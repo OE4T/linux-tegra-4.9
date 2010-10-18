@@ -671,8 +671,25 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 }
 EXPORT_SYMBOL(tegra_dc_sync_windows);
 
+static unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
+{
+	unsigned long rate;
+	unsigned long div;
+
+	rate = clk_get_rate(dc->clk);
+
+	div = DIV_ROUND_CLOSEST(rate * 2, pclk);
+
+	if (div < 2)
+		return 0;
+
+	return rate * 2 / div;
+}
+
 void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
+	int pclk;
+
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 		unsigned long rate;
 		struct clk *pll_d_out0_clk =
@@ -691,6 +708,10 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		if (clk_get_parent(clk) != pll_d_out0_clk)
 			clk_set_parent(clk, pll_d_out0_clk);
 	}
+
+	pclk = tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
+	tegra_dvfs_set_rate(clk, pclk);
+
 }
 
 static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
@@ -698,6 +719,7 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 	unsigned long val;
 	unsigned long rate;
 	unsigned long div;
+	unsigned long pclk;
 
 	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);
 	tegra_dc_writel(dc, mode->h_ref_to_sync | (mode->v_ref_to_sync << 16),
@@ -744,17 +766,18 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 
 	rate = clk_get_rate(dc->clk);
 
-	div = ((rate * 2 + mode->pclk / 2) / mode->pclk) - 2;
-
-	if (rate * 2 / (div + 2) < (mode->pclk / 100 * 99) ||
-	    rate * 2 / (div + 2) > (mode->pclk / 100 * 109)) {
+	pclk = tegra_dc_pclk_round_rate(dc, mode->pclk);
+	if (pclk < (mode->pclk / 100 * 99) ||
+	    pclk > (mode->pclk / 100 * 109)) {
 		dev_err(&dc->ndev->dev,
 			"can't divide %ld clock to %d -1/+9%% %ld %d %d\n",
 			rate, mode->pclk,
-			rate / div, (mode->pclk / 100 * 99),
+			pclk, (mode->pclk / 100 * 99),
 			(mode->pclk / 100 * 109));
 		return -EINVAL;
 	}
+
+	div = (rate * 2 / pclk) - 2;
 
 	tegra_dc_writel(dc, 0x00010001,
 			DC_DISP_SHIFT_CLOCK_OPTIONS);
@@ -1059,6 +1082,7 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 	clk_disable(dc->emc_clk);
 	clk_disable(dc->clk);
+	tegra_dvfs_set_rate(dc->clk, 0);
 
 	if (dc->out && dc->out->disable)
 		dc->out->disable();

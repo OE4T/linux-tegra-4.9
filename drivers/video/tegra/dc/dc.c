@@ -826,6 +826,76 @@ int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 }
 EXPORT_SYMBOL(tegra_dc_set_mode);
 
+static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
+				const struct tegra_dc_out_pin *pins,
+				const unsigned int n_pins)
+{
+	unsigned int i;
+
+	int name;
+	int pol;
+
+	u32 pol1, pol3;
+
+	u32 set1, unset1;
+	u32 set3, unset3;
+
+	set1 = set3 = unset1 = unset3 = 0;
+
+	for (i = 0; i < n_pins; i++) {
+		name = (pins + i)->name;
+		pol  = (pins + i)->pol;
+
+		/* set polarity by name */
+		switch (name) {
+		case TEGRA_DC_OUT_PIN_DATA_ENABLE:
+			if (pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				set3 |= LSPI_OUTPUT_POLARITY_LOW;
+			else
+				unset3 |= LSPI_OUTPUT_POLARITY_LOW;
+			break;
+		case TEGRA_DC_OUT_PIN_H_SYNC:
+			if (pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				set1 |= LHS_OUTPUT_POLARITY_LOW;
+			else
+				unset1 |= LHS_OUTPUT_POLARITY_LOW;
+			break;
+		case TEGRA_DC_OUT_PIN_V_SYNC:
+			if (pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				set1 |= LVS_OUTPUT_POLARITY_LOW;
+			else
+				unset1 |= LVS_OUTPUT_POLARITY_LOW;
+			break;
+		case TEGRA_DC_OUT_PIN_PIXEL_CLOCK:
+			if (pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				set1 |= LSC0_OUTPUT_POLARITY_LOW;
+			else
+				unset1 |= LSC0_OUTPUT_POLARITY_LOW;
+			break;
+		default:
+			printk("Invalid argument in function %s\n",
+			       __FUNCTION__);
+			break;
+		}
+	}
+
+	mutex_lock(&dc->lock);
+
+	pol1 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY1);
+	pol3 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY3);
+
+	pol1 |= set1;
+	pol1 &= ~unset1;
+
+	pol3 |= set3;
+	pol3 &= ~unset3;
+
+	tegra_dc_writel(dc, pol1, DC_COM_PIN_OUTPUT_POLARITY1);
+	tegra_dc_writel(dc, pol3, DC_COM_PIN_OUTPUT_POLARITY3);
+
+	mutex_unlock(&dc->lock);
+}
+
 static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 {
 	dc->out = out;
@@ -1085,6 +1155,10 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
+
+	if (dc->out->out_pins)
+		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
+					    dc->out->n_out_pins);
 
 	/* force a full blending update */
 	dc->blend.z[0] = -1;

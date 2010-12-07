@@ -1098,7 +1098,8 @@ static int nvmap_probe(struct platform_device *pdev)
 	init_waitqueue_head(&dev->iovmm_master.pin_wait);
 	mutex_init(&dev->iovmm_master.pin_lock);
 	dev->iovmm_master.iovmm =
-		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL);
+		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL,
+			&(dev->dev_user));
 	if (IS_ERR(dev->iovmm_master.iovmm)) {
 		e = PTR_ERR(dev->iovmm_master.iovmm);
 		dev_err(&pdev->dev, "couldn't create iovmm client\n");

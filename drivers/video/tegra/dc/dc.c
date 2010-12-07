@@ -812,7 +812,11 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 
 	tegra_dc_writel(dc, val, DC_DISP_DISP_INTERFACE_CONTROL);
 
+#ifdef CONFIG_TEGRA_FPGA_PLATFORM
+	rate = 27000000;
+#else
 	rate = clk_get_rate(dc->clk);
+#endif
 
 	pclk = tegra_dc_pclk_round_rate(dc, mode->pclk);
 	if (pclk < (mode->pclk / 100 * 99) ||

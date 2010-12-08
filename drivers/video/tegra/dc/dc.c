@@ -742,7 +742,6 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 	pclk = tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 	tegra_dvfs_set_rate(clk, pclk);
-
 }
 
 static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
@@ -1135,6 +1134,9 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	if (dc->mode.pclk == 0)
 		return false;
 
+	if (!dc->out)
+		return false;
+
 	tegra_dc_io_start(dc);
 
 	if (dc->out && dc->out->enable)
@@ -1156,6 +1158,9 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	if (dc->out->out_pins)
 		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
 					    dc->out->n_out_pins);
+
+	if (dc->out->postpoweron)
+		dc->out->postpoweron();
 
 	/* force a full blending update */
 	dc->blend.z[0] = -1;

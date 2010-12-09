@@ -22,6 +22,7 @@
 
 #ifndef __NVHOST_DEV_H
 #define __NVHOST_DEV_H
+
 #include "nvhost_acm.h"
 #include "nvhost_syncpt.h"
 #include "nvhost_intr.h"

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dc.c
+ * drivers/video/tegra/host/debug.c
  *
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
@@ -66,7 +66,7 @@ static int nvhost_debug_handle_cmd(struct seq_file *s, u32 val, int *count)
 
 	case 0x4:
 		seq_printf(s, "IMM(offset=%03x, data=%03x)\n",
-			   val >> 16 & 0x3ff, val & 0xffff);
+			   val >> 16 & 0xfff, val & 0xffff);
 		return NVHOST_DBG_STATE_CMD;
 
 	case 0x5:
@@ -101,7 +101,7 @@ static int nvhost_debug_handle_cmd(struct seq_file *s, u32 val, int *count)
 }
 
 static void nvhost_debug_handle_word(struct seq_file *s, int *state, int *count,
-				     unsigned long addr, int channel, u32 val)
+				     u32 addr, int channel, u32 val)
 {
 	switch (*state) {
 	case NVHOST_DBG_STATE_CMD:
@@ -210,14 +210,14 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 			break;
 
 		case 0x00010009:		/* HOST_WAIT_SYNCPT_BASE */
-			base = cbread >> 15 & 0xf;
+			base = cbread >> 16 & 0xf;
 			offset = cbread & 0xffff;
 
 			val = readl(m->aperture + HOST1X_SYNC_SYNCPT_BASE(base)) & 0xffff;
 			val += offset;
 
-			seq_printf(s, "waiting on syncpt %d val %d (base %d, offset %d)\n",
-				   cbread >> 24, val, base, offset);
+			seq_printf(s, "waiting on syncpt %d val %d (base %d = %d, offset %d)\n",
+				   cbread >> 24, val, base, val - offset, offset);
 			break;
 
 		default:
@@ -233,7 +233,7 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 		 * it. */
 		if (size) {
 			u32 map_base = phys_addr & PAGE_MASK;
-			u32 map_size = (size * 4 + PAGE_SIZE - 1) & PAGE_MASK;
+			u32 map_size = ((phys_addr + size * 4 + PAGE_SIZE - 1) & PAGE_MASK) - map_base;
 			u32 map_offset = phys_addr - map_base;
 			void *map_addr = ioremap_nocache(map_base, map_size);
 
@@ -244,7 +244,7 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 				state = NVHOST_DBG_STATE_CMD;
 				for (ii = 0; ii < size; ii++) {
 					val = readl(map_addr + map_offset + ii*sizeof(u32));
-					nvhost_debug_handle_word(s, &state, &count, phys_addr + ii, i, val);
+					nvhost_debug_handle_word(s, &state, &count, phys_addr + ii * 4, i, val);
 				}
 				iounmap(map_addr);
 			}

@@ -78,6 +78,7 @@ static const struct nvhost_channeldesc channelmap[] = {
 			 BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
 			 BIT(NVSYNCPT_VI_ISP_4) | BIT(NVSYNCPT_VI_ISP_5),
 	.modulemutexes = BIT(NVMODMUTEX_VI),
+	.exclusive     = true,
 },
 {
 	/* channel 5 */
@@ -87,6 +88,7 @@ static const struct nvhost_channeldesc channelmap[] = {
 	.waitbases     = BIT(NVWAITBASE_MPE),
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.power	       = power_mpe,
+	.exclusive     = true,
 },
 {
 	/* channel 6 */
@@ -130,6 +132,8 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 			if (err)
 				nvhost_module_deinit(&ch->mod);
 		}
+	} else if (ch->desc->exclusive) {
+		err = -EBUSY;
 	}
 	if (!err) {
 		ch->refcount++;
@@ -169,12 +173,12 @@ void nvhost_channel_suspend(struct nvhost_channel *ch)
 }
 
 void nvhost_channel_submit(struct nvhost_channel *ch,
-			   struct nvmap_client *user_nvmap,
-			   struct nvhost_op_pair *ops, int num_pairs,
-			   struct nvhost_cpuinterrupt *intrs, int num_intrs,
-			   struct nvmap_handle **unpins, int num_unpins,
-			   u32 syncpt_id, u32 syncpt_val,
-			   int num_nulled_incrs)
+			struct nvmap_client *user_nvmap,
+			struct nvhost_op_pair *ops, int num_pairs,
+			struct nvhost_cpuinterrupt *intrs, int num_intrs,
+			struct nvmap_handle **unpins, int num_unpins,
+			u32 syncpt_id, u32 syncpt_val,
+			int num_nulled_incrs)
 {
 	int i;
 	struct nvhost_op_pair* p;
@@ -218,8 +222,8 @@ void nvhost_channel_submit(struct nvhost_channel *ch,
 	}
 
 	/* end CDMA submit & stash pinned hMems into sync queue for later cleanup */
-	nvhost_cdma_end(user_nvmap, &ch->cdma, syncpt_id, syncpt_val,
-                        unpins, num_unpins);
+	nvhost_cdma_end(&ch->cdma, user_nvmap, syncpt_id, syncpt_val,
+			unpins, num_unpins);
 }
 
 static void power_2d(struct nvhost_module *mod, enum nvhost_power_action action)

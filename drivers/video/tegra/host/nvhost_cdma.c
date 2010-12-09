@@ -174,9 +174,9 @@ static u32 push_buffer_putptr(struct push_buffer *pb)
  * The queue must not be left with less than SYNC_QUEUE_MIN_ENTRY words
  * of space at the end of the array.
  *
- * We want to pass contiguous arrays of handles to NrRmMemUnpin, so arrays
- * that would wrap at the end of the buffer will be split into two (or more)
- * entries.
+ * We want to pass contiguous arrays of handles to nvmap_unpin_handles,
+ * so arrays that would wrap at the end of the buffer will be split into
+ * two (or more) entries.
  */
 
 /* Number of words needed to store an entry containing one handle */
@@ -325,6 +325,37 @@ dequeue_sync_queue_head(struct sync_queue *queue)
 
 
 /*** Cdma internal stuff ***/
+
+/**
+ * Start channel DMA
+ */
+static void start_cdma(struct nvhost_cdma *cdma)
+{
+	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
+
+	if (cdma->running)
+		return;
+
+	cdma->last_put = push_buffer_putptr(&cdma->push_buffer);
+
+	writel(nvhost_channel_dmactrl(true, false, false),
+		chan_regs + HOST1X_CHANNEL_DMACTRL);
+
+	/* set base, put, end pointer (all of memory) */
+	writel(0, chan_regs + HOST1X_CHANNEL_DMASTART);
+	writel(cdma->last_put, chan_regs + HOST1X_CHANNEL_DMAPUT);
+	writel(0xFFFFFFFF, chan_regs + HOST1X_CHANNEL_DMAEND);
+
+	/* reset GET */
+	writel(nvhost_channel_dmactrl(true, true, true),
+		chan_regs + HOST1X_CHANNEL_DMACTRL);
+
+	/* start the command DMA */
+	writel(nvhost_channel_dmactrl(false, false, false),
+		chan_regs + HOST1X_CHANNEL_DMACTRL);
+
+	cdma->running = true;
+}
 
 /**
  * Kick channel DMA into action by writing its PUT offset (if it has changed)
@@ -489,35 +520,6 @@ void nvhost_cdma_deinit(struct nvhost_cdma *cdma)
 	destroy_push_buffer(&cdma->push_buffer);
 }
 
-static void start_cdma(struct nvhost_cdma *cdma)
-{
-	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
-
-	if (cdma->running)
-		return;
-
-	cdma->last_put = push_buffer_putptr(&cdma->push_buffer);
-
-	writel(nvhost_channel_dmactrl(true, false, false),
-		chan_regs + HOST1X_CHANNEL_DMACTRL);
-
-	/* set base, put, end pointer (all of memory) */
-	writel(0, chan_regs + HOST1X_CHANNEL_DMASTART);
-	writel(cdma->last_put, chan_regs + HOST1X_CHANNEL_DMAPUT);
-	writel(0xFFFFFFFF, chan_regs + HOST1X_CHANNEL_DMAEND);
-
-	/* reset GET */
-	writel(nvhost_channel_dmactrl(true, true, true),
-		chan_regs + HOST1X_CHANNEL_DMACTRL);
-
-	/* start the command DMA */
-	writel(nvhost_channel_dmactrl(false, false, false),
-		chan_regs + HOST1X_CHANNEL_DMACTRL);
-
-	cdma->running = true;
-
-}
-
 void nvhost_cdma_stop(struct nvhost_cdma *cdma)
 {
 	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
@@ -568,9 +570,10 @@ void nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2)
  * The handles for a submit must all be pinned at the same time, but they
  * can be unpinned in smaller chunks.
  */
-void nvhost_cdma_end(struct nvmap_client *user_nvmap, struct nvhost_cdma *cdma,
-		     u32 sync_point_id, u32 sync_point_value,
-		     struct nvmap_handle **handles, unsigned int nr_handles)
+void nvhost_cdma_end(struct nvhost_cdma *cdma,
+		struct nvmap_client *user_nvmap,
+		u32 sync_point_id, u32 sync_point_value,
+		struct nvmap_handle **handles, unsigned int nr_handles)
 {
 	kick_cdma(cdma);
 
@@ -582,10 +585,7 @@ void nvhost_cdma_end(struct nvmap_client *user_nvmap, struct nvhost_cdma *cdma,
 		 */
 		count = wait_cdma(cdma, CDMA_EVENT_SYNC_QUEUE_SPACE);
 
-		/*
-		 * Add reloc entries to sync queue (as many as will fit)
-		 * and unlock it
-		 */
+		/* Add reloc entries to sync queue (as many as will fit) */
 		if (count > nr_handles)
 			count = nr_handles;
 		add_to_sync_queue(&cdma->sync_queue, sync_point_id,

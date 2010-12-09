@@ -69,8 +69,9 @@ struct nvhost_intr_syncpt {
 
 struct nvhost_intr {
 	struct nvhost_intr_syncpt syncpt[NV_HOST1X_SYNCPT_NB_PTS];
-	int host1x_irq;
-	bool host1x_isr_started;
+	struct mutex mutex;
+	int host_general_irq;
+	bool host_general_irq_requested;
 };
 
 /**
@@ -97,6 +98,7 @@ void nvhost_intr_put_ref(struct nvhost_intr *intr, void *ref);
 
 int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync);
 void nvhost_intr_deinit(struct nvhost_intr *intr);
-void nvhost_intr_configure(struct nvhost_intr *intr, u32 hz);
+void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
+void nvhost_intr_stop(struct nvhost_intr *intr);
 
 #endif

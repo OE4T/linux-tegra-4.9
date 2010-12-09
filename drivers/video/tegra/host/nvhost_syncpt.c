@@ -217,7 +217,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 				id, nvhost_syncpt_name(id), thresh);
 			nvhost_syncpt_debug(sp);
 		}
-	};
+	}
 	nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), ref);
 
 done:

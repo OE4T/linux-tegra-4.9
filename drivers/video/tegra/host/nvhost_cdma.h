@@ -91,13 +91,13 @@ void	nvhost_cdma_deinit(struct nvhost_cdma *cdma);
 void	nvhost_cdma_stop(struct nvhost_cdma *cdma);
 void	nvhost_cdma_begin(struct nvhost_cdma *cdma);
 void	nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2);
-void	nvhost_cdma_end(struct nvmap_client *user_nvmap,
-			struct nvhost_cdma *cdma,
-			u32 sync_point_id, u32 sync_point_value,
-			struct nvmap_handle **handles, unsigned int nr_handles);
+void	nvhost_cdma_end(struct nvhost_cdma *cdma,
+		struct nvmap_client *user_nvmap,
+		u32 sync_point_id, u32 sync_point_value,
+		struct nvmap_handle **handles, unsigned int nr_handles);
 void	nvhost_cdma_update(struct nvhost_cdma *cdma);
 void	nvhost_cdma_flush(struct nvhost_cdma *cdma);
 void    nvhost_cdma_find_gather(struct nvhost_cdma *cdma, u32 dmaget,
-                u32 *addr, u32 *size);
+				u32 *addr, u32 *size);
 
 #endif

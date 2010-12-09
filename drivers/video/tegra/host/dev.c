@@ -30,7 +30,6 @@
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/file.h>
-#include <linux/clk.h>
 #include <linux/module.h>
 
 #include <asm/io.h>
@@ -51,6 +50,7 @@ struct nvhost_channel_userctx {
 	u32 syncpt_incrs;
 	u32 cmdbufs_pending;
 	u32 relocs_pending;
+	u32 null_kickoff;
 	struct nvmap_handle_ref *gather_mem;
 	struct nvhost_op_pair *gathers;
 	int num_gathers;
@@ -581,13 +581,17 @@ static void power_host(struct nvhost_module *mod, enum nvhost_power_action actio
 	struct nvhost_master *dev = container_of(mod, struct nvhost_master, mod);
 
 	if (action == NVHOST_POWER_ACTION_ON) {
-		nvhost_intr_configure(&dev->intr, clk_get_rate(mod->clk[0]));
-	}
-	else if (action == NVHOST_POWER_ACTION_OFF) {
+		nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0]));
+		/* don't do it, as display may have changed syncpt
+		 * after the last save
+		 * nvhost_syncpt_reset(&dev->syncpt);
+		 */
+	} else if (action == NVHOST_POWER_ACTION_OFF) {
 		int i;
 		for (i = 0; i < NVHOST_NUMCHANNELS; i++)
 			nvhost_channel_suspend(&dev->channels[i]);
 		nvhost_syncpt_save(&dev->syncpt);
+		nvhost_intr_stop(&dev->intr);
 	}
 }
 
@@ -617,6 +621,11 @@ static int nvhost_user_init(struct nvhost_master *host)
 
 	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
 		struct nvhost_channel *ch = &host->channels[i];
+
+		if (!strcmp(ch->desc->name, "display") &&
+		    !nvhost_access_module_regs(&host->cpuaccess,
+						NVHOST_MODULE_DISPLAY_A))
+			continue;
 
 		cdev_init(&ch->cdev, &nvhost_channelops);
 		ch->cdev.owner = THIS_MODULE;
@@ -718,11 +727,11 @@ static int nvhost_probe(struct platform_device *pdev)
 	err = nvhost_module_init(&host->mod, "host1x", power_host, NULL, &pdev->dev);
 	if (err) goto fail;
 
-	platform_set_drvdata(pdev, host);
-
 	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_reset(&host->syncpt);
 	clk_disable(host->mod.clk[0]);
+
+	platform_set_drvdata(pdev, host);
 
 	nvhost_bus_register(host);
 

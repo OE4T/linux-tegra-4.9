@@ -28,8 +28,6 @@
 #include <mach/powergate.h>
 #include <mach/clk.h>
 
-#include "dev.h"
-
 #define ACM_TIMEOUT 1*HZ
 
 #define DISABLE_3D_POWERGATING
@@ -88,7 +86,8 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 	mutex_lock(&mod->lock);
 	if (atomic_sub_return(refs, &mod->refcount) == 0) {
 		BUG_ON(!mod->powered);
-		schedule_delayed_work(&mod->powerdown, ACM_TIMEOUT);
+		schedule_delayed_work(
+			&mod->powerdown, msecs_to_jiffies(ACM_TIMEOUT_MSEC));
 		kick = true;
 	}
 	mutex_unlock(&mod->lock);
@@ -126,6 +125,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		struct device *dev)
 {
 	int i = 0;
+
 	mod->name = name;
 
 	while (i < NVHOST_MODULE_MAX_CLOCKS) {
@@ -140,7 +140,9 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 			break;
 		}
 		if (rate != clk_get_rate(mod->clk[i])) {
+			clk_enable(mod->clk[i]);
 			clk_set_rate(mod->clk[i], rate);
+			clk_disable(mod->clk[i]);
 		}
 		i++;
 	}

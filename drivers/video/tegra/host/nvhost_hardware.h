@@ -209,9 +209,9 @@ static inline u32 nvhost_opcode_restart(unsigned address)
 	return (5 << 28) | (address >> 4);
 }
 
-static inline u32 nvhost_opcode_gather(unsigned offset, unsigned count)
+static inline u32 nvhost_opcode_gather(unsigned count)
 {
-	return (6 << 28) | (offset << 16) | count;
+	return (6 << 28) | count;
 }
 
 static inline u32 nvhost_opcode_gather_nonincr(unsigned offset,	unsigned count)
@@ -225,6 +225,11 @@ static inline u32 nvhost_opcode_gather_incr(unsigned offset, unsigned count)
 }
 
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)
+
+static inline u32 nvhost_mask2(unsigned x, unsigned y)
+{
+	return 1 | (1 << (y - x));
+}
 
 #endif /* __NVHOST_HARDWARE_H */
 

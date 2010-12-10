@@ -172,58 +172,130 @@ void nvhost_channel_suspend(struct nvhost_channel *ch)
 	mutex_unlock(&ch->reflock);
 }
 
-void nvhost_channel_submit(struct nvhost_channel *ch,
+int nvhost_channel_submit(struct nvhost_channel *channel,
+			struct nvhost_hwctx *hwctx,
 			struct nvmap_client *user_nvmap,
-			struct nvhost_op_pair *ops, int num_pairs,
-			struct nvhost_cpuinterrupt *intrs, int num_intrs,
-			struct nvmap_handle **unpins, int num_unpins,
-			u32 syncpt_id, u32 syncpt_val,
-			int num_nulled_incrs)
+			u32 *gather,
+			u32 *gather_end,
+			struct nvmap_handle **unpins,
+			int nr_unpins,
+			u32 syncpt_id,
+			u32 syncpt_incrs,
+			u32 *syncpt_value,
+			bool null_kickoff)
 {
-	int i;
-	struct nvhost_op_pair* p;
+	struct nvhost_hwctx *hwctx_to_save = NULL;
+	u32 user_syncpt_incrs = syncpt_incrs;
+	bool need_restore = false;
+	u32 syncval;
+	int err;
 
-	/* schedule interrupts */
-	for (i = 0; i < num_intrs; i++) {
-		nvhost_intr_add_action(&ch->dev->intr, syncpt_id, intrs[i].syncpt_val,
-				NVHOST_INTR_ACTION_CTXSAVE, intrs[i].intr_data, NULL);
+	/* keep module powered */
+	nvhost_module_busy(&channel->mod);
+
+	/* get submit lock */
+	err = mutex_lock_interruptible(&channel->submitlock);
+	if (err) {
+		nvhost_module_idle(&channel->mod);
+		return err;
 	}
 
+	/* context switch */
+	if (channel->cur_ctx != hwctx) {
+		hwctx_to_save = channel->cur_ctx;
+		if (hwctx_to_save) {
+			syncpt_incrs += hwctx_to_save->save_incrs;
+			hwctx_to_save->valid = true;
+			channel->ctxhandler.get(hwctx_to_save);
+		}
+		channel->cur_ctx = hwctx;
+		if (channel->cur_ctx && channel->cur_ctx->valid) {
+			need_restore = true;
+			syncpt_incrs += channel->cur_ctx->restore_incrs;
+		}
+	}
+
+	/* get absolute sync value */
+	if (BIT(syncpt_id) & NVSYNCPTS_CLIENT_MANAGED)
+		syncval = nvhost_syncpt_set_max(&channel->dev->syncpt,
+						syncpt_id, syncpt_incrs);
+	else
+		syncval = nvhost_syncpt_incr_max(&channel->dev->syncpt,
+						syncpt_id, syncpt_incrs);
+
 	/* begin a CDMA submit */
-	nvhost_cdma_begin(&ch->cdma);
+	nvhost_cdma_begin(&channel->cdma);
 
-	/* push ops */
-	for (i = 0, p = ops; i < num_pairs; i++, p++)
-		nvhost_cdma_push(&ch->cdma, p->op1, p->op2);
+	/* push save buffer (pre-gather setup depends on unit) */
+	if (hwctx_to_save)
+		channel->ctxhandler.save_push(&channel->cdma, hwctx_to_save);
 
-	/* extra work to do for null kickoff */
-	if (num_nulled_incrs) {
-		u32 incr;
+	/* gather restore buffer */
+	if (need_restore)
+		nvhost_cdma_push(&channel->cdma,
+			nvhost_opcode_gather(channel->cur_ctx->restore_size),
+			channel->cur_ctx->restore_phys);
+
+	/* add a setclass for modules that require it (unless ctxsw added it) */
+	if (!hwctx_to_save && !need_restore && channel->desc->class)
+		nvhost_cdma_push(&channel->cdma,
+			nvhost_opcode_setclass(channel->desc->class, 0, 0),
+			NVHOST_OPCODE_NOOP);
+
+	if (null_kickoff) {
+		int incr;
 		u32 op_incr;
 
 		/* TODO ideally we'd also perform host waits here */
 
 		/* push increments that correspond to nulled out commands */
 		op_incr = nvhost_opcode_imm(0, 0x100 | syncpt_id);
-		for (incr = 0; incr < (num_nulled_incrs >> 1); incr++)
-			nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
-		if (num_nulled_incrs & 1)
-			nvhost_cdma_push(&ch->cdma, op_incr, NVHOST_OPCODE_NOOP);
+		for (incr = 0; incr < (user_syncpt_incrs >> 1); incr++)
+			nvhost_cdma_push(&channel->cdma, op_incr, op_incr);
+		if (user_syncpt_incrs & 1)
+			nvhost_cdma_push(&channel->cdma,
+					op_incr, NVHOST_OPCODE_NOOP);
 
 		/* for 3d, waitbase needs to be incremented after each submit */
-		if (ch->desc->class == NV_GRAPHICS_3D_CLASS_ID) {
-			u32 op1 = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
-			u32 op2 = nvhost_class_host_incr_syncpt_base(NVWAITBASE_3D,
-					num_nulled_incrs);
-
-			nvhost_cdma_push(&ch->cdma, op1, op2);
-		}
+		if (channel->desc->class == NV_GRAPHICS_3D_CLASS_ID)
+			nvhost_cdma_push(&channel->cdma,
+					nvhost_opcode_setclass(
+						NV_HOST1X_CLASS_ID,
+						NV_CLASS_HOST_INCR_SYNCPT_BASE,
+						1),
+					nvhost_class_host_incr_syncpt_base(
+						NVWAITBASE_3D,
+						user_syncpt_incrs));
+	}
+	else {
+		/* push user gathers */
+		for ( ; gather != gather_end; gather += 2)
+			nvhost_cdma_push(&channel->cdma,
+					nvhost_opcode_gather(gather[0]),
+					gather[1]);
 	}
 
-	/* end CDMA submit & stash pinned hMems into sync queue for later cleanup */
-	nvhost_cdma_end(&ch->cdma, user_nvmap, syncpt_id, syncpt_val,
-			unpins, num_unpins);
+	/* end CDMA submit & stash pinned hMems into sync queue */
+	nvhost_cdma_end(&channel->cdma, user_nvmap,
+			syncpt_id, syncval, unpins, nr_unpins);
+
+	/*
+	 * schedule a context save interrupt (to drain the host FIFO
+	 * if necessary, and to release the restore buffer)
+	 */
+	if (hwctx_to_save)
+		nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
+			syncval - syncpt_incrs + hwctx_to_save->save_thresh,
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+
+	/* schedule a submit complete interrupt */
+	nvhost_intr_add_action(&channel->dev->intr, syncpt_id, syncval,
+			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel, NULL);
+
+	mutex_unlock(&channel->submitlock);
+
+	*syncpt_value = syncval;
+	return 0;
 }
 
 static void power_2d(struct nvhost_module *mod, enum nvhost_power_action action)
@@ -237,42 +309,48 @@ static void power_2d(struct nvhost_module *mod, enum nvhost_power_action action)
 static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 {
 	struct nvhost_channel *ch = container_of(mod, struct nvhost_channel, mod);
+	struct nvhost_hwctx *hwctx_to_save;
+	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
+	u32 syncpt_incrs, syncpt_val;
+	void *ref;
 
-	if (action == NVHOST_POWER_ACTION_OFF) {
-		mutex_lock(&ch->submitlock);
-		if (ch->cur_ctx) {
-			DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
-			struct nvhost_op_pair save;
-			struct nvhost_cpuinterrupt ctxsw;
-			u32 syncval;
-			void *ref;
-			syncval = nvhost_syncpt_incr_max(&ch->dev->syncpt,
-							NVSYNCPT_3D,
-							ch->cur_ctx->save_incrs);
-			save.op1 = nvhost_opcode_gather(0, ch->cur_ctx->save_size);
-			save.op2 = ch->cur_ctx->save_phys;
-			ctxsw.intr_data = ch->cur_ctx;
-			ctxsw.syncpt_val = syncval - 1;
-			ch->cur_ctx->valid = true;
-			ch->ctxhandler.get(ch->cur_ctx);
-			ch->cur_ctx = NULL;
+	if (action != NVHOST_POWER_ACTION_OFF)
+		return;
 
-			nvhost_channel_submit(ch, ch->dev->nvmap,
-					      &save, 1, &ctxsw, 1, NULL, 0,
-					      NVSYNCPT_3D, syncval, 0);
-
-			nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
-					       syncval,
-					       NVHOST_INTR_ACTION_WAKEUP,
-					       &wq, &ref);
-			wait_event(wq,
-				   nvhost_syncpt_min_cmp(&ch->dev->syncpt,
-							 NVSYNCPT_3D, syncval));
-			nvhost_intr_put_ref(&ch->dev->intr, ref);
-			nvhost_cdma_update(&ch->cdma);
-		}
+	mutex_lock(&ch->submitlock);
+	hwctx_to_save = ch->cur_ctx;
+	if (!hwctx_to_save) {
 		mutex_unlock(&ch->submitlock);
+		return;
 	}
+
+	hwctx_to_save->valid = true;
+	ch->ctxhandler.get(hwctx_to_save);
+	ch->cur_ctx = NULL;
+
+	syncpt_incrs = hwctx_to_save->save_incrs;
+	syncpt_val = nvhost_syncpt_incr_max(&ch->dev->syncpt,
+					NVSYNCPT_3D, syncpt_incrs);
+
+	nvhost_cdma_begin(&ch->cdma);
+	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
+	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val, NULL, 0);
+
+	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
+			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+
+	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
+			NVHOST_INTR_ACTION_WAKEUP, &wq, &ref);
+	wait_event(wq,
+		nvhost_syncpt_min_cmp(&ch->dev->syncpt,
+				NVSYNCPT_3D, syncpt_val));
+
+	nvhost_intr_put_ref(&ch->dev->intr, ref);
+
+	nvhost_cdma_update(&ch->cdma);
+
+	mutex_unlock(&ch->submitlock);
 }
 
 static void power_mpe(struct nvhost_module *mod, enum nvhost_power_action action)

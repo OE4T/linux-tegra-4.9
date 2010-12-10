@@ -53,8 +53,8 @@ struct nvhost_channel_userctx {
 	u32 relocs_pending;
 	u32 null_kickoff;
 	struct nvmap_handle_ref *gather_mem;
-	struct nvhost_op_pair *gathers;
-	int num_gathers;
+	u32 *gathers;
+	u32 *cur_gather;
 	int pinarray_size;
 	struct nvmap_pinarray_elem pinarray[NVHOST_MAX_HANDLES];
 	struct nvmap_handle *unpinarray[NVHOST_MAX_HANDLES];
@@ -92,7 +92,6 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_channel *ch;
-	size_t gather_size;
 
 	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
 	ch = nvhost_getchannel(ch);
@@ -106,9 +105,9 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	gather_size = sizeof(struct nvhost_op_pair) * NVHOST_MAX_GATHERS;
-	priv->gather_mem = nvmap_alloc(ch->dev->nvmap, gather_size, 32,
-				       NVMAP_HANDLE_CACHEABLE);
+	priv->gather_mem = nvmap_alloc(ch->dev->nvmap,
+				sizeof(u32) * 2 * NVHOST_MAX_GATHERS, 32,
+				NVMAP_HANDLE_CACHEABLE);
 	if (IS_ERR(priv->gather_mem))
 		goto fail;
 
@@ -118,7 +117,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 			goto fail;
 	}
 
-	priv->gathers = (struct nvhost_op_pair *)nvmap_mmap(priv->gather_mem);
+	priv->gathers = nvmap_mmap(priv->gather_mem);
 
 	return 0;
 fail:
@@ -126,17 +125,18 @@ fail:
 	return -ENOMEM;
 }
 
-static void add_gather(struct nvhost_channel_userctx *ctx, int idx,
-		       u32 mem_id, u32 words, u32 offset)
+static void add_gather(struct nvhost_channel_userctx *ctx,
+		u32 mem_id, u32 words, u32 offset)
 {
 	struct nvmap_pinarray_elem *pin;
+	u32* cur_gather = ctx->cur_gather;
 	pin = &ctx->pinarray[ctx->pinarray_size++];
 	pin->patch_mem = (u32)nvmap_ref_to_handle(ctx->gather_mem);
-	pin->patch_offset = (idx * sizeof(struct nvhost_op_pair)) +
-		offsetof(struct nvhost_op_pair, op2);
+	pin->patch_offset = ((cur_gather + 1) - ctx->gathers) * sizeof(u32);
 	pin->pin_mem = mem_id;
 	pin->pin_offset = offset;
-	ctx->gathers[idx].op1 = nvhost_opcode_gather(0, words);
+	cur_gather[0] = words;
+	ctx->cur_gather = cur_gather + 2;
 }
 
 static void reset_submit(struct nvhost_channel_userctx *ctx)
@@ -166,8 +166,7 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
-			/* leave room for ctx switch */
-			priv->num_gathers = 2;
+			priv->cur_gather = priv->gathers;
 			priv->pinarray_size = 0;
 		} else if (priv->cmdbufs_pending) {
 			struct nvhost_cmdbuf cmdbuf;
@@ -178,8 +177,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
-			add_gather(priv, priv->num_gathers++,
-				   cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
+			add_gather(priv,
+				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			priv->cmdbufs_pending--;
 		} else if (priv->relocs_pending) {
 			int numrelocs = remaining / sizeof(struct nvhost_reloc);
@@ -215,28 +214,21 @@ static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
                                       struct nvhost_get_param_args *args,
                                       int null_kickoff)
 {
-	struct nvhost_cpuinterrupt ctxsw;
-	int gather_idx = 2;
-	int num_intrs = 0;
-	u32 syncval;
+	struct device *device = &ctx->ch->dev->pdev->dev;
 	int num_unpin;
 	int err;
-	int nulled_incrs = null_kickoff ? ctx->syncpt_incrs : 0;
 
 	if (ctx->relocs_pending || ctx->cmdbufs_pending) {
 		reset_submit(ctx);
-		dev_err(&ctx->ch->dev->pdev->dev, "channel submit out of sync\n");
+		dev_err(device, "channel submit out of sync\n");
 		return -EFAULT;
 	}
 	if (!ctx->nvmap) {
-		dev_err(&ctx->ch->dev->pdev->dev, "no nvmap context set\n");
+		dev_err(device, "no nvmap context set\n");
 		return -EFAULT;
 	}
-	if (ctx->num_gathers <= 2)
+	if (ctx->cur_gather == ctx->gathers)
 		return 0;
-
-	/* keep module powered */
-	nvhost_module_busy(&ctx->ch->mod);
 
 	/* pin mem handles and patch physical addresses */
 	num_unpin = nvmap_pin_array(ctx->nvmap,
@@ -244,77 +236,20 @@ static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
 				    ctx->pinarray, ctx->pinarray_size,
 				    ctx->unpinarray);
 	if (num_unpin < 0) {
-		dev_warn(&ctx->ch->dev->pdev->dev, "nvmap_pin_array failed: "
-			 "%d\n", num_unpin);
-		nvhost_module_idle(&ctx->ch->mod);
+		dev_warn(device, "nvmap_pin_array failed: %d\n", num_unpin);
 		return num_unpin;
 	}
 
-	/* get submit lock */
-	err = mutex_lock_interruptible(&ctx->ch->submitlock);
-	if (err) {
+	/* context switch if needed, and submit user's gathers to the channel */
+	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
+				ctx->gathers, ctx->cur_gather,
+				ctx->unpinarray, num_unpin,
+				ctx->syncpt_id, ctx->syncpt_incrs,
+				&args->value,
+				ctx->null_kickoff != 0);
+	if (err)
 		nvmap_unpin_handles(ctx->nvmap, ctx->unpinarray, num_unpin);
-		nvhost_module_idle(&ctx->ch->mod);
-		return err;
-	}
 
-	/* context switch */
-	if (ctx->ch->cur_ctx != ctx->hwctx) {
-		struct nvhost_hwctx *hw = ctx->hwctx;
-		if (hw && hw->valid) {
-			gather_idx--;
-			ctx->gathers[gather_idx].op1 =
-				nvhost_opcode_gather(0, hw->restore_size);
-			ctx->gathers[gather_idx].op2 = hw->restore_phys;
-			ctx->syncpt_incrs += hw->restore_incrs;
-		}
-		hw = ctx->ch->cur_ctx;
-		if (hw) {
-			gather_idx--;
-			ctx->gathers[gather_idx].op1 =
-				nvhost_opcode_gather(0, hw->save_size);
-			ctx->gathers[gather_idx].op2 = hw->save_phys;
-			ctx->syncpt_incrs += hw->save_incrs;
-			num_intrs = 1;
-			ctxsw.syncpt_val = hw->save_incrs - 1;
-			ctxsw.intr_data = hw;
-			hw->valid = true;
-			ctx->ch->ctxhandler.get(hw);
-		}
-		ctx->ch->cur_ctx = ctx->hwctx;
-	}
-
-	/* add a setclass for modules that require it */
-	if (gather_idx == 2 && ctx->ch->desc->class) {
-		gather_idx--;
-		ctx->gathers[gather_idx].op1 =
-			nvhost_opcode_setclass(ctx->ch->desc->class, 0, 0);
-		ctx->gathers[gather_idx].op2 = NVHOST_OPCODE_NOOP;
-	}
-
-	/* get absolute sync value */
-	if (BIT(ctx->syncpt_id) & NVSYNCPTS_CLIENT_MANAGED)
-		syncval = nvhost_syncpt_set_max(&ctx->ch->dev->syncpt,
-						ctx->syncpt_id, ctx->syncpt_incrs);
-	else
-		syncval = nvhost_syncpt_incr_max(&ctx->ch->dev->syncpt,
-						ctx->syncpt_id, ctx->syncpt_incrs);
-
-	/* patch absolute syncpt value into interrupt triggers */
-	ctxsw.syncpt_val += syncval - ctx->syncpt_incrs;
-
-	nvhost_channel_submit(ctx->ch, ctx->nvmap, &ctx->gathers[gather_idx],
-			      (null_kickoff ? 2 : ctx->num_gathers) - gather_idx, &ctxsw, num_intrs,
-			      ctx->unpinarray, num_unpin,
-			      ctx->syncpt_id, syncval,
-			      nulled_incrs);
-
-	/* schedule a submit complete interrupt */
-	nvhost_intr_add_action(&ctx->ch->dev->intr, ctx->syncpt_id, syncval,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, ctx->ch, NULL);
-
-	mutex_unlock(&ctx->ch->submitlock);
-	args->value = syncval;
 	return 0;
 }
 

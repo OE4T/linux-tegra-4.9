@@ -376,11 +376,15 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 				   struct tegra_dc_win *win,
 				   const struct tegra_fb_flip_win *flip_win)
 {
+	int xres, yres;
 	if (flip_win->handle == NULL) {
 		win->flags = 0;
 		win->cur_handle = NULL;
 		return 0;
 	}
+
+	xres = tegra_fb->info->var.xres;
+	yres = tegra_fb->info->var.yres;
 
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 	if (flip_win->attr.blend == TEGRA_FB_WIN_BLEND_PREMULT)
@@ -403,6 +407,15 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 	win->out_y = flip_win->attr.out_y;
 	win->out_w = flip_win->attr.out_w;
 	win->out_h = flip_win->attr.out_h;
+
+	if (((win->out_x + win->out_w) > xres) && (win->out_x < xres)) {
+		win->out_w = xres - win->out_x;
+	}
+
+	if (((win->out_y + win->out_h) > yres) && (win->out_y < yres)) {
+		win->out_h = yres - win->out_y;
+	}
+
 	win->z = flip_win->attr.z;
 	win->cur_handle = flip_win->handle;
 

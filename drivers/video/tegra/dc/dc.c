@@ -705,12 +705,21 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 }
 EXPORT_SYMBOL(tegra_dc_sync_windows);
 
+static unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
+{
+#ifdef CONFIG_TEGRA_FPGA_PLATFORM
+	return 27000000;
+#else
+	return clk_get_rate(dc->clk);
+#endif
+}
+
 static unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 {
 	unsigned long rate;
 	unsigned long div;
 
-	rate = clk_get_rate(dc->clk);
+	rate = tegra_dc_clk_get_rate(dc);
 
 	div = DIV_ROUND_CLOSEST(rate * 2, pclk);
 
@@ -812,11 +821,7 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 
 	tegra_dc_writel(dc, val, DC_DISP_DISP_INTERFACE_CONTROL);
 
-#ifdef CONFIG_TEGRA_FPGA_PLATFORM
-	rate = 27000000;
-#else
-	rate = clk_get_rate(dc->clk);
-#endif
+	rate = tegra_dc_clk_get_rate(dc);
 
 	pclk = tegra_dc_pclk_round_rate(dc, mode->pclk);
 	if (pclk < (mode->pclk / 100 * 99) ||

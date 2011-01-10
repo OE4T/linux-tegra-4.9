@@ -2711,7 +2711,9 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 		mutex_unlock(&tegra_dcs[0]->lock);
 	}
 
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 	enable_irq(dc->irq);
+#endif
 
 	if (tegra_dc_init(dc)) {
 		dev_err(&dc->ndev->dev, "cannot initialize\n");

@@ -879,8 +879,6 @@ static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 		}
 	}
 
-	mutex_lock(&dc->lock);
-
 	pol1 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY1);
 	pol3 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY3);
 
@@ -892,8 +890,6 @@ static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 
 	tegra_dc_writel(dc, pol1, DC_COM_PIN_OUTPUT_POLARITY1);
 	tegra_dc_writel(dc, pol3, DC_COM_PIN_OUTPUT_POLARITY3);
-
-	mutex_unlock(&dc->lock);
 }
 
 static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
@@ -1356,8 +1352,10 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
 
+	mutex_lock(&dc->lock);
 	if (dc->enabled)
 		_tegra_dc_enable(dc);
+	mutex_unlock(&dc->lock);
 
 	tegra_dc_dbg_add(dc);
 

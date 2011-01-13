@@ -44,6 +44,11 @@ struct tegra_crypto_ctx {
 	int use_ssk;
 };
 
+struct tegra_crypto_completion {
+	struct completion restart;
+	int req_err;
+};
+
 static int alloc_bufs(unsigned long *buf[NBUFS])
 {
 	int i;
@@ -134,6 +139,16 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static void tegra_crypt_complete(struct crypto_async_request *req, int err)
+{
+	struct tegra_crypto_completion *done = req->data;
+
+	if (err != -EINPROGRESS) {
+		done->req_err = err;
+		complete(&done->restart);
+	}
+}
+
 static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_req *crypt_req)
 {
 	struct crypto_ablkcipher *tfm;
@@ -143,6 +158,7 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 	unsigned long *xbuf[NBUFS];
 	int ret = 0, size = 0;
 	unsigned long total = 0;
+	struct tegra_crypto_completion tcrypt_complete;
 
 	if (crypt_req->op & TEGRA_CRYPTO_ECB) {
 		req = ablkcipher_request_alloc(ctx->ecb_tfm, GFP_KERNEL);
@@ -176,6 +192,11 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		goto process_req_out;
 	}
 
+	init_completion(&tcrypt_complete.restart);
+
+	ablkcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+		tegra_crypt_complete, &tcrypt_complete);
+
 	total = crypt_req->plaintext_sz;
 	while (total > 0) {
 		size = min(total, PAGE_SIZE);
@@ -187,13 +208,28 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		}
 		sg_init_one(&in_sg, xbuf[0], size);
 		sg_init_one(&out_sg, xbuf[1], size);
+
 		ablkcipher_request_set_crypt(req, &in_sg,
 			&out_sg, size, crypt_req->iv);
-		req->base.complete = NULL;
+
+		reinit_completion(&tcrypt_complete.restart);
+		tcrypt_complete.req_err = 0;
 		ret = crypt_req->encrypt ?
 			crypto_ablkcipher_encrypt(req) :
 			crypto_ablkcipher_decrypt(req);
-		if (ret < 0) {
+
+		if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
+			/* crypto driver is asynchronous */
+			ret = wait_for_completion_interruptible(&tcrypt_complete.restart);
+
+			if (ret < 0)
+				goto process_req_buf_out;
+
+			if (tcrypt_complete.req_err < 0) {
+				ret = tcrypt_complete.req_err;
+				goto process_req_buf_out;
+			}
+		} else if (ret < 0) {
 			pr_debug("%scrypt failed (%d)\n",
 				crypt_req->encrypt ? "en" : "de", ret);
 			goto process_req_buf_out;
@@ -223,7 +259,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
-	char rng[TEGRA_CRYPTO_RNG_SIZE];
+	char *rng;
 	int ret = 0;
 
 	switch (ioctl_num) {
@@ -253,6 +289,13 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		if (copy_from_user(&rng_req, (void __user *)arg, sizeof(rng_req)))
 			return -EFAULT;
 
+		rng = kzalloc(rng_req.nbytes, GFP_KERNEL);
+		if (!rng) {
+			pr_err("mem alloc for rng fail");
+			ret = -ENODATA;
+			goto rng_out;
+		}
+
 		ret = crypto_rng_get_bytes(ctx->rng, rng,
 			rng_req.nbytes);
 
@@ -266,6 +309,9 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			(const void *)rng, rng_req.nbytes);
 		ret = (ret < 0) ? -ENODATA : 0;
 rng_out:
+		if (rng)
+			kfree(rng);
+
 		break;
 
 

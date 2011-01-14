@@ -1055,6 +1055,18 @@ static void tegra_dc_set_color_control(struct tegra_dc *dc)
 		break;
 	}
 
+	switch (dc->out->dither) {
+	case TEGRA_DC_DISABLE_DITHER:
+		color_control |= DITHER_CONTROL_DISABLE;
+		break;
+	case TEGRA_DC_ORDERED_DITHER:
+		color_control |= DITHER_CONTROL_ORDERED;
+		break;
+	case TEGRA_DC_ERRDIFF_DITHER:
+		color_control |= DITHER_CONTROL_ERRDIFF;
+		break;
+	}
+
 	tegra_dc_writel(dc, color_control, DC_DISP_DISP_COLOR_CONTROL);
 }
 

@@ -1342,6 +1342,7 @@ void tegra_dc_hdmi_detect_config(struct tegra_dc *dc,
 	hdmi->dvi = !(specs->misc & FB_MISC_HDMI);
 
 	tegra_fb_update_monspecs(dc->fb, specs, tegra_dc_hdmi_mode_filter);
+	hdmi->hpd_switch.state = 0;
 	switch_set_state(&hdmi->hpd_switch, 1);
 	dev_info(&dc->ndev->dev, "display detected\n");
 

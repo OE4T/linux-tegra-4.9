@@ -230,7 +230,7 @@ static void run_handlers(struct list_head completed[NVHOST_INTR_ACTION_COUNT])
 /**
  * Remove & handle all waiters that have completed for the given syncpt
  */
-int process_wait_list(struct nvhost_intr_syncpt *syncpt,
+static int process_wait_list(struct nvhost_intr_syncpt *syncpt,
 		u32 threshold, void __iomem *sync_regs)
 {
 	struct list_head completed[NVHOST_INTR_ACTION_COUNT];

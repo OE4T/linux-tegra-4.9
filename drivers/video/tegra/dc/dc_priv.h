@@ -82,6 +82,8 @@ struct tegra_dc {
 	struct resource			*fb_mem;
 	struct tegra_fb_info		*fb;
 
+	struct tegra_overlay_info	*overlay;
+
 	u32				syncpt_id;
 	u32				syncpt_min;
 	u32				syncpt_max;

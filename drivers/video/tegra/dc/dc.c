@@ -39,6 +39,7 @@
 
 #include "dc_reg.h"
 #include "dc_priv.h"
+#include "overlay.h"
 
 static int no_vsync;
 
@@ -1378,6 +1379,12 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 			dc->fb = NULL;
 	}
 
+	if (dc->fb) {
+		dc->overlay = tegra_overlay_register(ndev, dc);
+		if (IS_ERR_OR_NULL(dc->overlay))
+			dc->overlay = NULL;
+	}
+
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
 
@@ -1404,6 +1411,10 @@ err_free:
 static int tegra_dc_remove(struct nvhost_device *ndev)
 {
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	if (dc->overlay) {
+		tegra_overlay_unregister(dc->overlay);
+	}
 
 	if (dc->fb) {
 		tegra_fb_unregister(dc->fb);

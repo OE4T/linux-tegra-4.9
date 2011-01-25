@@ -436,9 +436,10 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 	win->cur_handle = flip_win->handle;
 
 	/* STOPSHIP verify that this won't read outside of the surface */
-	win->phys_addr = flip_win->phys_addr + flip_win->attr.offset;
-	win->offset_u = flip_win->attr.offset_u + flip_win->attr.offset;
-	win->offset_v = flip_win->attr.offset_v + flip_win->attr.offset;
+	win->phys_addr = flip_win->phys_addr;
+	win->offset = flip_win->attr.offset;
+	win->offset_u = flip_win->attr.offset_u;
+	win->offset_v = flip_win->attr.offset_v;
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
 

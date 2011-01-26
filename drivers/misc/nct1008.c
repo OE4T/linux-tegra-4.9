@@ -35,6 +35,8 @@
 
 /* Register Addresses */
 #define LOCAL_TEMP_RD			0x00
+#define EXT_HI_TEMP_RD			0x01
+#define EXT_LO_TEMP_RD			0x10
 #define STATUS_RD			0x02
 #define CONFIG_RD			0x03
 
@@ -63,6 +65,64 @@ struct nct1008_data {
 	struct mutex mutex;
 	u8 config;
 	void (*alarm_fn)(bool raised);
+};
+
+static ssize_t nct1008_show_temp(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	signed int temp_value = 0;
+	u8 data = 0;
+
+	if (!dev || !buf || !attr)
+		return -EINVAL;
+
+	data = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	if (data < 0) {
+		dev_err(&client->dev, "%s: failed to read "
+			"temperature\n", __func__);
+		return -EINVAL;
+	}
+
+	temp_value = (signed int)data;
+	return sprintf(buf, "%d\n", temp_value);
+}
+
+static ssize_t nct1008_show_ext_temp(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	signed int temp_value = 0;
+	u8 data = 0;
+
+	if (!dev || !buf || !attr)
+		return -EINVAL;
+
+	data = i2c_smbus_read_byte_data(client, EXT_HI_TEMP_RD);
+	if (data < 0) {
+		dev_err(&client->dev, "%s: failed to read "
+			"ext_temperature\n", __func__);
+		return -EINVAL;
+	}
+
+	temp_value = (signed int)data;
+
+	data = i2c_smbus_read_byte_data(client, EXT_LO_TEMP_RD);
+
+	return sprintf(buf, "%d.%d\n", temp_value, (25 * (data >> 6)));
+}
+
+static DEVICE_ATTR(temperature, S_IRUGO, nct1008_show_temp, NULL);
+static DEVICE_ATTR(ext_temperature, S_IRUGO, nct1008_show_ext_temp, NULL);
+
+static struct attribute *nct1008_attributes[] = {
+	&dev_attr_temperature.attr,
+	&dev_attr_ext_temperature.attr,
+	NULL
+};
+
+static const struct attribute_group nct1008_attr_group = {
+	.attrs = nct1008_attributes,
 };
 
 static void nct1008_enable(struct i2c_client *client)
@@ -212,6 +272,13 @@ static int nct1008_probe(struct i2c_client *client, const struct i2c_device_id *
 	if (err < 0)
 		goto error;
 
+	/* register sysfs hooks */
+	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
+	if (err < 0)
+		goto error;
+
+	dev_info(&client->dev, "%s: initialized\n", __func__);
+
 	nct1008_enable(client);		/* sensor is running */
 
 	schedule_work(&data->work);		/* check initial state */
@@ -229,6 +296,7 @@ static int nct1008_remove(struct i2c_client *client)
 
 	free_irq(data->client->irq, data);
 	cancel_work_sync(&data->work);
+	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);
 	kfree(data);
 
 	return 0;

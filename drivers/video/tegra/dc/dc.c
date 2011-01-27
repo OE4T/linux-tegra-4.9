@@ -743,6 +743,21 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			clk_set_parent(clk, pll_d_out0_clk);
 	}
 
+	if (dc->out->type == TEGRA_DC_OUT_DSI) {
+		unsigned long rate;
+		struct clk *pll_d_out0_clk =
+			clk_get_sys(NULL, "pll_d_out0");
+		struct clk *pll_d_clk =
+			clk_get_sys(NULL, "pll_d");
+
+		rate = dc->mode.pclk;
+		if (rate != clk_get_rate(pll_d_clk))
+			clk_set_rate(pll_d_clk, rate);
+
+		if (clk_get_parent(clk) != pll_d_out0_clk)
+			clk_set_parent(clk, pll_d_out0_clk);
+	}
+
 	pclk = tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 	tegra_dvfs_set_rate(clk, pclk);
 }
@@ -935,7 +950,11 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_HDMI:
 		dc->out_ops = &tegra_dc_hdmi_ops;
 		break;
-
+#ifdef CONFIG_TEGRA_DSI
+	case TEGRA_DC_OUT_DSI:
+		dc->out_ops = &tegra_dc_dsi_ops;
+		break;
+#endif
 	default:
 		dc->out_ops = NULL;
 		break;

@@ -32,6 +32,14 @@
 #define DC_CMD_WIN_C_INCR_SYNCPT_ERROR		0x01a
 #define DC_CMD_CONT_SYNCPT_VSYNC		0x028
 #define DC_CMD_DISPLAY_COMMAND_OPTION0		0x031
+#define  MSF_POLARITY_HIGH			(0 << 0)
+#define  MSF_POLARITY_LOW			(1 << 0)
+#define  MSF_DISABLE				(0 << 1)
+#define  MSF_ENABLE				(1 << 1)
+#define  MSF_LSPI				(0 << 2)
+#define  MSF_LDC				(1 << 2)
+#define  MSF_LSDI				(2 << 2)
+
 #define DC_CMD_DISPLAY_COMMAND			0x032
 #define  DISP_COMMAND_RAISE		(1 << 0)
 #define  DISP_CTRL_MODE_STOP		(0 << 5)
@@ -93,6 +101,7 @@
 #define  WIN_A_UPDATE		(1 << 9)
 #define  WIN_B_UPDATE		(1 << 10)
 #define  WIN_C_UPDATE		(1 << 11)
+#define  NC_HOST_TRIG		(1 << 24)
 
 #define DC_CMD_DISPLAY_WINDOW_HEADER		0x042
 #define  WINDOW_A_SELECT		(1 << 4)
@@ -107,6 +116,8 @@
 #define DC_COM_PIN_OUTPUT_ENABLE1		0x303
 #define DC_COM_PIN_OUTPUT_ENABLE2		0x304
 #define DC_COM_PIN_OUTPUT_ENABLE3		0x305
+#define  PIN_OUTPUT_LSPI_OUTPUT_EN		(1 << 8)
+#define  PIN_OUTPUT_LSPI_OUTPUT_DIS		(1 << 8)
 #define DC_COM_PIN_OUTPUT_POLARITY0		0x306
 
 #define DC_COM_PIN_OUTPUT_POLARITY1		0x307
@@ -127,6 +138,8 @@
 #define DC_COM_PIN_INPUT_ENABLE1		0x30f
 #define DC_COM_PIN_INPUT_ENABLE2		0x310
 #define DC_COM_PIN_INPUT_ENABLE3		0x311
+#define  PIN_INPUT_LSPI_INPUT_EN		(1 << 8)
+#define  PIN_INPUT_LSPI_INPUT_DIS		(1 << 8)
 #define DC_COM_PIN_INPUT_DATA0			0x312
 #define DC_COM_PIN_INPUT_DATA1			0x313
 #define DC_COM_PIN_OUTPUT_SELECT0		0x314

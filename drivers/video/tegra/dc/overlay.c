@@ -130,16 +130,15 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 					struct tegra_dc_win *win,
 					const struct tegra_overlay_flip_win *flip_win)
 {
+	int xres, yres;
 	if (flip_win->handle == NULL) {
 		win->flags = 0;
 		win->cur_handle = NULL;
 		return 0;
 	}
 
-#if 0
-	xres = overlay->dc->fb->info->var.xres;
-	yres = overlay->dc->fb->info->var.yres;
-#endif
+	xres = overlay->dc->mode.h_active;
+	yres = overlay->dc->mode.v_active;
 
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 	if (flip_win->attr.blend == TEGRA_FB_WIN_BLEND_PREMULT)
@@ -156,13 +155,11 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 	win->out_w = flip_win->attr.out_w;
 	win->out_h = flip_win->attr.out_h;
 
-#if 0
 	if (((win->out_x + win->out_w) > xres) && (win->out_x < xres))
 		win->out_w = xres - win->out_x;
 
 	if (((win->out_y + win->out_h) > yres) && (win->out_y < yres))
 		win->out_h = yres - win->out_y;
-#endif
 
 	win->z = flip_win->attr.z;
 	win->cur_handle = flip_win->handle;

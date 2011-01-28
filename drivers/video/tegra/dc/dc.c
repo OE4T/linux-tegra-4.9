@@ -1117,6 +1117,12 @@ static void tegra_dc_set_color_control(struct tegra_dc *dc)
 		color_control |= DITHER_CONTROL_ORDERED;
 		break;
 	case TEGRA_DC_ERRDIFF_DITHER:
+		/* The line buffer for error-diffusion dither is limited
+		 * to 640 pixels per line. This limits the maximum
+		 * horizontal active area size to 640 pixels when error
+		 * diffusion is enabled.
+		 */
+		BUG_ON(dc->mode.h_active > 640);
 		color_control |= DITHER_CONTROL_ERRDIFF;
 		break;
 	}

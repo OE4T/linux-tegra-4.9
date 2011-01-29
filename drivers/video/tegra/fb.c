@@ -39,6 +39,7 @@
 
 #include "host/dev.h"
 #include "nvmap/nvmap.h"
+#include "dc/dc_priv.h"
 
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
@@ -398,8 +399,8 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 		return 0;
 	}
 
-	xres = tegra_fb->info->var.xres;
-	yres = tegra_fb->info->var.yres;
+	xres = tegra_fb->win->dc->mode.h_active;
+	yres = tegra_fb->win->dc->mode.v_active;
 
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 	if (flip_win->attr.blend == TEGRA_FB_WIN_BLEND_PREMULT)

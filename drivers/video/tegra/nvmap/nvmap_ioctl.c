@@ -282,6 +282,18 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	vpriv->handle = h;
 	vpriv->offs = op.offset;
 
+	if (op.flags == NVMAP_HANDLE_INNER_CACHEABLE) {
+		if (h->orig_size & ~PAGE_MASK) {
+			pr_err("\n%s:attempt to convert a buffer from uc/wc to"
+				" wb, whose size is not a multiple of page size."
+				" request ignored.\n", __func__);
+		} else {
+			wmb();
+			/* override allocation time cache coherency attributes. */
+			h->flags &= (~NVMAP_HANDLE_CACHEABLE);
+			h->flags |= NVMAP_HANDLE_INNER_CACHEABLE;
+		}
+	}
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
 
 out:

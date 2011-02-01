@@ -25,7 +25,7 @@
 
 #include <linux/slab.h>
 
-#if CONFIG_ARCH_TEGRA_3x_SOC
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 static bool s_is_v1 = true;
 static int s_nr_gpus = 2;
 #else

@@ -816,12 +816,21 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc)
 	unsigned long audio_n;
 	unsigned audio_freq = 44100; /* TODO: find some way of configuring this */
 
+
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	tegra_hdmi_writel(hdmi,AUDIO_CNTRL0_SOURCE_SELECT_AUTO,
+			  HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0);
+	tegra_hdmi_writel(hdmi,
+			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
+			  AUDIO_CNTRL0_FRAMES_PER_BLOCK(0xc0),
+			  HDMI_NV_PDISP_AUDIO_CNTRL0);
+#else
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
 			  AUDIO_CNTRL0_FRAMES_PER_BLOCK(0xc0) |
 			  AUDIO_CNTRL0_SOURCE_SELECT_AUTO,
 			  HDMI_NV_PDISP_AUDIO_CNTRL0);
-
+#endif
 	config = tegra_hdmi_get_audio_config(audio_freq, dc->mode.pclk);
 	if (!config) {
 		dev_err(&dc->ndev->dev,

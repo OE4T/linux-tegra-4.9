@@ -326,7 +326,7 @@ struct ext_slave_descr *kxsd9_get_slave_descr(void);
 #define get_accel_slave_descr kxsd9_get_slave_descr
 #endif
 
-#ifdef CONFIG_SENSORS_KXTF9	/* Kionix accelerometer */
+#ifdef CONFIG_SENSORS_KXTF9_MPU	/* Kionix accelerometer */
 struct ext_slave_descr *kxtf9_get_slave_descr(void);
 #undef get_accel_slave_descr
 #define get_accel_slave_descr kxtf9_get_slave_descr
@@ -369,7 +369,7 @@ struct ext_slave_descr *mma8451_get_slave_descr(void);
 */
 #define get_compass_slave_descr NULL
 
-#ifdef CONFIG_SENSORS_AK8975	/* AKM compass */
+#ifdef CONFIG_SENSORS_AK8975_MPU	/* AKM compass */
 struct ext_slave_descr *ak8975_get_slave_descr(void);
 #undef get_compass_slave_descr
 #define get_compass_slave_descr ak8975_get_slave_descr

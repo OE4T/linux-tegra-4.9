@@ -210,9 +210,9 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 	return (count - remaining);
 }
 
-static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
-                                      struct nvhost_get_param_args *args,
-                                      int null_kickoff)
+static int nvhost_ioctl_channel_flush(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_get_param_args *args)
 {
 	struct device *device = &ctx->ch->dev->pdev->dev;
 	int num_unpin;
@@ -274,10 +274,7 @@ static long nvhost_channelctl(struct file *filp,
 
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_FLUSH:
-		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 0);
-		break;
-	case NVHOST_IOCTL_CHANNEL_NULL_KICKOFF:
-		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 1);
+		err = nvhost_ioctl_channel_flush(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 		((struct nvhost_get_param_args *)buf)->value =

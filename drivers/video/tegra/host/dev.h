@@ -49,6 +49,5 @@ struct nvhost_master {
 };
 
 void nvhost_debug_init(struct nvhost_master *master);
-void nvhost_debug_dump(void);
 
 #endif

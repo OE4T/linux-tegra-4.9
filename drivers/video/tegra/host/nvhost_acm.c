@@ -28,7 +28,7 @@
 #include <mach/powergate.h>
 #include <mach/clk.h>
 
-#define ACM_TIMEOUT 1*HZ
+#define ACM_TIMEOUT_MSEC 25
 
 #define DISABLE_3D_POWERGATING
 #define DISABLE_MPE_POWERGATING
@@ -101,18 +101,9 @@ static const char *get_module_clk_id(const char *module, int index)
 	if (index == 1 && strcmp(module, "gr2d") == 0)
 		return "epp";
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	/* FIXME: Use proper gr3d2 index. */
 	else if (index == 1 && strcmp(module, "gr3d") == 0)
 		return "gr3d2";
 #endif
-	else if (index == 2 && strcmp(module, "gr2d") == 0)
-		return "emc";
-#ifndef CONFIG_ARCH_TEGRA_3x_SOC
-	else if (index == 1 && strcmp(module, "gr3d") == 0)
-		return "emc";
-#endif
-	else if (index == 1 && strcmp(module, "mpe") == 0)
-		return "emc";
 	else if (index == 0)
 		return module;
 	return NULL;
@@ -173,12 +164,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->powergate_id = -1;
 	}
 #endif
-
 #ifdef DISABLE_MPE_POWERGATING
-	/*
-	 * Disable power gating for MPE as it seems to cause issues with
-	 * camera record stress tests when run in loop.
-	 */
 	if (mod->powergate_id == TEGRA_POWERGATE_MPE) {
 		tegra_powergate_sequence_power_up(mod->powergate_id,
 			mod->clk[0]);
@@ -229,16 +215,10 @@ static void debug_not_idle(struct nvhost_module *mod)
 
 void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 {
-	int ret;
-
 	if (system_suspend && (!is_module_idle(mod)))
 		debug_not_idle(mod);
 
-	ret = wait_event_timeout(mod->idle, is_module_idle(mod),
-			   ACM_TIMEOUT + msecs_to_jiffies(500));
-	if (ret == 0)
-		nvhost_debug_dump();
-
+	wait_event(mod->idle, is_module_idle(mod));
 	if (system_suspend)
 		printk("tegra_grhost: entered idle\n");
 

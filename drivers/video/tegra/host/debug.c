@@ -22,7 +22,7 @@
 
 #include "dev.h"
 
-static struct nvhost_master *debug_master;
+#ifdef CONFIG_DEBUG_FS
 
 enum {
 	NVHOST_DBG_STATE_CMD = 0,
@@ -155,28 +155,6 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 
 	nvhost_module_busy(&m->mod);
 
-	seq_printf(s, "---- mlocks ----\n");
-	for (i = 0; i < NV_HOST1X_NB_MLOCKS; i++) {
-		u32 owner = readl(m->sync_aperture + HOST1X_SYNC_MLOCK_OWNER_0 + i * 4);
-		if (owner & 0x1)
-			seq_printf(s, "%d: locked by channel %d\n", i, (owner >> 8) * 0xff);
-		else if (owner & 0x2)
-			seq_printf(s, "%d: locked by cpu\n", i);
-		else
-			seq_printf(s, "%d: unlocked\n", i);
-	}
-	seq_printf(s, "\n---- syncpts ----\n");
-	for (i = 0; i < NV_HOST1X_SYNCPT_NB_PTS; i++) {
-		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
-		if (!max)
-			continue;
-		seq_printf(s, "id %d (%s) min %d max %d\n",
-			i, nvhost_syncpt_name(i),
-			nvhost_syncpt_update_min(&m->syncpt, i), max);
-
-	}
-
-	seq_printf(s, "\n---- channels ----\n");
 	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
 		void __iomem *regs = m->channels[i].aperture;
 		u32 dmaput, dmaget, dmactrl;
@@ -195,11 +173,8 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 		cbread = readl(m->aperture + HOST1X_SYNC_CBREAD(i));
 		cbstat = readl(m->aperture + HOST1X_SYNC_CBSTAT(i));
 
-		seq_printf(s, "%d-%s (%d): ", i, m->channels[i].mod.name,
-			   atomic_read(&m->channels[i].mod.refcount));
-
 		if (dmactrl != 0x0 || !m->channels[i].cdma.push_buffer.mapped) {
-			seq_printf(s, "inactive\n\n");
+			seq_printf(s, "%d: inactive\n\n", i);
 			continue;
 		}
 
@@ -221,8 +196,8 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 			break;
 
 		default:
-			seq_printf(s, "active class %02x, offset %04x, val %08x\n",
-				   cbstat >> 16, cbstat & 0xffff, cbread);
+			seq_printf(s, "%d: active class %02x, offset %04x, val %08x\n",
+				   i, cbstat >> 16, cbstat & 0xffff, cbread);
 			break;
 		}
 
@@ -292,7 +267,6 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-#ifdef CONFIG_DEBUG_FS
 
 static int nvhost_debug_open(struct inode *inode, struct file *file)
 {
@@ -308,44 +282,12 @@ static const struct file_operations nvhost_debug_fops = {
 
 void nvhost_debug_init(struct nvhost_master *master)
 {
-	debug_master = master;
 	debugfs_create_file("tegra_host", S_IRUGO, NULL, master, &nvhost_debug_fops);
 }
 #else
-void nvhost_debug_init(struct nvhost_master *master)
+void nvhost_debug_add(struct nvhost_master *master)
 {
-	debug_master = master;
 }
 
 #endif
-
-static char nvhost_debug_dump_buff[16 * 1024];
-
-void nvhost_debug_dump(void)
-{
-	struct seq_file s;
-	int i;
-	char c;
-
-	memset(&s, 0x0, sizeof(s));
-
-	s.buf = nvhost_debug_dump_buff;
-	s.size = sizeof(nvhost_debug_dump_buff);
-	s.private = debug_master;
-
-	nvhost_debug_show(&s, NULL);
-
-	i = 0;
-	while (i < s.count ) {
-		if ((s.count - i) > 256) {
-			c = s.buf[i + 256];
-			s.buf[i + 256] = 0;
-			printk("%s", s.buf + i);
-			s.buf[i + 256] = c;
-		} else {
-			printk("%s", s.buf + i);
-		}
-		i += 256;
-	}
-}
 

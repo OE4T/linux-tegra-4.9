@@ -137,6 +137,11 @@
 #define DC_COM_PIN_OUTPUT_SELECT5		0x319
 #define DC_COM_PIN_OUTPUT_SELECT6		0x31a
 
+#define PIN5_LM1_LCD_M1_OUTPUT_MASK	(7 << 4)
+#define PIN5_LM1_LCD_M1_OUTPUT_M1	(0 << 4)
+#define PIN5_LM1_LCD_M1_OUTPUT_LD21	(2 << 4)
+#define PIN5_LM1_LCD_M1_OUTPUT_PM1	(3 << 4)
+
 #define  PIN1_LHS_OUTPUT		(1 << 30)
 #define  PIN1_LVS_OUTPUT		(1 << 28)
 

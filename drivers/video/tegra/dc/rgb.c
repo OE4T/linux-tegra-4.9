@@ -36,6 +36,9 @@ static const u32 tegra_dc_rgb_enable_pintable[] = {
 	DC_COM_PIN_OUTPUT_DATA1,	0x00000000,
 	DC_COM_PIN_OUTPUT_DATA2,	0x00000000,
 	DC_COM_PIN_OUTPUT_DATA3,	0x00000000,
+};
+
+static const u32 tegra_dc_rgb_enable_out_sel_pintable[] = {
 	DC_COM_PIN_OUTPUT_SELECT0,	0x00000000,
 	DC_COM_PIN_OUTPUT_SELECT1,	0x00000000,
 	DC_COM_PIN_OUTPUT_SELECT2,	0x00000000,
@@ -69,6 +72,9 @@ static const u32 tegra_dc_rgb_disable_pintable[] = {
 
 void tegra_dc_rgb_enable(struct tegra_dc *dc)
 {
+	int i;
+	u32 out_sel_pintable[ARRAY_SIZE(tegra_dc_rgb_enable_out_sel_pintable)];
+
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 			PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 			DC_CMD_DISPLAY_POWER_CONTROL);
@@ -76,6 +82,42 @@ void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
 
 	tegra_dc_write_table(dc, tegra_dc_rgb_enable_pintable);
+
+	memcpy(out_sel_pintable, tegra_dc_rgb_enable_out_sel_pintable,
+		sizeof(tegra_dc_rgb_enable_out_sel_pintable));
+
+	if (dc->out && dc->out->out_sel_configs) {
+		u8 *out_sels = dc->out->out_sel_configs;
+		for (i = 0; i < dc->out->n_out_sel_configs; i++) {
+			switch (out_sels[i]) {
+			case TEGRA_PIN_OUT_CONFIG_SEL_LM1_M1:
+				out_sel_pintable[5*2+1] =
+					(out_sel_pintable[5*2+1] &
+					~PIN5_LM1_LCD_M1_OUTPUT_MASK) |
+					PIN5_LM1_LCD_M1_OUTPUT_M1;
+				break;
+			case TEGRA_PIN_OUT_CONFIG_SEL_LM1_LD21:
+				out_sel_pintable[5*2+1] =
+					(out_sel_pintable[5*2+1] &
+					~PIN5_LM1_LCD_M1_OUTPUT_MASK) |
+					PIN5_LM1_LCD_M1_OUTPUT_LD21;
+				break;
+			case TEGRA_PIN_OUT_CONFIG_SEL_LM1_PM1:
+				out_sel_pintable[5*2+1] =
+					(out_sel_pintable[5*2+1] &
+					~PIN5_LM1_LCD_M1_OUTPUT_MASK) |
+					PIN5_LM1_LCD_M1_OUTPUT_PM1;
+				break;
+			default:
+				dev_err(&dc->ndev->dev,
+					"Invalid pin config[%d]: %d\n",
+					 i, out_sels[i]);
+				break;
+			}
+		}
+	}
+
+	tegra_dc_write_table(dc, out_sel_pintable);
 }
 
 void tegra_dc_rgb_disable(struct tegra_dc *dc)

@@ -403,9 +403,10 @@ out:
 }
 
 struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
-						 size_t len, size_t align,
-						 unsigned long usage,
-						 unsigned int prot)
+					      size_t len, size_t align,
+					      unsigned long usage,
+					      unsigned int prot,
+					      struct nvmap_handle *handle)
 {
 	struct nvmap_carveout_node *co_heap;
 	struct nvmap_device *dev = client->dev;
@@ -418,16 +419,17 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 		if (!(co_heap->heap_bit & usage))
 			continue;
 
-		block = nvmap_heap_alloc(co_heap->carveout, len, align, prot);
+		block = nvmap_heap_alloc(co_heap->carveout, len,
+					align, prot, handle);
 		if (block) {
 			/* flush any stale data that may be left in the
 			 * cache at the block's address, since the new
 			 * block may be mapped uncached */
 			if (nvmap_flush_heap_block(client, block, len)) {
 				nvmap_heap_free(block);
-				return NULL;
-			} else
-				return block;
+				block = NULL;
+			}
+			return block;
 		}
 	}
 	return NULL;
@@ -442,7 +444,8 @@ static bool nvmap_carveout_freed(int count)
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *client,
 					      size_t len, size_t align,
 					      unsigned long usage,
-					      unsigned int prot)
+					      unsigned int prot,
+					      struct nvmap_handle *handle)
 {
 	struct nvmap_heap_block *block;
 	struct nvmap_carveout_node *co_heap;
@@ -453,8 +456,8 @@ struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *client,
 	int count = 0;
 
 	do {
-		block = do_nvmap_carveout_alloc(client, len, align,
-						usage, prot);
+		block = do_nvmap_carveout_alloc(client, len, align, usage,
+						prot, handle);
 		if (!carveout_killer)
 			return block;
 
@@ -860,12 +863,17 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv = vma->vm_private_data;
 
-	if (priv && !atomic_dec_return(&priv->count)) {
-		if (priv->handle)
-			nvmap_handle_put(priv->handle);
-		kfree(priv);
+	if (priv) {
+		if (priv->handle) {
+			nvmap_usecount_dec(priv->handle);
+			BUG_ON(priv->handle->usecount < 0);
+		}
+		if (!atomic_dec_return(&priv->count)) {
+			if (priv->handle)
+				nvmap_handle_put(priv->handle);
+			kfree(priv);
+		}
 	}
-
 	vma->vm_private_data = NULL;
 }
 

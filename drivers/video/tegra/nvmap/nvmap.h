@@ -67,6 +67,7 @@ struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	atomic_t pin;		/* pin count */
+	unsigned int usecount;	/* how often is used */
 	unsigned long flags;
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
@@ -148,10 +149,14 @@ pte_t **nvmap_alloc_pte_irq(struct nvmap_device *dev, void **vaddr);
 
 void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte);
 
+void nvmap_usecount_inc(struct nvmap_handle *h);
+void nvmap_usecount_dec(struct nvmap_handle *h);
+
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      size_t len, size_t align,
 					      unsigned long usage,
-					      unsigned int prot);
+					      unsigned int prot,
+					      struct nvmap_handle *handle);
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 				   struct nvmap_heap_block *b);

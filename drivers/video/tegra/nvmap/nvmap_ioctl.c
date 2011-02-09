@@ -271,7 +271,10 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 		goto out;
 	}
 
+	nvmap_usecount_inc(h);
+
 	if (!h->heap_pgalloc && (h->carveout->base & ~PAGE_MASK)) {
+		nvmap_usecount_dec(h);
 		err = -EFAULT;
 		goto out;
 	}
@@ -283,6 +286,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 
 out:
 	up_read(&current->mm->mmap_sem);
+
 	if (err)
 		nvmap_handle_put(h);
 	return err;
@@ -307,6 +311,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		op.result = h->orig_size;
 		break;
 	case NVMAP_HANDLE_PARAM_ALIGNMENT:
+		mutex_lock(&h->lock);
 		if (!h->alloc)
 			op.result = 0;
 		else if (h->heap_pgalloc)
@@ -315,12 +320,16 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 			op.result = (h->carveout->base & -h->carveout->base);
 		else
 			op.result = SZ_4M;
+		mutex_unlock(&h->lock);
 		break;
 	case NVMAP_HANDLE_PARAM_BASE:
 		if (WARN_ON(!h->alloc || !atomic_add_return(0, &h->pin)))
 			op.result = -1ul;
-		else if (!h->heap_pgalloc)
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
 			op.result = h->carveout->base;
+			mutex_unlock(&h->lock);
+		}
 		else if (h->pgalloc.contig)
 			op.result = page_to_phys(h->pgalloc.pages[0]);
 		else if (h->pgalloc.area)
@@ -331,8 +340,11 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 	case NVMAP_HANDLE_PARAM_HEAP:
 		if (!h->alloc)
 			op.result = 0;
-		else if (!h->heap_pgalloc)
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
 			op.result = nvmap_carveout_usage(client, h->carveout);
+			mutex_unlock(&h->lock);
+		}
 		else if (h->pgalloc.contig)
 			op.result = NVMAP_HEAP_SYSMEM;
 		else
@@ -369,6 +381,8 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg)
 	if (!h)
 		return -EPERM;
 
+	nvmap_usecount_inc(h);
+
 	copied = rw_handle(client, h, is_read, op.offset,
 			   (unsigned long)op.addr, op.hmem_stride,
 			   op.user_stride, op.elem_size, op.count);
@@ -380,6 +394,8 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg)
 		err = -EINTR;
 
 	__put_user(copied, &uarg->count);
+
+	nvmap_usecount_dec(h);
 
 	nvmap_handle_put(h);
 
@@ -497,6 +513,9 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 		return -EINVAL;
 	}
 
+	/* lock carveout from relocation by mapcount */
+	nvmap_usecount_inc(h);
+
 	start += h->carveout->base;
 	end += h->carveout->base;
 
@@ -521,6 +540,8 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 		else
 			outer_inv_range(start, end);
 	}
+	/* unlock carveout */
+	nvmap_usecount_dec(h);
 
 out:
 	if (pte)

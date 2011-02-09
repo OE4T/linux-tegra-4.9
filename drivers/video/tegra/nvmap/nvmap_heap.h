@@ -30,6 +30,7 @@ struct attribute_group;
 struct nvmap_heap_block {
 	unsigned long	base;
 	unsigned int	type;
+	struct nvmap_handle *handle;
 };
 
 #define NVMAP_HEAP_MIN_BUDDY_SIZE	8192
@@ -45,7 +46,8 @@ void *nvmap_heap_device_to_arg(struct device *dev);
 void *nvmap_heap_to_arg(struct nvmap_heap *heap);
 
 struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *heap, size_t len,
-					  size_t align, unsigned int prot);
+					  size_t align, unsigned int prot,
+					  struct nvmap_handle *handle);
 
 struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b);
 

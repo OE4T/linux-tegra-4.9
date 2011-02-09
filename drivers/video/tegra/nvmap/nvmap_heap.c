@@ -27,10 +27,14 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
+#include <linux/err.h>
 
 #include <mach/nvmap.h>
-
+#include "nvmap.h"
 #include "nvmap_heap.h"
+
+#include <asm/tlbflush.h>
+#include <asm/cacheflush.h>
 
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory
@@ -54,7 +58,7 @@
  *   TOP_DOWN in the code below). like "normal" allocations, each allocation
  *   is rounded up to be an integer multiple of the "small" allocation size.
  *
- * o "small" allocations are treatedy differently: the heap manager maintains
+ * o "small" allocations are treated differently: the heap manager maintains
  *   a pool of "small"-sized blocks internally from which allocations less
  *   than 1/2 of the "small" size are buddy-allocated. if a "small" allocation
  *   is requested and none of the buddy sub-heaps is able to service it,
@@ -76,6 +80,7 @@ enum direction {
 enum block_type {
 	BLOCK_FIRST_FIT,	/* block was allocated directly from the heap */
 	BLOCK_BUDDY,		/* block was allocated from a buddy sub-heap */
+	BLOCK_EMPTY,
 };
 
 struct heap_stat {
@@ -85,6 +90,10 @@ struct heap_stat {
 	size_t total;		/* total size */
 	size_t largest;		/* largest unique block */
 	size_t count;		/* total number of blocks */
+	/* fast compaction attempt counter */
+	unsigned int compaction_count_fast;
+	/* full compaction attempt counter */
+	unsigned int compaction_count_full;
 };
 
 struct buddy_heap;
@@ -100,6 +109,7 @@ struct list_block {
 	unsigned int mem_prot;
 	unsigned long orig_addr;
 	size_t size;
+	size_t align;
 	struct nvmap_heap *heap;
 	struct list_head free_list;
 };
@@ -290,7 +300,7 @@ static ssize_t heap_stat_show(struct device *dev,
 	else
 		return -EINVAL;
 }
-
+#ifndef CONFIG_NVMAP_CARVEOUT_COMPACTOR
 static struct nvmap_heap_block *buddy_alloc(struct buddy_heap *heap,
 					    size_t size, size_t align,
 					    unsigned int mem_prot)
@@ -343,6 +353,7 @@ static struct nvmap_heap_block *buddy_alloc(struct buddy_heap *heap,
 	b->block.type = BLOCK_BUDDY;
 	return &b->block;
 }
+#endif
 
 static struct buddy_heap *do_buddy_free(struct nvmap_heap_block *block)
 {
@@ -372,9 +383,15 @@ static struct buddy_heap *do_buddy_free(struct nvmap_heap_block *block)
 	return NULL;
 }
 
+
+/*
+ * base_max limits position of allocated chunk in memory.
+ * if base_max is 0 then there is no such limitation.
+ */
 static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 					      size_t len, size_t align,
-					      unsigned int mem_prot)
+					      unsigned int mem_prot,
+					      unsigned long base_max)
 {
 	struct list_block *b = NULL;
 	struct list_block *i = NULL;
@@ -393,13 +410,23 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		len = PAGE_ALIGN(len);
 	}
 
+#ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
+	dir = BOTTOM_UP;
+#else
 	dir = (len <= heap->small_alloc) ? BOTTOM_UP : TOP_DOWN;
+#endif
 
 	if (dir == BOTTOM_UP) {
 		list_for_each_entry(i, &heap->free_list, free_list) {
 			size_t fix_size;
 			fix_base = ALIGN(i->block.base, align);
 			fix_size = i->size - (fix_base - i->block.base);
+
+			/* needed for compaction. relocated chunk
+			 * should never go up */
+			if (base_max && fix_base > base_max) {
+				break;
+			}
 
 			if (fix_size >= len) {
 				b = i;
@@ -422,7 +449,12 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 	if (!b)
 		return NULL;
 
+	if (dir == BOTTOM_UP)
+		b->block.type = BLOCK_FIRST_FIT;
+
+	/* split free block */
 	if (b->block.base != fix_base) {
+		/* insert a new free block before allocated */
 		rem = kmem_cache_zalloc(block_cache, GFP_KERNEL);
 		if (!rem) {
 			b->orig_addr = b->block.base;
@@ -431,31 +463,32 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 			goto out;
 		}
 
-		rem->block.type = BLOCK_FIRST_FIT;
+		rem->block.type = BLOCK_EMPTY;
 		rem->block.base = b->block.base;
 		rem->orig_addr = rem->block.base;
 		rem->size = fix_base - rem->block.base;
 		b->block.base = fix_base;
 		b->orig_addr = fix_base;
 		b->size -= rem->size;
-		list_add_tail(&rem->all_list, &heap->all_list);
+		list_add_tail(&rem->all_list,  &b->all_list);
 		list_add_tail(&rem->free_list, &b->free_list);
 	}
 
 	b->orig_addr = b->block.base;
 
 	if (b->size > len) {
+		/* insert a new free block after allocated */
 		rem = kmem_cache_zalloc(block_cache, GFP_KERNEL);
 		if (!rem)
 			goto out;
 
-		rem->block.type = BLOCK_FIRST_FIT;
+		rem->block.type = BLOCK_EMPTY;
 		rem->block.base = b->block.base + len;
 		rem->size = b->size - len;
 		BUG_ON(rem->size > b->size);
 		rem->orig_addr = rem->block.base;
 		b->size = len;
-		list_add_tail(&rem->all_list, &heap->all_list);
+		list_add(&rem->all_list,  &b->all_list);
 		list_add(&rem->free_list, &b->free_list);
 	}
 
@@ -463,6 +496,7 @@ out:
 	list_del(&b->free_list);
 	b->heap = heap;
 	b->mem_prot = mem_prot;
+	b->align = align;
 	return &b->block;
 }
 
@@ -486,7 +520,7 @@ static void freelist_debug(struct nvmap_heap *heap, const char *title,
 #define freelist_debug(_heap, _title, _token)	do { } while (0)
 #endif
 
-static void do_heap_free(struct nvmap_heap_block *block)
+static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 {
 	struct list_block *b = container_of(block, struct list_block, block);
 	struct list_block *n = NULL;
@@ -498,16 +532,20 @@ static void do_heap_free(struct nvmap_heap_block *block)
 
 	freelist_debug(heap, "free list before", b);
 
+	/* Find position of first free block to the right of freed one */
 	list_for_each_entry(n, &heap->free_list, free_list) {
 		if (n->block.base > b->block.base)
 			break;
 	}
 
+	/* Add freed block before found free one */
 	list_add_tail(&b->free_list, &n->free_list);
 	BUG_ON(list_empty(&b->all_list));
 
 	freelist_debug(heap, "free list pre-merge", b);
 
+	/* merge freed block with next if they connect
+	 * freed block becomes bigger, next one is destroyed */
 	if (!list_is_last(&b->free_list, &heap->free_list)) {
 		n = list_first_entry(&b->free_list, struct list_block, free_list);
 		if (n->block.base == b->block.base + b->size) {
@@ -519,6 +557,8 @@ static void do_heap_free(struct nvmap_heap_block *block)
 		}
 	}
 
+	/* merge freed block with prev if they connect
+	 * previous free block becomes bigger, freed one is destroyed */
 	if (b->free_list.prev != &heap->free_list) {
 		n = list_entry(b->free_list.prev, struct list_block, free_list);
 		if (n->block.base + n->size == b->block.base) {
@@ -527,11 +567,16 @@ static void do_heap_free(struct nvmap_heap_block *block)
 			BUG_ON(n->orig_addr >= b->orig_addr);
 			n->size += b->size;
 			kmem_cache_free(block_cache, b);
+			b = n;
 		}
 	}
 
 	freelist_debug(heap, "free list after", b);
+	b->block.type = BLOCK_EMPTY;
+	return b;
 }
+
+#ifndef CONFIG_NVMAP_CARVEOUT_COMPACTOR
 
 static struct nvmap_heap_block *do_buddy_alloc(struct nvmap_heap *h,
 					       size_t len, size_t align,
@@ -552,7 +597,8 @@ static struct nvmap_heap_block *do_buddy_alloc(struct nvmap_heap *h,
 	if (!bh)
 		return NULL;
 
-	b = do_heap_alloc(h, h->buddy_heap_size, h->buddy_heap_size, mem_prot);
+	b = do_heap_alloc(h, h->buddy_heap_size,
+			h->buddy_heap_size, mem_prot, 0);
 	if (!b) {
 		kmem_cache_free(buddy_heap_cache, bh);
 		return NULL;
@@ -566,41 +612,300 @@ static struct nvmap_heap_block *do_buddy_alloc(struct nvmap_heap *h,
 	return buddy_alloc(bh, len, align, mem_prot);
 }
 
+#endif
+
+#ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
+
+static int do_heap_copy_listblock(struct nvmap_device *dev,
+		 unsigned long dst_base, unsigned long src_base, size_t len)
+{
+	pte_t **pte_src = NULL;
+	pte_t **pte_dst = NULL;
+	void *addr_src = NULL;
+	void *addr_dst = NULL;
+	unsigned long kaddr_src;
+	unsigned long kaddr_dst;
+	unsigned long phys_src = src_base;
+	unsigned long phys_dst = dst_base;
+	unsigned long pfn_src;
+	unsigned long pfn_dst;
+	int error = 0;
+
+	pgprot_t prot = pgprot_writecombine(pgprot_kernel);
+
+	int page;
+
+	pte_src = nvmap_alloc_pte(dev, &addr_src);
+	if (IS_ERR(pte_src)) {
+		pr_err("Error when allocating pte_src\n");
+		pte_src = NULL;
+		error = -1;
+		goto fail;
+	}
+
+	pte_dst = nvmap_alloc_pte(dev, &addr_dst);
+	if (IS_ERR(pte_dst)) {
+		pr_err("Error while allocating pte_dst\n");
+		pte_dst = NULL;
+		error = -1;
+		goto fail;
+	}
+
+	kaddr_src = (unsigned long)addr_src;
+	kaddr_dst = (unsigned long)addr_dst;
+
+	BUG_ON(phys_dst > phys_src);
+	BUG_ON((phys_src & PAGE_MASK) != phys_src);
+	BUG_ON((phys_dst & PAGE_MASK) != phys_dst);
+	BUG_ON((len & PAGE_MASK) != len);
+
+	for (page = 0; page < (len >> PAGE_SHIFT) ; page++) {
+
+		pfn_src = __phys_to_pfn(phys_src) + page;
+		pfn_dst = __phys_to_pfn(phys_dst) + page;
+
+		set_pte_at(&init_mm, kaddr_src, *pte_src,
+				pfn_pte(pfn_src, prot));
+		flush_tlb_kernel_page(kaddr_src);
+
+		set_pte_at(&init_mm, kaddr_dst, *pte_dst,
+				pfn_pte(pfn_dst, prot));
+		flush_tlb_kernel_page(kaddr_dst);
+
+		memcpy(addr_dst, addr_src, PAGE_SIZE);
+	}
+
+fail:
+	if (pte_src)
+		nvmap_free_pte(dev, pte_src);
+	if (pte_dst)
+		nvmap_free_pte(dev, pte_dst);
+	return error;
+}
+
+
+static struct nvmap_heap_block *do_heap_relocate_listblock(
+		struct list_block *block, bool fast)
+{
+	struct nvmap_heap_block *heap_block = &block->block;
+	struct nvmap_heap_block *heap_block_new = NULL;
+	struct nvmap_heap *heap = block->heap;
+	struct nvmap_handle *handle = heap_block->handle;
+	unsigned long src_base = heap_block->base;
+	unsigned long dst_base;
+	size_t src_size = block->size;
+	size_t src_align = block->align;
+	unsigned int src_prot = block->mem_prot;
+	int error = 0;
+
+	if (!handle) {
+		pr_err("INVALID HANDLE!\n");
+		return NULL;
+	}
+
+	mutex_lock(&handle->lock);
+
+	if (!handle->owner) {
+		mutex_unlock(&handle->lock);
+		return NULL;
+	}
+
+	/* TODO: It is possible to use only handle lock and no share
+	 * pin_lock, but then we'll need to lock every handle during
+	 * each pinning operation. Need to estimate performance impact
+	 * if we decide to simplify locking this way. */
+	mutex_lock(&handle->owner->share->pin_lock);
+
+	/* abort if block is pinned */
+	if (atomic_read(&handle->pin))
+		goto fail;
+	/* abort if block is mapped */
+	if (handle->usecount)
+		goto fail;
+
+	if (fast) {
+		/* Fast compaction path - first allocate, then free. */
+		heap_block_new = do_heap_alloc(heap, src_size, src_align,
+				src_prot, src_base);
+		if (heap_block_new)
+			do_heap_free(heap_block);
+		else
+			goto fail;
+	} else {
+		/* Full compaction path, first free, then allocate
+		 * It is slower but provide best compaction results */
+		do_heap_free(heap_block);
+		heap_block_new = do_heap_alloc(heap, src_size, src_align,
+				src_prot, src_base);
+		/* Allocation should always succeed*/
+		BUG_ON(!heap_block_new);
+	}
+
+	/* update handle */
+	handle->carveout = heap_block_new;
+	heap_block_new->handle = handle;
+
+	/* copy source data to new block location */
+	dst_base = heap_block_new->base;
+
+	/* new allocation should always go lower addresses */
+	BUG_ON(dst_base >= src_base);
+
+	error = do_heap_copy_listblock(handle->dev,
+				dst_base, src_base, src_size);
+	BUG_ON(error);
+
+fail:
+	mutex_unlock(&handle->owner->share->pin_lock);
+	mutex_unlock(&handle->lock);
+	return heap_block_new;
+}
+
+static void nvmap_heap_compact(struct nvmap_heap *heap,
+				size_t requested_size, bool fast)
+{
+	struct list_block *block_current = NULL;
+	struct list_block *block_prev = NULL;
+	struct list_block *block_next = NULL;
+
+	struct list_head *ptr, *ptr_prev, *ptr_next;
+	int relocation_count = 0;
+
+	ptr = heap->all_list.next;
+
+	/* walk through all blocks */
+	while (ptr != &heap->all_list) {
+		block_current = list_entry(ptr, struct list_block, all_list);
+
+		ptr_prev = ptr->prev;
+		ptr_next = ptr->next;
+
+		if (block_current->block.type != BLOCK_EMPTY) {
+			ptr = ptr_next;
+			continue;
+		}
+
+		if (fast && block_current->size >= requested_size)
+			break;
+
+		/* relocate prev block */
+		if (ptr_prev != &heap->all_list) {
+
+			block_prev = list_entry(ptr_prev,
+					struct list_block, all_list);
+
+			BUG_ON(block_prev->block.type != BLOCK_FIRST_FIT);
+
+			if (do_heap_relocate_listblock(block_prev, true)) {
+
+				/* After relocation current free block can be
+				 * destroyed when it is merged with previous
+				 * free block. Updated pointer to new free
+				 * block can be obtained from the next block */
+				relocation_count++;
+				ptr = ptr_next->prev;
+				continue;
+			}
+		}
+
+		if (ptr_next != &heap->all_list) {
+
+			block_next = list_entry(ptr_next,
+					struct list_block, all_list);
+
+			BUG_ON(block_next->block.type != BLOCK_FIRST_FIT);
+
+			if (do_heap_relocate_listblock(block_next, fast)) {
+				ptr = ptr_prev->next;
+				relocation_count++;
+				continue;
+			}
+		}
+		ptr = ptr_next;
+	}
+	pr_err("Relocated %d chunks\n", relocation_count);
+}
+#endif
+
+void nvmap_usecount_inc(struct nvmap_handle *h)
+{
+	if (h->alloc && !h->heap_pgalloc) {
+		mutex_lock(&h->lock);
+		h->usecount++;
+		mutex_unlock(&h->lock);
+	} else {
+		h->usecount++;
+	}
+}
+
+
+void nvmap_usecount_dec(struct nvmap_handle *h)
+{
+	h->usecount--;
+}
+
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
 struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h, size_t len,
-					  size_t align, unsigned int prot)
+					  size_t align, unsigned int prot,
+					  struct nvmap_handle *handle)
 {
 	struct nvmap_heap_block *b;
 
 	mutex_lock(&h->lock);
+
+#ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
+	/* Align to page size */
+	align = ALIGN(align, PAGE_SIZE);
+	len = ALIGN(len, PAGE_SIZE);
+	b = do_heap_alloc(h, len, align, prot, 0);
+	if (!b) {
+		pr_err("Compaction triggered!\n");
+		nvmap_heap_compact(h, len, true);
+		b = do_heap_alloc(h, len, align, prot, 0);
+		if (!b) {
+			pr_err("Full compaction triggered!\n");
+			nvmap_heap_compact(h, len, false);
+			b = do_heap_alloc(h, len, align, prot, 0);
+		}
+	}
+#else
 	if (len <= h->buddy_heap_size / 2) {
 		b = do_buddy_alloc(h, len, align, prot);
 	} else {
 		if (h->buddy_heap_size)
 			len = ALIGN(len, h->buddy_heap_size);
 		align = max(align, (size_t)L1_CACHE_BYTES);
-		b = do_heap_alloc(h, len, align, prot);
+		b = do_heap_alloc(h, len, align, prot, 0);
+	}
+#endif
+
+	if (b) {
+		b->handle = handle;
+		handle->carveout = b;
 	}
 	mutex_unlock(&h->lock);
 	return b;
+}
+
+struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
+{
+	if (b->type == BLOCK_BUDDY) {
+		struct buddy_block *bb;
+		bb = container_of(b, struct buddy_block, block);
+		return parent_of(bb->heap);
+	} else {
+		struct list_block *lb;
+		lb = container_of(b, struct list_block, block);
+		return lb->heap;
+	}
 }
 
 /* nvmap_heap_free: frees block b*/
 void nvmap_heap_free(struct nvmap_heap_block *b)
 {
 	struct buddy_heap *bh = NULL;
-	struct nvmap_heap *h;
-
-	if (b->type == BLOCK_BUDDY) {
-		struct buddy_block *bb;
-		bb = container_of(b, struct buddy_block, block);
-		h = bb->heap->heap_base->heap;
-	} else {
-		struct list_block *lb;
-		lb = container_of(b, struct list_block, block);
-		h = lb->heap;
-	}
+	struct nvmap_heap *h = nvmap_block_to_heap(b);
 
 	mutex_lock(&h->lock);
 	if (b->type == BLOCK_BUDDY)
@@ -617,18 +922,6 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 		mutex_unlock(&h->lock);
 }
 
-struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
-{
-	if (b->type == BLOCK_BUDDY) {
-		struct buddy_block *bb;
-		bb = container_of(b, struct buddy_block, block);
-		return parent_of(bb->heap);
-	} else {
-		struct list_block *lb;
-		lb = container_of(b, struct list_block, block);
-		return lb->heap;
-	}
-}
 
 static void heap_release(struct device *heap)
 {
@@ -713,7 +1006,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	l->block.base = base;
-	l->block.type = BLOCK_FIRST_FIT;
+	l->block.type = BLOCK_EMPTY;
 	l->size = len;
 	l->orig_addr = base;
 	list_add_tail(&l->free_list, &h->free_list);

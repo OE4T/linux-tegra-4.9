@@ -36,6 +36,9 @@
 #include <linux/gpio.h>
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
+#ifdef CONFIG_SWITCH
+#include <linux/switch.h>
+#endif
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -1468,6 +1471,9 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
 
+	switch_set_state(&dc->modeset_switch,
+			 (mode->h_active << 16) | mode->v_active);
+
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
@@ -2450,6 +2456,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 			_tegra_dc_disable(dc);
 	}
 
+	switch_set_state(&dc->modeset_switch, 0);
+
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
@@ -2521,6 +2529,17 @@ static void tegra_dc_underflow_worker(struct work_struct *work)
 		tegra_dc_underflow_handler(dc);
 	}
 	mutex_unlock(&dc->lock);
+}
+
+static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
+{
+	struct tegra_dc *dc =
+		container_of(sdev, struct tegra_dc, modeset_switch);
+
+	if (!sdev->state)
+		return sprintf(buf, "offline\n");
+
+	return sprintf(buf, "%dx%d\n", dc->mode.h_active, dc->mode.v_active);
 }
 
 static int tegra_dc_probe(struct nvhost_device *ndev,
@@ -2641,6 +2660,11 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 
 	nvhost_set_drvdata(ndev, dc);
 
+	dc->modeset_switch.name = dev_name(&ndev->dev);
+	dc->modeset_switch.state = 0;
+	dc->modeset_switch.print_state = switch_modeset_print_mode;
+	switch_dev_register(&dc->modeset_switch);
+
 	tegra_dc_feature_register(dc);
 
 	if (dc->pdata->default_out)
@@ -2742,6 +2766,7 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 	if (dc->enabled)
 		_tegra_dc_disable(dc);
 
+	switch_dev_unregister(&dc->modeset_switch);
 	free_irq(dc->irq, dc);
 	clk_put(dc->emc_clk);
 	clk_put(dc->clk);

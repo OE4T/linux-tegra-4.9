@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "nvhost_acm.h"
+#include "dev.h"
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/err.h>
@@ -194,22 +194,55 @@ static int is_module_idle(struct nvhost_module *mod)
 	return (count == 0);
 }
 
-void nvhost_module_suspend(struct nvhost_module *mod)
+static void debug_not_idle(struct nvhost_module *mod)
+{
+	int i;
+	bool lock_released = true;
+	struct nvhost_master *dev = container_of(mod, struct nvhost_master, mod);
+
+	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
+		struct nvhost_module *m = &dev->channels[i].mod;
+		if (m->name)
+			printk("tegra_grhost: %s: refcnt %d\n",
+				m->name, atomic_read(&m->refcount));
+	}
+
+	for (i = 0; i < NV_HOST1X_SYNC_MLOCK_NUM; i++) {
+		int c = atomic_read(&dev->cpuaccess.lock_counts[i]);
+		if (c) {
+			printk("tegra_grhost: lock id %d: refcnt %d\n", i, c);
+			lock_released = false;
+		}
+	}
+	if (lock_released)
+		printk("tegra_grhost: all locks released\n");
+}
+
+void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 {
 	int ret;
+
+	if (system_suspend && (!is_module_idle(mod)))
+		debug_not_idle(mod);
 
 	ret = wait_event_timeout(mod->idle, is_module_idle(mod),
 			   ACM_TIMEOUT + msecs_to_jiffies(500));
 	if (ret == 0)
 		nvhost_debug_dump();
+
+	if (system_suspend)
+		printk("tegra_grhost: entered idle\n");
+
 	flush_delayed_work(&mod->powerdown);
+	if (system_suspend)
+		printk("tegra_grhost: flushed delayed work\n");
 	BUG_ON(mod->powered);
 }
 
 void nvhost_module_deinit(struct nvhost_module *mod)
 {
 	int i;
-	nvhost_module_suspend(mod);
+	nvhost_module_suspend(mod, false);
 	for (i = 0; i < mod->num_clks; i++)
 		clk_put(mod->clk[i]);
 }

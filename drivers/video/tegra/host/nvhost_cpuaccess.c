@@ -71,6 +71,7 @@ int nvhost_mutex_try_lock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 		nvhost_module_idle(&dev->mod);
 		return -ERESTARTSYS;
 	}
+	atomic_inc(&ctx->lock_counts[idx]);
 	return 0;
 }
 
@@ -80,6 +81,7 @@ void nvhost_mutex_unlock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 	void __iomem *sync_regs = dev->sync_aperture;
 	writel(0, sync_regs + (HOST1X_SYNC_MLOCK_0 + idx * 4));
 	nvhost_module_idle(&dev->mod);
+	atomic_dec(&ctx->lock_counts[idx]);
 }
 
 void nvhost_read_module_regs(struct nvhost_cpuaccess *ctx, u32 module,

@@ -742,7 +742,7 @@ static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "suspending\n");
-	nvhost_module_suspend(&host->mod);
+	nvhost_module_suspend(&host->mod, true);
 	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_save(&host->syncpt);
 	clk_disable(host->mod.clk[0]);

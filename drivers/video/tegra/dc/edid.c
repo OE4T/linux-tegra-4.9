@@ -33,6 +33,7 @@ struct tegra_edid {
 
 	u8			*data;
 	unsigned		len;
+	u8			support_stereo;
 };
 
 #if defined(DEBUG) || defined(CONFIG_DEBUG_FS)
@@ -163,10 +164,84 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	return 0;
 }
 
+int tegra_edid_parse_ext_block(u8 *raw, int idx, struct tegra_edid *edid)
+{
+	u8 *ptr;
+	u8 tmp;
+	u8 code;
+	int len;
+
+	ptr = &raw[4];
+
+	while (ptr < &raw[idx]) {
+		tmp = *ptr;
+		len = tmp & 0x1f;
+
+		/* HDMI Specification v1.4a, section 8.3.2:
+		 * see Table 8-16 for HDMI VSDB format.
+		 * data blocks have tags in top 3 bits:
+		 * tag code 2: video data block
+		 * tag code 3: vendor specific data block
+		 */
+		code = (tmp >> 5) & 0x3;
+		switch (code) {
+		/* case 2 is commented out for now */
+		case 3:
+		{
+			int j = 0;
+
+			if ((len >= 8) &&
+				(ptr[1] == 0x03) &&
+				(ptr[2] == 0x0c) &&
+				(ptr[3] == 0)) {
+				j = 8;
+				tmp = ptr[j++];
+				/* HDMI_Video_present? */
+				if (tmp & 0x20) {
+					/* Latency_Fields_present? */
+					if (tmp & 0x80)
+						j += 2;
+					/* I_Latency_Fields_present? */
+					if (tmp & 0x40)
+						j += 2;
+					/* 3D_present? */
+					if (j <= len && (ptr[j] & 0x80))
+						edid->support_stereo = 1;
+				}
+			}
+
+			len++;
+			ptr += len; /* adding the header */
+			break;
+		}
+		default:
+			len++; /* len does not include header */
+			ptr += len;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int tegra_edid_mode_support_stereo(struct fb_videomode *mode)
+{
+	if (!mode)
+		return 0;
+
+	if (mode->xres == 1280 && mode->yres == 720 && mode->refresh == 60)
+		return 1;
+
+	if (mode->xres == 1280 && mode->yres == 720 && mode->refresh == 50)
+		return 1;
+
+	return 0;
+}
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 {
 	int i;
+	int j;
 	int ret;
 	int extension_blocks;
 
@@ -186,8 +261,21 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		if (ret < 0)
 			break;
 
-		if (edid->data[i * 128] == 0x2)
+		if (edid->data[i * 128] == 0x2) {
 			fb_edid_add_monspecs(edid->data + i * 128, specs);
+
+			tegra_edid_parse_ext_block(edid->data + i * 128,
+					edid->data[i * 128 + 2], edid);
+
+			if (edid->support_stereo) {
+				for (j = 0; j < specs->modedb_len; j++) {
+					if (tegra_edid_mode_support_stereo(
+						&specs->modedb[j]))
+						specs->modedb[j].vmode |=
+						FB_VMODE_STEREO_FRAME_PACK;
+				}
+			}
+		}
 	}
 
 	edid->len = i * 128;

@@ -81,6 +81,22 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
 
+	/* 1280x720p 60hz: EIA/CEA-861-B Format 4 (Stereo)*/
+	{
+		.xres =		1280,
+		.yres =		720,
+		.pixclock =	KHZ2PICOS(74250),
+		.hsync_len =	40,	/* h_sync_width */
+		.vsync_len =	5,	/* v_sync_width */
+		.left_margin =	220,	/* h_back_porch */
+		.upper_margin =	20,	/* v_back_porch */
+		.right_margin =	110,	/* h_front_porch */
+		.lower_margin =	5,	/* v_front_porch */
+		.vmode = FB_VMODE_NONINTERLACED |
+				 FB_VMODE_STEREO_FRAME_PACK,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+
 	/* 720x480p 59.94hz: EIA/CEA-861-B Formats 2 & 3 */
 	{
 		.xres =		720,
@@ -875,6 +891,38 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 			  HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_CTRL);
 }
 
+static void tegra_dc_hdmi_setup_stereo_infoframe(struct tegra_dc *dc)
+{
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+	struct hdmi_stereo_infoframe stereo;
+	u32 val;
+
+	if (!dc->mode.stereo_mode) {
+		val  = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+		val &= ~GENERIC_CTRL_ENABLE;
+		tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+		return;
+	}
+
+	memset(&stereo, 0x0, sizeof(stereo));
+
+	stereo.regid0 = 0x03;
+	stereo.regid1 = 0x0c;
+	stereo.regid2 = 0x00;
+	stereo.hdmi_video_format = 2; /* 3D_Structure present */
+	stereo._3d_structure = 0; /* frame packing */
+
+	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_GENERIC_HEADER,
+					HDMI_INFOFRAME_TYPE_VENDOR,
+					HDMI_VENDOR_VERSION,
+					&stereo, 6);
+
+	val  = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+	val |= GENERIC_CTRL_ENABLE;
+
+	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+}
+
 static void tegra_dc_hdmi_setup_audio_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
@@ -998,6 +1046,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
 	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
+	tegra_dc_hdmi_setup_stereo_infoframe(dc);
 
 	/* TMDS CONFIG */
 	pll0 = 0x200033f;

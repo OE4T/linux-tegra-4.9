@@ -193,6 +193,21 @@ static int tegra_fb_set_par(struct fb_info *info)
 		mode.v_active = info->mode->yres;
 		mode.h_front_porch = info->mode->right_margin;
 		mode.v_front_porch = info->mode->lower_margin;
+		/*
+		 * only enable stereo if the mode supports it and
+		 * client requests it
+		 */
+		mode.stereo_mode = !!(var->vmode & info->mode->vmode &
+					FB_VMODE_STEREO_FRAME_PACK);
+
+		if (mode.stereo_mode) {
+			mode.pclk *= 2;
+			/* total v_active = yres*2 + activespace */
+			mode.v_active = info->mode->yres*2 +
+					info->mode->vsync_len +
+					info->mode->upper_margin +
+					info->mode->lower_margin;
+		}
 
 		mode.flags = 0;
 
@@ -600,6 +615,17 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 					 &var, sizeof(var)))
 				return -EFAULT;
 			i++;
+
+			if (var.vmode & FB_VMODE_STEREO_MASK) {
+				if (i >= modedb.modedb_len)
+					break;
+				var.vmode &= ~FB_VMODE_STEREO_MASK;
+				if (copy_to_user(
+					(void __user *)&modedb.modedb[i],
+					 &var, sizeof(var)))
+					return -EFAULT;
+				i++;
+			}
 		}
 		modedb.modedb_len = i;
 

@@ -231,6 +231,15 @@ struct fb_bitfield {
 #define FB_FLAG_PIXEL_REPEAT	256
 
 /*
+ * Stereo modes
+ */
+#define FB_VMODE_STEREO_NONE        0x00000000  /* not stereo */
+#define FB_VMODE_STEREO_FRAME_PACK  0x01000000  /* frame packing */
+#define FB_VMODE_STEREO_TOP_BOTTOM  0x02000000  /* top-bottom */
+#define FB_VMODE_STEREO_LEFT_RIGHT  0x04000000  /* left-right */
+#define FB_VMODE_STEREO_MASK        0xFF000000
+
+/*
  * Display rotation support
  */
 #define FB_ROTATE_UR      0

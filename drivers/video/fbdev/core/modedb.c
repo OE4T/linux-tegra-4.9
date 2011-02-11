@@ -1355,7 +1355,7 @@ void fb_var_to_videomode(struct fb_videomode *mode,
 	mode->upper_margin = var->upper_margin;
 	mode->lower_margin = var->lower_margin;
 	mode->sync = var->sync;
-	mode->vmode = var->vmode & FB_VMODE_MASK;
+	mode->vmode = var->vmode & (FB_VMODE_MASK | FB_VMODE_STEREO_MASK);
 	mode->flag = FB_MODE_IS_FROM_VAR;
 	mode->refresh = 0;
 
@@ -1400,7 +1400,7 @@ void fb_videomode_to_var(struct fb_var_screeninfo *var,
 	var->hsync_len = mode->hsync_len;
 	var->vsync_len = mode->vsync_len;
 	var->sync = mode->sync;
-	var->vmode = mode->vmode & FB_VMODE_MASK;
+	var->vmode = mode->vmode & (FB_VMODE_MASK | FB_VMODE_STEREO_MASK);
 }
 
 /**

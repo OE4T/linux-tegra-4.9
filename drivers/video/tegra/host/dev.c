@@ -211,7 +211,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 }
 
 static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
-                                      struct nvhost_get_param_args *args)
+                                      struct nvhost_get_param_args *args,
+                                      int null_kickoff)
 {
 	struct nvhost_cpuinterrupt ctxsw;
 	int gather_idx = 2;
@@ -219,6 +220,7 @@ static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
 	u32 syncval;
 	int num_unpin;
 	int err;
+	int nulled_incrs = null_kickoff ? ctx->syncpt_incrs : 0;
 
 	if (ctx->relocs_pending || ctx->cmdbufs_pending) {
 		reset_submit(ctx);
@@ -301,9 +303,10 @@ static int nvhost_ioctl_channel_flush(struct nvhost_channel_userctx *ctx,
 	ctxsw.syncpt_val += syncval - ctx->syncpt_incrs;
 
 	nvhost_channel_submit(ctx->ch, ctx->nvmap, &ctx->gathers[gather_idx],
-			      ctx->num_gathers - gather_idx, &ctxsw, num_intrs,
+			      (null_kickoff ? 2 : ctx->num_gathers) - gather_idx, &ctxsw, num_intrs,
 			      ctx->unpinarray, num_unpin,
-			      ctx->syncpt_id, syncval);
+			      ctx->syncpt_id, syncval,
+			      nulled_incrs);
 
 	/* schedule a submit complete interrupt */
 	nvhost_intr_add_action(&ctx->ch->dev->intr, ctx->syncpt_id, syncval,
@@ -335,7 +338,10 @@ static long nvhost_channelctl(struct file *filp,
 
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_FLUSH:
-		err = nvhost_ioctl_channel_flush(priv, (void *)buf);
+		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 0);
+		break;
+	case NVHOST_IOCTL_CHANNEL_NULL_KICKOFF:
+		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 1);
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 		((struct nvhost_get_param_args *)buf)->value =

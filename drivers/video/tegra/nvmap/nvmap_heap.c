@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include <mach/nvmap.h>
 #include "nvmap.h"
 #include "nvmap_heap.h"
+#include "nvmap_common.h"
 
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
@@ -888,6 +889,9 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h, size_t len,
 
 struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
 {
+	struct buddy_heap *bh = NULL;
+	struct nvmap_heap *h;
+
 	if (b->type == BLOCK_BUDDY) {
 		struct buddy_block *bb;
 		bb = container_of(b, struct buddy_block, block);
@@ -899,17 +903,24 @@ struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
 	}
 }
 
+int nvmap_flush_heap_block(struct nvmap_client *client,
+	struct nvmap_heap_block *block, size_t len, unsigned int prot);
+
 /* nvmap_heap_free: frees block b*/
 void nvmap_heap_free(struct nvmap_heap_block *b)
 {
 	struct buddy_heap *bh = NULL;
 	struct nvmap_heap *h = nvmap_block_to_heap(b);
+	struct list_block *lb;
 
 	mutex_lock(&h->lock);
 	if (b->type == BLOCK_BUDDY)
 		bh = do_buddy_free(b);
-	else
+	else {
+		lb = container_of(b, struct list_block, block);
+		nvmap_flush_heap_block(NULL, b, lb->size, lb->mem_prot);
 		do_heap_free(b);
+	}
 
 	if (bh) {
 		list_del(&bh->buddy_list);
@@ -1009,6 +1020,10 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	l->orig_addr = base;
 	list_add_tail(&l->free_list, &h->free_list);
 	list_add_tail(&l->all_list, &h->all_list);
+
+	inner_flush_cache_all();
+	outer_flush_range(base, base + len);
+	wmb();
 	return h;
 
 fail_register:

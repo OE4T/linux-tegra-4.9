@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,7 @@
 #include "nvmap.h"
 #include "nvmap_ioctl.h"
 #include "nvmap_mru.h"
+#include "nvmap_common.h"
 
 #define NVMAP_NUM_PTES		64
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
@@ -251,8 +252,30 @@ unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 	return 0;
 }
 
-static int nvmap_flush_heap_block(struct nvmap_client *client,
-				  struct nvmap_heap_block *block, size_t len)
+/*
+ * This routine is used to flush the carveout memory from cache.
+ * Why cache flush is needed for carveout? Consider the case, where a piece of
+ * carveout is allocated as cached and released. After this, if the same memory is
+ * allocated for uncached request and the memory is not flushed out from cache.
+ * In this case, the client might pass this to H/W engine and it could start modify
+ * the memory. As this was cached earlier, it might have some portion of it in cache.
+ * During cpu request to read/write other memory, the cached portion of this memory
+ * might get flushed back to main memory and would cause corruptions, if it happens
+ * after H/W writes data to memory.
+ *
+ * But flushing out the memory blindly on each carveout allocation is redundant.
+ *
+ * In order to optimize the carveout buffer cache flushes, the following
+ * strategy is used.
+ *
+ * The whole Carveout is flushed out from cache during its initialization.
+ * During allocation, carveout buffers are not flused from cache.
+ * During deallocation, carveout buffers are flushed, if they were allocated as cached.
+ * if they were allocated as uncached/writecombined, no cache flush is needed.
+ * Just draining store buffers is enough.
+ */
+int nvmap_flush_heap_block(struct nvmap_client *client,
+	struct nvmap_heap_block *block, size_t len, unsigned int prot)
 {
 	pte_t **pte;
 	void *addr;
@@ -260,7 +283,17 @@ static int nvmap_flush_heap_block(struct nvmap_client *client,
 	unsigned long phys = block->base;
 	unsigned long end = block->base + len;
 
-	pte = nvmap_alloc_pte(client->dev, &addr);
+	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
+		goto out;
+
+	if ( len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD ) {
+		inner_flush_cache_all();
+		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
+			outer_flush_range(block->base, block->base + len);
+		goto out;
+	}
+
+	pte = nvmap_alloc_pte((client ? client->dev : nvmap_dev), &addr);
 	if (IS_ERR(pte))
 		return PTR_ERR(pte);
 
@@ -278,9 +311,12 @@ static int nvmap_flush_heap_block(struct nvmap_client *client,
 		phys = next;
 	}
 
-	outer_flush_range(block->base, block->base + len);
+	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
+		outer_flush_range(block->base, block->base + len);
 
-	nvmap_free_pte(client->dev, pte);
+	nvmap_free_pte((client ? client->dev: nvmap_dev), pte);
+out:
+	wmb();
 	return 0;
 }
 
@@ -422,13 +458,6 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 		block = nvmap_heap_alloc(co_heap->carveout, len,
 					align, prot, handle);
 		if (block) {
-			/* flush any stale data that may be left in the
-			 * cache at the block's address, since the new
-			 * block may be mapped uncached */
-			if (nvmap_flush_heap_block(client, block, len)) {
-				nvmap_heap_free(block);
-				block = NULL;
-			}
 			return block;
 		}
 	}

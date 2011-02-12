@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@
 
 #include "nvmap_ioctl.h"
 #include "nvmap.h"
+#include "nvmap_common.h"
 
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 int is_read, unsigned long h_offs,
@@ -467,10 +468,91 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg)
 	return 0;
 }
 
+static void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
+{
+	if (op == NVMAP_CACHE_OP_WB_INV)
+		dmac_flush_range(vaddr, vaddr + size);
+	else if (op == NVMAP_CACHE_OP_INV)
+		dmac_map_area(vaddr, size, DMA_FROM_DEVICE);
+	else
+		dmac_map_area(vaddr, size, DMA_TO_DEVICE);
+}
+
+static void outer_cache_maint(unsigned int op, unsigned long paddr, size_t size)
+{
+	if (op == NVMAP_CACHE_OP_WB_INV)
+		outer_flush_range(paddr, paddr + size);
+	else if (op == NVMAP_CACHE_OP_INV)
+		outer_inv_range(paddr, paddr + size);
+	else
+		outer_clean_range(paddr, paddr + size);
+}
+
+static void heap_page_cache_maint(struct nvmap_client *client,
+	struct nvmap_handle *h, unsigned long start, unsigned long end,
+	unsigned int op, bool inner, bool outer, pte_t **pte,
+	unsigned long kaddr, pgprot_t prot)
+{
+	struct page *page;
+	unsigned long paddr;
+	unsigned long next;
+	unsigned long off;
+	size_t size;
+
+	while (start < end) {
+		page = h->pgalloc.pages[start >> PAGE_SHIFT];
+		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
+		off = start & ~PAGE_MASK;
+		size = next - start;
+		paddr = page_to_phys(page) + off;
+
+		if (inner) {
+			void *vaddr = (void *)kaddr + off;
+			BUG_ON(!pte);
+			BUG_ON(!kaddr);
+			set_pte_at(&init_mm, kaddr, *pte,
+				pfn_pte(__phys_to_pfn(paddr), prot));
+			flush_tlb_kernel_page(kaddr);
+			inner_cache_maint(op, vaddr, size);
+		}
+
+		if (outer)
+			outer_cache_maint(op, paddr, size);
+		start = next;
+	}
+}
+
+static bool fast_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
+	unsigned long start, unsigned long end, unsigned int op)
+{
+	int ret = false;
+
+	if ( (op == NVMAP_CACHE_OP_INV) ||
+		((end - start) < FLUSH_CLEAN_BY_SET_WAY_THRESHOLD) )
+		goto out;
+
+	if (op == NVMAP_CACHE_OP_WB_INV) {
+		inner_flush_cache_all();
+	} else if (op == NVMAP_CACHE_OP_WB) {
+		inner_clean_cache_all();
+	}
+
+	if (h->heap_pgalloc && (h->flags != NVMAP_HANDLE_INNER_CACHEABLE)) {
+		heap_page_cache_maint(client, h, start, end, op,
+				false, true, NULL, 0, 0);
+	} else if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE) {
+		start += h->carveout->base;
+		end += h->carveout->base;
+		outer_cache_maint(op, start, end - start);
+	}
+	ret = true;
+out:
+	return ret;
+}
+
 static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 		       unsigned long start, unsigned long end, unsigned int op)
 {
-	enum dma_data_direction dir;
 	pgprot_t prot;
 	pte_t **pte = NULL;
 	unsigned long kaddr;
@@ -491,32 +573,21 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 	    start == end)
 		goto out;
 
-	if (WARN_ON_ONCE(op == NVMAP_CACHE_OP_WB_INV))
-		dir = DMA_BIDIRECTIONAL;
-	else if (op == NVMAP_CACHE_OP_WB)
-		dir = DMA_TO_DEVICE;
-	else
-		dir = DMA_FROM_DEVICE;
-
-	if (h->heap_pgalloc) {
-		while (start < end) {
-			unsigned long next = (start + PAGE_SIZE) & PAGE_MASK;
-			struct page *page;
-
-			page = h->pgalloc.pages[start >> PAGE_SHIFT];
-			next = min(next, end);
-			__dma_page_cpu_to_dev(page, start & ~PAGE_MASK,
-					      next - start, dir);
-			start = next;
-		}
+	if (fast_cache_maint(client, h, start, end, op))
 		goto out;
-	}
 
 	prot = nvmap_pgprot(h, pgprot_kernel);
 	pte = nvmap_alloc_pte(client->dev, (void **)&kaddr);
 	if (IS_ERR(pte)) {
 		err = PTR_ERR(pte);
 		pte = NULL;
+		goto out;
+	}
+
+	if (h->heap_pgalloc) {
+		heap_page_cache_maint(client, h, start, end, op, true,
+			(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ? false : true,
+			pte, kaddr, prot);
 		goto out;
 	}
 
@@ -542,16 +613,13 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			   pfn_pte(__phys_to_pfn(loop), prot));
 		flush_tlb_kernel_page(kaddr);
 
-		dmac_map_area(base, next - loop, dir);
+		inner_cache_maint(op, base, next - loop);
 		loop = next;
 	}
 
-	if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE) {
-		if (dir != DMA_FROM_DEVICE)
-			outer_clean_range(start, end);
-		else
-			outer_inv_range(start, end);
-	}
+	if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE)
+		outer_cache_maint(op, start, end - start);
+
 	/* unlock carveout */
 	nvmap_usecount_dec(h);
 

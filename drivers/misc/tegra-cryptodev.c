@@ -159,6 +159,7 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 	int ret = 0, size = 0;
 	unsigned long total = 0;
 	struct tegra_crypto_completion tcrypt_complete;
+	const u8 *key = NULL;
 
 	if (crypt_req->op & TEGRA_CRYPTO_ECB) {
 		req = ablkcipher_request_alloc(ctx->ecb_tfm, GFP_KERNEL);
@@ -177,13 +178,13 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 
 	crypto_ablkcipher_clear_flags(tfm, ~0);
 
-	if (!ctx->use_ssk) {
-		ret = crypto_ablkcipher_setkey(tfm, crypt_req->key,
-			crypt_req->keylen);
-		if (ret < 0) {
-			pr_err("setkey failed");
-			goto process_req_out;
-		}
+	if (!ctx->use_ssk)
+		key = crypt_req->key;
+
+	ret = crypto_ablkcipher_setkey(tfm, key, crypt_req->keylen);
+	if (ret < 0) {
+		pr_err("setkey failed");
+		goto process_req_out;
 	}
 
 	ret = alloc_bufs(xbuf);

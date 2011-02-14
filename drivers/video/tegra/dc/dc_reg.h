@@ -145,6 +145,10 @@
 #define DC_COM_PM0_DUTY_CYCLE			0x31d
 #define DC_COM_PM1_CONTROL			0x31e
 #define DC_COM_PM1_DUTY_CYCLE			0x31f
+
+#define PM_PERIOD_SHIFT                 18
+#define PM_CLK_DIVIDER_SHIFT		4
+
 #define DC_COM_SPI_CONTROL			0x320
 #define DC_COM_SPI_START_BYTE			0x321
 #define DC_COM_HSPI_WRITE_DATA_AB		0x322

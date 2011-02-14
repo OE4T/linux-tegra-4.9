@@ -828,6 +828,31 @@ int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 }
 EXPORT_SYMBOL(tegra_dc_set_mode);
 
+void
+tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
+{
+	unsigned int ctrl;
+
+	ctrl = ((cfg->period << PM_PERIOD_SHIFT) |
+		(cfg->clk_div << PM_CLK_DIVIDER_SHIFT) |
+		cfg->clk_select);
+
+	switch (cfg->which_pwm) {
+	case TEGRA_PWM_PM0:
+		tegra_dc_writel(dc, ctrl, DC_COM_PM0_CONTROL);
+		tegra_dc_writel(dc, cfg->duty_cycle, DC_COM_PM0_DUTY_CYCLE);
+		break;
+	case TEGRA_PWM_PM1:
+		tegra_dc_writel(dc, ctrl, DC_COM_PM1_CONTROL);
+		tegra_dc_writel(dc, cfg->duty_cycle, DC_COM_PM1_DUTY_CYCLE);
+		break;
+	default:
+		dev_err(&dc->ndev->dev, "Error\n");
+		return;
+	}
+}
+EXPORT_SYMBOL(tegra_dc_config_pwm);
+
 static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const struct tegra_dc_out_pin *pins,
 				const unsigned int n_pins)

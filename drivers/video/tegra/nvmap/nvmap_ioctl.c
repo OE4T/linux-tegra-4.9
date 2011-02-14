@@ -311,7 +311,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		op.result = h->orig_size;
 		break;
 	case NVMAP_HANDLE_PARAM_ALIGNMENT:
-		mutex_lock(&h->lock);
+		spin_lock(&h->lock);
 		if (!h->alloc)
 			op.result = 0;
 		else if (h->heap_pgalloc)
@@ -320,15 +320,15 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 			op.result = (h->carveout->base & -h->carveout->base);
 		else
 			op.result = SZ_4M;
-		mutex_unlock(&h->lock);
+		spin_unlock(&h->lock);
 		break;
 	case NVMAP_HANDLE_PARAM_BASE:
 		if (WARN_ON(!h->alloc || !atomic_add_return(0, &h->pin)))
 			op.result = -1ul;
 		else if (!h->heap_pgalloc) {
-			mutex_lock(&h->lock);
+			spin_lock(&h->lock);
 			op.result = h->carveout->base;
-			mutex_unlock(&h->lock);
+			spin_unlock(&h->lock);
 		}
 		else if (h->pgalloc.contig)
 			op.result = page_to_phys(h->pgalloc.pages[0]);
@@ -341,9 +341,9 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		if (!h->alloc)
 			op.result = 0;
 		else if (!h->heap_pgalloc) {
-			mutex_lock(&h->lock);
+			spin_lock(&h->lock);
 			op.result = nvmap_carveout_usage(client, h->carveout);
-			mutex_unlock(&h->lock);
+			spin_unlock(&h->lock);
 		}
 		else if (h->pgalloc.contig)
 			op.result = NVMAP_HEAP_SYSMEM;

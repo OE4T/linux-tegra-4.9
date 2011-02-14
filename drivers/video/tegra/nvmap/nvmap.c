@@ -578,9 +578,9 @@ unsigned long nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 	h = nvmap_get_handle_id(c, id);
 	if (!h)
 		return -EPERM;
-	mutex_lock(&h->lock);
+	spin_lock(&h->lock);
 	phys = handle_phys(h);
-	mutex_unlock(&h->lock);
+	spin_unlock(&h->lock);
 	nvmap_handle_put(h);
 
 	return phys;

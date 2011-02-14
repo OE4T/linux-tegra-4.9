@@ -81,7 +81,7 @@ struct nvmap_handle {
 	bool secure;		/* zap IOVMM area on unpin */
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
-	struct mutex lock;
+	spinlock_t lock;
 };
 
 struct nvmap_share {

@@ -21,11 +21,35 @@
 #include <linux/i2c.h>
 #include <linux/wait.h>
 
+#define ELD_MAX_MNL	16
+#define ELD_MAX_SAD	16
 struct tegra_edid;
+
+/*
+ * ELD: EDID Like Data
+ */
+struct tegra_edid_hdmi_eld {
+	u8	baseline_len;
+	u8	eld_ver;
+	u8	cea_edid_ver;
+	char	monitor_name[ELD_MAX_MNL + 1];
+	u8	mnl;
+	u8	manufacture_id[2];
+	u8	product_id[2];
+	u8	port_id[8];
+	u8	support_hdcp;
+	u8	support_ai;
+	u8	conn_type;
+	u8	aud_synch_delay;
+	u8	spk_alloc;
+	u8	sad_count;
+	u8	sad[ELD_MAX_SAD];
+};
 
 struct tegra_edid *tegra_edid_create(int bus);
 void tegra_edid_destroy(struct tegra_edid *edid);
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs);
+int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
 
 #endif

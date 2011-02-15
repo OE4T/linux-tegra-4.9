@@ -45,9 +45,22 @@
 
 #define HDMI_REKEY_DEFAULT		56
 
+#define HDMI_ELD_RESERVED1_INDEX		1
+#define HDMI_ELD_RESERVED2_INDEX		3
+#define HDMI_ELD_VER_INDEX			0
+#define HDMI_ELD_BASELINE_LEN_INDEX		2
+#define HDMI_ELD_CEA_VER_MNL_INDEX		4
+#define HDMI_ELD_SAD_CNT_CON_TYP_SAI_HDCP_INDEX		5
+#define HDMI_ELD_AUD_SYNC_DELAY_INDEX	6
+#define HDMI_ELD_SPK_ALLOC_INDEX		7
+#define HDMI_ELD_PORT_ID_INDEX		8
+#define HDMI_ELD_MANF_NAME_INDEX		16
+#define HDMI_ELD_PRODUCT_CODE_INDEX		18
+#define HDMI_ELD_MONITOR_NAME_INDEX		20
 struct tegra_dc_hdmi_data {
 	struct tegra_dc			*dc;
 	struct tegra_edid		*edid;
+	struct tegra_edid_hdmi_eld		eld;
 	struct tegra_nvhdcp		*nvhdcp;
 	struct delayed_work		work;
 
@@ -61,6 +74,7 @@ struct tegra_dc_hdmi_data {
 	spinlock_t			suspend_lock;
 	bool				suspended;
 	bool				hpd_pending;
+	bool				eld_retrieved;
 
 	bool				dvi;
 };
@@ -542,6 +556,12 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 		goto fail;
 	}
 
+	err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "error populating eld\n");
+		goto fail;
+	}
+	hdmi->eld_retrieved = true;
 	/* monitors like to lie about these but they are still useful for
 	 * detecting aspect ratios
 	 */
@@ -720,6 +740,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->disp2_clk = disp2_clk;
 	hdmi->suspended = false;
 	hdmi->hpd_pending = false;
+	hdmi->eld_retrieved= false;
 	spin_lock_init(&hdmi->suspend_lock);
 
 	dc->out->depth = 24;
@@ -808,6 +829,82 @@ static void tegra_dc_hdmi_setup_audio_fs_tables(struct tegra_dc *dc)
 				  HDMI_NV_PDISP_AUDIO_FS(i));
 	}
 }
+
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+static void tegra_dc_hdmi_setup_eld_buff(struct tegra_dc *dc)
+{
+	int i;
+	int j;
+	u8 tmp;
+
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	/* program ELD stuff */
+	for (i = 0; i < HDMI_ELD_MONITOR_NAME_INDEX; i++) {
+		switch (i) {
+		case HDMI_ELD_VER_INDEX:
+			tmp = (hdmi->eld.eld_ver << 3);
+			tegra_hdmi_writel(hdmi, (i << 8) | tmp,
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
+		case HDMI_ELD_BASELINE_LEN_INDEX:
+			break;
+		case HDMI_ELD_CEA_VER_MNL_INDEX:
+			tmp = (hdmi->eld.cea_edid_ver << 5);
+			tmp |= (hdmi->eld.mnl & 0x1f);
+			tegra_hdmi_writel(hdmi, (i << 8) | tmp,
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
+		case HDMI_ELD_SAD_CNT_CON_TYP_SAI_HDCP_INDEX:
+			tmp = (hdmi->eld.sad_count << 4);
+			tmp |= (hdmi->eld.conn_type & 0xC);
+			tmp |= (hdmi->eld.support_ai & 0x2);
+			tmp |= (hdmi->eld.support_hdcp & 0x1);
+			tegra_hdmi_writel(hdmi, (i << 8) | tmp,
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
+		case HDMI_ELD_AUD_SYNC_DELAY_INDEX:
+			tegra_hdmi_writel(hdmi, (i << 8) | (hdmi->eld.aud_synch_delay),
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
+		case HDMI_ELD_SPK_ALLOC_INDEX:
+			tegra_hdmi_writel(hdmi, (i << 8) | (hdmi->eld.spk_alloc),
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
+		case HDMI_ELD_PORT_ID_INDEX:
+			for (j = 0; j < 8;j++) {
+				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.port_id[j]),
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			}
+			break;
+		case HDMI_ELD_MANF_NAME_INDEX:
+			for (j = 0; j < 2;j++) {
+				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.manufacture_id[j]),
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			}
+			break;
+		case HDMI_ELD_PRODUCT_CODE_INDEX:
+			for (j = 0; j < 2;j++) {
+				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.product_id[j]),
+					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			}
+			break;
+		}
+	}
+	for (j = 0; j < hdmi->eld.mnl;j++) {
+		tegra_hdmi_writel(hdmi, ((j + HDMI_ELD_MONITOR_NAME_INDEX) << 8) |
+				  (hdmi->eld.monitor_name[j]),
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+	}
+	for (j = 0; j < hdmi->eld.sad_count;j++) {
+		tegra_hdmi_writel(hdmi, ((j + HDMI_ELD_MONITOR_NAME_INDEX + hdmi->eld.mnl) << 8) |
+				  (hdmi->eld.sad[j]),
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+	}
+		/* set presence andvalid bit  */
+	tegra_hdmi_writel(hdmi, 3, HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
+}
+#endif
 
 static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc)
 {
@@ -1122,6 +1219,11 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 			hdmi->dvi = true;
 	}
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	if (hdmi->eld_retrieved)
+		tegra_dc_hdmi_setup_eld_buff(dc);
+#endif
+
 	rekey = HDMI_REKEY_DEFAULT;
 	val = HDMI_CTRL_REKEY(rekey);
 	val |= HDMI_CTRL_MAX_AC_PACKET((dc->mode.h_sync_width +
@@ -1244,6 +1346,11 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
+
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	tegra_hdmi_writel(hdmi, 0, HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
+#endif
+	hdmi->eld_retrieved = false;
 
 	tegra_periph_reset_assert(hdmi->clk);
 	clk_disable(hdmi->clk);

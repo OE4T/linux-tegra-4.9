@@ -446,7 +446,7 @@ void nvhost_intr_configure (struct nvhost_intr *intr, u32 hz)
 {
 	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
 
-	// write microsecond clock register
+	/* write microsecond clock register */
 	writel((hz + 1000000 - 1)/1000000, sync_regs + HOST1X_SYNC_USEC_CLK);
 
 	/* disable the ip_busy_timeout. this prevents write drops, etc.

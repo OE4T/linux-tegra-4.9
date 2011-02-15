@@ -1062,7 +1062,6 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 		tegra_hdmi_writel(hdmi, GENERIC_CTRL_AUDIO,
 				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
 
-
 	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
 	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
 	tegra_dc_hdmi_setup_stereo_infoframe(dc);

@@ -24,6 +24,7 @@
 #define __VIDEO_TEGRA_NVMAP_NVMAP_H
 
 #include <linux/list.h>
+#include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/rbtree.h>
 #include <linux/sched.h>

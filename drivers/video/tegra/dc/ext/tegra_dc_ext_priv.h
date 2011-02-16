@@ -20,14 +20,32 @@
 #define __TEGRA_DC_EXT_PRIV_H
 
 #include <linux/cdev.h>
+#include <linux/mutex.h>
+
+#include <mach/nvmap.h>
+
+struct tegra_dc_ext_user;
+
+struct tegra_dc_ext_win {
+	struct tegra_dc_ext	*ext;
+
+	int			idx;
+
+	struct tegra_dc_ext_user *user;
+
+	struct mutex		lock;
+};
 
 struct tegra_dc_ext {
 	struct cdev	cdev;
 	struct device	*dev;
+
+	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
 };
 
 struct tegra_dc_ext_user {
-
+	struct tegra_dc_ext	*ext;
+	struct nvmap_client	*nvmap;
 };
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

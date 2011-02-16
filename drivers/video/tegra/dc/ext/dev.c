@@ -20,42 +20,183 @@
 
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/export.h>
 
+#include <video/tegra_dc_ext.h>
+
 #include <mach/dc.h>
+#include <mach/nvmap.h>
 #include <mach/tegra_dc_ext.h>
 
+/* XXX ew */
+#include "../dc_priv.h"
 #include "tegra_dc_ext_priv.h"
 
 static int tegra_dc_ext_devno;
 static struct class *tegra_dc_ext_class;
 
-static int tegra_dc_release(struct inode *inode, struct file *filp)
+static int tegra_dc_ext_set_nvmap_fd(struct tegra_dc_ext_user *user,
+				     int fd)
 {
-	struct tegra_dc_ext_user *user = filp->private_data;
+	struct nvmap_client *nvmap = NULL;
 
-	kfree(user);
+	if (fd < 0)
+		return -EINVAL;
+
+	nvmap = nvmap_client_get_file(fd);
+	if (IS_ERR(nvmap))
+		return PTR_ERR(nvmap);
+
+	if (user->nvmap)
+		nvmap_client_put(user->nvmap);
+
+	user->nvmap = nvmap;
 
 	return 0;
 }
 
-static int tegra_dc_open(struct inode *inode, struct file *filp)
+static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
+				   unsigned int n)
 {
-	struct tegra_dc_ext_user *user;
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc_ext_win *win;
+	int ret = 0;
 
-	user = kzalloc(sizeof(*user), GFP_KERNEL);
-	if (!user)
-		return -ENOMEM;
+	if (n >= DC_N_WINDOWS)
+		return -EINVAL;
 
-	filp->private_data = user;
+	win = &ext->win[n];
 
+	mutex_lock(&win->lock);
+
+	if (!win->user)
+		win->user = user;
+	else if (win->user != user)
+		ret = -EBUSY;
+
+	mutex_unlock(&win->lock);
+
+	return ret;
+}
+
+static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
+				   unsigned int n)
+{
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc_ext_win *win;
+	int ret = 0;
+
+	if (n >= DC_N_WINDOWS)
+		return -EINVAL;
+
+	win = &ext->win[n];
+
+	mutex_lock(&win->lock);
+
+	if (win->user == user)
+		win->user = 0;
+	else
+		ret = -EACCES;
+
+	mutex_unlock(&win->lock);
+
+	return ret;
+}
+
+static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
+			     struct tegra_dc_ext_flip *args)
+{
+	if (!user->nvmap)
+		return -EINVAL;
+
+	printk(KERN_ERR "flip\n");
 	return 0;
 }
 
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
+	void __user *user_arg = (void __user *)arg;
+	struct tegra_dc_ext_user *user = filp->private_data;
+
+	switch (cmd) {
+	case TEGRA_DC_EXT_SET_NVMAP_FD:
+		return tegra_dc_ext_set_nvmap_fd(user, arg);
+
+	case TEGRA_DC_EXT_GET_WINDOW:
+		return tegra_dc_ext_get_window(user, arg);
+	case TEGRA_DC_EXT_PUT_WINDOW:
+		return tegra_dc_ext_put_window(user, arg);
+
+	case TEGRA_DC_EXT_FLIP:
+	{
+		struct tegra_dc_ext_flip args;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_ext_flip(user, &args);
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
+	}
+
+	default:
+		return -EINVAL;
+	}
+}
+
+static int tegra_dc_open(struct inode *inode, struct file *filp)
+{
+	struct tegra_dc_ext_user *user;
+	struct tegra_dc_ext *ext;
+
+	user = kzalloc(sizeof(*user), GFP_KERNEL);
+	if (!user)
+		return -ENOMEM;
+
+	ext = container_of(inode->i_cdev, struct tegra_dc_ext, cdev);
+	user->ext = ext;
+
+	filp->private_data = user;
+
+	return 0;
+}
+
+static int tegra_dc_release(struct inode *inode, struct file *filp)
+{
+	struct tegra_dc_ext_user *user = filp->private_data;
+	struct tegra_dc_ext *ext = user->ext;
+	unsigned int i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		if (ext->win[i].user == user)
+			tegra_dc_ext_put_window(user, i);
+	}
+
+	kfree(user);
+
+	return 0;
+}
+
+static int tegra_dc_ext_setup_windows(struct tegra_dc_ext *ext)
+{
+	int i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_ext_win *win = &ext->win[i];
+
+		win->ext = ext;
+		win->idx = i;
+
+		mutex_init(&win->lock);
+	}
+
 	return 0;
 }
 
@@ -97,9 +238,16 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct nvhost_device *ndev,
 		goto cleanup_cdev;
 	}
 
+	ret = tegra_dc_ext_setup_windows(ext);
+	if (ret)
+		goto cleanup_device;
+
 	tegra_dc_ext_devno++;
 
 	return ext;
+
+cleanup_device:
+	device_del(ext->dev);
 
 cleanup_cdev:
 	cdev_del(&ext->cdev);

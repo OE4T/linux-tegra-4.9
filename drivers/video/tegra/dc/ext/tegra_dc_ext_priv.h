@@ -24,7 +24,12 @@
 
 #include <mach/nvmap.h>
 
-struct tegra_dc_ext_user;
+struct tegra_dc_ext;
+
+struct tegra_dc_ext_user {
+	struct tegra_dc_ext	*ext;
+	struct nvmap_client	*nvmap;
+};
 
 struct tegra_dc_ext_win {
 	struct tegra_dc_ext	*ext;
@@ -34,18 +39,23 @@ struct tegra_dc_ext_win {
 	struct tegra_dc_ext_user *user;
 
 	struct mutex		lock;
+
+	u32			syncpt_id;
+
+	struct nvmap_handle_ref	*cur_handle;
 };
 
 struct tegra_dc_ext {
-	struct cdev	cdev;
-	struct device	*dev;
+	struct tegra_dc			*dc;
+
+	struct cdev			cdev;
+	struct device			*dev;
+
+	struct nvmap_client		*nvmap;
 
 	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
-};
 
-struct tegra_dc_ext_user {
-	struct tegra_dc_ext	*ext;
-	struct nvmap_client	*nvmap;
+	struct workqueue_struct		*flip_wq;
 };
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

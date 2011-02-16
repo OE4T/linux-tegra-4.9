@@ -21,6 +21,11 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
+#if defined(__KERNEL__)
+# include <linux/time.h>
+#else
+# include <time.h>
+#endif
 
 #define TEGRA_DC_EXT_FMT_P1		0
 #define TEGRA_DC_EXT_FMT_P2		1
@@ -68,14 +73,20 @@ struct tegra_dc_ext_flip_windowattr {
 	__u32	out_w;
 	__u32	out_h;
 	__u32	z;
+	__u32	swap_interval;
+	struct timespec timestamp;
 	__u32	pre_syncpt_id;
 	__u32	pre_syncpt_val;
+	/* Leave some wiggle room for future expansion */
+	__u32   pad[8];
 };
 
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3
 
 struct tegra_dc_ext_flip {
 	struct tegra_dc_ext_flip_windowattr win[TEGRA_DC_EXT_FLIP_N_WINDOWS];
+	__u32	post_syncpt_id;
+	__u32	post_syncpt_val;
 };
 
 #define TEGRA_DC_EXT_SET_NVMAP_FD \

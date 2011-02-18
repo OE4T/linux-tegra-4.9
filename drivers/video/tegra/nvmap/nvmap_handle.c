@@ -371,11 +371,11 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 		atomic_sub(h->size, &client->iovm_commit);
 
 	if (h->alloc && !h->heap_pgalloc) {
-		spin_lock(&h->lock);
+		mutex_lock(&h->lock);
 		nvmap_carveout_commit_subtract(client,
 			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
 			h->size);
-		spin_unlock(&h->lock);
+		mutex_unlock(&h->lock);
 	}
 
 	nvmap_ref_unlock(client);
@@ -387,10 +387,8 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 	while (pins--)
 		nvmap_unpin_handles(client, &ref->handle, 1);
 
-	spin_lock(&h->lock);
 	if (h->owner == client)
 		h->owner = NULL;
-	spin_unlock(&h->lock);
 
 	kfree(ref);
 
@@ -446,7 +444,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	BUG_ON(!h->owner);
 	h->size = h->orig_size = size;
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;
-	spin_lock_init(&h->lock);
+	mutex_init(&h->lock);
 
 	nvmap_handle_add(client->dev, h);
 
@@ -516,11 +514,11 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	}
 
 	if (!h->heap_pgalloc) {
-		spin_lock(&h->lock);
+		mutex_lock(&h->lock);
 		nvmap_carveout_commit_add(client,
 			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
 			h->size);
-		spin_unlock(&h->lock);
+		mutex_unlock(&h->lock);
 	}
 
 	atomic_set(&ref->dupes, 1);

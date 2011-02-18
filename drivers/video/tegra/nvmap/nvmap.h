@@ -81,7 +81,7 @@ struct nvmap_handle {
 	bool secure;		/* zap IOVMM area on unpin */
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
-	spinlock_t lock;
+	struct mutex lock;
 };
 
 struct nvmap_share {
@@ -107,7 +107,7 @@ struct nvmap_client {
 	struct rb_root			handle_refs;
 	atomic_t			iovm_commit;
 	size_t				iovm_limit;
-	spinlock_t			ref_lock;
+	struct mutex			ref_lock;
 	bool				super;
 	atomic_t			count;
 	struct task_struct		*task;
@@ -133,12 +133,12 @@ struct nvmap_vma_priv {
 
 static inline void nvmap_ref_lock(struct nvmap_client *priv)
 {
-	spin_lock(&priv->ref_lock);
+	mutex_lock(&priv->ref_lock);
 }
 
 static inline void nvmap_ref_unlock(struct nvmap_client *priv)
 {
-	spin_unlock(&priv->ref_lock);
+	mutex_unlock(&priv->ref_lock);
 }
 
 struct device *nvmap_client_to_device(struct nvmap_client *client);

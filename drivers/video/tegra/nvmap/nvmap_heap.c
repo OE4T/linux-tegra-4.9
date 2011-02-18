@@ -697,24 +697,22 @@ static struct nvmap_heap_block *do_heap_relocate_listblock(
 	size_t src_align = block->align;
 	unsigned int src_prot = block->mem_prot;
 	int error = 0;
+	struct nvmap_share *share;
 
 	if (!handle) {
 		pr_err("INVALID HANDLE!\n");
 		return NULL;
 	}
 
-	spin_lock(&handle->lock);
+	mutex_lock(&handle->lock);
 
-	if (!handle->owner) {
-		spin_unlock(&handle->lock);
-		return NULL;
-	}
+	share = nvmap_get_share_from_dev(handle->dev);
 
 	/* TODO: It is possible to use only handle lock and no share
 	 * pin_lock, but then we'll need to lock every handle during
 	 * each pinning operation. Need to estimate performance impact
 	 * if we decide to simplify locking this way. */
-	mutex_lock(&handle->owner->share->pin_lock);
+	mutex_lock(&share->pin_lock);
 
 	/* abort if block is pinned */
 	if (atomic_read(&handle->pin))
@@ -756,8 +754,8 @@ static struct nvmap_heap_block *do_heap_relocate_listblock(
 	BUG_ON(error);
 
 fail:
-	mutex_unlock(&handle->owner->share->pin_lock);
-	spin_unlock(&handle->lock);
+	mutex_unlock(&share->pin_lock);
+	mutex_unlock(&handle->lock);
 	return heap_block_new;
 }
 
@@ -830,9 +828,9 @@ static void nvmap_heap_compact(struct nvmap_heap *heap,
 void nvmap_usecount_inc(struct nvmap_handle *h)
 {
 	if (h->alloc && !h->heap_pgalloc) {
-		spin_lock(&h->lock);
+		mutex_lock(&h->lock);
 		h->usecount++;
-		spin_unlock(&h->lock);
+		mutex_unlock(&h->lock);
 	} else {
 		h->usecount++;
 	}

@@ -627,7 +627,7 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 	task_unlock(current->group_leader);
 	client->task = task;
 
-	spin_lock_init(&client->ref_lock);
+	mutex_init(&client->ref_lock);
 	atomic_set(&client->count, 1);
 
 	return client;
@@ -652,10 +652,8 @@ static void destroy_client(struct nvmap_client *client)
 		smp_rmb();
 		pins = atomic_read(&ref->pin);
 
-		spin_lock(&ref->handle->lock);
 		if (ref->handle->owner == client)
 		    ref->handle->owner = NULL;
-		spin_unlock(&ref->handle->lock);
 
 		while (pins--)
 			nvmap_unpin_handles(client, &ref->handle, 1);

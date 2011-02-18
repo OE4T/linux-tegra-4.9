@@ -22,6 +22,7 @@
 #include <linux/list.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
+#include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/tegra_overlay.h>
@@ -50,7 +51,7 @@ struct tegra_overlay_info {
 	spinlock_t		clients_lock;
 
 	struct overlay		overlays[DC_N_WINDOWS];
-	spinlock_t		overlays_lock;
+	struct mutex		overlays_lock;
 
 	struct nvhost_device	*ndev;
 
@@ -309,24 +310,23 @@ surf_err:
 /* Overlay functions */
 static bool tegra_overlay_get(struct overlay_client *client, int idx)
 {
-	unsigned long flags;
 	struct tegra_overlay_info *dev = client->dev;
 	bool ret = false;
 
 	if (idx < 0 || idx > dev->dc->n_windows)
 		return ret;
 
-	spin_lock_irqsave(&dev->overlays_lock, flags);
+	mutex_lock(&dev->overlays_lock);
 	if (dev->overlays[idx].owner == NULL) {
 		dev->overlays[idx].owner = client;
 		ret = true;
 	}
-	spin_unlock_irqrestore(&dev->overlays_lock, flags);
+	mutex_unlock(&dev->overlays_lock);
 
 	return ret;
 }
 
-static void tegra_overlay_put_unlocked(struct overlay_client *client, int idx)
+static void tegra_overlay_put_locked(struct overlay_client *client, int idx)
 {
 	struct tegra_overlay_flip_args flip_args;
 	struct tegra_overlay_info *dev = client->dev;
@@ -349,11 +349,9 @@ static void tegra_overlay_put_unlocked(struct overlay_client *client, int idx)
 
 static void tegra_overlay_put(struct overlay_client *client, int idx)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&client->dev->overlays_lock, flags);
-	tegra_overlay_put_unlocked(client, idx);
-	spin_unlock_irqrestore(&client->dev->overlays_lock, flags);
+	mutex_lock(&client->dev->overlays_lock);
+	tegra_overlay_put_locked(client, idx);
+	mutex_unlock(&client->dev->overlays_lock);
 }
 
 /* Ioctl implementations */
@@ -381,7 +379,6 @@ static int tegra_overlay_ioctl_close(struct overlay_client *client,
 {
 	int err = 0;
 	int idx;
-	unsigned long flags;
 
 	if (copy_from_user(&idx, arg, sizeof(idx)))
 		return -EFAULT;
@@ -389,12 +386,12 @@ static int tegra_overlay_ioctl_close(struct overlay_client *client,
 	if (idx < 0 || idx > client->dev->dc->n_windows)
 		return -EINVAL;
 
-	spin_lock_irqsave(&client->dev->overlays_lock, flags);
+	mutex_lock(&client->dev->overlays_lock);
 	if (client->dev->overlays[idx].owner == client)
-		tegra_overlay_put_unlocked(client, idx);
+		tegra_overlay_put_locked(client, idx);
 	else
 		err = -EINVAL;
-	spin_unlock_irqrestore(&client->dev->overlays_lock, flags);
+	mutex_unlock(&client->dev->overlays_lock);
 
 	return err;
 }
@@ -509,11 +506,11 @@ static int tegra_overlay_release(struct inode *inode, struct file *filp)
 	unsigned long flags;
 	int i;
 
-	spin_lock_irqsave(&client->dev->overlays_lock, flags);
+	mutex_lock(&client->dev->overlays_lock);
 	for (i = 0; i < client->dev->dc->n_windows; i++)
 		if (client->dev->overlays[i].owner == client)
-			tegra_overlay_put_unlocked(client, i);
-	spin_unlock_irqrestore(&client->dev->overlays_lock, flags);
+			tegra_overlay_put_locked(client, i);
+	mutex_unlock(&client->dev->overlays_lock);
 
 	spin_lock_irqsave(&client->dev->clients_lock, flags);
 	list_del(&client->list);
@@ -599,7 +596,7 @@ struct tegra_overlay_info *tegra_overlay_register(struct nvhost_device *ndev,
 	spin_lock_init(&dev->clients_lock);
 	INIT_LIST_HEAD(&dev->clients);
 
-	spin_lock_init(&dev->overlays_lock);
+	mutex_init(&dev->overlays_lock);
 
 	e = misc_register(&dev->dev);
 	if (e) {

@@ -427,6 +427,29 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 
+	case TEGRA_DC_EXT_GET_CURSOR:
+		return tegra_dc_ext_get_cursor(user);
+	case TEGRA_DC_EXT_PUT_CURSOR:
+		return tegra_dc_ext_put_cursor(user);
+	case TEGRA_DC_EXT_SET_CURSOR_IMAGE:
+	{
+		struct tegra_dc_ext_cursor_image args;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_set_cursor_image(user, &args);
+	}
+	case TEGRA_DC_EXT_SET_CURSOR:
+	{
+		struct tegra_dc_ext_cursor args;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_set_cursor(user, &args);
+	}
+
 	default:
 		return -EINVAL;
 	}
@@ -459,6 +482,8 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 		if (ext->win[i].user == user)
 			tegra_dc_ext_put_window(user, i);
 	}
+	if (ext->cursor.user == user)
+		tegra_dc_ext_put_cursor(user);
 
 	if (user->nvmap)
 		nvmap_client_put(user->nvmap);
@@ -550,6 +575,8 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct nvhost_device *ndev,
 	ret = tegra_dc_ext_setup_windows(ext);
 	if (ret)
 		goto cleanup_nvmap;
+
+	mutex_init(&ext->cursor.lock);
 
 	tegra_dc_ext_devno++;
 

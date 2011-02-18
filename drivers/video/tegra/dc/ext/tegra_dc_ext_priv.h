@@ -22,7 +22,10 @@
 #include <linux/cdev.h>
 #include <linux/mutex.h>
 
+#include <mach/dc.h>
 #include <mach/nvmap.h>
+
+#include <video/tegra_dc_ext.h>
 
 struct tegra_dc_ext;
 
@@ -54,10 +57,23 @@ struct tegra_dc_ext {
 	struct nvmap_client		*nvmap;
 
 	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
+
+	struct {
+		struct tegra_dc_ext_user	*user;
+		struct nvmap_handle_ref		*cur_handle;
+		struct mutex			lock;
+	} cursor;
 };
 
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 				   struct nvmap_handle_ref **handle,
 				   dma_addr_t *phys_addr);
+
+extern int tegra_dc_ext_get_cursor(struct tegra_dc_ext_user *user);
+extern int tegra_dc_ext_put_cursor(struct tegra_dc_ext_user *user);
+extern int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
+					 struct tegra_dc_ext_cursor_image *);
+extern int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
+				   struct tegra_dc_ext_cursor *);
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

@@ -89,6 +89,42 @@ struct tegra_dc_ext_flip {
 	__u32	post_syncpt_val;
 };
 
+/*
+ * Cursor image format:
+ * - Tegra hardware supports two colors: foreground and background, specified
+ *   by the client in RGB8.
+ * - The image should be specified as two 1bpp bitmaps immediately following
+ *   each other in memory.  Each pixel in the final cursor will be constructed
+ *   from the bitmaps with the following logic:
+ *		bitmap1 bitmap0
+ *		(mask)  (color)
+ *		  1	   0	transparent
+ *		  1	   1	inverted
+ *		  0	   0	background color
+ *		  0	   1	foreground color
+ * - Exactly one of the SIZE flags must be specified.
+ */
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32	1
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64	2
+struct tegra_dc_ext_cursor_image {
+	struct {
+		__u8	r;
+		__u8	g;
+		__u8	b;
+	} foreground, background;
+	__u32	buff_id;
+	__u32	flags;
+};
+
+/* Possible flags for struct nvdc_cursor's flags field */
+#define TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE	1
+
+struct tegra_dc_ext_cursor {
+	__s16 x;
+	__s16 y;
+	__u32 flags;
+};
+
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
 	_IOW('D', 0x00, __s32)
 
@@ -100,5 +136,13 @@ struct tegra_dc_ext_flip {
 #define TEGRA_DC_EXT_FLIP \
 	_IOWR('D', 0x03, struct tegra_dc_ext_flip)
 
+#define TEGRA_DC_EXT_GET_CURSOR \
+	_IO('D', 0x04)
+#define TEGRA_DC_EXT_PUT_CURSOR \
+	_IO('D', 0x05)
+#define TEGRA_DC_EXT_SET_CURSOR_IMAGE \
+	_IOW('D', 0x06, struct tegra_dc_ext_cursor_image)
+#define TEGRA_DC_EXT_SET_CURSOR \
+	_IOW('D', 0x07, struct tegra_dc_ext_cursor)
 
 #endif /* __TEGRA_DC_EXT_H */

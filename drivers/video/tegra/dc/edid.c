@@ -245,6 +245,8 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	int ret;
 	int extension_blocks;
 
+	edid->support_stereo = 0;
+
 	ret = tegra_edid_read_block(edid, 0, edid->data);
 	if (ret)
 		return ret;

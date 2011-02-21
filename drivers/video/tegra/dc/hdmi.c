@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
+#include <linux/export.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -57,6 +58,8 @@
 #define HDMI_ELD_MANF_NAME_INDEX		16
 #define HDMI_ELD_PRODUCT_CODE_INDEX		18
 #define HDMI_ELD_MONITOR_NAME_INDEX		20
+
+
 struct tegra_dc_hdmi_data {
 	struct tegra_dc			*dc;
 	struct tegra_edid		*edid;
@@ -75,9 +78,14 @@ struct tegra_dc_hdmi_data {
 	bool				suspended;
 	bool				hpd_pending;
 	bool				eld_retrieved;
+	bool				clk_enabled;
+	unsigned			audio_freq;
+	unsigned			audio_source;
 
 	bool				dvi;
 };
+
+struct tegra_dc_hdmi_data *dc_hdmi;
 
 const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 	/* 1280x720p 60hz: EIA/CEA-861-B Format 4 */
@@ -249,32 +257,63 @@ struct tegra_hdmi_audio_config {
 	unsigned pix_clock;
 	unsigned n;
 	unsigned cts;
+	unsigned aval;
 };
 
+
 const struct tegra_hdmi_audio_config tegra_hdmi_audio_32k[] = {
-	{25200000,	4096,	25250},
-	{27000000,	4096,	27000},
-	{54000000,	4096,	54000},
-	{74250000,	4096,	74250},
-	{148500000,	4096,	148500},
+	{25200000,	4096,	25200,	24000},
+	{27000000,	4096,	27000,	24000},
+	{74250000,	4096,	74250,	24000},
+	{148500000,	4096,	148500,	24000},
 	{0,		0,	0},
 };
 
 const struct tegra_hdmi_audio_config tegra_hdmi_audio_44_1k[] = {
-	{25200000,	14112,	63125},
-	{27000000,	6272,	30000},
-	{54000000,	6272,	60000},
-	{74250000,	6272,	82500},
-	{148500000,	6272,	165000},
+	{25200000,	5880,	26250,	25000},
+	{27000000,	5880,	28125,	25000},
+	{74250000,	4704,	61875,	20000},
+	{148500000,	4704,	123750,	20000},
 	{0,		0,	0},
 };
 
 const struct tegra_hdmi_audio_config tegra_hdmi_audio_48k[] = {
-	{25200000,	6144,	25250},
-	{27000000,	6144,	27000},
-	{54000000,	6144,	54000},
-	{74250000,	6144,	74250},
-	{148500000,	6144,	148500},
+	{25200000,	6144,	25200,	24000},
+	{27000000,	6144,	27000,	24000},
+	{74250000,	6144,	74250,	24000},
+	{148500000,	6144,	148500,	24000},
+	{0,		0,	0},
+};
+
+const struct tegra_hdmi_audio_config tegra_hdmi_audio_88_2k[] = {
+	{25200000,	11760,	26250,	25000},
+	{27000000,	11760,	28125,	25000},
+	{74250000,	9408,	61875,	20000},
+	{148500000,	9408,	123750,20000},
+	{0,		0,	0},
+};
+
+const struct tegra_hdmi_audio_config tegra_hdmi_audio_96k[] = {
+	{25200000,	12288,	25200,	24000},
+	{27000000,	12288,	27000,	24000},
+	{74250000,	12288,	74250,	24000},
+	{148500000,	12288,	148500,	24000},
+	{0,		0,	0},
+};
+
+const struct tegra_hdmi_audio_config tegra_hdmi_audio_176_4k[] = {
+	{25200000,	23520,	26250,	25000},
+	{27000000,	23520,	28125,	25000},
+	{74250000,	18816,	61875,	20000},
+	{148500000,	18816,	123750,	20000},
+	{0,		0,	0},
+};
+
+const struct tegra_hdmi_audio_config tegra_hdmi_audio_192k[] = {
+	{25200000,	24576,	25200,	24000},
+	{27000000,	24576,	27000,	24000},
+	{74250000,	24576,	74250,	24000},
+	{148500000,	24576,	148500,	24000},
 	{0,		0,	0},
 };
 
@@ -284,18 +323,27 @@ static const struct tegra_hdmi_audio_config
 	const struct tegra_hdmi_audio_config *table;
 
 	switch (audio_freq) {
-	case 32000:
+	case AUDIO_FREQ_32K:
 		table = tegra_hdmi_audio_32k;
 		break;
-
-	case 44100:
+	case AUDIO_FREQ_44_1K:
 		table = tegra_hdmi_audio_44_1k;
 		break;
-
-	case 48000:
+	case AUDIO_FREQ_48K:
 		table = tegra_hdmi_audio_48k;
 		break;
-
+	case AUDIO_FREQ_88_2K:
+		table = tegra_hdmi_audio_88_2k;
+		break;
+	case AUDIO_FREQ_96K:
+		table = tegra_hdmi_audio_96k;
+		break;
+	case AUDIO_FREQ_176_4K:
+		table = tegra_hdmi_audio_176_4k;
+		break;
+	case AUDIO_FREQ_192K:
+		table = tegra_hdmi_audio_192k;
+		break;
 	default:
 		return NULL;
 	}
@@ -741,11 +789,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->suspended = false;
 	hdmi->hpd_pending = false;
 	hdmi->eld_retrieved= false;
+	hdmi->clk_enabled = false;
+	hdmi->audio_freq = 44100;
+	hdmi->audio_source = AUTO;
 	spin_lock_init(&hdmi->suspend_lock);
 
 	dc->out->depth = 24;
 
 	tegra_dc_set_outdata(dc, hdmi);
+
+	dc_hdmi = hdmi;
 
 	/* boards can select default content protection policy */
 	if (dc->out->flags & TEGRA_DC_OUT_NVHDCP_POLICY_ON_DEMAND) {
@@ -906,16 +959,22 @@ static void tegra_dc_hdmi_setup_eld_buff(struct tegra_dc *dc)
 }
 #endif
 
-static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc)
+static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
+					unsigned audio_source)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	const struct tegra_hdmi_audio_config *config;
 	unsigned long audio_n;
-	unsigned audio_freq = 44100; /* TODO: find some way of configuring this */
+	unsigned long reg_addr = 0;
+	unsigned a_source = AUDIO_CNTRL0_SOURCE_SELECT_AUTO;
 
+	if (HDA == audio_source)
+		a_source = AUDIO_CNTRL0_SOURCE_SELECT_HDAL;
+	else if (SPDIF == audio_source)
+		a_source = AUDIO_CNTRL0_SOURCE_SELECT_SPDIF;
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	tegra_hdmi_writel(hdmi,AUDIO_CNTRL0_SOURCE_SELECT_AUTO,
+	tegra_hdmi_writel(hdmi,a_source,
 			  HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0);
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
@@ -925,7 +984,7 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc)
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
 			  AUDIO_CNTRL0_FRAMES_PER_BLOCK(0xc0) |
-			  AUDIO_CNTRL0_SOURCE_SELECT_AUTO,
+			  a_source,
 			  HDMI_NV_PDISP_AUDIO_CNTRL0);
 #endif
 	config = tegra_hdmi_get_audio_config(audio_freq, dc->mode.pclk);
@@ -955,10 +1014,68 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc)
 	audio_n &= ~AUDIO_N_RESETF;
 	tegra_hdmi_writel(hdmi, audio_n, HDMI_NV_PDISP_AUDIO_N);
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	switch (audio_freq) {
+	case AUDIO_FREQ_32K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_0320_0;
+		break;
+	case AUDIO_FREQ_44_1K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_0441_0;
+		break;
+	case AUDIO_FREQ_48K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_0480_0;
+		break;
+	case AUDIO_FREQ_88_2K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_0882_0;
+		break;
+	case AUDIO_FREQ_96K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_0960_0;
+		break;
+	case AUDIO_FREQ_176_4K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_1764_0;
+		break;
+	case AUDIO_FREQ_192K:
+		reg_addr = HDMI_NV_PDISP_SOR_AUDIO_AVAL_1920_0;
+		break;
+	}
+
+	_tegra_hdmi_writel(hdmi, config->aval, reg_addr);
+#endif
 	tegra_dc_hdmi_setup_audio_fs_tables(dc);
 
 	return 0;
 }
+
+int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_source)
+{
+	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
+
+	if (!hdmi)
+		return -EAGAIN;
+
+	/* check for know freq */
+	if (AUDIO_FREQ_32K == audio_freq ||
+		AUDIO_FREQ_44_1K== audio_freq ||
+		AUDIO_FREQ_48K== audio_freq ||
+		AUDIO_FREQ_88_2K== audio_freq ||
+		AUDIO_FREQ_96K== audio_freq ||
+		AUDIO_FREQ_176_4K== audio_freq ||
+		AUDIO_FREQ_192K== audio_freq) {
+		/* If we can program HDMI, then proceed */
+		if (hdmi->clk_enabled)
+			tegra_dc_hdmi_setup_audio(hdmi->dc, audio_freq,audio_source);
+		else {
+			/* Store it for using it in enable */
+			hdmi->audio_freq = audio_freq;
+			hdmi->audio_source = audio_source;
+		}
+	}
+	else
+		return -EINVAL;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
 static void tegra_dc_hdmi_write_infopack(struct tegra_dc *dc, int header_reg,
 					 u8 type, u8 version, void *data, int len)
@@ -1212,6 +1329,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 			  HDMI_NV_PDISP_SOR_REFCLK);
 
 
+	hdmi->clk_enabled = true;
 	if (!hdmi->dvi) {
 		err = tegra_dc_hdmi_setup_audio(dc);
 
@@ -1351,8 +1469,8 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_hdmi_writel(hdmi, 0, HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
 #endif
 	hdmi->eld_retrieved = false;
-
 	tegra_periph_reset_assert(hdmi->clk);
+	hdmi->clk_enabled = false;
 	clk_disable(hdmi->clk);
 }
 

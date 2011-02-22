@@ -142,6 +142,22 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.sync = 0,
 	},
 
+#ifdef CONFIG_TEGRA_ENABLE_SUPPORT_FOR_1080p_30HZ
+	/* 1920x1080p 30Hz EIA/CEA-861-B Format 34 */
+	{
+		.xres =		1920,
+		.yres =		1080,
+		.pixclock =	KHZ2PICOS(74250),
+		.hsync_len =	44,	/* h_sync_width */
+		.vsync_len =	5,	/* v_sync_width */
+		.left_margin =	148,	/* h_back_porch */
+		.upper_margin =	36,	/* v_back_porch */
+		.right_margin =	88,	/* h_front_porch */
+		.lower_margin =	4,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+#else
 	/* 1920x1080p 59.94/60hz EIA/CEA-861-B Format 16 */
 	{
 		.xres =		1920,
@@ -156,6 +172,7 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.vmode =	FB_VMODE_NONINTERLACED,
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
+#endif
 };
 
 struct tegra_hdmi_audio_config {

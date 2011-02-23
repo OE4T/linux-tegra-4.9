@@ -56,4 +56,8 @@ struct tegra_dc_ext {
 	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
 };
 
+extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
+				   struct nvmap_handle_ref **handle,
+				   dma_addr_t *phys_addr);
+
 #endif /* __TEGRA_DC_EXT_PRIV_H */

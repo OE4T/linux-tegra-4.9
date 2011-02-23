@@ -238,54 +238,6 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	kfree(data);
 }
 
-static int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user,
-				   struct tegra_dc_ext_flip_win *flip_win)
-{
-	struct tegra_dc_ext *ext = user->ext;
-	struct nvmap_handle_ref *win_dup;
-	struct nvmap_handle *win_handle;
-	u32 id = flip_win->attr.buff_id;
-
-	if (!id) {
-		flip_win->handle = NULL;
-		flip_win->phys_addr = -1;
-
-		return 0;
-	}
-
-	/*
-	 * Take a reference to the buffer using the user's nvmap context, to
-	 * make sure they have permissions to access it.
-	 */
-	win_handle = nvmap_get_handle_id(user->nvmap, id);
-	if (!win_handle)
-		return -EACCES;
-
-	/*
-	 * Duplicate the buffer's handle into the dc_ext driver's nvmap
-	 * context, to ensure that the handle won't be freed as long as it is
-	 * in use by display.
-	 */
-	win_dup = nvmap_duplicate_handle_id(ext->nvmap, id);
-
-	/* Release the reference we took in the user's context above */
-	nvmap_handle_put(win_handle);
-
-	if (IS_ERR(win_dup))
-		return PTR_ERR(win_dup);
-
-	flip_win->handle = win_dup;
-
-	flip_win->phys_addr = nvmap_pin(ext->nvmap, win_dup);
-	/* XXX this isn't correct for non-pointers... */
-	if (IS_ERR((void *)flip_win->phys_addr)) {
-		nvmap_free(ext->nvmap, win_dup);
-		return PTR_ERR((void *)flip_win->phys_addr);
-	}
-
-	return 0;
-}
-
 static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 				 struct tegra_dc_ext_flip *args)
 {
@@ -395,7 +347,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		if (index < 0)
 			continue;
 
-		ret = tegra_dc_ext_pin_window(user, flip_win);
+		ret = tegra_dc_ext_pin_window(user, flip_win->attr.buff_id,
+					      &flip_win->handle,
+					      &flip_win->phys_addr);
 		if (ret)
 			goto fail_pin;
 	}

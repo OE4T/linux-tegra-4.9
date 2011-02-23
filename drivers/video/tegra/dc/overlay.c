@@ -404,6 +404,9 @@ static int tegra_overlay_ioctl_flip(struct overlay_client *client,
 	bool found_one = false;
 	struct tegra_overlay_flip_args flip_args;
 
+	if (!client->dev->dc->enabled)
+		return -EPIPE;
+
 	if (copy_from_user(&flip_args, arg, sizeof(flip_args)))
 		return -EFAULT;
 
@@ -641,4 +644,7 @@ void tegra_overlay_unregister(struct tegra_overlay_info *info)
 	kfree(info);
 }
 
-
+void tegra_overlay_disable(struct tegra_overlay_info *overlay_info)
+{
+	flush_workqueue(overlay_info->flip_wq);
+}

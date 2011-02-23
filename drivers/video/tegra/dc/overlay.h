@@ -23,6 +23,7 @@ struct tegra_overlay_info;
 struct tegra_overlay_info *tegra_overlay_register(struct nvhost_device *ndev,
 						  struct tegra_dc *dc);
 void tegra_overlay_unregister(struct tegra_overlay_info *overlay_info);
+void tegra_overlay_disable(struct tegra_overlay_info *overlay_info);
 #else
 static inline struct tegra_overlay_info *tegra_overlay_register(struct nvhost_device *ndev,
 								struct tegra_dc *dc)
@@ -31,6 +32,10 @@ static inline struct tegra_overlay_info *tegra_overlay_register(struct nvhost_de
 }
 
 static inline void tegra_overlay_unregister(struct tegra_overlay_info *overlay_info)
+{
+}
+
+static inline void tegra_overlay_disable(struct tegra_overlay_info *overlay_info)
 {
 }
 #endif

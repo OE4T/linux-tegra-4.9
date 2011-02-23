@@ -1221,6 +1221,9 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 {
 	disable_irq(dc->irq);
 
+	if (dc->overlay)
+		tegra_overlay_disable(dc->overlay);
+
 	if (dc->out_ops && dc->out_ops->disable)
 		dc->out_ops->disable(dc);
 

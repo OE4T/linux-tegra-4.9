@@ -48,6 +48,7 @@ module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 
 DEFINE_MUTEX(tegra_dc_lock);
+DEFINE_MUTEX(shared_lock);
 
 static inline int tegra_dc_fmt_bpp(int fmt)
 {
@@ -1168,20 +1169,13 @@ static void tegra_dc_init(struct tegra_dc *dc)
 		tegra_dc_program_mode(dc, &dc->mode);
 }
 
-static bool _tegra_dc_enable(struct tegra_dc *dc)
+static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 {
-	if (dc->mode.pclk == 0)
-		return false;
-
-	if (!dc->out)
-		return false;
-
-	tegra_dc_io_start(dc);
-
-	if (dc->out && dc->out->enable)
+	if (dc->out->enable)
 		dc->out->enable();
 
 	tegra_dc_setup_clk(dc, dc->clk);
+
 	clk_enable(dc->clk);
 	clk_enable(dc->emc_clk);
 	tegra_periph_reset_deassert(dc->clk);
@@ -1207,6 +1201,19 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	return true;
 }
 
+static bool _tegra_dc_enable(struct tegra_dc *dc)
+{
+	if (dc->mode.pclk == 0)
+		return false;
+
+	if (!dc->out)
+		return false;
+
+	tegra_dc_io_start(dc);
+
+	return _tegra_dc_controller_enable(dc);
+}
+
 void tegra_dc_enable(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);
@@ -1217,7 +1224,7 @@ void tegra_dc_enable(struct tegra_dc *dc)
 	mutex_unlock(&dc->lock);
 }
 
-static void _tegra_dc_disable(struct tegra_dc *dc)
+static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	disable_irq(dc->irq);
 
@@ -1239,10 +1246,13 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 		dc->syncpt_min++;
 		nvhost_syncpt_cpu_incr(&dc->ndev->host->syncpt, dc->syncpt_id);
 	}
-
-	tegra_dc_io_end(dc);
 }
 
+static void _tegra_dc_disable(struct tegra_dc *dc)
+{
+	_tegra_dc_controller_disable(dc);
+	tegra_dc_io_end(dc);
+}
 
 void tegra_dc_disable(struct tegra_dc *dc)
 {
@@ -1263,20 +1273,61 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 	struct tegra_dc *dc =
 		container_of(work, struct tegra_dc, reset_work);
 
+	unsigned long val = 0;
+
 	dev_warn(&dc->ndev->dev, "overlay stuck in underflow state.  resetting.\n");
 
+	mutex_lock(&shared_lock);
 	mutex_lock(&dc->lock);
-	if (dc->enabled && !dc->suspended) {
-		_tegra_dc_disable(dc);
 
-		/* A necessary wait. */
-		msleep(100);
-		tegra_periph_reset_assert(dc->clk);
+	if (dc->enabled == false || dc->suspended)
+		return;
 
-		/* _tegra_dc_enable deasserts reset */
-		_tegra_dc_enable(dc);
+	dc->enabled = false;
+
+	/*
+	 * off host read bus
+	 */
+	val = tegra_dc_readl(dc, DC_CMD_CONT_SYNCPT_VSYNC);
+	val &= ~(0x00000100);
+	tegra_dc_writel(dc, val, DC_CMD_CONT_SYNCPT_VSYNC);
+
+	/*
+	 * set DC to STOP mode
+	 */
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+
+	msleep(10);
+
+	_tegra_dc_controller_disable(dc);
+
+	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
+		mutex_lock(&tegra_dcs[1]->lock);
+		disable_irq(tegra_dcs[1]->irq);
+	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
+		mutex_lock(&tegra_dcs[0]->lock);
+		disable_irq(tegra_dcs[0]->irq);
 	}
+
+	msleep(5);
+
+	tegra_periph_reset_assert(dc->clk);
+	msleep(2);
+
+	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
+		enable_irq(tegra_dcs[1]->irq);
+		mutex_unlock(&tegra_dcs[1]->lock);
+	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
+		enable_irq(tegra_dcs[0]->irq);
+		mutex_unlock(&tegra_dcs[0]->lock);
+	}
+
+	/* _tegra_dc_enable deasserts reset */
+	_tegra_dc_controller_enable(dc);
+
+	dc->enabled = true;
 	mutex_unlock(&dc->lock);
+	mutex_unlock(&shared_lock);
 }
 
 

@@ -22,6 +22,7 @@
 #include <linux/cdev.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/poll.h>
 
 #include <mach/dc.h>
 #include <mach/nvmap.h>
@@ -126,6 +127,7 @@ extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
 				      int output);
 extern ssize_t tegra_dc_ext_event_read(struct file *filp, char __user *buf,
 				       size_t size, loff_t *ppos);
+extern unsigned int tegra_dc_ext_event_poll(struct file *, poll_table *);
 
 extern int tegra_dc_ext_get_num_outputs(void);
 

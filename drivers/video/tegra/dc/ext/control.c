@@ -188,6 +188,7 @@ static const struct file_operations tegra_dc_ext_event_devops = {
 	.open =			tegra_dc_ext_control_open,
 	.release =		tegra_dc_ext_control_release,
 	.read =			tegra_dc_ext_event_read,
+	.poll =			tegra_dc_ext_event_poll,
 	.unlocked_ioctl =	tegra_dc_ext_control_ioctl,
 };
 

@@ -19,6 +19,7 @@
 #include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/list.h>
+#include <linux/poll.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -26,6 +27,19 @@
 #include "tegra_dc_ext_priv.h"
 
 static DECLARE_WAIT_QUEUE_HEAD(event_wait);
+
+unsigned int tegra_dc_ext_event_poll(struct file *filp, poll_table *wait)
+{
+	struct tegra_dc_ext_control_user *user = filp->private_data;
+	unsigned int mask = 0;
+
+	poll_wait(filp, &event_wait, wait);
+
+	if (atomic_read(&user->num_events))
+		mask |= POLLIN;
+
+	return mask;
+}
 
 static int get_next_event(struct tegra_dc_ext_control_user *user,
 			  struct tegra_dc_ext_event_list *event,

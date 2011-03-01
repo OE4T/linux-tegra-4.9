@@ -31,6 +31,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/nvhost.h>
+#include <mach/hdmi-audio.h>
 
 #include <video/tegrafb.h>
 
@@ -799,7 +800,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	tegra_dc_set_outdata(dc, hdmi);
 
 	dc_hdmi = hdmi;
-
 	/* boards can select default content protection policy */
 	if (dc->out->flags & TEGRA_DC_OUT_NVHDCP_POLICY_ON_DEMAND) {
 		tegra_nvhdcp_set_policy(hdmi->nvhdcp,
@@ -1039,7 +1039,7 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 		break;
 	}
 
-	_tegra_hdmi_writel(hdmi, config->aval, reg_addr);
+	tegra_hdmi_writel(hdmi, config->aval, reg_addr);
 #endif
 	tegra_dc_hdmi_setup_audio_fs_tables(dc);
 
@@ -1328,10 +1328,11 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 			  SOR_REFCLK_DIV_FRAC(dispclk_div_8_2),
 			  HDMI_NV_PDISP_SOR_REFCLK);
 
-
 	hdmi->clk_enabled = true;
+
 	if (!hdmi->dvi) {
-		err = tegra_dc_hdmi_setup_audio(dc);
+		err = tegra_dc_hdmi_setup_audio(dc, hdmi->audio_freq,
+			hdmi->audio_source);
 
 		if (err < 0)
 			hdmi->dvi = true;

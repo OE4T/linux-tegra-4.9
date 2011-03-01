@@ -212,26 +212,9 @@ struct hdmi_stereo_infoframe {
 
 struct tegra_dc_hdmi_data;
 
-enum {
-	AUDIO_FREQ_32K = 32000,
-	AUDIO_FREQ_44_1K = 44100,
-	AUDIO_FREQ_48K = 48000,
-	AUDIO_FREQ_88_2K = 88200,
-	AUDIO_FREQ_96K = 96000,
-	AUDIO_FREQ_176_4K = 176400,
-	AUDIO_FREQ_192K = 192000,
-};
-
-enum {
-	AUTO = 0,
-	SPDIF,
-	HDA,
-};
-
 unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 				unsigned long reg);
 void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 				unsigned long val, unsigned long reg);
-int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_source);
 
 #endif

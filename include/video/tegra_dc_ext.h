@@ -25,6 +25,7 @@
 # include <linux/time.h>
 #else
 # include <time.h>
+# include <unistd.h>
 #endif
 
 #define TEGRA_DC_EXT_FMT_P1		0
@@ -144,5 +145,47 @@ struct tegra_dc_ext_cursor {
 	_IOW('D', 0x06, struct tegra_dc_ext_cursor_image)
 #define TEGRA_DC_EXT_SET_CURSOR \
 	_IOW('D', 0x07, struct tegra_dc_ext_cursor)
+
+
+enum tegra_dc_ext_control_output_type {
+	TEGRA_DC_EXT_DSI,
+	TEGRA_DC_EXT_LVDS,
+	TEGRA_DC_EXT_VGA,
+	TEGRA_DC_EXT_HDMI,
+	TEGRA_DC_EXT_DVI,
+};
+
+struct tegra_dc_ext_control_output_properties {
+	__u32 handle;
+	enum tegra_dc_ext_control_output_type type;
+	__u32 connected;
+	__s32 associated_head;
+};
+
+struct tegra_dc_ext_control_output_edid {
+	__u32 handle;
+	__u32 size;
+	void *data;
+};
+
+struct tegra_dc_ext_event {
+	__u32	type;
+	ssize_t	data_size;
+	char	data[0];
+};
+
+#define TEGRA_DC_EXT_EVENT_HOTPLUG	0x1
+struct tegra_dc_ext_control_event_hotplug {
+	__u32 handle;
+};
+
+#define TEGRA_DC_EXT_CONTROL_GET_NUM_OUTPUTS \
+	_IOR('C', 0x00, __u32)
+#define TEGRA_DC_EXT_CONTROL_GET_OUTPUT_PROPERTIES \
+	_IOWR('C', 0x01, struct tegra_dc_ext_control_output_properties)
+#define TEGRA_DC_EXT_CONTROL_GET_OUTPUT_EDID \
+	_IOWR('C', 0x02, struct tegra_dc_ext_control_output_edid)
+#define TEGRA_DC_EXT_CONTROL_SET_EVENT_MASK \
+	_IOW('C', 0x03, __u32)
 
 #endif /* __TEGRA_DC_EXT_H */

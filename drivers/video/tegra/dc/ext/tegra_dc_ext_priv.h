@@ -20,6 +20,7 @@
 #define __TEGRA_DC_EXT_PRIV_H
 
 #include <linux/cdev.h>
+#include <linux/list.h>
 #include <linux/mutex.h>
 
 #include <mach/dc.h>
@@ -67,6 +68,47 @@ struct tegra_dc_ext {
 	bool				enabled;
 };
 
+#define TEGRA_DC_EXT_EVENT_MASK_ALL \
+	TEGRA_DC_EXT_EVENT_HOTPLUG
+
+#define TEGRA_DC_EXT_EVENT_MAX_SZ	8
+
+struct tegra_dc_ext_event_list {
+	struct tegra_dc_ext_event	event;
+	/* The data field _must_ follow the event field. */
+	char				data[TEGRA_DC_EXT_EVENT_MAX_SZ];
+
+	struct list_head		list;
+};
+
+struct tegra_dc_ext_control_user {
+	struct tegra_dc_ext_control	*control;
+
+	struct list_head		event_list;
+	atomic_t			num_events;
+
+	u32				event_mask;
+
+	struct tegra_dc_ext_event_list	event_to_copy;
+	loff_t				partial_copy;
+
+	struct mutex			lock;
+
+	struct list_head		list;
+};
+
+struct tegra_dc_ext_control {
+	struct cdev			cdev;
+	struct device			*dev;
+
+	struct list_head		users;
+
+	struct mutex			lock;
+};
+
+extern int tegra_dc_ext_devno;
+extern struct class *tegra_dc_ext_class;
+
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 				   struct nvmap_handle_ref **handle,
 				   dma_addr_t *phys_addr);
@@ -77,5 +119,14 @@ extern int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 					 struct tegra_dc_ext_cursor_image *);
 extern int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 				   struct tegra_dc_ext_cursor *);
+
+extern int tegra_dc_ext_control_init(void);
+
+extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
+				      int output);
+extern ssize_t tegra_dc_ext_event_read(struct file *filp, char __user *buf,
+				       size_t size, loff_t *ppos);
+
+extern int tegra_dc_ext_get_num_outputs(void);
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

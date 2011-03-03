@@ -28,6 +28,8 @@
 #include "../host/dev.h"
 #include "../host/t20/syncpt_t20.h"
 
+#include <mach/tegra_dc_ext.h>
+
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
 #define WIN_USE_V_FILTER(win)	((win)->flags & TEGRA_WIN_FLAG_V_FILTER)
@@ -120,6 +122,8 @@ struct tegra_dc {
 		unsigned		underflows_b;
 		unsigned		underflows_c;
 	} stats;
+
+	struct tegra_dc_ext		*ext;
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry			*debugdir;

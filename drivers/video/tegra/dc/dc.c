@@ -2356,6 +2356,12 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	if (dc->out && dc->out->hotplug_init)
 		dc->out->hotplug_init();
 
+	dc->ext = tegra_dc_ext_register(ndev, dc);
+	if (IS_ERR_OR_NULL(dc->ext)) {
+		dev_warn(&ndev->dev, "Failed to enable Tegra DC extensions.\n");
+		dc->ext = NULL;
+	}
+
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
 
@@ -2398,6 +2404,8 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 			release_resource(dc->fb_mem);
 	}
 
+	if (dc->ext)
+		tegra_dc_ext_unregister(dc->ext);
 
 	if (dc->enabled)
 		_tegra_dc_disable(dc);
@@ -2507,12 +2515,16 @@ struct nvhost_driver tegra_dc_driver = {
 
 static int __init tegra_dc_module_init(void)
 {
+	int ret = tegra_dc_ext_module_init();
+	if (ret)
+		return ret;
 	return nvhost_driver_register(&tegra_dc_driver);
 }
 
 static void __exit tegra_dc_module_exit(void)
 {
 	nvhost_driver_unregister(&tegra_dc_driver);
+	tegra_dc_ext_module_exit();
 }
 
 module_exit(tegra_dc_module_exit);

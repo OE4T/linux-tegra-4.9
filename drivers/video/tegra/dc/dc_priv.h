@@ -19,7 +19,6 @@
 #define __DRIVERS_VIDEO_TEGRA_DC_DC_PRIV_H
 
 #include <linux/io.h>
-#include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/completion.h>

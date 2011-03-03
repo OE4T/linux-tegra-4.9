@@ -527,6 +527,12 @@ static int get_topmost_window(u32 *depths, unsigned long *wins)
 	return best;
 }
 
+bool tegra_dc_get_connected(struct tegra_dc *dc)
+{
+	return dc->connected;
+}
+EXPORT_SYMBOL(tegra_dc_get_connected);
+
 static u32 blend_topwin(u32 flags)
 {
 	if (flags & TEGRA_WIN_FLAG_BLEND_COVERAGE)
@@ -2419,6 +2425,8 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
+	else
+		dc->connected = true;
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);
 

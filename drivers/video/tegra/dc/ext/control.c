@@ -36,6 +36,8 @@ int tegra_dc_ext_process_hotplug(int output)
 static int
 get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 {
+	struct tegra_dc *dc;
+
 	/* TODO: this should be more dynamic */
 	if (properties->handle > 2)
 		return -EINVAL;
@@ -43,16 +45,18 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	switch (properties->handle) {
 	case 0:
 		properties->type = TEGRA_DC_EXT_LVDS;
-		properties->connected = 1;
 		break;
 	case 1:
 		properties->type = TEGRA_DC_EXT_HDMI;
-		properties->connected = 1;
 		break;
 	default:
 		return -EINVAL;
 	}
+
 	properties->associated_head = properties->handle;
+
+	dc = tegra_dc_get_dc(properties->associated_head);
+	properties->connected = tegra_dc_get_connected(dc);
 
 	return 0;
 }

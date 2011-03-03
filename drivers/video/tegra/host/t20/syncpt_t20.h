@@ -23,6 +23,8 @@
 #ifndef __NVHOST_SYNCPT_T20_H
 #define __NVHOST_SYNCPT_T20_H
 
+#define NVSYNCPT_DISP0_A		     (8)
+#define NVSYNCPT_DISP1_A		     (9)
 #define NVSYNCPT_AVP_0			     (10)
 #define NVSYNCPT_CSI_VI_0		     (11)
 #define NVSYNCPT_CSI_VI_1		     (12)
@@ -33,10 +35,12 @@
 #define NVSYNCPT_VI_ISP_4		     (17)
 #define NVSYNCPT_2D_0			     (18)
 #define NVSYNCPT_2D_1			     (19)
+#define NVSYNCPT_DISP0_B		     (20)
+#define NVSYNCPT_DISP1_B		     (21)
 #define NVSYNCPT_3D			     (22)
 #define NVSYNCPT_MPE			     (23)
-#define NVSYNCPT_DISP0			     (24)
-#define NVSYNCPT_DISP1			     (25)
+#define NVSYNCPT_DISP0_C		     (24)
+#define NVSYNCPT_DISP1_C		     (25)
 #define NVSYNCPT_VBLANK0		     (26)
 #define NVSYNCPT_VBLANK1		     (27)
 #define NVSYNCPT_MPE_EBM_EOF		     (28)
@@ -51,7 +55,10 @@
 
 /* sync points that are wholly managed by the client */
 #define NVSYNCPTS_CLIENT_MANAGED ( \
-	BIT(NVSYNCPT_DISP0) | BIT(NVSYNCPT_DISP1) | BIT(NVSYNCPT_DSI) | \
+	BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) | \
+	BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) | \
+	BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) | \
+	BIT(NVSYNCPT_DSI) | \
 	BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) | \
 	BIT(NVSYNCPT_VI_ISP_1) | BIT(NVSYNCPT_VI_ISP_2) | \
 	BIT(NVSYNCPT_VI_ISP_3) | BIT(NVSYNCPT_VI_ISP_4) | \

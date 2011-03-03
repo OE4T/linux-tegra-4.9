@@ -52,7 +52,9 @@ static const struct nvhost_channeldesc channelmap[] = {
 {
 	/* channel 0 */
 	.name	       = "display",
-	.syncpts       = BIT(NVSYNCPT_DISP0) | BIT(NVSYNCPT_DISP1) |
+	.syncpts       = BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
+			 BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) |
+			 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
 			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 },

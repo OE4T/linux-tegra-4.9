@@ -105,9 +105,11 @@ struct tegra_dc {
 
 	struct tegra_overlay_info	*overlay;
 
-	u32				syncpt_id;
-	u32				syncpt_min;
-	u32				syncpt_max;
+	struct {
+		u32			id;
+		u32			min;
+		u32			max;
+	} syncpt[DC_N_WINDOWS];
 
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;

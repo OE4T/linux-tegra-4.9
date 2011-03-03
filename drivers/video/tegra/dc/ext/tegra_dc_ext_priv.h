@@ -40,9 +40,9 @@ struct tegra_dc_ext_win {
 
 	struct mutex		lock;
 
-	u32			syncpt_id;
-
 	struct nvmap_handle_ref	*cur_handle;
+
+	struct workqueue_struct	*flip_wq;
 };
 
 struct tegra_dc_ext {
@@ -54,8 +54,6 @@ struct tegra_dc_ext {
 	struct nvmap_client		*nvmap;
 
 	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
-
-	struct workqueue_struct		*flip_wq;
 };
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

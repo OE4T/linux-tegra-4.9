@@ -318,7 +318,7 @@ static void tegra_overlay_flip_worker(struct work_struct *work)
 		tegra_dc_sync_windows(wins, nr_win);
 	}
 
-		tegra_dc_incr_syncpt_min(overlay->dc, data->syncpt_max);
+	tegra_dc_incr_syncpt_min(overlay->dc, 0, data->syncpt_max);
 
 	/* unpin and deref previous front buffers */
 	for (i = 0; i < nr_unpin; i++) {
@@ -378,13 +378,13 @@ static int tegra_overlay_flip(struct tegra_overlay_info *overlay,
 		}
 	}
 
-	syncpt_max = tegra_dc_incr_syncpt_max(overlay->dc);
+	syncpt_max = tegra_dc_incr_syncpt_max(overlay->dc, 0);
 	data->syncpt_max = syncpt_max;
 
 	queue_work(overlay->flip_wq, &data->work);
 
 	args->post_syncpt_val = syncpt_max;
-	args->post_syncpt_id = tegra_dc_get_syncpt_id(overlay->dc);
+	args->post_syncpt_id = tegra_dc_get_syncpt_id(overlay->dc, 0);
 	mutex_unlock(&tegra_flip_lock);
 
 	return 0;

@@ -63,6 +63,8 @@ struct tegra_dc_ext {
 		struct nvmap_handle_ref		*cur_handle;
 		struct mutex			lock;
 	} cursor;
+
+	bool				enabled;
 };
 
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,

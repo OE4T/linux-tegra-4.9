@@ -105,17 +105,20 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	mutex_lock(&ext->cursor.lock);
 
 	if (ext->cursor.user != user) {
-		mutex_unlock(&ext->cursor.lock);
-		return -EACCES;
+		ret = -EACCES;
+		goto unlock;
+	}
+
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
 	}
 
 	old_handle = ext->cursor.cur_handle;
 
 	ret = tegra_dc_ext_pin_window(user, args->buff_id, &handle, &phys_addr);
-	if (ret) {
-		mutex_unlock(&ext->cursor.lock);
-		return -EACCES;
-	}
+	if (ret)
+		goto unlock;
 
 	ext->cursor.cur_handle = handle;
 
@@ -138,6 +141,11 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	}
 
 	return 0;
+
+unlock:
+	mutex_unlock(&ext->cursor.lock);
+
+	return ret;
 }
 
 int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
@@ -147,12 +155,18 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	struct tegra_dc *dc = ext->dc;
 	u32 win_options;
 	bool enable;
+	int ret;
 
 	mutex_lock(&ext->cursor.lock);
 
 	if (ext->cursor.user != user) {
-		mutex_unlock(&ext->cursor.lock);
-		return -EACCES;
+		ret = -EACCES;
+		goto unlock;
+	}
+
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
 	}
 
 	enable = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
@@ -181,4 +195,9 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	mutex_unlock(&ext->cursor.lock);
 
 	return 0;
+
+unlock:
+	mutex_unlock(&ext->cursor.lock);
+
+	return ret;
 }

@@ -125,10 +125,39 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	return ret;
 }
 
-void tegra_dc_ext_suspend(struct tegra_dc_ext *ext)
+static void set_enable(struct tegra_dc_ext *ext, bool en)
 {
 	int i;
 
+	/*
+	 * Take all locks to make sure any flip requests or cursor moves are
+	 * out of their critical sections
+	 */
+	for (i = 0; i < ext->dc->n_windows; i++)
+		mutex_lock(&ext->win[i].lock);
+	mutex_lock(&ext->cursor.lock);
+
+	ext->enabled = en;
+
+	mutex_unlock(&ext->cursor.lock);
+	for (i = ext->dc->n_windows - 1; i >= 0 ; i--)
+		mutex_unlock(&ext->win[i].lock);
+}
+
+void tegra_dc_ext_enable(struct tegra_dc_ext *ext)
+{
+	set_enable(ext, true);
+}
+
+void tegra_dc_ext_disable(struct tegra_dc_ext *ext)
+{
+	int i;
+	set_enable(ext, false);
+
+	/*
+	 * Flush the flip queue -- note that this must be called with dc->lock
+	 * unlocked or else it will hang.
+	 */
 	for (i = 0; i < ext->dc->n_windows; i++) {
 		struct tegra_dc_ext_win *win = &ext->win[i];
 
@@ -358,6 +387,11 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	if (ret)
 		goto fail_pin;
 
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
+	}
+
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		u32 syncpt_max;
 		int index = args->win[i].index;
@@ -382,6 +416,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	unlock_windows_for_flip(user, args);
 
 	return 0;
+
+unlock:
+	unlock_windows_for_flip(user, args);
 
 fail_pin:
 	while (i--) {

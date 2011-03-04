@@ -2032,6 +2032,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	/* force a full blending update */
 	dc->blend.z[0] = -1;
 
+	tegra_dc_ext_enable(dc->ext);
+
 	return true;
 }
 
@@ -2189,6 +2191,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	if (dc->overlay)
 		tegra_overlay_disable(dc->overlay);
 
+	tegra_dc_ext_disable(dc->ext);
+
 	mutex_lock(&dc->lock);
 
 	if (dc->enabled) {
@@ -2210,6 +2214,8 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 	unsigned long val = 0;
 
 	dev_warn(&dc->ndev->dev, "overlay stuck in underflow state.  resetting.\n");
+
+	tegra_dc_ext_disable(dc->ext);
 
 	mutex_lock(&shared_lock);
 	mutex_lock(&dc->lock);
@@ -2370,6 +2376,12 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
 
+	dc->ext = tegra_dc_ext_register(ndev, dc);
+	if (IS_ERR_OR_NULL(dc->ext)) {
+		dev_warn(&ndev->dev, "Failed to enable Tegra DC extensions.\n");
+		dc->ext = NULL;
+	}
+
 	mutex_lock(&dc->lock);
 	if (dc->enabled)
 		_tegra_dc_enable(dc);
@@ -2404,12 +2416,6 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 
 	if (dc->out && dc->out->hotplug_init)
 		dc->out->hotplug_init();
-
-	dc->ext = tegra_dc_ext_register(ndev, dc);
-	if (IS_ERR_OR_NULL(dc->ext)) {
-		dev_warn(&ndev->dev, "Failed to enable Tegra DC extensions.\n");
-		dc->ext = NULL;
-	}
 
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
@@ -2453,6 +2459,8 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 			release_resource(dc->fb_mem);
 	}
 
+	tegra_dc_ext_disable(dc->ext);
+
 	if (dc->ext)
 		tegra_dc_ext_unregister(dc->ext);
 
@@ -2480,13 +2488,14 @@ static int tegra_dc_suspend(struct nvhost_device *ndev, pm_message_t state)
 	if (dc->overlay)
 		tegra_overlay_disable(dc->overlay);
 
+	tegra_dc_ext_disable(dc->ext);
+
 	mutex_lock(&dc->lock);
 
 	if (dc->out_ops && dc->out_ops->suspend)
 		dc->out_ops->suspend(dc);
 
 	if (dc->enabled) {
-		tegra_dc_ext_suspend(dc->ext);
 		_tegra_dc_disable(dc);
 
 		dc->suspended = true;

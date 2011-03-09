@@ -396,9 +396,9 @@ static int nvhost_ioctl_ctrl_syncpt_incr(
 	return 0;
 }
 
-static int nvhost_ioctl_ctrl_syncpt_wait(
+static int nvhost_ioctl_ctrl_syncpt_waitex(
 	struct nvhost_ctrl_userctx *ctx,
-	struct nvhost_ctrl_syncpt_wait_args *args)
+	struct nvhost_ctrl_syncpt_waitex_args *args)
 {
 	u32 timeout;
 	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
@@ -411,7 +411,7 @@ static int nvhost_ioctl_ctrl_syncpt_wait(
 	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
 	  args->timeout);
 	return nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
-					args->thresh, timeout);
+					args->thresh, timeout, &args->value);
 }
 
 static int nvhost_ioctl_ctrl_module_mutex(
@@ -510,13 +510,16 @@ static long nvhost_ctrlctl(struct file *filp,
 		err = nvhost_ioctl_ctrl_syncpt_incr(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CTRL_SYNCPT_WAIT:
-		err = nvhost_ioctl_ctrl_syncpt_wait(priv, (void *)buf);
+		err = nvhost_ioctl_ctrl_syncpt_waitex(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CTRL_MODULE_MUTEX:
 		err = nvhost_ioctl_ctrl_module_mutex(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CTRL_MODULE_REGRDWR:
 		err = nvhost_ioctl_ctrl_module_regrdwr(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_SYNCPT_WAITEX:
+		err = nvhost_ioctl_ctrl_syncpt_waitex(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

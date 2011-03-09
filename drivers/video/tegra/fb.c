@@ -440,7 +440,8 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 		nvhost_syncpt_wait_timeout(&tegra_fb->ndev->host->syncpt,
 					   flip_win->attr.pre_syncpt_id,
 					   flip_win->attr.pre_syncpt_val,
-					   msecs_to_jiffies(500));
+					   msecs_to_jiffies(500),
+					   NULL);
 	}
 
 

@@ -264,6 +264,9 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		tegra_dc_enable(tegra_fb->win->dc);
 		return 0;
 
+	case FB_BLANK_NORMAL:
+	case FB_BLANK_VSYNC_SUSPEND:
+	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
 		dev_dbg(&tegra_fb->ndev->dev, "blank\n");
 		flush_workqueue(tegra_fb->flip_wq);

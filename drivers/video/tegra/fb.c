@@ -174,7 +174,7 @@ static int tegra_fb_set_par(struct fb_info *info)
 	}
 
 	if (var->pixclock) {
-		struct tegra_dc_mode mode;
+		bool stereo;
 
 		info->mode = (struct fb_videomode *)
 			fb_find_best_mode(var, &info->modelist);
@@ -183,42 +183,14 @@ static int tegra_fb_set_par(struct fb_info *info)
 			return -EINVAL;
 		}
 
-		mode.pclk = PICOS2KHZ(info->mode->pixclock) * 1000;
-		mode.h_ref_to_sync = 1;
-		mode.v_ref_to_sync = 1;
-		mode.h_sync_width = info->mode->hsync_len;
-		mode.v_sync_width = info->mode->vsync_len;
-		mode.h_back_porch = info->mode->left_margin;
-		mode.v_back_porch = info->mode->upper_margin;
-		mode.h_active = info->mode->xres;
-		mode.v_active = info->mode->yres;
-		mode.h_front_porch = info->mode->right_margin;
-		mode.v_front_porch = info->mode->lower_margin;
 		/*
 		 * only enable stereo if the mode supports it and
 		 * client requests it
 		 */
-		mode.stereo_mode = !!(var->vmode & info->mode->vmode &
+		stereo = !!(var->vmode & info->mode->vmode &
 					FB_VMODE_STEREO_FRAME_PACK);
 
-		if (mode.stereo_mode) {
-			mode.pclk *= 2;
-			/* total v_active = yres*2 + activespace */
-			mode.v_active = info->mode->yres*2 +
-					info->mode->vsync_len +
-					info->mode->upper_margin +
-					info->mode->lower_margin;
-		}
-
-		mode.flags = 0;
-
-		if (!(info->mode->sync & FB_SYNC_HOR_HIGH_ACT))
-			mode.flags |= TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
-
-		if (!(info->mode->sync & FB_SYNC_VERT_HIGH_ACT))
-			mode.flags |= TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
-
-		tegra_dc_set_mode(tegra_fb->win->dc, &mode);
+		tegra_dc_set_fb_mode(tegra_fb->win->dc, info->mode, stereo);
 
 		tegra_fb->win->w = info->mode->xres;
 		tegra_fb->win->h = info->mode->yres;

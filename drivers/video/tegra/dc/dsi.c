@@ -1356,7 +1356,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_release_regs;
 	}
 
-	dsi_clk = clk_get(&dc->ndev->dev, "dsi");
+	dsi_clk = clk_get(&dc->ndev->dev, "dsia");
 	if (IS_ERR_OR_NULL(dsi_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
 		err = -EBUSY;

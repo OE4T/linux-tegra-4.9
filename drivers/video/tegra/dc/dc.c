@@ -30,6 +30,7 @@
 #include <linux/ktime.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/backlight.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -40,6 +41,7 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "overlay.h"
+#include "nvsd.h"
 
 static int no_vsync;
 
@@ -482,6 +484,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	unsigned long update_mask = GENERAL_ACT_REQ;
 	unsigned long val;
 	bool update_blend = false;
+	bool nvsd_updated = false;
 	int i;
 
 	dc = windows[0]->dc;
@@ -643,7 +646,21 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	}
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+
+	/* Update the SD brightness */
+	nvsd_updated = nvsd_update_brightness(dc);
+
 	mutex_unlock(&dc->lock);
+
+	/* Do the actual brightness update outside of the mutex */
+	if (nvsd_updated && dc->out->sd_settings &&
+	    dc->out->sd_settings->bl_device) {
+
+		struct platform_device *pdev = dc->out->sd_settings->bl_device;
+		struct backlight_device *bl = platform_get_drvdata(pdev);
+		if (bl)
+			backlight_update_status(bl);
+	}
 
 	return 0;
 }
@@ -1353,6 +1370,10 @@ static void tegra_dc_init(struct tegra_dc *dc)
 
 	if (dc->mode.pclk)
 		tegra_dc_program_mode(dc, &dc->mode);
+
+	/* Initialize SD AFTER the modeset.
+	   nvsd_init handles the sd_settings = NULL case. */
+	nvsd_init(dc, dc->out->sd_settings);
 }
 
 static bool _tegra_dc_controller_enable(struct tegra_dc *dc)

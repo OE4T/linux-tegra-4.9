@@ -614,11 +614,19 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			break;
 		}
 
+                if(is_read)
+                    cache_maint(client, h, h_offs,
+                                h_offs + elem_size, NVMAP_CACHE_OP_INV);
+
 		ret = rw_handle_page(h, is_read, h_offs, sys_addr,
 				     elem_size, (unsigned long)addr, *pte);
 
 		if (ret)
 			break;
+
+                if(!is_read)
+                    cache_maint(client, h, h_offs,
+                                h_offs + elem_size, NVMAP_CACHE_OP_WB);
 
 		copied += elem_size;
 		sys_addr += sys_stride;

@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/nvmap_mru.c
+ * drivers/video/tegra/nvmap/nvmap_mru.c
  *
  * IOVMM virtualization support for nvmap
  *
- * Copyright (c) 2009-2010, NVIDIA Corporation.
+ * Copyright (c) 2009-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,7 +115,8 @@ struct tegra_iovmm_area *nvmap_handle_iovmm(struct nvmap_client *c,
 		return h->pgalloc.area;
 	}
 
-	vm = tegra_iovmm_create_vm(c->share->iovmm, NULL, h->size, prot);
+	vm = tegra_iovmm_create_vm(c->share->iovmm, NULL,
+					h->size, h->align, prot);
 
 	if (vm) {
 		INIT_LIST_HEAD(&h->pgalloc.mru_list);
@@ -159,7 +160,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm(struct nvmap_client *c,
 			tegra_iovmm_free_vm(evict->pgalloc.area);
 			evict->pgalloc.area = NULL;
 			vm = tegra_iovmm_create_vm(c->share->iovmm,
-						   NULL, h->size, prot);
+					   NULL, h->size, h->align, prot);
 			nvmap_mru_lock(c->share);
 		}
 	}

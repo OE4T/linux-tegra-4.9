@@ -845,11 +845,13 @@ void nvmap_usecount_dec(struct nvmap_handle *h)
 
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
-struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h, size_t len,
-					  size_t align, unsigned int prot,
+struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 					  struct nvmap_handle *handle)
 {
 	struct nvmap_heap_block *b;
+	size_t len        = handle->size;
+	size_t align      = handle->align;
+	unsigned int prot = handle->flags;
 
 	mutex_lock(&h->lock);
 

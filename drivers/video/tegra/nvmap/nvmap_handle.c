@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/nvmap_handle.c
+ * drivers/video/tegra/nvmap/nvmap_handle.c
  *
  * Handle allocation and freeing routines for nvmap
  *
@@ -38,6 +38,13 @@
 #include "nvmap.h"
 #include "nvmap_mru.h"
 #include "nvmap_common.h"
+
+#define PRINT_CARVEOUT_CONVERSION 0
+#if PRINT_CARVEOUT_CONVERSION
+#define PR_INFO pr_info
+#else
+#define PR_INFO(...)
+#endif
 
 #define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM)
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
@@ -184,7 +191,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 #ifndef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
 		h->pgalloc.area = tegra_iovmm_create_vm(client->share->iovmm,
-							NULL, size, prot);
+						NULL, size, h->align, prot);
 		if (!h->pgalloc.area)
 			goto fail;
 
@@ -207,18 +214,43 @@ fail:
 	return -ENOMEM;
 }
 
-static void alloc_handle(struct nvmap_client *client, size_t align,
+static void alloc_handle(struct nvmap_client *client,
 			 struct nvmap_handle *h, unsigned int type)
 {
 	BUG_ON(type & (type - 1));
-	if (type & NVMAP_HEAP_CARVEOUT_MASK) {
-		struct nvmap_heap_block *b;
 
+#ifdef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
+#define __NVMAP_HEAP_CARVEOUT	NVMAP_HEAP_CARVEOUT_IRAM
+#define __NVMAP_HEAP_IOVMM	(NVMAP_HEAP_IOVMM | NVMAP_HEAP_CARVEOUT_GENERIC)
+	if (type & NVMAP_HEAP_CARVEOUT_GENERIC) {
+#ifdef CONFIG_NVMAP_ALLOW_SYSMEM
+		if (h->size <= PAGE_SIZE) {
+			PR_INFO("###CARVEOUT CONVERTED TO SYSMEM "
+				"0x%x bytes %s(%d)###\n",
+				h->size, current->comm, current->pid);
+			goto sysheap;
+		}
+#endif
+		PR_INFO("###CARVEOUT CONVERTED TO IOVM "
+			"0x%x bytes %s(%d)###\n",
+			h->size, current->comm, current->pid);
+	}
+#else
+#define __NVMAP_HEAP_CARVEOUT	NVMAP_HEAP_CARVEOUT_MASK
+#define __NVMAP_HEAP_IOVMM	NVMAP_HEAP_IOVMM
+#endif
+
+	if (type & __NVMAP_HEAP_CARVEOUT) {
+		struct nvmap_heap_block *b;
+#ifdef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
+		PR_INFO("###IRAM REQUEST RETAINED "
+			"0x%x bytes %s(%d)###\n",
+			h->size, current->comm, current->pid);
+#endif
 		/* Protect handle from relocation */
 		nvmap_usecount_inc(h);
 
-		b = nvmap_carveout_alloc(client, h->size, align,
-					 type, h->flags, h);
+		b = nvmap_carveout_alloc(client, h, type);
 		if (b) {
 			h->heap_pgalloc = false;
 			h->alloc = true;
@@ -228,12 +260,10 @@ static void alloc_handle(struct nvmap_client *client, size_t align,
 		}
 		nvmap_usecount_dec(h);
 
-	} else if (type & NVMAP_HEAP_IOVMM) {
+	} else if (type & __NVMAP_HEAP_IOVMM) {
 		size_t reserved = PAGE_ALIGN(h->size);
 		int commit;
 		int ret;
-
-		BUG_ON(align > PAGE_SIZE);
 
 		/* increment the committed IOVM space prior to allocation
 		 * to avoid race conditions with other threads simultaneously
@@ -253,7 +283,10 @@ static void alloc_handle(struct nvmap_client *client, size_t align,
 		}
 
 	} else if (type & NVMAP_HEAP_SYSMEM) {
-
+#if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) && \
+	defined(CONFIG_NVMAP_ALLOW_SYSMEM)
+sysheap:
+#endif
 		if (handle_page_alloc(client, h, true) == 0) {
 			BUG_ON(!h->pgalloc.contig);
 			h->heap_pgalloc = true;
@@ -295,12 +328,6 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	int nr_page;
 	int err = -ENOMEM;
 
-	align = max_t(size_t, align, L1_CACHE_BYTES);
-
-	/* can't do greater than page size alignment with page alloc */
-	if (align > PAGE_SIZE)
-		heap_mask &= NVMAP_HEAP_CARVEOUT_MASK;
-
 	h = nvmap_get_handle_id(client, id);
 
 	if (!h)
@@ -312,7 +339,14 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
-
+	h->align = max_t(size_t, align, L1_CACHE_BYTES);
+#ifndef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
+	/* This resriction is deprecated as alignments greater than
+	   PAGE_SIZE are now correctly handled, but it is retained for
+	   AP20 compatibility. */
+	if (h->align > PAGE_SIZE)
+		heap_mask &= NVMAP_HEAP_CARVEOUT_MASK;
+#endif
 	/* secure allocations can only be served from secure heaps */
 	if (h->secure)
 		heap_mask &= NVMAP_SECURE_HEAPS;
@@ -341,7 +375,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 			/* iterate possible heaps MSB-to-LSB, since higher-
 			 * priority carveouts will have higher usage masks */
 			heap = 1 << __fls(heap_type);
-			alloc_handle(client, align, h, heap);
+			alloc_handle(client, h, heap);
 			heap_type &= ~heap;
 		}
 	}

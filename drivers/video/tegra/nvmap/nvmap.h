@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ struct nvmap_handle {
 	unsigned long flags;
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
+	size_t align;
 	struct nvmap_client *owner;
 	struct nvmap_device *dev;
 	union {
@@ -153,10 +154,8 @@ void nvmap_usecount_inc(struct nvmap_handle *h);
 void nvmap_usecount_dec(struct nvmap_handle *h);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
-					      size_t len, size_t align,
-					      unsigned long usage,
-					      unsigned int prot,
-					      struct nvmap_handle *handle);
+					      struct nvmap_handle *handle,
+					      unsigned long type);
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 				   struct nvmap_heap_block *b);

@@ -38,6 +38,7 @@
 
 #define DSI_USE_SYNC_POINTS 0
 
+#define DSI_STOP_DC_DURATION_MSEC 1000
 
 #define DSI_MODULE_NOT_INIT		0x0
 #define DSI_MODULE_INIT			0x1
@@ -697,11 +698,39 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
-	/*
-	 * TODO: It is possible that we are in the middle of video stream,
-	 * Add code to wait for vsync and then stop DC from sending data to dsi
-	 */
 	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+}
+
+void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc, struct tegra_dc_dsi_data *dsi)
+{
+	int val;
+	long timeout;
+
+	/* stop dc */
+	tegra_dsi_stop_dc_stream(dc, dsi);
+
+	/* enable vblank interrupt */
+	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+	val |= V_BLANK_INT;
+	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	val |= V_BLANK_INT;
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+
+	/* wait for vblank completion */
+	timeout = wait_for_completion_interruptible_timeout(
+		&dc->v_blank_complete, DSI_STOP_DC_DURATION_MSEC);
+
+	/* disable vblank interrupt */
+	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+	val &= ~V_BLANK_INT;
+	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+
+	if(timeout == 0)
+		printk("Warning: dc dosen't stop at the end of the frame.\n");
 }
 
 static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,

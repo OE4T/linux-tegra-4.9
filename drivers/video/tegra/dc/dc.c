@@ -1181,6 +1181,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
 	tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
 
+	if (status & V_BLANK_INT)
+		complete(&dc->v_blank_complete);
+
 	if (status & FRAME_END_INT) {
 		int completed = 0;
 		int dirty = 0;
@@ -1640,6 +1643,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dc->enabled = true;
 
 	mutex_init(&dc->lock);
+	init_completion(&dc->v_blank_complete);
 	init_waitqueue_head(&dc->wq);
 	INIT_WORK(&dc->reset_work, tegra_dc_reset_worker);
 

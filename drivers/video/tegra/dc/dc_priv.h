@@ -22,6 +22,8 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/wait.h>
+#include <linux/completion.h>
+
 #include "../host/dev.h"
 
 struct tegra_dc;
@@ -90,6 +92,8 @@ struct tegra_dc {
 
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;
+
+	struct completion		v_blank_complete;
 };
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)

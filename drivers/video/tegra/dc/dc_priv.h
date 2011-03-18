@@ -32,8 +32,8 @@
 
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
-#define WIN_USE_V_FILTER(win)	((win)->flags & TEGRA_WIN_FLAG_V_FILTER)
-#define WIN_USE_H_FILTER(win)	((win)->flags & TEGRA_WIN_FLAG_H_FILTER)
+
+#define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)
 
 /* DDR: 8 bytes transfer per clock */
 #define DDR_BW_TO_FREQ(bw) ((bw) / 8)

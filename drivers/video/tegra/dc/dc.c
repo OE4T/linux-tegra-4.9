@@ -69,6 +69,28 @@ struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 DEFINE_MUTEX(tegra_dc_lock);
 DEFINE_MUTEX(shared_lock);
 
+static const struct {
+	bool h;
+	bool v;
+} can_filter[] = {
+	/* Window A has no filtering */
+	{ false, false },
+	/* Window B has both H and V filtering */
+	{ true,  true  },
+	/* Window C has only H filtering */
+	{ false, true  },
+};
+static inline bool win_use_v_filter(const struct tegra_dc_win *win)
+{
+	return can_filter[win->idx].v &&
+		win->h != win->out_h;
+}
+static inline bool win_use_h_filter(const struct tegra_dc_win *win)
+{
+	return can_filter[win->idx].h &&
+		win->w != win->out_w;
+}
+
 static inline int tegra_dc_fmt_bpp(int fmt)
 {
 	switch (fmt) {
@@ -655,7 +677,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 
 	/* tegra_dc_get_bandwidth() treats V filter windows as double
 	 * bandwidth, but LA has a seperate client for V filter */
-	if (w->idx == 1 && WIN_USE_V_FILTER(w))
+	if (w->idx == 1 && win_use_v_filter(w))
 		bw /= 2;
 
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
@@ -769,7 +791,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * to prevent overflow of long. */
 	ret = (unsigned long)(dc->pixel_clk >> 16) *
 		bpp / 8 *
-		(WIN_USE_V_FILTER(w) ? 2 : 1) * w->w / w->out_w *
+		(win_use_v_filter(w) ? 2 : 1) * w->w / w->out_w *
 		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
 
 /*
@@ -874,6 +896,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
 		bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
 		bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
+		const bool filter_h = win_use_h_filter(win);
+		const bool filter_v = win_use_v_filter(win);
 
 		if (win->z != dc->blend.z[win->idx]) {
 			dc->blend.z[win->idx] = win->z;
@@ -973,16 +997,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			val |= COLOR_EXPAND;
 
-		/* only B and C have H filer, force it on if scaling */
-		if (win->idx != 0 && win->w != win->out_w)
-			win->flags |= TEGRA_WIN_FLAG_H_FILTER;
-		/* only B has V filter, set it if scaling */
-		if (win->idx == 1 && win->h != win->out_h)
-			win->flags |= TEGRA_WIN_FLAG_V_FILTER;
-
-		if (WIN_USE_H_FILTER(win))
+		if (filter_h)
 			val |= H_FILTER_ENABLE;
-		if (WIN_USE_V_FILTER(win))
+		if (filter_v)
 			val |= V_FILTER_ENABLE;
 
 		if (invert_h)

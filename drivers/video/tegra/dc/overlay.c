@@ -27,6 +27,7 @@
 #include <linux/spinlock.h>
 #include <linux/tegra_overlay.h>
 #include <linux/uaccess.h>
+#include <drm/drm_fixed.h>
 
 #include <asm/atomic.h>
 
@@ -159,10 +160,10 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 		win->flags |= TEGRA_WIN_FLAG_TILED;
 
 	win->fmt = flip_win->attr.pixformat;
-	win->x = flip_win->attr.x;
-	win->y = flip_win->attr.y;
-	win->w = flip_win->attr.w;
-	win->h = flip_win->attr.h;
+	win->x.full = dfixed_const(flip_win->attr.x);
+	win->y.full = dfixed_const(flip_win->attr.y);
+	win->w.full = dfixed_const(flip_win->attr.w);
+	win->h.full = dfixed_const(flip_win->attr.h);
 	win->out_x = flip_win->attr.out_x;
 	win->out_y = flip_win->attr.out_y;
 	win->out_w = flip_win->attr.out_w;
@@ -183,12 +184,16 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 
 	if (((win->out_x + win->out_w) > xres) && (win->out_x < xres)) {
 		long new_w = xres - win->out_x;
-		win->w = win->w * new_w / win->out_w;
+		u64 in_w = win->w.full * new_w;
+		do_div(in_w, win->out_w);
+		win->w.full = lower_32_bits(in_w);
 	        win->out_w = new_w;
 	}
 	if (((win->out_y + win->out_h) > yres) && (win->out_y < yres)) {
 		long new_h = yres - win->out_y;
-		win->h = win->h * new_h / win->out_h;
+		u64 in_h = win->h.full * new_h;
+		do_div(in_h, win->out_h);
+		win->h.full = lower_32_bits(in_h);
 	        win->out_h = new_h;
 	}
 

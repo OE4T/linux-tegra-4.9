@@ -190,10 +190,10 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	else if (flip_win->attr.blend == TEGRA_DC_EXT_BLEND_COVERAGE)
 		win->flags |= TEGRA_WIN_FLAG_BLEND_COVERAGE;
 	win->fmt = flip_win->attr.pixformat;
-	win->x = flip_win->attr.x;
-	win->y = flip_win->attr.y;
-	win->w = flip_win->attr.w;
-	win->h = flip_win->attr.h;
+	win->x.full = flip_win->attr.x;
+	win->y.full = flip_win->attr.y;
+	win->w.full = flip_win->attr.w;
+	win->h.full = flip_win->attr.h;
 	/* XXX verify that this doesn't go outside display's active region */
 	win->out_x = flip_win->attr.out_x;
 	win->out_y = flip_win->attr.out_y;

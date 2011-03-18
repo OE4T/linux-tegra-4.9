@@ -138,8 +138,8 @@ static int tegra_fb_set_par(struct fb_info *info)
 
 		tegra_dc_set_fb_mode(tegra_fb->win->dc, info->mode, stereo);
 
-		tegra_fb->win->w = info->mode->xres;
-		tegra_fb->win->h = info->mode->yres;
+		tegra_fb->win->w.full = dfixed_const(info->mode->xres);
+		tegra_fb->win->h.full = dfixed_const(info->mode->yres);
 		tegra_fb->win->out_w = info->mode->xres;
 		tegra_fb->win->out_h = info->mode->yres;
 	}
@@ -446,10 +446,10 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	info->var.vsync_len		= 0;
 	info->var.vmode			= FB_VMODE_NONINTERLACED;
 
-	win->x = 0;
-	win->y = 0;
-	win->w = fb_data->xres;
-	win->h = fb_data->yres;
+	win->x.full = dfixed_const(0);
+	win->y.full = dfixed_const(0);
+	win->w.full = dfixed_const(fb_data->xres);
+	win->h.full = dfixed_const(fb_data->yres);
 	/* TODO: set to output res dc */
 	win->out_x = 0;
 	win->out_y = 0;

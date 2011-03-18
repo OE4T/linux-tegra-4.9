@@ -34,6 +34,7 @@
 #include <linux/seq_file.h>
 #include <linux/backlight.h>
 #include <video/tegrafb.h>
+#include <drm/drm_fixed.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -83,12 +84,12 @@ static const struct {
 static inline bool win_use_v_filter(const struct tegra_dc_win *win)
 {
 	return can_filter[win->idx].v &&
-		win->h != win->out_h;
+		win->h.full != dfixed_const(win->out_h);
 }
 static inline bool win_use_h_filter(const struct tegra_dc_win *win)
 {
 	return can_filter[win->idx].h &&
-		win->w != win->out_w;
+		win->w.full != dfixed_const(win->out_w);
 }
 
 static inline int tegra_dc_fmt_bpp(int fmt)
@@ -776,7 +777,8 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	if (!WIN_IS_ENABLED(w))
 		return 0;
 
-	if (w->w == 0 || w->h == 0 || w->out_w == 0 || w->out_h == 0)
+	if (dfixed_trunc(w->w) == 0 || dfixed_trunc(w->h) == 0 ||
+	    w->out_w == 0 || w->out_h == 0)
 		return 0;
 
 	tiled_windows_bw_multiplier =
@@ -791,7 +793,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * to prevent overflow of long. */
 	ret = (unsigned long)(dc->pixel_clk >> 16) *
 		bpp / 8 *
-		(win_use_v_filter(w) ? 2 : 1) * w->w / w->out_w *
+		(win_use_v_filter(w) ? 2 : 1) * dfixed_trunc(w->w) / w->out_w *
 		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
 
 /*
@@ -864,6 +866,53 @@ static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 	return 0;
 }
 
+static inline u32 compute_dda_inc(fixed20_12 in, unsigned out_int,
+				  bool v, unsigned Bpp)
+{
+	/*
+	 * min(round((prescaled_size_in_pixels - 1) * 0x1000 /
+	 *	     (post_scaled_size_in_pixels - 1)), MAX)
+	 * Where the value of MAX is as follows:
+	 * For V_DDA_INCREMENT: 15.0 (0xF000)
+	 * For H_DDA_INCREMENT:  4.0 (0x4000) for 4 Bytes/pix formats.
+	 *			 8.0 (0x8000) for 2 Bytes/pix formats.
+	 */
+
+	fixed20_12 out = dfixed_init(out_int);
+	u32 dda_inc;
+	int max;
+
+	if (v) {
+		max = 15;
+	} else {
+		switch (Bpp) {
+		default:
+			WARN_ON_ONCE(1);
+			/* fallthrough */
+		case 4:
+			max = 4;
+			break;
+		case 2:
+			max = 8;
+			break;
+		}
+	}
+
+	out.full = max_t(u32, out.full - dfixed_const(1), dfixed_const(1));
+	in.full -= dfixed_const(1);
+
+	dda_inc = dfixed_div(in, out);
+
+	dda_inc = min_t(u32, dda_inc, dfixed_const(max));
+
+	return dda_inc;
+}
+
+static inline u32 compute_initial_dda(fixed20_12 in)
+{
+	return dfixed_frac(in);
+}
+
 /* does not support updating windows on multiple dcs in one call */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 {
@@ -891,11 +940,13 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		struct tegra_dc_win *win = windows[i];
 		unsigned h_dda;
 		unsigned v_dda;
-		unsigned h_offset;
-		unsigned v_offset;
+		fixed20_12 h_offset, v_offset;
 		bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
 		bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
 		bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
+		unsigned Bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
+		/* Bytes per pixel of bandwidth, used for dda_inc calculation */
+		unsigned Bpp_bw = Bpp * (yuvp ? 2 : 1);
 		const bool filter_h = win_use_h_filter(win);
 		const bool filter_v = win_use_v_filter(win);
 
@@ -931,16 +982,18 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				V_SIZE(win->out_h) | H_SIZE(win->out_w),
 				DC_WIN_SIZE);
 		tegra_dc_writel(dc,
-				V_PRESCALED_SIZE(win->h) |
-				H_PRESCALED_SIZE(win->w * tegra_dc_fmt_bpp(win->fmt) / 8),
+				V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
+				H_PRESCALED_SIZE(dfixed_trunc(win->w) * Bpp),
 				DC_WIN_PRESCALED_SIZE);
 
-		h_dda = ((win->w - 1) * 0x1000) / max_t(int, win->out_w - 1, 1);
-		v_dda = ((win->h - 1) * 0x1000) / max_t(int, win->out_h - 1, 1);
+		h_dda = compute_dda_inc(win->w, win->out_w, false, Bpp_bw);
+		v_dda = compute_dda_inc(win->h, win->out_h, true, Bpp_bw);
 		tegra_dc_writel(dc, V_DDA_INC(v_dda) | H_DDA_INC(h_dda),
 				DC_WIN_DDA_INCREMENT);
-		tegra_dc_writel(dc, 0, DC_WIN_H_INITIAL_DDA);
-		tegra_dc_writel(dc, 0, DC_WIN_V_INITIAL_DDA);
+		h_dda = compute_initial_dda(win->x);
+		v_dda = compute_initial_dda(win->y);
+		tegra_dc_writel(dc, h_dda, DC_WIN_H_INITIAL_DDA);
+		tegra_dc_writel(dc, v_dda, DC_WIN_V_INITIAL_DDA);
 
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
@@ -968,17 +1021,18 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 		h_offset = win->x;
 		if (invert_h) {
-			h_offset += win->w - 1;
+			h_offset.full += win->w.full - dfixed_const(1);
 		}
-		h_offset *= tegra_dc_fmt_bpp(win->fmt) / 8;
 
 		v_offset = win->y;
 		if (invert_v) {
-			v_offset += win->h - 1;
+			v_offset.full += win->h.full - dfixed_const(1);
 		}
 
-		tegra_dc_writel(dc, h_offset, DC_WINBUF_ADDR_H_OFFSET);
-		tegra_dc_writel(dc, v_offset, DC_WINBUF_ADDR_V_OFFSET);
+		tegra_dc_writel(dc, dfixed_trunc(h_offset) * Bpp,
+				DC_WINBUF_ADDR_H_OFFSET);
+		tegra_dc_writel(dc, dfixed_trunc(v_offset),
+				DC_WINBUF_ADDR_V_OFFSET);
 
 		if (WIN_IS_TILED(win))
 			tegra_dc_writel(dc,

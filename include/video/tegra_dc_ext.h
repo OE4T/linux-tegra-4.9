@@ -65,6 +65,10 @@ struct tegra_dc_ext_flip_windowattr {
 	__u32	stride;
 	__u32	stride_uv;
 	__u32	pixformat;
+	/*
+	 * x, y, w, h are fixed-point: 20 bits of integer (MSB) and 12 bits of
+	 * fractional (LSB)
+	 */
 	__u32	x;
 	__u32	y;
 	__u32	w;

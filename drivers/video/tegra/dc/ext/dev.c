@@ -477,6 +477,13 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
+static u32 tegra_dc_ext_get_vblank_syncpt(struct tegra_dc_ext_user *user)
+{
+	struct tegra_dc *dc = user->ext->dc;
+
+	return dc->vblank_syncpt;
+}
+
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
@@ -539,6 +546,16 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return tegra_dc_ext_set_csc(user, &args);
+	}
+
+	case TEGRA_DC_EXT_GET_VBLANK_SYNCPT:
+	{
+		u32 syncpt = tegra_dc_ext_get_vblank_syncpt(user);
+
+		if (copy_to_user(user_arg, &syncpt, sizeof(syncpt)))
+			return -EFAULT;
+
+		return 0;
 	}
 
 	default:

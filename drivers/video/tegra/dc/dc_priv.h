@@ -111,6 +111,7 @@ struct tegra_dc {
 		u32			min;
 		u32			max;
 	} syncpt[DC_N_WINDOWS];
+	u32				vblank_syncpt;
 
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;

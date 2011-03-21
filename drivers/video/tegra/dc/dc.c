@@ -2043,13 +2043,10 @@ static u32 get_syncpt(struct tegra_dc *dc, int idx)
 
 static void tegra_dc_init(struct tegra_dc *dc)
 {
-	u32 vblank_syncpt = 0;
 	int i;
 
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
 	if (dc->ndev->id == 0) {
-		vblank_syncpt = NVSYNCPT_VBLANK0;
-
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0A,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0B,
@@ -2061,8 +2058,6 @@ static void tegra_dc_init(struct tegra_dc *dc)
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHC,
 				      TEGRA_MC_PRIO_HIGH);
 	} else if (dc->ndev->id == 1) {
-		vblank_syncpt = NVSYNCPT_VBLANK1;
-
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0AB,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0BB,
@@ -2074,7 +2069,8 @@ static void tegra_dc_init(struct tegra_dc *dc)
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHCB,
 				      TEGRA_MC_PRIO_HIGH);
 	}
-	tegra_dc_writel(dc, 0x00000100 | vblank_syncpt, DC_CMD_CONT_SYNCPT_VSYNC);
+	tegra_dc_writel(dc, 0x00000100 | dc->vblank_syncpt,
+			DC_CMD_CONT_SYNCPT_VSYNC);
 	tegra_dc_writel(dc, 0x00004700, DC_CMD_INT_TYPE);
 	tegra_dc_writel(dc, 0x0001c700, DC_CMD_INT_POLARITY);
 	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
@@ -2485,6 +2481,9 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		tegra_dc_set_out(dc, dc->pdata->default_out);
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
+
+	dc->vblank_syncpt = (dc->ndev->id == 0) ?
+		NVSYNCPT_VBLANK0 : NVSYNCPT_VBLANK1;
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {

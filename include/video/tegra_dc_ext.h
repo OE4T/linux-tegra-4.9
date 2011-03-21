@@ -184,6 +184,13 @@ struct tegra_dc_ext_csc {
 #define TEGRA_DC_EXT_SET_CSC \
 	_IOW('D', 0x08, struct tegra_dc_ext_csc)
 
+/*
+ * Returns the auto-incrementing vblank syncpoint for the head associated with
+ * this device node
+ */
+#define TEGRA_DC_EXT_GET_VBLANK_SYNCPT \
+	_IOR('D', 0x09, __u32)
+
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

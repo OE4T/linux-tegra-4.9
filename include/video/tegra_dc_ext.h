@@ -130,6 +130,37 @@ struct tegra_dc_ext_cursor {
 	__u32 flags;
 };
 
+/*
+ * Color conversion is performed as follows:
+ *
+ * r = sat(kyrgb * sat(y + yof) + kur * u + kvr * v)
+ * g = sat(kyrgb * sat(y + yof) + kug * u + kvg * v)
+ * b = sat(kyrgb * sat(y + yof) + kub * u + kvb * v)
+ *
+ * Coefficients should be specified as fixed-point values; the exact format
+ * varies for each coefficient.
+ * The format for each coefficient is listed below with the syntax:
+ * - A "s." prefix means that the coefficient has a sign bit (twos complement).
+ * - The first number is the number of bits in the integer component (not
+ *   including the optional sign bit).
+ * - The second number is the number of bits in the fractional component.
+ *
+ * All three fields should be tightly packed, justified to the LSB of the
+ * 16-bit value.  For example, the "s.2.8" value should be packed as:
+ * (MSB) 5 bits of 0, 1 bit of sign, 2 bits of integer, 8 bits of frac (LSB)
+ */
+struct tegra_dc_ext_csc {
+	__u32 win_index;
+	__u16 yof;	/* s.7.0 */
+	__u16 kyrgb;	/*   2.8 */
+	__u16 kur;	/* s.2.8 */
+	__u16 kvr;	/* s.2.8 */
+	__u16 kug;	/* s.1.8 */
+	__u16 kvg;	/* s.1.8 */
+	__u16 kub;	/* s.2.8 */
+	__u16 kvb;	/* s.2.8 */
+};
+
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
 	_IOW('D', 0x00, __s32)
 
@@ -149,6 +180,9 @@ struct tegra_dc_ext_cursor {
 	_IOW('D', 0x06, struct tegra_dc_ext_cursor_image)
 #define TEGRA_DC_EXT_SET_CURSOR \
 	_IOW('D', 0x07, struct tegra_dc_ext_cursor)
+
+#define TEGRA_DC_EXT_SET_CSC \
+	_IOW('D', 0x08, struct tegra_dc_ext_csc)
 
 
 enum tegra_dc_ext_control_output_type {

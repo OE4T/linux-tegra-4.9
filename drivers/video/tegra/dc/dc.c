@@ -621,17 +621,49 @@ static void tegra_dc_set_blending(struct tegra_dc *dc, struct tegra_dc_blend *bl
 	}
 }
 
-static void tegra_dc_set_csc(struct tegra_dc *dc)
+static void tegra_dc_init_csc_defaults(struct tegra_dc_csc *csc)
 {
-	tegra_dc_writel(dc, 0x00f0, DC_WIN_CSC_YOF);
-	tegra_dc_writel(dc, 0x012a, DC_WIN_CSC_KYRGB);
-	tegra_dc_writel(dc, 0x0000, DC_WIN_CSC_KUR);
-	tegra_dc_writel(dc, 0x0198, DC_WIN_CSC_KVR);
-	tegra_dc_writel(dc, 0x039b, DC_WIN_CSC_KUG);
-	tegra_dc_writel(dc, 0x032f, DC_WIN_CSC_KVG);
-	tegra_dc_writel(dc, 0x0204, DC_WIN_CSC_KUB);
-	tegra_dc_writel(dc, 0x0000, DC_WIN_CSC_KVB);
+	csc->yof   = 0x00f0;
+	csc->kyrgb = 0x012a;
+	csc->kur   = 0x0000;
+	csc->kvr   = 0x0198;
+	csc->kug   = 0x039b;
+	csc->kvg   = 0x032f;
+	csc->kub   = 0x0204;
+	csc->kvb   = 0x0000;
 }
+
+static void tegra_dc_set_csc(struct tegra_dc *dc, struct tegra_dc_csc *csc)
+{
+	tegra_dc_writel(dc, csc->yof,	DC_WIN_CSC_YOF);
+	tegra_dc_writel(dc, csc->kyrgb,	DC_WIN_CSC_KYRGB);
+	tegra_dc_writel(dc, csc->kur,	DC_WIN_CSC_KUR);
+	tegra_dc_writel(dc, csc->kvr,	DC_WIN_CSC_KVR);
+	tegra_dc_writel(dc, csc->kug,	DC_WIN_CSC_KUG);
+	tegra_dc_writel(dc, csc->kvg,	DC_WIN_CSC_KVG);
+	tegra_dc_writel(dc, csc->kub,	DC_WIN_CSC_KUB);
+	tegra_dc_writel(dc, csc->kvb,	DC_WIN_CSC_KVB);
+}
+
+int tegra_dc_update_csc(struct tegra_dc *dc, int win_idx)
+{
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -EFAULT;
+	}
+
+	tegra_dc_writel(dc, WINDOW_A_SELECT << win_idx,
+			DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	tegra_dc_set_csc(dc, &dc->windows[win_idx].csc);
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dc_update_csc);
 
 static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 {
@@ -2059,7 +2091,8 @@ static void tegra_dc_init(struct tegra_dc *dc)
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
-		tegra_dc_set_csc(dc);
+		tegra_dc_init_csc_defaults(&dc->windows[i].csc);
+		tegra_dc_set_csc(dc, &dc->windows[i].csc);
 		tegra_dc_set_scaling_filter(dc);
 	}
 

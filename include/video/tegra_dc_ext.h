@@ -193,11 +193,23 @@ enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DVI,
 };
 
+/*
+ * Get the properties for a given output.
+ *
+ * handle (in): Which output to query
+ * type (out): Describes the type of the output
+ * connected (out): Non-zero iff the output is currently connected
+ * associated_head (out): The head number that the output is currently
+ *      bound to.  -1 iff the output is not associated with any head.
+ * head_mask (out): Bitmask of which heads the output may be bound to (some
+ *      outputs are permanently bound to a single head).
+ */
 struct tegra_dc_ext_control_output_properties {
 	__u32 handle;
 	enum tegra_dc_ext_control_output_type type;
 	__u32 connected;
 	__s32 associated_head;
+	__u32 head_mask;
 };
 
 struct tegra_dc_ext_control_output_edid {

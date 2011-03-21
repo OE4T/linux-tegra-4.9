@@ -54,6 +54,7 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	}
 
 	properties->associated_head = properties->handle;
+	properties->head_mask = (1 << properties->associated_head);
 
 	dc = tegra_dc_get_dc(properties->associated_head);
 	properties->connected = tegra_dc_get_connected(dc);

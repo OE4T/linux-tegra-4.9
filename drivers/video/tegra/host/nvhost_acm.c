@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -189,11 +189,10 @@ static int is_module_idle(struct nvhost_module *mod)
 	return (count == 0);
 }
 
-static void debug_not_idle(struct nvhost_module *mod)
+static void debug_not_idle(struct nvhost_master *dev)
 {
 	int i;
 	bool lock_released = true;
-	struct nvhost_master *dev = container_of(mod, struct nvhost_master, mod);
 
 	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
 		struct nvhost_module *m = &dev->channels[i].mod;
@@ -215,10 +214,22 @@ static void debug_not_idle(struct nvhost_module *mod)
 
 void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 {
-	if (system_suspend && (!is_module_idle(mod)))
-		debug_not_idle(mod);
+	int ret;
+	struct nvhost_master *dev;
 
-	wait_event(mod->idle, is_module_idle(mod));
+	if (system_suspend) {
+		dev = container_of(mod, struct nvhost_master, mod);
+		if (!is_module_idle(mod))
+			debug_not_idle(dev);
+	} else {
+		dev = container_of(mod, struct nvhost_channel, mod)->dev;
+	}
+
+	ret = wait_event_timeout(mod->idle, is_module_idle(mod),
+			   msecs_to_jiffies(ACM_TIMEOUT_MSEC + 500));
+	if (ret == 0)
+		nvhost_debug_dump(dev);
+
 	if (system_suspend)
 		printk("tegra_grhost: entered idle\n");
 

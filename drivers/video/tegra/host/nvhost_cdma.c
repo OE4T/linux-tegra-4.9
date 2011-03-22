@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -627,22 +627,15 @@ void nvhost_cdma_flush(struct nvhost_cdma *cdma)
 }
 
 /**
- * Find the currently executing gather in the push buffer and return
- * its physical address and size.
+ * Retrieve the op pair at a slot offset from a DMA address
  */
-void nvhost_cdma_find_gather(struct nvhost_cdma *cdma, u32 dmaget, u32 *addr, u32 *size)
+void nvhost_cdma_peek(struct nvhost_cdma *cdma,
+		u32 dmaget, int slot, u32 *out)
 {
 	u32 offset = dmaget - cdma->push_buffer.phys;
+	u32 *p = cdma->push_buffer.mapped;
 
-	*addr = *size = 0;
-
-	if (offset >= 8 && offset < cdma->push_buffer.cur) {
-		u32 *p = cdma->push_buffer.mapped + (offset - 8) / 4;
-
-		/* Make sure we have a gather */
-		if ((p[0] >> 28) == 6) {
-			*addr = p[1];
-			*size = p[0] & 0x3fff;
-		}
-	}
+	offset = ((offset + slot * 8) & (PUSH_BUFFER_SIZE - 1)) >> 2;
+	out[0] = p[offset];
+	out[1] = p[offset + 1];
 }

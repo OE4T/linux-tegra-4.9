@@ -849,6 +849,12 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 {
 	unsigned int ctrl;
 
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
 	ctrl = ((cfg->period << PM_PERIOD_SHIFT) |
 		(cfg->clk_div << PM_CLK_DIVIDER_SHIFT) |
 		cfg->clk_select);
@@ -864,8 +870,9 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 		break;
 	default:
 		dev_err(&dc->ndev->dev, "Error\n");
-		return;
+		break;
 	}
+	mutex_unlock(&dc->lock);
 }
 EXPORT_SYMBOL(tegra_dc_config_pwm);
 

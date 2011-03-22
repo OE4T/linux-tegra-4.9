@@ -568,6 +568,7 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 		hdmi->hpd_pending = false;
 	}
 	spin_unlock_irqrestore(&hdmi->suspend_lock, flags);
+	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)

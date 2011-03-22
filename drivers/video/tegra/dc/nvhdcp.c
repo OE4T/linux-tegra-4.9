@@ -1086,6 +1086,11 @@ void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp)
 	tegra_nvhdcp_off(nvhdcp);
 }
 
+void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp)
+{
+	if (!nvhdcp) return;
+	tegra_nvhdcp_renegotiate(nvhdcp);
+}
 
 static long nvhdcp_dev_ioctl(struct file *filp,
                 unsigned int cmd, unsigned long arg)

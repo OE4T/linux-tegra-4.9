@@ -774,10 +774,22 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 	if (dc->out->type == TEGRA_DC_OUT_DSI) {
 		unsigned long rate;
-		struct clk *pll_d_out0_clk =
-			clk_get_sys(NULL, "pll_d_out0");
-		struct clk *pll_d_clk =
-			clk_get_sys(NULL, "pll_d");
+		struct clk *pll_d_out0_clk;
+		struct clk *pll_d_clk;
+
+		if (clk == dc->clk) {
+			pll_d_out0_clk = clk_get_sys(NULL, "pll_d_out0");
+			pll_d_clk = clk_get_sys(NULL, "pll_d");
+		} else {
+			if (dc->pdata->default_out->dsi->dsi_instance) {
+				pll_d_out0_clk = clk_get_sys(NULL, "pll_d2_out0");
+				pll_d_clk = clk_get_sys(NULL, "pll_d2");
+				tegra_clk_cfg_ex(pll_d_clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+			} else {
+				pll_d_out0_clk = clk_get_sys(NULL, "pll_d_out0");
+				pll_d_clk = clk_get_sys(NULL, "pll_d");
+			}
+		}
 
 		rate = dc->mode.pclk;
 		if (rate != clk_get_rate(pll_d_clk))

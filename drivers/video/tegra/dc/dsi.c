@@ -350,6 +350,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->default_hs_clk_khz =
 			(byte_clk_hz * NUMOF_BIT_PER_BYTE) / (1000 * 2);
 
+	dsi->controller_index = dc->ndev->id;
+
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
 			DSI_CONTROL_NUM_DATA_LANES(dsi->info.n_data_lanes - 1) |
@@ -915,8 +917,10 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	u32 val;
 	u32 i;
 	int err;
-
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
+	if (dsi->info.dsi_instance) {
+		/* TODO:Set the misc register*/
+	}
 
 	/* TODO: only need to change the timing for bta */
 	tegra_dsi_set_phy_timing(dsi);
@@ -1305,8 +1309,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data* dsi,
 	if (!dsi->info.lp_cmd_mode_freq_khz)
 		dsi->info.lp_cmd_mode_freq_khz = DEFAULT_LP_CMD_MODE_CLK_KHZ;
 
-	dsi->controller_index = 0;
-
 	/* host mode is for testing only*/
 	dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
 
@@ -1325,6 +1327,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	void __iomem *base;
 	struct clk *dc_clk = NULL;
 	struct clk *dsi_clk = NULL;
+	struct tegra_dsi_out *dsi_pdata;
 	int err;
 
 	err = 0;
@@ -1356,7 +1359,17 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_release_regs;
 	}
 
-	dsi_clk = clk_get(&dc->ndev->dev, "dsia");
+	dsi_pdata = dc->pdata->default_out->dsi;
+	if (!dsi_pdata) {
+		dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
+		goto err_release_regs;
+	}
+
+	if (dsi_pdata->dsi_instance)
+		dsi_clk = clk_get(&dc->ndev->dev, "dsib");
+	else
+		dsi_clk = clk_get(&dc->ndev->dev, "dsia");
+
 	if (IS_ERR_OR_NULL(dsi_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
 		err = -EBUSY;
@@ -1371,12 +1384,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_clk_put;
 	}
 
-	if (!dc->pdata->default_out->dsi) {
-		dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
-		goto err_dsi_data;
-	}
-
-	err = tegra_dc_dsi_cp_info(dsi, dc->pdata->default_out->dsi);
+	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
 	if (err < 0)
 		goto err_dsi_data;
 
@@ -1394,7 +1402,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 
 err_dsi_data:
 err_clk_put:
-	clk_put(dsi->dsi_clk);
+	clk_put(dsi_clk);
 err_release_regs:
 	release_resource(base_res);
 err_free_dsi:

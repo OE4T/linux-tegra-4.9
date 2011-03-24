@@ -1134,11 +1134,11 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_HDMI:
 		dc->out_ops = &tegra_dc_hdmi_ops;
 		break;
-#ifdef CONFIG_TEGRA_DSI
+
 	case TEGRA_DC_OUT_DSI:
 		dc->out_ops = &tegra_dc_dsi_ops;
 		break;
-#endif
+
 	default:
 		dc->out_ops = NULL;
 		break;

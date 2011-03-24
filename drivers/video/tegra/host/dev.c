@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@ struct nvhost_channel_userctx {
 	u32 syncpt_incrs;
 	u32 cmdbufs_pending;
 	u32 relocs_pending;
-	u32 null_kickoff;
 	struct nvmap_handle_ref *gather_mem;
 	u32 *gathers;
 	u32 *cur_gather;
@@ -212,7 +211,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 
 static int nvhost_ioctl_channel_flush(
 	struct nvhost_channel_userctx *ctx,
-	struct nvhost_get_param_args *args)
+	struct nvhost_get_param_args *args,
+	int null_kickoff)
 {
 	struct device *device = &ctx->ch->dev->pdev->dev;
 	int num_unpin;
@@ -246,7 +246,7 @@ static int nvhost_ioctl_channel_flush(
 				ctx->unpinarray, num_unpin,
 				ctx->syncpt_id, ctx->syncpt_incrs,
 				&args->value,
-				ctx->null_kickoff != 0);
+				null_kickoff);
 	if (err)
 		nvmap_unpin_handles(ctx->nvmap, ctx->unpinarray, num_unpin);
 
@@ -274,7 +274,10 @@ static long nvhost_channelctl(struct file *filp,
 
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_FLUSH:
-		err = nvhost_ioctl_channel_flush(priv, (void *)buf);
+		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 0);
+		break;
+	case NVHOST_IOCTL_CHANNEL_NULL_KICKOFF:
+		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 1);
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 		((struct nvhost_get_param_args *)buf)->value =

@@ -98,14 +98,29 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 
 static const char *get_module_clk_id(const char *module, int index)
 {
-	if (index == 1 && strcmp(module, "gr2d") == 0)
-		return "epp";
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	else if (index == 1 && strcmp(module, "gr3d") == 0)
-		return "gr3d2";
-#endif
-	else if (index == 0)
+	if (index == 0)
 		return module;
+	if (strcmp(module, "gr2d") == 0) {
+		if (index == 1)
+			return "epp";
+		if (index == 2)
+			return "emc";
+	}
+	if (strcmp(module, "gr3d") == 0) {
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+		if (index == 1)
+			return "gr3d2";
+		if (index == 2)
+			return "emc";
+#else
+		if (index == 1)
+			return "emc";
+#endif
+	}
+	if (strcmp(module, "mpe") == 0) {
+		if (index == 1)
+			return "emc";
+	}
 	return NULL;
 }
 

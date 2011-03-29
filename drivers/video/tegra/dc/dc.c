@@ -1795,6 +1795,21 @@ static inline void print_mode(struct tegra_dc *dc,
 			const struct tegra_dc_mode *mode, const char *note) { }
 #endif /* DEBUG */
 
+static inline void enable_dc_irq(unsigned int irq)
+{
+#ifdef CONFIG_TEGRA_FPGA_PLATFORM
+	/* Always disable DC interrupts on FPGA. */
+	disable_irq(irq);
+#else
+	enable_irq(irq);
+#endif
+}
+
+static inline void disable_dc_irq(unsigned int irq)
+{
+	disable_irq(irq);
+}
+
 static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
 {
 	u32 val;
@@ -2653,7 +2668,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0, DC_CMD_INT_ENABLE);
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
-	enable_irq(dc->irq);
+	enable_dc_irq(dc->irq);
 
 	failed_init = tegra_dc_init(dc);
 	if (failed_init) {
@@ -2704,16 +2719,14 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 #endif
 
 	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
-		enable_irq(tegra_dcs[1]->irq);
+		enable_dc_irq(tegra_dcs[1]->irq);
 		mutex_unlock(&tegra_dcs[1]->lock);
 	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
-		enable_irq(tegra_dcs[0]->irq);
+		enable_dc_irq(tegra_dcs[0]->irq);
 		mutex_unlock(&tegra_dcs[0]->lock);
 	}
 
-#ifndef CONFIG_TEGRA_FPGA_PLATFORM
-	enable_irq(dc->irq);
-#endif
+	enable_dc_irq(dc->irq);
 
 	if (tegra_dc_init(dc)) {
 		dev_err(&dc->ndev->dev, "cannot initialize\n");

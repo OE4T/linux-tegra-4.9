@@ -312,7 +312,7 @@ static void tegra_overlay_set_emc_freq(struct tegra_overlay_info *dev)
 
 	for (i = 0; i < dev->dc->n_windows; i++) {
 		if (dev->overlays[i].owner != NULL)
-			emc_freq += dev->dc->mode.pclk*(i==1?2:1);
+			emc_freq += dev->dc->mode.pclk*(i==1?2:1)*2;
 	}
 	clk_set_rate(dev->dc->emc_clk, emc_freq);
 }

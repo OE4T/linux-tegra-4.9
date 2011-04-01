@@ -683,6 +683,8 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_dc_hdmi_data, work);
 	struct tegra_dc *dc = hdmi->dc;
 
+	tegra_dc_enable(dc);
+	msleep(5);
 	if (!tegra_dc_hdmi_detect(dc)) {
 		tegra_dc_disable(dc);
 		tegra_fb_update_monspecs(dc->fb, NULL, NULL);

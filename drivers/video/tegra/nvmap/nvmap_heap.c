@@ -889,9 +889,6 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h, size_t len,
 
 struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
 {
-	struct buddy_heap *bh = NULL;
-	struct nvmap_heap *h;
-
 	if (b->type == BLOCK_BUDDY) {
 		struct buddy_block *bb;
 		bb = container_of(b, struct buddy_block, block);

@@ -19,5 +19,7 @@
 
 void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings);
 bool nvsd_update_brightness(struct tegra_dc *dc);
+int nvsd_create_sysfs(struct device *dev);
+void nvsd_remove_sysfs(struct device *dev);
 
 #endif

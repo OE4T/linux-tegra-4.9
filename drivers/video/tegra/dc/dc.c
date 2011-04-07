@@ -486,7 +486,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	unsigned long update_mask = GENERAL_ACT_REQ;
 	unsigned long val;
 	bool update_blend = false;
-	bool nvsd_updated = false;
 	int i;
 
 	dc = windows[0]->dc;
@@ -649,20 +648,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 
-	/* Update the SD brightness */
-	nvsd_updated = nvsd_update_brightness(dc);
-
 	mutex_unlock(&dc->lock);
-
-	/* Do the actual brightness update outside of the mutex */
-	if (nvsd_updated && dc->out->sd_settings &&
-	    dc->out->sd_settings->bl_device) {
-
-		struct platform_device *pdev = dc->out->sd_settings->bl_device;
-		struct backlight_device *bl = platform_get_drvdata(pdev);
-		if (bl)
-			backlight_update_status(bl);
-	}
 
 	return 0;
 }
@@ -1190,6 +1176,29 @@ unsigned tegra_dc_get_out_width(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_get_out_width);
 
+static void tegra_dc_vblank(struct work_struct *work)
+{
+	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
+	bool nvsd_updated = false;
+
+	mutex_lock(&dc->lock);
+
+	/* Update the SD brightness */
+	nvsd_updated = nvsd_update_brightness(dc);
+
+	mutex_unlock(&dc->lock);
+
+	/* Do the actual brightness update outside of the mutex */
+	if (nvsd_updated && dc->out->sd_settings &&
+	    dc->out->sd_settings->bl_device) {
+
+		struct platform_device *pdev = dc->out->sd_settings->bl_device;
+		struct backlight_device *bl = platform_get_drvdata(pdev);
+		if (bl)
+			backlight_update_status(bl);
+	}
+}
+
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
@@ -1202,8 +1211,52 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
 	tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
 
-	if (status & V_BLANK_INT)
-		complete(&dc->v_blank_complete);
+	/*
+	 * Overlays can get thier internal state corrupted during and underflow
+	 * condition.  The only way to fix this state is to reset the DC.
+	 * if we get 4 consecutive frames with underflows, assume we're
+	 * hosed and reset.
+	 */
+	underflow_mask = status & (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
+	if (underflow_mask) {
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val |= V_BLANK_INT;
+		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		dc->underflow_mask |= underflow_mask;
+	}
+
+	if (status & V_BLANK_INT) {
+		int i;
+
+		/* Check for any underflow reset conditions */
+		for (i = 0; i< DC_N_WINDOWS; i++) {
+			if (dc->underflow_mask & (WIN_A_UF_INT <<i)) {
+				dc->windows[i].underflows++;
+
+				if (dc->windows[i].underflows > 4)
+					schedule_work(&dc->reset_work);
+			} else {
+				dc->windows[i].underflows = 0;
+			}
+		}
+
+		if (!dc->underflow_mask) {
+			/* If we have no underflow to check, go ahead
+			   and disable the interrupt */
+			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+			val &= ~V_BLANK_INT;
+			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		}
+
+		/* Clear the underflow mask now that we've checked it. */
+		dc->underflow_mask = 0;
+
+		/* Schedule any additional bottom-half vblank actvities. */
+		schedule_work(&dc->vblank_work);
+
+		/* Mark the vblank as complete. */
+		complete(&dc->vblank_complete);
+	}
 
 	if (status & FRAME_END_INT) {
 		int completed = 0;
@@ -1225,48 +1278,23 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 		}
 
-		if (completed)
-			wake_up(&dc->wq);
-	}
+		if (completed) {
+			if (!dirty) {
+				/* With the last completed window, go ahead
+				   and enable the vblank interrupt for nvsd. */
+				val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+				val |= V_BLANK_INT;
+				tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 
-
-	/*
-	 * Overlays can get thier internal state corrupted during and underflow
-	 * condition.  The only way to fix this state is to reset the DC.
-	 * if we get 4 consecutive frames with underflows, assume we're
-	 * hosed and reset.
-	 */
-	underflow_mask = status & (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
-	if (underflow_mask) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-		val |= V_BLANK_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-		dc->underflow_mask |= underflow_mask;
-	}
-
-	if (status & V_BLANK_INT) {
-		int i;
-
-		for (i = 0; i< DC_N_WINDOWS; i++) {
-			if (dc->underflow_mask & (WIN_A_UF_INT <<i)) {
-				dc->windows[i].underflows++;
-
-				if (dc->windows[i].underflows > 4)
-					schedule_work(&dc->reset_work);
-			} else {
-				dc->windows[i].underflows = 0;
+				val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+				val |= V_BLANK_INT;
+				tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 			}
-		}
 
-		if (!dc->underflow_mask) {
-			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-			val &= ~V_BLANK_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+			/* Wake up the workqueue regardless. */
+			wake_up(&dc->wq);
 		}
-
-		dc->underflow_mask = 0;
 	}
-
 
 	return IRQ_HANDLED;
 #else
@@ -1665,9 +1693,10 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dc->enabled = true;
 
 	mutex_init(&dc->lock);
-	init_completion(&dc->v_blank_complete);
+	init_completion(&dc->vblank_complete);
 	init_waitqueue_head(&dc->wq);
 	INIT_WORK(&dc->reset_work, tegra_dc_reset_worker);
+	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
 
 	dc->n_windows = DC_N_WINDOWS;
 	for (i = 0; i < dc->n_windows; i++) {
@@ -1736,6 +1765,8 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
 
+	tegra_dc_create_sysfs(&dc->ndev->dev);
+
 	return 0;
 
 err_free_irq:
@@ -1759,6 +1790,8 @@ err_free:
 static int tegra_dc_remove(struct nvhost_device *ndev)
 {
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	tegra_dc_remove_sysfs(&dc->ndev->dev);
 
 	if (dc->overlay) {
 		tegra_overlay_unregister(dc->overlay);

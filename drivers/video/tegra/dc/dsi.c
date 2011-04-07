@@ -729,7 +729,7 @@ void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc, struct tegra_dc_
 
 	/* wait for vblank completion */
 	timeout = wait_for_completion_interruptible_timeout(
-		&dc->v_blank_complete, DSI_STOP_DC_DURATION_MSEC);
+		&dc->vblank_complete, DSI_STOP_DC_DURATION_MSEC);
 
 	/* disable vblank interrupt */
 	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);

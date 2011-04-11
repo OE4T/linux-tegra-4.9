@@ -963,11 +963,11 @@ static void client_stringify(struct nvmap_client *client, struct seq_file *s)
 {
 	char task_comm[TASK_COMM_LEN];
 	if (!client->task) {
-		seq_printf(s, "%8s %16s %8u", client->name, "kernel", 0);
+		seq_printf(s, "%-16s %16s %8u", client->name, "kernel", 0);
 		return;
 	}
 	get_task_comm(task_comm, client->task);
-	seq_printf(s, "%8s %16s %8u", client->name, task_comm,
+	seq_printf(s, "%-16s %16s %8u", client->name, task_comm,
 		   client->task->pid);
 }
 
@@ -975,19 +975,17 @@ static void allocations_stringify(struct nvmap_client *client,
 				  struct seq_file *s)
 {
 	struct rb_node *n = rb_first(&client->handle_refs);
-	unsigned long long total = 0;
 
 	for (; n != NULL; n = rb_next(n)) {
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && !handle->heap_pgalloc) {
-			seq_printf(s, " %8u@%8lx ", handle->size,
-				   handle->carveout->base);
-			total += handle->size;
+			seq_printf(s, "%-16s %-16s %8lx %10u\n", "", "",
+					handle->carveout->base,
+					handle->size);
 		}
 	}
-	seq_printf(s, " total: %llu\n", total);
 }
 
 static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
@@ -995,14 +993,19 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	struct nvmap_carveout_node *node = s->private;
 	struct nvmap_carveout_commit *commit;
 	unsigned long flags;
+	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
 	list_for_each_entry(commit, &node->clients, list) {
 		struct nvmap_client *client =
 			get_client_from_carveout_commit(node, commit);
 		client_stringify(client, s);
+		seq_printf(s, " %10u\n", commit->commit);
 		allocations_stringify(client, s);
+		seq_printf(s, "\n");
+		total += commit->commit;
 	}
+	seq_printf(s, "%-16s %-16s %8u %10u\n", "total", "", 0, total);
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 
 	return 0;
@@ -1026,14 +1029,17 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	struct nvmap_carveout_node *node = s->private;
 	struct nvmap_carveout_commit *commit;
 	unsigned long flags;
+	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
 	list_for_each_entry(commit, &node->clients, list) {
 		struct nvmap_client *client =
 			get_client_from_carveout_commit(node, commit);
 		client_stringify(client, s);
-		seq_printf(s, " %8u\n", commit->commit);
+		seq_printf(s, " %10u\n", commit->commit);
+		total += commit->commit;
 	}
+	seq_printf(s, "%-16s %-16s %8u %10u\n", "total", "", 0, total);
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 
 	return 0;

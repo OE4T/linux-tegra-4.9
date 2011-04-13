@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ struct nvhost_hwctx {
 
 	struct nvmap_handle_ref *restore;
 	u32 *restore_virt;
-	u32 restore_phys;
+	phys_addr_t restore_phys;
 	u32 restore_size;
 	u32 restore_incrs;
 };

@@ -123,7 +123,7 @@ static int show_channel_command(struct output *o, u32 val, int *count)
 	}
 }
 
-static void show_channel_gather(struct output *o, u32 phys_addr,
+static void show_channel_gather(struct output *o, phys_addr_t phys_addr,
 				u32 words);
 
 static void show_channel_word(struct output *o, int *state, int *count,
@@ -162,13 +162,13 @@ static void show_channel_word(struct output *o, int *state, int *count,
  * TODO: This uses ioremap_xxx on memory which is deprecated.
  * Also, it won't work properly with SMMU.
  */
-static void show_channel_gather(struct output *o, u32 phys_addr,
+static void show_channel_gather(struct output *o, phys_addr_t phys_addr,
 				u32 words)
 {
-	u32 map_base = phys_addr & PAGE_MASK;
-	u32 map_end = (phys_addr + words * 4 + PAGE_SIZE - 1) & PAGE_MASK;
-	u32 map_size = map_end - map_base;
-	u32 map_offset = phys_addr - map_base;
+	phys_addr_t map_base = phys_addr & PAGE_MASK;
+	phys_addr_t map_end = (phys_addr + words * 4 + PAGE_SIZE - 1) & PAGE_MASK;
+	phys_addr_t map_size = map_end - map_base;
+	phys_addr_t map_offset = phys_addr - map_base;
 	void *map_addr = ioremap_nocache(map_base, map_size);
 	int state = NVHOST_DBG_STATE_CMD;
 	int count, i;

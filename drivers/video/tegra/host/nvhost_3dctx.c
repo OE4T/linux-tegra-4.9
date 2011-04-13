@@ -208,7 +208,7 @@ static void setup_restore_v0(u32 *ptr)
 
 /* the same context save command sequence is used for all contexts. */
 static struct nvmap_handle_ref *save_buf = NULL;
-static u32 save_phys = 0;
+static phys_addr_t save_phys = 0;
 static unsigned int save_size = 0;
 static unsigned int save_incrs = 0;
 static unsigned int save_thresh = 0;

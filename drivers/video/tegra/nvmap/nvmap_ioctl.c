@@ -632,7 +632,7 @@ out:
 }
 
 static int rw_handle_page(struct nvmap_handle *h, int is_read,
-			  unsigned long start, unsigned long rw_addr,
+			  phys_addr_t start, unsigned long rw_addr,
 			  unsigned long bytes, unsigned long kaddr, pte_t *pte)
 {
 	pgprot_t prot = nvmap_pgprot(h, pgprot_kernel);
@@ -641,7 +641,7 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 
 	while (!err && start < end) {
 		struct page *page = NULL;
-		unsigned long phys;
+		phys_addr_t phys;
 		size_t count;
 		void *src;
 

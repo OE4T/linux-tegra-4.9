@@ -279,9 +279,9 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 {
 	pte_t **pte;
 	void *addr;
-	unsigned long kaddr;
-	unsigned long phys = block->base;
-	unsigned long end = block->base + len;
+	phys_addr_t kaddr;
+	phys_addr_t phys = block->base;
+	phys_addr_t end = block->base + len;
 
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
@@ -297,10 +297,10 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (IS_ERR(pte))
 		return PTR_ERR(pte);
 
-	kaddr = (unsigned long)addr;
+	kaddr = (phys_addr_t)addr;
 
 	while (phys < end) {
-		unsigned long next = (phys + PAGE_SIZE) & PAGE_MASK;
+		phys_addr_t next = (phys + PAGE_SIZE) & PAGE_MASK;
 		unsigned long pfn = __phys_to_pfn(phys);
 		void *base = (void *)kaddr + (phys & ~PAGE_MASK);
 
@@ -982,7 +982,7 @@ static void allocations_stringify(struct nvmap_client *client,
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && !handle->heap_pgalloc) {
 			seq_printf(s, "%-16s %-16s %8lx %10u\n", "", "",
-					handle->carveout->base,
+					(unsigned long)(handle->carveout->base),
 					handle->size);
 		}
 	}

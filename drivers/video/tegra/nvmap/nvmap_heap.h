@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/nvmap_heap.h
+ * drivers/video/tegra/nvmap/nvmap_heap.h
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ struct nvmap_heap;
 struct attribute_group;
 
 struct nvmap_heap_block {
-	unsigned long	base;
+	phys_addr_t	base;
 	unsigned int	type;
 	struct nvmap_handle *handle;
 };
@@ -36,7 +36,7 @@ struct nvmap_heap_block {
 #define NVMAP_HEAP_MIN_BUDDY_SIZE	8192
 
 struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
-				     unsigned long base, size_t len,
+				     phys_addr_t base, size_t len,
 				     unsigned int buddy_size, void *arg);
 
 void nvmap_heap_destroy(struct nvmap_heap *heap);

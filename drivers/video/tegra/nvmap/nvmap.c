@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/nvmap.c
+ * drivers/video/tegra/nvmap/nvmap.c
  *
  * Memory manager for Tegra GPU
  *
- * Copyright (c) 2009-2010, NVIDIA Corporation.
+ * Copyright (c) 2009-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -293,9 +293,9 @@ out:
 	return ret;
 }
 
-static unsigned long handle_phys(struct nvmap_handle *h)
+static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
-	u32 addr;
+	phys_addr_t addr;
 
 	if (h->heap_pgalloc && h->pgalloc.contig) {
 		addr = page_to_phys(h->pgalloc.pages[0]);
@@ -338,8 +338,8 @@ static int nvmap_reloc_pin_array(struct nvmap_client *client,
 	for (i = 0; i < nr; i++) {
 		struct nvmap_handle *patch;
 		struct nvmap_handle *pin;
-		unsigned long reloc_addr;
-		unsigned long phys;
+		phys_addr_t reloc_addr;
+		phys_addr_t phys;
 		unsigned int pfn;
 
 		/* all of the handles are validated and get'ted prior to
@@ -373,7 +373,7 @@ static int nvmap_reloc_pin_array(struct nvmap_client *client,
 		pfn = __phys_to_pfn(phys);
 		if (pfn != last_pfn) {
 			pgprot_t prot = nvmap_pgprot(patch, pgprot_kernel);
-			unsigned long kaddr = (unsigned long)addr;
+			phys_addr_t kaddr = (phys_addr_t)addr;
 			set_pte_at(&init_mm, kaddr, *pte, pfn_pte(pfn, prot));
 			flush_tlb_kernel_page(kaddr);
 			last_pfn = pfn;
@@ -538,11 +538,11 @@ int nvmap_pin_array(struct nvmap_client *client, struct nvmap_handle *gather,
 	return count;
 }
 
-unsigned long nvmap_pin(struct nvmap_client *client,
+phys_addr_t nvmap_pin(struct nvmap_client *client,
 			struct nvmap_handle_ref *ref)
 {
 	struct nvmap_handle *h;
-	unsigned long phys;
+	phys_addr_t phys;
 	int ret = 0;
 
 	h = nvmap_handle_get(ref->handle);
@@ -570,10 +570,10 @@ unsigned long nvmap_pin(struct nvmap_client *client,
 	return ret ?: phys;
 }
 
-unsigned long nvmap_handle_address(struct nvmap_client *c, unsigned long id)
+phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 {
 	struct nvmap_handle *h;
-	unsigned long phys;
+	phys_addr_t phys;
 
 	h = nvmap_get_handle_id(c, id);
 	if (!h)

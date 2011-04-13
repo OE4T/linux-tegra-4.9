@@ -1708,6 +1708,9 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 			dc->overlay = NULL;
 	}
 
+	if (dc->out && dc->out->hotplug_init)
+		dc->out->hotplug_init();
+
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
 
@@ -1780,6 +1783,12 @@ static int tegra_dc_suspend(struct nvhost_device *ndev, pm_message_t state)
 
 		dc->suspended = true;
 	}
+
+	if (dc->out && dc->out->postsuspend) {
+		dc->out->postsuspend();
+		msleep(100); /* avoid resume event due to voltage falling */
+	}
+
 	mutex_unlock(&dc->lock);
 
 	return 0;
@@ -1796,6 +1805,9 @@ static int tegra_dc_resume(struct nvhost_device *ndev)
 
 	if (dc->enabled)
 		_tegra_dc_enable(dc);
+
+	if (dc->out && dc->out->hotplug_init)
+		dc->out->hotplug_init();
 
 	if (dc->out_ops && dc->out_ops->resume)
 		dc->out_ops->resume(dc);

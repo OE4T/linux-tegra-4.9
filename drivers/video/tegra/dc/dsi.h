@@ -41,6 +41,15 @@ enum{
 #define DSI_MAX_COMMAND_DELAY_USEC	250000
 #define DSI_COMMAND_DELAY_STEPS_USEC	10
 
+/* DSI return packet types */
+#define GEN_LONG_RD_RES 0x1A
+#define DCS_LONG_RD_RES 0x1C
+#define GEN_1_BYTE_SHORT_RD_RES 0x11
+#define DCS_1_BYTE_SHORT_RD_RES 0x21
+#define GEN_2_BYTE_SHORT_RD_RES 0x12
+#define DCS_2_BYTE_SHORT_RD_RES 0x22
+#define ACK_ERR_RES 0x02
+
 /* End of Transmit command for HS mode */
 #define DSI_CMD_HS_EOT_PACKAGE          0x000F0F08
 

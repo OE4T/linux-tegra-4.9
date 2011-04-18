@@ -424,12 +424,15 @@ static int tegra_fb_set_windowattr(struct tegra_fb_info *tegra_fb,
 	win->out_w = flip_win->attr.out_w;
 	win->out_h = flip_win->attr.out_h;
 
-	if (((win->out_x + win->out_w) > xres) && (win->out_x < xres)) {
-		win->out_w = xres - win->out_x;
-	}
-
-	if (((win->out_y + win->out_h) > yres) && (win->out_y < yres)) {
-		win->out_h = yres - win->out_y;
+	if ((((win->out_x + win->out_w) > xres) && (win->out_x < xres)) ||
+		(((win->out_y + win->out_h) > yres) && (win->out_y < yres))) {
+		pr_warning("outside of FB: "
+				"FB=(%d,%d,%d,%d) "
+				"src=(%d,%d,%d,%d) ",
+				"dst=(%d,%d,%d,%d)",
+				0, 0, xres, yres,
+				win->x, win->y, win->w, win->h,
+				win->out_x, win->out_y, win->out_w, win->out_h);
 	}
 
 	win->z = flip_win->attr.z;

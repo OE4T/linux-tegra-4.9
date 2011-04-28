@@ -23,6 +23,7 @@
 #include "nvhost_channel.h"
 #include "dev.h"
 #include "nvhost_hwctx.h"
+#include <trace/events/nvhost.h>
 
 #include <linux/platform_device.h>
 
@@ -202,6 +203,8 @@ int nvhost_channel_submit(struct nvhost_channel *channel,
 
 	/* context switch */
 	if (channel->cur_ctx != hwctx) {
+		trace_nvhost_channel_context_switch(channel->desc->name,
+		  channel->cur_ctx, hwctx);
 		hwctx_to_save = channel->cur_ctx;
 		if (hwctx_to_save) {
 			syncpt_incrs += hwctx_to_save->save_incrs;

@@ -32,6 +32,9 @@
 #include <linux/file.h>
 #include <linux/module.h>
 #include <linux/clk.h>
+#include <linux/hrtimer.h>
+#define CREATE_TRACE_POINTS
+#include <trace/events/nvhost.h>
 
 #include <asm/io.h>
 
@@ -69,6 +72,8 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
 
+	trace_nvhost_channel_release(priv->ch->desc->name);
+
 	filp->private_data = NULL;
 
 	nvhost_putchannel(priv->ch, priv->hwctx);
@@ -92,10 +97,12 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_channel *ch;
 
+
 	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
 	ch = nvhost_getchannel(ch);
 	if (!ch)
 		return -ENOMEM;
+	trace_nvhost_channel_open(ch->desc->name);
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -165,6 +172,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
+			trace_nvhost_channel_write_submit(priv->ch->desc->name,
+			  count, priv->cmdbufs_pending, priv->relocs_pending);
 			priv->cur_gather = priv->gathers;
 			priv->pinarray_size = 0;
 		} else if (priv->cmdbufs_pending) {
@@ -176,6 +185,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
+			trace_nvhost_channel_write_cmdbuf(priv->ch->desc->name,
+			  cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			add_gather(priv,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			priv->cmdbufs_pending--;
@@ -190,6 +201,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
+			trace_nvhost_channel_write_relocs(priv->ch->desc->name,
+			  numrelocs);
 			priv->pinarray_size += numrelocs;
 			priv->relocs_pending -= numrelocs;
 		} else {
@@ -217,6 +230,8 @@ static int nvhost_ioctl_channel_flush(
 	struct device *device = &ctx->ch->dev->pdev->dev;
 	int num_unpin;
 	int err;
+
+	trace_nvhost_ioctl_channel_flush(ctx->ch->desc->name);
 
 	if (ctx->relocs_pending || ctx->cmdbufs_pending) {
 		reset_submit(ctx);
@@ -331,6 +346,8 @@ static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 	struct nvhost_ctrl_userctx *priv = filp->private_data;
 	int i;
 
+	trace_nvhost_ctrlrelease(priv->dev->mod.name);
+
 	filp->private_data = NULL;
 	if (priv->mod_locks[0])
 		nvhost_module_idle(&priv->dev->mod);
@@ -345,6 +362,8 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 {
 	struct nvhost_master *host = container_of(inode->i_cdev, struct nvhost_master, cdev);
 	struct nvhost_ctrl_userctx *priv;
+
+	trace_nvhost_ctrlopen(host->mod.name);
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -361,6 +380,7 @@ static int nvhost_ioctl_ctrl_syncpt_read(
 {
 	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
 		return -EINVAL;
+	trace_nvhost_ioctl_ctrl_syncpt_read(args->id);
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
 	return 0;
 }
@@ -371,6 +391,7 @@ static int nvhost_ioctl_ctrl_syncpt_incr(
 {
 	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
 		return -EINVAL;
+	trace_nvhost_ioctl_ctrl_syncpt_incr(args->id);
 	nvhost_syncpt_incr(&ctx->dev->syncpt, args->id);
 	return 0;
 }
@@ -387,6 +408,8 @@ static int nvhost_ioctl_ctrl_syncpt_wait(
 	else
 		timeout = (u32)msecs_to_jiffies(args->timeout);
 
+	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
+	  args->timeout);
 	return nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
 					args->thresh, timeout);
 }
@@ -400,6 +423,7 @@ static int nvhost_ioctl_ctrl_module_mutex(
 	    args->lock > 1)
 		return -EINVAL;
 
+	trace_nvhost_ioctl_ctrl_module_mutex(args->lock, args->id);
 	if (args->lock && !ctx->mod_locks[args->id]) {
 		if (args->id == 0)
 			nvhost_module_busy(&ctx->dev->mod);

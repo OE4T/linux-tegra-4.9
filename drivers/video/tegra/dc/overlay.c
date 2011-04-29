@@ -159,15 +159,28 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 	win->out_w = flip_win->attr.out_w;
 	win->out_h = flip_win->attr.out_h;
 
-	if ((((win->out_x + win->out_w) > xres) && (win->out_x < xres)) ||
-		(((win->out_y + win->out_h) > yres) && (win->out_y < yres))) {
-		pr_warning("outside of FB: "
-				"FB=(%d,%d,%d,%d) "
-				"src=(%d,%d,%d,%d) ",
-				"dst=(%d,%d,%d,%d)",
-				0, 0, xres, yres,
-				win->x, win->y, win->w, win->h,
-				win->out_x, win->out_y, win->out_w, win->out_h);
+	WARN_ONCE(win->out_x >= xres,
+		"%s:application window x offset exceeds display width(%d)\n",
+		dev_name(&win->dc->ndev->dev), win->out_x, xres);
+	WARN_ONCE(win->out_y >= yres,
+		"%s:application window y offset exceeds display height(%d)\n",
+		dev_name(&win->dc->ndev->dev), win->out_y, yres);
+	WARN_ONCE(win->out_x + win->out_w > xres && win->out_x < xres,
+		"%s:application window width(%d) exceeds display width(%d)\n",
+		dev_name(&win->dc->ndev->dev), win->out_x + win->out_w, xres);
+	WARN_ONCE(win->out_y + win->out_h > yres && win->out_y < yres,
+		"%s:application window height(%d) exceeds display height(%d)\n",
+		dev_name(&win->dc->ndev->dev), win->out_y + win->out_h, yres);
+
+	if (((win->out_x + win->out_w) > xres) && (win->out_x < xres)) {
+		long new_w = xres - win->out_x;
+		win->w = win->w * new_w / win->out_w;
+	        win->out_w = new_w;
+	}
+	if (((win->out_y + win->out_h) > yres) && (win->out_y < yres)) {
+		long new_h = yres - win->out_y;
+		win->h = win->h * new_h / win->out_h;
+	        win->out_h = new_h;
 	}
 
 	win->z = flip_win->attr.z;

@@ -805,60 +805,77 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	tegra_dvfs_set_rate(clk, pclk);
 }
 
-static void calc_h_ref_to_sync(const struct tegra_dc_mode *mode,
-	long *refmin, long *refmax)
+/* return non-zero if constraint is violated */
+static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
 {
 	long a, b;
-	a = 0; /* Constraint 5 */
-	/* Constraint 1 */
+
+	/* Constraint 5: H_REF_TO_SYNC >= 0 */
+	a = 0;
+
+	/* Constraint 6: H_FRONT_PORT >= (H_REF_TO_SYNC + 1) */
+	b = mode->h_front_porch - 1;
+
+	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11 */
 	if (a + mode->h_sync_width + mode->h_back_porch <= 11)
 		a = 1 + 11 - mode->h_sync_width - mode->h_back_porch;
-	/* Constraint 6 */
-	if (mode->h_front_porch < a + 1)
-		a = mode->h_front_porch - 1;
+	/* check Constraint 1 and 6 */
+	if (a > b)
+		return 1;
 
-	b = mode->h_front_porch - 1; /* Constraint 6 */
-	/* Constraint 1 */
-	if (b + mode->h_sync_width + mode->h_back_porch <= 11)
-		b = 1 + 11 - mode->h_sync_width - mode->h_back_porch;
-	/* Constraint 5 */
-	if (b < 0)
-		b = 0;
+	/* Constraint 4: H_SYNC_WIDTH >= 1 */
+	if (mode->h_sync_width < 1)
+		return 4;
 
-	if (refmin)
-		*refmin = a;
-	if (refmax)
-		*refmax = b;
+	/* Constraint 7: H_DISP_ACTIVE >= 16 */
+	if (mode->h_active < 16)
+		return 7;
+
+	if (href) {
+		if (b > a && a % 2)
+			*href = a + 1; /* use smallest even value */
+		else
+			*href = a; /* even or only possible value */
+	}
+
+	return 0;
 }
 
-static void calc_v_ref_to_sync(const struct tegra_dc_mode *mode, long *refmin)
+static int calc_v_ref_to_sync(const struct tegra_dc_mode *mode, int *vref)
 {
 	long a;
-	a = 1; /* Constraint 5 */
-	/* Constraint 2 */
+	a = 1; /* Constraint 5: V_REF_TO_SYNC >= 1 */
+
+	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1 */
 	if (a + mode->v_sync_width + mode->v_back_porch <= 1)
 		a = 1 + 1 - mode->v_sync_width - mode->v_back_porch;
+
 	/* Constraint 6 */
 	if (mode->v_front_porch < a + 1)
 		a = mode->v_front_porch - 1;
 
-        if (refmin)
-                *refmin = a;
+	/* Constraint 4: V_SYNC_WIDTH >= 1 */
+	if (mode->v_sync_width < 1)
+		return 4;
+
+	/* Constraint 7: V_DISP_ACTIVE >= 16 */
+	if (mode->v_active < 16)
+		return 7;
+
+        if (vref)
+                *vref = a;
+	return 0;
 }
 
 static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 {
-	long a, b;
-
-	calc_h_ref_to_sync(mode, &a, &b);
-	if (b > a && b % 2)
-		mode->h_ref_to_sync = b - 1; /* use largest even value */
-	else
-		mode->h_ref_to_sync = b; /* even or only possible value */
-
-	/* use smallest valid value for vertical ref */
-	calc_v_ref_to_sync(mode, &a);
-	mode->v_ref_to_sync = a;
+	int ret;
+	ret = calc_h_ref_to_sync(mode, &mode->h_ref_to_sync);
+	if (ret)
+		return ret;
+	ret = calc_v_ref_to_sync(mode, &mode->v_ref_to_sync);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -996,8 +1013,12 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
-	calc_ref_to_sync(&mode);
-	printk("Using mode %dx%d pclk=%d href=%d vref=%d\n",
+	if (calc_ref_to_sync(&mode)) {
+		dev_err(&dc->ndev->dev, "bad href/vref values, overriding.\n");
+		mode.h_ref_to_sync = 11;
+		mode.v_ref_to_sync = 1;
+	}
+	dev_info(&dc->ndev->dev, "Using mode %dx%d pclk=%d href=%d vref=%d\n",
 		mode.h_active, mode.v_active, mode.pclk,
 		mode.h_ref_to_sync, mode.v_ref_to_sync
 	);

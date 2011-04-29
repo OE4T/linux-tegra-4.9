@@ -40,12 +40,14 @@
 
 #include <mach/nvhost.h>
 #include <mach/nvmap.h>
+#include <mach/gpufuse.h>
 
 #define DRIVER_NAME "tegra_grhost"
 #define IFACE_NAME "nvhost"
 
 static int nvhost_major = NVHOST_MAJOR;
 static int nvhost_minor = NVHOST_CHANNEL_BASE;
+static unsigned int register_sets;
 
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
@@ -837,6 +839,7 @@ static struct platform_driver nvhost_driver = {
 
 static int __init nvhost_mod_init(void)
 {
+	register_sets = tegra_gpu_register_sets();
 	return platform_driver_probe(&nvhost_driver, nvhost_probe);
 }
 
@@ -847,6 +850,9 @@ static void __exit nvhost_mod_exit(void)
 
 module_init(nvhost_mod_init);
 module_exit(nvhost_mod_exit);
+
+module_param_call(register_sets, NULL, param_get_uint, &register_sets, 0444);
+MODULE_PARM_DESC(register_sets, "Number of register sets");
 
 MODULE_AUTHOR("NVIDIA");
 MODULE_DESCRIPTION("Graphics host driver for Tegra products");

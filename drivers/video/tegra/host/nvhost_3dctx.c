@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3d hardware context
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,16 +23,17 @@
 #include "nvhost_hwctx.h"
 #include "dev.h"
 
+#include <mach/gpufuse.h>
 #include <linux/slab.h>
 
 #define NV_WAR_789194 1
 
+/*  99 > 2, which makes kernel panic if register set is incorrect */
+static int register_sets = 99;
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 static bool s_is_v1 = false;
-static int s_nr_gpus = 1;
 #else
 static bool s_is_v1 = true;
-static int s_nr_gpus = 2;
 #endif
 
 const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
@@ -77,7 +78,7 @@ const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(1, 0xb06,   13, DIRECT),
 };
 
-const struct hwctx_reginfo ctxsave_regs_3d_pergpu[] = {
+const struct hwctx_reginfo ctxsave_regs_3d_perset[] = {
 	HWCTX_REGINFO(0, 0xe04,    1, DIRECT),
 	HWCTX_REGINFO(0, 0xe2a,    1, DIRECT),
 	HWCTX_REGINFO(1, 0x413,    1, DIRECT),
@@ -115,9 +116,9 @@ struct ctx_saver {
 
 /*** restore ***/
 
-static unsigned int restore_size = 0;
-static unsigned int restore_gpu1_offset = 0;
-static unsigned int restore_incrs = 0;
+static unsigned int restore_size;
+static unsigned int restore_set1_offset;
+static unsigned int restore_incrs;
 
 static void restore_begin(u32 *ptr)
 {
@@ -195,8 +196,8 @@ static void setup_restore_v0(u32 *ptr)
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	ptr = setup_restore_regs_v0(ptr,
-			ctxsave_regs_3d_pergpu,
-			ARRAY_SIZE(ctxsave_regs_3d_pergpu));
+			ctxsave_regs_3d_perset,
+			ARRAY_SIZE(ctxsave_regs_3d_perset));
 
 	restore_end(ptr);
 
@@ -265,9 +266,9 @@ static void __init setup_save_regs(const struct ctx_saver *saver,
 }
 
 static void __init switch_gpu(struct save_info *info,
-			unsigned int save_src_gpu,
-			u32 save_dest_gpus,
-			u32 restore_dest_gpus)
+			unsigned int save_src_set,
+			u32 save_dest_sets,
+			u32 restore_dest_sets)
 {
 #if NV_WAR_789194
 	if (info->ptr) {
@@ -275,10 +276,10 @@ static void __init switch_gpu(struct save_info *info,
 						0, 0);
 		info->ptr[1] = nvhost_opcode_nonincr(0x905, 2);
 		info->ptr[2] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
-		info->ptr[3] = nvhost_opcode_imm(0xb00, restore_dest_gpus);
+		info->ptr[3] = nvhost_opcode_imm(0xb00, restore_dest_sets);
 		info->ptr[4] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
-		info->ptr[5] = nvhost_opcode_imm(0xb00, save_dest_gpus);
-		info->ptr[6] = nvhost_opcode_imm(0xb01, save_src_gpu);
+		info->ptr[5] = nvhost_opcode_imm(0xb00, save_dest_sets);
+		info->ptr[6] = nvhost_opcode_imm(0xb01, save_src_set);
 		info->ptr += 7;
 	}
 	info->save_count += 7;
@@ -289,9 +290,9 @@ static void __init switch_gpu(struct save_info *info,
 	if (info->ptr) {
 		info->ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
 						0x905, 1);
-		info->ptr[1] = nvhost_opcode_imm(0xb00, restore_dest_gpus);
-		info->ptr[2] = nvhost_opcode_imm(0xb00, save_dest_gpus);
-		info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_gpu);
+		info->ptr[1] = nvhost_opcode_imm(0xb00, restore_dest_sets);
+		info->ptr[2] = nvhost_opcode_imm(0xb00, save_dest_sets);
+		info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
 		info->ptr += 4;
 	}
 	info->save_count += 4;
@@ -308,45 +309,44 @@ static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
 		saver->save_incrs,
 		1
 	};
-	bool is_sli = (s_nr_gpus == 2);
-	BUG_ON(s_nr_gpus > 2);
+	BUG_ON(register_sets > 2);
 
 	if (info.ptr) {
 		saver->save_begin(info.ptr);
 		info.ptr += saver->save_begin_size;
 	}
 
-	/* read from gpu0, write cmds through gpu0, restore to gpu0+gpu1 */
-	if (is_sli)
+	/* read from set 0, write cmds through set 0, restore to sets 0 and 1 */
+	if (register_sets == 2)
 		switch_gpu(&info, 0, 1, 3);
 
-	/* save regs that are common to both gpus */
+	/* save regs that are common to both sets */
 	setup_save_regs(saver, &info,
 			ctxsave_regs_3d_global,
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
-	/* read from gpu0, write cmds through gpu0, restore to gpu0 */
-	if (is_sli)
+	/* read from set 0, write cmds through set 0, restore to set 0 */
+	if (register_sets == 2)
 		switch_gpu(&info, 0, 1, 1);
 
-	/* save gpu0-specific regs */
+	/* save set 0 specific regs */
 	setup_save_regs(saver, &info,
-			ctxsave_regs_3d_pergpu,
-			ARRAY_SIZE(ctxsave_regs_3d_pergpu));
+			ctxsave_regs_3d_perset,
+			ARRAY_SIZE(ctxsave_regs_3d_perset));
 
-	if (is_sli) {
-		/* read from gpu1, write cmds through gpu1, restore to gpu1 */
+	if (register_sets == 2) {
+		/* read from set1, write cmds through set1, restore to set1 */
 		switch_gpu(&info, 1, 2, 2);
-		/* note offset at which gpu 1 restore starts */
-		restore_gpu1_offset = info.restore_count;
-		/* save gpu1-specific regs */
+		/* note offset at which set 1 restore starts */
+		restore_set1_offset = info.restore_count;
+		/* save set 1 specific regs */
 		setup_save_regs(saver, &info,
-				ctxsave_regs_3d_pergpu,
-				ARRAY_SIZE(ctxsave_regs_3d_pergpu));
+				ctxsave_regs_3d_perset,
+				ARRAY_SIZE(ctxsave_regs_3d_perset));
 	}
 
-	/* read from gpu0, write cmds through gpu1, restore to gpu0+gpu1 */
-	if (is_sli)
+	/* read from set 0, write cmds through set 1, restore to sets 0 and 1 */
+	if (register_sets == 2)
 		switch_gpu(&info, 0, 2, 3);
 
 	if (info.ptr) {
@@ -355,6 +355,11 @@ static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
 	}
 
 	wmb();
+
+#ifdef NV_WAR_789194
+	if (s_is_v1)
+		info.save_incrs += register_sets;
+#endif
 
 	save_size = info.save_count + saver->save_end_size;
 	restore_size = info.restore_count + RESTORE_END_SIZE;
@@ -507,15 +512,15 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 			NVHOST_OPCODE_NOOP);
-	/* set gpu1 and gpu0's register read memory output addresses,
+	/* set register set 0 and 1 register read memory output addresses,
 	   and send their reads to memory */
-	if (s_nr_gpus == 2) {
+	if (register_sets == 2) {
 		nvhost_cdma_push(cdma,
 				nvhost_opcode_imm(0xb00, 2),
 				nvhost_opcode_imm(0xe40, 1));
 		nvhost_cdma_push(cdma,
 				nvhost_opcode_nonincr(0x904, 1),
-				ctx->restore_phys + restore_gpu1_offset * 4);
+				ctx->restore_phys + restore_set1_offset * 4);
 #if NV_WAR_789194
 		nvhost_cdma_push(cdma,
 				NVHOST_OPCODE_NOOP,
@@ -589,7 +594,7 @@ static void __init save_end_v1(u32 *ptr)
 	ptr[1] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
 	ptr += 1;
 #endif
-	ptr[1] = nvhost_opcode_imm(0xb00, (1 << s_nr_gpus) - 1);
+	ptr[1] = nvhost_opcode_imm(0xb00, (1 << register_sets) - 1);
 	/* op_done syncpt incr to flush FDC */
 	ptr[2] = nvhost_opcode_imm(0, 0x100 | NVSYNCPT_3D);
 	/* host wait for that syncpt incr, and advance the wait base */
@@ -703,8 +708,8 @@ static void ctx3d_save_service(struct nvhost_hwctx *ctx)
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	ptr = save_regs_v0(ptr, &pending, ctx->channel->aperture,
-			ctxsave_regs_3d_pergpu,
-			ARRAY_SIZE(ctxsave_regs_3d_pergpu));
+			ctxsave_regs_3d_perset,
+			ARRAY_SIZE(ctxsave_regs_3d_perset));
 
 	wmb();
 	nvhost_syncpt_cpu_incr(&ctx->channel->dev->syncpt, NVSYNCPT_3D);
@@ -740,11 +745,7 @@ static const struct ctx_saver v1_saver __initconst = {
 	.save_indirect_size = SAVE_INDIRECT_V1_SIZE,
 	.save_end = save_end_v1,
 	.save_end_size = SAVE_END_V1_SIZE,
-#if NV_WAR_789194
-	.save_incrs = 5,
-#else
 	.save_incrs = 3,
-#endif
 	.save_thresh_offset = 0,
 	.ctx3d_alloc = ctx3d_alloc_v1,
 	.ctx3d_save_push = save_push_v1,
@@ -763,6 +764,9 @@ int __init nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 
 	ch = container_of(h, struct nvhost_channel, ctxhandler);
 	nvmap = ch->dev->nvmap;
+
+	register_sets = tegra_gpu_register_sets();
+	BUG_ON(register_sets == 0 || register_sets > 2);
 
 	setup_save(saver, NULL);
 

@@ -776,3 +776,52 @@ void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 {
 	nvmap_free_handle_id(client, nvmap_ref_to_id(r));
 }
+
+/*
+ * create a mapping to the user's buffer and write it
+ * (uses similar logic from nvmap_reloc_pin_array to map the cmdbuf)
+ */
+int nvmap_patch_word(struct nvmap_client *client,
+				struct nvmap_handle *patch,
+				u32 patch_offset, u32 patch_value)
+{
+	phys_addr_t phys;
+	unsigned long kaddr;
+	unsigned int pfn;
+	void *addr;
+	pte_t **pte;
+	pgprot_t prot;
+
+	if (patch_offset >= patch->size) {
+		nvmap_warn(client, "read/write outside of handle\n");
+		return -EFAULT;
+	}
+
+	pte = nvmap_alloc_pte(client->dev, &addr);
+	if (IS_ERR(pte))
+		return PTR_ERR(pte);
+
+	/* derive physaddr of cmdbuf WAIT to patch */
+	if (patch->heap_pgalloc) {
+		unsigned int page = patch_offset >> PAGE_SHIFT;
+		phys = page_to_phys(patch->pgalloc.pages[page]);
+		phys += (patch_offset & ~PAGE_MASK);
+	} else {
+		phys = patch->carveout->base + patch_offset;
+	}
+
+	pfn = __phys_to_pfn(phys);
+	prot = nvmap_pgprot(patch, pgprot_kernel);
+	kaddr = (unsigned long)addr;
+
+	/* write PTE, so addr points to cmdbuf PFN */
+	set_pte_at(&init_mm, kaddr, *pte, pfn_pte(pfn, prot));
+	flush_tlb_kernel_page(kaddr);
+
+	/* write patch_value to addr + page offset */
+	__raw_writel(patch_value, addr + (phys & ~PAGE_MASK));
+
+	nvmap_free_pte(client->dev, pte);
+	wmb();
+	return 0;
+}

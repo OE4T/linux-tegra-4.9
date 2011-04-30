@@ -179,6 +179,9 @@ int nvhost_channel_submit(struct nvhost_channel *channel,
 			struct nvmap_client *user_nvmap,
 			u32 *gather,
 			u32 *gather_end,
+			struct nvhost_waitchk *waitchk,
+			struct nvhost_waitchk *waitchk_end,
+			u32 waitchk_mask,
 			struct nvmap_handle **unpins,
 			int nr_unpins,
 			u32 syncpt_id,
@@ -200,6 +203,20 @@ int nvhost_channel_submit(struct nvhost_channel *channel,
 	if (err) {
 		nvhost_module_idle(&channel->mod);
 		return err;
+	}
+
+	/* remove stale waits */
+	if (waitchk != waitchk_end) {
+		err = nvhost_syncpt_wait_check(user_nvmap,
+				&channel->dev->syncpt, waitchk_mask,
+				waitchk, waitchk_end);
+		if (err) {
+			dev_warn(&channel->dev->pdev->dev,
+				"nvhost_syncpt_wait_check failed: %d\n", err);
+			mutex_unlock(&channel->submitlock);
+			nvhost_module_idle(&channel->mod);
+			return err;
+		}
 	}
 
 	/* context switch */

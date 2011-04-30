@@ -25,10 +25,13 @@
 
 #include <linux/kernel.h>
 #include <linux/sched.h>
+#include <mach/nvhost.h>
+#include <mach/nvmap.h>
 #include <asm/atomic.h>
 
 #include "nvhost_hardware.h"
 
+#define NVSYNCPT_GRAPHICS_HOST		     (0)
 #define NVSYNCPT_CSI_VI_0		     (11)
 #define NVSYNCPT_CSI_VI_1		     (12)
 #define NVSYNCPT_VI_ISP_0		     (13)
@@ -151,6 +154,21 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
 	                                  MAX_SCHEDULE_TIMEOUT, NULL);
 }
 
+/*
+ * Check driver supplied waitchk structs for syncpt thresholds
+ * that have already been satisfied and NULL the comparison (to
+ * avoid a wrap condition in the HW).
+ *
+ * @param: nvmap - needed to access command buffer
+ * @param: sp - global shadowed syncpt struct
+ * @param: mask - bit mask of syncpt IDs referenced in WAITs
+ * @param: wait - start of filled in array of waitchk structs
+ * @param: waitend - end ptr (one beyond last valid waitchk)
+ */
+int nvhost_syncpt_wait_check(struct nvmap_client *nvmap,
+			struct nvhost_syncpt *sp, u32 mask,
+			struct nvhost_waitchk *wait,
+			struct nvhost_waitchk *waitend);
 
 const char *nvhost_syncpt_name(u32 id);
 

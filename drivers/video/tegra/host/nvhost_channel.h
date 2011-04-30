@@ -32,6 +32,7 @@
 
 #define NVHOST_CHANNEL_BASE 0
 #define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
+#define NVHOST_MAX_WAIT_CHECKS 256
 #define NVHOST_MAX_GATHERS 512
 #define NVHOST_MAX_HANDLES 1280
 
@@ -82,6 +83,9 @@ int nvhost_channel_submit(
 	struct nvmap_client *user_nvmap,
 	u32 *gather,
 	u32 *gather_end,
+	struct nvhost_waitchk *waitchk,
+	struct nvhost_waitchk *waitchk_end,
+	u32 waitchk_mask,
 	struct nvmap_handle **unpins,
 	int nr_unpins,
 	u32 syncpt_id,

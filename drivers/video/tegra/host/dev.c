@@ -50,10 +50,7 @@ static int nvhost_minor = NVHOST_CHANNEL_BASE;
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;
-	u32 syncpt_id;
-	u32 syncpt_incrs;
-	u32 cmdbufs_pending;
-	u32 relocs_pending;
+	struct nvhost_submit_hdr_ext hdr;
 	struct nvmap_handle_ref *gather_mem;
 	u32 *gathers;
 	u32 *cur_gather;
@@ -61,6 +58,8 @@ struct nvhost_channel_userctx {
 	struct nvmap_pinarray_elem pinarray[NVHOST_MAX_HANDLES];
 	struct nvmap_handle *unpinarray[NVHOST_MAX_HANDLES];
 	struct nvmap_client *nvmap;
+	struct nvhost_waitchk waitchks[NVHOST_MAX_WAIT_CHECKS];
+	struct nvhost_waitchk *cur_waitchk;
 };
 
 struct nvhost_ctrl_userctx {
@@ -145,10 +144,40 @@ static void add_gather(struct nvhost_channel_userctx *ctx,
 	ctx->cur_gather = cur_gather + 2;
 }
 
+static int set_submit(struct nvhost_channel_userctx *ctx)
+{
+	/* submit should have at least 1 cmdbuf */
+	if (!ctx->hdr.num_cmdbufs)
+		return -EIO;
+
+	/* check submit doesn't exceed static structs */
+	if ((ctx->hdr.num_cmdbufs + ctx->hdr.num_relocs) > NVHOST_MAX_HANDLES) {
+		dev_err(&ctx->ch->dev->pdev->dev,
+			"channel submit exceeded max handles (%d > %d)\n",
+			ctx->hdr.num_cmdbufs + ctx->hdr.num_relocs,
+			NVHOST_MAX_HANDLES);
+		return -EIO;
+	}
+	if (ctx->hdr.num_waitchks > NVHOST_MAX_WAIT_CHECKS) {
+		dev_err(&ctx->ch->dev->pdev->dev,
+			"channel submit exceeded max waitchks (%d > %d)\n",
+			ctx->hdr.num_waitchks,
+			NVHOST_MAX_WAIT_CHECKS);
+		return -EIO;
+	}
+
+	ctx->cur_gather = ctx->gathers;
+	ctx->cur_waitchk = ctx->waitchks;
+	ctx->pinarray_size = 0;
+
+	return 0;
+}
+
 static void reset_submit(struct nvhost_channel_userctx *ctx)
 {
-	ctx->cmdbufs_pending = 0;
-	ctx->relocs_pending = 0;
+	ctx->hdr.num_cmdbufs = 0;
+	ctx->hdr.num_relocs = 0;
+	ctx->hdr.num_waitchks = 0;
 }
 
 static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
@@ -160,23 +189,23 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 
 	while (remaining) {
 		size_t consumed;
-		if (!priv->relocs_pending && !priv->cmdbufs_pending) {
+		if (!priv->hdr.num_relocs &&
+		    !priv->hdr.num_cmdbufs &&
+		    !priv->hdr.num_waitchks) {
 			consumed = sizeof(struct nvhost_submit_hdr);
 			if (remaining < consumed)
 				break;
-			if (copy_from_user(&priv->syncpt_id, buf, consumed)) {
+			if (copy_from_user(&priv->hdr, buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			if (!priv->cmdbufs_pending) {
-				err = -EFAULT;
+			priv->hdr.submit_version = NVHOST_SUBMIT_VERSION_V0;
+			err = set_submit(priv);
+			if (err)
 				break;
-			}
 			trace_nvhost_channel_write_submit(priv->ch->desc->name,
-			  count, priv->cmdbufs_pending, priv->relocs_pending);
-			priv->cur_gather = priv->gathers;
-			priv->pinarray_size = 0;
-		} else if (priv->cmdbufs_pending) {
+			  count, priv->hdr.num_cmdbufs, priv->hdr.num_relocs);
+		} else if (priv->hdr.num_cmdbufs) {
 			struct nvhost_cmdbuf cmdbuf;
 			consumed = sizeof(cmdbuf);
 			if (remaining < consumed)
@@ -189,12 +218,12 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 			  cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			add_gather(priv,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
-			priv->cmdbufs_pending--;
-		} else if (priv->relocs_pending) {
+			priv->hdr.num_cmdbufs--;
+		} else if (priv->hdr.num_relocs) {
 			int numrelocs = remaining / sizeof(struct nvhost_reloc);
 			if (!numrelocs)
 				break;
-			numrelocs = min_t(int, numrelocs, priv->relocs_pending);
+			numrelocs = min_t(int, numrelocs, priv->hdr.num_relocs);
 			consumed = numrelocs * sizeof(struct nvhost_reloc);
 			if (copy_from_user(&priv->pinarray[priv->pinarray_size],
 						buf, consumed)) {
@@ -204,7 +233,24 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 			trace_nvhost_channel_write_relocs(priv->ch->desc->name,
 			  numrelocs);
 			priv->pinarray_size += numrelocs;
-			priv->relocs_pending -= numrelocs;
+			priv->hdr.num_relocs -= numrelocs;
+		} else if (priv->hdr.num_waitchks) {
+			int numwaitchks =
+				(remaining / sizeof(struct nvhost_waitchk));
+			if (!numwaitchks)
+				break;
+			numwaitchks = min_t(int,
+				numwaitchks, priv->hdr.num_waitchks);
+			consumed = numwaitchks * sizeof(struct nvhost_waitchk);
+			if (copy_from_user(priv->cur_waitchk, buf, consumed)) {
+				err = -EFAULT;
+				break;
+			}
+			trace_nvhost_channel_write_waitchks(
+			  priv->ch->desc->name, numwaitchks,
+			  priv->hdr.waitchk_mask);
+			priv->cur_waitchk += numwaitchks;
+			priv->hdr.num_waitchks -= numwaitchks;
 		} else {
 			err = -EFAULT;
 			break;
@@ -233,7 +279,9 @@ static int nvhost_ioctl_channel_flush(
 
 	trace_nvhost_ioctl_channel_flush(ctx->ch->desc->name);
 
-	if (ctx->relocs_pending || ctx->cmdbufs_pending) {
+	if (ctx->hdr.num_relocs ||
+	    ctx->hdr.num_cmdbufs ||
+	    ctx->hdr.num_waitchks) {
 		reset_submit(ctx);
 		dev_err(device, "channel submit out of sync\n");
 		return -EFAULT;
@@ -261,8 +309,10 @@ static int nvhost_ioctl_channel_flush(
 	/* context switch if needed, and submit user's gathers to the channel */
 	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
 				ctx->gathers, ctx->cur_gather,
+				ctx->waitchks, ctx->cur_waitchk,
+				ctx->hdr.waitchk_mask,
 				ctx->unpinarray, num_unpin,
-				ctx->syncpt_id, ctx->syncpt_incrs,
+				ctx->hdr.syncpt_id, ctx->hdr.syncpt_incrs,
 				&args->value,
 				null_kickoff);
 	if (err)
@@ -297,7 +347,40 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_NULL_KICKOFF:
 		err = nvhost_ioctl_channel_flush(priv, (void *)buf, 1);
 		break;
+	case NVHOST_IOCTL_CHANNEL_SUBMIT_EXT:
+	{
+		struct nvhost_submit_hdr_ext *hdr;
+
+		if (priv->hdr.num_relocs ||
+		    priv->hdr.num_cmdbufs ||
+		    priv->hdr.num_waitchks) {
+			reset_submit(priv);
+			dev_err(&priv->ch->dev->pdev->dev,
+				"channel submit out of sync\n");
+			err = -EIO;
+			break;
+		}
+
+		hdr = (struct nvhost_submit_hdr_ext *)buf;
+		if (hdr->submit_version > NVHOST_SUBMIT_VERSION_MAX_SUPPORTED) {
+			dev_err(&priv->ch->dev->pdev->dev,
+				"submit version %d > max supported %d\n",
+				hdr->submit_version,
+				NVHOST_SUBMIT_VERSION_MAX_SUPPORTED);
+			err = -EINVAL;
+			break;
+		}
+		memcpy(&priv->hdr, hdr, sizeof(struct nvhost_submit_hdr_ext));
+		err = set_submit(priv);
+		trace_nvhost_ioctl_channel_submit(priv->ch->desc->name,
+			priv->hdr.submit_version,
+			priv->hdr.num_cmdbufs, priv->hdr.num_relocs,
+			priv->hdr.num_waitchks);
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
+		/* host syncpt ID is used by the RM (and never be given out) */
+		BUG_ON(priv->ch->desc->syncpts & (1 << NVSYNCPT_GRAPHICS_HOST));
 		((struct nvhost_get_param_args *)buf)->value =
 			priv->ch->desc->syncpts;
 		break;

@@ -237,7 +237,7 @@ done:
 }
 
 static const char *s_syncpt_names[32] = {
-	"", "", "", "", "", "", "", "", "", "", "",
+	"gfx_host", "", "", "", "", "", "", "", "", "", "",
 	"csi_vi_0", "csi_vi_1", "vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
 	"2d_0", "2d_1",
 	"", "",
@@ -264,4 +264,70 @@ void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
 			nvhost_syncpt_update_min(sp, i), max);
 
 	}
+}
+
+/* returns true, if a <= b < c using wrapping comparison */
+static inline bool nvhost_syncpt_is_between(u32 a, u32 b, u32 c)
+{
+	return b-a < c-a;
+}
+
+/* returns true, if syncpt >= threshold (mod 1 << 32) */
+static bool nvhost_syncpt_wrapping_comparison(u32 syncpt, u32 threshold)
+{
+	return nvhost_syncpt_is_between(threshold, syncpt,
+					(1UL<<31UL)+threshold);
+}
+
+/* check for old WAITs to be removed (avoiding a wrap) */
+int nvhost_syncpt_wait_check(struct nvmap_client *nvmap,
+			struct nvhost_syncpt *sp, u32 waitchk_mask,
+			struct nvhost_waitchk *wait,
+			struct nvhost_waitchk *waitend)
+{
+	u32 idx;
+	int err = 0;
+
+	/* get current syncpt values */
+	for (idx = 0; idx < NV_HOST1X_SYNCPT_NB_PTS; idx++) {
+		if (BIT(idx) & waitchk_mask)
+			nvhost_syncpt_update_min(sp, idx);
+	}
+
+	BUG_ON(!wait && !waitend);
+
+	/* compare syncpt vs wait threshold */
+	while (wait != waitend) {
+		u32 syncpt, override;
+
+		BUG_ON(wait->syncpt_id > NV_HOST1X_SYNCPT_NB_PTS);
+
+		syncpt = atomic_read(&sp->min_val[wait->syncpt_id]);
+		if (nvhost_syncpt_wrapping_comparison(syncpt, wait->thresh)) {
+			/*
+			 * NULL an already satisfied WAIT_SYNCPT host method,
+			 * by patching its args in the command stream. The
+			 * method data is changed to reference a reserved
+			 * (never given out or incr) NVSYNCPT_GRAPHICS_HOST
+			 * syncpt with a matching threshold value of 0, so
+			 * is guaranteed to be popped by the host HW.
+			 */
+			dev_dbg(&syncpt_to_dev(sp)->pdev->dev,
+			    "drop WAIT id %d (%s) thresh 0x%x, syncpt 0x%x\n",
+			    wait->syncpt_id,
+			    nvhost_syncpt_name(wait->syncpt_id),
+			    wait->thresh, syncpt);
+
+			/* patch the wait */
+			override = nvhost_class_host_wait_syncpt(
+					NVSYNCPT_GRAPHICS_HOST, 0);
+			err = nvmap_patch_word(nvmap,
+					(struct nvmap_handle *)wait->mem,
+					wait->offset, override);
+			if (err)
+				break;
+		}
+		wait++;
+	}
+	return err;
 }

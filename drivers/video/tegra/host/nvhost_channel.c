@@ -75,9 +75,10 @@ static const struct nvhost_channeldesc channelmap[] = {
 {
 	/* channel 4 */
 	.name	       = "vi",
-	.syncpts       = BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
+	.syncpts       = BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
+			 BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
 			 BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
-			 BIT(NVSYNCPT_VI_ISP_4) | BIT(NVSYNCPT_VI_ISP_5),
+			 BIT(NVSYNCPT_VI_ISP_4),
 	.modulemutexes = BIT(NVMODMUTEX_VI),
 	.exclusive     = true,
 },

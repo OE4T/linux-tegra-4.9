@@ -29,12 +29,13 @@
 
 #include "nvhost_hardware.h"
 
-#define NVSYNCPT_VI_ISP_0		     (12)
-#define NVSYNCPT_VI_ISP_1		     (13)
-#define NVSYNCPT_VI_ISP_2		     (14)
-#define NVSYNCPT_VI_ISP_3		     (15)
-#define NVSYNCPT_VI_ISP_4		     (16)
-#define NVSYNCPT_VI_ISP_5		     (17)
+#define NVSYNCPT_CSI_VI_0		     (11)
+#define NVSYNCPT_CSI_VI_1		     (12)
+#define NVSYNCPT_VI_ISP_0		     (13)
+#define NVSYNCPT_VI_ISP_1		     (14)
+#define NVSYNCPT_VI_ISP_2		     (15)
+#define NVSYNCPT_VI_ISP_3		     (16)
+#define NVSYNCPT_VI_ISP_4		     (17)
 #define NVSYNCPT_2D_0			     (18)
 #define NVSYNCPT_2D_1			     (19)
 #define NVSYNCPT_3D			     (22)
@@ -56,8 +57,9 @@
 /* sync points that are wholly managed by the client */
 #define NVSYNCPTS_CLIENT_MANAGED ( \
 	BIT(NVSYNCPT_DISP0) | BIT(NVSYNCPT_DISP1) | BIT(NVSYNCPT_DSI) | \
-	BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_2) | \
-	BIT(NVSYNCPT_VI_ISP_3) | BIT(NVSYNCPT_VI_ISP_4) | BIT(NVSYNCPT_VI_ISP_5) | \
+	BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) | \
+	BIT(NVSYNCPT_VI_ISP_1) | BIT(NVSYNCPT_VI_ISP_2) | \
+	BIT(NVSYNCPT_VI_ISP_3) | BIT(NVSYNCPT_VI_ISP_4) | \
 	BIT(NVSYNCPT_MPE_EBM_EOF) | BIT(NVSYNCPT_MPE_WR_SAFE) | \
 	BIT(NVSYNCPT_2D_1))
 

@@ -226,8 +226,8 @@ done:
 }
 
 static const char *s_syncpt_names[32] = {
-	"", "", "", "", "", "", "", "", "", "", "", "",
-	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4", "vi_isp_5",
+	"", "", "", "", "", "", "", "", "", "", "",
+	"csi_vi_0", "csi_vi_1", "vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
 	"2d_0", "2d_1",
 	"", "",
 	"3d", "mpe", "disp0", "disp1", "vblank0", "vblank1", "mpe_ebm_eof", "mpe_wr_safe",

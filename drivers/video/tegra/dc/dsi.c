@@ -175,23 +175,37 @@ const u32 dsi_pkt_seq_video_non_burst[NUMOF_PKT_SEQ] = {
 };
 
 static const u32 dsi_pkt_seq_video_burst[NUMOF_PKT_SEQ] = {
-	PKT_ID0(CMD_NULL) | PKT_LEN0(4) | PKT_ID1(CMD_VS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_EOT) | PKT_LEN2(0) | PKT_LP,
+	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
 	0,
-	PKT_ID0(CMD_NULL) | PKT_LEN0(4) | PKT_ID1(CMD_HS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_EOT) | PKT_LEN2(0) | PKT_LP,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
 	0,
-	PKT_ID0(CMD_NULL) | PKT_LEN0(4) | PKT_ID1(CMD_HS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_EOT) | PKT_LEN2(0) | PKT_LP,
-	PKT_ID0(CMD_BLNK) | PKT_LEN0(4) | PKT_ID1(CMD_HS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_BLNK) | PKT_LEN2(2),
-	PKT_ID3(CMD_RGB) | PKT_LEN3(3) | PKT_ID4(CMD_EOT) | PKT_LEN4(0),
-	PKT_ID0(CMD_NULL) | PKT_LEN0(4) | PKT_ID1(CMD_HS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_EOT) | PKT_LEN2(0) | PKT_LP,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
 	0,
-	PKT_ID0(CMD_BLNK) | PKT_LEN0(4) | PKT_ID1(CMD_HS) | PKT_LEN1(0) |
-		PKT_ID2(CMD_BLNK) | PKT_LEN2(2),
-	PKT_ID3(CMD_RGB) | PKT_LEN3(3) | PKT_ID4(CMD_EOT) | PKT_LEN4(0),
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2)|
+	PKT_ID2(CMD_RGB) | PKT_LEN2(3) | PKT_LP,
+	PKT_ID0(CMD_EOT) | PKT_LEN0(7),
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2)|
+	PKT_ID2(CMD_RGB) | PKT_LEN2(3) | PKT_LP,
+	PKT_ID0(CMD_EOT) | PKT_LEN0(7),
+};
+
+static const u32 dsi_pkt_seq_video_burst_no_eot[NUMOF_PKT_SEQ] = {
+	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2)|
+	PKT_ID2(CMD_RGB) | PKT_LEN2(3) | PKT_LP,
+	PKT_ID0(CMD_EOT) | PKT_LEN0(0),
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2)|
+	PKT_ID2(CMD_RGB) | PKT_LEN2(3) | PKT_LP,
+	PKT_ID0(CMD_EOT) | PKT_LEN0(0),
 };
 
 /* TODO: verify with hw about this format */
@@ -674,8 +688,11 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 		case TEGRA_DSI_VIDEO_BURST_MODE_FAST_SPEED:
 		case TEGRA_DSI_VIDEO_BURST_MODE_FASTEST_SPEED:
 		case TEGRA_DSI_VIDEO_BURST_MODE_MANUAL:
-			pkt_seq_3_5_rgb_hi = DSI_PKT_SEQ_3_HI_PKT_33_ID(rgb_info);
-			pkt_seq = dsi_pkt_seq_video_burst;
+			pkt_seq_3_5_rgb_lo = DSI_PKT_SEQ_3_LO_PKT_32_ID(rgb_info);
+			if(!dsi->info.no_pkt_seq_eot)
+				pkt_seq = dsi_pkt_seq_video_burst;
+			else
+				pkt_seq = dsi_pkt_seq_video_burst_no_eot;
 			break;
 		case TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END:
 			pkt_seq_3_5_rgb_hi = DSI_PKT_SEQ_3_HI_PKT_34_ID(rgb_info);

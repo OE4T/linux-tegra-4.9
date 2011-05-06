@@ -1175,8 +1175,7 @@ static int tegra_dsi_write_data(struct tegra_dc *dc,
 {
 	bool switch_back_to_hs_mode;
 	bool switch_back_to_dc_mode;
-	u32 val;
-	int	err;
+	int err;
 
 	err = 0;
 	switch_back_to_hs_mode = false;

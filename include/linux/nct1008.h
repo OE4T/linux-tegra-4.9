@@ -25,6 +25,10 @@
 
 #include <linux/types.h>
 
+#include <mach/edp.h>
+
+#define MAX_ZONES	16
+
 struct nct1008_platform_data {
 	bool supported_hwrev;
 	bool ext_range;
@@ -34,6 +38,8 @@ struct nct1008_platform_data {
 	u8 shutdown_ext_limit;
 	u8 shutdown_local_limit;
 	u8 throttling_ext_limit;
+	u8 thermal_zones[MAX_ZONES];
+	u8 thermal_zones_sz;
 	void (*alarm_fn)(bool raised);
 };
 

@@ -134,12 +134,30 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_WIN_FMT_YUV422RA:
 		return 8;
 
+	/* YUYV packed into 32-bits */
 	case TEGRA_WIN_FMT_YCbCr422:
 	case TEGRA_WIN_FMT_YUV422:
-		/* FIXME: need to know the bpp of these formats */
-		return 0;
+		return 16;
 	}
 	return 0;
+}
+
+static inline bool tegra_dc_is_yuv(int fmt)
+{
+	switch (fmt) {
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YCbCr422P:
+	case TEGRA_WIN_FMT_YUV422P:
+	case TEGRA_WIN_FMT_YCbCr422:
+	case TEGRA_WIN_FMT_YUV422:
+	case TEGRA_WIN_FMT_YCbCr422R:
+	case TEGRA_WIN_FMT_YUV422R:
+	case TEGRA_WIN_FMT_YCbCr422RA:
+	case TEGRA_WIN_FMT_YUV422RA:
+		return true;
+	}
+	return false;
 }
 
 static inline bool tegra_dc_is_yuv_planar(int fmt)
@@ -1122,6 +1140,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		fixed20_12 h_offset, v_offset;
 		bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
 		bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
+		bool yuv = tegra_dc_is_yuv(win->fmt);
 		bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 		unsigned Bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
 		/* Bytes per pixel of bandwidth, used for dda_inc calculation */
@@ -1151,8 +1170,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			continue;
 		}
 
-		tegra_dc_writel(dc, win->fmt, DC_WIN_COLOR_DEPTH);
-		tegra_dc_writel(dc, 0, DC_WIN_BYTE_SWAP);
+		tegra_dc_writel(dc, win->fmt & 0x1f, DC_WIN_COLOR_DEPTH);
+		tegra_dc_writel(dc, win->fmt >> 6, DC_WIN_BYTE_SWAP);
 
 		tegra_dc_writel(dc,
 				V_POSITION(win->out_y) | H_POSITION(win->out_x),
@@ -1222,7 +1241,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE);
 
 		val = WIN_ENABLE;
-		if (yuvp)
+		if (yuv)
 			val |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			val |= COLOR_EXPAND;

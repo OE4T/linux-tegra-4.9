@@ -1317,6 +1317,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	int err;
 	unsigned long val;
 	unsigned i;
+	unsigned long oldrate;
 
 	/* enbale power, clocks, resets, etc. */
 
@@ -1326,6 +1327,11 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	 */
 	clk_enable(hdmi->disp1_clk);
 	clk_enable(hdmi->disp2_clk);
+
+	/* back off multiplier before attaching to parent at new rate. */
+	oldrate = clk_get_rate(hdmi->clk);
+	clk_set_rate(hdmi->clk, oldrate / 2);
+
 	tegra_dc_setup_clk(dc, hdmi->clk);
 	clk_set_rate(hdmi->clk, dc->mode.pclk);
 

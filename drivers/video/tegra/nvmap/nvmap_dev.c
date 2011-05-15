@@ -1208,6 +1208,14 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dev);
 	nvmap_dev = dev;
+
+#if defined(CONFIG_TEGRA_AVP_KERNEL_ON_SMMU)
+	{
+		void avp_early_init(void);
+		avp_early_init();
+	}
+#endif
+
 	return 0;
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {

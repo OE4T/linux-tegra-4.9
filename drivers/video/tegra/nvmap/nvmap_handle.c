@@ -194,7 +194,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 #ifndef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
 		h->pgalloc.area = tegra_iovmm_create_vm(client->share->iovmm,
-						NULL, size, h->align, prot);
+					NULL, size, h->align, prot,
+					h->pgalloc.iovm_addr);
 		if (!h->pgalloc.area)
 			goto fail;
 

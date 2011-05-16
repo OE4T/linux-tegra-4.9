@@ -61,6 +61,7 @@ struct nvmap_pgalloc {
 	struct list_head mru_list;	/* MRU entry for IOVMM reclamation */
 	bool contig;			/* contiguous system memory */
 	bool dirty;			/* area is invalid and needs mapping */
+	u32 iovm_addr;	/* is non-zero, if client need specific iova mapping */
 };
 
 struct nvmap_handle {
@@ -238,5 +239,10 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 }
 
 int is_nvmap_vma(struct vm_area_struct *vma);
+
+struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
+	size_t size, size_t align, unsigned int flags, unsigned int iova_start);
+
+void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
 #endif

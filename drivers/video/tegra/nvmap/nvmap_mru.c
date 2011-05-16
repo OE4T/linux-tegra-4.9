@@ -116,12 +116,16 @@ struct tegra_iovmm_area *nvmap_handle_iovmm(struct nvmap_client *c,
 	}
 
 	vm = tegra_iovmm_create_vm(c->share->iovmm, NULL,
-					h->size, h->align, prot);
+			h->size, h->align, prot,
+			h->pgalloc.iovm_addr);
 
 	if (vm) {
 		INIT_LIST_HEAD(&h->pgalloc.mru_list);
 		return vm;
 	}
+	/* if client is looking for specific iovm address, return from here. */
+	if ((vm == NULL) && (h->pgalloc.iovm_addr != 0))
+		return NULL;
 	/* attempt to re-use the most recently unpinned IOVMM area in the
 	 * same size bin as the current handle. If that fails, iteratively
 	 * evict handles (starting from the current bin) until an allocation
@@ -160,7 +164,8 @@ struct tegra_iovmm_area *nvmap_handle_iovmm(struct nvmap_client *c,
 			tegra_iovmm_free_vm(evict->pgalloc.area);
 			evict->pgalloc.area = NULL;
 			vm = tegra_iovmm_create_vm(c->share->iovmm,
-					   NULL, h->size, h->align, prot);
+					NULL, h->size, h->align,
+					prot, h->pgalloc.iovm_addr);
 			nvmap_mru_lock(c->share);
 		}
 	}

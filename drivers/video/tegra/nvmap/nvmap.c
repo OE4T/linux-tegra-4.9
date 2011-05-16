@@ -725,6 +725,53 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 	return r;
 }
 
+/* allocates memory with specifed iovm_start address. */
+struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
+	size_t size, size_t align, unsigned int flags, unsigned int iovm_start)
+{
+	int err;
+	struct nvmap_handle *h;
+	struct nvmap_handle_ref *r;
+	const unsigned int default_heap = NVMAP_HEAP_IOVMM;
+
+	/* size need to be more than one page.
+	 * otherwise heap preference would change to system heap.
+	 */
+	if (size <= PAGE_SIZE)
+		size = PAGE_SIZE << 1;
+	r = nvmap_create_handle(client, size);
+	if (IS_ERR_OR_NULL(r))
+		return r;
+
+	h = r->handle;
+	h->pgalloc.iovm_addr = iovm_start;
+	err = nvmap_alloc_handle_id(client, nvmap_ref_to_id(r),
+			default_heap, align, flags);
+	if (err)
+		goto fail;
+
+	err = mutex_lock_interruptible(&client->share->pin_lock);
+	if (WARN_ON(err))
+		goto fail;
+	err = pin_locked(client, h);
+	mutex_unlock(&client->share->pin_lock);
+	if (err)
+		goto fail;
+	return r;
+
+fail:
+	nvmap_free_handle_id(client, nvmap_ref_to_id(r));
+	return ERR_PTR(err);
+}
+
+void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r)
+{
+	unsigned long ref_id = nvmap_ref_to_id(r);
+
+	nvmap_unpin_ids(client, 1, &ref_id);
+	nvmap_free_handle_id(client, ref_id);
+}
+
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 {
 	nvmap_free_handle_id(client, nvmap_ref_to_id(r));

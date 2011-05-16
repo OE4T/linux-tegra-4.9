@@ -46,6 +46,7 @@ struct nvhost_channeldesc {
 	u32 modulemutexes;
 	u32 class;
 	bool exclusive;
+	bool keepalive;
 };
 
 struct nvhost_channel {

@@ -31,7 +31,6 @@
 #define ACM_TIMEOUT_MSEC 25
 
 #define DISABLE_3D_POWERGATING
-#define DISABLE_MPE_POWERGATING
 
 void nvhost_module_busy(struct nvhost_module *mod)
 {
@@ -189,14 +188,6 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->powergate_id2 = -1;
 	}
 #endif
-#endif
-#ifdef DISABLE_MPE_POWERGATING
-	if (mod->powergate_id == TEGRA_POWERGATE_MPE) {
-		tegra_powergate_sequence_power_up(mod->powergate_id,
-			mod->clk[0]);
-		clk_disable(mod->clk[0]);
-		mod->powergate_id = -1;
-	}
 #endif
 
 	mutex_init(&mod->lock);

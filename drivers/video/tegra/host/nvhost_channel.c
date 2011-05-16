@@ -91,6 +91,7 @@ static const struct nvhost_channeldesc channelmap[] = {
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.power	       = power_mpe,
 	.exclusive     = true,
+	.keepalive     = true,
 },
 {
 	/* channel 6 */
@@ -142,6 +143,10 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	}
 	mutex_unlock(&ch->reflock);
 
+	/* Keep alive modules that needs to be when a channel is open */
+	if (!err && ch->desc->keepalive)
+		nvhost_module_busy(&ch->mod);
+
 	return err ? NULL : ch;
 }
 
@@ -153,6 +158,10 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 			ch->cur_ctx = NULL;
 		mutex_unlock(&ch->submitlock);
 	}
+
+	/* Allow keep-alive'd module to be turned off */
+	if (ch->desc->keepalive)
+		nvhost_module_idle(&ch->mod);
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 1) {

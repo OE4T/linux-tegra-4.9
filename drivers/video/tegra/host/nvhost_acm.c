@@ -38,17 +38,17 @@ void nvhost_module_busy(struct nvhost_module *mod)
 	mutex_lock(&mod->lock);
 	cancel_delayed_work(&mod->powerdown);
 	if ((atomic_inc_return(&mod->refcount) == 1) && !mod->powered) {
+		int i = 0;
 		if (mod->parent)
 			nvhost_module_busy(mod->parent);
-		if (mod->powergate_id != -1) {
-			BUG_ON(mod->num_clks != 1);
+		if (mod->powergate_id != -1)
 			tegra_powergate_sequence_power_up(
-				mod->powergate_id, mod->clk[0]);
-		} else {
-			int i;
-			for (i = 0; i < mod->num_clks; i++)
-				clk_enable(mod->clk[i]);
-		}
+				mod->powergate_id, mod->clk[i++]);
+		if (mod->powergate_id2 != -1)
+			tegra_powergate_sequence_power_up(
+				mod->powergate_id2, mod->clk[i++]);
+		while (i < mod->num_clks)
+			clk_enable(mod->clk[i++]);
 		if (mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_ON);
 		mod->powered = true;
@@ -65,12 +65,15 @@ static void powerdown_handler(struct work_struct *work)
 		int i;
 		if (mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_OFF);
-		for (i = 0; i < mod->num_clks; i++) {
+		for (i = 0; i < mod->num_clks; i++)
 			clk_disable(mod->clk[i]);
-		}
 		if (mod->powergate_id != -1) {
 			tegra_periph_reset_assert(mod->clk[0]);
 			tegra_powergate_power_off(mod->powergate_id);
+		}
+		if (mod->powergate_id2 != -1) {
+			tegra_periph_reset_assert(mod->clk[1]);
+			tegra_powergate_power_off(mod->powergate_id2);
 		}
 		mod->powered = false;
 		if (mod->parent)
@@ -124,15 +127,6 @@ static const char *get_module_clk_id(const char *module, int index)
 	return NULL;
 }
 
-static int get_module_powergate_id(const char *module)
-{
-	if (strcmp(module, "gr3d") == 0)
-		return TEGRA_POWERGATE_3D;
-	else if (strcmp(module, "mpe") == 0)
-		return TEGRA_POWERGATE_MPE;
-	return -1;
-}
-
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		nvhost_modulef func, struct nvhost_module *parent,
 		struct device *dev)
@@ -164,7 +158,16 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	mod->func = func;
 	mod->parent = parent;
 	mod->powered = false;
-	mod->powergate_id = get_module_powergate_id(name);
+	mod->powergate_id = -1;
+	mod->powergate_id2 = -1;
+
+	if (strcmp(name, "gr3d") == 0) {
+		mod->powergate_id = TEGRA_POWERGATE_3D;
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+		mod->powergate_id2 = TEGRA_POWERGATE_3D1;
+#endif
+	} else if (strcmp(name, "mpe") == 0)
+		mod->powergate_id = TEGRA_POWERGATE_MPE;
 
 #ifdef DISABLE_3D_POWERGATING
 	/*
@@ -178,6 +181,14 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		clk_disable(mod->clk[0]);
 		mod->powergate_id = -1;
 	}
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+	if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
+		tegra_powergate_sequence_power_up(mod->powergate_id2,
+			mod->clk[1]);
+		clk_disable(mod->clk[1]);
+		mod->powergate_id2 = -1;
+	}
+#endif
 #endif
 #ifdef DISABLE_MPE_POWERGATING
 	if (mod->powergate_id == TEGRA_POWERGATE_MPE) {

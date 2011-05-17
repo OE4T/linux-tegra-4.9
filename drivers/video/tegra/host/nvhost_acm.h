@@ -51,6 +51,7 @@ struct nvhost_module {
 	wait_queue_head_t idle;
 	struct nvhost_module *parent;
 	int powergate_id;
+	int powergate_id2;
 };
 
 int nvhost_module_init(struct nvhost_module *mod, const char *name,

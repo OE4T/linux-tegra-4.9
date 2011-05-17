@@ -41,11 +41,9 @@ void nvhost_module_busy(struct nvhost_module *mod)
 		if (mod->parent)
 			nvhost_module_busy(mod->parent);
 		if (mod->powergate_id != -1)
-			tegra_powergate_sequence_power_up(
-				mod->powergate_id, mod->clk[i++]);
+			tegra_unpowergate_partition(mod->powergate_id);
 		if (mod->powergate_id2 != -1)
-			tegra_powergate_sequence_power_up(
-				mod->powergate_id2, mod->clk[i++]);
+			tegra_unpowergate_partition(mod->powergate_id2);
 		while (i < mod->num_clks)
 			clk_enable(mod->clk[i++]);
 		if (mod->func)
@@ -66,14 +64,12 @@ static void powerdown_handler(struct work_struct *work)
 			mod->func(mod, NVHOST_POWER_ACTION_OFF);
 		for (i = 0; i < mod->num_clks; i++)
 			clk_disable(mod->clk[i]);
-		if (mod->powergate_id != -1) {
-			tegra_periph_reset_assert(mod->clk[0]);
-			tegra_powergate_power_off(mod->powergate_id);
-		}
-		if (mod->powergate_id2 != -1) {
-			tegra_periph_reset_assert(mod->clk[1]);
-			tegra_powergate_power_off(mod->powergate_id2);
-		}
+		if (mod->powergate_id != -1)
+			tegra_powergate_partition(mod->powergate_id);
+
+		if (mod->powergate_id2 != -1)
+			tegra_powergate_partition(mod->powergate_id2);
+
 		mod->powered = false;
 		if (mod->parent)
 			nvhost_module_idle(mod->parent);
@@ -175,15 +171,13 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	 * is to disable 3d block power gating.
 	 */
 	if (mod->powergate_id == TEGRA_POWERGATE_3D) {
-		tegra_powergate_sequence_power_up(mod->powergate_id,
-			mod->clk[0]);
+		tegra_unpowergate_partition(mod->powergate_id);
 		clk_disable(mod->clk[0]);
 		mod->powergate_id = -1;
 	}
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 	if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
-		tegra_powergate_sequence_power_up(mod->powergate_id2,
-			mod->clk[1]);
+		tegra_unpowergate_partition(mod->powergate_id2);
 		clk_disable(mod->clk[1]);
 		mod->powergate_id2 = -1;
 	}

@@ -36,7 +36,7 @@
 #include "dsi_regs.h"
 #include "dsi.h"
 
-#define DSI_USE_SYNC_POINTS 0
+#define DSI_USE_SYNC_POINTS 1
 
 #define DSI_STOP_DC_DURATION_MSEC 1000
 
@@ -116,6 +116,9 @@ struct tegra_dc_dsi_data {
 
 	u32		target_hs_clk_khz;
 	u32		target_lp_clk_khz;
+
+	u32		syncpt_id;
+	u32		syncpt_val;
 
 	u16		current_bit_clk_ns;
 	u32		current_dsi_clk_khz;
@@ -383,6 +386,10 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi);
 	dsi->target_hs_clk_khz = tegra_dsi_get_hs_clk_rate(dsi);
+
+#if DSI_USE_SYNC_POINTS
+	dsi->syncpt_id = NVSYNCPT_DSI;
+#endif
 
 	/*
 	 * Force video clock to be continuous mode if
@@ -1119,17 +1126,37 @@ static bool tegra_dsi_is_controller_idle(struct tegra_dc_dsi_data *dsi)
 static bool tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
 {
 	bool status;
+	u32 val;
 
 	status = false;
+
 	if (tegra_dsi_readl(dsi, DSI_TRIGGER))
 		goto fail;
 
-	tegra_dsi_writel(dsi, DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE),
-								DSI_TRIGGER);
-
 #if DSI_USE_SYNC_POINTS
-	/* TODO: Implement sync point */
+	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
+		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
+	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
+
+	dsi->syncpt_val = nvhost_syncpt_read(
+			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
+
+	tegra_dsi_writel(dsi,
+		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER);
+
+	/* TODO: Use interrupt rather than polling */
+	if (nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
+		dsi->syncpt_id, dsi->syncpt_val + 1) < 0) {
+		printk(KERN_ERR "DSI sync point failure\n");
+		status = false;
+		goto fail;
+	}
+
+	(dsi->syncpt_val)++;
+	status = true;
 #else
+	tegra_dsi_writel(dsi,
+		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER);
 	status = tegra_dsi_is_controller_idle(dsi);
 #endif
 
@@ -1264,6 +1291,27 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 	poll_time = 0;
 	err = 0;
 
+#if DSI_USE_SYNC_POINTS
+	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
+		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
+	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
+
+	/* FIXME: Workaround for nvhost_syncpt_read */
+	dsi->syncpt_val = nvhost_syncpt_update_min(
+			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
+
+	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
+	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+
+	/* TODO: Use interrupt rather than polling */
+	err = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
+		dsi->syncpt_id, dsi->syncpt_val + 1);
+	if (err < 0)
+		printk(KERN_ERR "DSI sync point failure\n");
+	else
+		(dsi->syncpt_val)++;
+#else
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
@@ -1278,6 +1326,7 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 	}
 	if (poll_time > DSI_STATUS_POLLING_DURATION_USEC)
 		err = -EBUSY;
+#endif
 
 	return err;
 }

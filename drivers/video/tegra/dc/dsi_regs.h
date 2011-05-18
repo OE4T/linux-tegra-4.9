@@ -23,7 +23,13 @@ enum {
 };
 
 /* These are word offsets from base (not byte offsets) */
+enum {
+	OP_DONE = 1,
+};
 #define DSI_INCR_SYNCPT 0x00
+#define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 8)
+#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0xff) << 0)
+
 #define DSI_INCR_SYNCPT_CNTRL 0x01
 #define DSI_INCR_SYNCPT_ERROR 0x02
 #define DSI_CTXSW 0x08

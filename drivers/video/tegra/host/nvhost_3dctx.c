@@ -24,6 +24,7 @@
 #include "dev.h"
 
 #include <mach/gpufuse.h>
+#include <mach/hardware.h>
 #include <linux/slab.h>
 
 #define NV_WAR_789194 1
@@ -35,6 +36,7 @@ static bool s_is_v1 = false;
 #else
 static bool s_is_v1 = true;
 #endif
+static bool s_war_insert_syncpoints;
 
 const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0, 0xe00,    4, DIRECT),
@@ -152,7 +154,8 @@ static void restore_indirect(u32 *ptr, u32 offset_reg, u32 offset,
 static void restore_end(u32 *ptr)
 {
 	/* syncpt increment to track restore gather. */
-	ptr[0] = nvhost_opcode_imm(0x0, 0x100 | NVSYNCPT_3D);
+	ptr[0] = nvhost_opcode_imm_incr_syncpt(NV_CLASS_HOST_SYNCPT_OP_DONE,
+			NVSYNCPT_3D);
 }
 #define RESTORE_END_SIZE 1
 
@@ -270,34 +273,42 @@ static void __init switch_gpu(struct save_info *info,
 			u32 save_dest_sets,
 			u32 restore_dest_sets)
 {
-#if NV_WAR_789194
-	if (info->ptr) {
-		info->ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
-						0, 0);
-		info->ptr[1] = nvhost_opcode_nonincr(0x905, 2);
-		info->ptr[2] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
-		info->ptr[3] = nvhost_opcode_imm(0xb00, restore_dest_sets);
-		info->ptr[4] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
-		info->ptr[5] = nvhost_opcode_imm(0xb00, save_dest_sets);
-		info->ptr[6] = nvhost_opcode_imm(0xb01, save_src_set);
-		info->ptr += 7;
+	if (s_war_insert_syncpoints) {
+		if (info->ptr) {
+			info->ptr[0] = nvhost_opcode_setclass(
+							NV_GRAPHICS_3D_CLASS_ID,
+							0, 0);
+			info->ptr[1] = nvhost_opcode_nonincr(0x905, 2);
+			info->ptr[2] = nvhost_opcode_imm_incr_syncpt(
+					NV_CLASS_HOST_SYNCPT_RD_DONE,
+					NVSYNCPT_3D);
+			info->ptr[3] = nvhost_opcode_imm(0xb00,
+					restore_dest_sets);
+			info->ptr[4] = nvhost_opcode_imm_incr_syncpt(
+					NV_CLASS_HOST_SYNCPT_RD_DONE,
+					NVSYNCPT_3D);
+			info->ptr[5] = nvhost_opcode_imm(0xb00, save_dest_sets);
+			info->ptr[6] = nvhost_opcode_imm(0xb01, save_src_set);
+			info->ptr += 7;
+		}
+		info->save_count += 7;
+		info->restore_count += 2;
+		info->save_incrs += 1;
+		info->restore_incrs += 1;
+	} else {
+		if (info->ptr) {
+			info->ptr[0] = nvhost_opcode_setclass(
+							NV_GRAPHICS_3D_CLASS_ID,
+							0x905, 1);
+			info->ptr[1] = nvhost_opcode_imm(0xb00,
+							restore_dest_sets);
+			info->ptr[2] = nvhost_opcode_imm(0xb00, save_dest_sets);
+			info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
+			info->ptr += 4;
+		}
+		info->save_count += 4;
+		info->restore_count += 1;
 	}
-	info->save_count += 7;
-	info->restore_count += 2;
-	info->save_incrs += 1;
-	info->restore_incrs += 1;
-#else
-	if (info->ptr) {
-		info->ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
-						0x905, 1);
-		info->ptr[1] = nvhost_opcode_imm(0xb00, restore_dest_sets);
-		info->ptr[2] = nvhost_opcode_imm(0xb00, save_dest_sets);
-		info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
-		info->ptr += 4;
-	}
-	info->save_count += 4;
-	info->restore_count += 1;
-#endif
 }
 
 static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
@@ -309,6 +320,7 @@ static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
 		saver->save_incrs,
 		1
 	};
+	int save_end_size = saver->save_end_size;
 	BUG_ON(register_sets > 2);
 
 	if (info.ptr) {
@@ -349,19 +361,20 @@ static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
 	if (register_sets == 2)
 		switch_gpu(&info, 0, 2, 3);
 
+	if (s_war_insert_syncpoints) {
+		if (s_is_v1)
+			info.save_incrs += register_sets;
+		save_end_size++;
+	}
+
 	if (info.ptr) {
 		saver->save_end(info.ptr);
-		info.ptr += saver->save_end_size;
+		info.ptr += save_end_size;
 	}
 
 	wmb();
 
-#ifdef NV_WAR_789194
-	if (s_is_v1)
-		info.save_incrs += register_sets;
-#endif
-
-	save_size = info.save_count + saver->save_end_size;
+	save_size = info.save_count + save_end_size;
 	restore_size = info.restore_count + RESTORE_END_SIZE;
 	save_incrs = info.save_incrs;
 	save_thresh = save_incrs - saver->save_thresh_offset;
@@ -383,14 +396,16 @@ static void __init save_begin_v0(u32 *ptr)
 {
 	/* 3d: when done, increment syncpt to base+1 */
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_imm(0, 0x100 | NVSYNCPT_3D); /* incr 1 */
+	ptr[1] = nvhost_opcode_imm_incr_syncpt(NV_CLASS_HOST_SYNCPT_OP_DONE,
+			NVSYNCPT_3D); /*  incr 1 */
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
 	ptr[3] = nvhost_class_host_wait_syncpt_base(NVSYNCPT_3D,
 						NVWAITBASE_3D, 1);
 	/* host: signal context read thread to start reading */
-	ptr[4] = nvhost_opcode_imm(0, NVSYNCPT_3D); /* incr 2 */
+	ptr[4] = nvhost_opcode_imm_incr_syncpt(NV_CLASS_HOST_SYNCPT_IMMEDIATE,
+			NVSYNCPT_3D); /* incr 2 */
 }
 #define SAVE_BEGIN_V0_SIZE 5
 
@@ -502,7 +517,9 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 	/* wait for 3d idle */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-			nvhost_opcode_imm(0, 0x100 | NVSYNCPT_3D));
+			nvhost_opcode_imm_incr_syncpt(
+					NV_CLASS_HOST_SYNCPT_OP_DONE,
+					NVSYNCPT_3D));
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
@@ -521,11 +538,12 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 		nvhost_cdma_push(cdma,
 				nvhost_opcode_nonincr(0x904, 1),
 				ctx->restore_phys + restore_set1_offset * 4);
-#if NV_WAR_789194
-		nvhost_cdma_push(cdma,
+		if (s_war_insert_syncpoints)
+			nvhost_cdma_push(cdma,
 				NVHOST_OPCODE_NOOP,
-				nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D));
-#endif
+				nvhost_opcode_imm_incr_syncpt(
+					NV_CLASS_HOST_SYNCPT_RD_DONE,
+					NVSYNCPT_3D));
 	}
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_imm(0xb00, 1),
@@ -589,14 +607,17 @@ static void __init save_end_v1(u32 *ptr)
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
 	restore_end(ptr + 1);
 	ptr += RESTORE_END_SIZE;
-	/* reset to sli if necessary */
-#if NV_WAR_789194
-	ptr[1] = nvhost_opcode_imm(0, 0x200 | NVSYNCPT_3D);
-	ptr += 1;
-#endif
+	/* reset to two register sets if necessary */
+	if (s_war_insert_syncpoints) {
+		ptr[1] = nvhost_opcode_imm_incr_syncpt(
+			NV_CLASS_HOST_SYNCPT_RD_DONE,
+			NVSYNCPT_3D);
+		ptr += 1;
+	}
 	ptr[1] = nvhost_opcode_imm(0xb00, (1 << register_sets) - 1);
 	/* op_done syncpt incr to flush FDC */
-	ptr[2] = nvhost_opcode_imm(0, 0x100 | NVSYNCPT_3D);
+	ptr[2] = nvhost_opcode_imm_incr_syncpt(NV_CLASS_HOST_SYNCPT_OP_DONE,
+			NVSYNCPT_3D);
 	/* host wait for that syncpt incr, and advance the wait base */
 	ptr[3] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_WAIT_SYNCPT_BASE,
@@ -612,14 +633,10 @@ static void __init save_end_v1(u32 *ptr)
 	/* send reg reads back to host */
 	ptr[7] = nvhost_opcode_imm(0xe40, 0);
 	/* final syncpt increment to release waiters */
-	ptr[8] = nvhost_opcode_imm(0, NVSYNCPT_3D);
+	ptr[8] = nvhost_opcode_imm_incr_syncpt(NV_CLASS_HOST_SYNCPT_IMMEDIATE,
+			NVSYNCPT_3D);
 }
-#if NV_WAR_789194
-#define SAVE_END_V1_SIZE (10 + RESTORE_END_SIZE)
-#else
 #define SAVE_END_V1_SIZE (9 + RESTORE_END_SIZE)
-#endif
-
 
 /*** ctx3d ***/
 
@@ -767,6 +784,9 @@ int __init nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 
 	register_sets = tegra_gpu_register_sets();
 	BUG_ON(register_sets == 0 || register_sets > 2);
+
+	s_war_insert_syncpoints = tegra_chip_id == TEGRA30
+		&& tegra_revision == TEGRA_REVISION_A01;
 
 	setup_save(saver, NULL);
 

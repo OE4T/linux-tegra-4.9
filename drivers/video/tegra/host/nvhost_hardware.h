@@ -130,7 +130,7 @@ static inline unsigned int nvhost_sync_mlock_owner_owner_chid(u32 reg)
 }
 
 
-/* host class */
+/* host class methods */
 enum {
 	NV_CLASS_HOST_INCR_SYNCPT = 0x0,
 	NV_CLASS_HOST_WAIT_SYNCPT = 0x8,
@@ -138,6 +138,13 @@ enum {
 	NV_CLASS_HOST_INCR_SYNCPT_BASE = 0xc,
 	NV_CLASS_HOST_INDOFF = 0x2d,
 	NV_CLASS_HOST_INDDATA = 0x2e
+};
+/*  sync point conditionals */
+enum {
+	NV_CLASS_HOST_SYNCPT_IMMEDIATE = 0x0,
+	NV_CLASS_HOST_SYNCPT_OP_DONE = 0x1,
+	NV_CLASS_HOST_SYNCPT_RD_DONE = 0x2,
+	NV_CLASS_HOST_SYNCPT_REG_WR_SAFE = 0x3,
 };
 
 static inline u32 nvhost_class_host_wait_syncpt(
@@ -156,6 +163,12 @@ static inline u32 nvhost_class_host_incr_syncpt_base(
 	unsigned base_indx, unsigned offset)
 {
 	return (base_indx << 24) | offset;
+}
+
+static inline u32 nvhost_class_host_incr_syncpt(
+	unsigned cond, unsigned indx)
+{
+	return (cond << 8) | indx;
 }
 
 enum {
@@ -208,6 +221,12 @@ static inline u32 nvhost_opcode_mask(unsigned offset, unsigned mask)
 static inline u32 nvhost_opcode_imm(unsigned offset, unsigned value)
 {
 	return (4 << 28) | (offset << 16) | value;
+}
+
+static inline u32 nvhost_opcode_imm_incr_syncpt(unsigned cond, unsigned indx)
+{
+	return nvhost_opcode_imm(NV_CLASS_HOST_INCR_SYNCPT,
+		nvhost_class_host_incr_syncpt(cond, indx));
 }
 
 static inline u32 nvhost_opcode_restart(unsigned address)

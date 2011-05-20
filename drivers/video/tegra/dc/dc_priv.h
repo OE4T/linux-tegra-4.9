@@ -96,6 +96,17 @@ struct tegra_dc {
 	struct completion		vblank_complete;
 
 	struct work_struct		vblank_work;
+
+	struct {
+		unsigned		underflows;
+		unsigned		underflows_a;
+		unsigned		underflows_b;
+		unsigned		underflows_c;
+	} stats;
+
+#ifdef CONFIG_DEBUG_FS
+	struct dentry			*debugdir;
+#endif
 };
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
@@ -150,7 +161,12 @@ extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 
+/* defined in dc_sysfs.c, used by dc.c */
 void tegra_dc_remove_sysfs(struct device *dev);
 void tegra_dc_create_sysfs(struct device *dev);
+
+/* defined in dc.c, used by dc_sysfs.c */
+void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable);
+bool tegra_dc_stats_get(struct tegra_dc *dc);
 #endif
 

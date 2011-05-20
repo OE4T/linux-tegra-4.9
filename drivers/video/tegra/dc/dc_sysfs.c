@@ -47,6 +47,46 @@ static ssize_t mode_show(struct device *device,
 
 static DEVICE_ATTR(mode, S_IRUGO, mode_show, NULL);
 
+/*******************
+ * DC Stat Enabled *
+ *******************/
+static ssize_t stats_enable_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	bool enabled;
+
+	if (mutex_lock_killable(&dc->lock))
+		return -EINTR;
+	enabled = tegra_dc_stats_get(dc);
+	mutex_unlock(&dc->lock);
+
+	return snprintf(buf, PAGE_SIZE, "%d", enabled);
+}
+
+static ssize_t stats_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	unsigned long val = 0;
+
+	if (strict_strtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (mutex_lock_killable(&dc->lock))
+		return -EINTR;
+	tegra_dc_stats_enable(dc, !!val);
+	mutex_unlock(&dc->lock);
+
+	return count;
+}
+
+static DEVICE_ATTR(stats_enable, S_IRUGO|S_IWUSR|S_IWGRP,
+	stats_enable_show, stats_enable_store);
+
+
 /**************
  * DC Enabled *
  **************/
@@ -68,11 +108,12 @@ static ssize_t enable_store(struct device *dev,
 {
 	struct nvhost_device *ndev = to_nvhost_device(dev);
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
-	int enabled;
+	unsigned long val = 0;
 
-	enabled = simple_strtoul(buf, NULL, 10);
+	if (strict_strtoul(buf, 10, &val) < 0)
+		return -EINVAL;
 
-	if (enabled) {
+	if (val) {
 		tegra_dc_enable(dc);
 	} else {
 		tegra_dc_disable(dc);
@@ -193,8 +234,11 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	struct nvhost_device *ndev = to_nvhost_device(dev);
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
+
+	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_mode);
 	device_remove_file(dev, &dev_attr_enable);
+
 	if (dc->out->stereo) {
 		device_remove_file(dev, &dev_attr_stereo_orientation);
 		device_remove_file(dev, &dev_attr_stereo_mode);
@@ -214,6 +258,8 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	error |= device_create_file(dev, &dev_attr_mode);
 	error |= device_create_file(dev, &dev_attr_enable);
+	error |= device_create_file(dev, &dev_attr_stats_enable);
+
 	if (dc->out->stereo) {
 		error |= device_create_file(dev, &dev_attr_stereo_orientation);
 		error |= device_create_file(dev, &dev_attr_stereo_mode);

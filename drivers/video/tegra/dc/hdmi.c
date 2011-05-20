@@ -27,6 +27,8 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/export.h>
 
 #include <mach/clk.h>
@@ -61,7 +63,6 @@
 #define HDMI_ELD_MANF_NAME_INDEX		16
 #define HDMI_ELD_PRODUCT_CODE_INDEX		18
 #define HDMI_ELD_MONITOR_NAME_INDEX		20
-
 
 struct tegra_dc_hdmi_data {
 	struct tegra_dc			*dc;
@@ -431,14 +432,19 @@ static inline void tegra_hdmi_clrsetbits(struct tegra_dc_hdmi_data *hdmi,
 	tegra_hdmi_writel(hdmi, val, reg);
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int dbg_hdmi_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_hdmi_data *hdmi = s->private;
+
 #define DUMP_REG(a) do {						\
-		printk("HDMI %-32s\t%03x\t%08lx\n",			\
+		seq_printf(s, "%-32s\t%03x\t%08lx\n",			\
 		       #a, a, tegra_hdmi_readl(hdmi, a));		\
 	} while (0)
 
-#ifdef DEBUG
-static void hdmi_dumpregs(struct tegra_dc_hdmi_data *hdmi)
-{
+	tegra_dc_io_start(hdmi->dc);
+	clk_enable(hdmi->clk);
+
 	DUMP_REG(HDMI_CTXSW);
 	DUMP_REG(HDMI_NV_PDISP_SOR_STATE0);
 	DUMP_REG(HDMI_NV_PDISP_SOR_STATE1);
@@ -593,7 +599,48 @@ static void hdmi_dumpregs(struct tegra_dc_hdmi_data *hdmi)
 	DUMP_REG(HDMI_NV_PDISP_KEY_HDCP_KEY_3);
 	DUMP_REG(HDMI_NV_PDISP_KEY_HDCP_KEY_TRIG);
 	DUMP_REG(HDMI_NV_PDISP_KEY_SKEY_INDEX);
+#undef DUMP_REG
+
+	clk_disable(hdmi->clk);
+	tegra_dc_io_end(hdmi->dc);
+
+	return 0;
 }
+
+static int dbg_hdmi_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_hdmi_show, inode->i_private);
+}
+
+static const struct file_operations dbg_fops = {
+	.open		= dbg_hdmi_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static struct dentry *hdmidir;
+
+static void tegra_dc_hdmi_debug_create(struct tegra_dc_hdmi_data *hdmi)
+{
+	struct dentry *retval;
+
+	hdmidir = debugfs_create_dir("tegra_hdmi", NULL);
+	if (!hdmidir)
+		return;
+	retval = debugfs_create_file("regs", S_IRUGO, hdmidir, hdmi,
+		&dbg_fops);
+	if (!retval)
+		goto free_out;
+	return;
+free_out:
+	debugfs_remove_recursive(hdmidir);
+	hdmidir = NULL;
+	return;
+}
+#else
+static inline void tegra_dc_hdmi_debug_create(struct tegra_dc_hdmi_data *hdmi)
+{ }
 #endif
 
 #define PIXCLOCK_TOLERANCE	200
@@ -883,6 +930,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		tegra_nvhdcp_set_policy(hdmi->nvhdcp,
 			TEGRA_NVHDCP_POLICY_ALWAYS_ON);
 	}
+
+	tegra_dc_hdmi_debug_create(hdmi);
+
 	return 0;
 
 err_edid_destroy:

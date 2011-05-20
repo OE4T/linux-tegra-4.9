@@ -292,11 +292,11 @@ static void dump_regs(struct tegra_dc *dc)
 {
 	_dump_regs(dc, dc, dump_regs_print);
 }
-#else
+#else /* !DEBUG */
 
 static void dump_regs(struct tegra_dc *dc) {}
 
-#endif
+#endif /* DEBUG */
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -324,25 +324,126 @@ static int dbg_dc_open(struct inode *inode, struct file *file)
 	return single_open(file, dbg_dc_show, inode->i_private);
 }
 
-static const struct file_operations dbg_fops = {
+static const struct file_operations regs_fops = {
 	.open		= dbg_dc_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
 
-static void tegra_dc_dbg_add(struct tegra_dc *dc)
+static int dbg_dc_mode_show(struct seq_file *s, void *unused)
 {
-	char name[32];
+	struct tegra_dc *dc = s->private;
+	struct tegra_dc_mode *m;
 
-	snprintf(name, sizeof(name), "tegra_dc%d_regs", dc->ndev->id);
-	(void) debugfs_create_file(name, S_IRUGO, NULL, dc, &dbg_fops);
+	mutex_lock(&dc->lock);
+	m = &dc->mode;
+	seq_printf(s,
+		"pclk: %d\n"
+		"h_ref_to_sync: %d\n"
+		"v_ref_to_sync: %d\n"
+		"h_sync_width: %d\n"
+		"v_sync_width: %d\n"
+		"h_back_porch: %d\n"
+		"v_back_porch: %d\n"
+		"h_active: %d\n"
+		"v_active: %d\n"
+		"h_front_porch: %d\n"
+		"v_front_porch: %d\n"
+		"stereo_mode: %d\n",
+		m->pclk, m->h_ref_to_sync, m->v_ref_to_sync,
+		m->h_sync_width, m->v_sync_width,
+		m->h_back_porch, m->v_back_porch,
+		m->h_active, m->v_active,
+		m->h_front_porch, m->v_front_porch,
+		m->stereo_mode);
+	mutex_unlock(&dc->lock);
+	return 0;
 }
-#else
-static void tegra_dc_dbg_add(struct tegra_dc *dc) {}
 
-#endif
+static int dbg_dc_mode_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_mode_show, inode->i_private);
+}
 
+static const struct file_operations mode_fops = {
+	.open		= dbg_dc_mode_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int dbg_dc_stats_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc *dc = s->private;
+
+	mutex_lock(&dc->lock);
+	seq_printf(s,
+		"underflows: %u\n"
+		"underflows_a: %u\n"
+		"underflows_b: %u\n"
+		"underflows_c: %u\n",
+		dc->stats.underflows,
+		dc->stats.underflows_a,
+		dc->stats.underflows_b,
+		dc->stats.underflows_c);
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+
+static int dbg_dc_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_stats_show, inode->i_private);
+}
+
+static const struct file_operations stats_fops = {
+	.open		= dbg_dc_stats_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
+{
+	if (dc->debugdir)
+		debugfs_remove_recursive(dc->debugdir);
+	dc->debugdir = NULL;
+}
+
+static void tegra_dc_create_debugfs(struct tegra_dc *dc)
+{
+	struct dentry *retval;
+
+	dc->debugdir = debugfs_create_dir(dev_name(&dc->ndev->dev), NULL);
+	if (!dc->debugdir)
+		goto remove_out;
+
+	retval = debugfs_create_file("regs", S_IRUGO, dc->debugdir, dc,
+		&regs_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("mode", S_IRUGO, dc->debugdir, dc,
+		&mode_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("stats", S_IRUGO, dc->debugdir, dc,
+		&stats_fops);
+	if (!retval)
+		goto remove_out;
+
+	return;
+remove_out:
+	dev_err(&dc->ndev->dev, "could not create debugfs\n");
+	tegra_dc_remove_debugfs(dc);
+}
+
+#else /* !CONFIG_DEBUGFS */
+static inline void tegra_dc_create_debugfs(struct tegra_dc *dc) { };
+static inline void tegra_dc_remove_debugfs(struct tegra_dc *dc) { };
+#endif /* CONFIG_DEBUGFS */
 
 static int tegra_dc_add(struct tegra_dc *dc, int index)
 {
@@ -913,10 +1014,10 @@ static void print_mode(struct tegra_dc *dc,
 			mode->pclk);
 	}
 }
-#else
+#else /* !DEBUG */
 static inline void print_mode(struct tegra_dc *dc,
 			const struct tegra_dc_mode *mode, const char *note) { }
-#endif
+#endif /* DEBUG */
 
 static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 {
@@ -1255,11 +1356,19 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	 * hosed and reset.
 	 */
 	underflow_mask = status & (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
+
 	if (underflow_mask) {
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
 		val |= V_BLANK_INT;
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 		dc->underflow_mask |= underflow_mask;
+		dc->stats.underflows++;
+		if (status & WIN_A_UF_INT)
+			dc->stats.underflows_a++;
+		if (status & WIN_B_UF_INT)
+			dc->stats.underflows_b++;
+		if (status & WIN_C_UF_INT)
+			dc->stats.underflows_c++;
 	}
 
 	if (status & V_BLANK_INT) {
@@ -1336,9 +1445,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	}
 
 	return IRQ_HANDLED;
-#else
+#else /* CONFIG_TEGRA_FPGA_PLATFORM */
 	return IRQ_NONE;
-#endif
+#endif /* !CONFIG_TEGRA_FPGA_PLATFORM */
 }
 
 static void tegra_dc_set_color_control(struct tegra_dc *dc)
@@ -1609,6 +1718,39 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	}
 }
 
+void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)
+{
+#if 0 /* underflow interrupt is already enabled by dc reset worker */
+	u32 val;
+	if (dc->enabled)  {
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		if (enable)
+			val |= (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
+		else
+			val &= ~(WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
+		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+	}
+#endif
+}
+
+bool tegra_dc_stats_get(struct tegra_dc *dc)
+{
+#if 0 /* right now it is always enabled */
+	u32 val;
+	bool res;
+
+	if (dc->enabled)  {
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		res = !!(val & (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT));
+	} else {
+		res = false;
+	}
+
+	return res;
+#endif
+	return true;
+}
+
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
 	_tegra_dc_controller_disable(dc);
@@ -1806,7 +1948,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		_tegra_dc_enable(dc);
 	mutex_unlock(&dc->lock);
 
-	tegra_dc_dbg_add(dc);
+	tegra_dc_create_debugfs(dc);
 
 	dev_info(&ndev->dev, "probed\n");
 
@@ -1866,6 +2008,7 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
 
 	tegra_dc_remove_sysfs(&dc->ndev->dev);
+	tegra_dc_remove_debugfs(dc);
 
 	if (dc->overlay) {
 		tegra_overlay_unregister(dc->overlay);
@@ -1945,7 +2088,7 @@ static int tegra_dc_resume(struct nvhost_device *ndev)
 	return 0;
 }
 
-#endif
+#endif /* CONFIG_PM */
 
 extern int suspend_set(const char *val, struct kernel_param *kp)
 {

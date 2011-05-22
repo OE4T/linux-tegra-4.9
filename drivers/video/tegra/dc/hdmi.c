@@ -653,15 +653,32 @@ static bool tegra_dc_hdmi_mode_equal(const struct fb_videomode *mode1,
 		mode1->vmode	== mode2->vmode;
 }
 
-static bool tegra_dc_hdmi_mode_filter(struct fb_videomode *mode)
+static bool tegra_dc_hdmi_valid_pixclock(const struct tegra_dc *dc,
+					const struct fb_videomode *mode)
+{
+	unsigned max_pixclock = tegra_dc_get_out_max_pixclock(dc);
+	if (max_pixclock) {
+		/* this might look counter-intuitive,
+		 * but pixclock's unit is picos(not Khz)
+		 */
+		return mode->pixclock >= max_pixclock;
+	} else {
+		return true;
+	}
+}
+
+static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
+					struct fb_videomode *mode)
 {
 	int i;
 	int clocks;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_dc_hdmi_supported_modes); i++) {
-		if (tegra_dc_hdmi_mode_equal(&tegra_dc_hdmi_supported_modes[i],
-					     mode)) {
-			memcpy(mode, &tegra_dc_hdmi_supported_modes[i], sizeof(*mode));
+		const struct fb_videomode *supported_mode
+				= &tegra_dc_hdmi_supported_modes[i];
+		if (tegra_dc_hdmi_mode_equal(supported_mode, mode) &&
+		    tegra_dc_hdmi_valid_pixclock(dc, supported_mode)) {
+			memcpy(mode, supported_mode, sizeof(*mode));
 			mode->flag = FB_MODE_IS_DETAILED;
 			clocks = (mode->left_margin + mode->xres + mode->right_margin + mode->hsync_len) *
 				(mode->upper_margin + mode->yres + mode->lower_margin + mode->vsync_len);

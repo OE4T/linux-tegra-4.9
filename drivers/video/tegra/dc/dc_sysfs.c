@@ -83,6 +83,108 @@ static ssize_t enable_store(struct device *dev,
 
 static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR|S_IWGRP, enable_show, enable_store);
 
+#define ORIENTATION_PORTRAIT	"portrait"
+#define ORIENTATION_LANDSCAPE	"landscape"
+
+static ssize_t orientation_3d_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct tegra_dc_out *dc_out = dc->out;
+	const char *orientation;
+	switch (dc_out->stereo->orientation) {
+	case TEGRA_DC_STEREO_LANDSCAPE:
+		orientation = ORIENTATION_LANDSCAPE;
+		break;
+	case TEGRA_DC_STEREO_PORTRAIT:
+		orientation = ORIENTATION_PORTRAIT;
+		break;
+	default:
+		pr_err("Invalid value is stored for stereo_orientation.\n");
+		return -EINVAL;
+	}
+	return snprintf(buf, PAGE_SIZE, "%s\n", orientation);
+}
+
+static ssize_t orientation_3d_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t cnt)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct tegra_dc_out *dc_out = dc->out;
+	struct tegra_stereo_out *stereo = dc_out->stereo;
+	int orientation;
+
+	if (0 == strncmp(buf, ORIENTATION_PORTRAIT,
+			min(cnt, ARRAY_SIZE(ORIENTATION_PORTRAIT) - 1))) {
+		orientation = TEGRA_DC_STEREO_PORTRAIT;
+	} else if (0 == strncmp(buf, ORIENTATION_LANDSCAPE,
+			min(cnt, ARRAY_SIZE(ORIENTATION_LANDSCAPE) - 1))) {
+		orientation = TEGRA_DC_STEREO_LANDSCAPE;
+	} else {
+		pr_err("Invalid property value for stereo_orientation.\n");
+		return -EINVAL;
+	}
+	stereo->orientation = orientation;
+	stereo->set_orientation(orientation);
+	return cnt;
+}
+
+static DEVICE_ATTR(stereo_orientation,
+	S_IRUGO|S_IWUGO, orientation_3d_show, orientation_3d_store);
+
+#define MODE_2D		"2d"
+#define MODE_3D		"3d"
+
+static ssize_t mode_3d_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct tegra_dc_out *dc_out = dc->out;
+	const char *mode;
+	switch (dc_out->stereo->mode_2d_3d) {
+	case TEGRA_DC_STEREO_MODE_2D:
+		mode = MODE_2D;
+		break;
+	case TEGRA_DC_STEREO_MODE_3D:
+		mode = MODE_3D;
+		break;
+	default:
+		pr_err("Invalid value is stored for stereo_mode.\n");
+		return -EINVAL;
+	}
+	return snprintf(buf, PAGE_SIZE, "%s\n", mode);
+}
+
+static ssize_t mode_3d_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t cnt)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct tegra_dc_out *dc_out = dc->out;
+	struct tegra_stereo_out *stereo = dc_out->stereo;
+	int mode;
+
+	if (0 == strncmp(buf, MODE_2D, min(cnt, ARRAY_SIZE(MODE_2D) - 1))) {
+		mode = TEGRA_DC_STEREO_MODE_2D;
+	} else if (0 == strncmp(buf, MODE_3D,
+			min(cnt, ARRAY_SIZE(MODE_3D) - 1))) {
+		mode = TEGRA_DC_STEREO_MODE_3D;
+	} else {
+		pr_err("Invalid property value for stereo_mode.\n");
+		return -EINVAL;
+	}
+	stereo->mode_2d_3d = mode;
+	stereo->set_mode(mode);
+	return cnt;
+}
+
+static DEVICE_ATTR(stereo_mode,
+	S_IRUGO|S_IWUGO, mode_3d_show, mode_3d_store);
+
+
 /********
  * Init *
  ********/
@@ -91,9 +193,12 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	struct nvhost_device *ndev = to_nvhost_device(dev);
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
-
 	device_remove_file(dev, &dev_attr_mode);
 	device_remove_file(dev, &dev_attr_enable);
+	if (dc->out->stereo) {
+		device_remove_file(dev, &dev_attr_stereo_orientation);
+		device_remove_file(dev, &dev_attr_stereo_mode);
+	}
 
 	if(sd_settings) {
 		nvsd_remove_sysfs(dev);
@@ -109,6 +214,10 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	error |= device_create_file(dev, &dev_attr_mode);
 	error |= device_create_file(dev, &dev_attr_enable);
+	if (dc->out->stereo) {
+		error |= device_create_file(dev, &dev_attr_stereo_orientation);
+		error |= device_create_file(dev, &dev_attr_stereo_mode);
+	}
 
 	if(sd_settings) {
 		error |= nvsd_create_sysfs(dev);

@@ -209,7 +209,7 @@ struct tdms_config {
 	u32 drive_current;
 };
 
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
 const struct tdms_config tdms_config[] = {
 	{ /* 480p modes */
 	.pclk = 27000000,

@@ -107,13 +107,13 @@ static const char *get_module_clk_id(const char *module, int index)
 			return "emc";
 	}
 	if (strcmp(module, "gr3d") == 0) {
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
 		if (index == 1)
-			return "gr3d2";
-		if (index == 2)
 			return "emc";
 #else
 		if (index == 1)
+			return "gr3d2";
+		if (index == 2)
 			return "emc";
 #endif
 	}

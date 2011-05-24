@@ -27,12 +27,12 @@
 
 #define NV_WAR_789194 1
 
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-static bool s_is_v1 = true;
-static int s_nr_gpus = 2;
-#else
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
 static bool s_is_v1 = false;
 static int s_nr_gpus = 1;
+#else
+static bool s_is_v1 = true;
+static int s_nr_gpus = 2;
 #endif
 
 const struct hwctx_reginfo ctxsave_regs_3d_global[] = {

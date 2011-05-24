@@ -51,4 +51,6 @@ struct nvhost_master {
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_debug_dump(struct nvhost_master *master);
 
+extern pid_t nvhost_debug_null_kickoff_pid;
+
 #endif

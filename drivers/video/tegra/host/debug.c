@@ -30,6 +30,8 @@ struct output {
 	char buf[256];
 };
 
+pid_t nvhost_debug_null_kickoff_pid;
+
 static void write_to_seqfile(void *ctx, const char* str, size_t len)
 {
 	seq_write((struct seq_file *)ctx, str, len);
@@ -371,8 +373,13 @@ static const struct file_operations nvhost_debug_fops = {
 
 void nvhost_debug_init(struct nvhost_master *master)
 {
-	debugfs_create_file("tegra_host", S_IRUGO, NULL,
+	struct dentry *de = debugfs_create_dir("tegra_host", NULL);
+
+	debugfs_create_file("status", S_IRUGO, de,
 			master, &nvhost_debug_fops);
+
+	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUGO, de,
+			&nvhost_debug_null_kickoff_pid);
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

@@ -255,6 +255,9 @@ static int nvhost_ioctl_channel_flush(
 		return num_unpin;
 	}
 
+	if (nvhost_debug_null_kickoff_pid == current->tgid)
+		null_kickoff = 1;
+
 	/* context switch if needed, and submit user's gathers to the channel */
 	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
 				ctx->gathers, ctx->cur_gather,

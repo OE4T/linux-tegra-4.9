@@ -681,6 +681,7 @@ static int nct1008_probe(struct i2c_client *client,
 {
 	struct nct1008_data *data;
 	int err;
+	u8 temperature;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 
@@ -710,6 +711,13 @@ static int nct1008_probe(struct i2c_client *client,
 
 	nct1008_enable(client);		/* sensor is running */
 
+	err = nct1008_get_temp(&data->client->dev, &temperature);
+	if (err) {
+		pr_err("%s: get temp fail(%d)", __func__, err);
+		return 0;	/*do not fail init on the 1st read */
+	}
+
+	tegra_edp_update_thermal_zone(temperature);
 	return 0;
 
 error:

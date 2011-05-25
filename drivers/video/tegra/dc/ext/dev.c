@@ -484,6 +484,19 @@ static u32 tegra_dc_ext_get_vblank_syncpt(struct tegra_dc_ext_user *user)
 	return dc->vblank_syncpt;
 }
 
+static int tegra_dc_ext_get_status(struct tegra_dc_ext_user *user,
+				   struct tegra_dc_ext_status *status)
+{
+	struct tegra_dc *dc = user->ext->dc;
+
+	memset(status, 0, sizeof(*status));
+
+	if (dc->enabled)
+		status->flags |= TEGRA_DC_EXT_FLAGS_ENABLED;
+
+	return 0;
+}
+
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
@@ -556,6 +569,19 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return 0;
+	}
+
+	case TEGRA_DC_EXT_GET_STATUS:
+	{
+		struct tegra_dc_ext_status args;
+		int ret;
+
+		ret = tegra_dc_ext_get_status(user, &args);
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
 	}
 
 	default:

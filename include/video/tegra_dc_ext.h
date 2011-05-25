@@ -161,6 +161,14 @@ struct tegra_dc_ext_csc {
 	__u16 kvb;	/* s.2.8 */
 };
 
+
+#define TEGRA_DC_EXT_FLAGS_ENABLED	1
+struct tegra_dc_ext_status {
+	__u32 flags;
+	/* Leave some wiggle room for future expansion */
+	__u32 pad[3];
+};
+
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
 	_IOW('D', 0x00, __s32)
 
@@ -183,6 +191,9 @@ struct tegra_dc_ext_csc {
 
 #define TEGRA_DC_EXT_SET_CSC \
 	_IOW('D', 0x08, struct tegra_dc_ext_csc)
+
+#define TEGRA_DC_EXT_GET_STATUS \
+	_IOR('D', 0x09, struct tegra_dc_ext_status)
 
 /*
  * Returns the auto-incrementing vblank syncpoint for the head associated with

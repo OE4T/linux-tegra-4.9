@@ -1592,6 +1592,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_periph_reset_assert(hdmi->clk);
 	hdmi->clk_enabled = false;
 	clk_disable(hdmi->clk);
+	tegra_dvfs_set_rate(hdmi->clk, 0);
 }
 
 struct tegra_dc_out_ops tegra_dc_hdmi_ops = {

@@ -141,7 +141,7 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 		}
 		status = i2c_transfer(nvhdcp->client->adapter,
 			msg, ARRAY_SIZE(msg));
-		if (retries > 1)
+		if ((status < 0) && (retries > 1))
 			msleep(250);
 	} while ((status < 0) && retries--);
 
@@ -178,7 +178,7 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 		}
 		status = i2c_transfer(nvhdcp->client->adapter,
 			msg, ARRAY_SIZE(msg));
-		if (retries > 1)
+		if ((status < 0) && (retries > 1))
 			msleep(250);
 	} while ((status < 0) && retries--);
 
@@ -964,14 +964,6 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 
-	tmp = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_RG_HDCP_CTRL);
-	tmp |= CRYPT_ENABLED;
-	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
-		tmp |= ONEONE_ENABLED;
-	tegra_hdmi_writel(hdmi, tmp, HDMI_NV_PDISP_RG_HDCP_CTRL);
-
-	nvhdcp_vdbg("CRYPT enabled\n");
-
 	/* if repeater then get repeater info */
 	if (b_caps & BCAPS_REPEATER) {
 		e = get_repeater_info(nvhdcp);
@@ -980,6 +972,14 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 	}
+
+	tmp = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_RG_HDCP_CTRL);
+	tmp |= CRYPT_ENABLED;
+	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
+		tmp |= ONEONE_ENABLED;
+	tegra_hdmi_writel(hdmi, tmp, HDMI_NV_PDISP_RG_HDCP_CTRL);
+
+	nvhdcp_vdbg("CRYPT enabled\n");
 
 	nvhdcp->state = STATE_LINK_VERIFY;
 	nvhdcp_info("link verified!\n");

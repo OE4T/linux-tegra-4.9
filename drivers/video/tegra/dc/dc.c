@@ -263,6 +263,18 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 		DUMP_REG(DC_WIN_CSC_KVB);
 	}
 
+	DUMP_REG(DC_CMD_DISPLAY_POWER_CONTROL);
+	DUMP_REG(DC_COM_PIN_OUTPUT_ENABLE2);
+	DUMP_REG(DC_COM_PIN_OUTPUT_POLARITY2);
+	DUMP_REG(DC_COM_PIN_OUTPUT_DATA2);
+	DUMP_REG(DC_COM_PIN_INPUT_ENABLE2);
+	DUMP_REG(DC_COM_PIN_OUTPUT_SELECT5);
+	DUMP_REG(DC_DISP_DISP_SIGNAL_OPTIONS0);
+	DUMP_REG(DC_DISP_M1_CONTROL);
+	DUMP_REG(DC_COM_PM1_CONTROL);
+	DUMP_REG(DC_COM_PM1_DUTY_CYCLE);
+	DUMP_REG(DC_DISP_SD_CONTROL);
+
 	clk_disable(dc->clk);
 	tegra_dc_io_end(dc);
 }
@@ -1034,6 +1046,8 @@ void
 tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 {
 	unsigned int ctrl;
+	unsigned long out_sel;
+	unsigned long cmd_state;
 
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
@@ -1045,12 +1059,26 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 		(cfg->clk_div << PM_CLK_DIVIDER_SHIFT) |
 		cfg->clk_select);
 
+	/* The new value should be effected immediately */
+	cmd_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, (cmd_state | (1 << 2)), DC_CMD_STATE_ACCESS);
+
 	switch (cfg->which_pwm) {
 	case TEGRA_PWM_PM0:
+		/* Select the LM0 on PM0 */
+		out_sel = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_SELECT5);
+		out_sel &= ~(7 << 0);
+		out_sel |= (3 << 0);
+		tegra_dc_writel(dc, out_sel, DC_COM_PIN_OUTPUT_SELECT5);
 		tegra_dc_writel(dc, ctrl, DC_COM_PM0_CONTROL);
 		tegra_dc_writel(dc, cfg->duty_cycle, DC_COM_PM0_DUTY_CYCLE);
 		break;
 	case TEGRA_PWM_PM1:
+		/* Select the LM1 on PM1 */
+		out_sel = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_SELECT5);
+		out_sel &= ~(7 << 4);
+		out_sel |= (3 << 4);
+		tegra_dc_writel(dc, out_sel, DC_COM_PIN_OUTPUT_SELECT5);
 		tegra_dc_writel(dc, ctrl, DC_COM_PM1_CONTROL);
 		tegra_dc_writel(dc, cfg->duty_cycle, DC_COM_PM1_DUTY_CYCLE);
 		break;
@@ -1058,6 +1086,7 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 		dev_err(&dc->ndev->dev, "Error\n");
 		break;
 	}
+	tegra_dc_writel(dc, cmd_state, DC_CMD_STATE_ACCESS);
 	mutex_unlock(&dc->lock);
 }
 EXPORT_SYMBOL(tegra_dc_config_pwm);

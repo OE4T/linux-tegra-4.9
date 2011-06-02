@@ -753,6 +753,14 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	int pclk;
 
+	if (dc->out->type == TEGRA_DC_OUT_RGB) {
+		struct clk *parent_clk =
+			clk_get_sys(NULL, dc->out->parent_clk ? : "pll_p");
+
+		if (clk_get_parent(clk) != parent_clk)
+			clk_set_parent(clk, parent_clk);
+	}
+
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 		unsigned long rate;
 		struct clk *pll_d_out0_clk =

@@ -1573,6 +1573,12 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
 
+	/* Stop DC stream before configuring DSI registers
+	 * to avoid visible glitches on panel during transition
+	 * from bootloader to kernel driver
+	 */
+	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
+
 	if (dsi->ulpm) {
 		tegra_dsi_exit_ulpm(dsi);
 		if (dsi->info.panel_reset) {

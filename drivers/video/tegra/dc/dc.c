@@ -1367,8 +1367,8 @@ static void tegra_dc_set_color_control(struct tegra_dc *dc)
 
 static void tegra_dc_init(struct tegra_dc *dc)
 {
-	u32 disp_syncpt;
-	u32 vblank_syncpt;
+	u32 disp_syncpt = 0;
+	u32 vblank_syncpt = 0;
 	int i;
 
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
@@ -1451,8 +1451,58 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	clk_enable(dc->clk);
 	clk_enable(dc->emc_clk);
+	enable_irq(dc->irq);
+
+	tegra_dc_init(dc);
+
+	if (dc->out_ops && dc->out_ops->enable)
+		dc->out_ops->enable(dc);
+
+	if (dc->out->out_pins)
+		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
+					    dc->out->n_out_pins);
+
+	if (dc->out->postpoweron)
+		dc->out->postpoweron();
+
+	/* force a full blending update */
+	dc->blend.z[0] = -1;
+
+	return true;
+}
+
+static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
+{
+	if (dc->out->enable)
+		dc->out->enable();
+
+	tegra_dc_setup_clk(dc, dc->clk);
+	clk_enable(dc->clk);
+	clk_enable(dc->emc_clk);
+
+	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
+		mutex_lock(&tegra_dcs[1]->lock);
+		disable_irq(tegra_dcs[1]->irq);
+	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
+		mutex_lock(&tegra_dcs[0]->lock);
+		disable_irq(tegra_dcs[0]->irq);
+	}
+
+	msleep(5);
+	tegra_periph_reset_assert(dc->clk);
+	msleep(2);
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 	tegra_periph_reset_deassert(dc->clk);
-	msleep(10);
+	msleep(1);
+#endif
+
+	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
+		enable_irq(tegra_dcs[1]->irq);
+		mutex_unlock(&tegra_dcs[1]->lock);
+	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
+		enable_irq(tegra_dcs[0]->irq);
+		mutex_unlock(&tegra_dcs[0]->lock);
+	}
 
 	enable_irq(dc->irq);
 
@@ -1574,29 +1624,8 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 
 	_tegra_dc_controller_disable(dc);
 
-	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
-		mutex_lock(&tegra_dcs[1]->lock);
-		disable_irq(tegra_dcs[1]->irq);
-	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
-		mutex_lock(&tegra_dcs[0]->lock);
-		disable_irq(tegra_dcs[0]->irq);
-	}
-
-	msleep(5);
-
-	tegra_periph_reset_assert(dc->clk);
-	msleep(2);
-
-	if (dc->ndev->id == 0 && tegra_dcs[1] != NULL) {
-		enable_irq(tegra_dcs[1]->irq);
-		mutex_unlock(&tegra_dcs[1]->lock);
-	} else if (dc->ndev->id == 1 && tegra_dcs[0] != NULL) {
-		enable_irq(tegra_dcs[0]->irq);
-		mutex_unlock(&tegra_dcs[0]->lock);
-	}
-
-	/* _tegra_dc_enable deasserts reset */
-	_tegra_dc_controller_enable(dc);
+	/* _tegra_dc_controller_reset_enable deasserts reset */
+	_tegra_dc_controller_reset_enable(dc);
 
 	dc->enabled = true;
 unlock:

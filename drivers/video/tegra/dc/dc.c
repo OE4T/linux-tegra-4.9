@@ -33,6 +33,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/backlight.h>
+#include <video/tegrafb.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -48,6 +49,16 @@
 static int no_vsync;
 
 module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
+
+static int use_dynamic_emc = 1;
+
+module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
+
+/* set default windows idle time as 2000ms for power saving purpose */
+static int windows_idle_detection_time = 2000;
+
+module_param_named(windows_idle_detection_time, windows_idle_detection_time,
+		   int, S_IRUGO | S_IWUSR);
 
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 
@@ -445,7 +456,7 @@ static inline void tegra_dc_create_debugfs(struct tegra_dc *dc) { };
 static inline void tegra_dc_remove_debugfs(struct tegra_dc *dc) { };
 #endif /* CONFIG_DEBUGFS */
 
-static int tegra_dc_add(struct tegra_dc *dc, int index)
+static int tegra_dc_set(struct tegra_dc *dc, int index)
 {
 	int ret = 0;
 
@@ -455,7 +466,7 @@ static int tegra_dc_add(struct tegra_dc *dc, int index)
 		goto out;
 	}
 
-	if (tegra_dcs[index] != NULL) {
+	if (dc != NULL && tegra_dcs[index] != NULL) {
 		ret = -EBUSY;
 		goto out;
 	}
@@ -466,6 +477,20 @@ out:
 	mutex_unlock(&tegra_dc_lock);
 
 	return ret;
+}
+
+static unsigned int tegra_dc_has_multiple_dc(void)
+{
+	unsigned int idx;
+	unsigned int cnt = 0;
+	struct tegra_dc *dc;
+
+	mutex_lock(&tegra_dc_lock);
+	for (idx = 0; idx < TEGRA_MAX_DC; idx++)
+		cnt += ((dc = tegra_dcs[idx]) != NULL && dc->enabled) ? 1 : 0;
+	mutex_unlock(&tegra_dc_lock);
+
+	return (cnt > 1);
 }
 
 struct tegra_dc *tegra_dc_get_dc(unsigned idx)
@@ -592,6 +617,186 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 	}
 }
 
+static unsigned int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
+						   struct tegra_dc_win *b)
+{
+	if (!WIN_IS_ENABLED(a) || !WIN_IS_ENABLED(b))
+		return 0;
+	return ((a->out_y + a->out_h > b->out_y) && (a->out_y <= b->out_y)) ||
+	       ((b->out_y + b->out_h > a->out_y) && (b->out_y <= a->out_y));
+}
+
+static unsigned int tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
+						unsigned int bw[], int n)
+{
+	/* We have n windows and knows their geometries and bandwidthes. If any
+	 * of them overlapped vertically, the overlapped area bandwidth get
+	 * combined.
+	 *
+	 * This function will find the maximum bandwidth of overlapped area.
+	 * If there is no windows overlapped, then return the maximum
+	 * bandwidth of windows.
+	 */
+
+	/* We know win_2 is always overlapped with win_0 and win_1. */
+	if (tegra_dc_windows_is_overlapped(wins[0], wins[1]))
+		return bw[0] + bw[1] + bw[2];
+	else
+		return max(bw[0], bw[1]) + bw[2];
+
+}
+
+/* 8 bits per byte (1 << 3) */
+#define BIT_TO_BYTE_SHIFT 3
+/*
+ * Assuming 50% (X >> 1) efficiency: i.e. if we calculate we need 70MBps, we
+ * will request 140MBps from EMC.
+ */
+#define MEM_EFFICIENCY_SHIFT 1
+static unsigned long tegra_dc_get_emc_rate(struct tegra_dc_win *wins[], int n)
+{
+	int i;
+	unsigned int bw[TEGRA_FB_FLIP_N_WINDOWS];
+	struct tegra_dc_win *w;
+	struct tegra_dc *dc;
+	unsigned int max;
+	unsigned int ret;
+
+	dc = wins[0]->dc;
+
+	if (tegra_dc_has_multiple_dc())
+		return tegra_dc_get_default_emc_clk_rate(dc);
+
+	BUG_ON(n > ARRAY_SIZE(bw));
+	/*
+	 * Calculate peak EMC bandwidth for each enabled window =
+	 * pixel_clock * win_bpp * (use_v_filter ? 2 : 1)) * H_scale_factor *
+	 * (windows_tiling ? 2 : 1)
+	 *
+	 *
+	 * note:
+	 * (*) We use 2 tap V filter, so need double BW if use V filter
+	 * (*) Tiling mode on T30 and DDR3 requires double BW
+	 */
+	for (i = 0; w = wins[i], bw[i] = 0, i < n; i++) {
+		if (!WIN_IS_ENABLED(w))
+			continue;
+		bw[i] = dc->mode.pclk *
+			(tegra_dc_fmt_bpp(w->fmt) >> BIT_TO_BYTE_SHIFT) *
+			(WIN_USE_V_FILTER(w) ? 2 : 1) /
+			w->out_w * w->w *
+			(WIN_IS_TILED(w) ? TILED_WINDOWS_BW_MULTIPLIER : 1);
+	}
+
+	max = tegra_dc_find_max_bandwidth(wins, bw, n) << MEM_EFFICIENCY_SHIFT;
+
+	ret = EMC_BW_TO_FREQ(max);
+
+	/*
+	 * If the calculated peak BW is bigger than board specified BW, then
+	 * either the above calculation is wrong, or board specified BW is
+	 * wrong.
+	 */
+	WARN_ON(ret > tegra_dc_get_default_emc_clk_rate(dc));
+
+	return ret;
+}
+#undef BIT_TO_BYTE_SHIFT
+#undef MEM_EFFICIENCY_SHIFT
+
+static void tegra_dc_change_emc(struct tegra_dc *dc)
+{
+	if (dc->emc_clk_rate != dc->new_emc_clk_rate) {
+		dc->emc_clk_rate = dc->new_emc_clk_rate;
+		clk_set_rate(dc->emc_clk, dc->emc_clk_rate);
+	}
+}
+
+static void tegra_dc_reduce_emc_worker(struct work_struct *work)
+{
+	struct tegra_dc *dc;
+
+	dc = container_of(to_delayed_work(work), struct tegra_dc,
+	    reduce_emc_clk_work);
+
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	tegra_dc_change_emc(dc);
+
+	mutex_unlock(&dc->lock);
+}
+
+int  tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
+{
+	unsigned long new_rate;
+	struct tegra_dc *dc;
+
+	if (!use_dynamic_emc)
+		return 0;
+
+	dc = windows[0]->dc;
+
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -EFAULT;
+	}
+
+	/* calculate the new rate based on this POST */
+	new_rate = tegra_dc_get_emc_rate(windows, n);
+
+	dc->new_emc_clk_rate = new_rate;
+
+	/*
+	 * If we don't need set EMC immediately after a frame POST, we schedule
+	 * a work_queue to reduce EMC in the future. This work_queue task will
+	 * not be executed if the another POST comes before the idle time
+	 * expired.
+	 */
+	if (NEED_UPDATE_EMC_ON_EVERY_FRAME)
+		tegra_dc_change_emc(dc);
+	else
+		schedule_delayed_work(&dc->reduce_emc_clk_work,
+			msecs_to_jiffies(windows_idle_detection_time));
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+
+int  tegra_dc_set_default_emc(struct tegra_dc *dc)
+{
+	/*
+	 * POST happens whenever this function is called, we first delete any
+	 * reduce_emc_clk_work, then we always set the DC EMC clock to default
+	 * value.
+	 */
+	cancel_delayed_work_sync(&dc->reduce_emc_clk_work);
+
+	if (NEED_UPDATE_EMC_ON_EVERY_FRAME)
+		return 0;
+
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -EFAULT;
+	}
+
+	dc->new_emc_clk_rate = tegra_dc_get_default_emc_clk_rate(dc);
+	tegra_dc_change_emc(dc);
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+
 /* does not support updating windows on multiple dcs in one call */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 {
@@ -642,7 +847,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		if (!no_vsync)
 			update_mask |= WIN_A_ACT_REQ << win->idx;
 
-		if (!(win->flags & TEGRA_WIN_FLAG_ENABLED)) {
+		if (!WIN_IS_ENABLED(win)) {
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			continue;
 		}
@@ -706,7 +911,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, h_offset, DC_WINBUF_ADDR_H_OFFSET);
 		tegra_dc_writel(dc, v_offset, DC_WINBUF_ADDR_V_OFFSET);
 
-		if (win->flags & TEGRA_WIN_FLAG_TILED)
+		if (WIN_IS_TILED(win))
 			tegra_dc_writel(dc,
 					DC_WIN_BUFFER_ADDR_MODE_TILE |
 					DC_WIN_BUFFER_ADDR_MODE_TILE_UV,
@@ -723,9 +928,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			val |= COLOR_EXPAND;
 
-		if (win->w != win->out_w)
+		if (WIN_USE_H_FILTER(win))
 			val |= H_FILTER_ENABLE;
-		if (win->h != win->out_h)
+		if (WIN_USE_V_FILTER(win))
 			val |= V_FILTER_ENABLE;
 
 		if (invert_h)
@@ -1840,7 +2045,6 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
-	unsigned long emc_clk_rate;
 
 	if (!ndev->dev.platform_data) {
 		dev_err(&ndev->dev, "no platform data\n");
@@ -1899,6 +2103,8 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 
 	dc->clk = clk;
 	dc->emc_clk = emc_clk;
+	INIT_DELAYED_WORK(&dc->reduce_emc_clk_work, tegra_dc_reduce_emc_worker);
+
 	dc->base_res = base_res;
 	dc->base = base;
 	dc->irq = irq;
@@ -1909,8 +2115,8 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	 * The emc is a shared clock, it will be set based on
 	 * the requirements for each user on the bus.
 	 */
-	emc_clk_rate = dc->pdata->emc_clk_rate;
-	clk_set_rate(emc_clk, emc_clk_rate ? emc_clk_rate : ULONG_MAX);
+	dc->emc_clk_rate = tegra_dc_get_default_emc_clk_rate(dc);
+	clk_set_rate(emc_clk, dc->emc_clk_rate);
 
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED)
 		dc->enabled = true;
@@ -1939,7 +2145,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	/* hack to ballence enable_irq calls in _tegra_dc_enable() */
 	disable_irq(dc->irq);
 
-	ret = tegra_dc_add(dc, ndev->id);
+	ret = tegra_dc_set(dc, ndev->id);
 	if (ret < 0) {
 		dev_err(&ndev->dev, "can't add dc\n");
 		goto err_free_irq;
@@ -2040,6 +2246,7 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 	if (dc->fb_mem)
 		release_resource(dc->base_res);
 	kfree(dc);
+	tegra_dc_set(NULL, ndev->id);
 	return 0;
 }
 

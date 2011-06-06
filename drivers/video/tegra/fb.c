@@ -43,6 +43,9 @@
 #include "nvmap/nvmap.h"
 #include "dc/dc_priv.h"
 
+/* Pad pitch to 16-byte boundary. */
+#define TEGRA_LINEAR_PITCH_ALIGNMENT 16
+
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
 	struct nvhost_device	*ndev;
@@ -169,7 +172,9 @@ static int tegra_fb_set_par(struct fb_info *info)
 			return -EINVAL;
 		}
 		info->fix.line_length = var->xres * var->bits_per_pixel / 8;
-		tegra_fb->win->stride = info->fix.line_length;
+		/* Pad the stride to 16-byte boundary. */
+		tegra_fb->win->stride = round_up(info->fix.line_length,
+						TEGRA_LINEAR_PITCH_ALIGNMENT);
 		tegra_fb->win->stride_uv = 0;
 		tegra_fb->win->offset_u = 0;
 		tegra_fb->win->offset_v = 0;
@@ -832,6 +837,8 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	win->offset_u = 0;
 	win->offset_v = 0;
 	win->stride = fb_data->xres * fb_data->bits_per_pixel / 8;
+	/* Pad the stride to 16-byte boundary. */
+	win->stride = round_up(win->stride, TEGRA_LINEAR_PITCH_ALIGNMENT);
 	win->stride_uv = 0;
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 

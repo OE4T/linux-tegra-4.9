@@ -26,6 +26,7 @@
 #include <linux/rbtree.h>
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
+#include <linux/slab.h>
 
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
@@ -697,6 +698,7 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 		addr -= (h->carveout->base & ~PAGE_MASK);
 		vm = remove_vm_area(addr);
 		BUG_ON(!vm);
+		kfree(vm);
 		nvmap_usecount_dec(h);
 	}
 	nvmap_handle_put(h);

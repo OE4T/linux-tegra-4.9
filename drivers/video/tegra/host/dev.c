@@ -324,6 +324,15 @@ static int nvhost_ioctl_channel_flush(
 	return 0;
 }
 
+static int nvhost_ioctl_channel_read_3d_reg(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_read_3d_reg_args *args)
+{
+	BUG_ON(!channel_op(ctx->ch).read3dreg);
+	return channel_op(ctx->ch).read3dreg(ctx->ch, ctx->hwctx,
+					args->offset, &args->value);
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -411,6 +420,9 @@ static long nvhost_channelctl(struct file *filp,
 		priv->nvmap = new_client;
 		break;
 	}
+	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
+		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
+		break;
 	default:
 		err = -ENOTTY;
 		break;

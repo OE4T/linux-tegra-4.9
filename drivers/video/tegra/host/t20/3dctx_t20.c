@@ -451,48 +451,13 @@ static void __init save_end_v0(u32 *ptr)
 }
 #define SAVE_END_V0_SIZE 5
 
-static void save_registers_from_fifo(u32 *ptr, unsigned int count,
-					void __iomem *chan_regs,
-					unsigned int *pending)
-{
-	unsigned int entries = *pending;
-	while (count) {
-		unsigned int num;
-
-		while (!entries) {
-			/* query host for number of entries in fifo */
-			entries = nvhost_channel_fifostat_outfentries(
-				readl(chan_regs + HOST1X_CHANNEL_FIFOSTAT));
-			if (!entries)
-				cpu_relax();
-			/* TODO: [ahowe 2010-06-14] timeout */
-		}
-		num = min(entries, count);
-		entries -= num;
-		count -= num;
-
-		while (num & ~0x3) {
-			u32 arr[4];
-			arr[0] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[1] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[2] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[3] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			memcpy(ptr, arr, 4*sizeof(u32));
-			ptr += 4;
-			num -= 4;
-		}
-		while (num--)
-			*ptr++ = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-	}
-	*pending = entries;
-}
-
 static u32 *save_regs_v0(u32 *ptr, unsigned int *pending,
 			void __iomem *chan_regs,
 			const struct hwctx_reginfo *regs,
 			unsigned int nr_regs)
 {
 	const struct hwctx_reginfo *rend = regs + nr_regs;
+	int drain_result = 0;
 
 	for ( ; regs != rend; ++regs) {
 		u32 count = regs->count;
@@ -507,7 +472,9 @@ static u32 *save_regs_v0(u32 *ptr, unsigned int *pending,
 			ptr += RESTORE_INDIRECT_SIZE;
 			break;
 		}
-		save_registers_from_fifo(ptr, count, chan_regs, pending);
+		drain_result = nvhost_drain_read_fifo(chan_regs,
+			ptr, count, pending);
+		BUG_ON(drain_result < 0);
 		ptr += count;
 	}
 	return ptr;

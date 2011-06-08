@@ -43,6 +43,10 @@ struct nvhost_chip_support {
 			      u32 syncpt_incrs,
 			      u32 *syncpt_value,
 			      bool null_kickoff);
+		int (*read3dreg)(struct nvhost_channel *channel,
+				struct nvhost_hwctx *hwctx,
+				u32 offset,
+				u32 *value);
 	} channel;
 
 	struct {

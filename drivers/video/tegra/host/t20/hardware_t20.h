@@ -256,6 +256,10 @@ static inline u32 nvhost_mask2(unsigned x, unsigned y)
 	return 1 | (1 << (y - x));
 }
 
+/* Reads words from FIFO */
+int nvhost_drain_read_fifo(void __iomem *chan_regs,
+		u32 *ptr, unsigned int count, unsigned int *pending);
+
 /* Size of the sync queue. If it is too small, we won't be able to queue up
  * many command buffers. If it is too large, we waste memory. */
 #define NVHOST_SYNC_QUEUE_SIZE 8192

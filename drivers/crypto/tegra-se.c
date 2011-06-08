@@ -21,7 +21,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -41,11 +40,109 @@
 #include <crypto/internal/rng.h>
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
+
 #include "tegra-se.h"
 
-static const char sg_driver_name[] = "tegra-se";
+#define DRIVER_NAME	"tegra-se"
+
+/* Security Engine operation modes */
+enum tegra_se_aes_op_mode {
+	SE_AES_OP_MODE_CBC,	/* Cipher Block Chaining (CBC) mode */
+	SE_AES_OP_MODE_ECB,	/* Electronic Codebook (ECB) mode */
+	SE_AES_OP_MODE_CTR,	/* Counter (CTR) mode */
+	SE_AES_OP_MODE_OFB,	/* Output feedback (CFB) mode */
+	SE_AES_OP_MODE_RNG_X931,	/* Random number generator (RNG) mode */
+	SE_AES_OP_MODE_CMAC,	/* Cipher-based MAC (CMAC) mode */
+	SE_AES_OP_MODE_SHA1,	/* Secure Hash Algorithm-1 (SHA1) mode */
+	SE_AES_OP_MODE_SHA224,	/* Secure Hash Algorithm-224  (SHA224) mode */
+	SE_AES_OP_MODE_SHA256,	/* Secure Hash Algorithm-256  (SHA256) mode */
+	SE_AES_OP_MODE_SHA384,	/* Secure Hash Algorithm-384  (SHA384) mode */
+	SE_AES_OP_MODE_SHA512	/* Secure Hash Algorithm-512  (SHA512) mode */
+};
+
+/* Security Engine key table type */
+enum tegra_se_key_table_type {
+	SE_KEY_TABLE_TYPE_KEY,	/* Key */
+	SE_KEY_TABLE_TYPE_ORGIV,	/* Original IV */
+	SE_KEY_TABLE_TYPE_UPDTDIV	/* Updated IV */
+};
+
+/* Security Engine request context */
+struct tegra_se_req_context {
+	enum tegra_se_aes_op_mode op_mode; /* Security Engine operation mode */
+	bool encrypt;	/* Operation type */
+};
+
+struct tegra_se_dev {
+	struct device *dev;
+	void __iomem *io_reg;	/* device memory/io */
+	int irq;	/* irq allocated */
+	spinlock_t lock;	/* spin lock */
+	struct clk *pclk;	/* Security Engine clock */
+	struct crypto_queue queue; /* Security Engine crypto queue */
+	struct tegra_se_slot *slot_list;	/* pointer to key slots */
+	u32 *src_ll_buf;	/* pointer to source linked list buffer */
+	dma_addr_t src_ll_buf_adr; /* Source linked list buffer dma address */
+	u32 src_ll_size;	/* Size of source linked list buffer */
+	u32 *dst_ll_buf;	/* pointer to destination linked list buffer */
+	dma_addr_t dst_ll_buf_adr; /* Destination linked list dma address */
+	u32 dst_ll_size;	/* Size of destination linked list buffer */
+	struct completion complete;	/* Tells the task completion */
+	bool work_q_busy;	/* Work queue busy status */
+};
 
 static struct tegra_se_dev *sg_tegra_se_dev;
+
+/* Security Engine AES context */
+struct tegra_se_aes_context {
+	struct tegra_se_dev *se_dev;	/* Security Engine device */
+	struct tegra_se_slot *slot;	/* Security Engine key slot */
+	u32 keylen;	/* key length in bits */
+	u32 op_mode;	/* AES operation mode */
+};
+
+/* Security Engine randon number generator context */
+struct tegra_se_rng_context {
+	struct tegra_se_dev *se_dev;	/* Security Engine device */
+	struct tegra_se_slot *slot;	/* Security Engine key slot */
+	u32 *dt_buf;	/* Destination buffer pointer */
+	dma_addr_t dt_buf_adr;	/* Destination buffer dma address */
+	u32 *rng_buf;	/* RNG buffer pointer */
+	dma_addr_t rng_buf_adr;	/* RNG buffer dma address */
+	bool use_org_iv;	/* Tells whether original IV is be used
+				or not. If it is false updated IV is used*/
+};
+
+/* Security Engine SHA context */
+struct tegra_se_sha_context {
+	struct tegra_se_dev	*se_dev;	/* Security Engine device */
+	u32 op_mode;	/* SHA operation mode */
+};
+
+/* Security Engine AES CMAC context */
+struct tegra_se_aes_cmac_context {
+	struct tegra_se_dev *se_dev;	/* Security Engine device */
+	struct tegra_se_slot *slot;	/* Security Engine key slot */
+	u32 keylen;	/* key length in bits */
+	u8 K1[TEGRA_SE_KEY_128_SIZE];	/* Key1 */
+	u8 K2[TEGRA_SE_KEY_128_SIZE];	/* Key2 */
+	dma_addr_t dma_addr;	/* DMA address of local buffer */
+	u32 buflen;	/* local buffer length */
+	u8	*buffer;	/* local buffer pointer */
+};
+
+/* Security Engine key slot */
+struct tegra_se_slot {
+	struct list_head node;
+	u8 slot_num;	/* Key slot number */
+	bool available; /* Tells whether key slot is free to use */
+};
+
+/* Security Engine Linked List */
+struct tegra_se_ll {
+	dma_addr_t addr; /* DMA buffer address */
+	u32 data_len; /* Data length in DMA buffer */
+};
 
 static LIST_HEAD(key_slot);
 static DEFINE_SPINLOCK(key_slot_lock);
@@ -53,10 +150,8 @@ static DEFINE_MUTEX(se_hw_lock);
 
 /* create a work for handling the async transfers */
 static void tegra_se_work_handler(struct work_struct *work);
-
 static DECLARE_WORK(se_work, tegra_se_work_handler);
 static struct workqueue_struct *se_work_q;
-
 
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
@@ -96,6 +191,21 @@ static void tegra_se_free_key_slot(struct tegra_se_slot *slot)
 	spin_lock(&key_slot_lock);
 	slot->available = true;
 	spin_unlock(&key_slot_lock);
+}
+
+void tegra_se_clk_enable(struct clk *c)
+{
+	clk_enable(c);
+}
+
+void tegra_se_clk_disable(struct clk *c)
+{
+	/*
+	 * do a dummy read, to avoid scenarios where you have unposted writes
+	 * still on the bus, before disabling clocks
+	 */
+	se_readl(sg_tegra_se_dev, SE_CONFIG_REG_OFFSET);
+	clk_disable(c);
 }
 
 static struct tegra_se_slot *tegra_se_alloc_key_slot(void)
@@ -441,7 +551,6 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes)
 	return 0;
 }
 
-
 static void tegra_se_read_hash_result(struct tegra_se_dev *se_dev,
 	u8 *pdata, u32 nbytes, bool swap32)
 {
@@ -661,7 +770,7 @@ static void tegra_se_work_handler(struct work_struct *work)
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
 
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	do {
 		spin_lock_irq(&se_dev->lock);
@@ -682,7 +791,7 @@ static void tegra_se_work_handler(struct work_struct *work)
 			async_req = NULL;
 		}
 	} while (se_dev->work_q_busy);
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 }
 
 static int tegra_se_aes_queue_req(struct ablkcipher_request *req)
@@ -788,7 +897,6 @@ static int tegra_se_aes_ofb_decrypt(struct ablkcipher_request *req)
 	return tegra_se_aes_queue_req(req);
 }
 
-
 static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	const u8 *key, u32 keylen)
 {
@@ -810,18 +918,17 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	/* load the key */
 	tegra_se_write_key_table(pdata, keylen, ctx->slot->slot_num,
 		SE_KEY_TABLE_TYPE_KEY);
 
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	return 0;
 }
-
 
 static int tegra_se_aes_cra_init(struct crypto_tfm *tfm)
 {
@@ -843,6 +950,7 @@ static int tegra_se_aes_cra_init(struct crypto_tfm *tfm)
 
 	return 0;
 }
+
 static void tegra_se_aes_cra_exit(struct crypto_tfm *tfm)
 {
 	struct tegra_se_aes_context *ctx = crypto_tfm_ctx(tfm);
@@ -850,7 +958,6 @@ static void tegra_se_aes_cra_exit(struct crypto_tfm *tfm)
 	tegra_se_free_key_slot(ctx->slot);
 	ctx->slot = NULL;
 }
-
 
 static int tegra_se_rng_init(struct crypto_tfm *tfm)
 {
@@ -920,7 +1027,7 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	*se_dev->src_ll_buf = 0;
 	*se_dev->dst_ll_buf = 0;
@@ -950,7 +1057,7 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 	}
 	rng_ctx->use_org_iv = false;
 
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	return dlen;
@@ -971,7 +1078,7 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	tegra_se_write_key_table(key, TEGRA_SE_RNG_KEY_SIZE,
 		rng_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY);
@@ -979,7 +1086,7 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 	tegra_se_write_key_table(iv, TEGRA_SE_RNG_IV_SIZE,
 		rng_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV);
 
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	memcpy(rng_ctx->dt_buf, dt, TEGRA_SE_RNG_DT_SIZE);
@@ -987,7 +1094,6 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 
 	return 0;
 }
-
 
 int tegra_se_sha_init(struct ahash_request *req)
 {
@@ -1003,7 +1109,6 @@ int tegra_se_sha_finup(struct ahash_request *req)
 {
 	return 0;
 }
-
 
 int tegra_se_sha_final(struct ahash_request *req)
 {
@@ -1032,12 +1137,12 @@ int tegra_se_sha_final(struct ahash_request *req)
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	if ((num_sgs > SE_MAX_SRC_SG_COUNT)) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");
-		clk_disable(se_dev->pclk);
+		tegra_se_clk_disable(se_dev->pclk);
 		mutex_unlock(&se_hw_lock);
 		return -EINVAL;
 	}
@@ -1050,7 +1155,7 @@ int tegra_se_sha_final(struct ahash_request *req)
 		err = dma_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
 		if (!err) {
 			dev_err(se_dev->dev, "dma_map_sg() error\n");
-			clk_disable(se_dev->pclk);
+			tegra_se_clk_disable(se_dev->pclk);
 			mutex_unlock(&se_hw_lock);
 			return -EINVAL;
 		}
@@ -1089,7 +1194,7 @@ int tegra_se_sha_final(struct ahash_request *req)
 		total -= src_sg->length;
 		src_sg = sg_next(src_sg);
 	}
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	return err;
@@ -1142,11 +1247,9 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 	u8 *temp_buffer = NULL;
 	bool use_orig_iv = true;
 
-
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
-
+	tegra_se_clk_enable(se_dev->pclk);
 
 	blocks_to_process = req->nbytes / TEGRA_SE_AES_BLOCK_SIZE;
 	/* num of bytes less than block size */
@@ -1287,7 +1390,7 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 				TEGRA_SE_AES_CMAC_DIGEST_SIZE, false);
 
 out:
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	if (cmac_ctx->buffer)
@@ -1332,7 +1435,7 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
-	clk_enable(se_dev->pclk);
+	tegra_se_clk_enable(se_dev->pclk);
 
 	*se_dev->src_ll_buf = 0;
 	*se_dev->dst_ll_buf = 0;
@@ -1381,7 +1484,7 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		ctx->K2[TEGRA_SE_AES_BLOCK_SIZE - 1] ^= rb;
 
 out:
-	clk_disable(se_dev->pclk);
+	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
 	if (pbuf) {
@@ -1430,7 +1533,6 @@ void tegra_se_aes_cmac_cra_exit(struct crypto_tfm *tfm)
 	tegra_se_free_key_slot(ctx->slot);
 	ctx->slot = NULL;
 }
-
 
 static struct crypto_alg aes_algs[] = {
 	{
@@ -1660,8 +1762,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 	struct resource *res = NULL;
 	int err = 0, i = 0, j = 0, k = 0;
 
-	dev_info(&pdev->dev, "tegra_se_probe START ");
-
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {
 		dev_err(&pdev->dev, "memory allocation failed\n");
@@ -1695,7 +1795,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	err = request_irq(se_dev->irq, tegra_se_irq, IRQF_DISABLED,
-					 sg_driver_name, se_dev);
+			DRIVER_NAME, se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
 			se_dev->irq, err);
@@ -1703,9 +1803,9 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize the clock */
-	se_dev->pclk = clk_get_sys("tegra-se", NULL);
-	if (!se_dev->pclk) {
-		dev_err(se_dev->dev, "clock intialization failed.\n");
+	se_dev->pclk = clk_get(se_dev->dev, "se");
+	if (IS_ERR(se_dev->pclk)) {
+		dev_err(se_dev->dev, "clock intialization failed (%d)\n", (int)se_dev->pclk);
 		err = -ENODEV;
 		goto clean;
 	}
@@ -1748,7 +1848,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-
 	for (j = 0; j < ARRAY_SIZE(hash_algs); j++) {
 		err = crypto_register_ahash(&hash_algs[j]);
 		if (err) {
@@ -1758,7 +1857,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	dev_info(se_dev->dev, "tegra_se_probe end");
+	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
 clean:
@@ -1777,8 +1876,10 @@ clean:
 		clk_put(se_dev->pclk);
 
 	free_irq(se_dev->irq, &pdev->dev);
+
 err_irq:
 	iounmap(se_dev->io_reg);
+
 fail:
 	platform_set_drvdata(pdev, NULL);
 	kfree(se_dev);
@@ -1824,7 +1925,6 @@ static int tegra_se_suspend(struct platform_device *pdev, pm_message_t state)
 }
 #endif
 
-
 static struct platform_driver tegra_se_driver = {
 	.probe  = tegra_se_probe,
 	.remove = tegra_se_remove,
@@ -1833,7 +1933,7 @@ static struct platform_driver tegra_se_driver = {
 	.resume = tegra_se_resume,
 #endif
 	.driver = {
-		.name   = sg_driver_name,
+		.name   = "tegra-se",
 		.owner  = THIS_MODULE,
 	},
 };

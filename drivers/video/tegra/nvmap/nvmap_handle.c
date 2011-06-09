@@ -266,13 +266,15 @@ static void alloc_handle(struct nvmap_client *client,
 
 	} else if (type & __NVMAP_HEAP_IOVMM) {
 		size_t reserved = PAGE_ALIGN(h->size);
-		int commit;
+		int commit = 0;
 		int ret;
 
 		/* increment the committed IOVM space prior to allocation
 		 * to avoid race conditions with other threads simultaneously
 		 * allocating. */
-		commit = atomic_add_return(reserved, &client->iovm_commit);
+		if (!client->super)
+			commit = atomic_add_return(reserved,
+						   &client->iovm_commit);
 
 		if (commit < client->iovm_limit)
 			ret = handle_page_alloc(client, h, false);
@@ -283,7 +285,8 @@ static void alloc_handle(struct nvmap_client *client,
 			h->heap_pgalloc = true;
 			h->alloc = true;
 		} else {
-			atomic_sub(reserved, &client->iovm_commit);
+			if (!client->super)
+				atomic_sub(reserved, &client->iovm_commit);
 		}
 
 	} else if (type & NVMAP_HEAP_SYSMEM) {
@@ -441,7 +444,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 	pins = atomic_read(&ref->pin);
 	rb_erase(&ref->node, &client->handle_refs);
 
-	if (h->alloc && h->heap_pgalloc && !h->pgalloc.contig)
+	if (h->alloc && h->heap_pgalloc && !h->pgalloc.contig && !client->super)
 		atomic_sub(h->size, &client->iovm_commit);
 
 	if (h->alloc && !h->heap_pgalloc) {

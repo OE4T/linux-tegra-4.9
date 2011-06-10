@@ -126,6 +126,7 @@ struct tegra_dc_dsi_data {
 	u32		dsi_control_val;
 
 	bool		ulpm;
+	bool		enabled;
 };
 
 const u32 dsi_pkt_seq_reg[NUMOF_PKT_SEQ] = {
@@ -278,6 +279,34 @@ static inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi,u32 val,
 	writel(val, dsi->base + reg * 4);
 }
 
+static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+	int ret;
+
+	ret = 0;
+
+	dsi->syncpt_val = nvhost_syncpt_read(
+			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
+
+	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
+		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
+	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
+
+	/* TODO: Use interrupt rather than polling */
+	ret = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
+		dsi->syncpt_id, dsi->syncpt_val + 1);
+	if (ret < 0) {
+		printk(KERN_ERR "DSI sync point failure\n");
+		goto fail;
+	}
+
+	(dsi->syncpt_val)++;
+	return 0;
+fail:
+	return ret;
+}
+
 static u32 tegra_dsi_get_hs_clk_rate(struct tegra_dc_dsi_data *dsi)
 {
 	u32 dsi_clock_rate_khz;
@@ -377,6 +406,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 	dsi->controller_index = dc->ndev->id;
 	dsi->ulpm = false;
+	dsi->enabled = false;
 
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
@@ -1000,10 +1030,17 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	}
 	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
 
-	val = DSI_PAD_CONTROL_PAD_PDIO(0) |
+	if (!dsi->ulpm) {
+		val = DSI_PAD_CONTROL_PAD_PDIO(0) |
 			DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
 			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
-	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+	} else {
+		val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
+			DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
+			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
+		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+	}
 
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
@@ -1123,41 +1160,30 @@ static bool tegra_dsi_is_controller_idle(struct tegra_dc_dsi_data *dsi)
 	return retVal;
 }
 
-static bool tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
+static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
 {
-	bool status;
+	int status;
 	u32 val;
 
-	status = false;
+	status = 0;
 
-	if (tegra_dsi_readl(dsi, DSI_TRIGGER))
-		goto fail;
-
-#if DSI_USE_SYNC_POINTS
-	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
-		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
-	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
-
-	dsi->syncpt_val = nvhost_syncpt_read(
-			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
-
-	tegra_dsi_writel(dsi,
-		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER);
-
-	/* TODO: Use interrupt rather than polling */
-	if (nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
-		dsi->syncpt_id, dsi->syncpt_val + 1) < 0) {
-		printk(KERN_ERR "DSI sync point failure\n");
-		status = false;
+	if (tegra_dsi_readl(dsi, DSI_TRIGGER)) {
+		status = -EBUSY;
 		goto fail;
 	}
 
-	(dsi->syncpt_val)++;
-	status = true;
-#else
 	tegra_dsi_writel(dsi,
 		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER);
-	status = tegra_dsi_is_controller_idle(dsi);
+
+#if DSI_USE_SYNC_POINTS
+	status = tegra_dsi_syncpt(dsi);
+	if (status < 0) {
+		printk(KERN_ERR "DSI syncpt for host trigger failed\n");
+		goto fail;
+	}
+#else
+	if (!tegra_dsi_is_controller_idle(dsi))
+		status = -EIO;
 #endif
 
 fail:
@@ -1199,8 +1225,9 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 		}
 	}
 
-	if (!tegra_dsi_host_trigger(dsi))
-		err = -EIO;
+	err = tegra_dsi_host_trigger(dsi);
+	if (err < 0)
+		printk(KERN_ERR "DSI host trigger failed\n");
 
 	return err;
 }
@@ -1291,18 +1318,18 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 	poll_time = 0;
 	err = 0;
 
-#if DSI_USE_SYNC_POINTS
-	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
-		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
-	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
+	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
+	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
+#if DSI_USE_SYNC_POINTS
 	/* FIXME: Workaround for nvhost_syncpt_read */
 	dsi->syncpt_val = nvhost_syncpt_update_min(
 			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
 
-	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
-	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
-	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
+		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
+	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 
 	/* TODO: Use interrupt rather than polling */
 	err = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
@@ -1312,10 +1339,6 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 	else
 		(dsi->syncpt_val)++;
 #else
-	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
-	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
-	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
-
 	while (poll_time <  DSI_STATUS_POLLING_DURATION_USEC) {
 		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 		val &= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
@@ -1535,40 +1558,71 @@ fail:
 	return err;
 }
 
-static void tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
+static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
+	int ret;
+
+	ret = 0;
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);
 	val |= DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(ENTER_ULPM);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
+#if DSI_USE_SYNC_POINTS
+	ret = tegra_dsi_syncpt(dsi);
+	if (ret < 0) {
+		printk(KERN_ERR "DSI syncpt for ulpm enter failed\n");
+		goto fail;
+	}
+#else
+	/* TODO: Find exact delay required */
+	mdelay(10);
+#endif
 	dsi->ulpm = true;
+fail:
+	return ret;
 }
 
-static void tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
+static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
+	int ret;
+
+	ret = 0;
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);
 	val |= DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(EXIT_ULPM);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
-	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);
+#if DSI_USE_SYNC_POINTS
+	ret = tegra_dsi_syncpt(dsi);
+	if (ret < 0) {
+		printk(KERN_ERR "DSI syncpt for ulpm exit failed\n");
+		goto fail;
+	}
+#else
+	/* TODO: Find exact delay required */
+	mdelay(10);
+#endif
+	dsi->ulpm = false;
+
+	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(0x3);
 	val |= DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(NORMAL);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+fail:
+	return ret;
 
-	/* TODO: Find exact delay required */
-	mdelay(5);
-	dsi->ulpm = false;
 }
 
 static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err;
+	u32 val;
 
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
@@ -1579,8 +1633,13 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	 */
 	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
 
-	if (dsi->ulpm) {
-		tegra_dsi_exit_ulpm(dsi);
+	if (dsi->enabled) {
+		if (dsi->ulpm) {
+			if (tegra_dsi_exit_ulpm(dsi) < 0) {
+				printk(KERN_ERR "DSI failed to exit ulpm\n");
+				goto fail;
+			}
+		}
 		if (dsi->info.panel_reset) {
 			err = tegra_dsi_send_panel_cmd(dc, dsi,
 							dsi->info.dsi_init_cmd,
@@ -1588,7 +1647,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			if (err < 0) {
 				dev_err(&dc->ndev->dev,
 				"dsi: error while sending dsi init cmd\n");
-				return;
+				goto fail;
 			}
 		}
 	} else {
@@ -1596,14 +1655,29 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: not able to init dsi hardware\n");
-			return;
+			goto fail;
+		}
+
+		if (dsi->ulpm) {
+			if (tegra_dsi_enter_ulpm(dsi) < 0) {
+				printk(KERN_ERR "DSI failed to enter ulpm\n");
+				goto fail;
+			}
+			val = DSI_PAD_CONTROL_PAD_PDIO(0) |
+				DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
+				DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
+			tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+			if (tegra_dsi_exit_ulpm(dsi) < 0) {
+				printk(KERN_ERR "DSI failed to exit ulpm\n");
+				goto fail;
+			}
 		}
 
 		err = tegra_dsi_set_to_lp_mode(dc, dsi);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: not able to set to lp mode\n");
-			return;
+			goto fail;
 		}
 
 		err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_init_cmd,
@@ -1611,21 +1685,22 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: error while sending dsi init cmd\n");
-			return;
+			goto fail;
 		}
 
 		err = tegra_dsi_set_to_hs_mode(dc, dsi);
 		if (err < 0) {
-				dev_err(&dc->ndev->dev,
-					"dsi: not able to set to hs mode\n");
-			return;
+			dev_err(&dc->ndev->dev,
+				"dsi: not able to set to hs mode\n");
+			goto fail;
 		}
+
+		dsi->enabled = true;
 	}
 
-	if (dsi->status.driven == DSI_DRIVEN_MODE_DC) {
+	if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
 		tegra_dsi_start_dc_stream(dc, dsi);
-	}
-
+fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);
 }
@@ -1862,8 +1937,10 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream(dc, dsi);
 
-	if (!dsi->ulpm)
-		tegra_dsi_enter_ulpm(dsi);
+	if (!dsi->ulpm) {
+		if (tegra_dsi_enter_ulpm(dsi) < 0)
+			printk(KERN_ERR "DSI failed to enter ulpm\n");
+	}
 
 	mutex_unlock(&dsi->lock);
 }
@@ -1873,25 +1950,51 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi;
 	int err;
+	u32 val;
 
 	dsi = tegra_dc_get_outdata(dc);
 
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
 
-	if (dsi->ulpm)
-		tegra_dsi_exit_ulpm(dsi);
+	if (dsi->ulpm) {
+		if (tegra_dsi_exit_ulpm(dsi) < 0) {
+			printk(KERN_ERR "DSI failed to exit ulpm");
+			goto fail;
+		}
+	}
 
+	/* Suspend Panel */
 	err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_suspend_cmd,
 				dsi->info.n_suspend_cmd);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
-			"dsi: error while sending dsi suspend cmd\n");
-		return;
+			"dsi: Error while sending dsi suspend cmd\n");
+		goto fail;
 	}
 
-	clk_disable(dsi->dsi_clk);
+	if (!dsi->ulpm) {
+		if (tegra_dsi_enter_ulpm(dsi) < 0) {
+			printk(KERN_ERR "DSI failed to enter ulpm\n");
+			goto fail;
+		}
+	}
 
+	/* Suspend pad */
+	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
+	val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
+		DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
+		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+
+	/* Suspend core-logic */
+	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE);
+	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
+
+	dsi->enabled = false;
+
+	clk_disable(dsi->dsi_clk);
+fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);
 }

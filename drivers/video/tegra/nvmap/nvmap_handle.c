@@ -27,6 +27,7 @@
 #include <linux/rbtree.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <linux/fs.h>
 
 #include <asm/cacheflush.h>
 #include <asm/outercache.h>

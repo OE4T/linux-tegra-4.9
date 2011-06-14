@@ -151,6 +151,13 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 		win->flags |= TEGRA_WIN_FLAG_BLEND_PREMULT;
 	else if (flip_win->attr.blend == TEGRA_FB_WIN_BLEND_COVERAGE)
 		win->flags |= TEGRA_WIN_FLAG_BLEND_COVERAGE;
+	if (flip_win->attr.flags & TEGRA_FB_WIN_FLAG_INVERT_H)
+		win->flags |= TEGRA_WIN_FLAG_INVERT_H;
+	if (flip_win->attr.flags & TEGRA_FB_WIN_FLAG_INVERT_V)
+		win->flags |= TEGRA_WIN_FLAG_INVERT_V;
+	if (flip_win->attr.flags & TEGRA_FB_WIN_FLAG_TILED)
+		win->flags |= TEGRA_WIN_FLAG_TILED;
+
 	win->fmt = flip_win->attr.pixformat;
 	win->x = flip_win->attr.x;
 	win->y = flip_win->attr.y;
@@ -194,8 +201,6 @@ static int tegra_overlay_set_windowattr(struct tegra_overlay_info *overlay,
 	win->offset_v = flip_win->attr.offset_v + flip_win->attr.offset;
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
-	if (flip_win->attr.tiled)
-		win->flags |= TEGRA_WIN_FLAG_TILED;
 
 	if ((s32)flip_win->attr.pre_syncpt_id >= 0) {
 		nvhost_syncpt_wait_timeout(&overlay->ndev->host->syncpt,

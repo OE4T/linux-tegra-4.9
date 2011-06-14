@@ -86,7 +86,7 @@ static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
 /* Functional initialization */
 void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings) {
-	u32 i = 0, val = 0;
+	u32 i = 0, val = 0, bw_idx = 0, bw = 0;
 	/* TODO: check if HW says SD's available */
 
 	/* If SD's not present or disabled, clear the register and return. */
@@ -120,12 +120,36 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings) {
 	val |= SD_CORRECTION_MODE_MAN;
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 
+	switch (settings->bin_width) {
+		default: case -1:
+			/* A -1 bin-width indicates 'automatic'
+			   based upon aggressiveness. */
+			settings->bin_width = -1;
+			switch (settings->aggressiveness) {
+				default: case 0: case 1:
+					bw = SD_BIN_WIDTH_ONE;
+					break;
+				case 2: case 3: case 4:
+					bw = SD_BIN_WIDTH_TWO;
+					break;
+				case 5:
+					bw = SD_BIN_WIDTH_FOUR;
+					break;
+			}
+			break;
+		case 1: bw = SD_BIN_WIDTH_ONE; break;
+		case 2: bw = SD_BIN_WIDTH_TWO; break;
+		case 4: bw = SD_BIN_WIDTH_FOUR; break;
+		case 8: bw = SD_BIN_WIDTH_EIGHT; break;
+	}
+	bw_idx = bw >> 3;
+
 	/* Write LUT */
 	dev_dbg(&dc->ndev->dev, "  LUT:\n");
 	for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
-		val = 	SD_LUT_R(settings->lut[i].r) |
-			SD_LUT_G(settings->lut[i].g) |
-			SD_LUT_B(settings->lut[i].b);
+		val = 	SD_LUT_R(settings->lut[bw_idx][i].r) |
+			SD_LUT_G(settings->lut[bw_idx][i].g) |
+			SD_LUT_B(settings->lut[bw_idx][i].b);
 		tegra_dc_writel(dc, val, DC_DISP_SD_LUT(i));
 
 		dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
@@ -134,10 +158,10 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings) {
 	/* Write BL TF */
 	dev_dbg(&dc->ndev->dev, "  BL_TF:\n");
 	for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
-		val = 	SD_BL_TF_POINT_0(settings->bltf[i][0]) |
-			SD_BL_TF_POINT_1(settings->bltf[i][1]) |
-			SD_BL_TF_POINT_2(settings->bltf[i][2]) |
-			SD_BL_TF_POINT_3(settings->bltf[i][3]);
+		val = 	SD_BL_TF_POINT_0(settings->bltf[bw_idx][i][0]) |
+			SD_BL_TF_POINT_1(settings->bltf[bw_idx][i][1]) |
+			SD_BL_TF_POINT_2(settings->bltf[bw_idx][i][2]) |
+			SD_BL_TF_POINT_3(settings->bltf[bw_idx][i][3]);
 		tegra_dc_writel(dc, val, DC_DISP_SD_BL_TF(i));
 
 		dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
@@ -181,29 +205,8 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings) {
 	val |= (settings->use_vid_luma) ? SD_USE_VID_LUMA : 0;
 	/* Aggressiveness */
 	val |= SD_AGGRESSIVENESS(settings->aggressiveness);
-	/* Bin Width */
-	switch (settings->bin_width) {
-		default: case 0:
-			/* A 0 bin-width indicates 'automatic'
-			   based upon aggressiveness. */
-			switch (settings->aggressiveness) {
-				default: case 0: case 1:
-					val |= SD_BIN_WIDTH_ONE;
-					break;
-				case 2: case 3: case 4:
-					val |= SD_BIN_WIDTH_TWO;
-					break;
-				case 5:
-					val |= SD_BIN_WIDTH_FOUR;
-					break;
-			}
-			break;
-		case 1: val |= SD_BIN_WIDTH_ONE; break;
-		case 2: val |= SD_BIN_WIDTH_TWO; break;
-		case 4: val |= SD_BIN_WIDTH_FOUR; break;
-		case 8: val |= SD_BIN_WIDTH_EIGHT; break;
-	}
-
+	/* Bin Width (value derived above) */
+	val |= bw;
 	/* Finally, Write SD Control */
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 	dev_dbg(&dc->ndev->dev, "  SD_CONTROL: 0x%08x\n", val);
@@ -300,26 +303,34 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 				sd_settings->fc.threshold);
 		}
 		else if(IS_NVSD_ATTR(lut)) {
-			u32 i = 0;
-			for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
+			u32 i = 0, j = 0;
+			for (i = 0; i < NUM_BIN_WIDTHS; i++) {
 				res += snprintf(buf + res, PAGE_SIZE - res,
-					"%d: R: %3d / G: %3d / B: %3d\n",
-					i,
-					sd_settings->lut[i].r,
-					sd_settings->lut[i].g,
-					sd_settings->lut[i].b);
+					"Bin Width: %d\n", 1<<i);
+				for (j = 0; j < DC_DISP_SD_LUT_NUM; j++) {
+					res += snprintf(buf + res, PAGE_SIZE - res,
+						"%d: R: %3d / G: %3d / B: %3d\n",
+						j,
+						sd_settings->lut[i][j].r,
+						sd_settings->lut[i][j].g,
+						sd_settings->lut[i][j].b);
+				}
 			}
 		}
 		else if(IS_NVSD_ATTR(bltf)) {
-			u32 i = 0;
-			for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
+			u32 i = 0, j = 0;
+			for (i = 0; i < NUM_BIN_WIDTHS; i++) {
 				res += snprintf(buf + res, PAGE_SIZE - res,
-					"%d: 0: %3d / 1: %3d / 2: %3d / 3: %3d\n",
-					i,
-					sd_settings->bltf[i][0],
-					sd_settings->bltf[i][1],
-					sd_settings->bltf[i][2],
-					sd_settings->bltf[i][3]);
+					"Bin Width: %d\n", 1<<i);
+				for (j = 0; j < DC_DISP_SD_BL_TF_NUM; j++) {
+					res += snprintf(buf + res, PAGE_SIZE - res,
+						"%d: 0: %3d / 1: %3d / 2: %3d / 3: %3d\n",
+						j,
+						sd_settings->bltf[i][j][0],
+						sd_settings->bltf[i][j][1],
+						sd_settings->bltf[i][j][2],
+						sd_settings->bltf[i][j][3]);
+				}
 			}
 		}
 		else {
@@ -409,14 +420,19 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 			NVSD_CHECK_AND_UPDATE(0, 255, fc.threshold);
 		}
 		else if(IS_NVSD_ATTR(lut)) {
-			int ele[3 * DC_DISP_SD_LUT_NUM];
-			int i = 0, num = 3 * DC_DISP_SD_LUT_NUM;
+			int ele[3 * DC_DISP_SD_LUT_NUM * NUM_BIN_WIDTHS];
+			int i = 0, j = 0, num = 3 * DC_DISP_SD_LUT_NUM * NUM_BIN_WIDTHS;
 			NVSD_GET_MULTI(ele, num, i, 0, 255);
 			if (i == num) {
-				for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
-					sd_settings->lut[i].r = ele[i * 3 + 0];
-					sd_settings->lut[i].g = ele[i * 3 + 1];
-					sd_settings->lut[i].b = ele[i * 3 + 2];
+				for (i = 0; i < NUM_BIN_WIDTHS; i++) {
+					for (j = 0; j < DC_DISP_SD_LUT_NUM; j++) {
+						sd_settings->lut[i][j].r =
+								ele[i * NUM_BIN_WIDTHS + j * 3 + 0];
+						sd_settings->lut[i][j].g =
+								ele[i * NUM_BIN_WIDTHS + j * 3 + 1];
+						sd_settings->lut[i][j].b =
+								ele[i * NUM_BIN_WIDTHS + j * 3 + 2];
+					}
 				}
 				settings_updated = true;
 			}
@@ -426,14 +442,20 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 		}
 		else if(IS_NVSD_ATTR(bltf)) {
 			int ele[4 * DC_DISP_SD_BL_TF_NUM];
-			int i = 0, num = 4 * DC_DISP_SD_BL_TF_NUM;
+			int i = 0, j = 0, num = 4 * DC_DISP_SD_BL_TF_NUM;
 			NVSD_GET_MULTI(ele, num, i, 0, 255);
 			if (i == num) {
-				for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
-					sd_settings->bltf[i][0] = ele[i * 4 + 0];
-					sd_settings->bltf[i][1] = ele[i * 4 + 1];
-					sd_settings->bltf[i][2] = ele[i * 4 + 2];
-					sd_settings->bltf[i][3] = ele[i * 4 + 3];
+				for (i = 0; i < NUM_BIN_WIDTHS; i++) {
+					for (j = 0; j < DC_DISP_SD_BL_TF_NUM; j++) {
+						sd_settings->bltf[i][j][0] =
+								ele[i * NUM_BIN_WIDTHS + j * 4 + 0];
+						sd_settings->bltf[i][j][1] =
+								ele[i * NUM_BIN_WIDTHS + j * 4 + 1];
+						sd_settings->bltf[i][j][2] =
+								ele[i * NUM_BIN_WIDTHS + j * 4 + 2];
+						sd_settings->bltf[i][j][3] =
+								ele[i * NUM_BIN_WIDTHS + j * 4 + 3];
+					}
 				}
 				settings_updated = true;
 			}

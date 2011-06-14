@@ -467,6 +467,8 @@
 #define  SD_CORRECTION_MODE_AUTO	(0 << 11)
 #define  SD_CORRECTION_MODE_MAN		(1 << 11)
 
+#define NUM_BIN_WIDTHS 4
+
 #define DC_DISP_SD_CSC_COEFF			0x4c3
 #define  SD_CSC_COEFF_R(x)		(((x) & 0xf) << 4)
 #define  SD_CSC_COEFF_G(x)		(((x) & 0xf) << 12)
@@ -493,7 +495,7 @@
 
 #define DC_DISP_SD_BL_PARAMETERS		0x4d7
 #define  SD_BLP_TIME_CONSTANT(x)	(((x) & 0x7ff) << 0)
-#define  SD_BLP_STEP(x)			(((x) & 0xff) << 8)
+#define  SD_BLP_STEP(x)			(((x) & 0xff) << 16)
 
 #define DC_DISP_SD_BL_TF(i)			(0x4d8 + i)
 #define DC_DISP_SD_BL_TF_NUM			4

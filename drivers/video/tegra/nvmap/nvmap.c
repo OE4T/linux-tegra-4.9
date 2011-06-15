@@ -69,12 +69,14 @@ static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
 	struct tegra_iovmm_area *area;
 	BUG_ON(!h->alloc);
 
+	nvmap_mru_lock(client->share);
 	if (atomic_inc_return(&h->pin) == 1) {
 		if (h->heap_pgalloc && !h->pgalloc.contig) {
-			area = nvmap_handle_iovmm(client, h);
+			area = nvmap_handle_iovmm_locked(client, h);
 			if (!area) {
 				/* no race here, inside the pin mutex */
 				atomic_dec(&h->pin);
+				nvmap_mru_unlock(client->share);
 				return -ENOMEM;
 			}
 			if (area != h->pgalloc.area)
@@ -82,30 +84,16 @@ static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
 			h->pgalloc.area = area;
 		}
 	}
+	nvmap_mru_unlock(client->share);
 	return 0;
-}
-
-static int wait_pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
-{
-	int ret = 0;
-
-	ret = pin_locked(client, h);
-
-	if (ret) {
-		ret = wait_event_interruptible(client->share->pin_wait,
-					       !pin_locked(client, h));
-	}
-
-	return ret ? -EINTR : 0;
-
 }
 
 /* doesn't need to be called inside nvmap_pin_lock, since this will only
  * expand the available VM area */
-static int handle_unpin(struct nvmap_client *client, struct nvmap_handle *h)
+static int handle_unpin(struct nvmap_client *client,
+		struct nvmap_handle *h, int free_vm)
 {
 	int ret = 0;
-
 	nvmap_mru_lock(client->share);
 
 	if (atomic_read(&h->pin) == 0) {
@@ -125,15 +113,79 @@ static int handle_unpin(struct nvmap_client *client, struct nvmap_handle *h)
 				tegra_iovmm_zap_vm(h->pgalloc.area);
 				h->pgalloc.dirty = true;
 			}
-			nvmap_mru_insert_locked(client->share, h);
+			if (free_vm) {
+				tegra_iovmm_free_vm(h->pgalloc.area);
+				h->pgalloc.area = NULL;
+			} else
+				nvmap_mru_insert_locked(client->share, h);
 			ret = 1;
 		}
 	}
 
 	nvmap_mru_unlock(client->share);
-
 	nvmap_handle_put(h);
 	return ret;
+}
+
+static int pin_array_locked(struct nvmap_client *client,
+		struct nvmap_handle **h, int count)
+{
+	int pinned;
+	int i;
+	int err = 0;
+
+	for (pinned = 0; pinned < count; pinned++) {
+		err = pin_locked(client, h[pinned]);
+		if (err)
+			break;
+	}
+
+	if (err) {
+		/* unpin pinned handles */
+		for (i = 0; i < pinned; i++) {
+			/* inc ref counter, because
+			 * handle_unpin decrements it */
+			nvmap_handle_get(h[i]);
+			/* unpin handles and free vm */
+			handle_unpin(client, h[i], true);
+		}
+	}
+
+	if (err && tegra_iovmm_get_max_free(client->share->iovmm) >=
+							client->iovm_limit) {
+		/* First attempt to pin in empty iovmm
+		 * may still fail because of fragmentation caused by
+		 * placing handles in MRU areas. After such failure
+		 * all MRU gets cleaned and iovm space is freed.
+		 *
+		 * We have to do pinning again here since there might be is
+		 * no more incoming pin_wait wakeup calls from unpin
+		 * operations */
+		for (pinned = 0; pinned < count; pinned++) {
+			err = pin_locked(client, h[pinned]);
+			if (err)
+				break;
+		}
+		if (err) {
+			pr_err("Pinning in empty iovmm failed!!!\n");
+			BUG_ON(1);
+		}
+	}
+	return err;
+}
+
+static int wait_pin_array_locked(struct nvmap_client *client,
+		struct nvmap_handle **h, int count)
+{
+	int ret = 0;
+
+	ret = pin_array_locked(client, h, count);
+
+	if (ret) {
+		ret = wait_event_interruptible(client->share->pin_wait,
+				!pin_array_locked(client, h, count));
+	}
+	return ret ? -EINTR : 0;
 }
 
 static int handle_unpin_noref(struct nvmap_client *client, unsigned long id)
@@ -152,7 +204,7 @@ static int handle_unpin_noref(struct nvmap_client *client, unsigned long id)
 		  current->group_leader->comm, h);
 	WARN_ON(1);
 
-	w = handle_unpin(client, h);
+	w = handle_unpin(client, h, false);
 	nvmap_handle_put(h);
 	return w;
 }
@@ -182,7 +234,7 @@ void nvmap_unpin_ids(struct nvmap_client *client,
 					  "handle %08lx\n",
 					  current->group_leader->comm, ids[i]);
 			} else {
-				do_wake |= handle_unpin(client, h);
+				do_wake |= handle_unpin(client, h, false);
 			}
 		} else {
 			nvmap_ref_unlock(client);
@@ -205,7 +257,6 @@ int nvmap_pin_ids(struct nvmap_client *client,
 		  unsigned int nr, const unsigned long *ids)
 {
 	int ret = 0;
-	int cnt = 0;
 	unsigned int i;
 	struct nvmap_handle **h = (struct nvmap_handle **)ids;
 	struct nvmap_handle_ref *ref;
@@ -249,20 +300,11 @@ int nvmap_pin_ids(struct nvmap_client *client,
 	if (WARN_ON(ret))
 		goto out;
 
-	for (cnt = 0; cnt < nr && !ret; cnt++) {
-		ret = wait_pin_locked(client, h[cnt]);
-	}
+	ret = wait_pin_array_locked(client, h, nr);
+
 	mutex_unlock(&client->share->pin_lock);
 
 	if (ret) {
-		int do_wake = 0;
-
-		for (i = 0; i < cnt; i++)
-			do_wake |= handle_unpin(client, h[i]);
-
-		if (do_wake)
-			wake_up(&client->share->pin_wait);
-
 		ret = -EINTR;
 	} else {
 		for (i = 0; i < nr; i++) {
@@ -287,7 +329,7 @@ out:
 		}
 		nvmap_ref_unlock(client);
 
-		for (i = cnt; i < nr; i++)
+		for (i = 0; i < nr; i++)
 			nvmap_handle_put(h[i]);
 	}
 
@@ -487,7 +529,6 @@ int nvmap_pin_array(struct nvmap_client *client, struct nvmap_handle *gather,
 		    struct nvmap_handle **unique_arr)
 {
 	int count = 0;
-	int pinned = 0;
 	int ret = 0;
 	int i;
 
@@ -507,8 +548,7 @@ int nvmap_pin_array(struct nvmap_client *client, struct nvmap_handle *gather,
 	for (i = 0; i < count; i++)
 		unique_arr[i]->flags &= ~NVMAP_HANDLE_VISITED;
 
-	for (pinned = 0; pinned < count && !ret; pinned++)
-		ret = wait_pin_locked(client, unique_arr[pinned]);
+	ret = wait_pin_array_locked(client, unique_arr, count);
 
 	mutex_unlock(&client->share->pin_lock);
 
@@ -516,17 +556,8 @@ int nvmap_pin_array(struct nvmap_client *client, struct nvmap_handle *gather,
 		ret = nvmap_reloc_pin_array(client, arr, nr, gather);
 
 	if (WARN_ON(ret)) {
-		int do_wake = 0;
-
-		for (i = pinned; i < count; i++)
+		for (i = 0; i < count; i++)
 			nvmap_handle_put(unique_arr[i]);
-
-		for (i = 0; i < pinned; i++)
-			do_wake |= handle_unpin(client, unique_arr[i]);
-
-		if (do_wake)
-			wake_up(&client->share->pin_wait);
-
 		return ret;
 	} else {
 		for (i = 0; i < count; i++) {
@@ -555,7 +586,7 @@ phys_addr_t nvmap_pin(struct nvmap_client *client,
 	if (WARN_ON(mutex_lock_interruptible(&client->share->pin_lock))) {
 		ret = -EINTR;
 	} else {
-		ret = wait_pin_locked(client, h);
+		ret = wait_pin_array_locked(client, &h, 1);
 		mutex_unlock(&client->share->pin_lock);
 	}
 
@@ -590,7 +621,7 @@ phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 {
 	atomic_dec(&ref->pin);
-	if (handle_unpin(client, ref->handle))
+	if (handle_unpin(client, ref->handle, false))
 		wake_up(&client->share->pin_wait);
 }
 
@@ -603,7 +634,7 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 	for (i = 0; i < nr; i++) {
 		if (WARN_ON(!h[i]))
 			continue;
-		do_wake |= handle_unpin(client, h[i]);
+		do_wake |= handle_unpin(client, h[i], false);
 	}
 
 	if (do_wake)

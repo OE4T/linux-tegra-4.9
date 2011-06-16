@@ -279,6 +279,9 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	nvhost_cdma_end(&channel->cdma, user_nvmap,
 			syncpt_id, syncval, unpins, nr_unpins);
 
+	trace_nvhost_channel_submitted(channel->desc->name,
+			syncval-syncpt_incrs, syncval);
+
 	/*
 	 * schedule a context save interrupt (to drain the host FIFO
 	 * if necessary, and to release the restore buffer)
@@ -289,8 +292,11 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
 
 	/* schedule a submit complete interrupt */
-	nvhost_intr_add_action(&channel->dev->intr, syncpt_id, syncval,
+	err = nvhost_intr_add_action(&channel->dev->intr, syncpt_id, syncval,
 			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel, NULL);
+	/*  if add_action failed, the submit has been already completed */
+	if (err)
+		trace_nvhost_channel_submit_complete(channel->desc->name, 1);
 
 	mutex_unlock(&channel->submitlock);
 

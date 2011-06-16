@@ -24,6 +24,7 @@
 #include "dev.h"
 #include <asm/cacheflush.h>
 #include <linux/slab.h>
+#include <trace/events/nvhost.h>
 /*
  * TODO:
  *   stats
@@ -257,6 +258,9 @@ unsigned int nvhost_cdma_wait(struct nvhost_cdma *cdma, enum cdma_event event)
 		unsigned int space = cdma_status(cdma, event);
 		if (space)
 			return space;
+
+		trace_nvhost_wait_cdma(cdma_to_channel(cdma)->desc->name,
+				event);
 
 		BUG_ON(cdma->event != CDMA_EVENT_NONE);
 		cdma->event = event;

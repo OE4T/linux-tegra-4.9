@@ -28,7 +28,7 @@
 
 /* Elements for sysfs access */
 #define NVSD_ATTR(__name) static struct kobj_attribute nvsd_attr_##__name = \
-	__ATTR(__name, S_IRUGO|S_IWUSR|S_IWGRP, nvsd_settings_show, nvsd_settings_store)
+	__ATTR(__name, S_IRUGO|S_IWUSR, nvsd_settings_show, nvsd_settings_store)
 #define NVSD_ATTRS_ENTRY(__name) (&nvsd_attr_##__name.attr)
 #define IS_NVSD_ATTR(__name) (attr == &nvsd_attr_##__name)
 

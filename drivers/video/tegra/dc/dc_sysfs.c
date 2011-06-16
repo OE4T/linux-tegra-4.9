@@ -83,7 +83,7 @@ static ssize_t stats_enable_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(stats_enable, S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(stats_enable, S_IRUGO|S_IWUSR,
 	stats_enable_show, stats_enable_store);
 
 
@@ -122,7 +122,7 @@ static ssize_t enable_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR|S_IWGRP, enable_show, enable_store);
+static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR, enable_show, enable_store);
 
 #define ORIENTATION_PORTRAIT	"portrait"
 #define ORIENTATION_LANDSCAPE	"landscape"

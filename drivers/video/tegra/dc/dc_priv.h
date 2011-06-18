@@ -25,6 +25,7 @@
 #include <linux/completion.h>
 
 #include "../host/dev.h"
+#include "../host/t20/syncpt_t20.h"
 
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)

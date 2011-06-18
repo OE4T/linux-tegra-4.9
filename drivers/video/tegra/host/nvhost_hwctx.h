@@ -57,20 +57,6 @@ struct nvhost_hwctx_handler {
 	void (*save_service) (struct nvhost_hwctx *ctx);
 };
 
-int nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h);
-int nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h);
-
-static inline int nvhost_hwctx_handler_init(
-	struct nvhost_hwctx_handler *h,
-	const char *module)
-{
-	if (strcmp(module, "gr3d") == 0)
-		return nvhost_3dctx_handler_init(h);
-	else if (strcmp(module, "mpe") == 0)
-		return nvhost_mpectx_handler_init(h);
-
-	return 0;
-}
 
 struct hwctx_reginfo {
 	unsigned int offset:12;

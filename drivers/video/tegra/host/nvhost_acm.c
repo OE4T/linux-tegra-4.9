@@ -205,14 +205,14 @@ static void debug_not_idle(struct nvhost_master *dev)
 	int i;
 	bool lock_released = true;
 
-	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
+	for (i = 0; i < dev->nb_channels; i++) {
 		struct nvhost_module *m = &dev->channels[i].mod;
 		if (m->name)
 			printk("tegra_grhost: %s: refcnt %d\n",
 				m->name, atomic_read(&m->refcount));
 	}
 
-	for (i = 0; i < NV_HOST1X_SYNC_MLOCK_NUM; i++) {
+	for (i = 0; i < dev->nb_mlocks; i++) {
 		int c = atomic_read(&dev->cpuaccess.lock_counts[i]);
 		if (c) {
 			printk("tegra_grhost: lock id %d: refcnt %d\n", i, c);

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/nvhost_3dctx.c
+ * drivers/video/tegra/host/t20/3dctx_t20.c
  *
  * Tegra Graphics Host 3d hardware context
  *
@@ -20,12 +20,15 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "nvhost_hwctx.h"
-#include "dev.h"
+#include "../nvhost_hwctx.h"
+#include "../dev.h"
+#include "hardware_t20.h"
+#include "syncpt_t20.h"
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
 #include <linux/slab.h>
+
 
 #define NV_WAR_789194 1
 
@@ -37,6 +40,8 @@ static bool s_is_v1 = false;
 static bool s_is_v1 = true;
 #endif
 static bool s_war_insert_syncpoints;
+
+
 
 const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0, 0xe00,    4, DIRECT),
@@ -769,10 +774,7 @@ static const struct ctx_saver v1_saver __initconst = {
 	.ctx3d_save_service = NULL
 };
 
-
-/*** nvhost_3dctx ***/
-
-int __init nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
+int __init t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 {
 	const struct ctx_saver *saver = s_is_v1 ? &v1_saver : &v0_saver;
 	struct nvhost_channel *ch;
@@ -819,7 +821,7 @@ int __init nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 }
 
 /* TODO: [ahatala 2010-05-27] */
-int __init nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h)
+int __init t20_nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h)
 {
 	return 0;
 }

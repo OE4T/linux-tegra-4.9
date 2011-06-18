@@ -26,8 +26,6 @@
 #include <linux/kthread.h>
 #include <linux/semaphore.h>
 
-#include "nvhost_hardware.h"
-
 struct nvhost_channel;
 
 enum nvhost_intr_action {
@@ -58,7 +56,10 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_COUNT
 };
 
+struct nvhost_intr;
+
 struct nvhost_intr_syncpt {
+	struct  nvhost_intr *intr;
 	u8 id;
 	u8 irq_requested;
 	u16 irq;
@@ -68,11 +69,14 @@ struct nvhost_intr_syncpt {
 };
 
 struct nvhost_intr {
-	struct nvhost_intr_syncpt syncpt[NV_HOST1X_SYNCPT_NB_PTS];
+	struct nvhost_intr_syncpt *syncpt;
 	struct mutex mutex;
 	int host_general_irq;
 	bool host_general_irq_requested;
 };
+#define intr_to_dev(x) container_of(x, struct nvhost_master, intr)
+#define intr_op(intr) (intr_to_dev(intr)->op.intr)
+#define intr_syncpt_to_intr(is) is->intr
 
 /**
  * Schedule an action to be taken when a sync point reaches the given threshold.

@@ -24,20 +24,20 @@
 #include "dev.h"
 #include <linux/string.h>
 
-#define cpuaccess_to_dev(ctx) container_of(ctx, struct nvhost_master, cpuaccess)
-
 int nvhost_cpuaccess_init(struct nvhost_cpuaccess *ctx,
 			struct platform_device *pdev)
 {
+	struct nvhost_master *host = cpuaccess_to_dev(ctx);
 	int i;
-	for (i = 0; i < NVHOST_MODULE_NUM; i++) {
+
+	for (i = 0; i < host->nb_modules; i++) {
 		struct resource *mem;
 		mem = platform_get_resource(pdev, IORESOURCE_MEM, i+1);
 		if (!mem) {
 			dev_err(&pdev->dev, "missing module memory resource\n");
 			return -ENXIO;
 		}
-
+		ctx->reg_mem[i] = mem;
 		ctx->regs[i] = ioremap(mem->start, resource_size(mem));
 		if (!ctx->regs[i]) {
 			dev_err(&pdev->dev, "failed to map module registers\n");
@@ -50,8 +50,10 @@ int nvhost_cpuaccess_init(struct nvhost_cpuaccess *ctx,
 
 void nvhost_cpuaccess_deinit(struct nvhost_cpuaccess *ctx)
 {
+	struct nvhost_master *host = cpuaccess_to_dev(ctx);
 	int i;
-	for (i = 0; i < NVHOST_MODULE_NUM; i++) {
+
+	for (i = 0; i < host->nb_modules; i++) {
 		iounmap(ctx->regs[i]);
 		release_resource(ctx->reg_mem[i]);
 	}
@@ -60,13 +62,11 @@ void nvhost_cpuaccess_deinit(struct nvhost_cpuaccess *ctx)
 int nvhost_mutex_try_lock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
-	void __iomem *sync_regs = dev->sync_aperture;
 	u32 reg;
+	BUG_ON(!cpuaccess_op(ctx).mutex_try_lock);
 
-	/* mlock registers returns 0 when the lock is aquired.
-	 * writing 0 clears the lock. */
 	nvhost_module_busy(&dev->mod);
-	reg = readl(sync_regs + (HOST1X_SYNC_MLOCK_0 + idx * 4));
+	reg = cpuaccess_op(ctx).mutex_try_lock(ctx, idx);
 	if (reg) {
 		nvhost_module_idle(&dev->mod);
 		return -ERESTARTSYS;
@@ -78,8 +78,9 @@ int nvhost_mutex_try_lock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 void nvhost_mutex_unlock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
-	void __iomem *sync_regs = dev->sync_aperture;
-	writel(0, sync_regs + (HOST1X_SYNC_MLOCK_0 + idx * 4));
+	BUG_ON(!cpuaccess_op(ctx).mutex_unlock);
+
+	cpuaccess_op(ctx).mutex_unlock(ctx, idx);
 	nvhost_module_idle(&dev->mod);
 	atomic_dec(&ctx->lock_counts[idx]);
 }

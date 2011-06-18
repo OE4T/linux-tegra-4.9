@@ -23,7 +23,6 @@
 #ifndef __NVHOST_CPUACCESS_H
 #define __NVHOST_CPUACCESS_H
 
-#include "nvhost_hardware.h"
 #include <linux/platform_device.h>
 #include <linux/io.h>
 
@@ -43,25 +42,19 @@ enum nvhost_module_id {
 };
 
 struct nvhost_cpuaccess {
-	struct resource *reg_mem[NVHOST_MODULE_NUM];
-	void __iomem *regs[NVHOST_MODULE_NUM];
-	atomic_t lock_counts[NV_HOST1X_SYNC_MLOCK_NUM];
+	struct resource **reg_mem;
+	void __iomem **regs;
+	atomic_t *lock_counts;
 };
 
+#define cpuaccess_to_dev(ctx) container_of(ctx, struct nvhost_master, cpuaccess)
+#define cpuaccess_op(ctx) (cpuaccess_to_dev(ctx)->op.cpuaccess)
 int nvhost_cpuaccess_init(struct nvhost_cpuaccess *ctx,
 			struct platform_device *pdev);
-
-void nvhost_cpuaccess_deinit(struct nvhost_cpuaccess *ctx);
 
 int nvhost_mutex_try_lock(struct nvhost_cpuaccess *ctx, unsigned int idx);
 
 void nvhost_mutex_unlock(struct nvhost_cpuaccess *ctx, unsigned int idx);
-
-static inline bool nvhost_access_module_regs(
-	struct nvhost_cpuaccess *ctx, u32 module)
-{
-	return (module < NVHOST_MODULE_NUM);
-}
 
 void nvhost_read_module_regs(struct nvhost_cpuaccess *ctx, u32 module,
 			u32 offset, size_t size, void *values);

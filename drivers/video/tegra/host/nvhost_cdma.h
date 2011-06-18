@@ -45,13 +45,6 @@
  *	update - call to update sync queue and push buffer, unpin memory
  */
 
-/* Size of the sync queue. If it is too small, we won't be able to queue up
- * many command buffers. If it is too large, we waste memory. */
-#define NVHOST_SYNC_QUEUE_SIZE 8192
-
-/* Number of gathers we allow to be queued up per channel. Must be a
-   power of two. Currently sized such that pushbuffer is 4KB (512*8B). */
-#define NVHOST_GATHER_QUEUE_SIZE 512
 
 struct push_buffer {
 	struct nvmap_handle_ref *mem; /* handle to pushbuffer memory */
@@ -64,7 +57,7 @@ struct push_buffer {
 struct sync_queue {
 	unsigned int read;		    /* read position within buffer */
 	unsigned int write;		    /* write position within buffer */
-	u32 buffer[NVHOST_SYNC_QUEUE_SIZE]; /* queue data */
+	u32 *buffer;                        /* queue data */
 };
 
 enum cdma_event {
@@ -84,7 +77,16 @@ struct nvhost_cdma {
 	struct push_buffer push_buffer;	/* channel's push buffer */
 	struct sync_queue sync_queue;	/* channel's sync queue */
 	bool running;
+
 };
+
+#define cdma_to_channel(cdma) container_of(cdma, struct nvhost_channel, cdma)
+#define cdma_to_dev(cdma) ((cdma_to_channel(cdma))->dev)
+#define cdma_op(cdma) (cdma_to_dev(cdma)->op.cdma)
+#define cdma_to_nvmap(cdma) ((cdma_to_dev(cdma))->nvmap)
+#define pb_to_cdma(pb) container_of(pb, struct nvhost_cdma, push_buffer)
+#define cdma_pb_op(cdma) (cdma_to_dev(cdma)->op.push_buffer)
+
 
 int	nvhost_cdma_init(struct nvhost_cdma *cdma);
 void	nvhost_cdma_deinit(struct nvhost_cdma *cdma);
@@ -100,4 +102,5 @@ void	nvhost_cdma_flush(struct nvhost_cdma *cdma);
 void	nvhost_cdma_peek(struct nvhost_cdma *cdma,
 		u32 dmaget, int slot, u32 *out);
 
+unsigned int nvhost_cdma_wait(struct nvhost_cdma *cdma, enum cdma_event event);
 #endif

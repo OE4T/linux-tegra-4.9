@@ -30,8 +30,6 @@
 #include <linux/cdev.h>
 #include <linux/io.h>
 
-#define NVHOST_CHANNEL_BASE 0
-#define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
 #define NVHOST_MAX_WAIT_CHECKS 256
 #define NVHOST_MAX_GATHERS 512
 #define NVHOST_MAX_HANDLES 1280
@@ -98,4 +96,7 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);
 void nvhost_channel_suspend(struct nvhost_channel *ch);
 
+#define channel_cdma_op(ch) (ch->dev->op.cdma)
+#define channel_op(ch) (ch->dev->op.channel)
+#define host_channel_op(host) (host->op.channel)
 #endif

@@ -46,7 +46,7 @@
 #define IFACE_NAME "nvhost"
 
 static int nvhost_major = NVHOST_MAJOR;
-static int nvhost_minor = NVHOST_CHANNEL_BASE;
+static int nvhost_minor;
 static unsigned int register_sets;
 
 struct nvhost_channel_userctx {
@@ -66,7 +66,7 @@ struct nvhost_channel_userctx {
 
 struct nvhost_ctrl_userctx {
 	struct nvhost_master *dev;
-	u32 mod_locks[NV_HOST1X_NB_MLOCKS];
+	u32 *mod_locks;
 };
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
@@ -309,7 +309,8 @@ static int nvhost_ioctl_channel_flush(
 		null_kickoff = 1;
 
 	/* context switch if needed, and submit user's gathers to the channel */
-	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
+	BUG_ON(!channel_op(ctx->ch).submit);
+	err = channel_op(ctx->ch).submit(ctx->ch, ctx->hwctx, ctx->nvmap,
 				ctx->gathers, ctx->cur_gather,
 				ctx->waitchks, ctx->cur_waitchk,
 				ctx->hdr.waitchk_mask,
@@ -439,9 +440,10 @@ static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 	filp->private_data = NULL;
 	if (priv->mod_locks[0])
 		nvhost_module_idle(&priv->dev->mod);
-	for (i = 1; i < NV_HOST1X_NB_MLOCKS; i++)
+	for (i = 1; i < priv->dev->nb_mlocks; i++)
 		if (priv->mod_locks[i])
 			nvhost_mutex_unlock(&priv->dev->cpuaccess, i);
+	kfree(priv->mod_locks);
 	kfree(priv);
 	return 0;
 }
@@ -450,14 +452,21 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 {
 	struct nvhost_master *host = container_of(inode->i_cdev, struct nvhost_master, cdev);
 	struct nvhost_ctrl_userctx *priv;
+	u32 *mod_locks;
 
 	trace_nvhost_ctrlopen(host->mod.name);
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
+	mod_locks = kzalloc(sizeof(u32)*host->nb_mlocks, GFP_KERNEL);
+
+	if (!(priv && mod_locks)) {
+		kfree(priv);
+		kfree(mod_locks);
 		return -ENOMEM;
+	}
 
 	priv->dev = host;
+	priv->mod_locks = mod_locks;
 	filp->private_data = priv;
 	return 0;
 }
@@ -466,7 +475,7 @@ static int nvhost_ioctl_ctrl_syncpt_read(
 	struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_read_args *args)
 {
-	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
+	if (args->id >= ctx->dev->syncpt.nb_pts)
 		return -EINVAL;
 	trace_nvhost_ioctl_ctrl_syncpt_read(args->id);
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
@@ -477,7 +486,7 @@ static int nvhost_ioctl_ctrl_syncpt_incr(
 	struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_incr_args *args)
 {
-	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
+	if (args->id >= ctx->dev->syncpt.nb_pts)
 		return -EINVAL;
 	trace_nvhost_ioctl_ctrl_syncpt_incr(args->id);
 	nvhost_syncpt_incr(&ctx->dev->syncpt, args->id);
@@ -489,7 +498,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(
 	struct nvhost_ctrl_syncpt_waitex_args *args)
 {
 	u32 timeout;
-	if (args->id >= NV_HOST1X_SYNCPT_NB_PTS)
+	if (args->id >= ctx->dev->syncpt.nb_pts)
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		timeout = MAX_SCHEDULE_TIMEOUT;
@@ -507,7 +516,7 @@ static int nvhost_ioctl_ctrl_module_mutex(
 	struct nvhost_ctrl_module_mutex_args *args)
 {
 	int err = 0;
-	if (args->id >= NV_HOST1X_NB_MLOCKS ||
+	if (args->id >= ctx->dev->nb_mlocks ||
 	    args->lock > 1)
 		return -EINVAL;
 
@@ -539,7 +548,7 @@ static int nvhost_ioctl_ctrl_module_regrdwr(
 	void *values = args->values;
 	u32 vals[64];
 
-	if (!nvhost_access_module_regs(&ctx->dev->cpuaccess, args->id) ||
+	if (!(args->id < ctx->dev->nb_modules) ||
 	    (num_offsets == 0))
 		return -EINVAL;
 
@@ -639,7 +648,7 @@ static void power_host(struct nvhost_module *mod, enum nvhost_power_action actio
 		 */
 	} else if (action == NVHOST_POWER_ACTION_OFF) {
 		int i;
-		for (i = 0; i < NVHOST_NUMCHANNELS; i++)
+		for (i = 0; i < dev->nb_channels; i++)
 			nvhost_channel_suspend(&dev->channels[i]);
 		nvhost_syncpt_save(&dev->syncpt);
 		nvhost_intr_stop(&dev->intr);
@@ -659,10 +668,11 @@ static int nvhost_user_init(struct nvhost_master *host)
 
 	if (nvhost_major) {
 		devno = MKDEV(nvhost_major, nvhost_minor);
-		err = register_chrdev_region(devno, NVHOST_NUMCHANNELS + 1, IFACE_NAME);
+		err = register_chrdev_region(devno, host->nb_channels + 1,
+					     IFACE_NAME);
 	} else {
 		err = alloc_chrdev_region(&devno, nvhost_minor,
-					NVHOST_NUMCHANNELS + 1, IFACE_NAME);
+					host->nb_channels + 1, IFACE_NAME);
 		nvhost_major = MAJOR(devno);
 	}
 	if (err < 0) {
@@ -670,13 +680,8 @@ static int nvhost_user_init(struct nvhost_master *host)
 		goto fail;
 	}
 
-	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
+	for (i = 0; i < host->nb_channels; i++) {
 		struct nvhost_channel *ch = &host->channels[i];
-
-		if (!strcmp(ch->desc->name, "display") &&
-		    !nvhost_access_module_regs(&host->cpuaccess,
-						NVHOST_MODULE_DISPLAY_A))
-			continue;
 
 		cdev_init(&ch->cdev, &nvhost_channelops);
 		ch->cdev.owner = THIS_MODULE;
@@ -698,7 +703,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 
 	cdev_init(&host->cdev, &nvhost_ctrlops);
 	host->cdev.owner = THIS_MODULE;
-	devno = MKDEV(nvhost_major, nvhost_minor + NVHOST_NUMCHANNELS);
+	devno = MKDEV(nvhost_major, nvhost_minor + host->nb_channels);
 	err = cdev_add(&host->cdev, devno, 1);
 	if (err < 0)
 		goto fail;
@@ -715,6 +720,91 @@ fail:
 	return err;
 }
 
+static void nvhost_remove_chip_support(struct nvhost_master *host)
+{
+
+	kfree(host->channels);
+	host->channels = 0;
+
+	kfree(host->syncpt.min_val);
+	host->syncpt.min_val = 0;
+
+	kfree(host->syncpt.max_val);
+	host->syncpt.max_val = 0;
+
+	kfree(host->syncpt.base_val);
+	host->syncpt.base_val = 0;
+
+	kfree(host->intr.syncpt);
+	host->intr.syncpt = 0;
+
+	kfree(host->cpuaccess.regs);
+	host->cpuaccess.regs = 0;
+
+	kfree(host->cpuaccess.reg_mem);
+	host->cpuaccess.reg_mem = 0;
+
+	kfree(host->cpuaccess.lock_counts);
+	host->cpuaccess.lock_counts = 0;
+}
+
+static int nvhost_init_chip_support(struct nvhost_master *host)
+{
+	int err;
+	err = tegra_get_chip_info(&host->chip_info);
+	if (err)
+		return err;
+
+	switch (host->chip_info.arch) {
+	case TEGRA_SOC_CHIP_ARCH_T20:
+		err = nvhost_init_t20_support(host);
+		break;
+
+	case TEGRA_SOC_CHIP_ARCH_T30:
+		err = nvhost_init_t30_support(host);
+		break;
+	default:
+		return -ENODEV;
+	}
+
+	if (err)
+		return err;
+
+	/* allocate items sized in chip specific support init */
+	host->channels = kzalloc(sizeof(struct nvhost_channel) *
+				 host->nb_channels, GFP_KERNEL);
+
+	host->syncpt.min_val = kzalloc(sizeof(atomic_t) *
+				       host->syncpt.nb_pts, GFP_KERNEL);
+
+	host->syncpt.max_val = kzalloc(sizeof(atomic_t) *
+				       host->syncpt.nb_pts, GFP_KERNEL);
+
+	host->syncpt.base_val = kzalloc(sizeof(u32) *
+					host->syncpt.nb_bases, GFP_KERNEL);
+
+	host->intr.syncpt = kzalloc(sizeof(struct nvhost_intr_syncpt) *
+				    host->syncpt.nb_pts, GFP_KERNEL);
+
+	host->cpuaccess.reg_mem = kzalloc(sizeof(struct resource *) *
+				       host->nb_modules, GFP_KERNEL);
+
+	host->cpuaccess.regs = kzalloc(sizeof(void __iomem *) *
+				       host->nb_modules, GFP_KERNEL);
+
+	host->cpuaccess.lock_counts = kzalloc(sizeof(atomic_t) *
+				       host->nb_mlocks, GFP_KERNEL);
+
+	if (!(host->channels && host->syncpt.min_val &&
+	      host->syncpt.max_val && host->syncpt.base_val &&
+	      host->intr.syncpt && host->cpuaccess.reg_mem &&
+	      host->cpuaccess.regs && host->cpuaccess.lock_counts)) {
+		/* frees happen in the support removal phase */
+		return -ENOMEM;
+	}
+
+	return 0;
+}
 static int nvhost_probe(struct platform_device *pdev)
 {
 	struct nvhost_master *host;
@@ -756,27 +846,40 @@ static int nvhost_probe(struct platform_device *pdev)
 		err = -ENXIO;
 		goto fail;
 	}
-	host->sync_aperture = host->aperture +
-		(NV_HOST1X_CHANNEL0_BASE +
-			HOST1X_CHANNEL_SYNC_REG_BASE);
 
-	for (i = 0; i < NVHOST_NUMCHANNELS; i++) {
+	err = nvhost_init_chip_support(host);
+	if (err) {
+		dev_err(&pdev->dev, "failed to init chip support\n");
+		goto fail;
+	}
+
+	for (i = 0; i < host->nb_channels; i++) {
 		struct nvhost_channel *ch = &host->channels[i];
-		err = nvhost_channel_init(ch, host, i);
+		BUG_ON(!host_channel_op(host).init);
+		err = host_channel_op(host).init(ch, host, i);
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to init channel %d\n", i);
 			goto fail;
 		}
 	}
 
+
 	err = nvhost_cpuaccess_init(&host->cpuaccess, pdev);
-	if (err) goto fail;
+	if (err)
+		goto fail;
+
 	err = nvhost_intr_init(&host->intr, intr1->start, intr0->start);
-	if (err) goto fail;
+	if (err)
+		goto fail;
+
 	err = nvhost_user_init(host);
-	if (err) goto fail;
+	if (err)
+		goto fail;
+
 	err = nvhost_module_init(&host->mod, "host1x", power_host, NULL, &pdev->dev);
-	if (err) goto fail;
+	if (err)
+		goto fail;
+
 
 	platform_set_drvdata(pdev, host);
 
@@ -792,6 +895,7 @@ static int nvhost_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
+	nvhost_remove_chip_support(host);
 	if (host->nvmap)
 		nvmap_client_put(host->nvmap);
 	/* TODO: [ahatala 2010-05-04] */
@@ -801,6 +905,9 @@ fail:
 
 static int __exit nvhost_remove(struct platform_device *pdev)
 {
+	struct nvhost_master *host = platform_get_drvdata(pdev);
+	nvhost_remove_chip_support(host);
+	/*kfree(host);?*/
 	return 0;
 }
 

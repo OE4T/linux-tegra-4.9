@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/nvhost_hardware.h
+ * drivers/video/tegra/host/t20/hardware_t20.h
  *
  * Tegra Graphics Host Register Offsets
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010,2011 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_HARDWARE_H
-#define __NVHOST_HARDWARE_H
+#ifndef __NVHOST_HARDWARE_T20_H
+#define __NVHOST_HARDWARE_T20_H
 
 #include <linux/types.h>
 #include <linux/bitops.h>
@@ -256,5 +256,15 @@ static inline u32 nvhost_mask2(unsigned x, unsigned y)
 	return 1 | (1 << (y - x));
 }
 
-#endif /* __NVHOST_HARDWARE_H */
+/* Size of the sync queue. If it is too small, we won't be able to queue up
+ * many command buffers. If it is too large, we waste memory. */
+#define NVHOST_SYNC_QUEUE_SIZE 8192
 
+/* Number of gathers we allow to be queued up per channel. Must be a
+ * power of two. Currently sized such that pushbuffer is 4KB (512*8B). */
+#define NVHOST_GATHER_QUEUE_SIZE 512
+
+/* 8 bytes per slot. (This number does not include the final RESTART.) */
+#define PUSH_BUFFER_SIZE (NVHOST_GATHER_QUEUE_SIZE * 8)
+
+#endif /* __NVHOST_HARDWARE_T20_H */

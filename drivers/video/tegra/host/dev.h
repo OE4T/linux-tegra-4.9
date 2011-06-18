@@ -28,7 +28,7 @@
 #include "nvhost_intr.h"
 #include "nvhost_cpuaccess.h"
 #include "nvhost_channel.h"
-#include "nvhost_hardware.h"
+#include "chip_support.h"
 
 #define NVHOST_MAJOR 0 /* dynamic */
 
@@ -43,9 +43,17 @@ struct nvhost_master {
 	struct nvhost_syncpt syncpt;
 	struct nvmap_client *nvmap;
 	struct nvhost_cpuaccess cpuaccess;
+	u32 nb_mlocks;
 	struct nvhost_intr intr;
 	struct nvhost_module mod;
-	struct nvhost_channel channels[NVHOST_NUMCHANNELS];
+	struct nvhost_channel *channels;
+	u32 nb_channels;
+	u32 nb_modules;
+
+	u32 sync_queue_size;
+
+	struct tegra_chip_info chip_info;
+	struct nvhost_chip_support op;
 };
 
 void nvhost_debug_init(struct nvhost_master *master);

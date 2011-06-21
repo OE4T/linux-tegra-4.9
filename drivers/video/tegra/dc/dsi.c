@@ -1071,17 +1071,22 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	}
 	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
 
+	/* Initialize DSI_PAD_CONTROL register. */
+	val =	DSI_PAD_CONTROL_PAD_LPUPADJ(0x1) |
+		DSI_PAD_CONTROL_PAD_LPDNADJ(0x1) |
+		DSI_PAD_CONTROL_PAD_PREEMP_EN(0x1) |
+		DSI_PAD_CONTROL_PAD_SLEWDNADJ(0x6) |
+		DSI_PAD_CONTROL_PAD_SLEWUPADJ(0x6);
 	if (!dsi->ulpm) {
-		val = DSI_PAD_CONTROL_PAD_PDIO(0) |
+		val |=	DSI_PAD_CONTROL_PAD_PDIO(0) |
 			DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
 			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
-		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 	} else {
-		val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
+		val |=	DSI_PAD_CONTROL_PAD_PDIO(0x3) |
 			DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
 			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
-		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 	}
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);

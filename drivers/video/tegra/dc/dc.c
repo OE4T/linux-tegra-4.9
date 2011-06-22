@@ -1090,10 +1090,14 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			clk_get_sys(NULL, dc->out->parent_clk ? : "pll_d_out0");
 		struct clk *base_clk = clk_get_parent(parent_clk);
 
+		/* needs to match tegra_dc_hdmi_supported_modes[]
+		and tegra_pll_d_freq_table[] */
 		if (dc->mode.pclk > 70000000)
 			rate = 594000000;
-		else
+		else if (dc->mode.pclk > 25200000)
 			rate = 216000000;
+		else
+			rate = 504000000;
 
 		if (rate != clk_get_rate(base_clk))
 			clk_set_rate(base_clk, rate);

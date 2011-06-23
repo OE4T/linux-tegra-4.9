@@ -111,9 +111,11 @@ struct tegra_dc_dsi_data {
 	u8		pixel_scaler_mul;
 	u8		pixel_scaler_div;
 
+	u32		default_shift_clk_div;
 	u32		default_pixel_clk_khz;
 	u32		default_hs_clk_khz;
 
+	u32		shift_clk_div;
 	u32		target_hs_clk_khz;
 	u32		target_lp_clk_khz;
 
@@ -316,17 +318,15 @@ static u32 tegra_dsi_get_hs_clk_rate(struct tegra_dc_dsi_data *dsi)
 	case TEGRA_DSI_VIDEO_BURST_MODE_MEDIUM_SPEED:
 	case TEGRA_DSI_VIDEO_BURST_MODE_FAST_SPEED:
 	case TEGRA_DSI_VIDEO_BURST_MODE_FASTEST_SPEED:
-		/* TODO: implement algo for these speed rate */
-
-	case TEGRA_DSI_VIDEO_BURST_MODE_MANUAL:
-		if (dsi->info.burst_mode_freq_khz) {
-			dsi_clock_rate_khz = dsi->info.burst_mode_freq_khz;
-			break;
-		}
+		/* Calculate DSI HS clock rate for DSI burst mode */
+		dsi_clock_rate_khz = dsi->default_pixel_clk_khz *
+							dsi->shift_clk_div;
+		break;
 	case TEGRA_DSI_VIDEO_NONE_BURST_MODE:
 	case TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END:
 	case TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED:
 	default:
+		/* Clock rate is default DSI clock rate for non-burst mode */
 		dsi_clock_rate_khz = dsi->default_hs_clk_khz;
 		break;
 	}
@@ -350,6 +350,40 @@ static u32 tegra_dsi_get_lp_clk_rate(struct tegra_dc_dsi_data *dsi)
 	return dsi_clock_rate_khz;
 }
 
+static u32 tegra_dsi_get_shift_clk_div(struct tegra_dc_dsi_data *dsi)
+{
+	u32 shift_clk_div;
+	u32 max_shift_clk_div;
+	u32 burst_width;
+	u32 burst_width_max;
+
+	/* Get the real value of default shift_clk_div. default_shift_clk_div
+	 * holds the real value of shift_clk_div. */
+	shift_clk_div = dsi->default_shift_clk_div;
+
+	/* Calculate shift_clk_div which can matche the video_burst_mode.*/
+	if (dsi->info.video_burst_mode >=
+			TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED) {
+		/* The max_shift_clk_div is multiplied by 10 to save the
+		 * fraction */
+		if (dsi->info.max_panel_freq_khz >= dsi->default_hs_clk_khz)
+			max_shift_clk_div = dsi->info.max_panel_freq_khz
+				* shift_clk_div * 10 / dsi->default_hs_clk_khz;
+		else
+			max_shift_clk_div = shift_clk_div * 10;
+
+		burst_width = dsi->info.video_burst_mode
+				- TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED;
+		burst_width_max = TEGRA_DSI_VIDEO_BURST_MODE_FASTEST_SPEED
+				- TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED;
+
+		shift_clk_div = (max_shift_clk_div - shift_clk_div * 10) *
+			burst_width / (burst_width_max * 10) + shift_clk_div;
+	}
+
+	return shift_clk_div;
+}
+
 static void tegra_dsi_init_sw(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
@@ -357,6 +391,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	u32 v_width_lines;
 	u32 pixel_clk_hz;
 	u32 byte_clk_hz;
+	u32 plld_clk_mhz;
 
 	switch (dsi->info.pixel_format) {
 		case TEGRA_DSI_PIXEL_FORMAT_16BIT_P:
@@ -379,31 +414,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 			break;
 	}
 
-	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
-			dc->mode.h_sync_width + dc->mode.h_active;
-	v_width_lines = dc->mode.v_back_porch + dc->mode.v_front_porch +
-			dc->mode.v_sync_width + dc->mode.v_active;
-
-	/* The slowest pixel rate that is required */
-	/*   for the given display timing 	*/
-	pixel_clk_hz = h_width_pixels * v_width_lines * dsi->info.refresh_rate;
-
-	/* Pixel byte rate on DSI interface */
-	byte_clk_hz	= (pixel_clk_hz * dsi->pixel_scaler_mul) /
-			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
-
-	dsi->default_pixel_clk_khz = pixel_clk_hz / 1000;
-
-	printk("dsi: default pixel rate %d khz\n", dsi->default_pixel_clk_khz);
-
-	/*
-	 * Pixel bit rate on DSI. Since DSI interface is double data rate (
-	 * transferring data on both rising and falling edge of clk), div by 2
-	 * to get the actual clock rate.
-	 */
-	dsi->default_hs_clk_khz =
-			(byte_clk_hz * NUMOF_BIT_PER_BYTE) / (1000 * 2);
-
 	dsi->controller_index = dc->ndev->id;
 	dsi->ulpm = false;
 	dsi->enabled = false;
@@ -414,8 +424,46 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 			DSI_CONTROL_VID_SOURCE(dsi->controller_index) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
+	/* Below we are going to calculate dsi and dc clock rate.
+	 * Calcuate the horizontal and vertical width. */
+	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
+			dc->mode.h_sync_width + dc->mode.h_active;
+	v_width_lines = dc->mode.v_back_porch + dc->mode.v_front_porch +
+			dc->mode.v_sync_width + dc->mode.v_active;
+
+	/* Calculate minimum required pixel rate. */
+	pixel_clk_hz = h_width_pixels * v_width_lines * dsi->info.refresh_rate;
+
+	/* Calculate minimum byte rate on DSI interface. */
+	byte_clk_hz = (pixel_clk_hz * dsi->pixel_scaler_mul) /
+			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
+
+	/* Round up to multiple of mega hz. */
+	plld_clk_mhz = DIV_ROUND_UP((byte_clk_hz * NUMOF_BIT_PER_BYTE),
+								1000000);
+
+	/* Calculate default real shift_clk_div. */
+	dsi->default_shift_clk_div = (NUMOF_BIT_PER_BYTE / 2) *
+		dsi->pixel_scaler_mul / (dsi->pixel_scaler_div *
+		dsi->info.n_data_lanes);
+	/* Calculate default DSI hs clock. DSI interface is double data rate.
+	 * Data is transferred on both rising and falling edge of clk, div by 2
+	 * to get the actual clock rate.
+	 * */
+	dsi->default_hs_clk_khz = plld_clk_mhz * 1000 / 2;
+	dsi->default_pixel_clk_khz = plld_clk_mhz * 1000 / 2
+						/ dsi->default_shift_clk_div;
+
+	/* Get the actual shift_clk_div and clock rates. */
+	dsi->shift_clk_div = tegra_dsi_get_shift_clk_div(dsi);
 	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi);
 	dsi->target_hs_clk_khz = tegra_dsi_get_hs_clk_rate(dsi);
+
+	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
+							dsi->target_hs_clk_khz);
+
+	dsi->controller_index = dc->ndev->id;
+	dsi->ulpm = false;
 
 #if DSI_USE_SYNC_POINTS
 	dsi->syncpt_id = NVSYNCPT_DSI;
@@ -727,7 +775,6 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 		case TEGRA_DSI_VIDEO_BURST_MODE_MEDIUM_SPEED:
 		case TEGRA_DSI_VIDEO_BURST_MODE_FAST_SPEED:
 		case TEGRA_DSI_VIDEO_BURST_MODE_FASTEST_SPEED:
-		case TEGRA_DSI_VIDEO_BURST_MODE_MANUAL:
 			pkt_seq_3_5_rgb_lo = DSI_PKT_SEQ_3_LO_PKT_32_ID(rgb_info);
 			if(!dsi->info.no_pkt_seq_eot)
 				pkt_seq = dsi_pkt_seq_video_burst;
@@ -838,25 +885,19 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
-	u32 shift_clk_div;
+	u32 shift_clk_div_register;
 	u32 val;
 
-	if (dsi->info.video_burst_mode == TEGRA_DSI_VIDEO_NONE_BURST_MODE ||
-		dsi->info.video_burst_mode ==
-				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END)
-		shift_clk_div = NUMOF_BIT_PER_BYTE * dsi->pixel_scaler_mul /
-			(dsi->pixel_scaler_div * dsi->info.n_data_lanes) - 2;
-	else
-		shift_clk_div = (dsi->current_dsi_clk_khz * 2 +
-						dsi->default_hs_clk_khz - 1) /
-						(dsi->default_hs_clk_khz) - 2;
+	/* Get the corresponding register value of shift_clk_div. */
+	shift_clk_div_register = dsi->shift_clk_div * 2 - 2;
 
 #ifdef CONFIG_TEGRA_FPGA_PLATFORM
-	shift_clk_div = 1;
+	shift_clk_div_register = 1;
 #endif
 
 	/* TODO: find out if PCD3 option is required */
-	val = PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(shift_clk_div);
+	val = PIXEL_CLK_DIVIDER_PCD1 |
+				SHIFT_CLK_DIVIDER(shift_clk_div_register);
 	tegra_dc_writel(dc, val, DC_DISP_DISP_CLOCK_CONTROL);
 
 	clk_enable(dsi->dc_clk);
@@ -1780,8 +1821,17 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data* dsi,
 	if (!dsi->info.panel_buffer_size_byte)
 		dsi->info.panel_buffer_size_byte = DEFAULT_PANEL_BUFFER_BYTE;
 
-	if (!dsi->info.max_panel_freq_khz)
+	if (!dsi->info.max_panel_freq_khz) {
 		dsi->info.max_panel_freq_khz = DEFAULT_MAX_DSI_PHY_CLK_KHZ;
+
+		if (dsi->info.video_burst_mode >
+				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END){
+			dev_err(&dsi->dc->ndev->dev, "DSI: max_panel_freq_khz"
+					"is not set for DSI burst mode.\n");
+			dsi->info.video_burst_mode =
+				TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED;
+		}
+	}
 
 	if (!dsi->info.lp_cmd_mode_freq_khz)
 		dsi->info.lp_cmd_mode_freq_khz = DEFAULT_LP_CMD_MODE_CLK_KHZ;

@@ -2012,6 +2012,9 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
 
+	if (!dsi->enabled)
+		goto fail;
+
 	if (dsi->ulpm) {
 		if (tegra_dsi_exit_ulpm(dsi) < 0) {
 			printk(KERN_ERR "DSI failed to exit ulpm");

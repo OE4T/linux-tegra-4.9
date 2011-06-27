@@ -1615,7 +1615,7 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	/* Get the corresponding register value of shift_clk_div. */
 	shift_clk_div_register = dsi->shift_clk_div * 2 - 2;
 
-#ifdef CONFIG_TEGRA_FPGA_PLATFORM
+#ifndef CONFIG_TEGRA_SILICON_PLATFORM
 	shift_clk_div_register = 1;
 	if (dsi->info.ganged_type)
 		shift_clk_div_register = 0;

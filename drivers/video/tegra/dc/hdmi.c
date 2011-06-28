@@ -1074,7 +1074,9 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	const struct tegra_hdmi_audio_config *config;
 	unsigned long audio_n;
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	unsigned long reg_addr = 0;
+#endif
 	unsigned a_source = AUDIO_CNTRL0_SOURCE_SELECT_AUTO;
 
 	if (HDA == audio_source)

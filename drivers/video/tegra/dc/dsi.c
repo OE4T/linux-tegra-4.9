@@ -1210,10 +1210,7 @@ static bool tegra_dsi_is_controller_idle(struct tegra_dc_dsi_data *dsi)
 
 static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
 {
-	int status;
-	u32 val;
-
-	status = 0;
+	int status = 0;
 
 	if (tegra_dsi_readl(dsi, DSI_TRIGGER)) {
 		status = -EBUSY;

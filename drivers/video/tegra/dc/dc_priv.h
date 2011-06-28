@@ -87,6 +87,7 @@ struct tegra_dc {
 	void __iomem			*base;
 	int				irq;
 
+	int				pixel_clk;
 	struct clk			*clk;
 	struct clk			*emc_clk;
 	int				emc_clk_rate;

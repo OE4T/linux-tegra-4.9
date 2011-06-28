@@ -681,7 +681,7 @@ static unsigned long tegra_dc_get_emc_rate(struct tegra_dc_win *wins[], int n)
 	for (i = 0; w = wins[i], bw[i] = 0, i < n; i++) {
 		if (!WIN_IS_ENABLED(w))
 			continue;
-		bw[i] = dc->mode.pclk *
+		bw[i] = dc->pixel_clk *
 			(tegra_dc_fmt_bpp(w->fmt) >> BIT_TO_BYTE_SHIFT) *
 			(WIN_USE_V_FILTER(w) ? 2 : 1) /
 			w->out_w * w->w *
@@ -1194,14 +1194,14 @@ static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 
 #ifdef DEBUG
 /* return in 1000ths of a Hertz */
-static int calc_refresh(const struct tegra_dc_mode *m)
+static int calc_refresh(struct tegra_dc *dc, const struct tegra_dc_mode *m)
 {
 	long h_total, v_total, refresh;
 	h_total = m->h_active + m->h_front_porch + m->h_back_porch +
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	refresh = m->pclk / h_total;
+	refresh = dc->pixel_clk / h_total;
 	refresh *= 1000;
 	refresh /= v_total;
 	return refresh;
@@ -1295,6 +1295,8 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 			DC_DISP_SHIFT_CLOCK_OPTIONS);
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
+
+	dc->pixel_clk = dc->mode.pclk;
 
 	return 0;
 }

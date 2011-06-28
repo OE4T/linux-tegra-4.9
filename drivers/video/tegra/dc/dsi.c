@@ -434,6 +434,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	/* Calculate minimum required pixel rate. */
 	pixel_clk_hz = h_width_pixels * v_width_lines * dsi->info.refresh_rate;
 
+	dc->pixel_clk = pixel_clk_hz;
+
 	/* Calculate minimum byte rate on DSI interface. */
 	byte_clk_hz = (pixel_clk_hz * dsi->pixel_scaler_mul) /
 			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);

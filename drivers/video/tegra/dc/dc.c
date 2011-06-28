@@ -656,7 +656,7 @@ static unsigned int tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
 static unsigned long tegra_dc_get_emc_rate(struct tegra_dc_win *wins[], int n)
 {
 	int i;
-	unsigned int bw[TEGRA_FB_FLIP_N_WINDOWS];
+	unsigned int bw[DC_N_WINDOWS];
 	struct tegra_dc_win *w;
 	struct tegra_dc *dc;
 	unsigned int max;

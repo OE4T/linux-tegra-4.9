@@ -1069,48 +1069,51 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 		unsigned long rate;
-		struct clk *pll_d_out0_clk =
-			clk_get_sys(NULL, "pll_d_out0");
-		struct clk *pll_d_clk =
-			clk_get_sys(NULL, "pll_d");
+		struct clk *parent_clk =
+			clk_get_sys(NULL, dc->out->parent_clk ? : "pll_d_out0");
+		struct clk *base_clk = clk_get_parent(parent_clk);
 
 		if (dc->mode.pclk > 70000000)
 			rate = 594000000;
 		else
 			rate = 216000000;
 
-		if (rate != clk_get_rate(pll_d_clk))
-			clk_set_rate(pll_d_clk, rate);
+		if (rate != clk_get_rate(base_clk))
+			clk_set_rate(base_clk, rate);
 
-		if (clk_get_parent(clk) != pll_d_out0_clk)
-			clk_set_parent(clk, pll_d_out0_clk);
+		if (clk_get_parent(clk) != parent_clk)
+			clk_set_parent(clk, parent_clk);
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_DSI) {
 		unsigned long rate;
-		struct clk *pll_d_out0_clk;
-		struct clk *pll_d_clk;
+		struct clk *parent_clk;
+		struct clk *base_clk;
 
 		if (clk == dc->clk) {
-			pll_d_out0_clk = clk_get_sys(NULL, "pll_d_out0");
-			pll_d_clk = clk_get_sys(NULL, "pll_d");
+			parent_clk = clk_get_sys(NULL,
+					dc->out->parent_clk ? : "pll_d_out0");
+			base_clk = clk_get_parent(parent_clk);
 		} else {
 			if (dc->pdata->default_out->dsi->dsi_instance) {
-				pll_d_out0_clk = clk_get_sys(NULL, "pll_d2_out0");
-				pll_d_clk = clk_get_sys(NULL, "pll_d2");
-				tegra_clk_cfg_ex(pll_d_clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+				parent_clk = clk_get_sys(NULL,
+					dc->out->parent_clk ? : "pll_d2_out0");
+				base_clk = clk_get_parent(parent_clk);
+				tegra_clk_cfg_ex(base_clk,
+						TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
 			} else {
-				pll_d_out0_clk = clk_get_sys(NULL, "pll_d_out0");
-				pll_d_clk = clk_get_sys(NULL, "pll_d");
+				parent_clk = clk_get_sys(NULL,
+					dc->out->parent_clk ? : "pll_d_out0");
+				base_clk = clk_get_parent(parent_clk);
 			}
 		}
 
 		rate = dc->mode.pclk;
-		if (rate != clk_get_rate(pll_d_clk))
-			clk_set_rate(pll_d_clk, rate);
+		if (rate != clk_get_rate(base_clk))
+			clk_set_rate(base_clk, rate);
 
-		if (clk_get_parent(clk) != pll_d_out0_clk)
-			clk_set_parent(clk, pll_d_out0_clk);
+		if (clk_get_parent(clk) != parent_clk)
+			clk_set_parent(clk, parent_clk);
 	}
 
 	pclk = tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
@@ -1174,8 +1177,8 @@ static int calc_v_ref_to_sync(const struct tegra_dc_mode *mode, int *vref)
 	if (mode->v_active < 16)
 		return 7;
 
-        if (vref)
-                *vref = a;
+	if (vref)
+		*vref = a;
 	return 0;
 }
 

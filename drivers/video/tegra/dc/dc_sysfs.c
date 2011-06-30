@@ -1,3 +1,23 @@
+/*
+ * drivers/video/tegra/dc/dc_sysfs.c
+ *
+ * Copyright (c) 2011, NVIDIA Corporation.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
 
@@ -8,9 +28,6 @@
 #include "dc_priv.h"
 #include "nvsd.h"
 
-/****************
- * Current mode *
- ****************/
 static ssize_t mode_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -47,9 +64,6 @@ static ssize_t mode_show(struct device *device,
 
 static DEVICE_ATTR(mode, S_IRUGO, mode_show, NULL);
 
-/*******************
- * DC Stat Enabled *
- *******************/
 static ssize_t stats_enable_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -86,10 +100,6 @@ static ssize_t stats_enable_store(struct device *dev,
 static DEVICE_ATTR(stats_enable, S_IRUGO|S_IWUSR,
 	stats_enable_show, stats_enable_store);
 
-
-/**************
- * DC Enabled *
- **************/
 static ssize_t enable_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -272,10 +282,6 @@ static ssize_t mode_3d_store(struct device *dev,
 static DEVICE_ATTR(stereo_mode,
 	S_IRUGO|S_IWUGO, mode_3d_show, mode_3d_store);
 
-
-/********
- * Init *
- ********/
 void tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct nvhost_device *ndev = to_nvhost_device(dev);

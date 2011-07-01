@@ -378,7 +378,7 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_file("status", S_IRUGO, de,
 			master, &nvhost_debug_fops);
 
-	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUGO, de,
+	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_null_kickoff_pid);
 }
 #else

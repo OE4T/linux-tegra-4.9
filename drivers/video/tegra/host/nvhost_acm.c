@@ -28,7 +28,8 @@
 #include <mach/powergate.h>
 #include <mach/clk.h>
 
-#define ACM_TIMEOUT_MSEC 25
+#define ACM_POWERDOWN_HANDLER_DELAY_MSEC  25
+#define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
 
 #define DISABLE_3D_POWERGATING
 
@@ -84,8 +85,8 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 	mutex_lock(&mod->lock);
 	if (atomic_sub_return(refs, &mod->refcount) == 0) {
 		BUG_ON(!mod->powered);
-		schedule_delayed_work(
-			&mod->powerdown, msecs_to_jiffies(ACM_TIMEOUT_MSEC));
+		schedule_delayed_work(&mod->powerdown,
+			msecs_to_jiffies(mod->powerdown_delay));
 		kick = true;
 	}
 	mutex_unlock(&mod->lock);
@@ -155,6 +156,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	mod->powered = false;
 	mod->powergate_id = -1;
 	mod->powergate_id2 = -1;
+	mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
 
 	if (strcmp(name, "gr3d") == 0) {
 		mod->powergate_id = TEGRA_POWERGATE_3D;
@@ -237,7 +239,7 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 	}
 
 	ret = wait_event_timeout(mod->idle, is_module_idle(mod),
-			   msecs_to_jiffies(ACM_TIMEOUT_MSEC + 500));
+			ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT);
 	if (ret == 0)
 		nvhost_debug_dump(dev);
 

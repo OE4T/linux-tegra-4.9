@@ -52,6 +52,7 @@ struct nvhost_module {
 	struct nvhost_module *parent;
 	int powergate_id;
 	int powergate_id2;
+	int powerdown_delay;
 };
 
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
@@ -71,7 +72,6 @@ static inline bool nvhost_module_powered(struct nvhost_module *mod)
 static inline void nvhost_module_idle(struct nvhost_module *mod)
 {
 	nvhost_module_idle_mult(mod, 1);
-
 }
 
 #endif

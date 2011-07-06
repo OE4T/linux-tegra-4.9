@@ -815,6 +815,9 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 			queue_delayed_work(system_nrt_wq, &hdmi->work,
 					   msecs_to_jiffies(30));
 		hdmi->hpd_pending = false;
+	} else if (tegra_dc_hdmi_hpd(dc)) { /* Check for HDMI Peripheral */
+		queue_delayed_work(system_nrt_wq, &hdmi->work,
+					   msecs_to_jiffies(100));
 	}
 	spin_unlock_irqrestore(&hdmi->suspend_lock, flags);
 	tegra_nvhdcp_resume(hdmi->nvhdcp);

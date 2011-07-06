@@ -697,7 +697,10 @@ static unsigned long tegra_dc_get_emc_rate(struct tegra_dc_win *wins[], int n)
 	 * either the above calculation is wrong, or board specified BW is
 	 * wrong.
 	 */
-	WARN_ON(ret > tegra_dc_get_default_emc_clk_rate(dc));
+	WARN_ONCE(ret > tegra_dc_get_default_emc_clk_rate(dc),
+		  "Calculated EMC bandwidth is %luHz, "
+		  "maximum allowed EMC bandwidth is %luHz\n",
+		  ret, tegra_dc_get_default_emc_clk_rate(dc));
 
 	return ret;
 }

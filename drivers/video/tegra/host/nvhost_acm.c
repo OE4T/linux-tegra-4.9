@@ -143,17 +143,18 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->clk[i] = clk_get(dev, get_module_clk_id(name, i));
 		if (IS_ERR_OR_NULL(mod->clk[i]))
 			break;
-		rate = clk_round_rate(mod->clk[i], UINT_MAX);
+		if (strcmp(name, "gr2d") == 0)
+			rate = clk_round_rate(mod->clk[i], 0);
+		else
+			rate = clk_round_rate(mod->clk[i], UINT_MAX);
 		if (rate < 0) {
 			pr_err("%s: can't get maximum rate for %s\n",
 				__func__, name);
 			break;
 		}
-		if (rate != clk_get_rate(mod->clk[i])) {
-			clk_enable(mod->clk[i]);
-			clk_set_rate(mod->clk[i], rate);
-			clk_disable(mod->clk[i]);
-		}
+		clk_enable(mod->clk[i]);
+		clk_set_rate(mod->clk[i], rate);
+		clk_disable(mod->clk[i]);
 		i++;
 	}
 
@@ -163,7 +164,10 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	mod->powered = false;
 	mod->powergate_id = -1;
 	mod->powergate_id2 = -1;
-	mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
+	if (strcmp(name, "gr2d") == 0)
+		mod->powerdown_delay = 0;
+	else
+		mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
 
 	if (strcmp(name, "gr3d") == 0) {
 		mod->powergate_id = TEGRA_POWERGATE_3D;

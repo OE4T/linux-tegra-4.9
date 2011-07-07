@@ -289,7 +289,6 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 		/* TODO: update virt_addr */
 
 		tegra_dc_set_default_emc(tegra_fb->win->dc);
-		tegra_dc_set_dynamic_emc(&tegra_fb->win, 1);
 		tegra_dc_update_windows(&tegra_fb->win, 1);
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
 	}
@@ -500,7 +499,6 @@ static void tegra_fb_flip_worker(struct work_struct *work)
 #endif
 	}
 
-	tegra_dc_set_dynamic_emc(wins, nr_win);
 	tegra_dc_update_windows(wins, nr_win);
 	/* TODO: implement swapinterval here */
 	tegra_dc_sync_windows(wins, nr_win);
@@ -861,7 +859,6 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 
 	if (fb_data->flags & TEGRA_FB_FLIP_ON_PROBE) {
 		tegra_dc_set_default_emc(tegra_fb->win->dc);
-		tegra_dc_set_dynamic_emc(&tegra_fb->win, 1);
 		tegra_dc_update_windows(&tegra_fb->win, 1);
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
 	}

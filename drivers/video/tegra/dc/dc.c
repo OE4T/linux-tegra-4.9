@@ -736,7 +736,7 @@ static void tegra_dc_reduce_emc_worker(struct work_struct *work)
 	mutex_unlock(&dc->lock);
 }
 
-int  tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
+static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 {
 	unsigned long new_rate;
 	struct tegra_dc *dc;
@@ -745,13 +745,6 @@ int  tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 		return 0;
 
 	dc = windows[0]->dc;
-
-	mutex_lock(&dc->lock);
-
-	if (!dc->enabled) {
-		mutex_unlock(&dc->lock);
-		return -EFAULT;
-	}
 
 	/* calculate the new rate based on this POST */
 	new_rate = tegra_dc_get_emc_rate(windows, n);
@@ -770,12 +763,10 @@ int  tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 		schedule_delayed_work(&dc->reduce_emc_clk_work,
 			msecs_to_jiffies(windows_idle_detection_time));
 
-	mutex_unlock(&dc->lock);
-
 	return 0;
 }
 
-int  tegra_dc_set_default_emc(struct tegra_dc *dc)
+int tegra_dc_set_default_emc(struct tegra_dc *dc)
 {
 	/*
 	 * POST happens whenever this function is called, we first delete any
@@ -819,6 +810,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		mutex_unlock(&dc->lock);
 		return -EFAULT;
 	}
+
+	tegra_dc_set_dynamic_emc(windows, n);
 
 	if (no_vsync)
 		tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE, DC_CMD_STATE_ACCESS);

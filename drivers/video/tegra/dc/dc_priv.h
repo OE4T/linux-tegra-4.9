@@ -40,18 +40,6 @@
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * 2)
 #endif
 
-/*
- * If using T30/DDR3, the 2nd 16 bytes part of DDR3 atom is 2nd line and is
- * discarded in tiling mode.
- */
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-#define TILED_WINDOWS_BW_MULTIPLIER 1
-#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
-#define TILED_WINDOWS_BW_MULTIPLIER 2
-#else
-#warning "need to revisit memory tiling effects on DC"
-#endif
-
 struct tegra_dc;
 
 struct tegra_dc_blend {

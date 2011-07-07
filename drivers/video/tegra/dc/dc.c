@@ -707,16 +707,20 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
 {
 	unsigned long ret;
+	int tiled_windows_bw_multiplier;
 
 	if (!WIN_IS_ENABLED(w))
 		return 0;
+
+	tiled_windows_bw_multiplier =
+		tegra_mc_get_tiled_memory_bandwidth_multiplier();
 
 	/* perform calculations with most significant bits of pixel clock
 	 * to prevent overflow of long. */
 	ret = (unsigned long)(dc->pixel_clk >> 16) *
 		(tegra_dc_fmt_bpp(w->fmt) / 8) *
 		(WIN_USE_V_FILTER(w) ? 2 : 1) * w->w / w->out_w *
-		(WIN_IS_TILED(w) ? TILED_WINDOWS_BW_MULTIPLIER : 1);
+		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
 
 /*
  * Assuming 50% (X >> 1) efficiency: i.e. if we calculate we need 70MBps, we

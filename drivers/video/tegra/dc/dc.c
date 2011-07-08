@@ -811,8 +811,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		return -EFAULT;
 	}
 
-	tegra_dc_set_dynamic_emc(windows, n);
-
 	if (no_vsync)
 		tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
 	else
@@ -926,6 +924,13 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			val |= COLOR_EXPAND;
 
+		/* only B and C have H filer, force it on if scaling */
+		if (win->idx != 0 && win->w != win->out_w)
+			win->flags |= TEGRA_WIN_FLAG_H_FILTER;
+		/* only B has V filter, set it if scaling */
+		if (win->idx == 1 && win->h != win->out_h)
+			win->flags |= TEGRA_WIN_FLAG_V_FILTER;
+
 		if (WIN_USE_H_FILTER(win))
 			val |= H_FILTER_ENABLE;
 		if (WIN_USE_V_FILTER(win))
@@ -949,6 +954,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			update_mask |= WIN_A_ACT_REQ << i;
 		}
 	}
+
+	tegra_dc_set_dynamic_emc(windows, n);
 
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 

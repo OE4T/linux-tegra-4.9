@@ -31,6 +31,7 @@
 #include <linux/device.h>
 #include <linux/nct1008.h>
 #include <linux/delay.h>
+#include <linux/regulator/consumer.h>
 
 #define DRIVER_NAME "nct1008"
 
@@ -83,6 +84,7 @@ struct nct1008_data {
 	u8 *limits;
 	u8 limits_sz;
 	void (*alarm_fn)(bool raised);
+	struct regulator *nct_reg;
 };
 
 static inline u8 value_to_temperature(bool extended, u8 value)
@@ -535,6 +537,32 @@ static irqreturn_t nct1008_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void nct1008_power_control(struct nct1008_data* data, bool is_enable)
+{
+	int ret;
+	if (!data->nct_reg) {
+		data->nct_reg = regulator_get(NULL, "vdd_nct1008");
+		if (IS_ERR_OR_NULL(data->nct_reg)) {
+			dev_warn(&data->client->dev, "Error in getting the "
+				"regulator handle for vdd_nct1008\n");
+			data->nct_reg = NULL;
+			return;
+		}
+	}
+	if (is_enable)
+		ret = regulator_enable(data->nct_reg);
+	else
+		ret = regulator_disable(data->nct_reg);
+
+	if (ret < 0)
+		dev_err(&data->client->dev, "Error in %s rail vdd_nct1008, "
+			"error %d\n", (is_enable) ? "enabling" : "disabling",
+			ret);
+	else
+		dev_info(&data->client->dev, "success in %s rail vdd_nct1008\n",
+			(is_enable) ? "enabling" : "disabling");
+}
+
 static int nct1008_configure_sensor(struct nct1008_data* data)
 {
 	struct i2c_client *client = data->client;
@@ -694,6 +722,7 @@ static int nct1008_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->mutex);
 
+	nct1008_power_control(data, true);
 	err = nct1008_configure_sensor(data);	/* sensor is in standby */
 	if (err < 0) {
 		dev_err(&client->dev, "\n error file: %s : %s(), line=%d ",
@@ -722,6 +751,9 @@ static int nct1008_probe(struct i2c_client *client,
 
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
+	nct1008_power_control(data, false);
+	if (data->nct_reg)
+		regulator_put(data->nct_reg);
 	kfree(data);
 	return err;
 }
@@ -733,6 +765,9 @@ static int nct1008_remove(struct i2c_client *client)
 	free_irq(data->client->irq, data);
 	cancel_work_sync(&data->work);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);
+	nct1008_power_control(data, false);
+	if (data->nct_reg)
+		regulator_put(data->nct_reg);
 	kfree(data);
 
 	return 0;

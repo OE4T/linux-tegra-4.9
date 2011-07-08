@@ -204,5 +204,10 @@ void tegra_dc_create_sysfs(struct device *dev);
 /* defined in dc.c, used by dc_sysfs.c */
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable);
 bool tegra_dc_stats_get(struct tegra_dc *dc);
+
+/* defined in dc.c, used by dc_sysfs.c */
+u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc);
+void tegra_dc_enable_crc(struct tegra_dc *dc);
+void tegra_dc_disable_crc(struct tegra_dc *dc);
 #endif
 

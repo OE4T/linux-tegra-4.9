@@ -113,6 +113,14 @@
 #define DC_CMD_REG_ACT_CONTROL			0x043
 
 #define DC_COM_CRC_CONTROL			0x300
+#define  CRC_ALWAYS_ENABLE		(1 << 3)
+#define  CRC_ALWAYS_DISABLE		(0 << 3)
+#define  CRC_INPUT_DATA_ACTIVE_DATA	(1 << 2)
+#define  CRC_INPUT_DATA_FULL_FRAME	(0 << 2)
+#define  CRC_WAIT_TWO_VSYNC		(1 << 1)
+#define  CRC_WAIT_ONE_VSYNC		(0 << 1)
+#define  CRC_ENABLE_ENABLE		(1 << 0)
+#define  CRC_ENABLE_DISABLE		(0 << 0)
 #define DC_COM_CRC_CHECKSUM			0x301
 #define DC_COM_PIN_OUTPUT_ENABLE0		0x302
 #define DC_COM_PIN_OUTPUT_ENABLE1		0x303

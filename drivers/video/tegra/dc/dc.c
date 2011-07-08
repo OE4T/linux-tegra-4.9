@@ -46,6 +46,8 @@
 #include "overlay.h"
 #include "nvsd.h"
 
+#define TEGRA_CRC_LATCHED_DELAY		34
+
 static int no_vsync;
 
 module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
@@ -1535,6 +1537,46 @@ unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc)
 		return 0;
 }
 EXPORT_SYMBOL(tegra_dc_get_out_max_pixclock);
+
+void tegra_dc_enable_crc(struct tegra_dc *dc)
+{
+	u32 val;
+	tegra_dc_io_start(dc);
+
+	val = CRC_ALWAYS_ENABLE | CRC_INPUT_DATA_ACTIVE_DATA |
+		CRC_ENABLE_ENABLE;
+	tegra_dc_writel(dc, val, DC_COM_CRC_CONTROL);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+}
+
+void tegra_dc_disable_crc(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, 0x0, DC_COM_CRC_CONTROL);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_io_end(dc);
+}
+
+u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
+{
+	int crc = 0;
+	u32 val = 0;
+
+	if(!dc) {
+		dev_err(&dc->ndev->dev, "Failed to get dc.\n");
+		goto crc_error;
+	}
+
+	/* TODO: Replace mdelay with code to sync VBlANK, since
+	 * DC_COM_CRC_CHECKSUM_LATCHED is available after VBLANK */
+	mdelay(TEGRA_CRC_LATCHED_DELAY);
+
+	crc = tegra_dc_readl(dc, DC_COM_CRC_CHECKSUM_LATCHED);
+crc_error:
+	return crc;
+}
 
 static void tegra_dc_vblank(struct work_struct *work)
 {

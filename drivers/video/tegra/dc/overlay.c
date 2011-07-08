@@ -637,6 +637,7 @@ static int tegra_overlay_release(struct inode *inode, struct file *filp)
 	list_del(&client->list);
 	spin_unlock_irqrestore(&client->dev->clients_lock, flags);
 
+	nvmap_client_put(client->user_nvmap);
 	put_task_struct(client->task);
 
 	kfree(client);

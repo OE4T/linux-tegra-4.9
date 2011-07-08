@@ -40,6 +40,7 @@
 #include <mach/fb.h>
 #include <mach/mc.h>
 #include <mach/nvhost.h>
+#include <mach/latency_allowance.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"
@@ -613,6 +614,46 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 	}
 }
 
+static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
+	struct tegra_dc_win *w)
+{
+	/* windows A, B, C for first and second display */
+	static const enum tegra_la_id la_id_tab[2][3] = {
+		/* first display */
+		{ TEGRA_LA_DISPLAY_0A, TEGRA_LA_DISPLAY_0B,
+			TEGRA_LA_DISPLAY_0C },
+		/* second display */
+		{ TEGRA_LA_DISPLAY_0AB, TEGRA_LA_DISPLAY_0BB,
+			TEGRA_LA_DISPLAY_0CB },
+	};
+	/* window B V-filter tap for first and second display. */
+	static const enum tegra_la_id vfilter_tab[2] = {
+		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
+	};
+	unsigned long bw;
+
+	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
+	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));
+	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
+
+	/* tegra_dc_get_bandwidth() treats V filter windows as double
+	 * bandwidth, but LA has a seperate client for V filter */
+	if (w->idx == 1 && WIN_USE_V_FILTER(w))
+		bw /= 2;
+
+	/* our bandwidth is in bytes/sec, but LA takes MBps.
+	 * round up bandwidth to 1MBps */
+	bw = w->new_bandwidth / 1000000 + 1;
+
+	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
+
+	/* if window B, also set the 1B client for the 2-tap V filter. */
+	if (w->idx == 1)
+		tegra_set_latency_allowance(vfilter_tab[dc->ndev->id], bw);
+
+	w->bandwidth = w->new_bandwidth;
+}
+
 static unsigned int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
 						   struct tegra_dc_win *b)
 {
@@ -623,7 +664,7 @@ static unsigned int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
 }
 
 static unsigned int tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
-						unsigned int bw[], int n)
+						int n)
 {
 	/* We have n windows and knows their geometries and bandwidthes. If any
 	 * of them overlapped vertically, the overlapped area bandwidth get
@@ -634,80 +675,88 @@ static unsigned int tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
 	 * bandwidth of windows.
 	 */
 
+	WARN_ONCE(n != 3, "Code assumes 3 windows, possibly reading junk.\n");
 	/* We know win_2 is always overlapped with win_0 and win_1. */
 	if (tegra_dc_windows_is_overlapped(wins[0], wins[1]))
-		return bw[0] + bw[1] + bw[2];
+		return wins[0]->new_bandwidth + wins[1]->new_bandwidth +
+			wins[2]->new_bandwidth;
 	else
-		return max(bw[0], bw[1]) + bw[2];
+		return max(wins[0]->new_bandwidth, wins[1]->new_bandwidth) +
+			wins[2]->new_bandwidth;
 
 }
 
-/* 8 bits per byte (1 << 3) */
-#define BIT_TO_BYTE_SHIFT 3
+/*
+ * Calculate peak EMC bandwidth for each enabled window =
+ * pixel_clock * win_bpp * (use_v_filter ? 2 : 1)) * H_scale_factor *
+ * (windows_tiling ? 2 : 1)
+ *
+ *
+ * note:
+ * (*) We use 2 tap V filter, so need double BW if use V filter
+ * (*) Tiling mode on T30 and DDR3 requires double BW
+ */
+static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
+	struct tegra_dc_win *w)
+{
+	unsigned long ret;
+
+	if (!WIN_IS_ENABLED(w))
+		return 0;
+
+	/* perform calculations with most significant bits of pixel clock
+	 * to prevent overflow of long. */
+	ret = (unsigned long)(dc->pixel_clk >> 16) *
+		(tegra_dc_fmt_bpp(w->fmt) / 8) *
+		(WIN_USE_V_FILTER(w) ? 2 : 1) * w->w / w->out_w *
+		(WIN_IS_TILED(w) ? TILED_WINDOWS_BW_MULTIPLIER : 1);
+
 /*
  * Assuming 50% (X >> 1) efficiency: i.e. if we calculate we need 70MBps, we
  * will request 140MBps from EMC.
  */
 #define MEM_EFFICIENCY_SHIFT 1
-static unsigned long tegra_dc_get_emc_rate(struct tegra_dc_win *wins[], int n)
-{
-	int i;
-	unsigned int bw[DC_N_WINDOWS];
-	struct tegra_dc_win *w;
-	struct tegra_dc *dc;
-	unsigned int max;
-	unsigned int ret;
-
-	dc = wins[0]->dc;
-
-	if (tegra_dc_has_multiple_dc())
-		return tegra_dc_get_default_emc_clk_rate(dc);
-
-	BUG_ON(n > ARRAY_SIZE(bw));
-	/*
-	 * Calculate peak EMC bandwidth for each enabled window =
-	 * pixel_clock * win_bpp * (use_v_filter ? 2 : 1)) * H_scale_factor *
-	 * (windows_tiling ? 2 : 1)
-	 *
-	 *
-	 * note:
-	 * (*) We use 2 tap V filter, so need double BW if use V filter
-	 * (*) Tiling mode on T30 and DDR3 requires double BW
-	 */
-	for (i = 0; w = wins[i], bw[i] = 0, i < n; i++) {
-		if (!WIN_IS_ENABLED(w))
-			continue;
-		bw[i] = dc->pixel_clk *
-			(tegra_dc_fmt_bpp(w->fmt) >> BIT_TO_BYTE_SHIFT) *
-			(WIN_USE_V_FILTER(w) ? 2 : 1) /
-			w->out_w * w->w *
-			(WIN_IS_TILED(w) ? TILED_WINDOWS_BW_MULTIPLIER : 1);
-	}
-
-	max = tegra_dc_find_max_bandwidth(wins, bw, n) << MEM_EFFICIENCY_SHIFT;
-
-	ret = EMC_BW_TO_FREQ(max);
-
-	/*
-	 * If the calculated peak BW is bigger than board specified BW, then
-	 * either the above calculation is wrong, or board specified BW is
-	 * wrong.
-	 */
-	WARN_ONCE(ret > tegra_dc_get_default_emc_clk_rate(dc),
-		  "Calculated EMC bandwidth is %luHz, "
-		  "maximum allowed EMC bandwidth is %luHz\n",
-		  ret, tegra_dc_get_default_emc_clk_rate(dc));
-
-	return ret;
-}
-#undef BIT_TO_BYTE_SHIFT
+	ret <<= MEM_EFFICIENCY_SHIFT;
 #undef MEM_EFFICIENCY_SHIFT
 
-static void tegra_dc_change_emc(struct tegra_dc *dc)
+	/* if overflowed */
+	if (ret > (1UL << 31))
+		return ULONG_MAX;
+
+	return ret << 16; /* restore the scaling we did above */
+}
+
+static unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[],
+	int n)
 {
+	int i;
+	struct tegra_dc *dc;
+
+	dc = windows[0]->dc;
+	BUG_ON(n > DC_N_WINDOWS);
+	/* emc rate and latency allowance both need to know per window
+	 * bandwidths */
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *w = windows[i];
+		w->new_bandwidth = tegra_dc_calc_win_bandwidth(dc, w);
+	}
+
+	return tegra_dc_find_max_bandwidth(windows, n);
+}
+
+static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
+{
+	unsigned i;
+
 	if (dc->emc_clk_rate != dc->new_emc_clk_rate) {
 		dc->emc_clk_rate = dc->new_emc_clk_rate;
 		clk_set_rate(dc->emc_clk, dc->emc_clk_rate);
+	}
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_win *w = &dc->windows[i];
+		if (w->bandwidth != w->new_bandwidth)
+			tegra_dc_set_latency_allowance(dc, w);
 	}
 }
 
@@ -722,7 +771,16 @@ static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 	dc = windows[0]->dc;
 
 	/* calculate the new rate based on this POST */
-	new_rate = tegra_dc_get_emc_rate(windows, n);
+	new_rate = tegra_dc_get_bandwidth(windows, n);
+	new_rate = EMC_BW_TO_FREQ(new_rate);
+
+	WARN_ONCE(new_rate > tegra_dc_get_default_emc_clk_rate(dc),
+		"Calculated EMC bandwidth is %luHz, "
+		"maximum allowed EMC bandwidth is %luHz\n",
+		new_rate, tegra_dc_get_default_emc_clk_rate(dc));
+
+	if (tegra_dc_has_multiple_dc())
+		new_rate = tegra_dc_get_default_emc_clk_rate(dc);
 
 	dc->new_emc_clk_rate = new_rate;
 
@@ -1522,7 +1580,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	mutex_lock(&dc->lock);
 
 	/* update EMC clock if calculated bandwidth has changed */
-	tegra_dc_change_emc(dc);
+	tegra_dc_program_bandwidth(dc);
 
 	/* Update the SD brightness */
 	nvsd_updated = nvsd_update_brightness(dc);

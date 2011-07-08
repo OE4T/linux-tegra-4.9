@@ -380,12 +380,6 @@ static int tegra_overlay_flip(struct tegra_overlay_info *overlay,
 
 	queue_work(overlay->flip_wq, &data->work);
 
-	/*
-	 * Before the queued flip_wq get scheduled, we set the EMC clock to the
-	 * default value in order to do FLIP without glitch.
-	 */
-	tegra_dc_set_default_emc(overlay->dc);
-
 	args->post_syncpt_val = syncpt_max;
 	args->post_syncpt_id = tegra_dc_get_syncpt_id(overlay->dc);
 	mutex_unlock(&tegra_flip_lock);

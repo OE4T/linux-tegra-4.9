@@ -441,7 +441,6 @@ static void nct1008_work_func(struct work_struct *work)
 	int nentries = data->limits_sz;
 	int lo_limit = 0, hi_limit = 0;
 	int intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
-	bool throttle = false;
 
 	err = nct1008_get_temp(&data->client->dev, &temperature);
 	if (err) {
@@ -461,7 +460,6 @@ static void nct1008_work_func(struct work_struct *work)
 	} else if (temperature >= data->limits[nentries-1]) {
 		lo_limit = data->limits[nentries-1] - ALERT_HYSTERESIS;
 		hi_limit = data->plat_data.shutdown_ext_limit;
-		throttle = true;
 	} else {
 		for (i = 0; (i + 1) < nentries; i++) {
 			if (temperature >= data->limits[i] &&
@@ -471,6 +469,15 @@ static void nct1008_work_func(struct work_struct *work)
 				break;
 			}
 		}
+	}
+
+	if (temperature >= data->plat_data.throttling_ext_limit) {
+		/* start throttling */
+		therm_throttle(data, true);
+	} else if (temperature <
+		   (data->plat_data.throttling_ext_limit - ALERT_HYSTERESIS)) {
+		/* switch off throttling */
+		therm_throttle(data, false);
 	}
 
 	if (lo_limit == hi_limit) {
@@ -503,19 +510,12 @@ static void nct1008_work_func(struct work_struct *work)
 		current_hi_limit = hi_limit;
 	}
 
-	if (throttle) {
-		/* start throttling */
-		therm_throttle(data, true);
-		goto out;
-	} else {
-		/* switch off throttling */
-		therm_throttle(data, false);
-	}
-
 	/* inform edp governor */
 	if (edp_thermal_zone_val != temperature)
-		// FIXME: Move this direct tegra_ function call to be called via
-		//        a pointer in 'struct nct1008_data' (like 'alarm_fn')
+		/*
+		 * FIXME: Move this direct tegra_ function call to be called
+		 * via a pointer in 'struct nct1008_data' (like 'alarm_fn')
+		 */
 		tegra_edp_update_thermal_zone(temperature);
 
 	edp_thermal_zone_val = temperature;
@@ -629,7 +629,10 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 		if (err)
 			goto error;
 	} else {
-		/* External Temperature Throttling limit */
+		/*
+		 * External Temperature Throttling limit:
+		 *   Applies when 'Thermal Zones' are not specified.
+		 */
 		hi_limit = pdata->throttling_ext_limit;
 	}
 

@@ -855,30 +855,35 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 	tegra_dc_writel(dc, DSI_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	/* TODO: clean up */
-	val = PIN_INPUT_LSPI_INPUT_EN;
-	tegra_dc_writel(dc, val, DC_COM_PIN_INPUT_ENABLE3);
-
-	val = PIN_OUTPUT_LSPI_OUTPUT_DIS;
-	tegra_dc_writel(dc, val, DC_COM_PIN_OUTPUT_ENABLE3);
-
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 			PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 			DC_CMD_DISPLAY_POWER_CONTROL);
 
-	val = MSF_POLARITY_HIGH | MSF_ENABLE | MSF_LSPI;
-	tegra_dc_writel(dc, val, DC_CMD_DISPLAY_COMMAND_OPTION0);
+	/* Configure one-shot mode or continuous mode */
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		/* disable LSPI/LCD_DE output */
+		val = PIN_OUTPUT_LSPI_OUTPUT_DIS;
+		tegra_dc_writel(dc, val, DC_COM_PIN_OUTPUT_ENABLE3);
 
+		/* enable MSF & set MSF polarity */
+		val = MSF_ENABLE | MSF_LSPI;
+		if (!dsi->info.te_polarity_low)
+			val |= MSF_POLARITY_HIGH;
+		else
+			val |= MSF_POLARITY_LOW;
+		tegra_dc_writel(dc, val, DC_CMD_DISPLAY_COMMAND_OPTION0);
 
-	/* TODO: using continuous video mode for now */
-	/* if (dsi->info.panel_has_frame_buffer) {*/
-	if (0) {
-		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY, DC_CMD_DISPLAY_COMMAND);
+		/* set non-continuous mode */
+		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
+						DC_CMD_DISPLAY_COMMAND);
 		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
-		val = GENERAL_ACT_REQ | NC_HOST_TRIG;
-		tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ | NC_HOST_TRIG,
+						DC_CMD_STATE_CONTROL);
 	} else {
-		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+		/* set continuous mode */
+		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
+						DC_CMD_DISPLAY_COMMAND);
+		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 	}
 

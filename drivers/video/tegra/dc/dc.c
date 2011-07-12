@@ -980,6 +980,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		tegra_dc_writel(dc, NC_HOST_TRIG, DC_CMD_STATE_CONTROL);
+
 	mutex_unlock(&dc->lock);
 
 	return 0;

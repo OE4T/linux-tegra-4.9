@@ -955,12 +955,15 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	if (!no_vsync) {
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-		val |= FRAME_END_INT;
+		val |= (FRAME_END_INT | V_BLANK_INT | WIN_A_UF_INT | \
+				WIN_B_UF_INT | WIN_C_UF_INT);
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+	} else {
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val &= ~(FRAME_END_INT | V_BLANK_INT | WIN_A_UF_INT | \
+				WIN_B_UF_INT | WIN_C_UF_INT);
 
-		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-		val |= FRAME_END_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 	}
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);

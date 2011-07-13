@@ -174,13 +174,11 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	 */
 	if (mod->powergate_id == TEGRA_POWERGATE_3D) {
 		tegra_unpowergate_partition(mod->powergate_id);
-		clk_disable(mod->clk[0]);
 		mod->powergate_id = -1;
 	}
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 	if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
 		tegra_unpowergate_partition(mod->powergate_id2);
-		clk_disable(mod->clk[1]);
 		mod->powergate_id2 = -1;
 	}
 #endif

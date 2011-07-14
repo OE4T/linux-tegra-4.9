@@ -267,10 +267,11 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	case TEGRA_CRYPTO_IOCTL_NEED_SSK:
 		ctx->use_ssk = (int)arg;
 		break;
+
 	case TEGRA_CRYPTO_IOCTL_PROCESS_REQ:
 		ret = copy_from_user(&crypt_req, (void __user *)arg, sizeof(crypt_req));
 		if (ret < 0) {
-			pr_debug("%s: copy_from_user fail(%d)\n", __func__, ret);
+			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			break;
 		}
 
@@ -286,6 +287,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		ret = crypto_rng_reset(ctx->rng, ctx->seed,
 			crypto_rng_seedsize(ctx->rng));
 		break;
+
 	case TEGRA_CRYPTO_IOCTL_GET_RANDOM:
 		if (copy_from_user(&rng_req, (void __user *)arg, sizeof(rng_req)))
 			return -EFAULT;
@@ -301,7 +303,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			rng_req.nbytes);
 
 		if (ret != rng_req.nbytes) {
-			pr_debug("rng failed");
+			pr_err("rng failed");
 			ret = -ENODATA;
 			goto rng_out;
 		}
@@ -312,14 +314,13 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 rng_out:
 		if (rng)
 			kfree(rng);
-
 		break;
-
 
 	default:
 		pr_debug("invalid ioctl code(%d)", ioctl_num);
 		ret = -EINVAL;
 	}
+
 	return ret;
 }
 

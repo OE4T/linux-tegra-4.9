@@ -101,7 +101,7 @@ struct tegra_se_aes_context {
 	u32 op_mode;	/* AES operation mode */
 };
 
-/* Security Engine randon number generator context */
+/* Security Engine random number generator context */
 struct tegra_se_rng_context {
 	struct tegra_se_dev *se_dev;	/* Security Engine device */
 	struct tegra_se_slot *slot;	/* Security Engine key slot */
@@ -136,6 +136,11 @@ struct tegra_se_slot {
 	struct list_head node;
 	u8 slot_num;	/* Key slot number */
 	bool available; /* Tells whether key slot is free to use */
+};
+
+static struct tegra_se_slot ssk_slot = {
+	.slot_num = 15,
+	.available = false,
 };
 
 /* Security Engine Linked List */
@@ -188,9 +193,11 @@ static inline unsigned int se_readl(struct tegra_se_dev *se_dev,
 
 static void tegra_se_free_key_slot(struct tegra_se_slot *slot)
 {
-	spin_lock(&key_slot_lock);
-	slot->available = true;
-	spin_unlock(&key_slot_lock);
+	if (slot) {
+		spin_lock(&key_slot_lock);
+		slot->available = true;
+		spin_unlock(&key_slot_lock);
+	}
 }
 
 void tegra_se_clk_enable(struct clk *c)
@@ -400,6 +407,9 @@ static void tegra_se_write_key_table(u8 *pdata, u32 data_len,
 	u32 *pdata_buf = (u32 *)pdata;
 	u8 pkt = 0, quad = 0;
 	u32 val = 0, i;
+
+	if ((type == SE_KEY_TABLE_TYPE_KEY) && (slot_num == ssk_slot.slot_num))
+		return;
 
 	if (type == SE_KEY_TABLE_TYPE_ORGIV)
 		quad = QUAD_ORG_IV;
@@ -616,7 +626,6 @@ static int tegra_se_alloc_ll_buf(struct tegra_se_dev *se_dev,
 	return 0;
 }
 
-
 static void tegra_se_free_ll_buf(struct tegra_se_dev *se_dev)
 {
 	if (se_dev->src_ll_buf) {
@@ -631,7 +640,6 @@ static void tegra_se_free_ll_buf(struct tegra_se_dev *se_dev)
 		se_dev->dst_ll_buf = NULL;
 	}
 }
-
 
 static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	struct ablkcipher_request *req)
@@ -690,7 +698,6 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	return ret;
 }
 
-
 static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
 	struct ablkcipher_request *req)
 {
@@ -745,7 +752,6 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	mutex_unlock(&se_hw_lock);
 	req->base.complete(&req->base, ret);
 }
-
 
 static irqreturn_t tegra_se_irq(int irq, void *dev)
 {
@@ -902,6 +908,7 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 {
 	struct tegra_se_aes_context *ctx = crypto_ablkcipher_ctx(tfm);
 	struct tegra_se_dev *se_dev = ctx->se_dev;
+	struct tegra_se_slot *pslot;
 	u8 *pdata = (u8 *)key;
 
 	if (!ctx) {
@@ -909,12 +916,22 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 		return -EINVAL;
 	}
 
-	if (!key) {
-		dev_err(se_dev->dev, "invalid argument key");
-		return -EINVAL;
+	if (key) {
+		if (!ctx->slot || (ctx->slot &&
+		    ctx->slot->slot_num == ssk_slot.slot_num)) {
+			pslot = tegra_se_alloc_key_slot();
+			if (!pslot) {
+				dev_err(se_dev->dev, "no free key slot\n");
+				return -ENOMEM;
+			}
+			ctx->slot = pslot;
+		}
+		ctx->keylen = keylen;
+	} else {
+		tegra_se_free_key_slot(ctx->slot);
+		ctx->slot = &ssk_slot;
+		ctx->keylen = AES_KEYSIZE_128;
 	}
-
-	ctx->keylen = keylen;
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -932,18 +949,7 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 
 static int tegra_se_aes_cra_init(struct crypto_tfm *tfm)
 {
-	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
 	struct tegra_se_aes_context *ctx = crypto_tfm_ctx(tfm);
-	struct tegra_se_slot *pslot;
-
-	if (!ctx->slot) {
-		pslot = tegra_se_alloc_key_slot();
-		if (!pslot) {
-			dev_err(se_dev->dev, "no free key slot\n");
-			return -ENOMEM;
-		}
-		ctx->slot = pslot;
-	}
 
 	ctx->se_dev = sg_tegra_se_dev;
 	tfm->crt_ablkcipher.reqsize = sizeof(struct tegra_se_req_context);
@@ -1207,17 +1213,15 @@ static int tegra_se_sha_digest(struct ahash_request *req)
 
 int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
 {
-	int err = 0;
-
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
 				 sizeof(struct tegra_se_sha_context));
-	return err;
+	return 0;
 }
 
 void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
 {
+	/* do nothing */
 }
-
 
 int tegra_se_aes_cmac_init(struct ahash_request *req)
 {
@@ -1406,6 +1410,7 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	struct tegra_se_aes_cmac_context *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
 	struct tegra_se_ll *src_ll, *dst_ll;
+	struct tegra_se_slot *pslot;
 	u8 piv[TEGRA_SE_AES_IV_SIZE];
 	u32 *pbuf;
 	dma_addr_t pbuf_adr;
@@ -1418,12 +1423,22 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		return -EINVAL;
 	}
 
-	if (!key) {
-		dev_err(se_dev->dev, "invalid argument key");
-		return -EINVAL;
+	if (key) {
+		if (!ctx->slot || (ctx->slot &&
+		    ctx->slot->slot_num == ssk_slot.slot_num)) {
+			pslot = tegra_se_alloc_key_slot();
+			if (!pslot) {
+				dev_err(se_dev->dev, "no free key slot\n");
+				return -ENOMEM;
+			}
+			ctx->slot = pslot;
+		}
+		ctx->keylen = keylen;
+	} else {
+		tegra_se_free_key_slot(ctx->slot);
+		ctx->slot = &ssk_slot;
+		ctx->keylen = AES_KEYSIZE_128;
 	}
-
-	ctx->keylen = keylen;
 
 	pbuf = dma_alloc_coherent(se_dev->dev, TEGRA_SE_AES_BLOCK_SIZE,
 		&pbuf_adr, GFP_KERNEL);
@@ -1492,7 +1507,6 @@ out:
 			pbuf, pbuf_adr);
 	}
 
-
 	return 0;
 }
 
@@ -1508,19 +1522,6 @@ int tegra_se_aes_cmac_finup(struct ahash_request *req)
 
 int tegra_se_aes_cmac_cra_init(struct crypto_tfm *tfm)
 {
-	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
-	struct tegra_se_aes_cmac_context *ctx = crypto_tfm_ctx(tfm);
-	struct tegra_se_slot *pslot;
-
-	if (!ctx->slot) {
-		pslot = tegra_se_alloc_key_slot();
-		if (!pslot) {
-			dev_err(se_dev->dev, "no free key slot\n");
-			return -ENOMEM;
-		}
-		ctx->slot = pslot;
-	}
-
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
 				 sizeof(struct tegra_se_aes_cmac_context));
 
@@ -1537,7 +1538,7 @@ void tegra_se_aes_cmac_cra_exit(struct crypto_tfm *tfm)
 static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name = "cbc(aes)",
-		.cra_driver_name = "tegra-se-aes-cbc",
+		.cra_driver_name = "cbc-aes-tegra",
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
@@ -1557,7 +1558,7 @@ static struct crypto_alg aes_algs[] = {
 		}
 	}, {
 		.cra_name = "ecb(aes)",
-		.cra_driver_name = "tegra-se-aes-ecb",
+		.cra_driver_name = "ecb-aes-tegra",
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
@@ -1577,7 +1578,7 @@ static struct crypto_alg aes_algs[] = {
 		}
 	}, {
 		.cra_name = "ctr(aes)",
-		.cra_driver_name = "tegra-se-aes-ctr",
+		.cra_driver_name = "ctr-aes-tegra",
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
@@ -1598,7 +1599,7 @@ static struct crypto_alg aes_algs[] = {
 		}
 	}, {
 		.cra_name = "ofb(aes)",
-		.cra_driver_name = "tegra-se-aes-ofb",
+		.cra_driver_name = "ofb-aes-tegra",
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
@@ -1619,7 +1620,7 @@ static struct crypto_alg aes_algs[] = {
 		}
 	}, {
 		.cra_name = "ansi_cprng",
-		.cra_driver_name = "tegra_ansi_cprng",
+		.cra_driver_name = "rng-aes-tegra",
 		.cra_priority = 100,
 		.cra_flags = CRYPTO_ALG_TYPE_RNG,
 		.cra_ctxsize = sizeof(struct tegra_se_rng_context),

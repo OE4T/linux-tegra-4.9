@@ -1691,7 +1691,16 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 							dsi->info.n_init_cmd);
 			if (err < 0) {
 				dev_err(&dc->ndev->dev,
-				"dsi: error while sending dsi init cmd\n");
+				"dsi: error sending dsi init cmd\n");
+				goto fail;
+			}
+		} else if (dsi->info.dsi_late_resume_cmd) {
+			err = tegra_dsi_send_panel_cmd(dc, dsi,
+						dsi->info.dsi_late_resume_cmd,
+						dsi->info.n_late_resume_cmd);
+			if (err < 0) {
+				dev_err(&dc->ndev->dev,
+				"dsi: error sending late resume cmd\n");
 				goto fail;
 			}
 		}
@@ -1787,32 +1796,77 @@ free_cmd_pdata:
 static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data* dsi,
 						struct tegra_dsi_out* p_dsi)
 {
-	struct tegra_dsi_cmd* p_init_cmd;
+	struct tegra_dsi_cmd *p_init_cmd;
+	struct tegra_dsi_cmd *p_early_suspend_cmd;
+	struct tegra_dsi_cmd *p_late_resume_cmd;
 	struct tegra_dsi_cmd *p_suspend_cmd;
 	int err;
 
 	if (p_dsi->n_data_lanes > MAX_DSI_DATA_LANES)
 		return -EINVAL;
 
-	p_init_cmd = kzalloc(sizeof(*p_init_cmd) * p_dsi->n_init_cmd, GFP_KERNEL);
+	p_init_cmd = kzalloc(sizeof(*p_init_cmd) *
+				p_dsi->n_init_cmd, GFP_KERNEL);
 	if (!p_init_cmd)
 		return -ENOMEM;
+
+	if (p_dsi->dsi_early_suspend_cmd) {
+		p_early_suspend_cmd = kzalloc(sizeof(*p_early_suspend_cmd) *
+					p_dsi->n_early_suspend_cmd,
+					GFP_KERNEL);
+		if (!p_early_suspend_cmd) {
+			err = -ENOMEM;
+			goto err_free_init_cmd;
+		}
+	}
+
+	if (p_dsi->dsi_late_resume_cmd) {
+		p_late_resume_cmd = kzalloc(sizeof(*p_late_resume_cmd) *
+					p_dsi->n_late_resume_cmd,
+					GFP_KERNEL);
+		if (!p_late_resume_cmd) {
+			err = -ENOMEM;
+			goto err_free_p_early_suspend_cmd;
+		}
+	}
 
 	p_suspend_cmd = kzalloc(sizeof(*p_suspend_cmd) * p_dsi->n_suspend_cmd,
 				GFP_KERNEL);
 	if (!p_suspend_cmd) {
 		err = -ENOMEM;
-		goto err_free_p_init_cmd;
+		goto err_free_p_late_resume_cmd;
 	}
 
 	memcpy(&dsi->info, p_dsi, sizeof(dsi->info));
 
+	/* Copy panel init cmd */
 	err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_init_cmd,
 						p_init_cmd, p_dsi->n_init_cmd);
 	if (err < 0)
 		goto err_free;
 	dsi->info.dsi_init_cmd = p_init_cmd;
 
+	/* Copy panel early suspend cmd */
+	if (p_dsi->dsi_early_suspend_cmd) {
+		err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_early_suspend_cmd,
+					p_early_suspend_cmd,
+					p_dsi->n_early_suspend_cmd);
+		if (err < 0)
+			goto err_free;
+		dsi->info.dsi_early_suspend_cmd = p_early_suspend_cmd;
+	}
+
+	/* Copy panel late resume cmd */
+	if (p_dsi->dsi_late_resume_cmd) {
+		err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_late_resume_cmd,
+						p_late_resume_cmd,
+						p_dsi->n_late_resume_cmd);
+		if (err < 0)
+			goto err_free;
+		dsi->info.dsi_late_resume_cmd = p_late_resume_cmd;
+	}
+
+	/* Copy panel suspend cmd */
 	err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_suspend_cmd, p_suspend_cmd,
 					p_dsi->n_suspend_cmd);
 	if (err < 0)
@@ -1847,7 +1901,11 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data* dsi,
 
 err_free:
 	kfree(p_suspend_cmd);
-err_free_p_init_cmd:
+err_free_p_late_resume_cmd:
+	kfree(p_late_resume_cmd);
+err_free_p_early_suspend_cmd:
+	kfree(p_early_suspend_cmd);
+err_free_init_cmd:
 	kfree(p_init_cmd);
 	return err;
 }
@@ -1985,18 +2043,32 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+	int err;
 
+	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
 
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream(dc, dsi);
 
+	if (dsi->info.dsi_early_suspend_cmd) {
+		err = tegra_dsi_send_panel_cmd(dc, dsi,
+			dsi->info.dsi_early_suspend_cmd,
+			dsi->info.n_early_suspend_cmd);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"dsi: Error sending early suspend cmd\n");
+			goto fail;
+		}
+	}
+
 	if (!dsi->ulpm) {
 		if (tegra_dsi_enter_ulpm(dsi) < 0)
 			printk(KERN_ERR "DSI failed to enter ulpm\n");
 	}
-
+fail:
 	mutex_unlock(&dsi->lock);
+	tegra_dc_io_end(dc);
 }
 
 #ifdef CONFIG_PM
@@ -2022,14 +2094,14 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 	}
 
 	/* Suspend Panel */
-	err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_suspend_cmd,
-				dsi->info.n_suspend_cmd);
+	err = tegra_dsi_send_panel_cmd(dc, dsi,
+			dsi->info.dsi_suspend_cmd,
+			dsi->info.n_suspend_cmd);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
-			"dsi: Error while sending dsi suspend cmd\n");
+			"dsi: Error sending suspend cmd\n");
 		goto fail;
 	}
-
 	if (!dsi->ulpm) {
 		if (tegra_dsi_enter_ulpm(dsi) < 0) {
 			printk(KERN_ERR "DSI failed to enter ulpm\n");

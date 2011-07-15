@@ -342,10 +342,13 @@ static int tegra_overlay_flip(struct tegra_overlay_info *overlay,
 		return -EFAULT;
 
 	mutex_lock(&tegra_flip_lock);
+	mutex_lock(&overlay->dc->lock);
 	if (!overlay->dc->enabled) {
+		mutex_unlock(&overlay->dc->lock);
 		mutex_unlock(&tegra_flip_lock);
 		return -EFAULT;
 	}
+	mutex_unlock(&overlay->dc->lock);
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (data == NULL) {
@@ -511,11 +514,16 @@ static int tegra_overlay_ioctl_flip(struct overlay_client *client,
 {
 	int i = 0;
 	int idx = 0;
+	int err;
 	bool found_one = false;
 	struct tegra_overlay_flip_args flip_args;
 
-	if (!client->dev->dc->enabled)
+	mutex_lock(&client->dev->dc->lock);
+	if (!client->dev->dc->enabled) {
+		mutex_unlock(&client->dev->dc->lock);
 		return -EPIPE;
+	}
+	mutex_unlock(&client->dev->dc->lock);
 
 	if (copy_from_user(&flip_args, arg, sizeof(flip_args)))
 		return -EFAULT;
@@ -549,7 +557,10 @@ static int tegra_overlay_ioctl_flip(struct overlay_client *client,
 	if (!found_one)
 		return -EFAULT;
 
-	tegra_overlay_flip(client->dev, &flip_args, client->user_nvmap);
+	err = tegra_overlay_flip(client->dev, &flip_args, client->user_nvmap);
+
+	if (err)
+		return err;
 
 	if (copy_to_user(arg, &flip_args, sizeof(flip_args)))
 		return -EFAULT;

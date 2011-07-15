@@ -53,7 +53,6 @@
 #define LOCAL_TEMP_LO_LIMIT_WR		0x0C
 #define EXT_TEMP_HI_LIMIT_HI_BYTE_WR	0x0D
 #define EXT_TEMP_LO_LIMIT_HI_BYTE_WR	0x0E
-#define EXT_TEMP_RD_LOW			0x10
 #define OFFSET_WR			0x11
 #define EXT_THERM_LIMIT_WR		0x19
 #define LOCAL_THERM_LIMIT_WR		0x20
@@ -108,7 +107,7 @@ static int nct1008_get_temp(struct device *dev, u8 *pTemp)
 		goto error;
 	temp1 = value_to_temperature(pdata->ext_range, value);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LOW);
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
 	if (value < 0)
 		goto error;
 	temp2 = (value >> 6);
@@ -136,7 +135,7 @@ static ssize_t nct1008_show_temp(struct device *dev,
 	u8 temp1 = 0;
 	u8 temp = 0;
 	u8 temp2 = 0;
-	u8 value;
+	u8 value = 0;
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
@@ -146,7 +145,7 @@ static ssize_t nct1008_show_temp(struct device *dev,
 		goto error;
 	temp1 = value_to_temperature(pdata->ext_range, value);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LOW);
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
 	if (value < 0)
 		goto error;
 	temp2 = (value >> 6);
@@ -218,7 +217,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	}
 	/* check for system power down */
 	err = nct1008_get_temp(dev, &currTemp);
-	if (err < 0)
+	if (err)
 		goto error;
 
 	if (currTemp >= (int)num) {
@@ -320,11 +319,18 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	signed int temp_value = 0;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	u8 temp_value;
 	u8 data = 0;
+	u8 data_lo;
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
+
+	/* When reading the full external temperature value, read the
+	 * LSB first. This causes the MSB to be locked (that is, the
+	 * ADC does not write to it) until it is read */
+	data_lo = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
 
 	data = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
 	if (data < 0) {
@@ -333,11 +339,9 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 		return -EINVAL;
 	}
 
-	temp_value = (signed int)data;
+	temp_value = value_to_temperature(pdata->ext_range, data);
 
-	data = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
-
-	return sprintf(buf, "%d.%d\n", temp_value, (25 * (data >> 6)));
+	return sprintf(buf, "%d.%d\n", temp_value, (25 * (data_lo >> 6)));
 }
 
 static DEVICE_ATTR(temperature, S_IRUGO, nct1008_show_temp, NULL);
@@ -651,7 +655,7 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	temp = value_to_temperature(pdata->ext_range, value);
 	dev_dbg(&client->dev, "\n initial local temp = %d ", temp);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LOW);
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
 	if (value < 0) {
 		err = value;
 		goto error;

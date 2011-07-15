@@ -161,7 +161,7 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 
 
 static const char *s_syncpt_names[32] = {
-	"gfx_host", "", "", "", "", "", "", "", "", "", "",
+	"gfx_host", "", "", "", "", "", "", "", "", "", "avp_0",
 	"csi_vi_0", "csi_vi_1", "vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
 	"2d_0", "2d_1",
 	"", "",

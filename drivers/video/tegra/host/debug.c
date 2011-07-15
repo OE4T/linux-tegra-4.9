@@ -111,6 +111,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 
 	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_null_kickoff_pid);
+
+	nvhost_debug_scale_init(de);
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

@@ -87,4 +87,10 @@ static inline void nvhost_module_idle(struct nvhost_module *mod)
 	nvhost_module_idle_mult(mod, 1);
 }
 
+/*
+ * call when performing submit to notify scaling mechanism that 3d module is
+ * in use
+ */
+void module3d_notify_busy(void);
+
 #endif

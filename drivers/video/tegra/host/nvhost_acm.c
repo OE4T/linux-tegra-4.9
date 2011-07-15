@@ -29,6 +29,8 @@
 #include <mach/powergate.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
+#include <linux/debugfs.h>
+#include "nvhost_scale.h"
 
 #define ACM_POWERDOWN_HANDLER_DELAY_MSEC  25
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
@@ -57,6 +59,7 @@ void nvhost_module_busy(struct nvhost_module *mod)
 static void powerdown_handler(struct work_struct *work)
 {
 	struct nvhost_module *mod;
+
 	mod = container_of(to_delayed_work(work), struct nvhost_module, powerdown);
 	mutex_lock(&mod->lock);
 	if ((atomic_read(&mod->refcount) == 0) && mod->powered) {
@@ -78,6 +81,222 @@ static void powerdown_handler(struct work_struct *work)
 	mutex_unlock(&mod->lock);
 }
 
+/*
+ * 3d clock scaling
+ *
+ * module3d_notify_busy() is called upon submit, module3d_notify_idle() is
+ * called when all outstanding submits are completed. Idle times are measured
+ * over a fixed time period (scale3d.p_period). If the 3d module idle time
+ * percentage goes over the limit (set in scale3d.p_idle_max), 3d clocks are
+ * scaled down. If the percentage goes under the minimum limit (set in
+ * scale3d.p_idle_min), 3d clocks are scaled up. An additional test is made
+ * over the time frame given in scale3d.p_fast_response for clocking up
+ * quickly in response to sudden load peaks.
+ */
+static struct scale3d_info_rec scale3d;
+
+static void scale_3d_clocks(unsigned long percent)
+{
+	unsigned long hz, curr;
+
+	if (!tegra_is_clk_enabled(scale3d.clk_3d))
+		return;
+
+	if (tegra_chip_id == TEGRA30)
+		if (!tegra_is_clk_enabled(scale3d.clk_3d2))
+			return;
+
+	curr = clk_get_rate(scale3d.clk_3d);
+	hz = percent * (curr / 100);
+
+	if (tegra_chip_id == TEGRA30)
+		clk_set_rate(scale3d.clk_3d2, 0);
+	clk_set_rate(scale3d.clk_3d, hz);
+}
+
+static void scale_3d_clocks_handler(struct work_struct *work)
+{
+	unsigned int scale;
+
+	spin_lock(&scale3d.lock);
+	scale = scale3d.scale;
+	spin_unlock(&scale3d.lock);
+
+	if (scale != 0) {
+		mutex_lock(&scale3d.set_lock);
+		scale_3d_clocks(scale);
+		mutex_unlock(&scale3d.set_lock);
+	}
+}
+
+static void scale3d_init(struct nvhost_module *mod)
+{
+	spin_lock_init(&scale3d.lock);
+	mutex_init(&scale3d.set_lock);
+
+	scale3d.clk_3d = mod->clk[0];
+	if (tegra_chip_id == TEGRA30)
+		scale3d.clk_3d2 = mod->clk[1];
+
+	INIT_WORK(&scale3d.work, scale_3d_clocks_handler);
+
+	/* set scaling parameter defaults */
+	scale3d.enable = 1;
+	scale3d.p_period = 1200000;
+	scale3d.p_idle_min = 17;
+	scale3d.p_idle_max = 17;
+	scale3d.p_fast_response = 16000;
+	scale3d.p_verbosity = 0;
+
+	scale3d_reset();
+
+	scale3d.init = 1;
+}
+
+/* set 3d clocks to max */
+static void reset_3d_clocks(void)
+{
+	unsigned long hz;
+
+	mutex_lock(&scale3d.set_lock);
+	hz = clk_round_rate(scale3d.clk_3d, UINT_MAX);
+	clk_set_rate(scale3d.clk_3d, hz);
+	if (tegra_chip_id == TEGRA30)
+		clk_set_rate(scale3d.clk_3d2, hz);
+	mutex_unlock(&scale3d.set_lock);
+}
+
+int scale3d_is_enabled(void)
+{
+	int enable;
+
+	spin_lock(&scale3d.lock);
+	enable = scale3d.enable;
+	spin_unlock(&scale3d.lock);
+
+	return enable;
+}
+
+void scale3d_enable(int enable)
+{
+	int disable = 0;
+
+	spin_lock(&scale3d.lock);
+
+	if (enable)
+		scale3d.enable = 1;
+	else {
+		scale3d.enable = 0;
+		disable = 1;
+	}
+
+	spin_unlock(&scale3d.lock);
+
+	if (disable)
+		reset_3d_clocks();
+}
+
+static void reset_scaling_counters(ktime_t time)
+{
+	scale3d.idle_total = 0;
+	scale3d.last_idle = time;
+	scale3d.last_busy = time;
+	scale3d.idle_frame = time;
+}
+
+static void scaling_state_check(ktime_t time)
+{
+	unsigned long dt;
+
+	/* check for load peaks */
+	dt = (unsigned long) ktime_us_delta(time, scale3d.fast_frame);
+	if (dt > scale3d.p_fast_response) {
+		unsigned long idleness = (scale3d.idle_total * 100) / dt;
+		scale3d.fast_frame = time;
+		/* if too busy, scale up */
+		if (idleness < scale3d.p_idle_min) {
+			if (scale3d.p_verbosity > 5)
+				pr_info("scale3d: %ld%% busy\n",
+					100 - idleness);
+
+			scale3d.scale = 200;
+			schedule_work(&scale3d.work);
+			reset_scaling_counters(time);
+			return;
+		}
+	}
+
+	dt = (unsigned long) ktime_us_delta(time, scale3d.idle_frame);
+	if (dt > scale3d.p_period) {
+		unsigned long idleness = (scale3d.idle_total * 100) / dt;
+
+		if (scale3d.p_verbosity > 5)
+			pr_info("scale3d: idle %lu, ~%lu%%\n",
+				scale3d.idle_total, idleness);
+
+		if (idleness > scale3d.p_idle_max) {
+			/* if idle time is high, clock down */
+			scale3d.scale = 100 - (idleness - scale3d.p_idle_min);
+			schedule_work(&scale3d.work);
+		} else if (idleness < scale3d.p_idle_min) {
+			/* if idle time is low, clock up */
+			scale3d.scale = 200;
+			schedule_work(&scale3d.work);
+		}
+		reset_scaling_counters(time);
+	}
+}
+
+static void module3d_notify_idle(void)
+{
+	spin_lock(&scale3d.lock);
+
+	if (!scale3d.enable)
+		goto done;
+
+	scale3d.last_idle = ktime_get();
+	scale3d.is_idle = 1;
+
+	scaling_state_check(scale3d.last_idle);
+
+done:
+	spin_unlock(&scale3d.lock);
+}
+
+void module3d_notify_busy(void)
+{
+	unsigned long idle;
+	ktime_t t;
+
+	spin_lock(&scale3d.lock);
+
+	if (!scale3d.enable)
+		goto done;
+
+	t = ktime_get();
+
+	if (scale3d.is_idle) {
+		scale3d.last_busy = t;
+		idle = (unsigned long)
+			ktime_us_delta(scale3d.last_busy, scale3d.last_idle);
+		scale3d.idle_total += idle;
+		scale3d.is_idle = 0;
+	}
+
+	scaling_state_check(t);
+
+done:
+	spin_unlock(&scale3d.lock);
+}
+
+void scale3d_reset()
+{
+	ktime_t t = ktime_get();
+	spin_lock(&scale3d.lock);
+	reset_scaling_counters(t);
+	spin_unlock(&scale3d.lock);
+}
+
 void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 {
 	bool kick = false;
@@ -91,8 +310,12 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 	}
 	mutex_unlock(&mod->lock);
 
-	if (kick)
+	if (kick) {
 		wake_up(&mod->idle);
+
+		if (strcmp(mod->name, "gr3d") == 0)
+			module3d_notify_idle();
+	}
 }
 
 static const char *get_module_clk_id(const char *module, int index)
@@ -273,6 +496,8 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
 
 	if (strcmp(name, "gr3d") == 0) {
+		if (!scale3d.init)
+			scale3d_init(mod);
 		mod->powergate_id = TEGRA_POWERGATE_3D;
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		mod->powergate_id2 = TEGRA_POWERGATE_3D1;
@@ -354,6 +579,8 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 		printk("tegra_grhost: entered idle\n");
 
 	flush_delayed_work(&mod->powerdown);
+	cancel_work_sync(&scale3d.work);
+
 	if (system_suspend)
 		printk("tegra_grhost: flushed delayed work\n");
 	BUG_ON(mod->powered);
@@ -362,7 +589,41 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 void nvhost_module_deinit(struct nvhost_module *mod)
 {
 	int i;
+
 	nvhost_module_suspend(mod, false);
 	for (i = 0; i < mod->num_clks; i++)
 		clk_put(mod->clk[i]);
+}
+
+
+/*
+ * debugfs parameters to control 3d clock scaling
+ */
+
+void nvhost_debug_scale_init(struct dentry *de)
+{
+	struct dentry *d, *f;
+
+	d = debugfs_create_dir("scaling", de);
+	if (!d) {
+		pr_err("scale3d: can\'t create debugfs directory\n");
+		return;
+	}
+
+#define CREATE_SCALE3D_FILE(fname) \
+	do {\
+		f = debugfs_create_u32(#fname, S_IRUGO | S_IWUSR, d,\
+			&scale3d.p_##fname);\
+		if (NULL == f) {\
+			pr_err("scale3d: can\'t create file " #fname "\n");\
+			return;\
+		} \
+	} while (0)
+
+	CREATE_SCALE3D_FILE(fast_response);
+	CREATE_SCALE3D_FILE(idle_min);
+	CREATE_SCALE3D_FILE(idle_max);
+	CREATE_SCALE3D_FILE(period);
+	CREATE_SCALE3D_FILE(verbosity);
+#undef CREATE_SCALE3D_FILE
 }

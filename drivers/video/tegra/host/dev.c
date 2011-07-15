@@ -42,6 +42,8 @@
 #include <mach/nvmap.h>
 #include <mach/gpufuse.h>
 
+#include "nvhost_scale.h"
+
 #define DRIVER_NAME "tegra_grhost"
 #define IFACE_NAME "nvhost"
 
@@ -839,6 +841,46 @@ static int nvhost_init_chip_support(struct nvhost_master *host)
 
 	return 0;
 }
+
+
+static ssize_t enable_3d_scaling_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t res;
+
+	res = snprintf(buf, PAGE_SIZE, "%d\n", scale3d_is_enabled());
+
+	return res;
+}
+
+static ssize_t enable_3d_scaling_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned long val = 0;
+
+	if (strict_strtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	scale3d_enable(val);
+
+	return count;
+}
+
+static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUSR,
+	enable_3d_scaling_show, enable_3d_scaling_store);
+
+void nvhost_remove_sysfs(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_enable_3d_scaling);
+}
+
+void nvhost_create_sysfs(struct device *dev)
+{
+	int error = device_create_file(dev, &dev_attr_enable_3d_scaling);
+	if (error)
+		dev_err(dev, "failed to create sysfs attributes");
+}
+
 static int nvhost_probe(struct platform_device *pdev)
 {
 	struct nvhost_master *host;
@@ -925,6 +967,8 @@ static int nvhost_probe(struct platform_device *pdev)
 
 	nvhost_debug_init(host);
 
+	nvhost_create_sysfs(&pdev->dev);
+
 	dev_info(&pdev->dev, "initialized\n");
 	return 0;
 
@@ -941,6 +985,7 @@ static int __exit nvhost_remove(struct platform_device *pdev)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	nvhost_remove_chip_support(host);
+	nvhost_remove_sysfs(&pdev->dev);
 	/*kfree(host);?*/
 	return 0;
 }
@@ -964,6 +1009,7 @@ static int nvhost_resume(struct platform_device *pdev)
 	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_reset(&host->syncpt);
 	clk_disable(host->mod.clk[0]);
+	scale3d_reset();
 	dev_info(&pdev->dev, "resumed\n");
 	return 0;
 }

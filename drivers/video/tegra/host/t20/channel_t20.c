@@ -171,6 +171,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 
 	/* keep module powered */
 	nvhost_module_busy(&channel->mod);
+	if (strcmp(channel->mod.name, "gr3d") == 0)
+		module3d_notify_busy();
 
 	/* get submit lock */
 	err = mutex_lock_interruptible(&channel->submitlock);
@@ -319,6 +321,9 @@ static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 		mutex_unlock(&ch->submitlock);
 		return;
 	}
+
+	if (strcmp(mod->name, "gr3d") == 0)
+		module3d_notify_busy();
 
 	hwctx_to_save->valid = true;
 	ch->ctxhandler.get(hwctx_to_save);

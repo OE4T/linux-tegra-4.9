@@ -22,6 +22,8 @@
 #ifndef __NVHOST_DEBUG_H
 #define __NVHOST_DEBUG_H
 
+#include <linux/debugfs.h>
+
 struct output {
 	void (*fn)(void *ctx, const char* str, size_t len);
 	void *ctx;
@@ -40,4 +42,5 @@ static inline void write_to_printk(void *ctx, const char* str, size_t len)
 
 void nvhost_debug_output(struct output *o, const char* fmt, ...);
 
+void nvhost_debug_scale_init(struct dentry *de);
 #endif /*__NVHOST_DEBUG_H */

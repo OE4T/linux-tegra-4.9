@@ -97,6 +97,7 @@ struct tegra_dc_dsi_data {
 
 	struct clk		*dc_clk;
 	struct clk		*dsi_clk;
+	bool			clk_ref;
 
 	struct mutex	lock;
 
@@ -417,6 +418,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->controller_index = dc->ndev->id;
 	dsi->ulpm = false;
 	dsi->enabled = false;
+	dsi->clk_ref = false;
 
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
@@ -465,7 +467,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 							dsi->target_hs_clk_khz);
 
 	dsi->controller_index = dc->ndev->id;
-	dsi->ulpm = false;
 
 #if DSI_USE_SYNC_POINTS
 	dsi->syncpt_id = NVSYNCPT_DSI;
@@ -901,8 +902,6 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	val = PIXEL_CLK_DIVIDER_PCD1 |
 				SHIFT_CLK_DIVIDER(shift_clk_div_register);
 	tegra_dc_writel(dc, val, DC_DISP_DISP_CLOCK_CONTROL);
-
-	clk_enable(dsi->dc_clk);
 }
 
 static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
@@ -919,6 +918,10 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 
 	dc->mode.pclk = clk*1000;
 	tegra_dc_setup_clk(dc, dsi->dsi_clk);
+	if (dsi->clk_ref == true)
+		clk_disable(dsi->dsi_clk);
+	else
+		dsi->clk_ref = true;
 	clk_enable(dsi->dsi_clk);
 	tegra_periph_reset_deassert(dsi->dsi_clk);
 
@@ -2123,6 +2126,7 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 	dsi->enabled = false;
 
 	clk_disable(dsi->dsi_clk);
+	dsi->clk_ref = false;
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);

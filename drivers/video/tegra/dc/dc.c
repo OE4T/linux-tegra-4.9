@@ -1319,6 +1319,9 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 {
 	struct tegra_dc_mode mode;
 
+	if (!fbmode->pixclock)
+		return -EINVAL;
+
 	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
 	mode.h_sync_width = fbmode->hsync_len;
 	mode.v_sync_width = fbmode->vsync_len;

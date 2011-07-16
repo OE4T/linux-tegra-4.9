@@ -82,8 +82,11 @@ struct tegra_dc_ext_flip_windowattr {
 	struct timespec timestamp;
 	__u32	pre_syncpt_id;
 	__u32	pre_syncpt_val;
+	/* These are optional; if zero, U and V are taken from buff_id */
+	__u32	buff_id_u;
+	__u32	buff_id_v;
 	/* Leave some wiggle room for future expansion */
-	__u32   pad[8];
+	__u32   pad[6];
 };
 
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3

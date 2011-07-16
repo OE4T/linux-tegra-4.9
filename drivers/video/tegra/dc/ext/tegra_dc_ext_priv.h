@@ -36,6 +36,13 @@ struct tegra_dc_ext_user {
 	struct nvmap_client	*nvmap;
 };
 
+enum {
+	TEGRA_DC_Y,
+	TEGRA_DC_U,
+	TEGRA_DC_V,
+	TEGRA_DC_NUM_PLANES,
+};
+
 struct tegra_dc_ext_win {
 	struct tegra_dc_ext	*ext;
 
@@ -45,7 +52,8 @@ struct tegra_dc_ext_win {
 
 	struct mutex		lock;
 
-	struct nvmap_handle_ref	*cur_handle;
+	/* Current nvmap handle (if any) for Y, U, V planes */
+	struct nvmap_handle_ref	*cur_handle[TEGRA_DC_NUM_PLANES];
 
 	struct workqueue_struct	*flip_wq;
 };

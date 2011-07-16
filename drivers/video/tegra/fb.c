@@ -111,8 +111,8 @@ static int tegra_fb_set_par(struct fb_info *info)
 		tegra_fb->win->stride = round_up(info->fix.line_length,
 						TEGRA_LINEAR_PITCH_ALIGNMENT);
 		tegra_fb->win->stride_uv = 0;
-		tegra_fb->win->offset_u = 0;
-		tegra_fb->win->offset_v = 0;
+		tegra_fb->win->phys_addr_u = 0;
+		tegra_fb->win->phys_addr_v = 0;
 	}
 
 	if (var->pixclock) {
@@ -436,8 +436,8 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	win->z = 0;
 	win->phys_addr = fb_phys;
 	win->virt_addr = fb_base;
-	win->offset_u = 0;
-	win->offset_v = 0;
+	win->phys_addr_u = 0;
+	win->phys_addr_v = 0;
 	win->stride = fb_data->xres * fb_data->bits_per_pixel / 8;
 	/* Pad the stride to 16-byte boundary. */
 	win->stride = round_up(win->stride, TEGRA_LINEAR_PITCH_ALIGNMENT);

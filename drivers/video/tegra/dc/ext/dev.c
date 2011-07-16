@@ -45,9 +45,10 @@ static int head_count;
 
 struct tegra_dc_ext_flip_win {
 	struct tegra_dc_ext_flip_windowattr	attr;
-	struct nvmap_handle_ref			*handle;
-	/* ugh. is this really necessary */
+	struct nvmap_handle_ref			*handle[TEGRA_DC_NUM_PLANES];
 	dma_addr_t				phys_addr;
+	dma_addr_t				phys_addr_u;
+	dma_addr_t				phys_addr_v;
 	u32					syncpt_max;
 };
 
@@ -178,9 +179,9 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 {
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
 
-	if (flip_win->handle == NULL) {
+	if (flip_win->handle[TEGRA_DC_Y] == NULL) {
 		win->flags = 0;
-		ext_win->cur_handle = NULL;
+		memset(ext_win->cur_handle, 0, sizeof(ext_win->cur_handle));
 		return 0;
 	}
 
@@ -200,12 +201,20 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	win->out_w = flip_win->attr.out_w;
 	win->out_h = flip_win->attr.out_h;
 	win->z = flip_win->attr.z;
-	ext_win->cur_handle = flip_win->handle;
+	memcpy(ext_win->cur_handle, flip_win->handle,
+	       sizeof(ext_win->cur_handle));
 
 	/* XXX verify that this won't read outside of the surface */
 	win->phys_addr = flip_win->phys_addr + flip_win->attr.offset;
-	win->offset_u = flip_win->attr.offset_u + flip_win->attr.offset;
-	win->offset_v = flip_win->attr.offset_v + flip_win->attr.offset;
+
+	win->phys_addr_u = flip_win->handle[TEGRA_DC_U] ?
+		flip_win->phys_addr_u : flip_win->phys_addr;
+	win->phys_addr_u += flip_win->attr.offset_u;
+
+	win->phys_addr_v = flip_win->handle[TEGRA_DC_V] ?
+		flip_win->phys_addr_v : flip_win->phys_addr;
+	win->phys_addr_v += flip_win->attr.offset_v;
+
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
 
@@ -226,7 +235,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		container_of(work, struct tegra_dc_ext_flip_data, work);
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc_win *wins[DC_N_WINDOWS];
-	struct nvmap_handle_ref *unpin_handles[DC_N_WINDOWS];
+	struct nvmap_handle_ref *unpin_handles[DC_N_WINDOWS *
+					       TEGRA_DC_NUM_PLANES];
 	int i, nr_unpin = 0, nr_win = 0;
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
@@ -241,9 +251,16 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		win = tegra_dc_get_window(ext->dc, index);
 		ext_win = &ext->win[index];
 
-		if ((win->flags & TEGRA_WIN_FLAG_ENABLED) &&
-		    ext_win->cur_handle)
-			unpin_handles[nr_unpin++] = ext_win->cur_handle;
+		if (win->flags & TEGRA_WIN_FLAG_ENABLED) {
+			int j;
+			for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
+				if (!ext_win->cur_handle[j])
+					continue;
+
+				unpin_handles[nr_unpin++] =
+					ext_win->cur_handle[j];
+			}
+		}
 
 		tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
 
@@ -384,10 +401,34 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 			continue;
 
 		ret = tegra_dc_ext_pin_window(user, flip_win->attr.buff_id,
-					      &flip_win->handle,
+					      &flip_win->handle[TEGRA_DC_Y],
 					      &flip_win->phys_addr);
 		if (ret)
 			goto fail_pin;
+
+		if (flip_win->attr.buff_id_u) {
+			ret = tegra_dc_ext_pin_window(user,
+					      flip_win->attr.buff_id_u,
+					      &flip_win->handle[TEGRA_DC_U],
+					      &flip_win->phys_addr_u);
+			if (ret)
+				goto fail_pin;
+		} else {
+			flip_win->handle[TEGRA_DC_U] = NULL;
+			flip_win->phys_addr_u = 0;
+		}
+
+		if (flip_win->attr.buff_id_v) {
+			ret = tegra_dc_ext_pin_window(user,
+					      flip_win->attr.buff_id_v,
+					      &flip_win->handle[TEGRA_DC_V],
+					      &flip_win->phys_addr_v);
+			if (ret)
+				goto fail_pin;
+		} else {
+			flip_win->handle[TEGRA_DC_V] = NULL;
+			flip_win->phys_addr_v = 0;
+		}
 	}
 
 	ret = lock_windows_for_flip(user, args);
@@ -428,12 +469,15 @@ unlock:
 	unlock_windows_for_flip(user, args);
 
 fail_pin:
-	while (i--) {
-		if (!data->win[i].handle)
-			continue;
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		int j;
+		for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
+			if (!data->win[i].handle[j])
+				continue;
 
-		nvmap_unpin(ext->nvmap, data->win[i].handle);
-		nvmap_free(ext->nvmap, data->win[i].handle);
+			nvmap_unpin(ext->nvmap, data->win[i].handle[j]);
+			nvmap_free(ext->nvmap, data->win[i].handle[j]);
+		}
 	}
 	kfree(data);
 

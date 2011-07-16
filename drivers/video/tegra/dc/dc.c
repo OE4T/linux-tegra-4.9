@@ -1030,20 +1030,17 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
 		tegra_dc_writel(dc,
-				(unsigned long)win->phys_addr +
-				(unsigned long)win->offset,
+				(unsigned long)win->phys_addr,
 				DC_WINBUF_START_ADDR);
 
 		if (!yuvp) {
 			tegra_dc_writel(dc, win->stride, DC_WIN_LINE_STRIDE);
 		} else {
 			tegra_dc_writel(dc,
-					(unsigned long)win->phys_addr +
-					(unsigned long)win->offset_u,
+					(unsigned long)win->phys_addr_u,
 					DC_WINBUF_START_ADDR_U);
 			tegra_dc_writel(dc,
-					(unsigned long)win->phys_addr +
-					(unsigned long)win->offset_v,
+					(unsigned long)win->phys_addr_v,
 					DC_WINBUF_START_ADDR_V);
 			tegra_dc_writel(dc,
 					LINE_STRIDE(win->stride) |

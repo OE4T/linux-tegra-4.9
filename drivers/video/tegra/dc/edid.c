@@ -181,6 +181,14 @@ int tegra_edid_parse_ext_block(u8 *raw, int idx, struct tegra_edid *edid)
 		if (*ptr <= 3)
 			edid->eld.eld_ver = 0x02;
 		edid->eld.cea_edid_ver = ptr[1];
+
+		/* check for basic audio support in CEA 861 block */
+		if(raw[3] & (1<<6)) {
+			/* For basic audio, set spk_alloc to Left+Right.
+			 * If there is a Speaker Alloc block this will
+			 * get over written with that value */
+			edid->eld.spk_alloc = 1;
+		}
 	}
 	ptr = &raw[4];
 

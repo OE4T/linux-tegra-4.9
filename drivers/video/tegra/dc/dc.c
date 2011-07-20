@@ -1542,10 +1542,12 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
-	if (calc_ref_to_sync(&mode)) {
-		dev_err(&dc->ndev->dev, "bad href/vref values, overriding.\n");
-		mode.h_ref_to_sync = 11;
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		/* HDMI controller requires h_ref=1, v_ref=1 */
+		mode.h_ref_to_sync = 1;
 		mode.v_ref_to_sync = 1;
+	} else {
+		calc_ref_to_sync(&mode);
 	}
 	if (!check_ref_to_sync(&mode)) {
 		dev_err(&dc->ndev->dev,

@@ -402,16 +402,31 @@ surf_err:
 	mutex_unlock(&tegra_flip_lock);
 	return err;
 }
+
 static void tegra_overlay_set_emc_freq(struct tegra_overlay_info *dev)
 {
 	unsigned long emc_freq = 0;
 	int i;
+	struct tegra_dc_win *win;
+	struct tegra_dc_win *wins[DC_N_WINDOWS];
 
-	for (i = 0; i < dev->dc->n_windows; i++) {
-		if (dev->overlays[i].owner != NULL)
-			emc_freq += dev->dc->mode.pclk*(i==1?2:1) *
-					CONFIG_TEGRA_EMC_TO_DDR_CLOCK;
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		win = tegra_dc_get_window(dev->dc, i);
+		wins[i] = win;
 	}
+
+	emc_freq = tegra_dc_get_bandwidth(wins, dev->dc->n_windows);
+
+	if (emc_freq  > tegra_dc_get_default_emc_clk_rate(dev->dc)) {
+		WARN_ONCE(emc_freq > tegra_dc_get_default_emc_clk_rate(dev->dc),
+				"Overlay: calculated EMC bandwidth is %luHz greater "
+				"than maximum allowed %luHz. Setting to max.\n",
+				emc_freq,
+				tegra_dc_get_default_emc_clk_rate(dev->dc));
+
+		emc_freq = tegra_dc_get_default_emc_clk_rate(dev->dc);
+	}
+
 	clk_set_rate(dev->dc->emc_clk, emc_freq);
 }
 

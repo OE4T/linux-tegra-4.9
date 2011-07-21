@@ -733,11 +733,13 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	return ret << 16; /* restore the scaling we did above */
 }
 
-static unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[],
-	int n)
+unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n)
 {
 	int i;
 	struct tegra_dc *dc;
+
+	if (windows[0] == NULL)
+		return tegra_dc_get_default_emc_clk_rate(dc);
 
 	dc = windows[0]->dc;
 	BUG_ON(n > DC_N_WINDOWS);
@@ -745,7 +747,8 @@ static unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[],
 	 * bandwidths */
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *w = windows[i];
-		w->new_bandwidth = tegra_dc_calc_win_bandwidth(dc, w);
+		if (w)
+			w->new_bandwidth = tegra_dc_calc_win_bandwidth(dc, w);
 	}
 
 	return tegra_dc_find_max_bandwidth(windows, n);

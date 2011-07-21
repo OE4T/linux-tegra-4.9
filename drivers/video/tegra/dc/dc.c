@@ -49,6 +49,13 @@
 
 #define TEGRA_CRC_LATCHED_DELAY		34
 
+#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+#define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
+#else
+/* ignore underflows when on simulation and fpga platform */
+#define ALL_UF_INT (0)
+#endif
+
 static int no_vsync;
 
 module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
@@ -955,13 +962,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	if (!no_vsync) {
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-		val |= (FRAME_END_INT | V_BLANK_INT | WIN_A_UF_INT | \
-				WIN_B_UF_INT | WIN_C_UF_INT);
+		val |= (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 	} else {
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-		val &= ~(FRAME_END_INT | V_BLANK_INT | WIN_A_UF_INT | \
-				WIN_B_UF_INT | WIN_C_UF_INT);
+		val &= ~(FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
 
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 	}
@@ -1622,7 +1627,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	 * if we get 4 consecutive frames with underflows, assume we're
 	 * hosed and reset.
 	 */
-	underflow_mask = status & (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT);
+	underflow_mask = status & ALL_UF_INT;
 
 	if (underflow_mask) {
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
@@ -1824,12 +1829,8 @@ static void tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_writel(dc, (FRAME_END_INT |
 			     V_BLANK_INT |
-			     WIN_A_UF_INT |
-			     WIN_B_UF_INT |
-			     WIN_C_UF_INT), DC_CMD_INT_MASK);
-	tegra_dc_writel(dc, (WIN_A_UF_INT |
-			     WIN_B_UF_INT |
-			     WIN_C_UF_INT), DC_CMD_INT_ENABLE);
+			     ALL_UF_INT), DC_CMD_INT_MASK);
+	tegra_dc_writel(dc, ALL_UF_INT, DC_CMD_INT_ENABLE);
 
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
 

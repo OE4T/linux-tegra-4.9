@@ -479,7 +479,7 @@ static void nct1008_work_func(struct work_struct *work)
 	if (temperature >= data->plat_data.throttling_ext_limit) {
 		/* start throttling */
 		therm_throttle(data, true);
-	} else if (temperature <
+	} else if (temperature <=
 		   (data->plat_data.throttling_ext_limit - ALERT_HYSTERESIS)) {
 		/* switch off throttling */
 		therm_throttle(data, false);

@@ -172,7 +172,8 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		mod->powergate_id2 = TEGRA_POWERGATE_3D1;
 #endif
-	}
+	} else if (strcmp(name, "mpe") == 0)
+		mod->powergate_id = TEGRA_POWERGATE_MPE;
 
 	if (mod->powergate_id == TEGRA_POWERGATE_3D
 		&& _3d_powergating_disabled()) {

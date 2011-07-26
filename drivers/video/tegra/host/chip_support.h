@@ -23,6 +23,7 @@
 #define _NVHOST_CHIP_SUPPORT_H_
 
 struct output;
+struct nvhost_waitchk;
 
 struct nvhost_chip_support {
 	struct {

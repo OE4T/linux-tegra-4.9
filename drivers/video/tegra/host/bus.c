@@ -2,11 +2,9 @@
  * drivers/video/tegra/host/bus.c
  *
  * Copyright (C) 2010 Google, Inc.
+ * Author: Erik Gilling <konkers@google.com>
  *
- * Author:
- *	Erik Gilling <konkers@google.com>
- *
- * based heavily on drivers/base/platform.c
+ * Copyright (C) 2010-2011 NVIDIA Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,8 +19,7 @@
 
 #include <linux/pm_runtime.h>
 #include <linux/export.h>
-
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 
 #include "dev.h"
 

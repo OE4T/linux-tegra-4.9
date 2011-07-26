@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@
 #define NVHOST_MAX_HANDLES 1280
 
 struct nvhost_master;
+struct nvhost_waitchk;
 
 struct nvhost_channeldesc {
 	const char *name;

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +25,12 @@
 
 #include <linux/kernel.h>
 #include <linux/sched.h>
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/nvmap.h>
 #include <asm/atomic.h>
+
+struct nvhost_syncpt;
+struct nvhost_waitchk;
 
 /* host managed and invalid syncpt id */
 #define NVSYNCPT_GRAPHICS_HOST		     (0)

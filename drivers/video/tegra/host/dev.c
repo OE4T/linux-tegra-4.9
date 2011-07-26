@@ -38,7 +38,8 @@
 
 #include <asm/io.h>
 
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
+#include <linux/nvhost_ioctl.h>
 #include <mach/nvmap.h>
 #include <mach/gpufuse.h>
 

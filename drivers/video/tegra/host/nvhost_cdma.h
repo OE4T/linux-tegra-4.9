@@ -26,7 +26,7 @@
 #include <linux/sched.h>
 #include <linux/semaphore.h>
 
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/nvmap.h>
 
 #include "nvhost_acm.h"

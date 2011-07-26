@@ -26,7 +26,7 @@
 #include <linux/string.h>
 #include <linux/kref.h>
 
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/nvmap.h>
 
 struct nvhost_channel;

@@ -27,7 +27,6 @@
 #include <asm/atomic.h>
 
 #include <mach/dc.h>
-#include <mach/nvhost.h>
 #include <mach/kfuse.h>
 
 #include <video/nvhdcp.h>

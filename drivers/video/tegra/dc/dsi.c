@@ -29,7 +29,7 @@
 #include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <../gpio-names.h>
 
 #include "dc_reg.h"

@@ -40,7 +40,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/mc.h>
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/latency_allowance.h>
 
 #include "dc_reg.h"

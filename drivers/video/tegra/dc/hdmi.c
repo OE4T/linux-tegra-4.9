@@ -34,7 +34,7 @@
 #include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/hdmi-audio.h>
 
 #include <video/tegrafb.h>

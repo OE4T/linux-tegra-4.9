@@ -36,7 +36,7 @@
 
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/nvhost.h>
+#include <linux/nvhost.h>
 #include <mach/nvmap.h>
 
 #include "host/dev.h"

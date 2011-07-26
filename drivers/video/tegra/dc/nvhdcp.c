@@ -999,8 +999,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 		mutex_unlock(&nvhdcp->lock);
-		wait_event_interruptible_timeout(wq_worker, 0,
-				msecs_to_jiffies(1500));
+		wait_event_interruptible_timeout(wq_worker,
+			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
 		mutex_lock(&nvhdcp->lock);
 
 	}
@@ -1012,8 +1012,11 @@ failure:
 	} else {
 		nvhdcp_err("nvhdcp failure - renegotiating in 1.75 seconds\n");
 		mutex_unlock(&nvhdcp->lock);
-		msleep(1750);
+		wait_event_interruptible_timeout(wq_worker,
+			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1750));
 		mutex_lock(&nvhdcp->lock);
+		if (!nvhdcp_is_plugged(nvhdcp))
+			goto lost_hdmi;
 		queue_work(nvhdcp->downstream_wq, &nvhdcp->work);
 	}
 

@@ -122,12 +122,10 @@ static const char *get_module_clk_id(const char *module, int index)
 	return NULL;
 }
 
-/* Not all hardware revisions support power gating */
+/* 3D power gating disabled as it causes syncpt hangs */
 static bool _3d_powergating_disabled(void)
 {
-	return tegra_chip_id < TEGRA30
-		|| (tegra_chip_id == TEGRA30
-			&& tegra_revision == TEGRA_REVISION_A01);
+	return 1;
 }
 
 int nvhost_module_init(struct nvhost_module *mod, const char *name,

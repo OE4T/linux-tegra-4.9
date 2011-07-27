@@ -76,7 +76,7 @@ enum tegra_nvhdcp_state {
 };
 
 struct tegra_nvhdcp {
-	struct work_struct		work;
+	struct delayed_work		work;
 	struct tegra_dc_hdmi_data	*hdmi;
 	struct workqueue_struct		*downstream_wq;
 	struct mutex			lock;
@@ -829,7 +829,7 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 static void nvhdcp_downstream_worker(struct work_struct *work)
 {
 	struct tegra_nvhdcp *nvhdcp =
-	        container_of(work, struct tegra_nvhdcp, work);
+		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
 	struct tegra_dc_hdmi_data *hdmi = nvhdcp->hdmi;
 	int e;
 	u8 b_caps;
@@ -1011,13 +1011,10 @@ failure:
 	        nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
 	} else {
 		nvhdcp_err("nvhdcp failure - renegotiating in 1.75 seconds\n");
-		mutex_unlock(&nvhdcp->lock);
-		wait_event_interruptible_timeout(wq_worker,
-			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1750));
-		mutex_lock(&nvhdcp->lock);
 		if (!nvhdcp_is_plugged(nvhdcp))
 			goto lost_hdmi;
-		queue_work(nvhdcp->downstream_wq, &nvhdcp->work);
+		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
+						msecs_to_jiffies(1750));
 	}
 
 lost_hdmi:
@@ -1039,7 +1036,8 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp)) {
 		nvhdcp->fail_count = 0;
-		queue_work(nvhdcp->downstream_wq, &nvhdcp->work);
+		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
+						msecs_to_jiffies(100));
 	}
 	return 0;
 }
@@ -1232,7 +1230,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_dc_hdmi_data *hdmi,
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 
 	nvhdcp->downstream_wq = create_singlethread_workqueue(nvhdcp->name);
-	INIT_WORK(&nvhdcp->work, nvhdcp_downstream_worker);
+	INIT_DELAYED_WORK(&nvhdcp->work, nvhdcp_downstream_worker);
 
 	nvhdcp->miscdev.minor = MISC_DYNAMIC_MINOR;
 	nvhdcp->miscdev.name = nvhdcp->name;

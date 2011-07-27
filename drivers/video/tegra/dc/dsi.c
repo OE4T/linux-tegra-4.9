@@ -933,6 +933,13 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 static void tegra_dsi_hs_clk_out_enable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
+	struct clk *base_clk;
+
+	/* Enable PHY clock */
+	base_clk = clk_get_parent(dsi->dsi_clk);
+	tegra_clk_cfg_ex(base_clk, TEGRA_CLK_PLLD_DSI_OUT_ENB, 1);
+	if (dsi->info.dsi_instance)
+		tegra_clk_cfg_ex(base_clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
 
 	val = tegra_dsi_readl(dsi, DSI_CONTROL);
 	val &= ~DSI_CONTROL_HS_CLK_CTRL(1);
@@ -969,6 +976,7 @@ static void tegra_dsi_hs_clk_out_disable(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
+	struct clk *base_clk;
 
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream(dc, dsi);
@@ -984,6 +992,12 @@ static void tegra_dsi_hs_clk_out_disable(struct tegra_dc *dc,
 	val &= ~DSI_HOST_DSI_CONTROL_HIGH_SPEED_TRANS(1);
 	val |= DSI_HOST_DSI_CONTROL_HIGH_SPEED_TRANS(TEGRA_DSI_LOW);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+
+	/* Disable PHY clock */
+	base_clk = clk_get_parent(dsi->dsi_clk);
+	tegra_clk_cfg_ex(base_clk, TEGRA_CLK_PLLD_DSI_OUT_ENB, 0);
+	if (dsi->info.dsi_instance)
+		tegra_clk_cfg_ex(base_clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 0);
 
 	dsi->status.clk_mode = DSI_PHYCLK_NOT_INIT;
 	dsi->status.clk_out = DSI_PHYCLK_OUT_DIS;
@@ -1688,6 +1702,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 				goto fail;
 			}
 		}
+
 		if (dsi->info.panel_reset) {
 			err = tegra_dsi_send_panel_cmd(dc, dsi,
 							dsi->info.dsi_init_cmd,
@@ -1706,6 +1721,13 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 				"dsi: error sending late resume cmd\n");
 				goto fail;
 			}
+		}
+
+		err = tegra_dsi_set_to_hs_mode(dc, dsi);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"dsi: not able to set to hs mode\n");
+			goto fail;
 		}
 	} else {
 		err = tegra_dsi_init_hw(dc, dsi);
@@ -2045,8 +2067,8 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 
 static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 {
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err;
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
@@ -2063,6 +2085,13 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 				"dsi: Error sending early suspend cmd\n");
 			goto fail;
 		}
+	}
+
+	err = tegra_dsi_set_to_lp_mode(dc, dsi);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev,
+			"dsi: not able to set to lp mode\n");
+		goto fail;
 	}
 
 	if (!dsi->ulpm) {

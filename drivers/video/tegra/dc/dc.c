@@ -1108,6 +1108,8 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			parent_clk = clk_get_sys(NULL,
 					dc->out->parent_clk ? : "pll_d_out0");
 			base_clk = clk_get_parent(parent_clk);
+			tegra_clk_cfg_ex(base_clk,
+					TEGRA_CLK_PLLD_DSI_OUT_ENB, 1);
 		} else {
 			if (dc->pdata->default_out->dsi->dsi_instance) {
 				parent_clk = clk_get_sys(NULL,

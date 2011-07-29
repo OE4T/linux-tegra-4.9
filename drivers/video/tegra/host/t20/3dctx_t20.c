@@ -392,7 +392,8 @@ static void __init setup_save(const struct ctx_saver *saver, u32 *ptr)
 static void save_push_v0(struct nvhost_cdma *cdma,
 			struct nvhost_hwctx *ctx)
 {
-	nvhost_cdma_push(cdma,
+	nvhost_cdma_push_gather(cdma,
+			nvmap_ref_to_handle(save_buf),
 			nvhost_opcode_gather(save_size),
 			save_phys);
 }
@@ -524,7 +525,8 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 			nvhost_opcode_nonincr(0x904, 1),
 			ctx->restore_phys);
 	/* gather the save buffer */
-	nvhost_cdma_push(cdma,
+	nvhost_cdma_push_gather(cdma,
+			nvmap_ref_to_handle(save_buf),
 			nvhost_opcode_gather(save_size),
 			save_phys);
 }

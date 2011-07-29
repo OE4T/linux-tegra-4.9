@@ -20,6 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <linux/slab.h>
 #include "../nvhost_cdma.h"
 #include "../dev.h"
 
@@ -53,6 +54,7 @@ static int t20_push_buffer_init(struct push_buffer *pb)
 	pb->mem = NULL;
 	pb->mapped = NULL;
 	pb->phys = 0;
+	pb->handles = NULL;
 
 	BUG_ON(!cdma_pb_op(cdma).reset);
 	cdma_pb_op(cdma).reset(pb);
@@ -74,6 +76,11 @@ static int t20_push_buffer_init(struct push_buffer *pb)
 		pb->phys = 0;
 		goto fail;
 	}
+
+	/* memory for storing nvmap handles for each opcode pair */
+	pb->handles = kzalloc(PUSH_BUFFER_SIZE/2, GFP_KERNEL);
+	if (!pb->handles)
+		goto fail;
 
 	/* put the restart at the end of pushbuffer memory */
 	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) = nvhost_opcode_restart(pb->phys);
@@ -101,22 +108,27 @@ static void t20_push_buffer_destroy(struct push_buffer *pb)
 	if (pb->mem)
 		nvmap_free(nvmap, pb->mem);
 
+	kfree(pb->handles);
+
 	pb->mem = NULL;
 	pb->mapped = NULL;
 	pb->phys = 0;
+	pb->handles = 0;
 }
 
 /**
  * Push two words to the push buffer
  * Caller must ensure push buffer is not full
  */
-static void t20_push_buffer_push_to(struct push_buffer *pb, u32 op1, u32 op2)
+static void t20_push_buffer_push_to(struct push_buffer *pb,
+			struct nvmap_handle *handle, u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
 	u32 *p = (u32*)((u32)pb->mapped + cur);
 	BUG_ON(cur == pb->fence);
 	*(p++) = op1;
 	*(p++) = op2;
+	pb->handles[cur/8] = handle;
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
 	/* printk("push_to_push_buffer: op1=%08x; op2=%08x; cur=%x\n", op1, op2, pb->cur); */
 }

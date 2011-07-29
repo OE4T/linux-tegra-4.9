@@ -47,11 +47,12 @@
 
 
 struct push_buffer {
-	struct nvmap_handle_ref *mem; /* handle to pushbuffer memory */
-	u32 *mapped;		/* mapped pushbuffer memory */
-	u32 phys;		/* physical address of pushbuffer */
-	u32 fence;		/* index we've written */
-	u32 cur;		/* index to write to */
+	struct nvmap_handle_ref *mem;	/* handle to pushbuffer memory */
+	u32 *mapped;			/* mapped pushbuffer memory */
+	u32 phys;			/* physical address of pushbuffer */
+	u32 fence;			/* index we've written */
+	u32 cur;			/* index to write to */
+	struct nvmap_handle **handles;	/* nvmap handle for each opcode pair */
 };
 
 struct sync_queue {
@@ -93,6 +94,8 @@ void	nvhost_cdma_deinit(struct nvhost_cdma *cdma);
 void	nvhost_cdma_stop(struct nvhost_cdma *cdma);
 void	nvhost_cdma_begin(struct nvhost_cdma *cdma);
 void	nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2);
+void	nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
+		struct nvmap_handle *handle, u32 op1, u32 op2);
 void	nvhost_cdma_end(struct nvhost_cdma *cdma,
 		struct nvmap_client *user_nvmap,
 		u32 sync_point_id, u32 sync_point_value,

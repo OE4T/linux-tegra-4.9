@@ -232,7 +232,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 
 	/* gather restore buffer */
 	if (need_restore)
-		nvhost_cdma_push(&channel->cdma,
+		nvhost_cdma_push_gather(&channel->cdma,
+			nvmap_ref_to_handle(channel->cur_ctx->restore),
 			nvhost_opcode_gather(channel->cur_ctx->restore_size),
 			channel->cur_ctx->restore_phys);
 
@@ -269,10 +270,13 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	}
 	else {
 		/* push user gathers */
-		for ( ; gather != gather_end; gather += 2)
-			nvhost_cdma_push(&channel->cdma,
-					nvhost_opcode_gather(gather[0]),
-					gather[1]);
+		int i = 0;
+		for ( ; i < gather_end-gather; i += 2) {
+			nvhost_cdma_push_gather(&channel->cdma,
+					unpins[i/2],
+					nvhost_opcode_gather(gather[i]),
+					gather[i+1]);
+		}
 	}
 
 	/* end CDMA submit & stash pinned hMems into sync queue */

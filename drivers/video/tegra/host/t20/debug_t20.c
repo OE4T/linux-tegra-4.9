@@ -19,12 +19,14 @@
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/mm.h>
 
 #include <asm/io.h>
 
 #include "../dev.h"
 #include "../debug.h"
 #include "../nvhost_cdma.h"
+#include "../../nvmap/nvmap.h"
 
 #include "hardware_t20.h"
 
@@ -34,7 +36,7 @@ enum {
 	NVHOST_DBG_STATE_GATHER = 2
 };
 
-static int show_channel_command(struct output *o, u32 val, int *count)
+static int show_channel_command(struct output *o, u32 addr, u32 val, int *count)
 {
 	unsigned mask;
 	unsigned subop;
@@ -104,11 +106,11 @@ static int show_channel_command(struct output *o, u32 val, int *count)
  * TODO: This uses ioremap_xxx on memory which is deprecated.
  * Also, it won't work properly with SMMU.
  */
-static void show_channel_gather(struct output *o, u32 phys_addr,
-				phys_addr_t words);
+static void show_channel_gather(struct output *o, u32 addr, u32 phys_addr,
+		phys_addr_t words, struct nvhost_cdma *cdma);
 
 static void show_channel_word(struct output *o, int *state, int *count,
-				     u32 addr, u32 val)
+		u32 addr, u32 val, struct nvhost_cdma *cdma)
 {
 	switch (*state) {
 	case NVHOST_DBG_STATE_CMD:
@@ -117,7 +119,7 @@ static void show_channel_word(struct output *o, int *state, int *count,
 		else
 			nvhost_debug_output(o, "%08x:", val);
 
-		*state = show_channel_command(o, val, count);
+		*state = show_channel_command(o, addr, val, count);
 		if (*state == NVHOST_DBG_STATE_DATA && *count == 0) {
 			*state = NVHOST_DBG_STATE_CMD;
 			nvhost_debug_output(o, "])\n");
@@ -134,38 +136,54 @@ static void show_channel_word(struct output *o, int *state, int *count,
 	case NVHOST_DBG_STATE_GATHER:
 		*state = NVHOST_DBG_STATE_CMD;
 		nvhost_debug_output(o, "%08x]):\n", val);
-		show_channel_gather(o, val, *count);
+		if (cdma)
+			show_channel_gather(o, addr, val, *count, cdma);
 		break;
 	}
 }
 
-static void show_channel_gather(struct output *o, phys_addr_t phys_addr,
-				u32 words)
+static void show_channel_gather(struct output *o, u32 addr,
+		phys_addr_t phys_addr,
+		u32 words, struct nvhost_cdma *cdma)
 {
+	/* Calculate page boundary and offset */
 	phys_addr_t map_base = phys_addr & PAGE_MASK;
-	phys_addr_t map_end = (phys_addr + words * 4 + PAGE_SIZE - 1) & PAGE_MASK;
-	phys_addr_t map_size = map_end - map_base;
 	phys_addr_t map_offset = phys_addr - map_base;
-	void *map_addr = ioremap_nocache(map_base, map_size);
-	int state = NVHOST_DBG_STATE_CMD;
-	int count, i;
 
+	/* Map dmaget cursor to corresponding nvmap_handle */
+	struct push_buffer *pb = &cdma->push_buffer;
+	u32 cur = addr - pb->phys;
+	struct nvmap_handle *h = pb->handles[cur/8];
+
+	/* Create a fake nvmap_handle_ref - nvmap_mmap requires it
+	 * but accesses only the first field - nvmap_handle */
+	struct nvmap_handle_ref ref = {.handle = h};
+
+	u32 *map_addr;
+	int state, count, i;
+
+	map_addr = nvmap_mmap(&ref);
 	if (!map_addr)
 		return;
+
+	/* GATHER buffer starts always with commands */
+	state = NVHOST_DBG_STATE_CMD;
 	for (i = 0; i < words; i++)
-		show_channel_word(o, &state, &count, phys_addr + i * 4,
-				readl(map_addr + map_offset + i * 4));
-	iounmap(map_addr);
+		show_channel_word(o, &state, &count,
+				phys_addr + i * 4,
+				*(map_addr + map_offset/4 + i), cdma);
+
+	nvmap_munmap(&ref, map_addr);
 }
 
 static void show_channel_pair(struct output *o, u32 addr,
-				u32 w0, u32 w1)
+		u32 w0, u32 w1, struct nvhost_cdma *cdma)
 {
 	int state = NVHOST_DBG_STATE_CMD;
 	int count;
 
-	show_channel_word(o, &state, &count, addr, w0);
-	show_channel_word(o, &state, &count, addr, w1);
+	show_channel_word(o, &state, &count, addr, w0, cdma);
+	show_channel_word(o, &state, &count, addr+4, w1, cdma);
 }
 
 /**
@@ -182,10 +200,20 @@ static void cdma_peek(struct nvhost_cdma *cdma,
 	out[1] = p[offset + 1];
 }
 
+u32 previous_oppair(struct nvhost_cdma *cdma, u32 cur)
+{
+	u32 pb = cdma->push_buffer.phys;
+	u32 prev = cur-8;
+	if (prev < pb)
+		prev += PUSH_BUFFER_SIZE;
+	return prev;
+}
+
 static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 					struct output *o, int chid)
 {
 	struct nvhost_channel *channel = m->channels + chid;
+	struct nvhost_cdma *cdma = &channel->cdma;
 	u32 dmaput, dmaget, dmactrl;
 	u32 cbstat, cbread;
 	u32 val, base, baseval;
@@ -198,7 +226,8 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	cbstat = readl(m->aperture + HOST1X_SYNC_CBSTAT(chid));
 
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
-			    channel->mod.name, atomic_read(&channel->mod.refcount));
+			    channel->mod.name,
+			    atomic_read(&channel->mod.refcount));
 
 	if ((dmactrl & 1) || !channel->cdma.push_buffer.mapped) {
 		nvhost_debug_output(o, "inactive\n\n");
@@ -223,13 +252,14 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 		break;
 
 	default:
-		nvhost_debug_output(o, "active class %02x, offset %04x, val %08x\n",
+		nvhost_debug_output(o,
+				"active class %02x, offset %04x, val %08x\n",
 			cbstat >> 16, cbstat & 0xffff, cbread);
 		break;
 	}
 
-	cdma_peek(&channel->cdma, dmaget, -1, pbw);
-	show_channel_pair(o, chid, pbw[0], pbw[1]);
+	cdma_peek(cdma, dmaget, -1, pbw);
+	show_channel_pair(o, previous_oppair(cdma, dmaget), pbw[0], pbw[1], &channel->cdma);
 	nvhost_debug_output(o, "\n");
 }
 
@@ -264,7 +294,7 @@ void t20_debug_show_channel_fifo(struct nvhost_master *m,
 			m->aperture + HOST1X_SYNC_CFPEEK_CTRL);
 		val = readl(m->aperture + HOST1X_SYNC_CFPEEK_READ);
 
-		show_channel_word(o, &state, &count, 0, val);
+		show_channel_word(o, &state, &count, 0, val, NULL);
 
 		if (rd_ptr == end)
 			rd_ptr = start;

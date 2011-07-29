@@ -1509,6 +1509,11 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 	if (!windows[0]->dc->enabled)
 		return -EFAULT;
 
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+	/* Don't want to timeout on simulator */
+	ret = wait_event_interruptible(windows[0]->dc->wq,
+		tegra_dc_windows_are_clean(windows, n));
+#else
 	trace_printk("%s:Before wait_event_interruptible_timeout\n",
 			windows[0]->dc->ndev->name);
 	ret = wait_event_interruptible_timeout(windows[0]->dc->wq,
@@ -1516,6 +1521,7 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 					 HZ);
 	trace_printk("%s:After wait_event_interruptible_timeout\n",
 			windows[0]->dc->ndev->name);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dc_sync_windows);
@@ -1797,7 +1803,7 @@ static inline void print_mode(struct tegra_dc *dc,
 
 static inline void enable_dc_irq(unsigned int irq)
 {
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 	enable_irq(irq);
 #else
 	/* Always disable DC interrupts on FPGA. */
@@ -2415,7 +2421,7 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 	struct tegra_dc *dc = ptr;
 	unsigned long status;
 	unsigned long underflow_mask;
@@ -2457,9 +2463,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		tegra_dc_continuous_irq(dc, status);
 
 	return IRQ_HANDLED;
-#else /* CONFIG_TEGRA_SILICON_PLATFORM */
+#else /* CONFIG_TEGRA_FPGA_PLATFORM */
 	return IRQ_NONE;
-#endif /* !CONFIG_TEGRA_SILICON_PLATFORM */
+#endif /* !CONFIG_TEGRA_FPGA_PLATFORM */
 }
 
 static void tegra_dc_set_color_control(struct tegra_dc *dc)

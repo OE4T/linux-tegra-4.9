@@ -1008,11 +1008,11 @@ failure:
 	if(nvhdcp->fail_count > 5) {
 	        nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
 	} else {
-		nvhdcp_err("nvhdcp failure - renegotiating in 1.75 seconds\n");
+		nvhdcp_err("nvhdcp failure - renegotiating in 1 second\n");
 		if (!nvhdcp_is_plugged(nvhdcp))
 			goto lost_hdmi;
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
-						msecs_to_jiffies(1750));
+						msecs_to_jiffies(1000));
 	}
 
 lost_hdmi:

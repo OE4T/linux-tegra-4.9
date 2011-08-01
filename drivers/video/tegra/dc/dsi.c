@@ -2005,16 +2005,16 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_clk_put;
 	}
 
-	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
-	if (err < 0)
-		goto err_dsi_data;
-
 	mutex_init(&dsi->lock);
 	dsi->dc = dc;
 	dsi->base = base;
 	dsi->base_res = base_res;
 	dsi->dc_clk = dc_clk;
 	dsi->dsi_clk = dsi_clk;
+
+	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
+	if (err < 0)
+		goto err_dsi_data;
 
 	tegra_dc_set_outdata(dc, dsi);
 	_tegra_dc_dsi_init(dc);

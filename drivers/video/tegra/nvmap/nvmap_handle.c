@@ -499,6 +499,9 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	struct nvmap_handle_ref *ref = NULL;
 
+	if (!client )
+		return ERR_PTR(-EINVAL);
+
 	if (!size)
 		return ERR_PTR(-EINVAL);
 

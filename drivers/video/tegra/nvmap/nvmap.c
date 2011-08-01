@@ -620,6 +620,9 @@ phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 {
+	if (!ref)
+		return;
+
 	atomic_dec(&ref->pin);
 	if (handle_unpin(client, ref->handle, false))
 		wake_up(&client->share->pin_wait);
@@ -807,6 +810,9 @@ void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r)
 
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 {
+	if (!r)
+		return;
+
 	nvmap_free_handle_id(client, nvmap_ref_to_id(r));
 }
 

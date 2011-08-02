@@ -21,6 +21,7 @@
  */
 
 #include "dev.h"
+#include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/err.h>
@@ -128,6 +129,109 @@ static bool _3d_powergating_disabled(void)
 	return 1;
 }
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
+			    int index)
+{
+	struct clk *c;
+
+	c = mod->clk[index];
+	if (IS_ERR_OR_NULL(c))
+		return -EINVAL;
+
+	*rate = clk_get_rate(c);
+	return 0;
+}
+
+int nvhost_module_update_rate(struct nvhost_module *mod, int index)
+{
+	unsigned long rate = 0;
+	struct nvhost_module_client *m;
+
+	list_for_each_entry(m, &mod->client_list, node) {
+		rate = max(m->rate[index], rate);
+	}
+	if (!mod->clk[index])
+		return -EINVAL;
+	clk_set_rate(mod->clk[index], rate);
+	return 0;
+}
+
+int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
+			    unsigned long rate, int index)
+{
+	struct nvhost_module_client *m;
+
+	list_for_each_entry(m, &mod->client_list, node) {
+		if (m->priv == priv) {
+			rate = clk_round_rate(mod->clk[index], rate);
+			m->rate[index] = rate;
+			break;
+		}
+	}
+	return nvhost_module_update_rate(mod, index);
+}
+
+int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
+{
+	int i;
+	unsigned long rate;
+	struct nvhost_module_client *client;
+
+	client = kzalloc(sizeof(*client), GFP_KERNEL);
+	if (!client) {
+		return -ENOMEM;
+	}
+	INIT_LIST_HEAD(&client->node);
+	client->priv = priv;
+
+	for (i = 0; i < mod->num_clks; i++) {
+		rate = clk_round_rate(mod->clk[i], 0);
+		client->rate[i] = rate;
+	}
+	list_add_tail(&client->node, &mod->client_list);
+	return 0;
+}
+
+void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
+{
+	int i;
+	struct nvhost_module_client *m;
+
+	list_for_each_entry(m, &mod->client_list, node) {
+		if (priv == m->priv) {
+			list_del(&m->node);
+			break;
+		}
+	}
+	m->priv = NULL;
+	kfree(m);
+	for (i = 0; i < mod->num_clks; i++)
+		nvhost_module_update_rate(mod, i);
+}
+#else
+int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
+                            int index)
+{
+        return 0;
+}
+
+int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
+                            unsigned long rate, int index)
+{
+        return 0;
+}
+
+int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
+{
+        return 0;
+}
+
+void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
+{
+}
+#endif
+
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		nvhost_modulef func, struct nvhost_module *parent,
 		struct device *dev)
@@ -136,6 +240,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 
 	mod->name = name;
 
+	INIT_LIST_HEAD(&mod->client_list);
 	while (i < NVHOST_MODULE_MAX_CLOCKS) {
 		long rate;
 		mod->clk[i] = clk_get(dev, get_module_clk_id(name, i));

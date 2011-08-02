@@ -1408,6 +1408,11 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 	cmd_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 	tegra_dc_writel(dc, (cmd_state | (1 << 2)), DC_CMD_STATE_ACCESS);
 
+	if (cfg->switch_to_sfio && cfg->gpio_conf_to_sfio)
+		cfg->switch_to_sfio(cfg->gpio_conf_to_sfio);
+	else
+		dev_err(&dc->ndev->dev, "Error: Need gpio_conf_to_sfio\n");
+
 	switch (cfg->which_pwm) {
 	case TEGRA_PWM_PM0:
 		/* Select the LM0 on PM0 */
@@ -1428,7 +1433,7 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 		tegra_dc_writel(dc, cfg->duty_cycle, DC_COM_PM1_DUTY_CYCLE);
 		break;
 	default:
-		dev_err(&dc->ndev->dev, "Error\n");
+		dev_err(&dc->ndev->dev, "Error: Need which_pwm\n");
 		break;
 	}
 	tegra_dc_writel(dc, cmd_state, DC_CMD_STATE_ACCESS);
@@ -1583,7 +1588,6 @@ void tegra_dc_disable_crc(struct tegra_dc *dc)
 u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 {
 	int crc = 0;
-	u32 val = 0;
 
 	if(!dc) {
 		dev_err(&dc->ndev->dev, "Failed to get dc.\n");

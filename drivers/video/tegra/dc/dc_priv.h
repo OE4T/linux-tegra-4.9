@@ -193,6 +193,7 @@ void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable);
 bool tegra_dc_stats_get(struct tegra_dc *dc);
 
 /* defined in dc.c, used by overlay.c */
+unsigned int tegra_dc_has_multiple_dc(void);
 unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *wins[], int n);
 
 /* defined in dc.c, used by dc_sysfs.c */

@@ -1255,6 +1255,42 @@ static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 	return 0;
 }
 
+static bool check_ref_to_sync(struct tegra_dc_mode *mode)
+{
+	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11. */
+	if (mode->h_ref_to_sync + mode->h_sync_width + mode->h_back_porch <= 11)
+		return false;
+
+	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1. */
+	if (mode->v_ref_to_sync + mode->v_sync_width + mode->v_back_porch <= 1)
+		return false;
+
+	/* Constraint 3: V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH > 1
+	 * (vertical blank). */
+	if (mode->v_front_porch + mode->v_sync_width + mode->v_back_porch <= 1)
+		return false;
+
+	/* Constraint 4: V_SYNC_WIDTH >= 1; H_SYNC_WIDTH >= 1. */
+	if (mode->v_sync_width < 1 || mode->h_sync_width < 1)
+		return false;
+
+	/* Constraint 5: V_REF_TO_SYNC >= 1; H_REF_TO_SYNC >= 0. */
+	if (mode->v_ref_to_sync < 1 || mode->h_ref_to_sync < 0)
+		return false;
+
+	/* Constraint 6: V_FRONT_PORT >= (V_REF_TO_SYNC + 1);
+	 * H_FRONT_PORT >= (H_REF_TO_SYNC + 1). */
+	if (mode->v_front_porch < mode->v_ref_to_sync + 1 ||
+		mode->h_front_porch < mode->h_ref_to_sync + 1)
+		return false;
+
+	/* Constraint 7: H_DISP_ACTIVE >= 16; V_DISP_ACTIVE >= 16. */
+	if (mode->h_active < 16 || mode->v_active < 16)
+		return false;
+
+	return true;
+}
+
 #ifdef DEBUG
 /* return in 1000ths of a Hertz */
 static int calc_refresh(struct tegra_dc *dc, const struct tegra_dc_mode *m)
@@ -1401,6 +1437,11 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		dev_err(&dc->ndev->dev, "bad href/vref values, overriding.\n");
 		mode.h_ref_to_sync = 11;
 		mode.v_ref_to_sync = 1;
+	}
+	if (!check_ref_to_sync(&mode)) {
+		dev_err(&dc->ndev->dev,
+				"Display timing doesn't meet restrictions.\n");
+		return -EINVAL;
 	}
 	dev_info(&dc->ndev->dev, "Using mode %dx%d pclk=%d href=%d vref=%d\n",
 		mode.h_active, mode.v_active, mode.pclk,

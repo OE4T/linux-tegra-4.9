@@ -947,7 +947,6 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 static void tegra_dsi_hs_clk_out_enable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	struct clk *base_clk;
 
 	val = tegra_dsi_readl(dsi, DSI_CONTROL);
 	val &= ~DSI_CONTROL_HS_CLK_CTRL(1);
@@ -984,7 +983,6 @@ static void tegra_dsi_hs_clk_out_disable(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	struct clk *base_clk;
 
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream(dc, dsi);

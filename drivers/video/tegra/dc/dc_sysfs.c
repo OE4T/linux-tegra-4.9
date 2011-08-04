@@ -230,7 +230,7 @@ static ssize_t orientation_3d_store(struct device *dev,
 }
 
 static DEVICE_ATTR(stereo_orientation,
-	S_IRUGO|S_IWUGO, orientation_3d_show, orientation_3d_store);
+	S_IRUGO|S_IWUSR, orientation_3d_show, orientation_3d_store);
 
 #define MODE_2D		"2d"
 #define MODE_3D		"3d"
@@ -280,7 +280,7 @@ static ssize_t mode_3d_store(struct device *dev,
 }
 
 static DEVICE_ATTR(stereo_mode,
-	S_IRUGO|S_IWUGO, mode_3d_show, mode_3d_store);
+	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
 
 void tegra_dc_remove_sysfs(struct device *dev)
 {

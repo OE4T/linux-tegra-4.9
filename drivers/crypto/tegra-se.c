@@ -75,7 +75,8 @@ struct tegra_se_req_context {
 
 struct tegra_se_dev {
 	struct device *dev;
-	void __iomem *io_reg;	/* device memory/io */
+	void __iomem *io_reg;	/* se device memory/io */
+	void __iomem *pmc_io_reg;	/* pmc device memory/io */
 	int irq;	/* irq allocated */
 	spinlock_t lock;	/* spin lock */
 	struct clk *pclk;	/* Security Engine clock */
@@ -87,6 +88,8 @@ struct tegra_se_dev {
 	u32 *dst_ll_buf;	/* pointer to destination linked list buffer */
 	dma_addr_t dst_ll_buf_adr; /* Destination linked list dma address */
 	u32 dst_ll_size;	/* Size of destination linked list buffer */
+	u32 *ctx_save_buf;	/* LP context buffer pointer*/
+	dma_addr_t ctx_save_buf_adr;	/* LP context buffer dma address*/
 	struct completion complete;	/* Tells the task completion */
 	bool work_q_busy;	/* Work queue busy status */
 };
@@ -143,6 +146,11 @@ static struct tegra_se_slot ssk_slot = {
 	.available = false,
 };
 
+static struct tegra_se_slot srk_slot = {
+	.slot_num = 0,
+	.available = false,
+};
+
 /* Security Engine Linked List */
 struct tegra_se_ll {
 	dma_addr_t addr; /* DMA buffer address */
@@ -158,6 +166,7 @@ static void tegra_se_work_handler(struct work_struct *work);
 static DECLARE_WORK(se_work, tegra_se_work_handler);
 static struct workqueue_struct *se_work_q;
 
+#define PMC_SCRATCH43_REG_OFFSET 0x22c
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 {
@@ -245,6 +254,13 @@ static int tegra_init_key_slot(struct tegra_se_dev *se_dev)
 	spin_lock_init(&key_slot_lock);
 	spin_lock(&key_slot_lock);
 	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
+		/*
+		 * Slot 0 and 15 are reserved and will not be added to the
+		 * free slots pool. Slot 0 is used for SRK generation and
+		 * Slot 15 is used for SSK operation
+		 */
+		if ((i == srk_slot.slot_num) || (i == ssk_slot.slot_num))
+			continue;
 		se_dev->slot_list[i].available = true;
 		se_dev->slot_list[i].slot_num = i;
 		INIT_LIST_HEAD(&se_dev->slot_list[i].node);
@@ -271,6 +287,7 @@ static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 				val |= SE_CONFIG_ENC_MODE(MODE_KEY192);
 			else
 				val |= SE_CONFIG_ENC_MODE(MODE_KEY128);
+			val |= SE_CONFIG_DEC_ALG(ALG_NOP);
 		} else {
 			val = SE_CONFIG_DEC_ALG(ALG_AES_DEC);
 			if (key_len == TEGRA_SE_KEY_256_SIZE)
@@ -528,7 +545,8 @@ static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count)
 	se_writel(se_dev, SHA_ENABLE, SE_SHA_CONFIG_REG_OFFSET);
 }
 
-static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes)
+static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
+	bool context_save)
 {
 	u32 nblocks = nbytes / TEGRA_SE_AES_BLOCK_SIZE;
 	int ret = 0;
@@ -549,7 +567,12 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes)
 
 	reinit_completion(&se_dev->complete);
 
-	se_writel(se_dev, SE_OPERATION(OP_SRART), SE_OPERATION_REG_OFFSET);
+	if (context_save)
+		se_writel(se_dev, SE_OPERATION(OP_CTX_SAVE),
+			SE_OPERATION_REG_OFFSET);
+	else
+		se_writel(se_dev, SE_OPERATION(OP_SRART),
+			SE_OPERATION_REG_OFFSET);
 
 	ret = wait_for_completion_timeout(&se_dev->complete,
 			msecs_to_jiffies(1000));
@@ -746,7 +769,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 		aes_ctx->keylen);
 	tegra_se_config_crypto(se_dev, req_ctx->op_mode, req_ctx->encrypt,
 			aes_ctx->slot->slot_num, req->info ? true : false);
-	ret = tegra_se_start_operation(se_dev, req->nbytes);
+	ret = tegra_se_start_operation(se_dev, req->nbytes, false);
 	tegra_se_dequeue_complete_req(se_dev, req);
 
 	mutex_unlock(&se_hw_lock);
@@ -1048,7 +1071,7 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 		TEGRA_SE_KEY_128_SIZE);
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_X931, true,
 				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
-	ret = tegra_se_start_operation(se_dev, dlen);
+	ret = tegra_se_start_operation(se_dev, dlen, false);
 
 	if (!ret) {
 		memcpy(rdata, rng_ctx->rng_buf, dlen);
@@ -1175,7 +1198,7 @@ int tegra_se_sha_final(struct ahash_request *req)
 
 	tegra_se_config_algo(se_dev, sha_ctx->op_mode, false, 0);
 	tegra_se_config_sha(se_dev, req->nbytes);
-	err = tegra_se_start_operation(se_dev, 0);
+	err = tegra_se_start_operation(se_dev, 0, false);
 	if (!err) {
 		tegra_se_read_hash_result(se_dev, req->result,
 			crypto_ahash_digestsize(tfm), true);
@@ -1315,7 +1338,7 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 		tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_CMAC, true,
 					cmac_ctx->slot->slot_num, true);
 		tegra_se_start_operation(se_dev,
-			blocks_to_process * TEGRA_SE_AES_BLOCK_SIZE);
+			blocks_to_process * TEGRA_SE_AES_BLOCK_SIZE, false);
 		src_sg = req->src;
 		while (mapped_sg_count--) {
 			dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
@@ -1389,7 +1412,7 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 				cmac_ctx->keylen);
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_CMAC, true,
 				cmac_ctx->slot->slot_num, use_orig_iv);
-	tegra_se_start_operation(se_dev, TEGRA_SE_AES_BLOCK_SIZE);
+	tegra_se_start_operation(se_dev, TEGRA_SE_AES_BLOCK_SIZE, false);
 	tegra_se_read_hash_result(se_dev, req->result,
 				TEGRA_SE_AES_CMAC_DIGEST_SIZE, false);
 
@@ -1479,7 +1502,7 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_CBC, true,
 		ctx->slot->slot_num, true);
 
-	ret = tegra_se_start_operation(se_dev, TEGRA_SE_AES_BLOCK_SIZE);
+	ret = tegra_se_start_operation(se_dev, TEGRA_SE_AES_BLOCK_SIZE, false);
 	if (ret) {
 		dev_err(se_dev->dev, "tegra_se_aes_cmac_setkey:: start op failed\n");
 		goto out;
@@ -1788,6 +1811,20 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		err = -ENXIO;
+		dev_err(se_dev->dev, "platform_get_resource failed\n");
+		goto err_pmc;
+	}
+
+	se_dev->pmc_io_reg = ioremap(res->start, resource_size(res));
+	if (!se_dev->pmc_io_reg) {
+		err = -ENOMEM;
+		dev_err(se_dev->dev, "pmc ioremap failed\n");
+		goto err_pmc;
+	}
+
 	se_dev->irq = platform_get_irq(pdev, 0);
 	if (!se_dev->irq) {
 		err = -ENODEV;
@@ -1806,7 +1843,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	/* Initialize the clock */
 	se_dev->pclk = clk_get(se_dev->dev, "se");
 	if (IS_ERR(se_dev->pclk)) {
-		dev_err(se_dev->dev, "clock intialization failed (%d)\n", (int)se_dev->pclk);
+		dev_err(se_dev->dev, "clock intialization failed (%d)\n",
+			(int)se_dev->pclk);
 		err = -ENODEV;
 		goto clean;
 	}
@@ -1858,6 +1896,15 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
+#if defined(CONFIG_PM)
+	se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
+		SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr, GFP_KERNEL);
+	if (!se_dev->ctx_save_buf) {
+		dev_err(se_dev->dev, "Context save buffer alloc filed\n");
+		goto clean;
+	}
+#endif
+
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
@@ -1879,6 +1926,8 @@ clean:
 	free_irq(se_dev->irq, &pdev->dev);
 
 err_irq:
+	iounmap(se_dev->pmc_io_reg);
+err_pmc:
 	iounmap(se_dev->io_reg);
 
 fail:
@@ -1908,7 +1957,13 @@ static int tegra_se_remove(struct platform_device *pdev)
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
 	tegra_se_free_ll_buf(se_dev);
+	if (se_dev->ctx_save_buf) {
+		dma_free_coherent(se_dev->dev, SE_CONTEXT_BUFER_SIZE,
+			se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
+		se_dev->ctx_save_buf = NULL;
+	}
 	iounmap(se_dev->io_reg);
+	iounmap(se_dev->pmc_io_reg);
 	kfree(se_dev);
 	sg_tegra_se_dev = NULL;
 
@@ -1920,9 +1975,348 @@ static int tegra_se_resume(struct platform_device *pdev)
 {
 	return 0;
 }
+static int tegra_se_generate_rng_key(struct tegra_se_dev *se_dev)
+{
+	int ret = 0;
+	u32 val = 0;
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+
+	/* Configure algorithm */
+	val = SE_CONFIG_ENC_ALG(ALG_RNG) | SE_CONFIG_ENC_MODE(MODE_KEY128) |
+		SE_CONFIG_DST(DST_KEYTAB);
+	se_writel(se_dev, val, SE_CONFIG_REG_OFFSET);
+
+	/* Configure destination key index number */
+	val = SE_CRYPTO_KEYTABLE_DST_KEY_INDEX(srk_slot.slot_num) |
+		SE_CRYPTO_KEYTABLE_DST_WORD_QUAD(KEYS_0_3);
+	se_writel(se_dev, val, SE_CRYPTO_KEYTABLE_DST_REG_OFFSET);
+
+	/* Configure crypto */
+	val = SE_CRYPTO_INPUT_SEL(INPUT_LFSR) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
+		SE_CRYPTO_HASH(HASH_DISABLE) |
+		SE_CRYPTO_KEY_INDEX(ssk_slot.slot_num) |
+		SE_CRYPTO_IV_SEL(IV_ORIGINAL);
+	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+
+	ret = tegra_se_start_operation(se_dev, TEGRA_SE_KEY_128_SIZE, false);
+
+	return ret;
+}
+
+static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
+{
+	int ret = 0;
+	u32 val = 0;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	ret = tegra_se_generate_rng_key(se_dev);
+	if (ret) {
+		tegra_se_clk_disable(se_dev->pclk);
+		mutex_unlock(&se_hw_lock);
+		return ret;
+	}
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+
+	val = SE_CONFIG_ENC_ALG(ALG_RNG) | SE_CONFIG_ENC_MODE(MODE_KEY128) |
+		SE_CONFIG_DEC_ALG(ALG_NOP) | SE_CONFIG_DST(DST_SRK);
+
+	se_writel(se_dev, val, SE_CONFIG_REG_OFFSET);
+
+	val = SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
+		SE_CRYPTO_HASH(HASH_DISABLE) |
+		SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |
+		SE_CRYPTO_IV_SEL(IV_UPDATED);
+
+	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+	ret = tegra_se_start_operation(se_dev, TEGRA_SE_KEY_128_SIZE, false);
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
+{
+	struct tegra_se_ll *src_ll, *dst_ll;
+	int ret = 0;
+	u32 val;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	src_ll->addr = se_dev->ctx_save_buf_adr;
+	src_ll->data_len = SE_CONTEXT_SAVE_RANDOM_DATA_SIZE;
+	dst_ll->addr = se_dev->ctx_save_buf_adr;
+	dst_ll->data_len = SE_CONTEXT_SAVE_RANDOM_DATA_SIZE;
+
+	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_X931, true,
+		TEGRA_SE_KEY_128_SIZE);
+
+	/* Configure crypto */
+	val = SE_CRYPTO_INPUT_SEL(INPUT_LFSR) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
+		SE_CRYPTO_HASH(HASH_DISABLE) |
+		SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |
+		SE_CRYPTO_IV_SEL(IV_ORIGINAL);
+
+	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+	ret = tegra_se_start_operation(se_dev,
+		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, false);
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+
+}
+
+static int tegra_se_lp_encrypt_context_data(struct tegra_se_dev *se_dev,
+	u32 context_offset, u32 data_size)
+{
+	struct tegra_se_ll *src_ll, *dst_ll;
+	int ret = 0;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	src_ll->addr = se_dev->ctx_save_buf_adr + context_offset;
+	src_ll->data_len = data_size;
+	dst_ll->addr = se_dev->ctx_save_buf_adr + context_offset;;
+	dst_ll->data_len = data_size;
+
+	se_writel(se_dev, SE_CONTEXT_SAVE_SRC(MEM),
+		SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+
+	ret = tegra_se_start_operation(se_dev, data_size, true);
+
+	tegra_se_clk_disable(se_dev->pclk);
+
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_lp_sticky_bits_context_save(struct tegra_se_dev *se_dev)
+{
+	struct tegra_se_ll *dst_ll;
+	int ret = 0;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	dst_ll->addr = (se_dev->ctx_save_buf_adr +
+		SE_CONTEXT_SAVE_STICKY_BITS_OFFSET);
+	dst_ll->data_len = SE_CONTEXT_SAVE_STICKY_BITS_SIZE;
+
+	se_writel(se_dev, SE_CONTEXT_SAVE_SRC(STICKY_BITS),
+		SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+
+	ret = tegra_se_start_operation(se_dev,
+		SE_CONTEXT_SAVE_STICKY_BITS_SIZE, true);
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_lp_keytable_context_save(struct tegra_se_dev *se_dev)
+{
+	struct tegra_se_ll *dst_ll;
+	int ret = 0, i, j;
+	u32 val = 0;
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	*se_dev->dst_ll_buf = 0;
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	dst_ll->addr = (se_dev->ctx_save_buf_adr + SE_CONTEXT_SAVE_KEYS_OFFSET);
+	dst_ll->data_len = TEGRA_SE_KEY_128_SIZE;
+
+	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
+		for (j = 0; j < 2; j++) {
+			val = SE_CONTEXT_SAVE_SRC(KEYTABLE) |
+				SE_CONTEXT_SAVE_KEY_INDEX(i) |
+				SE_CONTEXT_SAVE_WORD_QUAD(j);
+			se_writel(se_dev,
+				val, SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+			ret = tegra_se_start_operation(se_dev,
+				TEGRA_SE_KEY_128_SIZE, true);
+			if (ret)
+				break;
+			dst_ll->addr += TEGRA_SE_KEY_128_SIZE;
+		}
+	}
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_lp_iv_context_save(struct tegra_se_dev *se_dev,
+	bool org_iv, u32 context_offset)
+{
+	struct tegra_se_ll *dst_ll;
+	int ret = 0, i;
+	u32 val = 0;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	*se_dev->dst_ll_buf = 0;
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	dst_ll->addr = (se_dev->ctx_save_buf_adr + context_offset);
+	dst_ll->data_len = TEGRA_SE_AES_IV_SIZE;
+
+	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
+		val = SE_CONTEXT_SAVE_SRC(KEYTABLE) |
+			SE_CONTEXT_SAVE_KEY_INDEX(i) |
+			(org_iv ? SE_CONTEXT_SAVE_WORD_QUAD(ORIG_IV) :
+			SE_CONTEXT_SAVE_WORD_QUAD(UPD_IV));
+		se_writel(se_dev, val, SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+		ret = tegra_se_start_operation(se_dev,
+			TEGRA_SE_AES_IV_SIZE, true);
+		if (ret)
+			break;
+		dst_ll->addr += TEGRA_SE_AES_IV_SIZE;
+	}
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
+{
+	int ret = 0;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	se_writel(se_dev, SE_CONTEXT_SAVE_SRC(SRK),
+		SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+	ret = tegra_se_start_operation(se_dev, 0, true);
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
 static int tegra_se_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	return 0;
+	struct tegra_se_dev *se_dev = platform_get_drvdata(pdev);
+	int err = 0, i;
+	unsigned char *dt_buf = NULL;
+	u8 pdata[SE_CONTEXT_KNOWN_PATTERN_SIZE] = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+
+	if (!se_dev)
+		return -ENODEV;
+
+	/* Generate SRK */
+	err = tegra_se_generate_srk(se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP SRK genration failed\n");
+		goto out;
+	}
+
+	/* Generate random data*/
+	err = tegra_se_lp_generate_random_data(se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP random pattern generation failed\n");
+		goto out;
+	}
+
+	/* Encrypt random data */
+	err = tegra_se_lp_encrypt_context_data(se_dev,
+		SE_CONTEXT_SAVE_RANDOM_DATA_OFFSET,
+		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP random pattern encryption failed\n");
+		goto out;
+	}
+
+	/* Sticky bits context save*/
+	err = tegra_se_lp_sticky_bits_context_save(se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP sticky bits context save failure\n");
+		goto out;
+	}
+
+	/* Key table context save*/
+	err = tegra_se_lp_keytable_context_save(se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP key table  save failure\n");
+		goto out;
+	}
+
+	/* Original iv context save*/
+	err = tegra_se_lp_iv_context_save(se_dev,
+		true, SE_CONTEXT_ORIGINAL_IV_OFFSET);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP original iv save failure\n");
+		goto out;
+	}
+
+	/* UPdated iv context save*/
+	err = tegra_se_lp_iv_context_save(se_dev,
+		false, SE_CONTEXT_UPDATED_IV_OFFSET);
+	if (err) {
+		dev_err(se_dev->dev, "\n LP updated iv save failure\n");
+		goto out;
+	}
+
+	/* Encrypt known pattern */
+	dt_buf = (unsigned char *)se_dev->ctx_save_buf;
+	dt_buf += SE_CONTEXT_KNOWN_PATTERN_OFFSET;
+	for (i = 0; i < SE_CONTEXT_KNOWN_PATTERN_SIZE; i++)
+		dt_buf[i] = pdata[i];
+	err = tegra_se_lp_encrypt_context_data(se_dev,
+		SE_CONTEXT_KNOWN_PATTERN_OFFSET, SE_CONTEXT_KNOWN_PATTERN_SIZE);
+	if (err) {
+		dev_err(se_dev->dev, "LP known pattern save failure\n");
+		goto out;
+	}
+
+	/* Write lp context buffer address into PMC scratch register */
+	writel(se_dev->ctx_save_buf_adr,
+		se_dev->pmc_io_reg + PMC_SCRATCH43_REG_OFFSET);
+
+	/* Saves SRK in secure scratch */
+	err = tegra_se_save_SRK(se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "LP SRK save failure\n");
+		goto out;
+	}
+
+out:
+	return err;
 }
 #endif
 

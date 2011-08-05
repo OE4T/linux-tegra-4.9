@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
+#include <linux/export.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -270,17 +271,19 @@ const u32 init_reg[] = {
 	DSI_PKT_LEN_6_7,
 };
 
-static inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi,
+inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi,
 									u32 reg)
 {
 	return readl(dsi->base + reg * 4);
 }
+EXPORT_SYMBOL(tegra_dsi_readl);
 
-static inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi,u32 val,
+inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi,u32 val,
 									u32 reg)
 {
 	writel(val, dsi->base + reg * 4);
 }
+EXPORT_SYMBOL(tegra_dsi_writel);
 
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
@@ -1299,7 +1302,7 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 	return err;
 }
 
-static int tegra_dsi_write_data(struct tegra_dc *dc,
+int tegra_dsi_write_data(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
 					u8* pdata, u8 data_id, u16 data_len)
 {
@@ -1348,6 +1351,7 @@ static int tegra_dsi_write_data(struct tegra_dc *dc,
 fail:
 	return err;
 }
+EXPORT_SYMBOL(tegra_dsi_write_data);
 
 static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi,
@@ -1492,7 +1496,7 @@ static int tegra_dsi_parse_read_response(struct tegra_dc *dc,
 	return err;
 }
 
-static int tegra_dsi_read_data(struct tegra_dc *dc,
+int tegra_dsi_read_data(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u32 max_ret_payload_size,
 				u32 panel_reg_addr, u8 *read_data)
@@ -1624,6 +1628,7 @@ fail:
 
 	return err;
 }
+EXPORT_SYMBOL(tegra_dsi_read_data);
 
 static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 {

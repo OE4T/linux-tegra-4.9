@@ -23,6 +23,8 @@
 #include <linux/wait.h>
 #include <linux/completion.h>
 
+#include <mach/dc.h>
+
 #include "../host/dev.h"
 #include "../host/t20/syncpt_t20.h"
 

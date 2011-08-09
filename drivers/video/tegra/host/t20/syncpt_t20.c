@@ -127,7 +127,7 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 	while (wait != waitend) {
 		u32 syncpt, override;
 
-		BUG_ON(wait->syncpt_id > NV_HOST1X_SYNCPT_NB_PTS);
+		BUG_ON(wait->syncpt_id >= NV_HOST1X_SYNCPT_NB_PTS);
 
 		syncpt = atomic_read(&sp->min_val[wait->syncpt_id]);
 		if (nvhost_syncpt_wrapping_comparison(syncpt, wait->thresh)) {
@@ -171,7 +171,7 @@ static const char *s_syncpt_names[32] = {
 
 static const char *t20_syncpt_name(struct nvhost_syncpt *s, u32 id)
 {
-	BUG_ON(id > ARRAY_SIZE(s_syncpt_names));
+	BUG_ON(id >= ARRAY_SIZE(s_syncpt_names));
 	return s_syncpt_names[id];
 }
 

@@ -82,6 +82,7 @@ struct tegra_se_dev {
 	struct clk *pclk;	/* Security Engine clock */
 	struct crypto_queue queue; /* Security Engine crypto queue */
 	struct tegra_se_slot *slot_list;	/* pointer to key slots */
+	u64 ctr;
 	u32 *src_ll_buf;	/* pointer to source linked list buffer */
 	dma_addr_t src_ll_buf_adr; /* Source linked list buffer dma address */
 	u32 src_ll_size;	/* Size of source linked list buffer */
@@ -183,6 +184,8 @@ static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 		in_buf[i] <<= 1;
 	}
 }
+
+extern unsigned long long tegra_chip_uid(void);
 
 static inline void se_writel(struct tegra_se_dev *se_dev,
 	unsigned int val, unsigned int reg_offset)
@@ -1049,10 +1052,12 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
 	struct tegra_se_ll *src_ll, *dst_ll;
 	unsigned char *dt_buf = (unsigned char *)rng_ctx->dt_buf;
-	int ret = 0, i;
+	u8 *rdata_addr;
+	int ret = 0, i, j, num_blocks;
 
-	if (dlen > TEGRA_SE_RNG_DT_SIZE)
+	if (dlen < TEGRA_SE_RNG_DT_SIZE)
 		return -EINVAL;
+	num_blocks = (dlen / TEGRA_SE_RNG_DT_SIZE);
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -1063,28 +1068,39 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
 	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
 	src_ll->addr = rng_ctx->dt_buf_adr;
-	src_ll->data_len = dlen;
+	src_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
 	dst_ll->addr = rng_ctx->rng_buf_adr;
-	dst_ll->data_len = dlen;
+	dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
 
 	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_X931, true,
 		TEGRA_SE_KEY_128_SIZE);
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_X931, true,
 				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
-	ret = tegra_se_start_operation(se_dev, dlen, false);
+	for (j = 0; j < num_blocks; j++) {
+		ret = tegra_se_start_operation(se_dev,
+				TEGRA_SE_RNG_DT_SIZE, false);
 
-	if (!ret) {
-		memcpy(rdata, rng_ctx->rng_buf, dlen);
-		/* update DT vector */
-		for (i = TEGRA_SE_RNG_DT_SIZE - 1; i >= 0; i--) {
-			dt_buf[i] += 1;
-			if (dt_buf[i] != 0)
-				break;
+		if (!ret) {
+			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
+			memcpy(rdata_addr,
+				rng_ctx->rng_buf, TEGRA_SE_RNG_DT_SIZE);
+
+			/* update DT vector */
+			for (i = TEGRA_SE_RNG_DT_SIZE - 1; i >= 0; i--) {
+				dt_buf[i] += 1;
+				if (dt_buf[i] != 0)
+					break;
+			}
+		} else {
+			dlen = 0;
 		}
-	} else {
-		dlen = 0;
+		if (rng_ctx->use_org_iv) {
+			rng_ctx->use_org_iv = false;
+			tegra_se_config_crypto(se_dev,
+				SE_AES_OP_MODE_RNG_X931, true,
+				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
+		}
 	}
-	rng_ctx->use_org_iv = false;
 
 	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
@@ -1099,11 +1115,10 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 	u8 *iv = seed;
 	u8 *key = (u8 *)(seed + TEGRA_SE_RNG_IV_SIZE);
 	u8 *dt = key + TEGRA_SE_RNG_KEY_SIZE;
+	struct timespec ts;
+	u64 nsec, tmp[2];
 
 	BUG_ON(!seed);
-
-	if (slen < TEGRA_SE_RNG_SEED_SIZE)
-		return -EINVAL;
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -1118,7 +1133,19 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 	tegra_se_clk_disable(se_dev->pclk);
 	mutex_unlock(&se_hw_lock);
 
-	memcpy(rng_ctx->dt_buf, dt, TEGRA_SE_RNG_DT_SIZE);
+	if (slen < TEGRA_SE_RNG_SEED_SIZE) {
+		getnstimeofday(&ts);
+		nsec = timespec_to_ns(&ts);
+		do_div(nsec, 1000);
+		nsec ^= se_dev->ctr << 56;
+		se_dev->ctr++;
+		tmp[0] = nsec;
+		tmp[1] = tegra_chip_uid();
+		memcpy(rng_ctx->dt_buf, (u8 *)tmp, TEGRA_SE_RNG_DT_SIZE);
+	} else {
+		memcpy(rng_ctx->dt_buf, dt, TEGRA_SE_RNG_DT_SIZE);
+	}
+
 	rng_ctx->use_org_iv = true;
 
 	return 0;

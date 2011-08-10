@@ -30,5 +30,6 @@ int nvhost_init_t20_debug_support(struct nvhost_master *);
 int nvhost_init_t20_syncpt_support(struct nvhost_master *);
 int nvhost_init_t20_intr_support(struct nvhost_master *);
 int nvhost_init_t20_cpuaccess_support(struct nvhost_master *);
+int nvhost_t20_save_context(struct nvhost_module *mod, u32 syncpt_id);
 
 #endif /* _NVHOST_T20_H_ */

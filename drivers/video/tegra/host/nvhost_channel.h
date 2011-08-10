@@ -74,16 +74,6 @@ struct nvhost_channel {
 	struct nvhost_cdma cdma;
 };
 
-struct nvhost_op_pair {
-	u32 op1;
-	u32 op2;
-};
-
-struct nvhost_cpuinterrupt {
-	u32 syncpt_val;
-	void *intr_data;
-};
-
 int nvhost_channel_init(
 	struct nvhost_channel *ch,
 	struct nvhost_master *dev, int index);

@@ -1918,9 +1918,11 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	if (!dsi->info.lp_cmd_mode_freq_khz)
 		dsi->info.lp_cmd_mode_freq_khz = DEFAULT_LP_CMD_MODE_CLK_KHZ;
 
+	if (!dsi->info.chip_id || !dsi->info.chip_rev)
+		printk(KERN_WARNING "DSI: Failed to get chip info\n");
+
 	/* host mode is for testing only*/
 	dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
-
 	return 0;
 
 err_free:

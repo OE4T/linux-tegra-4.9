@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t30/t30.c
+ * drivers/video/tegra/host/t20/channel_t20.h
  *
- * Tegra Graphics Init for T30 Architecture Chips
+ * Tegra Graphics Host Channel
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,31 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "../dev.h"
-#include "t30.h"
+#ifndef __NVHOST_CHANNEL_T20_H
+#define __NVHOST_CHANNEL_T20_H
 
-int nvhost_init_t30_support(struct nvhost_master *host)
-{
-	int err;
+#include "../nvhost_channel.h"
 
-	/* don't worry about cleaning up on failure... "remove" does it. */
-	err = nvhost_init_t30_channel_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cdma_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_debug_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_syncpt_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_intr_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cpuaccess_support(host);
-	if (err)
-		return err;
-	return 0;
-}
+extern const struct nvhost_channeldesc nvhost_t20_channelmap[];
+
+#endif

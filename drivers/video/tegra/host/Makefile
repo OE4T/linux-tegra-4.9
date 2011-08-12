@@ -7,6 +7,7 @@ nvhost-objs = \
 	nvhost_channel.o \
 	dev.o \
 	bus.o \
+	3dctx_common.o \
 	debug.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t20/

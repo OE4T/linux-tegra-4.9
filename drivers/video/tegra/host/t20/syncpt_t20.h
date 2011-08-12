@@ -72,6 +72,7 @@
 #define NVWAITBASE_3D   (3)
 #define NVWAITBASE_MPE  (4)
 
+struct nvhost_master;
 int nvhost_t20_init_syncpt(struct nvhost_master *host);
 
 #endif /* __NVHOST_SYNCPT_T20_H */

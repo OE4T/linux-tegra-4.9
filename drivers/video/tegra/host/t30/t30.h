@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t30/t30.c
+ * drivers/video/tegra/host/t30/t30.h
  *
- * Tegra Graphics Init for T30 Architecture Chips
+ * Tegra Graphics Chip support for Tegra3
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -19,32 +19,11 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+#ifndef _NVHOST_T30_H_
+#define _NVHOST_T30_H_
 
-#include "../dev.h"
-#include "t30.h"
+#include "../t20/t20.h"
 
-int nvhost_init_t30_support(struct nvhost_master *host)
-{
-	int err;
+int nvhost_init_t30_channel_support(struct nvhost_master *);
 
-	/* don't worry about cleaning up on failure... "remove" does it. */
-	err = nvhost_init_t30_channel_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cdma_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_debug_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_syncpt_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_intr_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cpuaccess_support(host);
-	if (err)
-		return err;
-	return 0;
-}
+#endif /* _NVHOST_T30_H_ */

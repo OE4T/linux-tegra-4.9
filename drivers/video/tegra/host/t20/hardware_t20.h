@@ -157,10 +157,10 @@ enum {
 };
 /*  sync point conditionals */
 enum {
-	NV_CLASS_HOST_SYNCPT_IMMEDIATE = 0x0,
-	NV_CLASS_HOST_SYNCPT_OP_DONE = 0x1,
-	NV_CLASS_HOST_SYNCPT_RD_DONE = 0x2,
-	NV_CLASS_HOST_SYNCPT_REG_WR_SAFE = 0x3,
+	NV_SYNCPT_IMMEDIATE = 0x0,
+	NV_SYNCPT_OP_DONE = 0x1,
+	NV_SYNCPT_RD_DONE = 0x2,
+	NV_SYNCPT_REG_WR_SAFE = 0x3,
 };
 
 static inline u32 nvhost_class_host_wait_syncpt(

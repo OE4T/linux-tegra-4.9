@@ -28,6 +28,8 @@
 #include "hardware_t20.h"
 #include "syncpt_t20.h"
 #include "../dev.h"
+#include "3dctx_t20.h"
+#include "../t30/3dctx_t30.h"
 
 #define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
 #define NVHOST_CHANNEL_BASE 0
@@ -46,7 +48,7 @@
 static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action);
 
 
-static const struct nvhost_channeldesc channelmap[] = {
+const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 {
 	/* channel 0 */
 	.name	       = "display",
@@ -113,29 +115,22 @@ static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 	return p;
 }
 
-
-int t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h);
-int t20_nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h);
-
 static inline int t20_nvhost_hwctx_handler_init(
 	struct nvhost_hwctx_handler *h,
 	const char *module)
 {
 	if (strcmp(module, "gr3d") == 0)
 		return t20_nvhost_3dctx_handler_init(h);
-	else if (strcmp(module, "mpe") == 0)
-		return t20_nvhost_mpectx_handler_init(h);
 
 	return 0;
 }
-
 
 static int t20_channel_init(struct nvhost_channel *ch,
 			    struct nvhost_master *dev, int index)
 {
 	ch->dev = dev;
 	ch->chid = index;
-	ch->desc = channelmap + index;
+	ch->desc = nvhost_t20_channelmap + index;
 	mutex_init(&ch->reflock);
 	mutex_init(&ch->submitlock);
 
@@ -143,8 +138,6 @@ static int t20_channel_init(struct nvhost_channel *ch,
 
 	return t20_nvhost_hwctx_handler_init(&ch->ctxhandler, ch->desc->name);
 }
-
-
 
 static int t20_channel_submit(struct nvhost_channel *channel,
 			      struct nvhost_hwctx *hwctx,
@@ -440,7 +433,7 @@ static int t20_channel_read_3d_reg(
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 		nvhost_opcode_imm(NV_CLASS_HOST_INCR_SYNCPT,
-		    NV_CLASS_HOST_SYNCPT_OP_DONE << 8 | NVSYNCPT_3D));
+				NV_SYNCPT_OP_DONE << 8 | NVSYNCPT_3D));
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 			NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
@@ -512,7 +505,7 @@ static int t20_channel_read_3d_reg(
 int nvhost_init_t20_channel_support(struct nvhost_master *host)
 {
 
-	BUILD_BUG_ON(NVHOST_NUMCHANNELS != ARRAY_SIZE(channelmap));
+	BUILD_BUG_ON(NVHOST_NUMCHANNELS != ARRAY_SIZE(nvhost_t20_channelmap));
 
 	host->nb_mlocks =  NV_HOST1X_SYNC_MLOCK_NUM;
 	host->nb_channels =  NVHOST_NUMCHANNELS;

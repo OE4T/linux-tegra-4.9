@@ -211,7 +211,7 @@ static int t20_cdma_timeout_init(struct nvhost_cdma *cdma,
 		sb->mapped[i++] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 						0, 0);
 		sb->mapped[i++] = nvhost_opcode_imm_incr_syncpt(
-						NV_CLASS_HOST_SYNCPT_IMMEDIATE,
+						NV_SYNCPT_IMMEDIATE,
 						syncpt_id);
 		if (syncpt_id == NVSYNCPT_3D) {
 			/* also contains base increments */

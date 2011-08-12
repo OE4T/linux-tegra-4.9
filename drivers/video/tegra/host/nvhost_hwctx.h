@@ -31,16 +31,19 @@
 
 struct nvhost_channel;
 struct nvhost_cdma;
+struct nvhost_userctx_timeout;
 
 struct nvhost_hwctx {
 	struct kref ref;
 
 	struct nvhost_channel *channel;
+	struct nvhost_userctx_timeout *timeout;
 	bool valid;
 
 	struct nvmap_handle_ref *save;
 	u32 save_incrs;
 	u32 save_thresh;
+	u32 save_slots;
 
 	struct nvmap_handle_ref *restore;
 	u32 *restore_virt;

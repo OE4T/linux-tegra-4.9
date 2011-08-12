@@ -56,6 +56,7 @@ struct nvhost_module {
 	atomic_t refcount;
 	wait_queue_head_t idle;
 	struct nvhost_module *parent;
+	bool can_powergate;
 	int powergate_id;
 	int powergate_id2;
 	int powerdown_delay;
@@ -68,6 +69,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 void nvhost_module_deinit(struct nvhost_module *mod);
 void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
 
+void nvhost_module_reset(struct nvhost_module *mod);
 void nvhost_module_busy(struct nvhost_module *mod);
 void nvhost_module_idle_mult(struct nvhost_module *mod, int refs);
 int nvhost_module_add_client(struct nvhost_module *mod, void *priv);

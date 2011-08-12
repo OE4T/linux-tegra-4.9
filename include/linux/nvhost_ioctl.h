@@ -96,6 +96,10 @@ struct nvhost_clk_rate_args {
 	__u64 rate;
 };
 
+struct nvhost_set_timeout_args {
+	__u32 timeout;
+};
+
 #define NVHOST_IOCTL_CHANNEL_FLUSH		\
 	_IOR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS	\
@@ -116,8 +120,12 @@ struct nvhost_clk_rate_args {
 	_IOR(NVHOST_IOCTL_MAGIC, 9, struct nvhost_clk_rate_args)
 #define NVHOST_IOCTL_CHANNEL_SET_CLK_RATE		\
 	_IOW(NVHOST_IOCTL_MAGIC, 10, struct nvhost_clk_rate_args)
+#define NVHOST_IOCTL_CHANNEL_SET_TIMEOUT	\
+	_IOW(NVHOST_IOCTL_MAGIC, 11, struct nvhost_set_timeout_args)
+#define NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT	\
+	_IOR(NVHOST_IOCTL_MAGIC, 12, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_SET_CLK_RATE)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_hdr_ext)
 
 struct nvhost_ctrl_syncpt_read_args {

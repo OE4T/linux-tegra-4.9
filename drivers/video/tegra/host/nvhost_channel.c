@@ -27,8 +27,6 @@
 
 #include <linux/platform_device.h>
 
-
-
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 {
 	int err = 0;

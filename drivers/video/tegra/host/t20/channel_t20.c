@@ -27,6 +27,7 @@
 
 #include "hardware_t20.h"
 #include "syncpt_t20.h"
+#include "../dev.h"
 
 #define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
 #define NVHOST_CHANNEL_BASE 0
@@ -42,10 +43,7 @@
 #define NVMODMUTEX_DSI       (9)
 #define NV_FIFO_READ_TIMEOUT 200000
 
-static void power_2d(struct nvhost_module *mod, enum nvhost_power_action action);
 static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action);
-static void power_mpe(struct nvhost_module *mod, enum nvhost_power_action action);
-
 
 
 static const struct nvhost_channeldesc channelmap[] = {
@@ -74,7 +72,6 @@ static const struct nvhost_channeldesc channelmap[] = {
 	.waitbases     = BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes = BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			 BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.power         = power_2d,
 },
 {
 	/* channel 3 */
@@ -98,7 +95,6 @@ static const struct nvhost_channeldesc channelmap[] = {
 			 BIT(NVSYNCPT_MPE_WR_SAFE),
 	.waitbases     = BIT(NVWAITBASE_MPE),
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
-	.power	       = power_mpe,
 	.exclusive     = true,
 	.keepalive     = true,
 },
@@ -138,6 +134,7 @@ static int t20_channel_init(struct nvhost_channel *ch,
 			    struct nvhost_master *dev, int index)
 {
 	ch->dev = dev;
+	ch->chid = index;
 	ch->desc = channelmap + index;
 	mutex_init(&ch->reflock);
 	mutex_init(&ch->submitlock);
@@ -161,6 +158,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 			      int nr_unpins,
 			      u32 syncpt_id,
 			      u32 syncpt_incrs,
+			      struct nvhost_userctx_timeout *timeout,
 			      u32 *syncpt_value,
 			      bool null_kickoff)
 {
@@ -175,6 +173,9 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	nvhost_module_busy(&channel->mod);
 	if (strcmp(channel->mod.name, "gr3d") == 0)
 		module3d_notify_busy();
+
+	/* before error checks, return current max */
+	*syncpt_value = nvhost_syncpt_read_max(sp, syncpt_id);
 
 	/* get submit lock */
 	err = mutex_lock_interruptible(&channel->submitlock);
@@ -198,11 +199,26 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 		}
 	}
 
+	/* begin a CDMA submit */
+	err = nvhost_cdma_begin(&channel->cdma, timeout);
+	if (err) {
+		mutex_unlock(&channel->submitlock);
+		nvhost_module_idle(&channel->mod);
+		return err;
+	}
+
 	/* context switch */
 	if (channel->cur_ctx != hwctx) {
 		trace_nvhost_channel_context_switch(channel->desc->name,
 		  channel->cur_ctx, hwctx);
 		hwctx_to_save = channel->cur_ctx;
+		if (hwctx_to_save && hwctx_to_save->timeout &&
+			hwctx_to_save->timeout->has_timedout) {
+			hwctx_to_save = NULL;
+			dev_dbg(&channel->dev->pdev->dev,
+				"%s: skip save of timed out context (0x%p)\n",
+				__func__, channel->cur_ctx->timeout);
+		}
 		if (hwctx_to_save) {
 			syncpt_incrs += hwctx_to_save->save_incrs;
 			hwctx_to_save->valid = true;
@@ -222,9 +238,6 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	else
 		syncval = nvhost_syncpt_incr_max(sp,
 						syncpt_id, syncpt_incrs);
-
-	/* begin a CDMA submit */
-	nvhost_cdma_begin(&channel->cdma);
 
 	/* push save buffer (pre-gather setup depends on unit) */
 	if (hwctx_to_save)
@@ -281,7 +294,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&channel->cdma, user_nvmap,
-			syncpt_id, syncval, unpins, nr_unpins);
+			syncpt_id, syncval, unpins, nr_unpins,
+			timeout);
 
 	trace_nvhost_channel_submitted(channel->desc->name,
 			syncval-syncpt_incrs, syncval);
@@ -308,23 +322,16 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	return 0;
 }
 
-static void power_2d(struct nvhost_module *mod, enum nvhost_power_action action)
-{
-	/* TODO: [ahatala 2010-06-17] reimplement EPP hang war */
-	if (action == NVHOST_POWER_ACTION_OFF) {
-		/* TODO: [ahatala 2010-06-17] reset EPP */
-	}
-}
-
 static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 {
 	struct nvhost_channel *ch = container_of(mod, struct nvhost_channel, mod);
 	struct nvhost_hwctx *hwctx_to_save;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	u32 syncpt_incrs, syncpt_val;
+	int err;
 	void *ref;
 
-	if (action != NVHOST_POWER_ACTION_OFF)
+	if ((action != NVHOST_POWER_ACTION_OFF) || !mod->can_powergate)
 		return;
 
 	mutex_lock(&ch->submitlock);
@@ -337,6 +344,12 @@ static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 	if (strcmp(mod->name, "gr3d") == 0)
 		module3d_notify_busy();
 
+	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
+	if (err) {
+		mutex_unlock(&ch->submitlock);
+		return;
+	}
+
 	hwctx_to_save->valid = true;
 	ch->ctxhandler.get(hwctx_to_save);
 	ch->cur_ctx = NULL;
@@ -345,9 +358,9 @@ static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 	syncpt_val = nvhost_syncpt_incr_max(&ch->dev->syncpt,
 					NVSYNCPT_3D, syncpt_incrs);
 
-	nvhost_cdma_begin(&ch->cdma);
 	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
-	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val, NULL, 0);
+	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val,
+			NULL, 0, hwctx_to_save->timeout);
 
 	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
 			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
@@ -366,13 +379,10 @@ static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 	mutex_unlock(&ch->submitlock);
 }
 
-static void power_mpe(struct nvhost_module *mod, enum nvhost_power_action action)
-{
-}
-
 static int t20_channel_read_3d_reg(
 	struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
+	struct nvhost_userctx_timeout *timeout,
 	u32 offset,
 	u32 *value)
 {
@@ -414,7 +424,7 @@ static int t20_channel_read_3d_reg(
 		NVSYNCPT_3D, syncpt_incrs);
 
 	/* begin a CDMA submit */
-	nvhost_cdma_begin(&channel->cdma);
+	nvhost_cdma_begin(&channel->cdma, timeout);
 
 	/* push save buffer (pre-gather setup depends on unit) */
 	if (hwctx_to_save)
@@ -463,7 +473,8 @@ static int t20_channel_read_3d_reg(
 
 	/* end CDMA submit  */
 	nvhost_cdma_end(&channel->cdma, channel->dev->nvmap,
-			NVSYNCPT_3D, syncval, NULL, 0);
+			NVSYNCPT_3D, syncval, NULL, 0,
+			timeout);
 
 	/*
 	 * schedule a context save interrupt (to drain the host FIFO

@@ -31,6 +31,7 @@
 #include "chip_support.h"
 
 #define NVHOST_MAJOR 0 /* dynamic */
+struct nvhost_hwctx;
 
 struct nvhost_master {
 	void __iomem *aperture;
@@ -54,6 +55,13 @@ struct nvhost_master {
 
 	struct tegra_chip_info chip_info;
 	struct nvhost_chip_support op;
+};
+
+struct nvhost_userctx_timeout {
+	u32 timeout;
+	bool has_timedout;
+	struct nvhost_hwctx *hwctx;
+	int syncpt_id;
 };
 
 void nvhost_debug_init(struct nvhost_master *master);

@@ -216,11 +216,12 @@ static void setup_restore_v0(u32 *ptr)
 /*** save ***/
 
 /* the same context save command sequence is used for all contexts. */
-static struct nvmap_handle_ref *save_buf = NULL;
-static phys_addr_t save_phys = 0;
-static unsigned int save_size = 0;
-static unsigned int save_incrs = 0;
-static unsigned int save_thresh = 0;
+static struct nvmap_handle_ref *save_buf;
+static phys_addr_t save_phys;
+static unsigned int save_size;
+static unsigned int save_incrs;
+static unsigned int save_thresh;
+static unsigned int save_slots;
 
 static void __init setup_save_regs(const struct ctx_saver *saver,
 			struct save_info *info,
@@ -648,6 +649,7 @@ static struct nvhost_hwctx *ctx3d_alloc_common(struct nvhost_channel *ch,
 	ctx->save = save_buf;
 	ctx->save_incrs = save_incrs;
 	ctx->save_thresh = save_thresh;
+	ctx->save_slots = save_slots;
 	ctx->restore_phys = nvmap_pin(nvmap, ctx->restore);
 	ctx->restore_size = restore_size;
 	ctx->restore_incrs = restore_incrs;
@@ -767,6 +769,15 @@ int __init t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 		int err = PTR_ERR(save_buf);
 		save_buf = NULL;
 		return err;
+	}
+
+	save_slots = 1;		/* save_push_v0() */
+	if (s_is_v1) {
+		save_slots = 6;	/* save_push_v1() */
+		if (register_sets == 2)
+			save_slots += 2;
+		if (s_war_insert_syncpoints)
+			save_slots += 1;
 	}
 
 	save_ptr = nvmap_mmap(save_buf);

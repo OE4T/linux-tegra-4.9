@@ -145,7 +145,7 @@ static void action_ctxsave(struct nvhost_waitlist *waiter)
 	struct nvhost_hwctx *hwctx = waiter->data;
 	struct nvhost_channel *channel = hwctx->channel;
 
-	if (channel->ctxhandler.save_service)
+	if (channel->ctxhandler.save_service && !hwctx->timeout->has_timedout)
 		channel->ctxhandler.save_service(hwctx);
 	channel->ctxhandler.put(hwctx);
 }

@@ -26,6 +26,7 @@
 #include <linux/sched.h>
 #include <linux/err.h>
 #include <linux/device.h>
+#include <linux/delay.h>
 #include <mach/powergate.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
@@ -34,6 +35,47 @@
 
 #define ACM_POWERDOWN_HANDLER_DELAY_MSEC  25
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
+#define POWERGATE_DELAY 10
+
+void nvhost_module_reset(struct nvhost_module *mod)
+{
+	struct nvhost_master *dev;
+	dev = container_of(mod, struct nvhost_channel, mod)->dev;
+
+	dev_dbg(&dev->pdev->dev,
+		"%s: asserting %s module reset (id %d, id2 %d)\n",
+		__func__, mod->name,
+		mod->powergate_id, mod->powergate_id2);
+
+	/* assert module and mc client reset */
+	if (mod->powergate_id != -1) {
+		tegra_powergate_mc_disable(mod->powergate_id);
+		tegra_periph_reset_assert(mod->clk[0]);
+		tegra_powergate_mc_flush(mod->powergate_id);
+	}
+	if (mod->powergate_id2 != -1) {
+		tegra_powergate_mc_disable(mod->powergate_id2);
+		tegra_periph_reset_assert(mod->clk[1]);
+		tegra_powergate_mc_flush(mod->powergate_id2);
+	}
+
+	udelay(POWERGATE_DELAY);
+
+	/* deassert reset */
+	if (mod->powergate_id != -1) {
+		tegra_powergate_mc_flush_done(mod->powergate_id);
+		tegra_periph_reset_deassert(mod->clk[0]);
+		tegra_powergate_mc_enable(mod->powergate_id);
+	}
+	if (mod->powergate_id2 != -1) {
+		tegra_powergate_mc_flush_done(mod->powergate_id2);
+		tegra_periph_reset_deassert(mod->clk[1]);
+		tegra_powergate_mc_enable(mod->powergate_id2);
+	}
+
+	dev_dbg(&dev->pdev->dev, "%s: module %s out of reset\n",
+		__func__, mod->name);
+}
 
 void nvhost_module_busy(struct nvhost_module *mod)
 {
@@ -43,13 +85,15 @@ void nvhost_module_busy(struct nvhost_module *mod)
 		int i = 0;
 		if (mod->parent)
 			nvhost_module_busy(mod->parent);
-		if (mod->powergate_id != -1)
-			tegra_unpowergate_partition(mod->powergate_id);
-		if (mod->powergate_id2 != -1)
-			tegra_unpowergate_partition(mod->powergate_id2);
+		if (mod->can_powergate) {
+			if (mod->powergate_id != -1)
+				tegra_unpowergate_partition(mod->powergate_id);
+			if (mod->powergate_id2 != -1)
+				tegra_unpowergate_partition(mod->powergate_id2);
+		}
 		while (i < mod->num_clks)
 			clk_enable(mod->clk[i++]);
-		if (mod->func)
+		if (mod->can_powergate && mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_ON);
 		mod->powered = true;
 	}
@@ -68,12 +112,12 @@ static void powerdown_handler(struct work_struct *work)
 			mod->func(mod, NVHOST_POWER_ACTION_OFF);
 		for (i = 0; i < mod->num_clks; i++)
 			clk_disable(mod->clk[i]);
-		if (mod->powergate_id != -1)
-			tegra_powergate_partition(mod->powergate_id);
-
-		if (mod->powergate_id2 != -1)
-			tegra_powergate_partition(mod->powergate_id2);
-
+		if (mod->can_powergate) {
+			if (mod->powergate_id != -1)
+				tegra_powergate_partition(mod->powergate_id);
+			if (mod->powergate_id2 != -1)
+				tegra_powergate_partition(mod->powergate_id2);
+		}
 		mod->powered = false;
 		if (mod->parent)
 			nvhost_module_idle(mod->parent);
@@ -493,23 +537,30 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	mod->num_clks = i;
 	mod->func = func;
 	mod->parent = parent;
+	mod->can_powergate = false;
 	mod->powered = false;
 	mod->powergate_id = -1;
 	mod->powergate_id2 = -1;
+	mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
+
 	if (strcmp(name, "gr2d") == 0)
 		mod->powerdown_delay = 0;
-	else
-		mod->powerdown_delay = ACM_POWERDOWN_HANDLER_DELAY_MSEC;
-
-	if (strcmp(name, "gr3d") == 0) {
+	else if (strcmp(name, "gr3d") == 0) {
+		mod->can_powergate = !_3d_powergating_disabled();
 		if (!scale3d.init)
 			scale3d_init(mod);
 		mod->powergate_id = TEGRA_POWERGATE_3D;
+		if (!mod->can_powergate)
+			tegra_unpowergate_partition(mod->powergate_id);
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		mod->powergate_id2 = TEGRA_POWERGATE_3D1;
+		if (!mod->can_powergate)
+			tegra_unpowergate_partition(mod->powergate_id2);
 #endif
-	} else if (strcmp(name, "mpe") == 0)
+	} else if (strcmp(name, "mpe") == 0) {
+		mod->can_powergate = true;
 		mod->powergate_id = TEGRA_POWERGATE_MPE;
+	}
 
 	if (mod->powergate_id == TEGRA_POWERGATE_MPE
 		&& _mpe_powergating_disabled()) {

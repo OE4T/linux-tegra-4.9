@@ -50,6 +50,8 @@ struct nvhost_channeldesc {
 
 struct nvhost_channel {
 	int refcount;
+	int chid;
+	u32 syncpt_id;
 	struct mutex reflock;
 	struct mutex submitlock;
 	void __iomem *aperture;
@@ -90,6 +92,8 @@ int nvhost_channel_submit(
 	int nr_unpins,
 	u32 syncpt_id,
 	u32 syncpt_incrs,
+	u32 timeout,
+	void *timeout_ctx,
 	u32 *syncpt_value,
 	bool null_kickoff);
 

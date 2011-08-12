@@ -91,6 +91,8 @@ enum {
 	HOST1X_SYNC_SYNCPT_THRESH_CPU1_INT_STATUS = 0x48,
 	HOST1X_SYNC_SYNCPT_THRESH_INT_DISABLE = 0x60,
 	HOST1X_SYNC_SYNCPT_THRESH_INT_ENABLE_CPU0 = 0x68,
+	HOST1X_SYNC_CMDPROC_STOP = 0xac,
+	HOST1X_SYNC_CH_TEARDOWN = 0xb0,
 	HOST1X_SYNC_USEC_CLK = 0x1a4,
 	HOST1X_SYNC_CTXSW_TIMEOUT_CFG = 0x1a8,
 	HOST1X_SYNC_IP_BUSY_TIMEOUT = 0x1bc,
@@ -129,6 +131,20 @@ static inline unsigned int nvhost_sync_mlock_owner_owner_chid(u32 reg)
 	return (reg >> 8) & 0xf;
 }
 
+static inline unsigned int nvhost_sync_cmdproc_stop_chid(u32 reg, u32 chid)
+{
+	return reg | BIT(chid);
+}
+
+static inline unsigned int nvhost_sync_cmdproc_run_chid(u32 reg, u32 chid)
+{
+	return reg & ~(BIT(chid));
+}
+
+static inline unsigned int nvhost_sync_ch_teardown_chid(u32 reg, u32 chid)
+{
+	return reg | BIT(chid);
+}
 
 /* host class methods */
 enum {
@@ -270,5 +286,9 @@ int nvhost_drain_read_fifo(void __iomem *chan_regs,
 
 /* 8 bytes per slot. (This number does not include the final RESTART.) */
 #define PUSH_BUFFER_SIZE (NVHOST_GATHER_QUEUE_SIZE * 8)
+
+/* 4K page containing GATHERed methods to increment channel syncpts
+ * and replaces the original timed out contexts GATHER slots */
+#define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
 
 #endif /* __NVHOST_HARDWARE_T20_H */

@@ -23,6 +23,7 @@
 #define __NVHOST_DEBUG_H
 
 #include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 struct output {
 	void (*fn)(void *ctx, const char* str, size_t len);
@@ -43,4 +44,8 @@ static inline void write_to_printk(void *ctx, const char* str, size_t len)
 void nvhost_debug_output(struct output *o, const char* fmt, ...);
 
 void nvhost_debug_scale_init(struct dentry *de);
+extern pid_t nvhost_debug_force_timeout_pid;
+extern u32 nvhost_debug_force_timeout_val;
+extern u32 nvhost_debug_force_timeout_channel;
+
 #endif /*__NVHOST_DEBUG_H */

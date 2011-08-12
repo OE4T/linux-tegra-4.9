@@ -352,6 +352,11 @@ static bool _3d_powergating_disabled(void)
 	return 1;
 }
 
+/* MPE power gating disabled as it causes syncpt hangs */
+static bool _mpe_powergating_disabled(void)
+{
+	return 1;
+}
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
 			    int index)
@@ -505,16 +510,22 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	} else if (strcmp(name, "mpe") == 0)
 		mod->powergate_id = TEGRA_POWERGATE_MPE;
 
+	if (mod->powergate_id == TEGRA_POWERGATE_MPE
+		&& _mpe_powergating_disabled()) {
+		tegra_unpowergate_partition(mod->powergate_id);
+		mod->powergate_id = -1;
+	}
+
 	if (mod->powergate_id == TEGRA_POWERGATE_3D
 		&& _3d_powergating_disabled()) {
 		tegra_unpowergate_partition(mod->powergate_id);
 		mod->powergate_id = -1;
 
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
-		tegra_unpowergate_partition(mod->powergate_id2);
-		mod->powergate_id2 = -1;
-	}
+		if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
+			tegra_unpowergate_partition(mod->powergate_id2);
+			mod->powergate_id2 = -1;
+		}
 #endif
 	}
 

@@ -25,6 +25,17 @@
 struct output;
 struct nvhost_waitchk;
 struct nvhost_userctx_timeout;
+struct nvhost_master;
+struct nvhost_channel;
+struct nvmap_handle;
+struct nvhost_waitchk;
+struct nvmap_client;
+struct nvhost_hwctx;
+struct nvhost_cdma;
+struct nvhost_intr;
+struct push_buffer;
+struct nvhost_syncpt;
+struct nvhost_cpuaccess;
 
 struct nvhost_chip_support {
 	struct {
@@ -140,37 +151,5 @@ struct nvhost_chip_support {
 
 int nvhost_init_t20_support(struct nvhost_master *host);
 int nvhost_init_t30_support(struct nvhost_master *host);
-
-
-/* place holder for chip id assumed to live in kernel/arch/arm/mach-tegra */
-struct tegra_chip_info {
-#define TEGRA_SOC_CHIP_ARCH_T20 0
-#define TEGRA_SOC_CHIP_IMPL_T20 0
-	u16 arch;
-#define TEGRA_SOC_CHIP_ARCH_T30 1
-#define TEGRA_SOC_CHIP_IMPL_T30 0
-	u16 impl;
-};
-
-#if 0
-extern int tegra_get_chip_info(struct tegra_chip_info *);
-#else
-static inline int tegra_get_chip_info(struct tegra_chip_info *ci)
-{
-#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	ci->arch = TEGRA_SOC_CHIP_ARCH_T30;
-	ci->impl = TEGRA_SOC_CHIP_IMPL_T30;
-
-#elif defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	ci->arch = TEGRA_SOC_CHIP_ARCH_T20;
-	ci->impl = TEGRA_SOC_CHIP_IMPL_T20;
-
-#else
-	return -ENODEV;
-#endif
-
-	return 0;
-}
-#endif
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

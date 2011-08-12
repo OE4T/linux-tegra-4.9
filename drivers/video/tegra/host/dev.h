@@ -53,7 +53,6 @@ struct nvhost_master {
 
 	u32 sync_queue_size;
 
-	struct tegra_chip_info chip_info;
 	struct nvhost_chip_support op;
 };
 

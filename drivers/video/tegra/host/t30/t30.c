@@ -25,7 +25,6 @@
 /* t30 uses t20 entry points */
 #include "../t20/t20.h"
 
-#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 int nvhost_init_t30_support(struct nvhost_master *host)
 {
 	int err;
@@ -51,4 +50,3 @@ int nvhost_init_t30_support(struct nvhost_master *host)
 		return err;
 	return 0;
 }
-#endif

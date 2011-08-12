@@ -290,10 +290,12 @@ int tegra_edid_mode_support_stereo(struct fb_videomode *mode)
 	if (!mode)
 		return 0;
 
-	if (mode->xres == 1280 && mode->yres == 720 && mode->refresh == 60)
+	if (mode->xres == 1280 &&
+		mode->yres == 720 &&
+		((mode->refresh == 60) || (mode->refresh == 50)))
 		return 1;
 
-	if (mode->xres == 1280 && mode->yres == 720 && mode->refresh == 50)
+	if (mode->xres == 1920 && mode->yres == 1080 && mode->refresh == 24)
 		return 1;
 
 	return 0;

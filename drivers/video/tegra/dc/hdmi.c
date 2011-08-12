@@ -167,6 +167,23 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.vmode =	FB_VMODE_NONINTERLACED,
 		.sync = 0,
 	},
+
+	/* 1920x1080p 23.98/24hz: EIA/CEA-861-B Format 32 (Stereo)*/
+	{
+		.xres =		1920,
+		.yres =		1080,
+		.pixclock =	KHZ2PICOS(74250),
+		.hsync_len =	44,	/* h_sync_width */
+		.vsync_len =	5,	/* v_sync_width */
+		.left_margin =	148,	/* h_back_porch */
+		.upper_margin =	36,	/* v_back_porch */
+		.right_margin =	638,	/* h_front_porch */
+		.lower_margin =	4,	/* v_front_porch */
+		.vmode = FB_VMODE_NONINTERLACED |
+				 FB_VMODE_STEREO_FRAME_PACK,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+
 	/* 1920x1080p 30Hz EIA/CEA-861-B Format 34 */
 	{
 		.xres =		1920,
@@ -1305,7 +1322,9 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 			avi.vic = 4; /* 60 Hz */
 		else
 			avi.vic = 19; /* 50 Hz */
-	} else if (dc->mode.v_active == 1080) {
+	} else if (dc->mode.v_active == 1080 ||
+		(dc->mode.v_active == 2205 && dc->mode.stereo_mode)) {
+		/* VIC for both 1080p and 1080p 3D mode */
 		avi.m = HDMI_AVI_M_16_9;
 		if (dc->mode.h_front_porch == 88)
 			avi.vic = 16; /* 60 Hz */

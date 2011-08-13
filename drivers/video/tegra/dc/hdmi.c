@@ -1303,7 +1303,7 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 			avi.m = HDMI_AVI_M_16_9;
 			avi.vic = 18;
 		} else {
-			avi.m = HDMI_AVI_M_16_9;
+			avi.m = HDMI_AVI_M_4_3;
 			avi.vic = 17;
 		}
 	} else if (dc->mode.v_active == 720 ||

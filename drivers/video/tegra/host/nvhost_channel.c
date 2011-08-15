@@ -23,50 +23,25 @@
 #include "nvhost_channel.h"
 #include "dev.h"
 #include "nvhost_hwctx.h"
+#include "nvhost_job.h"
 #include <trace/events/nvhost.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/slab.h>
 
 #include <linux/platform_device.h>
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
-int nvhost_channel_submit(
-	struct nvhost_channel *channel,
-	struct nvhost_hwctx *hwctx,
-	struct nvmap_client *user_nvmap,
-	struct nvhost_channel_gather *gathers,
-	int num_gathers,
-	struct nvhost_waitchk *waitchk,
-	struct nvhost_waitchk *waitchk_end,
-	u32 waitchk_mask,
-	struct nvmap_handle **unpins,
-	int nr_unpins,
-	u32 syncpt_id,
-	u32 syncpt_incrs,
-	struct nvhost_userctx_timeout *timeout_ctx,
-	u32 priority,
-	u32 *syncpt_value,
-	bool null_kickoff)
+int nvhost_channel_submit(struct nvhost_job *job)
 {
-	BUG_ON(!channel_op(channel).submit);
-
 	/* Low priority submits wait until sync queue is empty. Ignores result
 	 * from nvhost_cdma_flush, as we submit either when push buffer is
 	 * empty or when we reach the timeout. */
-	if (priority < NVHOST_PRIORITY_MEDIUM)
-		(void)nvhost_cdma_flush(&channel->cdma,
+	if (job->priority < NVHOST_PRIORITY_MEDIUM)
+		(void)nvhost_cdma_flush(&job->ch->cdma,
 				NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT);
 
-	return channel_op(channel).submit(channel,
-			hwctx,
-			user_nvmap,
-			gathers, num_gathers,
-			waitchk, waitchk_end, waitchk_mask,
-			unpins, nr_unpins,
-			syncpt_id, syncpt_incrs,
-			timeout_ctx,
-			syncpt_value,
-			null_kickoff);
+	return channel_op(job->ch).submit(job);
 }
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)

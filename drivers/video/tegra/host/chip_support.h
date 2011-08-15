@@ -29,7 +29,6 @@ struct nvhost_userctx_timeout;
 struct nvhost_master;
 struct nvhost_channel;
 struct nvmap_handle;
-struct nvhost_waitchk;
 struct nvmap_client;
 struct nvhost_hwctx;
 struct nvhost_cdma;
@@ -40,27 +39,14 @@ struct nvhost_cpuaccess;
 struct nvhost_module;
 struct nvhost_master;
 struct dentry;
+struct nvhost_job;
 
 struct nvhost_chip_support {
 	struct {
 		int (*init)(struct nvhost_channel *,
 			    struct nvhost_master *,
 			    int chid);
-		int (*submit)(struct nvhost_channel *,
-			      struct nvhost_hwctx *,
-			      struct nvmap_client *,
-			      struct nvhost_channel_gather *gathers,
-			      int num_gathers,
-			      struct nvhost_waitchk *waitchk,
-			      struct nvhost_waitchk *waitchk_end,
-			      u32 waitchk_mask,
-			      struct nvmap_handle **unpins,
-			      int nr_unpins,
-			      u32 syncpt_id,
-			      u32 syncpt_incrs,
-			      struct nvhost_userctx_timeout *timeout,
-			      u32 *syncpt_value,
-			      bool null_kickoff);
+		int (*submit)(struct nvhost_job *job);
 		int (*read3dreg)(struct nvhost_channel *channel,
 				struct nvhost_hwctx *hwctx,
 				struct nvhost_userctx_timeout *timeout,
@@ -127,7 +113,7 @@ struct nvhost_chip_support {
 				  struct nvmap_client *nvmap,
 				  u32 waitchk_mask,
 				  struct nvhost_waitchk *wait,
-				  struct nvhost_waitchk *waitend);
+				  int num_waitchk);
 		void (*debug)(struct nvhost_syncpt *);
 		const char * (*name)(struct nvhost_syncpt *, u32 id);
 	} syncpt;

@@ -5,6 +5,7 @@ nvhost-objs = \
 	nvhost_cpuaccess.o \
 	nvhost_intr.o \
 	nvhost_channel.o \
+	nvhost_job.o \
 	dev.o \
 	bus.o \
 	3dctx_common.o \

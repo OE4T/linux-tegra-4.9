@@ -26,6 +26,7 @@
 #include "nvhost_cdma.h"
 #include "nvhost_acm.h"
 #include "nvhost_hwctx.h"
+#include "nvhost_job.h"
 
 #include <linux/cdev.h>
 #include <linux/io.h>
@@ -78,23 +79,7 @@ int nvhost_channel_init(
 	struct nvhost_channel *ch,
 	struct nvhost_master *dev, int index);
 
-int nvhost_channel_submit(
-	struct nvhost_channel *channel,
-	struct nvhost_hwctx *hwctx,
-	struct nvmap_client *user_nvmap,
-	struct nvhost_channel_gather *gathers,
-	int num_gathers,
-	struct nvhost_waitchk *waitchk,
-	struct nvhost_waitchk *waitchk_end,
-	u32 waitchk_mask,
-	struct nvmap_handle **unpins,
-	int nr_unpins,
-	u32 syncpt_id,
-	u32 syncpt_incrs,
-	struct nvhost_userctx_timeout *timeout_ctx,
-	u32 priority,
-	u32 *syncpt_value,
-	bool null_kickoff);
+int nvhost_channel_submit(struct nvhost_job *job);
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);

@@ -240,7 +240,8 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			     struct nvmap_client *nvmap,
 			     u32 waitchk_mask,
 			     struct nvhost_waitchk *wait,
-			     struct nvhost_waitchk *waitend)
+			     int num_waitchk)
 {
-	return syncpt_op(sp).wait_check(sp, nvmap, waitchk_mask, wait, waitend);
+	return syncpt_op(sp).wait_check(sp, nvmap,
+			waitchk_mask, wait, num_waitchk);
 }

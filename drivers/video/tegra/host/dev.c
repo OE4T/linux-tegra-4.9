@@ -45,6 +45,7 @@
 #include <mach/hardware.h>
 
 #include "debug.h"
+#include "nvhost_job.h"
 
 #define DRIVER_NAME "tegra_grhost"
 #define IFACE_NAME "nvhost"
@@ -59,15 +60,8 @@ struct nvhost_channel_userctx {
 	struct nvhost_hwctx *hwctx;
 	struct nvhost_submit_hdr_ext hdr;
 	int num_relocshifts;
-	struct nvmap_handle_ref *gather_mem;
-	struct nvhost_channel_gather *gathers;
-	int num_gathers;
-	int pinarray_size;
-	struct nvmap_pinarray_elem pinarray[NVHOST_MAX_HANDLES];
-	struct nvmap_handle *unpinarray[NVHOST_MAX_HANDLES];
+	struct nvhost_job *job;
 	struct nvmap_client *nvmap;
-	struct nvhost_waitchk waitchks[NVHOST_MAX_WAIT_CHECKS];
-	struct nvhost_waitchk *cur_waitchk;
 	struct nvhost_userctx_timeout timeout;
 	u32 priority;
 };
@@ -81,14 +75,14 @@ struct nvhost_ctrl_userctx {
  * Write cmdbuf to ftrace output. Checks if cmdbuf contents should be output
  * and mmaps the cmdbuf contents if required.
  */
-static void trace_write_cmdbufs(struct nvhost_channel_userctx *ctx)
+static void trace_write_cmdbufs(struct nvhost_job *job)
 {
 	struct nvmap_handle_ref handle;
 	void *mem = NULL;
 	int i = 0;
 
-	for (i = 0; i < ctx->num_gathers; i++) {
-		struct nvhost_channel_gather *gather = &ctx->gathers[i];
+	for (i = 0; i < job->num_gathers; i++) {
+		struct nvhost_channel_gather *gather = &job->gathers[i];
 		if (nvhost_debug_trace_cmdbuf) {
 			handle.handle = nvmap_id_to_handle(gather->mem_id);
 			mem = nvmap_mmap(&handle);
@@ -104,7 +98,7 @@ static void trace_write_cmdbufs(struct nvhost_channel_userctx *ctx)
 			 */
 			for (i = 0; i < gather->words; i += TRACE_MAX_LENGTH) {
 				trace_nvhost_channel_write_cmdbuf_data(
-					ctx->ch->desc->name,
+					job->ch->desc->name,
 					gather->mem_id,
 					min(gather->words - i,
 					    TRACE_MAX_LENGTH),
@@ -130,11 +124,8 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->hwctx)
 		priv->ch->ctxhandler.put(priv->hwctx);
 
-	if (priv->gathers)
-		nvmap_munmap(priv->gather_mem, priv->gathers);
-
-	if (!IS_ERR_OR_NULL(priv->gather_mem))
-		nvmap_free(priv->ch->dev->nvmap, priv->gather_mem);
+	if (priv->job)
+		nvhost_job_put(priv->job);
 
 	nvmap_client_put(priv->nvmap);
 	kfree(priv);
@@ -145,7 +136,6 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_channel *ch;
-
 
 	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
 	ch = nvhost_getchannel(ch);
@@ -161,12 +151,6 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	filp->private_data = priv;
 	priv->ch = ch;
 	nvhost_module_add_client(ch->dev, &ch->mod, priv);
-	priv->gather_mem = nvmap_alloc(ch->dev->nvmap,
-				sizeof(struct nvhost_channel_gather)
-					* NVHOST_MAX_GATHERS, 32,
-				NVMAP_HANDLE_CACHEABLE);
-	if (IS_ERR(priv->gather_mem))
-		goto fail;
 
 	if (ch->ctxhandler.alloc) {
 		priv->hwctx = ch->ctxhandler.alloc(ch);
@@ -177,8 +161,9 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 
-	priv->gathers = nvmap_mmap(priv->gather_mem);
-	if (!priv->gathers)
+	priv->job = nvhost_job_alloc(ch, priv->hwctx, &priv->hdr,
+			NULL, priv->priority, &priv->timeout);
+	if (!priv->job)
 		goto fail;
 
 	return 0;
@@ -187,49 +172,25 @@ fail:
 	return -ENOMEM;
 }
 
-static void add_gather(struct nvhost_channel_userctx *ctx,
-		u32 mem_id, u32 words, u32 offset)
-{
-	struct nvmap_pinarray_elem *pin;
-	struct nvhost_channel_gather *cur_gather =
-			&ctx->gathers[ctx->num_gathers];
-
-	pin = &ctx->pinarray[ctx->pinarray_size++];
-	pin->patch_mem = (u32)nvmap_ref_to_handle(ctx->gather_mem);
-	pin->patch_offset = (void *)&(cur_gather->mem) - (void *)ctx->gathers;
-	pin->pin_mem = mem_id;
-	pin->pin_offset = offset;
-	cur_gather->words = words;
-	cur_gather->mem_id = mem_id;
-	cur_gather->offset = offset;
-	ctx->num_gathers += 1;
-}
-
 static int set_submit(struct nvhost_channel_userctx *ctx)
 {
+	struct device *device = &ctx->ch->dev->pdev->dev;
+
 	/* submit should have at least 1 cmdbuf */
 	if (!ctx->hdr.num_cmdbufs)
 		return -EIO;
 
-	/* check submit doesn't exceed static structs */
-	if ((ctx->hdr.num_cmdbufs + ctx->hdr.num_relocs) > NVHOST_MAX_HANDLES) {
-		dev_err(&ctx->ch->dev->pdev->dev,
-			"channel submit exceeded max handles (%d > %d)\n",
-			ctx->hdr.num_cmdbufs + ctx->hdr.num_relocs,
-			NVHOST_MAX_HANDLES);
-		return -EIO;
-	}
-	if (ctx->hdr.num_waitchks > NVHOST_MAX_WAIT_CHECKS) {
-		dev_err(&ctx->ch->dev->pdev->dev,
-			"channel submit exceeded max waitchks (%d > %d)\n",
-			ctx->hdr.num_waitchks,
-			NVHOST_MAX_WAIT_CHECKS);
-		return -EIO;
+	if (!ctx->nvmap) {
+		dev_err(device, "no nvmap context set\n");
+		return -EFAULT;
 	}
 
-	ctx->num_gathers = 0;
-	ctx->cur_waitchk = ctx->waitchks;
-	ctx->pinarray_size = 0;
+	ctx->job = nvhost_job_realloc(ctx->job,
+			&ctx->hdr,
+			ctx->nvmap,
+			ctx->priority);
+	if (!ctx->job)
+		return -ENOMEM;
 
 	if (ctx->hdr.submit_version >= NVHOST_SUBMIT_VERSION_V2)
 		ctx->num_relocshifts = ctx->hdr.num_relocs;
@@ -251,28 +212,31 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 	struct nvhost_channel_userctx *priv = filp->private_data;
 	size_t remaining = count;
 	int err = 0;
+	struct nvhost_job *job = priv->job;
+	struct nvhost_submit_hdr_ext *hdr = &priv->hdr;
+	const char *chname = priv->ch->desc->name;
 
 	while (remaining) {
 		size_t consumed;
-		if (!priv->hdr.num_relocs &&
+		if (!hdr->num_relocs &&
 		    !priv->num_relocshifts &&
-		    !priv->hdr.num_cmdbufs &&
-		    !priv->hdr.num_waitchks) {
+		    !hdr->num_cmdbufs &&
+		    !hdr->num_waitchks) {
 			consumed = sizeof(struct nvhost_submit_hdr);
 			if (remaining < consumed)
 				break;
-			if (copy_from_user(&priv->hdr, buf, consumed)) {
+			if (copy_from_user(hdr, buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			priv->hdr.submit_version = NVHOST_SUBMIT_VERSION_V0;
+			hdr->submit_version = NVHOST_SUBMIT_VERSION_V0;
 			err = set_submit(priv);
 			if (err)
 				break;
-			trace_nvhost_channel_write_submit(priv->ch->desc->name,
-			  count, priv->hdr.num_cmdbufs, priv->hdr.num_relocs,
-			  priv->hdr.syncpt_id, priv->hdr.syncpt_incrs);
-		} else if (priv->hdr.num_cmdbufs) {
+			trace_nvhost_channel_write_submit(chname,
+			  count, hdr->num_cmdbufs, hdr->num_relocs,
+			  hdr->syncpt_id, hdr->syncpt_incrs);
+		} else if (hdr->num_cmdbufs) {
 			struct nvhost_cmdbuf cmdbuf;
 			consumed = sizeof(cmdbuf);
 			if (remaining < consumed)
@@ -281,47 +245,49 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
-			trace_nvhost_channel_write_cmdbuf(priv->ch->desc->name,
+			trace_nvhost_channel_write_cmdbuf(chname,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
-			add_gather(priv,
+			nvhost_job_add_gather(job,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
-			priv->hdr.num_cmdbufs--;
-		} else if (priv->hdr.num_relocs) {
+			hdr->num_cmdbufs--;
+		} else if (hdr->num_relocs) {
 			consumed = sizeof(struct nvhost_reloc);
 			if (remaining < consumed)
 				break;
-			if (copy_from_user(&priv->pinarray[priv->pinarray_size],
-						buf, consumed)) {
+			if (copy_from_user(&job->pinarray[job->num_pins],
+					buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			trace_nvhost_channel_write_reloc(priv->ch->desc->name);
-			priv->pinarray_size++;
-			priv->hdr.num_relocs--;
-		} else if (priv->hdr.num_waitchks) {
+			trace_nvhost_channel_write_reloc(chname);
+			job->num_pins++;
+			hdr->num_relocs--;
+		} else if (hdr->num_waitchks) {
 			int numwaitchks =
 				(remaining / sizeof(struct nvhost_waitchk));
 			if (!numwaitchks)
 				break;
 			numwaitchks = min_t(int,
-				numwaitchks, priv->hdr.num_waitchks);
+				numwaitchks, hdr->num_waitchks);
 			consumed = numwaitchks * sizeof(struct nvhost_waitchk);
-			if (copy_from_user(priv->cur_waitchk, buf, consumed)) {
+			if (copy_from_user(&job->waitchk[job->num_waitchk],
+					buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
 			trace_nvhost_channel_write_waitchks(
-			  priv->ch->desc->name, numwaitchks,
-			  priv->hdr.waitchk_mask);
-			priv->cur_waitchk += numwaitchks;
-			priv->hdr.num_waitchks -= numwaitchks;
+			  chname, numwaitchks,
+			  hdr->waitchk_mask);
+			job->num_waitchk += numwaitchks;
+			hdr->num_waitchks -= numwaitchks;
 		} else if (priv->num_relocshifts) {
 			int next_shift =
-				priv->pinarray_size - priv->num_relocshifts;
+				job->num_pins - priv->num_relocshifts;
 			consumed = sizeof(struct nvhost_reloc_shift);
 			if (remaining < consumed)
 				break;
-			if (copy_from_user(&priv->pinarray[next_shift].reloc_shift,
+			if (copy_from_user(
+					&job->pinarray[next_shift].reloc_shift,
 					buf, consumed)) {
 				err = -EFAULT;
 				break;
@@ -350,37 +316,28 @@ static int nvhost_ioctl_channel_flush(
 	int null_kickoff)
 {
 	struct device *device = &ctx->ch->dev->pdev->dev;
-	int num_unpin;
 	int err;
 
 	trace_nvhost_ioctl_channel_flush(ctx->ch->desc->name);
 
-	if (ctx->hdr.num_relocs ||
+	if (!ctx->job ||
+	    ctx->hdr.num_relocs ||
 	    ctx->hdr.num_cmdbufs ||
 	    ctx->hdr.num_waitchks) {
 		reset_submit(ctx);
 		dev_err(device, "channel submit out of sync\n");
 		return -EFAULT;
 	}
-	if (!ctx->nvmap) {
-		dev_err(device, "no nvmap context set\n");
-		return -EFAULT;
-	}
-	if (ctx->num_gathers == 0)
-		return 0;
 
-	/* pin mem handles and patch physical addresses */
-	num_unpin = nvmap_pin_array(ctx->nvmap,
-				    nvmap_ref_to_handle(ctx->gather_mem),
-				    ctx->pinarray, ctx->pinarray_size,
-				    ctx->unpinarray);
-	if (num_unpin < 0) {
-		dev_warn(device, "nvmap_pin_array failed: %d\n", num_unpin);
-		return num_unpin;
+	err = nvhost_job_pin(ctx->job);
+	if (err) {
+		dev_warn(device, "nvhost_job_pin failed: %d\n", err);
+		return err;
 	}
 
 	if (nvhost_debug_null_kickoff_pid == current->tgid)
 		null_kickoff = 1;
+	ctx->job->null_kickoff = null_kickoff;
 
 	if ((nvhost_debug_force_timeout_pid == current->tgid) &&
 	    (nvhost_debug_force_timeout_channel == ctx->ch->chid)) {
@@ -388,21 +345,13 @@ static int nvhost_ioctl_channel_flush(
 	}
 	ctx->timeout.syncpt_id = ctx->hdr.syncpt_id;
 
-	trace_write_cmdbufs(ctx);
+	trace_write_cmdbufs(ctx->job);
 
 	/* context switch if needed, and submit user's gathers to the channel */
-	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
-				ctx->gathers, ctx->num_gathers,
-				ctx->waitchks, ctx->cur_waitchk,
-				ctx->hdr.waitchk_mask,
-				ctx->unpinarray, num_unpin,
-				ctx->hdr.syncpt_id, ctx->hdr.syncpt_incrs,
-				&ctx->timeout,
-				ctx->priority,
-				&args->value,
-				null_kickoff);
+	err = nvhost_channel_submit(ctx->job);
+	args->value = ctx->job->syncpt_end;
 	if (err)
-		nvmap_unpin_handles(ctx->nvmap, ctx->unpinarray, num_unpin);
+		nvhost_job_unpin(ctx->job);
 
 	return err;
 }

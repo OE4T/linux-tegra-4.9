@@ -630,6 +630,7 @@ static void t20_cdma_timeout_handler(struct work_struct *work)
 	cdma_op(cdma).timeout_teardown_begin(cdma);
 
 	nvhost_cdma_update_sync_queue(cdma, sp, &dev->pdev->dev);
+	mutex_unlock(&cdma->lock);
 }
 
 int nvhost_init_t20_cdma_support(struct nvhost_master *host)

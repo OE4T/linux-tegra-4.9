@@ -25,6 +25,7 @@
 #include <asm/cacheflush.h>
 
 #include <linux/slab.h>
+#include <linux/kfifo.h>
 #include <trace/events/nvhost.h>
 #include <linux/interrupt.h>
 
@@ -36,228 +37,45 @@
  *     - some channels hardly need any, some channels (3d) could use more
  */
 
-/* Sync Queue
- *
- * The sync queue is a circular buffer of u32s interpreted as:
- *   0: SyncPointID
- *   1: SyncPointValue
- *   2: FirstDMAGet (start of submit in pushbuffer)
- *   3: Timeout (time to live for this submit)
- *   4: TimeoutContext (userctx that submitted buffer)
- *   5: NumSlots (how many pushbuffer slots to free)
- *   6: NumHandles
- *   7: nvmap client which pinned the handles
- *   8..: NumHandles * nvmemhandle to unpin
- *
- * There's always one word unused, so (accounting for wrap):
- *   - Write == Read => queue empty
- *   - Write + 1 == Read => queue full
- * The queue must not be left with less than SYNC_QUEUE_MIN_ENTRY words
- * of space at the end of the array.
- *
- * We want to pass contiguous arrays of handles to nvmap_unpin_handles,
- * so arrays that would wrap at the end of the buffer will be split into
- * two (or more) entries.
+/**
+ * kfifo_save - save current out pointer
+ * @fifo: address of the fifo to be used
  */
-
-/* Number of words needed to store an entry containing one handle */
-#define SYNC_QUEUE_MIN_ENTRY (SQ_IDX_HANDLES + (sizeof(void *)/4))
-
-/* Magic to use to fill freed handle slots */
-#define BAD_MAGIC 0xdeadbeef
+#define	kfifo_save(fifo) \
+__kfifo_uint_must_check_helper( \
+({ \
+	typeof((fifo) + 1) __tmp = (fifo); \
+	struct __kfifo *__kfifo = &__tmp->kfifo; \
+	__kfifo->out; \
+}) \
+)
 
 /**
- * Reset to empty queue.
+ * kfifo_restore - restore previously saved pointer
+ * @fifo: address of the fifo to be used
+ * @out: output pointer
  */
-static void reset_sync_queue(struct sync_queue *queue)
-{
-	queue->read = 0;
-	queue->write = 0;
-}
-
-/**
- *  Find the number of handles that can be stashed in the sync queue without
- *  waiting.
- *  0 -> queue is full, must update to wait for some entries to be freed.
- */
-static unsigned int sync_queue_space(struct sync_queue *queue)
-{
-	struct nvhost_cdma *cdma;
-	struct nvhost_master *host;
-
-	unsigned int read = queue->read;
-	unsigned int write = queue->write;
-	u32 size;
-
-	cdma = container_of(queue, struct nvhost_cdma, sync_queue);
-	host = cdma_to_dev(cdma);
-
-	BUG_ON(read  > (host->sync_queue_size - SYNC_QUEUE_MIN_ENTRY));
-	BUG_ON(write > (host->sync_queue_size - SYNC_QUEUE_MIN_ENTRY));
-
-	/*
-	 * We can use all of the space up to the end of the buffer, unless the
-	 * read position is within that space (the read position may advance
-	 * asynchronously, but that can't take space away once we've seen it).
-	 */
-	if (read > write) {
-		size = (read - 1) - write;
-	} else {
-		size = host->sync_queue_size - write;
-
-		/*
-		 * If the read position is zero, it gets complicated. We can't
-		 * use the last word in the buffer, because that would leave
-		 * the queue empty.
-		 * But also if we use too much we would not leave enough space
-		 * for a single handle packet, and would have to wrap in
-		 * add_to_sync_queue - also leaving write == read == 0,
-		 * an empty queue.
-		 */
-		if (read == 0)
-			size -= SYNC_QUEUE_MIN_ENTRY;
-	}
-
-	/*
-	 * There must be room for an entry header and at least one handle,
-	 * otherwise we report a full queue.
-	 */
-	if (size < SYNC_QUEUE_MIN_ENTRY)
-		return 0;
-	/* Minimum entry stores one handle */
-	return (size - SYNC_QUEUE_MIN_ENTRY) + 1;
-}
-
-/**
- * Debug routine used to dump sync_queue entries
- */
-static void dump_sync_queue_entry(struct nvhost_cdma *cdma, u32 *entry)
-{
-	struct nvhost_master *dev = cdma_to_dev(cdma);
-
-	dev_dbg(&dev->pdev->dev, "sync_queue index 0x%x\n",
-		(entry - cdma->sync_queue.buffer));
-	dev_dbg(&dev->pdev->dev, "    SYNCPT_ID   %d\n",
-		entry[SQ_IDX_SYNCPT_ID]);
-	dev_dbg(&dev->pdev->dev, "    SYNCPT_VAL  %d\n",
-		entry[SQ_IDX_SYNCPT_VAL]);
-	dev_dbg(&dev->pdev->dev, "    FIRST_GET   0x%x\n",
-		entry[SQ_IDX_FIRST_GET]);
-	dev_dbg(&dev->pdev->dev, "    TIMEOUT     %d\n",
-		entry[SQ_IDX_TIMEOUT]);
-	dev_dbg(&dev->pdev->dev, "    TIMEOUT_CTX 0x%x\n",
-		entry[SQ_IDX_TIMEOUT_CTX]);
-	dev_dbg(&dev->pdev->dev, "    NUM_SLOTS   %d\n",
-		entry[SQ_IDX_NUM_SLOTS]);
-	dev_dbg(&dev->pdev->dev, "    NUM_HANDLES %d\n",
-		entry[SQ_IDX_NUM_HANDLES]);
-}
+#define	kfifo_restore(fifo, restore) \
+(void)({ \
+	typeof((fifo) + 1) __tmp = (fifo); \
+	struct __kfifo *__kfifo = &__tmp->kfifo; \
+	__kfifo->out = (restore); \
+})
 
 /**
  * Add an entry to the sync queue.
  */
-#define entry_size(_cnt)	((_cnt)*sizeof(void *)/sizeof(u32))
-
-static void add_to_sync_queue(struct sync_queue *queue,
-			      u32 sync_point_id, u32 sync_point_value,
-			      u32 nr_slots, struct nvmap_client *user_nvmap,
-			      struct nvmap_handle **handles, u32 nr_handles,
-			      u32 first_get,
-			      struct nvhost_userctx_timeout *timeout)
+static void add_to_sync_queue(struct nvhost_cdma *cdma,
+			      struct nvhost_job *job,
+			      u32 nr_slots,
+			      u32 first_get)
 {
-	struct nvhost_cdma *cdma;
-	struct nvhost_master *host;
-	u32 size, write = queue->write;
-	u32 *p = queue->buffer + write;
+	BUG_ON(job->syncpt_id == NVSYNCPT_INVALID);
 
-	cdma = container_of(queue, struct nvhost_cdma, sync_queue);
-	host = cdma_to_dev(cdma);
-
-	BUG_ON(sync_point_id == NVSYNCPT_INVALID);
-	BUG_ON(sync_queue_space(queue) < nr_handles);
-
-	size  = SQ_IDX_HANDLES;
-	size += entry_size(nr_handles);
-
-	write += size;
-	BUG_ON(write > host->sync_queue_size);
-
-	p[SQ_IDX_SYNCPT_ID] = sync_point_id;
-	p[SQ_IDX_SYNCPT_VAL] = sync_point_value;
-	p[SQ_IDX_FIRST_GET] = first_get;
-	p[SQ_IDX_TIMEOUT] = timeout->timeout;
-	p[SQ_IDX_NUM_SLOTS] = nr_slots;
-	p[SQ_IDX_NUM_HANDLES] = nr_handles;
-
-	*(void **)(&p[SQ_IDX_TIMEOUT_CTX]) = timeout;
-
-	BUG_ON(!user_nvmap);
-	*(struct nvmap_client **)(&p[SQ_IDX_NVMAP_CTX]) =
-		nvmap_client_get(user_nvmap);
-
-	if (nr_handles) {
-		memcpy(&p[SQ_IDX_HANDLES], handles,
-			(nr_handles * sizeof(struct nvmap_handle *)));
-	}
-
-	/* If there's not enough room for another entry, wrap to the start. */
-	if ((write + SYNC_QUEUE_MIN_ENTRY) > host->sync_queue_size) {
-		/*
-		 * It's an error for the read position to be zero, as that
-		 * would mean we emptied the queue while adding something.
-		 */
-		BUG_ON(queue->read == 0);
-		write = 0;
-	}
-	queue->write = write;
-}
-
-/**
- * Get a pointer to the next entry in the queue, or NULL if the queue is empty.
- * Doesn't consume the entry.
- */
-static u32 *sync_queue_head(struct sync_queue *queue)
-{
-	struct nvhost_cdma *cdma = container_of(queue,
-						struct nvhost_cdma,
-						sync_queue);
-	struct nvhost_master *host = cdma_to_dev(cdma);
-	u32 read = queue->read;
-	u32 write = queue->write;
-
-	BUG_ON(read  > (host->sync_queue_size - SYNC_QUEUE_MIN_ENTRY));
-	BUG_ON(write > (host->sync_queue_size - SYNC_QUEUE_MIN_ENTRY));
-
-	if (read == write)
-		return NULL;
-	return queue->buffer + read;
-}
-
-/**
- * Advances to the next queue entry, if you want to consume it.
- */
-static void
-dequeue_sync_queue_head(struct sync_queue *queue)
-{
-	struct nvhost_cdma *cdma = container_of(queue,
-						struct nvhost_cdma,
-						sync_queue);
-	struct nvhost_master *host = cdma_to_dev(cdma);
-	u32 read = queue->read;
-	u32 size;
-
-	BUG_ON(read == queue->write);
-
-	size  = SQ_IDX_HANDLES;
-	size += entry_size(queue->buffer[read + SQ_IDX_NUM_HANDLES]);
-
-	read += size;
-	BUG_ON(read > host->sync_queue_size);
-
-	/* If there's not enough room for another entry, wrap to the start. */
-	if ((read + SYNC_QUEUE_MIN_ENTRY) > host->sync_queue_size)
-		read = 0;
-	queue->read = read;
+	job->first_get = first_get;
+	job->num_slots = nr_slots;
+	nvhost_job_get(job);
+	kfifo_in(&cdma->sync_queue, (void *)&job, 1);
 }
 
 /**
@@ -272,9 +90,9 @@ static unsigned int cdma_status_locked(struct nvhost_cdma *cdma,
 {
 	switch (event) {
 	case CDMA_EVENT_SYNC_QUEUE_EMPTY:
-		return sync_queue_head(&cdma->sync_queue) ? 0 : 1;
+		return kfifo_len(&cdma->sync_queue) == 0 ? 1 : 0;
 	case CDMA_EVENT_SYNC_QUEUE_SPACE:
-		return sync_queue_space(&cdma->sync_queue);
+		return kfifo_avail(&cdma->sync_queue);
 	case CDMA_EVENT_PUSH_BUFFER_SPACE: {
 		struct push_buffer *pb = &cdma->push_buffer;
 		BUG_ON(!cdma_pb_op(cdma).space);
@@ -370,36 +188,26 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	 * to consume as many sync queue entries as possible without blocking
 	 */
 	for (;;) {
-		u32 syncpt_id, syncpt_val;
-		u32 timeout;
-		struct nvhost_userctx_timeout *timeout_ref = NULL;
-		unsigned int nr_slots, nr_handles;
 		struct nvhost_syncpt *sp = &dev->syncpt;
-		struct nvmap_handle **handles;
-		struct nvmap_client *nvmap;
-		u32 *sync;
+		struct nvhost_job *job;
+		int result;
 
-		sync = sync_queue_head(&cdma->sync_queue);
-		if (!sync) {
+		result = kfifo_peek(&cdma->sync_queue, &job);
+		if (!result) {
 			if (cdma->event == CDMA_EVENT_SYNC_QUEUE_EMPTY)
 				signal = true;
 			break;
 		}
 
-		syncpt_id = sync[SQ_IDX_SYNCPT_ID];
-		syncpt_val = sync[SQ_IDX_SYNCPT_VAL];
-		timeout = sync[SQ_IDX_TIMEOUT];
-		timeout_ref = (struct nvhost_userctx_timeout *)
-				sync[SQ_IDX_TIMEOUT_CTX];
-
-		BUG_ON(syncpt_id == NVSYNCPT_INVALID);
+		BUG_ON(job->syncpt_id == NVSYNCPT_INVALID);
 
 		/* Check whether this syncpt has completed, and bail if not */
-		if (!nvhost_syncpt_min_cmp(sp, syncpt_id, syncpt_val)) {
+		if (!nvhost_syncpt_min_cmp(sp,
+				job->syncpt_id, job->syncpt_end)) {
 			/* Start timer on next pending syncpt */
-			if (timeout) {
-				cdma_start_timer_locked(cdma, syncpt_id,
-					syncpt_val, timeout_ref);
+			if (job->timeout->timeout) {
+				cdma_start_timer_locked(cdma, job->syncpt_id,
+					job->syncpt_end, job->timeout);
 			}
 			break;
 		}
@@ -408,29 +216,20 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		if (cdma->timeout.ctx_timeout)
 			stop_cdma_timer_locked(cdma);
 
-		nr_slots = sync[SQ_IDX_NUM_SLOTS];
-		nr_handles = sync[SQ_IDX_NUM_HANDLES];
-		nvmap = (struct nvmap_client *)sync[SQ_IDX_NVMAP_CTX];
-		handles = (struct nvmap_handle **)&sync[SQ_IDX_HANDLES];
-
-		BUG_ON(!nvmap);
-
 		/* Unpin the memory */
-		nvmap_unpin_handles(nvmap, handles, nr_handles);
-		memset(handles, BAD_MAGIC, nr_handles * sizeof(*handles));
-		nvmap_client_put(nvmap);
-		sync[SQ_IDX_NVMAP_CTX] = 0;
+		nvhost_job_unpin(job);
 
 		/* Pop push buffer slots */
-		if (nr_slots) {
+		if (job->num_slots) {
 			struct push_buffer *pb = &cdma->push_buffer;
 			BUG_ON(!cdma_pb_op(cdma).pop_from);
-			cdma_pb_op(cdma).pop_from(pb, nr_slots);
+			cdma_pb_op(cdma).pop_from(pb, job->num_slots);
 			if (cdma->event == CDMA_EVENT_PUSH_BUFFER_SPACE)
 				signal = true;
 		}
 
-		dequeue_sync_queue_head(&cdma->sync_queue);
+		nvhost_job_put(job);
+		kfifo_skip(&cdma->sync_queue);
 		if (cdma->event == CDMA_EVENT_SYNC_QUEUE_SPACE)
 			signal = true;
 	}
@@ -442,38 +241,24 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	}
 }
 
-static u32 *advance_next_entry(struct nvhost_cdma *cdma, u32 *read)
-{
-	struct nvhost_master *host;
-	u32 ridx;
-
-	host = cdma_to_dev(cdma);
-
-	/* move sync_queue read ptr to next entry */
-	ridx = (read - cdma->sync_queue.buffer);
-	ridx += (SQ_IDX_HANDLES + entry_size(read[SQ_IDX_NUM_HANDLES]));
-	if ((ridx + SYNC_QUEUE_MIN_ENTRY) > host->sync_queue_size)
-		ridx = 0;
-
-	/* return sync_queue entry */
-	return cdma->sync_queue.buffer + ridx;
-}
-
 void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		struct nvhost_syncpt *syncpt, struct device *dev)
 {
-	u32 first_get, get_restart;
-	u32 syncpt_incrs, nr_slots;
+	u32 get_restart;
+	u32 syncpt_incrs;
 	bool exec_ctxsave;
-	struct sync_queue *queue = &cdma->sync_queue;
-	u32 *sync = sync_queue_head(queue);
-	u32 syncpt_val = nvhost_syncpt_update_min(syncpt,
-			cdma->timeout.syncpt_id);
+	unsigned int queue_restore;
+	struct nvhost_job *job = NULL;
+	int result;
+	u32 syncpt_val;
+
+	syncpt_val = nvhost_syncpt_update_min(syncpt, cdma->timeout.syncpt_id);
+	queue_restore = kfifo_save(&cdma->sync_queue);
 
 	dev_dbg(dev,
-		"%s: starting cleanup (thresh %d, queue rd 0x%x wr 0x%x)\n",
+		"%s: starting cleanup (thresh %d, queue length %d)\n",
 		__func__,
-		syncpt_val, queue->read, queue->write);
+		syncpt_val, kfifo_len(&cdma->sync_queue));
 
 	/*
 	 * Move the sync_queue read pointer to the first entry that hasn't
@@ -486,13 +271,11 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		"%s: skip completed buffers still in sync_queue\n",
 		__func__);
 
-	while (sync != (queue->buffer + queue->write)) {
-		/* move read ptr to first blocked entry */
-		if (syncpt_val < sync[SQ_IDX_SYNCPT_VAL])
-			break;	/* not completed */
-
-		dump_sync_queue_entry(cdma, sync);
-		sync = advance_next_entry(cdma, sync);
+	result = kfifo_peek(&cdma->sync_queue, &job);
+	while (result && syncpt_val >= job->syncpt_end) {
+		nvhost_job_dump(dev, job);
+		kfifo_skip(&cdma->sync_queue);
+		result = kfifo_peek(&cdma->sync_queue, &job);
 	}
 
 	/*
@@ -515,34 +298,33 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		__func__);
 
 	get_restart = cdma->last_put;
-	if (sync != (queue->buffer + queue->write))
-		get_restart = sync[SQ_IDX_FIRST_GET];
+	if (kfifo_len(&cdma->sync_queue) > 0)
+		get_restart = job->first_get;
 
-	/* do CPU increments */
-	while (sync != (queue->buffer + queue->write)) {
-
+	/* do CPU increments as long as this context continues */
+	while (result && job->timeout == cdma->timeout.ctx_timeout) {
 		/* different context, gets us out of this loop */
-		if ((void *)sync[SQ_IDX_TIMEOUT_CTX] !=
-				cdma->timeout.ctx_timeout)
+		if (job->timeout != cdma->timeout.ctx_timeout)
 			break;
 
-		syncpt_incrs = (sync[SQ_IDX_SYNCPT_VAL] - syncpt_val);
-		first_get = sync[SQ_IDX_FIRST_GET];
-		nr_slots = sync[SQ_IDX_NUM_SLOTS];
-
 		/* won't need a timeout when replayed */
-		sync[SQ_IDX_TIMEOUT] = 0;
+		job->timeout->timeout = 0;
 
+		syncpt_incrs = job->syncpt_end - syncpt_val;
 		dev_dbg(dev,
 			"%s: CPU incr (%d)\n", __func__, syncpt_incrs);
 
-		dump_sync_queue_entry(cdma, sync);
+		nvhost_job_dump(dev, job);
 
 		/* safe to use CPU to incr syncpts */
-		cdma_op(cdma).timeout_cpu_incr(cdma, first_get,
-			syncpt_incrs, sync[SQ_IDX_SYNCPT_VAL], nr_slots);
-		syncpt_val += syncpt_incrs;
-		sync = advance_next_entry(cdma, sync);
+		cdma_op(cdma).timeout_cpu_incr(cdma,
+				job->first_get,
+				syncpt_incrs,
+				job->syncpt_end,
+				job->num_slots);
+
+		kfifo_skip(&cdma->sync_queue);
+		result = kfifo_peek(&cdma->sync_queue, &job);
 	}
 
 	dev_dbg(dev,
@@ -552,26 +334,22 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	exec_ctxsave = false;
 
 	/* setup GPU increments */
-	while (sync != (queue->buffer + queue->write)) {
-
-		syncpt_incrs = (sync[SQ_IDX_SYNCPT_VAL] - syncpt_val);
-		first_get = sync[SQ_IDX_FIRST_GET];
-		nr_slots = sync[SQ_IDX_NUM_SLOTS];
-
+	while (result) {
 		/* same context, increment in the pushbuffer */
-		if ((void *)sync[SQ_IDX_TIMEOUT_CTX] ==
-				cdma->timeout.ctx_timeout) {
-
+		if (job->timeout == cdma->timeout.ctx_timeout) {
 			/* won't need a timeout when replayed */
-			sync[SQ_IDX_TIMEOUT] = 0;
+			job->timeout->timeout = 0;
 
 			/* update buffer's syncpts in the pushbuffer */
-			cdma_op(cdma).timeout_pb_incr(cdma, first_get,
-				syncpt_incrs, nr_slots, exec_ctxsave);
+			cdma_op(cdma).timeout_pb_incr(cdma,
+					job->first_get,
+					job->syncpt_incrs,
+					job->num_slots,
+					exec_ctxsave);
 
 			exec_ctxsave = false;
 		} else {
-			dev_dbg(dev,
+			dev_warn(dev,
 				"%s: switch to a different userctx\n",
 				__func__);
 			/*
@@ -581,20 +359,21 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 			exec_ctxsave = true;
 		}
 
-		dump_sync_queue_entry(cdma, sync);
+		nvhost_job_dump(dev, job);
 
-		syncpt_val = sync[SQ_IDX_SYNCPT_VAL];
-		sync = advance_next_entry(cdma, sync);
+		kfifo_skip(&cdma->sync_queue);
+		result = kfifo_peek(&cdma->sync_queue, &job);
 	}
 
 	dev_dbg(dev,
 		"%s: finished sync_queue modification\n", __func__);
 
+	kfifo_restore(&cdma->sync_queue, queue_restore);
+
 	/* roll back DMAGET and start up channel again */
 	cdma_op(cdma).timeout_teardown_end(cdma, get_restart);
 
 	cdma->timeout.ctx_timeout->has_timedout = true;
-	mutex_unlock(&cdma->lock);
 }
 
 /**
@@ -607,20 +386,21 @@ int nvhost_cdma_init(struct nvhost_cdma *cdma)
 	BUG_ON(!cdma_pb_op(cdma).init);
 	mutex_init(&cdma->lock);
 	sema_init(&cdma->sem, 0);
+
+	err = kfifo_alloc(&cdma->sync_queue,
+			cdma_to_dev(cdma)->sync_queue_size
+				* sizeof(struct nvhost_job *),
+			GFP_KERNEL);
+	if (err)
+		return err;
+
 	cdma->event = CDMA_EVENT_NONE;
 	cdma->running = false;
 	cdma->torndown = false;
 
-	/* allocate sync queue memory */
-	cdma->sync_queue.buffer = kzalloc(cdma_to_dev(cdma)->sync_queue_size
-					  * sizeof(u32), GFP_KERNEL);
-	if (!cdma->sync_queue.buffer)
-		return -ENOMEM;
-
 	err = cdma_pb_op(cdma).init(pb);
 	if (err)
 		return err;
-	reset_sync_queue(&cdma->sync_queue);
 	return 0;
 }
 
@@ -633,8 +413,7 @@ void nvhost_cdma_deinit(struct nvhost_cdma *cdma)
 
 	BUG_ON(!cdma_pb_op(cdma).destroy);
 	BUG_ON(cdma->running);
-	kfree(cdma->sync_queue.buffer);
-	cdma->sync_queue.buffer = NULL;
+	kfifo_free(&cdma->sync_queue);
 	cdma_pb_op(cdma).destroy(pb);
 	cdma_op(cdma).timeout_destroy(cdma);
 }
@@ -725,44 +504,26 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
  * can be unpinned in smaller chunks.
  */
 void nvhost_cdma_end(struct nvhost_cdma *cdma,
-		struct nvmap_client *user_nvmap,
-		u32 sync_point_id, u32 sync_point_value,
-		struct nvmap_handle **handles, unsigned int nr_handles,
-		struct nvhost_userctx_timeout *timeout)
+		struct nvhost_job *job)
 {
-	bool was_idle = (cdma->sync_queue.read == cdma->sync_queue.write);
+	bool was_idle = kfifo_len(&cdma->sync_queue) == 0;
 
 	BUG_ON(!cdma_op(cdma).kick);
 	cdma_op(cdma).kick(cdma);
 
-	while (nr_handles || cdma->slots_used) {
-		unsigned int count;
-		/*
-		 * Wait until there's enough room in the
-		 * sync queue to write something.
-		 */
-		count = nvhost_cdma_wait_locked(cdma,
-				CDMA_EVENT_SYNC_QUEUE_SPACE);
+	BUG_ON(job->syncpt_id == NVSYNCPT_INVALID);
 
-		/* Add reloc entries to sync queue (as many as will fit) */
-		if (count > nr_handles)
-			count = nr_handles;
-
-		add_to_sync_queue(&cdma->sync_queue, sync_point_id,
-				  sync_point_value, cdma->slots_used,
-				  user_nvmap, handles, count, cdma->first_get,
-				  timeout);
-
-		/* NumSlots only goes in the first packet */
-		cdma->slots_used = 0;
-		handles += count;
-		nr_handles -= count;
-	}
+	nvhost_cdma_wait_locked(cdma, CDMA_EVENT_SYNC_QUEUE_SPACE);
+	add_to_sync_queue(cdma,
+			job,
+			cdma->slots_used,
+			cdma->first_get);
 
 	/* start timer on idle -> active transitions */
-	if (timeout->timeout && was_idle) {
-		cdma_start_timer_locked(cdma, sync_point_id, sync_point_value,
-			timeout);
+	if (job->timeout->timeout && was_idle) {
+		cdma_start_timer_locked(cdma,
+				job->syncpt_id, job->syncpt_end,
+			job->timeout);
 	}
 
 	mutex_unlock(&cdma->lock);

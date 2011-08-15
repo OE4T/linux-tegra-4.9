@@ -155,7 +155,7 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			struct nvmap_client *nvmap,
 			u32 mask,
 			struct nvhost_waitchk *wait,
-			struct nvhost_waitchk *waitend);
+			int num_waitchk);
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
 

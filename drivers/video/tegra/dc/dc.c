@@ -704,14 +704,16 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
 
-	/* our bandwidth is in bytes/sec, but LA takes MBps.
-	 * round up bandwidth to 1MBps */
-	bw = w->new_bandwidth / 1000000 + 1;
+	bw = w->new_bandwidth;
 
 	/* tegra_dc_get_bandwidth() treats V filter windows as double
 	 * bandwidth, but LA has a seperate client for V filter */
 	if (w->idx == 1 && win_use_v_filter(w))
 		bw /= 2;
+
+	/* our bandwidth is in bytes/sec, but LA takes MBps.
+	 * round up bandwidth to 1MBps */
+	bw = bw / 1000000 + 1;
 
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
 

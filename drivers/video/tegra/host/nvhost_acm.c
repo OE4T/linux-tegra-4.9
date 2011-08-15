@@ -474,7 +474,8 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->clk[i] = clk_get(dev, get_module_clk_id(name, i));
 		if (IS_ERR_OR_NULL(mod->clk[i]))
 			break;
-		if (strcmp(name, "gr2d") == 0)
+		if (strcmp(name, "gr2d") == 0
+				&& tegra_chip_id != TEGRA20)
 			rate = clk_round_rate(mod->clk[i], 0);
 		else
 			rate = clk_round_rate(mod->clk[i], UINT_MAX);

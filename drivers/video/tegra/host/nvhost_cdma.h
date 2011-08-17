@@ -48,6 +48,10 @@ struct nvhost_userctx_timeout;
  *	update - call to update sync queue and push buffer, unpin memory
  */
 
+struct nvmap_client_handle {
+	struct nvmap_client *client;
+	struct nvmap_handle *handle;
+};
 
 struct push_buffer {
 	struct nvmap_handle_ref *mem;	/* handle to pushbuffer memory */
@@ -55,7 +59,8 @@ struct push_buffer {
 	u32 phys;			/* physical address of pushbuffer */
 	u32 fence;			/* index we've written */
 	u32 cur;			/* index to write to */
-	struct nvmap_handle **handles;	/* nvmap handle for each opcode pair */
+	struct nvmap_client_handle *nvmap;
+					/* nvmap handle for each opcode pair */
 };
 
 struct syncpt_buffer {
@@ -131,6 +136,7 @@ int	nvhost_cdma_begin(struct nvhost_cdma *cdma,
 		struct nvhost_userctx_timeout *timeout);
 void	nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2);
 void	nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
+		struct nvmap_client *client,
 		struct nvmap_handle *handle, u32 op1, u32 op2);
 void	nvhost_cdma_end(struct nvhost_cdma *cdma,
 		struct nvmap_client *user_nvmap,

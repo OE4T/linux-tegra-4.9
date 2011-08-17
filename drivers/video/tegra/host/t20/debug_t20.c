@@ -146,32 +146,33 @@ static void show_channel_gather(struct output *o, u32 addr,
 		phys_addr_t phys_addr,
 		u32 words, struct nvhost_cdma *cdma)
 {
-	/* Calculate page boundary and offset */
-	phys_addr_t map_base = phys_addr & PAGE_MASK;
-	phys_addr_t map_offset = phys_addr - map_base;
-
 	/* Map dmaget cursor to corresponding nvmap_handle */
 	struct push_buffer *pb = &cdma->push_buffer;
 	u32 cur = addr - pb->phys;
-	struct nvmap_handle *h = pb->handles[cur/8];
+	struct nvmap_client_handle *nvmap = &pb->nvmap[cur/8];
 
 	/* Create a fake nvmap_handle_ref - nvmap_mmap requires it
 	 * but accesses only the first field - nvmap_handle */
-	struct nvmap_handle_ref ref = {.handle = h};
+	struct nvmap_handle_ref ref = {.handle = nvmap->handle};
 
-	u32 *map_addr;
+	u32 *map_addr, pin_addr, offset;
 	int state, count, i;
 
 	map_addr = nvmap_mmap(&ref);
 	if (!map_addr)
 		return;
 
+	/* Get base address from nvmap */
+	pin_addr = nvmap_pin(nvmap->client, &ref);
+	offset = phys_addr - pin_addr;
+	nvmap_unpin(nvmap->client, &ref);
+
 	/* GATHER buffer starts always with commands */
 	state = NVHOST_DBG_STATE_CMD;
 	for (i = 0; i < words; i++)
 		show_channel_word(o, &state, &count,
 				phys_addr + i * 4,
-				*(map_addr + map_offset/4 + i), cdma);
+				*(map_addr + offset/4 + i), cdma);
 
 	nvmap_munmap(&ref, map_addr);
 }

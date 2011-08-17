@@ -150,7 +150,9 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 			nvhost_opcode_nonincr(0x904, 1),
 			ctx->restore_phys);
 	/* gather the save buffer */
-	nvhost_cdma_push(cdma,
+	nvhost_cdma_push_gather(cdma,
+			cdma_to_channel(cdma)->dev->nvmap,
+			nvmap_ref_to_handle(nvhost_3dctx_save_buf),
 			nvhost_opcode_gather(save_size),
 			save_phys);
 }

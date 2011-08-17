@@ -93,6 +93,7 @@ struct nvhost_chip_support {
 		int (*init)(struct push_buffer *);
 		void (*destroy)(struct push_buffer *);
 		void (*push_to)(struct push_buffer *,
+				struct nvmap_client *,
 				struct nvmap_handle *,
 				u32 op1, u32 op2);
 		void (*pop_from)(struct push_buffer *,

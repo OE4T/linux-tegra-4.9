@@ -239,6 +239,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	/* gather restore buffer */
 	if (need_restore)
 		nvhost_cdma_push_gather(&channel->cdma,
+			channel->dev->nvmap,
 			nvmap_ref_to_handle(channel->cur_ctx->restore),
 			nvhost_opcode_gather(channel->cur_ctx->restore_size),
 			channel->cur_ctx->restore_phys);
@@ -278,6 +279,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 		int i = 0;
 		for ( ; i < gather_end-gather; i += 2) {
 			nvhost_cdma_push_gather(&channel->cdma,
+					user_nvmap,
 					unpins[i/2],
 					nvhost_opcode_gather(gather[i]),
 					gather[i+1]);

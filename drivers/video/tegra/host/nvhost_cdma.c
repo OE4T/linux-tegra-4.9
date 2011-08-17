@@ -691,7 +691,7 @@ int nvhost_cdma_begin(struct nvhost_cdma *cdma,
  */
 void nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2)
 {
-	nvhost_cdma_push_gather(cdma, NULL, op1, op2);
+	nvhost_cdma_push_gather(cdma, NULL, NULL, op1, op2);
 }
 
 /**
@@ -699,6 +699,7 @@ void nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2)
  * Blocks as necessary if the push buffer is full.
  */
 void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
+		struct nvmap_client *client,
 		struct nvmap_handle *handle, u32 op1, u32 op2)
 {
 	u32 slots_free = cdma->slots_free;
@@ -712,7 +713,7 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 	}
 	cdma->slots_free = slots_free - 1;
 	cdma->slots_used++;
-	cdma_pb_op(cdma).push_to(pb, handle, op1, op2);
+	cdma_pb_op(cdma).push_to(pb, client, handle, op1, op2);
 }
 
 /**

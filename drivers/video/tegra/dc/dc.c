@@ -1822,6 +1822,119 @@ static void tegra_dc_vblank(struct work_struct *work)
 	}
 }
 
+#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+static void tegra_dc_underflow_handler(struct tegra_dc *dc)
+{
+	u32 val, i;
+
+	/* Check for any underflow reset conditions */
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		if (dc->underflow_mask & (WIN_A_UF_INT << i)) {
+			dc->windows[i].underflows++;
+
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
+			if (dc->windows[i].underflows > 4)
+				schedule_work(&dc->reset_work);
+#endif
+		} else {
+			dc->windows[i].underflows = 0;
+		}
+	}
+
+	if (!dc->underflow_mask) {
+		/* If we have no underflow to check, go ahead
+		   and disable the interrupt */
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+			val &= ~FRAME_END_INT;
+		else
+			val &= ~V_BLANK_INT;
+		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+	}
+
+	/* Clear the underflow mask now that we've checked it. */
+	dc->underflow_mask = 0;
+}
+
+static void tegra_dc_trigger_windows(struct tegra_dc *dc)
+{
+	u32 val, i;
+	u32 completed = 0;
+	u32 dirty = 0;
+
+	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		if (!(val & (WIN_A_UPDATE << i))) {
+			dc->windows[i].dirty = 0;
+			completed = 1;
+		} else {
+			dirty = 1;
+		}
+	}
+
+	if (!dirty) {
+		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+			val &= ~V_BLANK_INT;
+		else
+			val &= ~FRAME_END_INT;
+		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+	}
+
+	if (completed) {
+		if (!dirty) {
+			/* With the last completed window, go ahead
+			   and enable the vblank interrupt for nvsd. */
+			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+			val |= V_BLANK_INT;
+			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+
+			val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+			val |= V_BLANK_INT;
+			tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		}
+
+		wake_up(&dc->wq);
+	}
+}
+
+static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
+{
+	if (status & V_BLANK_INT) {
+		/* Sync up windows. */
+		tegra_dc_trigger_windows(dc);
+
+		/* Schedule any additional bottom-half vblank actvities. */
+		schedule_work(&dc->vblank_work);
+
+		/* Mark the vblank as complete. */
+		complete(&dc->vblank_complete);
+
+	}
+
+	/* Check underflow at frame end */
+	if (status & FRAME_END_INT)
+		tegra_dc_underflow_handler(dc);
+}
+
+static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
+{
+	if (status & V_BLANK_INT) {
+		/* Check underflow */
+		tegra_dc_underflow_handler(dc);
+
+		/* Schedule any additional bottom-half vblank actvities. */
+		schedule_work(&dc->vblank_work);
+
+		/* Mark the vblank as complete. */
+		complete(&dc->vblank_complete);
+	}
+
+	if (status & FRAME_END_INT)
+		tegra_dc_trigger_windows(dc);
+}
+#endif
+
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
@@ -1829,7 +1942,6 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	unsigned long status;
 	unsigned long val;
 	unsigned long underflow_mask;
-	int i;
 
 	status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
 	tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
@@ -1856,78 +1968,10 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			dc->stats.underflows_c++;
 	}
 
-	if (status & V_BLANK_INT) {
-		int i;
-
-		/* Check for any underflow reset conditions */
-		for (i = 0; i< DC_N_WINDOWS; i++) {
-			if (dc->underflow_mask & (WIN_A_UF_INT <<i)) {
-				dc->windows[i].underflows++;
-
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
-				if (dc->windows[i].underflows > 4)
-					schedule_work(&dc->reset_work);
-#endif
-			} else {
-				dc->windows[i].underflows = 0;
-			}
-		}
-
-		if (!dc->underflow_mask) {
-			/* If we have no underflow to check, go ahead
-			   and disable the interrupt */
-			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-			val &= ~V_BLANK_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-		}
-
-		/* Clear the underflow mask now that we've checked it. */
-		dc->underflow_mask = 0;
-
-		/* Schedule any additional bottom-half vblank actvities. */
-		schedule_work(&dc->vblank_work);
-
-		/* Mark the vblank as complete. */
-		complete(&dc->vblank_complete);
-	}
-
-	if (status & FRAME_END_INT) {
-		int completed = 0;
-		int dirty = 0;
-
-		val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-		for (i = 0; i < DC_N_WINDOWS; i++) {
-			if (!(val & (WIN_A_UPDATE << i))) {
-				dc->windows[i].dirty = 0;
-				completed = 1;
-			} else {
-				dirty = 1;
-			}
-		}
-
-		if (!dirty) {
-			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-			val &= ~FRAME_END_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-		}
-
-		if (completed) {
-			if (!dirty) {
-				/* With the last completed window, go ahead
-				   and enable the vblank interrupt for nvsd. */
-				val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-				val |= V_BLANK_INT;
-				tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-
-				val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-				val |= V_BLANK_INT;
-				tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
-			}
-
-			/* Wake up the workqueue regardless. */
-			wake_up(&dc->wq);
-		}
-	}
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		tegra_dc_one_shot_irq(dc, status);
+	else
+		tegra_dc_continuous_irq(dc, status);
 
 	return IRQ_HANDLED;
 #else /* CONFIG_TEGRA_FPGA_PLATFORM */

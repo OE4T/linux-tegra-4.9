@@ -35,9 +35,12 @@ static int cpufreq_stats_update(struct cpufreq_stats *stats)
 	unsigned long long cur_time = get_jiffies_64();
 
 	spin_lock(&cpufreq_stats_lock);
-	stats->time_in_state[stats->last_index] += cur_time - stats->last_time;
-	stats->last_time = cur_time;
+	if (stats->last_index >= 0) {
+		stats->time_in_state[stats->last_index] += cur_time - stats->last_time;
+		stats->last_time = cur_time;
+	}
 	spin_unlock(&cpufreq_stats_lock);
+
 	return 0;
 }
 
@@ -238,7 +241,8 @@ void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 
 	stats->last_index = new_index;
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
-	stats->trans_table[old_index * stats->max_state + new_index]++;
+	if (old_index >= 0 && new_index >= 0)
+			stats->trans_table[old_index * stats->max_state + new_index]++;
 #endif
 	stats->total_trans++;
 }

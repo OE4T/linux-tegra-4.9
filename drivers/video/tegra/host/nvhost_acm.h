@@ -50,6 +50,7 @@ struct nvhost_module {
 	nvhost_modulef func;
 	struct delayed_work powerdown;
 	struct clk *clk[NVHOST_MODULE_MAX_CLOCKS];
+	unsigned long min_rate[NVHOST_MODULE_MAX_CLOCKS];
 	int num_clks;
 	struct mutex lock;
 	bool powered;

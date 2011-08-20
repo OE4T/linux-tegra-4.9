@@ -37,6 +37,8 @@
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
 #define POWERGATE_DELAY 10
 
+#define HOST_EMC_FLOOR 300000000
+
 void nvhost_module_reset(struct nvhost_module *mod)
 {
 	struct nvhost_master *dev;
@@ -417,7 +419,7 @@ int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
 
 int nvhost_module_update_rate(struct nvhost_module *mod, int index)
 {
-	unsigned long rate = 0;
+	unsigned long rate = mod->min_rate[index];
 	struct nvhost_module_client *m;
 
 	list_for_each_entry(m, &mod->client_list, node) {
@@ -515,10 +517,18 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	INIT_LIST_HEAD(&mod->client_list);
 	while (i < NVHOST_MODULE_MAX_CLOCKS) {
 		long rate;
-		mod->clk[i] = clk_get(dev, get_module_clk_id(name, i));
+		const char *clk_name = get_module_clk_id(name, i);
+		mod->min_rate[i] = 0;
+		mod->clk[i] = clk_get(dev, clk_name);
 		if (IS_ERR_OR_NULL(mod->clk[i]))
 			break;
-		if (strcmp(name, "gr2d") == 0
+
+		if (strcmp(clk_name, "emc") == 0
+				&& tegra_chip_id != TEGRA20) {
+			rate = clk_round_rate(mod->clk[i], HOST_EMC_FLOOR);
+			if (!IS_ERR_VALUE(rate))
+				mod->min_rate[i] = rate;
+		} else if (strcmp(name, "gr2d") == 0
 				&& tegra_chip_id != TEGRA20)
 			rate = clk_round_rate(mod->clk[i], 0);
 		else

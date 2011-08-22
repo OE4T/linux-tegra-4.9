@@ -331,7 +331,7 @@ static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
 	int err;
 	void *ref;
 
-	if ((action != NVHOST_POWER_ACTION_OFF) || !mod->can_powergate)
+	if (action != NVHOST_POWER_ACTION_OFF)
 		return;
 
 	mutex_lock(&ch->submitlock);

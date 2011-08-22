@@ -95,7 +95,7 @@ void nvhost_module_busy(struct nvhost_module *mod)
 		}
 		while (i < mod->num_clks)
 			clk_enable(mod->clk[i++]);
-		if (mod->can_powergate && mod->func)
+		if (mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_ON);
 		mod->powered = true;
 	}

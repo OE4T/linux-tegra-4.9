@@ -52,12 +52,12 @@ void nvhost_module_reset(struct nvhost_module *mod)
 	/* assert module and mc client reset */
 	if (mod->powergate_id != -1) {
 		tegra_powergate_mc_disable(mod->powergate_id);
-		tegra_periph_reset_assert(mod->clk[0]);
+		tegra_periph_reset_assert(mod->clk[0].clk);
 		tegra_powergate_mc_flush(mod->powergate_id);
 	}
 	if (mod->powergate_id2 != -1) {
 		tegra_powergate_mc_disable(mod->powergate_id2);
-		tegra_periph_reset_assert(mod->clk[1]);
+		tegra_periph_reset_assert(mod->clk[1].clk);
 		tegra_powergate_mc_flush(mod->powergate_id2);
 	}
 
@@ -66,12 +66,12 @@ void nvhost_module_reset(struct nvhost_module *mod)
 	/* deassert reset */
 	if (mod->powergate_id != -1) {
 		tegra_powergate_mc_flush_done(mod->powergate_id);
-		tegra_periph_reset_deassert(mod->clk[0]);
+		tegra_periph_reset_deassert(mod->clk[0].clk);
 		tegra_powergate_mc_enable(mod->powergate_id);
 	}
 	if (mod->powergate_id2 != -1) {
 		tegra_powergate_mc_flush_done(mod->powergate_id2);
-		tegra_periph_reset_deassert(mod->clk[1]);
+		tegra_periph_reset_deassert(mod->clk[1].clk);
 		tegra_powergate_mc_enable(mod->powergate_id2);
 	}
 
@@ -94,7 +94,7 @@ void nvhost_module_busy(struct nvhost_module *mod)
 				tegra_unpowergate_partition(mod->powergate_id2);
 		}
 		while (i < mod->num_clks)
-			clk_enable(mod->clk[i++]);
+			clk_enable(mod->clk[i++].clk);
 		if (mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_ON);
 		mod->powered = true;
@@ -113,7 +113,7 @@ static void powerdown_handler(struct work_struct *work)
 		if (mod->func)
 			mod->func(mod, NVHOST_POWER_ACTION_OFF);
 		for (i = 0; i < mod->num_clks; i++)
-			clk_disable(mod->clk[i]);
+			clk_disable(mod->clk[i].clk);
 		if (mod->can_powergate) {
 			if (mod->powergate_id != -1)
 				tegra_powergate_partition(mod->powergate_id);
@@ -180,9 +180,9 @@ static void scale3d_init(struct nvhost_module *mod)
 	spin_lock_init(&scale3d.lock);
 	mutex_init(&scale3d.set_lock);
 
-	scale3d.clk_3d = mod->clk[0];
+	scale3d.clk_3d = mod->clk[0].clk;
 	if (tegra_chip_id == TEGRA30)
-		scale3d.clk_3d2 = mod->clk[1];
+		scale3d.clk_3d2 = mod->clk[1].clk;
 
 	INIT_WORK(&scale3d.work, scale_3d_clocks_handler);
 
@@ -364,32 +364,107 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 	}
 }
 
-static const char *get_module_clk_id(const char *module, int index)
+static const char *get_module_clk_id_tegra2(const char *module, int index,
+		struct nvhost_module_clock_info *info)
 {
+	const char *name = NULL;
 	if (index == 0)
-		return module;
+		name = module;
 	if (strcmp(module, "gr2d") == 0) {
 		if (index == 1)
-			return "epp";
+			name = "epp";
 		if (index == 2)
-			return "emc";
+			name = "emc";
 	}
 	if (strcmp(module, "gr3d") == 0) {
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
 		if (index == 1)
-			return "emc";
-#else
-		if (index == 1)
-			return "gr3d2";
-		if (index == 2)
-			return "emc";
-#endif
+			name = "emc";
 	}
 	if (strcmp(module, "mpe") == 0) {
 		if (index == 1)
-			return "emc";
+			name = "emc";
 	}
-	return NULL;
+
+	if (name) {
+		info->default_rate = UINT_MAX;
+		info->min_rate = UINT_MAX;
+	}
+
+	return name;
+}
+
+static const char *get_module_clk_id_tegra3(const char *module, int index,
+		struct nvhost_module_clock_info *info)
+{
+	const char *name = NULL;
+	if (index == 0)
+		name = module;
+	if (strcmp(module, "gr2d") == 0) {
+		if (index == 1)
+			name = "epp";
+		if (index == 2)
+			name = "emc";
+	} else if (strcmp(module, "gr3d") == 0) {
+		if (index == 1)
+			name = "gr3d2";
+		if (index == 2)
+			name = "emc";
+	} else if (strcmp(module, "mpe") == 0) {
+		if (index == 1)
+			name = "emc";
+	}
+
+	if (name) {
+		if (strcmp(name, "emc") == 0) {
+			info->default_rate = HOST_EMC_FLOOR;
+			info->min_rate = info->default_rate;
+		} else if (strcmp(name, "gr2d") == 0)
+			info->default_rate = 0;
+		else
+			info->default_rate = UINT_MAX;
+	}
+
+	return name;
+}
+
+static const char *get_module_clk(const char *module,
+		int index,
+		struct device *dev,
+		struct nvhost_module_clock_info *info)
+{
+	const char *clk_id = NULL;
+	info->min_rate = 0;
+
+	switch (tegra_chip_id) {
+	case TEGRA20:
+		clk_id = get_module_clk_id_tegra2(module, index, info);
+		break;
+	case TEGRA30:
+		clk_id = get_module_clk_id_tegra3(module, index, info);
+		break;
+	default:
+		BUG();
+		break;
+	}
+
+	if (clk_id == NULL)
+		return NULL;
+
+	info->clk = clk_get(dev, clk_id);
+	if (IS_ERR_OR_NULL(info->clk)) {
+		clk_id = NULL;
+		return NULL;
+	}
+
+	info->default_rate = clk_round_rate(info->clk, info->default_rate);
+	info->min_rate = clk_round_rate(info->clk, info->min_rate);
+	if (info->default_rate < 0) {
+		pr_err("%s: can't get maximum rate for %s\n",
+			__func__, clk_id);
+		clk_id = NULL;
+	}
+
+	return clk_id;
 }
 
 /* 3D power gating disabled as it causes syncpt hangs */
@@ -409,7 +484,7 @@ int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
 {
 	struct clk *c;
 
-	c = mod->clk[index];
+	c = mod->clk[index].clk;
 	if (IS_ERR_OR_NULL(c))
 		return -EINVAL;
 
@@ -419,15 +494,19 @@ int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
 
 int nvhost_module_update_rate(struct nvhost_module *mod, int index)
 {
-	unsigned long rate = mod->min_rate[index];
+	unsigned long rate = 0;
 	struct nvhost_module_client *m;
+
+	if (!mod->clk[index].clk)
+		return -EINVAL;
 
 	list_for_each_entry(m, &mod->client_list, node) {
 		rate = max(m->rate[index], rate);
 	}
-	if (!mod->clk[index])
-		return -EINVAL;
-	clk_set_rate(mod->clk[index], rate);
+	if (!rate)
+		rate = mod->clk[index].default_rate;
+
+	clk_set_rate(mod->clk[index].clk, rate);
 	return 0;
 }
 
@@ -438,7 +517,8 @@ int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
 
 	list_for_each_entry(m, &mod->client_list, node) {
 		if (m->priv == priv) {
-			rate = clk_round_rate(mod->clk[index], rate);
+			rate = clk_round_rate(mod->clk[index].clk, rate);
+			rate = max(mod->clk[index].min_rate, rate);
 			m->rate[index] = rate;
 			break;
 		}
@@ -460,7 +540,8 @@ int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
 	client->priv = priv;
 
 	for (i = 0; i < mod->num_clks; i++) {
-		rate = clk_round_rate(mod->clk[i], 0);
+		rate = clk_round_rate(mod->clk[i].clk,
+				mod->clk[i].default_rate);
 		client->rate[i] = rate;
 	}
 	list_add_tail(&client->node, &mod->client_list);
@@ -516,31 +597,12 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 
 	INIT_LIST_HEAD(&mod->client_list);
 	while (i < NVHOST_MODULE_MAX_CLOCKS) {
-		long rate;
-		const char *clk_name = get_module_clk_id(name, i);
-		mod->min_rate[i] = 0;
-		mod->clk[i] = clk_get(dev, clk_name);
-		if (IS_ERR_OR_NULL(mod->clk[i]))
+		if (get_module_clk(name, i, dev, &mod->clk[i]) == NULL)
 			break;
 
-		if (strcmp(clk_name, "emc") == 0
-				&& tegra_chip_id != TEGRA20) {
-			rate = clk_round_rate(mod->clk[i], HOST_EMC_FLOOR);
-			if (!IS_ERR_VALUE(rate))
-				mod->min_rate[i] = rate;
-		} else if (strcmp(name, "gr2d") == 0
-				&& tegra_chip_id != TEGRA20)
-			rate = clk_round_rate(mod->clk[i], 0);
-		else
-			rate = clk_round_rate(mod->clk[i], UINT_MAX);
-		if (rate < 0) {
-			pr_err("%s: can't get maximum rate for %s\n",
-				__func__, name);
-			break;
-		}
-		clk_enable(mod->clk[i]);
-		clk_set_rate(mod->clk[i], rate);
-		clk_disable(mod->clk[i]);
+		clk_enable(mod->clk[i].clk);
+		clk_set_rate(mod->clk[i].clk, mod->clk[i].default_rate);
+		clk_disable(mod->clk[i].clk);
 		i++;
 	}
 
@@ -665,7 +727,7 @@ void nvhost_module_deinit(struct nvhost_module *mod)
 
 	nvhost_module_suspend(mod, false);
 	for (i = 0; i < mod->num_clks; i++)
-		clk_put(mod->clk[i]);
+		clk_put(mod->clk[i].clk);
 }
 
 

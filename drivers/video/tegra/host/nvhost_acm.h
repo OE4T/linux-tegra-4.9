@@ -45,12 +45,17 @@ struct nvhost_module_client {
 	void *priv;
 };
 
+struct nvhost_module_clock_info {
+	struct clk *clk;
+	unsigned long default_rate;
+	unsigned long min_rate;
+};
+
 struct nvhost_module {
 	const char *name;
 	nvhost_modulef func;
 	struct delayed_work powerdown;
-	struct clk *clk[NVHOST_MODULE_MAX_CLOCKS];
-	unsigned long min_rate[NVHOST_MODULE_MAX_CLOCKS];
+	struct nvhost_module_clock_info clk[NVHOST_MODULE_MAX_CLOCKS];
 	int num_clks;
 	struct mutex lock;
 	bool powered;

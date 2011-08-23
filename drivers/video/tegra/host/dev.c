@@ -701,7 +701,7 @@ static void power_host(struct nvhost_module *mod, enum nvhost_power_action actio
 	struct nvhost_master *dev = container_of(mod, struct nvhost_master, mod);
 
 	if (action == NVHOST_POWER_ACTION_ON) {
-		nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0]));
+		nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0].clk));
 	} else if (action == NVHOST_POWER_ACTION_OFF) {
 		int i;
 		for (i = 0; i < dev->nb_channels; i++)
@@ -974,9 +974,9 @@ static int nvhost_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
-	clk_enable(host->mod.clk[0]);
+	clk_enable(host->mod.clk[0].clk);
 	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->mod.clk[0]);
+	clk_disable(host->mod.clk[0].clk);
 
 	nvhost_bus_register(host);
 
@@ -1008,9 +1008,9 @@ static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "suspending\n");
 	nvhost_module_suspend(&host->mod, true);
-	clk_enable(host->mod.clk[0]);
+	clk_enable(host->mod.clk[0].clk);
 	nvhost_syncpt_save(&host->syncpt);
-	clk_disable(host->mod.clk[0]);
+	clk_disable(host->mod.clk[0].clk);
 	dev_info(&pdev->dev, "suspended\n");
 	return 0;
 }
@@ -1019,9 +1019,9 @@ static int nvhost_resume(struct platform_device *pdev)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "resuming\n");
-	clk_enable(host->mod.clk[0]);
+	clk_enable(host->mod.clk[0].clk);
 	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->mod.clk[0]);
+	clk_disable(host->mod.clk[0].clk);
 	scale3d_reset();
 	dev_info(&pdev->dev, "resumed\n");
 	return 0;

@@ -117,7 +117,6 @@ static int tegra_fb_set_par(struct fb_info *info)
 
 	if (var->pixclock) {
 		bool stereo;
-		struct tegra_dc_mode mode;
 		struct fb_videomode m;
 
 		fb_var_to_videomode(&m, var);

@@ -1809,7 +1809,8 @@ static void tegra_dc_vblank(struct work_struct *work)
 	tegra_dc_program_bandwidth(dc);
 
 	/* Update the SD brightness */
-	nvsd_updated = nvsd_update_brightness(dc);
+	if (dc->enabled)
+		nvsd_updated = nvsd_update_brightness(dc);
 
 	mutex_unlock(&dc->lock);
 

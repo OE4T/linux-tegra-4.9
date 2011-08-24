@@ -64,8 +64,43 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 
 static int get_output_edid(struct tegra_dc_ext_control_output_edid *edid)
 {
-	/* XXX implement me */
-	return -ENOTSUPP;
+	struct tegra_dc *dc;
+	size_t user_size = edid->size;
+	struct tegra_dc_edid *dc_edid = NULL;
+	int ret;
+
+	/* TODO: this should be more dynamic */
+	if (edid->handle > 2)
+		return -EINVAL;
+
+	dc = tegra_dc_get_dc(edid->handle);
+
+	dc_edid = tegra_dc_get_edid(dc);
+	if (IS_ERR(dc_edid))
+		return PTR_ERR(dc_edid);
+
+	if (!dc_edid) {
+		edid->size = 0;
+	} else {
+		edid->size = dc_edid->len;
+
+		if (user_size < edid->size) {
+			ret = -EFBIG;
+			goto done;
+		}
+
+		if (copy_to_user(edid->data, dc_edid->buf, edid->size)) {
+			ret = -EFAULT;
+			goto done;
+		}
+
+	}
+
+done:
+	if (dc_edid)
+		tegra_dc_put_edid(dc_edid);
+
+	return ret;
 }
 
 static int set_event_mask(struct tegra_dc_ext_control_user *user, u32 mask)

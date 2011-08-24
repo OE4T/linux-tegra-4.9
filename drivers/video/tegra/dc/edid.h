@@ -20,6 +20,7 @@
 
 #include <linux/i2c.h>
 #include <linux/wait.h>
+#include <mach/dc.h>
 
 #define ELD_MAX_MNL	16
 #define ELD_MAX_SAD	16
@@ -51,5 +52,8 @@ void tegra_edid_destroy(struct tegra_edid *edid);
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
+
+struct tegra_dc_edid *tegra_edid_get_data(struct tegra_edid *edid);
+void tegra_edid_put_data(struct tegra_dc_edid *data);
 
 #endif

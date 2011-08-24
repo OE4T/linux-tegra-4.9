@@ -1640,3 +1640,22 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.resume = tegra_dc_hdmi_resume,
 };
 
+struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)
+{
+	struct tegra_dc_hdmi_data *hdmi;
+
+	/* TODO: Support EDID on non-HDMI devices */
+	if (dc->out->type != TEGRA_DC_OUT_HDMI)
+		return ERR_PTR(-ENODEV);
+
+	hdmi = tegra_dc_get_outdata(dc);
+
+	return tegra_edid_get_data(hdmi->edid);
+}
+EXPORT_SYMBOL(tegra_dc_get_edid);
+
+void tegra_dc_put_edid(struct tegra_dc_edid *edid)
+{
+	tegra_edid_put_data(edid);
+}
+EXPORT_SYMBOL(tegra_dc_put_edid);

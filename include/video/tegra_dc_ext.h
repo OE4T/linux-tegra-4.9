@@ -233,6 +233,16 @@ struct tegra_dc_ext_control_output_properties {
 	__u32 head_mask;
 };
 
+/*
+ * This allows userspace to query the raw EDID data for the specified output
+ * handle.
+ *
+ * Here, the size parameter is both an input and an output:
+ * 1. Userspace passes in the size of the buffer allocated for data.
+ * 2. If size is too small, the call fails with the error EFBIG; otherwise, the
+ *    raw EDID data is written to the buffer pointed to by data.  In both
+ *    cases, size will be filled in with the size of the data.
+ */
 struct tegra_dc_ext_control_output_edid {
 	__u32 handle;
 	__u32 size;

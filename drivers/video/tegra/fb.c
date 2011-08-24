@@ -312,7 +312,6 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 						  struct fb_videomode *mode))
 {
 	struct fb_event event;
-	struct fb_modelist *m;
 	int i;
 
 	mutex_lock(&fb_info->info->lock);
@@ -342,26 +341,6 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			fb_add_videomode(&specs->modedb[i],
 					 &fb_info->info->modelist);
 		}
-	}
-
-	if (list_empty(&fb_info->info->modelist)) {
-		struct tegra_dc_mode mode;
-		memset(&fb_info->info->var, 0x0, sizeof(fb_info->info->var));
-		memset(&mode, 0x0, sizeof(mode));
-		tegra_dc_set_mode(fb_info->win->dc, &mode);
-	} else {
-		/* in case the first mode was not matched */
-		m = list_first_entry(&fb_info->info->modelist, struct fb_modelist, list);
-		m->mode.flag |= FB_MODE_IS_FIRST;
-		fb_info->info->mode = (struct fb_videomode *)
-			fb_find_best_display(specs, &fb_info->info->modelist);
-
-		/* fb_videomode_to_var doesn't fill out all the members
-		   of fb_var_screeninfo */
-		memset(&fb_info->info->var, 0x0, sizeof(fb_info->info->var));
-
-		fb_videomode_to_var(&fb_info->info->var, fb_info->info->mode);
-		tegra_fb_set_par(fb_info->info);
 	}
 
 	event.info = fb_info->info;

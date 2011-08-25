@@ -2168,6 +2168,11 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	tegra_periph_reset_assert(dc->clk);
 	clk_enable(dc->clk);
 	clk_enable(dc->emc_clk);
+
+	/* do not accept interrupts during initialization */
+	tegra_dc_writel(dc, 0, DC_CMD_INT_ENABLE);
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+
 	enable_irq(dc->irq);
 
 	tegra_dc_init(dc);
@@ -2506,16 +2511,6 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dc->windows[i].dc = dc;
 	}
 
-	if (request_irq(irq, tegra_dc_irq, IRQF_DISABLED,
-			dev_name(&ndev->dev), dc)) {
-		dev_err(&ndev->dev, "request_irq %d failed\n", irq);
-		ret = -EBUSY;
-		goto err_put_emc_clk;
-	}
-
-	/* hack to ballence enable_irq calls in _tegra_dc_enable() */
-	disable_irq(dc->irq);
-
 	ret = tegra_dc_set(dc, ndev->id);
 	if (ret < 0) {
 		dev_err(&ndev->dev, "can't add dc\n");
@@ -2537,6 +2532,17 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dev_warn(&ndev->dev, "Failed to enable Tegra DC extensions.\n");
 		dc->ext = NULL;
 	}
+
+	/* interrupt handler must be registered before tegra_fb_register() */
+	if (request_irq(irq, tegra_dc_irq, IRQF_DISABLED,
+			dev_name(&ndev->dev), dc)) {
+		dev_err(&ndev->dev, "request_irq %d failed\n", irq);
+		ret = -EBUSY;
+		goto err_put_emc_clk;
+	}
+
+	/* hack to balance enable_irq calls in _tegra_dc_enable() */
+	disable_irq(dc->irq);
 
 	mutex_lock(&dc->lock);
 	if (dc->enabled)

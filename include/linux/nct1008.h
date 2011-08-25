@@ -35,10 +35,10 @@ struct nct1008_platform_data {
 	u8 conv_rate;
 	u8 offset;
 	u8 hysteresis;
-	u8 shutdown_ext_limit;
-	u8 shutdown_local_limit;
-	u8 throttling_ext_limit;
-	u8 thermal_zones[MAX_ZONES];
+	s8 shutdown_ext_limit;
+	s8 shutdown_local_limit;
+	s8 throttling_ext_limit;
+	s8 thermal_zones[MAX_ZONES];
 	u8 thermal_zones_sz;
 	void (*alarm_fn)(bool raised);
 };

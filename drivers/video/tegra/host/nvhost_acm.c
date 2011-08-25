@@ -38,6 +38,7 @@
 #define POWERGATE_DELAY 10
 
 #define HOST_EMC_FLOOR 300000000
+#define MAX_DEVID_LENGTH 16
 
 void nvhost_module_reset(struct nvhost_module *mod)
 {
@@ -433,6 +434,7 @@ static const char *get_module_clk(const char *module,
 		struct nvhost_module_clock_info *info)
 {
 	const char *clk_id = NULL;
+	char devname[MAX_DEVID_LENGTH];
 	info->min_rate = 0;
 
 	switch (tegra_chip_id) {
@@ -450,7 +452,8 @@ static const char *get_module_clk(const char *module,
 	if (clk_id == NULL)
 		return NULL;
 
-	info->clk = clk_get(dev, clk_id);
+	snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s", module);
+	info->clk = clk_get_sys(devname, clk_id);
 	if (IS_ERR_OR_NULL(info->clk)) {
 		clk_id = NULL;
 		return NULL;

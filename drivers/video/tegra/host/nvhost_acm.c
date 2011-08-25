@@ -36,7 +36,6 @@
 #define ACM_POWERDOWN_HANDLER_DELAY_MSEC  25
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
 #define POWERGATE_DELAY 10
-
 #define HOST_EMC_FLOOR 300000000
 #define MAX_DEVID_LENGTH 16
 
@@ -386,10 +385,8 @@ static const char *get_module_clk_id_tegra2(const char *module, int index,
 			name = "emc";
 	}
 
-	if (name) {
+	if (name)
 		info->default_rate = UINT_MAX;
-		info->min_rate = UINT_MAX;
-	}
 
 	return name;
 }
@@ -416,10 +413,9 @@ static const char *get_module_clk_id_tegra3(const char *module, int index,
 	}
 
 	if (name) {
-		if (strcmp(name, "emc") == 0) {
+		if (strcmp(name, "emc") == 0)
 			info->default_rate = HOST_EMC_FLOOR;
-			info->min_rate = info->default_rate;
-		} else if (strcmp(name, "gr2d") == 0)
+		else if (strcmp(name, "gr2d") == 0)
 			info->default_rate = 0;
 		else
 			info->default_rate = UINT_MAX;
@@ -435,7 +431,6 @@ static const char *get_module_clk(const char *module,
 {
 	const char *clk_id = NULL;
 	char devname[MAX_DEVID_LENGTH];
-	info->min_rate = 0;
 
 	switch (tegra_chip_id) {
 	case TEGRA20:
@@ -460,7 +455,6 @@ static const char *get_module_clk(const char *module,
 	}
 
 	info->default_rate = clk_round_rate(info->clk, info->default_rate);
-	info->min_rate = clk_round_rate(info->clk, info->min_rate);
 	if (info->default_rate < 0) {
 		pr_err("%s: can't get maximum rate for %s\n",
 			__func__, clk_id);
@@ -521,7 +515,6 @@ int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
 	list_for_each_entry(m, &mod->client_list, node) {
 		if (m->priv == priv) {
 			rate = clk_round_rate(mod->clk[index].clk, rate);
-			rate = max(mod->clk[index].min_rate, rate);
 			m->rate[index] = rate;
 			break;
 		}

@@ -48,7 +48,6 @@ struct nvhost_module_client {
 struct nvhost_module_clock_info {
 	struct clk *clk;
 	unsigned long default_rate;
-	unsigned long min_rate;
 };
 
 struct nvhost_module {

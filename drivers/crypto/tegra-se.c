@@ -274,6 +274,34 @@ static int tegra_init_key_slot(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
+static void tegra_se_key_read_disable(u8 slot_num)
+{
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	u32 val;
+
+	val = se_readl(se_dev,
+			(SE_KEY_TABLE_ACCESS_REG_OFFSET + (slot_num * 4)));
+	val &= ~(1 << SE_KEY_READ_DISABLE_SHIFT);
+	se_writel(se_dev,
+		val, (SE_KEY_TABLE_ACCESS_REG_OFFSET + (slot_num * 4)));
+	return 0;
+}
+
+static void tegra_se_key_read_disable_all(void)
+{
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	u8 slot_num;
+
+	mutex_lock(&se_hw_lock);
+	tegra_se_clk_enable(se_dev->pclk);
+
+	for (slot_num = 0; slot_num < TEGRA_SE_KEYSLOT_COUNT; slot_num++)
+		tegra_se_key_read_disable(slot_num);
+
+	tegra_se_clk_disable(se_dev->pclk);
+	mutex_unlock(&se_hw_lock);
+}
+
 static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 	enum tegra_se_aes_op_mode mode, bool encrypt, u32 key_len)
 {
@@ -1896,6 +1924,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	sg_tegra_se_dev = se_dev;
+	tegra_se_key_read_disable_all();
 
 	err = tegra_se_alloc_ll_buf(se_dev, SE_MAX_SRC_SG_COUNT,
 		SE_MAX_DST_SG_COUNT);

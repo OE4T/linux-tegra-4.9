@@ -80,27 +80,29 @@ struct nct1008_data {
 	struct nct1008_platform_data plat_data;
 	struct mutex mutex;
 	u8 config;
-	u8 *limits;
+	s8 *limits;
 	u8 limits_sz;
 	void (*alarm_fn)(bool raised);
 	struct regulator *nct_reg;
 };
 
-static inline u8 value_to_temperature(bool extended, u8 value)
+static inline s8 value_to_temperature(bool extended, u8 value)
 {
-	return extended ? (u8)(value - EXTENDED_RANGE_OFFSET) : value;
+	return extended ? (s8)(value - EXTENDED_RANGE_OFFSET) : (s8)value;
 }
 
-static inline u8 temperature_to_value(bool extended, u8 temp)
+static inline u8 temperature_to_value(bool extended, s8 temp)
 {
-	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : temp;
+	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : (u8)temp;
 }
 
 static int nct1008_get_temp(struct device *dev, u8 *pTemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 temp1, temp2, temp;
+	s8 temp1;
+	u8 temp2;
+	s8 temp;
 	u8 value;
 	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
 	if (value < 0)
@@ -133,8 +135,8 @@ static ssize_t nct1008_show_temp(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 temp1 = 0;
-	u8 temp = 0;
+	s8 temp1 = 0;
+	s8 temp = 0;
 	u8 temp2 = 0;
 	u8 value = 0;
 
@@ -170,7 +172,7 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	u8 value;
-	u8 temp, temp2;
+	s8 temp, temp2;
 
 	/* Local temperature h/w shutdown limit */
 	value = i2c_smbus_read_byte_data(client, LOCAL_THERM_LIMIT_WR);
@@ -206,7 +208,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	char bufOverheat[MAX_STR_PRINT];
 	unsigned int ret;
 
-	if (strict_strtoul(buf, 0, &num)) {
+	if (strict_strtol(buf, 0, &num)) {
 		dev_err(dev, "\n file: %s, line=%d return %s() ", __FILE__,
 			__LINE__, __func__);
 		return -EINVAL;
@@ -231,13 +233,13 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	}
 
 	/* External temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (u8)num);
+	temp = temperature_to_value(pdata->ext_range, (s8)num);
 	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (u8)num);
+	temp = temperature_to_value(pdata->ext_range, (s8)num);
 	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
@@ -254,7 +256,7 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	u8 value;
-	u8 temp, temp2;
+	s8 temp, temp2;
 	/* External Temperature Throttling limit */
 	value = i2c_smbus_read_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
 	if (value < 0)
@@ -285,7 +287,7 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 
-	if (strict_strtoul(buf, 0, &num)) {
+	if (strict_strtol(buf, 0, &num)) {
 		dev_err(dev, "\n file: %s, line=%d return %s() ", __FILE__,
 			__LINE__, __func__);
 		return -EINVAL;
@@ -297,7 +299,7 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 	}
 
 	/* External Temperature Throttling limit */
-	value = temperature_to_value(pdata->ext_range, num);
+	value = temperature_to_value(pdata->ext_range, (s8)num);
 	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
 		value);
 	if (err < 0)
@@ -321,7 +323,7 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 temp_value;
+	s8 temp_value;
 	u8 data = 0;
 	u8 data_lo;
 
@@ -572,7 +574,9 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 {
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 value, temp, temp2;
+	u8 value;
+	s8 temp;
+	u8 temp2;
 	int err;
 	int hi_limit;
 

@@ -54,6 +54,7 @@
 #define EXT_TEMP_HI_LIMIT_HI_BYTE_WR	0x0D
 #define EXT_TEMP_LO_LIMIT_HI_BYTE_WR	0x0E
 #define OFFSET_WR			0x11
+#define OFFSET_QUARTER_WR		0x12
 #define EXT_THERM_LIMIT_WR		0x19
 #define LOCAL_THERM_LIMIT_WR		0x20
 #define THERM_HYSTERESIS_WR		0x21
@@ -683,7 +684,13 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
 
 	/* Remote channel offset */
-	err = i2c_smbus_write_byte_data(client, OFFSET_WR, pdata->offset);
+	err = i2c_smbus_write_byte_data(client, OFFSET_WR, pdata->offset / 4);
+	if (err < 0)
+		goto error;
+
+	/* Remote channel offset fraction (quarters) */
+	err = i2c_smbus_write_byte_data(client, OFFSET_QUARTER_WR,
+					(pdata->offset % 4) << 6);
 	if (err < 0)
 		goto error;
 

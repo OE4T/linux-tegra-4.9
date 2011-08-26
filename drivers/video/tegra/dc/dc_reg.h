@@ -471,6 +471,10 @@
 #define DC_WINBUF_ADDR_V_OFFSET_NS		0x809
 #define DC_WINBUF_UFLOW_STATUS			0x80a
 
+/* direct versions of DC_WINBUF_UFLOW_STATUS */
+#define DC_WINBUF_AD_UFLOW_STATUS		0xbca
+#define DC_WINBUF_BD_UFLOW_STATUS		0xdca
+#define DC_WINBUF_CD_UFLOW_STATUS		0xfca
 
 #define DC_DISP_SD_CONTROL			0x4c2
 #define  SD_ENABLE_NORMAL		(1 << 0)

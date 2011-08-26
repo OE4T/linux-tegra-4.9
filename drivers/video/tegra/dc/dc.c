@@ -417,10 +417,10 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 
 	mutex_lock(&dc->lock);
 	seq_printf(s,
-		"underflows: %u\n"
-		"underflows_a: %u\n"
-		"underflows_b: %u\n"
-		"underflows_c: %u\n",
+		"underflows: %llu\n"
+		"underflows_a: %llu\n"
+		"underflows_b: %llu\n"
+		"underflows_c: %llu\n",
 		dc->stats.underflows,
 		dc->stats.underflows_a,
 		dc->stats.underflows_b,
@@ -1943,6 +1943,15 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 }
 #endif
 
+/* return an arbitrarily large number if count overflow occurs.
+ * make it a nice base-10 number to show up in stats output */
+static u64 tegra_dc_underflow_count(struct tegra_dc *dc, unsigned reg)
+{
+	unsigned count = tegra_dc_readl(dc, reg);
+	tegra_dc_writel(dc, 0, reg);
+	return ((count & 0x80000000) == 0) ? count : 10000000000ll;
+}
+
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
@@ -1969,11 +1978,14 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		dc->underflow_mask |= underflow_mask;
 		dc->stats.underflows++;
 		if (status & WIN_A_UF_INT)
-			dc->stats.underflows_a++;
+			dc->stats.underflows_a += tegra_dc_underflow_count(dc,
+				DC_WINBUF_AD_UFLOW_STATUS);
 		if (status & WIN_B_UF_INT)
-			dc->stats.underflows_b++;
+			dc->stats.underflows_b += tegra_dc_underflow_count(dc,
+				DC_WINBUF_BD_UFLOW_STATUS);
 		if (status & WIN_C_UF_INT)
-			dc->stats.underflows_c++;
+			dc->stats.underflows_c += tegra_dc_underflow_count(dc,
+				DC_WINBUF_CD_UFLOW_STATUS);
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)

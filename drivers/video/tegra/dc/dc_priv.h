@@ -121,10 +121,10 @@ struct tegra_dc {
 	struct work_struct		vblank_work;
 
 	struct {
-		unsigned		underflows;
-		unsigned		underflows_a;
-		unsigned		underflows_b;
-		unsigned		underflows_c;
+		u64			underflows;
+		u64			underflows_a;
+		u64			underflows_b;
+		u64			underflows_c;
 	} stats;
 
 	struct tegra_dc_ext		*ext;

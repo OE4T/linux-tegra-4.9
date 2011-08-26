@@ -831,12 +831,10 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
 
 /*
- * Assuming 50% (X >> 1) efficiency: i.e. if we calculate we need 70MBps, we
- * will request 140MBps from EMC.
+ * Assuming 48% efficiency: i.e. if we calculate we need 70MBps, we
+ * will request 147MBps from EMC.
  */
-#define MEM_EFFICIENCY_SHIFT 1
-	ret <<= MEM_EFFICIENCY_SHIFT;
-#undef MEM_EFFICIENCY_SHIFT
+	ret = ret * 2 + ret / 10;
 
 	/* if overflowed */
 	if (ret > (1UL << 31))

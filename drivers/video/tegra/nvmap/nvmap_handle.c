@@ -348,6 +348,12 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 
+#ifndef CONFIG_TEGRA_IOVMM
+	if (heap_mask & NVMAP_HEAP_IOVMM) {
+		heap_mask &= NVMAP_HEAP_IOVMM;
+		heap_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	}
+#endif
 #ifndef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
 #ifdef CONFIG_NVMAP_ALLOW_SYSMEM
 	/* Allow single pages allocations in system memory to save

@@ -1186,11 +1186,13 @@ static int nvmap_probe(struct platform_device *pdev)
 	dev->iovmm_master.iovmm =
 		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL,
 			&(dev->dev_user));
-	if (IS_ERR(dev->iovmm_master.iovmm)) {
+#ifdef CONFIG_TEGRA_IOVMM
+	if (!dev->iovmm_master.iovmm) {
 		e = PTR_ERR(dev->iovmm_master.iovmm);
 		dev_err(&pdev->dev, "couldn't create iovmm client\n");
 		goto fail;
 	}
+#endif
 	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, NULL);
 	if (!dev->vm_rgn) {
 		e = -ENOMEM;

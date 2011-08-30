@@ -145,6 +145,8 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define cdma_op()		nvhost_get_chip_ops()->cdma
 #define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
 
-int nvhost_init_chip_support(struct nvhost_master *);
+int nvhost_init_t20_support(struct nvhost_master *host);
+int nvhost_init_t30_support(struct nvhost_master *host);
+int nvhost_init_t114_support(struct nvhost_master *host);
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

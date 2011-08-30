@@ -49,6 +49,9 @@
 #include <linux/nvmap.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
+#include "t20/t20.h"
+#include "t30/t30.h"
+#include "t114/t114.h"
 
 #define DRIVER_NAME		"host1x"
 
@@ -382,6 +385,23 @@ static void nvhost_free_resources(struct nvhost_master *host)
 static int nvhost_alloc_resources(struct nvhost_master *host)
 {
 	int err;
+
+	switch (tegra_get_chipid()) {
+	case TEGRA_CHIPID_TEGRA2:
+		err = nvhost_init_t20_support(host);
+		break;
+
+	case TEGRA_CHIPID_TEGRA3:
+		err = nvhost_init_t30_support(host);
+		break;
+
+	case TEGRA_CHIPID_TEGRA11:
+		err = nvhost_init_t114_support(host);
+		break;
+
+	default:
+		return -ENODEV;
+	}
 
 	err = nvhost_init_chip_support(host);
 	if (err)

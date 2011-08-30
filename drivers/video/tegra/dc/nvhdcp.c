@@ -420,7 +420,7 @@ static int wait_hdcp_ctrl(struct tegra_dc_hdmi_data *hdmi, u32 mask, u32 *v)
 
 	do {
 		ctrl = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_RG_HDCP_CTRL);
-		if ((ctrl | (mask))) {
+		if ((ctrl & mask)) {
 			if (v)
 				*v = ctrl;
 			break;
@@ -435,19 +435,18 @@ static int wait_hdcp_ctrl(struct tegra_dc_hdmi_data *hdmi, u32 mask, u32 *v)
 	return 0;
 }
 
-/* wait for any bits in mask to be set in HDMI_NV_PDISP_KEY_CTRL
+/* wait for bits in mask to be set to value in HDMI_NV_PDISP_KEY_CTRL
  * waits up to 100mS */
-static int wait_key_ctrl(struct tegra_dc_hdmi_data *hdmi, u32 mask)
+static int wait_key_ctrl(struct tegra_dc_hdmi_data *hdmi, u32 mask, u32 value)
 {
 	int retries = 101;
 	u32 ctrl;
 
 	do {
+		msleep(1);
 		ctrl = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_KEY_CTRL);
-		if ((ctrl | (mask)))
+		if (((ctrl ^ value) & mask) == 0)
 			break;
-		if (retries > 1)
-			msleep(1);
 	} while (--retries);
 	if (!retries) {
 		nvhdcp_err("key ctrl read timeout (mask=0x%x)\n", mask);
@@ -667,7 +666,7 @@ static int load_kfuse(struct tegra_dc_hdmi_data *hdmi)
 	tegra_hdmi_writel(hdmi, ctrl | PKEY_REQUEST_RELOAD_TRIGGER
 					| LOCAL_KEYS , HDMI_NV_PDISP_KEY_CTRL);
 
-	e = wait_key_ctrl(hdmi, PKEY_LOADED);
+	e = wait_key_ctrl(hdmi, PKEY_LOADED, PKEY_LOADED);
 	if (e) {
 		nvhdcp_err("key reload timeout\n");
 		return -EIO;
@@ -705,7 +704,7 @@ static int load_kfuse(struct tegra_dc_hdmi_data *hdmi)
 		tegra_hdmi_writel(hdmi, tmp, HDMI_NV_PDISP_KEY_CTRL);
 
 		/* wait for WRITE16 to complete */
-		e = wait_key_ctrl(hdmi, 0x10); /* WRITE16 */
+		e = wait_key_ctrl(hdmi, 0x10, 0); /* WRITE16 */
 		if (e) {
 			nvhdcp_err("key write timeout\n");
 			return -EIO;

@@ -106,6 +106,12 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 
 	nvmap_mru_remove(nvmap_get_share_from_dev(dev), h);
 
+	/* Restore page attributes. */
+	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE ||
+	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
+	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
+		set_pages_array_wb(h->pgalloc.pages, nr_page);
+
 	if (h->pgalloc.area)
 		tegra_iovmm_free_vm(h->pgalloc.area);
 
@@ -146,7 +152,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	pgprot_t prot;
 	unsigned int i = 0;
 	struct page **pages;
-	bool flush_inner = true;
 	unsigned long base;
 
 	pages = altalloc(nr_page * sizeof(*pages));
@@ -189,18 +194,26 @@ static int handle_page_alloc(struct nvmap_client *client,
 #endif
 	}
 
-	/* Flush the cache for allocated pages*/
-	if (size >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD) {
-		inner_flush_cache_all();
-		flush_inner = false;
-	}
+	/* Update the pages mapping in kernel page table. */
+	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
+		set_pages_array_wc(pages, nr_page);
+	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
+		set_pages_array_uc(pages, nr_page);
+	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
+		set_pages_array_iwb(pages, nr_page);
+	else
+		goto skip_cache_flush;
+
+	/* Flush the cache for allocated high mem pages only */
 	for (i = 0; i < nr_page; i++) {
-		if (flush_inner)
+		if (PageHighMem(pages[i])) {
 			__flush_dcache_page(page_mapping(pages[i]), pages[i]);
-		base = page_to_phys(pages[i]);
-		outer_flush_range(base, base + PAGE_SIZE);
+			base = page_to_phys(pages[i]);
+			outer_flush_range(base, base + PAGE_SIZE);
+		}
 	}
 
+skip_cache_flush:
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;

@@ -285,17 +285,24 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	vpriv->offs = op.offset;
 
 	cache_flags = op.flags & NVMAP_HANDLE_CACHE_FLAG;
-	if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE ||
-	    cache_flags == NVMAP_HANDLE_CACHEABLE) {
+	if ((cache_flags == NVMAP_HANDLE_INNER_CACHEABLE ||
+	     cache_flags == NVMAP_HANDLE_CACHEABLE) &&
+	    (h->flags == NVMAP_HANDLE_UNCACHEABLE ||
+	     h->flags == NVMAP_HANDLE_WRITE_COMBINE)) {
 		if (h->size & ~PAGE_MASK) {
 			pr_err("\n%s:attempt to convert a buffer from uc/wc to"
 				" wb, whose size is not a multiple of page size."
 				" request ignored.\n", __func__);
 		} else {
+			unsigned int nr_page = h->size >> PAGE_SHIFT;
 			wmb();
 			/* override allocation time cache coherency attributes. */
 			h->flags &= ~NVMAP_HANDLE_CACHE_FLAG;
 			h->flags |= cache_flags;
+			if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE)
+				set_pages_array_iwb(h->pgalloc.pages, nr_page);
+			else
+				set_pages_array_wb(h->pgalloc.pages, nr_page);
 		}
 	}
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
@@ -569,11 +576,8 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 	}
 
 	wmb();
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		goto out;
-#endif
-	if (h->flags == NVMAP_HANDLE_UNCACHEABLE || start == end)
+	if (h->flags == NVMAP_HANDLE_UNCACHEABLE ||
+	    h->flags == NVMAP_HANDLE_WRITE_COMBINE || start == end)
 		goto out;
 
 	if (fast_cache_maint(client, h, start, end, op))

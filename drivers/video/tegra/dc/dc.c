@@ -2369,12 +2369,19 @@ static void tegra_dc_trigger_windows(struct tegra_dc *dc)
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		/* FIXME: this is not needed when the simulator
+		   clears WIN_x_UPDATE bits as in HW */
+		dc->windows[i].dirty = 0;
+		completed = 1;
+#else
 		if (!(val & (WIN_A_ACT_REQ << i))) {
 			dc->windows[i].dirty = 0;
 			completed = 1;
 		} else {
 			dirty = 1;
 		}
+#endif
 	}
 
 	if (!dirty) {

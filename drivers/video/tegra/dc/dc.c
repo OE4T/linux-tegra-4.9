@@ -1310,6 +1310,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 		tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
 
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+		if (win->global_alpha == 255)
+			tegra_dc_writel(dc, 0, DC_WIN_GLOBAL_ALPHA);
+		else
+			tegra_dc_writel(dc, GLOBAL_ALPHA_ENABLE |
+				win->global_alpha, DC_WIN_GLOBAL_ALPHA);
+#endif
+
 		win->dirty = no_vsync ? 0 : 1;
 
 		dev_dbg(&dc->ndev->dev, "%s():idx=%d z=%d x=%d y=%d w=%d h=%d "

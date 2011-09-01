@@ -2349,17 +2349,20 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	clk_disable(dc->clk);
 	tegra_dvfs_set_rate(dc->clk, 0);
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		struct tegra_dc_win *w = &dc->windows[i];
-		w->bandwidth = 0;
-		w->new_bandwidth = 0;
-	}
-
 	if (dc->out && dc->out->disable)
 		dc->out->disable();
 
-	/* flush any pending syncpt waits */
 	for (i = 0; i < dc->n_windows; i++) {
+		struct tegra_dc_win *w = &dc->windows[i];
+
+		/* reset window bandwidth */
+		w->bandwidth = 0;
+		w->new_bandwidth = 0;
+
+		/* disable windows */
+		w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+
+		/* flush any pending syncpt waits */
 		while (dc->syncpt[i].min < dc->syncpt[i].max) {
 			dc->syncpt[i].min++;
 			nvhost_syncpt_cpu_incr(&dc->ndev->host->syncpt,

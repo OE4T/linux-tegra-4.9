@@ -33,19 +33,20 @@
 #define NVHOST_MAX_WAIT_CHECKS 256
 #define NVHOST_MAX_GATHERS 512
 #define NVHOST_MAX_HANDLES 1280
+#define NVHOST_MAX_POWERGATE_IDS 2
 
 struct nvhost_master;
 struct nvhost_waitchk;
 
 struct nvhost_channeldesc {
 	const char *name;
-	nvhost_modulef power;
 	u32 syncpts;
 	u32 waitbases;
 	u32 modulemutexes;
 	u32 class;
 	bool exclusive;
 	bool keepalive;
+	struct nvhost_moduledesc module;
 };
 
 struct nvhost_channel {

@@ -22,6 +22,7 @@
 #ifndef _NVHOST_CHIP_SUPPORT_H_
 #define _NVHOST_CHIP_SUPPORT_H_
 
+#include <linux/types.h>
 struct output;
 struct nvhost_waitchk;
 struct nvhost_userctx_timeout;
@@ -36,6 +37,9 @@ struct nvhost_intr;
 struct push_buffer;
 struct nvhost_syncpt;
 struct nvhost_cpuaccess;
+struct nvhost_module;
+struct nvhost_master;
+struct dentry;
 
 struct nvhost_chip_support {
 	struct {
@@ -103,6 +107,7 @@ struct nvhost_chip_support {
 	} push_buffer;
 
 	struct {
+		void (*debug_init)(struct dentry *de);
 		void (*show_channel_cdma)(struct nvhost_master *,
 					  struct output *,
 					  int chid);
@@ -148,6 +153,16 @@ struct nvhost_chip_support {
 		void (*mutex_unlock)(struct nvhost_cpuaccess *,
 				     unsigned int idx);
 	} cpuaccess;
+
+	struct {
+		int (*add_client)(struct nvhost_module *mod, void *priv);
+		void (*remove_client)(struct nvhost_module *mod, void *priv);
+		int (*get_rate)(struct nvhost_module *mod,
+				unsigned long *rate,
+				int index);
+		int (*set_rate)(struct nvhost_module *mod, void *priv,
+				unsigned long rate, int index);
+	} acm;
 };
 
 

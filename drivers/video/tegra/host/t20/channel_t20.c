@@ -24,12 +24,13 @@
 #include "../dev.h"
 #include "../nvhost_hwctx.h"
 #include <trace/events/nvhost.h>
+#include <mach/powergate.h>
 
 #include "hardware_t20.h"
 #include "syncpt_t20.h"
 #include "../dev.h"
 #include "3dctx_t20.h"
-#include "../t30/3dctx_t30.h"
+#include "../3dctx_common.h"
 
 #define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
 #define NVHOST_CHANNEL_BASE 0
@@ -45,9 +46,6 @@
 #define NVMODMUTEX_DSI       (9)
 #define NV_FIFO_READ_TIMEOUT 200000
 
-static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action);
-
-
 const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 {
 	/* channel 0 */
@@ -57,6 +55,10 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 			 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
 			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
+	.module        = {
+			NVHOST_MODULE_NO_POWERGATING,
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			},
 },
 {
 	/* channel 1 */
@@ -65,7 +67,12 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.waitbases     = BIT(NVWAITBASE_3D),
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
-	.power         = power_3d,
+	.module        = {
+			.prepare_poweroff = nvhost_3dctx_prepare_power_off,
+			.clocks = {{"gr3d", UINT_MAX}, {"emc", UINT_MAX}, {} },
+			.powergate_ids = {TEGRA_POWERGATE_3D, -1},
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			},
 },
 {
 	/* channel 2 */
@@ -74,11 +81,22 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.waitbases     = BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes = BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			 BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
+	.module        = {
+			.clocks = {{"gr2d", UINT_MAX} ,
+					{"epp", UINT_MAX} ,
+					{"emc", UINT_MAX} },
+			NVHOST_MODULE_NO_POWERGATING,
+			.powerdown_delay = 0,
+			}
 },
 {
 	/* channel 3 */
 	.name	 = "isp",
 	.syncpts = 0,
+	.module         = {
+			NVHOST_MODULE_NO_POWERGATING,
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			},
 },
 {
 	/* channel 4 */
@@ -89,6 +107,10 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 			 BIT(NVSYNCPT_VI_ISP_4),
 	.modulemutexes = BIT(NVMODMUTEX_VI),
 	.exclusive     = true,
+	.module        = {
+			NVHOST_MODULE_NO_POWERGATING,
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			}
 },
 {
 	/* channel 5 */
@@ -99,13 +121,22 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.exclusive     = true,
 	.keepalive     = true,
+	.module        = {
+			.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
+			.powergate_ids = {TEGRA_POWERGATE_MPE, -1},
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			},
 },
 {
 	/* channel 6 */
 	.name	       = "dsi",
 	.syncpts       = BIT(NVSYNCPT_DSI),
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
-} };
+	.module        = {
+			NVHOST_MODULE_NO_POWERGATING,
+			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			},
+}};
 
 static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 {
@@ -164,8 +195,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 
 	/* keep module powered */
 	nvhost_module_busy(&channel->mod);
-	if (strcmp(channel->mod.name, "gr3d") == 0)
-		module3d_notify_busy();
+	if (channel->mod.desc->busy)
+		channel->mod.desc->busy(&channel->mod);
 
 	/* before error checks, return current max */
 	*syncpt_value = nvhost_syncpt_read_max(sp, syncpt_id);
@@ -314,63 +345,6 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 
 	*syncpt_value = syncval;
 	return 0;
-}
-
-static void power_3d(struct nvhost_module *mod, enum nvhost_power_action action)
-{
-	struct nvhost_channel *ch = container_of(mod, struct nvhost_channel, mod);
-	struct nvhost_hwctx *hwctx_to_save;
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
-	u32 syncpt_incrs, syncpt_val;
-	int err;
-	void *ref;
-
-	if (action != NVHOST_POWER_ACTION_OFF)
-		return;
-
-	mutex_lock(&ch->submitlock);
-	hwctx_to_save = ch->cur_ctx;
-	if (!hwctx_to_save) {
-		mutex_unlock(&ch->submitlock);
-		return;
-	}
-
-	if (strcmp(mod->name, "gr3d") == 0)
-		module3d_notify_busy();
-
-	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
-	if (err) {
-		mutex_unlock(&ch->submitlock);
-		return;
-	}
-
-	hwctx_to_save->valid = true;
-	ch->ctxhandler.get(hwctx_to_save);
-	ch->cur_ctx = NULL;
-
-	syncpt_incrs = hwctx_to_save->save_incrs;
-	syncpt_val = nvhost_syncpt_incr_max(&ch->dev->syncpt,
-					NVSYNCPT_3D, syncpt_incrs);
-
-	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
-	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val,
-			NULL, 0, hwctx_to_save->timeout);
-
-	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
-			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
-
-	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
-			NVHOST_INTR_ACTION_WAKEUP, &wq, &ref);
-	wait_event(wq,
-		nvhost_syncpt_min_cmp(&ch->dev->syncpt,
-				NVSYNCPT_3D, syncpt_val));
-
-	nvhost_intr_put_ref(&ch->dev->intr, ref);
-
-	nvhost_cdma_update(&ch->cdma);
-
-	mutex_unlock(&ch->submitlock);
 }
 
 static int t20_channel_read_3d_reg(

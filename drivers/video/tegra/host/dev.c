@@ -44,7 +44,6 @@
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
 
-#include "nvhost_scale.h"
 #include "debug.h"
 
 #define DRIVER_NAME "tegra_grhost"
@@ -83,7 +82,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 
 	filp->private_data = NULL;
 
-	nvhost_module_remove_client(&priv->ch->mod, priv);
+	nvhost_module_remove_client(priv->ch->dev, &priv->ch->mod, priv);
 	nvhost_putchannel(priv->ch, priv->hwctx);
 
 	if (priv->hwctx)
@@ -119,7 +118,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	nvhost_module_add_client(&ch->mod, priv);
+	nvhost_module_add_client(ch->dev, &ch->mod, priv);
 	priv->gather_mem = nvmap_alloc(ch->dev->nvmap,
 				sizeof(u32) * 2 * NVHOST_MAX_GATHERS, 32,
 				NVMAP_HANDLE_CACHEABLE);
@@ -446,7 +445,8 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
 
-		err = nvhost_module_get_rate(&priv->ch->mod, &rate, 0);
+		err = nvhost_module_get_rate(priv->ch->dev,
+				&priv->ch->mod, &rate, 0);
 		if (err == 0)
 			arg->rate = rate;
 		break;
@@ -457,7 +457,8 @@ static long nvhost_channelctl(struct file *filp,
 				(struct nvhost_clk_rate_args *)buf;
 		unsigned long rate = (unsigned long)arg->rate;
 
-		err = nvhost_module_set_rate(&priv->ch->mod, priv, rate, 0);
+		err = nvhost_module_set_rate(priv->ch->dev,
+				&priv->ch->mod, priv, rate, 0);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:
@@ -695,19 +696,24 @@ static const struct file_operations nvhost_ctrlops = {
 	.unlocked_ioctl = nvhost_ctrlctl
 };
 
-static void power_host(struct nvhost_module *mod, enum nvhost_power_action action)
+static void power_on_host(struct nvhost_module *mod)
 {
-	struct nvhost_master *dev = container_of(mod, struct nvhost_master, mod);
+	struct nvhost_master *dev =
+			container_of(mod, struct nvhost_master, mod);
 
-	if (action == NVHOST_POWER_ACTION_ON) {
-		nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0].clk));
-	} else if (action == NVHOST_POWER_ACTION_OFF) {
-		int i;
-		for (i = 0; i < dev->nb_channels; i++)
-			nvhost_channel_suspend(&dev->channels[i]);
-		nvhost_syncpt_save(&dev->syncpt);
-		nvhost_intr_stop(&dev->intr);
-	}
+	nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0]));
+}
+
+static void power_off_host(struct nvhost_module *mod)
+{
+	struct nvhost_master *dev =
+			container_of(mod, struct nvhost_master, mod);
+	int i;
+
+	for (i = 0; i < dev->nb_channels; i++)
+		nvhost_channel_suspend(&dev->channels[i]);
+	nvhost_syncpt_save(&dev->syncpt);
+	nvhost_intr_stop(&dev->intr);
 }
 
 static int nvhost_user_init(struct nvhost_master *host)
@@ -857,44 +863,12 @@ static int nvhost_init_chip_support(struct nvhost_master *host)
 	return 0;
 }
 
-
-static ssize_t enable_3d_scaling_show(struct device *device,
-	struct device_attribute *attr, char *buf)
-{
-	ssize_t res;
-
-	res = snprintf(buf, PAGE_SIZE, "%d\n", scale3d_is_enabled());
-
-	return res;
-}
-
-static ssize_t enable_3d_scaling_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	unsigned long val = 0;
-
-	if (strict_strtoul(buf, 10, &val) < 0)
-		return -EINVAL;
-
-	scale3d_enable(val);
-
-	return count;
-}
-
-static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUSR,
-	enable_3d_scaling_show, enable_3d_scaling_store);
-
-void nvhost_remove_sysfs(struct device *dev)
-{
-	device_remove_file(dev, &dev_attr_enable_3d_scaling);
-}
-
-void nvhost_create_sysfs(struct device *dev)
-{
-	int error = device_create_file(dev, &dev_attr_enable_3d_scaling);
-	if (error)
-		dev_err(dev, "failed to create sysfs attributes");
-}
+struct nvhost_moduledesc hostdesc = {
+		.finalize_poweron = power_on_host,
+		.prepare_poweroff = power_off_host,
+		.clocks = {{"host1x", UINT_MAX}, {} },
+		NVHOST_MODULE_NO_POWERGATING,
+};
 
 static int nvhost_probe(struct platform_device *pdev)
 {
@@ -966,22 +940,21 @@ static int nvhost_probe(struct platform_device *pdev)
 	if (err)
 		goto fail;
 
-	err = nvhost_module_init(&host->mod, "host1x", power_host, NULL, &pdev->dev);
+	err = nvhost_module_init(&host->mod, "host1x",
+			&hostdesc, NULL, &pdev->dev);
 	if (err)
 		goto fail;
 
 
 	platform_set_drvdata(pdev, host);
 
-	clk_enable(host->mod.clk[0].clk);
+	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->mod.clk[0].clk);
+	clk_disable(host->mod.clk[0]);
 
 	nvhost_bus_register(host);
 
 	nvhost_debug_init(host);
-
-	nvhost_create_sysfs(&pdev->dev);
 
 	dev_info(&pdev->dev, "initialized\n");
 	return 0;
@@ -998,7 +971,6 @@ static int __exit nvhost_remove(struct platform_device *pdev)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	nvhost_remove_chip_support(host);
-	nvhost_remove_sysfs(&pdev->dev);
 	return 0;
 }
 
@@ -1007,9 +979,9 @@ static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "suspending\n");
 	nvhost_module_suspend(&host->mod, true);
-	clk_enable(host->mod.clk[0].clk);
+	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_save(&host->syncpt);
-	clk_disable(host->mod.clk[0].clk);
+	clk_disable(host->mod.clk[0]);
 	dev_info(&pdev->dev, "suspended\n");
 	return 0;
 }
@@ -1018,10 +990,9 @@ static int nvhost_resume(struct platform_device *pdev)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "resuming\n");
-	clk_enable(host->mod.clk[0].clk);
+	clk_enable(host->mod.clk[0]);
 	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->mod.clk[0].clk);
-	scale3d_reset();
+	clk_disable(host->mod.clk[0]);
 	dev_info(&pdev->dev, "resumed\n");
 	return 0;
 }

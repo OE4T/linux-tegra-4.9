@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,12 +33,14 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
 		err = nvhost_module_init(&ch->mod, ch->desc->name,
-					ch->desc->power, &ch->dev->mod,
+					&ch->desc->module,
+					&ch->dev->mod,
 					&ch->dev->pdev->dev);
 		if (!err) {
 			err = nvhost_cdma_init(&ch->cdma);
 			if (err)
-				nvhost_module_deinit(&ch->mod);
+				nvhost_module_deinit(&ch->dev->pdev->dev,
+						&ch->mod);
 		}
 	} else if (ch->desc->exclusive) {
 		err = -EBUSY;
@@ -72,7 +74,7 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 1) {
-		nvhost_module_deinit(&ch->mod);
+		nvhost_module_deinit(&ch->dev->pdev->dev, &ch->mod);
 		/* cdma may already be stopped, that's ok */
 
 		channel_cdma_op(ch).stop(&ch->cdma);

@@ -134,3 +134,58 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 {
 	kref_put(&ctx->ref, nvhost_3dctx_free);
 }
+
+void nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
+{
+	struct nvhost_channel *ch =
+			container_of(mod, struct nvhost_channel, mod);
+	struct nvhost_hwctx *hwctx_to_save;
+	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
+	u32 syncpt_incrs, syncpt_val;
+	int err;
+	void *ref;
+
+	if (mod->desc->busy)
+		mod->desc->busy(mod);
+
+	mutex_lock(&ch->submitlock);
+	hwctx_to_save = ch->cur_ctx;
+	if (!hwctx_to_save) {
+		mutex_unlock(&ch->submitlock);
+		return;
+	}
+
+	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
+	if (err) {
+		mutex_unlock(&ch->submitlock);
+		return;
+	}
+
+	hwctx_to_save->valid = true;
+	ch->ctxhandler.get(hwctx_to_save);
+	ch->cur_ctx = NULL;
+
+	syncpt_incrs = hwctx_to_save->save_incrs;
+	syncpt_val = nvhost_syncpt_incr_max(&ch->dev->syncpt,
+					NVSYNCPT_3D, syncpt_incrs);
+
+	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
+	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val,
+			NULL, 0, hwctx_to_save->timeout);
+
+	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
+			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+
+	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
+			NVHOST_INTR_ACTION_WAKEUP, &wq, &ref);
+	wait_event(wq,
+		nvhost_syncpt_min_cmp(&ch->dev->syncpt,
+				NVSYNCPT_3D, syncpt_val));
+
+	nvhost_intr_put_ref(&ch->dev->intr, ref);
+
+	nvhost_cdma_update(&ch->cdma);
+
+	mutex_unlock(&ch->submitlock);
+}

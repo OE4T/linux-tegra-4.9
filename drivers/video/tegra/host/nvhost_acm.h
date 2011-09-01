@@ -29,60 +29,72 @@
 #include <linux/clk.h>
 
 #define NVHOST_MODULE_MAX_CLOCKS 3
-
+#define NVHOST_MODULE_MAX_POWERGATE_IDS 2
 struct nvhost_module;
+struct nvhost_master;
 
-enum nvhost_power_action {
-	NVHOST_POWER_ACTION_OFF,
-	NVHOST_POWER_ACTION_ON,
+struct nvhost_moduledesc_clock {
+	char *name;
+	long default_rate;
 };
 
-typedef void (*nvhost_modulef)(struct nvhost_module *mod, enum nvhost_power_action action);
+#define NVHOST_MODULE_NO_POWERGATING .powergate_ids = {-1, -1}
+#define NVHOST_DEFAULT_POWERDOWN_DELAY .powerdown_delay = 25
 
-struct nvhost_module_client {
-	struct list_head node;
-	unsigned long rate[NVHOST_MODULE_MAX_CLOCKS];
-	void *priv;
-};
+struct nvhost_moduledesc {
+	void (*prepare_poweroff)(struct nvhost_module *mod);
+	void (*finalize_poweron)(struct nvhost_module *mod);
+	void (*busy)(struct nvhost_module *);
+	void (*idle)(struct nvhost_module *);
+	void (*suspend)(struct nvhost_module *);
+	void (*init)(struct device *dev, struct nvhost_module *);
+	void (*deinit)(struct device *dev, struct nvhost_module *);
 
-struct nvhost_module_clock_info {
-	struct clk *clk;
-	unsigned long default_rate;
+	int powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
+	bool can_powergate;
+	int powerdown_delay;
+	struct nvhost_moduledesc_clock clocks[NVHOST_MODULE_MAX_CLOCKS];
 };
 
 struct nvhost_module {
 	const char *name;
-	nvhost_modulef func;
 	struct delayed_work powerdown;
-	struct nvhost_module_clock_info clk[NVHOST_MODULE_MAX_CLOCKS];
 	int num_clks;
+	struct clk *clk[NVHOST_MODULE_MAX_CLOCKS];
 	struct mutex lock;
 	bool powered;
 	atomic_t refcount;
 	wait_queue_head_t idle;
 	struct nvhost_module *parent;
-	bool can_powergate;
-	int powergate_id;
-	int powergate_id2;
-	int powerdown_delay;
+	const struct nvhost_moduledesc *desc;
 	struct list_head client_list;
 };
 
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
-		nvhost_modulef func, struct nvhost_module *parent,
+		const struct nvhost_moduledesc *desc,
+		struct nvhost_module *parent,
 		struct device *dev);
-void nvhost_module_deinit(struct nvhost_module *mod);
+void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod);
 void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
 
-void nvhost_module_reset(struct nvhost_module *mod);
+void nvhost_module_reset(struct device *dev, struct nvhost_module *mod);
 void nvhost_module_busy(struct nvhost_module *mod);
 void nvhost_module_idle_mult(struct nvhost_module *mod, int refs);
-int nvhost_module_add_client(struct nvhost_module *mod, void *priv);
-void nvhost_module_remove_client(struct nvhost_module *mod, void *priv);
-int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
-			int index);
-int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
-			unsigned long rate, int index);
+int nvhost_module_add_client(struct nvhost_master *host,
+		struct nvhost_module *mod,
+		void *priv);
+void nvhost_module_remove_client(struct nvhost_master *host,
+		struct nvhost_module *mod,
+		void *priv);
+int nvhost_module_get_rate(struct nvhost_master *host,
+		struct nvhost_module *mod,
+		unsigned long *rate,
+		int index);
+int nvhost_module_set_rate(struct nvhost_master *host,
+		struct nvhost_module *mod, void *priv,
+		unsigned long rate, int index);
+
+#define host_acm_op(host) (host->op.acm)
 
 static inline bool nvhost_module_powered(struct nvhost_module *mod)
 {
@@ -94,10 +106,5 @@ static inline void nvhost_module_idle(struct nvhost_module *mod)
 	nvhost_module_idle_mult(mod, 1);
 }
 
-/*
- * call when performing submit to notify scaling mechanism that 3d module is
- * in use
- */
-void module3d_notify_busy(void);
 
 #endif

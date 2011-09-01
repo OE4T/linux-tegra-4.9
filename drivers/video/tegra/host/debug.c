@@ -116,7 +116,9 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_null_kickoff_pid);
 
-	nvhost_debug_scale_init(de);
+	if (master->op.debug.debug_init)
+		master->op.debug.debug_init(de);
+
 	debugfs_create_u32("force_timeout_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_pid);
 	debugfs_create_u32("force_timeout_val", S_IRUGO|S_IWUSR, de,

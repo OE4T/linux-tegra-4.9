@@ -137,7 +137,6 @@ static void t20_push_buffer_push_to(struct push_buffer *pb,
 	pb->nvmap[cur/8].client = client;
 	pb->nvmap[cur/8].handle = handle;
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
-	/* printk("push_to_push_buffer: op1=%08x; op2=%08x; cur=%x\n", op1, op2, pb->cur); */
 }
 
 /**
@@ -578,7 +577,7 @@ void t20_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 		ch->aperture + HOST1X_CHANNEL_DMACTRL);
 
 	writel(BIT(ch->chid), dev->sync_aperture + HOST1X_SYNC_CH_TEARDOWN);
-	nvhost_module_reset(&ch->mod);
+	nvhost_module_reset(&dev->pdev->dev, &ch->mod);
 
 	cdma->running = false;
 	cdma->torndown = true;

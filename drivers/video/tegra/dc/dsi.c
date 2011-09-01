@@ -29,6 +29,7 @@
 #include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
+#include <mach/csi.h>
 #include <linux/nvhost.h>
 #include <../gpio-names.h>
 
@@ -1126,6 +1127,12 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
 	}
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+
+	val = MIPI_CAL_HSPUOSD(0x3) | MIPI_CAL_HSPDOSD(0x4);
+	tegra_vi_csi_writel(val, CSI_DSI_MIPI_CAL_CONFIG);
+
+	val = PAD_DRIV_DN_REF(0x5) | PAD_DRIV_UP_REF(0x7);
+	tegra_vi_csi_writel(val, CSI_MIPIBIAS_PAD_CONFIG);
 
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);

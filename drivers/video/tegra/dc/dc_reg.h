@@ -484,6 +484,7 @@
 #define  SD_BIN_WIDTH_TWO		(1 << 3)
 #define  SD_BIN_WIDTH_FOUR		(2 << 3)
 #define  SD_BIN_WIDTH_EIGHT		(3 << 3)
+#define  SD_BIN_WIDTH_MASK		(3 << 3)
 #define  SD_AGGRESSIVENESS(x)	   	(((x) & 0x7) << 5)
 #define  SD_HW_UPDATE_DLY(x)		(((x) & 0x3) << 8)
 #define  SD_ONESHOT_ENABLE		(1 << 10)
@@ -491,6 +492,9 @@
 #define  SD_CORRECTION_MODE_MAN		(1 << 11)
 
 #define NUM_BIN_WIDTHS 4
+#define STEPS_PER_AGG_LVL 64
+#define STEPS_PER_AGG_CHG_LOG2 5
+#define STEPS_PER_AGG_CHG (1<<STEPS_PER_AGG_CHG_LOG2)
 
 #define DC_DISP_SD_CSC_COEFF			0x4c3
 #define  SD_CSC_COEFF_R(x)		(((x) & 0xf) << 4)

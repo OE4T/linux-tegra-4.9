@@ -43,6 +43,7 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 
 NVSD_ATTR(enable);
 NVSD_ATTR(aggressiveness);
+NVSD_ATTR(phase_in);
 NVSD_ATTR(bin_width);
 NVSD_ATTR(hw_update_delay);
 NVSD_ATTR(use_vid_luma);
@@ -59,6 +60,7 @@ static struct kobj_attribute nvsd_attr_registers =
 static struct attribute *nvsd_attrs[] = {
 	NVSD_ATTRS_ENTRY(enable),
 	NVSD_ATTRS_ENTRY(aggressiveness),
+	NVSD_ATTRS_ENTRY(phase_in),
 	NVSD_ATTRS_ENTRY(bin_width),
 	NVSD_ATTRS_ENTRY(hw_update_delay),
 	NVSD_ATTRS_ENTRY(use_vid_luma),
@@ -84,13 +86,173 @@ static atomic_t *sd_brightness = NULL;
 /* shared boolean for manual K workaround */
 static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
+static u8 nvsd_get_bw_idx(struct tegra_dc_sd_settings *settings)
+{
+	u8 bw;
+
+	switch (settings->bin_width) {
+	default:
+	case -1:
+	/* A -1 bin-width indicates 'automatic'
+	   based upon aggressiveness. */
+		settings->bin_width = -1;
+		switch (settings->aggressiveness) {
+		default:
+		case 0:
+		case 1:
+			bw = SD_BIN_WIDTH_ONE;
+			break;
+		case 2:
+		case 3:
+		case 4:
+			bw = SD_BIN_WIDTH_TWO;
+			break;
+		case 5:
+			bw = SD_BIN_WIDTH_FOUR;
+			break;
+		}
+		break;
+	case 1:
+		bw = SD_BIN_WIDTH_ONE;
+		break;
+	case 2:
+		bw = SD_BIN_WIDTH_TWO;
+		break;
+	case 4:
+		bw = SD_BIN_WIDTH_FOUR;
+		break;
+	case 8:
+		bw = SD_BIN_WIDTH_EIGHT;
+		break;
+	}
+	return bw >> 3;
+
+}
+
+/* phase in the luts based on the current and max step */
+static void nvsd_phase_in_luts(struct tegra_dc_sd_settings *settings,
+	struct tegra_dc *dc)
+{
+	u32 val;
+	u8 bw_idx;
+	int i;
+	u16 cur_phase_step = settings->cur_phase_step;
+	u16 phase_in_steps = settings->phase_in_steps;
+
+	bw_idx = nvsd_get_bw_idx(settings);
+
+	/* Phase in Final LUT */
+	for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
+		val = SD_LUT_R((settings->lut[bw_idx][i].r *
+				cur_phase_step)/phase_in_steps) |
+			SD_LUT_G((settings->lut[bw_idx][i].g *
+				cur_phase_step)/phase_in_steps) |
+			SD_LUT_B((settings->lut[bw_idx][i].b *
+				cur_phase_step)/phase_in_steps);
+
+		tegra_dc_writel(dc, val, DC_DISP_SD_LUT(i));
+	}
+			/* Phase in Final BLTF */
+	for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
+		val = SD_BL_TF_POINT_0(255-((255-settings->bltf[bw_idx][i][0])
+				* cur_phase_step)/phase_in_steps) |
+			SD_BL_TF_POINT_1(255-((255-settings->bltf[bw_idx][i][1])
+				* cur_phase_step)/phase_in_steps) |
+			SD_BL_TF_POINT_2(255-((255-settings->bltf[bw_idx][i][2])
+				* cur_phase_step)/phase_in_steps) |
+			SD_BL_TF_POINT_3(255-((255-settings->bltf[bw_idx][i][3])
+				* cur_phase_step)/phase_in_steps);
+
+		tegra_dc_writel(dc, val, DC_DISP_SD_BL_TF(i));
+	}
+}
+
+/* handle the commands that may be invoked for phase_in */
+static void nvsd_cmd_handler(struct tegra_dc_sd_settings *settings,
+	struct tegra_dc *dc)
+{
+	u32 val;
+	u8 bw_idx, bw;
+
+	if (settings->cmd & ENABLE) {
+		settings->cur_phase_step++;
+		if (settings->cur_phase_step >= settings->phase_in_steps)
+			settings->cmd &= ~ENABLE;
+
+		nvsd_phase_in_luts(settings, dc);
+	}
+	if (settings->cmd & DISABLE) {
+		settings->cur_phase_step--;
+		nvsd_phase_in_luts(settings, dc);
+		if (settings->cur_phase_step == 0) {
+			/* finish up aggressiveness phase in */
+			if (settings->cmd & AGG_CHG)
+				settings->aggressiveness = settings->final_agg;
+			settings->cmd = NO_CMD;
+			settings->enable = 0;
+			nvsd_init(dc, settings);
+		}
+	}
+	if (settings->cmd & AGG_CHG) {
+		if (settings->aggressiveness == settings->final_agg)
+			settings->cmd &= ~AGG_CHG;
+		if ((settings->cur_agg_step++ & (STEPS_PER_AGG_CHG - 1)) == 0) {
+			settings->final_agg > settings->aggressiveness ?
+				settings->aggressiveness++ :
+				settings->aggressiveness--;
+
+			/* Update aggressiveness value in HW */
+			val = tegra_dc_readl(dc, DC_DISP_SD_CONTROL);
+			val &= ~SD_AGGRESSIVENESS(0x7);
+			val |= SD_AGGRESSIVENESS(settings->aggressiveness);
+
+			/* Adjust bin_width for automatic setting */
+			if (settings->bin_width == -1) {
+				bw_idx = nvsd_get_bw_idx(settings);
+
+				bw = bw_idx << 3;
+
+				val &= ~SD_BIN_WIDTH_MASK;
+				val |= bw;
+			}
+			tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
+
+			nvsd_phase_in_luts(settings, dc);
+		}
+	}
+}
+
+static bool nvsd_update_enable(struct tegra_dc_sd_settings *settings,
+	int enable_val)
+{
+
+	if (enable_val != 1 && enable_val != 0)
+		return false;
+
+	if (!settings->cmd && settings->enable != enable_val) {
+		settings->phase_in_steps =
+			STEPS_PER_AGG_LVL*settings->aggressiveness;
+		settings->cur_phase_step = enable_val ?
+			0 : settings->phase_in_steps;
+	}
+
+	if (settings->enable != enable_val || settings->cmd & DISABLE) {
+		settings->cmd &= ~(ENABLE | DISABLE);
+		if (!settings->enable && enable_val)
+			settings->cmd |= PHASE_IN;
+		settings->cmd |= enable_val ? ENABLE : DISABLE;
+		return true;
+	}
+
+	return false;
+}
+
 /* Functional initialization */
 void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 {
 	u32 i = 0;
 	u32 val = 0;
 	u32 bw_idx = 0;
-	u32 bw = 0;
 	/* TODO: check if HW says SD's available */
 
 	/* If SD's not present or disabled, clear the register and return. */
@@ -101,6 +263,8 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 
 		sd_brightness = NULL;
 
+		if (settings)
+			settings->cur_phase_step = 0;
 		tegra_dc_writel(dc, 0, DC_DISP_SD_CONTROL);
 		return;
 	}
@@ -124,69 +288,57 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	val |= SD_CORRECTION_MODE_MAN;
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 
-	switch (settings->bin_width) {
-	default:
-	case -1:
-		/* A -1 bin-width indicates 'automatic'
-		 * based upon aggressiveness. */
-		settings->bin_width = -1;
-
-		switch (settings->aggressiveness) {
-		default:
-		case 0:
-		case 1:
-			bw = SD_BIN_WIDTH_ONE;
-			break;
-		case 2:
-		case 3:
-		case 4:
-			bw = SD_BIN_WIDTH_TWO;
-			break;
-		case 5:
-			bw = SD_BIN_WIDTH_FOUR;
-			break;
-		}
-
-		break;
-	case 1:
-		bw = SD_BIN_WIDTH_ONE;
-		break;
-	case 2:
-		bw = SD_BIN_WIDTH_TWO;
-		break;
-	case 4:
-		bw = SD_BIN_WIDTH_FOUR;
-		break;
-	case 8:
-		bw = SD_BIN_WIDTH_EIGHT;
-		break;
-	}
-
-	bw_idx = bw >> 3;
+	bw_idx = nvsd_get_bw_idx(settings);
 
 	/* Write LUT */
-	dev_dbg(&dc->ndev->dev, "  LUT:\n");
+	if (!settings->cmd) {
+		dev_dbg(&dc->ndev->dev, "  LUT:\n");
 
-	for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
-		val = SD_LUT_R(settings->lut[bw_idx][i].r) |
-			SD_LUT_G(settings->lut[bw_idx][i].g) |
-			SD_LUT_B(settings->lut[bw_idx][i].b);
-		tegra_dc_writel(dc, val, DC_DISP_SD_LUT(i));
+		for (i = 0; i < DC_DISP_SD_LUT_NUM; i++) {
+			val = SD_LUT_R(settings->lut[bw_idx][i].r) |
+				SD_LUT_G(settings->lut[bw_idx][i].g) |
+				SD_LUT_B(settings->lut[bw_idx][i].b);
+			tegra_dc_writel(dc, val, DC_DISP_SD_LUT(i));
 
-		dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
+			dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
+		}
 	}
 
 	/* Write BL TF */
-	dev_dbg(&dc->ndev->dev, "  BL_TF:\n");
+	if (!settings->cmd) {
+		dev_dbg(&dc->ndev->dev, "  BL_TF:\n");
 
-	for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
-		val = SD_BL_TF_POINT_0(settings->bltf[bw_idx][i][0]) |
-			SD_BL_TF_POINT_1(settings->bltf[bw_idx][i][1]) |
-			SD_BL_TF_POINT_2(settings->bltf[bw_idx][i][2]) |
-			SD_BL_TF_POINT_3(settings->bltf[bw_idx][i][3]);
-		tegra_dc_writel(dc, val, DC_DISP_SD_BL_TF(i));
+		for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
+			val = SD_BL_TF_POINT_0(settings->bltf[bw_idx][i][0]) |
+				SD_BL_TF_POINT_1(settings->bltf[bw_idx][i][1]) |
+				SD_BL_TF_POINT_2(settings->bltf[bw_idx][i][2]) |
+				SD_BL_TF_POINT_3(settings->bltf[bw_idx][i][3]);
 
-		dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
+			tegra_dc_writel(dc, val, DC_DISP_SD_BL_TF(i));
+
+			dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
+		}
+	} else if ((settings->cmd & PHASE_IN)) {
+		settings->cmd &= ~PHASE_IN;
+		/* Write NO_OP values for BLTF */
+		for (i = 0; i < DC_DISP_SD_BL_TF_NUM; i++) {
+			val = SD_BL_TF_POINT_0(0xFF) |
+				SD_BL_TF_POINT_1(0xFF) |
+				SD_BL_TF_POINT_2(0xFF) |
+				SD_BL_TF_POINT_3(0xFF);
+
+			tegra_dc_writel(dc, val, DC_DISP_SD_BL_TF(i));
+
+			dev_dbg(&dc->ndev->dev, "    %d: 0x%08x\n", i, val);
+		}
+	}
+
+	/* Set step correctly on init */
+	if (!settings->cmd && settings->phase_in) {
+		settings->phase_in_steps = STEPS_PER_AGG_LVL *
+			settings->aggressiveness;
+		settings->cur_phase_step = settings->enable ?
+			settings->phase_in_steps : 0;
 	}
 
 	/* Write Coeff */
@@ -227,8 +379,8 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	val |= (settings->use_vid_luma) ? SD_USE_VID_LUMA : 0;
 	/* Aggressiveness */
 	val |= SD_AGGRESSIVENESS(settings->aggressiveness);
-	/* Bin Width (value derived above) */
-	val |= bw;
+	/* Bin Width (value derived from bw_idx) */
+	val |= bw_idx << 3;
 	/* Finally, Write SD Control */
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 	dev_dbg(&dc->ndev->dev, "  SD_CONTROL: 0x%08x\n", val);
@@ -245,6 +397,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 {
 	u32 val = 0;
 	int cur_sd_brightness;
+	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
 
 	if (sd_brightness) {
 		if (atomic_read(&man_k_until_blank)) {
@@ -253,6 +406,13 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 			tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 			atomic_set(&man_k_until_blank, 0);
 		}
+
+		if (settings->cmd)
+			nvsd_cmd_handler(settings, dc);
+
+		/* nvsd_cmd_handler may turn off didim */
+		if (!settings->enable)
+			return true;
 
 		cur_sd_brightness = atomic_read(sd_brightness);
 
@@ -335,6 +495,9 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 		else if (IS_NVSD_ATTR(aggressiveness))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->aggressiveness);
+		else if (IS_NVSD_ATTR(phase_in))
+			res = snprintf(buf, PAGE_SIZE, "%d\n",
+				sd_settings->phase_in);
 		else if (IS_NVSD_ATTR(bin_width))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->bin_width);
@@ -463,12 +626,39 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 	ssize_t res = count;
 	bool settings_updated = false;
+	long int result;
+	int err;
 
 	if (sd_settings) {
 		if (IS_NVSD_ATTR(enable)) {
-			nvsd_check_and_update(0, 1, enable);
+			if (sd_settings->phase_in) {
+				err = strict_strtol(buf, 10, &result);
+				if (err)
+					return err;
+
+				if (nvsd_update_enable(sd_settings, result))
+					nvsd_check_and_update(1, 1, enable);
+
+			} else {
+				nvsd_check_and_update(0, 1, enable);
+			}
 		} else if (IS_NVSD_ATTR(aggressiveness)) {
-			nvsd_check_and_update(1, 5, aggressiveness);
+			if (sd_settings->phase_in && sd_settings->enable) {
+				err = strict_strtol(buf, 10, &result);
+				if (err)
+					return err;
+
+				if (result > 0 && result <= 5 &&
+					result != sd_settings->aggressiveness) {
+
+					sd_settings->cmd |= AGG_CHG;
+					sd_settings->final_agg = result;
+					sd_settings->cur_agg_step = 0;
+				}
+			} else
+				nvsd_check_and_update(1, 5, aggressiveness);
+		} else if (IS_NVSD_ATTR(phase_in)) {
+			nvsd_check_and_update(0, 1, phase_in);
 		} else if (IS_NVSD_ATTR(bin_width)) {
 			nvsd_check_and_update(0, 8, bin_width);
 		} else if (IS_NVSD_ATTR(hw_update_delay)) {

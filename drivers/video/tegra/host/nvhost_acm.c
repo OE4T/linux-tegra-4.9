@@ -187,7 +187,7 @@ static void scale3d_init(struct nvhost_module *mod)
 	INIT_WORK(&scale3d.work, scale_3d_clocks_handler);
 
 	/* set scaling parameter defaults */
-	scale3d.enable = 1;
+	scale3d.enable = 0;
 	scale3d.p_period = 1200000;
 	scale3d.p_idle_min = 17;
 	scale3d.p_idle_max = 17;

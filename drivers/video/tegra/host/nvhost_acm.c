@@ -511,7 +511,9 @@ int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
 			    unsigned long rate, int index)
 {
 	struct nvhost_module_client *m;
+	int err;
 
+	mutex_lock(&mod->lock);
 	list_for_each_entry(m, &mod->client_list, node) {
 		if (m->priv == priv) {
 			rate = clk_round_rate(mod->clk[index].clk, rate);
@@ -519,7 +521,9 @@ int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
 			break;
 		}
 	}
-	return nvhost_module_update_rate(mod, index);
+	err = nvhost_module_update_rate(mod, index);
+	mutex_unlock(&mod->lock);
+	return err;
 }
 
 int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
@@ -529,9 +533,9 @@ int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
 	struct nvhost_module_client *client;
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
-	if (!client) {
+	if (!client)
 		return -ENOMEM;
-	}
+
 	INIT_LIST_HEAD(&client->node);
 	client->priv = priv;
 
@@ -540,7 +544,9 @@ int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
 				mod->clk[i].default_rate);
 		client->rate[i] = rate;
 	}
+	mutex_lock(&mod->lock);
 	list_add_tail(&client->node, &mod->client_list);
+	mutex_unlock(&mod->lock);
 	return 0;
 }
 
@@ -549,6 +555,7 @@ void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
 	int i;
 	struct nvhost_module_client *m;
 
+	mutex_lock(&mod->lock);
 	list_for_each_entry(m, &mod->client_list, node) {
 		if (priv == m->priv) {
 			list_del(&m->node);
@@ -559,6 +566,7 @@ void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
 	kfree(m);
 	for (i = 0; i < mod->num_clks; i++)
 		nvhost_module_update_rate(mod, i);
+	mutex_unlock(&mod->lock);
 }
 #else
 int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,

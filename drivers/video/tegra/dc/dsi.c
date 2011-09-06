@@ -70,6 +70,10 @@
 #define DSI_DC_STREAM_DISABLE		0x0
 #define DSI_DC_STREAM_ENABLE		0x1
 
+#define DSI_LP_OP_NOT_INIT		0x0
+#define DSI_LP_OP_WRITE			0x1
+#define DSI_LP_OP_READ			0x2
+
 struct dsi_status {
 	unsigned	init:2;
 
@@ -81,6 +85,8 @@ struct dsi_status {
 	unsigned	clk_out:2;
 	unsigned	clk_mode:2;
 	unsigned	clk_burst:2;
+
+	unsigned	lp_op:2;
 
 	unsigned	dc_stream:1;
 };
@@ -335,7 +341,7 @@ static u32 tegra_dsi_get_hs_clk_rate(struct tegra_dc_dsi_data *dsi)
 	return dsi_clock_rate_khz;
 }
 
-static u32 tegra_dsi_get_lp_clk_rate(struct tegra_dc_dsi_data *dsi)
+static u32 tegra_dsi_get_lp_clk_rate(struct tegra_dc_dsi_data *dsi, u8 lp_op)
 {
 	u32 dsi_clock_rate_khz;
 
@@ -346,7 +352,12 @@ static u32 tegra_dsi_get_lp_clk_rate(struct tegra_dc_dsi_data *dsi)
 		else
 			dsi_clock_rate_khz = tegra_dsi_get_hs_clk_rate(dsi);
 	else
-		dsi_clock_rate_khz = dsi->info.lp_cmd_mode_freq_khz;
+		if (lp_op == DSI_LP_OP_READ)
+			dsi_clock_rate_khz =
+				dsi->info.lp_read_cmd_mode_freq_khz;
+		else
+			dsi_clock_rate_khz =
+				dsi->info.lp_cmd_mode_freq_khz;
 
 	return dsi_clock_rate_khz;
 }
@@ -460,7 +471,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 	/* Get the actual shift_clk_div and clock rates. */
 	dsi->shift_clk_div = tegra_dsi_get_shift_clk_div(dsi);
-	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi);
+	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi, DSI_LP_OP_WRITE);
 	dsi->target_hs_clk_khz = tegra_dsi_get_hs_clk_rate(dsi);
 
 	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
@@ -1126,12 +1137,14 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	dsi->status.clk_mode = DSI_PHYCLK_NOT_INIT;
 	dsi->status.clk_burst = DSI_CLK_BURST_NOT_INIT;
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;
+	dsi->status.lp_op = DSI_LP_OP_NOT_INIT;
 
 	return 0;
 }
 
 static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
-						struct tegra_dc_dsi_data *dsi)
+						struct tegra_dc_dsi_data *dsi,
+						u8 lp_op)
 {
 	int	err;
 
@@ -1140,7 +1153,8 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	if (dsi->status.lphs == DSI_LPHS_IN_LP_MODE)
+	if (dsi->status.lphs == DSI_LPHS_IN_LP_MODE &&
+			dsi->status.lp_op == lp_op)
 		goto success;
 
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
@@ -1151,6 +1165,7 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 		(!dsi->info.enable_hs_clock_on_lp_cmd_mode))
 		tegra_dsi_hs_clk_out_disable(dc, dsi);
 
+	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi, lp_op);
 	if (dsi->current_dsi_clk_khz != dsi->target_lp_clk_khz) {
 		tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 		tegra_dsi_set_timeout(dsi);
@@ -1164,6 +1179,7 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 
 success:
 	dsi->status.lphs = DSI_LPHS_IN_LP_MODE;
+	dsi->status.lp_op = lp_op;
 	err = 0;
 fail:
 	return err;
@@ -1312,7 +1328,8 @@ int tegra_dsi_write_data(struct tegra_dc *dc,
 	switch_back_to_dc_mode = false;
 
 	if ((dsi->status.init != DSI_MODULE_INIT) ||
-		(dsi->status.lphs == DSI_LPHS_NOT_INIT)) {
+		(dsi->status.lphs == DSI_LPHS_NOT_INIT) ||
+		(dsi->status.lp_op == DSI_LP_OP_NOT_INIT)) {
 		err = -EPERM;
 		goto fail;
 	}
@@ -1332,7 +1349,7 @@ int tegra_dsi_write_data(struct tegra_dc *dc,
 				switch_back_to_dc_mode = true;
 			}
 		} else {
-			tegra_dsi_set_to_lp_mode(dc, dsi);
+			tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 			switch_back_to_hs_mode = true;
 		}
 	}
@@ -1513,10 +1530,13 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 
 	if ((dsi->status.init != DSI_MODULE_INIT) ||
 		(dsi->status.lphs == DSI_LPHS_NOT_INIT) ||
-		(dsi->status.driven == DSI_DRIVEN_MODE_NOT_INIT)) {
+		(dsi->status.driven == DSI_DRIVEN_MODE_NOT_INIT)||
+		(dsi->status.lp_op == DSI_LP_OP_NOT_INIT)) {
 		err = -EPERM;
 		goto fail;
 	}
+
+	tegra_dc_io_start(dc);
 
 	val = tegra_dsi_readl(dsi, DSI_STATUS);
 	val &= DSI_STATUS_RD_FIFO_COUNT(0x1f);
@@ -1532,23 +1552,35 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 		goto fail;
 	}
 
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	val &= (DSI_STATUS_LB_OVERFLOW(0x1) | DSI_STATUS_LB_UNDERFLOW(0x1));
+	if (val) {
+		dev_warn(&dc->ndev->dev, "Reset overflow/underflow\n");
+		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+		val |= DSI_HOST_CONTROL_FIFO_STAT_RESET(0x1);
+		tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+		ndelay(200);
+	}
+
 	if (dsi->status.lphs == DSI_LPHS_IN_HS_MODE) {
 		if (dsi->status.driven == DSI_DRIVEN_MODE_DC) {
-			if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
+			if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE) {
+				tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
 				restart_dc_stream = true;
+			}
 			dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_HOST;
 			switch_back_to_dc_mode = true;
 			if (dsi->info.hs_cmd_mode_supported) {
 				err = tegra_dsi_set_to_hs_mode(dc, dsi);
 				if (err < 0) {
 					dev_err(&dc->ndev->dev,
-					"DSI failed to go to HS mode host driven\n");
+					"DSI failed to go to HS host driven mode\n");
 					goto fail;
 				}
 			}
 		}
 		if (!dsi->info.hs_cmd_mode_supported) {
-			err = tegra_dsi_set_to_lp_mode(dc, dsi);
+			err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 			if (err < 0) {
 				dev_err(&dc->ndev->dev,
 				"DSI failed to go to LP mode\n");
@@ -1576,6 +1608,15 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 		dev_err(&dc->ndev->dev,
 				"DSI write failed\n");
 		goto fail;
+	}
+
+	if (switch_back_to_hs_mode) {
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_READ);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+			"DSI failed to go to LP mode\n");
+			goto fail;
+		}
 	}
 
 	err = tegra_dsi_bta(dsi);
@@ -1622,6 +1663,8 @@ fail:
 		tegra_dsi_set_to_hs_mode(dc, dsi);
 	if (restart_dc_stream)
 		tegra_dsi_start_dc_stream(dc, dsi);
+
+	tegra_dc_io_end(dc);
 
 	return err;
 }
@@ -1752,7 +1795,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			}
 		}
 
-		err = tegra_dsi_set_to_lp_mode(dc, dsi);
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: not able to set to lp mode\n");
@@ -1924,6 +1967,10 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	if (!dsi->info.chip_id || !dsi->info.chip_rev)
 		printk(KERN_WARNING "DSI: Failed to get chip info\n");
 
+	if (!dsi->info.lp_read_cmd_mode_freq_khz)
+		dsi->info.lp_read_cmd_mode_freq_khz =
+			dsi->info.lp_cmd_mode_freq_khz;
+
 	/* host mode is for testing only*/
 	dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
 	return 0;
@@ -2082,7 +2129,7 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	err = tegra_dsi_set_to_lp_mode(dc, dsi);
+	err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 		"DSI failed to go to LP mode\n");

@@ -24,8 +24,45 @@
 #include "dev.h"
 #include "nvhost_hwctx.h"
 #include <trace/events/nvhost.h>
+#include <linux/nvhost_ioctl.h>
 
 #include <linux/platform_device.h>
+
+int nvhost_channel_submit(
+	struct nvhost_channel *channel,
+	struct nvhost_hwctx *hwctx,
+	struct nvmap_client *user_nvmap,
+	u32 *gather,
+	u32 *gather_end,
+	struct nvhost_waitchk *waitchk,
+	struct nvhost_waitchk *waitchk_end,
+	u32 waitchk_mask,
+	struct nvmap_handle **unpins,
+	int nr_unpins,
+	u32 syncpt_id,
+	u32 syncpt_incrs,
+	struct nvhost_userctx_timeout *timeout_ctx,
+	u32 priority,
+	u32 *syncpt_value,
+	bool null_kickoff)
+{
+	BUG_ON(!channel_op(channel).submit);
+
+	/* Low priority submits wait until sync queue is empty */
+	if (priority < NVHOST_PRIORITY_MEDIUM)
+		nvhost_cdma_wait(&channel->cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
+
+	return channel_op(channel).submit(channel,
+			hwctx,
+			user_nvmap,
+			gather, gather_end,
+			waitchk, waitchk_end, waitchk_mask,
+			unpins, nr_unpins,
+			syncpt_id, syncpt_incrs,
+			timeout_ctx,
+			syncpt_value,
+			null_kickoff);
+}
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 {

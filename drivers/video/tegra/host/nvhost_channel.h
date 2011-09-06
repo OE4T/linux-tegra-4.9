@@ -93,8 +93,8 @@ int nvhost_channel_submit(
 	int nr_unpins,
 	u32 syncpt_id,
 	u32 syncpt_incrs,
-	u32 timeout,
-	void *timeout_ctx,
+	struct nvhost_userctx_timeout *timeout_ctx,
+	u32 priority,
 	u32 *syncpt_value,
 	bool null_kickoff);
 

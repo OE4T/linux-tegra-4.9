@@ -67,6 +67,7 @@ struct nvhost_channel_userctx {
 	struct nvhost_waitchk waitchks[NVHOST_MAX_WAIT_CHECKS];
 	struct nvhost_waitchk *cur_waitchk;
 	struct nvhost_userctx_timeout timeout;
+	u32 priority;
 };
 
 struct nvhost_ctrl_userctx {
@@ -131,6 +132,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 			goto fail;
 		priv->hwctx->timeout = &priv->timeout;
 	}
+	priv->priority = NVHOST_PRIORITY_MEDIUM;
 
 	priv->gathers = nvmap_mmap(priv->gather_mem);
 	if (!priv->gathers)
@@ -325,14 +327,14 @@ static int nvhost_ioctl_channel_flush(
 	ctx->timeout.syncpt_id = ctx->hdr.syncpt_id;
 
 	/* context switch if needed, and submit user's gathers to the channel */
-	BUG_ON(!channel_op(ctx->ch).submit);
-	err = channel_op(ctx->ch).submit(ctx->ch, ctx->hwctx, ctx->nvmap,
+	err = nvhost_channel_submit(ctx->ch, ctx->hwctx, ctx->nvmap,
 				ctx->gathers, ctx->cur_gather,
 				ctx->waitchks, ctx->cur_waitchk,
 				ctx->hdr.waitchk_mask,
 				ctx->unpinarray, num_unpin,
 				ctx->hdr.syncpt_id, ctx->hdr.syncpt_incrs,
 				&ctx->timeout,
+				ctx->priority,
 				&args->value,
 				null_kickoff);
 	if (err)
@@ -473,6 +475,10 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
 		((struct nvhost_get_param_args *)buf)->value =
 				priv->timeout.has_timedout;
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
+		priv->timeout.timeout =
+			(u32)((struct nvhost_set_priority_args *)buf)->priority;
 		break;
 	default:
 		err = -ENOTTY;

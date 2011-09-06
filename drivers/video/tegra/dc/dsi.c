@@ -1128,6 +1128,12 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	}
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 
+	val = MIPI_CAL_TERMOSA(0x4);
+	tegra_vi_csi_writel(val, CSI_CILA_MIPI_CAL_CONFIG_0);
+
+	val = MIPI_CAL_TERMOSB(0x4);
+	tegra_vi_csi_writel(val, CSI_CILB_MIPI_CAL_CONFIG_0);
+
 	val = MIPI_CAL_HSPUOSD(0x3) | MIPI_CAL_HSPDOSD(0x4);
 	tegra_vi_csi_writel(val, CSI_DSI_MIPI_CAL_CONFIG);
 

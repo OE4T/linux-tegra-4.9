@@ -1266,7 +1266,7 @@ static int nvmap_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "couldn't create debug files\n");
 
 	for (i = 0; i < plat->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[i];
+		struct nvmap_carveout_node *node = &dev->heaps[dev->nr_carveouts];
 		const struct nvmap_platform_carveout *co = &plat->carveouts[i];
 		if (!co->size)
 			continue;
@@ -1278,9 +1278,9 @@ static int nvmap_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "couldn't create %s\n", co->name);
 			goto fail_heaps;
 		}
+		node->index = dev->nr_carveouts;
 		dev->nr_carveouts++;
 		spin_lock_init(&node->clients_lock);
-		node->index = i;
 		INIT_LIST_HEAD(&node->clients);
 		node->heap_bit = co->usage_mask;
 		if (nvmap_heap_create_group(node->carveout,

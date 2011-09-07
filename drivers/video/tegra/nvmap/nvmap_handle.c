@@ -50,7 +50,8 @@
 #define PR_INFO(...)
 #endif
 
-#define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM)
+#define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM | \
+				 NVMAP_HEAP_CARVEOUT_VPR)
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
 #define GFP_NVMAP		(__GFP_HIGHMEM | __GFP_NOWARN)
 #else
@@ -220,7 +221,7 @@ static void alloc_handle(struct nvmap_client *client,
 	BUG_ON(type & (type - 1));
 
 #ifdef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
-#define __NVMAP_HEAP_CARVEOUT	NVMAP_HEAP_CARVEOUT_IRAM
+#define __NVMAP_HEAP_CARVEOUT	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_CARVEOUT_VPR)
 #define __NVMAP_HEAP_IOVMM	(NVMAP_HEAP_IOVMM | NVMAP_HEAP_CARVEOUT_GENERIC)
 	if (type & NVMAP_HEAP_CARVEOUT_GENERIC) {
 #ifdef CONFIG_NVMAP_ALLOW_SYSMEM
@@ -301,6 +302,7 @@ sysheap:
  * allocations, and to reduce fragmentation of the graphics heaps with
  * sub-page splinters */
 static const unsigned int heap_policy_small[] = {
+	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
 #ifdef CONFIG_NVMAP_ALLOW_SYSMEM
 	NVMAP_HEAP_SYSMEM,
@@ -311,6 +313,7 @@ static const unsigned int heap_policy_small[] = {
 };
 
 static const unsigned int heap_policy_large[] = {
+	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
 	NVMAP_HEAP_IOVMM,
 	NVMAP_HEAP_CARVEOUT_MASK,

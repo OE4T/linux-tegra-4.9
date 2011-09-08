@@ -553,7 +553,8 @@ static void therm_throttle(struct nct1008_data *data, bool enable)
 	}
 }
 
-#define ALERT_HYSTERESIS	3
+#define ALERT_HYSTERESIS_THROTTLE	1
+#define ALERT_HYSTERESIS_EDP	3
 static int edp_thermal_zone_val = -1;
 static int current_hi_limit = -1;
 static int current_lo_limit = -1;
@@ -565,6 +566,7 @@ static void nct1008_work_func(struct work_struct *work)
 	bool extended_range = data->plat_data.ext_range;
 	u8 temperature, value;
 	int err = 0, i;
+	int hysteresis;
 	int nentries = data->limits_sz;
 	int lo_limit = 0, hi_limit = 0;
 	int intr_status;
@@ -594,30 +596,35 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 	}
 
+
+	hysteresis = ALERT_HYSTERESIS_EDP;
+
+	if (temperature >= data->plat_data.throttling_ext_limit) {
+		/* start throttling */
+		therm_throttle(data, true);
+		hysteresis = ALERT_HYSTERESIS_THROTTLE;
+	} else if (temperature <=
+			(data->plat_data.throttling_ext_limit -
+			ALERT_HYSTERESIS_THROTTLE)) {
+		/* switch off throttling */
+		therm_throttle(data, false);
+	}
+
 	if (temperature < data->limits[0]) {
 		lo_limit = 0;
 		hi_limit = data->limits[0];
 	} else if (temperature >= data->limits[nentries-1]) {
-		lo_limit = data->limits[nentries-1] - ALERT_HYSTERESIS;
+		lo_limit = data->limits[nentries-1] - hysteresis;
 		hi_limit = data->plat_data.shutdown_ext_limit;
 	} else {
 		for (i = 0; (i + 1) < nentries; i++) {
 			if (temperature >= data->limits[i] &&
 			    temperature < data->limits[i + 1]) {
-				lo_limit = data->limits[i] - ALERT_HYSTERESIS;
+				lo_limit = data->limits[i] - hysteresis;
 				hi_limit = data->limits[i + 1];
 				break;
 			}
 		}
-	}
-
-	if (temperature >= data->plat_data.throttling_ext_limit) {
-		/* start throttling */
-		therm_throttle(data, true);
-	} else if (temperature <=
-		   (data->plat_data.throttling_ext_limit - ALERT_HYSTERESIS)) {
-		/* switch off throttling */
-		therm_throttle(data, false);
 	}
 
 	if (lo_limit == hi_limit) {

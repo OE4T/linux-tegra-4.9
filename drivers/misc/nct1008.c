@@ -104,7 +104,7 @@ static int nct1008_get_temp(struct device *dev, u8 *pTemp)
 	s8 temp1;
 	u8 temp2;
 	s8 temp;
-	u8 value;
+	int value;
 	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
 	if (value < 0)
 		goto error;
@@ -139,7 +139,7 @@ static ssize_t nct1008_show_temp(struct device *dev,
 	s8 temp1 = 0;
 	s8 temp = 0;
 	u8 temp2 = 0;
-	u8 value = 0;
+	int value = 0;
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
@@ -162,8 +162,8 @@ static ssize_t nct1008_show_temp(struct device *dev,
 		temp1, temp, temp2 * 25);
 
 error:
-	snprintf(buf, MAX_STR_PRINT, " Rd Error\n");
-	return value;
+	return snprintf(buf, MAX_STR_PRINT,
+		"Error read local/ext temperature\n");
 }
 
 static ssize_t nct1008_show_temp_overheat(struct device *dev,
@@ -172,7 +172,7 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 value;
+	int value;
 	s8 temp, temp2;
 
 	/* Local temperature h/w shutdown limit */
@@ -189,10 +189,9 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 
 	return snprintf(buf, MAX_STR_PRINT, "%d %d\n", temp, temp2);
 error:
-	snprintf(buf, MAX_STR_PRINT, " Rd overheat Error\n");
 	dev_err(dev, "%s: failed to read temperature-overheat "
 		"\n", __func__);
-	return value;
+	return snprintf(buf, MAX_STR_PRINT, " Rd overheat Error\n");
 }
 
 static ssize_t nct1008_set_temp_overheat(struct device *dev,
@@ -256,7 +255,7 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	u8 value;
+	int value;
 	s8 temp, temp2;
 	/* External Temperature Throttling limit */
 	value = i2c_smbus_read_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
@@ -272,10 +271,9 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 
 	return snprintf(buf, MAX_STR_PRINT, "%d %d\n", temp, temp2);
 error:
-	snprintf(buf, MAX_STR_PRINT, " Rd overheat Error\n");
 	dev_err(dev, "%s: failed to read temperature-overheat "
 		"\n", __func__);
-	return value;
+	return snprintf(buf, MAX_STR_PRINT, " Rd overheat Error\n");
 }
 
 static ssize_t nct1008_set_temp_alert(struct device *dev,
@@ -325,8 +323,8 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	s8 temp_value;
-	u8 data = 0;
-	u8 data_lo;
+	int data = 0;
+	int data_lo;
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
@@ -335,17 +333,25 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 	 * LSB first. This causes the MSB to be locked (that is, the
 	 * ADC does not write to it) until it is read */
 	data_lo = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	if (data_lo < 0) {
+		dev_err(&client->dev, "%s: failed to read "
+			"ext_temperature, i2c error=%d\n", __func__, data_lo);
+		goto error;
+	}
 
 	data = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
 	if (data < 0) {
 		dev_err(&client->dev, "%s: failed to read "
-			"ext_temperature\n", __func__);
-		return -EINVAL;
+			"ext_temperature, i2c error=%d\n", __func__, data);
+		goto error;
 	}
 
 	temp_value = value_to_temperature(pdata->ext_range, data);
 
-	return sprintf(buf, "%d.%d\n", temp_value, (25 * (data_lo >> 6)));
+	return snprintf(buf, MAX_STR_PRINT, "%d.%d\n", temp_value,
+		(25 * (data_lo >> 6)));
+error:
+	return snprintf(buf, MAX_STR_PRINT, "Error read ext temperature\n");
 }
 
 static DEVICE_ATTR(temperature, S_IRUGO, nct1008_show_temp, NULL);
@@ -367,27 +373,37 @@ static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
 
-static void nct1008_enable(struct i2c_client *client)
+static int nct1008_enable(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	int err;
 
-	i2c_smbus_write_byte_data(client, CONFIG_WR,
+	err = i2c_smbus_write_byte_data(client, CONFIG_WR,
 				  data->config & ~STANDBY_BIT);
+	if (err < 0)
+		pr_err("%s, line=%d, i2c write error=%d\n",
+		__func__, __LINE__, err);
+	return err;
 }
 
-static void nct1008_disable(struct i2c_client *client)
+static int nct1008_disable(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	int err;
 
-	i2c_smbus_write_byte_data(client, CONFIG_WR,
+	err = i2c_smbus_write_byte_data(client, CONFIG_WR,
 				  data->config | STANDBY_BIT);
+	if (err < 0)
+		pr_err("%s, line=%d, i2c write error=%d\n",
+		__func__, __LINE__, err);
+	return err;
 }
 
 static int nct1008_disable_alert(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
 	int ret = 0;
-	u8 val;
+	int val;
 
 	/*
 	 * Disable ALERT# output, because these chips don't implement
@@ -395,23 +411,36 @@ static int nct1008_disable_alert(struct nct1008_data *data)
 	 * low briefly.
 	 */
 	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
+	if (val < 0) {
+		pr_err("%s, line=%d, disable alert failed ... "
+			"i2c read error=%d\n", __func__, __LINE__, val);
+		return val;
+	}
+	data->config = val | ALERT_BIT;
 	ret = i2c_smbus_write_byte_data(client, CONFIG_WR, val | ALERT_BIT);
 	if (ret)
-		pr_err("%s: fail to disable alert#\n", __func__);
+		pr_err("%s: fail to disable alert, i2c write error=%d#\n",
+			__func__, ret);
 
 	return ret;
 }
 
 static int nct1008_enable_alert(struct nct1008_data *data)
 {
-	u8 val;
+	int val;
 	int ret;
 
 	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
+	if (val < 0) {
+		pr_err("%s, line=%d, enable alert failed ... "
+			"i2c read error=%d\n", __func__, __LINE__, val);
+		return val;
+	}
 	val &= ~(ALERT_BIT | THERM2_BIT);
 	ret = i2c_smbus_write_byte_data(data->client, CONFIG_WR, val);
 	if (ret) {
-		pr_err("%s: fail to enable alert#\n", __func__);
+		pr_err("%s: fail to enable alert, i2c write error=%d\n",
+			__func__, ret);
 		return ret;
 	}
 
@@ -448,7 +477,14 @@ static void nct1008_work_func(struct work_struct *work)
 	int err = 0, i;
 	int nentries = data->limits_sz;
 	int lo_limit = 0, hi_limit = 0;
-	int intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
+	int intr_status;
+
+	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
+	if (intr_status < 0) {
+		pr_err("%s, line=%d, i2c read error=%d\n",
+			__func__, __LINE__, intr_status);
+		return;
+	}
 
 	err = nct1008_get_temp(&data->client->dev, &temperature);
 	if (err) {
@@ -460,7 +496,12 @@ static void nct1008_work_func(struct work_struct *work)
 	if (!intr_status)
 		return;
 
-	nct1008_disable_alert(data);
+	err = nct1008_disable_alert(data);
+	if (err) {
+		pr_err("%s: disable alert fail(error=%d)\n",
+			__func__, err);
+		return;
+	}
 
 	if (temperature < data->limits[0]) {
 		lo_limit = 0;
@@ -532,7 +573,7 @@ out:
 	nct1008_enable_alert(data);
 
 	if (err)
-		pr_err("%s: fail(%d)\n", __func__, err);
+		pr_err("%s: fail(error=%d)\n", __func__, err);
 	else
 		pr_debug("%s: done\n", __func__);
 }
@@ -552,8 +593,9 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 		data->nct_reg = regulator_get(data->client->dev, "vdd");
 		if (IS_ERR_OR_NULL(data->nct_reg)) {
 			dev_warn(&data->client->dev, "Error [%d] in"
-				"getting the regulator handle for vdd of %s\n",
-				data->nct_reg, dev_name(data->client->dev));
+				"getting the regulator handle for vdd "
+				"of %s\n", (int)data->nct_reg,
+				dev_name(data->client->dev));
 			data->nct_reg = NULL;
 			return;
 		}
@@ -791,7 +833,9 @@ static int nct1008_probe(struct i2c_client *client,
 	}
 	dev_info(&client->dev, "%s: initialized\n", __func__);
 
-	nct1008_enable(client);		/* sensor is running */
+	err = nct1008_enable(client);		/* sensor is running */
+	if (err < 0)
+		goto error;
 
 	/* switch to extended mode reports correct temperature
 	 * from next measurement cycle */
@@ -836,8 +880,12 @@ static int nct1008_remove(struct i2c_client *client)
 #ifdef CONFIG_PM
 static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 {
+	int err;
+
 	disable_irq(client->irq);
-	nct1008_disable(client);
+	err = nct1008_disable(client);
+	if (err < 0)
+		return err;
 
 	return 0;
 }
@@ -845,8 +893,11 @@ static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 static int nct1008_resume(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	int err;
 
-	nct1008_enable(client);
+	err = nct1008_enable(client);
+	if (err < 0)
+		return err;
 	enable_irq(client->irq);
 	schedule_work(&data->work);
 

@@ -374,6 +374,81 @@ static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+static void print_reg(const char *reg_name, struct seq_file *s,
+		int offset)
+{
+	struct nct1008_data *nct_data = s->private;
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(nct_data->client,
+		offset);
+	if (ret >= 0)
+		seq_printf(s, "Reg %s Addr = 0x%02x Reg 0x%02x "
+		"Value 0x%02x\n", reg_name,
+		nct_data->client->addr,
+			offset, ret);
+	else
+		seq_printf(s, "%s: line=%d, i2c read error=%d\n",
+		__func__, __LINE__, ret);
+}
+
+static int dbg_nct1008_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "nct1008 Registers\n");
+	seq_printf(s, "------------------\n");
+	print_reg("Local Temp Value    ",     s, 0x00);
+	print_reg("Ext Temp Value Hi   ",     s, 0x01);
+	print_reg("Status              ",     s, 0x02);
+	print_reg("Configuration       ",     s, 0x03);
+	print_reg("Conversion Rate     ",     s, 0x04);
+	print_reg("Local Temp Hi Limit ",     s, 0x05);
+	print_reg("Local Temp Lo Limit ",     s, 0x06);
+	print_reg("Ext Temp Hi Limit Hi",     s, 0x07);
+	print_reg("Ext Temp Hi Limit Lo",     s, 0x13);
+	print_reg("Ext Temp Lo Limit Hi",     s, 0x08);
+	print_reg("Ext Temp Lo Limit Lo",     s, 0x14);
+	print_reg("Ext Temp Value Lo   ",     s, 0x10);
+	print_reg("Ext Temp Offset Hi  ",     s, 0x11);
+	print_reg("Ext Temp Offset Lo  ",     s, 0x12);
+	print_reg("Ext THERM Limit     ",     s, 0x19);
+	print_reg("Local THERM Limit   ",     s, 0x20);
+	print_reg("THERM Hysteresis    ",     s, 0x21);
+	print_reg("Consecutive ALERT   ",     s, 0x22);
+	return 0;
+}
+
+static int dbg_nct1008_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_nct1008_show, inode->i_private);
+}
+
+static const struct file_operations debug_fops = {
+	.open		= dbg_nct1008_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init nct1008_debuginit(struct nct1008_data *nct)
+{
+	int err;
+	err = debugfs_create_file("nct1008", S_IRUGO, NULL,
+			nct, &debug_fops);
+	if (err < 0)
+		pr_err("Error: %s debugfs not supported, error=%d\n",
+			__func__, err);
+	return err;
+}
+#else
+static int __init nct1008_debuginit(struct nct1008_data *nct)
+{
+	return 0;
+}
+#endif
+
 static int nct1008_enable(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
@@ -595,12 +670,12 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 {
 	int ret;
 	if (!data->nct_reg) {
-		data->nct_reg = regulator_get(data->client->dev, "vdd");
+		data->nct_reg = regulator_get(&data->client->dev, "vdd");
 		if (IS_ERR_OR_NULL(data->nct_reg)) {
 			dev_warn(&data->client->dev, "Error [%d] in"
 				"getting the regulator handle for vdd "
 				"of %s\n", (int)data->nct_reg,
-				dev_name(data->client->dev));
+				dev_name(&data->client->dev));
 			data->nct_reg = NULL;
 			return;
 		}
@@ -844,6 +919,10 @@ static int nct1008_probe(struct i2c_client *client,
 			__func__, __LINE__, err);
 		goto error;
 	}
+
+	err = nct1008_debuginit(data);
+	if (err < 0)
+		err = 0; /* without debugfs we may continue */
 
 	/* switch to extended mode reports correct temperature
 	 * from next measurement cycle */

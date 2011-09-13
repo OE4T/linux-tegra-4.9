@@ -1094,6 +1094,15 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
 
 		win->dirty = no_vsync ? 0 : 1;
+
+		dev_dbg(&dc->ndev->dev, "%s():idx=%d z=%d x=%d y=%d w=%d h=%d "
+			"out_x=%u out_y=%u out_w=%u out_h=%u "
+			"fmt=%d yuvp=%d Bpp=%u filter_h=%d filter_v=%d",
+			__func__, win->idx, win->z,
+			dfixed_trunc(win->x), dfixed_trunc(win->y),
+			dfixed_trunc(win->w), dfixed_trunc(win->h),
+			win->out_x, win->out_y, win->out_w, win->out_h,
+			win->fmt, yuvp, Bpp, filter_h, filter_v);
 	}
 
 	if (update_blend) {
@@ -1417,7 +1426,7 @@ static void print_mode(struct tegra_dc *dc,
 			const struct tegra_dc_mode *mode, const char *note)
 {
 	if (mode) {
-		int refresh = calc_refresh(mode);
+		int refresh = calc_refresh(dc, mode);
 		dev_info(&dc->ndev->dev, "%s():MODE:%dx%d@%d.%03uHz pclk=%d\n",
 			note ? note : "",
 			mode->h_active, mode->v_active,

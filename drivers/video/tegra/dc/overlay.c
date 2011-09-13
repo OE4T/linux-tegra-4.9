@@ -540,6 +540,10 @@ static bool tegra_overlay_get(struct overlay_client *client, int idx)
 		ret = true;
 		if (dev->dc->mode.pclk != 0)
 			tegra_overlay_set_emc_freq(dev);
+
+		dev_dbg(&client->dev->ndev->dev,
+			"%s(): idx=%d pid=%d comm=%s\n",
+			__func__, idx, client->task->pid, client->task->comm);
 	}
 	mutex_unlock(&dev->overlays_lock);
 
@@ -556,6 +560,10 @@ static void tegra_overlay_put_locked(struct overlay_client *client, int idx)
 
 	if (dev->overlays[idx].owner != client)
 		return;
+
+	dev_dbg(&client->dev->ndev->dev,
+		"%s(): idx=%d pid=%d comm=%s\n",
+		__func__, idx, client->task->pid, client->task->comm);
 
 	dev->overlays[idx].owner = NULL;
 

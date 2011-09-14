@@ -287,7 +287,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	cache_flags = op.flags & NVMAP_HANDLE_CACHE_FLAG;
 	if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE ||
 	    cache_flags == NVMAP_HANDLE_CACHEABLE) {
-		if (h->orig_size & ~PAGE_MASK) {
+		if (h->size & ~PAGE_MASK) {
 			pr_err("\n%s:attempt to convert a buffer from uc/wc to"
 				" wb, whose size is not a multiple of page size."
 				" request ignored.\n", __func__);

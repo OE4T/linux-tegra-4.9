@@ -715,11 +715,12 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	 * round up bandwidth to 1MBps */
 	bw = bw / 1000000 + 1;
 
+#ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
-
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)
 		tegra_set_latency_allowance(vfilter_tab[dc->ndev->id], bw);
+#endif
 
 	w->bandwidth = w->new_bandwidth;
 }

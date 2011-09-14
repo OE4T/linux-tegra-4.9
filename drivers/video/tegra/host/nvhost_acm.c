@@ -485,7 +485,9 @@ int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
 	if (IS_ERR_OR_NULL(c))
 		return -EINVAL;
 
+	nvhost_module_busy(mod);
 	*rate = clk_get_rate(c);
+	nvhost_module_idle(mod);
 	return 0;
 }
 

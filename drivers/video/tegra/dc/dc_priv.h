@@ -120,7 +120,9 @@ struct tegra_dc {
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;
 
+#ifdef CONFIG_SWITCH
 	struct switch_dev		modeset_switch;
+#endif
 
 	struct completion		frame_end_complete;
 

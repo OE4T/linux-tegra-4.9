@@ -26,7 +26,9 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#ifdef CONFIG_SWITCH
 #include <linux/switch.h>
+#endif
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -104,7 +106,9 @@ struct tegra_dc_hdmi_data {
 	struct clk			*hda2codec_clk;
 	struct clk			*hda2hdmi_clk;
 
+#ifdef CONFIG_SWITCH
 	struct switch_dev		hpd_switch;
+#endif
 
 	spinlock_t			suspend_lock;
 	bool				suspended;
@@ -1342,8 +1346,10 @@ void tegra_dc_hdmi_detect_config(struct tegra_dc *dc,
 	hdmi->dvi = !(specs->misc & FB_MISC_HDMI);
 
 	tegra_fb_update_monspecs(dc->fb, specs, tegra_dc_hdmi_mode_filter);
+#ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.state = 0;
 	switch_set_state(&hdmi->hpd_switch, 1);
+#endif
 	dev_info(&dc->ndev->dev, "display detected\n");
 
 	dc->connected = true;
@@ -1381,7 +1387,9 @@ bool tegra_dc_hdmi_detect_test(struct tegra_dc *dc, unsigned char *edid_ptr)
 
 fail:
 	hdmi->eld_retrieved = false;
+#ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, 0);
+#endif
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	return false;
 }
@@ -1612,8 +1620,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->audio_source = AUTO;
 	spin_lock_init(&hdmi->suspend_lock);
 
+#ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	switch_dev_register(&hdmi->hpd_switch);
+#endif
 
 	dc->out->depth = 24;
 
@@ -1666,7 +1676,9 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	cancel_delayed_work_sync(&hdmi->work);
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
+#endif
 	iounmap(hdmi->base);
 	release_resource(hdmi->base_res);
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)

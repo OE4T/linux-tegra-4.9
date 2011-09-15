@@ -39,8 +39,7 @@
 #include "dsi.h"
 
 #define DSI_USE_SYNC_POINTS		1
-
-#define DSI_STOP_DC_DURATION_MSEC	1000
+#define S_TO_MS(x)			(1000 * (x))
 
 #define DSI_MODULE_NOT_INIT		0x0
 #define DSI_MODULE_INIT			0x1
@@ -844,26 +843,28 @@ void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 {
 	int val;
 	long timeout;
+	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 
 	/* stop dc */
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
-	/* enable vblank interrupt */
+	/* enable frame end interrupt */
 	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-	val |= V_BLANK_INT;
+	val |= FRAME_END_INT;
 	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 
 	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-	val |= V_BLANK_INT;
+	val |= FRAME_END_INT;
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 
-	/* wait for vblank completion */
+	/* wait for frame_end completion */
 	timeout = wait_for_completion_interruptible_timeout(
-		&dc->vblank_complete, DSI_STOP_DC_DURATION_MSEC);
+			&dc->frame_end_complete,
+			msecs_to_jiffies(frame_period));
 
-	/* disable vblank interrupt */
+	/* disable frame end interrupt */
 	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-	val &= ~V_BLANK_INT;
+	val &= ~FRAME_END_INT;
 	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 
 	if (timeout == 0)

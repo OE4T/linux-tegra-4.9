@@ -2033,15 +2033,16 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 
 		/* Schedule any additional bottom-half vblank actvities. */
 		schedule_work(&dc->vblank_work);
-
-		/* Mark the vblank as complete. */
-		complete(&dc->vblank_complete);
-
 	}
 
 	/* Check underflow at frame end */
-	if (status & FRAME_END_INT)
+	if (status & FRAME_END_INT) {
 		tegra_dc_underflow_handler(dc);
+
+		/* Mark the frame_end as complete. */
+		if (completion_done(&dc->frame_end_complete))
+			complete(&dc->frame_end_complete);
+	}
 }
 
 static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
@@ -2052,13 +2053,15 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 
 		/* Schedule any additional bottom-half vblank actvities. */
 		schedule_work(&dc->vblank_work);
-
-		/* Mark the vblank as complete. */
-		complete(&dc->vblank_complete);
 	}
 
-	if (status & FRAME_END_INT)
+	if (status & FRAME_END_INT) {
+		/* Mark the frame_end as complete. */
+		if (completion_done(&dc->frame_end_complete))
+			complete(&dc->frame_end_complete);
+
 		tegra_dc_trigger_windows(dc);
+	}
 }
 #endif
 
@@ -2654,7 +2657,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dc->enabled = true;
 
 	mutex_init(&dc->lock);
-	init_completion(&dc->vblank_complete);
+	init_completion(&dc->frame_end_complete);
 	init_waitqueue_head(&dc->wq);
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	INIT_WORK(&dc->reset_work, tegra_dc_reset_worker);

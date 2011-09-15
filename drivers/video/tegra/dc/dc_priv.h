@@ -116,7 +116,7 @@ struct tegra_dc {
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;
 
-	struct completion		vblank_complete;
+	struct completion		frame_end_complete;
 
 	struct work_struct		vblank_work;
 

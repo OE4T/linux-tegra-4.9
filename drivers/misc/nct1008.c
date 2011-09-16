@@ -82,6 +82,8 @@
 #define MAX_STR_PRINT 50
 
 #define MIN_SLEEP_MSEC			20
+#define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
+#define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
 
 struct nct1008_data {
 	struct work_struct work;
@@ -141,38 +143,46 @@ static int nct1008_wait_till_busy(struct i2c_client *client)
 	return 0;
 }
 
-static int nct1008_get_temp(struct device *dev, u8 *pTemp)
+static int nct1008_get_temp(struct device *dev, long *pTemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp1;
-	u8 temp2;
-	s8 temp;
-	int value;
+	s8 temp_local;
+	u8 temp_ext_lo;
+	s8 temp_ext_hi;
+	long temp_ext_milli;
+	long temp_local_milli;
+	u8 value;
 
 	value = nct1008_wait_till_busy(client);
 	if (value < 0)
 		goto error;
 
+	/* Read Local Temp */
 	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
 	if (value < 0)
 		goto error;
-	temp1 = value_to_temperature(pdata->ext_range, value);
+	temp_local = value_to_temperature(pdata->ext_range, value);
+	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
 
+	/* Read External Temp */
 	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
 	if (value < 0)
 		goto error;
-	temp2 = (value >> 6);
+	temp_ext_lo = (value >> 6);
+
 	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
 	if (value < 0)
 		goto error;
-	temp = value_to_temperature(pdata->ext_range, value);
-	if (temp2 > 0)
-		*pTemp = max((int)temp1, (int)temp + 1);
-	else
-		*pTemp = max(temp1, temp);
+	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
 
-	dev_dbg(dev, "\n %s: ret temp=%dC ", __func__, *pTemp);
+	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
+				temp_ext_lo * 250;
+
+	/* Return max between Local and External Temp */
+	*pTemp = max(temp_local_milli, temp_ext_milli);
+
+	dev_dbg(dev, "\n %s: ret temp=%ldC ", __func__, *pTemp);
 	return 0;
 error:
 	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
@@ -254,7 +264,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	long int num;
 	int err;
 	u8 temp;
-	u8 currTemp;
+	long currTemp;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	char bufTemp[MAX_STR_PRINT];
@@ -276,12 +286,14 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	if (err)
 		goto error;
 
+	currTemp = MILLICELSIUS_TO_CELSIUS(currTemp);
+
 	if (currTemp >= (int)num) {
 		ret = nct1008_show_temp(dev, attr, bufTemp);
 		ret = nct1008_show_temp_overheat(dev, attr, bufOverheat);
 		dev_err(dev, "\nCurrent temp: %s ", bufTemp);
 		dev_err(dev, "\nOld overheat limit: %s ", bufOverheat);
-		dev_err(dev, "\nReset from overheat: curr temp=%d, "
+		dev_err(dev, "\nReset from overheat: curr temp=%ld, "
 			"new overheat temp=%d\n\n", currTemp, (int)num);
 	}
 
@@ -620,30 +632,31 @@ static void nct1008_work_func(struct work_struct *work)
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
 	bool extended_range = data->plat_data.ext_range;
-	u8 temperature, value;
+	long temp_milli;
+	u8 value;
 	int err = 0, i;
 	int hysteresis;
 	int nentries = data->limits_sz;
 	int lo_limit = 0, hi_limit = 0;
-	int intr_status;
+	long throttling_ext_limit_milli;
+	int intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 
-	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 	if (intr_status < 0) {
 		dev_err(&data->client->dev, "%s, line=%d, i2c read error=%d\n",
 			__func__, __LINE__, intr_status);
 		return;
 	}
 
-	err = nct1008_get_temp(&data->client->dev, &temperature);
+	intr_status &= (BIT(3) | BIT(4));
+	if (!intr_status)
+		return;
+
+	err = nct1008_get_temp(&data->client->dev, &temp_milli);
 	if (err) {
 		dev_err(&data->client->dev, "%s: get temp fail(%d)", __func__,
 			err);
 		return;
 	}
-
-	intr_status &= (BIT(3) | BIT(4));
-	if (!intr_status)
-		return;
 
 	err = nct1008_disable_alert(data);
 	if (err) {
@@ -652,30 +665,33 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 	}
 
-
 	hysteresis = ALERT_HYSTERESIS_EDP;
+	throttling_ext_limit_milli =
+		CELSIUS_TO_MILLICELSIUS(data->plat_data.throttling_ext_limit);
 
-	if (temperature >= data->plat_data.throttling_ext_limit) {
+	if (temp_milli >= throttling_ext_limit_milli) {
 		/* start throttling */
 		therm_throttle(data, true);
 		hysteresis = ALERT_HYSTERESIS_THROTTLE;
-	} else if (temperature <=
-			(data->plat_data.throttling_ext_limit -
+	} else if (temp_milli <=
+			(throttling_ext_limit_milli -
 			ALERT_HYSTERESIS_THROTTLE)) {
 		/* switch off throttling */
 		therm_throttle(data, false);
 	}
 
-	if (temperature < data->limits[0]) {
+	if (temp_milli < CELSIUS_TO_MILLICELSIUS(data->limits[0])) {
 		lo_limit = 0;
 		hi_limit = data->limits[0];
-	} else if (temperature >= data->limits[nentries-1]) {
+	} else if (temp_milli >= CELSIUS_TO_MILLICELSIUS(data->limits[nentries-1])) {
 		lo_limit = data->limits[nentries-1] - hysteresis;
 		hi_limit = data->plat_data.shutdown_ext_limit;
 	} else {
 		for (i = 0; (i + 1) < nentries; i++) {
-			if (temperature >= data->limits[i] &&
-			    temperature < data->limits[i + 1]) {
+			if (temp_milli >=
+				CELSIUS_TO_MILLICELSIUS(data->limits[i]) &&
+			    temp_milli <
+				CELSIUS_TO_MILLICELSIUS(data->limits[i + 1])) {
 				lo_limit = data->limits[i] - hysteresis;
 				hi_limit = data->limits[i + 1];
 				break;
@@ -714,14 +730,15 @@ static void nct1008_work_func(struct work_struct *work)
 	}
 
 	/* inform edp governor */
-	if (edp_thermal_zone_val != temperature)
+	if (edp_thermal_zone_val != temp_milli)
 		/*
 		 * FIXME: Move this direct tegra_ function call to be called
 		 * via a pointer in 'struct nct1008_data' (like 'alarm_fn')
 		 */
-		tegra_edp_update_thermal_zone(temperature);
+		tegra_edp_update_thermal_zone(
+			MILLICELSIUS_TO_CELSIUS(temp_milli));
 
-	edp_thermal_zone_val = temperature;
+	edp_thermal_zone_val = temp_milli;
 
 out:
 	nct1008_enable_alert(data);
@@ -975,7 +992,7 @@ static int nct1008_probe(struct i2c_client *client,
 {
 	struct nct1008_data *data;
 	int err;
-	u8 temperature;
+	long temp_milli;
 	unsigned int delay;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
@@ -1026,14 +1043,14 @@ static int nct1008_probe(struct i2c_client *client,
 			data->plat_data.conv_rate);
 		msleep(delay); /* 63msec for default conv rate 0x8 */
 	}
-	err = nct1008_get_temp(&data->client->dev, &temperature);
+	err = nct1008_get_temp(&data->client->dev, &temp_milli);
 	if (err) {
 		dev_err(&data->client->dev, "%s: get temp fail(%d)",
 			__func__, err);
 		return 0;	/*do not fail init on the 1st read */
 	}
 
-	tegra_edp_update_thermal_zone(temperature);
+	tegra_edp_update_thermal_zone(MILLICELSIUS_TO_CELSIUS(temp_milli));
 	return 0;
 
 error:

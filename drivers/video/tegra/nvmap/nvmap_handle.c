@@ -271,7 +271,7 @@ static void alloc_handle(struct nvmap_client *client,
 		commit = atomic_add_return(reserved,
 					    &client->iovm_commit);
 
-		if (commit < client->iovm_limit || client->super)
+		if (commit < client->iovm_limit)
 			ret = handle_page_alloc(client, h, false);
 		else
 			ret = -ENOMEM;

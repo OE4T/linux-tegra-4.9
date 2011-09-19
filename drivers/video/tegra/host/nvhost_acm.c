@@ -82,53 +82,67 @@ void nvhost_module_reset(struct device *dev, struct nvhost_module *mod)
 		__func__, mod->name);
 }
 
-static void clock_enable(struct nvhost_module *mod)
-{
-	int i;
-	for (i = 0; i < mod->num_clks; i++)
-		clk_enable(mod->clk[i]);
-}
-
-static void unpowergate(struct nvhost_module *mod)
+static void to_state_clockgated(struct nvhost_module *mod)
 {
 	const struct nvhost_moduledesc *desc = mod->desc;
-	if (desc->can_powergate) {
+	if (mod->powerstate == NVHOST_POWER_STATE_RUNNING) {
+		int i;
+		for (i = 0; i < mod->num_clks; i++)
+			clk_disable(mod->clk[i]);
+		if (mod->parent)
+			nvhost_module_idle(mod->parent);
+	} else if (mod->powerstate == NVHOST_POWER_STATE_POWERGATED
+			&& mod->desc->can_powergate) {
 		if (desc->powergate_ids[0] != -1)
 			tegra_unpowergate_partition(desc->powergate_ids[0]);
 
 		if (desc->powergate_ids[1] != -1)
 			tegra_unpowergate_partition(desc->powergate_ids[1]);
 	}
+	mod->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 }
 
-void nvhost_module_busy(struct nvhost_module *mod)
+static void to_state_running(struct nvhost_module *mod)
 {
-	mutex_lock(&mod->lock);
-	cancel_delayed_work(&mod->powerdown);
-	if (mod->desc->busy)
-		mod->desc->busy(mod);
+	if (mod->powerstate == NVHOST_POWER_STATE_POWERGATED)
+		to_state_clockgated(mod);
+	if (mod->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
+		int i;
 
-	if ((atomic_inc_return(&mod->refcount) == 1) && !mod->powered) {
 		if (mod->parent)
 			nvhost_module_busy(mod->parent);
-		unpowergate(mod);
-		clock_enable(mod);
+
+		for (i = 0; i < mod->num_clks; i++) {
+			int err = clk_enable(mod->clk[i]);
+			BUG_ON(err);
+		}
+
 		if (mod->desc->finalize_poweron)
 			mod->desc->finalize_poweron(mod);
-		mod->powered = true;
 	}
-	mutex_unlock(&mod->lock);
+	mod->powerstate = NVHOST_POWER_STATE_RUNNING;
 }
 
-static void clock_disable(struct nvhost_module *mod)
+/* This gets called from powergate_handler() and from module suspend.
+ * Module suspend is done for all modules, runtime power gating only
+ * for modules with can_powergate set.
+ */
+static int to_state_powergated(struct nvhost_module *mod)
 {
-	int i;
-	for (i = 0; i < mod->num_clks; i++)
-		clk_disable(mod->clk[i]);
-}
+	int err = 0;
 
-static void powergate(struct nvhost_module *mod)
-{
+	if (mod->desc->prepare_poweroff
+			&& mod->powerstate != NVHOST_POWER_STATE_POWERGATED) {
+		/* Clock needs to be on in prepare_poweroff */
+		to_state_running(mod);
+		err = mod->desc->prepare_poweroff(mod);
+		if (err)
+			return err;
+	}
+
+	if (mod->powerstate == NVHOST_POWER_STATE_RUNNING)
+		to_state_clockgated(mod);
+
 	if (mod->desc->can_powergate) {
 		if (mod->desc->powergate_ids[0] != -1)
 			tegra_powergate_partition(mod->desc->powergate_ids[0]);
@@ -136,31 +150,59 @@ static void powergate(struct nvhost_module *mod)
 		if (mod->desc->powergate_ids[1] != -1)
 			tegra_powergate_partition(mod->desc->powergate_ids[1]);
 	}
+
+	mod->powerstate = NVHOST_POWER_STATE_POWERGATED;
+	return 0;
 }
 
-static void powerdown_handler(struct work_struct *work)
+static void schedule_powergating(struct nvhost_module *mod)
+{
+	if (mod->desc->can_powergate)
+		schedule_delayed_work(&mod->powerstate_down,
+				msecs_to_jiffies(mod->desc->powergate_delay));
+}
+
+static void schedule_clockgating(struct nvhost_module *mod)
+{
+	schedule_delayed_work(&mod->powerstate_down,
+			msecs_to_jiffies(mod->desc->clockgate_delay));
+}
+
+void nvhost_module_busy(struct nvhost_module *mod)
+{
+	mutex_lock(&mod->lock);
+	cancel_delayed_work(&mod->powerstate_down);
+	if (mod->desc->busy)
+		mod->desc->busy(mod);
+
+	if ((atomic_inc_return(&mod->refcount) > 0
+			&& !nvhost_module_powered(mod)))
+		to_state_running(mod);
+	mutex_unlock(&mod->lock);
+}
+
+static void powerstate_down_handler(struct work_struct *work)
 {
 	struct nvhost_module *mod;
 
 	mod = container_of(to_delayed_work(work),
 			struct nvhost_module,
-			powerdown);
+			powerstate_down);
+
 	mutex_lock(&mod->lock);
-	if ((atomic_read(&mod->refcount) == 0) && mod->powered) {
-		if (mod->desc->prepare_poweroff
-			&& mod->desc->prepare_poweroff(mod)) {
-			/* If poweroff fails, retry */
-			mutex_unlock(&mod->lock);
-			schedule_delayed_work(&mod->powerdown,
-					msecs_to_jiffies(
-						mod->desc->powerdown_delay));
-			return;
+	if ((atomic_read(&mod->refcount) == 0)) {
+		switch (mod->powerstate) {
+		case NVHOST_POWER_STATE_RUNNING:
+			to_state_clockgated(mod);
+			schedule_powergating(mod);
+			break;
+		case NVHOST_POWER_STATE_CLOCKGATED:
+			if (to_state_powergated(mod))
+				schedule_powergating(mod);
+			break;
+		default:
+			break;
 		}
-		clock_disable(mod);
-		powergate(mod);
-		mod->powered = false;
-		if (mod->parent)
-			nvhost_module_idle(mod->parent);
 	}
 	mutex_unlock(&mod->lock);
 }
@@ -172,9 +214,8 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 
 	mutex_lock(&mod->lock);
 	if (atomic_sub_return(refs, &mod->refcount) == 0) {
-		BUG_ON(!mod->powered);
-		schedule_delayed_work(&mod->powerdown,
-			msecs_to_jiffies(mod->desc->powerdown_delay));
+		if (nvhost_module_powered(mod))
+			schedule_clockgating(mod);
 		kick = true;
 	}
 	mutex_unlock(&mod->lock);
@@ -317,13 +358,15 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 	mod->num_clks = i;
 	mod->desc = desc;
 	mod->parent = parent;
-	mod->powered = false;
 
 	mutex_init(&mod->lock);
 	init_waitqueue_head(&mod->idle);
-	INIT_DELAYED_WORK(&mod->powerdown, powerdown_handler);
+	INIT_DELAYED_WORK(&mod->powerstate_down, powerstate_down_handler);
 
-	if (!desc->can_powergate) {
+	if (desc->can_powergate) {
+		mod->powerstate = NVHOST_POWER_STATE_POWERGATED;
+	} else {
+		mod->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 		if (desc->powergate_ids[0] != -1)
 			tegra_unpowergate_partition(desc->powergate_ids[0]);
 		if (desc->powergate_ids[1] != -1)
@@ -391,7 +434,8 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 	if (system_suspend)
 		dev_dbg(&dev->pdev->dev, "tegra_grhost: entered idle\n");
 
-	flush_delayed_work(&mod->powerdown);
+	cancel_delayed_work(&mod->powerstate_down);
+	to_state_powergated(mod);
 
 	if (system_suspend)
 		dev_dbg(&dev->pdev->dev, "tegra_grhost: flushed delayed work\n");
@@ -399,7 +443,7 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 	if (mod->desc->suspend)
 		mod->desc->suspend(mod);
 
-	BUG_ON(mod->powered);
+	BUG_ON(nvhost_module_powered(mod));
 }
 
 void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod)
@@ -412,5 +456,6 @@ void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod)
 	nvhost_module_suspend(mod, false);
 	for (i = 0; i < mod->num_clks; i++)
 		clk_put(mod->clk[i]);
+	mod->powerstate = NVHOST_POWER_STATE_DEINIT;
 }
 

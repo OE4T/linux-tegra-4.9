@@ -870,7 +870,7 @@ struct nvhost_moduledesc hostdesc = {
 		.finalize_poweron = power_on_host,
 		.prepare_poweroff = power_off_host,
 		.clocks = {{"host1x", UINT_MAX}, {} },
-		NVHOST_MODULE_NO_POWERGATING,
+		NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 
 static int nvhost_probe(struct platform_device *pdev)

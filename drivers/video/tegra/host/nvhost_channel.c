@@ -88,7 +88,9 @@ void nvhost_channel_suspend(struct nvhost_channel *ch)
 	BUG_ON(nvhost_module_powered(&ch->mod));
 	BUG_ON(!channel_cdma_op(ch).stop);
 
-	if (ch->refcount)
+	if (ch->refcount) {
+		nvhost_module_suspend(&ch->mod, false);
 		channel_cdma_op(ch).stop(&ch->cdma);
+	}
 	mutex_unlock(&ch->reflock);
 }

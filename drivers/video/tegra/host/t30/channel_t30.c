@@ -57,8 +57,8 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 	.module        = {
-			NVHOST_MODULE_NO_POWERGATING,
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_MODULE_NO_POWERGATE_IDS,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 			},
 },
 {
@@ -80,7 +80,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 					{"emc", HOST_EMC_FLOOR} },
 			.powergate_ids = {TEGRA_POWERGATE_3D,
 					TEGRA_POWERGATE_3D1},
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	},
 },
 {
@@ -94,8 +94,8 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 			.clocks = {{"gr2d", 0},
 					{"epp", 0},
 					{"emc", HOST_EMC_FLOOR} },
-			NVHOST_MODULE_NO_POWERGATING,
-			.powerdown_delay = 0,
+			NVHOST_MODULE_NO_POWERGATE_IDS,
+			.clockgate_delay = 0,
 			},
 },
 {
@@ -103,8 +103,8 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.name	 = "isp",
 	.syncpts = 0,
 	.module         = {
-			NVHOST_MODULE_NO_POWERGATING,
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_MODULE_NO_POWERGATE_IDS,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 			},
 },
 {
@@ -117,8 +117,8 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.modulemutexes = BIT(NVMODMUTEX_VI),
 	.exclusive     = true,
 	.module        = {
-			NVHOST_MODULE_NO_POWERGATING,
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_MODULE_NO_POWERGATE_IDS,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 			},
 },
 {
@@ -133,7 +133,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.module        = {
 			.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 			.powergate_ids  = {TEGRA_POWERGATE_MPE, -1},
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 			},
 },
 {
@@ -142,8 +142,8 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.syncpts       = BIT(NVSYNCPT_DSI),
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
 	.module        = {
-			NVHOST_MODULE_NO_POWERGATING,
-			NVHOST_DEFAULT_POWERDOWN_DELAY,
+			NVHOST_MODULE_NO_POWERGATE_IDS,
+			NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	},
 } };
 

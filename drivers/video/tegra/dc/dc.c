@@ -2345,6 +2345,21 @@ bool tegra_dc_stats_get(struct tegra_dc *dc)
 	return true;
 }
 
+/* make the screen blank by disabling all windows */
+void tegra_dc_blank(struct tegra_dc *dc)
+{
+	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
+	unsigned i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		dcwins[i] = tegra_dc_get_window(dc, i);
+		dcwins[i]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+	}
+
+	tegra_dc_update_windows(dcwins, DC_N_WINDOWS);
+	tegra_dc_sync_windows(dcwins, DC_N_WINDOWS);
+}
+
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
 	_tegra_dc_controller_disable(dc);

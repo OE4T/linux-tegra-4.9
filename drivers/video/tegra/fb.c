@@ -182,10 +182,14 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		return 0;
 
 	case FB_BLANK_NORMAL:
+		dev_dbg(&tegra_fb->ndev->dev, "blank - normal\n");
+		tegra_dc_blank(tegra_fb->win->dc);
+		return 0;
+
 	case FB_BLANK_VSYNC_SUSPEND:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
-		dev_dbg(&tegra_fb->ndev->dev, "blank\n");
+		dev_dbg(&tegra_fb->ndev->dev, "blank - powerdown\n");
 		tegra_dc_disable(tegra_fb->win->dc);
 		return 0;
 

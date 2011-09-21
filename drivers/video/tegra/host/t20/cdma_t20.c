@@ -127,7 +127,7 @@ static void t20_push_buffer_push_to(struct push_buffer *pb,
 			struct nvmap_handle *handle, u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
-	u32 *p = (u32*)((u32)pb->mapped + cur);
+	u32 *p = (u32 *)((u32)pb->mapped + cur);
 	BUG_ON(cur == pb->fence);
 	*(p++) = op1;
 	*(p++) = op2;

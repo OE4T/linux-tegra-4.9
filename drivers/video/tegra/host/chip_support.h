@@ -131,13 +131,14 @@ struct nvhost_chip_support {
 	struct {
 		void (*init_host_sync)(struct nvhost_intr *);
 		void (*set_host_clocks_per_usec)(
-		        struct nvhost_intr *, u32 clocks);
+			struct nvhost_intr *, u32 clocks);
 		void (*set_syncpt_threshold)(
-		        struct nvhost_intr *, u32 id, u32 thresh);
+			struct nvhost_intr *, u32 id, u32 thresh);
 		void (*enable_syncpt_intr)(struct nvhost_intr *, u32 id);
 		void (*disable_all_syncpt_intrs)(struct nvhost_intr *);
 		int  (*request_host_general_irq)(struct nvhost_intr *);
 		void (*free_host_general_irq)(struct nvhost_intr *);
+		int (*request_syncpt_irq)(struct nvhost_intr_syncpt *syncpt);
 	} intr;
 
 	struct {

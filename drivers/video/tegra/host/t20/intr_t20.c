@@ -183,6 +183,22 @@ static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
 	}
 }
 
+static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
+{
+	int err;
+	if (syncpt->irq_requested)
+		return 0;
+
+	err = request_threaded_irq(syncpt->irq,
+				   t20_intr_syncpt_thresh_isr, nvhost_syncpt_thresh_fn,
+				   0, syncpt->thresh_irq_name, syncpt);
+	if (err)
+		return err;
+
+	syncpt->irq_requested = 1;
+	return 0;
+}
+
 int nvhost_init_t20_intr_support(struct nvhost_master *host)
 {
 	host->op.intr.init_host_sync = t20_intr_init_host_sync;
@@ -196,6 +212,8 @@ int nvhost_init_t20_intr_support(struct nvhost_master *host)
 		t20_intr_request_host_general_irq;
 	host->op.intr.free_host_general_irq =
 		t20_intr_free_host_general_irq;
+	host->op.intr.request_syncpt_irq =
+		t20_request_syncpt_irq;
 
 	return 0;
 }

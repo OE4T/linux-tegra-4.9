@@ -105,7 +105,7 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.name	       = "dsi",
 	.syncpts       = BIT(NVSYNCPT_DSI),
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
-}};
+} };
 
 static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 {
@@ -273,8 +273,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 					nvhost_class_host_incr_syncpt_base(
 						NVWAITBASE_3D,
 						user_syncpt_incrs));
-	}
-	else {
+	} else {
 		/* push user gathers */
 		int i = 0;
 		for ( ; i < gather_end-gather; i += 2) {

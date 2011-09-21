@@ -27,7 +27,7 @@
 #include <linux/sched.h>
 #include <linux/nvhost.h>
 #include <mach/nvmap.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 struct nvhost_syncpt;
 struct nvhost_waitchk;
@@ -49,7 +49,7 @@ int nvhost_syncpt_init(struct nvhost_syncpt *);
 #define client_managed(id) (BIT(id) & sp->client_managed)
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define syncpt_op(sp) (syncpt_to_dev(sp)->op.syncpt)
-#define SYNCPT_CHECK_PERIOD 2*HZ
+#define SYNCPT_CHECK_PERIOD (2*HZ)
 static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp, u32 id, u32 real)
 {
 	u32 max;
@@ -135,7 +135,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id, u32 thresh,
 static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thresh)
 {
 	return nvhost_syncpt_wait_timeout(sp, id, thresh,
-	                                  MAX_SCHEDULE_TIMEOUT, NULL);
+					  MAX_SCHEDULE_TIMEOUT, NULL);
 }
 
 /*

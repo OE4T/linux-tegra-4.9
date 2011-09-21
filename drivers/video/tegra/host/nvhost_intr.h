@@ -25,6 +25,7 @@
 
 #include <linux/kthread.h>
 #include <linux/semaphore.h>
+#include <linux/interrupt.h>
 
 struct nvhost_channel;
 
@@ -76,7 +77,7 @@ struct nvhost_intr {
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)
 #define intr_op(intr) (intr_to_dev(intr)->op.intr)
-#define intr_syncpt_to_intr(is) is->intr
+#define intr_syncpt_to_intr(is) (is->intr)
 
 /**
  * Schedule an action to be taken when a sync point reaches the given threshold.
@@ -105,4 +106,5 @@ void nvhost_intr_deinit(struct nvhost_intr *intr);
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 void nvhost_intr_stop(struct nvhost_intr *intr);
 
+irqreturn_t nvhost_syncpt_thresh_fn(int irq, void *dev_id);
 #endif

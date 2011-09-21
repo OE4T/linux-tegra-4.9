@@ -90,7 +90,7 @@ void nvhost_read_module_regs(struct nvhost_cpuaccess *ctx, u32 module,
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
 	void __iomem *p = ctx->regs[module] + offset;
-	u32* out = (u32*)values;
+	u32 *out = (u32 *)values;
 	BUG_ON(size & 3);
 	size >>= 2;
 	nvhost_module_busy(&dev->mod);
@@ -107,7 +107,7 @@ void nvhost_write_module_regs(struct nvhost_cpuaccess *ctx, u32 module,
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
 	void __iomem *p = ctx->regs[module] + offset;
-	const u32* in = (const u32*)values;
+	const u32 *in = (const u32 *)values;
 	BUG_ON(size & 3);
 	size >>= 2;
 	nvhost_module_busy(&dev->mod);

@@ -36,7 +36,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost.h>
 
-#include <asm/io.h>
+#include <linux/io.h>
 
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
@@ -145,7 +145,7 @@ static void add_gather(struct nvhost_channel_userctx *ctx,
 		u32 mem_id, u32 words, u32 offset)
 {
 	struct nvmap_pinarray_elem *pin;
-	u32* cur_gather = ctx->cur_gather;
+	u32 *cur_gather = ctx->cur_gather;
 	pin = &ctx->pinarray[ctx->pinarray_size++];
 	pin->patch_mem = (u32)nvmap_ref_to_handle(ctx->gather_mem);
 	pin->patch_offset = ((cur_gather + 1) - ctx->gathers) * sizeof(u32);
@@ -276,7 +276,7 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 		return err;
 	}
 
-	return (count - remaining);
+	return count - remaining;
 }
 
 static int nvhost_ioctl_channel_flush(
@@ -482,7 +482,7 @@ static long nvhost_channelctl(struct file *filp,
 	return err;
 }
 
-static struct file_operations nvhost_channelops = {
+static const struct file_operations nvhost_channelops = {
 	.owner = THIS_MODULE,
 	.release = nvhost_channelrelease,
 	.open = nvhost_channelopen,
@@ -588,8 +588,7 @@ static int nvhost_ioctl_ctrl_module_mutex(
 			err = nvhost_mutex_try_lock(&ctx->dev->cpuaccess, args->id);
 		if (!err)
 			ctx->mod_locks[args->id] = 1;
-	}
-	else if (!args->lock && ctx->mod_locks[args->id]) {
+	} else if (!args->lock && ctx->mod_locks[args->id]) {
 		if (args->id == 0)
 			nvhost_module_idle(&ctx->dev->mod);
 		else
@@ -689,7 +688,7 @@ static long nvhost_ctrlctl(struct file *filp,
 	return err;
 }
 
-static struct file_operations nvhost_ctrlops = {
+static const struct file_operations nvhost_ctrlops = {
 	.owner = THIS_MODULE,
 	.release = nvhost_ctrlrelease,
 	.open = nvhost_ctrlopen,

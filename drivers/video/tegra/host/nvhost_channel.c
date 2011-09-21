@@ -43,9 +43,9 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	} else if (ch->desc->exclusive) {
 		err = -EBUSY;
 	}
-	if (!err) {
+	if (!err)
 		ch->refcount++;
-	}
+
 	mutex_unlock(&ch->reflock);
 
 	/* Keep alive modules that needs to be when a channel is open */

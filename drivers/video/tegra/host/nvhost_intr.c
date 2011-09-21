@@ -43,8 +43,7 @@ struct nvhost_waitlist {
 	int count;
 };
 
-enum waitlist_state
-{
+enum waitlist_state {
 	WLS_PENDING,
 	WLS_REMOVED,
 	WLS_CANCELLED,
@@ -226,7 +225,7 @@ static int process_wait_list(struct nvhost_intr *intr,
  * Sync point threshold interrupt service thread function
  * Handles sync point threshold triggers, in thread context
  */
-static irqreturn_t syncpt_thresh_fn(int irq, void *dev_id)
+irqreturn_t nvhost_syncpt_thresh_fn(int irq, void *dev_id)
 {
 	struct nvhost_intr_syncpt *syncpt = dev_id;
 	unsigned int id = syncpt->id;
@@ -237,26 +236,6 @@ static irqreturn_t syncpt_thresh_fn(int irq, void *dev_id)
 				nvhost_syncpt_update_min(&dev->syncpt, id));
 
 	return IRQ_HANDLED;
-}
-
-/**
- * lazily request a syncpt's irq
- */
-static int request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
-{
-	int err;
-	extern irqreturn_t t20_intr_syncpt_thresh_isr(int irq, void *dev_id);
-	if (syncpt->irq_requested)
-		return 0;
-
-	err = request_threaded_irq(syncpt->irq,
-				t20_intr_syncpt_thresh_isr, syncpt_thresh_fn,
-				0, syncpt->thresh_irq_name, syncpt);
-	if (err)
-		return err;
-
-	syncpt->irq_requested = 1;
-	return 0;
 }
 
 /**
@@ -312,7 +291,8 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 		spin_unlock(&syncpt->lock);
 
 		mutex_lock(&intr->mutex);
-		err = request_syncpt_irq(syncpt);
+		BUG_ON(!(intr_op(intr).request_syncpt_irq));
+		err = intr_op(intr).request_syncpt_irq(syncpt);
 		mutex_unlock(&intr->mutex);
 
 		if (err) {
@@ -431,8 +411,8 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 			}
 		}
 
-		if(!list_empty(&syncpt->wait_head)) {  // output diagnostics
-			printk("%s id=%d\n",__func__,id);
+		if (!list_empty(&syncpt->wait_head)) {  /* output diagnostics */
+			printk(KERN_DEBUG "%s id=%d\n", __func__, id);
 			BUG_ON(1);
 		}
 

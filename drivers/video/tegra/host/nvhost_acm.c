@@ -570,20 +570,20 @@ void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
 }
 #else
 int nvhost_module_get_rate(struct nvhost_module *mod, unsigned long *rate,
-                            int index)
+			   int index)
 {
-        return 0;
+	return 0;
 }
 
 int nvhost_module_set_rate(struct nvhost_module *mod, void *priv,
-                            unsigned long rate, int index)
+			   unsigned long rate, int index)
 {
-        return 0;
+	return 0;
 }
 
 int nvhost_module_add_client(struct nvhost_module *mod, void *priv)
 {
-        return 0;
+	return 0;
 }
 
 void nvhost_module_remove_client(struct nvhost_module *mod, void *priv)
@@ -681,19 +681,19 @@ static void debug_not_idle(struct nvhost_master *dev)
 	for (i = 0; i < dev->nb_channels; i++) {
 		struct nvhost_module *m = &dev->channels[i].mod;
 		if (m->name)
-			printk("tegra_grhost: %s: refcnt %d\n",
+			printk(KERN_INFO "tegra_grhost: %s: refcnt %d\n",
 				m->name, atomic_read(&m->refcount));
 	}
 
 	for (i = 0; i < dev->nb_mlocks; i++) {
 		int c = atomic_read(&dev->cpuaccess.lock_counts[i]);
 		if (c) {
-			printk("tegra_grhost: lock id %d: refcnt %d\n", i, c);
+			printk(KERN_INFO "tegra_grhost: lock id %d: refcnt %d\n", i, c);
 			lock_released = false;
 		}
 	}
 	if (lock_released)
-		printk("tegra_grhost: all locks released\n");
+		printk(KERN_INFO "tegra_grhost: all locks released\n");
 }
 
 void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
@@ -715,13 +715,13 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 		nvhost_debug_dump(dev);
 
 	if (system_suspend)
-		printk("tegra_grhost: entered idle\n");
+		printk(KERN_INFO "tegra_grhost: entered idle\n");
 
 	flush_delayed_work(&mod->powerdown);
 	cancel_work_sync(&scale3d.work);
 
 	if (system_suspend)
-		printk("tegra_grhost: flushed delayed work\n");
+		printk(KERN_INFO "tegra_grhost: flushed delayed work\n");
 	BUG_ON(mod->powered);
 }
 

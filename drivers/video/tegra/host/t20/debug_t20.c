@@ -21,7 +21,7 @@
 #include <linux/seq_file.h>
 #include <linux/mm.h>
 
-#include <asm/io.h>
+#include <linux/io.h>
 
 #include "../dev.h"
 #include "../debug.h"
@@ -84,7 +84,7 @@ static int show_channel_command(struct output *o, u32 addr, u32 val, int *count)
 		nvhost_debug_output(o, "GATHER(offset=%03x, insert=%d, type=%d, count=%04x, addr=[",
 			   val >> 16 & 0xfff, val >> 15 & 0x1, val >> 14 & 0x1,
 			   val & 0x3fff);
-		*count = val & 0x3fff; // TODO: insert
+		*count = val & 0x3fff; /* TODO: insert */
 		return NVHOST_DBG_STATE_GATHER;
 
 	case 0xe:

@@ -138,8 +138,15 @@ static void powerdown_handler(struct work_struct *work)
 			powerdown);
 	mutex_lock(&mod->lock);
 	if ((atomic_read(&mod->refcount) == 0) && mod->powered) {
-		if (mod->desc->prepare_poweroff)
-			mod->desc->prepare_poweroff(mod);
+		if (mod->desc->prepare_poweroff
+			&& mod->desc->prepare_poweroff(mod)) {
+			/* If poweroff fails, retry */
+			mutex_unlock(&mod->lock);
+			schedule_delayed_work(&mod->powerdown,
+					msecs_to_jiffies(
+						mod->desc->powerdown_delay));
+			return;
+		}
 		clock_disable(mod);
 		powergate(mod);
 		mod->powered = false;

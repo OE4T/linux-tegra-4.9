@@ -25,6 +25,7 @@
 #include "../nvhost_hwctx.h"
 #include <trace/events/nvhost.h>
 #include <mach/powergate.h>
+#include <linux/slab.h>
 
 #include "hardware_t20.h"
 #include "syncpt_t20.h"
@@ -192,6 +193,15 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	bool need_restore = false;
 	u32 syncval;
 	int err;
+	void *ctxrestore_waiter = NULL;
+	void *ctxsave_waiter, *completed_waiter;
+
+	ctxsave_waiter = nvhost_intr_alloc_waiter();
+	completed_waiter = nvhost_intr_alloc_waiter();
+	if (!ctxsave_waiter || !completed_waiter) {
+		err = -ENOMEM;
+		goto done;
+	}
 
 	/* keep module powered */
 	nvhost_module_busy(&channel->mod);
@@ -205,7 +215,19 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	err = mutex_lock_interruptible(&channel->submitlock);
 	if (err) {
 		nvhost_module_idle(&channel->mod);
-		return err;
+		goto done;
+	}
+
+	/* If we are going to need a restore, allocate a waiter for it */
+	if (channel->cur_ctx != hwctx && hwctx && hwctx->valid) {
+		ctxrestore_waiter = nvhost_intr_alloc_waiter();
+		if (!ctxrestore_waiter) {
+			mutex_unlock(&channel->submitlock);
+			nvhost_module_idle(&channel->mod);
+			err = -ENOMEM;
+			goto done;
+		}
+		need_restore = true;
 	}
 
 	/* remove stale waits */
@@ -219,7 +241,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 				 "nvhost_syncpt_wait_check failed: %d\n", err);
 			mutex_unlock(&channel->submitlock);
 			nvhost_module_idle(&channel->mod);
-			return err;
+			goto done;
 		}
 	}
 
@@ -228,7 +250,7 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	if (err) {
 		mutex_unlock(&channel->submitlock);
 		nvhost_module_idle(&channel->mod);
-		return err;
+		goto done;
 	}
 
 	/* context switch */
@@ -249,10 +271,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 			channel->ctxhandler.get(hwctx_to_save);
 		}
 		channel->cur_ctx = hwctx;
-		if (channel->cur_ctx && channel->cur_ctx->valid) {
-			need_restore = true;
+		if (need_restore)
 			syncpt_incrs += channel->cur_ctx->restore_incrs;
-		}
 	}
 
 	/* get absolute sync value */
@@ -331,27 +351,44 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	 * schedule a context save interrupt (to drain the host FIFO
 	 * if necessary, and to release the restore buffer)
 	 */
-	if (hwctx_to_save)
-		nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
+	if (hwctx_to_save) {
+		err = nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
 			syncval - syncpt_incrs + hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
+			ctxsave_waiter,
+			NULL);
+		ctxsave_waiter = NULL;
+		WARN(err, "Failed to set ctx save interrupt");
+	}
 
-	if (need_restore)
-		nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
+	if (need_restore) {
+		BUG_ON(!ctxrestore_waiter);
+		err = nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
 			syncval - user_syncpt_incrs,
-			NVHOST_INTR_ACTION_CTXRESTORE, channel->cur_ctx, NULL);
+			NVHOST_INTR_ACTION_CTXRESTORE, channel->cur_ctx,
+			ctxrestore_waiter,
+			NULL);
+		ctxrestore_waiter = NULL;
+		WARN(err, "Failed to set ctx restore interrupt");
+	}
 
 	/* schedule a submit complete interrupt */
 	err = nvhost_intr_add_action(&channel->dev->intr, syncpt_id, syncval,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel, NULL);
-	/*  if add_action failed, the submit has been already completed */
-	if (err)
-		trace_nvhost_channel_submit_complete(channel->desc->name, 1);
+			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel,
+			completed_waiter,
+			NULL);
+	completed_waiter = NULL;
+	WARN(err, "Failed to set submit complete interrupt");
 
 	mutex_unlock(&channel->submitlock);
 
 	*syncpt_value = syncval;
-	return 0;
+
+done:
+	kfree(ctxrestore_waiter);
+	kfree(ctxsave_waiter);
+	kfree(completed_waiter);
+	return err;
 }
 
 static int t20_channel_read_3d_reg(
@@ -367,8 +404,17 @@ static int t20_channel_read_3d_reg(
 	unsigned int pending = 0;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref;
+	void *ctx_waiter, *read_waiter, *completed_waiter;
 	u32 syncval;
 	int err;
+
+	ctx_waiter = nvhost_intr_alloc_waiter();
+	read_waiter = nvhost_intr_alloc_waiter();
+	completed_waiter = nvhost_intr_alloc_waiter();
+	if (!ctx_waiter || !read_waiter || !completed_waiter) {
+		err = -ENOMEM;
+		goto done;
+	}
 
 	/* keep module powered */
 	nvhost_module_busy(&channel->mod);
@@ -455,14 +501,24 @@ static int t20_channel_read_3d_reg(
 	 * schedule a context save interrupt (to drain the host FIFO
 	 * if necessary, and to release the restore buffer)
 	 */
-	if (hwctx_to_save)
-		nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D,
+	if (hwctx_to_save) {
+		err = nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D,
 			syncval - syncpt_incrs + hwctx_to_save->save_incrs - 1,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
+			ctx_waiter,
+			NULL);
+		ctx_waiter = NULL;
+		WARN(err, "Failed to set context save interrupt");
+	}
 
 	/* Wait for FIFO to be ready */
-	nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D, syncval - 2,
-			NVHOST_INTR_ACTION_WAKEUP, &wq, &ref);
+	err = nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D,
+			syncval - 2,
+			NVHOST_INTR_ACTION_WAKEUP, &wq,
+			read_waiter,
+			&ref);
+	read_waiter = NULL;
+	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_min_cmp(&channel->dev->syncpt,
 				NVSYNCPT_3D, syncval - 2));
@@ -476,11 +532,18 @@ static int t20_channel_read_3d_reg(
 	nvhost_syncpt_cpu_incr(&channel->dev->syncpt, NVSYNCPT_3D);
 
 	/* Schedule a submit complete interrupt */
-	nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D, syncval,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel, NULL);
+	err = nvhost_intr_add_action(&channel->dev->intr, NVSYNCPT_3D, syncval,
+			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel,
+			completed_waiter, NULL);
+	completed_waiter = NULL;
+	WARN(err, "Failed to set submit complete interrupt");
 
 	mutex_unlock(&channel->submitlock);
 
+done:
+	kfree(ctx_waiter);
+	kfree(read_waiter);
+	kfree(completed_waiter);
 	return err;
 }
 

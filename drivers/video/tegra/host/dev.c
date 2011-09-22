@@ -133,6 +133,8 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 
 	priv->gathers = nvmap_mmap(priv->gather_mem);
+	if (!priv->gathers)
+		goto fail;
 
 	return 0;
 fail:
@@ -704,7 +706,7 @@ static void power_on_host(struct nvhost_module *mod)
 	nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0]));
 }
 
-static void power_off_host(struct nvhost_module *mod)
+static int power_off_host(struct nvhost_module *mod)
 {
 	struct nvhost_master *dev =
 			container_of(mod, struct nvhost_master, mod);
@@ -714,6 +716,7 @@ static void power_off_host(struct nvhost_module *mod)
 		nvhost_channel_suspend(&dev->channels[i]);
 	nvhost_syncpt_save(&dev->syncpt);
 	nvhost_intr_stop(&dev->intr);
+	return 0;
 }
 
 static int nvhost_user_init(struct nvhost_master *host)

@@ -84,21 +84,15 @@ struct nvhost_hwctx *nvhost_3dctx_alloc_common(struct nvhost_channel *ch,
 	ctx->restore = nvmap_alloc(nvmap, nvhost_3dctx_restore_size * 4, 32,
 		map_restore ? NVMAP_HANDLE_WRITE_COMBINE
 			    : NVMAP_HANDLE_UNCACHEABLE);
-	if (IS_ERR_OR_NULL(ctx->restore)) {
-		kfree(ctx);
-		return NULL;
-	}
+	if (IS_ERR_OR_NULL(ctx->restore))
+		goto fail;
 
 	if (map_restore) {
 		ctx->restore_virt = nvmap_mmap(ctx->restore);
-		if (!ctx->restore_virt) {
-			nvmap_free(nvmap, ctx->restore);
-			kfree(ctx);
-			return NULL;
-		}
-	} else {
+		if (!ctx->restore_virt)
+			goto fail;
+	} else
 		ctx->restore_virt = NULL;
-	}
 
 	kref_init(&ctx->ref);
 	ctx->channel = ch;
@@ -108,9 +102,22 @@ struct nvhost_hwctx *nvhost_3dctx_alloc_common(struct nvhost_channel *ch,
 	ctx->save_thresh = nvhost_3dctx_save_thresh;
 	ctx->save_slots = nvhost_3dctx_save_slots;
 	ctx->restore_phys = nvmap_pin(nvmap, ctx->restore);
+	if (IS_ERR_VALUE(ctx->restore_phys))
+		goto fail;
+
 	ctx->restore_size = nvhost_3dctx_restore_size;
 	ctx->restore_incrs = nvhost_3dctx_restore_incrs;
 	return ctx;
+
+fail:
+	if (map_restore && ctx->restore_virt) {
+		nvmap_munmap(ctx->restore, ctx->restore_virt);
+		ctx->restore_virt = NULL;
+	}
+	nvmap_free(nvmap, ctx->restore);
+	ctx->restore = NULL;
+	kfree(ctx);
+	return NULL;
 }
 
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx)
@@ -123,10 +130,14 @@ void nvhost_3dctx_free(struct kref *ref)
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 	struct nvmap_client *nvmap = ctx->channel->dev->nvmap;
 
-	if (ctx->restore_virt)
+	if (ctx->restore_virt) {
 		nvmap_munmap(ctx->restore, ctx->restore_virt);
+		ctx->restore_virt = NULL;
+	}
 	nvmap_unpin(nvmap, ctx->restore);
+	ctx->restore_phys = 0;
 	nvmap_free(nvmap, ctx->restore);
+	ctx->restore = NULL;
 	kfree(ctx);
 }
 
@@ -135,15 +146,23 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 	kref_put(&ctx->ref, nvhost_3dctx_free);
 }
 
-void nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
+int nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
 {
 	struct nvhost_channel *ch =
 			container_of(mod, struct nvhost_channel, mod);
 	struct nvhost_hwctx *hwctx_to_save;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	u32 syncpt_incrs, syncpt_val;
-	int err;
+	int err = 0;
 	void *ref;
+	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
+
+	ctx_waiter = nvhost_intr_alloc_waiter();
+	wakeup_waiter = nvhost_intr_alloc_waiter();
+	if (!ctx_waiter || !wakeup_waiter) {
+		err = -ENOMEM;
+		goto done;
+	}
 
 	if (mod->desc->busy)
 		mod->desc->busy(mod);
@@ -152,13 +171,13 @@ void nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
 	hwctx_to_save = ch->cur_ctx;
 	if (!hwctx_to_save) {
 		mutex_unlock(&ch->submitlock);
-		return;
+		goto done;
 	}
 
 	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
 	if (err) {
 		mutex_unlock(&ch->submitlock);
-		return;
+		goto done;
 	}
 
 	hwctx_to_save->valid = true;
@@ -173,12 +192,20 @@ void nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
 	nvhost_cdma_end(&ch->cdma, ch->dev->nvmap, NVSYNCPT_3D, syncpt_val,
 			NULL, 0, hwctx_to_save->timeout);
 
-	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
+	err = nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
 			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
+			ctx_waiter,
+			NULL);
+	ctx_waiter = NULL;
+	WARN(err, "Failed to set context save interrupt");
 
-	nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
-			NVHOST_INTR_ACTION_WAKEUP, &wq, &ref);
+	err = nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
+			NVHOST_INTR_ACTION_WAKEUP, &wq,
+			wakeup_waiter,
+			&ref);
+	wakeup_waiter = NULL;
+	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_min_cmp(&ch->dev->syncpt,
 				NVSYNCPT_3D, syncpt_val));
@@ -188,4 +215,9 @@ void nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
 	nvhost_cdma_update(&ch->cdma);
 
 	mutex_unlock(&ch->submitlock);
+
+done:
+	kfree(ctx_waiter);
+	kfree(wakeup_waiter);
+	return err;
 }

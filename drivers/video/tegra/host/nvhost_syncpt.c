@@ -111,6 +111,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 {
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref;
+	void *waiter;
 	int err = 0;
 
 	if (value)
@@ -150,8 +151,16 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	}
 
 	/* schedule a wakeup when the syncpoint value is reached */
+	waiter = nvhost_intr_alloc_waiter();
+	if (!waiter) {
+		err = -ENOMEM;
+		goto done;
+	}
+
 	err = nvhost_intr_add_action(&(syncpt_to_dev(sp)->intr), id, thresh,
-				NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE, &wq, &ref);
+				NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE, &wq,
+				waiter,
+				&ref);
 	if (err)
 		goto done;
 

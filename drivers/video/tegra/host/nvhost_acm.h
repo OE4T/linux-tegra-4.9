@@ -42,7 +42,7 @@ struct nvhost_moduledesc_clock {
 #define NVHOST_DEFAULT_POWERDOWN_DELAY .powerdown_delay = 25
 
 struct nvhost_moduledesc {
-	void (*prepare_poweroff)(struct nvhost_module *mod);
+	int (*prepare_poweroff)(struct nvhost_module *mod);
 	void (*finalize_poweron)(struct nvhost_module *mod);
 	void (*busy)(struct nvhost_module *);
 	void (*idle)(struct nvhost_module *);

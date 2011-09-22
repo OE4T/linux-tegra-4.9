@@ -123,10 +123,11 @@ void t30_acm_remove_client(struct nvhost_module *mod, void *priv)
 			break;
 		}
 	}
-	m->priv = NULL;
-	kfree(m);
-	for (i = 0; i < mod->num_clks; i++)
-		t30_acm_update_rate(mod, i);
+	if (m) {
+		kfree(m);
+		for (i = 0; i < mod->num_clks; i++)
+			t30_acm_update_rate(mod, i);
+	}
 	mutex_unlock(&client_list_lock);
 }
 

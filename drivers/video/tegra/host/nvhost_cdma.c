@@ -63,6 +63,9 @@
 /* Number of words needed to store an entry containing one handle */
 #define SYNC_QUEUE_MIN_ENTRY (SQ_IDX_HANDLES + (sizeof(void *)/4))
 
+/* Magic to use to fill freed handle slots */
+#define BAD_MAGIC 0xdeadbeef
+
 /**
  * Reset to empty queue.
  */
@@ -412,7 +415,9 @@ static void update_cdma(struct nvhost_cdma *cdma)
 
 		/* Unpin the memory */
 		nvmap_unpin_handles(nvmap, handles, nr_handles);
+		memset(handles, BAD_MAGIC, nr_handles * sizeof(*handles));
 		nvmap_client_put(nvmap);
+		sync[SQ_IDX_NVMAP_CTX] = 0;
 
 		/* Pop push buffer slots */
 		if (nr_slots) {
@@ -634,7 +639,7 @@ void nvhost_cdma_deinit(struct nvhost_cdma *cdma)
 	BUG_ON(!cdma_pb_op(cdma).destroy);
 	BUG_ON(cdma->running);
 	kfree(cdma->sync_queue.buffer);
-	cdma->sync_queue.buffer = 0;
+	cdma->sync_queue.buffer = NULL;
 	cdma_pb_op(cdma).destroy(pb);
 	cdma_op(cdma).timeout_destroy(cdma);
 }

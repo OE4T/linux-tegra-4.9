@@ -266,20 +266,20 @@ static void free_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 
 int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 			enum nvhost_intr_action action, void *data,
+			void *_waiter,
 			void **ref)
 {
-	struct nvhost_waitlist *waiter;
+	struct nvhost_waitlist *waiter = _waiter;
 	struct nvhost_intr_syncpt *syncpt;
 	int queue_was_empty;
 	int err;
 
+	BUG_ON(waiter == NULL);
+
 	BUG_ON(!(intr_op(intr).set_syncpt_threshold &&
 		 intr_op(intr).enable_syncpt_intr));
 
-	/* create and initialize a new waiter */
-	waiter = kmalloc(sizeof(*waiter), GFP_KERNEL);
-	if (!waiter)
-		return -ENOMEM;
+	/* initialize a new waiter */
 	INIT_LIST_HEAD(&waiter->list);
 	kref_init(&waiter->refcount);
 	if (ref)
@@ -328,6 +328,12 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 	if (ref)
 		*ref = waiter;
 	return 0;
+}
+
+void *nvhost_intr_alloc_waiter()
+{
+	return kzalloc(sizeof(struct nvhost_waitlist),
+			GFP_KERNEL|__GFP_REPEAT);
 }
 
 void nvhost_intr_put_ref(struct nvhost_intr *intr, void *ref)

@@ -549,10 +549,11 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 {
 	int ret;
 	if (!data->nct_reg) {
-		data->nct_reg = regulator_get(NULL, "vdd_nct1008");
+		data->nct_reg = regulator_get(data->client->dev, "vdd");
 		if (IS_ERR_OR_NULL(data->nct_reg)) {
-			dev_warn(&data->client->dev, "Error in getting the "
-				"regulator handle for vdd_nct1008\n");
+			dev_warn(&data->client->dev, "Error [%d] in"
+				"getting the regulator handle for vdd of %s\n",
+				data->nct_reg, dev_name(data->client->dev));
 			data->nct_reg = NULL;
 			return;
 		}

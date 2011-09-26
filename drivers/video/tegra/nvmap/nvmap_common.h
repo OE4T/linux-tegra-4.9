@@ -35,3 +35,5 @@ static inline void inner_clean_cache_all(void)
 {
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
 }
+
+extern void __flush_dcache_page(struct address_space *, struct page *);

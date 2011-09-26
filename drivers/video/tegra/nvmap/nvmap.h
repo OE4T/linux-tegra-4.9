@@ -30,7 +30,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #include <mach/nvmap.h>
 

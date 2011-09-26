@@ -62,7 +62,7 @@ struct nvmap_carveout_node {
 	struct nvmap_heap	*carveout;
 	int			index;
 	struct list_head	clients;
-	spinlock_t 		clients_lock;
+	spinlock_t		clients_lock;
 };
 
 struct nvmap_device {
@@ -288,7 +288,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	if ( len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD ) {
+	if (len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD) {
 		inner_flush_cache_all();
 		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 			outer_flush_range(block->base, block->base + len);
@@ -316,7 +316,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 		outer_flush_range(block->base, block->base + len);
 
-	nvmap_free_pte((client ? client->dev: nvmap_dev), pte);
+	nvmap_free_pte((client ? client->dev : nvmap_dev), pte);
 out:
 	wmb();
 	return 0;
@@ -362,7 +362,7 @@ void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 }
 
-static struct nvmap_client* get_client_from_carveout_commit(
+static struct nvmap_client *get_client_from_carveout_commit(
 	struct nvmap_carveout_node *node, struct nvmap_carveout_commit *commit)
 {
 	struct nvmap_carveout_commit *first_commit = commit - node->index;
@@ -681,7 +681,7 @@ static void destroy_client(struct nvmap_client *client)
 		pins = atomic_read(&ref->pin);
 
 		if (ref->handle->owner == client)
-		    ref->handle->owner = NULL;
+			ref->handle->owner = NULL;
 
 		while (pins--)
 			nvmap_unpin_handles(client, &ref->handle, 1);
@@ -1027,7 +1027,7 @@ static int nvmap_debug_allocations_open(struct inode *inode, struct file *file)
 			   inode->i_private);
 }
 
-static struct file_operations debug_allocations_fops = {
+static const struct file_operations debug_allocations_fops = {
 	.open = nvmap_debug_allocations_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -1062,7 +1062,7 @@ static int nvmap_debug_clients_open(struct inode *inode, struct file *file)
 	return single_open(file, nvmap_debug_clients_show, inode->i_private);
 }
 
-static struct file_operations debug_clients_fops = {
+static const struct file_operations debug_clients_fops = {
 	.open = nvmap_debug_clients_open,
 	.read = seq_read,
 	.llseek = seq_lseek,

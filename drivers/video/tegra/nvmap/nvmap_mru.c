@@ -182,8 +182,6 @@ int nvmap_mru_init(struct nvmap_share *share)
 
 void nvmap_mru_destroy(struct nvmap_share *share)
 {
-	if (share->mru_lists)
-		kfree(share->mru_lists);
-
+	kfree(share->mru_lists);
 	share->mru_lists = NULL;
 }

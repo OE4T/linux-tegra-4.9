@@ -62,4 +62,7 @@ int __init nvmap_heap_init(void);
 
 void nvmap_heap_deinit(void);
 
+int nvmap_flush_heap_block(struct nvmap_client *client,
+	struct nvmap_heap_block *block, size_t len, unsigned int prot);
+
 #endif

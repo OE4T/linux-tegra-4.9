@@ -117,8 +117,6 @@ out:
 	kfree(h);
 }
 
-extern void __flush_dcache_page(struct address_space *, struct page *);
-
 static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 {
 	struct page *page, *p, *e;
@@ -503,7 +501,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	struct nvmap_handle_ref *ref = NULL;
 
-	if (!client )
+	if (!client)
 		return ERR_PTR(-EINVAL);
 
 	if (!size)

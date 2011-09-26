@@ -345,8 +345,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 			mutex_lock(&h->lock);
 			op.result = h->carveout->base;
 			mutex_unlock(&h->lock);
-		}
-		else if (h->pgalloc.contig)
+		} else if (h->pgalloc.contig)
 			op.result = page_to_phys(h->pgalloc.pages[0]);
 		else if (h->pgalloc.area)
 			op.result = h->pgalloc.area->iovm_start;
@@ -360,8 +359,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 			mutex_lock(&h->lock);
 			op.result = nvmap_carveout_usage(client, h->carveout);
 			mutex_unlock(&h->lock);
-		}
-		else if (h->pgalloc.contig)
+		} else if (h->pgalloc.contig)
 			op.result = NVMAP_HEAP_SYSMEM;
 		else
 			op.result = NVMAP_HEAP_IOVMM;
@@ -530,15 +528,14 @@ static bool fast_cache_maint(struct nvmap_client *client, struct nvmap_handle *h
 {
 	int ret = false;
 
-	if ( (op == NVMAP_CACHE_OP_INV) ||
-		((end - start) < FLUSH_CLEAN_BY_SET_WAY_THRESHOLD) )
+	if ((op == NVMAP_CACHE_OP_INV) ||
+		((end - start) < FLUSH_CLEAN_BY_SET_WAY_THRESHOLD))
 		goto out;
 
-	if (op == NVMAP_CACHE_OP_WB_INV) {
+	if (op == NVMAP_CACHE_OP_WB_INV)
 		inner_flush_cache_all();
-	} else if (op == NVMAP_CACHE_OP_WB) {
+	else if (op == NVMAP_CACHE_OP_WB)
 		inner_clean_cache_all();
-	}
 
 	if (h->heap_pgalloc && (h->flags != NVMAP_HANDLE_INNER_CACHEABLE)) {
 		heap_page_cache_maint(client, h, start, end, op,
@@ -719,7 +716,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			ret = -EFAULT;
 			break;
 		}
-		if(is_read)
+		if (is_read)
 			cache_maint(client, h, h_offs,
 				h_offs + elem_size, NVMAP_CACHE_OP_INV);
 
@@ -729,7 +726,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		if (ret)
 			break;
 
-		if(!is_read)
+		if (!is_read)
 			cache_maint(client, h, h_offs,
 				h_offs + elem_size, NVMAP_CACHE_OP_WB);
 

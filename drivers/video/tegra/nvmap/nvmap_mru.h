@@ -65,11 +65,11 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 #define nvmap_mru_vm_size(_a)	tegra_iovmm_get_vm_size(_a)
 
 static inline void nvmap_mru_insert_locked(struct nvmap_share *share,
-                                           struct nvmap_handle *h)
+					   struct nvmap_handle *h)
 { }
 
 static inline void nvmap_mru_remove(struct nvmap_share *s,
-                                    struct nvmap_handle *h)
+				    struct nvmap_handle *h)
 { }
 
 static inline struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,

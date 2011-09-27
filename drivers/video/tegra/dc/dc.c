@@ -50,7 +50,7 @@
 
 #define TEGRA_CRC_LATCHED_DELAY		34
 
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 #define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
 #else
 /* ignore underflows when on simulation and fpga platform */
@@ -1830,7 +1830,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	}
 }
 
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
 static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 {
 	u32 val, i;

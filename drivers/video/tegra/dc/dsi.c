@@ -1068,14 +1068,12 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi)
 
 	if (dsi->info.video_data_type == TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE) {
 		dsi_control |= DSI_CTRL_CMD_MODE;
-		host_dsi_control |= HOST_DSI_CTRL_CMD_MODE;
 		dcs_cmd = DSI_DCS_CMDS_LT5_DCS_CMD(DSI_WRITE_MEMORY_START)|
 			DSI_DCS_CMDS_LT3_DCS_CMD(DSI_WRITE_MEMORY_CONTINUE);
 		dsi->status.vtype = DSI_VIDEO_TYPE_CMD_MODE;
 
 	} else {
 		dsi_control |= DSI_CTRL_VIDEO_MODE;
-		host_dsi_control |= HOST_DSI_CTRL_VIDEO_MODE;
 		dsi->status.vtype = DSI_VIDEO_TYPE_VIDEO_MODE;
 	}
 

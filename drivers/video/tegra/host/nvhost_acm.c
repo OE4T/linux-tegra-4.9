@@ -628,7 +628,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->powergate_id = TEGRA_POWERGATE_3D;
 		if (!mod->can_powergate)
 			tegra_unpowergate_partition(mod->powergate_id);
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#ifdef CONFIG_ARCH_TEGRA_HAS_DUAL_3D
 		mod->powergate_id2 = TEGRA_POWERGATE_3D1;
 		if (!mod->can_powergate)
 			tegra_unpowergate_partition(mod->powergate_id2);
@@ -649,7 +649,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		tegra_unpowergate_partition(mod->powergate_id);
 		mod->powergate_id = -1;
 
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#ifdef CONFIG_ARCH_TEGRA_HAS_DUAL_3D
 		if (mod->powergate_id2 == TEGRA_POWERGATE_3D1) {
 			tegra_unpowergate_partition(mod->powergate_id2);
 			mod->powergate_id2 = -1;

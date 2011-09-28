@@ -1217,11 +1217,10 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_sourc
 		/* If we can program HDMI, then proceed */
 		if (hdmi->clk_enabled)
 			tegra_dc_hdmi_setup_audio(hdmi->dc, audio_freq,audio_source);
-		else {
-			/* Store it for using it in enable */
-			hdmi->audio_freq = audio_freq;
-			hdmi->audio_source = audio_source;
-		}
+
+		/* Store it for using it in enable */
+		hdmi->audio_freq = audio_freq;
+		hdmi->audio_source = audio_source;
 	}
 	else
 		return -EINVAL;

@@ -149,6 +149,14 @@ static void action_ctxsave(struct nvhost_waitlist *waiter)
 	channel->ctxhandler.put(hwctx);
 }
 
+static void action_ctxrestore(struct nvhost_waitlist *waiter)
+{
+	struct nvhost_hwctx *hwctx = waiter->data;
+	struct nvhost_channel *channel = hwctx->channel;
+
+	channel->ctxhandler.put(hwctx);
+}
+
 static void action_wakeup(struct nvhost_waitlist *waiter)
 {
 	wait_queue_head_t *wq = waiter->data;
@@ -168,6 +176,7 @@ typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_submit_complete,
 	action_ctxsave,
+	action_ctxrestore,
 	action_wakeup,
 	action_wakeup_interruptible,
 };

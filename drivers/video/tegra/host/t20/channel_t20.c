@@ -268,12 +268,14 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 		channel->ctxhandler.save_push(&channel->cdma, hwctx_to_save);
 
 	/* gather restore buffer */
-	if (need_restore)
+	if (need_restore) {
 		nvhost_cdma_push_gather(&channel->cdma,
 			channel->dev->nvmap,
 			nvmap_ref_to_handle(channel->cur_ctx->restore),
 			nvhost_opcode_gather(channel->cur_ctx->restore_size),
 			channel->cur_ctx->restore_phys);
+		channel->ctxhandler.get(channel->cur_ctx);
+	}
 
 	/* add a setclass for modules that require it (unless ctxsw added it) */
 	if (!hwctx_to_save && !need_restore && channel->desc->class)
@@ -333,6 +335,11 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 		nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
 			syncval - syncpt_incrs + hwctx_to_save->save_thresh,
 			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save, NULL);
+
+	if (need_restore)
+		nvhost_intr_add_action(&channel->dev->intr, syncpt_id,
+			syncval - user_syncpt_incrs,
+			NVHOST_INTR_ACTION_CTXRESTORE, channel->cur_ctx, NULL);
 
 	/* schedule a submit complete interrupt */
 	err = nvhost_intr_add_action(&channel->dev->intr, syncpt_id, syncval,

@@ -108,8 +108,9 @@ static int tegra_fb_set_par(struct fb_info *info)
 		}
 		info->fix.line_length = var->xres * var->bits_per_pixel / 8;
 		/* Pad the stride to 16-byte boundary. */
-		tegra_fb->win->stride = round_up(info->fix.line_length,
+		info->fix.line_length = round_up(info->fix.line_length,
 						TEGRA_LINEAR_PITCH_ALIGNMENT);
+		tegra_fb->win->stride = info->fix.line_length;
 		tegra_fb->win->stride_uv = 0;
 		tegra_fb->win->phys_addr_u = 0;
 		tegra_fb->win->phys_addr_v = 0;
@@ -410,6 +411,10 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	info->fix.accel		= FB_ACCEL_NONE;
 	info->fix.smem_start	= fb_phys;
 	info->fix.smem_len	= fb_size;
+	info->fix.line_length = fb_data->xres * fb_data->bits_per_pixel / 8;
+	/* Pad the stride to 16-byte boundary. */
+	info->fix.line_length = round_up(info->fix.line_length,
+					TEGRA_LINEAR_PITCH_ALIGNMENT);
 
 	info->var.xres			= fb_data->xres;
 	info->var.yres			= fb_data->yres;
@@ -442,9 +447,7 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	win->virt_addr = fb_base;
 	win->phys_addr_u = 0;
 	win->phys_addr_v = 0;
-	win->stride = fb_data->xres * fb_data->bits_per_pixel / 8;
-	/* Pad the stride to 16-byte boundary. */
-	win->stride = round_up(win->stride, TEGRA_LINEAR_PITCH_ALIGNMENT);
+	win->stride = info->fix.line_length;
 	win->stride_uv = 0;
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 

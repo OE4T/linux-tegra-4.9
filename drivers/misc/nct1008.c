@@ -32,6 +32,7 @@
 #include <linux/nct1008.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
+#include <linux/thermal.h>
 
 #define DRIVER_NAME "nct1008"
 
@@ -96,6 +97,9 @@ struct nct1008_data {
 	u8 limits_sz;
 	void (*alarm_fn)(bool raised);
 	struct regulator *nct_reg;
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	struct thermal_zone_device *thz;
+#endif
 };
 
 static inline s8 value_to_temperature(bool extended, u8 value)
@@ -604,6 +608,9 @@ static int nct1008_enable_alert(struct nct1008_data *data)
 	return ret;
 }
 
+/* The thermal sysfs handles notifying the throttling
+ * cooling device */
+#ifndef CONFIG_TEGRA_THERMAL_SYSFS
 static bool throttle_enb;
 static void therm_throttle(struct nct1008_data *data, bool enable)
 {
@@ -620,6 +627,12 @@ static void therm_throttle(struct nct1008_data *data, bool enable)
 		mutex_unlock(&data->mutex);
 	}
 }
+#endif
+
+/* Thermal sysfs handles hysteresis */
+#ifndef CONFIG_TEGRA_THERMAL_SYSFS
+	#define ALERT_HYSTERESIS_THROTTLE	1
+#endif
 
 #define ALERT_HYSTERESIS_THROTTLE	1
 #define ALERT_HYSTERESIS_EDP	3
@@ -666,6 +679,9 @@ static void nct1008_work_func(struct work_struct *work)
 	}
 
 	hysteresis = ALERT_HYSTERESIS_EDP;
+
+/* Thermal sysfs handles hysteresis */
+#ifndef CONFIG_TEGRA_THERMAL_SYSFS
 	throttling_ext_limit_milli =
 		CELSIUS_TO_MILLICELSIUS(data->plat_data.throttling_ext_limit);
 
@@ -679,11 +695,13 @@ static void nct1008_work_func(struct work_struct *work)
 		/* switch off throttling */
 		therm_throttle(data, false);
 	}
+#endif
 
 	if (temp_milli < CELSIUS_TO_MILLICELSIUS(data->limits[0])) {
 		lo_limit = 0;
 		hi_limit = data->limits[0];
-	} else if (temp_milli >= CELSIUS_TO_MILLICELSIUS(data->limits[nentries-1])) {
+	} else if (temp_milli >=
+			CELSIUS_TO_MILLICELSIUS(data->limits[nentries-1])) {
 		lo_limit = data->limits[nentries-1] - hysteresis;
 		hi_limit = data->plat_data.shutdown_ext_limit;
 	} else {
@@ -739,6 +757,13 @@ static void nct1008_work_func(struct work_struct *work)
 			MILLICELSIUS_TO_CELSIUS(temp_milli));
 
 	edp_thermal_zone_val = temp_milli;
+
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	if (data->thz) {
+		if (!data->thz->passive)
+			thermal_zone_device_update(data->thz);
+	}
+#endif
 
 out:
 	nct1008_enable_alert(data);
@@ -971,6 +996,66 @@ static unsigned int get_ext_mode_delay_ms(unsigned int conv_rate)
 	}
 }
 
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+
+static int nct1008_thermal_zone_bind(struct thermal_zone_device *thermal,
+				struct thermal_cooling_device *cdevice) {
+	/* Support only Thermal Throttling (1 trip) for now */
+	return thermal_zone_bind_cooling_device(thermal, 0, cdevice);
+}
+
+static int nct1008_thermal_zone_unbind(struct thermal_zone_device *thermal,
+				struct thermal_cooling_device *cdevice) {
+	/* Support only Thermal Throttling (1 trip) for now */
+	return thermal_zone_unbind_cooling_device(thermal, 0, cdevice);
+}
+
+static int nct1008_thermal_zone_get_temp(struct thermal_zone_device *thermal,
+						long *temp)
+{
+	struct nct1008_data *data = thermal->devdata;
+
+	return nct1008_get_temp(&data->client->dev, temp);
+}
+
+static int nct1008_thermal_zone_get_trip_type(
+			struct thermal_zone_device *thermal,
+			int trip,
+			enum thermal_trip_type *type) {
+
+	/* Support only Thermal Throttling (1 trip) for now */
+	if (trip != 0)
+		return -EINVAL;
+
+	*type = THERMAL_TRIP_PASSIVE;
+
+	return 0;
+}
+
+static int nct1008_thermal_zone_get_trip_temp(
+		struct thermal_zone_device *thermal,
+		int trip,
+		long *temp) {
+	struct nct1008_data *data = thermal->devdata;
+
+	/* Support only Thermal Throttling (1 trip) for now */
+	if (trip != 0)
+		return -EINVAL;
+
+	*temp = CELSIUS_TO_MILLICELSIUS(data->plat_data.throttling_ext_limit);
+
+	return 0;
+}
+
+static struct thermal_zone_device_ops nct1008_thermal_zone_ops = {
+	.bind = nct1008_thermal_zone_bind,
+	.unbind = nct1008_thermal_zone_unbind,
+	.get_temp = nct1008_thermal_zone_get_temp,
+	.get_trip_type = nct1008_thermal_zone_get_trip_type,
+	.get_trip_temp = nct1008_thermal_zone_get_trip_temp,
+};
+#endif
+
 /*
  * Manufacturer(OnSemi) recommended sequence for
  * Extended Range mode is as follows
@@ -994,6 +1079,9 @@ static int nct1008_probe(struct i2c_client *client,
 	int err;
 	long temp_milli;
 	unsigned int delay;
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	struct thermal_zone_device *thz;
+#endif
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 
@@ -1051,6 +1139,26 @@ static int nct1008_probe(struct i2c_client *client,
 	}
 
 	tegra_edp_update_thermal_zone(MILLICELSIUS_TO_CELSIUS(temp_milli));
+
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	thz = thermal_zone_device_register("nct1008",
+					1, /* trips */
+					data,
+					&nct1008_thermal_zone_ops,
+					1, /* tc1 */
+					5, /* tc2 */
+					2000, /* passive delay */
+					0); /* polling delay */
+
+	if (IS_ERR(thz)) {
+		data->thz = NULL;
+		err = -ENODEV;
+		goto error;
+	}
+
+	data->thz = thz;
+#endif
+
 	return 0;
 
 error:
@@ -1068,6 +1176,14 @@ static int nct1008_remove(struct i2c_client *client)
 
 	if (data->dent)
 		debugfs_remove(data->dent);
+
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	if (data->thz) {
+		thermal_zone_device_unregister(data->thz);
+		data->thz = NULL;
+	}
+#endif
+
 	free_irq(data->client->irq, data);
 	cancel_work_sync(&data->work);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);

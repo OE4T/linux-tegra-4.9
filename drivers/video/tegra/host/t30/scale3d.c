@@ -65,10 +65,15 @@ struct scale3d_info_rec {
 	ktime_t idle_frame;
 	ktime_t fast_frame;
 	ktime_t last_idle;
+	ktime_t last_short_term_idle;
 	ktime_t last_busy;
 	int is_idle;
 	unsigned long idle_total;
+	unsigned long idle_short_term_total;
+	unsigned long max_rate_3d;
+	unsigned long min_rate_3d;
 	struct work_struct work;
+	struct delayed_work idle_timer;
 	unsigned int scale;
 	unsigned int p_period;
 	unsigned int p_idle_min;
@@ -95,9 +100,11 @@ static void scale3d_clocks(unsigned long percent)
 	curr = clk_get_rate(scale3d.clk_3d);
 	hz = percent * (curr / 100);
 
-	if (tegra_chip_id == TEGRA30)
-		clk_set_rate(scale3d.clk_3d2, 0);
-	clk_set_rate(scale3d.clk_3d, hz);
+	if (!(hz >= scale3d.max_rate_3d && curr == scale3d.max_rate_3d)) {
+		if (tegra_chip_id == TEGRA30)
+			clk_set_rate(scale3d.clk_3d2, 0);
+		clk_set_rate(scale3d.clk_3d, hz);
+	}
 }
 
 static void scale3d_clocks_handler(struct work_struct *work)
@@ -115,17 +122,17 @@ static void scale3d_clocks_handler(struct work_struct *work)
 void nvhost_scale3d_suspend(struct nvhost_module *mod)
 {
 	cancel_work_sync(&scale3d.work);
+	cancel_delayed_work(&scale3d.idle_timer);
 }
 
 /* set 3d clocks to max */
 static void reset_3d_clocks(void)
 {
-	unsigned long hz;
-
-	hz = clk_round_rate(scale3d.clk_3d, UINT_MAX);
-	clk_set_rate(scale3d.clk_3d, hz);
-	if (tegra_chip_id == TEGRA30)
-		clk_set_rate(scale3d.clk_3d2, hz);
+	if (clk_get_rate(scale3d.clk_3d) != scale3d.max_rate_3d) {
+		clk_set_rate(scale3d.clk_3d, scale3d.max_rate_3d);
+		if (tegra_chip_id == TEGRA30)
+			clk_set_rate(scale3d.clk_3d2, scale3d.max_rate_3d);
+	}
 }
 
 static int scale3d_is_enabled(void)
@@ -161,7 +168,9 @@ static void scale3d_enable(int enable)
 static void reset_scaling_counters(ktime_t time)
 {
 	scale3d.idle_total = 0;
+	scale3d.idle_short_term_total = 0;
 	scale3d.last_idle = time;
+	scale3d.last_short_term_idle = time;
 	scale3d.last_busy = time;
 	scale3d.idle_frame = time;
 }
@@ -173,7 +182,8 @@ static void scaling_state_check(ktime_t time)
 	/* check for load peaks */
 	dt = (unsigned long) ktime_us_delta(time, scale3d.fast_frame);
 	if (dt > scale3d.p_fast_response) {
-		unsigned long idleness = (scale3d.idle_total * 100) / dt;
+		unsigned long idleness =
+			(scale3d.idle_short_term_total * 100) / dt;
 		scale3d.fast_frame = time;
 		/* if too busy, scale up */
 		if (idleness < scale3d.p_idle_min) {
@@ -181,11 +191,12 @@ static void scaling_state_check(ktime_t time)
 				pr_info("scale3d: %ld%% busy\n",
 					100 - idleness);
 
-			scale3d.scale = 200;
-			schedule_work(&scale3d.work);
+			reset_3d_clocks();
 			reset_scaling_counters(time);
 			return;
 		}
+		scale3d.idle_short_term_total = 0;
+		scale3d.last_short_term_idle = time;
 	}
 
 	dt = (unsigned long) ktime_us_delta(time, scale3d.idle_frame);
@@ -202,8 +213,7 @@ static void scaling_state_check(ktime_t time)
 			schedule_work(&scale3d.work);
 		} else if (idleness < scale3d.p_idle_min) {
 			/* if idle time is low, clock up */
-			scale3d.scale = 200;
-			schedule_work(&scale3d.work);
+			reset_3d_clocks();
 		}
 		reset_scaling_counters(time);
 	}
@@ -211,24 +221,8 @@ static void scaling_state_check(ktime_t time)
 
 void nvhost_scale3d_notify_idle(struct nvhost_module *mod)
 {
-	mutex_lock(&scale3d.lock);
-
-	if (!scale3d.enable)
-		goto done;
-
-	scale3d.last_idle = ktime_get();
-	scale3d.is_idle = 1;
-
-	scaling_state_check(scale3d.last_idle);
-
-done:
-	mutex_unlock(&scale3d.lock);
-}
-
-void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
-{
-	unsigned long idle;
 	ktime_t t;
+	unsigned long dt;
 
 	mutex_lock(&scale3d.lock);
 
@@ -238,10 +232,50 @@ void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
 	t = ktime_get();
 
 	if (scale3d.is_idle) {
+		dt = ktime_us_delta(t, scale3d.last_idle);
+		scale3d.idle_total += dt;
+		dt = ktime_us_delta(t, scale3d.last_short_term_idle);
+		scale3d.idle_short_term_total += dt;
+	} else
+		scale3d.is_idle = 1;
+
+	scale3d.last_idle = t;
+	scale3d.last_short_term_idle = t;
+
+	scaling_state_check(scale3d.last_idle);
+
+	/* delay idle_max % of 2 * fast_response time (given in microseconds) */
+	schedule_delayed_work(&scale3d.idle_timer,
+		msecs_to_jiffies((scale3d.p_idle_max * scale3d.p_fast_response)
+			/ 50000));
+
+done:
+	mutex_unlock(&scale3d.lock);
+}
+
+void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
+{
+	unsigned long idle;
+	unsigned long short_term_idle;
+	ktime_t t;
+
+	mutex_lock(&scale3d.lock);
+
+	if (!scale3d.enable)
+		goto done;
+
+	cancel_delayed_work(&scale3d.idle_timer);
+
+	t = ktime_get();
+
+	if (scale3d.is_idle) {
 		scale3d.last_busy = t;
 		idle = (unsigned long)
-			ktime_us_delta(scale3d.last_busy, scale3d.last_idle);
+			ktime_us_delta(t, scale3d.last_idle);
 		scale3d.idle_total += idle;
+		short_term_idle =
+			ktime_us_delta(t, scale3d.last_short_term_idle);
+		scale3d.idle_short_term_total += short_term_idle;
 		scale3d.is_idle = 0;
 	}
 
@@ -249,6 +283,25 @@ void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
 
 done:
 	mutex_unlock(&scale3d.lock);
+}
+
+static void scale3d_idle_handler(struct work_struct *work)
+{
+	int notify_idle = 0;
+
+	mutex_lock(&scale3d.lock);
+
+	if (scale3d.enable && scale3d.is_idle &&
+		tegra_is_clk_enabled(scale3d.clk_3d)) {
+		unsigned long curr = clk_get_rate(scale3d.clk_3d);
+		if (curr > scale3d.min_rate_3d)
+			notify_idle = 1;
+	}
+
+	mutex_unlock(&scale3d.lock);
+
+	if (notify_idle)
+		nvhost_scale3d_notify_idle(NULL);
 }
 
 void nvhost_scale3d_reset()
@@ -327,14 +380,18 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 		if (tegra_chip_id == TEGRA30)
 			scale3d.clk_3d2 = mod->clk[1];
 
+		scale3d.max_rate_3d = clk_round_rate(scale3d.clk_3d, UINT_MAX);
+		scale3d.min_rate_3d = clk_round_rate(scale3d.clk_3d, 0);
+
 		INIT_WORK(&scale3d.work, scale3d_clocks_handler);
+		INIT_DELAYED_WORK(&scale3d.idle_timer, scale3d_idle_handler);
 
 		/* set scaling parameter defaults */
 		scale3d.enable = 0;
-		scale3d.p_period = 1200000;
-		scale3d.p_idle_min = 17;
-		scale3d.p_idle_max = 17;
-		scale3d.p_fast_response = 16000;
+		scale3d.p_period = 125000;
+		scale3d.p_idle_min = 10;
+		scale3d.p_idle_max = 15;
+		scale3d.p_fast_response = 6000;
 		scale3d.p_verbosity = 0;
 
 		error = device_create_file(d, &dev_attr_enable_3d_scaling);

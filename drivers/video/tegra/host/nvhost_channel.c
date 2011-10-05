@@ -74,11 +74,9 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 1) {
-		nvhost_module_deinit(&ch->dev->pdev->dev, &ch->mod);
-		/* cdma may already be stopped, that's ok */
-
 		channel_cdma_op(ch).stop(&ch->cdma);
 		nvhost_cdma_deinit(&ch->cdma);
+		nvhost_module_deinit(&ch->dev->pdev->dev, &ch->mod);
 	}
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);

@@ -490,7 +490,7 @@ static ssize_t enable_3d_scaling_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUSR,
+static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUGO,
 	enable_3d_scaling_show, enable_3d_scaling_store);
 
 void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)

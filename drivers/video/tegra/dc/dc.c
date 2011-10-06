@@ -665,6 +665,48 @@ int tegra_dc_update_csc(struct tegra_dc *dc, int win_idx)
 }
 EXPORT_SYMBOL(tegra_dc_update_csc);
 
+static void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut)
+{
+	int i;
+	for(i=0; i<256; i++) {
+		lut->r[i] = lut->g[i] = lut->b[i] = (u8)i;
+	}
+}
+
+static void tegra_dc_set_lut(struct tegra_dc *dc,
+			     struct tegra_dc_lut *lut,
+			     int start,
+			     int len)
+{
+	int i;
+	for (i = start, len += start; i < len; i++) {
+		u32 rgb = ((u32)lut->r[i]) |
+			  ((u32)lut->g[i]<<8) |
+			  ((u32)lut->b[i]<<16);
+		tegra_dc_writel(dc, rgb, DC_WIN_COLOR_PALETTE(i));
+	}
+}
+
+int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int start, int len)
+{
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -EFAULT;
+	}
+
+	tegra_dc_writel(dc, WINDOW_A_SELECT << win_idx,
+			DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	tegra_dc_set_lut(dc, &dc->windows[win_idx].lut, start, len);
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dc_update_lut);
+
 static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 {
 	unsigned i;
@@ -1075,7 +1117,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
 					DC_WIN_BUFFER_ADDR_MODE);
 
-		val = WIN_ENABLE;
+		val = WIN_ENABLE | CP_ENABLE;
 		if (yuvp)
 			val |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
@@ -2155,6 +2197,8 @@ static void tegra_dc_init(struct tegra_dc *dc)
 				DC_CMD_DISPLAY_WINDOW_HEADER);
 		tegra_dc_init_csc_defaults(&dc->windows[i].csc);
 		tegra_dc_set_csc(dc, &dc->windows[i].csc);
+		tegra_dc_init_lut_defaults(&dc->windows[i].lut);
+		tegra_dc_set_lut(dc, &dc->windows[i].lut, 0, 256);
 		tegra_dc_set_scaling_filter(dc);
 	}
 

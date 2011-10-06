@@ -521,6 +521,67 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
+static int set_lut_channel(u16 *channel_from_user,
+			   u8 *channel_to,
+			   u32 start,
+			   u32 len)
+{
+	int i;
+	u16 lut16bpp[256];
+
+	if (copy_from_user(lut16bpp, channel_from_user, len<<1))
+		return 1;
+
+	for (i=0; i<len; i++)
+		channel_to[start+i] = lut16bpp[i]>>8;
+
+	return 0;
+}
+
+static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_lut *new_lut)
+{
+	int err;
+	unsigned int index = new_lut->win_index;
+	u32 start = new_lut->start;
+	u32 len = new_lut->len;
+
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_dc_ext_win *ext_win;
+	struct tegra_dc_lut *lut;
+
+	if (index >= DC_N_WINDOWS)
+		return -EINVAL;
+
+	if ((start >= 256) || (len > 256) || ((start + len) > 256))
+		return -EINVAL;
+
+	ext_win = &user->ext->win[index];
+	lut = &dc->windows[index].lut;
+
+	mutex_lock(&ext_win->lock);
+
+	if (ext_win->user != user) {
+		mutex_unlock(&ext_win->lock);
+		return -EACCES;
+	}
+
+	err = set_lut_channel(new_lut->r, lut->r, start, len) |
+	      set_lut_channel(new_lut->g, lut->g, start, len) |
+	      set_lut_channel(new_lut->b, lut->b, start, len);
+
+	if (err) {
+		mutex_unlock(&ext_win->lock);
+		return -EFAULT;
+	}
+
+	tegra_dc_update_lut(dc, index, start, len);
+
+	mutex_unlock(&ext_win->lock);
+
+	return 0;
+}
+
 static u32 tegra_dc_ext_get_vblank_syncpt(struct tegra_dc_ext_user *user)
 {
 	struct tegra_dc *dc = user->ext->dc;
@@ -626,6 +687,16 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return ret;
+	}
+
+	case TEGRA_DC_EXT_SET_LUT:
+	{
+		struct tegra_dc_ext_lut args;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_set_lut(user, &args);
 	}
 
 	default:

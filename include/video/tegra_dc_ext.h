@@ -164,6 +164,29 @@ struct tegra_dc_ext_csc {
 	__u16 kvb;	/* s.2.8 */
 };
 
+/*
+ * RGB Lookup table
+ *
+ * In true-color and YUV modes this is used for post-CSC RGB->RGB lookup, i.e.
+ * gamma-correction. In palette-indexed RGB modes, this table designates the
+ * mode's color palette.
+ *
+ * To convert 8-bit per channel RGB values to 16-bit, duplicate the 8 bits
+ * in low and high byte, e.g. r=r|(r<<8)
+ *
+ * Current Tegra DC hardware supports 8-bit per channel to 8-bit per channel,
+ * and each hardware window (overlay) uses its own lookup table.
+ *
+ */
+struct tegra_dc_ext_lut {
+	__u32  win_index; /* window index to set lut for */
+	__u32  start;     /* start index to update lut from */
+	__u32  len;       /* number of valid lut entries */
+	__u16* r;         /* array of size 16-bit red values */
+	__u16* g;         /* array of size 16-bit green values */
+	__u16* b;         /* array of size 16-bit blue values */
+};
+
 
 #define TEGRA_DC_EXT_FLAGS_ENABLED	1
 struct tegra_dc_ext_status {
@@ -205,6 +228,8 @@ struct tegra_dc_ext_status {
 #define TEGRA_DC_EXT_GET_VBLANK_SYNCPT \
 	_IOR('D', 0x09, __u32)
 
+#define TEGRA_DC_EXT_SET_LUT \
+	_IOR('D', 0x0A, struct tegra_dc_ext_lut)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

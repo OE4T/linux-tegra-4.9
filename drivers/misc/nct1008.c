@@ -80,6 +80,7 @@ struct nct1008_data {
 	struct i2c_client *client;
 	struct nct1008_platform_data plat_data;
 	struct mutex mutex;
+	struct dentry *dent;
 	u8 config;
 	s8 *limits;
 	u8 limits_sz;
@@ -381,7 +382,7 @@ static int nct1008_enable(struct i2c_client *client)
 	err = i2c_smbus_write_byte_data(client, CONFIG_WR,
 				  data->config & ~STANDBY_BIT);
 	if (err < 0)
-		pr_err("%s, line=%d, i2c write error=%d\n",
+		dev_err(&client->dev, "%s, line=%d, i2c write error=%d\n",
 		__func__, __LINE__, err);
 	return err;
 }
@@ -394,7 +395,7 @@ static int nct1008_disable(struct i2c_client *client)
 	err = i2c_smbus_write_byte_data(client, CONFIG_WR,
 				  data->config | STANDBY_BIT);
 	if (err < 0)
-		pr_err("%s, line=%d, i2c write error=%d\n",
+		dev_err(&client->dev, "%s, line=%d, i2c write error=%d\n",
 		__func__, __LINE__, err);
 	return err;
 }
@@ -412,15 +413,15 @@ static int nct1008_disable_alert(struct nct1008_data *data)
 	 */
 	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
 	if (val < 0) {
-		pr_err("%s, line=%d, disable alert failed ... "
+		dev_err(&client->dev, "%s, line=%d, disable alert failed ... "
 			"i2c read error=%d\n", __func__, __LINE__, val);
 		return val;
 	}
 	data->config = val | ALERT_BIT;
 	ret = i2c_smbus_write_byte_data(client, CONFIG_WR, val | ALERT_BIT);
 	if (ret)
-		pr_err("%s: fail to disable alert, i2c write error=%d#\n",
-			__func__, ret);
+		dev_err(&client->dev, "%s: fail to disable alert, i2c "
+			"write error=%d#\n", __func__, ret);
 
 	return ret;
 }
@@ -432,15 +433,16 @@ static int nct1008_enable_alert(struct nct1008_data *data)
 
 	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
 	if (val < 0) {
-		pr_err("%s, line=%d, enable alert failed ... "
-			"i2c read error=%d\n", __func__, __LINE__, val);
+		dev_err(&data->client->dev, "%s, line=%d, enable alert "
+			"failed ... i2c read error=%d\n", __func__,
+			__LINE__, val);
 		return val;
 	}
 	val &= ~(ALERT_BIT | THERM2_BIT);
 	ret = i2c_smbus_write_byte_data(data->client, CONFIG_WR, val);
 	if (ret) {
-		pr_err("%s: fail to enable alert, i2c write error=%d\n",
-			__func__, ret);
+		dev_err(&data->client->dev, "%s: fail to enable alert, i2c "
+			"write error=%d\n", __func__, ret);
 		return ret;
 	}
 
@@ -451,7 +453,8 @@ static bool throttle_enb;
 static void therm_throttle(struct nct1008_data *data, bool enable)
 {
 	if (!data->alarm_fn) {
-		pr_err("system too hot. no way to cool down!\n");
+		dev_err(&data->client->dev, "system too hot. no way to "
+			"cool down!\n");
 		return;
 	}
 
@@ -481,14 +484,15 @@ static void nct1008_work_func(struct work_struct *work)
 
 	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 	if (intr_status < 0) {
-		pr_err("%s, line=%d, i2c read error=%d\n",
+		dev_err(&data->client->dev, "%s, line=%d, i2c read error=%d\n",
 			__func__, __LINE__, intr_status);
 		return;
 	}
 
 	err = nct1008_get_temp(&data->client->dev, &temperature);
 	if (err) {
-		pr_err("%s: get temp fail(%d)", __func__, err);
+		dev_err(&data->client->dev, "%s: get temp fail(%d)", __func__,
+			err);
 		return;
 	}
 
@@ -498,7 +502,7 @@ static void nct1008_work_func(struct work_struct *work)
 
 	err = nct1008_disable_alert(data);
 	if (err) {
-		pr_err("%s: disable alert fail(error=%d)\n",
+		dev_err(&data->client->dev, "%s: disable alert fail(error=%d)\n",
 			__func__, err);
 		return;
 	}
@@ -573,7 +577,8 @@ out:
 	nct1008_enable_alert(data);
 
 	if (err)
-		pr_err("%s: fail(error=%d)\n", __func__, err);
+		dev_err(&data->client->dev, "%s: fail(error=%d)\n", __func__,
+			err);
 	else
 		pr_debug("%s: done\n", __func__);
 }
@@ -834,8 +839,11 @@ static int nct1008_probe(struct i2c_client *client,
 	dev_info(&client->dev, "%s: initialized\n", __func__);
 
 	err = nct1008_enable(client);		/* sensor is running */
-	if (err < 0)
+	if (err < 0) {
+		dev_err(&client->dev, "Error: %s, line=%d, error=%d\n",
+			__func__, __LINE__, err);
 		goto error;
+	}
 
 	/* switch to extended mode reports correct temperature
 	 * from next measurement cycle */
@@ -846,7 +854,8 @@ static int nct1008_probe(struct i2c_client *client,
 	}
 	err = nct1008_get_temp(&data->client->dev, &temperature);
 	if (err) {
-		pr_err("%s: get temp fail(%d)", __func__, err);
+		dev_err(&data->client->dev, "%s: get temp fail(%d)",
+			__func__, err);
 		return 0;	/*do not fail init on the 1st read */
 	}
 
@@ -884,10 +893,7 @@ static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 
 	disable_irq(client->irq);
 	err = nct1008_disable(client);
-	if (err < 0)
-		return err;
-
-	return 0;
+	return err;
 }
 
 static int nct1008_resume(struct i2c_client *client)
@@ -896,8 +902,11 @@ static int nct1008_resume(struct i2c_client *client)
 	int err;
 
 	err = nct1008_enable(client);
-	if (err < 0)
+	if (err < 0) {
+		dev_err(&client->dev, "Error: %s, error=%d\n",
+			__func__, err);
 		return err;
+	}
 	enable_irq(client->irq);
 	schedule_work(&data->work);
 

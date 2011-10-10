@@ -247,6 +247,46 @@ static bool nvsd_update_enable(struct tegra_dc_sd_settings *settings,
 	return false;
 }
 
+static bool nvsd_update_agg(struct tegra_dc_sd_settings *settings, int agg_val)
+{
+	int i;
+	int pri_lvl = SD_AGG_PRI_LVL(agg_val);
+	int agg_lvl = SD_GET_AGG(agg_val);
+	struct tegra_dc_sd_agg_priorities *sd_agg_priorities =
+		&settings->agg_priorities;
+
+	if (agg_lvl > 5 || agg_lvl < 0)
+		return false;
+	else if (agg_lvl == 0 && pri_lvl == 0)
+		return false;
+
+	if (pri_lvl >= 0 && pri_lvl < 4)
+		sd_agg_priorities->agg[pri_lvl] = agg_lvl;
+
+	for (i = NUM_AGG_PRI_LVLS - 1; i >= 0; i--) {
+		if (sd_agg_priorities->agg[i])
+			break;
+	}
+
+	sd_agg_priorities->pri_lvl = i;
+	pri_lvl = i;
+	agg_lvl = sd_agg_priorities->agg[i];
+
+	if (settings->phase_in && settings->enable &&
+		settings->aggressiveness != agg_lvl) {
+
+		settings->final_agg = agg_lvl;
+		settings->cmd |= AGG_CHG;
+		settings->cur_agg_step = 0;
+		return true;
+	} else if (settings->aggressiveness != agg_lvl) {
+		settings->aggressiveness = agg_lvl;
+		return true;
+	}
+
+	return false;
+}
+
 /* Functional initialization */
 void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 {
@@ -270,6 +310,10 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	}
 
 	dev_dbg(&dc->ndev->dev, "NVSD Init:\n");
+
+	/* init agg_priorities */
+	if (!settings->agg_priorities.agg[0])
+		settings->agg_priorities.agg[0] = settings->aggressiveness;
 
 	/* WAR: Settings will not be valid until the next flip.
 	 * Thus, set manual K to either HW's current value (if
@@ -643,20 +687,14 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				nvsd_check_and_update(0, 1, enable);
 			}
 		} else if (IS_NVSD_ATTR(aggressiveness)) {
-			if (sd_settings->phase_in && sd_settings->enable) {
-				err = strict_strtol(buf, 10, &result);
-				if (err)
-					return err;
+			err = strict_strtol(buf, 10, &result);
+			if (err)
+				return err;
 
-				if (result > 0 && result <= 5 &&
-					result != sd_settings->aggressiveness) {
+			if (nvsd_update_agg(sd_settings, result)
+					&& !sd_settings->phase_in)
+				settings_updated = true;
 
-					sd_settings->cmd |= AGG_CHG;
-					sd_settings->final_agg = result;
-					sd_settings->cur_agg_step = 0;
-				}
-			} else
-				nvsd_check_and_update(1, 5, aggressiveness);
 		} else if (IS_NVSD_ATTR(phase_in)) {
 			nvsd_check_and_update(0, 1, phase_in);
 		} else if (IS_NVSD_ATTR(bin_width)) {

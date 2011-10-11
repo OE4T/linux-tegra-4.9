@@ -55,6 +55,8 @@
 #define TEGRA_DC_EXT_BLEND_PREMULT	1
 #define TEGRA_DC_EXT_BLEND_COVERAGE	2
 
+#define TEGRA_DC_EXT_FLIP_FLAG_TILED	(1 << 2)
+
 struct tegra_dc_ext_flip_windowattr {
 	__s32	index;
 	__u32	buff_id;
@@ -82,11 +84,12 @@ struct tegra_dc_ext_flip_windowattr {
 	struct timespec timestamp;
 	__u32	pre_syncpt_id;
 	__u32	pre_syncpt_val;
-	/* These are optional; if zero, U and V are taken from buff_id */
+	/* These two are optional; if zero, U and V are taken from buff_id */
 	__u32	buff_id_u;
 	__u32	buff_id_v;
+	__u32	flags;
 	/* Leave some wiggle room for future expansion */
-	__u32   pad[6];
+	__u32   pad[5];
 };
 
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3

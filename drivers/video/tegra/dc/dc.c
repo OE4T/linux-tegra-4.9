@@ -1226,15 +1226,15 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 
+	tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT, DC_CMD_INT_STATUS);
 	if (!no_vsync) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 		val |= (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 	} else {
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 		val &= ~(FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
-
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 	}
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
@@ -1971,12 +1971,12 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	if (!dc->underflow_mask) {
 		/* If we have no underflow to check, go ahead
 		   and disable the interrupt */
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 			val &= ~FRAME_END_INT;
 		else
 			val &= ~V_BLANK_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 	}
 
 	/* Clear the underflow mask now that we've checked it. */
@@ -2000,22 +2000,18 @@ static void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	}
 
 	if (!dirty) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 			val &= ~V_BLANK_INT;
 		else
 			val &= ~FRAME_END_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 	}
 
 	if (completed) {
 		if (!dirty) {
 			/* With the last completed window, go ahead
 			   and enable the vblank interrupt for nvsd. */
-			val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-			val |= V_BLANK_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-
 			val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 			val |= V_BLANK_INT;
 			tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
@@ -2094,9 +2090,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	underflow_mask = status & ALL_UF_INT;
 
 	if (underflow_mask) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 		val |= V_BLANK_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 		dc->underflow_mask |= underflow_mask;
 		dc->stats.underflows++;
 		if (status & WIN_A_UF_INT)
@@ -2264,10 +2260,10 @@ static void tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
 	tegra_dc_writel(dc, 0x00010101, DC_DISP_MEM_HIGH_PRIORITY_TIMER);
 
-	tegra_dc_writel(dc, (FRAME_END_INT |
-			     V_BLANK_INT |
-			     ALL_UF_INT), DC_CMD_INT_MASK);
-	tegra_dc_writel(dc, ALL_UF_INT, DC_CMD_INT_ENABLE);
+	/* enable interrupts for vblank, frame_end and underflows */
+	tegra_dc_writel(dc, (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT),
+		DC_CMD_INT_ENABLE);
+	tegra_dc_writel(dc, ALL_UF_INT, DC_CMD_INT_MASK);
 
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
 
@@ -2418,6 +2414,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	unsigned i;
 
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+	tegra_dc_writel(dc, 0, DC_CMD_INT_ENABLE);
 	disable_irq(dc->irq);
 
 	if (dc->out_ops && dc->out_ops->disable)

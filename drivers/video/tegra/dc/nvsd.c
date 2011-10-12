@@ -44,6 +44,7 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 NVSD_ATTR(enable);
 NVSD_ATTR(aggressiveness);
 NVSD_ATTR(phase_in);
+NVSD_ATTR(phase_in_video);
 NVSD_ATTR(bin_width);
 NVSD_ATTR(hw_update_delay);
 NVSD_ATTR(use_vid_luma);
@@ -61,6 +62,7 @@ static struct attribute *nvsd_attrs[] = {
 	NVSD_ATTRS_ENTRY(enable),
 	NVSD_ATTRS_ENTRY(aggressiveness),
 	NVSD_ATTRS_ENTRY(phase_in),
+	NVSD_ATTRS_ENTRY(phase_in_video),
 	NVSD_ATTRS_ENTRY(bin_width),
 	NVSD_ATTRS_ENTRY(hw_update_delay),
 	NVSD_ATTRS_ENTRY(use_vid_luma),
@@ -442,6 +444,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 	u32 val = 0;
 	int cur_sd_brightness;
 	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
+	int new_k, step;
 
 	if (sd_brightness) {
 		if (atomic_read(&man_k_until_blank)) {
@@ -463,8 +466,29 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		/* read brightness value */
 		val = tegra_dc_readl(dc, DC_DISP_SD_BL_CONTROL);
 		val = SD_BLC_BRIGHTNESS(val);
+		new_k = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
+		new_k = SD_HW_K_R(new_k);
 
-		if (val != (u32)cur_sd_brightness) {
+		if (settings->phase_in_video) {
+			step = settings->phase_vid_step;
+			/* check if pixel modification value has changed */
+			if (new_k != settings->prev_k) {
+				/* Compute how much to shift brightness by */
+				step = ((int)val - cur_sd_brightness)*8/256;
+				if (step <= 0)
+					step = step ? 1 : ~step + 1;
+				settings->prev_k = new_k;
+			} else if (cur_sd_brightness != val) {
+				/* Phase in Brightness */
+				if (step--)
+					val > cur_sd_brightness ?
+						(cur_sd_brightness++)
+						: (cur_sd_brightness--);
+				atomic_set(sd_brightness, cur_sd_brightness);
+				return true;
+			}
+			settings->phase_vid_step = step;
+		} else if (val != (u32)cur_sd_brightness) {
 			/* set brightness value and note the update */
 			atomic_set(sd_brightness, (int)val);
 			return true;
@@ -542,6 +566,9 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 		else if (IS_NVSD_ATTR(phase_in))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->phase_in);
+		else if (IS_NVSD_ATTR(phase_in_video))
+			res = snprintf(buf, PAGE_SIZE, "%d\n",
+				sd_settings->phase_in_video);
 		else if (IS_NVSD_ATTR(bin_width))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->bin_width);
@@ -697,6 +724,17 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 
 		} else if (IS_NVSD_ATTR(phase_in)) {
 			nvsd_check_and_update(0, 1, phase_in);
+		} else if (IS_NVSD_ATTR(phase_in_video)) {
+			nvsd_check_and_update(0, 1, phase_in_video);
+			if (sd_settings->phase_in_video) {
+				/* Phase in adjustments to pixels */
+				sd_settings->blp.time_constant = 4;
+				sd_settings->blp.step = 0;
+			} else {
+				/* Instant Adjustments to pixels */
+				sd_settings->blp.time_constant = 1024;
+				sd_settings->blp.step = 255;
+			}
 		} else if (IS_NVSD_ATTR(bin_width)) {
 			nvsd_check_and_update(0, 8, bin_width);
 		} else if (IS_NVSD_ATTR(hw_update_delay)) {

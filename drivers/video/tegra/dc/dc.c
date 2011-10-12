@@ -977,7 +977,7 @@ static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *w = &dc->windows[i];
-		if (w->bandwidth != w->new_bandwidth)
+		if (w->bandwidth != w->new_bandwidth && w->new_bandwidth != 0)
 			tegra_dc_set_latency_allowance(dc, w);
 	}
 }

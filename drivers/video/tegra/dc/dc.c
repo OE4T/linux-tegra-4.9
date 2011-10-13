@@ -668,27 +668,46 @@ EXPORT_SYMBOL(tegra_dc_update_csc);
 static void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut)
 {
 	int i;
-	for(i=0; i<256; i++) {
+	for (i = 0; i < 256; i++)
 		lut->r[i] = lut->g[i] = lut->b[i] = (u8)i;
-	}
 }
 
-static void tegra_dc_set_lut(struct tegra_dc *dc,
-			     struct tegra_dc_lut *lut,
-			     int start,
-			     int len)
+static int tegra_dc_lut_is_defaults(struct tegra_dc_lut *lut)
 {
-	int i;
-	for (i = start, len += start; i < len; i++) {
+	unsigned int i;
+	for (i = 0; i < 256; i++)
+		if ((lut->r[i] != i) || (lut->g[i] != i) || (lut->b[i] != i))
+			return 0;
+	return 1;
+}
+
+static void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win* win)
+{
+	unsigned int i;
+	unsigned long val;
+	struct tegra_dc_lut *lut = &win->lut;
+
+	for (i = 0; i < 256; i++) {
 		u32 rgb = ((u32)lut->r[i]) |
 			  ((u32)lut->g[i]<<8) |
 			  ((u32)lut->b[i]<<16);
 		tegra_dc_writel(dc, rgb, DC_WIN_COLOR_PALETTE(i));
 	}
+
+	val = tegra_dc_readl(dc, DC_WIN_WIN_OPTIONS);
+
+	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
+		val |= CP_ENABLE;
+	else
+		val &= ~CP_ENABLE;
+
+	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
 }
 
-int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int start, int len)
+int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int fboveride)
 {
+	struct tegra_dc_win *win = &dc->windows[win_idx];
+
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
@@ -696,10 +715,20 @@ int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int start, int len)
 		return -EFAULT;
 	}
 
+	if (!tegra_dc_lut_is_defaults(&win->lut))
+		win->ppflags |= TEGRA_WIN_PPFLAG_CP_ENABLE;
+	else
+		win->ppflags &= ~TEGRA_WIN_PPFLAG_CP_ENABLE;
+
+	if (fboveride)
+		win->ppflags |= TEGRA_WIN_PPFLAG_CP_FBOVERRIDE;
+	else
+		win->ppflags &= ~TEGRA_WIN_PPFLAG_CP_FBOVERRIDE;
+
 	tegra_dc_writel(dc, WINDOW_A_SELECT << win_idx,
 			DC_CMD_DISPLAY_WINDOW_HEADER);
 
-	tegra_dc_set_lut(dc, &dc->windows[win_idx].lut, start, len);
+	tegra_dc_set_lut(dc, win);
 
 	mutex_unlock(&dc->lock);
 
@@ -1117,11 +1146,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
 					DC_WIN_BUFFER_ADDR_MODE);
 
-		val = WIN_ENABLE | CP_ENABLE;
+		val = WIN_ENABLE;
 		if (yuvp)
 			val |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			val |= COLOR_EXPAND;
+
+		if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
+			val |= CP_ENABLE;
 
 		if (filter_h)
 			val |= H_FILTER_ENABLE;
@@ -2193,12 +2225,13 @@ static void tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_set_color_control(dc);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_win *win = &dc->windows[i];
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
-		tegra_dc_init_csc_defaults(&dc->windows[i].csc);
-		tegra_dc_set_csc(dc, &dc->windows[i].csc);
-		tegra_dc_init_lut_defaults(&dc->windows[i].lut);
-		tegra_dc_set_lut(dc, &dc->windows[i].lut, 0, 256);
+		tegra_dc_init_csc_defaults(&win->csc);
+		tegra_dc_set_csc(dc, &win->csc);
+		tegra_dc_init_lut_defaults(&win->lut);
+		tegra_dc_set_lut(dc, win);
 		tegra_dc_set_scaling_filter(dc);
 	}
 

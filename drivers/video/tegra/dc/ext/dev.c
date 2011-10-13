@@ -529,11 +529,16 @@ static int set_lut_channel(u16 *channel_from_user,
 	int i;
 	u16 lut16bpp[256];
 
-	if (copy_from_user(lut16bpp, channel_from_user, len<<1))
-		return 1;
+	if (channel_from_user) {
+		if (copy_from_user(lut16bpp, channel_from_user, len<<1))
+			return 1;
 
-	for (i=0; i<len; i++)
-		channel_to[start+i] = lut16bpp[i]>>8;
+		for (i = 0; i < len; i++)
+			channel_to[start+i] = lut16bpp[i]>>8;
+	} else {
+		for (i = 0; i < len; i++)
+			channel_to[start+i] = start+i;
+	}
 
 	return 0;
 }
@@ -575,7 +580,8 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 		return -EFAULT;
 	}
 
-	tegra_dc_update_lut(dc, index, start, len);
+	tegra_dc_update_lut(dc, index,
+			new_lut->flags & TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE);
 
 	mutex_unlock(&ext_win->lock);
 

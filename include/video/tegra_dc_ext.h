@@ -180,13 +180,16 @@ struct tegra_dc_ext_csc {
  */
 struct tegra_dc_ext_lut {
 	__u32  win_index; /* window index to set lut for */
+	__u32  flags;     /* Flag bitmask, see TEGRA_DC_EXT_LUT_FLAGS_* */
 	__u32  start;     /* start index to update lut from */
 	__u32  len;       /* number of valid lut entries */
-	__u16* r;         /* array of size 16-bit red values */
-	__u16* g;         /* array of size 16-bit green values */
-	__u16* b;         /* array of size 16-bit blue values */
+	__u16 *r;         /* array of 16-bit red values, 0 to reset */
+	__u16 *g;         /* array of 16-bit green values, 0 to reset */
+	__u16 *b;         /* array of 16-bit blue values, 0 to reset */
 };
 
+/* tegra_dc_ext_lut.flags - override fb device palette. Default is multiply. */
+#define TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE 0x01
 
 #define TEGRA_DC_EXT_FLAGS_ENABLED	1
 struct tegra_dc_ext_status {
@@ -229,7 +232,7 @@ struct tegra_dc_ext_status {
 	_IOR('D', 0x09, __u32)
 
 #define TEGRA_DC_EXT_SET_LUT \
-	_IOR('D', 0x0A, struct tegra_dc_ext_lut)
+	_IOW('D', 0x0A, struct tegra_dc_ext_lut)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

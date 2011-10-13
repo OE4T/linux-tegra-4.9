@@ -29,6 +29,8 @@
 
 #define MAX_ZONES	16
 
+struct nct1008_data;
+
 struct nct1008_platform_data {
 	bool supported_hwrev;
 	bool ext_range;
@@ -41,6 +43,38 @@ struct nct1008_platform_data {
 	s8 thermal_zones[MAX_ZONES];
 	u8 thermal_zones_sz;
 	void (*alarm_fn)(bool raised);
+	void (*probe_callback)(struct nct1008_data *);
 };
 
+struct nct1008_data {
+	struct work_struct work;
+	struct i2c_client *client;
+	struct nct1008_platform_data plat_data;
+	struct mutex mutex;
+	struct dentry *dent;
+	u8 config;
+	s8 *limits;
+	u8 limits_sz;
+	void (*alarm_fn)(bool raised);
+	struct regulator *nct_reg;
+#ifdef CONFIG_TEGRA_THERMAL_SYSFS
+	struct thermal_zone_device *thz;
+#endif
+	long current_lo_limit;
+	long current_hi_limit;
+
+	long shutdown_temp;
+	void (*alert_func)(void *);
+	void *alert_data;
+};
+
+int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp);
+int nct1008_thermal_set_limits(struct nct1008_data *data,
+				long lo_limit_milli,
+				long hi_limit_milli);
+int nct1008_thermal_set_alert(struct nct1008_data *data,
+				void (*alert_func)(void *),
+				void *alert_data);
+int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
+					long shutdown_temp);
 #endif /* _LINUX_NCT1008_H */

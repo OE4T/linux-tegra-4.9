@@ -2228,9 +2228,7 @@ static void tegra_dc_init(struct tegra_dc *dc)
 		struct tegra_dc_win *win = &dc->windows[i];
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
-		tegra_dc_init_csc_defaults(&win->csc);
 		tegra_dc_set_csc(dc, &win->csc);
-		tegra_dc_init_lut_defaults(&win->lut);
 		tegra_dc_set_lut(dc, win);
 		tegra_dc_set_scaling_filter(dc);
 	}
@@ -2621,8 +2619,11 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 
 	dc->n_windows = DC_N_WINDOWS;
 	for (i = 0; i < dc->n_windows; i++) {
-		dc->windows[i].idx = i;
-		dc->windows[i].dc = dc;
+		struct tegra_dc_win *win = &dc->windows[i];
+		win->idx = i;
+		win->dc = dc;
+		tegra_dc_init_csc_defaults(&win->csc);
+		tegra_dc_init_lut_defaults(&win->lut);
 	}
 
 	ret = tegra_dc_set(dc, ndev->id);

@@ -57,13 +57,9 @@ struct nct1008_data {
 	u8 limits_sz;
 	void (*alarm_fn)(bool raised);
 	struct regulator *nct_reg;
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-	struct thermal_zone_device *thz;
-#endif
 	long current_lo_limit;
 	long current_hi_limit;
 
-	long shutdown_temp;
 	void (*alert_func)(void *);
 	void *alert_data;
 };

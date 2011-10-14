@@ -22,7 +22,6 @@
 
 
 #include <linux/interrupt.h>
-#include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/slab.h>
@@ -32,7 +31,6 @@
 #include <linux/nct1008.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
-#include <linux/thermal.h>
 
 #define DRIVER_NAME "nct1008"
 
@@ -561,7 +559,7 @@ static int nct1008_disable_alert(struct nct1008_data *data)
 		return val;
 	}
 	data->config = val | ALERT_BIT;
-	ret = i2c_smbus_write_byte_data(client, CONFIG_WR, val | ALERT_BIT);
+	ret = i2c_smbus_write_byte_data(client, CONFIG_WR, data->config);
 	if (ret)
 		dev_err(&client->dev, "%s: fail to disable alert, i2c "
 			"write error=%d#\n", __func__, ret);
@@ -592,50 +590,11 @@ static int nct1008_enable_alert(struct nct1008_data *data)
 	return ret;
 }
 
-/* The thermal sysfs handles notifying the throttling
- * cooling device */
-#ifndef CONFIG_TEGRA_THERMAL_SYSFS
-static bool throttle_enb;
-static void therm_throttle(struct nct1008_data *data, bool enable)
-{
-	if (!data->alarm_fn) {
-		dev_err(&data->client->dev, "system too hot. no way to "
-			"cool down!\n");
-		return;
-	}
-
-	if (throttle_enb != enable) {
-		mutex_lock(&data->mutex);
-		data->alarm_fn(enable);
-		throttle_enb = enable;
-		mutex_unlock(&data->mutex);
-	}
-}
-#endif
-
-/* Thermal sysfs handles hysteresis */
-#ifndef CONFIG_TEGRA_THERMAL_SYSFS
-	#define ALERT_HYSTERESIS_THROTTLE	1
-#endif
-
-#define ALERT_HYSTERESIS_THROTTLE	1
-#define ALERT_HYSTERESIS_EDP	3
-static int edp_thermal_zone_val = -1;
-static int current_hi_limit = -1;
-static int current_lo_limit = -1;
-
 static void nct1008_work_func(struct work_struct *work)
 {
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
-	bool extended_range = data->plat_data.ext_range;
-	long temp_milli;
-	u8 value;
-	int err = 0, i;
-	int hysteresis;
-	int nentries = data->limits_sz;
-	int lo_limit = 0, hi_limit = 0;
-	long throttling_ext_limit_milli;
+	int err = 0;
 	int intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 
 	if (intr_status < 0) {
@@ -648,109 +607,20 @@ static void nct1008_work_func(struct work_struct *work)
 	if (!intr_status)
 		return;
 
-	err = nct1008_get_temp(&data->client->dev, &temp_milli);
-	if (err) {
-		dev_err(&data->client->dev, "%s: get temp fail(%d)", __func__,
-			err);
-		return;
-	}
-
-	err = nct1008_disable_alert(data);
-	if (err) {
-		dev_err(&data->client->dev, "%s: disable alert fail(error=%d)\n"
-			, __func__, err);
-		return;
-	}
-
-	hysteresis = ALERT_HYSTERESIS_EDP;
-
-/* Thermal sysfs handles hysteresis */
-#ifndef CONFIG_TEGRA_THERMAL_SYSFS
-	throttling_ext_limit_milli =
-		CELSIUS_TO_MILLICELSIUS(data->plat_data.throttling_ext_limit);
-
-	if (temp_milli >= throttling_ext_limit_milli) {
-		/* start throttling */
-		therm_throttle(data, true);
-		hysteresis = ALERT_HYSTERESIS_THROTTLE;
-	} else if (temp_milli <=
-			(throttling_ext_limit_milli -
-			ALERT_HYSTERESIS_THROTTLE)) {
-		/* switch off throttling */
-		therm_throttle(data, false);
-	}
-#endif
-
-	if (temp_milli < CELSIUS_TO_MILLICELSIUS(data->limits[0])) {
-		lo_limit = 0;
-		hi_limit = data->limits[0];
-	} else if (temp_milli >=
-			CELSIUS_TO_MILLICELSIUS(data->limits[nentries-1])) {
-		lo_limit = data->limits[nentries-1] - hysteresis;
-		hi_limit = data->plat_data.shutdown_ext_limit;
-	} else {
-		for (i = 0; (i + 1) < nentries; i++) {
-			if (temp_milli >=
-				CELSIUS_TO_MILLICELSIUS(data->limits[i]) &&
-			    temp_milli <
-				CELSIUS_TO_MILLICELSIUS(data->limits[i + 1])) {
-				lo_limit = data->limits[i] - hysteresis;
-				hi_limit = data->limits[i + 1];
-				break;
-			}
+	if (data->alert_func) {
+		err = nct1008_disable_alert(data);
+		if (err) {
+			dev_err(&data->client->dev,
+				"%s: disable alert fail(error=%d)\n",
+				__func__, err);
+			return;
 		}
+
+		data->alert_func(data->alert_data);
+
+		nct1008_enable_alert(data);
 	}
 
-	if (lo_limit == hi_limit) {
-		err = -ENODATA;
-		goto out;
-	}
-
-	if (current_lo_limit == lo_limit && current_hi_limit == hi_limit)
-		goto out;
-
-	if (current_lo_limit != lo_limit) {
-		value = temperature_to_value(extended_range, lo_limit);
-		pr_debug("%s: %d\n", __func__, value);
-		err = i2c_smbus_write_byte_data(data->client,
-			EXT_TEMP_LO_LIMIT_HI_BYTE_WR, value);
-		if (err)
-			goto out;
-
-		current_lo_limit = lo_limit;
-	}
-
-	if (current_hi_limit != hi_limit) {
-		value = temperature_to_value(extended_range, hi_limit);
-		pr_debug("%s: %d\n", __func__, value);
-		err = i2c_smbus_write_byte_data(data->client,
-			EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
-		if (err)
-			goto out;
-
-		current_hi_limit = hi_limit;
-	}
-
-	/* inform edp governor */
-	if (edp_thermal_zone_val != temp_milli)
-		/*
-		 * FIXME: Move this direct tegra_ function call to be called
-		 * via a pointer in 'struct nct1008_data' (like 'alarm_fn')
-		 */
-		tegra_edp_update_thermal_zone(
-			MILLICELSIUS_TO_CELSIUS(temp_milli));
-
-	edp_thermal_zone_val = temp_milli;
-
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-	if (data->thz) {
-		if (!data->thz->passive)
-			thermal_zone_device_update(data->thz);
-	}
-#endif
-
-out:
-	nct1008_enable_alert(data);
 
 	if (err)
 		dev_err(&data->client->dev, "%s: fail(error=%d)\n", __func__,
@@ -803,7 +673,6 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	s8 temp;
 	u8 temp2;
 	int err;
-	int hi_limit;
 
 	if (!pdata || !pdata->supported_hwrev)
 		return -ENODEV;
@@ -815,15 +684,13 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 		goto error;
 
 	/* External temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range,
-			pdata->shutdown_ext_limit);
+	value = temperature_to_value(pdata->ext_range, NCT1008_MAX_TEMP);
 	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range,
-			pdata->shutdown_local_limit);
+	value = temperature_to_value(pdata->ext_range, NCT1008_MAX_TEMP);
 	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
@@ -831,10 +698,7 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	/* set extended range mode if needed */
 	if (pdata->ext_range)
 		data->config |= EXTENDED_RANGE_BIT;
-	if (pdata->thermal_zones_sz)
-		data->config &= ~(THERM2_BIT | ALERT_BIT);
-	else
-		data->config |= (ALERT_BIT | THERM2_BIT);
+	data->config &= ~(THERM2_BIT | ALERT_BIT);
 
 	err = i2c_smbus_write_byte_data(client, CONFIG_WR, data->config);
 	if (err)
@@ -845,38 +709,24 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	if (err)
 		goto error;
 
-	if (pdata->thermal_zones_sz) {
-		data->limits = pdata->thermal_zones;
-		data->limits_sz = pdata->thermal_zones_sz;
+	/* Setup local hi and lo limits */
+	err = i2c_smbus_write_byte_data(client,
+		LOCAL_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
+	if (err)
+		goto error;
 
-		/* setup alarm */
-		hi_limit = pdata->thermal_zones[0];
+	err = i2c_smbus_write_byte_data(client,
+		LOCAL_TEMP_LO_LIMIT_WR, 0);
+	if (err)
+		goto error;
 
-		err = i2c_smbus_write_byte_data(client,
-			EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
-		if (err)
-			goto error;
-
-		err = i2c_smbus_write_byte_data(client,
-			LOCAL_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
-		if (err)
-			goto error;
-
-		err = i2c_smbus_write_byte_data(client,
-			LOCAL_TEMP_LO_LIMIT_WR, 0);
-		if (err)
-			goto error;
-	} else {
-		/*
-		 * External Temperature Throttling limit:
-		 *   Applies when 'Thermal Zones' are not specified.
-		 */
-		hi_limit = pdata->throttling_ext_limit;
-	}
-
-	value = temperature_to_value(pdata->ext_range, hi_limit);
+	/* Setup external hi and lo limits */
+	err = i2c_smbus_write_byte_data(client,
+		EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
+	if (err)
+		goto error;
 	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
-			value);
+			NCT1008_MAX_TEMP);
 	if (err)
 		goto error;
 
@@ -919,12 +769,6 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	if (err < 0)
 		goto error;
 
-	/* THERM hysteresis */
-	err = i2c_smbus_write_byte_data(client, THERM_HYSTERESIS_WR,
-			pdata->hysteresis);
-	if (err < 0)
-		goto error;
-
 	/* register sysfs hooks */
 	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
 	if (err < 0) {
@@ -932,10 +776,6 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 		goto error;
 	}
 
-	data->alarm_fn = pdata->alarm_fn;
-
-	data->current_lo_limit = -1;
-	data->current_hi_limit = -1;
 	return 0;
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
@@ -1027,85 +867,44 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 		data->current_hi_limit = hi_limit;
 	}
 
+	return 0;
 }
 
 int nct1008_thermal_set_alert(struct nct1008_data *data,
 				void (*alert_func)(void *),
 				void *alert_data)
 {
-	data->alert_func = alert_func;
 	data->alert_data = alert_data;
+	data->alert_func = alert_func;
 
 	return 0;
 }
 
 int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
-					long shutdown_temp)
+					long shutdown_temp_milli)
 {
-	data->shutdown_temp = shutdown_temp;
+	struct i2c_client *client = data->client;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	int err;
+	u8 value;
+	long shutdown_temp;
+
+	shutdown_temp = MILLICELSIUS_TO_CELSIUS(shutdown_temp_milli);
+
+	/* External temperature h/w shutdown limit */
+	value = temperature_to_value(pdata->ext_range, shutdown_temp);
+	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
+	if (err)
+		return err;
+
+	/* Local temperature h/w shutdown limit */
+	value = temperature_to_value(pdata->ext_range, shutdown_temp);
+	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
+	if (err)
+		return err;
 
 	return 0;
 }
-
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-
-static int nct1008_thermal_zone_bind(struct thermal_zone_device *thermal,
-				struct thermal_cooling_device *cdevice) {
-	/* Support only Thermal Throttling (1 trip) for now */
-	return thermal_zone_bind_cooling_device(thermal, 0, cdevice);
-}
-
-static int nct1008_thermal_zone_unbind(struct thermal_zone_device *thermal,
-				struct thermal_cooling_device *cdevice) {
-	/* Support only Thermal Throttling (1 trip) for now */
-	return thermal_zone_unbind_cooling_device(thermal, 0, cdevice);
-}
-
-static int nct1008_thermal_zone_get_temp(struct thermal_zone_device *thermal,
-						long *temp)
-{
-	struct nct1008_data *data = thermal->devdata;
-
-	return nct1008_get_temp(&data->client->dev, temp);
-}
-
-static int nct1008_thermal_zone_get_trip_type(
-			struct thermal_zone_device *thermal,
-			int trip,
-			enum thermal_trip_type *type) {
-
-	/* Support only Thermal Throttling (1 trip) for now */
-	if (trip != 0)
-		return -EINVAL;
-
-	*type = THERMAL_TRIP_PASSIVE;
-
-	return 0;
-}
-
-static int nct1008_thermal_zone_get_trip_temp(
-		struct thermal_zone_device *thermal,
-		int trip,
-		long *temp) {
-	struct nct1008_data *data = thermal->devdata;
-
-	/* Support only Thermal Throttling (1 trip) for now */
-	if (trip != 0)
-		return -EINVAL;
-
-	*temp = CELSIUS_TO_MILLICELSIUS(data->plat_data.throttling_ext_limit);
-
-	return 0;
-}
-
-static struct thermal_zone_device_ops nct1008_thermal_zone_ops = {
-	.bind = nct1008_thermal_zone_bind,
-	.unbind = nct1008_thermal_zone_unbind,
-	.get_temp = nct1008_thermal_zone_get_temp,
-	.get_trip_type = nct1008_thermal_zone_get_trip_type,
-	.get_trip_temp = nct1008_thermal_zone_get_trip_temp,
-};
-#endif
 
 /*
  * Manufacturer(OnSemi) recommended sequence for
@@ -1128,11 +927,7 @@ static int nct1008_probe(struct i2c_client *client,
 {
 	struct nct1008_data *data;
 	int err;
-	long temp_milli;
 	unsigned int delay;
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-	struct thermal_zone_device *thz;
-#endif
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)
@@ -1142,7 +937,6 @@ static int nct1008_probe(struct i2c_client *client,
 	memcpy(&data->plat_data, client->dev.platform_data,
 		sizeof(struct nct1008_platform_data));
 	i2c_set_clientdata(client, data);
-	mutex_init(&data->mutex);
 
 	nct1008_power_control(data, true);
 	/* extended range recommended steps 1 through 4 taken care
@@ -1181,34 +975,8 @@ static int nct1008_probe(struct i2c_client *client,
 			data->plat_data.conv_rate);
 		msleep(delay); /* 63msec for default conv rate 0x8 */
 	}
-	err = nct1008_get_temp(&data->client->dev, &temp_milli);
-	if (err) {
-		dev_err(&data->client->dev, "%s: get temp fail(%d)",
-			__func__, err);
-		return 0;	/*do not fail init on the 1st read */
-	}
 
-	tegra_edp_update_thermal_zone(MILLICELSIUS_TO_CELSIUS(temp_milli));
-
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-	thz = thermal_zone_device_register("nct1008",
-					1, /* trips */
-					data,
-					&nct1008_thermal_zone_ops,
-					1, /* tc1 */
-					5, /* tc2 */
-					2000, /* passive delay */
-					0); /* polling delay */
-
-	if (IS_ERR(thz)) {
-		data->thz = NULL;
-		err = -ENODEV;
-		goto error;
-	}
-
-	data->thz = thz;
-#endif
-
+	/* notify callback that probe is done */
 	if (data->plat_data.probe_callback)
 		data->plat_data.probe_callback(data);
 
@@ -1229,13 +997,6 @@ static int nct1008_remove(struct i2c_client *client)
 
 	if (data->dent)
 		debugfs_remove(data->dent);
-
-#ifdef CONFIG_TEGRA_THERMAL_SYSFS
-	if (data->thz) {
-		thermal_zone_device_unregister(data->thz);
-		data->thz = NULL;
-	}
-#endif
 
 	free_irq(data->client->irq, data);
 	cancel_work_sync(&data->work);

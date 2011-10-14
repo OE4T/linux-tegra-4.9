@@ -128,6 +128,10 @@ enum {
 #define DSI_INIT_SEQ_DATA_1 0x1c
 #define DSI_INIT_SEQ_DATA_2 0x1d
 #define DSI_INIT_SEQ_DATA_3 0x1e
+#define DSI_INIT_SEQ_DATA_4 0x1f
+#define DSI_INIT_SEQ_DATA_5 0x20
+#define DSI_INIT_SEQ_DATA_6 0x21
+#define DSI_INIT_SEQ_DATA_7 0x22
 
 #define DSI_PKT_SEQ_0_LO 0x23
 #define   DSI_PKT_SEQ_0_LO_SEQ_0_FORCE_LP(x)	(((x) & 0x1) << 30)

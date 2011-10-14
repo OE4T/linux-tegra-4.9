@@ -185,6 +185,7 @@ enum {
 
 	CMD_EOT 	= 0x08,
 	CMD_NULL 	= 0x09,
+	CMD_SHORTW	= 0x15,
 	CMD_BLNK 	= 0x19,
 	CMD_LONGW	= 0x39,
 

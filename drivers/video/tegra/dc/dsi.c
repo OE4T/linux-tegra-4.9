@@ -248,6 +248,10 @@ const u32 init_reg[] = {
 	DSI_INIT_SEQ_DATA_1,
 	DSI_INIT_SEQ_DATA_2,
 	DSI_INIT_SEQ_DATA_3,
+	DSI_INIT_SEQ_DATA_4,
+	DSI_INIT_SEQ_DATA_5,
+	DSI_INIT_SEQ_DATA_6,
+	DSI_INIT_SEQ_DATA_7,
 	DSI_DCS_CMDS,
 	DSI_PKT_SEQ_0_LO,
 	DSI_PKT_SEQ_1_LO,
@@ -1410,6 +1414,90 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 	}
 	return err;
 }
+
+static u8 get_8bit_ecc(u32 header)
+{
+	char ecc_parity[24] = {
+		0x07, 0x0b, 0x0d, 0x0e, 0x13, 0x15, 0x16, 0x19,
+		0x1a, 0x1c, 0x23, 0x25, 0x26, 0x29, 0x2a, 0x2c,
+		0x31, 0x32, 0x34, 0x38, 0x1f, 0x2f, 0x37, 0x3b
+	};
+	u8 ecc_byte;
+	int i;
+
+	ecc_byte = 0;
+	for (i = 0; i < 24; i++)
+		ecc_byte ^= ((header >> i) & 1) ? ecc_parity[i] : 0x00;
+
+	return ecc_byte;
+}
+
+/* This function is written to send DCS short write (1 parameter) only.
+ * This means the cmd will contain only 1 byte of index and 1 byte of value.
+ * The data type ID is fixed at 0x15 and the ECC is calculated based on the
+ * data in pdata.
+ * The command will be sent by hardware every frame.
+ * pdata should contain both the index + value for each cmd.
+ * data_len will be the total number of bytes in pdata.
+ */
+int tegra_dsi_send_panel_short_cmd(struct tegra_dc *dc, u8 *pdata, u8 data_len)
+{
+	u8 ecc8bits = 0, data_len_orig = 0;
+	u32 val = 0, pkthdr = 0;
+	int err = 0, count = 0;
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	data_len_orig = data_len;
+	if (pdata != NULL) {
+		while (data_len) {
+			if (data_len >= 2) {
+				pkthdr = (CMD_SHORTW |
+					(((u16 *)pdata)[0]) << 8 | 0x00 << 24);
+				ecc8bits = get_8bit_ecc(pkthdr);
+				val = (pkthdr | (ecc8bits << 24));
+				data_len -= 2;
+				pdata += 2;
+				count++;
+			}
+			switch (count) {
+			case 1:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_0);
+				break;
+			case 2:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_1);
+				break;
+			case 3:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_2);
+				break;
+			case 4:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_3);
+				break;
+			case 5:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_4);
+				break;
+			case 6:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_5);
+				break;
+			case 7:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_6);
+				break;
+			case 8:
+				tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_DATA_7);
+				break;
+			default:
+				err = 1;
+				break;
+			}
+		}
+	}
+
+	val = DSI_INIT_SEQ_CONTROL_DSI_FRAME_INIT_BYTE_COUNT(data_len_orig * 2)
+		| DSI_INIT_SEQ_CONTROL_DSI_SEND_INIT_SEQUENCE(1);
+	tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_CONTROL);
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_dsi_send_panel_short_cmd);
 
 static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 {

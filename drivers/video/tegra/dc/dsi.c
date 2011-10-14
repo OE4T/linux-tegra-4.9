@@ -849,10 +849,6 @@ void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
 	/* enable frame end interrupt */
-	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
-	val |= FRAME_END_INT;
-	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
-
 	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 	val |= FRAME_END_INT;
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
@@ -863,9 +859,9 @@ void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 			msecs_to_jiffies(frame_period));
 
 	/* disable frame end interrupt */
-	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 	val &= ~FRAME_END_INT;
-	tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 
 	if (timeout == 0)
 		printk(KERN_WARNING "DC doesn't stop at end of frame.\n");

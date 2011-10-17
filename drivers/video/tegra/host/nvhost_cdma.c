@@ -267,7 +267,8 @@ dequeue_sync_queue_head(struct sync_queue *queue)
  *  - pb space: returns the number of free slots in the channel's push buffer
  * Must be called with the cdma lock held.
  */
-static unsigned int cdma_status(struct nvhost_cdma *cdma, enum cdma_event event)
+static unsigned int cdma_status_locked(struct nvhost_cdma *cdma,
+		enum cdma_event event)
 {
 	switch (event) {
 	case CDMA_EVENT_SYNC_QUEUE_EMPTY:
@@ -293,10 +294,11 @@ static unsigned int cdma_status(struct nvhost_cdma *cdma, enum cdma_event event)
  *     - Return the amount of space (> 0)
  * Must be called with the cdma lock held.
  */
-unsigned int nvhost_cdma_wait(struct nvhost_cdma *cdma, enum cdma_event event)
+unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
+		enum cdma_event event)
 {
 	for (;;) {
-		unsigned int space = cdma_status(cdma, event);
+		unsigned int space = cdma_status_locked(cdma, event);
 		if (space)
 			return space;
 
@@ -317,7 +319,7 @@ unsigned int nvhost_cdma_wait(struct nvhost_cdma *cdma, enum cdma_event event)
  * Start timer for a buffer submition that has completed yet.
  * Must be called with the cdma lock held.
  */
-void nvhost_cdma_start_timer(struct nvhost_cdma *cdma, u32 syncpt_id,
+static void cdma_start_timer_locked(struct nvhost_cdma *cdma, u32 syncpt_id,
 				u32 syncpt_val,
 				struct nvhost_userctx_timeout *timeout)
 {
@@ -340,7 +342,7 @@ void nvhost_cdma_start_timer(struct nvhost_cdma *cdma, u32 syncpt_id,
  * Stop timer when a buffer submition completes.
  * Must be called with the cdma lock held.
  */
-static void stop_cdma_timer(struct nvhost_cdma *cdma)
+static void stop_cdma_timer_locked(struct nvhost_cdma *cdma)
 {
 	cancel_delayed_work(&cdma->timeout.wq);
 	cdma->timeout.ctx_timeout = NULL;
@@ -356,7 +358,7 @@ static void stop_cdma_timer(struct nvhost_cdma *cdma)
  * called manually if necessary.
  * Must be called with the cdma lock held.
  */
-static void update_cdma(struct nvhost_cdma *cdma)
+static void update_cdma_locked(struct nvhost_cdma *cdma)
 {
 	bool signal = false;
 	struct nvhost_master *dev = cdma_to_dev(cdma);
@@ -396,7 +398,7 @@ static void update_cdma(struct nvhost_cdma *cdma)
 		if (!nvhost_syncpt_min_cmp(sp, syncpt_id, syncpt_val)) {
 			/* Start timer on next pending syncpt */
 			if (timeout) {
-				nvhost_cdma_start_timer(cdma, syncpt_id,
+				cdma_start_timer_locked(cdma, syncpt_id,
 					syncpt_val, timeout_ref);
 			}
 			break;
@@ -404,7 +406,7 @@ static void update_cdma(struct nvhost_cdma *cdma)
 
 		/* Cancel timeout, when a buffer completes */
 		if (cdma->timeout.ctx_timeout)
-			stop_cdma_timer(cdma);
+			stop_cdma_timer_locked(cdma);
 
 		nr_slots = sync[SQ_IDX_NUM_SLOTS];
 		nr_handles = sync[SQ_IDX_NUM_HANDLES];
@@ -713,7 +715,7 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 	BUG_ON(!cdma_op(cdma).kick);
 	if (slots_free == 0) {
 		cdma_op(cdma).kick(cdma);
-		slots_free = nvhost_cdma_wait(cdma,
+		slots_free = nvhost_cdma_wait_locked(cdma,
 				CDMA_EVENT_PUSH_BUFFER_SPACE);
 	}
 	cdma->slots_free = slots_free - 1;
@@ -746,7 +748,8 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 		 * Wait until there's enough room in the
 		 * sync queue to write something.
 		 */
-		count = nvhost_cdma_wait(cdma, CDMA_EVENT_SYNC_QUEUE_SPACE);
+		count = nvhost_cdma_wait_locked(cdma,
+				CDMA_EVENT_SYNC_QUEUE_SPACE);
 
 		/* Add reloc entries to sync queue (as many as will fit) */
 		if (count > nr_handles)
@@ -765,7 +768,7 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 
 	/* start timer on idle -> active transitions */
 	if (timeout->timeout && was_idle) {
-		nvhost_cdma_start_timer(cdma, sync_point_id, sync_point_value,
+		cdma_start_timer_locked(cdma, sync_point_id, sync_point_value,
 			timeout);
 	}
 
@@ -778,23 +781,42 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 void nvhost_cdma_update(struct nvhost_cdma *cdma)
 {
 	mutex_lock(&cdma->lock);
-	update_cdma(cdma);
+	update_cdma_locked(cdma);
 	mutex_unlock(&cdma->lock);
 }
 
 /**
- * Manually spin until all CDMA has finished. Used if an async update
- * cannot be scheduled for any reason.
+ * Wait for push buffer to be empty.
+ * @cdma pointer to channel cdma
+ * @timeout timeout in ms
+ * Returns -ETIME if timeout was reached, zero if push buffer is empty.
  */
-void nvhost_cdma_flush(struct nvhost_cdma *cdma)
+int nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout)
 {
-	mutex_lock(&cdma->lock);
-	while (sync_queue_head(&cdma->sync_queue)) {
-		update_cdma(cdma);
-		mutex_unlock(&cdma->lock);
-		schedule();
-		mutex_lock(&cdma->lock);
-	}
-	mutex_unlock(&cdma->lock);
-}
+	unsigned int space, err = 0;
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 
+	/*
+	 * Wait for at most timeout ms. Recalculate timeout at each iteration
+	 * to better keep within given timeout.
+	 */
+	while(!err && time_before(jiffies, end_jiffies)) {
+		int timeout_jiffies = end_jiffies - jiffies;
+
+		mutex_lock(&cdma->lock);
+		space = cdma_status_locked(cdma,
+				CDMA_EVENT_SYNC_QUEUE_EMPTY);
+		if (space) {
+			mutex_unlock(&cdma->lock);
+			return 0;
+		}
+
+		BUG_ON(cdma->event != CDMA_EVENT_NONE);
+		cdma->event = CDMA_EVENT_SYNC_QUEUE_EMPTY;
+
+		mutex_unlock(&cdma->lock);
+		err = down_timeout(&cdma->sem,
+				jiffies_to_msecs(timeout_jiffies));
+	}
+	return err;
+}

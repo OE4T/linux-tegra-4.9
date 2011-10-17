@@ -525,7 +525,7 @@ static void t20_cdma_stop(struct nvhost_cdma *cdma)
 
 	mutex_lock(&cdma->lock);
 	if (cdma->running) {
-		nvhost_cdma_wait(cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
+		nvhost_cdma_wait_locked(cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
 		writel(nvhost_channel_dmactrl(true, false, false),
 			chan_regs + HOST1X_CHANNEL_DMACTRL);
 		cdma->running = false;

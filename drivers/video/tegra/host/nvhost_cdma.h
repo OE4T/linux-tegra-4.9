@@ -144,13 +144,11 @@ void	nvhost_cdma_end(struct nvhost_cdma *cdma,
 		struct nvmap_handle **handles, unsigned int nr_handles,
 		struct nvhost_userctx_timeout *timeout);
 void	nvhost_cdma_update(struct nvhost_cdma *cdma);
-void	nvhost_cdma_flush(struct nvhost_cdma *cdma);
+int	nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout);
 void	nvhost_cdma_peek(struct nvhost_cdma *cdma,
 		u32 dmaget, int slot, u32 *out);
-unsigned int nvhost_cdma_wait(struct nvhost_cdma *cdma, enum cdma_event event);
-void nvhost_cdma_start_timer(struct nvhost_cdma *cdma, u32 syncpt_id,
-				u32 syncpt_val,
-				struct nvhost_userctx_timeout *timeout);
+unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
+		enum cdma_event event);
 void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		struct nvhost_syncpt *syncpt, struct device *dev);
 #endif

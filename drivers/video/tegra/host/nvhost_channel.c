@@ -28,6 +28,8 @@
 
 #include <linux/platform_device.h>
 
+#define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
+
 int nvhost_channel_submit(
 	struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
@@ -48,9 +50,12 @@ int nvhost_channel_submit(
 {
 	BUG_ON(!channel_op(channel).submit);
 
-	/* Low priority submits wait until sync queue is empty */
+	/* Low priority submits wait until sync queue is empty. Ignores result
+	 * from nvhost_cdma_flush, as we submit either when push buffer is
+	 * empty or when we reach the timeout. */
 	if (priority < NVHOST_PRIORITY_MEDIUM)
-		nvhost_cdma_wait(&channel->cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
+		(void)nvhost_cdma_flush(&channel->cdma,
+				NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT);
 
 	return channel_op(channel).submit(channel,
 			hwctx,

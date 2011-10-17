@@ -477,7 +477,7 @@ static long nvhost_channelctl(struct file *filp,
 				priv->timeout.has_timedout;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
-		priv->timeout.timeout =
+		priv->priority =
 			(u32)((struct nvhost_set_priority_args *)buf)->priority;
 		break;
 	default:

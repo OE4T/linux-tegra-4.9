@@ -154,15 +154,6 @@ struct nvhost_chip_support {
 				     unsigned int idx);
 	} cpuaccess;
 
-	struct {
-		int (*add_client)(struct nvhost_module *mod, void *priv);
-		void (*remove_client)(struct nvhost_module *mod, void *priv);
-		int (*get_rate)(struct nvhost_module *mod,
-				unsigned long *rate,
-				int index);
-		int (*set_rate)(struct nvhost_module *mod, void *priv,
-				unsigned long rate, int index);
-	} acm;
 };
 
 

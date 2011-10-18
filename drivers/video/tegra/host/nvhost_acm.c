@@ -36,6 +36,15 @@
 #define POWERGATE_DELAY 10
 #define MAX_DEVID_LENGTH 16
 
+DEFINE_MUTEX(client_list_lock);
+
+struct nvhost_module_client {
+	struct list_head node;
+	unsigned long rate[NVHOST_MODULE_MAX_CLOCKS];
+	void *priv;
+};
+
+
 void nvhost_module_reset(struct device *dev, struct nvhost_module *mod)
 {
 	dev_dbg(dev,
@@ -182,36 +191,103 @@ int nvhost_module_get_rate(struct nvhost_master *host,
 		struct nvhost_module *mod, unsigned long *rate,
 		int index)
 {
-	int ret = -EINVAL;
-	if (host_acm_op(host).get_rate)
-		ret = host_acm_op(host).get_rate(mod, rate, index);
-	return ret;
+	struct clk *c;
+
+	c = mod->clk[index];
+	if (IS_ERR_OR_NULL(c))
+		return -EINVAL;
+
+	/* Need to enable client to get correct rate */
+	nvhost_module_busy(mod);
+	*rate = clk_get_rate(c);
+	nvhost_module_idle(mod);
+	return 0;
+
+}
+
+static int nvhost_module_update_rate(struct nvhost_module *mod, int index)
+{
+	unsigned long rate = 0;
+	struct nvhost_module_client *m;
+
+	if (!mod->clk[index])
+		return -EINVAL;
+
+	list_for_each_entry(m, &mod->client_list, node) {
+		rate = max(m->rate[index], rate);
+	}
+	if (!rate)
+		rate = clk_round_rate(mod->clk[index],
+				mod->desc->clocks[index].default_rate);
+
+	return clk_set_rate(mod->clk[index], rate);
 }
 
 int nvhost_module_set_rate(struct nvhost_master *host,
 		struct nvhost_module *mod, void *priv,
 		unsigned long rate, int index)
 {
-	int ret = -EINVAL;
-	if (host_acm_op(host).set_rate)
-		ret = host_acm_op(host).set_rate(mod, priv, rate, index);
+	struct nvhost_module_client *m;
+	int ret;
+
+	mutex_lock(&client_list_lock);
+	list_for_each_entry(m, &mod->client_list, node) {
+		if (m->priv == priv) {
+			rate = clk_round_rate(mod->clk[index], rate);
+			m->rate[index] = rate;
+			break;
+		}
+	}
+	ret = nvhost_module_update_rate(mod, index);
+	mutex_unlock(&client_list_lock);
 	return ret;
+
 }
 
 int nvhost_module_add_client(struct nvhost_master *host,
 		struct nvhost_module *mod, void *priv)
 {
-	int ret = 0;
-	if (host_acm_op(host).add_client)
-		ret = host_acm_op(host).add_client(mod, priv);
-	return ret;
+	int i;
+	unsigned long rate;
+	struct nvhost_module_client *client;
+
+	client = kzalloc(sizeof(*client), GFP_KERNEL);
+	if (!client)
+		return -ENOMEM;
+
+	INIT_LIST_HEAD(&client->node);
+	client->priv = priv;
+
+	for (i = 0; i < mod->num_clks; i++) {
+		rate = clk_round_rate(mod->clk[i],
+				mod->desc->clocks[i].default_rate);
+		client->rate[i] = rate;
+	}
+	mutex_lock(&client_list_lock);
+	list_add_tail(&client->node, &mod->client_list);
+	mutex_unlock(&client_list_lock);
+	return 0;
 }
 
 void nvhost_module_remove_client(struct nvhost_master *host,
 		struct nvhost_module *mod, void *priv)
 {
-	if (host_acm_op(host).remove_client)
-		host_acm_op(host).remove_client(mod, priv);
+	int i;
+	struct nvhost_module_client *m;
+
+	mutex_lock(&client_list_lock);
+	list_for_each_entry(m, &mod->client_list, node) {
+		if (priv == m->priv) {
+			list_del(&m->node);
+			break;
+		}
+	}
+	if (m) {
+		kfree(m);
+		for (i = 0; i < mod->num_clks; i++)
+			nvhost_module_update_rate(mod, i);
+	}
+	mutex_unlock(&client_list_lock);
 }
 
 int nvhost_module_init(struct nvhost_module *mod, const char *name,

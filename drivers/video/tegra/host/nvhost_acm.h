@@ -94,7 +94,6 @@ int nvhost_module_set_rate(struct nvhost_master *host,
 		struct nvhost_module *mod, void *priv,
 		unsigned long rate, int index);
 
-#define host_acm_op(host) (host->op.acm)
 
 static inline bool nvhost_module_powered(struct nvhost_module *mod)
 {

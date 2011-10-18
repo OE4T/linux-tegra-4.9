@@ -46,8 +46,5 @@ int nvhost_init_t30_support(struct nvhost_master *host)
 	err = nvhost_init_t20_cpuaccess_support(host);
 	if (err)
 		return err;
-	err = nvhost_init_t30_acm(host);
-	if (err)
-		return err;
 	return 0;
 }

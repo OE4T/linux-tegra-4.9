@@ -270,7 +270,6 @@ static void tegra_se_key_read_disable(u8 slot_num)
 	val &= ~(1 << SE_KEY_READ_DISABLE_SHIFT);
 	se_writel(se_dev,
 		val, (SE_KEY_TABLE_ACCESS_REG_OFFSET + (slot_num * 4)));
-	return 0;
 }
 
 static void tegra_se_key_read_disable_all(void)

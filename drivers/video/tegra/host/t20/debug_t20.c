@@ -106,8 +106,8 @@ static int show_channel_command(struct output *o, u32 addr, u32 val, int *count)
  * TODO: This uses ioremap_xxx on memory which is deprecated.
  * Also, it won't work properly with SMMU.
  */
-static void show_channel_gather(struct output *o, u32 addr, u32 phys_addr,
-		phys_addr_t words, struct nvhost_cdma *cdma);
+static void show_channel_gather(struct output *o, u32 addr,
+		phys_addr_t phys_addr, u32 words, struct nvhost_cdma *cdma);
 
 static void show_channel_word(struct output *o, int *state, int *count,
 		u32 addr, u32 val, struct nvhost_cdma *cdma)

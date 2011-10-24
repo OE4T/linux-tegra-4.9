@@ -33,9 +33,7 @@
 static void t20_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
-	int min;
-	smp_rmb();
-	min = atomic_read(&sp->min_val[id]);
+	int min = nvhost_syncpt_read_min(sp, id);
 	writel(min, dev->sync_aperture + (HOST1X_SYNC_SYNCPT_0 + id * 4));
 }
 
@@ -70,13 +68,18 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 	u32 old, live;
 
 	do {
-		smp_rmb();
-		old = (u32)atomic_read(&sp->min_val[id]);
+		old = nvhost_syncpt_read_min(sp, id);
 		live = readl(sync_regs + (HOST1X_SYNC_SYNCPT_0 + id * 4));
 	} while ((u32)atomic_cmpxchg(&sp->min_val[id], old, live) != old);
 
-	BUG_ON(!nvhost_syncpt_check_max(sp, id, live));
-
+	if (!nvhost_syncpt_check_max(sp, id, live)) {
+		dev_err(&syncpt_to_dev(sp)->pdev->dev,
+				"%s failed: id=%u\n",
+				__func__,
+				id);
+		nvhost_debug_dump(syncpt_to_dev(sp));
+		BUG();
+	}
 	return live;
 }
 
@@ -88,7 +91,13 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	BUG_ON(!nvhost_module_powered(&dev->mod));
-	BUG_ON(!client_managed(id) && nvhost_syncpt_min_eq_max(sp, id));
+	if (!client_managed(id) && nvhost_syncpt_min_eq_max(sp, id)) {
+		dev_err(&syncpt_to_dev(sp)->pdev->dev,
+				"Syncpoint id %d\n",
+				id);
+		nvhost_debug_dump(syncpt_to_dev(sp));
+		BUG();
+	}
 	writel(BIT(id), dev->sync_aperture + HOST1X_SYNC_SYNCPT_CPU_INCR);
 	wmb();
 }
@@ -162,12 +171,20 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 
 
 static const char *s_syncpt_names[32] = {
-	"gfx_host", "", "", "", "", "", "", "", "", "", "avp_0",
-	"csi_vi_0", "csi_vi_1", "vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
+	"gfx_host",
+	"", "", "", "", "", "", "",
+	"disp0_a", "disp1_a", "avp_0",
+	"csi_vi_0", "csi_vi_1",
+	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
 	"2d_0", "2d_1",
-	"", "",
-	"3d", "mpe", "disp0", "disp1", "vblank0", "vblank1", "mpe_ebm_eof", "mpe_wr_safe",
-	"2d_tinyblt", "dsi"
+	"disp0_b", "disp1_b",
+	"3d",
+	"mpe",
+	"disp0_c", "disp1_c",
+	"vblank0", "vblank1",
+	"mpe_ebm_eof", "mpe_wr_safe",
+	"2d_tinyblt",
+	"dsi"
 };
 
 static const char *t20_syncpt_name(struct nvhost_syncpt *s, u32 id)

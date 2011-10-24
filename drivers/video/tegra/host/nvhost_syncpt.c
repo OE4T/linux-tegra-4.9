@@ -119,9 +119,11 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 
 	BUG_ON(!syncpt_op(sp).update_min);
 	if (!nvhost_syncpt_check_max(sp, id, thresh)) {
-		WARN(1, "wait %d (%s) for (%d) wouldn't be met (max %d)\n",
+		dev_warn(&syncpt_to_dev(sp)->pdev->dev,
+			"wait %d (%s) for (%d) wouldn't be met (max %d)\n",
 			id, syncpt_op(sp).name(sp, id), thresh,
 			nvhost_syncpt_read_max(sp, id));
+		nvhost_debug_dump(syncpt_to_dev(sp));
 		return -EINVAL;
 	}
 
@@ -185,8 +187,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			timeout -= check;
 		if (timeout) {
 			dev_warn(&syncpt_to_dev(sp)->pdev->dev,
-				"syncpoint id %d (%s) stuck waiting %d\n",
-				 id, syncpt_op(sp).name(sp, id), thresh);
+				"%s: syncpoint id %d (%s) stuck waiting %d, timeout=%d\n",
+				 current->comm, id, syncpt_op(sp).name(sp, id),
+				 thresh, timeout);
 			syncpt_op(sp).debug(sp);
 		}
 	}

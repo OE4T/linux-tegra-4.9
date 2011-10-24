@@ -50,15 +50,6 @@ int nvhost_syncpt_init(struct nvhost_syncpt *);
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define syncpt_op(sp) (syncpt_to_dev(sp)->op.syncpt)
 #define SYNCPT_CHECK_PERIOD (2*HZ)
-static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp, u32 id, u32 real)
-{
-	u32 max;
-	if (client_managed(id))
-		return true;
-	smp_rmb();
-	max = (u32)atomic_read(&sp->max_val[id]);
-	return ((s32)(max - real) >= 0);
-}
 
 
 /**
@@ -91,6 +82,16 @@ static inline u32 nvhost_syncpt_read_min(struct nvhost_syncpt *sp, u32 id)
 {
 	smp_rmb();
 	return (u32)atomic_read(&sp->min_val[id]);
+}
+
+static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp,
+		u32 id, u32 real)
+{
+	u32 max;
+	if (client_managed(id))
+		return true;
+	max = nvhost_syncpt_read_max(sp, id);
+	return (s32)(max - real) >= 0;
 }
 
 /**

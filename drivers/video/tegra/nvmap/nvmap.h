@@ -193,8 +193,10 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 		return pgprot_noncached(prot);
 	else if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
 		return pgprot_writecombine(prot);
+#ifndef CONFIG_ARM_LPAE /* !!!FIXME!!! BUG 892578 */
 	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
 		return pgprot_inner_writeback(prot);
+#endif
 	return prot;
 }
 

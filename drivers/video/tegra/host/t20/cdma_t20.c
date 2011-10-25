@@ -81,7 +81,7 @@ static int t20_push_buffer_init(struct push_buffer *pb)
 	}
 
 	/* memory for storing nvmap client and handles for each opcode pair */
-	pb->nvmap = kzalloc(PUSH_BUFFER_SIZE/2 *
+	pb->nvmap = kzalloc(NVHOST_GATHER_QUEUE_SIZE *
 				sizeof(struct nvmap_client_handle),
 			GFP_KERNEL);
 	if (!pb->nvmap)
@@ -131,11 +131,12 @@ static void t20_push_buffer_push_to(struct push_buffer *pb,
 {
 	u32 cur = pb->cur;
 	u32 *p = (u32 *)((u32)pb->mapped + cur);
+	u32 cur_nvmap = (cur/8) & (NVHOST_GATHER_QUEUE_SIZE - 1);
 	BUG_ON(cur == pb->fence);
 	*(p++) = op1;
 	*(p++) = op2;
-	pb->nvmap[cur/8].client = client;
-	pb->nvmap[cur/8].handle = handle;
+	pb->nvmap[cur_nvmap].client = client;
+	pb->nvmap[cur_nvmap].handle = handle;
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
 }
 
@@ -143,8 +144,21 @@ static void t20_push_buffer_push_to(struct push_buffer *pb,
  * Pop a number of two word slots from the push buffer
  * Caller must ensure push buffer is not empty
  */
-static void t20_push_buffer_pop_from(struct push_buffer *pb, unsigned int slots)
+static void t20_push_buffer_pop_from(struct push_buffer *pb,
+		unsigned int slots)
 {
+	/* Clear the nvmap references for old items from pb */
+	unsigned int i;
+	u32 fence_nvmap = pb->fence/8;
+	for(i = 0; i < slots; i++) {
+		int cur_fence_nvmap = (fence_nvmap+i)
+				& (NVHOST_GATHER_QUEUE_SIZE - 1);
+		struct nvmap_client_handle *h =
+				&pb->nvmap[cur_fence_nvmap];
+		h->client = NULL;
+		h->handle = NULL;
+	}
+	/* Advance the next write position */
 	pb->fence = (pb->fence + slots * 8) & (PUSH_BUFFER_SIZE - 1);
 }
 

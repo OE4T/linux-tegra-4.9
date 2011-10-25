@@ -48,8 +48,15 @@ static void show_channels(struct nvhost_master *m, struct output *o)
 	int i;
 	nvhost_debug_output(o, "---- channels ----\n");
 	for (i = 0; i < m->nb_channels; i++) {
-		m->op.debug.show_channel_cdma(m, o, i);
-		m->op.debug.show_channel_fifo(m, o, i);
+		struct nvhost_channel *ch = &m->channels[i];
+		mutex_lock(&ch->reflock);
+		if (ch->refcount) {
+			mutex_lock(&ch->cdma.lock);
+			m->op.debug.show_channel_cdma(m, o, i);
+			m->op.debug.show_channel_fifo(m, o, i);
+			mutex_unlock(&ch->cdma.lock);
+		}
+		mutex_unlock(&ch->reflock);
 	}
 }
 

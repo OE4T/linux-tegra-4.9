@@ -30,6 +30,8 @@
 
 #include "hardware_t20.h"
 
+#define NVHOST_DEBUG_MAX_PAGE_OFFSET 102400
+
 enum {
 	NVHOST_DBG_STATE_CMD = 0,
 	NVHOST_DBG_STATE_DATA = 1,
@@ -150,30 +152,53 @@ static void show_channel_gather(struct output *o, u32 addr,
 	struct push_buffer *pb = &cdma->push_buffer;
 	u32 cur = addr - pb->phys;
 	struct nvmap_client_handle *nvmap = &pb->nvmap[cur/8];
-
-	/* Create a fake nvmap_handle_ref - nvmap_mmap requires it
-	 * but accesses only the first field - nvmap_handle */
-	struct nvmap_handle_ref ref = {.handle = nvmap->handle};
-
-	u32 *map_addr, pin_addr, offset;
+	struct nvmap_handle_ref ref;
+	u32 *map_addr, offset;
+	phys_addr_t pin_addr;
 	int state, count, i;
 
-	map_addr = nvmap_mmap(&ref);
-	if (!map_addr)
+	if (!nvmap->handle || !nvmap->client
+			|| atomic_read(&nvmap->handle->ref) < 1) {
+		nvhost_debug_output(o, "[already deallocated]\n");
 		return;
+	}
+
+	/* Create a fake nvmap_handle_ref - nvmap requires it
+	 * but accesses only the first field - nvmap_handle */
+	ref.handle = nvmap->handle;
+
+	map_addr = nvmap_mmap(&ref);
+	if (!map_addr) {
+		nvhost_debug_output(o, "[could not mmap]\n");
+		return;
+	}
 
 	/* Get base address from nvmap */
 	pin_addr = nvmap_pin(nvmap->client, &ref);
+	if (IS_ERR_VALUE(pin_addr)) {
+		nvhost_debug_output(o, "[couldn't pin]\n");
+		nvmap_munmap(&ref, map_addr);
+		return;
+	}
+
 	offset = phys_addr - pin_addr;
+	/*
+	 * Sometimes we're given different hardware address to the same
+	 * page - in these cases the offset will get an invalid number and
+	 * we just have to bail out.
+	 */
+	if (offset > NVHOST_DEBUG_MAX_PAGE_OFFSET) {
+		nvhost_debug_output(o, "[address mismatch]\n");
+	} else {
+		/* GATHER buffer starts always with commands */
+		state = NVHOST_DBG_STATE_CMD;
+		for (i = 0; i < words; i++)
+			show_channel_word(o, &state, &count,
+					phys_addr + i * 4,
+					*(map_addr + offset/4 + i),
+					cdma);
+	}
 	nvmap_unpin(nvmap->client, &ref);
-
-	/* GATHER buffer starts always with commands */
-	state = NVHOST_DBG_STATE_CMD;
-	for (i = 0; i < words; i++)
-		show_channel_word(o, &state, &count,
-				phys_addr + i * 4,
-				*(map_addr + offset/4 + i), cdma);
-
 	nvmap_munmap(&ref, map_addr);
 }
 

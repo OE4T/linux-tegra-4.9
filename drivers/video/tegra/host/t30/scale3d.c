@@ -66,8 +66,13 @@ struct scale3d_info_rec {
 	ktime_t fast_frame;
 	ktime_t last_idle;
 	ktime_t last_short_term_idle;
-	ktime_t last_busy;
 	int is_idle;
+	ktime_t last_tweak;
+	ktime_t last_down;
+	int fast_up_count;
+	int slow_down_count;
+	int is_scaled;
+	int fast_responses;
 	unsigned long idle_total;
 	unsigned long idle_short_term_total;
 	unsigned long max_rate_3d;
@@ -76,9 +81,14 @@ struct scale3d_info_rec {
 	struct delayed_work idle_timer;
 	unsigned int scale;
 	unsigned int p_period;
+	unsigned int period;
 	unsigned int p_idle_min;
+	unsigned int idle_min;
 	unsigned int p_idle_max;
+	unsigned int idle_max;
 	unsigned int p_fast_response;
+	unsigned int fast_response;
+	unsigned int p_adjust;
 	unsigned int p_verbosity;
 	struct clk *clk_3d;
 	struct clk *clk_3d2;
@@ -171,23 +181,133 @@ static void reset_scaling_counters(ktime_t time)
 	scale3d.idle_short_term_total = 0;
 	scale3d.last_idle = time;
 	scale3d.last_short_term_idle = time;
-	scale3d.last_busy = time;
 	scale3d.idle_frame = time;
 }
+
+/* scaling_adjust - use scale up / scale down hint counts to adjust scaling
+ * parameters.
+ *
+ * hint_ratio is 100 x the ratio of scale up to scale down hints. Three cases
+ * are distinguished:
+ *
+ * hint_ratio < HINT_RATIO_MIN - set parameters to maximize scaling effect
+ * hint_ratio > HINT_RATIO_MAX - set parameters to minimize scaling effect
+ * hint_ratio between limits - scale parameters linearly
+ *
+ * the parameters adjusted are
+ *
+ * * fast_response time
+ * * period - time for scaling down estimate
+ * * idle_min percentage
+ * * idle_max percentage
+ */
+#define SCALING_ADJUST_PERIOD 1000000
+#define HINT_RATIO_MAX 400
+#define HINT_RATIO_MIN 100
+#define HINT_RATIO_MID ((HINT_RATIO_MAX + HINT_RATIO_MIN) / 2)
+#define HINT_RATIO_DIFF (HINT_RATIO_MAX - HINT_RATIO_MIN)
+
+static void scaling_adjust(ktime_t time)
+{
+	long hint_ratio;
+	long fast_response_adjustment;
+	long period_adjustment;
+	int idle_min_adjustment;
+	int idle_max_adjustment;
+	unsigned long dt;
+
+	dt = (unsigned long) ktime_us_delta(time, scale3d.last_tweak);
+	if (dt < SCALING_ADJUST_PERIOD)
+		return;
+
+	hint_ratio = (100 * (scale3d.fast_up_count + 1)) /
+				 (scale3d.slow_down_count + 1);
+
+	if (hint_ratio > HINT_RATIO_MAX) {
+		fast_response_adjustment = -((int) scale3d.p_fast_response) / 4;
+		period_adjustment = scale3d.p_period / 2;
+		idle_min_adjustment = scale3d.p_idle_min;
+		idle_max_adjustment = scale3d.p_idle_max;
+	} else if (hint_ratio < HINT_RATIO_MIN) {
+		fast_response_adjustment = scale3d.p_fast_response / 2;
+		period_adjustment = -((int) scale3d.p_period) / 4;
+		idle_min_adjustment = -((int) scale3d.p_idle_min) / 2;
+		idle_max_adjustment = -((int) scale3d.p_idle_max) / 2;
+	} else {
+		int diff;
+		int factor;
+
+		diff = HINT_RATIO_MID - hint_ratio;
+		if (diff < 0)
+			factor = -diff * 2;
+		else {
+			factor = -diff;
+			diff *= 2;
+		}
+
+		fast_response_adjustment = diff *
+			(scale3d.p_fast_response / (HINT_RATIO_DIFF * 2));
+		period_adjustment =
+			diff * (scale3d.p_period / HINT_RATIO_DIFF);
+		idle_min_adjustment =
+			(factor * (int) scale3d.p_idle_min) / HINT_RATIO_DIFF;
+		idle_max_adjustment =
+			(factor * (int) scale3d.p_idle_max) / HINT_RATIO_DIFF;
+	}
+
+	scale3d.fast_response =
+		scale3d.p_fast_response + fast_response_adjustment;
+	scale3d.period = scale3d.p_period + period_adjustment;
+		scale3d.idle_min = scale3d.p_idle_min + idle_min_adjustment;
+	scale3d.idle_max = scale3d.p_idle_max + idle_max_adjustment;
+
+	if (scale3d.p_verbosity >= 10)
+		pr_info("scale3d stats: + %d - %d (/ %d) f %u p %u min %u max %u\n",
+			scale3d.fast_up_count, scale3d.slow_down_count,
+			scale3d.fast_responses, scale3d.fast_response,
+			scale3d.period, scale3d.idle_min, scale3d.idle_max);
+
+	scale3d.fast_up_count = 0;
+	scale3d.slow_down_count = 0;
+	scale3d.fast_responses = 0;
+	scale3d.last_down = time;
+	scale3d.last_tweak = time;
+}
+
+#undef SCALING_ADJUST_PERIOD
+#undef HINT_RATIO_MAX
+#undef HINT_RATIO_MIN
+#undef HINT_RATIO_MID
+#undef HINT_RATIO_DIFF
 
 static void scaling_state_check(ktime_t time)
 {
 	unsigned long dt;
 
+	/* adjustment: set scale parameters (fast_response, period) +/- 25%
+	 * based on ratio of scale up to scale down hints
+     */
+	if (scale3d.p_adjust)
+		scaling_adjust(time);
+	else {
+		scale3d.fast_response = scale3d.p_fast_response;
+		scale3d.period = scale3d.p_period;
+		scale3d.idle_min = scale3d.p_idle_min;
+		scale3d.idle_max = scale3d.p_idle_max;
+	}
+
 	/* check for load peaks */
 	dt = (unsigned long) ktime_us_delta(time, scale3d.fast_frame);
-	if (dt > scale3d.p_fast_response) {
+	if (dt > scale3d.fast_response) {
 		unsigned long idleness =
 			(scale3d.idle_short_term_total * 100) / dt;
+		scale3d.fast_responses++;
 		scale3d.fast_frame = time;
 		/* if too busy, scale up */
-		if (idleness < scale3d.p_idle_min) {
-			if (scale3d.p_verbosity > 5)
+		if (idleness < scale3d.idle_min) {
+			scale3d.is_scaled = 0;
+			scale3d.fast_up_count++;
+			if (scale3d.p_verbosity >= 5)
 				pr_info("scale3d: %ld%% busy\n",
 					100 - idleness);
 
@@ -200,21 +320,24 @@ static void scaling_state_check(ktime_t time)
 	}
 
 	dt = (unsigned long) ktime_us_delta(time, scale3d.idle_frame);
-	if (dt > scale3d.p_period) {
+	if (dt > scale3d.period) {
 		unsigned long idleness = (scale3d.idle_total * 100) / dt;
 
-		if (scale3d.p_verbosity > 5)
+		if (scale3d.p_verbosity >= 5)
 			pr_info("scale3d: idle %lu, ~%lu%%\n",
 				scale3d.idle_total, idleness);
 
-		if (idleness > scale3d.p_idle_max) {
+		if (idleness > scale3d.idle_max) {
+			if (!scale3d.is_scaled) {
+				scale3d.is_scaled = 1;
+				scale3d.last_down = time;
+			}
+			scale3d.slow_down_count++;
 			/* if idle time is high, clock down */
-			scale3d.scale = 100 - (idleness - scale3d.p_idle_min);
+			scale3d.scale = 100 - (idleness - scale3d.idle_min);
 			schedule_work(&scale3d.work);
-		} else if (idleness < scale3d.p_idle_min) {
-			/* if idle time is low, clock up */
-			reset_3d_clocks();
 		}
+
 		reset_scaling_counters(time);
 	}
 }
@@ -246,7 +369,7 @@ void nvhost_scale3d_notify_idle(struct nvhost_module *mod)
 
 	/* delay idle_max % of 2 * fast_response time (given in microseconds) */
 	schedule_delayed_work(&scale3d.idle_timer,
-		msecs_to_jiffies((scale3d.p_idle_max * scale3d.p_fast_response)
+		msecs_to_jiffies((scale3d.idle_max * scale3d.fast_response)
 			/ 50000));
 
 done:
@@ -269,7 +392,6 @@ void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
 	t = ktime_get();
 
 	if (scale3d.is_idle) {
-		scale3d.last_busy = t;
 		idle = (unsigned long)
 			ktime_us_delta(t, scale3d.last_idle);
 		scale3d.idle_total += idle;
@@ -340,6 +462,7 @@ void nvhost_scale3d_debug_init(struct dentry *de)
 	CREATE_SCALE3D_FILE(idle_min);
 	CREATE_SCALE3D_FILE(idle_max);
 	CREATE_SCALE3D_FILE(period);
+	CREATE_SCALE3D_FILE(adjust);
 	CREATE_SCALE3D_FILE(verbosity);
 #undef CREATE_SCALE3D_FILE
 }
@@ -388,11 +511,12 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 
 		/* set scaling parameter defaults */
 		scale3d.enable = 0;
-		scale3d.p_period = 125000;
-		scale3d.p_idle_min = 10;
-		scale3d.p_idle_max = 15;
-		scale3d.p_fast_response = 6000;
+		scale3d.period = scale3d.p_period = 100000;
+		scale3d.idle_min = scale3d.p_idle_min = 10;
+		scale3d.idle_max = scale3d.p_idle_max = 15;
+		scale3d.fast_response = scale3d.p_fast_response = 7000;
 		scale3d.p_verbosity = 0;
+		scale3d.p_adjust = 1;
 
 		error = device_create_file(d, &dev_attr_enable_3d_scaling);
 		if (error)

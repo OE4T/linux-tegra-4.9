@@ -350,7 +350,7 @@ const struct tegra_hdmi_audio_config tegra_hdmi_audio_88_2k[] = {
 	{25200000,	11760,	26250,	25000},
 	{27000000,	11760,	28125,	25000},
 	{74250000,	9408,	61875,	20000},
-	{148500000,	9408,	123750,20000},
+	{148500000,	9408,	123750, 20000},
 	{0,		0,	0},
 };
 
@@ -735,6 +735,63 @@ static bool tegra_dc_hdmi_hpd(struct tegra_dc *dc)
 		(sense == TEGRA_DC_OUT_HOTPLUG_LOW && !level);
 }
 
+
+void tegra_dc_hdmi_detect_config(struct tegra_dc *dc,
+						struct fb_monspecs *specs)
+{
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	/* monitors like to lie about these but they are still useful for
+	 * detecting aspect ratios
+	 */
+	dc->out->h_size = specs->max_x * 1000;
+	dc->out->v_size = specs->max_y * 1000;
+
+	hdmi->dvi = !(specs->misc & FB_MISC_HDMI);
+
+	tegra_fb_update_monspecs(dc->fb, specs, tegra_dc_hdmi_mode_filter);
+	dev_info(&dc->ndev->dev, "display detected\n");
+
+	dc->connected = true;
+	tegra_dc_ext_process_hotplug(dc->ndev->id);
+}
+
+/* This function is used to enable DC1 and HDMI for the purpose of testing. */
+bool tegra_dc_hdmi_detect_test(struct tegra_dc *dc, unsigned char *edid_ptr)
+{
+	int err;
+	struct fb_monspecs specs;
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	if (!dc || !hdmi || !edid_ptr) {
+		dev_err(&dc->ndev->dev, "HDMI test failed to get arguments.\n");
+		return false;
+	}
+
+	err = tegra_edid_get_monspecs_test(hdmi->edid, &specs, edid_ptr);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "error reading edid\n");
+		goto fail;
+	}
+
+	err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "error populating eld\n");
+		goto fail;
+	}
+	hdmi->eld_retrieved = true;
+
+	tegra_dc_hdmi_detect_config(dc, &specs);
+
+	return true;
+
+fail:
+	hdmi->eld_retrieved = false;
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
+	return false;
+}
+EXPORT_SYMBOL(tegra_dc_hdmi_detect_test);
+
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
@@ -756,20 +813,8 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 		goto fail;
 	}
 	hdmi->eld_retrieved = true;
-	/* monitors like to lie about these but they are still useful for
-	 * detecting aspect ratios
-	 */
-	dc->out->h_size = specs.max_x * 1000;
-	dc->out->v_size = specs.max_y * 1000;
 
-
-	hdmi->dvi = !(specs.misc & FB_MISC_HDMI);
-
-	tegra_fb_update_monspecs(dc->fb, &specs, tegra_dc_hdmi_mode_filter);
-	dev_info(&dc->ndev->dev, "display detected\n");
-
-	dc->connected = true;
-	tegra_dc_ext_process_hotplug(dc->ndev->id);
+	tegra_dc_hdmi_detect_config(dc, &specs);
 
 	return true;
 

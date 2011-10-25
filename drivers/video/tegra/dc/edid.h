@@ -50,6 +50,8 @@ struct tegra_edid_hdmi_eld {
 struct tegra_edid *tegra_edid_create(int bus);
 void tegra_edid_destroy(struct tegra_edid *edid);
 
+int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
+				struct fb_monspecs *specs, u8 *edid_ptr);
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
 

@@ -146,27 +146,28 @@ static int tegra_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
-static int tegra_fb_setcolreg(unsigned regno, unsigned red, unsigned green,
-	unsigned blue, unsigned transp, struct fb_info *info)
+static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 {
-	struct fb_var_screeninfo *var = &info->var;
+	struct tegra_fb_info *tegra_fb = info->par;
+	struct tegra_dc *dc = tegra_fb->win->dc;
+	int i;
+	u16 *red = cmap->red;
+	u16 *green = cmap->green;
+	u16 *blue = cmap->blue;
+	int start = cmap->start;
+
+	if (((unsigned)start > 255) || ((start + cmap->len) > 255))
+		return -EINVAL;
 
 	if (info->fix.visual == FB_VISUAL_TRUECOLOR ||
 	    info->fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		u32 v;
+		for (i = 0; i < cmap->len; i++) {
+			dc->fb_lut.r[start+i] = *red++ >> 8;
+			dc->fb_lut.g[start+i] = *green++ >> 8;
+			dc->fb_lut.b[start+i] = *blue++ >> 8;
+		}
 
-		if (regno >= 16)
-			return -EINVAL;
-
-		red = (red >> (16 - info->var.red.length));
-		green = (green >> (16 - info->var.green.length));
-		blue = (blue >> (16 - info->var.blue.length));
-
-		v = (red << var->red.offset) |
-			(green << var->green.offset) |
-			(blue << var->blue.offset);
-
-		((u32 *)info->pseudo_palette)[regno] = v;
+		tegra_dc_update_lut(dc, -1, -1);
 	}
 
 	return 0;
@@ -302,7 +303,7 @@ static struct fb_ops tegra_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = tegra_fb_check_var,
 	.fb_set_par = tegra_fb_set_par,
-	.fb_setcolreg = tegra_fb_setcolreg,
+	.fb_setcmap = tegra_fb_setcmap,
 	.fb_blank = tegra_fb_blank,
 	.fb_pan_display = tegra_fb_pan_display,
 	.fb_fillrect = tegra_fb_fillrect,

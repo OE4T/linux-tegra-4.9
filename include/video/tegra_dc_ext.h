@@ -174,6 +174,8 @@ struct tegra_dc_ext_csc {
  * To convert 8-bit per channel RGB values to 16-bit, duplicate the 8 bits
  * in low and high byte, e.g. r=r|(r<<8)
  *
+ * To just update flags, set len to 0.
+ *
  * Current Tegra DC hardware supports 8-bit per channel to 8-bit per channel,
  * and each hardware window (overlay) uses its own lookup table.
  *
@@ -188,7 +190,9 @@ struct tegra_dc_ext_lut {
 	__u16 *b;         /* array of 16-bit blue values, 0 to reset */
 };
 
-/* tegra_dc_ext_lut.flags - override fb device palette. Default is multiply. */
+/* tegra_dc_ext_lut.flags - override global fb device lookup table.
+ * Default behaviour is double-lookup.
+ */
 #define TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE 0x01
 
 #define TEGRA_DC_EXT_FLAGS_ENABLED	1

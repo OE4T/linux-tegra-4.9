@@ -1423,6 +1423,9 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 
 fail:
 	hdmi->eld_retrieved = false;
+#ifdef CONFIG_SWITCH
+	switch_set_state(&hdmi->hpd_switch, 0);
+#endif
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	return false;
 }

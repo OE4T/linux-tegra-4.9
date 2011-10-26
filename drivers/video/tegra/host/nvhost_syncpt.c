@@ -83,6 +83,20 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 }
 
 /**
+ * Get the current syncpoint base
+ */
+u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
+{
+	u32 val;
+	BUG_ON(!syncpt_op(sp).read_wait_base);
+	nvhost_module_busy(&syncpt_to_dev(sp)->mod);
+	syncpt_op(sp).read_wait_base(sp, id);
+	val = sp->base_val[id];
+	nvhost_module_idle(&syncpt_to_dev(sp)->mod);
+	return val;
+}
+
+/**
  * Write a cpu syncpoint increment to the hardware, without touching
  * the cache. Caller is responsible for host being powered.
  */

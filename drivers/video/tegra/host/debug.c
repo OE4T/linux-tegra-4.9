@@ -75,6 +75,15 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 			nvhost_syncpt_update_min(&m->syncpt, i), max);
 
 	}
+
+	for (i = 0; i < m->syncpt.nb_bases; i++) {
+		u32 base_val;
+		base_val = nvhost_syncpt_read_wait_base(&m->syncpt, i);
+		if (base_val)
+			nvhost_debug_output(o, "waitbase id %d val %d\n",
+					i, base_val);
+	}
+
 	nvhost_debug_output(o, "\n");
 }
 

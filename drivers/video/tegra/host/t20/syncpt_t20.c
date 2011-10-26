@@ -206,6 +206,17 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 			nvhost_syncpt_update_min(sp, i), max);
 
 	}
+
+	for (i = 0; i < NV_HOST1X_SYNCPT_NB_BASES; i++) {
+		u32 base_val;
+		t20_syncpt_read_wait_base(sp, i);
+		base_val = sp->base_val[i];
+		if (base_val)
+			dev_info(&syncpt_to_dev(sp)->pdev->dev,
+					"waitbase id %d val %d\n",
+					i, base_val);
+
+	}
 }
 
 int nvhost_init_t20_syncpt_support(struct nvhost_master *host)

@@ -151,6 +151,7 @@ enum {
 	NV_CLASS_HOST_INCR_SYNCPT = 0x0,
 	NV_CLASS_HOST_WAIT_SYNCPT = 0x8,
 	NV_CLASS_HOST_WAIT_SYNCPT_BASE = 0x9,
+	NV_CLASS_HOST_LOAD_SYNCPT_BASE = 0xb,
 	NV_CLASS_HOST_INCR_SYNCPT_BASE = 0xc,
 	NV_CLASS_HOST_INDOFF = 0x2d,
 	NV_CLASS_HOST_INDDATA = 0x2e
@@ -164,6 +165,12 @@ enum {
 };
 
 static inline u32 nvhost_class_host_wait_syncpt(
+	unsigned indx, unsigned threshold)
+{
+	return (indx << 24) | (threshold & 0xffffff);
+}
+
+static inline u32 nvhost_class_host_load_syncpt_base(
 	unsigned indx, unsigned threshold)
 {
 	return (indx << 24) | (threshold & 0xffffff);

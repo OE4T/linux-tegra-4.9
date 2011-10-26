@@ -67,6 +67,7 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.syncpts       = BIT(NVSYNCPT_3D),
 	.waitbases     = BIT(NVWAITBASE_3D),
 	.modulemutexes = BIT(NVMODMUTEX_3D),
+	.waitbasesync  = true,
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.module        = {
 			.prepare_poweroff = nvhost_3dctx_prepare_power_off,
@@ -171,6 +172,21 @@ static int t20_channel_init(struct nvhost_channel *ch,
 	return t20_nvhost_hwctx_handler_init(&ch->ctxhandler, ch->desc->name);
 }
 
+static void t20_channel_sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
+{
+	unsigned long waitbase;
+	unsigned long int waitbase_mask = ch->desc->waitbases;
+	if (ch->desc->waitbasesync) {
+		waitbase = find_first_bit(&waitbase_mask, BITS_PER_LONG);
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				NV_CLASS_HOST_LOAD_SYNCPT_BASE,
+				1),
+				nvhost_class_host_load_syncpt_base(waitbase,
+						syncpt_val));
+	}
+}
+
 static int t20_channel_submit(struct nvhost_channel *channel,
 			      struct nvhost_hwctx *hwctx,
 			      struct nvmap_client *user_nvmap,
@@ -252,6 +268,8 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 		nvhost_module_idle(&channel->mod);
 		goto done;
 	}
+
+	t20_channel_sync_waitbases(channel, *syncpt_value);
 
 	/* context switch */
 	if (channel->cur_ctx != hwctx) {

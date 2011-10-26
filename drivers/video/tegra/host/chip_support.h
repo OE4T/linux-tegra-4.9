@@ -87,9 +87,6 @@ struct nvhost_chip_support {
 					u32 syncpt_incrs,
 					u32 nr_slots,
 					bool exec_ctxsave);
-		void (*timeout_clear_ctxsave)(struct nvhost_cdma *,
-					u32 getptr,
-					u32 nr_slots);
 	} cdma;
 
 	struct {

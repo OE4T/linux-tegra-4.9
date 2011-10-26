@@ -464,7 +464,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 {
 	u32 first_get, get_restart;
 	u32 syncpt_incrs, nr_slots;
-	bool clear_ctxsave, exec_ctxsave;
+	bool exec_ctxsave;
 	struct sync_queue *queue = &cdma->sync_queue;
 	u32 *sync = sync_queue_head(queue);
 	u32 syncpt_val = nvhost_syncpt_update_min(syncpt,
@@ -549,7 +549,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		"%s: GPU incr blocked interleaved ctx buffers\n",
 		__func__);
 
-	clear_ctxsave = true;
 	exec_ctxsave = false;
 
 	/* setup GPU increments */
@@ -570,7 +569,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 			cdma_op(cdma).timeout_pb_incr(cdma, first_get,
 				syncpt_incrs, nr_slots, exec_ctxsave);
 
-			clear_ctxsave = true;
 			exec_ctxsave = false;
 		} else {
 			dev_dbg(dev,
@@ -580,11 +578,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 			 * If previous context was the timed out context
 			 * then clear its CTXSAVE in this slot.
 			 */
-			if (clear_ctxsave) {
-				cdma_op(cdma).timeout_clear_ctxsave(cdma,
-					first_get, nr_slots);
-				clear_ctxsave = false;
-			}
 			exec_ctxsave = true;
 		}
 

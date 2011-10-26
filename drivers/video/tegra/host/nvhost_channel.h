@@ -46,6 +46,7 @@ struct nvhost_channeldesc {
 	u32 class;
 	bool exclusive;
 	bool keepalive;
+	bool waitbasesync;
 	struct nvhost_moduledesc module;
 };
 

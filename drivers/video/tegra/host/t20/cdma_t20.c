@@ -369,60 +369,6 @@ static void t20_cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 }
 
 /**
- * Clear a context switch save for a timed out context that's been
- * queued up in a non-timed out context.
- */
-static void t20_cdma_timeout_clear_ctxsave(struct nvhost_cdma *cdma,
-				u32 getptr, u32 nr_slots)
-{
-	struct nvhost_master *dev = cdma_to_dev(cdma);
-	struct syncpt_buffer *sb = &cdma->syncpt_buffer;
-	struct push_buffer *pb = &cdma->push_buffer;
-	struct nvhost_userctx_timeout *timeout = cdma->timeout.ctx_timeout;
-	u32 getidx, *p;
-
-	getidx = getptr - pb->phys;
-	p = (u32 *)((u32)pb->mapped + getidx);
-
-	if (timeout->hwctx) {
-		u32 incrs, slots_to_clear;
-
-		slots_to_clear = timeout->hwctx->save_slots;
-		incrs = timeout->hwctx->save_incrs;
-
-		BUG_ON(slots_to_clear > nr_slots);
-		BUG_ON(incrs > sb->incr_per_buffer);
-
-		dev_dbg(&dev->pdev->dev,
-			"%s: clearing CTXSAVE at 0x%x, for %d slots %d incrs\n",
-			__func__, pb->phys + getidx, slots_to_clear, incrs);
-
-		/* first, GATHER incr for ctxsave */
-		if (incrs) {
-			u32 count = incrs * sb->words_per_incr;
-
-			p = (u32 *)((u32)pb->mapped + getidx);
-			*(p++) = nvhost_opcode_gather(count);
-			*(p++) = sb->phys;
-
-			getidx = (getidx + 8) & (PUSH_BUFFER_SIZE - 1);
-			slots_to_clear--;
-		}
-
-		/* NOP remaining slots */
-		while (slots_to_clear--) {
-			p = (u32 *)((u32)pb->mapped + getidx);
-			*(p++) = NVHOST_OPCODE_NOOP;
-			*(p++) = NVHOST_OPCODE_NOOP;
-			dev_dbg(&dev->pdev->dev, "%s: NOP at 0x%x\n",
-				__func__, pb->phys + getidx);
-			getidx = (getidx + 8) & (PUSH_BUFFER_SIZE - 1);
-		}
-	}
-	wmb();
-}
-
-/**
  * Start channel DMA
  */
 static void t20_cdma_start(struct nvhost_cdma *cdma)
@@ -684,7 +630,6 @@ int nvhost_init_t20_cdma_support(struct nvhost_master *host)
 	host->op.cdma.timeout_teardown_end = t20_cdma_timeout_teardown_end;
 	host->op.cdma.timeout_cpu_incr = t20_cdma_timeout_cpu_incr;
 	host->op.cdma.timeout_pb_incr = t20_cdma_timeout_pb_incr;
-	host->op.cdma.timeout_clear_ctxsave = t20_cdma_timeout_clear_ctxsave;
 
 	host->sync_queue_size = NVHOST_SYNC_QUEUE_SIZE;
 

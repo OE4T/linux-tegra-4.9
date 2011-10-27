@@ -434,12 +434,24 @@ static const struct file_operations debug_fops = {
 
 static int __init nct1008_debuginit(struct nct1008_data *nct)
 {
-	int err;
-	err = debugfs_create_file("nct1008", S_IRUGO, NULL,
-			nct, &debug_fops);
-	if (err < 0)
-		pr_err("Error: %s debugfs not supported, error=%d\n",
-			__func__, err);
+	int err = 0;
+	struct dentry *d;
+	d = debugfs_create_file("nct1008", S_IRUGO, NULL,
+			(void *)nct, &debug_fops);
+	if ((!d) || IS_ERR(d)) {
+		dev_err(&nct->client->dev, "Error: %s debugfs_create_file"
+			" returned an error\n", __func__);
+		err = -ENOENT;
+		goto end;
+	}
+	if (d == ERR_PTR(-ENODEV)) {
+		dev_err(&nct->client->dev, "Error: %s debugfs not supported "
+			"error=-ENODEV\n", __func__);
+		err = -ENODEV;
+	} else {
+		nct->dent = d;
+	}
+end:
 	return err;
 }
 #else
@@ -974,6 +986,8 @@ static int nct1008_remove(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
+	if (data->dent)
+		debugfs_remove(data->dent);
 	free_irq(data->client->irq, data);
 	cancel_work_sync(&data->work);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);

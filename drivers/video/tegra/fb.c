@@ -156,7 +156,7 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	u16 *blue = cmap->blue;
 	int start = cmap->start;
 
-	if (((unsigned)start > 255) || ((start + cmap->len) > 255))
+	if (((unsigned)start > 255) || ((start + cmap->len) > 256))
 		return -EINVAL;
 
 	if (info->fix.visual == FB_VISUAL_TRUECOLOR ||

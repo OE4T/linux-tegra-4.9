@@ -24,6 +24,7 @@
 #include "nvhost_syncpt.h"
 #include "dev.h"
 
+#define MAX_STUCK_CHECK_COUNT 15
 
 /**
  * Resets syncpoint and waitbase values to sw shadows
@@ -126,7 +127,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref;
 	void *waiter;
-	int err = 0;
+	int err = 0, check_count = 0, low_timeout = 0;
 
 	if (value)
 		*value = 0;
@@ -197,14 +198,28 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			err = remain;
 			break;
 		}
-		if (timeout != NVHOST_NO_TIMEOUT)
+		if (timeout != NVHOST_NO_TIMEOUT) {
+			if (timeout < SYNCPT_CHECK_PERIOD) {
+				/* Caller-specified timeout may be impractically low */
+				low_timeout = timeout;
+			}
 			timeout -= check;
+		}
 		if (timeout) {
 			dev_warn(&syncpt_to_dev(sp)->pdev->dev,
 				"%s: syncpoint id %d (%s) stuck waiting %d, timeout=%d\n",
 				 current->comm, id, syncpt_op(sp).name(sp, id),
 				 thresh, timeout);
 			syncpt_op(sp).debug(sp);
+			if (check_count > MAX_STUCK_CHECK_COUNT) {
+				if (low_timeout) {
+					dev_warn(&syncpt_to_dev(sp)->pdev->dev,
+						"is timeout %d too low?\n", low_timeout);
+				}
+				nvhost_debug_dump(syncpt_to_dev(sp));
+				BUG();
+			}
+			check_count++;
 		}
 	}
 	nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), ref);

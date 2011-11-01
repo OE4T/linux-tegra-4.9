@@ -984,12 +984,12 @@ static void allocations_stringify(struct nvmap_client *client,
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && !handle->heap_pgalloc) {
-			seq_printf(s, "%-18s %-18s %8lx %10u\n", "", "",
+			seq_printf(s, "%-18s %-18s %8lx %10u %8lx\n", "", "",
 					(unsigned long)(handle->carveout->base),
-					handle->size);
+					handle->size, handle->userflags);
 		} else if (handle->alloc && handle->heap_pgalloc) {
-			seq_printf(s, "%-18s %-18s %8lx %10u\n", "", "",
-					base, handle->size);
+			seq_printf(s, "%-18s %-18s %8lx %10u %8lx\n", "", "",
+					base, handle->size, handle->userflags);
 		}
 	}
 }
@@ -1002,8 +1002,8 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s %8s\n", "CLIENT", "PROCESS", "PID",
+		"SIZE", "FLAGS");
 	seq_printf(s, "%-18s %18s %8s %10s\n", "", "",
 					"BASE", "SIZE");
 	list_for_each_entry(commit, &node->clients, list) {

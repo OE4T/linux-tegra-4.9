@@ -131,6 +131,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 		if (!priv->hwctx)
 			goto fail;
 		priv->hwctx->timeout = &priv->timeout;
+		priv->timeout.hwctx = priv->hwctx;
 	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 

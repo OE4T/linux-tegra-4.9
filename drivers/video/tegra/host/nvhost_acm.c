@@ -44,6 +44,17 @@ struct nvhost_module_client {
 	void *priv;
 };
 
+static void do_powergate(int id)
+{
+	if (id != -1 && tegra_powergate_is_powered(id))
+		tegra_powergate_partition(id);
+}
+
+static void do_unpowergate(int id)
+{
+	if (id != -1 && !tegra_powergate_is_powered(id))
+		tegra_unpowergate_partition(id);
+}
 
 void nvhost_module_reset(struct device *dev, struct nvhost_module *mod)
 {
@@ -93,11 +104,8 @@ static void to_state_clockgated(struct nvhost_module *mod)
 			nvhost_module_idle(mod->parent);
 	} else if (mod->powerstate == NVHOST_POWER_STATE_POWERGATED
 			&& mod->desc->can_powergate) {
-		if (desc->powergate_ids[0] != -1)
-			tegra_unpowergate_partition(desc->powergate_ids[0]);
-
-		if (desc->powergate_ids[1] != -1)
-			tegra_unpowergate_partition(desc->powergate_ids[1]);
+		do_unpowergate(desc->powergate_ids[0]);
+		do_unpowergate(desc->powergate_ids[1]);
 	}
 	mod->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 }
@@ -144,11 +152,8 @@ static int to_state_powergated(struct nvhost_module *mod)
 		to_state_clockgated(mod);
 
 	if (mod->desc->can_powergate) {
-		if (mod->desc->powergate_ids[0] != -1)
-			tegra_powergate_partition(mod->desc->powergate_ids[0]);
-
-		if (mod->desc->powergate_ids[1] != -1)
-			tegra_powergate_partition(mod->desc->powergate_ids[1]);
+		do_powergate(mod->desc->powergate_ids[0]);
+		do_powergate(mod->desc->powergate_ids[1]);
 	}
 
 	mod->powerstate = NVHOST_POWER_STATE_POWERGATED;
@@ -331,6 +336,36 @@ void nvhost_module_remove_client(struct nvhost_master *host,
 	mutex_unlock(&client_list_lock);
 }
 
+void nvhost_module_preinit(const char *name,
+		const struct nvhost_moduledesc *desc)
+{
+	int i = 0;
+	/* initialize clocks to known state */
+	while (desc->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
+		char devname[MAX_DEVID_LENGTH];
+		long rate = desc->clocks[i].default_rate;
+		struct clk *c;
+
+		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s", name);
+		c = clk_get_sys(devname, desc->clocks[i].name);
+		BUG_ON(IS_ERR_OR_NULL(c));
+
+		rate = clk_round_rate(c, rate);
+		clk_enable(c);
+		clk_set_rate(c, rate);
+		clk_disable(c);
+		i++;
+	}
+
+	if (desc->can_powergate) {
+		do_powergate(desc->powergate_ids[0]);
+		do_powergate(desc->powergate_ids[1]);
+	} else {
+		do_unpowergate(desc->powergate_ids[0]);
+		do_unpowergate(desc->powergate_ids[1]);
+	}
+}
+
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		const struct nvhost_moduledesc *desc,
 		struct nvhost_module *parent,
@@ -338,21 +373,16 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 {
 	int i = 0;
 
+	nvhost_module_preinit(name, desc);
 	mod->name = name;
 
 	INIT_LIST_HEAD(&mod->client_list);
 	while (desc->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
-		long rate = desc->clocks[i].default_rate;
 
 		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s", name);
 		mod->clk[i] = clk_get_sys(devname, desc->clocks[i].name);
 		BUG_ON(IS_ERR_OR_NULL(mod->clk[i]));
-
-		rate = clk_round_rate(mod->clk[i], rate);
-		clk_enable(mod->clk[i]);
-		clk_set_rate(mod->clk[i], rate);
-		clk_disable(mod->clk[i]);
 		i++;
 	}
 	mod->num_clks = i;
@@ -367,10 +397,6 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		mod->powerstate = NVHOST_POWER_STATE_POWERGATED;
 	} else {
 		mod->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
-		if (desc->powergate_ids[0] != -1)
-			tegra_unpowergate_partition(desc->powergate_ids[0]);
-		if (desc->powergate_ids[1] != -1)
-			tegra_unpowergate_partition(desc->powergate_ids[1]);
 	}
 
 	if (desc->init)

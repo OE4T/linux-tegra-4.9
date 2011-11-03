@@ -873,7 +873,7 @@ static int nvhost_init_chip_support(struct nvhost_master *host)
 	return 0;
 }
 
-struct nvhost_moduledesc hostdesc = {
+const struct nvhost_moduledesc hostdesc = {
 		.finalize_poweron = power_on_host,
 		.prepare_poweroff = power_off_host,
 		.clocks = {{"host1x", UINT_MAX}, {} },
@@ -952,6 +952,12 @@ static int nvhost_probe(struct platform_device *pdev)
 
 	err = nvhost_module_init(&host->mod, "host1x",
 			&hostdesc, NULL, &pdev->dev);
+	for (i = 0; i < host->nb_channels; i++) {
+		struct nvhost_channel *ch = &host->channels[i];
+		nvhost_module_preinit(ch->desc->name,
+				&ch->desc->module);
+	}
+
 	if (err)
 		goto fail;
 

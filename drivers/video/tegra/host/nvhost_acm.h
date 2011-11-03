@@ -78,6 +78,8 @@ struct nvhost_module {
 	struct list_head client_list;
 };
 
+/* Sets clocks and powergating state for a module */
+void nvhost_module_preinit(const char *name, const struct nvhost_moduledesc *desc);
 int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		const struct nvhost_moduledesc *desc,
 		struct nvhost_module *parent,

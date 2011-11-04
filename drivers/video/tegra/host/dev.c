@@ -341,7 +341,7 @@ static int nvhost_ioctl_channel_flush(
 	if (err)
 		nvmap_unpin_handles(ctx->nvmap, ctx->unpinarray, num_unpin);
 
-	return 0;
+	return err;
 }
 
 static int nvhost_ioctl_channel_read_3d_reg(

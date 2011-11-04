@@ -214,7 +214,8 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			if (check_count > MAX_STUCK_CHECK_COUNT) {
 				if (low_timeout) {
 					dev_warn(&syncpt_to_dev(sp)->pdev->dev,
-						"is timeout %d too low?\n", low_timeout);
+						"is timeout %d too low?\n",
+						low_timeout);
 				}
 				nvhost_debug_dump(syncpt_to_dev(sp));
 				BUG();

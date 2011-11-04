@@ -138,8 +138,8 @@ static void save_push_v0(struct nvhost_cdma *cdma,
 			struct nvhost_hwctx *ctx)
 {
 	nvhost_cdma_push_gather(cdma,
-			cdma_to_channel(cdma)->dev->nvmap,
-			nvmap_ref_to_handle(nvhost_3dctx_save_buf),
+			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
+			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
 			nvhost_opcode_gather(save_size),
 			save_phys);
 }
@@ -331,9 +331,6 @@ static void ctx3d_save_service(struct nvhost_hwctx *ctx)
 	wmb();
 	nvhost_syncpt_cpu_incr(&ctx->channel->dev->syncpt, NVSYNCPT_3D);
 }
-
-
-/*** savers ***/
 
 int __init t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 {

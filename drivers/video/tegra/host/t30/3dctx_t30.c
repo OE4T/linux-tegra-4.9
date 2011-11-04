@@ -85,6 +85,7 @@ static const struct hwctx_reginfo ctxsave_regs_3d_perset[] = {
 };
 
 static unsigned int restore_set1_offset;
+
 /* the same context save command sequence is used for all contexts. */
 static phys_addr_t save_phys;
 static unsigned int save_size;
@@ -151,8 +152,8 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 			ctx->restore_phys);
 	/* gather the save buffer */
 	nvhost_cdma_push_gather(cdma,
-			cdma_to_channel(cdma)->dev->nvmap,
-			nvmap_ref_to_handle(nvhost_3dctx_save_buf),
+			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
+			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
 			nvhost_opcode_gather(save_size),
 			save_phys);
 }
@@ -272,7 +273,17 @@ static void __init setup_save_regs(struct save_info *info,
 			break;
 		}
 		if (ptr) {
-			memset(ptr, 0, count * 4);
+			/* SAVE cases only: reserve room for incoming data */
+			u32 k = 0;
+			/*
+			 * Create a signature pattern for indirect data (which
+			 * will be overwritten by true incoming data) for
+			 * better deducing where we are in a long command
+			 * sequence, when given only a FIFO snapshot for debug
+			 * purposes.
+			*/
+			for (k = 0; k < count; k++)
+				*(ptr + k) = 0xd000d000 | (offset << 16) | k;
 			ptr += count;
 		}
 		save_count += count;
@@ -401,8 +412,6 @@ static struct nvhost_hwctx *ctx3d_alloc_v1(struct nvhost_channel *ch)
 {
 	return nvhost_3dctx_alloc_common(ch, false);
 }
-
-/*** savers ***/
 
 int __init t30_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 {

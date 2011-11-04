@@ -135,6 +135,7 @@ void	nvhost_cdma_stop(struct nvhost_cdma *cdma);
 int	nvhost_cdma_begin(struct nvhost_cdma *cdma,
 		struct nvhost_userctx_timeout *timeout);
 void	nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2);
+#define NVHOST_CDMA_PUSH_GATHER_CTXSAVE 0xffffffff
 void	nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 		struct nvmap_client *client,
 		struct nvmap_handle *handle, u32 op1, u32 op2);

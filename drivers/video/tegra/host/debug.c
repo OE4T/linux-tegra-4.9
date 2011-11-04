@@ -52,8 +52,8 @@ static void show_channels(struct nvhost_master *m, struct output *o)
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
 			mutex_lock(&ch->cdma.lock);
-			m->op.debug.show_channel_cdma(m, o, i);
 			m->op.debug.show_channel_fifo(m, o, i);
+			m->op.debug.show_channel_cdma(m, o, i);
 			mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
@@ -73,7 +73,6 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 		nvhost_debug_output(o, "id %d (%s) min %d max %d\n",
 				    i, m->op.syncpt.name(&m->syncpt, i),
 			nvhost_syncpt_update_min(&m->syncpt, i), max);
-
 	}
 
 	for (i = 0; i < m->syncpt.nb_bases; i++) {

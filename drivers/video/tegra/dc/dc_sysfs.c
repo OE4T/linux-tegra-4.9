@@ -178,7 +178,7 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 
 	return count;
 }
-static DEVICE_ATTR(crc_checksum_latched, S_IRUGO|S_IWUSR|S_IWGRP,
+static DEVICE_ATTR(crc_checksum_latched, S_IRUGO|S_IWUSR,
 		crc_checksum_latched_show, crc_checksum_latched_store);
 
 #define ORIENTATION_PORTRAIT	"portrait"

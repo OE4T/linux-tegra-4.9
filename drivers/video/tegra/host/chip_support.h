@@ -81,6 +81,7 @@ struct nvhost_chip_support {
 		void (*timeout_cpu_incr)(struct nvhost_cdma *,
 					 u32 getptr,
 					 u32 syncpt_incrs,
+					 u32 syncval,
 					 u32 nr_slots);
 		void (*timeout_pb_incr)(struct nvhost_cdma *,
 					u32 getptr,

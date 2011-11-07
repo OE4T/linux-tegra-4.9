@@ -282,7 +282,7 @@ static void t20_cdma_timeout_destroy(struct nvhost_cdma *cdma)
  * Increment timedout buffer's syncpt via CPU.
  */
 static void t20_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
-				u32 syncpt_incrs, u32 nr_slots)
+				u32 syncpt_incrs, u32 syncval, u32 nr_slots)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct push_buffer *pb = &cdma->push_buffer;
@@ -299,7 +299,7 @@ static void t20_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 		void __iomem *p;
 		p = dev->sync_aperture + HOST1X_SYNC_SYNCPT_BASE_0 +
 				(NVWAITBASE_3D * sizeof(u32));
-		writel(readl(p) + syncpt_incrs, p);
+		writel(syncval, p);
 	}
 
 	/* NOP all the PB slots */

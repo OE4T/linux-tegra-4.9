@@ -540,7 +540,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 
 		/* safe to use CPU to incr syncpts */
 		cdma_op(cdma).timeout_cpu_incr(cdma, first_get,
-			syncpt_incrs, nr_slots);
+			syncpt_incrs, sync[SQ_IDX_SYNCPT_VAL], nr_slots);
 		syncpt_val += syncpt_incrs;
 		sync = advance_next_entry(cdma, sync);
 	}

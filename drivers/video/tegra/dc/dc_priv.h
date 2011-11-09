@@ -101,7 +101,9 @@ struct tegra_dc {
 	struct tegra_dc_win		windows[DC_N_WINDOWS];
 	struct tegra_dc_blend		blend;
 	int				n_windows;
-
+#ifdef CONFIG_TEGRA_DC_CMU
+	struct tegra_dc_cmu		cmu;
+#endif
 	wait_queue_head_t		wq;
 
 	struct mutex			lock;

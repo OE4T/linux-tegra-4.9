@@ -775,6 +775,13 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 
 		/* Re-init if our settings were updated. */
 		if (settings_updated) {
+			mutex_lock(&dc->lock);
+			if (!dc->enabled) {
+				mutex_unlock(&dc->lock);
+				return -ENODEV;
+			}
+			mutex_unlock(&dc->lock);
+
 			nvsd_init(dc, sd_settings);
 
 			/* Update backlight state IFF we're disabling! */
@@ -822,6 +829,13 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
 	ssize_t res = 0;
 
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -ENODEV;
+	}
+
+	mutex_unlock(&dc->lock);
 	NVSD_PRINT_REG(DC_DISP_SD_CONTROL);
 	NVSD_PRINT_REG(DC_DISP_SD_CSC_COEFF);
 	NVSD_PRINT_REG_ARRAY(DC_DISP_SD_LUT);

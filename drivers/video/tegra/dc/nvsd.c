@@ -664,8 +664,8 @@ static int nvsd_lut_store(struct tegra_dc_sd_settings *sd_settings,
 static int nvsd_bltf_store(struct tegra_dc_sd_settings *sd_settings,
 	const char *buf)
 {
-	int ele[4 * DC_DISP_SD_BL_TF_NUM];
-	int i = 0, j = 0, num = 4 * DC_DISP_SD_BL_TF_NUM;
+	int ele[4 * DC_DISP_SD_BL_TF_NUM * NUM_BIN_WIDTHS];
+	int i = 0, j = 0, num = ARRAY_SIZE(ele);
 
 	nvsd_get_multi(ele, num, i, 0, 255);
 
@@ -674,14 +674,12 @@ static int nvsd_bltf_store(struct tegra_dc_sd_settings *sd_settings,
 
 	for (i = 0; i < NUM_BIN_WIDTHS; i++) {
 		for (j = 0; j < DC_DISP_SD_BL_TF_NUM; j++) {
-			sd_settings->bltf[i][j][0] =
-				ele[i * NUM_BIN_WIDTHS + j * 4 + 0];
-			sd_settings->bltf[i][j][1] =
-				ele[i * NUM_BIN_WIDTHS + j * 4 + 1];
-			sd_settings->bltf[i][j][2] =
-				ele[i * NUM_BIN_WIDTHS + j * 4 + 2];
-			sd_settings->bltf[i][j][3] =
-				ele[i * NUM_BIN_WIDTHS + j * 4 + 3];
+			size_t base = (i * NUM_BIN_WIDTHS *
+				       DC_DISP_SD_BL_TF_NUM) + (j * 4);
+			sd_settings->bltf[i][j][0] = ele[base + 0];
+			sd_settings->bltf[i][j][1] = ele[base + 1];
+			sd_settings->bltf[i][j][2] = ele[base + 2];
+			sd_settings->bltf[i][j][3] = ele[base + 3];
 		}
 	}
 

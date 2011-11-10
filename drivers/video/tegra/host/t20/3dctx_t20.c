@@ -260,7 +260,17 @@ static void __init setup_save_regs(struct save_info *info,
 			break;
 		}
 		if (ptr) {
-			memset(ptr, 0, count * 4);
+			/* SAVE cases only: reserve room for incoming data */
+			u32 k = 0;
+			/*
+			 * Create a signature pattern for indirect data (which
+			 * will be overwritten by true incoming data) for
+			 * better deducing where we are in a long command
+			 * sequence, when given only a FIFO snapshot for debug
+			 * purposes.
+			*/
+			for (k = 0; k < count; k++)
+				*(ptr + k) = 0xd000d000 | (offset << 16) | k;
 			ptr += count;
 		}
 		save_count += count;

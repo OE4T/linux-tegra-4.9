@@ -68,6 +68,7 @@ struct nct1008_data {
 	void *alert_data;
 };
 
+#ifdef CONFIG_SENSORS_NCT1008
 int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp);
 int nct1008_thermal_set_limits(struct nct1008_data *data,
 				long lo_limit_milli,
@@ -77,4 +78,21 @@ int nct1008_thermal_set_alert(struct nct1008_data *data,
 				void *alert_data);
 int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
 					long shutdown_temp);
+#else
+static inline int nct1008_thermal_get_temp(struct nct1008_data *data,
+						long *temp)
+{ return -EINVAL; }
+static inline int nct1008_thermal_set_limits(struct nct1008_data *data,
+				long lo_limit_milli,
+				long hi_limit_milli)
+{ return -EINVAL; }
+static inline int nct1008_thermal_set_alert(struct nct1008_data *data,
+				void (*alert_func)(void *),
+				void *alert_data)
+{ return -EINVAL; }
+static inline int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
+					long shutdown_temp)
+{ return -EINVAL; }
+#endif
+
 #endif /* _LINUX_NCT1008_H */

@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
+#include <linux/moduleparam.h>
 #include <linux/export.h>
 
 #include <mach/clk.h>
@@ -73,6 +74,11 @@
 #define DSI_LP_OP_NOT_INIT		0x0
 #define DSI_LP_OP_WRITE			0x1
 #define DSI_LP_OP_READ			0x2
+
+static bool enable_read_debug;
+module_param(enable_read_debug, bool, 0644);
+MODULE_PARM_DESC(enable_read_debug,
+		"Enable to print read fifo and return packet type");
 
 struct dsi_status {
 	unsigned init:2;
@@ -1084,7 +1090,7 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, host_dsi_control, DSI_HOST_DSI_CONTROL);
 }
 
-static void tegra_dsi_pad_caliberation(struct tegra_dc_dsi_data *dsi)
+static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
@@ -1143,7 +1149,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 
 	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
 
-	tegra_dsi_pad_caliberation(dsi);
+	tegra_dsi_pad_calibration(dsi);
 
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
@@ -1198,9 +1204,9 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 		(dsi->info.enable_hs_clock_on_lp_cmd_mode))
 		tegra_dsi_hs_clk_out_enable_in_lp(dsi);
 
-success:
 	dsi->status.lphs = DSI_LPHS_IN_LP_MODE;
 	dsi->status.lp_op = lp_op;
+success:
 	err = 0;
 fail:
 	return err;
@@ -1215,6 +1221,9 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 		err = -EPERM;
 		goto fail;
 	}
+
+	if (dsi->status.lphs == DSI_LPHS_IN_HS_MODE)
+		goto success;
 
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
@@ -1243,6 +1252,8 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 		tegra_dsi_hs_clk_out_enable(dsi);
 
 	dsi->status.lphs = DSI_LPHS_IN_HS_MODE;
+success:
+	dsi->status.lp_op = DSI_LP_OP_NOT_INIT;
 	err = 0;
 fail:
 	return err;
@@ -1554,7 +1565,8 @@ static void tegra_dsi_read_fifo(struct tegra_dc *dc,
 	/* Read data from FIFO */
 	for (i = 0; i < rd_fifo_cnt; i++) {
 		val = tegra_dsi_readl(dsi, DSI_RD_DATA);
-		printk(KERN_INFO "Read data[%d]: 0x%x\n", i, val);
+		if (enable_read_debug)
+			printk(KERN_INFO "Read data[%d]: 0x%x\n", i, val);
 		memcpy(read_fifo, &val, 4);
 		read_fifo += 4;
 	}
@@ -1634,8 +1646,7 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 
 	if ((dsi->status.init != DSI_MODULE_INIT) ||
 		(dsi->status.lphs == DSI_LPHS_NOT_INIT) ||
-		(dsi->status.driven == DSI_DRIVEN_MODE_NOT_INIT) ||
-		(dsi->status.lp_op == DSI_LP_OP_NOT_INIT)) {
+		(dsi->status.driven == DSI_DRIVEN_MODE_NOT_INIT)) {
 		err = -EPERM;
 		goto fail;
 	}
@@ -1715,7 +1726,7 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	if (switch_back_to_hs_mode) {
+	if (dsi->status.lp_op == DSI_LP_OP_WRITE) {
 		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_READ);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
@@ -1760,7 +1771,9 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 
 	tegra_dsi_read_fifo(dc, dsi, rd_fifo_cnt, read_data);
 
-	err = tegra_dsi_parse_read_response(dc, rd_fifo_cnt, read_data);
+	if (enable_read_debug)
+		err = tegra_dsi_parse_read_response
+				(dc, rd_fifo_cnt, read_data);
 fail:
 	if (switch_back_to_dc_mode)
 		dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;

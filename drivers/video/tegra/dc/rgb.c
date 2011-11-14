@@ -23,6 +23,19 @@
 #include "dc_priv.h"
 
 
+static const u32 tegra_dc_rgb_enable_partial_pintable[] = {
+	DC_COM_PIN_OUTPUT_ENABLE0,	0x00000000,
+	DC_COM_PIN_OUTPUT_ENABLE1,	0x00000000,
+	DC_COM_PIN_OUTPUT_ENABLE2,	0x00000000,
+	DC_COM_PIN_OUTPUT_ENABLE3,	0x00000000,
+	DC_COM_PIN_OUTPUT_POLARITY0,	0x00000000,
+	DC_COM_PIN_OUTPUT_POLARITY2,	0x00000000,
+	DC_COM_PIN_OUTPUT_DATA0,	0x00000000,
+	DC_COM_PIN_OUTPUT_DATA1,	0x00000000,
+	DC_COM_PIN_OUTPUT_DATA2,	0x00000000,
+	DC_COM_PIN_OUTPUT_DATA3,	0x00000000,
+};
+
 static const u32 tegra_dc_rgb_enable_pintable[] = {
 	DC_COM_PIN_OUTPUT_ENABLE0,	0x00000000,
 	DC_COM_PIN_OUTPUT_ENABLE1,	0x00000000,
@@ -81,7 +94,13 @@ void tegra_dc_rgb_enable(struct tegra_dc *dc)
 
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
 
-	tegra_dc_write_table(dc, tegra_dc_rgb_enable_pintable);
+	if (dc->out->out_pins) {
+		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
+			dc->out->n_out_pins);
+		tegra_dc_write_table(dc, tegra_dc_rgb_enable_partial_pintable);
+	} else {
+		tegra_dc_write_table(dc, tegra_dc_rgb_enable_pintable);
+	}
 
 	memcpy(out_sel_pintable, tegra_dc_rgb_enable_out_sel_pintable,
 		sizeof(tegra_dc_rgb_enable_out_sel_pintable));

@@ -50,6 +50,9 @@
 
 #define TEGRA_CRC_LATCHED_DELAY		34
 
+#define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
+#define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
+
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
 #define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
 #else
@@ -1586,18 +1589,6 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 	tegra_dc_writel(dc, DE_SELECT_ACTIVE | DE_CONTROL_NORMAL,
 			DC_DISP_DATA_ENABLE_OPTIONS);
 
-	val = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY1);
-	if (mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC)
-		val |= PIN1_LVS_OUTPUT;
-	else
-		val &= ~PIN1_LVS_OUTPUT;
-
-	if (mode->flags & TEGRA_DC_MODE_FLAG_NEG_H_SYNC)
-		val |= PIN1_LHS_OUTPUT;
-	else
-		val &= ~PIN1_LHS_OUTPUT;
-	tegra_dc_writel(dc, val, DC_COM_PIN_OUTPUT_POLARITY1);
-
 	/* TODO: MIPI/CRT/HDMI clock cals */
 
 	val = DISP_DATA_FORMAT_DF1P1C;
@@ -1760,7 +1751,7 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 }
 EXPORT_SYMBOL(tegra_dc_config_pwm);
 
-static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
+void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const struct tegra_dc_out_pin *pins,
 				const unsigned int n_pins)
 {
@@ -1813,8 +1804,8 @@ static void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 		}
 	}
 
-	pol1 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY1);
-	pol3 = tegra_dc_readl(dc, DC_COM_PIN_OUTPUT_POLARITY3);
+	pol1 = DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL;
+	pol3 = DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL;
 
 	pol1 |= set1;
 	pol1 &= ~unset1;
@@ -2317,10 +2308,6 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
 
-	if (dc->out->out_pins)
-		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
-					    dc->out->n_out_pins);
-
 	if (dc->out->postpoweron)
 		dc->out->postpoweron();
 
@@ -2372,10 +2359,6 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
-
-	if (dc->out->out_pins)
-		tegra_dc_set_out_pin_polars(dc, dc->out->out_pins,
-					    dc->out->n_out_pins);
 
 	if (dc->out->postpoweron)
 		dc->out->postpoweron();

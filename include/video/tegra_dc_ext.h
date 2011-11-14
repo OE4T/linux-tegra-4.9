@@ -55,6 +55,8 @@
 #define TEGRA_DC_EXT_BLEND_PREMULT	1
 #define TEGRA_DC_EXT_BLEND_COVERAGE	2
 
+#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_H	(1 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_V	(1 << 1)
 #define TEGRA_DC_EXT_FLIP_FLAG_TILED	(1 << 2)
 
 struct tegra_dc_ext_flip_windowattr {

@@ -157,8 +157,6 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			struct nvhost_waitchk *wait,
 			struct nvhost_waitchk *waitend);
 
-const char *nvhost_syncpt_name(u32 id);
-
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
 
 #endif

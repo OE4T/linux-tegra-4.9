@@ -152,7 +152,7 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 			dev_dbg(&syncpt_to_dev(sp)->pdev->dev,
 			    "drop WAIT id %d (%s) thresh 0x%x, syncpt 0x%x\n",
 			    wait->syncpt_id,
-			    nvhost_syncpt_name(wait->syncpt_id),
+			    syncpt_op(sp).name(sp, wait->syncpt_id),
 			    wait->thresh, syncpt);
 
 			/* patch the wait */

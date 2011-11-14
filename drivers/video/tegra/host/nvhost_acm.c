@@ -52,7 +52,7 @@ static void do_powergate(int id)
 
 static void do_unpowergate(int id)
 {
-	if (id != -1 && !tegra_powergate_is_powered(id))
+	if (id != -1)
 		tegra_unpowergate_partition(id);
 }
 

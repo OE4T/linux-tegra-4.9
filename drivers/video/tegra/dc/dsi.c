@@ -949,11 +949,6 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 	if (rm != 0)
 		clk -= rm;
 
-	clk *= 2;	/*
-			 * Value for PLLD routine is required to be twice as
-			 * the desired clock rate
-			 */
-
 	dc->mode.pclk = clk*1000;
 	tegra_dc_setup_clk(dc, dsi->dsi_clk);
 	if (dsi->clk_ref == true)

@@ -1403,7 +1403,7 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			}
 		}
 
-		rate = dc->mode.pclk;
+		rate = dc->mode.pclk * 2;
 		if (rate != clk_get_rate(base_clk))
 			clk_set_rate(base_clk, rate);
 

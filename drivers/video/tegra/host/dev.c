@@ -568,8 +568,8 @@ static int nvhost_ioctl_ctrl_syncpt_read(
 {
 	if (args->id >= ctx->dev->syncpt.nb_pts)
 		return -EINVAL;
-	trace_nvhost_ioctl_ctrl_syncpt_read(args->id);
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
+	trace_nvhost_ioctl_ctrl_syncpt_read(args->id, args->value);
 	return 0;
 }
 
@@ -589,6 +589,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(
 	struct nvhost_ctrl_syncpt_waitex_args *args)
 {
 	u32 timeout;
+	int err;
 	if (args->id >= ctx->dev->syncpt.nb_pts)
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
@@ -596,10 +597,12 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(
 	else
 		timeout = (u32)msecs_to_jiffies(args->timeout);
 
-	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
-	  args->timeout);
-	return nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
+	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
 					args->thresh, timeout, &args->value);
+	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
+	  args->timeout, args->value, err);
+
+	return err;
 }
 
 static int nvhost_ioctl_ctrl_module_mutex(

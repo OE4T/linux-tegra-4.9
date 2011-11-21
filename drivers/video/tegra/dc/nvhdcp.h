@@ -19,6 +19,7 @@
 #include <video/nvhdcp.h>
 
 struct tegra_nvhdcp;
+#ifdef CONFIG_TEGRA_NVHDCP
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);
 void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp);
@@ -26,4 +27,20 @@ void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp);
 struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_dc_hdmi_data *hdmi,
 					int id, int bus);
 void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp);
+#else
+inline void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd) { }
+inline int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol)
+{
+	return 0;
+}
+inline void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp) { }
+inline void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp) { }
+inline struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_dc_hdmi_data *hdmi,
+					int id, int bus)
+{
+	return NULL;
+}
+inline void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp) { }
+#endif
+
 #endif

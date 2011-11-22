@@ -119,17 +119,6 @@ struct nvmap_client {
 	struct nvmap_carveout_commit	carveout_commit[0];
 };
 
-/* handle_ref objects are client-local references to an nvmap_handle;
- * they are distinct objects so that handles can be unpinned and
- * unreferenced the correct number of times when a client abnormally
- * terminates */
-struct nvmap_handle_ref {
-	struct nvmap_handle *handle;
-	struct rb_node	node;
-	atomic_t	dupes;	/* number of times to free on file close */
-	atomic_t	pin;	/* number of times to unpin on free */
-};
-
 struct nvmap_vma_priv {
 	struct nvmap_handle *handle;
 	size_t		offs;

@@ -48,6 +48,7 @@
 
 #define DRIVER_NAME "tegra_grhost"
 #define IFACE_NAME "nvhost"
+#define TRACE_MAX_LENGTH 128U
 
 static int nvhost_major = NVHOST_MAJOR;
 static int nvhost_minor;
@@ -74,6 +75,40 @@ struct nvhost_ctrl_userctx {
 	struct nvhost_master *dev;
 	u32 *mod_locks;
 };
+
+/*
+ * Write cmdbuf to ftrace output. Checks if cmdbuf contents should be output
+ * and mmaps the cmdbuf contents if required.
+ */
+static void trace_write_cmdbuf(const char *name, u32 mem_id,
+		u32 words, u32 offset)
+{
+	struct nvmap_handle_ref handle;
+	void *mem = NULL;
+
+	if (nvhost_debug_trace_cmdbuf) {
+		handle.handle = nvmap_id_to_handle(mem_id);
+		mem = nvmap_mmap(&handle);
+		if (IS_ERR_OR_NULL(mem))
+			mem = NULL;
+	};
+
+	trace_nvhost_channel_write_cmdbuf(name, mem_id, words, offset);
+	if (mem) {
+		u32 i;
+		/*
+		 * Write in batches of 128 as there seems to be a limit of how
+		 * much you can output to ftrace at once.
+		 */
+		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
+			trace_nvhost_channel_write_cmdbuf_data(name, mem_id,
+					min(words - i, TRACE_MAX_LENGTH),
+					offset + i * sizeof(u32),
+					mem);
+		}
+		nvmap_munmap(&handle, mem);
+	}
+}
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
@@ -219,7 +254,8 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 			if (err)
 				break;
 			trace_nvhost_channel_write_submit(priv->ch->desc->name,
-			  count, priv->hdr.num_cmdbufs, priv->hdr.num_relocs);
+			  count, priv->hdr.num_cmdbufs, priv->hdr.num_relocs,
+			  priv->hdr.syncpt_id, priv->hdr.syncpt_incrs);
 		} else if (priv->hdr.num_cmdbufs) {
 			struct nvhost_cmdbuf cmdbuf;
 			consumed = sizeof(cmdbuf);
@@ -229,7 +265,7 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				err = -EFAULT;
 				break;
 			}
-			trace_nvhost_channel_write_cmdbuf(priv->ch->desc->name,
+			trace_write_cmdbuf(priv->ch->desc->name,
 			  cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			add_gather(priv,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
@@ -408,7 +444,8 @@ static long nvhost_channelctl(struct file *filp,
 		trace_nvhost_ioctl_channel_submit(priv->ch->desc->name,
 			priv->hdr.submit_version,
 			priv->hdr.num_cmdbufs, priv->hdr.num_relocs,
-			priv->hdr.num_waitchks);
+			priv->hdr.num_waitchks,
+			priv->hdr.syncpt_id, priv->hdr.syncpt_incrs);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
@@ -617,6 +654,8 @@ static int nvhost_ioctl_ctrl_module_regrdwr(
 	void *values = args->values;
 	u32 vals[64];
 
+	trace_nvhost_ioctl_ctrl_module_regrdwr(args->id,
+			args->num_offsets, args->write);
 	if (!(args->id < ctx->dev->nb_modules) ||
 	    (num_offsets == 0))
 		return -EINVAL;

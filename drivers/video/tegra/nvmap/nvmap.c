@@ -423,6 +423,7 @@ static int nvmap_reloc_pin_array(struct nvmap_client *client,
 		}
 
 		reloc_addr = handle_phys(pin) + arr[i].pin_offset;
+		reloc_addr >>= arr[i].reloc_shift;
 		__raw_writel(reloc_addr, addr + (phys & ~PAGE_MASK));
 	}
 

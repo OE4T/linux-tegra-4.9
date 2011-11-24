@@ -58,6 +58,7 @@ struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;
 	struct nvhost_submit_hdr_ext hdr;
+	int num_relocshifts;
 	struct nvmap_handle_ref *gather_mem;
 	u32 *gathers;
 	u32 *cur_gather;
@@ -220,6 +221,9 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	ctx->cur_waitchk = ctx->waitchks;
 	ctx->pinarray_size = 0;
 
+	if (ctx->hdr.submit_version >= NVHOST_SUBMIT_VERSION_V2)
+		ctx->num_relocshifts = ctx->hdr.num_relocs;
+
 	return 0;
 }
 
@@ -227,6 +231,7 @@ static void reset_submit(struct nvhost_channel_userctx *ctx)
 {
 	ctx->hdr.num_cmdbufs = 0;
 	ctx->hdr.num_relocs = 0;
+	ctx->num_relocshifts = 0;
 	ctx->hdr.num_waitchks = 0;
 }
 
@@ -240,6 +245,7 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 	while (remaining) {
 		size_t consumed;
 		if (!priv->hdr.num_relocs &&
+		    !priv->num_relocshifts &&
 		    !priv->hdr.num_cmdbufs &&
 		    !priv->hdr.num_waitchks) {
 			consumed = sizeof(struct nvhost_submit_hdr);
@@ -271,20 +277,17 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			priv->hdr.num_cmdbufs--;
 		} else if (priv->hdr.num_relocs) {
-			int numrelocs = remaining / sizeof(struct nvhost_reloc);
-			if (!numrelocs)
+			consumed = sizeof(struct nvhost_reloc);
+			if (remaining < consumed)
 				break;
-			numrelocs = min_t(int, numrelocs, priv->hdr.num_relocs);
-			consumed = numrelocs * sizeof(struct nvhost_reloc);
 			if (copy_from_user(&priv->pinarray[priv->pinarray_size],
 						buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			trace_nvhost_channel_write_relocs(priv->ch->desc->name,
-			  numrelocs);
-			priv->pinarray_size += numrelocs;
-			priv->hdr.num_relocs -= numrelocs;
+			trace_nvhost_channel_write_reloc(priv->ch->desc->name);
+			priv->pinarray_size++;
+			priv->hdr.num_relocs--;
 		} else if (priv->hdr.num_waitchks) {
 			int numwaitchks =
 				(remaining / sizeof(struct nvhost_waitchk));
@@ -302,6 +305,18 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 			  priv->hdr.waitchk_mask);
 			priv->cur_waitchk += numwaitchks;
 			priv->hdr.num_waitchks -= numwaitchks;
+		} else if (priv->num_relocshifts) {
+			int next_shift =
+				priv->pinarray_size - priv->num_relocshifts;
+			consumed = sizeof(struct nvhost_reloc_shift);
+			if (remaining < consumed)
+				break;
+			if (copy_from_user(&priv->pinarray[next_shift].reloc_shift,
+					buf, consumed)) {
+				err = -EFAULT;
+				break;
+			}
+			priv->num_relocshifts--;
 		} else {
 			err = -EFAULT;
 			break;
@@ -421,6 +436,7 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_submit_hdr_ext *hdr;
 
 		if (priv->hdr.num_relocs ||
+		    priv->num_relocshifts ||
 		    priv->hdr.num_cmdbufs ||
 		    priv->hdr.num_waitchks) {
 			reset_submit(priv);
@@ -688,6 +704,14 @@ static int nvhost_ioctl_ctrl_module_regrdwr(
 	return 0;
 }
 
+static int nvhost_ioctl_ctrl_get_version(
+	struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_get_param_args *args)
+{
+	args->value = NVHOST_SUBMIT_VERSION_MAX_SUPPORTED;
+	return 0;
+}
+
 static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -725,6 +749,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_SYNCPT_WAITEX:
 		err = nvhost_ioctl_ctrl_syncpt_waitex(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_GET_VERSION:
+		err = nvhost_ioctl_ctrl_get_version(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

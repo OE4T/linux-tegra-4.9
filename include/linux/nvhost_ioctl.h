@@ -48,7 +48,8 @@ struct nvhost_submit_hdr {
 
 #define NVHOST_SUBMIT_VERSION_V0		0x0
 #define NVHOST_SUBMIT_VERSION_V1		0x1
-#define NVHOST_SUBMIT_VERSION_MAX_SUPPORTED	NVHOST_SUBMIT_VERSION_V1
+#define NVHOST_SUBMIT_VERSION_V2		0x2
+#define NVHOST_SUBMIT_VERSION_MAX_SUPPORTED	NVHOST_SUBMIT_VERSION_V2
 
 /* version 1 header (used with ioctl() submit interface) */
 struct nvhost_submit_hdr_ext {
@@ -73,6 +74,10 @@ struct nvhost_reloc {
 	__u32 cmdbuf_offset;
 	__u32 target;
 	__u32 target_offset;
+};
+
+struct nvhost_reloc_shift {
+	__u32 shift;
 };
 
 struct nvhost_waitchk {
@@ -188,8 +193,11 @@ struct nvhost_ctrl_module_regrdwr_args {
 #define NVHOST_IOCTL_CTRL_SYNCPT_WAITEX		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 6, struct nvhost_ctrl_syncpt_waitex_args)
 
+#define NVHOST_IOCTL_CTRL_GET_VERSION	\
+	_IOR(NVHOST_IOCTL_MAGIC, 7, struct nvhost_get_param_args)
+
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_SYNCPT_WAITEX)
+	_IOC_NR(NVHOST_IOCTL_CTRL_GET_VERSION)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_module_regrdwr_args)
 

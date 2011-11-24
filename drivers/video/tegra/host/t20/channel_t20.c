@@ -189,8 +189,8 @@ static void t20_channel_sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val
 static int t20_channel_submit(struct nvhost_channel *channel,
 			      struct nvhost_hwctx *hwctx,
 			      struct nvmap_client *user_nvmap,
-			      u32 *gather,
-			      u32 *gather_end,
+			      struct nvhost_channel_gather *gathers,
+			      int num_gathers,
 			      struct nvhost_waitchk *waitchk,
 			      struct nvhost_waitchk *waitchk_end,
 			      u32 waitchk_mask,
@@ -347,12 +347,12 @@ static int t20_channel_submit(struct nvhost_channel *channel,
 	} else {
 		/* push user gathers */
 		int i = 0;
-		for ( ; i < gather_end-gather; i += 2) {
+		for ( ; i < num_gathers; i++) {
 			nvhost_cdma_push_gather(&channel->cdma,
 					user_nvmap,
 					unpins[i/2],
-					nvhost_opcode_gather(gather[i]),
-					gather[i+1]);
+					nvhost_opcode_gather(gathers[i].words),
+					gathers[i].mem);
 		}
 	}
 

@@ -50,6 +50,13 @@ struct nvhost_channeldesc {
 	struct nvhost_moduledesc module;
 };
 
+struct nvhost_channel_gather {
+	u32 words;
+	phys_addr_t mem;
+	u32 mem_id;
+	int offset;
+};
+
 struct nvhost_channel {
 	int refcount;
 	int chid;
@@ -85,8 +92,8 @@ int nvhost_channel_submit(
 	struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
 	struct nvmap_client *user_nvmap,
-	u32 *gather,
-	u32 *gather_end,
+	struct nvhost_channel_gather *gathers,
+	int num_gathers,
 	struct nvhost_waitchk *waitchk,
 	struct nvhost_waitchk *waitchk_end,
 	u32 waitchk_mask,

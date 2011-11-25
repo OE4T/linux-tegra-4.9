@@ -22,9 +22,12 @@
 
 #include <linux/mutex.h>
 #include <mach/powergate.h>
+
+#include "3dctx_t30.h"
+#include "scale3d.h"
+
 #include "../dev.h"
 #include "../t20/channel_t20.h"
-#include "../t20/hardware_t20.h"
 #include "../t20/t20.h"
 #include "../t20/syncpt_t20.h"
 #include "../3dctx_common.h"
@@ -41,7 +44,6 @@
 #define NVMODMUTEX_DISPLAYB  (7)
 #define NVMODMUTEX_VI        (8)
 #define NVMODMUTEX_DSI       (9)
-#define NV_FIFO_READ_TIMEOUT 200000
 
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1 -1

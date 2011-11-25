@@ -22,6 +22,7 @@
 
 #include "../nvhost_hwctx.h"
 #include "../dev.h"
+#include "channel_t20.h"
 #include "hardware_t20.h"
 #include "syncpt_t20.h"
 #include "../3dctx_common.h"
@@ -353,7 +354,7 @@ int __init t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 
 	setup_save(NULL);
 
-	nvhost_3dctx_save_buf = nvmap_alloc(nvmap, save_size * 4, 32,
+	nvhost_3dctx_save_buf = nvmap_alloc(nvmap, save_size * sizeof(u32), 32,
 				NVMAP_HANDLE_WRITE_COMBINE);
 	if (IS_ERR(nvhost_3dctx_save_buf)) {
 		int err = PTR_ERR(nvhost_3dctx_save_buf);

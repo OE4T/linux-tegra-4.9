@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/channel_t20.h
+ * drivers/video/tegra/host/t30/3dctx_t30.h
  *
- * Tegra Graphics Host Channel
+ * Tegra Graphics Host Context Switching for Tegra3
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,16 +20,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_CHANNEL_T20_H
-#define __NVHOST_CHANNEL_T20_H
+#ifndef __NVHOST_3D_T30_H
+#define __NVHOST_3D_T30_H
 
-#include "hardware_t20.h"
-#include "../nvhost_channel.h"
+/* Registers of 3D unit */
 
-extern const struct nvhost_channeldesc nvhost_t20_channelmap[];
-
-/* Reads words from FIFO */
-int nvhost_drain_read_fifo(void __iomem *chan_regs,
-		u32 *ptr, unsigned int count, unsigned int *pending);
+#define AR3D_PSEQ_QUAD_ID 0x545
+#define AR3D_DW_MEMORY_OUTPUT_ADDRESS 0x904
+#define AR3D_DW_MEMORY_OUTPUT_DATA 0x905
+#define AR3D_GSHIM_WRITE_MASK 0xb00
+#define AR3D_GSHIM_READ_SELECT 0xb01
+#define AR3D_GLOBAL_MEMORY_OUTPUT_READS 0xe40
 
 #endif

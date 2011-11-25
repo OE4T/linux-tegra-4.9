@@ -77,9 +77,9 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	writel(0, sync_regs + HOST1X_SYNC_SYNCPT_THRESH_INT_DISABLE);
 
 	/* clear status for both cpu's */
-	writel(0xfffffffful, sync_regs +
+	writel(0xffffffffu, sync_regs +
 		HOST1X_SYNC_SYNCPT_THRESH_CPU0_INT_STATUS);
-	writel(0xfffffffful, sync_regs +
+	writel(0xffffffffu, sync_regs +
 		HOST1X_SYNC_SYNCPT_THRESH_CPU1_INT_STATUS);
 }
 
@@ -118,12 +118,12 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + HOST1X_SYNC_HINTSTATUS);
 	ext_stat = readl(sync_regs + HOST1X_SYNC_HINTSTATUS_EXT);
 
-	if (nvhost_sync_hintstatus_ext_ip_read_int(ext_stat)) {
+	if (HOST1X_VAL(SYNC_HINTSTATUS_EXT, IP_READ_INT, ext_stat)) {
 		addr = readl(sync_regs + HOST1X_SYNC_IP_READ_TIMEOUT_ADDR);
 		pr_err("Host read timeout at address %x\n", addr);
 	}
 
-	if (nvhost_sync_hintstatus_ext_ip_write_int(ext_stat)) {
+	if (HOST1X_VAL(SYNC_HINTSTATUS_EXT, IP_WRITE_INT, ext_stat)) {
 		addr = readl(sync_regs + HOST1X_SYNC_IP_WRITE_TIMEOUT_ADDR);
 		pr_err("Host write timeout at address %x\n", addr);
 	}

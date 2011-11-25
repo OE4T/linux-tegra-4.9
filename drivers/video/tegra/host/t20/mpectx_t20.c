@@ -23,6 +23,7 @@
 #include "../nvhost_hwctx.h"
 #include "../dev.h"
 #include "hardware_t20.h"
+#include "channel_t20.h"
 #include "syncpt_t20.h"
 #include "t20.h"
 #include <linux/slab.h>

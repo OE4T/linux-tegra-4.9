@@ -27,15 +27,15 @@
 #include <mach/powergate.h>
 #include <linux/slab.h>
 
-#include "hardware_t20.h"
+#include "channel_t20.h"
 #include "syncpt_t20.h"
-#include "../dev.h"
 #include "3dctx_t20.h"
+
 #include "../3dctx_common.h"
 #include "mpectx_t20.h"
+#include "../nvhost_intr.h"
 
 #define NVHOST_NUMCHANNELS (NV_HOST1X_CHANNELS - 1)
-#define NVHOST_CHANNEL_BASE 0
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -143,7 +143,6 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 
 static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 {
-	ndx += NVHOST_CHANNEL_BASE;
 	p += NV_HOST1X_CHANNEL0_BASE;
 	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
 	return p;
@@ -488,8 +487,7 @@ static int t20_channel_read_3d_reg(
 	/* Switch to 3D - wait for it to complete what it was doing */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-		nvhost_opcode_imm(NV_CLASS_HOST_INCR_SYNCPT,
-				NV_SYNCPT_OP_DONE << 8 | NVSYNCPT_3D));
+		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE, NVSYNCPT_3D));
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 			NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
@@ -505,7 +503,8 @@ static int t20_channel_read_3d_reg(
 		NVHOST_OPCODE_NOOP);
 	/*  Increment syncpt to indicate that FIFO can be read */
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_imm(NV_CLASS_HOST_INCR_SYNCPT, NVSYNCPT_3D),
+		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
+			NVSYNCPT_3D),
 		NVHOST_OPCODE_NOOP);
 	/*  Wait for value to be read from FIFO */
 	nvhost_cdma_push(&channel->cdma,
@@ -518,7 +517,8 @@ static int t20_channel_read_3d_reg(
 		nvhost_class_host_incr_syncpt_base(NVWAITBASE_3D, 4));
 	nvhost_cdma_push(&channel->cdma,
 		NVHOST_OPCODE_NOOP,
-		nvhost_opcode_imm(NV_CLASS_HOST_INCR_SYNCPT, NVSYNCPT_3D));
+		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
+			NVSYNCPT_3D));
 
 	/* end CDMA submit  */
 	nvhost_cdma_end(&channel->cdma, job);
@@ -578,9 +578,6 @@ done:
 
 int nvhost_init_t20_channel_support(struct nvhost_master *host)
 {
-
-	BUILD_BUG_ON(NVHOST_NUMCHANNELS != ARRAY_SIZE(nvhost_t20_channelmap));
-
 	host->nb_mlocks =  NV_HOST1X_SYNC_MLOCK_NUM;
 	host->nb_channels =  NVHOST_NUMCHANNELS;
 
@@ -601,7 +598,7 @@ int nvhost_drain_read_fifo(void __iomem *chan_regs,
 
 		while (!entries && time_before(jiffies, timeout)) {
 			/* query host for number of entries in fifo */
-			entries = nvhost_channel_fifostat_outfentries(
+			entries = HOST1X_VAL(CHANNEL_FIFOSTAT, OUTFENTRIES,
 				readl(chan_regs + HOST1X_CHANNEL_FIFOSTAT));
 			if (!entries)
 				cpu_relax();

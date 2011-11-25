@@ -25,6 +25,7 @@
 #include "../t20/hardware_t20.h"
 #include "../t20/syncpt_t20.h"
 #include "../3dctx_common.h"
+#include "../3d_common.h"
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
@@ -131,18 +132,19 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 	   and send their reads to memory */
 	if (register_sets == 2) {
 		nvhost_cdma_push(cdma,
-				nvhost_opcode_imm(0xb00, 2),
-				nvhost_opcode_imm(0xe40, 1));
+			nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 2),
+			nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS,
+					1));
 		nvhost_cdma_push(cdma,
 				nvhost_opcode_nonincr(0x904, 1),
 				ctx->restore_phys + restore_set1_offset * 4);
 	}
 	nvhost_cdma_push(cdma,
-			nvhost_opcode_imm(0xb00, 1),
-			nvhost_opcode_imm(0xe40, 1));
+		nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 1),
+		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
 	nvhost_cdma_push(cdma,
-			nvhost_opcode_nonincr(0x904, 1),
-			ctx->restore_phys);
+		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
+		ctx->restore_phys);
 	/* gather the save buffer */
 	nvhost_cdma_push_gather(cdma,
 			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
@@ -153,17 +155,16 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 
 static void __init save_begin_v1(u32 *ptr)
 {
-	ptr[0] = nvhost_opcode_nonincr(0x905, RESTORE_BEGIN_SIZE);
+	ptr[0] = nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_DATA,
+			RESTORE_BEGIN_SIZE);
 	nvhost_3dctx_restore_begin(ptr + 1);
 	ptr += RESTORE_BEGIN_SIZE;
 }
 
 static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count)
 {
-#if RESTORE_DIRECT_SIZE != 1
-#error whoops! code is optimized for RESTORE_DIRECT_SIZE == 1
-#endif
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
+			AR3D_DW_MEMORY_OUTPUT_DATA, 1);
 	nvhost_3dctx_restore_direct(ptr + 1, start_reg, count);
 	ptr += RESTORE_DIRECT_SIZE;
 	ptr[1] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
@@ -178,7 +179,8 @@ static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 			u32 data_reg, u32 count)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_nonincr(0x905, RESTORE_INDIRECT_SIZE);
+	ptr[1] = nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_DATA,
+			RESTORE_INDIRECT_SIZE);
 	nvhost_3dctx_restore_indirect(ptr + 2, offset_reg, offset, data_reg,
 			count);
 	ptr += RESTORE_INDIRECT_SIZE;
@@ -192,14 +194,14 @@ static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 
 static void __init save_end_v1(u32 *ptr)
 {
-#if RESTORE_END_SIZE != 1
-#error whoops! code is optimized for RESTORE_END_SIZE == 1
-#endif
 	/* write end of restore buffer */
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
+			AR3D_DW_MEMORY_OUTPUT_DATA, 1);
 	nvhost_3dctx_restore_end(ptr + 1);
 	ptr += RESTORE_END_SIZE;
-	ptr[1] = nvhost_opcode_imm(0xb00, (1 << register_sets) - 1);
+	/* reset to dual reg if necessary */
+	ptr[1] = nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK,
+			(1 << register_sets) - 1);
 	/* op_done syncpt incr to flush FDC */
 	ptr[2] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE, NVSYNCPT_3D);
 	/* host wait for that syncpt incr, and advance the wait base */
@@ -215,7 +217,7 @@ static void __init save_end_v1(u32 *ptr)
 	/* set class back to 3d */
 	ptr[6] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* send reg reads back to host */
-	ptr[7] = nvhost_opcode_imm(0xe40, 0);
+	ptr[7] = nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 0);
 	/* final syncpt increment to release waiters */
 	ptr[8] = nvhost_opcode_imm(0, NVSYNCPT_3D);
 }
@@ -289,12 +291,14 @@ static void __init switch_gpu(struct save_info *info,
 {
 	if (info->ptr) {
 		info->ptr[0] = nvhost_opcode_setclass(
-				NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
-		info->ptr[1] = nvhost_opcode_imm(0xb00,
+				NV_GRAPHICS_3D_CLASS_ID,
+				AR3D_DW_MEMORY_OUTPUT_DATA, 1);
+		info->ptr[1] = nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK,
 				restore_dest_sets);
-		info->ptr[2] = nvhost_opcode_imm(0xb00,
+		info->ptr[2] = nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK,
 				save_dest_sets);
-		info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
+		info->ptr[3] = nvhost_opcode_imm(AR3D_GSHIM_READ_SELECT,
+				save_src_set);
 		info->ptr += 4;
 	}
 	info->save_count += 4;
@@ -319,7 +323,7 @@ static void __init setup_save(u32 *ptr)
 		info.ptr += SAVE_BEGIN_V1_SIZE;
 	}
 
-	/* read from set0, write cmds through set0, restore to sets 0 and 1 */
+	/* read from set0, write cmds through set0, restore to set0 and 1 */
 	if (register_sets == 2)
 		switch_gpu(&info, 0, 1, 3);
 
@@ -328,7 +332,7 @@ static void __init setup_save(u32 *ptr)
 			ctxsave_regs_3d_global,
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
-	/* read from set 0, write cmds through set 0, restore to set 0 */
+	/* read from set 0, write cmds through set0, restore to set0 */
 	if (register_sets == 2)
 		switch_gpu(&info, 0, 1, 1);
 
@@ -348,7 +352,7 @@ static void __init setup_save(u32 *ptr)
 				ARRAY_SIZE(ctxsave_regs_3d_perset));
 	}
 
-	/* read from set 0, write cmds through set 1, restore to sets 0 and 1 */
+	/* read from set0, write cmds through set1, restore to set0 and 1 */
 	if (register_sets == 2)
 		switch_gpu(&info, 0, 2, 3);
 
@@ -362,7 +366,8 @@ static void __init setup_save(u32 *ptr)
 	save_size = info.save_count + save_end_size;
 	nvhost_3dctx_restore_size = info.restore_count + RESTORE_END_SIZE;
 	nvhost_3dctx_save_incrs = info.save_incrs;
-	nvhost_3dctx_save_thresh = nvhost_3dctx_save_incrs - SAVE_THRESH_OFFSET;
+	nvhost_3dctx_save_thresh = nvhost_3dctx_save_incrs
+			- SAVE_THRESH_OFFSET;
 	nvhost_3dctx_restore_incrs = info.restore_incrs;
 }
 

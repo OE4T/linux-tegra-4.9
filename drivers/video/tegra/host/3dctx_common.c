@@ -30,6 +30,7 @@
 #include "t20/syncpt_t20.h"
 #include "nvhost_hwctx.h"
 #include "dev.h"
+#include "3d_common.h"
 
 unsigned int nvhost_3dctx_restore_size;
 unsigned int nvhost_3dctx_restore_incrs;
@@ -49,7 +50,7 @@ void nvhost_3dctx_restore_begin(u32 *ptr)
 	/* set class to 3D */
 	ptr[2] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* program PSEQ_QUAD_ID */
-	ptr[3] = nvhost_opcode_imm(0x545, 0);
+	ptr[3] = nvhost_opcode_imm(AR3D_PSEQ_QUAD_ID, 0);
 }
 
 void nvhost_3dctx_restore_direct(u32 *ptr, u32 start_reg, u32 count)

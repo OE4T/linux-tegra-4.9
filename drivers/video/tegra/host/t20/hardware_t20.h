@@ -40,111 +40,105 @@ enum {
 #define NV_HOST1X_CHANNEL_MAP_SIZE_BYTES 16384
 #define NV_HOST1X_SYNC_MLOCK_NUM 16
 
+#define HOST1X_VAL(reg, field, regdata) \
+	((regdata >> HOST1X_##reg##_##field##_SHIFT) \
+			& HOST1X_##reg##_##field##_MASK)
+#define HOST1X_CREATE(reg, field, data) \
+	((data & HOST1X_##reg##_##field##_MASK) \
+			<< HOST1X_##reg##_##field##_SHIFT) \
+
 #define HOST1X_CHANNEL_FIFOSTAT		0x00
+#define HOST1X_CHANNEL_FIFOSTAT_CFEMPTY_SHIFT 10
+#define HOST1X_CHANNEL_FIFOSTAT_CFEMPTY_MASK 0x1
+#define HOST1X_CHANNEL_FIFOSTAT_OUTFENTRIES_SHIFT 24
+#define HOST1X_CHANNEL_FIFOSTAT_OUTFENTRIES_MASK 0x1f
 #define HOST1X_CHANNEL_INDDATA		0x0c
 #define HOST1X_CHANNEL_DMASTART		0x14
 #define HOST1X_CHANNEL_DMAPUT		0x18
 #define HOST1X_CHANNEL_DMAGET		0x1c
 #define HOST1X_CHANNEL_DMAEND		0x20
 #define HOST1X_CHANNEL_DMACTRL		0x24
+#define HOST1X_CHANNEL_DMACTRL_DMASTOP_SHIFT 0
+#define HOST1X_CHANNEL_DMACTRL_DMASTOP_MASK 0x1
+#define HOST1X_CHANNEL_DMACTRL_DMAGETRST_SHIFT 1
+#define HOST1X_CHANNEL_DMACTRL_DMAGETRST_MASK 0x1
+#define HOST1X_CHANNEL_DMACTRL_DMAINITGET_SHIFT 2
+#define HOST1X_CHANNEL_DMACTRL_DMAINITGET_MASK 0x1
 
-#define HOST1X_SYNC_CF_SETUP(x)		(0x3080 + (4 * (x)))
+#define HOST1X_CHANNEL_SYNC_REG_BASE	0x3000
 
-#define HOST1X_SYNC_SYNCPT_BASE(x)	(0x3600 + (4 * (x)))
+#define HOST1X_SYNC_INTMASK		0x4
+#define HOST1X_SYNC_INTC0MASK		0x8
+#define HOST1X_SYNC_HINTSTATUS		0x20
+#define HOST1X_SYNC_HINTMASK		0x24
+#define HOST1X_SYNC_HINTSTATUS_EXT	0x28
+#define HOST1X_SYNC_HINTSTATUS_EXT_IP_READ_INT_SHIFT 30
+#define HOST1X_SYNC_HINTSTATUS_EXT_IP_READ_INT_MASK 0x1
+#define HOST1X_SYNC_HINTSTATUS_EXT_IP_WRITE_INT_SHIFT 31
+#define HOST1X_SYNC_HINTSTATUS_EXT_IP_WRITE_INT_MASK 0x1
+#define HOST1X_SYNC_HINTMASK_EXT	0x2c
+#define HOST1X_SYNC_SYNCPT_THRESH_CPU0_INT_STATUS 0x40
+#define HOST1X_SYNC_SYNCPT_THRESH_CPU1_INT_STATUS 0x48
+#define HOST1X_SYNC_SYNCPT_THRESH_INT_DISABLE 0x60
+#define HOST1X_SYNC_SYNCPT_THRESH_INT_ENABLE_CPU0 0x68
+#define HOST1X_SYNC_CF0_SETUP		0x80
+#define HOST1X_SYNC_CF0_SETUP_BASE_SHIFT 0
+#define HOST1X_SYNC_CF0_SETUP_BASE_MASK	0x1ff
+#define HOST1X_SYNC_CF0_SETUP_LIMIT_SHIFT 16
+#define HOST1X_SYNC_CF0_SETUP_LIMIT_MASK 0x1ff
+#define HOST1X_SYNC_CFx_SETUP(x)	(HOST1X_SYNC_CF0_SETUP + (4 * (x)))
 
-#define HOST1X_SYNC_CBREAD(x)		(0x3720 + (4 * (x)))
-#define HOST1X_SYNC_CFPEEK_CTRL		0x374c
-#define HOST1X_SYNC_CFPEEK_READ		0x3750
-#define HOST1X_SYNC_CFPEEK_PTRS		0x3754
-#define HOST1X_SYNC_CBSTAT(x)		(0x3758 + (4 * (x)))
+#define HOST1X_SYNC_CMDPROC_STOP	0xac
+#define HOST1X_SYNC_CH_TEARDOWN		0xb0
+#define HOST1X_SYNC_USEC_CLK		0x1a4
+#define HOST1X_SYNC_CTXSW_TIMEOUT_CFG	0x1a8
+#define HOST1X_SYNC_IP_BUSY_TIMEOUT	0x1bc
+#define HOST1X_SYNC_IP_READ_TIMEOUT_ADDR 0x1c0
+#define HOST1X_SYNC_IP_WRITE_TIMEOUT_ADDR 0x1c4
+#define HOST1X_SYNC_MLOCK_0		0x2c0
+#define HOST1X_SYNC_MLOCK_OWNER_0	0x340
+#define HOST1X_SYNC_MLOCK_OWNER_0_CHID_SHIFT 8
+#define HOST1X_SYNC_MLOCK_OWNER_0_CHID_MASK 0xf
+#define HOST1X_SYNC_MLOCK_OWNER_0_CPU_OWNS_SHIFT 1
+#define HOST1X_SYNC_MLOCK_OWNER_0_CPU_OWNS_MASK 0x1
+#define HOST1X_SYNC_MLOCK_OWNER_0_CH_OWNS_SHIFT 0
+#define HOST1X_SYNC_MLOCK_OWNER_0_CH_OWNS_MASK 0x1
+#define HOST1X_SYNC_SYNCPT_0		0x400
+#define HOST1X_SYNC_SYNCPT_INT_THRESH_0	0x500
 
-static inline unsigned nvhost_channel_fifostat_outfentries(u32 reg)
-{
-	return (reg >> 24) & 0x1f;
-}
+#define HOST1X_SYNC_SYNCPT_BASE_0	0x600
+#define HOST1X_SYNC_SYNCPT_BASE_0_BASE_SHIFT 0
+#define HOST1X_SYNC_SYNCPT_BASE_0_BASE_MASK 0xffff
+#define HOST1X_SYNC_SYNCPT_BASE_x(x)	(HOST1X_SYNC_SYNCPT_BASE_0 + (4 * (x)))
 
-static inline u32 nvhost_channel_dmactrl(bool stop, bool get_rst, bool init_get)
-{
-	u32 v = stop ? 1 : 0;
-	if (get_rst)
-		v |= 2;
-	if (init_get)
-		v |= 4;
-	return v;
-}
+#define HOST1X_SYNC_SYNCPT_CPU_INCR	0x700
 
+#define HOST1X_SYNC_CBREAD_0		0x720
+#define HOST1X_SYNC_CBREAD_x(x)		(HOST1X_SYNC_CBREAD_0 + (4 * (x)))
+#define HOST1X_SYNC_CFPEEK_CTRL		0x74c
+#define HOST1X_SYNC_CFPEEK_CTRL_ADDR_SHIFT 0
+#define HOST1X_SYNC_CFPEEK_CTRL_ADDR_MASK 0x1ff
+#define HOST1X_SYNC_CFPEEK_CTRL_CHANNR_SHIFT 16
+#define HOST1X_SYNC_CFPEEK_CTRL_CHANNR_MASK 0x7
+#define HOST1X_SYNC_CFPEEK_CTRL_ENA_SHIFT 31
+#define HOST1X_SYNC_CFPEEK_CTRL_ENA_MASK 0x1
+#define HOST1X_SYNC_CFPEEK_READ		0x750
+#define HOST1X_SYNC_CFPEEK_PTRS		0x754
+#define HOST1X_SYNC_CFPEEK_PTRS_CF_RD_PTR_SHIFT 0
+#define HOST1X_SYNC_CFPEEK_PTRS_CF_RD_PTR_MASK 0x1ff
+#define HOST1X_SYNC_CFPEEK_PTRS_CF_WR_PTR_SHIFT 16
+#define HOST1X_SYNC_CFPEEK_PTRS_CF_WR_PTR_MASK 0x1ff
+#define HOST1X_SYNC_CBSTAT_0		0x758
+#define HOST1X_SYNC_CBSTAT_0_CBOFFSET0_SHIFT 0
+#define HOST1X_SYNC_CBSTAT_0_CBOFFSET0_MASK 0xffff
+#define HOST1X_SYNC_CBSTAT_0_CBCLASS0_SHIFT 16
+#define HOST1X_SYNC_CBSTAT_0_CBCLASS0_MASK 0xffff
+#define HOST1X_SYNC_CBSTAT_x(x)		(HOST1X_SYNC_CBSTAT_0 + (4 * (x)))
 
 /* sync registers */
 #define NV_HOST1X_SYNCPT_NB_PTS 32
 #define NV_HOST1X_SYNCPT_NB_BASES 8
 #define NV_HOST1X_NB_MLOCKS 16
-#define HOST1X_CHANNEL_SYNC_REG_BASE 12288
-
-enum {
-	HOST1X_SYNC_INTMASK = 0x4,
-	HOST1X_SYNC_INTC0MASK = 0x8,
-	HOST1X_SYNC_HINTSTATUS = 0x20,
-	HOST1X_SYNC_HINTMASK = 0x24,
-	HOST1X_SYNC_HINTSTATUS_EXT = 0x28,
-	HOST1X_SYNC_HINTMASK_EXT = 0x2c,
-	HOST1X_SYNC_SYNCPT_THRESH_CPU0_INT_STATUS = 0x40,
-	HOST1X_SYNC_SYNCPT_THRESH_CPU1_INT_STATUS = 0x48,
-	HOST1X_SYNC_SYNCPT_THRESH_INT_DISABLE = 0x60,
-	HOST1X_SYNC_SYNCPT_THRESH_INT_ENABLE_CPU0 = 0x68,
-	HOST1X_SYNC_CMDPROC_STOP = 0xac,
-	HOST1X_SYNC_CH_TEARDOWN = 0xb0,
-	HOST1X_SYNC_USEC_CLK = 0x1a4,
-	HOST1X_SYNC_CTXSW_TIMEOUT_CFG = 0x1a8,
-	HOST1X_SYNC_IP_BUSY_TIMEOUT = 0x1bc,
-	HOST1X_SYNC_IP_READ_TIMEOUT_ADDR = 0x1c0,
-	HOST1X_SYNC_IP_WRITE_TIMEOUT_ADDR = 0x1c4,
-	HOST1X_SYNC_MLOCK_0 = 0x2c0,
-	HOST1X_SYNC_MLOCK_OWNER_0 = 0x340,
-	HOST1X_SYNC_SYNCPT_0 = 0x400,
-	HOST1X_SYNC_SYNCPT_INT_THRESH_0 = 0x500,
-	HOST1X_SYNC_SYNCPT_BASE_0 = 0x600,
-	HOST1X_SYNC_SYNCPT_CPU_INCR = 0x700
-};
-
-static inline bool nvhost_sync_hintstatus_ext_ip_read_int(u32 reg)
-{
-	return (reg & BIT(30)) != 0;
-}
-
-static inline bool nvhost_sync_hintstatus_ext_ip_write_int(u32 reg)
-{
-	return (reg & BIT(31)) != 0;
-}
-
-static inline bool nvhost_sync_mlock_owner_ch_owns(u32 reg)
-{
-	return (reg & BIT(0)) != 0;
-}
-
-static inline bool nvhost_sync_mlock_owner_cpu_owns(u32 reg)
-{
-	return (reg & BIT(1)) != 0;
-}
-
-static inline unsigned int nvhost_sync_mlock_owner_owner_chid(u32 reg)
-{
-	return (reg >> 8) & 0xf;
-}
-
-static inline unsigned int nvhost_sync_cmdproc_stop_chid(u32 reg, u32 chid)
-{
-	return reg | BIT(chid);
-}
-
-static inline unsigned int nvhost_sync_cmdproc_run_chid(u32 reg, u32 chid)
-{
-	return reg & ~(BIT(chid));
-}
-
-static inline unsigned int nvhost_sync_ch_teardown_chid(u32 reg, u32 chid)
-{
-	return reg | BIT(chid);
-}
 
 /* host class methods */
 enum {
@@ -278,26 +272,5 @@ static inline u32 nvhost_mask2(unsigned x, unsigned y)
 {
 	return 1 | (1 << (y - x));
 }
-
-/* Reads words from FIFO */
-int nvhost_drain_read_fifo(void __iomem *chan_regs,
-		u32 *ptr, unsigned int count, unsigned int *pending);
-
-/*
- * Size of the sync queue. Size equals to case where all submits consist of
- * only one gather.
- */
-#define NVHOST_SYNC_QUEUE_SIZE 512
-
-/* Number of gathers we allow to be queued up per channel. Must be a
- * power of two. Currently sized such that pushbuffer is 4KB (512*8B). */
-#define NVHOST_GATHER_QUEUE_SIZE 512
-
-/* 8 bytes per slot. (This number does not include the final RESTART.) */
-#define PUSH_BUFFER_SIZE (NVHOST_GATHER_QUEUE_SIZE * 8)
-
-/* 4K page containing GATHERed methods to increment channel syncpts
- * and replaces the original timed out contexts GATHER slots */
-#define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
 
 #endif /* __NVHOST_HARDWARE_T20_H */

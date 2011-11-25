@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/channel_t20.h
+ * drivers/video/tegra/host/t20/cdma_t20.h
  *
  * Tegra Graphics Host Channel
  *
@@ -20,16 +20,22 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_CHANNEL_T20_H
-#define __NVHOST_CHANNEL_T20_H
+#ifndef __NVHOST_CDMA_T20_H
+#define __NVHOST_CDMA_T20_H
 
-#include "hardware_t20.h"
-#include "../nvhost_channel.h"
+/* Size of the sync queue. If it is too small, we won't be able to queue up
+ * many command buffers. If it is too large, we waste memory. */
+#define NVHOST_SYNC_QUEUE_SIZE 512
 
-extern const struct nvhost_channeldesc nvhost_t20_channelmap[];
+/* Number of gathers we allow to be queued up per channel. Must be a
+ * power of two. Currently sized such that pushbuffer is 4KB (512*8B). */
+#define NVHOST_GATHER_QUEUE_SIZE 512
 
-/* Reads words from FIFO */
-int nvhost_drain_read_fifo(void __iomem *chan_regs,
-		u32 *ptr, unsigned int count, unsigned int *pending);
+/* 8 bytes per slot. (This number does not include the final RESTART.) */
+#define PUSH_BUFFER_SIZE (NVHOST_GATHER_QUEUE_SIZE * 8)
+
+/* 4K page containing GATHERed methods to increment channel syncpts
+ * and replaces the original timed out contexts GATHER slots */
+#define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
 
 #endif

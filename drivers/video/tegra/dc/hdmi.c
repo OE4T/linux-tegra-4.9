@@ -1313,6 +1313,31 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_sourc
 }
 EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+int tegra_hdmi_setup_hda_presence()
+{
+	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
+
+	if (!hdmi)
+		return -EAGAIN;
+
+	if (hdmi->clk_enabled && hdmi->eld_retrieved) {
+		/* If HDA_PRESENCE is already set reset it */
+		if (tegra_hdmi_readl(hdmi,
+				     HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0))
+			tegra_hdmi_writel(hdmi, 0,
+				     HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
+
+		tegra_dc_hdmi_setup_eld_buff(hdmi->dc);
+	}
+	else
+		return -ENODEV;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hdmi_setup_hda_presence);
+#endif
+
 static void tegra_dc_hdmi_write_infopack(struct tegra_dc *dc, int header_reg,
 					 u8 type, u8 version, void *data, int len)
 {

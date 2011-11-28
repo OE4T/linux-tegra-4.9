@@ -69,7 +69,7 @@ int nvhost_mutex_try_lock(struct nvhost_cpuaccess *ctx, unsigned int idx)
 	reg = cpuaccess_op(ctx).mutex_try_lock(ctx, idx);
 	if (reg) {
 		nvhost_module_idle(&dev->mod);
-		return -ERESTARTSYS;
+		return -EBUSY;
 	}
 	atomic_inc(&ctx->lock_counts[idx]);
 	return 0;

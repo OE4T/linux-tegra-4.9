@@ -41,6 +41,10 @@ enum{
 #define DSI_MAX_COMMAND_DELAY_USEC	250000
 #define DSI_COMMAND_DELAY_STEPS_USEC	10
 
+/* Trigger message */
+#define DSI_ESCAPE_CMD	0x87
+#define DSI_ACK_NO_ERR	0x84
+
 /* DSI return packet types */
 #define GEN_LONG_RD_RES 0x1A
 #define DCS_LONG_RD_RES 0x1C

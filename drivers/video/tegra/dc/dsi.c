@@ -316,7 +316,7 @@ static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 	ret = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
 		dsi->syncpt_id, dsi->syncpt_val + 1);
 	if (ret < 0) {
-		printk(KERN_ERR "DSI sync point failure\n");
+		dev_err(&dsi->dc->ndev->dev, "DSI sync point failure\n");
 		goto fail;
 	}
 
@@ -504,7 +504,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	if (dsi->info.enable_hs_clock_on_lp_cmd_mode) {
 		if (dsi->info.video_clock_mode !=
 					TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS)
-			printk(KERN_WARNING "Force clock continuous mode\n");
+			dev_warn(&dc->ndev->dev,
+				"Force clock continuous mode\n");
 
 		dsi->info.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS;
 	}
@@ -874,7 +875,8 @@ void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 
 	if (timeout == 0)
-		printk(KERN_WARNING "DC doesn't stop at end of frame.\n");
+		dev_warn(&dc->ndev->dev,
+			"DC doesn't stop at end of frame.\n");
 }
 
 static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
@@ -1259,15 +1261,15 @@ fail:
 	return err;
 }
 
-static bool tegra_dsi_is_controller_idle(struct tegra_dc_dsi_data *dsi)
+static bool tegra_dsi_write_busy(struct tegra_dc_dsi_data *dsi)
 {
 	u32 timeout = 0;
-	bool retVal;
+	bool retVal = true;
 
-	retVal = false;
 	while (timeout <= DSI_MAX_COMMAND_DELAY_USEC) {
-		if (!tegra_dsi_readl(dsi, DSI_TRIGGER)) {
-			retVal = true;
+		if (!(DSI_TRIGGER_HOST_TRIGGER(0x1) &
+			tegra_dsi_readl(dsi, DSI_TRIGGER))) {
+			retVal = false;
 			break;
 		}
 		udelay(DSI_COMMAND_DELAY_STEPS_USEC);
@@ -1275,6 +1277,244 @@ static bool tegra_dsi_is_controller_idle(struct tegra_dc_dsi_data *dsi)
 	}
 
 	return retVal;
+}
+
+static bool tegra_dsi_read_busy(struct tegra_dc_dsi_data *dsi)
+{
+	u32 timeout = 0;
+	bool retVal = true;
+
+	while (timeout <  DSI_STATUS_POLLING_DURATION_USEC) {
+		if (!(DSI_HOST_DSI_CONTROL_IMM_BTA(0x1) &
+			tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL))) {
+			retVal = false;
+			break;
+		}
+		udelay(DSI_STATUS_POLLING_DELAY_USEC);
+		timeout += DSI_STATUS_POLLING_DELAY_USEC;
+	}
+
+	return retVal;
+}
+
+static bool tegra_dsi_host_busy(struct tegra_dc_dsi_data *dsi)
+{
+	int err = 0;
+
+	if (tegra_dsi_write_busy(dsi)) {
+		err = -EBUSY;
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI trigger bit already set\n");
+		goto fail;
+	}
+
+	if (tegra_dsi_read_busy(dsi)) {
+		err = -EBUSY;
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI immediate bta bit already set\n");
+		goto fail;
+	}
+fail:
+	return err;
+}
+
+static void tegra_dsi_reset_underflow_overflow
+				(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	val &= (DSI_STATUS_LB_OVERFLOW(0x1) | DSI_STATUS_LB_UNDERFLOW(0x1));
+	if (val) {
+		dev_warn(&dsi->dc->ndev->dev, "Reset overflow/underflow\n");
+		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+		val |= DSI_HOST_CONTROL_FIFO_STAT_RESET(0x1);
+		tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+		ndelay(200);
+	}
+}
+
+static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+
+	tegra_dsi_writel(dsi,
+		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE),
+		DSI_POWER_CONTROL);
+	mdelay(1);
+
+	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE);
+	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
+
+	while (tegra_dsi_readl(dsi, DSI_POWER_CONTROL) != val)
+		tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
+}
+
+static void tegra_dsi_reset_read_count(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	val &= DSI_STATUS_RD_FIFO_COUNT(0x1f);
+	if (val) {
+		dev_warn(&dsi->dc->ndev->dev,
+			"DSI read count not zero, resetting\n");
+		tegra_dsi_soft_reset(dsi);
+	}
+}
+
+static struct dsi_status *tegra_dsi_save_state_switch_to_host_cmd_mode(
+						struct tegra_dc_dsi_data *dsi,
+						struct tegra_dc *dc,
+						u8 lp_op)
+{
+	struct dsi_status *init_status;
+	int err;
+
+	init_status = kzalloc(sizeof(*init_status), GFP_KERNEL);
+	if (!init_status)
+		return ERR_PTR(-ENOMEM);
+
+	*init_status = dsi->status;
+
+	if (dsi->status.lphs == DSI_LPHS_IN_HS_MODE) {
+		if (dsi->status.driven == DSI_DRIVEN_MODE_DC) {
+			if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
+				tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
+			dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_HOST;
+			if (dsi->info.hs_cmd_mode_supported) {
+				err = tegra_dsi_set_to_hs_mode(dc, dsi);
+				if (err < 0) {
+					dev_err(&dc->ndev->dev,
+					"Switch to HS host mode failed\n");
+					goto fail;
+				}
+			}
+		}
+		if (!dsi->info.hs_cmd_mode_supported) {
+			err =
+			tegra_dsi_set_to_lp_mode(dc, dsi, lp_op);
+			if (err < 0) {
+				dev_err(&dc->ndev->dev,
+				"DSI failed to go to LP mode\n");
+				goto fail;
+			}
+		}
+	} else if (dsi->status.lphs == DSI_LPHS_IN_LP_MODE) {
+		if (dsi->status.lp_op != lp_op) {
+			err = tegra_dsi_set_to_lp_mode(dc, dsi, lp_op);
+			if (err < 0) {
+				dev_err(&dc->ndev->dev,
+				"DSI failed to go to LP mode\n");
+				goto fail;
+			}
+		}
+	}
+
+	return init_status;
+fail:
+	kfree(init_status);
+	return ERR_PTR(err);
+}
+
+static struct dsi_status *tegra_dsi_prepare_host_transmission(
+				struct tegra_dc *dc,
+				struct tegra_dc_dsi_data *dsi,
+				u8 lp_op)
+{
+	int err = 0;
+	struct dsi_status *init_status;
+
+	if (dsi->status.init != DSI_MODULE_INIT ||
+		dsi->ulpm) {
+		err = -EPERM;
+		goto fail;
+	}
+
+	if (tegra_dsi_host_busy(dsi)) {
+		err = -EBUSY;
+		dev_err(&dc->ndev->dev, "DSI host busy\n");
+		goto fail;
+	}
+
+	tegra_dsi_reset_underflow_overflow(dsi);
+
+	if (lp_op == DSI_LP_OP_READ)
+		tegra_dsi_reset_read_count(dsi);
+
+	if (dsi->status.lphs == DSI_LPHS_NOT_INIT) {
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, lp_op);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev, "Failed to config LP write\n");
+			goto fail;
+		}
+	}
+
+	init_status = tegra_dsi_save_state_switch_to_host_cmd_mode
+					(dsi, dc, lp_op);
+	if (IS_ERR_OR_NULL(init_status)) {
+		err = PTR_ERR(init_status);
+		dev_err(&dc->ndev->dev, "DSI state saving failed\n");
+		goto fail;
+	}
+
+	return init_status;
+fail:
+	return ERR_PTR(err);
+}
+
+static int tegra_dsi_restore_state(struct tegra_dc *dc,
+				struct tegra_dc_dsi_data *dsi,
+				struct dsi_status *init_status)
+{
+	bool switch_back_to_dc_mode = false;
+	bool switch_back_to_hs_mode = false;
+	bool restart_dc_stream;
+	int err = 0;
+
+	switch_back_to_dc_mode = (dsi->status.driven ==
+				DSI_DRIVEN_MODE_HOST &&
+				init_status->driven ==
+				DSI_DRIVEN_MODE_DC);
+	switch_back_to_hs_mode = (dsi->status.lphs ==
+				DSI_LPHS_IN_LP_MODE &&
+				init_status->lphs ==
+				DSI_LPHS_IN_HS_MODE);
+	restart_dc_stream = (dsi->status.dc_stream ==
+				DSI_DC_STREAM_DISABLE &&
+				init_status->dc_stream ==
+				DSI_DC_STREAM_ENABLE);
+
+	if (dsi->status.lphs == DSI_LPHS_IN_LP_MODE &&
+		init_status->lphs == DSI_LPHS_IN_LP_MODE) {
+		if (dsi->status.lp_op != init_status->lp_op) {
+			err =
+			tegra_dsi_set_to_lp_mode(dc, dsi, init_status->lp_op);
+			if (err < 0) {
+				dev_err(&dc->ndev->dev,
+					"Failed to config LP mode\n");
+				goto fail;
+			}
+		}
+		goto success;
+	}
+
+	if (switch_back_to_dc_mode)
+		dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
+	if (switch_back_to_dc_mode || switch_back_to_hs_mode) {
+		err = tegra_dsi_set_to_hs_mode(dc, dsi);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev, "Failed to config HS mode\n");
+			goto fail;
+		}
+	}
+	if (restart_dc_stream)
+		tegra_dsi_start_dc_stream(dc, dsi);
+
+success:
+fail:
+	kfree(init_status);
+	return err;
 }
 
 static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
@@ -1292,12 +1532,16 @@ static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
 #if DSI_USE_SYNC_POINTS
 	status = tegra_dsi_syncpt(dsi);
 	if (status < 0) {
-		printk(KERN_ERR "DSI syncpt for host trigger failed\n");
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI syncpt for host trigger failed\n");
 		goto fail;
 	}
 #else
-	if (!tegra_dsi_is_controller_idle(dsi))
-		status = -EIO;
+	if (tegra_dsi_write_busy(dsi)) {
+		status = -EBUSY;
+		dev_err(&dsi->dc->ndev->dev,
+			"Timeout waiting on write completion\n");
+	}
 #endif
 
 fail:
@@ -1342,7 +1586,7 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 
 	err = tegra_dsi_host_trigger(dsi);
 	if (err < 0)
-		printk(KERN_ERR "DSI host trigger failed\n");
+		dev_err(&dsi->dc->ndev->dev, "DSI host trigger failed\n");
 
 	return err;
 }
@@ -1351,50 +1595,25 @@ int tegra_dsi_write_data(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
 			u8 *pdata, u8 data_id, u16 data_len)
 {
-	bool switch_back_to_hs_mode;
-	bool switch_back_to_dc_mode;
-	int err;
+	int err = 0;
+	struct dsi_status *init_status;
 
-	err = 0;
-	switch_back_to_hs_mode = false;
-	switch_back_to_dc_mode = false;
+	tegra_dc_io_start(dc);
 
-	if ((dsi->status.init != DSI_MODULE_INIT) ||
-		(dsi->status.lphs == DSI_LPHS_NOT_INIT) ||
-		(dsi->status.lp_op == DSI_LP_OP_NOT_INIT)) {
-		err = -EPERM;
+	init_status = tegra_dsi_prepare_host_transmission(
+				dc, dsi, DSI_LP_OP_WRITE);
+	if (IS_ERR_OR_NULL(init_status)) {
+		err = PTR_ERR(init_status);
+		dev_err(&dc->ndev->dev, "DSI host config failed\n");
 		goto fail;
-	}
-
-	if (!tegra_dsi_is_controller_idle(dsi)) {
-		err = -EBUSY;
-		goto fail;
-	}
-
-	err = 0;
-
-	if (dsi->status.lphs == DSI_LPHS_IN_HS_MODE) {
-		if (dsi->info.hs_cmd_mode_supported) {
-			if (dsi->status.driven == DSI_DRIVEN_MODE_DC) {
-				dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_HOST;
-				tegra_dsi_set_to_hs_mode(dc, dsi);
-				switch_back_to_dc_mode = true;
-			}
-		} else {
-			tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
-			switch_back_to_hs_mode = true;
-		}
 	}
 
 	err = _tegra_dsi_write_data(dsi, pdata, data_id, data_len);
-
-
-	if (switch_back_to_dc_mode)
-		dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
-	if (switch_back_to_dc_mode || switch_back_to_hs_mode)
-		tegra_dsi_set_to_hs_mode(dc, dsi);
-
 fail:
+	err = tegra_dsi_restore_state(dc, dsi, init_status);
+	if (err < 0)
+		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
+	tegra_dc_io_end(dc);
 	return err;
 }
 EXPORT_SYMBOL(tegra_dsi_write_data);
@@ -1536,47 +1755,19 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 	err = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
 		dsi->syncpt_id, dsi->syncpt_val + 1);
 	if (err < 0)
-		printk(KERN_ERR "DSI sync point failure\n");
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI sync point failure\n");
 	else
 		(dsi->syncpt_val)++;
 #else
-	while (poll_time <  DSI_STATUS_POLLING_DURATION_USEC) {
-		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
-		val &= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
-		if (!val)
-			break;
-		udelay(DSI_STATUS_POLLING_DELAY_USEC);
-		poll_time += DSI_STATUS_POLLING_DELAY_USEC;
-	}
-	if (poll_time > DSI_STATUS_POLLING_DURATION_USEC)
+	if (tegra_dsi_read_busy(dsi)) {
 		err = -EBUSY;
+		dev_err(&dsi->dc->ndev->dev,
+			"Timeout wating on read completion\n");
+	}
 #endif
 
 	return err;
-}
-
-static void tegra_dsi_read_fifo(struct tegra_dc *dc,
-			struct tegra_dc_dsi_data *dsi,
-			u32 rd_fifo_cnt, u8 *read_fifo)
-{
-	u32 val;
-	u32 i;
-
-	/* Read data from FIFO */
-	for (i = 0; i < rd_fifo_cnt; i++) {
-		val = tegra_dsi_readl(dsi, DSI_RD_DATA);
-		if (enable_read_debug)
-			printk(KERN_INFO "Read data[%d]: 0x%x\n", i, val);
-		memcpy(read_fifo, &val, 4);
-		read_fifo += 4;
-	}
-
-	/* Make sure all the data is read from the FIFO */
-	val = tegra_dsi_readl(dsi, DSI_STATUS);
-	val &= DSI_STATUS_RD_FIFO_COUNT(0x1f);
-	if (val)
-		dev_err(&dc->ndev->dev, "DSI FIFO_RD_CNT not zero"
-		" even after reading FIFO_RD_CNT words from read fifo\n");
 }
 
 static int tegra_dsi_parse_read_response(struct tegra_dc *dc,
@@ -1588,41 +1779,114 @@ static int tegra_dsi_parse_read_response(struct tegra_dc *dc,
 	payload_size = 0;
 	err = 0;
 
-	printk(KERN_INFO "escape sequence[0x%x]\n", read_fifo[0]);
+	switch (read_fifo[0]) {
+	case DSI_ESCAPE_CMD:
+		dev_info(&dc->ndev->dev, "escape cmd[0x%x]\n", read_fifo[0]);
+		break;
+	case DSI_ACK_NO_ERR:
+		dev_info(&dc->ndev->dev,
+			"Panel ack, no err[0x%x]\n", read_fifo[0]);
+		return err;
+	default:
+		dev_info(&dc->ndev->dev, "Invalid read response\n");
+		break;
+	}
+
 	switch (read_fifo[4] & 0xff) {
 	case GEN_LONG_RD_RES:
 		/* Fall through */
 	case DCS_LONG_RD_RES:
 		payload_size = (read_fifo[5] |
 				(read_fifo[6] << 8)) & 0xFFFF;
-		printk(KERN_INFO "Long read response Packet\n"
+		dev_info(&dc->ndev->dev, "Long read response Packet\n"
 				"payload_size[0x%x]\n", payload_size);
 		break;
 	case GEN_1_BYTE_SHORT_RD_RES:
 		/* Fall through */
 	case DCS_1_BYTE_SHORT_RD_RES:
 		payload_size = 1;
-		printk(KERN_INFO "Short read response Packet\n"
+		dev_info(&dc->ndev->dev, "Short read response Packet\n"
 			"payload_size[0x%x]\n", payload_size);
 		break;
 	case GEN_2_BYTE_SHORT_RD_RES:
 		/* Fall through */
 	case DCS_2_BYTE_SHORT_RD_RES:
 		payload_size = 2;
-		printk(KERN_INFO "Short read response Packet\n"
+		dev_info(&dc->ndev->dev, "Short read response Packet\n"
 			"payload_size[0x%x]\n", payload_size);
 		break;
 	case ACK_ERR_RES:
 		payload_size = 2;
-		printk(KERN_INFO "Acknowledge error report response\n"
+		dev_info(&dc->ndev->dev, "Acknowledge error report response\n"
 			"Packet payload_size[0x%x]\n", payload_size);
 		break;
 	default:
-		/*reading from RD_FIFO_COUNT*/
-		printk(KERN_INFO "Invalid read response payload_size\n");
+		dev_info(&dc->ndev->dev, "Invalid response packet\n");
 		err = -EINVAL;
 		break;
 	}
+	return err;
+}
+
+static int tegra_dsi_read_fifo(struct tegra_dc *dc,
+			struct tegra_dc_dsi_data *dsi,
+			u8 *read_fifo)
+{
+	u32 val;
+	u32 i;
+	u32 poll_time = 0;
+	u32 rd_fifo_cnt;
+	int err = 0;
+	u8 *read_fifo_cp = read_fifo;
+
+	while (poll_time <  DSI_DELAY_FOR_READ_FIFO) {
+		mdelay(1);
+		val = tegra_dsi_readl(dsi, DSI_STATUS);
+		rd_fifo_cnt = val & DSI_STATUS_RD_FIFO_COUNT(0x1f);
+		if (rd_fifo_cnt << 2 > DSI_READ_FIFO_DEPTH)
+			dev_err(&dc->ndev->dev,
+			"DSI RD_FIFO_CNT is greater than RD_FIFO_DEPTH\n");
+			break;
+		poll_time++;
+	}
+
+	if (rd_fifo_cnt == 0) {
+		dev_info(&dc->ndev->dev,
+			"DSI RD_FIFO_CNT is zero\n");
+		err = -EINVAL;
+		goto fail;
+	}
+
+	if (val & (DSI_STATUS_LB_UNDERFLOW(0x1) |
+		DSI_STATUS_LB_OVERFLOW(0x1))) {
+		dev_warn(&dc->ndev->dev,
+			"DSI overflow/underflow error\n");
+	}
+
+	/* Read data from FIFO */
+	for (i = 0; i < rd_fifo_cnt; i++) {
+		val = tegra_dsi_readl(dsi, DSI_RD_DATA);
+		if (enable_read_debug)
+			dev_info(&dc->ndev->dev,
+			"Read data[%d]: 0x%x\n", i, val);
+		memcpy(read_fifo, &val, 4);
+		read_fifo += 4;
+	}
+
+	/* Make sure all the data is read from the FIFO */
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	val &= DSI_STATUS_RD_FIFO_COUNT(0x1f);
+	if (val)
+		dev_err(&dc->ndev->dev, "DSI FIFO_RD_CNT not zero"
+		" even after reading FIFO_RD_CNT words from read fifo\n");
+
+	if (enable_read_debug) {
+		err =
+		tegra_dsi_parse_read_response(dc, rd_fifo_cnt, read_fifo_cp);
+		if (err < 0)
+			dev_warn(&dc->ndev->dev, "Unexpected read data\n");
+	}
+fail:
 	return err;
 }
 
@@ -1631,79 +1895,17 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 				u32 max_ret_payload_size,
 				u32 panel_reg_addr, u8 *read_data)
 {
-	u32 val;
-	int err;
-	u32 poll_time;
-	u32 rd_fifo_cnt;
-	bool switch_back_to_hs_mode;
-	bool restart_dc_stream;
-	bool switch_back_to_dc_mode;
-
-	err = 0;
-	switch_back_to_hs_mode = false;
-	restart_dc_stream = false;
-	switch_back_to_dc_mode = false;
-
-	if ((dsi->status.init != DSI_MODULE_INIT) ||
-		(dsi->status.lphs == DSI_LPHS_NOT_INIT) ||
-		(dsi->status.driven == DSI_DRIVEN_MODE_NOT_INIT)) {
-		err = -EPERM;
-		goto fail;
-	}
+	int err = 0;
+	struct dsi_status *init_status;
 
 	tegra_dc_io_start(dc);
 
-	val = tegra_dsi_readl(dsi, DSI_STATUS);
-	val &= DSI_STATUS_RD_FIFO_COUNT(0x1f);
-	if (val) {
-		err = -EBUSY;
-		dev_err(&dc->ndev->dev, "DSI fifo count not zero\n");
+	init_status = tegra_dsi_prepare_host_transmission(
+				dc, dsi, DSI_LP_OP_WRITE);
+	if (IS_ERR_OR_NULL(init_status)) {
+		err = PTR_ERR(init_status);
+		dev_err(&dc->ndev->dev, "DSI host config failed\n");
 		goto fail;
-	}
-
-	if (!tegra_dsi_is_controller_idle(dsi)) {
-		err = -EBUSY;
-		dev_err(&dc->ndev->dev, "DSI trigger bit is already set\n");
-		goto fail;
-	}
-
-	val = tegra_dsi_readl(dsi, DSI_STATUS);
-	val &= (DSI_STATUS_LB_OVERFLOW(0x1) | DSI_STATUS_LB_UNDERFLOW(0x1));
-	if (val) {
-		dev_warn(&dc->ndev->dev, "Reset overflow/underflow\n");
-		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
-		val |= DSI_HOST_CONTROL_FIFO_STAT_RESET(0x1);
-		tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
-		ndelay(200);
-	}
-
-	if (dsi->status.lphs == DSI_LPHS_IN_HS_MODE) {
-		if (dsi->status.driven == DSI_DRIVEN_MODE_DC) {
-			if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE) {
-				tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
-				restart_dc_stream = true;
-			}
-			dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_HOST;
-			switch_back_to_dc_mode = true;
-			if (dsi->info.hs_cmd_mode_supported) {
-				err = tegra_dsi_set_to_hs_mode(dc, dsi);
-				if (err < 0) {
-					dev_err(&dc->ndev->dev,
-					"DSI failed to go to HS host driven mode\n");
-					goto fail;
-				}
-			}
-		}
-		if (!dsi->info.hs_cmd_mode_supported) {
-			err =
-			tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
-			if (err < 0) {
-				dev_err(&dc->ndev->dev,
-				"DSI failed to go to LP mode\n");
-				goto fail;
-			}
-			switch_back_to_hs_mode = true;
-		}
 	}
 
 	/* Set max return payload size in words */
@@ -1726,11 +1928,13 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 		goto fail;
 	}
 
+	tegra_dsi_reset_read_count(dsi);
+
 	if (dsi->status.lp_op == DSI_LP_OP_WRITE) {
 		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_READ);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
-			"DSI failed to go to LP mode\n");
+			"DSI failed to go to LP read mode\n");
 			goto fail;
 		}
 	}
@@ -1742,51 +1946,81 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	poll_time = 0;
-	while (poll_time <  DSI_DELAY_FOR_READ_FIFO) {
-		mdelay(1);
-		val = tegra_dsi_readl(dsi, DSI_STATUS);
-		rd_fifo_cnt = val & DSI_STATUS_RD_FIFO_COUNT(0x1f);
-		if (rd_fifo_cnt << 2 > DSI_READ_FIFO_DEPTH)
-			dev_err(&dc->ndev->dev,
-			"DSI RD_FIFO_CNT is greater than RD_FIFO_DEPTH\n");
-			break;
-		poll_time++;
-	}
-
-	if (rd_fifo_cnt == 0) {
-		dev_info(&dc->ndev->dev,
-			"DSI RD_FIFO_CNT is zero\n");
-		err = -EINVAL;
+	err = tegra_dsi_read_fifo(dc, dsi, read_data);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "DSI read fifo failure\n");
 		goto fail;
 	}
-
-	if (val & DSI_STATUS_LB_UNDERFLOW(0x1) ||
-		val & DSI_STATUS_LB_OVERFLOW(0x1)) {
-		dev_err(&dc->ndev->dev,
-			"DSI overflow/underflow error\n");
-		err = -EINVAL;
-		goto fail;
-	}
-
-	tegra_dsi_read_fifo(dc, dsi, rd_fifo_cnt, read_data);
-
-	if (enable_read_debug)
-		err = tegra_dsi_parse_read_response
-				(dc, rd_fifo_cnt, read_data);
 fail:
-	if (switch_back_to_dc_mode)
-		dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
-	if (switch_back_to_dc_mode || switch_back_to_hs_mode)
-		tegra_dsi_set_to_hs_mode(dc, dsi);
-	if (restart_dc_stream)
-		tegra_dsi_start_dc_stream(dc, dsi);
-
+	err = tegra_dsi_restore_state(dc, dsi, init_status);
+	if (err < 0)
+		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
 	tegra_dc_io_end(dc);
-
 	return err;
 }
 EXPORT_SYMBOL(tegra_dsi_read_data);
+
+int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
+				struct tegra_dc_dsi_data *dsi)
+{
+	int err = 0;
+	u8 read_fifo[DSI_READ_FIFO_DEPTH];
+	struct dsi_status *init_status;
+	static struct tegra_dsi_cmd dsi_nop_cmd =
+			DSI_CMD_SHORT(0x05, 0x0, 0x0);
+
+	tegra_dc_io_start(dc);
+
+	init_status = tegra_dsi_prepare_host_transmission(
+					dc, dsi, DSI_LP_OP_WRITE);
+	if (IS_ERR_OR_NULL(init_status)) {
+		err = PTR_ERR(init_status);
+		dev_err(&dc->ndev->dev, "DSI host config failed\n");
+		goto fail;
+	}
+
+	err = _tegra_dsi_write_data(dsi, NULL, dsi_nop_cmd.data_id, 0x0);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "DSI nop write failed\n");
+		goto fail;
+	}
+
+	tegra_dsi_reset_read_count(dsi);
+
+	if (dsi->status.lp_op == DSI_LP_OP_WRITE) {
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_READ);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+			"DSI failed to go to LP read mode\n");
+			goto fail;
+		}
+	}
+
+	err = tegra_dsi_bta(dsi);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "DSI BTA failed\n");
+		goto fail;
+	}
+
+	err = tegra_dsi_read_fifo(dc, dsi, read_fifo);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "DSI read fifo failure\n");
+		goto fail;
+	}
+
+	if (read_fifo[0] != DSI_ACK_NO_ERR) {
+		dev_warn(&dc->ndev->dev,
+			"Ack no error trigger message not received\n");
+		err = -EAGAIN;
+	}
+fail:
+	err = tegra_dsi_restore_state(dc, dsi, init_status);
+	if (err < 0)
+		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
+	tegra_dc_io_end(dc);
+	return err;
+}
+EXPORT_SYMBOL(tegra_dsi_panel_sanity_check);
 
 static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 {
@@ -1803,7 +2037,8 @@ static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 #if DSI_USE_SYNC_POINTS
 	ret = tegra_dsi_syncpt(dsi);
 	if (ret < 0) {
-		printk(KERN_ERR "DSI syncpt for ulpm enter failed\n");
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI syncpt for ulpm enter failed\n");
 		goto fail;
 	}
 #else
@@ -1830,7 +2065,8 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 #if DSI_USE_SYNC_POINTS
 	ret = tegra_dsi_syncpt(dsi);
 	if (ret < 0) {
-		printk(KERN_ERR "DSI syncpt for ulpm exit failed\n");
+		dev_err(&dsi->dc->ndev->dev,
+			"DSI syncpt for ulpm exit failed\n");
 		goto fail;
 	}
 #else
@@ -1866,7 +2102,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	if (dsi->enabled) {
 		if (dsi->ulpm) {
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
-				printk(KERN_ERR "DSI failed to exit ulpm\n");
+				dev_err(&dc->ndev->dev,
+					"DSI failed to exit ulpm\n");
 				goto fail;
 			}
 		}
@@ -1900,7 +2137,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 
 		if (dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
-				printk(KERN_ERR "DSI failed to enter ulpm\n");
+				dev_err(&dc->ndev->dev,
+					"DSI failed to enter ulpm\n");
 				goto fail;
 			}
 			val = DSI_PAD_CONTROL_PAD_PDIO(0) |
@@ -1909,7 +2147,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 						(TEGRA_DSI_DISABLE);
 			tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
-				printk(KERN_ERR "DSI failed to exit ulpm\n");
+				dev_err(&dc->ndev->dev,
+					"DSI failed to exit ulpm\n");
 				goto fail;
 			}
 		}
@@ -2084,7 +2323,8 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 		dsi->info.lp_cmd_mode_freq_khz = DEFAULT_LP_CMD_MODE_CLK_KHZ;
 
 	if (!dsi->info.chip_id || !dsi->info.chip_rev)
-		printk(KERN_WARNING "DSI: Failed to get chip info\n");
+		dev_warn(&dsi->dc->ndev->dev,
+			"DSI: Failed to get chip info\n");
 
 	if (!dsi->info.lp_read_cmd_mode_freq_khz)
 		dsi->info.lp_read_cmd_mode_freq_khz =
@@ -2321,7 +2561,8 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 
 	if (dsi->info.power_saving_suspend) {
 		if (tegra_dsi_deep_sleep(dc, dsi) < 0) {
-			printk(KERN_ERR "DSI failed to enter deep sleep\n");
+			dev_err(&dc->ndev->dev,
+				"DSI failed to enter deep sleep\n");
 			goto fail;
 		}
 	} else {
@@ -2338,7 +2579,8 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 
 		if (!dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
-				printk(KERN_ERR "DSI failed to enter ulpm\n");
+				dev_err(&dc->ndev->dev,
+					"DSI failed to enter ulpm\n");
 				goto fail;
 			}
 		}
@@ -2365,13 +2607,15 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 	if (!dsi->info.power_saving_suspend) {
 		if (dsi->ulpm) {
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
-				printk(KERN_ERR "DSI failed to exit ulpm");
+				dev_err(&dc->ndev->dev,
+					"DSI failed to exit ulpm");
 				goto fail;
 			}
 		}
 
 		if (tegra_dsi_deep_sleep(dc, dsi) < 0) {
-			printk(KERN_ERR "DSI failed to enter deep sleep\n");
+			dev_err(&dc->ndev->dev,
+				"DSI failed to enter deep sleep\n");
 			goto fail;
 		}
 	}

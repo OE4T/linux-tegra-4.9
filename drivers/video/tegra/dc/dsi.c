@@ -32,7 +32,6 @@
 #include <mach/fb.h>
 #include <mach/csi.h>
 #include <linux/nvhost.h>
-#include <../gpio-names.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"

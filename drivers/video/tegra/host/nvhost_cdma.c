@@ -804,12 +804,20 @@ int nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout)
 			return 0;
 		}
 
-		BUG_ON(cdma->event != CDMA_EVENT_NONE);
-		cdma->event = CDMA_EVENT_SYNC_QUEUE_EMPTY;
+		/*
+		 * Wait for sync queue to become empty. If there is already
+		 * an event pending, we need to poll.
+		 */
+		if (cdma->event != CDMA_EVENT_NONE) {
+			mutex_unlock(&cdma->lock);
+			schedule();
+		} else {
+			cdma->event = CDMA_EVENT_SYNC_QUEUE_EMPTY;
 
-		mutex_unlock(&cdma->lock);
-		err = down_timeout(&cdma->sem,
-				jiffies_to_msecs(timeout_jiffies));
+			mutex_unlock(&cdma->lock);
+			err = down_timeout(&cdma->sem,
+					jiffies_to_msecs(timeout_jiffies));
+		}
 	}
 	return err;
 }

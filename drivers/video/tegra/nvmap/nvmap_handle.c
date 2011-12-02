@@ -152,7 +152,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	pgprot_t prot;
 	unsigned int i = 0;
 	struct page **pages;
-	unsigned long base;
 
 	pages = altalloc(nr_page * sizeof(*pages));
 	if (!pages)
@@ -201,19 +200,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 		set_pages_array_uc(pages, nr_page);
 	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
 		set_pages_array_iwb(pages, nr_page);
-	else
-		goto skip_cache_flush;
 
-	/* Flush the cache for allocated high mem pages only */
-	for (i = 0; i < nr_page; i++) {
-		if (PageHighMem(pages[i])) {
-			__flush_dcache_page(page_mapping(pages[i]), pages[i]);
-			base = page_to_phys(pages[i]);
-			outer_flush_range(base, base + PAGE_SIZE);
-		}
-	}
-
-skip_cache_flush:
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;

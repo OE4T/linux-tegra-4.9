@@ -2016,10 +2016,11 @@ static int tegra_se_remove(struct platform_device *pdev)
 }
 
 #if defined(CONFIG_PM)
-static int tegra_se_resume(struct platform_device *pdev)
+static int tegra_se_resume(struct device *dev)
 {
 	return 0;
 }
+
 static int tegra_se_generate_rng_key(struct tegra_se_dev *se_dev)
 {
 	int ret = 0;
@@ -2272,8 +2273,9 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 	return ret;
 }
 
-static int tegra_se_suspend(struct platform_device *pdev, pm_message_t state)
+static int tegra_se_suspend(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_se_dev *se_dev = platform_get_drvdata(pdev);
 	int err = 0, i;
 	unsigned char *dt_buf = NULL;
@@ -2387,20 +2389,19 @@ static int tegra_se_runtime_resume(struct device *dev)
 static const struct dev_pm_ops tegra_se_dev_pm_ops = {
 	.runtime_suspend = tegra_se_runtime_suspend,
 	.runtime_resume = tegra_se_runtime_resume,
+#if defined(CONFIG_PM)
+	.suspend = tegra_se_suspend,
+	.resume = tegra_se_resume,
+#endif
 };
 #endif
 
 static struct platform_driver tegra_se_driver = {
 	.probe  = tegra_se_probe,
 	.remove = tegra_se_remove,
-#if defined(CONFIG_PM)
-	.suspend = tegra_se_suspend,
-	.resume = tegra_se_resume,
-#endif
 	.driver = {
 		.name   = "tegra-se",
 		.owner  = THIS_MODULE,
-
 #if defined(CONFIG_PM_RUNTIME)
 		.pm = &tegra_se_dev_pm_ops,
 #endif

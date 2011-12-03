@@ -267,7 +267,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
 			    channel->mod.name,
-			    atomic_read(&channel->mod.refcount));
+			    channel->mod.refcount);
 
 	if ((dmactrl & 1) || !channel->cdma.push_buffer.mapped) {
 		nvhost_debug_output(o, "inactive\n\n");

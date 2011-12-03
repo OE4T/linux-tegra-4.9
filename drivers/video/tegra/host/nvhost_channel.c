@@ -127,7 +127,6 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 void nvhost_channel_suspend(struct nvhost_channel *ch)
 {
 	mutex_lock(&ch->reflock);
-	BUG_ON(nvhost_module_powered(&ch->mod));
 	BUG_ON(!channel_cdma_op(ch).stop);
 
 	if (ch->refcount) {

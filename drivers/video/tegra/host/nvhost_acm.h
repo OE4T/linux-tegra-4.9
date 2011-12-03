@@ -71,7 +71,7 @@ struct nvhost_module {
 	struct clk *clk[NVHOST_MODULE_MAX_CLOCKS];
 	struct mutex lock;
 	int powerstate;
-	atomic_t refcount;
+	int refcount;
 	wait_queue_head_t idle;
 	struct nvhost_module *parent;
 	const struct nvhost_moduledesc *desc;

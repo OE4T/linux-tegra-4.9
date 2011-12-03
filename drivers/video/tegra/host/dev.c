@@ -777,16 +777,14 @@ static void power_on_host(struct nvhost_module *mod)
 			container_of(mod, struct nvhost_master, mod);
 
 	nvhost_intr_start(&dev->intr, clk_get_rate(mod->clk[0]));
+	nvhost_syncpt_reset(&dev->syncpt);
 }
 
 static int power_off_host(struct nvhost_module *mod)
 {
 	struct nvhost_master *dev =
 			container_of(mod, struct nvhost_master, mod);
-	int i;
 
-	for (i = 0; i < dev->nb_channels; i++)
-		nvhost_channel_suspend(&dev->channels[i]);
 	nvhost_syncpt_save(&dev->syncpt);
 	nvhost_intr_stop(&dev->intr);
 	return 0;
@@ -1059,23 +1057,20 @@ static int __exit nvhost_remove(struct platform_device *pdev)
 static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
+	int i;
 	dev_info(&pdev->dev, "suspending\n");
+
+	for (i = 0; i < host->nb_channels; i++)
+		nvhost_channel_suspend(&host->channels[i]);
+
 	nvhost_module_suspend(&host->mod, true);
-	clk_enable(host->mod.clk[0]);
-	nvhost_syncpt_save(&host->syncpt);
-	clk_disable(host->mod.clk[0]);
 	dev_info(&pdev->dev, "suspended\n");
 	return 0;
 }
 
 static int nvhost_resume(struct platform_device *pdev)
 {
-	struct nvhost_master *host = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "resuming\n");
-	clk_enable(host->mod.clk[0]);
-	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->mod.clk[0]);
-	dev_info(&pdev->dev, "resumed\n");
 	return 0;
 }
 

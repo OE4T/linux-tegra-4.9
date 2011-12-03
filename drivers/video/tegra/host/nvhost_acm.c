@@ -44,13 +44,13 @@ struct nvhost_module_client {
 	void *priv;
 };
 
-static void do_powergate(int id)
+static void do_powergate_locked(int id)
 {
 	if (id != -1 && tegra_powergate_is_powered(id))
 		tegra_powergate_partition(id);
 }
 
-static void do_unpowergate(int id)
+static void do_unpowergate_locked(int id)
 {
 	if (id != -1)
 		tegra_unpowergate_partition(id);
@@ -62,6 +62,8 @@ void nvhost_module_reset(struct device *dev, struct nvhost_module *mod)
 		"%s: asserting %s module reset (id %d, id2 %d)\n",
 		__func__, mod->name,
 		mod->desc->powergate_ids[0], mod->desc->powergate_ids[1]);
+
+	mutex_lock(&mod->lock);
 
 	/* assert module and mc client reset */
 	if (mod->desc->powergate_ids[0] != -1) {
@@ -89,11 +91,13 @@ void nvhost_module_reset(struct device *dev, struct nvhost_module *mod)
 		tegra_powergate_mc_enable(mod->desc->powergate_ids[1]);
 	}
 
+	mutex_unlock(&mod->lock);
+
 	dev_dbg(dev, "%s: module %s out of reset\n",
 		__func__, mod->name);
 }
 
-static void to_state_clockgated(struct nvhost_module *mod)
+static void to_state_clockgated_locked(struct nvhost_module *mod)
 {
 	const struct nvhost_moduledesc *desc = mod->desc;
 	if (mod->powerstate == NVHOST_POWER_STATE_RUNNING) {
@@ -104,16 +108,17 @@ static void to_state_clockgated(struct nvhost_module *mod)
 			nvhost_module_idle(mod->parent);
 	} else if (mod->powerstate == NVHOST_POWER_STATE_POWERGATED
 			&& mod->desc->can_powergate) {
-		do_unpowergate(desc->powergate_ids[0]);
-		do_unpowergate(desc->powergate_ids[1]);
+		do_unpowergate_locked(desc->powergate_ids[0]);
+		do_unpowergate_locked(desc->powergate_ids[1]);
 	}
 	mod->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 }
 
-static void to_state_running(struct nvhost_module *mod)
+static void to_state_running_locked(struct nvhost_module *mod)
 {
+	int prev_state = mod->powerstate;
 	if (mod->powerstate == NVHOST_POWER_STATE_POWERGATED)
-		to_state_clockgated(mod);
+		to_state_clockgated_locked(mod);
 	if (mod->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
 		int i;
 
@@ -125,7 +130,8 @@ static void to_state_running(struct nvhost_module *mod)
 			BUG_ON(err);
 		}
 
-		if (mod->desc->finalize_poweron)
+		if (prev_state == NVHOST_POWER_STATE_POWERGATED
+				&& mod->desc->finalize_poweron)
 			mod->desc->finalize_poweron(mod);
 	}
 	mod->powerstate = NVHOST_POWER_STATE_RUNNING;
@@ -135,39 +141,39 @@ static void to_state_running(struct nvhost_module *mod)
  * Module suspend is done for all modules, runtime power gating only
  * for modules with can_powergate set.
  */
-static int to_state_powergated(struct nvhost_module *mod)
+static int to_state_powergated_locked(struct nvhost_module *mod)
 {
 	int err = 0;
 
 	if (mod->desc->prepare_poweroff
 			&& mod->powerstate != NVHOST_POWER_STATE_POWERGATED) {
 		/* Clock needs to be on in prepare_poweroff */
-		to_state_running(mod);
+		to_state_running_locked(mod);
 		err = mod->desc->prepare_poweroff(mod);
 		if (err)
 			return err;
 	}
 
 	if (mod->powerstate == NVHOST_POWER_STATE_RUNNING)
-		to_state_clockgated(mod);
+		to_state_clockgated_locked(mod);
 
 	if (mod->desc->can_powergate) {
-		do_powergate(mod->desc->powergate_ids[0]);
-		do_powergate(mod->desc->powergate_ids[1]);
+		do_powergate_locked(mod->desc->powergate_ids[0]);
+		do_powergate_locked(mod->desc->powergate_ids[1]);
 	}
 
 	mod->powerstate = NVHOST_POWER_STATE_POWERGATED;
 	return 0;
 }
 
-static void schedule_powergating(struct nvhost_module *mod)
+static void schedule_powergating_locked(struct nvhost_module *mod)
 {
 	if (mod->desc->can_powergate)
 		schedule_delayed_work(&mod->powerstate_down,
 				msecs_to_jiffies(mod->desc->powergate_delay));
 }
 
-static void schedule_clockgating(struct nvhost_module *mod)
+static void schedule_clockgating_locked(struct nvhost_module *mod)
 {
 	schedule_delayed_work(&mod->powerstate_down,
 			msecs_to_jiffies(mod->desc->clockgate_delay));
@@ -175,14 +181,15 @@ static void schedule_clockgating(struct nvhost_module *mod)
 
 void nvhost_module_busy(struct nvhost_module *mod)
 {
-	mutex_lock(&mod->lock);
-	cancel_delayed_work(&mod->powerstate_down);
 	if (mod->desc->busy)
 		mod->desc->busy(mod);
 
-	if ((atomic_inc_return(&mod->refcount) > 0
-			&& !nvhost_module_powered(mod)))
-		to_state_running(mod);
+	mutex_lock(&mod->lock);
+	cancel_delayed_work(&mod->powerstate_down);
+
+	mod->refcount++;
+	if (mod->refcount > 0 && !nvhost_module_powered(mod))
+		to_state_running_locked(mod);
 	mutex_unlock(&mod->lock);
 }
 
@@ -195,15 +202,15 @@ static void powerstate_down_handler(struct work_struct *work)
 			powerstate_down);
 
 	mutex_lock(&mod->lock);
-	if ((atomic_read(&mod->refcount) == 0)) {
+	if (mod->refcount == 0) {
 		switch (mod->powerstate) {
 		case NVHOST_POWER_STATE_RUNNING:
-			to_state_clockgated(mod);
-			schedule_powergating(mod);
+			to_state_clockgated_locked(mod);
+			schedule_powergating_locked(mod);
 			break;
 		case NVHOST_POWER_STATE_CLOCKGATED:
-			if (to_state_powergated(mod))
-				schedule_powergating(mod);
+			if (to_state_powergated_locked(mod))
+				schedule_powergating_locked(mod);
 			break;
 		default:
 			break;
@@ -218,9 +225,10 @@ void nvhost_module_idle_mult(struct nvhost_module *mod, int refs)
 	bool kick = false;
 
 	mutex_lock(&mod->lock);
-	if (atomic_sub_return(refs, &mod->refcount) == 0) {
+	mod->refcount -= refs;
+	if (mod->refcount == 0) {
 		if (nvhost_module_powered(mod))
-			schedule_clockgating(mod);
+			schedule_clockgating_locked(mod);
 		kick = true;
 	}
 	mutex_unlock(&mod->lock);
@@ -358,11 +366,11 @@ void nvhost_module_preinit(const char *name,
 	}
 
 	if (desc->can_powergate) {
-		do_powergate(desc->powergate_ids[0]);
-		do_powergate(desc->powergate_ids[1]);
+		do_powergate_locked(desc->powergate_ids[0]);
+		do_powergate_locked(desc->powergate_ids[1]);
 	} else {
-		do_unpowergate(desc->powergate_ids[0]);
-		do_unpowergate(desc->powergate_ids[1]);
+		do_unpowergate_locked(desc->powergate_ids[0]);
+		do_unpowergate_locked(desc->powergate_ids[1]);
 	}
 }
 
@@ -409,7 +417,7 @@ static int is_module_idle(struct nvhost_module *mod)
 {
 	int count;
 	mutex_lock(&mod->lock);
-	count = atomic_read(&mod->refcount);
+	count = mod->refcount;
 	mutex_unlock(&mod->lock);
 	return (count == 0);
 }
@@ -420,10 +428,13 @@ static void debug_not_idle(struct nvhost_master *dev)
 	bool lock_released = true;
 
 	for (i = 0; i < dev->nb_channels; i++) {
-		struct nvhost_module *m = &dev->channels[i].mod;
-		if (m->name)
-			dev_warn(&dev->pdev->dev, "tegra_grhost: %s: refcnt %d\n",
-				m->name, atomic_read(&m->refcount));
+		struct nvhost_module *mod = &dev->channels[i].mod;
+		mutex_lock(&mod->lock);
+		if (mod->name)
+			dev_warn(&dev->pdev->dev,
+					"tegra_grhost: %s: refcnt %d\n",
+					mod->name, mod->refcount);
+		mutex_unlock(&mod->lock);
 	}
 
 	for (i = 0; i < dev->nb_mlocks; i++) {
@@ -460,11 +471,10 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 	if (system_suspend)
 		dev_dbg(&dev->pdev->dev, "tegra_grhost: entered idle\n");
 
+	mutex_lock(&mod->lock);
 	cancel_delayed_work(&mod->powerstate_down);
-	to_state_powergated(mod);
-
-	if (system_suspend)
-		dev_dbg(&dev->pdev->dev, "tegra_grhost: flushed delayed work\n");
+	to_state_powergated_locked(mod);
+	mutex_unlock(&mod->lock);
 
 	if (mod->desc->suspend)
 		mod->desc->suspend(mod);

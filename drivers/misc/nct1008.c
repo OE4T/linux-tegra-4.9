@@ -64,12 +64,6 @@
 #define STANDBY_BIT			BIT(6)
 #define ALERT_BIT			BIT(7)
 
-/* Status register bits */
-#define STATUS_BUSY			BIT(7)
-
-/* Worst-case wait when nct1008 is busy */
-#define BUSY_TIMEOUT_MSEC		1000
-
 /* Max Temperature Measurements */
 #define EXTENDED_RANGE_OFFSET		64U
 #define STANDARD_RANGE_MAX		127U
@@ -94,41 +88,6 @@ static inline u8 temperature_to_value(bool extended, s8 temp)
 	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : (u8)temp;
 }
 
-/* Wait with timeout if busy */
-static int nct1008_wait_till_busy(struct i2c_client *client)
-{
-	int intr_status;
-	int msec_left = BUSY_TIMEOUT_MSEC;
-	bool is_busy;
-
-	do {
-		intr_status = i2c_smbus_read_byte_data(client, STATUS_RD);
-
-		if (intr_status < 0) {
-			dev_err(&client->dev, "%s, line=%d, i2c read error=%d\n"
-				, __func__, __LINE__, intr_status);
-			return intr_status;
-		}
-
-		/* check for busy bit */
-		is_busy = (intr_status & STATUS_BUSY) ? true : false;
-		if (is_busy) {
-			/* fastest nct1008 conversion rate ~15msec */
-			/* using 20msec since msleep below 20 is not
-			 * guaranteed to complete in specified duration */
-			msleep(MIN_SLEEP_MSEC);
-			msec_left -= MIN_SLEEP_MSEC;
-		}
-	} while ((is_busy) && (msec_left > 0));
-
-	if (msec_left <= 0) {
-		dev_err(&client->dev, "error: nct1008 busy timed out\n");
-		return -ETIMEDOUT;
-	}
-
-	return 0;
-}
-
 static int nct1008_get_temp(struct device *dev, long *pTemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -139,10 +98,6 @@ static int nct1008_get_temp(struct device *dev, long *pTemp)
 	long temp_ext_milli;
 	long temp_local_milli;
 	u8 value;
-
-	value = nct1008_wait_till_busy(client);
-	if (value < 0)
-		goto error;
 
 	/* Read Local Temp */
 	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
@@ -188,10 +143,6 @@ static ssize_t nct1008_show_temp(struct device *dev,
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
-
-	value = nct1008_wait_till_busy(client);
-	if (value < 0)
-		goto error;
 
 	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
 	if (value < 0)
@@ -379,10 +330,6 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 
 	if (!dev || !buf || !attr)
 		return -EINVAL;
-
-	data = nct1008_wait_till_busy(client);
-	if (data < 0)
-		goto error;
 
 	/* When reading the full external temperature value, read the
 	 * LSB first. This causes the MSB to be locked (that is, the

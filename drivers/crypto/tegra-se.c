@@ -2366,7 +2366,7 @@ out:
 #endif
 
 #if defined(CONFIG_PM_RUNTIME)
-static int tegra_se_runtime_idle(struct device *dev)
+static int tegra_se_runtime_suspend(struct device *dev)
 {
 	/*
 	 * do a dummy read, to avoid scenarios where you have unposted writes
@@ -2385,7 +2385,7 @@ static int tegra_se_runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops tegra_se_dev_pm_ops = {
-	.runtime_idle = tegra_se_runtime_idle,
+	.runtime_suspend = tegra_se_runtime_suspend,
 	.runtime_resume = tegra_se_runtime_resume,
 };
 #endif

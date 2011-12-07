@@ -32,6 +32,7 @@
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/device.h>
 #include <linux/export.h>
 
 #include <mach/clk.h>
@@ -1499,11 +1500,30 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
 
+static ssize_t underscan_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+#ifdef CONFIG_SWITCH
+	struct tegra_dc_hdmi_data *hdmi =
+			container_of(dev_get_drvdata(dev), struct tegra_dc_hdmi_data, hpd_switch);
+
+	if (hdmi->edid)
+		return sprintf(buf, "%d\n", tegra_edid_underscan_supported(hdmi->edid));
+	else
+		return 0;
+#else
+	return 0;
+#endif
+}
+
+static DEVICE_ATTR(underscan, S_IRUGO | S_IWUSR, underscan_show, NULL);
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi;
 	struct resource *res;
 	struct resource *base_res;
+	int ret;
 	void __iomem *base;
 	struct clk *clk = NULL;
 	struct clk *disp1_clk = NULL;
@@ -1625,7 +1645,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
-	switch_dev_register(&hdmi->hpd_switch);
+	ret = switch_dev_register(&hdmi->hpd_switch);
+
+	if (!ret)
+		device_create_file(hdmi->hpd_switch.dev, &dev_attr_underscan);
 #endif
 
 	dc->out->depth = 24;

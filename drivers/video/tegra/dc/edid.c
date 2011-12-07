@@ -31,6 +31,7 @@ struct tegra_edid_pvt {
 	struct kref			refcnt;
 	struct tegra_edid_hdmi_eld	eld;
 	bool				support_stereo;
+	bool				support_underscan;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -211,6 +212,12 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			basic_audio = true;
 		}
 	}
+
+	if (raw[3] & 0x80)
+		edid->support_underscan = 1;
+	else
+		edid->support_underscan = 0;
+
 	ptr = &raw[4];
 
 	while (ptr < &raw[idx]) {
@@ -343,6 +350,7 @@ int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
 	kref_init(&new_data->refcnt);
 
 	new_data->support_stereo = 0;
+	new_data->support_underscan = 0;
 
 	data = new_data->dc_edid.buf;
 	memcpy(data, edid_ptr, 128);
@@ -487,6 +495,14 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 fail:
 	vfree(new_data);
 	return ret;
+}
+
+int tegra_edid_underscan_supported(struct tegra_edid *edid)
+{
+	if ((!edid) || (!edid->data))
+		return 0;
+
+	return edid->data->support_underscan;
 }
 
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata)

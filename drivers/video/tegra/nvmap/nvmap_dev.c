@@ -354,8 +354,8 @@ void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 		return;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
+	BUG_ON(client->carveout_commit[node->index].commit < len);
 	client->carveout_commit[node->index].commit -= len;
-	BUG_ON(client->carveout_commit[node->index].commit < 0);
 	/* if no more allocation in this carveout for this node, delete it */
 	if (!client->carveout_commit[node->index].commit)
 		list_del_init(&client->carveout_commit[node->index].list);

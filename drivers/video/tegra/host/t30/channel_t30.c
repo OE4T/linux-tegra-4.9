@@ -43,7 +43,6 @@
 #define NVMODMUTEX_DSI       (9)
 #define NV_FIFO_READ_TIMEOUT 200000
 
-#define HOST_EMC_FLOOR 300000000
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1 -1
 #endif
@@ -78,7 +77,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 			.suspend = nvhost_scale3d_suspend,
 			.clocks = {{"gr3d", UINT_MAX},
 					{"gr3d2", UINT_MAX},
-					{"emc", HOST_EMC_FLOOR} },
+					{"emc", UINT_MAX} },
 			.powergate_ids = {TEGRA_POWERGATE_3D,
 					TEGRA_POWERGATE_3D1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -96,7 +95,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.module        = {
 			.clocks = {{"gr2d", 0},
 					{"epp", 0},
-					{"emc", HOST_EMC_FLOOR} },
+					{"emc", 300000000} },
 			NVHOST_MODULE_NO_POWERGATE_IDS,
 			.clockgate_delay = 0,
 			},

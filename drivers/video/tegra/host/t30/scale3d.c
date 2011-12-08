@@ -30,7 +30,10 @@
  * scaled down. If the percentage goes under the minimum limit (set in
  * scale3d.p_idle_min), 3d clocks are scaled up. An additional test is made
  * over the time frame given in scale3d.p_fast_response for clocking up
- * quickly in response to sudden load peaks.
+ * quickly in response to load peaks.
+ *
+ * 3d.emc clock is scaled proportionately to 3d clock, with a quadratic-
+ * bezier-like factor added to pull 3d.emc rate a bit lower.
  */
 
 #include <linux/debugfs.h>
@@ -43,6 +46,8 @@
 
 static int scale3d_is_enabled(void);
 static void scale3d_enable(int enable);
+
+#define POW2(x) ((x) * (x))
 
 /*
  * debugfs parameters to control 3d clock scaling test
@@ -76,6 +81,11 @@ struct scale3d_info_rec {
 	unsigned long idle_total;
 	unsigned long idle_short_term_total;
 	unsigned long max_rate_3d;
+	long emc_slope;
+	long emc_offset;
+	long emc_dip_slope;
+	long emc_dip_offset;
+	long emc_xmid;
 	unsigned long min_rate_3d;
 	struct work_struct work;
 	struct delayed_work idle_timer;
@@ -89,9 +99,12 @@ struct scale3d_info_rec {
 	unsigned int p_fast_response;
 	unsigned int fast_response;
 	unsigned int p_adjust;
+	unsigned int p_scale_emc;
+	unsigned int p_emc_dip;
 	unsigned int p_verbosity;
 	struct clk *clk_3d;
 	struct clk *clk_3d2;
+	struct clk *clk_3d_emc;
 };
 
 static struct scale3d_info_rec scale3d;
@@ -114,6 +127,17 @@ static void scale3d_clocks(unsigned long percent)
 		if (tegra_chip_id == TEGRA30)
 			clk_set_rate(scale3d.clk_3d2, 0);
 		clk_set_rate(scale3d.clk_3d, hz);
+
+		if (scale3d.p_scale_emc) {
+			long after = (long) clk_get_rate(scale3d.clk_3d);
+			hz = after * scale3d.emc_slope + scale3d.emc_offset;
+			if (scale3d.p_emc_dip)
+				hz -=
+					(scale3d.emc_dip_slope *
+					POW2(after / 1000 - scale3d.emc_xmid) +
+					scale3d.emc_dip_offset);
+			clk_set_rate(scale3d.clk_3d_emc, hz);
+		}
 	}
 }
 
@@ -142,6 +166,9 @@ static void reset_3d_clocks(void)
 		clk_set_rate(scale3d.clk_3d, scale3d.max_rate_3d);
 		if (tegra_chip_id == TEGRA30)
 			clk_set_rate(scale3d.clk_3d2, scale3d.max_rate_3d);
+		if (scale3d.p_scale_emc)
+			clk_set_rate(scale3d.clk_3d_emc,
+				clk_round_rate(scale3d.clk_3d_emc, UINT_MAX));
 	}
 }
 
@@ -162,9 +189,10 @@ static void scale3d_enable(int enable)
 
 	mutex_lock(&scale3d.lock);
 
-	if (enable)
-		scale3d.enable = 1;
-	else {
+	if (enable) {
+		if (scale3d.max_rate_3d != scale3d.min_rate_3d)
+			scale3d.enable = 1;
+	} else {
 		scale3d.enable = 0;
 		disable = 1;
 	}
@@ -286,7 +314,7 @@ static void scaling_state_check(ktime_t time)
 
 	/* adjustment: set scale parameters (fast_response, period) +/- 25%
 	 * based on ratio of scale up to scale down hints
-     */
+	 */
 	if (scale3d.p_adjust)
 		scaling_adjust(time);
 	else {
@@ -463,6 +491,8 @@ void nvhost_scale3d_debug_init(struct dentry *de)
 	CREATE_SCALE3D_FILE(idle_max);
 	CREATE_SCALE3D_FILE(period);
 	CREATE_SCALE3D_FILE(adjust);
+	CREATE_SCALE3D_FILE(scale_emc);
+	CREATE_SCALE3D_FILE(emc_dip);
 	CREATE_SCALE3D_FILE(verbosity);
 #undef CREATE_SCALE3D_FILE
 }
@@ -497,24 +527,110 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 {
 	if (!scale3d.init) {
 		int error;
+		unsigned long max_emc, min_emc;
+		long correction;
 		mutex_init(&scale3d.lock);
 
 		scale3d.clk_3d = mod->clk[0];
-		if (tegra_chip_id == TEGRA30)
+		if (tegra_chip_id == TEGRA30) {
 			scale3d.clk_3d2 = mod->clk[1];
+			scale3d.clk_3d_emc = mod->clk[2];
+		} else
+			scale3d.clk_3d_emc = mod->clk[1];
 
 		scale3d.max_rate_3d = clk_round_rate(scale3d.clk_3d, UINT_MAX);
 		scale3d.min_rate_3d = clk_round_rate(scale3d.clk_3d, 0);
+
+		if (scale3d.max_rate_3d == scale3d.min_rate_3d) {
+			pr_warn("scale3d: 3d max rate = min rate (%lu), "
+				"disabling\n", scale3d.max_rate_3d);
+			scale3d.enable = 0;
+			return;
+		}
+
+		/* emc scaling:
+		 *
+		 * Remc = S * R3d + O - (Sd * (R3d - Rm)^2 + Od)
+		 *
+		 * Remc - 3d.emc rate
+		 * R3d  - 3d.cbus rate
+		 * Rm   - 3d.cbus 'middle' rate = (max + min)/2
+		 * S    - emc_slope
+		 * O    - emc_offset
+		 * Sd   - emc_dip_slope
+		 * Od   - emc_dip_offset
+		 *
+		 * this superposes a quadratic dip centered around the middle 3d
+		 * frequency over a linear correlation of 3d.emc to 3d clock
+		 * rates.
+		 *
+		 * S, O are chosen so that the maximum 3d rate produces the
+		 * maximum 3d.emc rate exactly, and the minimum 3d rate produces
+		 * at least the minimum 3d.emc rate.
+		 *
+		 * Sd and Od are chosen to produce the largest dip that will
+		 * keep 3d.emc frequencies monotonously decreasing with 3d
+		 * frequencies. To achieve this, the first derivative of Remc
+		 * with respect to R3d should be zero for the minimal 3d rate:
+		 *
+		 *   R'emc = S - 2 * Sd * (R3d - Rm)
+		 *   R'emc(R3d-min) = 0
+		 *   S = 2 * Sd * (R3d-min - Rm)
+		 *     = 2 * Sd * (R3d-min - R3d-max) / 2
+		 *   Sd = S / (R3d-min - R3d-max)
+		 *
+		 *   +---------------------------------------------------+
+		 *   | Sd = -(emc-max - emc-min) / (R3d-min - R3d-max)^2 |
+		 *   +---------------------------------------------------+
+		 *
+		 *   dip = Sd * (R3d - Rm)^2 + Od
+		 *
+		 * requiring dip(R3d-min) = 0 and dip(R3d-max) = 0 gives
+		 *
+		 *   Sd * (R3d-min - Rm)^2 + Od = 0
+		 *   Od = -Sd * ((R3d-min - R3d-max) / 2)^2
+		 *      = -Sd * ((R3d-min - R3d-max)^2) / 4
+		 *
+		 *   +------------------------------+
+		 *   | Od = (emc-max - emc-min) / 4 |
+		 *   +------------------------------+
+		 */
+
+		max_emc = clk_round_rate(scale3d.clk_3d_emc, UINT_MAX);
+		min_emc = clk_round_rate(scale3d.clk_3d_emc, 0);
+
+		scale3d.emc_slope = (max_emc - min_emc) /
+			 (scale3d.max_rate_3d - scale3d.min_rate_3d);
+		scale3d.emc_offset = max_emc -
+			scale3d.emc_slope * scale3d.max_rate_3d;
+		/* guarantee max 3d rate maps to max emc rate */
+		scale3d.emc_offset += max_emc -
+			(scale3d.emc_slope * scale3d.max_rate_3d +
+			scale3d.emc_offset);
+
+		scale3d.emc_dip_offset = (max_emc - min_emc) / 4;
+		scale3d.emc_dip_slope =
+			-4 * (scale3d.emc_dip_offset /
+			(POW2(scale3d.max_rate_3d - scale3d.min_rate_3d)));
+		scale3d.emc_xmid =
+			(scale3d.max_rate_3d + scale3d.min_rate_3d) / 2;
+		correction =
+			scale3d.emc_dip_offset +
+				scale3d.emc_dip_slope *
+				POW2(scale3d.max_rate_3d - scale3d.emc_xmid);
+		scale3d.emc_dip_offset -= correction;
 
 		INIT_WORK(&scale3d.work, scale3d_clocks_handler);
 		INIT_DELAYED_WORK(&scale3d.idle_timer, scale3d_idle_handler);
 
 		/* set scaling parameter defaults */
-		scale3d.enable = 0;
+		scale3d.enable = 1;
 		scale3d.period = scale3d.p_period = 100000;
 		scale3d.idle_min = scale3d.p_idle_min = 10;
 		scale3d.idle_max = scale3d.p_idle_max = 15;
 		scale3d.fast_response = scale3d.p_fast_response = 7000;
+		scale3d.p_scale_emc = 1;
+		scale3d.p_emc_dip = 1;
 		scale3d.p_verbosity = 0;
 		scale3d.p_adjust = 1;
 

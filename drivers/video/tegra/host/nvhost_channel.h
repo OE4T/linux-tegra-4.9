@@ -108,7 +108,7 @@ int nvhost_channel_submit(
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);
-void nvhost_channel_suspend(struct nvhost_channel *ch);
+int nvhost_channel_suspend(struct nvhost_channel *ch);
 
 #define channel_cdma_op(ch) (ch->dev->op.cdma)
 #define channel_op(ch) (ch->dev->op.channel)

@@ -1069,15 +1069,18 @@ static int __exit nvhost_remove(struct platform_device *pdev)
 static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct nvhost_master *host = platform_get_drvdata(pdev);
-	int i;
+	int i, ret;
 	dev_info(&pdev->dev, "suspending\n");
 
-	for (i = 0; i < host->nb_channels; i++)
-		nvhost_channel_suspend(&host->channels[i]);
+	for (i = 0; i < host->nb_channels; i++) {
+		ret = nvhost_channel_suspend(&host->channels[i]);
+		if (ret)
+			return ret;
+	}
 
-	nvhost_module_suspend(&host->mod, true);
-	dev_info(&pdev->dev, "suspended\n");
-	return 0;
+	ret = nvhost_module_suspend(&host->mod, true);
+	dev_info(&pdev->dev, "suspend status: %d\n", ret);
+	return ret;
 }
 
 static int nvhost_resume(struct platform_device *pdev)

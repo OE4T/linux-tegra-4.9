@@ -85,7 +85,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		struct nvhost_module *parent,
 		struct device *dev);
 void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod);
-void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
+int nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
 
 void nvhost_module_reset(struct device *dev, struct nvhost_module *mod);
 void nvhost_module_busy(struct nvhost_module *mod);

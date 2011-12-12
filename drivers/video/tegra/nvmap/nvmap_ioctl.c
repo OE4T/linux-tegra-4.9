@@ -299,9 +299,14 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 			/* override allocation time cache coherency attributes. */
 			h->flags &= ~NVMAP_HANDLE_CACHE_FLAG;
 			h->flags |= cache_flags;
-			if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE)
+
+			/* Update page attributes, if the memory is allocated
+			 *  from system heap pages.
+			 */
+			if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE &&
+				h->heap_pgalloc)
 				set_pages_array_iwb(h->pgalloc.pages, nr_page);
-			else
+			else if (h->heap_pgalloc)
 				set_pages_array_wb(h->pgalloc.pages, nr_page);
 		}
 	}

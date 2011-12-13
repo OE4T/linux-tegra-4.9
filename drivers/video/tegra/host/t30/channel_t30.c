@@ -132,7 +132,6 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.waitbases     = BIT(NVWAITBASE_MPE),
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.waitbasesync  = true,
-	.exclusive     = true,
 	.keepalive     = true,
 	.module        = {
 			.prepare_poweroff = nvhost_mpectx_prepare_power_off,

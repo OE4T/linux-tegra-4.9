@@ -25,9 +25,22 @@
 
 #include "t20.h"
 
+static struct nvhost_device devices[] = {
+	{.name   = "gr3d", .id = -1 },
+	{.name = "gr2d", .id = -1 },
+	{.name = "isp", .id = -1 },
+	{.name = "vi", .id = -1 },
+	{.name = "mpe", .id = -1 },
+	{.name = "dsi", .id = -1 }
+};
+
 int nvhost_init_t20_support(struct nvhost_master *host)
 {
 	int err;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(devices); i++)
+		nvhost_device_register(&devices[i]);
 
 	/* don't worry about cleaning up on failure... "remove" does it. */
 	err = nvhost_init_t20_channel_support(host);

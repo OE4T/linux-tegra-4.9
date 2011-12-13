@@ -348,6 +348,7 @@ void nvhost_module_preinit(const char *name,
 		const struct nvhost_moduledesc *desc)
 {
 	int i = 0;
+
 	/* initialize clocks to known state */
 	while (desc->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
@@ -380,6 +381,14 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		struct device *dev)
 {
 	int i = 0;
+	int err;
+
+	/* register to kernel */
+	mod->drv.driver.name = name;
+	mod->drv.driver.owner = THIS_MODULE;
+	err = nvhost_driver_register(&mod->drv);
+	if (err)
+		return err;
 
 	nvhost_module_preinit(name, desc);
 	mod->name = name;
@@ -487,6 +496,8 @@ int nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod)
 {
 	int i;
+
+	nvhost_driver_unregister(&mod->drv);
 
 	if (mod->desc->deinit)
 		mod->desc->deinit(dev, mod);

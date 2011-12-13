@@ -204,7 +204,6 @@ static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
 {
 	struct nvhost_device *dev = to_nvhost_device(_dev);
 
-	pr_info("host1x: %s %s\n", dev->name, drv->name);
 	return !strncmp(dev->name, drv->name, strlen(drv->name));
 }
 

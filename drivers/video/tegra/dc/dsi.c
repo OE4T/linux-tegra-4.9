@@ -1244,7 +1244,8 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 
 	tegra_dsi_set_control_reg_hs(dsi);
 
-	if (dsi->status.clk_out == DSI_PHYCLK_OUT_DIS)
+	if (dsi->status.clk_out == DSI_PHYCLK_OUT_DIS ||
+		dsi->info.enable_hs_clock_on_lp_cmd_mode)
 		tegra_dsi_hs_clk_out_enable(dsi);
 
 	dsi->status.lphs = DSI_LPHS_IN_HS_MODE;

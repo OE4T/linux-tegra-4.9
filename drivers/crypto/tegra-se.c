@@ -955,6 +955,13 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 		return -EINVAL;
 	}
 
+	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
+		(keylen != TEGRA_SE_KEY_192_SIZE) &&
+		(keylen != TEGRA_SE_KEY_256_SIZE)) {
+		dev_err(se_dev->dev, "invalid key size");
+		return -EINVAL;
+	}
+
 	if (key) {
 		if (!ctx->slot || (ctx->slot &&
 		    ctx->slot->slot_num == ssk_slot.slot_num)) {
@@ -1483,6 +1490,13 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	if (!ctx) {
 		dev_err(se_dev->dev, "invalid context");
+		return -EINVAL;
+	}
+
+	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
+		(keylen != TEGRA_SE_KEY_192_SIZE) &&
+		(keylen != TEGRA_SE_KEY_256_SIZE)) {
+		dev_err(se_dev->dev, "invalid key size");
 		return -EINVAL;
 	}
 
@@ -2144,7 +2158,7 @@ static int tegra_se_lp_encrypt_context_data(struct tegra_se_dev *se_dev,
 	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
 	src_ll->addr = se_dev->ctx_save_buf_adr + context_offset;
 	src_ll->data_len = data_size;
-	dst_ll->addr = se_dev->ctx_save_buf_adr + context_offset;;
+	dst_ll->addr = se_dev->ctx_save_buf_adr + context_offset;
 	dst_ll->data_len = data_size;
 
 	se_writel(se_dev, SE_CONTEXT_SAVE_SRC(MEM),

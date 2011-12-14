@@ -32,7 +32,6 @@
 
 /*  99 > 2, which makes kernel panic if register set is incorrect */
 static int register_sets = 99;
-static bool s_war_insert_syncpoints;
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xe00,    4, DIRECT),
@@ -137,12 +136,6 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 		nvhost_cdma_push(cdma,
 				nvhost_opcode_nonincr(0x904, 1),
 				ctx->restore_phys + restore_set1_offset * 4);
-		if (s_war_insert_syncpoints)
-			nvhost_cdma_push(cdma,
-					NVHOST_OPCODE_NOOP,
-					nvhost_opcode_imm_incr_syncpt(
-							NV_SYNCPT_RD_DONE,
-							NVSYNCPT_3D));
 	}
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_imm(0xb00, 1),
@@ -206,12 +199,6 @@ static void __init save_end_v1(u32 *ptr)
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
 	nvhost_3dctx_restore_end(ptr + 1);
 	ptr += RESTORE_END_SIZE;
-	/* reset to dual reg if necessary */
-	if (s_war_insert_syncpoints) {
-		ptr[1] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_RD_DONE,
-				NVSYNCPT_3D);
-		ptr += 1;
-	}
 	ptr[1] = nvhost_opcode_imm(0xb00, (1 << register_sets) - 1);
 	/* op_done syncpt incr to flush FDC */
 	ptr[2] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE, NVSYNCPT_3D);
@@ -300,39 +287,18 @@ static void __init switch_gpu(struct save_info *info,
 			u32 save_dest_sets,
 			u32 restore_dest_sets)
 {
-	if (s_war_insert_syncpoints) {
-		if (info->ptr) {
-			info->ptr[0] = nvhost_opcode_setclass(
-					NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-			info->ptr[1] = nvhost_opcode_nonincr(0x905, 2);
-			info->ptr[2] = nvhost_opcode_imm_incr_syncpt(
-					NV_SYNCPT_RD_DONE, NVSYNCPT_3D);
-			info->ptr[3] = nvhost_opcode_imm(0xb00,
-					restore_dest_sets);
-			info->ptr[4] = nvhost_opcode_imm_incr_syncpt(
-					NV_SYNCPT_RD_DONE, NVSYNCPT_3D);
-			info->ptr[5] = nvhost_opcode_imm(0xb00, save_dest_sets);
-			info->ptr[6] = nvhost_opcode_imm(0xb01, save_src_set);
-			info->ptr += 7;
-		}
-		info->save_count += 7;
-		info->restore_count += 2;
-		info->save_incrs += 1;
-		info->restore_incrs += 1;
-	} else {
-		if (info->ptr) {
-			info->ptr[0] = nvhost_opcode_setclass(
-					NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
-			info->ptr[1] = nvhost_opcode_imm(0xb00,
-					restore_dest_sets);
-			info->ptr[2] = nvhost_opcode_imm(0xb00,
-					save_dest_sets);
-			info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
-			info->ptr += 4;
-		}
-		info->save_count += 4;
-		info->restore_count += 1;
+	if (info->ptr) {
+		info->ptr[0] = nvhost_opcode_setclass(
+				NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
+		info->ptr[1] = nvhost_opcode_imm(0xb00,
+				restore_dest_sets);
+		info->ptr[2] = nvhost_opcode_imm(0xb00,
+				save_dest_sets);
+		info->ptr[3] = nvhost_opcode_imm(0xb01, save_src_set);
+		info->ptr += 4;
 	}
+	info->save_count += 4;
+	info->restore_count += 1;
 }
 
 static void __init setup_save(u32 *ptr)
@@ -386,11 +352,6 @@ static void __init setup_save(u32 *ptr)
 	if (register_sets == 2)
 		switch_gpu(&info, 0, 2, 3);
 
-	if (s_war_insert_syncpoints) {
-		info.save_incrs += register_sets;
-		save_end_size++;
-	}
-
 	if (info.ptr) {
 		save_end_v1(info.ptr);
 		info.ptr += SAVE_END_V1_SIZE;
@@ -425,9 +386,6 @@ int __init t30_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 	register_sets = tegra_gpu_register_sets();
 	BUG_ON(register_sets == 0 || register_sets > 2);
 
-	/* Tegra3 A01 workaround */
-	s_war_insert_syncpoints = tegra_revision == TEGRA_REVISION_A01;
-
 	setup_save(NULL);
 
 	nvhost_3dctx_save_buf = nvmap_alloc(nvmap, save_size * 4, 32,
@@ -441,8 +399,6 @@ int __init t30_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 	nvhost_3dctx_save_slots = 6;
 	if (register_sets == 2)
 		nvhost_3dctx_save_slots += 2;
-	if (s_war_insert_syncpoints)
-		nvhost_3dctx_save_slots += 1;
 
 	save_ptr = nvmap_mmap(nvhost_3dctx_save_buf);
 	if (!save_ptr) {

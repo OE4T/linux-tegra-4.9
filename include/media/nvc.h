@@ -126,7 +126,8 @@ struct nvc_param {
  */
 
 #define NVC_PWR_ERR			0
-#define NVC_PWR_OFF_DELAYED		1
+#define NVC_PWR_OFF_DELAYED		1 /* obsolete - never used */
+#define NVC_PWR_OFF_FORCE		1
 #define NVC_PWR_OFF			2
 #define NVC_PWR_STDBY_OFF		3
 #define NVC_PWR_STDBY			4

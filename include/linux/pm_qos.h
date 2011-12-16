@@ -3,7 +3,10 @@
 /* interface for the pm_qos_power infrastructure of the linux kernel.
  *
  * Mark Gross <mgross@linux.intel.com>
+ *
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  */
+
 #include <linux/plist.h>
 #include <linux/notifier.h>
 #include <linux/miscdevice.h>
@@ -18,6 +21,7 @@ enum {
 	PM_QOS_MEMORY_BANDWIDTH,
 	PM_QOS_GPU_FREQ_MIN,
 	PM_QOS_GPU_FREQ_MAX,
+	PM_QOS_MAX_ONLINE_CPUS,
 
 	/* insert new class ID */
 	PM_QOS_NUM_CLASSES,
@@ -41,7 +45,8 @@ enum pm_qos_flags_status {
 #define PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT	(-1)
 #define PM_QOS_LATENCY_ANY			((s32)(~(__u32)0 >> 1))
 #define PM_QOS_GPU_FREQ_MIN_DEFAULT_VALUE	0
-#define PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE	LONG_MAX
+#define PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE	INT_MAX
+#define PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE	INT_MAX
 
 #define PM_QOS_FLAG_NO_POWER_OFF	(1 << 0)
 #define PM_QOS_FLAG_REMOTE_WAKEUP	(1 << 1)

@@ -66,6 +66,7 @@ struct nct1008_data {
 
 #ifdef CONFIG_SENSORS_NCT1008
 int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp);
+int nct1008_thermal_get_temp_low(struct nct1008_data *data, long *temp);
 int nct1008_thermal_set_limits(struct nct1008_data *data,
 				long lo_limit_milli,
 				long hi_limit_milli);
@@ -76,6 +77,9 @@ int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
 					long shutdown_temp);
 #else
 static inline int nct1008_thermal_get_temp(struct nct1008_data *data,
+						long *temp)
+{ return -EINVAL; }
+static inline int nct1008_thermal_get_temp_low(struct nct1008_data *data,
 						long *temp)
 { return -EINVAL; }
 static inline int nct1008_thermal_set_limits(struct nct1008_data *data,

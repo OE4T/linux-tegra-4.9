@@ -775,6 +775,12 @@ int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp)
 	return nct1008_get_temp(&data->client->dev, temp);
 }
 
+int nct1008_thermal_get_temp_low(struct nct1008_data *data, long *temp)
+{
+	*temp = 0;
+	return 0;
+}
+
 int nct1008_thermal_set_limits(struct nct1008_data *data,
 				long lo_limit_milli,
 				long hi_limit_milli)

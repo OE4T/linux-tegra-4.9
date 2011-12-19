@@ -78,6 +78,7 @@ struct nvhost_ctrl_userctx {
  */
 static void trace_write_cmdbufs(struct nvhost_job *job)
 {
+#if defined(CONFIG_TEGRA_NVMAP)
 	struct nvmap_handle_ref handle;
 	void *mem = NULL;
 	int i = 0;
@@ -109,6 +110,7 @@ static void trace_write_cmdbufs(struct nvhost_job *job)
 			nvmap_munmap(&handle, mem);
 		}
 	}
+#endif
 }
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)

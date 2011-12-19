@@ -62,8 +62,9 @@ struct nvhost_channel_userctx {
 	int num_relocshifts;
 	struct nvhost_job *job;
 	struct nvmap_client *nvmap;
-	struct nvhost_userctx_timeout timeout;
+	u32 timeout;
 	u32 priority;
+	int clientid;
 };
 
 struct nvhost_ctrl_userctx {
@@ -156,13 +157,12 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 		priv->hwctx = ch->ctxhandler.alloc(ch);
 		if (!priv->hwctx)
 			goto fail;
-		priv->hwctx->timeout = &priv->timeout;
-		priv->timeout.hwctx = priv->hwctx;
 	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
+	priv->clientid = atomic_add_return(1, &ch->dev->clientid);
 
 	priv->job = nvhost_job_alloc(ch, priv->hwctx, &priv->hdr,
-			NULL, priv->priority, &priv->timeout);
+			NULL, priv->priority, priv->clientid);
 	if (!priv->job)
 		goto fail;
 
@@ -188,9 +188,11 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	ctx->job = nvhost_job_realloc(ctx->job,
 			&ctx->hdr,
 			ctx->nvmap,
-			ctx->priority);
+			ctx->priority,
+			ctx->clientid);
 	if (!ctx->job)
 		return -ENOMEM;
+	ctx->job->timeout = ctx->timeout;
 
 	if (ctx->hdr.submit_version >= NVHOST_SUBMIT_VERSION_V2)
 		ctx->num_relocshifts = ctx->hdr.num_relocs;
@@ -341,9 +343,8 @@ static int nvhost_ioctl_channel_flush(
 
 	if ((nvhost_debug_force_timeout_pid == current->tgid) &&
 	    (nvhost_debug_force_timeout_channel == ctx->ch->chid)) {
-		ctx->timeout.timeout = nvhost_debug_force_timeout_val;
+		ctx->timeout = nvhost_debug_force_timeout_val;
 	}
-	ctx->timeout.syncpt_id = ctx->hdr.syncpt_id;
 
 	trace_write_cmdbufs(ctx->job);
 
@@ -362,7 +363,6 @@ static int nvhost_ioctl_channel_read_3d_reg(
 {
 	BUG_ON(!channel_op(ctx->ch).read3dreg);
 	return channel_op(ctx->ch).read3dreg(ctx->ch, ctx->hwctx,
-			&ctx->timeout,
 			args->offset, &args->value);
 }
 
@@ -481,15 +481,15 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:
-		priv->timeout.timeout =
+		priv->timeout =
 			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
 		dev_dbg(&priv->ch->dev->pdev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
-			__func__, priv->timeout.timeout, priv);
+			__func__, priv->timeout, priv);
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
 		((struct nvhost_get_param_args *)buf)->value =
-				priv->timeout.has_timedout;
+				priv->hwctx->has_timedout;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
 		priv->priority =

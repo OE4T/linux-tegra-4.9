@@ -137,23 +137,23 @@ unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
  * Start timer for a buffer submition that has completed yet.
  * Must be called with the cdma lock held.
  */
-static void cdma_start_timer_locked(struct nvhost_cdma *cdma, u32 syncpt_id,
-				u32 syncpt_val,
-				struct nvhost_userctx_timeout *timeout)
+static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
+		struct nvhost_job *job)
 {
-	BUG_ON(!timeout);
-	if (cdma->timeout.ctx_timeout) {
+	BUG_ON(!job);
+	if (cdma->timeout.clientid) {
 		/* timer already started */
 		return;
 	}
 
-	cdma->timeout.ctx_timeout = timeout;
-	cdma->timeout.syncpt_id = syncpt_id;
-	cdma->timeout.syncpt_val = syncpt_val;
+	cdma->timeout.ctx = job->hwctx;
+	cdma->timeout.clientid = job->clientid;
+	cdma->timeout.syncpt_id = job->syncpt_id;
+	cdma->timeout.syncpt_val = job->syncpt_end;
 	cdma->timeout.start_ktime = ktime_get();
 
 	schedule_delayed_work(&cdma->timeout.wq,
-			msecs_to_jiffies(timeout->timeout));
+			msecs_to_jiffies(job->timeout));
 }
 
 /**
@@ -163,7 +163,8 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma, u32 syncpt_id,
 static void stop_cdma_timer_locked(struct nvhost_cdma *cdma)
 {
 	cancel_delayed_work(&cdma->timeout.wq);
-	cdma->timeout.ctx_timeout = NULL;
+	cdma->timeout.ctx = NULL;
+	cdma->timeout.clientid = 0;
 }
 
 /**
@@ -205,15 +206,13 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		if (!nvhost_syncpt_min_cmp(sp,
 				job->syncpt_id, job->syncpt_end)) {
 			/* Start timer on next pending syncpt */
-			if (job->timeout->timeout) {
-				cdma_start_timer_locked(cdma, job->syncpt_id,
-					job->syncpt_end, job->timeout);
-			}
+			if (job->timeout)
+				cdma_start_timer_locked(cdma, job);
 			break;
 		}
 
 		/* Cancel timeout, when a buffer completes */
-		if (cdma->timeout.ctx_timeout)
+		if (cdma->timeout.clientid)
 			stop_cdma_timer_locked(cdma);
 
 		/* Unpin the memory */
@@ -302,13 +301,13 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		get_restart = job->first_get;
 
 	/* do CPU increments as long as this context continues */
-	while (result && job->timeout == cdma->timeout.ctx_timeout) {
+	while (result && job->clientid == cdma->timeout.clientid) {
 		/* different context, gets us out of this loop */
-		if (job->timeout != cdma->timeout.ctx_timeout)
+		if (job->clientid != cdma->timeout.clientid)
 			break;
 
 		/* won't need a timeout when replayed */
-		job->timeout->timeout = 0;
+		job->timeout = 0;
 
 		syncpt_incrs = job->syncpt_end - syncpt_val;
 		dev_dbg(dev,
@@ -336,9 +335,9 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	/* setup GPU increments */
 	while (result) {
 		/* same context, increment in the pushbuffer */
-		if (job->timeout == cdma->timeout.ctx_timeout) {
+		if (job->clientid == cdma->timeout.clientid) {
 			/* won't need a timeout when replayed */
-			job->timeout->timeout = 0;
+			job->timeout = 0;
 
 			/* update buffer's syncpts in the pushbuffer */
 			cdma_op(cdma).timeout_pb_incr(cdma,
@@ -349,7 +348,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 
 			exec_ctxsave = false;
 		} else {
-			dev_warn(dev,
+			dev_dbg(dev,
 				"%s: switch to a different userctx\n",
 				__func__);
 			/*
@@ -373,7 +372,8 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	/* roll back DMAGET and start up channel again */
 	cdma_op(cdma).timeout_teardown_end(cdma, get_restart);
 
-	cdma->timeout.ctx_timeout->has_timedout = true;
+	if (cdma->timeout.ctx)
+		cdma->timeout.ctx->has_timedout = true;
 }
 
 /**
@@ -421,33 +421,17 @@ void nvhost_cdma_deinit(struct nvhost_cdma *cdma)
 /**
  * Begin a cdma submit
  */
-int nvhost_cdma_begin(struct nvhost_cdma *cdma,
-		       struct nvhost_userctx_timeout *timeout)
+int nvhost_cdma_begin(struct nvhost_cdma *cdma, struct nvhost_job *job)
 {
 	mutex_lock(&cdma->lock);
 
-	if (timeout && timeout->has_timedout) {
-		struct nvhost_master *dev = cdma_to_dev(cdma);
-		u32 min, max;
-
-		min = nvhost_syncpt_update_min(&dev->syncpt,
-			cdma->timeout.syncpt_id);
-		max = nvhost_syncpt_read_min(&dev->syncpt,
-			cdma->timeout.syncpt_id);
-
-		dev_dbg(&dev->pdev->dev,
-			"%s: skip timed out ctx submit (min = %d, max = %d)\n",
-			__func__, min, max);
-		mutex_unlock(&cdma->lock);
-		return -ETIMEDOUT;
-	}
-	if (timeout->timeout) {
+	if (job->timeout) {
 		/* init state on first submit with timeout value */
 		if (!cdma->timeout.initialized) {
 			int err;
 			BUG_ON(!cdma_op(cdma).timeout_init);
 			err = cdma_op(cdma).timeout_init(cdma,
-				timeout->syncpt_id);
+				job->syncpt_id);
 			if (err) {
 				mutex_unlock(&cdma->lock);
 				return err;
@@ -520,11 +504,8 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 			cdma->first_get);
 
 	/* start timer on idle -> active transitions */
-	if (job->timeout->timeout && was_idle) {
-		cdma_start_timer_locked(cdma,
-				job->syncpt_id, job->syncpt_end,
-			job->timeout);
-	}
+	if (job->timeout && was_idle)
+		cdma_start_timer_locked(cdma, job);
 
 	mutex_unlock(&cdma->lock);
 }

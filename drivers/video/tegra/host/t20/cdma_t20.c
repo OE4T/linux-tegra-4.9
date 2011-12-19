@@ -328,7 +328,7 @@ static void t20_cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct syncpt_buffer *sb = &cdma->syncpt_buffer;
 	struct push_buffer *pb = &cdma->push_buffer;
-	struct nvhost_userctx_timeout *timeout = cdma->timeout.ctx_timeout;
+	struct nvhost_hwctx *hwctx = cdma->timeout.ctx;
 	u32 getidx, *p;
 
 	/* should have enough slots to incr to desired count */
@@ -337,10 +337,10 @@ static void t20_cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 	getidx = getptr - pb->phys;
 	if (exec_ctxsave) {
 		/* don't disrupt the CTXSAVE of a good/non-timed out ctx */
-		nr_slots -= timeout->hwctx->save_slots;
-		syncpt_incrs -= timeout->hwctx->save_incrs;
+		nr_slots -= hwctx->save_slots;
+		syncpt_incrs -= hwctx->save_incrs;
 
-		getidx += (timeout->hwctx->save_slots * 8);
+		getidx += (hwctx->save_slots * 8);
 		getidx &= (PUSH_BUFFER_SIZE - 1);
 
 		dev_dbg(&dev->pdev->dev,
@@ -587,9 +587,9 @@ static void t20_cdma_timeout_handler(struct work_struct *work)
 
 	mutex_lock(&cdma->lock);
 
-	if (!cdma->timeout.ctx_timeout) {
+	if (!cdma->timeout.clientid) {
 		dev_dbg(&dev->pdev->dev,
-			 "cdma_timeout: expired, but has NULL context\n");
+			 "cdma_timeout: expired, but has no clientid\n");
 		mutex_unlock(&cdma->lock);
 		return;
 	}
@@ -623,7 +623,7 @@ static void t20_cdma_timeout_handler(struct work_struct *work)
 		__func__,
 		cdma->timeout.syncpt_id,
 		syncpt_op(sp).name(sp, cdma->timeout.syncpt_id),
-		cdma->timeout.ctx_timeout,
+		cdma->timeout.ctx,
 		syncpt_val, cdma->timeout.syncpt_val);
 
 	/* stop HW, resetting channel/module */

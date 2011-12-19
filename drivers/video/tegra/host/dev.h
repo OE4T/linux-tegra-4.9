@@ -54,13 +54,8 @@ struct nvhost_master {
 	u32 sync_queue_size;
 
 	struct nvhost_chip_support op;
-};
 
-struct nvhost_userctx_timeout {
-	u32 timeout;
-	bool has_timedout;
-	struct nvhost_hwctx *hwctx;
-	int syncpt_id;
+	atomic_t clientid;
 };
 
 void nvhost_debug_init(struct nvhost_master *master);

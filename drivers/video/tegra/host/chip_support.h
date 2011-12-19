@@ -49,7 +49,6 @@ struct nvhost_chip_support {
 		int (*submit)(struct nvhost_job *job);
 		int (*read3dreg)(struct nvhost_channel *channel,
 				struct nvhost_hwctx *hwctx,
-				struct nvhost_userctx_timeout *timeout,
 				u32 offset,
 				u32 *value);
 	} channel;

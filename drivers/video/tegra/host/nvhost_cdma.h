@@ -80,7 +80,8 @@ struct buffer_timeout {
 	u32 syncpt_val;			/* syncpt value when completed */
 	ktime_t start_ktime;		/* starting time */
 	/* context timeout information */
-	struct nvhost_userctx_timeout *ctx_timeout;
+	struct nvhost_hwctx *ctx;
+	int clientid;
 };
 
 enum cdma_event {
@@ -116,8 +117,7 @@ struct nvhost_cdma {
 int	nvhost_cdma_init(struct nvhost_cdma *cdma);
 void	nvhost_cdma_deinit(struct nvhost_cdma *cdma);
 void	nvhost_cdma_stop(struct nvhost_cdma *cdma);
-int	nvhost_cdma_begin(struct nvhost_cdma *cdma,
-		struct nvhost_userctx_timeout *timeout);
+int	nvhost_cdma_begin(struct nvhost_cdma *cdma, struct nvhost_job *job);
 void	nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2);
 #define NVHOST_CDMA_PUSH_GATHER_CTXSAVE 0xffffffff
 void	nvhost_cdma_push_gather(struct nvhost_cdma *cdma,

@@ -95,15 +95,9 @@ int nvhost_t20_save_context(struct nvhost_module *mod, u32 syncpt_id)
 
 	job = nvhost_job_alloc(ch, hwctx_to_save,
 			NULL,
-			ch->dev->nvmap, 0, hwctx_to_save->timeout);
+			ch->dev->nvmap, 0, 0);
 	if (IS_ERR_OR_NULL(job)) {
 		err = PTR_ERR(job);
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
-	if (err) {
 		mutex_unlock(&ch->submitlock);
 		goto done;
 	}
@@ -119,6 +113,12 @@ int nvhost_t20_save_context(struct nvhost_module *mod, u32 syncpt_id)
 	job->syncpt_id = syncpt_id;
 	job->syncpt_incrs = syncpt_incrs;
 	job->syncpt_end = syncpt_val;
+
+	err = nvhost_cdma_begin(&ch->cdma, job);
+	if (err) {
+		mutex_unlock(&ch->submitlock);
+		goto done;
+	}
 
 	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
 	nvhost_cdma_end(&ch->cdma, job);

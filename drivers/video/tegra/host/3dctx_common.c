@@ -25,6 +25,7 @@
 #include <mach/nvmap.h>
 #include <linux/slab.h>
 #include "3dctx_common.h"
+#include "t20/t20.h"
 #include "t20/hardware_t20.h"
 #include "t20/syncpt_t20.h"
 #include "nvhost_hwctx.h"
@@ -148,90 +149,5 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 
 int nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
 {
-	struct nvhost_channel *ch =
-			container_of(mod, struct nvhost_channel, mod);
-	struct nvhost_hwctx *hwctx_to_save;
-	struct nvhost_job *job;
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
-	u32 syncpt_incrs, syncpt_val;
-	int err = 0;
-	void *ref;
-	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
-
-	ctx_waiter = nvhost_intr_alloc_waiter();
-	wakeup_waiter = nvhost_intr_alloc_waiter();
-	if (!ctx_waiter || !wakeup_waiter) {
-		err = -ENOMEM;
-		goto done;
-	}
-	if (mod->desc->busy)
-		mod->desc->busy(mod);
-
-	mutex_lock(&ch->submitlock);
-	hwctx_to_save = ch->cur_ctx;
-	if (!hwctx_to_save) {
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	job = nvhost_job_alloc(ch, hwctx_to_save,
-			NULL,
-			ch->dev->nvmap, 0, hwctx_to_save->timeout);
-	if (IS_ERR_OR_NULL(job)) {
-		err = PTR_ERR(job);
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	err = nvhost_cdma_begin(&ch->cdma, hwctx_to_save->timeout);
-	if (err) {
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	hwctx_to_save->valid = true;
-	ch->ctxhandler.get(hwctx_to_save);
-	ch->cur_ctx = NULL;
-
-	syncpt_incrs = hwctx_to_save->save_incrs;
-	syncpt_val = nvhost_syncpt_incr_max(&ch->dev->syncpt,
-					NVSYNCPT_3D, syncpt_incrs);
-
-	job->syncpt_id = NVSYNCPT_3D;
-	job->syncpt_incrs = syncpt_incrs;
-	job->syncpt_end = syncpt_val;
-
-	ch->ctxhandler.save_push(&ch->cdma, hwctx_to_save);
-	nvhost_cdma_end(&ch->cdma, job);
-	nvhost_job_put(job);
-	job = NULL;
-
-	err = nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D,
-			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
-			ctx_waiter,
-			NULL);
-	ctx_waiter = NULL;
-	WARN(err, "Failed to set context save interrupt");
-
-	err = nvhost_intr_add_action(&ch->dev->intr, NVSYNCPT_3D, syncpt_val,
-			NVHOST_INTR_ACTION_WAKEUP, &wq,
-			wakeup_waiter,
-			&ref);
-	wakeup_waiter = NULL;
-	WARN(err, "Failed to set wakeup interrupt");
-	wait_event(wq,
-		nvhost_syncpt_min_cmp(&ch->dev->syncpt,
-				NVSYNCPT_3D, syncpt_val));
-
-	nvhost_intr_put_ref(&ch->dev->intr, ref);
-
-	nvhost_cdma_update(&ch->cdma);
-
-	mutex_unlock(&ch->submitlock);
-
-done:
-	kfree(ctx_waiter);
-	kfree(wakeup_waiter);
-	return err;
+	return nvhost_t20_save_context(mod, NVSYNCPT_3D);
 }

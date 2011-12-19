@@ -201,6 +201,9 @@ static int t20_channel_submit(struct nvhost_job *job)
 	void *ctxrestore_waiter = NULL;
 	void *ctxsave_waiter, *completed_waiter;
 
+	if (job->hwctx && job->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	ctxsave_waiter = nvhost_intr_alloc_waiter();
 	completed_waiter = nvhost_intr_alloc_waiter();
 	if (!ctxsave_waiter || !completed_waiter) {
@@ -252,7 +255,7 @@ static int t20_channel_submit(struct nvhost_job *job)
 	}
 
 	/* begin a CDMA submit */
-	err = nvhost_cdma_begin(&channel->cdma, job->timeout);
+	err = nvhost_cdma_begin(&channel->cdma, job);
 	if (err) {
 		mutex_unlock(&channel->submitlock);
 		nvhost_module_idle(&channel->mod);
@@ -266,12 +269,12 @@ static int t20_channel_submit(struct nvhost_job *job)
 		trace_nvhost_channel_context_switch(channel->desc->name,
 		  channel->cur_ctx, job->hwctx);
 		hwctx_to_save = channel->cur_ctx;
-		if (hwctx_to_save && hwctx_to_save->timeout &&
-			hwctx_to_save->timeout->has_timedout) {
+		if (hwctx_to_save &&
+			hwctx_to_save->has_timedout) {
 			hwctx_to_save = NULL;
 			dev_dbg(&channel->dev->pdev->dev,
 				"%s: skip save of timed out context (0x%p)\n",
-				__func__, channel->cur_ctx->timeout);
+				__func__, channel->cur_ctx);
 		}
 		if (hwctx_to_save) {
 			job->syncpt_incrs += hwctx_to_save->save_incrs;
@@ -404,7 +407,6 @@ done:
 static int t20_channel_read_3d_reg(
 	struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
-	struct nvhost_userctx_timeout *timeout,
 	u32 offset,
 	u32 *value)
 {
@@ -419,6 +421,9 @@ static int t20_channel_read_3d_reg(
 	u32 syncval;
 	int err;
 
+	if (hwctx && hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	ctx_waiter = nvhost_intr_alloc_waiter();
 	read_waiter = nvhost_intr_alloc_waiter();
 	completed_waiter = nvhost_intr_alloc_waiter();
@@ -429,7 +434,7 @@ static int t20_channel_read_3d_reg(
 
 	job = nvhost_job_alloc(channel, hwctx,
 			NULL,
-			channel->dev->nvmap, 0, timeout);
+			channel->dev->nvmap, 0, 0);
 	if (!job) {
 		err = -ENOMEM;
 		goto done;
@@ -468,7 +473,7 @@ static int t20_channel_read_3d_reg(
 	job->syncpt_end = syncval;
 
 	/* begin a CDMA submit */
-	nvhost_cdma_begin(&channel->cdma, timeout);
+	nvhost_cdma_begin(&channel->cdma, job);
 
 	/* push save buffer (pre-gather setup depends on unit) */
 	if (hwctx_to_save)

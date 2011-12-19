@@ -31,13 +31,11 @@
 
 struct nvhost_channel;
 struct nvhost_cdma;
-struct nvhost_userctx_timeout;
 
 struct nvhost_hwctx {
 	struct kref ref;
 
 	struct nvhost_channel *channel;
-	struct nvhost_userctx_timeout *timeout;
 	bool valid;
 
 	struct nvmap_handle_ref *save;
@@ -50,6 +48,8 @@ struct nvhost_hwctx {
 	phys_addr_t restore_phys;
 	u32 restore_size;
 	u32 restore_incrs;
+
+	bool has_timedout;
 };
 
 struct nvhost_hwctx_handler {

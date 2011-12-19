@@ -30,7 +30,6 @@ struct nvhost_hwctx;
 struct nvmap_client;
 struct nvhost_waitchk;
 struct nvmap_handle;
-struct nvhost_userctx_timeout;
 
 /*
  * Each submit is tracked as a nvhost_job.
@@ -44,7 +43,7 @@ struct nvhost_job {
 
 	/* Hardware context valid for this client */
 	struct nvhost_hwctx *hwctx;
-	struct nvhost_userctx_timeout *timeout;
+	int clientid;
 
 	/* Nvmap to be used for pinning & unpinning memory */
 	struct nvmap_client *nvmap;
@@ -74,6 +73,9 @@ struct nvhost_job {
 	/* Priority of this submit. */
 	int priority;
 
+	/* Maximum time to wait for this job */
+	int timeout;
+
 	/* Null kickoff prevents submit from being sent to hardware */
 	bool null_kickoff;
 
@@ -90,8 +92,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		struct nvhost_submit_hdr_ext *hdr,
 		struct nvmap_client *nvmap,
-		int priority,
-		struct nvhost_userctx_timeout *timeout);
+		int priority, int clientid);
 
 /*
  * Allocate memory for a job. Just enough memory will be allocated to
@@ -101,7 +102,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 struct nvhost_job *nvhost_job_realloc(struct nvhost_job *oldjob,
 		struct nvhost_submit_hdr_ext *hdr,
 		struct nvmap_client *nvmap,
-		int priority);
+		int priority, int clientid);
 
 /*
  * Add a gather to a job.

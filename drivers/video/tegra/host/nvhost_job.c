@@ -121,7 +121,7 @@ static int realloc_gathers(struct nvhost_job *oldjob,
 
 static void init_fields(struct nvhost_job *job,
 		struct nvhost_submit_hdr_ext *hdr,
-		int priority)
+		int priority, int clientid)
 {
 	int num_pins = hdr ? (hdr->num_relocs + hdr->num_cmdbufs)*2 : 0;
 	int num_waitchks = hdr ? hdr->num_waitchks : 0;
@@ -137,6 +137,7 @@ static void init_fields(struct nvhost_job *job,
 	job->syncpt_incrs = 0;
 	job->syncpt_end = 0;
 	job->priority = priority;
+	job->clientid = clientid;
 	job->null_kickoff = false;
 	job->first_get = 0;
 	job->num_slots = 0;
@@ -168,7 +169,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_submit_hdr_ext *hdr,
 		struct nvmap_client *nvmap,
 		int priority,
-		struct nvhost_userctx_timeout *timeout)
+		int clientid)
 {
 	struct nvhost_job *job = NULL;
 	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
@@ -181,14 +182,13 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 	kref_init(&job->ref);
 	job->ch = ch;
 	job->hwctx = hwctx;
-	job->timeout = timeout;
 	job->nvmap = nvmap ? nvmap_client_get(nvmap) : NULL;
 
 	err = alloc_gathers(job, num_cmdbufs);
 	if (err)
 		goto error;
 
-	init_fields(job, hdr, priority);
+	init_fields(job, hdr, priority, clientid);
 
 	return job;
 
@@ -202,7 +202,7 @@ struct nvhost_job *nvhost_job_realloc(
 		struct nvhost_job *oldjob,
 		struct nvhost_submit_hdr_ext *hdr,
 		struct nvmap_client *nvmap,
-		int priority)
+		int priority, int clientid)
 {
 	struct nvhost_job *newjob = NULL;
 	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
@@ -223,7 +223,7 @@ struct nvhost_job *nvhost_job_realloc(
 
 	nvhost_job_put(oldjob);
 
-	init_fields(newjob, hdr, priority);
+	init_fields(newjob, hdr, priority, clientid);
 
 	return newjob;
 
@@ -311,9 +311,9 @@ void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 	dev_dbg(dev, "    FIRST_GET   0x%x\n",
 		job->first_get);
 	dev_dbg(dev, "    TIMEOUT     %d\n",
-		job->timeout->timeout);
-	dev_dbg(dev, "    TIMEOUT_CTX 0x%p\n",
 		job->timeout);
+	dev_dbg(dev, "    CTX 0x%p\n",
+		job->hwctx);
 	dev_dbg(dev, "    NUM_SLOTS   %d\n",
 		job->num_slots);
 	dev_dbg(dev, "    NUM_HANDLES %d\n",

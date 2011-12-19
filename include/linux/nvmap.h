@@ -53,15 +53,30 @@
 
 #if defined(__KERNEL__)
 
+#if defined(CONFIG_TEGRA_NVMAP)
 struct nvmap_handle;
 struct nvmap_client;
 struct nvmap_device;
-
 #define nvmap_ref_to_handle(_ref) (*(struct nvmap_handle **)(_ref))
-#define nvmap_id_to_handle(_id) ((struct nvmap_handle *)(_id))
 /* Convert User space handle to Kernel. */
-#define nvmap_convert_handle_u2k(h) h
+#define nvmap_convert_handle_u2k(h) (h)
+#elif defined(CONFIG_ION_TEGRA)
+/* For Ion Mem Manager support through nvmap_* API's. */
+#include "../../../../../drivers/gpu/ion/ion_priv.h"
 
+#define nvmap_client ion_client
+#define nvmap_device ion_device
+#define nvmap_handle ion_handle
+#define nvmap_handle_ref ion_handle
+#define nvmap_ref_to_handle(_ref) (struct ion_handle *)_ref
+/* Convert User space handle to Kernel. */
+#define nvmap_convert_handle_u2k(h) (*((u32 *)h))
+#endif
+
+#define nvmap_id_to_handle(_id) ((struct nvmap_handle *)(_id))
+
+
+#if defined(CONFIG_TEGRA_NVMAP)
 /* handle_ref objects are client-local references to an nvmap_handle;
  * they are distinct objects so that handles can be unpinned and
  * unreferenced the correct number of times when a client abnormally
@@ -72,6 +87,7 @@ struct nvmap_handle_ref {
 	atomic_t	dupes;	/* number of times to free on file close */
 	atomic_t	pin;	/* number of times to unpin on free */
 };
+#endif
 
 struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 					 const char *name);

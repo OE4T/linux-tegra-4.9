@@ -29,12 +29,16 @@
 #include <linux/rbtree.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
-
 #include <linux/atomic.h>
 #include <linux/nvmap.h>
 
 #include "nvmap_heap.h"
 
+struct nvmap_device;
+struct page;
+struct tegra_iovmm_area;
+
+#if defined(CONFIG_TEGRA_NVMAP)
 #define nvmap_err(_client, _fmt, ...)				\
 	dev_err(nvmap_client_to_device(_client),		\
 		"%s: "_fmt, __func__, ##__VA_ARGS__)
@@ -48,10 +52,6 @@
 		"%s: "_fmt, __func__, ##__VA_ARGS__)
 
 #define nvmap_ref_to_id(_ref)		((unsigned long)(_ref)->handle)
-
-struct nvmap_device;
-struct page;
-struct tegra_iovmm_area;
 
 /* handles allocated using shared system memory (either IOVMM- or high-order
  * page allocations */
@@ -163,6 +163,7 @@ static inline void nvmap_ref_unlock(struct nvmap_client *priv)
 {
 	mutex_unlock(&priv->ref_lock);
 }
+#endif /* CONFIG_TEGRA_NVMAP */
 
 struct device *nvmap_client_to_device(struct nvmap_client *client);
 
@@ -222,6 +223,7 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 
 void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
+#if defined(CONFIG_TEGRA_NVMAP)
 static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 {
 	if (unlikely(atomic_inc_return(&h->ref) <= 1)) {
@@ -254,6 +256,11 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 		return pgprot_inner_writeback(prot);
 	return prot;
 }
+#else /* CONFIG_TEGRA_NVMAP */
+struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h);
+void nvmap_handle_put(struct nvmap_handle *h);
+pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot);
+#endif /* !CONFIG_TEGRA_NVMAP */
 
 int is_nvmap_vma(struct vm_area_struct *vma);
 

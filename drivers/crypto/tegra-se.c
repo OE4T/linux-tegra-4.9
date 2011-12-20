@@ -1916,7 +1916,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	init_completion(&se_dev->complete);
-	se_work_q = alloc_workqueue("se_work_q", WQ_HIGHPRI, 16);
+	se_work_q = alloc_workqueue("se_work_q", WQ_HIGHPRI | WQ_UNBOUND, 16);
 	if (!se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
 		goto clean;

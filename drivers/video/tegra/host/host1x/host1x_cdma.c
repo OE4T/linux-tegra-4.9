@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/cdma_t20.c
+ * drivers/video/tegra/host/host1x/host1x_cdma.c
  *
  * Tegra Graphics Host Command DMA
  *
@@ -21,12 +21,12 @@
  */
 
 #include <linux/slab.h>
-#include "../nvhost_cdma.h"
-#include "../dev.h"
+#include "nvhost_cdma.h"
+#include "dev.h"
 
-#include "hardware_t20.h"
-#include "syncpt_t20.h"
-#include "cdma_t20.h"
+#include "host1x_hardware.h"
+#include "host1x_syncpt.h"
+#include "host1x_cdma.h"
 
 static inline u32 host1x_channel_dmactrl(int stop, int get_rst, int init_get)
 {
@@ -35,7 +35,7 @@ static inline u32 host1x_channel_dmactrl(int stop, int get_rst, int init_get)
 			| HOST1X_CREATE(CHANNEL_DMACTRL, DMAINITGET, init_get);
 }
 
-static void t20_cdma_timeout_handler(struct work_struct *work);
+static void cdma_timeout_handler(struct work_struct *work);
 
 /*
  * push_buffer
@@ -49,7 +49,7 @@ static void t20_cdma_timeout_handler(struct work_struct *work);
 /**
  * Reset to empty push buffer
  */
-static void t20_push_buffer_reset(struct push_buffer *pb)
+static void push_buffer_reset(struct push_buffer *pb)
 {
 	pb->fence = PUSH_BUFFER_SIZE - 8;
 	pb->cur = 0;
@@ -58,7 +58,7 @@ static void t20_push_buffer_reset(struct push_buffer *pb)
 /**
  * Init push buffer resources
  */
-static int t20_push_buffer_init(struct push_buffer *pb)
+static int push_buffer_init(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvmap_client *nvmap = cdma_to_nvmap(cdma);
@@ -96,7 +96,8 @@ static int t20_push_buffer_init(struct push_buffer *pb)
 		goto fail;
 
 	/* put the restart at the end of pushbuffer memory */
-	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) = nvhost_opcode_restart(pb->phys);
+	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) =
+		nvhost_opcode_restart(pb->phys);
 
 	return 0;
 
@@ -108,7 +109,7 @@ fail:
 /**
  * Clean up push buffer resources
  */
-static void t20_push_buffer_destroy(struct push_buffer *pb)
+static void push_buffer_destroy(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvmap_client *nvmap = cdma_to_nvmap(cdma);
@@ -133,7 +134,7 @@ static void t20_push_buffer_destroy(struct push_buffer *pb)
  * Push two words to the push buffer
  * Caller must ensure push buffer is not full
  */
-static void t20_push_buffer_push_to(struct push_buffer *pb,
+static void push_buffer_push_to(struct push_buffer *pb,
 		struct nvmap_client *client,
 		struct nvmap_handle *handle, u32 op1, u32 op2)
 {
@@ -152,13 +153,13 @@ static void t20_push_buffer_push_to(struct push_buffer *pb,
  * Pop a number of two word slots from the push buffer
  * Caller must ensure push buffer is not empty
  */
-static void t20_push_buffer_pop_from(struct push_buffer *pb,
+static void push_buffer_pop_from(struct push_buffer *pb,
 		unsigned int slots)
 {
 	/* Clear the nvmap references for old items from pb */
 	unsigned int i;
 	u32 fence_nvmap = pb->fence/8;
-	for(i = 0; i < slots; i++) {
+	for (i = 0; i < slots; i++) {
 		int cur_fence_nvmap = (fence_nvmap+i)
 				& (NVHOST_GATHER_QUEUE_SIZE - 1);
 		struct nvmap_client_handle *h =
@@ -173,12 +174,12 @@ static void t20_push_buffer_pop_from(struct push_buffer *pb,
 /**
  * Return the number of two word slots free in the push buffer
  */
-static u32 t20_push_buffer_space(struct push_buffer *pb)
+static u32 push_buffer_space(struct push_buffer *pb)
 {
 	return ((pb->fence - pb->cur) & (PUSH_BUFFER_SIZE - 1)) / 8;
 }
 
-static u32 t20_push_buffer_putptr(struct push_buffer *pb)
+static u32 push_buffer_putptr(struct push_buffer *pb)
 {
 	return pb->phys + pb->cur;
 }
@@ -193,7 +194,7 @@ static u32 t20_push_buffer_putptr(struct push_buffer *pb)
 /**
  * Init timeout and syncpt incr buffer resources
  */
-static int t20_cdma_timeout_init(struct nvhost_cdma *cdma,
+static int cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
@@ -251,7 +252,7 @@ static int t20_cdma_timeout_init(struct nvhost_cdma *cdma,
 	}
 	wmb();
 
-	INIT_DELAYED_WORK(&cdma->timeout.wq, t20_cdma_timeout_handler);
+	INIT_DELAYED_WORK(&cdma->timeout.wq, cdma_timeout_handler);
 	cdma->timeout.initialized = true;
 
 	return 0;
@@ -263,7 +264,7 @@ fail:
 /**
  * Clean up timeout syncpt buffer resources
  */
-static void t20_cdma_timeout_destroy(struct nvhost_cdma *cdma)
+static void cdma_timeout_destroy(struct nvhost_cdma *cdma)
 {
 	struct nvmap_client *nvmap = cdma_to_nvmap(cdma);
 	struct syncpt_buffer *sb = &cdma->syncpt_buffer;
@@ -289,7 +290,7 @@ static void t20_cdma_timeout_destroy(struct nvhost_cdma *cdma)
 /**
  * Increment timedout buffer's syncpt via CPU.
  */
-static void t20_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
+static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 				u32 syncpt_incrs, u32 syncval, u32 nr_slots)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
@@ -329,7 +330,7 @@ static void t20_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
  * whether there's a CTXSAVE that should be still executed (for the
  * preceding HW ctx).
  */
-static void t20_cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
+static void cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 				u32 syncpt_incrs, u32 nr_slots,
 				bool exec_ctxsave)
 {
@@ -393,7 +394,7 @@ static void t20_cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 /**
  * Start channel DMA
  */
-static void t20_cdma_start(struct nvhost_cdma *cdma)
+static void cdma_start(struct nvhost_cdma *cdma)
 {
 	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
 
@@ -423,11 +424,11 @@ static void t20_cdma_start(struct nvhost_cdma *cdma)
 }
 
 /**
- * Similar to t20_cdma_start(), but rather than starting from an idle
+ * Similar to cdma_start(), but rather than starting from an idle
  * state (where DMA GET is set to DMA PUT), on a timeout we restore
  * DMA GET from an explicit value (so DMA may again be pending).
  */
-static void t20_cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
+static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
@@ -472,7 +473,7 @@ static void t20_cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 /**
  * Kick channel DMA into action by writing its PUT offset (if it has changed)
  */
-static void t20_cdma_kick(struct nvhost_cdma *cdma)
+static void cdma_kick(struct nvhost_cdma *cdma)
 {
 	u32 put;
 	BUG_ON(!cdma_pb_op(cdma).putptr);
@@ -487,7 +488,7 @@ static void t20_cdma_kick(struct nvhost_cdma *cdma)
 	}
 }
 
-static void t20_cdma_stop(struct nvhost_cdma *cdma)
+static void cdma_stop(struct nvhost_cdma *cdma)
 {
 	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
 
@@ -504,7 +505,7 @@ static void t20_cdma_stop(struct nvhost_cdma *cdma)
 /**
  * Retrieve the op pair at a slot offset from a DMA address
  */
-void t20_cdma_peek(struct nvhost_cdma *cdma,
+void cdma_peek(struct nvhost_cdma *cdma,
 			  u32 dmaget, int slot, u32 *out)
 {
 	u32 offset = dmaget - cdma->push_buffer.phys;
@@ -519,7 +520,7 @@ void t20_cdma_peek(struct nvhost_cdma *cdma,
  * Stops both channel's command processor and CDMA immediately.
  * Also, tears down the channel and resets corresponding module.
  */
-void t20_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
+void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
@@ -551,7 +552,7 @@ void t20_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	cdma->torndown = true;
 }
 
-void t20_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
+void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
@@ -568,7 +569,7 @@ void t20_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	writel(cmdproc_stop, dev->sync_aperture + HOST1X_SYNC_CMDPROC_STOP);
 
 	cdma->torndown = false;
-	t20_cdma_timeout_restart(cdma, getptr);
+	cdma_timeout_restart(cdma, getptr);
 }
 
 /**
@@ -576,7 +577,7 @@ void t20_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
  * exceeded its TTL and the userctx should be timed out and remaining
  * submits already issued cleaned up (future submits return an error).
  */
-static void t20_cdma_timeout_handler(struct work_struct *work)
+static void cdma_timeout_handler(struct work_struct *work)
 {
 	struct nvhost_cdma *cdma;
 	struct nvhost_master *dev;
@@ -640,28 +641,28 @@ static void t20_cdma_timeout_handler(struct work_struct *work)
 	mutex_unlock(&cdma->lock);
 }
 
-int nvhost_init_t20_cdma_support(struct nvhost_master *host)
+int host1x_init_cdma_support(struct nvhost_master *host)
 {
-	host->op.cdma.start = t20_cdma_start;
-	host->op.cdma.stop = t20_cdma_stop;
-	host->op.cdma.kick = t20_cdma_kick;
+	host->op.cdma.start = cdma_start;
+	host->op.cdma.stop = cdma_stop;
+	host->op.cdma.kick = cdma_kick;
 
-	host->op.cdma.timeout_init = t20_cdma_timeout_init;
-	host->op.cdma.timeout_destroy = t20_cdma_timeout_destroy;
-	host->op.cdma.timeout_teardown_begin = t20_cdma_timeout_teardown_begin;
-	host->op.cdma.timeout_teardown_end = t20_cdma_timeout_teardown_end;
-	host->op.cdma.timeout_cpu_incr = t20_cdma_timeout_cpu_incr;
-	host->op.cdma.timeout_pb_incr = t20_cdma_timeout_pb_incr;
+	host->op.cdma.timeout_init = cdma_timeout_init;
+	host->op.cdma.timeout_destroy = cdma_timeout_destroy;
+	host->op.cdma.timeout_teardown_begin = cdma_timeout_teardown_begin;
+	host->op.cdma.timeout_teardown_end = cdma_timeout_teardown_end;
+	host->op.cdma.timeout_cpu_incr = cdma_timeout_cpu_incr;
+	host->op.cdma.timeout_pb_incr = cdma_timeout_pb_incr;
 
 	host->sync_queue_size = NVHOST_SYNC_QUEUE_SIZE;
 
-	host->op.push_buffer.reset = t20_push_buffer_reset;
-	host->op.push_buffer.init = t20_push_buffer_init;
-	host->op.push_buffer.destroy = t20_push_buffer_destroy;
-	host->op.push_buffer.push_to = t20_push_buffer_push_to;
-	host->op.push_buffer.pop_from = t20_push_buffer_pop_from;
-	host->op.push_buffer.space = t20_push_buffer_space;
-	host->op.push_buffer.putptr = t20_push_buffer_putptr;
+	host->op.push_buffer.reset = push_buffer_reset;
+	host->op.push_buffer.init = push_buffer_init;
+	host->op.push_buffer.destroy = push_buffer_destroy;
+	host->op.push_buffer.push_to = push_buffer_push_to;
+	host->op.push_buffer.pop_from = push_buffer_pop_from;
+	host->op.push_buffer.space = push_buffer_space;
+	host->op.push_buffer.putptr = push_buffer_putptr;
 
 	return 0;
 }

@@ -22,8 +22,8 @@
 
 #include "nvhost_hwctx.h"
 #include "dev.h"
-#include "t20/hardware_t20.h"
-#include "t20/syncpt_t20.h"
+#include "host1x/host1x_hardware.h"
+#include "host1x/host1x_syncpt.h"
 #include "gr3d.h"
 
 #include <mach/gpufuse.h>

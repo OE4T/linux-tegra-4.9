@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/cdma_t20.h
+ * drivers/video/tegra/host/host1x/host1x_cdma.h
  *
  * Tegra Graphics Host Channel
  *
@@ -20,8 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_CDMA_T20_H
-#define __NVHOST_CDMA_T20_H
+#ifndef __NVHOST_HOST1X_HOST1X_CDMA_H
+#define __NVHOST_HOST1X_HOST1X_CDMA_H
 
 /* Size of the sync queue. If it is too small, we won't be able to queue up
  * many command buffers. If it is too large, we waste memory. */
@@ -37,5 +37,7 @@
 /* 4K page containing GATHERed methods to increment channel syncpts
  * and replaces the original timed out contexts GATHER slots */
 #define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
+
+int host1x_init_cdma_support(struct nvhost_master *);
 
 #endif

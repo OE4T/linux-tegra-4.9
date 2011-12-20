@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/syncpt_t20.c
+ * drivers/video/tegra/host/host1x/host1x_syncpt.c
  *
- * Tegra Graphics Host Syncpoints for T20
+ * Tegra Graphics Host Syncpoints for HOST1X
  *
  * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
@@ -21,11 +21,10 @@
  */
 
 #include <linux/nvhost_ioctl.h>
-#include "../nvhost_syncpt.h"
-#include "../dev.h"
-
-#include "syncpt_t20.h"
-#include "hardware_t20.h"
+#include "nvhost_syncpt.h"
+#include "dev.h"
+#include "host1x_syncpt.h"
+#include "host1x_hardware.h"
 
 /**
  * Write the current syncpoint value back to hw.
@@ -221,7 +220,7 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 	}
 }
 
-int nvhost_init_t20_syncpt_support(struct nvhost_master *host)
+int host1x_init_syncpt_support(struct nvhost_master *host)
 {
 
 	host->sync_aperture = host->aperture +

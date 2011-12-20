@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/syncpt_t20.h
+ * drivers/video/tegra/host/host1x/host1x_syncpt.h
  *
- * Tegra Graphics Host Syncpoints for T20
+ * Tegra Graphics Host Syncpoints for HOST1X
  *
  * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
@@ -20,8 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_SYNCPT_T20_H
-#define __NVHOST_SYNCPT_T20_H
+#ifndef __NVHOST_HOST1X_HOST1X_SYNCPT_H
+#define __NVHOST_HOST1X_HOST1X_SYNCPT_H
 
 #define NVSYNCPT_DISP0_A		     (8)
 #define NVSYNCPT_DISP1_A		     (9)
@@ -73,6 +73,7 @@
 #define NVWAITBASE_MPE  (4)
 
 struct nvhost_master;
-int nvhost_t20_init_syncpt(struct nvhost_master *host);
+int host1x_init_syncpt(struct nvhost_master *host);
+int host1x_init_syncpt_support(struct nvhost_master *host);
 
-#endif /* __NVHOST_SYNCPT_T20_H */
+#endif

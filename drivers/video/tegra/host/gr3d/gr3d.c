@@ -25,8 +25,9 @@
 #include <mach/nvmap.h>
 #include <linux/slab.h>
 #include "t20/t20.h"
-#include "t20/hardware_t20.h"
-#include "t20/syncpt_t20.h"
+#include "host1x/host1x_channel.h"
+#include "host1x/host1x_hardware.h"
+#include "host1x/host1x_syncpt.h"
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "gr3d.h"
@@ -149,5 +150,5 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 
 int nvhost_gr3d_prepare_power_off(struct nvhost_module *mod)
 {
-	return nvhost_t20_save_context(mod, NVSYNCPT_3D);
+	return host1x_save_context(mod, NVSYNCPT_3D);
 }

@@ -12,6 +12,7 @@ nvhost-objs = \
 
 obj-$(CONFIG_TEGRA_GRHOST) += mpe/
 obj-$(CONFIG_TEGRA_GRHOST) += gr3d/
+obj-$(CONFIG_TEGRA_GRHOST) += host1x/
 obj-$(CONFIG_TEGRA_GRHOST) += t20/
 obj-$(CONFIG_TEGRA_GRHOST) += t30/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o

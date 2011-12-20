@@ -1,6 +1,6 @@
+EXTRA_CFLAGS += -Idrivers/video/tegra/host
+
 nvhost-t30-objs  = \
-	t30.o \
-	channel_t30.o \
-	debug_t30.o
+	t30.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-t30.o

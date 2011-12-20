@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/hardware_t20.h
+ * drivers/video/tegra/host/host1x/host1x_hardware.h
  *
  * Tegra Graphics Host Register Offsets
  *
@@ -20,8 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_HARDWARE_T20_H
-#define __NVHOST_HARDWARE_T20_H
+#ifndef __NVHOST_HOST1X_HOST1X_HARDWARE_H
+#define __NVHOST_HOST1X_HOST1X_HARDWARE_H
 
 #include <linux/types.h>
 #include <linux/bitops.h>
@@ -273,4 +273,4 @@ static inline u32 nvhost_mask2(unsigned x, unsigned y)
 	return 1 | (1 << (y - x));
 }
 
-#endif /* __NVHOST_HARDWARE_T20_H */
+#endif

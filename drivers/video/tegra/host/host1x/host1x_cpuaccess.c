@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/cpuaccess_t20.c
+ * drivers/video/tegra/host/host1x/host1x_cpuaccess.c
  *
  * Tegra Graphics Host Cpu Register Access
  *
@@ -20,10 +20,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "../nvhost_cpuaccess.h"
-#include "../dev.h"
-
-#include "hardware_t20.h"
+#include "nvhost_cpuaccess.h"
+#include "dev.h"
+#include "host1x_hardware.h"
 
 static int t20_cpuaccess_mutex_try_lock(struct nvhost_cpuaccess *ctx,
 					unsigned int idx)

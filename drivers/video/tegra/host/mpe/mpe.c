@@ -22,9 +22,9 @@
 
 #include "nvhost_hwctx.h"
 #include "dev.h"
-#include "t20/hardware_t20.h"
-#include "t20/channel_t20.h"
-#include "t20/syncpt_t20.h"
+#include "host1x/host1x_hardware.h"
+#include "host1x/host1x_channel.h"
+#include "host1x/host1x_syncpt.h"
 #include "t20/t20.h"
 #include <linux/slab.h>
 
@@ -399,7 +399,7 @@ static u32 *save_regs(u32 *ptr, unsigned int *pending,
 		u32 count = regs->count;
 		++ptr; /* restore incr */
 		if (regs->type == HWCTX_REGINFO_NORMAL) {
-			nvhost_drain_read_fifo(channel->aperture,
+			host1x_drain_read_fifo(channel->aperture,
 						ptr, count, pending);
 			ptr += count;
 		} else {
@@ -408,7 +408,7 @@ static u32 *save_regs(u32 *ptr, unsigned int *pending,
 				BUG_ON(msi->out_pos >= NR_WRITEBACKS);
 				word = msi->out[msi->out_pos++];
 			} else {
-				nvhost_drain_read_fifo(channel->aperture,
+				host1x_drain_read_fifo(channel->aperture,
 							&word, 1, pending);
 				if (regs->type == HWCTX_REGINFO_STASH) {
 					BUG_ON(msi->in_pos >= NR_STASHES);
@@ -429,7 +429,7 @@ static u32 *save_ram(u32 *ptr, unsigned int *pending,
 {
 	int err = 0;
 	ptr += RESTORE_RAM_SIZE;
-	err = nvhost_drain_read_fifo(channel->aperture, ptr, words, pending);
+	err = host1x_drain_read_fifo(channel->aperture, ptr, words, pending);
 	WARN_ON(err);
 	return ptr + words;
 }
@@ -566,5 +566,5 @@ int __init nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h)
 
 int nvhost_mpe_prepare_power_off(struct nvhost_module *mod)
 {
-	return nvhost_t20_save_context(mod, NVSYNCPT_MPE);
+	return host1x_save_context(mod, NVSYNCPT_MPE);
 }

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/debug_t20.c
+ * drivers/video/tegra/host/host1x/host1x_debug.c
  *
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
@@ -23,13 +23,13 @@
 
 #include <linux/io.h>
 
-#include "../dev.h"
-#include "../debug.h"
-#include "../nvhost_cdma.h"
+#include "dev.h"
+#include "debug.h"
+#include "nvhost_cdma.h"
 #include "../../nvmap/nvmap.h"
 
-#include "hardware_t20.h"
-#include "cdma_t20.h"
+#include "host1x_hardware.h"
+#include "host1x_cdma.h"
 
 #define NVHOST_DEBUG_MAX_PAGE_OFFSET 102400
 
@@ -48,22 +48,26 @@ static int show_channel_command(struct output *o, u32 addr, u32 val, int *count)
 	case 0x0:
 		mask = val & 0x3f;
 		if (mask) {
-			nvhost_debug_output(o, "SETCL(class=%03x, offset=%03x, mask=%02x, [",
-				   val >> 6 & 0x3ff, val >> 16 & 0xfff, mask);
+			nvhost_debug_output(o,
+				"SETCL(class=%03x, offset=%03x, mask=%02x, [",
+				val >> 6 & 0x3ff, val >> 16 & 0xfff, mask);
 			*count = hweight8(mask);
 			return NVHOST_DBG_STATE_DATA;
 		} else {
-			nvhost_debug_output(o, "SETCL(class=%03x)\n", val >> 6 & 0x3ff);
+			nvhost_debug_output(o, "SETCL(class=%03x)\n",
+				val >> 6 & 0x3ff);
 			return NVHOST_DBG_STATE_CMD;
 		}
 
 	case 0x1:
-		nvhost_debug_output(o, "INCR(offset=%03x, [", val >> 16 & 0xfff);
+		nvhost_debug_output(o, "INCR(offset=%03x, [",
+			val >> 16 & 0xfff);
 		*count = val & 0xffff;
 		return NVHOST_DBG_STATE_DATA;
 
 	case 0x2:
-		nvhost_debug_output(o, "NONINCR(offset=%03x, [", val >> 16 & 0xfff);
+		nvhost_debug_output(o, "NONINCR(offset=%03x, [",
+			val >> 16 & 0xfff);
 		*count = val & 0xffff;
 		return NVHOST_DBG_STATE_DATA;
 
@@ -85,17 +89,19 @@ static int show_channel_command(struct output *o, u32 addr, u32 val, int *count)
 
 	case 0x6:
 		nvhost_debug_output(o, "GATHER(offset=%03x, insert=%d, type=%d, count=%04x, addr=[",
-			   val >> 16 & 0xfff, val >> 15 & 0x1, val >> 14 & 0x1,
-			   val & 0x3fff);
+			val >> 16 & 0xfff, val >> 15 & 0x1, val >> 14 & 0x1,
+			val & 0x3fff);
 		*count = val & 0x3fff; /* TODO: insert */
 		return NVHOST_DBG_STATE_GATHER;
 
 	case 0xe:
 		subop = val >> 24 & 0xf;
 		if (subop == 0)
-			nvhost_debug_output(o, "ACQUIRE_MLOCK(index=%d)\n", val & 0xff);
+			nvhost_debug_output(o, "ACQUIRE_MLOCK(index=%d)\n",
+				val & 0xff);
 		else if (subop == 1)
-			nvhost_debug_output(o, "RELEASE_MLOCK(index=%d)\n", val & 0xff);
+			nvhost_debug_output(o, "RELEASE_MLOCK(index=%d)\n",
+				val & 0xff);
 		else
 			nvhost_debug_output(o, "EXTEND_UNKNOWN(%08x)\n", val);
 		return NVHOST_DBG_STATE_CMD;
@@ -310,7 +316,8 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	nvhost_debug_output(o, "CBREAD %08x, CBSTAT %08x\n", cbread, cbstat);
 
 	cdma_peek(cdma, dmaget, -1, pbw);
-	show_channel_pair(o, previous_oppair(cdma, dmaget), pbw[0], pbw[1], &channel->cdma);
+	show_channel_pair(o, previous_oppair(cdma, dmaget),
+		pbw[0], pbw[1], &channel->cdma);
 	nvhost_debug_output(o, "\n");
 }
 

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/channel_t20.h
+ * drivers/video/tegra/host/host1x/host1x_channel.h
  *
  * Tegra Graphics Host Channel
  *
@@ -20,16 +20,27 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_CHANNEL_T20_H
-#define __NVHOST_CHANNEL_T20_H
+#ifndef __NVHOST_HOST1X_CHANNEL_H
+#define __NVHOST_HOST1X_CHANNEL_H
 
-#include "hardware_t20.h"
-#include "../nvhost_channel.h"
+struct nvhost_job;
+struct nvhost_channel;
+struct nvhost_hwctx;
 
-extern const struct nvhost_channeldesc nvhost_t20_channelmap[];
+/*  Submit job to a host1x client */
+int host1x_channel_submit(struct nvhost_job *job);
+
+/*  Read 3d register via FIFO */
+int host1x_channel_read_3d_reg(
+	struct nvhost_channel *channel,
+	struct nvhost_hwctx *hwctx,
+	u32 offset,
+	u32 *value);
 
 /* Reads words from FIFO */
-int nvhost_drain_read_fifo(void __iomem *chan_regs,
+int host1x_drain_read_fifo(void __iomem *chan_regs,
 		u32 *ptr, unsigned int count, unsigned int *pending);
+
+int host1x_save_context(struct nvhost_module *mod, u32 syncpt_id);
 
 #endif

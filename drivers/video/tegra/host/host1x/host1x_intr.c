@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/host/t20/intr_t20.c
+ * drivers/video/tegra/host/host1x/host1x_intr.c
  *
  * Tegra Graphics Host Interrupt Management
  *
@@ -23,10 +23,9 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 
-#include "../nvhost_intr.h"
-#include "../dev.h"
-
-#include "hardware_t20.h"
+#include "nvhost_intr.h"
+#include "dev.h"
+#include "host1x_hardware.h"
 
 
 /*** HW host sync management ***/
@@ -54,7 +53,8 @@ static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 	writel(cpm, sync_regs + HOST1X_SYNC_USEC_CLK);
 }
 
-static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr, u32 id, u32 thresh)
+static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr,
+	u32 id, u32 thresh)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	void __iomem *sync_regs = dev->sync_aperture;
@@ -190,7 +190,8 @@ static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 		return 0;
 
 	err = request_threaded_irq(syncpt->irq,
-				   t20_intr_syncpt_thresh_isr, nvhost_syncpt_thresh_fn,
+				   t20_intr_syncpt_thresh_isr,
+				   nvhost_syncpt_thresh_fn,
 				   0, syncpt->thresh_irq_name, syncpt);
 	if (err)
 		return err;

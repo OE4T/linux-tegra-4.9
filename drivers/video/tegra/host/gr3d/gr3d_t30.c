@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t30/3dctx_t30.c
+ * drivers/video/tegra/host/gr3d/gr3d_t30.c
  *
- * Tegra Graphics Host 3d hardware context
+ * Tegra Graphics Host 3D for Tegra3
  *
  * Copyright (c) 2011 NVIDIA Corporation.
  *
@@ -20,12 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "../nvhost_hwctx.h"
-#include "../dev.h"
-#include "../t20/hardware_t20.h"
-#include "../t20/syncpt_t20.h"
-#include "../3dctx_common.h"
-#include "../3d_common.h"
+#include "nvhost_hwctx.h"
+#include "dev.h"
+#include "t20/hardware_t20.h"
+#include "t20/syncpt_t20.h"
+#include "gr3d.h"
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
@@ -379,7 +378,7 @@ static struct nvhost_hwctx *ctx3d_alloc_v1(struct nvhost_channel *ch)
 	return nvhost_3dctx_alloc_common(ch, false);
 }
 
-int __init t30_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
+int __init nvhost_gr3d_t30_ctxhandler_init(struct nvhost_hwctx_handler *h)
 {
 	struct nvhost_channel *ch;
 	struct nvmap_client *nvmap;

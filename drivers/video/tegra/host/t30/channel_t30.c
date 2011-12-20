@@ -23,17 +23,15 @@
 #include <linux/mutex.h>
 #include <mach/powergate.h>
 
-#include "3dctx_t30.h"
-#include "scale3d.h"
+#include "../gr3d/gr3d_t30.h"
+#include "../gr3d/scale3d.h"
 
 #include "../dev.h"
 #include "../t20/channel_t20.h"
 #include "../t20/t20.h"
 #include "../t20/syncpt_t20.h"
-#include "../3dctx_common.h"
-#include "3dctx_t30.h"
+#include "../gr3d/gr3d.h"
 #include "../mpe/mpe.h"
-#include "scale3d.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -71,7 +69,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.module        = {
-			.prepare_poweroff = nvhost_3dctx_prepare_power_off,
+			.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 			.busy = nvhost_scale3d_notify_busy,
 			.idle = nvhost_scale3d_notify_idle,
 			.init = nvhost_scale3d_init,
@@ -161,7 +159,7 @@ static inline int t30_nvhost_hwctx_handler_init(
 	const char *module)
 {
 	if (strcmp(module, "gr3d") == 0)
-		return t30_nvhost_3dctx_handler_init(h);
+		return nvhost_gr3d_t30_ctxhandler_init(h);
 	else if (strcmp(module, "mpe") == 0)
 		return nvhost_mpe_ctxhandler_init(h);
 

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/3dctx_t20.h
+ * drivers/video/tegra/host/gr3d/gr3d_t20.h
  *
- * Tegra Graphics Host Syncpoints for T20
+ * Tegra Graphics Host 3D for Tegra2
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,11 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_3DCTX_T20_H
-#define __NVHOST_3DCTX_T20_H
+#ifndef __NVHOST_GR3D_GR3D_T20_H
+#define __NVHOST_GR3D_GR3D_T20_H
 
 struct nvhost_hwctx_handler;
 
-int t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h);
+int nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h);
 
 #endif

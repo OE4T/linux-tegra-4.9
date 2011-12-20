@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/3dctx_common.c
+ * drivers/video/tegra/host/gr3d/gr3d.c
  *
- * Tegra Graphics Host 3d hardware context
+ * Tegra Graphics Host 3D
  *
  * Copyright (c) 2011 NVIDIA Corporation.
  *
@@ -24,13 +24,12 @@
 
 #include <mach/nvmap.h>
 #include <linux/slab.h>
-#include "3dctx_common.h"
 #include "t20/t20.h"
 #include "t20/hardware_t20.h"
 #include "t20/syncpt_t20.h"
 #include "nvhost_hwctx.h"
 #include "dev.h"
-#include "3d_common.h"
+#include "gr3d.h"
 
 unsigned int nvhost_3dctx_restore_size;
 unsigned int nvhost_3dctx_restore_incrs;
@@ -148,7 +147,7 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 	kref_put(&ctx->ref, nvhost_3dctx_free);
 }
 
-int nvhost_3dctx_prepare_power_off(struct nvhost_module *mod)
+int nvhost_gr3d_prepare_power_off(struct nvhost_module *mod)
 {
 	return nvhost_t20_save_context(mod, NVSYNCPT_3D);
 }

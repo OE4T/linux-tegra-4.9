@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/3dctx_common.h
+ * drivers/video/tegra/host/gr3d/gr3d.h
  *
- * Tegra Graphics Host Syncpoints for T20
+ * Tegra Graphics Host 3D
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,11 +20,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_3DCTX_COMMON_H
-#define __NVHOST_3DCTX_COMMON_H
+#ifndef __NVHOST_GR3D_GR3D_H
+#define __NVHOST_GR3D_GR3D_H
 
-#include "nvhost_acm.h"
 #include <linux/types.h>
+
+/* Registers of 3D unit */
+
+#define AR3D_PSEQ_QUAD_ID 0x545
+#define AR3D_DW_MEMORY_OUTPUT_ADDRESS 0x904
+#define AR3D_DW_MEMORY_OUTPUT_DATA 0x905
+#define AR3D_GSHIM_WRITE_MASK 0xb00
+#define AR3D_GSHIM_READ_SELECT 0xb01
+#define AR3D_GLOBAL_MEMORY_OUTPUT_READS 0xe40
 
 /* Internal variables used by common 3D context switch functions */
 extern unsigned int nvhost_3dctx_restore_size;
@@ -49,6 +57,6 @@ struct nvhost_hwctx *nvhost_3dctx_alloc_common(
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx);
 void nvhost_3dctx_free(struct kref *ref);
 void nvhost_3dctx_put(struct nvhost_hwctx *ctx);
-int nvhost_3dctx_prepare_power_off(struct nvhost_module *mod);
+int nvhost_gr3d_prepare_power_off(struct nvhost_module *mod);
 
 #endif

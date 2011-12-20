@@ -29,9 +29,9 @@
 
 #include "channel_t20.h"
 #include "syncpt_t20.h"
-#include "3dctx_t20.h"
+#include "../gr3d/gr3d_t20.h"
 
-#include "../3dctx_common.h"
+#include "../gr3d/gr3d.h"
 #include "../mpe/mpe.h"
 #include "../nvhost_intr.h"
 
@@ -70,7 +70,7 @@ const struct nvhost_channeldesc nvhost_t20_channelmap[] = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.module        = {
-			.prepare_poweroff = nvhost_3dctx_prepare_power_off,
+			.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 			.clocks = {{"gr3d", UINT_MAX}, {"emc", UINT_MAX}, {} },
 			.powergate_ids = {TEGRA_POWERGATE_3D, -1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -153,7 +153,7 @@ static inline int t20_nvhost_hwctx_handler_init(
 	const char *module)
 {
 	if (strcmp(module, "gr3d") == 0)
-		return t20_nvhost_3dctx_handler_init(h);
+		return nvhost_gr3d_t20_ctxhandler_init(h);
 	else if (strcmp(module, "mpe") == 0)
 		return nvhost_mpe_ctxhandler_init(h);
 	return 0;

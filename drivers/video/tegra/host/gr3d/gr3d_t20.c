@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/3dctx_t20.c
+ * drivers/video/tegra/host/gr3d/gr3d_t20.c
  *
- * Tegra Graphics Host 3d hardware context
+ * Tegra Graphics Host 3D for Tegra2
  *
  * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
@@ -20,12 +20,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "../nvhost_hwctx.h"
-#include "../dev.h"
-#include "channel_t20.h"
-#include "hardware_t20.h"
-#include "syncpt_t20.h"
-#include "../3dctx_common.h"
+#include "nvhost_hwctx.h"
+#include "dev.h"
+#include "t20/channel_t20.h"
+#include "t20/hardware_t20.h"
+#include "t20/syncpt_t20.h"
+#include "gr3d.h"
 
 #include <linux/slab.h>
 
@@ -343,7 +343,7 @@ static void ctx3d_save_service(struct nvhost_hwctx *ctx)
 	nvhost_syncpt_cpu_incr(&ctx->channel->dev->syncpt, NVSYNCPT_3D);
 }
 
-int __init t20_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
+int __init nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h)
 {
 	struct nvhost_channel *ch;
 	struct nvmap_client *nvmap;

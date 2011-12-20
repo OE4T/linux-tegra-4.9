@@ -15,7 +15,7 @@
  */
 
 #include "../dev.h"
-#include "scale3d.h"
+#include "../gr3d/scale3d.h"
 #include "../t20/t20.h"
 #include "../chip_support.h"
 

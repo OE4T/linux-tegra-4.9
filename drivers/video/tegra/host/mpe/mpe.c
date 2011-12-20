@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/nvhost_mpectx.c
+ * drivers/video/tegra/host/mpe/mpe.c
  *
- * Tegra Graphics Host MPE HW Context
+ * Tegra Graphics Host MPE
  *
  * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
@@ -20,12 +20,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "../nvhost_hwctx.h"
-#include "../dev.h"
-#include "hardware_t20.h"
-#include "channel_t20.h"
-#include "syncpt_t20.h"
-#include "t20.h"
+#include "nvhost_hwctx.h"
+#include "dev.h"
+#include "t20/hardware_t20.h"
+#include "t20/channel_t20.h"
+#include "t20/syncpt_t20.h"
+#include "t20/t20.h"
 #include <linux/slab.h>
 
 enum {
@@ -525,10 +525,7 @@ static void ctxmpe_save_service(struct nvhost_hwctx *ctx)
 	nvhost_syncpt_cpu_incr(&ctx->channel->dev->syncpt, NVSYNCPT_MPE);
 }
 
-
-/*** nvhost_mpectx ***/
-
-int __init t20_nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h)
+int __init nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h)
 {
 	struct nvhost_channel *ch;
 	struct nvmap_client *nvmap;
@@ -567,7 +564,7 @@ int __init t20_nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h)
 	return 0;
 }
 
-int nvhost_mpectx_prepare_power_off(struct nvhost_module *mod)
+int nvhost_mpe_prepare_power_off(struct nvhost_module *mod)
 {
 	return nvhost_t20_save_context(mod, NVSYNCPT_MPE);
 }

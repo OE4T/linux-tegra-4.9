@@ -32,7 +32,7 @@
 #include "../t20/syncpt_t20.h"
 #include "../3dctx_common.h"
 #include "3dctx_t30.h"
-#include "../t20/mpectx_t20.h"
+#include "../mpe/mpe.h"
 #include "scale3d.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
@@ -135,7 +135,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.waitbasesync  = true,
 	.keepalive     = true,
 	.module        = {
-			.prepare_poweroff = nvhost_mpectx_prepare_power_off,
+			.prepare_poweroff = nvhost_mpe_prepare_power_off,
 			.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 			.powergate_ids  = {TEGRA_POWERGATE_MPE, -1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -163,7 +163,7 @@ static inline int t30_nvhost_hwctx_handler_init(
 	if (strcmp(module, "gr3d") == 0)
 		return t30_nvhost_3dctx_handler_init(h);
 	else if (strcmp(module, "mpe") == 0)
-		return t20_nvhost_mpectx_handler_init(h);
+		return nvhost_mpe_ctxhandler_init(h);
 
 	return 0;
 }

@@ -6,7 +6,6 @@ nvhost-t20-objs  = \
 	intr_t20.o \
 	cdma_t20.o \
 	3dctx_t20.o \
-	mpectx_t20.o \
 	debug_t20.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-t20.o

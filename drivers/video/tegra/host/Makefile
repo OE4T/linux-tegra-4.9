@@ -11,6 +11,7 @@ nvhost-objs = \
 	3dctx_common.o \
 	debug.o
 
+obj-$(CONFIG_TEGRA_GRHOST) += mpe/
 obj-$(CONFIG_TEGRA_GRHOST) += t20/
 obj-$(CONFIG_TEGRA_GRHOST) += t30/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t20/mpectx_t20.h
+ * drivers/video/tegra/host/mpe/mpe.h
  *
- * Tegra Graphics Host MPE context saving for T20
+ * Tegra Graphics Host MPE
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,12 +20,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_MPECTX_T20_H
-#define __NVHOST_MPECTX_T20_H
+#ifndef __NVHOST_MPE_MPE_H
+#define __NVHOST_MPE_MPE_H
 
 struct nvhost_hwctx_handler;
 
-int t20_nvhost_mpectx_handler_init(struct nvhost_hwctx_handler *h);
-int nvhost_mpectx_prepare_power_off(struct nvhost_module *mod);
+int nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h);
+int nvhost_mpe_prepare_power_off(struct nvhost_module *mod);
 
 #endif

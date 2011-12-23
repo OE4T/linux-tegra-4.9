@@ -2027,7 +2027,7 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 		tegra_dc_underflow_handler(dc);
 
 		/* Mark the frame_end as complete. */
-		if (completion_done(&dc->frame_end_complete))
+		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
 	}
 }
@@ -2044,7 +2044,7 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 
 	if (status & FRAME_END_INT) {
 		/* Mark the frame_end as complete. */
-		if (completion_done(&dc->frame_end_complete))
+		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
 
 		tegra_dc_trigger_windows(dc);

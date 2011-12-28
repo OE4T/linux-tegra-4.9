@@ -268,7 +268,7 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	pin = &job->pinarray[job->num_pins++];
 	pin->patch_mem = (u32)nvmap_ref_to_handle(job->gather_mem);
 	pin->patch_offset = (void *)&(cur_gather->mem) - (void *)job->gathers;
-	pin->pin_mem = mem_id;
+	pin->pin_mem = nvmap_convert_handle_u2k(mem_id);
 	pin->pin_offset = offset;
 	cur_gather->words = words;
 	cur_gather->mem_id = mem_id;

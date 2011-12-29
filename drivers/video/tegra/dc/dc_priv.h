@@ -137,25 +137,25 @@ struct tegra_dc {
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
 {
-	nvhost_module_busy(&dc->ndev->host->mod);
+	nvhost_module_busy(dc->ndev->host->dev);
 }
 
 static inline void tegra_dc_io_end(struct tegra_dc *dc)
 {
-	nvhost_module_idle(&dc->ndev->host->mod);
+	nvhost_module_idle(dc->ndev->host->dev);
 }
 
 static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 					   unsigned long reg)
 {
-	BUG_ON(!nvhost_module_powered(&dc->ndev->host->mod));
+	BUG_ON(!nvhost_module_powered(dc->ndev->host->dev));
 	return readl(dc->base + reg * 4);
 }
 
 static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 				   unsigned long reg)
 {
-	BUG_ON(!nvhost_module_powered(&dc->ndev->host->mod));
+	BUG_ON(!nvhost_module_powered(dc->ndev->host->dev));
 	writel(val, dc->base + reg * 4);
 }
 

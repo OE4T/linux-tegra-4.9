@@ -108,7 +108,7 @@ struct nvhost_cdma {
 };
 
 #define cdma_to_channel(cdma) container_of(cdma, struct nvhost_channel, cdma)
-#define cdma_to_dev(cdma) ((cdma_to_channel(cdma))->dev)
+#define cdma_to_dev(cdma) ((cdma_to_channel(cdma))->dev->host)
 #define cdma_op(cdma) (cdma_to_dev(cdma)->op.cdma)
 #define cdma_to_nvmap(cdma) ((cdma_to_dev(cdma))->nvmap)
 #define pb_to_cdma(pb) container_of(pb, struct nvhost_cdma, push_buffer)

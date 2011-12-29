@@ -57,6 +57,6 @@ struct nvhost_hwctx *nvhost_3dctx_alloc_common(
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx);
 void nvhost_3dctx_free(struct kref *ref);
 void nvhost_3dctx_put(struct nvhost_hwctx *ctx);
-int nvhost_gr3d_prepare_power_off(struct nvhost_module *mod);
+int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev);
 
 #endif

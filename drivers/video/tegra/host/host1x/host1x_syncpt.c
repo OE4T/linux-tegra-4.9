@@ -89,7 +89,7 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
-	BUG_ON(!nvhost_module_powered(&dev->mod));
+	BUG_ON(!nvhost_module_powered(dev->dev));
 	if (!client_managed(id) && nvhost_syncpt_min_eq_max(sp, id)) {
 		dev_err(&syncpt_to_dev(sp)->pdev->dev,
 				"Syncpoint id %d\n",

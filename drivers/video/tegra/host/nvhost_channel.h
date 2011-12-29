@@ -38,18 +38,7 @@
 
 struct nvhost_master;
 struct nvhost_waitchk;
-
-struct nvhost_channeldesc {
-	const char *name;
-	u32 syncpts;
-	u32 waitbases;
-	u32 modulemutexes;
-	u32 class;
-	bool exclusive;
-	bool keepalive;
-	bool waitbasesync;
-	struct nvhost_moduledesc module;
-};
+struct nvhost_device;
 
 struct nvhost_channel_gather {
 	u32 words;
@@ -65,13 +54,11 @@ struct nvhost_channel {
 	struct mutex reflock;
 	struct mutex submitlock;
 	void __iomem *aperture;
-	struct nvhost_master *dev;
-	const struct nvhost_channeldesc *desc;
 	struct nvhost_hwctx *cur_ctx;
 	struct device *node;
+	struct nvhost_device *dev;
 	struct cdev cdev;
 	struct nvhost_hwctx_handler ctxhandler;
-	struct nvhost_module mod;
 	struct nvhost_cdma cdma;
 };
 
@@ -85,8 +72,8 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
-#define channel_cdma_op(ch) (ch->dev->op.cdma)
-#define channel_op(ch) (ch->dev->op.channel)
+#define channel_cdma_op(ch) (ch->dev->host->op.cdma)
+#define channel_op(ch) (ch->dev->host->op.channel)
 #define host_channel_op(host) (host->op.channel)
 
 int nvhost_channel_drain_read_fifo(void __iomem *chan_regs,

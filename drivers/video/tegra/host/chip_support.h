@@ -36,7 +36,6 @@ struct nvhost_intr;
 struct push_buffer;
 struct nvhost_syncpt;
 struct nvhost_cpuaccess;
-struct nvhost_module;
 struct nvhost_master;
 struct dentry;
 struct nvhost_job;

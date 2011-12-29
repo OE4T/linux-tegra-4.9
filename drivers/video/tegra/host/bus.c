@@ -24,9 +24,6 @@
 #include "dev.h"
 
 struct nvhost_master *nvhost;
-struct device nvhost_bus = {
-	.init_name	= "nvhost",
-};
 
 struct resource *nvhost_get_resource(struct nvhost_device *dev,
 				       unsigned int type, unsigned int num)
@@ -131,9 +128,12 @@ int nvhost_device_register(struct nvhost_device *dev)
 
 	device_initialize(&dev->dev);
 
-	if (!dev->dev.parent)
-		dev->dev.parent = &nvhost_bus;
+	/*  If the dev does not have a parent, assign host1x as parent */
+	if (!dev->dev.parent && nvhost && nvhost->dev != dev)
+		dev->dev.parent = &nvhost->dev->dev;
 
+	/*  Give pointer to host1x */
+	dev->host = nvhost;
 	dev->dev.bus = &nvhost_bus_type;
 
 	if (dev->id != -1)
@@ -198,7 +198,6 @@ void nvhost_device_unregister(struct nvhost_device *dev)
 	}
 }
 EXPORT_SYMBOL_GPL(nvhost_device_unregister);
-
 
 static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
 {
@@ -541,9 +540,22 @@ struct bus_type nvhost_bus_type = {
 };
 EXPORT_SYMBOL(nvhost_bus_type);
 
-int nvhost_bus_register(struct nvhost_master *host)
+static int set_parent(struct device *dev, void *data)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct nvhost_master *host = data;
+	if (!dev->parent && ndev != host->dev)
+		dev->parent = &host->dev->dev;
+	ndev->host = host;
+	return 0;
+}
+
+int nvhost_bus_add_host(struct nvhost_master *host)
 {
 	nvhost = host;
+
+	/*  Assign host1x as parent to all devices in nvhost bus */
+	bus_for_each_dev(&nvhost_bus_type, NULL, host, set_parent);
 
 	return 0;
 }
@@ -554,13 +566,8 @@ int nvhost_bus_init(void)
 	int err;
 
 	pr_info("host1x bus init\n");
-	err = device_register(&nvhost_bus);
-	if (err)
-		return err;
 
 	err = bus_register(&nvhost_bus_type);
-	if (err)
-		device_unregister(&nvhost_bus);
 
 	return err;
 }

@@ -153,7 +153,7 @@ static void scale3d_clocks_handler(struct work_struct *work)
 		scale3d_clocks(scale);
 }
 
-void nvhost_scale3d_suspend(struct nvhost_module *mod)
+void nvhost_scale3d_suspend(struct nvhost_device *dev)
 {
 	cancel_work_sync(&scale3d.work);
 	cancel_delayed_work(&scale3d.idle_timer);
@@ -370,7 +370,7 @@ static void scaling_state_check(ktime_t time)
 	}
 }
 
-void nvhost_scale3d_notify_idle(struct nvhost_module *mod)
+void nvhost_scale3d_notify_idle(struct nvhost_device *dev)
 {
 	ktime_t t;
 	unsigned long dt;
@@ -404,7 +404,7 @@ done:
 	mutex_unlock(&scale3d.lock);
 }
 
-void nvhost_scale3d_notify_busy(struct nvhost_module *mod)
+void nvhost_scale3d_notify_busy(struct nvhost_device *dev)
 {
 	unsigned long idle;
 	unsigned long short_term_idle;
@@ -523,7 +523,7 @@ static ssize_t enable_3d_scaling_store(struct device *dev,
 static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUGO,
 	enable_3d_scaling_show, enable_3d_scaling_store);
 
-void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
+void nvhost_scale3d_init(struct nvhost_device *d)
 {
 	if (!scale3d.init) {
 		int error;
@@ -531,12 +531,12 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 		long correction;
 		mutex_init(&scale3d.lock);
 
-		scale3d.clk_3d = mod->clk[0];
+		scale3d.clk_3d = d->clk[0];
 		if (tegra_chip_id == TEGRA30) {
-			scale3d.clk_3d2 = mod->clk[1];
-			scale3d.clk_3d_emc = mod->clk[2];
+			scale3d.clk_3d2 = d->clk[1];
+			scale3d.clk_3d_emc = d->clk[2];
 		} else
-			scale3d.clk_3d_emc = mod->clk[1];
+			scale3d.clk_3d_emc = d->clk[1];
 
 		scale3d.max_rate_3d = clk_round_rate(scale3d.clk_3d, UINT_MAX);
 		scale3d.min_rate_3d = clk_round_rate(scale3d.clk_3d, 0);
@@ -634,9 +634,10 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 		scale3d.p_verbosity = 0;
 		scale3d.p_adjust = 1;
 
-		error = device_create_file(d, &dev_attr_enable_3d_scaling);
+		error = device_create_file(&d->dev,
+				&dev_attr_enable_3d_scaling);
 		if (error)
-			dev_err(d, "failed to create sysfs attributes");
+			dev_err(&d->dev, "failed to create sysfs attributes");
 
 		scale3d.init = 1;
 	}
@@ -644,8 +645,8 @@ void nvhost_scale3d_init(struct device *d, struct nvhost_module *mod)
 	nvhost_scale3d_reset();
 }
 
-void nvhost_scale3d_deinit(struct device *dev, struct nvhost_module *mod)
+void nvhost_scale3d_deinit(struct nvhost_device *dev)
 {
-	device_remove_file(dev, &dev_attr_enable_3d_scaling);
+	device_remove_file(&dev->dev, &dev_attr_enable_3d_scaling);
 	scale3d.init = 0;
 }

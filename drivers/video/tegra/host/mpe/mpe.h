@@ -24,8 +24,9 @@
 #define __NVHOST_MPE_MPE_H
 
 struct nvhost_hwctx_handler;
+struct nvhost_device;
 
 int nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h);
-int nvhost_mpe_prepare_power_off(struct nvhost_module *mod);
+int nvhost_mpe_prepare_power_off(struct nvhost_device *dev);
 
 #endif

@@ -26,6 +26,7 @@
 struct nvhost_job;
 struct nvhost_channel;
 struct nvhost_hwctx;
+struct nvhost_device;
 
 /*  Submit job to a host1x client */
 int host1x_channel_submit(struct nvhost_job *job);
@@ -41,6 +42,6 @@ int host1x_channel_read_3d_reg(
 int host1x_drain_read_fifo(void __iomem *chan_regs,
 		u32 *ptr, unsigned int count, unsigned int *pending);
 
-int host1x_save_context(struct nvhost_module *mod, u32 syncpt_id);
+int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id);
 
 #endif

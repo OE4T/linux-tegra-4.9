@@ -120,7 +120,7 @@ unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
 		if (space)
 			return space;
 
-		trace_nvhost_wait_cdma(cdma_to_channel(cdma)->desc->name,
+		trace_nvhost_wait_cdma(cdma_to_channel(cdma)->dev->name,
 				event);
 
 		BUG_ON(cdma->event != CDMA_EVENT_NONE);

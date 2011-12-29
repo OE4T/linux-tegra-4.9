@@ -46,7 +46,7 @@ struct nvhost_master {
 	struct nvhost_cpuaccess cpuaccess;
 	u32 nb_mlocks;
 	struct nvhost_intr intr;
-	struct nvhost_module mod;
+	struct nvhost_device *dev;
 	struct nvhost_channel *channels;
 	u32 nb_channels;
 	u32 nb_modules;

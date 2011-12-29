@@ -49,17 +49,13 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	int err = 0;
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
-		err = nvhost_module_init(&ch->mod, ch->desc->name,
-					&ch->desc->module,
-					&ch->dev->mod,
-					&ch->dev->pdev->dev);
+		err = nvhost_module_init(ch->dev);
 		if (!err) {
 			err = nvhost_cdma_init(&ch->cdma);
 			if (err)
-				nvhost_module_deinit(&ch->dev->pdev->dev,
-						&ch->mod);
+				nvhost_module_deinit(ch->dev);
 		}
-	} else if (ch->desc->exclusive) {
+	} else if (ch->dev->exclusive) {
 		err = -EBUSY;
 	}
 	if (!err)
@@ -68,8 +64,8 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	mutex_unlock(&ch->reflock);
 
 	/* Keep alive modules that needs to be when a channel is open */
-	if (!err && ch->desc->keepalive)
-		nvhost_module_busy(&ch->mod);
+	if (!err && ch->dev->keepalive)
+		nvhost_module_busy(ch->dev);
 
 	return err ? NULL : ch;
 }
@@ -86,14 +82,14 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 	}
 
 	/* Allow keep-alive'd module to be turned off */
-	if (ch->desc->keepalive)
-		nvhost_module_idle(&ch->mod);
+	if (ch->dev->keepalive)
+		nvhost_module_idle(ch->dev);
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 1) {
 		channel_cdma_op(ch).stop(&ch->cdma);
 		nvhost_cdma_deinit(&ch->cdma);
-		nvhost_module_deinit(&ch->dev->pdev->dev, &ch->mod);
+		nvhost_module_deinit(ch->dev);
 	}
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);
@@ -107,7 +103,7 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 	BUG_ON(!channel_cdma_op(ch).stop);
 
 	if (ch->refcount) {
-		ret = nvhost_module_suspend(&ch->mod, false);
+		ret = nvhost_module_suspend(ch->dev, false);
 		if (!ret)
 			channel_cdma_op(ch).stop(&ch->cdma);
 	}

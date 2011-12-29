@@ -28,17 +28,75 @@
 
 struct nvhost_master;
 
-struct nvhost_device {
-	const char		*name;
-	struct device		dev;
-	int			id;
-	u32			num_resources;
-	struct resource		*resource;
+#define NVHOST_MODULE_MAX_CLOCKS 3
+#define NVHOST_MODULE_MAX_POWERGATE_IDS 2
+#define NVHOST_MODULE_NO_POWERGATE_IDS .powergate_ids = {-1, -1}
+#define NVHOST_DEFAULT_CLOCKGATE_DELAY .clockgate_delay = 25
 
-	struct nvhost_master	*host;
+struct nvhost_clock {
+	char *name;
+	long default_rate;
 };
 
+enum nvhost_device_powerstate_t {
+	NVHOST_POWER_STATE_DEINIT,
+	NVHOST_POWER_STATE_RUNNING,
+	NVHOST_POWER_STATE_CLOCKGATED,
+	NVHOST_POWER_STATE_POWERGATED
+};
+
+struct nvhost_device {
+	const char	*name;		/* Device name */
+	struct device	dev;		/* Linux device struct */
+	int		id;		/* Separates clients of same hw */
+	u32		num_resources;	/* Number of resources following */
+	struct resource	*resource;	/* Resources (IOMEM in particular) */
+
+	struct nvhost_master *host;	/* Access to host1x resources */
+	u32		syncpts;	/* Bitfield of sync points used */
+	u32		waitbases;	/* Bit field of wait bases */
+	u32		modulemutexes;	/* Bit field of module mutexes */
+	u32		class;		/* Device class */
+	bool		exclusive;	/* True if only one user at a time */
+	bool		keepalive;	/* Do not power gate when opened */
+	bool		waitbasesync;	/* Force sync of wait bases */
+
+	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
+	bool		can_powergate;	/* True if module can be power gated */
+	int		clockgate_delay;/* Delay before clock gated */
+	int		powergate_delay;/* Delay before power gated */
+	struct nvhost_clock clocks[NVHOST_MODULE_MAX_CLOCKS];/* Clock names */
+
+	struct delayed_work powerstate_down;/* Power state management */
+	int		num_clks;	/* Number of clocks opened for dev */
+	struct clk	*clk[NVHOST_MODULE_MAX_CLOCKS];
+	struct mutex	lock;		/* Power management lock */
+	int		powerstate;	/* Current power state */
+	int		refcount;	/* Number of tasks active */
+	wait_queue_head_t idle_wq;	/* Work queue for idle */
+	struct list_head client_list;	/* List of clients and rate requests */
+
+	struct nvhost_channel *channel;	/* Channel assigned for the module */
+
+	/* Preparing for power off. Used for context save. */
+	int (*prepare_poweroff)(struct nvhost_device *dev);
+	/* Finalize power on. Can be used for context restore. */
+	void (*finalize_poweron)(struct nvhost_device *dev);
+	/* Device is busy. */
+	void (*busy)(struct nvhost_device *);
+	/* Device is idle. */
+	void (*idle)(struct nvhost_device *);
+	/* Device is going to be suspended */
+	void (*suspend)(struct nvhost_device *);
+	/* Device is initialized */
+	void (*init)(struct nvhost_device *dev);
+	/* Device is de-initialized. */
+	void (*deinit)(struct nvhost_device *dev);
+};
+
+/* Register device to nvhost bus */
 extern int nvhost_device_register(struct nvhost_device *);
+/* Deregister device from nvhost bus */
 extern void nvhost_device_unregister(struct nvhost_device *);
 
 extern struct bus_type nvhost_bus_type;
@@ -68,6 +126,6 @@ extern int nvhost_get_irq_byname(struct nvhost_device *, const char *);
 #define nvhost_get_drvdata(_dev) dev_get_drvdata(&(_dev)->dev)
 #define nvhost_set_drvdata(_dev, data) dev_set_drvdata(&(_dev)->dev, (data))
 
-int nvhost_bus_register(struct nvhost_master *host);
+int nvhost_bus_add_host(struct nvhost_master *host);
 
 #endif

@@ -23,16 +23,16 @@
 #ifndef NVHOST_T30_SCALE3D_H
 #define NVHOST_T30_SCALE3D_H
 
-struct nvhost_module;
+struct nvhost_device;
 struct device;
 struct dentry;
 
 /* Initialization and de-initialization for module */
-void nvhost_scale3d_init(struct device *, struct nvhost_module *);
-void nvhost_scale3d_deinit(struct device *, struct nvhost_module *);
+void nvhost_scale3d_init(struct nvhost_device *);
+void nvhost_scale3d_deinit(struct nvhost_device *);
 
 /* Suspend is called when powering down module */
-void nvhost_scale3d_suspend(struct nvhost_module *);
+void nvhost_scale3d_suspend(struct nvhost_device *);
 
 /* reset 3d module load counters, called on resume */
 void nvhost_scale3d_reset(void);
@@ -41,8 +41,8 @@ void nvhost_scale3d_reset(void);
  * call when performing submit to notify scaling mechanism that 3d module is
  * in use
  */
-void nvhost_scale3d_notify_busy(struct nvhost_module *);
-void nvhost_scale3d_notify_idle(struct nvhost_module *);
+void nvhost_scale3d_notify_busy(struct nvhost_device *);
+void nvhost_scale3d_notify_idle(struct nvhost_device *);
 
 void nvhost_scale3d_debug_init(struct dentry *de);
 

@@ -52,7 +52,6 @@ struct nvhost_device {
 	u32		num_resources;	/* Number of resources following */
 	struct resource	*resource;	/* Resources (IOMEM in particular) */
 
-	struct nvhost_master *host;	/* Access to host1x resources */
 	u32		syncpts;	/* Bitfield of sync points used */
 	u32		waitbases;	/* Bit field of wait bases */
 	u32		modulemutexes;	/* Bit field of module mutexes */
@@ -125,6 +124,8 @@ extern int nvhost_get_irq_byname(struct nvhost_device *, const char *);
 
 #define nvhost_get_drvdata(_dev) dev_get_drvdata(&(_dev)->dev)
 #define nvhost_set_drvdata(_dev, data) dev_set_drvdata(&(_dev)->dev, (data))
+#define nvhost_get_host(_dev) ((struct nvhost_master *) \
+		dev_get_drvdata((_dev)->dev.parent))
 
 int nvhost_bus_add_host(struct nvhost_master *host);
 

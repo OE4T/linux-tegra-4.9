@@ -385,7 +385,7 @@ int __init nvhost_gr3d_t30_ctxhandler_init(struct nvhost_hwctx_handler *h)
 	u32 *save_ptr;
 
 	ch = container_of(h, struct nvhost_channel, ctxhandler);
-	nvmap = ch->dev->host->nvmap;
+	nvmap = nvhost_get_host(ch->dev)->nvmap;
 
 	register_sets = tegra_gpu_register_sets();
 	BUG_ON(register_sets == 0 || register_sets > 2);

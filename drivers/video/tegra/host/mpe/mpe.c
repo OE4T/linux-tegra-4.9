@@ -439,7 +439,7 @@ static u32 *save_ram(u32 *ptr, unsigned int *pending,
 
 static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_channel *ch)
 {
-	struct nvmap_client *nvmap = ch->dev->host->nvmap;
+	struct nvmap_client *nvmap = nvhost_get_host(ch->dev)->nvmap;
 	struct nvhost_hwctx *ctx;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
@@ -482,7 +482,7 @@ static void ctxmpe_get(struct nvhost_hwctx *ctx)
 static void ctxmpe_free(struct kref *ref)
 {
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
-	struct nvmap_client *nvmap = ctx->channel->dev->host->nvmap;
+	struct nvmap_client *nvmap = nvhost_get_host(ctx->channel->dev)->nvmap;
 
 	if (ctx->restore_virt)
 		nvmap_munmap(ctx->restore, ctx->restore_virt);
@@ -522,7 +522,8 @@ static void ctxmpe_save_service(struct nvhost_hwctx *ctx)
 		IRFR_RAM_SIZE, IRFR_RAM_READ_CMD, IRFR_RAM_READ_DATA);
 
 	wmb();
-	nvhost_syncpt_cpu_incr(&ctx->channel->dev->host->syncpt, NVSYNCPT_MPE);
+	nvhost_syncpt_cpu_incr(&nvhost_get_host(ctx->channel->dev)->syncpt,
+			NVSYNCPT_MPE);
 }
 
 int __init nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h)
@@ -532,7 +533,7 @@ int __init nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h)
 	u32 *save_ptr;
 
 	ch = container_of(h, struct nvhost_channel, ctxhandler);
-	nvmap = ch->dev->host->nvmap;
+	nvmap = nvhost_get_host(ch->dev)->nvmap;
 
 	setup_save(NULL);
 

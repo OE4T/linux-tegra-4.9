@@ -340,7 +340,8 @@ static void ctx3d_save_service(struct nvhost_hwctx *ctx)
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	wmb();
-	nvhost_syncpt_cpu_incr(&ctx->channel->dev->host->syncpt, NVSYNCPT_3D);
+	nvhost_syncpt_cpu_incr(&nvhost_get_host(ctx->channel->dev)->syncpt,
+			NVSYNCPT_3D);
 }
 
 int __init nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h)
@@ -350,7 +351,7 @@ int __init nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h)
 	u32 *save_ptr;
 
 	ch = container_of(h, struct nvhost_channel, ctxhandler);
-	nvmap = ch->dev->host->nvmap;
+	nvmap = nvhost_get_host(ch->dev)->nvmap;
 
 	setup_save(NULL);
 

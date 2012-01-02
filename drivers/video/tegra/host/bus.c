@@ -78,8 +78,6 @@ static int nvhost_drv_probe(struct device *_dev)
 	struct nvhost_driver *drv = to_nvhost_driver(_dev->driver);
 	struct nvhost_device *dev = to_nvhost_device(_dev);
 
-	dev->host = nvhost;
-
 	return drv->probe(dev);
 }
 
@@ -132,8 +130,6 @@ int nvhost_device_register(struct nvhost_device *dev)
 	if (!dev->dev.parent && nvhost && nvhost->dev != dev)
 		dev->dev.parent = &nvhost->dev->dev;
 
-	/*  Give pointer to host1x */
-	dev->host = nvhost;
 	dev->dev.bus = &nvhost_bus_type;
 
 	if (dev->id != -1)
@@ -546,7 +542,6 @@ static int set_parent(struct device *dev, void *data)
 	struct nvhost_master *host = data;
 	if (!dev->parent && ndev != host->dev)
 		dev->parent = &host->dev->dev;
-	ndev->host = host;
 	return 0;
 }
 

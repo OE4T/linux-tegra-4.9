@@ -72,8 +72,8 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
-#define channel_cdma_op(ch) (ch->dev->host->op.cdma)
-#define channel_op(ch) (ch->dev->host->op.channel)
+#define channel_cdma_op(ch) (nvhost_get_host(ch->dev)->op.cdma)
+#define channel_op(ch) (nvhost_get_host(ch->dev)->op.channel)
 #define host_channel_op(host) (host->op.channel)
 
 int nvhost_channel_drain_read_fifo(void __iomem *chan_regs,

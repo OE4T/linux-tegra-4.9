@@ -77,7 +77,7 @@ void nvhost_3dctx_restore_end(u32 *ptr)
 struct nvhost_hwctx *nvhost_3dctx_alloc_common(struct nvhost_channel *ch,
 					bool map_restore)
 {
-	struct nvmap_client *nvmap = ch->dev->host->nvmap;
+	struct nvmap_client *nvmap = nvhost_get_host(ch->dev)->nvmap;
 	struct nvhost_hwctx *ctx;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
@@ -130,7 +130,7 @@ void nvhost_3dctx_get(struct nvhost_hwctx *ctx)
 void nvhost_3dctx_free(struct kref *ref)
 {
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
-	struct nvmap_client *nvmap = ctx->channel->dev->host->nvmap;
+	struct nvmap_client *nvmap = nvhost_get_host(ctx->channel->dev)->nvmap;
 
 	if (ctx->restore_virt) {
 		nvmap_munmap(ctx->restore, ctx->restore_virt);

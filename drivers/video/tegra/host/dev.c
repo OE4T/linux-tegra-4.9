@@ -163,7 +163,8 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 			goto fail;
 	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
-	priv->clientid = atomic_add_return(1, &ch->dev->host->clientid);
+	priv->clientid = atomic_add_return(1,
+			&nvhost_get_host(ch->dev)->clientid);
 
 	priv->job = nvhost_job_alloc(ch, priv->hwctx, &priv->hdr,
 			NULL, priv->priority, priv->clientid);
@@ -739,14 +740,14 @@ static const struct file_operations nvhost_ctrlops = {
 
 static void power_on_host(struct nvhost_device *dev)
 {
-	struct nvhost_master *host = dev->host;
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
 	nvhost_syncpt_reset(&host->syncpt);
 }
 
 static int power_off_host(struct nvhost_device *dev)
 {
-	struct nvhost_master *host = dev->host;
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	nvhost_syncpt_save(&host->syncpt);
 	nvhost_intr_stop(&host->intr);
 	return 0;
@@ -953,6 +954,9 @@ static int nvhost_probe(struct platform_device *pdev)
 	nvhost_device_register(&hostdev);
 	host->dev = &hostdev;
 	nvhost_bus_add_host(host);
+
+	/*  Give pointer to host1x via driver */
+	nvhost_set_drvdata(&hostdev, host);
 
 	for (i = 0; i < host->nb_channels; i++) {
 		struct nvhost_channel *ch = &host->channels[i];

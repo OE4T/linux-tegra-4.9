@@ -441,15 +441,10 @@ static void debug_not_idle(struct nvhost_master *host)
 int nvhost_module_suspend(struct nvhost_device *dev, bool system_suspend)
 {
 	int ret;
-	struct nvhost_master *host;
+	struct nvhost_master *host = nvhost_get_host(dev);
 
-	if (system_suspend) {
-		host = dev->host;
-		if (!is_module_idle(dev))
-			debug_not_idle(host);
-	} else {
-		host = dev->host;
-	}
+	if (system_suspend && !is_module_idle(dev))
+		debug_not_idle(host);
 
 	ret = wait_event_timeout(dev->idle_wq, is_module_idle(dev),
 			ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT);

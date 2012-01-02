@@ -138,8 +138,4 @@ struct nvhost_chip_support {
 
 };
 
-
-int nvhost_init_t20_support(struct nvhost_master *host);
-int nvhost_init_t30_support(struct nvhost_master *host);
-
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

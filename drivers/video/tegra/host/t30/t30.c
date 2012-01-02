@@ -23,6 +23,7 @@
 #include <linux/mutex.h>
 #include <mach/powergate.h>
 #include "dev.h"
+#include "t20/t20.h"
 #include "t30.h"
 #include "gr3d/gr3d.h"
 #include "mpe/mpe.h"
@@ -31,8 +32,7 @@
 #include "host1x/host1x_hardware.h"
 #include "host1x/host1x_cdma.h"
 #include "host1x/host1x_syncpt.h"
-#include "gr3d/scale3d.h"
-#include "../chip_support.h"
+#include "chip_support.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)

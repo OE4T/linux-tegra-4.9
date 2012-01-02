@@ -42,7 +42,7 @@
 #include <mach/clk.h>
 #include <mach/hardware.h>
 #include "scale3d.h"
-#include "../dev.h"
+#include "dev.h"
 
 static int scale3d_is_enabled(void);
 static void scale3d_enable(int enable);

@@ -46,6 +46,8 @@
 
 #include "debug.h"
 #include "nvhost_job.h"
+#include "t20/t20.h"
+#include "t30/t30.h"
 
 #define DRIVER_NAME "tegra_grhost"
 #define IFACE_NAME "nvhost"

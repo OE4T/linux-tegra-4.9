@@ -225,10 +225,11 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	win->stride_uv = flip_win->attr.stride_uv;
 
 	if ((s32)flip_win->attr.pre_syncpt_id >= 0) {
-		nvhost_syncpt_wait_timeout(&ext->dc->ndev->host->syncpt,
-					   flip_win->attr.pre_syncpt_id,
-					   flip_win->attr.pre_syncpt_val,
-					   msecs_to_jiffies(500), NULL);
+		nvhost_syncpt_wait_timeout(
+				&nvhost_get_host(ext->dc->ndev)->syncpt,
+				flip_win->attr.pre_syncpt_id,
+				flip_win->attr.pre_syncpt_val,
+				msecs_to_jiffies(500), NULL);
 	}
 
 

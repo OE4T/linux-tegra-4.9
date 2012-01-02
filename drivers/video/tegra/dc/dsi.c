@@ -305,14 +305,15 @@ static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 	ret = 0;
 
 	dsi->syncpt_val = nvhost_syncpt_read(
-			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
+			&nvhost_get_host(dsi->dc->ndev)->syncpt,
+			dsi->syncpt_id);
 
 	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
 		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
 	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 
 	/* TODO: Use interrupt rather than polling */
-	ret = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
+	ret = nvhost_syncpt_wait(&nvhost_get_host(dsi->dc->ndev)->syncpt,
 		dsi->syncpt_id, dsi->syncpt_val + 1);
 	if (ret < 0) {
 		dev_err(&dsi->dc->ndev->dev, "DSI sync point failure\n");
@@ -1744,14 +1745,15 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 #if DSI_USE_SYNC_POINTS
 	/* FIXME: Workaround for nvhost_syncpt_read */
 	dsi->syncpt_val = nvhost_syncpt_update_min(
-			&dsi->dc->ndev->host->syncpt, dsi->syncpt_id);
+			&nvhost_get_host(dsi->dc->ndev)->syncpt,
+			dsi->syncpt_id);
 
 	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
 		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
 	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 
 	/* TODO: Use interrupt rather than polling */
-	err = nvhost_syncpt_wait(&dsi->dc->ndev->host->syncpt,
+	err = nvhost_syncpt_wait(&nvhost_get_host(dsi->dc->ndev)->syncpt,
 		dsi->syncpt_id, dsi->syncpt_val + 1);
 	if (err < 0)
 		dev_err(&dsi->dc->ndev->dev,

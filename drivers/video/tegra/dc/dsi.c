@@ -1010,17 +1010,18 @@ static void tegra_dsi_hs_clk_out_disable(struct tegra_dc *dc,
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
 
-	val = tegra_dsi_readl(dsi, DSI_CONTROL);
-	val &= ~DSI_CONTROL_HS_CLK_CTRL(1);
-	val |= DSI_CONTROL_HS_CLK_CTRL(TX_ONLY);
-	tegra_dsi_writel(dsi, val, DSI_CONTROL);
-
-	/* TODO: issue a cmd */
+	tegra_dsi_writel(dsi, TEGRA_DSI_DISABLE, DSI_POWER_CONTROL);
+	/* stabilization delay */
+	udelay(300);
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_HIGH_SPEED_TRANS(1);
 	val |= DSI_HOST_DSI_CONTROL_HIGH_SPEED_TRANS(TEGRA_DSI_LOW);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+
+	tegra_dsi_writel(dsi, TEGRA_DSI_ENABLE, DSI_POWER_CONTROL);
+	/* stabilization delay */
+	udelay(300);
 
 	dsi->status.clk_mode = DSI_PHYCLK_NOT_INIT;
 	dsi->status.clk_out = DSI_PHYCLK_OUT_DIS;

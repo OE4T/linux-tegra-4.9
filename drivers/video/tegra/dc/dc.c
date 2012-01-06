@@ -973,24 +973,6 @@ unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n)
 	return tegra_dc_find_max_bandwidth(windows, n);
 }
 
-/* program bandwidth needs if higher than old bandwidth */
-static void tegra_dc_increase_bandwidth(struct tegra_dc *dc)
-{
-	unsigned i;
-
-	if (dc->emc_clk_rate < dc->new_emc_clk_rate) {
-		dc->emc_clk_rate = dc->new_emc_clk_rate;
-		clk_set_rate(dc->emc_clk, dc->emc_clk_rate);
-	}
-
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		struct tegra_dc_win *w = &dc->windows[i];
-		if (w->bandwidth < w->new_bandwidth && w->new_bandwidth != 0)
-			tegra_dc_set_latency_allowance(dc, w);
-	}
-}
-
-/* program the current bandwidth */
 static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 {
 	unsigned i;
@@ -1248,7 +1230,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	}
 
 	tegra_dc_set_dynamic_emc(windows, n);
-	tegra_dc_increase_bandwidth(dc);
 
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 

@@ -20,4 +20,5 @@ obj-$(CONFIG_TEGRA_GRHOST) += gr2d/
 obj-$(CONFIG_TEGRA_GRHOST) += isp/
 obj-$(CONFIG_TEGRA_GRHOST) += vi/
 obj-$(CONFIG_TEGRA_GRHOST) += t114/
+obj-$(CONFIG_TEGRA_GRHOST) += msenc/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o

@@ -146,6 +146,8 @@ extern int nvhost_get_irq(struct nvhost_device *, unsigned int);
 extern struct resource *nvhost_get_resource_byname(struct nvhost_device *,
 		unsigned int, const char *);
 extern int nvhost_get_irq_byname(struct nvhost_device *, const char *);
+extern void nvhost_device_writel(struct nvhost_device *, u32 r, u32 v);
+extern u32 nvhost_device_readl(struct nvhost_device *, u32 r);
 
 #define to_nvhost_device(x)	container_of((x), struct nvhost_device, dev)
 #define to_nvhost_driver(drv)	(container_of((drv), struct nvhost_driver, \

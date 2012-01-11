@@ -228,6 +228,25 @@ void nvhost_device_unregister(struct nvhost_device *dev)
 }
 EXPORT_SYMBOL_GPL(nvhost_device_unregister);
 
+void nvhost_device_writel(struct nvhost_device *dev, u32 r, u32 v)
+{
+	writel(v, dev->aperture + r);
+}
+EXPORT_SYMBOL_GPL(nvhost_device_writel);
+
+u32 nvhost_device_readl(struct nvhost_device *dev, u32 r)
+{
+	return readl(dev->aperture + r);
+}
+EXPORT_SYMBOL_GPL(nvhost_device_readl);
+
+static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
+{
+	struct nvhost_device *dev = to_nvhost_device(_dev);
+
+	return !strncmp(dev->name, drv->name, strlen(drv->name));
+}
+
 #ifdef CONFIG_PM_SLEEP
 
 static int nvhost_legacy_suspend(struct device *dev, pm_message_t mesg)

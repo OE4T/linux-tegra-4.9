@@ -176,6 +176,7 @@ enum nvhost_module_id {
 	NVHOST_MODULE_VI,
 	NVHOST_MODULE_ISP,
 	NVHOST_MODULE_MPE,
+	NVHOST_MODULE_MSENC,
 };
 
 struct nvhost_ctrl_module_regrdwr_args {

@@ -32,6 +32,7 @@
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t114.h"
 #include "gr3d/scale3d.h"
+#include "msenc/msenc.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -56,6 +57,7 @@ static struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 1 */
@@ -73,6 +75,7 @@ static struct nvhost_device devices[] = {
 			{"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 2 */
@@ -86,6 +89,7 @@ static struct nvhost_device devices[] = {
 			{"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 3 */
@@ -93,6 +97,7 @@ static struct nvhost_device devices[] = {
 	.syncpts = 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_ISP,
 },
 {
 	/* channel 4 */
@@ -105,6 +110,7 @@ static struct nvhost_device devices[] = {
 	.exclusive     = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
 },
 {
 	/* channel 5 */
@@ -114,8 +120,12 @@ static struct nvhost_device devices[] = {
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.exclusive     = true,
 	.keepalive     = true,
+	.init          = nvhost_msenc_init,
+	.deinit        = nvhost_msenc_deinit,
+	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_MSENC,
 },
 {
 	/* channel 6 */
@@ -124,6 +134,7 @@ static struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 7 */
@@ -134,6 +145,7 @@ static struct nvhost_device devices[] = {
 	.exclusive     = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 } };
 
 static inline int t114_nvhost_hwctx_handler_init(

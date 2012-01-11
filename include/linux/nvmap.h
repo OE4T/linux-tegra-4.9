@@ -70,7 +70,12 @@ struct nvmap_device;
 #define nvmap_handle_ref ion_handle
 #define nvmap_ref_to_handle(_ref) (struct ion_handle *)_ref
 /* Convert User space handle to Kernel. */
-#define nvmap_convert_handle_u2k(h) (*((u32 *)h))
+#define nvmap_convert_handle_u2k(h) ({ \
+	if ((u32)h >= TASK_SIZE) { \
+		pr_err("Invalid user space handle."); \
+		BUG(); \
+	} \
+	(*((u32 *)h)); })
 #endif
 
 #define nvmap_id_to_handle(_id) ((struct nvmap_handle *)(_id))

@@ -938,7 +938,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
 	/* perform calculations with most significant bits of pixel clock
 	 * to prevent overflow of long. */
-	ret = (unsigned long)(dc->pixel_clk >> 16) *
+	ret = (unsigned long)(dc->mode.pclk >> 16) *
 		bpp / 8 *
 		(win_use_v_filter(w) ? 2 : 1) * dfixed_trunc(w->w) / w->out_w *
 		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
@@ -1535,14 +1535,14 @@ static bool check_ref_to_sync(struct tegra_dc_mode *mode)
 
 #ifdef DEBUG
 /* return in 1000ths of a Hertz */
-static int calc_refresh(struct tegra_dc *dc, const struct tegra_dc_mode *m)
+static int calc_refresh(const struct tegra_dc_mode *m)
 {
 	long h_total, v_total, refresh;
 	h_total = m->h_active + m->h_front_porch + m->h_back_porch +
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	refresh = dc->pixel_clk / h_total;
+	refresh = m->pclk / h_total;
 	refresh *= 1000;
 	refresh /= v_total;
 	return refresh;
@@ -1628,8 +1628,6 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 			DC_DISP_SHIFT_CLOCK_OPTIONS);
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
-
-	dc->pixel_clk = dc->mode.pclk;
 
 	return 0;
 }

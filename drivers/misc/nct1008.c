@@ -45,6 +45,7 @@
 #define LOCAL_TEMP_LO_LIMIT_RD		0x06
 
 #define EXT_TEMP_HI_LIMIT_HI_BYTE_RD	0x07
+#define EXT_TEMP_LO_LIMIT_HI_BYTE_RD	0x08
 
 #define CONFIG_WR			0x09
 #define CONV_RATE_WR			0x0A
@@ -258,24 +259,23 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	int value;
-	s8 temp, temp2;
-	/* External Temperature Throttling limit */
+	s8 temp_hi, temp_lo;
+	/* External Temperature Throttling hi-limit */
 	value = i2c_smbus_read_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
 	if (value < 0)
 		goto error;
-	temp2 = value_to_temperature(pdata->ext_range, value);
+	temp_hi = value_to_temperature(pdata->ext_range, value);
 
-	/* Local Temperature Throttling limit */
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_HI_LIMIT_RD);
+	/* External Temperature Throttling lo-limit */
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
 	if (value < 0)
 		goto error;
-	temp = value_to_temperature(pdata->ext_range, value);
+	temp_lo = value_to_temperature(pdata->ext_range, value);
 
-	return snprintf(buf, MAX_STR_PRINT, "%d %d\n", temp, temp2);
+	return snprintf(buf, MAX_STR_PRINT, "lo:%d hi:%d\n", temp_lo, temp_hi);
 error:
-	dev_err(dev, "%s: failed to read temperature-overheat "
-		"\n", __func__);
-	return snprintf(buf, MAX_STR_PRINT, " Rd overheat Error\n");
+	dev_err(dev, "%s: failed to read temperature-alert\n", __func__);
+	return snprintf(buf, MAX_STR_PRINT, " Rd alert Error\n");
 }
 
 static ssize_t nct1008_set_temp_alert(struct device *dev,
@@ -800,7 +800,7 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 
 	if (data->current_lo_limit != lo_limit) {
 		value = temperature_to_value(extended_range, lo_limit);
-		pr_debug("%s: %d\n", __func__, value);
+		pr_debug("%s: set lo_limit %ld\n", __func__, lo_limit);
 		err = i2c_smbus_write_byte_data(data->client,
 				EXT_TEMP_LO_LIMIT_HI_BYTE_WR, value);
 		if (err)
@@ -811,7 +811,7 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 
 	if (data->current_hi_limit != hi_limit) {
 		value = temperature_to_value(extended_range, hi_limit);
-		pr_debug("%s: %d\n", __func__, value);
+		pr_debug("%s: set hi_limit %ld\n", __func__, hi_limit);
 		err = i2c_smbus_write_byte_data(data->client,
 				EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
 		if (err)

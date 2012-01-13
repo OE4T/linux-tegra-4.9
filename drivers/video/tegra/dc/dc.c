@@ -1352,6 +1352,21 @@ static unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 	return rate * 2 / div;
 }
 
+static unsigned long tegra_dc_pclk_predict_rate(struct clk *parent, int pclk)
+{
+	unsigned long rate;
+	unsigned long div;
+
+	rate = clk_get_rate(parent);
+
+	div = DIV_ROUND_CLOSEST(rate * 2, pclk);
+
+	if (div < 2)
+		return 0;
+
+	return rate * 2 / div;
+}
+
 void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	int pclk;
@@ -1360,6 +1375,17 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		unsigned long rate;
 		struct clk *parent_clk =
 			clk_get_sys(NULL, dc->out->parent_clk ? : "pll_p");
+
+		if (dc->out->parent_clk_backup &&
+		    (parent_clk == clk_get_sys(NULL, "pll_p"))) {
+			rate = tegra_dc_pclk_predict_rate(
+				parent_clk, dc->mode.pclk);
+			/* use pll_d as last resort */
+			if (rate < (dc->mode.pclk / 100 * 99) ||
+			    rate > (dc->mode.pclk / 100 * 109))
+				parent_clk = clk_get_sys(
+					NULL, dc->out->parent_clk_backup);
+		}
 
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);

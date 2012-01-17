@@ -73,6 +73,7 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xa02,   10, DIRECT),
 	HWCTX_REGINFO(0xb04,    1, DIRECT),
 	HWCTX_REGINFO(0xb06,   13, DIRECT),
+	HWCTX_REGINFO(0xe42,    2, DIRECT), /* HW bug workaround */
 };
 
 static const struct hwctx_reginfo ctxsave_regs_3d_perset[] = {

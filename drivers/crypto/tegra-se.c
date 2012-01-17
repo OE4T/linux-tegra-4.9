@@ -622,9 +622,9 @@ static int tegra_se_count_sgs(struct scatterlist *sl, u32 total_bytes)
 		return 0;
 
 	do {
-		total_bytes -= sl[i].length;
+		total_bytes -= min(sl[i].length, total_bytes);
 		i++;
-	} while (total_bytes > 0);
+	} while (total_bytes);
 
 	return i;
 }
@@ -723,11 +723,11 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 
 		WARN_ON(src_sg->length != dst_sg->length);
 		src_ll->addr = sg_dma_address(src_sg);
-		src_ll->data_len = src_sg->length;
+		src_ll->data_len = min(src_sg->length, total);
 		dst_ll->addr = sg_dma_address(dst_sg);
-		dst_ll->data_len = dst_sg->length;
+		dst_ll->data_len = min(dst_sg->length, total);
+		total -= min(src_sg->length, total);
 
-		total -= src_sg->length;
 		src_sg = sg_next(src_sg);
 		dst_sg = sg_next(dst_sg);
 		dst_ll++;
@@ -750,7 +750,7 @@ static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
 		while (total) {
 			dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE);
 			dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-			total -= src_sg->length;
+			total -= min(src_sg->length, total);
 			src_sg = sg_next(src_sg);
 			dst_sg = sg_next(dst_sg);
 		}

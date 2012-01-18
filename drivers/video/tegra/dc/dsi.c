@@ -948,21 +948,23 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 {
 	u32 rm;
 
+	/* Round up to MHz */
 	rm = clk % 1000;
 	if (rm != 0)
 		clk -= rm;
 
-	dc->mode.pclk = clk*1000;
+	/* Set up pixel clock */
+	dc->shift_clk_div = dsi->shift_clk_div;
+	dc->mode.pclk = (clk * 1000) / dsi->shift_clk_div;
+
+	/* Enable DSI clock */
 	tegra_dc_setup_clk(dc, dsi->dsi_clk);
-	if (dsi->clk_ref == true)
-		clk_disable(dsi->dsi_clk);
-	else
+	if (!dsi->clk_ref) {
 		dsi->clk_ref = true;
-	clk_enable(dsi->dsi_clk);
-	tegra_periph_reset_deassert(dsi->dsi_clk);
-
+		clk_enable(dsi->dsi_clk);
+		tegra_periph_reset_deassert(dsi->dsi_clk);
+	}
 	dsi->current_dsi_clk_khz = clk_get_rate(dsi->dsi_clk) / 1000;
-
 	dsi->current_bit_clk_ns =  1000*1000 / (dsi->current_dsi_clk_khz * 2);
 }
 

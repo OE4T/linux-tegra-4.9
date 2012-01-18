@@ -81,6 +81,7 @@ struct tegra_dc {
 	struct clk			*emc_clk;
 	int				emc_clk_rate;
 	int				new_emc_clk_rate;
+	u32				shift_clk_div;
 
 	bool				connected;
 	bool				enabled;

@@ -113,7 +113,8 @@ void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
  */
 void nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id)
 {
-	nvhost_syncpt_incr_max(sp, id, 1);
+	if (client_managed(id))
+		nvhost_syncpt_incr_max(sp, id, 1);
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 	nvhost_syncpt_cpu_incr(sp, id);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);

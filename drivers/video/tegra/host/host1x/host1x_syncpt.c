@@ -93,10 +93,10 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 	BUG_ON(!nvhost_module_powered(dev->dev));
 	if (!client_managed(id) && nvhost_syncpt_min_eq_max(sp, id)) {
 		dev_err(&syncpt_to_dev(sp)->pdev->dev,
-				"Syncpoint id %d\n",
-				id);
+			"Trying to increment syncpoint id %d beyond max\n",
+			id);
 		nvhost_debug_dump(syncpt_to_dev(sp));
-		BUG();
+		return;
 	}
 	writel(BIT(id), dev->sync_aperture + HOST1X_SYNC_SYNCPT_CPU_INCR);
 	wmb();

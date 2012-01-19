@@ -2656,8 +2656,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	 * The emc is a shared clock, it will be set based on
 	 * the requirements for each user on the bus.
 	 */
-	dc->emc_clk_rate = tegra_dc_get_default_emc_clk_rate(dc);
-	clk_set_rate(emc_clk, dc->emc_clk_rate);
+	dc->emc_clk_rate = 0;
 
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED)
 		dc->enabled = true;

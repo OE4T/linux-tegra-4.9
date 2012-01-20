@@ -488,99 +488,34 @@ static int nct1008_disable(struct i2c_client *client)
 	return err;
 }
 
-static int nct1008_disable_alert(struct nct1008_data *data)
+static int nct1008_within_limits(struct nct1008_data *data)
 {
-	struct i2c_client *client = data->client;
-	int ret = 0;
-	int val;
+	int intr_status;
 
-	/*
-	 * Disable ALERT# output, because these chips don't implement
-	 * SMBus alert correctly; they should only hold the alert line
-	 * low briefly.
-	 */
-	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
-	if (val < 0) {
-		dev_err(&client->dev, "%s, line=%d, disable alert failed ... "
-			"i2c read error=%d\n", __func__, __LINE__, val);
-		return val;
-	}
-	data->config = val | ALERT_BIT;
-	ret = i2c_smbus_write_byte_data(client, CONFIG_WR, data->config);
-	if (ret)
-		dev_err(&client->dev, "%s: fail to disable alert, i2c "
-			"write error=%d#\n", __func__, ret);
+	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 
-	return ret;
-}
-
-static int nct1008_enable_alert(struct nct1008_data *data)
-{
-	int val;
-	int ret;
-
-	val = i2c_smbus_read_byte_data(data->client, CONFIG_RD);
-	if (val < 0) {
-		dev_err(&data->client->dev, "%s, line=%d, enable alert "
-			"failed ... i2c read error=%d\n", __func__,
-			__LINE__, val);
-		return val;
-	}
-	val &= ~(ALERT_BIT | THERM2_BIT);
-	ret = i2c_smbus_write_byte_data(data->client, CONFIG_WR, val);
-	if (ret) {
-		dev_err(&data->client->dev, "%s: fail to enable alert, i2c "
-			"write error=%d\n", __func__, ret);
-		return ret;
-	}
-
-	return ret;
+	return !(intr_status & (BIT(3) | BIT(4)));
 }
 
 static void nct1008_work_func(struct work_struct *work)
 {
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
-	int err = 0;
-	int intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
 
-	if (intr_status < 0) {
-		dev_err(&data->client->dev, "%s, line=%d, i2c read error=%d\n",
-			__func__, __LINE__, intr_status);
-		return;
-	}
+	if (data->alert_func)
+		if (!nct1008_within_limits(data))
+			data->alert_func(data->alert_data);
 
-	intr_status &= (BIT(3) | BIT(4));
-	if (!intr_status)
-		return;
-
-	if (data->alert_func) {
-		err = nct1008_disable_alert(data);
-		if (err) {
-			dev_err(&data->client->dev,
-				"%s: disable alert fail(error=%d)\n",
-				__func__, err);
-			return;
-		}
-
-		data->alert_func(data->alert_data);
-
-		nct1008_enable_alert(data);
-	}
-
-
-	if (err)
-		dev_err(&data->client->dev, "%s: fail(error=%d)\n", __func__,
-			err);
-	else
-		pr_debug("%s: done\n", __func__);
+	enable_irq(data->client->irq);
 }
 
 static irqreturn_t nct1008_irq(int irq, void *dev_id)
 {
 	struct nct1008_data *data = dev_id;
 
+	disable_irq_nosync(irq);
 	schedule_work(&data->work);
+
 	return IRQ_HANDLED;
 }
 
@@ -737,7 +672,7 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 		return 0;
 	else
 		return request_irq(data->client->irq, nct1008_irq,
-			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+			IRQF_TRIGGER_LOW,
 			DRIVER_NAME, data);
 }
 
@@ -793,10 +728,6 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 
 	if (lo_limit >= hi_limit)
 		return -EINVAL;
-
-	if (data->current_lo_limit == lo_limit &&
-		data->current_hi_limit == hi_limit)
-		return 0;
 
 	if (data->current_lo_limit != lo_limit) {
 		value = temperature_to_value(extended_range, lo_limit);

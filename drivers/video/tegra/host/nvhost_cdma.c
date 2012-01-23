@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -322,6 +322,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 				job->syncpt_end,
 				job->num_slots);
 
+		syncpt_val += syncpt_incrs;
 		kfifo_skip(&cdma->sync_queue);
 		result = kfifo_peek(&cdma->sync_queue, &job);
 	}

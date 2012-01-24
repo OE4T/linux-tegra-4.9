@@ -314,7 +314,7 @@ int __init t114_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 	u32 *save_ptr;
 
 	ch = container_of(h, struct nvhost_channel, ctxhandler);
-	nvmap = ch->dev->host->nvmap;
+	nvmap = nvhost_get_host(ch->dev)->nvmap;
 
 	setup_save(NULL);
 

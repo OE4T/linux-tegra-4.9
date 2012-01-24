@@ -26,7 +26,6 @@
 #include "nvhost_acm.h"
 #include "nvhost_syncpt.h"
 #include "nvhost_intr.h"
-#include "nvhost_cpuaccess.h"
 #include "nvhost_channel.h"
 #include "chip_support.h"
 
@@ -43,13 +42,10 @@ struct nvhost_master {
 	struct device *ctrl;
 	struct nvhost_syncpt syncpt;
 	struct nvmap_client *nvmap;
-	struct nvhost_cpuaccess cpuaccess;
-	u32 nb_mlocks;
 	struct nvhost_intr intr;
 	struct nvhost_device *dev;
 	struct nvhost_channel *channels;
 	u32 nb_channels;
-	u32 nb_modules;
 
 	u32 sync_queue_size;
 

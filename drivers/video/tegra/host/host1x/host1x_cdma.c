@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/platform_device.h>
 #include "nvhost_cdma.h"
 #include "dev.h"
 

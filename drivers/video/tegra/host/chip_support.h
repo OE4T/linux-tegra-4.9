@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@ struct nvhost_cdma;
 struct nvhost_intr;
 struct push_buffer;
 struct nvhost_syncpt;
-struct nvhost_cpuaccess;
 struct nvhost_master;
 struct dentry;
 struct nvhost_job;
@@ -114,6 +113,10 @@ struct nvhost_chip_support {
 				  int num_waitchk);
 		void (*debug)(struct nvhost_syncpt *);
 		const char * (*name)(struct nvhost_syncpt *, u32 id);
+		int (*mutex_try_lock)(struct nvhost_syncpt *,
+				      unsigned int idx);
+		void (*mutex_unlock)(struct nvhost_syncpt *,
+				     unsigned int idx);
 	} syncpt;
 
 	struct {
@@ -128,14 +131,6 @@ struct nvhost_chip_support {
 		void (*free_host_general_irq)(struct nvhost_intr *);
 		int (*request_syncpt_irq)(struct nvhost_intr_syncpt *syncpt);
 	} intr;
-
-	struct {
-		int (*mutex_try_lock)(struct nvhost_cpuaccess *,
-				      unsigned int idx);
-		void (*mutex_unlock)(struct nvhost_cpuaccess *,
-				     unsigned int idx);
-	} cpuaccess;
-
 };
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

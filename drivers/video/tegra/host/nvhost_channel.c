@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,57 @@
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
+int nvhost_channel_init(struct nvhost_channel *ch,
+		struct nvhost_master *dev, int index)
+{
+	int err;
+	struct nvhost_device *ndev;
+	struct resource *r = NULL;
+	void __iomem *regs = NULL;
+	struct resource *reg_mem = NULL;
+
+	/* Link nvhost_device to nvhost_channel */
+	err = host_channel_op(dev).init(ch, dev, index);
+	if (err < 0) {
+		dev_err(&dev->dev->dev, "failed to init channel %d\n",
+				index);
+		return err;
+	}
+	ndev = ch->dev;
+	ndev->channel = ch;
+
+	/* Map IO memory related to nvhost_device */
+	if (ndev->moduleid != NVHOST_MODULE_NONE) {
+		/* First one is host1x - skip that */
+		r = platform_get_resource(dev->pdev,
+				IORESOURCE_MEM, ndev->moduleid + 1);
+		if (!r)
+			goto fail;
+
+		reg_mem = request_mem_region(r->start,
+				resource_size(r), ndev->name);
+		if (!reg_mem)
+			goto fail;
+
+		regs = ioremap(r->start, resource_size(r));
+		if (!regs)
+			goto fail;
+
+		ndev->reg_mem = reg_mem;
+		ndev->aperture = regs;
+	}
+	return 0;
+
+fail:
+	if (reg_mem)
+		release_mem_region(r->start, resource_size(r));
+	if (regs)
+		iounmap(regs);
+	dev_err(&ndev->dev, "failed to get register memory\n");
+	return -ENXIO;
+
+}
+
 int nvhost_channel_submit(struct nvhost_job *job)
 {
 	/* Low priority submits wait until sync queue is empty. Ignores result
@@ -49,12 +100,9 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	int err = 0;
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
-		err = nvhost_module_init(ch->dev);
-		if (!err) {
-			err = nvhost_cdma_init(&ch->cdma);
-			if (err)
-				nvhost_module_deinit(ch->dev);
-		}
+		if (ch->dev->init)
+			ch->dev->init(ch->dev);
+		err = nvhost_cdma_init(&ch->cdma);
 	} else if (ch->dev->exclusive) {
 		err = -EBUSY;
 	}
@@ -89,7 +137,7 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 	if (ch->refcount == 1) {
 		channel_cdma_op(ch).stop(&ch->cdma);
 		nvhost_cdma_deinit(&ch->cdma);
-		nvhost_module_deinit(ch->dev);
+		nvhost_module_suspend(ch->dev, false);
 	}
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);

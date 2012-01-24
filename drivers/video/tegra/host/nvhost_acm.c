@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include <linux/err.h>
 #include <linux/device.h>
 #include <linux/delay.h>
+#include <linux/platform_device.h>
 #include <mach/powergate.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
@@ -339,11 +340,12 @@ void nvhost_module_remove_client(struct nvhost_device *dev, void *priv)
 	mutex_unlock(&client_list_lock);
 }
 
-void nvhost_module_preinit(struct nvhost_device *dev)
+int nvhost_module_init(struct nvhost_device *dev)
 {
 	int i = 0;
 
 	/* initialize clocks to known state */
+	INIT_LIST_HEAD(&dev->client_list);
 	while (dev->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
 		long rate = dev->clocks[i].default_rate;
@@ -357,31 +359,7 @@ void nvhost_module_preinit(struct nvhost_device *dev)
 		clk_enable(c);
 		clk_set_rate(c, rate);
 		clk_disable(c);
-		i++;
-	}
-
-	if (dev->can_powergate) {
-		do_powergate_locked(dev->powergate_ids[0]);
-		do_powergate_locked(dev->powergate_ids[1]);
-	} else {
-		do_unpowergate_locked(dev->powergate_ids[0]);
-		do_unpowergate_locked(dev->powergate_ids[1]);
-	}
-}
-
-int nvhost_module_init(struct nvhost_device *dev)
-{
-	int i = 0;
-
-	nvhost_module_preinit(dev);
-
-	INIT_LIST_HEAD(&dev->client_list);
-	while (dev->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
-		char devname[MAX_DEVID_LENGTH];
-
-		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s", dev->name);
-		dev->clk[i] = clk_get_sys(devname, dev->clocks[i].name);
-		BUG_ON(IS_ERR_OR_NULL(dev->clk[i]));
+		dev->clk[i] = c;
 		i++;
 	}
 	dev->num_clks = i;
@@ -390,13 +368,16 @@ int nvhost_module_init(struct nvhost_device *dev)
 	init_waitqueue_head(&dev->idle_wq);
 	INIT_DELAYED_WORK(&dev->powerstate_down, powerstate_down_handler);
 
-	if (dev->can_powergate)
+	/* power gate units that we can power gate */
+	if (dev->can_powergate) {
+		do_powergate_locked(dev->powergate_ids[0]);
+		do_powergate_locked(dev->powergate_ids[1]);
 		dev->powerstate = NVHOST_POWER_STATE_POWERGATED;
-	else
+	} else {
+		do_unpowergate_locked(dev->powergate_ids[0]);
+		do_unpowergate_locked(dev->powergate_ids[1]);
 		dev->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
-
-	if (dev->init)
-		dev->init(dev);
+	}
 
 	return 0;
 }
@@ -425,8 +406,8 @@ static void debug_not_idle(struct nvhost_master *host)
 		mutex_unlock(&dev->lock);
 	}
 
-	for (i = 0; i < host->nb_mlocks; i++) {
-		int c = atomic_read(&host->cpuaccess.lock_counts[i]);
+	for (i = 0; i < host->syncpt.nb_mlocks; i++) {
+		int c = atomic_read(&host->syncpt.lock_counts[i]);
 		if (c) {
 			dev_warn(&host->pdev->dev,
 				"tegra_grhost: lock id %d: refcnt %d\n",

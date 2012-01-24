@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/t20/t20.h
+ * drivers/video/tegra/host/bus_client.c
  *
- * Tegra Graphics Chip support for T20
+ * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,35 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#ifndef _NVHOST_T20_H_
-#define _NVHOST_T20_H_
 
-struct nvhost_master;
-struct nvhost_module;
+#include "bus_client.h"
+#include "dev.h"
+#include <linux/string.h>
 
-int nvhost_init_t20_channel_support(struct nvhost_master *);
-int nvhost_init_t20_debug_support(struct nvhost_master *);
-int nvhost_init_t20_syncpt_support(struct nvhost_master *);
-int nvhost_init_t20_intr_support(struct nvhost_master *);
-int nvhost_init_t20_support(struct nvhost_master *host);
-int nvhost_t20_save_context(struct nvhost_module *mod, u32 syncpt_id);
+void nvhost_read_module_regs(struct nvhost_device *ndev,
+			u32 offset, int count, u32 *values)
+{
+	void __iomem *p = ndev->aperture + offset;
 
-#endif /* _NVHOST_T20_H_ */
+	nvhost_module_busy(ndev);
+	while (count--) {
+		*(values++) = readl(p);
+		p += 4;
+	}
+	rmb();
+	nvhost_module_idle(ndev);
+}
+
+void nvhost_write_module_regs(struct nvhost_device *ndev,
+			u32 offset, int count, const u32 *values)
+{
+	void __iomem *p = ndev->aperture + offset;
+
+	nvhost_module_busy(ndev);
+	while (count--) {
+		writel(*(values++), p);
+		p += 4;
+	}
+	wmb();
+	nvhost_module_idle(ndev);
+}

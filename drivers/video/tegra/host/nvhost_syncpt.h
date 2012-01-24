@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,8 @@ struct nvhost_syncpt {
 	u32 nb_pts;
 	u32 nb_bases;
 	u32 client_managed;
+	atomic_t *lock_counts;
+	u32 nb_mlocks;
 };
 
 int nvhost_syncpt_init(struct nvhost_syncpt *);
@@ -158,5 +160,9 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			int num_waitchk);
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
+
+int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);
+
+void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx);
 
 #endif

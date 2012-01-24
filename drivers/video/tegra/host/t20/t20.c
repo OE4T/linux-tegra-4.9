@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T20 Architecture Chips
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,6 +56,7 @@ struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 1 */
@@ -69,6 +70,7 @@ struct nvhost_device devices[] = {
 	.clocks = {{"gr3d", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	.powergate_ids = {TEGRA_POWERGATE_3D, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 2 */
@@ -83,6 +85,7 @@ struct nvhost_device devices[] = {
 			{"emc", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 3 */
@@ -91,6 +94,7 @@ struct nvhost_device devices[] = {
 	.syncpts = 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_ISP,
 },
 {
 	/* channel 4 */
@@ -104,6 +108,7 @@ struct nvhost_device devices[] = {
 	.exclusive     = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
 },
 {
 	/* channel 5 */
@@ -119,6 +124,7 @@ struct nvhost_device devices[] = {
 	.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	.powergate_ids = {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_MPE,
 },
 {
 	/* channel 6 */
@@ -128,6 +134,7 @@ struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 } };
 
 static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
@@ -164,7 +171,6 @@ static int t20_channel_init(struct nvhost_channel *ch,
 
 int nvhost_init_t20_channel_support(struct nvhost_master *host)
 {
-	host->nb_mlocks =  NV_HOST1X_SYNC_MLOCK_NUM;
 	host->nb_channels =  NVHOST_NUMCHANNELS;
 
 	host->op.channel.init = t20_channel_init;
@@ -192,9 +198,6 @@ int nvhost_init_t20_support(struct nvhost_master *host)
 	if (err)
 		return err;
 	err = nvhost_init_t20_intr_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cpuaccess_support(host);
 	if (err)
 		return err;
 	return 0;

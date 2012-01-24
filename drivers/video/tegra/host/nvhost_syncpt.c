@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
  */
 
 #include <linux/nvhost_ioctl.h>
+#include <linux/platform_device.h>
 #include "nvhost_syncpt.h"
 #include "dev.h"
 
@@ -233,6 +234,28 @@ done:
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
 {
 	syncpt_op(sp).debug(sp);
+}
+
+int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
+{
+	struct nvhost_master *host = syncpt_to_dev(sp);
+	u32 reg;
+
+	nvhost_module_busy(host->dev);
+	reg = syncpt_op(sp).mutex_try_lock(sp, idx);
+	if (reg) {
+		nvhost_module_idle(host->dev);
+		return -EBUSY;
+	}
+	atomic_inc(&sp->lock_counts[idx]);
+	return 0;
+}
+
+void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx)
+{
+	syncpt_op(sp).mutex_unlock(sp, idx);
+	nvhost_module_idle(syncpt_to_dev(sp)->dev);
+	atomic_dec(&sp->lock_counts[idx]);
 }
 
 /* check for old WAITs to be removed (avoiding a wrap) */

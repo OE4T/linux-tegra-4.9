@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2011, NVIDIA Corporation.
+ * Copyright (c) 2009-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -167,6 +167,15 @@ struct nvhost_ctrl_syncpt_waitex_args {
 struct nvhost_ctrl_module_mutex_args {
 	__u32 id;
 	__u32 lock;
+};
+
+enum nvhost_module_id {
+	NVHOST_MODULE_NONE = -1,
+	NVHOST_MODULE_DISPLAY_A = 0,
+	NVHOST_MODULE_DISPLAY_B,
+	NVHOST_MODULE_VI,
+	NVHOST_MODULE_ISP,
+	NVHOST_MODULE_MPE,
 };
 
 struct nvhost_ctrl_module_regrdwr_args {

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T30 Architecture Chips
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 #include <linux/mutex.h>
 #include <mach/powergate.h>
+#include <mach/iomap.h>
 #include "dev.h"
 #include "t20/t20.h"
 #include "t30.h"
@@ -60,6 +61,7 @@ static struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 1 */
@@ -83,6 +85,7 @@ static struct nvhost_device devices[] = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate = true,
 	.powergate_delay = 100,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 2 */
@@ -97,6 +100,7 @@ static struct nvhost_device devices[] = {
 			{"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
+	.moduleid      = NVHOST_MODULE_NONE,
 },
 {
 	/* channel 3 */
@@ -105,6 +109,7 @@ static struct nvhost_device devices[] = {
 	.syncpts       = 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_ISP,
 },
 {
 	/* channel 4 */
@@ -118,6 +123,7 @@ static struct nvhost_device devices[] = {
 	.exclusive     = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
 },
 {
 	/* channel 5 */
@@ -135,6 +141,7 @@ static struct nvhost_device devices[] = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate  = true,
 	.powergate_delay = 100,
+	.moduleid      = NVHOST_MODULE_MPE,
 },
 {
 	/* channel 6 */
@@ -144,6 +151,7 @@ static struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_NONE,
 } };
 
 #define NVHOST_CHANNEL_BASE 0
@@ -215,9 +223,6 @@ int nvhost_init_t30_support(struct nvhost_master *host)
 	if (err)
 		return err;
 	err = nvhost_init_t20_intr_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cpuaccess_support(host);
 	if (err)
 		return err;
 	return 0;

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@
 #include <linux/nvhost.h>
 
 /* Sets clocks and powergating state for a module */
-void nvhost_module_preinit(struct nvhost_device *ndev);
 int nvhost_module_init(struct nvhost_device *ndev);
 void nvhost_module_deinit(struct nvhost_device *dev);
 int nvhost_module_suspend(struct nvhost_device *dev, bool system_suspend);

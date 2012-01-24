@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints for HOST1X
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
  */
 
 #include <linux/nvhost_ioctl.h>
+#include <linux/platform_device.h>
 #include "nvhost_syncpt.h"
 #include "dev.h"
 #include "host1x_syncpt.h"
@@ -220,6 +221,23 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 	}
 }
 
+static int syncpt_mutex_try_lock(struct nvhost_syncpt *sp,
+		unsigned int idx)
+{
+	void __iomem *sync_regs = syncpt_to_dev(sp)->sync_aperture;
+	/* mlock registers returns 0 when the lock is aquired.
+	 * writing 0 clears the lock. */
+	return !!readl(sync_regs + (HOST1X_SYNC_MLOCK_0 + idx * 4));
+}
+
+static void syncpt_mutex_unlock(struct nvhost_syncpt *sp,
+	       unsigned int idx)
+{
+	void __iomem *sync_regs = syncpt_to_dev(sp)->sync_aperture;
+
+	writel(0, sync_regs + (HOST1X_SYNC_MLOCK_0 + idx * 4));
+}
+
 int host1x_init_syncpt_support(struct nvhost_master *host)
 {
 
@@ -235,10 +253,13 @@ int host1x_init_syncpt_support(struct nvhost_master *host)
 	host->op.syncpt.wait_check = t20_syncpt_wait_check;
 	host->op.syncpt.debug = t20_syncpt_debug;
 	host->op.syncpt.name = t20_syncpt_name;
+	host->op.syncpt.mutex_try_lock = syncpt_mutex_try_lock;
+	host->op.syncpt.mutex_unlock = syncpt_mutex_unlock;
 
 	host->syncpt.nb_pts = NV_HOST1X_SYNCPT_NB_PTS;
 	host->syncpt.nb_bases = NV_HOST1X_SYNCPT_NB_BASES;
 	host->syncpt.client_managed = NVSYNCPTS_CLIENT_MANAGED;
+	host->syncpt.nb_mlocks =  NV_HOST1X_SYNC_MLOCK_NUM;
 
 	return 0;
 }

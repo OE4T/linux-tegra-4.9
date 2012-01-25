@@ -477,6 +477,18 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
 	}
 
+	if (dc->mode.pclk > 1000) {
+		struct tegra_dc_mode *mode = &dc->mode;
+
+		info->var.pixclock = KHZ2PICOS(mode->pclk / 1000);
+		info->var.left_margin = mode->h_back_porch;
+		info->var.right_margin = mode->h_front_porch;
+		info->var.upper_margin = mode->v_back_porch;
+		info->var.lower_margin = mode->v_front_porch;
+		info->var.hsync_len = mode->h_sync_width;
+		info->var.vsync_len = mode->v_sync_width;
+	}
+
 	return tegra_fb;
 
 err_iounmap_fb:

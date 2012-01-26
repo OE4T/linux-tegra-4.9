@@ -343,8 +343,20 @@ enum {
 #define DSI_PAD_CONTROL_PAD_LPUPADJ(x)		(((x) & 0x3) << 14)
 #define DSI_PAD_CONTROL_PAD_LPDNADJ(x)		(((x) & 0x3) << 12)
 
+#define DSI_PAD_CONTROL_0_VS1 0x4b
+#define DSI_PAD_CONTROL_0_VS1_PAD_PULLDN_CLK_ENAB(x)	(((x) & 0x1) << 24)
+#define DSI_PAD_CONTROL_0_VS1_PAD_PULLDN_ENAB(x)	(((x) & 0xf) << 16)
+#define DSI_PAD_CONTROL_0_VS1_PAD_PDIO_CLK(x)		(((x) & 0x1) << 8)
+#define DSI_PAD_CONTROL_0_VS1_PAD_PDIO(x)		(((x) & 0xf) << 0)
+
 #define DSI_PAD_CONTROL_CD 0x4c
+#define DSI_PAD_CONTROL_CD_VS1 0x4c
 #define DSI_PAD_CD_STATUS 0x4d
+#define DSI_PAD_CD_STATUS_VS1 0x4d
+#define DSI_PAD_CONTROL_1_VS1 0x4f
+#define DSI_PAD_CONTROL_2_VS1 0x50
+#define DSI_PAD_CONTROL_3_VS1 0x51
+#define DSI_PAD_CONTROL_4_VS1 0x52
 #define DSI_VID_MODE_CONTROL 0x4e
 
 #endif

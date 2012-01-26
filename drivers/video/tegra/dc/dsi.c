@@ -757,11 +757,39 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 		((1000 * 1000) / dsi->info.fpga_freq_khz) :
 		DEFAULT_FPGA_FREQ_KHZ;
 #endif
+
 	phy_timing_clk->t_hsdexit = dsi->info.phy_timing.t_hsdexit_ns ?
 			(dsi->info.phy_timing.t_hsdexit_ns / clk_ns) :
 			(T_HSEXIT_DEFAULT(clk_ns));
 
+	if (lphs == DSI_LPHS_IN_HS_MODE) {
+		tegra_dsi_get_clk_phy_timing(dsi, phy_timing_clk, clk_ns);
+		tegra_dsi_get_hs_phy_timing(dsi, phy_timing_clk, clk_ns);
+	} else {
+		/* default is LP mode */
+		tegra_dsi_get_escape_phy_timing(dsi, phy_timing_clk, clk_ns);
+		tegra_dsi_get_bta_phy_timing(dsi, phy_timing_clk, clk_ns);
+		tegra_dsi_get_ulps_phy_timing(dsi, phy_timing_clk, clk_ns);
+		if (dsi->info.enable_hs_clock_on_lp_cmd_mode)
+			tegra_dsi_get_clk_phy_timing(dsi, phy_timing_clk, clk_ns);
+	}
+}
+
+static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
+				struct dsi_phy_timing_inclk *phy_timing,
+				u32 clk_ns, u8 lphs)
+{
 	int err = 0;
+
+#define CHECK_RANGE(val, min, max) ( \
+		((min) == NOT_DEFINED ? 0 : (val) < (min)) || \
+		((max) == NOT_DEFINED ? 0 : (val) > (max)) ? -EINVAL : 0)
+
+#ifndef CONFIG_TEGRA_SILICON_PLATFORM
+	clk_ns = dsi->info.fpga_freq_khz ?
+		((1000 * 1000) / dsi->info.fpga_freq_khz) :
+		DEFAULT_FPGA_FREQ_KHZ;
+#endif
 
 	err = CHECK_RANGE(
 	DSI_CONVERT_T_PHY_TO_T_PHY_NS(
@@ -1698,6 +1726,15 @@ static void tegra_dsi_config_pad(struct tegra_dc_dsi_data *dsi)
 			DSI_PAD_CONTROL_PAD_SLEWUPADJ(0x6);
 		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 	}
+}
+
+static void tegra_dsi_panelB_enable(void)
+{
+	unsigned int val;
+
+	val = readl(IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0));
+	val |= DSIB_MODE_ENABLE;
+	writel(val, (IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0)));
 }
 
 static int tegra_dsi_init_hw(struct tegra_dc *dc,

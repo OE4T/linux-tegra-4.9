@@ -2060,6 +2060,18 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 }
 
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
+static bool tegra_dc_windows_are_dirty(struct tegra_dc *dc)
+{
+#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
+	u32 val;
+
+	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+	if (val & (WIN_A_UPDATE | WIN_B_UPDATE | WIN_C_UPDATE))
+	    return true;
+#endif
+	return false;
+}
+
 static void tegra_dc_trigger_windows(struct tegra_dc *dc)
 {
 	u32 val, i;
@@ -2120,6 +2132,15 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 	if (status & V_BLANK_INT) {
 		/* Schedule any additional bottom-half vblank actvities. */
 		schedule_work(&dc->vblank_work);
+
+		/* All windows updated. Mask subsequent V_BLANK interrupts */
+		if (!tegra_dc_windows_are_dirty(dc)) {
+			u32 val;
+
+			val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+			val &= ~V_BLANK_INT;
+			tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		}
 	}
 
 	if (status & FRAME_END_INT) {

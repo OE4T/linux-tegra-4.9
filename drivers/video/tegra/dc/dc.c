@@ -2435,12 +2435,12 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	unsigned i;
 
+	if (dc->out_ops && dc->out_ops->disable)
+		dc->out_ops->disable(dc);
+
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 	tegra_dc_writel(dc, 0, DC_CMD_INT_ENABLE);
 	disable_irq(dc->irq);
-
-	if (dc->out_ops && dc->out_ops->disable)
-		dc->out_ops->disable(dc);
 
 	tegra_dc_clear_bandwidth(dc);
 	clk_disable(dc->clk);

@@ -38,11 +38,8 @@
 #include <mach/iovmm.h>
 #include <linux/nvmap.h>
 
-#include <linux/vmstat.h>
-#include <linux/swap.h>
 #include <linux/shrinker.h>
 #include <linux/moduleparam.h>
-
 #include "nvmap.h"
 #include "nvmap_mru.h"
 #include "nvmap_common.h"
@@ -751,10 +748,6 @@ static const unsigned int heap_policy_large[] = {
 	0,
 };
 
-/* Do not override single page policy if there is not much space to
-avoid invoking system oom killer. */
-#define NVMAP_SMALL_POLICY_SYSMEM_THRESHOLD 50000000
-
 int nvmap_alloc_handle_id(struct nvmap_client *client,
 			  unsigned long id, unsigned int heap_mask,
 			  size_t align, unsigned int flags)
@@ -792,15 +785,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 		if (heap_mask & NVMAP_HEAP_IOVMM)
 			heap_mask |= NVMAP_HEAP_SYSMEM;
 		else if (heap_mask & NVMAP_HEAP_CARVEOUT_GENERIC) {
-			/* Calculate size of free physical pages
-			 * managed by kernel */
-			unsigned long freeMem =
-				(global_page_state(NR_FREE_PAGES) +
-				global_page_state(NR_FILE_PAGES) -
-				total_swapcache_pages) << PAGE_SHIFT;
-
-			if (freeMem > NVMAP_SMALL_POLICY_SYSMEM_THRESHOLD)
-				heap_mask |= NVMAP_HEAP_SYSMEM;
+			heap_mask |= NVMAP_HEAP_SYSMEM;
 		}
 	}
 #endif

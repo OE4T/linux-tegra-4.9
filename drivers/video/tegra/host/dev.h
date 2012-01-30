@@ -47,8 +47,6 @@ struct nvhost_master {
 	struct nvhost_channel *channels;
 	u32 nb_channels;
 
-	u32 sync_queue_size;
-
 	struct nvhost_chip_support op;
 
 	atomic_t clientid;

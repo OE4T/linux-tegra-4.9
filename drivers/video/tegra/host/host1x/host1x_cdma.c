@@ -655,8 +655,6 @@ int host1x_init_cdma_support(struct nvhost_master *host)
 	host->op.cdma.timeout_cpu_incr = cdma_timeout_cpu_incr;
 	host->op.cdma.timeout_pb_incr = cdma_timeout_pb_incr;
 
-	host->sync_queue_size = NVHOST_SYNC_QUEUE_SIZE;
-
 	host->op.push_buffer.reset = push_buffer_reset;
 	host->op.push_buffer.init = push_buffer_init;
 	host->op.push_buffer.destroy = push_buffer_destroy;

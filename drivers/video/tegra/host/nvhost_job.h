@@ -38,6 +38,9 @@ struct nvhost_job {
 	/* When refcount goes to zero, job can be freed */
 	struct kref ref;
 
+	/* List entry */
+	struct list_head list;
+
 	/* Channel where job is submitted to */
 	struct nvhost_channel *ch;
 

@@ -28,7 +28,7 @@
 
 #include <linux/nvhost.h>
 #include <mach/nvmap.h>
-#include <linux/kfifo.h>
+#include <linux/list.h>
 
 #include "nvhost_acm.h"
 
@@ -87,7 +87,6 @@ struct buffer_timeout {
 enum cdma_event {
 	CDMA_EVENT_NONE,		/* not waiting for any event */
 	CDMA_EVENT_SYNC_QUEUE_EMPTY,	/* wait for empty sync queue */
-	CDMA_EVENT_SYNC_QUEUE_SPACE,	/* wait for space in sync queue */
 	CDMA_EVENT_PUSH_BUFFER_SPACE	/* wait for space in push buffer */
 };
 
@@ -101,7 +100,7 @@ struct nvhost_cdma {
 	unsigned int last_put;		/* last value written to DMAPUT */
 	struct push_buffer push_buffer;	/* channel's push buffer */
 	struct syncpt_buffer syncpt_buffer; /* syncpt incr buffer */
-	DECLARE_KFIFO_PTR(sync_queue, struct nvhost_job *); /* job queue */
+	struct list_head sync_queue;	/* job queue */
 	struct buffer_timeout timeout;	/* channel's timeout state/wq */
 	bool running;
 	bool torndown;

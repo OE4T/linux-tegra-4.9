@@ -1027,7 +1027,7 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		return;
 
 	if (edid[0] != 0x2 ||
-	    edid[2] < 4 || edid[2] > 128 - DETAILED_TIMING_DESCRIPTION_SIZE)
+	    edid[2] < 4 || edid[2] > 128)
 		return;
 
 	DPRINTK("  Short Video Descriptors\n");

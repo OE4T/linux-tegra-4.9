@@ -22,7 +22,7 @@
 
 #include <linux/mutex.h>
 #include <mach/powergate.h>
-#include "../dev.h"
+#include "dev.h"
 #include "host1x/host1x_cdma.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
@@ -193,9 +193,6 @@ int nvhost_init_t114_support(struct nvhost_master *host)
 	if (err)
 		return err;
 	err = nvhost_init_t20_intr_support(host);
-	if (err)
-		return err;
-	err = nvhost_init_t20_cpuaccess_support(host);
 	if (err)
 		return err;
 	return 0;

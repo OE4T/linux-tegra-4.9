@@ -1254,10 +1254,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 	}
 
-	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
-
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		tegra_dc_writel(dc, NC_HOST_TRIG, DC_CMD_STATE_CONTROL);
+		update_mask |= NC_HOST_TRIG;
+
+	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 
 	/* update EMC clock if calculated bandwidth has changed */
 	tegra_dc_program_bandwidth(dc);

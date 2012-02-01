@@ -2404,6 +2404,8 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 	/* force a full blending update */
 	dc->blend.z[0] = -1;
 
+	tegra_dc_ext_enable(dc->ext);
+
 	return true;
 }
 #endif

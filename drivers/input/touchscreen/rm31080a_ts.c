@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2012-2016, Raydium Semiconductor Corporation.
  * All Rights Reserved.
- * Copyright (C) 2012-2016, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2017, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -254,6 +254,7 @@ struct rm_tch_queue_info {
 /*=============================================================================
 	GLOBAL VARIABLES DECLARATION
 =============================================================================*/
+static struct miscdevice raydium_ts_miscdev;
 struct input_dev *g_input_dev;
 struct spi_device *g_spi;
 struct rm31080a_ts_para g_st_ts;
@@ -490,7 +491,8 @@ static void rm_tch_generate_event(struct rm_tch_ts *dev_touch,
 		break;
 	}
 	envp[1] = NULL;
-	kobject_uevent_env(&dev_touch->dev->kobj, KOBJ_CHANGE, envp);
+	kobject_uevent_env(&raydium_ts_miscdev.this_device->kobj,
+		KOBJ_CHANGE, envp);
 }
 
 /*===========================================================================*/
@@ -1588,55 +1590,72 @@ int rm_set_kernel_tbl(int i_func_idx, u8 *p_u8_src)
 	u16 u16_len = 0;
 	u8 *p_u8_len;
 	u8 *p_u8_dst;
+	size_t dst_len = 0;
 
 	switch (i_func_idx) {
 	case KRL_INDEX_FUNC_SET_IDLE:
 		p_u8_dst = g_st_cmd_set_idle;
+		dst_len = sizeof(g_st_cmd_set_idle);
 		break;
 	case KRL_INDEX_FUNC_PAUSE_AUTO:
 		p_u8_dst = g_st_cmd_pause_auto;
+		dst_len = sizeof(g_st_cmd_pause_auto);
 		break;
 	case KRL_INDEX_RM_RESUME:
 		p_u8_dst = g_st_rm_resume_cmd;
+		dst_len = sizeof(g_st_rm_resume_cmd);
 		break;
 	case KRL_INDEX_RM_SUSPEND:
 		p_u8_dst = g_st_rm_suspend_cmd;
+		dst_len = sizeof(g_st_rm_suspend_cmd);
 		break;
 	case KRL_INDEX_RM_READ_IMG:
 		p_u8_dst = g_st_rm_readimg_cmd;
+		dst_len = sizeof(g_st_rm_readimg_cmd);
 		break;
 	case KRL_INDEX_RM_WATCHDOG:
 		p_u8_dst = g_st_rm_watchdog_cmd;
+		dst_len = sizeof(g_st_rm_watchdog_cmd);
 		break;
 	case KRL_INDEX_RM_TESTMODE:
 		p_u8_dst = g_st_rm_testmode_cmd;
+		dst_len = sizeof(g_st_rm_testmode_cmd);
 		break;
 	case KRL_INDEX_RM_SLOWSCAN:
 		p_u8_dst = g_st_rm_slow_scan_cmd;
+		dst_len = sizeof(g_st_rm_slow_scan_cmd);
 		break;
 	case KRL_INDEX_RM_CLEARINT:
 		p_u8_dst = g_st_rm_clear_int_cmd;
+		dst_len = sizeof(g_st_rm_clear_int_cmd);
 		break;
 	case KRL_INDEX_RM_SCANSTART:
 		p_u8_dst = g_st_rm_scan_start_cmd;
+		dst_len = sizeof(g_st_rm_scan_start_cmd);
 		break;
 	case KRL_INDEX_RM_WAITSCANOK:
 		p_u8_dst = g_st_rm_wait_scan_ok_cmd;
+		dst_len = sizeof(g_st_rm_wait_scan_ok_cmd);
 		break;
 	case KRL_INDEX_RM_SETREPTIME:
 		p_u8_dst = g_st_rm_set_rep_time_cmd;
+		dst_len = sizeof(g_st_rm_set_rep_time_cmd);
 		break;
 	case KRL_INDEX_RM_NSPARA:
 		p_u8_dst = g_st_rm_ns_para_cmd;
+		dst_len = sizeof(g_st_rm_ns_para_cmd);
 		break;
 	case KRL_INDEX_RM_WRITE_IMG:
 		p_u8_dst = g_st_rm_writeimg_cmd;
+		dst_len = sizeof(g_st_rm_writeimg_cmd);
 		break;
 	case KRL_INDEX_RM_TLK:
 		p_u8_dst = g_st_rm_tlk_cmd;
+		dst_len = sizeof(g_st_rm_tlk_cmd);
 		break;
 	case KRL_INDEX_RM_KL_TESTMODE:
 		p_u8_dst = g_st_rm_kl_testmode_cmd;
+		dst_len = sizeof(g_st_rm_kl_testmode_cmd);
 		break;
 	default:
 		dev_err(&g_spi->dev, "Raydium - %s : no such kernel table - err:%d\n",
@@ -1660,11 +1679,12 @@ int rm_set_kernel_tbl(int i_func_idx, u8 *p_u8_src)
 	u16_len = p_u8_len[KRL_TBL_FIELD_POS_LEN_H];
 	u16_len <<= 8;
 	u16_len |= p_u8_len[KRL_TBL_FIELD_POS_LEN_L];
+	dst_len = u16_len > dst_len ? dst_len : u16_len;
 
-	missing = copy_from_user(p_u8_dst, p_u8_src, u16_len);
+	missing = copy_from_user(p_u8_dst, p_u8_src, dst_len);
 	if (missing) {
-		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%zu\n",
-			__func__, u16_len, missing);
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%zu, miss:%zu\n",
+			__func__, dst_len, missing);
 		kfree(p_u8_len);
 		return missing;
 	}
@@ -1792,7 +1812,7 @@ static int rm_tch_ts_send_signal(int pid, int i_info)
 	info.si_int = i_info;	/*real time signals may have 32 bits of data.*/
 
 	rcu_read_lock();
-	t = find_task_by_vpid(pid);
+	t = pid_task(find_vpid(pid), PIDTYPE_PID);
 	rcu_read_unlock();
 	if (t == NULL) {
 		dev_err(&g_spi->dev, "Raydium - %s : no such pid\n", __func__);
@@ -2112,8 +2132,6 @@ static void rm_tch_init_ts_structure_part(void)
 	mutex_lock(&g_st_ts.mutex_scan_mode);
 	g_st_ts.u8_scan_mode_state = RM_SCAN_ACTIVE_MODE;
 	mutex_unlock(&g_st_ts.mutex_scan_mode);
-
-	g_st_ctrl.u8_event_report_mode = EVENT_REPORT_MODE_STYLUS_ERASER_FINGER;
 
 	g_pu8_burstread_buf = NULL;
 #if (ISR_POST_HANDLER == WORK_QUEUE)
@@ -3919,10 +3937,12 @@ static void rm_tch_spi_shutdown(struct spi_device *spi)
 
 	free_irq(ts->irq, ts);
 
-	if (ts->regulator_3v3 && ts->regulator_1v8) {
+	if (ts->regulator_3v3 &&
+			regulator_is_enabled(ts->regulator_3v3))
 		regulator_disable(ts->regulator_3v3);
+	if (ts->regulator_1v8 &&
+		regulator_is_enabled(ts->regulator_1v8))
 		regulator_disable(ts->regulator_1v8);
-	}
 }
 
 static int rm_tch_spi_remove(struct spi_device *spi)
@@ -3940,8 +3960,7 @@ static int rm_tch_spi_remove(struct spi_device *spi)
 		destroy_workqueue(g_st_ts.rm_workqueue);
 #endif
 
-	if (&g_st_ts.wakelock_initialization)
-		wake_lock_destroy(&g_st_ts.wakelock_initialization);
+	wake_lock_destroy(&g_st_ts.wakelock_initialization);
 
 	mutex_destroy(&g_st_ts.mutex_scan_mode);
 	mutex_destroy(&g_st_ts.mutex_ns_mode);

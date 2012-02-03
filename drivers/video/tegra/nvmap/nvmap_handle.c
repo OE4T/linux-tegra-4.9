@@ -41,6 +41,7 @@
 #include <asm/pgtable.h>
 
 #include <mach/iovmm.h>
+#include <mach/hardware.h>
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
@@ -787,7 +788,9 @@ static const unsigned int heap_policy_large[] = {
 
 int nvmap_alloc_handle_id(struct nvmap_client *client,
 			  unsigned long id, unsigned int heap_mask,
-			  size_t align, unsigned int flags)
+			  size_t align,
+			  u8 kind,
+			  unsigned int flags)
 {
 	struct nvmap_handle *h = NULL;
 	const unsigned int *alloc_policy;
@@ -810,6 +813,8 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
+	h->kind = kind;
+	h->map_resources = 0;
 
 #ifndef CONFIG_TEGRA_IOVMM
 	/* convert iovmm requests to generic carveout. */
@@ -1307,6 +1312,12 @@ int nvmap_get_handle_param(struct nvmap_client *client,
 			mutex_unlock(&h->lock);
 		} else
 			*result = NVMAP_HEAP_IOVMM;
+		break;
+	case NVMAP_HANDLE_PARAM_KIND:
+		*result = h->kind;
+		break;
+	case NVMAP_HANDLE_PARAM_COMPR:
+		/* ignored, to be removed */
 		break;
 	default:
 		err = -EINVAL;

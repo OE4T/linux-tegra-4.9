@@ -817,7 +817,7 @@ void *nvmap_mmap(struct nvmap_handle_ref *ref)
 	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
 
-	v = alloc_vm_area(adj_size, NULL);
+	v = alloc_vm_area(adj_size);
 	if (!v) {
 		nvmap_handle_put(h);
 		return NULL;
@@ -915,7 +915,10 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 		return r;
 
 	err = nvmap_alloc_handle_id(client, nvmap_ref_to_id(r),
-				    heap_mask, align, flags);
+				    heap_mask, align,
+				    0, /* kind n/a */
+				    flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
+					      NVMAP_HANDLE_COMPR_SPECIFIED));
 
 	if (err) {
 		nvmap_free_handle_id(client, nvmap_ref_to_id(r));
@@ -950,7 +953,10 @@ struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
 	h = r->handle;
 	h->pgalloc.iovm_addr = iovm_start;
 	err = nvmap_alloc_handle_id(client, nvmap_ref_to_id(r),
-			default_heap, align, flags);
+				    default_heap, align,
+				    0, /* kind n/a */
+				    flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
+					      NVMAP_HANDLE_COMPR_SPECIFIED));
 	if (err)
 		goto fail;
 

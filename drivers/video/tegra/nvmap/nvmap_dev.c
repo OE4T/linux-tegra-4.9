@@ -27,7 +27,6 @@
 #include <linux/kernel.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
-#include <linux/module.h>
 #include <linux/oom.h>
 #include <linux/platform_device.h>
 #include <linux/seq_file.h>
@@ -134,6 +133,8 @@ int is_nvmap_vma(struct vm_area_struct *vma)
 
 struct device *nvmap_client_to_device(struct nvmap_client *client)
 {
+	if (!client)
+		return 0;
 	if (client->super)
 		return client->dev->dev_super.this_device;
 	else
@@ -1132,7 +1133,7 @@ static int nvmap_probe(struct platform_device *pdev)
 		goto fail;
 	}
 #endif
-	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, NULL);
+	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE);
 	if (!dev->vm_rgn) {
 		e = -ENOMEM;
 		dev_err(&pdev->dev, "couldn't allocate remapping region\n");

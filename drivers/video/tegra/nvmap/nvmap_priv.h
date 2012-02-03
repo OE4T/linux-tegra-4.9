@@ -90,6 +90,9 @@ struct nvmap_handle {
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
 	size_t align;
+	u8 kind;                /* memory kind (0=pitch, !0 -> blocklinear) */
+	void *map_resources;    /* mapping resources associated with the
+				   buffer */
 	struct nvmap_client *owner;
 	struct nvmap_handle_ref *owner_ref; /* use this ref to avoid spending
 			time on validation in some cases.
@@ -289,7 +292,8 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 
 int nvmap_alloc_handle_id(struct nvmap_client *client,
 			  unsigned long id, unsigned int heap_mask,
-			  size_t align, unsigned int flags);
+			  size_t align, u8 kind,
+			  unsigned int flags);
 
 void nvmap_free_handle_id(struct nvmap_client *c, unsigned long id);
 
@@ -342,5 +346,8 @@ static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
 	flush_tlb_kernel_page(kaddr);
 #endif
 }
+
+int nvmap_get_handle_param_u32(struct nvmap_client *client,
+			       struct nvmap_handle *h, u32 param, u32 *result);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

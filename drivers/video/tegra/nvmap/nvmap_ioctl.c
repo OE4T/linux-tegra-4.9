@@ -319,7 +319,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 #endif
 
 	return nvmap_alloc_handle_id(client, handle, op.heap_mask,
-				     op.align, op.flags);
+				     op.align, op.kind, op.flags);
 }
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
@@ -473,11 +473,13 @@ out:
 	return err;
 }
 
+
 int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 {
 	struct nvmap_handle_param op;
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_handle *h;
+	u32 result;
 	int err = 0;
 	ulong handle;
 
@@ -489,50 +491,8 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 	if (!h)
 		return -EINVAL;
 
-	switch (op.param) {
-	case NVMAP_HANDLE_PARAM_SIZE:
-		op.result = h->orig_size;
-		break;
-	case NVMAP_HANDLE_PARAM_ALIGNMENT:
-		mutex_lock(&h->lock);
-		if (!h->alloc)
-			op.result = 0;
-		else if (h->heap_pgalloc)
-			op.result = PAGE_SIZE;
-		else if (h->carveout->base)
-			op.result = (h->carveout->base & -h->carveout->base);
-		else
-			op.result = SZ_4M;
-		mutex_unlock(&h->lock);
-		break;
-	case NVMAP_HANDLE_PARAM_BASE:
-		if (WARN_ON(!h->alloc || !atomic_add_return(0, &h->pin)))
-			op.result = -1ul;
-		else if (!h->heap_pgalloc) {
-			mutex_lock(&h->lock);
-			op.result = h->carveout->base;
-			mutex_unlock(&h->lock);
-		} else if (h->pgalloc.contig)
-			op.result = page_to_phys(h->pgalloc.pages[0]);
-		else if (h->pgalloc.area)
-			op.result = h->pgalloc.area->iovm_start;
-		else
-			op.result = -1ul;
-		break;
-	case NVMAP_HANDLE_PARAM_HEAP:
-		if (!h->alloc)
-			op.result = 0;
-		else if (!h->heap_pgalloc) {
-			mutex_lock(&h->lock);
-			op.result = nvmap_carveout_usage(client, h->carveout);
-			mutex_unlock(&h->lock);
-		} else
-			op.result = NVMAP_HEAP_IOVMM;
-		break;
-	default:
-		err = -EINVAL;
-		break;
-	}
+	err = nvmap_get_handle_param_u32(client, h, op.param, &result);
+	op.result = (long unsigned int)result;
 
 	if (!err && copy_to_user(arg, &op, sizeof(op)))
 		err = -EFAULT;

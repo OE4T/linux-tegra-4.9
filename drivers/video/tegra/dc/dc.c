@@ -1079,6 +1079,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	dc = windows[0]->dc;
 
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		cancel_delayed_work_sync(&dc->one_shot_work);
+
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
@@ -1255,12 +1258,16 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		update_mask |= NC_HOST_TRIG;
-
-	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+		schedule_delayed_work(&dc->one_shot_work,
+				msecs_to_jiffies(dc->one_shot_delay_ms));
 
 	/* update EMC clock if calculated bandwidth has changed */
 	tegra_dc_program_bandwidth(dc);
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		update_mask |= NC_HOST_TRIG;
+
+	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 
 	mutex_unlock(&dc->lock);
 
@@ -1979,11 +1986,28 @@ static void tegra_dc_vblank(struct work_struct *work)
 	}
 }
 
+/* Must acquire dc lock before invoking this function. */
+void tegra_dc_host_trigger(struct tegra_dc *dc)
+{
+	/* We release the lock here to prevent deadlock between
+	 * cancel_delayed_work_sync and one-shot work. */
+	mutex_unlock(&dc->lock);
+	cancel_delayed_work_sync(&dc->one_shot_work);
+	mutex_lock(&dc->lock);
+	schedule_delayed_work(&dc->one_shot_work,
+				msecs_to_jiffies(dc->one_shot_delay_ms));
+	tegra_dc_program_bandwidth(dc);
+	tegra_dc_writel(dc, NC_HOST_TRIG, DC_CMD_STATE_CONTROL);
+}
+
 static void tegra_dc_one_shot_worker(struct work_struct *work)
 {
-	struct tegra_dc *dc = container_of(work, struct tegra_dc, one_shot_work);
+	struct tegra_dc *dc = container_of(
+		to_delayed_work(work), struct tegra_dc, one_shot_work);
+	mutex_lock(&dc->lock);
 	/* memory client has gone idle */
 	tegra_dc_clear_bandwidth(dc);
+	mutex_unlock(&dc->lock);
 }
 
 /* return an arbitrarily large number if count overflow occurs.
@@ -2082,8 +2106,6 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 	}
 
 	if (status & FRAME_END_INT) {
-		schedule_work(&dc->one_shot_work);
-
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
@@ -2535,6 +2557,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	/* it's important that new underflow work isn't scheduled before the
 	 * lock is acquired. */
 	cancel_delayed_work_sync(&dc->underflow_work);
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		cancel_delayed_work_sync(&dc->one_shot_work);
 
 	mutex_lock(&dc->lock);
 
@@ -2677,6 +2701,9 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 	dc->clk = clk;
 	dc->emc_clk = emc_clk;
 	dc->shift_clk_div = 1;
+	/* Initialize one shot work delay, it will be assigned by dsi
+	 * according to refresh rate later. */
+	dc->one_shot_delay_ms = 40;
 
 	dc->base_res = base_res;
 	dc->base = base;
@@ -2701,7 +2728,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 #endif
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
 	INIT_DELAYED_WORK(&dc->underflow_work, tegra_dc_underflow_worker);
-	INIT_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);
+	INIT_DELAYED_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);
 
 	tegra_dc_init_lut_defaults(&dc->fb_lut);
 

@@ -956,6 +956,12 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 	/* Set up pixel clock */
 	dc->shift_clk_div = dsi->shift_clk_div;
 	dc->mode.pclk = (clk * 1000) / dsi->shift_clk_div;
+	/* TODO: Define one shot work delay in board file. */
+	/* Since for one-shot mode, refresh rate is usually set larger than
+	 * expected refresh rate, it needs at least 3 frame period. Less
+	 * delay one shot work is, more powering saving we have. */
+	dc->one_shot_delay_ms = 4 *
+			DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 
 	/* Enable DSI clock */
 	tegra_dc_setup_clk(dc, dsi->dsi_clk);

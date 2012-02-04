@@ -134,7 +134,8 @@ struct tegra_dc {
 #endif
 	struct tegra_dc_lut		fb_lut;
 	struct delayed_work		underflow_work;
-	struct work_struct		one_shot_work;
+	u32				one_shot_delay_ms;
+	struct delayed_work		one_shot_work;
 };
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)

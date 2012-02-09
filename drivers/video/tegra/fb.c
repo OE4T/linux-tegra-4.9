@@ -146,6 +146,33 @@ static int tegra_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
+static int tegra_fb_setcolreg(unsigned regno, unsigned red, unsigned green,
+	unsigned blue, unsigned transp, struct fb_info *info)
+{
+	struct fb_var_screeninfo *var = &info->var;
+
+	if (info->fix.visual == FB_VISUAL_TRUECOLOR ||
+	    info->fix.visual == FB_VISUAL_DIRECTCOLOR) {
+		u32 v;
+
+		if (regno >= 16)
+			return -EINVAL;
+
+		red = (red >> (16 - info->var.red.length));
+		green = (green >> (16 - info->var.green.length));
+		blue = (blue >> (16 - info->var.blue.length));
+
+		v = (red << var->red.offset) |
+			(green << var->green.offset) |
+			(blue << var->blue.offset);
+
+		((u32 *)info->pseudo_palette)[regno] = v;
+	}
+
+	return 0;
+}
+
+
 static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
@@ -160,16 +187,41 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		return -EINVAL;
 
 	if (info->fix.visual == FB_VISUAL_TRUECOLOR ||
-	    info->fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		for (i = 0; i < cmap->len; i++) {
-			dc->fb_lut.r[start+i] = *red++ >> 8;
-			dc->fb_lut.g[start+i] = *green++ >> 8;
-			dc->fb_lut.b[start+i] = *blue++ >> 8;
+		info->fix.visual == FB_VISUAL_DIRECTCOLOR) {
+		/*
+		 * For now we are considering color schemes with
+		 * cmap->len <=16 as special case of basic color
+		 * scheme to support fbconsole.But for DirectColor
+		 * visuals(like the one we actually have, that include
+		 * a HW LUT),the way it's intended to work is that the
+		 * actual LUT HW is programmed to the intended values,
+		 * even for small color maps like those with 16 or fewer
+		 * entries. The pseudo_palette is then programmed to the
+		 * identity transform.
+		 */
+		if (cmap->len <= 16) {
+			/* Low-color schemes like fbconsole*/
+			u16 *transp = cmap->transp;
+			u_int vtransp = 0xffff;
+
+			for (i = 0; i < cmap->len; i++) {
+				if (transp)
+					vtransp = *transp++;
+				if (tegra_fb_setcolreg(start++, *red++,
+					*green++, *blue++,
+					vtransp, info))
+						return -EINVAL;
+			}
+		} else {
+			/* High-color schemes*/
+			for (i = 0; i < cmap->len; i++) {
+				dc->fb_lut.r[start+i] = *red++ >> 8;
+				dc->fb_lut.g[start+i] = *green++ >> 8;
+				dc->fb_lut.b[start+i] = *blue++ >> 8;
+			}
+			tegra_dc_update_lut(dc, -1, -1);
 		}
-
-		tegra_dc_update_lut(dc, -1, -1);
 	}
-
 	return 0;
 }
 

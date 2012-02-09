@@ -225,6 +225,49 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	return 0;
 }
 
+static void tegra_fb_flip_win(struct tegra_fb_info *tegra_fb)
+{
+	struct tegra_dc_win *win = tegra_fb->win;
+	struct fb_info *info = tegra_fb->info;
+
+	win->x.full = dfixed_const(0);
+	win->y.full = dfixed_const(0);
+	win->w.full = dfixed_const(tegra_fb->xres);
+	win->h.full = dfixed_const(tegra_fb->yres);
+
+	/* TODO: set to output res dc */
+	win->out_x = 0;
+	win->out_y = 0;
+	win->out_w = tegra_fb->xres;
+	win->out_h = tegra_fb->yres;
+	win->z = 0;
+	win->phys_addr = info->fix.smem_start +
+		(info->var.yoffset * info->fix.line_length) +
+		(info->var.xoffset * (info->var.bits_per_pixel / 8));
+	win->virt_addr = info->screen_base;
+
+	win->phys_addr_u = 0;
+	win->phys_addr_v = 0;
+	win->stride = info->fix.line_length;
+	win->stride_uv = 0;
+
+	switch (info->var.bits_per_pixel) {
+	default:
+		WARN_ON(1);
+		/* fall through */
+	case 32:
+		tegra_fb->win->fmt = TEGRA_WIN_FMT_R8G8B8A8;
+		break;
+	case 16:
+		tegra_fb->win->fmt = TEGRA_WIN_FMT_B5G6R5;
+		break;
+	}
+	win->flags = TEGRA_WIN_FLAG_ENABLED;
+
+	tegra_dc_update_windows(&tegra_fb->win, 1);
+	tegra_dc_sync_windows(&tegra_fb->win, 1);
+}
+
 static int tegra_fb_blank(int blank, struct fb_info *info)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
@@ -234,6 +277,16 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		dev_dbg(&tegra_fb->ndev->dev, "unblank\n");
 		tegra_fb->win->flags = TEGRA_WIN_FLAG_ENABLED;
 		tegra_dc_enable(tegra_fb->win->dc);
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+		/*
+		* TODO:
+		* This is a work around to provide an unblanking flip
+		* to dc driver, required to display fb-console after
+		* a blank event,and needs to be replaced by a proper
+		* unblanking mechanism
+		*/
+		tegra_fb_flip_win(tegra_fb);
+#endif
 		return 0;
 
 	case FB_BLANK_NORMAL:

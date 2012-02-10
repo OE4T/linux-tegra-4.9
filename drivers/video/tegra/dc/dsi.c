@@ -2601,11 +2601,11 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 
 	dsi = tegra_dc_get_outdata(dc);
 
+	if (!dsi->enabled)
+		return;
+
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
-
-	if (!dsi->enabled)
-		goto fail;
 
 	if (!dsi->info.power_saving_suspend) {
 		if (dsi->ulpm) {

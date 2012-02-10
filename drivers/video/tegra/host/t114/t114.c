@@ -33,6 +33,7 @@
 #include "gr3d/gr3d_t114.h"
 #include "gr3d/scale3d.h"
 #include "msenc/msenc.h"
+#include "tsec/tsec.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -143,9 +144,12 @@ static struct nvhost_device devices[] = {
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
+	.init          = nvhost_tsec_init,
+	.deinit        = nvhost_tsec_deinit,
+	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+	.moduleid      = NVHOST_MODULE_TSEC,
 } };
 
 static inline int t114_nvhost_hwctx_handler_init(
@@ -182,6 +186,8 @@ static int t114_channel_init(struct nvhost_channel *ch,
 int nvhost_init_t114_channel_support(struct nvhost_master *host)
 {
 	int result = nvhost_init_t20_channel_support(host);
+	/* We're using 8 out of 9 channels supported by hw */
+	host->nb_channels = NV_HOST1X_CHANNELS_T114-1;
 	host->op.channel.init = t114_channel_init;
 
 	return result;

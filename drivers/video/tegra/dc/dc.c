@@ -2580,11 +2580,12 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 
 	unsigned long val = 0;
 
+	mutex_lock(&shared_lock);
+
 	dev_warn(&dc->ndev->dev, "overlay stuck in underflow state.  resetting.\n");
 
 	tegra_dc_ext_disable(dc->ext);
 
-	mutex_lock(&shared_lock);
 	mutex_lock(&dc->lock);
 
 	if (dc->enabled == false)

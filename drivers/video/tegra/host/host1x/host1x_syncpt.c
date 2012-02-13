@@ -19,7 +19,6 @@
  */
 
 #include <linux/nvhost_ioctl.h>
-#include <linux/platform_device.h>
 #include "nvhost_syncpt.h"
 #include "dev.h"
 #include "host1x_syncpt.h"

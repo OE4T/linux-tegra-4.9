@@ -49,6 +49,7 @@ struct nvhost_device {
 	const char	*name;		/* Device name */
 	struct device	dev;		/* Linux device struct */
 	int		id;		/* Separates clients of same hw */
+	int		index;		/* Hardware channel number */
 	u32		num_resources;	/* Number of resources following */
 	struct resource	*resource;	/* Resources (IOMEM in particular) */
 	struct resource	*reg_mem;

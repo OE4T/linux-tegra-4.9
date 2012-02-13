@@ -18,10 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*** restore ***/
-
+#include <linux/module.h>
 #include <mach/nvmap.h>
 #include <linux/slab.h>
+
 #include "t20/t20.h"
 #include "host1x/host1x_channel.h"
 #include "host1x/host1x_hardware.h"
@@ -29,6 +29,11 @@
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "gr3d.h"
+#include "bus_client.h"
+
+#ifndef TEGRA_POWERGATE_3D1
+#define TEGRA_POWERGATE_3D1	-1
+#endif
 
 void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 {
@@ -145,3 +150,63 @@ int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev)
 {
 	return host1x_save_context(dev, NVSYNCPT_3D);
 }
+
+static int gr3d_probe(struct nvhost_device *dev)
+{
+	return nvhost_client_device_init(dev);
+}
+
+static int __exit gr3d_remove(struct nvhost_device *dev)
+{
+	/* Add clean-up */
+	return 0;
+}
+
+static int gr3d_suspend(struct nvhost_device *dev, pm_message_t state)
+{
+	return nvhost_client_device_suspend(dev);
+}
+
+static int gr3d_resume(struct nvhost_device *dev)
+{
+	dev_info(&dev->dev, "resuming\n");
+	return 0;
+}
+
+struct nvhost_device *gr3d_device;
+
+static struct nvhost_driver gr3d_driver = {
+	.probe = gr3d_probe,
+	.remove = __exit_p(gr3d_remove),
+#ifdef CONFIG_PM
+	.suspend = gr3d_suspend,
+	.resume = gr3d_resume,
+#endif
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "gr3d",
+	}
+};
+
+static int __init gr3d_init(void)
+{
+	int err;
+
+	gr3d_device = nvhost_get_device("gr3d");
+	if (!gr3d_device)
+		return -ENXIO;
+
+	err = nvhost_device_register(gr3d_device);
+	if (err)
+		return err;
+
+	return nvhost_driver_register(&gr3d_driver);
+}
+
+static void __exit gr3d_exit(void)
+{
+	nvhost_driver_unregister(&gr3d_driver);
+}
+
+module_init(gr3d_init);
+module_exit(gr3d_exit);

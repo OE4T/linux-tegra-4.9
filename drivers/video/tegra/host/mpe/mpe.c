@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/module.h>
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "host1x/host1x_hardware.h"
@@ -26,6 +27,7 @@
 #include "host1x/host1x_hwctx.h"
 #include "t20/t20.h"
 #include <linux/slab.h>
+#include "bus_client.h"
 
 enum {
 	HWCTX_REGINFO_NORMAL = 0,
@@ -575,3 +577,63 @@ int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 {
 	return host1x_save_context(dev, NVSYNCPT_MPE);
 }
+
+static int mpe_probe(struct nvhost_device *dev)
+{
+	return nvhost_client_device_init(dev);
+}
+
+static int __exit mpe_remove(struct nvhost_device *dev)
+{
+	/* Add clean-up */
+	return 0;
+}
+
+static int mpe_suspend(struct nvhost_device *dev, pm_message_t state)
+{
+	return nvhost_client_device_suspend(dev);
+}
+
+static int mpe_resume(struct nvhost_device *dev)
+{
+	dev_info(&dev->dev, "resuming\n");
+	return 0;
+}
+
+struct nvhost_device *mpe_device;
+
+static struct nvhost_driver mpe_driver = {
+	.probe = mpe_probe,
+	.remove = __exit_p(mpe_remove),
+#ifdef CONFIG_PM
+	.suspend = mpe_suspend,
+	.resume = mpe_resume,
+#endif
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "mpe",
+	}
+};
+
+static int __init mpe_init(void)
+{
+	int err;
+
+	mpe_device = nvhost_get_device("mpe");
+	if (!mpe_device)
+		return -ENXIO;
+
+	err = nvhost_device_register(mpe_device);
+	if (err)
+		return err;
+
+	return nvhost_driver_register(&mpe_driver);
+}
+
+static void __exit mpe_exit(void)
+{
+	nvhost_driver_unregister(&mpe_driver);
+}
+
+module_init(mpe_init);
+module_exit(mpe_exit);

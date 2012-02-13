@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/bus_client.h
  *
- * Tegra Graphics Host Cpu Register Access
+ * Tegra Graphics Host client
  *
  * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
@@ -29,5 +29,11 @@ void nvhost_read_module_regs(struct nvhost_device *ndev,
 
 void nvhost_write_module_regs(struct nvhost_device *ndev,
 			u32 offset, int count, const u32 *values);
+
+int nvhost_client_user_init(struct nvhost_device *dev);
+
+int nvhost_client_device_init(struct nvhost_device *dev);
+
+int nvhost_client_device_suspend(struct nvhost_device *dev);
 
 #endif

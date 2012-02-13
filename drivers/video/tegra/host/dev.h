@@ -27,7 +27,12 @@
 #include "nvhost_channel.h"
 #include "chip_support.h"
 
-#define NVHOST_MAJOR 0 /* dynamic */
+#define TRACE_MAX_LENGTH	128U
+#define IFACE_NAME		"nvhost"
+
+extern int nvhost_major;
+extern int nvhost_minor;
+
 struct nvhost_hwctx;
 
 struct nvhost_master {
@@ -49,8 +54,14 @@ struct nvhost_master {
 	atomic_t clientid;
 };
 
+extern struct nvhost_master *nvhost;
+
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_debug_dump(struct nvhost_master *master);
+
+#define host_device_op(host)	(host->op.nvhost_dev)
+
+struct nvhost_device *nvhost_get_device(char *name);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
 

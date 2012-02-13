@@ -129,6 +129,11 @@ struct nvhost_chip_support {
 		void (*free_host_general_irq)(struct nvhost_intr *);
 		int (*request_syncpt_irq)(struct nvhost_intr_syncpt *syncpt);
 	} intr;
+
+	struct {
+		struct nvhost_device *(*get_nvhost_device)(struct nvhost_master *host,
+			char *name);
+	} nvhost_dev;
 };
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

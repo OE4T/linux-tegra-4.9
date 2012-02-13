@@ -19,7 +19,6 @@
  */
 
 #include <linux/slab.h>
-#include <linux/platform_device.h>
 #include "nvhost_cdma.h"
 #include "dev.h"
 

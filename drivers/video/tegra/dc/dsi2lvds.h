@@ -20,11 +20,12 @@
 struct tegra_dc_dsi2lvds_data {
 	struct tegra_dc *dc;
 	struct tegra_dc_dsi_data *dsi;
-	struct i2c_client *client;
+	struct i2c_client *client_i2c;
 
 	struct mutex lock;
 };
 
 extern inline void *tegra_dc_dsi_get_outdata(struct tegra_dc *);
+extern inline void tegra_dc_dsi_set_outdata(struct tegra_dc *, void*);
 
 #endif

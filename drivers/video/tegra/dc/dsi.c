@@ -437,6 +437,12 @@ inline void *tegra_dc_dsi_get_outdata(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_dsi_get_outdata);
 
+inline void tegra_dc_dsi_set_outdata(struct tegra_dc *dc, void *data)
+{
+	((struct tegra_dc_dsi_data *)(dc->out_data))->dsi2lvds_out_data = data;
+}
+EXPORT_SYMBOL(tegra_dc_dsi_set_outdata);
+
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;

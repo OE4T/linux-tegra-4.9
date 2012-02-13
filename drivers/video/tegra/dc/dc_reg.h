@@ -458,8 +458,11 @@
 #define  UV_LINE_STRIDE(x)	(((x) & 0xffff) << 16)
 #define  GET_LINE_STRIDE(x)	((x) & 0xffff)
 #define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
+
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define DC_WIN_BUF_STRIDE			0x70b
 #define DC_WIN_UV_BUF_STRIDE			0x70c
+#endif
 #define DC_WIN_BUFFER_ADDR_MODE			0x70d
 #define  DC_WIN_BUFFER_ADDR_MODE_LINEAR		(0 << 0)
 #define  DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV	(0 << 16)

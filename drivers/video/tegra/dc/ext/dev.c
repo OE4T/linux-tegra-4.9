@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dev.c
  *
- * Copyright (C) 2011, NVIDIA Corporation
+ * Copyright (C) 2011-2012, NVIDIA Corporation
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -399,6 +399,11 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	int work_index;
 	int i, ret = 0;
 
+#ifdef CONFIG_ANDROID
+	int index_check[DC_N_WINDOWS] = {0, };
+	int zero_index_id = 0;
+#endif
+
 	if (!user->nvmap)
 		return -EFAULT;
 
@@ -412,6 +417,21 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 
 	INIT_WORK(&data->work, tegra_dc_ext_flip_worker);
 	data->ext = ext;
+
+#ifdef CONFIG_ANDROID
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		index_check[i] = args->win[i].index;
+		if (index_check[i] == 0)
+			zero_index_id = i;
+	}
+
+	if (index_check[DC_N_WINDOWS - 1] != 0) {
+		struct tegra_dc_ext_flip_windowattr win_temp;
+		win_temp = args->win[DC_N_WINDOWS - 1];
+		args->win[DC_N_WINDOWS - 1] = args->win[zero_index_id];
+		args->win[zero_index_id] = win_temp;
+	}
+#endif
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];

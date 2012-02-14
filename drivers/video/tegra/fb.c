@@ -134,7 +134,11 @@ static int tegra_fb_set_par(struct fb_info *info)
 		 * client requests it
 		 */
 		stereo = !!(var->vmode & info->mode->vmode &
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 					FB_VMODE_STEREO_FRAME_PACK);
+#else
+					FB_VMODE_STEREO_LEFT_RIGHT);
+#endif
 
 		tegra_dc_set_fb_mode(tegra_fb->win->dc, info->mode, stereo);
 

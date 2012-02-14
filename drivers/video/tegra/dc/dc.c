@@ -1725,6 +1725,8 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		mode.h_ref_to_sync, mode.v_ref_to_sync
 	);
 
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+	/* Double the pixel clock and update v_active only for frame packed mode */
 	if (mode.stereo_mode) {
 		mode.pclk *= 2;
 		/* total v_active = yres*2 + activespace */
@@ -1733,6 +1735,7 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 				fbmode->upper_margin +
 				fbmode->lower_margin;
 	}
+#endif
 
 	mode.flags = 0;
 

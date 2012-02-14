@@ -121,7 +121,11 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.right_margin =	110,	/* h_front_porch */
 		.lower_margin =	5,	/* v_front_porch */
 		.vmode = FB_VMODE_NONINTERLACED |
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 				 FB_VMODE_STEREO_FRAME_PACK,
+#else
+				 FB_VMODE_STEREO_LEFT_RIGHT,
+#endif
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
 
@@ -182,7 +186,11 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.right_margin =	638,	/* h_front_porch */
 		.lower_margin =	4,	/* v_front_porch */
 		.vmode = FB_VMODE_NONINTERLACED |
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 				 FB_VMODE_STEREO_FRAME_PACK,
+#else
+				 FB_VMODE_STEREO_LEFT_RIGHT,
+#endif
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
 
@@ -706,6 +714,11 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 
 	if (!mode->pixclock)
 		return false;
+
+#ifdef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+	if (PICOS2KHZ(mode->pixclock) > 74250)
+		return false;
+#endif
 
 	for (i = 0; i < ARRAY_SIZE(tegra_dc_hdmi_supported_modes); i++) {
 		const struct fb_videomode *supported_mode
@@ -1476,7 +1489,12 @@ static void tegra_dc_hdmi_setup_stereo_infoframe(struct tegra_dc *dc)
 	stereo.regid1 = 0x0c;
 	stereo.regid2 = 0x00;
 	stereo.hdmi_video_format = 2; /* 3D_Structure present */
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 	stereo._3d_structure = 0; /* frame packing */
+#else
+	stereo._3d_structure = 8; /* side-by-side (half) */
+	stereo._3d_ext_data = 0; /* something which fits into 00XX bit req */
+#endif
 
 	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_GENERIC_HEADER,
 					HDMI_INFOFRAME_TYPE_VENDOR,

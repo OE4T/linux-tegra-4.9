@@ -381,7 +381,11 @@ int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
 					if (tegra_edid_mode_support_stereo(
 						&specs->modedb[j]))
 						specs->modedb[j].vmode |=
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 						FB_VMODE_STEREO_FRAME_PACK;
+#else
+						FB_VMODE_STEREO_LEFT_RIGHT;
+#endif
 				}
 			}
 		}
@@ -459,7 +463,11 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 					if (tegra_edid_mode_support_stereo(
 						&specs->modedb[j]))
 						specs->modedb[j].vmode |=
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 						FB_VMODE_STEREO_FRAME_PACK;
+#else
+						FB_VMODE_STEREO_LEFT_RIGHT;
+#endif
 				}
 			}
 		}

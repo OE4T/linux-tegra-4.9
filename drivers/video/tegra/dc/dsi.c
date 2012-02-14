@@ -291,14 +291,19 @@ const u32 init_reg[] = {
 
 inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
+	unsigned long ret;
+
 	BUG_ON(!nvhost_module_powered(nvhost_get_host(dsi->dc->ndev)->dev));
-	return readl(dsi->base + reg * 4);
+	ret = readl(dsi->base + reg * 4);
+	trace_printk("readl %p=%#08lx\n", dsi->base + reg * 4, ret);
+	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
 
 inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 {
 	BUG_ON(!nvhost_module_powered(nvhost_get_host(dsi->dc->ndev)->dev));
+	trace_printk("writel %p=%#08x\n", dsi->base + reg * 4, val);
 	writel(val, dsi->base + reg * 4);
 }
 EXPORT_SYMBOL(tegra_dsi_writel);

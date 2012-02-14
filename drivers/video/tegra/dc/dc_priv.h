@@ -150,14 +150,19 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 					   unsigned long reg)
 {
+	unsigned long ret;
+
 	BUG_ON(!nvhost_module_powered(nvhost_get_host(dc->ndev)->dev));
-	return readl(dc->base + reg * 4);
+	ret = readl(dc->base + reg * 4);
+	trace_printk("readl %p=%#08lx\n", dc->base + reg * 4, ret);
+	return ret;
 }
 
 static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 				   unsigned long reg)
 {
 	BUG_ON(!nvhost_module_powered(nvhost_get_host(dc->ndev)->dev));
+	trace_printk("writel %p=%#08lx\n", dc->base + reg * 4, val);
 	writel(val, dc->base + reg * 4);
 }
 

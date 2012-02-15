@@ -767,8 +767,8 @@ static const struct file_operations nvhost_ctrlops = {
 static void power_on_host(struct nvhost_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
-	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
 	nvhost_syncpt_reset(&host->syncpt);
+	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
 }
 
 static int power_off_host(struct nvhost_device *dev)

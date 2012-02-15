@@ -1324,7 +1324,7 @@ static bool tegra_dsi_host_busy(struct tegra_dc_dsi_data *dsi)
 		goto fail;
 	}
 fail:
-	return err;
+	return (err < 0 ? true : false);
 }
 
 static void tegra_dsi_reset_underflow_overflow
@@ -1440,9 +1440,12 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 	}
 
 	if (tegra_dsi_host_busy(dsi)) {
-		err = -EBUSY;
-		dev_err(&dc->ndev->dev, "DSI host busy\n");
-		goto fail;
+		tegra_dsi_soft_reset(dsi);
+		if (tegra_dsi_host_busy(dsi)) {
+			err = -EBUSY;
+			dev_err(&dc->ndev->dev, "DSI host busy\n");
+			goto fail;
+		}
 	}
 
 	tegra_dsi_reset_underflow_overflow(dsi);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 NVIDIA Corporation.
+/* Copyright (C) 2012 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -112,7 +112,7 @@ struct nvc_param {
  * algorithms.
  * The PM actions:
  * _PWR_ERR = Non-valid state.
- * _PWR_OFF_DELAYED = _PWR_OFF is called after a period of time.
+ * _PWR_OFF_FORCE = _PWR_OFF is forced regardless of standby mechanisms.
  * _PWR_OFF = Device, regulators, clocks, etc is turned off.  The longest
  *            transition time to _PWR_ON is from this state.
  * _PWR_STDBY_OFF = Device is useless but powered.  No communication possible.
@@ -122,11 +122,10 @@ struct nvc_param {
  * _PWR_COMM = Device is powered enough to communicate with the device.
  * _PWR_ON = Device is at full power with active output.
  *
- * The kernel drivers treat these calls as guaranteed level of service.
+ * The kernel drivers treat these calls as Guaranteed Level Of Service.
  */
 
 #define NVC_PWR_ERR			0
-#define NVC_PWR_OFF_DELAYED		1 /* obsolete - never used */
 #define NVC_PWR_OFF_FORCE		1
 #define NVC_PWR_OFF			2
 #define NVC_PWR_STDBY_OFF		3
@@ -138,6 +137,55 @@ struct nvc_regulator {
 	bool vreg_flag;
 	struct regulator *vreg;
 	const char *vreg_name;
+};
+
+/* The GPIO mechanism uses the _gpio_type in the device's header file as a key
+ * to define all the possible GPIO's the device will need.  The key is used to
+ * combine the GPIO's defined in the platform board file using the
+ * nvc_gpio_pdata structure with the nvc_gpio structure in the nvc kernel
+ * driver.
+ */
+struct nvc_gpio_pdata {
+	/* use a _gpio_type enum from the device's header file */
+	unsigned gpio_type;
+	/* the GPIO system number */
+	unsigned gpio;
+	/* init_en is typically set to true for all GPIO's used by the driver.
+	 * However, some GPIO's are used by multiple drivers (CSI MUX, reset,
+	 * etc.).  In this case, this is set true for only one of the drivers
+	 * that uses the GPIO and false for the others.  If the platform board
+	 * file initializes the GPIO, then this is false for all of the drivers
+	 * using the GPIO.
+	 */
+	bool init_en;
+	/* this defines the assert level for the general purpose GPIO's
+	 * (_GPIO_TYPE_GPx, etc.).  The _GPIO_TYPE_GPx can be used for a GPIO
+	 * that the driver doesn't know about but is needed in order for the
+	 * device to work (CSI select, regulator, etc.).  The driver will
+	 * blindly assert the GPIO when the device is operational and deassert
+	 * when the device is turned off.
+	 */
+	bool active_high;
+};
+
+struct nvc_gpio_init {
+	/* key to match in nvc_gpio_pdata */
+	unsigned gpio_type;
+	/* same as in gpio.h */
+	unsigned long flags;
+	/* same as in gpio.h */
+	const char *label;
+	/* used instead of nvc_gpio_pdata.active_high if use_flags true */
+	bool active_high;
+	/* false if nvc_gpio_pdata.active_high used else flags is used */
+	bool use_flags;
+};
+
+struct nvc_gpio {
+	unsigned gpio; /* system GPIO number */
+	bool own; /* gets set if driver initializes */
+	bool active_high; /* used for GP GPIOs */
+	bool flag; /* scratch flag for driver implementation */
 };
 
 #endif /* __KERNEL__ */

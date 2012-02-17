@@ -107,6 +107,21 @@ static struct pm_qos_object network_throughput_pm_qos = {
 	.name = "network_throughput",
 };
 
+
+static BLOCKING_NOTIFIER_HEAD(min_online_cpus_notifier);
+static struct pm_qos_constraints min_online_cpus_constraints = {
+	.list = PLIST_HEAD_INIT(min_online_cpus_constraints.list),
+	.target_value = PM_QOS_MIN_ONLINE_CPUS_DEFAULT_VALUE,
+	.default_value = PM_QOS_MIN_ONLINE_CPUS_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &min_online_cpus_notifier,
+};
+static struct pm_qos_object min_online_cpus_pm_qos = {
+	.constraints = &min_online_cpus_constraints,
+	.name = "min_online_cpus",
+};
+
+
 static BLOCKING_NOTIFIER_HEAD(max_online_cpus_notifier);
 static struct pm_qos_constraints max_online_cpus_constraints = {
 	.list = PLIST_HEAD_INIT(max_online_cpus_constraints.list),
@@ -199,6 +214,7 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&memory_bandwidth_pm_qos,
 	&gpu_freq_min_pm_qos,
 	&gpu_freq_max_pm_qos,
+	&min_online_cpus_pm_qos,
 	&max_online_cpus_pm_qos,
 	&cpu_freq_min_pm_qos,
 	&cpu_freq_max_pm_qos,

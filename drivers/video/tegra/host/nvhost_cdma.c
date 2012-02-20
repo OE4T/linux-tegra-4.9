@@ -163,7 +163,7 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		BUG_ON(job->syncpt_id == NVSYNCPT_INVALID);
 
 		/* Check whether this syncpt has completed, and bail if not */
-		if (!nvhost_syncpt_min_cmp(sp,
+		if (!nvhost_syncpt_is_expired(sp,
 				job->syncpt_id, job->syncpt_end)) {
 			/* Start timer on next pending syncpt */
 			if (job->timeout)

@@ -95,18 +95,6 @@ static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp,
 }
 
 /**
- * Returns true if syncpoint has reached threshold
- */
-static inline bool nvhost_syncpt_min_cmp(struct nvhost_syncpt *sp,
-					u32 id, u32 thresh)
-{
-	u32 cur;
-	smp_rmb();
-	cur = (u32)atomic_read(&sp->min_val[id]);
-	return ((s32)(cur - thresh) >= 0);
-}
-
-/**
  * Returns true if syncpoint min == max
  */
 static inline bool nvhost_syncpt_min_eq_max(struct nvhost_syncpt *sp, u32 id)
@@ -121,6 +109,7 @@ static inline bool nvhost_syncpt_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id);
 
 u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id);
+bool nvhost_syncpt_is_expired(struct nvhost_syncpt *sp, u32 id, u32 thresh);
 
 void nvhost_syncpt_save(struct nvhost_syncpt *sp);
 

@@ -143,7 +143,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	}
 
 	/* first check cache */
-	if (nvhost_syncpt_min_cmp(sp, id, thresh)) {
+	if (nvhost_syncpt_is_expired(sp, id, thresh)) {
 		if (value)
 			*value = nvhost_syncpt_read_min(sp, id);
 		return 0;
@@ -182,13 +182,17 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		goto done;
 
 	err = -EAGAIN;
+	/* Caller-specified timeout may be impractically low */
+	if (timeout < SYNCPT_CHECK_PERIOD)
+		low_timeout = timeout;
+
 	/* wait for the syncpoint, or timeout, or signal */
 	while (timeout) {
 		u32 check = min_t(u32, SYNCPT_CHECK_PERIOD, timeout);
 		int remain = wait_event_interruptible_timeout(wq,
-						nvhost_syncpt_min_cmp(sp, id, thresh),
-						check);
-		if (remain > 0 || nvhost_syncpt_min_cmp(sp, id, thresh)) {
+				nvhost_syncpt_is_expired(sp, id, thresh),
+				check);
+		if (remain > 0 || nvhost_syncpt_is_expired(sp, id, thresh)) {
 			if (value)
 				*value = nvhost_syncpt_read_min(sp, id);
 			err = 0;
@@ -198,13 +202,8 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			err = remain;
 			break;
 		}
-		if (timeout != NVHOST_NO_TIMEOUT) {
-			if (timeout < SYNCPT_CHECK_PERIOD) {
-				/* Caller-specified timeout may be impractically low */
-				low_timeout = timeout;
-			}
+		if (timeout != NVHOST_NO_TIMEOUT)
 			timeout -= check;
-		}
 		if (timeout) {
 			dev_warn(&syncpt_to_dev(sp)->dev->dev,
 				"%s: syncpoint id %d (%s) stuck waiting %d, timeout=%d\n",
@@ -228,6 +227,68 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 done:
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	return err;
+}
+
+/**
+ * Returns true if syncpoint is expired, false if we may need to wait
+ */
+bool nvhost_syncpt_is_expired(
+	struct nvhost_syncpt *sp,
+	u32 id,
+	u32 thresh)
+{
+	u32 current_val;
+	u32 future_val;
+	smp_rmb();
+	current_val = (u32)atomic_read(&sp->min_val[id]);
+	future_val = (u32)atomic_read(&sp->max_val[id]);
+
+	/* Note the use of unsigned arithmetic here (mod 1<<32).
+	 *
+	 * c = current_val = min_val	= the current value of the syncpoint.
+	 * t = thresh			= the value we are checking
+	 * f = future_val  = max_val	= the value c will reach when all
+	 *			   	  outstanding increments have completed.
+	 *
+	 * Note that c always chases f until it reaches f.
+	 *
+	 * Dtf = (f - t)
+	 * Dtc = (c - t)
+	 *
+	 *  Consider all cases:
+	 *
+	 *	A) .....c..t..f.....	Dtf < Dtc	need to wait
+	 *	B) .....c.....f..t..	Dtf > Dtc	expired
+	 *	C) ..t..c.....f.....	Dtf > Dtc	expired	   (Dct very large)
+	 *
+	 *  Any case where f==c: always expired (for any t).  	Dtf == Dcf
+	 *  Any case where t==c: always expired (for any f).  	Dtf >= Dtc (because Dtc==0)
+	 *  Any case where t==f!=c: always wait.	 	Dtf <  Dtc (because Dtf==0,
+	 *							Dtc!=0)
+	 *
+	 *  Other cases:
+	 *
+	 *	A) .....t..f..c.....	Dtf < Dtc	need to wait
+	 *	A) .....f..c..t.....	Dtf < Dtc	need to wait
+	 *	A) .....f..t..c.....	Dtf > Dtc	expired
+	 *
+	 *   So:
+	 *	   Dtf >= Dtc implies EXPIRED	(return true)
+	 *	   Dtf <  Dtc implies WAIT	(return false)
+	 *
+	 * Note: If t is expired then we *cannot* wait on it. We would wait
+	 * forever (hang the system).
+	 *
+	 * Note: do NOT get clever and remove the -thresh from both sides. It
+	 * is NOT the same.
+	 *
+	 * If future valueis zero, we have a client managed sync point. In that
+	 * case we do a direct comparison.
+	 */
+	if (!client_managed(id))
+		return future_val - thresh >= current_val - thresh;
+	else
+		return (s32)(current_val - thresh) >= 0;
 }
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp)

@@ -72,14 +72,11 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 		live = readl(sync_regs + (HOST1X_SYNC_SYNCPT_0 + id * 4));
 	} while ((u32)atomic_cmpxchg(&sp->min_val[id], old, live) != old);
 
-	if (!nvhost_syncpt_check_max(sp, id, live)) {
+	if (!nvhost_syncpt_check_max(sp, id, live))
 		dev_err(&syncpt_to_dev(sp)->pdev->dev,
 				"%s failed: id=%u\n",
 				__func__,
 				id);
-		nvhost_debug_dump(syncpt_to_dev(sp));
-		BUG();
-	}
 	return live;
 }
 
@@ -200,12 +197,13 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 	u32 i;
 	for (i = 0; i < NV_HOST1X_SYNCPT_NB_PTS; i++) {
 		u32 max = nvhost_syncpt_read_max(sp, i);
-		if (!max)
+		u32 min = nvhost_syncpt_update_min(sp, i);
+		if (!max && !min)
 			continue;
 		dev_info(&syncpt_to_dev(sp)->pdev->dev,
 			"id %d (%s) min %d max %d\n",
-			 i, syncpt_op(sp).name(sp, i),
-			nvhost_syncpt_update_min(sp, i), max);
+			i, syncpt_op(sp).name(sp, i),
+			min, max);
 
 	}
 

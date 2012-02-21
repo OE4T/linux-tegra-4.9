@@ -69,11 +69,12 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 	nvhost_debug_output(o, "---- syncpts ----\n");
 	for (i = 0; i < m->syncpt.nb_pts; i++) {
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
-		if (!max)
+		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
+		if (!min && !max)
 			continue;
 		nvhost_debug_output(o, "id %d (%s) min %d max %d\n",
-				    i, m->op.syncpt.name(&m->syncpt, i),
-			nvhost_syncpt_update_min(&m->syncpt, i), max);
+				i, m->op.syncpt.name(&m->syncpt, i),
+				min, max);
 	}
 
 	for (i = 0; i < m->syncpt.nb_bases; i++) {

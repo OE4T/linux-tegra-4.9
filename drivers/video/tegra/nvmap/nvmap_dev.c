@@ -984,11 +984,11 @@ static void allocations_stringify(struct nvmap_client *client,
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && !handle->heap_pgalloc) {
-			seq_printf(s, "%-18s %-18s %8lx %10u %8lx\n", "", "",
+			seq_printf(s, "%-18s %-18s %8lx %10u %8x\n", "", "",
 					(unsigned long)(handle->carveout->base),
 					handle->size, handle->userflags);
 		} else if (handle->alloc && handle->heap_pgalloc) {
-			seq_printf(s, "%-18s %-18s %8lx %10u %8lx\n", "", "",
+			seq_printf(s, "%-18s %-18s %8lx %10u %8x\n", "", "",
 					base, handle->size, handle->userflags);
 		}
 	}

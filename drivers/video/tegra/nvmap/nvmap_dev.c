@@ -1193,7 +1193,7 @@ static int nvmap_probe(struct platform_device *pdev)
 	dev->iovmm_master.iovmm =
 		tegra_iovmm_alloc_client(&pdev->dev, NULL,
 			&(dev->dev_user));
-#ifdef CONFIG_TEGRA_IOVMM
+#if defined(CONFIG_TEGRA_IOVMM) || defined(CONFIG_IOMMU_API)
 	if (!dev->iovmm_master.iovmm) {
 		e = PTR_ERR(dev->iovmm_master.iovmm);
 		dev_err(&pdev->dev, "couldn't create iovmm client\n");

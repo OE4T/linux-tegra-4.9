@@ -66,9 +66,6 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 };
 
 /* the same context save command sequence is used for all contexts. */
-static phys_addr_t save_phys;
-static unsigned int save_size;
-
 #define SAVE_BEGIN_V0_SIZE 5
 #define SAVE_DIRECT_V0_SIZE 3
 #define SAVE_INDIRECT_V0_SIZE 5
@@ -117,46 +114,48 @@ static u32 *setup_restore_regs_v0(u32 *ptr,
 	return ptr;
 }
 
-static void setup_restore_v0(u32 *ptr)
+static void setup_restore_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
-	nvhost_3dctx_restore_begin(ptr);
+	nvhost_3dctx_restore_begin(h, ptr);
 	ptr += RESTORE_BEGIN_SIZE;
 
 	ptr = setup_restore_regs_v0(ptr,
 			ctxsave_regs_3d_global,
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
-	nvhost_3dctx_restore_end(ptr);
+	nvhost_3dctx_restore_end(h, ptr);
 
 	wmb();
 }
 
 /*** v0 saver ***/
 
-static void save_push_v0(struct nvhost_cdma *cdma,
-			struct nvhost_hwctx *ctx)
+static void save_push_v0(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 {
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	struct host1x_hwctx_handler *p = host1x_hwctx_handler(ctx);
+
 	nvhost_cdma_push_gather(cdma,
 			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
 			(void *)NVHOST_CDMA_PUSH_GATHER_CTXSAVE,
-			nvhost_opcode_gather(save_size),
-			save_phys);
+			nvhost_opcode_gather(p->save_size),
+			p->save_phys);
 }
 
-static void __init save_begin_v0(u32 *ptr)
+static void __init save_begin_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* 3d: when done, increment syncpt to base+1 */
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	ptr[1] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
-			NVSYNCPT_3D); /*  incr 1 */
+			h->syncpt); /*  incr 1 */
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
-	ptr[3] = nvhost_class_host_wait_syncpt_base(NVSYNCPT_3D,
-						NVWAITBASE_3D, 1);
+	ptr[3] = nvhost_class_host_wait_syncpt_base(h->syncpt,
+						h->waitbase, 1);
 	/* host: signal context read thread to start reading */
 	ptr[4] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
-			NVSYNCPT_3D); /* incr 2 */
+			h->syncpt); /* incr 2 */
 }
 
 static void __init save_direct_v0(u32 *ptr, u32 start_reg, u32 count)
@@ -180,16 +179,16 @@ static void __init save_indirect_v0(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[4] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
 }
 
-static void __init save_end_v0(u32 *ptr)
+static void __init save_end_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* Wait for context read service to finish (cpu incr 3) */
 	ptr[0] = nvhost_opcode_nonincr(NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
-	ptr[1] = nvhost_class_host_wait_syncpt_base(NVSYNCPT_3D,
-			NVWAITBASE_3D, nvhost_3dctx_save_incrs);
+	ptr[1] = nvhost_class_host_wait_syncpt_base(h->syncpt,
+			h->waitbase, h->save_incrs);
 	/* Advance syncpoint base */
 	ptr[2] = nvhost_opcode_nonincr(NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
 	ptr[3] = nvhost_class_host_incr_syncpt_base(NVWAITBASE_3D,
-			nvhost_3dctx_save_incrs);
+			h->save_incrs);
 	/* set class back to the unit */
 	ptr[4] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 }
@@ -281,7 +280,7 @@ static void __init setup_save_regs(struct save_info *info,
 	info->restore_count = restore_count;
 }
 
-static void __init setup_save(u32 *ptr)
+static void __init setup_save(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	struct save_info info = {
 		ptr,
@@ -292,7 +291,7 @@ static void __init setup_save(u32 *ptr)
 	};
 
 	if (info.ptr) {
-		save_begin_v0(info.ptr);
+		save_begin_v0(h, info.ptr);
 		info.ptr += SAVE_BEGIN_V0_SIZE;
 	}
 
@@ -302,83 +301,95 @@ static void __init setup_save(u32 *ptr)
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	if (info.ptr) {
-		save_end_v0(info.ptr);
+		save_end_v0(h, info.ptr);
 		info.ptr += SAVE_END_V0_SIZE;
 	}
 
 	wmb();
 
-	save_size = info.save_count + SAVE_END_V0_SIZE;
-	nvhost_3dctx_restore_size = info.restore_count + RESTORE_END_SIZE;
-	nvhost_3dctx_save_incrs = info.save_incrs;
-	nvhost_3dctx_save_thresh =
-			nvhost_3dctx_save_incrs - SAVE_THRESH_OFFSET;
-	nvhost_3dctx_restore_incrs = info.restore_incrs;
+	h->save_size = info.save_count + SAVE_END_V0_SIZE;
+	h->restore_size = info.restore_count + RESTORE_END_SIZE;
+	h->save_incrs = info.save_incrs;
+	h->save_thresh = h->save_incrs - SAVE_THRESH_OFFSET;
+	h->restore_incrs = info.restore_incrs;
 }
 
 
 
 /*** ctx3d ***/
 
-static struct nvhost_hwctx *ctx3d_alloc_v0(struct nvhost_channel *ch)
+static struct nvhost_hwctx *ctx3d_alloc_v0(struct nvhost_hwctx_handler *h,
+		struct nvhost_channel *ch)
 {
-	struct nvhost_hwctx *ctx = nvhost_3dctx_alloc_common(ch, true);
-	if (ctx)
-		setup_restore_v0(ctx->restore_virt);
-	return ctx;
+	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
+	struct host1x_hwctx *ctx =
+		nvhost_3dctx_alloc_common(p, ch, true);
+	if (ctx) {
+		setup_restore_v0(p, ctx->restore_virt);
+		return &ctx->hwctx;
+	} else
+		return NULL;
 }
 
-static void ctx3d_save_service(struct nvhost_hwctx *ctx)
+static void ctx3d_save_service(struct nvhost_hwctx *nctx)
 {
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+
 	u32 *ptr = (u32 *)ctx->restore_virt + RESTORE_BEGIN_SIZE;
 	unsigned int pending = 0;
 
-	ptr = save_regs_v0(ptr, &pending, ctx->channel->aperture,
+	ptr = save_regs_v0(ptr, &pending, nctx->channel->aperture,
 			ctxsave_regs_3d_global,
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	wmb();
-	nvhost_syncpt_cpu_incr(&nvhost_get_host(ctx->channel->dev)->syncpt,
-			NVSYNCPT_3D);
+	nvhost_syncpt_cpu_incr(&nvhost_get_host(nctx->channel->dev)->syncpt,
+			host1x_hwctx_handler(ctx)->syncpt);
 }
 
-int __init nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h)
+struct nvhost_hwctx_handler * __init nvhost_gr3d_t20_ctxhandler_init(
+		u32 syncpt, u32 waitbase,
+		struct nvhost_channel *ch)
 {
-	struct nvhost_channel *ch;
 	struct nvmap_client *nvmap;
 	u32 *save_ptr;
+	struct host1x_hwctx_handler *p;
 
-	ch = container_of(h, struct nvhost_channel, ctxhandler);
+	p = kmalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return NULL;
 	nvmap = nvhost_get_host(ch->dev)->nvmap;
 
-	setup_save(NULL);
+	p->syncpt = syncpt;
+	p->waitbase = waitbase;
 
-	nvhost_3dctx_save_buf = nvmap_alloc(nvmap, save_size * sizeof(u32), 32,
+	setup_save(p, NULL);
+
+	p->save_buf = nvmap_alloc(nvmap, p->save_size * sizeof(u32), 32,
 				NVMAP_HANDLE_WRITE_COMBINE);
-	if (IS_ERR(nvhost_3dctx_save_buf)) {
-		int err = PTR_ERR(nvhost_3dctx_save_buf);
-		nvhost_3dctx_save_buf = NULL;
-		return err;
+	if (IS_ERR(p->save_buf)) {
+		p->save_buf = NULL;
+		return NULL;
 	}
 
-	nvhost_3dctx_save_slots = 1;
+	p->save_slots = 1;
 
-	save_ptr = nvmap_mmap(nvhost_3dctx_save_buf);
+	save_ptr = nvmap_mmap(p->save_buf);
 	if (!save_ptr) {
-		nvmap_free(nvmap, nvhost_3dctx_save_buf);
-		nvhost_3dctx_save_buf = NULL;
-		return -ENOMEM;
+		nvmap_free(nvmap, p->save_buf);
+		p->save_buf = NULL;
+		return NULL;
 	}
 
-	save_phys = nvmap_pin(nvmap, nvhost_3dctx_save_buf);
+	p->save_phys = nvmap_pin(nvmap, p->save_buf);
 
-	setup_save(save_ptr);
+	setup_save(p, save_ptr);
 
-	h->alloc = ctx3d_alloc_v0;
-	h->save_push = save_push_v0;
-	h->save_service = ctx3d_save_service;
-	h->get = nvhost_3dctx_get;
-	h->put = nvhost_3dctx_put;
+	p->h.alloc = ctx3d_alloc_v0;
+	p->h.save_push = save_push_v0;
+	p->h.save_service = ctx3d_save_service;
+	p->h.get = nvhost_3dctx_get;
+	p->h.put = nvhost_3dctx_put;
 
-	return 0;
+	return &p->h;
 }

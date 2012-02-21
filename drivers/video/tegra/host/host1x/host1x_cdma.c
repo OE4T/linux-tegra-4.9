@@ -26,6 +26,7 @@
 #include "host1x_hardware.h"
 #include "host1x_syncpt.h"
 #include "host1x_cdma.h"
+#include "host1x_hwctx.h"
 
 static inline u32 host1x_channel_dmactrl(int stop, int get_rst, int init_get)
 {
@@ -336,7 +337,7 @@ static void cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct syncpt_buffer *sb = &cdma->syncpt_buffer;
 	struct push_buffer *pb = &cdma->push_buffer;
-	struct nvhost_hwctx *hwctx = cdma->timeout.ctx;
+	struct host1x_hwctx *hwctx = to_host1x_hwctx(cdma->timeout.ctx);
 	u32 getidx, *p;
 
 	/* should have enough slots to incr to desired count */

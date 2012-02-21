@@ -75,6 +75,7 @@ static struct nvhost_device devices[] = {
 	.init = nvhost_scale3d_init,
 	.deinit = nvhost_scale3d_deinit,
 	.suspend = nvhost_scale3d_suspend,
+	.alloc_hwctx_handler = nvhost_gr3d_t30_ctxhandler_init,
 	.clocks = {{"gr3d", UINT_MAX},
 			{"gr3d2", UINT_MAX},
 			{"emc", UINT_MAX} },
@@ -134,6 +135,7 @@ static struct nvhost_device devices[] = {
 	.waitbasesync  = true,
 	.keepalive     = true,
 	.prepare_poweroff = nvhost_mpe_prepare_power_off,
+	.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
 	.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	.powergate_ids  = {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -154,16 +156,22 @@ static struct nvhost_device devices[] = {
 
 #define NVHOST_CHANNEL_BASE 0
 
-static inline int t30_nvhost_hwctx_handler_init(
-	struct nvhost_hwctx_handler *h,
-	const char *module)
+static inline int t30_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
-	if (strcmp(module, "gr3d") == 0)
-		return nvhost_gr3d_t30_ctxhandler_init(h);
-	else if (strcmp(module, "mpe") == 0)
-		return nvhost_mpe_ctxhandler_init(h);
+	int err = 0;
+	unsigned long syncpts = ch->dev->syncpts;
+	unsigned long waitbases = ch->dev->waitbases;
+	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
+	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
 
-	return 0;
+	if (ch->dev->alloc_hwctx_handler) {
+		ch->ctxhandler = ch->dev->alloc_hwctx_handler(syncpt,
+				waitbase, ch);
+		if (!ch->ctxhandler)
+			err = -ENOMEM;
+	}
+
+	return err;
 }
 
 static inline void __iomem *t30_channel_aperture(void __iomem *p, int ndx)
@@ -185,7 +193,7 @@ static int t30_channel_init(struct nvhost_channel *ch,
 	nvhost_device_register(ch->dev);
 	ch->aperture = t30_channel_aperture(dev->aperture, index);
 
-	return t30_nvhost_hwctx_handler_init(&ch->ctxhandler, ch->dev->name);
+	return t30_nvhost_hwctx_handler_init(ch);
 }
 
 int nvhost_init_t30_channel_support(struct nvhost_master *host)

@@ -21,6 +21,7 @@
 #ifndef __NVHOST_GR3D_GR3D_H
 #define __NVHOST_GR3D_GR3D_H
 
+#include "host1x/host1x_hwctx.h"
 #include <linux/types.h>
 
 /* Registers of 3D unit */
@@ -32,25 +33,18 @@
 #define AR3D_GSHIM_READ_SELECT 0xb01
 #define AR3D_GLOBAL_MEMORY_OUTPUT_READS 0xe40
 
-/* Internal variables used by common 3D context switch functions */
-extern unsigned int nvhost_3dctx_restore_size;
-extern unsigned int nvhost_3dctx_restore_incrs;
-extern struct nvmap_handle_ref *nvhost_3dctx_save_buf;
-extern unsigned int nvhost_3dctx_save_incrs;
-extern unsigned int nvhost_3dctx_save_thresh;
-extern unsigned int nvhost_3dctx_save_slots;
-
 struct nvhost_hwctx;
 struct nvhost_channel;
 struct kref;
 
 /* Functions used commonly by all 3D context switch modules */
-void nvhost_3dctx_restore_begin(u32 *ptr);
+void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *h, u32 *ptr);
 void nvhost_3dctx_restore_direct(u32 *ptr, u32 start_reg, u32 count);
 void nvhost_3dctx_restore_indirect(u32 *ptr, u32 offset_reg,
 		u32 offset,	u32 data_reg, u32 count);
-void nvhost_3dctx_restore_end(u32 *ptr);
-struct nvhost_hwctx *nvhost_3dctx_alloc_common(
+void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *h, u32 *ptr);
+struct host1x_hwctx *nvhost_3dctx_alloc_common(
+		struct host1x_hwctx_handler *p,
 		struct nvhost_channel *ch, bool map_restore);
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx);
 void nvhost_3dctx_free(struct kref *ref);

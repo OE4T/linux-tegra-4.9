@@ -81,6 +81,9 @@ struct nvhost_device {
 
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 
+	/* Allocates a context handler for the device */
+	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
+			u32 waitbase, struct nvhost_channel *ch);
 	/* Preparing for power off. Used for context save. */
 	int (*prepare_poweroff)(struct nvhost_device *dev);
 	/* Finalize power on. Can be used for context restore. */

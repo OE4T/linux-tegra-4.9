@@ -23,6 +23,8 @@
 
 struct nvhost_hwctx_handler;
 
-int nvhost_gr3d_t20_ctxhandler_init(struct nvhost_hwctx_handler *h);
+struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
+		u32 syncpt, u32 waitbase,
+		struct nvhost_channel *ch);
 
 #endif

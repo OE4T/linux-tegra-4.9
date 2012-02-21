@@ -32,30 +32,21 @@ struct nvhost_cdma;
 
 struct nvhost_hwctx {
 	struct kref ref;
-
+	struct nvhost_hwctx_handler *h;
 	struct nvhost_channel *channel;
 	bool valid;
-
-	struct nvmap_handle_ref *save;
-	u32 save_incrs;
-	u32 save_thresh;
-	u32 save_slots;
-
-	struct nvmap_handle_ref *restore;
-	u32 *restore_virt;
-	phys_addr_t restore_phys;
-	u32 restore_size;
-	u32 restore_incrs;
-
 	bool has_timedout;
 };
 
 struct nvhost_hwctx_handler {
-	struct nvhost_hwctx * (*alloc) (struct nvhost_channel *ch);
+	struct nvhost_hwctx * (*alloc) (struct nvhost_hwctx_handler *h,
+			struct nvhost_channel *ch);
 	void (*get) (struct nvhost_hwctx *ctx);
 	void (*put) (struct nvhost_hwctx *ctx);
-	void (*save_push) (struct nvhost_cdma *cdma, struct nvhost_hwctx *ctx);
+	void (*save_push) (struct nvhost_hwctx *ctx,
+			struct nvhost_cdma *cdma);
 	void (*save_service) (struct nvhost_hwctx *ctx);
+	void *priv;
 };
 
 

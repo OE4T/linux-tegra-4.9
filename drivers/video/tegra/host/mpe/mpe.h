@@ -24,7 +24,9 @@
 struct nvhost_hwctx_handler;
 struct nvhost_device;
 
-int nvhost_mpe_ctxhandler_init(struct nvhost_hwctx_handler *h);
+struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(
+		u32 syncpt, u32 waitbase,
+		struct nvhost_channel *ch);
 int nvhost_mpe_prepare_power_off(struct nvhost_device *dev);
 
 #endif

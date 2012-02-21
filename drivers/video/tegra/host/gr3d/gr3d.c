@@ -30,21 +30,14 @@
 #include "dev.h"
 #include "gr3d.h"
 
-unsigned int nvhost_3dctx_restore_size;
-unsigned int nvhost_3dctx_restore_incrs;
-struct nvmap_handle_ref *nvhost_3dctx_save_buf;
-unsigned int nvhost_3dctx_save_incrs;
-unsigned int nvhost_3dctx_save_thresh;
-unsigned int nvhost_3dctx_save_slots;
-
-void nvhost_3dctx_restore_begin(u32 *ptr)
+void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* set class to host */
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
 	/* increment sync point base */
-	ptr[1] = nvhost_class_host_incr_syncpt_base(NVWAITBASE_3D,
-			nvhost_3dctx_restore_incrs);
+	ptr[1] = nvhost_class_host_incr_syncpt_base(p->waitbase,
+			p->restore_incrs);
 	/* set class to 3D */
 	ptr[2] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* program PSEQ_QUAD_ID */
@@ -63,25 +56,25 @@ void nvhost_3dctx_restore_indirect(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[1] = nvhost_opcode_nonincr(data_reg, count);
 }
 
-void nvhost_3dctx_restore_end(u32 *ptr)
+void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* syncpt increment to track restore gather. */
 	ptr[0] = nvhost_opcode_imm_incr_syncpt(
-			NV_SYNCPT_OP_DONE, NVSYNCPT_3D);
+			NV_SYNCPT_OP_DONE, p->syncpt);
 }
 
 /*** ctx3d ***/
 
-struct nvhost_hwctx *nvhost_3dctx_alloc_common(struct nvhost_channel *ch,
-					bool map_restore)
+struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
+		struct nvhost_channel *ch, bool map_restore)
 {
 	struct nvmap_client *nvmap = nvhost_get_host(ch->dev)->nvmap;
-	struct nvhost_hwctx *ctx;
+	struct host1x_hwctx *ctx;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return NULL;
-	ctx->restore = nvmap_alloc(nvmap, nvhost_3dctx_restore_size * 4, 32,
+	ctx->restore = nvmap_alloc(nvmap, p->restore_size * 4, 32,
 		map_restore ? NVMAP_HANDLE_WRITE_COMBINE
 			    : NVMAP_HANDLE_UNCACHEABLE);
 	if (IS_ERR_OR_NULL(ctx->restore))
@@ -94,19 +87,19 @@ struct nvhost_hwctx *nvhost_3dctx_alloc_common(struct nvhost_channel *ch,
 	} else
 		ctx->restore_virt = NULL;
 
-	kref_init(&ctx->ref);
-	ctx->channel = ch;
-	ctx->valid = false;
-	ctx->save = nvhost_3dctx_save_buf;
-	ctx->save_incrs = nvhost_3dctx_save_incrs;
-	ctx->save_thresh = nvhost_3dctx_save_thresh;
-	ctx->save_slots = nvhost_3dctx_save_slots;
+	kref_init(&ctx->hwctx.ref);
+	ctx->hwctx.h = &p->h;
+	ctx->hwctx.channel = ch;
+	ctx->hwctx.valid = false;
+	ctx->save_incrs = p->save_incrs;
+	ctx->save_thresh = p->save_thresh;
+	ctx->save_slots = p->save_slots;
 	ctx->restore_phys = nvmap_pin(nvmap, ctx->restore);
 	if (IS_ERR_VALUE(ctx->restore_phys))
 		goto fail;
 
-	ctx->restore_size = nvhost_3dctx_restore_size;
-	ctx->restore_incrs = nvhost_3dctx_restore_incrs;
+	ctx->restore_size = p->restore_size;
+	ctx->restore_incrs = p->restore_incrs;
 	return ctx;
 
 fail:
@@ -127,8 +120,10 @@ void nvhost_3dctx_get(struct nvhost_hwctx *ctx)
 
 void nvhost_3dctx_free(struct kref *ref)
 {
-	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
-	struct nvmap_client *nvmap = nvhost_get_host(ctx->channel->dev)->nvmap;
+	struct nvhost_hwctx *nctx = container_of(ref, struct nvhost_hwctx, ref);
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	struct nvmap_client *nvmap =
+		nvhost_get_host(nctx->channel->dev)->nvmap;
 
 	if (ctx->restore_virt) {
 		nvmap_munmap(ctx->restore, ctx->restore_virt);

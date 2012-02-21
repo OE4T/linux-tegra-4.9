@@ -126,7 +126,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	nvhost_putchannel(priv->ch, priv->hwctx);
 
 	if (priv->hwctx)
-		priv->ch->ctxhandler.put(priv->hwctx);
+		priv->ch->ctxhandler->put(priv->hwctx);
 
 	if (priv->job)
 		nvhost_job_put(priv->job);
@@ -156,8 +156,8 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	priv->ch = ch;
 	nvhost_module_add_client(ch->dev, priv);
 
-	if (ch->ctxhandler.alloc) {
-		priv->hwctx = ch->ctxhandler.alloc(ch);
+	if (ch->ctxhandler && ch->ctxhandler->alloc) {
+		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);
 		if (!priv->hwctx)
 			goto fail;
 	}

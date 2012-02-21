@@ -56,7 +56,7 @@ struct nvhost_channel {
 	struct device *node;
 	struct nvhost_device *dev;
 	struct cdev cdev;
-	struct nvhost_hwctx_handler ctxhandler;
+	struct nvhost_hwctx_handler *ctxhandler;
 	struct nvhost_cdma cdma;
 };
 

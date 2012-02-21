@@ -29,6 +29,7 @@
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t20.h"
 #include "mpe/mpe.h"
+#include "nvhost_hwctx.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -65,6 +66,7 @@ struct nvhost_device devices[] = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.prepare_poweroff = nvhost_gr3d_prepare_power_off,
+	.alloc_hwctx_handler = nvhost_gr3d_t20_ctxhandler_init,
 	.clocks = {{"gr3d", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	.powergate_ids = {TEGRA_POWERGATE_3D, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -119,6 +121,7 @@ struct nvhost_device devices[] = {
 	.waitbasesync  = true,
 	.keepalive     = true,
 	.prepare_poweroff = nvhost_mpe_prepare_power_off,
+	.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
 	.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	.powergate_ids = {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -142,15 +145,22 @@ static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 	return p;
 }
 
-static inline int t20_nvhost_hwctx_handler_init(
-	struct nvhost_hwctx_handler *h,
-	const char *module)
+static inline int t20_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
-	if (strcmp(module, "gr3d") == 0)
-		return nvhost_gr3d_t20_ctxhandler_init(h);
-	else if (strcmp(module, "mpe") == 0)
-		return nvhost_mpe_ctxhandler_init(h);
-	return 0;
+	int err = 0;
+	unsigned long syncpts = ch->dev->syncpts;
+	unsigned long waitbases = ch->dev->waitbases;
+	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
+	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
+
+	if (ch->dev->alloc_hwctx_handler) {
+		ch->ctxhandler = ch->dev->alloc_hwctx_handler(syncpt,
+				waitbase, ch);
+		if (!ch->ctxhandler)
+			err = -ENOMEM;
+	}
+
+	return err;
 }
 
 static int t20_channel_init(struct nvhost_channel *ch,
@@ -164,7 +174,7 @@ static int t20_channel_init(struct nvhost_channel *ch,
 	nvhost_device_register(ch->dev);
 	ch->aperture = t20_channel_aperture(dev->aperture, index);
 
-	return t20_nvhost_hwctx_handler_init(&ch->ctxhandler, ch->dev->name);
+	return t20_nvhost_hwctx_handler_init(ch);
 }
 
 int nvhost_init_t20_channel_support(struct nvhost_master *host)

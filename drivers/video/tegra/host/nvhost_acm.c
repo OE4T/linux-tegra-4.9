@@ -280,17 +280,22 @@ int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 		unsigned long rate, int index)
 {
 	struct nvhost_module_client *m;
-	int ret;
+	int i, ret = 0;
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &dev->client_list, node) {
 		if (m->priv == priv) {
-			rate = clk_round_rate(dev->clk[index], rate);
-			m->rate[index] = rate;
+			for (i = 0; i < dev->num_clks; i++)
+				m->rate[i] = clk_round_rate(dev->clk[i], rate);
 			break;
 		}
 	}
-	ret = nvhost_module_update_rate(dev, index);
+
+	for (i = 0; i < dev->num_clks; i++) {
+		ret = nvhost_module_update_rate(dev, i);
+		if (ret < 0)
+			break;
+	}
 	mutex_unlock(&client_list_lock);
 	return ret;
 

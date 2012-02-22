@@ -47,6 +47,7 @@ struct nct1008_platform_data {
 };
 
 struct nct1008_data {
+	struct workqueue_struct *workqueue;
 	struct work_struct work;
 	struct i2c_client *client;
 	struct nct1008_platform_data plat_data;
@@ -59,6 +60,7 @@ struct nct1008_data {
 	struct regulator *nct_reg;
 	long current_lo_limit;
 	long current_hi_limit;
+	int conv_period_ms;
 
 	void (*alert_func)(void *);
 	void *alert_data;

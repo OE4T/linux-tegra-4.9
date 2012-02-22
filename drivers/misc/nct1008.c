@@ -53,6 +53,7 @@
 #define LOCAL_TEMP_LO_LIMIT_WR		0x0C
 #define EXT_TEMP_HI_LIMIT_HI_BYTE_WR	0x0D
 #define EXT_TEMP_LO_LIMIT_HI_BYTE_WR	0x0E
+#define ONE_SHOT			0x0F
 #define OFFSET_WR			0x11
 #define OFFSET_QUARTER_WR		0x12
 #define EXT_THERM_LIMIT_WR		0x19
@@ -75,9 +76,13 @@
 
 #define MAX_STR_PRINT 50
 
-#define MIN_SLEEP_MSEC			20
+#define MAX_CONV_TIME_ONESHOT_MS (52)
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
+
+
+static int conv_period_ms_table[] =
+	{16000, 8000, 4000, 2000, 1000, 500, 250, 125, 63, 32, 16};
 
 static inline s8 value_to_temperature(bool extended, u8 value)
 {
@@ -501,10 +506,25 @@ static void nct1008_work_func(struct work_struct *work)
 {
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
+	int intr_status;
+	struct timespec ts;
+
+	nct1008_disable(data->client);
 
 	if (data->alert_func)
 		if (!nct1008_within_limits(data))
 			data->alert_func(data->alert_data);
+
+	/* Initiate one-shot conversion */
+	i2c_smbus_write_byte_data(data->client, ONE_SHOT, 0x1);
+
+	/* Give hardware necessary time to finish conversion */
+	ts = ns_to_timespec(MAX_CONV_TIME_ONESHOT_MS * 1000 * 1000);
+	hrtimer_nanosleep(&ts, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
+
+	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
+
+	nct1008_enable(data->client);
 
 	enable_irq(data->client->irq);
 }
@@ -514,7 +534,7 @@ static irqreturn_t nct1008_irq(int irq, void *dev_id)
 	struct nct1008_data *data = dev_id;
 
 	disable_irq_nosync(irq);
-	schedule_work(&data->work);
+	queue_work(data->workqueue, &data->work);
 
 	return IRQ_HANDLED;
 }
@@ -591,6 +611,8 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	if (err)
 		goto error;
 
+	data->conv_period_ms = conv_period_ms_table[pdata->conv_rate];
+
 	/* Setup local hi and lo limits */
 	err = i2c_smbus_write_byte_data(client,
 		LOCAL_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
@@ -666,6 +688,8 @@ error:
 
 static int nct1008_configure_irq(struct nct1008_data *data)
 {
+	data->workqueue = create_singlethread_workqueue("nct1008");
+
 	INIT_WORK(&data->work, nct1008_work_func);
 
 	if (data->client->irq < 0)
@@ -674,35 +698,6 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 		return request_irq(data->client->irq, nct1008_irq,
 			IRQF_TRIGGER_LOW,
 			DRIVER_NAME, data);
-}
-
-static unsigned int get_ext_mode_delay_ms(unsigned int conv_rate)
-{
-	switch (conv_rate) {
-	case 0:
-		return 16000;
-	case 1:
-		return 8000;
-	case 2:
-		return 4000;
-	case 3:
-		return 2000;
-	case 4:
-		return 1000;
-	case 5:
-		return 500;
-	case 6:
-		return 250;
-	case 7:
-		return 125;
-	case 9:
-		return 32;
-	case 10:
-		return 16;
-	case 8:
-	default:
-		return 63;
-	}
 }
 
 int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp)
@@ -852,14 +847,6 @@ static int nct1008_probe(struct i2c_client *client,
 	if (err < 0)
 		err = 0; /* without debugfs we may continue */
 
-	/* switch to extended mode reports correct temperature
-	 * from next measurement cycle */
-	if (data->plat_data.ext_range) {
-		delay = get_ext_mode_delay_ms(
-			data->plat_data.conv_rate);
-		msleep(delay); /* 63msec for default conv rate 0x8 */
-	}
-
 	/* notify callback that probe is done */
 	if (data->plat_data.probe_callback)
 		data->plat_data.probe_callback(data);
@@ -916,7 +903,6 @@ static int nct1008_resume(struct i2c_client *client)
 		return err;
 	}
 	enable_irq(client->irq);
-	schedule_work(&data->work);
 
 	return 0;
 }

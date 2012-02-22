@@ -159,11 +159,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	prot = nvmap_pgprot(h, pgprot_kernel);
 
-#ifdef CONFIG_NVMAP_ALLOW_SYSMEM
-	if (nr_page == 1)
-		contiguous = true;
-#endif
-
 	h->pgalloc.area = NULL;
 	if (contiguous) {
 		struct page *page;

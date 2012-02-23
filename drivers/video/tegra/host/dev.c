@@ -224,6 +224,9 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 	struct nvhost_submit_hdr_ext *hdr = &priv->hdr;
 	const char *chname = priv->ch->dev->name;
 
+	if (!job)
+		return -EIO;
+
 	while (remaining) {
 		size_t consumed;
 		if (!hdr->num_relocs &&

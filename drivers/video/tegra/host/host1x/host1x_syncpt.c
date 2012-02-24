@@ -73,10 +73,11 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 	} while ((u32)atomic_cmpxchg(&sp->min_val[id], old, live) != old);
 
 	if (!nvhost_syncpt_check_max(sp, id, live))
-		dev_err(&syncpt_to_dev(sp)->pdev->dev,
+		dev_err(&syncpt_to_dev(sp)->dev->dev,
 				"%s failed: id=%u\n",
 				__func__,
 				id);
+
 	return live;
 }
 
@@ -89,7 +90,7 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	BUG_ON(!nvhost_module_powered(dev->dev));
 	if (!client_managed(id) && nvhost_syncpt_min_eq_max(sp, id)) {
-		dev_err(&syncpt_to_dev(sp)->pdev->dev,
+		dev_err(&syncpt_to_dev(sp)->dev->dev,
 			"Trying to increment syncpoint id %d beyond max\n",
 			id);
 		nvhost_debug_dump(syncpt_to_dev(sp));
@@ -146,7 +147,7 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 			 * syncpt with a matching threshold value of 0, so
 			 * is guaranteed to be popped by the host HW.
 			 */
-			dev_dbg(&syncpt_to_dev(sp)->pdev->dev,
+			dev_dbg(&syncpt_to_dev(sp)->dev->dev,
 			    "drop WAIT id %d (%s) thresh 0x%x, syncpt 0x%x\n",
 			    wait->syncpt_id,
 			    syncpt_op(sp).name(sp, wait->syncpt_id),
@@ -200,7 +201,7 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 		u32 min = nvhost_syncpt_update_min(sp, i);
 		if (!max && !min)
 			continue;
-		dev_info(&syncpt_to_dev(sp)->pdev->dev,
+		dev_info(&syncpt_to_dev(sp)->dev->dev,
 			"id %d (%s) min %d max %d\n",
 			i, syncpt_op(sp).name(sp, i),
 			min, max);
@@ -212,7 +213,7 @@ static void t20_syncpt_debug(struct nvhost_syncpt *sp)
 		t20_syncpt_read_wait_base(sp, i);
 		base_val = sp->base_val[i];
 		if (base_val)
-			dev_info(&syncpt_to_dev(sp)->pdev->dev,
+			dev_info(&syncpt_to_dev(sp)->dev->dev,
 					"waitbase id %d val %d\n",
 					i, base_val);
 

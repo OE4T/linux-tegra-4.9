@@ -226,7 +226,7 @@ static int cdma_timeout_init(struct nvhost_cdma *cdma,
 		goto fail;
 	}
 
-	dev_dbg(&dev->pdev->dev, "%s: SYNCPT_INCR buffer at 0x%x\n",
+	dev_dbg(&dev->dev->dev, "%s: SYNCPT_INCR buffer at 0x%x\n",
 		 __func__, sb->phys);
 
 	sb->words_per_incr = (syncpt_id == NVSYNCPT_3D) ? 5 : 3;
@@ -318,7 +318,7 @@ static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 		u32 *p = (u32 *)((u32)pb->mapped + getidx);
 		*(p++) = NVHOST_OPCODE_NOOP;
 		*(p++) = NVHOST_OPCODE_NOOP;
-		dev_dbg(&dev->pdev->dev, "%s: NOP at 0x%x\n",
+		dev_dbg(&dev->dev->dev, "%s: NOP at 0x%x\n",
 			__func__, pb->phys + getidx);
 		getidx = (getidx + 8) & (PUSH_BUFFER_SIZE - 1);
 	}
@@ -353,7 +353,7 @@ static void cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 		getidx += (hwctx->save_slots * 8);
 		getidx &= (PUSH_BUFFER_SIZE - 1);
 
-		dev_dbg(&dev->pdev->dev,
+		dev_dbg(&dev->dev->dev,
 			"%s: exec CTXSAVE of prev ctx (slots %d, incrs %d)\n",
 			__func__, nr_slots, syncpt_incrs);
 	}
@@ -369,7 +369,7 @@ static void cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 		*(p++) = nvhost_opcode_gather(count);
 		*(p++) = sb->phys;
 
-		dev_dbg(&dev->pdev->dev,
+		dev_dbg(&dev->dev->dev,
 			"%s: GATHER at 0x%x, from 0x%x, dcount = %d\n",
 			__func__,
 			pb->phys + getidx, sb->phys,
@@ -385,7 +385,7 @@ static void cdma_timeout_pb_incr(struct nvhost_cdma *cdma, u32 getptr,
 		p = (u32 *)((u32)pb->mapped + getidx);
 		*(p++) = NVHOST_OPCODE_NOOP;
 		*(p++) = NVHOST_OPCODE_NOOP;
-		dev_dbg(&dev->pdev->dev, "%s: NOP at 0x%x\n",
+		dev_dbg(&dev->dev->dev, "%s: NOP at 0x%x\n",
 			__func__, pb->phys + getidx);
 		getidx = (getidx + 8) & (PUSH_BUFFER_SIZE - 1);
 	}
@@ -452,7 +452,7 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 	writel(host1x_channel_dmactrl(true, true, true),
 		chan_regs + HOST1X_CHANNEL_DMACTRL);
 
-	dev_dbg(&dev->pdev->dev,
+	dev_dbg(&dev->dev->dev,
 		"%s: DMA GET 0x%x, PUT HW 0x%x / shadow 0x%x\n",
 		__func__,
 		readl(chan_regs + HOST1X_CHANNEL_DMAGET),
@@ -529,14 +529,14 @@ void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 
 	BUG_ON(cdma->torndown);
 
-	dev_dbg(&dev->pdev->dev,
+	dev_dbg(&dev->dev->dev,
 		"begin channel teardown (channel id %d)\n", ch->chid);
 
 	cmdproc_stop = readl(dev->sync_aperture + HOST1X_SYNC_CMDPROC_STOP);
 	cmdproc_stop |= BIT(ch->chid);
 	writel(cmdproc_stop, dev->sync_aperture + HOST1X_SYNC_CMDPROC_STOP);
 
-	dev_dbg(&dev->pdev->dev,
+	dev_dbg(&dev->dev->dev,
 		"%s: DMA GET 0x%x, PUT HW 0x%x / shadow 0x%x\n",
 		__func__,
 		readl(ch->aperture + HOST1X_CHANNEL_DMAGET),
@@ -561,7 +561,7 @@ void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 
 	BUG_ON(!cdma->torndown || cdma->running);
 
-	dev_dbg(&dev->pdev->dev,
+	dev_dbg(&dev->dev->dev,
 		"end channel teardown (id %d, DMAGET restart = 0x%x)\n",
 		ch->chid, getptr);
 
@@ -598,7 +598,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 	mutex_lock(&cdma->lock);
 
 	if (!cdma->timeout.clientid) {
-		dev_dbg(&dev->pdev->dev,
+		dev_dbg(&dev->dev->dev,
 			 "cdma_timeout: expired, but has no clientid\n");
 		mutex_unlock(&cdma->lock);
 		return;
@@ -609,7 +609,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 	cmdproc_stop = prev_cmdproc | BIT(ch->chid);
 	writel(cmdproc_stop, dev->sync_aperture + HOST1X_SYNC_CMDPROC_STOP);
 
-	dev_dbg(&dev->pdev->dev, "cdma_timeout: cmdproc was 0x%x is 0x%x\n",
+	dev_dbg(&dev->dev->dev, "cdma_timeout: cmdproc was 0x%x is 0x%x\n",
 		prev_cmdproc, cmdproc_stop);
 
 	syncpt_val = nvhost_syncpt_update_min(&dev->syncpt,
@@ -617,7 +617,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	/* has buffer actually completed? */
 	if ((s32)(syncpt_val - cdma->timeout.syncpt_val) >= 0) {
-		dev_dbg(&dev->pdev->dev,
+		dev_dbg(&dev->dev->dev,
 			 "cdma_timeout: expired, but buffer had completed\n");
 		/* restore */
 		cmdproc_stop = prev_cmdproc & ~(BIT(ch->chid));
@@ -627,7 +627,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 		return;
 	}
 
-	dev_warn(&dev->pdev->dev,
+	dev_warn(&dev->dev->dev,
 		"%s: timeout: %d (%s) ctx 0x%p, HW thresh %d, done %d\n",
 		__func__,
 		cdma->timeout.syncpt_id,
@@ -638,7 +638,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 	/* stop HW, resetting channel/module */
 	cdma_op(cdma).timeout_teardown_begin(cdma);
 
-	nvhost_cdma_update_sync_queue(cdma, sp, &dev->pdev->dev);
+	nvhost_cdma_update_sync_queue(cdma, sp, &dev->dev->dev);
 	mutex_unlock(&cdma->lock);
 }
 

@@ -400,23 +400,23 @@ static void debug_not_idle(struct nvhost_master *host)
 		struct nvhost_device *dev = host->channels[i].dev;
 		mutex_lock(&dev->lock);
 		if (dev->name)
-			dev_warn(&host->pdev->dev,
-					"tegra_grhost: %s: refcnt %d\n",
-					dev->name, dev->refcount);
+			dev_warn(&host->dev->dev,
+				"tegra_grhost: %s: refcnt %d\n", dev->name,
+				dev->refcount);
 		mutex_unlock(&dev->lock);
 	}
 
 	for (i = 0; i < host->syncpt.nb_mlocks; i++) {
 		int c = atomic_read(&host->syncpt.lock_counts[i]);
 		if (c) {
-			dev_warn(&host->pdev->dev,
+			dev_warn(&host->dev->dev,
 				"tegra_grhost: lock id %d: refcnt %d\n",
 				i, c);
 			lock_released = false;
 		}
 	}
 	if (lock_released)
-		dev_dbg(&host->pdev->dev, "tegra_grhost: all locks released\n");
+		dev_dbg(&host->dev->dev, "tegra_grhost: all locks released\n");
 }
 
 int nvhost_module_suspend(struct nvhost_device *dev, bool system_suspend)

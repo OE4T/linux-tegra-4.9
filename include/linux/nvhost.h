@@ -126,10 +126,10 @@ extern int nvhost_get_irq_byname(struct nvhost_device *, const char *);
 #define to_nvhost_driver(drv)	(container_of((drv), struct nvhost_driver, \
 				 driver))
 
-#define nvhost_get_drvdata(_dev) dev_get_drvdata(&(_dev)->dev)
-#define nvhost_set_drvdata(_dev, data) dev_set_drvdata(&(_dev)->dev, (data))
-#define nvhost_get_host(_dev) ((struct nvhost_master *) \
-		dev_get_drvdata((_dev)->dev.parent))
+#define nvhost_get_drvdata(_dev)	dev_get_drvdata(&(_dev)->dev)
+#define nvhost_set_drvdata(_dev, data)	dev_set_drvdata(&(_dev)->dev, (data))
+#define nvhost_get_host(_dev)		((struct nvhost_master *) \
+						dev_get_drvdata((_dev)->dev.parent))
 
 int nvhost_bus_add_host(struct nvhost_master *host);
 

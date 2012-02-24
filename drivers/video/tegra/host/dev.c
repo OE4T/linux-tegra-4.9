@@ -28,7 +28,6 @@
 #include <linux/spinlock.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/file.h>
 #include <linux/module.h>
@@ -44,15 +43,16 @@
 #include <mach/nvmap.h>
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
+#include <mach/iomap.h>
 
 #include "debug.h"
 #include "nvhost_job.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 
-#define DRIVER_NAME "tegra_grhost"
-#define IFACE_NAME "nvhost"
-#define TRACE_MAX_LENGTH 128U
+#define DRIVER_NAME		"host1x"
+#define IFACE_NAME		"nvhost"
+#define TRACE_MAX_LENGTH	128U
 
 static int nvhost_major = NVHOST_MAJOR;
 static int nvhost_minor;
@@ -789,7 +789,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 	host->nvhost_class = class_create(THIS_MODULE, IFACE_NAME);
 	if (IS_ERR(host->nvhost_class)) {
 		err = PTR_ERR(host->nvhost_class);
-		dev_err(&host->pdev->dev, "failed to create class\n");
+		dev_err(&host->dev->dev, "failed to create class\n");
 		goto fail;
 	}
 
@@ -797,7 +797,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 				host->nb_channels + 1, IFACE_NAME);
 	nvhost_major = MAJOR(devno);
 	if (err < 0) {
-		dev_err(&host->pdev->dev, "failed to reserve chrdev region\n");
+		dev_err(&host->dev->dev, "failed to reserve chrdev region\n");
 		goto fail;
 	}
 
@@ -810,14 +810,14 @@ static int nvhost_user_init(struct nvhost_master *host)
 		devno = MKDEV(nvhost_major, nvhost_minor + i);
 		err = cdev_add(&ch->cdev, devno, 1);
 		if (err < 0) {
-			dev_err(&host->pdev->dev, "failed to add chan %i cdev\n", i);
+			dev_err(&host->dev->dev, "failed to add chan %i cdev\n", i);
 			goto fail;
 		}
 		ch->node = device_create(host->nvhost_class, NULL, devno, NULL,
 				IFACE_NAME "-%s", ch->dev->name);
 		if (IS_ERR(ch->node)) {
 			err = PTR_ERR(ch->node);
-			dev_err(&host->pdev->dev, "failed to create chan %i device\n", i);
+			dev_err(&host->dev->dev, "failed to create chan %i device\n", i);
 			goto fail;
 		}
 	}
@@ -832,7 +832,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 			IFACE_NAME "-ctrl");
 	if (IS_ERR(host->ctrl)) {
 		err = PTR_ERR(host->ctrl);
-		dev_err(&host->pdev->dev, "failed to create ctrl device\n");
+		dev_err(&host->dev->dev, "failed to create ctrl device\n");
 		goto fail;
 	}
 
@@ -910,27 +910,72 @@ static int nvhost_init_chip_support(struct nvhost_master *host)
 	return 0;
 }
 
-struct nvhost_device hostdev = {
-	.name = "host1x",
+static struct resource tegra_grhost_resources[] = {
+	{
+		.start = TEGRA_HOST1X_BASE,
+		.end = TEGRA_HOST1X_BASE + TEGRA_HOST1X_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TEGRA_DISPLAY_BASE,
+		.end = TEGRA_DISPLAY_BASE + TEGRA_DISPLAY_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TEGRA_DISPLAY2_BASE,
+		.end = TEGRA_DISPLAY2_BASE + TEGRA_DISPLAY2_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TEGRA_VI_BASE,
+		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TEGRA_ISP_BASE,
+		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TEGRA_MPE_BASE,
+		.end = TEGRA_MPE_BASE + TEGRA_MPE_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = INT_SYNCPT_THRESH_BASE,
+		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = INT_HOST1X_MPCORE_GENERAL,
+		.end = INT_HOST1X_MPCORE_GENERAL,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct nvhost_device tegra_grhost_device = {
+	.name = DRIVER_NAME,
 	.id = -1,
+	.resource = tegra_grhost_resources,
+	.num_resources = ARRAY_SIZE(tegra_grhost_resources),
 	.finalize_poweron = power_on_host,
 	.prepare_poweroff = power_off_host,
 	.clocks = {{"host1x", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 
-static int nvhost_probe(struct platform_device *pdev)
+static int nvhost_probe(struct nvhost_device *dev)
 {
 	struct nvhost_master *host;
 	struct resource *regs, *intr0, *intr1;
 	int i, err;
 
-	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	intr0 = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	intr1 = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
+	regs = nvhost_get_resource(dev, IORESOURCE_MEM, 0);
+	intr0 = nvhost_get_resource(dev, IORESOURCE_IRQ, 0);
+	intr1 = nvhost_get_resource(dev, IORESOURCE_IRQ, 1);
 
 	if (!regs || !intr0 || !intr1) {
-		dev_err(&pdev->dev, "missing required platform resources\n");
+		dev_err(&dev->dev, "missing required platform resources\n");
 		return -ENXIO;
 	}
 
@@ -938,42 +983,41 @@ static int nvhost_probe(struct platform_device *pdev)
 	if (!host)
 		return -ENOMEM;
 
-	host->pdev = pdev;
-
 	host->nvmap = nvmap_create_client(nvmap_dev, "nvhost");
 	if (!host->nvmap) {
-		dev_err(&pdev->dev, "unable to create nvmap client\n");
+		dev_err(&dev->dev, "unable to create nvmap client\n");
 		err = -EIO;
 		goto fail;
 	}
 
 	host->reg_mem = request_mem_region(regs->start,
-					resource_size(regs), pdev->name);
+					resource_size(regs), dev->name);
 	if (!host->reg_mem) {
-		dev_err(&pdev->dev, "failed to get host register memory\n");
+		dev_err(&dev->dev, "failed to get host register memory\n");
 		err = -ENXIO;
 		goto fail;
 	}
+
 	host->aperture = ioremap(regs->start, resource_size(regs));
 	if (!host->aperture) {
-		dev_err(&pdev->dev, "failed to remap host registers\n");
+		dev_err(&dev->dev, "failed to remap host registers\n");
 		err = -ENXIO;
 		goto fail;
 	}
 
 	err = nvhost_init_chip_support(host);
 	if (err) {
-		dev_err(&pdev->dev, "failed to init chip support\n");
+		dev_err(&dev->dev, "failed to init chip support\n");
 		goto fail;
 	}
 
 	/*  Register host1x device as bus master */
-	nvhost_device_register(&hostdev);
-	host->dev = &hostdev;
-	nvhost_bus_add_host(host);
+	host->dev = dev;
 
 	/*  Give pointer to host1x via driver */
-	nvhost_set_drvdata(&hostdev, host);
+	nvhost_set_drvdata(dev, host);
+
+	nvhost_bus_add_host(host);
 
 	BUG_ON(!host_channel_op(host).init);
 	for (i = 0; i < host->nb_channels; i++) {
@@ -991,7 +1035,7 @@ static int nvhost_probe(struct platform_device *pdev)
 	if (err)
 		goto fail;
 
-	err = nvhost_module_init(&hostdev);
+	err = nvhost_module_init(&tegra_grhost_device);
 	if (err)
 		goto fail;
 
@@ -1000,15 +1044,15 @@ static int nvhost_probe(struct platform_device *pdev)
 		nvhost_module_init(ch->dev);
 	}
 
-	platform_set_drvdata(pdev, host);
-
-	clk_enable(host->dev->clk[0]);
+	for (i = 0; i < host->dev->num_clks; i++)
+		clk_enable(host->dev->clk[i]);
 	nvhost_syncpt_reset(&host->syncpt);
-	clk_disable(host->dev->clk[0]);
+	for (i = 0; i < host->dev->num_clks; i++)
+		clk_disable(host->dev->clk[0]);
 
 	nvhost_debug_init(host);
 
-	dev_info(&pdev->dev, "initialized\n");
+	dev_info(&dev->dev, "initialized\n");
 	return 0;
 
 fail:
@@ -1019,18 +1063,18 @@ fail:
 	return err;
 }
 
-static int __exit nvhost_remove(struct platform_device *pdev)
+static int __exit nvhost_remove(struct nvhost_device *dev)
 {
-	struct nvhost_master *host = platform_get_drvdata(pdev);
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	nvhost_remove_chip_support(host);
 	return 0;
 }
 
-static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
+static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
 {
-	struct nvhost_master *host = platform_get_drvdata(pdev);
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	int i, ret;
-	dev_info(&pdev->dev, "suspending\n");
+	dev_info(&dev->dev, "suspending\n");
 
 	for (i = 0; i < host->nb_channels; i++) {
 		ret = nvhost_channel_suspend(&host->channels[i]);
@@ -1039,17 +1083,18 @@ static int nvhost_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	ret = nvhost_module_suspend(host->dev, true);
-	dev_info(&pdev->dev, "suspend status: %d\n", ret);
+	dev_info(&dev->dev, "suspend status: %d\n", ret);
 	return ret;
 }
 
-static int nvhost_resume(struct platform_device *pdev)
+static int nvhost_resume(struct nvhost_device *dev)
 {
-	dev_info(&pdev->dev, "resuming\n");
+	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 
-static struct platform_driver nvhost_driver = {
+static struct nvhost_driver nvhost_driver = {
+	.probe = nvhost_probe,
 	.remove = __exit_p(nvhost_remove),
 	.suspend = nvhost_suspend,
 	.resume = nvhost_resume,
@@ -1061,16 +1106,27 @@ static struct platform_driver nvhost_driver = {
 
 static int __init nvhost_mod_init(void)
 {
+	int err;
+
 	register_sets = tegra_gpu_register_sets();
-	return platform_driver_probe(&nvhost_driver, nvhost_probe);
+
+	err = nvhost_device_register(&tegra_grhost_device);
+	if (err)
+		return err;
+
+	return nvhost_driver_register(&nvhost_driver);
 }
 
 static void __exit nvhost_mod_exit(void)
 {
-	platform_driver_unregister(&nvhost_driver);
+	nvhost_driver_unregister(&nvhost_driver);
 }
 
-module_init(nvhost_mod_init);
+/* host1x master device needs nvmap to be instantiated first.
+ * nvmap is instantiated via fs_initcall.
+ * Hence instantiate host1x master device using rootfs_initcall
+ * which is one level after fs_initcall. */
+rootfs_initcall(nvhost_mod_init);
 module_exit(nvhost_mod_exit);
 
 module_param_call(register_sets, NULL, param_get_uint, &register_sets, 0444);

@@ -2419,10 +2419,18 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 					"DSI failed to enter ulpm\n");
 				goto fail;
 			}
-			val = DSI_PAD_CONTROL_PAD_PDIO(0) |
+
+			val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
+
+			/* erase bits we're about to set */
+			val &= ~(DSI_PAD_CONTROL_PAD_PDIO(0x3) |
+				DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
+				DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE));
+
+			val |= (DSI_PAD_CONTROL_PAD_PDIO(0) |
 				DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
-				DSI_PAD_CONTROL_PAD_PULLDN_ENAB
-						(TEGRA_DSI_DISABLE);
+				DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE));
+
 			tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
 				dev_err(&dc->ndev->dev,
@@ -2792,8 +2800,11 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 		}
 	}
 
-	/* Suspend pad */
-	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
+	/*
+	 * Suspend pad
+	 * It is ok to overwrite previous value of DSI_PAD_CONTROL reg
+	 * because it will be restored properly in resume sequence
+	 */
 	val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
 		DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
 		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);

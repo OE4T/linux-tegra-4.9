@@ -1094,6 +1094,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	else
 		tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY, DC_CMD_STATE_ACCESS);
 
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+					DC_CMD_DISPLAY_WINDOW_HEADER);
+		tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
+		if (!no_vsync)
+			update_mask |= WIN_A_ACT_REQ << i;
+	}
+
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		unsigned h_dda;

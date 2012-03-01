@@ -897,8 +897,10 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 	if (dsi->info.video_burst_mode == TEGRA_DSI_VIDEO_NONE_BURST_MODE ||
 		dsi->info.video_burst_mode ==
 				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END) {
-		sol_delay = NUMOF_BIT_PER_BYTE * dsi->pixel_scaler_mul /
-			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
+#define VIDEO_FIFO_LATENCY_PIXEL_CLK 8
+		sol_delay = VIDEO_FIFO_LATENCY_PIXEL_CLK *
+			dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
+#undef VIDEO_FIFO_LATENCY_PIXEL_CLK
 		dsi->status.clk_burst = DSI_CLK_BURST_NONE_BURST;
 	} else {
 		sol_delay = tegra_dsi_sol_delay_burst(dc, dsi);
@@ -1091,6 +1093,27 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 	}
 }
 
+static void tegra_dsi_reset_underflow_overflow
+				(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	val &= (DSI_STATUS_LB_OVERFLOW(0x1) | DSI_STATUS_LB_UNDERFLOW(0x1));
+	if (val) {
+		if (val & DSI_STATUS_LB_OVERFLOW(0x1))
+			dev_warn(&dsi->dc->ndev->dev,
+				"dsi: video fifo overflow. Resetting flag\n");
+		if (val & DSI_STATUS_LB_UNDERFLOW(0x1))
+			dev_warn(&dsi->dc->ndev->dev,
+				"dsi: video fifo underflow. Resetting flag\n");
+		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+		val |= DSI_HOST_CONTROL_FIFO_STAT_RESET(0x1);
+		tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+		udelay(5);
+	}
+}
+
 static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
@@ -1133,6 +1156,8 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	if (timeout == 0)
 		dev_warn(&dc->ndev->dev,
 			"DC doesn't stop at end of frame.\n");
+
+	tegra_dsi_reset_underflow_overflow(dsi);
 }
 
 static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
@@ -1586,22 +1611,6 @@ fail:
 	return (err < 0 ? true : false);
 }
 
-static void tegra_dsi_reset_underflow_overflow
-				(struct tegra_dc_dsi_data *dsi)
-{
-	u32 val;
-
-	val = tegra_dsi_readl(dsi, DSI_STATUS);
-	val &= (DSI_STATUS_LB_OVERFLOW(0x1) | DSI_STATUS_LB_UNDERFLOW(0x1));
-	if (val) {
-		dev_warn(&dsi->dc->ndev->dev, "Reset overflow/underflow\n");
-		val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
-		val |= DSI_HOST_CONTROL_FIFO_STAT_RESET(0x1);
-		tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
-		ndelay(200);
-	}
-}
-
 static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 {
 	tegra_dsi_writel(dsi,
@@ -1706,8 +1715,6 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 			goto fail;
 		}
 	}
-
-	tegra_dsi_reset_underflow_overflow(dsi);
 
 	if (lp_op == DSI_LP_OP_READ)
 		tegra_dsi_reset_read_count(dsi);

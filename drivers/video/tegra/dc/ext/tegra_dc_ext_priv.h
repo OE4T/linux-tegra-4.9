@@ -90,6 +90,8 @@ struct tegra_dc_ext_event_list {
 	struct list_head		list;
 };
 
+#define TEGRA_DC_EXT_CAPABILITIES	0
+
 struct tegra_dc_ext_control_user {
 	struct tegra_dc_ext_control	*control;
 

@@ -128,6 +128,12 @@ static int set_event_mask(struct tegra_dc_ext_control_user *user, u32 mask)
 	return 0;
 }
 
+static int get_capabilities(struct tegra_dc_ext_control_capabilities *caps)
+{
+	caps->caps = TEGRA_DC_EXT_CAPABILITIES;
+	return 0;
+}
+
 static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 				       unsigned long arg)
 {
@@ -176,6 +182,18 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 	}
 	case TEGRA_DC_EXT_CONTROL_SET_EVENT_MASK:
 		return set_event_mask(user, (u32) arg);
+	case TEGRA_DC_EXT_CONTROL_GET_CAPABILITIES:
+	{
+		struct tegra_dc_ext_control_capabilities args;
+		int ret;
+
+		ret = get_capabilities(&args);
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
+	}
 	default:
 		return -EINVAL;
 	}

@@ -99,6 +99,7 @@ struct nvhost_device {
 
 /* Register device to nvhost bus */
 extern int nvhost_device_register(struct nvhost_device *);
+
 /* Deregister device from nvhost bus */
 extern void nvhost_device_unregister(struct nvhost_device *);
 
@@ -128,8 +129,12 @@ extern int nvhost_get_irq_byname(struct nvhost_device *, const char *);
 
 #define nvhost_get_drvdata(_dev)	dev_get_drvdata(&(_dev)->dev)
 #define nvhost_set_drvdata(_dev, data)	dev_set_drvdata(&(_dev)->dev, (data))
-#define nvhost_get_host(_dev)		((struct nvhost_master *) \
-						dev_get_drvdata((_dev)->dev.parent))
+static inline struct nvhost_master *nvhost_get_host(struct nvhost_device *_dev)
+{
+	return (_dev->dev.parent) ? \
+		((struct nvhost_master *) dev_get_drvdata(_dev->dev.parent)) : \
+		((struct nvhost_master *) dev_get_drvdata(&(_dev->dev)));
+}
 
 int nvhost_bus_add_host(struct nvhost_master *host);
 

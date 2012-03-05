@@ -1073,7 +1073,8 @@ static int __exit nvhost_remove(struct nvhost_device *dev)
 static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
 {
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
-	int i, ret;
+	int i, ret = 0;
+
 	dev_info(&dev->dev, "suspending\n");
 
 	for (i = 0; i < host->nb_channels; i++) {
@@ -1084,6 +1085,7 @@ static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
 
 	ret = nvhost_module_suspend(host->dev, true);
 	dev_info(&dev->dev, "suspend status: %d\n", ret);
+
 	return ret;
 }
 
@@ -1106,14 +1108,7 @@ static struct nvhost_driver nvhost_driver = {
 
 static int __init nvhost_mod_init(void)
 {
-	int err;
-
 	register_sets = tegra_gpu_register_sets();
-
-	err = nvhost_device_register(&tegra_grhost_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&nvhost_driver);
 }
 

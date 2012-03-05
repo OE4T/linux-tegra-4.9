@@ -55,15 +55,8 @@ static void do_unpowergate_locked(int id)
 		tegra_unpowergate_partition(id);
 }
 
-void nvhost_module_reset(struct nvhost_device *dev)
+static void do_module_reset_locked(struct nvhost_device *dev)
 {
-	dev_dbg(&dev->dev,
-		"%s: asserting %s module reset (id %d, id2 %d)\n",
-		__func__, dev->name,
-		dev->powergate_ids[0], dev->powergate_ids[1]);
-
-	mutex_lock(&dev->lock);
-
 	/* assert module and mc client reset */
 	if (dev->powergate_ids[0] != -1) {
 		tegra_powergate_mc_disable(dev->powergate_ids[0]);
@@ -89,7 +82,17 @@ void nvhost_module_reset(struct nvhost_device *dev)
 		tegra_periph_reset_deassert(dev->clk[1]);
 		tegra_powergate_mc_enable(dev->powergate_ids[1]);
 	}
+}
 
+void nvhost_module_reset(struct nvhost_device *dev)
+{
+	dev_dbg(&dev->dev,
+		"%s: asserting %s module reset (id %d, id2 %d)\n",
+		__func__, dev->name,
+		dev->powergate_ids[0], dev->powergate_ids[1]);
+
+	mutex_lock(&dev->lock);
+	do_module_reset_locked(dev);
 	mutex_unlock(&dev->lock);
 
 	dev_dbg(&dev->dev, "%s: module %s out of reset\n",
@@ -108,6 +111,9 @@ static void to_state_clockgated_locked(struct nvhost_device *dev)
 			&& dev->can_powergate) {
 		do_unpowergate_locked(dev->powergate_ids[0]);
 		do_unpowergate_locked(dev->powergate_ids[1]);
+
+		if (dev->powerup_reset)
+			do_module_reset_locked(dev);
 	}
 	dev->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 }

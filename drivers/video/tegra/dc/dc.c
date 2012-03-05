@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2010-2011 NVIDIA Corporation
+ * Copyright (C) 2010-2012 NVIDIA Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2949,7 +2949,11 @@ static int tegra_dc_suspend(struct nvhost_device *ndev, pm_message_t state)
 
 	if (dc->out && dc->out->postsuspend) {
 		dc->out->postsuspend();
-		msleep(100); /* avoid resume event due to voltage falling */
+		if (dc->out->type && dc->out->type == TEGRA_DC_OUT_HDMI)
+			/*
+			 * avoid resume event due to voltage falling
+			 */
+			msleep(100);
 	}
 
 	mutex_unlock(&dc->lock);

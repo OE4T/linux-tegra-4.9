@@ -82,7 +82,7 @@ static struct nvhost_device devices[] = {
 	.powergate_ids = {TEGRA_POWERGATE_3D,
 			TEGRA_POWERGATE_3D1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.can_powergate = true,
+	.can_powergate = false,
 	.powergate_delay = 250,
 	.moduleid      = NVHOST_MODULE_NONE,
 },

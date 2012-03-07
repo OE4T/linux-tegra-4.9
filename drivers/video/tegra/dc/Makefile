@@ -2,6 +2,7 @@ obj-y += bandwidth.o
 obj-y += dc.o
 obj-y += rgb.o
 obj-y += hdmi.o
+obj-y += dsi2lvds.o
 obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
 obj-y += edid.o
 obj-y += nvsd.o

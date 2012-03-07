@@ -2051,7 +2051,8 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_hdmi_ops;
 		break;
 
-	case TEGRA_DC_OUT_DSI:
+	case TEGRA_DC_OUT_DSI: /* fall through */
+	case TEGRA_DC_OUT_DSI2LVDS:
 		dc->out_ops = &tegra_dc_dsi_ops;
 		break;
 

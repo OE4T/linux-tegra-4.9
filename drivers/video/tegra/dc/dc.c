@@ -2071,8 +2071,11 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			dc->windows[i].underflows++;
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
-			if (dc->windows[i].underflows > 4)
+			if (dc->windows[i].underflows > 4) {
 				schedule_work(&dc->reset_work);
+				/* reset counter */
+				dc->windows[i].underflows = 0;
+			}
 #endif
 		} else {
 			dc->windows[i].underflows = 0;
@@ -2684,6 +2687,13 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 	_tegra_dc_controller_reset_enable(dc);
 
 	dc->enabled = true;
+
+	/* reopen host read bus */
+	val = tegra_dc_readl(dc, DC_CMD_CONT_SYNCPT_VSYNC);
+	val &= ~(0x00000100);
+	val |= 0x100;
+	tegra_dc_writel(dc, val, DC_CMD_CONT_SYNCPT_VSYNC);
+
 unlock:
 	mutex_unlock(&dc->lock);
 	mutex_unlock(&shared_lock);

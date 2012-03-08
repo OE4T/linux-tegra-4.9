@@ -61,7 +61,6 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x700,   64, INDIRECT),
 	HWCTX_REGINFO(0x710,   50, DIRECT),
 	HWCTX_REGINFO(0x750,   16, DIRECT),
-	HWCTX_REGINFO(0x760,   16, DIRECT),
 	HWCTX_REGINFO(0x780,   32, DIRECT),
 	HWCTX_REGINFO(0x7e0,    1, DIRECT),
 	HWCTX_REGINFO(0x7e1,    1, DIRECT),
@@ -76,8 +75,6 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x90a,    1, DIRECT),
 	HWCTX_REGINFO(0x90b,    1, DIRECT),
 	HWCTX_REGINFO(0xa02,   10, DIRECT),
-	HWCTX_REGINFO(0xb04,    1, DIRECT),
-	HWCTX_REGINFO(0xb06,   13, DIRECT),
 	HWCTX_REGINFO(0xe04,    1, DIRECT),
 	HWCTX_REGINFO(0xe2a,    1, DIRECT),
 	HWCTX_REGINFO(0xe41,    1, DIRECT),
@@ -125,9 +122,6 @@ static void save_push_v1(struct nvhost_cdma *cdma,
 	/* back to 3d */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-			NVHOST_OPCODE_NOOP);
-	nvhost_cdma_push(cdma,
-			nvhost_opcode_imm(0xb00, 1),
 			nvhost_opcode_imm(0xe40, 1));
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_nonincr(0x904, 1),
@@ -326,7 +320,7 @@ int __init t114_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 		return err;
 	}
 
-	nvhost_3dctx_save_slots = 6;
+	nvhost_3dctx_save_slots = 5;
 
 	save_ptr = nvmap_mmap(nvhost_3dctx_save_buf);
 	if (!save_ptr) {

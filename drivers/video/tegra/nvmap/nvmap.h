@@ -97,6 +97,8 @@ struct nvmap_page_pool {
 	spinlock_t lock;
 	int npages;
 	struct page **page_array;
+	struct mutex shrink_lock;
+	struct page **shrink_array;
 	int max_pages;
 };
 

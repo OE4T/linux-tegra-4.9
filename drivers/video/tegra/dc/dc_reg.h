@@ -613,7 +613,7 @@
 
 #if defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 
-#define DC_WINBUF_BLEND_LAYER_CONTROL		0x824
+#define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
 #define  WIN_DEPTH(x)			(((x) & 0xff) << 0)
 #define  WIN_K1(x)			(((x) & 0xff) << 8)
 #define  WIN_K2(x)			(((x) & 0xff) << 16)
@@ -627,7 +627,7 @@
 #define  WIN_CKEY_SEL_WINC_KEY0		(5 << 25)
 #define  WIN_CKEY_SEL_WINC_KEY1		(6 << 25)
 
-#define DC_WINBUF_BLEND_MATCH_SELECT		0x825
+#define DC_WINBUF_BLEND_MATCH_SELECT		0x717
 #define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_ZERO \
 					(0 << 0)
 #define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 \
@@ -667,7 +667,7 @@
 #define  WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_K2 \
 					(3 << 12)
 
-#define DC_WINBUF_BLEND_NOMATCH_SELECT		0x826
+#define DC_WINBUF_BLEND_NOMATCH_SELECT		0x718
 #define  WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_ZERO \
 					(0 << 0)
 #define  WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_K1 \
@@ -707,7 +707,7 @@
 #define  WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_K2 \
 					(3 << 12)
 
-#define DC_WINBUF_BLEND_ALPHA_1BIT		0x827
+#define DC_WINBUF_BLEND_ALPHA_1BIT		0x719
 #define  WIN_ALPHA_1BIT_WEIGHT0(x)	(((x) & 0xff) << 0)
 #define  WIN_ALPHA_1BIT_WEIGHT1(x)	(((x) & 0xff) << 8)
 

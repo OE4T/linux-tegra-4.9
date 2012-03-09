@@ -976,7 +976,7 @@ unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n)
 /* to save power, call when display memory clients would be idle */
 static void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 {
-	if (dc->emc_clk_rate)
+	if (tegra_is_clk_enabled(dc->emc_clk))
 		clk_disable(dc->emc_clk);
 	dc->emc_clk_rate = 0;
 }
@@ -986,7 +986,8 @@ static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 	unsigned i;
 
 	if (dc->emc_clk_rate != dc->new_emc_clk_rate) {
-		if (!dc->emc_clk_rate) /* going from 0 to non-zero */
+		/* going from 0 to non-zero */
+		if (!dc->emc_clk_rate && !tegra_is_clk_enabled(dc->emc_clk))
 			clk_enable(dc->emc_clk);
 		dc->emc_clk_rate = dc->new_emc_clk_rate;
 		clk_set_rate(dc->emc_clk, dc->emc_clk_rate);

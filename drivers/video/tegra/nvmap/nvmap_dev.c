@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1183,6 +1183,11 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&dev->iovmm_master.pin_wait);
 	mutex_init(&dev->iovmm_master.pin_lock);
+	nvmap_page_pool_init(&dev->iovmm_master.uc_pool,
+		NVMAP_HANDLE_UNCACHEABLE);
+	nvmap_page_pool_init(&dev->iovmm_master.wc_pool,
+		NVMAP_HANDLE_WRITE_COMBINE);
+
 	dev->iovmm_master.iovmm =
 		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL,
 			&(dev->dev_user));
@@ -1309,6 +1314,12 @@ static int nvmap_probe(struct platform_device *pdev)
 				dev, &debug_iovmm_clients_fops);
 			debugfs_create_file("allocations", 0664, iovmm_root,
 				dev, &debug_iovmm_allocations_fops);
+			debugfs_create_u32("uc_page_pool_npages",
+				S_IRUGO|S_IWUSR, iovmm_root,
+				&dev->iovmm_master.uc_pool.npages);
+			debugfs_create_u32("wc_page_pool_npages",
+				S_IRUGO|S_IWUSR, iovmm_root,
+				&dev->iovmm_master.wc_pool.npages);
 		}
 	}
 

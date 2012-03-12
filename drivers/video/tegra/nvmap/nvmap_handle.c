@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2009-2011, NVIDIA Corporation.
+ * Copyright (c) 2009-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@
 
 #include <linux/vmstat.h>
 #include <linux/swap.h>
+#include <linux/shrinker.h>
 
 #include "nvmap.h"
 #include "nvmap_mru.h"
@@ -62,6 +63,181 @@
  * preserve kmalloc space, if the array of pages exceeds PAGELIST_VMALLOC_MIN,
  * the array is allocated using vmalloc. */
 #define PAGELIST_VMALLOC_MIN	(PAGE_SIZE * 2)
+#define NVMAP_TEST_PAGE_POOL_SHRINKER 0
+
+static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size);
+
+static int nvmap_page_pool_shrink(struct shrinker *shrinker,
+				  struct shrink_control *sc)
+{
+	int shrink_pages = sc->nr_to_scan;
+	int wc_free_pages, uc_free_pages;
+	struct nvmap_share *share = nvmap_get_share_from_dev(nvmap_dev);
+	int wc_pages_to_free = 0, uc_pages_to_free = 0;
+	struct page *page;
+
+	pr_debug("%s: sh_pages=%d", __func__, shrink_pages);
+	shrink_pages = shrink_pages % 2 ? shrink_pages + 1 : shrink_pages;
+	wc_free_pages = nvmap_page_pool_get_free_count(&share->wc_pool);
+	uc_free_pages = nvmap_page_pool_get_free_count(&share->uc_pool);
+
+	if (shrink_pages == 0)
+		return wc_free_pages + uc_free_pages;
+
+	if (!(sc->gfp_mask & __GFP_WAIT))
+		return -1;
+
+	if (wc_free_pages >= uc_free_pages) {
+		wc_pages_to_free = wc_free_pages - uc_free_pages;
+		if (wc_pages_to_free >= shrink_pages)
+			wc_pages_to_free = shrink_pages;
+		else {
+			shrink_pages -= wc_pages_to_free;
+			wc_pages_to_free += shrink_pages / 2;
+			uc_pages_to_free = shrink_pages / 2;
+		}
+	}  else {
+		uc_pages_to_free = uc_free_pages - wc_free_pages;
+		if (uc_pages_to_free >= shrink_pages)
+			uc_pages_to_free = shrink_pages;
+		else {
+			shrink_pages -= uc_pages_to_free;
+			uc_pages_to_free += shrink_pages / 2;
+			wc_pages_to_free = shrink_pages / 2;
+		}
+	}
+
+	while (uc_pages_to_free--) {
+		page = nvmap_page_pool_alloc(&share->uc_pool);
+		if (!page)
+			break;
+		set_pages_array_wb(&page, 1);
+		__free_page(page);
+	}
+
+	while (wc_pages_to_free--) {
+		page = nvmap_page_pool_alloc(&share->wc_pool);
+		if (!page)
+			break;
+		set_pages_array_wb(&page, 1);
+		__free_page(page);
+	}
+
+	wc_free_pages = nvmap_page_pool_get_free_count(&share->wc_pool);
+	uc_free_pages = nvmap_page_pool_get_free_count(&share->uc_pool);
+	pr_debug("%s: free pages=%d", __func__, wc_free_pages+uc_free_pages);
+	return wc_free_pages + uc_free_pages;
+}
+
+static struct shrinker nvmap_page_pool_shrinker = {
+	.shrink = nvmap_page_pool_shrink,
+	.seeks = 1,
+};
+
+#if NVMAP_TEST_PAGE_POOL_SHRINKER
+static int shrink_state;
+static int shrink_set(const char *arg, const struct kernel_param *kp)
+{
+	struct shrink_control sc;
+
+	sc.nr_to_scan = 32768 * 2 - 1;
+	nvmap_page_pool_shrink(NULL, &sc);
+	shrink_state = 1;
+	return 0;
+}
+
+static int shrink_get(char *buff, const struct kernel_param *kp)
+{
+	return param_get_int(buff, kp);
+}
+
+static struct kernel_param_ops shrink_ops = {
+	.get = shrink_get,
+	.set = shrink_set,
+};
+
+module_param_cb(shrink, &shrink_ops, &shrink_state, 0644);
+#endif
+int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
+{
+	struct page *page;
+	int i;
+	static int reg = 1;
+	struct sysinfo info;
+
+	si_meminfo(&info);
+	spin_lock_init(&pool->lock);
+	pool->npages = 0;
+	/* Use 1/4th of total ram for page pools.
+	 *  1/8th for wc and 1/8th for uc.
+	 */
+	pool->max_pages = info.totalram >> 3;
+	if (pool->max_pages <= 0)
+		pool->max_pages = NVMAP_DEFAULT_PAGE_POOL_SIZE;
+	pr_info("nvmap %s page pool size=%d pages",
+		flags == NVMAP_HANDLE_UNCACHEABLE ? "uc" : "wc",
+		pool->max_pages);
+	pool->page_array = vmalloc(sizeof(void *) * pool->max_pages);
+	if (!pool->page_array)
+		return -ENOMEM;
+
+	if (reg) {
+		reg = 0;
+		register_shrinker(&nvmap_page_pool_shrinker);
+	}
+
+	for (i = 0; i < pool->max_pages; i++) {
+		page = nvmap_alloc_pages_exact(GFP_NVMAP,
+				PAGE_SIZE);
+		if (!page)
+			return 0;
+		if (flags == NVMAP_HANDLE_WRITE_COMBINE)
+			set_pages_array_wc(&page, 1);
+		else if (flags == NVMAP_HANDLE_UNCACHEABLE)
+			set_pages_array_uc(&page, 1);
+		if (!nvmap_page_pool_release(pool, page)) {
+			set_pages_array_wb(&page, 1);
+			__free_page(page);
+			return 0;
+		}
+	}
+	return 0;
+}
+
+struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool)
+{
+	struct page *page = NULL;
+
+	spin_lock(&pool->lock);
+	if (pool->npages > 0)
+		page = pool->page_array[--pool->npages];
+	spin_unlock(&pool->lock);
+	return page;
+}
+
+bool nvmap_page_pool_release(struct nvmap_page_pool *pool,
+				  struct page *page)
+{
+	int ret = false;
+
+	spin_lock(&pool->lock);
+	if (pool->npages < pool->max_pages) {
+		pool->page_array[pool->npages++] = page;
+		ret = true;
+	}
+	spin_unlock(&pool->lock);
+	return ret;
+}
+
+int nvmap_page_pool_get_free_count(struct nvmap_page_pool *pool)
+{
+	int count;
+
+	spin_lock(&pool->lock);
+	count = pool->npages;
+	spin_unlock(&pool->lock);
+	return count;
+}
 
 static inline void *altalloc(size_t len)
 {
@@ -84,10 +260,11 @@ static inline void altfree(void *ptr, size_t len)
 
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
-	struct nvmap_device *dev = h->dev;
-	unsigned int i, nr_page;
+	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
+	unsigned int i, nr_page, page_index = 0;
+	struct nvmap_page_pool *pool = NULL;
 
-	if (nvmap_handle_remove(dev, h) != 0)
+	if (nvmap_handle_remove(h->dev, h) != 0)
 		return;
 
 	if (!h->alloc)
@@ -104,18 +281,38 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	BUG_ON(h->size & ~PAGE_MASK);
 	BUG_ON(!h->pgalloc.pages);
 
-	nvmap_mru_remove(nvmap_get_share_from_dev(dev), h);
+	nvmap_mru_remove(share, h);
+
+	/* Add to page pools, if necessary */
+	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
+		pool = &share->wc_pool;
+	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
+		pool = &share->uc_pool;
+
+	if (pool) {
+		while (page_index < nr_page) {
+			if (!nvmap_page_pool_release(pool,
+			    h->pgalloc.pages[page_index]))
+				break;
+			page_index++;
+		}
+	}
+
+	if (page_index == nr_page)
+		goto skip_attr_restore;
 
 	/* Restore page attributes. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE ||
 	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
 	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		set_pages_array_wb(h->pgalloc.pages, nr_page);
+		set_pages_array_wb(&h->pgalloc.pages[page_index],
+				nr_page - page_index);
 
+skip_attr_restore:
 	if (h->pgalloc.area)
 		tegra_iovmm_free_vm(h->pgalloc.area);
 
-	for (i = 0; i < nr_page; i++)
+	for (i = page_index; i < nr_page; i++)
 		__free_page(h->pgalloc.pages[i]);
 
 	altfree(h->pgalloc.pages, nr_page * sizeof(struct page *));
@@ -148,9 +345,10 @@ static int handle_page_alloc(struct nvmap_client *client,
 			     struct nvmap_handle *h, bool contiguous)
 {
 	size_t size = PAGE_ALIGN(h->size);
+	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 	unsigned int nr_page = size >> PAGE_SHIFT;
 	pgprot_t prot;
-	unsigned int i = 0;
+	unsigned int i = 0, page_index = 0;
 	struct page **pages;
 
 	pages = altalloc(nr_page * sizeof(*pages));
@@ -171,6 +369,21 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	} else {
 		for (i = 0; i < nr_page; i++) {
+			pages[i] = NULL;
+
+			/* Get pages from pool if there are any */
+			if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
+				pages[i] = nvmap_page_pool_alloc(
+						&share->wc_pool);
+			else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
+				pages[i] = nvmap_page_pool_alloc(
+						&share->uc_pool);
+
+			if (pages[i]) {
+				page_index++;
+				continue;
+			}
+
 			pages[i] = nvmap_alloc_pages_exact(GFP_NVMAP,
 				PAGE_SIZE);
 			if (!pages[i])
@@ -188,14 +401,21 @@ static int handle_page_alloc(struct nvmap_client *client,
 #endif
 	}
 
+	if (nr_page == page_index)
+		goto skip_attr_change;
+
 	/* Update the pages mapping in kernel page table. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		set_pages_array_wc(pages, nr_page);
+		set_pages_array_wc(&pages[page_index],
+				nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
-		set_pages_array_uc(pages, nr_page);
+		set_pages_array_uc(&pages[page_index],
+				nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		set_pages_array_iwb(pages, nr_page);
+		set_pages_array_iwb(&pages[page_index],
+				nr_page - page_index);
 
+skip_attr_change:
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
@@ -203,8 +423,10 @@ static int handle_page_alloc(struct nvmap_client *client,
 	return 0;
 
 fail:
-	while (i--)
+	while (i--) {
+		set_pages_array_wb(&pages[i], 1);
 		__free_page(pages[i]);
+	}
 	altfree(pages, nr_page * sizeof(*pages));
 	wmb();
 	return -ENOMEM;

@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,10 +88,34 @@ struct nvmap_handle {
 	struct mutex lock;
 };
 
+#define NVMAP_DEFAULT_PAGE_POOL_SIZE 8192
+#define NVMAP_NUM_POOLS 2
+#define NVMAP_UC_POOL 0
+#define NVMAP_WC_POOL 1
+
+struct nvmap_page_pool {
+	spinlock_t lock;
+	int npages;
+	struct page **page_array;
+	int max_pages;
+};
+
+int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags);
+struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
+bool nvmap_page_pool_release(struct nvmap_page_pool *pool, struct page *page);
+int nvmap_page_pool_get_free_count(struct nvmap_page_pool *pool);
+
 struct nvmap_share {
 	struct tegra_iovmm_client *iovmm;
 	wait_queue_head_t pin_wait;
 	struct mutex pin_lock;
+	union {
+		struct nvmap_page_pool pools[NVMAP_NUM_POOLS];
+		struct {
+			struct nvmap_page_pool uc_pool;
+			struct nvmap_page_pool wc_pool;
+		};
+	};
 #ifdef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
 	struct mutex mru_lock;
 	struct list_head *mru_lists;

@@ -1066,6 +1066,7 @@ fail:
 static int __exit nvhost_remove(struct nvhost_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	nvhost_intr_deinit(&host->intr);
 	nvhost_remove_chip_support(host);
 	return 0;
 }

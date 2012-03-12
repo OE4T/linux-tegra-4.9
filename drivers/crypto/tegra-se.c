@@ -846,6 +846,9 @@ static int tegra_se_aes_queue_req(struct ablkcipher_request *req)
 	bool idle = true;
 	int err = 0;
 
+	if (!req->nbytes)
+		return -EINVAL;
+
 	spin_lock_irqsave(&se_dev->lock, flags);
 	err = ablkcipher_enqueue_request(&se_dev->queue, req);
 	if (se_dev->work_q_busy)
@@ -1202,6 +1205,9 @@ int tegra_se_sha_final(struct ahash_request *req)
 	struct tegra_se_ll *src_ll;
 	u32 total, num_sgs;
 	int err = 0;
+
+	if (!req->nbytes)
+		return -EINVAL;
 
 	if (crypto_ahash_digestsize(tfm) == SHA1_DIGEST_SIZE)
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;

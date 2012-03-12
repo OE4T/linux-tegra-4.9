@@ -37,6 +37,7 @@
 /* common carveout heaps */
 #define NVMAP_HEAP_CARVEOUT_IRAM    (1ul<<29)
 #define NVMAP_HEAP_CARVEOUT_VPR     (1ul<<28)
+#define NVMAP_HEAP_CARVEOUT_TSEC    (1ul<<27)
 #define NVMAP_HEAP_CARVEOUT_GENERIC (1ul<<0)
 
 #define NVMAP_HEAP_CARVEOUT_MASK    (NVMAP_HEAP_IOVMM - 1)

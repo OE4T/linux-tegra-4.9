@@ -229,6 +229,7 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	return 0;
 }
 
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
 static void tegra_fb_flip_win(struct tegra_fb_info *tegra_fb)
 {
 	struct tegra_dc_win *win = tegra_fb->win;
@@ -271,6 +272,7 @@ static void tegra_fb_flip_win(struct tegra_fb_info *tegra_fb)
 	tegra_dc_update_windows(&tegra_fb->win, 1);
 	tegra_dc_sync_windows(&tegra_fb->win, 1);
 }
+#endif
 
 static int tegra_fb_blank(int blank, struct fb_info *info)
 {

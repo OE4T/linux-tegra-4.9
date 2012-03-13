@@ -157,18 +157,19 @@ static bool nvsd_phase_in_adjustments(struct tegra_dc *dc,
 
 		/* Phase in Backlight and Pixel K
 		every ADJ_PHASE_STEP frames*/
-		if (step-- & ADJ_PHASE_STEP == ADJ_PHASE_STEP) {
+		if ((step-- & ADJ_PHASE_STEP) == ADJ_PHASE_STEP) {
 
 			if (val != cur_sd_brightness)
 				val > cur_sd_brightness ?
 				(cur_sd_brightness++) :
 				(cur_sd_brightness--);
 
-			if (target_k != cur_k)
+			if (target_k != cur_k) {
 				if (target_k > cur_k)
 					cur_k += K_STEP;
 				else
 					cur_k -= K_STEP;
+			}
 
 			/* Set manual k value */
 			man_k = SD_MAN_K_R(cur_k) |

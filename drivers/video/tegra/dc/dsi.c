@@ -461,6 +461,13 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 	/* Calculate minimum required pixel rate. */
 	pixel_clk_hz = h_width_pixels * v_width_lines * dsi->info.refresh_rate;
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		if (dsi->info.rated_refresh_rate >= dsi->info.refresh_rate)
+			dev_info(&dc->ndev->dev, "DSI: measured refresh rate "
+				"should be larger than rated refresh rate.\n");
+		dc->mode.rated_pclk = h_width_pixels * v_width_lines *
+						dsi->info.rated_refresh_rate;
+	}
 
 	/* Calculate minimum byte rate on DSI interface. */
 	byte_clk_hz = (pixel_clk_hz * dsi->pixel_scaler_mul) /

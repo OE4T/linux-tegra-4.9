@@ -589,7 +589,10 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	if (dc->mode.pclk > 1000) {
 		struct tegra_dc_mode *mode = &dc->mode;
 
-		info->var.pixclock = KHZ2PICOS(mode->pclk / 1000);
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+			info->var.pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
+		else
+			info->var.pixclock = KHZ2PICOS(mode->pclk / 1000);
 		info->var.left_margin = mode->h_back_porch;
 		info->var.right_margin = mode->h_front_porch;
 		info->var.upper_margin = mode->v_back_porch;

@@ -800,6 +800,74 @@ fail:
 	return err;
 }
 
+static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
+				struct dsi_phy_timing_inclk *phy_timing,
+				u32 clk_ns, u8 lphs)
+{
+	u32 hs_t_phy_ns;
+	u32 clk_t_phy_ns;
+	u32 t_phy_ns;
+	u32 h_blank_ns;
+	struct tegra_dc_mode *modes;
+	u32 t_pix_ns;
+	int err = 0;
+
+	if (!(lphs == DSI_LPHS_IN_HS_MODE))
+		goto fail;
+
+	modes = dsi->dc->out->modes;
+	t_pix_ns = clk_ns * BITS_PER_BYTE *
+		dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
+
+	hs_t_phy_ns =
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_hsprepare, clk_ns, T_HSPREPARE_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_datzero, clk_ns, T_DATZERO_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_hstrail, clk_ns, T_HSTRAIL_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_hsdexit, clk_ns, T_HSEXIT_HW_INC);
+
+	clk_t_phy_ns =
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_clkpost, clk_ns, T_CLKPOST_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_clktrail, clk_ns, T_CLKTRAIL_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_hsdexit, clk_ns, T_HSEXIT_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_clkprepare, clk_ns, T_CLKPREPARE_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_clkzero, clk_ns, T_CLKZERO_HW_INC) +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_clkpre, clk_ns, T_CLKPRE_HW_INC);
+
+	h_blank_ns = t_pix_ns * (modes->h_sync_width + modes->h_back_porch +
+						modes->h_front_porch);
+
+	/* Extra tlpx and byte cycle required by dsi HW */
+	t_phy_ns = dsi->info.n_data_lanes * (hs_t_phy_ns + clk_t_phy_ns +
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC) +
+		clk_ns * BITS_PER_BYTE);
+
+	if (h_blank_ns < t_phy_ns) {
+		err = -EINVAL;
+		dev_err(&dsi->dc->ndev->dev,
+			"dsi: Hblank is smaller than HS trans phy timing\n");
+		goto fail;
+	}
+
+	return 0;
+fail:
+	return err;
+}
+
 static int tegra_dsi_constraint_phy_timing(struct tegra_dc_dsi_data *dsi,
 				struct dsi_phy_timing_inclk *phy_timing,
 				u32 clk_ns, u8 lphs)
@@ -809,6 +877,12 @@ static int tegra_dsi_constraint_phy_timing(struct tegra_dc_dsi_data *dsi,
 	err = tegra_dsi_mipi_phy_timing_range(dsi, phy_timing, clk_ns, lphs);
 	if (err < 0) {
 		dev_warn(&dsi->dc->ndev->dev, "dsi: mipi range violated\n");
+		goto fail;
+	}
+
+	err = tegra_dsi_hs_phy_len(dsi, phy_timing, clk_ns, lphs);
+	if (err < 0) {
+		dev_err(&dsi->dc->ndev->dev, "dsi: Hblank too short\n");
 		goto fail;
 	}
 

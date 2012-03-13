@@ -43,8 +43,8 @@
 #include "nvmap/nvmap.h"
 #include "dc/dc_priv.h"
 
-/* Pad pitch to 16-byte boundary. */
-#define TEGRA_LINEAR_PITCH_ALIGNMENT 32
+/* Pad pitch to 256-byte boundary. */
+#define TEGRA_LINEAR_PITCH_ALIGNMENT 256
 
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;

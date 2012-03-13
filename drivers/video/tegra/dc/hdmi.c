@@ -1648,7 +1648,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	ret = switch_dev_register(&hdmi->hpd_switch);
 
 	if (!ret)
-		device_create_file(hdmi->hpd_switch.dev, &dev_attr_underscan);
+		ret = device_create_file(hdmi->hpd_switch.dev,
+			&dev_attr_underscan);
+	BUG_ON(ret != 0);
 #endif
 
 	dc->out->depth = 24;

@@ -379,11 +379,12 @@ static int handle_page_alloc(struct nvmap_client *client,
 				pages[i] = nvmap_page_pool_alloc(
 						&share->uc_pool);
 
-			if (pages[i]) {
-				page_index++;
-				continue;
-			}
+			if (!pages[i])
+				break;
+			page_index++;
+		}
 
+		for (; i < nr_page; i++) {
 			pages[i] = nvmap_alloc_pages_exact(GFP_NVMAP,
 				PAGE_SIZE);
 			if (!pages[i])

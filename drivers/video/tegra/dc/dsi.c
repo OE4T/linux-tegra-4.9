@@ -1709,6 +1709,9 @@ fail:
 
 static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 {
+	u32 trigger;
+	u32 status;
+
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE),
 		DSI_POWER_CONTROL);
@@ -1720,6 +1723,17 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
+
+	/* dsi HW does not clear host trigger bit automatically
+	 * on dsi interface disable if host fifo is empty
+	 */
+	trigger = tegra_dsi_readl(dsi, DSI_TRIGGER);
+	status = tegra_dsi_readl(dsi, DSI_STATUS);
+	if (trigger & DSI_TRIGGER_HOST_TRIGGER(0x1) &&
+		status & DSI_STATUS_IDLE(0x1)) {
+		trigger &= ~(DSI_TRIGGER_HOST_TRIGGER(0x1));
+		tegra_dsi_writel(dsi, trigger, DSI_TRIGGER);
+	}
 }
 
 static void tegra_dsi_reset_read_count(struct tegra_dc_dsi_data *dsi)

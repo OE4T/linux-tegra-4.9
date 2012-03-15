@@ -56,6 +56,8 @@ struct tegra_dc_ext_win {
 	struct nvmap_handle_ref	*cur_handle[TEGRA_DC_NUM_PLANES];
 
 	struct workqueue_struct	*flip_wq;
+
+	atomic_t		nr_pending_flips;
 };
 
 struct tegra_dc_ext {
@@ -90,7 +92,8 @@ struct tegra_dc_ext_event_list {
 	struct list_head		list;
 };
 
-#define TEGRA_DC_EXT_CAPABILITIES	0
+#define TEGRA_DC_EXT_CAPABILITIES \
+	TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE
 
 struct tegra_dc_ext_control_user {
 	struct tegra_dc_ext_control	*control;

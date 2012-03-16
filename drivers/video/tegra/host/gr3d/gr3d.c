@@ -76,7 +76,7 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 		return NULL;
 	ctx->restore = nvmap_alloc(nvmap, p->restore_size * 4, 32,
 		map_restore ? NVMAP_HANDLE_WRITE_COMBINE
-			    : NVMAP_HANDLE_UNCACHEABLE);
+			    : NVMAP_HANDLE_UNCACHEABLE, 0);
 	if (IS_ERR_OR_NULL(ctx->restore))
 		goto fail;
 

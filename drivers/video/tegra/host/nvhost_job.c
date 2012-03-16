@@ -71,7 +71,7 @@ static int alloc_gathers(struct nvhost_job *job,
 		/* Allocate memory */
 		job->gather_mem = nvmap_alloc(job->nvmap,
 				gather_size(num_cmdbufs),
-				32, NVMAP_HANDLE_CACHEABLE);
+				32, NVMAP_HANDLE_CACHEABLE, 0);
 		if (IS_ERR_OR_NULL(job->gather_mem)) {
 			err = PTR_ERR(job->gather_mem);
 			job->gather_mem = NULL;

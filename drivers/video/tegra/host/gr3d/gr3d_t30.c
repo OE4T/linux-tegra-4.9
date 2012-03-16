@@ -404,7 +404,7 @@ struct nvhost_hwctx_handler *__init nvhost_gr3d_t30_ctxhandler_init(
 	setup_save(p, NULL);
 
 	p->save_buf = nvmap_alloc(nvmap, p->save_size * 4, 32,
-				NVMAP_HANDLE_WRITE_COMBINE);
+				NVMAP_HANDLE_WRITE_COMBINE, 0);
 	if (IS_ERR(p->save_buf)) {
 		p->save_buf = NULL;
 		return NULL;

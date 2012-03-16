@@ -740,19 +740,23 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 }
 
 struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
-				     size_t align, unsigned int flags)
+				     size_t align, unsigned int flags,
+				     unsigned int heap_mask)
 {
 	const unsigned int default_heap = (NVMAP_HEAP_SYSMEM |
 					   NVMAP_HEAP_CARVEOUT_GENERIC);
 	struct nvmap_handle_ref *r = NULL;
 	int err;
 
+	if (heap_mask == 0)
+		heap_mask = default_heap;
+
 	r = nvmap_create_handle(client, size);
 	if (IS_ERR(r))
 		return r;
 
 	err = nvmap_alloc_handle_id(client, nvmap_ref_to_id(r),
-				    default_heap, align, flags);
+				    heap_mask, align, flags);
 
 	if (err) {
 		nvmap_free_handle_id(client, nvmap_ref_to_id(r));

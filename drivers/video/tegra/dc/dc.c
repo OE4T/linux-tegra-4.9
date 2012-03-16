@@ -1566,6 +1566,10 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	else
 		tegra_dc_continuous_irq(dc, status);
 
+	/* update video mode if it has changed since the last frame */
+	if (status & (FRAME_END_INT | V_BLANK_INT))
+		tegra_dc_update_mode(dc);
+
 	tegra_dc_release_dc_out(dc);
 	tegra_dc_io_end(dc);
 	clk_disable(dc->clk);
@@ -2176,6 +2180,24 @@ static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
 }
 #endif
 
+static void tegra_dc_add_modes(struct tegra_dc *dc)
+{
+	struct fb_monspecs specs;
+	int i;
+
+	memset(&specs, 0, sizeof(specs));
+	specs.max_x = dc->mode.h_active * 1000;
+	specs.max_y = dc->mode.v_active * 1000;
+	specs.modedb_len = dc->out->n_modes;
+	specs.modedb = kzalloc(specs.modedb_len *
+		sizeof(struct fb_videomode), GFP_KERNEL);
+	for (i = 0; i < dc->out->n_modes; i++)
+		tegra_dc_to_fb_videomode(&specs.modedb[i],
+			&dc->out->modes[i]);
+	tegra_fb_update_monspecs(dc->fb, &specs, NULL);
+	kfree(specs.modedb);
+}
+
 static int tegra_dc_probe(struct platform_device *ndev)
 {
 	struct tegra_dc *dc;
@@ -2380,6 +2402,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->fb = NULL;
 		tegra_dc_io_end(dc);
 	}
+
+	if (dc->out && dc->out->n_modes)
+		tegra_dc_add_modes(dc);
 
 	if (dc->out && dc->out->hotplug_init)
 		dc->out->hotplug_init(&ndev->dev);

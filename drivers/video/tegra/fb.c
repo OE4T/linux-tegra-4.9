@@ -529,6 +529,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	unsigned long fb_phys = 0;
 	int ret = 0;
 	unsigned stride;
+	struct fb_videomode m;
 
 	win = tegra_dc_get_window(dc, fb_data->win);
 	if (!win) {
@@ -584,22 +585,16 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	info->fix.smem_len	= fb_size;
 	info->fix.line_length = stride;
 
-	info->var.xres			= fb_data->xres;
-	info->var.yres			= fb_data->yres;
+	INIT_LIST_HEAD(&info->modelist);
+	/* pick first mode as the default for initialization */
+	tegra_dc_to_fb_videomode(&m, &dc->mode);
+	fb_videomode_to_var(&info->var, &m);
 	info->var.xres_virtual		= fb_data->xres;
 	info->var.yres_virtual		= fb_data->yres * 2;
 	info->var.bits_per_pixel	= fb_data->bits_per_pixel;
 	info->var.activate		= FB_ACTIVATE_VBL;
 	info->var.height		= tegra_dc_get_out_height(dc);
 	info->var.width			= tegra_dc_get_out_width(dc);
-	info->var.pixclock		= 0;
-	info->var.left_margin		= 0;
-	info->var.right_margin		= 0;
-	info->var.upper_margin		= 0;
-	info->var.lower_margin		= 0;
-	info->var.hsync_len		= 0;
-	info->var.vsync_len		= 0;
-	info->var.vmode			= FB_VMODE_NONINTERLACED;
 
 	win->x.full = dfixed_const(0);
 	win->y.full = dfixed_const(0);

@@ -270,7 +270,9 @@ EXPORT_SYMBOL(tegra_dc_get_panel_sync_rate);
 
 int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 {
+	mutex_lock(&dc->lock);
 	memcpy(&dc->mode, mode, sizeof(dc->mode));
+	dc->mode_dirty = true;
 
 	if (dc->out->type == TEGRA_DC_OUT_RGB)
 		panel_sync_rate = tegra_dc_calc_refresh(mode);
@@ -279,10 +281,54 @@ int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 
 	print_mode(dc, mode, __func__);
 	dc->frametime_ns = calc_frametime_ns(mode);
+	mutex_unlock(&dc->lock);
 
 	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_set_mode);
+
+int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
+	const struct tegra_dc_mode *mode)
+{
+	if (!fbmode || !mode || !mode->pclk)
+		return -EINVAL;
+	memset(fbmode, 0, sizeof(*fbmode));
+	if (mode->rated_pclk >= 1000) /* handle DSI one-shot modes */
+		fbmode->pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
+	else if (mode->pclk >= 1000) /* normal continous modes */
+		fbmode->pixclock = KHZ2PICOS(mode->pclk / 1000);
+	fbmode->right_margin = mode->h_front_porch;
+	fbmode->lower_margin = mode->v_front_porch;
+	fbmode->hsync_len = mode->h_sync_width;
+	fbmode->vsync_len = mode->v_sync_width;
+	fbmode->left_margin = mode->h_back_porch;
+	fbmode->upper_margin = mode->v_back_porch;
+	fbmode->xres = mode->h_active;
+	fbmode->yres = mode->v_active;
+	fbmode->vmode = FB_VMODE_NONINTERLACED;
+	if (mode->stereo_mode)
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+		fbmode->vmode |= FB_VMODE_STEREO_FRAME_PACK;
+#else
+		fbmode->vmode |= FB_VMODE_STEREO_LEFT_RIGHT;
+#endif
+	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_H_SYNC))
+		fbmode->sync |=  FB_SYNC_HOR_HIGH_ACT;
+	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC))
+		fbmode->sync |= FB_SYNC_VERT_HIGH_ACT;
+	/* round up refresh rate for fractions above 0.500Hz */
+	fbmode->refresh = (tegra_dc_calc_refresh(mode) + 500) / 1000;
+
+	return 0;
+}
+
+void tegra_dc_update_mode(struct tegra_dc *dc)
+{
+	if (dc->mode_dirty) {
+		tegra_dc_program_mode(dc, &dc->mode);
+		dc->mode_dirty = false;
+	}
+}
 
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		const struct fb_videomode *fbmode, bool stereo_mode)

@@ -201,6 +201,7 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	}
 
 	ctx->job = nvhost_job_realloc(ctx->job,
+			ctx->hwctx,
 			&ctx->hdr,
 			ctx->nvmap,
 			ctx->priority,

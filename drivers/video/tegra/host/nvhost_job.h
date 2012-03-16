@@ -83,6 +83,9 @@ struct nvhost_job {
 	/* Index and number of slots used in the push buffer */
 	int first_get;
 	int num_slots;
+
+	/* Context to be freed */
+	struct nvhost_hwctx *hwctxref;
 };
 
 /*
@@ -101,6 +104,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
  * oldjob will be reused, and nvhost_job_put() will be called to it.
  */
 struct nvhost_job *nvhost_job_realloc(struct nvhost_job *oldjob,
+		struct nvhost_hwctx *hwctx,
 		struct nvhost_submit_hdr_ext *hdr,
 		struct nvmap_client *nvmap,
 		int priority, int clientid);
@@ -115,6 +119,11 @@ void nvhost_job_add_gather(struct nvhost_job *job,
  * Increment reference going to nvhost_job.
  */
 void nvhost_job_get(struct nvhost_job *job);
+
+/*
+ * Increment reference for a hardware context.
+ */
+void nvhost_job_get_hwctx(struct nvhost_job *job, struct nvhost_hwctx *hwctx);
 
 /*
  * Decrement reference job, free if goes to zero.

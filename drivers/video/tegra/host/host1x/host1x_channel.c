@@ -47,53 +47,193 @@ static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 	}
 }
 
-int host1x_channel_submit(struct nvhost_job *job)
+static void *pre_submit_ctxsave(struct nvhost_job *job,
+		struct nvhost_hwctx *cur_ctx)
 {
-	struct host1x_hwctx *hwctx_to_save = NULL;
-	struct nvhost_channel *channel = job->ch;
-	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
-	u32 user_syncpt_incrs = job->syncpt_incrs;
-	bool need_restore = false;
+	struct nvhost_channel *ch = job->ch;
+	void *ctxsave_waiter = NULL;
+
+	/* Is a save needed? */
+	if (!cur_ctx || ch->cur_ctx == job->hwctx)
+		return NULL;
+
+	if (cur_ctx->has_timedout) {
+		dev_dbg(&ch->dev->dev,
+			"%s: skip save of timed out context (0x%p)\n",
+			__func__, ch->cur_ctx);
+
+		return NULL;
+	}
+
+	/* Allocate save waiter if needed */
+	if (ch->ctxhandler->save_service) {
+		ctxsave_waiter = nvhost_intr_alloc_waiter();
+		if (!ctxsave_waiter)
+			return ERR_PTR(-ENOMEM);
+	}
+
+	return ctxsave_waiter;
+}
+
+static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
+		struct nvhost_hwctx *cur_ctx)
+{
+	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
+	struct nvhost_channel *ch = job->ch;
 	u32 syncval;
 	int err;
-	void *ctxrestore_waiter = NULL;
-	void *ctxsave_waiter, *completed_waiter;
+	u32 save_thresh = 0;
 
+	/* Is a save needed? */
+	if (!cur_ctx || cur_ctx == job->hwctx || cur_ctx->has_timedout)
+		return;
+
+	/* Retrieve save threshold if we have a waiter */
+	if (ctxsave_waiter)
+		save_thresh =
+			nvhost_syncpt_read_max(&host->syncpt, job->syncpt_id)
+			+ to_host1x_hwctx(cur_ctx)->save_thresh;
+
+	/* Adjust the syncpoint max */
+	job->syncpt_incrs += to_host1x_hwctx(cur_ctx)->save_incrs;
+	syncval = nvhost_syncpt_incr_max(&host->syncpt,
+			job->syncpt_id,
+			to_host1x_hwctx(cur_ctx)->save_incrs);
+
+	/* Send the save to channel */
+	cur_ctx->valid = true;
+	ch->ctxhandler->save_push(cur_ctx, &ch->cdma);
+	nvhost_job_get_hwctx(job, cur_ctx);
+
+	/* Notify save service */
+	if (ctxsave_waiter) {
+		err = nvhost_intr_add_action(&host->intr,
+			job->syncpt_id,
+			save_thresh,
+			NVHOST_INTR_ACTION_CTXSAVE, cur_ctx,
+			ctxsave_waiter,
+			NULL);
+		ctxsave_waiter = NULL;
+		WARN(err, "Failed to set ctx save interrupt");
+	}
+
+	trace_nvhost_channel_context_save(ch->dev->name, cur_ctx);
+}
+
+static void submit_ctxrestore(struct nvhost_job *job)
+{
+	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
+	struct nvhost_channel *ch = job->ch;
+	u32 syncval;
+	struct host1x_hwctx *ctx =
+		job->hwctx ? to_host1x_hwctx(job->hwctx) : NULL;
+
+	/* First check if we have a valid context to restore */
+	if(ch->cur_ctx == job->hwctx || !job->hwctx || !job->hwctx->valid)
+		return;
+
+	/* Increment syncpt max */
+	job->syncpt_incrs += ctx->restore_incrs;
+	syncval = nvhost_syncpt_incr_max(&host->syncpt,
+			job->syncpt_id,
+			ctx->restore_incrs);
+
+	/* Send restore buffer to channel */
+	nvhost_cdma_push_gather(&ch->cdma,
+		host->nvmap,
+		nvmap_ref_to_handle(ctx->restore),
+		nvhost_opcode_gather(ctx->restore_size),
+		ctx->restore_phys);
+
+	trace_nvhost_channel_context_restore(ch->dev->name, &ctx->hwctx);
+}
+
+void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
+{
+	struct nvhost_channel *ch = job->ch;
+	int incr;
+	u32 op_incr;
+
+	/* push increments that correspond to nulled out commands */
+	op_incr = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
+			job->syncpt_id);
+	for (incr = 0; incr < (user_syncpt_incrs >> 1); incr++)
+		nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
+	if (user_syncpt_incrs & 1)
+		nvhost_cdma_push(&ch->cdma, op_incr, NVHOST_OPCODE_NOOP);
+
+	/* for 3d, waitbase needs to be incremented after each submit */
+	if (ch->dev->class == NV_GRAPHICS_3D_CLASS_ID) {
+		u32 waitbase = to_host1x_hwctx_handler(job->hwctx->h)->waitbase;
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(
+				NV_HOST1X_CLASS_ID,
+				NV_CLASS_HOST_INCR_SYNCPT_BASE,
+				1),
+			nvhost_class_host_incr_syncpt_base(
+				waitbase,
+				user_syncpt_incrs));
+	}
+}
+
+void submit_gathers(struct nvhost_job *job)
+{
+	/* push user gathers */
+	int i = 0;
+	for ( ; i < job->num_gathers; i++) {
+		u32 op1 = nvhost_opcode_gather(job->gathers[i].words);
+		u32 op2 = job->gathers[i].mem;
+		nvhost_cdma_push_gather(&job->ch->cdma,
+				job->nvmap, job->unpins[i/2],
+				op1, op2);
+	}
+}
+
+int host1x_channel_submit(struct nvhost_job *job)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
+	u32 user_syncpt_incrs = job->syncpt_incrs;
+	u32 prev_max = 0;
+	u32 syncval;
+	int err;
+	void *completed_waiter = NULL, *ctxsave_waiter = NULL;
+
+	/* Bail out on timed out contexts */
 	if (job->hwctx && job->hwctx->has_timedout)
 		return -ETIMEDOUT;
 
-	ctxsave_waiter = nvhost_intr_alloc_waiter();
-	completed_waiter = nvhost_intr_alloc_waiter();
-	if (!ctxsave_waiter || !completed_waiter) {
-		err = -ENOMEM;
-		goto done;
-	}
-
-	/* keep module powered */
-	nvhost_module_busy(channel->dev);
-	if (channel->dev->busy)
-		channel->dev->busy(channel->dev);
+	/* Turn on the client module and host1x */
+	nvhost_module_busy(ch->dev);
+	if (ch->dev->busy)
+		ch->dev->busy(ch->dev);
 
 	/* before error checks, return current max */
-	job->syncpt_end = nvhost_syncpt_read_max(sp, job->syncpt_id);
+	prev_max = job->syncpt_end =
+		nvhost_syncpt_read_max(sp, job->syncpt_id);
 
 	/* get submit lock */
-	err = mutex_lock_interruptible(&channel->submitlock);
+	err = mutex_lock_interruptible(&ch->submitlock);
 	if (err) {
-		nvhost_module_idle(channel->dev);
-		goto done;
+		nvhost_module_idle(ch->dev);
+		goto error;
 	}
 
-	/* If we are going to need a restore, allocate a waiter for it */
-	if (channel->cur_ctx != job->hwctx && job->hwctx && job->hwctx->valid) {
-		ctxrestore_waiter = nvhost_intr_alloc_waiter();
-		if (!ctxrestore_waiter) {
-			mutex_unlock(&channel->submitlock);
-			nvhost_module_idle(channel->dev);
-			err = -ENOMEM;
-			goto done;
-		}
-		need_restore = true;
+	/* Do the needed allocations */
+	ctxsave_waiter = pre_submit_ctxsave(job, ch->cur_ctx);
+	if (IS_ERR(ctxsave_waiter)) {
+		err = PTR_ERR(ctxsave_waiter);
+		nvhost_module_idle(ch->dev);
+		mutex_unlock(&ch->submitlock);
+		goto error;
+	}
+
+	completed_waiter = nvhost_intr_alloc_waiter();
+	if (!completed_waiter) {
+		nvhost_module_idle(ch->dev);
+		mutex_unlock(&ch->submitlock);
+		err = -ENOMEM;
+		goto error;
 	}
 
 	/* remove stale waits */
@@ -104,166 +244,64 @@ int host1x_channel_submit(struct nvhost_job *job)
 					       job->waitchk,
 					       job->num_waitchk);
 		if (err) {
-			dev_warn(&channel->dev->dev,
+			dev_warn(&ch->dev->dev,
 				 "nvhost_syncpt_wait_check failed: %d\n", err);
-			mutex_unlock(&channel->submitlock);
-			nvhost_module_idle(channel->dev);
-			goto done;
+			mutex_unlock(&ch->submitlock);
+			nvhost_module_idle(ch->dev);
+			goto error;
 		}
 	}
 
 	/* begin a CDMA submit */
-	err = nvhost_cdma_begin(&channel->cdma, job);
+	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {
-		mutex_unlock(&channel->submitlock);
-		nvhost_module_idle(channel->dev);
-		goto done;
+		mutex_unlock(&ch->submitlock);
+		nvhost_module_idle(ch->dev);
+		goto error;
 	}
 
-	sync_waitbases(channel, job->syncpt_end);
+	submit_ctxsave(job, ctxsave_waiter, ch->cur_ctx);
+	submit_ctxrestore(job);
+	ch->cur_ctx = job->hwctx;
 
-	/* context switch */
-	if (channel->cur_ctx != job->hwctx) {
-		trace_nvhost_channel_context_switch(channel->dev->name,
-		  channel->cur_ctx, job->hwctx);
-		hwctx_to_save = channel->cur_ctx ?
-			to_host1x_hwctx(channel->cur_ctx) : NULL;
-		if (hwctx_to_save &&
-			hwctx_to_save->hwctx.has_timedout) {
-			hwctx_to_save = NULL;
-			dev_dbg(&channel->dev->dev,
-				"%s: skip save of timed out context (0x%p)\n",
-				__func__, channel->cur_ctx);
-		}
-		if (hwctx_to_save) {
-			job->syncpt_incrs += hwctx_to_save->save_incrs;
-			hwctx_to_save->hwctx.valid = true;
-			channel->ctxhandler->get(&hwctx_to_save->hwctx);
-		}
-		channel->cur_ctx = job->hwctx;
-		if (need_restore)
-			job->syncpt_incrs +=
-				to_host1x_hwctx(job->hwctx)->restore_incrs;
-	}
-
-	/* get absolute sync value */
-	if (BIT(job->syncpt_id) & sp->client_managed)
-		syncval = nvhost_syncpt_set_max(sp,
-				job->syncpt_id, job->syncpt_incrs);
-	else
-		syncval = nvhost_syncpt_incr_max(sp,
-				job->syncpt_id, job->syncpt_incrs);
+	syncval = nvhost_syncpt_incr_max(sp,
+			job->syncpt_id, user_syncpt_incrs);
 
 	job->syncpt_end = syncval;
 
-	/* push save buffer (pre-gather setup depends on unit) */
-	if (hwctx_to_save)
-		channel->ctxhandler->save_push(&hwctx_to_save->hwctx,
-				&channel->cdma);
-
-	/* gather restore buffer */
-	if (need_restore) {
-		struct host1x_hwctx *cur_ctx =
-			to_host1x_hwctx(channel->cur_ctx);
-		nvhost_cdma_push_gather(&channel->cdma,
-			nvhost_get_host(channel->dev)->nvmap,
-			nvmap_ref_to_handle(cur_ctx->restore),
-			nvhost_opcode_gather(cur_ctx->restore_size),
-			cur_ctx->restore_phys);
-		channel->ctxhandler->get(channel->cur_ctx);
-	}
-
-	/* add a setclass for modules that require it (unless ctxsw added it) */
-	if (!hwctx_to_save && !need_restore && channel->dev->class)
-		nvhost_cdma_push(&channel->cdma,
-			nvhost_opcode_setclass(channel->dev->class, 0, 0),
+	/* add a setclass for modules that require it */
+	if (ch->dev->class)
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(ch->dev->class, 0, 0),
 			NVHOST_OPCODE_NOOP);
 
-	if (job->null_kickoff) {
-		int incr;
-		u32 op_incr;
+	if (job->null_kickoff)
+		submit_nullkickoff(job, user_syncpt_incrs);
+	else
+		submit_gathers(job);
 
-		/* TODO ideally we'd also perform host waits here */
-
-		/* push increments that correspond to nulled out commands */
-		op_incr = nvhost_opcode_imm(0, 0x100 | job->syncpt_id);
-		for (incr = 0; incr < (user_syncpt_incrs >> 1); incr++)
-			nvhost_cdma_push(&channel->cdma, op_incr, op_incr);
-		if (user_syncpt_incrs & 1)
-			nvhost_cdma_push(&channel->cdma,
-					op_incr, NVHOST_OPCODE_NOOP);
-
-		/* for 3d, waitbase needs to be incremented after each submit */
-		if (channel->dev->class == NV_GRAPHICS_3D_CLASS_ID)
-			nvhost_cdma_push(&channel->cdma,
-					nvhost_opcode_setclass(
-						NV_HOST1X_CLASS_ID,
-						NV_CLASS_HOST_INCR_SYNCPT_BASE,
-						1),
-					nvhost_class_host_incr_syncpt_base(
-						NVWAITBASE_3D,
-						user_syncpt_incrs));
-	} else {
-		/* push user gathers */
-		int i = 0;
-		for ( ; i < job->num_gathers; i++) {
-			u32 op1 = nvhost_opcode_gather(job->gathers[i].words);
-			u32 op2 = job->gathers[i].mem;
-			nvhost_cdma_push_gather(&channel->cdma,
-					job->nvmap, job->unpins[i/2],
-					op1, op2);
-		}
-	}
+	sync_waitbases(ch, job->syncpt_end);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
-	nvhost_cdma_end(&channel->cdma, job);
+	nvhost_cdma_end(&ch->cdma, job);
 
-	trace_nvhost_channel_submitted(channel->dev->name,
-			syncval - job->syncpt_incrs, syncval);
-
-	/*
-	 * schedule a context save interrupt (to drain the host FIFO
-	 * if necessary, and to release the restore buffer)
-	 */
-	if (hwctx_to_save) {
-		err = nvhost_intr_add_action(
-			&nvhost_get_host(channel->dev)->intr,
-			job->syncpt_id,
-			syncval - job->syncpt_incrs
-				+ hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, &hwctx_to_save->hwctx,
-			ctxsave_waiter,
-			NULL);
-		ctxsave_waiter = NULL;
-		WARN(err, "Failed to set ctx save interrupt");
-	}
-
-	if (need_restore) {
-		BUG_ON(!ctxrestore_waiter);
-		err = nvhost_intr_add_action(
-			&nvhost_get_host(channel->dev)->intr,
-			job->syncpt_id,
-			syncval - user_syncpt_incrs,
-			NVHOST_INTR_ACTION_CTXRESTORE, channel->cur_ctx,
-			ctxrestore_waiter,
-			NULL);
-		ctxrestore_waiter = NULL;
-		WARN(err, "Failed to set ctx restore interrupt");
-	}
+	trace_nvhost_channel_submitted(ch->dev->name,
+			prev_max, syncval);
 
 	/* schedule a submit complete interrupt */
-	err = nvhost_intr_add_action(&nvhost_get_host(channel->dev)->intr,
+	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
 			job->syncpt_id, syncval,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel,
+			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, ch,
 			completed_waiter,
 			NULL);
 	completed_waiter = NULL;
 	WARN(err, "Failed to set submit complete interrupt");
 
-	mutex_unlock(&channel->submitlock);
+	mutex_unlock(&ch->submitlock);
 
-done:
-	kfree(ctxrestore_waiter);
+	return 0;
+
+error:
 	kfree(ctxsave_waiter);
 	kfree(completed_waiter);
 	return err;

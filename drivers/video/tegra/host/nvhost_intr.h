@@ -41,12 +41,6 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_CTXSAVE,
 
 	/**
-	 * Restore a HW context.
-	 * 'data' points to a context
-	 */
-	NVHOST_INTR_ACTION_CTXRESTORE,
-
-	/**
 	 * Wake up a  task.
 	 * 'data' points to a wait_queue_head_t
 	 */

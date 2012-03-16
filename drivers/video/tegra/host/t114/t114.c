@@ -72,6 +72,7 @@ static struct nvhost_device devices[] = {
 	.idle = nvhost_scale3d_notify_idle,
 	.init = nvhost_scale3d_init,
 	.deinit = nvhost_scale3d_deinit,
+	.alloc_hwctx_handler = t114_nvhost_3dctx_handler_init,
 	.clocks = {{"gr3d", UINT_MAX},
 			{"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -152,14 +153,22 @@ static struct nvhost_device devices[] = {
 	.moduleid      = NVHOST_MODULE_TSEC,
 } };
 
-static inline int t114_nvhost_hwctx_handler_init(
-	struct nvhost_hwctx_handler *h,
-	const char *module)
+static inline int t114_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
-	if (strcmp(module, "gr3d") == 0)
-		return t114_nvhost_3dctx_handler_init(h);
+	int err = 0;
+	unsigned long syncpts = ch->dev->syncpts;
+	unsigned long waitbases = ch->dev->waitbases;
+	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
+	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
 
-	return 0;
+	if (ch->dev->alloc_hwctx_handler) {
+		ch->ctxhandler = ch->dev->alloc_hwctx_handler(syncpt,
+				waitbase, ch);
+		if (!ch->ctxhandler)
+			err = -ENOMEM;
+	}
+
+	return err;
 }
 
 static inline void __iomem *t114_channel_aperture(void __iomem *p, int ndx)
@@ -180,7 +189,7 @@ static int t114_channel_init(struct nvhost_channel *ch,
 	nvhost_device_register(ch->dev);
 	ch->aperture = t114_channel_aperture(dev->aperture, index);
 
-	return t114_nvhost_hwctx_handler_init(&ch->ctxhandler, ch->dev->name);
+	return t114_nvhost_hwctx_handler_init(ch);
 }
 
 int nvhost_init_t114_channel_support(struct nvhost_master *host)

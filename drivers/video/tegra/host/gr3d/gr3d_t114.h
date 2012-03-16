@@ -25,6 +25,8 @@
 
 struct nvhost_hwctx_handler;
 
-int t114_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h);
+struct nvhost_hwctx_handler *t114_nvhost_3dctx_handler_init(
+		u32 syncpt, u32 base,
+		struct nvhost_channel *ch);
 
 #endif

@@ -24,7 +24,7 @@
 #include "dc_priv.h"
 #include "dsi2lvds.h"
 
-static enum i2c_transfer_type {
+enum i2c_transfer_type {
 	I2C_WRITE,
 	I2C_READ,
 };

@@ -2846,7 +2846,11 @@ static void _tegra_dc_dsi_init(struct tegra_dc *dc)
 	tegra_dc_dsi_debug_create(dsi);
 
 	if (dc->out->type == TEGRA_DC_OUT_DSI2LVDS)
+#ifdef CONFIG_TEGRA_DSI2LVDS
 		dsi->dsi2lvds_out_ops = &tegra_dc_dsi2lvds_ops;
+#else
+		dsi->dsi2lvds_out_ops = NULL;
+#endif
 
 	if (dsi->dsi2lvds_out_ops && dsi->dsi2lvds_out_ops->init)
 		dsi->dsi2lvds_out_ops->init(dc);

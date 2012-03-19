@@ -64,34 +64,69 @@ void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 	kfree(area);
 }
 
+#ifdef CONFIG_PLATFORM_IOMMUABLE
+
+static inline int tegra_iommu_create_map(struct device *dev)
+{
+	return 0;
+}
+
+static inline void tegra_iommu_delete_map(struct device *dev)
+{
+}
+
+#else
+
+static int tegra_iommu_create_map(struct device *dev)
+{
+	int err;
+	struct dma_iommu_mapping *map;
+
+	map = arm_iommu_create_mapping(&platform_bus_type,
+				       TEGRA_IOMMU_BASE, TEGRA_IOMMU_SIZE, 0);
+	if (IS_ERR(map))
+		return PTR_ERR(map);
+
+	err = arm_iommu_attach_device(dev, map);
+	if (err) {
+		arm_iommu_release_mapping(map);
+		return err;
+	}
+	return 0;
+}
+
+static void tegra_iommu_delete_map(struct device *dev)
+{
+	arm_iommu_release_mapping(dev->archdata.mapping);
+}
+
+#endif
+
 struct tegra_iovmm_client *tegra_iommu_alloc_client(struct device *dev)
 {
-	struct dma_iommu_mapping *map;
 	struct tegra_iovmm_client *client;
+
+	if (WARN_ON(!dev))
+		return NULL;
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
 		return NULL;
 
-	map = arm_iommu_create_mapping(&platform_bus_type,
-		       TEGRA_IOMMU_BASE, TEGRA_IOMMU_SIZE, 0);
-	if (IS_ERR(map))
-		goto err_map;
+	if (tegra_iommu_create_map(dev)) {
+		kfree(client);
+		return NULL;
+	}
 
-	if (arm_iommu_attach_device(dev, map))
-		goto err_attach;
 	client->dev = dev;
-	return client;
 
-err_attach:
-	arm_iommu_release_mapping(map);
-err_map:
-	kfree(client);
-	return NULL;
+	return client;
 }
 
 void tegra_iommu_free_client(struct tegra_iovmm_client *client)
 {
-	arm_iommu_release_mapping(client->dev->archdata.mapping);
+	if (WARN_ON(!client))
+		return;
+	tegra_iommu_delete_map(client->dev);
 	kfree(client);
 }

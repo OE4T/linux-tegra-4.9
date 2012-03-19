@@ -259,9 +259,9 @@ u32 previous_oppair(struct nvhost_cdma *cdma, u32 cur)
 }
 
 static void t20_debug_show_channel_cdma(struct nvhost_master *m,
-					struct output *o, int chid)
+	struct nvhost_channel *ch, struct output *o, int chid)
 {
-	struct nvhost_channel *channel = m->channels + chid;
+	struct nvhost_channel *channel = ch;
 	struct nvhost_cdma *cdma = &channel->cdma;
 	u32 dmaput, dmaget, dmactrl;
 	u32 cbstat, cbread;
@@ -322,10 +322,10 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 }
 
 void t20_debug_show_channel_fifo(struct nvhost_master *m,
-				 struct output *o, int chid)
+	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	u32 val, rd_ptr, wr_ptr, start, end;
-	struct nvhost_channel *channel = m->channels + chid;
+	struct nvhost_channel *channel = ch;
 	int state, count;
 
 	nvhost_debug_output(o, "%d: fifo:\n", chid);

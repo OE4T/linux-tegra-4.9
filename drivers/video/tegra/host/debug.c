@@ -43,24 +43,31 @@ void nvhost_debug_output(struct output *o, const char* fmt, ...)
 	o->fn(o->ctx, o->buf, len);
 }
 
-
-static void show_channels(struct nvhost_master *m, struct output *o)
+static int show_channels(struct device *dev, void *data)
 {
-	int i;
-	nvhost_debug_output(o, "---- channels ----\n");
-	for (i = 0; i < m->nb_channels; i++) {
-		struct nvhost_channel *ch = &m->channels[i];
+	struct nvhost_channel *ch;
+	struct nvhost_device *nvdev = to_nvhost_device(dev);
+	struct output *o = data;
+	struct nvhost_master *m;
+
+	if (nvdev == NULL)
+		return 0;
+
+	m = nvhost_get_host(nvdev);
+	ch = nvdev->channel;
+	if (ch) {
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
 			mutex_lock(&ch->cdma.lock);
-			m->op.debug.show_channel_fifo(m, o, i);
-			m->op.debug.show_channel_cdma(m, o, i);
+			m->op.debug.show_channel_fifo(m, ch, o, nvdev->index);
+			m->op.debug.show_channel_cdma(m, ch, o, nvdev->index);
 			mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
 	}
-}
 
+	return 0;
+}
 
 static void show_syncpts(struct nvhost_master *m, struct output *o)
 {
@@ -94,11 +101,11 @@ static void show_all(struct nvhost_master *m, struct output *o)
 
 	m->op.debug.show_mlocks(m, o);
 	show_syncpts(m, o);
-	show_channels(m, o);
+	nvhost_debug_output(o, "---- channels ----\n");
+	bus_for_each_dev(&nvhost_bus_type, NULL, o, show_channels);
 
 	nvhost_module_idle(m->dev);
 }
-
 
 #ifdef CONFIG_DEBUG_FS
 static int nvhost_debug_show(struct seq_file *s, void *unused)

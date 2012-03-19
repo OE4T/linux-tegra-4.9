@@ -88,9 +88,11 @@ struct nvhost_chip_support {
 	struct {
 		void (*debug_init)(struct dentry *de);
 		void (*show_channel_cdma)(struct nvhost_master *,
+					  struct nvhost_channel *,
 					  struct output *,
 					  int chid);
 		void (*show_channel_fifo)(struct nvhost_master *,
+					  struct nvhost_channel *,
 					  struct output *,
 					  int chid);
 		void (*show_mlocks)(struct nvhost_master *m,

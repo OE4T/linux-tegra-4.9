@@ -25,8 +25,6 @@
 #define NVC_IMAGER_API_DYNAMIC_VER	1
 #define NVC_IMAGER_API_BAYER_VER	1
 
-#define NVC_IMAGER_PARAM_BAYER		0xE100
-
 #define NVC_IMAGER_TEST_NONE		0
 #define NVC_IMAGER_TEST_COLORBARS	1
 #define NVC_IMAGER_TEST_CHECKERBOARD	2
@@ -51,6 +49,7 @@
 
 #define NVC_IMAGER_INT2FLOAT_DIVISOR	1000
 
+#define NVC_FOCUS_INTERNAL		(0x665F4E5643414D69ULL)
 #define NVC_FOCUS_GUID(n) (0x665F4E5643414D30ULL | ((n) & 0xF))
 #define NVC_TORCH_GUID(n) (0x6C5F4E5643414D30ULL | ((n) & 0xF))
 
@@ -67,6 +66,10 @@ struct nvc_imager_static_nvc {
 	__u32 view_angle_v;
 	__u32 stereo_cap;
 	__u32 res_chg_wait_time;
+	__u8 support_isp;
+	__u8 align1;
+	__u8 align2;
+	__u8 align3;
 	__u32 place_holder1;
 	__u32 place_holder2;
 	__u32 place_holder3;

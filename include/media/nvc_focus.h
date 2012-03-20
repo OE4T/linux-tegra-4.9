@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 NVIDIA Corporation.
+/* Copyright (C) 2012 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,21 @@
 
 #ifndef __NVC_FOCUS_H__
 #define __NVC_FOCUS_H__
+
+/* NVC_FOCUS_CAP_VER0: invalid */
+/* NVC_FOCUS_CAP_VER1:
+ * __u32 version
+ * __u32 actuator_range
+ * __u32 settle_time
+ */
+#define NVC_FOCUS_CAP_VER1		1
+/* NVC_FOCUS_CAP_VER2 adds:
+ * __u32 focus_macro;
+ * __u32 focus_hyper;
+ * __u32 focus_infinity;
+ */
+#define NVC_FOCUS_CAP_VER2		2
+#define NVC_FOCUS_CAP_VER		2 /* latest version */
 
 enum nvc_focus_sts {
 	NVC_FOCUS_STS_UNKNOWN		= 1,

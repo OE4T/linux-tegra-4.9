@@ -27,6 +27,7 @@
 #include "dev.h"
 #include "msenc.h"
 #include "hw_msenc.h"
+#include "bus_client.h"
 
 #define MSENC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define MSENC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -311,3 +312,65 @@ void nvhost_msenc_finalize_poweron(struct nvhost_device *dev)
 {
 	msenc_boot(dev);
 }
+
+static int msenc_probe(struct nvhost_device *dev)
+{
+	return nvhost_client_device_init(dev);
+}
+
+static int __exit msenc_remove(struct nvhost_device *dev)
+{
+	/* Add clean-up */
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int msenc_suspend(struct nvhost_device *dev, pm_message_t state)
+{
+	return nvhost_client_device_suspend(dev);
+}
+
+static int msenc_resume(struct nvhost_device *dev)
+{
+	dev_info(&dev->dev, "resuming\n");
+	return 0;
+}
+#endif
+
+struct nvhost_device *msenc_device;
+
+static struct nvhost_driver msenc_driver = {
+	.probe = msenc_probe,
+	.remove = __exit_p(msenc_remove),
+#ifdef CONFIG_PM
+	.suspend = msenc_suspend,
+	.resume = msenc_resume,
+#endif
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "msenc",
+	}
+};
+
+static int __init msenc_init(void)
+{
+	int err;
+
+	msenc_device = nvhost_get_device("msenc");
+	if (!msenc_device)
+		return -ENXIO;
+
+	err = nvhost_device_register(msenc_device);
+	if (err)
+		return err;
+
+	return nvhost_driver_register(&msenc_driver);
+}
+
+static void __exit msenc_exit(void)
+{
+	nvhost_driver_unregister(&msenc_driver);
+}
+
+module_init(msenc_init);
+module_exit(msenc_exit);

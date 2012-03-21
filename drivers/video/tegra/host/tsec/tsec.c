@@ -27,6 +27,7 @@
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
+#include "bus_client.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -311,3 +312,65 @@ void nvhost_tsec_finalize_poweron(struct nvhost_device *dev)
 {
 	tsec_boot(dev);
 }
+
+static int tsec_probe(struct nvhost_device *dev)
+{
+	return nvhost_client_device_init(dev);
+}
+
+static int __exit tsec_remove(struct nvhost_device *dev)
+{
+	/* Add clean-up */
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int tsec_suspend(struct nvhost_device *dev, pm_message_t state)
+{
+	return nvhost_client_device_suspend(dev);
+}
+
+static int tsec_resume(struct nvhost_device *dev)
+{
+	dev_info(&dev->dev, "resuming\n");
+	return 0;
+}
+#endif
+
+struct nvhost_device *tsec_device;
+
+static struct nvhost_driver tsec_driver = {
+	.probe = tsec_probe,
+	.remove = __exit_p(tsec_remove),
+#ifdef CONFIG_PM
+	.suspend = tsec_suspend,
+	.resume = tsec_resume,
+#endif
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "tsec",
+	}
+};
+
+static int __init tsec_init(void)
+{
+	int err;
+
+	tsec_device = nvhost_get_device("tsec");
+	if (!tsec_device)
+		return -ENXIO;
+
+	err = nvhost_device_register(tsec_device);
+	if (err)
+		return err;
+
+	return nvhost_driver_register(&tsec_driver);
+}
+
+static void __exit tsec_exit(void)
+{
+	nvhost_driver_unregister(&tsec_driver);
+}
+
+module_init(tsec_init);
+module_exit(tsec_exit);

@@ -51,6 +51,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 0 */
 	.name	       = "display",
+	.id            = -1,
+	.index         = 0,
 	.syncpts       = BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
 			 BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) |
 			 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
@@ -63,6 +65,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 1 */
 	.name	       = "gr3d",
+	.id            = -1,
+	.index         = 1,
 	.syncpts       = BIT(NVSYNCPT_3D),
 	.waitbases     = BIT(NVWAITBASE_3D),
 	.modulemutexes = BIT(NVMODMUTEX_3D),
@@ -82,6 +86,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 2 */
 	.name	       = "gr2d",
+	.id            = -1,
+	.index         = 2,
 	.syncpts       = BIT(NVSYNCPT_2D_0) | BIT(NVSYNCPT_2D_1),
 	.waitbases     = BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes = BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
@@ -96,6 +102,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 3 */
 	.name	 = "isp",
+	.id      = -1,
+	.index   = 3,
 	.syncpts = 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -104,6 +112,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 4 */
 	.name	       = "vi",
+	.id            = -1,
+	.index         = 4,
 	.syncpts       = BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
 			 BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
 			 BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
@@ -117,6 +127,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 5 */
 	.name	       = "msenc",
+	.id            = -1,
+	.index         = 5,
 	.syncpts       = BIT(NVSYNCPT_MSENC),
 	.waitbases     = BIT(NVWAITBASE_MSENC),
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
@@ -132,6 +144,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 6 */
 	.name	       = "dsi",
+	.id            = -1,
+	.index         = 6,
 	.syncpts       = BIT(NVSYNCPT_DSI),
 	.modulemutexes = BIT(NVMODMUTEX_DSI),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -141,6 +155,8 @@ static struct nvhost_device devices[] = {
 {
 	/* channel 7 */
 	.name          = "tsec",
+	.id            = -1,
+	.index         = 7,
 	.syncpts       = BIT(NVSYNCPT_TSEC),
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
@@ -182,11 +198,9 @@ static int t114_channel_init(struct nvhost_channel *ch,
 			    struct nvhost_master *dev, int index)
 {
 	ch->chid = index;
-	ch->dev = &devices[index];
 	mutex_init(&ch->reflock);
 	mutex_init(&ch->submitlock);
 
-	nvhost_device_register(ch->dev);
 	ch->aperture = t114_channel_aperture(dev->aperture, index);
 
 	return t114_nvhost_hwctx_handler_init(ch);
@@ -200,6 +214,19 @@ int nvhost_init_t114_channel_support(struct nvhost_master *host)
 	host->op.channel.init = t114_channel_init;
 
 	return result;
+}
+
+static struct nvhost_device *t114_get_nvhost_device(struct nvhost_master *host,
+		char *name)
+{
+	int i;
+
+	for (i = 0; i < host->nb_channels; i++) {
+		if (strcmp(devices[i].name, name) == 0)
+			return &devices[i];
+	}
+
+	return NULL;
 }
 
 int nvhost_init_t114_support(struct nvhost_master *host)
@@ -222,5 +249,6 @@ int nvhost_init_t114_support(struct nvhost_master *host)
 	err = nvhost_init_t20_intr_support(host);
 	if (err)
 		return err;
+	host->op.nvhost_dev.get_nvhost_device = t114_get_nvhost_device;
 	return 0;
 }

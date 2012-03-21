@@ -222,6 +222,497 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.vmode =	FB_VMODE_NONINTERLACED,
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
+
+	/*
+	* Few VGA/SVGA modes to support monitors with lower
+	* resolutions or to support HDMI<->DVI connection
+	*/
+
+	/* 640x480p 75hz */
+	{
+		.xres =		640,
+		.yres =		480,
+		.pixclock =	KHZ2PICOS(31500),
+		.hsync_len =	96,	/* h_sync_width */
+		.vsync_len =	2,	/* v_sync_width */
+		.left_margin =	48,	/* h_back_porch */
+		.upper_margin =	32,	/* v_back_porch */
+		.right_margin =	16,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = 0,
+	},
+	/* 720x400p 59hz */
+	{
+		.xres =		720,
+		.yres =		400,
+		.pixclock =	KHZ2PICOS(35500),
+		.hsync_len =	72,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	108,	/* h_back_porch */
+		.upper_margin =	42,	/* v_back_porch */
+		.right_margin =	36,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync  = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 800x600p 60hz */
+	{
+		.xres =		800,
+		.yres =		600,
+		.pixclock =	KHZ2PICOS(40000),
+		.hsync_len =	128,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	88,	/* h_back_porch */
+		.upper_margin =	23,	/* v_back_porch */
+		.right_margin =	40,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 800x600p 75hz */
+	{
+		.xres =		800,
+		.yres =		600,
+		.pixclock =	KHZ2PICOS(49500),
+		.hsync_len =	80,	/* h_sync_width */
+		.vsync_len =	2,	/* v_sync_width */
+		.left_margin =	160,	/* h_back_porch */
+		.upper_margin =	21,	/* v_back_porch */
+		.right_margin =	16,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1024x768p 60hz */
+	{
+		.xres =		1024,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(65000),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	6,	/* v_sync_width */
+		.left_margin =	160,	/* h_back_porch */
+		.upper_margin =	29,	/* v_back_porch */
+		.right_margin =	24,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =	0,
+	},
+	/* 1024x768p 75hz */
+	{
+		.xres =		1024,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(78800),
+		.hsync_len =	96,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	176,	/* h_back_porch */
+		.upper_margin =	28,	/* v_back_porch */
+		.right_margin =	16,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = 0,
+	},
+	/* 1152x864p 75hz */
+	{
+		.xres =		1152,
+		.yres =		864,
+		.pixclock =	KHZ2PICOS(108000),
+		.hsync_len =	128,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	256,	/* h_back_porch */
+		.upper_margin =	32,	/* v_back_porch */
+		.right_margin =	64,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x800p 60hz */
+	{
+		.xres =		1280,
+		.yres =		800,
+		.pixclock =	KHZ2PICOS(83460),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	200,	/* h_back_porch */
+		.upper_margin =	24,	/* v_back_porch */
+		.right_margin =	64,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x960p 60hz */
+	{
+		.xres =		1280,
+		.yres =		960,
+		.pixclock =	KHZ2PICOS(108000),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	216,	/* h_back_porch */
+		.upper_margin =	30,	/* v_back_porch */
+		.right_margin =	80,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x1024p 60hz */
+	{
+		.xres =		1280,
+		.yres =		1024,
+		.pixclock =	KHZ2PICOS(108000),
+		.hsync_len =	112,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	248,	/* h_back_porch */
+		.upper_margin =	38,	/* v_back_porch */
+		.right_margin =	48,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x1024p 75hz */
+	{
+		.xres =		1280,
+		.yres =		1024,
+		.pixclock =	KHZ2PICOS(135000),
+		.hsync_len =	144,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	248,	/* h_back_porch */
+		.upper_margin =	38,	/* v_back_porch */
+		.right_margin =	16,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1368x768p 60hz */
+	{
+		.xres =		1368,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(85860),
+		.hsync_len =	144,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	216,	/* h_back_porch */
+		.upper_margin =	23,	/* v_back_porch */
+		.right_margin =	72,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1440x900p 60hz */
+	{
+		.xres =		1440,
+		.yres =		900,
+		.pixclock =	KHZ2PICOS(106470),
+		.hsync_len =	152,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	232,	/* h_back_porch */
+		.upper_margin =	28,	/* v_back_porch */
+		.right_margin =	80,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1600x1200p 60hz */
+	{
+		.xres =		1600,
+		.yres =		1200,
+		.pixclock =	KHZ2PICOS(162000),
+		.hsync_len =	192,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	304,	/* h_back_porch */
+		.upper_margin =	46,	/* v_back_porch */
+		.right_margin =	64,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1600x1200p 75hz */
+	{
+		.xres =		1600,
+		.yres =		1200,
+		.pixclock =	KHZ2PICOS(202500),
+		.hsync_len =	192,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	304,	/* h_back_porch */
+		.upper_margin =	46,	/* v_back_porch */
+		.right_margin =	64,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1680x1050p 59.94/60hz */
+	{
+		.xres =		1680,
+		.yres =		1050,
+		.pixclock =	KHZ2PICOS(147140),
+		.hsync_len =	184,	/* h_sync_width */
+		.vsync_len =	3,	/* v_sync_width */
+		.left_margin =	288,	/* h_back_porch */
+		.upper_margin =	33,	/* v_back_porch */
+		.right_margin =	104,	/* h_front_porch */
+		.lower_margin =	1,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =	FB_SYNC_VERT_HIGH_ACT,
+	},
+};
+
+/* CVT timing representation of VESA modes*/
+const struct fb_videomode tegra_dc_hdmi_supported_cvt_modes[] = {
+
+	/* 640x480p 60hz */
+	{
+		.refresh =	60,
+		.xres =		640,
+		.yres =		480,
+		.pixclock =	KHZ2PICOS(23750),
+		.hsync_len =	64,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	80,	/* h_back_porch */
+		.upper_margin =	17,	/* v_back_porch */
+		.right_margin =	16,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 640x480p 75hz */
+	{
+		.refresh =	75,
+		.xres =		640,
+		.yres =		480,
+		.pixclock =	KHZ2PICOS(30750),
+		.hsync_len =	64,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	88,	/* h_back_porch */
+		.upper_margin =	21,	/* v_back_porch */
+		.right_margin =	24,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 720x400p 59hz */
+	{
+		.refresh =	59,
+		.xres =		720,
+		.yres =		400,
+		.pixclock =	KHZ2PICOS(22000),
+		.hsync_len =	64,	/* h_sync_width */
+		.vsync_len =	10,	/* v_sync_width */
+		.left_margin =	88,	/* h_back_porch */
+		.upper_margin =	14,	/* v_back_porch */
+		.right_margin =	24,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync  = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 800x600p 60hz */
+	{
+		.refresh =	60,
+		.xres =		800,
+		.yres =		600,
+		.pixclock =	KHZ2PICOS(38250),
+		.hsync_len =	80,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	112,	/* h_back_porch */
+		.upper_margin =	21,	/* v_back_porch */
+		.right_margin =	32,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = 	FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 800x600p 75hz */
+	{
+		.refresh =	75,
+		.xres =		800,
+		.yres =		600,
+		.pixclock =	KHZ2PICOS(49000),
+		.hsync_len =	80,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	120,	/* h_back_porch */
+		.upper_margin =	26,	/* v_back_porch */
+		.right_margin =	40,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1024x768p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1024,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(63500),
+		.hsync_len =	104,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	152,	/* h_back_porch */
+		.upper_margin =	27,	/* v_back_porch */
+		.right_margin =	48,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =	FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1024x768p 75hz */
+	{
+		.refresh =	75,
+		.xres =		1024,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(82000),
+		.hsync_len =	104,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	168,	/* h_back_porch */
+		.upper_margin =	34,	/* v_back_porch */
+		.right_margin =	64,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1152x864p 75hz */
+	{
+		.refresh =	75,
+		.xres =		1152,
+		.yres =		864,
+		.pixclock =	KHZ2PICOS(104500),
+		.hsync_len =	120,	/* h_sync_width */
+		.vsync_len =	10,	/* v_sync_width */
+		.left_margin =	192,	/* h_back_porch */
+		.upper_margin =	38,	/* v_back_porch */
+		.right_margin =	72,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x800p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1280,
+		.yres =		800,
+		.pixclock =	KHZ2PICOS(83500),
+		.hsync_len =	128,	/* h_sync_width */
+		.vsync_len =	6,	/* v_sync_width */
+		.left_margin =	200,	/* h_back_porch */
+		.upper_margin =	28,	/* v_back_porch */
+		.right_margin =	72,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x960p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1280,
+		.yres =		960,
+		.pixclock =	KHZ2PICOS(101250),
+		.hsync_len =	128,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	208,	/* h_back_porch */
+		.upper_margin =	33,	/* v_back_porch */
+		.right_margin =	80,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1280x1024p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1280,
+		.yres =		1024,
+		.pixclock =	KHZ2PICOS(109000),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	7,	/* v_sync_width */
+		.left_margin =	216,	/* h_back_porch */
+		.upper_margin =	36,	/* v_back_porch */
+		.right_margin =	80,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =	FB_SYNC_VERT_HIGH_ACT,
+	},
+
+	/* 1280x1024p 75hz */
+	{
+		.refresh =	75,
+		.xres =		1280,
+		.yres =		1024,
+		.pixclock =	KHZ2PICOS(138750),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	7,	/* v_sync_width */
+		.left_margin =	224,	/* h_back_porch */
+		.upper_margin =	45,	/* v_back_porch */
+		.right_margin =	88,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1368x768p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1368,
+		.yres =		768,
+		.pixclock =	KHZ2PICOS(85250),
+		.hsync_len =	136,	/* h_sync_width */
+		.vsync_len =	10,	/* v_sync_width */
+		.left_margin =	208,	/* h_back_porch */
+		.upper_margin =	27,	/* v_back_porch */
+		.right_margin =	72,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1440x900p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1440,
+		.yres =		900,
+		.pixclock =	KHZ2PICOS(106500),
+		.hsync_len =	152,	/* h_sync_width */
+		.vsync_len =	6,	/* v_sync_width */
+		.left_margin =	232,	/* h_back_porch */
+		.upper_margin =	31,	/* v_back_porch */
+		.right_margin =	80,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =		FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1600x1200p 60hz */
+	{
+		.refresh =	60,
+		.xres =		1600,
+		.yres =		1200,
+		.pixclock =	KHZ2PICOS(161000),
+		.hsync_len =	168,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	280,	/* h_back_porch */
+		.upper_margin =	42,	/* v_back_porch */
+		.right_margin =	112,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1600x1200p 75hz */
+	{
+		.refresh =	75,
+		.xres =		1600,
+		.yres =		1200,
+		.pixclock =	KHZ2PICOS(204750),
+		.hsync_len =	168,	/* h_sync_width */
+		.vsync_len =	4,	/* v_sync_width */
+		.left_margin =	288,	/* h_back_porch */
+		.upper_margin =	52,	/* v_back_porch */
+		.right_margin =	120,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+	/* 1680x1050p 59.94/60hz */
+	{
+		.refresh =	60,
+		.xres =		1680,
+		.yres =		1050,
+		.pixclock =	KHZ2PICOS(140000),
+		.hsync_len =	168,	/* h_sync_width */
+		.vsync_len =	10,	/* v_sync_width */
+		.left_margin =	272,	/* h_back_porch */
+		.upper_margin =	36,	/* v_back_porch */
+		.right_margin =	104,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode =	FB_VMODE_NONINTERLACED,
+		.sync =	FB_SYNC_VERT_HIGH_ACT,
+	},
 };
 
 /* table of electrical settings, must be in acending order. */
@@ -703,6 +1194,30 @@ static bool tegra_dc_hdmi_valid_pixclock(const struct tegra_dc *dc,
 	}
 }
 
+static bool tegra_dc_cvt_mode_equal(const struct fb_videomode *mode1,
+				const struct fb_videomode *mode2)
+{
+	return (mode1->xres == mode2->xres &&
+		mode1->yres == mode2->yres &&
+		mode1->refresh == mode2->refresh &&
+		mode1->vmode == mode2->vmode);
+}
+
+static bool tegra_dc_reload_mode(struct fb_videomode *mode)
+{
+	int i = 0;
+	for (i = 0; i < ARRAY_SIZE(tegra_dc_hdmi_supported_cvt_modes); i++) {
+		const struct fb_videomode *cvt_mode
+				= &tegra_dc_hdmi_supported_cvt_modes[i];
+		if (tegra_dc_cvt_mode_equal(cvt_mode, mode)) {
+			memcpy(mode, cvt_mode, sizeof(*mode));
+			return true;
+		}
+	}
+	return false;
+}
+
+
 static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -722,7 +1237,19 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 				= &tegra_dc_hdmi_supported_modes[i];
 		if (tegra_dc_hdmi_mode_equal(supported_mode, mode) &&
 		    tegra_dc_hdmi_valid_pixclock(dc, supported_mode)) {
-			memcpy(mode, supported_mode, sizeof(*mode));
+			if (mode->lower_margin == 1) {
+				/* This might be the case for HDMI<->DVI
+				 * where std VESA representation will not
+				 * pass constraint V_FRONT_PORCH >=
+				 * V_REF_TO_SYNC + 1.So reload mode in
+				 * CVT timing standards.
+				 */
+				if (!tegra_dc_reload_mode(mode))
+					return false;
+			}
+			else
+				memcpy(mode, supported_mode, sizeof(*mode));
+
 			mode->flag = FB_MODE_IS_DETAILED;
 			clock_per_frame = tegra_dc_calc_clock_per_frame(mode);
 			mode->refresh = (PICOS2KHZ(mode->pixclock) * 1000)

@@ -228,7 +228,7 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 	/* allocate pages for ucode */
 	m->mem_r = nvmap_alloc(nvhost_get_host(dev)->nvmap,
 				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, NVMAP_HANDLE_UNCACHEABLE);
+				     PAGE_SIZE, NVMAP_HANDLE_UNCACHEABLE, 0);
 	if (IS_ERR_OR_NULL(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
 		err = -ENOMEM;

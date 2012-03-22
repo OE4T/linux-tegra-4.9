@@ -89,23 +89,22 @@ struct nvmap_handle {
 };
 
 #define NVMAP_DEFAULT_PAGE_POOL_SIZE 8192
-#define NVMAP_NUM_POOLS 2
-#define NVMAP_UC_POOL 0
-#define NVMAP_WC_POOL 1
+#define NVMAP_UC_POOL NVMAP_HANDLE_UNCACHEABLE
+#define NVMAP_WC_POOL NVMAP_HANDLE_WRITE_COMBINE
+#define NVMAP_IWB_POOL NVMAP_HANDLE_INNER_CACHEABLE
+#define NVMAP_WB_POOL NVMAP_HANDLE_CACHEABLE
+#define NVMAP_NUM_POOLS (NVMAP_HANDLE_CACHEABLE + 1)
 
 struct nvmap_page_pool {
-	spinlock_t lock;
+	struct mutex lock;
 	int npages;
 	struct page **page_array;
-	struct mutex shrink_lock;
 	struct page **shrink_array;
 	int max_pages;
+	int flags;
 };
 
 int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags);
-struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
-bool nvmap_page_pool_release(struct nvmap_page_pool *pool, struct page *page);
-int nvmap_page_pool_get_free_count(struct nvmap_page_pool *pool);
 
 struct nvmap_share {
 	struct tegra_iovmm_client *iovmm;
@@ -116,6 +115,8 @@ struct nvmap_share {
 		struct {
 			struct nvmap_page_pool uc_pool;
 			struct nvmap_page_pool wc_pool;
+			struct nvmap_page_pool iwb_pool;
+			struct nvmap_page_pool wb_pool;
 		};
 	};
 #ifdef CONFIG_NVMAP_RECLAIM_UNPINNED_VM

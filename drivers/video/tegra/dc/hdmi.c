@@ -208,6 +208,22 @@ const struct fb_videomode tegra_dc_hdmi_supported_modes[] = {
 		.vmode =	FB_VMODE_NONINTERLACED,
 		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	},
+
+	/* 1920x1080p 59.94/60hz CVT */
+	{
+		.xres =		1920,
+		.yres =		1080,
+		.pixclock =	KHZ2PICOS(138500),
+		.hsync_len =	32,	/* h_sync_width */
+		.vsync_len =	5,	/* v_sync_width */
+		.left_margin =	80,	/* h_back_porch */
+		.upper_margin =	23,	/* v_back_porch */
+		.right_margin =	48,	/* h_front_porch */
+		.lower_margin =	3,	/* v_front_porch */
+		.vmode = FB_VMODE_NONINTERLACED,
+		.sync = FB_SYNC_VERT_HIGH_ACT,
+	},
+
 	/* 1920x1080p 59.94/60hz EIA/CEA-861-B Format 16 */
 	{
 		.xres =		1920,

@@ -128,19 +128,10 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	void *ref;
 	void *waiter;
 	int err = 0, check_count = 0, low_timeout = 0;
+	u32 val;
 
 	if (value)
 		*value = 0;
-
-	BUG_ON(!syncpt_op(sp).update_min);
-	if (!nvhost_syncpt_check_max(sp, id, thresh)) {
-		dev_warn(&syncpt_to_dev(sp)->dev->dev,
-			"wait %d (%s) for (%d) wouldn't be met (max %d)\n",
-			id, syncpt_op(sp).name(sp, id), thresh,
-			nvhost_syncpt_read_max(sp, id));
-		nvhost_debug_dump(syncpt_to_dev(sp));
-		return -EINVAL;
-	}
 
 	/* first check cache */
 	if (nvhost_syncpt_is_expired(sp, id, thresh)) {
@@ -152,14 +143,12 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	/* keep host alive */
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 
-	if (client_managed(id) || !nvhost_syncpt_min_eq_max(sp, id)) {
-		/* try to read from register */
-		u32 val = syncpt_op(sp).update_min(sp, id);
-		if ((s32)(val - thresh) >= 0) {
-			if (value)
-				*value = val;
-			goto done;
-		}
+	/* try to read from register */
+	val = syncpt_op(sp).update_min(sp, id);
+	if (nvhost_syncpt_is_expired(sp, id, thresh)) {
+		if (value)
+			*value = val;
+		goto done;
 	}
 
 	if (!timeout) {
@@ -192,7 +181,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		int remain = wait_event_interruptible_timeout(wq,
 				nvhost_syncpt_is_expired(sp, id, thresh),
 				check);
-		if (remain > 0 || nvhost_syncpt_is_expired(sp, id, thresh)) {
+		if (remain > 0) {
 			if (value)
 				*value = nvhost_syncpt_read_min(sp, id);
 			err = 0;

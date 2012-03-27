@@ -34,7 +34,15 @@ struct nvhost_waitchk;
 #define NVSYNCPT_GRAPHICS_HOST		     (0)
 #define NVSYNCPT_INVALID		     (-1)
 
+/* Attribute struct for sysfs min and max attributes */
+struct nvhost_syncpt_attr {
+	struct kobj_attribute attr;
+	struct nvhost_master *host;
+	int id;
+};
+
 struct nvhost_syncpt {
+	struct kobject *kobj;
 	atomic_t *min_val;
 	atomic_t *max_val;
 	u32 *base_val;
@@ -43,9 +51,12 @@ struct nvhost_syncpt {
 	u32 client_managed;
 	atomic_t *lock_counts;
 	u32 nb_mlocks;
+	struct nvhost_syncpt_attr *syncpt_attrs;
 };
 
-int nvhost_syncpt_init(struct nvhost_syncpt *);
+int nvhost_syncpt_init(struct nvhost_device *, struct nvhost_syncpt *);
+void nvhost_syncpt_deinit(struct nvhost_syncpt *);
+
 #define client_managed(id) (BIT(id) & sp->client_managed)
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define syncpt_op(sp) (syncpt_to_dev(sp)->op.syncpt)

@@ -20,10 +20,16 @@
 
 #include <linux/nvhost_ioctl.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
+#include <linux/stat.h>
 #include "nvhost_syncpt.h"
 #include "dev.h"
 
 #define MAX_STUCK_CHECK_COUNT 15
+#define MAX_SYNCPT_LENGTH 5
+/* Name of sysfs node for min and max value */
+static const char *min_name = "min";
+static const char *max_name = "max";
 
 /**
  * Resets syncpoint and waitbase values to sw shadows
@@ -316,4 +322,123 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 {
 	return syncpt_op(sp).wait_check(sp, nvmap,
 			waitchk_mask, wait, num_waitchk);
+}
+
+/* Displays the current value of the sync point via sysfs */
+static ssize_t syncpt_min_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_syncpt_attr *syncpt_attr =
+		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	return snprintf(buf, PAGE_SIZE, "%d",
+			nvhost_syncpt_read(&syncpt_attr->host->syncpt,
+				syncpt_attr->id));
+}
+
+static ssize_t syncpt_max_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_syncpt_attr *syncpt_attr =
+		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	return snprintf(buf, PAGE_SIZE, "%d",
+			nvhost_syncpt_read_max(&syncpt_attr->host->syncpt,
+				syncpt_attr->id));
+}
+
+int nvhost_syncpt_init(struct nvhost_device *dev,
+		struct nvhost_syncpt *sp)
+{
+	int i;
+	struct nvhost_master *host = syncpt_to_dev(sp);
+	int err = 0;
+
+	/* Allocate structs for min, max and base values */
+	sp->min_val = kzalloc(sizeof(atomic_t) * sp->nb_pts, GFP_KERNEL);
+	sp->max_val = kzalloc(sizeof(atomic_t) * sp->nb_pts, GFP_KERNEL);
+	sp->base_val = kzalloc(sizeof(u32) * sp->nb_bases, GFP_KERNEL);
+	sp->lock_counts = kzalloc(sizeof(atomic_t) * sp->nb_mlocks, GFP_KERNEL);
+
+	if (!(sp->min_val && sp->max_val && sp->base_val && sp->lock_counts)) {
+		/* frees happen in the deinit */
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	sp->kobj = kobject_create_and_add("syncpt", &dev->dev.kobj);
+	if (!sp->kobj) {
+		err = -EIO;
+		goto fail;
+	}
+
+	/* Allocate two attributes for each sync point: min and max */
+	sp->syncpt_attrs = kzalloc(sizeof(*sp->syncpt_attrs) * sp->nb_pts * 2,
+			GFP_KERNEL);
+	if (!sp->syncpt_attrs) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	/* Fill in the attributes */
+	for (i = 0; i < sp->nb_pts; i++) {
+		char name[MAX_SYNCPT_LENGTH];
+		struct kobject *kobj;
+		struct nvhost_syncpt_attr *min = &sp->syncpt_attrs[i*2];
+		struct nvhost_syncpt_attr *max = &sp->syncpt_attrs[i*2+1];
+
+		/* Create one directory per sync point */
+		snprintf(name, sizeof(name), "%d", i);
+		kobj = kobject_create_and_add(name, sp->kobj);
+		if (!kobj) {
+			err = -EIO;
+			goto fail;
+		}
+
+		min->id = i;
+		min->host = host;
+		min->attr.attr.name = min_name;
+		min->attr.attr.mode = S_IRUGO;
+		min->attr.show = syncpt_min_show;
+		if (sysfs_create_file(kobj, &min->attr.attr)) {
+			err = -EIO;
+			goto fail;
+		}
+
+		max->id = i;
+		max->host = host;
+		max->attr.attr.name = max_name;
+		max->attr.attr.mode = S_IRUGO;
+		max->attr.show = syncpt_max_show;
+		if (sysfs_create_file(kobj, &max->attr.attr)) {
+			err = -EIO;
+			goto fail;
+		}
+	}
+
+	return err;
+
+fail:
+	nvhost_syncpt_deinit(sp);
+	return err;
+}
+
+void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
+{
+	kobject_put(sp->kobj);
+
+	kfree(sp->min_val);
+	sp->min_val = NULL;
+
+	kfree(sp->max_val);
+	sp->max_val = NULL;
+
+	kfree(sp->base_val);
+	sp->base_val = NULL;
+
+	kfree(sp->lock_counts);
+	sp->lock_counts = 0;
+
+	kfree(sp->syncpt_attrs);
+	sp->syncpt_attrs = NULL;
 }

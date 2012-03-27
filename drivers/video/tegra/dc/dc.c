@@ -899,9 +899,9 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	if (w->idx == 1 && win_use_v_filter(w))
 		bw /= 2;
 
-	/* our bandwidth is in bytes/sec, but LA takes MBps.
-	 * round up bandwidth to 1MBps */
-	bw = bw / 1000000 + 1;
+	/* our bandwidth is in kbytes/sec, but LA takes MBps.
+	 * round up bandwidth to next 1MBps */
+	bw = bw / 1000 + 1;
 
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
@@ -985,10 +985,12 @@ static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
  * pixel_clock * win_bpp * (use_v_filter ? 2 : 1)) * H_scale_factor *
  * (windows_tiling ? 2 : 1)
  *
- *
  * note:
  * (*) We use 2 tap V filter, so need double BW if use V filter
  * (*) Tiling mode on T30 and DDR3 requires double BW
+ *
+ * return:
+ * bandwidth in kBps
  */
 static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
@@ -1012,24 +1014,16 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * is of the luma plane's size only. */
 	bpp = tegra_dc_is_yuv_planar(w->fmt) ?
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
-	/* perform calculations with most significant bits of pixel clock
-	 * to prevent overflow of long. */
-	ret = (unsigned long)(dc->mode.pclk >> 16) *
-		bpp / 8 *
-		(win_use_v_filter(w) ? 2 : 1) * dfixed_trunc(w->w) / w->out_w *
+	ret = dc->mode.pclk / 1000UL * bpp / 8 * (win_use_v_filter(w) ? 2 : 1)
+		* dfixed_trunc(w->w) / w->out_w *
 		(WIN_IS_TILED(w) ? tiled_windows_bw_multiplier : 1);
+	/*
+	 * Assuming ~35% efficiency: i.e. if we calculate we need 70MBps, we
+	 * will request 200MBps from EMC.
+	 */
+	ret = ret * 29 / 10;
 
-/*
- * Assuming 48% efficiency: i.e. if we calculate we need 70MBps, we
- * will request 147MBps from EMC.
- */
-	ret = ret * 2 + ret / 10;
-
-	/* if overflowed */
-	if (ret > (1UL << 31))
-		return ULONG_MAX;
-
-	return ret << 16; /* restore the scaling we did above */
+	return ret;
 }
 
 static unsigned long tegra_dc_get_bandwidth(
@@ -1043,8 +1037,10 @@ static unsigned long tegra_dc_get_bandwidth(
 	 * bandwidths */
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *w = windows[i];
+
 		if (w)
-			w->new_bandwidth = tegra_dc_calc_win_bandwidth(w->dc, w);
+			w->new_bandwidth =
+				tegra_dc_calc_win_bandwidth(w->dc, w);
 	}
 
 	return tegra_dc_find_max_bandwidth(windows, n);
@@ -1078,6 +1074,7 @@ static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *w = &dc->windows[i];
+
 		if (w->bandwidth != w->new_bandwidth && w->new_bandwidth != 0)
 			tegra_dc_set_latency_allowance(dc, w);
 		trace_printk("%s:win%u bandwidth=%d\n", dc->ndev->name, w->idx,
@@ -1097,7 +1094,10 @@ static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 
 	/* calculate the new rate based on this POST */
 	new_rate = tegra_dc_get_bandwidth(windows, n);
-	new_rate = EMC_BW_TO_FREQ(new_rate);
+	if (WARN_ONCE(new_rate > (ULONG_MAX / 1000), "bandwidth maxed out\n"))
+		new_rate = ULONG_MAX;
+	else
+		new_rate = EMC_BW_TO_FREQ(new_rate * 1000);
 
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;

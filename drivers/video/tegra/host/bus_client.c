@@ -601,7 +601,6 @@ int nvhost_client_device_suspend(struct nvhost_device *dev)
 	if (ret)
 		return ret;
 
-	ret = nvhost_module_suspend(dev, true);
 	dev_info(&dev->dev, "suspend status: %d\n", ret);
 
 	return ret;

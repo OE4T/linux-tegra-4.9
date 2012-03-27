@@ -595,8 +595,6 @@ int nvhost_client_device_suspend(struct nvhost_device *dev)
 {
 	int ret = 0;
 
-	dev_info(&dev->dev, "suspending\n");
-
 	ret = nvhost_channel_suspend(dev->channel);
 	if (ret)
 		return ret;

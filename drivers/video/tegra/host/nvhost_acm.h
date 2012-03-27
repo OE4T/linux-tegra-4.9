@@ -30,7 +30,7 @@
 /* Sets clocks and powergating state for a module */
 int nvhost_module_init(struct nvhost_device *ndev);
 void nvhost_module_deinit(struct nvhost_device *dev);
-int nvhost_module_suspend(struct nvhost_device *dev, bool system_suspend);
+int nvhost_module_suspend(struct nvhost_device *dev);
 
 void nvhost_module_reset(struct nvhost_device *dev);
 void nvhost_module_busy(struct nvhost_device *dev);

@@ -584,8 +584,7 @@ static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	int ret = 0;
 
-	dev_info(&dev->dev, "suspending\n");
-	ret = nvhost_module_suspend(host->dev, true);
+	ret = nvhost_module_suspend(host->dev);
 	dev_info(&dev->dev, "suspend status: %d\n", ret);
 
 	return ret;

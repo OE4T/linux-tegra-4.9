@@ -2123,9 +2123,11 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 		goto crc_error;
 	}
 
+#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
 	/* TODO: Replace mdelay with code to sync VBlANK, since
 	 * DC_COM_CRC_CHECKSUM_LATCHED is available after VBLANK */
 	mdelay(TEGRA_CRC_LATCHED_DELAY);
+#endif
 
 	crc = tegra_dc_readl(dc, DC_COM_CRC_CHECKSUM_LATCHED);
 crc_error:

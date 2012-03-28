@@ -584,7 +584,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 		break;
 	}
 
-	dsi->controller_index = dc->ndev->id;
+	dsi->controller_index = dsi->info.source_invert ?
+			(dc->ndev->id ^ 0x1) : dc->ndev->id;
 	dsi->ulpm = false;
 	dsi->enabled = false;
 	dsi->clk_ref = false;
@@ -641,8 +642,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
 							dsi->target_hs_clk_khz);
-
-	dsi->controller_index = dc->ndev->id;
 
 #if DSI_USE_SYNC_POINTS
 	dsi->syncpt_id = NVSYNCPT_DSI;

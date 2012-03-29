@@ -24,9 +24,11 @@
 #define __VIDEO_TEGRA_NVMAP_IOCTL_H
 
 #include <linux/ioctl.h>
-#include <linux/file.h>
 
+#ifdef  __KERNEL__
+#include <linux/file.h>
 #include <mach/nvmap.h>
+#endif
 
 enum {
 	NVMAP_HANDLE_PARAM_SIZE = 1,
@@ -136,6 +138,7 @@ struct nvmap_cache_op {
 
 #define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_GET_ID))
 
+#ifdef  __KERNEL__
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);
 
 int nvmap_ioctl_get_param(struct file *filp, void __user* arg);
@@ -153,6 +156,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg);
 int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg);
+#endif
 
 
 

@@ -347,7 +347,7 @@ static void ctx3d_save_service(struct nvhost_hwctx *nctx)
 			host1x_hwctx_handler(ctx)->syncpt);
 }
 
-struct nvhost_hwctx_handler * __init nvhost_gr3d_t20_ctxhandler_init(
+struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch)
 {

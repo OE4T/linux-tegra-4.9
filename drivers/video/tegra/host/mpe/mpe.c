@@ -527,7 +527,7 @@ static void ctxmpe_save_service(struct nvhost_hwctx *nctx)
 			h->syncpt);
 }
 
-struct nvhost_hwctx_handler * __init nvhost_mpe_ctxhandler_init(
+struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch)
 {

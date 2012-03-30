@@ -540,6 +540,9 @@ void nvhost_scale3d_init(struct nvhost_device *d)
 		long correction;
 		mutex_init(&scale3d.lock);
 
+		INIT_WORK(&scale3d.work, scale3d_clocks_handler);
+		INIT_DELAYED_WORK(&scale3d.idle_timer, scale3d_idle_handler);
+
 		scale3d.clk_3d = d->clk[0];
 		if (tegra_chip_id == TEGRA30) {
 			scale3d.clk_3d2 = d->clk[1];
@@ -628,9 +631,6 @@ void nvhost_scale3d_init(struct nvhost_device *d)
 				scale3d.emc_dip_slope *
 				POW2(scale3d.max_rate_3d - scale3d.emc_xmid);
 		scale3d.emc_dip_offset -= correction;
-
-		INIT_WORK(&scale3d.work, scale3d_clocks_handler);
-		INIT_DELAYED_WORK(&scale3d.idle_timer, scale3d_idle_handler);
 
 		/* set scaling parameter defaults */
 		scale3d.enable = 1;

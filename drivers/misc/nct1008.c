@@ -545,10 +545,14 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 	if (!data->nct_reg) {
 		data->nct_reg = regulator_get(&data->client->dev, "vdd");
 		if (IS_ERR_OR_NULL(data->nct_reg)) {
-			dev_warn(&data->client->dev, "Error [%d] in"
-				"getting the regulator handle for vdd "
-				"of %s\n", (int)data->nct_reg,
-				dev_name(&data->client->dev));
+			if (PTR_ERR(data->nct_reg) == -ENODEV)
+				dev_info(&data->client->dev,
+					"no regulator found for vdd."
+					" Assuming vdd is always powered");
+			else
+				dev_warn(&data->client->dev, "Error [%ld] in "
+					"getting the regulator handle for"
+					" vdd\n", PTR_ERR(data->nct_reg));
 			data->nct_reg = NULL;
 			return;
 		}

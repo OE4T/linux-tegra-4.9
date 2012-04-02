@@ -365,7 +365,11 @@
 #define  BASE_COLOR_SIZE888		(8 << 0)
 #define  DITHER_CONTROL_DISABLE		(0 << 8)
 #define  DITHER_CONTROL_ORDERED		(2 << 8)
+#ifdef CONFIG_TEGRA_DC_TEMPORAL_DITHER
+#define  DITHER_CONTROL_TEMPORAL	(3 << 8)
+#else
 #define  DITHER_CONTROL_ERRDIFF		(3 << 8)
+#endif
 #define  CMU_DISABLE			(0 << 20)
 #define  CMU_ENABLE			(1 << 20)
 

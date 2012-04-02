@@ -1940,6 +1940,11 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	case TEGRA_DC_ORDERED_DITHER:
 		color_control |= DITHER_CONTROL_ORDERED;
 		break;
+#ifdef CONFIG_TEGRA_DC_TEMPORAL_DITHER
+	case TEGRA_DC_TEMPORAL_DITHER:
+		color_control |= DITHER_CONTROL_TEMPORAL;
+		break;
+#else
 	case TEGRA_DC_ERRDIFF_DITHER:
 		/* The line buffer for error-diffusion dither is limited
 		 * to 1280 pixels per line. This limits the maximum
@@ -1949,6 +1954,9 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 		BUG_ON(dc->mode.h_active > 1280);
 		color_control |= DITHER_CONTROL_ERRDIFF;
 		break;
+#endif
+	default:
+		dev_err(&dc->ndev->dev, "Error: Unsupported dithering mode\n");
 	}
 
 #ifdef CONFIG_TEGRA_DC_CMU

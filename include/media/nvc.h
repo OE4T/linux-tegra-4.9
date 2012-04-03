@@ -275,6 +275,7 @@ struct nvc_gpio {
 	unsigned gpio; /* system GPIO number */
 	bool own; /* gets set if driver initializes */
 	bool active_high; /* used for GP GPIOs */
+	bool valid; /* set if struct data is valid */
 	bool flag; /* scratch flag for driver implementation */
 };
 

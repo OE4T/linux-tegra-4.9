@@ -2219,6 +2219,26 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 						dc->ndev->name, (65 + i));
 			}
 #endif
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+			if (dc->windows[i].underflows > 4) {
+				printk("%s:dc in underflow state."
+					" enable UF_LINE_FLUSH to clear up\n",
+					__func__);
+				tegra_dc_writel(dc, UF_LINE_FLUSH,
+						DC_DISP_DISP_MISC_CONTROL);
+				tegra_dc_writel(dc, GENERAL_UPDATE,
+						DC_CMD_STATE_CONTROL);
+				tegra_dc_writel(dc, GENERAL_ACT_REQ,
+						DC_CMD_STATE_CONTROL);
+
+				tegra_dc_writel(dc, 0,
+						DC_DISP_DISP_MISC_CONTROL);
+				tegra_dc_writel(dc, GENERAL_UPDATE,
+						DC_CMD_STATE_CONTROL);
+				tegra_dc_writel(dc, GENERAL_ACT_REQ,
+						DC_CMD_STATE_CONTROL);
+			}
+#endif
 		} else {
 			dc->windows[i].underflows = 0;
 		}
@@ -2522,7 +2542,9 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0x0001c700, DC_CMD_INT_POLARITY);
 	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
 	tegra_dc_writel(dc, 0x00010101, DC_DISP_MEM_HIGH_PRIORITY_TIMER);
-
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	tegra_dc_writel(dc, 0x00000000, DC_DISP_DISP_MISC_CONTROL);
+#endif
 	/* enable interrupts for vblank, frame_end and underflows */
 	tegra_dc_writel(dc, (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT),
 		DC_CMD_INT_ENABLE);

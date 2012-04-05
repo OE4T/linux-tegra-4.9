@@ -393,6 +393,7 @@
 #define DC_DISP_MCCIF_DISPLAY1B_HYST		0x484
 #define DC_DISP_DAC_CRT_CTRL			0x4c0
 #define DC_DISP_DISP_MISC_CONTROL		0x4c1
+#define   UF_LINE_FLUSH                         (1 << 1)
 
 #define DC_WIN_COLOR_PALETTE(x)			(0x500 + (x))
 

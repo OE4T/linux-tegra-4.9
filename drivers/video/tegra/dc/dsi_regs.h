@@ -22,6 +22,11 @@ enum {
 	TEGRA_DSI_ENABLE,
 };
 
+enum {
+	TEGRA_DSI_PAD_ENABLE,
+	TEGRA_DSI_PAD_DISABLE,
+};
+
 /* These are word offsets from base (not byte offsets) */
 enum {
 	OP_DONE = 1,

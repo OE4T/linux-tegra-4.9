@@ -19,6 +19,7 @@
  */
 
 #include <linux/mutex.h>
+#include <linux/kernel.h>
 #include <mach/powergate.h>
 #include <mach/iomap.h>
 #include "dev.h"

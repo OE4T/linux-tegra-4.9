@@ -145,7 +145,7 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	/* gather the save buffer */
 	nvhost_cdma_push_gather(cdma,
 			nvhost_get_host(nctx->channel->dev)->nvmap,
-			p->save_buf->handle,
+			p->save_buf,
 			0,
 			nvhost_opcode_gather(p->save_size),
 			p->save_phys);

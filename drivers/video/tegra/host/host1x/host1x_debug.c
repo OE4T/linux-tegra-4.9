@@ -169,32 +169,27 @@ static void show_channel_gather(struct output *o, u32 addr,
 	struct push_buffer *pb = &cdma->push_buffer;
 	u32 cur = addr - pb->phys;
 	struct nvmap_client_handle *nvmap = &pb->nvmap[cur/8];
-	struct nvmap_handle_ref ref;
 	u32 *map_addr, offset;
 	phys_addr_t pin_addr;
 	int state, count, i;
 
 	if (!nvmap->handle || !nvmap->client
-			|| atomic_read(&nvmap->handle->ref) < 1) {
+			|| atomic_read(&nvmap->handle->handle->ref) < 1) {
 		nvhost_debug_output(o, "[already deallocated]\n");
 		return;
 	}
 
-	/* Create a fake nvmap_handle_ref - nvmap requires it
-	 * but accesses only the first field - nvmap_handle */
-	ref.handle = nvmap->handle;
-
-	map_addr = nvmap_mmap(&ref);
+	map_addr = nvmap_mmap(nvmap->handle);
 	if (!map_addr) {
 		nvhost_debug_output(o, "[could not mmap]\n");
 		return;
 	}
 
 	/* Get base address from nvmap */
-	pin_addr = nvmap_pin(nvmap->client, &ref);
+	pin_addr = nvmap_pin(nvmap->client, nvmap->handle);
 	if (IS_ERR_VALUE(pin_addr)) {
 		nvhost_debug_output(o, "[couldn't pin]\n");
-		nvmap_munmap(&ref, map_addr);
+		nvmap_munmap(nvmap->handle, map_addr);
 		return;
 	}
 
@@ -215,8 +210,8 @@ static void show_channel_gather(struct output *o, u32 addr,
 					*(map_addr + offset/4 + i),
 					cdma);
 	}
-	nvmap_unpin(nvmap->client, &ref);
-	nvmap_munmap(&ref, map_addr);
+	nvmap_unpin(nvmap->client, nvmap->handle);
+	nvmap_munmap(nvmap->handle, map_addr);
 #endif
 }
 

@@ -143,7 +143,7 @@ static void submit_ctxrestore(struct nvhost_job *job)
 	/* Send restore buffer to channel */
 	nvhost_cdma_push_gather(&ch->cdma,
 		host->nvmap,
-		nvmap_ref_to_handle(ctx->restore),
+		ctx->restore,
 		0,
 		nvhost_opcode_gather(ctx->restore_size),
 		ctx->restore_phys);
@@ -188,7 +188,7 @@ void submit_gathers(struct nvhost_job *job)
 		u32 op2 = job->gathers[i].mem;
 		nvhost_cdma_push_gather(&job->ch->cdma,
 				job->nvmap,
-				nvmap_id_to_handle(job->gathers[i].mem_id),
+				job->gathers[i].ref,
 				job->gathers[i].offset,
 				op1, op2);
 	}

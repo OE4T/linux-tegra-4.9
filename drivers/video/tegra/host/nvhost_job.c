@@ -23,6 +23,7 @@
 #include <linux/err.h>
 #include <linux/vmalloc.h>
 #include <linux/nvmap.h>
+#include <trace/events/nvhost.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"
@@ -33,128 +34,41 @@
 
 static int job_size(struct nvhost_submit_hdr_ext *hdr)
 {
-	int num_pins = hdr ? (hdr->num_relocs + hdr->num_cmdbufs)*2 : 0;
+	int num_relocs = hdr ? hdr->num_relocs : 0;
 	int num_waitchks = hdr ? hdr->num_waitchks : 0;
+	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
+	int num_unpins = num_cmdbufs + num_relocs;
 
 	return sizeof(struct nvhost_job)
-			+ num_pins * sizeof(struct nvmap_pinarray_elem)
-			+ num_pins * sizeof(struct nvmap_handle *)
-			+ num_waitchks * sizeof(struct nvhost_waitchk);
-}
-
-static int gather_size(int num_cmdbufs)
-{
-	return num_cmdbufs * sizeof(struct nvhost_channel_gather);
-}
-
-static void free_gathers(struct nvhost_job *job)
-{
-	if (job->gathers) {
-		nvmap_munmap(job->gather_mem, job->gathers);
-		job->gathers = NULL;
-	}
-	if (job->gather_mem) {
-		nvmap_free(job->nvmap, job->gather_mem);
-		job->gather_mem = NULL;
-	}
-}
-
-static int alloc_gathers(struct nvhost_job *job,
-		int num_cmdbufs)
-{
-	int err = 0;
-
-	job->gather_mem = NULL;
-	job->gathers = NULL;
-	job->gather_mem_size = 0;
-
-	if (num_cmdbufs) {
-		/* Allocate memory */
-		job->gather_mem = nvmap_alloc(job->nvmap,
-				gather_size(num_cmdbufs),
-				32, NVMAP_HANDLE_CACHEABLE, 0);
-		if (IS_ERR_OR_NULL(job->gather_mem)) {
-			err = job->gather_mem ? PTR_ERR(job->gather_mem) : -ENOMEM;
-			job->gather_mem = NULL;
-			goto error;
-		}
-		job->gather_mem_size = gather_size(num_cmdbufs);
-
-		/* Map memory to kernel */
-		job->gathers = nvmap_mmap(job->gather_mem);
-		if (IS_ERR_OR_NULL(job->gathers)) {
-			err = job->gathers ? PTR_ERR(job->gathers) : -ENOMEM;
-			job->gathers = NULL;
-			goto error;
-		}
-	}
-
-	return 0;
-
-error:
-	free_gathers(job);
-	return err;
-}
-
-static int realloc_gathers(struct nvhost_job *oldjob,
-		struct nvhost_job *newjob,
-		int num_cmdbufs)
-{
-	int err = 0;
-
-	/* Check if we can reuse gather buffer */
-	if (oldjob->gather_mem_size < gather_size(num_cmdbufs)
-			|| oldjob->nvmap != newjob->nvmap) {
-		free_gathers(oldjob);
-		err = alloc_gathers(newjob, num_cmdbufs);
-	} else {
-		newjob->gather_mem = oldjob->gather_mem;
-		newjob->gathers = oldjob->gathers;
-		newjob->gather_mem_size = oldjob->gather_mem_size;
-
-		oldjob->gather_mem = NULL;
-		oldjob->gathers = NULL;
-		oldjob->gather_mem_size = 0;
-	}
-	return err;
+			+ num_relocs * sizeof(struct nvmap_pinarray_elem)
+			+ num_unpins * sizeof(struct nvmap_handle_ref *)
+			+ num_waitchks * sizeof(struct nvhost_waitchk)
+			+ num_cmdbufs * sizeof(struct nvhost_job_gather);
 }
 
 static void init_fields(struct nvhost_job *job,
 		struct nvhost_submit_hdr_ext *hdr,
 		int priority, int clientid)
 {
-	int num_pins = hdr ? (hdr->num_relocs + hdr->num_cmdbufs)*2 : 0;
+	int num_relocs = hdr ? hdr->num_relocs : 0;
 	int num_waitchks = hdr ? hdr->num_waitchks : 0;
+	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
+	int num_unpins = num_cmdbufs + num_relocs;
 	void *mem = job;
 
 	/* First init state to zero */
-	job->num_gathers = 0;
-	job->num_pins = 0;
-	job->num_unpins = 0;
-	job->num_waitchk = 0;
-	job->waitchk_mask = 0;
-	job->syncpt_id = 0;
-	job->syncpt_incrs = 0;
-	job->syncpt_end = 0;
 	job->priority = priority;
 	job->clientid = clientid;
-	job->null_kickoff = false;
-	job->first_get = 0;
-	job->num_slots = 0;
 
 	/* Redistribute memory to the structs */
 	mem += sizeof(struct nvhost_job);
-	if (num_pins) {
-		job->pinarray = mem;
-		mem += num_pins * sizeof(struct nvmap_pinarray_elem);
-		job->unpins = mem;
-		mem += num_pins * sizeof(struct nvmap_handle *);
-	} else {
-		job->pinarray = NULL;
-		job->unpins = NULL;
-	}
-
+	job->pinarray = num_relocs ? mem : NULL;
+	mem += num_relocs * sizeof(struct nvmap_pinarray_elem);
+	job->unpins = num_unpins ? mem : NULL;
+	mem += num_unpins * sizeof(struct nvmap_handle_ref *);
 	job->waitchk = num_waitchks ? mem : NULL;
+	mem += num_waitchks * sizeof(struct nvhost_waitchk);
+	job->gathers = num_cmdbufs ? mem : NULL;
 
 	/* Copy information from header */
 	if (hdr) {
@@ -172,8 +86,6 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		int clientid)
 {
 	struct nvhost_job *job = NULL;
-	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
-	int err = 0;
 
 	job = vzalloc(job_size(hdr));
 	if (!job)
@@ -186,10 +98,6 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		hwctx->h->get(hwctx);
 	job->nvmap = nvmap ? nvmap_client_get(nvmap) : NULL;
 
-	err = alloc_gathers(job, num_cmdbufs);
-	if (err)
-		goto error;
-
 	init_fields(job, hdr, priority, clientid);
 
 	return job;
@@ -197,46 +105,6 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 error:
 	if (job)
 		nvhost_job_put(job);
-	return NULL;
-}
-
-struct nvhost_job *nvhost_job_realloc(
-		struct nvhost_job *oldjob,
-		struct nvhost_hwctx *hwctx,
-		struct nvhost_submit_hdr_ext *hdr,
-		struct nvmap_client *nvmap,
-		int priority, int clientid)
-{
-	struct nvhost_job *newjob = NULL;
-	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
-	int err = 0;
-
-	newjob = vzalloc(job_size(hdr));
-	if (!newjob)
-		goto error;
-	kref_init(&newjob->ref);
-	newjob->ch = oldjob->ch;
-	newjob->hwctx = hwctx;
-	if (hwctx)
-		newjob->hwctx->h->get(newjob->hwctx);
-	newjob->timeout = oldjob->timeout;
-	newjob->nvmap = nvmap ? nvmap_client_get(nvmap) : NULL;
-
-	err = realloc_gathers(oldjob, newjob, num_cmdbufs);
-	if (err)
-		goto error;
-
-	nvhost_job_put(oldjob);
-
-	init_fields(newjob, hdr, priority, clientid);
-
-	return newjob;
-
-error:
-	if (newjob)
-		nvhost_job_put(newjob);
-	if (oldjob)
-		nvhost_job_put(oldjob);
 	return NULL;
 }
 
@@ -253,10 +121,6 @@ static void job_free(struct kref *ref)
 		job->hwctxref->h->put(job->hwctxref);
 	if (job->hwctx)
 		job->hwctx->h->put(job->hwctx);
-	if (job->gathers)
-		nvmap_munmap(job->gather_mem, job->gathers);
-	if (job->gather_mem)
-		nvmap_free(job->nvmap, job->gather_mem);
 	if (job->nvmap)
 		nvmap_client_put(job->nvmap);
 	vfree(job);
@@ -280,42 +144,119 @@ void nvhost_job_put(struct nvhost_job *job)
 void nvhost_job_add_gather(struct nvhost_job *job,
 		u32 mem_id, u32 words, u32 offset)
 {
-	struct nvmap_pinarray_elem *pin;
-	struct nvhost_channel_gather *cur_gather =
+	struct nvhost_job_gather *cur_gather =
 			&job->gathers[job->num_gathers];
 
-	pin = &job->pinarray[job->num_pins++];
-	pin->patch_mem = (u32)nvmap_ref_to_handle(job->gather_mem);
-	pin->patch_offset = (void *)&(cur_gather->mem) - (void *)job->gathers;
-	pin->pin_mem = nvmap_convert_handle_u2k(mem_id);
-	pin->pin_offset = offset;
 	cur_gather->words = words;
 	cur_gather->mem_id = mem_id;
 	cur_gather->offset = offset;
 	job->num_gathers += 1;
 }
 
+static int do_relocs(struct nvhost_job *job, u32 patch_mem, void *patch_addr)
+{
+	phys_addr_t pin_phys;
+	int i;
+	u32 mem_id = 0;
+	struct nvmap_handle_ref *pin_ref = NULL;
+
+	/* pin & patch the relocs for one gather */
+	for (i = 0; i < job->num_relocs; i++) {
+		struct nvmap_pinarray_elem *pin = &job->pinarray[i];
+
+		/* skip all other gathers */
+		if (patch_mem != pin->patch_mem)
+			continue;
+
+		/* check if pin-mem is same as previous */
+		if (pin->pin_mem != mem_id) {
+			pin_ref = nvmap_duplicate_handle_id(job->nvmap,
+					pin->pin_mem);
+			if (IS_ERR(pin_ref))
+				return PTR_ERR(pin_ref);
+
+			pin_phys = nvmap_pin(job->nvmap, pin_ref);
+			if (IS_ERR((void *)pin_phys)) {
+				nvmap_free(job->nvmap, pin_ref);
+				return pin_phys;
+			}
+
+			mem_id = pin->pin_mem;
+			job->unpins[job->num_unpins++] = pin_ref;
+		}
+
+		__raw_writel((pin_phys + pin->pin_offset) >> pin->reloc_shift,
+				(patch_addr + pin->patch_offset));
+
+		/* Different gathers might have same mem_id. This ensures we
+		 * perform reloc only once per gather memid. */
+		pin->patch_mem = 0;
+	}
+
+	return 0;
+}
+
 int nvhost_job_pin(struct nvhost_job *job)
 {
-	int err = 0;
+	int err = 0, i = 0;
+	phys_addr_t gather_phys = 0;
+	void *gather_addr = NULL;
 
-	/* pin mem handles and patch physical addresses */
-	job->num_unpins = nvmap_pin_array(job->nvmap,
-				nvmap_ref_to_handle(job->gather_mem),
-				job->pinarray, job->num_pins,
-				job->unpins);
-	if (job->num_unpins < 0)
-		err = job->num_unpins;
+	/* pin gathers */
+	for (i = 0; i < job->num_gathers; i++) {
+		struct nvhost_job_gather *g = &job->gathers[i];
+
+		/* process each gather mem only once */
+		if (!g->ref) {
+			g->ref = nvmap_duplicate_handle_id(job->nvmap,
+					job->gathers[i].mem_id);
+			if (IS_ERR(g->ref)) {
+				err = PTR_ERR(g->ref);
+				g->ref = NULL;
+				break;
+			}
+
+			gather_phys = nvmap_pin(job->nvmap, g->ref);
+			if (IS_ERR((void *)gather_phys)) {
+				nvmap_free(job->nvmap, g->ref);
+				err = gather_phys;
+				break;
+			}
+
+			/* store the gather ref into unpin array */
+			job->unpins[job->num_unpins++] = g->ref;
+
+			gather_addr = nvmap_mmap(g->ref);
+			if (!gather_addr) {
+				err = -ENOMEM;
+				break;
+			}
+
+			err = do_relocs(job, g->mem_id, gather_addr);
+			nvmap_munmap(g->ref, gather_addr);
+
+			if (err)
+				break;
+		}
+		g->mem = gather_phys + g->offset;
+	}
+	wmb();
 
 	return err;
 }
 
 void nvhost_job_unpin(struct nvhost_job *job)
 {
-	nvmap_unpin_handles(job->nvmap, job->unpins,
-			job->num_unpins);
+	int i;
+
+	for (i = 0; i < job->num_unpins; i++) {
+		nvmap_unpin(job->nvmap, job->unpins[i]);
+		nvmap_free(job->nvmap, job->unpins[i]);
+	}
+
 	memset(job->unpins, BAD_MAGIC,
-			job->num_unpins * sizeof(struct nvmap_handle *));
+			job->num_unpins * sizeof(struct nvmap_handle_ref *));
+	job->num_unpins = 0;
 }
 
 /**

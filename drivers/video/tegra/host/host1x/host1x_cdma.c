@@ -137,7 +137,7 @@ static void push_buffer_destroy(struct push_buffer *pb)
  */
 static void push_buffer_push_to(struct push_buffer *pb,
 		struct nvmap_client *client,
-		struct nvmap_handle *handle, u32 op1, u32 op2)
+		struct nvmap_handle_ref *handle, u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
 	u32 *p = (u32 *)((u32)pb->mapped + cur);

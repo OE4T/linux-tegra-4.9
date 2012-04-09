@@ -31,7 +31,7 @@ struct nvhost_syncpt;
 struct nvhost_waitchk;
 struct nvhost_userctx_timeout;
 struct nvhost_channel;
-struct nvmap_handle;
+struct nvmap_handle_ref;
 struct nvmap_client;
 struct nvhost_hwctx;
 struct nvhost_cdma;
@@ -77,7 +77,7 @@ struct nvhost_chip_support {
 		void (*destroy)(struct push_buffer *);
 		void (*push_to)(struct push_buffer *,
 				struct nvmap_client *,
-				struct nvmap_handle *,
+				struct nvmap_handle_ref *,
 				u32 op1, u32 op2);
 		void (*pop_from)(struct push_buffer *,
 				 unsigned int slots);

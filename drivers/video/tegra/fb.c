@@ -411,6 +411,41 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	return 0;
 }
 
+int tegra_fb_get_mode(struct tegra_dc *dc) {
+	return dc->fb->info->mode->refresh;
+}
+
+int tegra_fb_set_mode(struct tegra_dc *dc, int fps) {
+	size_t stereo;
+	struct list_head *pos;
+	struct fb_videomode *best_mode = NULL;
+	int curr_diff = INT_MAX; /* difference of best_mode refresh rate */
+	struct fb_modelist *modelist;
+	struct fb_info *info = dc->fb->info;
+
+	list_for_each(pos, &info->modelist) {
+		struct fb_videomode *mode;
+
+		modelist = list_entry(pos, struct fb_modelist, list);
+		mode = &modelist->mode;
+		if (fps <= mode->refresh && curr_diff > (mode->refresh - fps)) {
+			curr_diff = mode->refresh - fps;
+			best_mode = mode;
+		}
+	}
+	if (best_mode) {
+		info->mode = best_mode;
+		stereo = !!(info->var.vmode & info->mode->vmode &
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+				FB_VMODE_STEREO_FRAME_PACK);
+#else
+				FB_VMODE_STEREO_LEFT_RIGHT);
+#endif
+		return tegra_dc_set_fb_mode(dc, best_mode, stereo);
+	}
+	return -EIO;
+}
+
 static struct fb_ops tegra_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = tegra_fb_check_var,
@@ -455,6 +490,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 
 	memcpy(&fb_info->info->monspecs, specs,
 	       sizeof(fb_info->info->monspecs));
+	fb_info->info->mode = specs->modedb;
 
 	for (i = 0; i < specs->modedb_len; i++) {
 		if (mode_filter) {

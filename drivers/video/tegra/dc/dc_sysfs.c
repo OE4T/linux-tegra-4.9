@@ -18,6 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <linux/fb.h>
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
 
@@ -282,6 +283,36 @@ static ssize_t mode_3d_store(struct device *dev,
 static DEVICE_ATTR(stereo_mode,
 	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
 
+static ssize_t nvdps_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	int refresh_rate;
+	struct nvhost_device *ndev = to_nvhost_device(device);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	refresh_rate = tegra_fb_get_mode(dc);
+	return snprintf(buf, PAGE_SIZE, "%d\n", refresh_rate);
+}
+
+
+static ssize_t nvdps_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	int refresh_rate;
+	int e;
+
+	e = kstrtoint(buf, 10, &refresh_rate);
+	if (e)
+		return e;
+	e = tegra_fb_set_mode(dc, refresh_rate);
+
+	return count;
+}
+
+static DEVICE_ATTR(nvdps, S_IRUGO|S_IWUSR, nvdps_show, nvdps_store);
+
 void tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct nvhost_device *ndev = to_nvhost_device(dev);
@@ -289,6 +320,7 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 
 	device_remove_file(dev, &dev_attr_mode);
+	device_remove_file(dev, &dev_attr_nvdps);
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
@@ -310,6 +342,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_mode);
+	error |= device_create_file(dev, &dev_attr_nvdps);
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);

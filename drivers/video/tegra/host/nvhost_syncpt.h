@@ -57,6 +57,7 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *);
 #define client_managed(id) (BIT(id) & sp->client_managed)
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define SYNCPT_CHECK_PERIOD (2 * HZ)
+#define MAX_STUCK_CHECK_COUNT 15
 
 /**
  * Updates the value sent to hardware.

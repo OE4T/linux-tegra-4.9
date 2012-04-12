@@ -461,6 +461,7 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.valid = false;
 	ctx->save_incrs = 3;
 	ctx->save_thresh = 2;
+	ctx->save_slots = p->save_slots;
 	ctx->restore_phys = nvmap_pin(nvmap, ctx->restore);
 	ctx->restore_size = restore_size;
 	ctx->restore_incrs = 1;
@@ -567,6 +568,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(
 	}
 
 	p->save_phys = nvmap_pin(nvmap, p->save_buf);
+	p->save_slots = 1;
 
 	setup_save(p, save_ptr);
 

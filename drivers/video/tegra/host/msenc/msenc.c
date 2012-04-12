@@ -24,6 +24,7 @@
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <mach/nvmap.h>
+#include <mach/iomap.h>
 #include "dev.h"
 #include "msenc.h"
 #include "hw_msenc.h"
@@ -315,6 +316,12 @@ void nvhost_msenc_finalize_poweron(struct nvhost_device *dev)
 
 static int msenc_probe(struct nvhost_device *dev)
 {
+	int err = 0;
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	return nvhost_client_device_init(dev);
 }
 
@@ -336,6 +343,13 @@ static int msenc_resume(struct nvhost_device *dev)
 	return 0;
 }
 #endif
+
+static struct resource msenc_resources = {
+	.name = "regs",
+	.start = TEGRA_MSENC_BASE,
+	.end = TEGRA_MSENC_BASE + TEGRA_MSENC_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+};
 
 struct nvhost_device *msenc_device;
 
@@ -359,6 +373,9 @@ static int __init msenc_init(void)
 	msenc_device = nvhost_get_device("msenc");
 	if (!msenc_device)
 		return -ENXIO;
+
+	msenc_device->resource = &msenc_resources;
+	msenc_device->num_resources = 1;
 
 	err = nvhost_device_register(msenc_device);
 	if (err)

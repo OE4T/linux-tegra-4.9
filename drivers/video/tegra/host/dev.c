@@ -179,7 +179,7 @@ static int match_by_moduleid(struct device *dev, void *data)
 static struct nvhost_device *get_ndev_by_moduleid(struct nvhost_master *host,
 		u32 id)
 {
-	struct device *dev = bus_find_device(&nvhost_bus_type, NULL, (void *)id,
+	struct device *dev = bus_find_device(&nvhost_bus_inst->nvhost_bus_type, NULL, (void *)id,
 			match_by_moduleid);
 
 	return dev ? to_nvhost_device(dev) : NULL;
@@ -353,11 +353,11 @@ fail:
 
 struct nvhost_device *nvhost_get_device(char *name)
 {
-	BUG_ON(!host_device_op(nvhost).get_nvhost_device);
-	return host_device_op(nvhost).get_nvhost_device(nvhost, name);
+	BUG_ON(!host_device_op().get_nvhost_device);
+	return host_device_op().get_nvhost_device(nvhost, name);
 }
 
-static void nvhost_remove_chip_support(struct nvhost_master *host)
+static void nvhost_free_resources(struct nvhost_master *host)
 {
 	kfree(host->channels);
 	host->channels = 0;
@@ -366,21 +366,11 @@ static void nvhost_remove_chip_support(struct nvhost_master *host)
 	host->intr.syncpt = 0;
 }
 
-static int nvhost_init_chip_support(struct nvhost_master *host)
+static int nvhost_alloc_resources(struct nvhost_master *host)
 {
 	int err;
-	switch (tegra_chip_id) {
-	case TEGRA20:
-		err = nvhost_init_t20_support(host);
-		break;
 
-	case TEGRA30:
-		err = nvhost_init_t30_support(host);
-		break;
-	default:
-		return -ENODEV;
-	}
-
+	err = nvhost_init_chip_support(host);
 	if (err)
 		return err;
 
@@ -469,7 +459,7 @@ static int nvhost_probe(struct nvhost_device *dev)
 		goto fail;
 	}
 
-	err = nvhost_init_chip_support(host);
+	err = nvhost_alloc_resources(host);
 	if (err) {
 		dev_err(&dev->dev, "failed to init chip support\n");
 		goto fail;
@@ -511,7 +501,7 @@ static int nvhost_probe(struct nvhost_device *dev)
 	return 0;
 
 fail:
-	nvhost_remove_chip_support(host);
+	nvhost_free_resources(host);
 	if (host->nvmap)
 		nvmap_client_put(host->nvmap);
 	kfree(host);
@@ -523,7 +513,7 @@ static int __exit nvhost_remove(struct nvhost_device *dev)
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	nvhost_intr_deinit(&host->intr);
 	nvhost_syncpt_deinit(&host->syncpt);
-	nvhost_remove_chip_support(host);
+	nvhost_free_resources(host);
 	return 0;
 }
 

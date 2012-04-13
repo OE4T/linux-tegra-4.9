@@ -115,11 +115,11 @@ void reset_threshold_interrupt(struct nvhost_intr *intr,
 {
 	u32 thresh = list_first_entry(head,
 				struct nvhost_waitlist, list)->thresh;
-	BUG_ON(!(intr_op(intr).set_syncpt_threshold &&
-		 intr_op(intr).enable_syncpt_intr));
+	BUG_ON(!(intr_op().set_syncpt_threshold &&
+		 intr_op().enable_syncpt_intr));
 
-	intr_op(intr).set_syncpt_threshold(intr, id, thresh);
-	intr_op(intr).enable_syncpt_intr(intr, id);
+	intr_op().set_syncpt_threshold(intr, id, thresh);
+	intr_op().enable_syncpt_intr(intr, id);
 }
 
 
@@ -263,8 +263,8 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 
 	BUG_ON(waiter == NULL);
 
-	BUG_ON(!(intr_op(intr).set_syncpt_threshold &&
-		 intr_op(intr).enable_syncpt_intr));
+	BUG_ON(!(intr_op().set_syncpt_threshold &&
+		 intr_op().enable_syncpt_intr));
 
 	/* initialize a new waiter */
 	INIT_LIST_HEAD(&waiter->list);
@@ -287,8 +287,8 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 		spin_unlock(&syncpt->lock);
 
 		mutex_lock(&intr->mutex);
-		BUG_ON(!(intr_op(intr).request_syncpt_irq));
-		err = intr_op(intr).request_syncpt_irq(syncpt);
+		BUG_ON(!(intr_op().request_syncpt_irq));
+		err = intr_op().request_syncpt_irq(syncpt);
 		mutex_unlock(&intr->mutex);
 
 		if (err) {
@@ -303,11 +303,11 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 
 	if (add_waiter_to_queue(waiter, &syncpt->wait_head)) {
 		/* added at head of list - new threshold value */
-		intr_op(intr).set_syncpt_threshold(intr, id, thresh);
+		intr_op().set_syncpt_threshold(intr, id, thresh);
 
 		/* added as first waiter - enable interrupt */
 		if (queue_was_empty)
-			intr_op(intr).enable_syncpt_intr(intr, id);
+			intr_op().enable_syncpt_intr(intr, id);
 	}
 
 	spin_unlock(&syncpt->lock);
@@ -373,17 +373,17 @@ void nvhost_intr_deinit(struct nvhost_intr *intr)
 
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz)
 {
-	BUG_ON(!(intr_op(intr).init_host_sync &&
-		 intr_op(intr).set_host_clocks_per_usec &&
-		 intr_op(intr).request_host_general_irq));
+	BUG_ON(!(intr_op().init_host_sync &&
+		 intr_op().set_host_clocks_per_usec &&
+		 intr_op().request_host_general_irq));
 
 	mutex_lock(&intr->mutex);
 
-	intr_op(intr).init_host_sync(intr);
-	intr_op(intr).set_host_clocks_per_usec(intr,
+	intr_op().init_host_sync(intr);
+	intr_op().set_host_clocks_per_usec(intr,
 					       (hz + 1000000 - 1)/1000000);
 
-	intr_op(intr).request_host_general_irq(intr);
+	intr_op().request_host_general_irq(intr);
 
 	mutex_unlock(&intr->mutex);
 }
@@ -394,12 +394,12 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 	struct nvhost_intr_syncpt *syncpt;
 	u32 nb_pts = intr_to_dev(intr)->syncpt.nb_pts;
 
-	BUG_ON(!(intr_op(intr).disable_all_syncpt_intrs &&
-		 intr_op(intr).free_host_general_irq));
+	BUG_ON(!(intr_op().disable_all_syncpt_intrs &&
+		 intr_op().free_host_general_irq));
 
 	mutex_lock(&intr->mutex);
 
-	intr_op(intr).disable_all_syncpt_intrs(intr);
+	intr_op().disable_all_syncpt_intrs(intr);
 
 	for (id = 0, syncpt = intr->syncpt;
 	     id < nb_pts;
@@ -421,7 +421,7 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 		free_syncpt_irq(syncpt);
 	}
 
-	intr_op(intr).free_host_general_irq(intr);
+	intr_op().free_host_general_irq(intr);
 
 	mutex_unlock(&intr->mutex);
 }

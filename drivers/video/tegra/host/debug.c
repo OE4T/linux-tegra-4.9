@@ -22,10 +22,12 @@
 
 #include <linux/io.h>
 
+#include "bus.h"
 #include "dev.h"
 #include "debug.h"
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
+#include "chip_support.h"
 
 pid_t nvhost_debug_null_kickoff_pid;
 unsigned int nvhost_debug_trace_cmdbuf;
@@ -61,8 +63,8 @@ static int show_channels(struct device *dev, void *data)
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
 			mutex_lock(&ch->cdma.lock);
-			m->op.debug.show_channel_fifo(m, ch, o, nvdev->index);
-			m->op.debug.show_channel_cdma(m, ch, o, nvdev->index);
+			nvhost_get_chip_ops()->debug.show_channel_fifo(m, ch, o, nvdev->index);
+			nvhost_get_chip_ops()->debug.show_channel_cdma(m, ch, o, nvdev->index);
 			mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
@@ -74,7 +76,7 @@ static int show_channels(struct device *dev, void *data)
 static void show_syncpts(struct nvhost_master *m, struct output *o)
 {
 	int i;
-	BUG_ON(!m->op.syncpt.name);
+	BUG_ON(!nvhost_get_chip_ops()->syncpt.name);
 	nvhost_debug_output(o, "---- syncpts ----\n");
 	for (i = 0; i < m->syncpt.nb_pts; i++) {
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
@@ -82,7 +84,7 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 		if (!min && !max)
 			continue;
 		nvhost_debug_output(o, "id %d (%s) min %d max %d\n",
-				i, m->op.syncpt.name(&m->syncpt, i),
+				i, nvhost_get_chip_ops()->syncpt.name(&m->syncpt, i),
 				min, max);
 	}
 
@@ -101,10 +103,10 @@ static void show_all(struct nvhost_master *m, struct output *o)
 {
 	nvhost_module_busy(m->dev);
 
-	m->op.debug.show_mlocks(m, o);
+	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	bus_for_each_dev(&nvhost_bus_type, NULL, o, show_channels);
+	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o, show_channels);
 
 	nvhost_module_idle(m->dev);
 }
@@ -144,8 +146,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_trace_cmdbuf);
 
-	if (master->op.debug.debug_init)
-		master->op.debug.debug_init(de);
+	if (nvhost_get_chip_ops()->debug.debug_init)
+		nvhost_get_chip_ops()->debug.debug_init(de);
 
 	debugfs_create_u32("force_timeout_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_pid);

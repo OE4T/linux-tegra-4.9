@@ -202,17 +202,18 @@ static int t30_channel_init(struct nvhost_channel *ch,
 	return t30_nvhost_hwctx_handler_init(ch);
 }
 
-int nvhost_init_t30_channel_support(struct nvhost_master *host)
+int nvhost_init_t30_channel_support(struct nvhost_master *host,
+	struct nvhost_chip_support *op)
 {
-	int result = nvhost_init_t20_channel_support(host);
-	host->op.channel.init = t30_channel_init;
+	int result = nvhost_init_t20_channel_support(host, op);
+	op->channel.init = t30_channel_init;
 
 	return result;
 }
-int nvhost_init_t30_debug_support(struct nvhost_master *host)
+int nvhost_init_t30_debug_support(struct nvhost_chip_support *op)
 {
-	nvhost_init_t20_debug_support(host);
-	host->op.debug.debug_init = nvhost_scale3d_debug_init;
+	nvhost_init_t20_debug_support(op);
+	op->debug.debug_init = nvhost_scale3d_debug_init;
 
 	return 0;
 }
@@ -230,26 +231,27 @@ struct nvhost_device *t30_get_nvhost_device(struct nvhost_master *host,
 	return NULL;
 }
 
-int nvhost_init_t30_support(struct nvhost_master *host)
+int nvhost_init_t30_support(struct nvhost_master *host,
+	struct nvhost_chip_support *op)
 {
 	int err;
 
 	/* don't worry about cleaning up on failure... "remove" does it. */
-	err = nvhost_init_t30_channel_support(host);
+	err = nvhost_init_t30_channel_support(host, op);
 	if (err)
 		return err;
-	err = host1x_init_cdma_support(host);
+	err = host1x_init_cdma_support(op);
 	if (err)
 		return err;
-	err = nvhost_init_t30_debug_support(host);
+	err = nvhost_init_t30_debug_support(op);
 	if (err)
 		return err;
-	err = host1x_init_syncpt_support(host);
+	err = host1x_init_syncpt_support(host, op);
 	if (err)
 		return err;
-	err = nvhost_init_t20_intr_support(host);
+	err = nvhost_init_t20_intr_support(op);
 	if (err)
 		return err;
-	host->op.nvhost_dev.get_nvhost_device = t30_get_nvhost_device;
+	op->nvhost_dev.get_nvhost_device = t30_get_nvhost_device;
 	return 0;
 }

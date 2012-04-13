@@ -25,10 +25,10 @@
 #include <linux/io.h>
 #include "nvhost_cdma.h"
 
-#define NVHOST_MAX_WAIT_CHECKS 256
-#define NVHOST_MAX_GATHERS 512
-#define NVHOST_MAX_HANDLES 1280
-#define NVHOST_MAX_POWERGATE_IDS 2
+#define NVHOST_MAX_WAIT_CHECKS		256
+#define NVHOST_MAX_GATHERS		512
+#define NVHOST_MAX_HANDLES		1280
+#define NVHOST_MAX_POWERGATE_IDS	2
 
 struct nvhost_master;
 struct nvhost_waitchk;
@@ -58,8 +58,7 @@ struct nvhost_channel {
 	struct nvhost_cdma cdma;
 };
 
-int nvhost_channel_init(
-	struct nvhost_channel *ch,
+int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev, int index);
 
 int nvhost_channel_submit(struct nvhost_job *job);
@@ -67,10 +66,6 @@ int nvhost_channel_submit(struct nvhost_job *job);
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
-
-#define channel_cdma_op(ch) (nvhost_get_host(ch->dev)->op.cdma)
-#define channel_op(ch) (nvhost_get_host(ch->dev)->op.channel)
-#define host_channel_op(host) (host->op.channel)
 
 int nvhost_channel_drain_read_fifo(void __iomem *chan_regs,
 			u32 *ptr, unsigned int count, unsigned int *pending);

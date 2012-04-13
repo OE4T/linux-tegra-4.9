@@ -26,7 +26,6 @@
 #include "dev.h"
 #include "host1x_hardware.h"
 
-
 /*** HW host sync management ***/
 
 static void t20_intr_init_host_sync(struct nvhost_intr *intr)
@@ -199,21 +198,16 @@ static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 	return 0;
 }
 
-int nvhost_init_t20_intr_support(struct nvhost_master *host)
+int nvhost_init_t20_intr_support(struct nvhost_chip_support *op)
 {
-	host->op.intr.init_host_sync = t20_intr_init_host_sync;
-	host->op.intr.set_host_clocks_per_usec =
-		t20_intr_set_host_clocks_per_usec;
-	host->op.intr.set_syncpt_threshold = t20_intr_set_syncpt_threshold;
-	host->op.intr.enable_syncpt_intr = t20_intr_enable_syncpt_intr;
-	host->op.intr.disable_all_syncpt_intrs =
-		t20_intr_disable_all_syncpt_intrs;
-	host->op.intr.request_host_general_irq =
-		t20_intr_request_host_general_irq;
-	host->op.intr.free_host_general_irq =
-		t20_intr_free_host_general_irq;
-	host->op.intr.request_syncpt_irq =
-		t20_request_syncpt_irq;
+	op->intr.init_host_sync = t20_intr_init_host_sync;
+	op->intr.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec;
+	op->intr.set_syncpt_threshold = t20_intr_set_syncpt_threshold;
+	op->intr.enable_syncpt_intr = t20_intr_enable_syncpt_intr;
+	op->intr.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs;
+	op->intr.request_host_general_irq = t20_intr_request_host_general_irq;
+	op->intr.free_host_general_irq = t20_intr_free_host_general_irq;
+	op->intr.request_syncpt_irq = t20_request_syncpt_irq;
 
 	return 0;
 }

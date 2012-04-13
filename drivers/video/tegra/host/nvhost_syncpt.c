@@ -39,12 +39,12 @@ static const char *max_name = "max";
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 {
 	u32 i;
-	BUG_ON(!(syncpt_op(sp).reset && syncpt_op(sp).reset_wait_base));
+	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
 
 	for (i = 0; i < sp->nb_pts; i++)
-		syncpt_op(sp).reset(sp, i);
+		syncpt_op().reset(sp, i);
 	for (i = 0; i < sp->nb_bases; i++)
-		syncpt_op(sp).reset_wait_base(sp, i);
+		syncpt_op().reset_wait_base(sp, i);
 	wmb();
 }
 
@@ -54,17 +54,17 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 void nvhost_syncpt_save(struct nvhost_syncpt *sp)
 {
 	u32 i;
-	BUG_ON(!(syncpt_op(sp).update_min && syncpt_op(sp).read_wait_base));
+	BUG_ON(!(syncpt_op().update_min && syncpt_op().read_wait_base));
 
 	for (i = 0; i < sp->nb_pts; i++) {
 		if (client_managed(i))
-			syncpt_op(sp).update_min(sp, i);
+			syncpt_op().update_min(sp, i);
 		else
 			BUG_ON(!nvhost_syncpt_min_eq_max(sp, i));
 	}
 
 	for (i = 0; i < sp->nb_bases; i++)
-		syncpt_op(sp).read_wait_base(sp, i);
+		syncpt_op().read_wait_base(sp, i);
 }
 
 /**
@@ -74,9 +74,9 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
 
-	BUG_ON(!syncpt_op(sp).update_min);
+	BUG_ON(!syncpt_op().update_min);
 
-	val = syncpt_op(sp).update_min(sp, id);
+	return syncpt_op().update_min(sp, id);
 	trace_nvhost_syncpt_update_min(id, val);
 
 	return val;
@@ -88,9 +88,9 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
-	BUG_ON(!syncpt_op(sp).update_min);
+	BUG_ON(!syncpt_op().update_min);
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
-	val = syncpt_op(sp).update_min(sp, id);
+	val = syncpt_op().update_min(sp, id);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	return val;
 }
@@ -101,9 +101,9 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
-	BUG_ON(!syncpt_op(sp).read_wait_base);
+	BUG_ON(!syncpt_op().read_wait_base);
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
-	syncpt_op(sp).read_wait_base(sp, id);
+	syncpt_op().read_wait_base(sp, id);
 	val = sp->base_val[id];
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	return val;
@@ -115,8 +115,8 @@ u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
  */
 void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 {
-	BUG_ON(!syncpt_op(sp).cpu_incr);
-	syncpt_op(sp).cpu_incr(sp, id);
+	BUG_ON(!syncpt_op().cpu_incr);
+	syncpt_op().cpu_incr(sp, id);
 }
 
 /**
@@ -157,7 +157,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 
 	/* try to read from register */
-	val = syncpt_op(sp).update_min(sp, id);
+	val = syncpt_op().update_min(sp, id);
 	if (nvhost_syncpt_is_expired(sp, id, thresh)) {
 		if (value)
 			*value = val;
@@ -209,9 +209,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		if (timeout) {
 			dev_warn(&syncpt_to_dev(sp)->dev->dev,
 				"%s: syncpoint id %d (%s) stuck waiting %d, timeout=%d\n",
-				 current->comm, id, syncpt_op(sp).name(sp, id),
+				 current->comm, id, syncpt_op().name(sp, id),
 				 thresh, timeout);
-			syncpt_op(sp).debug(sp);
+			syncpt_op().debug(sp);
 			if (check_count > MAX_STUCK_CHECK_COUNT) {
 				if (low_timeout) {
 					dev_warn(&syncpt_to_dev(sp)->dev->dev,
@@ -295,7 +295,7 @@ bool nvhost_syncpt_is_expired(
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
 {
-	syncpt_op(sp).debug(sp);
+	syncpt_op().debug(sp);
 }
 
 int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
@@ -304,7 +304,7 @@ int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
 	u32 reg;
 
 	nvhost_module_busy(host->dev);
-	reg = syncpt_op(sp).mutex_try_lock(sp, idx);
+	reg = syncpt_op().mutex_try_lock(sp, idx);
 	if (reg) {
 		nvhost_module_idle(host->dev);
 		return -EBUSY;
@@ -315,7 +315,7 @@ int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
 
 void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx)
 {
-	syncpt_op(sp).mutex_unlock(sp, idx);
+	syncpt_op().mutex_unlock(sp, idx);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	atomic_dec(&sp->lock_counts[idx]);
 }
@@ -327,7 +327,7 @@ int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			     struct nvhost_waitchk *wait,
 			     int num_waitchk)
 {
-	return syncpt_op(sp).wait_check(sp, nvmap,
+	return syncpt_op().wait_check(sp, nvmap,
 			waitchk_mask, wait, num_waitchk);
 }
 

@@ -389,11 +389,11 @@ static void t20_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 	nvhost_debug_output(o, "\n");
 }
 
-int nvhost_init_t20_debug_support(struct nvhost_master *host)
+int nvhost_init_t20_debug_support(struct nvhost_chip_support *op)
 {
-	host->op.debug.show_channel_cdma = t20_debug_show_channel_cdma;
-	host->op.debug.show_channel_fifo = t20_debug_show_channel_fifo;
-	host->op.debug.show_mlocks = t20_debug_show_mlocks;
+	op->debug.show_channel_cdma = t20_debug_show_channel_cdma;
+	op->debug.show_channel_fifo = t20_debug_show_channel_fifo;
+	op->debug.show_mlocks = t20_debug_show_mlocks;
 
 	return 0;
 }

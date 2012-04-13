@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/t30/t30.h
+ * drivers/video/tegra/host/bus.h
  *
- * Tegra Graphics Chip support for Tegra3
+ * Tegra Graphics Host bus API header
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,16 +17,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NVHOST_T30_H_
-#define _NVHOST_T30_H_
 
-struct nvhost_master;
-struct nvhost_chip_support;
+#ifndef __NVHOST_BUS_H
+#define __NVHOST_BUS_H
 
-int nvhost_init_t30_channel_support(struct nvhost_master *,
-	struct nvhost_chip_support *);
-int nvhost_init_t30_debug_support(struct nvhost_chip_support *);
-int nvhost_init_t30_support(struct nvhost_master *host,
-	struct nvhost_chip_support *);
+#include <linux/types.h>
+#include <linux/device.h>
 
-#endif /* _NVHOST_T30_H_ */
+#include "chip_support.h"
+
+struct nvhost_bus {
+	struct nvhost_chip_support *nvhost_chip_ops;
+	struct bus_type nvhost_bus_type;
+};
+
+struct nvhost_bus *nvhost_bus_get(void);
+
+extern struct nvhost_bus *nvhost_bus_inst;
+
+#endif

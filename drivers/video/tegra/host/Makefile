@@ -8,7 +8,8 @@ nvhost-objs = \
 	bus.o \
 	dev.o \
 	debug.o \
-	bus_client.o
+	bus_client.o \
+	chip_support.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += mpe/
 obj-$(CONFIG_TEGRA_GRHOST) += gr3d/

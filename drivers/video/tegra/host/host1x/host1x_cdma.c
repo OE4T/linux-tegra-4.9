@@ -68,8 +68,8 @@ static int push_buffer_init(struct push_buffer *pb)
 	pb->phys = 0;
 	pb->nvmap = NULL;
 
-	BUG_ON(!cdma_pb_op(cdma).reset);
-	cdma_pb_op(cdma).reset(pb);
+	BUG_ON(!cdma_pb_op().reset);
+	cdma_pb_op().reset(pb);
 
 	/* allocate and map pushbuffer memory */
 	pb->mem = nvmap_alloc(nvmap, PUSH_BUFFER_SIZE + 4, 32,
@@ -103,7 +103,7 @@ static int push_buffer_init(struct push_buffer *pb)
 	return 0;
 
 fail:
-	cdma_pb_op(cdma).destroy(pb);
+	cdma_pb_op().destroy(pb);
 	return -ENOMEM;
 }
 
@@ -258,7 +258,7 @@ static int cdma_timeout_init(struct nvhost_cdma *cdma,
 
 	return 0;
 fail:
-	cdma_op(cdma).timeout_destroy(cdma);
+	cdma_op().timeout_destroy(cdma);
 	return -ENOMEM;
 }
 
@@ -402,8 +402,8 @@ static void cdma_start(struct nvhost_cdma *cdma)
 	if (cdma->running)
 		return;
 
-	BUG_ON(!cdma_pb_op(cdma).putptr);
-	cdma->last_put = cdma_pb_op(cdma).putptr(&cdma->push_buffer);
+	BUG_ON(!cdma_pb_op().putptr);
+	cdma->last_put = cdma_pb_op().putptr(&cdma->push_buffer);
 
 	writel(host1x_channel_dmactrl(true, false, false),
 		chan_regs + HOST1X_CHANNEL_DMACTRL);
@@ -437,8 +437,8 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 	if (cdma->running)
 		return;
 
-	BUG_ON(!cdma_pb_op(cdma).putptr);
-	cdma->last_put = cdma_pb_op(cdma).putptr(&cdma->push_buffer);
+	BUG_ON(!cdma_pb_op().putptr);
+	cdma->last_put = cdma_pb_op().putptr(&cdma->push_buffer);
 
 	writel(host1x_channel_dmactrl(true, false, false),
 		chan_regs + HOST1X_CHANNEL_DMACTRL);
@@ -477,9 +477,9 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 static void cdma_kick(struct nvhost_cdma *cdma)
 {
 	u32 put;
-	BUG_ON(!cdma_pb_op(cdma).putptr);
+	BUG_ON(!cdma_pb_op().putptr);
 
-	put = cdma_pb_op(cdma).putptr(&cdma->push_buffer);
+	put = cdma_pb_op().putptr(&cdma->push_buffer);
 
 	if (put != cdma->last_put) {
 		void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
@@ -631,37 +631,37 @@ static void cdma_timeout_handler(struct work_struct *work)
 		"%s: timeout: %d (%s) ctx 0x%p, HW thresh %d, done %d\n",
 		__func__,
 		cdma->timeout.syncpt_id,
-		syncpt_op(sp).name(sp, cdma->timeout.syncpt_id),
+		syncpt_op().name(sp, cdma->timeout.syncpt_id),
 		cdma->timeout.ctx,
 		syncpt_val, cdma->timeout.syncpt_val);
 
 	/* stop HW, resetting channel/module */
-	cdma_op(cdma).timeout_teardown_begin(cdma);
+	cdma_op().timeout_teardown_begin(cdma);
 
 	nvhost_cdma_update_sync_queue(cdma, sp, &dev->dev->dev);
 	mutex_unlock(&cdma->lock);
 }
 
-int host1x_init_cdma_support(struct nvhost_master *host)
+int host1x_init_cdma_support(struct nvhost_chip_support *op)
 {
-	host->op.cdma.start = cdma_start;
-	host->op.cdma.stop = cdma_stop;
-	host->op.cdma.kick = cdma_kick;
+	op->cdma.start = cdma_start;
+	op->cdma.stop = cdma_stop;
+	op->cdma.kick = cdma_kick;
 
-	host->op.cdma.timeout_init = cdma_timeout_init;
-	host->op.cdma.timeout_destroy = cdma_timeout_destroy;
-	host->op.cdma.timeout_teardown_begin = cdma_timeout_teardown_begin;
-	host->op.cdma.timeout_teardown_end = cdma_timeout_teardown_end;
-	host->op.cdma.timeout_cpu_incr = cdma_timeout_cpu_incr;
-	host->op.cdma.timeout_pb_incr = cdma_timeout_pb_incr;
+	op->cdma.timeout_init = cdma_timeout_init;
+	op->cdma.timeout_destroy = cdma_timeout_destroy;
+	op->cdma.timeout_teardown_begin = cdma_timeout_teardown_begin;
+	op->cdma.timeout_teardown_end = cdma_timeout_teardown_end;
+	op->cdma.timeout_cpu_incr = cdma_timeout_cpu_incr;
+	op->cdma.timeout_pb_incr = cdma_timeout_pb_incr;
 
-	host->op.push_buffer.reset = push_buffer_reset;
-	host->op.push_buffer.init = push_buffer_init;
-	host->op.push_buffer.destroy = push_buffer_destroy;
-	host->op.push_buffer.push_to = push_buffer_push_to;
-	host->op.push_buffer.pop_from = push_buffer_pop_from;
-	host->op.push_buffer.space = push_buffer_space;
-	host->op.push_buffer.putptr = push_buffer_putptr;
+	op->push_buffer.reset = push_buffer_reset;
+	op->push_buffer.init = push_buffer_init;
+	op->push_buffer.destroy = push_buffer_destroy;
+	op->push_buffer.push_to = push_buffer_push_to;
+	op->push_buffer.pop_from = push_buffer_pop_from;
+	op->push_buffer.space = push_buffer_space;
+	op->push_buffer.putptr = push_buffer_putptr;
 
 	return 0;
 }

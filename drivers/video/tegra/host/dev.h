@@ -45,9 +45,6 @@ struct nvhost_master {
 	struct nvhost_device *dev;
 	struct nvhost_channel *channels;
 	u32 nb_channels;
-
-	struct nvhost_chip_support op;
-
 	atomic_t clientid;
 };
 
@@ -55,8 +52,6 @@ extern struct nvhost_master *nvhost;
 
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_debug_dump(struct nvhost_master *master);
-
-#define host_device_op(host)	(host->op.nvhost_dev)
 
 struct nvhost_device *nvhost_get_device(char *name);
 

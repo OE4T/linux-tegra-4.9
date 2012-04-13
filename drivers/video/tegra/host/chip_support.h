@@ -21,6 +21,8 @@
 #define _NVHOST_CHIP_SUPPORT_H_
 
 #include <linux/types.h>
+#include "bus.h"
+
 struct output;
 
 struct nvhost_master;
@@ -35,7 +37,10 @@ struct nvhost_hwctx;
 struct nvhost_cdma;
 struct nvhost_job;
 struct push_buffer;
+struct nvhost_syncpt;
 struct dentry;
+struct nvhost_job;
+struct nvhost_intr_syncpt;
 
 struct nvhost_chip_support {
 	struct {
@@ -137,5 +142,17 @@ struct nvhost_chip_support {
 			char *name);
 	} nvhost_dev;
 };
+
+struct nvhost_chip_support *nvhost_get_chip_ops(void);
+
+#define host_device_op()	nvhost_get_chip_ops()->nvhost_dev
+#define channel_cdma_op()	nvhost_get_chip_ops()->cdma
+#define channel_op()		nvhost_get_chip_ops()->channel
+#define syncpt_op()		nvhost_get_chip_ops()->syncpt
+#define intr_op()		nvhost_get_chip_ops()->intr
+#define cdma_op()		nvhost_get_chip_ops()->cdma
+#define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
+
+int nvhost_init_chip_support(struct nvhost_master *);
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

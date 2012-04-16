@@ -156,7 +156,9 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	struct nvhost_syncpt *sp = &dev->syncpt;
 	struct nvhost_job *job, *n;
 
-	BUG_ON(!cdma->running);
+	/* If CDMA is stopped, queue is cleared and we can return */
+	if (!cdma->running)
+		return;
 
 	/*
 	 * Walk the sync queue, reading the sync point registers as necessary,

@@ -73,7 +73,7 @@ static int alloc_gathers(struct nvhost_job *job,
 				gather_size(num_cmdbufs),
 				32, NVMAP_HANDLE_CACHEABLE, 0);
 		if (IS_ERR_OR_NULL(job->gather_mem)) {
-			err = PTR_ERR(job->gather_mem);
+			err = job->gather_mem ? PTR_ERR(job->gather_mem) : -ENOMEM;
 			job->gather_mem = NULL;
 			goto error;
 		}
@@ -82,7 +82,7 @@ static int alloc_gathers(struct nvhost_job *job,
 		/* Map memory to kernel */
 		job->gathers = nvmap_mmap(job->gather_mem);
 		if (IS_ERR_OR_NULL(job->gathers)) {
-			err = PTR_ERR(job->gathers);
+			err = job->gathers ? PTR_ERR(job->gathers) : -ENOMEM;
 			job->gathers = NULL;
 			goto error;
 		}

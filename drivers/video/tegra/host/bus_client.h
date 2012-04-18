@@ -36,4 +36,6 @@ int nvhost_client_device_init(struct nvhost_device *dev);
 
 int nvhost_client_device_suspend(struct nvhost_device *dev);
 
+int nvhost_client_device_get_resources(struct nvhost_device *dev);
+
 #endif

@@ -34,9 +34,6 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 {
 	int err;
 	struct nvhost_device *ndev;
-	struct resource *r = NULL;
-	void __iomem *regs = NULL;
-	struct resource *reg_mem = NULL;
 
 	/* Link nvhost_device to nvhost_channel */
 	err = host_channel_op(dev).init(ch, dev, index);
@@ -48,36 +45,7 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 	ndev = ch->dev;
 	ndev->channel = ch;
 
-	/* Map IO memory related to nvhost_device */
-	if (ndev->moduleid != NVHOST_MODULE_NONE) {
-		/* First one is host1x - skip that */
-		r = nvhost_get_resource(dev->dev,
-				IORESOURCE_MEM, ndev->moduleid + 1);
-		if (!r)
-			goto fail;
-
-		reg_mem = request_mem_region(r->start,
-				resource_size(r), ndev->name);
-		if (!reg_mem)
-			goto fail;
-
-		regs = ioremap(r->start, resource_size(r));
-		if (!regs)
-			goto fail;
-
-		ndev->reg_mem = reg_mem;
-		ndev->aperture = regs;
-	}
 	return 0;
-
-fail:
-	if (reg_mem)
-		release_mem_region(r->start, resource_size(r));
-	if (regs)
-		iounmap(regs);
-	dev_err(&ndev->dev, "failed to get register memory\n");
-	return -ENXIO;
-
 }
 
 int nvhost_channel_submit(struct nvhost_job *job)

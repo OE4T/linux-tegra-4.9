@@ -412,31 +412,6 @@ static struct resource nvhost_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.start = TEGRA_DISPLAY_BASE,
-		.end = TEGRA_DISPLAY_BASE + TEGRA_DISPLAY_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = TEGRA_DISPLAY2_BASE,
-		.end = TEGRA_DISPLAY2_BASE + TEGRA_DISPLAY2_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = TEGRA_VI_BASE,
-		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = TEGRA_ISP_BASE,
-		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = TEGRA_MPE_BASE,
-		.end = TEGRA_MPE_BASE + TEGRA_MPE_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
 		.start = INT_SYNCPT_THRESH_BASE,
 		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
 		.flags = IORESOURCE_IRQ,

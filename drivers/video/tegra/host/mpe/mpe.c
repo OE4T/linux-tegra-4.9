@@ -26,7 +26,12 @@
 #include "host1x/host1x_syncpt.h"
 #include "host1x/host1x_hwctx.h"
 #include "t20/t20.h"
+
 #include <linux/slab.h>
+#include <linux/resource.h>
+
+#include <mach/iomap.h>
+
 #include "bus_client.h"
 
 enum {
@@ -128,7 +133,6 @@ struct mpe_save_info {
 	u32 h264_mode;
 };
 
-
 /*** restore ***/
 
 static unsigned int restore_size;
@@ -202,8 +206,8 @@ static void setup_restore(struct host1x_hwctx_handler *h, u32 *ptr)
 	wmb();
 }
 
-
 /*** save ***/
+
 struct save_info {
 	u32 *ptr;
 	unsigned int save_count;
@@ -358,7 +362,6 @@ static void __init setup_save(struct host1x_hwctx_handler *h, u32 *ptr)
 	restore_size = info.restore_count + RESTORE_END_SIZE;
 }
 
-
 static u32 calculate_mpe(u32 word, struct mpe_save_info *msi)
 {
 	u32 buffer_full_read = msi->in[0] & 0x01ffffff;
@@ -424,7 +427,6 @@ static u32 *save_ram(u32 *ptr, unsigned int *pending,
 	WARN_ON(err);
 	return ptr + words;
 }
-
 
 /*** ctxmpe ***/
 
@@ -580,6 +582,12 @@ int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 
 static int mpe_probe(struct nvhost_device *dev)
 {
+	int err = 0;
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	return nvhost_client_device_init(dev);
 }
 
@@ -599,6 +607,13 @@ static int mpe_resume(struct nvhost_device *dev)
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
+
+static struct resource mpe_resources = {
+	.name = "regs",
+	.start = TEGRA_MPE_BASE,
+	.end = TEGRA_MPE_BASE + TEGRA_MPE_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+};
 
 struct nvhost_device *mpe_device;
 
@@ -623,6 +638,9 @@ static int __init mpe_init(void)
 	if (!mpe_device)
 		return -ENXIO;
 
+	/* use ARRAY_SIZE macro if resources are more than 1 */
+	mpe_device->resource = &mpe_resources;
+	mpe_device->num_resources = 1;
 	err = nvhost_device_register(mpe_device);
 	if (err)
 		return err;

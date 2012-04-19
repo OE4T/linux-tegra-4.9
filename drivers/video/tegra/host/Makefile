@@ -24,8 +24,10 @@ ifneq ($(CONFIG_VIDEO_TEGRA),y)
 obj-$(CONFIG_TEGRA_GRHOST) += vi/
 endif
 obj-$(CONFIG_TEGRA_GRHOST) += t114/
+obj-$(CONFIG_TEGRA_GRHOST) += t148/
 obj-$(CONFIG_TEGRA_GRHOST) += msenc/
 obj-$(CONFIG_TEGRA_GRHOST) += tsec/
+obj-$(CONFIG_TEGRA_GRHOST) += dsi/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 
 obj-$(CONFIG_TEGRA_GRHOST_USE_NVMAP) += nvmap.o

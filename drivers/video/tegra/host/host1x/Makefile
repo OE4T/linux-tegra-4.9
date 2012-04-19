@@ -7,6 +7,7 @@ nvhost-host1x-objs  = \
 	host1x_channel.o \
 	host1x_intr.o \
 	host1x_cdma.o \
-	host1x_debug.o
+	host1x_debug.o \
+	host1x_actmon.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-host1x.o

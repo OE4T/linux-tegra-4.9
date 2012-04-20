@@ -1531,7 +1531,7 @@ static unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	return clk_get_rate(dc->clk);
 #else
-	return 27000000;
+	return dc->mode.pclk;
 #endif
 }
 

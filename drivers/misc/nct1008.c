@@ -816,7 +816,6 @@ static int nct1008_probe(struct i2c_client *client,
 {
 	struct nct1008_data *data;
 	int err;
-	unsigned int delay;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)
@@ -904,7 +903,6 @@ static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 
 static int nct1008_resume(struct i2c_client *client)
 {
-	struct nct1008_data *data = i2c_get_clientdata(client);
 	int err;
 
 	err = nct1008_enable(client);

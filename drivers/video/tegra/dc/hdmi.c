@@ -1980,6 +1980,11 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 
 	avi.r = HDMI_AVI_R_SAME;
 
+	if ((dc->mode.h_active == 720) && ((dc->mode.v_active == 480) || (dc->mode.v_active == 576)))
+		tegra_dc_writel(dc, 0x00101010, DC_DISP_BORDER_COLOR);
+	else
+		tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
+
 	if (dc->mode.v_active == 480) {
 		if (dc->mode.h_active == 640) {
 			avi.m = HDMI_AVI_M_4_3;
@@ -2175,10 +2180,16 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 			  VSYNC_WINDOW_ENABLE,
 			  HDMI_NV_PDISP_HDMI_VSYNC_WINDOW);
 
-	tegra_hdmi_writel(hdmi,
-			  (dc->ndev->id ? HDMI_SRC_DISPLAYB : HDMI_SRC_DISPLAYA) |
-			  ARM_VIDEO_RANGE_LIMITED,
-			  HDMI_NV_PDISP_INPUT_CONTROL);
+	if ((dc->mode.h_active == 720) && ((dc->mode.v_active == 480) || (dc->mode.v_active == 576)))
+		tegra_hdmi_writel(hdmi,
+				  (dc->ndev->id ? HDMI_SRC_DISPLAYB : HDMI_SRC_DISPLAYA) |
+				  ARM_VIDEO_RANGE_FULL,
+				  HDMI_NV_PDISP_INPUT_CONTROL);
+	else
+		tegra_hdmi_writel(hdmi,
+				  (dc->ndev->id ? HDMI_SRC_DISPLAYB : HDMI_SRC_DISPLAYA) |
+				  ARM_VIDEO_RANGE_LIMITED,
+				  HDMI_NV_PDISP_INPUT_CONTROL);
 
 	clk_disable(hdmi->disp1_clk);
 	clk_disable(hdmi->disp2_clk);

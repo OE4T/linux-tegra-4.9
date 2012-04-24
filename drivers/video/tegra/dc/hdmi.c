@@ -87,6 +87,7 @@ struct tegra_dc_hdmi_data {
 	bool				clk_enabled;
 	unsigned			audio_freq;
 	unsigned			audio_source;
+	bool				audio_inject_null;
 
 	bool				dvi;
 };
@@ -1767,7 +1768,10 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 		a_source = AUDIO_CNTRL0_SOURCE_SELECT_SPDIF;
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	tegra_hdmi_writel(hdmi,a_source | AUDIO_CNTRL0_INJECT_NULLSMPL,
+	if (hdmi->audio_inject_null)
+		a_source |= AUDIO_CNTRL0_INJECT_NULLSMPL;
+
+	tegra_hdmi_writel(hdmi,a_source,
 			  HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0);
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
@@ -1870,6 +1874,31 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_sourc
 EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+int tegra_hdmi_audio_null_sample_inject(bool on)
+{
+	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
+	unsigned int val = 0;
+
+	if (!hdmi)
+		return -EAGAIN;
+
+	if (hdmi->audio_inject_null != on) {
+		hdmi->audio_inject_null = on;
+		if (hdmi->clk_enabled) {
+			val = tegra_hdmi_readl(hdmi,
+				HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0);
+			val &= ~AUDIO_CNTRL0_INJECT_NULLSMPL;
+			if (on)
+				val |= AUDIO_CNTRL0_INJECT_NULLSMPL;
+			tegra_hdmi_writel(hdmi,val,
+				HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0);
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
+
 int tegra_hdmi_setup_hda_presence()
 {
 	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;

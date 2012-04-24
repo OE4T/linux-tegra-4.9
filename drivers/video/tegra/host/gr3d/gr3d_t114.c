@@ -29,30 +29,29 @@
 #include <linux/slab.h>
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
-	HWCTX_REGINFO(0xe00,    4, DIRECT),
-	HWCTX_REGINFO(0xe05,   30, DIRECT),
+	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe44), //bug 962360. This has to be the first one
+	HWCTX_REGINFO(0xe00,   35, DIRECT),
 	HWCTX_REGINFO(0xe25,    2, DIRECT),
 	HWCTX_REGINFO(0xe28,    2, DIRECT),
-	HWCTX_REGINFO(0xe30,   16, DIRECT),
 	HWCTX_REGINFO(0x001,    2, DIRECT),
 	HWCTX_REGINFO(0x00c,   10, DIRECT),
 	HWCTX_REGINFO(0x100,   34, DIRECT),
 	HWCTX_REGINFO(0x124,    2, DIRECT),
-	HWCTX_REGINFO(0x127,    1, DIRECT),
 	HWCTX_REGINFO(0x200,    5, DIRECT),
 	HWCTX_REGINFO(0x205, 1024, INDIRECT),
-	HWCTX_REGINFO(0x207, 1024, INDIRECT),
+	HWCTX_REGINFO(0x207, 1120, INDIRECT),
 	HWCTX_REGINFO(0x209,    1, DIRECT),
 	HWCTX_REGINFO(0x300,   64, DIRECT),
 	HWCTX_REGINFO(0x343,   25, DIRECT),
 	HWCTX_REGINFO(0x363,    2, DIRECT),
-	HWCTX_REGINFO(0x400,   16, DIRECT),
-	HWCTX_REGINFO(0x411,    1, DIRECT),
-	HWCTX_REGINFO(0x412,    1, DIRECT),
-	HWCTX_REGINFO(0x413,    1, DIRECT),
+	HWCTX_REGINFO(0x400,   19, DIRECT),
+	HWCTX_REGINFO(0x414,    7, DIRECT),
+	HWCTX_REGINFO(0x434,    1, DIRECT),
 	HWCTX_REGINFO(0x500,    4, DIRECT),
 	HWCTX_REGINFO(0x520,   32, DIRECT),
 	HWCTX_REGINFO(0x540,   64, INDIRECT),
+	HWCTX_REGINFO(0x545,    1, DIRECT),
+	HWCTX_REGINFO(0x547,    1, DIRECT),
 	HWCTX_REGINFO(0x548,   64, INDIRECT),
 	HWCTX_REGINFO(0x600,   16, INDIRECT_4X),
 	HWCTX_REGINFO(0x603,  128, INDIRECT),
@@ -61,25 +60,23 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x700,   64, INDIRECT),
 	HWCTX_REGINFO(0x710,   50, DIRECT),
 	HWCTX_REGINFO(0x750,   16, DIRECT),
-	HWCTX_REGINFO(0x780,   32, DIRECT),
+	HWCTX_REGINFO(0x770,   48, DIRECT),
 	HWCTX_REGINFO(0x7e0,    1, DIRECT),
-	HWCTX_REGINFO(0x7e1,    1, DIRECT),
-	HWCTX_REGINFO(0x7f9,    1, DIRECT),
-	HWCTX_REGINFO(0x800,   16, INDIRECT_4X),
+	HWCTX_REGINFO(0x800,   64, INDIRECT),
 	HWCTX_REGINFO(0x803, 1024, INDIRECT),
 	HWCTX_REGINFO(0x805,   64, INDIRECT),
 	HWCTX_REGINFO(0x807,    1, DIRECT),
 	HWCTX_REGINFO(0x820,   32, DIRECT),
 	HWCTX_REGINFO(0x900,   64, INDIRECT),
 	HWCTX_REGINFO(0x902,    2, DIRECT),
+	HWCTX_REGINFO(0x907,    1, DIRECT),
 	HWCTX_REGINFO(0x90a,    1, DIRECT),
-	HWCTX_REGINFO(0x90b,    1, DIRECT),
 	HWCTX_REGINFO(0xa02,   10, DIRECT),
-	HWCTX_REGINFO(0xe04,    1, DIRECT),
 	HWCTX_REGINFO(0xe2a,    1, DIRECT),
-	HWCTX_REGINFO(0xe41,    1, DIRECT),
-	HWCTX_REGINFO(0xe44,    1, DIRECT),
 	HWCTX_REGINFO(0xe45,    1, DIRECT),
+	HWCTX_REGINFO(0xe50,   49, DIRECT),
+	HWCTX_REGINFO_RST(0x410, 1, DIRECT, 0x7e0), //bug 955371
+	HWCTX_REGINFO_RST(0x126, 1, DIRECT, 0xe2b), //bug 930456
 };
 
 #define SAVE_BEGIN_V1_SIZE (1 + RESTORE_BEGIN_SIZE)
@@ -134,15 +131,16 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 
 static void __init save_begin_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 {
-	ptr[0] = nvhost_opcode_nonincr(0x905, RESTORE_BEGIN_SIZE);
+	ptr[0] = nvhost_opcode_nonincr(0xc10, RESTORE_BEGIN_SIZE);
 	nvhost_3dctx_restore_begin(p, ptr + 1);
 	ptr += RESTORE_BEGIN_SIZE;
 }
 
-static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count)
+static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count,
+			u32 rst_reg)
 {
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
-	nvhost_3dctx_restore_direct(ptr + 1, start_reg, count);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0xc10, 1);
+	nvhost_3dctx_restore_direct(ptr + 1, rst_reg, count);
 	ptr += RESTORE_DIRECT_SIZE;
 	ptr[1] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					NV_CLASS_HOST_INDOFF, 1);
@@ -153,11 +151,12 @@ static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count)
 }
 
 static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
-			u32 data_reg, u32 count)
+			u32 data_reg, u32 count,
+			u32 rst_reg, u32 rst_data_reg)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_nonincr(0x905, RESTORE_INDIRECT_SIZE);
-	nvhost_3dctx_restore_indirect(ptr + 2, offset_reg, offset, data_reg,
+	ptr[1] = nvhost_opcode_nonincr(0xc10, RESTORE_INDIRECT_SIZE);
+	nvhost_3dctx_restore_indirect(ptr + 2, rst_reg, offset, rst_data_reg,
 			count);
 	ptr += RESTORE_INDIRECT_SIZE;
 	ptr[2] = nvhost_opcode_imm(offset_reg, offset);
@@ -171,7 +170,7 @@ static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* write end of restore buffer */
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0x905, 1);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0xc10, 1);
 	nvhost_3dctx_restore_end(p, ptr + 1);
 	ptr += RESTORE_END_SIZE;
 	/* op_done syncpt incr to flush FDC */
@@ -206,11 +205,14 @@ static void __init setup_save_regs(struct save_info *info,
 	for ( ; regs != rend; ++regs) {
 		u32 offset = regs->offset;
 		u32 count = regs->count;
+		u32 rstoff = regs->rst_off;
 		u32 indoff = offset + 1;
+		u32 indrstoff = rstoff + 1;
+
 		switch (regs->type) {
 		case HWCTX_REGINFO_DIRECT:
 			if (ptr) {
-				save_direct_v1(ptr, offset, count);
+				save_direct_v1(ptr, offset, count, rstoff);
 				ptr += SAVE_DIRECT_V1_SIZE;
 			}
 			save_count += SAVE_DIRECT_V1_SIZE;
@@ -218,11 +220,13 @@ static void __init setup_save_regs(struct save_info *info,
 			break;
 		case HWCTX_REGINFO_INDIRECT_4X:
 			++indoff;
+			++indrstoff;
 			/* fall through */
 		case HWCTX_REGINFO_INDIRECT:
 			if (ptr) {
 				save_indirect_v1(ptr, offset, 0,
-						indoff, count);
+						indoff, count,
+						rstoff, indrstoff);
 				ptr += SAVE_INDIRECT_V1_SIZE;
 			}
 			save_count += SAVE_INDIRECT_V1_SIZE;

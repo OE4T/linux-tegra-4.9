@@ -137,6 +137,10 @@ void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	}
 
 	tegra_dc_write_table(dc, out_sel_pintable);
+
+	/* Inform DC register updated */
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 }
 
 void tegra_dc_rgb_disable(struct tegra_dc *dc)

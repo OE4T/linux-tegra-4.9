@@ -202,7 +202,7 @@ struct nvhost_device *t20_get_nvhost_device(struct nvhost_master *host,
 {
 	int i;
 
-	for (i = 0; i < host->nb_channels; i++) {
+	for (i = 0; i < ARRAY_SIZE(t20_devices); i++) {
 		if (strcmp(t20_devices[i].name, name) == 0)
 			return &t20_devices[i];
 	}

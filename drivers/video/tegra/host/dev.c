@@ -52,9 +52,6 @@
 
 #define DRIVER_NAME		"host1x"
 
-int nvhost_major;
-int nvhost_minor;
-
 static unsigned int register_sets;
 
 struct nvhost_ctrl_userctx {
@@ -171,24 +168,21 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 	return err;
 }
 
+static int match_by_moduleid(struct device *dev, void *data)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	u32 id = (u32)data;
+
+	return id == ndev->moduleid;
+}
+
 static struct nvhost_device *get_ndev_by_moduleid(struct nvhost_master *host,
 		u32 id)
 {
-	int i;
+	struct device *dev = bus_find_device(&nvhost_bus_type, NULL, (void *)id,
+			match_by_moduleid);
 
-	for (i = 0; i < host->nb_channels; i++) {
-		struct nvhost_device *ndev = host->channels[i].dev;
-
-		/* display and dsi do not use channel for register programming.
-		 * so their channels do not have device instance.
-		 * hence skip such channels from here. */
-		if (ndev == NULL)
-			continue;
-
-		if (id == ndev->moduleid)
-			return ndev;
-	}
-	return NULL;
+	return dev ? to_nvhost_device(dev) : NULL;
 }
 
 static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
@@ -333,9 +327,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 		goto fail;
 	}
 
-	err = alloc_chrdev_region(&devno, nvhost_minor,
-				host->nb_channels + 1, IFACE_NAME);
-	nvhost_major = MAJOR(devno);
+	err = alloc_chrdev_region(&devno, 0, 1, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&host->dev->dev, "failed to reserve chrdev region\n");
 		goto fail;
@@ -343,7 +335,6 @@ static int nvhost_user_init(struct nvhost_master *host)
 
 	cdev_init(&host->cdev, &nvhost_ctrlops);
 	host->cdev.owner = THIS_MODULE;
-	devno = MKDEV(nvhost_major, nvhost_minor + host->nb_channels);
 	err = cdev_add(&host->cdev, devno, 1);
 	if (err < 0)
 		goto fail;

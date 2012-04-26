@@ -541,18 +541,23 @@ int nvhost_client_user_init(struct nvhost_device *dev)
 	int err, devno;
 
 	struct nvhost_channel *ch = dev->channel;
+	err = alloc_chrdev_region(&devno, 0, 1, IFACE_NAME);
+	if (err < 0) {
+		dev_err(&dev->dev, "failed to allocate devno\n");
+		goto fail;
+	}
 
 	cdev_init(&ch->cdev, &nvhost_channelops);
 	ch->cdev.owner = THIS_MODULE;
 
-	devno = MKDEV(nvhost_major, nvhost_minor + dev->index);
 	err = cdev_add(&ch->cdev, devno, 1);
 	if (err < 0) {
 		dev_err(&dev->dev,
 			"failed to add chan %i cdev\n", dev->index);
 		goto fail;
 	}
-	ch->node = device_create(nvhost_get_host(dev)->nvhost_class, NULL, devno, NULL,
+	ch->node = device_create(nvhost_get_host(dev)->nvhost_class,
+			NULL, devno, NULL,
 			IFACE_NAME "-%s", dev->name);
 	if (IS_ERR(ch->node)) {
 		err = PTR_ERR(ch->node);

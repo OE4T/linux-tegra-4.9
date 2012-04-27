@@ -23,12 +23,18 @@ enum {
 	TEGRA_DSI_VIDEO_DRIVEN_BY_HOST,
 };
 
+#define MAX_DSI_INSTANCE	2
+
 /* Max number of data lanes supported */
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define MAX_DSI_DATA_LANES	2
 #else
+#ifdef CONFIG_TEGRA_DSI_GANGED_MODE
+#define MAX_DSI_DATA_LANES	8
+#else
 #define MAX_DSI_DATA_LANES	4
+#endif
 #endif
 
 /* Default Peripheral reset timeout */

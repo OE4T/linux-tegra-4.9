@@ -364,5 +364,15 @@ enum {
 #define DSI_PAD_CONTROL_4_VS1 0x52
 #define DSI_VID_MODE_CONTROL 0x4e
 
+#define DSI_GANGED_MODE_CONTROL 0x53
+#define DSI_GANGED_MODE_CONTROL_EN(x)			(((x) & 0x1) << 0)
+
+#define DSI_GANGED_MODE_START 0x54
+#define DSI_GANGED_MODE_START_POINTER(x)		(((x) & 0x1fff) << 0)
+
+#define DSI_GANGED_MODE_SIZE 0x55
+#define DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(x)		(((x) & 0x1fff) << 16)
+#define DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(x)	(((x) & 0x1fff) << 0)
+
 #endif
 

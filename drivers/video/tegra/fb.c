@@ -283,16 +283,6 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		dev_dbg(&tegra_fb->ndev->dev, "unblank\n");
 		tegra_fb->win->flags = TEGRA_WIN_FLAG_ENABLED;
 		tegra_dc_enable(tegra_fb->win->dc);
-#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
-		/*
-		* TODO:
-		* This is a work around to provide an unblanking flip
-		* to dc driver, required to display fb-console after
-		* a blank event,and needs to be replaced by a proper
-		* unblanking mechanism
-		*/
-		tegra_fb_flip_win(tegra_fb);
-#endif
 		return 0;
 
 	case FB_BLANK_NORMAL:
@@ -331,7 +321,8 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 			(var->xoffset * (var->bits_per_pixel/8));
 
 		tegra_fb->win->phys_addr = addr;
-		/* TODO: update virt_addr */
+		tegra_fb->win->flags = TEGRA_WIN_FLAG_ENABLED;
+		tegra_fb->win->virt_addr = info->screen_base;
 
 		tegra_dc_update_windows(&tegra_fb->win, 1);
 		tegra_dc_sync_windows(&tegra_fb->win, 1);

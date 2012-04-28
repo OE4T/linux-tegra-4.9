@@ -54,6 +54,7 @@
 #include "t114/t114.h"
 
 #define DRIVER_NAME		"host1x"
+#define HOST_DEFAULT_RATE	108000000
 
 static unsigned int register_sets;
 
@@ -478,7 +479,7 @@ struct nvhost_device tegra_grhost_device = {
 	.id = -1,
 	.resource = nvhost_resources,
 	.num_resources = ARRAY_SIZE(nvhost_resources),
-	.clocks = {{"host1x", UINT_MAX}, {} },
+	.clocks = {{"host1x", HOST_DEFAULT_RATE}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 

@@ -1285,15 +1285,7 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 
 static bool tegra_dc_hdmi_hpd(struct tegra_dc *dc)
 {
-	int sense;
-	int level;
-
-	level = gpio_get_value(dc->out->hotplug_gpio);
-
-	sense = dc->out->flags & TEGRA_DC_OUT_HOTPLUG_MASK;
-
-	return (sense == TEGRA_DC_OUT_HOTPLUG_HIGH && level) ||
-		(sense == TEGRA_DC_OUT_HOTPLUG_LOW && !level);
+	return tegra_dc_hpd(dc);
 }
 
 

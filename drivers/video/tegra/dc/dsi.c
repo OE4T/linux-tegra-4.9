@@ -26,6 +26,8 @@
 #include <linux/workqueue.h>
 #include <linux/moduleparam.h>
 #include <linux/export.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -300,6 +302,111 @@ inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	writel(val, dsi->base + reg * 4);
 }
 EXPORT_SYMBOL(tegra_dsi_writel);
+
+#ifdef CONFIG_DEBUG_FS
+static int dbg_dsi_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+
+#define DUMP_REG(a) do {						\
+		seq_printf(s, "%-32s\t%03x\t%08lx\n",			\
+		       #a, a, tegra_dsi_readl(dsi, a));		\
+	} while (0)
+
+	tegra_dc_io_start(dsi->dc);
+	clk_enable(dsi->dsi_clk);
+
+	DUMP_REG(DSI_INCR_SYNCPT_CNTRL);
+	DUMP_REG(DSI_INCR_SYNCPT_ERROR);
+	DUMP_REG(DSI_CTXSW);
+	DUMP_REG(DSI_POWER_CONTROL);
+	DUMP_REG(DSI_INT_ENABLE);
+	DUMP_REG(DSI_CONTROL);
+	DUMP_REG(DSI_SOL_DELAY);
+	DUMP_REG(DSI_MAX_THRESHOLD);
+	DUMP_REG(DSI_TRIGGER);
+	DUMP_REG(DSI_TX_CRC);
+	DUMP_REG(DSI_STATUS);
+	DUMP_REG(DSI_INIT_SEQ_CONTROL);
+	DUMP_REG(DSI_INIT_SEQ_DATA_0);
+	DUMP_REG(DSI_INIT_SEQ_DATA_1);
+	DUMP_REG(DSI_INIT_SEQ_DATA_2);
+	DUMP_REG(DSI_INIT_SEQ_DATA_3);
+	DUMP_REG(DSI_INIT_SEQ_DATA_4);
+	DUMP_REG(DSI_INIT_SEQ_DATA_5);
+	DUMP_REG(DSI_INIT_SEQ_DATA_6);
+	DUMP_REG(DSI_INIT_SEQ_DATA_7);
+	DUMP_REG(DSI_PKT_SEQ_0_LO);
+	DUMP_REG(DSI_PKT_SEQ_0_HI);
+	DUMP_REG(DSI_PKT_SEQ_1_LO);
+	DUMP_REG(DSI_PKT_SEQ_1_HI);
+	DUMP_REG(DSI_PKT_SEQ_2_LO);
+	DUMP_REG(DSI_PKT_SEQ_2_HI);
+	DUMP_REG(DSI_PKT_SEQ_3_LO);
+	DUMP_REG(DSI_PKT_SEQ_3_HI);
+	DUMP_REG(DSI_PKT_SEQ_4_LO);
+	DUMP_REG(DSI_PKT_SEQ_4_HI);
+	DUMP_REG(DSI_PKT_SEQ_5_LO);
+	DUMP_REG(DSI_PKT_SEQ_5_HI);
+	DUMP_REG(DSI_DCS_CMDS);
+	DUMP_REG(DSI_PKT_LEN_0_1);
+	DUMP_REG(DSI_PKT_LEN_2_3);
+	DUMP_REG(DSI_PKT_LEN_4_5);
+	DUMP_REG(DSI_PKT_LEN_6_7);
+	DUMP_REG(DSI_PHY_TIMING_0);
+	DUMP_REG(DSI_PHY_TIMING_1);
+	DUMP_REG(DSI_PHY_TIMING_2);
+	DUMP_REG(DSI_BTA_TIMING);
+	DUMP_REG(DSI_TIMEOUT_0);
+	DUMP_REG(DSI_TIMEOUT_1);
+	DUMP_REG(DSI_TO_TALLY);
+	DUMP_REG(DSI_PAD_CONTROL);
+	DUMP_REG(DSI_PAD_CONTROL_CD);
+	DUMP_REG(DSI_PAD_CD_STATUS);
+	DUMP_REG(DSI_VID_MODE_CONTROL);
+#undef DUMP_REG
+
+	clk_disable(dsi->dsi_clk);
+	tegra_dc_io_end(dsi->dc);
+
+	return 0;
+}
+
+static int dbg_dsi_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dsi_show, inode->i_private);
+}
+
+static const struct file_operations dbg_fops = {
+	.open		= dbg_dsi_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static struct dentry *dsidir;
+
+static void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
+{
+	struct dentry *retval;
+
+	dsidir = debugfs_create_dir("tegra_dsi", NULL);
+	if (!dsidir)
+		return;
+	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
+		&dbg_fops);
+	if (!retval)
+		goto free_out;
+	return;
+free_out:
+	debugfs_remove_recursive(dsidir);
+	dsidir = NULL;
+	return;
+}
+#else
+static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
+{ }
+#endif
 
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
@@ -2586,6 +2693,7 @@ static void _tegra_dc_dsi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
+	tegra_dc_dsi_debug_create(dsi);
 	tegra_dsi_init_sw(dc, dsi);
 	/* TODO: Configure the CSI pad configuration */
 }

@@ -1282,7 +1282,6 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 	return false;
 }
 
-
 static bool tegra_dc_hdmi_hpd(struct tegra_dc *dc)
 {
 	return tegra_dc_hpd(dc);
@@ -2350,6 +2349,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.detect = tegra_dc_hdmi_detect,
 	.suspend = tegra_dc_hdmi_suspend,
 	.resume = tegra_dc_hdmi_resume,
+	.mode_filter = tegra_dc_hdmi_mode_filter,
 };
 
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)

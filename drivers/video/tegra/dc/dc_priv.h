@@ -21,6 +21,7 @@
 #include <linux/io.h>
 #include <linux/mutex.h>
 #include <linux/wait.h>
+#include <linux/fb.h>
 #include <linux/completion.h>
 
 #include <mach/dc.h>
@@ -63,11 +64,13 @@ struct tegra_dc_out_ops {
 	void (*enable)(struct tegra_dc *dc);
 	/* disable output.  dc clocks are on at this point */
 	void (*disable)(struct tegra_dc *dc);
-
 	/* suspend output.  dc clocks are on at this point */
 	void (*suspend)(struct tegra_dc *dc);
 	/* resume output.  dc clocks are on at this point */
 	void (*resume)(struct tegra_dc *dc);
+	/* mode filter. to provide a list of supported modes*/
+	bool (*mode_filter)(struct tegra_dc *dc,
+			struct fb_videomode *mode);
 };
 
 struct tegra_dc {

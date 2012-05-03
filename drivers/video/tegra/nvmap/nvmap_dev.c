@@ -1183,8 +1183,10 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&dev->iovmm_master.pin_wait);
 	mutex_init(&dev->iovmm_master.pin_lock);
+#ifdef CONFIG_NVMAP_PAGE_POOLS
 	for (i = 0; i < NVMAP_NUM_POOLS; i++)
 		nvmap_page_pool_init(&dev->iovmm_master.pools[i], i);
+#endif
 
 	dev->iovmm_master.iovmm =
 		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL,
@@ -1312,6 +1314,7 @@ static int nvmap_probe(struct platform_device *pdev)
 				dev, &debug_iovmm_clients_fops);
 			debugfs_create_file("allocations", 0664, iovmm_root,
 				dev, &debug_iovmm_allocations_fops);
+#ifdef CONFIG_NVMAP_PAGE_POOLS
 			for (i = 0; i < NVMAP_NUM_POOLS; i++) {
 				char name[40];
 				char *memtype_string[] = {"uc", "wc",
@@ -1322,6 +1325,7 @@ static int nvmap_probe(struct platform_device *pdev)
 					iovmm_root,
 					&dev->iovmm_master.pools[i].npages);
 			}
+#endif
 		}
 	}
 

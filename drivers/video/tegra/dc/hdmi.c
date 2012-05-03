@@ -1371,18 +1371,31 @@ bool tegra_dc_hdmi_detect_test(struct tegra_dc *dc, unsigned char *edid_ptr)
 
 	err = tegra_edid_get_monspecs_test(hdmi->edid, &specs, edid_ptr);
 	if (err < 0) {
-		dev_err(&dc->ndev->dev, "error reading edid\n");
-		goto fail;
-	}
+		/* Check if there's a hard-wired mode, if so, enable it */
+		if (dc->out->n_modes)
+			tegra_dc_enable(dc);
+		else {
+			dev_err(&dc->ndev->dev, "error reading edid\n");
+			goto fail;
+		}
+#ifdef CONFIG_SWITCH
+		hdmi->hpd_switch.state = 0;
+		switch_set_state(&hdmi->hpd_switch, 1);
+#endif
+		dev_info(&dc->ndev->dev, "display detected\n");
 
-	err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
-	if (err < 0) {
-		dev_err(&dc->ndev->dev, "error populating eld\n");
-		goto fail;
-	}
-	hdmi->eld_retrieved = true;
+		dc->connected = true;
+		tegra_dc_ext_process_hotplug(dc->ndev->id);
+	} else {
+		err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev, "error populating eld\n");
+			goto fail;
+		}
+		hdmi->eld_retrieved = true;
 
-	tegra_dc_hdmi_detect_config(dc, &specs);
+		tegra_dc_hdmi_detect_config(dc, &specs);
+	}
 
 	return true;
 
@@ -1407,18 +1420,30 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 
 	err = tegra_edid_get_monspecs(hdmi->edid, &specs);
 	if (err < 0) {
-		dev_err(&dc->ndev->dev, "error reading edid\n");
-		goto fail;
-	}
+		if (dc->out->n_modes)
+			tegra_dc_enable(dc);
+		else {
+			dev_err(&dc->ndev->dev, "error reading edid\n");
+			goto fail;
+		}
+#ifdef CONFIG_SWITCH
+		hdmi->hpd_switch.state = 0;
+		switch_set_state(&hdmi->hpd_switch, 1);
+#endif
+		dev_info(&dc->ndev->dev, "display detected\n");
 
-	err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
-	if (err < 0) {
-		dev_err(&dc->ndev->dev, "error populating eld\n");
-		goto fail;
-	}
-	hdmi->eld_retrieved = true;
+		dc->connected = true;
+		tegra_dc_ext_process_hotplug(dc->ndev->id);
+	} else {
+		err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev, "error populating eld\n");
+			goto fail;
+		}
+		hdmi->eld_retrieved = true;
 
-	tegra_dc_hdmi_detect_config(dc, &specs);
+		tegra_dc_hdmi_detect_config(dc, &specs);
+	}
 
 	return true;
 

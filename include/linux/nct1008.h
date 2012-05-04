@@ -31,6 +31,8 @@
 
 struct nct1008_data;
 
+enum nct1008_chip { NCT1008, NCT72 };
+
 struct nct1008_platform_data {
 	bool supported_hwrev;
 	bool ext_range;
@@ -56,6 +58,7 @@ struct nct1008_data {
 	u8 config;
 	s8 *limits;
 	u8 limits_sz;
+	enum nct1008_chip chip;
 	void (*alarm_fn)(bool raised);
 	struct regulator *nct_reg;
 	long current_lo_limit;

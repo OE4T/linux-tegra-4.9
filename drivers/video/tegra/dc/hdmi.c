@@ -2017,9 +2017,12 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 		(dc->mode.v_active == 2205 && dc->mode.stereo_mode)) {
 		/* VIC for both 1080p and 1080p 3D mode */
 		avi.m = HDMI_AVI_M_16_9;
-		if (dc->mode.h_front_porch == 88)
-			avi.vic = 16; /* 60 Hz */
-		else if (dc->mode.h_front_porch == 528)
+		if (dc->mode.h_front_porch == 88) {
+			if (dc->mode.pclk > 74250000)
+				avi.vic = 16; /* 60 Hz */
+			else
+				avi.vic = 34; /* 30 Hz */
+		} else if (dc->mode.h_front_porch == 528)
 			avi.vic = 31; /* 50 Hz */
 		else
 			avi.vic = 32; /* 24 Hz */

@@ -33,6 +33,7 @@
 
 /* XXX ew */
 #include "../dc_priv.h"
+#include "../dc_config.h"
 /* XXX ew 2 */
 #include "../../host/dev.h"
 /* XXX ew 3 */
@@ -173,10 +174,39 @@ void tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 	}
 }
 
+int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
+						struct tegra_dc_win *win)
+{
+	long *addr;
+	struct tegra_dc *dc = ext->dc;
+
+	/* Check the window format */
+	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_FORMATS);
+	if (!test_bit(win->fmt, addr)) {
+		dev_err(&dc->ndev->dev, "Color format of window %d is"
+						" invalid.\n", win->idx);
+		goto fail;
+	}
+
+	/* Check window size */
+	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_SIZE);
+	if (CHECK_SIZE(win->out_w, addr[MIN_WIDTH], addr[MAX_WIDTH]) ||
+		CHECK_SIZE(win->out_h, addr[MIN_HEIGHT], addr[MAX_HEIGHT])) {
+		dev_err(&dc->ndev->dev, "Size of window %d is"
+						" invalid.\n", win->idx);
+		goto fail;
+	}
+
+	return 0;
+fail:
+	return -EINVAL;
+}
+
 static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 			       struct tegra_dc_win *win,
 			       const struct tegra_dc_ext_flip_win *flip_win)
 {
+	int err = 0;
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
 
 	if (flip_win->handle[TEGRA_DC_Y] == NULL) {
@@ -223,6 +253,11 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
+
+	err = tegra_dc_ext_check_windowattr(ext, win);
+	if (err < 0)
+		dev_err(&ext->dc->ndev->dev,
+				"Window atrributes are invalid.\n");
 
 	if ((s32)flip_win->attr.pre_syncpt_id >= 0) {
 		nvhost_syncpt_wait_timeout(

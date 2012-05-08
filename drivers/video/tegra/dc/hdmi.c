@@ -64,6 +64,28 @@
 #define HDMI_ELD_PRODUCT_CODE_INDEX		18
 #define HDMI_ELD_MONITOR_NAME_INDEX		20
 
+/* These two values need to be cross checked in case of
+     addition/removal from tegra_dc_hdmi_aspect_ratios[] */
+#define TEGRA_DC_HDMI_MIN_ASPECT_RATIO_PERCENT	80
+#define TEGRA_DC_HDMI_MAX_ASPECT_RATIO_PERCENT	320
+
+/* Percentage equivalent of standard aspect ratios
+    accurate upto two decimal digits */
+static int tegra_dc_hdmi_aspect_ratios[] = {
+	/*   3:2	*/	150,
+	/*   4:3	*/	133,
+	/*   4:5	*/	 80,
+	/*   5:4	*/	125,
+	/*   9:5	*/	180,
+	/*  16:5	*/	320,
+	/*  16:9	*/	178,
+	/* 16:10	*/	160,
+	/* 19:10	*/	190,
+	/* 25:16	*/	156,
+	/* 64:35	*/	183,
+	/* 72:35	*/	206
+};
+
 struct tegra_dc_hdmi_data {
 	struct tegra_dc			*dc;
 	struct tegra_edid		*edid;
@@ -1238,45 +1260,76 @@ static bool tegra_dc_reload_mode(struct fb_videomode *mode)
 	return false;
 }
 
+static bool tegra_dc_hdmi_valid_asp_ratio(const struct tegra_dc *dc,
+					struct fb_videomode *mode)
+{
+	int count = 0;
+	int m_aspratio = 0;
+	int s_aspratio = 0;
+
+	/* To check the aspect upto two decimal digits, calculate in % */
+	m_aspratio = (mode->xres*100 / mode->yres);
+
+	if ((m_aspratio < TEGRA_DC_HDMI_MIN_ASPECT_RATIO_PERCENT) ||
+			(m_aspratio > TEGRA_DC_HDMI_MAX_ASPECT_RATIO_PERCENT))
+				return false;
+
+	/* Check from the table of  supported aspect ratios, allow
+	    difference of 1% for second decimal digit calibration */
+	for (count = 0; count < ARRAY_SIZE(tegra_dc_hdmi_aspect_ratios);
+		 count++) {
+			s_aspratio =  tegra_dc_hdmi_aspect_ratios[count];
+			if ((m_aspratio == s_aspratio) ||
+				(abs(m_aspratio - s_aspratio) == 1))
+				return true;
+	}
+
+	return false;
+}
+
 
 static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
-	int i;
-	int clock_per_frame;
+	if (mode->vmode & FB_VMODE_INTERLACED)
+		return false;
 
+	/* Ignore modes with a 0 pixel clock */
 	if (!mode->pixclock)
 		return false;
 
 #ifdef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
-	if (PICOS2KHZ(mode->pixclock) > 74250)
-		return false;
+		if (PICOS2KHZ(mode->pixclock) > 74250)
+			return false;
 #endif
 
-	for (i = 0; i < ARRAY_SIZE(tegra_dc_hdmi_supported_modes); i++) {
-		const struct fb_videomode *supported_mode
-				= &tegra_dc_hdmi_supported_modes[i];
-		if (tegra_dc_hdmi_mode_equal(supported_mode, mode) &&
-		    tegra_dc_hdmi_valid_pixclock(dc, supported_mode)) {
-			if (mode->lower_margin == 1) {
-				/* This might be the case for HDMI<->DVI
-				 * where std VESA representation will not
-				 * pass constraint V_FRONT_PORCH >=
-				 * V_REF_TO_SYNC + 1.So reload mode in
-				 * CVT timing standards.
-				 */
-				if (!tegra_dc_reload_mode(mode))
-					return false;
-			}
-			else
-				memcpy(mode, supported_mode, sizeof(*mode));
+	/* Check if the mode's pixel clock is more than the max rate*/
+	if (!tegra_dc_hdmi_valid_pixclock(dc, mode))
+		return false;
 
-			mode->flag = FB_MODE_IS_DETAILED;
-			clock_per_frame = tegra_dc_calc_clock_per_frame(mode);
-			mode->refresh = (PICOS2KHZ(mode->pixclock) * 1000)
-					/ clock_per_frame;
-			return true;
+	/* Check if the mode's aspect ratio is supported */
+	if (!tegra_dc_hdmi_valid_asp_ratio(dc, mode))
+		return false;
+
+	/* Check some of DC's constraints */
+	if (mode->hsync_len > 1 && mode->vsync_len > 1 &&
+		mode->lower_margin + mode->vsync_len + mode->upper_margin > 1 &&
+		mode->xres >= 16 && mode->yres >= 16) {
+
+		if (mode->lower_margin == 1) {
+			/* This might be the case for HDMI<->DVI
+			 * where std VESA representation will not
+			 * pass constraint V_FRONT_PORCH >=
+			 * V_REF_TO_SYNC + 1.So reload mode in
+			 * CVT timing standards.
+			 */
+			if (!tegra_dc_reload_mode(mode))
+				return false;
 		}
+		mode->flag = FB_MODE_IS_DETAILED;
+		mode->refresh = (PICOS2KHZ(mode->pixclock) * 1000) /
+				tegra_dc_calc_clock_per_frame(mode);
+		return true;
 	}
 
 	return false;

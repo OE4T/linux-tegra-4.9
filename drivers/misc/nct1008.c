@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,7 +92,7 @@ static inline u8 temperature_to_value(bool extended, s8 temp)
 	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : (u8)temp;
 }
 
-static int nct1008_get_temp(struct device *dev, long *pTemp)
+static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
@@ -104,30 +104,34 @@ static int nct1008_get_temp(struct device *dev, long *pTemp)
 	u8 value;
 
 	/* Read Local Temp */
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
-	if (value < 0)
-		goto error;
-	temp_local = value_to_temperature(pdata->ext_range, value);
-	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
+	if (itemp) {
+		value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+		if (value < 0)
+			goto error;
+		temp_local = value_to_temperature(pdata->ext_range, value);
+		temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
+
+		*itemp = temp_local_milli;
+	}
 
 	/* Read External Temp */
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
-	if (value < 0)
-		goto error;
-	temp_ext_lo = (value >> 6);
+	if (etemp) {
+		value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+		if (value < 0)
+			goto error;
+		temp_ext_lo = (value >> 6);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
-	if (value < 0)
-		goto error;
-	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
+		value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+		if (value < 0)
+			goto error;
+		temp_ext_hi = value_to_temperature(pdata->ext_range, value);
 
-	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
-				temp_ext_lo * 250;
+		temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
+					temp_ext_lo * 250;
 
-	/* Return max between Local and External Temp */
-	*pTemp = max(temp_local_milli, temp_ext_milli);
+		*etemp = temp_ext_milli;
+	}
 
-	dev_dbg(dev, "\n %s: ret temp=%ldC ", __func__, *pTemp);
 	return 0;
 error:
 	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
@@ -223,7 +227,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 		return -EINVAL;
 	}
 	/* check for system power down */
-	err = nct1008_get_temp(dev, &currTemp);
+	err = nct1008_get_temp(dev, &currTemp, NULL);
 	if (err)
 		goto error;
 
@@ -712,7 +716,12 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 
 int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp)
 {
-	return nct1008_get_temp(&data->client->dev, temp);
+	return nct1008_get_temp(&data->client->dev, temp, NULL);
+}
+
+int nct1008_thermal_get_temps(struct nct1008_data *data, long *etemp, long *itemp)
+{
+	return nct1008_get_temp(&data->client->dev, etemp, itemp);
 }
 
 int nct1008_thermal_get_temp_low(struct nct1008_data *data, long *temp)

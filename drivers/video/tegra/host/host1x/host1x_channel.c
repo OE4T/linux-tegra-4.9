@@ -144,6 +144,7 @@ static void submit_ctxrestore(struct nvhost_job *job)
 	nvhost_cdma_push_gather(&ch->cdma,
 		host->nvmap,
 		nvmap_ref_to_handle(ctx->restore),
+		0,
 		nvhost_opcode_gather(ctx->restore_size),
 		ctx->restore_phys);
 
@@ -181,12 +182,14 @@ void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 void submit_gathers(struct nvhost_job *job)
 {
 	/* push user gathers */
-	int i = 0;
-	for ( ; i < job->num_gathers; i++) {
+	int i;
+	for (i = 0 ; i < job->num_gathers; i++) {
 		u32 op1 = nvhost_opcode_gather(job->gathers[i].words);
 		u32 op2 = job->gathers[i].mem;
 		nvhost_cdma_push_gather(&job->ch->cdma,
-				job->nvmap, job->unpins[i/2],
+				job->nvmap,
+				nvmap_id_to_handle(job->gathers[i].mem_id),
+				job->gathers[i].offset,
 				op1, op2);
 	}
 }

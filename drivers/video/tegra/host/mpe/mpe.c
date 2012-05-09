@@ -499,7 +499,10 @@ static void ctxmpe_save_push(struct nvhost_hwctx *nctx,
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
 	struct host1x_hwctx_handler *h = host1x_hwctx_handler(ctx);
-	nvhost_cdma_push(cdma,
+	nvhost_cdma_push_gather(cdma,
+			nvhost_get_host(nctx->channel->dev)->nvmap,
+			h->save_buf->handle,
+			0,
 			nvhost_opcode_gather(h->save_size),
 			h->save_phys);
 }

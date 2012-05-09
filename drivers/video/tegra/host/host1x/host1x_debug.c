@@ -174,11 +174,6 @@ static void show_channel_gather(struct output *o, u32 addr,
 	phys_addr_t pin_addr;
 	int state, count, i;
 
-	if ((u32)nvmap->handle == NVHOST_CDMA_PUSH_GATHER_CTXSAVE) {
-		nvhost_debug_output(o, "[context save]\n");
-		return;
-	}
-
 	if (!nvmap->handle || !nvmap->client
 			|| atomic_read(&nvmap->handle->ref) < 1) {
 		nvhost_debug_output(o, "[already deallocated]\n");

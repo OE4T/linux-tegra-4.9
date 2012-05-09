@@ -91,45 +91,6 @@ struct nvhost_channel_userctx {
 	int clientid;
 };
 
-/*
- * Write cmdbuf to ftrace output. Checks if cmdbuf contents should be output
- * and mmaps the cmdbuf contents if required.
- */
-static void trace_write_cmdbufs(struct nvhost_job *job)
-{
-	struct nvmap_handle_ref handle;
-	void *mem = NULL;
-	int i = 0;
-
-	for (i = 0; i < job->num_gathers; i++) {
-		struct nvhost_channel_gather *gather = &job->gathers[i];
-		if (nvhost_debug_trace_cmdbuf) {
-			handle.handle = nvmap_id_to_handle(gather->mem_id);
-			mem = nvmap_mmap(&handle);
-			if (IS_ERR_OR_NULL(mem))
-				mem = NULL;
-		};
-
-		if (mem) {
-			u32 i;
-			/*
-			 * Write in batches of 128 as there seems to be a limit
-			 * of how much you can output to ftrace at once.
-			 */
-			for (i = 0; i < gather->words; i += TRACE_MAX_LENGTH) {
-				trace_nvhost_channel_write_cmdbuf_data(
-					job->ch->dev->name,
-					gather->mem_id,
-					min(gather->words - i,
-					    TRACE_MAX_LENGTH),
-					gather->offset + i * sizeof(u32),
-					mem);
-			}
-			nvmap_munmap(&handle, mem);
-		}
-	}
-}
-
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
@@ -369,8 +330,6 @@ static int nvhost_ioctl_channel_flush(
 	    (nvhost_debug_force_timeout_channel == ctx->ch->chid)) {
 		ctx->timeout = nvhost_debug_force_timeout_val;
 	}
-
-	trace_write_cmdbufs(ctx->job);
 
 	/* context switch if needed, and submit user's gathers to the channel */
 	err = nvhost_channel_submit(ctx->job);

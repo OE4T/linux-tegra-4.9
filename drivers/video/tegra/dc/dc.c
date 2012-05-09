@@ -2969,6 +2969,11 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		dc->ext = NULL;
 	}
 
+	mutex_lock(&dc->lock);
+	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED)
+		dc->enabled = _tegra_dc_enable(dc);
+	mutex_unlock(&dc->lock);
+
 	/* interrupt handler must be registered before tegra_fb_register() */
 	if (request_irq(irq, tegra_dc_irq, IRQF_DISABLED,
 			dev_name(&ndev->dev), dc)) {
@@ -2976,14 +2981,6 @@ static int tegra_dc_probe(struct nvhost_device *ndev)
 		ret = -EBUSY;
 		goto err_put_emc_clk;
 	}
-
-	/* hack to balance enable_irq calls in _tegra_dc_enable() */
-	disable_irq(dc->irq);
-
-	mutex_lock(&dc->lock);
-	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED)
-		dc->enabled = _tegra_dc_enable(dc);
-	mutex_unlock(&dc->lock);
 
 	tegra_dc_create_debugfs(dc);
 

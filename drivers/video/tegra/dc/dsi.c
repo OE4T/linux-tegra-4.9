@@ -1224,10 +1224,17 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
 	u32 sol_delay;
+	u32 internal_delay;
+	u32 h_width_byte_clk;
+	u32 h_width_pixels;
+	u32 h_width_ganged_byte_clk;
+	u8 n_data_lanes_this_cont = 0;
+	u8 n_data_lanes_ganged = 0;
 
+#ifndef CONFIG_TEGRA_DSI_GANGED_MODE
 	if (dsi->info.video_burst_mode == TEGRA_DSI_VIDEO_NONE_BURST_MODE ||
 		dsi->info.video_burst_mode ==
-				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END) {
+			TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END) {
 #define VIDEO_FIFO_LATENCY_PIXEL_CLK 8
 		sol_delay = VIDEO_FIFO_LATENCY_PIXEL_CLK *
 			dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
@@ -1237,14 +1244,49 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 		sol_delay = tegra_dsi_sol_delay_burst(dc, dsi);
 		dsi->status.clk_burst = DSI_CLK_BURST_BURST_MODE;
 	}
+#else
+#define SOL_TO_VALID_PIX_CLK_DELAY 4
+#define VALID_TO_FIFO_PIX_CLK_DELAY 4
+#define FIFO_WR_PIX_CLK_DELAY 2
+#define FIFO_RD_BYTE_CLK_DELAY 6
+#define TOT_INTERNAL_PIX_DELAY (SOL_TO_VALID_PIX_CLK_DELAY + \
+				VALID_TO_FIFO_PIX_CLK_DELAY + \
+				FIFO_WR_PIX_CLK_DELAY)
 
-#ifdef CONFIG_TEGRA_DSI_GANGED_MODE
-	/* TODO: use proper algo */
-	sol_delay = 0xaa;
+	internal_delay = DIV_ROUND_UP(
+			TOT_INTERNAL_PIX_DELAY * dsi->pixel_scaler_mul,
+			dsi->pixel_scaler_div * dsi->info.n_data_lanes) +
+			FIFO_RD_BYTE_CLK_DELAY;
+
+	h_width_pixels = dc->mode.h_sync_width + dc->mode.h_back_porch +
+				dc->mode.h_active + dc->mode.h_front_porch +
+				dsi->correction_pix;
+	h_width_byte_clk = DIV_ROUND_UP(h_width_pixels * dsi->pixel_scaler_mul,
+			dsi->pixel_scaler_div * dsi->info.n_data_lanes);
+
+	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT) {
+		n_data_lanes_this_cont = dsi->info.n_data_lanes / 2;
+		n_data_lanes_ganged = dsi->info.n_data_lanes;
+	}
+
+	h_width_ganged_byte_clk = DIV_ROUND_UP(
+				n_data_lanes_this_cont * h_width_byte_clk,
+				n_data_lanes_ganged);
+
+	sol_delay = h_width_byte_clk - h_width_ganged_byte_clk +
+						internal_delay;
+	sol_delay = (dsi->info.video_data_type ==
+			TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE) ?
+			sol_delay + 20: sol_delay;
+
+#undef SOL_TO_VALID_PIX_CLK_DELAY
+#undef VALID_TO_FIFO_PIX_CLK_DELAY
+#undef FIFO_WR_PIX_CLK_DELAY
+#undef FIFO_RD_BYTE_CLK_DELAY
+#undef TOT_INTERNAL_PIX_DELAY
 #endif
-
 	tegra_dsi_writel(dsi, DSI_SOL_DELAY_SOL_DELAY(sol_delay),
-								DSI_SOL_DELAY);
+						DSI_SOL_DELAY);
 }
 
 static void tegra_dsi_set_timeout(struct tegra_dc_dsi_data *dsi)

@@ -83,7 +83,7 @@ static const u32 tegra_dc_rgb_disable_pintable[] = {
 	DC_COM_PIN_OUTPUT_SELECT6,	0x00000000,
 };
 
-void tegra_dc_rgb_enable(struct tegra_dc *dc)
+static void tegra_dc_rgb_enable(struct tegra_dc *dc)
 {
 	int i;
 	u32 out_sel_pintable[ARRAY_SIZE(tegra_dc_rgb_enable_out_sel_pintable)];
@@ -143,7 +143,7 @@ void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 }
 
-void tegra_dc_rgb_disable(struct tegra_dc *dc)
+static void tegra_dc_rgb_disable(struct tegra_dc *dc)
 {
 	tegra_dc_writel(dc, 0x00000000, DC_CMD_DISPLAY_POWER_CONTROL);
 

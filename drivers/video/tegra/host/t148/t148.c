@@ -32,6 +32,7 @@
 #include "gr3d/scale3d.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
+#include "linux/nvhost_ioctl.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)

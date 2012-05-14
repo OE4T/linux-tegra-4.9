@@ -26,6 +26,7 @@
 #include <mach/dc.h>
 
 #include "../host/dev.h"
+#include "../host/nvhost_acm.h"
 #include "../host/host1x/host1x_syncpt.h"
 
 #include <mach/tegra_dc_ext.h>

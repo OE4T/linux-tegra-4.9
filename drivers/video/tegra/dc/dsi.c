@@ -1933,6 +1933,10 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 
 	if (tegra_dsi_host_busy(dsi)) {
 		tegra_dsi_soft_reset(dsi);
+
+		/* WAR to stop host write in middle */
+		tegra_dsi_writel(dsi, TEGRA_DSI_DISABLE, DSI_TRIGGER);
+
 		if (tegra_dsi_host_busy(dsi)) {
 			err = -EBUSY;
 			dev_err(&dc->ndev->dev, "DSI host busy\n");

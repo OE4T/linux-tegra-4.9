@@ -43,7 +43,9 @@
 #define NVMODMUTEX_VI		(8)
 #define NVMODMUTEX_DSI		(9)
 
-#define NVHOST_NUMCHANNELS	(NV_HOST1X_CHANNELS - 1)
+#define T20_NVHOST_NUMCHANNELS	(NV_HOST1X_CHANNELS - 1)
+
+static int t20_num_alloc_channels = 0;
 
 struct nvhost_device t20_devices[] = {
 {
@@ -189,8 +191,6 @@ static int t20_channel_init(struct nvhost_channel *ch,
 int nvhost_init_t20_channel_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
-	host->nb_channels =  NVHOST_NUMCHANNELS;
-
 	op->channel.init = t20_channel_init;
 	op->channel.submit = host1x_channel_submit;
 	op->channel.read3dreg = host1x_channel_read_3d_reg;
@@ -198,8 +198,18 @@ int nvhost_init_t20_channel_support(struct nvhost_master *host,
 	return 0;
 }
 
-struct nvhost_device *t20_get_nvhost_device(struct nvhost_master *host,
-	char *name)
+static void t20_free_nvhost_channel(struct nvhost_channel *ch)
+{
+	nvhost_free_channel_internal(ch, &t20_num_alloc_channels);
+}
+
+static struct nvhost_channel *t20_alloc_nvhost_channel(int chindex)
+{
+	return nvhost_alloc_channel_internal(chindex,
+		T20_NVHOST_NUMCHANNELS, &t20_num_alloc_channels);
+}
+
+struct nvhost_device *t20_get_nvhost_device(char *name)
 {
 	int i;
 
@@ -232,6 +242,10 @@ int nvhost_init_t20_support(struct nvhost_master *host,
 	err = nvhost_init_t20_intr_support(op);
 	if (err)
 		return err;
+
 	op->nvhost_dev.get_nvhost_device = t20_get_nvhost_device;
+	op->nvhost_dev.alloc_nvhost_channel = t20_alloc_nvhost_channel;
+	op->nvhost_dev.free_nvhost_channel = t20_free_nvhost_channel;
+
 	return 0;
 }

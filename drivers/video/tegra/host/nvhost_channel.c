@@ -125,3 +125,29 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 
 	return ret;
 }
+
+struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
+	int max_channels, int *current_channel_count)
+{
+	struct nvhost_channel *ch = NULL;
+
+	if ( (chindex > max_channels) ||
+	     ( (*current_channel_count + 1) > max_channels) )
+		return NULL;
+	else {
+		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
+		if (ch == NULL)
+			return NULL;
+		else {
+			(*current_channel_count)++;
+			return ch;
+		}
+	}
+}
+
+void nvhost_free_channel_internal(struct nvhost_channel *ch,
+	int *current_channel_count)
+{
+	kfree(ch);
+	(*current_channel_count)--;
+}

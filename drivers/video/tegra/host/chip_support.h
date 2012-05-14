@@ -138,8 +138,9 @@ struct nvhost_chip_support {
 	} intr;
 
 	struct {
-		struct nvhost_device *(*get_nvhost_device)(struct nvhost_master *host,
-			char *name);
+		struct nvhost_device *(*get_nvhost_device)(char *name);
+		struct nvhost_channel *(*alloc_nvhost_channel)(int chid);
+		void (*free_nvhost_channel)(struct nvhost_channel *ch);
 	} nvhost_dev;
 };
 

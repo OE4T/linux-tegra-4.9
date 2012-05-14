@@ -70,10 +70,14 @@ int nvhost_channel_suspend(struct nvhost_channel *ch);
 int nvhost_channel_drain_read_fifo(void __iomem *chan_regs,
 			u32 *ptr, unsigned int count, unsigned int *pending);
 
-int nvhost_channel_read_3d_reg(
-	struct nvhost_channel *channel,
+int nvhost_channel_read_3d_reg(struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
-	u32 offset,
-	u32 *value);
+	u32 offset, u32 *value);
+
+struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
+	int max_channels, int *current_channel_count);
+
+void nvhost_free_channel_internal(struct nvhost_channel *ch,
+	int *current_channel_count);
 
 #endif

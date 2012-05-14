@@ -533,7 +533,11 @@ int nvhost_client_device_init(struct nvhost_device *dev)
 {
 	int err;
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
-	struct nvhost_channel *ch = &nvhost_master->channels[dev->index];
+	struct nvhost_channel *ch;
+
+	ch = nvhost_alloc_channel(dev->index);
+	if (ch == NULL)
+		return -ENODEV;
 
 	/* store the pointer to this device for channel */
 	ch->dev = dev;
@@ -556,6 +560,7 @@ int nvhost_client_device_init(struct nvhost_device *dev)
 
 fail:
 	/* Add clean-up */
+	nvhost_free_channel(ch);
 	return err;
 }
 

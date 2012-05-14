@@ -48,6 +48,10 @@
 
 #define NVHOST_CHANNEL_BASE	0
 
+#define T30_NVHOST_NUMCHANNELS	(NV_HOST1X_CHANNELS - 1)
+
+static int t30_num_alloc_channels = 0;
+
 struct nvhost_device t30_devices[] = {
 {
 	/* channel 0 */
@@ -210,6 +214,7 @@ int nvhost_init_t30_channel_support(struct nvhost_master *host,
 
 	return result;
 }
+
 int nvhost_init_t30_debug_support(struct nvhost_chip_support *op)
 {
 	nvhost_init_t20_debug_support(op);
@@ -218,8 +223,18 @@ int nvhost_init_t30_debug_support(struct nvhost_chip_support *op)
 	return 0;
 }
 
-struct nvhost_device *t30_get_nvhost_device(struct nvhost_master *host,
-	char *name)
+static void t30_free_nvhost_channel(struct nvhost_channel *ch)
+{
+	nvhost_free_channel_internal(ch, &t30_num_alloc_channels);
+}
+
+static struct nvhost_channel *t30_alloc_nvhost_channel(int chindex)
+{
+	return nvhost_alloc_channel_internal(chindex,
+		T30_NVHOST_NUMCHANNELS, &t30_num_alloc_channels);
+}
+
+struct nvhost_device *t30_get_nvhost_device(char *name)
 {
 	int i;
 
@@ -252,6 +267,10 @@ int nvhost_init_t30_support(struct nvhost_master *host,
 	err = nvhost_init_t20_intr_support(op);
 	if (err)
 		return err;
+
 	op->nvhost_dev.get_nvhost_device = t30_get_nvhost_device;
+	op->nvhost_dev.alloc_nvhost_channel = t30_alloc_nvhost_channel;
+	op->nvhost_dev.free_nvhost_channel = t30_free_nvhost_channel;
+
 	return 0;
 }

@@ -354,14 +354,23 @@ fail:
 struct nvhost_device *nvhost_get_device(char *name)
 {
 	BUG_ON(!host_device_op().get_nvhost_device);
-	return host_device_op().get_nvhost_device(nvhost, name);
+	return host_device_op().get_nvhost_device(name);
+}
+
+struct nvhost_channel *nvhost_alloc_channel(int index)
+{
+	BUG_ON(!host_device_op().alloc_nvhost_channel);
+	return host_device_op().alloc_nvhost_channel(index);
+}
+
+void nvhost_free_channel(struct nvhost_channel *ch)
+{
+	BUG_ON(!host_device_op().free_nvhost_channel);
+	host_device_op().free_nvhost_channel(ch);
 }
 
 static void nvhost_free_resources(struct nvhost_master *host)
 {
-	kfree(host->channels);
-	host->channels = 0;
-
 	kfree(host->intr.syncpt);
 	host->intr.syncpt = 0;
 }
@@ -374,14 +383,10 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 	if (err)
 		return err;
 
-	/* allocate items sized in chip specific support init */
-	host->channels = kzalloc(sizeof(struct nvhost_channel) *
-				 host->nb_channels, GFP_KERNEL);
-
 	host->intr.syncpt = kzalloc(sizeof(struct nvhost_intr_syncpt) *
 				    host->syncpt.nb_pts, GFP_KERNEL);
 
-	if (!(host->channels && host->intr.syncpt)) {
+	if (!host->intr.syncpt) {
 		/* frees happen in the support removal phase */
 		return -ENOMEM;
 	}

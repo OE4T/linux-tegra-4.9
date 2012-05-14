@@ -43,8 +43,6 @@ struct nvhost_master {
 	struct nvmap_client *nvmap;
 	struct nvhost_intr intr;
 	struct nvhost_device *dev;
-	struct nvhost_channel *channels;
-	u32 nb_channels;
 	atomic_t clientid;
 };
 
@@ -54,6 +52,8 @@ void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_debug_dump(struct nvhost_master *master);
 
 struct nvhost_device *nvhost_get_device(char *name);
+struct nvhost_channel *nvhost_alloc_channel(int index);
+void nvhost_free_channel(struct nvhost_channel *ch);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
 

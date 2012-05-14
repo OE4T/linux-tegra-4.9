@@ -30,6 +30,7 @@
 #include "dev.h"
 #include "gr3d.h"
 #include "bus_client.h"
+#include "nvhost_channel.h"
 
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1	-1

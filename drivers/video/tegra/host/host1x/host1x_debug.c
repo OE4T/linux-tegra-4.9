@@ -25,10 +25,10 @@
 
 #include "dev.h"
 #include "debug.h"
-#include "nvhost_cdma.h"
-#include "../../nvmap/nvmap.h"
-
 #include "host1x_hardware.h"
+#include "nvhost_cdma.h"
+#include "nvhost_channel.h"
+#include "../../nvmap/nvmap.h"
 #include "host1x_cdma.h"
 
 #define NVHOST_DEBUG_MAX_PAGE_OFFSET 102400

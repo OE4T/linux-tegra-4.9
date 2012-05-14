@@ -24,6 +24,8 @@
 
 #include "dev.h"
 #include "debug.h"
+#include "nvhost_acm.h"
+#include "nvhost_channel.h"
 
 pid_t nvhost_debug_null_kickoff_pid;
 unsigned int nvhost_debug_trace_cmdbuf;

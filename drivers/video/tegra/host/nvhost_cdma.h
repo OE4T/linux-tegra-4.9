@@ -28,8 +28,6 @@
 #include <mach/nvmap.h>
 #include <linux/list.h>
 
-#include "nvhost_acm.h"
-
 struct nvhost_syncpt;
 struct nvhost_userctx_timeout;
 struct nvhost_job;

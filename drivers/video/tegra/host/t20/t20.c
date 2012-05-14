@@ -19,17 +19,19 @@
  */
 
 #include <linux/slab.h>
+#include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
 #include "dev.h"
 #include "t20.h"
-#include "host1x/host1x_channel.h"
 #include "host1x/host1x_syncpt.h"
 #include "host1x/host1x_hardware.h"
-#include "host1x/host1x_cdma.h"
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t20.h"
 #include "mpe/mpe.h"
 #include "nvhost_hwctx.h"
+#include "nvhost_channel.h"
+#include "host1x/host1x_channel.h"
+#include "host1x/host1x_cdma.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)

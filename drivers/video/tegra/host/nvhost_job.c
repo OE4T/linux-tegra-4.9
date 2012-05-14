@@ -25,6 +25,7 @@
 #include <mach/nvmap.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
+#include "nvhost_hwctx.h"
 #include "dev.h"
 
 /* Magic to use to fill freed handle slots */

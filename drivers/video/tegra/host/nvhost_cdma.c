@@ -19,6 +19,9 @@
  */
 
 #include "nvhost_cdma.h"
+#include "nvhost_channel.h"
+#include "nvhost_job.h"
+#include "nvhost_hwctx.h"
 #include "dev.h"
 #include <asm/cacheflush.h>
 

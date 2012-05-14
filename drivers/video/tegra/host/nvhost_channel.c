@@ -20,6 +20,7 @@
 
 #include "nvhost_channel.h"
 #include "dev.h"
+#include "nvhost_acm.h"
 #include "nvhost_job.h"
 #include <trace/events/nvhost.h>
 #include <linux/nvhost_ioctl.h>

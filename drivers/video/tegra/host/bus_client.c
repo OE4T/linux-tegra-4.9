@@ -45,6 +45,11 @@
 #include "debug.h"
 #include "bus_client.h"
 #include "dev.h"
+#include "nvhost_acm.h"
+
+#include "nvhost_channel.h"
+#include "nvhost_job.h"
+#include "nvhost_hwctx.h"
 
 void nvhost_read_module_regs(struct nvhost_device *ndev,
 			u32 offset, int count, u32 *values)

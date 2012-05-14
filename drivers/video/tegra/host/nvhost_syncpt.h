@@ -27,9 +27,6 @@
 #include <mach/nvmap.h>
 #include <linux/atomic.h>
 
-struct nvhost_syncpt;
-struct nvhost_waitchk;
-
 /* host managed and invalid syncpt id */
 #define NVSYNCPT_GRAPHICS_HOST		     (0)
 #define NVSYNCPT_INVALID		     (-1)
@@ -151,6 +148,7 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
  * @param: wait - start of filled in array of waitchk structs
  * @param: waitend - end ptr (one beyond last valid waitchk)
  */
+struct nvhost_waitchk;
 int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
 			struct nvmap_client *nvmap,
 			u32 mask,

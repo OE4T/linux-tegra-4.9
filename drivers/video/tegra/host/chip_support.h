@@ -22,20 +22,20 @@
 
 #include <linux/types.h>
 struct output;
+
+struct nvhost_master;
+struct nvhost_intr;
+struct nvhost_syncpt;
 struct nvhost_waitchk;
 struct nvhost_userctx_timeout;
-struct nvhost_master;
 struct nvhost_channel;
 struct nvmap_handle;
 struct nvmap_client;
 struct nvhost_hwctx;
 struct nvhost_cdma;
-struct nvhost_intr;
-struct push_buffer;
-struct nvhost_syncpt;
-struct nvhost_master;
-struct dentry;
 struct nvhost_job;
+struct push_buffer;
+struct dentry;
 
 struct nvhost_chip_support {
 	struct {

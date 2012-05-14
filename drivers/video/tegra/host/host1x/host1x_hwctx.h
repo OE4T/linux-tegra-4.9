@@ -24,6 +24,7 @@
 #define __NVHOST_HOST1X_HWCTX_H
 
 #include <linux/kref.h>
+#include "nvhost_hwctx.h"
 
 struct nvhost_hwctx_handler;
 struct nvhost_channel;

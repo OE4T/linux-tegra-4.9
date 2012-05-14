@@ -37,16 +37,18 @@
 
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
-#include <mach/nvmap.h>
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
 #include <mach/iomap.h>
 
 #include "debug.h"
-#include "nvhost_job.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
+#include <mach/nvmap.h>
+#include "nvhost_channel.h"
+#include "nvhost_job.h"
 
 #define DRIVER_NAME		"host1x"
 
@@ -80,7 +82,8 @@ static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 
 static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 {
-	struct nvhost_master *host = container_of(inode->i_cdev, struct nvhost_master, cdev);
+	struct nvhost_master *host =
+		container_of(inode->i_cdev, struct nvhost_master, cdev);
 	struct nvhost_ctrl_userctx *priv;
 	u32 *mod_locks;
 

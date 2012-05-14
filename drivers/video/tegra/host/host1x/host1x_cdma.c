@@ -19,7 +19,9 @@
  */
 
 #include <linux/slab.h>
+#include "nvhost_acm.h"
 #include "nvhost_cdma.h"
+#include "nvhost_channel.h"
 #include "dev.h"
 
 #include "host1x_hardware.h"

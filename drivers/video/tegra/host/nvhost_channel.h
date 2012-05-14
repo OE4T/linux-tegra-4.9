@@ -21,13 +21,9 @@
 #ifndef __NVHOST_CHANNEL_H
 #define __NVHOST_CHANNEL_H
 
-#include "nvhost_cdma.h"
-#include "nvhost_acm.h"
-#include "nvhost_hwctx.h"
-#include "nvhost_job.h"
-
 #include <linux/cdev.h>
 #include <linux/io.h>
+#include "nvhost_cdma.h"
 
 #define NVHOST_MAX_WAIT_CHECKS 256
 #define NVHOST_MAX_GATHERS 512
@@ -37,6 +33,8 @@
 struct nvhost_master;
 struct nvhost_waitchk;
 struct nvhost_device;
+struct nvhost_channel;
+struct nvhost_hwctx;
 
 struct nvhost_channel_gather {
 	u32 words;

@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include "nvhost_syncpt.h"
+#include "nvhost_acm.h"
 #include "dev.h"
 
 #define MAX_STUCK_CHECK_COUNT 15

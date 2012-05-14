@@ -20,6 +20,7 @@
 
 #include <linux/nvhost_ioctl.h>
 #include <linux/io.h>
+#include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
 #include "nvhost_acm.h"
 #include "dev.h"
@@ -124,6 +125,8 @@ static int t20_syncpt_wait_check(struct nvhost_syncpt *sp,
 		u32 override;
 
 		BUG_ON(wait->syncpt_id >= NV_HOST1X_SYNCPT_NB_PTS);
+		trace_nvhost_syncpt_wait_check(wait->mem, wait->offset,
+				wait->syncpt_id, wait->thresh);
 		if (nvhost_syncpt_is_expired(sp,
 					wait->syncpt_id, wait->thresh)) {
 			/*

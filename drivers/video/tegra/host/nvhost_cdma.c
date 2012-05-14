@@ -213,7 +213,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 {
 	u32 get_restart;
 	u32 syncpt_incrs;
-	bool exec_ctxsave;
 	struct nvhost_job *job = NULL;
 	u32 syncpt_val;
 
@@ -287,41 +286,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 				job->num_slots);
 
 		syncpt_val += syncpt_incrs;
-	}
-
-	dev_dbg(dev,
-		"%s: GPU incr blocked interleaved ctx buffers\n",
-		__func__);
-
-	exec_ctxsave = false;
-
-	/* setup GPU increments */
-	list_for_each_entry_from(job, &cdma->sync_queue, list) {
-		/* same context, increment in the pushbuffer */
-		if (job->clientid == cdma->timeout.clientid) {
-			/* won't need a timeout when replayed */
-			job->timeout = 0;
-
-			/* update buffer's syncpts in the pushbuffer */
-			cdma_op().timeout_pb_incr(cdma,
-					job->first_get,
-					job->syncpt_incrs,
-					job->num_slots,
-					exec_ctxsave);
-
-			exec_ctxsave = false;
-		} else {
-			dev_dbg(dev,
-				"%s: switch to a different userctx\n",
-				__func__);
-			/*
-			 * If previous context was the timed out context
-			 * then clear its CTXSAVE in this slot.
-			 */
-			exec_ctxsave = true;
-		}
-
-		nvhost_job_dump(dev, job);
 	}
 
 	dev_dbg(dev,

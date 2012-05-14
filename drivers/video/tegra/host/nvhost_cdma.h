@@ -95,7 +95,6 @@ struct nvhost_cdma {
 	unsigned int first_get;		/* DMAGET value, where submit begins */
 	unsigned int last_put;		/* last value written to DMAPUT */
 	struct push_buffer push_buffer;	/* channel's push buffer */
-	struct syncpt_buffer syncpt_buffer; /* syncpt incr buffer */
 	struct list_head sync_queue;	/* job queue */
 	struct buffer_timeout timeout;	/* channel's timeout state/wq */
 	bool running;

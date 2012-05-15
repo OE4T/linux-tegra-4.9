@@ -2796,6 +2796,9 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	unsigned i;
 
+	if (dc->out && dc->out->prepoweroff)
+		dc->out->prepoweroff();
+
 	if (dc->out_ops && dc->out_ops->disable)
 		dc->out_ops->disable(dc);
 

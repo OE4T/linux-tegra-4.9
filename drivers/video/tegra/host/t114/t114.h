@@ -40,7 +40,9 @@ enum {
 #define NVWAITBASE_MSENC  (4)
 #define NVWAITBASE_TSEC   (5)
 
-int nvhost_init_t114_channel_support(struct nvhost_master *);
-int nvhost_init_t114_support(struct nvhost_master *host);
+int nvhost_init_t114_channel_support(struct nvhost_master *,
+		struct nvhost_chip_support *);
+int nvhost_init_t114_support(struct nvhost_master *host,
+		struct nvhost_chip_support *);
 
 #endif

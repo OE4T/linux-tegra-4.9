@@ -254,6 +254,16 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 		dc->feature = &t30_feature_table_a;
 	else
 		dc->feature = &t30_feature_table_b;
+#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
+	if (!dc->ndev->id)
+		dc->feature = &t30_feature_table_a;
+	else
+		dc->feature = &t30_feature_table_b;
+#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	if (!dc->ndev->id)
+		dc->feature = &t30_feature_table_a;
+	else
+		dc->feature = &t30_feature_table_b;
 #endif
 	/* Count the number of windows using gen1 blender. */
 	dc->gen1_blend_num = 0;

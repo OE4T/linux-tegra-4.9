@@ -62,11 +62,14 @@
 				(1 << TEGRA_WIN_FMT_B6x2G6x2R6x2A8) | \
 				(1 << TEGRA_WIN_FMT_R6x2G6x2B6x2A8))
 
-#define TEGRA_WIN_FMT_WIN_B	(TEGRA_WIN_FMT_BASE & \
-				~(1 << TEGRA_WIN_FMT_B8G8R8A8) & \
-				~(1 << TEGRA_WIN_FMT_R8G8B8A8))
+#define TEGRA_WIN_FMT_WIN_B	TEGRA_WIN_FMT_BASE
 
 #define TEGRA_WIN_FMT_WIN_C	TEGRA_WIN_FMT_BASE
+
+/* preferred formats do not include 32-bpp formats */
+#define TEGRA_WIN_PREF_FMT_WIN_B	(TEGRA_WIN_FMT_BASE & \
+				~(1 << TEGRA_WIN_FMT_B8G8R8A8) & \
+				~(1 << TEGRA_WIN_FMT_R8G8B8A8))
 
 #define UNDEFINED	-1
 #define MAX_WIDTH	0
@@ -93,6 +96,7 @@ enum tegra_dc_feature_option {
 	TEGRA_DC_FEATURE_FILTER_TYPE,
 	TEGRA_DC_FEATURE_LAYOUT_TYPE,
 	TEGRA_DC_FEATURE_INVERT_TYPE,
+	TEGRA_DC_FEATURE_PREFERRED_FORMATS,
 };
 
 struct tegra_dc_feature_entry {

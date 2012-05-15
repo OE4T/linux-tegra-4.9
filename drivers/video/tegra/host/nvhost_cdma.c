@@ -96,7 +96,13 @@ unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
 		trace_nvhost_wait_cdma(cdma_to_channel(cdma)->dev->name,
 				event);
 
-		BUG_ON(cdma->event != CDMA_EVENT_NONE);
+		/* If somebody has managed to already start waiting, yield */
+		if (cdma->event != CDMA_EVENT_NONE) {
+			mutex_unlock(&cdma->lock);
+			schedule();
+			mutex_lock(&cdma->lock);
+			continue;
+		}
 		cdma->event = event;
 
 		mutex_unlock(&cdma->lock);

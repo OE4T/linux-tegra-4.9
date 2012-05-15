@@ -449,9 +449,8 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 {
 	u32 slots_free = cdma->slots_free;
 	struct push_buffer *pb = &cdma->push_buffer;
-
-	BUG_ON(!cdma_pb_op().push_to);
-	BUG_ON(!cdma_op().kick);
+	BUG_ON(!cdma_pb_op(cdma).push_to);
+	BUG_ON(!cdma_op(cdma).kick);
 
 	if (handle)
 		trace_write_gather(cdma, handle, offset, op1 & 0xffff);

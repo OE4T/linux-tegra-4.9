@@ -22,7 +22,7 @@
 #include <linux/kref.h>
 #include <linux/err.h>
 #include <linux/vmalloc.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"

@@ -19,7 +19,7 @@
  */
 
 #include <linux/module.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include <linux/slab.h>
 
 #include "t20/t20.h"

@@ -37,7 +37,7 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
 #include <mach/iomap.h>

@@ -25,7 +25,7 @@
 #include <linux/semaphore.h>
 
 #include <linux/nvhost.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include <linux/list.h>
 
 struct nvhost_syncpt;

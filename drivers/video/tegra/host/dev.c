@@ -46,7 +46,7 @@
 #include "t30/t30.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 

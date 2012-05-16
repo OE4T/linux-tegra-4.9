@@ -29,7 +29,7 @@
 #include <linux/stat.h>
 #include <linux/err.h>
 
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include "nvmap.h"
 #include "nvmap_heap.h"
 #include "nvmap_common.h"

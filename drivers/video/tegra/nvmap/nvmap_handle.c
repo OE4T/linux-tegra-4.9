@@ -36,7 +36,7 @@
 #include <asm/pgtable.h>
 
 #include <mach/iovmm.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 
 #include <linux/vmstat.h>
 #include <linux/swap.h>

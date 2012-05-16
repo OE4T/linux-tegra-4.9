@@ -152,8 +152,6 @@ struct tegra_dc_dsi_data {
 
 	u32 dsi_control_val;
 
-	u32 correction_pix;
-
 	bool ulpm;
 	bool enabled;
 };
@@ -581,25 +579,44 @@ static u32 tegra_dsi_get_shift_clk_div(struct tegra_dc_dsi_data *dsi)
 }
 
 #ifdef CONFIG_TEGRA_DSI_GANGED_MODE
-static void tegra_dsi_pix_correction(u32 *h_width_pixels,
+static void tegra_dsi_pix_correction(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
-	u32 orig_h_width_pixels = *h_width_pixels;
-	u32 temp = *h_width_pixels % dsi->info.n_data_lanes;
+	u32 h_width_pixels;
+	u32 h_act_corr = 0;
+	u32 hfp_corr = 0;
+	u32 temp = 0;
 
-	if (temp)
-		*h_width_pixels += (dsi->info.n_data_lanes - temp);
+	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
+			dc->mode.h_sync_width + dc->mode.h_active;
+
+	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD) {
+		temp = dc->mode.h_active % dsi->info.n_data_lanes;
+		if (temp) {
+			h_act_corr = dsi->info.n_data_lanes - temp;
+			h_width_pixels += h_act_corr;
+		}
+	}
+
+	temp = h_width_pixels % dsi->info.n_data_lanes;
+	if (temp) {
+		hfp_corr = dsi->info.n_data_lanes - temp;
+		h_width_pixels += hfp_corr;
+	}
 
 	while (1) {
-		temp = (*h_width_pixels * dsi->pixel_scaler_mul /
+		temp = (h_width_pixels * dsi->pixel_scaler_mul /
 			dsi->pixel_scaler_div) % dsi->info.n_data_lanes;
-		if (temp)
-			*h_width_pixels += dsi->info.n_data_lanes;
+		if (temp) {
+			hfp_corr += dsi->info.n_data_lanes;
+			h_width_pixels += dsi->info.n_data_lanes;
+		}
 		else
 			break;
 	}
 
-	dsi->correction_pix = *h_width_pixels - orig_h_width_pixels;
+	dc->mode.h_front_porch += hfp_corr;
+	dc->mode.h_active += h_act_corr;
 }
 #endif
 
@@ -648,15 +665,16 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 			DSI_CONTROL_VID_SOURCE(dc->ndev->id) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
+#ifdef CONFIG_TEGRA_DSI_GANGED_MODE
+	tegra_dsi_pix_correction(dc, dsi);
+#endif
+
 	/* Below we are going to calculate dsi and dc clock rate.
 	 * Calcuate the horizontal and vertical width.
 	 */
 	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
 			dc->mode.h_sync_width + dc->mode.h_active;
 
-#ifdef CONFIG_TEGRA_DSI_GANGED_MODE
-	tegra_dsi_pix_correction(&h_width_pixels, dsi);
-#endif
 	v_width_lines = dc->mode.v_back_porch + dc->mode.v_front_porch +
 			dc->mode.v_sync_width + dc->mode.v_active;
 
@@ -1259,12 +1277,13 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 			FIFO_RD_BYTE_CLK_DELAY;
 
 	h_width_pixels = dc->mode.h_sync_width + dc->mode.h_back_porch +
-				dc->mode.h_active + dc->mode.h_front_porch +
-				dsi->correction_pix;
+				dc->mode.h_active + dc->mode.h_front_porch;
+
 	h_width_byte_clk = DIV_ROUND_UP(h_width_pixels * dsi->pixel_scaler_mul,
 			dsi->pixel_scaler_div * dsi->info.n_data_lanes);
 
-	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT) {
+	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT ||
+		dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD) {
 		n_data_lanes_this_cont = dsi->info.n_data_lanes / 2;
 		n_data_lanes_ganged = dsi->info.n_data_lanes;
 	}
@@ -1338,10 +1357,10 @@ static void tegra_dsi_setup_ganged_mode_pkt_length(struct tegra_dc *dc,
 #define HEADER_OVERHEAD 16
 
 	pix_per_line_orig = dc->mode.h_sync_width + dc->mode.h_back_porch +
-			dc->mode.h_active + dc->mode.h_front_porch +
-			dsi->correction_pix;
+			dc->mode.h_active + dc->mode.h_front_porch;
 
-	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT) {
+	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT ||
+		dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD) {
 		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
 		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
 		if (dsi->controller_index) {
@@ -2051,11 +2070,20 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 		return;
 	}
 
-	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT) {
+	if (dsi->info.ganged_type ==
+			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT) {
 		low_width = DIV_ROUND_UP(h_active, 2);
 		high_width = h_active - low_width;
 		if (dsi->controller_index)
 			start = h_active / 2;
+		else
+			start = 0;
+	} else if (dsi->info.ganged_type ==
+			TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD) {
+		low_width = 0x1;
+		high_width = 0x1;
+		if (dsi->controller_index)
+			start = 1;
 		else
 			start = 0;
 	}

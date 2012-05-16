@@ -32,6 +32,7 @@
 #include <linux/resource.h>
 
 #include <mach/iomap.h>
+#include <mach/hardware.h>
 
 #include "bus_client.h"
 
@@ -534,9 +535,8 @@ static void ctxmpe_save_service(struct nvhost_hwctx *nctx)
 			h->syncpt);
 }
 
-struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(
-		u32 syncpt, u32 waitbase,
-		struct nvhost_channel *ch)
+struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch)
 {
 	struct nvmap_client *nvmap;
 	u32 *save_ptr;
@@ -586,9 +586,51 @@ int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 	return host1x_save_context(dev, NVSYNCPT_MPE);
 }
 
-static int mpe_probe(struct nvhost_device *dev)
+enum mpe_ip_ver {
+	mpe_01,
+	mpe_02,
+};
+
+struct mpe_desc {
+	int (*prepare_poweroff)(struct nvhost_device *dev);
+	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
+			u32 waitbase, struct nvhost_channel *ch);
+};
+
+static const struct mpe_desc mpe[] = {
+	[mpe_01] = {
+		.prepare_poweroff = nvhost_mpe_prepare_power_off,
+		.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
+	},
+	[mpe_02] = {
+		.prepare_poweroff = nvhost_mpe_prepare_power_off,
+		.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
+	},
+};
+
+static struct nvhost_device_id mpe_id[] = {
+	{ "mpe01", mpe_01 },
+	{ "mpe02", mpe_02 },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(nvhost, mpe_id);
+
+static int mpe_probe(struct nvhost_device *dev,
+	struct nvhost_device_id *id_table)
 {
 	int err = 0;
+	int index = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	index = id_table->driver_data;
+
+	drv->prepare_poweroff		= mpe[index].prepare_poweroff;
+	drv->alloc_hwctx_handler	= mpe[index].alloc_hwctx_handler;
+
+	/* reset device name so that consistent device name can be
+	 * found in clock tree */
+	dev->name = "mpe";
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -633,7 +675,8 @@ static struct nvhost_driver mpe_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "mpe",
-	}
+	},
+	.id_table = mpe_id,
 };
 
 static int __init mpe_init(void)

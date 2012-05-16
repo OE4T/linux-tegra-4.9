@@ -120,9 +120,12 @@ static void to_state_clockgated_locked(struct nvhost_device *dev)
 
 static void to_state_running_locked(struct nvhost_device *dev)
 {
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 	int prev_state = dev->powerstate;
+
 	if (dev->powerstate == NVHOST_POWER_STATE_POWERGATED)
 		to_state_clockgated_locked(dev);
+
 	if (dev->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
 		int i;
 
@@ -135,8 +138,8 @@ static void to_state_running_locked(struct nvhost_device *dev)
 		}
 
 		if (prev_state == NVHOST_POWER_STATE_POWERGATED
-				&& dev->finalize_poweron)
-			dev->finalize_poweron(dev);
+				&& drv->finalize_poweron)
+			drv->finalize_poweron(dev);
 	}
 	dev->powerstate = NVHOST_POWER_STATE_RUNNING;
 }
@@ -148,12 +151,13 @@ static void to_state_running_locked(struct nvhost_device *dev)
 static int to_state_powergated_locked(struct nvhost_device *dev)
 {
 	int err = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
-	if (dev->prepare_poweroff
+	if (drv->prepare_poweroff
 			&& dev->powerstate != NVHOST_POWER_STATE_POWERGATED) {
 		/* Clock needs to be on in prepare_poweroff */
 		to_state_running_locked(dev);
-		err = dev->prepare_poweroff(dev);
+		err = drv->prepare_poweroff(dev);
 		if (err)
 			return err;
 	}
@@ -185,8 +189,10 @@ static void schedule_clockgating_locked(struct nvhost_device *dev)
 
 void nvhost_module_busy(struct nvhost_device *dev)
 {
-	if (dev->busy)
-		dev->busy(dev);
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	if (drv->busy)
+		drv->busy(dev);
 
 	mutex_lock(&dev->lock);
 	cancel_delayed_work(&dev->powerstate_down);
@@ -226,6 +232,7 @@ static void powerstate_down_handler(struct work_struct *work)
 
 void nvhost_module_idle_mult(struct nvhost_device *dev, int refs)
 {
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 	bool kick = false;
 
 	mutex_lock(&dev->lock);
@@ -240,8 +247,8 @@ void nvhost_module_idle_mult(struct nvhost_device *dev, int refs)
 	if (kick) {
 		wake_up(&dev->idle_wq);
 
-		if (dev->idle)
-			dev->idle(dev);
+		if (drv->idle)
+			drv->idle(dev);
 	}
 }
 
@@ -403,6 +410,7 @@ static int is_module_idle(struct nvhost_device *dev)
 int nvhost_module_suspend(struct nvhost_device *dev)
 {
 	int ret;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
 	ret = wait_event_timeout(dev->idle_wq, is_module_idle(dev),
 			ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT);
@@ -417,8 +425,8 @@ int nvhost_module_suspend(struct nvhost_device *dev)
 	to_state_powergated_locked(dev);
 	mutex_unlock(&dev->lock);
 
-	if (dev->suspend)
-		dev->suspend(dev);
+	if (drv->suspend_ndev)
+		drv->suspend_ndev(dev);
 
 	return 0;
 }
@@ -426,9 +434,10 @@ int nvhost_module_suspend(struct nvhost_device *dev)
 void nvhost_module_deinit(struct nvhost_device *dev)
 {
 	int i;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
-	if (dev->deinit)
-		dev->deinit(dev);
+	if (drv->deinit)
+		drv->deinit(dev);
 
 	nvhost_module_suspend(dev);
 	for (i = 0; i < dev->num_clks; i++)

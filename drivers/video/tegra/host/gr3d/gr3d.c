@@ -29,8 +29,13 @@
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "gr3d.h"
+#include "gr3d_t20.h"
+#include "gr3d_t30.h"
+#include "scale3d.h"
 #include "bus_client.h"
 #include "nvhost_channel.h"
+
+#include <mach/hardware.h>
 
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1	-1
@@ -70,7 +75,6 @@ void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *p, u32 *ptr)
 }
 
 /*** ctx3d ***/
-
 struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 		struct nvhost_channel *ch, bool map_restore)
 {
@@ -152,8 +156,75 @@ int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev)
 	return host1x_save_context(dev, NVSYNCPT_3D);
 }
 
-static int gr3d_probe(struct nvhost_device *dev)
+enum gr3d_ip_ver {
+	gr3d_01,
+	gr3d_02,
+};
+
+struct gr3d_desc {
+	void (*finalize_poweron)(struct nvhost_device *dev);
+	void (*busy)(struct nvhost_device *);
+	void (*idle)(struct nvhost_device *);
+	void (*suspend_ndev)(struct nvhost_device *);
+	void (*init)(struct nvhost_device *dev);
+	void (*deinit)(struct nvhost_device *dev);
+	int (*prepare_poweroff)(struct nvhost_device *dev);
+	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
+			u32 waitbase, struct nvhost_channel *ch);
+};
+
+static const struct gr3d_desc gr3d[] = {
+	[gr3d_01] = {
+		.finalize_poweron = NULL,
+		.busy = NULL,
+		.idle = NULL,
+		.suspend_ndev = NULL,
+		.init = NULL,
+		.deinit = NULL,
+		.prepare_poweroff = nvhost_gr3d_prepare_power_off,
+		.alloc_hwctx_handler = nvhost_gr3d_t20_ctxhandler_init,
+	},
+	[gr3d_02] = {
+		.finalize_poweron = NULL,
+		.busy = nvhost_scale3d_notify_busy,
+		.idle = nvhost_scale3d_notify_idle,
+		.suspend_ndev = nvhost_scale3d_suspend,
+		.init = nvhost_scale3d_init,
+		.deinit = nvhost_scale3d_deinit,
+		.prepare_poweroff = nvhost_gr3d_prepare_power_off,
+		.alloc_hwctx_handler = nvhost_gr3d_t30_ctxhandler_init,
+	},
+};
+
+static struct nvhost_device_id gr3d_id[] = {
+	{ "gr3d01", gr3d_01 },
+	{ "gr3d02", gr3d_02 },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(nvhost, gr3d_id);
+
+static int gr3d_probe(struct nvhost_device *dev,
+	struct nvhost_device_id *id_table)
 {
+	int index = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	index = id_table->driver_data;
+
+	drv->finalize_poweron		= gr3d[index].finalize_poweron;
+	drv->busy			= gr3d[index].busy;
+	drv->idle			= gr3d[index].idle;
+	drv->suspend_ndev		= gr3d[index].suspend_ndev;
+	drv->init			= gr3d[index].init;
+	drv->deinit			= gr3d[index].deinit;
+	drv->prepare_poweroff		= gr3d[index].prepare_poweroff;
+	drv->alloc_hwctx_handler	= gr3d[index].alloc_hwctx_handler;
+
+	/* reset device name so that consistent device name can be
+	 * found in clock tree */
+	dev->name = "gr3d";
+
 	return nvhost_client_device_init(dev);
 }
 
@@ -186,7 +257,8 @@ static struct nvhost_driver gr3d_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr3d",
-	}
+	},
+	.id_table = gr3d_id,
 };
 
 static int __init gr3d_init(void)
@@ -198,8 +270,10 @@ static int __init gr3d_init(void)
 		return -ENXIO;
 
 	err = nvhost_device_register(gr3d_device);
-	if (err)
+	if (err) {
+		pr_err("Could not register 3D device\n");
 		return err;
+	}
 
 	return nvhost_driver_register(&gr3d_driver);
 }

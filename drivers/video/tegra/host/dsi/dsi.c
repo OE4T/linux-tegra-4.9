@@ -22,7 +22,8 @@
 #include "dev.h"
 #include "bus_client.h"
 
-static int dsi_probe(struct nvhost_device *dev)
+static int dsi_probe(struct nvhost_device *dev,
+	struct nvhost_device_id *id_table)
 {
 	return nvhost_client_device_init(dev);
 }

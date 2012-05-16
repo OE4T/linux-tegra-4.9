@@ -64,10 +64,12 @@ int nvhost_channel_submit(struct nvhost_job *job)
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 {
 	int err = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
+
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
-		if (ch->dev->init)
-			ch->dev->init(ch->dev);
+		if (drv->init)
+			drv->init(ch->dev);
 		err = nvhost_cdma_init(&ch->cdma);
 	} else if (ch->dev->exclusive) {
 		err = -EBUSY;

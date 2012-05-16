@@ -26,7 +26,8 @@
 #include "dev.h"
 #include "bus_client.h"
 
-static int vi_probe(struct nvhost_device *dev)
+static int vi_probe(struct nvhost_device *dev,
+	struct nvhost_device_id *id_table)
 {
 	int err = 0;
 

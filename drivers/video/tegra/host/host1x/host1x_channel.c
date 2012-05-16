@@ -203,6 +203,7 @@ int host1x_channel_submit(struct nvhost_job *job)
 	u32 syncval;
 	int err;
 	void *completed_waiter = NULL, *ctxsave_waiter = NULL;
+	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
 
 	/* Bail out on timed out contexts */
 	if (job->hwctx && job->hwctx->has_timedout)
@@ -210,8 +211,8 @@ int host1x_channel_submit(struct nvhost_job *job)
 
 	/* Turn on the client module and host1x */
 	nvhost_module_busy(ch->dev);
-	if (ch->dev->busy)
-		ch->dev->busy(ch->dev);
+	if (drv->busy)
+		drv->busy(ch->dev);
 
 	/* before error checks, return current max */
 	prev_max = job->syncpt_end =
@@ -549,6 +550,7 @@ int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
 	void *ref;
 	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
 	struct nvhost_job *job;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
 	ctx_waiter = nvhost_intr_alloc_waiter();
 	wakeup_waiter = nvhost_intr_alloc_waiter();
@@ -557,8 +559,8 @@ int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
 		goto done;
 	}
 
-	if (dev->busy)
-		dev->busy(dev);
+	if (drv->busy)
+		drv->busy(dev);
 
 	mutex_lock(&ch->submitlock);
 	hwctx_to_save = ch->cur_ctx;

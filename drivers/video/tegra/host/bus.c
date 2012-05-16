@@ -76,12 +76,42 @@ int nvhost_get_irq_byname(struct nvhost_device *dev, const char *name)
 }
 EXPORT_SYMBOL_GPL(nvhost_get_irq_byname);
 
+static struct nvhost_device_id *nvhost_bus_match_id(struct nvhost_device *dev,
+	struct nvhost_device_id *id_table)
+{
+	while (id_table->name[0]) {
+		if (strcmp(dev->name, id_table->name) == 0)
+			return id_table;
+		id_table++;
+	}
+	return NULL;
+}
+
+static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
+{
+	struct nvhost_device *dev = to_nvhost_device(_dev);
+	struct nvhost_driver *ndrv = to_nvhost_driver(drv);
+
+	/* check if driver support multiple devices through id_table */
+	if (ndrv->id_table)
+		return nvhost_bus_match_id(dev, ndrv->id_table) != NULL;
+	else /* driver does not support id_table */
+		return !strncmp(dev->name, drv->name, strlen(drv->name));
+}
+
 static int nvhost_drv_probe(struct device *_dev)
 {
 	struct nvhost_driver *drv = to_nvhost_driver(_dev->driver);
 	struct nvhost_device *dev = to_nvhost_device(_dev);
 
-	return drv->probe(dev);
+	if (drv && drv->probe) {
+		if (drv->id_table)
+			return drv->probe(dev, nvhost_bus_match_id(dev, drv->id_table));
+		else
+			return drv->probe(dev, NULL);
+	}
+	else
+		return -ENODEV;
 }
 
 static int nvhost_drv_remove(struct device *_dev)
@@ -197,13 +227,6 @@ void nvhost_device_unregister(struct nvhost_device *dev)
 	}
 }
 EXPORT_SYMBOL_GPL(nvhost_device_unregister);
-
-static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
-{
-	struct nvhost_device *dev = to_nvhost_device(_dev);
-
-	return !strncmp(dev->name, drv->name, strlen(drv->name));
-}
 
 #ifdef CONFIG_PM_SLEEP
 

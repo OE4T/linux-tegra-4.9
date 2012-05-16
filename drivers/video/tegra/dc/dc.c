@@ -2839,7 +2839,8 @@ static void tegra_dc_underflow_worker(struct work_struct *work)
 	mutex_unlock(&dc->lock);
 }
 
-static int tegra_dc_probe(struct nvhost_device *ndev)
+static int tegra_dc_probe(struct nvhost_device *ndev,
+	struct nvhost_device_id *id_table)
 {
 	struct tegra_dc *dc;
 	struct clk *clk;

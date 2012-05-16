@@ -28,7 +28,7 @@
 #include <video/tegra_dc_ext.h>
 
 #include <mach/dc.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include <mach/tegra_dc_ext.h>
 
 /* XXX ew */

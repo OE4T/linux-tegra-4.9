@@ -25,7 +25,7 @@
 #include <linux/poll.h>
 
 #include <mach/dc.h>
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 
 #include <video/tegra_dc_ext.h>
 

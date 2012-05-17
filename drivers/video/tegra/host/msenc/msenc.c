@@ -247,9 +247,10 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 	void *ucode_ptr;
 	int err;
 
-	err = request_firmware(&ucode_fw, fw_name, &dev->dev);
-	if (err) {
+	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
+	if (IS_ERR_OR_NULL(ucode_fw)) {
 		dev_err(&dev->dev, "failed to get msenc firmware\n");
+		err = -ENOENT;
 		return err;
 	}
 

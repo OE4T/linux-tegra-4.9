@@ -23,6 +23,7 @@
 
 #include <linux/types.h>
 struct nvhost_device;
+struct firmware;
 
 int nvhost_read_module_regs(struct nvhost_device *ndev,
 			u32 offset, int count, u32 *values);
@@ -35,6 +36,9 @@ int nvhost_client_user_init(struct nvhost_device *dev);
 int nvhost_client_device_init(struct nvhost_device *dev);
 
 int nvhost_client_device_suspend(struct nvhost_device *dev);
+
+const struct firmware *
+nvhost_client_request_firmware(struct nvhost_device *dev, const char *fw_name);
 
 int nvhost_client_device_get_resources(struct nvhost_device *dev);
 

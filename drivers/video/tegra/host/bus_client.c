@@ -28,6 +28,7 @@
 #include <linux/clk.h>
 #include <linux/hrtimer.h>
 #include <linux/export.h>
+#include <linux/firmware.h>
 
 #include <trace/events/nvhost.h>
 
@@ -658,4 +659,43 @@ fail:
 	dev_err(&dev->dev, "failed to get register memory\n");
 
 	return -ENXIO;
+}
+
+/* This is a simple wrapper around request_firmware that takes
+ * 'fw_name' and if available applies a SOC relative path prefix to it.
+ * The caller is responsible for calling release_firmware later.
+ */
+const struct firmware *
+nvhost_client_request_firmware(struct nvhost_device *dev, const char *fw_name)
+{
+	struct nvhost_chip_support *op = nvhost_get_chip_ops();
+	const struct firmware *fw;
+	char *fw_path = NULL;
+	int path_len, err;
+
+	if (!fw_name)
+		return NULL;
+
+	if (op->soc_name) {
+		path_len = strlen(fw_name) + strlen(op->soc_name);
+		path_len +=2; /* for the path separator and zero terminator*/
+
+		fw_path = kzalloc(sizeof(*fw_path) * path_len,
+				     GFP_KERNEL);
+		if (!fw_path)
+			return NULL;
+
+		sprintf(fw_path, "%s/%s", op->soc_name, fw_name);
+		fw_name = fw_path;
+	}
+
+	err = request_firmware(&fw, fw_name, &dev->dev);
+	kfree(fw_path);
+	if (err) {
+		dev_err(&dev->dev, "failed to get firmware\n");
+		return NULL;
+	}
+
+	/* note: caller must release_firmware */
+	return fw;
 }

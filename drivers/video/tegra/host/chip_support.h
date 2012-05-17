@@ -43,6 +43,7 @@ struct mem_mgr;
 struct nvhost_device;
 
 struct nvhost_channel_ops {
+	const char * soc_name;
 	int (*init)(struct nvhost_channel *,
 		    struct nvhost_master *,
 		    int chid);
@@ -164,6 +165,7 @@ struct nvhost_actmon_ops {
 };
 
 struct nvhost_chip_support {
+	const char * soc_name;
 	struct nvhost_channel_ops channel;
 	struct nvhost_cdma_ops cdma;
 	struct nvhost_pushbuffer_ops push_buffer;

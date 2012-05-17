@@ -27,7 +27,8 @@
 
 #define ENTRY_SIZE	4	/* Size of feature entry args */
 
-/* These macros are defined based on T20/T30 formats. */
+/* Define the supported formats. TEGRA_WIN_FMT_WIN_x macros are defined
+ * based on T20/T30 formats. */
 #define TEGRA_WIN_FMT_BASE_CNT	(TEGRA_WIN_FMT_YUV422RA + 1)
 #define TEGRA_WIN_FMT_BASE	((1 << TEGRA_WIN_FMT_P8) | \
 				(1 << TEGRA_WIN_FMT_B4G4R4A4) | \
@@ -36,8 +37,6 @@
 				(1 << TEGRA_WIN_FMT_AB5G5R5) | \
 				(1 << TEGRA_WIN_FMT_B8G8R8A8) | \
 				(1 << TEGRA_WIN_FMT_R8G8B8A8) | \
-				(1 << TEGRA_WIN_FMT_B6x2G6x2R6x2A8) | \
-				(1 << TEGRA_WIN_FMT_R6x2G6x2B6x2A8) | \
 				(1 << TEGRA_WIN_FMT_YCbCr422) | \
 				(1 << TEGRA_WIN_FMT_YUV422) | \
 				(1 << TEGRA_WIN_FMT_YCbCr420P) | \
@@ -45,9 +44,7 @@
 				(1 << TEGRA_WIN_FMT_YCbCr422P) | \
 				(1 << TEGRA_WIN_FMT_YUV422P) | \
 				(1 << TEGRA_WIN_FMT_YCbCr422R) | \
-				(1 << TEGRA_WIN_FMT_YUV422R) | \
-				(1 << TEGRA_WIN_FMT_YCbCr422RA) | \
-				(1 << TEGRA_WIN_FMT_YUV422RA))
+				(1 << TEGRA_WIN_FMT_YUV422R))
 
 #define TEGRA_WIN_FMT_WIN_A	((1 << TEGRA_WIN_FMT_P1) | \
 				(1 << TEGRA_WIN_FMT_P2) | \
@@ -62,16 +59,33 @@
 				(1 << TEGRA_WIN_FMT_B6x2G6x2R6x2A8) | \
 				(1 << TEGRA_WIN_FMT_R6x2G6x2B6x2A8))
 
-#define TEGRA_WIN_FMT_WIN_B	TEGRA_WIN_FMT_BASE
+#define TEGRA_WIN_FMT_WIN_B	(TEGRA_WIN_FMT_BASE | \
+				(1 << TEGRA_WIN_FMT_B6x2G6x2R6x2A8) | \
+				(1 << TEGRA_WIN_FMT_R6x2G6x2B6x2A8) | \
+				(1 << TEGRA_WIN_FMT_YCbCr422RA) | \
+				(1 << TEGRA_WIN_FMT_YUV422RA))
 
-#define TEGRA_WIN_FMT_WIN_C	TEGRA_WIN_FMT_BASE
+#define TEGRA_WIN_FMT_WIN_C	(TEGRA_WIN_FMT_BASE | \
+				(1 << TEGRA_WIN_FMT_B6x2G6x2R6x2A8) | \
+				(1 << TEGRA_WIN_FMT_R6x2G6x2B6x2A8) | \
+				(1 << TEGRA_WIN_FMT_YCbCr422RA) | \
+				(1 << TEGRA_WIN_FMT_YUV422RA))
 
 /* preferred formats do not include 32-bpp formats */
-#define TEGRA_WIN_PREF_FMT_WIN_B	(TEGRA_WIN_FMT_BASE & \
+#define TEGRA_WIN_PREF_FMT_WIN_B	(TEGRA_WIN_FMT_WIN_B & \
 				~(1 << TEGRA_WIN_FMT_B8G8R8A8) & \
 				~(1 << TEGRA_WIN_FMT_R8G8B8A8))
 
-#define UNDEFINED	-1
+
+
+/* For each entry, we define the offset to read specific feature. Define the
+ * offset for TEGRA_DC_FEATURE_MAXIMUM_SCALE */
+#define H_SCALE_UP	0
+#define V_SCALE_UP	1
+#define H_FILTER_DOWN	2
+#define V_FILTER_DOWN	3
+
+/* Define the offset for TEGRA_DC_FEATURE_MAXIMUM_SIZE */
 #define MAX_WIDTH	0
 #define MIN_WIDTH	1
 #define MAX_HEIGHT	2
@@ -79,14 +93,29 @@
 #define CHECK_SIZE(val, min, max)	( \
 		((val) < (min) || (val) > (max)) ? -EINVAL : 0)
 
-/* Available operations of feature table. */
-#define HAS_SCALE		1
-#define HAS_TILED		2
-#define HAS_V_FILTER		3
-#define HAS_H_FILTER		4
-#define HAS_GEN2_BLEND		5
-#define GET_WIN_FORMATS		6
-#define GET_WIN_SIZE		7
+/* Define the offset for TEGRA_DC_FEATURE_FILTER_TYPE */
+#define V_FILTER	0
+#define H_FILTER	1
+
+/* Define the offset for TEGRA_DC_FEATURE_INVERT_TYPE */
+#define H_INVERT	0
+#define V_INVERT	1
+#define SCAN_COLUMN	2
+
+/* Define the offset for TEGRA_DC_FEATURE_LAYOUT_TYPE. */
+#define PITCHED_LAYOUT	0
+#define TILED_LAYOUT	1
+
+/* Available operations on feature table. */
+enum {
+	HAS_SCALE,
+	HAS_TILED,
+	HAS_V_FILTER,
+	HAS_H_FILTER,
+	HAS_GEN2_BLEND,
+	GET_WIN_FORMATS,
+	GET_WIN_SIZE,
+};
 
 enum tegra_dc_feature_option {
 	TEGRA_DC_FEATURE_FORMATS,

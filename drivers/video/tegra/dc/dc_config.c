@@ -25,7 +25,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
-	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
@@ -34,7 +34,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
@@ -42,7 +42,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
-	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 };
 
@@ -52,7 +52,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
-	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
@@ -61,7 +61,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
@@ -69,7 +69,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
-	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 };
 
@@ -87,7 +87,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
-	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
@@ -96,7 +96,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
@@ -104,7 +104,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
-	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 };
 
@@ -114,7 +114,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
-	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
@@ -123,7 +123,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
@@ -131,7 +131,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
-	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 };
 
@@ -217,7 +217,7 @@ int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_TILED);
 
-	return addr[0];
+	return addr[TILED_LAYOUT];
 }
 
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
@@ -225,9 +225,9 @@ int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
 	long *addr = tegra_dc_parse_feature(dc, win_idx, operation);
 
 	if (operation == HAS_V_FILTER)
-		return addr[0];
+		return addr[V_FILTER];
 	else
-		return addr[1];
+		return addr[H_FILTER];
 }
 
 void tegra_dc_feature_register(struct tegra_dc *dc)
@@ -242,15 +242,5 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 		dc->feature = &t30_feature_table_a;
 	else
 		dc->feature = &t30_feature_table_b;
-#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	if (!dc->ndev->id)
-		dc->feature = &t114_feature_table_a;
-	else
-		dc->feature = &t114_feature_table_b;
-#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	if (!dc->ndev->id)
-		dc->feature = &t148_feature_table_a;
-	else
-		dc->feature = &t148_feature_table_b;
 #endif
 }

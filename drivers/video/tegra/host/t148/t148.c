@@ -25,6 +25,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 #include "host1x/host1x_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "gr3d/gr3d.h"
@@ -186,14 +187,15 @@ static struct nvhost_device *t148_get_nvhost_device(struct nvhost_master *host,
 	return NULL;
 }
 
-int nvhost_init_t148_support(struct nvhost_master *host)
+int nvhost_init_t148_support(struct nvhost_master *host,
+	struct nvhost_chip_support *op)
 {
 	int err;
 
-	err = nvhost_init_t114_support(host);
+	err = nvhost_init_t114_support(host, op);
 
 	if (err)
 		return err;
-	host->op.nvhost_dev.get_nvhost_device = t148_get_nvhost_device;
+	op->nvhost_dev.get_nvhost_device = t148_get_nvhost_device;
 	return 0;
 }

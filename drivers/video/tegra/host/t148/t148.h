@@ -20,6 +20,7 @@
 #ifndef _NVHOST_T148_H_
 #define _NVHOST_T148_H_
 
-int nvhost_init_t148_support(struct nvhost_master *host);
+int nvhost_init_t148_support(struct nvhost_master *host,
+		struct nvhost_chip_support *);
 
 #endif

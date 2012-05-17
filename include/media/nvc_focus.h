@@ -59,5 +59,43 @@ struct nvc_focus_cap {
 	__u32 focus_infinity;
 } __packed;
 
+
+#define NV_FOCUSER_SET_MAX              10
+#define NV_FOCUSER_SET_DISTANCE_PAIR    16
+
+struct nv_focuser_set_dist_pairs {
+	__s32 fdn;
+	__s32 distance;
+};
+
+struct nv_focuser_set {
+	__s32 posture;
+	__s32 macro;
+	__s32 hyper;
+	__s32 inf;
+	__s32 hysteresis;
+	__u32 settle_time;
+	__s32 macro_offset;
+	__s32 inf_offset;
+	__u32 num_dist_pairs;
+	struct nv_focuser_set_dist_pairs dist_pair[NV_FOCUSER_SET_DISTANCE_PAIR];
+};
+
+struct nv_focuser_config {
+	__u32 focal_length;
+	__u32 fnumber;
+	__u32 max_aperture;
+	__u32 actuator_range;
+	__u32 settle_time;
+	__s32 pos_working_low;
+	__s32 pos_working_high;
+	__s32 pos_actual_low;
+	__s32 pos_actual_high;
+	__u32 slew_rate;
+	__u32 circle_of_confusion;
+	struct nv_focuser_set focuser_set[NV_FOCUSER_SET_MAX];
+};
+
+
 #endif /* __NVC_FOCUS_H__ */
 

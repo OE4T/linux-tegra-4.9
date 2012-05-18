@@ -346,6 +346,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	u32 nb_pts = host->syncpt.nb_pts;
 
 	mutex_init(&intr->mutex);
+	intr_op().init_host_sync(intr);
 	intr->host_general_irq = irq_gen;
 	intr->host_general_irq_requested = false;
 

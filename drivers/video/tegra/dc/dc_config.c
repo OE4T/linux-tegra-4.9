@@ -143,6 +143,66 @@ struct tegra_dc_feature t30_feature_table_b = {
 	ARRAY_SIZE(t30_feature_entries_b), t30_feature_entries_b,
 };
 
+static struct tegra_dc_feature_entry t114_feature_entries_a[] = {
+	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 0, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+
+	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+
+	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+};
+
+static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
+	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 0, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+
+	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+
+	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
+	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
+	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4095, 16, 4095, 16,} },
+	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
+	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+};
+
+struct tegra_dc_feature t114_feature_table_a = {
+	ARRAY_SIZE(t114_feature_entries_a), t114_feature_entries_a,
+};
+
+struct tegra_dc_feature t114_feature_table_b = {
+	ARRAY_SIZE(t114_feature_entries_b), t114_feature_entries_b,
+};
+
 int tegra_dc_get_feature(struct tegra_dc_feature *feature, int win_idx,
 					enum tegra_dc_feature_option option)
 {
@@ -254,6 +314,11 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 		dc->feature = &t30_feature_table_a;
 	else
 		dc->feature = &t30_feature_table_b;
+#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
+	if (!dc->ndev->id)
+		dc->feature = &t114_feature_table_a;
+	else
+		dc->feature = &t114_feature_table_b;
 #endif
 	/* Count the number of windows using gen1 blender. */
 	dc->gen1_blend_num = 0;

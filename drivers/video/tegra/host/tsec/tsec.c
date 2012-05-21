@@ -314,9 +314,14 @@ void nvhost_tsec_finalize_poweron(struct nvhost_device *dev)
 	tsec_boot(dev);
 }
 
-static int tsec_probe(struct nvhost_device *dev)
+static int tsec_probe(struct nvhost_device *dev,
+		struct nvhost_device_id *id_table)
 {
 	int err;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	drv->init = nvhost_tsec_init;
+	drv->deinit = nvhost_tsec_deinit;
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

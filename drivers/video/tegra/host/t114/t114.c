@@ -66,7 +66,7 @@ static struct nvhost_device devices[] = {
 },
 {
 	/* channel 1 */
-	.name	       = "gr3d",
+	.name	       = "gr3d03",
 	.id            = -1,
 	.index         = 1,
 	.syncpts       = BIT(NVSYNCPT_3D),
@@ -234,7 +234,7 @@ static struct nvhost_device *t114_get_nvhost_device(char *name)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(devices); i++) {
-		if (strcmp(devices[i].name, name) == 0)
+		if (strncmp(devices[i].name, name, strlen(name)) == 0)
 			return &devices[i];
 	}
 

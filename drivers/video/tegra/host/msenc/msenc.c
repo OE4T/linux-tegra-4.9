@@ -314,9 +314,14 @@ void nvhost_msenc_finalize_poweron(struct nvhost_device *dev)
 	msenc_boot(dev);
 }
 
-static int msenc_probe(struct nvhost_device *dev)
+static int msenc_probe(struct nvhost_device *dev,
+		struct nvhost_device_id *id_table)
 {
 	int err = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	drv->init = nvhost_msenc_init;
+	drv->deinit = nvhost_msenc_deinit;
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

@@ -47,6 +47,8 @@
 
 #define HOST_EMC_FLOOR 300000000
 
+static int t114_num_alloc_channels = 0;
+
 static struct nvhost_device devices[] = {
 {
 	/* channel 0 */
@@ -211,18 +213,27 @@ int nvhost_init_t114_channel_support(struct nvhost_master *host,
 {
 	int result = nvhost_init_t20_channel_support(host, op);
 	/* We're using 8 out of 9 channels supported by hw */
-	host->nb_channels = NV_HOST1X_CHANNELS_T114-1;
 	op->channel.init = t114_channel_init;
 
 	return result;
 }
 
-static struct nvhost_device *t114_get_nvhost_device(struct nvhost_master *host,
-		char *name)
+static void t114_free_nvhost_channel(struct nvhost_channel *ch)
+{
+	nvhost_free_channel_internal(ch, &t114_num_alloc_channels);
+}
+
+static struct nvhost_channel *t114_alloc_nvhost_channel(int chindex)
+{
+	return nvhost_alloc_channel_internal(chindex,
+		NV_HOST1X_CHANNELS_T114, &t114_num_alloc_channels);
+}
+
+static struct nvhost_device *t114_get_nvhost_device(char *name)
 {
 	int i;
 
-	for (i = 0; i < host->nb_channels; i++) {
+	for (i = 0; i < ARRAY_SIZE(devices); i++) {
 		if (strcmp(devices[i].name, name) == 0)
 			return &devices[i];
 	}
@@ -252,6 +263,8 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	if (err)
 		return err;
 	op->nvhost_dev.get_nvhost_device = t114_get_nvhost_device;
+	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
+	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
 
 	return 0;
 }

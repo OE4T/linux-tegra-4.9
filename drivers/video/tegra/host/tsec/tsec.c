@@ -23,7 +23,7 @@
 #include <linux/firmware.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
-#include <mach/nvmap.h>
+#include <linux/nvmap.h>
 #include <mach/iomap.h>
 #include "dev.h"
 #include "tsec.h"

@@ -17,10 +17,90 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_DSI_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_DSI_H__
 
-/* source of video data */
-enum {
-	TEGRA_DSI_VIDEO_DRIVEN_BY_DC,
-	TEGRA_DSI_VIDEO_DRIVEN_BY_HOST,
+/* Defines the DSI phy timing parameters */
+struct dsi_phy_timing_inclk {
+	unsigned	t_hsdexit;
+	unsigned	t_hstrail;
+	unsigned	t_hsprepare;
+	unsigned	t_datzero;
+
+	unsigned	t_clktrail;
+	unsigned	t_clkpost;
+	unsigned	t_clkzero;
+	unsigned	t_tlpx;
+
+	unsigned	t_clkpre;
+	unsigned	t_clkprepare;
+	unsigned	t_wakeup;
+
+	unsigned	t_taget;
+	unsigned	t_tasure;
+	unsigned	t_tago;
+};
+
+struct dsi_status {
+	unsigned init:2;
+
+	unsigned lphs:2;
+
+	unsigned vtype:2;
+	unsigned driven:2;
+
+	unsigned clk_out:2;
+	unsigned clk_mode:2;
+	unsigned clk_burst:2;
+
+	unsigned lp_op:2;
+
+	unsigned dc_stream:1;
+};
+
+struct tegra_dc_dsi_data {
+	struct tegra_dc *dc;
+	void __iomem *base;
+	struct resource *base_res;
+
+	struct clk *dc_clk;
+	struct clk *dsi_clk;
+	struct clk *dsi_fixed_clk;
+	bool clk_ref;
+
+	struct mutex lock;
+
+	struct tegra_dsi_out_ops *out_ops;
+	void			*out_data;
+
+	/* data from board info */
+	struct tegra_dsi_out info;
+
+	struct dsi_status status;
+
+	struct dsi_phy_timing_inclk phy_timing;
+
+	u8 driven_mode;
+	u8 controller_index;
+
+	u8 pixel_scaler_mul;
+	u8 pixel_scaler_div;
+
+	u32 default_shift_clk_div;
+	u32 default_pixel_clk_khz;
+	u32 default_hs_clk_khz;
+
+	u32 shift_clk_div;
+	u32 target_hs_clk_khz;
+	u32 target_lp_clk_khz;
+
+	u32 syncpt_id;
+	u32 syncpt_val;
+
+	u16 current_bit_clk_ns;
+	u32 current_dsi_clk_khz;
+
+	u32 dsi_control_val;
+
+	bool ulpm;
+	bool enabled;
 };
 
 #define MAX_DSI_INSTANCE	2
@@ -363,25 +443,31 @@ T_TASURE_NS_DEFAULT, clk_ns, T_TASURE_HW_INC))
 (DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
 T_TAGET_NS_DEFAULT, clk_ns, T_TAGET_HW_INC))
 
-/* Defines the DSI phy timing parameters */
-struct dsi_phy_timing_inclk {
-	unsigned	t_hsdexit;
-	unsigned	t_hstrail;
-	unsigned	t_hsprepare;
-	unsigned	t_datzero;
-
-	unsigned	t_clktrail;
-	unsigned	t_clkpost;
-	unsigned	t_clkzero;
-	unsigned	t_tlpx;
-
-	unsigned	t_clkpre;
-	unsigned	t_clkprepare;
-	unsigned	t_wakeup;
-
-	unsigned	t_taget;
-	unsigned	t_tasure;
-	unsigned	t_tago;
+struct tegra_dsi_out_ops {
+	/* initialize output.  dsi clocks are not on at this point */
+	int (*init)(struct tegra_dc_dsi_data *);
+	/* destroy output.  dsi clocks are not on at this point */
+	void (*destroy)(struct tegra_dc_dsi_data *);
+	/* enable output.  dsi clocks are on at this point */
+	void (*enable)(struct tegra_dc_dsi_data *);
+	/* disable output.  dsi clocks are on at this point */
+	void (*disable)(struct tegra_dc_dsi_data *dc);
+	/* suspend output.  dsi clocks are on at this point */
+	void (*suspend)(struct tegra_dc_dsi_data *);
+	/* resume output.  dsi clocks are on at this point */
+	void (*resume)(struct tegra_dc_dsi_data *);
 };
+extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
+
+static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
+{
+	return dsi->out_data;
+}
+
+static inline void tegra_dsi_set_outdata(struct tegra_dc_dsi_data *dsi,
+						void *data)
+{
+	dsi->out_data = data;
+}
 
 #endif

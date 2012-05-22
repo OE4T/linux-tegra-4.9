@@ -85,75 +85,10 @@ module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
 		"Enable to print read fifo and return packet type");
 
-struct dsi_status {
-	unsigned init:2;
-
-	unsigned lphs:2;
-
-	unsigned vtype:2;
-	unsigned driven:2;
-
-	unsigned clk_out:2;
-	unsigned clk_mode:2;
-	unsigned clk_burst:2;
-
-	unsigned lp_op:2;
-
-	unsigned dc_stream:1;
-};
-
 /* source of video data */
 enum {
 	TEGRA_DSI_DRIVEN_BY_DC,
 	TEGRA_DSI_DRIVEN_BY_HOST,
-};
-
-struct tegra_dc_dsi_data {
-	struct tegra_dc *dc;
-	void __iomem *base;
-	struct resource *base_res;
-
-	struct clk *dc_clk;
-	struct clk *dsi_clk;
-	struct clk *dsi_fixed_clk;
-	bool clk_ref;
-
-	struct mutex lock;
-
-	struct tegra_dc_out_ops *dsi2lvds_out_ops;
-	void			*dsi2lvds_out_data;
-
-	/* data from board info */
-	struct tegra_dsi_out info;
-
-	struct dsi_status status;
-
-	struct dsi_phy_timing_inclk phy_timing;
-
-	u8 driven_mode;
-	u8 controller_index;
-
-	u8 pixel_scaler_mul;
-	u8 pixel_scaler_div;
-
-	u32 default_shift_clk_div;
-	u32 default_pixel_clk_khz;
-	u32 default_hs_clk_khz;
-
-	u32 shift_clk_div;
-	u32 target_hs_clk_khz;
-	u32 target_lp_clk_khz;
-
-	u32 syncpt_id;
-	u32 syncpt_val;
-
-	u16 current_bit_clk_ns;
-	u32 current_dsi_clk_khz;
-
-	u32 dsi_control_val;
-
-	bool ulpm;
-	bool enabled;
 };
 
 #ifdef CONFIG_TEGRA_DSI_GANGED_MODE
@@ -454,18 +389,6 @@ free_out:
 static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 { }
 #endif
-
-inline void *tegra_dc_dsi_get_outdata(struct tegra_dc *dc)
-{
-	return ((struct tegra_dc_dsi_data *)(dc->out_data))->dsi2lvds_out_data;
-}
-EXPORT_SYMBOL(tegra_dc_dsi_get_outdata);
-
-inline void tegra_dc_dsi_set_outdata(struct tegra_dc *dc, void *data)
-{
-	((struct tegra_dc_dsi_data *)(dc->out_data))->dsi2lvds_out_data = data;
-}
-EXPORT_SYMBOL(tegra_dc_dsi_set_outdata);
 
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
@@ -3068,8 +2991,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		dsi->enabled = true;
 	}
 
-	if (dsi->dsi2lvds_out_ops && dsi->dsi2lvds_out_ops->enable)
-		dsi->dsi2lvds_out_ops->enable(dc);
+	if (dsi->out_ops && dsi->out_ops->enable)
+		dsi->out_ops->enable(dsi);
 
 	if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
 		tegra_dsi_start_dc_stream(dc, dsi);
@@ -3085,15 +3008,13 @@ static void _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	tegra_dc_dsi_debug_create(dsi);
 
-	if (dc->out->type == TEGRA_DC_OUT_DSI2LVDS)
-#ifdef CONFIG_TEGRA_DSI2LVDS
-		dsi->dsi2lvds_out_ops = &tegra_dc_dsi2lvds_ops;
-#else
-		dsi->dsi2lvds_out_ops = NULL;
-#endif
+	if (dsi->info.dsi2lvds_bridge_enable)
+		dsi->out_ops = &tegra_dsi2lvds_ops;
+	else
+		dsi->out_ops = NULL;
 
-	if (dsi->dsi2lvds_out_ops && dsi->dsi2lvds_out_ops->init)
-		dsi->dsi2lvds_out_ops->init(dc);
+	if (dsi->out_ops && dsi->out_ops->init)
+		dsi->out_ops->init(dsi);
 
 	tegra_dsi_init_sw(dc, dsi);
 	/* TODO: Configure the CSI pad configuration */
@@ -3391,6 +3312,9 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 
 	mutex_lock(&dsi->lock);
 
+	if (dsi->out_ops && dsi->out_ops->destroy)
+		dsi->out_ops->destroy(dsi);
+
 	/* free up the pdata */
 	for (i = 0; i < dsi->info.n_init_cmd; i++) {
 		if (dsi->info.dsi_init_cmd[i].pdata)
@@ -3502,8 +3426,8 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
 
-	if (dsi->dsi2lvds_out_ops && dsi->dsi2lvds_out_ops->disable)
-		dsi->dsi2lvds_out_ops->disable(dc);
+	if (dsi->out_ops && dsi->out_ops->disable)
+		dsi->out_ops->disable(dc);
 
 	if (dsi->info.power_saving_suspend) {
 		if (tegra_dsi_deep_sleep(dc, dsi) < 0) {
@@ -3550,8 +3474,8 @@ static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 	mutex_lock(&dsi->lock);
 
-	if (dsi->dsi2lvds_out_ops && dsi->dsi2lvds_out_ops->suspend)
-		dsi->dsi2lvds_out_ops->suspend(dc);
+	if (dsi->out_ops && dsi->out_ops->suspend)
+		dsi->out_ops->suspend(dsi);
 
 	if (!dsi->info.power_saving_suspend) {
 		if (dsi->ulpm) {
@@ -3575,9 +3499,16 @@ fail:
 
 static void tegra_dc_dsi_resume(struct tegra_dc *dc)
 {
-	/* Not required since tegra_dc_dsi_enable
+	struct tegra_dc_dsi_data *dsi;
+
+	dsi = tegra_dc_get_outdata(dc);
+
+	/* No dsi config required since tegra_dc_dsi_enable
 	 * will reconfigure the controller from scratch
 	 */
+
+	 if (dsi->out_ops && dsi->out_ops->resume)
+		dsi->out_ops->resume(dsi);
 }
 #endif
 

@@ -131,6 +131,19 @@ void nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id)
 }
 
 /**
+ * Updated sync point form hardware, and returns true if syncpoint is expired,
+ * false if we may need to wait
+ */
+static bool syncpt_update_min_is_expired(
+	struct nvhost_syncpt *sp,
+	u32 id,
+	u32 thresh)
+{
+	syncpt_op().update_min(sp, id);
+	return nvhost_syncpt_is_expired(sp, id, thresh);
+}
+
+/**
  * Main entrypoint for syncpoint value waits.
  */
 int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
@@ -191,9 +204,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	while (timeout) {
 		u32 check = min_t(u32, SYNCPT_CHECK_PERIOD, timeout);
 		int remain = wait_event_interruptible_timeout(wq,
-				nvhost_syncpt_is_expired(sp, id, thresh),
+				syncpt_update_min_is_expired(sp, id, thresh),
 				check);
-		if (remain > 0) {
+		if (remain > 0 || nvhost_syncpt_is_expired(sp, id, thresh)) {
 			if (value)
 				*value = nvhost_syncpt_read_min(sp, id);
 			err = 0;

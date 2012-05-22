@@ -28,8 +28,8 @@
 #define __user
 #endif
 
-#ifndef __NVMAP_H
-#define __NVMAP_H
+#ifndef _LINUX_NVMAP_H
+#define _LINUX_NVMAP_H
 
 #define NVMAP_HEAP_SYSMEM  (1ul<<31)
 #define NVMAP_HEAP_IOVMM   (1ul<<30)
@@ -50,20 +50,31 @@
 
 #define NVMAP_HANDLE_SECURE          (0x1ul << 2)
 
-
 #if defined(__KERNEL__)
 
 #if defined(CONFIG_TEGRA_NVMAP)
 struct nvmap_handle;
 struct nvmap_client;
 struct nvmap_device;
+
 #define nvmap_ref_to_handle(_ref) (*(struct nvmap_handle **)(_ref))
 /* Convert User space handle to Kernel. */
 #define nvmap_convert_handle_u2k(h) (h)
+
+/* handle_ref objects are client-local references to an nvmap_handle;
+ * they are distinct objects so that handles can be unpinned and
+ * unreferenced the correct number of times when a client abnormally
+ * terminates */
+struct nvmap_handle_ref {
+	struct nvmap_handle *handle;
+	struct rb_node	node;
+	atomic_t	dupes;	/* number of times to free on file close */
+	atomic_t	pin;	/* number of times to unpin on free */
+};
+
 #elif defined(CONFIG_ION_TEGRA)
 /* For Ion Mem Manager support through nvmap_* API's. */
 #include "../../../../../drivers/gpu/ion/ion_priv.h"
-
 #define nvmap_client ion_client
 #define nvmap_device ion_device
 #define nvmap_handle ion_handle
@@ -76,23 +87,10 @@ struct nvmap_device;
 		BUG(); \
 	} \
 	(*((u32 *)h)); })
-#endif
+
+#endif /* CONFIG_ION_TEGRA */
 
 #define nvmap_id_to_handle(_id) ((struct nvmap_handle *)(_id))
-
-
-#if defined(CONFIG_TEGRA_NVMAP)
-/* handle_ref objects are client-local references to an nvmap_handle;
- * they are distinct objects so that handles can be unpinned and
- * unreferenced the correct number of times when a client abnormally
- * terminates */
-struct nvmap_handle_ref {
-	struct nvmap_handle *handle;
-	struct rb_node	node;
-	atomic_t	dupes;	/* number of times to free on file close */
-	atomic_t	pin;	/* number of times to unpin on free */
-};
-#endif
 
 struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 					 const char *name);
@@ -140,6 +138,6 @@ struct nvmap_platform_data {
 
 extern struct nvmap_device *nvmap_dev;
 
-#endif
+#endif /* __KERNEL__ */
 
-#endif
+#endif /* _LINUX_NVMAP_H */

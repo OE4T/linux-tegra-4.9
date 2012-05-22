@@ -74,6 +74,8 @@ static struct fb_videomode tegra_dc_hdmi_fallback_mode = {
 	.sync = 0,
 };
 
+static struct tegra_dc_mode override_disp_mode[3];
+
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
@@ -1000,11 +1002,27 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 	tegra_dc_writel(dc, pol3, DC_COM_PIN_OUTPUT_POLARITY3);
 }
 
+static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
+{
+	if (dc->out->type == TEGRA_DC_OUT_RGB ||
+		dc->out->type == TEGRA_DC_OUT_HDMI ||
+		dc->out->type == TEGRA_DC_OUT_DSI)
+		return override_disp_mode[dc->out->type].pclk ?
+			&override_disp_mode[dc->out->type] : NULL;
+	else
+		return NULL;
+}
+
 static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 {
-	dc->out = out;
+	struct tegra_dc_mode *mode;
 
-	if (out->n_modes > 0)
+	dc->out = out;
+	mode = tegra_dc_get_override_mode(dc);
+
+	if (mode)
+		tegra_dc_set_mode(dc, mode);
+	else if (out->n_modes > 0)
 		tegra_dc_set_mode(dc, &dc->out->modes[0]);
 
 	switch (out->type) {
@@ -1906,6 +1924,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	struct nvhost_device_id *id_table)
 {
 	struct tegra_dc *dc;
+	struct tegra_dc_mode *mode;
 	struct clk *clk;
 	struct clk *emc_clk;
 	struct resource	*res;
@@ -2072,6 +2091,12 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 			fmt = tegra_dc_readl(dc, DC_WIN_COLOR_DEPTH);
 			dc->pdata->fb->bits_per_pixel =
 				tegra_dc_fmt_bpp(fmt);
+		}
+
+		mode = tegra_dc_get_override_mode(dc);
+		if (mode) {
+			dc->pdata->fb->xres = mode->h_active;
+			dc->pdata->fb->yres = mode->v_active;
 		}
 
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
@@ -2251,6 +2276,74 @@ struct nvhost_driver tegra_dc_driver = {
 #endif
 	.shutdown = tegra_dc_shutdown,
 };
+
+#ifndef MODULE
+static int __init parse_disp_params(char *options, struct tegra_dc_mode *mode)
+{
+	int i, params[11];
+	char *p;
+
+	for (i = 0; i < ARRAY_SIZE(params); i++) {
+		if ((p = strsep(&options, ",")) != NULL) {
+			if (*p)
+				params[i] = simple_strtoul(p, &p, 10);
+		} else
+			return -EINVAL;
+	}
+
+	if ((mode->pclk = params[0]) == 0)
+		return -EINVAL;
+
+	mode->h_active      = params[1];
+	mode->v_active      = params[2];
+	mode->h_ref_to_sync = params[3];
+	mode->v_ref_to_sync = params[4];
+	mode->h_sync_width  = params[5];
+	mode->v_sync_width  = params[6];
+	mode->h_back_porch  = params[7];
+	mode->v_back_porch  = params[8];
+	mode->h_front_porch = params[9];
+	mode->v_front_porch = params[10];
+
+	return 0;
+}
+
+static int __init tegra_dc_mode_override(char *str)
+{
+	char *p = str, *options;
+
+	if (!p || !*p)
+		return -EINVAL;
+
+	p = strstr(str, "hdmi:");
+	if (p) {
+		p += 5;
+		options = strsep(&p, ";");
+		if (parse_disp_params(options, &override_disp_mode[TEGRA_DC_OUT_HDMI]))
+			return -EINVAL;
+	}
+
+	p = strstr(str, "rgb:");
+	if (p) {
+		p += 4;
+		options = strsep(&p, ";");
+		if (parse_disp_params(options, &override_disp_mode[TEGRA_DC_OUT_RGB]))
+			return -EINVAL;
+	}
+
+	p = strstr(str, "dsi:");
+	if (p) {
+		p += 4;
+		options = strsep(&p, ";");
+		if (parse_disp_params(options, &override_disp_mode[TEGRA_DC_OUT_DSI]))
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+__setup("disp_params=", tegra_dc_mode_override);
+#endif
 
 static int __init tegra_dc_module_init(void)
 {

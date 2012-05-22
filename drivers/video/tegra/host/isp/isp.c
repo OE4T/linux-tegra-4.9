@@ -55,15 +55,6 @@ static int isp_resume(struct nvhost_device *dev)
 	return 0;
 }
 
-static struct resource isp_resources = {
-	.name = "regs",
-	.start = TEGRA_ISP_BASE,
-	.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-};
-
-struct nvhost_device *isp_device;
-
 static struct nvhost_driver isp_driver = {
 	.probe = isp_probe,
 	.remove = __exit_p(isp_remove),
@@ -79,18 +70,6 @@ static struct nvhost_driver isp_driver = {
 
 static int __init isp_init(void)
 {
-	int err;
-
-	isp_device = nvhost_get_device("isp");
-	if (!isp_device)
-		return -ENXIO;
-
-	isp_device->resource = &isp_resources;
-	isp_device->num_resources = 1;
-	err = nvhost_device_register(isp_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&isp_driver);
 }
 

@@ -46,8 +46,6 @@ static int gr2d_resume(struct nvhost_device *dev)
 	return 0;
 }
 
-struct nvhost_device *gr2d_device;
-
 static struct nvhost_driver gr2d_driver = {
 	.probe = gr2d_probe,
 	.remove = __exit_p(gr2d_remove),
@@ -63,16 +61,6 @@ static struct nvhost_driver gr2d_driver = {
 
 static int __init gr2d_init(void)
 {
-	int err;
-
-	gr2d_device = nvhost_get_device("gr2d");
-	if (!gr2d_device)
-		return -ENXIO;
-
-	err = nvhost_device_register(gr2d_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&gr2d_driver);
 }
 

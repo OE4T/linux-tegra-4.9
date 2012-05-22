@@ -94,6 +94,9 @@ struct nvhost_device {
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 };
 
+/* Register devices to nvhost bus */
+extern int nvhost_add_devices(struct nvhost_device **, int num);
+
 /* Register device to nvhost bus */
 extern int nvhost_device_register(struct nvhost_device *);
 

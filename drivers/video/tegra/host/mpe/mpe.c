@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/slab.h>
+#include <linux/export.h>
+#include <linux/resource.h>
+#include <linux/module.h>
+
+#include <mach/iomap.h>
+#include <mach/hardware.h>
+
 #include "nvhost_hwctx.h"
 #include "nvhost_channel.h"
 #include "dev.h"
@@ -28,14 +36,6 @@
 #include "t20/t20.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
-
-#include <linux/slab.h>
-#include <linux/export.h>
-#include <linux/resource.h>
-#include <linux/module.h>
-
-#include <mach/iomap.h>
-#include <mach/hardware.h>
 
 #include "bus_client.h"
 
@@ -658,15 +658,6 @@ static int mpe_resume(struct nvhost_device *dev)
 	return 0;
 }
 
-static struct resource mpe_resources = {
-	.name = "regs",
-	.start = TEGRA_MPE_BASE,
-	.end = TEGRA_MPE_BASE + TEGRA_MPE_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-};
-
-struct nvhost_device *mpe_device;
-
 static struct nvhost_driver mpe_driver = {
 	.probe = mpe_probe,
 	.remove = __exit_p(mpe_remove),
@@ -683,19 +674,6 @@ static struct nvhost_driver mpe_driver = {
 
 static int __init mpe_init(void)
 {
-	int err;
-
-	mpe_device = nvhost_get_device("mpe");
-	if (!mpe_device)
-		return -ENXIO;
-
-	/* use ARRAY_SIZE macro if resources are more than 1 */
-	mpe_device->resource = &mpe_resources;
-	mpe_device->num_resources = 1;
-	err = nvhost_device_register(mpe_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&mpe_driver);
 }
 

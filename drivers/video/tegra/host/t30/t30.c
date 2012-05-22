@@ -23,13 +23,13 @@
 #include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
 #include <mach/iomap.h>
-#include "dev.h"
 #include "t20/t20.h"
 #include "t30.h"
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t30.h"
 #include "gr3d/scale3d.h"
 #include "mpe/mpe.h"
+#include "host1x/host1x.h"
 #include "host1x/host1x_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "chip_support.h"
@@ -48,19 +48,15 @@
 #define NVMODMUTEX_VI		(8)
 #define NVMODMUTEX_DSI		(9)
 
-#define NVHOST_CHANNEL_BASE	0
-
 #define T30_NVHOST_NUMCHANNELS	(NV_HOST1X_CHANNELS - 1)
 
 static int t30_num_alloc_channels = 0;
 
-struct nvhost_device t30_devices[] = {
-{
-	/* channel 0 */
+static struct nvhost_device tegra_display01_device = {
 	.name		= "display",
 	.id		= -1,
 	.index		= 0,
-	.syncpts 	= BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
+	.syncpts	= BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
 			  BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) |
 			  BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
 			  BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
@@ -68,13 +64,13 @@ struct nvhost_device t30_devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_NONE,
-},
-{
-	/* channel 1 */
+};
+
+static struct nvhost_device tegra_gr3d02_device = {
 	.name		= "gr3d02",
 	.id		= -1,
 	.index		= 1,
-	.syncpts 	= BIT(NVSYNCPT_3D),
+	.syncpts	= BIT(NVSYNCPT_3D),
 	.waitbases	= BIT(NVWAITBASE_3D),
 	.modulemutexes	= BIT(NVMODMUTEX_3D),
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
@@ -88,9 +84,9 @@ struct nvhost_device t30_devices[] = {
 	.powerup_reset = true,
 	.powergate_delay = 250,
 	.moduleid	= NVHOST_MODULE_NONE,
-},
-{
-	/* channel 2 */
+};
+
+static struct nvhost_device tegra_gr2d02_device = {
 	.name		= "gr2d",
 	.id		= -1,
 	.index		= 2,
@@ -98,29 +94,51 @@ struct nvhost_device t30_devices[] = {
 	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.clocks 	= { {"gr2d", 0},
-			    {"epp", 0},
-			    {"emc", 300000000} },
+	.clocks		= { {"gr2d", UINT_MAX},
+			  {"epp", 0},
+			  {"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
 	.moduleid	= NVHOST_MODULE_NONE,
-},
-{
-	/* channel 3 */
+};
+
+static struct resource isp_resources_t20[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_ISP_BASE,
+		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	}
+};
+
+static struct nvhost_device tegra_isp01_device = {
 	.name		= "isp",
 	.id		= -1,
+	.resource = isp_resources_t20,
+	.num_resources = ARRAY_SIZE(isp_resources_t20),
 	.index		= 3,
 	.syncpts	= 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_ISP,
-},
-{
-	/* channel 4 */
+};
+
+static struct resource vi_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_VI_BASE,
+		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device tegra_vi01_device = {
 	.name		= "vi",
+	.resource = vi_resources,
+	.num_resources = ARRAY_SIZE(vi_resources),
 	.id		= -1,
 	.index		= 4,
-	.syncpts 	= BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
+	.syncpts	= BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
 			  BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
 			  BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
 			  BIT(NVSYNCPT_VI_ISP_4),
@@ -129,11 +147,22 @@ struct nvhost_device t30_devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_VI,
-},
-{
-	/* channel 5 */
+};
+
+static struct resource tegra_mpe01_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_MPE_BASE,
+		.end = TEGRA_MPE_BASE + TEGRA_MPE_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device tegra_mpe02_device = {
 	.name		= "mpe02",
 	.id		= -1,
+	.resource	= tegra_mpe01_resources,
+	.num_resources	= ARRAY_SIZE(tegra_mpe01_resources),
 	.index		= 5,
 	.syncpts	= BIT(NVSYNCPT_MPE) | BIT(NVSYNCPT_MPE_EBM_EOF) |
 			  BIT(NVSYNCPT_MPE_WR_SAFE),
@@ -141,16 +170,16 @@ struct nvhost_device t30_devices[] = {
 	.class		= NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.waitbasesync	= true,
 	.keepalive	= true,
-	.clocks 	= { {"mpe", UINT_MAX},
+	.clocks		= { {"mpe", UINT_MAX},
 			    {"emc", UINT_MAX} },
 	.powergate_ids	= {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate	= true,
 	.powergate_delay = 100,
 	.moduleid	= NVHOST_MODULE_MPE,
-},
-{
-	/* channel 6 */
+};
+
+static struct nvhost_device tegra_dsi01_device = {
 	.name		= "dsi",
 	.id		= -1,
 	.index		= 6,
@@ -159,7 +188,23 @@ struct nvhost_device t30_devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_NONE,
-} };
+};
+
+static struct nvhost_device *t30_devices[] = {
+	&tegra_host1x01_device,
+	&tegra_display01_device,
+	&tegra_gr3d02_device,
+	&tegra_gr2d02_device,
+	&tegra_isp01_device,
+	&tegra_vi01_device,
+	&tegra_mpe02_device,
+	&tegra_dsi01_device,
+};
+
+int tegra3_register_host1x_devices(void)
+{
+	return nvhost_add_devices(t30_devices, ARRAY_SIZE(t30_devices));
+}
 
 static inline int t30_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
@@ -182,7 +227,6 @@ static inline int t30_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 
 static inline void __iomem *t30_channel_aperture(void __iomem *p, int ndx)
 {
-	ndx += NVHOST_CHANNEL_BASE;
 	p += NV_HOST1X_CHANNEL0_BASE;
 	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
 	return p;
@@ -228,18 +272,6 @@ static struct nvhost_channel *t30_alloc_nvhost_channel(int chindex)
 		T30_NVHOST_NUMCHANNELS, &t30_num_alloc_channels);
 }
 
-struct nvhost_device *t30_get_nvhost_device(char *name)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(t30_devices); i++) {
-		if (strncmp(t30_devices[i].name, name, strlen(name)) == 0)
-			return &t30_devices[i];
-	}
-
-	return NULL;
-}
-
 int nvhost_init_t30_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
@@ -265,7 +297,6 @@ int nvhost_init_t30_support(struct nvhost_master *host,
 	if (err)
 		return err;
 
-	op->nvhost_dev.get_nvhost_device = t30_get_nvhost_device;
 	op->nvhost_dev.alloc_nvhost_channel = t30_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t30_free_nvhost_channel;
 

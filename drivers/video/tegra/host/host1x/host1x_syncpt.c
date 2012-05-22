@@ -23,7 +23,7 @@
 #include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
 #include "nvhost_acm.h"
-#include "dev.h"
+#include "host1x.h"
 #include "host1x_syncpt.h"
 #include "host1x_hardware.h"
 #include "chip_support.h"

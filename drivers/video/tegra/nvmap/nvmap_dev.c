@@ -974,20 +974,17 @@ static void client_stringify(struct nvmap_client *client, struct seq_file *s)
 }
 
 static void allocations_stringify(struct nvmap_client *client,
-				  struct seq_file *s)
+				  struct seq_file *s, bool iovmm)
 {
-	unsigned long base = 0;
 	struct rb_node *n = rb_first(&client->handle_refs);
 
 	for (; n != NULL; n = rb_next(n)) {
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
-		if (handle->alloc && !handle->heap_pgalloc) {
-			seq_printf(s, "%-18s %-18s %8lx %10u %8x\n", "", "",
-					(unsigned long)(handle->carveout->base),
-					handle->size, handle->userflags);
-		} else if (handle->alloc && handle->heap_pgalloc) {
+		if (handle->alloc && handle->heap_pgalloc == iovmm) {
+			unsigned long base = iovmm ? 0:
+				(unsigned long)(handle->carveout->base);
 			seq_printf(s, "%-18s %-18s %8lx %10u %8x\n", "", "",
 					base, handle->size, handle->userflags);
 		}
@@ -1011,7 +1008,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 			get_client_from_carveout_commit(node, commit);
 		client_stringify(client, s);
 		seq_printf(s, " %10u\n", commit->commit);
-		allocations_stringify(client, s);
+		allocations_stringify(client, s, false);
 		seq_printf(s, "\n");
 		total += commit->commit;
 	}
@@ -1112,14 +1109,14 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 
 	spin_lock_irqsave(&dev->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s %8s\n", "CLIENT", "PROCESS", "PID",
+		"SIZE", "FLAGS");
 	seq_printf(s, "%-18s %18s %8s %10s\n", "", "",
 					"BASE", "SIZE");
 	list_for_each_entry(client, &dev->clients, list) {
 		client_stringify(client, s);
 		seq_printf(s, " %10u\n", atomic_read(&client->iovm_commit));
-		allocations_stringify(client, s);
+		allocations_stringify(client, s, true);
 		seq_printf(s, "\n");
 		total += atomic_read(&client->iovm_commit);
 	}

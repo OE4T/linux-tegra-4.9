@@ -44,7 +44,7 @@
 #include "dc/dc_priv.h"
 
 /* Pad pitch to 16-byte boundary. */
-#define TEGRA_LINEAR_PITCH_ALIGNMENT 16
+#define TEGRA_LINEAR_PITCH_ALIGNMENT 32
 
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
@@ -527,6 +527,7 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	unsigned long fb_size = 0;
 	unsigned long fb_phys = 0;
 	int ret = 0;
+	unsigned stride;
 
 	win = tegra_dc_get_window(dc, fb_data->win);
 	if (!win) {
@@ -560,6 +561,11 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 		tegra_fb->valid = true;
 	}
 
+	stride = tegra_dc_get_stride(dc, 0);
+	if (!stride) /* default to pad the stride to 16-byte boundary. */
+		stride = round_up(info->fix.line_length,
+			TEGRA_LINEAR_PITCH_ALIGNMENT);
+
 	info->fbops = &tegra_fb_ops;
 	info->pseudo_palette = pseudo_palette;
 	info->screen_base = fb_base;
@@ -574,9 +580,7 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 	info->fix.smem_start	= fb_phys;
 	info->fix.smem_len	= fb_size;
 	info->fix.line_length = fb_data->xres * fb_data->bits_per_pixel / 8;
-	/* Pad the stride to 16-byte boundary. */
-	info->fix.line_length = round_up(info->fix.line_length,
-					TEGRA_LINEAR_PITCH_ALIGNMENT);
+	info->fix.line_length = stride;
 
 	info->var.xres			= fb_data->xres;
 	info->var.yres			= fb_data->yres;

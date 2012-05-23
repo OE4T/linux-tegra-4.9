@@ -430,6 +430,8 @@
 #define DC_WIN_LINE_STRIDE			0x70a
 #define  LINE_STRIDE(x)		(x)
 #define  UV_LINE_STRIDE(x)	(((x) & 0xffff) << 16)
+#define  GET_LINE_STRIDE(x)	((x) & 0xffff)
+#define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
 #define DC_WIN_BUF_STRIDE			0x70b
 #define DC_WIN_UV_BUF_STRIDE			0x70c
 #define DC_WIN_BUFFER_ADDR_MODE			0x70d

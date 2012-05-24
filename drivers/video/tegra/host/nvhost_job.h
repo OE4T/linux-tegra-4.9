@@ -27,7 +27,7 @@ struct nvhost_channel;
 struct nvhost_hwctx;
 struct nvmap_client;
 struct nvhost_waitchk;
-struct nvmap_handle;
+struct nvhost_syncpt;
 
 struct nvhost_job_gather {
 	u32 words;
@@ -129,8 +129,11 @@ void nvhost_job_put(struct nvhost_job *job);
  * Pin memory related to job. This handles relocation of addresses to the
  * host1x address space. Handles both the gather memory and any other memory
  * referred to from the gather buffers.
+ *
+ * Handles also patching out host waits that would wait for an expired sync
+ * point value.
  */
-int nvhost_job_pin(struct nvhost_job *job);
+int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp);
 
 /*
  * Unpin memory related to job.

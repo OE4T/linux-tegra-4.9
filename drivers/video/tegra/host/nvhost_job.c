@@ -27,6 +27,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"
+#include "nvhost_syncpt.h"
 #include "dev.h"
 
 /* Magic to use to fill freed handle slots */
@@ -196,11 +197,63 @@ static int do_relocs(struct nvhost_job *job, u32 patch_mem, void *patch_addr)
 	return 0;
 }
 
-int nvhost_job_pin(struct nvhost_job *job)
+/*
+ * Check driver supplied waitchk structs for syncpt thresholds
+ * that have already been satisfied and NULL the comparison (to
+ * avoid a wrap condition in the HW).
+ */
+static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
+		u32 patch_mem, void *patch_addr)
+{
+	int i;
+
+	/* compare syncpt vs wait threshold */
+	for (i = 0; i < job->num_waitchk; i++) {
+		struct nvhost_waitchk *wait = &job->waitchk[i];
+
+		/* skip all other gathers */
+		if (patch_mem != wait->mem)
+			continue;
+
+		trace_nvhost_syncpt_wait_check(wait->mem, wait->offset,
+				wait->syncpt_id, wait->thresh);
+		if (nvhost_syncpt_is_expired(sp,
+					wait->syncpt_id, wait->thresh)) {
+			/*
+			 * NULL an already satisfied WAIT_SYNCPT host method,
+			 * by patching its args in the command stream. The
+			 * method data is changed to reference a reserved
+			 * (never given out or incr) NVSYNCPT_GRAPHICS_HOST
+			 * syncpt with a matching threshold value of 0, so
+			 * is guaranteed to be popped by the host HW.
+			 */
+			dev_dbg(&syncpt_to_dev(sp)->dev->dev,
+			    "drop WAIT id %d (%s) thresh 0x%x, min 0x%x\n",
+			    wait->syncpt_id,
+			    syncpt_op().name(sp, wait->syncpt_id),
+			    wait->thresh,
+			    nvhost_syncpt_read_min(sp, wait->syncpt_id));
+
+			/* patch the wait */
+			nvhost_syncpt_patch_wait(sp,
+					(patch_addr + wait->offset));
+		}
+
+		wait->mem = 0;
+	}
+	return 0;
+}
+
+int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0;
 	phys_addr_t gather_phys = 0;
 	void *gather_addr = NULL;
+	unsigned long waitchk_mask = job->waitchk_mask;
+
+	/* get current syncpt values for waitchk */
+	for_each_set_bit(i, &waitchk_mask, sizeof(job->waitchk_mask))
+		nvhost_syncpt_update_min(sp, i);
 
 	/* pin gathers */
 	for (i = 0; i < job->num_gathers; i++) {
@@ -233,6 +286,9 @@ int nvhost_job_pin(struct nvhost_job *job)
 			}
 
 			err = do_relocs(job, g->mem_id, gather_addr);
+			if (!err)
+				err = do_waitchks(job, sp,
+						g->mem_id, gather_addr);
 			nvmap_munmap(g->ref, gather_addr);
 
 			if (err)

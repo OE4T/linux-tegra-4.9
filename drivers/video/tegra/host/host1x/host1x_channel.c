@@ -242,22 +242,6 @@ int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	/* remove stale waits */
-	if (job->num_waitchk) {
-		err = nvhost_syncpt_wait_check(sp,
-					       job->nvmap,
-					       job->waitchk_mask,
-					       job->waitchk,
-					       job->num_waitchk);
-		if (err) {
-			dev_warn(&ch->dev->dev,
-				 "nvhost_syncpt_wait_check failed: %d\n", err);
-			mutex_unlock(&ch->submitlock);
-			nvhost_module_idle(ch->dev);
-			goto error;
-		}
-	}
-
 	/* begin a CDMA submit */
 	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {

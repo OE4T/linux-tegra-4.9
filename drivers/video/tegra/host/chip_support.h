@@ -28,7 +28,6 @@ struct output;
 struct nvhost_master;
 struct nvhost_intr;
 struct nvhost_syncpt;
-struct nvhost_waitchk;
 struct nvhost_userctx_timeout;
 struct nvhost_channel;
 struct nvmap_handle_ref;
@@ -106,11 +105,8 @@ struct nvhost_chip_support {
 		void (*read_wait_base)(struct nvhost_syncpt *, u32 id);
 		u32 (*update_min)(struct nvhost_syncpt *, u32 id);
 		void (*cpu_incr)(struct nvhost_syncpt *, u32 id);
-		int (*wait_check)(struct nvhost_syncpt *sp,
-				  struct nvmap_client *nvmap,
-				  u32 waitchk_mask,
-				  struct nvhost_waitchk *wait,
-				  int num_waitchk);
+		int (*patch_wait)(struct nvhost_syncpt *sp,
+				void *patch_addr);
 		void (*debug)(struct nvhost_syncpt *);
 		const char * (*name)(struct nvhost_syncpt *, u32 id);
 		int (*mutex_try_lock)(struct nvhost_syncpt *,

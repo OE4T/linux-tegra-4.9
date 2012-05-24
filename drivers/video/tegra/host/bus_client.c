@@ -307,7 +307,7 @@ static int nvhost_ioctl_channel_flush(
 	struct nvhost_get_param_args *args,
 	int null_kickoff)
 {
-	struct device *device = &ctx->ch->dev->dev;
+	struct nvhost_device *ndev = to_nvhost_device(&ctx->ch->dev->dev);
 	int err;
 
 	trace_nvhost_ioctl_channel_flush(ctx->ch->dev->name);
@@ -317,13 +317,13 @@ static int nvhost_ioctl_channel_flush(
 	    ctx->hdr.num_cmdbufs ||
 	    ctx->hdr.num_waitchks) {
 		reset_submit(ctx);
-		dev_err(device, "channel submit out of sync\n");
+		dev_err(&ndev->dev, "channel submit out of sync\n");
 		return -EFAULT;
 	}
 
-	err = nvhost_job_pin(ctx->job);
+	err = nvhost_job_pin(ctx->job, &nvhost_get_host(ndev)->syncpt);
 	if (err) {
-		dev_warn(device, "nvhost_job_pin failed: %d\n", err);
+		dev_warn(&ndev->dev, "nvhost_job_pin failed: %d\n", err);
 		return err;
 	}
 

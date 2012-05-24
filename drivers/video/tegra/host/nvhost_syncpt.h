@@ -136,23 +136,7 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
 					  MAX_SCHEDULE_TIMEOUT, NULL);
 }
 
-/*
- * Check driver supplied waitchk structs for syncpt thresholds
- * that have already been satisfied and NULL the comparison (to
- * avoid a wrap condition in the HW).
- *
- * @param: sp - global shadowed syncpt struct
- * @param: nvmap - needed to access command buffer
- * @param: mask - bit mask of syncpt IDs referenced in WAITs
- * @param: wait - start of filled in array of waitchk structs
- * @param: waitend - end ptr (one beyond last valid waitchk)
- */
-struct nvhost_waitchk;
-int nvhost_syncpt_wait_check(struct nvhost_syncpt *sp,
-			struct nvmap_client *nvmap,
-			u32 mask,
-			struct nvhost_waitchk *wait,
-			int num_waitchk);
+int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr);
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
 

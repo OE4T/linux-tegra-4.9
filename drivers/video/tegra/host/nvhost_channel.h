@@ -31,7 +31,6 @@
 #define NVHOST_MAX_POWERGATE_IDS	2
 
 struct nvhost_master;
-struct nvhost_waitchk;
 struct nvhost_device;
 struct nvhost_channel;
 struct nvhost_hwctx;

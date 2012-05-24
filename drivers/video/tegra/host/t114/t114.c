@@ -73,12 +73,6 @@ static struct nvhost_device devices[] = {
 	.waitbases     = BIT(NVWAITBASE_3D),
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
-	.prepare_poweroff = nvhost_gr3d_prepare_power_off,
-	.busy = nvhost_scale3d_notify_busy,
-	.idle = nvhost_scale3d_notify_idle,
-	.init = nvhost_scale3d_init,
-	.deinit = nvhost_scale3d_deinit,
-	.alloc_hwctx_handler = t114_nvhost_3dctx_handler_init,
 	.clocks = {{"gr3d", UINT_MAX},
 			{"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -136,8 +130,6 @@ static struct nvhost_device devices[] = {
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.exclusive     = false,
 	.keepalive     = true,
-	.init          = nvhost_msenc_init,
-	.deinit        = nvhost_msenc_deinit,
 	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -163,8 +155,6 @@ static struct nvhost_device devices[] = {
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = false,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
 	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -178,9 +168,10 @@ static inline int t114_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 	unsigned long waitbases = ch->dev->waitbases;
 	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
 	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
+	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
 
-	if (ch->dev->alloc_hwctx_handler) {
-		ch->ctxhandler = ch->dev->alloc_hwctx_handler(syncpt,
+	if (drv->alloc_hwctx_handler) {
+		ch->ctxhandler = drv->alloc_hwctx_handler(syncpt,
 				waitbase, ch);
 		if (!ch->ctxhandler)
 			err = -ENOMEM;

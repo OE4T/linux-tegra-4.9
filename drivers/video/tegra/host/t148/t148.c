@@ -174,12 +174,11 @@ static struct nvhost_device t148_devices[] = {
 };
 
 
-static struct nvhost_device *t148_get_nvhost_device(struct nvhost_master *host,
-		char *name)
+static struct nvhost_device *t148_get_nvhost_device(char *name)
 {
 	int i;
 
-	for (i = 0; i < host->nb_channels; i++) {
+	for (i = 0; i < ARRAY_SIZE(t148_devices); i++) {
 		if (strcmp(t148_devices[i].name, name) == 0)
 			return &t148_devices[i];
 	}

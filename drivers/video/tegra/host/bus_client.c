@@ -239,21 +239,28 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
 			hdr->num_cmdbufs--;
 		} else if (hdr->num_relocs) {
-			consumed = sizeof(struct nvhost_reloc);
-			if (remaining < consumed)
+			int numrelocs = remaining / sizeof(struct nvhost_reloc);
+			if (!numrelocs)
 				break;
-			if (copy_from_user(&job->pinarray[job->num_relocs],
+			numrelocs = min_t(int, numrelocs, priv->hdr.num_relocs);
+			consumed = numrelocs * sizeof(struct nvhost_reloc);
+			if (copy_from_user(&job->relocarray[job->num_relocs],
 					buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			trace_nvhost_channel_write_reloc(chname,
-				job->pinarray[job->num_relocs].patch_mem,
-				job->pinarray[job->num_relocs].patch_offset,
-				job->pinarray[job->num_relocs].pin_mem,
-				job->pinarray[job->num_relocs].pin_offset);
-			job->num_relocs++;
-			hdr->num_relocs--;
+			while (numrelocs) {
+				struct nvhost_reloc *reloc =
+					&job->relocarray[job->num_relocs];
+				trace_nvhost_channel_write_reloc(chname,
+					reloc->cmdbuf_mem,
+					reloc->cmdbuf_offset,
+					reloc->target,
+					reloc->target_offset);
+				job->num_relocs++;
+				hdr->num_relocs--;
+				numrelocs--;
+			}
 		} else if (hdr->num_waitchks) {
 			int numwaitchks =
 				(remaining / sizeof(struct nvhost_waitchk));
@@ -275,16 +282,18 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 		} else if (priv->num_relocshifts) {
 			int next_shift =
 				job->num_relocs - priv->num_relocshifts;
-			consumed = sizeof(struct nvhost_reloc_shift);
-			if (remaining < consumed)
+			int num =
+				(remaining / sizeof(struct nvhost_reloc_shift));
+			if (!num)
 				break;
-			if (copy_from_user(
-					&job->pinarray[next_shift].reloc_shift,
+			num = min_t(int, num, priv->num_relocshifts);
+			consumed = num * sizeof(struct nvhost_reloc_shift);
+			if (copy_from_user(&job->relocshiftarray[next_shift],
 					buf, consumed)) {
 				err = -EFAULT;
 				break;
 			}
-			priv->num_relocshifts--;
+			priv->num_relocshifts -= num;
 		} else {
 			err = -EFAULT;
 			break;

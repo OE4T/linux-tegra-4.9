@@ -67,7 +67,8 @@ struct nvhost_job {
 	u32 waitchk_mask;
 
 	/* Array of handles to be pinned & unpinned */
-	struct nvmap_pinarray_elem *pinarray;
+	struct nvhost_reloc *relocarray;
+	struct nvhost_reloc_shift *relocshiftarray;
 	int num_relocs;
 	struct nvmap_handle_ref **unpins;
 	int num_unpins;

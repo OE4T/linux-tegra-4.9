@@ -41,7 +41,8 @@ static int job_size(struct nvhost_submit_hdr_ext *hdr)
 	int num_unpins = num_cmdbufs + num_relocs;
 
 	return sizeof(struct nvhost_job)
-			+ num_relocs * sizeof(struct nvmap_pinarray_elem)
+			+ num_relocs * sizeof(struct nvhost_reloc)
+			+ num_relocs * sizeof(struct nvhost_reloc_shift)
 			+ num_unpins * sizeof(struct nvmap_handle_ref *)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather);
@@ -63,8 +64,10 @@ static void init_fields(struct nvhost_job *job,
 
 	/* Redistribute memory to the structs */
 	mem += sizeof(struct nvhost_job);
-	job->pinarray = num_relocs ? mem : NULL;
-	mem += num_relocs * sizeof(struct nvmap_pinarray_elem);
+	job->relocarray = num_relocs ? mem : NULL;
+	mem += num_relocs * sizeof(struct nvhost_reloc);
+	job->relocshiftarray = num_relocs ? mem : NULL;
+	mem += num_relocs * sizeof(struct nvhost_reloc_shift);
 	job->unpins = num_unpins ? mem : NULL;
 	mem += num_unpins * sizeof(struct nvmap_handle_ref *);
 	job->waitchk = num_waitchks ? mem : NULL;
@@ -154,44 +157,46 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	job->num_gathers += 1;
 }
 
-static int do_relocs(struct nvhost_job *job, u32 patch_mem, void *patch_addr)
+static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
 {
-	phys_addr_t pin_phys;
+	phys_addr_t target_phys;
 	int i;
 	u32 mem_id = 0;
-	struct nvmap_handle_ref *pin_ref = NULL;
+	struct nvmap_handle_ref *target_ref = NULL;
 
 	/* pin & patch the relocs for one gather */
 	for (i = 0; i < job->num_relocs; i++) {
-		struct nvmap_pinarray_elem *pin = &job->pinarray[i];
+		struct nvhost_reloc *reloc = &job->relocarray[i];
+		struct nvhost_reloc_shift *shift = &job->relocshiftarray[i];
 
 		/* skip all other gathers */
-		if (patch_mem != pin->patch_mem)
+		if (cmdbuf_mem != reloc->cmdbuf_mem)
 			continue;
 
 		/* check if pin-mem is same as previous */
-		if (pin->pin_mem != mem_id) {
-			pin_ref = nvmap_duplicate_handle_id(job->nvmap,
-					pin->pin_mem);
-			if (IS_ERR(pin_ref))
-				return PTR_ERR(pin_ref);
+		if (reloc->target != mem_id) {
+			target_ref = nvmap_duplicate_handle_id(job->nvmap,
+					reloc->target);
+			if (IS_ERR(target_ref))
+				return PTR_ERR(target_ref);
 
-			pin_phys = nvmap_pin(job->nvmap, pin_ref);
-			if (IS_ERR((void *)pin_phys)) {
-				nvmap_free(job->nvmap, pin_ref);
-				return pin_phys;
+			target_phys = nvmap_pin(job->nvmap, target_ref);
+			if (IS_ERR((void *)target_phys)) {
+				nvmap_free(job->nvmap, target_ref);
+				return target_phys;
 			}
 
-			mem_id = pin->pin_mem;
-			job->unpins[job->num_unpins++] = pin_ref;
+			mem_id = reloc->target;
+			job->unpins[job->num_unpins++] = target_ref;
 		}
 
-		__raw_writel((pin_phys + pin->pin_offset) >> pin->reloc_shift,
-				(patch_addr + pin->patch_offset));
+		__raw_writel(
+			(target_phys + reloc->target_offset) >> shift->shift,
+			(cmdbuf_addr + reloc->cmdbuf_offset));
 
 		/* Different gathers might have same mem_id. This ensures we
 		 * perform reloc only once per gather memid. */
-		pin->patch_mem = 0;
+		reloc->cmdbuf_mem = 0;
 	}
 
 	return 0;
@@ -216,7 +221,8 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			continue;
 
 		trace_nvhost_syncpt_wait_check(wait->mem, wait->offset,
-				wait->syncpt_id, wait->thresh);
+				wait->syncpt_id, wait->thresh,
+				nvhost_syncpt_read(sp, wait->syncpt_id));
 		if (nvhost_syncpt_is_expired(sp,
 					wait->syncpt_id, wait->thresh)) {
 			/*

@@ -53,6 +53,18 @@ static void add_to_sync_queue(struct nvhost_cdma *cdma,
 	job->num_slots = nr_slots;
 	nvhost_job_get(job);
 	list_add_tail(&job->list, &cdma->sync_queue);
+
+	switch (job->priority) {
+	case NVHOST_PRIORITY_HIGH:
+		cdma->high_prio_count++;
+		break;
+	case NVHOST_PRIORITY_MEDIUM:
+		cdma->med_prio_count++;
+		break;
+	case NVHOST_PRIORITY_LOW:
+		cdma->low_prio_count++;
+		break;
+	}
 }
 
 /**
@@ -200,6 +212,19 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		}
 
 		list_del(&job->list);
+
+		switch (job->priority) {
+		case NVHOST_PRIORITY_HIGH:
+			cdma->high_prio_count--;
+			break;
+		case NVHOST_PRIORITY_MEDIUM:
+			cdma->med_prio_count--;
+			break;
+		case NVHOST_PRIORITY_LOW:
+			cdma->low_prio_count--;
+			break;
+		}
+
 		nvhost_job_put(job);
 	}
 
@@ -466,6 +491,12 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 	if (job->timeout && was_idle)
 		cdma_start_timer_locked(cdma, job);
 
+	trace_nvhost_cdma_end(job->ch->dev->name,
+			job->priority,
+			job->ch->cdma.high_prio_count,
+			job->ch->cdma.med_prio_count,
+			job->ch->cdma.low_prio_count);
+
 	mutex_unlock(&cdma->lock);
 }
 
@@ -489,6 +520,8 @@ int nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout)
 {
 	unsigned int space, err = 0;
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+
+	trace_nvhost_cdma_flush(cdma_to_channel(cdma)->dev->name, timeout);
 
 	/*
 	 * Wait for at most timeout ms. Recalculate timeout at each iteration

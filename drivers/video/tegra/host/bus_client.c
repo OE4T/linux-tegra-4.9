@@ -142,12 +142,6 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(ch->dev)->clientid);
 	priv->timeout = MAX_STUCK_CHECK_COUNT * SYNCPT_CHECK_PERIOD;
-
-	priv->job = nvhost_job_alloc(ch, priv->hwctx, &priv->hdr,
-			NULL, priv->priority, priv->clientid);
-	if (!priv->job)
-		goto fail;
-
 	return 0;
 fail:
 	nvhost_channelrelease(inode, filp);

@@ -99,6 +99,9 @@ struct nvhost_cdma {
 	struct buffer_timeout timeout;	/* channel's timeout state/wq */
 	bool running;
 	bool torndown;
+	int high_prio_count;
+	int med_prio_count;
+	int low_prio_count;
 };
 
 #define cdma_to_channel(cdma) container_of(cdma, struct nvhost_channel, cdma)

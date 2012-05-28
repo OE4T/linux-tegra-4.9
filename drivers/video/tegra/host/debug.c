@@ -106,13 +106,53 @@ static void show_all(struct nvhost_master *m, struct output *o)
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o, show_channels);
+	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o,
+			show_channels);
 
 	nvhost_module_idle(m->dev);
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int nvhost_debug_show(struct seq_file *s, void *unused)
+static int show_channels_no_fifo(struct device *dev, void *data)
+{
+	struct nvhost_channel *ch;
+	struct nvhost_device *nvdev = to_nvhost_device(dev);
+	struct output *o = data;
+	struct nvhost_master *m;
+
+	if (nvdev == NULL)
+		return 0;
+
+	m = nvhost_get_host(nvdev);
+	ch = nvdev->channel;
+	if (ch) {
+		mutex_lock(&ch->reflock);
+		if (ch->refcount) {
+			mutex_lock(&ch->cdma.lock);
+			nvhost_get_chip_ops()->debug.show_channel_cdma(m,
+					ch, o, nvdev->index);
+			mutex_unlock(&ch->cdma.lock);
+		}
+		mutex_unlock(&ch->reflock);
+	}
+
+	return 0;
+}
+
+static void show_all_no_fifo(struct nvhost_master *m, struct output *o)
+{
+	nvhost_module_busy(m->dev);
+
+	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
+	show_syncpts(m, o);
+	nvhost_debug_output(o, "---- channels ----\n");
+	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o,
+			show_channels_no_fifo);
+
+	nvhost_module_idle(m->dev);
+}
+
+static int nvhost_debug_show_all(struct seq_file *s, void *unused)
 {
 	struct output o = {
 		.fn = write_to_seqfile,
@@ -121,6 +161,27 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 	show_all(s->private, &o);
 	return 0;
 }
+static int nvhost_debug_show(struct seq_file *s, void *unused)
+{
+	struct output o = {
+		.fn = write_to_seqfile,
+		.ctx = s
+	};
+	show_all_no_fifo(s->private, &o);
+	return 0;
+}
+
+static int nvhost_debug_open_all(struct inode *inode, struct file *file)
+{
+	return single_open(file, nvhost_debug_show_all, inode->i_private);
+}
+
+static const struct file_operations nvhost_debug_all_fops = {
+	.open		= nvhost_debug_open_all,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static int nvhost_debug_open(struct inode *inode, struct file *file)
 {
@@ -140,6 +201,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 
 	debugfs_create_file("status", S_IRUGO, de,
 			master, &nvhost_debug_fops);
+	debugfs_create_file("status_all", S_IRUGO, de,
+			master, &nvhost_debug_all_fops);
 
 	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_null_kickoff_pid);

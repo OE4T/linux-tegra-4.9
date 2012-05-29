@@ -183,6 +183,11 @@ static void reset_submit(struct nvhost_channel_userctx *ctx)
 	ctx->hdr.num_relocs = 0;
 	ctx->num_relocshifts = 0;
 	ctx->hdr.num_waitchks = 0;
+
+	if (ctx->job) {
+		nvhost_job_put(ctx->job);
+		ctx->job = NULL;
+	}
 }
 
 static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,

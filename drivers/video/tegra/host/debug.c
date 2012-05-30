@@ -79,7 +79,7 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 	int i;
 	BUG_ON(!nvhost_get_chip_ops()->syncpt.name);
 	nvhost_debug_output(o, "---- syncpts ----\n");
-	for (i = 0; i < m->syncpt.nb_pts; i++) {
+	for (i = 0; i < nvhost_syncpt_nb_pts(&m->syncpt); i++) {
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
 		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
 		if (!min && !max)
@@ -89,7 +89,7 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 				min, max);
 	}
 
-	for (i = 0; i < m->syncpt.nb_bases; i++) {
+	for (i = 0; i < nvhost_syncpt_nb_pts(&m->syncpt); i++) {
 		u32 base_val;
 		base_val = nvhost_syncpt_read_wait_base(&m->syncpt, i);
 		if (base_val)

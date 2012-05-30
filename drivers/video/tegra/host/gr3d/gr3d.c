@@ -43,7 +43,7 @@ void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* set class to host */
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
+					host1x_uclass_incr_syncpt_base_r(), 1);
 	/* increment sync point base */
 	ptr[1] = nvhost_class_host_incr_syncpt_base(p->waitbase,
 			p->restore_incrs);
@@ -69,7 +69,7 @@ void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* syncpt increment to track restore gather. */
 	ptr[0] = nvhost_opcode_imm_incr_syncpt(
-			NV_SYNCPT_OP_DONE, p->syncpt);
+			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
 }
 
 /*** ctx3d ***/
@@ -150,7 +150,13 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 
 int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev)
 {
-	return host1x_save_context(dev, NVSYNCPT_3D);
+	struct nvhost_hwctx *cur_ctx = dev->channel->cur_ctx;
+	int err = 0;
+	if (cur_ctx)
+		err = host1x_save_context(dev,
+			to_host1x_hwctx_handler(cur_ctx->h)->syncpt);
+
+	return err;
 }
 
 enum gr3d_ip_ver {

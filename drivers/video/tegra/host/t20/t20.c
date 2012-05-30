@@ -47,9 +47,61 @@
 #define NVMODMUTEX_VI		(8)
 #define NVMODMUTEX_DSI		(9)
 
-#define T20_NVHOST_NUMCHANNELS	(NV_HOST1X_CHANNELS - 1)
-
 static int t20_num_alloc_channels = 0;
+
+static struct resource tegra_host1x01_resources[] = {
+	{
+		.start = TEGRA_HOST1X_BASE,
+		.end = TEGRA_HOST1X_BASE + TEGRA_HOST1X_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = INT_SYNCPT_THRESH_BASE,
+		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = INT_HOST1X_MPCORE_GENERAL,
+		.end = INT_HOST1X_MPCORE_GENERAL,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static const char *s_syncpt_names[32] = {
+	"gfx_host",
+	"", "", "", "", "", "", "",
+	"disp0_a", "disp1_a", "avp_0",
+	"csi_vi_0", "csi_vi_1",
+	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
+	"2d_0", "2d_1",
+	"disp0_b", "disp1_b",
+	"3d",
+	"mpe",
+	"disp0_c", "disp1_c",
+	"vblank0", "vblank1",
+	"mpe_ebm_eof", "mpe_wr_safe",
+	"2d_tinyblt",
+	"dsi"
+};
+
+static struct host1x_device_info host1x01_info = {
+	.nb_channels	= 8,
+	.nb_pts		= 32,
+	.nb_mlocks	= 16,
+	.nb_bases	= 8,
+	.syncpt_names	= s_syncpt_names,
+	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
+};
+
+static struct nvhost_device tegra_host1x01_device = {
+	.dev		= {.platform_data = &host1x01_info},
+	.name		= "host1x",
+	.id		= -1,
+	.resource	= tegra_host1x01_resources,
+	.num_resources	= ARRAY_SIZE(tegra_host1x01_resources),
+	.clocks		= {{"host1x", UINT_MAX}, {} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+};
 
 static struct nvhost_device tegra_display01_device = {
 	.name		= "display",
@@ -199,7 +251,6 @@ int tegra2_register_host1x_devices(void)
 
 static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
 {
-	p += NV_HOST1X_CHANNEL0_BASE;
 	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
 	return p;
 }
@@ -250,10 +301,12 @@ static void t20_free_nvhost_channel(struct nvhost_channel *ch)
 	nvhost_free_channel_internal(ch, &t20_num_alloc_channels);
 }
 
-static struct nvhost_channel *t20_alloc_nvhost_channel(int chindex)
+static struct nvhost_channel *t20_alloc_nvhost_channel(
+		struct nvhost_device *dev)
 {
-	return nvhost_alloc_channel_internal(chindex,
-		T20_NVHOST_NUMCHANNELS, &t20_num_alloc_channels);
+	return nvhost_alloc_channel_internal(dev->index,
+		nvhost_get_host(dev)->info.nb_channels,
+		&t20_num_alloc_channels);
 }
 
 int nvhost_init_t20_support(struct nvhost_master *host,

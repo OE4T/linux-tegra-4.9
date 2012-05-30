@@ -583,7 +583,7 @@ int nvhost_client_device_init(struct nvhost_device *dev)
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_channel *ch;
 
-	ch = nvhost_alloc_channel(dev->index);
+	ch = nvhost_alloc_channel(dev);
 	if (ch == NULL)
 		return -ENODEV;
 

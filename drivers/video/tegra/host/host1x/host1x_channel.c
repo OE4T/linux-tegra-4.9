@@ -42,7 +42,7 @@ static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 		waitbase = find_first_bit(&waitbase_mask, BITS_PER_LONG);
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				NV_CLASS_HOST_LOAD_SYNCPT_BASE,
+				host1x_uclass_load_syncpt_base_r(),
 				1),
 				nvhost_class_host_load_syncpt_base(waitbase,
 						syncpt_val));
@@ -158,7 +158,8 @@ void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 	u32 op_incr;
 
 	/* push increments that correspond to nulled out commands */
-	op_incr = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
+	op_incr = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(),
 			job->syncpt_id);
 	for (incr = 0; incr < (user_syncpt_incrs >> 1); incr++)
 		nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
@@ -171,7 +172,7 @@ void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(
 				NV_HOST1X_CLASS_ID,
-				NV_CLASS_HOST_INCR_SYNCPT_BASE,
+				host1x_uclass_incr_syncpt_base_r(),
 				1),
 			nvhost_class_host_incr_syncpt_base(
 				waitbase,
@@ -386,38 +387,41 @@ int host1x_channel_read_3d_reg(
 	/* Switch to 3D - wait for it to complete what it was doing */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
+		nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(),
 			p->syncpt));
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-			NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
+			host1x_uclass_wait_syncpt_base_r(), 1),
 		nvhost_class_host_wait_syncpt_base(p->syncpt,
 			p->waitbase, 1));
 	/*  Tell 3D to send register value to FIFO */
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(NV_CLASS_HOST_INDOFF, 1),
+		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
 		nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
 			offset, false));
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_imm(NV_CLASS_HOST_INDDATA, 0),
+		nvhost_opcode_imm(host1x_uclass_inddata_r(), 0),
 		NVHOST_OPCODE_NOOP);
 	/*  Increment syncpt to indicate that FIFO can be read */
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
+		nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_immediate_v(),
 			p->syncpt),
 		NVHOST_OPCODE_NOOP);
 	/*  Wait for value to be read from FIFO */
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
+		nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1),
 		nvhost_class_host_wait_syncpt_base(p->syncpt,
 			p->waitbase, 3));
 	/*  Indicate submit complete */
 	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(NV_CLASS_HOST_INCR_SYNCPT_BASE, 1),
+		nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1),
 		nvhost_class_host_incr_syncpt_base(p->waitbase, 4));
 	nvhost_cdma_push(&channel->cdma,
 		NVHOST_OPCODE_NOOP,
-		nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
+		nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_immediate_v(),
 			p->syncpt));
 
 	/* end CDMA submit  */
@@ -492,8 +496,8 @@ int host1x_drain_read_fifo(void __iomem *chan_regs,
 
 		while (!entries && time_before(jiffies, timeout)) {
 			/* query host for number of entries in fifo */
-			entries = HOST1X_VAL(CHANNEL_FIFOSTAT, OUTFENTRIES,
-				readl(chan_regs + HOST1X_CHANNEL_FIFOSTAT));
+			entries = host1x_channel_fifostat_outfentries_v(
+				readl(chan_regs + host1x_channel_fifostat_r()));
 			if (!entries)
 				cpu_relax();
 		}
@@ -508,16 +512,16 @@ int host1x_drain_read_fifo(void __iomem *chan_regs,
 
 		while (num & ~0x3) {
 			u32 arr[4];
-			arr[0] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[1] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[2] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
-			arr[3] = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
+			arr[0] = readl(chan_regs + host1x_channel_inddata_r());
+			arr[1] = readl(chan_regs + host1x_channel_inddata_r());
+			arr[2] = readl(chan_regs + host1x_channel_inddata_r());
+			arr[3] = readl(chan_regs + host1x_channel_inddata_r());
 			memcpy(ptr, arr, 4*sizeof(u32));
 			ptr += 4;
 			num -= 4;
 		}
 		while (num--)
-			*ptr++ = readl(chan_regs + HOST1X_CHANNEL_INDDATA);
+			*ptr++ = readl(chan_regs + host1x_channel_inddata_r());
 	}
 	*pending = entries;
 

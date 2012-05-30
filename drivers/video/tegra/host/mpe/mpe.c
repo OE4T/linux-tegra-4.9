@@ -146,7 +146,7 @@ static void restore_begin(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* set class to host */
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
+					host1x_uclass_incr_syncpt_base_r(), 1);
 	/* increment sync point base */
 	ptr[1] = nvhost_class_host_incr_syncpt_base(h->waitbase, 1);
 	/* set class to MPE */
@@ -165,7 +165,8 @@ static void restore_ram(u32 *ptr, unsigned words,
 static void restore_end(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* syncpt increment to track restore gather. */
-	ptr[0] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
+	ptr[0] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(),
 			h->syncpt);
 }
 #define RESTORE_END_SIZE 1
@@ -223,23 +224,26 @@ static void __init save_begin(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* MPE: when done, increment syncpt to base+1 */
 	ptr[0] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE, h->syncpt);
+	ptr[1] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(), h->syncpt);
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
+					host1x_uclass_wait_syncpt_base_r(), 1);
 	ptr[3] = nvhost_class_host_wait_syncpt_base(h->syncpt, h->waitbase, 1);
 	/* host: signal context read thread to start reading */
-	ptr[4] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE, h->syncpt);
+	ptr[4] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_immediate_v(),
+			h->syncpt);
 }
 #define SAVE_BEGIN_SIZE 5
 
 static void __init save_direct(u32 *ptr, u32 start_reg, u32 count)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INDOFF, 1);
+					host1x_uclass_indoff_r(), 1);
 	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_MPE,
 						start_reg, true);
-	ptr[2] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
+	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 #define SAVE_DIRECT_SIZE 3
 
@@ -254,10 +258,10 @@ static void __init save_set_ram_cmd(u32 *ptr, u32 cmd_reg, u32 count)
 static void __init save_read_ram_data_nasty(u32 *ptr, u32 data_reg)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INDOFF, 1);
+					host1x_uclass_indoff_r(), 1);
 	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_MPE,
 						data_reg, false);
-	ptr[2] = nvhost_opcode_imm(NV_CLASS_HOST_INDDATA, 0);
+	ptr[2] = nvhost_opcode_imm(host1x_uclass_inddata_r(), 0);
 	/* write junk data to avoid 'cached problem with register memory' */
 	ptr[3] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 					data_reg, 1);
@@ -269,10 +273,10 @@ static void __init save_end(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* Wait for context read service to finish (cpu incr 3) */
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
+					host1x_uclass_wait_syncpt_base_r(), 1);
 	ptr[1] = nvhost_class_host_wait_syncpt_base(h->syncpt, h->waitbase, 3);
 	/* Advance syncpoint base */
-	ptr[2] = nvhost_opcode_nonincr(NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
+	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1);
 	ptr[3] = nvhost_class_host_incr_syncpt_base(h->waitbase, 3);
 	/* set class back to the unit */
 	ptr[4] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0);
@@ -585,7 +589,13 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 {
-	return host1x_save_context(dev, NVSYNCPT_MPE);
+	struct nvhost_hwctx *cur_ctx = dev->channel->cur_ctx;
+	int err = 0;
+	if (cur_ctx)
+		err = host1x_save_context(dev,
+			to_host1x_hwctx_handler(cur_ctx->h)->syncpt);
+
+	return err;
 }
 
 enum mpe_ip_ver {

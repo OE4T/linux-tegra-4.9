@@ -19,8 +19,6 @@
  */
 
 #include <linux/slab.h>
-#include <linux/string.h>
-#include <linux/spinlock.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
@@ -33,49 +31,16 @@
 #include "bus.h"
 #include <trace/events/nvhost.h>
 
-#include <linux/io.h>
-
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
-#include <mach/hardware.h>
-#include <mach/iomap.h>
 
 #include "debug.h"
-#include "t20/t20.h"
-#include "t30/t30.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 
 #define DRIVER_NAME		"host1x"
-
-static struct resource tegra_host1x01_resources[] = {
-	{
-		.start = TEGRA_HOST1X_BASE,
-		.end = TEGRA_HOST1X_BASE + TEGRA_HOST1X_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = INT_SYNCPT_THRESH_BASE,
-		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
-		.flags = IORESOURCE_IRQ,
-	},
-	{
-		.start = INT_HOST1X_MPCORE_GENERAL,
-		.end = INT_HOST1X_MPCORE_GENERAL,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct nvhost_device tegra_host1x01_device = {
-	.name		= "host1x",
-	.id		= -1,
-	.resource	= tegra_host1x01_resources,
-	.num_resources	= ARRAY_SIZE(tegra_host1x01_resources),
-	.clocks		= {{"host1x", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-};
 
 struct nvhost_ctrl_userctx {
 	struct nvhost_master *dev;
@@ -92,7 +57,7 @@ static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 	filp->private_data = NULL;
 	if (priv->mod_locks[0])
 		nvhost_module_idle(priv->dev->dev);
-	for (i = 1; i < priv->dev->syncpt.nb_mlocks; i++)
+	for (i = 1; i < nvhost_syncpt_nb_mlocks(&priv->dev->syncpt); i++)
 		if (priv->mod_locks[i])
 			nvhost_mutex_unlock(&priv->dev->syncpt, i);
 	kfree(priv->mod_locks);
@@ -110,7 +75,9 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 	trace_nvhost_ctrlopen(host->dev->name);
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	mod_locks = kzalloc(sizeof(u32) * host->syncpt.nb_mlocks, GFP_KERNEL);
+	mod_locks = kzalloc(sizeof(u32)
+			* nvhost_syncpt_nb_mlocks(&host->syncpt),
+			GFP_KERNEL);
 
 	if (!(priv && mod_locks)) {
 		kfree(priv);
@@ -127,7 +94,7 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 static int nvhost_ioctl_ctrl_syncpt_read(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_read_args *args)
 {
-	if (args->id >= ctx->dev->syncpt.nb_pts)
+	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))
 		return -EINVAL;
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
 	trace_nvhost_ioctl_ctrl_syncpt_read(args->id, args->value);
@@ -137,7 +104,7 @@ static int nvhost_ioctl_ctrl_syncpt_read(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_incr(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_incr_args *args)
 {
-	if (args->id >= ctx->dev->syncpt.nb_pts)
+	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))
 		return -EINVAL;
 	trace_nvhost_ioctl_ctrl_syncpt_incr(args->id);
 	nvhost_syncpt_incr(&ctx->dev->syncpt, args->id);
@@ -149,7 +116,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 {
 	u32 timeout;
 	int err;
-	if (args->id >= ctx->dev->syncpt.nb_pts)
+	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		timeout = MAX_SCHEDULE_TIMEOUT;
@@ -168,7 +135,7 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_module_mutex_args *args)
 {
 	int err = 0;
-	if (args->id >= ctx->dev->syncpt.nb_mlocks ||
+	if (args->id >= nvhost_syncpt_nb_mlocks(&ctx->dev->syncpt) ||
 	    args->lock > 1)
 		return -EINVAL;
 
@@ -378,10 +345,10 @@ fail:
 	return err;
 }
 
-struct nvhost_channel *nvhost_alloc_channel(int index)
+struct nvhost_channel *nvhost_alloc_channel(struct nvhost_device *dev)
 {
 	BUG_ON(!host_device_op().alloc_nvhost_channel);
-	return host_device_op().alloc_nvhost_channel(index);
+	return host_device_op().alloc_nvhost_channel(dev);
 }
 
 void nvhost_free_channel(struct nvhost_channel *ch)
@@ -405,7 +372,8 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 		return err;
 
 	host->intr.syncpt = kzalloc(sizeof(struct nvhost_intr_syncpt) *
-				    host->syncpt.nb_pts, GFP_KERNEL);
+				    nvhost_syncpt_nb_pts(&host->syncpt),
+				    GFP_KERNEL);
 
 	if (!host->intr.syncpt) {
 		/* frees happen in the support removal phase */
@@ -434,6 +402,13 @@ static int nvhost_probe(struct nvhost_device *dev,
 	host = kzalloc(sizeof(*host), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
+
+	/*  Register host1x device as bus master */
+	host->dev = dev;
+
+	/* Copy host1x parameters */
+	memcpy(&host->info, dev->dev.platform_data,
+			sizeof(struct host1x_device_info));
 
 	host->reg_mem = request_mem_region(regs->start,
 					resource_size(regs), dev->name);

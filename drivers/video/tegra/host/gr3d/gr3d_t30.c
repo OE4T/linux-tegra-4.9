@@ -116,11 +116,12 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	/* wait for 3d idle */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-			nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
-					p->syncpt));
+			nvhost_opcode_imm_incr_syncpt(
+				host1x_uclass_incr_syncpt_cond_op_done_v(),
+				p->syncpt));
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1),
+					host1x_uclass_wait_syncpt_base_r(), 1),
 			nvhost_class_host_wait_syncpt_base(p->syncpt,
 							p->waitbase, 1));
 	/* back to 3d */
@@ -168,11 +169,11 @@ static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count)
 	nvhost_3dctx_restore_direct(ptr + 1, start_reg, count);
 	ptr += RESTORE_DIRECT_SIZE;
 	ptr[1] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INDOFF, 1);
+					host1x_uclass_indoff_r(), 1);
 	ptr[2] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
 						start_reg, true);
 	/* TODO could do this in the setclass if count < 6 */
-	ptr[3] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
+	ptr[3] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
 static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
@@ -186,10 +187,10 @@ static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr += RESTORE_INDIRECT_SIZE;
 	ptr[2] = nvhost_opcode_imm(offset_reg, offset);
 	ptr[3] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INDOFF, 1);
+					host1x_uclass_indoff_r(), 1);
 	ptr[4] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
 						data_reg, false);
-	ptr[5] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
+	ptr[5] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
 static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
@@ -203,13 +204,14 @@ static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 	ptr[1] = nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK,
 			(1 << register_sets) - 1);
 	/* op_done syncpt incr to flush FDC */
-	ptr[2] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE, p->syncpt);
+	ptr[2] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
 	/* host wait for that syncpt incr, and advance the wait base */
 	ptr[3] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-			NV_CLASS_HOST_WAIT_SYNCPT_BASE,
+			host1x_uclass_wait_syncpt_base_r(),
 			nvhost_mask2(
-					NV_CLASS_HOST_WAIT_SYNCPT_BASE,
-					NV_CLASS_HOST_INCR_SYNCPT_BASE));
+				host1x_uclass_wait_syncpt_base_r(),
+				host1x_uclass_incr_syncpt_base_r()));
 	ptr[4] = nvhost_class_host_wait_syncpt_base(p->syncpt,
 				p->waitbase, p->save_incrs - 1);
 	ptr[5] = nvhost_class_host_incr_syncpt_base(p->waitbase,

@@ -242,7 +242,7 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 }
 
 void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
-		struct nvhost_syncpt *syncpt, struct device *dev)
+		struct nvhost_syncpt *syncpt, struct nvhost_device *dev)
 {
 	u32 get_restart;
 	u32 syncpt_incrs;
@@ -251,7 +251,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 
 	syncpt_val = nvhost_syncpt_update_min(syncpt, cdma->timeout.syncpt_id);
 
-	dev_dbg(dev,
+	dev_dbg(&dev->dev,
 		"%s: starting cleanup (thresh %d)\n",
 		__func__, syncpt_val);
 
@@ -262,7 +262,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	 * where a syncpt incr happens just prior/during the teardown.
 	 */
 
-	dev_dbg(dev,
+	dev_dbg(&dev->dev,
 		"%s: skip completed buffers still in sync_queue\n",
 		__func__);
 
@@ -270,7 +270,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		if (syncpt_val < job->syncpt_end)
 			break;
 
-		nvhost_job_dump(dev, job);
+		nvhost_job_dump(&dev->dev, job);
 	}
 
 	/*
@@ -288,7 +288,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	 * properly for this buffer and resources are freed.
 	 */
 
-	dev_dbg(dev,
+	dev_dbg(&dev->dev,
 		"%s: perform CPU incr on pending same ctx buffers\n",
 		__func__);
 
@@ -306,22 +306,23 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		job->timeout = 0;
 
 		syncpt_incrs = job->syncpt_end - syncpt_val;
-		dev_dbg(dev,
+		dev_dbg(&dev->dev,
 			"%s: CPU incr (%d)\n", __func__, syncpt_incrs);
 
-		nvhost_job_dump(dev, job);
+		nvhost_job_dump(&dev->dev, job);
 
 		/* safe to use CPU to incr syncpts */
 		cdma_op().timeout_cpu_incr(cdma,
 				job->first_get,
 				syncpt_incrs,
 				job->syncpt_end,
-				job->num_slots);
+				job->num_slots,
+				dev->waitbases);
 
 		syncpt_val += syncpt_incrs;
 	}
 
-	dev_dbg(dev,
+	dev_dbg(&dev->dev,
 		"%s: finished sync_queue modification\n", __func__);
 
 	/* roll back DMAGET and start up channel again */

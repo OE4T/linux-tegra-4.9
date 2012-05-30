@@ -282,7 +282,6 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 	waiter->data = data;
 	waiter->count = 1;
 
-	BUG_ON(id >= intr_to_dev(intr)->syncpt.nb_pts);
 	syncpt = intr->syncpt + id;
 
 	spin_lock(&syncpt->lock);
@@ -346,11 +345,11 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 {
 	unsigned int id;
 	struct nvhost_intr_syncpt *syncpt;
-	struct nvhost_master *host =
-		container_of(intr, struct nvhost_master, intr);
-	u32 nb_pts = host->syncpt.nb_pts;
+	struct nvhost_master *host = intr_to_dev(intr);
+	u32 nb_pts = nvhost_syncpt_nb_pts(&host->syncpt);
 
 	mutex_init(&intr->mutex);
+	intr->host_syncpt_irq_base = irq_sync;
 	intr_op().init_host_sync(intr);
 	intr->host_general_irq = irq_gen;
 	intr->host_general_irq_requested = false;
@@ -399,7 +398,7 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 {
 	unsigned int id;
 	struct nvhost_intr_syncpt *syncpt;
-	u32 nb_pts = intr_to_dev(intr)->syncpt.nb_pts;
+	u32 nb_pts = nvhost_syncpt_nb_pts(&intr_to_dev(intr)->syncpt);
 
 	BUG_ON(!(intr_op().disable_all_syncpt_intrs &&
 		 intr_op().free_host_general_irq));

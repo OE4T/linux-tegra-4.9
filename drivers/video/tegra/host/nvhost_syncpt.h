@@ -42,18 +42,14 @@ struct nvhost_syncpt {
 	atomic_t *min_val;
 	atomic_t *max_val;
 	u32 *base_val;
-	u32 nb_pts;
-	u32 nb_bases;
-	u32 client_managed;
 	atomic_t *lock_counts;
-	u32 nb_mlocks;
+	const char **syncpt_names;
 	struct nvhost_syncpt_attr *syncpt_attrs;
 };
 
 int nvhost_syncpt_init(struct nvhost_device *, struct nvhost_syncpt *);
 void nvhost_syncpt_deinit(struct nvhost_syncpt *);
 
-#define client_managed(id) (BIT(id) & sp->client_managed)
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define SYNCPT_CHECK_PERIOD (2 * HZ)
 #define MAX_STUCK_CHECK_COUNT 15
@@ -90,11 +86,16 @@ static inline u32 nvhost_syncpt_read_min(struct nvhost_syncpt *sp, u32 id)
 	return (u32)atomic_read(&sp->min_val[id]);
 }
 
+int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id);
+int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
+int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
+int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
+
 static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp,
 		u32 id, u32 real)
 {
 	u32 max;
-	if (client_managed(id))
+	if (nvhost_syncpt_client_managed(sp, id))
 		return true;
 	max = nvhost_syncpt_read_max(sp, id);
 	return (s32)(max - real) >= 0;
@@ -141,7 +142,7 @@ void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
 
 static inline int nvhost_syncpt_is_valid(struct nvhost_syncpt *sp, u32 id)
 {
-	return id != NVSYNCPT_INVALID && id < sp->nb_pts;
+	return id != NVSYNCPT_INVALID && id < nvhost_syncpt_nb_pts(sp);
 }
 
 int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);

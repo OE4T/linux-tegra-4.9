@@ -40,6 +40,7 @@ struct nvhost_job;
 struct nvhost_intr_syncpt;
 struct mem_handle;
 struct mem_mgr;
+struct nvhost_device;
 
 struct nvhost_chip_support {
 	struct {
@@ -67,7 +68,8 @@ struct nvhost_chip_support {
 					 u32 getptr,
 					 u32 syncpt_incrs,
 					 u32 syncval,
-					 u32 nr_slots);
+					 u32 nr_slots,
+					 u32 waitbases);
 	} cdma;
 
 	struct {
@@ -128,7 +130,8 @@ struct nvhost_chip_support {
 	} intr;
 
 	struct {
-		struct nvhost_channel *(*alloc_nvhost_channel)(int chid);
+		struct nvhost_channel *(*alloc_nvhost_channel)(
+				struct nvhost_device *dev);
 		void (*free_nvhost_channel)(struct nvhost_channel *ch);
 	} nvhost_dev;
 

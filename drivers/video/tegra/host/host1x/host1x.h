@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_DEV_H
-#define __NVHOST_DEV_H
+#ifndef __NVHOST_HOST1X_H
+#define __NVHOST_HOST1X_H
 
 #include <linux/cdev.h>
 #include "nvhost_syncpt.h"
@@ -28,9 +28,18 @@
 #define TRACE_MAX_LENGTH	128U
 #define IFACE_NAME		"nvhost"
 
-struct nvhost_hwctx;
 struct nvhost_channel;
 struct mem_mgr;
+struct nvhost_device;
+
+struct host1x_device_info {
+	int		nb_channels;	/* host1x: num channels supported */
+	int		nb_pts;	/* host1x: num syncpoints supported */
+	int		nb_bases;	/* host1x: num syncpoints supported */
+	u32		client_managed; /* host1x: client managed syncpts */
+	int		nb_mlocks;	/* host1x: number of mlocks */
+	const char	**syncpt_names;	/* names of sync points */
+};
 
 struct nvhost_master {
 	void __iomem *aperture;
@@ -44,6 +53,8 @@ struct nvhost_master {
 	struct nvhost_intr intr;
 	struct nvhost_device *dev;
 	atomic_t clientid;
+
+	struct host1x_device_info info;
 };
 
 extern struct nvhost_master *nvhost;
@@ -51,13 +62,9 @@ extern struct nvhost_master *nvhost;
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_debug_dump(struct nvhost_master *master);
 
-struct nvhost_channel *nvhost_alloc_channel(int index);
+struct nvhost_channel *nvhost_alloc_channel(struct nvhost_device *dev);
 void nvhost_free_channel(struct nvhost_channel *ch);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
-
-struct nvhost_device;
-
-extern struct nvhost_device tegra_host1x01_device;
 
 #endif

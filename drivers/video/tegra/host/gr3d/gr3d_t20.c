@@ -150,24 +150,26 @@ static void __init save_begin_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* 3d: when done, increment syncpt to base+1 */
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_OP_DONE,
+	ptr[1] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(),
 			h->syncpt); /*  incr 1 */
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
+					host1x_uclass_wait_syncpt_base_r(), 1);
 	ptr[3] = nvhost_class_host_wait_syncpt_base(h->syncpt,
 						h->waitbase, 1);
 	/* host: signal context read thread to start reading */
-	ptr[4] = nvhost_opcode_imm_incr_syncpt(NV_SYNCPT_IMMEDIATE,
+	ptr[4] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_immediate_v(),
 			h->syncpt); /* incr 2 */
 }
 
 static void __init save_direct_v0(u32 *ptr, u32 start_reg, u32 count)
 {
-	ptr[0] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDOFF, 1);
+	ptr[0] = nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1);
 	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
 						start_reg, true);
-	ptr[2] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
+	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
 static void __init save_indirect_v0(u32 *ptr, u32 offset_reg, u32 offset,
@@ -177,21 +179,21 @@ static void __init save_indirect_v0(u32 *ptr, u32 offset_reg, u32 offset,
 					offset_reg, 1);
 	ptr[1] = offset;
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					NV_CLASS_HOST_INDOFF, 1);
+					host1x_uclass_indoff_r(), 1);
 	ptr[3] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
 						data_reg, false);
-	ptr[4] = nvhost_opcode_nonincr(NV_CLASS_HOST_INDDATA, count);
+	ptr[4] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
 static void __init save_end_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* Wait for context read service to finish (cpu incr 3) */
-	ptr[0] = nvhost_opcode_nonincr(NV_CLASS_HOST_WAIT_SYNCPT_BASE, 1);
+	ptr[0] = nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1);
 	ptr[1] = nvhost_class_host_wait_syncpt_base(h->syncpt,
 			h->waitbase, h->save_incrs);
 	/* Advance syncpoint base */
-	ptr[2] = nvhost_opcode_nonincr(NV_CLASS_HOST_INCR_SYNCPT_BASE, 1);
-	ptr[3] = nvhost_class_host_incr_syncpt_base(NVWAITBASE_3D,
+	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1);
+	ptr[3] = nvhost_class_host_incr_syncpt_base(h->waitbase,
 			h->save_incrs);
 	/* set class back to the unit */
 	ptr[4] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);

@@ -76,6 +76,11 @@
 				~(1 << TEGRA_WIN_FMT_B8G8R8A8) & \
 				~(1 << TEGRA_WIN_FMT_R8G8B8A8))
 
+#define TEGRA_WIN_FMT_SIMPLE	((1 << TEGRA_WIN_FMT_B4G4R4A4) | \
+				(1 << TEGRA_WIN_FMT_B5G5R5A) | \
+				(1 << TEGRA_WIN_FMT_B5G6R5) | \
+				(1 << TEGRA_WIN_FMT_B8G8R8A8) | \
+				(1 << TEGRA_WIN_FMT_R8G8B8A8))
 
 
 /* For each entry, we define the offset to read specific feature. Define the
@@ -105,6 +110,9 @@
 /* Define the offset for TEGRA_DC_FEATURE_LAYOUT_TYPE. */
 #define PITCHED_LAYOUT	0
 #define TILED_LAYOUT	1
+
+/* Define the offset for TEGRA_DC_FEATURE_BLEND_TYPE. */
+#define BLEND_GENERATION	0
 
 /* Available operations on feature table. */
 enum {
@@ -142,6 +150,7 @@ struct tegra_dc_feature {
 int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation);
+int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx);
 
 long *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation);
 void tegra_dc_feature_register(struct tegra_dc *dc);

@@ -456,8 +456,65 @@
 #define DC_WIN_LINE_STRIDE			0x70a
 #define  LINE_STRIDE(x)		(x)
 #define  UV_LINE_STRIDE(x)	(((x) & 0xffff) << 16)
+
+#define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
+#define  WIN_K1(x)			(((x) & 0xff) << 8)
+#define  WIN_K2(x)			(((x) & 0xff) << 16)
+#define  WIN_BLEND_ENABLE		(0 << 24)
+#define  WIN_BLEND_BYPASS		(1 << 24)
+
+#define DC_WINBUF_BLEND_MATCH_SELECT		0x717
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_ZERO \
+					(0 << 0)
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_ONE \
+					(1 << 0)
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 \
+					(2 << 0)
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1_TIMES_DST \
+					(3 << 0)
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_NEG_K1_TIMES_DST \
+					(4 << 0)
+#define  WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1_TIMES_SRC \
+					(5 << 0)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_ZERO \
+					(0 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_ONE \
+					(1 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_K1 \
+					(2 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_K2 \
+					(3 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_K1_TIMES_DST \
+					(4 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1_TIMES_DST \
+					(5 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1_TIMES_SRC \
+					(6 << 4)
+#define  WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1 \
+					(7 << 4)
+#define  WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_ZERO \
+					(0 << 8)
+#define  WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K1 \
+					(1 << 8)
+#define  WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K2 \
+					(2 << 8)
+#define  WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO \
+					(0 << 12)
+#define  WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ONE \
+					(1 << 12)
+#define  WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_NEG_K1_TIMES_SRC \
+					(2 << 12)
+#define  WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_K2 \
+					(3 << 12)
+
+#define DC_WINBUF_BLEND_ALPHA_1BIT		0x719
+#define  WIN_ALPHA_1BIT_WEIGHT0(x)	(((x) & 0xff) << 0)
+#define  WIN_ALPHA_1BIT_WEIGHT1(x)	(((x) & 0xff) << 8)
+
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define  GET_LINE_STRIDE(x)	((x) & 0xffff)
 #define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
+#endif
 
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define DC_WIN_BUF_STRIDE			0x70b

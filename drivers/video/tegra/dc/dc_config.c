@@ -230,8 +230,20 @@ int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
 		return addr[H_FILTER];
 }
 
+int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx)
+{
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_GEN2_BLEND);
+
+	if (addr[BLEND_GENERATION] == 2)
+		return 1;
+
+	return 0;
+}
+
 void tegra_dc_feature_register(struct tegra_dc *dc)
 {
+	int i;
+	struct tegra_dc_feature_entry *entry;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	if (!dc->ndev->id)
 		dc->feature = &t20_feature_table_a;
@@ -243,4 +255,12 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 	else
 		dc->feature = &t30_feature_table_b;
 #endif
+	/* Count the number of windows using gen1 blender. */
+	dc->gen1_blend_num = 0;
+	for (i = 0; i < dc->feature->num_entries; i++) {
+		entry = &dc->feature->entries[i];
+		if (entry->option == TEGRA_DC_FEATURE_BLEND_TYPE &&
+							entry->arg[0] == 1)
+			dc->gen1_blend_num++;
+	}
 }

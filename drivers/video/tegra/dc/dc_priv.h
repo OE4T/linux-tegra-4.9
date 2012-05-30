@@ -140,6 +140,7 @@ struct tegra_dc {
 	struct tegra_dc_ext		*ext;
 
 	struct tegra_dc_feature		*feature;
+	int				gen1_blend_num;
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry			*debugdir;

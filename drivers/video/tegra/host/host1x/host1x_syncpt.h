@@ -21,6 +21,9 @@
 #ifndef __NVHOST_HOST1X_HOST1X_SYNCPT_H
 #define __NVHOST_HOST1X_HOST1X_SYNCPT_H
 
+#define NVSYNCPT_DISP0_D		     (5)
+#define NVSYNCPT_DISP0_H		     (6)
+#define NVSYNCPT_DISP1_H		     (7)
 #define NVSYNCPT_DISP0_A		     (8)
 #define NVSYNCPT_DISP1_A		     (9)
 #define NVSYNCPT_AVP_0			     (10)

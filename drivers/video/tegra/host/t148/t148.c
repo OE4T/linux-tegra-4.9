@@ -67,19 +67,13 @@ static struct nvhost_device t148_devices[] = {
 },
 {
 	/* channel 1 */
-	.name	       = "gr3d",
+	.name	       = "gr3d03",
 	.id            = -1,
 	.index         = 1,
 	.syncpts       = BIT(NVSYNCPT_3D),
 	.waitbases     = BIT(NVWAITBASE_3D),
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
-	.prepare_poweroff = nvhost_gr3d_prepare_power_off,
-	.busy = nvhost_scale3d_notify_busy,
-	.idle = nvhost_scale3d_notify_idle,
-	.init = nvhost_scale3d_init,
-	.deinit = nvhost_scale3d_deinit,
-	.alloc_hwctx_handler = t114_nvhost_3dctx_handler_init,
 	.clocks = {{"gr3d", UINT_MAX},
 			{"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -137,8 +131,6 @@ static struct nvhost_device t148_devices[] = {
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.exclusive     = false,
 	.keepalive     = true,
-	.init          = nvhost_msenc_init,
-	.deinit        = nvhost_msenc_deinit,
 	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -164,8 +156,6 @@ static struct nvhost_device t148_devices[] = {
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = false,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
 	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -179,7 +169,7 @@ static struct nvhost_device *t148_get_nvhost_device(char *name)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(t148_devices); i++) {
-		if (strcmp(t148_devices[i].name, name) == 0)
+		if (strncmp(t148_devices[i].name, name, strlen(name)) == 0)
 			return &t148_devices[i];
 	}
 

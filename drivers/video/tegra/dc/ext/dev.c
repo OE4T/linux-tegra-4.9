@@ -709,6 +709,21 @@ static int tegra_dc_ext_get_status(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
+static int tegra_dc_ext_get_feature(struct tegra_dc_ext_user *user,
+				   struct tegra_dc_ext_feature *feature)
+{
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_dc_feature *table = dc->feature;
+
+	if (dc->enabled && feature->entries) {
+		feature->length = table->num_entries;
+		memcpy(feature->entries, table->entries, table->num_entries *
+					sizeof(struct tegra_dc_feature_entry));
+	}
+
+	return 0;
+}
+
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
@@ -804,6 +819,22 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return tegra_dc_ext_set_lut(user, &args);
+	}
+
+	case TEGRA_DC_EXT_GET_FEATURES:
+	{
+		struct tegra_dc_ext_feature args;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_ext_get_feature(user, &args);
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
 	}
 
 	default:

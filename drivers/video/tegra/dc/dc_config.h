@@ -129,13 +129,13 @@ enum tegra_dc_feature_option {
 };
 
 struct tegra_dc_feature_entry {
-	int window_index;
-	enum tegra_dc_feature_option option;
+	u32 window_index;
+	u32 option;
 	long arg[ENTRY_SIZE];
 };
 
 struct tegra_dc_feature {
-	unsigned num_entries;
+	u32 num_entries;
 	struct tegra_dc_feature_entry *entries;
 };
 

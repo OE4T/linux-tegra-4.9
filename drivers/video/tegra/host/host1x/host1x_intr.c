@@ -28,6 +28,7 @@
 #include "dev.h"
 #include "host1x_hardware.h"
 #include "host1x_actmon.h"
+#include "chip_support.h"
 
 /*** HW host sync management ***/
 

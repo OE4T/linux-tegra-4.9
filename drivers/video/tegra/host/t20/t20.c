@@ -32,6 +32,9 @@
 #include "nvhost_channel.h"
 #include "host1x/host1x_channel.h"
 #include "host1x/host1x_cdma.h"
+#include "chip_support.h"
+#include "nvmap.h"
+#include "nvhost_memmgr.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)
@@ -239,6 +242,7 @@ int nvhost_init_t20_support(struct nvhost_master *host,
 	err = nvhost_init_t20_intr_support(op);
 	if (err)
 		return err;
+	err = nvhost_memmgr_init(op);
 
 	op->nvhost_dev.get_nvhost_device = t20_get_nvhost_device;
 	op->nvhost_dev.alloc_nvhost_channel = t20_alloc_nvhost_channel;

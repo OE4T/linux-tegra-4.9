@@ -25,7 +25,6 @@
 #include <linux/kref.h>
 
 #include <linux/nvhost.h>
-#include <linux/nvmap.h>
 
 struct nvhost_channel;
 struct nvhost_cdma;

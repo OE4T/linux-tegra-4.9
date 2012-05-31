@@ -142,7 +142,7 @@ static void submit_ctxrestore(struct nvhost_job *job)
 
 	/* Send restore buffer to channel */
 	nvhost_cdma_push_gather(&ch->cdma,
-		host->nvmap,
+		host->memmgr,
 		ctx->restore,
 		0,
 		nvhost_opcode_gather(ctx->restore_size),
@@ -187,7 +187,7 @@ void submit_gathers(struct nvhost_job *job)
 		u32 op1 = nvhost_opcode_gather(job->gathers[i].words);
 		u32 op2 = job->gathers[i].mem;
 		nvhost_cdma_push_gather(&job->ch->cdma,
-				job->nvmap,
+				job->memmgr,
 				job->gathers[i].ref,
 				job->gathers[i].offset,
 				op1, op2);
@@ -329,7 +329,7 @@ int host1x_channel_read_3d_reg(
 
 	job = nvhost_job_alloc(channel, hwctx,
 			NULL,
-			nvhost_get_host(channel->dev)->nvmap, 0, 0);
+			nvhost_get_host(channel->dev)->memmgr, 0, 0);
 	if (!job) {
 		err = -ENOMEM;
 		goto done;
@@ -555,7 +555,7 @@ int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
 
 	job = nvhost_job_alloc(ch, hwctx_to_save,
 			NULL,
-			nvhost_get_host(ch->dev)->nvmap, 0, 0);
+			nvhost_get_host(ch->dev)->memmgr, 0, 0);
 	if (IS_ERR_OR_NULL(job)) {
 		err = PTR_ERR(job);
 		mutex_unlock(&ch->submitlock);

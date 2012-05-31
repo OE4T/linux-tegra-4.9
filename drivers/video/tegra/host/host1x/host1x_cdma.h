@@ -36,6 +36,7 @@
  * and replaces the original timed out contexts GATHER slots */
 #define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
 
+struct nvhost_chip_support;
 int host1x_init_cdma_support(struct nvhost_chip_support *);
 
 #endif

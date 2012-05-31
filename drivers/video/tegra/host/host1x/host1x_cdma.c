@@ -23,6 +23,8 @@
 #include "nvhost_cdma.h"
 #include "nvhost_channel.h"
 #include "dev.h"
+#include "chip_support.h"
+#include "nvhost_memmgr.h"
 
 #include "host1x_hardware.h"
 #include "host1x_syncpt.h"
@@ -62,38 +64,38 @@ static void push_buffer_reset(struct push_buffer *pb)
 static int push_buffer_init(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
-	struct nvmap_client *nvmap = cdma_to_nvmap(cdma);
+	struct mem_mgr *mgr = cdma_to_memmgr(cdma);
 	pb->mem = NULL;
 	pb->mapped = NULL;
 	pb->phys = 0;
-	pb->nvmap = NULL;
+	pb->client_handle = NULL;
 
 	BUG_ON(!cdma_pb_op().reset);
 	cdma_pb_op().reset(pb);
 
 	/* allocate and map pushbuffer memory */
-	pb->mem = nvmap_alloc(nvmap, PUSH_BUFFER_SIZE + 4, 32,
-			      NVMAP_HANDLE_WRITE_COMBINE, 0);
+	pb->mem = mem_op().alloc(mgr, PUSH_BUFFER_SIZE + 4, 32,
+			      mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(pb->mem)) {
 		pb->mem = NULL;
 		goto fail;
 	}
-	pb->mapped = nvmap_mmap(pb->mem);
+	pb->mapped = mem_op().mmap(pb->mem);
 	if (pb->mapped == NULL)
 		goto fail;
 
 	/* pin pushbuffer and get physical address */
-	pb->phys = nvmap_pin(nvmap, pb->mem);
+	pb->phys = mem_op().pin(mgr, pb->mem);
 	if (pb->phys >= 0xfffff000) {
 		pb->phys = 0;
 		goto fail;
 	}
 
 	/* memory for storing nvmap client and handles for each opcode pair */
-	pb->nvmap = kzalloc(NVHOST_GATHER_QUEUE_SIZE *
-				sizeof(struct nvmap_client_handle),
+	pb->client_handle = kzalloc(NVHOST_GATHER_QUEUE_SIZE *
+				sizeof(struct mem_mgr_handle),
 			GFP_KERNEL);
-	if (!pb->nvmap)
+	if (!pb->client_handle)
 		goto fail;
 
 	/* put the restart at the end of pushbuffer memory */
@@ -113,22 +115,22 @@ fail:
 static void push_buffer_destroy(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
-	struct nvmap_client *nvmap = cdma_to_nvmap(cdma);
+	struct mem_mgr *mgr = cdma_to_memmgr(cdma);
 	if (pb->mapped)
-		nvmap_munmap(pb->mem, pb->mapped);
+		mem_op().munmap(pb->mem, pb->mapped);
 
 	if (pb->phys != 0)
-		nvmap_unpin(nvmap, pb->mem);
+		mem_op().unpin(mgr, pb->mem);
 
 	if (pb->mem)
-		nvmap_free(nvmap, pb->mem);
+		mem_op().put(mgr, pb->mem);
 
-	kfree(pb->nvmap);
+	kfree(pb->client_handle);
 
 	pb->mem = NULL;
 	pb->mapped = NULL;
 	pb->phys = 0;
-	pb->nvmap = 0;
+	pb->client_handle = 0;
 }
 
 /**
@@ -136,8 +138,8 @@ static void push_buffer_destroy(struct push_buffer *pb)
  * Caller must ensure push buffer is not full
  */
 static void push_buffer_push_to(struct push_buffer *pb,
-		struct nvmap_client *client,
-		struct nvmap_handle_ref *handle, u32 op1, u32 op2)
+		struct mem_mgr *client, struct mem_handle *handle,
+		u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
 	u32 *p = (u32 *)((u32)pb->mapped + cur);
@@ -145,8 +147,8 @@ static void push_buffer_push_to(struct push_buffer *pb,
 	BUG_ON(cur == pb->fence);
 	*(p++) = op1;
 	*(p++) = op2;
-	pb->nvmap[cur_nvmap].client = client;
-	pb->nvmap[cur_nvmap].handle = handle;
+	pb->client_handle[cur_nvmap].client = client;
+	pb->client_handle[cur_nvmap].handle = handle;
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
 }
 
@@ -163,8 +165,7 @@ static void push_buffer_pop_from(struct push_buffer *pb,
 	for (i = 0; i < slots; i++) {
 		int cur_fence_nvmap = (fence_nvmap+i)
 				& (NVHOST_GATHER_QUEUE_SIZE - 1);
-		struct nvmap_client_handle *h =
-				&pb->nvmap[cur_fence_nvmap];
+		struct mem_mgr_handle *h = &pb->client_handle[cur_fence_nvmap];
 		h->client = NULL;
 		h->handle = NULL;
 	}

@@ -30,8 +30,6 @@ struct nvhost_intr;
 struct nvhost_syncpt;
 struct nvhost_userctx_timeout;
 struct nvhost_channel;
-struct nvmap_handle_ref;
-struct nvmap_client;
 struct nvhost_hwctx;
 struct nvhost_cdma;
 struct nvhost_job;
@@ -40,6 +38,8 @@ struct nvhost_syncpt;
 struct dentry;
 struct nvhost_job;
 struct nvhost_intr_syncpt;
+struct mem_handle;
+struct mem_mgr;
 
 struct nvhost_chip_support {
 	struct {
@@ -75,8 +75,7 @@ struct nvhost_chip_support {
 		int (*init)(struct push_buffer *);
 		void (*destroy)(struct push_buffer *);
 		void (*push_to)(struct push_buffer *,
-				struct nvmap_client *,
-				struct nvmap_handle_ref *,
+				struct mem_mgr *, struct mem_handle *,
 				u32 op1, u32 op2);
 		void (*pop_from)(struct push_buffer *,
 				 unsigned int slots);
@@ -133,6 +132,22 @@ struct nvhost_chip_support {
 		struct nvhost_channel *(*alloc_nvhost_channel)(int chid);
 		void (*free_nvhost_channel)(struct nvhost_channel *ch);
 	} nvhost_dev;
+
+	struct {
+		struct mem_mgr *(*alloc_mgr)(void);
+		void (*put_mgr)(struct mem_mgr *);
+		struct mem_mgr *(*get_mgr)(struct mem_mgr *);
+		struct mem_mgr *(*get_mgr_file)(int fd);
+		struct mem_handle *(*alloc)(struct mem_mgr *,
+				size_t size, size_t align,
+				int flags);
+		struct mem_handle *(*get)(struct mem_mgr *, u32 id);
+		void (*put)(struct mem_mgr *, struct mem_handle *);
+		phys_addr_t (*pin)(struct mem_mgr *, struct mem_handle *);
+		void (*unpin)(struct mem_mgr *, struct mem_handle *);
+		void *(*mmap)(struct mem_handle *);
+		void (*munmap)(struct mem_handle *, void *);
+	} mem;
 };
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
@@ -144,6 +159,7 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define intr_op()		nvhost_get_chip_ops()->intr
 #define cdma_op()		nvhost_get_chip_ops()->cdma
 #define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
+#define mem_op()		(nvhost_get_chip_ops()->mem)
 
 int nvhost_init_t20_support(struct nvhost_master *host);
 int nvhost_init_t30_support(struct nvhost_master *host);

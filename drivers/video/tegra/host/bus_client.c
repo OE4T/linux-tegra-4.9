@@ -37,7 +37,6 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
-#include <linux/nvmap.h>
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
 #include <mach/iomap.h>
@@ -45,6 +44,8 @@
 #include "debug.h"
 #include "bus_client.h"
 #include "dev.h"
+#include "nvhost_memmgr.h"
+#include "chip_support.h"
 #include "nvhost_acm.h"
 
 #include "nvhost_channel.h"
@@ -113,7 +114,7 @@ struct nvhost_channel_userctx {
 	struct nvhost_submit_hdr_ext hdr;
 	int num_relocshifts;
 	struct nvhost_job *job;
-	struct nvmap_client *nvmap;
+	struct mem_mgr *memmgr;
 	u32 timeout;
 	u32 priority;
 	int clientid;
@@ -136,7 +137,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->job)
 		nvhost_job_put(priv->job);
 
-	nvmap_client_put(priv->nvmap);
+	mem_op().put_mgr(priv->memmgr);
 	kfree(priv);
 	return 0;
 }
@@ -189,7 +190,7 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 				ctx->hdr.syncpt_id))
 		return -EIO;
 
-	if (!ctx->nvmap) {
+	if (!ctx->memmgr) {
 		dev_err(&ndev->dev, "no nvmap context set\n");
 		return -EFAULT;
 	}
@@ -197,7 +198,7 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	ctx->job = nvhost_job_alloc(ctx->ch,
 			ctx->hwctx,
 			&ctx->hdr,
-			ctx->nvmap,
+			ctx->memmgr,
 			ctx->priority,
 			ctx->clientid);
 	if (!ctx->job)
@@ -472,17 +473,17 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 	{
 		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;
-		struct nvmap_client *new_client = nvmap_client_get_file(fd);
+		struct mem_mgr *new_client = mem_op().get_mgr_file(fd);
 
 		if (IS_ERR(new_client)) {
 			err = PTR_ERR(new_client);
 			break;
 		}
 
-		if (priv->nvmap)
-			nvmap_client_put(priv->nvmap);
+		if (priv->memmgr)
+			mem_op().put_mgr(priv->memmgr);
 
-		priv->nvmap = new_client;
+		priv->memmgr = new_client;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:

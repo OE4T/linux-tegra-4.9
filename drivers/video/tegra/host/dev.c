@@ -46,12 +46,13 @@
 #include "t30/t30.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include <linux/nvmap.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "nvhost_memmgr.h"
+#include "chip_support.h"
 
 #define DRIVER_NAME		"host1x"
 #define HOST_DEFAULT_RATE	108000000
@@ -503,13 +504,6 @@ static int nvhost_probe(struct nvhost_device *dev,
 	if (!host)
 		return -ENOMEM;
 
-	host->nvmap = nvmap_create_client(nvmap_dev, "nvhost");
-	if (!host->nvmap) {
-		dev_err(&dev->dev, "unable to create nvmap client\n");
-		err = -EIO;
-		goto fail;
-	}
-
 	host->reg_mem = request_mem_region(regs->start,
 					resource_size(regs), dev->name);
 	if (!host->reg_mem) {
@@ -528,6 +522,13 @@ static int nvhost_probe(struct nvhost_device *dev,
 	err = nvhost_alloc_resources(host);
 	if (err) {
 		dev_err(&dev->dev, "failed to init chip support\n");
+		goto fail;
+	}
+
+	host->memmgr = mem_op().alloc_mgr();
+	if (!host->memmgr) {
+		dev_err(&dev->dev, "unable to create nvmap client\n");
+		err = -EIO;
 		goto fail;
 	}
 
@@ -568,8 +569,8 @@ static int nvhost_probe(struct nvhost_device *dev,
 
 fail:
 	nvhost_free_resources(host);
-	if (host->nvmap)
-		nvmap_client_put(host->nvmap);
+	if (host->memmgr)
+		mem_op().put_mgr(host->memmgr);
 	kfree(host);
 	return err;
 }

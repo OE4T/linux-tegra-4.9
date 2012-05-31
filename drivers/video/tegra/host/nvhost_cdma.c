@@ -24,6 +24,8 @@
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "debug.h"
+#include "nvhost_memmgr.h"
+#include "chip_support.h"
 #include <asm/cacheflush.h>
 
 #include <linux/slab.h>
@@ -396,13 +398,13 @@ int nvhost_cdma_begin(struct nvhost_cdma *cdma, struct nvhost_job *job)
 }
 
 static void trace_write_gather(struct nvhost_cdma *cdma,
-		struct nvmap_handle_ref *ref,
+		struct mem_handle *ref,
 		u32 offset, u32 words)
 {
 	void *mem = NULL;
 
 	if (nvhost_debug_trace_cmdbuf) {
-		mem = nvmap_mmap(ref);
+		mem = mem_op().mmap(ref);
 		if (IS_ERR_OR_NULL(mem))
 			mem = NULL;
 	};
@@ -416,12 +418,12 @@ static void trace_write_gather(struct nvhost_cdma *cdma,
 		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
 			trace_nvhost_cdma_push_gather(
 				cdma_to_channel(cdma)->dev->name,
-				(u32)ref->handle,
+				(u32)ref,
 				min(words - i, TRACE_MAX_LENGTH),
 				offset + i * sizeof(u32),
 				mem);
 		}
-		nvmap_munmap(ref, mem);
+		mem_op().munmap(ref, mem);
 	}
 }
 
@@ -443,8 +445,7 @@ void nvhost_cdma_push(struct nvhost_cdma *cdma, u32 op1, u32 op2)
  * Blocks as necessary if the push buffer is full.
  */
 void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
-		struct nvmap_client *client,
-		struct nvmap_handle_ref *handle,
+		struct mem_mgr *client, struct mem_handle *handle,
 		u32 offset, u32 op1, u32 op2)
 {
 	u32 slots_free = cdma->slots_free;

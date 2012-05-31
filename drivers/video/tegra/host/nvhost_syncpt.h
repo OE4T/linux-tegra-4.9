@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <linux/nvhost.h>
-#include <linux/nvmap.h>
 #include <linux/atomic.h>
 
 /* host managed and invalid syncpt id */

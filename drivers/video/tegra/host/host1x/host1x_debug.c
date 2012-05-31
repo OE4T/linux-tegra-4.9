@@ -30,6 +30,8 @@
 #include "nvhost_channel.h"
 #include "host1x_cdma.h"
 #include "nvhost_job.h"
+#include "chip_support.h"
+#include "nvhost_memmgr.h"
 
 #define NVHOST_DEBUG_MAX_PAGE_OFFSET 102400
 
@@ -196,7 +198,7 @@ static void show_channel_gather(struct output *o, u32 addr,
 	/* Map dmaget cursor to corresponding nvmap_handle */
 	struct push_buffer *pb = &cdma->push_buffer;
 	u32 cur = addr - pb->phys;
-	struct nvmap_client_handle *nvmap = &pb->nvmap[cur/8];
+	struct mem_mgr_handle *nvmap = &pb->client_handle[cur/8];
 	u32 *map_addr, offset;
 	phys_addr_t pin_addr;
 
@@ -205,25 +207,25 @@ static void show_channel_gather(struct output *o, u32 addr,
 		return;
 	}
 
-	map_addr = nvmap_mmap(nvmap->handle);
+	map_addr = mem_op().mmap(nvmap->handle);
 	if (!map_addr) {
 		nvhost_debug_output(o, "[could not mmap]\n");
 		return;
 	}
 
 	/* Get base address from nvmap */
-	pin_addr = nvmap_pin(nvmap->client, nvmap->handle);
+	pin_addr = mem_op().pin(nvmap->client, nvmap->handle);
 	if (IS_ERR_VALUE(pin_addr)) {
 		nvhost_debug_output(o, "[couldn't pin]\n");
-		nvmap_munmap(nvmap->handle, map_addr);
+		mem_op().munmap(nvmap->handle, map_addr);
 		return;
 	}
 
 	offset = phys_addr - pin_addr;
 	do_show_channel_gather(o, phys_addr, words, cdma,
 			pin_addr, map_addr);
-	nvmap_unpin(nvmap->client, nvmap->handle);
-	nvmap_munmap(nvmap->handle, map_addr);
+	mem_op().unpin(nvmap->client, nvmap->handle);
+	mem_op().munmap(nvmap->handle, map_addr);
 #endif
 }
 
@@ -256,7 +258,7 @@ void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 		for (i = 0; i < job->num_gathers; i++) {
 			struct nvhost_job_gather *g = &job->gathers[i];
-			u32 *mapped = nvmap_mmap(g->ref);
+			u32 *mapped = mem_op().mmap(g->ref);
 			if (!mapped) {
 				nvhost_debug_output(o, "[could not mmap]\n");
 				continue;
@@ -267,7 +269,7 @@ void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 			do_show_channel_gather(o, g->mem + g->offset,
 					g->words, cdma, g->mem, mapped);
-			nvmap_munmap(g->ref, mapped);
+			mem_op().munmap(g->ref, mapped);
 		}
 	}
 }

@@ -25,7 +25,6 @@
 
 struct nvhost_channel;
 struct nvhost_hwctx;
-struct nvmap_client;
 struct nvhost_waitchk;
 struct nvhost_syncpt;
 
@@ -34,7 +33,7 @@ struct nvhost_job_gather {
 	phys_addr_t mem;
 	u32 mem_id;
 	int offset;
-	struct nvmap_handle_ref *ref;
+	struct mem_handle *ref;
 };
 
 /*
@@ -55,7 +54,7 @@ struct nvhost_job {
 	int clientid;
 
 	/* Nvmap to be used for pinning & unpinning memory */
-	struct nvmap_client *nvmap;
+	struct mem_mgr *memmgr;
 
 	/* Gathers and their memory */
 	struct nvhost_job_gather *gathers;
@@ -70,7 +69,7 @@ struct nvhost_job {
 	struct nvhost_reloc *relocarray;
 	struct nvhost_reloc_shift *relocshiftarray;
 	int num_relocs;
-	struct nvmap_handle_ref **unpins;
+	struct mem_handle **unpins;
 	int num_unpins;
 
 	/* Sync point id, number of increments and end related to the submit */
@@ -102,7 +101,7 @@ struct nvhost_job {
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		struct nvhost_submit_hdr_ext *hdr,
-		struct nvmap_client *nvmap,
+		struct mem_mgr *memmgr,
 		int priority, int clientid);
 
 /*

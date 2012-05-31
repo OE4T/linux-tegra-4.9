@@ -25,6 +25,8 @@
 #include "host1x/host1x_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "gr3d.h"
+#include "chip_support.h"
+#include "nvhost_memmgr.h"
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
@@ -144,7 +146,7 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 		ctx->restore_phys);
 	/* gather the save buffer */
 	nvhost_cdma_push_gather(cdma,
-			nvhost_get_host(nctx->channel->dev)->nvmap,
+			nvhost_get_host(nctx->channel->dev)->memmgr,
 			p->save_buf,
 			0,
 			nvhost_opcode_gather(p->save_size),
@@ -387,7 +389,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch)
 {
-	struct nvmap_client *nvmap;
+	struct mem_mgr *memmgr;
 	u32 *save_ptr;
 	struct host1x_hwctx_handler *p;
 
@@ -395,7 +397,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	if (!p)
 		return NULL;
 
-	nvmap = nvhost_get_host(ch->dev)->nvmap;
+	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
 	register_sets = tegra_gpu_register_sets();
 	BUG_ON(register_sets == 0 || register_sets > 2);
@@ -405,8 +407,8 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 
 	setup_save(p, NULL);
 
-	p->save_buf = nvmap_alloc(nvmap, p->save_size * 4, 32,
-				NVMAP_HANDLE_WRITE_COMBINE, 0);
+	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
+				mem_mgr_flag_write_combine);
 	if (IS_ERR(p->save_buf)) {
 		p->save_buf = NULL;
 		return NULL;
@@ -416,18 +418,18 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	if (register_sets == 2)
 		p->save_slots += 2;
 
-	save_ptr = nvmap_mmap(p->save_buf);
+	save_ptr = mem_op().mmap(p->save_buf);
 	if (!save_ptr) {
-		nvmap_free(nvmap, p->save_buf);
+		mem_op().put(memmgr, p->save_buf);
 		p->save_buf = NULL;
 		return NULL;
 	}
 
-	p->save_phys = nvmap_pin(nvmap, p->save_buf);
+	p->save_phys = mem_op().pin(memmgr, p->save_buf);
 
 	setup_save(p, save_ptr);
 
-	nvmap_munmap(p->save_buf, save_ptr);
+	mem_op().munmap(p->save_buf, save_ptr);
 
 	p->h.alloc = ctx3d_alloc_v1;
 	p->h.save_push = save_push_v1;

@@ -378,7 +378,10 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	val = tegra_dc_readl(dc, DC_DISP_SD_CONTROL);
 
 	if (val & SD_ENABLE_NORMAL)
-		i = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
+		if (settings->phase_in_adjustments)
+			i = tegra_dc_readl(dc, DC_DISP_SD_MAN_K_VALUES);
+		else
+			i = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
 	else
 		i = 0; /* 0 values for RGB = 1.0, i.e. non-affected */
 

@@ -206,6 +206,7 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 
 	while (num_offsets--) {
+		int err;
 		int remaining = args->block_size >> 2;
 		u32 offs;
 		if (get_user(offs, offsets))
@@ -217,17 +218,21 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 				if (copy_from_user(vals, values,
 							batch*sizeof(u32)))
 					return -EFAULT;
-				nvhost_write_module_regs(ndev,
+				err = nvhost_write_module_regs(ndev,
 						offs, batch, vals);
+				if (err)
+					return err;
 			} else {
-				nvhost_read_module_regs(ndev,
+				err = nvhost_read_module_regs(ndev,
 						offs, batch, vals);
+				if (err)
+					return err;
 				if (copy_to_user(values, vals,
 							batch*sizeof(u32)))
 					return -EFAULT;
 			}
 			remaining -= batch;
-			offs += batch;
+			offs += batch*sizeof(u32);
 			values += batch;
 		}
 	}

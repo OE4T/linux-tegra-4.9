@@ -200,6 +200,86 @@ static inline unsigned long tegra_dc_get_default_emc_clk_rate(
 	return dc->pdata->emc_clk_rate ? dc->pdata->emc_clk_rate : ULONG_MAX;
 }
 
+static inline int tegra_dc_fmt_bpp(int fmt)
+{
+	switch (fmt) {
+	case TEGRA_WIN_FMT_P1:
+		return 1;
+
+	case TEGRA_WIN_FMT_P2:
+		return 2;
+
+	case TEGRA_WIN_FMT_P4:
+		return 4;
+
+	case TEGRA_WIN_FMT_P8:
+		return 8;
+
+	case TEGRA_WIN_FMT_B4G4R4A4:
+	case TEGRA_WIN_FMT_B5G5R5A:
+	case TEGRA_WIN_FMT_B5G6R5:
+	case TEGRA_WIN_FMT_AB5G5R5:
+		return 16;
+
+	case TEGRA_WIN_FMT_B8G8R8A8:
+	case TEGRA_WIN_FMT_R8G8B8A8:
+	case TEGRA_WIN_FMT_B6x2G6x2R6x2A8:
+	case TEGRA_WIN_FMT_R6x2G6x2B6x2A8:
+		return 32;
+
+	/* for planar formats, size of the Y plane, 8bit */
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCbCr422P:
+	case TEGRA_WIN_FMT_YUV422P:
+	case TEGRA_WIN_FMT_YCbCr422R:
+	case TEGRA_WIN_FMT_YUV422R:
+	case TEGRA_WIN_FMT_YCbCr422RA:
+	case TEGRA_WIN_FMT_YUV422RA:
+		return 8;
+
+	/* YUYV packed into 32-bits */
+	case TEGRA_WIN_FMT_YCbCr422:
+	case TEGRA_WIN_FMT_YUV422:
+		return 16;
+	}
+	return 0;
+}
+
+static inline bool tegra_dc_is_yuv(int fmt)
+{
+	switch (fmt) {
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YCbCr422P:
+	case TEGRA_WIN_FMT_YUV422P:
+	case TEGRA_WIN_FMT_YCbCr422:
+	case TEGRA_WIN_FMT_YUV422:
+	case TEGRA_WIN_FMT_YCbCr422R:
+	case TEGRA_WIN_FMT_YUV422R:
+	case TEGRA_WIN_FMT_YCbCr422RA:
+	case TEGRA_WIN_FMT_YUV422RA:
+		return true;
+	}
+	return false;
+}
+
+static inline bool tegra_dc_is_yuv_planar(int fmt)
+{
+	switch (fmt) {
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YCbCr422P:
+	case TEGRA_WIN_FMT_YUV422P:
+	case TEGRA_WIN_FMT_YCbCr422R:
+	case TEGRA_WIN_FMT_YUV422R:
+	case TEGRA_WIN_FMT_YCbCr422RA:
+	case TEGRA_WIN_FMT_YUV422RA:
+		return true;
+	}
+	return false;
+}
+
 void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk);
 
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
@@ -222,5 +302,11 @@ void tegra_dc_disable_crc(struct tegra_dc *dc);
 void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const struct tegra_dc_out_pin *pins,
 				const unsigned int n_pins);
-#endif
+/* defined in dc.c, used in bandwidth.c */
+unsigned int tegra_dc_has_multiple_dc(void);
 
+/* defined in bandwidth.c, used in dc.c */
+void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
+void tegra_dc_program_bandwidth(struct tegra_dc *dc);
+int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n);
+#endif

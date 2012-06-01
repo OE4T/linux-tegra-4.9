@@ -1,3 +1,4 @@
+obj-y += bandwidth.o
 obj-y += dc.o
 obj-y += rgb.o
 obj-y += hdmi.o

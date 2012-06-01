@@ -180,14 +180,17 @@ fail:
 
 static int set_submit(struct nvhost_channel_userctx *ctx)
 {
-	struct device *device = &ctx->ch->dev->dev;
+	struct nvhost_device *ndev = ctx->ch->dev;
+	struct nvhost_master *host = nvhost_get_host(ndev);
 
 	/* submit should have at least 1 cmdbuf */
-	if (!ctx->hdr.num_cmdbufs)
+	if (!ctx->hdr.num_cmdbufs ||
+			!nvhost_syncpt_is_valid(&host->syncpt,
+				ctx->hdr.syncpt_id))
 		return -EIO;
 
 	if (!ctx->nvmap) {
-		dev_err(device, "no nvmap context set\n");
+		dev_err(&ndev->dev, "no nvmap context set\n");
 		return -EFAULT;
 	}
 
@@ -403,10 +406,9 @@ static long nvhost_channelctl(struct file *filp,
 
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
-		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST))
+		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST) ||
+		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE))
 		return -EFAULT;
-
-	BUG_ON(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE);
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))

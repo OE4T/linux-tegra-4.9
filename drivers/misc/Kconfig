@@ -814,6 +814,12 @@ config EQOS_APE_HWDEP
 	calculated frequency offset, the pll_a clock (parent of APE clock)
 	frequency is adjusted.
 
+config THERM_EST
+	bool "Thermal estimator driver"
+	default n
+	---help---
+	Thermal driver which estimates temperature based of other sensors.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

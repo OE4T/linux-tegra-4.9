@@ -2114,23 +2114,6 @@ static void tegra_dc_vblank(struct work_struct *work)
 	}
 }
 
-/* Must acquire dc lock and dc one-shot lock before invoking this function.
- * Acquire dc one-shot lock first and then dc lock. */
-void tegra_dc_host_trigger(struct tegra_dc *dc)
-{
-	/* We release the lock here to prevent deadlock between
-	 * cancel_delayed_work_sync and one-shot work. */
-	mutex_unlock(&dc->lock);
-
-	cancel_delayed_work_sync(&dc->one_shot_work);
-	mutex_lock(&dc->lock);
-
-	schedule_delayed_work(&dc->one_shot_work,
-				msecs_to_jiffies(dc->one_shot_delay_ms));
-	tegra_dc_program_bandwidth(dc);
-	tegra_dc_writel(dc, NC_HOST_TRIG, DC_CMD_STATE_CONTROL);
-}
-
 static void tegra_dc_one_shot_worker(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(

@@ -583,7 +583,6 @@ static unsigned int tegra_dc_has_multiple_dc(void)
  * return: stride size in bytes for window win. or 0 if unavailble. */
 int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win)
 {
-	u32 tmp;
 	u32 stride;
 
 	if (!dc->enabled)
@@ -591,8 +590,8 @@ int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win)
 	BUG_ON(win > DC_N_WINDOWS);
 	tegra_dc_writel(dc, WINDOW_A_SELECT << win,
 		DC_CMD_DISPLAY_WINDOW_HEADER);
-	tmp = tegra_dc_readl(dc, DC_WIN_LINE_STRIDE);
-	return GET_LINE_STRIDE(tmp);
+	stride = tegra_dc_readl(dc, DC_WIN_LINE_STRIDE);
+	return GET_LINE_STRIDE(stride);
 }
 EXPORT_SYMBOL(tegra_dc_get_stride);
 

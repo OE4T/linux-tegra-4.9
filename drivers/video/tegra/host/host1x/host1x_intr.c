@@ -27,6 +27,7 @@
 #include "nvhost_intr.h"
 #include "dev.h"
 #include "host1x_hardware.h"
+#include "host1x_actmon.h"
 
 /*** HW host sync management ***/
 
@@ -168,6 +169,19 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + HOST1X_SYNC_HINTSTATUS);
 	ext_stat = readl(sync_regs + HOST1X_SYNC_HINTSTATUS_EXT);
 
+	if (HOST1X_VAL(SYNC_HINTSTATUS, GR3D_ACTMON_INTR, stat)) {
+		u32 actmon =
+			readl(sync_regs + HOST1X_SYNC_ACTMON_INTR_STATUS_0);
+		if (HOST1X_VAL(SYNC_ACTMON_INTR_STATUS,
+					AVG_BELOW_WMARK, actmon)) {
+			host1x_actmon_intr_below_wmark();
+		} else if (HOST1X_VAL(SYNC_ACTMON_INTR_STATUS,
+					AVG_ABOVE_WMARK, actmon)) {
+			host1x_actmon_intr_above_wmark();
+		}
+		writel(actmon, sync_regs + HOST1X_SYNC_ACTMON_INTR_STATUS_0);
+	}
+
 	if (HOST1X_VAL(SYNC_HINTSTATUS_EXT, IP_READ_INT, ext_stat)) {
 		addr = readl(sync_regs + HOST1X_SYNC_IP_READ_TIMEOUT_ADDR);
 		pr_err("Host read timeout at address %x\n", addr);
@@ -207,7 +221,7 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 	writel(BIT(30) | BIT(31), sync_regs + HOST1X_SYNC_HINTMASK_EXT);
 
 	/* enable extra interrupt sources */
-	writel(BIT(31), sync_regs + HOST1X_SYNC_HINTMASK);
+	writel(BIT(12) | BIT(31), sync_regs + HOST1X_SYNC_HINTMASK);
 
 	/* enable host module interrupt to CPU0 */
 	writel(BIT(0), sync_regs + HOST1X_SYNC_INTC0MASK);

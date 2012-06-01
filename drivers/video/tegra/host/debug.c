@@ -196,7 +196,42 @@ static const struct file_operations nvhost_debug_fops = {
 	.release	= single_release,
 };
 
-static int actmon_show(struct seq_file *s, void *unused)
+static int actmon_below_wmark_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "%d\n", host1x_actmon_below_wmark_count());
+	return 0;
+}
+
+static int actmon_below_wmark_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_below_wmark_show, inode->i_private);
+}
+
+static const struct file_operations actmon_below_wmark_fops = {
+	.open		= actmon_below_wmark_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_above_wmark_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "%d\n", host1x_actmon_above_wmark_count());
+	return 0;
+}
+
+static int actmon_above_wmark_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_above_wmark_show, inode->i_private);
+}
+
+static const struct file_operations actmon_above_wmark_fops = {
+	.open		= actmon_above_wmark_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+static int actmon_avg_show(struct seq_file *s, void *unused)
 {
 	struct nvhost_master *host = s->private;
 	u32 avg;
@@ -207,13 +242,14 @@ static int actmon_show(struct seq_file *s, void *unused)
 		seq_printf(s, "%d\n", avg);
 	return err;
 }
-static int actmon_open(struct inode *inode, struct file *file)
+
+static int actmon_avg_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, actmon_show, inode->i_private);
+	return single_open(file, actmon_avg_show, inode->i_private);
 }
 
-static const struct file_operations actmon_fops = {
-	.open		= actmon_open,
+static const struct file_operations actmon_avg_fops = {
+	.open		= actmon_avg_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
@@ -244,7 +280,11 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&nvhost_debug_force_timeout_channel);
 
 	debugfs_create_file("3d_actmon_avg", S_IRUGO, de,
-			master, &actmon_fops);
+			master, &actmon_avg_fops);
+	debugfs_create_file("3d_actmon_above_wmark", S_IRUGO, de,
+			master, &actmon_above_wmark_fops);
+	debugfs_create_file("3d_actmon_below_wmark", S_IRUGO, de,
+			master, &actmon_below_wmark_fops);
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

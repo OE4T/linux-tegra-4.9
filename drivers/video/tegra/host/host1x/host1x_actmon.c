@@ -25,6 +25,8 @@
 
 /* Set to 1 if actmon has been initialized */
 static int host1x_actmon_initialized;
+static int above_wmark;
+static int below_wmark;
 
 int host1x_actmon_init(struct nvhost_master *host)
 {
@@ -47,16 +49,20 @@ int host1x_actmon_init(struct nvhost_master *host)
 	/* Clear interrupt status */
 	writel(0xffffffff, sync_regs + HOST1X_SYNC_ACTMON_INTR_STATUS_0);
 
+	/* Set watermarks - arbitrary for now */
+	writel(0x100, sync_regs + HOST1X_SYNC_ACTMON_AVG_UPPER_WMARK_0);
+	writel(0x50, sync_regs + HOST1X_SYNC_ACTMON_AVG_LOWER_WMARK_0);
+
 	val = readl(sync_regs + HOST1X_SYNC_ACTMON_CTRL_0);
 	/* Enable periodic mode */
 	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, ENB_PERIODIC, 1);
-	/* Disable watermark interrupts */
-	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, AVG_ABOVE_WMARK_EN, 0);
-	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, AVG_BELOW_WMARK_EN, 0);
+	/* Enable watermark interrupts */
+	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, AVG_ABOVE_WMARK_EN, 1);
+	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, AVG_BELOW_WMARK_EN, 1);
 	/* Number of upper wmark breaches before interrupt */
 	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, CONSECUTIVE_ABOVE_WMARK_NUM, 1);
 	/* Number of below wmark breaches before interrupt */
-	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, CONSECUTIVE_BELOW_WMARK_NUM, 3);
+	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, CONSECUTIVE_BELOW_WMARK_NUM, 1);
 	/* Moving avg IIR filter window size 2^6=128 */
 	val |= HOST1X_CREATE(SYNC_ACTMON_CTRL, K_VAL, 6);
 	/* Enable ACTMON */
@@ -97,4 +103,24 @@ int host1x_actmon_avg(struct nvhost_master *host, u32 *val)
 	rmb();
 
 	return 0;
+}
+
+void host1x_actmon_intr_above_wmark(void)
+{
+	above_wmark++;
+}
+
+void host1x_actmon_intr_below_wmark(void)
+{
+	below_wmark++;
+}
+
+int host1x_actmon_above_wmark_count(void)
+{
+	return above_wmark;
+}
+
+int host1x_actmon_below_wmark_count(void)
+{
+	return below_wmark;
 }

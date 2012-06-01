@@ -27,5 +27,9 @@ struct nvhost_master;
 int host1x_actmon_init(struct nvhost_master *host);
 void host1x_actmon_deinit(struct nvhost_master *host);
 int host1x_actmon_avg(struct nvhost_master *host, u32 *val);
+void host1x_actmon_intr_above_wmark(void);
+void host1x_actmon_intr_below_wmark(void);
+int host1x_actmon_above_wmark_count(void);
+int host1x_actmon_below_wmark_count(void);
 
 #endif

@@ -1206,22 +1206,6 @@ static int tegra_dc_calc_clock_per_frame(const struct fb_videomode *mode)
 	       (mode->upper_margin + mode->yres +
 		mode->lower_margin + mode->vsync_len);
 }
-static bool tegra_dc_hdmi_mode_equal(const struct fb_videomode *mode1,
-					const struct fb_videomode *mode2)
-{
-	int clock_per_frame1 = tegra_dc_calc_clock_per_frame(mode1);
-	int clock_per_frame2 = tegra_dc_calc_clock_per_frame(mode2);
-
-	/* allows up to 1Hz of pixclock difference */
-	return (clock_per_frame1 == clock_per_frame2 &&
-			mode1->xres == mode2->xres &&
-			mode1->yres == mode2->yres &&
-			mode1->vmode == mode2->vmode &&
-			(mode1->pixclock == mode2->pixclock ||
-			(abs(PICOS2KHZ(mode1->pixclock) -
-			PICOS2KHZ(mode2->pixclock)) *
-			1000 / clock_per_frame1 <= 1)));
-}
 
 static bool tegra_dc_hdmi_valid_pixclock(const struct tegra_dc *dc,
 					const struct fb_videomode *mode)

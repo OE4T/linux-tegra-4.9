@@ -1627,7 +1627,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 	tegra_vi_csi_writel(val, CSI_CIL_PAD_CONFIG);
 }
 
-static void tegra_dsi_panelB_enable()
+static void tegra_dsi_panelB_enable(void)
 {
 	unsigned int val;
 
@@ -2753,8 +2753,8 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 					struct tegra_dsi_out *p_dsi)
 {
 	struct tegra_dsi_cmd *p_init_cmd;
-	struct tegra_dsi_cmd *p_early_suspend_cmd;
-	struct tegra_dsi_cmd *p_late_resume_cmd;
+	struct tegra_dsi_cmd *p_early_suspend_cmd = NULL;
+	struct tegra_dsi_cmd *p_late_resume_cmd = NULL;
 	struct tegra_dsi_cmd *p_suspend_cmd;
 	int err;
 

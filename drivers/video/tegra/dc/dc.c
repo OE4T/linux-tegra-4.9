@@ -2804,6 +2804,17 @@ static int tegra_dc_resume(struct nvhost_device *ndev)
 
 #endif /* CONFIG_PM */
 
+static void tegra_dc_shutdown(struct nvhost_device *ndev)
+{
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	if (!dc || !dc->enabled)
+		return;
+
+	tegra_dc_blank(dc);
+	tegra_dc_disable(dc);
+}
+
 extern int suspend_set(const char *val, struct kernel_param *kp)
 {
 	if (!strcmp(val, "dump"))
@@ -2838,6 +2849,7 @@ struct nvhost_driver tegra_dc_driver = {
 	.suspend = tegra_dc_suspend,
 	.resume = tegra_dc_resume,
 #endif
+	.shutdown = tegra_dc_shutdown,
 };
 
 static int __init tegra_dc_module_init(void)

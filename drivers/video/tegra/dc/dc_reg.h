@@ -456,6 +456,8 @@
 #define DC_WIN_LINE_STRIDE			0x70a
 #define  LINE_STRIDE(x)		(x)
 #define  UV_LINE_STRIDE(x)	(((x) & 0xffff) << 16)
+#define  GET_LINE_STRIDE(x)	((x) & 0xffff)
+#define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
 
 #define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
 #define  WIN_K1(x)			(((x) & 0xff) << 8)
@@ -510,11 +512,6 @@
 #define DC_WINBUF_BLEND_ALPHA_1BIT		0x719
 #define  WIN_ALPHA_1BIT_WEIGHT0(x)	(((x) & 0xff) << 0)
 #define  WIN_ALPHA_1BIT_WEIGHT1(x)	(((x) & 0xff) << 8)
-
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-#define  GET_LINE_STRIDE(x)	((x) & 0xffff)
-#define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
-#endif
 
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define DC_WIN_BUF_STRIDE			0x70b

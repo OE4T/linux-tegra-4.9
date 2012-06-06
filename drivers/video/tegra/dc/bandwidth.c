@@ -234,7 +234,8 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 			max(dc->emc_clk_rate, dc->new_emc_clk_rate));
 		dc->emc_clk_rate = dc->new_emc_clk_rate;
 
-		if (!dc->new_emc_clk_rate) /* going from non-zero to 0 */
+		/* going from non-zero to 0 */
+		if (!dc->new_emc_clk_rate && tegra_is_clk_enabled(dc->emc_clk))
 			clk_disable(dc->emc_clk);
 	}
 

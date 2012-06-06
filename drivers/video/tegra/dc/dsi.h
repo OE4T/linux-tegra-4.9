@@ -110,11 +110,7 @@ struct tegra_dc_dsi_data {
 	defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define MAX_DSI_DATA_LANES	2
 #else
-#ifdef CONFIG_TEGRA_DSI_GANGED_MODE
 #define MAX_DSI_DATA_LANES	8
-#else
-#define MAX_DSI_DATA_LANES	4
-#endif
 #endif
 
 /* Default Peripheral reset timeout */

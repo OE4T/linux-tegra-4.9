@@ -62,6 +62,8 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 				struct tegra_dc_ext_cursor_image *args,
 				dma_addr_t phys_addr)
 {
+	int clip_win;
+
 	tegra_dc_writel(dc,
 		CURSOR_COLOR(args->foreground.r,
 			     args->foreground.g,
@@ -75,7 +77,11 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
 
-	tegra_dc_writel(dc,
+	/* Get the cursor clip window number */
+	clip_win = CURSOR_CLIP_GET_WINDOW(tegra_dc_readl(dc,
+					  DC_DISP_CURSOR_START_ADDR));
+
+	tegra_dc_writel(dc, CURSOR_CLIP_SHIFT_BITS(clip_win) |
 		CURSOR_START_ADDR(((unsigned long) phys_addr)) |
 		((args->flags & TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64) ?
 			CURSOR_SIZE_64 : 0),
@@ -189,6 +195,45 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 
 	/* TODO: need to sync here?  hopefully can avoid this, but need to
 	 * figure out interaction w/ rest of GENERAL_ACT_REQ */
+
+	mutex_unlock(&dc->lock);
+
+	mutex_unlock(&ext->cursor.lock);
+
+	return 0;
+
+unlock:
+	mutex_unlock(&ext->cursor.lock);
+
+	return ret;
+}
+
+int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
+			    int *args)
+{
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc *dc = ext->dc;
+	int ret;
+	unsigned long reg_val;
+
+	mutex_lock(&ext->cursor.lock);
+
+	if (ext->cursor.user != user) {
+		ret = -EACCES;
+		goto unlock;
+	}
+
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
+	}
+
+	mutex_lock(&dc->lock);
+
+	reg_val = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
+	reg_val &= ~CURSOR_CLIP_SHIFT_BITS(3); /* Clear out the old value */
+	tegra_dc_writel(dc, reg_val | CURSOR_CLIP_SHIFT_BITS(*args),
+			DC_DISP_CURSOR_START_ADDR);
 
 	mutex_unlock(&dc->lock);
 

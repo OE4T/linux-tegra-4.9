@@ -44,6 +44,10 @@
 /* DDR: 8 bytes transfer per clock */
 #define DDR_BW_TO_FREQ(bw) ((bw) / 8)
 
+/* 29 bit offset for window clip number */
+#define CURSOR_CLIP_SHIFT_BITS(win)	(win << 29)
+#define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 29) & 3)
+
 #if defined(CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #else

@@ -937,6 +937,15 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 
+	case TEGRA_DC_EXT_CURSOR_CLIP:
+	{
+		int args;
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_cursor_clip(user, &args);
+	}
+
 	default:
 		return -EINVAL;
 	}

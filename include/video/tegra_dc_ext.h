@@ -256,6 +256,9 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_GET_FEATURES \
 	_IOW('D', 0x0B, struct tegra_dc_ext_feature)
 
+#define TEGRA_DC_EXT_CURSOR_CLIP \
+	_IOW('D', 0x0C, __s32)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,

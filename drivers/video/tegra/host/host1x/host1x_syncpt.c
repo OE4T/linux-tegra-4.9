@@ -24,8 +24,6 @@
 #include "nvhost_syncpt.h"
 #include "nvhost_acm.h"
 #include "host1x.h"
-#include "host1x_syncpt.h"
-#include "host1x_hardware.h"
 #include "chip_support.h"
 
 /**
@@ -168,21 +166,15 @@ static void syncpt_mutex_unlock(struct nvhost_syncpt *sp,
 	writel(0, sync_regs + (host1x_sync_mlock_0_r() + idx * 4));
 }
 
-int host1x_init_syncpt_support(struct nvhost_master *host,
-	struct nvhost_chip_support *op)
-{
-	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
-
-	op->syncpt.reset = t20_syncpt_reset;
-	op->syncpt.reset_wait_base = t20_syncpt_reset_wait_base;
-	op->syncpt.read_wait_base = t20_syncpt_read_wait_base;
-	op->syncpt.update_min = t20_syncpt_update_min;
-	op->syncpt.cpu_incr = t20_syncpt_cpu_incr;
-	op->syncpt.patch_wait = host1x_syncpt_patch_wait;
-	op->syncpt.debug = t20_syncpt_debug;
-	op->syncpt.name = t20_syncpt_name;
-	op->syncpt.mutex_try_lock = syncpt_mutex_try_lock;
-	op->syncpt.mutex_unlock = syncpt_mutex_unlock;
-
-	return 0;
-}
+static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
+	.reset = t20_syncpt_reset,
+	.reset_wait_base = t20_syncpt_reset_wait_base,
+	.read_wait_base = t20_syncpt_read_wait_base,
+	.update_min = t20_syncpt_update_min,
+	.cpu_incr = t20_syncpt_cpu_incr,
+	.patch_wait = host1x_syncpt_patch_wait,
+	.debug = t20_syncpt_debug,
+	.name = t20_syncpt_name,
+	.mutex_try_lock = syncpt_mutex_try_lock,
+	.mutex_unlock = syncpt_mutex_unlock,
+};

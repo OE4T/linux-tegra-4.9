@@ -21,7 +21,10 @@
 #ifndef __NVHOST_GR3D_GR3D_T30_H
 #define __NVHOST_GR3D_GR3D_T30_H
 
+#include <linux/types.h>
+
 struct nvhost_hwctx_handler;
+struct nvhost_channel;
 
 struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 		u32 syncpt, u32 waitbase,

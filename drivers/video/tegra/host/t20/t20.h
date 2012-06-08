@@ -21,16 +21,9 @@
 #define _NVHOST_T20_H_
 
 struct nvhost_master;
-struct nvhost_module;
 struct nvhost_chip_support;
 
-int nvhost_init_t20_channel_support(struct nvhost_master *,
-	struct nvhost_chip_support *);
-int nvhost_init_t20_debug_support(struct nvhost_chip_support *);
-int nvhost_init_t20_syncpt_support(struct nvhost_master *);
-int nvhost_init_t20_intr_support(struct nvhost_chip_support *);
 int nvhost_init_t20_support(struct nvhost_master *,
 	struct nvhost_chip_support *);
-int nvhost_t20_save_context(struct nvhost_module *mod, u32 syncpt_id);
 
 #endif /* _NVHOST_T20_H_ */

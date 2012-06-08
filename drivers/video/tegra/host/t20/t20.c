@@ -18,24 +18,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/slab.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
 #include <mach/iomap.h>
 #include "t20.h"
-#include "host1x/host1x_syncpt.h"
-#include "host1x/host1x_hardware.h"
-#include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t20.h"
 #include "mpe/mpe.h"
 #include "host1x/host1x.h"
-#include "nvhost_hwctx.h"
 #include "nvhost_channel.h"
-#include "host1x/host1x_channel.h"
-#include "host1x/host1x_cdma.h"
-#include "chip_support.h"
-#include "nvmap.h"
 #include "nvhost_memmgr.h"
+#include "host1x/host1x01_hardware.h"
+#include "host1x/host1x_syncpt.h"
+#include "chip_support.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)
@@ -251,55 +245,6 @@ int tegra2_register_host1x_devices(void)
 	return nvhost_add_devices(t20_devices, ARRAY_SIZE(t20_devices));
 }
 
-static inline void __iomem *t20_channel_aperture(void __iomem *p, int ndx)
-{
-	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
-	return p;
-}
-
-static inline int t20_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
-{
-	int err = 0;
-	unsigned long syncpts = ch->dev->syncpts;
-	unsigned long waitbases = ch->dev->waitbases;
-	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
-	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
-	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
-
-	if (drv->alloc_hwctx_handler) {
-		ch->ctxhandler = drv->alloc_hwctx_handler(syncpt,
-				waitbase, ch);
-		if (!ch->ctxhandler)
-			err = -ENOMEM;
-	}
-
-	return err;
-}
-
-static int t20_channel_init(struct nvhost_channel *ch,
-	struct nvhost_master *dev, int index)
-{
-	ch->chid = index;
-	mutex_init(&ch->reflock);
-	mutex_init(&ch->submitlock);
-
-	ch->aperture = t20_channel_aperture(dev->aperture, index);
-
-	return t20_nvhost_hwctx_handler_init(ch);
-}
-
-int nvhost_init_t20_channel_support(struct nvhost_master *host,
-	struct nvhost_chip_support *op)
-{
-	op->channel.init = t20_channel_init;
-	op->channel.submit = host1x_channel_submit;
-	op->channel.read3dreg = host1x_channel_read_3d_reg;
-	op->channel.save_context = host1x_save_context;
-	op->channel.drain_read_fifo = host1x_drain_read_fifo;
-
-	return 0;
-}
-
 static void t20_free_nvhost_channel(struct nvhost_channel *ch)
 {
 	nvhost_free_channel_internal(ch, &t20_num_alloc_channels);
@@ -313,28 +258,27 @@ static struct nvhost_channel *t20_alloc_nvhost_channel(
 		&t20_num_alloc_channels);
 }
 
+#include "host1x/host1x_channel.c"
+#include "host1x/host1x_cdma.c"
+#include "host1x/host1x_debug.c"
+#include "host1x/host1x_syncpt.c"
+#include "host1x/host1x_intr.c"
+
 int nvhost_init_t20_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
 	int err;
 
-	/* don't worry about cleaning up on failure... "remove" does it. */
-	err = nvhost_init_t20_channel_support(host, op);
-	if (err)
-		return err;
-	err = host1x_init_cdma_support(op);
-	if (err)
-		return err;
-	err = nvhost_init_t20_debug_support(op);
-	if (err)
-		return err;
-	err = host1x_init_syncpt_support(host, op);
-	if (err)
-		return err;
-	err = nvhost_init_t20_intr_support(op);
-	if (err)
-		return err;
+	op->channel = host1x_channel_ops;
+	op->cdma = host1x_cdma_ops;
+	op->push_buffer = host1x_pushbuffer_ops;
+	op->debug = host1x_debug_ops;
+	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
+	op->syncpt = host1x_syncpt_ops;
+	op->intr = host1x_intr_ops;
 	err = nvhost_memmgr_init(op);
+	if (err)
+		return err;
 
 	op->nvhost_dev.alloc_nvhost_channel = t20_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t20_free_nvhost_channel;

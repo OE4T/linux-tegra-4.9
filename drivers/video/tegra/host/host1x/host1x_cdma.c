@@ -26,8 +26,6 @@
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 
-#include "host1x_hardware.h"
-#include "host1x_syncpt.h"
 #include "host1x_cdma.h"
 #include "host1x_hwctx.h"
 
@@ -371,7 +369,7 @@ static void cdma_stop(struct nvhost_cdma *cdma)
  * Stops both channel's command processor and CDMA immediately.
  * Also, tears down the channel and resets corresponding module.
  */
-void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
+static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
@@ -403,7 +401,7 @@ void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	cdma->torndown = true;
 }
 
-void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
+static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
@@ -492,25 +490,25 @@ static void cdma_timeout_handler(struct work_struct *work)
 	mutex_unlock(&cdma->lock);
 }
 
-int host1x_init_cdma_support(struct nvhost_chip_support *op)
-{
-	op->cdma.start = cdma_start;
-	op->cdma.stop = cdma_stop;
-	op->cdma.kick = cdma_kick;
+static const struct nvhost_cdma_ops host1x_cdma_ops = {
+	.start = cdma_start,
+	.stop = cdma_stop,
+	.kick = cdma_kick,
 
-	op->cdma.timeout_init = cdma_timeout_init;
-	op->cdma.timeout_destroy = cdma_timeout_destroy;
-	op->cdma.timeout_teardown_begin = cdma_timeout_teardown_begin;
-	op->cdma.timeout_teardown_end = cdma_timeout_teardown_end;
-	op->cdma.timeout_cpu_incr = cdma_timeout_cpu_incr;
+	.timeout_init = cdma_timeout_init,
+	.timeout_destroy = cdma_timeout_destroy,
+	.timeout_teardown_begin = cdma_timeout_teardown_begin,
+	.timeout_teardown_end = cdma_timeout_teardown_end,
+	.timeout_cpu_incr = cdma_timeout_cpu_incr,
+};
 
-	op->push_buffer.reset = push_buffer_reset;
-	op->push_buffer.init = push_buffer_init;
-	op->push_buffer.destroy = push_buffer_destroy;
-	op->push_buffer.push_to = push_buffer_push_to;
-	op->push_buffer.pop_from = push_buffer_pop_from;
-	op->push_buffer.space = push_buffer_space;
-	op->push_buffer.putptr = push_buffer_putptr;
+static const struct nvhost_pushbuffer_ops host1x_pushbuffer_ops = {
+	.reset = push_buffer_reset,
+	.init = push_buffer_init,
+	.destroy = push_buffer_destroy,
+	.push_to = push_buffer_push_to,
+	.pop_from = push_buffer_pop_from,
+	.space = push_buffer_space,
+	.putptr = push_buffer_putptr,
+};
 
-	return 0;
-}

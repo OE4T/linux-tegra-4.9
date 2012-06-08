@@ -26,9 +26,7 @@
 
 #include "nvhost_intr.h"
 #include "dev.h"
-#include "host1x_hardware.h"
 #include "host1x_actmon.h"
-#include "chip_support.h"
 
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
@@ -159,7 +157,7 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
  * Sync point threshold interrupt service function
  * Handles sync point threshold triggers, in interrupt context
  */
-irqreturn_t t20_intr_syncpt_thresh_isr(int irq, void *dev_id)
+static irqreturn_t t20_intr_syncpt_thresh_isr(int irq, void *dev_id)
 {
 	struct nvhost_intr_syncpt *syncpt = dev_id;
 	unsigned int id = syncpt->id;
@@ -285,16 +283,13 @@ static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 	return 0;
 }
 
-int nvhost_init_t20_intr_support(struct nvhost_chip_support *op)
-{
-	op->intr.init_host_sync = t20_intr_init_host_sync;
-	op->intr.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec;
-	op->intr.set_syncpt_threshold = t20_intr_set_syncpt_threshold;
-	op->intr.enable_syncpt_intr = t20_intr_enable_syncpt_intr;
-	op->intr.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs;
-	op->intr.request_host_general_irq = t20_intr_request_host_general_irq;
-	op->intr.free_host_general_irq = t20_intr_free_host_general_irq;
-	op->intr.request_syncpt_irq = t20_request_syncpt_irq;
-
-	return 0;
-}
+static const struct nvhost_intr_ops host1x_intr_ops = {
+	.init_host_sync = t20_intr_init_host_sync,
+	.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec,
+	.set_syncpt_threshold = t20_intr_set_syncpt_threshold,
+	.enable_syncpt_intr = t20_intr_enable_syncpt_intr,
+	.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs,
+	.request_host_general_irq = t20_intr_request_host_general_irq,
+	.free_host_general_irq = t20_intr_free_host_general_irq,
+	.request_syncpt_irq = t20_request_syncpt_irq,
+};

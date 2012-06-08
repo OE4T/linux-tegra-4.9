@@ -25,10 +25,8 @@
 
 #include "dev.h"
 #include "debug.h"
-#include "host1x_hardware.h"
 #include "nvhost_cdma.h"
 #include "nvhost_channel.h"
-#include "host1x_cdma.h"
 #include "nvhost_job.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
@@ -229,7 +227,7 @@ static void show_channel_gather(struct output *o, u32 addr,
 #endif
 }
 
-void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
+static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 {
 	struct nvhost_job *job;
 
@@ -324,7 +322,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	nvhost_debug_output(o, "\n");
 }
 
-void t20_debug_show_channel_fifo(struct nvhost_master *m,
+static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	u32 val, rd_ptr, wr_ptr, start, end;
@@ -400,11 +398,8 @@ static void t20_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 	nvhost_debug_output(o, "\n");
 }
 
-int nvhost_init_t20_debug_support(struct nvhost_chip_support *op)
-{
-	op->debug.show_channel_cdma = t20_debug_show_channel_cdma;
-	op->debug.show_channel_fifo = t20_debug_show_channel_fifo;
-	op->debug.show_mlocks = t20_debug_show_mlocks;
-
-	return 0;
-}
+static const struct nvhost_debug_ops host1x_debug_ops = {
+	.show_channel_cdma = t20_debug_show_channel_cdma,
+	.show_channel_fifo = t20_debug_show_channel_fifo,
+	.show_mlocks = t20_debug_show_mlocks,
+};

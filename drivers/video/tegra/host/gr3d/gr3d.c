@@ -24,9 +24,7 @@
 #include <mach/gpufuse.h>
 
 #include "t20/t20.h"
-#include "host1x/host1x_channel.h"
-#include "host1x/host1x_hardware.h"
-#include "host1x/host1x_syncpt.h"
+#include "host1x/host1x01_hardware.h"
 #include "nvhost_hwctx.h"
 #include "dev.h"
 #include "gr3d.h"

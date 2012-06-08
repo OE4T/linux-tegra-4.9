@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/host1x/host1x_hardware.h
+ * drivers/video/tegra/host/host1x/host1x01_hardware.h
  *
- * Tegra Graphics Host Register Offsets
+ * Tegra Graphics Host Register Offsets for T20/T30
  *
  * Copyright (c) 2010-2012 NVIDIA Corporation.
  *
@@ -18,14 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_HOST1X_HOST1X_HARDWARE_H
-#define __NVHOST_HOST1X_HOST1X_HARDWARE_H
+#ifndef __NVHOST_HOST1X01_HARDWARE_H
+#define __NVHOST_HOST1X01_HARDWARE_H
 
 #include <linux/types.h>
 #include <linux/bitops.h>
-#include "hw_host1x_channel.h"
-#include "hw_host1x_sync.h"
-#include "hw_host1x_uclass.h"
+#include "hw_host1x01_channel.h"
+#include "hw_host1x01_sync.h"
+#include "hw_host1x01_uclass.h"
 
 /* class ids */
 enum {

@@ -128,6 +128,7 @@ struct tegra_dc {
 	struct completion		frame_end_complete;
 
 	struct work_struct		vblank_work;
+	long				vblank_ref_count;
 
 	struct {
 		u64			underflows;
@@ -294,6 +295,10 @@ static inline bool tegra_dc_is_yuv_planar(int fmt)
 	}
 	return false;
 }
+
+static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val);
+static inline void tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val);
+static bool tegra_dc_windows_are_dirty(struct tegra_dc *dc);
 
 void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk);
 

@@ -1428,13 +1428,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT, DC_CMD_INT_STATUS);
 	if (!no_vsync) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-		val |= (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
-		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
+		tegra_dc_unmask_interrupt(dc, FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
 	} else {
-		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-		val &= ~(FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
-		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
+		tegra_dc_mask_interrupt(dc, FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
@@ -1798,6 +1796,24 @@ static void print_mode(struct tegra_dc *dc,
 static inline void print_mode(struct tegra_dc *dc,
 			const struct tegra_dc_mode *mode, const char *note) { }
 #endif /* DEBUG */
+
+static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
+{
+	u32 val;
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	val |= int_val;
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+}
+
+static inline void tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val)
+{
+	u32 val;
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	val &= ~int_val;
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+}
 
 static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 {
@@ -2174,14 +2190,32 @@ static void tegra_dc_vblank(struct work_struct *work)
 	bool nvsd_updated = false;
 
 	mutex_lock(&dc->lock);
+
 	/* use the new frame's bandwidth setting instead of max(current, new),
 	 * skip this if we're using tegra_dc_one_shot_worker() */
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 		tegra_dc_program_bandwidth(dc);
 
+	/* Clear the V_BLANK_FLIP bit of vblank ref-count if update is clean. */
+	if (!tegra_dc_windows_are_dirty(dc))
+		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
+
 	/* Update the SD brightness */
-	if (dc->enabled && dc->out->sd_settings)
+	if (dc->enabled && dc->out->sd_settings) {
 		nvsd_updated = nvsd_update_brightness(dc);
+		/* Ref-count vblank if nvsd is on-going. Otherwise, clean the
+		 * V_BLANK_NVSD bit of vblank ref-count. */
+		if (nvsd_updated) {
+			set_bit(V_BLANK_NVSD, &dc->vblank_ref_count);
+			tegra_dc_unmask_interrupt(dc, V_BLANK_INT);
+		} else {
+			clear_bit(V_BLANK_NVSD, &dc->vblank_ref_count);
+		}
+	}
+
+	/* Mask vblank interrupt if ref-count is zero. */
+	if (!dc->vblank_ref_count)
+		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
 
 	mutex_unlock(&dc->lock);
 
@@ -2320,25 +2354,12 @@ static void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	}
 
 	if (!dirty) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-			val &= ~V_BLANK_INT;
-		else
-			val &= ~FRAME_END_INT;
-		tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+		if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
+			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 
-	if (completed) {
-		if (!dirty) {
-			/* With the last completed window, go ahead
-			   and enable the vblank interrupt for nvsd. */
-			val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-			val |= V_BLANK_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
-		}
-
+	if (completed)
 		wake_up(&dc->wq);
-	}
 }
 
 static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
@@ -2360,19 +2381,9 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 
 static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 {
-	if (status & V_BLANK_INT) {
-		/* Schedule any additional bottom-half vblank actvities. */
+	/* Schedule any additional bottom-half vblank actvities. */
+	if (status & V_BLANK_INT)
 		schedule_work(&dc->vblank_work);
-
-		/* All windows updated. Mask subsequent V_BLANK interrupts */
-		if (!tegra_dc_windows_are_dirty(dc)) {
-			u32 val;
-
-			val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-			val &= ~V_BLANK_INT;
-			tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
-		}
-	}
 
 	if (status & FRAME_END_INT) {
 		/* Mark the frame_end as complete. */
@@ -3082,6 +3093,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	INIT_WORK(&dc->reset_work, tegra_dc_reset_worker);
 #endif
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
+	dc->vblank_ref_count = 0;
 	INIT_DELAYED_WORK(&dc->underflow_work, tegra_dc_underflow_worker);
 	INIT_DELAYED_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);
 

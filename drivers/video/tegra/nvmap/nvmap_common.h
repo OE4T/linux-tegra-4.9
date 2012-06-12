@@ -24,7 +24,8 @@
 
 extern void v7_clean_kern_cache_all(void *);
 
-#define FLUSH_CLEAN_BY_SET_WAY_THRESHOLD (8 * PAGE_SIZE)
+#define FLUSH_CLEAN_BY_SET_WAY_THRESHOLD_INNER (8 * PAGE_SIZE)
+#define FLUSH_CLEAN_BY_SET_WAY_THRESHOLD_OUTER (1024 * 1024)
 
 static inline void inner_flush_cache_all(void)
 {

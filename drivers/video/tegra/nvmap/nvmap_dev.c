@@ -291,7 +291,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	if (len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD) {
+	if (len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD_INNER) {
 		inner_flush_cache_all();
 		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 			outer_flush_range(block->base, block->base + len);

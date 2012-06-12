@@ -24,6 +24,8 @@
 
 #include <linux/nvhost.h>
 
+struct mem_handle;
+
 void nvhost_tsec_finalize_poweron(struct nvhost_device *dev);
 void nvhost_tsec_init(struct nvhost_device *dev);
 void nvhost_tsec_deinit(struct nvhost_device *dev);
@@ -31,7 +33,7 @@ void nvhost_tsec_deinit(struct nvhost_device *dev);
 struct tsec {
 	bool valid;
 	u32  size;
-	struct nvmap_handle_ref *mem_r;
+	struct mem_handle *mem_r;
 
 	struct {
 		u32 bin_data_offset;
@@ -73,7 +75,7 @@ struct tsec_ucode_os_header_v1 {
 struct tsec_ucode_v1 {
 	struct tsec_ucode_bin_header_v1 *bin_header;
 	struct tsec_ucode_os_header_v1  *os_header;
-	struct nvmap_handle_ref *mem;
+	struct mem_handle *mem;
 	phys_addr_t pa;
 	bool valid;
 };

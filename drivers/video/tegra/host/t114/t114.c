@@ -35,6 +35,10 @@
 #include "gr3d/scale3d.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
+#include <linux/nvhost_ioctl.h>
+#include "nvhost_channel.h"
+#include "nvhost_memmgr.h"
+#include "chip_support.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -252,6 +256,9 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	if (err)
 		return err;
 	err = nvhost_init_t20_intr_support(op);
+	if (err)
+		return err;
+	err = nvhost_memmgr_init(op);
 	if (err)
 		return err;
 	op->nvhost_dev.get_nvhost_device = t114_get_nvhost_device;

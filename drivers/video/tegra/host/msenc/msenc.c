@@ -23,12 +23,14 @@
 #include <linux/firmware.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
-#include <linux/nvmap.h>
 #include <mach/iomap.h>
 #include "dev.h"
 #include "msenc.h"
 #include "hw_msenc.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
+#include "chip_support.h"
+#include "nvhost_memmgr.h"
 
 #define MSENC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define MSENC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -228,16 +230,16 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 	}
 
 	/* allocate pages for ucode */
-	m->mem_r = nvmap_alloc(nvhost_get_host(dev)->nvmap,
+	m->mem_r = mem_op().alloc(nvhost_get_host(dev)->memmgr,
 				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, NVMAP_HANDLE_UNCACHEABLE, 0);
+				     PAGE_SIZE, mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	ucode_ptr = nvmap_mmap(m->mem_r);
+	ucode_ptr = mem_op().mmap(m->mem_r);
 	if (!ucode_ptr) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
@@ -252,7 +254,7 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 
 	m->valid = true;
 
-	nvmap_munmap(m->mem_r, ucode_ptr);
+	mem_op().munmap(m->mem_r, ucode_ptr);
 
  clean_up:
 	release_firmware(ucode_fw);
@@ -279,7 +281,7 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 		return;
 	}
 
-	m->pa = nvmap_pin(nvhost_get_host(dev)->nvmap, m->mem_r);
+	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
 	if (m->pa == -EINVAL || m->pa == -EINTR) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = -EINVAL;
@@ -294,7 +296,7 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 
  clean_up:
 	dev_err(&dev->dev, "failed");
-	nvmap_unpin(nvhost_get_host(dev)->nvmap, m->mem_r);
+	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
 }
 
 void nvhost_msenc_deinit(struct nvhost_device *dev)
@@ -303,8 +305,8 @@ void nvhost_msenc_deinit(struct nvhost_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
-		nvmap_unpin(nvhost_get_host(dev)->nvmap, m->mem_r);
-		nvmap_free(nvhost_get_host(dev)->nvmap, m->mem_r);
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
+		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = 0;
 	}
 }

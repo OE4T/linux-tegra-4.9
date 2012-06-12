@@ -51,6 +51,8 @@
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
+#include "dev.h"
+#include "host1x/host1x_syncpt.h"
 #include "nvsd.h"
 
 #define TEGRA_CRC_LATCHED_DELAY		34

@@ -38,6 +38,8 @@
 
 #include "dc_reg.h"
 #include "dc_priv.h"
+#include "dev.h"
+#include "host1x/host1x_syncpt.h"
 #include "dsi_regs.h"
 #include "dsi.h"
 

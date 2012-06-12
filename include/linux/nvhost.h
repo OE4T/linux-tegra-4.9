@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2012, NVIDIA Corporation.
+ * Copyright (c) 2009-2012, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +27,20 @@
 #include <linux/types.h>
 
 struct nvhost_master;
+struct nvhost_device_power_attr;
 
-#define NVHOST_MODULE_MAX_CLOCKS 3
-#define NVHOST_MODULE_MAX_POWERGATE_IDS 2
-#define NVHOST_MODULE_NO_POWERGATE_IDS .powergate_ids = {-1, -1}
-#define NVHOST_DEFAULT_CLOCKGATE_DELAY .clockgate_delay = 25
-#define NVHOST_NAME_SIZE	24
+#define NVHOST_MODULE_MAX_CLOCKS		3
+#define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
+#define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
+#define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
+#define NVHOST_NAME_SIZE			24
+
+enum nvhost_power_sysfs_attributes {
+	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,
+	NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY,
+	NVHOST_POWER_SYSFS_ATTRIB_REFCOUNT,
+	NVHOST_POWER_SYSFS_ATTRIB_MAX
+};
 
 struct nvhost_device_id {
 	char name[NVHOST_NAME_SIZE];
@@ -89,6 +97,13 @@ struct nvhost_device {
 	struct list_head client_list;	/* List of clients and rate requests */
 
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
+	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
+	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
+};
+
+struct nvhost_device_power_attr {
+	struct nvhost_device *ndev;
+	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];
 };
 
 /* Register devices to nvhost bus */

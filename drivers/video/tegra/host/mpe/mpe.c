@@ -599,7 +599,7 @@ int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 }
 
 enum mpe_ip_ver {
-	mpe_01,
+	mpe_01 = 1,
 	mpe_02,
 };
 
@@ -621,8 +621,8 @@ static const struct mpe_desc mpe[] = {
 };
 
 static struct nvhost_device_id mpe_id[] = {
-	{ "mpe01", mpe_01 },
-	{ "mpe02", mpe_02 },
+	{ "mpe", mpe_01 },
+	{ "mpe", mpe_02 },
 	{ },
 };
 
@@ -635,14 +635,10 @@ static int mpe_probe(struct nvhost_device *dev,
 	int index = 0;
 	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
-	index = id_table->driver_data;
+	index = id_table->version;
 
 	drv->prepare_poweroff		= mpe[index].prepare_poweroff;
 	drv->alloc_hwctx_handler	= mpe[index].alloc_hwctx_handler;
-
-	/* reset device name so that consistent device name can be
-	 * found in clock tree */
-	dev->name = "mpe";
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

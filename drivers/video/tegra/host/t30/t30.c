@@ -119,7 +119,8 @@ static struct nvhost_device tegra_display01_device = {
 };
 
 static struct nvhost_device tegra_gr3d02_device = {
-	.name		= "gr3d02",
+	.name		= "gr3d",
+	.version	= 2,
 	.id		= -1,
 	.index		= 1,
 	.syncpts	= BIT(NVSYNCPT_3D),
@@ -211,7 +212,8 @@ static struct resource tegra_mpe01_resources[] = {
 };
 
 static struct nvhost_device tegra_mpe02_device = {
-	.name		= "mpe02",
+	.name		= "mpe",
+	.version	= 2,
 	.id		= -1,
 	.resource	= tegra_mpe01_resources,
 	.num_resources	= ARRAY_SIZE(tegra_mpe01_resources),

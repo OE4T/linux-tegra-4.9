@@ -81,7 +81,8 @@ static struct nvhost_device_id *nvhost_bus_match_id(struct nvhost_device *dev,
 	struct nvhost_device_id *id_table)
 {
 	while (id_table->name[0]) {
-		if (strcmp(dev->name, id_table->name) == 0)
+		if (strcmp(dev->name, id_table->name) == 0
+				&& dev->version == id_table->version)
 			return id_table;
 		id_table++;
 	}

@@ -435,6 +435,26 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 	}
 }
 
+
+static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
+				 struct tegra_dc_win *new_win)
+{
+	return ((cur_win->fmt == new_win->fmt) &&
+		(cur_win->flags == new_win->flags) &&
+		(dfixed_trunc(cur_win->x) == dfixed_trunc(new_win->x)) &&
+		(dfixed_trunc(cur_win->y) == dfixed_trunc(new_win->y)) &&
+		(dfixed_trunc(cur_win->w) == dfixed_trunc(new_win->w)) &&
+		(dfixed_trunc(cur_win->h) == dfixed_trunc(new_win->h)) &&
+		(cur_win->out_x == new_win->out_x) &&
+		(cur_win->out_y == new_win->out_y) &&
+		(cur_win->out_w == new_win->out_w) &&
+		(cur_win->out_h == new_win->out_h) &&
+		(cur_win->z == new_win->z) &&
+		(!memcmp(&cur_win->csc, &new_win->csc,
+			sizeof(struct tegra_dc_csc))));
+}
+
+
 /* Does not support updating windows on multiple dcs in one call.
  * Requires a matching sync_windows to avoid leaking ref-count on clocks. */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
@@ -491,6 +511,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	if (no_vsync)
 		wait_for_vblank = 0;
 
+	BUG_ON(!wait_for_vblank && dirty_rect);
+
 	if (dirty_rect) {
 		xoff = dirty_rect[0];
 		yoff = dirty_rect[1];
@@ -507,6 +529,19 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		}
 	}
 
+	/* If any of the window updates requires vsync to program the window
+	   update safely, vsync all windows in this flip.  Safety overrides both
+	   the requested wait_for_vblank, and also the no_vsync global. */
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *win = windows[i];
+		if ((!wait_for_vblank &&
+		    !update_is_hsync_safe(&dc->shadow_windows[win->idx],
+					  win)) || do_partial_update)
+			wait_for_vblank = 1;
+
+		memcpy(&dc->shadow_windows[win->idx], win,
+		       sizeof(struct tegra_dc_win));
+	}
 
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
@@ -642,6 +677,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 				win->out_y = yoff_2 - yoff;
 				win->out_w = width_2;
 				win->out_h = height_2;
+
+				/* Update shadow registers */
+				memcpy(&dc->shadow_windows[win->idx], win,
+						sizeof(struct tegra_dc_win));
 			}
 		}
 

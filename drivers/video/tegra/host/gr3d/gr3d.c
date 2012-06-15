@@ -238,6 +238,7 @@ static int __exit gr3d_remove(struct nvhost_device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int gr3d_suspend(struct nvhost_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
@@ -248,6 +249,7 @@ static int gr3d_resume(struct nvhost_device *dev)
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
+#endif
 
 static struct nvhost_driver gr3d_driver = {
 	.probe = gr3d_probe,

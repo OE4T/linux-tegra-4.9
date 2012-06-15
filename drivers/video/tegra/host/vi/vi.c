@@ -44,6 +44,7 @@ static int __exit vi_remove(struct nvhost_device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int vi_suspend(struct nvhost_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
@@ -54,6 +55,7 @@ static int vi_resume(struct nvhost_device *dev)
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
+#endif
 
 static struct nvhost_driver vi_driver = {
 	.probe = vi_probe,

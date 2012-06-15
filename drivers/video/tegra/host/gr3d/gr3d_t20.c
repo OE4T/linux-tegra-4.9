@@ -200,7 +200,7 @@ static void __init save_end_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 }
 
 static u32 *save_regs_v0(u32 *ptr, unsigned int *pending,
-			void __iomem *chan_regs,
+			struct nvhost_channel *ch,
 			const struct hwctx_reginfo *regs,
 			unsigned int nr_regs)
 {
@@ -218,7 +218,7 @@ static u32 *save_regs_v0(u32 *ptr, unsigned int *pending,
 			ptr += RESTORE_INDIRECT_SIZE;
 			break;
 		}
-		drain_result = host1x_drain_read_fifo(chan_regs,
+		drain_result = nvhost_channel_drain_read_fifo(ch,
 			ptr, count, pending);
 		BUG_ON(drain_result < 0);
 		ptr += count;
@@ -344,7 +344,7 @@ static void ctx3d_save_service(struct nvhost_hwctx *nctx)
 	u32 *ptr = (u32 *)ctx->restore_virt + RESTORE_BEGIN_SIZE;
 	unsigned int pending = 0;
 
-	ptr = save_regs_v0(ptr, &pending, nctx->channel->aperture,
+	ptr = save_regs_v0(ptr, &pending, nctx->channel,
 			ctxsave_regs_3d_global,
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 

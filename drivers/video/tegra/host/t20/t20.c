@@ -294,6 +294,8 @@ int nvhost_init_t20_channel_support(struct nvhost_master *host,
 	op->channel.init = t20_channel_init;
 	op->channel.submit = host1x_channel_submit;
 	op->channel.read3dreg = host1x_channel_read_3d_reg;
+	op->channel.save_context = host1x_save_context;
+	op->channel.drain_read_fifo = host1x_drain_read_fifo;
 
 	return 0;
 }

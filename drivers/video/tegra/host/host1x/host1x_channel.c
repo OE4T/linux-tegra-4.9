@@ -461,8 +461,7 @@ int host1x_channel_read_3d_reg(
 	nvhost_intr_put_ref(&nvhost_get_host(channel->dev)->intr, ref);
 
 	/* Read the register value from FIFO */
-	err = host1x_drain_read_fifo(channel->aperture,
-		value, 1, &pending);
+	err = host1x_drain_read_fifo(channel, value, 1, &pending);
 
 	/* Indicate we've read the value */
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(channel->dev)->syncpt,
@@ -486,11 +485,12 @@ done:
 }
 
 
-int host1x_drain_read_fifo(void __iomem *chan_regs,
+int host1x_drain_read_fifo(struct nvhost_channel *ch,
 	u32 *ptr, unsigned int count, unsigned int *pending)
 {
 	unsigned int entries = *pending;
 	unsigned long timeout = jiffies + NV_FIFO_READ_TIMEOUT;
+	void __iomem *chan_regs = ch->aperture;
 	while (count) {
 		unsigned int num;
 
@@ -528,9 +528,9 @@ int host1x_drain_read_fifo(void __iomem *chan_regs,
 	return 0;
 }
 
-int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
+int host1x_save_context(struct nvhost_channel *ch)
 {
-	struct nvhost_channel *ch = dev->channel;
+	struct nvhost_device *dev = ch->dev;
 	struct nvhost_hwctx *hwctx_to_save;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	u32 syncpt_incrs, syncpt_val;
@@ -539,6 +539,7 @@ int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
 	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
 	struct nvhost_job *job;
 	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	u32 syncpt_id;
 
 	ctx_waiter = nvhost_intr_alloc_waiter();
 	wakeup_waiter = nvhost_intr_alloc_waiter();
@@ -569,6 +570,7 @@ int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id)
 	hwctx_to_save->valid = true;
 	ch->ctxhandler->get(hwctx_to_save);
 	ch->cur_ctx = NULL;
+	syncpt_id = to_host1x_hwctx_handler(hwctx_to_save->h)->syncpt;
 
 	syncpt_incrs = to_host1x_hwctx(hwctx_to_save)->save_incrs;
 	syncpt_val = nvhost_syncpt_incr_max(&nvhost_get_host(ch->dev)->syncpt,

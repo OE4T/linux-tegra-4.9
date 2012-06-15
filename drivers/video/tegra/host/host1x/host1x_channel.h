@@ -37,9 +37,9 @@ int host1x_channel_read_3d_reg(
 	u32 *value);
 
 /* Reads words from FIFO */
-int host1x_drain_read_fifo(void __iomem *chan_regs,
+int host1x_drain_read_fifo(struct nvhost_channel *ch,
 		u32 *ptr, unsigned int count, unsigned int *pending);
 
-int host1x_save_context(struct nvhost_device *dev, u32 syncpt_id);
+int host1x_save_context(struct nvhost_channel *ch);
 
 #endif

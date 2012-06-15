@@ -150,13 +150,7 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 
 int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev)
 {
-	struct nvhost_hwctx *cur_ctx = dev->channel->cur_ctx;
-	int err = 0;
-	if (cur_ctx)
-		err = host1x_save_context(dev,
-			to_host1x_hwctx_handler(cur_ctx->h)->syncpt);
-
-	return err;
+	return nvhost_channel_save_context(dev->channel);
 }
 
 enum gr3d_ip_ver {

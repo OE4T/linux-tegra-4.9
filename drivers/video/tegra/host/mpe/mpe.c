@@ -402,7 +402,7 @@ static u32 *save_regs(u32 *ptr, unsigned int *pending,
 		u32 count = regs->count;
 		++ptr; /* restore incr */
 		if (regs->type == HWCTX_REGINFO_NORMAL) {
-			host1x_drain_read_fifo(channel->aperture,
+			nvhost_channel_drain_read_fifo(channel,
 						ptr, count, pending);
 			ptr += count;
 		} else {
@@ -411,8 +411,8 @@ static u32 *save_regs(u32 *ptr, unsigned int *pending,
 				BUG_ON(msi->out_pos >= NR_WRITEBACKS);
 				word = msi->out[msi->out_pos++];
 			} else {
-				host1x_drain_read_fifo(channel->aperture,
-							&word, 1, pending);
+				nvhost_channel_drain_read_fifo(channel,
+						&word, 1, pending);
 				if (regs->type == HWCTX_REGINFO_STASH) {
 					BUG_ON(msi->in_pos >= NR_STASHES);
 					msi->in[msi->in_pos++] = word;
@@ -432,7 +432,7 @@ static u32 *save_ram(u32 *ptr, unsigned int *pending,
 {
 	int err = 0;
 	ptr += RESTORE_RAM_SIZE;
-	err = host1x_drain_read_fifo(channel->aperture, ptr, words, pending);
+	err = nvhost_channel_drain_read_fifo(channel, ptr, words, pending);
 	WARN_ON(err);
 	return ptr + words;
 }
@@ -589,13 +589,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
 {
-	struct nvhost_hwctx *cur_ctx = dev->channel->cur_ctx;
-	int err = 0;
-	if (cur_ctx)
-		err = host1x_save_context(dev,
-			to_host1x_hwctx_handler(cur_ctx->h)->syncpt);
-
-	return err;
+	return nvhost_channel_save_context(dev->channel);
 }
 
 enum mpe_ip_ver {

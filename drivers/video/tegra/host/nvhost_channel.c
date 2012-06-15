@@ -169,3 +169,20 @@ void nvhost_free_channel_internal(struct nvhost_channel *ch,
 	kfree(ch);
 	(*current_channel_count)--;
 }
+
+int nvhost_channel_save_context(struct nvhost_channel *ch)
+{
+	struct nvhost_hwctx *cur_ctx = ch->cur_ctx;
+	int err = 0;
+	if (cur_ctx)
+		err = channel_op().save_context(ch);
+
+	return err;
+
+}
+
+int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
+			u32 *ptr, unsigned int count, unsigned int *pending)
+{
+	return channel_op().drain_read_fifo(ch, ptr, count, pending);
+}

@@ -53,6 +53,7 @@ enum tegra_se_aes_op_mode {
 	SE_AES_OP_MODE_CTR,	/* Counter (CTR) mode */
 	SE_AES_OP_MODE_OFB,	/* Output feedback (CFB) mode */
 	SE_AES_OP_MODE_RNG_X931,	/* Random number generator (RNG) mode */
+	SE_AES_OP_MODE_RNG_DRBG,	/* Deterministic Random Bit Generator mode */
 	SE_AES_OP_MODE_CMAC,	/* Cipher-based MAC (CMAC) mode */
 	SE_AES_OP_MODE_SHA1,	/* Secure Hash Algorithm-1 (SHA1) mode */
 	SE_AES_OP_MODE_SHA224,	/* Secure Hash Algorithm-224  (SHA224) mode */
@@ -173,6 +174,7 @@ static DEFINE_SPINLOCK(rsa_key_slot_lock);
 
 #define RSA_MIN_SIZE	64
 #define RSA_MAX_SIZE	256
+#define RNG_RESEED_INTERVAL	100
 
 static DEFINE_SPINLOCK(key_slot_lock);
 static DEFINE_MUTEX(se_hw_lock);
@@ -333,6 +335,7 @@ static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 			val |= SE_CONFIG_DST(DST_MEMORY);
 		break;
 	case SE_AES_OP_MODE_RNG_X931:
+	case SE_AES_OP_MODE_RNG_DRBG:
 		val = SE_CONFIG_ENC_ALG(ALG_RNG) |
 			SE_CONFIG_ENC_MODE(MODE_KEY128) |
 				SE_CONFIG_DST(DST_MEMORY);
@@ -509,6 +512,11 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
 		break;
+	case SE_AES_OP_MODE_RNG_DRBG:
+		val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
+			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		break;
 	case SE_AES_OP_MODE_ECB:
 		if (encrypt) {
 			val = SE_CRYPTO_INPUT_SEL(INPUT_AHB) |
@@ -553,6 +561,12 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 		val |= SE_CRYPTO_HASH(HASH_ENABLE);
 
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+
+	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
+		se_writel(se_dev, SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
+			SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR), SE_RNG_CONFIG_REG_OFFSET);
+		se_writel(se_dev, RNG_RESEED_INTERVAL, SE_RNG_RESEED_INTERVAL_REG_OFFSET);
+	}
 
 	if (mode == SE_AES_OP_MODE_CTR)
 		se_writel(se_dev, 1, SE_SPARE_0_REG_OFFSET);
@@ -1196,6 +1210,106 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 	rng_ctx->use_org_iv = true;
 
 	return 0;
+}
+
+static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
+{
+	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+
+	rng_ctx->se_dev = se_dev;
+	rng_ctx->dt_buf = dma_alloc_coherent(se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
+		&rng_ctx->dt_buf_adr, GFP_KERNEL);
+	if (!rng_ctx->dt_buf) {
+		dev_err(se_dev->dev, "can not allocate rng dma buffer");
+		return -ENOMEM;
+	}
+
+	rng_ctx->rng_buf = dma_alloc_coherent(rng_ctx->se_dev->dev,
+		TEGRA_SE_RNG_DT_SIZE, &rng_ctx->rng_buf_adr, GFP_KERNEL);
+	if (!rng_ctx->rng_buf) {
+		dev_err(se_dev->dev, "can not allocate rng dma buffer");
+		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
+					rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
+{
+	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
+	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
+	struct tegra_se_ll *src_ll, *dst_ll;
+	u8 *rdata_addr;
+	int ret = 0, j, num_blocks, data_len = 0;
+
+	num_blocks = (dlen / TEGRA_SE_RNG_DT_SIZE);
+
+	data_len = (dlen % TEGRA_SE_RNG_DT_SIZE);
+	if (data_len == 0)
+		num_blocks = num_blocks - 1;
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	*se_dev->src_ll_buf = 0;
+	*se_dev->dst_ll_buf = 0;
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	src_ll->addr = rng_ctx->dt_buf_adr;
+	src_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
+	dst_ll->addr = rng_ctx->rng_buf_adr;
+	dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
+
+	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_DRBG, true,
+		TEGRA_SE_KEY_128_SIZE);
+	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_DRBG, true,
+				0, true);
+	for (j = 0; j <= num_blocks; j++) {
+		ret = tegra_se_start_operation(se_dev,
+				TEGRA_SE_RNG_DT_SIZE, false);
+
+		if (!ret) {
+			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
+
+			if (data_len && num_blocks == j) {
+				memcpy(rdata_addr, rng_ctx->rng_buf, data_len);
+			} else {
+				memcpy(rdata_addr,
+					rng_ctx->rng_buf, TEGRA_SE_RNG_DT_SIZE);
+			}
+		} else {
+			dlen = 0;
+		}
+	}
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
+	return dlen;
+}
+
+static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
+{
+	return 0;
+}
+
+static void tegra_se_rng_drbg_exit(struct crypto_tfm *tfm)
+{
+	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
+
+	if (rng_ctx->dt_buf) {
+		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
+			rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
+	}
+
+	if (rng_ctx->rng_buf) {
+		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
+			rng_ctx->rng_buf, rng_ctx->rng_buf_adr);
+	}
+	rng_ctx->se_dev = NULL;
 }
 
 int tegra_se_sha_init(struct ahash_request *req)
@@ -2008,6 +2122,23 @@ static struct crypto_alg aes_algs[] = {
 				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
 			}
 		}
+	}, {
+		.cra_name = "rng_drbg",
+		.cra_driver_name = "rng_drbg-aes-tegra",
+		.cra_priority = 100,
+		.cra_flags = CRYPTO_ALG_TYPE_RNG,
+		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
+		.cra_type = &crypto_rng_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_se_rng_drbg_init,
+		.cra_exit = tegra_se_rng_drbg_exit,
+		.cra_u = {
+			.rng = {
+				.rng_make_random = tegra_se_rng_drbg_get_random,
+				.rng_reset = tegra_se_rng_drbg_reset,
+				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
+			}
+		}
 	}
 };
 
@@ -2470,7 +2601,7 @@ static int tegra_se_generate_rng_key(struct tegra_se_dev *se_dev)
 	se_writel(se_dev, val, SE_CRYPTO_KEYTABLE_DST_REG_OFFSET);
 
 	/* Configure crypto */
-	val = SE_CRYPTO_INPUT_SEL(INPUT_LFSR) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
 		SE_CRYPTO_HASH(HASH_DISABLE) |
 		SE_CRYPTO_KEY_INDEX(ssk_slot.slot_num) |
@@ -2542,7 +2673,7 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 		TEGRA_SE_KEY_128_SIZE);
 
 	/* Configure crypto */
-	val = SE_CRYPTO_INPUT_SEL(INPUT_LFSR) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
 		SE_CRYPTO_HASH(HASH_DISABLE) |
 		SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |

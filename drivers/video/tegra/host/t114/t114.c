@@ -23,6 +23,7 @@
 #include <linux/init.h>
 #include <linux/mutex.h>
 #include <mach/powergate.h>
+#include <mach/iomap.h>
 #include "dev.h"
 #include "host1x/host1x_cdma.h"
 #include "t20/t20.h"
@@ -55,9 +56,7 @@
 
 static int t114_num_alloc_channels = 0;
 
-static struct nvhost_device devices[] = {
-{
-	/* channel 0 */
+static struct nvhost_device tegra_display01_device = {
 	.name	       = "display",
 	.id            = -1,
 	.index         = 0,
@@ -69,9 +68,9 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_NONE,
-},
-{
-	/* channel 1 */
+};
+
+static struct nvhost_device tegra_gr3d03_device = {
 	.name	       = "gr3d03",
 	.id            = -1,
 	.index         = 1,
@@ -84,9 +83,9 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_NONE,
-},
-{
-	/* channel 2 */
+};
+
+static struct nvhost_device tegra_gr2d03_device = {
 	.name	       = "gr2d",
 	.id            = -1,
 	.index         = 2,
@@ -100,21 +99,43 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_NONE,
-},
-{
-	/* channel 3 */
+};
+
+static struct resource isp_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_ISP_BASE,
+		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	}
+};
+
+static struct nvhost_device tegra_isp01_device = {
 	.name	 = "isp",
 	.id      = -1,
+	.resource = isp_resources,
+	.num_resources = ARRAY_SIZE(isp_resources),
 	.index   = 3,
 	.syncpts = 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_ISP,
-},
-{
-	/* channel 4 */
+};
+
+static struct resource vi_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_VI_BASE,
+		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device tegra_vi01_device = {
 	.name	       = "vi",
 	.id            = -1,
+	.resource      = vi_resources,
+	.num_resources = ARRAY_SIZE(vi_resources),
 	.index         = 4,
 	.syncpts       = BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
 			 BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
@@ -125,11 +146,22 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
-},
-{
-	/* channel 5 */
+};
+
+static struct resource msenc_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_MSENC_BASE,
+		.end = TEGRA_MSENC_BASE + TEGRA_MSENC_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device tegra_msenc02_device = {
 	.name	       = "msenc",
 	.id            = -1,
+	.resource      = msenc_resources,
+	.num_resources = ARRAY_SIZE(msenc_resources),
 	.index         = 5,
 	.syncpts       = BIT(NVSYNCPT_MSENC),
 	.waitbases     = BIT(NVWAITBASE_MSENC),
@@ -140,9 +172,9 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_MSENC,
-},
-{
-	/* channel 6 */
+};
+
+static struct nvhost_device tegra_dsi01_device = {
 	.name	       = "dsi",
 	.id            = -1,
 	.index         = 6,
@@ -151,11 +183,23 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_NONE,
-},
-{
+};
+
+static struct resource tsec_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_TSEC_BASE,
+		.end = TEGRA_TSEC_BASE + TEGRA_TSEC_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device tegra_tsec01_device = {
 	/* channel 7 */
 	.name          = "tsec",
 	.id            = -1,
+	.resource      = tsec_resources,
+	.num_resources = ARRAY_SIZE(tsec_resources),
 	.index         = 7,
 	.syncpts       = BIT(NVSYNCPT_TSEC),
 	.waitbases     = BIT(NVWAITBASE_TSEC),
@@ -165,7 +209,24 @@ static struct nvhost_device devices[] = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
-} };
+};
+
+static struct nvhost_device *t11_devices[] = {
+	&tegra_host1x01_device,
+	&tegra_display01_device,
+	&tegra_gr3d03_device,
+	&tegra_gr2d03_device,
+	&tegra_isp01_device,
+	&tegra_vi01_device,
+	&tegra_msenc02_device,
+	&tegra_dsi01_device,
+	&tegra_tsec01_device,
+};
+
+int tegra11_register_host1x_devices(void)
+{
+	return nvhost_add_devices(t11_devices, ARRAY_SIZE(t11_devices));
+}
 
 static inline int t114_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
@@ -226,18 +287,6 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(int chindex)
 		NV_HOST1X_CHANNELS_T114, &t114_num_alloc_channels);
 }
 
-static struct nvhost_device *t114_get_nvhost_device(char *name)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(devices); i++) {
-		if (strncmp(devices[i].name, name, strlen(name)) == 0)
-			return &devices[i];
-	}
-
-	return NULL;
-}
-
 int nvhost_init_t114_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
@@ -262,7 +311,6 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	err = nvhost_memmgr_init(op);
 	if (err)
 		return err;
-	op->nvhost_dev.get_nvhost_device = t114_get_nvhost_device;
 	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
 

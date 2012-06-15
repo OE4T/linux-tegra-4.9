@@ -24,7 +24,6 @@
 #include <linux/module.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
-#include <mach/iomap.h>
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
@@ -352,15 +351,6 @@ static int tsec_resume(struct nvhost_device *dev)
 }
 #endif
 
-struct nvhost_device *tsec_device;
-
-static struct resource tsec_resources = {
-	.name = "regs",
-	.start = TEGRA_TSEC_BASE,
-	.end = TEGRA_TSEC_BASE + TEGRA_TSEC_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-};
-
 static struct nvhost_driver tsec_driver = {
 	.probe = tsec_probe,
 	.remove = __exit_p(tsec_remove),
@@ -376,19 +366,6 @@ static struct nvhost_driver tsec_driver = {
 
 static int __init tsec_init(void)
 {
-	int err;
-
-	tsec_device = nvhost_get_device("tsec");
-	if (!tsec_device)
-		return -ENXIO;
-
-	tsec_device->resource = &tsec_resources;
-	tsec_device->num_resources = 1;
-
-	err = nvhost_device_register(tsec_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&tsec_driver);
 }
 

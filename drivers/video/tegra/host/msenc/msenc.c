@@ -352,13 +352,6 @@ static int msenc_resume(struct nvhost_device *dev)
 }
 #endif
 
-static struct resource msenc_resources = {
-	.name = "regs",
-	.start = TEGRA_MSENC_BASE,
-	.end = TEGRA_MSENC_BASE + TEGRA_MSENC_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-};
-
 struct nvhost_device *msenc_device;
 
 static struct nvhost_driver msenc_driver = {
@@ -376,19 +369,6 @@ static struct nvhost_driver msenc_driver = {
 
 static int __init msenc_init(void)
 {
-	int err;
-
-	msenc_device = nvhost_get_device("msenc");
-	if (!msenc_device)
-		return -ENXIO;
-
-	msenc_device->resource = &msenc_resources;
-	msenc_device->num_resources = 1;
-
-	err = nvhost_device_register(msenc_device);
-	if (err)
-		return err;
-
 	return nvhost_driver_register(&msenc_driver);
 }
 

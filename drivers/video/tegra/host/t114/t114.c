@@ -125,7 +125,8 @@ static struct nvhost_device tegra_display01_device = {
 };
 
 static struct nvhost_device tegra_gr3d03_device = {
-	.name	       = "gr3d03",
+	.name	       = "gr3d",
+	.version       = 3,
 	.id            = -1,
 	.index         = 1,
 	.syncpts       = BIT(NVSYNCPT_3D),

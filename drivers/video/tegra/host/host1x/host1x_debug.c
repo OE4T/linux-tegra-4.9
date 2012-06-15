@@ -229,15 +229,6 @@ static void show_channel_gather(struct output *o, u32 addr,
 #endif
 }
 
-u32 previous_oppair(struct nvhost_cdma *cdma, u32 cur)
-{
-	u32 pb = cdma->push_buffer.phys;
-	u32 prev = cur-8;
-	if (prev < pb)
-		prev += PUSH_BUFFER_SIZE;
-	return prev;
-}
-
 void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 {
 	struct nvhost_job *job;

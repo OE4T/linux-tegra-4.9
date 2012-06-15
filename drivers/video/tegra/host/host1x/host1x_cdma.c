@@ -368,20 +368,6 @@ static void cdma_stop(struct nvhost_cdma *cdma)
 }
 
 /**
- * Retrieve the op pair at a slot offset from a DMA address
- */
-void cdma_peek(struct nvhost_cdma *cdma,
-			  u32 dmaget, int slot, u32 *out)
-{
-	u32 offset = dmaget - cdma->push_buffer.phys;
-	u32 *p = cdma->push_buffer.mapped;
-
-	offset = ((offset + slot * 8) & (PUSH_BUFFER_SIZE - 1)) >> 2;
-	out[0] = p[offset];
-	out[1] = p[offset + 1];
-}
-
-/**
  * Stops both channel's command processor and CDMA immediately.
  * Also, tears down the channel and resets corresponding module.
  */

@@ -31,9 +31,6 @@
 #include <mach/hardware.h>
 #include <linux/slab.h>
 
-/*  99 > 2, which makes kernel panic if register set is incorrect */
-static int register_sets = 99;
-
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xe00,    4, DIRECT),
 	HWCTX_REGINFO(0xe05,   30, DIRECT),
@@ -127,17 +124,17 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 			NVHOST_OPCODE_NOOP);
+
 	/* set register set 0 and 1 register read memory output addresses,
 	   and send their reads to memory */
-	if (register_sets == 2) {
-		nvhost_cdma_push(cdma,
-			nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 2),
-			nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS,
-					1));
-		nvhost_cdma_push(cdma,
-				nvhost_opcode_nonincr(0x904, 1),
-				ctx->restore_phys + restore_set1_offset * 4);
-	}
+
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 2),
+		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_nonincr(0x904, 1),
+		ctx->restore_phys + restore_set1_offset * 4);
+
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 1),
 		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
@@ -201,7 +198,7 @@ static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 	ptr += RESTORE_END_SIZE;
 	/* reset to dual reg if necessary */
 	ptr[1] = nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK,
-			(1 << register_sets) - 1);
+			(1 << 2) - 1);
 	/* op_done syncpt incr to flush FDC */
 	ptr[2] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
@@ -317,16 +314,13 @@ static void __init setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 	};
 	int save_end_size = SAVE_END_V1_SIZE;
 
-	BUG_ON(register_sets > 2);
-
 	if (info.ptr) {
 		save_begin_v1(p, info.ptr);
 		info.ptr += SAVE_BEGIN_V1_SIZE;
 	}
 
 	/* read from set0, write cmds through set0, restore to set0 and 1 */
-	if (register_sets == 2)
-		switch_gpu(&info, 0, 1, 3);
+	switch_gpu(&info, 0, 1, 3);
 
 	/* save regs that are common to both sets */
 	setup_save_regs(&info,
@@ -334,28 +328,26 @@ static void __init setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 			ARRAY_SIZE(ctxsave_regs_3d_global));
 
 	/* read from set 0, write cmds through set0, restore to set0 */
-	if (register_sets == 2)
-		switch_gpu(&info, 0, 1, 1);
+	switch_gpu(&info, 0, 1, 1);
 
 	/* save set 0 specific regs */
 	setup_save_regs(&info,
 			ctxsave_regs_3d_perset,
 			ARRAY_SIZE(ctxsave_regs_3d_perset));
 
-	if (register_sets == 2) {
-		/* read from set1, write cmds through set1, restore to set1 */
-		switch_gpu(&info, 1, 2, 2);
-		/* note offset at which set 1 restore starts */
-		restore_set1_offset = info.restore_count;
-		/* save set 1 specific regs */
-		setup_save_regs(&info,
-				ctxsave_regs_3d_perset,
-				ARRAY_SIZE(ctxsave_regs_3d_perset));
-	}
+
+	/* read from set1, write cmds through set1, restore to set1 */
+	switch_gpu(&info, 1, 2, 2);
+	/* note offset at which set 1 restore starts */
+	restore_set1_offset = info.restore_count;
+	/* save set 1 specific regs */
+	setup_save_regs(&info,
+			ctxsave_regs_3d_perset,
+			ARRAY_SIZE(ctxsave_regs_3d_perset));
+
 
 	/* read from set0, write cmds through set1, restore to set0 and 1 */
-	if (register_sets == 2)
-		switch_gpu(&info, 0, 2, 3);
+	switch_gpu(&info, 0, 2, 3);
 
 	if (info.ptr) {
 		save_end_v1(p, info.ptr);
@@ -400,9 +392,6 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 
 	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
-	register_sets = tegra_gpu_register_sets();
-	BUG_ON(register_sets == 0 || register_sets > 2);
-
 	p->syncpt = syncpt;
 	p->waitbase = waitbase;
 
@@ -415,9 +404,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 		return NULL;
 	}
 
-	p->save_slots = 6;
-	if (register_sets == 2)
-		p->save_slots += 2;
+	p->save_slots = 8;
 
 	save_ptr = mem_op().mmap(p->save_buf);
 	if (!save_ptr) {

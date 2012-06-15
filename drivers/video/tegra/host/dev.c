@@ -24,16 +24,6 @@
 #include <linux/nvhost.h>
 #include <mach/gpufuse.h>
 
-static unsigned int register_sets;
-
-void nvhost_set_register_sets(unsigned int r)
-{
-	register_sets = r;
-}
-
-module_param_call(register_sets, NULL, param_get_uint, &register_sets, 0444);
-MODULE_PARM_DESC(register_sets, "Number of register sets");
-
 MODULE_AUTHOR("NVIDIA");
 MODULE_DESCRIPTION("Graphics host driver for Tegra products");
 MODULE_VERSION("1.0");

@@ -21,5 +21,4 @@
 
 #include "host1x/host1x.h"
 
-void nvhost_set_register_sets(unsigned int r);
 #endif

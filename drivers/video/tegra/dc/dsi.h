@@ -77,6 +77,10 @@ struct tegra_dc_dsi_data {
 
 	struct dsi_phy_timing_inclk phy_timing;
 
+	bool ulpm;
+	bool enabled;
+	bool host_suspended;
+
 	u8 driven_mode;
 	u8 controller_index;
 
@@ -98,9 +102,6 @@ struct tegra_dc_dsi_data {
 	u32 current_dsi_clk_khz;
 
 	u32 dsi_control_val;
-
-	bool ulpm;
-	bool enabled;
 };
 
 #define MAX_DSI_INSTANCE	2

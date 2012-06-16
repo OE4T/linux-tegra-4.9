@@ -1285,6 +1285,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			update_mask |= WIN_A_ACT_REQ << win->idx;
 
 		if (!WIN_IS_ENABLED(win)) {
+			dc->windows[i].dirty = 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			continue;
 		}

@@ -34,12 +34,12 @@
 #include <linux/seq_file.h>
 #include <linux/backlight.h>
 #include <linux/gpio.h>
+#include <linux/nvhost.h>
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
-
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -52,7 +52,6 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dev.h"
-#include "host1x/host1x_syncpt.h"
 #include "nvsd.h"
 
 #define TEGRA_CRC_LATCHED_DELAY		34
@@ -1468,7 +1467,7 @@ u32 tegra_dc_incr_syncpt_max(struct tegra_dc *dc, int i)
 	u32 max;
 
 	mutex_lock(&dc->lock);
-	max = nvhost_syncpt_incr_max(&nvhost_get_host(dc->ndev)->syncpt,
+	max = nvhost_syncpt_incr_max_ext(dc->ndev,
 		dc->syncpt[i].id, ((dc->enabled) ? 1 : 0));
 	dc->syncpt[i].max = max;
 	mutex_unlock(&dc->lock);
@@ -1482,9 +1481,7 @@ void tegra_dc_incr_syncpt_min(struct tegra_dc *dc, int i, u32 val)
 	if ( dc->enabled )
 		while (dc->syncpt[i].min < val) {
 			dc->syncpt[i].min++;
-			nvhost_syncpt_cpu_incr(
-					&nvhost_get_host(dc->ndev)->syncpt,
-					dc->syncpt[i].id);
+			nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[i].id);
 		}
 	mutex_unlock(&dc->lock);
 }
@@ -2409,7 +2406,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	unsigned long underflow_mask;
 	u32 val;
 
-	if (!nvhost_module_powered(nvhost_get_host(dc->ndev)->dev)) {
+	if (!nvhost_module_powered_ext(nvhost_get_parent(dc->ndev))) {
 		WARN(1, "IRQ when DC not powered!\n");
 		tegra_dc_io_start(dc);
 		status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
@@ -2626,8 +2623,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		dc->syncpt[i].id = syncpt;
 
 		dc->syncpt[i].min = dc->syncpt[i].max =
-			nvhost_syncpt_read(&nvhost_get_host(dc->ndev)->syncpt,
-					syncpt);
+			nvhost_syncpt_read_ext(dc->ndev, syncpt);
 	}
 
 	print_mode(dc, &dc->mode, __func__);
@@ -2827,9 +2823,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 			trace_printk("%s:syncpt flush id=%d\n", dc->ndev->name,
 				dc->syncpt[i].id);
 			dc->syncpt[i].min++;
-			nvhost_syncpt_cpu_incr(
-				&nvhost_get_host(dc->ndev)->syncpt,
-				dc->syncpt[i].id);
+			nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[i].id);
 		}
 	}
 	trace_printk("%s:disabled\n", dc->ndev->name);

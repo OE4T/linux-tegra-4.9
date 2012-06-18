@@ -16,6 +16,7 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/clk.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>

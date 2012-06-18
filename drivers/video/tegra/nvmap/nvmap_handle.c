@@ -748,7 +748,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 #ifndef CONFIG_TEGRA_IOVMM
 	/* convert iovmm requests to generic carveout. */
 	if (heap_mask & NVMAP_HEAP_IOVMM) {
-		heap_mask = heap_mask & ~NVMAP_HEAP_IOVMM |
+		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |
 			    NVMAP_HEAP_CARVEOUT_GENERIC;
 	}
 #endif

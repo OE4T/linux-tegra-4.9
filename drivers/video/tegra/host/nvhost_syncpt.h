@@ -28,7 +28,6 @@
 
 /* host managed and invalid syncpt id */
 #define NVSYNCPT_GRAPHICS_HOST		     (0)
-#define NVSYNCPT_INVALID		     (-1)
 
 /* Attribute struct for sysfs min and max attributes */
 struct nvhost_syncpt_attr {

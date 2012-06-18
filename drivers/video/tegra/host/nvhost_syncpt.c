@@ -481,3 +481,29 @@ int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp)
 {
 	return syncpt_to_dev(sp)->info.nb_mlocks;
 }
+
+/* public sync point API */
+u32 nvhost_syncpt_incr_max_ext(struct nvhost_device *dev, u32 id, u32 incrs)
+{
+	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	return nvhost_syncpt_incr_max(sp, id, incrs);
+}
+
+void nvhost_syncpt_cpu_incr_ext(struct nvhost_device *dev, u32 id)
+{
+	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	nvhost_syncpt_cpu_incr(sp, id);
+}
+
+u32 nvhost_syncpt_read_ext(struct nvhost_device *dev, u32 id)
+{
+	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	return nvhost_syncpt_read(sp, id);
+}
+
+int nvhost_syncpt_wait_timeout_ext(struct nvhost_device *dev, u32 id, u32 thresh,
+	u32 timeout, u32 *value)
+{
+	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value);
+}

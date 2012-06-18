@@ -34,9 +34,9 @@
 #include "nvhost_acm.h"
 #include "dev.h"
 
-#define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
-#define POWERGATE_DELAY 10
-#define MAX_DEVID_LENGTH 16
+#define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT	(2 * HZ)
+#define POWERGATE_DELAY 			10
+#define MAX_DEVID_LENGTH			16
 
 DEFINE_MUTEX(client_list_lock);
 
@@ -613,3 +613,18 @@ void nvhost_module_deinit(struct nvhost_device *dev)
 	dev->powerstate = NVHOST_POWER_STATE_DEINIT;
 }
 
+/* public host1x power management APIs */
+bool nvhost_module_powered_ext(struct nvhost_device *dev)
+{
+	return nvhost_module_powered(dev);
+}
+
+void nvhost_module_busy_ext(struct nvhost_device *dev)
+{
+	nvhost_module_busy(dev);
+}
+
+void nvhost_module_idle_ext(struct nvhost_device *dev)
+{
+	nvhost_module_idle(dev);
+}

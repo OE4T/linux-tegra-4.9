@@ -27,6 +27,7 @@
 #include <linux/types.h>
 
 struct nvhost_master;
+
 struct nvhost_device_power_attr;
 
 #define NVHOST_MODULE_MAX_CLOCKS		3
@@ -34,6 +35,25 @@ struct nvhost_device_power_attr;
 #define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
 #define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
 #define NVHOST_NAME_SIZE			24
+#define NVSYNCPT_INVALID			(-1)
+
+/* FIXME:
+ * Sync point ids are now split into 2 files.
+ * 1 if this one and other is in
+ * drivers/video/tegra/host/host1x/host1x_syncpt.h
+ * So if someone decides to add new sync point in future
+ * please check both the header files
+ */
+#define NVSYNCPT_DISP0_A		(8)
+#define NVSYNCPT_DISP1_A		(9)
+#define NVSYNCPT_AVP_0			(10)
+#define NVSYNCPT_DISP0_B		(20)
+#define NVSYNCPT_DISP1_B		(21)
+#define NVSYNCPT_DISP0_C		(24)
+#define NVSYNCPT_DISP1_C		(25)
+#define NVSYNCPT_VBLANK0		(26)
+#define NVSYNCPT_VBLANK1		(27)
+#define NVSYNCPT_DSI			(31)
 
 enum nvhost_power_sysfs_attributes {
 	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,
@@ -170,13 +190,24 @@ extern u32 nvhost_device_readl(struct nvhost_device *, u32 r);
 
 #define nvhost_get_drvdata(_dev)	dev_get_drvdata(&(_dev)->dev)
 #define nvhost_set_drvdata(_dev, data)	dev_set_drvdata(&(_dev)->dev, (data))
-static inline struct nvhost_master *nvhost_get_host(struct nvhost_device *_dev)
-{
-	return (_dev->dev.parent) ? \
-		((struct nvhost_master *) dev_get_drvdata(_dev->dev.parent)) : \
-		((struct nvhost_master *) dev_get_drvdata(&(_dev->dev)));
-}
 
 int nvhost_bus_add_host(struct nvhost_master *host);
+
+static inline struct nvhost_device *nvhost_get_parent(struct nvhost_device *_dev)
+{
+	return _dev->dev.parent ? to_nvhost_device(_dev->dev.parent) : NULL;
+}
+
+/* public host1x power management APIs */
+bool nvhost_module_powered_ext(struct nvhost_device *dev);
+void nvhost_module_busy_ext(struct nvhost_device *dev);
+void nvhost_module_idle_ext(struct nvhost_device *dev);
+
+/* public host1x sync-point management APIs */
+u32 nvhost_syncpt_incr_max_ext(struct nvhost_device *dev, u32 id, u32 incrs);
+void nvhost_syncpt_cpu_incr_ext(struct nvhost_device *dev, u32 id);
+u32 nvhost_syncpt_read_ext(struct nvhost_device *dev, u32 id);
+int nvhost_syncpt_wait_timeout_ext(struct nvhost_device *dev, u32 id, u32 thresh,
+	u32 timeout, u32 *value);
 
 #endif

@@ -45,7 +45,6 @@ int nvhost_module_get_rate(struct nvhost_device *dev,
 int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 		unsigned long rate, int index);
 
-
 static inline bool nvhost_module_powered(struct nvhost_device *dev)
 {
 	return dev->powerstate == NVHOST_POWER_STATE_RUNNING;
@@ -55,6 +54,5 @@ static inline void nvhost_module_idle(struct nvhost_device *dev)
 {
 	nvhost_module_idle_mult(dev, 1);
 }
-
 
 #endif

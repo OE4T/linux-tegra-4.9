@@ -22,6 +22,8 @@
 #define __NVHOST_HOST1X_H
 
 #include <linux/cdev.h>
+#include <linux/nvhost.h>
+
 #include "nvhost_syncpt.h"
 #include "nvhost_intr.h"
 
@@ -30,11 +32,10 @@
 
 struct nvhost_channel;
 struct mem_mgr;
-struct nvhost_device;
 
 struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
-	int		nb_pts;	/* host1x: num syncpoints supported */
+	int		nb_pts; 	/* host1x: num syncpoints supported */
 	int		nb_bases;	/* host1x: num syncpoints supported */
 	u32		client_managed; /* host1x: client managed syncpts */
 	int		nb_mlocks;	/* host1x: number of mlocks */
@@ -66,5 +67,12 @@ struct nvhost_channel *nvhost_alloc_channel(struct nvhost_device *dev);
 void nvhost_free_channel(struct nvhost_channel *ch);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
+
+static inline struct nvhost_master *nvhost_get_host(struct nvhost_device *_dev)
+{
+	return (_dev->dev.parent) ? \
+		((struct nvhost_master *) dev_get_drvdata(_dev->dev.parent)) : \
+		((struct nvhost_master *) dev_get_drvdata(&(_dev->dev)));
+}
 
 #endif

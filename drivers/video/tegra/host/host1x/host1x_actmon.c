@@ -20,7 +20,7 @@
 
 #include <linux/nvhost.h>
 #include <linux/io.h>
-#include "host1x_hardware.h"
+#include "host1x02_hardware.h"
 #include "dev.h"
 
 /* Set to 1 if actmon has been initialized */
@@ -123,4 +123,20 @@ int host1x_actmon_above_wmark_count(void)
 int host1x_actmon_below_wmark_count(void)
 {
 	return below_wmark;
+}
+
+int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs)
+{
+	if (host1x_sync_hintstatus_gr3d_actmon_intr_v(hintstatus)) {
+		u32 actmon =
+			readl(sync_regs + host1x_sync_actmon_intr_status_r());
+		if (host1x_sync_actmon_intr_status_avg_below_wmark_v(actmon))
+			host1x_actmon_intr_below_wmark();
+		if (host1x_sync_actmon_intr_status_avg_above_wmark_v(actmon))
+			host1x_actmon_intr_above_wmark();
+
+		writel(actmon, sync_regs + host1x_sync_actmon_intr_status_r());
+		return 1;
+	} else
+		return 0;
 }

@@ -190,16 +190,7 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + host1x_sync_hintstatus_r());
 	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
 
-	if (host1x_sync_hintstatus_gr3d_actmon_intr_v(stat)) {
-		u32 actmon =
-			readl(sync_regs + host1x_sync_actmon_intr_status_r());
-		if (host1x_sync_actmon_intr_status_avg_below_wmark_v(actmon))
-			host1x_actmon_intr_below_wmark();
-		if (host1x_sync_actmon_intr_status_avg_above_wmark_v(actmon))
-			host1x_actmon_intr_above_wmark();
-
-		writel(actmon, sync_regs + host1x_sync_actmon_intr_status_r());
-	}
+	host1x_actmon_process_isr(stat, sync_regs);
 
 	if (host1x_sync_hintstatus_ext_ip_read_int_v(ext_stat)) {
 		addr = readl(sync_regs + host1x_sync_ip_read_timeout_addr_r());

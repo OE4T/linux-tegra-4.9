@@ -31,5 +31,6 @@ void host1x_actmon_intr_above_wmark(void);
 void host1x_actmon_intr_below_wmark(void);
 int host1x_actmon_above_wmark_count(void);
 int host1x_actmon_below_wmark_count(void);
+int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs);
 
 #endif

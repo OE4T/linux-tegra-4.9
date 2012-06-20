@@ -22,7 +22,7 @@
 
 #include "nvhost_hwctx.h"
 #include "dev.h"
-#include "host1x/host1x_hardware.h"
+#include "host1x/host1x02_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "gr3d/gr3d.h"
 #include "nvhost_channel.h"

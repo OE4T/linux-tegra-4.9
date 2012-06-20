@@ -327,6 +327,6 @@ unsigned int tegra_dc_has_multiple_dc(void);
 
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
-void tegra_dc_program_bandwidth(struct tegra_dc *dc);
+void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);
 int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n);
 #endif

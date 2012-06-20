@@ -1441,7 +1441,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				msecs_to_jiffies(dc->one_shot_delay_ms));
 
 	/* update EMC clock if calculated bandwidth has changed */
-	tegra_dc_program_bandwidth(dc);
+	tegra_dc_program_bandwidth(dc, false);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		update_mask |= NC_HOST_TRIG;
@@ -1827,7 +1827,7 @@ static int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode
 
 	/* use default EMC rate when switching modes */
 	dc->new_emc_clk_rate = tegra_dc_get_default_emc_clk_rate(dc);
-	tegra_dc_program_bandwidth(dc);
+	tegra_dc_program_bandwidth(dc, true);
 
 	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);
 	tegra_dc_writel(dc, mode->h_ref_to_sync | (mode->v_ref_to_sync << 16),
@@ -2195,7 +2195,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	/* use the new frame's bandwidth setting instead of max(current, new),
 	 * skip this if we're using tegra_dc_one_shot_worker() */
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
-		tegra_dc_program_bandwidth(dc);
+		tegra_dc_program_bandwidth(dc, true);
 
 	/* Clear the V_BLANK_FLIP bit of vblank ref-count if update is clean. */
 	if (!tegra_dc_windows_are_dirty(dc))

@@ -1,0 +1,19 @@
+menuconfig TEGRA_CEC_SUPPORT
+	bool "Tegra CEC support"
+	depends on ARCH_TEGRA
+	---help---
+	  Say Y here to get to see options for tegra CEC support.
+	  This option alone does not add any kernel code.
+
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if TEGRA_CEC_SUPPORT
+
+config TEGRA_CEC_T30
+	bool "Enable T30 CEC support"
+	---help---
+	 Adds HDMI-CEC driver for T30.
+
+	 Disabled by default. Choose Y here if you want to build the driver.
+
+endif # TEGRA_CEC_SUPPORT

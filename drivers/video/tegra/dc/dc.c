@@ -2192,6 +2192,11 @@ static void tegra_dc_vblank(struct work_struct *work)
 
 	mutex_lock(&dc->lock);
 
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
 	/* use the new frame's bandwidth setting instead of max(current, new),
 	 * skip this if we're using tegra_dc_one_shot_worker() */
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))

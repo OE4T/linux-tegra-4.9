@@ -2912,6 +2912,53 @@ fail:
 
 }
 
+static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
+				     struct tegra_dc_dsi_data *dsi,
+				     int no_of_frames)
+{
+	int err;
+	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
+	u8 lp_op = dsi->status.lp_op;
+	bool switch_to_lp = (dsi->status.lphs == DSI_LPHS_IN_LP_MODE);
+
+	if (dsi->status.lphs != DSI_LPHS_IN_HS_MODE) {
+		err = tegra_dsi_set_to_hs_mode(dc, dsi);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"Switch to HS host mode failed\n");
+			return;
+		}
+	}
+
+	/*
+	 * Some panels need DC frames be sent under certain
+	 * conditions. We are working on the right fix for this
+	 * requirement, while using this current fix.
+	 */
+	tegra_dsi_start_dc_stream(dc, dsi);
+
+	/*
+	 * Send frames in Continuous or One-shot mode.
+	 */
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		while (no_of_frames--) {
+			tegra_dc_writel(dc, GENERAL_ACT_REQ | NC_HOST_TRIG,
+					DC_CMD_STATE_CONTROL);
+			mdelay(frame_period);
+		}
+	} else
+		mdelay(no_of_frames * frame_period);
+
+	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
+
+	if (switch_to_lp) {
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, lp_op);
+		if (err < 0)
+			dev_err(&dc->ndev->dev,
+				"DSI failed to go to LP mode\n");
+	}
+}
+
 static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
@@ -2938,6 +2985,13 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 		}
 
 		if (dsi->info.panel_reset) {
+			/*
+			 * Certain panels need dc frames be sent before
+			 * waking panel.
+			 */
+			if (dsi->info.panel_send_dc_frames)
+				tegra_dsi_send_dc_frames(dc, dsi, 2);
+
 			err = tegra_dsi_send_panel_cmd(dc, dsi,
 							dsi->info.dsi_init_cmd,
 							dsi->info.n_init_cmd);
@@ -2979,6 +3033,13 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 				goto fail;
 			}
 		}
+
+		/*
+		 * Certain panels need dc frames be sent before
+		 * waking panel.
+		 */
+		if (dsi->info.panel_send_dc_frames)
+			tegra_dsi_send_dc_frames(dc, dsi, 2);
 
 		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 		if (err < 0) {
@@ -3401,6 +3462,13 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 		err = tegra_dsi_send_panel_cmd(dc, dsi,
 				dsi->info.dsi_suspend_cmd,
 				dsi->info.n_suspend_cmd);
+		/*
+		 * Certain panels need dc frames be sent after
+		 * putting panel to sleep.
+		 */
+		if (dsi->info.panel_send_dc_frames)
+			tegra_dsi_send_dc_frames(dc, dsi, 2);
+
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: Error sending suspend cmd\n");

@@ -205,6 +205,17 @@ int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 		goto fail;
 	}
 
+	if (win->flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR) {
+		if (win->flags & TEGRA_DC_EXT_FLIP_FLAG_TILED) {
+			dev_err(&dc->ndev->dev, "Layout cannot be both "
+				"blocklinear and tile for window %d.\n",
+				win->idx);
+			goto fail;
+		}
+
+		/* TODO: also check current window blocklinear support */
+	}
+
 	return 0;
 fail:
 	return -EINVAL;
@@ -243,6 +254,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
 		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
 #endif
+	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR)
+		win->flags |= TEGRA_WIN_FLAG_BLOCKLINEAR;
 	win->fmt = flip_win->attr.pixformat;
 	win->x.full = flip_win->attr.x;
 	win->y.full = flip_win->attr.y;
@@ -271,6 +284,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
 
+	/* win->blockheight = flip_win->attr.block_height_log2; */
 	err = tegra_dc_ext_check_windowattr(ext, win);
 	if (err < 0)
 		dev_err(&ext->dc->ndev->dev,

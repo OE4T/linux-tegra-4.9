@@ -97,7 +97,8 @@ struct tegra_dc_ext_event_list {
 };
 
 #define TEGRA_DC_EXT_CAPABILITIES \
-	TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE
+	(TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE |\
+	 TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR)
 
 struct tegra_dc_ext_control_user {
 	struct tegra_dc_ext_control	*control;

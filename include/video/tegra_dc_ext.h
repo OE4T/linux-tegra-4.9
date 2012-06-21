@@ -72,11 +72,12 @@
 #define TEGRA_DC_EXT_BLEND_PREMULT	1
 #define TEGRA_DC_EXT_BLEND_COVERAGE	2
 
-#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_H	(1 << 0)
-#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_V	(1 << 1)
-#define TEGRA_DC_EXT_FLIP_FLAG_TILED	(1 << 2)
-#define TEGRA_DC_EXT_FLIP_FLAG_CURSOR	(1 << 3)
+#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_H		(1 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_INVERT_V		(1 << 1)
+#define TEGRA_DC_EXT_FLIP_FLAG_TILED		(1 << 2)
+#define TEGRA_DC_EXT_FLIP_FLAG_CURSOR		(1 << 3)
 #define TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA	(1 << 4)
+#define TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR	(1 << 5)
 #define TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN	(1 << 6)
 
 struct tegra_dc_ext_flip_windowattr {
@@ -111,8 +112,11 @@ struct tegra_dc_ext_flip_windowattr {
 	__u32	buff_id_v;
 	__u32	flags;
 	__u8	global_alpha; /* requires TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA */
+	/* log2(blockheight) for blocklinear format */
+	__u8	block_height_log2;
+
 	/* Leave some wiggle room for future expansion */
-	__u8	pad1[3];
+	__u8	pad1[2];
 	__u32   pad2[4];
 };
 
@@ -371,6 +375,7 @@ struct tegra_dc_ext_control_event_bandwidth {
 };
 
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE	(1 << 0)
+#define TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR   (1 << 1)
 struct tegra_dc_ext_control_capabilities {
 	__u32 caps;
 	/* Leave some wiggle room for future expansion */

@@ -1,3 +1,5 @@
+EXTRA_CFLAGS += -Idrivers/video/tegra/host
+
 nvhost-objs = \
 	nvhost_acm.o \
 	nvhost_syncpt.o \

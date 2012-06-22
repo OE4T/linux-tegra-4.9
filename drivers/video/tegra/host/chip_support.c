@@ -19,6 +19,8 @@
  */
 
 #include <linux/errno.h>
+#include <linux/types.h>
+#include <linux/bug.h>
 
 #include <mach/hardware.h>
 

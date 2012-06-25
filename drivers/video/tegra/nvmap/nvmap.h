@@ -33,6 +33,7 @@
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include "nvmap_heap.h"
+#include <linux/workqueue.h>
 
 struct nvmap_device;
 struct page;
@@ -54,6 +55,19 @@ void _nvmap_handle_free(struct nvmap_handle *h);
 		"%s: "_fmt, __func__, ##__VA_ARGS__)
 
 #define nvmap_ref_to_id(_ref)		((unsigned long)(_ref)->handle)
+
+/*
+ *
+ */
+struct nvmap_deferred_ops {
+	struct list_head ops_list;
+	spinlock_t deferred_ops_lock;
+	bool enable_deferred_cache_maintenance;
+	u64 deferred_maint_inner_requested;
+	u64 deferred_maint_inner_flushed;
+	u64 deferred_maint_outer_requested;
+	u64 deferred_maint_outer_flushed;
+};
 
 /* handles allocated using shared system memory (either IOVMM- or high-order
  * page allocations */
@@ -243,6 +257,16 @@ void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 				    size_t len);
 
 struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev);
+
+
+void nvmap_cache_maint_ops_flush(struct nvmap_device *dev,
+		struct nvmap_handle *h);
+
+struct nvmap_deferred_ops *nvmap_get_deferred_ops_from_dev(
+		struct nvmap_device *dev);
+
+int nvmap_find_cache_maint_op(struct nvmap_device *dev,
+		struct nvmap_handle *h);
 
 struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 					unsigned long handle);

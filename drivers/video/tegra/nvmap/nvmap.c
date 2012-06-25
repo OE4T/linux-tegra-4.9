@@ -37,6 +37,7 @@
 
 #include "nvmap.h"
 #include "nvmap_mru.h"
+#include "nvmap_common.h"
 
 /* private nvmap_handle flag for pinning duplicate detection */
 #define NVMAP_HANDLE_VISITED (0x1ul << 31)
@@ -136,6 +137,11 @@ static int pin_array_locked(struct nvmap_client *client,
 	int pinned;
 	int i;
 	int err = 0;
+
+	/* Flush deferred cache maintenance if needed */
+	for (pinned = 0; pinned < count; pinned++)
+		if (nvmap_find_cache_maint_op(client->dev, h[pinned]))
+			nvmap_cache_maint_ops_flush(client->dev, h[pinned]);
 
 	nvmap_mru_lock(client->share);
 	for (pinned = 0; pinned < count; pinned++) {
@@ -674,6 +680,15 @@ void nvmap_kunmap(struct nvmap_handle_ref *ref, unsigned int pagenum,
 	BUG_ON(!addr || !ref);
 	h = ref->handle;
 
+	if (nvmap_find_cache_maint_op(h->dev, h)) {
+		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
+		/* acquire pin lock to ensure maintenance is done before
+		 * handle is pinned */
+		mutex_lock(&share->pin_lock);
+		nvmap_cache_maint_ops_flush(h->dev, h);
+		mutex_unlock(&share->pin_lock);
+	}
+
 	if (h->heap_pgalloc)
 		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
 	else
@@ -771,6 +786,17 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 
 	h = ref->handle;
 
+	if (nvmap_find_cache_maint_op(h->dev, h)) {
+		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
+		/* acquire pin lock to ensure maintenance is done before
+		 * handle is pinned */
+		mutex_lock(&share->pin_lock);
+		nvmap_cache_maint_ops_flush(h->dev, h);
+		mutex_unlock(&share->pin_lock);
+	}
+
+	/* Handle can be locked by cache maintenance in
+	 * separate thread */
 	if (h->heap_pgalloc) {
 		vm_unmap_ram(addr, h->size >> PAGE_SHIFT);
 	} else {
@@ -839,6 +865,10 @@ struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
 	err = mutex_lock_interruptible(&client->share->pin_lock);
 	if (WARN_ON(err))
 		goto fail;
+
+	/* Flush deferred cache maintenance if needed */
+	if (nvmap_find_cache_maint_op(client->dev, h))
+		nvmap_cache_maint_ops_flush(client->dev, h);
 
 	nvmap_mru_lock(client->share);
 	err = pin_locked(client, h);

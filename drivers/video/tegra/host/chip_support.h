@@ -161,8 +161,6 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
 #define mem_op()		(nvhost_get_chip_ops()->mem)
 
-int nvhost_init_t20_support(struct nvhost_master *host);
-int nvhost_init_t30_support(struct nvhost_master *host);
-int nvhost_init_t114_support(struct nvhost_master *host);
+int nvhost_init_chip_support(struct nvhost_master *host);
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

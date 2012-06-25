@@ -21,6 +21,7 @@
 
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
+#include <linux/module.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <mach/iomap.h>

@@ -362,8 +362,8 @@ fail:
 
 struct nvhost_device *nvhost_get_device(char *name)
 {
-	if (host_device_op(nvhost).get_nvhost_device)
-		return host_device_op(nvhost).get_nvhost_device(nvhost, name);
+	if (host_device_op().get_nvhost_device)
+		return host_device_op().get_nvhost_device(name);
 	pr_warn("%s: nvhost device %s does not exist\n", __func__, name);
 	return NULL;
 }
@@ -389,23 +389,6 @@ static void nvhost_free_resources(struct nvhost_master *host)
 static int nvhost_alloc_resources(struct nvhost_master *host)
 {
 	int err;
-
-	switch (tegra_get_chipid()) {
-	case TEGRA_CHIPID_TEGRA2:
-		err = nvhost_init_t20_support(host);
-		break;
-
-	case TEGRA_CHIPID_TEGRA3:
-		err = nvhost_init_t30_support(host);
-		break;
-
-	case TEGRA_CHIPID_TEGRA11:
-		err = nvhost_init_t114_support(host);
-		break;
-
-	default:
-		return -ENODEV;
-	}
 
 	err = nvhost_init_chip_support(host);
 	if (err)

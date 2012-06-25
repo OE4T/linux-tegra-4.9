@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/export.h>
 #include <linux/nvhost.h>
+#include <linux/io.h>
 
 #include "bus.h"
 #include "dev.h"

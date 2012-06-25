@@ -20,6 +20,7 @@
 
 #include <linux/slab.h>
 #include <linux/export.h>
+#include <linux/module.h>
 
 #include "t20/t20.h"
 #include "host1x/host1x_channel.h"

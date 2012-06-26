@@ -906,11 +906,6 @@ tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg)
 	cmd_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 	tegra_dc_writel(dc, (cmd_state | (1 << 2)), DC_CMD_STATE_ACCESS);
 
-	if (cfg->switch_to_sfio && cfg->gpio_conf_to_sfio)
-		cfg->switch_to_sfio(cfg->gpio_conf_to_sfio);
-	else
-		dev_err(&dc->ndev->dev, "Error: Need gpio_conf_to_sfio\n");
-
 	switch (cfg->which_pwm) {
 	case TEGRA_PWM_PM0:
 		/* Select the LM0 on PM0 */

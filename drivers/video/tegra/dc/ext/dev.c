@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dev.c
  *
- * Copyright (C) 2011-2012, NVIDIA Corporation
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -448,7 +448,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc_ext_flip_data *data;
-	int work_index;
+	int work_index = -1;
 	int i, ret = 0;
 
 #ifdef CONFIG_ANDROID
@@ -559,6 +559,10 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		work_index = index;
 
 		atomic_inc(&ext->win[work_index].nr_pending_flips);
+	}
+	if (work_index < 0) {
+		ret = -EINVAL;
+		goto unlock;
 	}
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 

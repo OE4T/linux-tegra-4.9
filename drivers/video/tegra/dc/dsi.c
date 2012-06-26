@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -43,7 +43,7 @@
 #include "dsi_regs.h"
 #include "dsi.h"
 
-#define APB_MISC_GP_MIPI_PAD_CTRL_0 	(TEGRA_APB_MISC_BASE + 0x820)
+#define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
 
 #define DSI_USE_SYNC_POINTS		1
@@ -1129,7 +1129,7 @@ static u32 tegra_dsi_sol_delay_burst(struct tegra_dc *dc,
 	u32 dsi_to_pixel_clk_ratio;
 	u32 temp;
 	u32 temp1;
-	u32 mipi_clk_adj_kHz;
+	u32 mipi_clk_adj_kHz = 0;
 	u32 sol_delay;
 	struct tegra_dc_mode *dc_modes = &dc->mode;
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/util.c
  *
- * Copyright (C) 2011, NVIDIA Corporation
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *

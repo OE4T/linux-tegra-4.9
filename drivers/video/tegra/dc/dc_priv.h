@@ -4,6 +4,8 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
+ * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -22,6 +24,7 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/fb.h>
+#include <linux/clk.h>
 #include <linux/completion.h>
 #include <linux/switch.h>
 #include <linux/nvhost.h>
@@ -30,6 +33,8 @@
 
 #include <mach/tegra_dc_ext.h>
 #include <mach/clk.h>
+
+#include "dc_reg.h"
 
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
@@ -43,6 +48,13 @@
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #else
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * 2)
+#endif
+
+#ifndef CONFIG_TEGRA_FPGA_PLATFORM
+#define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
+#else
+/* ignore underflows when on simulation and fpga platform */
+#define ALL_UF_INT (0)
 #endif
 
 struct tegra_dc;
@@ -149,6 +161,23 @@ struct tegra_dc {
 	u32				one_shot_delay_ms;
 	struct delayed_work		one_shot_work;
 };
+
+#define print_mode_info(dc, mode) do {					\
+	trace_printk("%s:Mode settings: "				\
+			"ref_to_sync: H = %d V = %d, "			\
+			"sync_width: H = %d V = %d, "			\
+			"back_porch: H = %d V = %d, "			\
+			"active: H = %d V = %d, "			\
+			"front_porch: H = %d V = %d, "			\
+			"pclk = %d, stereo mode = %d\n",		\
+			dc->ndev->name,					\
+			mode.h_ref_to_sync, mode.v_ref_to_sync,		\
+			mode.h_sync_width, mode.v_sync_width,		\
+			mode.h_back_porch, mode.v_back_porch,		\
+			mode.h_active, mode.v_active,			\
+			mode.h_front_porch, mode.v_front_porch,		\
+			mode.pclk, mode.stereo_mode);			\
+	} while (0)
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
 {
@@ -293,11 +322,32 @@ static inline bool tegra_dc_is_yuv_planar(int fmt)
 	return false;
 }
 
-static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val);
-static inline void tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val);
-static bool tegra_dc_windows_are_dirty(struct tegra_dc *dc);
+static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
+{
+	u32 val;
 
-void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk);
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	val |= int_val;
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+}
+
+static inline void tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val)
+{
+	u32 val;
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	val &= ~int_val;
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+}
+
+static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
+{
+#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+	return clk_get_rate(dc->clk);
+#else
+	return dc->mode.pclk;
+#endif
+}
 
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
@@ -326,4 +376,24 @@ unsigned int tegra_dc_has_multiple_dc(void);
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);
 int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n);
+
+/* defined in mode.c, used in dc.c */
+int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode);
+int tegra_dc_calc_refresh(const struct tegra_dc_mode *m);
+
+/* defined in clock.c, used in dc.c, dsi.c and hdmi.c */
+void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk);
+unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk);
+
+/* defined in lut.c, used in dc.c */
+void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut);
+void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win);
+
+/* defined in csc.c, used in dc.c */
+void tegra_dc_init_csc_defaults(struct tegra_dc_csc *csc);
+void tegra_dc_set_csc(struct tegra_dc *dc, struct tegra_dc_csc *csc);
+
+/* defined in window.c, used in dc.c */
+void tegra_dc_trigger_windows(struct tegra_dc *dc);
+
 #endif

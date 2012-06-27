@@ -100,6 +100,7 @@ struct nvhost_device {
 	bool		keepalive;	/* Do not power gate when opened */
 	bool		waitbasesync;	/* Force sync of wait bases */
 	bool		powerup_reset;	/* Do a reset after power un-gating */
+	bool		serialize;	/* Serialize submits in the channel */
 
 	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
 	bool		can_powergate;	/* True if module can be power gated */

@@ -150,6 +150,7 @@ static struct nvhost_device tegra_gr2d02_device = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
 	.moduleid	= NVHOST_MODULE_NONE,
+	.serialize	= true,
 };
 
 static struct resource isp_resources_t20[] = {

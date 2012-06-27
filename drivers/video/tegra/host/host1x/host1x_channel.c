@@ -251,6 +251,18 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
+	if (ch->dev->serialize) {
+		/* Force serialization by inserting a host wait for the
+		 * previous job to finish before this one can commence. */
+		nvhost_cdma_push(&ch->cdma,
+				nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+					host1x_uclass_wait_syncpt_r(),
+					1),
+				nvhost_class_host_wait_syncpt(job->syncpt_id,
+					nvhost_syncpt_read_max(sp,
+						job->syncpt_id)));
+	}
+
 	submit_ctxsave(job, ctxsave_waiter, ch->cur_ctx);
 	submit_ctxrestore(job);
 	ch->cur_ctx = job->hwctx;

@@ -247,9 +247,22 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	return 0;
 }
 
+static int panel_sync_rate;
+
+int tegra_dc_get_panel_sync_rate(void)
+{
+	return panel_sync_rate;
+}
+EXPORT_SYMBOL(tegra_dc_get_panel_sync_rate);
+
 int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 {
 	memcpy(&dc->mode, mode, sizeof(dc->mode));
+
+	if (dc->out->type == TEGRA_DC_OUT_RGB)
+		panel_sync_rate = tegra_dc_calc_refresh(mode);
+	else if (dc->out->type == TEGRA_DC_OUT_DSI)
+		panel_sync_rate = dc->out->dsi->rated_refresh_rate * 1000;
 
 	print_mode(dc, mode, __func__);
 

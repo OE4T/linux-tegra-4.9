@@ -375,7 +375,7 @@ void tegra_dc_disable_crc(struct tegra_dc *dc);
 void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const struct tegra_dc_out_pin *pins,
 				const unsigned int n_pins);
-/* defined in dc.c, used in bandwidth.c */
+/* defined in dc.c, used in bandwidth.c and ext/dev.c */
 unsigned int tegra_dc_has_multiple_dc(void);
 
 /* defined in dc.c, used in dsi.c */

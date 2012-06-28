@@ -275,6 +275,32 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	return 0;
 }
 
+static struct srcu_notifier_head tegra_dc_flip_notifier_list;
+static bool init_tegra_dc_flip_notifier_list_called;
+static int __init init_tegra_dc_flip_notifier_list(void)
+{
+	srcu_init_notifier_head(&tegra_dc_flip_notifier_list);
+	init_tegra_dc_flip_notifier_list_called = true;
+	return 0;
+}
+
+pure_initcall(init_tegra_dc_flip_notifier_list);
+
+int tegra_dc_register_flip_notifier(struct notifier_block *nb)
+{
+	WARN_ON(!init_tegra_dc_flip_notifier_list_called);
+
+	return srcu_notifier_chain_register(
+			&tegra_dc_flip_notifier_list, nb);
+}
+EXPORT_SYMBOL(tegra_dc_register_flip_notifier);
+
+int tegra_dc_unregister_flip_notifier(struct notifier_block *nb)
+{
+	return srcu_notifier_chain_unregister(&tegra_dc_flip_notifier_list, nb);
+}
+EXPORT_SYMBOL(tegra_dc_unregister_flip_notifier);
+
 static void tegra_dc_ext_flip_worker(struct work_struct *work)
 {
 	struct tegra_dc_ext_flip_data *data =
@@ -328,6 +354,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		tegra_dc_update_windows(wins, nr_win);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
+		if (!tegra_dc_has_multiple_dc())
+			srcu_notifier_call_chain(&tegra_dc_flip_notifier_list,
+						 1UL, NULL);
 	}
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {

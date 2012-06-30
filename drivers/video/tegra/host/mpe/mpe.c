@@ -32,6 +32,7 @@
 #include <linux/slab.h>
 #include <linux/export.h>
 #include <linux/resource.h>
+#include <linux/module.h>
 
 #include <mach/iomap.h>
 #include <mach/hardware.h>

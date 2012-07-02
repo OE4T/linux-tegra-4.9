@@ -2420,14 +2420,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	err = request_irq(se_dev->irq, tegra_se_irq, IRQF_DISABLED,
-			DRIVER_NAME, se_dev);
-	if (err) {
-		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
-			se_dev->irq, err);
-		goto err_irq;
-	}
-
 	se_dev->chipdata =
 		(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
 
@@ -2468,6 +2460,14 @@ static int tegra_se_probe(struct platform_device *pdev)
 	sg_tegra_se_dev = se_dev;
 	pm_runtime_enable(se_dev->dev);
 	tegra_se_key_read_disable_all();
+
+	err = request_irq(se_dev->irq, tegra_se_irq, IRQF_DISABLED,
+			DRIVER_NAME, se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
+			se_dev->irq, err);
+		goto err_irq;
+	}
 
 	err = tegra_se_alloc_ll_buf(se_dev, SE_MAX_SRC_SG_COUNT,
 		SE_MAX_DST_SG_COUNT);

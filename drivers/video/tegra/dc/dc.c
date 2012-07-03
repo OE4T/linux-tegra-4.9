@@ -1583,15 +1583,19 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
 
-	if (dc->out->postpoweron)
-		dc->out->postpoweron();
-
 	/* force a full blending update */
 	dc->blend.z[0] = -1;
 
 	tegra_dc_ext_enable(dc->ext);
 
 	trace_printk("%s:enable\n", dc->ndev->name);
+
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	if (dc->out->postpoweron)
+		dc->out->postpoweron();
+
 	return true;
 }
 

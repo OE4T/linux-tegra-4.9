@@ -20,7 +20,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost.h>
-
+#include <linux/module.h>
 #include <linux/nvhost.h>
 #include <mach/gpufuse.h>
 

@@ -86,7 +86,7 @@ static void therm_est_work_func(struct work_struct *work)
 	est->ntemp++;
 
 	if (est->callback && ((est->cur_temp >= est->therm_est_hi_limit) ||
-			 (est->cur_temp <= est->therm_est_hi_limit)))
+			 (est->cur_temp <= est->therm_est_lo_limit)))
 		est->callback(est->callback_data);
 
 	queue_delayed_work(est->workqueue, &est->therm_est_work,

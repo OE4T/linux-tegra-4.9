@@ -18,18 +18,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "nvhost_acm.h"
-#include "dev.h"
 #include <linux/slab.h>
+#include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/err.h>
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+
 #include <mach/powergate.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
+
+#include "nvhost_acm.h"
+#include "dev.h"
 
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT (2 * HZ)
 #define POWERGATE_DELAY 10

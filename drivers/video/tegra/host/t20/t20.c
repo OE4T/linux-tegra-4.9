@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/init.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
 #include <mach/iomap.h>

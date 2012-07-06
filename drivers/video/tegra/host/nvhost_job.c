@@ -160,7 +160,7 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 
 static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
 {
-	phys_addr_t target_phys;
+	phys_addr_t target_phys = -EINVAL;
 	int i;
 	u32 mem_id = 0;
 	struct mem_handle *target_ref = NULL;

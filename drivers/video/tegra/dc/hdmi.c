@@ -1670,8 +1670,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	return 0;
 
+#ifdef CONFIG_TEGRA_NVHDCP
 err_edid_destroy:
 	tegra_edid_destroy(hdmi->edid);
+#endif
 err_free_irq:
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 err_put_clock:

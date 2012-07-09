@@ -1191,7 +1191,7 @@ static int nvmap_probe(struct platform_device *pdev)
 #endif
 
 	dev->iovmm_master.iovmm =
-		tegra_iovmm_alloc_client(dev_name(&pdev->dev), NULL,
+		tegra_iovmm_alloc_client(&pdev->dev, NULL,
 			&(dev->dev_user));
 #ifdef CONFIG_TEGRA_IOVMM
 	if (!dev->iovmm_master.iovmm) {

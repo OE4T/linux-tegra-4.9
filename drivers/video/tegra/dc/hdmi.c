@@ -1500,10 +1500,10 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
 
+#ifdef CONFIG_SWITCH
 static ssize_t underscan_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-#ifdef CONFIG_SWITCH
 	struct tegra_dc_hdmi_data *hdmi =
 			container_of(dev_get_drvdata(dev), struct tegra_dc_hdmi_data, hpd_switch);
 
@@ -1511,19 +1511,19 @@ static ssize_t underscan_show(struct device *dev,
 		return sprintf(buf, "%d\n", tegra_edid_underscan_supported(hdmi->edid));
 	else
 		return 0;
-#else
-	return 0;
-#endif
 }
 
 static DEVICE_ATTR(underscan, S_IRUGO | S_IWUSR, underscan_show, NULL);
+#endif
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi;
 	struct resource *res;
 	struct resource *base_res;
+#ifdef CONFIG_SWITCH
 	int ret;
+#endif
 	void __iomem *base;
 	struct clk *clk = NULL;
 	struct clk *disp1_clk = NULL;

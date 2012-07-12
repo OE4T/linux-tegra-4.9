@@ -156,7 +156,7 @@ static void print_mode(struct tegra_dc *dc,
 			const struct tegra_dc_mode *mode, const char *note)
 {
 	if (mode) {
-		int refresh = tegra_dc_calc_refresh(dc, mode);
+		int refresh = tegra_dc_calc_refresh(mode);
 		dev_info(&dc->ndev->dev, "%s():MODE:%dx%d@%d.%03uHz pclk=%d\n",
 			note ? note : "",
 			mode->h_active, mode->v_active,

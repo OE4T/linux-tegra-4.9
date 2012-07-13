@@ -148,6 +148,9 @@ int nvmap_pin_array(struct nvmap_client *client,
 		struct nvmap_handle_ref **unique_arr_refs);
 
 
+struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
+						   unsigned long id);
+
 struct nvmap_platform_carveout {
 	const char *name;
 	unsigned int usage_mask;

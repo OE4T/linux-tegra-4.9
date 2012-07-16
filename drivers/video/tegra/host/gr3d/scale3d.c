@@ -37,6 +37,7 @@
 #include <linux/debugfs.h>
 #include <linux/types.h>
 #include <linux/clk.h>
+#include <linux/export.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
 #include "scale3d.h"
@@ -85,9 +86,14 @@ struct scale3d_info_rec {
 	long emc_dip_offset;
 	long emc_xmid;
 	unsigned long min_rate_3d;
+	ktime_t last_throughput_hint;
 	struct work_struct work;
 	struct delayed_work idle_timer;
 	unsigned int scale;
+	unsigned int p_use_throughput_hint;
+	unsigned int p_throughput_lo_limit;
+	unsigned int p_throughput_hi_limit;
+	unsigned int p_scale_step;
 	unsigned int p_period;
 	unsigned int period;
 	unsigned int p_idle_min;
@@ -382,6 +388,13 @@ void nvhost_scale3d_notify_idle(struct nvhost_device *dev)
 	if (!scale3d.enable)
 		return;
 
+	/* if throughput hint enabled, and last hint is recent enough, return */
+	if (scale3d.p_use_throughput_hint) {
+		t = ktime_get();
+		if (ktime_us_delta(t, scale3d.last_throughput_hint) < 1000000)
+			return;
+	}
+
 	mutex_lock(&scale3d.lock);
 
 	t = ktime_get();
@@ -416,6 +429,13 @@ void nvhost_scale3d_notify_busy(struct nvhost_device *dev)
 	if (!scale3d.enable)
 		return;
 
+	/* if throughput hint enabled, and last hint is recent enough, return */
+	if (scale3d.p_use_throughput_hint) {
+		t = ktime_get();
+		if (ktime_us_delta(t, scale3d.last_throughput_hint) < 1000000)
+			return;
+	}
+
 	mutex_lock(&scale3d.lock);
 
 	cancel_delayed_work(&scale3d.idle_timer);
@@ -436,6 +456,66 @@ void nvhost_scale3d_notify_busy(struct nvhost_device *dev)
 
 	mutex_unlock(&scale3d.lock);
 }
+
+static void do_scale(int diff)
+{
+	unsigned long hz, curr;
+
+	if (!tegra_is_clk_enabled(scale3d.clk_3d))
+		return;
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
+		if (!tegra_is_clk_enabled(scale3d.clk_3d2))
+			return;
+
+	curr = clk_get_rate(scale3d.clk_3d);
+	hz = curr + diff;
+
+	if (hz < scale3d.min_rate_3d)
+		hz = scale3d.min_rate_3d;
+
+	if (hz > scale3d.max_rate_3d)
+		hz = scale3d.max_rate_3d;
+
+	if (hz == curr) return;
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
+		clk_set_rate(scale3d.clk_3d2, 0);
+	clk_set_rate(scale3d.clk_3d, hz);
+
+	if (scale3d.p_scale_emc) {
+		long after = (long) clk_get_rate(scale3d.clk_3d);
+		hz = after * scale3d.emc_slope + scale3d.emc_offset;
+		if (scale3d.p_emc_dip)
+			hz -=
+				(scale3d.emc_dip_slope *
+				POW2(after / 1000 - scale3d.emc_xmid) +
+				scale3d.emc_dip_offset);
+		clk_set_rate(scale3d.clk_3d_emc, hz);
+	}
+}
+
+#define scale_up() do_scale(scale3d.p_scale_step)
+#define scale_down() do_scale(-scale3d.p_scale_step)
+
+void nvhost_scale3d_set_throughput_hint(int hint)
+{
+	if (!scale3d.enable)
+		return;
+
+	if (!scale3d.p_use_throughput_hint)
+		return;
+
+	scale3d.last_throughput_hint = ktime_get();
+
+	if (scale3d.p_use_throughput_hint) {
+		if (hint >= scale3d.p_throughput_hi_limit)
+			scale_down();
+		else if (hint <= scale3d.p_throughput_lo_limit)
+			scale_up();
+	}
+}
+EXPORT_SYMBOL(nvhost_scale3d_set_throughput_hint);
 
 static void scale3d_idle_handler(struct work_struct *work)
 {
@@ -502,6 +582,10 @@ void nvhost_scale3d_debug_init(struct dentry *de)
 	CREATE_SCALE3D_FILE(adjust);
 	CREATE_SCALE3D_FILE(scale_emc);
 	CREATE_SCALE3D_FILE(emc_dip);
+	CREATE_SCALE3D_FILE(use_throughput_hint);
+	CREATE_SCALE3D_FILE(throughput_hi_limit);
+	CREATE_SCALE3D_FILE(throughput_lo_limit);
+	CREATE_SCALE3D_FILE(scale_step);
 	CREATE_SCALE3D_FILE(verbosity);
 #undef CREATE_SCALE3D_FILE
 }
@@ -642,6 +726,10 @@ void nvhost_scale3d_init(struct nvhost_device *d)
 		scale3d.p_emc_dip = 1;
 		scale3d.p_verbosity = 0;
 		scale3d.p_adjust = 1;
+		scale3d.p_use_throughput_hint = 0;
+		scale3d.p_throughput_lo_limit = 95;
+		scale3d.p_throughput_hi_limit = 100;
+		scale3d.p_scale_step = 60000000;
 
 		error = device_create_file(&d->dev,
 				&dev_attr_enable_3d_scaling);

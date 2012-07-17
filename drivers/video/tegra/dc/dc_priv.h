@@ -175,21 +175,26 @@ static inline bool tegra_dc_is_yuv_planar(int fmt)
 	return false;
 }
 
-static inline void tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
+static inline u32 tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
 {
 	u32 val;
 
 	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-	val |= int_val;
-	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+	tegra_dc_writel(dc, val | int_val, DC_CMD_INT_MASK);
+	return val;
 }
 
-static inline void tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val)
+static inline u32 tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val)
 {
 	u32 val;
 
 	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-	val &= ~int_val;
+	tegra_dc_writel(dc, val & ~int_val, DC_CMD_INT_MASK);
+	return val;
+}
+
+static inline void tegra_dc_restore_interrupt(struct tegra_dc *dc, u32 val)
+{
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 }
 

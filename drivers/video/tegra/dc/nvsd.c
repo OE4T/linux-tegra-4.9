@@ -196,7 +196,9 @@ static bool nvsd_phase_in_adjustments(struct tegra_dc *dc,
 			/* Set manual k value */
 			man_k = SD_MAN_K_R(cur_k) |
 				SD_MAN_K_G(cur_k) | SD_MAN_K_B(cur_k);
+			tegra_dc_io_start(dc);
 			tegra_dc_writel(dc, man_k, DC_DISP_SD_MAN_K_VALUES);
+			tegra_dc_io_end(dc);
 			/* Set manual brightness value */
 			atomic_set(sd_brightness, cur_sd_brightness);
 		}
@@ -293,6 +295,7 @@ static void nvsd_cmd_handler(struct tegra_dc_sd_settings *settings,
 				val &= ~SD_BIN_WIDTH_MASK;
 				val |= bw;
 			}
+
 			tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 
 			nvsd_phase_in_luts(settings, dc);
@@ -374,6 +377,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	u32 bw_idx = 0;
 	/* TODO: check if HW says SD's available */
 
+	tegra_dc_io_start(dc);
 	/* If SD's not present or disabled, clear the register and return. */
 	if (!settings || settings->enable == 0) {
 		/* clear the brightness val, too. */
@@ -385,6 +389,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 		if (settings)
 			settings->phase_settings_step = 0;
 		tegra_dc_writel(dc, 0, DC_DISP_SD_CONTROL);
+		tegra_dc_io_end(dc);
 		return;
 	}
 
@@ -572,6 +577,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	/* Finally, Write SD Control */
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
 	dev_dbg(&dc->ndev->dev, "  SD_CONTROL: 0x%08x\n", val);
+	tegra_dc_io_end(dc);
 
 	/* set the brightness pointer */
 	sd_brightness = settings->sd_brightness;
@@ -1083,9 +1089,11 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				return -ENODEV;
 			}
 
+			tegra_dc_io_start(dc);
 			tegra_dc_hold_dc_out(dc);
 			nvsd_init(dc, sd_settings);
 			tegra_dc_release_dc_out(dc);
+			tegra_dc_io_end(dc);
 
 			mutex_unlock(&dc->lock);
 

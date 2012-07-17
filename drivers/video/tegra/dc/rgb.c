@@ -97,6 +97,7 @@ static void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	int i;
 	u32 out_sel_pintable[ARRAY_SIZE(tegra_dc_rgb_enable_out_sel_pintable)];
 
+	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 			PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 			DC_CMD_DISPLAY_POWER_CONTROL);
@@ -150,13 +151,16 @@ static void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	/* Inform DC register updated */
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_rgb_disable(struct tegra_dc *dc)
 {
+	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, 0x00000000, DC_CMD_DISPLAY_POWER_CONTROL);
 
 	tegra_dc_write_table(dc, tegra_dc_rgb_disable_pintable);
+	tegra_dc_io_end(dc);
 }
 
 struct tegra_dc_out_ops tegra_dc_rgb_ops = {

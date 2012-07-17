@@ -24,7 +24,7 @@
 #include <linux/nvhost.h>
 #include <mach/gpufuse.h>
 
-static unsigned int register_sets = 99;
+static unsigned int register_sets = 2;
 
 void nvhost_set_register_sets(unsigned int r)
 {

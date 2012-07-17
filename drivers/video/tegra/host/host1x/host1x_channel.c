@@ -580,7 +580,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	}
 
 	hwctx_to_save->valid = true;
-	ch->ctxhandler->get(hwctx_to_save);
 	ch->cur_ctx = NULL;
 	syncpt_id = to_host1x_hwctx_handler(hwctx_to_save->h)->syncpt;
 

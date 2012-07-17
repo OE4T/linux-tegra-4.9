@@ -726,7 +726,7 @@ void nvhost_scale3d_init(struct nvhost_device *d)
 		scale3d.p_emc_dip = 1;
 		scale3d.p_verbosity = 0;
 		scale3d.p_adjust = 1;
-		scale3d.p_use_throughput_hint = 0;
+		scale3d.p_use_throughput_hint = 1;
 		scale3d.p_throughput_lo_limit = 95;
 		scale3d.p_throughput_hi_limit = 100;
 		scale3d.p_scale_step = 60000000;

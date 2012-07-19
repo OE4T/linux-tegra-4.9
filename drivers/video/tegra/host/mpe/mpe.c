@@ -281,7 +281,7 @@ static void __init save_end(struct host1x_hwctx_handler *h, u32 *ptr)
 }
 #define SAVE_END_SIZE 5
 
-static void __init setup_save_regs(struct save_info *info,
+static void setup_save_regs(struct save_info *info,
 			const struct hwctx_reginfo *regs,
 			unsigned int nr_regs)
 {
@@ -310,7 +310,7 @@ static void __init setup_save_regs(struct save_info *info,
 	info->restore_count = restore_count;
 }
 
-static void __init setup_save_ram_nasty(struct save_info *info,	unsigned words,
+static void setup_save_ram_nasty(struct save_info *info, unsigned words,
 					unsigned cmd_reg, unsigned data_reg)
 {
 	u32 *ptr = info->ptr;
@@ -336,7 +336,7 @@ static void __init setup_save_ram_nasty(struct save_info *info,	unsigned words,
 	info->restore_count = restore_count;
 }
 
-static void __init setup_save(struct host1x_hwctx_handler *h, u32 *ptr)
+static void setup_save(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	struct save_info info = {
 		ptr,

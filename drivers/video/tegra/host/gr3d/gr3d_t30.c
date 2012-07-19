@@ -224,7 +224,7 @@ static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 
 
 
-static void __init setup_save_regs(struct save_info *info,
+static void setup_save_regs(struct save_info *info,
 			const struct hwctx_reginfo *regs,
 			unsigned int nr_regs)
 {
@@ -303,7 +303,7 @@ static void __init switch_gpu(struct save_info *info,
 	info->restore_count += 1;
 }
 
-static void __init setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
+static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	struct save_info info = {
 		ptr,

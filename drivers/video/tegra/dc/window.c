@@ -220,8 +220,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		return -EFAULT;
 	}
 
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE)
-		tegra_dc_host_resume(dc);
+	tegra_dc_hold_dc_out(dc);
 
 	if (no_vsync)
 		tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
@@ -427,6 +426,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 	trace_printk("%s:update_mask=%#lx\n", dc->ndev->name, update_mask);
 
+	tegra_dc_release_dc_out(dc);
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);

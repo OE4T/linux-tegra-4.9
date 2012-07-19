@@ -75,6 +75,12 @@ struct tegra_dc_out_ops {
 	void (*enable)(struct tegra_dc *dc);
 	/* disable output.  dc clocks are on at this point */
 	void (*disable)(struct tegra_dc *dc);
+	/* hold output.  keeps dc clocks on. */
+	void (*hold)(struct tegra_dc *dc);
+	/* release output.  dc clocks may turn off after this. */
+	void (*release)(struct tegra_dc *dc);
+	/* idle routine of output.  dc clocks may turn off after this. */
+	void (*idle)(struct tegra_dc *dc);
 	/* suspend output.  dc clocks are on at this point */
 	void (*suspend)(struct tegra_dc *dc);
 	/* resume output.  dc clocks are on at this point */
@@ -371,6 +377,14 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const unsigned int n_pins);
 /* defined in dc.c, used in bandwidth.c */
 unsigned int tegra_dc_has_multiple_dc(void);
+
+/* defined in dc.c, used in dsi.c */
+void tegra_dc_clk_enable(struct tegra_dc *dc);
+void tegra_dc_clk_disable(struct tegra_dc *dc);
+
+/* defined in dc.c, used in nvsd.c and dsi.c */
+void tegra_dc_hold_dc_out(struct tegra_dc *dc);
+void tegra_dc_release_dc_out(struct tegra_dc *dc);
 
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);

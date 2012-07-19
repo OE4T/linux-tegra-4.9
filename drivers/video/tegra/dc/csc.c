@@ -54,10 +54,12 @@ int tegra_dc_update_csc(struct tegra_dc *dc, int win_idx)
 		return -EFAULT;
 	}
 
+	tegra_dc_hold_dc_out(dc);
 	tegra_dc_writel(dc, WINDOW_A_SELECT << win_idx,
 			DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	tegra_dc_set_csc(dc, &dc->windows[win_idx].csc);
+	tegra_dc_release_dc_out(dc);
 
 	mutex_unlock(&dc->lock);
 

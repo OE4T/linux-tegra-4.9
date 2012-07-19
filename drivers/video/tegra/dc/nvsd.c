@@ -959,9 +959,12 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				mutex_unlock(&dc->lock);
 				return -ENODEV;
 			}
-			mutex_unlock(&dc->lock);
 
+			tegra_dc_hold_dc_out(dc);
 			nvsd_init(dc, sd_settings);
+			tegra_dc_release_dc_out(dc);
+
+			mutex_unlock(&dc->lock);
 
 			/* Update backlight state IFF we're disabling! */
 			if (!sd_settings->enable && sd_settings->bl_device) {

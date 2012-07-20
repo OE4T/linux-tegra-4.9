@@ -1288,12 +1288,12 @@ static void tegra_dsi_setup_ganged_mode_pkt_length(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
 	u32 hact_pkt_len_pix_orig = dc->mode.h_active;
-	u32 hact_pkt_len_pix;
-	u32 hact_pkt_len_bytes;
-	u32 hfp_pkt_len_bytes;
-	u32 pix_per_line_orig;
-	u32 pix_per_line;
-	u32 val;
+	u32 hact_pkt_len_pix = 0;
+	u32 hact_pkt_len_bytes = 0;
+	u32 hfp_pkt_len_bytes = 0;
+	u32 pix_per_line_orig = 0;
+	u32 pix_per_line = 0;
+	u32 val = 0;
 
 /* hsync + hact + hfp = (4) + (4+2) + (4+2) */
 #define HEADER_OVERHEAD 16
@@ -1993,11 +1993,11 @@ fail:
 static void tegra_dsi_ganged(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
-	u32 start;
-	u32 low_width;
-	u32 high_width;
+	u32 start = 0;
+	u32 low_width = 0;
+	u32 high_width = 0;
 	u32 h_active = dc->out->modes->h_active;
-	u32 val;
+	u32 val = 0;
 
 	if (dsi->info.controller_vs < DSI_VS_1) {
 		dev_err(&dc->ndev->dev, "dsi: ganged mode not"

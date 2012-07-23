@@ -144,7 +144,7 @@ static struct nvhost_device tegra_gr2d02_device = {
 	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.clocks		= { {"gr2d", UINT_MAX},
+	.clocks		= { {"gr2d", 0},
 			  {"epp", 0},
 			  {"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,

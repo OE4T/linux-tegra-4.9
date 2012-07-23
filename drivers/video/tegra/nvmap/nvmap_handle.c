@@ -378,11 +378,12 @@ POOL_SIZE_MOUDLE_PARAM_CB(wb, NVMAP_HANDLE_CACHEABLE);
 
 int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 {
+	static int reg = 1;
+	struct sysinfo info;
+#ifdef CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP
 	int i;
 	int err;
 	struct page *page;
-	static int reg = 1;
-	struct sysinfo info;
 	int highmem_pages = 0;
 	typedef int (*set_pages_array) (struct page **pages, int addrinarray);
 	set_pages_array s_cpa[] = {
@@ -391,6 +392,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		set_pages_array_iwb,
 		set_pages_array_wb
 	};
+#endif
 
 	BUG_ON(flags >= NVMAP_NUM_POOLS);
 	memset(pool, 0x0, sizeof(*pool));
@@ -425,6 +427,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		register_shrinker(&nvmap_page_pool_shrinker);
 	}
 
+#ifdef CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP
 	nvmap_page_pool_lock(pool);
 	for (i = 0; i < pool->max_pages; i++) {
 		page = alloc_page(GFP_NVMAP);
@@ -446,6 +449,7 @@ do_cpa:
 	err = (*s_cpa[flags])(pool->page_array, pool->npages);
 	BUG_ON(err);
 	nvmap_page_pool_unlock(pool);
+#endif
 	return 0;
 fail:
 	pool->max_pages = 0;

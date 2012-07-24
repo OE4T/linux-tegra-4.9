@@ -98,7 +98,7 @@ static int nvhost_bus_match(struct device *_dev, struct device_driver *drv)
 	if (ndrv->id_table)
 		return nvhost_bus_match_id(dev, ndrv->id_table) != NULL;
 	else /* driver does not support id_table */
-		return !strncmp(dev->name, drv->name, strlen(drv->name));
+		return !strcmp(dev->name, drv->name);
 }
 
 static int nvhost_drv_probe(struct device *_dev)

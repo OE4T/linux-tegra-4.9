@@ -296,8 +296,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			tegra_dc_writel(dc, v_dda, DC_WIN_V_INITIAL_DDA);
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
+#endif
 		tegra_dc_writel(dc, (unsigned long)win->phys_addr,
 			DC_WINBUF_START_ADDR);
 

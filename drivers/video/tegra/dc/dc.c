@@ -809,6 +809,7 @@ static void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 		cmu->lut2[i] = LUT2_READ_DATA(val);
 	}
 }
+EXPORT_SYMBOL(tegra_dc_get_cmu);
 
 static int tegra_dc_update_cmu(struct tegra_dc *dc, bool cmu_enable)
 {

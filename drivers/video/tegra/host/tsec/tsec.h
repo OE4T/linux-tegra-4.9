@@ -30,6 +30,17 @@ void nvhost_tsec_finalize_poweron(struct nvhost_device *dev);
 void nvhost_tsec_init(struct nvhost_device *dev);
 void nvhost_tsec_deinit(struct nvhost_device *dev);
 
+/* Would have preferred a static inline here... but we're using this
+ * in a place where a constant initializer is required */
+#define NVHOST_ENCODE_TSEC_VER(maj,min) ( (((maj)&0xff)<<8) | ((min)&0xff) )
+
+static inline void decode_tsec_ver(int version, u8 *maj, u8 *min)
+{
+	u32 uv32 = (u32)version;
+	*maj = (u8)((uv32 >> 8) & 0xff);
+	*min = (u8)(uv32 & 0xff);
+}
+
 struct tsec {
 	bool valid;
 	u32  size;

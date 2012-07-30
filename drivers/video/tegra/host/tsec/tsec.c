@@ -34,10 +34,34 @@
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
-#define TSEC_FIRMWARE_NAME		"nvhost_tsec.fw"
 
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
+
+/* caller is responsible for freeing */
+static char *tsec_get_fw_name(struct nvhost_device *dev)
+{
+	char *fw_name;
+	u8 maj, min;
+
+	/*note size here is a little over...*/
+	fw_name = kzalloc(32, GFP_KERNEL);
+	if (!fw_name)
+		return NULL;
+
+	decode_tsec_ver(dev->version, &maj, &min);
+	if (maj == 1) {
+		/* there are no minor versions so far for maj==1 */
+		sprintf(fw_name, "nvhost_tsec.fw");
+	}
+	else
+		return NULL;
+
+	dev_info(&dev->dev, "fw name:%s\n", fw_name);
+
+	return fw_name;
+}
+
 
 static int tsec_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 {
@@ -265,15 +289,25 @@ void nvhost_tsec_init(struct nvhost_device *dev)
 {
 	int err = 0;
 	struct tsec *m;
+	char *fw_name;
+
+	fw_name = tsec_get_fw_name(dev);
+	if (!fw_name) {
+		dev_err(&dev->dev, "couldn't determine firmware name");
+		return;
+	}
 
 	m = kzalloc(sizeof(struct tsec), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't alloc ucode");
+		kfree(fw_name);
 		return;
 	}
 	set_tsec(dev, m);
 
-	err = tsec_read_ucode(dev, TSEC_FIRMWARE_NAME);
+	err = tsec_read_ucode(dev, fw_name);
+	kfree(fw_name);
+	fw_name = 0;
 
 	if (err || !m->valid) {
 		kfree(m);
@@ -288,6 +322,7 @@ void nvhost_tsec_init(struct nvhost_device *dev)
 		kfree(m);
 		goto clean_up;
 	}
+
 
 	nvhost_module_busy(dev);
 	tsec_boot(dev);

@@ -35,10 +35,33 @@
 
 #define MSENC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define MSENC_IDLE_CHECK_PERIOD		10	/* 10 usec */
-#define MSENC_FIRMWARE_NAME		"nvhost_msenc02.fw"
 
 #define get_msenc(ndev) ((struct msenc *)(ndev)->dev.platform_data)
 #define set_msenc(ndev, f) ((ndev)->dev.platform_data = f)
+
+/* caller is responsible for freeing */
+static char *msenc_get_fw_name(struct nvhost_device *dev)
+{
+	char *fw_name;
+	u8 maj, min;
+
+	/*note size here is a little over...*/
+	fw_name = kzalloc(32, GFP_KERNEL);
+	if (!fw_name)
+		return NULL;
+
+	decode_msenc_ver(dev->version, &maj, &min);
+	if (maj == 2) {
+		/* there are no minor versions so far for maj==2 */
+		sprintf(fw_name, "nvhost_msenc02.fw");
+	}
+	else
+		return NULL;
+
+	dev_info(&dev->dev, "fw name:%s\n", fw_name);
+
+	return fw_name;
+}
 
 static int msenc_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 {
@@ -266,15 +289,25 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 {
 	int err = 0;
 	struct msenc *m;
+	char *fw_name;
+
+	fw_name = msenc_get_fw_name(dev);
+	if (!fw_name) {
+		dev_err(&dev->dev, "couldn't determine firmware name");
+		return;
+	}
 
 	m = kzalloc(sizeof(struct msenc), GFP_KERNEL);
 	if (!m) {
+		kfree(fw_name);
 		dev_err(&dev->dev, "couldn't alloc ucode");
 		return;
 	}
 	set_msenc(dev, m);
 
-	err = msenc_read_ucode(dev, MSENC_FIRMWARE_NAME);
+	err = msenc_read_ucode(dev, fw_name);
+	kfree(fw_name);
+	fw_name = 0;
 
 	if (err || !m->valid) {
 		kfree(m);

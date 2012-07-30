@@ -214,6 +214,7 @@ static struct resource msenc_resources[] = {
 
 static struct nvhost_device tegra_msenc02_device = {
 	.name	       = "msenc",
+	.version       = NVHOST_ENCODE_MSENC_VER(2, 0),
 	.id            = -1,
 	.resource      = msenc_resources,
 	.num_resources = ARRAY_SIZE(msenc_resources),
@@ -252,6 +253,7 @@ static struct resource tsec_resources[] = {
 static struct nvhost_device tegra_tsec01_device = {
 	/* channel 7 */
 	.name          = "tsec",
+	.version       = NVHOST_ENCODE_TSEC_VER(1,0),
 	.id            = -1,
 	.resource      = tsec_resources,
 	.num_resources = ARRAY_SIZE(tsec_resources),

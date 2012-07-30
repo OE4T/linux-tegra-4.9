@@ -65,10 +65,10 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		return -EINVAL;
 
 	if (op.count > 1) {
-		size_t bytes = op.count * sizeof(unsigned long *);
+		size_t bytes = op.count * sizeof(*refs); /* kcalloc below will catch overflow. */
 
 		if (op.count > ARRAY_SIZE(on_stack))
-			refs = kmalloc(op.count * sizeof(*refs), GFP_KERNEL);
+			refs = kcalloc(op.count, sizeof(*refs), GFP_KERNEL);
 		else
 			refs = on_stack;
 
@@ -251,7 +251,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 		goto out;
 	}
 
-	if ((op.offset + op.length) > h->size) {
+	if (op.offset > h->size || (op.offset + op.length) > h->size) {
 		err = -EADDRNOTAVAIL;
 		goto out;
 	}

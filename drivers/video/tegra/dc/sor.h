@@ -18,7 +18,6 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 
-
 enum {
 	trainingPattern_Disabled	= 0,
 	trainingPattern_1		= 1,
@@ -76,14 +75,6 @@ struct tegra_dc_sor_data {
 			return ret;	\
 	} while (0)
 
-
-static inline void usleep(unsigned int usecs)
-{
-	unsigned long timeout = usecs_to_jiffies(usecs) + 1;
-
-	set_current_state(TASK_UNINTERRUPTIBLE);
-	schedule_timeout_uninterruptible(timeout);
-}
 
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);

@@ -19,6 +19,7 @@
 #include <linux/nvhost.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
+#include <linux/delay.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -66,7 +67,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
-	clk = clk_get(&dc->ndev->dev, "sor");
+	clk = clk_get_sys("had2codec", "dpaux");
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
 		err = -ENOENT;
@@ -112,7 +113,7 @@ static unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	u32 reg_val = 0;
 
 	do {
-		usleep(poll_interval_us);
+		usleep_range(poll_interval_us, poll_interval_us << 1);
 		reg_val = tegra_sor_readl(sor, reg);
 	} while (((reg_val & mask) != exp_val) &&
 		time_after(timeout_jf, jiffies));
@@ -168,6 +169,8 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor)
 			"Failed to power down dp lanes\n");
 		return;
 	}
+
+	clk_disable(sor->clk);
 }
 EXPORT_SYMBOL(tegra_dc_sor_disable);
 
@@ -394,6 +397,7 @@ static void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 
 void tegra_dc_sor_enable(struct tegra_dc_sor_data *sor)
 {
+	enable_clk(sor->clk);
 	tegra_dc_sor_set_dp_mode(sor, sor->link_cfg);
 }
 EXPORT_SYMBOL(tegra_dc_sor_enable);

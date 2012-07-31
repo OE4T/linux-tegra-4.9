@@ -57,7 +57,7 @@ static unsigned long tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 	u32 reg_val = 0;
 
 	do {
-		usleep(poll_interval_us);
+		usleep_range(poll_interval_us, poll_interval_us << 1);
 		reg_val = tegra_dpaux_readl(dp, reg);
 	} while (((reg_val & mask) != exp_val) &&
 		time_after(timeout_jf, jiffies));
@@ -164,15 +164,10 @@ static int tegra_dc_dpaux_write_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	reg_val |= (*size << DPAUX_DP_AUXCTL_CMDLEN_SHIFT);
 
 	while ((timeout_retries > 0) && (defer_retries > 0)) {
-		/* Reset AUX first*/
-		reg_val |= DPAUX_DP_AUXCTL_RST_ASSERT;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
-		reg_val &= ~DPAUX_DP_AUXCTL_RST_ASSERT;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
-
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep(DP_DPCP_RETRY_SLEEP_NS);
+			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
+				DP_DPCP_RETRY_SLEEP_NS << 1);
 
 		reg_val |= DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING;
 		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
@@ -294,15 +289,10 @@ static int tegra_dc_dpaux_read_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	reg_val |= (*size << DPAUX_DP_AUXCTL_CMDLEN_SHIFT);
 
 	while ((timeout_retries > 0) && (defer_retries > 0)) {
-		/* Reset AUX first*/
-		reg_val |= DPAUX_DP_AUXCTL_RST_ASSERT;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
-		reg_val &= ~DPAUX_DP_AUXCTL_RST_ASSERT;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
-
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep(DP_DPCP_RETRY_SLEEP_NS);
+			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
+				DP_DPCP_RETRY_SLEEP_NS << 1);
 
 
 		reg_val |= DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING;
@@ -776,7 +766,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 			pre_emphasis, drive_current);
 	}
 
-	usleep(10);
+	usleep_range(10, 30);
 
 	/* Now program the sink */
 	if (training_pattern != trainingPattern_None) {
@@ -866,7 +856,7 @@ static int tegra_dc_dp_lt_clock_recovery(struct tegra_dc_dp_data *dp,
 	sl_retry_count = 0;
 	retry_count = 0;
 	do {
-		usleep(100);
+		usleep_range(100, 200);
 		temp_edc[0] = edc_data[0];
 		temp_edc[1] = edc_data[1];
 
@@ -968,7 +958,7 @@ static int tegra_dc_dp_lt_channel_equalization(struct tegra_dc_dp_data *dp,
 	CHECK_RET(tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET,
 			data));
 
-	usleep(400);
+	usleep_range(400, 800);
 
 	for (tries = 0; tries <= DP_CLOCK_RECOVERY_MAX_TRIES; ++tries) {
 		ret = tegra_dc_dpcd_read_lane_request(dp, cfg->lane_count,
@@ -984,7 +974,7 @@ static int tegra_dc_dp_lt_channel_equalization(struct tegra_dc_dp_data *dp,
 			return ret;
 		}
 
-		usleep(400);
+		usleep_range(400, 800);
 
 		CHECK_RET(tegra_dc_dp_dpcd_read(dp,
 				NV_DPCD_LANE_ALIGN_STATUS_UPDATED,
@@ -1095,13 +1085,13 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_1, cfg,
 		false);
 
-	usleep(500);
+	usleep_range(500, 1000);
 	/* enable ASSR */
 	tegra_dc_dp_set_assr(dp, true);
 	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_2, cfg,
 		true);
 
-	usleep(500);
+	usleep_range(500, 1000);
 	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_Disabled,
 		cfg, false);
 
@@ -1305,9 +1295,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_release_resource_reg;
 	}
 
-	clk = clk_get(&dc->ndev->dev, NULL);
+	clk = clk_get(&dc->ndev->dev, "edp");
 	if (IS_ERR_OR_NULL(clk)) {
-		dev_err(&dc->ndev->dev, "dp: dc clock %s unavailable\n",
+		dev_err(&dc->ndev->dev, "dp: dc clock %s.edp unavailable\n",
 			dev_name(&dc->ndev->dev));
 		err = -EFAULT;
 		goto err_iounmap_reg;
@@ -1365,6 +1355,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	int    ret;
 
 	tegra_dc_dpaux_enable(dp);
+	clk_enable(dp->clk);
 
 	/* Power on panel */
 	tegra_dc_sor_set_panel_power(dp->sor, true);
@@ -1448,6 +1439,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	/* Power down SOR */
 	tegra_dc_sor_disable(dp->sor);
 
+	clk_disable(dp->clk);
 	/* TODO: Now power down the panel -- through GPIO */
 	/* Make sure the timing meet the eDP specs */
 }

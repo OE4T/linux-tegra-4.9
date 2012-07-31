@@ -239,6 +239,11 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	if (!h)
 		return -EPERM;
 
+	if(!h->alloc) {
+		nvmap_handle_put(h);
+		return -EFAULT;
+	}
+
 	trace_nvmap_map_into_caller_ptr(client, h, op.offset,
 					op.length, op.flags);
 	down_read(&current->mm->mmap_sem);

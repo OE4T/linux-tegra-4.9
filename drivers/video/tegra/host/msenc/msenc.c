@@ -260,13 +260,13 @@ static int msenc_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
+int msenc_read_ucode(struct platform_device *dev)
 {
 	struct msenc *m = get_msenc(dev);
 	const struct firmware *ucode_fw;
 	int err;
 
-	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
+	ucode_fw  = nvhost_client_request_firmware(dev, MSENC_FIRMWARE_NAME);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get msenc firmware\n");
 		err = -ENOENT;
@@ -276,7 +276,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 	/* allocate pages for ucode */
 	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
 				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, mem_mgr_flag_uncacheable);
+				     PAGE_SIZE, mem_mgr_flag_uncacheable, 0);
 	if (IS_ERR(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
 		err = PTR_ERR(m->mem_r);
@@ -350,7 +350,7 @@ void nvhost_msenc_init(struct platform_device *dev)
 	}
 	set_msenc(dev, m);
 
-	err = msenc_read_ucode(dev, fw_name);
+	err = msenc_read_ucode(dev);
 	kfree(fw_name);
 	fw_name = 0;
 

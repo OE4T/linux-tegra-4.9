@@ -22,6 +22,9 @@
 
 struct nvhost_master;
 struct nvhost_chip_support;
+struct output;
+struct nvhost_job;
+struct nvhost_channel;
 
 int nvhost_init_t20_support(struct nvhost_master *,
 	struct nvhost_chip_support *);

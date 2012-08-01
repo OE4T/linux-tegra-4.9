@@ -23,6 +23,7 @@
 
 #include <mach/powergate.h>
 
+#include "class_ids.h"
 #include "t20.h"
 #include "gr2d/gr2d_t30.h"
 #include "gr3d/gr3d.h"

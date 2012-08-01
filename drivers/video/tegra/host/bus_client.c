@@ -764,6 +764,18 @@ fail:
 	return -ENXIO;
 }
 
+void nvhost_client_device_put_resources(struct nvhost_device *dev)
+{
+	struct resource *r;
+
+	r = nvhost_get_resource(dev, IORESOURCE_MEM, 0);
+	BUG_ON(!r);
+
+	iounmap(dev->aperture);
+
+	release_mem_region(r->start, resource_size(r));
+}
+
 /* This is a simple wrapper around request_firmware that takes
  * 'fw_name' and if available applies a SOC relative path prefix to it.
  * The caller is responsible for calling release_firmware later.

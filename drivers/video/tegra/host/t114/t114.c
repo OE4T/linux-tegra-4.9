@@ -24,6 +24,7 @@
 
 #include <mach/powergate.h>
 
+#include "class_ids.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114.h"

@@ -86,8 +86,11 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool)
 {
 	struct page *page = NULL;
 
-	if (pool->npages > 0)
+	if (pool->npages > 0) {
 		page = pool->page_array[--pool->npages];
+		atomic_dec(&page->_count);
+		BUG_ON(atomic_read(&page->_count) != 1);
+	}
 	return page;
 }
 
@@ -108,7 +111,9 @@ static bool nvmap_page_pool_release_locked(struct nvmap_page_pool *pool,
 {
 	int ret = false;
 
+	BUG_ON(atomic_read(&page->_count) != 1);
 	if (enable_pp && pool->npages < pool->max_pages) {
+		atomic_inc(&page->_count);
 		pool->page_array[pool->npages++] = page;
 		ret = true;
 	}
@@ -135,6 +140,7 @@ static int nvmap_page_pool_get_available_count(struct nvmap_page_pool *pool)
 
 static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 {
+	int err;
 	int i = nr_free;
 	int idx = 0;
 	struct page *page;
@@ -150,8 +156,12 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 		i--;
 	}
 
-	if (idx)
-		set_pages_array_wb(pool->shrink_array, idx);
+	if (idx) {
+		/* This op should never fail. */
+		err = set_pages_array_wb(pool->shrink_array, idx);
+		BUG_ON(err);
+	}
+
 	while (idx--)
 		__free_page(pool->shrink_array[idx]);
 	nvmap_page_pool_unlock(pool);
@@ -368,8 +378,9 @@ POOL_SIZE_MOUDLE_PARAM_CB(wb, NVMAP_HANDLE_CACHEABLE);
 
 int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 {
-	struct page *page;
 	int i;
+	int err;
+	struct page *page;
 	static int reg = 1;
 	struct sysinfo info;
 	int highmem_pages = 0;
@@ -432,7 +443,8 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		s_memtype_str[flags], highmem_pages, pool->max_pages,
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
-	(*s_cpa[flags])(pool->page_array, pool->npages);
+	err = (*s_cpa[flags])(pool->page_array, pool->npages);
+	BUG_ON(err);
 	nvmap_page_pool_unlock(pool);
 	return 0;
 fail:
@@ -464,6 +476,7 @@ static inline void altfree(void *ptr, size_t len)
 
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
+	int err;
 	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 	unsigned int i, nr_page, page_index = 0;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -507,9 +520,12 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	/* Restore page attributes. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE ||
 	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
-	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		set_pages_array_wb(&h->pgalloc.pages[page_index],
+	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE) {
+		/* This op should never fail. */
+		err = set_pages_array_wb(&h->pgalloc.pages[page_index],
 				nr_page - page_index);
+		BUG_ON(err);
+	}
 
 skip_attr_restore:
 	if (h->pgalloc.area)
@@ -547,6 +563,7 @@ static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 static int handle_page_alloc(struct nvmap_client *client,
 			     struct nvmap_handle *h, bool contiguous)
 {
+	int err = 0;
 	size_t size = PAGE_ALIGN(h->size);
 	unsigned int nr_page = size >> PAGE_SHIFT;
 	pgprot_t prot;
@@ -637,14 +654,17 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	/* Update the pages mapping in kernel page table. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		set_pages_array_wc(&pages[page_index],
-				nr_page - page_index);
+		err = set_pages_array_wc(&pages[page_index],
+					nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
-		set_pages_array_uc(&pages[page_index],
-				nr_page - page_index);
+		err = set_pages_array_uc(&pages[page_index],
+					nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		set_pages_array_iwb(&pages[page_index],
-				nr_page - page_index);
+		err = set_pages_array_iwb(&pages[page_index],
+					nr_page - page_index);
+
+	if (err)
+		goto fail;
 
 skip_attr_change:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
@@ -658,10 +678,10 @@ skip_attr_change:
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(client->dev, pte);
-	while (i--) {
-		set_pages_array_wb(&pages[i], 1);
+	err = set_pages_array_wb(pages, i);
+	BUG_ON(err);
+	while (i--)
 		__free_page(pages[i]);
-	}
 	altfree(pages, nr_page * sizeof(*pages));
 	wmb();
 	return -ENOMEM;

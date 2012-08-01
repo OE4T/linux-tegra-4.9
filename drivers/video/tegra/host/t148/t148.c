@@ -23,6 +23,7 @@
 #include <linux/nvhost.h>
 
 #include "dev.h"
+#include "class_ids.h"
 #include "host1x/host1x_cdma.h"
 #include "t20/t20.h"
 #include "t30/t30.h"

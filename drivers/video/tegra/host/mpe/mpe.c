@@ -28,12 +28,12 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 
-#include <mach/hardware.h>
 #include <mach/pm_domains.h>
 
 #include "nvhost_hwctx.h"
 #include "nvhost_channel.h"
 #include "dev.h"
+#include "class_ids.h"
 #include "host1x/host1x01_hardware.h"
 #include "host1x/host1x_hwctx.h"
 #include "t20/t20.h"
@@ -45,6 +45,8 @@
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
 #include "mpe.h"
+
+#include <linux/slab.h>
 
 #include "bus_client.h"
 

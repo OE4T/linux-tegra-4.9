@@ -36,6 +36,7 @@
 
 #include <asm/cacheflush.h>
 #include <asm/outercache.h>
+#include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
 #include <mach/iovmm.h>
@@ -555,6 +556,17 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct nvmap_page_pool *pool = NULL;
 	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 #endif
+	gfp_t gfp = GFP_NVMAP;
+	unsigned long kaddr, paddr;
+	pte_t **pte = NULL;
+
+	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES) {
+		gfp |= __GFP_ZERO;
+		prot = nvmap_pgprot(h, pgprot_kernel);
+		pte = nvmap_alloc_pte(client->dev, (void **)&kaddr);
+		if (IS_ERR(pte))
+			return -ENOMEM;
+	}
 
 	pages = altalloc(nr_page * sizeof(*pages));
 	if (!pages)
@@ -565,7 +577,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	h->pgalloc.area = NULL;
 	if (contiguous) {
 		struct page *page;
-		page = nvmap_alloc_pages_exact(GFP_NVMAP, size);
+		page = nvmap_alloc_pages_exact(gfp, size);
 		if (!page)
 			goto fail;
 
@@ -582,12 +594,29 @@ static int handle_page_alloc(struct nvmap_client *client,
 			pages[i] = nvmap_page_pool_alloc(pool);
 			if (!pages[i])
 				break;
+			if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES) {
+				/*
+				 * Just memset low mem pages; they will for
+				 * sure have a virtual address. Otherwise, build
+				 * a mapping for the page in the kernel.
+				 */
+				if (!PageHighMem(pages[i])) {
+					memset(page_address(pages[i]), 0,
+					       PAGE_SIZE);
+				} else {
+					paddr = page_to_phys(pages[i]);
+					set_pte_at(&init_mm, kaddr, *pte,
+						   pfn_pte(__phys_to_pfn(paddr),
+							   prot));
+					flush_tlb_kernel_page(kaddr);
+					memset((char *)kaddr, 0, PAGE_SIZE);
+				}
+			}
 			page_index++;
 		}
 #endif
 		for (; i < nr_page; i++) {
-			pages[i] = nvmap_alloc_pages_exact(GFP_NVMAP,
-				PAGE_SIZE);
+			pages[i] = nvmap_alloc_pages_exact(gfp,	PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
 		}
@@ -618,6 +647,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 				nr_page - page_index);
 
 skip_attr_change:
+	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
+		nvmap_free_pte(client->dev, pte);
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
@@ -625,6 +656,8 @@ skip_attr_change:
 	return 0;
 
 fail:
+	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
+		nvmap_free_pte(client->dev, pte);
 	while (i--) {
 		set_pages_array_wb(&pages[i], 1);
 		__free_page(pages[i]);

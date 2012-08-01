@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,6 +175,9 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
 	op.align = max_t(size_t, op.align, PAGE_SIZE);
+#if defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
+	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
+#endif
 
 	return nvmap_alloc_handle_id(client, op.handle, op.heap_mask,
 				     op.align, op.flags);

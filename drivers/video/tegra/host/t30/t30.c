@@ -22,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
+#include "class_ids.h"
 #include "t20/t20.h"
 #include "t30.h"
 #include "gr2d/gr2d_t30.h"

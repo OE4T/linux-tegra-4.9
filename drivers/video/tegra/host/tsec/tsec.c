@@ -402,7 +402,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	/* allocate pages for ucode */
 	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
 			     roundup(ucode_fw->size+256, PAGE_SIZE),
-			     PAGE_SIZE, mem_mgr_flag_uncacheable);
+			     PAGE_SIZE, mem_mgr_flag_uncacheable, 0);
 	if (IS_ERR(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
 		err = PTR_ERR(m->mem_r);

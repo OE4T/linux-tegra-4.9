@@ -25,6 +25,7 @@
 #include "nvhost_channel.h"
 #include "debug.h"
 #include "dev.h"
+#include "class_ids.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 
@@ -75,7 +76,7 @@ static int push_buffer_init(struct push_buffer *pb)
 
 	/* allocate and map pushbuffer memory */
 	pb->mem = nvhost_memmgr_alloc(mgr, PUSH_BUFFER_SIZE + 4, 32,
-			      mem_mgr_flag_write_combine);
+			      mem_mgr_flag_write_combine, 0);
 	if (IS_ERR(pb->mem)) {
 		err = PTR_ERR(pb->mem);
 		pb->mem = NULL;

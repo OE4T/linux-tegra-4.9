@@ -44,6 +44,8 @@
 #include "debug.h"
 #include "bus_client.h"
 #include "dev.h"
+#include "class_ids.h"
+#include "nvhost_as.h"
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_acm.h"
@@ -177,7 +179,9 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 		goto fail;
 
 	if (ch->ctxhandler && ch->ctxhandler->alloc) {
+		nvhost_module_busy(ch->dev);
 		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);
+		nvhost_module_idle(ch->dev);
 		if (!priv->hwctx)
 			goto fail;
 	}
@@ -417,6 +421,152 @@ fail:
 	ctx->job = NULL;
 
 	return err;
+}
+
+static int nvhost_ioctl_channel_alloc_obj_ctx(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_alloc_obj_ctx_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_op().alloc_obj);
+	ret = channel_op().alloc_obj(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_free_obj_ctx(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_free_obj_ctx_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_op().free_obj);
+	ret = channel_op().free_obj(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_alloc_gpfifo(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_alloc_gpfifo_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_op().alloc_gpfifo);
+	ret = channel_op().alloc_gpfifo(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_submit_gpfifo(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_submit_gpfifo_args *args)
+{
+	struct nvhost_gpfifo *gpfifo;
+	u32 size = args->num_entries * sizeof(struct nvhost_gpfifo);
+	int ret = 0;
+
+	gpfifo = kzalloc(size, GFP_KERNEL);
+	if (IS_ERR_OR_NULL(gpfifo))
+		return -ENOMEM;
+
+	if (copy_from_user(gpfifo, (void __user *)args->gpfifo, size)) {
+		ret = -EINVAL;
+		goto clean_up;
+	}
+
+	BUG_ON(!channel_op().submit_gpfifo);
+	ret = channel_op().submit_gpfifo(ctx->hwctx, gpfifo,
+			args->num_entries, &args->fence, args->flags);
+clean_up:
+	kfree(gpfifo);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_map_buffer(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_map_buffer_args *map_buffer_args)
+{
+	int ret = 0;
+
+	BUG_ON(!channel_op().map_buffer);
+	ret = channel_op().map_buffer(ctx->hwctx, map_buffer_args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_unmap_buffer(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_unmap_buffer_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_op().unmap_buffer);
+	ret = channel_op().unmap_buffer(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_wait(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_wait_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_op().wait);
+	ret = channel_op().wait(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_zcull_get_size(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zcull_get_size_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_zcull_op().get_size);
+	ret = channel_zcull_op().get_size(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_zcull_bind(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zcull_bind_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_zcull_op().bind);
+	ret = channel_zcull_op().bind(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_zcull_get_info(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zcull_get_info_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_zcull_op().get_info);
+	ret = channel_zcull_op().get_info(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_zbc_set_table(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zbc_set_table_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_zbc_op().set_table);
+	ret = channel_zbc_op().set_table(ctx->hwctx, args);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_zbc_query_table(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zbc_query_table_args *args)
+{
+	int ret;
+
+	BUG_ON(!channel_zbc_op().query_table);
+	ret = channel_zbc_op().query_table(ctx->hwctx, args);
+	return ret;
 }
 
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
@@ -838,6 +988,7 @@ static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	struct device *dev = &priv->ch->dev->dev;
 	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
 	int err = 0;
 
@@ -963,7 +1114,6 @@ static long nvhost_channelctl(struct file *filp,
 			err = PTR_ERR(new_client);
 			break;
 		}
-
 		if (priv->memmgr)
 			nvhost_memmgr_put_mgr(priv->memmgr);
 
@@ -974,6 +1124,42 @@ static long nvhost_channelctl(struct file *filp,
 
 		break;
 	}
+	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
+		err = nvhost_ioctl_channel_alloc_obj_ctx(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
+		err = nvhost_ioctl_channel_free_obj_ctx(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
+		err = nvhost_ioctl_channel_alloc_gpfifo(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
+		err = nvhost_ioctl_channel_submit_gpfifo(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_MAP_BUFFER:
+		err = nvhost_ioctl_channel_map_buffer(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER:
+		err = nvhost_ioctl_channel_unmap_buffer(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_WAIT:
+		err = nvhost_ioctl_channel_wait(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZCULL_GET_SIZE:
+		err = nvhost_ioctl_channel_zcull_get_size(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
+		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZCULL_GET_INFO:
+		err = nvhost_ioctl_channel_zcull_get_info(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE:
+		err = nvhost_ioctl_channel_zbc_set_table(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE:
+		err = nvhost_ioctl_channel_zbc_query_table(priv, (void *)buf);
+		break;
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
 		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
 		break;
@@ -1029,6 +1215,7 @@ static long nvhost_channelctl(struct file *filp,
 		err = nvhost_ioctl_channel_set_ctxswitch(priv, (void *)buf);
 		break;
 	default:
+		nvhost_err(dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}
@@ -1047,13 +1234,88 @@ static const struct file_operations nvhost_channelops = {
 	.unlocked_ioctl = nvhost_channelctl
 };
 
+struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd)
+{
+	struct nvhost_channel_userctx *userctx;
+	struct file *f = fget(fd);
+	if (!f)
+		return 0;
+
+	if (f->f_op != &nvhost_channelops) {
+		fput(f);
+		return 0;
+	}
+
+	userctx = (struct nvhost_channel_userctx *)f->private_data;
+	fput(f);
+	return userctx->hwctx;
+}
+
+
+static const struct file_operations nvhost_asops = {
+	.owner = THIS_MODULE,
+	.release = nvhost_as_dev_release,
+	.open = nvhost_as_dev_open,
+	.unlocked_ioctl = nvhost_as_dev_ctl,
+};
+
+static struct {
+	int class_id;
+	const char *dev_name;
+} class_id_dev_name_map[] = {
+	/*	{ NV_HOST1X_CLASS_ID, ""}, */
+	{ NV_VIDEO_ENCODE_MPEG_CLASS_ID, "mpe" },
+	{ NV_VIDEO_ENCODE_MSENC_CLASS_ID, "msenc" },
+	{ NV_GRAPHICS_3D_CLASS_ID, "gr3d" },
+	{ NV_GRAPHICS_GPU_CLASS_ID, "gr3d"},  /* TBD: move to "gpu" */
+	{ NV_GRAPHICS_VIC_CLASS_ID, "vic"},
+	{ NV_TSEC_CLASS_ID, "tsec" },
+};
+
+static struct {
+	int module_id;
+	const char *dev_name;
+} module_id_dev_name_map[] = {
+	{ NVHOST_MODULE_VI, "vi"},
+	{ NVHOST_MODULE_ISP, "isp"},
+	{ NVHOST_MODULE_MPE, "mpe"},
+	{ NVHOST_MODULE_MSENC, "msenc"},
+	{ NVHOST_MODULE_TSEC, "tsec"},
+	{ NVHOST_MODULE_GPU, "gpu"},
+	{ NVHOST_MODULE_VIC, "vic"},
+};
+
+static const char *get_device_name_for_dev(struct nvhost_device *dev)
+{
+	int i;
+	/* first choice is to use the class id if specified */
+	for (i = 0; i < ARRAY_SIZE(class_id_dev_name_map); i++)
+		if (dev->class == class_id_dev_name_map[i].class_id)
+			return class_id_dev_name_map[i].dev_name;
+
+	/* second choice is module name if specified */
+	for (i = 0; i < ARRAY_SIZE(module_id_dev_name_map); i++)
+		if (dev->moduleid == module_id_dev_name_map[i].module_id)
+			return module_id_dev_name_map[i].dev_name;
+
+
+	/* last choice is to just use the given dev name */
+	return dev->name;
+}
+
 int nvhost_client_user_init(struct platform_device *dev)
 {
 	int err, devno;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	struct nvhost_channel *ch = pdata->channel;
-	err = alloc_chrdev_region(&devno, 0, 1, IFACE_NAME);
+	struct nvhost_master *host = nvhost_get_host(dev);
+	const char *use_dev_name;
+
+	BUG_ON(!ch);
+	BUG_ON(!host);
+	// reserve 2 minor #s for both <dev> and as-<dev>
+	err = alloc_chrdev_region(&devno, 0, 2, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
@@ -1068,14 +1330,43 @@ int nvhost_client_user_init(struct platform_device *dev)
 			"failed to add chan %i cdev\n", pdata->index);
 		goto fail;
 	}
+	use_dev_name = get_device_name_for_dev(dev);
+
 	ch->node = device_create(nvhost_get_host(dev)->nvhost_class,
-			NULL, devno, NULL,
-			IFACE_NAME "-%s", dev_name(&dev->dev));
+				 NULL, devno, NULL,
+				 (dev->id == 0) ?
+				 IFACE_NAME "-%s" :
+				 IFACE_NAME "-%s.%d",
+				 use_dev_name, dev->id);
+
 	if (IS_ERR(ch->node)) {
 		err = PTR_ERR(ch->node);
 		dev_err(&dev->dev,
-			"failed to create %s channel device\n",
-			dev_name(&dev->dev));
+			"failed to create %s channel device for %s\n",
+			use_dev_name, dev->name);
+		goto fail;
+	}
+
+	/* do the same as above for the address space driver */
+	cdev_init(&ch->as_cdev, &nvhost_asops);
+	ch->as_cdev.owner = THIS_MODULE;
+
+	++ devno; // create a new minor for as-<dev>
+	err = cdev_add(&ch->as_cdev, devno, 1);
+	if (err < 0) {
+		dev_err(&pdata->dev,
+			"failed to add chan %i as_cdev\n", pdata->index);
+		goto fail;
+	}
+	ch->as_node = device_create(host->nvhost_class, NULL, devno, NULL,
+				    (dev->id == 0) ?
+				    IFACE_NAME "-as-%s" :
+				    IFACE_NAME "-as-%s.%d",
+				    use_dev_name, pdata->id);
+	if (IS_ERR(ch->as_node)) {
+		err = PTR_ERR(ch->as_node);
+		dev_err(&pdata->dev,
+			"failed to create chan aspace %i device\n", pdata->index);
 		goto fail;
 	}
 
@@ -1182,30 +1473,47 @@ int nvhost_client_device_resume(struct device *dev)
 
 int nvhost_client_device_get_resources(struct platform_device *dev)
 {
-	int i;
-	void __iomem *regs = NULL;
+	struct resource *r[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int n;
 
-	for (i = 0; i < dev->num_resources; i++) {
-		struct resource *r = NULL;
+	if (dev->num_resources > NVHOST_MODULE_MAX_IORESOURCE_MEM) {
+		dev_err(&dev->dev, "too many io mem resources: %d, max is %d\n",
+			dev->num_resources, NVHOST_MODULE_MAX_IORESOURCE_MEM);
+		return -ENOMEM;
+	}
 
-		r = platform_get_resource(dev, IORESOURCE_MEM, i);
-		/* We've run out of mem resources */
-		if (!r)
-			break;
+	for (n = 0; n < NVHOST_MODULE_MAX_IORESOURCE_MEM; n++)
+		r[n] = NULL;
 
-		regs = devm_request_and_ioremap(&dev->dev, r);
-		if (!regs)
+	for (n = 0; n < dev->num_resources; n++ ) {
+		r[n] = platform_get_resource(dev, IORESOURCE_MEM, n);
+		if (!r[n])
 			goto fail;
 
-		pdata->aperture[i] = regs;
+		pdata->reg_mem[n] = request_mem_region(r[n]->start,
+						     resource_size(r[n]),
+						     dev_name(&dev->dev));
+		if (!pdata->reg_mem[n])
+			goto fail;
+
+		pdata->aperture[n] = ioremap(r[n]->start, resource_size(r[n]));
+		if (!pdata->aperture[n])
+			goto fail;
 	}
 
 	return 0;
 
 fail:
+	for (n = 0; n < dev->num_resources; n++ ) {
+		if (r[n]) {
+			if (pdata->aperture[n])
+				iounmap(dev->aperture[n]);
+			if (pdata->reg_mem[n])
+				release_mem_region(r[n]->start, resource_size(r[n]));
+		}
+	}
 	dev_err(&dev->dev, "failed to get register memory\n");
-
 	return -ENXIO;
 }
 EXPORT_SYMBOL(nvhost_client_device_get_resources);

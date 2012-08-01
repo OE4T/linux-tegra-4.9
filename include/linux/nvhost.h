@@ -43,6 +43,7 @@ struct mem_mgr;
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM	3
 #define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
 #define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
+#define NVHOST_MODULE_MAX_IORESOURCE_MEM 3
 #define NVHOST_NAME_SIZE			24
 #define NVSYNCPT_INVALID			(-1)
 
@@ -126,9 +127,11 @@ struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
 	int		index;		/* Hardware channel number */
+	struct resource	*reg_mem[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
+	u32		syncpt_base;	/* Device sync point base */
 	u32		waitbases[NVHOST_MODULE_MAX_WAITBASES];
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
@@ -152,6 +155,27 @@ struct nvhost_device_data {
 	struct list_head client_list;	/* List of clients and rate requests */
 
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
+
+	void	*priv;
+
+	/* Allocates a context handler for the device */
+	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
+			u32 waitbase, struct nvhost_channel *ch);
+	/* Preparing for power off. Used for context save. */
+	int (*prepare_poweroff)(struct nvhost_device *dev);
+	/* Finalize power on. Can be used for context restore. */
+	void (*finalize_poweron)(struct nvhost_device *dev);
+	/* Device is busy. */
+	void (*busy)(struct nvhost_device *);
+	/* Device is idle. */
+	void (*idle)(struct nvhost_device *);
+	/* Device is going to be suspended */
+	void (*suspend)(struct nvhost_device *);
+	/* Device is initialized */
+	void (*init)(struct nvhost_device *dev);
+	/* Device is de-initialized. */
+	void (*deinit)(struct nvhost_device *dev);
+
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
 	struct dentry *debugfs;		/* debugfs directory */

@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/err.h>
+#include <linux/bug.h>
 
 #include "nvhost_memmgr.h"
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP

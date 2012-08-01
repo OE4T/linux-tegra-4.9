@@ -29,6 +29,12 @@
 
 #include <mach/gpufuse.h>
 
+#include "dev.h"
+
+#if defined(NVHOST_DEBUG)
+u32 nvhost_dbg_mask = NVHOST_DBG_MASK; /* can be changed dynamically, as well */
+#endif
+
 /* host1x device list is used in 2 places:
  * 1. In ioctl(NVHOST_IOCTL_CTRL_MODULE_REGRDWR) of host1x device
  * 2. debug-fs dump of host1x and client device

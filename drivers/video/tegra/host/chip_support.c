@@ -27,6 +27,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t124/t124.h"
 #include "t148/t148.h"
 
 #include <mach/hardware.h>
@@ -65,6 +66,11 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 	case TEGRA_CHIPID_TEGRA11:
 		nvhost_chip_ops->soc_name = "tegra11x";
 		err = nvhost_init_t114_support(host, nvhost_chip_ops);
+		break;
+
+	case TEGRA_CHIPID_TEGRA12:
+		chip_ops->soc_name = "tegra12x";
+		err = nvhost_init_t124_support(host, chip_ops);
 		break;
 
 	case TEGRA_CHIPID_TEGRA14:

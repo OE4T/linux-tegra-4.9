@@ -43,6 +43,10 @@ struct nvhost_hwctx {
 	u32 save_slots;
 
 	u32 restore_incrs;
+	void *priv; /* chip support state */
+
+	struct list_head as_share_bound_list_node;
+	struct nvhost_as_share *as_share;
 };
 
 struct nvhost_hwctx_handler {

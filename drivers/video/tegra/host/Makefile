@@ -1,7 +1,28 @@
 EXTRA_CFLAGS += -Idrivers/video/tegra/host -Idrivers/devfreq
 
+#
+# Arrange for code sharing among configurations.
+#
+config_present = $(if $(findstring y,$(1)),y,)
+
+all_configs = $(call config_present,$(CONFIG_ARCH_TEGRA_2x_SOC) \
+ $(CONFIG_ARCH_TEGRA_3x_SOC) $(CONFIG_ARCH_TEGRA_11x_SOC) \
+ $(CONFIG_ARCH_TEGRA_12x_SOC) $(CONFIG_ARCH_TEGRA_14x_SOC))
+
+t3x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_3x_SOC)\
+  $(t11x_or_higher_config))
+
+t11x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_11x_SOC)\
+  $(t14x_or_higher_config))
+
+t14x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_14x_SOC)\
+  $(t12x_or_higher_config))
+
+t12x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_12x_SOC))
+
 nvhost-objs = \
 	nvhost_acm.o \
+	nvhost_as.o \
 	nvhost_syncpt.o \
 	nvhost_cdma.o \
 	nvhost_intr.o \
@@ -15,21 +36,23 @@ nvhost-objs = \
 	nvhost_scale.o \
 	user_hwctx.o
 
-obj-$(CONFIG_TEGRA_GRHOST) += mpe/
-obj-$(CONFIG_TEGRA_GRHOST) += gr3d/
-obj-$(CONFIG_TEGRA_GRHOST) += host1x/
-obj-$(CONFIG_TEGRA_GRHOST) += t20/
-obj-$(CONFIG_TEGRA_GRHOST) += t30/
-obj-$(CONFIG_TEGRA_GRHOST) += gr2d/
-obj-$(CONFIG_TEGRA_GRHOST) += isp/
-ifneq ($(CONFIG_VIDEO_TEGRA),y)
-obj-$(CONFIG_TEGRA_GRHOST) += vi/
-endif
-obj-$(CONFIG_TEGRA_GRHOST) += t114/
-obj-$(CONFIG_TEGRA_GRHOST) += t148/
-obj-$(CONFIG_TEGRA_GRHOST) += msenc/
-obj-$(CONFIG_TEGRA_GRHOST) += tsec/
-obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
+obj-$(all_configs) += nvhost.o
+obj-$(all_configs) += host1x/
+obj-$(all_configs) += t20/
+obj-$(all_configs) += mpe/
+obj-$(all_configs) += gr3d/
+obj-$(t3x_or_higher_config) += t30/
+obj-$(t11x_or_higher_config) += t114/
+obj-$(t14x_or_higher_config) += t148/
+obj-$(t11x_or_higher_config) += msenc/
+obj-$(t11x_or_higher_config) += tsec/
+obj-$(t11x_or_higher_config) += gr2d/
+obj-$(t11x_or_higher_config) += isp/
+obj-$(t11x_or_higher_config) += vi/
+obj-$(t12x_or_higher_config) += t124/
+obj-$(t12x_or_higher_config) += gk20a/
+obj-$(t12x_or_higher_config) += vic03/
+obj-$(t12x_or_higher_config) += nvhost_allocator.o
 
 obj-$(CONFIG_TEGRA_GRHOST_USE_NVMAP) += nvmap.o
 obj-$(CONFIG_TEGRA_GRHOST_USE_DMABUF) += dmabuf.o

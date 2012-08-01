@@ -48,6 +48,13 @@ struct nvhost_channel {
 	struct cdev cdev;
 	struct nvhost_hwctx_handler *ctxhandler;
 	struct nvhost_cdma cdma;
+
+	/* the address space block here
+	 * belongs to the module. but for
+	 * now just keep it here */
+	struct device *as_node;
+	struct cdev as_cdev;
+	struct nvhost_as *as;
 };
 
 int nvhost_channel_init(struct nvhost_channel *ch,

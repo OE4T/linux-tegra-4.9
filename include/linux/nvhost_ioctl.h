@@ -94,6 +94,11 @@ struct nvhost_syncpt_incr {
 	__u32 syncpt_incrs;
 };
 
+struct nvhost_gpfifo {
+	__u64 gpu_va;
+	__u32 words;
+};
+
 struct nvhost_get_param_args {
 	__u32 value;
 } __packed;
@@ -106,6 +111,82 @@ struct nvhost_get_param_arg {
 struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
+
+struct nvhost_alloc_obj_ctx_args {
+	__u32 class_num; /* kepler3d, 2d, compute, etc       */
+	__u32 obj_id;    /* output, used to free later       */
+	__u32 vaspace_share; /*XXX to be removed */
+};
+
+struct nvhost_free_obj_ctx_args {
+	__u32 obj_id; /* obj ctx to free */
+};
+
+struct nvhost_alloc_gpfifo_args {
+	__u32 num_entries;
+#define NVHOST_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
+	__u32 flags;
+
+};
+
+struct nvhost_fence {
+	__u32 syncpt_id; /* syncpoint id */
+	__u32 value;     /* syncpoint value to wait or value for other to wait */
+};
+
+struct nvhost_submit_gpfifo_args {
+	struct nvhost_gpfifo *gpfifo;
+	__u32 num_entries;
+	struct nvhost_fence fence;
+	__u32 flags;
+/* insert a wait on the fance before submitting gpfifo */
+#define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT	BIT(0)
+ /* insert an fence update after submitting gpfifo and
+    return the new fence for other to wait on */
+#define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
+};
+
+struct nvhost_map_buffer_args {
+	__u32 flags;
+#define NVHOST_MAP_BUFFER_FLAGS_ALIGN		0x0
+#define NVHOST_MAP_BUFFER_FLAGS_OFFSET		BIT(0)
+#define NVHOST_MAP_BUFFER_FLAGS_KIND_PITCH	0x0
+#define NVHOST_MAP_BUFFER_FLAGS_KIND_SPECIFIED	BIT(1)
+#define NVHOST_MAP_BUFFER_FLAGS_CACHABLE_TRUE	0x0
+#define NVHOST_MAP_BUFFER_FLAGS_CACHABLE_FALSE	BIT(2)
+	__u32 nvmap_handle;
+	union {
+		__u64 offset; /* valid if _offset flag given (in|out) */
+		__u64 align;  /* alignment multiple (0:={1 or n/a})   */
+	} offset_alignment;
+	__u32 kind;
+#define NVHOST_MAP_BUFFER_KIND_GENERIC_16BX2 0xfe
+};
+
+struct nvhost_unmap_buffer_args {
+	__u64 offset;
+};
+
+struct nvhost_wait_args {
+#define NVHOST_WAIT_TYPE_NOTIFIER	0x0
+#define NVHOST_WAIT_TYPE_SEMAPHORE	0x1
+	__u32 type;
+	__u32 timeout;
+	union {
+		struct {
+			/* handle and offset for notifier memory */
+			__u32 nvmap_handle;
+			__u32 offset;
+		} notifier;
+		struct {
+			/* handle and offset for semaphore memory */
+			__u32 nvmap_handle;
+			__u32 offset;
+			/* semaphore payload to wait for */
+			__u32 payload;
+		} semaphore;
+	} condition; /* determined by type field */
+};
 
 struct nvhost_read_3d_reg_args {
 	__u32 offset;
@@ -142,6 +223,56 @@ struct nvhost_set_timeout_ex_args {
 struct nvhost_set_priority_args {
 	__u32 priority;
 } __packed;
+
+struct nvhost_zcull_get_size_args {
+	__u32 size;
+};
+
+#define NVHOST_ZCULL_MODE_GLOBAL		0
+#define NVHOST_ZCULL_MODE_NO_CTXSW		1
+#define NVHOST_ZCULL_MODE_SEPARATE_BUFFER	2
+#define NVHOST_ZCULL_MODE_PART_OF_REGULAR_BUF	3
+
+struct nvhost_zcull_bind_args {
+	__u64 gpu_va;
+	__u32 mode;
+};
+
+struct nvhost_zcull_get_info_args {
+	__u32 width_align_pixels;
+	__u32 height_align_pixels;
+	__u32 pixel_squares_by_aliquots;
+	__u32 aliquot_total;
+	__u32 region_byte_multiplier;
+	__u32 region_header_size;
+	__u32 subregion_header_size;
+	__u32 subregion_width_align_pixels;
+	__u32 subregion_height_align_pixels;
+	__u32 subregion_count;
+};
+
+#define NVHOST_ZBC_COLOR_VALUE_SIZE	4
+#define NVHOST_ZBC_TYPE_INVALID		0
+#define NVHOST_ZBC_TYPE_COLOR		1
+#define NVHOST_ZBC_TYPE_DEPTH		2
+
+struct nvhost_zbc_set_table_args {
+	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 depth;
+	__u32 format;
+	__u32 type;	/* color or depth */
+};
+
+struct nvhost_zbc_query_table_args {
+	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 depth;
+	__u32 ref_cnt;
+	__u32 format;
+	__u32 type;		/* color or depth */
+	__u32 index_size;	/* [out] size, [in] index */
+};
 
 struct nvhost_ctrl_module_regrdwr_args {
 	__u32 id;
@@ -229,9 +360,38 @@ struct nvhost_set_ctxswitch_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 23, struct nvhost_get_param_arg)
 #define NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 25, struct nvhost_set_ctxswitch_args)
+
+/* START of T124 IOCTLS */
+#define NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO	\
+	_IOW(NVHOST_IOCTL_MAGIC,  100, struct nvhost_alloc_gpfifo_args)
+#define NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 101, struct nvhost_submit_gpfifo_args)
+#define NVHOST_IOCTL_CHANNEL_WAIT		\
+	_IOWR(NVHOST_IOCTL_MAGIC, 102, struct nvhost_wait_args)
+#define NVHOST_IOCTL_CHANNEL_ZCULL_BIND		\
+	_IOWR(NVHOST_IOCTL_MAGIC, 103, struct nvhost_zcull_bind_args)
+#define NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 104, struct nvhost_alloc_obj_ctx_args)
+#define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
+	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
+
+#define NVHOST_IOCTL_CHANNEL_MAP_BUFFER        \
+	_IOWR(NVHOST_IOCTL_MAGIC, 118, struct nvhost_map_buffer_args)
+#define NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER \
+	_IOWR(NVHOST_IOCTL_MAGIC, 119, struct nvhost_unmap_buffer_args)
+#define NVHOST_IOCTL_CHANNEL_ZCULL_GET_SIZE    \
+	_IOWR(NVHOST_IOCTL_MAGIC, 123, struct nvhost_zcull_get_size_args)
+#define NVHOST_IOCTL_CHANNEL_ZCULL_GET_INFO    \
+	_IOWR(NVHOST_IOCTL_MAGIC, 125, struct nvhost_zcull_get_info_args)
+#define NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE     \
+	_IOWR(NVHOST_IOCTL_MAGIC, 126, struct nvhost_zbc_set_table_args)
+#define NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE   \
+	_IOWR(NVHOST_IOCTL_MAGIC, 127, struct nvhost_zbc_query_table_args)
+
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH)
-#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE)
+
+#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_zbc_query_table_args)
 
 struct nvhost_ctrl_syncpt_read_args {
 	__u32 id;
@@ -292,6 +452,8 @@ enum nvhost_module_id {
 	NVHOST_MODULE_MPE,
 	NVHOST_MODULE_MSENC,
 	NVHOST_MODULE_TSEC,
+	NVHOST_MODULE_GPU,
+	NVHOST_MODULE_VIC,
 };
 
 #define NVHOST_IOCTL_CTRL_SYNCPT_READ		\

@@ -157,6 +157,8 @@ int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);
 
 void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx);
 
+bool nvhost_syncpt_wrapping_comparison(u32 syncpt, u32 threshold);
+
 struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 		int idx);
 #endif

@@ -20,6 +20,8 @@
 #ifndef _NVHOST_CHIP_SUPPORT_H_
 #define _NVHOST_CHIP_SUPPORT_H_
 
+#include <linux/nvhost_ioctl.h>
+
 #include <linux/types.h>
 
 struct output;
@@ -33,6 +35,7 @@ struct nvhost_hwctx;
 struct nvhost_cdma;
 struct nvhost_job;
 struct push_buffer;
+struct nvhost_as;
 struct nvhost_syncpt;
 struct dentry;
 struct nvhost_job;
@@ -43,6 +46,22 @@ struct mem_mgr;
 struct platform_device;
 struct host1x_actmon;
 
+struct nvhost_zcull_ops {
+	int (*get_size)(struct nvhost_hwctx *,
+		    struct nvhost_zcull_get_size_args *args);
+	int (*bind)(struct nvhost_hwctx *,
+		    struct nvhost_zcull_bind_args *args);
+	int (*get_info)(struct nvhost_hwctx *,
+		    struct nvhost_zcull_get_info_args *args);
+};
+
+struct nvhost_zbc_ops {
+	int (*set_table)(struct nvhost_hwctx *,
+		    struct nvhost_zbc_set_table_args *args);
+	int (*query_table)(struct nvhost_hwctx *,
+		    struct nvhost_zbc_query_table_args *args);
+};
+
 struct nvhost_channel_ops {
 	const char * soc_name;
 	int (*init)(struct nvhost_channel *,
@@ -51,7 +70,26 @@ struct nvhost_channel_ops {
 	int (*submit)(struct nvhost_job *job);
 	int (*save_context)(struct nvhost_channel *channel);
 	int (*drain_read_fifo)(struct nvhost_channel *ch,
-		u32 *ptr, unsigned int count, unsigned int *pending);
+	u32 *ptr, unsigned int count, unsigned int *pending);
+	int (*alloc_obj)(struct nvhost_hwctx *,
+			struct nvhost_alloc_obj_ctx_args *args);
+	int (*free_obj)(struct nvhost_hwctx *,
+			struct nvhost_free_obj_ctx_args *args);
+	int (*alloc_gpfifo)(struct nvhost_hwctx *,
+			struct nvhost_alloc_gpfifo_args *args);
+	int (*submit_gpfifo)(struct nvhost_hwctx *,
+			struct nvhost_gpfifo *gpfifo,
+			u32 num_entries,
+			struct nvhost_fence *fence,
+			u32 flags);
+	int (*map_buffer)(struct nvhost_hwctx *,
+			  struct nvhost_map_buffer_args *args);
+	int (*unmap_buffer)(struct nvhost_hwctx *,
+			    struct nvhost_unmap_buffer_args *args);
+	int (*wait)(struct nvhost_hwctx *,
+		    struct nvhost_wait_args *args);
+	struct nvhost_zcull_ops zcull;
+	struct nvhost_zbc_ops zbc;
 };
 
 struct nvhost_cdma_ops {
@@ -138,6 +176,10 @@ struct nvhost_dev_ops {
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
 };
 
+struct nvhost_as_ops {
+	int (*init)(struct nvhost_master *host, struct nvhost_as *as);
+};
+
 struct nvhost_actmon_ops {
 	int (*init)(struct host1x_actmon *actmon);
 	void (*deinit)(struct host1x_actmon *actmon);
@@ -172,9 +214,91 @@ struct nvhost_chip_support {
 	struct nvhost_syncpt_ops syncpt;
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
+	struct nvhost_as_ops as;
 	struct nvhost_actmon_ops actmon;
 	struct nvhost_tickctrl_ops tickctrl;
+	void (*remove_support)(struct nvhost_chip_support *op);
+	void *priv;
 };
+
+/* The reason these accumulate is that 3x uses
+ * some of the 2x code, and likewise 12x vs prior.
+ */
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#define TEGRA_3X_OR_HIGHER_CONFIG
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define TEGRA_11X_OR_HIGHER_CONFIG
+#define TEGRA_3X_OR_HIGHER_CONFIG
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#define TEGRA_14X_OR_HIGHER_CONFIG
+#define TEGRA_11X_OR_HIGHER_CONFIG
+#define TEGRA_3X_OR_HIGHER_CONFIG
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#define TEGRA_12X_OR_HIGHER_CONFIG
+#define TEGRA_14X_OR_HIGHER_CONFIG
+#define TEGRA_11X_OR_HIGHER_CONFIG
+#define TEGRA_3X_OR_HIGHER_CONFIG
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
+#ifdef TEGRA_2X_OR_HIGHER_CONFIG
+#else
+static inline int nvhost_init_t20_support(struct nvhost_master *host,
+					  struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
+
+#ifdef TEGRA_3X_OR_HIGHER_CONFIG
+#else
+static inline int nvhost_init_t30_support(struct nvhost_master *host,
+					  struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
+
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
+#else
+static inline int nvhost_init_t114_support(struct nvhost_master *host,
+					   struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
+
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
+#else
+static inline int nvhost_init_t148_support(struct nvhost_master *host,
+					   struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
+
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+#else
+static inline int nvhost_init_t124_support(struct nvhost_master *host,
+					   struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
+
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
 
@@ -185,9 +309,12 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define intr_op()		(nvhost_get_chip_ops()->intr)
 #define cdma_op()		(nvhost_get_chip_ops()->cdma)
 #define cdma_pb_op()		(nvhost_get_chip_ops()->push_buffer)
+#define channel_zcull_op() 	(nvhost_get_chip_ops()->channel.zcull)
+#define channel_zbc_op()	(nvhost_get_chip_ops()->channel.zbc)
+
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
 #define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)
 
-int nvhost_init_chip_support(struct nvhost_master *host);
+int nvhost_init_chip_support(struct nvhost_master *);
 
 #endif /* _NVHOST_CHIP_SUPPORT_H_ */

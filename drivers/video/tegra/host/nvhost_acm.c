@@ -54,6 +54,7 @@ struct nvhost_module_client {
 
 static void do_powergate_locked(int id)
 {
+	nvhost_dbg_fn("%d", id);
 	if (id != -1 && tegra_powergate_is_powered(id))
 		tegra_powergate_partition(id);
 }
@@ -242,6 +243,8 @@ int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 	int ret = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	nvhost_dbg_fn("%s", dev->name);
+
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &pdata->client_list, node) {
 		if (m->priv == priv) {
@@ -275,6 +278,8 @@ int nvhost_module_add_client(struct platform_device *dev, void *priv)
 	struct nvhost_module_client *client;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	nvhost_dbg_fn("%s num_clks=%d priv=%p", dev->name, dev->num_clks, priv);
+
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
 		return -ENOMEM;
@@ -295,6 +300,8 @@ void nvhost_module_remove_client(struct platform_device *dev, void *priv)
 	struct nvhost_module_client *m;
 	int found = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	nvhost_dbg_fn("%s priv=%p", dev->name, priv);
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &pdata->client_list, node) {
@@ -426,28 +433,35 @@ int nvhost_module_init(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	/* initialize clocks to known state (=enabled) */
+
+	dev->num_clks = 0;
 	INIT_LIST_HEAD(&pdata->client_list);
 	while (pdata->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
 		long rate = pdata->clocks[i].default_rate;
 		struct clk *c;
 
-		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s",
-			dev_name(&dev->dev));
+		snprintf(devname, MAX_DEVID_LENGTH,
+			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
+			 dev->name, dev->id);
 		c = clk_get_sys(devname, pdata->clocks[i].name);
 		if (IS_ERR(c)) {
 			dev_err(&dev->dev, "Cannot get clock %s\n",
 					pdata->clocks[i].name);
+			/* arguably we should fail init here instead... */
+			i++;
 			continue;
 		}
-
+		nvhost_dbg_fn("%s->clk[%d] -> %s:%s:%p",
+			      dev->name, dev->num_clks,
+			      devname, dev->clocks[i].name,
+			      c);
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
 		clk_set_rate(c, rate);
-		pdata->clk[i] = c;
+		pdata->clk[pdata->num_clks++] = c;
 		i++;
 	}
-	pdata->num_clks = i;
 
 	/* reset the module */
 	mutex_lock(&pdata->lock);

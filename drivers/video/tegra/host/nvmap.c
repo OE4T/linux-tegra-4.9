@@ -25,7 +25,6 @@
 #include "nvmap.h"
 #include "nvhost_job.h"
 
-
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 {
 	return (struct mem_mgr *)nvmap_create_client(nvmap_dev, "nvhost");
@@ -47,10 +46,10 @@ struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd)
 }
 
 struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
-		size_t size, size_t align, int flags)
+		size_t size, size_t align, int flags, unsigned int heap_mask)
 {
 	return (struct mem_handle *)nvmap_alloc((struct nvmap_client *)mgr,
-			size, align, flags, 0);
+			size, align, flags, heap_mask);
 }
 
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
@@ -173,3 +172,28 @@ struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		nvmap_duplicate_handle_user_id((struct nvmap_client *)mgr, id);
 }
 
+int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
+		u32 param, u32 *result)
+{
+	return nvmap_get_handle_param_u32((struct nvmap_client *)mgr,
+			nvmap_ref_to_handle((struct nvmap_handle_ref *)handle),
+			param, result);
+}
+
+int nvhost_init_nvmap_support(struct nvhost_chip_support *chip)
+{
+	chip->mem.alloc_mgr = nvhost_nvmap_alloc_mgr;
+	chip->mem.put_mgr = nvhost_nvmap_put_mgr;
+	chip->mem.get_mgr = nvhost_nvmap_get_mgr;
+	chip->mem.get_mgr_file = nvhost_nvmap_get_mgr_file;
+	chip->mem.alloc = nvhost_nvmap_alloc;
+	chip->mem.put = nvhost_nvmap_put;
+	chip->mem.get = nvhost_nvmap_get;
+	chip->mem.pin = nvhost_nvmap_pin;
+	chip->mem.unpin = nvhost_nvmap_unpin;
+	chip->mem.mmap = nvhost_nvmap_mmap;
+	chip->mem.munmap = nvhost_nvmap_munmap;
+	chip->mem.get_param = nvhost_nvmap_get_param;
+
+	return 0;
+}

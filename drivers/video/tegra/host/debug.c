@@ -241,11 +241,6 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&nvhost_debug_force_timeout_dump);
 	nvhost_debug_force_timeout_dump = 0;
 }
-#else
-void nvhost_debug_init(struct nvhost_master *master)
-{
-}
-#endif
 
 void nvhost_debug_dump(struct nvhost_master *master)
 {
@@ -254,3 +249,4 @@ void nvhost_debug_dump(struct nvhost_master *master)
 	};
 	show_all(master, &o);
 }
+#endif

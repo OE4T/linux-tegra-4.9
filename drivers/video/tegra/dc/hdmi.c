@@ -1637,6 +1637,7 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	struct hdmi_avi_infoframe avi;
+	unsigned int blender_reg;
 
 	if (dvi) {
 		tegra_hdmi_writel(hdmi, 0x0,
@@ -1650,10 +1651,16 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 	avi.a = 1;
 	avi.r = HDMI_AVI_R_SAME;
 
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
+	blender_reg = DC_DISP_BORDER_COLOR;
+#else
+	blender_reg = DC_DISP_BLEND_BACKGROUND_COLOR;
+#endif
+
 	if ((dc->mode.h_active == 720) && ((dc->mode.v_active == 480) || (dc->mode.v_active == 576)))
-		tegra_dc_writel(dc, 0x00101010, DC_DISP_BORDER_COLOR);
+		tegra_dc_writel(dc, 0x00101010, blender_reg);
 	else
-		tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
+		tegra_dc_writel(dc, 0x00000000, blender_reg);
 
 	avi.vic = tegra_dc_find_cea_vic(&dc->mode);
 	avi.m = dc->mode.avi_m;

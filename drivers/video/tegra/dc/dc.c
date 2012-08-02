@@ -575,7 +575,9 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_DISP_DATA_ENABLE_OPTIONS);
 	DUMP_REG(DC_DISP_SERIAL_INTERFACE_OPTIONS);
 	DUMP_REG(DC_DISP_LCD_SPI_OPTIONS);
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	DUMP_REG(DC_DISP_BORDER_COLOR);
+#endif
 	DUMP_REG(DC_DISP_COLOR_KEY0_LOWER);
 	DUMP_REG(DC_DISP_COLOR_KEY0_UPPER);
 	DUMP_REG(DC_DISP_COLOR_KEY1_LOWER);
@@ -621,15 +623,15 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 		DUMP_REG(DC_WIN_V_INITIAL_DDA);
 		DUMP_REG(DC_WIN_DDA_INCREMENT);
 		DUMP_REG(DC_WIN_LINE_STRIDE);
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		DUMP_REG(DC_WIN_BUF_STRIDE);
 		DUMP_REG(DC_WIN_UV_BUF_STRIDE);
-#endif
 		DUMP_REG(DC_WIN_BLEND_NOKEY);
 		DUMP_REG(DC_WIN_BLEND_1WIN);
 		DUMP_REG(DC_WIN_BLEND_2WIN_X);
 		DUMP_REG(DC_WIN_BLEND_2WIN_Y);
 		DUMP_REG(DC_WIN_BLEND_3WIN_XY);
+#endif
 		DUMP_REG(DC_WINBUF_START_ADDR);
 		DUMP_REG(DC_WINBUF_START_ADDR_U);
 		DUMP_REG(DC_WINBUF_START_ADDR_V);
@@ -1373,6 +1375,12 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_dsi_ops;
 		break;
 
+#ifdef CONFIG_TEGRA_DP
+	case TEGRA_DC_OUT_DP:
+		dc->out_ops = &tegra_dc_dp_ops;
+		break;
+#endif
+
 	default:
 		dc->out_ops = NULL;
 		break;
@@ -2038,7 +2046,11 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, ALL_UF_INT(), DC_CMD_INT_MASK);
 	tegra_dc_init_vpulse2_int(dc);
 
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
+#else
+	tegra_dc_writel(dc, 0x00000000, DC_DISP_BLEND_BACKGROUND_COLOR);
+#endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
 	if (dc->pdata->cmu) {

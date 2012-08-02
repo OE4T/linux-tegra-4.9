@@ -27,7 +27,7 @@
 #include "t30/t30.h"
 #include "t148/t148.h"
 #include "t114/t114.h"
-#include "host1x/host1x02_hardware.h"
+#include "host1x/host1x03_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t114.h"
@@ -91,10 +91,10 @@ static const char *s_syncpt_names[32] = {
 };
 
 static struct host1x_device_info host1x03_info = {
-	.nb_channels	= 9,
-	.nb_pts		= 32,
+	.nb_channels	= 12,
+	.nb_pts		= 48,
 	.nb_mlocks	= 16,
-	.nb_bases	= 8,
+	.nb_bases	= 12,
 	.syncpt_names	= s_syncpt_names,
 	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
@@ -319,9 +319,6 @@ int nvhost_init_t148_support(struct nvhost_master *host,
 		return err;
 	op->nvhost_dev.alloc_nvhost_channel = t148_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t148_free_nvhost_channel;
-
-	/* Initialize T114 3D actmon */
-	err = host1x_actmon_init(host);
 
 	return 0;
 }

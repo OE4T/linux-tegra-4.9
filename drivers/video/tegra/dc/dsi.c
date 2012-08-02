@@ -54,7 +54,12 @@
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
 
-#define DSI_USE_SYNC_POINTS		0
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+#define DSI_USE_SYNC_POINTS 0
+#else
+#define DSI_USE_SYNC_POINTS 1
+#endif
+
 #define S_TO_MS(x)			(1000 * (x))
 #define MS_TO_US(x)			(1000 * (x))
 
@@ -208,6 +213,24 @@ static const u32 dsi_pkt_seq_video_burst_no_eot[NUMOF_PKT_SEQ] = {
 	PKT_ID2(CMD_RGB) | PKT_LEN2(3) | PKT_LP,
 	0,
 };
+
+const u32 dsi_pkt_seq_video_non_burst_no_eot[NUMOF_PKT_SEQ] = {
+	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2) |
+		PKT_ID2(CMD_RGB) | PKT_LEN2(3),
+	PKT_ID3(CMD_BLNK) | PKT_LEN3(4),
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(2) |
+		PKT_ID2(CMD_RGB) | PKT_LEN2(3),
+	PKT_ID3(CMD_BLNK) | PKT_LEN3(4),
+};
+
 
 /* TODO: verify with hw about this format */
 const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
@@ -1541,6 +1564,12 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 					DSI_PKT_SEQ_3_LO_PKT_32_ID(rgb_info);
 				pkt_seq = dsi_pkt_seq_video_non_burst;
 			}
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+			/* Simulator does not support EOT packet yet */
+			pkt_seq = dsi_pkt_seq_video_non_burst_no_eot;
+#else
+			pkt_seq = dsi_pkt_seq_video_non_burst;
+#endif
 			break;
 		}
 	}

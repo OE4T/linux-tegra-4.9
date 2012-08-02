@@ -31,7 +31,8 @@ struct sg_table;
 
 struct nvhost_job_gather {
 	u32 words;
-	dma_addr_t mem;
+	struct sg_table *mem_sgt;
+	dma_addr_t mem_base;
 	u32 mem_id;
 	int offset;
 	struct mem_handle *ref;

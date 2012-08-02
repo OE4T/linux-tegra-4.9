@@ -252,11 +252,12 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 				continue;
 			}
 
-			nvhost_debug_output(o, "    GATHER at %08x, %d words\n",
-				g->mem, g->words);
+			nvhost_debug_output(o,
+				"    GATHER at %08x+%04x, %d words\n",
+				g->mem_base, g->offset, g->words);
 
-			do_show_channel_gather(o, g->mem + g->offset,
-					g->words, cdma, g->mem, mapped);
+			do_show_channel_gather(o, g->mem_base + g->offset,
+					g->words, cdma, g->mem_base, mapped);
 			mem_op().munmap(g->ref, mapped);
 		}
 	}

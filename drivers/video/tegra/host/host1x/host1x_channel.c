@@ -185,8 +185,9 @@ static void submit_gathers(struct nvhost_job *job)
 	/* push user gathers */
 	int i;
 	for (i = 0 ; i < job->num_gathers; i++) {
-		u32 op1 = nvhost_opcode_gather(job->gathers[i].words);
-		u32 op2 = job->gathers[i].mem;
+		struct nvhost_job_gather *g = &job->gathers[i];
+		u32 op1 = nvhost_opcode_gather(g->words);
+		u32 op2 = g->mem_base + g->offset;
 		nvhost_cdma_push_gather(&job->ch->cdma,
 				job->memmgr,
 				job->gathers[i].ref,

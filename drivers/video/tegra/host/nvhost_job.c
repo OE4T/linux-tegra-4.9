@@ -271,9 +271,8 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
-	int err = 0, i = 0;
+	int err = 0, i = 0, j = 0;
 	struct sg_table *gather_sgt = NULL;
-	dma_addr_t gather_phys = 0;
 	void *gather_addr = NULL;
 	unsigned long waitchk_mask = job->waitchk_mask;
 
@@ -295,16 +294,24 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 				break;
 			}
 
-			gather_sgt = mem_op().pin(job->memmgr, g->ref);
-			if (IS_ERR((void *)gather_sgt)) {
+			g->mem_sgt = mem_op().pin(job->memmgr, g->ref);
+			if (IS_ERR_OR_NULL(g->mem_sgt)) {
 				mem_op().put(job->memmgr, g->ref);
 				err = PTR_ERR(gather_sgt);
 				break;
 			}
-			gather_phys = sg_dma_address(gather_sgt->sgl);
+			g->mem_base = sg_dma_address(g->mem_sgt->sgl);
 
+			for (j = 0; j < job->num_gathers; j++) {
+				struct nvhost_job_gather *tmp =
+					&job->gathers[j];
+				if (!tmp->ref && tmp->mem_id == g->mem_id) {
+					tmp->ref = g->ref;
+					tmp->mem_base = g->mem_base;
+				}
+			}
 			/* store the gather ref into unpin array */
-			job->unpins[job->num_unpins].mem = gather_sgt;
+			job->unpins[job->num_unpins].mem = g->mem_sgt;
 			job->unpins[job->num_unpins++].h = g->ref;
 
 			gather_addr = mem_op().mmap(g->ref);
@@ -322,7 +329,6 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 			if (err)
 				break;
 		}
-		g->mem = gather_phys + g->offset;
 	}
 	wmb();
 

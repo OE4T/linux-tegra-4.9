@@ -27,6 +27,8 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/err.h>
+#include <linux/bug.h>
+#include <linux/stat.h>
 
 #include <linux/nvmap.h>
 #include "nvmap_priv.h"

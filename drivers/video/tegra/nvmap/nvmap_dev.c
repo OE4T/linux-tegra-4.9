@@ -35,6 +35,8 @@
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/nvmap.h>
+#include <linux/module.h>
+#include <linux/stat.h>
 
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
@@ -1133,7 +1135,7 @@ static int nvmap_probe(struct platform_device *pdev)
 		goto fail;
 	}
 #endif
-	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE);
+	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, 0);
 	if (!dev->vm_rgn) {
 		e = -ENOMEM;
 		dev_err(&pdev->dev, "couldn't allocate remapping region\n");

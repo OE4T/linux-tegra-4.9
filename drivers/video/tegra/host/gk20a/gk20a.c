@@ -31,6 +31,7 @@
 #include "nvhost_as.h"
 
 #include "gk20a.h"
+#include "ctrl_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_sim_gk20a.h"
 
@@ -40,7 +41,6 @@
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 
-static void nvhost_gk20a_init(struct nvhost_device *dev);
 static void nvhost_gk20a_deinit(struct nvhost_device *dev);
 static struct nvhost_hwctx_handler *
     nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 base,
@@ -78,6 +78,13 @@ struct resource gk20a_resources [] = {
 #endif
 };
 
+static const struct file_operations gk20a_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.release = gk20a_ctrl_dev_release,
+	.open = gk20a_ctrl_dev_open,
+	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
+};
+
 struct nvhost_device gk20a_device = {
 	.name	       = "gk20a",
 	/* the following are set by the platform (e.g. t124) support
@@ -91,6 +98,7 @@ struct nvhost_device gk20a_device = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
+	.ctrl_ops = &gk20a_ctrl_ops,
 	.moduleid      = NVHOST_MODULE_GPU,
 #if CONFIG_GK20A_SIM
 	.num_resources = 3, /* this is num ioresource_mem, not the sum */
@@ -574,7 +582,7 @@ int nvhost_init_gk20a_support(struct nvhost_device *dev)
 	return err;
 }
 
-static void nvhost_gk20a_init(struct nvhost_device *dev)
+void nvhost_gk20a_init(struct nvhost_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int err;
@@ -692,7 +700,6 @@ static int __devinit gk20a_probe(struct nvhost_device *dev,
 		return err;
 
 	err = nvhost_client_device_init(dev);
-
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",
 			      dev->name);

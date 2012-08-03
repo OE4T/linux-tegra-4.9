@@ -4,6 +4,7 @@ EXTRA_CFLAGS += -Idrivers/video/tegra/host
 
 nvhost-gk20a-objs  = \
 	gk20a.o \
+	ctrl_gk20a.o \
 	fifo_gk20a.o \
 	channel_gk20a.o \
 	cdma_gk20a.o \

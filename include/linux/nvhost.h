@@ -23,6 +23,7 @@
 #ifndef __LINUX_NVHOST_H
 #define __LINUX_NVHOST_H
 
+#include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/types.h>
 #include <linux/devfreq.h>
@@ -155,6 +156,11 @@ struct nvhost_device_data {
 	struct list_head client_list;	/* List of clients and rate requests */
 
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
+
+	/* device node for ctrl block */
+	struct device *ctrl_node;
+	struct cdev ctrl_cdev;
+	const struct file_operations *ctrl_ops;    /* ctrl ops for the module */
 
 	void	*priv;
 

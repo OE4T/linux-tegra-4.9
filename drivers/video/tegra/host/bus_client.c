@@ -1303,71 +1303,64 @@ static const char *get_device_name_for_dev(struct nvhost_device *dev)
 	return dev->name;
 }
 
+static struct device *nvhost_client_device_create(
+	struct platform_device *pdev, struct cdev *cdev,
+	const char *cdev_name, int devno,
+	const struct file_operations *ops)
+{
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	const char *use_dev_name;
+	struct device *dev;
+	int err;
+
+	BUG_ON(!host);
+
+	cdev_init(cdev, ops);
+	cdev->owner = THIS_MODULE;
+
+	err = cdev_add(cdev, devno, 1);
+	if (err < 0) {
+		dev_err(&pdev->dev,
+			"failed to add chan %i cdev\n", pdev->index);
+		return NULL;
+	}
+
+	return dev;
+}
+
 int nvhost_client_user_init(struct platform_device *dev)
 {
 	int err, devno;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
 	struct nvhost_channel *ch = pdata->channel;
-	struct nvhost_master *host = nvhost_get_host(dev);
-	const char *use_dev_name;
 
 	BUG_ON(!ch);
-	BUG_ON(!host);
-	// reserve 2 minor #s for both <dev> and as-<dev>
-	err = alloc_chrdev_region(&devno, 0, 2, IFACE_NAME);
+	// reserve 3 minor #s for <dev> and as-<dev> and ctrl-<dev>
+	err = alloc_chrdev_region(&devno, 0, 3, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
 	}
 
-	cdev_init(&ch->cdev, &nvhost_channelops);
-	ch->cdev.owner = THIS_MODULE;
-
-	err = cdev_add(&ch->cdev, devno, 1);
-	if (err < 0) {
-		dev_err(&dev->dev,
-			"failed to add chan %i cdev\n", pdata->index);
+	ch->node = nvhost_client_device_create(dev, &ch->cdev,
+				"", devno, &nvhost_channelops);
+	if (ch->node == NULL)
 		goto fail;
-	}
-	use_dev_name = get_device_name_for_dev(dev);
 
-	ch->node = device_create(nvhost_get_host(dev)->nvhost_class,
-				 NULL, devno, NULL,
-				 (dev->id == 0) ?
-				 IFACE_NAME "-%s" :
-				 IFACE_NAME "-%s.%d",
-				 use_dev_name, dev->id);
-
-	if (IS_ERR(ch->node)) {
-		err = PTR_ERR(ch->node);
-		dev_err(&dev->dev,
-			"failed to create %s channel device for %s\n",
-			use_dev_name, dev->name);
+	++devno;
+	ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,
+				"as-", devno, &nvhost_asops);
+	if (ch->as_node == NULL)
 		goto fail;
-	}
 
-	/* do the same as above for the address space driver */
-	cdev_init(&ch->as_cdev, &nvhost_asops);
-	ch->as_cdev.owner = THIS_MODULE;
-
-	++ devno; // create a new minor for as-<dev>
-	err = cdev_add(&ch->as_cdev, devno, 1);
-	if (err < 0) {
-		dev_err(&pdata->dev,
-			"failed to add chan %i as_cdev\n", pdata->index);
-		goto fail;
-	}
-	ch->as_node = device_create(host->nvhost_class, NULL, devno, NULL,
-				    (dev->id == 0) ?
-				    IFACE_NAME "-as-%s" :
-				    IFACE_NAME "-as-%s.%d",
-				    use_dev_name, pdata->id);
-	if (IS_ERR(ch->as_node)) {
-		err = PTR_ERR(ch->as_node);
-		dev_err(&pdata->dev,
-			"failed to create chan aspace %i device\n", pdata->index);
-		goto fail;
+	if (pdata->ctrl_ops) {
+		++devno;
+		pdata->ctrl_node = nvhost_client_device_create(dev,
+					&pdata->ctrl_cdev, "ctrl-",
+					devno, pdata->ctrl_ops);
+		if (pdata->ctrl_node == NULL)
+			goto fail;
 	}
 
 	return 0;

@@ -137,6 +137,16 @@ static bool check_ref_to_sync(struct tegra_dc_mode *mode)
 	return true;
 }
 
+static s64 calc_frametime_ns(const struct tegra_dc_mode *m)
+{
+	long h_total, v_total;
+	h_total = m->h_active + m->h_front_porch + m->h_back_porch +
+		m->h_sync_width;
+	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
+		m->v_sync_width;
+	return (s64)(div_s64(((s64)h_total * v_total * 1000000000ULL), m->pclk));
+}
+
 /* return in 1000ths of a Hertz */
 int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 {
@@ -268,6 +278,7 @@ int tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode)
 		panel_sync_rate = dc->out->dsi->rated_refresh_rate * 1000;
 
 	print_mode(dc, mode, __func__);
+	dc->frametime_ns = calc_frametime_ns(mode);
 
 	return 0;
 }

@@ -1336,12 +1336,30 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 		queue_work(system_freezable_wq, &dc->vblank_work);
 
 	if (status & FRAME_END_INT) {
+		struct timespec tm = CURRENT_TIME;
+		dc->frame_end_timestamp = timespec_to_ns(&tm);
+		wake_up(&dc->timestamp_wq);
+
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
 
 		tegra_dc_trigger_windows(dc);
 	}
+}
+
+/* XXX: Not sure if we limit look ahead to 1 frame */
+bool tegra_dc_is_within_n_vsync(struct tegra_dc *dc, s64 ts)
+{
+	return ((ts - dc->frame_end_timestamp) < dc->frametime_ns);
+}
+
+bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
+{
+	return (((new_ts - old_ts) > dc->frametime_ns)
+		|| (div_s64((new_ts - dc->frame_end_timestamp), dc->frametime_ns)
+			!= div_s64((old_ts - dc->frame_end_timestamp),
+				dc->frametime_ns)));
 }
 #endif
 
@@ -2057,6 +2075,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	mutex_init(&dc->one_shot_lock);
 	init_completion(&dc->frame_end_complete);
 	init_waitqueue_head(&dc->wq);
+	init_waitqueue_head(&dc->timestamp_wq);
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	INIT_WORK(&dc->reset_work, tegra_dc_reset_worker);
 #endif

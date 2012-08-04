@@ -113,6 +113,7 @@ struct tegra_dc {
 	void				*out_data;
 
 	struct tegra_dc_mode		mode;
+	s64				frametime_ns;
 
 	struct tegra_dc_win		windows[DC_N_WINDOWS];
 	struct tegra_dc_blend		blend;
@@ -121,6 +122,7 @@ struct tegra_dc {
 	struct tegra_dc_cmu		cmu;
 #endif
 	wait_queue_head_t		wq;
+	wait_queue_head_t		timestamp_wq;
 
 	struct mutex			lock;
 	struct mutex			one_shot_lock;
@@ -166,6 +168,7 @@ struct tegra_dc {
 	struct delayed_work		underflow_work;
 	u32				one_shot_delay_ms;
 	struct delayed_work		one_shot_work;
+	s64				frame_end_timestamp;
 };
 
 #define print_mode_info(dc, mode) do {					\

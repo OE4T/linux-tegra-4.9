@@ -58,6 +58,10 @@ struct tegra_dc_ext_win {
 	struct workqueue_struct	*flip_wq;
 
 	atomic_t		nr_pending_flips;
+
+	struct mutex		queue_lock;
+
+	struct list_head	timestamp_queue;
 };
 
 struct tegra_dc_ext {

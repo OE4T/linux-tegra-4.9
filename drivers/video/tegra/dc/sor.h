@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,6 +25,16 @@ enum {
 	trainingPattern_3		= 3,
 	trainingPattern_None		= 0xff
 };
+
+enum tegra_dc_sor_protocol {
+	SOR_DP,
+	SOR_LVDS,
+};
+
+#define SOR_LINK_SPEED_G1_62	6
+#define SOR_LINK_SPEED_G2_7	10
+#define SOR_LINK_SPEED_G5_4	20
+#define SOR_LINK_SPEED_LVDS	7
 
 struct tegra_dc_dp_link_config {
 	bool	is_valid;
@@ -66,7 +76,8 @@ struct tegra_dc_sor_data {
 	const struct tegra_dc_dp_link_config	*link_cfg;
 };
 
-#define TEGRA_SOR_TIMEOUT_MS  1000
+#define TEGRA_SOR_TIMEOUT_MS		1000
+#define TEGRA_SOR_ATTACH_TIMEOUT_MS	100000
 
 #define CHECK_RET(x)			\
 	do {				\
@@ -80,8 +91,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);
 
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
-void tegra_dc_sor_enable(struct tegra_dc_sor_data *sor);
-void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);
 
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor,
 	bool is_int);
@@ -94,8 +106,7 @@ void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
 	bool power_up);
 void tegra_dc_sor_set_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	u32 pwm_dutycycle, u32 pwm_clksrc);
-int  tegra_dc_sor_powerdown_dplanes(struct tegra_dc_sor_data *sor,
-	u32 lane_count);
+int  tegra_dc_sor_power_dplanes(struct tegra_dc_sor_data *sor, u32 lane_count);
 void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
 	u32 lane, u32 pre_emphasis, u32 drive_current, u32 tx_pu);
 void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,

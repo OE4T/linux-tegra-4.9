@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.h
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,22 +19,17 @@
 
 #include "sor.h"
 
-#define DP_AUX_DEFER_MAX_TRIES	    7
-#define DP_AUX_TIMEOUT_MAX_TRIES    2
-#define DP_POWER_ON_MAX_TRIES	    3
-#define DP_CLOCK_RECOVERY_MAX_TRIES 7
-#define DP_CLOCK_RECOVERY_TOT_TRIES 15
+#define DP_AUX_DEFER_MAX_TRIES		7
+#define DP_AUX_TIMEOUT_MAX_TRIES	2
+#define DP_POWER_ON_MAX_TRIES		3
+#define DP_CLOCK_RECOVERY_MAX_TRIES	7
+#define DP_CLOCK_RECOVERY_TOT_TRIES	15
 
-#define DP_AUX_MAX_BYTES	    16
+#define DP_AUX_MAX_BYTES		16
 
-#define DP_LCDVCC_TO_HPD_DELAY_MS   200
-#define DP_AUX_TIMEOUT_MS	    40
-#define DP_DPCP_RETRY_SLEEP_NS	    400
-
-
-#define DP_LINK_SPEED_G1_62	    6
-#define DP_LINK_SPEED_G2_7	    10
-#define DP_LINK_SPEED_G5_4	    20
+#define DP_LCDVCC_TO_HPD_DELAY_MS	200
+#define DP_AUX_TIMEOUT_MS		40
+#define DP_DPCP_RETRY_SLEEP_NS		400
 
 enum {
 	driveCurrent_Level0 = 0,

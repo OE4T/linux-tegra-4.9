@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2102, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -105,6 +105,14 @@ static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
 	writel(val, sor->base + reg * 4);
 }
 
+static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
+	unsigned long reg, u32 mask, u32 val)
+{
+	u32 reg_val = tegra_sor_readl(sor, reg);
+	reg_val &= ~mask;
+	reg_val |= val;
+	tegra_sor_writel(sor, reg, reg_val);
+}
 
 static unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
@@ -151,28 +159,19 @@ static int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
 
 	reg_val |= NV_SOR_PWR_SETTING_NEW_TRIGGER;
 	tegra_sor_writel(sor, NV_SOR_PWR, reg_val);
+
+	/* Poll to confirm it is done */
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+			NV_SOR_PWR_SETTING_NEW_DEFAULT_MASK,
+			NV_SOR_PWR_SETTING_NEW_DONE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for SOR_PWR = NEW_DONE\n");
+		return -EFAULT;
+	}
 	return 0;
 }
 
-void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor)
-{
-	/* Power down the SOR sequencer */
-	if ((tegra_dc_sor_set_power_state(sor, 0))) {
-		dev_err(&sor->dc->ndev->dev,
-			"Failed to power down SOR sequencer\n");
-		return;
-	}
-
-	/* Power down DP lanes */
-	if (tegra_dc_sor_powerdown_dplanes(sor, 0)) {
-		dev_err(&sor->dc->ndev->dev,
-			"Failed to power down dp lanes\n");
-		return;
-	}
-
-	clk_disable(sor->clk);
-}
-EXPORT_SYMBOL(tegra_dc_sor_disable);
 
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 {
@@ -274,20 +273,29 @@ void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
 EXPORT_SYMBOL(tegra_dc_sor_set_dp_lanedata);
 
 
-int tegra_dc_sor_powerdown_dplanes(struct tegra_dc_sor_data *sor,
+int tegra_dc_sor_power_dplanes(struct tegra_dc_sor_data *sor,
 	u32 lane_count)
 {
 	unsigned long reg_val;
 
-	reg_val = tegra_sor_readl(sor, NV_SOR_DP_PADCTL(sor->portnum));
+	reg_val = tegra_sor_readl(sor, NV_SOR_DP_PADCTL(sor->portnum)) | 0xf;
 
-	if (lane_count < 4)
+	switch (lane_count) {
+	case 4:
 		reg_val &= (NV_SOR_DP_PADCTL_PD_TXD_3_YES |
 			NV_SOR_DP_PADCTL_PD_TXD_2_YES);
-	if (lane_count < 2)
+		/* fall through */
+	case 2:
 		reg_val &= NV_SOR_DP_PADCTL_PD_TXD_1_YES;
-	if (lane_count < 1)
+	case 1:
 		reg_val &= NV_SOR_DP_PADCTL_PD_TXD_0_YES;
+		break;
+	default:
+		dev_dbg(&sor->dc->ndev->dev,
+			"dp: invalid lane number %d\n", lane_count);
+		return -EFAULT;
+	}
+
 	tegra_sor_writel(sor, NV_SOR_DP_PADCTL(sor->portnum), reg_val);
 
 	/* SOR lane sequencer */
@@ -306,7 +314,7 @@ int tegra_dc_sor_powerdown_dplanes(struct tegra_dc_sor_data *sor,
 	}
 	return 0;
 }
-EXPORT_SYMBOL(tegra_dc_sor_powerdown_dplanes);
+EXPORT_SYMBOL(tegra_dc_sor_power_dplanes);
 
 
 void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
@@ -329,17 +337,13 @@ void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
 EXPORT_SYMBOL(tegra_dc_sor_set_panel_power);
 
 
-void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
-	u32 pwm_dutycycle, u32 pwm_clksrc)
+static void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
+	u32 pwm_dutycycle)
 {
-	unsigned long reg_val;
-
 	tegra_sor_writel(sor, NV_SOR_PWM_DIV, pwm_div);
-
-	reg_val = pwm_dutycycle & NV_SOR_PWM_CTL_DUTY_CYCLE_MASK;
-	reg_val |= (pwm_clksrc << NV_SOR_PWM_CTL_DUTY_CYCLE_SHIFT);
-	reg_val |= NV_SOR_PWM_CTL_SETTING_NEW_TRIGGER;
-	tegra_sor_writel(sor, NV_SOR_PWM_CTL, reg_val);
+	tegra_sor_writel(sor, NV_SOR_PWM_CTL,
+		(pwm_dutycycle & NV_SOR_PWM_CTL_DUTY_CYCLE_MASK) |
+		NV_SOR_PWM_CTL_SETTING_NEW_TRIGGER);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWM_CTL,
 			NV_SOR_PWM_CTL_SETTING_NEW_SHIFT,
@@ -349,16 +353,13 @@ void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 			"dp: timeout while waiting for SOR PWM setting\n");
 	}
 }
-EXPORT_SYMBOL(tegra_dc_sor_config_pwm);
 
 static void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg)
 {
 	unsigned long reg_val;
 
-	reg_val = NV_SOR_CLK_CNTRL_DP_CLK_SEL_DIFF_DPCLK;
-	reg_val |= (cfg->link_bw << NV_SOR_CLK_CNTRL_DP_LINK_SPEED_SHIFT);
-	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, reg_val);
+	tegra_dc_sor_set_link_bandwidth(sor, cfg->link_bw);
 
 	/* TODO: SOR_NV_PDISP_SOR_REFCL */
 	/* tegra_dc_sor_set_dp_linkctl(sor, true,
@@ -395,13 +396,483 @@ static void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 		reg_val);
 }
 
-void tegra_dc_sor_enable(struct tegra_dc_sor_data *sor)
+static void tegra_dc_sor_poweron(struct tegra_dc_sor_data *sor, u32 vdd_mode)
 {
-	enable_clk(sor->clk);
-	tegra_dc_sor_set_dp_mode(sor, sor->link_cfg);
+	/* enable PLL */
+	tegra_sor_writel(sor, NV_SOR_PLL2,
+		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
+		NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN |
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE |
+		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE |
+		NV_SOR_PLL2_DCIR_PLL_RESET_OVERRIDE |
+		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
+	tegra_sor_writel(sor, NV_SOR_PLL0,
+		NV_SOR_PLL0_VCOPD_RESCIND |
+		NV_SOR_PLL0_PWR_ON);
+	tegra_sor_writel(sor, NV_SOR_PLL3, vdd_mode);
 }
-EXPORT_SYMBOL(tegra_dc_sor_enable);
 
+static inline void tegra_dc_sor_super_update(struct tegra_dc_sor_data *sor)
+{
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE0, 0);
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE0, 1);
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE0, 0);
+}
+
+static inline void tegra_dc_sor_update(struct tegra_dc_sor_data *sor)
+{
+	tegra_sor_writel(sor, NV_SOR_STATE0, 0);
+	tegra_sor_writel(sor, NV_SOR_STATE0, 1);
+	tegra_sor_writel(sor, NV_SOR_STATE0, 0);
+}
+
+static inline void tegra_dc_sor_enable_sequencer(struct tegra_dc_sor_data *sor)
+{
+	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum),
+		NV_SOR_DP_SPARE_SEQ_ENABLE_YES);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_CTL,
+		(8 << NV_SOR_SEQ_CTL_PD_PC_SHIFT) |
+		(8 << NV_SOR_SEQ_CTL_PD_PC_ALT_SHIFT));
+
+	tegra_sor_write_field(sor, NV_SOR_LANE_SEQ_CTL,
+		NV_SOR_LANE_SEQ_CTL_DELAY_DEFAULT_MASK, 0);
+}
+
+static void tegra_dc_sor_sequencer_dp_start(struct tegra_dc_sor_data *sor)
+{
+	tegra_dc_sor_enable_sequencer(sor);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		NV_SOR_SEQ_INST_HALT_TRUE |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_LANE_SEQ_RUN);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(8),
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		NV_SOR_SEQ_INST_HALT_TRUE |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_LANE_SEQ_RUN |
+		NV_SOR_SEQ_INST_SEQUENCE_DOWN);
+}
+
+static void tegra_dc_sor_sequencer_lvds_start(struct tegra_dc_sor_data *sor)
+{
+	tegra_dc_sor_enable_sequencer(sor);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_POWERDOWN |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_BLACK |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_TRISTATE |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_PIN_A_LOW |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_STOP |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_FALSE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_US |
+		0 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(1),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_POWERDOWN |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_BLACK |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_STOP |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_FALSE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_US |
+		1 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(2),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_NORMAL |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_RUN |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_FALSE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_US |
+		33 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(3),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_NORMAL |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_STOP |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_FALSE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_US |
+		205 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(4),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_NORMAL |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_FALSE |
+		NV_SOR_SEQ_INST_PIN_B_HIGH |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_STOP |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_FALSE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		0 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(5),
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLACK_DATA_NORMAL |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_FALSE |
+		NV_SOR_SEQ_INST_PIN_B_HIGH |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_SEQUENCE_UP |
+		NV_SOR_SEQ_INST_LANE_SEQ_STOP |
+		NV_SOR_SEQ_INST_PDPORT_NO |
+		NV_SOR_SEQ_INST_PDPLL_NO |
+		NV_SOR_SEQ_INST_HALT_TRUE |
+		NV_SOR_SEQ_INST_WAIT_UNITS_US |
+		0 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+			NV_SOR_PWR_SETTING_NEW_DEFAULT_MASK,
+			NV_SOR_PWR_SETTING_NEW_DONE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for SOR_PWR = DONE\n");
+		return;
+	}
+}
+
+static void tegra_dc_sor_sequencer_lvds_stop(struct tegra_dc_sor_data *sor)
+{
+	tegra_dc_sor_enable_sequencer(sor);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		1 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(1),
+		NV_SOR_SEQ_INST_BLANK_V_INACTIVE |
+		NV_SOR_SEQ_INST_BLANK_H_INACTIVE |
+		NV_SOR_SEQ_INST_BLANK_DE_INACTIVE |
+		NV_SOR_SEQ_INST_BLACK_DATA_BLACK |
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		1 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT);
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(2),
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_TRISTATE);
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(3),
+		NV_SOR_SEQ_INST_LANE_SEQ_RUN |
+		NV_SOR_SEQ_INST_SEQUENCE_DOWN);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+			NV_SOR_PWR_SETTING_NEW_DEFAULT_MASK,
+			NV_SOR_PWR_SETTING_NEW_DONE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for SOR_PWR = DONE\n");
+		return;
+	}
+}
+
+static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
+	bool is_lvds)
+{
+	const struct tegra_dc_out_pin	*pins	  = sor->dc->out->out_pins;
+	const struct tegra_dc_mode	*dc_mode  = sor->dc->out->modes;
+
+	const int	head_num = sor->dc->ndev->id;
+	u32		reg_val  = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
+	u32		vtotal, htotal;
+	u32		vsync_end, hsync_end;
+	u32		vblank_end, hblank_end;
+	u32		vblank_start, hblank_start;
+	int		i;
+
+	reg_val |= is_lvds ? NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM :
+		NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
+	reg_val |= NV_SOR_STATE1_ASY_SUBOWNER_BOTH;
+
+	for (i = 0; pins && (i < sor->dc->out->n_out_pins); i++) {
+		switch (pins[i].name) {
+		case TEGRA_DC_OUT_PIN_DATA_ENABLE:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				reg_val |=
+				NV_SOR_STATE1_ASY_DEPOL_NEGATIVE_TRUE;
+			break;
+		case TEGRA_DC_OUT_PIN_H_SYNC:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				reg_val |=
+				NV_SOR_STATE1_ASY_HSYNCPOL_NEGATIVE_TRUE;
+			break;
+		case TEGRA_DC_OUT_PIN_V_SYNC:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				reg_val |=
+				NV_SOR_STATE1_ASY_VSYNCPOL_NEGATIVE_TRUE;
+			break;
+		default:	/* Ignore other pin setting */
+			break;
+		}
+	}
+
+	reg_val |= (sor->dc->pdata->fb->bits_per_pixel > 16) ?
+		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
+		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
+
+	BUG_ON(!dc_mode);
+	vtotal = dc_mode->v_sync_width + dc_mode->v_back_porch +
+		dc_mode->v_active + dc_mode->v_front_porch;
+	htotal = dc_mode->h_sync_width + dc_mode->h_back_porch +
+		dc_mode->h_active + dc_mode->h_front_porch;
+	tegra_sor_writel(sor, NV_HEAD_STATE1(head_num),
+		vtotal << NV_HEAD_STATE1_VTOTAL_SHIFT |
+		htotal << NV_HEAD_STATE1_HTOTAL_SHIFT);
+
+	vsync_end = dc_mode->v_sync_width - dc_mode->v_ref_to_sync;
+	hsync_end = dc_mode->h_sync_width - dc_mode->h_ref_to_sync;
+	tegra_sor_writel(sor, NV_HEAD_STATE2(head_num),
+		vsync_end << NV_HEAD_STATE2_VSYNC_END_SHIFT |
+		hsync_end << NV_HEAD_STATE2_HSYNC_END_SHIFT);
+
+	vblank_end = dc_mode->v_sync_width + dc_mode->v_back_porch
+		- dc_mode->v_ref_to_sync;
+	hblank_end = dc_mode->h_sync_width + dc_mode->h_back_porch
+		- dc_mode->h_ref_to_sync;
+	tegra_sor_writel(sor, NV_HEAD_STATE3(head_num),
+		vblank_end << NV_HEAD_STATE3_VBLANK_END_SHIFT |
+		hblank_end << NV_HEAD_STATE3_HBLANK_END_SHIFT);
+
+	vblank_start = vblank_end + dc_mode->v_active;
+	hblank_start = hblank_end + dc_mode->h_active;
+	tegra_sor_writel(sor, NV_HEAD_STATE4(head_num),
+		vblank_start << NV_HEAD_STATE4_VBLANK_START_SHIFT |
+		hblank_start << NV_HEAD_STATE4_HBLANK_START_SHIFT);
+
+	/* TODO: setup rotclk */
+
+	tegra_dc_sor_config_pwm(sor, 1024, 1024);
+}
+
+void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
+{
+	unsigned long reg_val;
+
+	tegra_dc_sor_poweron(sor, NV_SOR_PLL3_PLLVDD_MODE_V3_3);
+	tegra_dc_sor_power_dplanes(sor, sor->link_cfg->lane_count);
+	tegra_dc_sor_set_dp_mode(sor, sor->link_cfg);
+
+	tegra_dc_sor_sequencer_dp_start(sor);
+	tegra_dc_sor_set_power_state(sor, 1);
+	tegra_dc_sor_config_panel(sor, false);
+	tegra_dc_sor_update(sor);
+
+	reg_val = NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
+		NV_SOR_SUPER_STATE1_ATTACHED_NO;
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1, reg_val);
+	tegra_dc_sor_super_update(sor);
+
+	reg_val |= NV_SOR_SUPER_STATE1_ATTACHED_YES;
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1, reg_val);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+			NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
+			NV_SOR_TEST_ATTACHED_TRUE,
+			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for ATTACHED = TRUE\n");
+	}
+}
+EXPORT_SYMBOL(tegra_dc_sor_enable_dp);
+
+void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor)
+{
+	tegra_dc_sor_poweron(sor, NV_SOR_PLL3_PLLVDD_MODE_V1_8);
+	tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+		NV_SOR_DP_SPARE_SOR_CLK_SEL_DEFAULT_MASK,
+		NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK);
+
+	/* TODO: check if balanced mode is needed
+		 check ROTDAT setting */
+	tegra_sor_writel(sor, NV_SOR_LVDS,
+		NV_SOR_LVDS_LINKACTB_DISABLE |
+		NV_SOR_LVDS_PD_TXCB_DISABLE |
+		NV_SOR_LVDS_PD_TXDB_3_DISABLE |
+		NV_SOR_LVDS_PD_TXDB_2_DISABLE |
+		NV_SOR_LVDS_PD_TXDB_1_DISABLE |
+		NV_SOR_LVDS_PD_TXDB_0_DISABLE |
+		NV_SOR_LVDS_PD_TXDA_2_ENABLE |
+		NV_SOR_LVDS_PD_TXDA_1_ENABLE |
+		NV_SOR_LVDS_PD_TXDA_0_ENABLE);
+
+	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
+	tegra_dc_sor_config_panel(sor, true);
+	tegra_dc_sor_update(sor);
+
+	/* Attaching */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+			NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
+			NV_SOR_TEST_ATTACHED_TRUE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for ATTACHED = TRUE\n");
+		return;
+	}
+
+	/* OR mode: normal */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	/* then awake */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	/* TODO: check if display controller needs to start now*/
+	tegra_dc_sor_sequencer_lvds_start(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+			NV_SOR_PWR_MODE_DEFAULT_MASK,
+			NV_SOR_PWR_MODE_NORMAL,
+			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for ATTACHED = TRUE\n");
+		return;
+	}
+}
+EXPORT_SYMBOL(tegra_dc_sor_enable_lvds);
+
+void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
+{
+	/* #1: safe mode */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+			NV_SOR_PWR_MODE_DEFAULT_MASK,
+			NV_SOR_PWR_MODE_SAFE,
+			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for SOR_PWR = NEW_DONE\n");
+		return;
+	}
+
+	if (is_lvds)
+		tegra_dc_sor_sequencer_lvds_stop(sor);
+
+	/* #2: sleep */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+			NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+			NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for ACT_HEAD_OPMODE = SLEEP\n");
+		return;
+	}
+
+	/* #3: detach */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+			NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
+			NV_SOR_TEST_ATTACHED_FALSE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"dc timeout waiting for ATTACHED = FALSE\n");
+		return;
+	}
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_STATE1_ASY_OWNER_NONE |
+		NV_SOR_STATE1_ASY_SUBOWNER_NONE |
+		NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM);
+	tegra_dc_sor_update(sor);
+
+	/* TODO: need to program:
+	   DISP_WIN_OPTIONS(SOR_DISABLE)
+	   DISPLAY_COMMAND(DISPLAY_CTRL_MODE_STOP)
+	   DISPLAY_POWER_CONTROL(POWER_ENABLE_DISABLE)
+	 */
+
+	/* Power down the SOR sequencer */
+	if ((tegra_dc_sor_set_power_state(sor, 0))) {
+		dev_err(&sor->dc->ndev->dev,
+			"Failed to power down SOR sequencer\n");
+		return;
+	}
+
+	/* Power down DP lanes */
+	if (!is_lvds && tegra_dc_sor_power_dplanes(sor, 0)) {
+		dev_err(&sor->dc->ndev->dev,
+			"Failed to power down dp lanes\n");
+		return;
+	}
+
+	clk_disable(sor->sor_clk);
+}
+EXPORT_SYMBOL(tegra_dc_sor_disable);
 
 int tegra_dc_sor_set_dp_packet(struct tegra_dc_sor_data *sor,
 	u8 *packet)

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.c
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -466,15 +466,15 @@ static int tegra_dc_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 static bool tegra_dc_dp_lower_config(struct tegra_dc_dp_data *dp,
 	struct tegra_dc_dp_link_config *cfg)
 {
-	if (cfg->link_bw == DP_LINK_SPEED_G1_62) {
-		if (cfg->max_link_bw > DP_LINK_SPEED_G1_62)
-			cfg->link_bw = DP_LINK_SPEED_G2_7;
+	if (cfg->link_bw == SOR_LINK_SPEED_G1_62) {
+		if (cfg->max_link_bw > SOR_LINK_SPEED_G1_62)
+			cfg->link_bw = SOR_LINK_SPEED_G2_7;
 		cfg->lane_count /= 2;
-	} else if (cfg->link_bw == DP_LINK_SPEED_G2_7)
-		cfg->link_bw = DP_LINK_SPEED_G1_62;
-	else if (cfg->link_bw == DP_LINK_SPEED_G5_4) {
+	} else if (cfg->link_bw == SOR_LINK_SPEED_G2_7)
+		cfg->link_bw = SOR_LINK_SPEED_G1_62;
+	else if (cfg->link_bw == SOR_LINK_SPEED_G5_4) {
 		if (cfg->lane_count == 1) {
-			cfg->link_bw = DP_LINK_SPEED_G2_7;
+			cfg->link_bw = SOR_LINK_SPEED_G2_7;
 			cfg->lane_count = cfg->max_lane_count;
 		} else
 			cfg->lane_count /= 2;
@@ -503,8 +503,8 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	u64	activecount_f;
 	u32	activecount;
 	u32	activepolarity;
-	u32	activefrac;
 	u64	approx_value_f;
+	u32	activefrac		  = 0;
 	u64	accumulated_error_f	  = 0;
 	u32	lowest_neg_activecount	  = 0;
 	u32	lowest_neg_activepolarity = 0;
@@ -699,7 +699,7 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp,
 	tegra_dc_sor_set_lane_count(dp->sor, cfg->lane_count);
 
 	/* Also power down lanes that will not be used */
-	return tegra_dc_sor_powerdown_dplanes(dp->sor, cfg->lane_count);
+	return tegra_dc_sor_power_dplanes(dp->sor, cfg->lane_count);
 }
 
 static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
@@ -806,7 +806,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 
 
 static int tegra_dc_dpcd_read_lane_request(struct tegra_dc_dp_data *dp,
-	u32 lane_count, u8 *edc, u8* c2)
+	u32 lane_count, u8 *edc, u8 *c2)
 {
 	u32 size;
 	int ret;
@@ -1413,7 +1413,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	}
 
 	/* enable SOR by programming the watermark/v/hblank_sym etc */
-	tegra_dc_sor_enable(dp->sor);
+	tegra_dc_sor_enable_dp(dp->sor);
 }
 
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
@@ -1437,7 +1437,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dc_dpaux_disable(dp);
 
 	/* Power down SOR */
-	tegra_dc_sor_disable(dp->sor);
+	tegra_dc_sor_disable(dp->sor, false);
 
 	clk_disable(dp->clk);
 	/* TODO: Now power down the panel -- through GPIO */

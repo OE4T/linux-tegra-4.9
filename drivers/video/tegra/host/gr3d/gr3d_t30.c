@@ -125,6 +125,16 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 			NVHOST_OPCODE_NOOP);
 
+	/* invalidate the FDC to prevent cache-coherency issues across GPUs
+	   note that we assume FDC_CONTROL_0 is left in the reset state by all
+	   contexts.  the invalidate bit will clear itself, so the register
+	   should be unchanged after this */
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_imm(AR3D_FDC_CONTROL_0,
+			AR3D_FDC_CONTROL_0_RESET_VAL
+				| AR3D_FDC_CONTROL_0_INVALIDATE),
+		NVHOST_OPCODE_NOOP);
+
 	/* set register set 0 and 1 register read memory output addresses,
 	   and send their reads to memory */
 
@@ -132,7 +142,7 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 		nvhost_opcode_imm(AR3D_GSHIM_WRITE_MASK, 2),
 		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
 	nvhost_cdma_push(cdma,
-		nvhost_opcode_nonincr(0x904, 1),
+		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
 		ctx->restore_phys + restore_set1_offset * 4);
 
 	nvhost_cdma_push(cdma,

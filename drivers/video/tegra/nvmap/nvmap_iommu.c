@@ -52,15 +52,8 @@ err_out:
 
 void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 {
-	int i;
-	size_t count = area->iovm_length >> PAGE_SHIFT;
-
-	for (i = 0; i < count; i++) {
-		dma_addr_t iova;
-
-		iova = area->iovm_start + i * PAGE_SIZE;
-		dma_unmap_page(area->dev, iova, PAGE_SIZE, DMA_NONE);
-	}
+	dma_unmap_page(area->dev,
+		       area->iovm_start, area->iovm_length, DMA_NONE);
 	kfree(area);
 }
 

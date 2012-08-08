@@ -211,8 +211,9 @@ static struct resource msenc_resources[] = {
 	},
 };
 
-static struct nvhost_device tegra_msenc02_device = {
+static struct nvhost_device tegra_msenc03_device = {
 	.name	       = "msenc",
+	.version       = NVHOST_ENCODE_MSENC_VER(3, 0),
 	.id            = -1,
 	.resource      = msenc_resources,
 	.num_resources = ARRAY_SIZE(msenc_resources),
@@ -251,6 +252,7 @@ static struct resource tsec_resources[] = {
 static struct nvhost_device tegra_tsec01_device = {
 	/* channel 7 */
 	.name          = "tsec",
+	.version       = NVHOST_ENCODE_TSEC_VER(1,0),
 	.id            = -1,
 	.resource      = tsec_resources,
 	.num_resources = ARRAY_SIZE(tsec_resources),
@@ -272,7 +274,7 @@ static struct nvhost_device *t14_devices[] = {
 	&tegra_gr2d03_device,
 	&tegra_isp01_device,
 	&tegra_vi01_device,
-	&tegra_msenc02_device,
+	&tegra_msenc03_device,
 	&tegra_dsi01_device,
 	&tegra_tsec01_device,
 };

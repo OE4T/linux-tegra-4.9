@@ -54,10 +54,15 @@ static char *msenc_get_fw_name(struct platform_device *dev)
 		return NULL;
 
 	decode_msenc_ver(pdata->version, &maj, &min);
-	if (maj == 2) {
+	switch (maj) {
+	case 2:
 		/* there are no minor versions so far for maj==2 */
 		sprintf(fw_name, "nvhost_msenc02.fw");
-	} else {
+		break;
+	case 3:
+		sprintf(fw_name, "nvhost_msenc03%d.fw", min);
+		break;
+	default:
 		kfree(fw_name);
 		return NULL;
 	}

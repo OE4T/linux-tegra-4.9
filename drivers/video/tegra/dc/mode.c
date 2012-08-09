@@ -199,18 +199,21 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 
 	/* TODO: MIPI/CRT/HDMI clock cals */
 
-	val = DISP_DATA_FORMAT_DF1P1C;
+	val = 0;
+	if (!(dc->out->type == TEGRA_DC_OUT_DSI ||
+		dc->out->type == TEGRA_DC_OUT_HDMI)) {
+		val = DISP_DATA_FORMAT_DF1P1C;
 
-	if (dc->out->align == TEGRA_DC_ALIGN_MSB)
-		val |= DISP_DATA_ALIGNMENT_MSB;
-	else
-		val |= DISP_DATA_ALIGNMENT_LSB;
+		if (dc->out->align == TEGRA_DC_ALIGN_MSB)
+			val |= DISP_DATA_ALIGNMENT_MSB;
+		else
+			val |= DISP_DATA_ALIGNMENT_LSB;
 
-	if (dc->out->order == TEGRA_DC_ORDER_RED_BLUE)
-		val |= DISP_DATA_ORDER_RED_BLUE;
-	else
-		val |= DISP_DATA_ORDER_BLUE_RED;
-
+		if (dc->out->order == TEGRA_DC_ORDER_RED_BLUE)
+			val |= DISP_DATA_ORDER_RED_BLUE;
+		else
+			val |= DISP_DATA_ORDER_BLUE_RED;
+	}
 	tegra_dc_writel(dc, val, DC_DISP_DISP_INTERFACE_CONTROL);
 
 	rate = tegra_dc_clk_get_rate(dc);

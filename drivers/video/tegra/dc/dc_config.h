@@ -110,6 +110,7 @@
 /* Define the offset for TEGRA_DC_FEATURE_LAYOUT_TYPE. */
 #define PITCHED_LAYOUT	0
 #define TILED_LAYOUT	1
+#define BLOCK_LINEAR	2
 
 /* Define the offset for TEGRA_DC_FEATURE_BLEND_TYPE. */
 #define BLEND_GENERATION	0
@@ -123,6 +124,7 @@ enum {
 	HAS_GEN2_BLEND,
 	GET_WIN_FORMATS,
 	GET_WIN_SIZE,
+	HAS_BLOCKLINEAR,
 };
 
 enum tegra_dc_feature_option {
@@ -149,6 +151,7 @@ struct tegra_dc_feature {
 
 int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx);
+int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation);
 int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx);
 

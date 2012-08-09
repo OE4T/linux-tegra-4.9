@@ -585,6 +585,14 @@
 
 #endif
 
+#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
+
+#define DC_WIN_BUFFER_SURFACE_KIND		0xdcb
+#define DC_WIN_BUFFER_SURFACE_PITCH		(0 << 0)
+#define DC_WIN_BUFFER_SURFACE_TILED		(1 << 0)
+#define DC_WIN_BUFFER_SURFACE_BL_16B2		(1 << 1)
+
+#endif
 
 #define DC_WIN_HP_FETCH_CONTROL			0x714
 

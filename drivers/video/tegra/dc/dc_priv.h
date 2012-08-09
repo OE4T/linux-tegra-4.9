@@ -23,6 +23,7 @@
 #include "dc_priv_defs.h"
 #ifndef CREATE_TRACE_POINTS
 # include <trace/events/display.h>
+#define WIN_IS_BLOCKLINEAR(win)	((win)->flags & TEGRA_WIN_FLAG_BLOCKLINEAR)
 #endif
 #include <mach/powergate.h>
 #include <video/tegra_dc_ext.h>

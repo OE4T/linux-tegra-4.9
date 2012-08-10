@@ -34,9 +34,14 @@
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
+#define TSEC_KEY_LENGTH			16
+#define TSEC_KEY_RESERVE		256
 
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
+
+/* The key value in ascii hex */
+static u8 otf_key[TSEC_KEY_LENGTH];
 
 /* caller is responsible for freeing */
 static char *tsec_get_fw_name(struct nvhost_device *dev)
@@ -61,7 +66,6 @@ static char *tsec_get_fw_name(struct nvhost_device *dev)
 
 	return fw_name;
 }
-
 
 static int tsec_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 {
@@ -182,6 +186,7 @@ static int tsec_setup_ucode_image(struct nvhost_device *dev,
 	/* image data is little endian. */
 	struct tsec_ucode_v1 ucode;
 	int w;
+	u32 tsec_key_offset;
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size / sizeof(u32); w++)
@@ -207,12 +212,12 @@ static int tsec_setup_ucode_image(struct nvhost_device *dev,
 	}
 
 	dev_dbg(&dev->dev,
-		"ucode bin header: magic:0x%x ver:%d size:%d",
+		"ucode bin header: magic:0x%x ver:%d size:%d\n",
 		ucode.bin_header->bin_magic,
 		ucode.bin_header->bin_ver,
 		ucode.bin_header->bin_size);
 	dev_dbg(&dev->dev,
-		"ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
+		"ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d\n",
 		ucode.bin_header->os_bin_header_offset,
 		ucode.bin_header->os_bin_data_offset,
 		ucode.bin_header->os_bin_size);
@@ -220,16 +225,29 @@ static int tsec_setup_ucode_image(struct nvhost_device *dev,
 		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
 
 	dev_dbg(&dev->dev,
-		"os ucode header: os code (offset,size): 0x%x, 0x%x",
+		"os ucode header: os code (offset,size): 0x%x, 0x%x\n",
 		ucode.os_header->os_code_offset,
 		ucode.os_header->os_code_size);
 	dev_dbg(&dev->dev,
-		"os ucode header: os data (offset,size): 0x%x, 0x%x",
+		"os ucode header: os data (offset,size): 0x%x, 0x%x\n",
 		ucode.os_header->os_data_offset,
 		ucode.os_header->os_data_size);
 	dev_dbg(&dev->dev,
-		"os ucode header: num apps: %d",
+		"os ucode header: num apps: %d\n",
 		ucode.os_header->num_apps);
+
+	/* make space for key - key is 16 bytes, but we move 256 bytes
+	 * because firmware needs to be 256 byte aligned */
+	tsec_key_offset = ucode.bin_header->os_bin_data_offset;
+	memmove(((void *)ucode_ptr) + tsec_key_offset + TSEC_KEY_RESERVE,
+			((void *)ucode_ptr) + tsec_key_offset,
+			ucode.bin_header->os_bin_size);
+	ucode.bin_header->os_bin_data_offset += TSEC_KEY_RESERVE;
+
+	/* Copy key to be the 16 bytes before the firmware */
+	tsec_key_offset += TSEC_KEY_RESERVE - TSEC_KEY_LENGTH;
+	memcpy(((void *)ucode_ptr) + tsec_key_offset,
+			otf_key, TSEC_KEY_LENGTH);
 
 	m->os.size = ucode.bin_header->os_bin_size;
 	m->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
@@ -255,8 +273,8 @@ int tsec_read_ucode(struct nvhost_device *dev, const char *fw_name)
 
 	/* allocate pages for ucode */
 	m->mem_r = mem_op().alloc(nvhost_get_host(dev)->memmgr,
-				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, mem_mgr_flag_uncacheable);
+			     roundup(ucode_fw->size+256, PAGE_SIZE),
+			     PAGE_SIZE, mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
 		err = -ENOMEM;
@@ -398,6 +416,30 @@ static struct nvhost_driver tsec_driver = {
 		.name = "tsec",
 	}
 };
+
+static int __init tsec_key_setup(char *line)
+{
+	int i;
+	u8 tmp[] = {0,0,0};
+	pr_debug("tsec otf key: %s\n", line);
+
+	if (strlen(line) != TSEC_KEY_LENGTH*2) {
+		pr_warn("invalid tsec key: %s\n", line);
+		return 0;
+	}
+
+	for (i = 0; i < TSEC_KEY_LENGTH; i++) {
+		int err;
+		memcpy(tmp, &line[i*2], 2);
+		err = kstrtou8(tmp, 16, &otf_key[i]);
+		if (err) {
+			pr_warn("cannot read tsec otf key: %d", err);
+			break;
+		}
+	}
+	return 0;
+}
+__setup("otf_key=", tsec_key_setup);
 
 static int __init tsec_init(void)
 {

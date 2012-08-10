@@ -77,10 +77,6 @@ struct tsec_ucode_os_header_v1 {
 	u32 os_data_offset;
 	u32 os_data_size;
 	u32 num_apps;
-	struct tsec_ucode_os_code_header_v1 *app_code;
-	struct tsec_ucode_os_code_header_v1 *app_data;
-	u32 *os_ovl_offset;
-	u32 *of_ovl_size;
 };
 
 struct tsec_ucode_v1 {

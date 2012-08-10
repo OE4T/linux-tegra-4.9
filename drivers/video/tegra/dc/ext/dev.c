@@ -254,8 +254,12 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
 		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
 #endif
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR)
+#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
+	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR) {
 		win->flags |= TEGRA_WIN_FLAG_BLOCKLINEAR;
+		win->block_height_log2 = flip_win->attr.block_height_log2;
+	}
+#endif
 	win->fmt = flip_win->attr.pixformat;
 	win->x.full = flip_win->attr.x;
 	win->y.full = flip_win->attr.y;
@@ -284,7 +288,6 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
 
-	/* win->blockheight = flip_win->attr.block_height_log2; */
 	err = tegra_dc_ext_check_windowattr(ext, win);
 	if (err < 0)
 		dev_err(&ext->dc->ndev->dev,

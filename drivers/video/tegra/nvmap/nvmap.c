@@ -287,10 +287,16 @@ int nvmap_pin_ids(struct nvmap_client *client,
 					   "handle %p\n",
 					   current->group_leader->comm, h[i]);
 			} else {
-				h[i] = NULL;
 				ret = -EPERM;
+				nr = i;
+				break;
 			}
 			nvmap_ref_lock(client);
+		}
+		if (!h[i]->alloc) {
+			ret = -EFAULT;
+			nr = i + 1;
+			break;
 		}
 	}
 	nvmap_ref_unlock(client);

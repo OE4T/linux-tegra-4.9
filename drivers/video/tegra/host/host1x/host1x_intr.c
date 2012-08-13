@@ -141,7 +141,7 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	for (reg = 0; reg <= BIT_WORD(dev->info.nb_pts) * REGISTER_STRIDE;
 			reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
-		writel(0, sync_regs +
+		writel(0xffffffffu, sync_regs +
 				host1x_sync_syncpt_thresh_int_disable_r() +
 				reg);
 

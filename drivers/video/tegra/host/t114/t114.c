@@ -134,8 +134,10 @@ static struct nvhost_device tegra_gr3d03_device = {
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.clocks = {{"gr3d", UINT_MAX},
 			{"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.powergate_ids = { TEGRA_POWERGATE_3D, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.can_powergate = true,
+	.powergate_delay = 250,
 	.moduleid      = NVHOST_MODULE_NONE,
 };
 

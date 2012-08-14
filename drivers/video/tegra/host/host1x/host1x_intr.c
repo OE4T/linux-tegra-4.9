@@ -26,7 +26,6 @@
 
 #include "nvhost_intr.h"
 #include "dev.h"
-#include "host1x_actmon.h"
 
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
@@ -190,7 +189,7 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + host1x_sync_hintstatus_r());
 	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
 
-	host1x_actmon_process_isr(stat, sync_regs);
+	actmon_op().isr(stat, sync_regs);
 
 	if (host1x_sync_hintstatus_ext_ip_read_int_v(ext_stat)) {
 		addr = readl(sync_regs + host1x_sync_ip_read_timeout_addr_r());

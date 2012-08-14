@@ -25,7 +25,6 @@
 #include "bus.h"
 #include "dev.h"
 #include "debug.h"
-#include "host1x/host1x_actmon.h"
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "chip_support.h"
@@ -198,7 +197,8 @@ static const struct file_operations nvhost_debug_fops = {
 
 static int actmon_below_wmark_show(struct seq_file *s, void *unused)
 {
-	seq_printf(s, "%d\n", host1x_actmon_below_wmark_count());
+	struct nvhost_master *host = s->private;
+	seq_printf(s, "%d\n", actmon_op().below_wmark_count(host));
 	return 0;
 }
 
@@ -216,7 +216,8 @@ static const struct file_operations actmon_below_wmark_fops = {
 
 static int actmon_above_wmark_show(struct seq_file *s, void *unused)
 {
-	seq_printf(s, "%d\n", host1x_actmon_above_wmark_count());
+	struct nvhost_master *host = s->private;
+	seq_printf(s, "%d\n", actmon_op().above_wmark_count(host));
 	return 0;
 }
 
@@ -237,7 +238,7 @@ static int actmon_avg_show(struct seq_file *s, void *unused)
 	u32 avg;
 	int err;
 
-	err = host1x_actmon_avg(host, &avg);
+	err = actmon_op().read_avg(host, &avg);
 	if (!err)
 		seq_printf(s, "%d\n", avg);
 	return err;

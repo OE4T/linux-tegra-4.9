@@ -20,15 +20,15 @@
 
 #include <linux/nvhost.h>
 #include <linux/io.h>
-#include "host1x02_hardware.h"
 #include "dev.h"
+#include "chip_support.h"
 
 /* Set to 1 if actmon has been initialized */
 static int host1x_actmon_initialized;
 static int above_wmark;
 static int below_wmark;
 
-int host1x_actmon_init(struct nvhost_master *host)
+static int host1x_actmon_init(struct nvhost_master *host)
 {
 	void __iomem *sync_regs = host->sync_aperture;
 	u32 val;
@@ -70,7 +70,7 @@ int host1x_actmon_init(struct nvhost_master *host)
 	return 0;
 }
 
-void host1x_actmon_deinit(struct nvhost_master *host)
+static void host1x_actmon_deinit(struct nvhost_master *host)
 {
 	void __iomem *sync_regs = host->sync_aperture;
 	u32 val;
@@ -89,40 +89,39 @@ void host1x_actmon_deinit(struct nvhost_master *host)
 	host1x_actmon_initialized = 0;
 }
 
-int host1x_actmon_avg(struct nvhost_master *host, u32 *val)
+static int host1x_actmon_avg(struct nvhost_master *host, u32 *val)
 {
 	void __iomem *sync_regs = host->sync_aperture;
 
-	if (!host1x_actmon_initialized)
-		return -ENODEV;
-
+	nvhost_module_busy(host->dev);
 	*val = readl(sync_regs + host1x_sync_actmon_avg_count_r());
+	nvhost_module_idle(host->dev);
 	rmb();
 
 	return 0;
 }
 
-void host1x_actmon_intr_above_wmark(void)
+static void host1x_actmon_intr_above_wmark(void)
 {
 	above_wmark++;
 }
 
-void host1x_actmon_intr_below_wmark(void)
+static void host1x_actmon_intr_below_wmark(void)
 {
 	below_wmark++;
 }
 
-int host1x_actmon_above_wmark_count(void)
+static int host1x_actmon_above_wmark_count(struct nvhost_master *host)
 {
 	return above_wmark;
 }
 
-int host1x_actmon_below_wmark_count(void)
+static int host1x_actmon_below_wmark_count(struct nvhost_master *host)
 {
 	return below_wmark;
 }
 
-int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs)
+static int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs)
 {
 	if (host1x_sync_hintstatus_gr3d_actmon_intr_v(hintstatus)) {
 		u32 actmon =
@@ -137,3 +136,12 @@ int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs)
 	} else
 		return 0;
 }
+
+static const struct nvhost_actmon_ops host1x_actmon_ops = {
+	.init = host1x_actmon_init,
+	.deinit = host1x_actmon_deinit,
+	.read_avg = host1x_actmon_avg,
+	.above_wmark_count = host1x_actmon_above_wmark_count,
+	.below_wmark_count = host1x_actmon_below_wmark_count,
+	.isr = host1x_actmon_process_isr,
+};

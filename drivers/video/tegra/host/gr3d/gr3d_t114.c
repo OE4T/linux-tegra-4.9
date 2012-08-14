@@ -28,6 +28,7 @@
 #include "nvhost_channel.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "scale3d.h"
 
 #include <linux/slab.h>
 
@@ -357,4 +358,29 @@ struct nvhost_hwctx_handler * __init nvhost_gr3d_t114_ctxhandler_init(
 	p->h.put = nvhost_3dctx_put;
 
 	return &p->h;
+}
+
+void nvhost_gr3d_t114_init(struct nvhost_device *dev)
+{
+	actmon_op().init(nvhost_get_host(dev));
+	nvhost_scale3d_init(dev);
+}
+
+void nvhost_gr3d_t114_deinit(struct nvhost_device *dev)
+{
+	nvhost_scale3d_deinit(dev);
+	actmon_op().deinit(nvhost_get_host(dev));
+}
+
+int nvhost_gr3d_t114_prepare_power_off(struct nvhost_device *dev)
+{
+	actmon_op().deinit(nvhost_get_host(dev));
+	return nvhost_gr3d_prepare_power_off(dev);
+}
+
+void nvhost_gr3d_t114_finalize_power_on(struct nvhost_device *dev)
+{
+	/* actmon needs to be reinitialized when we come back from
+	 * power gated state */
+	actmon_op().init(nvhost_get_host(dev));
 }

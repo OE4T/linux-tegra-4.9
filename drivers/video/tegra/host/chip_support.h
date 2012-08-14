@@ -153,6 +153,15 @@ struct nvhost_mem_ops {
 	void (*munmap)(struct mem_handle *, void *);
 };
 
+struct nvhost_actmon_ops {
+	int (*init)(struct nvhost_master *host);
+	void (*deinit)(struct nvhost_master *host);
+	int (*read_avg)(struct nvhost_master *host, u32 *val);
+	int (*above_wmark_count)(struct nvhost_master *host);
+	int (*below_wmark_count)(struct nvhost_master *host);
+	int (*isr)(u32 hintstatus, void __iomem *sync_regs);
+};
+
 struct nvhost_chip_support {
 	struct nvhost_channel_ops channel;
 	struct nvhost_cdma_ops cdma;
@@ -162,6 +171,7 @@ struct nvhost_chip_support {
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
 	struct nvhost_mem_ops mem;
+	struct nvhost_actmon_ops actmon;
 };
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
@@ -174,6 +184,7 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define cdma_op()		nvhost_get_chip_ops()->cdma
 #define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
 #define mem_op()		(nvhost_get_chip_ops()->mem)
+#define actmon_op()		(nvhost_get_chip_ops()->actmon)
 
 int nvhost_init_chip_support(struct nvhost_master *host);
 

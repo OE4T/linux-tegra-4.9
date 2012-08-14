@@ -31,7 +31,6 @@
 #include "t114.h"
 #include "host1x/host1x02_hardware.h"
 #include "host1x/host1x_syncpt.h"
-#include "host1x/host1x_actmon.h"
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t114.h"
 #include "gr3d/scale3d.h"
@@ -303,6 +302,7 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(
 #include "host1x/host1x_debug.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
+#include "host1x/host1x_actmon.c"
 
 int nvhost_init_t114_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
@@ -322,9 +322,7 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 		return err;
 	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
-
-	/* Initialize T114 3D actmon */
-	err = host1x_actmon_init(host);
+	op->actmon = host1x_actmon_ops;
 
 	return 0;
 }

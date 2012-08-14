@@ -597,6 +597,9 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 	int ret = 0;
 	u32 val = 0;
 
+	if (nblocks > SE_MAX_LAST_BLOCK_SIZE)
+		return -EINVAL;
+
 	/* clear any pending interrupts */
 	val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 	se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);

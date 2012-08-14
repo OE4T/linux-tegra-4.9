@@ -33,6 +33,7 @@
 #define SE_MAX_DST_SG_COUNT		50
 
 #define TEGRA_SE_KEYSLOT_COUNT		16
+#define SE_MAX_LAST_BLOCK_SIZE	0xFFFFF
 
 /* SE register definitions */
 #define SE_CONFIG_REG_OFFSET		0x014

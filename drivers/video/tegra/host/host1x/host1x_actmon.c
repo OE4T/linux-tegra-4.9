@@ -43,7 +43,8 @@ int host1x_actmon_init(struct nvhost_master *host)
 	writel(1, sync_regs + host1x_sync_actmon_count_weight_r());
 
 	/*  Write sample period */
-	writel(host1x_sync_actmon_status_sample_period_f(1),
+	writel(host1x_sync_actmon_status_sample_period_f(0)
+			| host1x_sync_actmon_status_gr3d_mon_act_f(1),
 			sync_regs + host1x_sync_actmon_status_r());
 
 	/* Clear interrupt status */
@@ -59,10 +60,6 @@ int host1x_actmon_init(struct nvhost_master *host)
 	/* Enable watermark interrupts */
 	val |= host1x_sync_actmon_ctrl_avg_above_wmark_en_f(1);
 	val |= host1x_sync_actmon_ctrl_avg_below_wmark_en_f(1);
-	/* Number of upper wmark breaches before interrupt */
-	val |= host1x_sync_actmon_ctrl_consecutive_above_wmark_num_f(1);
-	/* Number of below wmark breaches before interrupt */
-	val |= host1x_sync_actmon_ctrl_consecutive_below_wmark_num_f(1);
 	/* Moving avg IIR filter window size 2^6=128 */
 	val |= host1x_sync_actmon_ctrl_k_val_f(6);
 	/* Enable ACTMON */

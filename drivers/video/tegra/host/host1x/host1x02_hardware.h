@@ -137,14 +137,10 @@ static inline u32 nvhost_opcode_gather(unsigned count)
 	return (6 << 28) | count;
 }
 
-static inline u32 nvhost_opcode_gather_nonincr(unsigned offset,	unsigned count)
+static inline u32 nvhost_opcode_gather_insert(unsigned offset, unsigned incr,
+		unsigned count)
 {
-	return (6 << 28) | (offset << 16) | BIT(15) | count;
-}
-
-static inline u32 nvhost_opcode_gather_incr(unsigned offset, unsigned count)
-{
-	return (6 << 28) | (offset << 16) | BIT(15) | BIT(14) | count;
+	return (6 << 28) | (offset << 16) | BIT(15) | (incr << 14) | count;
 }
 
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)

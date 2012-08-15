@@ -183,18 +183,45 @@ static void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 	}
 }
 
+static inline u32 gather_regnum(u32 word)
+{
+	return (word >> 16) & 0xfff;
+}
+
+static inline  u32 gather_type(u32 word)
+{
+	return (word >> 28) & 1;
+}
+
+static inline u32 gather_count(u32 word)
+{
+	return word & 0x3fff;
+}
+
 static void submit_gathers(struct nvhost_job *job)
 {
 	/* push user gathers */
 	int i;
 	for (i = 0 ; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		u32 op1 = nvhost_opcode_gather(g->words);
-		u32 op2 = g->mem_base + g->offset;
+		u32 op1;
+		u32 op2;
+
+		/* If register is specified, add a gather with incr/nonincr.
+		 * This allows writing large amounts of data directly from
+		 * memory to a register. */
+		if (gather_regnum(g->words))
+			op1 = nvhost_opcode_gather_insert(
+					gather_regnum(g->words),
+					gather_type(g->words),
+					gather_count(g->words));
+		else
+			op1 = nvhost_opcode_gather(g->words);
+		op2 = job->gathers[i].mem_base + g->offset;
 		nvhost_cdma_push_gather(&job->ch->cdma,
 				job->memmgr,
-				job->gathers[i].ref,
-				job->gathers[i].offset,
+				g->ref,
+				g->offset,
 				op1, op2);
 	}
 }

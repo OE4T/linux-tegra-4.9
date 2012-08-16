@@ -34,9 +34,10 @@ struct tegra_iovmm_area *tegra_iommu_create_vm(struct device *dev,
 		return NULL;
 
 	if (!req)
-		req = DMA_ANON_ADDR;
+		iova = dma_iova_alloc(dev, size);
+	else
+		iova = dma_iova_alloc_at(dev, req, size);
 
-	iova = arm_iommu_alloc_iova_at(dev, req, size);
 	if (iova == DMA_ERROR_CODE)
 		goto err_out;
 	area->iovm_start = iova;
@@ -52,8 +53,10 @@ err_out:
 
 void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 {
-	dma_unmap_page(area->dev,
-		       area->iovm_start, area->iovm_length, DMA_NONE);
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_unmap_single_attrs(area->dev, area->iovm_start, area->iovm_length,
+			       0, &attrs);
 	kfree(area);
 }
 

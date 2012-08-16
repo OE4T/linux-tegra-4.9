@@ -346,15 +346,17 @@ void nvhost_module_remove_client(struct nvhost_device *dev, void *priv)
 {
 	int i;
 	struct nvhost_module_client *m;
+	int found = 0;
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &dev->client_list, node) {
 		if (priv == m->priv) {
 			list_del(&m->node);
+			found = 1;
 			break;
 		}
 	}
-	if (m) {
+	if (found) {
 		kfree(m);
 		for (i = 0; i < dev->num_clks; i++)
 			nvhost_module_update_rate(dev, i);

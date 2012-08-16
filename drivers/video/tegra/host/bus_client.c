@@ -160,7 +160,8 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	nvhost_module_add_client(ch->dev, priv);
+	if(nvhost_module_add_client(ch->dev, priv))
+		goto fail;
 
 	if (ch->ctxhandler && ch->ctxhandler->alloc) {
 		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);

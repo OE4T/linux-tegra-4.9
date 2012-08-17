@@ -592,6 +592,7 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 
 	if (dc->mode.pclk > 1000) {
 		struct tegra_dc_mode *mode = &dc->mode;
+		struct fb_videomode vmode;
 
 		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 			info->var.pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
@@ -603,6 +604,10 @@ struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
 		info->var.lower_margin = mode->v_front_porch;
 		info->var.hsync_len = mode->h_sync_width;
 		info->var.vsync_len = mode->v_sync_width;
+
+		/* Keep info->var consistent with info->modelist. */
+		fb_var_to_videomode(&vmode, &info->var);
+		fb_add_videomode(&vmode, &info->modelist);
 	}
 
 	return tegra_fb;

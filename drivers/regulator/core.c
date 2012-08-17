@@ -323,6 +323,50 @@ static int regulator_mode_constrain(struct regulator_dev *rdev, int *mode)
 	return -EINVAL;
 }
 
+static ssize_t regulator_uV_set(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct regulator_dev *rdev = dev_get_drvdata(dev);
+	int ret;
+	int min_uV;
+	int max_uV = rdev->constraints->max_uV;
+	char *p = (char *)buf;
+
+	min_uV = memparse(p, &p);
+	mutex_lock(&rdev->mutex);
+
+	/* sanity check */
+	if (!rdev->desc->ops->set_voltage &&
+		!rdev->desc->ops->set_voltage_sel) {
+		rdev_err(rdev, "The operation is not supported\n");
+		goto out;
+	}
+
+	/* constraints check */
+	ret = regulator_check_voltage(rdev, &min_uV, &max_uV);
+	if (ret < 0) {
+		rdev_err(rdev, "Voltage is out of range min:max= %d:%d\n",
+			rdev->constraints->min_uV, rdev->constraints->max_uV);
+		goto out;
+	}
+
+	/* Consumer check */
+	ret = regulator_check_consumers(rdev, &min_uV, &max_uV);
+	if (ret < 0) {
+		rdev_warn(rdev, "new voltage is out-range for some consumer\n");
+		rdev_warn(rdev, "min: max = %d:%d\n", min_uV, max_uV);
+	}
+
+	rdev_info(rdev, "Setting voltage min:max = %d:%d\n", min_uV, max_uV);
+	ret = _regulator_do_set_voltage(rdev, min_uV, max_uV);
+	if (ret < 0)
+		rdev_warn(rdev, "Can not set voltage %d:%d\n",  min_uV, max_uV);
+
+out:
+	mutex_unlock(&rdev->mutex);
+	return count;
+}
+
 static ssize_t regulator_uV_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -335,7 +379,7 @@ static ssize_t regulator_uV_show(struct device *dev,
 
 	return ret;
 }
-static DEVICE_ATTR(microvolts, 0444, regulator_uV_show, NULL);
+static DEVICE_ATTR(microvolts, 0644, regulator_uV_show, regulator_uV_set);
 
 static ssize_t regulator_uA_show(struct device *dev,
 				struct device_attribute *attr, char *buf)

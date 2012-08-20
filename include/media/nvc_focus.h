@@ -35,6 +35,14 @@
 
 #define AF_POS_INVALID_VALUE INT_MAX
 
+/* These are the slew rate values coming down from the configuration */
+/* Disabled is the same as fastest. Default is the default */
+/* slew rate configuration in the focuser */
+#define SLEW_RATE_DISABLED		0
+#define SLEW_RATE_DEFAULT		1
+#define SLEW_RATE_SLOWEST		9
+
+
 enum nvc_focus_sts {
 	NVC_FOCUS_STS_UNKNOWN		= 1,
 	NVC_FOCUS_STS_NO_DEVICE,

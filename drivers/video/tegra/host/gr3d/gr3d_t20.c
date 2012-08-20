@@ -371,7 +371,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 
 	p->save_buf = mem_op().alloc(memmgr, p->save_size * sizeof(u32), 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR(p->save_buf)) {
+	if (IS_ERR_OR_NULL(p->save_buf)) {
 		p->save_buf = NULL;
 		return NULL;
 	}

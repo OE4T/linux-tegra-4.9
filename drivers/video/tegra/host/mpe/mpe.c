@@ -559,7 +559,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR(p->save_buf)) {
+	if (IS_ERR_OR_NULL(p->save_buf)) {
 		p->save_buf = NULL;
 		return NULL;
 	}

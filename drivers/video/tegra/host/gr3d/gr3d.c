@@ -83,8 +83,10 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->restore = mem_op().alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
 			    : mem_mgr_flag_uncacheable);
-	if (IS_ERR_OR_NULL(ctx->restore))
+	if (IS_ERR_OR_NULL(ctx->restore)) {
+		ctx->restore = NULL;
 		goto fail;
+	}
 
 	if (map_restore) {
 		ctx->restore_virt = mem_op().mmap(ctx->restore);

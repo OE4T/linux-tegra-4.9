@@ -45,6 +45,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
+#include <linux/moduleparam.h>
 #include <linux/uaccess.h>
 #include <linux/export.h>
 #include <trace/events/power.h>
@@ -235,6 +236,8 @@ static const struct file_operations pm_qos_power_fops = {
 	.llseek = noop_llseek,
 };
 
+static bool pm_qos_enabled __read_mostly = true;
+
 /* unlocked internal variant */
 static inline int pm_qos_get_value(struct pm_qos_constraints *c)
 {
@@ -394,8 +397,12 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 		;
 	}
 
-	curr_value = pm_qos_get_value(c);
-	pm_qos_set_value(c, curr_value);
+	if (pm_qos_enabled) {
+		curr_value = pm_qos_get_value(c);
+		pm_qos_set_value(c, curr_value);
+	} else {
+		curr_value = c->default_value;
+	}
 
 	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
@@ -643,6 +650,59 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 	memset(req, 0, sizeof(*req));
 }
 EXPORT_SYMBOL_GPL(pm_qos_remove_request);
+
+static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
+{
+	unsigned long flags;
+	bool old;
+	s32 prev[PM_QOS_NUM_CLASSES], curr[PM_QOS_NUM_CLASSES];
+	int ret, i;
+
+	old = pm_qos_enabled;
+	ret = param_set_bool(arg, kp);
+	if (ret != 0) {
+		pr_warn("%s: cannot set PM QoS enable to %s\n",
+			__FUNCTION__, arg);
+		return ret;
+	}
+	spin_lock_irqsave(&pm_qos_lock, flags);
+	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
+		prev[i] = pm_qos_read_value(pm_qos_array[i]->constraints);
+	if (old && !pm_qos_enabled) {
+		/* got disabled */
+		for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
+			curr[i] = pm_qos_array[i]->constraints->default_value;
+			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
+		}
+	} else if (!old && pm_qos_enabled) {
+		/* got enabled */
+		for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
+			curr[i] = pm_qos_get_value(pm_qos_array[i]->constraints);
+			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
+		}
+	}
+	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
+		if (prev[i] != curr[i])
+			blocking_notifier_call_chain(
+				pm_qos_array[i]->constraints->notifiers,
+				(unsigned long)curr[i],
+				NULL);
+
+	return ret;
+}
+
+static int pm_qos_enabled_get(char *buffer, const struct kernel_param *kp)
+{
+	return param_get_bool(buffer, kp);
+}
+
+static struct kernel_param_ops pm_qos_enabled_ops = {
+	.set = pm_qos_enabled_set,
+	.get = pm_qos_enabled_get,
+};
+
+module_param_cb(enable, &pm_qos_enabled_ops, &pm_qos_enabled, 0644);
 
 /**
  * pm_qos_add_notifier - sets notification entry for changes to target value

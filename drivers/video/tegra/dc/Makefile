@@ -3,6 +3,7 @@ obj-y += dc.o bandwidth.o mode.o clock.o lut.o csc.o window.o
 obj-y += rgb.o
 obj-y += hdmi.o
 obj-y += dsi2lvds.o
+obj-y += tc358770_dsi2edp.o
 obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
 obj-y += edid.o
 obj-y += nvsd.o

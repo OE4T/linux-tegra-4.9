@@ -455,6 +455,7 @@ struct tegra_dsi_out_ops {
 	void (*resume)(struct tegra_dc_dsi_data *);
 };
 extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
+extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

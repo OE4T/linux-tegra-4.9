@@ -3195,6 +3195,8 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	if (dsi->info.dsi2lvds_bridge_enable)
 		dsi->out_ops = &tegra_dsi2lvds_ops;
+	else if (dsi->info.dsi2edp_bridge_enable)
+		dsi->out_ops = &tegra_dsi2edp_ops;
 	else
 		dsi->out_ops = NULL;
 

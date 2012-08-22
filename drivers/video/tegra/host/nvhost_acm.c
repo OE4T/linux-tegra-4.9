@@ -104,8 +104,17 @@ void nvhost_module_reset(struct nvhost_device *dev)
 
 static void to_state_clockgated_locked(struct nvhost_device *dev)
 {
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
 	if (dev->powerstate == NVHOST_POWER_STATE_RUNNING) {
-		int i;
+		int i, err;
+		if (drv->prepare_clockoff) {
+			err = drv->prepare_clockoff(dev);
+			if (err) {
+				dev_err(&dev->dev, "error clock gating");
+				return;
+			}
+		}
 		for (i = 0; i < dev->num_clks; i++)
 			clk_disable(dev->clk[i]);
 		if (dev->dev.parent)
@@ -144,6 +153,14 @@ static void to_state_running_locked(struct nvhost_device *dev)
 			}
 		}
 
+		/* Invoke callback after enabling clock. This is used for
+		 * re-enabling host1x interrupts. */
+		if (prev_state == NVHOST_POWER_STATE_CLOCKGATED
+				&& drv->finalize_clockon)
+			drv->finalize_clockon(dev);
+
+		/* Invoke callback after power un-gating. This is used for
+		 * restoring context. */
 		if (prev_state == NVHOST_POWER_STATE_POWERGATED
 				&& drv->finalize_poweron)
 			drv->finalize_poweron(dev);

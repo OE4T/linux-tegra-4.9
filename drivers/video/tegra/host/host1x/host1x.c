@@ -314,6 +314,19 @@ static int power_off_host(struct nvhost_device *dev)
 	return 0;
 }
 
+static void clock_on_host(struct nvhost_device *dev)
+{
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
+}
+
+static int clock_off_host(struct nvhost_device *dev)
+{
+	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	nvhost_intr_stop(&host->intr);
+	return 0;
+}
+
 static int nvhost_user_init(struct nvhost_master *host)
 {
 	int err, devno;
@@ -525,6 +538,8 @@ static struct nvhost_driver nvhost_driver = {
 	},
 	.finalize_poweron = power_on_host,
 	.prepare_poweroff = power_off_host,
+	.finalize_clockon = clock_on_host,
+	.prepare_clockoff = clock_off_host,
 };
 
 static int __init nvhost_mod_init(void)

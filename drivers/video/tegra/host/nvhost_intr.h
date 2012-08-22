@@ -104,7 +104,7 @@ void *nvhost_intr_alloc_waiter(void);
  * You must call this if you passed non-NULL as ref.
  * @ref the ref returned from nvhost_intr_add_action()
  */
-void nvhost_intr_put_ref(struct nvhost_intr *intr, void *ref);
+void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref);
 
 int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync);
 void nvhost_intr_deinit(struct nvhost_intr *intr);

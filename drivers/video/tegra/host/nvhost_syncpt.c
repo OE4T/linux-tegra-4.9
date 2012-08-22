@@ -236,7 +236,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			check_count++;
 		}
 	}
-	nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), ref);
+	nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), id, ref);
 
 done:
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);

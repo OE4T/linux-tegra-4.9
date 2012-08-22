@@ -210,7 +210,9 @@ static int process_wait_list(struct nvhost_intr *intr,
 	remove_completed_waiters(&syncpt->wait_head, threshold, completed);
 
 	empty = list_empty(&syncpt->wait_head);
-	if (!empty)
+	if (empty)
+		intr_op().disable_syncpt_intr(intr, syncpt->id);
+	else
 		reset_threshold_interrupt(intr, &syncpt->wait_head,
 					  syncpt->id);
 
@@ -327,13 +329,19 @@ void *nvhost_intr_alloc_waiter()
 			GFP_KERNEL|__GFP_REPEAT);
 }
 
-void nvhost_intr_put_ref(struct nvhost_intr *intr, void *ref)
+void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref)
 {
 	struct nvhost_waitlist *waiter = ref;
+	struct nvhost_intr_syncpt *syncpt;
+	struct nvhost_master *host = intr_to_dev(intr);
 
 	while (atomic_cmpxchg(&waiter->state,
 				WLS_PENDING, WLS_CANCELLED) == WLS_REMOVED)
 		schedule();
+
+	syncpt = intr->syncpt + id;
+	(void)process_wait_list(intr, syncpt,
+				nvhost_syncpt_update_min(&host->syncpt, id));
 
 	kref_put(&waiter->refcount, waiter_release);
 }

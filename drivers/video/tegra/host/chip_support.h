@@ -125,6 +125,7 @@ struct nvhost_intr_ops {
 	void (*set_syncpt_threshold)(
 		struct nvhost_intr *, u32 id, u32 thresh);
 	void (*enable_syncpt_intr)(struct nvhost_intr *, u32 id);
+	void (*disable_syncpt_intr)(struct nvhost_intr *, u32 id);
 	void (*disable_all_syncpt_intrs)(struct nvhost_intr *);
 	int  (*request_host_general_irq)(struct nvhost_intr *);
 	void (*free_host_general_irq)(struct nvhost_intr *);

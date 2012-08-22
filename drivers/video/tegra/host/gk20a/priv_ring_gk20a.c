@@ -21,6 +21,8 @@
 
 #include <linux/delay.h>	/* for mdelay */
 
+#include <mach/hardware.h>
+
 #include "../dev.h"
 
 #include "gk20a.h"
@@ -28,17 +30,13 @@
 #include "hw_pri_ringmaster_gk20a.h"
 #include "hw_pri_ringstation_sys_gk20a.h"
 
-#if defined (CONFIG_TEGRA_SIMULATION_PLATFORM) && !defined (CONFIG_TEGRA_SIMULATION_SPLIT_MEM)
-
-void gk20a_reset_priv_ring(struct gk20a *g) {}
-void gk20a_priv_ring_isr(struct gk20a *g) {}
-
-#else
-
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
 	u32 pmc_en, decode_cfg, data;
 	s32 retry = 200;
+
+	if (tegra_revision == TEGRA_REVISION_SIM)
+		return;
 
 	pmc_en = gk20a_readl(g, mc_enable_r());
 	pmc_en &= ~mc_enable_priv_ring_enabled_f();
@@ -94,6 +92,9 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 cmd;
 	s32 retry = 100;
 
+	if (tegra_revision == TEGRA_REVISION_SIM)
+		return;
+
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
@@ -124,4 +125,3 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 		" status1: 0x%08x", status0, status1);
 }
 
-#endif /* defined (CONFIG_TEGRA_SIMULATION_PLATFORM) && !defined (CONFIG_TEGRA_SIMULATION_SPLIT_MEM) */

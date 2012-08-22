@@ -24,7 +24,7 @@
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
 
-int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int err = 0;
 	u32 i, temp;

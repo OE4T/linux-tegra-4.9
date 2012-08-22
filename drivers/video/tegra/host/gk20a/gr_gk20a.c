@@ -23,6 +23,8 @@
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/nvmap.h>
 
+#include "mach/hardware.h"
+
 #include "../dev.h"
 
 #include "gk20a.h"
@@ -1306,7 +1308,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	/* gr_gk20a_ctx_zcull_setup(g, c, false); */
 	gr_gk20a_ctx_pm_setup(g, c, false);
 
-	if (CONFIG_GK20A_SIM /*|| IS_RTLSIM()*/) {
+	if (tegra_revision == TEGRA_REVISION_SIM) {
 		u32 inst_base_ptr =
 			u64_lo32(c->inst_block.cpu_pa) >> ram_in_base_shift_v();
 
@@ -1347,7 +1349,7 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvhost_dbg_fn("");
 
-	if (CONFIG_GK20A_SIM) { /* fmodel */
+	if (tegra_revision == TEGRA_REVISION_SIM) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),
@@ -1410,7 +1412,7 @@ static int gr_gk20a_create_ctx_header(struct gk20a *g, u32 *header)
 
 	nvhost_dbg_fn("");
 
-	if (CONFIG_GK20A_SIM) { /* fmodel */
+	if (tegra_revision == TEGRA_REVISION_SIM) {
 		num_gpcs = g->gr.gpc_count;
 	} else {
 		num_gpcs = gk20a_readl(g, gr_fecs_fs_r());
@@ -1436,7 +1438,7 @@ static int gr_gk20a_create_ctx_header(struct gk20a *g, u32 *header)
 	header_curr[ctxsw_prog_local_magic_value_v() >> 2] =
 		ctxsw_prog_local_magic_value_v_value_f();
 
-	if (!CONFIG_GK20A_SIM) {
+	if (tegra_revision != TEGRA_REVISION_SIM) {
 		rc_offset = 0;
 		rc_size = 0;
 
@@ -1513,7 +1515,7 @@ static int gr_gk20a_create_ctx_header(struct gk20a *g, u32 *header)
 		header_curr[ctxsw_prog_local_magic_value_v() >> 2] =
 			ctxsw_prog_local_magic_value_v_value_f();
 
-		if (!CONFIG_GK20A_SIM) {
+		if (tegra_revision != TEGRA_REVISION_SIM) {
 			rc_offset = 0;
 			rc_size = 0;
 
@@ -3259,11 +3261,11 @@ static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 			"invalid elcg mode %d", mode);
 	}
 
-#ifdef CONFIG_GK20A_SIM
-	gate_ctrl = set_field(gate_ctrl,
+	if (tegra_revision == TEGRA_REVISION_SIM) {
+		gate_ctrl = set_field(gate_ctrl,
 			therm_gate_ctrl_eng_delay_after_m(),
 			therm_gate_ctrl_eng_delay_after_f(4));
-#endif
+	}
 
 	/* 2 * (1 << 5) = 64 clks */
 	gate_ctrl = set_field(gate_ctrl,

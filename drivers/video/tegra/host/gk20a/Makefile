@@ -15,12 +15,8 @@ nvhost-gk20a-objs  = \
 	pmu_gk20a.o \
 	priv_ring_gk20a.o \
 	clk_gk20a.o \
-	therm_gk20a.o
-
-ifneq ($(CONFIG_TEGRA_GK20A_NETLIST_FIRMWARE),y)
-nvhost-gk20a-objs += gr_ctx_gk20a_sim.o
-else
-nvhost-gk20a-objs += gr_ctx_gk20a.o
-endif
+	therm_gk20a.o \
+	gr_ctx_gk20a_sim.o \
+	gr_ctx_gk20a.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-gk20a.o

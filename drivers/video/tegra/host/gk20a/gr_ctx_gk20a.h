@@ -146,5 +146,6 @@ struct gr_ucode_gk20a {
 
 /* main entry for grctx loading */
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
+int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr);
 
 #endif /*__GR_CTX_GK20A_H__*/

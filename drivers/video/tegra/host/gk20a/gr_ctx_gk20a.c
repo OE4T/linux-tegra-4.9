@@ -21,6 +21,8 @@
 
 #include <linux/firmware.h>
 
+#include "mach/hardware.h"
+
 #include "dev.h"
 #include "bus_client.h"
 
@@ -97,7 +99,7 @@ static int gr_gk20a_get_netlist_name(int index, char *name)
 	return -1;
 }
 
-int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
+static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct device *d = dev_from_gk20a(g);
 	const struct firmware *netlist_fw;
@@ -325,3 +327,10 @@ done:
 	}
 }
 
+int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
+{
+	if (tegra_revision == TEGRA_REVISION_SIM)
+		return gr_gk20a_init_ctx_vars_sim(g, gr);
+	else
+		return gr_gk20a_init_ctx_vars_fw(g, gr);
+}

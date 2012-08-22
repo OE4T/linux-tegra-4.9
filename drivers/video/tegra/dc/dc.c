@@ -1176,6 +1176,36 @@ static inline void enable_dc_irq(unsigned int irq)
 #endif
 }
 
+void tegra_dc_get_fbvblank(struct tegra_dc *dc, struct fb_vblank *vblank)
+{
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		vblank->flags = FB_VBLANK_HAVE_VSYNC;
+}
+
+int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
+{
+	int ret = -ENOTTY;
+
+	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) || !dc->enabled)
+		return ret;
+
+	/*
+	 * Logic is as follows
+	 * a) Indicate we need a vblank.
+	 * b) Wait for completion to be signalled from isr.
+	 * c) Initialize completion for next iteration.
+	 */
+
+	tegra_dc_hold_dc_out(dc);
+	dc->out->user_needs_vblank = true;
+
+	ret = wait_for_completion_interruptible(&dc->out->user_vblank_comp);
+	init_completion(&dc->out->user_vblank_comp);
+	tegra_dc_release_dc_out(dc);
+
+	return ret;
+}
+
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
@@ -1322,6 +1352,13 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
 static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 {
+	/* pending user vblank, so wakeup */
+	if ((status & (V_BLANK_INT | MSF_INT)) &&
+	    (dc->out->user_needs_vblank)) {
+		dc->out->user_needs_vblank = false;
+		complete(&dc->out->user_vblank_comp);
+	}
+
 	if (status & V_BLANK_INT) {
 		/* Sync up windows. */
 		tegra_dc_trigger_windows(dc);
@@ -1538,6 +1575,7 @@ static u32 get_syncpt(struct tegra_dc *dc, int idx)
 static int tegra_dc_init(struct tegra_dc *dc)
 {
 	int i;
+	int int_enable;
 
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
 	if (dc->ndev->id == 0) {
@@ -1579,8 +1617,12 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_DISP_MISC_CONTROL);
 #endif
 	/* enable interrupts for vblank, frame_end and underflows */
-	tegra_dc_writel(dc, (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT),
-		DC_CMD_INT_ENABLE);
+	int_enable = (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
+	/* for panels with one-shot mode enable tearing effect interrupt */
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		int_enable |= MSF_INT;
+
+	tegra_dc_writel(dc, int_enable, DC_CMD_INT_ENABLE);
 	tegra_dc_writel(dc, ALL_UF_INT, DC_CMD_INT_MASK);
 
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);

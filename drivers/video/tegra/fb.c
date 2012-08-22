@@ -332,8 +332,10 @@ static void tegra_fb_imageblit(struct fb_info *info,
 
 static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 {
+	struct tegra_fb_info *tegra_fb = (struct tegra_fb_info *)info->par;
 	struct tegra_fb_modedb modedb;
 	struct fb_modelist *modelist;
+	struct fb_vblank vblank = {};
 	int i;
 
 	switch (cmd) {
@@ -375,6 +377,17 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		if (copy_to_user((void __user *)arg, &modedb, sizeof(modedb)))
 			return -EFAULT;
 		break;
+
+	case FBIOGET_VBLANK:
+		tegra_dc_get_fbvblank(tegra_fb->win->dc, &vblank);
+
+		if (copy_to_user(
+			(void __user *)arg, &vblank, sizeof(vblank)))
+			return -EFAULT;
+		break;
+
+	case FBIO_WAITFORVSYNC:
+		return tegra_dc_wait_for_vsync(tegra_fb->win->dc);
 
 	default:
 		return -ENOTTY;

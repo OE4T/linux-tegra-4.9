@@ -209,7 +209,9 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 {
 	int err = 0;
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
+#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
 	s64 timestamp_ns;
+#endif
 
 	if (flip_win->handle[TEGRA_DC_Y] == NULL) {
 		win->flags = 0;

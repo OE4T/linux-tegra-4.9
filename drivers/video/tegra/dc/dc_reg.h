@@ -409,13 +409,12 @@
 #define DC_WIN_CSC_KVB				0x618
 #define DC_WIN_V_FILTER_P(x)			(0x619 + (x))
 #define DC_WIN_WIN_OPTIONS			0x700
-#define  H_DIRECTION_INCREMENT		(0 << 0)
-#define  H_DIRECTION_DECREMENT		(1 << 0)
-#define  V_DIRECTION_INCREMENT		(0 << 2)
-#define  V_DIRECTION_DECREMENT		(1 << 2)
+#define  H_DIRECTION_DECREMENT(x)	((x) << 0)
+#define  V_DIRECTION_DECREMENT(x)	((x) << 2)
+#define  WIN_SCAN_COLUMN		(1 << 4)
 #define  COLOR_EXPAND			(1 << 6)
-#define  H_FILTER_ENABLE		(1 << 8)
-#define  V_FILTER_ENABLE		(1 << 10)
+#define  H_FILTER_ENABLE(x)		((x) << 8)
+#define  V_FILTER_ENABLE(x)		((x) << 10)
 #define  CP_ENABLE			(1 << 16)
 #define  CSC_ENABLE			(1 << 18)
 #define  DV_ENABLE			(1 << 20)

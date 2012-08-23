@@ -264,12 +264,52 @@ static inline u32 compute_initial_dda(fixed20_12 in)
 	return dfixed_frac(in);
 }
 
+static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
+				struct tegra_dc_win *win, unsigned Bpp,
+				unsigned Bpp_bw, bool scan_column)
+{
+	u32 h_dda, h_dda_init;
+	u32 v_dda, v_dda_init;
+
+	h_dda_init = compute_initial_dda(win->x);
+	v_dda_init = compute_initial_dda(win->y);
+
+	if (scan_column) {
+		tegra_dc_writel(dc,
+			V_PRESCALED_SIZE(dfixed_trunc(win->w)) |
+			H_PRESCALED_SIZE(dfixed_trunc(win->h) * Bpp),
+			DC_WIN_PRESCALED_SIZE);
+
+		tegra_dc_writel(dc, v_dda_init, DC_WIN_H_INITIAL_DDA);
+		tegra_dc_writel(dc, h_dda_init, DC_WIN_V_INITIAL_DDA);
+		h_dda = compute_dda_inc(win->h, win->out_h,
+				false, Bpp_bw);
+		v_dda = compute_dda_inc(win->w, win->out_w,
+				true, Bpp_bw);
+	} else {
+		tegra_dc_writel(dc,
+			V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
+			H_PRESCALED_SIZE(dfixed_trunc(win->w) * Bpp),
+			DC_WIN_PRESCALED_SIZE);
+
+		tegra_dc_writel(dc, h_dda_init, DC_WIN_H_INITIAL_DDA);
+		tegra_dc_writel(dc, v_dda_init, DC_WIN_V_INITIAL_DDA);
+		h_dda = compute_dda_inc(win->w, win->out_w,
+				false, Bpp_bw);
+		v_dda = compute_dda_inc(win->h, win->out_h,
+				true, Bpp_bw);
+	}
+	tegra_dc_writel(dc, V_DDA_INC(v_dda) |
+		H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
+}
+
 /* does not support updating windows on multiple dcs in one call */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 {
 	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
 	unsigned long val;
+	unsigned long win_options;
 	bool update_blend_par = false;
 	bool update_blend_seq = false;
 	int i;
@@ -303,8 +343,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
-		unsigned h_dda;
-		unsigned v_dda;
+		bool scan_column = 0;
 		fixed20_12 h_offset, v_offset;
 		bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
 		bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
@@ -315,6 +354,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		unsigned Bpp_bw = Bpp * (yuvp ? 2 : 1);
 		const bool filter_h = win_use_h_filter(dc, win);
 		const bool filter_v = win_use_v_filter(dc, win);
+#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
+		scan_column = (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN);
+#endif
 
 		/* Update blender */
 		if ((win->z != dc->blend.z[win->idx]) ||
@@ -347,27 +389,25 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc,
 			V_POSITION(win->out_y) | H_POSITION(win->out_x),
 			DC_WIN_POSITION);
-		tegra_dc_writel(dc,
-			V_SIZE(win->out_h) | H_SIZE(win->out_w),
-			DC_WIN_SIZE);
 
-		if (tegra_dc_feature_has_scaling(dc, win->idx)) {
-			tegra_dc_writel(dc,
-				V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
-				H_PRESCALED_SIZE(dfixed_trunc(win->w) * Bpp),
-				DC_WIN_PRESCALED_SIZE);
-
-			h_dda = compute_dda_inc(win->w, win->out_w, false,
-				Bpp_bw);
-			v_dda = compute_dda_inc(win->h, win->out_h, true,
-				Bpp_bw);
-			tegra_dc_writel(dc, V_DDA_INC(v_dda) |
-				H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
-			h_dda = compute_initial_dda(win->x);
-			v_dda = compute_initial_dda(win->y);
-			tegra_dc_writel(dc, h_dda, DC_WIN_H_INITIAL_DDA);
-			tegra_dc_writel(dc, v_dda, DC_WIN_V_INITIAL_DDA);
+		/* Check scan_column flag to set window size and scaling. */
+		win_options = WIN_ENABLE;
+		if (scan_column) {
+			win_options |= WIN_SCAN_COLUMN;
+			win_options |= H_FILTER_ENABLE(filter_v);
+			win_options |= V_FILTER_ENABLE(filter_h);
+			val = V_SIZE(win->out_w) | H_SIZE(win->out_h);
+		} else {
+			win_options |= H_FILTER_ENABLE(filter_h);
+			win_options |= V_FILTER_ENABLE(filter_v);
+			val = V_SIZE(win->out_h) | H_SIZE(win->out_w);
 		}
+		tegra_dc_writel(dc, val, DC_WIN_SIZE);
+
+		/* Update scaling registers if window supports scaling. */
+		if (likely(tegra_dc_feature_has_scaling(dc, win->idx)))
+			tegra_dc_update_scaling(dc, win, Bpp, Bpp_bw,
+								scan_column);
 
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
@@ -419,26 +459,18 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE);
 		}
 
-		val = WIN_ENABLE;
 		if (yuv)
-			val |= CSC_ENABLE;
+			win_options |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
-			val |= COLOR_EXPAND;
+			win_options |= COLOR_EXPAND;
 
 		if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
-			val |= CP_ENABLE;
+			win_options |= CP_ENABLE;
 
-		if (filter_h)
-			val |= H_FILTER_ENABLE;
-		if (filter_v)
-			val |= V_FILTER_ENABLE;
+		win_options |= H_DIRECTION_DECREMENT(invert_h);
+		win_options |= V_DIRECTION_DECREMENT(invert_v);
 
-		if (invert_h)
-			val |= H_DIRECTION_DECREMENT;
-		if (invert_v)
-			val |= V_DIRECTION_DECREMENT;
-
-		tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
+		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		if (win->global_alpha == 255)

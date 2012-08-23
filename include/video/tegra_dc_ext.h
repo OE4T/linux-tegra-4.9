@@ -60,6 +60,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_TILED	(1 << 2)
 #define TEGRA_DC_EXT_FLIP_FLAG_CURSOR	(1 << 3)
 #define TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA	(1 << 4)
+#define TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN	(1 << 6)
 
 struct tegra_dc_ext_flip_windowattr {
 	__s32	index;

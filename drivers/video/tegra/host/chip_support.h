@@ -164,6 +164,16 @@ struct nvhost_actmon_ops {
 	int (*isr)(u32 hintstatus, void __iomem *sync_regs);
 };
 
+struct nvhost_tickctrl_ops {
+	int (*init_host)(struct nvhost_master *host);
+	void (*deinit_host)(struct nvhost_master *host);
+	int (*init_channel)(struct nvhost_device *dev);
+	void (*deinit_channel)(struct nvhost_device *dev);
+	int (*tickcount)(struct nvhost_device *dev, u64 *val);
+	int (*stallcount)(struct nvhost_device *dev, u64 *val);
+	int (*xfercount)(struct nvhost_device *dev, u64 *val);
+};
+
 struct nvhost_chip_support {
 	const char * soc_name;
 	struct nvhost_channel_ops channel;
@@ -175,6 +185,7 @@ struct nvhost_chip_support {
 	struct nvhost_dev_ops nvhost_dev;
 	struct nvhost_mem_ops mem;
 	struct nvhost_actmon_ops actmon;
+	struct nvhost_tickctrl_ops tickctrl;
 };
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
@@ -188,6 +199,7 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
 #define mem_op()		(nvhost_get_chip_ops()->mem)
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
+#define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)
 
 int nvhost_init_chip_support(struct nvhost_master *host);
 

@@ -178,5 +178,105 @@ static inline u32 host1x_channel_dmactrl_dmainitget_v(u32 r)
 {
 	return (r >> 2) & 0x1;
 }
+static inline u32 host1x_channel_tickcount_hi_r(void)
+{
+	return 0x90;
+}
+static inline u32 host1x_channel_tickcount_lo_r(void)
+{
+	return 0x94;
+}
+static inline u32 host1x_channel_channelctrl_r(void)
+{
+	return 0x98;
+}
+static inline u32 host1x_channel_channelctrl_enabletickcnt_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_channel_channelctrl_enabletickcnt_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 host1x_channel_channelctrl_enabletickcnt_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 host1x_channel_channelctrl_enabletickcnt_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 host1x_channel_stallctrl_r(void)
+{
+	return 0xa0;
+}
+static inline u32 host1x_channel_stallctrl_enable_channel_stall_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_channel_stallctrl_enable_channel_stall_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 host1x_channel_stallctrl_enable_channel_stall_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 host1x_channel_stallctrl_enable_channel_stall_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 host1x_channel_stallcount_hi_r(void)
+{
+	return 0xa4;
+}
+static inline u32 host1x_channel_stallcount_hi_stallcount_hi_s(void)
+{
+	return 32;
+}
+static inline u32 host1x_channel_stallcount_hi_stallcount_hi_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 host1x_channel_stallcount_hi_stallcount_hi_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 host1x_channel_stallcount_hi_stallcount_hi_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 host1x_channel_stallcount_lo_r(void)
+{
+	return 0xa8;
+}
+static inline u32 host1x_channel_xferctrl_r(void)
+{
+	return 0xac;
+}
+static inline u32 host1x_channel_xferctrl_enable_channel_xfer_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_channel_xferctrl_enable_channel_xfer_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 host1x_channel_xferctrl_enable_channel_xfer_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 host1x_channel_xferctrl_enable_channel_xfer_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 host1x_channel_xfercount_hi_r(void)
+{
+	return 0xb0;
+}
+static inline u32 host1x_channel_xfercount_lo_r(void)
+{
+	return 0xb4;
+}
 
 #endif /* __hw_host1x_channel_host1x_h__ */

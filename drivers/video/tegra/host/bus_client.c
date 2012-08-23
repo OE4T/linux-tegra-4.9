@@ -604,6 +604,11 @@ int nvhost_client_device_init(struct nvhost_device *dev)
 	if (err)
 		goto fail;
 
+	if (tickctrl_op().init_channel)
+		tickctrl_op().init_channel(dev);
+
+	nvhost_device_debug_init(dev);
+
 	dev_info(&dev->dev, "initialized\n");
 
 	return 0;

@@ -300,11 +300,15 @@ static void power_on_host(struct nvhost_device *dev)
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
 	nvhost_syncpt_reset(&host->syncpt);
 	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
+	if (tickctrl_op().init_host)
+		tickctrl_op().init_host(host);
 }
 
 static int power_off_host(struct nvhost_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	if (tickctrl_op().deinit_host)
+		tickctrl_op().deinit_host(host);
 	nvhost_syncpt_save(&host->syncpt);
 	nvhost_intr_stop(&host->intr);
 	return 0;
@@ -469,6 +473,9 @@ static int nvhost_probe(struct nvhost_device *dev,
 		clk_disable(host->dev->clk[0]);
 
 	nvhost_debug_init(host);
+
+	if (tickctrl_op().init_host)
+		tickctrl_op().init_host(host);
 
 	dev_info(&dev->dev, "initialized\n");
 	return 0;

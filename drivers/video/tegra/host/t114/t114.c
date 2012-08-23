@@ -305,6 +305,7 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
 #include "host1x/host1x_actmon.c"
+#include "host1x/host1x_tickctrl.c"
 
 int nvhost_init_t114_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
@@ -325,6 +326,7 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
 	op->actmon = host1x_actmon_ops;
+	op->tickctrl = host1x_tickctrl_ops;
 
 	return 0;
 }

@@ -120,6 +120,7 @@ struct nvhost_device {
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
+	struct dentry *debugfs;		/* debugfs directory */
 };
 
 struct nvhost_device_power_attr {

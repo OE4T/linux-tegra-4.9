@@ -28,50 +28,16 @@ struct therm_est_subdevice {
 	long hist[HIST_LEN];
 };
 
-struct therm_estimator {
-	long therm_est_lo_limit;
-	long therm_est_hi_limit;
-	void (*callback)(void *);
-	void *callback_data;
-	long cur_temp;
-	long polling_period;
-	struct workqueue_struct *workqueue;
-	struct delayed_work therm_est_work;
+struct therm_est_data {
 	long toffset;
-	int ntemp;
+	long polling_period;
+	struct thermal_cooling_device *cdev;
+	long trip_temp;
+	int tc1;
+	int tc2;
+	int passive_delay;
 	int ndevs;
-	struct therm_est_subdevice **devs;
+	struct therm_est_subdevice devs[];
 };
 
-#ifdef CONFIG_THERM_EST
-struct therm_estimator *therm_est_register(
-			struct therm_est_subdevice **devs,
-			int ndevs,
-			long toffset,
-			long pperiod);
-int therm_est_get_temp(struct therm_estimator *est, long *temp);
-int therm_est_set_limits(struct therm_estimator *est,
-			long lo_limit,
-			long hi_limit);
-int therm_est_set_alert(struct therm_estimator *est,
-			void (*cb)(void *),
-			void *cb_data);
-#else
-static inline struct therm_estimator *therm_est_register(
-			struct therm_est_subdevice **devs,
-			int ndevs,
-			long toffset,
-			long pperiod)
-{ return NULL; }
-static inline int therm_est_get_temp(struct therm_estimator *est, long *temp)
-{ return -EINVAL; }
-static inline int therm_est_set_limits(struct therm_estimator *est,
-			long lo_limit,
-			long hi_limit)
-{ return -EINVAL; }
-static inline int therm_est_set_alert(struct therm_estimator *est,
-			void (*cb)(void *),
-			void *cb_data)
-{ return -EINVAL; }
-#endif
 #endif /* _LINUX_THERM_EST_H */

@@ -14,6 +14,7 @@
  *
  */
 
+#include <linux/platform_device.h>
 #include <linux/kernel.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
@@ -27,34 +28,22 @@
 #include <linux/slab.h>
 #include <linux/syscalls.h>
 #include <linux/therm_est.h>
+#include <linux/thermal.h>
+#include <linux/module.h>
 
-int therm_est_get_temp(struct therm_estimator *est, long *temp)
-{
-	*temp = est->cur_temp;
-	return 0;
-}
-
-int therm_est_set_limits(struct therm_estimator *est,
-				long lo_limit,
-				long hi_limit)
-{
-	est->therm_est_lo_limit = lo_limit;
-	est->therm_est_hi_limit = hi_limit;
-	return 0;
-}
-
-int therm_est_set_alert(struct therm_estimator *est,
-			void (*cb)(void *),
-			void *cb_data)
-{
-	if ((!cb) || est->callback)
-		BUG();
-
-	est->callback = cb;
-	est->callback_data = cb_data;
-
-	return 0;
-}
+struct therm_estimator {
+	long cur_temp;
+	long polling_period;
+	struct workqueue_struct *workqueue;
+	struct delayed_work therm_est_work;
+	long toffset;
+	int ntemp;
+	int ndevs;
+	struct therm_est_subdevice *devs;
+	struct thermal_zone_device *thz;
+	struct thermal_cooling_device *cdev;
+	long trip_temp;
+};
 
 static void therm_est_work_func(struct work_struct *work)
 {
@@ -68,16 +57,16 @@ static void therm_est_work_func(struct work_struct *work)
 					therm_est_work);
 
 	for (i = 0; i < est->ndevs; i++) {
-		if (est->devs[i]->get_temp(est->devs[i]->dev_data, &temp))
+		if (est->devs[i].get_temp(est->devs[i].dev_data, &temp))
 			continue;
-		est->devs[i]->hist[(est->ntemp % HIST_LEN)] = temp;
+		est->devs[i].hist[(est->ntemp % HIST_LEN)] = temp;
 	}
 
 	for (i = 0; i < est->ndevs; i++) {
 		for (j = 0; j < HIST_LEN; j++) {
 			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
-			sum += est->devs[i]->hist[index] *
-				est->devs[i]->coeffs[j];
+			sum += est->devs[i].hist[index] *
+				est->devs[i].coeffs[j];
 		}
 	}
 
@@ -85,46 +74,101 @@ static void therm_est_work_func(struct work_struct *work)
 
 	est->ntemp++;
 
-	if (est->callback && ((est->cur_temp >= est->therm_est_hi_limit) ||
-			 (est->cur_temp <= est->therm_est_lo_limit)))
-		est->callback(est->callback_data);
+	if (est->cur_temp >= est->trip_temp)
+		if (est->thz && !est->thz->passive)
+			thermal_zone_device_update(est->thz);
 
 	queue_delayed_work(est->workqueue, &est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
 }
 
-struct therm_estimator *therm_est_register(
-			struct therm_est_subdevice **devs,
-			int ndevs,
-			long toffset,
-			long polling_period)
+static int therm_est_bind(struct thermal_zone_device *thz,
+				struct thermal_cooling_device *cdev)
+{
+	struct therm_estimator *est = thz->devdata;
+
+	if (cdev == est->cdev)
+		thermal_zone_bind_cooling_device(thz, 0, cdev);
+
+	return 0;
+}
+
+static int therm_est_unbind(struct thermal_zone_device *thz,
+				struct thermal_cooling_device *cdev)
+{
+	struct therm_estimator *est = thz->devdata;
+
+	if (cdev == est->cdev)
+		thermal_zone_unbind_cooling_device(thz, 0, cdev);
+
+	return 0;
+}
+
+static int therm_est_get_trip_type(struct thermal_zone_device *thz,
+					int trip,
+					enum thermal_trip_type *type)
+{
+	*type = THERMAL_TRIP_PASSIVE;
+	return 0;
+}
+
+static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
+					int trip,
+					unsigned long *temp)
+{
+	struct therm_estimator *est = thz->devdata;
+
+	*temp = est->trip_temp;
+
+	return 0;
+}
+
+static int therm_est_get_temp(struct thermal_zone_device *thz,
+				unsigned long *temp)
+{
+	struct therm_estimator *est = thz->devdata;
+	*temp = est->cur_temp;
+	return 0;
+}
+
+static struct thermal_zone_device_ops therm_est_ops = {
+	.bind = therm_est_bind,
+	.unbind = therm_est_unbind,
+	.get_trip_type = therm_est_get_trip_type,
+	.get_trip_temp = therm_est_get_trip_temp,
+	.get_temp = therm_est_get_temp,
+};
+
+static int __devinit therm_est_probe(struct platform_device *pdev)
 {
 	int i, j;
 	long temp;
 	struct therm_estimator *est;
 	struct therm_est_subdevice *dev;
+	struct therm_est_data *data;
 
 	est = kzalloc(sizeof(struct therm_estimator), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(est))
-		return ERR_PTR(-ENOMEM);
+		return -ENOMEM;
 
-	est->devs = devs;
-	est->ndevs = ndevs;
-	est->toffset = toffset;
-	est->polling_period = polling_period;
+	platform_set_drvdata(pdev, est);
+
+	data = pdev->dev.platform_data;
+
+	est->devs = data->devs;
+	est->ndevs = data->ndevs;
+	est->toffset = data->toffset;
+	est->polling_period = data->polling_period;
 
 	/* initialize history */
-	for (i = 0; i < ndevs; i++) {
-		dev = est->devs[i];
+	for (i = 0; i < data->ndevs; i++) {
+		dev = &est->devs[i];
 
-		if (dev->get_temp(dev->dev_data, &temp)) {
-			kfree(est);
-			return ERR_PTR(-EINVAL);
-		}
+		if (dev->get_temp(dev->dev_data, &temp))
+			goto err;
 
-		for (j = 0; j < HIST_LEN; j++) {
+		for (j = 0; j < HIST_LEN; j++)
 			dev->hist[j] = temp;
-		}
 	}
 
 	est->workqueue = alloc_workqueue("therm_est",
@@ -135,5 +179,42 @@ struct therm_estimator *therm_est_register(
 				&est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
 
-	return est;
+	est->cdev = data->cdev;
+	est->trip_temp = data->trip_temp;
+
+	est->thz = thermal_zone_device_register("therm_est",
+					1,
+					est,
+					&therm_est_ops,
+					data->tc1,
+					data->tc2,
+					data->passive_delay,
+					0);
+	if (IS_ERR_OR_NULL(est->thz))
+		goto err;
+
+	return 0;
+err:
+	kfree(est);
+	return -EINVAL;
 }
+
+static int __devexit therm_est_remove(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static struct platform_driver therm_est_driver = {
+	.driver = {
+		.owner = THIS_MODULE,
+		.name  = "therm_est",
+	},
+	.probe  = therm_est_probe,
+	.remove = __devexit_p(therm_est_remove),
+};
+
+static int __init therm_est_driver_init(void)
+{
+	return platform_driver_register(&therm_est_driver);
+}
+module_init(therm_est_driver_init);

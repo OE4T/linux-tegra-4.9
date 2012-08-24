@@ -2146,7 +2146,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	dev_info(&ndev->dev, "probed\n");
 
 	if (dc->pdata->fb) {
-		if (dc->pdata->fb->bits_per_pixel == -1) {
+		if (dc->enabled && dc->pdata->fb->bits_per_pixel == -1) {
 			unsigned long fmt;
 			tegra_dc_writel(dc,
 					WINDOW_A_SELECT << dc->pdata->fb->win,

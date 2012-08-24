@@ -34,19 +34,27 @@
 /* Magic to use to fill freed handle slots */
 #define BAD_MAGIC 0xdeadbeef
 
-static int job_size(struct nvhost_submit_hdr_ext *hdr)
+static size_t job_size(struct nvhost_submit_hdr_ext *hdr)
 {
-	int num_relocs = hdr ? hdr->num_relocs : 0;
-	int num_waitchks = hdr ? hdr->num_waitchks : 0;
-	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
-	int num_unpins = num_cmdbufs + num_relocs;
+	s64 num_relocs = hdr ? (int)hdr->num_relocs : 0;
+	s64 num_waitchks = hdr ? (int)hdr->num_waitchks : 0;
+	s64 num_cmdbufs = hdr ? (int)hdr->num_cmdbufs : 0;
+	s64 num_unpins = num_cmdbufs + num_relocs;
+	s64 total;
 
-	return sizeof(struct nvhost_job)
+	if(num_relocs < 0 || num_waitchks < 0 || num_cmdbufs < 0)
+		return 0;
+
+	total = sizeof(struct nvhost_job)
 			+ num_relocs * sizeof(struct nvhost_reloc)
 			+ num_relocs * sizeof(struct nvhost_reloc_shift)
 			+ num_unpins * sizeof(struct mem_handle *)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather);
+
+	if(total > ULONG_MAX)
+		return 0;
+	return (size_t)total;
 }
 
 static void init_fields(struct nvhost_job *job,
@@ -63,7 +71,11 @@ static void init_fields(struct nvhost_job *job,
 	job->priority = priority;
 	job->clientid = clientid;
 
-	/* Redistribute memory to the structs */
+	/*
+	 * Redistribute memory to the structs.
+	 * Overflows and negative conditions have
+	 * already been checked in job_alloc().
+	 */
 	mem += sizeof(struct nvhost_job);
 	job->relocarray = num_relocs ? mem : NULL;
 	mem += num_relocs * sizeof(struct nvhost_reloc);
@@ -91,8 +103,11 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		int clientid)
 {
 	struct nvhost_job *job = NULL;
+	size_t size = job_size(hdr);
 
-	job = vzalloc(job_size(hdr));
+	if(!size)
+		goto error;
+	job = vzalloc(size);
 	if (!job)
 		goto error;
 

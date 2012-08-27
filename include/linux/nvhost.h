@@ -44,6 +44,9 @@ struct nvhost_device_power_attr;
  * So if someone decides to add new sync point in future
  * please check both the header files
  */
+#define NVSYNCPT_DISP0_D		(5)
+#define NVSYNCPT_DISP0_H		(6)
+#define NVSYNCPT_DISP1_H		(7)
 #define NVSYNCPT_DISP0_A		(8)
 #define NVSYNCPT_DISP1_A		(9)
 #define NVSYNCPT_AVP_0			(10)

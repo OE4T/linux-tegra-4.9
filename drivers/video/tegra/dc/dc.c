@@ -1382,6 +1382,11 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_dp_ops;
 		break;
 #endif
+#ifdef CONFIG_TEGRA_LVDS
+	case TEGRA_DC_OUT_LVDS:
+		dc->out_ops = &tegra_dc_lvds_ops;
+		break;
+#endif
 
 	default:
 		dc->out_ops = NULL;

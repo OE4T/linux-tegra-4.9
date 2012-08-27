@@ -317,6 +317,9 @@ extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 #ifdef CONFIG_TEGRA_DP
 extern struct tegra_dc_out_ops tegra_dc_dp_ops;
 #endif
+#ifdef CONFIG_TEGRA_LVDS
+extern struct tegra_dc_out_ops tegra_dc_lvds_ops;
+#endif
 
 /* defined in dc_sysfs.c, used by dc.c */
 void tegra_dc_remove_sysfs(struct device *dev);

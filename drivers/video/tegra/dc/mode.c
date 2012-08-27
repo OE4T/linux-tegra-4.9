@@ -144,7 +144,8 @@ static s64 calc_frametime_ns(const struct tegra_dc_mode *m)
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	return (s64)(div_s64(((s64)h_total * v_total * 1000000000ULL), m->pclk));
+	return (!m->pclk) ? 0 : (s64)(div_s64(((s64)h_total * v_total *
+					1000000000ULL), m->pclk));
 }
 
 /* return in 1000ths of a Hertz */

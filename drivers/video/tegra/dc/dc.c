@@ -1351,11 +1351,13 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 /* XXX: Not sure if we limit look ahead to 1 frame */
 bool tegra_dc_is_within_n_vsync(struct tegra_dc *dc, s64 ts)
 {
+	BUG_ON(!dc->frametime_ns);
 	return ((ts - dc->frame_end_timestamp) < dc->frametime_ns);
 }
 
 bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
 {
+	BUG_ON(!dc->frametime_ns);
 	return (((new_ts - old_ts) > dc->frametime_ns)
 		|| (div_s64((new_ts - dc->frame_end_timestamp), dc->frametime_ns)
 			!= div_s64((old_ts - dc->frame_end_timestamp),

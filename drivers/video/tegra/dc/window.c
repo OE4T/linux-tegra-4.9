@@ -53,11 +53,11 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
-static int get_topmost_window(u32 *depths, unsigned long *wins)
+static int get_topmost_window(u32 *depths, unsigned long *wins, int win_num)
 {
 	int idx, best = -1;
 
-	for_each_set_bit(idx, wins, DC_N_WINDOWS) {
+	for_each_set_bit(idx, wins, win_num) {
 		if (best == -1 || depths[idx] < depths[best])
 			best = idx;
 	}
@@ -75,11 +75,12 @@ static u32 blend_topwin(u32 flags)
 		return BLEND(NOKEY, FIX, 0xff, 0xff);
 }
 
-static u32 blend_2win(int idx, unsigned long behind_mask, u32* flags, int xy)
+static u32 blend_2win(int idx, unsigned long behind_mask,
+						u32* flags, int xy, int win_num)
 {
 	int other;
 
-	for (other = 0; other < DC_N_WINDOWS; other++) {
+	for (other = 0; other < win_num; other++) {
 		if (other != idx && (xy-- == 0))
 			break;
 	}
@@ -91,13 +92,14 @@ static u32 blend_2win(int idx, unsigned long behind_mask, u32* flags, int xy)
 		return BLEND(NOKEY, FIX, 0x00, 0x00);
 }
 
-static u32 blend_3win(int idx, unsigned long behind_mask, u32* flags)
+static u32 blend_3win(int idx, unsigned long behind_mask,
+						u32* flags, int win_num)
 {
 	unsigned long infront_mask;
 	int first;
 
 	infront_mask = ~(behind_mask | BIT(idx));
-	infront_mask &= (BIT(DC_N_WINDOWS) - 1);
+	infront_mask &= (BIT(win_num) - 1);
 	first = ffs(infront_mask) - 1;
 
 	if (!infront_mask)
@@ -108,13 +110,14 @@ static u32 blend_3win(int idx, unsigned long behind_mask, u32* flags)
 		return BLEND(NOKEY, FIX, 0x0, 0x0);
 }
 
-static void tegra_dc_set_blending(struct tegra_dc *dc,
-	struct tegra_dc_blend *blend)
+static void tegra_dc_blend_parallel(struct tegra_dc *dc,
+				struct tegra_dc_blend *blend)
 {
-	unsigned long mask = BIT(DC_N_WINDOWS) - 1;
+	int win_num = dc->gen1_blend_num;
+	unsigned long mask = BIT(win_num) - 1;
 
 	while (mask) {
-		int idx = get_topmost_window(blend->z, &mask);
+		int idx = get_topmost_window(blend->z, &mask, win_num);
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << idx,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -122,12 +125,68 @@ static void tegra_dc_set_blending(struct tegra_dc *dc,
 				DC_WIN_BLEND_NOKEY);
 		tegra_dc_writel(dc, BLEND(NOKEY, FIX, 0xff, 0xff),
 				DC_WIN_BLEND_1WIN);
-		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 0),
-				DC_WIN_BLEND_2WIN_X);
-		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 1),
-				DC_WIN_BLEND_2WIN_Y);
-		tegra_dc_writel(dc, blend_3win(idx, mask, blend->flags),
-				DC_WIN_BLEND_3WIN_XY);
+		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 0,
+				win_num), DC_WIN_BLEND_2WIN_X);
+		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 1,
+				win_num), DC_WIN_BLEND_2WIN_Y);
+		tegra_dc_writel(dc, blend_3win(idx, mask, blend->flags,
+				win_num), DC_WIN_BLEND_3WIN_XY);
+	}
+}
+
+static void tegra_dc_blend_sequential(struct tegra_dc *dc,
+				struct tegra_dc_blend *blend)
+{
+	int i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		if (!tegra_dc_feature_is_gen2_blender(dc, i))
+			continue;
+
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+				DC_CMD_DISPLAY_WINDOW_HEADER);
+
+		if (blend->flags[i] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
+			tegra_dc_writel(dc,
+					WIN_K1(0xff) |
+					WIN_K2(0xff) |
+					WIN_BLEND_ENABLE,
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+
+			tegra_dc_writel(dc,
+			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1_TIMES_SRC |
+			WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1_TIMES_SRC |
+			WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+			DC_WINBUF_BLEND_MATCH_SELECT);
+
+			tegra_dc_writel(dc,
+					WIN_ALPHA_1BIT_WEIGHT0(0) |
+					WIN_ALPHA_1BIT_WEIGHT1(0xff),
+					DC_WINBUF_BLEND_ALPHA_1BIT);
+		} else if (blend->flags[i] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
+			tegra_dc_writel(dc,
+					WIN_K1(0xff) |
+					WIN_K2(0xff) |
+					WIN_BLEND_ENABLE,
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+
+			tegra_dc_writel(dc,
+			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 |
+			WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1 |
+			WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+			DC_WINBUF_BLEND_MATCH_SELECT);
+
+			tegra_dc_writel(dc,
+					WIN_ALPHA_1BIT_WEIGHT0(0) |
+					WIN_ALPHA_1BIT_WEIGHT1(0xff),
+					DC_WINBUF_BLEND_ALPHA_1BIT);
+		} else {
+			tegra_dc_writel(dc,
+					WIN_BLEND_BYPASS,
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+		}
 	}
 }
 
@@ -211,7 +270,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
 	unsigned long val;
-	bool update_blend = false;
+	bool update_blend_par = false;
+	bool update_blend_seq = false;
 	int i;
 
 	dc = windows[0]->dc;
@@ -256,15 +316,17 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		const bool filter_h = win_use_h_filter(dc, win);
 		const bool filter_v = win_use_v_filter(dc, win);
 
-		if (win->z != dc->blend.z[win->idx]) {
+		/* Update blender */
+		if ((win->z != dc->blend.z[win->idx]) ||
+			((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
+			dc->blend.flags[win->idx])) {
 			dc->blend.z[win->idx] = win->z;
-			update_blend = true;
-		}
-		if ((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
-			dc->blend.flags[win->idx]) {
 			dc->blend.flags[win->idx] =
 				win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
-			update_blend = true;
+			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
+				update_blend_seq = true;
+			else
+				update_blend_par = true;
 		}
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << win->idx,
@@ -401,8 +463,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			dfixed_trunc(win->h), win->out_w, win->out_h, win->fmt);
 	}
 
-	if (update_blend) {
-		tegra_dc_set_blending(dc, &dc->blend);
+	if (update_blend_par || update_blend_seq) {
+		if (update_blend_par)
+			tegra_dc_blend_parallel(dc, &dc->blend);
+		if (update_blend_seq)
+			tegra_dc_blend_sequential(dc, &dc->blend);
 		for (i = 0; i < DC_N_WINDOWS; i++) {
 			if (!no_vsync)
 				dc->windows[i].dirty = 1;

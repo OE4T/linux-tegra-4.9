@@ -326,7 +326,7 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 	for (i = 0; i < dc->feature->num_entries; i++) {
 		entry = &dc->feature->entries[i];
 		if (entry->option == TEGRA_DC_FEATURE_BLEND_TYPE &&
-							entry->arg[0] == 1)
+					entry->arg[BLEND_GENERATION] == 1)
 			dc->gen1_blend_num++;
 	}
 }

@@ -57,7 +57,7 @@ void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 	kfree(area);
 }
 
-#ifdef CONFIG_PLATFORM_IOMMUABLE
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 
 static inline int tegra_iommu_create_map(struct device *dev)
 {

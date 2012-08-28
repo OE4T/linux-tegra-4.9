@@ -98,8 +98,6 @@ struct nv_focuser_config {
 	__u32 focal_length;
 	__u32 fnumber;
 	__u32 max_aperture;
-	__s32 actuator_range;
-	__u32 settle_time;
 	__u32 range_ends_reversed;
 	__s32 pos_working_low;
 	__s32 pos_working_high;

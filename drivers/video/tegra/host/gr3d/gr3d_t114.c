@@ -21,11 +21,10 @@
  */
 
 #include "nvhost_hwctx.h"
+#include "nvhost_channel.h"
 #include "dev.h"
 #include "host1x/host1x02_hardware.h"
-#include "host1x/host1x_syncpt.h"
-#include "gr3d/gr3d.h"
-#include "nvhost_channel.h"
+#include "gr3d.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "scale3d.h"
@@ -117,15 +116,25 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1),
-			nvhost_class_host_wait_syncpt_base(NVSYNCPT_3D,
+			nvhost_class_host_wait_syncpt_base(p->syncpt,
 							p->waitbase, 1));
 	/* back to 3d */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-			nvhost_opcode_imm(0xe40, 1));
+			NVHOST_OPCODE_NOOP);
+
+	/* invalidate the FDC to prevent cache-coherency issues across GPUs
+	   note that we assume FDC_CONTROL_0 is left in the reset state by all
+	   contexts.  the invalidate bit will clear itself, so the register
+	   should be unchanged after this */
 	nvhost_cdma_push(cdma,
-			nvhost_opcode_nonincr(0x904, 1),
-			ctx->restore_phys);
+		nvhost_opcode_imm(AR3D_FDC_CONTROL_0,
+			AR3D_FDC_CONTROL_0_RESET_VAL
+				| AR3D_FDC_CONTROL_0_INVALIDATE),
+		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
+		ctx->restore_phys);
 	/* gather the save buffer */
 	nvhost_cdma_push_gather(cdma,
 			nvhost_get_host(nctx->channel->dev)->memmgr,
@@ -135,17 +144,19 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 			p->save_phys);
 }
 
-static void __init save_begin_v1(struct host1x_hwctx_handler *p, u32 *ptr)
+static void save_begin_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 {
-	ptr[0] = nvhost_opcode_nonincr(0xc10, RESTORE_BEGIN_SIZE);
+	ptr[0] = nvhost_opcode_nonincr(AR3D_PIPEALIAS_DW_MEMORY_OUTPUT_DATA,
+			RESTORE_BEGIN_SIZE);
 	nvhost_3dctx_restore_begin(p, ptr + 1);
 	ptr += RESTORE_BEGIN_SIZE;
 }
 
-static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count,
+static void save_direct_v1(u32 *ptr, u32 start_reg, u32 count,
 			u32 rst_reg)
 {
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0xc10, 1);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
+			AR3D_PIPEALIAS_DW_MEMORY_OUTPUT_DATA, 1);
 	nvhost_3dctx_restore_direct(ptr + 1, rst_reg, count);
 	ptr += RESTORE_DIRECT_SIZE;
 	ptr[1] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
@@ -156,12 +167,13 @@ static void __init save_direct_v1(u32 *ptr, u32 start_reg, u32 count,
 	ptr[3] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
-static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
+static void save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 			u32 data_reg, u32 count,
 			u32 rst_reg, u32 rst_data_reg)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
-	ptr[1] = nvhost_opcode_nonincr(0xc10, RESTORE_INDIRECT_SIZE);
+	ptr[1] = nvhost_opcode_nonincr(AR3D_PIPEALIAS_DW_MEMORY_OUTPUT_DATA,
+			RESTORE_INDIRECT_SIZE);
 	nvhost_3dctx_restore_indirect(ptr + 2, rst_reg, offset, rst_data_reg,
 			count);
 	ptr += RESTORE_INDIRECT_SIZE;
@@ -173,14 +185,16 @@ static void __init save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[5] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
-static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
+static void save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* write end of restore buffer */
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0xc10, 1);
+	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID,
+			AR3D_PIPEALIAS_DW_MEMORY_OUTPUT_DATA, 1);
 	nvhost_3dctx_restore_end(p, ptr + 1);
 	ptr += RESTORE_END_SIZE;
 	/* op_done syncpt incr to flush FDC */
-	ptr[1] = nvhost_opcode_imm_incr_syncpt(host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
+	ptr[1] = nvhost_opcode_imm_incr_syncpt(
+			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
 	/* host wait for that syncpt incr, and advance the wait base */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 			host1x_uclass_wait_syncpt_base_r(),
@@ -194,12 +208,12 @@ static void __init save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 	/* set class back to 3d */
 	ptr[5] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* send reg reads back to host */
-	ptr[6] = nvhost_opcode_imm(0xe40, 0);
+	ptr[6] = nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 0);
 	/* final syncpt increment to release waiters */
 	ptr[7] = nvhost_opcode_imm(0, p->syncpt);
 }
 
-static void __init setup_save_regs(struct save_info *info,
+static void setup_save_regs(struct save_info *info,
 			const struct hwctx_reginfo *regs,
 			unsigned int nr_regs)
 {
@@ -262,7 +276,7 @@ static void __init setup_save_regs(struct save_info *info,
 	info->restore_count = restore_count;
 }
 
-static void __init setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
+static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	struct save_info info = {
 		ptr,
@@ -310,7 +324,7 @@ static struct nvhost_hwctx *ctx3d_alloc_v1(struct nvhost_hwctx_handler *h,
 		return NULL;
 }
 
-struct nvhost_hwctx_handler * __init nvhost_gr3d_t114_ctxhandler_init(
+struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch)
 {
@@ -331,7 +345,7 @@ struct nvhost_hwctx_handler * __init nvhost_gr3d_t114_ctxhandler_init(
 
 	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR(p->save_buf)) {
+	if (IS_ERR_OR_NULL(p->save_buf)) {
 		p->save_buf = NULL;
 		return NULL;
 	}

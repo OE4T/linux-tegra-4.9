@@ -1,45 +1,41 @@
 /*
  * drivers/video/tegra/host/t114/t114.c
  *
- * Tegra Graphics Init for T114 Architecture Chips
+ * Tegra Graphics Init for Tegra11 Architecture Chips
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
+ * This program is distributed in the hope it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/init.h>
 #include <linux/mutex.h>
+#include <linux/kernel.h>
+#include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
 #include <mach/iomap.h>
-#include "dev.h"
-#include "host1x/host1x_cdma.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114.h"
-#include "host1x/host1x02_hardware.h"
-#include "host1x/host1x_syncpt.h"
-#include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t114.h"
 #include "gr3d/scale3d.h"
+#include "host1x/host1x02_hardware.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
-#include <linux/nvhost_ioctl.h>
+#include "host1x/host1x.h"
+#include "chip_support.h"
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
-#include "chip_support.h"
+#include "host1x/host1x_syncpt.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -50,8 +46,6 @@
 #define NVMODMUTEX_DISPLAYB  (7)
 #define NVMODMUTEX_VI        (8)
 #define NVMODMUTEX_DSI       (9)
-
-#define HOST_EMC_FLOOR 300000000
 
 static int t114_num_alloc_channels = 0;
 
@@ -133,7 +127,7 @@ static struct nvhost_device tegra_gr3d03_device = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.clocks = {{"gr3d", UINT_MAX},
-			{"emc", HOST_EMC_FLOOR} },
+			{"emc", UINT_MAX} },
 	.powergate_ids = { TEGRA_POWERGATE_3D, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate = true,
@@ -150,11 +144,12 @@ static struct nvhost_device tegra_gr2d03_device = {
 	.modulemutexes = BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			 BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
 	.clocks = {{"gr2d", 0},
-			{"epp", UINT_MAX},
-			{"emc", HOST_EMC_FLOOR} },
+			{"epp", 0},
+			{"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+	.clockgate_delay = 0,
+	.moduleid	= NVHOST_MODULE_NONE,
+	.serialize	= true,
 };
 
 static struct resource isp_resources[] = {
@@ -167,15 +162,18 @@ static struct resource isp_resources[] = {
 };
 
 static struct nvhost_device tegra_isp01_device = {
-	.name	 = "isp",
-	.id      = -1,
-	.resource = isp_resources,
-	.num_resources = ARRAY_SIZE(isp_resources),
-	.index   = 3,
-	.syncpts = 0,
+	.name		= "isp",
+	.id		= -1,
+	.resource	= isp_resources,
+	.num_resources	= ARRAY_SIZE(isp_resources),
+	.index		= 3,
+	.syncpts	= BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
+			  BIT(NVSYNCPT_VI_ISP_4),
+	.clocks		= { {"epp", 0} },
+	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_ISP,
+	.moduleid	= NVHOST_MODULE_ISP,
 };
 
 static struct resource vi_resources[] = {
@@ -189,9 +187,9 @@ static struct resource vi_resources[] = {
 
 static struct nvhost_device tegra_vi01_device = {
 	.name	       = "vi",
-	.id            = -1,
 	.resource      = vi_resources,
 	.num_resources = ARRAY_SIZE(vi_resources),
+	.id            = -1,
 	.index         = 4,
 	.syncpts       = BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
 			 BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
@@ -225,7 +223,7 @@ static struct nvhost_device tegra_msenc02_device = {
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.exclusive     = false,
 	.keepalive     = true,
-	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks = {{"msenc", UINT_MAX}, {"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_MSENC,
@@ -263,7 +261,7 @@ static struct nvhost_device tegra_tsec01_device = {
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = false,
-	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks = {{"tsec", UINT_MAX}, {"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,

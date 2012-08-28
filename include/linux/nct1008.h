@@ -25,6 +25,7 @@
 
 #include <linux/types.h>
 #include <linux/workqueue.h>
+#include <linux/thermal.h>
 
 #include <mach/edp.h>
 

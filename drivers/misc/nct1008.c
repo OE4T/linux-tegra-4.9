@@ -30,6 +30,7 @@
 #include <linux/device.h>
 #include <linux/nct1008.h>
 #include <linux/delay.h>
+#include <linux/thermal.h>
 #include <linux/regulator/consumer.h>
 
 /* Register Addresses */
@@ -598,13 +599,15 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 		goto error;
 
 	/* External temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range, NCT1008_MAX_TEMP);
+	value = temperature_to_value(pdata->ext_range,
+					pdata->shutdown_ext_limit);
 	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range, NCT1008_MAX_TEMP);
+	value = temperature_to_value(pdata->ext_range,
+					pdata->shutdown_local_limit);
 	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
@@ -724,12 +727,6 @@ int nct1008_thermal_get_temps(struct nct1008_data *data, long *etemp, long *item
 	return nct1008_get_temp(&data->client->dev, etemp, itemp);
 }
 
-int nct1008_thermal_get_temp_low(struct nct1008_data *data, long *temp)
-{
-	*temp = 0;
-	return 0;
-}
-
 int nct1008_thermal_set_limits(struct nct1008_data *data,
 				long lo_limit_milli,
 				long hi_limit_milli)
@@ -778,31 +775,47 @@ int nct1008_thermal_set_alert(struct nct1008_data *data,
 	return 0;
 }
 
-int nct1008_thermal_set_shutdown_temp(struct nct1008_data *data,
-					long shutdown_temp_milli)
+#ifdef CONFIG_THERMAL
+static int nct1008_zone_get_temp(struct thermal_zone_device *thz,
+					unsigned long *temp)
 {
+	struct nct1008_data *data = thz->devdata;
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	int err;
+	s8 temp_local;
+	long temp_local_milli;
 	u8 value;
-	long shutdown_temp;
 
-	shutdown_temp = MILLICELSIUS_TO_CELSIUS(shutdown_temp_milli);
+	/* Read Local Temp */
+	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	if (value < 0)
+		return -1;
+	temp_local = value_to_temperature(pdata->ext_range, value);
+	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
 
-	/* External temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range, shutdown_temp);
-	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
-	if (err)
-		return err;
-
-	/* Local temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->ext_range, shutdown_temp);
-	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
-	if (err)
-		return err;
+	*temp = temp_local_milli;
 
 	return 0;
 }
+
+static int nct1008_bind(struct thermal_zone_device *thz,
+				struct thermal_cooling_device *cdev)
+{
+	return 0;
+}
+
+static int nct1008_unbind(struct thermal_zone_device *thz,
+				struct thermal_cooling_device *cdev)
+{
+	return 0;
+}
+
+static struct thermal_zone_device_ops nct_ops = {
+	.get_temp = nct1008_zone_get_temp,
+	.bind = nct1008_bind,
+	.unbind = nct1008_unbind,
+};
+#endif
 
 /*
  * Manufacturer(OnSemi) recommended sequence for
@@ -865,6 +878,17 @@ static int nct1008_probe(struct i2c_client *client,
 	err = nct1008_debuginit(data);
 	if (err < 0)
 		err = 0; /* without debugfs we may continue */
+
+#ifdef CONFIG_THERMAL
+	thermal_zone_device_register("nct_int",
+				0,
+				data,
+				&nct_ops,
+				0,
+				1,
+				2000,
+				0);
+#endif
 
 	/* notify callback that probe is done */
 	if (data->plat_data.probe_callback)

@@ -1782,6 +1782,23 @@ void thermal_notify_framework(struct thermal_zone_device *tz, int trip)
 }
 EXPORT_SYMBOL_GPL(thermal_notify_framework);
 
+struct thermal_zone_device *thermal_zone_device_find(void *data,
+	int (*match)(struct thermal_zone_device *, void *))
+{
+	struct thermal_zone_device *thz;
+
+	mutex_lock(&thermal_list_lock);
+	list_for_each_entry(thz, &thermal_tz_list, node)
+		if (match(thz, data)) {
+			mutex_unlock(&thermal_list_lock);
+			return thz;
+		}
+
+	mutex_unlock(&thermal_list_lock);
+	return NULL;
+}
+EXPORT_SYMBOL(thermal_zone_device_find);
+
 /**
  * create_trip_attrs() - create attributes for trip points
  * @tz:		the thermal zone device

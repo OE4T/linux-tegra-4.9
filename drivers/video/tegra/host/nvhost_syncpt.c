@@ -345,7 +345,7 @@ static ssize_t syncpt_min_show(struct kobject *kobj,
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
 
-	return snprintf(buf, PAGE_SIZE, "%d",
+	return snprintf(buf, PAGE_SIZE, "%u",
 			nvhost_syncpt_read(&syncpt_attr->host->syncpt,
 				syncpt_attr->id));
 }
@@ -356,7 +356,7 @@ static ssize_t syncpt_max_show(struct kobject *kobj,
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
 
-	return snprintf(buf, PAGE_SIZE, "%d",
+	return snprintf(buf, PAGE_SIZE, "%u",
 			nvhost_syncpt_read_max(&syncpt_attr->host->syncpt,
 				syncpt_attr->id));
 }

@@ -237,6 +237,15 @@ static int nvhost_ioctl_ctrl_get_version(struct nvhost_ctrl_userctx *ctx,
 	return 0;
 }
 
+static int nvhost_ioctl_ctrl_syncpt_read_max(struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_syncpt_read_args *args)
+{
+	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))
+		return -EINVAL;
+	args->value = nvhost_syncpt_read_max(&ctx->dev->syncpt, args->id);
+	return 0;
+}
+
 static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -276,6 +285,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_GET_VERSION:
 		err = nvhost_ioctl_ctrl_get_version(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_SYNCPT_READ_MAX:
+		err = nvhost_ioctl_ctrl_syncpt_read_max(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

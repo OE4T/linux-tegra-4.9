@@ -386,13 +386,13 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-int tsec_read_ucode(struct platform_device *dev)
+int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct tsec *m = get_tsec(dev);
 	const struct firmware *ucode_fw;
 	int err;
 
-	ucode_fw = nvhost_client_request_firmware(dev, TSEC_FIRMWARE_NAME);
+	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get tsec firmware\n");
 		err = -ENOENT;

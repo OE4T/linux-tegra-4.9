@@ -260,13 +260,13 @@ static int msenc_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-int msenc_read_ucode(struct platform_device *dev)
+int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct msenc *m = get_msenc(dev);
 	const struct firmware *ucode_fw;
 	int err;
 
-	ucode_fw  = nvhost_client_request_firmware(dev, MSENC_FIRMWARE_NAME);
+	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get msenc firmware\n");
 		err = -ENOENT;

@@ -63,6 +63,7 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 static int get_topmost_window(u32 *depths, unsigned long *wins, int win_num)
 {
 	int idx, best = -1;
@@ -155,10 +156,12 @@ static u32 blend_3win(int idx, unsigned long behind_mask,
 		}
 	}
 }
+#endif
 
 static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 				struct tegra_dc_blend *blend)
 {
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	int win_num = dc->gen1_blend_num;
 	unsigned long mask = BIT(win_num) - 1;
 
@@ -177,12 +180,14 @@ static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 		tegra_dc_writel(dc, blend_3win(idx, mask, blend->flags,
 				win_num), DC_WIN_BLEND_3WIN_XY);
 	}
+#endif
 	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 				struct tegra_dc_blend *blend)
 {
+#if defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	int idx;
 	unsigned long mask = dc->valid_windows;
 
@@ -236,6 +241,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
 		}
 	}
+#endif
 	tegra_dc_io_end(dc);
 }
 
@@ -399,9 +405,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
 		bool yuv = tegra_dc_is_yuv(win->fmt);
 		bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
+		bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
 		unsigned Bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
 		/* Bytes per pixel of bandwidth, used for dda_inc calculation */
-		unsigned Bpp_bw = Bpp * (yuvp ? 2 : 1);
+		unsigned Bpp_bw = Bpp * ((yuvp || yuvsp) ? 2 : 1);
 		bool filter_h;
 		bool filter_v;
 #if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
@@ -430,6 +437,15 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			dc->blend.z[win->idx] = win->z;
 			dc->blend.flags[win->idx] =
 					win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
+			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
+				update_blend_seq = true;
+			else
+				update_blend_par = true;
+		}
+		if ((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
+			dc->blend.flags[win->idx]) {
+			dc->blend.flags[win->idx] =
+				win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
 			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
 				update_blend_seq = true;
 			else
@@ -464,16 +480,16 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			tegra_dc_update_scaling(dc, win, Bpp, Bpp_bw,
 								scan_column);
 
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
 #endif
 		tegra_dc_writel(dc, (unsigned long)win->phys_addr,
 			DC_WINBUF_START_ADDR);
 
-		if (!yuvp) {
+		if (!yuvp && !yuvsp) {
 			tegra_dc_writel(dc, win->stride, DC_WIN_LINE_STRIDE);
-		} else {
+		} else if (yuvp) {
 			tegra_dc_writel(dc,
 				(unsigned long)win->phys_addr_u,
 				DC_WINBUF_START_ADDR_U);
@@ -484,6 +500,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				LINE_STRIDE(win->stride) |
 				UV_LINE_STRIDE(win->stride_uv),
 				DC_WIN_LINE_STRIDE);
+		} else {
+			tegra_dc_writel(dc,
+					(unsigned long)win->phys_addr_u,
+					DC_WINBUF_START_ADDR_U);
+			tegra_dc_writel(dc,
+					LINE_STRIDE(win->stride) |
+					UV_LINE_STRIDE(win->stride_uv),
+					DC_WIN_LINE_STRIDE);
 		}
 
 		if (invert_h) {
@@ -504,6 +528,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, dfixed_trunc(v_offset),
 				DC_WINBUF_ADDR_V_OFFSET);
 
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		if (tegra_dc_feature_has_tiling(dc, win->idx)) {
 			if (WIN_IS_TILED(win))
 				tegra_dc_writel(dc,
@@ -516,7 +541,29 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
 					DC_WIN_BUFFER_ADDR_MODE);
 		}
+#endif
 
+#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
+		if (tegra_dc_feature_has_blocklinear(dc, win->idx) ||
+			tegra_dc_feature_has_tiling(dc, win->idx)) {
+				if (WIN_IS_BLOCKLINEAR(win)) {
+					tegra_dc_writel(dc,
+						DC_WIN_BUFFER_SURFACE_BL_16B2 |
+						(win->block_height_log2
+							<< BLOCK_HEIGHT_SHIFT),
+						DC_WIN_BUFFER_SURFACE_KIND);
+				} else if (WIN_IS_TILED(win)) {
+					tegra_dc_writel(dc,
+						DC_WIN_BUFFER_SURFACE_TILED,
+						DC_WIN_BUFFER_SURFACE_KIND);
+				} else {
+					tegra_dc_writel(dc,
+						DC_WIN_BUFFER_SURFACE_PITCH,
+						DC_WIN_BUFFER_SURFACE_KIND);
+				}
+		}
+
+#endif
 		if (yuv)
 			win_options |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)

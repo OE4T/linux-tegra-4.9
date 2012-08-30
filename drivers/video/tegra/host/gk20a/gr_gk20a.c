@@ -1251,6 +1251,11 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	gr->ctx_vars.golden_image_initialized = true;
 
+	/* TBD: determine if this is necessary
+	   Bug 1035430 */
+	gk20a_writel(g, gr_fecs_current_ctx_r(),
+		gr_fecs_current_ctx_valid_false_f());
+
 clean_up:
 	if (err)
 		nvhost_dbg(dbg_fn | dbg_err, "fail");

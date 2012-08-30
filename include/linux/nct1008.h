@@ -27,13 +27,21 @@
 #include <linux/workqueue.h>
 #include <linux/thermal.h>
 
-#include <mach/edp.h>
-
-#define MAX_ZONES	16
-
 struct nct1008_data;
 
 enum nct1008_chip { NCT1008, NCT72 };
+
+struct nct1008_cdev {
+	struct thermal_cooling_device *(*create_cdev)(void *);
+	void *cdev_data;
+	long trip_temp;
+	enum thermal_trip_type type;
+	int tc1;
+	int tc2;
+	int passive_delay;
+};
+
+#define NCT1008_MAX_ACTIVE (16)
 
 struct nct1008_platform_data {
 	bool supported_hwrev;
@@ -42,52 +50,8 @@ struct nct1008_platform_data {
 	u8 offset;
 	s8 shutdown_ext_limit;
 	s8 shutdown_local_limit;
-	void (*probe_callback)(struct nct1008_data *);
+
+	struct nct1008_cdev passive;
+	struct nct1008_cdev active[NCT1008_MAX_ACTIVE];
 };
-
-struct nct1008_data {
-	struct workqueue_struct *workqueue;
-	struct work_struct work;
-	struct i2c_client *client;
-	struct nct1008_platform_data plat_data;
-	struct mutex mutex;
-	struct dentry *dent;
-	u8 config;
-	enum nct1008_chip chip;
-	struct regulator *nct_reg;
-	long current_lo_limit;
-	long current_hi_limit;
-	int conv_period_ms;
-
-	void (*alert_func)(void *);
-	void *alert_data;
-};
-
-#ifdef CONFIG_SENSORS_NCT1008
-int nct1008_thermal_get_temp(struct nct1008_data *data, long *temp);
-int nct1008_thermal_get_temps(struct nct1008_data *data, long *etemp,
-				long *itemp);
-int nct1008_thermal_set_limits(struct nct1008_data *data,
-				long lo_limit_milli,
-				long hi_limit_milli);
-int nct1008_thermal_set_alert(struct nct1008_data *data,
-				void (*alert_func)(void *),
-				void *alert_data);
-#else
-static inline int nct1008_thermal_get_temp(struct nct1008_data *data,
-						long *temp)
-{ return -EINVAL; }
-static inline int nct1008_thermal_get_temps(struct nct1008_data *data,
-						long *etemp, long *itemp)
-{ return -EINVAL; }
-static inline int nct1008_thermal_set_limits(struct nct1008_data *data,
-				long lo_limit_milli,
-				long hi_limit_milli)
-{ return -EINVAL; }
-static inline int nct1008_thermal_set_alert(struct nct1008_data *data,
-				void (*alert_func)(void *),
-				void *alert_data)
-{ return -EINVAL; }
-#endif
-
 #endif /* _LINUX_NCT1008_H */

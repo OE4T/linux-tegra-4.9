@@ -94,7 +94,9 @@ static struct nvhost_device *channel_devices[] = {
 	&tegra_host1x04_device,
 (struct nvhost_device []){{
 	.name	       = "display",
-	.syncpts       = BIT(NVSYNCPT_DISP0) | BIT(NVSYNCPT_DISP1) |
+	.syncpts       = BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
+			 BIT(NVSYNCPT_DISP0_B) | /* BIT(NVSYNCPT_DISP1_B) |
+	!!!FIXME!!!	 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) | */
 			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
 	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -113,7 +115,7 @@ static struct nvhost_device *channel_devices[] = {
 (struct nvhost_device []){{
 	.name	 = "isp",
 	.id      = 1, /* .1 on the dev node */
-	.syncpts       = NV_ISP_1_SYNCPTS,
+	.syncpts = NV_ISP_1_SYNCPTS,
 	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
 	.clocks = {{"isp.1", UINT_MAX}, {} },
 	.exclusive     = true,

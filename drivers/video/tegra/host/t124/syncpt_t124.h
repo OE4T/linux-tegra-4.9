@@ -22,42 +22,36 @@
 #ifndef __NVHOST_SYNCPT_T124_H
 #define __NVHOST_SYNCPT_T124_H
 
-#define NVSYNCPT_VI_0_0   1
-#define NVSYNCPT_VI_0_1   2
-#define NVSYNCPT_VI_0_2   3
-#define NVSYNCPT_VI_0_3   4
-#define NVSYNCPT_VI_0_4   5
-#define NVSYNCPT_VI_1_0   6
-#define NVSYNCPT_VI_1_1   7
-#define NVSYNCPT_VI_1_2   8
-#define NVSYNCPT_VI_1_3   9
-#define NVSYNCPT_VI_1_4  10
-#define NVSYNCPT_ISP_0_0 11
-#define NVSYNCPT_ISP_0_1 12
-#define NVSYNCPT_ISP_0_2 13
-#define NVSYNCPT_ISP_0_3 14
-#define NVSYNCPT_ISP_1_0 15
-#define NVSYNCPT_ISP_1_1 16
-#define NVSYNCPT_ISP_1_2 17
-#define NVSYNCPT_ISP_1_3 18
-#define NVSYNCPT_TSEC	 19
-#define NVSYNCPT_3D	 20
-#define NVSYNCPT_MSENC	 21
-#define NVSYNCPT_DISP0	 22
-#define NVSYNCPT_DISP1	 23
-#define NVSYNCPT_VBLANK0 24
-#define NVSYNCPT_VBLANK1 25
-#define NVSYNCPT_DSI     26
+#include "host1x/host1x_syncpt.h"
+
+#define NVSYNCPT_ISP_0_0	0
+#define NVSYNCPT_ISP_0_1	1
+#define NVSYNCPT_ISP_0_2	2
+#define NVSYNCPT_ISP_0_3	3
+#define NVSYNCPT_ISP_1_0	4
+#define NVSYNCPT_ISP_1_1	5
+#define NVSYNCPT_ISP_1_2	6
+#define NVSYNCPT_ISP_1_3	7
+#define NVSYNCPT_VI_0_0		NVSYNCPT_VI_ISP_0
+#define NVSYNCPT_VI_0_1		NVSYNCPT_VI_ISP_1
+#define NVSYNCPT_VI_0_2		NVSYNCPT_VI_ISP_2
+#define NVSYNCPT_VI_0_3		NVSYNCPT_VI_ISP_3
+#define NVSYNCPT_VI_0_4		NVSYNCPT_VI_ISP_4
+#define NVSYNCPT_VI_1_0		NVSYNCPT_MPE_EBM_EOF
+#define NVSYNCPT_VI_1_1		NVSYNCPT_MPE_WR_SAFE
+#define NVSYNCPT_VI_1_2		NVSYNCPT_DISP0_B /* !!!FIXME!!! */
+#define NVSYNCPT_VI_1_3		NVSYNCPT_DISP1_B /* !!!FIXME!!! */
+#define NVSYNCPT_VI_1_4		NVSYNCPT_DISP0_C /* !!!FIXME!!! */
+#define NVSYNCPT_TSEC		NVSYNCPT_DISP1_C /* !!!FIXME!!! */
+#define NVSYNCPT_MSENC		NVSYNCPT_MPE
 
 #ifdef CONFIG_ARCH_TEGRA_VIC
-#define NVSYNCPT_VIC     27
+#define NVSYNCPT_VIC		NVSYNCPT_2D_0
 #endif
-
 
 #define NVSYNCPT_GK20A_BASE 32
 /* following is base + number of gk20a channels. TODO: remove magic */
 #define NVSYNCPT_GK20A_LAST (NVSYNCPT_GK20A_BASE + 127)
-
 
 #define NV_VI_0_SYNCPTS ( \
 	BIT(NVSYNCPT_VI_0_0) | \
@@ -89,24 +83,13 @@
 	BIT(NVSYNCPT_ISP_1_3) | \
 	0 )
 
-
 #define NVCAMERA_MANAGED_SYNCPTS ( \
 	NV_VI_0_SYNCPTS  | NV_VI_1_SYNCPTS  | \
 	NV_ISP_0_SYNCPTS | NV_ISP_1_SYNCPTS | \
 	0 )
 
-/* sync points that are wholly managed by the client */
-#define NVSYNCPTS_CLIENT_MANAGED ( \
-	BIT(NVSYNCPT_DISP0) | BIT(NVSYNCPT_DISP1) | \
-	BIT(NVSYNCPT_DSI) |			    \
-	NVCAMERA_MANAGED_SYNCPTS | \
-   0 )
-
-
 #define NVWAITBASE_3D   (3)
 #define NVWAITBASE_MSENC  (4)
 #define NVWAITBASE_TSEC   (5)
-
-int nvhost_t124_init_syncpt(struct nvhost_master *host);
 
 #endif /* __NVHOST_SYNCPT_T124_H */

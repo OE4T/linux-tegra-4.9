@@ -128,13 +128,6 @@ static int t124_syncpt_patch_wait(struct nvhost_syncpt *sp,
 }
 
 static const char *s_syncpt_names[NV_HOST1X_SYNCPT_NB_PTS] = {
-	"", "", "", "", "", "", "", "", "", "", "vic", "",
-	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4", "vi_isp_5",
-	"2d_0", "2d_1",
-	"", "",
-	"3d", "mpe", "disp0", "disp1", "vblank0", "vblank1",
-	"mpe_ebm_eof", "mpe_wr_safe",
-	"2d_tinyblt", "dsi",
 	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -200,6 +193,30 @@ int nvhost_init_t124_syncpt_support(struct nvhost_master *host,
 	op->syncpt.mutex_unlock = t124_syncpt_mutex_unlock;
 
 	gk20a_device.syncpt_base = NVSYNCPT_GK20A_BASE;
+
+	s_syncpt_names[NVSYNCPT_CSI_VI_0]	= "csi_vi_0";
+	s_syncpt_names[NVSYNCPT_CSI_VI_1]	= "csi_vi_1";
+	s_syncpt_names[NVSYNCPT_VI_ISP_0]	= "vi_isp_0";
+	s_syncpt_names[NVSYNCPT_VI_ISP_1]	= "vi_isp_1";
+	s_syncpt_names[NVSYNCPT_VI_ISP_2]	= "vi_isp_2";
+	s_syncpt_names[NVSYNCPT_VI_ISP_3]	= "vi_isp_3";
+	s_syncpt_names[NVSYNCPT_VI_ISP_4]	= "vi_isp_4";
+	s_syncpt_names[NVSYNCPT_3D]		= "3d";
+	s_syncpt_names[NVSYNCPT_MPE]		= "mpe";
+	s_syncpt_names[NVSYNCPT_MPE_EBM_EOF]	= "mpe_ebm_eof";
+	s_syncpt_names[NVSYNCPT_MPE_WR_SAFE]	= "mpe_wr_safe";
+	s_syncpt_names[NVSYNCPT_VIC]		= "vic";
+	s_syncpt_names[NVSYNCPT_TSEC]		= "tsec";
+	s_syncpt_names[NVSYNCPT_DISP0_A]	= "disp0";
+	s_syncpt_names[NVSYNCPT_DISP1_A]	= "disp1";
+	s_syncpt_names[NVSYNCPT_AVP_0]		= "avp";
+	s_syncpt_names[NVSYNCPT_DISP0_B]	= "disp0b";
+	s_syncpt_names[NVSYNCPT_DISP1_B]	= "disp1b";
+	s_syncpt_names[NVSYNCPT_DISP0_C]	= "disp0c";
+	s_syncpt_names[NVSYNCPT_DISP1_C]	= "disp0c";
+	s_syncpt_names[NVSYNCPT_VBLANK0]	= "vblank0";
+	s_syncpt_names[NVSYNCPT_VBLANK1]	= "vblank1";
+	s_syncpt_names[NVSYNCPT_DSI]		= "dsi";
 
 	return 0;
 }

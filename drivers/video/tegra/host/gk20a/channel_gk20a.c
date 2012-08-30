@@ -551,6 +551,7 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 	return ctx;
 }
 
+#if 0
 /* move to debug_gk20a.c ... */
 static void dump_gpfifo(struct channel_gk20a *c)
 {
@@ -614,6 +615,7 @@ static void dump_gpfifo(struct channel_gk20a *c)
 
 	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
 }
+#endif
 
 /* allocate private cmd buffer.
    used for inserting commands before/after user submitted buffers. */

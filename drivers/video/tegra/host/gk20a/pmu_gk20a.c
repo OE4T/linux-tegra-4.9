@@ -1532,7 +1532,7 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_sequence *seq;
-	int ret;
+	int ret = 0;
 
 	nvhost_dbg_fn("");
 

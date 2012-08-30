@@ -3683,7 +3683,7 @@ out:
 static int gk20a_init_gr_prepare(struct gk20a *g)
 {
 	u32 gpfifo_ctrl, pmc_en;
-	u32 err;
+	u32 err = 0;
 
 	/* disable fifo access */
 	gpfifo_ctrl = gk20a_readl(g, gr_gpfifo_ctl_r());

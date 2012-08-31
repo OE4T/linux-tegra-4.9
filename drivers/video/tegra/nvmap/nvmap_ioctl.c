@@ -550,11 +550,11 @@ static void heap_page_cache_maint(struct nvmap_client *client,
 	}
 }
 
+#if defined(CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS)
 static bool fast_cache_maint_outer(unsigned long start,
 		unsigned long end, unsigned int op)
 {
 	bool result = false;
-#if defined(CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS)
 	if (end - start >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD_OUTER) {
 		if (op == NVMAP_CACHE_OP_WB_INV) {
 			outer_flush_all();
@@ -565,9 +565,16 @@ static bool fast_cache_maint_outer(unsigned long start,
 			result = true;
 		}
 	}
-#endif
+
 	return result;
 }
+#else
+static inline bool fast_cache_maint_outer(unsigned long start,
+		unsigned long end, unsigned int op)
+{
+	return false;
+}
+#endif
 
 static bool fast_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 	unsigned long start, unsigned long end, unsigned int op)

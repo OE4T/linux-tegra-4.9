@@ -26,6 +26,7 @@
 struct nvhost_hwctx_handler;
 struct nvhost_device;
 struct nvhost_channel;
+struct nvhost_hwctx;
 
 struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 		u32 syncpt, u32 base,
@@ -35,5 +36,12 @@ void nvhost_gr3d_t114_init(struct nvhost_device *dev);
 void nvhost_gr3d_t114_deinit(struct nvhost_device *dev);
 int nvhost_gr3d_t114_prepare_power_off(struct nvhost_device *dev);
 void nvhost_gr3d_t114_finalize_power_on(struct nvhost_device *dev);
+
+int nvhost_gr3d_t114_read_reg(
+	struct nvhost_device *dev,
+	struct nvhost_channel *channel,
+	struct nvhost_hwctx *hwctx,
+	u32 offset,
+	u32 *value);
 
 #endif

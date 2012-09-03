@@ -62,7 +62,7 @@ int nvhost_channel_suspend(struct nvhost_channel *ch);
 int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
 			u32 *ptr, unsigned int count, unsigned int *pending);
 
-int nvhost_channel_read_3d_reg(struct nvhost_channel *channel,
+int nvhost_channel_read_reg(struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
 	u32 offset, u32 *value);
 

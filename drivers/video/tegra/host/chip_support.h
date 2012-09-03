@@ -48,10 +48,6 @@ struct nvhost_channel_ops {
 		    struct nvhost_master *,
 		    int chid);
 	int (*submit)(struct nvhost_job *job);
-	int (*read3dreg)(struct nvhost_channel *channel,
-			struct nvhost_hwctx *hwctx,
-			u32 offset,
-			u32 *value);
 	int (*save_context)(struct nvhost_channel *channel);
 	int (*drain_read_fifo)(struct nvhost_channel *ch,
 		u32 *ptr, unsigned int count, unsigned int *pending);

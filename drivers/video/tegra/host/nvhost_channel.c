@@ -181,6 +181,17 @@ int nvhost_channel_save_context(struct nvhost_channel *ch)
 
 }
 
+int nvhost_channel_read_reg(struct nvhost_channel *ch,
+	struct nvhost_hwctx *hwctx,
+	u32 offset, u32 *value)
+{
+	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
+	if (!drv->read_reg)
+		return -EINVAL;
+
+	return drv->read_reg(ch->dev, ch, hwctx, offset, value);
+}
+
 int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
 			u32 *ptr, unsigned int count, unsigned int *pending)
 {

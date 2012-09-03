@@ -394,8 +394,7 @@ static int nvhost_ioctl_channel_flush(
 static int nvhost_ioctl_channel_read_3d_reg(struct nvhost_channel_userctx *ctx,
 	struct nvhost_read_3d_reg_args *args)
 {
-	BUG_ON(!channel_op().read3dreg);
-	return channel_op().read3dreg(ctx->ch, ctx->hwctx,
+	return nvhost_channel_read_reg(ctx->ch, ctx->hwctx,
 			args->offset, &args->value);
 }
 

@@ -233,12 +233,15 @@ static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 	/* after CPU incr, ensure shadow is up to date */
 	nvhost_syncpt_update_min(&dev->syncpt, cdma->timeout.syncpt_id);
 
-	/* update WAITBASE_3D by same number of incrs */
-	if (waitbases) {
+	/* Synchronize wait bases. 2D wait bases are synchronized with
+	 * syncpoint 19. Hence wait bases are not updated when syncptid=18. */
+
+	if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 && waitbases) {
 		void __iomem *p;
 		p = dev->sync_aperture + host1x_sync_syncpt_base_0_r() +
-				(ffs(waitbases) * sizeof(u32));
+				(__ffs(waitbases) * sizeof(u32));
 		writel(syncval, p);
+		dev->syncpt.base_val[__ffs(waitbases)] = syncval;
 	}
 
 	/* NOP all the PB slots */
@@ -486,7 +489,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma);
 
-	nvhost_cdma_update_sync_queue(cdma, sp, dev->dev);
+	nvhost_cdma_update_sync_queue(cdma, sp, ch->dev);
 	mutex_unlock(&cdma->lock);
 }
 

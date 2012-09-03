@@ -25,9 +25,17 @@
 
 struct nvhost_hwctx_handler;
 struct nvhost_channel;
+struct nvhost_device;
+struct nvhost_hwctx;
 
 struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch);
 
+int nvhost_gr3d_t30_read_reg(
+	struct nvhost_device *dev,
+	struct nvhost_channel *channel,
+	struct nvhost_hwctx *hwctx,
+	u32 offset,
+	u32 *value);
 #endif

@@ -1302,9 +1302,9 @@ static int nvmap_probe(struct platform_device *pdev)
 			struct dentry *heap_root =
 				debugfs_create_dir(co->name, nvmap_debug_root);
 			if (!IS_ERR_OR_NULL(heap_root)) {
-				debugfs_create_file("clients", 0664, heap_root,
-				    node, &debug_clients_fops);
-				debugfs_create_file("allocations", 0664,
+				debugfs_create_file("clients", S_IRUGO,
+					heap_root, node, &debug_clients_fops);
+				debugfs_create_file("allocations", S_IRUGO,
 				    heap_root, node, &debug_allocations_fops);
 			}
 		}
@@ -1313,9 +1313,9 @@ static int nvmap_probe(struct platform_device *pdev)
 		struct dentry *iovmm_root =
 			debugfs_create_dir("iovmm", nvmap_debug_root);
 		if (!IS_ERR_OR_NULL(iovmm_root)) {
-			debugfs_create_file("clients", 0664, iovmm_root,
+			debugfs_create_file("clients", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_clients_fops);
-			debugfs_create_file("allocations", 0664, iovmm_root,
+			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_allocations_fops);
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 			for (i = 0; i < NVMAP_NUM_POOLS; i++) {
@@ -1324,7 +1324,7 @@ static int nvmap_probe(struct platform_device *pdev)
 							  "iwb", "wb"};
 				sprintf(name, "%s_page_pool_available_pages",
 					memtype_string[i]);
-				debugfs_create_u32(name, S_IRUGO|S_IWUSR,
+				debugfs_create_u32(name, S_IRUGO,
 					iovmm_root,
 					&dev->iovmm_master.pools[i].npages);
 			}

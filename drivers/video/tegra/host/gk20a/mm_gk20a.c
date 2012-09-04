@@ -24,7 +24,6 @@
 #include <linux/log2.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
-#include <mach/hardware.h>
 
 #include "../../nvmap/nvmap.h"
 #include "../../nvmap/nvmap_ioctl.h"

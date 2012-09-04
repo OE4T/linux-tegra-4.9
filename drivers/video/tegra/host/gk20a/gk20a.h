@@ -34,6 +34,8 @@ struct channel_gk20a;
 struct gr_gk20a;
 struct sim_gk20a;
 
+#include <mach/hardware.h>
+
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
@@ -159,7 +161,10 @@ enum {
 #define TEGRA_GK20A_BAR1_SIZE  0x01000000
 
 #if defined (CONFIG_TEGRA_GK20A_PMU)
-static inline int support_gk20a_pmu(void){return 1;}
+static inline int support_gk20a_pmu(void)
+{
+	return ((tegra_revision != TEGRA_REVISION_QT) ? 1 : 0);
+}
 #else
 static inline int support_gk20a_pmu(void){return 0;}
 #endif

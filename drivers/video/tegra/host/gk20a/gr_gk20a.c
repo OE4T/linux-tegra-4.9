@@ -23,8 +23,6 @@
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/nvmap.h>
 
-#include "mach/hardware.h"
-
 #include "../dev.h"
 
 #include "gk20a.h"

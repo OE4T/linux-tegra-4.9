@@ -21,8 +21,6 @@
 
 #include <linux/firmware.h>
 
-#include "mach/hardware.h"
-
 #include "dev.h"
 #include "bus_client.h"
 

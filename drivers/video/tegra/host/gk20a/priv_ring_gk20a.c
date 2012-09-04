@@ -21,8 +21,6 @@
 
 #include <linux/delay.h>	/* for mdelay */
 
-#include <mach/hardware.h>
-
 #include "../dev.h"
 
 #include "gk20a.h"

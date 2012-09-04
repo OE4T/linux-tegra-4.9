@@ -364,8 +364,12 @@ phys_addr_t nvmap_pin(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	phys_addr_t phys;
 	int ret = 0;
+	unsigned long ref_id;
 
-	h = nvmap_handle_get(ref->handle);
+	if (!ref)
+		return -EINVAL;
+	ref_id = nvmap_ref_to_id(ref);
+	h = nvmap_get_handle_id(client, ref_id);
 	if (WARN_ON(!h))
 		return -EINVAL;
 

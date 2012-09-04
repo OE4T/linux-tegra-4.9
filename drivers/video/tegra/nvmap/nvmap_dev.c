@@ -871,6 +871,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_cache_maint(filp, uarg);
 		break;
 
+	case NVMAP_IOC_SHARE:
+		err = nvmap_ioctl_share_dmabuf(filp, uarg);
+		break;
+
 	default:
 		return -ENOTTY;
 	}

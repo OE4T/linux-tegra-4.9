@@ -23,6 +23,7 @@
 #include <linux/ioctl.h>
 #include <linux/file.h>
 #include <linux/rbtree.h>
+#include <linux/dma-buf.h>
 
 #if !defined(__KERNEL__)
 #define __user
@@ -139,6 +140,17 @@ struct nvmap_platform_data {
 };
 
 extern struct nvmap_device *nvmap_dev;
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+/* dma-buf exporter */
+struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id);
+#else
+static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
+						 u32 id)
+{
+	return NULL;
+}
+#endif	/* !CONFIG_DMA_SHARED_BUFFER */
 
 #endif /* __KERNEL__ */
 

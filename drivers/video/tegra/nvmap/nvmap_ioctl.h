@@ -3,7 +3,7 @@
  *
  * ioctl declarations for nvmap
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@ struct nvmap_create_handle {
 		__u32 key;	/* ClaimPreservedHandle */
 		__u32 id;	/* FromId */
 		__u32 size;	/* CreateHandle */
+		int fd;		/* dmabuf fd */
 	};
 	__u32 handle;
 };
@@ -136,7 +137,11 @@ struct nvmap_cache_op {
  * reference to the same handle */
 #define NVMAP_IOC_GET_ID  _IOWR(NVMAP_IOC_MAGIC, 13, struct nvmap_create_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_GET_ID))
+/* Returns a dma-buf fd usable to allow a remote process to create a handle
+ * reference to the same handle */
+#define NVMAP_IOC_SHARE  _IOWR(NVMAP_IOC_MAGIC, 14, struct nvmap_create_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_SHARE))
 
 #ifdef  __KERNEL__
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);
@@ -156,8 +161,16 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg);
 int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg);
-#endif
 
+#ifdef CONFIG_DMA_SHARED_BUFFER
+int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg);
+#else
+static inline int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
+{
+	return -EINVAL;
+}
+#endif	/* !CONFIG_DMA_SHARED_BUFFER */
 
+#endif	/* __KERNEL__ */
 
-#endif
+#endif	/*  __VIDEO_TEGRA_NVMAP_IOCTL_H */

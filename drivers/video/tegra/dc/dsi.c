@@ -82,6 +82,7 @@
 #define DSI_LP_OP_WRITE			0x1
 #define DSI_LP_OP_READ			0x2
 
+static atomic_t dsi_syncpt_rst = ATOMIC_INIT(0);
 static bool enable_read_debug;
 module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
@@ -410,12 +411,20 @@ static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
+static void tegra_dsi_syncpt_reset(struct tegra_dc_dsi_data *dsi)
+{
+	tegra_dsi_writel(dsi, 0x1, DSI_INCR_SYNCPT_CNTRL);
+	/* stabilization delay */
+	udelay(300);
+	tegra_dsi_writel(dsi, 0x0, DSI_INCR_SYNCPT_CNTRL);
+	/* stabilization delay */
+	udelay(300);
+}
+
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	int ret;
-
-	ret = 0;
+	int ret = 0;
 
 	dsi->syncpt_val = nvhost_syncpt_read_ext(dsi->dc->ndev, dsi->syncpt_id);
 
@@ -423,7 +432,6 @@ static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
 	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 
-	/* TODO: Use interrupt rather than polling */
 	ret = nvhost_syncpt_wait_timeout_ext(dsi->dc->ndev, dsi->syncpt_id,
 		dsi->syncpt_val + 1, MAX_SCHEDULE_TIMEOUT, NULL);
 	if (ret < 0) {
@@ -1557,8 +1565,8 @@ static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;
 }
 
-static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
-						struct tegra_dc_dsi_data *dsi)
+static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi)
 {
 	int val;
 	long timeout;
@@ -1570,8 +1578,6 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	val = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 	tegra_dc_writel(dc, val | FRAME_END_INT, DC_CMD_INT_MASK);
 
-	tegra_dsi_stop_dc_stream(dc, dsi);
-
 	/* wait for frame_end completion.
 	 * timeout is 2 frame duration to accomodate for
 	 * internal delay.
@@ -1580,15 +1586,27 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 			&dc->frame_end_complete,
 			msecs_to_jiffies(2 * frame_period));
 
+	/* reinstate interrupt mask */
+	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+
+	return timeout;
+}
+
+static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
+						struct tegra_dc_dsi_data *dsi)
+{
+	long timeout;
+
+	tegra_dsi_stop_dc_stream(dc, dsi);
+
+	timeout = tegra_dsi_wait_frame_end(dc, dsi);
+
 	/* give 2 line time to dsi HW to catch up
 	 * with pixels sent by dc
 	 */
 	udelay(50);
 
 	tegra_dsi_soft_reset(dsi);
-
-	/* reinstate interrupt mask */
-	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 
 	if (timeout == 0)
 		dev_warn(&dc->ndev->dev,
@@ -2295,6 +2313,9 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 	if (restart_dc_stream)
 		init_status->dc_stream = DSI_DC_STREAM_ENABLE;
 
+	if (atomic_read(&dsi_syncpt_rst))
+		tegra_dsi_syncpt_reset(dsi);
+
 	return init_status;
 fail:
 	return ERR_PTR(err);
@@ -2558,7 +2579,7 @@ static int tegra_dsi_dcs_pkt_seq_ctrl_init(struct tegra_dc_dsi_data *dsi,
 	if (cmd->pdata != NULL) {
 		u8 *pdata;
 		u8 *pdata_mem;
-		/*  allocate memory for pdata + 2 bytes checksum */
+		/* allocate memory for pdata + 2 bytes checksum */
 		pdata_mem = kzalloc(sizeof(u8) * data_len + 2, GFP_KERNEL);
 		if (!pdata_mem) {
 			dev_err(&dsi->dc->ndev->dev, "dsi: memory err\n");
@@ -2612,6 +2633,9 @@ int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data * dsi,
 
 	tegra_dc_io_start(dc);
 
+#if DSI_USE_SYNC_POINTS
+	atomic_set(&dsi_syncpt_rst, 1);
+#endif
 
 	err = tegra_dsi_dcs_pkt_seq_ctrl_init(dsi, cmd);
 	if (err < 0) {
@@ -2651,6 +2675,12 @@ void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data * dsi)
 
 	tegra_dc_io_start(dc);
 
+	if (atomic_read(&dsi_syncpt_rst)) {
+		tegra_dsi_wait_frame_end(dc, dsi);
+		tegra_dsi_syncpt_reset(dsi);
+		atomic_set(&dsi_syncpt_rst, 0);
+	}
+
 	tegra_dsi_writel(dsi, TEGRA_DSI_DISABLE, DSI_INIT_SEQ_CONTROL);
 
 	/* clear seq data registers */
@@ -2667,32 +2697,18 @@ EXPORT_SYMBOL(tegra_dsi_stop_host_cmd_v_blank_dcs);
 static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	u32 poll_time;
-	int err;
-
-	poll_time = 0;
-	err = 0;
+	int err = 0;
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
 #if DSI_USE_SYNC_POINTS
-	dsi->syncpt_val = nvhost_syncpt_read_ext(dsi->dc->ndev,
-			dsi->syncpt_id);
-
-	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
-		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
-	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
-
-	/* TODO: Use interrupt rather than polling */
-	err = nvhost_syncpt_wait_timeout_ext(dsi->dc->ndev, dsi->syncpt_id,
-		dsi->syncpt_val + 1, MAX_SCHEDULE_TIMEOUT, NULL);
-	if (err < 0)
+	err = tegra_dsi_syncpt(dsi);
+	if (err < 0) {
 		dev_err(&dsi->dc->ndev->dev,
-			"DSI sync point failure\n");
-	else
-		(dsi->syncpt_val)++;
+			"DSI syncpt for bta failed\n");
+	}
 #else
 	if (tegra_dsi_read_busy(dsi)) {
 		err = -EBUSY;
@@ -2961,9 +2977,10 @@ EXPORT_SYMBOL(tegra_dsi_panel_sanity_check);
 static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	int ret;
+	int ret = 0;
 
-	ret = 0;
+	if (atomic_read(&dsi_syncpt_rst))
+		tegra_dsi_syncpt_reset(dsi);
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);
@@ -2989,9 +3006,10 @@ fail:
 static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
-	int ret;
+	int ret = 0;
 
-	ret = 0;
+	if (atomic_read(&dsi_syncpt_rst))
+		tegra_dsi_syncpt_reset(dsi);
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);

@@ -350,7 +350,7 @@ void nvhost_msenc_init(struct platform_device *dev)
 	}
 	set_msenc(dev, m);
 
-	err = msenc_read_ucode(dev);
+	err = msenc_read_ucode(dev, fw_name);
 	kfree(fw_name);
 	fw_name = 0;
 

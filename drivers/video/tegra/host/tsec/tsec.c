@@ -476,7 +476,7 @@ void nvhost_tsec_init(struct platform_device *dev)
 	}
 	set_tsec(dev, m);
 
-	err = tsec_read_ucode(dev);
+	err = tsec_read_ucode(dev, fw_name);
 	kfree(fw_name);
 	fw_name = 0;
 

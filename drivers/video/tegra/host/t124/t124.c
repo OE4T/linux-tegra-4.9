@@ -177,6 +177,7 @@ static struct nvhost_device *channel_devices[] = {
 },},
 (struct nvhost_device []){{
 	.name	       = "msenc",
+	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
 	.resource      = msenc_resources,
 	.num_resources = ARRAY_SIZE(msenc_resources),
 	.syncpts       = BIT(NVSYNCPT_MSENC),
@@ -202,6 +203,7 @@ static struct nvhost_device *channel_devices[] = {
 },},
 (struct nvhost_device []){{
 	.name          = "tsec",
+	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
 	.resource      = tsec_resources,
 	.num_resources = ARRAY_SIZE(tsec_resources),
 	.waitbases     = BIT(NVWAITBASE_TSEC),

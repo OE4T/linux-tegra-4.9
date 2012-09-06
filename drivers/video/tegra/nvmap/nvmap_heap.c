@@ -749,12 +749,14 @@ static struct nvmap_heap_block *do_heap_relocate_listblock(
 	/* copy source data to new block location */
 	dst_base = heap_block_new->base;
 
-	/* new allocation should always go lower addresses */
-	BUG_ON(dst_base >= src_base);
+	/* new allocation should always go lower addresses, or stay same */
+	BUG_ON(dst_base > src_base);
 
-	error = do_heap_copy_listblock(handle->dev,
-				dst_base, src_base, src_size);
-	BUG_ON(error);
+	if (dst_base != src_base) {
+		error = do_heap_copy_listblock(handle->dev,
+					dst_base, src_base, src_size);
+		BUG_ON(error);
+	}
 
 fail:
 	mutex_unlock(&share->pin_lock);
@@ -798,7 +800,6 @@ static void nvmap_heap_compact(struct nvmap_heap *heap,
 			BUG_ON(block_prev->block.type != BLOCK_FIRST_FIT);
 
 			if (do_heap_relocate_listblock(block_prev, true)) {
-
 				/* After relocation current free block can be
 				 * destroyed when it is merged with previous
 				 * free block. Updated pointer to new free
@@ -810,13 +811,24 @@ static void nvmap_heap_compact(struct nvmap_heap *heap,
 		}
 
 		if (ptr_next != &heap->all_list) {
+			struct nvmap_heap_block *block_new;
+			phys_addr_t old_base;
 
 			block_next = list_entry(ptr_next,
 					struct list_block, all_list);
 
 			BUG_ON(block_next->block.type != BLOCK_FIRST_FIT);
 
-			if (do_heap_relocate_listblock(block_next, fast)) {
+			old_base = block_next->block.base;
+			block_new = do_heap_relocate_listblock(block_next,
+					fast);
+			if (block_new && block_new->base == old_base) {
+				/* When doing full heap compaction, the block
+				 * can end up relocated in the same location.
+				 * That means nothing was really accomplished,
+				 * but block pointers got invalidated. */
+				ptr_next = ptr_prev->next->next;
+			} else if (block_new) {
 				ptr = ptr_prev->next;
 				relocation_count++;
 				continue;

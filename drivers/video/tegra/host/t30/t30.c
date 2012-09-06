@@ -228,7 +228,7 @@ static struct nvhost_device tegra_mpe02_device = {
 	.waitbasesync	= true,
 	.keepalive	= true,
 	.clocks		= { {"mpe", UINT_MAX},
-			    {"emc", UINT_MAX} },
+			    {"emc", 400000000} },
 	.powergate_ids	= {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate	= true,

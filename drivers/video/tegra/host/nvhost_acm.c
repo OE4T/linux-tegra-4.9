@@ -319,8 +319,13 @@ int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &dev->client_list, node) {
 		if (m->priv == priv) {
-			for (i = 0; i < dev->num_clks; i++)
-				m->rate[i] = clk_round_rate(dev->clk[i], rate);
+			if (!strcmp(dev->name, "mpe")) {
+				m->rate[0] = clk_round_rate(dev->clk[0], rate);
+			} else {
+				for (i = 0; i < dev->num_clks; i++)
+					m->rate[i] = clk_round_rate(dev->clk[i],
+									rate);
+			}
 			break;
 		}
 	}

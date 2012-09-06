@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Actmon support
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@ struct actmon_status_t {
 	int k;
 };
 
-struct actmon_status_t actmon_status;
+static struct actmon_status_t actmon_status;
 
 /*******************************************************************************
  * host1x_actmon_update_sample_period_safe(host)

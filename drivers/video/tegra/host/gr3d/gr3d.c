@@ -36,6 +36,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
+#include "pod_scaling.h"
 
 void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 {

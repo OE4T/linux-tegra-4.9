@@ -36,6 +36,8 @@
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
 #include "host1x/host1x_syncpt.h"
+#include "chip_support.h"
+#include "gr3d/pod_scaling.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -314,7 +316,6 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
-	op->debug.debug_init = nvhost_scale3d_debug_init;
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;

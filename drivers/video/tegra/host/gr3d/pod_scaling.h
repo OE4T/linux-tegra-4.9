@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/gr3d/scale3d.h
+ * drivers/video/tegra/host/gr3d/pod_scaling.h
  *
- * Tegra Graphics Host 3D Clock Scaling
+ * Tegra Graphics Host Power-On-Demand Scaling
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,28 +18,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NVHOST_T30_SCALE3D_H
-#define NVHOST_T30_SCALE3D_H
-
-enum power_profile_status {
-	DEVICE_UNKNOWN = 0,
-	DEVICE_IDLE = 1,
-	DEVICE_BUSY = 2
-};
+#ifndef POD_SCALING_H
+#define POD_SCALING_H
 
 struct nvhost_device;
-struct device;
 struct dentry;
 
-/* Initialization and de-initialization for module */
-void nvhost_scale3d_init(struct nvhost_device *);
-void nvhost_scale3d_deinit(struct nvhost_device *);
+#define GET_TARGET_FREQ_DONTSCALE	1
 
-/*
- * call when performing submit to notify scaling mechanism that 3d module is
- * in use
- */
-void nvhost_scale3d_notify_busy(struct nvhost_device *);
-void nvhost_scale3d_notify_idle(struct nvhost_device *);
+/* Suspend is called when powering down module */
+void nvhost_scale3d_suspend(struct nvhost_device *);
+
+extern const struct devfreq_governor nvhost_podgov;
 
 #endif

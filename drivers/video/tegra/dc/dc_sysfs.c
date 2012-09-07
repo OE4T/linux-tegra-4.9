@@ -144,7 +144,7 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 	u32 crc;
 
 	if (!dc->enabled) {
-		dev_err(&dc->ndev->dev, "Failed to get dc.\n");
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
 		return -EFAULT;
 	}
 
@@ -161,7 +161,7 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 	unsigned long val = 0;
 
 	if (!dc->enabled) {
-		dev_err(&dc->ndev->dev, "Failed to get dc.\n");
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
 		return -EFAULT;
 	}
 

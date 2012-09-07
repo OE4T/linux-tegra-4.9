@@ -1123,7 +1123,7 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 	int crc = 0;
 
 	if (!dc) {
-		dev_err(&dc->ndev->dev, "Failed to get dc.\n");
+		dev_err(&dc->ndev->dev, "Failed to get dc: NULL parameter.\n");
 		goto crc_error;
 	}
 

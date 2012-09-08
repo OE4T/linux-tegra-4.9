@@ -28,6 +28,7 @@
 #define TEGRA_CRYPTO_IOCTL_PROCESS_REQ	_IOWR(0x98, 101, int*)
 #define TEGRA_CRYPTO_IOCTL_SET_SEED	_IOWR(0x98, 102, int*)
 #define TEGRA_CRYPTO_IOCTL_GET_RANDOM	_IOWR(0x98, 103, int*)
+#define TEGRA_CRYPTO_IOCTL_GET_SHA	_IOWR(0x98, 104, int*)
 
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
@@ -40,7 +41,10 @@
 /* encrypt/decrypt operations */
 #define TEGRA_CRYPTO_ECB	BIT(0)
 #define TEGRA_CRYPTO_CBC	BIT(1)
-#define TEGRA_CRYPTO_RNG	BIT(2)
+#define TEGRA_CRYPTO_OFB	BIT(2)
+#define TEGRA_CRYPTO_CTR	BIT(3)
+#define TEGRA_CRYPTO_CMAC	BIT(4)
+#define TEGRA_CRYPTO_RNG	BIT(5)
 
 /* a pointer to this struct needs to be passed to:
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ
@@ -65,6 +69,15 @@ struct tegra_rng_req {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	u8 *rdata; /* random generated data */
 	int nbytes; /* random data length */
+};
+
+struct tegra_sha_req {
+	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
+	int keylen;
+	unsigned char *algo;
+	unsigned char *plaintext;
+	int plaintext_sz;
+	unsigned char *result;
 };
 
 #endif

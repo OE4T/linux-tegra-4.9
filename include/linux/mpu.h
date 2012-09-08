@@ -140,6 +140,14 @@ enum ext_slave_type {
 
 	EXT_SLAVE_NUM_TYPES
 };
+enum secondary_slave_type {
+        SECONDARY_SLAVE_TYPE_NONE,
+        SECONDARY_SLAVE_TYPE_ACCEL,
+        SECONDARY_SLAVE_TYPE_COMPASS,
+        SECONDARY_SLAVE_TYPE_PRESSURE,
+
+        SECONDARY_SLAVE_TYPE_TYPES
+};
 
 enum ext_slave_id {
 	ID_INVALID = 0,
@@ -310,6 +318,12 @@ struct mpu_platform_data {
 	__u8 int_config;
 	__u8 level_shifter;
 	__s8 orientation[GYRO_NUM_AXES * GYRO_NUM_AXES];
+	enum secondary_slave_type sec_slave_type;
+        enum ext_slave_id sec_slave_id;
+        __u16 secondary_i2c_addr;
+        __u8 secondary_read_reg;
+        __s8 secondary_orientation[9];
+        __u8 key[16];
 };
 
 #define MPU_IOCTL (0x81) /* Magic number for MPU Iocts */

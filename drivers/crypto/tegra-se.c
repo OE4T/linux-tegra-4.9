@@ -186,6 +186,7 @@ static struct workqueue_struct *se_work_q;
 
 #define PMC_SCRATCH43_REG_OFFSET 0x22c
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
+static int force_reseed_count;
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 {
 	u8 carry;
@@ -564,9 +565,21 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
 
 	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
-		se_writel(se_dev, SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
-			SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR), SE_RNG_CONFIG_REG_OFFSET);
-		se_writel(se_dev, RNG_RESEED_INTERVAL, SE_RNG_RESEED_INTERVAL_REG_OFFSET);
+		if (force_reseed_count <= 0) {
+			se_writel(se_dev,
+				SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
+				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
+				SE_RNG_CONFIG_REG_OFFSET);
+		force_reseed_count = RNG_RESEED_INTERVAL;
+		} else {
+			se_writel(se_dev,
+				SE_RNG_CONFIG_MODE(DRBG_MODE_NORMAL)|
+				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
+				SE_RNG_CONFIG_REG_OFFSET);
+		}
+		--force_reseed_count;
+		se_writel(se_dev, RNG_RESEED_INTERVAL,
+			SE_RNG_RESEED_INTERVAL_REG_OFFSET);
 	}
 
 	if (mode == SE_AES_OP_MODE_CTR)
@@ -1241,7 +1254,8 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 	return 0;
 }
 
-static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
+static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
+	u8 *rdata, u32 dlen)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
@@ -2605,7 +2619,8 @@ static int tegra_se_generate_rng_key(struct tegra_se_dev *se_dev)
 	se_writel(se_dev, val, SE_CRYPTO_KEYTABLE_DST_REG_OFFSET);
 
 	/* Configure crypto */
-	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
+		SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
 		SE_CRYPTO_HASH(HASH_DISABLE) |
 		SE_CRYPTO_KEY_INDEX(ssk_slot.slot_num) |
@@ -2677,7 +2692,8 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 		TEGRA_SE_KEY_128_SIZE);
 
 	/* Configure crypto */
-	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) | SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+	val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
+		SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
 		SE_CRYPTO_HASH(HASH_DISABLE) |
 		SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |

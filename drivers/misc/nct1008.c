@@ -970,7 +970,7 @@ static int nct1008_probe(struct i2c_client *client,
 	struct nct1008_data *data;
 	int err;
 	int i;
-	int num_trips;
+	int num_trips = 0;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)

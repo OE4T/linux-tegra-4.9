@@ -336,9 +336,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 	f->userd.gpu_va = g->mm.bar1.vm.map(&g->mm.bar1.vm,
 					    memmgr,
 					    f->userd.mem.ref,
-					    4096,
-					    NVHOST_MAP_BUFFER_FLAGS_CACHABLE_FALSE,
-					    0);
+					    /*offset_align, flags, kind*/
+					    4096, 0, 0);
 	nvhost_dbg_info("userd bar1 va = 0x%llx", f->userd.gpu_va);
 
 	f->userd.mem.size = f->userd_total_size;

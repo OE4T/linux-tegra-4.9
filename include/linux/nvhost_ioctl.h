@@ -152,8 +152,8 @@ struct nvhost_map_buffer_args {
 #define NVHOST_MAP_BUFFER_FLAGS_OFFSET		BIT(0)
 #define NVHOST_MAP_BUFFER_FLAGS_KIND_PITCH	0x0
 #define NVHOST_MAP_BUFFER_FLAGS_KIND_SPECIFIED	BIT(1)
-#define NVHOST_MAP_BUFFER_FLAGS_CACHABLE_TRUE	0x0
-#define NVHOST_MAP_BUFFER_FLAGS_CACHABLE_FALSE	BIT(2)
+#define NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_FALSE	0x0
+#define NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE	BIT(2)
 	__u32 nvmap_handle;
 	union {
 		__u64 offset; /* valid if _offset flag given (in|out) */

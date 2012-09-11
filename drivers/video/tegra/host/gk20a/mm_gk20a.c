@@ -856,7 +856,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			       map_offset, map_offset + bfr.size - 1,
 			       bfr.kind_v,
 			       bfr.ctag_offset,
-			       !(flags & NVHOST_MAP_BUFFER_FLAGS_CACHABLE_FALSE));
+			       flags & NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE);
 	if (err) {
 		nvhost_err(d, "failed to update ptes on map");
 		goto clean_up;

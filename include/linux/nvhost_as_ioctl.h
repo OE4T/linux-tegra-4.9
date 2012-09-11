@@ -105,7 +105,8 @@ struct nvhost_as_bind_channel_args {
  */
 struct nvhost_as_map_buffer_args {
 	__u32 flags;          /* in/out */
-#define NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET 0x1
+#define NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    BIT(0)
+#define NVHOST_AS_MAP_BUFFER_FLAGS_CACHEABLE	    BIT(2)
 	__u32 nvmap_fd;       /* in */
 	__u32 nvmap_handle;   /* in */
 	__u32 page_size;      /* inout, 0:= best fit to buffer */

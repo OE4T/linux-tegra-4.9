@@ -1,32 +1,38 @@
 /*
-	$License:
-	Copyright (C) 2011 InvenSense Corporation, All Rights Reserved.
+* Copyright (C) 2012 Invensense, Inc.
+*
+* This software is licensed under the terms of the GNU General Public
+* License version 2, as published by the Free Software Foundation, and
+* may be copied, distributed, and modified under those terms.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+*/
 
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	$
+/**
+ *  @addtogroup  DRIVERS
+ *  @brief       Hardware drivers.
+ *
+ *  @{
+ *      @file    mpu.h
+ *      @brief   mpu definition
  */
 
 #ifndef __MPU_H_
 #define __MPU_H_
 
+#ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/ioctl.h>
-
-/* Number of axes on each sensor */
-#define GYRO_NUM_AXES               (3)
-#define ACCEL_NUM_AXES              (3)
-#define COMPASS_NUM_AXES            (3)
+#elif defined LINUX
+#include <sys/ioctl.h>
+#include <linux/types.h>
+#else
+#include "mltypes.h"
+#endif
 
 struct mpu_read_write {
 	/* Memory address or register address depending on ioctl */
@@ -36,7 +42,8 @@ struct mpu_read_write {
 };
 
 enum mpuirq_data_type {
-	MPUIRQ_DATA_TYPE_MPU_IRQ,
+	MPUIRQ_DATA_TYPE_MPU_DATA_READY_IRQ,
+	MPUIRQ_DATA_TYPE_MPU_FIFO_READY_IRQ,
 	MPUIRQ_DATA_TYPE_SLAVE_IRQ,
 	MPUIRQ_DATA_TYPE_PM_EVENT,
 	MPUIRQ_DATA_TYPE_NUM_TYPES,
@@ -46,24 +53,35 @@ enum mpuirq_data_type {
 #define MPU_PM_EVENT_SUSPEND_PREPARE (3)
 #define MPU_PM_EVENT_POST_SUSPEND    (4)
 
+/**
+ * struct mpuirq_data - structure to report what and when
+ * @interruptcount	: The number of times this IRQ has occured since open
+ * @irqtime		: monotonic time of the IRQ in ns
+ * @data_type		: The type of this IRQ enum mpuirq_data_type
+ * @data		: Data associated with this IRQ
+ */
 struct mpuirq_data {
 	__u32 interruptcount;
-	__u64 irqtime;
+	__s64 irqtime_ns;
 	__u32 data_type;
 	__s32 data;
 };
 
 enum ext_slave_config_key {
+	/* TODO: Remove these first six. */
 	MPU_SLAVE_CONFIG_ODR_SUSPEND,
 	MPU_SLAVE_CONFIG_ODR_RESUME,
 	MPU_SLAVE_CONFIG_FSR_SUSPEND,
 	MPU_SLAVE_CONFIG_FSR_RESUME,
+	MPU_SLAVE_CONFIG_IRQ_SUSPEND,
+	MPU_SLAVE_CONFIG_IRQ_RESUME,
+	MPU_SLAVE_CONFIG_ODR,
+	MPU_SLAVE_CONFIG_FSR,
 	MPU_SLAVE_CONFIG_MOT_THS,
 	MPU_SLAVE_CONFIG_NMOT_THS,
 	MPU_SLAVE_CONFIG_MOT_DUR,
 	MPU_SLAVE_CONFIG_NMOT_DUR,
-	MPU_SLAVE_CONFIG_IRQ_SUSPEND,
-	MPU_SLAVE_CONFIG_IRQ_RESUME,
+	MPU_SLAVE_CONFIG_IRQ,
 	MPU_SLAVE_WRITE_REGISTERS,
 	MPU_SLAVE_READ_REGISTERS,
 	MPU_SLAVE_CONFIG_INTERNAL_REFERENCE,
@@ -72,8 +90,6 @@ enum ext_slave_config_key {
 	MPU_SLAVE_WINDOW,
 	MPU_SLAVE_READWINPARAMS,
 	MPU_SLAVE_SEARCHOFFSET,
-	/* AKM specific config keys */
-	MPU_SLAVE_READ_SCALE,
 	/* MPU3050 and MPU6050 Keys */
 	MPU_SLAVE_INT_CONFIG,
 	MPU_SLAVE_EXT_SYNC,
@@ -141,16 +157,21 @@ enum ext_slave_type {
 	EXT_SLAVE_NUM_TYPES
 };
 enum secondary_slave_type {
-        SECONDARY_SLAVE_TYPE_NONE,
-        SECONDARY_SLAVE_TYPE_ACCEL,
-        SECONDARY_SLAVE_TYPE_COMPASS,
-        SECONDARY_SLAVE_TYPE_PRESSURE,
+	SECONDARY_SLAVE_TYPE_NONE,
+	SECONDARY_SLAVE_TYPE_ACCEL,
+	SECONDARY_SLAVE_TYPE_COMPASS,
+	SECONDARY_SLAVE_TYPE_PRESSURE,
 
-        SECONDARY_SLAVE_TYPE_TYPES
+	SECONDARY_SLAVE_TYPE_TYPES
 };
 
 enum ext_slave_id {
 	ID_INVALID = 0,
+	GYRO_ID_MPU3050,
+	GYRO_ID_MPU6050A2,
+	GYRO_ID_MPU6050B1,
+	GYRO_ID_MPU6050B1_NO_ACCEL,
+	GYRO_ID_ITG3500,
 
 	ACCEL_ID_LIS331,
 	ACCEL_ID_LSM303DLX,
@@ -165,8 +186,8 @@ enum ext_slave_id {
 	ACCEL_ID_MMA845X,
 	ACCEL_ID_MPU6050,
 
-	COMPASS_ID_AK8975,
 	COMPASS_ID_AK8963,
+	COMPASS_ID_AK8975,
 	COMPASS_ID_AK8972,
 	COMPASS_ID_AMI30X,
 	COMPASS_ID_AMI306,
@@ -181,6 +202,8 @@ enum ext_slave_id {
 
 	PRESSURE_ID_BMA085,
 };
+
+#define INV_PROD_KEY(ver, rev) (ver * 100 + rev)
 
 enum ext_slave_endian {
 	EXT_SLAVE_BIG_ENDIAN,
@@ -307,6 +330,10 @@ struct ext_slave_descr {
  * @int_config:		Bits [7:3] of the int config register.
  * @level_shifter:	0: VLogic, 1: VDD
  * @orientation:	Orientation matrix of the gyroscope
+ * @sec_slave_type:     secondary slave device type, can be compass, accel, etc
+ * @sec_slave_id:       id of the secondary slave device
+ * @secondary_i2c_address: secondary device's i2c address
+ * @secondary_orientation: secondary device's orientation matrix
  *
  * Contains platform specific information on how to configure the MPU3050 to
  * work on this platform.  The orientation matricies are 3x3 rotation matricies
@@ -317,65 +344,13 @@ struct ext_slave_descr {
 struct mpu_platform_data {
 	__u8 int_config;
 	__u8 level_shifter;
-	__s8 orientation[GYRO_NUM_AXES * GYRO_NUM_AXES];
+	__s8 orientation[9];
 	enum secondary_slave_type sec_slave_type;
-        enum ext_slave_id sec_slave_id;
-        __u16 secondary_i2c_addr;
-        __u8 secondary_read_reg;
-        __s8 secondary_orientation[9];
-        __u8 key[16];
+	enum ext_slave_id sec_slave_id;
+	__u16 secondary_i2c_addr;
+	__u8 secondary_read_reg;
+	__s8 secondary_orientation[9];
+	__u8 key[16];
 };
 
-#define MPU_IOCTL (0x81) /* Magic number for MPU Iocts */
-/* IOCTL commands for /dev/mpu */
-
-/*--------------------------------------------------------------------------
- * Deprecated, debugging only
- */
-#define MPU_SET_MPU_PLATFORM_DATA	\
-	_IOWR(MPU_IOCTL, 0x01, struct mpu_platform_data)
-#define MPU_SET_EXT_SLAVE_PLATFORM_DATA	\
-	_IOWR(MPU_IOCTL, 0x01, struct ext_slave_platform_data)
-/*--------------------------------------------------------------------------*/
-#define MPU_GET_EXT_SLAVE_PLATFORM_DATA	\
-	_IOWR(MPU_IOCTL, 0x02, struct ext_slave_platform_data)
-#define MPU_GET_MPU_PLATFORM_DATA	\
-	_IOWR(MPU_IOCTL, 0x02, struct mpu_platform_data)
-#define MPU_GET_EXT_SLAVE_DESCR	\
-	_IOWR(MPU_IOCTL, 0x02, struct ext_slave_descr)
-
-#define MPU_READ		_IOWR(MPU_IOCTL, 0x10, struct mpu_read_write)
-#define MPU_WRITE		_IOW(MPU_IOCTL,  0x10, struct mpu_read_write)
-#define MPU_READ_MEM		_IOWR(MPU_IOCTL, 0x11, struct mpu_read_write)
-#define MPU_WRITE_MEM		_IOW(MPU_IOCTL,  0x11, struct mpu_read_write)
-#define MPU_READ_FIFO		_IOWR(MPU_IOCTL, 0x12, struct mpu_read_write)
-#define MPU_WRITE_FIFO		_IOW(MPU_IOCTL,  0x12, struct mpu_read_write)
-
-#define MPU_READ_COMPASS	_IOR(MPU_IOCTL, 0x12, __u8)
-#define MPU_READ_ACCEL		_IOR(MPU_IOCTL, 0x13, __u8)
-#define MPU_READ_PRESSURE	_IOR(MPU_IOCTL, 0x14, __u8)
-
-#define MPU_CONFIG_GYRO		_IOW(MPU_IOCTL, 0x20, struct ext_slave_config)
-#define MPU_CONFIG_ACCEL	_IOW(MPU_IOCTL, 0x21, struct ext_slave_config)
-#define MPU_CONFIG_COMPASS	_IOW(MPU_IOCTL, 0x22, struct ext_slave_config)
-#define MPU_CONFIG_PRESSURE	_IOW(MPU_IOCTL, 0x23, struct ext_slave_config)
-
-#define MPU_GET_CONFIG_GYRO	_IOWR(MPU_IOCTL, 0x20, struct ext_slave_config)
-#define MPU_GET_CONFIG_ACCEL	_IOWR(MPU_IOCTL, 0x21, struct ext_slave_config)
-#define MPU_GET_CONFIG_COMPASS	_IOWR(MPU_IOCTL, 0x22, struct ext_slave_config)
-#define MPU_GET_CONFIG_PRESSURE	_IOWR(MPU_IOCTL, 0x23, struct ext_slave_config)
-
-#define MPU_SUSPEND		_IOW(MPU_IOCTL, 0x30, __u32)
-#define MPU_RESUME		_IOW(MPU_IOCTL, 0x31, __u32)
-/* Userspace PM Event response */
-#define MPU_PM_EVENT_HANDLED	_IO(MPU_IOCTL, 0x32)
-
-#define MPU_GET_REQUESTED_SENSORS	_IOR(MPU_IOCTL, 0x40, __u8)
-#define MPU_SET_REQUESTED_SENSORS	_IOW(MPU_IOCTL, 0x40, __u8)
-#define MPU_GET_IGNORE_SYSTEM_SUSPEND	_IOR(MPU_IOCTL, 0x41, __u8)
-#define MPU_SET_IGNORE_SYSTEM_SUSPEND	_IOW(MPU_IOCTL, 0x41, __u8)
-#define MPU_GET_MLDL_STATUS		_IOR(MPU_IOCTL, 0x42, __u8)
-#define MPU_GET_I2C_SLAVES_ENABLED	_IOR(MPU_IOCTL, 0x43, __u8)
-
-
-#endif				/* __MPU_H_ */
+#endif	/* __MPU_H_ */

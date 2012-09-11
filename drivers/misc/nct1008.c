@@ -882,6 +882,21 @@ static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
+static int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
+					int trip,
+					unsigned long temp)
+{
+	struct nct1008_data *data = thz->devdata;
+	if (trip == 0)
+		data->plat_data.passive.trip_temp = temp;
+	else
+		data->plat_data.active[trip-1].trip_temp = temp;
+
+	nct1008_update(data);
+
+	return 0;
+}
+
 static int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
 					int trip,
 					enum thermal_trip_type *type)
@@ -945,6 +960,7 @@ static struct thermal_zone_device_ops nct_ext_ops = {
 	.unbind = nct1008_ext_unbind,
 	.get_trip_type = nct1008_ext_get_trip_type,
 	.get_trip_temp = nct1008_ext_get_trip_temp,
+	.set_trip_temp = nct1008_ext_set_trip_temp,
 };
 #endif
 
@@ -971,6 +987,7 @@ static int nct1008_probe(struct i2c_client *client,
 	int err;
 	int i;
 	int num_trips = 0;
+	int mask = 0;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)
@@ -1016,17 +1033,20 @@ static int nct1008_probe(struct i2c_client *client,
 	if (data->plat_data.passive.create_cdev) {
 		data->passive_cdev = data->plat_data.passive.create_cdev(
 					data->plat_data.passive.cdev_data);
+		mask |= (1 << num_trips);
 		num_trips++;
 	}
 
 	for (i = 0; data->plat_data.active[i].create_cdev; i++) {
 		data->active_cdev[i] = data->plat_data.active[i].create_cdev(
 				data->plat_data.active[i].cdev_data);
+		mask |= (1 << num_trips);
 		num_trips++;
 	}
 
 	data->nct_int = thermal_zone_device_register("nct_int",
 						0,
+						0x0,
 						data,
 						&nct_int_ops,
 						0,
@@ -1038,6 +1058,7 @@ static int nct1008_probe(struct i2c_client *client,
 
 	data->nct_ext = thermal_zone_device_register("nct_ext",
 					num_trips,
+					mask,
 					data,
 					&nct_ext_ops,
 					data->plat_data.passive.tc1,

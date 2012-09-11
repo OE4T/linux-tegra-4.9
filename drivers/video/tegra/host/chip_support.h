@@ -159,6 +159,14 @@ struct nvhost_actmon_ops {
 	int (*above_wmark_count)(struct nvhost_master *host);
 	int (*below_wmark_count)(struct nvhost_master *host);
 	int (*isr)(u32 hintstatus, void __iomem *sync_regs);
+	int (*read_avg_norm)(struct nvhost_master *host, u32 *val);
+	void (*update_sample_period)(struct nvhost_master *host);
+	void (*set_sample_period_norm)(struct nvhost_master *host, long usecs);
+	long (*get_sample_period_norm)(struct nvhost_master *host);
+	long (*get_sample_period)(struct nvhost_master *host);
+	void (*set_k)(struct nvhost_master *host, u32 k);
+	u32 (*get_k)(struct nvhost_master *host);
+
 };
 
 struct nvhost_tickctrl_ops {

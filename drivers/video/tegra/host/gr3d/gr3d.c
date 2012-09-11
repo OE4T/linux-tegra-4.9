@@ -195,7 +195,7 @@ static const struct gr3d_desc gr3d[] = {
 		.deinit = nvhost_scale3d_deinit,
 		.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 		.alloc_hwctx_handler = nvhost_gr3d_t30_ctxhandler_init,
-		.read_reg = nvhost_gr3d_t30_read_reg,
+		.read_reg = nvhost_gr3d_t20_read_reg,
 	},
 	[gr3d_03] = {
 		.busy = nvhost_scale3d_notify_busy,

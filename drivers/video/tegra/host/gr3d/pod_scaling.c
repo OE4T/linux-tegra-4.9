@@ -856,8 +856,11 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 	int stat = 0;
 	ktime_t now = ktime_get();
 
-	if (!podgov->enable)
-		return GET_TARGET_FREQ_DONTSCALE;
+	/* Ensure maximal clock when scaling is disabled */
+	if (!podgov->enable) {
+		*freq = df->max_freq;
+		return 0;
+	}
 
 	/* Local adjustments (i.e. requests from kernel threads) are
 	 * handled here */

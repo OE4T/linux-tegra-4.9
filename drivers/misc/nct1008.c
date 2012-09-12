@@ -440,7 +440,7 @@ static const struct file_operations debug_fops = {
 	.release	= single_release,
 };
 
-static int __devinit nct1008_debuginit(struct nct1008_data *nct)
+static int nct1008_debuginit(struct nct1008_data *nct)
 {
 	int err = 0;
 	struct dentry *d;
@@ -467,7 +467,7 @@ end:
 	return err;
 }
 #else
-static int __devinit nct1008_debuginit(struct nct1008_data *nct)
+static int nct1008_debuginit(struct nct1008_data *nct)
 {
 	return 0;
 }

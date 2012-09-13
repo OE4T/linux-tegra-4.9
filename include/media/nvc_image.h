@@ -37,9 +37,22 @@
 #define NVC_IMAGER_TYPE_RAW		1
 #define NVC_IMAGER_TYPE_SOC		2
 
-#define NVC_IMAGER_INTERFACE_MIPI_A	3
-#define NVC_IMAGER_INTERFACE_MIPI_B	4
-#define NVC_IMAGER_INTERFACE_MIPI_AB	5
+/**
+ * Defines camera imager types.
+ * Mirrors "NvOdmImagerRegion" in "imager/include/nvodm_imager.h".
+ * These must remain in sync.
+ */
+#define NVC_IMAGER_SENSOR_INTERFACE_PARALLEL_8		1
+#define NVC_IMAGER_SENSOR_INTERFACE_PARALLEL_10		2
+#define NVC_IMAGER_SENSOR_INTERFACE_SERIAL_A		3
+#define NVC_IMAGER_SENSOR_INTERFACE_SERIAL_B		4
+#define NVC_IMAGER_SENSOR_INTERFACE_SERIAL_C		5
+#define NVC_IMAGER_SENSOR_INTERFACE_SERIAL_AB		6
+#define NVC_IMAGER_SENSOR_INTERFACE_CCIR		7
+#define NVC_IMAGER_SENSOR_INTERFACE_HOST		8
+#define NVC_IMAGER_SENSOR_INTERFACE_HOST_CSI_A		9
+#define NVC_IMAGER_SENSOR_INTERFACE_HOST_CSI_B		10
+#define NVC_IMAGER_SENSOR_INTERFACE_NUM			11
 
 #define NVC_IMAGER_IDENTIFIER_MAX	32
 #define NVC_IMAGER_FORMAT_MAX		4
@@ -70,6 +83,7 @@ struct nvc_imager_static_nvc {
 	__u8 align1;
 	__u8 align2;
 	__u8 align3;
+	__u8 fuse_id[16];
 	__u32 place_holder1;
 	__u32 place_holder2;
 	__u32 place_holder3;
@@ -138,6 +152,13 @@ struct nvc_imager_mode {
 	__u32 pixel_aspect_ratio;
 	__u32 pll_multiplier;
 	__u32 crop_mode;
+	__u32 rect_left;
+	__u32 rect_top;
+	__u32 rect_right;
+	__u32 rect_bottom;
+	__u32 point_x;
+	__u32 point_y;
+	__u32 type;
 } __packed;
 
 struct nvc_imager_dnvc {
@@ -183,6 +204,15 @@ struct nvc_imager_cap {
 	__u64 torch_guid;
 	__u32 cap_end;
 	__u32 align4;
+} __packed;
+
+struct nvc_imager_ae {
+	__u32 frame_length;
+	__u8  frame_length_enable;
+	__u32 coarse_time;
+	__u8  coarse_time_enable;
+	__u32 gain;
+	__u8  gain_enable;
 } __packed;
 
 #define NVC_IOCTL_CAPS_RD	_IOWR('o', 106, struct nvc_imager_cap)

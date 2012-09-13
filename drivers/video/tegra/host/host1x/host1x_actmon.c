@@ -42,9 +42,15 @@ static int host1x_actmon_init(struct nvhost_master *host)
 	/* Default count weight - 1 for per unit actmons */
 	writel(1, sync_regs + host1x_sync_actmon_count_weight_r());
 
+	/* Wait for actmon to be disabled */
+	do {
+		val = readl(sync_regs + host1x_sync_actmon_status_r());
+	} while (val & host1x_sync_actmon_status_gr3d_mon_act_f(1));
+
 	/*  Write sample period */
 	writel(host1x_sync_actmon_status_sample_period_f(0)
-			| host1x_sync_actmon_status_gr3d_mon_act_f(1),
+		| host1x_sync_actmon_status_status_source_f(
+			host1x_sync_actmon_status_status_source_msec_v()),
 			sync_regs + host1x_sync_actmon_status_r());
 
 	/* Clear interrupt status */
@@ -80,9 +86,17 @@ static void host1x_actmon_deinit(struct nvhost_master *host)
 
 	/* Disable actmon */
 	val = readl(sync_regs + host1x_sync_actmon_ctrl_r());
-	val |= host1x_sync_actmon_ctrl_enb_f(0);
+	val &= ~host1x_sync_actmon_ctrl_enb_m();
+	val &= ~host1x_sync_actmon_ctrl_enb_periodic_m();
+	val &= ~host1x_sync_actmon_ctrl_avg_above_wmark_en_m();
+	val &= ~host1x_sync_actmon_ctrl_avg_below_wmark_en_m();
 	writel(val, sync_regs + host1x_sync_actmon_ctrl_r());
 
+	/*  Write sample period */
+	writel(host1x_sync_actmon_status_sample_period_f(0)
+		| host1x_sync_actmon_status_status_source_f(
+			host1x_sync_actmon_status_status_source_usec_v()),
+			sync_regs + host1x_sync_actmon_status_r());
 	/* Clear interrupt status */
 	writel(0xffffffff, sync_regs + host1x_sync_actmon_intr_status_r());
 

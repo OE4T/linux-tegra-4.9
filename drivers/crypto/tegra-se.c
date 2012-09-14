@@ -2936,7 +2936,8 @@ static int tegra_se_lp_iv_context_save(struct tegra_se_dev *se_dev,
 
 static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 {
-	int ret = 0;
+	int ret;
+	int val;
 
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
@@ -2945,10 +2946,45 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 		SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
 	ret = tegra_se_start_operation(se_dev, 0, true);
 
+	if (ret < 0) {
+		dev_err(se_dev->dev, "\n LP SRK operation failed\n");
+		pm_runtime_put(se_dev->dev);
+		mutex_unlock(&se_hw_lock);
+		return ret;
+	}
+
+	if (se_dev->chipdata->drbg_supported) {
+		/* clear any pending interrupts */
+		val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
+		se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);
+
+		/* enable interupts */
+		val = SE_INT_ERROR(INT_ENABLE) | SE_INT_OP_DONE(INT_ENABLE);
+		se_writel(se_dev, val, SE_INT_ENABLE_REG_OFFSET);
+
+		val = SE_CONFIG_ENC_ALG(ALG_NOP) |
+				SE_CONFIG_DEC_ALG(ALG_NOP);
+		se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+
+		reinit_completion(&se_dev->complete);
+
+		se_writel(se_dev, SE_OPERATION(OP_CTX_SAVE),
+			SE_OPERATION_REG_OFFSET);
+		ret = wait_for_completion_timeout(&se_dev->complete,
+				msecs_to_jiffies(1000));
+
+		if (ret == 0) {
+			dev_err(se_dev->dev, "\n LP SRK timed out no interrupt\n");
+			pm_runtime_put(se_dev->dev);
+			mutex_unlock(&se_hw_lock);
+			return -ETIMEDOUT;
+		}
+	}
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
-	return ret;
+	return 0;
 }
 
 static int tegra_se_suspend(struct device *dev)
@@ -3055,7 +3091,7 @@ static int tegra_se_suspend(struct device *dev)
 
 	/* Saves SRK in secure scratch */
 	err = tegra_se_save_SRK(se_dev);
-	if (err) {
+	if (err < 0) {
 		dev_err(se_dev->dev, "LP SRK save failure\n");
 		goto out;
 	}

@@ -44,6 +44,7 @@
 #include "pod_scaling.h"
 #include "scale3d.h"
 #include "dev.h"
+#include "nvhost_acm.h"
 
 #define POW2(x) ((x) * (x))
 
@@ -68,9 +69,10 @@ struct power_profile_gr3d {
 	long				emc_dip_offset;
 	long				emc_xmid;
 
-	struct clk			*clk_3d;
-	struct clk			*clk_3d2;
-	struct clk			*clk_3d_emc;
+	struct nvhost_device		*dev;
+	int				clk_3d;
+	int				clk_3d2;
+	int				clk_3d_emc;
 
 	struct devfreq_dev_status	*dev_stat;
 
@@ -84,6 +86,12 @@ struct power_profile_gr3d {
  ******************************************************************************/
 
 static struct power_profile_gr3d power_profile;
+
+/* Convert clk index to struct clk * */
+static inline struct clk *clk(int index)
+{
+	return power_profile.dev->clk[index];
+}
 
 /*******************************************************************************
  * nvhost_scale3d_notify(dev, busy)
@@ -157,7 +165,7 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 	long after;
 
 	/* Inform that the clock is disabled */
-	if (!tegra_is_clk_enabled(power_profile.clk_3d)) {
+	if (!tegra_is_clk_enabled(clk(power_profile.clk_3d))) {
 		*freq = 0;
 		return 0;
 	}
@@ -169,16 +177,18 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 		*freq = power_profile.max_rate_3d;
 
 	/* Check if we're already running at the desired speed */
-	if (*freq == clk_get_rate(power_profile.clk_3d))
+	if (*freq == clk_get_rate(clk(power_profile.clk_3d)))
 		return 0;
 
 	/* Set GPU clockrate */
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
-		clk_set_rate(power_profile.clk_3d2, 0);
-	clk_set_rate(power_profile.clk_3d, *freq);
+		nvhost_module_set_devfreq_rate(power_profile.dev,
+				power_profile.clk_3d2, 0);
+	nvhost_module_set_devfreq_rate(power_profile.dev,
+			power_profile.clk_3d, *freq);
 
 	/* Set EMC clockrate */
-	after = (long) clk_get_rate(power_profile.clk_3d);
+	after = (long) clk_get_rate(clk(power_profile.clk_3d));
 	hz = after * power_profile.emc_slope +
 		power_profile.emc_offset;
 
@@ -186,10 +196,11 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 		(power_profile.emc_dip_slope *
 		POW2(after / 1000 - power_profile.emc_xmid) +
 		power_profile.emc_dip_offset);
-	clk_set_rate(power_profile.clk_3d_emc, hz);
+	nvhost_module_set_devfreq_rate(power_profile.dev,
+			power_profile.clk_3d_emc, hz);
 
 	/* Get the new clockrate */
-	*freq = clk_get_rate(power_profile.clk_3d);
+	*freq = clk_get_rate(clk(power_profile.clk_3d));
 
 	return 0;
 }
@@ -209,7 +220,7 @@ static int nvhost_scale3d_get_dev_status(struct device *d,
 
 	/* Make sure there are correct values for the current frequency */
 	power_profile.dev_stat->current_frequency =
-		clk_get_rate(power_profile.clk_3d);
+		clk_get_rate(clk(power_profile.clk_3d));
 
 	/* Copy the contents of the current device status */
 	ext_stat->busy = power_profile.last_event_type;
@@ -285,9 +296,10 @@ static struct devfreq_dev_profile nvhost_scale3d_devfreq_profile = {
 static void nvhost_scale3d_calibrate_emc(void)
 {
 	long correction;
-	unsigned long max_emc = clk_round_rate(power_profile.clk_3d_emc,
+	unsigned long max_emc = clk_round_rate(clk(power_profile.clk_3d_emc),
 		UINT_MAX);
-	unsigned long min_emc = clk_round_rate(power_profile.clk_3d_emc, 0);
+	unsigned long min_emc = clk_round_rate(clk(power_profile.clk_3d_emc),
+		0);
 
 	power_profile.emc_slope = (max_emc - min_emc) /
 		(power_profile.max_rate_3d -
@@ -329,19 +341,21 @@ void nvhost_scale3d_init(struct nvhost_device *dev)
 	if (power_profile.init)
 		return;
 
+
 	/* Get clocks */
-	power_profile.clk_3d = dev->clk[0];
+	power_profile.dev = dev;
+	power_profile.clk_3d = 0;
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
-		power_profile.clk_3d2 = dev->clk[1];
-		power_profile.clk_3d_emc = dev->clk[2];
+		power_profile.clk_3d2 = 1;
+		power_profile.clk_3d_emc = 2;
 	} else
-		power_profile.clk_3d_emc = dev->clk[1];
+		power_profile.clk_3d_emc = 1;
 
 	/* Get maximum and minimum clocks */
 	power_profile.max_rate_3d =
-		clk_round_rate(power_profile.clk_3d, UINT_MAX);
+		clk_round_rate(clk(power_profile.clk_3d), UINT_MAX);
 	power_profile.min_rate_3d =
-		clk_round_rate(power_profile.clk_3d, 0);
+		clk_round_rate(clk(power_profile.clk_3d), 0);
 
 	nvhost_scale3d_devfreq_profile.initial_freq = power_profile.max_rate_3d;
 

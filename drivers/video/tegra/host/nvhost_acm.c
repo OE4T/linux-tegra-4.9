@@ -296,16 +296,25 @@ static int nvhost_module_update_rate(struct nvhost_device *dev, int index)
 {
 	unsigned long rate = 0;
 	struct nvhost_module_client *m;
+	unsigned long devfreq_rate, default_rate;
 
 	if (!dev->clk[index])
 		return -EINVAL;
 
+	/* If devfreq is on, use that clock rate, otherwise default */
+	devfreq_rate = dev->clocks[index].devfreq_rate;
+	default_rate = devfreq_rate ?
+		devfreq_rate : dev->clocks[index].default_rate;
+	default_rate = clk_round_rate(dev->clk[index], default_rate);
+
 	list_for_each_entry(m, &dev->client_list, node) {
-		rate = max(m->rate[index], rate);
+		unsigned long r = m->rate[index];
+		if (!r)
+			r = default_rate;
+		rate = max(r, rate);
 	}
 	if (!rate)
-		rate = clk_round_rate(dev->clk[index],
-				dev->clocks[index].default_rate);
+		rate = default_rate;
 
 	return clk_set_rate(dev->clk[index], rate);
 }
@@ -330,8 +339,6 @@ int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 
 int nvhost_module_add_client(struct nvhost_device *dev, void *priv)
 {
-	int i;
-	unsigned long rate;
 	struct nvhost_module_client *client;
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
@@ -341,11 +348,6 @@ int nvhost_module_add_client(struct nvhost_device *dev, void *priv)
 	INIT_LIST_HEAD(&client->node);
 	client->priv = priv;
 
-	for (i = 0; i < dev->num_clks; i++) {
-		rate = clk_round_rate(dev->clk[i],
-				dev->clocks[i].default_rate);
-		client->rate[i] = rate;
-	}
 	mutex_lock(&client_list_lock);
 	list_add_tail(&client->node, &dev->client_list);
 	mutex_unlock(&client_list_lock);
@@ -465,6 +467,15 @@ static ssize_t clockgate_delay_show(struct kobject *kobj,
 	mutex_unlock(&dev->lock);
 
 	return ret;
+}
+
+int nvhost_module_set_devfreq_rate(struct nvhost_device *dev, int index,
+		unsigned long rate)
+{
+	rate = clk_round_rate(dev->clk[index], rate);
+	dev->clocks[index].devfreq_rate = rate;
+
+	return nvhost_module_update_rate(dev, index);
 }
 
 int nvhost_module_init(struct nvhost_device *dev)

@@ -101,7 +101,7 @@ static struct nvhost_device tegra_host1x02_device = {
 	.id		= -1,
 	.resource	= tegra_host1x02_resources,
 	.num_resources	= ARRAY_SIZE(tegra_host1x02_resources),
-	.clocks		= {{"host1x", UINT_MAX}, {} },
+	.clocks		= {{"host1x", 102000000}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 

@@ -47,6 +47,9 @@
 
 #define POW2(x) ((x) * (x))
 
+static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
+					u32 flags);
+
 /*******************************************************************************
  * power_profile_rec - Device specific power management variables
  ******************************************************************************/
@@ -95,6 +98,18 @@ static void nvhost_scale3d_notify(struct nvhost_device *dev, int busy)
 	struct nvhost_devfreq_ext_stat *ext_stat;
 	ktime_t t;
 	unsigned long dt;
+
+	/* If defreq is disabled, do nothing */
+	if (!df) {
+
+		/* Ok.. make sure the 3d gets highest frequency always */
+		if (busy) {
+			unsigned long freq = power_profile.max_rate_3d;
+			nvhost_scale3d_target(&dev->dev, &freq, 0);
+		}
+
+		return;
+	}
 
 	/* get_dev_status() may run simulatanously. Hence lock. */
 	mutex_lock(&df->lock);
@@ -353,19 +368,16 @@ void nvhost_scale3d_init(struct nvhost_device *dev)
 
 	nvhost_scale3d_calibrate_emc();
 
+	power_profile.init = 1;
+
 	/* Start using devfreq */
 	dev->power_manager = devfreq_add_device(&dev->dev,
 				&nvhost_scale3d_devfreq_profile,
 				&nvhost_podgov,
 				NULL);
-	if (!dev->power_manager)
-		goto err_devfreq_pm_alloc;
 
-	power_profile.init = 1;
 	return;
 
-err_devfreq_pm_alloc:
-	kfree(power_profile.dev_stat->private_data);
 err_devfreq_ext_stat_alloc:
 	kfree(power_profile.dev_stat);
 err_devfreq_alloc:
@@ -386,7 +398,8 @@ void nvhost_scale3d_deinit(struct nvhost_device *dev)
 	if (!power_profile.init)
 		return;
 
-	devfreq_remove_device(dev->power_manager);
+	if (dev->power_manager)
+		devfreq_remove_device(dev->power_manager);
 
 	kfree(power_profile.dev_stat->private_data);
 	kfree(power_profile.dev_stat);

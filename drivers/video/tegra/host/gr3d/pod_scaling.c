@@ -222,6 +222,9 @@ void nvhost_scale3d_suspend(struct nvhost_device *dev)
 	struct devfreq *df = (void *)dev->power_manager;
 	struct podgov_info_rec *podgov;
 
+	if (!df)
+		return;
+
 	mutex_lock(&df->lock);
 	podgov = df->data;
 	if (!podgov->enable) {
@@ -636,13 +639,19 @@ static void podgov_idle_handler(struct work_struct *work)
 void nvhost_scale3d_set_throughput_hint(int hint)
 {
 	struct podgov_info_rec *podgov = local_podgov;
-	struct devfreq *df = podgov->power_manager;
+	struct devfreq *df;
 
 	ktime_t now;
 	long busy;
 	long curr, target;
 	long dt;
 	int avg_busy, avg_hint;
+
+	if (!podgov)
+		return;
+	df = podgov->power_manager;
+	if (!df)
+		return;
 
 	mutex_lock(&podgov->power_manager->lock);
 

@@ -314,27 +314,15 @@ int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 		unsigned long rate, int index)
 {
 	struct nvhost_module_client *m;
-	int i, ret = 0;
+	int ret = 0;
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &dev->client_list, node) {
-		if (m->priv == priv) {
-			if (!strcmp(dev->name, "mpe")) {
-				m->rate[0] = clk_round_rate(dev->clk[0], rate);
-			} else {
-				for (i = 0; i < dev->num_clks; i++)
-					m->rate[i] = clk_round_rate(dev->clk[i],
-									rate);
-			}
-			break;
-		}
+		if (m->priv == priv)
+			m->rate[index] = clk_round_rate(dev->clk[index], rate);
 	}
 
-	for (i = 0; i < dev->num_clks; i++) {
-		ret = nvhost_module_update_rate(dev, i);
-		if (ret < 0)
-			break;
-	}
+	ret = nvhost_module_update_rate(dev, index);
 	mutex_unlock(&client_list_lock);
 	return ret;
 

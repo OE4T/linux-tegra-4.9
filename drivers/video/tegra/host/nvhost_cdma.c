@@ -322,6 +322,10 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		syncpt_val += syncpt_incrs;
 	}
 
+	list_for_each_entry_from(job, &cdma->sync_queue, list)
+		if (job->clientid == cdma->timeout.clientid)
+			job->timeout = 500;
+
 	dev_dbg(&dev->dev,
 		"%s: finished sync_queue modification\n", __func__);
 

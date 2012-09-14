@@ -53,7 +53,7 @@ enum tegra_se_aes_op_mode {
 	SE_AES_OP_MODE_CTR,	/* Counter (CTR) mode */
 	SE_AES_OP_MODE_OFB,	/* Output feedback (CFB) mode */
 	SE_AES_OP_MODE_RNG_X931,	/* Random number generator (RNG) mode */
-	SE_AES_OP_MODE_RNG_DRBG,	/* Deterministic Random Bit Generator mode */
+	SE_AES_OP_MODE_RNG_DRBG,	/* Deterministic Random Bit Generator */
 	SE_AES_OP_MODE_CMAC,	/* Cipher-based MAC (CMAC) mode */
 	SE_AES_OP_MODE_SHA1,	/* Secure Hash Algorithm-1 (SHA1) mode */
 	SE_AES_OP_MODE_SHA224,	/* Secure Hash Algorithm-224  (SHA224) mode */
@@ -175,6 +175,7 @@ static DEFINE_SPINLOCK(rsa_key_slot_lock);
 #define RSA_MIN_SIZE	64
 #define RSA_MAX_SIZE	256
 #define RNG_RESEED_INTERVAL	100
+#define TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT	4
 
 static DEFINE_SPINLOCK(key_slot_lock);
 static DEFINE_MUTEX(se_hw_lock);
@@ -2523,15 +2524,23 @@ static int tegra_se_probe(struct platform_device *pdev)
 			err = crypto_register_ahash(&hash_algs[j]);
 			if (err) {
 				dev_err(se_dev->dev,
-				"crypto_register_sha alg failed index[%d]\n", i);
+				"crypto_register_sha alg failed index[%d]\n",
+				i);
 				goto clean;
 			}
 		}
 	}
 
 #if defined(CONFIG_PM)
-	se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
-		SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr, GFP_KERNEL);
+	if (!se_dev->chipdata->drbg_supported)
+		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
+			SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr,
+			GFP_KERNEL);
+	else
+		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
+			SE_CONTEXT_DRBG_BUFER_SIZE,
+			&se_dev->ctx_save_buf_adr, GFP_KERNEL);
+
 	if (!se_dev->ctx_save_buf) {
 		dev_err(se_dev->dev, "Context save buffer alloc filed\n");
 		goto clean;
@@ -2594,8 +2603,13 @@ static int tegra_se_remove(struct platform_device *pdev)
 		clk_put(se_dev->pclk);
 	tegra_se_free_ll_buf(se_dev);
 	if (se_dev->ctx_save_buf) {
-		dma_free_coherent(se_dev->dev, SE_CONTEXT_BUFER_SIZE,
-			se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
+		if (!se_dev->chipdata->drbg_supported)
+			dma_free_coherent(se_dev->dev, SE_CONTEXT_BUFER_SIZE,
+				se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
+		else
+			dma_free_coherent(se_dev->dev,
+				SE_CONTEXT_DRBG_BUFER_SIZE,
+				se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
 		se_dev->ctx_save_buf = NULL;
 	}
 	iounmap(se_dev->io_reg);
@@ -2667,13 +2681,28 @@ static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
 
 	se_writel(se_dev, val, SE_CONFIG_REG_OFFSET);
 
-	val = SE_CRYPTO_XOR_POS(XOR_BYPASS) |
-		SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
-		SE_CRYPTO_HASH(HASH_DISABLE) |
-		SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |
-		SE_CRYPTO_IV_SEL(IV_UPDATED);
-
+	if (!se_dev->chipdata->drbg_supported)
+		val = SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+				SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
+				SE_CRYPTO_HASH(HASH_DISABLE) |
+				SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |
+				SE_CRYPTO_IV_SEL(IV_UPDATED);
+	else
+		val = SE_CRYPTO_XOR_POS(XOR_BYPASS) |
+				SE_CRYPTO_CORE_SEL(CORE_ENCRYPT) |
+				SE_CRYPTO_HASH(HASH_DISABLE) |
+				SE_CRYPTO_KEY_INDEX(srk_slot.slot_num) |
+				SE_CRYPTO_IV_SEL(IV_UPDATED)|
+				SE_CRYPTO_INPUT_SEL(INPUT_RANDOM);
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+
+	if (se_dev->chipdata->drbg_supported) {
+		se_writel(se_dev, SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
+			SE_RNG_CONFIG_SRC(DRBG_SRC_ENTROPY),
+			SE_RNG_CONFIG_REG_OFFSET);
+		se_writel(se_dev, RNG_RESEED_INTERVAL,
+			SE_RNG_RESEED_INTERVAL_REG_OFFSET);
+	}
 	ret = tegra_se_start_operation(se_dev, TEGRA_SE_KEY_128_SIZE, false);
 
 	pm_runtime_put(se_dev->dev);
@@ -2712,6 +2741,11 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 		SE_CRYPTO_IV_SEL(IV_ORIGINAL);
 
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
+	if (se_dev->chipdata->drbg_supported)
+		se_writel(se_dev, SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
+			SE_RNG_CONFIG_SRC(DRBG_SRC_ENTROPY),
+			SE_RNG_CONFIG_REG_OFFSET);
+
 	ret = tegra_se_start_operation(se_dev,
 		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, false);
 
@@ -2756,6 +2790,8 @@ static int tegra_se_lp_sticky_bits_context_save(struct tegra_se_dev *se_dev)
 {
 	struct tegra_se_ll *dst_ll;
 	int ret = 0;
+	u32 val = 0;
+	int i = 0;
 
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
@@ -2767,11 +2803,21 @@ static int tegra_se_lp_sticky_bits_context_save(struct tegra_se_dev *se_dev)
 		SE_CONTEXT_SAVE_STICKY_BITS_OFFSET);
 	dst_ll->data_len = SE_CONTEXT_SAVE_STICKY_BITS_SIZE;
 
-	se_writel(se_dev, SE_CONTEXT_SAVE_SRC(STICKY_BITS),
-		SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
-
-	ret = tegra_se_start_operation(se_dev,
-		SE_CONTEXT_SAVE_STICKY_BITS_SIZE, true);
+	if (!se_dev->chipdata->drbg_supported) {
+		se_writel(se_dev, SE_CONTEXT_SAVE_SRC(STICKY_BITS),
+			SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+		ret = tegra_se_start_operation(se_dev,
+			SE_CONTEXT_SAVE_STICKY_BITS_SIZE, true);
+	} else
+		for (i = 0; i < 2; i++) {
+			val = SE_CONTEXT_SAVE_SRC(STICKY_BITS) |
+				SE_CONTEXT_SAVE_STICKY_WORD_QUAD(i);
+			se_writel(se_dev, val,
+				SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+			ret = tegra_se_start_operation(se_dev,
+				SE_CONTEXT_SAVE_STICKY_BITS_SIZE, true);
+			dst_ll->addr += SE_CONTEXT_SAVE_STICKY_BITS_SIZE;
+		}
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -2805,6 +2851,45 @@ static int tegra_se_lp_keytable_context_save(struct tegra_se_dev *se_dev)
 				TEGRA_SE_KEY_128_SIZE, true);
 			if (ret)
 				break;
+			dst_ll->addr += TEGRA_SE_KEY_128_SIZE;
+		}
+	}
+
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
+	return ret;
+}
+
+static int tegra_se_lp_rsakeytable_context_save(struct tegra_se_dev *se_dev)
+{
+	struct tegra_se_ll *dst_ll;
+	int ret = 0, i, j;
+	u32 val = 0;
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	*se_dev->dst_ll_buf = 0;
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	dst_ll->addr =
+		(se_dev->ctx_save_buf_adr + SE_CONTEXT_SAVE_RSA_KEYS_OFFSET);
+	dst_ll->data_len = TEGRA_SE_KEY_128_SIZE;
+
+	for (i = 0; i < TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT; i++) {
+		for (j = 0; j < 16; j++) {
+			val = SE_CONTEXT_SAVE_SRC(RSA_KEYTABLE) |
+				SE_CONTEXT_SAVE_RSA_KEY_INDEX(i) |
+				SE_CONTEXT_RSA_WORD_QUAD(j);
+			se_writel(se_dev,
+				val, SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+			ret = tegra_se_start_operation(se_dev,
+				TEGRA_SE_KEY_128_SIZE, true);
+			if (ret) {
+				dev_err(se_dev->dev, "tegra_se_lp_rsakeytable_context_save error\n");
+				break;
+			}
 			dst_ll->addr += TEGRA_SE_KEY_128_SIZE;
 		}
 	}
@@ -2924,7 +3009,7 @@ static int tegra_se_suspend(struct device *dev)
 		goto out;
 	}
 
-	/* UPdated iv context save*/
+	/* Updated iv context save*/
 	err = tegra_se_lp_iv_context_save(se_dev,
 		false, SE_CONTEXT_UPDATED_IV_OFFSET);
 	if (err) {
@@ -2932,13 +3017,33 @@ static int tegra_se_suspend(struct device *dev)
 		goto out;
 	}
 
-	/* Encrypt known pattern */
-	dt_buf = (unsigned char *)se_dev->ctx_save_buf;
-	dt_buf += SE_CONTEXT_KNOWN_PATTERN_OFFSET;
-	for (i = 0; i < SE_CONTEXT_KNOWN_PATTERN_SIZE; i++)
-		dt_buf[i] = pdata[i];
-	err = tegra_se_lp_encrypt_context_data(se_dev,
-		SE_CONTEXT_KNOWN_PATTERN_OFFSET, SE_CONTEXT_KNOWN_PATTERN_SIZE);
+	if (se_dev->chipdata->drbg_supported) {
+		/* rsa-key slot table context save*/
+		err = tegra_se_lp_rsakeytable_context_save(se_dev);
+		if (err) {
+			dev_err(se_dev->dev, "\n LP RSA key table save failure\n");
+			goto out;
+		}
+		/* Encrypt known pattern */
+		dt_buf = (unsigned char *)se_dev->ctx_save_buf;
+		dt_buf +=
+			SE_CONTEXT_SAVE_RSA_KNOWN_PATTERN_OFFSET;
+		for (i = 0; i < SE_CONTEXT_KNOWN_PATTERN_SIZE; i++)
+			dt_buf[i] = pdata[i];
+		err = tegra_se_lp_encrypt_context_data(se_dev,
+			SE_CONTEXT_SAVE_RSA_KNOWN_PATTERN_OFFSET,
+			SE_CONTEXT_KNOWN_PATTERN_SIZE);
+	} else {
+		/* Encrypt known pattern */
+		dt_buf = (unsigned char *)se_dev->ctx_save_buf;
+		dt_buf +=
+			SE_CONTEXT_SAVE_KNOWN_PATTERN_OFFSET;
+		for (i = 0; i < SE_CONTEXT_KNOWN_PATTERN_SIZE; i++)
+			dt_buf[i] = pdata[i];
+		err = tegra_se_lp_encrypt_context_data(se_dev,
+			SE_CONTEXT_SAVE_KNOWN_PATTERN_OFFSET,
+			SE_CONTEXT_KNOWN_PATTERN_SIZE);
+	}
 	if (err) {
 		dev_err(se_dev->dev, "LP known pattern save failure\n");
 		goto out;

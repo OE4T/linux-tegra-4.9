@@ -26,6 +26,7 @@
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include <trace/events/nvhost.h>
 
 #include <mach/powergate.h>
 #include <mach/clk.h>
@@ -316,6 +317,9 @@ static int nvhost_module_update_rate(struct nvhost_device *dev, int index)
 	if (!rate)
 		rate = default_rate;
 
+	trace_nvhost_module_update_rate(dev->name,
+			dev->clocks[index].name, rate);
+
 	return clk_set_rate(dev->clk[index], rate);
 }
 
@@ -475,6 +479,8 @@ int nvhost_module_set_devfreq_rate(struct nvhost_device *dev, int index,
 	rate = clk_round_rate(dev->clk[index], rate);
 	dev->clocks[index].devfreq_rate = rate;
 
+	trace_nvhost_module_set_devfreq_rate(dev->name,
+			dev->clocks[index].name, rate);
 	return nvhost_module_update_rate(dev, index);
 }
 

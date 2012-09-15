@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2012-2014, Raydium Semiconductor Corporation.
  * All Rights Reserved.
- * Copyright (C) 2012-2014, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2017, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -26,6 +26,7 @@
 	GLOBAL VARIABLES DECLARATION
 =============================================================================*/
 struct rm_tch_ctrl_para g_st_ctrl;
+EXPORT_SYMBOL(g_st_ctrl);
 
 /*=============================================================================
 	FUNCTION DECLARATION
@@ -42,6 +43,7 @@ void rm_tch_ctrl_init(void)
 {
 	memset(&g_st_ctrl, 0, sizeof(struct rm_tch_ctrl_para));
 }
+EXPORT_SYMBOL(rm_tch_ctrl_init);
 
 /*=============================================================================
 	Description: To transfer the value to HAL layer
@@ -60,6 +62,7 @@ unsigned char rm_tch_ctrl_get_idle_mode(u8 *p)
 		return RETURN_FAIL;
 	return RETURN_OK;
 }
+EXPORT_SYMBOL(rm_tch_ctrl_get_idle_mode);
 
 /*=============================================================================
 	Description:
@@ -77,6 +80,7 @@ void rm_tch_ctrl_set_parameter(void *arg)
 	if (missing)
 		return;
 }
+EXPORT_SYMBOL(rm_tch_ctrl_set_parameter);
 
 /*===========================================================================*/
 MODULE_AUTHOR("xxxxxxxxxx <xxxxxxxx@rad-ic.com>");

@@ -38,6 +38,8 @@
 
 #define NBUFS 2
 #define XBUFSIZE 8
+#define RNG_DRBG 1
+#define RNG 0
 
 struct tegra_crypto_ctx {
 	struct crypto_ablkcipher *ecb_tfm;
@@ -46,6 +48,7 @@ struct tegra_crypto_ctx {
 	struct crypto_ablkcipher *ctr_tfm;
 	struct crypto_ablkcipher *cmac_tfm;
 	struct crypto_rng *rng;
+	struct crypto_rng *rng_drbg;
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	int use_ssk;
 };
@@ -130,13 +133,24 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 			goto fail_ctr;
 		}
 	}
-
-	ctx->rng = crypto_alloc_rng("rng-aes-tegra", CRYPTO_ALG_TYPE_RNG, 0);
-	if (IS_ERR(ctx->rng)) {
-		pr_err("Failed to load transform for tegra rng: %ld\n",
-			PTR_ERR(ctx->rng));
-		ret = PTR_ERR(ctx->rng);
-		goto fail_rng;
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) {
+		ctx->rng_drbg = crypto_alloc_rng("rng_drbg-aes-tegra",
+			CRYPTO_ALG_TYPE_RNG, 0);
+		if (IS_ERR(ctx->rng_drbg)) {
+			pr_err("Failed to load transform for rng_drbg tegra: %ld\n",
+				PTR_ERR(ctx->rng_drbg));
+			ret = PTR_ERR(ctx->rng_drbg);
+			goto fail_rng;
+		}
+	} else {
+		ctx->rng = crypto_alloc_rng("rng-aes-tegra",
+			CRYPTO_ALG_TYPE_RNG, 0);
+		if (IS_ERR(ctx->rng)) {
+			pr_err("Failed to load transform for tegra rng: %ld\n",
+				PTR_ERR(ctx->rng));
+			ret = PTR_ERR(ctx->rng);
+			goto fail_rng;
+		}
 	}
 
 	filp->private_data = ctx;
@@ -171,7 +185,10 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 		crypto_free_ablkcipher(ctx->ctr_tfm);
 	}
 
-	crypto_free_rng(ctx->rng);
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
+		crypto_free_rng(ctx->rng_drbg);
+	else
+		crypto_free_rng(ctx->rng);
 	kfree(ctx);
 	filp->private_data = NULL;
 	return 0;
@@ -427,7 +444,8 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_PROCESS_REQ:
-		ret = copy_from_user(&crypt_req, (void __user *)arg, sizeof(crypt_req));
+		ret = copy_from_user(&crypt_req, (void __user *)arg,
+			sizeof(crypt_req));
 		if (ret < 0) {
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			break;
@@ -437,31 +455,46 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_SET_SEED:
-		if (copy_from_user(&rng_req, (void __user *)arg, sizeof(rng_req)))
+		if (copy_from_user(&rng_req, (void __user *)arg,
+			sizeof(rng_req)))
 			return -EFAULT;
-
 		memcpy(ctx->seed, rng_req.seed, TEGRA_CRYPTO_RNG_SEED_SIZE);
 
-		ret = crypto_rng_reset(ctx->rng, ctx->seed,
-			crypto_rng_seedsize(ctx->rng));
+		if (rng_req.type == RNG_DRBG)
+			ret = crypto_rng_reset(ctx->rng_drbg, ctx->seed,
+				crypto_rng_seedsize(ctx->rng_drbg));
+		else
+			ret = crypto_rng_reset(ctx->rng, ctx->seed,
+				crypto_rng_seedsize(ctx->rng));
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_GET_RANDOM:
-		if (copy_from_user(&rng_req, (void __user *)arg, sizeof(rng_req)))
+		if (copy_from_user(&rng_req, (void __user *)arg,
+			sizeof(rng_req)))
 			return -EFAULT;
 
 		rng = kzalloc(rng_req.nbytes, GFP_KERNEL);
 		if (!rng) {
-			pr_err("mem alloc for rng fail");
+			if (rng_req.type == RNG_DRBG)
+				pr_err("mem alloc for rng_drbg fail");
+			else
+				pr_err("mem alloc for rng fail");
 			ret = -ENODATA;
 			goto rng_out;
 		}
 
-		ret = crypto_rng_get_bytes(ctx->rng, rng,
-			rng_req.nbytes);
+		if (rng_req.type == RNG_DRBG)
+			ret = crypto_rng_get_bytes(ctx->rng_drbg, rng,
+				rng_req.nbytes);
+		else
+			ret = crypto_rng_get_bytes(ctx->rng, rng,
+				rng_req.nbytes);
 
 		if (ret != rng_req.nbytes) {
-			pr_err("rng failed");
+			if (rng_req.type == RNG_DRBG)
+				pr_err("rng_drbg failed");
+			else
+				pr_err("rng failed");
 			ret = -ENODATA;
 			goto rng_out;
 		}
@@ -493,7 +526,7 @@ rng_out:
 	return ret;
 }
 
-struct file_operations tegra_crypto_fops = {
+const struct file_operations tegra_crypto_fops = {
 	.owner = THIS_MODULE,
 	.open = tegra_crypto_dev_open,
 	.release = tegra_crypto_dev_release,

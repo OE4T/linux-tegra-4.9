@@ -69,6 +69,7 @@ struct tegra_rng_req {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	u8 *rdata; /* random generated data */
 	int nbytes; /* random data length */
+	int type;
 };
 
 struct tegra_sha_req {

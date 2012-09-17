@@ -246,9 +246,13 @@ void nvhost_scale3d_suspend(struct nvhost_device *dev)
 
 static int podgov_is_enabled(struct device *dev)
 {
-	struct devfreq *df = to_devfreq(dev);
+	struct nvhost_device *d = to_nvhost_device(dev);
+	struct devfreq *df = d->power_manager;
 	struct podgov_info_rec *podgov;
 	int enable;
+
+	if (!df)
+		return 0;
 
 	mutex_lock(&df->lock);
 	podgov = df->data;
@@ -268,8 +272,12 @@ static int podgov_is_enabled(struct device *dev)
 
 static void podgov_enable(struct device *dev, int enable)
 {
-	struct devfreq *df = to_devfreq(dev);
+	struct nvhost_device *d = to_nvhost_device(dev);
+	struct devfreq *df = d->power_manager;
 	struct podgov_info_rec *podgov;
+
+	if (!df)
+		return;
 
 	mutex_lock(&df->lock);
 	podgov = df->data;
@@ -608,7 +616,7 @@ static void podgov_idle_handler(struct work_struct *work)
 	/* Retrieve device driver ops and the device struct */
 	struct device *d = df->dev.parent;
 	struct nvhost_driver *drv = to_nvhost_driver(d->driver);
-	struct nvhost_device *dev = dev = to_nvhost_device(d);
+	struct nvhost_device *dev = to_nvhost_device(d);
 
 	int notify_idle = 0;
 
@@ -998,7 +1006,7 @@ static int nvhost_pod_init(struct devfreq *df)
 	df->max_freq = ext_stat->max_freq;
 
 	/* Create a sysfs entry for controlling this governor */
-	error = device_create_file(&df->dev,
+	error = device_create_file(&d->dev,
 			&dev_attr_enable_3d_scaling);
 	if (error)
 		goto err_create_sysfs_entry;
@@ -1042,9 +1050,9 @@ err_allocate_hint:
 err_allocate_busy:
 	kfree(podgov->freqlist);
 err_allocate_freq_list:
-	device_remove_file(&df->dev, &dev_attr_enable_3d_scaling);
+	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
 err_create_sysfs_entry:
-	dev_err(&df->dev, "failed to create sysfs attributes");
+	dev_err(&d->dev, "failed to create sysfs attributes");
 err_get_current_status:
 	kfree(podgov);
 err_alloc_podgov:
@@ -1060,6 +1068,7 @@ err_alloc_podgov:
 static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
+	struct nvhost_device *d = to_nvhost_device(df->dev.parent);
 
 	cancel_work_sync(&podgov->work);
 	cancel_delayed_work(&podgov->idle_timer);
@@ -1068,7 +1077,7 @@ static void nvhost_pod_exit(struct devfreq *df)
 	score_delete(podgov->hint_history);
 	kfree(podgov->freqlist);
 
-	device_remove_file(&df->dev, &dev_attr_enable_3d_scaling);
+	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
 
 	nvhost_scale3d_debug_deinit(df);
 

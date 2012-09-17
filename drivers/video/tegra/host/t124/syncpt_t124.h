@@ -24,7 +24,7 @@
 
 #include "host1x/host1x_syncpt.h"
 
-#define NVSYNCPT_ISP_0_0	0
+#define NVSYNCPT_ISP_0_0	NVSYNCPT_MPE
 #define NVSYNCPT_ISP_0_1	1
 #define NVSYNCPT_ISP_0_2	2
 #define NVSYNCPT_ISP_0_3	3

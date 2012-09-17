@@ -19,6 +19,7 @@
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/uaccess.h>
 
 #include <linux/io.h>
 
@@ -256,6 +257,145 @@ static const struct file_operations actmon_avg_fops = {
 	.release	= single_release,
 };
 
+static int actmon_avg_norm_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_master *host = s->private;
+	u32 avg;
+	int err;
+
+	err = actmon_op().read_avg_norm(host, &avg);
+	if (!err)
+		seq_printf(s, "%d\n", avg);
+	return err;
+}
+
+static int actmon_avg_norm_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_avg_norm_show, inode->i_private);
+}
+
+static const struct file_operations actmon_avg_norm_fops = {
+	.open		= actmon_avg_norm_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_sample_period_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_master *host = s->private;
+	long period = actmon_op().get_sample_period(host);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_sample_period_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_sample_period_show, inode->i_private);
+}
+
+static const struct file_operations actmon_sample_period_fops = {
+	.open		= actmon_sample_period_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_sample_period_norm_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_master *host = s->private;
+	long period = actmon_op().get_sample_period_norm(host);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_sample_period_norm_open(struct inode *inode,
+						struct file *file)
+{
+	return single_open(file, actmon_sample_period_norm_show,
+		inode->i_private);
+}
+
+static int actmon_sample_period_norm_write(struct file *file,
+				const char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct seq_file *s = file->private_data;
+	struct nvhost_master *host = s->private;
+	char buffer[40];
+	int buf_size;
+	unsigned long period;
+
+	memset(buffer, 0, sizeof(buffer));
+	buf_size = min(count, (sizeof(buffer)-1));
+
+	if (copy_from_user(buffer, user_buf, buf_size))
+		return -EFAULT;
+
+	if (kstrtoul(buffer, 10, &period))
+		return -EINVAL;
+
+	actmon_op().set_sample_period_norm(host, period);
+
+	return count;
+}
+
+static const struct file_operations actmon_sample_period_norm_fops = {
+	.open		= actmon_sample_period_norm_open,
+	.read		= seq_read,
+	.write          = actmon_sample_period_norm_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+
+
+static int actmon_k_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_master *host = s->private;
+	long period = actmon_op().get_k(host);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_k_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_k_show, inode->i_private);
+}
+
+static int actmon_k_write(struct file *file,
+				const char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct seq_file *s = file->private_data;
+	struct nvhost_master *host = s->private;
+	char buffer[40];
+	int buf_size;
+	unsigned long k;
+
+	memset(buffer, 0, sizeof(buffer));
+	buf_size = min(count, (sizeof(buffer)-1));
+
+	if (copy_from_user(buffer, user_buf, buf_size))
+		return -EFAULT;
+
+	if (kstrtoul(buffer, 10, &k))
+		return -EINVAL;
+
+	actmon_op().set_k(host, k);
+
+	return count;
+}
+
+static const struct file_operations actmon_k_fops = {
+	.open		= actmon_k_open,
+	.read		= seq_read,
+	.write          = actmon_k_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+
 static int tickcount_show(struct seq_file *s, void *unused)
 {
 	struct nvhost_device *dev = s->private;
@@ -378,6 +518,14 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_u32("force_timeout_channel", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_channel);
 
+	debugfs_create_file("3d_actmon_k", S_IRUGO, de,
+			master, &actmon_k_fops);
+	debugfs_create_file("3d_actmon_sample_period", S_IRUGO, de,
+			master, &actmon_sample_period_fops);
+	debugfs_create_file("3d_actmon_sample_period_norm", S_IRUGO, de,
+			master, &actmon_sample_period_norm_fops);
+	debugfs_create_file("3d_actmon_avg_norm", S_IRUGO, de,
+			master, &actmon_avg_norm_fops);
 	debugfs_create_file("3d_actmon_avg", S_IRUGO, de,
 			master, &actmon_avg_fops);
 	debugfs_create_file("3d_actmon_above_wmark", S_IRUGO, de,

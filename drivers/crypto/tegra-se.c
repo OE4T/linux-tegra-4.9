@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -997,14 +997,16 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	const u8 *key, u32 keylen)
 {
 	struct tegra_se_aes_context *ctx = crypto_ablkcipher_ctx(tfm);
-	struct tegra_se_dev *se_dev = ctx->se_dev;
+	struct tegra_se_dev *se_dev = NULL;
 	struct tegra_se_slot *pslot;
 	u8 *pdata = (u8 *)key;
 
-	if (!ctx) {
-		dev_err(se_dev->dev, "invalid context");
+	if (!ctx || !ctx->se_dev) {
+		pr_err("invalid context or dev");
 		return -EINVAL;
 	}
+
+	se_dev = ctx->se_dev;
 
 	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
 		(keylen != TEGRA_SE_KEY_192_SIZE) &&

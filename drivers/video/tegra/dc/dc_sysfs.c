@@ -25,6 +25,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 
+#include <linux/../../drivers/video/tegra/nvmap/nvmap.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"
@@ -140,7 +141,6 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 {
 	struct nvhost_device *ndev = to_nvhost_device(device);
 	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
-
 	u32 crc;
 
 	if (!dc->enabled) {
@@ -283,6 +283,100 @@ static ssize_t mode_3d_store(struct device *dev,
 static DEVICE_ATTR(stereo_mode,
 	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
 
+static ssize_t colorbar_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	int refresh_rate;
+	struct nvhost_device *ndev = to_nvhost_device(device);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	refresh_rate = tegra_fb_get_mode(dc);
+	return snprintf(buf, PAGE_SIZE, "%d\n", refresh_rate);
+}
+
+#define WIDTH 1920
+#define HEIGHT 1200
+
+static ssize_t colorbar_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	struct nvmap_client	*test_nvmap;
+	struct nvmap_handle_ref *win;
+	int i, j;
+	phys_addr_t phys_addr;
+	u8* win_ptr;
+	u32 *ptr;
+	u32 val;
+
+	printk("===== test is started ====\n");
+	test_nvmap = nvmap_create_client(nvmap_dev, "wint_test");
+	win = nvmap_alloc(test_nvmap, WIDTH*HEIGHT*4*2, 32, NVMAP_HANDLE_WRITE_COMBINE, 0);
+	phys_addr = nvmap_pin(test_nvmap, win);
+
+	win_ptr = nvmap_mmap(win);
+
+	ptr = (u32*) win_ptr;
+	for(i = 0; i < HEIGHT / 4; i++)
+		for(j = 0; j < WIDTH; j++)
+			*(ptr++) = 0xff0000ff;
+	for(i = 0; i < HEIGHT / 4; i++)
+		for(j = 0; j < WIDTH; j++)
+			*(ptr++) = 0xff00ff00;
+	for(i = 0; i < HEIGHT / 4; i++)
+		for(j = 0; j < WIDTH; j++)
+			*(ptr++) = 0xffff0000;
+	for(i = 0; i < HEIGHT / 4; i++)
+		for(j = 0; j < WIDTH; j++)
+			*(ptr++) = 0xff0000ff;
+
+
+	tegra_dc_writel(dc, WINDOW_A_SELECT,
+			DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	val = WIN_ENABLE;
+	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
+	tegra_dc_writel(dc, 0xd, DC_WIN_COLOR_DEPTH);
+
+	tegra_dc_writel(dc,
+		V_POSITION(0) | H_POSITION(0),
+		DC_WIN_POSITION);
+	tegra_dc_writel(dc,
+		V_SIZE(1200) | H_SIZE(1920),
+		DC_WIN_SIZE);
+
+	tegra_dc_writel(dc,
+			V_PRESCALED_SIZE(1200) |
+			H_PRESCALED_SIZE(1920 * 4),
+			DC_WIN_PRESCALED_SIZE);
+
+		tegra_dc_writel(dc, 0x10001000, DC_WIN_DDA_INCREMENT);
+		tegra_dc_writel(dc, 0, DC_WIN_H_INITIAL_DDA);
+		tegra_dc_writel(dc, 0, DC_WIN_V_INITIAL_DDA);
+
+	tegra_dc_writel(dc, phys_addr, DC_WINBUF_START_ADDR);
+
+	tegra_dc_writel(dc, 1920*4, DC_WIN_LINE_STRIDE);
+
+	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_H_OFFSET);
+	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_V_OFFSET);
+
+	tegra_dc_writel(dc,
+				DC_WIN_BUFFER_ADDR_MODE_LINEAR |
+				DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
+				DC_WIN_BUFFER_ADDR_MODE);
+	tegra_dc_writel(dc, 0xffff00, DC_WIN_BLEND_1WIN);
+
+	tegra_dc_writel(dc, WIN_A_UPDATE | GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, WIN_A_ACT_REQ | GENERAL_ACT_REQ , DC_CMD_STATE_CONTROL);
+
+	return count;
+}
+
+static DEVICE_ATTR(colorbar, S_IRUGO|S_IWUSR, colorbar_show, colorbar_store);
+
 static ssize_t nvdps_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -324,6 +418,7 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
+	device_remove_file(dev, &dev_attr_colorbar);
 
 	if (dc->out->stereo) {
 		device_remove_file(dev, &dev_attr_stereo_orientation);
@@ -346,6 +441,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
+	error |= device_create_file(dev, &dev_attr_colorbar);
 
 	if (dc->out->stereo) {
 		error |= device_create_file(dev, &dev_attr_stereo_orientation);

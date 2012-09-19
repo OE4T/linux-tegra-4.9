@@ -58,8 +58,39 @@ static struct resource tegra_host1x04_resources[] = {
 	},
 };
 
+static const char *s_syncpt_names[NV_HOST1X_SYNCPT_NB_PTS] = {
+	[NVSYNCPT_CSI_VI_0]	= "csi_vi_0",
+	[NVSYNCPT_CSI_VI_1]	= "csi_vi_1",
+	[NVSYNCPT_VI_ISP_0]	= "vi_isp_0",
+	[NVSYNCPT_VI_ISP_1]	= "vi_isp_1",
+	[NVSYNCPT_VI_ISP_2]	= "vi_isp_2",
+	[NVSYNCPT_VI_ISP_3]	= "vi_isp_3",
+	[NVSYNCPT_VI_ISP_4]	= "vi_isp_4",
+	[NVSYNCPT_3D]		= "3d",
+	[NVSYNCPT_MPE]		= "mpe",
+	[NVSYNCPT_MPE_EBM_EOF]	= "mpe_ebm_eof",
+	[NVSYNCPT_MPE_WR_SAFE]	= "mpe_wr_safe",
+	[NVSYNCPT_VIC]		= "vic",
+	[NVSYNCPT_TSEC]		= "tsec",
+	[NVSYNCPT_DISP0_A]	= "disp0",
+	[NVSYNCPT_DISP1_A]	= "disp1",
+	[NVSYNCPT_AVP_0]	= "avp",
+	[NVSYNCPT_DISP0_B]	= "disp0b",
+	[NVSYNCPT_DISP1_B]	= "disp1b",
+	[NVSYNCPT_DISP0_C]	= "disp0c",
+	[NVSYNCPT_DISP1_C]	= "disp0c",
+	[NVSYNCPT_VBLANK0]	= "vblank0",
+	[NVSYNCPT_VBLANK1]	= "vblank1",
+	[NVSYNCPT_DSI]		= "dsi",
+};
+
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T124_NVHOST_NUMCHANNELS,
+	.nb_pts		= NV_HOST1X_SYNCPT_NB_PTS,
+	.nb_mlocks	= NV_HOST1X_NB_MLOCKS,
+	.nb_bases	= NV_HOST1X_SYNCPT_NB_BASES,
+	.syncpt_names	= s_syncpt_names,
+	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
 
 static struct nvhost_device tegra_host1x04_device = {
@@ -428,6 +459,8 @@ static void t124_remove_support(struct nvhost_chip_support *op)
 	op->priv = 0;
 }
 
+#include "host1x/host1x_syncpt.c"
+
 int nvhost_init_t124_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
@@ -447,9 +480,8 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	if (err)
 		return err;
 
-	err = nvhost_init_t124_syncpt_support(host, op);
-	if (err)
-		return err;
+	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
+	op->syncpt = host1x_syncpt_ops;
 
 	err = nvhost_init_t124_intr_support(op);
 	if (err)

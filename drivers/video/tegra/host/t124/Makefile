@@ -4,7 +4,6 @@ EXTRA_CFLAGS += -Idrivers/video/tegra/host
 nvhost-t124-objs  = \
 	t124.o \
 	as_t124.o \
-	syncpt_t124.o \
 	intr_t124.o \
 	cdma_t124.o \
 	3dctx_t124.o \

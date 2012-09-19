@@ -137,6 +137,22 @@ static void t124_intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 		host1x_sync_syncpt_thresh_int_enable_cpu0_0_r() + reg_offset);
 }
 
+static void t124_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	void __iomem *sync_regs = dev->sync_aperture;
+	u32 reg_offset = (id / 32) * 4;
+
+	nvhost_dbg_fn("");
+	BUG_ON(reg_offset > (nvhost_syncpt_nb_pts(&dev->syncpt) / 32) * 4);
+	writel(BIT(id & (32 - 1)),
+	       sync_regs +
+		host1x_sync_syncpt_thresh_int_disable_0_r() + reg_offset);
+	writel(BIT(id & (32 - 1)),
+	       sync_regs +
+		host1x_sync_syncpt_thresh_cpu0_int_status_0_r() + reg_offset);
+}
+
 static void t124_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -298,6 +314,7 @@ int nvhost_init_t124_intr_support(struct nvhost_chip_support *op)
 	  t124_intr_set_host_clocks_per_usec;
 	op->intr.set_syncpt_threshold = t124_intr_set_syncpt_threshold;
 	op->intr.enable_syncpt_intr = t124_intr_enable_syncpt_intr;
+	op->intr.disable_syncpt_intr = t124_intr_disable_syncpt_intr;
 	op->intr.disable_all_syncpt_intrs =
 	  t124_intr_disable_all_syncpt_intrs;
 	op->intr.request_host_general_irq =

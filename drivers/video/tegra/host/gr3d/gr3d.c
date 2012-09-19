@@ -206,7 +206,7 @@ static const struct gr3d_desc gr3d[] = {
 		.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,
 		.finalize_poweron = nvhost_gr3d_t114_finalize_power_on,
 		.alloc_hwctx_handler = nvhost_gr3d_t114_ctxhandler_init,
-		.read_reg = nvhost_gr3d_t114_read_reg,
+		.read_reg = nvhost_gr3d_t30_read_reg,
 	},
 };
 

@@ -34,6 +34,25 @@
 #include "mltypes.h"
 #endif
 
+/*********************************************************************/
+/* DEBUG INTERFACE
+*	Adds SYSFS attributes to read/write MPU registers from ADB
+*	shell:
+*	dbg_reg	= REGISTER
+*		- A write to dbg_reg sets the device register to use
+*		- A read reads the current value of dbg_reg
+*	dbg_dat = DATA
+*		- A write to dbg_dat initiates an I2C write transaction
+*		  to the device register defined by dbg_reg with the
+*		  data defined by dbg_dat
+*		- A read to dbg_dat initiates an I2C read transaction
+*		  to the device register defined by dbg_reg.
+**********************************************************************/
+#define	DEBUG_SYSFS_INTERFACE		0
+
+/*********************************************************************/
+/* Structure and function prototypes				     */
+/*********************************************************************/
 struct mpu_read_write {
 	/* Memory address or register address depending on ioctl */
 	__u16 address;

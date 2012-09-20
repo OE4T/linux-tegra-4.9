@@ -628,13 +628,11 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		u32 syncpt_max;
 		int index = args->win[i].index;
-		struct tegra_dc_win *win;
 		struct tegra_dc_ext_win *ext_win;
 
 		if (index < 0)
 			continue;
 
-		win = tegra_dc_get_window(ext->dc, index);
 		ext_win = &ext->win[index];
 
 		syncpt_max = tegra_dc_incr_syncpt_max(ext->dc, index);

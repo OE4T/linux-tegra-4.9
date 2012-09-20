@@ -46,7 +46,7 @@
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
 
-#define DSI_USE_SYNC_POINTS		1
+#define DSI_USE_SYNC_POINTS		0
 #define S_TO_MS(x)			(1000 * (x))
 
 #define DSI_MODULE_NOT_INIT		0x0
@@ -430,7 +430,8 @@ static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-static void tegra_dsi_syncpt_reset(struct tegra_dc_dsi_data *dsi)
+static void __maybe_unused tegra_dsi_syncpt_reset(
+				struct tegra_dc_dsi_data *dsi)
 {
 	tegra_dsi_writel(dsi, 0x1, DSI_INCR_SYNCPT_CNTRL);
 	/* stabilization delay */
@@ -440,7 +441,7 @@ static void tegra_dsi_syncpt_reset(struct tegra_dc_dsi_data *dsi)
 	udelay(300);
 }
 
-static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
+static int __maybe_unused tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 	int ret = 0;
@@ -3011,14 +3012,14 @@ static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 	if (ret < 0) {
 		dev_err(&dsi->dc->ndev->dev,
 			"DSI syncpt for ulpm enter failed\n");
-		goto fail;
+		return ret;
 	}
 #else
 	/* TODO: Find exact delay required */
 	mdelay(10);
 #endif
 	dsi->ulpm = true;
-fail:
+
 	return ret;
 }
 
@@ -3040,7 +3041,7 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 	if (ret < 0) {
 		dev_err(&dsi->dc->ndev->dev,
 			"DSI syncpt for ulpm exit failed\n");
-		goto fail;
+		return ret;
 	}
 #else
 	/* TODO: Find exact delay required */
@@ -3052,9 +3053,8 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(0x3);
 	val |= DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(NORMAL);
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
-fail:
-	return ret;
 
+	return ret;
 }
 
 static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,

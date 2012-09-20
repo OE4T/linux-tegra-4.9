@@ -3285,7 +3285,7 @@ static int tegra_dc_dsi_cp_p_cmd(struct tegra_dsi_cmd *src,
 	return 0;
 
 free_cmd_pdata:
-	for (--i; i >= 0; i--)
+	while (i--)
 		if (dst[i].pdata)
 			kfree(dst[i].pdata);
 	return -ENOMEM;

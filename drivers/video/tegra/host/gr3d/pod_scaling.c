@@ -62,23 +62,9 @@
  * prevent spiky scaling behavior, which in turn exacerbates frame rate
  * instability.
  */
-#define GR3D_FRAME_SPAN 6
 
 static int podgov_is_enabled(struct device *dev);
 static void podgov_enable(struct device *dev, int enable);
-
-/*******************************************************************************
- * score - a structure for holding data over certain period
- ******************************************************************************/
-
-struct score {
-	int size;		/* number of samples */
-	int pos;		/* position in ring buffer */
-	int count;		/* actual item count */
-	unsigned int sum;	/* running sum */
-	unsigned int prev;	/* previous score after 'reset' operation */
-	unsigned int list[];	/* ring buffer */
-};
 
 /*******************************************************************************
  * podgov_info_rec - gr3d scaling governor specific parameters
@@ -106,13 +92,13 @@ struct podgov_info_rec {
 	struct delayed_work	idle_timer;
 
 	unsigned int		scale;
-	unsigned int		p_busy_cutoff;
 	unsigned int		p_estimation_window;
 	unsigned int		p_use_throughput_hint;
-	unsigned int		p_throughput_lo_limit;
-	unsigned int		p_throughput_lower_limit;
-	unsigned int		p_throughput_hi_limit;
-	unsigned int		p_scale_step;
+	unsigned int		p_hint_lo_limit;
+	unsigned int		p_hint_hi_limit;
+	unsigned int		p_scaleup_limit;
+	unsigned int		p_scaledown_limit;
+	unsigned int		p_smooth;
 	unsigned int		p_idle_min;
 	unsigned int		idle_min;
 	unsigned int		p_idle_max;
@@ -134,8 +120,9 @@ struct podgov_info_rec {
 	int			*freqlist;
 	int			freq_count;
 
-	struct score		*busy_history;
-	struct score		*hint_history;
+	unsigned int		idle_avg;
+	unsigned int		hint_avg;
+	int			block;
 
 };
 
@@ -497,73 +484,6 @@ static void update_load_estimate(struct devfreq *df)
 }
 
 /*******************************************************************************
- * score_init(capacity)
- *
- * This function initialises a score list with given capacity
- ******************************************************************************/
-
-static struct score *score_init(int capacity)
-{
-	struct score *s;
-
-	s = kzalloc(sizeof(struct score) + capacity * sizeof(int), GFP_KERNEL);
-	if (s == NULL)
-		return NULL;
-
-	s->size = capacity;
-
-	return s;
-}
-
-/*******************************************************************************
- * score_delete(s)
- *
- * This function destructs the given score list
- ******************************************************************************/
-
-static void score_delete(struct score *s)
-{
-	kfree(s);
-}
-
-#define score_get_average(s) ((s)->count ? (s)->sum / (s)->count : 0)
-
-/*******************************************************************************
- * score_add(s, reading)
- *
- * Add a single reading into the given score list
- ******************************************************************************/
-
-static void score_add(struct score *s, unsigned int reading)
-{
-	if (s->count < s->size) {
-		s->sum += reading;
-		s->count++;
-	} else
-		s->sum = s->sum - s->list[s->pos] + reading;
-
-	s->list[s->pos] = reading;
-	s->pos = (s->pos + 1) % s->size;
-}
-
-/*******************************************************************************
- * score_reset(s)
- *
- * Reset the score list
- ******************************************************************************/
-
-static unsigned int score_reset(struct score *s)
-{
-	s->prev = s->sum;
-
-	s->count = 0;
-	s->pos = 0;
-	s->sum = 0;
-
-	return s->prev;
-}
-
-/*******************************************************************************
  * freqlist_up(podgov, target, steps)
  *
  * This function determines the frequency that is "steps" frequency steps
@@ -652,11 +572,10 @@ void nvhost_scale3d_set_throughput_hint(int hint)
 	struct podgov_info_rec *podgov = local_podgov;
 	struct devfreq *df;
 
-	ktime_t now;
-	long busy;
+	long idle;
 	long curr, target;
-	long dt;
-	int avg_busy, avg_hint;
+	int avg_idle, avg_hint, scale_score;
+	unsigned int smooth;
 
 	if (!podgov)
 		return;
@@ -666,76 +585,54 @@ void nvhost_scale3d_set_throughput_hint(int hint)
 
 	mutex_lock(&podgov->power_manager->lock);
 
-	if (!podgov->enable) {
-		mutex_unlock(&podgov->power_manager->lock);
-		return;
-	}
-	if (!podgov->p_use_throughput_hint) {
+	podgov->block--;
+
+	if (!podgov->enable ||
+		!podgov->p_use_throughput_hint ||
+		podgov->block > 0) {
 		mutex_unlock(&podgov->power_manager->lock);
 		return;
 	}
 
 	trace_podgov_hint(podgov->idle_estimate, hint);
+	podgov->last_throughput_hint = ktime_get();
 
-	now = ktime_get();
-	dt = ktime_us_delta(now, podgov->last_throughput_hint);
-	if (dt > GR3D_TIMEFRAME) {
-		score_reset(podgov->busy_history);
-		score_reset(podgov->hint_history);
-	}
-
-	podgov->last_throughput_hint = now;
-
-	busy = 1000 - podgov->idle_estimate;
 	curr = podgov->power_manager->previous_freq;
-	target = df->min_freq;
+	idle = podgov->idle_estimate;
+	smooth = podgov->p_smooth;
 
-	score_add(podgov->busy_history, busy);
-	score_add(podgov->hint_history, hint);
+	/* compute averages usings exponential-moving-average */
+	avg_idle = ((smooth*podgov->idle_avg + idle)/(smooth+1));
+	podgov->idle_avg = avg_idle;
+	avg_hint = ((smooth*podgov->hint_avg + hint)/(smooth+1));
+	podgov->hint_avg = avg_hint;
 
-	avg_busy = score_get_average(podgov->busy_history);
-	avg_hint = score_get_average(podgov->hint_history);
-
-	if (busy > 0)
-		target = (curr / 1000) * busy;
-
-	/* In practice, running the gpu at min frequency is typically
-	 * sufficient to keep up performance at loads up to 70% on cases,
-	 * but the average hint value is tested to keep performance up if
-	 * needed.
-	 */
-	if (avg_busy <= podgov->p_busy_cutoff &&
-	    avg_hint >= podgov->p_throughput_lower_limit)
-		target = df->min_freq;
-	else {
-		target = (df->max_freq / 1000) * avg_busy;
-
-		/* Scale up if either the current hint or the running average
-		 * are below the target to prevent performance drop.
-		 */
-		if (hint <= podgov->p_throughput_lo_limit ||
-		    avg_hint <= podgov->p_throughput_lo_limit) {
-			if (target < curr)
-				target = curr;
-			target = freqlist_up(podgov, target,
-				podgov->p_scale_step);
-		} else if (avg_hint >= podgov->p_throughput_hi_limit) {
-			if (target > curr)
-				target = curr;
-			target = freqlist_down(podgov, target,
-				podgov->p_scale_step);
-		}
+	/* set the target using avg_hint and avg_idle */
+	if (avg_hint < podgov->p_hint_lo_limit) {
+		target = freqlist_up(podgov, curr, 1);
+	} else if (avg_hint > podgov->p_hint_hi_limit) {
+		target = freqlist_down(podgov, curr, 1);
+	} else {
+		scale_score = avg_idle + avg_hint;
+		if (scale_score > podgov->p_scaledown_limit)
+			target = freqlist_down(podgov, curr, 1);
+		else if (scale_score < podgov->p_scaleup_limit)
+			target = freqlist_up(podgov, curr, 1);
+		else
+			target = curr;
 	}
 
+	/* clamp and apply target */
 	scaling_limit(df, &target);
 	if (target != curr) {
+		podgov->block = podgov->p_smooth;
 		trace_podgov_do_scale(df->previous_freq, target);
 		podgov->adjustment_frequency = target;
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
 	}
 
-	trace_podgov_print_target(busy, avg_busy, curr / 1000000, target, hint,
+	trace_podgov_print_target(idle, avg_idle, curr / 1000000, target, hint,
 		avg_hint);
 
 	mutex_unlock(&podgov->power_manager->lock);
@@ -779,10 +676,11 @@ static void nvhost_scale3d_debug_init(struct devfreq *df)
 	CREATE_PODGOV_FILE(idle_max);
 	CREATE_PODGOV_FILE(adjust);
 	CREATE_PODGOV_FILE(use_throughput_hint);
-	CREATE_PODGOV_FILE(throughput_hi_limit);
-	CREATE_PODGOV_FILE(throughput_lo_limit);
-	CREATE_PODGOV_FILE(throughput_lower_limit);
-	CREATE_PODGOV_FILE(scale_step);
+	CREATE_PODGOV_FILE(hint_hi_limit);
+	CREATE_PODGOV_FILE(hint_lo_limit);
+	CREATE_PODGOV_FILE(scaleup_limit);
+	CREATE_PODGOV_FILE(scaledown_limit);
+	CREATE_PODGOV_FILE(smooth);
 #undef CREATE_PODGOV_FILE
 }
 
@@ -980,16 +878,27 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
-	podgov->idle_min = podgov->p_idle_min = 100;
-	podgov->idle_max = podgov->p_idle_max = 150;
-	podgov->p_adjust = 1;
+	podgov->p_adjust = 0;
+	podgov->block = 0;
 	podgov->p_use_throughput_hint = 1;
-	podgov->p_throughput_lower_limit = 940;
-	podgov->p_throughput_lo_limit = 990;
-	podgov->p_throughput_hi_limit = 1010;
-	podgov->p_scale_step = 1;
-	podgov->p_estimation_window = 8000;
-	podgov->p_busy_cutoff = 750;
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) {
+		podgov->idle_min = podgov->p_idle_min = 400;
+		podgov->idle_max = podgov->p_idle_max = 500;
+		podgov->p_hint_lo_limit = 750;
+		podgov->p_hint_hi_limit = 995;
+		podgov->p_scaleup_limit = 1650;
+		podgov->p_scaledown_limit = 1750;
+		podgov->p_smooth = 11;
+	} else {
+		podgov->idle_min = podgov->p_idle_min = 100;
+		podgov->idle_max = podgov->p_idle_max = 150;
+		podgov->p_hint_lo_limit = 800;
+		podgov->p_hint_hi_limit = 1015;
+		podgov->p_scaleup_limit = 1275;
+		podgov->p_scaledown_limit = 1475;
+		podgov->p_smooth = 7;
+	}
+	podgov->p_estimation_window = 10000;
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;
 
 	/* Reset clock counters */
@@ -1041,22 +950,13 @@ static int nvhost_pod_init(struct devfreq *df)
 	memcpy(podgov->freqlist, freqs,
 		podgov->freq_count * sizeof(int));
 
-	podgov->busy_history = score_init(GR3D_FRAME_SPAN);
-	if (podgov->busy_history == NULL)
-		goto err_allocate_busy;
-
-	podgov->hint_history = score_init(GR3D_FRAME_SPAN);
-	if (podgov->hint_history == NULL)
-		goto err_allocate_hint;
+	podgov->idle_avg = 0;
+	podgov->hint_avg = 0;
 
 	nvhost_scale3d_debug_init(df);
 
 	return 0;
 
-err_allocate_hint:
-	score_delete(podgov->busy_history);
-err_allocate_busy:
-	kfree(podgov->freqlist);
 err_allocate_freq_list:
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
 err_create_sysfs_entry:
@@ -1081,8 +981,6 @@ static void nvhost_pod_exit(struct devfreq *df)
 	cancel_work_sync(&podgov->work);
 	cancel_delayed_work(&podgov->idle_timer);
 
-	score_delete(podgov->busy_history);
-	score_delete(podgov->hint_history);
 	kfree(podgov->freqlist);
 
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);

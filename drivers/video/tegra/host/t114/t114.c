@@ -90,7 +90,7 @@ static struct host1x_device_info host1x02_info = {
 	.nb_channels	= 9,
 	.nb_pts		= 32,
 	.nb_mlocks	= 16,
-	.nb_bases	= 8,
+	.nb_bases	= 12,
 	.syncpt_names	= s_syncpt_names,
 	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };

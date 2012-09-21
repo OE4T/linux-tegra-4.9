@@ -88,7 +88,7 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 				min, max);
 	}
 
-	for (i = 0; i < nvhost_syncpt_nb_pts(&m->syncpt); i++) {
+	for (i = 0; i < nvhost_syncpt_nb_bases(&m->syncpt); i++) {
 		u32 base_val;
 		base_val = nvhost_syncpt_read_wait_base(&m->syncpt, i);
 		if (base_val)

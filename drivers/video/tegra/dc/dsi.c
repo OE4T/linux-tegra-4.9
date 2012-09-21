@@ -2527,6 +2527,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 						cur_cmd->pdata,
 						cur_cmd->data_id,
 						cur_cmd->sp_len_dly.data_len);
+			mdelay(1);
 			if (err < 0)
 				break;
 		}

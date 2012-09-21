@@ -119,7 +119,12 @@ static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
 static const char *t20_syncpt_name(struct nvhost_syncpt *sp, u32 id)
 {
 	struct host1x_device_info *info = &syncpt_to_dev(sp)->info;
-	return (id >= info->nb_pts) ? NULL : info->syncpt_names[id];
+	const char *name = NULL;
+
+	if (id < info->nb_pts)
+		name = info->syncpt_names[id];
+
+	return name ? name : "";
 }
 
 static void t20_syncpt_debug(struct nvhost_syncpt *sp)

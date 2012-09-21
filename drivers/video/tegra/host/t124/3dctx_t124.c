@@ -30,7 +30,9 @@ static void t124_ctx3d_free(struct kref *ref)
 {
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 
+#if defined(CONFIG_TEGRA_GK20A)
 	gk20a_free_channel(ctx);
+#endif
 	kfree(ctx);
 }
 
@@ -53,7 +55,12 @@ struct nvhost_hwctx *t124_3dctx_alloc(struct nvhost_hwctx_handler *h,
 		return NULL;
 
 	kref_init(&ctx->ref);
+
+#if defined(CONFIG_TEGRA_GK20A)
 	return gk20a_open_channel(ch, ctx);
+#else
+	return ctx;
+#endif
 }
 
 void t124_3dctx_get(struct nvhost_hwctx *hwctx)

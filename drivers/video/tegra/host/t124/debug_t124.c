@@ -40,9 +40,12 @@ static void t124_debug_show_channel_cdma(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	nvhost_dbg_fn("");
+
+#if defined(CONFIG_TEGRA_GK20A)
 	if (ch->dev == &gk20a_device)
 		gk20a_debug_show_channel_cdma(m, ch, o, chid);
 	else
+#endif
 		t20_debug_show_channel_cdma(m, ch, o, chid);
 }
 
@@ -50,9 +53,12 @@ void t124_debug_show_channel_fifo(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	nvhost_dbg_fn("");
+
+#if defined(CONFIG_TEGRA_GK20A)
 	if (ch->dev == &gk20a_device)
 		gk20a_debug_show_channel_fifo(m, ch, o, chid);
 	else
+#endif
 		t20_debug_show_channel_fifo(m, ch, o, chid);
 }
 

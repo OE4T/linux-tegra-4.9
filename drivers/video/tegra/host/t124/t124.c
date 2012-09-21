@@ -183,9 +183,11 @@ static struct nvhost_device *channel_devices[] = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
 },},
-     &gk20a_device,
-#ifdef CONFIG_ARCH_TEGRA_VIC
-    &vic03_device,
+#if defined(CONFIG_TEGRA_GK20A)
+	&gk20a_device,
+#endif
+#if defined(CONFIG_ARCH_TEGRA_VIC)
+	&vic03_device,
 #endif
 };
 
@@ -221,12 +223,24 @@ static int t124_channel_init(struct nvhost_channel *ch,
 static int t124_channel_submit(struct nvhost_job *job)
 {
 	nvhost_dbg_fn("");
+
+#if defined(CONFIG_TEGRA_GK20A)
 	if (job->ch->dev == &gk20a_device)
 		return gk20a_channel_submit(job);
 	else
+#endif
 		return host1x_channel_submit(job);
 }
 
+static int t124_channel_read_3d_reg(struct nvhost_channel *channel,
+			struct nvhost_hwctx *hwctx,
+			u32 offset,
+			u32 *value)
+{
+	return -EPERM;
+}
+
+#if defined(CONFIG_TEGRA_GK20A)
 static int t124_channel_alloc_obj(struct nvhost_hwctx *hwctx,
 				 struct nvhost_alloc_obj_ctx_args *args)
 {
@@ -278,14 +292,6 @@ static int t124_channel_wait(struct nvhost_hwctx *hwctx,
 	return gk20a_channel_wait(hwctx->priv, args);
 }
 
-static int t124_channel_read_3d_reg(struct nvhost_channel *channel,
-			struct nvhost_hwctx *hwctx,
-			u32 offset,
-			u32 *value)
-{
-	return -EPERM;
-}
-
 static int t124_channel_zcull_get_size(struct nvhost_hwctx *hwctx,
 			    struct nvhost_zcull_get_size_args *args)
 {
@@ -320,6 +326,7 @@ static int t124_channel_zbc_query_table(struct nvhost_hwctx *hwctx,
 	nvhost_dbg_fn("");
 	return gk20a_channel_zbc_query_table(hwctx->priv, args);
 }
+#endif /* CONFIG_TEGRA_GK20A */
 
 static void t124_free_nvhost_channel(struct nvhost_channel *ch)
 {
@@ -360,15 +367,20 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 			dev->modulemutexes = BIT(NVMODMUTEX_VIC);
 			dev->syncpts = BIT(NVSYNCPT_VIC);
 		}
+#if defined(CONFIG_TEGRA_GK20A)
 		if (dev == &gk20a_device) {
 			dev->syncpts       = BIT(NVSYNCPT_3D);
 			dev->waitbases     = BIT(NVWAITBASE_3D);
 			dev->modulemutexes = BIT(NVMODMUTEX_3D);
 		}
+#endif
 	}
 
 	op->channel.init          = t124_channel_init;
 	op->channel.submit        = t124_channel_submit;
+	op->channel.read3dreg     = t124_channel_read_3d_reg;
+
+#if defined(CONFIG_TEGRA_GK20A)
 	op->channel.alloc_obj     = t124_channel_alloc_obj;
 	op->channel.free_obj      = t124_channel_free_obj;
 	op->channel.alloc_gpfifo  = t124_channel_alloc_gpfifo;
@@ -376,7 +388,6 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	op->channel.map_buffer    = t124_channel_map_buffer;
 	op->channel.unmap_buffer  = t124_channel_unmap_buffer;
 	op->channel.wait          = t124_channel_wait;
-	op->channel.read3dreg     = t124_channel_read_3d_reg;
 
 	op->channel.zcull.get_size = t124_channel_zcull_get_size;
 	op->channel.zcull.bind     = t124_channel_zcull_bind;
@@ -384,7 +395,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 
 	op->channel.zbc.set_table   = t124_channel_zbc_set_table;
 	op->channel.zbc.query_table = t124_channel_zbc_query_table;
-
+#endif
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
 

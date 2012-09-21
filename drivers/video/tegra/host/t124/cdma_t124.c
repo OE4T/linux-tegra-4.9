@@ -35,13 +35,16 @@
 
 static void t124_push_buffer_reset(struct push_buffer *pb)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device )
+
+	if (ch->dev == &gk20a_device)
 		gk20a_push_buffer_reset(pb);
 	else
+#endif
 		host1x_pushbuffer_ops.reset(pb);
 }
 
@@ -50,13 +53,16 @@ static void t124_push_buffer_reset(struct push_buffer *pb)
  */
 static int t124_push_buffer_init(struct push_buffer *pb)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		return gk20a_push_buffer_init(pb);
 	else
+#endif
 		return host1x_pushbuffer_ops.init(pb);
 }
 
@@ -65,13 +71,16 @@ static int t124_push_buffer_init(struct push_buffer *pb)
  */
 static void t124_push_buffer_destroy(struct push_buffer *pb)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		gk20a_push_buffer_destroy(pb);
 	else
+#endif
 		host1x_pushbuffer_ops.destroy(pb);
 }
 
@@ -83,13 +92,16 @@ static void t124_push_buffer_push_to(struct push_buffer *pb,
 			    struct mem_mgr *client,
 			    struct mem_handle *handle, u32 op1, u32 op2)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		gk20a_push_buffer_push_to(pb, client, handle, op1, op2);
 	else
+#endif
 		host1x_pushbuffer_ops.push_to(pb, client, handle, op1, op2);
 }
 
@@ -99,13 +111,16 @@ static void t124_push_buffer_push_to(struct push_buffer *pb,
  */
 static void t124_push_buffer_pop_from(struct push_buffer *pb, unsigned int slots)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		gk20a_push_buffer_pop_from(pb, slots);
 	else
+#endif
 		host1x_pushbuffer_ops.pop_from(pb, slots);
 }
 
@@ -114,25 +129,31 @@ static void t124_push_buffer_pop_from(struct push_buffer *pb, unsigned int slots
  */
 static u32 t124_push_buffer_space(struct push_buffer *pb)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		return gk20a_push_buffer_space(pb);
 	else
+#endif
 		return host1x_pushbuffer_ops.space(pb);
 }
 
 static u32 t124_push_buffer_putptr(struct push_buffer *pb)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 
 	nvhost_dbg_fn("");
+
 	if (ch->dev == &gk20a_device)
 		return gk20a_push_buffer_putptr(pb);
 	else
+#endif
 		return host1x_pushbuffer_ops.putptr(pb);
 }
 
@@ -149,56 +170,61 @@ static u32 t124_push_buffer_putptr(struct push_buffer *pb)
 static int t124_cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		return -EINVAL; /*XXX gk20a_cdma_timeout_init(cdma, syncpt_id);*/
 	else
+#endif
 		return host1x_cdma_ops.timeout_init(cdma, syncpt_id);
 }
 static void t124_cdma_timeout_destroy(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		return; /*XXX gk20a_cdma_timeout_destroy(cdma);*/
 	else
+#endif
 		host1x_cdma_ops.timeout_destroy(cdma);
 }
 
 void t124_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		return; /*XXX gk20a_cdma_teardown_begin(cdma);*/
 	else
+#endif
 		host1x_cdma_ops.timeout_teardown_begin(cdma);
 }
 
 void t124_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		return; /*XXX gk20a_cdma_teardown_end(cdma, getptr);*/
 	else
+#endif
 		host1x_cdma_ops.timeout_teardown_end(cdma, getptr);
 }
 static void t124_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
        u32 syncpt_incrs, u32 syncval, u32 nr_slots, u32 waitbases)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		return; /*XXX gk20a_cdma_timeout_cpu_incr(cdma, getptr,
 			  syncpt_incrs, syncval, nr_slots);*/
 	else
+#endif
 		host1x_cdma_ops.timeout_cpu_incr(cdma, getptr, syncpt_incrs,
 					  syncval, nr_slots, waitbases);
 }
@@ -208,12 +234,13 @@ static void t124_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
  */
 static void t124_cdma_start(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		gk20a_cdma_start(cdma);
 	else
+#endif
 		host1x_cdma_ops.start(cdma);
 }
 
@@ -222,23 +249,25 @@ static void t124_cdma_start(struct nvhost_cdma *cdma)
  */
 static void t124_cdma_kick(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		gk20a_cdma_kick(cdma);
 	else
+#endif
 		host1x_cdma_ops.kick(cdma);
 }
 
 static void t124_cdma_stop(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-
 	nvhost_dbg_fn("");
-	if (ch->dev == &gk20a_device)
+
+#if defined(CONFIG_TEGRA_GK20A)
+	if (cdma_to_channel(cdma)->dev == &gk20a_device)
 		gk20a_cdma_stop(cdma);
 	else
+#endif
 		host1x_cdma_ops.stop(cdma);
 }
 
@@ -250,6 +279,7 @@ int nvhost_init_t124_cdma_support(struct nvhost_chip_support *op)
 	*/
 
 	nvhost_dbg_fn("");
+
 	op->cdma.start = t124_cdma_start;
 	op->cdma.stop = t124_cdma_stop;
 	op->cdma.kick = t124_cdma_kick;

@@ -26,8 +26,10 @@
 
 static int t124_as_init(struct nvhost_master *host, struct nvhost_as *as)
 {
+#if defined(CONFIG_TEGRA_GK20A)
 	if (as->ch->dev == &gk20a_device)
 		as->ops = &gk20a_as_moduleops;
+#endif
 	return 0;
 }
 

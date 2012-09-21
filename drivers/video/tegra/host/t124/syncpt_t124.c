@@ -192,7 +192,9 @@ int nvhost_init_t124_syncpt_support(struct nvhost_master *host,
 	op->syncpt.mutex_try_lock = t124_syncpt_mutex_try_lock;
 	op->syncpt.mutex_unlock = t124_syncpt_mutex_unlock;
 
+#if defined(CONFIG_TEGRA_GK20A)
 	gk20a_device.syncpt_base = NVSYNCPT_GK20A_BASE;
+#endif
 
 	s_syncpt_names[NVSYNCPT_CSI_VI_0]	= "csi_vi_0";
 	s_syncpt_names[NVSYNCPT_CSI_VI_1]	= "csi_vi_1";

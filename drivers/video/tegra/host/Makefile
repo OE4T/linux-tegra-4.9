@@ -50,7 +50,9 @@ obj-$(t11x_or_higher_config) += gr2d/
 obj-$(t11x_or_higher_config) += isp/
 obj-$(t11x_or_higher_config) += vi/
 obj-$(t12x_or_higher_config) += t124/
+ifeq ($(CONFIG_TEGRA_GK20A),y)
 obj-$(t12x_or_higher_config) += gk20a/
+endif
 obj-$(t12x_or_higher_config) += vic03/
 obj-$(t12x_or_higher_config) += nvhost_allocator.o
 

@@ -2099,7 +2099,9 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	dc->modeset_switch.name = dev_name(&ndev->dev);
 	dc->modeset_switch.state = 0;
 	dc->modeset_switch.print_state = switch_modeset_print_mode;
-	switch_dev_register(&dc->modeset_switch);
+	ret = switch_dev_register(&dc->modeset_switch);
+	if (ret < 0)
+		dev_err(&ndev->dev, "failed to register switch driver\n");
 #endif
 
 	tegra_dc_feature_register(dc);

@@ -3111,6 +3111,7 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
 	u32 val;
+	u32 i;
 
 	mutex_lock(&dsi->lock);
 	tegra_dc_dsi_hold_host(dc);
@@ -3221,6 +3222,11 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 	val = readl(IO_ADDRESS(0x60006000 + 0x14));
 	val |= (1<<24);
 	writel(val, IO_ADDRESS(0x60006000 + 0x14));
+
+	//zero out mipi cal
+	for (i = 0; i <= 0x60; i += 4) {
+		writel(0x0, IO_ADDRESS(0x700e3000 + i));
+	}
 
 	//enable vclamp ref voltage
 	writel(0x1, IO_ADDRESS(0x700e3058));

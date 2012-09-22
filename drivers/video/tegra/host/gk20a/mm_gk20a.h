@@ -106,6 +106,8 @@ struct page_table_gk20a {
 	void *ref;
 	/* track mapping cnt on this page table */
 	u32 ref_cnt;
+	/* 4k or 128k */
+	u32 page_size_idx;
 };
 
 struct page_directory_gk20a {
@@ -240,5 +242,8 @@ static inline int max_vaddr_bits_gk20a(void)
 #else
 #define bar1_instance_block_shift_gk20a() bus_bar1_block_ptr_shift_v()
 #endif
+
+void gk20a_mm_dump_vm(struct vm_gk20a *vm,
+		u64 va_begin, u64 va_end, char *label);
 
 #endif /*_MM_GK20A_H_ */

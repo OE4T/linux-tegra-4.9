@@ -340,6 +340,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 
 	*pa = phys;
 	pte->ref = handle;
+	pte->page_size_idx = page_size_idx;
 
 	return 0;
 }
@@ -1749,3 +1750,123 @@ void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm)
 		nvhost_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
 }
+
+#if 0
+
+/* print pdes/ptes for a gpu virtual address range under a vm */
+void gk20a_mm_dump_vm(struct vm_gk20a *vm,
+		u64 va_begin, u64 va_end, char *label)
+{
+	struct mem_mgr *client = mem_mgr_from_vm(vm);
+	struct mm_gk20a *mm = vm->mm;
+	struct page_table_gk20a *pte_s;
+	u64 pde_va, pte_va;
+	u32 pde_i, pde_lo, pde_hi;
+	u32 pte_i, pte_lo, pte_hi, pte_pfn0;
+	u32 pte_space_page_cur, pte_space_offset_cur;
+	u32 pte_space_page, pte_space_page_offset;
+	u32 num_ptes, page_size;
+	void *pde, *pte;
+	phys_addr_t pte_addr;
+	int err;
+
+	pde_range_from_vaddr_range(vm, va_begin, va_end,
+			&pde_lo, &pde_hi);
+
+	nvhost_err(dev_from_vm(vm),
+		"%s page table entries for gpu va 0x%016llx -> 0x%016llx\n",
+		label, va_begin, va_end);
+
+	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
+		pde = pde_from_index(vm, pde_i);
+		pde_va = pde_i * mm->pde_stride;
+		nvhost_err(dev_from_vm(vm),
+			"\t[0x%016llx -> 0x%016llx] pde @ 0x%08x: 0x%08x, 0x%08x\n",
+			pde_va, pde_va + mm->pde_stride - 1,
+			vm->pdes.phys + pde_i * gmmu_pde__size_v(),
+			mem_rd32(pde, 0), mem_rd32(pde, 1));
+
+		pte_s = vm->pdes.ptes + pde_i;
+
+		num_ptes = mm->page_table_sizing[pte_s->page_size_idx].num_ptes;
+		page_size = mm->pde_stride / num_ptes;
+		pte_lo = 0;
+		pte_hi = num_ptes - 1;
+
+		pte_space_page_offset_from_index(pte_lo,
+						&pte_space_page_cur,
+						&pte_space_offset_cur);
+
+		pte_pfn0 = 0;
+#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
+		if (tegra_split_mem_active()) {
+			err = map_gmmu_pages(pte_s->ref, &pte);
+			pte_addr = mem_op().pin(client, pte_s->ref);
+		} else
+#endif
+		{
+			pte_pfn0 = page_to_pfn((struct page *)pte_s->ref);
+			err = map_gmmu_pages((void *)pfn_to_page(pte_pfn0 +
+					pte_space_page_cur),
+					&pte);
+			pte_addr = __pfn_to_phys(pte_pfn0);
+		}
+
+		for (pte_i = pte_lo; pte_i <= pte_hi; pte_i++) {
+
+			pte_va = pde_va + pte_i * page_size;
+
+			if (pte_va < va_begin)
+				continue;
+			if (pte_va > va_end)
+				break;
+
+#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
+			if (tegra_split_mem_active()) {
+				pte_space_page_offset = pte_i;
+			} else
+#endif
+			{
+				pte_space_page_offset_from_index(pte_i,
+						&pte_space_page,
+						&pte_space_page_offset);
+				if (unlikely(pte_space_page !=
+						pte_space_page_cur)) {
+					unmap_gmmu_pages(pfn_to_page(pte_pfn0 +
+							 pte_space_page_cur),
+							 pte);
+					pte_space_page_cur = pte_space_page;
+					err = map_gmmu_pages(
+							pfn_to_page(pte_pfn0 +
+							pte_space_page_cur),
+							&pte);
+					if (err) {
+						nvhost_err(dev_from_vm(vm),
+						"couldn't map pde %d, pte %d",
+							pde_i, pte_i);
+						continue;
+					}
+				}
+			}
+
+			nvhost_err(dev_from_vm(vm),
+				"\t\t[0x%016llx -> 0x%016llx] pte @ 0x%08x : 0x%08x, 0x%08x\n",
+				pte_va, pte_va + page_size - 1,
+				pte_addr + pte_i * gmmu_pte__size_v(),
+				mem_rd32(pte + pte_space_page_offset * 8, 0),
+				mem_rd32(pte + pte_space_page_offset * 8, 1));
+		}
+
+#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
+		if (tegra_split_mem_active()) {
+			unmap_gmmu_pages(pte_s->ref, pte);
+			mem_op().unpin(client, pte_s->ref);
+		} else
+#endif
+			unmap_gmmu_pages(
+				pfn_to_page(pte_pfn0 + pte_space_page_cur),
+				pte);
+	}
+}
+
+#endif

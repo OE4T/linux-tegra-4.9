@@ -47,6 +47,11 @@ struct mem_handle;
  *	update - call to update sync queue and push buffer, unpin memory
  */
 
+struct mem_mgr_handle {
+	struct mem_mgr *client;
+	struct mem_handle *handle;
+};
+
 struct push_buffer {
 	struct mem_handle *mem;		/* handle to pushbuffer memory */
 	u32 *mapped;			/* mapped pushbuffer memory */

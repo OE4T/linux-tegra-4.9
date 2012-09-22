@@ -191,7 +191,8 @@ static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
 
 		/* check if pin-mem is same as previous */
 		if (reloc->target != mem_id) {
-			target_ref = mem_op().get(job->memmgr, reloc->target);
+			target_ref = mem_op().get(job->memmgr,
+					reloc->target, job->ch->dev);
 			if (IS_ERR(target_ref))
 				return PTR_ERR(target_ref);
 
@@ -283,7 +284,7 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 		/* process each gather mem only once */
 		if (!g->ref) {
 			g->ref = mem_op().get(job->memmgr,
-					job->gathers[i].mem_id);
+					job->gathers[i].mem_id, job->ch->dev);
 			if (IS_ERR(g->ref)) {
 				err = PTR_ERR(g->ref);
 				g->ref = NULL;

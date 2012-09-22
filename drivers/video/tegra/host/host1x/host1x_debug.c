@@ -192,7 +192,6 @@ static void show_channel_gather(struct output *o, u32 addr,
 		phys_addr_t phys_addr,
 		u32 words, struct nvhost_cdma *cdma)
 {
-#if defined(CONFIG_TEGRA_NVMAP)
 	/* Map dmaget cursor to corresponding nvmap_handle */
 	struct push_buffer *pb = &cdma->push_buffer;
 	u32 cur = addr - pb->phys;
@@ -224,7 +223,6 @@ static void show_channel_gather(struct output *o, u32 addr,
 			pin_addr, map_addr);
 	mem_op().unpin(nvmap->client, nvmap->handle);
 	mem_op().munmap(nvmap->handle, map_addr);
-#endif
 }
 
 static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)

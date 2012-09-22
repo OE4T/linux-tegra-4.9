@@ -21,7 +21,23 @@
 #ifndef __NVHOST_NVMAP_H
 #define __NVHOST_NVMAP_H
 
+#include "nvhost_memmgr.h"
+
 struct nvhost_chip_support;
-int nvhost_init_nvmap_support(struct nvhost_chip_support *op);
+struct nvhost_device;
+
+struct mem_mgr *nvhost_nvmap_alloc_mgr(void);
+void nvhost_nvmap_put_mgr(struct mem_mgr *mgr);
+struct mem_mgr *nvhost_nvmap_get_mgr(struct mem_mgr *mgr);
+struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd);
+struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
+		size_t size, size_t align, int flags);
+void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle);
+dma_addr_t nvhost_nvmap_pin(struct mem_mgr *mgr, struct mem_handle *handle);
+void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle);
+void *nvhost_nvmap_mmap(struct mem_handle *handle);
+void nvhost_nvmap_munmap(struct mem_handle *handle, void *addr);
+struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
+		u32 id, struct nvhost_device *dev);
 
 #endif

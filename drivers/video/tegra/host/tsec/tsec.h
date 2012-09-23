@@ -24,6 +24,7 @@
 #include <linux/nvhost.h>
 
 struct mem_handle;
+struct sg_table;
 
 void nvhost_tsec_finalize_poweron(struct nvhost_device *dev);
 void nvhost_tsec_init(struct nvhost_device *dev);
@@ -53,7 +54,7 @@ struct tsec {
 		u32 size;
 	} os;
 
-	phys_addr_t pa;
+	struct sg_table *pa;
 };
 
 struct tsec_ucode_bin_header_v1 {
@@ -82,7 +83,7 @@ struct tsec_ucode_v1 {
 	struct tsec_ucode_bin_header_v1 *bin_header;
 	struct tsec_ucode_os_header_v1  *os_header;
 	struct mem_handle *mem;
-	phys_addr_t pa;
+	struct sg_table *pa;
 	bool valid;
 };
 

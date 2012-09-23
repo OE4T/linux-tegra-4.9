@@ -27,13 +27,19 @@ struct nvhost_channel;
 struct nvhost_hwctx;
 struct nvhost_waitchk;
 struct nvhost_syncpt;
+struct sg_table;
 
 struct nvhost_job_gather {
 	u32 words;
-	phys_addr_t mem;
+	dma_addr_t mem;
 	u32 mem_id;
 	int offset;
 	struct mem_handle *ref;
+};
+
+struct nvhost_job_unpin {
+	struct mem_handle *h;
+	struct sg_table *mem;
 };
 
 /*
@@ -69,7 +75,7 @@ struct nvhost_job {
 	struct nvhost_reloc *relocarray;
 	struct nvhost_reloc_shift *relocshiftarray;
 	int num_relocs;
-	struct mem_handle **unpins;
+	struct nvhost_job_unpin *unpins;
 	int num_unpins;
 
 	/* Sync point id, number of increments and end related to the submit */

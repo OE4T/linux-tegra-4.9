@@ -19,6 +19,9 @@
  */
 
 #include <linux/nvmap.h>
+#include <linux/slab.h>
+#include <linux/scatterlist.h>
+#include <linux/err.h>
 #include "nvmap.h"
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
@@ -54,14 +57,41 @@ void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 			(struct nvmap_handle_ref *)handle);
 }
 
-dma_addr_t nvhost_nvmap_pin(struct mem_mgr *mgr, struct mem_handle *handle)
+static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
 {
-	return nvmap_pin((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle);
+	return (struct scatterlist *)gfp_mask;
 }
 
-void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle)
+struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
+		struct mem_handle *handle)
 {
+	int err = 0;
+	dma_addr_t ret = 0;
+	struct sg_table *sgt = kmalloc(sizeof(*sgt) + sizeof(*sgt->sgl),
+			GFP_KERNEL);
+	if (!sgt)
+		return ERR_PTR(-ENOMEM);
+
+	err = __sg_alloc_table(sgt, 1, 1, (gfp_t)(sgt+1), sg_kmalloc);
+	if (err)
+		return ERR_PTR(err);
+
+	ret = nvmap_pin((struct nvmap_client *)mgr,
+			(struct nvmap_handle_ref *)handle);
+	if (IS_ERR_VALUE(ret)) {
+		kfree(sgt);
+		return ERR_PTR(ret);
+	}
+	sg_dma_address(sgt->sgl) = ret;
+
+	return sgt;
+}
+
+void nvhost_nvmap_unpin(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt)
+{
+	kfree(sgt);
+
 	return nvmap_unpin((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);
 }

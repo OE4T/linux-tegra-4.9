@@ -55,7 +55,8 @@ struct mem_mgr_handle {
 struct push_buffer {
 	struct mem_handle *mem;		/* handle to pushbuffer memory */
 	u32 *mapped;			/* mapped pushbuffer memory */
-	u32 phys;			/* physical address of pushbuffer */
+	struct sg_table *sgt;
+	dma_addr_t phys;		/* physical address of pushbuffer */
 	u32 fence;			/* index we've written */
 	u32 cur;			/* index to write to */
 	struct mem_mgr_handle *client_handle; /* handle for each opcode pair */

@@ -106,7 +106,8 @@ void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 	}
 }
 
-dma_addr_t nvhost_memmgr_pin(struct mem_mgr *mgr, struct mem_handle *handle)
+struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
+		struct mem_handle *handle)
 {
 	switch (nvhost_memmgr_type((u32)handle)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
@@ -120,12 +121,13 @@ dma_addr_t nvhost_memmgr_pin(struct mem_mgr *mgr, struct mem_handle *handle)
 	}
 }
 
-void nvhost_memmgr_unpin(struct mem_mgr *mgr, struct mem_handle *handle)
+void nvhost_memmgr_unpin(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt)
 {
 	switch (nvhost_memmgr_type((u32)handle)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		nvhost_nvmap_unpin(mgr, handle);
+		nvhost_nvmap_unpin(mgr, handle, sgt);
 		break;
 #endif
 	default:

@@ -28,6 +28,7 @@
 
 struct nvhost_hwctx_handler;
 struct nvhost_channel;
+struct sg_table;
 
 #define to_host1x_hwctx_handler(handler) \
 	container_of((handler), struct host1x_hwctx_handler, h)
@@ -43,7 +44,8 @@ struct host1x_hwctx {
 
 	struct mem_handle *restore;
 	u32 *restore_virt;
-	phys_addr_t restore_phys;
+	struct sg_table *restore_sgt;
+	dma_addr_t restore_phys;
 	u32 restore_size;
 	u32 restore_incrs;
 };
@@ -59,7 +61,8 @@ struct host1x_hwctx_handler {
 	u32 save_incrs;
 	u32 save_thresh;
 	u32 save_slots;
-	phys_addr_t save_phys;
+	struct sg_table *save_sgt;
+	dma_addr_t save_phys;
 	u32 save_size;
 };
 

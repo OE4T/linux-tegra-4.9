@@ -29,6 +29,7 @@
 #include "nvhost_acm.h"
 
 #include <linux/slab.h>
+#include <linux/scatterlist.h>
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xe00,    4, DIRECT),
@@ -380,9 +381,10 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 	if (IS_ERR_OR_NULL(save_ptr))
 		goto fail_mmap;
 
-	p->save_phys = mem_op().pin(memmgr, p->save_buf);
-	if (IS_ERR_VALUE(p->save_phys))
+	p->save_sgt = mem_op().pin(memmgr, p->save_buf);
+	if (IS_ERR_OR_NULL(p->save_sgt))
 		goto fail_pin;
+	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 
 	setup_save(p, save_ptr);
 

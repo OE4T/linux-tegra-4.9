@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
+#include <linux/scatterlist.h>
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
@@ -134,7 +135,7 @@ int tsec_boot(struct nvhost_device *dev)
 
 	nvhost_device_writel(dev, tsec_dmactl_r(), 0);
 	nvhost_device_writel(dev, tsec_dmatrfbase_r(),
-			(m->pa + m->os.bin_data_offset) >> 8);
+		(sg_dma_address(m->pa->sgl) + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
 		tsec_dma_pa_to_internal_256b(dev,
@@ -282,9 +283,9 @@ int tsec_read_ucode(struct nvhost_device *dev, const char *fw_name)
 	}
 
 	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
-	if (IS_ERR_VALUE(m->pa)) {
+	if (IS_ERR_OR_NULL(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
-		err = m->pa;
+		err = PTR_ERR(m->pa);
 		m->pa = 0;
 		goto clean_up;
 	}
@@ -313,7 +314,7 @@ clean_up:
 	if (ucode_ptr)
 		mem_op().munmap(m->mem_r, ucode_ptr);
 	if (m->pa)
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 	if (m->mem_r)
 		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 	release_firmware(ucode_fw);
@@ -356,7 +357,7 @@ void nvhost_tsec_init(struct nvhost_device *dev)
 
  clean_up:
 	dev_err(&dev->dev, "failed");
-	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
 void nvhost_tsec_deinit(struct nvhost_device *dev)
@@ -365,7 +366,7 @@ void nvhost_tsec_deinit(struct nvhost_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = 0;
 	}

@@ -24,6 +24,7 @@
 #include <linux/nvhost.h>
 
 struct mem_handle;
+struct sg_table;
 
 void nvhost_msenc_finalize_poweron(struct nvhost_device *dev);
 void nvhost_msenc_init(struct nvhost_device *dev);
@@ -53,7 +54,7 @@ struct msenc {
 		u32 size;
 	} os;
 
-	phys_addr_t pa;
+	struct sg_table *pa;
 };
 
 struct msenc_ucode_bin_header_v1 {
@@ -86,7 +87,7 @@ struct msenc_ucode_v1 {
 	struct msenc_ucode_bin_header_v1 *bin_header;
 	struct msenc_ucode_os_header_v1  *os_header;
 	struct mem_handle *mem;
-	phys_addr_t pa;
+	struct sg_table *pa;
 	bool valid;
 };
 

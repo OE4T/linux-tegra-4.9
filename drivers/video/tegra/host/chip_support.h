@@ -147,8 +147,8 @@ struct nvhost_mem_ops {
 	struct mem_handle *(*get)(struct mem_mgr *,
 			u32 id, struct nvhost_device *);
 	void (*put)(struct mem_mgr *, struct mem_handle *);
-	phys_addr_t (*pin)(struct mem_mgr *, struct mem_handle *);
-	void (*unpin)(struct mem_mgr *, struct mem_handle *);
+	struct sg_table *(*pin)(struct mem_mgr *, struct mem_handle *);
+	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
 	void *(*mmap)(struct mem_handle *);
 	void (*munmap)(struct mem_handle *, void *);
 };

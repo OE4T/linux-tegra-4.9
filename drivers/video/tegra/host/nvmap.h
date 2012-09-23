@@ -25,6 +25,7 @@
 
 struct nvhost_chip_support;
 struct nvhost_device;
+struct sg_table;
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void);
 void nvhost_nvmap_put_mgr(struct mem_mgr *mgr);
@@ -33,8 +34,10 @@ struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd);
 struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
 		size_t size, size_t align, int flags);
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle);
-dma_addr_t nvhost_nvmap_pin(struct mem_mgr *mgr, struct mem_handle *handle);
-void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle);
+struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
+		struct mem_handle *handle);
+void nvhost_nvmap_unpin(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt);
 void *nvhost_nvmap_mmap(struct mem_handle *handle);
 void nvhost_nvmap_munmap(struct mem_handle *handle, void *addr);
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,

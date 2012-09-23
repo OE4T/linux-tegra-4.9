@@ -411,26 +411,23 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 
 	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(p->save_buf)) {
-		p->save_buf = NULL;
-		return NULL;
-	}
+	if (IS_ERR_OR_NULL(p->save_buf))
+		goto fail_alloc;
 
-	p->save_slots = 8;
 
 	save_ptr = mem_op().mmap(p->save_buf);
-	if (!save_ptr) {
-		mem_op().put(memmgr, p->save_buf);
-		p->save_buf = NULL;
-		return NULL;
-	}
+	if (IS_ERR_OR_NULL(save_ptr))
+		goto fail_mmap;
 
 	p->save_phys = mem_op().pin(memmgr, p->save_buf);
+	if (IS_ERR_VALUE(p->save_phys))
+		goto fail_pin;
 
 	setup_save(p, save_ptr);
 
 	mem_op().munmap(p->save_buf, save_ptr);
 
+	p->save_slots = 8;
 	p->h.alloc = ctx3d_alloc_v1;
 	p->h.save_push = save_push_v1;
 	p->h.save_service = NULL;
@@ -438,6 +435,14 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	p->h.put = nvhost_3dctx_put;
 
 	return &p->h;
+
+fail_pin:
+	mem_op().munmap(p->save_buf, save_ptr);
+fail_mmap:
+	mem_op().put(memmgr, p->save_buf);
+fail_alloc:
+	kfree(p);
+	return NULL;
 }
 
 int nvhost_gr3d_t30_read_reg(

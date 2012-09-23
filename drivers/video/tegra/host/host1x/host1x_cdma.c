@@ -59,6 +59,7 @@ static void push_buffer_reset(struct push_buffer *pb)
 /**
  * Init push buffer resources
  */
+static void push_buffer_destroy(struct push_buffer *pb);
 static int push_buffer_init(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
@@ -79,12 +80,14 @@ static int push_buffer_init(struct push_buffer *pb)
 		goto fail;
 	}
 	pb->mapped = mem_op().mmap(pb->mem);
-	if (pb->mapped == NULL)
+	if (IS_ERR_OR_NULL(pb->mapped)) {
+		pb->mapped = NULL;
 		goto fail;
+	}
 
 	/* pin pushbuffer and get physical address */
 	pb->phys = mem_op().pin(mgr, pb->mem);
-	if (pb->phys >= 0xfffff000) {
+	if (IS_ERR_VALUE(pb->phys)) {
 		pb->phys = 0;
 		goto fail;
 	}
@@ -103,7 +106,7 @@ static int push_buffer_init(struct push_buffer *pb)
 	return 0;
 
 fail:
-	cdma_pb_op().destroy(pb);
+	push_buffer_destroy(pb);
 	return -ENOMEM;
 }
 

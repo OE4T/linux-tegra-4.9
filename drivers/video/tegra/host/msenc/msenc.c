@@ -85,10 +85,10 @@ static int msenc_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 }
 
 static int msenc_dma_pa_to_internal_256b(struct nvhost_device *dev,
-		phys_addr_t pa, u32 internal_offset, bool imem)
+		u32 offset, u32 internal_offset, bool imem)
 {
 	u32 cmd = msenc_dmatrfcmd_size_256b_f();
-	u32 pa_offset =  msenc_dmatrffboffs_offs_f(pa);
+	u32 pa_offset =  msenc_dmatrffboffs_offs_f(offset);
 	u32 i_offset = msenc_dmatrfmoffs_offs_f(internal_offset);
 	u32 timeout = 0; /* default*/
 
@@ -243,7 +243,7 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 {
 	struct msenc *m = get_msenc(dev);
 	const struct firmware *ucode_fw;
-	void *ucode_ptr;
+	void *ucode_ptr = NULL;
 	int err;
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
@@ -263,8 +263,16 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
+	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	if (IS_ERR_VALUE(m->pa)) {
+		dev_err(&dev->dev, "nvmap pin failed for ucode");
+		err = m->pa;
+		m->pa = 0;
+		goto clean_up;
+	}
+
 	ucode_ptr = mem_op().mmap(m->mem_r);
-	if (!ucode_ptr) {
+	if (IS_ERR_OR_NULL(ucode_ptr)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
 		goto clean_up;
@@ -279,8 +287,17 @@ int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
 	m->valid = true;
 
 	mem_op().munmap(m->mem_r, ucode_ptr);
+	release_firmware(ucode_fw);
 
- clean_up:
+	return 0;
+
+clean_up:
+	if (ucode_ptr)
+		mem_op().munmap(m->mem_r, ucode_ptr);
+	if (m->pa)
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	if (m->mem_r)
+		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 	release_firmware(ucode_fw);
 	return err;
 }
@@ -299,8 +316,8 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 
 	m = kzalloc(sizeof(struct msenc), GFP_KERNEL);
 	if (!m) {
-		kfree(fw_name);
 		dev_err(&dev->dev, "couldn't alloc ucode");
+		kfree(fw_name);
 		return;
 	}
 	set_msenc(dev, m);
@@ -310,16 +327,7 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 	fw_name = 0;
 
 	if (err || !m->valid) {
-		kfree(m);
 		dev_err(&dev->dev, "ucode not valid");
-		return;
-	}
-
-	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
-	if (m->pa == -EINVAL || m->pa == -EINTR) {
-		dev_err(&dev->dev, "nvmap pin failed for ucode");
-		err = -EINVAL;
-		kfree(m);
 		goto clean_up;
 	}
 
@@ -384,8 +392,6 @@ static int msenc_resume(struct nvhost_device *dev)
 	return 0;
 }
 #endif
-
-struct nvhost_device *msenc_device;
 
 static struct nvhost_driver msenc_driver = {
 	.probe = msenc_probe,

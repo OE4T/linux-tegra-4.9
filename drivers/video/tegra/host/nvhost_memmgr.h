@@ -33,6 +33,7 @@ enum mem_mgr_flag {
 
 enum mem_mgr_type {
 	mem_mgr_type_nvmap = 0,
+	mem_mgr_type_dmabuf = 1,
 };
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip);

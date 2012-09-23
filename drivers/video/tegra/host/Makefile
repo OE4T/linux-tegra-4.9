@@ -28,3 +28,4 @@ obj-$(CONFIG_TEGRA_GRHOST) += tsec/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 
 obj-$(CONFIG_TEGRA_GRHOST_USE_NVMAP) += nvmap.o
+obj-$(CONFIG_TEGRA_GRHOST_USE_DMABUF) += dmabuf.o

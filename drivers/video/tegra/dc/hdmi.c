@@ -1463,6 +1463,10 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_dc_hdmi_data, work);
 	struct tegra_dc *dc = hdmi->dc;
 
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+	/* Set default videomode on dc before enabling it*/
+	tegra_dc_set_default_videomode(dc);
+#endif
 	tegra_dc_enable(dc);
 	msleep(5);
 	if (!tegra_dc_hdmi_detect(dc)) {

@@ -1724,6 +1724,11 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 	return false;
 }
 
+int tegra_dc_set_default_videomode(struct tegra_dc *dc)
+{
+	return _tegra_dc_set_default_videomode(dc);
+}
+
 static bool _tegra_dc_enable(struct tegra_dc *dc)
 {
 	if (dc->mode.pclk == 0)

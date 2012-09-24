@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/workqueue.h>
+#include <linux/console.h>
 
 #include <asm/atomic.h>
 
@@ -469,7 +470,13 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	}
 
 	event.info = fb_info->info;
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+	console_lock();
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+	console_unlock();
+#else
+	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+#endif
 	mutex_unlock(&fb_info->info->lock);
 }
 

@@ -2793,10 +2793,11 @@ static int tegra_dsi_read_fifo(struct tegra_dc *dc,
 		mdelay(1);
 		val = tegra_dsi_readl(dsi, DSI_STATUS);
 		rd_fifo_cnt = val & DSI_STATUS_RD_FIFO_COUNT(0x1f);
-		if (rd_fifo_cnt << 2 > DSI_READ_FIFO_DEPTH)
+		if (rd_fifo_cnt << 2 > DSI_READ_FIFO_DEPTH) {
 			dev_err(&dc->ndev->dev,
 			"DSI RD_FIFO_CNT is greater than RD_FIFO_DEPTH\n");
 			break;
+		}
 		poll_time++;
 	}
 

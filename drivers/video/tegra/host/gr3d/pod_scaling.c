@@ -1023,7 +1023,7 @@ static int nvhost_pod_init(struct devfreq *df)
 			break;
 		}
 		rounded_rate =
-			clk_round_rate(d->clk[0], rate);
+			clk_round_rate(clk_get_parent(d->clk[0]), rate);
 		freqs[podgov->freq_count++] = rounded_rate;
 		rate = rounded_rate + 2000;
 	}

@@ -747,8 +747,8 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 }
 
 #ifdef CONFIG_TEGRA_DC_CMU
-static void tegra_dc_init_cmu_defaults(struct tegra_dc_cmu *dst_cmu,
-						struct tegra_dc_cmu *src_cmu)
+static void tegra_dc_cache_cmu(struct tegra_dc_cmu *dst_cmu,
+					struct tegra_dc_cmu *src_cmu)
 {
 	memcpy(dst_cmu, src_cmu, sizeof(struct tegra_dc_cmu));
 }
@@ -779,7 +779,7 @@ static void tegra_dc_set_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	}
 }
 
-static void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
 	u32 val;
 	u32 i;
@@ -823,32 +823,50 @@ static void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 EXPORT_SYMBOL(tegra_dc_get_cmu);
 
-static int tegra_dc_update_cmu(struct tegra_dc *dc, bool cmu_enable)
+int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
-	mutex_lock(&dc->lock);
+	u32 val;
 
-	if (!dc->enabled) {
-		mutex_unlock(&dc->lock);
-		return -EFAULT;
-	}
-
-	if (cmu_enable) {
-		dc->out->flags |= TEGRA_DC_OUT_CMU_ENABLE;
+	if (dc->pdata->cmu_enable) {
+		dc->pdata->flags |= TEGRA_DC_FLAG_CMU_ENABLE;
 	} else {
-		dc->out->flags &= ~TEGRA_DC_OUT_CMU_ENABLE;
+		dc->pdata->flags &= ~TEGRA_DC_FLAG_CMU_ENABLE;
 		return 0;
 	}
 
-	tegra_dc_set_cmu(dc, &dc->cmu);
+	if (cmu != &dc->cmu) {
+		tegra_dc_cache_cmu(&dc->cmu, cmu);
 
-	mutex_unlock(&dc->lock);
+		/* Disable CMU */
+		val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
+		if (val & CMU_ENABLE) {
+			val &= ~CMU_ENABLE;
+			tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
+			val = GENERAL_UPDATE;
+			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
+			val = GENERAL_ACT_REQ;
+			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
+			/*TODO: Sync up with vsync */
+			mdelay(20);
+		}
+
+		tegra_dc_set_cmu(dc, &dc->cmu);
+	}
 
 	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
+
+void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
+{
+	dc->pdata->cmu_enable = cmu_enable;
+	tegra_dc_update_cmu(dc, &dc->cmu);
+	tegra_dc_set_color_control(dc);
+}
 #else
-#define tegra_dc_init_cmu_defaults(dst_cmu, src_cmu)
+#define tegra_dc_cache_cmu(dst_cmu, src_cmu)
 #define tegra_dc_set_cmu(dc, cmu)
+#define tegra_dc_update_cmu(dc, cmu)
 #endif
 
 static inline void disable_dc_irq(unsigned int irq)
@@ -1398,7 +1416,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 #endif /* !CONFIG_TEGRA_FPGA_PLATFORM */
 }
 
-static void tegra_dc_set_color_control(struct tegra_dc *dc)
+void tegra_dc_set_color_control(struct tegra_dc *dc)
 {
 	u32 color_control;
 
@@ -1459,7 +1477,7 @@ static void tegra_dc_set_color_control(struct tegra_dc *dc)
 	}
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	if (dc->out->flags & TEGRA_DC_OUT_CMU_ENABLE)
+	if (dc->pdata->flags & TEGRA_DC_FLAG_CMU_ENABLE)
 		color_control |= CMU_ENABLE;
 #endif
 
@@ -1561,6 +1579,13 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
 
+#ifdef CONFIG_TEGRA_DC_CMU
+	if (dc->pdata->cmu)
+		tegra_dc_update_cmu(dc, dc->pdata->cmu);
+	else
+		tegra_dc_update_cmu(dc, &default_cmu);
+#endif
+
 	tegra_dc_set_color_control(dc);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *win = &dc->windows[i];
@@ -1570,9 +1595,6 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		tegra_dc_set_lut(dc, win);
 		tegra_dc_set_scaling_filter(dc);
 	}
-
-	tegra_dc_init_cmu_defaults(&dc->cmu, &default_cmu);
-	tegra_dc_set_cmu(dc, &dc->cmu);
 
 	for (i = 0; i < dc->n_windows; i++) {
 		u32 syncpt = get_syncpt(dc, i);

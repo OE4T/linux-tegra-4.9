@@ -20,177 +20,10 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_DC_PRIV_H
 #define __DRIVERS_VIDEO_TEGRA_DC_DC_PRIV_H
 
-#include <linux/io.h>
-#include <linux/mutex.h>
-#include <linux/wait.h>
-#include <linux/fb.h>
-#include <linux/clk.h>
-#include <linux/completion.h>
-#include <linux/switch.h>
-#include <linux/nvhost.h>
-
-#include <mach/dc.h>
-
-#include <mach/tegra_dc_ext.h>
-#include <mach/clk.h>
-
-#include "dc_reg.h"
-
-#define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
-#define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
-
-#define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)
-
-/* DDR: 8 bytes transfer per clock */
-#define DDR_BW_TO_FREQ(bw) ((bw) / 8)
-
-/* 29 bit offset for window clip number */
-#define CURSOR_CLIP_SHIFT_BITS(win)	(win << 29)
-#define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 29) & 3)
-
-#if defined(CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
-#define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
-#else
-#define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * 2)
+#include "dc_priv_defs.h"
+#ifndef CREATE_TRACE_POINTS
+# include <trace/events/display.h>
 #endif
-
-#ifndef CONFIG_TEGRA_FPGA_PLATFORM
-#define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
-#else
-/* ignore underflows when on simulation and fpga platform */
-#define ALL_UF_INT (0)
-#endif
-
-struct tegra_dc;
-
-struct tegra_dc_blend {
-	unsigned z[DC_N_WINDOWS];
-	unsigned flags[DC_N_WINDOWS];
-};
-
-struct tegra_dc_out_ops {
-	/* initialize output.  dc clocks are not on at this point */
-	int (*init)(struct tegra_dc *dc);
-	/* destroy output.  dc clocks are not on at this point */
-	void (*destroy)(struct tegra_dc *dc);
-	/* detect connected display.  can sleep.*/
-	bool (*detect)(struct tegra_dc *dc);
-	/* enable output.  dc clocks are on at this point */
-	void (*enable)(struct tegra_dc *dc);
-	/* disable output.  dc clocks are on at this point */
-	void (*disable)(struct tegra_dc *dc);
-	/* hold output.  keeps dc clocks on. */
-	void (*hold)(struct tegra_dc *dc);
-	/* release output.  dc clocks may turn off after this. */
-	void (*release)(struct tegra_dc *dc);
-	/* idle routine of output.  dc clocks may turn off after this. */
-	void (*idle)(struct tegra_dc *dc);
-	/* suspend output.  dc clocks are on at this point */
-	void (*suspend)(struct tegra_dc *dc);
-	/* resume output.  dc clocks are on at this point */
-	void (*resume)(struct tegra_dc *dc);
-	/* mode filter. to provide a list of supported modes*/
-	bool (*mode_filter)(const struct tegra_dc *dc,
-			struct fb_videomode *mode);
-};
-
-struct tegra_dc {
-	struct nvhost_device		*ndev;
-	struct tegra_dc_platform_data	*pdata;
-
-	struct resource			*base_res;
-	void __iomem			*base;
-	int				irq;
-
-	struct clk			*clk;
-	struct clk			*emc_clk;
-	int				emc_clk_rate;
-	int				new_emc_clk_rate;
-	u32				shift_clk_div;
-
-	bool				connected;
-	bool				enabled;
-	bool				suspended;
-
-	struct tegra_dc_out		*out;
-	struct tegra_dc_out_ops		*out_ops;
-	void				*out_data;
-
-	struct tegra_dc_mode		mode;
-	s64				frametime_ns;
-
-	struct tegra_dc_win		windows[DC_N_WINDOWS];
-	struct tegra_dc_blend		blend;
-	int				n_windows;
-#ifdef CONFIG_TEGRA_DC_CMU
-	struct tegra_dc_cmu		cmu;
-#endif
-	wait_queue_head_t		wq;
-	wait_queue_head_t		timestamp_wq;
-
-	struct mutex			lock;
-	struct mutex			one_shot_lock;
-
-	struct resource			*fb_mem;
-	struct tegra_fb_info		*fb;
-
-	struct {
-		u32			id;
-		u32			min;
-		u32			max;
-	} syncpt[DC_N_WINDOWS];
-	u32				vblank_syncpt;
-
-	unsigned long			underflow_mask;
-	struct work_struct		reset_work;
-
-#ifdef CONFIG_SWITCH
-	struct switch_dev		modeset_switch;
-#endif
-
-	struct completion		frame_end_complete;
-
-	struct work_struct		vblank_work;
-	long				vblank_ref_count;
-
-	struct {
-		u64			underflows;
-		u64			underflows_a;
-		u64			underflows_b;
-		u64			underflows_c;
-	} stats;
-
-	struct tegra_dc_ext		*ext;
-
-	struct tegra_dc_feature		*feature;
-	int				gen1_blend_num;
-
-#ifdef CONFIG_DEBUG_FS
-	struct dentry			*debugdir;
-#endif
-	struct tegra_dc_lut		fb_lut;
-	struct delayed_work		underflow_work;
-	u32				one_shot_delay_ms;
-	struct delayed_work		one_shot_work;
-	s64				frame_end_timestamp;
-};
-
-#define print_mode_info(dc, mode) do {					\
-	trace_printk("%s:Mode settings: "				\
-			"ref_to_sync: H = %d V = %d, "			\
-			"sync_width: H = %d V = %d, "			\
-			"back_porch: H = %d V = %d, "			\
-			"active: H = %d V = %d, "			\
-			"front_porch: H = %d V = %d, "			\
-			"pclk = %d, stereo mode = %d\n",		\
-			dc->ndev->name,					\
-			mode.h_ref_to_sync, mode.v_ref_to_sync,		\
-			mode.h_sync_width, mode.v_sync_width,		\
-			mode.h_back_porch, mode.v_back_porch,		\
-			mode.h_active, mode.v_active,			\
-			mode.h_front_porch, mode.v_front_porch,		\
-			mode.pclk, mode.stereo_mode);			\
-	} while (0)
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
 {
@@ -212,7 +45,7 @@ static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 		WARN(1, "DC is clock-gated.\n");
 
 	ret = readl(dc->base + reg * 4);
-	trace_printk("readl %p=%#08lx\n", dc->base + reg * 4, ret);
+	trace_display_readl(dc, ret, dc->base + reg * 4);
 	return ret;
 }
 
@@ -223,7 +56,7 @@ static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 	if (!tegra_is_clk_enabled(dc->clk))
 		WARN(1, "DC is clock-gated.\n");
 
-	trace_printk("writel %p=%#08lx\n", dc->base + reg * 4, val);
+	trace_display_writel(dc, val, dc->base + reg * 4);
 	writel(val, dc->base + reg * 4);
 }
 

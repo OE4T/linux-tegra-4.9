@@ -285,10 +285,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (timestamp_ns) {
 		/* XXX: Should timestamping be overridden by "no_vsync" flag */
 		tegra_dc_config_frame_end_intr(win->dc, true);
-		trace_printk("%s:Before timestamp wait\n", win->dc->ndev->name);
 		err = wait_event_interruptible(win->dc->timestamp_wq,
 				tegra_dc_is_within_n_vsync(win->dc, timestamp_ns));
-		trace_printk("%s:After timestamp wait\n", win->dc->ndev->name);
 		tegra_dc_config_frame_end_intr(win->dc, false);
 	}
 #endif

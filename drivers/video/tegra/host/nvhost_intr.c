@@ -246,10 +246,7 @@ irqreturn_t nvhost_syncpt_thresh_fn(int irq, void *dev_id)
  */
 static void free_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 {
-	if (syncpt->irq_requested) {
-		free_irq(syncpt->irq, syncpt);
-		syncpt->irq_requested = 0;
-	}
+	intr_op().free_syncpt_irq(syncpt);
 }
 
 

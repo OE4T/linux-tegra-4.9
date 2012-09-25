@@ -30,68 +30,61 @@
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
 
-/*** HW host sync management ***/
+static void t20_intr_syncpt_thresh_isr(struct nvhost_intr_syncpt *syncpt);
 
-static void syncpt_thresh_mask(struct irq_data *data)
+static void syncpt_thresh_cascade_fn(struct work_struct *work)
 {
-	(void)data;
+	struct nvhost_intr_syncpt *sp =
+		container_of(work, struct nvhost_intr_syncpt, work);
+	nvhost_syncpt_thresh_fn(sp->irq, sp);
 }
 
-static void syncpt_thresh_unmask(struct irq_data *data)
+static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 {
-	(void)data;
-}
-
-static void syncpt_thresh_cascade(unsigned int irq, struct irq_desc *desc)
-{
-	struct nvhost_master *dev = irq_desc_get_handler_data(desc);
+	struct nvhost_master *dev = dev_id;
 	void __iomem *sync_regs = dev->sync_aperture;
+	struct nvhost_intr *intr = &dev->intr;
 	unsigned long reg;
 	int i, id;
-	struct irq_chip *chip = irq_desc_get_chip(desc);
-
-	chained_irq_enter(chip, desc);
 
 	for (i = 0; i < dev->info.nb_pts / BITS_PER_LONG; i++) {
 		reg = readl(sync_regs +
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
-		for_each_set_bit(id, &reg, BITS_PER_LONG)
-			generic_handle_irq(id +
-					dev->intr.host_syncpt_irq_base +
-					i * BITS_PER_LONG);
+		for_each_set_bit(id, &reg, BITS_PER_LONG) {
+			struct nvhost_intr_syncpt *sp =
+				intr->syncpt + (i * BITS_PER_LONG + id);
+			if (sp->irq_requested) {
+				t20_intr_syncpt_thresh_isr(sp);
+				queue_work(intr->wq, &sp->work);
+			}
+		}
 	}
 
-	chained_irq_exit(chip, desc);
+	return IRQ_HANDLED;
 }
-
-static struct irq_chip syncpt_thresh_irq = {
-	.name		= "syncpt",
-	.irq_mask	= syncpt_thresh_mask,
-	.irq_unmask	= syncpt_thresh_unmask
-};
 
 static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	void __iomem *sync_regs = dev->sync_aperture;
-	int i, irq;
+	int i, err;
 
 	writel(0xffffffffUL,
 		sync_regs + host1x_sync_syncpt_thresh_int_disable_r());
 	writel(0xffffffffUL,
 		sync_regs + host1x_sync_syncpt_thresh_cpu0_int_status_r());
 
-	for (i = 0; i < dev->info.nb_pts; i++) {
-		irq = intr->host_syncpt_irq_base + i;
-		irq_set_chip_and_handler(irq, &syncpt_thresh_irq,
-			handle_simple_irq);
-		irq_set_chip_data(irq, sync_regs);
-		set_irq_flags(irq, IRQF_VALID);
-	}
-	irq_set_chained_handler(INT_HOST1X_MPCORE_SYNCPT,
-		syncpt_thresh_cascade);
-	irq_set_handler_data(INT_HOST1X_MPCORE_SYNCPT, dev);
+	for (i = 0; i < dev->info.nb_pts; i++)
+		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
+
+	intr->wq = create_workqueue("host_syncpt");
+	err = request_irq(INT_HOST1X_MPCORE_SYNCPT,
+				syncpt_thresh_cascade_isr,
+				IRQF_SHARED, "host_syncpt", dev);
+	if (err)
+		BUG();
+
 	/* disable the ip_busy_timeout. this prevents write drops, etc.
 	 * there's no real way to recover from a hung client anyway.
 	 */
@@ -173,9 +166,8 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
  * Sync point threshold interrupt service function
  * Handles sync point threshold triggers, in interrupt context
  */
-static irqreturn_t t20_intr_syncpt_thresh_isr(int irq, void *dev_id)
+static void t20_intr_syncpt_thresh_isr(struct nvhost_intr_syncpt *syncpt)
 {
-	struct nvhost_intr_syncpt *syncpt = dev_id;
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
 
@@ -187,8 +179,6 @@ static irqreturn_t t20_intr_syncpt_thresh_isr(int irq, void *dev_id)
 		host1x_sync_syncpt_thresh_int_disable_r() + reg);
 	writel(BIT_MASK(id), sync_regs +
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg);
-
-	return IRQ_WAKE_THREAD;
 }
 
 /**
@@ -275,18 +265,17 @@ static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
 
 static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 {
-	int err;
-	if (syncpt->irq_requested)
+	syncpt->irq_requested = 1;
+	return 0;
+}
+
+static int t20_free_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
+{
+	if (!syncpt->irq_requested)
 		return 0;
 
-	err = request_threaded_irq(syncpt->irq,
-				   t20_intr_syncpt_thresh_isr,
-				   nvhost_syncpt_thresh_fn,
-				   0, syncpt->thresh_irq_name, syncpt);
-	if (err)
-		return err;
-
-	syncpt->irq_requested = 1;
+	syncpt->irq_requested = 0;
+	flush_workqueue(syncpt->intr->wq);
 	return 0;
 }
 
@@ -300,4 +289,5 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.request_host_general_irq = t20_intr_request_host_general_irq,
 	.free_host_general_irq = t20_intr_free_host_general_irq,
 	.request_syncpt_irq = t20_request_syncpt_irq,
+	.free_syncpt_irq = t20_free_syncpt_irq,
 };

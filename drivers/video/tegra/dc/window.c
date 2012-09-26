@@ -280,9 +280,9 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 
 		tegra_dc_writel(dc, v_dda_init, DC_WIN_H_INITIAL_DDA);
 		tegra_dc_writel(dc, h_dda_init, DC_WIN_V_INITIAL_DDA);
-		h_dda = compute_dda_inc(win->h, win->out_h,
+		h_dda = compute_dda_inc(win->h, win->out_w,
 				false, Bpp_bw);
-		v_dda = compute_dda_inc(win->w, win->out_w,
+		v_dda = compute_dda_inc(win->w, win->out_h,
 				true, Bpp_bw);
 	} else {
 		tegra_dc_writel(dc,
@@ -306,7 +306,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 {
 	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
-	unsigned long val;
 	unsigned long win_options;
 	bool update_blend_par = false;
 	bool update_blend_seq = false;
@@ -388,6 +387,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc,
 			V_POSITION(win->out_y) | H_POSITION(win->out_x),
 			DC_WIN_POSITION);
+		tegra_dc_writel(dc,
+			V_SIZE(win->out_h) | H_SIZE(win->out_w),
+			DC_WIN_SIZE);
 
 		/* Check scan_column flag to set window size and scaling. */
 		win_options = WIN_ENABLE;
@@ -395,13 +397,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			win_options |= WIN_SCAN_COLUMN;
 			win_options |= H_FILTER_ENABLE(filter_v);
 			win_options |= V_FILTER_ENABLE(filter_h);
-			val = V_SIZE(win->out_w) | H_SIZE(win->out_h);
 		} else {
 			win_options |= H_FILTER_ENABLE(filter_h);
 			win_options |= V_FILTER_ENABLE(filter_v);
-			val = V_SIZE(win->out_h) | H_SIZE(win->out_w);
 		}
-		tegra_dc_writel(dc, val, DC_WIN_SIZE);
 
 		/* Update scaling registers if window supports scaling. */
 		if (likely(tegra_dc_feature_has_scaling(dc, win->idx)))

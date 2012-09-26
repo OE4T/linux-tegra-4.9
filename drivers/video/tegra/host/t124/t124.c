@@ -230,7 +230,7 @@ int tegra12_register_host1x_devices(void)
 
 static inline void __iomem *t124_channel_aperture(void __iomem *p, int ndx)
 {
-	return p;
+	return p + (ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES);
 }
 
 static int t124_channel_init(struct nvhost_channel *ch,

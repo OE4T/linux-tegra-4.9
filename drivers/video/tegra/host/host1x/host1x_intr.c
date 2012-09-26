@@ -116,7 +116,6 @@ static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr,
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	void __iomem *sync_regs = dev->sync_aperture;
-	thresh &= 0xffff;
 	writel(thresh, sync_regs +
 		(host1x_sync_syncpt_int_thresh_0_r() + id * REGISTER_STRIDE));
 }

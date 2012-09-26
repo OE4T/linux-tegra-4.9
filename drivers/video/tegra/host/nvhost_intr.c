@@ -37,6 +37,7 @@ struct nvhost_waitlist {
 	u32 thresh;
 	enum nvhost_intr_action action;
 	atomic_t state;
+	struct timespec isr_recv;
 	void *data;
 	int count;
 };
@@ -51,6 +52,16 @@ enum waitlist_state {
 static void waiter_release(struct kref *kref)
 {
 	kfree(container_of(kref, struct nvhost_waitlist, refcount));
+}
+
+int nvhost_intr_release_time(void *ref, struct timespec *ts)
+{
+	struct nvhost_waitlist *waiter = ref;
+	if (atomic_read(&waiter->state) == WLS_PENDING)
+		return -EBUSY;
+
+	*ts = waiter->isr_recv;
+	return 0;
 }
 
 /**
@@ -78,6 +89,7 @@ static bool add_waiter_to_queue(struct nvhost_waitlist *waiter,
  * and gather all completed waiters into lists by actions
  */
 static void remove_completed_waiters(struct list_head *head, u32 sync,
+			struct timespec isr_recv,
 			struct list_head completed[NVHOST_INTR_ACTION_COUNT])
 {
 	struct list_head *dest;
@@ -87,6 +99,7 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 		if ((s32)(waiter->thresh - sync) > 0)
 			break;
 
+		waiter->isr_recv = isr_recv;
 		dest = completed + waiter->action;
 
 		/* consolidate submit cleanups */
@@ -204,7 +217,8 @@ static int process_wait_list(struct nvhost_intr *intr,
 
 	spin_lock(&syncpt->lock);
 
-	remove_completed_waiters(&syncpt->wait_head, threshold, completed);
+	remove_completed_waiters(&syncpt->wait_head, threshold,
+		syncpt->isr_recv, completed);
 
 	empty = list_empty(&syncpt->wait_head);
 	if (empty)

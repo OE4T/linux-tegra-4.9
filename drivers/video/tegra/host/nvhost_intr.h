@@ -65,6 +65,7 @@ struct nvhost_intr_syncpt {
 	struct list_head wait_head;
 	char thresh_irq_name[12];
 	struct work_struct work;
+	struct timespec isr_recv;
 };
 
 struct nvhost_intr {
@@ -116,6 +117,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync);
 void nvhost_intr_deinit(struct nvhost_intr *intr);
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 void nvhost_intr_stop(struct nvhost_intr *intr);
+int nvhost_intr_release_time(void *ref, struct timespec *ts);
 
 irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);

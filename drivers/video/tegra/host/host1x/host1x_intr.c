@@ -22,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
+#include <linux/ktime.h>
 
 #include "nvhost_intr.h"
 #include "dev.h"
@@ -53,6 +54,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 		for_each_set_bit(id, &reg, BITS_PER_LONG) {
 			struct nvhost_intr_syncpt *sp =
 				intr->syncpt + (i * BITS_PER_LONG + id);
+			ktime_get_ts(&sp->isr_recv);
 			t20_intr_syncpt_thresh_isr(sp);
 			queue_work(intr->wq, &sp->work);
 		}

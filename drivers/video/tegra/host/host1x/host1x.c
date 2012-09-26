@@ -136,9 +136,34 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 		timeout = (u32)msecs_to_jiffies(args->timeout);
 
 	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
-					args->thresh, timeout, &args->value);
+					args->thresh, timeout, &args->value,
+					NULL);
 	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
 	  args->timeout, args->value, err);
+
+	return err;
+}
+
+static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_syncpt_waitmex_args *args)
+{
+	u32 timeout;
+	int err;
+	struct timespec ts;
+	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))
+		return -EINVAL;
+	if (args->timeout == NVHOST_NO_TIMEOUT)
+		timeout = MAX_SCHEDULE_TIMEOUT;
+	else
+		timeout = (u32)msecs_to_jiffies(args->timeout);
+
+	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
+					args->thresh, timeout, &args->value,
+					&ts);
+	args->tv_sec = ts.tv_sec;
+	args->tv_nsec = ts.tv_nsec;
+	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
+					    args->timeout, args->value, err);
 
 	return err;
 }
@@ -307,6 +332,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_SYNCPT_READ_MAX:
 		err = nvhost_ioctl_ctrl_syncpt_read_max(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_SYNCPT_WAITMEX:
+		err = nvhost_ioctl_ctrl_syncpt_waitmex(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

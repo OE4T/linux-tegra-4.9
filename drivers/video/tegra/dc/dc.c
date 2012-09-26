@@ -2673,7 +2673,10 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	if (!dc || !dc->enabled)
 		return;
 
+#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
+	/* Hack: no windows blanking for simulation to save shutdown time */
 	tegra_dc_blank(dc);
+#endif
 	tegra_dc_disable(dc);
 }
 

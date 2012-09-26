@@ -280,7 +280,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		nvhost_syncpt_wait_timeout_ext(ext->dc->ndev,
 				flip_win->attr.pre_syncpt_id,
 				flip_win->attr.pre_syncpt_val,
-				msecs_to_jiffies(500), NULL);
+				msecs_to_jiffies(500), NULL, NULL);
 	}
 
 	if (err < 0)

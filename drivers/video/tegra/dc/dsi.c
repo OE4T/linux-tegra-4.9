@@ -111,7 +111,6 @@ const u32 dsi_pkt_seq_reg[NUMOF_PKT_SEQ] = {
 	DSI_PKT_SEQ_5_HI,
 };
 
-#if 0
 const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
 	0,
@@ -130,24 +129,6 @@ const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
 	PKT_ID3(CMD_BLNK) | PKT_LEN3(2) | PKT_ID4(CMD_RGB) | PKT_LEN4(3) |
 	PKT_ID5(CMD_BLNK) | PKT_LEN5(4),
 };
-#else
-const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
-	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_LP,
-	0,
-	PKT_ID0(CMD_VE) | PKT_LEN0(0) | PKT_LP,
-	0,
-	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
-	0,
-	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
-	PKT_ID2(CMD_HE) | PKT_LEN2(0),
-	PKT_ID3(CMD_BLNK) | PKT_LEN3(2) | PKT_ID4(CMD_RGB) | PKT_LEN4(3),
-	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
-	0,
-	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
-	PKT_ID2(CMD_HE) | PKT_LEN2(0),
-	PKT_ID3(CMD_BLNK) | PKT_LEN3(2) | PKT_ID4(CMD_RGB) | PKT_LEN4(3),
-};
-#endif
 
 const u32 dsi_pkt_seq_video_non_burst[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(0) | PKT_LP,
@@ -1479,7 +1460,9 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 
 	pkt_seq_3_5_rgb_lo = 0;
 	pkt_seq_3_5_rgb_hi = 0;
-	if (dsi->info.video_data_type == TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE)
+	if (dsi->info.pkt_seq)
+		pkt_seq = dsi->info.pkt_seq;
+	else if (dsi->info.video_data_type == TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE)
 		pkt_seq = dsi_pkt_seq_cmd_mode;
 	else {
 		switch (dsi->info.video_burst_mode) {

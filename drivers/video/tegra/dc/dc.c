@@ -400,7 +400,9 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_DISP_MCCIF_DISPLAY0A_HYST);
 	DUMP_REG(DC_DISP_MCCIF_DISPLAY0B_HYST);
 	DUMP_REG(DC_DISP_MCCIF_DISPLAY0C_HYST);
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	DUMP_REG(DC_DISP_MCCIF_DISPLAY1B_HYST);
+#endif
 	DUMP_REG(DC_DISP_DAC_CRT_CTRL);
 	DUMP_REG(DC_DISP_DISP_MISC_CONTROL);
 
@@ -1521,8 +1523,11 @@ static int tegra_dc_init(struct tegra_dc *dc)
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0C,
 				      TEGRA_MC_PRIO_MED);
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+		/* only present on Tegra2 and 3 */
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY1B,
 				      TEGRA_MC_PRIO_MED);
+#endif
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHC,
 				      TEGRA_MC_PRIO_HIGH);
 	} else if (dc->ndev->id == 1) {
@@ -1532,8 +1537,11 @@ static int tegra_dc_init(struct tegra_dc *dc)
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0CB,
 				      TEGRA_MC_PRIO_MED);
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+		/* only present on Tegra2 and 3 */
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY1BB,
 				      TEGRA_MC_PRIO_MED);
+#endif
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHCB,
 				      TEGRA_MC_PRIO_HIGH);
 	}

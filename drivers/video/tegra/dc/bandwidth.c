@@ -47,22 +47,28 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 		{ TEGRA_LA_DISPLAY_0AB, TEGRA_LA_DISPLAY_0BB,
 			TEGRA_LA_DISPLAY_0CB },
 	};
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* window B V-filter tap for first and second display. */
 	static const enum tegra_la_id vfilter_tab[2] = {
 		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
 	};
+#endif
 	unsigned long bw;
 
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));
+#endif
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
 
 	bw = max(w->bandwidth, w->new_bandwidth);
 
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* tegra_dc_get_bandwidth() treats V filter windows as double
 	 * bandwidth, but LA has a seperate client for V filter */
 	if (w->idx == 1 && win_use_v_filter(dc, w))
 		bw /= 2;
+#endif
 
 	/* our bandwidth is in kbytes/sec, but LA takes MBps.
 	 * round up bandwidth to next 1MBps */
@@ -70,9 +76,11 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)
 		tegra_set_latency_allowance(vfilter_tab[dc->ndev->id], bw);
+#endif
 #endif
 }
 
@@ -149,7 +157,7 @@ static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
  * (windows_tiling ? 2 : 1)
  *
  * note:
- * (*) We use 2 tap V filter, so need double BW if use V filter
+ * (*) We use 2 tap V filter on T2x/T3x, so need double BW if use V filter
  * (*) Tiling mode on T30 and DDR3 requires double BW
  *
  * return:
@@ -177,8 +185,10 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * is of the luma plane's size only. */
 	bpp = tegra_dc_is_yuv_planar(w->fmt) ?
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
-	ret = dc->mode.pclk / 1000UL * bpp / 8 * (
-		win_use_v_filter(dc, w) ? 2 : 1) *
+	ret = dc->mode.pclk / 1000UL * bpp / 8 *
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+		(win_use_v_filter(dc, w) ? 2 : 1) *
+#endif
 		dfixed_trunc(w->w) / w->out_w * (WIN_IS_TILED(w) ?
 		tiled_windows_bw_multiplier : 1);
 

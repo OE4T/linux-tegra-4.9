@@ -257,8 +257,13 @@ int nvhost_as_release_share(struct nvhost_as_share *as_share,
 
 	nvhost_dbg_fn("");
 
-	if (hwctx)
+	if (hwctx) {
 		hwctx->as_share = 0;
+
+		mutex_lock(&as_share->bound_list_lock);
+		list_del(&hwctx->as_share_bound_list_node);
+		mutex_unlock(&as_share->bound_list_lock);
+	}
 
 	if (atomic_dec_return(&as_share->ref_cnt) > 0)
 		return 0;

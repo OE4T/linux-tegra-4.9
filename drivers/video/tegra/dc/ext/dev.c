@@ -209,7 +209,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 {
 	int err = 0;
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
-#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
+#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
+	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 	s64 timestamp_ns;
 #endif
 
@@ -278,7 +279,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 				msecs_to_jiffies(500), NULL);
 	}
 
-#ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
+#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
+	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 	timestamp_ns = timespec_to_ns(&flip_win->attr.timestamp);
 
 	if (timestamp_ns) {
@@ -341,11 +343,15 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
-		int j = 0, index = flip_win->attr.index;
+		int index = flip_win->attr.index;
 		struct tegra_dc_win *win;
 		struct tegra_dc_ext_win *ext_win;
+#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
+	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 		struct tegra_dc_ext_flip_data *temp = NULL;
 		s64 head_timestamp = 0;
+		int j = 0;
+#endif
 
 		if (index < 0)
 			continue;
@@ -358,6 +364,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			skip_flip = true;
 
 		mutex_lock(&ext_win->queue_lock);
+#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
+	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 		list_for_each_entry(temp, &ext_win->timestamp_queue,
 				timestamp_node) {
 			if (j == 0) {
@@ -378,6 +386,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			}
 			j++;
 		}
+#endif
 		if (!list_empty(&ext_win->timestamp_queue))
 			list_del(&data->timestamp_node);
 		mutex_unlock(&ext_win->queue_lock);

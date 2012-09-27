@@ -24,6 +24,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
+#include <asm/cacheflush.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -332,6 +333,10 @@ static int rpc_send_message(struct gk20a *g)
 	g->sim.send_ring_put = (g->sim.send_ring_put + 2 * sizeof(u32)) %
 		PAGE_SIZE;
 
+	__cpuc_flush_dcache_area(g->sim.msg_bfr.kvaddr, PAGE_SIZE);
+	__cpuc_flush_dcache_area(g->sim.send_bfr.kvaddr, PAGE_SIZE);
+	__cpuc_flush_dcache_area(g->sim.recv_bfr.kvaddr, PAGE_SIZE);
+
 	/* Update the put pointer. This will trap into the host. */
 	sim_writel(g, sim_send_put_r(), g->sim.send_ring_put);
 
@@ -378,6 +383,10 @@ static int rpc_recv_poll(struct gk20a *g)
 		/* Update GET pointer */
 		g->sim.recv_ring_get = (g->sim.recv_ring_get + 2*sizeof(u32)) %
 			PAGE_SIZE;
+
+		__cpuc_flush_dcache_area(g->sim.msg_bfr.kvaddr, PAGE_SIZE);
+		__cpuc_flush_dcache_area(g->sim.send_bfr.kvaddr, PAGE_SIZE);
+		__cpuc_flush_dcache_area(g->sim.recv_bfr.kvaddr, PAGE_SIZE);
 
 		sim_writel(g, sim_recv_get_r(), g->sim.recv_ring_get);
 

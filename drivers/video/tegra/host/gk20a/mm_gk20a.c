@@ -25,6 +25,8 @@
 #include <linux/nvhost.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
+#include <mach/hardware.h>
+#include <asm/cacheflush.h>
 
 #include "../../nvmap/nvmap.h"
 #include "../../nvmap/nvmap_ioctl.h"
@@ -456,6 +458,7 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	vm->pdes.dirty = true;
 
 	smp_mb();
+	__cpuc_flush_dcache_area(pde, sizeof(u32) * 2);
 	gk20a_mm_tlb_invalidate(vm->mm->g, vm);
 
 	return 0;
@@ -972,6 +975,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 								&pte_space_page,
 								&pte_space_page_offset);
 				if (unlikely(pte_space_page != pte_space_page_cur)) {
+					__cpuc_flush_dcache_area(pte_kv_cur,
+								 PAGE_SIZE);
 					unmap_gmmu_pages(pfn_to_page(pte_pfn0 +
 							 pte_space_page_cur),
 							 pte_kv_cur);
@@ -1016,6 +1021,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 1,
 				 pte_w[1]);
 		}
+
+		__cpuc_flush_dcache_area(pte_kv_cur, PAGE_SIZE);
 
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
 		if (tegra_split_mem_active())

@@ -351,7 +351,7 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *engine_info;
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(c);
+	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 runlist_id = ~0;
 	u32 *runlist_entry_base = NULL;

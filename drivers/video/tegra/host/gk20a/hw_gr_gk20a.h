@@ -7094,6 +7094,22 @@ static inline u32 gr_fecs_ctxsw_mailbox_value_bad_ctxsw_image_f(void)
 {
 	return 0x1;
 }
+static inline u32 gr_fecs_ctxsw_mailbox_value_bind_pointer_pass_v(void)
+{
+	return 0x00000010;
+}
+static inline u32 gr_fecs_ctxsw_mailbox_value_bind_pointer_pass_f(void)
+{
+	return 0x10;
+}
+static inline u32 gr_fecs_ctxsw_mailbox_value_bind_pointer_fail_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 gr_fecs_ctxsw_mailbox_value_bind_pointer_fail_f(void)
+{
+	return 0x20;
+}
 static inline u32 gr_fecs_ctxsw_mailbox_set_r(u32 i)
 {
 	return 0x00409820+((i)*4);
@@ -17137,6 +17153,22 @@ static inline u32 gr_gpccs_ctxsw_mailbox_value_bad_ctxsw_image_v(void)
 static inline u32 gr_gpccs_ctxsw_mailbox_value_bad_ctxsw_image_f(void)
 {
 	return 0x1;
+}
+static inline u32 gr_gpccs_ctxsw_mailbox_value_bind_pointer_pass_v(void)
+{
+	return 0x00000010;
+}
+static inline u32 gr_gpccs_ctxsw_mailbox_value_bind_pointer_pass_f(void)
+{
+	return 0x10;
+}
+static inline u32 gr_gpccs_ctxsw_mailbox_value_bind_pointer_fail_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 gr_gpccs_ctxsw_mailbox_value_bind_pointer_fail_f(void)
+{
+	return 0x20;
 }
 static inline u32 gr__junk0_r(u32 i)
 {

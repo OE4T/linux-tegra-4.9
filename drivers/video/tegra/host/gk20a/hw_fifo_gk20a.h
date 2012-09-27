@@ -1834,6 +1834,14 @@ static inline u32 fifo_intr_sched_error_code_rl_ack_extra_f(void)
 {
 	return 0x7;
 }
+static inline u32 fifo_intr_sched_error_code_rl_bad_ack_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 fifo_intr_sched_error_code_rl_bad_ack_f(void)
+{
+	return 0x7;
+}
 static inline u32 fifo_intr_sched_error_code_rl_rdat_timeout_v(void)
 {
 	return 0x00000008;

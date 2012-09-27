@@ -418,5 +418,57 @@ static inline u32 tfbif_mccif_fifoctrl_wclk_ovr_mode_enable_f(void)
 {
 	return 0x100;
 }
+static inline u32 tfbif_mccif_fifoctrl1_v(void)
+{
+	return 0x00001634;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_s(void)
+{
+	return 16;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_init_v(void)
+{
+	return 0x00000080;
+}
+static inline u32 tfbif_mccif_fifoctrl1_srd2mc_reorder_depth_limit_init_f(void)
+{
+	return 0x80;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_s(void)
+{
+	return 16;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_init_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 tfbif_mccif_fifoctrl1_swr2mc_reorder_depth_limit_init_f(void)
+{
+	return 0x400000;
+}
 
 #endif /* __hw_tfbif_vic03_h__ */

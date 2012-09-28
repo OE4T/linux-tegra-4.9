@@ -60,6 +60,13 @@ static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 	writel(val, dc->base + reg * 4);
 }
 
+static inline void tegra_dc_power_on(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
+					PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
+					DC_CMD_DISPLAY_POWER_CONTROL);
+}
+
 static inline void _tegra_dc_write_table(struct tegra_dc *dc, const u32 *table,
 					 unsigned len)
 {

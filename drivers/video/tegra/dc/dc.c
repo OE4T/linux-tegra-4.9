@@ -1598,6 +1598,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	tegra_dc_setup_clk(dc, dc->clk);
 	tegra_dc_clk_enable(dc);
 
+	tegra_dc_power_on(dc);
+
 	/* do not accept interrupts during initialization */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
@@ -2120,13 +2122,6 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 		dc->ext = NULL;
 	}
 
-	mutex_lock(&dc->lock);
-	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
-		_tegra_dc_set_default_videomode(dc);
-		dc->enabled = _tegra_dc_enable(dc);
-	}
-	mutex_unlock(&dc->lock);
-
 	/* interrupt handler must be registered before tegra_fb_register() */
 	if (request_irq(irq, tegra_dc_irq, 0,
 			dev_name(&ndev->dev), dc)) {
@@ -2134,6 +2129,13 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 		ret = -EBUSY;
 		goto err_put_emc_clk;
 	}
+
+	mutex_lock(&dc->lock);
+	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
+		_tegra_dc_set_default_videomode(dc);
+		dc->enabled = _tegra_dc_enable(dc);
+	}
+	mutex_unlock(&dc->lock);
 
 	tegra_dc_create_debugfs(dc);
 

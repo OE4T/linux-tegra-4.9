@@ -228,8 +228,10 @@ static struct nvhost_device tegra_msenc02_device = {
 	.keepalive     = true,
 	.clocks	       = { {"msenc", UINT_MAX, 107},
 			{"emc", 300000000, 75} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay = 100,
+	.can_powergate = true,
 	.moduleid      = NVHOST_MODULE_MSENC,
 };
 

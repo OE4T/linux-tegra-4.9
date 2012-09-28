@@ -1611,6 +1611,10 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 		dev_WARN(&dc->ndev->dev,
 		"dsi: to stop at next frame give at least 2 frame delay\n");
 
+	if (timeout_n_frames < 2)
+		dev_WARN(&dc->ndev->dev,
+		"dsi: to stop at next frame give at least 2 frame delay\n");
+
 	reinit_completion(&dc->frame_end_complete);
 
 	/* unmask frame end interrupt */
@@ -1985,6 +1989,15 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
 	u32 i;
+
+	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
+
+	/* Stop DC stream before configuring DSI registers
+	 * to avoid visible glitches on panel during transition
+	 * from bootloader to kernel driver
+	 * TODO: Delayed frame end interrupt from bootloader
+	 */
+	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 50);
 
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 

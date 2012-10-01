@@ -530,7 +530,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 		val = (64 * 1024) / (256 - settings->soft_clipping_threshold);
 		val = SD_SOFT_CLIPPING_RECIP(val) |
 		SD_SOFT_CLIPPING_THRESHOLD(settings->soft_clipping_threshold);
-		tegra_dc_writel(dc, val, DC_DISP_SD_K_LIMIT);
+		tegra_dc_writel(dc, val, DC_DISP_SD_SOFT_CLIPPING);
 		dev_dbg(&dc->ndev->dev, "  SOFT_CLIPPING: 0x%08x\n", val);
 	}
 
@@ -930,7 +930,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 		} else if (IS_NVSD_ATTR(soft_clipping_enable)) {
 			nvsd_check_and_update(0, 1, soft_clipping_enable);
 		} else if (IS_NVSD_ATTR(soft_clipping_threshold)) {
-			nvsd_check_and_update(0, 170, soft_clipping_threshold);
+			nvsd_check_and_update(0, 255, soft_clipping_threshold);
 		} else if (IS_NVSD_ATTR(smooth_k_enable)) {
 			nvsd_check_and_update(0, 1, smooth_k_enable);
 		} else if (IS_NVSD_ATTR(smooth_k_incr)) {

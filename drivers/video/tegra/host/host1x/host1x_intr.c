@@ -78,7 +78,6 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	for (i = 0; i < dev->info.nb_pts; i++)
 		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
 
-	intr->wq = create_workqueue("host_syncpt");
 	err = request_irq(INT_HOST1X_MPCORE_SYNCPT,
 				syncpt_thresh_cascade_isr,
 				IRQF_SHARED, "host_syncpt", dev);
@@ -269,13 +268,11 @@ static int t20_request_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
 	return 0;
 }
 
-static int t20_free_syncpt_irq(struct nvhost_intr_syncpt *syncpt)
+static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 {
-	if (!syncpt->irq_requested)
-		return 0;
-
-	syncpt->irq_requested = 0;
-	flush_workqueue(syncpt->intr->wq);
+	struct nvhost_master *dev = intr_to_dev(intr);
+	free_irq(INT_HOST1X_MPCORE_SYNCPT, dev);
+	flush_workqueue(intr->wq);
 	return 0;
 }
 

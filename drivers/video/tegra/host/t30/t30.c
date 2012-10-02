@@ -140,6 +140,7 @@ static struct nvhost_device tegra_gr3d02_device = {
 
 static struct nvhost_device tegra_gr2d02_device = {
 	.name		= "gr2d",
+	.version	= 1,
 	.id		= -1,
 	.index		= 2,
 	.syncpts	= BIT(NVSYNCPT_2D_0) | BIT(NVSYNCPT_2D_1),

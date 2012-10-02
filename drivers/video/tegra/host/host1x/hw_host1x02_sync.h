@@ -186,6 +186,298 @@ static inline u32 host1x_sync_ch_teardown_r(void)
 {
 	return 0xb0;
 }
+static inline u32 host1x_sync_mod_teardown_r(void)
+{
+	return 0xb4;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_display_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_displayb_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_epp_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_gr3d_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_isp_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_dsi_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_hdmi_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_vi_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_gr2d_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_dsib_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_msenc_teardown_teardown_v(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_no_action_v(void)
+{
+	return 0;
+}
+static inline u32 host1x_sync_mod_teardown_tsec_teardown_teardown_v(void)
+{
+	return 1;
+}
 static inline u32 host1x_sync_usec_clk_r(void)
 {
 	return 0x1a4;

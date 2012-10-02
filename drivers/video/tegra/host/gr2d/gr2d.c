@@ -19,13 +19,48 @@
  */
 
 #include <linux/export.h>
+#include <linux/module.h>
 
 #include "dev.h"
 #include "bus_client.h"
+#include "gr2d_t114.h"
+
+enum gr2d_ip_ver {
+	gr2d_01 = 1,
+	gr2d_02,
+};
+
+struct gr2d_desc {
+	void (*finalize_poweron)(struct nvhost_device *dev);
+};
+
+static const struct gr2d_desc gr2d[] = {
+	[gr2d_01] = {
+		.finalize_poweron = NULL,
+	},
+	[gr2d_02] = {
+		.finalize_poweron = nvhost_gr2d_t114_finalize_poweron,
+	}
+};
+
+static struct nvhost_device_id gr2d_id[] = {
+	{ "gr2d", gr2d_01 },
+	{ "gr2d", gr2d_02 },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(nvhost, gr2d_id);
 
 static int gr2d_probe(struct nvhost_device *dev,
 	struct nvhost_device_id *id_table)
 {
+	int index = 0;
+	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+
+	index = id_table->version;
+
+	drv->finalize_poweron = gr2d[index].finalize_poweron;
+
 	return nvhost_client_device_init(dev);
 }
 
@@ -58,7 +93,8 @@ static struct nvhost_driver gr2d_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr2d",
-	}
+	},
+	.id_table = gr2d_id,
 };
 
 static int __init gr2d_init(void)

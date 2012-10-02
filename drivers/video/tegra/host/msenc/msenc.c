@@ -332,9 +332,6 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 		goto clean_up;
 	}
 
-	nvhost_module_busy(dev);
-	msenc_boot(dev);
-	nvhost_module_idle(dev);
 	return;
 
  clean_up:
@@ -367,6 +364,7 @@ static int msenc_probe(struct nvhost_device *dev,
 
 	drv->init = nvhost_msenc_init;
 	drv->deinit = nvhost_msenc_deinit;
+	drv->finalize_poweron = nvhost_msenc_finalize_poweron;
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

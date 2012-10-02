@@ -224,8 +224,6 @@ static struct nvhost_device tegra_msenc02_device = {
 	.syncpts       = BIT(NVSYNCPT_MSENC),
 	.waitbases     = BIT(NVWAITBASE_MSENC),
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.exclusive     = false,
-	.keepalive     = true,
 	.clocks	       = { {"msenc", UINT_MAX, 107},
 			{"emc", 300000000, 75} },
 	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },

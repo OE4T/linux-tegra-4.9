@@ -35,6 +35,7 @@
 #include "t20/t20.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "class_ids.h"
 
 #include "bus_client.h"
 

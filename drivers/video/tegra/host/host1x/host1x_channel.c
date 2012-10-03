@@ -28,6 +28,7 @@
 
 #include "host1x_hwctx.h"
 #include "nvhost_intr.h"
+#include "class_ids.h"
 
 #define NV_FIFO_READ_TIMEOUT 200000
 

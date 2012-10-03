@@ -31,6 +31,7 @@
 #include "host1x/host1x01_hardware.h"
 #include "host1x/host1x_syncpt.h"
 #include "chip_support.h"
+#include "class_ids.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)

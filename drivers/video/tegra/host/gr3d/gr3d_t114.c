@@ -28,6 +28,7 @@
 #include "scale3d.h"
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
+#include "class_ids.h"
 
 #include <linux/slab.h>
 #include <linux/scatterlist.h>

@@ -28,6 +28,7 @@
 #include "nvhost_memmgr.h"
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
+#include "class_ids.h"
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>

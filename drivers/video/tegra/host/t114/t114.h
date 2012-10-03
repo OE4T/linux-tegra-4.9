@@ -24,12 +24,6 @@
 
 struct nvhost_master;
 
-/* class ids */
-enum {
-	NV_VIDEO_ENCODE_MSENC_CLASS_ID = 0x21,
-	NV_TSEC_CLASS_ID = 0xE0,
-};
-
 /* number of host channels */
 #define NV_HOST1X_CHANNELS_T114 9
 

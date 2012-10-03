@@ -35,6 +35,7 @@
 #include "nvhost_memmgr.h"
 #include "host1x/host1x_syncpt.h"
 #include "gr3d/pod_scaling.h"
+#include "class_ids.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)

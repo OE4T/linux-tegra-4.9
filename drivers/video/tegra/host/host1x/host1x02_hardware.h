@@ -78,12 +78,6 @@ static inline u32 nvhost_class_host_incr_syncpt(
 		| host1x_uclass_incr_syncpt_indx_f(indx);
 }
 
-enum {
-	NV_HOST_MODULE_HOST1X = 0,
-	NV_HOST_MODULE_MPE = 1,
-	NV_HOST_MODULE_GR3D = 6
-};
-
 static inline u32 nvhost_class_host_indoff_reg_write(
 	unsigned mod_id, unsigned offset, bool auto_inc)
 {

@@ -174,8 +174,9 @@ static void save_direct_v1(u32 *ptr, u32 start_reg, u32 count,
 	ptr += RESTORE_DIRECT_SIZE;
 	ptr[1] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[2] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						start_reg, true);
+	ptr[2] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			start_reg, true);
 	/* TODO could do this in the setclass if count < 6 */
 	ptr[3] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
@@ -194,8 +195,9 @@ static void save_indirect_v1(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[2] = nvhost_opcode_imm(offset_reg, offset);
 	ptr[3] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[4] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						data_reg, false);
+	ptr[4] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			data_reg, false);
 	ptr[5] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 

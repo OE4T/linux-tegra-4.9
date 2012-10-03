@@ -168,8 +168,9 @@ static void save_begin_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 static void save_direct_v0(u32 *ptr, u32 start_reg, u32 count)
 {
 	ptr[0] = nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1);
-	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						start_reg, true);
+	ptr[1] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			start_reg, true);
 	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
@@ -181,8 +182,9 @@ static void save_indirect_v0(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[1] = offset;
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[3] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						data_reg, false);
+	ptr[3] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			data_reg, false);
 	ptr[4] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
@@ -509,7 +511,8 @@ int nvhost_gr3d_t20_read_reg(
 	/*  Tell 3D to send register value to FIFO */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
-		nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
+		nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
 			offset, false));
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_imm(host1x_uclass_inddata_r(), 0),

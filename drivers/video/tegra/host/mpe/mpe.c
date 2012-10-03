@@ -240,8 +240,9 @@ static void save_direct(u32 *ptr, u32 start_reg, u32 count)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_MPE,
-						start_reg, true);
+	ptr[1] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_mpe_v(),
+			start_reg, true);
 	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 #define SAVE_DIRECT_SIZE 3
@@ -258,8 +259,9 @@ static void save_read_ram_data_nasty(u32 *ptr, u32 data_reg)
 {
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_MPE,
-						data_reg, false);
+	ptr[1] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_mpe_v(),
+			data_reg, false);
 	ptr[2] = nvhost_opcode_imm(host1x_uclass_inddata_r(), 0);
 	/* write junk data to avoid 'cached problem with register memory' */
 	ptr[3] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID,

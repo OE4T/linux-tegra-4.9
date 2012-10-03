@@ -38,14 +38,15 @@
 static inline u32 nvhost_class_host_wait_syncpt(
 	unsigned indx, unsigned threshold)
 {
-	return (indx << 24) | (threshold & 0xffffff);
+	return host1x_uclass_wait_syncpt_indx_f(indx)
+		| host1x_uclass_wait_syncpt_thresh_f(threshold);
 }
 
 static inline u32 nvhost_class_host_load_syncpt_base(
 	unsigned indx, unsigned threshold)
 {
-	return host1x_uclass_wait_syncpt_indx_f(indx)
-		| host1x_uclass_wait_syncpt_thresh_f(threshold);
+	return host1x_uclass_load_syncpt_base_base_indx_f(indx)
+		| host1x_uclass_load_syncpt_base_value_f(threshold);
 }
 
 static inline u32 nvhost_class_host_wait_syncpt_base(

@@ -75,9 +75,9 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 		dev_err(&syncpt_to_dev(sp)->dev->dev,
 				"%s failed: id=%u, min=%d, max=%d\n",
 				__func__,
+				id,
 				nvhost_syncpt_read_min(sp, id),
-				nvhost_syncpt_read_max(sp, id),
-				id);
+				nvhost_syncpt_read_max(sp, id));
 
 	return live;
 }

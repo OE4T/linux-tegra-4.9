@@ -61,7 +61,6 @@ struct nvhost_intr;
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u8 id;
-	u8 irq_requested;
 	u16 irq;
 	spinlock_t lock;
 	struct list_head wait_head;
@@ -74,7 +73,6 @@ struct nvhost_intr {
 	struct mutex mutex;
 	int host_general_irq;
 	int host_syncpt_irq_base;
-	bool host_general_irq_requested;
 	struct workqueue_struct *wq;
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)

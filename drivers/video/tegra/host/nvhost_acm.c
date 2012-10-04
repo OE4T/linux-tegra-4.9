@@ -154,10 +154,9 @@ static void to_state_running_locked(struct nvhost_device *dev)
 			}
 		}
 
-		/* Invoke callback after enabling clock. This is used for
-		 * re-enabling host1x interrupts. */
-		if (prev_state == NVHOST_POWER_STATE_CLOCKGATED
-				&& drv->finalize_clockon)
+		/* Invoke callback. This is used for re-enabling host1x
+		 * interrupts. */
+		if (drv->finalize_clockon)
 			drv->finalize_clockon(dev);
 
 		/* Invoke callback after power un-gating. This is used for

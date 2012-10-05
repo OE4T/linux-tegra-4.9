@@ -570,6 +570,7 @@ static int nct1008_thermal_set_limits(struct nct1008_data *data,
 static void nct1008_update(struct nct1008_data *data)
 {
 	struct thermal_zone_device *thz = data->nct_ext;
+	struct nct1008_cdev *cdev;
 	long temp, trip_temp, low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
 	int count;
 
@@ -587,8 +588,11 @@ static void nct1008_update(struct nct1008_data *data)
 		if ((trip_temp >= temp) && (trip_temp < high_temp))
 			high_temp = trip_temp;
 
-		if ((trip_temp < temp) && (trip_temp > low_temp))
-			low_temp = trip_temp;
+		if ((trip_temp < temp) && (trip_temp > low_temp)) {
+			cdev = count ? &data->plat_data.active[count - 1] :
+					&data->plat_data.passive;
+			low_temp = trip_temp - cdev->hysteresis;
+		}
 	}
 
 	nct1008_thermal_set_limits(data, low_temp, high_temp);

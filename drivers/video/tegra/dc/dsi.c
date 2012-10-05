@@ -48,6 +48,7 @@
 
 #define DSI_USE_SYNC_POINTS		0
 #define S_TO_MS(x)			(1000 * (x))
+#define MS_TO_US(x)			(1000 * (x))
 
 #define DSI_MODULE_NOT_INIT		0x0
 #define DSI_MODULE_INIT			0x1
@@ -1534,6 +1535,27 @@ static void tegra_dsi_reset_underflow_overflow
 static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 {
 	u32 trigger;
+	u32 val;
+	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
+	struct tegra_dc_mode mode = dsi->dc->mode;
+	u32 line_period = DIV_ROUND_UP(
+				MS_TO_US(frame_period),
+				mode.v_sync_width + mode.v_back_porch +
+				mode.v_active + mode.v_front_porch);
+	u32 timeout_cnt = 0;
+
+#define DSI_IDLE_TIMEOUT	1000
+
+	val = tegra_dsi_readl(dsi, DSI_STATUS);
+	while (!(val & DSI_STATUS_IDLE(0x1))) {
+		cpu_relax();
+		udelay(line_period);
+		val = tegra_dsi_readl(dsi, DSI_STATUS);
+		if (timeout_cnt++ > DSI_IDLE_TIMEOUT) {
+			dev_warn(&dsi->dc->ndev->dev, "dsi not idle when soft reset\n");
+			break;
+		}
+	}
 
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE),
@@ -1554,6 +1576,8 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 	trigger = tegra_dsi_readl(dsi, DSI_TRIGGER);
 	if (trigger)
 		tegra_dsi_writel(dsi, 0x0, DSI_TRIGGER);
+
+#undef DSI_IDLE_TIMEOUT
 }
 
 static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
@@ -1574,6 +1598,11 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 	int val;
 	long timeout;
 	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
+	struct tegra_dc_mode mode = dc->mode;
+	u32 line_period = DIV_ROUND_UP(
+				MS_TO_US(frame_period),
+				mode.v_sync_width + mode.v_back_porch +
+				mode.v_active + mode.v_front_porch);
 
 	if (timeout_n_frames < 2)
 		dev_WARN(&dc->ndev->dev,
@@ -1592,6 +1621,9 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 	/* reinstate interrupt mask */
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 
+	/* wait for v_ref_to_sync no. of lines after frame end interrupt */
+	udelay(mode.v_ref_to_sync * line_period);
+
 	return timeout;
 }
 
@@ -1604,11 +1636,6 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
 	timeout = tegra_dsi_wait_frame_end(dc, dsi, timeout_n_frames);
-
-	/* give 2 line time to dsi HW to catch up
-	 * with pixels sent by dc
-	 */
-	udelay(50);
 
 	tegra_dsi_soft_reset(dsi);
 

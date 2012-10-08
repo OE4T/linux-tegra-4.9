@@ -466,9 +466,9 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	return 0;
 }
 
-static u64 gk20a_channel_vm_alloc_va(struct vm_gk20a *vm,
-				     u64 size,
-				     u32 gmmu_page_size)
+static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
+			u64 size,
+			u32 gmmu_page_size)
 {
 	struct nvhost_allocator *vma = &vm->vma;
 	int err;
@@ -514,7 +514,7 @@ static u64 gk20a_channel_vm_alloc_va(struct vm_gk20a *vm,
 	return offset;
 }
 
-static void gk20a_channel_vm_free_va(struct vm_gk20a *vm, u64 offset,
+static void gk20a_vm_free_va(struct vm_gk20a *vm, u64 offset,
 				     u64 size, u32 gmmu_page_size)
 {
 	struct nvhost_allocator *vma = &vm->vma;
@@ -1060,18 +1060,7 @@ clean_up:
 
 }
 
-static u64 gk20a_channel_vm_map(struct vm_gk20a *vm,
-				struct mem_mgr *nvmap,
-				struct mem_handle *r,
-				u64 offset_align,
-				u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
-				u32 kind)
-{
-	nvhost_dbg_fn("");
-	return gk20a_vm_map(vm, nvmap, r, offset_align, flags, kind);
-}
-
-static void gk20a_channel_vm_unmap(struct vm_gk20a *vm,
+static void gk20a_vm_unmap(struct vm_gk20a *vm,
 			 u64 offset)
 {
 	struct mapped_buffer_node *mapped_buffer;
@@ -1119,9 +1108,25 @@ clean_up:
 	return;
 }
 
-void gk20a_channel_vm_remove_support(struct vm_gk20a *vm)
+void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
+	struct mapped_buffer_node *mapped_buffer;
+	struct rb_node *node;
+
 	nvhost_dbg_fn("");
+
+	node = rb_first(&vm->mapped_buffers);
+	while (node) {
+		mapped_buffer =
+			container_of(node, struct mapped_buffer_node, node);
+		vm->unmap(vm, mapped_buffer->addr);
+		node = rb_first(&vm->mapped_buffers);
+	}
+
+	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.kv);
+	free_gmmu_pages(vm, vm->pdes.ref, 0);
+	kfree(vm->pdes.ptes);
+	nvhost_allocator_destroy(&vm->vma);
 }
 
 /* address space interfaces for the gk20a module */
@@ -1188,11 +1193,11 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 
 	vm->mapped_buffers = RB_ROOT;
 
-	vm->alloc_va = gk20a_channel_vm_alloc_va;
-	vm->free_va =  gk20a_channel_vm_free_va;
-	vm->map =  gk20a_channel_vm_map;
-	vm->unmap =  gk20a_channel_vm_unmap;
-	vm->remove_support = gk20a_channel_vm_remove_support;
+	vm->alloc_va = gk20a_vm_alloc_va;
+	vm->free_va =  gk20a_vm_free_va;
+	vm->map =  gk20a_vm_map;
+	vm->unmap =  gk20a_vm_unmap;
+	vm->remove_support = gk20a_vm_remove_support;
 
 	return 0;
 }
@@ -1201,26 +1206,12 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 static int gk20a_as_release_share(struct nvhost_as_share *as_share)
 {
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
-	struct mapped_buffer_node *mapped_buffer;
-	struct rb_node *node;
-	int err = 0;
 
 	nvhost_dbg_fn("");
 
-	node = rb_first(&vm->mapped_buffers);
-	while (node) {
-		mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
-		vm->unmap(vm, mapped_buffer->addr);
-		node = rb_first(&vm->mapped_buffers);
-	}
+	gk20a_vm_remove_support(vm);
 
-	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.kv);
-	free_gmmu_pages(vm, vm->pdes.ref, 0);
-	kfree(vm->pdes.ptes);
-	nvhost_allocator_destroy(&vm->vma);
-
-	return err;
+	return 0;
 }
 
 static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
@@ -1305,84 +1296,6 @@ const struct nvhost_as_moduleops gk20a_as_moduleops = {
 	.map_buffer    = gk20a_as_map_buffer,
 	.unmap_buffer  = gk20a_as_unmap_buffer,
 };
-
-/* bar1 vm interfaces */
-
-u64 gk20a_bar1_vm_alloc_va(struct vm_gk20a *vm,
-			   u64 size,
-			   u32 bar1_page_size)
-{
-	struct nvhost_allocator *vma = &vm->vma;
-	int err;
-	u64 offset;
-	u32 shift = ilog2(bar1_page_size);
-	u32 start_page_nr = 0, num_pages;
-	u32 i, pde_lo, pde_hi;
-
-	BUG_ON(bar1_page_size != 4096); /* always 4KB ?*/;
-
-	/* be certain we round up to gmmu_page_size if needed */
-	size = (size + ((u64)bar1_page_size - 1)) & ~((u64)bar1_page_size - 1);
-
-	nvhost_dbg_info("size=0x%llx", size);
-
-	num_pages = size >> shift;
-	err = vma->alloc(vma, &start_page_nr, num_pages);
-	offset = (u64)start_page_nr << shift;
-	if (err != 0) {
-		nvhost_err(dev_from_vm(vm), "oom: sz=0x%llx", size);
-		return 0;
-	}
-
-	pde_range_from_vaddr_range(vm,
-				   offset, offset + size - 1,
-				   &pde_lo, &pde_hi);
-
-	for (i = pde_lo; i <= pde_hi; i++) {
-
-		err = validate_gmmu_page_table_gk20a(vm, i, bar1_page_size);
-
-		/* mark the pages valid, with correct phys adddr */
-		if (err) {
-			nvhost_err(dev_from_vm(vm),
-				   "failed to validate bar1 page table %d:"
-				   " %d", i, err);
-			return 0;
-		}
-	}
-
-	nvhost_dbg_fn("ret=0x%llx", offset);
-
-	return offset;
-}
-
-void gk20a_bar1_vm_free_va(struct vm_gk20a *vm, u64 offset, u64 size, u32 page_size)
-{
-	nvhost_dbg_fn("");
-}
-
-u64 gk20a_bar1_vm_map(struct vm_gk20a *vm,
-		      struct mem_mgr *nvmap,
-		      struct mem_handle *r,
-		      u64 offset_align,
-		      u32 flags/*NVHOST_MAP_BUFFER_FLAGS_*/,
-		      u32 kind)
-{
-	nvhost_dbg_fn("");
-	return gk20a_vm_map(vm, nvmap, r, offset_align, flags, kind);
-}
-
-void gk20a_bar1_vm_unmap(struct vm_gk20a *vm,
-			u64 offset)
-{
-	nvhost_dbg_fn("");
-}
-
-void gk20a_bar1_vm_remove_support(struct vm_gk20a *vm)
-{
-	nvhost_dbg_fn("");
-	nvhost_allocator_destroy(&vm->vma);
-}
 
 int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
@@ -1498,11 +1411,11 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	vm->mapped_buffers = RB_ROOT;
 
-	vm->alloc_va = gk20a_bar1_vm_alloc_va;
-	vm->free_va =  gk20a_bar1_vm_free_va;
-	vm->map =  gk20a_bar1_vm_map;
-	vm->unmap =  gk20a_bar1_vm_unmap;
-	vm->remove_support = gk20a_channel_vm_remove_support;
+	vm->alloc_va = gk20a_vm_alloc_va;
+	vm->free_va =  gk20a_vm_free_va;
+	vm->map =  gk20a_vm_map;
+	vm->unmap =  gk20a_vm_unmap;
+	vm->remove_support = gk20a_vm_remove_support;
 
 	return 0;
 
@@ -1625,11 +1538,11 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	vm->mapped_buffers = RB_ROOT;
 
-	vm->alloc_va	    = gk20a_channel_vm_alloc_va;
-	vm->free_va	    = gk20a_channel_vm_free_va;
-	vm->map		    = gk20a_channel_vm_map;
-	vm->unmap	    = gk20a_channel_vm_unmap;
-	vm->remove_support  = gk20a_channel_vm_remove_support;
+	vm->alloc_va	    = gk20a_vm_alloc_va;
+	vm->free_va	    = gk20a_vm_free_va;
+	vm->map		    = gk20a_vm_map;
+	vm->unmap	    = gk20a_vm_unmap;
+	vm->remove_support  = gk20a_vm_remove_support;
 
 	return 0;
 

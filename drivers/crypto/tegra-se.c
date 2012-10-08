@@ -1949,8 +1949,8 @@ static void tegra_se_read_rsa_result(struct tegra_se_dev *se_dev,
 
 int tegra_se_rsa_digest(struct ahash_request *req)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_se_aes_rsa_context *rsa_ctx = crypto_ahash_ctx(tfm);
+	struct crypto_ahash *tfm = NULL;
+	struct tegra_se_aes_rsa_context *rsa_ctx = NULL;
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
 	struct scatterlist *src_sg;
 	struct tegra_se_ll *src_ll;
@@ -1959,6 +1959,16 @@ int tegra_se_rsa_digest(struct ahash_request *req)
 	u32 val = 0;
 
 	if (!req)
+		return -EINVAL;
+
+	tfm = crypto_ahash_reqtfm(req);
+
+	if (!tfm)
+		return -EINVAL;
+
+	rsa_ctx = crypto_ahash_ctx(tfm);
+
+	if (!rsa_ctx || !rsa_ctx->slot)
 		return -EINVAL;
 
 	if (!req->nbytes)

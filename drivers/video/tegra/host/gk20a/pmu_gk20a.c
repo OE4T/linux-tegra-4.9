@@ -901,8 +901,29 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 
 void gk20a_remove_pmu_support(struct gk20a *g, struct pmu_gk20a *pmu)
 {
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct inst_desc *inst_block = &mm->pmu.inst_block;
+	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+
 	nvhost_dbg_fn("");
-	/* TBD */
+
+	kfree(pmu->mutex);
+	kfree(pmu->seq);
+
+	release_firmware(pmu->ucode_fw);
+
+	mem_op().put(memmgr, inst_block->mem.ref);
+	vm->remove_support(vm);
+
+	mem_op().put(memmgr, pmu->ucode.mem.ref);
+	mem_op().put(memmgr, pmu->pg_buf.mem.ref);
+	mem_op().put(memmgr, pmu->seq_buf.mem.ref);
+
+	nvhost_allocator_destroy(&pmu->dmem);
+	del_timer(&pmu->elpg_timer);
+
+	memset(pmu, 0, sizeof(struct pmu_gk20a));
 }
 
 int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
@@ -935,7 +956,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
 	struct mem_mgr *memmgr = mem_mgr_from_mm(mm);
-	const struct firmware *ucode_fw = NULL;
 	u32 size;
 	int i, err = 0;
 	u8 *ptr;
@@ -968,8 +988,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 
 	pmu_seq_init(pmu);
 
-	ucode_fw = nvhost_client_request_firmware(g->dev, GK20A_PMU_UCODE_IMAGE);
-	if (IS_ERR_OR_NULL(ucode_fw)) {
+	pmu->ucode_fw = nvhost_client_request_firmware(g->dev,
+				GK20A_PMU_UCODE_IMAGE);
+	if (IS_ERR_OR_NULL(pmu->ucode_fw)) {
 		nvhost_err(d, "failed to load pmu ucode!!");
 		err = -ENOENT;
 		return err;
@@ -977,7 +998,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 
 	nvhost_dbg_fn("firmware loaded");
 
-	pmu->desc = (struct pmu_ucode_desc *)ucode_fw->data;
+	pmu->desc = (struct pmu_ucode_desc *)pmu->ucode_fw->data;
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
@@ -1079,8 +1100,8 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 
 clean_up:
 	nvhost_dbg_fn("fail");
-	if (ucode_fw)
-		release_firmware(ucode_fw);
+	if (pmu->ucode_fw)
+		release_firmware(pmu->ucode_fw);
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
 	vm->unmap(vm, pmu->ucode.pmu_va);
@@ -1113,7 +1134,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 		nvhost_err(dev_from_gk20a(g), "failed to load PGENG buffer");
 	}
 
-	pmu->pg_buf_loaded = (eng_buf_stat->status == PMU_PG_MSG_ENG_BUF_LOADED);
+	pmu->buf_loaded = (eng_buf_stat->status == PMU_PG_MSG_ENG_BUF_LOADED);
 	wake_up(&pmu->pg_wq);
 }
 
@@ -1195,14 +1216,15 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.dma_offset = (u8)(pmu->pg_buf.pmu_va & 0xFF);
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
 
+	pmu->buf_loaded = false;
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
 	remain = wait_event_interruptible_timeout(
 			pmu->pg_wq,
-			pmu->pg_buf_loaded,
+			pmu->buf_loaded,
 			2 * HZ /* 2 sec */);
-	if (!pmu->pg_buf_loaded) {
+	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG FECS buffer load failed, remaining timeout : 0x%08x",
 			remain);
@@ -1220,14 +1242,15 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.dma_offset = (u8)(pmu->seq_buf.pmu_va & 0xFF);
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
 
+	pmu->buf_loaded = false;
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
 	remain = wait_event_interruptible_timeout(
 			pmu->pg_wq,
-			pmu->pg_buf_loaded,
+			pmu->buf_loaded,
 			2 * HZ /* 2 sec */);
-	if (!pmu->pg_buf_loaded) {
+	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG ZBC buffer load failed, remaining timeout 0x%08x",
 			remain);

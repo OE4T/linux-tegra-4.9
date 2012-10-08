@@ -510,15 +510,14 @@ struct pmu_gk20a {
 
 	struct gk20a *g;
 
+	const struct firmware *ucode_fw;
 	struct pmu_ucode_desc *desc;
 	struct pmu_mem_desc ucode;
 
 	struct pmu_mem_desc pg_buf;
-	bool pg_buf_loaded;
-
-	/* TBD: remove those two if ZBC seq is fixed */
+	/* TBD: remove this if ZBC seq is fixed */
 	struct pmu_mem_desc seq_buf;
-	bool seq_buf_loaded;
+	bool buf_loaded;
 
 	struct pmu_cmdline_args args;
 	struct pmu_sha1_gid gid_info;

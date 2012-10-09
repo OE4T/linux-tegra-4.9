@@ -167,8 +167,7 @@ static int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist = &f->runlist_info[runlist_id];
 
 		runlist->active_channels =
-			kzalloc((f->num_channels /
-				(sizeof(unsigned long) * BITS_PER_BYTE)) + 1,
+			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
 				GFP_KERNEL);
 		if (!runlist->active_channels)
 			goto clean_up;
@@ -552,12 +551,18 @@ void gk20a_fifo_isr(struct gk20a *g)
 			   fifo_intr);
 }
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 runlist_id, u32 hw_chid)
+int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_runlist_info_gk20a *runlist = &f->runlist_info[runlist_id];
+	struct fifo_runlist_info_gk20a *runlist;
+	u32 runlist_id;
 	u32 timeout = 2000; /* 2 sec */
 	u32 ret = 0;
+
+	nvhost_dbg_fn("%d", hw_chid);
+
+	runlist_id = f->engine_info[engine_id].runlist_id;
+	runlist = &f->runlist_info[runlist_id];
 
 	mutex_lock(&runlist->mutex);
 
@@ -577,6 +582,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 runlist_id, u32 hw_chid)
 				    "preempt channel %d timeout\n",
 				    hw_chid);
 			ret = -EBUSY;
+			break;
 		}
 		mdelay(1);
 	} while (1);
@@ -633,7 +639,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 
 	if (pbdma_chid != ~0) {
 		err = gk20a_fifo_preempt_channel(g,
-				eng_info->runlist_id, pbdma_chid);
+				eng_info->engine_id, pbdma_chid);
 		if (err)
 			goto clean_up;
 	}
@@ -650,7 +656,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 
 	if (engine_chid != ~0 && engine_chid != pbdma_chid) {
 		err = gk20a_fifo_preempt_channel(g,
-				eng_info->runlist_id, engine_chid);
+				eng_info->engine_id, engine_chid);
 		if (err)
 			goto clean_up;
 	}
@@ -660,4 +666,124 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 clean_up:
 	gk20a_fifo_enable_engine_activity(g, eng_info);
 	return err;
+}
+
+/* add/remove a channel from runlist
+   special cases below: runlist->active_channels will NOT be changed.
+   (hw_chid == ~0 && !add) means remove all active channels from runlist.
+   (hw_chid == ~0 &&  add) means restore all active channels on runlist. */
+int gk20a_fifo_update_runlist(struct gk20a *g,
+	u32 engine_id, u32 hw_chid, bool add)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct fifo_runlist_info_gk20a *runlist = NULL;
+	u32 runlist_id = ~0;
+	u32 *runlist_entry_base = NULL;
+	u32 *runlist_entry = NULL;
+	phys_addr_t runlist_pa;
+	u32 old_buf, new_buf;
+	u32 chid;
+	u32 count = 0;
+	int remain;
+	bool pending;
+	u32 ret = 0;
+
+	runlist_id = f->engine_info[engine_id].runlist_id;
+	runlist = &f->runlist_info[runlist_id];
+
+	mutex_lock(&runlist->mutex);
+
+	/* valid channel, add/remove it from active list.
+	   Otherwise, keep active list untouched for suspend/resume. */
+	if (hw_chid != ~0) {
+		if (add) {
+			if (test_and_set_bit(hw_chid,
+				runlist->active_channels) == 1)
+				goto done;
+		} else {
+			if (test_and_clear_bit(hw_chid,
+				runlist->active_channels) == 0)
+				goto done;
+		}
+	}
+
+	old_buf = runlist->cur_buffer;
+	new_buf = !runlist->cur_buffer;
+
+	nvhost_dbg_info("runlist_id : %d, switch to new buffer %p",
+		runlist_id, runlist->mem[new_buf].ref);
+
+	runlist->mem[new_buf].sgt =
+		mem_op().pin(memmgr, runlist->mem[new_buf].ref);
+
+	runlist_pa = sg_dma_address(runlist->mem[new_buf].sgt->sgl);
+	if (!runlist_pa) {
+		ret = -ENOMEM;
+		goto clean_up;
+	}
+
+	runlist_entry_base = mem_op().mmap(runlist->mem[new_buf].ref);
+	if (IS_ERR_OR_NULL(runlist_entry_base)) {
+		ret = -ENOMEM;
+		goto clean_up;
+	}
+
+	if (hw_chid != ~0 || /* add/remove a valid channel */
+	    add /* resume to add all channels back */) {
+		runlist_entry = runlist_entry_base;
+		for_each_set_bit(chid,
+			runlist->active_channels, f->num_channels) {
+			nvhost_dbg_info("add channel %d to runlist", chid);
+			runlist_entry[0] = chid;
+			runlist_entry[1] = 0;
+			runlist_entry += 2;
+			count++;
+		}
+	} else	/* suspend to remove all channels */
+		count = 0;
+
+	if (count != 0) {
+		gk20a_writel(g, fifo_runlist_base_r(),
+			fifo_runlist_base_ptr_f(u64_lo32(runlist_pa >> 12)) |
+			fifo_runlist_base_target_vid_mem_f());
+	}
+
+	gk20a_writel(g, fifo_runlist_r(),
+		fifo_runlist_engine_f(runlist_id) |
+		fifo_eng_runlist_length_f(count));
+
+	remain =
+		wait_event_interruptible_timeout(
+			runlist->runlist_wq,
+			((pending =
+				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
+				fifo_eng_runlist_pending_true_f()) == 0),
+			2 * HZ /* 2 sec */);
+
+	if (remain == 0 && pending != 0) {
+		nvhost_err(dev_from_gk20a(g), "runlist update timeout");
+		ret = -ETIMEDOUT;
+		goto clean_up;
+	} else if (remain < 0) {
+		nvhost_err(dev_from_gk20a(g), "runlist update interrupted");
+		ret = -EINTR;
+		goto clean_up;
+	}
+
+	runlist->cur_buffer = new_buf;
+
+clean_up:
+	if (ret != 0)
+		mem_op().unpin(memmgr, runlist->mem[new_buf].ref,
+			runlist->mem[new_buf].sgt);
+	else
+		mem_op().unpin(memmgr, runlist->mem[old_buf].ref,
+			runlist->mem[old_buf].sgt);
+
+	mem_op().munmap(runlist->mem[new_buf].ref,
+		     runlist_entry_base);
+done:
+	mutex_unlock(&runlist->mutex);
+	return ret;
 }

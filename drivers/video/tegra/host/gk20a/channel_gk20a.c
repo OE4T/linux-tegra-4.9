@@ -349,108 +349,8 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add)
 {
-	struct gk20a *g = c->g;
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *engine_info;
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
-	struct fifo_runlist_info_gk20a *runlist = NULL;
-	u32 runlist_id = ~0;
-	u32 *runlist_entry_base = NULL;
-	u32 *runlist_entry = NULL;
-	phys_addr_t runlist_pa;
-	u32 old_buf, new_buf;
-	u32 chid;
-	u32 count = 0;
-	int remain;
-	bool pending;
-	u32 ret = 0;
-
-	engine_info = f->engine_info + ENGINE_GR_GK20A;
-	runlist_id = engine_info->runlist_id;
-	runlist = &f->runlist_info[runlist_id];
-
-	mutex_lock(&runlist->mutex);
-
-	if (add) {
-		if (test_and_set_bit(c->hw_chid,
-			    runlist->active_channels) == 1)
-			goto done;
-	} else {
-		if (test_and_clear_bit(c->hw_chid,
-			    runlist->active_channels) == 0)
-			goto done;
-	}
-
-	old_buf = runlist->cur_buffer;
-	new_buf = !runlist->cur_buffer;
-
-	nvhost_dbg_info("runlist_id : %d, switch to new buffer %p",
-		runlist_id, runlist->mem[new_buf].ref);
-
-	runlist->mem[new_buf].sgt = mem_op().pin(memmgr,
-						 runlist->mem[new_buf].ref);
-	runlist_pa = sg_dma_address(runlist->mem[new_buf].sgt->sgl);
-
-	if (!runlist_pa) {
-		ret = -ENOMEM;
-		goto clean_up;
-	}
-
-	runlist_entry_base = mem_op().mmap(runlist->mem[new_buf].ref);
-	if (IS_ERR_OR_NULL(runlist_entry_base)) {
-		ret = -ENOMEM;
-		goto clean_up;
-	}
-
-	runlist_entry = runlist_entry_base;
-	for_each_set_bit(chid,
-	    runlist->active_channels, f->num_channels) {
-		nvhost_dbg_info("add channel %d to runlist", chid);
-		runlist_entry[0] = chid;
-		runlist_entry[1] = 0;
-		runlist_entry += 2;
-		count++;
-	}
-
-	gk20a_writel(g, fifo_runlist_base_r(),
-		fifo_runlist_base_ptr_f(u64_lo32(runlist_pa >> 12)) |
-		fifo_runlist_base_target_vid_mem_f());
-
-	gk20a_writel(g, fifo_runlist_r(),
-		fifo_runlist_engine_f(runlist_id) |
-		fifo_eng_runlist_length_f(count));
-
-	remain =
-		wait_event_interruptible_timeout(
-			runlist->runlist_wq,
-			((pending =
-				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
-				fifo_eng_runlist_pending_true_f()) == 0),
-			2 * HZ /* 2 sec */);
-
-	if (remain == 0 && pending != 0) {
-		nvhost_err(dev_from_gk20a(g), "runlist update timeout");
-		ret = -ETIMEDOUT;
-		goto clean_up;
-	} else if (remain < 0) {
-		nvhost_err(dev_from_gk20a(g), "runlist update interrupted");
-		ret = -EINTR;
-		goto clean_up;
-	}
-
-	runlist->cur_buffer = new_buf;
-
-clean_up:
-	if (ret != 0)
-		mem_op().unpin(memmgr, runlist->mem[new_buf].ref, runlist->mem[new_buf].sgt);
-	else
-		mem_op().unpin(memmgr, runlist->mem[old_buf].ref, runlist->mem[old_buf].sgt);
-
-	mem_op().munmap(runlist->mem[new_buf].ref,
-		     runlist_entry_base);
-done:
-	mutex_unlock(&runlist->mutex);
-	return ret;
+	return gk20a_fifo_update_runlist(c->g,
+		ENGINE_GR_GK20A, c->hw_chid, add);
 }
 
 void gk20a_free_channel(struct nvhost_hwctx *ctx)
@@ -461,8 +361,6 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 	struct gr_gk20a *gr = &g->gr;
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct vm_gk20a *ch_vm = ch->vm;
-	struct fifo_engine_info_gk20a *engine_info =
-			f->engine_info + ENGINE_GR_GK20A;
 
 	if (!ch->bound)
 		return;
@@ -479,7 +377,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 
 	/* preempt the channel */
 	gk20a_fifo_preempt_channel(g,
-		engine_info->runlist_id, ch->hw_chid);
+		ENGINE_GR_GK20A, ch->hw_chid);
 
 	/* remove channel from runlist */
 	channel_gk20a_update_runlist(ch, false);

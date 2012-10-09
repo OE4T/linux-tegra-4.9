@@ -147,7 +147,7 @@ static struct nvhost_device_data tegra_gr2d03_info = {
 			    {"emc", 300000000, 75 } },
 	.powergate_ids	= { TEGRA_POWERGATE_HEG, -1 },
 	.clockgate_delay = 0,
-	.can_powergate	= false,
+	.can_powergate  = true,
 	.powergate_delay = 100,
 	.moduleid	= NVHOST_MODULE_NONE,
 	.serialize	= true,

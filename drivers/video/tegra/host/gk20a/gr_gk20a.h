@@ -25,6 +25,16 @@
 
 #include "gr_ctx_gk20a.h"
 
+#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
+#define GR_IDLE_CHECK_DEFAULT		100 /* usec */
+#define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_IDLE_TIMEOUT_DEFAULT		10000 /* usec */
+#else
+#define GR_IDLE_CHECK_DEFAULT		100 /* usec */
+#define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_IDLE_TIMEOUT_DEFAULT		10000 /* usec */
+#endif
+
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
 

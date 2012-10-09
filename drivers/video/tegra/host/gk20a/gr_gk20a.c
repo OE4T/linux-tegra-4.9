@@ -30,6 +30,7 @@
 
 #include "hw_ccsr_gk20a.h"
 #include "hw_ctxsw_prog_gk20a.h"
+#include "hw_fifo_gk20a.h"
 #include "hw_gr_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_ram_gk20a.h"
@@ -187,49 +188,47 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 	}
 }
 
-#define GR_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
-
-static int gr_gk20a_wait_idle(struct gk20a *g, u32 *timeout)
+static int gr_gk20a_wait_idle(struct gk20a *g, u32 *timeout, u32 expect_delay)
 {
-#define GR_ENGINE_INDEX		0
-#define GR_IDLE_CHECK_PERIOD	10		/* 10 usec */
-
-	u32 gr_engine_status;
-	u32 gr_status;
-	bool ctxsw_active = false;
+	u32 delay = expect_delay;
+	bool gr_enabled;
+	bool ctxsw_active;
+	bool gr_busy;
 
 	nvhost_dbg_fn("");
 
 	do {
-		u32 check = min_t(u32, GR_IDLE_CHECK_PERIOD, *timeout);
-
 		/* fmodel: host gets fifo_engine_status(gr) from gr
 		   only when gr_status is read */
-		gr_status = gk20a_readl(g, gr_status_r());
+		gk20a_readl(g, gr_status_r());
 
-		gr_engine_status = gk20a_readl(g, gr_engine_status_r());
+		gr_enabled = gk20a_readl(g, mc_enable_r()) &
+			mc_enable_pgraph_enabled_f();
 
-		if (!(gk20a_readl(g, mc_enable_r()) &
-		      mc_enable_pgraph_enabled_f()) ||
-		    (gr_engine_status_value_v(gr_engine_status) ==
-		     gr_engine_status_value_idle_v() &&
-		     !ctxsw_active)) {
+		ctxsw_active = gk20a_readl(g,
+			fifo_engine_status_r(ENGINE_GR_GK20A)) &
+			fifo_engine_status_ctxsw_in_progress_f();
+
+		gr_busy = gk20a_readl(g, gr_engine_status_r()) &
+			gr_engine_status_value_busy_f();
+
+
+		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
 			nvhost_dbg_fn("done");
 			return 0;
 		}
 
-		udelay(GR_IDLE_CHECK_PERIOD);
-
-		/* handle interrupts */
-
-		*timeout -= check;
+		udelay(delay);
+		*timeout -= min_t(u32, delay, *timeout);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
 	} while (*timeout);
 
-	nvhost_err(dev_from_gk20a(g), "timeout, status: %d",
-		   gr_engine_status);
+	nvhost_err(dev_from_gk20a(g),
+		"timeout, ctxsw busy : %d, gr busy : %d",
+		ctxsw_active, gr_busy);
 
-	return -1;
+	return -EAGAIN;
 }
 
 static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
@@ -280,6 +279,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 mailbox_fail)
 {
 	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
 
@@ -361,8 +361,9 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			break;
 		}
 
-		udelay(10);
-		timeout -= min_t(u32, GR_IDLE_CHECK_PERIOD, timeout);
+		udelay(delay);
+		timeout -= min_t(u32, delay, timeout);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	}
 
 	if (check == WAIT_UCODE_TIMEOUT) {
@@ -603,10 +604,12 @@ static int gr_gk20a_ctx_pm_setup(struct gk20a *g, struct channel_gk20a *c,
 		enable_engine_activity(...);
 	*/
 
-	nvhost_dbg_fn("done");
-
 clean_up:
-	nvhost_dbg_fn("fail");
+	if (ret)
+		nvhost_dbg_fn("fail");
+	else
+		nvhost_dbg_fn("done");
+
 	mem_op().munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
 	return ret;
@@ -685,7 +688,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 
 	nvhost_dbg_fn("");
 
-	/* global pagepool */
+	/* global pagepool buffer */
 	addr = (u64_lo32(ch_ctx->global_ctx_buffer_va[PAGEPOOL_VA]) >>
 		gr_scc_pagepool_base_addr_39_8_align_bits_v()) |
 		(u64_hi32(ch_ctx->global_ctx_buffer_va[PAGEPOOL_VA]) <<
@@ -697,7 +700,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	if (size == gr_scc_pagepool_total_pages_hwmax_value_v())
 		size = gr_scc_pagepool_total_pages_hwmax_v();
 
-	nvhost_dbg_info("pagepool addr : 0x%016llx, size : %d",
+	nvhost_dbg_info("pagepool buffer addr : 0x%016llx, size : %d",
 		addr, size);
 
 	gr_gk20a_ctx_patch_write(g, c, gr_scc_pagepool_base_r(),
@@ -725,7 +728,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 
 	size = gr->bundle_cb_default_size;
 
-	nvhost_dbg_info("global bundle cb addr : 0x%016llx, size : %d",
+	nvhost_dbg_info("bundle cb addr : 0x%016llx, size : %d",
 		addr, size);
 
 	gr_gk20a_ctx_patch_write(g, c, gr_scc_bundle_cb_base_r(),
@@ -749,7 +752,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 
 	data = min_t(u32, data, gr->min_gpm_fifo_depth);
 
-	nvhost_dbg_info("global bundle cb token limit : %d, state limit : %d",
+	nvhost_dbg_info("bundle cb token limit : %d, state limit : %d",
 		   gr->bundle_cb_token_limit, data);
 
 	gr_gk20a_ctx_patch_write(g, c, gr_pd_ab_dist_cfg2_r(),
@@ -762,7 +765,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 		(u64_hi32(ch_ctx->global_ctx_buffer_va[ATTRIBUTE_VA]) <<
 		 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
-	nvhost_dbg_info("global attrib cb addr : 0x%016llx", addr);
+	nvhost_dbg_info("attrib cb addr : 0x%016llx", addr);
 
 	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_setup_attrib_cb_base_r(),
 		gr_gpcs_setup_attrib_cb_base_addr_39_12_f(addr) |
@@ -2689,6 +2692,7 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val;
 	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
@@ -2708,21 +2712,23 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 
 	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
 		for (slice = 0; slice < slices_per_fbp; slice++) {
+
+			delay = GR_IDLE_CHECK_DEFAULT;
+
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
 				fbp * proj_ltc_pri_stride_v() +
 				slice * proj_lts_pri_stride_v();
 
 			do {
-				u32 check = min_t(u32,
-					GR_IDLE_CHECK_PERIOD, timeout);
-
 				val = gk20a_readl(g, ctrl1);
 				if (ltc_ltc0_lts0_cbc_ctrl1_clear_v(val) !=
 				    ltc_ltc0_lts0_cbc_ctrl1_clear_active_v())
 					break;
 
-				udelay(GR_IDLE_CHECK_PERIOD);
-				timeout -= check;
+				udelay(delay);
+				timeout -= min_t(u32, delay, timeout);
+				delay = min_t(u32, delay << 1,
+					GR_IDLE_CHECK_MAX);
 
 			} while (timeout);
 
@@ -2826,7 +2832,7 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout);
+	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -2899,7 +2905,7 @@ static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout);
+	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -3053,7 +3059,7 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout);
+	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -3620,7 +3626,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	/* TBD: add gr ctx overrides */
 
-	err = gr_gk20a_wait_idle(g, &timeout);
+	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 
@@ -3638,7 +3644,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	/* floorsweep anything left */
 	gr_gk20a_ctx_state_floorsweep(g);
 
-	err = gr_gk20a_wait_idle(g, &timeout);
+	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto restore_fe_go_idle;
 
@@ -3661,20 +3667,22 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 		if (gr_pipe_bundle_address_value_v(sw_bundle_init->l[i].addr) ==
 		    GR_GO_IDLE_BUNDLE)
-			err |= gr_gk20a_wait_idle(g, &timeout);
+			err |= gr_gk20a_wait_idle(g, &timeout,
+					GR_IDLE_CHECK_DEFAULT);
 		else if (0) { /* IS_SILICON */
+			u32 delay = GR_IDLE_CHECK_DEFAULT;
 			do {
 				u32 gr_status = gk20a_readl(g, gr_status_r());
-				u32 check = min_t(u32, GR_IDLE_CHECK_PERIOD,
-						  timeout);
 
 				if (gr_status_fe_method_lower_v(gr_status) ==
 				    gr_status_fe_method_lower_idle_v())
 					break;
 
-				udelay(GR_IDLE_CHECK_PERIOD);
+				udelay(delay);
+				timeout -= min_t(u32, delay, timeout);
+				delay = min_t(u32, delay << 1,
+					GR_IDLE_CHECK_MAX);
 
-				timeout -= check;
 			} while (timeout);
 		}
 	}
@@ -3687,7 +3695,7 @@ restore_fe_go_idle:
 	/* restore fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(), fe_go_idle_timeout_save);
 
-	if (err || gr_gk20a_wait_idle(g, &timeout))
+	if (err || gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT))
 		goto out;
 
 	/* load method init */
@@ -3710,7 +3718,7 @@ restore_fe_go_idle:
 			sw_method_init->l[i].addr);
 	}
 
-	err = gr_gk20a_wait_idle(g, &timeout);
+	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 
@@ -3783,7 +3791,7 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, sw_non_ctx_load->l[i].addr,
 			sw_non_ctx_load->l[i].value);
 
-	err = gr_gk20a_wait_idle(g, &timeout);
+	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 

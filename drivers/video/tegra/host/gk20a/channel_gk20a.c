@@ -672,8 +672,6 @@ TRY_AGAIN:
 		e = container_of(node, struct priv_cmd_entry, list);
 	}
 
-	e->ptr = q->base_ptr + q->put;
-	e->gva = q->base_gva + q->put * sizeof(u32);
 	e->size = orig_size;
 	e->gp_get = c->gpfifo.get;
 	e->gp_put = c->gpfifo.put;
@@ -681,10 +679,15 @@ TRY_AGAIN:
 
 	/* if we have increased size to skip free space in the end, set put
 	   to beginning of cmd buffer (0) + size */
-	if (size != orig_size)
+	if (size != orig_size) {
+		e->ptr = q->base_ptr;
+		e->gva = q->base_gva;
 		q->put = orig_size;
-	else
+	} else {
+		e->ptr = q->base_ptr + q->put;
+		e->gva = q->base_gva + q->put * sizeof(u32);
 		q->put = (q->put + orig_size) & (q->size - 1);
+	}
 
 	/* we already handled q->put + size > q->size so BUG_ON this */
 	BUG_ON(q->put > q->size);
@@ -932,7 +935,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		extra_count++;
 	}
 	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
-		alloc_priv_cmdbuf(c, 4, &get_cmd);
+		alloc_priv_cmdbuf(c, 6, &get_cmd);
 		if (get_cmd == NULL) {
 			nvhost_err(d, "not enough priv cmd buffer space");
 			err = -EAGAIN;
@@ -971,7 +974,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			u64_lo32(wait_cmd->gva);
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
 			u64_hi32(wait_cmd->gva) |
-			(4 << 10); /* 4 words for above cmds */
+			(wait_cmd->size << 10);
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
@@ -999,21 +1002,27 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 		trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
 
+		/* wfi */
+		get_cmd->ptr[0] = 0x2001001E;
+		/* handle, ignored */
+		get_cmd->ptr[1] = 0x00000000;
 		/* syncpoint_a */
-		get_cmd->ptr[0] = 0x2001001C;
+		get_cmd->ptr[2] = 0x2001001C;
 		/* payload, ignored */
-		get_cmd->ptr[1] = 0;
+		get_cmd->ptr[3] = 0;
 		/* syncpoint_b */
-		get_cmd->ptr[2] = 0x2001001D;
+		get_cmd->ptr[4] = 0x2001001D;
 		/* syncpt_id, incr */
-		get_cmd->ptr[3] = (fence->syncpt_id << 8) | 0x1;
+		get_cmd->ptr[5] = (fence->syncpt_id << 8) | 0x1;
 
 		nvhost_dbg_info("cmds for syncpt incr :\n"
-			"0x%08x, 0x%08x, 0x%08x, 0x%08x",
+			"0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x",
 			get_cmd->ptr[0],
 			get_cmd->ptr[1],
 			get_cmd->ptr[2],
-			get_cmd->ptr[3]);
+			get_cmd->ptr[3],
+			get_cmd->ptr[4],
+			get_cmd->ptr[5]);
 
 		nvhost_dbg_info("put %d, get %d, size %d",
 			c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
@@ -1022,7 +1031,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			u64_lo32(get_cmd->gva);
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
 			u64_hi32(get_cmd->gva) |
-			(4 << 10); /* 4 words for above cmds */
+			(get_cmd->size << 10);
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);

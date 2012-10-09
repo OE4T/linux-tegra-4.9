@@ -117,7 +117,14 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 #define RESTORE_INDIRECT_SIZE 2
 #define RESTORE_END_SIZE 1
 
-#ifdef CONFIG_TEGRA_FPGA_PLATFORM
+#if 1
+/* THIS IS THE CORRECT # for T148 asim (dolak_sim)
+  This # shouldn't be coming from an ifdef, ultimately.
+  It should be determined at runtime if *at all* possible.
+  Further, we do need a t148 version of this. So it may
+  be possible to leave this here and make the t148 version
+  more subtle
+*/
 #define NUM_3D_PIXEL_PIPES   2
 #else
 #define NUM_3D_PIXEL_PIPES   4

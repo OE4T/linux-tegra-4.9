@@ -40,7 +40,8 @@ static const struct hwctx_reginfo ctxsave_regs_3d_per_pipe[] = {
 };
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
-	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe44), //bug 962360. This has to be the first one
+	/* bug 962360. Reg 0xe44 has to be the first one to be restored*/
+	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe44),
 	HWCTX_REGINFO(0xe00,   35, DIRECT),
 	HWCTX_REGINFO(0xe25,    2, DIRECT),
 	HWCTX_REGINFO(0xe28,    2, DIRECT),
@@ -56,7 +57,12 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x300,   64, DIRECT),
 	HWCTX_REGINFO(0x343,   25, DIRECT),
 	HWCTX_REGINFO(0x363,    2, DIRECT),
+	/* bug 976976 requires reg 0x403 to be restored before reg 0xe45 */
 	HWCTX_REGINFO(0x400,   19, DIRECT),
+	/* bug 955371 requires reg 0x7e0 to be restored with 0x410,s value.
+	   bug 982750 requires reg 0x7e0 to be restored before 0x804.
+	   note: 0x803 is the offset reg for 0x804 */
+	HWCTX_REGINFO_RST(0x410, 1, DIRECT, 0x7e0),
 	HWCTX_REGINFO(0x414,    7, DIRECT),
 	HWCTX_REGINFO(0x434,    1, DIRECT),
 	HWCTX_REGINFO(0x500,    4, DIRECT),
@@ -65,6 +71,8 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x545,    1, DIRECT),
 	HWCTX_REGINFO(0x547,    1, DIRECT),
 	HWCTX_REGINFO(0x548,   64, INDIRECT),
+	/* bug 951938 requires that reg 601 should not be the last reg to be
+	   saved */
 	HWCTX_REGINFO(0x600,   16, INDIRECT_4X),
 	HWCTX_REGINFO(0x603,  128, INDIRECT),
 	HWCTX_REGINFO(0x608,    4, DIRECT),
@@ -75,6 +83,7 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x770,   48, DIRECT),
 	HWCTX_REGINFO(0x7e0,    1, DIRECT),
 	HWCTX_REGINFO(0x800,   64, INDIRECT),
+	/* bug 982750 requires 0x804 to be restored after reg 0x7e0 */
 	HWCTX_REGINFO(0x803, 1024, INDIRECT),
 	HWCTX_REGINFO(0x805,   64, INDIRECT),
 	HWCTX_REGINFO(0x807,    1, DIRECT),
@@ -85,10 +94,11 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x90a,    1, DIRECT),
 	HWCTX_REGINFO(0xa02,   10, DIRECT),
 	HWCTX_REGINFO(0xe2a,    1, DIRECT),
+	/* bug 976976 requires reg 0xe45 to be restored after reg 0x403 */
 	HWCTX_REGINFO(0xe45,    1, DIRECT),
 	HWCTX_REGINFO(0xe50,   49, DIRECT),
-	HWCTX_REGINFO_RST(0x410, 1, DIRECT, 0x7e0), //bug 955371
-	HWCTX_REGINFO_RST(0x126, 1, DIRECT, 0xe2b), //bug 930456
+	/* bug 930456 requires reg 0xe2b to be restored with 0x126's value */
+	HWCTX_REGINFO_RST(0x126, 1, DIRECT, 0xe2b),
 };
 
 #define SAVE_BEGIN_V1_SIZE (1 + RESTORE_BEGIN_SIZE)
@@ -142,6 +152,11 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	   note that we assume FDC_CONTROL_0 is left in the reset state by all
 	   contexts.  the invalidate bit will clear itself, so the register
 	   should be unchanged after this */
+	/* bug 990395 T114 HW no longer can automatically clear the invalidate
+	   bit. Luckily that the ctx switching always happens on the push
+	   buffer boundary, and 3d driver inserts a FDC flush & invalidate &
+	   clear the invalidate bit in the beginning of the each push buffer.
+	   So we do not need to explicitly clear the invalidate bit here. */
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_imm(AR3D_FDC_CONTROL_0,
 			AR3D_FDC_CONTROL_0_RESET_VAL

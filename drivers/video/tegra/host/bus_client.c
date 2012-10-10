@@ -435,6 +435,67 @@ static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
 			(unsigned long *)rate, index);
 }
 
+static int nvhost_ioctl_channel_module_regrdwr(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_ctrl_module_regrdwr_args *args)
+{
+	u32 num_offsets = args->num_offsets;
+	u32 *offsets = args->offsets;
+	u32 *values = args->values;
+	u32 vals[64];
+	struct nvhost_device *ndev;
+
+	trace_nvhost_ioctl_channel_module_regrdwr(args->id,
+		args->num_offsets, args->write);
+
+	/* Check that there is something to read and that block size is
+	 * u32 aligned */
+	if (num_offsets == 0 || args->block_size & 3)
+		return -EINVAL;
+
+	ndev = ctx->ch->dev;
+	BUG_ON(!ndev);
+
+	while (num_offsets--) {
+		int err;
+		u32 offs;
+		int remaining = args->block_size >> 2;
+
+		if (get_user(offs, offsets))
+			return -EFAULT;
+
+		offsets++;
+		while (remaining) {
+			int batch = min(remaining, 64);
+			if (args->write) {
+				if (copy_from_user(vals, values,
+						batch * sizeof(u32)))
+					return -EFAULT;
+
+				err = nvhost_write_module_regs(ndev,
+					offs, batch, vals);
+				if (err)
+					return err;
+			} else {
+				err = nvhost_read_module_regs(ndev,
+						offs, batch, vals);
+				if (err)
+					return err;
+
+				if (copy_to_user(values, vals,
+						batch * sizeof(u32)))
+					return -EFAULT;
+			}
+
+			remaining -= batch;
+			offs += batch * sizeof(u32);
+			values += batch;
+		}
+	}
+
+	return 0;
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -558,6 +619,9 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
 		priv->priority =
 			(u32)((struct nvhost_set_priority_args *)buf)->priority;
+		break;
+	case NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR:
+		err = nvhost_ioctl_channel_module_regrdwr(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

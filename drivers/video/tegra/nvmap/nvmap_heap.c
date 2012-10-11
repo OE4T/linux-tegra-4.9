@@ -712,8 +712,8 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 
 	if (WARN_ON(buddy_size && (base & (buddy_size - 1)))) {
 		phys_addr_t orig = base;
-		dev_warn(parent, "%s: base address %p not aligned to "
-			 "buddy_size %u\n", __func__, (void *)base, buddy_size);
+		dev_warn(parent, "%s: base address 0x%llx not aligned to "
+			 "buddy_size %u\n", __func__, (u64)base, buddy_size);
 		base = ALIGN(base, buddy_size);
 		len -= (base - orig);
 	}

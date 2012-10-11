@@ -245,8 +245,8 @@ static void cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
 		u32 *p = (u32 *)((u32)pb->mapped + getidx);
 		*(p++) = NVHOST_OPCODE_NOOP;
 		*(p++) = NVHOST_OPCODE_NOOP;
-		dev_dbg(&dev->dev->dev, "%s: NOP at 0x%x\n",
-			__func__, pb->phys + getidx);
+		dev_dbg(&dev->dev->dev, "%s: NOP at 0x%llx\n",
+			__func__, (u64)(pb->phys + getidx));
 		getidx = (getidx + 8) & (PUSH_BUFFER_SIZE - 1);
 	}
 	wmb();

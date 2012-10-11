@@ -564,8 +564,8 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 			gk20a_intr_isr, gk20a_intr_thread,
 			0, "gk20a", g);
 	if (err) {
-		dev_err(dev_from_gk20a(g), "failed to request stall interrupt irq @ %d\n",
-			gk20a_intr.start);
+		dev_err(dev_from_gk20a(g), "failed to request stall interrupt irq @ %lld\n",
+			(u64)gk20a_intr.start);
 		goto fail;
 	}
 	g->irq_requested = true;

@@ -227,7 +227,6 @@ struct gr_gk20a {
 	u32 alpha_cb_size;
 	u32 timeslice_mode;
 
-	void *temp_ctx_header;
 	struct mem_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
 	struct mmu_desc mmu_wr_mem;

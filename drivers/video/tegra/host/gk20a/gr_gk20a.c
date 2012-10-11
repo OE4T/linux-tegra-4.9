@@ -448,8 +448,6 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
 	u32 patch_slot = 0;
 	void *patch_ptr = NULL;
 
-	nvhost_dbg_fn("");
-
 	BUG_ON(patch != 0 && c == NULL);
 
 	if (patch) {
@@ -1409,191 +1407,6 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-#define PRI_GPCCS_ADDR_WIDTH 15
-#define CTXSW_UCODE_HEADER_SIZE_IN_BYTES 256
-
-#define PRI_GPCCS_ADDR_MASK(addr)	((addr) & ((1 << PRI_GPCCS_ADDR_WIDTH) - 1))
-#define PRI_GPC_ADDR(addr, gpc)		(proj_gpc_base_v()+((gpc)*proj_gpc_stride_v())+(addr))
-
-static int gr_gk20a_create_ctx_header(struct gk20a *g, u32 *header)
-{
-	u32 *header_curr;
-	u32 num_gpcs;
-	u32 num_tpcs;
-	u32 num_ppcs;
-	u32 tpc_id_mask;
-	u32 ppc_mask;
-	u32 rc_offset, rc_size;
-	u32 num_fecs_ramchains;
-	u32 num_gpc_ramchains;
-	u32 sys_priv_size;
-	u32 sys_priv_offset;
-	u32 gpc_priv_size;
-	u32 gpc_priv_offset;
-	u32 fecs_image_size;
-	u32 gpc_image_size;
-	u32 total_image_size;
-	u32 lane, gpc, ppc;
-	u32 addr, words, bytes;
-	u32 litter_num_pes_per_gpc;
-
-	if (!g->gr.ctx_vars.valid)
-		return -1;
-
-	nvhost_dbg_fn("");
-
-	if (tegra_revision == TEGRA_REVISION_SIM) {
-		num_gpcs = g->gr.gpc_count;
-	} else {
-		num_gpcs = gk20a_readl(g, gr_fecs_fs_r());
-		num_gpcs = gr_fecs_fs_num_available_gpcs_v(num_gpcs);
-	}
-
-	header_curr = header;
-
-	header_curr[ctxsw_prog_main_image_num_gpc_v() >> 2] = num_gpcs;
-	header_curr[ctxsw_prog_main_image_magic_value_v() >> 2] =
-		ctxsw_prog_main_image_magic_value_v_value_f();
-
-	fecs_image_size = g->gr.ctx_vars.ctxsw_regs.sys.count << 2;
-	fecs_image_size = ((fecs_image_size + 255) & ~255);
-
-	sys_priv_size = fecs_image_size >> 8;
-	sys_priv_offset = 2 + num_gpcs;
-
-	header_curr += (CTXSW_UCODE_HEADER_SIZE_IN_BYTES >> 2);
-	header_curr[ctxsw_prog_local_reg_ctl_v() >> 2] =
-		ctxsw_prog_local_reg_ctl_offset_f(sys_priv_offset) |
-		ctxsw_prog_local_reg_ctl_size_f(sys_priv_size);
-	header_curr[ctxsw_prog_local_magic_value_v() >> 2] =
-		ctxsw_prog_local_magic_value_v_value_f();
-
-	if (tegra_revision != TEGRA_REVISION_SIM) {
-		rc_offset = 0;
-		rc_size = 0;
-
-		num_fecs_ramchains = gr_fecs_rc_lanes_num_chains_v(
-			gk20a_readl(g, gr_fecs_rc_lanes_r()));
-
-		header_curr[ctxsw_prog_local_image_ctl_v() >> 2] =
-			ctxsw_prog_local_image_ctl_num_ramchains_f(num_fecs_ramchains);
-
-		for (lane = 0; lane < num_fecs_ramchains; lane++) {
-			rc_offset += (rc_size >> 8);
-
-			gk20a_writel(g, gr_fecs_falcon_addr_v(), lane);
-			words = gr_fecs_rc_lane_size_v_v(
-					gk20a_readl(g, gr_fecs_rc_lane_size_r(0)));
-			header_curr[ctxsw_prog_local_ramchain_save_v(lane) >> 2] =
-				ctxsw_prog_local_ramchain_save_words_f(words);
-			bytes = words << 2;
-
-			if (bytes)
-				header_curr[ctxsw_prog_local_ramchain_ctl_v(lane) >> 2] =
-					ctxsw_prog_local_ramchain_ctl_offset_f(rc_offset);
-			else
-				header_curr[ctxsw_prog_local_ramchain_ctl_v(lane) >> 2] =
-					ctxsw_prog_local_ramchain_ctl_offset_f(0);
-
-			rc_size = (bytes + 0xFF) & ~0xFF;
-			fecs_image_size += rc_size;
-		}
-	}
-
-	header_curr[ctxsw_prog_local_image_size_v() >> 2] = fecs_image_size;
-	total_image_size = fecs_image_size + 256 + 256 + num_gpcs * 256;
-
-	litter_num_pes_per_gpc = proj_scal_litter_num_pes_per_gpc_v();
-	for (gpc = 0; gpc < num_gpcs; gpc++) {
-
-		header_curr += (CTXSW_UCODE_HEADER_SIZE_IN_BYTES >> 2);
-
-		addr = PRI_GPC_ADDR(PRI_GPCCS_ADDR_MASK(gr_gpc0_fs_gpc_r()), gpc);
-		num_tpcs = gr_gpc0_fs_gpc_num_available_tpcs_v(
-				gk20a_readl(g, addr));
-
-		if (litter_num_pes_per_gpc > 1) {
-			num_ppcs = 0;
-			ppc_mask = 0;
-			for (ppc = 0; ppc < litter_num_pes_per_gpc; ppc++) {
-				addr = PRI_GPC_ADDR(PRI_GPCCS_ADDR_MASK(
-					gr_gpc0_gpm_pd_pes_tpc_id_mask_r(ppc)), gpc);
-				tpc_id_mask = gr_gpc0_gpm_pd_pes_tpc_id_mask_mask_v(
-					gk20a_readl(g, addr));
-				if (tpc_id_mask) {
-					num_ppcs++;
-					ppc_mask |= (1 << ppc);
-				}
-			}
-			header_curr[ctxsw_prog_local_image_ppc_info_v() >> 2] =
-				ctxsw_prog_local_image_ppc_info_ppc_mask_f(ppc_mask) |
-				ctxsw_prog_local_image_ppc_info_num_ppcs_f(num_ppcs);
-		}
-
-		gpc_priv_offset = total_image_size >> 8;
-		gpc_image_size = (g->gr.ctx_vars.ctxsw_regs.gpc.count +
-				  g->gr.ctx_vars.ctxsw_regs.tpc.count * num_tpcs) << 2;
-		gpc_image_size = ((gpc_image_size + 0xFF) & ~0xFF);
-		gpc_priv_size = gpc_image_size >> 8;
-
-		header_curr[ctxsw_prog_local_reg_ctl_v() >> 2] =
-			ctxsw_prog_local_reg_ctl_offset_f(gpc_priv_offset) |
-			ctxsw_prog_local_reg_ctl_size_f(gpc_priv_size);
-
-		header_curr[ctxsw_prog_local_image_num_tpcs_v() >> 2] =
-			num_tpcs;
-		header_curr[ctxsw_prog_local_magic_value_v() >> 2] =
-			ctxsw_prog_local_magic_value_v_value_f();
-
-		if (tegra_revision != TEGRA_REVISION_SIM) {
-			rc_offset = 0;
-			rc_size = 0;
-
-			addr = PRI_GPC_ADDR(PRI_GPCCS_ADDR_MASK(
-				gr_gpccs_rc_lanes_r()), gpc);
-			num_gpc_ramchains = gr_gpccs_rc_lanes_num_chains_v(
-				gk20a_readl(g, addr));
-
-			header_curr[ctxsw_prog_local_image_ctl_v() >> 2] =
-				ctxsw_prog_local_image_ctl_num_ramchains_f(num_gpc_ramchains);
-
-			for (lane = 0; lane < num_gpc_ramchains; lane++) {
-				rc_offset += rc_size >> 8;
-
-				addr = PRI_GPC_ADDR(PRI_GPCCS_ADDR_MASK(
-						gr_gpccs_falcon_addr_r()), gpc);
-				gk20a_writel(g, addr, lane);
-
-				addr = PRI_GPC_ADDR(PRI_GPCCS_ADDR_MASK(
-						gr_gpccs_rc_lane_size_r(0)), gpc);
-				words = gr_gpccs_rc_lane_size_v_v(
-						gk20a_readl(g, addr));
-
-				header_curr[ctxsw_prog_local_ramchain_save_v(lane) >> 2] =
-					ctxsw_prog_local_ramchain_save_words_f(words);
-				bytes = words << 2;
-
-				if (bytes)
-					header_curr[ctxsw_prog_local_ramchain_ctl_v(lane) >> 2] =
-						ctxsw_prog_local_ramchain_ctl_offset_f(words);
-				else
-					header_curr[ctxsw_prog_local_ramchain_ctl_v(lane) >> 2] =
-						ctxsw_prog_local_ramchain_ctl_offset_f(0);
-
-				rc_size = (bytes + 0xFF) & ~0xFF;
-				gpc_image_size += rc_size;
-			}
-		}
-
-		header_curr[ctxsw_prog_local_image_size_v() >> 2] = gpc_image_size;
-		total_image_size += gpc_image_size;
-	}
-
-	header[ctxsw_prog_main_image_size_v() >> 2] = total_image_size;
-
-	return 0;
-}
-
 static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 golden_ctx_image_size = 0;
@@ -1641,16 +1454,6 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 
 	g->gr.ctx_vars.golden_image_size = golden_ctx_image_size;
 	g->gr.ctx_vars.zcull_ctxsw_image_size = zcull_ctx_image_size;
-
-	/* create a temp header for ctx override */
-	if (!gr->temp_ctx_header) {
-		gr->temp_ctx_header =
-			kzalloc(gr->ctx_vars.buffer_header_size, GFP_KERNEL);
-		if (!gr->temp_ctx_header)
-			return -ENOMEM;
-	}
-
-	gr_gk20a_create_ctx_header(g, (u32 *)gr->temp_ctx_header);
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -2160,7 +1963,6 @@ static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
 	kfree(gr->pes_tpc_mask[0]);
 	kfree(gr->pes_tpc_mask[1]);
 	kfree(gr->gpc_skip_mask);
-	kfree(gr->temp_ctx_header);
 	kfree(gr->ctx_vars.ucode.fecs.inst.l);
 	kfree(gr->ctx_vars.ucode.fecs.data.l);
 	kfree(gr->ctx_vars.ucode.gpccs.inst.l);
@@ -2188,7 +1990,6 @@ static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
 	gr->pes_tpc_mask[0] = NULL;
 	gr->pes_tpc_mask[1] = NULL;
 	gr->gpc_skip_mask = NULL;
-	gr->temp_ctx_header = NULL;
 
 	nvhost_allocator_destroy(&gr->comp_tags);
 

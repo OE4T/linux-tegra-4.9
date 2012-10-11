@@ -474,6 +474,10 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	if (err)
 		return err;
 
+#if defined(CONFIG_TEGRA_GK20A)
+	gk20a_device.syncpt_base = NVSYNCPT_GK20A_BASE;
+#endif
+
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;

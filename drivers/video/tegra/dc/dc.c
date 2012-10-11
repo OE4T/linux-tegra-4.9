@@ -2646,8 +2646,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
 	} else {
 		dev_err(&ndev->dev,
-			"Unknown base address %#08x: unable to assign syncpt\n",
-			res->start);
+			"Unknown base address %llx: unable to assign syncpt\n",
+			(u64)res->start);
 	}
 
 

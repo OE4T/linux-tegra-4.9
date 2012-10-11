@@ -1593,7 +1593,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	int failed_init = 0;
 
 	if (dc->out->enable)
-		dc->out->enable();
+		dc->out->enable(&dc->ndev->dev);
 
 	tegra_dc_setup_clk(dc, dc->clk);
 	tegra_dc_clk_enable(dc);
@@ -1639,7 +1639,7 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 	bool ret = true;
 
 	if (dc->out->enable)
-		dc->out->enable();
+		dc->out->enable(&dc->ndev->dev);
 
 	tegra_dc_setup_clk(dc, dc->clk);
 	tegra_dc_clk_enable(dc);
@@ -2163,7 +2163,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 	}
 
 	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init();
+		dc->out->hotplug_init(&ndev->dev);
 
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
@@ -2278,7 +2278,7 @@ static int tegra_dc_resume(struct nvhost_device *ndev)
 	}
 
 	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init();
+		dc->out->hotplug_init(&ndev->dev);
 
 	if (dc->out_ops && dc->out_ops->resume)
 		dc->out_ops->resume(dc);

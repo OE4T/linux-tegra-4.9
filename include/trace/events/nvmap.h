@@ -298,6 +298,55 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 );
 
 
+DECLARE_EVENT_CLASS(pin_unpin,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *h,
+		 u32 pin_count
+	),
+
+	TP_ARGS(client, h, pin_count),
+
+	TP_STRUCT__entry(
+		__field(struct nvmap_client *, client)
+		__field(struct nvmap_handle *, h)
+		__field(u32, pin_count)
+	),
+
+	TP_fast_assign(
+		__entry->client = client;
+		__entry->h = h;
+		__entry->pin_count = pin_count;
+	),
+
+	TP_printk("client=%p, name=%s, h=%p, pin_count=%d",
+		__entry->client, __entry->client->name,
+		__entry->h, __entry->pin_count)
+);
+
+DEFINE_EVENT(pin_unpin, handle_pin,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *h,
+		 u32 pin_count
+	),
+	TP_ARGS(client, h, pin_count)
+);
+
+DEFINE_EVENT(pin_unpin, handle_unpin,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *h,
+		 u32 pin_count
+	),
+	TP_ARGS(client, h, pin_count)
+);
+
+DEFINE_EVENT(pin_unpin, handle_unpin_error,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *h,
+		 u32 pin_count
+	),
+	TP_ARGS(client, h, pin_count)
+);
+
 #endif /* _TRACE_NVMAP_H */
 
 /* This part must be outside protection */

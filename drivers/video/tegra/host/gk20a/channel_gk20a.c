@@ -104,8 +104,8 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	addr_lo = u64_lo32(c->vm->pdes.phys) >> 12;
 	addr_hi = u64_hi32(c->vm->pdes.phys);
 
-	nvhost_dbg_info("pde pa=0x%x addr_lo=0x%x addr_hi=0x%x",
-		   c->vm->pdes.phys, addr_lo, addr_hi);
+	nvhost_dbg_info("pde pa=0x%llx addr_lo=0x%x addr_hi=0x%x",
+		   (u64)c->vm->pdes.phys, addr_lo, addr_hi);
 
 	mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
 		ram_in_page_dir_base_target_vid_mem_f() |
@@ -141,8 +141,8 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	addr_lo = u64_lo32(c->userd_cpu_pa >> ram_userd_base_shift_v());
 	addr_hi = u64_hi32(c->userd_cpu_pa);
 
-	nvhost_dbg_info("channel %d : set ramfc userd 0x%08x",
-		c->hw_chid, c->userd_cpu_pa);
+	nvhost_dbg_info("channel %d : set ramfc userd 0x%16llx",
+		c->hw_chid, (u64)c->userd_cpu_pa);
 
 	mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
 		 pbdma_userd_target_vid_mem_f() |
@@ -322,8 +322,8 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 		goto clean_up;
 	}
 
-	nvhost_dbg_info("channel %d inst block physical addr: 0x%08x",
-		ch->hw_chid, ch->inst_block.cpu_pa);
+	nvhost_dbg_info("channel %d inst block physical addr: 0x%16llx",
+		ch->hw_chid, (u64)ch->inst_block.cpu_pa);
 
 	ch->inst_block.mem.size = ram_in_alloc_size_v();
 

@@ -236,7 +236,6 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 
 	/*write send ring address and make it valid*/
 	/*TBD: work for >32b physmem*/
-	BUILD_BUG_ON(sizeof(phys_addr_t) != sizeof(u32));
 	phys = g->sim.send_bfr.phys;
 	sim_writel(g, sim_send_ring_hi_r(), 0);
 	sim_writel(g, sim_send_ring_r(),
@@ -254,7 +253,6 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 
 	/*write send ring address and make it valid*/
 	/*TBD: work for >32b physmem*/
-	BUILD_BUG_ON(sizeof(phys_addr_t) != sizeof(u32));
 	phys = g->sim.recv_bfr.phys;
 	sim_writel(g, sim_recv_ring_hi_r(), 0);
 	sim_writel(g, sim_recv_ring_r(),

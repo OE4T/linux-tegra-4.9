@@ -3454,10 +3454,19 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_init_zbc(g, gr);
 
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
+	{
+		u64 compbit_base_post_divide64 = (gr->compbit_store.base_pa >>
+				ltc_ltc0_lts0_cbc_base_alignment_shift_v());
+		do_div(compbit_base_post_divide64, gr->num_fbps);
+		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
+	}
+#else
 	compbit_base_post_divide = u64_lo32(
 		(gr->compbit_store.base_pa >>
 			ltc_ltc0_lts0_cbc_base_alignment_shift_v()) /
 			gr->num_fbps);
+#endif
 
 	compbit_base_post_multiply = ((u64)compbit_base_post_divide *
 		gr->num_fbps) << ltc_ltc0_lts0_cbc_base_alignment_shift_v();

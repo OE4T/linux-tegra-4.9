@@ -459,7 +459,7 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 
 	if (gmmu_page_size == 4096) {
 		/* "small" gmmu page size */
-		nvhost_dbg(dbg_pte, "4KB ptes @ 0x%x", dbg_addr);
+		nvhost_dbg(dbg_pte, "4KB ptes @ 0x%llx", (u64)dbg_addr);
 		mem_wr32(pde, 0, (gmmu_pde_size_full_f() |
 				  gmmu_pde_aperture_big_invalid_f()));
 		mem_wr32(pde, 1, (gmmu_pde_aperture_small_video_memory_f() |
@@ -467,7 +467,7 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 				  gmmu_pde_address_small_sys_f((u32)pte_addr)));
 	} else {
 		/* "large" gmmu page size */
-		nvhost_dbg(dbg_pte, "128KB ptes @ 0x%x", dbg_addr);
+		nvhost_dbg(dbg_pte, "128KB ptes @ 0x%llx", (u64)dbg_addr);
 		mem_wr32(pde, 0, (gmmu_pde_size_full_f() |
 				  gmmu_pde_aperture_big_video_memory_f() |
 				  gmmu_pde_address_big_sys_f((u32)pte_addr)));
@@ -854,13 +854,13 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 	bfr.addr = sg_dma_address(sgt->sgl);
 
-	nvhost_dbg_info("nvmap pinned buffer @ 0x%x", bfr.addr);
+	nvhost_dbg_info("nvmap pinned buffer @ 0x%llx", (u64)bfr.addr);
 	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d "
 		      "iovmm_mapped=%d kind=0x%x kind_uc=0x%x flags=0x%x",
 		      r, map_offset, bfr.contig, bfr.iovmm_mapped,
 		      bfr.kind_v, bfr.uc_kind_v, flags);
-	nvhost_dbg_info("comptag size=%d start=%d for 0x%x",
-			bfr.ctag_lines, bfr.ctag_offset, bfr.addr);
+	nvhost_dbg_info("comptag size=%d start=%d for 0x%llx",
+			bfr.ctag_lines, bfr.ctag_offset, (u64)bfr.addr);
 
 
 	/* keep track of the buffer for unmapping */
@@ -1221,8 +1221,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		return -ENOMEM;
 	}
-	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%x",
-			vm->pdes.kv, vm->pdes.phys);
+	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%llx",
+			vm->pdes.kv, (u64)vm->pdes.phys);
 
 	/* we could release vm->pdes.kv but it's only one page... */
 
@@ -1390,15 +1390,15 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
-	nvhost_dbg(dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%x",
-			vm->pdes.kv, vm->pdes.phys);
+	nvhost_dbg(dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%llx",
+			vm->pdes.kv, (u64)vm->pdes.phys);
 	/* we could release vm->pdes.kv but it's only one page... */
 
 	pde_addr_lo = u64_lo32(vm->pdes.phys) >> 12;
 	pde_addr_hi = u64_hi32(vm->pdes.phys);
 
-	nvhost_dbg_info("pde pa=0x%x pde_addr_lo=0x%x pde_addr_hi=0x%x",
-		   vm->pdes.phys, pde_addr_lo, pde_addr_hi);
+	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
+		(u64)vm->pdes.phys, pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for bar1 */
 	inst_block->mem.size = ram_in_alloc_size_v();
@@ -1429,8 +1429,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	nvhost_dbg_info("bar1 inst block physical phys = 0x%08x, kv = 0x%p",
-		   inst_pa, inst_ptr);
+	nvhost_dbg_info("bar1 inst block physical phys = 0x%llx, kv = 0x%p",
+		(u64)inst_pa, inst_ptr);
 
 	memset(inst_ptr, 0, ram_fc_size_val_v());
 
@@ -1517,15 +1517,14 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
-	nvhost_dbg_info("pmu pdes phys @ 0x%x",
-		   vm->pdes.phys);
+	nvhost_dbg_info("pmu pdes phys @ 0x%llx", (u64)vm->pdes.phys);
 	/* we could release vm->pdes.kv but it's only one page... */
 
 	pde_addr_lo = u64_lo32(vm->pdes.phys) >> 12;
 	pde_addr_hi = u64_hi32(vm->pdes.phys);
 
-	nvhost_dbg_info("pde pa=0x%x pde_addr_lo=0x%x pde_addr_hi=0x%x",
-		   vm->pdes.phys, pde_addr_lo, pde_addr_hi);
+	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
+			(u64)vm->pdes.phys, pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for pmu */
 	inst_block->mem.size = GK20A_PMU_INST_SIZE;
@@ -1551,8 +1550,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	inst_block->cpu_pa = inst_pa =
 		sg_dma_address(inst_block->mem.sgt->sgl);
 
-	nvhost_dbg_info("pmu inst block physical addr: 0x%08x",
-		   inst_pa);
+	nvhost_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
 
 	inst_ptr = mem_op().mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {

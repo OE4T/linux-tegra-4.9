@@ -128,6 +128,7 @@ static inline int backlight_update_status(struct backlight_device *bd)
 
 	return ret;
 }
+extern struct backlight_device *get_backlight_device_by_name(char *name);
 
 extern struct backlight_device *backlight_device_register(const char *name,
 	struct device *dev, void *devdata, const struct backlight_ops *ops,

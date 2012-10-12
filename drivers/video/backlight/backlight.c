@@ -31,6 +31,23 @@ static const char *const backlight_types[] = {
 	[BACKLIGHT_FIRMWARE] = "firmware",
 };
 
+struct backlight_device *get_backlight_device_by_name(char *name)
+{
+	struct list_head *ptr;
+	struct backlight_device *entry = NULL;
+
+	mutex_lock(&backlight_dev_list_mutex);
+	list_for_each(ptr, &backlight_dev_list) {
+		entry = list_entry(ptr, struct backlight_device, entry);
+		if (strcmp(dev_name(&entry->dev), name) == 0)
+			return entry;
+	}
+	mutex_unlock(&backlight_dev_list_mutex);
+
+	return entry;
+}
+EXPORT_SYMBOL(get_backlight_device_by_name);
+
 #if defined(CONFIG_FB) || (defined(CONFIG_FB_MODULE) && \
 			   defined(CONFIG_BACKLIGHT_CLASS_DEVICE_MODULE))
 /* This callback gets called when something important happens inside a

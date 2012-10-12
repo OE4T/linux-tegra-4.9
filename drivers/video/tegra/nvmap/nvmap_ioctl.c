@@ -319,7 +319,38 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 #endif
 
 	return nvmap_alloc_handle_id(client, handle, op.heap_mask,
-				     op.align, op.kind, op.flags);
+				     op.align,
+				     0, /* no kind */
+				     op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED));
+}
+
+int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
+{
+	struct nvmap_alloc_kind_handle op;
+	struct nvmap_client *client = filp->private_data;
+	ulong handle;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	handle = unmarshal_user_handle(op.handle);
+	if (!handle)
+		return -EINVAL;
+
+	if (op.align & (op.align - 1))
+		return -EINVAL;
+
+	/* user-space handles are aligned to page boundaries, to prevent
+	 * data leakage. */
+	op.align = max_t(size_t, op.align, PAGE_SIZE);
+#if defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
+	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
+#endif
+
+	return nvmap_alloc_handle_id(client, handle, op.heap_mask,
+				     op.align,
+				     op.kind,
+				     op.flags);
 }
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)

@@ -763,6 +763,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_alloc(filp, uarg);
 		break;
 
+	case NVMAP_IOC_ALLOC_KIND:
+		err = nvmap_ioctl_alloc_kind(filp, uarg);
+		break;
+
 	case NVMAP_IOC_FREE:
 		err = nvmap_ioctl_free(filp, arg);
 		break;

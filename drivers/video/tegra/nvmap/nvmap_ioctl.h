@@ -70,6 +70,15 @@ struct nvmap_alloc_handle {
 	__u32 align;
 };
 
+struct nvmap_alloc_kind_handle {
+	__u32 handle;
+	__u32 heap_mask;
+	__u32 flags;
+	__u32 align;
+	__u8  kind;
+	__u8  comp_tags;
+};
+
 struct nvmap_map_caller {
 	__u32 handle;		/* hmem */
 	__u32 offset;		/* offset into hmem; should be page-aligned */
@@ -157,7 +166,11 @@ struct nvmap_cache_op {
 /* Create a new memory handle from file id passed */
 #define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_FROM_FD))
+/* START of T124 IOCTLS */
+/* Actually allocates memory for the specified handle, with kind */
+#define NVMAP_IOC_ALLOC_KIND _IOW(NVMAP_IOC_MAGIC, 100, struct nvmap_alloc_kind_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_ALLOC_KIND))
 #endif
 
 #ifdef  __KERNEL__
@@ -170,6 +183,8 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg);
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg);
+
+int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_free(struct file *filp, unsigned long arg);
 

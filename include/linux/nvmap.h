@@ -232,6 +232,20 @@ struct nvmap_alloc_handle {
 	__u32 align;		/* min alignment necessary */
 };
 
+
+struct nvmap_alloc_kind_handle {
+#ifdef CONFIG_COMPAT
+	__u32 handle;		/* nvmap handle */
+#else
+	struct nvmap_handle *handle; /* nvmap handle */
+#endif
+	__u32 heap_mask;
+	__u32 flags;
+	__u32 align;
+	__u8  kind;
+	__u8  comp_tags;
+};
+
 struct nvmap_map_caller {
 #ifdef CONFIG_COMPAT
 	__u32 handle;		/* nvmap handle */
@@ -350,6 +364,10 @@ struct nvmap_cache_op {
 /* Create a new memory handle from file id passed */
 #define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_FROM_FD))
+/* START of T124 IOCTLS */
+/* Actually allocates memory for the specified handle, with kind */
+#define NVMAP_IOC_ALLOC_KIND _IOW(NVMAP_IOC_MAGIC, 100, struct nvmap_alloc_kind_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_ALLOC_KIND))
 
 #endif /* _LINUX_NVMAP_H */

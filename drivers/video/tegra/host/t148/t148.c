@@ -38,6 +38,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
+#include "class_ids.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)

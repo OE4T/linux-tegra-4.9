@@ -27,13 +27,6 @@
 #include "hw_host1x03_sync.h"
 #include "hw_host1x03_uclass.h"
 
-/* class ids */
-enum {
-	NV_HOST1X_CLASS_ID = 0x1,
-	NV_VIDEO_ENCODE_MPEG_CLASS_ID = 0x20,
-	NV_GRAPHICS_3D_CLASS_ID = 0x60
-};
-
 
 /* channel registers */
 #define NV_HOST1X_CHANNEL_MAP_SIZE_BYTES 16384

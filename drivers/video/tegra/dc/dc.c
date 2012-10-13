@@ -1218,14 +1218,20 @@ static void tegra_dc_vblank(struct work_struct *work)
 	tegra_dc_release_dc_out(dc);
 	mutex_unlock(&dc->lock);
 
+	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
+		dc->out->sd_settings->bl_device_name) {
+		char *bl_device_name =
+			dc->out->sd_settings->bl_device_name;
+		dc->out->sd_settings->bl_device =
+			get_backlight_device_by_name(bl_device_name);
+	}
+
 	/* Do the actual brightness update outside of the mutex */
 	if (nvsd_updated && dc->out->sd_settings &&
 	    dc->out->sd_settings->bl_device) {
 
-		struct platform_device *pdev = dc->out->sd_settings->bl_device;
-		struct backlight_device *bl = platform_get_drvdata(pdev);
-		if (bl)
-			backlight_update_status(bl);
+		struct backlight_device *bl = dc->out->sd_settings->bl_device;
+		backlight_update_status(bl);
 	}
 }
 

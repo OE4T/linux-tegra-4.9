@@ -20,7 +20,6 @@
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/backlight.h>
-#include <linux/platform_device.h>
 #include <linux/stat.h>
 
 #include "dc_reg.h"
@@ -1094,10 +1093,8 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 			if (!sd_settings->enable && sd_settings->bl_device) {
 				/* Do the actual brightness update outside of
 				 * the mutex */
-				struct platform_device *pdev =
-					sd_settings->bl_device;
 				struct backlight_device *bl =
-					platform_get_drvdata(pdev);
+					sd_settings->bl_device;
 
 				if (bl)
 					backlight_update_status(bl);

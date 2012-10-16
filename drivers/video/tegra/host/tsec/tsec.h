@@ -28,6 +28,8 @@ struct sg_table;
 
 void nvhost_tsec_finalize_poweron(struct platform_device *dev);
 void nvhost_tsec_init(struct platform_device *dev);
+void nvhost_tsec_isr(void);
+void nvhost_tsec_isr_thread(void);
 void nvhost_tsec_deinit(struct platform_device *dev);
 
 /* Would have preferred a static inline here... but we're using this
@@ -47,6 +49,7 @@ struct tsec {
 	struct mem_handle *mem_r;
 
 	struct {
+		u32 reserved_offset;
 		u32 bin_data_offset;
 		u32 data_offset;
 		u32 data_size;
@@ -55,6 +58,7 @@ struct tsec {
 	} os;
 
 	struct sg_table *pa;
+	u8 *mapped;
 };
 
 struct tsec_ucode_bin_header_v1 {
@@ -85,6 +89,13 @@ struct tsec_ucode_v1 {
 	struct mem_handle *mem;
 	struct sg_table *pa;
 	bool valid;
+};
+
+enum tsec_host1x_state_t {
+	tsec_host1x_none,
+	tsec_host1x_request_access,
+	tsec_host1x_access_granted,
+	tsec_host1x_release_access,
 };
 
 #endif

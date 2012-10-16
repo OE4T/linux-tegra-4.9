@@ -189,7 +189,13 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	u32 stat;
 	u32 ext_stat;
 	u32 addr;
+	unsigned long intstat;
+	int i;
 
+	intstat = readl(sync_regs + host1x_sync_intstatus_r());
+	intr->intstatus = intstat;
+
+	/* Handle host1x interrupt in ISR */
 	stat = readl(sync_regs + host1x_sync_hintstatus_r());
 	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
 
@@ -206,7 +212,15 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	writel(ext_stat, sync_regs + host1x_sync_hintstatus_ext_r());
 	writel(stat, sync_regs + host1x_sync_hintstatus_r());
 
-	return IRQ_HANDLED;
+	for_each_set_bit(i, &intstat, BITS_PER_LONG) {
+		if (intr->generic_isr[i])
+			intr->generic_isr[i]();
+	}
+
+	writel(intstat, sync_regs + host1x_sync_intstatus_r());
+	/* If we received only host1x interrupt, mark it as handled.
+	 * For other interrupts, wake up the thread */
+	return (intstat & ~BIT(0)) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
 
 static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
@@ -221,8 +235,9 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_ext_r());
 	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_r());
 
-	err = request_irq(intr->host_general_irq, t20_intr_host1x_isr, 0,
-			"host_status", intr);
+	err = request_threaded_irq(intr->host_general_irq,
+			t20_intr_host1x_isr, nvhost_intr_irq_fn,
+			0, "host_status", intr);
 	if (err)
 		return err;
 
@@ -251,6 +266,26 @@ static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
 	free_irq(intr->host_general_irq, intr);
 }
 
+static void host1x_intr_enable_general_irq(struct nvhost_intr *intr, int irq)
+{
+	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	u32 intmask;
+
+	intmask = readl(sync_regs + host1x_sync_intc0mask_r());
+	intmask |= BIT(irq);
+	writel(intmask, sync_regs + host1x_sync_intc0mask_r());
+}
+
+static void host1x_intr_disable_general_irq(struct nvhost_intr *intr, int irq)
+{
+	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	u32 intmask;
+
+	intmask = readl(sync_regs + host1x_sync_intc0mask_r());
+	intmask &= ~BIT(irq);
+	writel(intmask, sync_regs + host1x_sync_intc0mask_r());
+}
+
 static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -268,5 +303,7 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs,
 	.request_host_general_irq = t20_intr_request_host_general_irq,
 	.free_host_general_irq = t20_intr_free_host_general_irq,
+	.enable_general_irq = host1x_intr_enable_general_irq,
+	.disable_general_irq = host1x_intr_disable_general_irq,
 	.free_syncpt_irq = t20_free_syncpt_irq,
 };

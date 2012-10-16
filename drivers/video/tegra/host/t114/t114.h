@@ -29,7 +29,7 @@ struct nvhost_master;
 
 /*  T114 specicic sync point assignments */
 #define NVSYNCPT_MSENC			     (23)
-#define NVSYNCPT_TSEC			     (21)
+#define NVSYNCPT_TSEC			     (28)
 
 #define NVWAITBASE_MSENC  (4)
 #define NVWAITBASE_TSEC   (5)

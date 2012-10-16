@@ -21,9 +21,11 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <linux/scatterlist.h>
+#include <linux/stop_machine.h>
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
@@ -31,17 +33,92 @@
 #include "nvhost_acm.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "nvhost_intr.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 #define TSEC_KEY_LENGTH			16
-#define TSEC_KEY_RESERVE		256
+#define TSEC_RESERVE			256
+#define TSEC_KEY_OFFSET			(TSEC_RESERVE - TSEC_KEY_LENGTH)
+#define TSEC_HOST1X_STATUS_OFFSET	(TSEC_KEY_OFFSET - 4)
 
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
 
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
+
+/* Pointer to this device */
+struct platform_device *tsec;
+
+static u32 *host1x_status_offset(struct tsec *m)
+{
+	return (u32 *)
+		&(m->mapped[m->os.reserved_offset + TSEC_HOST1X_STATUS_OFFSET]);
+}
+
+static u32 tsec_get_host1x_state(void)
+{
+	struct tsec *m = get_tsec(tsec);
+	u32 ret;
+
+	/* We have dedicated memory byte  */
+	ret = *host1x_status_offset(m);
+	rmb();
+	return ret;
+}
+
+static void tsec_set_host1x_state(int state)
+{
+	struct tsec *m = get_tsec(tsec);
+
+	*host1x_status_offset(m) = state;
+	wmb();
+}
+
+static int stop_machine_fn(void *priv)
+{
+	int timeout = 10000;
+
+	tsec_set_host1x_state(tsec_host1x_access_granted);
+
+	while (tsec_get_host1x_state() != tsec_host1x_release_access
+			&& timeout)
+		timeout--;
+
+	if (!timeout)
+		pr_err("TSEC didn't release access");
+
+	tsec_set_host1x_state(tsec_host1x_none);
+
+	return 0;
+}
+
+static void disable_tsec_irq(struct platform_device *pdev)
+{
+	nvhost_intr_disable_general_irq(&nvhost_get_host(pdev)->intr, 20);
+}
+
+static void enable_tsec_irq(struct platform_device *pdev)
+{
+	/* Clear interrupt */
+	nvhost_device_writel(pdev, tsec_irqsclr_r(), 0xffffff);
+	nvhost_device_writel(pdev, tsec_thi_int_status_r(), 0x1);
+	nvhost_intr_enable_general_irq(&nvhost_get_host(pdev)->intr, 20,
+			nvhost_tsec_isr, nvhost_tsec_isr_thread);
+}
+
+void nvhost_tsec_isr(void)
+{
+	disable_tsec_irq(tsec);
+}
+
+void nvhost_tsec_isr_thread(void)
+{
+	if (tsec_get_host1x_state() == tsec_host1x_request_access)
+		stop_machine(stop_machine_fn, NULL, NULL);
+	enable_tsec_irq(tsec);
+}
 
 /* caller is responsible for freeing */
 static char *tsec_get_fw_name(struct platform_device *dev)
@@ -146,24 +223,6 @@ int tsec_boot(struct platform_device *dev)
 
 	tsec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
 
-	/* setup tsec interrupts and enable interface */
-	nvhost_device_writel(dev, tsec_irqmset_r(),
-			(tsec_irqmset_ext_f(0xff) |
-				tsec_irqmset_swgen1_set_f() |
-				tsec_irqmset_swgen0_set_f() |
-				tsec_irqmset_exterr_set_f() |
-				tsec_irqmset_halt_set_f()   |
-				tsec_irqmset_wdtmr_set_f()));
-	nvhost_device_writel(dev, tsec_irqdest_r(),
-			(tsec_irqdest_host_ext_f(0xff) |
-				tsec_irqdest_host_swgen1_host_f() |
-				tsec_irqdest_host_swgen0_host_f() |
-				tsec_irqdest_host_exterr_host_f() |
-				tsec_irqdest_host_halt_host_f()));
-	nvhost_device_writel(dev, tsec_itfen_r(),
-			(tsec_itfen_mthden_enable_f() |
-				tsec_itfen_ctxen_enable_f()));
-
 	/* boot tsec */
 	nvhost_device_writel(dev, tsec_bootvec_r(), tsec_bootvec_vec_f(0));
 	nvhost_device_writel(dev, tsec_cpuctl_r(),
@@ -177,6 +236,19 @@ int tsec_boot(struct platform_device *dev)
 		return err;
 	}
 
+	/* setup tsec interrupts and enable interface */
+	nvhost_device_writel(dev, tsec_irqmset_r(),
+			(tsec_irqmset_ext_f(0xff) |
+				tsec_irqmset_swgen1_set_f() |
+				tsec_irqmset_swgen0_set_f() |
+				tsec_irqmset_exterr_set_f() |
+				tsec_irqmset_halt_set_f()   |
+				tsec_irqmset_wdtmr_set_f()));
+
+	nvhost_device_writel(dev, tsec_itfen_r(),
+			(tsec_itfen_mthden_enable_f() |
+				tsec_itfen_ctxen_enable_f()));
+
 	return 0;
 }
 
@@ -188,6 +260,7 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	/* image data is little endian. */
 	struct tsec_ucode_v1 ucode;
 	int w;
+	u32 reserved_offset;
 	u32 tsec_key_offset;
 
 	/* copy the whole thing taking into account endianness */
@@ -238,20 +311,23 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 		"os ucode header: num apps: %d\n",
 		ucode.os_header->num_apps);
 
-	/* make space for key - key is 16 bytes, but we move 256 bytes
-	 * because firmware needs to be 256 byte aligned */
-	tsec_key_offset = ucode.bin_header->os_bin_data_offset;
-	memmove(((void *)ucode_ptr) + tsec_key_offset + TSEC_KEY_RESERVE,
-			((void *)ucode_ptr) + tsec_key_offset,
+	/* make space for reserved area - we need 20 bytes, but we move 256
+	 * bytes because firmware needs to be 256 byte aligned */
+	reserved_offset = ucode.bin_header->os_bin_data_offset;
+	memmove(((void *)ucode_ptr) + reserved_offset + TSEC_RESERVE,
+			((void *)ucode_ptr) + reserved_offset,
 			ucode.bin_header->os_bin_size);
-	ucode.bin_header->os_bin_data_offset += TSEC_KEY_RESERVE;
+	ucode.bin_header->os_bin_data_offset += TSEC_RESERVE;
+
+	/*  clear 256 bytes before ucode os code */
+	memset(((void *)ucode_ptr) + reserved_offset, 0, TSEC_RESERVE);
 
 	/* Copy key to be the 16 bytes before the firmware */
-	tsec_key_offset += TSEC_KEY_RESERVE - TSEC_KEY_LENGTH;
-	memcpy(((void *)ucode_ptr) + tsec_key_offset,
-			otf_key, TSEC_KEY_LENGTH);
+	tsec_key_offset = reserved_offset + TSEC_KEY_OFFSET;
+	memcpy(((void *)ucode_ptr) + tsec_key_offset, otf_key, TSEC_KEY_LENGTH);
 
 	m->os.size = ucode.bin_header->os_bin_size;
+	m->os.reserved_offset = reserved_offset;
 	m->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
 	m->os.code_offset = ucode.os_header->os_code_offset;
 	m->os.data_offset = ucode.os_header->os_data_offset;
@@ -264,7 +340,6 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct tsec *m = get_tsec(dev);
 	const struct firmware *ucode_fw;
-	void *ucode_ptr = NULL;
 	int err;
 
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
@@ -292,14 +367,14 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	ucode_ptr = mem_op().mmap(m->mem_r);
-	if (IS_ERR_OR_NULL(ucode_ptr)) {
+	m->mapped = mem_op().mmap(m->mem_r);
+	if (IS_ERR_OR_NULL(m->mapped)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = tsec_setup_ucode_image(dev, ucode_ptr, ucode_fw);
+	err = tsec_setup_ucode_image(dev, (u32 *)m->mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
 		return err;
@@ -307,14 +382,13 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->valid = true;
 
-	mem_op().munmap(m->mem_r, ucode_ptr);
 	release_firmware(ucode_fw);
 
 	return 0;
 
 clean_up:
-	if (ucode_ptr)
-		mem_op().munmap(m->mem_r, ucode_ptr);
+	if (m->mapped)
+		mem_op().munmap(m->mem_r, m->mapped);
 	if (m->pa)
 		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 	if (m->mem_r)
@@ -353,7 +427,9 @@ void nvhost_tsec_init(struct platform_device *dev)
 	}
 
 	nvhost_module_busy(dev);
+
 	tsec_boot(dev);
+	enable_tsec_irq(dev);
 	nvhost_module_idle(dev);
 	return;
 
@@ -366,8 +442,11 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 {
 	struct tsec *m = get_tsec(dev);
 
+	disable_tsec_irq(dev);
+
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
+		mem_op().munmap(m->mem_r, m->mapped);
 		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = 0;
@@ -395,12 +474,31 @@ static int tsec_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
-	return nvhost_client_device_init(dev);
+	tsec = dev;
+
+	err = nvhost_client_device_init(dev);
+	if (err)
+		return err;
+
+	nvhost_module_busy(to_platform_device(dev->dev.parent));
+
+	/* Reset TSEC at boot-up. Otherwise it starts sending interrupts. */
+	clk_enable(pdata->clk[0]);
+	tegra_periph_reset_assert(pdata->clk[0]);
+	udelay(10);
+	tegra_periph_reset_deassert(pdata->clk[0]);
+	clk_disable(pdata->clk[0]);
+	nvhost_module_idle(to_platform_device(dev->dev.parent));
+	return err;
 }
 
 static int __exit tsec_remove(struct platform_device *dev)
 {
+	struct nvhost_master *host = nvhost_get_host(dev);
+
 	/* Add clean-up */
+	host->intr.generic_isr[20] = NULL;
+	host->intr.generic_isr_thread[20] = NULL;
 	return 0;
 }
 

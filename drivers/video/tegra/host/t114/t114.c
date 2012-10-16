@@ -84,7 +84,7 @@ static const char *s_syncpt_names[32] = {
 	"mpe",
 	"disp0_c", "disp1_c",
 	"vblank0", "vblank1",
-	"mpe_ebm_eof", "mpe_wr_safe",
+	"tsec", "mpe_wr_safe",
 	"2d_tinyblt",
 	"dsi"
 };

@@ -2,7 +2,7 @@
  * Raydium RM31080 touchscreen driver
  *
  * Copyright (C) 2012 Raydium Semiconductor Corporation
- * Copyright (C) 2012 NVIDIA Corporation
+ * Copyright (C) 2012 NVIDIA Corporation, All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -2095,6 +2095,37 @@ static const struct dev_pm_ops rm31080_pm_ops = {
 
 #endif				/*CONFIG_PM */
 
+
+static int rm31080_input_enable(struct input_dev *in_dev)
+{
+	int error = 0;
+
+#ifdef CONFIG_PM
+	struct rm31080_ts *ts = input_get_drvdata(in_dev);
+
+	error = rm31080_resume(ts->dev);
+	if (error)
+		dev_err(ts->dev, "%s: failed\n", __func__);
+#endif
+
+	return error;
+}
+
+static int rm31080_input_disable(struct input_dev *in_dev)
+{
+	int error = 0;
+
+#ifdef CONFIG_PM
+	struct rm31080_ts *ts = input_get_drvdata(in_dev);
+
+	error = rm31080_suspend(ts->dev);
+	if (error)
+		dev_err(ts->dev, "%s: failed\n", __func__);
+#endif
+
+	return error;
+}
+
 static void rm31080_set_input_resolution(unsigned int x, unsigned int y)
 {
 	input_set_abs_params(g_input_dev, ABS_X, 0, x - 1, 0, 0);
@@ -2143,6 +2174,8 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 
 	input_dev->open = rm31080_input_open;
 	input_dev->close = rm31080_input_close;
+	input_dev->enable = rm31080_input_enable;
+	input_dev->disable = rm31080_input_disable;
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);

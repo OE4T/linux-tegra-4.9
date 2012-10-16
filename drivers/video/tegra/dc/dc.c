@@ -1081,7 +1081,6 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 
 	if (dc->out_ops && dc->out_ops->init)
 		dc->out_ops->init(dc);
-
 }
 
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc)
@@ -1245,7 +1244,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
 	/* Update the SD brightness */
-	if (dc->enabled && dc->out->sd_settings) {
+	if (dc->out->sd_settings && !dc->out->sd_settings->use_vpulse2) {
 		nvsd_updated = nvsd_update_brightness(dc);
 		/* Ref-count vblank if nvsd is on-going. Otherwise, clean the
 		 * V_BLANK_NVSD bit of vblank ref-count. */
@@ -1368,6 +1367,35 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	trace_underflow(dc);
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+static void tegra_dc_vpulse2_locked(struct tegra_dc *dc)
+{
+	bool nvsd_updated = false;
+
+	if (!dc->enabled)
+		return;
+
+	/* Clear the V_PULSE2_FLIP if no update */
+	if (!tegra_dc_windows_are_dirty(dc))
+		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
+
+	/* Update the SD brightness */
+	if (dc->out->sd_settings && dc->out->sd_settings->use_vpulse2) {
+		nvsd_updated = nvsd_update_brightness(dc);
+		if (nvsd_updated) {
+			set_bit(V_PULSE2_NVSD, &dc->vpulse2_ref_count);
+			tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
+		} else {
+			clear_bit(V_PULSE2_NVSD, &dc->vpulse2_ref_count);
+		}
+	}
+
+	/* Mask vpulse2 interrupt if ref-count is zero. */
+	if (!dc->vpulse2_ref_count)
+		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+}
+#endif
+
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
 static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 {
@@ -1391,6 +1419,11 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
 	}
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	if (status & V_PULSE2_INT)
+		tegra_dc_vpulse2_locked(dc);
+#endif
 }
 
 static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
@@ -1410,6 +1443,11 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 
 		tegra_dc_trigger_windows(dc);
 	}
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	if (status & V_PULSE2_INT)
+		tegra_dc_vpulse2_locked(dc);
+#endif
 }
 
 /* XXX: Not sure if we limit look ahead to 1 frame */
@@ -1603,6 +1641,30 @@ static u32 get_syncpt(struct tegra_dc *dc, int idx)
 	return syncpt_id;
 }
 
+static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
+{
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	u32 start, end;
+	unsigned long val;
+
+	val = V_PULSE2_H_POSITION(0) | V_PULSE2_LAST(0x1);
+	tegra_dc_writel(dc, val, DC_DISP_V_PULSE2_CONTROL);
+
+	start = dc->mode.v_ref_to_sync + dc->mode.v_sync_width +
+		dc->mode.v_back_porch +	dc->mode.v_active;
+	end = start + 1;
+	val = V_PULSE2_START_A(start) + V_PULSE2_END_A(end);
+	tegra_dc_writel(dc, val, DC_DISP_V_PULSE2_POSITION_A);
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
+	val |= V_PULSE2_INT;
+	tegra_dc_writel(dc, val , DC_CMD_INT_ENABLE);
+
+	tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+	tegra_dc_writel(dc, V_PULSE_2_ENABLE, DC_DISP_DISP_SIGNAL_OPTIONS0);
+#endif
+}
+
 static int tegra_dc_init(struct tegra_dc *dc)
 {
 	int i;
@@ -1641,6 +1703,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	}
 	tegra_dc_writel(dc, 0x00000100 | dc->vblank_syncpt,
 			DC_CMD_CONT_SYNCPT_VSYNC);
+
 	tegra_dc_writel(dc, 0x00004700, DC_CMD_INT_TYPE);
 	tegra_dc_writel(dc, 0x0001c700, DC_CMD_INT_POLARITY);
 	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
@@ -1656,6 +1719,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_writel(dc, int_enable, DC_CMD_INT_ENABLE);
 	tegra_dc_writel(dc, ALL_UF_INT, DC_CMD_INT_MASK);
+	tegra_dc_init_vpulse2_int(dc);
 
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
 
@@ -1665,7 +1729,6 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	else
 		tegra_dc_update_cmu(dc, &default_cmu);
 #endif
-
 	tegra_dc_set_color_control(dc);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *win = &dc->windows[i];
@@ -2198,6 +2261,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 #endif
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
 	dc->vblank_ref_count = 0;
+	dc->vpulse2_ref_count = 0;
 	INIT_DELAYED_WORK(&dc->underflow_work, tegra_dc_underflow_worker);
 	INIT_DELAYED_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);
 
@@ -2363,6 +2427,7 @@ static int tegra_dc_remove(struct nvhost_device *ndev)
 		release_resource(dc->base_res);
 	kfree(dc);
 	tegra_dc_set(NULL, ndev->id);
+
 	return 0;
 }
 

@@ -72,6 +72,7 @@
 #define  V_BLANK_INT		(1 << 2)
 #define  H_BLANK_INT		(1 << 3)
 #define  V_PULSE3_INT		(1 << 4)
+#define  V_PULSE2_INT		(1 << 5)
 #define  SPI_BUSY_INT		(1 << 7)
 #define  WIN_A_UF_INT		(1 << 8)
 #define  WIN_B_UF_INT		(1 << 9)
@@ -268,7 +269,12 @@
 #define DC_DISP_V_PULSE1_POSITION_B		0x420
 #define DC_DISP_V_PULSE1_POSITION_C		0x421
 #define DC_DISP_V_PULSE2_CONTROL		0x422
+#define  V_PULSE2_H_POSITION(x)		(((x) & 0x1fff) << 16)
+#define  V_PULSE2_LAST(x)		(((x) & 0x1) << 8)
 #define DC_DISP_V_PULSE2_POSITION_A		0x423
+#define  V_PULSE2_START_A(x)		(((x) & 0x1fff) << 0)
+#define  V_PULSE2_END_A(x)		(((x) & 0x1fff) << 16)
+
 #define DC_DISP_V_PULSE3_CONTROL		0x424
 #define DC_DISP_V_PULSE3_POSITION_A		0x425
 #define DC_DISP_M0_CONTROL			0x426

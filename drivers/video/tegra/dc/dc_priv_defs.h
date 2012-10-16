@@ -158,6 +158,7 @@ struct tegra_dc {
 
 	struct work_struct		vblank_work;
 	long				vblank_ref_count;
+	long				vpulse2_ref_count;
 
 	struct {
 		u64			underflows;

@@ -522,9 +522,17 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
 			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+		set_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
+		tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
+#endif
 	} else {
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_mask_interrupt(dc, V_BLANK_INT | ALL_UF_INT);
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
+		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+#endif
 		if (!atomic_read(&frame_end_ref))
 			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}

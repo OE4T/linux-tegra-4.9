@@ -30,6 +30,7 @@
 #include <linux/therm_est.h>
 #include <linux/thermal.h>
 #include <linux/module.h>
+#include <linux/hwmon-sysfs.h>
 
 struct therm_estimator {
 	long cur_temp;
@@ -139,6 +140,128 @@ static struct thermal_zone_device_ops therm_est_ops = {
 	.get_temp = therm_est_get_temp,
 };
 
+static ssize_t show_coeff(struct device *dev,
+				struct device_attribute *da,
+				char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	ssize_t len, total_len = 0;
+	int i, j;
+	for (i = 0; i < est->ndevs; i++) {
+		len = snprintf(buf + total_len, PAGE_SIZE, "[%d]", i);
+		total_len += len;
+		for (j = 0; j < HIST_LEN; j++) {
+			len = snprintf(buf + total_len, PAGE_SIZE, " %ld",
+					est->devs[i].coeffs[j]);
+			total_len += len;
+		}
+		len = snprintf(buf + total_len, PAGE_SIZE, "\n");
+		total_len += len;
+	}
+	return strlen(buf);
+}
+
+static ssize_t set_coeff(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	int devid, scount;
+	long coeff[20];
+
+	if (HIST_LEN > 20)
+		return -EINVAL;
+
+	scount = sscanf(buf, "[%d] %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld " \
+			"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",
+			&devid,
+			&coeff[0],
+			&coeff[1],
+			&coeff[2],
+			&coeff[3],
+			&coeff[4],
+			&coeff[5],
+			&coeff[6],
+			&coeff[7],
+			&coeff[8],
+			&coeff[9],
+			&coeff[10],
+			&coeff[11],
+			&coeff[12],
+			&coeff[13],
+			&coeff[14],
+			&coeff[15],
+			&coeff[16],
+			&coeff[17],
+			&coeff[18],
+			&coeff[19]);
+
+	if (scount != HIST_LEN + 1)
+		return -1;
+
+	if (devid < 0 || devid >= est->ndevs)
+		return -EINVAL;
+
+	/* This has obvious locking issues but don't worry about it */
+	memcpy(est->devs[devid].coeffs, coeff, sizeof(long) * HIST_LEN);
+
+	return count;
+}
+
+static ssize_t show_offset(struct device *dev,
+				struct device_attribute *da,
+				char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	snprintf(buf, PAGE_SIZE, "%ld\n", est->toffset);
+	return strlen(buf);
+}
+
+static ssize_t set_offset(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	int offset;
+
+	if (kstrtoint(buf, 0, &offset))
+		return -EINVAL;
+
+	est->toffset = offset;
+
+	return count;
+}
+
+static ssize_t show_temps(struct device *dev,
+				struct device_attrbite *da,
+				char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	ssize_t total_len = 0;
+	int i, j;
+	int index;
+
+	/* This has obvious locking issues but don't worry about it */
+	for (i = 0; i < est->ndevs; i++) {
+		total_len += snprintf(buf + total_len, PAGE_SIZE, "[%d]", i);
+		for (j = 0; j < HIST_LEN; j++) {
+			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
+			total_len += snprintf(buf + total_len,
+						PAGE_SIZE,
+						" %ld",
+						est->devs[i].hist[index]);
+		}
+		total_len += snprintf(buf + total_len, PAGE_SIZE, "\n");
+	}
+	return strlen(buf);
+}
+
+static struct sensor_device_attribute therm_est_nodes[] = {
+	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
+	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
+	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
+};
+
 static int __devinit therm_est_probe(struct platform_device *pdev)
 {
 	int i, j;
@@ -192,6 +315,9 @@ static int __devinit therm_est_probe(struct platform_device *pdev)
 					0);
 	if (IS_ERR_OR_NULL(est->thz))
 		goto err;
+
+	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
+		device_create_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
 
 	return 0;
 err:

@@ -219,6 +219,29 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 	}
 }
 
+int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
+			    struct mem_handle *mem_handle,
+			    u32 param, u32 *result)
+{
+	switch (nvhost_memmgr_type((u32)mem_handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvhost_nvmap_get_param(mem_mgr, mem_handle,
+					      param, result);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		return nvhost_dmabuf_get_param(mem_mgr, mem_handle,
+					       param, result);
+		break;
+#endif
+	default:
+		break;
+	}
+	return -EINVAL;
+}
+
 void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
 {
 	switch (nvhost_memmgr_type((u32)handle)) {

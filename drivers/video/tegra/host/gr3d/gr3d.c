@@ -96,7 +96,7 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 		return NULL;
 	ctx->restore = nvhost_memmgr_alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
-			    : mem_mgr_flag_uncacheable);
+			    : mem_mgr_flag_uncacheable, 0);
 	if (IS_ERR(ctx->restore))
 		goto fail_alloc;
 

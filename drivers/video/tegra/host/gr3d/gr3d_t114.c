@@ -432,7 +432,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 	setup_save(p, NULL);
 
 	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
-				mem_mgr_flag_write_combine);
+				mem_mgr_flag_write_combine, 0);
 	if (IS_ERR(p->save_buf))
 		goto fail_alloc;
 

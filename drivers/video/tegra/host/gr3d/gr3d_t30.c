@@ -415,7 +415,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	setup_save(p, NULL);
 
 	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
-				mem_mgr_flag_write_combine);
+				mem_mgr_flag_write_combine, 0);
 	if (IS_ERR(p->save_buf))
 		goto fail_alloc;
 
@@ -498,7 +498,7 @@ int nvhost_gr3d_t30_read_reg(
 
 	/* 12 slots for gather, and one slot for storing the result value */
 	mem = nvhost_memmgr_alloc(memmgr, sizeof(opcodes)+4,
-			32, mem_mgr_flag_uncacheable);
+			32, mem_mgr_flag_uncacheable, 0);
 	if (IS_ERR(mem))
 		return PTR_ERR(mem);
 

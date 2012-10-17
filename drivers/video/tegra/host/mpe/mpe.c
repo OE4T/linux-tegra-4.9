@@ -466,7 +466,7 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 		return NULL;
 
 	ctx->restore = nvhost_memmgr_alloc(memmgr, restore_size * 4, 32,
-				mem_mgr_flag_write_combine);
+				mem_mgr_flag_write_combine, 0);
 	if (IS_ERR(ctx->restore))
 		goto fail_alloc;
 
@@ -597,7 +597,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 	setup_save(p, NULL);
 
 	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
-				mem_mgr_flag_write_combine);
+				mem_mgr_flag_write_combine, 0);
 	if (IS_ERR(p->save_buf))
 		goto fail_alloc;
 
@@ -810,7 +810,7 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 	};
 
 	mem = nvhost_memmgr_alloc(memmgr, sizeof(opcodes),
-			32, mem_mgr_flag_uncacheable);
+			32, mem_mgr_flag_uncacheable, 0);
 	if (IS_ERR(mem))
 		return PTR_ERR(mem);
 

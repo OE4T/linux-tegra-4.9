@@ -103,6 +103,13 @@ struct mem_handle *nvhost_dmabuf_get(u32 id, struct platform_device *dev)
 	return (struct mem_handle *) ((u32)h | mem_mgr_type_dmabuf);
 }
 
+int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
+			    u32 param, u32 *result)
+{
+	/* TBD: find a way to associate size, kind, etc */
+	return -EINVAL;
+}
+
 int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,
 		u32 *ids,
 		u32 id_type_mask,

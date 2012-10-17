@@ -446,6 +446,65 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 		wake_up(&client->share->pin_wait);
 }
 
+void *nvmap_kmap(struct nvmap_handle_ref *ref, unsigned int pagenum)
+{
+	struct nvmap_handle *h;
+	unsigned long paddr;
+	unsigned long kaddr;
+	pgprot_t prot;
+	pte_t **pte;
+
+	BUG_ON(!ref);
+	h = nvmap_handle_get(ref->handle);
+	if (!h)
+		return NULL;
+
+	BUG_ON(pagenum >= h->size >> PAGE_SHIFT);
+	prot = nvmap_pgprot(h, pgprot_kernel);
+	pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
+	if (!pte)
+		goto out;
+
+	if (h->heap_pgalloc)
+		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
+	else
+		paddr = h->carveout->base + pagenum * PAGE_SIZE;
+
+	set_pte_at(&init_mm, kaddr, *pte,
+				pfn_pte(__phys_to_pfn(paddr), prot));
+	flush_tlb_kernel_page(kaddr);
+	return (void *)kaddr;
+out:
+	nvmap_handle_put(ref->handle);
+	return NULL;
+}
+
+void nvmap_kunmap(struct nvmap_handle_ref *ref, unsigned int pagenum,
+		  void *addr)
+{
+	struct nvmap_handle *h;
+	unsigned long paddr;
+	pte_t **pte;
+
+	BUG_ON(!addr || !ref);
+	h = ref->handle;
+
+	if (h->heap_pgalloc)
+		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
+	else
+		paddr = h->carveout->base + pagenum * PAGE_SIZE;
+
+	if (h->flags != NVMAP_HANDLE_UNCACHEABLE &&
+	    h->flags != NVMAP_HANDLE_WRITE_COMBINE) {
+		dmac_flush_range(addr, addr + PAGE_SIZE);
+		outer_flush_range(paddr, paddr + PAGE_SIZE);
+	}
+
+	pte = nvmap_vaddr_to_pte(nvmap_dev, (unsigned long)addr);
+	nvmap_free_pte(nvmap_dev, pte);
+	nvmap_handle_put(h);
+}
+
 void *nvmap_mmap(struct nvmap_handle_ref *ref)
 {
 	struct nvmap_handle *h;

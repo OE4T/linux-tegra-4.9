@@ -134,15 +134,18 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
-	unsigned long allpages = PAGE_ALIGN(dmabuf->size) >> PAGE_SHIFT;
-
-	if (page_num != allpages) {
-		pr_err("%s() doesn't support partial kmap\n", __func__);
-		return NULL;
-	}
 
 	pr_debug("%s(%08x)\n", __func__, info->id);
-	return nvmap_mmap(info->ref);
+	return nvmap_kmap(info->ref, page_num);
+}
+
+static void nvmap_dmabuf_kunmap(struct dma_buf *dmabuf,
+		unsigned long page_num, void *addr)
+{
+	struct nvmap_handle_info *info = dmabuf->priv;
+
+	pr_debug("%s(%08x)\n", __func__, info->id);
+	nvmap_kunmap(info->ref, page_num, addr);
 }
 
 static void *nvmap_dmabuf_kmap_atomic(struct dma_buf *dmabuf,
@@ -182,6 +185,7 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.release	= nvmap_dmabuf_release,
 	.kmap_atomic	= nvmap_dmabuf_kmap_atomic,
 	.kmap		= nvmap_dmabuf_kmap,
+	.kunmap		= nvmap_dmabuf_kunmap,
 	.mmap		= nvmap_dmabuf_mmap,
 	.vmap		= nvmap_dmabuf_vmap,
 	.vunmap		= nvmap_dmabuf_vunmap,

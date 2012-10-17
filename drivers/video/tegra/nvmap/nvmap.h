@@ -216,6 +216,8 @@ pte_t **nvmap_alloc_pte_irq(struct nvmap_device *dev, void **vaddr);
 
 void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte);
 
+pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr);
+
 void nvmap_usecount_inc(struct nvmap_handle *h);
 void nvmap_usecount_dec(struct nvmap_handle *h);
 

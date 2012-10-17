@@ -108,6 +108,11 @@ void *nvmap_mmap(struct nvmap_handle_ref *r);
 
 void nvmap_munmap(struct nvmap_handle_ref *r, void *addr);
 
+void *nvmap_kmap(struct nvmap_handle_ref *r, unsigned int pagenum);
+
+void nvmap_kunmap(struct nvmap_handle_ref *r, unsigned int pagenum,
+		void *addr);
+
 struct nvmap_client *nvmap_client_get_file(int fd);
 
 struct nvmap_client *nvmap_client_get(struct nvmap_client *client);

@@ -21,7 +21,7 @@
 
 #include <linux/delay.h>	/* for udelay */
 #include <linux/mm.h>		/* for totalram_pages */
-#include <linux/nvmap.h>
+#include <linux/scatterlist.h>
 
 #include "../dev.h"
 
@@ -1704,9 +1704,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	nvhost_dbg_info("cb_buffer_size : %d", cb_buffer_size);
 
 	mem = mem_op().alloc(memmgr, cb_buffer_size,
-			  DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			  DEFAULT_NVMAP_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_GENERIC);
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1716,9 +1716,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	nvhost_dbg_info("pagepool_buffer_size : %d", pagepool_buffer_size);
 
 	mem = mem_op().alloc(memmgr, pagepool_buffer_size,
-			  DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			  DEFAULT_NVMAP_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_GENERIC);
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1728,9 +1728,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	nvhost_dbg_info("attr_buffer_size : %d", attr_buffer_size);
 
 	mem = mem_op().alloc(memmgr, attr_buffer_size,
-			  DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			  DEFAULT_NVMAP_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_GENERIC);
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1738,9 +1738,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	gr->global_ctx_buffer[ATTRIBUTE].size = attr_buffer_size;
 
 	mem = mem_op().alloc(memmgr, attr_buffer_size,
-			  DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			  DEFAULT_NVMAP_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_GENERIC); /* TBD: use NVMAP_HEAP_CARVEOUT_VPR */
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0); /* TBD: use NVMAP_HEAP_CARVEOUT_VPR */
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1751,9 +1751,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		   gr->ctx_vars.golden_image_size);
 
 	mem = mem_op().alloc(memmgr, gr->ctx_vars.golden_image_size,
-			  DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			  DEFAULT_NVMAP_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_GENERIC);
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1886,9 +1886,9 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 
 	gr_ctx->mem.ref = mem_op().alloc(memmgr,
 				gr->ctx_vars.buffer_total_size,
-				DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-				DEFAULT_NVMAP_ALLOC_FLAGS,
-				NVMAP_HEAP_CARVEOUT_GENERIC);
+				DEFAULT_ALLOC_ALIGNMENT,
+				DEFAULT_ALLOC_FLAGS,
+				0);
 
 	if (IS_ERR(gr_ctx->mem.ref))
 		return -ENOMEM;
@@ -1927,9 +1927,9 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	nvhost_dbg_fn("");
 
 	patch_ctx->mem.ref = mem_op().alloc(memmgr, 128 * sizeof(u32),
-				DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-				DEFAULT_NVMAP_ALLOC_FLAGS,
-				NVMAP_HEAP_CARVEOUT_GENERIC);
+				DEFAULT_ALLOC_ALIGNMENT,
+				DEFAULT_ALLOC_FLAGS,
+				0);
 	if (IS_ERR(patch_ctx->mem.ref))
 		return -ENOMEM;
 
@@ -2143,9 +2143,10 @@ static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	mem_op().unpin(memmgr, gr->mmu_wr_mem.mem.ref);
-	mem_op().unpin(memmgr, gr->mmu_rd_mem.mem.ref);
-	mem_op().unpin(memmgr, gr->compbit_store.mem.ref);
+	mem_op().unpin(memmgr, gr->mmu_wr_mem.mem.ref, gr->mmu_wr_mem.mem.sgt);
+	mem_op().unpin(memmgr, gr->mmu_rd_mem.mem.ref, gr->mmu_rd_mem.mem.sgt);
+	mem_op().unpin(memmgr, gr->compbit_store.mem.ref,
+		       gr->compbit_store.mem.sgt);
 	mem_op().put(memmgr, gr->mmu_wr_mem.mem.ref);
 	mem_op().put(memmgr, gr->mmu_rd_mem.mem.ref);
 	mem_op().put(memmgr, gr->compbit_store.mem.ref);
@@ -2374,17 +2375,17 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 	gr->mmu_wr_mem_size = gr->mmu_rd_mem_size = 0x1000;
 
 	gr->mmu_wr_mem.mem.ref = mem_op().alloc(memmgr, gr->mmu_wr_mem_size,
-					     DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-					     DEFAULT_NVMAP_ALLOC_FLAGS,
-					     NVMAP_HEAP_CARVEOUT_GENERIC);
+					     DEFAULT_ALLOC_ALIGNMENT,
+					     DEFAULT_ALLOC_FLAGS,
+					     0);
 	if (!gr->mmu_wr_mem.mem.ref)
 		goto clean_up;
 	gr->mmu_wr_mem.mem.size = gr->mmu_wr_mem_size;
 
 	gr->mmu_rd_mem.mem.ref = mem_op().alloc(memmgr, gr->mmu_rd_mem_size,
-					     DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-					     DEFAULT_NVMAP_ALLOC_FLAGS,
-					     NVMAP_HEAP_CARVEOUT_GENERIC);
+					     DEFAULT_ALLOC_ALIGNMENT,
+					     DEFAULT_ALLOC_FLAGS,
+					     0);
 	if (!gr->mmu_rd_mem.mem.ref)
 		goto clean_up;
 	gr->mmu_rd_mem.mem.size = gr->mmu_rd_mem_size;
@@ -2401,14 +2402,15 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 	memset(mmu_ptr, 0, gr->mmu_rd_mem.mem.size);
 	mem_op().munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
 
-	gr->mmu_wr_mem.cpu_pa = mem_op().pin(memmgr, gr->mmu_wr_mem.mem.ref);
-	if (gr->mmu_wr_mem.cpu_pa == -EINVAL || gr->mmu_wr_mem.cpu_pa == -EINTR)
+	gr->mmu_wr_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_wr_mem.mem.ref); 
+	if (IS_ERR_OR_NULL(gr->mmu_wr_mem.mem.sgt))
 		goto clean_up;
+	gr->mmu_wr_mem.cpu_pa = sg_dma_address(gr->mmu_wr_mem.mem.sgt->sgl);
 
-	gr->mmu_rd_mem.cpu_pa = mem_op().pin(memmgr, gr->mmu_rd_mem.mem.ref);
-	if (gr->mmu_rd_mem.cpu_pa == -EINVAL || gr->mmu_rd_mem.cpu_pa == -EINTR)
+	gr->mmu_rd_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_rd_mem.mem.ref); 
+	if (IS_ERR_OR_NULL(gr->mmu_rd_mem.mem.sgt))
 		goto clean_up;
-
+	gr->mmu_rd_mem.cpu_pa = sg_dma_address(gr->mmu_rd_mem.mem.sgt->sgl);
 	return 0;
 
 clean_up:
@@ -2654,9 +2656,9 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->compbit_store.mem.ref =
 		mem_op().alloc(memmgr, compbit_backing_size,
-			    DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			    DEFAULT_NVMAP_ALLOC_FLAGS,
-			    NVMAP_HEAP_CARVEOUT_GENERIC);
+			    DEFAULT_ALLOC_ALIGNMENT,
+			    DEFAULT_ALLOC_FLAGS,
+			    0);
 	if (IS_ERR_OR_NULL(gr->compbit_store.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g), "failed to allocate"
 			   "backing store for compbit : size %d",
@@ -2665,13 +2667,14 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	gr->compbit_store.mem.size = compbit_backing_size;
 
-	gr->compbit_store.base_pa =
+	gr->compbit_store.mem.sgt =
 		mem_op().pin(memmgr, gr->compbit_store.mem.ref);
-	if (gr->compbit_store.base_pa == -EINVAL ||
-	    gr->compbit_store.base_pa == -EINTR) {
+	if (IS_ERR_OR_NULL(gr->compbit_store.mem.sgt)) {
 		ret = -ENOMEM;
 		goto clean_up;
 	}
+	gr->compbit_store.base_pa =
+		sg_dma_address(gr->compbit_store.mem.sgt->sgl);
 
 	nvhost_allocator_init(&gr->comp_tags, "comptag",
 			1, max_comptag_lines, 1);

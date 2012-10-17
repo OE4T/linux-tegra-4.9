@@ -385,7 +385,7 @@ int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 		return err;
 	}
 
-	r = mem_op().get(memmgr, args->nvmap_handle);
+	r = mem_op().get(memmgr, args->nvmap_handle, /*XXX:get device*/0);
 	if (!r) {
 		err = -EINVAL;
 		goto finish;

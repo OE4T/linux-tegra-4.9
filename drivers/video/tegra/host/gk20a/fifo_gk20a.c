@@ -20,7 +20,8 @@
  */
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/nvmap.h>
+#include <linux/scatterlist.h>
+/*#include <linux/nvmap.h>*/
 
 #include "../dev.h"
 #include "../nvhost_as.h"
@@ -132,7 +133,7 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	}
 
 	mem_op().munmap(f->userd.mem.ref, f->userd.cpu_va);
-	mem_op().unpin(memmgr, f->userd.mem.ref);
+	mem_op().unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
 	mem_op().put(memmgr, f->userd.mem.ref);
 	memset(&f->userd, 0, sizeof(struct userd_desc));
 
@@ -177,9 +178,9 @@ static int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 			runlist->mem[i].ref =
 				mem_op().alloc(memmgr, runlist_size,
-					    DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-					    DEFAULT_NVMAP_ALLOC_FLAGS,
-					    NVMAP_HEAP_CARVEOUT_GENERIC);
+					    DEFAULT_ALLOC_ALIGNMENT,
+					    DEFAULT_ALLOC_FLAGS,
+					    0); /*0);*/
 			if (!runlist->mem[i].ref)
 				goto clean_up;
 			runlist->mem[i].size = runlist_size;
@@ -305,9 +306,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 	f->userd_total_size = f->userd_entry_size * f->num_channels;
 
 	f->userd.mem.ref = mem_op().alloc(memmgr, f->userd_total_size,
-				       DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-				       DEFAULT_NVMAP_ALLOC_FLAGS,
-				       NVMAP_HEAP_CARVEOUT_GENERIC);
+				       DEFAULT_ALLOC_ALIGNMENT,
+				       DEFAULT_ALLOC_FLAGS,
+				       0); /*, 0);*/
 	if (IS_ERR_OR_NULL(f->userd.mem.ref)) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -321,7 +322,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 		goto clean_up;
 	}
 
-	f->userd.cpu_pa = mem_op().pin(memmgr, f->userd.mem.ref);
+	f->userd.mem.sgt = mem_op().pin(memmgr, f->userd.mem.ref);
+	f->userd.cpu_pa = sg_dma_address(f->userd.mem.sgt->sgl);
 	nvhost_dbg_info("userd physical address : 0x%08x",
 		   (u32)f->userd.cpu_pa);
 
@@ -382,7 +384,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 clean_up:
 	nvhost_dbg_fn("fail");
 	mem_op().munmap(f->userd.mem.ref, f->userd.cpu_va);
-	mem_op().unpin(memmgr, f->userd.mem.ref);
+	mem_op().unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
 	mem_op().put(memmgr, f->userd.mem.ref);
 	memset(&f->userd, 0, sizeof(struct userd_desc));
 

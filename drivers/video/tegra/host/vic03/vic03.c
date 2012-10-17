@@ -22,6 +22,7 @@
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <linux/export.h>
+#include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 
 #include "dev.h"
@@ -241,8 +242,8 @@ static int vic03_read_ucode(struct nvhost_device *dev)
 	/* allocate pages for ucode */
 	v->ucode.mem_r = mem_op().alloc(nvmap_c,
 				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, NVMAP_HANDLE_UNCACHEABLE,
-				     NVMAP_HEAP_CARVEOUT_GENERIC);
+				     PAGE_SIZE, mem_mgr_flag_uncacheable,
+				     0);
 	if (IS_ERR_OR_NULL(v->ucode.mem_r)) {
 		nvhost_dbg_fn("nvmap alloc failed");
 		err = -ENOMEM;
@@ -357,11 +358,12 @@ void nvhost_vic03_init(struct nvhost_device *dev)
 		return;
 	}
 
-	v->ucode.pa = mem_op().pin(v->host->memmgr, v->ucode.mem_r);
-	if (v->ucode.pa == -EINVAL || v->ucode.pa == -EINTR) {
+	v->ucode.sgt = mem_op().pin(v->host->memmgr, v->ucode.mem_r);
+	if (IS_ERR_OR_NULL(v->ucode.sgt)){
 		nvhost_err(&dev->dev, "nvmap pin failed for ucode");
 		goto clean_up;
 	}
+	v->ucode.pa = sg_dma_address(v->ucode.sgt->sgl);
 
 	err = vic03_boot(dev);
 
@@ -372,7 +374,8 @@ void nvhost_vic03_init(struct nvhost_device *dev)
 
  clean_up:
 	nvhost_err(&dev->dev, "failed");
-	mem_op().unpin(nvhost_get_host(dev)->memmgr, v->ucode.mem_r);
+	mem_op().unpin(nvhost_get_host(dev)->memmgr, v->ucode.mem_r,
+		       v->ucode.sgt);
 	return /*err*/;
 
 
@@ -384,7 +387,7 @@ void nvhost_vic03_deinit(struct nvhost_device *dev)
 	struct vic03 *v = get_vic03(dev);
 	/* unpin, free ucode memory */
 	if (v->ucode.mem_r) {
-		mem_op().unpin(v->host->memmgr, v->ucode.mem_r);
+		mem_op().unpin(v->host->memmgr, v->ucode.mem_r, v->ucode.sgt);
 		mem_op().put(v->host->memmgr, v->ucode.mem_r);
 		v->ucode.mem_r = 0;
 	}
@@ -421,16 +424,16 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
 	ctx->restore = mem_op().alloc(nvmap,
 				   nvhost_vic03_restore_size * 4, 32,
-				   map_restore ? NVMAP_HANDLE_WRITE_COMBINE
-				   : NVMAP_HANDLE_UNCACHEABLE,
-				   NVMAP_HEAP_CARVEOUT_GENERIC);
+				   map_restore ? mem_mgr_flag_write_combine
+				      : mem_mgr_flag_uncacheable,
+				   0);
 	if (IS_ERR_OR_NULL(ctx->restore))
-		goto fail;
+		goto fail_alloc;
 
 	if (map_restore) {
 		ctx->restore_virt = mem_op().mmap(ctx->restore);
-		if (!ctx->restore_virt)
-			goto fail;
+		if (IS_ERR_OR_NULL(ctx->restore_virt))
+			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
 
@@ -465,22 +468,22 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->save_thresh = 0;
 	ctx->save_slots = 0;
 
-	ctx->restore_phys = mem_op().pin(nvmap, ctx->restore);
+	ctx->restore_sgt = mem_op().pin(nvmap, ctx->restore);
 	if (IS_ERR_VALUE(ctx->restore_phys))
-		goto fail;
+		goto fail_pin;
+	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 
 	ctx->restore_size = nvhost_vic03_restore_size;
 	ctx->restore_incrs = 1;
 
 	return &ctx->hwctx;
 
- fail:
-	if (map_restore && ctx->restore_virt) {
+ fail_pin:
+	if (map_restore)
 		mem_op().munmap(ctx->restore, ctx->restore_virt);
-		ctx->restore_virt = NULL;
-	}
+ fail_mmap:
 	mem_op().put(nvmap, ctx->restore);
-	ctx->restore = NULL;
+ fail_alloc:
 	kfree(ctx);
 	return NULL;
 }
@@ -496,7 +499,7 @@ static void vic03_free_hwctx(struct kref *ref)
 		mem_op().munmap(ctx->restore, ctx->restore_virt);
 		ctx->restore_virt = NULL;
 	}
-	mem_op().unpin(nvmap, ctx->restore);
+	mem_op().unpin(nvmap, ctx->restore, ctx->restore_sgt);
 	ctx->restore_phys = 0;
 	mem_op().put(nvmap, ctx->restore);
 	ctx->restore = NULL;

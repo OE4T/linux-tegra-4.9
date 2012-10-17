@@ -51,7 +51,7 @@ struct mem_mgr *nvhost_memmgr_get_mgr(struct mem_mgr *);
 struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd);
 struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *,
 		size_t size, size_t align,
-		int flags);
+		int flags, unsigned int heap_mask);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
 		u32 id, struct platform_device *dev);
 void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle);

@@ -87,11 +87,11 @@ struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd)
 }
 
 struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *mgr,
-		size_t size, size_t align, int flags)
+       size_t size, size_t align, int flags, unsigned int heap_mask)
 {
 	struct mem_handle *h = NULL;
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	h = nvhost_nvmap_alloc(mgr, size, align, flags);
+	h = nvhost_nvmap_alloc(mgr, size, align, flags, heap_mask);
 #else
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 	h = nvhost_dmabuf_alloc(mgr, size, align, flags);

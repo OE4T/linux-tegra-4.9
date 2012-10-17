@@ -265,14 +265,6 @@ static int t124_channel_submit(struct nvhost_job *job)
 		return host1x_channel_submit(job);
 }
 
-static int t124_channel_read_3d_reg(struct nvhost_channel *channel,
-			struct nvhost_hwctx *hwctx,
-			u32 offset,
-			u32 *value)
-{
-	return -EPERM;
-}
-
 #if defined(CONFIG_TEGRA_GK20A)
 static int t124_channel_alloc_obj(struct nvhost_hwctx *hwctx,
 				 struct nvhost_alloc_obj_ctx_args *args)
@@ -411,7 +403,6 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 
 	op->channel.init          = t124_channel_init;
 	op->channel.submit        = t124_channel_submit;
-	op->channel.read3dreg     = t124_channel_read_3d_reg;
 
 #if defined(CONFIG_TEGRA_GK20A)
 	op->channel.alloc_obj     = t124_channel_alloc_obj;

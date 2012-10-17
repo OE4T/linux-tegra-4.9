@@ -25,6 +25,7 @@
 
 struct mem_desc {
 	struct mem_handle *ref;
+	struct sg_table *sgt;
 	u32 size;
 };
 
@@ -106,6 +107,7 @@ struct page_table_gk20a {
 	void *ref;
 	/* track mapping cnt on this page table */
 	u32 ref_cnt;
+	struct sg_table *sgt;
 	/* 4k or 128k */
 	u32 page_size_idx;
 };
@@ -118,7 +120,7 @@ struct page_directory_gk20a {
 	/* Either a *page or a *mem_handle */
 	void *ref;
 	bool dirty;
-
+	struct sg_table *sgt;
 	struct page_table_gk20a *ptes;
 };
 
@@ -128,6 +130,7 @@ struct mapped_buffer_node {
 	u64 size;
 	struct mem_mgr *memmgr;
 	struct mem_handle *handle_ref;
+	struct sg_table *sgt;
 	u32 page_size;
 	u32 ctag_offset;
 	u32 ctag_lines;
@@ -213,8 +216,8 @@ int gk20a_mm_init(struct mm_gk20a *mm);
 #define mem_mgr_from_vm(vm) (gk20a_from_vm(vm)->host->memmgr)
 #define dev_from_vm(vm) dev_from_gk20a(vm->mm->g)
 
-#define DEFAULT_NVMAP_ALLOC_FLAGS (NVMAP_HANDLE_UNCACHEABLE)
-#define DEFAULT_NVMAP_ALLOC_ALIGNMENT (4*1024)
+#define DEFAULT_ALLOC_FLAGS (mem_mgr_flag_uncacheable)
+#define DEFAULT_ALLOC_ALIGNMENT (4*1024)
 
 static inline int bar1_aperture_size_mb_gk20a(void)
 {

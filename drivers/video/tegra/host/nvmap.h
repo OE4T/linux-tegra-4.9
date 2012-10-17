@@ -32,7 +32,7 @@ void nvhost_nvmap_put_mgr(struct mem_mgr *mgr);
 struct mem_mgr *nvhost_nvmap_get_mgr(struct mem_mgr *mgr);
 struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd);
 struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
-		size_t size, size_t align, int flags);
+		size_t size, size_t align, int flags, unsigned int heap_flags);
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle);
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		struct mem_handle *handle);

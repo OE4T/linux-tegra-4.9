@@ -89,6 +89,7 @@ struct vic03 {
 			u32 size;
 		} os, fce;
 
+		struct sg_table *sgt;
 		phys_addr_t pa;
 	} ucode;
 

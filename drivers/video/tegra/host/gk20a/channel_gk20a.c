@@ -22,8 +22,8 @@
 #include <linux/delay.h>
 #include <linux/highmem.h> /* need for nvmap.h*/
 #include <trace/events/nvhost.h>
+#include <linux/scatterlist.h>
 
-#include "../../nvmap/nvmap.h"
 
 #include "../dev.h"
 #include "../nvhost_as.h"
@@ -302,17 +302,18 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 
 	ch->inst_block.mem.ref =
 		mem_op().alloc(memmgr, ram_in_alloc_size_v(),
-			    DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			    DEFAULT_NVMAP_ALLOC_FLAGS,
-			    NVMAP_HEAP_CARVEOUT_GENERIC);
+			    DEFAULT_ALLOC_ALIGNMENT,
+			    DEFAULT_ALLOC_FLAGS,
+			    0);
 
 	if (IS_ERR(ch->inst_block.mem.ref)) {
 		ch->inst_block.mem.ref = 0;
 		goto clean_up;
 	}
 
-	ch->inst_block.cpu_pa =
+	ch->inst_block.mem.sgt = 
 		mem_op().pin(memmgr, ch->inst_block.mem.ref);
+	ch->inst_block.cpu_pa = sg_dma_address(ch->inst_block.mem.sgt->sgl);
 
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (ch->inst_block.cpu_pa == -EINVAL ||
@@ -340,7 +341,7 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 
-	mem_op().unpin(memmgr, ch->inst_block.mem.ref);
+	mem_op().unpin(memmgr, ch->inst_block.mem.ref, ch->inst_block.mem.sgt);
 	mem_op().put(memmgr, ch->inst_block.mem.ref);
 	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
 }
@@ -386,8 +387,10 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 	nvhost_dbg_info("runlist_id : %d, switch to new buffer %p",
 		runlist_id, runlist->mem[new_buf].ref);
 
-	runlist_pa = mem_op().pin(memmgr,
-			       runlist->mem[new_buf].ref);
+	runlist->mem[new_buf].sgt = mem_op().pin(memmgr,
+						 runlist->mem[new_buf].ref);
+	runlist_pa = sg_dma_address(runlist->mem[new_buf].sgt->sgl);
+
 	if (!runlist_pa) {
 		ret = -ENOMEM;
 		goto clean_up;
@@ -439,9 +442,9 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 
 clean_up:
 	if (ret != 0)
-		mem_op().unpin(memmgr, runlist->mem[new_buf].ref);
+		mem_op().unpin(memmgr, runlist->mem[new_buf].ref, runlist->mem[new_buf].sgt);
 	else
-		mem_op().unpin(memmgr, runlist->mem[old_buf].ref);
+		mem_op().unpin(memmgr, runlist->mem[old_buf].ref, runlist->mem[old_buf].sgt);
 
 	mem_op().munmap(runlist->mem[new_buf].ref,
 		     runlist_entry_base);
@@ -631,9 +634,9 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	size = GK20A_PRIV_CMDBUF_ENTRY_NUM * sizeof(u32);
 	q->mem.ref = mem_op().alloc(memmgr,
 			size,
-			DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			DEFAULT_NVMAP_ALLOC_FLAGS,
-			NVMAP_HEAP_CARVEOUT_GENERIC);
+			DEFAULT_ALLOC_ALIGNMENT,
+			DEFAULT_ALLOC_FLAGS,
+			0);
 	if (IS_ERR_OR_NULL(q->mem.ref)) {
 		nvhost_err(d, "ch %d : failed to allocate"
 			   " priv cmd buffer(size: %d bytes)",
@@ -918,9 +921,9 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	c->gpfifo.mem.ref = mem_op().alloc(memmgr,
 			gpfifo_size * sizeof(struct gpfifo),
-			DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			DEFAULT_NVMAP_ALLOC_FLAGS,
-			NVMAP_HEAP_CARVEOUT_GENERIC);
+			DEFAULT_ALLOC_ALIGNMENT,
+			DEFAULT_ALLOC_FLAGS,
+			0);
 	if (IS_ERR_OR_NULL(c->gpfifo.mem.ref)) {
 		nvhost_err(d, "channel %d :"
 			   " failed to allocate gpfifo (size: %d bytes)",
@@ -1192,10 +1195,11 @@ int gk20a_channel_map_buffer(struct channel_gk20a *ch,
 			     struct nvhost_map_buffer_args *a)
 {
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
+	struct nvhost_device *dev = ch->ch->dev;
 	u64 ret_va;
 	struct mem_handle *r;
 
-	r = mem_op().get(memmgr, a->nvmap_handle); /*id, really*/
+	r = mem_op().get(memmgr, a->nvmap_handle, dev); /*id, really*/
 
 	nvhost_dbg_info("id=0x%x r=%p", a->nvmap_handle, r);
 
@@ -1225,6 +1229,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args)
 {
 	struct device *d = dev_from_gk20a(ch->g);
+	struct nvhost_device *dev = ch->ch->dev;
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct mem_handle *handle_ref;
 	struct notification *notif;
@@ -1245,7 +1250,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		id = args->condition.notifier.nvmap_handle;
 		offset = args->condition.notifier.offset;
 
-		handle_ref = mem_op().get(memmgr, id);
+		handle_ref = mem_op().get(memmgr, id, dev);
 		if (!handle_ref) {
 			nvhost_err(d, "invalid notifier nvmap handle 0x%08x",
 				   id);

@@ -25,6 +25,7 @@
 
 #include "../dev.h"
 #include "../bus_client.h"
+#include "nvhost_memmgr.h"
 
 #include "gk20a.h"
 #include "hw_mc_gk20a.h"
@@ -984,9 +985,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 
 	pmu->ucode.mem.ref = mem_op().alloc(memmgr,
 			GK20A_PMU_UCODE_SIZE_MAX,
-			DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			DEFAULT_NVMAP_ALLOC_FLAGS,
-			NVMAP_HEAP_CARVEOUT_GENERIC);
+			DEFAULT_ALLOC_ALIGNMENT,
+			DEFAULT_ALLOC_FLAGS,
+			0);
 	if (IS_ERR_OR_NULL(pmu->ucode.mem.ref)) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -1011,9 +1012,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	}
 
 	pmu->pg_buf.mem.ref = mem_op().alloc(memmgr, size,
-				DEFAULT_NVMAP_ALLOC_ALIGNMENT, /* TBD: 256 bytes alignment is sufficient */
-				DEFAULT_NVMAP_ALLOC_FLAGS,
-				NVMAP_HEAP_CARVEOUT_GENERIC);
+				DEFAULT_ALLOC_ALIGNMENT, /* TBD: 256 bytes alignment is sufficient */
+				DEFAULT_ALLOC_FLAGS,
+				0);
 	if (IS_ERR_OR_NULL(pmu->pg_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate fecs pg buffer");
@@ -1032,9 +1033,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	}
 
 	pmu->seq_buf.mem.ref = mem_op().alloc(memmgr, 4096,
-				DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-				DEFAULT_NVMAP_ALLOC_FLAGS,
-				NVMAP_HEAP_CARVEOUT_GENERIC);
+				DEFAULT_ALLOC_ALIGNMENT,
+				DEFAULT_ALLOC_FLAGS,
+				0);
 	if (IS_ERR_OR_NULL(pmu->seq_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate zbc buffer");

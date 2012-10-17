@@ -23,6 +23,7 @@
 #include <linux/highmem.h>
 #include <linux/log2.h>
 #include <linux/nvhost.h>
+#include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 
 #include "../../nvmap/nvmap.h"
@@ -180,7 +181,8 @@ int gk20a_init_mm_support(struct gk20a *g, bool reinit)
 }
 
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-static int alloc_gmmu_nvmap_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa, void **handle)
+static int alloc_gmmu_nvmap_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa, void **handle,
+				  struct sg_table **sgt)
 {
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	struct mem_handle *r;
@@ -192,9 +194,9 @@ static int alloc_gmmu_nvmap_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *p
 	nvhost_dbg_fn("");
 
 	r = mem_op().alloc(client, len,
-			DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			DEFAULT_NVMAP_ALLOC_FLAGS,
-			NVMAP_HEAP_CARVEOUT_GENERIC);
+			DEFAULT_ALLOC_ALIGNMENT,
+			DEFAULT_ALLOC_FLAGS,
+			0);
 	if (IS_ERR_OR_NULL(r)) {
 		nvhost_dbg(dbg_pte, "nvmap_alloc failed\n");
 		goto err_out;
@@ -204,12 +206,12 @@ static int alloc_gmmu_nvmap_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *p
 		nvhost_dbg(dbg_pte, "nvmap_mmap failed\n");
 		goto err_alloced;
 	}
-	phys = mem_op().pin(client, r);
-	if (IS_ERR_OR_NULL((void *)pa)) {
+	*sgt =  mem_op().pin(client, r);
+	if (IS_ERR_OR_NULL(*sgt)) {
 		nvhost_dbg(dbg_pte, "nvmap_pin failed\n");
 		goto err_alloced;
 	}
-
+	phys = sg_dma_address((*sgt)->sgl);
 	memset(va, 0, len);
 	mem_op().munmap(r, va);
 	*pa = phys;
@@ -224,7 +226,8 @@ err_out:
 }
 #endif
 
-static int alloc_gmmu_sysmem_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa, void **handle)
+static int alloc_gmmu_sysmem_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa,
+				   void **handle, struct sg_table **sgt)
 {
 	struct page *pte_page;
 
@@ -235,21 +238,23 @@ static int alloc_gmmu_sysmem_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *
 		return -ENOMEM;
 
 	*pa = page_to_phys(pte_page);
+	*sgt = 0;
 	*handle = pte_page;
 	return 0;
 }
 
-static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa, void **handle)
+static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa,
+			    void **handle, struct sg_table **sgt)
 {
 
 	nvhost_dbg_fn("");
 
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
 	if (tegra_split_mem_active())
-		return alloc_gmmu_nvmap_pages(vm, order, pa, handle);
+		return alloc_gmmu_nvmap_pages(vm, order, pa, handle, sgt);
 	else
 #endif
-		return alloc_gmmu_sysmem_pages(vm, order, pa, handle);
+		return alloc_gmmu_sysmem_pages(vm, order, pa, handle, sgt);
 }
 
 static void free_gmmu_pages(struct vm_gk20a *vm, void *handle, u32 order)
@@ -325,6 +330,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	u32 pte_order;
 	phys_addr_t phys;
 	void *handle;
+	struct sg_table *sgt;
 
 	nvhost_dbg_fn("");
 
@@ -332,7 +338,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	page_size_idx = gmmu_page_size_idx(gmmu_page_size);
 	pte_order = vm->mm->page_table_sizing[page_size_idx].order;
 
-	err = alloc_gmmu_pages(vm, pte_order, &phys, &handle);
+	err = alloc_gmmu_pages(vm, pte_order, &phys, &handle, &sgt);
 	if (err)
 		return err;
 
@@ -340,6 +346,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 
 	*pa = phys;
 	pte->ref = handle;
+	pte->sgt = sgt;
 	pte->page_size_idx = page_size_idx;
 
 	return 0;
@@ -724,6 +731,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct nvhost_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct device *d = &g->dev->dev;
 	struct mapped_buffer_node *mapped_buffer = 0;
+	struct sg_table *sgt;
 	bool inserted = false, va_allocated = false;
 	u32 gmmu_page_size = 0;
 	u64 map_offset = 0;
@@ -817,7 +825,12 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.addr = mem_op().pin(memmgr, r);
+	sgt = mem_op().pin(memmgr, r);
+	if (IS_ERR_OR_NULL(sgt)) {
+		nvhost_warn(d, "oom allocating tracking buffer");
+		goto clean_up;
+	}
+	bfr.addr = sg_dma_address(sgt->sgl);
 
 	nvhost_dbg_info("nvmap pinned buffer @ 0x%x", bfr.addr);
 	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d "
@@ -837,6 +850,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 	mapped_buffer->memmgr     = memmgr;
 	mapped_buffer->handle_ref = r;
+	mapped_buffer->sgt        = sgt;
 	mapped_buffer->addr       = map_offset;
 	mapped_buffer->size       = bfr.size;
 	mapped_buffer->page_size  = gmmu_page_size;
@@ -1091,7 +1105,8 @@ static void gk20a_channel_vm_unmap(struct vm_gk20a *vm,
 	}
 
 	mem_op().unpin(mapped_buffer->memmgr,
-		    mapped_buffer->handle_ref);
+		       mapped_buffer->handle_ref,
+		       mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
@@ -1152,7 +1167,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
 	if (err) {
 		return -ENOMEM;
 	}
@@ -1408,7 +1423,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
@@ -1431,9 +1446,9 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	inst_block->mem.size = ram_in_alloc_size_v();
 	inst_block->mem.ref =
 		mem_op().alloc(nvmap, inst_block->mem.size,
-			    DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			    DEFAULT_NVMAP_ALLOC_FLAGS,
-			    NVMAP_HEAP_CARVEOUT_GENERIC);
+			    DEFAULT_ALLOC_ALIGNMENT,
+			    DEFAULT_ALLOC_FLAGS,
+			    0);
 
 	if (IS_ERR(inst_block->mem.ref)) {
 		inst_block->mem.ref = 0;
@@ -1441,15 +1456,15 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->cpu_pa = inst_pa =
-		mem_op().pin(nvmap, inst_block->mem.ref);
-
+	inst_block->mem.sgt = mem_op().pin(nvmap, inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
-	if (inst_pa == -EINVAL || inst_pa == -EINTR) {
+	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
 		err = (int)inst_pa;
 		goto clean_up;
 	}
+	inst_block->cpu_pa = inst_pa = sg_dma_address(inst_block->mem.sgt->sgl);
+
 	inst_ptr = mem_op().mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
 		return -ENOMEM;
@@ -1535,7 +1550,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
@@ -1558,9 +1573,9 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	inst_block->mem.size = GK20A_PMU_INST_SIZE;
 	inst_block->mem.ref =
 		mem_op().alloc(nvmap, inst_block->mem.size,
-			    DEFAULT_NVMAP_ALLOC_ALIGNMENT,
-			    DEFAULT_NVMAP_ALLOC_FLAGS,
-			    NVMAP_HEAP_CARVEOUT_GENERIC);
+			    DEFAULT_ALLOC_ALIGNMENT,
+			    DEFAULT_ALLOC_FLAGS,
+			    0);
 
 	if (IS_ERR(inst_block->mem.ref)) {
 		inst_block->mem.ref = 0;
@@ -1568,15 +1583,16 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->cpu_pa = inst_pa =
-		mem_op().pin(nvmap, inst_block->mem.ref);
-
+	inst_block->mem.sgt = mem_op().pin(nvmap, inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
-	if (inst_pa == -EINVAL || inst_pa == -EINTR) {
+	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
-		err = (int)inst_pa;
+		err = (int)inst_block->mem.sgt;
 		goto clean_up;
 	}
+	inst_block->cpu_pa = inst_pa =
+		sg_dma_address(inst_block->mem.sgt->sgl);
+
 	nvhost_dbg_info("pmu inst block physical addr: 0x%08x",
 		   inst_pa);
 
@@ -1801,7 +1817,8 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
 		if (tegra_split_mem_active()) {
 			err = map_gmmu_pages(pte_s->ref, &pte);
-			pte_addr = mem_op().pin(client, pte_s->ref);
+			pte_s->sgt = mem_op().pin(client, pte_s->ref);
+			pte_addr = sg_dma_address(pte_s->sgt->sgl);
 		} else
 #endif
 		{
@@ -1860,7 +1877,7 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
 		if (tegra_split_mem_active()) {
 			unmap_gmmu_pages(pte_s->ref, pte);
-			mem_op().unpin(client, pte_s->ref);
+			mem_op().unpin(client, pte_s->ref, pte_s->sgt);
 		} else
 #endif
 			unmap_gmmu_pages(

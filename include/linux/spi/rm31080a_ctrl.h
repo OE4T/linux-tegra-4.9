@@ -16,6 +16,7 @@
 #define RM31080_REG_80 0x80
 #define RM31080_REG_F2 0xF2
 #define RM31080_REG_7E 0x7E
+#define RM31080_REG_7F 0x7F
 
 #define RM31080B1_REG_BANK0_00H		0x00
 #define RM31080B1_REG_BANK0_01H		0x01
@@ -95,6 +96,9 @@ struct rm31080a_ctrl_para {
 	unsigned char bNoisePipelineBase;
 	unsigned char bTime2Idle;
 	unsigned char bfPowerMode;
+    unsigned char bfIdleMessage;
+    unsigned char bDummyRunCycle;
+
 
 #if ENABLE_FILTER_SWITCH
 	unsigned char bReg1_09h[2];	//  0: Digital Filter 1: Analog Filter

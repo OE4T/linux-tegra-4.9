@@ -97,8 +97,9 @@
 #define DSI_LP_OP_READ			0x2
 
 #define DSI_HOST_IDLE_PERIOD		1000
+#if DSI_USE_SYNC_POINTS
 static atomic_t dsi_syncpt_rst = ATOMIC_INIT(0);
-
+#endif
 static bool enable_read_debug;
 module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
@@ -2586,8 +2587,10 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 	if (restart_dc_stream)
 		init_status->dc_stream = DSI_DC_STREAM_ENABLE;
 
+#if DSI_USE_SYNC_POINTS
 	if (atomic_read(&dsi_syncpt_rst))
 		tegra_dsi_syncpt_reset(dsi);
+#endif
 
 	return init_status;
 fail:
@@ -2971,11 +2974,13 @@ void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data * dsi)
 	tegra_dc_io_start(dc);
 	tegra_dc_dsi_hold_host(dc);
 
+#if DSI_USE_SYNC_POINTS
 	if (atomic_read(&dsi_syncpt_rst)) {
 		tegra_dsi_wait_frame_end(dc, dsi, 2);
 		tegra_dsi_syncpt_reset(dsi);
 		atomic_set(&dsi_syncpt_rst, 0);
 	}
+#endif
 
 	tegra_dsi_writel(dsi, TEGRA_DSI_DISABLE, DSI_INIT_SEQ_CONTROL);
 
@@ -3295,8 +3300,10 @@ static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 	u32 val;
 	int ret = 0;
 
+#if DSI_USE_SYNC_POINTS
 	if (atomic_read(&dsi_syncpt_rst))
 		tegra_dsi_syncpt_reset(dsi);
+#endif
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);
@@ -3324,8 +3331,10 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 	u32 val;
 	int ret = 0;
 
+#if DSI_USE_SYNC_POINTS
 	if (atomic_read(&dsi_syncpt_rst))
 		tegra_dsi_syncpt_reset(dsi);
+#endif
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val &= ~DSI_HOST_DSI_CONTROL_ULTRA_LOW_POWER(3);

@@ -99,20 +99,6 @@ static struct nvhost_device tegra_host1x01_device = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 
-static struct nvhost_device tegra_display01_device = {
-	.name		= "display",
-	.id		= -1,
-	.index		= 0,
-	.syncpts	= BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
-			  BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) |
-			  BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
-			  BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
-	.modulemutexes	= BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid	= NVHOST_MODULE_NONE,
-};
-
 static struct nvhost_device tegra_gr3d01_device = {
 	.name		= "gr3d",
 	.version	= 1,
@@ -222,26 +208,13 @@ static struct nvhost_device tegra_mpe01_device = {
 	.moduleid	= NVHOST_MODULE_MPE,
 };
 
-static struct nvhost_device tegra_dsi01_device = {
-	.name		= "dsi",
-	.id		= -1,
-	.index		= 6,
-	.syncpts	= BIT(NVSYNCPT_DSI),
-	.modulemutexes	= BIT(NVMODMUTEX_DSI),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid	= NVHOST_MODULE_NONE,
-};
-
 static struct nvhost_device *t20_devices[] = {
 	&tegra_host1x01_device,
-	&tegra_display01_device,
 	&tegra_gr3d01_device,
 	&tegra_gr2d01_device,
 	&tegra_isp01_device,
 	&tegra_vi01_device,
 	&tegra_mpe01_device,
-	&tegra_dsi01_device,
 };
 
 int tegra2_register_host1x_devices(void)

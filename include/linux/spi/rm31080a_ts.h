@@ -3,23 +3,30 @@
 
 #define ENABLE_RAW_DATA_QUEUE
 
-#define ENABLE_TOUCH_RESPONSE_TEST    1       //Roger
-#define ENABLE_RESOLUTION_SWITCH      1       //Alex
-#define ENABLE_FILTER_SWITCH          0       //Cage
-#define ENABLE_NEW_NOISE_MODE         0       //Marty
-#define NOISE_SUM_CHECK               0	      //Nelson
+#define ENABLE_TOUCH_RESPONSE_TEST	1		//Roger
+#define ENABLE_RESOLUTION_SWITCH	1		//Alex
+#define ENABLE_FILTER_SWITCH		0		//Cage
+#define ENABLE_NEW_NOISE_MODE		0		//Marty
+#define NOISE_SUM_CHECK				0		//Nelson
 #define ENABLE_CALIBRATTION_BY_FIRMWARE	1
 #define ENABLE_NEW_PARAMETER          1
+#define ENABLE_ST_SCAN						0
 
-#define ENABLE_T007B1_SETTING         1
-#define ENABLE_T007B1_STABLE_IDLE_MODE  1
+#define ENABLE_T007B1_SETTING				1
+#define ENABLE_T007B1_STABLE_IDLE_MODE		1
 
 /* Define for T007 A6/B1 IC version ckeck */
 #define T007A6				0xD0
 #define T007_VERSION_B		0xB0
-#define T007B1				0xB0
-#define T007B2				0xB1
+	#define T007B1				0xB0
+	#define T007B2				0xB1
 #define T007_VERSION_C		0xC0
+
+#define VERSION_A_PARAMETER_OFFSET 0x00
+#define VERSION_B_PARAMETER_OFFSET 0x01
+#define VERSION_C_PARAMETER_OFFSET 0x02
+#define PARAMETER_AMOUNT 384
+#define RM_MAX_CHANNEL_COUNT 120
 
 #define RM_IOCTL_REPORT_POINT    0x1001
 #define RM_IOCTL_SET_HAL_PID     0x1002
@@ -62,6 +69,13 @@
 #define RM_SELF_TEST_RESULT_FAIL    0
 #define RM_SELF_TEST_RESULT_PASS    1
 
+
+#define RM_PLATFORM_KAI_PCB    0x00
+#define RM_PLATFORM_KAI        0x01
+#define RM_PLATFORM_CARDHU     0x02
+#define RM_PLATFORM_DALMORE    0x03
+#define RM_PLATFORM_PLUTO      0x04
+
 #define RM_PLATFORM_K007	0x00
 #define RM_PLATFORM_K107	0x01
 #define RM_PLATFORM_C210	0x02
@@ -84,6 +98,9 @@ struct rm_spi_ts_platform_data {
 	int y_size;
 	unsigned char *config;
 	int platform_id;
+	unsigned char *name_of_clock;
+	unsigned char *name_of_3v3;
+	unsigned char *name_of_1v8;	
 };
 
 int rm31080_spi_byte_write(unsigned char u8Addr, unsigned char u8Value);

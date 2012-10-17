@@ -24,7 +24,7 @@
 //DEFINITIONS
 //=============================================================================
 #define RM31080_RAW_DATA_LENGTH 2048
-#define MAX_AVERAGE_TIMES        128
+#define MAX_AVERAGE_TIMES		128
 //=============================================================================
 //STRUCTURE DECLARATION
 //=============================================================================
@@ -60,7 +60,7 @@ unsigned char bfSign[60];
 
 //=============================================================================
 // Description:
-//      Control functions for Touch IC
+//	  Control functions for Touch IC
 // Input:
 //
 // Output:
@@ -71,7 +71,7 @@ int rm31080_ctrl_clear_int(void)
 {
 	u8 flag;
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion == T007_VERSION_B)
+	if (g_stCtrl.bICVersion != T007A6)
 		return rm31080_spi_byte_read(RM31080B1_REG_BANK0_02H, &flag);
 	else
 #endif
@@ -101,9 +101,9 @@ void rm31080_ctrl_wait_for_scan_finish(void)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 //Marty added
 int rm31080_soft_average(signed char *pSource)
@@ -269,7 +269,7 @@ int rm31080_soft_average(signed char *pSource)
 					bResult1 = (s16Sum / g_bMFCounter[bMaxBlockId]);
 					//if (g_stCtrl.bfNoiseDetector)
 					//{
-					//    bResult1 = (s16)bResult1 * 4 / 5;
+					//	bResult1 = (s16)bResult1 * 4 / 5;
 					//}
 				}
 			}
@@ -286,7 +286,7 @@ int rm31080_soft_average(signed char *pSource)
 				bResult2 = (bMax + bMin) / 2;
 				//if (g_stCtrl.bfNoiseDetector)
 				//{
-				//    bResult2 = (s16)bResult2 * 4 / 5;
+				//	bResult2 = (s16)bResult2 * 4 / 5;
 				//}
 
 			}
@@ -315,7 +315,7 @@ int rm31080_soft_average(signed char *pSource)
 			bResult0 = (s16Sum / g_stCtrl.bNoiseRepeatTimes);	// + 0x80;
 			//if (g_stCtrl.bfNoiseDetector)
 			//{
-			//    bResult0 = (s16)bResult0 * 4 / 5;
+			//	bResult0 = (s16)bResult0 * 4 / 5;
 			//}
 
 			if (g_stCtrl.bfMediumFilter & 0x01) {
@@ -378,33 +378,33 @@ int rm31080_soft_average(signed char *pSource)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 void rm_set_repeat_times(u8 u8Times)
 {
 	u8 bReg1_1Fh = 0x00;
 	u8 u8Reg = 0x00;
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion == T007_VERSION_B)
+	if (g_stCtrl.bICVersion != T007A6)
 	{
-	u8Reg = g_stCtrl.bSenseNumber - 1;
-	rm31080_spi_byte_write(0x0A, u8Reg&0x0F);
-	rm31080_spi_byte_write(0x0E, u8Times&0x1F);
-	if (g_stCtrl.bfADFC)
-		bReg1_1Fh |= ADFC;
+		u8Reg = g_stCtrl.bSenseNumber - 1;
+		rm31080_spi_byte_write(0x0A, u8Reg&0x0F);
+		rm31080_spi_byte_write(0x0E, u8Times&0x1F);
+		if ((g_stCtrl.bfADFC) && (g_stCtrl.bICVersion != T007_VERSION_C))
+			bReg1_1Fh |= ADFC;
 
-	if (g_stCtrl.bfTHMode)
-		bReg1_1Fh |= FILTER_THRESHOLD_MODE;
-	else
-		bReg1_1Fh &= ~FILTER_NONTHRESHOLD_MODE;
-		//bReg1_1Fh |= FILTER_NONTHRESHOLD_MODE;
+		if (g_stCtrl.bfTHMode)
+			bReg1_1Fh |= FILTER_THRESHOLD_MODE;
+		else
+			bReg1_1Fh &= ~FILTER_NONTHRESHOLD_MODE;
+			//bReg1_1Fh |= FILTER_NONTHRESHOLD_MODE;
 
-	if (u8Times != REPEAT_1)
-		bReg1_1Fh |= 0x44;     //Marty 20120820
+		if (u8Times != REPEAT_1)
+			bReg1_1Fh |= 0x44;	//Marty 20120820
 
-	rm31080_spi_byte_write(RM31080_REG_1F, bReg1_1Fh);
+		rm31080_spi_byte_write(RM31080_REG_1F, bReg1_1Fh);
 	}
 	else
 #endif
@@ -432,9 +432,9 @@ void rm_set_repeat_times(u8 u8Times)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 NOISE_DETECTOR_RET_t rm_noise_detect(signed char *pSource)
 {
@@ -451,7 +451,7 @@ NOISE_DETECTOR_RET_t rm_noise_detect(signed char *pSource)
 
 
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion == T007_VERSION_B)
+	if (g_stCtrl.bICVersion != T007A6)
 	{
 		wSENum = 0;
 		return ND_DETECTOR_OFF;
@@ -481,9 +481,10 @@ NOISE_DETECTOR_RET_t rm_noise_detect(signed char *pSource)
 			for (i = 0; i < XNum; i++) {
 				if (g_stCtrl.bADCNumber) {
 					if ((i == g_stCtrl.bDummyChannel[0])
-					    || (i == g_stCtrl.bDummyChannel[1])
-					    || (i == g_stCtrl.bDummyChannel[2])
-					    || (i == g_stCtrl.bDummyChannel[3])) {
+						|| (i == g_stCtrl.bDummyChannel[1])
+						|| (i == g_stCtrl.bDummyChannel[2])
+						|| (i == g_stCtrl.bDummyChannel[3]))
+					{
 						continue;
 					}
 				} else {
@@ -670,7 +671,7 @@ int rm_noise_main(signed char *pSource)
 		iRet = 0;
 
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007_VERSION_B)
+	if (g_stCtrl.bICVersion == T007A6)
 #endif
 	{
 #if ENABLE_NEW_NOISE_MODE
@@ -688,9 +689,9 @@ int rm_noise_main(signed char *pSource)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 void rm31080_ctrl_set_baseline(void *arg)
 {
@@ -708,9 +709,9 @@ void rm31080_ctrl_set_baseline(void *arg)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 void rm31080_ctrl_set_analog_baseline(void *arg)
 {
@@ -727,9 +728,9 @@ void rm31080_ctrl_set_analog_baseline(void *arg)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 void rm31080_ctrl_init(void)
 {
@@ -747,6 +748,7 @@ void rm31080_ctrl_init(void)
 	g_stCtrl.bfNoisePreHold = 0;
 	g_stCtrl.bfTouched = 0;
 	g_stCtrl.bfExitNoiseMode = 0;
+    g_stCtrl.bDummyRunCycle = 1;
 
 	g_stCtrl.u16DataLength = RM31080_RAW_DATA_LENGTH;
 	g_bfFirstAverage = 0;
@@ -763,9 +765,9 @@ void rm31080_ctrl_init(void)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 unsigned char rm31080_ctrl_get_noise_mode(u8 * p)
 {
@@ -793,9 +795,9 @@ void rm31080b_sw_reset(void)
 // Description: Set T007B analog filter repeat
 //
 // Input:
-//      Analog average tap number
+//		Analog average tap number
 // Output:
-//      none
+//		none
 //=============================================================================
 void rm31080b_analog_filter_config(unsigned char u8Amount)
 {
@@ -814,9 +816,9 @@ void rm31080b_analog_filter_config(unsigned char u8Amount)
 // Description: Set T007B digital  filter repeat
 //
 // Input:
-//      Digital average tap number
+//		Digital average tap number
 // Output:
-//      none
+//		none
 //=============================================================================
 void rm31080b_digital_filter_config(unsigned char u8Amount)
 {
@@ -835,22 +837,22 @@ void rm31080b_digital_filter_config(unsigned char u8Amount)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 
 #if ENABLE_FILTER_SWITCH
 void rm31080_analog_filter_config(u8 bRepeatTimes)
 {
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007_VERSION_B)
+	if (g_stCtrl.bICVersion == T007A6)
 #endif
 	{
 		//u8 bReg0_1Fh = 0x00;
 
 		//InitChargePump();
-		rm31080_spi_byte_write(0x7F, 0x01);     // Switch to 0x01
+		rm31080_spi_byte_write(0x7F, 0x01);		// Switch to 0x01
 
 		rm31080_spi_byte_write(0x09, g_stCtrl.bReg1_09h[1]);
 		rm31080_spi_byte_write(0x43, g_stCtrl.bReg1_43h[1]);
@@ -859,7 +861,7 @@ void rm31080_analog_filter_config(u8 bRepeatTimes)
 		rm31080_spi_byte_write(0x4A, g_stCtrl.bReg1_4Ah[1]);
 		rm31080_spi_byte_write(0x4B, g_stCtrl.bReg1_4Bh[1]);
 
-		rm31080_spi_byte_write(0x7F, 0x00);     // Switch to BANK0
+		rm31080_spi_byte_write(0x7F, 0x00);		// Switch to BANK0
 
 		#if 0
 		rm31080_spi_byte_write(0x0E, ( 0x38 | 0x00)); //bSenseNumber = 8, REPEAT_1
@@ -907,118 +909,118 @@ void rm31080_analog_filter_config(u8 bRepeatTimes)
 void rm31080_digital_filter_config(void)
 {
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007_VERSION_B)
+	if (g_stCtrl.bICVersion == T007A6)
 #endif
-    {
-	//u8 bReg0_1Fh = 0x00;
-
-	//InitChargePump();
-	rm31080_spi_byte_write(0x7F, 0x01);	// Switch to BANK1
-
-	rm31080_spi_byte_write(0x09, g_stCtrl.bReg1_09h[0]);
-	rm31080_spi_byte_write(0x43, g_stCtrl.bReg1_43h[0]);
-	rm31080_spi_byte_write(0x48, g_stCtrl.bReg1_48h[0]);
-	rm31080_spi_byte_write(0x49, g_stCtrl.bReg1_49h[0]);
-	rm31080_spi_byte_write(0x4A, g_stCtrl.bReg1_4Ah[0]);
-	rm31080_spi_byte_write(0x4B, g_stCtrl.bReg1_4Bh[0]);
-
-	rm31080_spi_byte_write(0x7F, 0x00);     // Switch to 0x00
-
-	#if 0
-	rm31080_spi_byte_write(0x0E, ( 0x38 | 0x04)); //bSenseNumber = 8, REPEAT_5
-
-	rm31080_spi_byte_read(0x1F, &bReg0_1Fh);
-	bReg0_1Fh = bReg0_1Fh & 0xF8;
-	bReg0_1Fh = bReg0_1Fh | 0x07;//REPEAT_5
-
-	rm31080_spi_byte_write(0x1F, bReg0_1Fh);
-	#endif
-	rm_set_repeat_times(g_stCtrl.bRepeatTimes[0]);
-
-// -------- Set Driving / Sensing Control Mode --------
-	if(!g_stCtrl.bfAnalogFilter)
 	{
-		rm31080_spi_byte_write(RM31080_REG_10, 0x10 |0x40); //ACC | DDSC
+		//u8 bReg0_1Fh = 0x00;
+
+		//InitChargePump();
+		rm31080_spi_byte_write(0x7F, 0x01);	// Switch to BANK1
+
+		rm31080_spi_byte_write(0x09, g_stCtrl.bReg1_09h[0]);
+		rm31080_spi_byte_write(0x43, g_stCtrl.bReg1_43h[0]);
+		rm31080_spi_byte_write(0x48, g_stCtrl.bReg1_48h[0]);
+		rm31080_spi_byte_write(0x49, g_stCtrl.bReg1_49h[0]);
+		rm31080_spi_byte_write(0x4A, g_stCtrl.bReg1_4Ah[0]);
+		rm31080_spi_byte_write(0x4B, g_stCtrl.bReg1_4Bh[0]);
+
+		rm31080_spi_byte_write(0x7F, 0x00);		// Switch to 0x00
+
+		#if 0
+		rm31080_spi_byte_write(0x0E, ( 0x38 | 0x04)); //bSenseNumber = 8, REPEAT_5
+
+		rm31080_spi_byte_read(0x1F, &bReg0_1Fh);
+		bReg0_1Fh = bReg0_1Fh & 0xF8;
+		bReg0_1Fh = bReg0_1Fh | 0x07;//REPEAT_5
+
+		rm31080_spi_byte_write(0x1F, bReg0_1Fh);
+		#endif
+		rm_set_repeat_times(g_stCtrl.bRepeatTimes[0]);
+
+	// -------- Set Driving / Sensing Control Mode --------
+		if(!g_stCtrl.bfAnalogFilter)
+		{
+			rm31080_spi_byte_write(RM31080_REG_10, 0x10 |0x40); //ACC | DDSC
+		}
+
+	// -------- Set PGA/DAC --------
+		rm31080_spi_byte_write(0x6B, 0x04); //EN_C0
+
+	// -------- Scan Time Setting --------
+		rm31080_spi_byte_write(RM31080_REG_42, g_stCtrl.bReg0_42h[g_stCtrl.bfAnalogFilter]);  //LACTIVE
+		rm31080_spi_byte_write(RM31080_REG_43, g_stCtrl.bReg0_43h[g_stCtrl.bfAnalogFilter]);  //LACTIVE
+
+		rm31080_spi_byte_write(0x20, g_stCtrl.bReg0_20h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x21, g_stCtrl.bReg0_21h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x22, g_stCtrl.bReg0_22h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x23, g_stCtrl.bReg0_23h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x24, g_stCtrl.bReg0_24h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x25, g_stCtrl.bReg0_25h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x26, g_stCtrl.bReg0_26h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x27, g_stCtrl.bReg0_27h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x28, g_stCtrl.bReg0_28h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x29, g_stCtrl.bReg0_29h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2A, g_stCtrl.bReg0_2Ah[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2B, g_stCtrl.bReg0_2Bh[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2C, g_stCtrl.bReg0_2Ch[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2D, g_stCtrl.bReg0_2Dh[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2E, g_stCtrl.bReg0_2Eh[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x2F, g_stCtrl.bReg0_2Fh[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x30, g_stCtrl.bReg0_30h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x31, g_stCtrl.bReg0_31h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x32, g_stCtrl.bReg0_32h[g_stCtrl.bfAnalogFilter]);
+		rm31080_spi_byte_write(0x33, g_stCtrl.bReg0_33h[g_stCtrl.bfAnalogFilter]);
 	}
-
-// -------- Set PGA/DAC --------
-	rm31080_spi_byte_write(0x6B, 0x04); //EN_C0
-
-// -------- Scan Time Setting --------
-	rm31080_spi_byte_write(RM31080_REG_42, g_stCtrl.bReg0_42h[g_stCtrl.bfAnalogFilter]);  //LACTIVE
-	rm31080_spi_byte_write(RM31080_REG_43, g_stCtrl.bReg0_43h[g_stCtrl.bfAnalogFilter]);  //LACTIVE
-
-	rm31080_spi_byte_write(0x20, g_stCtrl.bReg0_20h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x21, g_stCtrl.bReg0_21h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x22, g_stCtrl.bReg0_22h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x23, g_stCtrl.bReg0_23h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x24, g_stCtrl.bReg0_24h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x25, g_stCtrl.bReg0_25h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x26, g_stCtrl.bReg0_26h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x27, g_stCtrl.bReg0_27h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x28, g_stCtrl.bReg0_28h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x29, g_stCtrl.bReg0_29h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2A, g_stCtrl.bReg0_2Ah[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2B, g_stCtrl.bReg0_2Bh[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2C, g_stCtrl.bReg0_2Ch[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2D, g_stCtrl.bReg0_2Dh[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2E, g_stCtrl.bReg0_2Eh[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x2F, g_stCtrl.bReg0_2Fh[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x30, g_stCtrl.bReg0_30h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x31, g_stCtrl.bReg0_31h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x32, g_stCtrl.bReg0_32h[g_stCtrl.bfAnalogFilter]);
-	rm31080_spi_byte_write(0x33, g_stCtrl.bReg0_33h[g_stCtrl.bfAnalogFilter]);
-    }
 }
 
 void rm31080_filter_config(void)
 {
 #if ENABLE_FILTER_SWITCH
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007_VERSION_B)
+	if (g_stCtrl.bICVersion == T007A6)
 #endif
-    {
-	if (g_stCtrl.bfAnalogFilter)
 	{
-#if ENABLE_NEW_NOISE_MODE
-		if ((g_stCtrl.bfNoiseMode & 0x02) && g_stCtrl.bfNoiseDetector)
+		if (g_stCtrl.bfAnalogFilter)
 		{
-			if (g_stCtrl.bfNoiseModeDetector)
+#if ENABLE_NEW_NOISE_MODE
+			if ((g_stCtrl.bfNoiseMode & 0x02) && g_stCtrl.bfNoiseDetector)
 			{
-				rm_set_repeat_times(g_stCtrl.bNewNoiseRepeatTimes);
+				if (g_stCtrl.bfNoiseModeDetector)
+				{
+					rm_set_repeat_times(g_stCtrl.bNewNoiseRepeatTimes);
+				}
+				else
+				{
+					rm_set_repeat_times(g_stCtrl.bRepeatTimes[1]);
+				}
 			}
 			else
-			{
 				rm_set_repeat_times(g_stCtrl.bRepeatTimes[1]);
-			}
+#else
+			rm31080_analog_filter_config(g_stCtrl.bRepeatTimes[1]);
+#endif
+			//rm_printk("Analog Setting with %d Repeat Times \n", (g_stCtrl.bRepeatTimes[1] + 1));
 		}
 		else
-			rm_set_repeat_times(g_stCtrl.bRepeatTimes[1]);
-#else
-		rm31080_analog_filter_config(g_stCtrl.bRepeatTimes[1]);
-#endif
-		//rm_printk("Analog Setting with %d Repeat Times \n", (g_stCtrl.bRepeatTimes[1] + 1));
-	}
-	else
-	{
-#if ENABLE_NEW_NOISE_MODE
-		if ((g_stCtrl.bfNoiseMode & 0x02) && g_stCtrl.bfNoiseDetector)
 		{
-			if (g_stCtrl.bfNoiseModeDetector)
+#if ENABLE_NEW_NOISE_MODE
+			if ((g_stCtrl.bfNoiseMode & 0x02) && g_stCtrl.bfNoiseDetector)
 			{
-				rm_set_repeat_times(g_stCtrl.bNewNoiseRepeatTimes);
+				if (g_stCtrl.bfNoiseModeDetector)
+				{
+					rm_set_repeat_times(g_stCtrl.bNewNoiseRepeatTimes);
+				}
+				else
+				{
+					rm31080_digital_filter_config();
+				}
 			}
 			else
-			{
-				rm31080_digital_filter_config();
-			}
-		}
-		else
 #endif
-		rm31080_digital_filter_config();
-		//rm_printk("Digital Setting with %d Repeat Times \n", (g_stCtrl.bRepeatTimes[0]));
-	}
-	//rm_printk("Disable Analog Filter\n");
+			rm31080_digital_filter_config();
+			//rm_printk("Digital Setting with %d Repeat Times \n", (g_stCtrl.bRepeatTimes[0]));
+		}
+	}	//rm_printk("Disable Analog Filter\n");
 #endif
 }
 
@@ -1027,9 +1029,9 @@ void rm31080_filter_config(void)
 // Description:
 //
 // Input:
-//      N/A
+//		N/A
 // Output:
-//      N/A
+//		N/A
 //=============================================================================
 void rm31080_ctrl_get_parameter(void *arg)
 {
@@ -1070,7 +1072,7 @@ void rm31080_ctrl_get_parameter(void *arg)
 	g_stCtrl.bMFBlockNumber = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 26];	// Noise_Detector
 	g_stCtrl.bRepeatTimes[0] = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 4];	// Noise_Detector
 	g_stCtrl.bRepeatTimes[1] = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 5];	// Noise_Detector
-    g_stCtrl.bIdleRepeatTimes[0] = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 6];
+	g_stCtrl.bIdleRepeatTimes[0] = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 6];
 	g_stCtrl.bSenseNumber = pPara[PARA_BASIC_LEN + 11];	// Noise_Detector
 	g_stCtrl.bfADFC = pPara[PARA_BASIC_LEN + 4];	// Noise_Detector
 	g_stCtrl.bfTHMode = pPara[PARA_BASIC_LEN + PARA_HARDWARE_LEN + 10];	// Noise_Detector
@@ -1086,6 +1088,8 @@ void rm31080_ctrl_get_parameter(void *arg)
 	g_stCtrl.bMTTouchThreshold = pPara[192];
 	g_stCtrl.bTime2Idle = pPara[194];
 	g_stCtrl.bfPowerMode= pPara[195];
+    g_stCtrl.bfIdleMessage = pPara[207];
+    g_stCtrl.bDummyRunCycle = pPara[31];
 	//
 	// Store dummy channel to skip it, data sequence:
 	// Dummy[0](single end) | raw_data | dummy[1](single end) dummy[2](single end) | raw_data | dummy[3](single end)
@@ -1142,8 +1146,8 @@ void rm31080_ctrl_get_parameter(void *arg)
 #if ENABLE_RESOLUTION_SWITCH
 	g_stCtrl.u16ResolutionX = ((u16) pPara[PARA_BASIC_LEN + 13]) << 8 | ((u16)pPara[PARA_BASIC_LEN + 12]);
 	g_stCtrl.u16ResolutionY = ((u16) pPara[PARA_BASIC_LEN + 15]) << 8 | ((u16)pPara[PARA_BASIC_LEN + 14]);
-// 	printk("g_stCtrl.u16ResolutionX=%d", g_stCtrl.u16ResolutionX);
-// 	printk("g_stCtrl.u16ResolutionY=%d", g_stCtrl.u16ResolutionY);
+ 	//printk("===========================================================================================>g_stCtrl.u16ResolutionX=%d\n", g_stCtrl.u16ResolutionX);
+ 	//printk("===========================================================================================>g_stCtrl.u16ResolutionY=%d\n", g_stCtrl.u16ResolutionY);
 	if ((g_stCtrl.u16ResolutionX == 0) || (g_stCtrl.u16ResolutionY == 0)) {
 		g_stCtrl.u16ResolutionX = RM_INPUT_RESOLUTION_X;
 		g_stCtrl.u16ResolutionY = RM_INPUT_RESOLUTION_Y;
@@ -1152,73 +1156,73 @@ void rm31080_ctrl_get_parameter(void *arg)
 
 #if ENABLE_FILTER_SWITCH
 #if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007_VERSION_B)
+	if (g_stCtrl.bICVersion == T007A6)
 #endif
-    {
-	g_stCtrl.bReg1_09h[0] = pPara[327];	// Addr. 0327
-	g_stCtrl.bReg1_09h[1] = pPara[328];	// Addr. 0328
-	g_stCtrl.bReg1_43h[0] = pPara[337];	// Addr. 0337
-	g_stCtrl.bReg1_43h[1] = pPara[338];	// Addr. 0338
-	g_stCtrl.bReg1_48h[0] = pPara[339];	// Addr. 0339
-	g_stCtrl.bReg1_48h[1] = pPara[340];	// Addr. 0340
-	g_stCtrl.bReg1_49h[0] = pPara[341];	// Addr. 0341
-	g_stCtrl.bReg1_49h[1] = pPara[342];	// Addr. 0342
-	g_stCtrl.bReg1_4Ah[0] = pPara[343];	// Addr. 0343
-	g_stCtrl.bReg1_4Ah[1] = pPara[344];	// Addr. 0344
-	g_stCtrl.bReg1_4Bh[0] = pPara[345];	// Addr. 0345
-	g_stCtrl.bReg1_4Bh[1] = pPara[346];	// Addr. 0346
+	{
+		g_stCtrl.bReg1_09h[0] = pPara[327];	// Addr. 0327
+		g_stCtrl.bReg1_09h[1] = pPara[328];	// Addr. 0328
+		g_stCtrl.bReg1_43h[0] = pPara[337];	// Addr. 0337
+		g_stCtrl.bReg1_43h[1] = pPara[338];	// Addr. 0338
+		g_stCtrl.bReg1_48h[0] = pPara[339];	// Addr. 0339
+		g_stCtrl.bReg1_48h[1] = pPara[340];	// Addr. 0340
+		g_stCtrl.bReg1_49h[0] = pPara[341];	// Addr. 0341
+		g_stCtrl.bReg1_49h[1] = pPara[342];	// Addr. 0342
+		g_stCtrl.bReg1_4Ah[0] = pPara[343];	// Addr. 0343
+		g_stCtrl.bReg1_4Ah[1] = pPara[344];	// Addr. 0344
+		g_stCtrl.bReg1_4Bh[0] = pPara[345];	// Addr. 0345
+		g_stCtrl.bReg1_4Bh[1] = pPara[346];	// Addr. 0346
 
-	g_stCtrl.bReg0_40h[0] = pPara[258];
-	g_stCtrl.bReg0_40h[1] = pPara[259];
-	g_stCtrl.bReg0_41h[0] = pPara[260];
-	g_stCtrl.bReg0_41h[1] = pPara[261];
-	g_stCtrl.bReg0_42h[0] = pPara[262];	// Addr. 0262
-	g_stCtrl.bReg0_42h[1] = pPara[263];	// Addr. 0263
-	g_stCtrl.bReg0_43h[0] = pPara[264];	// Addr. 0264
-	g_stCtrl.bReg0_43h[1] = pPara[265];	// Addr. 0265
+		g_stCtrl.bReg0_40h[0] = pPara[258];
+		g_stCtrl.bReg0_40h[1] = pPara[259];
+		g_stCtrl.bReg0_41h[0] = pPara[260];
+		g_stCtrl.bReg0_41h[1] = pPara[261];
+		g_stCtrl.bReg0_42h[0] = pPara[262];	// Addr. 0262
+		g_stCtrl.bReg0_42h[1] = pPara[263];	// Addr. 0263
+		g_stCtrl.bReg0_43h[0] = pPara[264];	// Addr. 0264
+		g_stCtrl.bReg0_43h[1] = pPara[265];	// Addr. 0265
 
-// time chart
-	g_stCtrl.bReg0_20h[0] = pPara[213];	// Addr. 0213
-	g_stCtrl.bReg0_20h[1] = pPara[214];	// Addr. 0214
-	g_stCtrl.bReg0_21h[0] = pPara[215];	// Addr. 0215
-	g_stCtrl.bReg0_21h[1] = pPara[216];	// Addr. 0216
-	g_stCtrl.bReg0_22h[0] = pPara[217];	// Addr. 0217
-	g_stCtrl.bReg0_22h[1] = pPara[218];	// Addr. 0218
-	g_stCtrl.bReg0_23h[0] = pPara[219];	// Addr. 0219
-	g_stCtrl.bReg0_23h[1] = pPara[220];	// Addr. 0220
-	g_stCtrl.bReg0_24h[0] = pPara[221];	// Addr. 0221
-	g_stCtrl.bReg0_24h[1] = pPara[222];	// Addr. 0222
-	g_stCtrl.bReg0_25h[0] = pPara[223];	// Addr. 0223
-	g_stCtrl.bReg0_25h[1] = pPara[224];	// Addr. 0224
-	g_stCtrl.bReg0_26h[0] = pPara[225];	// Addr. 0225
-	g_stCtrl.bReg0_26h[1] = pPara[226];	// Addr. 0226
-	g_stCtrl.bReg0_27h[0] = pPara[227];	// Addr. 0227
-	g_stCtrl.bReg0_27h[1] = pPara[228];	// Addr. 0228
-	g_stCtrl.bReg0_28h[0] = pPara[229];	// Addr. 0229
-	g_stCtrl.bReg0_28h[1] = pPara[230];	// Addr. 0230
-	g_stCtrl.bReg0_29h[0] = pPara[231];	// Addr. 0231
-	g_stCtrl.bReg0_29h[1] = pPara[232];	// Addr. 0232
-	g_stCtrl.bReg0_2Ah[0] = pPara[233];	// Addr. 0233
-	g_stCtrl.bReg0_2Ah[1] = pPara[234];	// Addr. 0234
-	g_stCtrl.bReg0_2Bh[0] = pPara[235];	// Addr. 0235
-	g_stCtrl.bReg0_2Bh[1] = pPara[236];	// Addr. 0236
-	g_stCtrl.bReg0_2Ch[0] = pPara[237];	// Addr. 0237
-	g_stCtrl.bReg0_2Ch[1] = pPara[238];	// Addr. 0238
-	g_stCtrl.bReg0_2Dh[0] = pPara[239];	// Addr. 0239
-	g_stCtrl.bReg0_2Dh[1] = pPara[240];	// Addr. 0240
-	g_stCtrl.bReg0_2Eh[0] = pPara[241];	// Addr. 0241
-	g_stCtrl.bReg0_2Eh[1] = pPara[242];	// Addr. 0242
-	g_stCtrl.bReg0_2Fh[0] = pPara[243];	// Addr. 0243
-	g_stCtrl.bReg0_2Fh[1] = pPara[244];	// Addr. 0244
-	g_stCtrl.bReg0_30h[0] = pPara[245];	// Addr. 0245
-	g_stCtrl.bReg0_30h[1] = pPara[246];	// Addr. 0246
-	g_stCtrl.bReg0_31h[0] = pPara[247];	// Addr. 0247
-	g_stCtrl.bReg0_31h[1] = pPara[248];	// Addr. 0248
-	g_stCtrl.bReg0_32h[0] = pPara[249];	// Addr. 0249
-	g_stCtrl.bReg0_32h[1] = pPara[250];	// Addr. 0250
-	g_stCtrl.bReg0_33h[0] = pPara[251];	// Addr. 0251
-	g_stCtrl.bReg0_33h[1] = pPara[252];	// Addr. 0252
-    }
+	// time chart
+		g_stCtrl.bReg0_20h[0] = pPara[213];	// Addr. 0213
+		g_stCtrl.bReg0_20h[1] = pPara[214];	// Addr. 0214
+		g_stCtrl.bReg0_21h[0] = pPara[215];	// Addr. 0215
+		g_stCtrl.bReg0_21h[1] = pPara[216];	// Addr. 0216
+		g_stCtrl.bReg0_22h[0] = pPara[217];	// Addr. 0217
+		g_stCtrl.bReg0_22h[1] = pPara[218];	// Addr. 0218
+		g_stCtrl.bReg0_23h[0] = pPara[219];	// Addr. 0219
+		g_stCtrl.bReg0_23h[1] = pPara[220];	// Addr. 0220
+		g_stCtrl.bReg0_24h[0] = pPara[221];	// Addr. 0221
+		g_stCtrl.bReg0_24h[1] = pPara[222];	// Addr. 0222
+		g_stCtrl.bReg0_25h[0] = pPara[223];	// Addr. 0223
+		g_stCtrl.bReg0_25h[1] = pPara[224];	// Addr. 0224
+		g_stCtrl.bReg0_26h[0] = pPara[225];	// Addr. 0225
+		g_stCtrl.bReg0_26h[1] = pPara[226];	// Addr. 0226
+		g_stCtrl.bReg0_27h[0] = pPara[227];	// Addr. 0227
+		g_stCtrl.bReg0_27h[1] = pPara[228];	// Addr. 0228
+		g_stCtrl.bReg0_28h[0] = pPara[229];	// Addr. 0229
+		g_stCtrl.bReg0_28h[1] = pPara[230];	// Addr. 0230
+		g_stCtrl.bReg0_29h[0] = pPara[231];	// Addr. 0231
+		g_stCtrl.bReg0_29h[1] = pPara[232];	// Addr. 0232
+		g_stCtrl.bReg0_2Ah[0] = pPara[233];	// Addr. 0233
+		g_stCtrl.bReg0_2Ah[1] = pPara[234];	// Addr. 0234
+		g_stCtrl.bReg0_2Bh[0] = pPara[235];	// Addr. 0235
+		g_stCtrl.bReg0_2Bh[1] = pPara[236];	// Addr. 0236
+		g_stCtrl.bReg0_2Ch[0] = pPara[237];	// Addr. 0237
+		g_stCtrl.bReg0_2Ch[1] = pPara[238];	// Addr. 0238
+		g_stCtrl.bReg0_2Dh[0] = pPara[239];	// Addr. 0239
+		g_stCtrl.bReg0_2Dh[1] = pPara[240];	// Addr. 0240
+		g_stCtrl.bReg0_2Eh[0] = pPara[241];	// Addr. 0241
+		g_stCtrl.bReg0_2Eh[1] = pPara[242];	// Addr. 0242
+		g_stCtrl.bReg0_2Fh[0] = pPara[243];	// Addr. 0243
+		g_stCtrl.bReg0_2Fh[1] = pPara[244];	// Addr. 0244
+		g_stCtrl.bReg0_30h[0] = pPara[245];	// Addr. 0245
+		g_stCtrl.bReg0_30h[1] = pPara[246];	// Addr. 0246
+		g_stCtrl.bReg0_31h[0] = pPara[247];	// Addr. 0247
+		g_stCtrl.bReg0_31h[1] = pPara[248];	// Addr. 0248
+		g_stCtrl.bReg0_32h[0] = pPara[249];	// Addr. 0249
+		g_stCtrl.bReg0_32h[1] = pPara[250];	// Addr. 0250
+		g_stCtrl.bReg0_33h[0] = pPara[251];	// Addr. 0251
+		g_stCtrl.bReg0_33h[1] = pPara[252];	// Addr. 0252
+	}
 #endif
 }
 

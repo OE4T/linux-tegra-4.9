@@ -347,7 +347,4 @@ static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
 #endif
 }
 
-int nvmap_get_handle_param_u32(struct nvmap_client *client,
-			       struct nvmap_handle *h, u32 param, u32 *result);
-
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

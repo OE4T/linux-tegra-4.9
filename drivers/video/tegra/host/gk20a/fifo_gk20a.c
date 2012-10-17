@@ -21,7 +21,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
-/*#include <linux/nvmap.h>*/
 
 #include "../dev.h"
 #include "../nvhost_as.h"
@@ -180,7 +179,7 @@ static int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				mem_op().alloc(memmgr, runlist_size,
 					    DEFAULT_ALLOC_ALIGNMENT,
 					    DEFAULT_ALLOC_FLAGS,
-					    0); /*0);*/
+					    0);
 			if (!runlist->mem[i].ref)
 				goto clean_up;
 			runlist->mem[i].size = runlist_size;
@@ -308,7 +307,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 	f->userd.mem.ref = mem_op().alloc(memmgr, f->userd_total_size,
 				       DEFAULT_ALLOC_ALIGNMENT,
 				       DEFAULT_ALLOC_FLAGS,
-				       0); /*, 0);*/
+				       0);
 	if (IS_ERR_OR_NULL(f->userd.mem.ref)) {
 		err = -ENOMEM;
 		goto clean_up;

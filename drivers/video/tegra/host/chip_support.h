@@ -150,6 +150,8 @@ struct nvhost_mem_ops {
 	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
 	void *(*mmap)(struct mem_handle *);
 	void (*munmap)(struct mem_handle *, void *);
+	void *(*kmap)(struct mem_handle *, unsigned int);
+	void (*kunmap)(struct mem_handle *, unsigned int, void *);
 };
 
 struct nvhost_actmon_ops {

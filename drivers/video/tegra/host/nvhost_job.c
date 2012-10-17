@@ -169,12 +169,15 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	job->num_gathers += 1;
 }
 
-static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
+static int do_relocs(struct nvhost_job *job,
+		u32 cmdbuf_mem, struct mem_handle *h)
 {
 	struct sg_table *target_sgt = NULL;
 	int i;
 	u32 mem_id = 0;
 	struct mem_handle *target_ref = NULL;
+	int last_page = -1;
+	void *cmdbuf_page_addr = NULL;
 
 	/* pin & patch the relocs for one gather */
 	for (i = 0; i < job->num_relocs; i++) {
@@ -203,15 +206,32 @@ static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
 			job->unpins[job->num_unpins++].h = target_ref;
 		}
 
+		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
+			if (cmdbuf_page_addr)
+				mem_op().kunmap(h, last_page, cmdbuf_page_addr);
+
+			cmdbuf_page_addr = mem_op().kmap(h,
+					reloc->cmdbuf_offset >> PAGE_SHIFT);
+			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
+
+			if (unlikely(!cmdbuf_page_addr)) {
+				pr_err("Couldn't map cmdbuf for relocation\n");
+				return -ENOMEM;
+			}
+		}
+
 		__raw_writel(
 			(sg_dma_address(target_sgt->sgl) +
 				reloc->target_offset) >> shift->shift,
-			(cmdbuf_addr + reloc->cmdbuf_offset));
-
+			(cmdbuf_page_addr +
+				(reloc->cmdbuf_offset & ~PAGE_MASK)));
 		/* Different gathers might have same mem_id. This ensures we
 		 * perform reloc only once per gather memid. */
 		reloc->cmdbuf_mem = 0;
 	}
+
+	if (cmdbuf_page_addr)
+		mem_op().kunmap(h, last_page, cmdbuf_page_addr);
 
 	return 0;
 }
@@ -222,7 +242,7 @@ static int do_relocs(struct nvhost_job *job, u32 cmdbuf_mem, void *cmdbuf_addr)
  * avoid a wrap condition in the HW).
  */
 static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
-		u32 patch_mem, void *patch_addr)
+		u32 patch_mem, struct mem_handle *h)
 {
 	int i;
 
@@ -239,6 +259,8 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 				nvhost_syncpt_read(sp, wait->syncpt_id));
 		if (nvhost_syncpt_is_expired(sp,
 					wait->syncpt_id, wait->thresh)) {
+			void *patch_addr = NULL;
+
 			/*
 			 * NULL an already satisfied WAIT_SYNCPT host method,
 			 * by patching its args in the command stream. The
@@ -255,8 +277,18 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			    nvhost_syncpt_read_min(sp, wait->syncpt_id));
 
 			/* patch the wait */
-			nvhost_syncpt_patch_wait(sp,
-					(patch_addr + wait->offset));
+			patch_addr = mem_op().kmap(h,
+					wait->offset >> PAGE_SHIFT);
+			if (patch_addr) {
+				nvhost_syncpt_patch_wait(sp,
+					(patch_addr +
+					 (wait->offset & ~PAGE_MASK)));
+				mem_op().kunmap(h,
+						wait->offset >> PAGE_SHIFT,
+						patch_addr);
+			} else {
+				pr_err("Couldn't map cmdbuf for wait check\n");
+			}
 		}
 
 		wait->mem = 0;
@@ -268,7 +300,6 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
 	struct sg_table *gather_sgt = NULL;
-	void *gather_addr = NULL;
 	unsigned long waitchk_mask = job->waitchk_mask;
 
 	/* get current syncpt values for waitchk */
@@ -309,17 +340,10 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 			job->unpins[job->num_unpins].mem = g->mem_sgt;
 			job->unpins[job->num_unpins++].h = g->ref;
 
-			gather_addr = mem_op().mmap(g->ref);
-			if (!gather_addr) {
-				err = -ENOMEM;
-				break;
-			}
-
-			err = do_relocs(job, g->mem_id, gather_addr);
+			err = do_relocs(job, g->mem_id, g->ref);
 			if (!err)
 				err = do_waitchks(job, sp,
-						g->mem_id, gather_addr);
-			mem_op().munmap(g->ref, gather_addr);
+						g->mem_id, g->ref);
 
 			if (err)
 				break;

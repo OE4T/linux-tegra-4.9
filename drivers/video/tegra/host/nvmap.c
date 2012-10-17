@@ -106,6 +106,17 @@ void nvhost_nvmap_munmap(struct mem_handle *handle, void *addr)
 	nvmap_munmap((struct nvmap_handle_ref *)handle, addr);
 }
 
+void *nvhost_nvmap_kmap(struct mem_handle *handle, unsigned int pagenum)
+{
+	return nvmap_kmap((struct nvmap_handle_ref *)handle, pagenum);
+}
+
+void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr)
+{
+	nvmap_kunmap((struct nvmap_handle_ref *)handle, pagenum, addr);
+}
+
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		u32 id, struct nvhost_device *dev)
 {

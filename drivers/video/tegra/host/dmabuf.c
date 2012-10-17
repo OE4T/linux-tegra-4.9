@@ -69,6 +69,17 @@ void nvhost_dmabuf_munmap(struct mem_handle *handle, void *addr)
 	dma_buf_vunmap(to_dmabuf(handle), addr);
 }
 
+void *nvhost_dmabuf_kmap(struct mem_handle *handle, unsigned int pagenum)
+{
+	return dma_buf_kmap(to_dmabuf(handle), pagenum);
+}
+
+void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr)
+{
+	dma_buf_kunmap(to_dmabuf(handle), pagenum, addr);
+}
+
 struct mem_handle *nvhost_dmabuf_get(u32 id, struct nvhost_device *dev)
 {
 	struct mem_handle *h;

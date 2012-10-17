@@ -215,6 +215,43 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 	}
 }
 
+void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
+{
+	switch (nvhost_memmgr_type((u32)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvhost_nvmap_kmap(handle, pagenum);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		return nvhost_dmabuf_kmap(handle, pagenum);
+		break;
+#endif
+	default:
+		return 0;
+		break;
+	}
+}
+
+void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr)
+{
+	switch (nvhost_memmgr_type((u32)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		nvhost_nvmap_kunmap(handle, pagenum, addr);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		nvhost_dmabuf_kunmap(handle, pagenum, addr);
+		break;
+#endif
+	default:
+		break;
+	}
+}
 static const struct nvhost_mem_ops mem_ops = {
 	.alloc_mgr = nvhost_memmgr_alloc_mgr,
 	.put_mgr = nvhost_memmgr_put_mgr,
@@ -227,6 +264,8 @@ static const struct nvhost_mem_ops mem_ops = {
 	.unpin = nvhost_memmgr_unpin,
 	.mmap = nvhost_memmgr_mmap,
 	.munmap = nvhost_memmgr_munmap,
+	.kmap = nvhost_memmgr_kmap,
+	.kunmap = nvhost_memmgr_kunmap,
 };
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)

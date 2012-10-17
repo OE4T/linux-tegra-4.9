@@ -40,6 +40,9 @@ void nvhost_nvmap_unpin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct sg_table *sgt);
 void *nvhost_nvmap_mmap(struct mem_handle *handle);
 void nvhost_nvmap_munmap(struct mem_handle *handle, void *addr);
+void *nvhost_nvmap_kmap(struct mem_handle *handle, unsigned int pagenum);
+void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr);
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		u32 id, struct nvhost_device *dev);
 

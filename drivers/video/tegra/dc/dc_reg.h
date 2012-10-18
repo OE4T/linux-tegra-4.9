@@ -615,6 +615,7 @@
 
 #define DC_DISP_SD_HISTOGRAM(i)			(0x4cf + i)
 #define DC_DISP_SD_HISTOGRAM_NUM		8
+#define  SD_HISTOGRAM_BIN(val, offset)	((val >> offset) & 0xff)
 #define  SD_HISTOGRAM_BIN_0(val)	(((val) & (0xff << 0)) >> 0)
 #define  SD_HISTOGRAM_BIN_1(val)	(((val) & (0xff << 8)) >> 8)
 #define  SD_HISTOGRAM_BIN_2(val)	(((val) & (0xff << 16)) >> 16)

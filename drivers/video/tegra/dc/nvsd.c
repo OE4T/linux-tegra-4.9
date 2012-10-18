@@ -107,7 +107,7 @@ static struct attribute_group nvsd_attr_group = {
 static struct kobject *nvsd_kobj;
 
 /* shared brightness variable */
-static atomic_t *sd_brightness = NULL;
+static atomic_t *sd_brightness;
 /* shared boolean for manual K workaround */
 static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
@@ -581,11 +581,125 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	atomic_set(&man_k_until_blank, 1);
 }
 
+static int bl_tf[17] = {
+				57,  65,  73,  82,  92,
+				103, 114, 125, 138, 150,
+				164, 178, 193, 208, 224,
+				241, 255,
+			};
+
+static int nvsd_backlght_interplate(u32 in, u32 base)
+{
+	int q, r;
+
+	if (in <= base)
+		return bl_tf[0];
+
+	if (in > 255) {
+		WARN(1, "PRISM gain is out of range!\n");
+		return -1;
+	}
+
+	q = (in - base) / 8;
+	r = (in - base) % 8;
+
+	return (bl_tf[q] * (8 - r) + bl_tf[q + 1] * r) / 8;
+}
+
+/* Estimate the pixel gain of PRISM enhancement and soft-clipping algorithm*/
+static u32 nvsd_softclip(fixed20_12 pixel, fixed20_12 k, fixed20_12 th)
+{
+	fixed20_12 num, f;
+
+	if (pixel.full >= th.full) {
+		num.full = pixel.full - th.full;
+		f.full = dfixed_const(1) - dfixed_div(num, th);
+	} else {
+		f.full = dfixed_const(1);
+	}
+
+	num.full = dfixed_mul(pixel, f);
+	f.full = dfixed_mul(num, k);
+	num.full = pixel.full + f.full;
+
+	return min_t(u32, num.full, dfixed_const(255));
+}
+
+static int nvsd_set_brightness(struct tegra_dc *dc)
+{
+	u32 bin_width;
+	int i, j;
+	int val;
+	int pix;
+	int bin_idx;
+
+	int incr;
+	int base;
+
+	u32 histo[32];
+	u32 histo_total = 0;		/* count of pixels */
+	fixed20_12 nonhisto_gain;	/* gain of pixels not in histogram */
+	fixed20_12 est_achieved_gain;	/* final gain of pixels */
+	fixed20_12 histo_gain = dfixed_init(0);	/* gain of pixels */
+	fixed20_12 k, threshold;
+	fixed20_12 den, num, out;
+	fixed20_12 pix_avg, pix_avg_softclip;
+
+	/* Collet the inputs of the algorithm */
+	for (i = 0; i < DC_DISP_SD_HISTOGRAM_NUM; i++) {
+		val = tegra_dc_readl(dc, DC_DISP_SD_HISTOGRAM(i));
+		for (j = 0; j < 4; j++)
+			histo[i * 4 + j] = SD_HISTOGRAM_BIN(val, (j * 8));
+	}
+
+	val = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
+	k.full = SD_HW_K_R(val) << 2;
+
+	val = tegra_dc_readl(dc, DC_DISP_SD_SOFT_CLIPPING);
+	threshold.full = dfixed_const(SD_SOFT_CLIPPING_THRESHOLD(val));
+
+	val = tegra_dc_readl(dc, DC_DISP_SD_CONTROL);
+	bin_width = SD_BIN_WIDTH(val)>>3;
+	incr = 1 << bin_width;
+	base = 256 - 32 * incr;
+
+	for (pix = base, bin_idx = 0; pix < 256; pix += incr, bin_idx++) {
+		num.full = dfixed_const(pix + pix + incr);
+		den.full = dfixed_const(2);
+		pix_avg.full = dfixed_div(num, den);
+		pix_avg_softclip.full = nvsd_softclip(pix_avg, k, threshold);
+
+		num.full = dfixed_const(histo[bin_idx]);
+		den.full = dfixed_const(256);
+		out.full = dfixed_div(num, den);
+		num.full = dfixed_mul(out, pix_avg_softclip);
+		out.full = dfixed_div(num, pix_avg);
+		histo_gain.full += out.full;
+		histo_total += histo[bin_idx];
+	}
+
+	out.full = dfixed_const(256 - histo_total);
+	den.full = dfixed_const(1) + k.full;
+	num.full = dfixed_mul(out, den);
+	den.full = dfixed_const(256);
+	nonhisto_gain.full = dfixed_div(num, den);
+
+	den.full = nonhisto_gain.full + histo_gain.full;
+	num.full = dfixed_const(1);
+	out.full = dfixed_div(num, den);
+	num.full = dfixed_const(255);
+	est_achieved_gain.full = dfixed_mul(num, out);
+	val = dfixed_trunc(est_achieved_gain);
+
+	return nvsd_backlght_interplate(val, 128);
+}
+
 /* Periodic update */
 bool nvsd_update_brightness(struct tegra_dc *dc)
 {
 	u32 val = 0;
 	int cur_sd_brightness;
+	int sw_sd_brightness;
 	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
 
 	if (sd_brightness) {
@@ -610,13 +724,23 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		val = tegra_dc_readl(dc, DC_DISP_SD_BL_CONTROL);
 		val = SD_BLC_BRIGHTNESS(val);
 
+		/* PRISM is updated by hw or sw algorithm. Brightness is
+		 * compensated according to histogram for soft-clipping
+		 * if hw output is used to update brightness. */
 		if (settings->phase_in_adjustments) {
 			return nvsd_phase_in_adjustments(dc, settings);
+		} else if (settings->soft_clipping_correction) {
+			sw_sd_brightness = nvsd_set_brightness(dc);
+			if (sw_sd_brightness != cur_sd_brightness) {
+				atomic_set(sd_brightness, sw_sd_brightness);
+				return true;
+			}
 		} else if (val != (u32)cur_sd_brightness) {
 			/* set brightness value and note the update */
 			atomic_set(sd_brightness, (int)val);
 			return true;
 		}
+
 	}
 
 	/* No update needed. */

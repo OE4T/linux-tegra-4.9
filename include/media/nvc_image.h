@@ -121,10 +121,10 @@ struct nvc_imager_dynamic_nvc {
 	__u8 align3;
 	__u32 pll_mult;
 	__u32 pll_div;
+	__u32 mode_sw_wait_frames;
 	__u32 place_holder1;
 	__u32 place_holder2;
 	__u32 place_holder3;
-	__u32 place_holder4;
 } __packed;
 
 struct nvc_imager_bayer {

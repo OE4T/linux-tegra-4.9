@@ -1848,8 +1848,10 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, VSYNC_H_POSITION(1), DC_DISP_DISP_TIMING_OPTIONS);
-	tegra_dc_writel(dc, DITHER_CONTROL_DISABLE | BASE_COLOR_SIZE888,
-			DC_DISP_DISP_COLOR_CONTROL);
+
+	dc->out->depth = 24;
+	dc->out->dither = TEGRA_DC_DISABLE_DITHER;
+	tegra_dc_set_color_control(dc);
 
 	/* video_preamble uses h_pulse2 */
 	pulse_start = dc->mode.h_ref_to_sync + dc->mode.h_sync_width +

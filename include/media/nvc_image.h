@@ -70,6 +70,7 @@
 struct nvc_imager_static_nvc {
 	__u32 api_version;
 	__u32 sensor_type;
+	__u32 bits_per_pixel;
 	__u32 sensor_id;
 	__u32 sensor_id_minor;
 	__u32 focal_len;

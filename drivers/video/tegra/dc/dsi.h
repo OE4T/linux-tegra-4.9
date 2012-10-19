@@ -94,11 +94,11 @@ struct tegra_dc_dsi_data {
 	u8 pixel_scaler_mul;
 	u8 pixel_scaler_div;
 
-	u32 default_shift_clk_div;
+	struct tegra_dc_shift_clk_div default_shift_clk_div;
 	u32 default_pixel_clk_khz;
 	u32 default_hs_clk_khz;
 
-	u32 shift_clk_div;
+	struct tegra_dc_shift_clk_div shift_clk_div;
 	u32 target_hs_clk_khz;
 	u32 target_lp_clk_khz;
 

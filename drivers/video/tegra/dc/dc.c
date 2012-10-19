@@ -2171,7 +2171,7 @@ static int tegra_dc_probe(struct nvhost_device *ndev,
 
 	dc->clk = clk;
 	dc->emc_clk = emc_clk;
-	dc->shift_clk_div = 1;
+	dc->shift_clk_div.mul = dc->shift_clk_div.div = 1;
 	/* Initialize one shot work delay, it will be assigned by dsi
 	 * according to refresh rate later. */
 	dc->one_shot_delay_ms = 40;

@@ -41,5 +41,11 @@ void *nvhost_dmabuf_kmap(struct mem_handle *handle, unsigned int pagenum);
 void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
 int nvhost_dmabuf_get(u32 id, struct nvhost_device *dev);
-
+int nvhost_dmabuf_pin_array_ids(struct nvhost_device *dev,
+		long unsigned *ids,
+		long unsigned id_type_mask,
+		long unsigned id_type,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data,
+		dma_addr_t *phys_addr);
 #endif

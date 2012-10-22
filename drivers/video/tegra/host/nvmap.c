@@ -23,6 +23,8 @@
 #include <linux/scatterlist.h>
 #include <linux/err.h>
 #include "nvmap.h"
+#include "nvhost_job.h"
+
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 {
@@ -53,7 +55,7 @@ struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
 
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 {
-	nvmap_free((struct nvmap_client *)mgr,
+	_nvmap_free((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);
 }
 
@@ -90,8 +92,6 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 void nvhost_nvmap_unpin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct sg_table *sgt)
 {
-	kfree(sgt);
-
 	return nvmap_unpin((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);
 }
@@ -117,10 +117,53 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	nvmap_kunmap((struct nvmap_handle_ref *)handle, pagenum, addr);
 }
 
+int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
+		long unsigned *ids,
+		long unsigned id_type_mask,
+		long unsigned id_type,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data,
+		dma_addr_t *phys_addr)
+{
+	int i;
+	int result = 0;
+	struct nvmap_handle **unique_handles;
+	struct nvmap_handle_ref **unique_handle_refs;
+	void *ptrs = kmalloc(sizeof(void *) * count * 2,
+			GFP_KERNEL);
+
+	if (!ptrs)
+		return -ENOMEM;
+
+	unique_handles = (struct nvmap_handle **) ptrs;
+	unique_handle_refs = (struct nvmap_handle_ref **)
+			&unique_handles[count];
+
+	result = nvmap_pin_array((struct nvmap_client *)mgr,
+		    ids, id_type_mask, id_type, count,
+		    unique_handles,
+		    unique_handle_refs);
+
+	if (result < 0)
+		goto fail;
+
+	BUG_ON(result > count);
+
+	for (i = 0; i < result; i++)
+		unpin_data[i].h = (struct mem_handle *)unique_handle_refs[i];
+
+	for (i = 0; i < count; i++)
+		phys_addr[i] = (dma_addr_t)_nvmap_get_addr_from_id(ids[i]);
+
+fail:
+	kfree(ptrs);
+	return result;
+}
+
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		u32 id, struct nvhost_device *dev)
 {
 	return (struct mem_handle *)
-		nvmap_duplicate_handle_id((struct nvmap_client *)mgr, id);
+		_nvmap_duplicate_handle_id((struct nvmap_client *)mgr, id);
 }
 

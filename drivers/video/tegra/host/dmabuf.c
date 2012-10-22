@@ -59,6 +59,7 @@ void nvhost_dmabuf_unpin(struct mem_handle *handle, struct sg_table *sgt)
 	dma_buf_unmap_attachment(to_dmabuf_att(handle), sgt, DMA_BIDIRECTIONAL);
 }
 
+
 void *nvhost_dmabuf_mmap(struct mem_handle *handle)
 {
 	return dma_buf_vmap(to_dmabuf(handle));
@@ -95,4 +96,53 @@ struct mem_handle *nvhost_dmabuf_get(u32 id, struct nvhost_device *dev)
 	}
 
 	return (struct mem_handle *) ((u32)h | mem_mgr_type_dmabuf);
+}
+
+int nvhost_dmabuf_pin_array_ids(struct nvhost_device *dev,
+		long unsigned *ids,
+		long unsigned id_type_mask,
+		long unsigned id_type,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data,
+		dma_addr_t *phys_addr) {
+	int i;
+	int pin_count = 0;
+	int err;
+
+	for (i = 0; i < count; i++) {
+		struct mem_handle *handle;
+		struct sg_table *sgt;
+
+		if ((ids[i] & id_type_mask) != id_type)
+			continue;
+
+		handle = nvhost_dmabuf_get(ids[i], dev);
+
+		if (IS_ERR(handle)) {
+			err = PTR_ERR(handle);
+			goto fail;
+		}
+
+		sgt = nvhost_dmabuf_pin(handle);
+		if (IS_ERR_OR_NULL(sgt)) {
+			nvhost_dmabuf_put(handle);
+			err = PTR_ERR(sgt);
+			goto fail;
+		}
+
+		phys_addr[i] = sg_dma_address(sgt->sgl);
+
+		unpin_data[pin_count].h = handle;
+		unpin_data[pin_count].mem = sgt;
+		pin_count++;
+	}
+	return pin_count;
+fail:
+	while (pin_count) {
+		pin_count--;
+		nvhost_dmabuf_unpin(unpin_data[pin_count].h,
+				unpin_data[pin_count].mem);
+		nvhost_dmabuf_put(unpin_data[pin_count].h);
+	}
+	return err;
 }

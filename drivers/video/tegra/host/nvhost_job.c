@@ -51,7 +51,8 @@ static size_t job_size(struct nvhost_submit_hdr_ext *hdr)
 			+ num_relocs * sizeof(struct nvhost_reloc_shift)
 			+ num_unpins * sizeof(struct nvhost_job_unpin)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
-			+ num_cmdbufs * sizeof(struct nvhost_job_gather);
+			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
+			+ (num_relocs + num_cmdbufs) * sizeof(dma_addr_t);
 
 	if(total > ULONG_MAX)
 		return 0;
@@ -87,6 +88,12 @@ static void init_fields(struct nvhost_job *job,
 	job->waitchk = num_waitchks ? mem : NULL;
 	mem += num_waitchks * sizeof(struct nvhost_waitchk);
 	job->gathers = num_cmdbufs ? mem : NULL;
+	mem += num_cmdbufs * sizeof(struct nvhost_job_gather);
+	job->addr_phys = (num_cmdbufs || num_relocs) ? mem : NULL;
+
+	job->reloc_addr_phys = job->addr_phys;
+	job->gather_addr_phys = &job->addr_phys[num_relocs];
+
 
 	/* Copy information from header */
 	if (hdr) {
@@ -169,73 +176,6 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	job->num_gathers += 1;
 }
 
-static int do_relocs(struct nvhost_job *job,
-		u32 cmdbuf_mem, struct mem_handle *h)
-{
-	struct sg_table *target_sgt = NULL;
-	int i;
-	u32 mem_id = 0;
-	struct mem_handle *target_ref = NULL;
-	int last_page = -1;
-	void *cmdbuf_page_addr = NULL;
-
-	/* pin & patch the relocs for one gather */
-	for (i = 0; i < job->num_relocs; i++) {
-		struct nvhost_reloc *reloc = &job->relocarray[i];
-		struct nvhost_reloc_shift *shift = &job->relocshiftarray[i];
-
-		/* skip all other gathers */
-		if (cmdbuf_mem != reloc->cmdbuf_mem)
-			continue;
-
-		/* check if pin-mem is same as previous */
-		if (reloc->target != mem_id) {
-			target_ref = mem_op().get(job->memmgr,
-					reloc->target, job->ch->dev);
-			if (IS_ERR(target_ref))
-				return PTR_ERR(target_ref);
-
-			target_sgt = mem_op().pin(job->memmgr, target_ref);
-			if (IS_ERR((void *)target_sgt)) {
-				mem_op().put(job->memmgr, target_ref);
-				return PTR_ERR(target_sgt);
-			}
-
-			mem_id = reloc->target;
-			job->unpins[job->num_unpins].mem = target_sgt;
-			job->unpins[job->num_unpins++].h = target_ref;
-		}
-
-		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
-			if (cmdbuf_page_addr)
-				mem_op().kunmap(h, last_page, cmdbuf_page_addr);
-
-			cmdbuf_page_addr = mem_op().kmap(h,
-					reloc->cmdbuf_offset >> PAGE_SHIFT);
-			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
-
-			if (unlikely(!cmdbuf_page_addr)) {
-				pr_err("Couldn't map cmdbuf for relocation\n");
-				return -ENOMEM;
-			}
-		}
-
-		__raw_writel(
-			(sg_dma_address(target_sgt->sgl) +
-				reloc->target_offset) >> shift->shift,
-			(cmdbuf_page_addr +
-				(reloc->cmdbuf_offset & ~PAGE_MASK)));
-		/* Different gathers might have same mem_id. This ensures we
-		 * perform reloc only once per gather memid. */
-		reloc->cmdbuf_mem = 0;
-	}
-
-	if (cmdbuf_page_addr)
-		mem_op().kunmap(h, last_page, cmdbuf_page_addr);
-
-	return 0;
-}
-
 /*
  * Check driver supplied waitchk structs for syncpt thresholds
  * that have already been satisfied and NULL the comparison (to
@@ -296,37 +236,138 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 	return 0;
 }
 
+
+static int pin_job_mem(struct nvhost_job *job)
+{
+	int i;
+	int count = 0;
+	int result;
+	long unsigned *ids =
+			kmalloc(sizeof(u32 *) *
+				(job->num_relocs + job->num_gathers),
+				GFP_KERNEL);
+	if (!ids)
+		return -ENOMEM;
+
+	for (i = 0; i < job->num_relocs; i++) {
+		struct nvhost_reloc *reloc = &job->relocarray[i];
+		ids[count] = reloc->target;
+		count++;
+	}
+
+	for (i = 0; i < job->num_gathers; i++) {
+		struct nvhost_job_gather *g = &job->gathers[i];
+		ids[count] = g->mem_id;
+		count++;
+	}
+
+	/* validate array and pin unique ids, get refs for unpinning */
+	result = mem_op().pin_array_ids(job->memmgr, job->ch->dev,
+		ids, job->addr_phys,
+		count,
+		job->unpins);
+	kfree(ids);
+
+	if (result > 0)
+		job->num_unpins = result;
+
+	return result;
+}
+
+static int do_relocs(struct nvhost_job *job,
+		u32 cmdbuf_mem, struct mem_handle *h)
+{
+	int i = 0;
+	int last_page = -1;
+	void *cmdbuf_page_addr = NULL;
+
+	/* pin & patch the relocs for one gather */
+	while (i < job->num_relocs) {
+		struct nvhost_reloc *reloc = &job->relocarray[i];
+		struct nvhost_reloc_shift *shift = &job->relocshiftarray[i];
+
+		/* skip all other gathers */
+		if (cmdbuf_mem != reloc->cmdbuf_mem) {
+			i++;
+			continue;
+		}
+
+		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
+			if (cmdbuf_page_addr)
+				mem_op().kunmap(h, last_page, cmdbuf_page_addr);
+
+			cmdbuf_page_addr = mem_op().kmap(h,
+					reloc->cmdbuf_offset >> PAGE_SHIFT);
+			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
+
+			if (unlikely(!cmdbuf_page_addr)) {
+				pr_err("Couldn't map cmdbuf for relocation\n");
+				return -ENOMEM;
+			}
+		}
+
+		__raw_writel(
+			(job->reloc_addr_phys[i] +
+				reloc->target_offset) >> shift->shift,
+			(cmdbuf_page_addr +
+				(reloc->cmdbuf_offset & ~PAGE_MASK)));
+
+		/* remove completed reloc from the job */
+		if (i != job->num_relocs - 1) {
+			struct nvhost_reloc *reloc_last =
+				&job->relocarray[job->num_relocs - 1];
+			struct nvhost_reloc_shift *shift_last =
+				&job->relocshiftarray[job->num_relocs - 1];
+			reloc->cmdbuf_mem	= reloc_last->cmdbuf_mem;
+			reloc->cmdbuf_offset	= reloc_last->cmdbuf_offset;
+			reloc->target		= reloc_last->target;
+			reloc->target_offset	= reloc_last->target_offset;
+			shift->shift		= shift_last->shift;
+			job->reloc_addr_phys[i] =
+				job->reloc_addr_phys[job->num_relocs - 1];
+			job->num_relocs--;
+		} else {
+			break;
+		}
+	}
+
+	if (cmdbuf_page_addr)
+		mem_op().kunmap(h, last_page, cmdbuf_page_addr);
+
+	return 0;
+}
+
+
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
-	struct sg_table *gather_sgt = NULL;
 	unsigned long waitchk_mask = job->waitchk_mask;
+
 
 	/* get current syncpt values for waitchk */
 	for_each_set_bit(i, &waitchk_mask, sizeof(job->waitchk_mask))
 		nvhost_syncpt_update_min(sp, i);
 
-	/* pin gathers */
+	/* pin memory */
+	err = pin_job_mem(job);
+	if (err <= 0)
+		goto fail;
+
+	/* patch gathers */
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
 
 		/* process each gather mem only once */
 		if (!g->ref) {
 			g->ref = mem_op().get(job->memmgr,
-					job->gathers[i].mem_id, job->ch->dev);
+				g->mem_id, job->ch->dev);
 			if (IS_ERR(g->ref)) {
 				err = PTR_ERR(g->ref);
 				g->ref = NULL;
 				break;
 			}
 
-			g->mem_sgt = mem_op().pin(job->memmgr, g->ref);
-			if (IS_ERR_OR_NULL(g->mem_sgt)) {
-				mem_op().put(job->memmgr, g->ref);
-				err = PTR_ERR(gather_sgt);
-				break;
-			}
-			g->mem_base = sg_dma_address(g->mem_sgt->sgl);
+			g->mem_base = job->gather_addr_phys[i];
 
 			for (j = 0; j < job->num_gathers; j++) {
 				struct nvhost_job_gather *tmp =
@@ -336,24 +377,24 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 					tmp->mem_base = g->mem_base;
 				}
 			}
-			/* store the gather ref into unpin array */
-			job->unpins[job->num_unpins].mem = g->mem_sgt;
-			job->unpins[job->num_unpins++].h = g->ref;
-
-			err = do_relocs(job, g->mem_id, g->ref);
+			err = do_relocs(job, g->mem_id,  g->ref);
 			if (!err)
 				err = do_waitchks(job, sp,
 						g->mem_id, g->ref);
-
+			mem_op().put(job->memmgr, g->ref);
 			if (err)
 				break;
 		}
 	}
+fail:
 	wmb();
 
 	return err;
 }
 
+/*
+ * Fast unpin, only for nvmap
+ */
 void nvhost_job_unpin(struct nvhost_job *job)
 {
 	int i;
@@ -363,9 +404,6 @@ void nvhost_job_unpin(struct nvhost_job *job)
 		mem_op().unpin(job->memmgr, unpin->h, unpin->mem);
 		mem_op().put(job->memmgr, unpin->h);
 	}
-
-	memset(job->unpins, BAD_MAGIC,
-			job->num_unpins * sizeof(struct mem_handle *));
 	job->num_unpins = 0;
 }
 

@@ -26,6 +26,11 @@ struct mem_mgr;
 struct mem_handle;
 struct nvhost_device;
 
+struct nvhost_job_unpin {
+	struct mem_handle *h;
+	struct sg_table *mem;
+};
+
 enum mem_mgr_flag {
 	mem_mgr_flag_uncacheable = 0,
 	mem_mgr_flag_write_combine = 1,
@@ -35,6 +40,9 @@ enum mem_mgr_type {
 	mem_mgr_type_nvmap = 0,
 	mem_mgr_type_dmabuf = 1,
 };
+
+#define MEMMGR_TYPE_MASK	0x3
+#define MEMMGR_ID_MASK		~0x3
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip);
 struct mem_mgr *nvhost_memmgr_alloc_mgr(void);
@@ -46,7 +54,14 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *,
 		int flags);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
 		u32 id, struct nvhost_device *dev);
-static inline int nvhost_memmgr_type(u32 id) { return id & 0x3; }
-static inline int nvhost_memmgr_id(u32 id) { return id & ~0x3; }
+static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
+static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
+
+int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
+		struct nvhost_device *dev,
+		long unsigned *ids,
+		dma_addr_t *phys_addr,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data);
 
 #endif

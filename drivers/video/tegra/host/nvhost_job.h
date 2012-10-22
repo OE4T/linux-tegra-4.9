@@ -22,6 +22,7 @@
 #define __NVHOST_JOB_H
 
 #include <linux/nvhost_ioctl.h>
+#include <linux/kref.h>
 
 struct nvhost_channel;
 struct nvhost_hwctx;
@@ -36,11 +37,6 @@ struct nvhost_job_gather {
 	u32 mem_id;
 	int offset;
 	struct mem_handle *ref;
-};
-
-struct nvhost_job_unpin {
-	struct mem_handle *h;
-	struct sg_table *mem;
 };
 
 /*
@@ -78,6 +74,10 @@ struct nvhost_job {
 	int num_relocs;
 	struct nvhost_job_unpin *unpins;
 	int num_unpins;
+
+	dma_addr_t *addr_phys;
+	dma_addr_t *gather_addr_phys;
+	dma_addr_t *reloc_addr_phys;
 
 	/* Sync point id, number of increments and end related to the submit */
 	u32 syncpt_id;

@@ -42,6 +42,7 @@
 #include "dev.h"
 #include "dsi_regs.h"
 #include "dsi.h"
+#include "mipi_cal.h"
 
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
@@ -402,6 +403,7 @@ static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 		clk_enable(dsi->dsi_clk);
 		clk_enable(dsi->dsi_fixed_clk);
 	}
+	tegra_mipi_cal_clk_enable(dsi->mipi_cal);
 }
 
 static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
@@ -410,6 +412,7 @@ static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 		clk_disable(dsi->dsi_clk);
 		clk_disable(dsi->dsi_fixed_clk);
 	}
+	tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 }
 
 static void __maybe_unused tegra_dsi_syncpt_reset(
@@ -2020,6 +2023,13 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 
 	tegra_dsi_pad_calibration(dsi);
 
+	tegra_mipi_cal_init_hw(dsi->mipi_cal);
+
+	tegra_mipi_cal_write(dsi->mipi_cal, MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
+					MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+	tegra_mipi_cal_write(dsi->mipi_cal, PAD_PDVREG(0x0),
+				MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
 		DSI_POWER_CONTROL);
@@ -3275,7 +3285,9 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->out_ops->init(dsi);
 
 	tegra_dsi_init_sw(dc, dsi);
-	/* TODO: Configure the CSI pad configuration */
+
+	if (!dsi->mipi_cal)
+		dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
 }
 
 static int tegra_dc_dsi_cp_p_cmd(struct tegra_dsi_cmd *src,

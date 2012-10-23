@@ -73,6 +73,8 @@ struct tegra_dc_dsi_data {
 	/* data from board info */
 	struct tegra_dsi_out info;
 
+	struct tegra_mipi_cal *mipi_cal;
+
 	struct dsi_status status;
 
 	struct dsi_phy_timing_inclk phy_timing;

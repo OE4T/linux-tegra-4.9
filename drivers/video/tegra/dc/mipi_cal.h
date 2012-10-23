@@ -17,6 +17,8 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
 
+#include "mipi_cal_regs.h"
+
 struct tegra_mipi_cal {
 	struct tegra_dc *dc;
 	struct resource *res;

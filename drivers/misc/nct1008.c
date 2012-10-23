@@ -1057,8 +1057,6 @@ static int nct1008_probe(struct i2c_client *client,
 						0x0,
 						data,
 						&nct_int_ops,
-						0,
-						1,
 						2000,
 						0);
 	if (IS_ERR_OR_NULL(data->nct_int))
@@ -1069,8 +1067,6 @@ static int nct1008_probe(struct i2c_client *client,
 					mask,
 					data,
 					&nct_ext_ops,
-					data->plat_data.passive.tc1,
-					data->plat_data.passive.tc2,
 					data->plat_data.passive.passive_delay,
 					0);
 	if (IS_ERR_OR_NULL(data->nct_int)) {

@@ -460,9 +460,16 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_submit_gpfifo_args *args)
 {
-	struct nvhost_gpfifo *gpfifo;
-	u32 size = args->num_entries * sizeof(struct nvhost_gpfifo);
+	void *gpfifo;
+	u32 size;
 	int ret = 0;
+
+	/* TBD: deprecate old nvhost_gpfifo and
+	   rename nvhost_gpfifo_hw to nvhost_gpfifo */
+	if (args->flags & NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT)
+		size = args->num_entries * sizeof(struct nvhost_gpfifo_hw);
+	else
+		size = args->num_entries * sizeof(struct nvhost_gpfifo);
 
 	gpfifo = kzalloc(size, GFP_KERNEL);
 	if (IS_ERR_OR_NULL(gpfifo))

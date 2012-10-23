@@ -95,8 +95,15 @@ struct nvhost_syncpt_incr {
 };
 
 struct nvhost_gpfifo {
-	__u64 gpu_va;
-	__u32 words;
+	__u64 gpu_va; /* gpu va of gpfifo entry */
+	__u32 words; /* size of the entry, in words */
+};
+
+/* TBD: deprecate above nvhost_gpfifo
+   rename nvhost_gpfifo_hw to nvhost_gpfifo */
+struct nvhost_gpfifo_hw {
+	__u32 entry0; /* first word of gpfifo entry */
+	__u32 entry1; /* second word of gpfifo entry */
 };
 
 struct nvhost_get_param_args {
@@ -135,7 +142,7 @@ struct nvhost_fence {
 };
 
 struct nvhost_submit_gpfifo_args {
-	struct nvhost_gpfifo *gpfifo;
+	void *gpfifo;
 	__u32 num_entries;
 	struct nvhost_fence fence;
 	__u32 flags;
@@ -144,6 +151,8 @@ struct nvhost_submit_gpfifo_args {
  /* insert an fence update after submitting gpfifo and
     return the new fence for other to wait on */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
+/* choose between different gpfifo entry format */
+#define NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
 };
 
 struct nvhost_map_buffer_args {

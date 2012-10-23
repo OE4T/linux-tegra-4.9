@@ -1028,9 +1028,14 @@ static void allocations_stringify(struct nvmap_client *client,
 		if (handle->alloc && handle->heap_pgalloc == iovmm) {
 			phys_addr_t base = iovmm ? 0 :
 					   (handle->carveout->base);
-			seq_printf(s, "%-18s %-18s %8llx %10u %8x\n", "", "",
-					(unsigned long long)base,
-					handle->size, handle->userflags);
+			seq_printf(s,
+				"%-18s %-18s %8llx %10u %8x %6u %6u %6u\n",
+				"", "",
+				(unsigned long long)base, handle->size,
+				handle->userflags,
+				atomic_read(&handle->ref),
+				atomic_read(&ref->dupes),
+				atomic_read(&ref->pin));
 		}
 	}
 }
@@ -1043,10 +1048,11 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s %8s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE", "FLAGS");
-	seq_printf(s, "%-18s %18s %8s %10s\n", "", "",
-					"BASE", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s %8s %6s %6s %6s\n",
+			"", "", "BASE", "SIZE", "FLAGS", "REFS",
+			"DUPES", "PINS");
 	list_for_each_entry(commit, &node->clients, list) {
 		struct nvmap_client *client =
 			get_client_from_carveout_commit(node, commit);
@@ -1152,10 +1158,11 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 
 	spin_lock_irqsave(&dev->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s %8s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE", "FLAGS");
-	seq_printf(s, "%-18s %18s %8s %10s\n", "", "",
-					"BASE", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %10s %8s %6s %6s %6s\n",
+			"", "", "BASE", "SIZE", "FLAGS", "REFS",
+			"DUPES", "PINS");
 	list_for_each_entry(client, &dev->clients, list) {
 		client_stringify(client, s);
 		seq_printf(s, " %10u\n", atomic_read(&client->iovm_commit));

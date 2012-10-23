@@ -848,11 +848,15 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 
 	if (cdev == data->passive_cdev)
-		return thermal_zone_bind_cooling_device(thz, 0, cdev);
+		return thermal_zone_bind_cooling_device(thz, 0, cdev,
+							THERMAL_NO_LIMIT,
+							THERMAL_NO_LIMIT);
 
 	for (i = 0; data->active_cdev[i]; i++)
 		if (cdev == data->active_cdev[i])
-			return thermal_zone_bind_cooling_device(thz, i+1, cdev);
+			return thermal_zone_bind_cooling_device(thz, i+1, cdev,
+							THERMAL_NO_LIMIT,
+							THERMAL_NO_LIMIT);
 
 	return 0;
 }

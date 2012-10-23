@@ -54,6 +54,16 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *,
 		int flags);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
 		u32 id, struct platform_device *dev);
+void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle);
+struct sg_table *nvhost_memmgr_pin(struct mem_mgr *,
+		struct mem_handle *handle);
+void nvhost_memmgr_unpin(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt);
+void *nvhost_memmgr_mmap(struct mem_handle *handle);
+void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr);
+void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum);
+void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr);
 static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
 

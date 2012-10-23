@@ -86,7 +86,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		u32 *mapped = mem_op().mmap(g->ref);
+		u32 *mapped = nvhost_memmgr_mmap(g->ref);
 		if (!mapped) {
 			nvhost_debug_output(o, "[could not mmap]\n");
 			continue;
@@ -98,7 +98,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 		do_show_channel_gather(o, g->mem_base + g->offset,
 				g->words, cdma, g->mem_base, mapped);
-		mem_op().munmap(g->ref, mapped);
+		nvhost_memmgr_munmap(g->ref, mapped);
 	}
 }
 

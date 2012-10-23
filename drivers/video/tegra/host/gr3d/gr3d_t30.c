@@ -413,24 +413,24 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 
 	setup_save(p, NULL);
 
-	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
+	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(p->save_buf))
 		goto fail_alloc;
 
 
-	save_ptr = mem_op().mmap(p->save_buf);
+	save_ptr = nvhost_memmgr_mmap(p->save_buf);
 	if (IS_ERR_OR_NULL(save_ptr))
 		goto fail_mmap;
 
-	p->save_sgt = mem_op().pin(memmgr, p->save_buf);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
 	if (IS_ERR_OR_NULL(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 
 	setup_save(p, save_ptr);
 
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 
 	p->save_slots = 8;
 	p->h.alloc = ctx3d_alloc_v1;
@@ -442,9 +442,9 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	return &p->h;
 
 fail_pin:
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 fail_mmap:
-	mem_op().put(memmgr, p->save_buf);
+	nvhost_memmgr_put(memmgr, p->save_buf);
 fail_alloc:
 	kfree(p);
 	return NULL;
@@ -479,17 +479,17 @@ int nvhost_gr3d_t30_read_reg(
 
 	memmgr = nvhost_get_host(dev)->memmgr;
 
-	mem = mem_op().alloc(memmgr, 16, 32, mem_mgr_flag_uncacheable);
+	mem = nvhost_memmgr_alloc(memmgr, 16, 32, mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(mem))
 		return -ENOMEM;
 
-	mem_ptr = mem_op().mmap(mem);
+	mem_ptr = nvhost_memmgr_mmap(mem);
 	if (IS_ERR_OR_NULL(mem_ptr)) {
 		err = -ENOMEM;
 		goto done;
 	}
 
-	mem_sgt = mem_op().pin(memmgr, mem);
+	mem_sgt = nvhost_memmgr_pin(memmgr, mem);
 	if (IS_ERR_OR_NULL(mem_sgt)) {
 		err = -ENOMEM;
 		goto done;
@@ -660,10 +660,10 @@ done:
 	kfree(read_waiter);
 	kfree(completed_waiter);
 	if (mem_ptr)
-		mem_op().munmap(mem, mem_ptr);
+		nvhost_memmgr_munmap(mem, mem_ptr);
 	if (mem_sgt)
-		mem_op().unpin(memmgr, mem, mem_sgt);
+		nvhost_memmgr_unpin(memmgr, mem, mem_sgt);
 	if (mem)
-		mem_op().put(memmgr, mem);
+		nvhost_memmgr_put(memmgr, mem);
 	return err;
 }

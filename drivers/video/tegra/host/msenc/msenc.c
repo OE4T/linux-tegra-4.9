@@ -258,7 +258,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	/* allocate pages for ucode */
-	m->mem_r = mem_op().alloc(nvhost_get_host(dev)->memmgr,
+	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
 				     roundup(ucode_fw->size, PAGE_SIZE),
 				     PAGE_SIZE, mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(m->mem_r)) {
@@ -267,7 +267,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r);
 	if (IS_ERR_OR_NULL(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
@@ -275,7 +275,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	ucode_ptr = mem_op().mmap(m->mem_r);
+	ucode_ptr = nvhost_memmgr_mmap(m->mem_r);
 	if (IS_ERR_OR_NULL(ucode_ptr)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
@@ -290,18 +290,19 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->valid = true;
 
-	mem_op().munmap(m->mem_r, ucode_ptr);
+	nvhost_memmgr_munmap(m->mem_r, ucode_ptr);
 	release_firmware(ucode_fw);
 
 	return 0;
 
 clean_up:
 	if (ucode_ptr)
-		mem_op().munmap(m->mem_r, ucode_ptr);
+		nvhost_memmgr_munmap(m->mem_r, ucode_ptr);
 	if (m->pa)
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
+				m->mem_r, m->pa);
 	if (m->mem_r)
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 	release_firmware(ucode_fw);
 	return err;
 }
@@ -347,7 +348,7 @@ void nvhost_msenc_init(struct platform_device *dev)
 
  clean_up:
 	dev_err(&dev->dev, "failed");
-	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+	nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
 void nvhost_msenc_deinit(struct platform_device *dev)
@@ -356,8 +357,9 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
+				m->mem_r, m->pa);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = 0;
 	}
 }

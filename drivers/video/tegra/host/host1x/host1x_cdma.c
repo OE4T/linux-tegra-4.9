@@ -74,20 +74,20 @@ static int push_buffer_init(struct push_buffer *pb)
 	cdma_pb_op().reset(pb);
 
 	/* allocate and map pushbuffer memory */
-	pb->mem = mem_op().alloc(mgr, PUSH_BUFFER_SIZE + 4, 32,
+	pb->mem = nvhost_memmgr_alloc(mgr, PUSH_BUFFER_SIZE + 4, 32,
 			      mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(pb->mem)) {
 		pb->mem = NULL;
 		goto fail;
 	}
-	pb->mapped = mem_op().mmap(pb->mem);
+	pb->mapped = nvhost_memmgr_mmap(pb->mem);
 	if (IS_ERR_OR_NULL(pb->mapped)) {
 		pb->mapped = NULL;
 		goto fail;
 	}
 
 	/* pin pushbuffer and get physical address */
-	pb->sgt = mem_op().pin(mgr, pb->mem);
+	pb->sgt = nvhost_memmgr_pin(mgr, pb->mem);
 	if (IS_ERR(pb->sgt)) {
 		pb->sgt = 0;
 		goto fail;
@@ -120,13 +120,13 @@ static void push_buffer_destroy(struct push_buffer *pb)
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct mem_mgr *mgr = cdma_to_memmgr(cdma);
 	if (pb->mapped)
-		mem_op().munmap(pb->mem, pb->mapped);
+		nvhost_memmgr_munmap(pb->mem, pb->mapped);
 
 	if (pb->phys != 0)
-		mem_op().unpin(mgr, pb->mem, pb->sgt);
+		nvhost_memmgr_unpin(mgr, pb->mem, pb->sgt);
 
 	if (pb->mem)
-		mem_op().put(mgr, pb->mem);
+		nvhost_memmgr_put(mgr, pb->mem);
 
 	kfree(pb->client_handle);
 

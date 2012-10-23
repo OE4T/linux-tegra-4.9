@@ -103,7 +103,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 	job->hwctx = hwctx;
 	if (hwctx)
 		hwctx->h->get(hwctx);
-	job->memmgr = memmgr ? mem_op().get_mgr(memmgr) : NULL;
+	job->memmgr = memmgr ? nvhost_memmgr_get_mgr(memmgr) : NULL;
 
 	init_fields(job, num_cmdbufs, num_relocs, num_waitchks);
 
@@ -124,7 +124,7 @@ static void job_free(struct kref *ref)
 	if (job->hwctx)
 		job->hwctx->h->put(job->hwctx);
 	if (job->memmgr)
-		mem_op().put_mgr(job->memmgr);
+		nvhost_memmgr_put_mgr(job->memmgr);
 	vfree(job);
 }
 
@@ -200,13 +200,13 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			    nvhost_syncpt_read_min(sp, wait->syncpt_id));
 
 			/* patch the wait */
-			patch_addr = mem_op().kmap(h,
+			patch_addr = nvhost_memmgr_kmap(h,
 					wait->offset >> PAGE_SHIFT);
 			if (patch_addr) {
 				nvhost_syncpt_patch_wait(sp,
 					(patch_addr +
 					 (wait->offset & ~PAGE_MASK)));
-				mem_op().kunmap(h,
+				nvhost_memmgr_kunmap(h,
 						wait->offset >> PAGE_SHIFT,
 						patch_addr);
 			} else {
@@ -245,7 +245,7 @@ static int pin_job_mem(struct nvhost_job *job)
 	}
 
 	/* validate array and pin unique ids, get refs for unpinning */
-	result = mem_op().pin_array_ids(job->memmgr, job->ch->dev,
+	result = nvhost_memmgr_pin_array_ids(job->memmgr, job->ch->dev,
 		ids, job->addr_phys,
 		count,
 		job->unpins);
@@ -277,9 +277,10 @@ static int do_relocs(struct nvhost_job *job,
 
 		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
 			if (cmdbuf_page_addr)
-				mem_op().kunmap(h, last_page, cmdbuf_page_addr);
+				nvhost_memmgr_kunmap(h,
+						last_page, cmdbuf_page_addr);
 
-			cmdbuf_page_addr = mem_op().kmap(h,
+			cmdbuf_page_addr = nvhost_memmgr_kmap(h,
 					reloc->cmdbuf_offset >> PAGE_SHIFT);
 			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
 
@@ -315,7 +316,7 @@ static int do_relocs(struct nvhost_job *job,
 	}
 
 	if (cmdbuf_page_addr)
-		mem_op().kunmap(h, last_page, cmdbuf_page_addr);
+		nvhost_memmgr_kunmap(h, last_page, cmdbuf_page_addr);
 
 	return 0;
 }
@@ -349,7 +350,7 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 
 		/* process each gather mem only once */
 		if (!g->ref) {
-			g->ref = mem_op().get(job->memmgr,
+			g->ref = nvhost_memmgr_get(job->memmgr,
 				g->mem_id, job->ch->dev);
 			if (IS_ERR(g->ref)) {
 				err = PTR_ERR(g->ref);
@@ -371,7 +372,7 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 			if (!err)
 				err = do_waitchks(job, sp,
 						g->mem_id, g->ref);
-			mem_op().put(job->memmgr, g->ref);
+			nvhost_memmgr_put(job->memmgr, g->ref);
 			if (err)
 				break;
 		}
@@ -389,8 +390,8 @@ void nvhost_job_unpin(struct nvhost_job *job)
 
 	for (i = 0; i < job->num_unpins; i++) {
 		struct nvhost_job_unpin *unpin = &job->unpins[i];
-		mem_op().unpin(job->memmgr, unpin->h, unpin->mem);
-		mem_op().put(job->memmgr, unpin->h);
+		nvhost_memmgr_unpin(job->memmgr, unpin->h, unpin->mem);
+		nvhost_memmgr_put(job->memmgr, unpin->h);
 	}
 	job->num_unpins = 0;
 }

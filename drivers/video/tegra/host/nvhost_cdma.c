@@ -410,7 +410,7 @@ static void trace_write_gather(struct nvhost_cdma *cdma,
 	void *mem = NULL;
 
 	if (nvhost_debug_trace_cmdbuf) {
-		mem = mem_op().mmap(ref);
+		mem = nvhost_memmgr_mmap(ref);
 		if (IS_ERR_OR_NULL(mem))
 			mem = NULL;
 	};
@@ -429,7 +429,7 @@ static void trace_write_gather(struct nvhost_cdma *cdma,
 				offset + i * sizeof(u32),
 				mem);
 		}
-		mem_op().munmap(ref, mem);
+		nvhost_memmgr_munmap(ref, mem);
 	}
 }
 

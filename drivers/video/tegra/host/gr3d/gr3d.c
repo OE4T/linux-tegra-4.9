@@ -84,20 +84,20 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return NULL;
-	ctx->restore = mem_op().alloc(memmgr, p->restore_size * 4, 32,
+	ctx->restore = nvhost_memmgr_alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
 			    : mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(ctx->restore))
 		goto fail_alloc;
 
 	if (map_restore) {
-		ctx->restore_virt = mem_op().mmap(ctx->restore);
+		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
 		if (IS_ERR_OR_NULL(ctx->restore_virt))
 			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
 
-	ctx->restore_sgt = mem_op().pin(memmgr, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
 	if (IS_ERR_OR_NULL(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -116,9 +116,9 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 
 fail_pin:
 	if (map_restore)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 fail_mmap:
-	mem_op().put(memmgr, ctx->restore);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 fail_alloc:
 	kfree(ctx);
 	return NULL;
@@ -136,10 +136,10 @@ void nvhost_3dctx_free(struct kref *ref)
 	struct mem_mgr *memmgr = nvhost_get_host(nctx->channel->dev)->memmgr;
 
 	if (ctx->restore_virt)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 
-	mem_op().unpin(memmgr, ctx->restore, ctx->restore_sgt);
-	mem_op().put(memmgr, ctx->restore);
+	nvhost_memmgr_unpin(memmgr, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 	kfree(ctx);
 }
 

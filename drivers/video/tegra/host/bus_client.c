@@ -142,7 +142,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->job)
 		nvhost_job_put(priv->job);
 
-	mem_op().put_mgr(priv->memmgr);
+	nvhost_memmgr_put_mgr(priv->memmgr);
 	kfree(priv);
 	return 0;
 }
@@ -686,7 +686,7 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 	{
 		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;
-		struct mem_mgr *new_client = mem_op().get_mgr_file(fd);
+		struct mem_mgr *new_client = nvhost_memmgr_get_mgr_file(fd);
 
 		if (IS_ERR(new_client)) {
 			err = PTR_ERR(new_client);
@@ -694,7 +694,7 @@ static long nvhost_channelctl(struct file *filp,
 		}
 
 		if (priv->memmgr)
-			mem_op().put_mgr(priv->memmgr);
+			nvhost_memmgr_put_mgr(priv->memmgr);
 
 		priv->memmgr = new_client;
 		break;

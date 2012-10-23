@@ -462,16 +462,16 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 	if (!ctx)
 		return NULL;
 
-	ctx->restore = mem_op().alloc(memmgr, restore_size * 4, 32,
+	ctx->restore = nvhost_memmgr_alloc(memmgr, restore_size * 4, 32,
 				mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(ctx->restore))
 		goto fail_alloc;
 
-	ctx->restore_virt = mem_op().mmap(ctx->restore);
+	ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
 	if (IS_ERR_OR_NULL(ctx->restore_virt))
 		goto fail_mmap;
 
-	ctx->restore_sgt = mem_op().pin(memmgr, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
 	if (IS_ERR_OR_NULL(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -491,9 +491,9 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 	return &ctx->hwctx;
 
 fail_pin:
-	mem_op().munmap(ctx->restore, ctx->restore_virt);
+	nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 fail_mmap:
-	mem_op().put(memmgr, ctx->restore);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 fail_alloc:
 	kfree(ctx);
 	return NULL;
@@ -511,9 +511,9 @@ static void ctxmpe_free(struct kref *ref)
 	struct mem_mgr *memmgr = nvhost_get_host(nctx->channel->dev)->memmgr;
 
 	if (ctx->restore_virt)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
-	mem_op().unpin(memmgr, ctx->restore, ctx->restore_sgt);
-	mem_op().put(memmgr, ctx->restore);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
+	nvhost_memmgr_unpin(memmgr, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 	kfree(ctx);
 }
 
@@ -579,23 +579,23 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 	setup_save(p, NULL);
 
-	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
+	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(p->save_buf))
 		goto fail_alloc;
 
-	save_ptr = mem_op().mmap(p->save_buf);
+	save_ptr = nvhost_memmgr_mmap(p->save_buf);
 	if (IS_ERR_OR_NULL(save_ptr))
 		goto fail_mmap;
 
-	p->save_sgt = mem_op().pin(memmgr, p->save_buf);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
 	if (IS_ERR_OR_NULL(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 
 	setup_save(p, save_ptr);
 
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 
 	p->save_slots = 1;
 	p->h.alloc = ctxmpe_alloc;
@@ -607,9 +607,9 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 	return &p->h;
 
 fail_pin:
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 fail_mmap:
-	mem_op().put(memmgr, p->save_buf);
+	nvhost_memmgr_put(memmgr, p->save_buf);
 fail_alloc:
 	kfree(p);
 	return NULL;

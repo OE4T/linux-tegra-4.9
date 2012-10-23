@@ -302,7 +302,7 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	} while (0)
 
 	tegra_dc_io_start(dsi->dc);
-	clk_enable(dsi->dsi_clk);
+	clk_prepare_enable(dsi->dsi_clk);
 
 	DUMP_REG(DSI_INCR_SYNCPT_CNTRL);
 	DUMP_REG(DSI_INCR_SYNCPT_ERROR);
@@ -355,7 +355,7 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	DUMP_REG(DSI_VID_MODE_CONTROL);
 #undef DUMP_REG
 
-	clk_disable(dsi->dsi_clk);
+	clk_disable_unprepare(dsi->dsi_clk);
 	tegra_dc_io_end(dsi->dc);
 
 	return 0;
@@ -400,8 +400,8 @@ static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	if (!tegra_is_clk_enabled(dsi->dsi_clk)) {
-		clk_enable(dsi->dsi_clk);
-		clk_enable(dsi->dsi_fixed_clk);
+		clk_prepare_enable(dsi->dsi_clk);
+		clk_prepare_enable(dsi->dsi_fixed_clk);
 	}
 	tegra_mipi_cal_clk_enable(dsi->mipi_cal);
 }
@@ -409,8 +409,8 @@ static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	if (tegra_is_clk_enabled(dsi->dsi_clk)) {
-		clk_disable(dsi->dsi_clk);
-		clk_disable(dsi->dsi_fixed_clk);
+		clk_disable_unprepare(dsi->dsi_clk);
+		clk_disable_unprepare(dsi->dsi_fixed_clk);
 	}
 	tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 }
@@ -2505,14 +2505,14 @@ static void tegra_dc_dsi_hold_host(struct tegra_dc *dc)
 		 * Take an extra refrence to count for the clk_disable in
 		 * tegra_dc_release_host.
 		 */
-		clk_enable(dc->clk);
+		clk_prepare_enable(dc->clk);
 	}
 }
 
 static void tegra_dc_dsi_release_host(struct tegra_dc *dc)
 {
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE)
-		clk_disable(dc->clk);
+		clk_disable_unprepare(dc->clk);
 }
 
 static void tegra_dc_dsi_idle(struct tegra_dc *dc)

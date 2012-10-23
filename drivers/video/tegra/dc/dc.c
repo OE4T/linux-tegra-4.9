@@ -270,7 +270,7 @@ static struct tegra_dc_cmu default_cmu = {
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
 	if (!tegra_is_clk_enabled(dc->clk)) {
-		clk_enable(dc->clk);
+		clk_prepare_enable(dc->clk);
 		tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
 	}
 }
@@ -278,7 +278,7 @@ void tegra_dc_clk_enable(struct tegra_dc *dc)
 void tegra_dc_clk_disable(struct tegra_dc *dc)
 {
 	if (tegra_is_clk_enabled(dc->clk)) {
-		clk_disable(dc->clk);
+		clk_disable_unprepare(dc->clk);
 		tegra_dvfs_set_rate(dc->clk, 0);
 	}
 }

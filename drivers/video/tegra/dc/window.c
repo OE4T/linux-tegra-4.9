@@ -429,9 +429,12 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				DC_WIN_LINE_STRIDE);
 		}
 
-		h_offset = win->x;
 		if (invert_h) {
-			h_offset.full += win->w.full - dfixed_const(1);
+			h_offset.full = win->x.full + win->w.full;
+			h_offset.full = dfixed_floor(h_offset) * Bpp;
+			h_offset.full -= dfixed_const(1);
+		} else {
+			h_offset.full = dfixed_floor(win->x) * Bpp;
 		}
 
 		v_offset = win->y;
@@ -439,7 +442,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			v_offset.full += win->h.full - dfixed_const(1);
 		}
 
-		tegra_dc_writel(dc, dfixed_trunc(h_offset) * Bpp,
+		tegra_dc_writel(dc, dfixed_trunc(h_offset),
 				DC_WINBUF_ADDR_H_OFFSET);
 		tegra_dc_writel(dc, dfixed_trunc(v_offset),
 				DC_WINBUF_ADDR_V_OFFSET);

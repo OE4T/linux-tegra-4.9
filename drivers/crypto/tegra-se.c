@@ -3110,13 +3110,13 @@ static int tegra_se_runtime_suspend(struct device *dev)
 	 */
 	se_readl(sg_tegra_se_dev, SE_CONFIG_REG_OFFSET);
 
-	clk_disable(sg_tegra_se_dev->pclk);
+	clk_disable_unprepare(sg_tegra_se_dev->pclk);
 	return 0;
 }
 
 static int tegra_se_runtime_resume(struct device *dev)
 {
-	clk_enable(sg_tegra_se_dev->pclk);
+	clk_prepare_enable(sg_tegra_se_dev->pclk);
 	return 0;
 }
 

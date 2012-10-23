@@ -117,7 +117,7 @@ static void to_state_clockgated_locked(struct nvhost_device *dev)
 			}
 		}
 		for (i = 0; i < dev->num_clks; i++)
-			clk_disable(dev->clk[i]);
+			clk_disable_unprepare(dev->clk[i]);
 		if (dev->dev.parent)
 			nvhost_module_idle(to_nvhost_device(dev->dev.parent));
 	} else if (dev->powerstate == NVHOST_POWER_STATE_POWERGATED
@@ -146,7 +146,7 @@ static void to_state_running_locked(struct nvhost_device *dev)
 			nvhost_module_busy(to_nvhost_device(dev->dev.parent));
 
 		for (i = 0; i < dev->num_clks; i++) {
-			int err = clk_enable(dev->clk[i]);
+			int err = clk_prepare_enable(dev->clk[i]);
 			if (err) {
 				dev_err(&dev->dev, "Cannot turn on clock %s",
 					dev->clocks[i].name);
@@ -504,9 +504,9 @@ int nvhost_module_init(struct nvhost_device *dev)
 		}
 
 		rate = clk_round_rate(c, rate);
-		clk_enable(c);
+		clk_prepare_enable(c);
 		clk_set_rate(c, rate);
-		clk_disable(c);
+		clk_disable_unprepare(c);
 		dev->clk[i] = c;
 		i++;
 	}

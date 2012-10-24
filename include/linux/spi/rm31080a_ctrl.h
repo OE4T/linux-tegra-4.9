@@ -26,17 +26,17 @@
 #define RM31080B1_REG_BANK0_0EH		0x0E
 #define RM31080B1_REG_BANK0_11H		0x11
 
-typedef enum
-{
+enum NOISE_DETECTOR_RET_t {
 	ND_NORMAL = 0,
 	ND_DETECTOR_OFF,
 	ND_BASELINE_NOT_READY,
 	ND_NOISE_DETECTED,
 	ND_LEAVE_NOISE_MODE
-}NOISE_DETECTOR_RET_t;
+};
 
-//Tchreg.h
-#define ADFC                                       0x10	// Adaptive digital filter
+/* Tchreg.h */
+/* Adaptive digital filter */
+#define ADFC                                       0x10
 #define FILTER_THRESHOLD_MODE                      0x08
 #define FILTER_NONTHRESHOLD_MODE                   0x00
 
@@ -65,22 +65,22 @@ struct rm31080a_ctrl_para {
 	unsigned char bICVersion;
 #endif
 
-	//Marty added
-	unsigned char bChannelDetectorNum;	// Noise_Detector
-	unsigned char bChannelDetectorDummy;	// Noise_Detector
-	signed char bNoiseThresholdMax;	// Noise_Detector
-	signed char bNoiseThresholdMin;	// Noise_Detector
-	signed char bNoiseThresholdLowMax;	// Noise_Detector
-	signed char bNoiseThresholdLowMin;	// Noise_Detector
-	unsigned char bBaselineReady;	// Noise_Detector
-	unsigned char bNoiseDetectThd;	// Noise_Detector
+	/* Marty added */
+	unsigned char bChannelDetectorNum;	/* Noise_Detector */
+	unsigned char bChannelDetectorDummy;	/* Noise_Detector */
+	signed char bNoiseThresholdMax;	/* Noise_Detector */
+	signed char bNoiseThresholdMin;	/* Noise_Detector */
+	signed char bNoiseThresholdLowMax;	/* Noise_Detector */
+	signed char bNoiseThresholdLowMin;	/* Noise_Detector */
+	unsigned char bBaselineReady;	/* Noise_Detector */
+	unsigned char bNoiseDetectThd;	/* Noise_Detector */
 	unsigned char bNewNoiseRepeatTimes;
-	unsigned char bRepeatTimes[2];	// Noise_Detector
+	unsigned char bRepeatTimes[2];	/* Noise_Detector */
 	unsigned char bIdleRepeatTimes[2];
-	unsigned char bSenseNumber;	// Noise_Detector
-	unsigned char bfADFC;	// Noise_Detector
-	unsigned char bfTHMode;	// Noise_Detector
-	unsigned char bfAnalogFilter;	// Noise_Detector
+	unsigned char bSenseNumber;	/* Noise_Detector */
+	unsigned char bfADFC;	/* Noise_Detector */
+	unsigned char bfTHMode;	/* Noise_Detector */
+	unsigned char bfAnalogFilter;	/* Noise_Detector */
 	unsigned char bXChannel[4];
 	unsigned char bYChannel[2];
 	unsigned char bDummyChannel[4];
@@ -96,42 +96,42 @@ struct rm31080a_ctrl_para {
 	unsigned char bNoisePipelineBase;
 	unsigned char bTime2Idle;
 	unsigned char bfPowerMode;
-    unsigned char bfIdleMessage;
-    unsigned char bDummyRunCycle;
+	unsigned char bfIdleMessage;
+	unsigned char bDummyRunCycle;
 
 
 #if ENABLE_FILTER_SWITCH
-	unsigned char bReg1_09h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg1_43h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg1_48h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg1_49h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg1_4Ah[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg1_4Bh[2];	//  0: Digital Filter 1: Analog Filter
+	unsigned char bReg1_09h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg1_43h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg1_48h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg1_49h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg1_4Ah[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg1_4Bh[2];	/*0: Digital Filter 1: Analog Filter*/
 
-	unsigned char bReg0_40h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_41h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_42h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_43h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_20h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_21h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_22h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_23h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_24h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_25h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_26h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_27h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_28h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_29h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Ah[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Bh[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Ch[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Dh[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Eh[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_2Fh[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_30h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_31h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_32h[2];	//  0: Digital Filter 1: Analog Filter
-	unsigned char bReg0_33h[2];	//  0: Digital Filter 1: Analog Filter
+	unsigned char bReg0_40h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_41h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_42h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_43h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_20h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_21h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_22h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_23h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_24h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_25h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_26h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_27h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_28h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_29h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Ah[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Bh[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Ch[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Dh[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Eh[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_2Fh[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_30h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_31h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_32h[2];	/*0: Digital Filter 1: Analog Filter*/
+	unsigned char bReg0_33h[2];	/*0: Digital Filter 1: Analog Filter*/
 #endif
 };
 
@@ -147,7 +147,7 @@ void rm31080_ctrl_set_baseline(void *arg);
 unsigned char rm31080_ctrl_get_noise_mode(unsigned char *p);
 void rm31080_ctrl_get_parameter(void *arg);
 int rm31080_soft_average(signed char *pSource);
-NOISE_DETECTOR_RET_t rm_noise_detect(signed char *pSource);
+int rm_noise_detect(signed char *pSource);
 int rm_noise_main(signed char *pSource);
 
 #if ENABLE_T007B1_SETTING
@@ -165,4 +165,4 @@ void rm31080_ctrl_set_analog_baseline(void *arg);
 #endif
 #endif
 void rm_set_repeat_times(u8 u8Times);
-#endif				//_RM31080A_CTRL_H_
+#endif	/* _RM31080A_CTRL_H_ */

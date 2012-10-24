@@ -31,6 +31,14 @@ struct nct1008_data;
 
 enum nct1008_chip { NCT1008, NCT72 };
 
+
+struct active_temp_state {
+	long trip_temp;
+	unsigned long state;
+};
+
+#define MAX_ACTIVE_TEMP_STATE 16
+
 struct nct1008_cdev {
 	struct thermal_cooling_device *(*create_cdev)(void *);
 	void *cdev_data;
@@ -40,9 +48,8 @@ struct nct1008_cdev {
 	int tc1;
 	int tc2;
 	int passive_delay;
+	struct active_temp_state states[MAX_ACTIVE_TEMP_STATE];
 };
-
-#define NCT1008_MAX_ACTIVE (16)
 
 struct nct1008_platform_data {
 	bool supported_hwrev;
@@ -53,6 +60,6 @@ struct nct1008_platform_data {
 	s8 shutdown_local_limit;
 
 	struct nct1008_cdev passive;
-	struct nct1008_cdev active[NCT1008_MAX_ACTIVE];
+	struct nct1008_cdev active;
 };
 #endif /* _LINUX_NCT1008_H */

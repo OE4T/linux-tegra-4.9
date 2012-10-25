@@ -89,7 +89,7 @@ static inline void tegra_mipi_cal_write(struct tegra_mipi_cal *mipi_cal,
 	/* dummy */
 }
 
-struct tegra_mipi_cal *tegra_mipi_cal_init(struct tegra_dc *dc)
+struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 {
 	/* dummy */
 	return NULL;

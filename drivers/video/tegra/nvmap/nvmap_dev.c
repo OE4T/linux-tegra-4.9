@@ -694,8 +694,10 @@ static void destroy_client(struct nvmap_client *client)
 		smp_rmb();
 		pins = atomic_read(&ref->pin);
 
-		if (ref->handle->owner == client)
+		if (ref->handle->owner == client) {
 			ref->handle->owner = NULL;
+			ref->handle->owner_ref = NULL;
+		}
 
 		while (pins--)
 			nvmap_unpin_handles(client, &ref->handle, 1);

@@ -76,6 +76,12 @@ struct nvmap_handle {
 	size_t orig_size;	/* original (as-requested) size */
 	size_t align;
 	struct nvmap_client *owner;
+	struct nvmap_handle_ref *owner_ref; /* use this ref to avoid spending
+			time on validation in some cases.
+			if handle was duplicated by other client and
+			original client destroy ref, this field
+			has to be set to zero. In this case ref should be
+			obtained through validation */
 	struct nvmap_device *dev;
 	union {
 		struct nvmap_pgalloc pgalloc;

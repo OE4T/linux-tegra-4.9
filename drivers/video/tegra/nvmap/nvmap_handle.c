@@ -866,6 +866,25 @@ out:
 	return err;
 }
 
+/*
+ * Free handle without slow validation step
+ */
+void _nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
+{
+	nvmap_ref_lock(client);
+	if (r->handle->owner == client && atomic_read(&r->dupes) > 1) {
+		atomic_dec(&r->dupes);
+		nvmap_ref_unlock(client);
+		nvmap_handle_put(r->handle);
+		return;
+	} else {
+		/* slow path */
+		nvmap_ref_unlock(client);
+		nvmap_free(client, r);
+		return;
+	}
+}
+
 void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 {
 	struct nvmap_handle_ref *ref;
@@ -913,8 +932,10 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 	while (pins--)
 		nvmap_unpin_handles(client, &ref->handle, 1);
 
-	if (h->owner == client)
+	if (h->owner == client) {
 		h->owner = NULL;
+		h->owner_ref = NULL;
+	}
 
 	kfree(ref);
 
@@ -969,6 +990,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	atomic_set(&h->ref, 1);
 	atomic_set(&h->pin, 0);
 	h->owner = client;
+	h->owner_ref = ref;
 	h->dev = client->dev;
 	BUG_ON(!h->owner);
 	h->size = h->orig_size = size;
@@ -983,6 +1005,29 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	add_handle_ref(client, ref);
 	trace_nvmap_create_handle(client, h, size, ref);
 	return ref;
+}
+
+/*
+ * Duplicate handle without slow validation step.
+ */
+struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
+						   unsigned long id)
+{
+	struct nvmap_handle *h = (struct nvmap_handle *)id;
+	struct nvmap_handle_ref *ref = h->owner_ref;
+
+	nvmap_ref_lock(client);
+	if (client == h->owner) {
+		/* handle already duplicated in client; just increment
+		 * the reference count rather than re-duplicating it */
+		atomic_inc(&ref->dupes);
+		nvmap_handle_get(h);
+		nvmap_ref_unlock(client);
+		return ref;
+	} else {
+		nvmap_ref_unlock(client);
+		return nvmap_duplicate_handle_id(client, id);
+	}
 }
 
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,

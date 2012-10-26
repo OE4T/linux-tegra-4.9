@@ -31,7 +31,7 @@
 #define NVHOST_MAX_POWERGATE_IDS	2
 
 struct nvhost_master;
-struct nvhost_device;
+struct platform_device;
 struct nvhost_channel;
 struct nvhost_hwctx;
 
@@ -44,7 +44,7 @@ struct nvhost_channel {
 	void __iomem *aperture;
 	struct nvhost_hwctx *cur_ctx;
 	struct device *node;
-	struct nvhost_device *dev;
+	struct platform_device *dev;
 	struct cdev cdev;
 	struct nvhost_hwctx_handler *ctxhandler;
 	struct nvhost_cdma cdma;

@@ -21,8 +21,8 @@
 #ifndef __NVHOST_2D_T114_H
 #define __NVHOST_2D_T114_H
 
-struct nvhost_device;
+struct platform_device;
 
-void nvhost_gr2d_t114_finalize_poweron(struct nvhost_device *dev);
+void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev);
 
 #endif

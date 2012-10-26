@@ -22,25 +22,27 @@
 #define __NVHOST_BUS_CLIENT_H
 
 #include <linux/types.h>
-struct nvhost_device;
-struct firmware;
 
-int nvhost_read_module_regs(struct nvhost_device *ndev,
+struct firmware;
+struct platform_device;
+
+int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values);
 
-int nvhost_write_module_regs(struct nvhost_device *ndev,
+int nvhost_write_module_regs(struct platform_device *ndev,
 			u32 offset, int count, const u32 *values);
 
-int nvhost_client_user_init(struct nvhost_device *dev);
+int nvhost_client_user_init(struct platform_device *dev);
 
-int nvhost_client_device_init(struct nvhost_device *dev);
+int nvhost_client_device_init(struct platform_device *dev);
 
-int nvhost_client_device_suspend(struct nvhost_device *dev);
+int nvhost_client_device_suspend(struct platform_device *dev);
 
 const struct firmware *
-nvhost_client_request_firmware(struct nvhost_device *dev, const char *fw_name);
+nvhost_client_request_firmware(struct platform_device *dev,
+	const char *fw_name);
 
-int nvhost_client_device_get_resources(struct nvhost_device *dev);
-void nvhost_client_device_put_resources(struct nvhost_device *dev);
+int nvhost_client_device_get_resources(struct platform_device *dev);
+void nvhost_client_device_put_resources(struct platform_device *dev);
 
 #endif

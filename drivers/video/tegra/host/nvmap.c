@@ -161,7 +161,7 @@ fail:
 }
 
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
-		u32 id, struct nvhost_device *dev)
+		u32 id, struct platform_device *dev)
 {
 	return (struct mem_handle *)
 		_nvmap_duplicate_handle_id((struct nvmap_client *)mgr, id);

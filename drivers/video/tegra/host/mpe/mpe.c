@@ -605,9 +605,10 @@ fail_alloc:
 	return NULL;
 }
 
-int nvhost_mpe_prepare_power_off(struct nvhost_device *dev)
+int nvhost_mpe_prepare_power_off(struct platform_device *dev)
 {
-	return nvhost_channel_save_context(dev->channel);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	return nvhost_channel_save_context(pdata->channel);
 }
 
 enum mpe_ip_ver {
@@ -616,7 +617,7 @@ enum mpe_ip_ver {
 };
 
 struct mpe_desc {
-	int (*prepare_poweroff)(struct nvhost_device *dev);
+	int (*prepare_poweroff)(struct platform_device *dev);
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			u32 waitbase, struct nvhost_channel *ch);
 };
@@ -632,25 +633,33 @@ static const struct mpe_desc mpe[] = {
 	},
 };
 
-static struct nvhost_device_id mpe_id[] = {
-	{ "mpe", mpe_01 },
-	{ "mpe", mpe_02 },
+static struct platform_device_id mpe_id[] = {
+	{ "mpe01", mpe_01 },
+	{ "mpe02", mpe_02 },
 	{ },
 };
 
 MODULE_DEVICE_TABLE(nvhost, mpe_id);
 
-static int mpe_probe(struct nvhost_device *dev,
-	struct nvhost_device_id *id_table)
+static int mpe_probe(struct platform_device *dev)
 {
 	int err = 0;
 	int index = 0;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	index = id_table->version;
+	/* HACK: reset device name */
+	dev_set_name(&dev->dev, "%s", "mpe");
 
-	drv->prepare_poweroff		= mpe[index].prepare_poweroff;
-	drv->alloc_hwctx_handler	= mpe[index].alloc_hwctx_handler;
+	pdata->pdev = dev;
+
+	index = (int)(platform_get_device_id(dev)->driver_data);
+	BUG_ON(index > mpe_02);
+
+	pdata->prepare_poweroff		= mpe[index].prepare_poweroff;
+	pdata->alloc_hwctx_handler	= mpe[index].alloc_hwctx_handler;
+
+	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -659,26 +668,26 @@ static int mpe_probe(struct nvhost_device *dev,
 	return nvhost_client_device_init(dev);
 }
 
-static int __exit mpe_remove(struct nvhost_device *dev)
+static int __exit mpe_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int mpe_suspend(struct nvhost_device *dev, pm_message_t state)
+static int mpe_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int mpe_resume(struct nvhost_device *dev)
+static int mpe_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver mpe_driver = {
+static struct platform_driver mpe_driver = {
 	.probe = mpe_probe,
 	.remove = __exit_p(mpe_remove),
 #ifdef CONFIG_PM
@@ -694,12 +703,12 @@ static struct nvhost_driver mpe_driver = {
 
 static int __init mpe_init(void)
 {
-	return nvhost_driver_register(&mpe_driver);
+	return platform_driver_register(&mpe_driver);
 }
 
 static void __exit mpe_exit(void)
 {
-	nvhost_driver_unregister(&mpe_driver);
+	platform_driver_unregister(&mpe_driver);
 }
 
 module_init(mpe_init);

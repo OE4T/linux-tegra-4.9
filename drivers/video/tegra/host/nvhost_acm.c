@@ -59,185 +59,194 @@ static void do_unpowergate_locked(int id)
 		tegra_unpowergate_partition(id);
 }
 
-static void do_module_reset_locked(struct nvhost_device *dev)
+static void do_module_reset_locked(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	/* assert module and mc client reset */
-	if (dev->powergate_ids[0] != -1) {
-		tegra_powergate_mc_disable(dev->powergate_ids[0]);
-		tegra_periph_reset_assert(dev->clk[0]);
-		tegra_powergate_mc_flush(dev->powergate_ids[0]);
+	if (pdata->powergate_ids[0] != -1) {
+		tegra_powergate_mc_disable(pdata->powergate_ids[0]);
+		tegra_periph_reset_assert(pdata->clk[0]);
+		tegra_powergate_mc_flush(pdata->powergate_ids[0]);
 	}
-	if (dev->powergate_ids[1] != -1) {
-		tegra_powergate_mc_disable(dev->powergate_ids[1]);
-		tegra_periph_reset_assert(dev->clk[1]);
-		tegra_powergate_mc_flush(dev->powergate_ids[1]);
+	if (pdata->powergate_ids[1] != -1) {
+		tegra_powergate_mc_disable(pdata->powergate_ids[1]);
+		tegra_periph_reset_assert(pdata->clk[1]);
+		tegra_powergate_mc_flush(pdata->powergate_ids[1]);
 	}
 
 	udelay(POWERGATE_DELAY);
 
 	/* deassert reset */
-	if (dev->powergate_ids[0] != -1) {
-		tegra_powergate_mc_flush_done(dev->powergate_ids[0]);
-		tegra_periph_reset_deassert(dev->clk[0]);
-		tegra_powergate_mc_enable(dev->powergate_ids[0]);
+	if (pdata->powergate_ids[0] != -1) {
+		tegra_powergate_mc_flush_done(pdata->powergate_ids[0]);
+		tegra_periph_reset_deassert(pdata->clk[0]);
+		tegra_powergate_mc_enable(pdata->powergate_ids[0]);
 	}
-	if (dev->powergate_ids[1] != -1) {
-		tegra_powergate_mc_flush_done(dev->powergate_ids[1]);
-		tegra_periph_reset_deassert(dev->clk[1]);
-		tegra_powergate_mc_enable(dev->powergate_ids[1]);
+	if (pdata->powergate_ids[1] != -1) {
+		tegra_powergate_mc_flush_done(pdata->powergate_ids[1]);
+		tegra_periph_reset_deassert(pdata->clk[1]);
+		tegra_powergate_mc_enable(pdata->powergate_ids[1]);
 	}
 }
 
-void nvhost_module_reset(struct nvhost_device *dev)
+void nvhost_module_reset(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	dev_dbg(&dev->dev,
 		"%s: asserting %s module reset (id %d, id2 %d)\n",
-		__func__, dev->name,
-		dev->powergate_ids[0], dev->powergate_ids[1]);
+		__func__, dev_name(&dev->dev),
+		pdata->powergate_ids[0], pdata->powergate_ids[1]);
 
-	mutex_lock(&dev->lock);
+	mutex_lock(&pdata->lock);
 	do_module_reset_locked(dev);
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 
 	dev_dbg(&dev->dev, "%s: module %s out of reset\n",
-		__func__, dev->name);
+		__func__, dev_name(&dev->dev));
 }
 
-static void to_state_clockgated_locked(struct nvhost_device *dev)
+static void to_state_clockgated_locked(struct platform_device *dev)
 {
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (dev->powerstate == NVHOST_POWER_STATE_RUNNING) {
+	if (pdata->powerstate == NVHOST_POWER_STATE_RUNNING) {
 		int i, err;
-		if (drv->prepare_clockoff) {
-			err = drv->prepare_clockoff(dev);
+		if (pdata->prepare_clockoff) {
+			err = pdata->prepare_clockoff(dev);
 			if (err) {
 				dev_err(&dev->dev, "error clock gating");
 				return;
 			}
 		}
-		for (i = 0; i < dev->num_clks; i++)
-			clk_disable_unprepare(dev->clk[i]);
-		if (dev->dev.parent)
-			nvhost_module_idle(to_nvhost_device(dev->dev.parent));
-	} else if (dev->powerstate == NVHOST_POWER_STATE_POWERGATED
-			&& dev->can_powergate) {
-		do_unpowergate_locked(dev->powergate_ids[0]);
-		do_unpowergate_locked(dev->powergate_ids[1]);
 
-		if (dev->powerup_reset)
+		for (i = 0; i < pdata->num_clks; i++)
+			clk_disable_unprepare(pdata->clk[i]);
+
+		if (dev->dev.parent)
+			nvhost_module_idle(to_platform_device(dev->dev.parent));
+	} else if (pdata->powerstate == NVHOST_POWER_STATE_POWERGATED
+			&& pdata->can_powergate) {
+		do_unpowergate_locked(pdata->powergate_ids[0]);
+		do_unpowergate_locked(pdata->powergate_ids[1]);
+
+		if (pdata->powerup_reset)
 			do_module_reset_locked(dev);
 	}
-	dev->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
+	pdata->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 }
 
-static void to_state_running_locked(struct nvhost_device *dev)
+static void to_state_running_locked(struct platform_device *dev)
 {
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
-	int prev_state = dev->powerstate;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int prev_state = pdata->powerstate;
 
-	if (dev->powerstate == NVHOST_POWER_STATE_POWERGATED)
+	if (pdata->powerstate == NVHOST_POWER_STATE_POWERGATED)
 		to_state_clockgated_locked(dev);
 
-	if (dev->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
+	if (pdata->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
 		int i;
 
 		if (dev->dev.parent)
-			nvhost_module_busy(to_nvhost_device(dev->dev.parent));
+			nvhost_module_busy(to_platform_device(dev->dev.parent));
 
-		for (i = 0; i < dev->num_clks; i++) {
-			int err = clk_prepare_enable(dev->clk[i]);
+		for (i = 0; i < pdata->num_clks; i++) {
+			int err = clk_prepare_enable(pdata->clk[i]);
 			if (err) {
 				dev_err(&dev->dev, "Cannot turn on clock %s",
-					dev->clocks[i].name);
+					pdata->clocks[i].name);
 				return;
 			}
 		}
 
-		/* Invoke callback. This is used for re-enabling host1x
-		 * interrupts. */
-		if (drv->finalize_clockon)
-			drv->finalize_clockon(dev);
+		if (pdata->finalize_clockon)
+			pdata->finalize_clockon(dev);
 
 		/* Invoke callback after power un-gating. This is used for
 		 * restoring context. */
 		if (prev_state == NVHOST_POWER_STATE_POWERGATED
-				&& drv->finalize_poweron)
-			drv->finalize_poweron(dev);
+				&& pdata->finalize_poweron)
+			pdata->finalize_poweron(dev);
 	}
-	dev->powerstate = NVHOST_POWER_STATE_RUNNING;
+	pdata->powerstate = NVHOST_POWER_STATE_RUNNING;
 }
 
 /* This gets called from powergate_handler() and from module suspend.
  * Module suspend is done for all modules, runtime power gating only
  * for modules with can_powergate set.
  */
-static int to_state_powergated_locked(struct nvhost_device *dev)
+static int to_state_powergated_locked(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 
-	if (drv->prepare_poweroff
-			&& dev->powerstate != NVHOST_POWER_STATE_POWERGATED) {
+	if (pdata->prepare_poweroff &&
+		pdata->powerstate != NVHOST_POWER_STATE_POWERGATED) {
 		/* Clock needs to be on in prepare_poweroff */
 		to_state_running_locked(dev);
-		err = drv->prepare_poweroff(dev);
+		err = pdata->prepare_poweroff(dev);
 		if (err)
 			return err;
 	}
 
-	if (dev->powerstate == NVHOST_POWER_STATE_RUNNING)
+	if (pdata->powerstate == NVHOST_POWER_STATE_RUNNING)
 		to_state_clockgated_locked(dev);
 
-	if (dev->can_powergate) {
-		do_powergate_locked(dev->powergate_ids[0]);
-		do_powergate_locked(dev->powergate_ids[1]);
+	if (pdata->can_powergate) {
+		do_powergate_locked(pdata->powergate_ids[0]);
+		do_powergate_locked(pdata->powergate_ids[1]);
 	}
 
-	dev->powerstate = NVHOST_POWER_STATE_POWERGATED;
+	pdata->powerstate = NVHOST_POWER_STATE_POWERGATED;
 	return 0;
 }
 
-static void schedule_powergating_locked(struct nvhost_device *dev)
+static void schedule_powergating_locked(struct platform_device *dev)
 {
-	if (dev->can_powergate)
-		schedule_delayed_work(&dev->powerstate_down,
-				msecs_to_jiffies(dev->powergate_delay));
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	if (pdata->can_powergate)
+		schedule_delayed_work(&pdata->powerstate_down,
+				msecs_to_jiffies(pdata->powergate_delay));
 }
 
-static void schedule_clockgating_locked(struct nvhost_device *dev)
+static void schedule_clockgating_locked(struct platform_device *dev)
 {
-	schedule_delayed_work(&dev->powerstate_down,
-			msecs_to_jiffies(dev->clockgate_delay));
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	schedule_delayed_work(&pdata->powerstate_down,
+			msecs_to_jiffies(pdata->clockgate_delay));
 }
 
-void nvhost_module_busy(struct nvhost_device *dev)
+void nvhost_module_busy(struct platform_device *dev)
 {
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (drv->busy)
-		drv->busy(dev);
+	if (pdata->busy)
+		pdata->busy(dev);
 
-	mutex_lock(&dev->lock);
-	cancel_delayed_work(&dev->powerstate_down);
+	mutex_lock(&pdata->lock);
+	cancel_delayed_work(&pdata->powerstate_down);
 
-	dev->refcount++;
-	if (dev->refcount > 0 && !nvhost_module_powered(dev))
+	pdata->refcount++;
+	if (pdata->refcount > 0 && !nvhost_module_powered(dev))
 		to_state_running_locked(dev);
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 }
 
 static void powerstate_down_handler(struct work_struct *work)
 {
-	struct nvhost_device *dev;
+	struct platform_device *dev;
+	struct nvhost_device_data *pdata;
 
-	dev = container_of(to_delayed_work(work),
-			struct nvhost_device,
+	pdata = container_of(to_delayed_work(work),
+			struct nvhost_device_data,
 			powerstate_down);
 
-	mutex_lock(&dev->lock);
-	if (dev->refcount == 0) {
-		switch (dev->powerstate) {
+	dev = pdata->pdev;
+
+	mutex_lock(&pdata->lock);
+	if (pdata->refcount == 0) {
+		switch (pdata->powerstate) {
 		case NVHOST_POWER_STATE_RUNNING:
 			to_state_clockgated_locked(dev);
 			schedule_powergating_locked(dev);
@@ -250,37 +259,38 @@ static void powerstate_down_handler(struct work_struct *work)
 			break;
 		}
 	}
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 }
 
-void nvhost_module_idle_mult(struct nvhost_device *dev, int refs)
+void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 {
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	bool kick = false;
 
-	mutex_lock(&dev->lock);
-	dev->refcount -= refs;
-	if (dev->refcount == 0) {
+	mutex_lock(&pdata->lock);
+	pdata->refcount -= refs;
+	if (pdata->refcount == 0) {
 		if (nvhost_module_powered(dev))
 			schedule_clockgating_locked(dev);
 		kick = true;
 	}
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 
 	if (kick) {
-		wake_up(&dev->idle_wq);
+		wake_up(&pdata->idle_wq);
 
-		if (drv->idle)
-			drv->idle(dev);
+		if (pdata->idle)
+			pdata->idle(dev);
 	}
 }
 
-int nvhost_module_get_rate(struct nvhost_device *dev, unsigned long *rate,
+int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 		int index)
 {
 	struct clk *c;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	c = dev->clk[index];
+	c = pdata->clk[index];
 	if (IS_ERR_OR_NULL(c))
 		return -EINVAL;
 
@@ -292,22 +302,23 @@ int nvhost_module_get_rate(struct nvhost_device *dev, unsigned long *rate,
 
 }
 
-static int nvhost_module_update_rate(struct nvhost_device *dev, int index)
+static int nvhost_module_update_rate(struct platform_device *dev, int index)
 {
 	unsigned long rate = 0;
 	struct nvhost_module_client *m;
 	unsigned long devfreq_rate, default_rate;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (!dev->clk[index])
+	if (!pdata->clk[index])
 		return -EINVAL;
 
 	/* If devfreq is on, use that clock rate, otherwise default */
-	devfreq_rate = dev->clocks[index].devfreq_rate;
+	devfreq_rate = pdata->clocks[index].devfreq_rate;
 	default_rate = devfreq_rate ?
-		devfreq_rate : dev->clocks[index].default_rate;
-	default_rate = clk_round_rate(dev->clk[index], default_rate);
+		devfreq_rate : pdata->clocks[index].default_rate;
+	default_rate = clk_round_rate(pdata->clk[index], default_rate);
 
-	list_for_each_entry(m, &dev->client_list, node) {
+	list_for_each_entry(m, &pdata->client_list, node) {
 		unsigned long r = m->rate[index];
 		if (!r)
 			r = default_rate;
@@ -317,21 +328,23 @@ static int nvhost_module_update_rate(struct nvhost_device *dev, int index)
 		rate = default_rate;
 
 	trace_nvhost_module_update_rate(dev->name,
-			dev->clocks[index].name, rate);
+			pdata->clocks[index].name, rate);
 
-	return clk_set_rate(dev->clk[index], rate);
+	return clk_set_rate(pdata->clk[index], rate);
 }
 
-int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
+int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 		unsigned long rate, int index)
 {
 	struct nvhost_module_client *m;
 	int ret = 0;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	mutex_lock(&client_list_lock);
-	list_for_each_entry(m, &dev->client_list, node) {
+	list_for_each_entry(m, &pdata->client_list, node) {
 		if (m->priv == priv)
-			m->rate[index] = clk_round_rate(dev->clk[index], rate);
+			m->rate[index] =
+				clk_round_rate(pdata->clk[index], rate);
 	}
 
 	ret = nvhost_module_update_rate(dev, index);
@@ -340,9 +353,10 @@ int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
 
 }
 
-int nvhost_module_add_client(struct nvhost_device *dev, void *priv)
+int nvhost_module_add_client(struct platform_device *dev, void *priv)
 {
 	struct nvhost_module_client *client;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
@@ -352,19 +366,21 @@ int nvhost_module_add_client(struct nvhost_device *dev, void *priv)
 	client->priv = priv;
 
 	mutex_lock(&client_list_lock);
-	list_add_tail(&client->node, &dev->client_list);
+	list_add_tail(&client->node, &pdata->client_list);
 	mutex_unlock(&client_list_lock);
+
 	return 0;
 }
 
-void nvhost_module_remove_client(struct nvhost_device *dev, void *priv)
+void nvhost_module_remove_client(struct platform_device *dev, void *priv)
 {
 	int i;
 	struct nvhost_module_client *m;
 	int found = 0;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	mutex_lock(&client_list_lock);
-	list_for_each_entry(m, &dev->client_list, node) {
+	list_for_each_entry(m, &pdata->client_list, node) {
 		if (priv == m->priv) {
 			list_del(&m->node);
 			found = 1;
@@ -373,7 +389,7 @@ void nvhost_module_remove_client(struct nvhost_device *dev, void *priv)
 	}
 	if (found) {
 		kfree(m);
-		for (i = 0; i < dev->num_clks; i++)
+		for (i = 0; i < pdata->num_clks; i++)
 			nvhost_module_update_rate(dev, i);
 	}
 	mutex_unlock(&client_list_lock);
@@ -386,11 +402,12 @@ static ssize_t refcount_show(struct kobject *kobj,
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
 			power_attr[NVHOST_POWER_SYSFS_ATTRIB_REFCOUNT]);
-	struct nvhost_device *dev = power_attribute->ndev;
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	mutex_lock(&dev->lock);
-	ret = sprintf(buf, "%d\n", dev->refcount);
-	mutex_unlock(&dev->lock);
+	mutex_lock(&pdata->lock);
+	ret = sprintf(buf, "%d\n", pdata->refcount);
+	mutex_unlock(&pdata->lock);
 
 	return ret;
 }
@@ -402,20 +419,21 @@ static ssize_t powergate_delay_store(struct kobject *kobj,
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
 			power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY]);
-	struct nvhost_device *dev = power_attribute->ndev;
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (!dev->can_powergate) {
+	if (!pdata->can_powergate) {
 		dev_info(&dev->dev, "does not support power-gating\n");
 		return count;
 	}
 
-	mutex_lock(&dev->lock);
+	mutex_lock(&pdata->lock);
 	ret = sscanf(buf, "%d", &powergate_delay);
 	if (ret == 1 && powergate_delay >= 0)
-		dev->powergate_delay = powergate_delay;
+		pdata->powergate_delay = powergate_delay;
 	else
 		dev_err(&dev->dev, "Invalid powergate delay\n");
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 
 	return count;
 }
@@ -427,11 +445,12 @@ static ssize_t powergate_delay_show(struct kobject *kobj,
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
 			power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY]);
-	struct nvhost_device *dev = power_attribute->ndev;
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	mutex_lock(&dev->lock);
-	ret = sprintf(buf, "%d\n", dev->powergate_delay);
-	mutex_unlock(&dev->lock);
+	mutex_lock(&pdata->lock);
+	ret = sprintf(buf, "%d\n", pdata->powergate_delay);
+	mutex_unlock(&pdata->lock);
 
 	return ret;
 }
@@ -443,15 +462,16 @@ static ssize_t clockgate_delay_store(struct kobject *kobj,
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
 			power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY]);
-	struct nvhost_device *dev = power_attribute->ndev;
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	mutex_lock(&dev->lock);
+	mutex_lock(&pdata->lock);
 	ret = sscanf(buf, "%d", &clockgate_delay);
 	if (ret == 1 && clockgate_delay >= 0)
-		dev->clockgate_delay = clockgate_delay;
+		pdata->clockgate_delay = clockgate_delay;
 	else
 		dev_err(&dev->dev, "Invalid clockgate delay\n");
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 
 	return count;
 }
@@ -463,43 +483,49 @@ static ssize_t clockgate_delay_show(struct kobject *kobj,
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
 			power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY]);
-	struct nvhost_device *dev = power_attribute->ndev;
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	mutex_lock(&dev->lock);
-	ret = sprintf(buf, "%d\n", dev->clockgate_delay);
-	mutex_unlock(&dev->lock);
+	mutex_lock(&pdata->lock);
+	ret = sprintf(buf, "%d\n", pdata->clockgate_delay);
+	mutex_unlock(&pdata->lock);
 
 	return ret;
 }
 
-int nvhost_module_set_devfreq_rate(struct nvhost_device *dev, int index,
+int nvhost_module_set_devfreq_rate(struct platform_device *dev, int index,
 		unsigned long rate)
 {
-	rate = clk_round_rate(dev->clk[index], rate);
-	dev->clocks[index].devfreq_rate = rate;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	rate = clk_round_rate(pdata->clk[index], rate);
+	pdata->clocks[index].devfreq_rate = rate;
 
 	trace_nvhost_module_set_devfreq_rate(dev->name,
-			dev->clocks[index].name, rate);
+			pdata->clocks[index].name, rate);
+
 	return nvhost_module_update_rate(dev, index);
 }
 
-int nvhost_module_init(struct nvhost_device *dev)
+int nvhost_module_init(struct platform_device *dev)
 {
 	int i = 0, err = 0;
 	struct kobj_attribute *attr = NULL;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	/* initialize clocks to known state */
-	INIT_LIST_HEAD(&dev->client_list);
-	while (dev->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
+	INIT_LIST_HEAD(&pdata->client_list);
+	while (pdata->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
-		long rate = dev->clocks[i].default_rate;
+		long rate = pdata->clocks[i].default_rate;
 		struct clk *c;
 
-		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s", dev->name);
-		c = clk_get_sys(devname, dev->clocks[i].name);
+		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s",
+			dev_name(&dev->dev));
+		c = clk_get_sys(devname, pdata->clocks[i].name);
 		if (IS_ERR_OR_NULL(c)) {
 			dev_err(&dev->dev, "Cannot get clock %s\n",
-					dev->clocks[i].name);
+					pdata->clocks[i].name);
 			continue;
 		}
 
@@ -507,69 +533,69 @@ int nvhost_module_init(struct nvhost_device *dev)
 		clk_prepare_enable(c);
 		clk_set_rate(c, rate);
 		clk_disable_unprepare(c);
-		dev->clk[i] = c;
+		pdata->clk[i] = c;
 		i++;
 	}
-	dev->num_clks = i;
+	pdata->num_clks = i;
 
-	mutex_init(&dev->lock);
-	init_waitqueue_head(&dev->idle_wq);
-	INIT_DELAYED_WORK(&dev->powerstate_down, powerstate_down_handler);
+	mutex_init(&pdata->lock);
+	init_waitqueue_head(&pdata->idle_wq);
+	INIT_DELAYED_WORK(&pdata->powerstate_down, powerstate_down_handler);
 
 	/* power gate units that we can power gate */
-	if (dev->can_powergate) {
-		do_powergate_locked(dev->powergate_ids[0]);
-		do_powergate_locked(dev->powergate_ids[1]);
-		dev->powerstate = NVHOST_POWER_STATE_POWERGATED;
+	if (pdata->can_powergate) {
+		do_powergate_locked(pdata->powergate_ids[0]);
+		do_powergate_locked(pdata->powergate_ids[1]);
+		pdata->powerstate = NVHOST_POWER_STATE_POWERGATED;
 	} else {
-		do_unpowergate_locked(dev->powergate_ids[0]);
-		do_unpowergate_locked(dev->powergate_ids[1]);
-		dev->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
+		do_unpowergate_locked(pdata->powergate_ids[0]);
+		do_unpowergate_locked(pdata->powergate_ids[1]);
+		pdata->powerstate = NVHOST_POWER_STATE_CLOCKGATED;
 	}
 
 	/* Init the power sysfs attributes for this device */
-	dev->power_attrib = kzalloc(sizeof(struct nvhost_device_power_attr),
+	pdata->power_attrib = kzalloc(sizeof(struct nvhost_device_power_attr),
 		GFP_KERNEL);
-	if (!dev->power_attrib) {
+	if (!pdata->power_attrib) {
 		dev_err(&dev->dev, "Unable to allocate sysfs attributes\n");
 		return -ENOMEM;
 	}
-	dev->power_attrib->ndev = dev;
+	pdata->power_attrib->ndev = dev;
 
-	dev->power_kobj = kobject_create_and_add("acm", &dev->dev.kobj);
-	if (!dev->power_kobj) {
+	pdata->power_kobj = kobject_create_and_add("acm", &dev->dev.kobj);
+	if (!pdata->power_kobj) {
 		dev_err(&dev->dev, "Could not add dir 'power'\n");
 		err = -EIO;
 		goto fail_attrib_alloc;
 	}
 
-	attr = &dev->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
 	attr->attr.name = "clockgate_delay";
 	attr->attr.mode = S_IWUSR | S_IRUGO;
 	attr->show = clockgate_delay_show;
 	attr->store = clockgate_delay_store;
-	if (sysfs_create_file(dev->power_kobj, &attr->attr)) {
+	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
 		dev_err(&dev->dev, "Could not create sysfs attribute clockgate_delay\n");
 		err = -EIO;
 		goto fail_clockdelay;
 	}
 
-	attr = &dev->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
 	attr->attr.name = "powergate_delay";
 	attr->attr.mode = S_IWUSR | S_IRUGO;
 	attr->show = powergate_delay_show;
 	attr->store = powergate_delay_store;
-	if (sysfs_create_file(dev->power_kobj, &attr->attr)) {
+	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
 		dev_err(&dev->dev, "Could not create sysfs attribute powergate_delay\n");
 		err = -EIO;
 		goto fail_powergatedelay;
 	}
 
-	attr = &dev->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_REFCOUNT];
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_REFCOUNT];
 	attr->attr.name = "refcount";
 	attr->attr.mode = S_IRUGO;
 	attr->show = refcount_show;
-	if (sysfs_create_file(dev->power_kobj, &attr->attr)) {
+	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
 		dev_err(&dev->dev, "Could not create sysfs attribute refcount\n");
 		err = -EIO;
 		goto fail_refcount;
@@ -578,81 +604,105 @@ int nvhost_module_init(struct nvhost_device *dev)
 	return 0;
 
 fail_refcount:
-	attr = &dev->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
-	sysfs_remove_file(dev->power_kobj, &attr->attr);
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
+	sysfs_remove_file(pdata->power_kobj, &attr->attr);
 
 fail_powergatedelay:
-	attr = &dev->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
-	sysfs_remove_file(dev->power_kobj, &attr->attr);
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
+	sysfs_remove_file(pdata->power_kobj, &attr->attr);
 
 fail_clockdelay:
-	kobject_put(dev->power_kobj);
+	kobject_put(pdata->power_kobj);
 
 fail_attrib_alloc:
-	kfree(dev->power_attrib);
+	kfree(pdata->power_attrib);
 
 	return err;
 }
 
-static int is_module_idle(struct nvhost_device *dev)
+static int is_module_idle(struct platform_device *dev)
 {
 	int count;
-	mutex_lock(&dev->lock);
-	count = dev->refcount;
-	mutex_unlock(&dev->lock);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	mutex_lock(&pdata->lock);
+	count = pdata->refcount;
+	mutex_unlock(&pdata->lock);
+
 	return (count == 0);
 }
 
-int nvhost_module_suspend(struct nvhost_device *dev)
+int nvhost_module_suspend(struct platform_device *dev)
 {
 	int ret;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	ret = wait_event_timeout(dev->idle_wq, is_module_idle(dev),
+	ret = wait_event_timeout(pdata->idle_wq, is_module_idle(dev),
 			ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT);
 	if (ret == 0) {
 		dev_info(&dev->dev, "%s prevented suspend\n",
-				dev->name);
+				dev_name(&dev->dev));
 		return -EBUSY;
 	}
 
-	mutex_lock(&dev->lock);
-	cancel_delayed_work(&dev->powerstate_down);
+	mutex_lock(&pdata->lock);
+	cancel_delayed_work(&pdata->powerstate_down);
 	to_state_powergated_locked(dev);
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&pdata->lock);
 
-	if (drv->suspend_ndev)
-		drv->suspend_ndev(dev);
+	if (pdata->suspend_ndev)
+		pdata->suspend_ndev(dev);
 
 	return 0;
 }
 
-void nvhost_module_deinit(struct nvhost_device *dev)
+void nvhost_module_deinit(struct platform_device *dev)
 {
 	int i;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (drv->deinit)
-		drv->deinit(dev);
+	if (pdata->deinit)
+		pdata->deinit(dev);
 
 	nvhost_module_suspend(dev);
-	for (i = 0; i < dev->num_clks; i++)
-		clk_put(dev->clk[i]);
-	dev->powerstate = NVHOST_POWER_STATE_DEINIT;
+	for (i = 0; i < pdata->num_clks; i++)
+		clk_put(pdata->clk[i]);
+	pdata->powerstate = NVHOST_POWER_STATE_DEINIT;
 }
 
 /* public host1x power management APIs */
-bool nvhost_module_powered_ext(struct nvhost_device *dev)
+bool nvhost_module_powered_ext(struct platform_device *dev)
 {
-	return nvhost_module_powered(dev);
+	struct platform_device *pdev;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+
+	return nvhost_module_powered(pdev);
 }
 
-void nvhost_module_busy_ext(struct nvhost_device *dev)
+void nvhost_module_busy_ext(struct platform_device *dev)
 {
-	nvhost_module_busy(dev);
+	struct platform_device *pdev;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+
+	nvhost_module_busy(pdev);
 }
 
-void nvhost_module_idle_ext(struct nvhost_device *dev)
+void nvhost_module_idle_ext(struct platform_device *dev)
 {
-	nvhost_module_idle(dev);
+	struct platform_device *pdev;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+
+	nvhost_module_idle(pdev);
 }

@@ -38,8 +38,9 @@ static int host1x_drain_read_fifo(struct nvhost_channel *ch,
 static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 {
 	unsigned long waitbase;
-	unsigned long int waitbase_mask = ch->dev->waitbases;
-	if (ch->dev->waitbasesync) {
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	unsigned long int waitbase_mask = pdata->waitbases;
+	if (pdata->waitbasesync) {
 		waitbase = find_first_bit(&waitbase_mask, BITS_PER_LONG);
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
@@ -157,6 +158,7 @@ static void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 	struct nvhost_channel *ch = job->ch;
 	int incr;
 	u32 op_incr;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* push increments that correspond to nulled out commands */
 	op_incr = nvhost_opcode_imm_incr_syncpt(
@@ -168,7 +170,7 @@ static void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 		nvhost_cdma_push(&ch->cdma, op_incr, NVHOST_OPCODE_NOOP);
 
 	/* for 3d, waitbase needs to be incremented after each submit */
-	if (ch->dev->class == NV_GRAPHICS_3D_CLASS_ID) {
+	if (pdata->class == NV_GRAPHICS_3D_CLASS_ID) {
 		u32 waitbase = to_host1x_hwctx_handler(job->hwctx->h)->waitbase;
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(
@@ -206,7 +208,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	u32 syncval;
 	int err;
 	void *completed_waiter = NULL, *ctxsave_waiter = NULL;
-	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* Bail out on timed out contexts */
 	if (job->hwctx && job->hwctx->has_timedout)
@@ -214,8 +216,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 
 	/* Turn on the client module and host1x */
 	nvhost_module_busy(ch->dev);
-	if (drv->busy)
-		drv->busy(ch->dev);
 
 	/* before error checks, return current max */
 	prev_max = job->syncpt_end =
@@ -253,7 +253,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	if (ch->dev->serialize) {
+	if (pdata->serialize) {
 		/* Force serialization by inserting a host wait for the
 		 * previous job to finish before this one can commence. */
 		nvhost_cdma_push(&ch->cdma,
@@ -275,9 +275,9 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	job->syncpt_end = syncval;
 
 	/* add a setclass for modules that require it */
-	if (ch->dev->class)
+	if (pdata->class)
 		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(ch->dev->class, 0, 0),
+			nvhost_opcode_setclass(pdata->class, 0, 0),
 			NVHOST_OPCODE_NOOP);
 
 	if (job->null_kickoff)
@@ -357,7 +357,6 @@ static int host1x_drain_read_fifo(struct nvhost_channel *ch,
 
 static int host1x_save_context(struct nvhost_channel *ch)
 {
-	struct nvhost_device *dev = ch->dev;
 	struct nvhost_hwctx *hwctx_to_save;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	u32 syncpt_incrs, syncpt_val;
@@ -365,7 +364,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	void *ref;
 	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
 	struct nvhost_job *job;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
 	u32 syncpt_id;
 
 	ctx_waiter = nvhost_intr_alloc_waiter();
@@ -374,9 +372,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		err = -ENOMEM;
 		goto done;
 	}
-
-	if (drv->busy)
-		drv->busy(dev);
 
 	mutex_lock(&ch->submitlock);
 	hwctx_to_save = ch->cur_ctx;
@@ -458,14 +453,15 @@ static inline void __iomem *host1x_channel_aperture(void __iomem *p, int ndx)
 static inline int host1x_hwctx_handler_init(struct nvhost_channel *ch)
 {
 	int err = 0;
-	unsigned long syncpts = ch->dev->syncpts;
-	unsigned long waitbases = ch->dev->waitbases;
+
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	unsigned long syncpts = pdata->syncpts;
+	unsigned long waitbases = pdata->waitbases;
 	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
 	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
-	struct nvhost_driver *drv = to_nvhost_driver(ch->dev->dev.driver);
 
-	if (drv->alloc_hwctx_handler) {
-		ch->ctxhandler = drv->alloc_hwctx_handler(syncpt,
+	if (pdata->alloc_hwctx_handler) {
+		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,
 				waitbase, ch);
 		if (!ch->ctxhandler)
 			err = -ENOMEM;

@@ -119,5 +119,5 @@ void	nvhost_cdma_peek(struct nvhost_cdma *cdma,
 unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
 		enum cdma_event event);
 void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
-		struct nvhost_syncpt *syncpt, struct nvhost_device *dev);
+		struct nvhost_syncpt *syncpt, struct platform_device *dev);
 #endif

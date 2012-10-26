@@ -21,40 +21,49 @@
 #include <linux/errno.h>
 #include <linux/types.h>
 #include <linux/bug.h>
+#include <linux/slab.h>
 
-#include "bus.h"
 #include "chip_support.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+
 #include <mach/hardware.h>
+
+struct nvhost_chip_support *nvhost_chip_ops;
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void)
 {
-	return (nvhost_bus_get())->nvhost_chip_ops;
+	return nvhost_chip_ops;
 }
 
 int nvhost_init_chip_support(struct nvhost_master *host)
 {
 	int err = 0;
-	struct nvhost_chip_support *chip_ops;
 
-	chip_ops = nvhost_get_chip_ops();
+	if (nvhost_chip_ops == NULL) {
+		nvhost_chip_ops = kzalloc(sizeof(*nvhost_chip_ops), GFP_KERNEL);
+		if (nvhost_chip_ops == NULL) {
+			pr_err("%s: Cannot allocate nvhost_chip_support\n",
+				__func__);
+			return 0;
+		}
+	}
 
 	switch (tegra_get_chipid()) {
 	case TEGRA_CHIPID_TEGRA2:
-		chip_ops->soc_name = "tegra2x";
-		err = nvhost_init_t20_support(host, chip_ops);
+		nvhost_chip_ops->soc_name = "tegra2x";
+		err = nvhost_init_t20_support(host, nvhost_chip_ops);
 		break;
 
 	case TEGRA_CHIPID_TEGRA3:
-		chip_ops->soc_name = "tegra3x";
-		err = nvhost_init_t30_support(host, chip_ops);
+		nvhost_chip_ops->soc_name = "tegra3x";
+		err = nvhost_init_t30_support(host, nvhost_chip_ops);
 		break;
 
 	case TEGRA_CHIPID_TEGRA11:
-		chip_ops->soc_name = "tegra11x";
-		err = nvhost_init_t114_support(host, chip_ops);
+		nvhost_chip_ops->soc_name = "tegra11x";
+		err = nvhost_init_t114_support(host, nvhost_chip_ops);
 		break;
 
 	default:

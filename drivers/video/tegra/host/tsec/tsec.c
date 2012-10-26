@@ -44,17 +44,18 @@
 static u8 otf_key[TSEC_KEY_LENGTH];
 
 /* caller is responsible for freeing */
-static char *tsec_get_fw_name(struct nvhost_device *dev)
+static char *tsec_get_fw_name(struct platform_device *dev)
 {
 	char *fw_name;
 	u8 maj, min;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	/*note size here is a little over...*/
+	/* note size here is a little over...*/
 	fw_name = kzalloc(32, GFP_KERNEL);
 	if (!fw_name)
 		return NULL;
 
-	decode_tsec_ver(dev->version, &maj, &min);
+	decode_tsec_ver(pdata->version, &maj, &min);
 	if (maj == 1) {
 		/* there are no minor versions so far for maj==1 */
 		sprintf(fw_name, "nvhost_tsec.fw");
@@ -67,7 +68,7 @@ static char *tsec_get_fw_name(struct nvhost_device *dev)
 	return fw_name;
 }
 
-static int tsec_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
+static int tsec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
 	if (!*timeout)
 		*timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
@@ -89,7 +90,7 @@ static int tsec_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 	return -1;
 }
 
-static int tsec_dma_pa_to_internal_256b(struct nvhost_device *dev,
+static int tsec_dma_pa_to_internal_256b(struct platform_device *dev,
 		u32 offset, u32 internal_offset, bool imem)
 {
 	u32 cmd = tsec_dmatrfcmd_size_256b_f();
@@ -108,7 +109,7 @@ static int tsec_dma_pa_to_internal_256b(struct nvhost_device *dev,
 
 }
 
-static int tsec_wait_idle(struct nvhost_device *dev, u32 *timeout)
+static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
 {
 	if (!*timeout)
 		*timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
@@ -126,7 +127,7 @@ static int tsec_wait_idle(struct nvhost_device *dev, u32 *timeout)
 	return -1;
 }
 
-int tsec_boot(struct nvhost_device *dev)
+int tsec_boot(struct platform_device *dev)
 {
 	u32 timeout;
 	u32 offset;
@@ -178,7 +179,7 @@ int tsec_boot(struct nvhost_device *dev)
 	return 0;
 }
 
-static int tsec_setup_ucode_image(struct nvhost_device *dev,
+static int tsec_setup_ucode_image(struct platform_device *dev,
 		u32 *ucode_ptr,
 		const struct firmware *ucode_fw)
 {
@@ -258,7 +259,7 @@ static int tsec_setup_ucode_image(struct nvhost_device *dev,
 	return 0;
 }
 
-int tsec_read_ucode(struct nvhost_device *dev, const char *fw_name)
+int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct tsec *m = get_tsec(dev);
 	const struct firmware *ucode_fw;
@@ -321,7 +322,7 @@ clean_up:
 	return err;
 }
 
-void nvhost_tsec_init(struct nvhost_device *dev)
+void nvhost_tsec_init(struct platform_device *dev)
 {
 	int err = 0;
 	struct tsec *m;
@@ -360,7 +361,7 @@ void nvhost_tsec_init(struct nvhost_device *dev)
 	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
-void nvhost_tsec_deinit(struct nvhost_device *dev)
+void nvhost_tsec_deinit(struct platform_device *dev)
 {
 	struct tsec *m = get_tsec(dev);
 
@@ -372,19 +373,22 @@ void nvhost_tsec_deinit(struct nvhost_device *dev)
 	}
 }
 
-void nvhost_tsec_finalize_poweron(struct nvhost_device *dev)
+void nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
 	tsec_boot(dev);
 }
 
-static int tsec_probe(struct nvhost_device *dev,
-		struct nvhost_device_id *id_table)
+static int tsec_probe(struct platform_device *dev)
 {
 	int err;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	drv->init = nvhost_tsec_init;
-	drv->deinit = nvhost_tsec_deinit;
+	pdata->pdev = dev;
+	pdata->init = nvhost_tsec_init;
+	pdata->deinit = nvhost_tsec_deinit;
+
+	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -393,26 +397,26 @@ static int tsec_probe(struct nvhost_device *dev,
 	return nvhost_client_device_init(dev);
 }
 
-static int __exit tsec_remove(struct nvhost_device *dev)
+static int __exit tsec_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int tsec_suspend(struct nvhost_device *dev, pm_message_t state)
+static int tsec_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int tsec_resume(struct nvhost_device *dev)
+static int tsec_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver tsec_driver = {
+static struct platform_driver tsec_driver = {
 	.probe = tsec_probe,
 	.remove = __exit_p(tsec_remove),
 #ifdef CONFIG_PM
@@ -451,12 +455,12 @@ __setup("otf_key=", tsec_key_setup);
 
 static int __init tsec_init(void)
 {
-	return nvhost_driver_register(&tsec_driver);
+	return platform_driver_register(&tsec_driver);
 }
 
 static void __exit tsec_exit(void)
 {
-	nvhost_driver_unregister(&tsec_driver);
+	platform_driver_unregister(&tsec_driver);
 }
 
 module_init(tsec_init);

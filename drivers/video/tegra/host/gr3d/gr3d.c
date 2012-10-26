@@ -148,9 +148,10 @@ void nvhost_3dctx_put(struct nvhost_hwctx *ctx)
 	kref_put(&ctx->ref, nvhost_3dctx_free);
 }
 
-int nvhost_gr3d_prepare_power_off(struct nvhost_device *dev)
+int nvhost_gr3d_prepare_power_off(struct platform_device *dev)
 {
-	return nvhost_channel_save_context(dev->channel);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	return nvhost_channel_save_context(pdata->channel);
 }
 
 enum gr3d_ip_ver {
@@ -160,16 +161,16 @@ enum gr3d_ip_ver {
 };
 
 struct gr3d_desc {
-	void (*finalize_poweron)(struct nvhost_device *dev);
-	void (*busy)(struct nvhost_device *);
-	void (*idle)(struct nvhost_device *);
-	void (*suspend_ndev)(struct nvhost_device *);
-	void (*init)(struct nvhost_device *dev);
-	void (*deinit)(struct nvhost_device *dev);
-	int (*prepare_poweroff)(struct nvhost_device *dev);
+	void (*finalize_poweron)(struct platform_device *dev);
+	void (*busy)(struct platform_device *);
+	void (*idle)(struct platform_device *);
+	void (*suspend_ndev)(struct platform_device *);
+	void (*init)(struct platform_device *dev);
+	void (*deinit)(struct platform_device *dev);
+	int (*prepare_poweroff)(struct platform_device *dev);
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			u32 waitbase, struct nvhost_channel *ch);
-	int (*read_reg)(struct nvhost_device *dev, struct nvhost_channel *ch,
+	int (*read_reg)(struct platform_device *dev, struct nvhost_channel *ch,
 			struct nvhost_hwctx *hwctx, u32 offset, u32 *value);
 };
 
@@ -209,56 +210,63 @@ static const struct gr3d_desc gr3d[] = {
 	},
 };
 
-static struct nvhost_device_id gr3d_id[] = {
-	{ "gr3d", gr3d_01 },
-	{ "gr3d", gr3d_02 },
-	{ "gr3d", gr3d_03 },
+static struct platform_device_id gr3d_id[] = {
+	{ "gr3d01", gr3d_01 },
+	{ "gr3d02", gr3d_02 },
+	{ "gr3d03", gr3d_03 },
 	{ },
 };
 
 MODULE_DEVICE_TABLE(nvhost, gr3d_id);
 
-static int gr3d_probe(struct nvhost_device *dev,
-	struct nvhost_device_id *id_table)
+static int gr3d_probe(struct platform_device *dev)
 {
 	int index = 0;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	index = id_table->version;
+	/* HACK: reset device name */
+	dev_set_name(&dev->dev, "%s", "gr3d");
 
-	drv->finalize_poweron		= gr3d[index].finalize_poweron;
-	drv->busy			= gr3d[index].busy;
-	drv->idle			= gr3d[index].idle;
-	drv->suspend_ndev		= gr3d[index].suspend_ndev;
-	drv->init			= gr3d[index].init;
-	drv->deinit			= gr3d[index].deinit;
-	drv->prepare_poweroff		= gr3d[index].prepare_poweroff;
-	drv->alloc_hwctx_handler	= gr3d[index].alloc_hwctx_handler;
-	drv->read_reg			= gr3d[index].read_reg;
+	pdata->pdev = dev;
+	index = (int)(platform_get_device_id(dev)->driver_data);
+	BUG_ON(index > gr3d_03);
+
+	pdata->finalize_poweron		= gr3d[index].finalize_poweron;
+	pdata->busy			= gr3d[index].busy;
+	pdata->idle			= gr3d[index].idle;
+	pdata->suspend_ndev		= gr3d[index].suspend_ndev;
+	pdata->init			= gr3d[index].init;
+	pdata->deinit			= gr3d[index].deinit;
+	pdata->prepare_poweroff		= gr3d[index].prepare_poweroff;
+	pdata->alloc_hwctx_handler	= gr3d[index].alloc_hwctx_handler;
+	pdata->read_reg			= gr3d[index].read_reg;
+
+	platform_set_drvdata(dev, pdata);
 
 	return nvhost_client_device_init(dev);
 }
 
-static int __exit gr3d_remove(struct nvhost_device *dev)
+static int __exit gr3d_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int gr3d_suspend(struct nvhost_device *dev, pm_message_t state)
+static int gr3d_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int gr3d_resume(struct nvhost_device *dev)
+static int gr3d_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver gr3d_driver = {
+static struct platform_driver gr3d_driver = {
 	.probe = gr3d_probe,
 	.remove = __exit_p(gr3d_remove),
 #ifdef CONFIG_PM
@@ -274,12 +282,12 @@ static struct nvhost_driver gr3d_driver = {
 
 static int __init gr3d_init(void)
 {
-	return nvhost_driver_register(&gr3d_driver);
+	return platform_driver_register(&gr3d_driver);
 }
 
 static void __exit gr3d_exit(void)
 {
-	nvhost_driver_unregister(&gr3d_driver);
+	platform_driver_unregister(&gr3d_driver);
 }
 
 module_init(gr3d_init);

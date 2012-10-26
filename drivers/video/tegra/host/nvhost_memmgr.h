@@ -24,7 +24,7 @@
 struct nvhost_chip_support;
 struct mem_mgr;
 struct mem_handle;
-struct nvhost_device;
+struct platform_device;
 
 struct nvhost_job_unpin {
 	struct mem_handle *h;
@@ -53,12 +53,12 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *,
 		size_t size, size_t align,
 		int flags);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
-		u32 id, struct nvhost_device *dev);
+		u32 id, struct platform_device *dev);
 static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
-		struct nvhost_device *dev,
+		struct platform_device *dev,
 		long unsigned *ids,
 		dma_addr_t *phys_addr,
 		u32 count,

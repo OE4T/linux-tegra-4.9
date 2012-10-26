@@ -28,7 +28,8 @@
 #include "dev.h"
 #include "chip_support.h"
 
-#define MAX_SYNCPT_LENGTH 5
+#define MAX_SYNCPT_LENGTH	5
+
 /* Name of sysfs node for min and max value */
 static const char *min_name = "min";
 static const char *max_name = "max";
@@ -361,7 +362,7 @@ static ssize_t syncpt_max_show(struct kobject *kobj,
 				syncpt_attr->id));
 }
 
-int nvhost_syncpt_init(struct nvhost_device *dev,
+int nvhost_syncpt_init(struct platform_device *dev,
 		struct nvhost_syncpt *sp)
 {
 	int i;
@@ -483,27 +484,59 @@ int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp)
 }
 
 /* public sync point API */
-u32 nvhost_syncpt_incr_max_ext(struct nvhost_device *dev, u32 id, u32 incrs)
+u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 {
-	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
 	return nvhost_syncpt_incr_max(sp, id, incrs);
 }
 
-void nvhost_syncpt_cpu_incr_ext(struct nvhost_device *dev, u32 id)
+void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 {
-	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
 	nvhost_syncpt_cpu_incr(sp, id);
 }
 
-u32 nvhost_syncpt_read_ext(struct nvhost_device *dev, u32 id)
+u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 {
-	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
 	return nvhost_syncpt_read(sp, id);
 }
 
-int nvhost_syncpt_wait_timeout_ext(struct nvhost_device *dev, u32 id, u32 thresh,
-	u32 timeout, u32 *value)
+int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
+	u32 thresh, u32 timeout, u32 *value)
 {
-	struct nvhost_syncpt *sp = &(nvhost_get_host(dev)->syncpt);
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+
+	BUG_ON(!dev->dev.parent);
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value);
 }

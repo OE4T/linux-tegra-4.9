@@ -28,31 +28,32 @@
 #include <linux/nvhost.h>
 
 /* Sets clocks and powergating state for a module */
-int nvhost_module_init(struct nvhost_device *ndev);
-void nvhost_module_deinit(struct nvhost_device *dev);
-int nvhost_module_suspend(struct nvhost_device *dev);
+int nvhost_module_init(struct platform_device *ndev);
+void nvhost_module_deinit(struct platform_device *dev);
+int nvhost_module_suspend(struct platform_device *dev);
 
-void nvhost_module_reset(struct nvhost_device *dev);
-void nvhost_module_busy(struct nvhost_device *dev);
-void nvhost_module_idle_mult(struct nvhost_device *dev, int refs);
-int nvhost_module_add_client(struct nvhost_device *dev,
+void nvhost_module_reset(struct platform_device *dev);
+void nvhost_module_busy(struct platform_device *dev);
+void nvhost_module_idle_mult(struct platform_device *dev, int refs);
+int nvhost_module_add_client(struct platform_device *dev,
 		void *priv);
-void nvhost_module_remove_client(struct nvhost_device *dev,
+void nvhost_module_remove_client(struct platform_device *dev,
 		void *priv);
-int nvhost_module_get_rate(struct nvhost_device *dev,
+int nvhost_module_get_rate(struct platform_device *dev,
 		unsigned long *rate,
 		int index);
-int nvhost_module_set_rate(struct nvhost_device *dev, void *priv,
+int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 		unsigned long rate, int index);
-int nvhost_module_set_devfreq_rate(struct nvhost_device *dev, int index,
+int nvhost_module_set_devfreq_rate(struct platform_device *dev, int index,
 		unsigned long rate);
 
-static inline bool nvhost_module_powered(struct nvhost_device *dev)
+static inline bool nvhost_module_powered(struct platform_device *dev)
 {
-	return dev->powerstate == NVHOST_POWER_STATE_RUNNING;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	return pdata->powerstate == NVHOST_POWER_STATE_RUNNING;
 }
 
-static inline void nvhost_module_idle(struct nvhost_device *dev)
+static inline void nvhost_module_idle(struct platform_device *dev)
 {
 	nvhost_module_idle_mult(dev, 1);
 }

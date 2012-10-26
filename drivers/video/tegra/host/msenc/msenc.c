@@ -40,17 +40,18 @@
 #define set_msenc(ndev, f) ((ndev)->dev.platform_data = f)
 
 /* caller is responsible for freeing */
-static char *msenc_get_fw_name(struct nvhost_device *dev)
+static char *msenc_get_fw_name(struct platform_device *dev)
 {
 	char *fw_name;
 	u8 maj, min;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	/*note size here is a little over...*/
+	/* note size here is a little over...*/
 	fw_name = kzalloc(32, GFP_KERNEL);
 	if (!fw_name)
 		return NULL;
 
-	decode_msenc_ver(dev->version, &maj, &min);
+	decode_msenc_ver(pdata->version, &maj, &min);
 	if (maj == 2) {
 		/* there are no minor versions so far for maj==2 */
 		sprintf(fw_name, "nvhost_msenc02.fw");
@@ -63,7 +64,7 @@ static char *msenc_get_fw_name(struct nvhost_device *dev)
 	return fw_name;
 }
 
-static int msenc_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
+static int msenc_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
 	if (!*timeout)
 		*timeout = MSENC_IDLE_TIMEOUT_DEFAULT;
@@ -85,7 +86,7 @@ static int msenc_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 	return -1;
 }
 
-static int msenc_dma_pa_to_internal_256b(struct nvhost_device *dev,
+static int msenc_dma_pa_to_internal_256b(struct platform_device *dev,
 		u32 offset, u32 internal_offset, bool imem)
 {
 	u32 cmd = msenc_dmatrfcmd_size_256b_f();
@@ -104,7 +105,7 @@ static int msenc_dma_pa_to_internal_256b(struct nvhost_device *dev,
 
 }
 
-static int msenc_wait_idle(struct nvhost_device *dev, u32 *timeout)
+static int msenc_wait_idle(struct platform_device *dev, u32 *timeout)
 {
 	if (!*timeout)
 		*timeout = MSENC_IDLE_TIMEOUT_DEFAULT;
@@ -122,7 +123,7 @@ static int msenc_wait_idle(struct nvhost_device *dev, u32 *timeout)
 	return -1;
 }
 
-int msenc_boot(struct nvhost_device *dev)
+int msenc_boot(struct platform_device *dev)
 {
 	u32 timeout;
 	u32 offset;
@@ -174,7 +175,7 @@ int msenc_boot(struct nvhost_device *dev)
 	return 0;
 }
 
-static int msenc_setup_ucode_image(struct nvhost_device *dev,
+static int msenc_setup_ucode_image(struct platform_device *dev,
 		u32 *ucode_ptr,
 		const struct firmware *ucode_fw)
 {
@@ -240,7 +241,7 @@ static int msenc_setup_ucode_image(struct nvhost_device *dev,
 	return 0;
 }
 
-int msenc_read_ucode(struct nvhost_device *dev, const char *fw_name)
+int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct msenc *m = get_msenc(dev);
 	const struct firmware *ucode_fw;
@@ -303,7 +304,7 @@ clean_up:
 	return err;
 }
 
-void nvhost_msenc_init(struct nvhost_device *dev)
+void nvhost_msenc_init(struct platform_device *dev)
 {
 	int err = 0;
 	struct msenc *m;
@@ -339,7 +340,7 @@ void nvhost_msenc_init(struct nvhost_device *dev)
 	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
-void nvhost_msenc_deinit(struct nvhost_device *dev)
+void nvhost_msenc_deinit(struct platform_device *dev)
 {
 	struct msenc *m = get_msenc(dev);
 
@@ -351,20 +352,23 @@ void nvhost_msenc_deinit(struct nvhost_device *dev)
 	}
 }
 
-void nvhost_msenc_finalize_poweron(struct nvhost_device *dev)
+void nvhost_msenc_finalize_poweron(struct platform_device *dev)
 {
 	msenc_boot(dev);
 }
 
-static int msenc_probe(struct nvhost_device *dev,
-		struct nvhost_device_id *id_table)
+static int msenc_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvhost_driver *drv = to_nvhost_driver(dev->dev.driver);
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	drv->init = nvhost_msenc_init;
-	drv->deinit = nvhost_msenc_deinit;
-	drv->finalize_poweron = nvhost_msenc_finalize_poweron;
+	pdata->pdev = dev;
+	pdata->init = nvhost_msenc_init;
+	pdata->deinit = nvhost_msenc_deinit;
+	pdata->finalize_poweron = nvhost_msenc_finalize_poweron;
+
+	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -373,26 +377,26 @@ static int msenc_probe(struct nvhost_device *dev,
 	return nvhost_client_device_init(dev);
 }
 
-static int __exit msenc_remove(struct nvhost_device *dev)
+static int __exit msenc_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int msenc_suspend(struct nvhost_device *dev, pm_message_t state)
+static int msenc_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int msenc_resume(struct nvhost_device *dev)
+static int msenc_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver msenc_driver = {
+static struct platform_driver msenc_driver = {
 	.probe = msenc_probe,
 	.remove = __exit_p(msenc_remove),
 #ifdef CONFIG_PM
@@ -407,12 +411,12 @@ static struct nvhost_driver msenc_driver = {
 
 static int __init msenc_init(void)
 {
-	return nvhost_driver_register(&msenc_driver);
+	return platform_driver_register(&msenc_driver);
 }
 
 static void __exit msenc_exit(void)
 {
-	nvhost_driver_unregister(&msenc_driver);
+	platform_driver_unregister(&msenc_driver);
 }
 
 module_init(msenc_init);

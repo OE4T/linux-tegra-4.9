@@ -81,7 +81,7 @@ void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	dma_buf_kunmap(to_dmabuf(handle), pagenum, addr);
 }
 
-struct mem_handle *nvhost_dmabuf_get(u32 id, struct nvhost_device *dev)
+struct mem_handle *nvhost_dmabuf_get(u32 id, struct platform_device *dev)
 {
 	struct mem_handle *h;
 	struct dma_buf *buf;
@@ -98,7 +98,7 @@ struct mem_handle *nvhost_dmabuf_get(u32 id, struct nvhost_device *dev)
 	return (struct mem_handle *) ((u32)h | mem_mgr_type_dmabuf);
 }
 
-int nvhost_dmabuf_pin_array_ids(struct nvhost_device *dev,
+int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,
 		long unsigned *ids,
 		long unsigned id_type_mask,
 		long unsigned id_type,

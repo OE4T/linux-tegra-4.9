@@ -21,7 +21,6 @@
 #define _NVHOST_CHIP_SUPPORT_H_
 
 #include <linux/types.h>
-#include "bus.h"
 
 struct output;
 
@@ -41,7 +40,7 @@ struct nvhost_job_unpin;
 struct nvhost_intr_syncpt;
 struct mem_handle;
 struct mem_mgr;
-struct nvhost_device;
+struct platform_device;
 
 struct nvhost_channel_ops {
 	const char * soc_name;
@@ -132,7 +131,7 @@ struct nvhost_intr_ops {
 
 struct nvhost_dev_ops {
 	struct nvhost_channel *(*alloc_nvhost_channel)(
-			struct nvhost_device *dev);
+			struct platform_device *dev);
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
 };
 
@@ -145,7 +144,7 @@ struct nvhost_mem_ops {
 			size_t size, size_t align,
 			int flags);
 	struct mem_handle *(*get)(struct mem_mgr *,
-			u32 id, struct nvhost_device *);
+			u32 id, struct platform_device *);
 	void (*put)(struct mem_mgr *, struct mem_handle *);
 	struct sg_table *(*pin)(struct mem_mgr *, struct mem_handle *);
 	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
@@ -154,7 +153,7 @@ struct nvhost_mem_ops {
 	void *(*kmap)(struct mem_handle *, unsigned int);
 	void (*kunmap)(struct mem_handle *, unsigned int, void *);
 	int (*pin_array_ids)(struct mem_mgr *,
-			struct nvhost_device *,
+			struct platform_device *,
 			long unsigned *,
 			dma_addr_t *,
 			u32,
@@ -181,11 +180,11 @@ struct nvhost_actmon_ops {
 struct nvhost_tickctrl_ops {
 	int (*init_host)(struct nvhost_master *host);
 	void (*deinit_host)(struct nvhost_master *host);
-	int (*init_channel)(struct nvhost_device *dev);
-	void (*deinit_channel)(struct nvhost_device *dev);
-	int (*tickcount)(struct nvhost_device *dev, u64 *val);
-	int (*stallcount)(struct nvhost_device *dev, u64 *val);
-	int (*xfercount)(struct nvhost_device *dev, u64 *val);
+	int (*init_channel)(struct platform_device *dev);
+	void (*deinit_channel)(struct platform_device *dev);
+	int (*tickcount)(struct platform_device *dev, u64 *val);
+	int (*stallcount)(struct platform_device *dev, u64 *val);
+	int (*xfercount)(struct platform_device *dev, u64 *val);
 };
 
 struct nvhost_chip_support {
@@ -204,13 +203,13 @@ struct nvhost_chip_support {
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
 
-#define host_device_op()	nvhost_get_chip_ops()->nvhost_dev
-#define channel_cdma_op()	nvhost_get_chip_ops()->cdma
-#define channel_op()		nvhost_get_chip_ops()->channel
-#define syncpt_op()		nvhost_get_chip_ops()->syncpt
-#define intr_op()		nvhost_get_chip_ops()->intr
-#define cdma_op()		nvhost_get_chip_ops()->cdma
-#define cdma_pb_op()		nvhost_get_chip_ops()->push_buffer
+#define host_device_op()	(nvhost_get_chip_ops()->nvhost_dev)
+#define channel_cdma_op()	(nvhost_get_chip_ops()->cdma)
+#define channel_op()		(nvhost_get_chip_ops()->channel)
+#define syncpt_op()		(nvhost_get_chip_ops()->syncpt)
+#define intr_op()		(nvhost_get_chip_ops()->intr)
+#define cdma_op()		(nvhost_get_chip_ops()->cdma)
+#define cdma_pb_op()		(nvhost_get_chip_ops()->push_buffer)
 #define mem_op()		(nvhost_get_chip_ops()->mem)
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
 #define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)

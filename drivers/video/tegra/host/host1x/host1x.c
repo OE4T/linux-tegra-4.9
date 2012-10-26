@@ -28,7 +28,6 @@
 #include <linux/module.h>
 
 #include "dev.h"
-#include "bus.h"
 #include <trace/events/nvhost.h>
 
 #include <linux/nvhost.h>
@@ -39,8 +38,11 @@
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
+#include "chip_support.h"
 
 #define DRIVER_NAME		"host1x"
+
+struct nvhost_master *nvhost;
 
 struct nvhost_ctrl_userctx {
 	struct nvhost_master *dev;
@@ -158,23 +160,6 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 	return err;
 }
 
-static int match_by_moduleid(struct device *dev, void *data)
-{
-	struct nvhost_device *ndev = to_nvhost_device(dev);
-	u32 id = (u32)data;
-
-	return id == ndev->moduleid;
-}
-
-static struct nvhost_device *get_ndev_by_moduleid(struct nvhost_master *host,
-		u32 id)
-{
-	struct device *dev = bus_find_device(&nvhost_bus_inst->nvhost_bus_type,
-			NULL, (void *)id, match_by_moduleid);
-
-	return dev ? to_nvhost_device(dev) : NULL;
-}
-
 static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_module_regrdwr_args *args)
 {
@@ -182,18 +167,18 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	u32 *offsets = args->offsets;
 	u32 *values = args->values;
 	u32 vals[64];
-	struct nvhost_device *ndev;
+	struct platform_device *ndev;
 
 	trace_nvhost_ioctl_ctrl_module_regrdwr(args->id,
 			args->num_offsets, args->write);
+
 	/* Check that there is something to read and that block size is
 	 * u32 aligned */
 	if (num_offsets == 0 || args->block_size & 3)
 		return -EINVAL;
 
-	ndev = get_ndev_by_moduleid(ctx->dev, args->id);
-	if (!ndev)
-		return -EINVAL;
+	ndev = nvhost_device_list_match_by_id(args->id);
+	BUG_ON(!ndev);
 
 	while (num_offsets--) {
 		int err;
@@ -307,32 +292,35 @@ static const struct file_operations nvhost_ctrlops = {
 	.unlocked_ioctl = nvhost_ctrlctl
 };
 
-static void power_on_host(struct nvhost_device *dev)
+static void power_on_host(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
+
 	nvhost_syncpt_reset(&host->syncpt);
 	if (tickctrl_op().init_host)
 		tickctrl_op().init_host(host);
 }
 
-static int power_off_host(struct nvhost_device *dev)
+static int power_off_host(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
+
 	if (tickctrl_op().deinit_host)
 		tickctrl_op().deinit_host(host);
 	nvhost_syncpt_save(&host->syncpt);
 	return 0;
 }
 
-static void clock_on_host(struct nvhost_device *dev)
+static void clock_on_host(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
-	nvhost_intr_start(&host->intr, clk_get_rate(dev->clk[0]));
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
+	nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
 }
 
-static int clock_off_host(struct nvhost_device *dev)
+static int clock_off_host(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
 	nvhost_intr_stop(&host->intr);
 	return 0;
 }
@@ -372,7 +360,7 @@ fail:
 	return err;
 }
 
-struct nvhost_channel *nvhost_alloc_channel(struct nvhost_device *dev)
+struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev)
 {
 	BUG_ON(!host_device_op().alloc_nvhost_channel);
 	return host_device_op().alloc_nvhost_channel(dev);
@@ -410,16 +398,17 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 	return 0;
 }
 
-static int nvhost_probe(struct nvhost_device *dev,
-	struct nvhost_device_id *id_table)
+static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
 	struct resource *regs, *intr0, *intr1;
 	int i, err;
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	regs = nvhost_get_resource(dev, IORESOURCE_MEM, 0);
-	intr0 = nvhost_get_resource(dev, IORESOURCE_IRQ, 0);
-	intr1 = nvhost_get_resource(dev, IORESOURCE_IRQ, 1);
+	regs = platform_get_resource(dev, IORESOURCE_MEM, 0);
+	intr0 = platform_get_resource(dev, IORESOURCE_IRQ, 0);
+	intr1 = platform_get_resource(dev, IORESOURCE_IRQ, 1);
 
 	if (!regs || !intr0 || !intr1) {
 		dev_err(&dev->dev, "missing required platform resources\n");
@@ -430,15 +419,30 @@ static int nvhost_probe(struct nvhost_device *dev,
 	if (!host)
 		return -ENOMEM;
 
-	/*  Register host1x device as bus master */
+	nvhost = host;
+
 	host->dev = dev;
 
-	/* Copy host1x parameters */
-	memcpy(&host->info, dev->dev.platform_data,
+	/* Copy host1x parameters. The private_data gets replaced
+	 * by nvhost_master later */
+	memcpy(&host->info, pdata->private_data,
 			sizeof(struct host1x_device_info));
 
+	pdata->finalize_poweron = power_on_host;
+	pdata->prepare_poweroff = power_off_host;
+	pdata->prepare_clockoff = clock_off_host;
+	pdata->finalize_clockon = clock_on_host;
+
+	pdata->pdev = dev;
+
+	/* set common host1x device data */
+	platform_set_drvdata(dev, pdata);
+
+	/* set private host1x device data */
+	nvhost_set_private_data(dev, host);
+
 	host->reg_mem = request_mem_region(regs->start,
-					resource_size(regs), dev->name);
+		resource_size(regs), dev->name);
 	if (!host->reg_mem) {
 		dev_err(&dev->dev, "failed to get host register memory\n");
 		err = -ENXIO;
@@ -465,14 +469,6 @@ static int nvhost_probe(struct nvhost_device *dev,
 		goto fail;
 	}
 
-	/*  Register host1x device as bus master */
-	host->dev = dev;
-
-	/*  Give pointer to host1x via driver */
-	nvhost_set_drvdata(dev, host);
-
-	nvhost_bus_add_host(host);
-
 	err = nvhost_syncpt_init(dev, &host->syncpt);
 	if (err)
 		goto fail;
@@ -489,11 +485,16 @@ static int nvhost_probe(struct nvhost_device *dev,
 	if (err)
 		goto fail;
 
-	for (i = 0; i < host->dev->num_clks; i++)
-		clk_prepare_enable(host->dev->clk[i]);
+	for (i = 0; i < pdata->num_clks; i++)
+		clk_prepare_enable(pdata->clk[i]);
 	nvhost_syncpt_reset(&host->syncpt);
-	for (i = 0; i < host->dev->num_clks; i++)
-		clk_disable_unprepare(host->dev->clk[0]);
+	for (i = 0; i < pdata->num_clks; i++)
+		clk_disable_unprepare(pdata->clk[i]);
+
+	nvhost_device_list_init();
+	err = nvhost_device_list_add(dev);
+	if (err)
+		goto fail;
 
 	nvhost_debug_init(host);
 
@@ -511,18 +512,18 @@ fail:
 	return err;
 }
 
-static int __exit nvhost_remove(struct nvhost_device *dev)
+static int __exit nvhost_remove(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
 	nvhost_intr_deinit(&host->intr);
 	nvhost_syncpt_deinit(&host->syncpt);
 	nvhost_free_resources(host);
 	return 0;
 }
 
-static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
+static int nvhost_suspend(struct platform_device *dev, pm_message_t state)
 {
-	struct nvhost_master *host = nvhost_get_drvdata(dev);
+	struct nvhost_master *host = nvhost_get_private_data(dev);
 	int ret = 0;
 
 	ret = nvhost_module_suspend(host->dev);
@@ -531,13 +532,13 @@ static int nvhost_suspend(struct nvhost_device *dev, pm_message_t state)
 	return ret;
 }
 
-static int nvhost_resume(struct nvhost_device *dev)
+static int nvhost_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 
-static struct nvhost_driver nvhost_driver = {
+static struct platform_driver platform_driver = {
 	.probe = nvhost_probe,
 	.remove = __exit_p(nvhost_remove),
 	.suspend = nvhost_suspend,
@@ -546,20 +547,16 @@ static struct nvhost_driver nvhost_driver = {
 		.owner = THIS_MODULE,
 		.name = DRIVER_NAME
 	},
-	.finalize_poweron = power_on_host,
-	.prepare_poweroff = power_off_host,
-	.finalize_clockon = clock_on_host,
-	.prepare_clockoff = clock_off_host,
 };
 
 static int __init nvhost_mod_init(void)
 {
-	return nvhost_driver_register(&nvhost_driver);
+	return platform_driver_register(&platform_driver);
 }
 
 static void __exit nvhost_mod_exit(void)
 {
-	nvhost_driver_unregister(&nvhost_driver);
+	platform_driver_unregister(&platform_driver);
 }
 
 /* host1x master device needs nvmap to be instantiated first.

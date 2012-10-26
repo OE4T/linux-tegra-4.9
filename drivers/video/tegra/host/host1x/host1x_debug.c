@@ -271,6 +271,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	u32 dmaput, dmaget, dmactrl;
 	u32 cbstat, cbread;
 	u32 val, base, baseval;
+	struct nvhost_device_data *pdata = platform_get_drvdata(channel->dev);
 
 	dmaput = readl(channel->aperture + host1x_channel_dmaput_r());
 	dmaget = readl(channel->aperture + host1x_channel_dmaget_r());
@@ -280,7 +281,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
 			    channel->dev->name,
-			    channel->dev->refcount);
+			    pdata->refcount);
 
 	if (host1x_channel_dmactrl_dmastop_v(dmactrl)
 		|| !channel->cdma.push_buffer.mapped) {

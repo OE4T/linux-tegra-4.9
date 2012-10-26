@@ -94,9 +94,10 @@ static struct power_profile_gr3d power_profile;
  * used to estimate the current load
  ******************************************************************************/
 
-static void nvhost_scale3d_notify(struct nvhost_device *dev, int busy)
+static void nvhost_scale3d_notify(struct platform_device *dev, int busy)
 {
-	struct devfreq *df = dev->power_manager;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct devfreq *df = pdata->power_manager;
 
 	/* If defreq is disabled, do nothing */
 	if (!df) {
@@ -116,12 +117,12 @@ static void nvhost_scale3d_notify(struct nvhost_device *dev, int busy)
 	mutex_unlock(&df->lock);
 }
 
-void nvhost_scale3d_actmon_notify_idle(struct nvhost_device *dev)
+void nvhost_scale3d_actmon_notify_idle(struct platform_device *dev)
 {
 	nvhost_scale3d_notify(dev, 0);
 }
 
-void nvhost_scale3d_actmon_notify_busy(struct nvhost_device *dev)
+void nvhost_scale3d_actmon_notify_busy(struct platform_device *dev)
 {
 	nvhost_scale3d_notify(dev, 1);
 }
@@ -133,7 +134,7 @@ void nvhost_scale3d_actmon_notify_busy(struct nvhost_device *dev)
  ******************************************************************************/
 
 static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
-					u32 flags)
+				u32 flags)
 {
 	unsigned long hz;
 	long after;
@@ -185,7 +186,7 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 static int nvhost_scale3d_get_dev_status(struct device *d,
 		      struct devfreq_dev_status *stat)
 {
-	struct nvhost_device *dev = to_nvhost_device(d);
+	struct platform_device *dev = to_platform_device(d);
 	struct nvhost_master *host_master = nvhost_get_host(dev);
 	struct nvhost_devfreq_ext_stat *ext_stat =
 		power_profile.dev_stat->private_data;
@@ -314,20 +315,21 @@ static void nvhost_scale3d_calibrate_emc(void)
  * pod_scaling governor to handle the clock scaling.
  ******************************************************************************/
 
-void nvhost_scale3d_actmon_init(struct nvhost_device *dev)
+void nvhost_scale3d_actmon_init(struct platform_device *dev)
 {
 	struct nvhost_devfreq_ext_stat *ext_stat;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	if (power_profile.init)
 		return;
 
 	/* Get clocks */
-	power_profile.clk_3d = dev->clk[0];
+	power_profile.clk_3d = pdata->clk[0];
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
-		power_profile.clk_3d2 = dev->clk[1];
-		power_profile.clk_3d_emc = dev->clk[2];
+		power_profile.clk_3d2 = pdata->clk[1];
+		power_profile.clk_3d_emc = pdata->clk[2];
 	} else
-		power_profile.clk_3d_emc = dev->clk[1];
+		power_profile.clk_3d_emc = pdata->clk[1];
 
 	/* Get frequency settings */
 	power_profile.max_rate_3d =
@@ -362,7 +364,7 @@ void nvhost_scale3d_actmon_init(struct nvhost_device *dev)
 	nvhost_scale3d_calibrate_emc();
 
 	/* Start using devfreq */
-	dev->power_manager = devfreq_add_device(&dev->dev,
+	pdata->power_manager = devfreq_add_device(&dev->dev,
 				&nvhost_scale3d_devfreq_profile,
 				&nvhost_podgov,
 				NULL);
@@ -385,13 +387,15 @@ err_bad_power_profile:
  * Stop 3d scaling for the given device.
  ******************************************************************************/
 
-void nvhost_scale3d_actmon_deinit(struct nvhost_device *dev)
+void nvhost_scale3d_actmon_deinit(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	if (!power_profile.init)
 		return;
 
-	if (dev->power_manager)
-		devfreq_remove_device(dev->power_manager);
+	if (pdata->power_manager)
+		devfreq_remove_device(pdata->power_manager);
 
 	kfree(power_profile.dev_stat->private_data);
 	kfree(power_profile.dev_stat);

@@ -26,13 +26,14 @@
 struct mem_handle;
 struct sg_table;
 
-void nvhost_msenc_finalize_poweron(struct nvhost_device *dev);
-void nvhost_msenc_init(struct nvhost_device *dev);
-void nvhost_msenc_deinit(struct nvhost_device *dev);
+void nvhost_msenc_finalize_poweron(struct platform_device *dev);
+void nvhost_msenc_init(struct platform_device *dev);
+void nvhost_msenc_deinit(struct platform_device *dev);
 
 /* Would have preferred a static inline here... but we're using this
  * in a place where a constant initializer is required */
-#define NVHOST_ENCODE_MSENC_VER(maj,min) ( (((maj)&0xff)<<8) | ((min)&0xff) )
+#define NVHOST_ENCODE_MSENC_VER(maj, min) \
+	((((maj) & 0xff) << 8) | ((min) & 0xff))
 
 static inline void decode_msenc_ver(int version, u8 *maj, u8 *min)
 {
@@ -58,9 +59,9 @@ struct msenc {
 };
 
 struct msenc_ucode_bin_header_v1 {
-	u32 bin_magic;        /* 0x10de */
-	u32 bin_ver;          /* cya, versioning of bin format (1) */
-	u32 bin_size;         /* entire image size including this header */
+	u32 bin_magic;		/* 0x10de */
+	u32 bin_ver;		/* cya, versioning of bin format (1) */
+	u32 bin_size;		/* entire image size including this header */
 	u32 os_bin_header_offset;
 	u32 os_bin_data_offset;
 	u32 os_bin_size;

@@ -21,4 +21,13 @@
 
 #include "host1x/host1x.h"
 
+struct platform_device;
+
+void nvhost_device_list_init(void);
+int nvhost_device_list_add(struct platform_device *pdev);
+void nvhost_device_list_for_all(void *data,
+	int (*fptr)(struct platform_device *pdev, void *fdata));
+struct platform_device *nvhost_device_list_match_by_id(u32 id);
+void nvhost_device_list_remove(struct platform_device *pdev);
+
 #endif

@@ -24,7 +24,7 @@
 #include "nvhost_memmgr.h"
 
 struct nvhost_chip_support;
-struct nvhost_device;
+struct platform_device;
 
 struct mem_mgr *nvhost_dmabuf_alloc_mgr(void);
 void nvhost_dmabuf_put_mgr(struct mem_mgr *mgr);
@@ -40,8 +40,8 @@ void nvhost_dmabuf_munmap(struct mem_handle *handle, void *addr);
 void *nvhost_dmabuf_kmap(struct mem_handle *handle, unsigned int pagenum);
 void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
-int nvhost_dmabuf_get(u32 id, struct nvhost_device *dev);
-int nvhost_dmabuf_pin_array_ids(struct nvhost_device *dev,
+int nvhost_dmabuf_get(u32 id, struct platform_device *dev);
+int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,
 		long unsigned *ids,
 		long unsigned id_type_mask,
 		long unsigned id_type,

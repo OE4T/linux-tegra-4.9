@@ -23,7 +23,7 @@
 #include "host1x/host1x.h"
 #include "host1x/hw_host1x02_sync.h"
 
-void nvhost_gr2d_t114_finalize_poweron(struct nvhost_device *dev)
+void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
 {
 	void __iomem *sync_aperture = nvhost_get_host(dev)->sync_aperture;
 

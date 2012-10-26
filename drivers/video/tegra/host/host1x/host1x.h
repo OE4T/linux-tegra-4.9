@@ -52,28 +52,55 @@ struct nvhost_master {
 	struct nvhost_syncpt syncpt;
 	struct mem_mgr *memmgr;
 	struct nvhost_intr intr;
-	struct nvhost_device *dev;
+	struct platform_device *dev;
 	atomic_t clientid;
-
 	struct host1x_device_info info;
 };
 
 extern struct nvhost_master *nvhost;
 
 void nvhost_debug_init(struct nvhost_master *master);
-void nvhost_device_debug_init(struct nvhost_device *dev);
+void nvhost_device_debug_init(struct platform_device *dev);
 void nvhost_debug_dump(struct nvhost_master *master);
 
-struct nvhost_channel *nvhost_alloc_channel(struct nvhost_device *dev);
+struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev);
 void nvhost_free_channel(struct nvhost_channel *ch);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
 
-static inline struct nvhost_master *nvhost_get_host(struct nvhost_device *_dev)
+static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {
-	return (_dev->dev.parent) ? \
-		((struct nvhost_master *) dev_get_drvdata(_dev->dev.parent)) : \
-		((struct nvhost_master *) dev_get_drvdata(&(_dev->dev)));
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)platform_get_drvdata(_dev);
+	BUG_ON(!pdata);
+	return pdata->private_data ? pdata->private_data : NULL;
+}
+
+static inline void nvhost_set_private_data(struct platform_device *_dev,
+	void *priv_data)
+{
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)platform_get_drvdata(_dev);
+	BUG_ON(!pdata);
+	pdata->private_data = priv_data;
+}
+
+static inline struct nvhost_master *nvhost_get_host(
+	struct platform_device *_dev)
+{
+	struct platform_device *pdev;
+
+	if (_dev->dev.parent) {
+		pdev = to_platform_device(_dev->dev.parent);
+		return nvhost_get_private_data(pdev);
+	} else
+		return nvhost_get_private_data(_dev);
+}
+
+static inline struct platform_device *nvhost_get_parent(
+	struct platform_device *_dev)
+{
+	return _dev->dev.parent ? to_platform_device(_dev->dev.parent) : NULL;
 }
 
 #endif

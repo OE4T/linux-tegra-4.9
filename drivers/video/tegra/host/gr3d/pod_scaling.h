@@ -21,13 +21,13 @@
 #ifndef POD_SCALING_H
 #define POD_SCALING_H
 
-struct nvhost_device;
+struct platform_device;
 struct dentry;
 
 #define GET_TARGET_FREQ_DONTSCALE	1
 
 /* Suspend is called when powering down module */
-void nvhost_scale3d_suspend(struct nvhost_device *);
+void nvhost_scale3d_suspend(struct platform_device *);
 
 extern const struct devfreq_governor nvhost_podgov;
 

@@ -217,9 +217,10 @@ static void podgov_clocks_handler(struct work_struct *work)
  * Prepare the device for suspend
  ******************************************************************************/
 
-void nvhost_scale3d_suspend(struct nvhost_device *dev)
+void nvhost_scale3d_suspend(struct platform_device *dev)
 {
-	struct devfreq *df = (void *)dev->power_manager;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
 
 	if (!df)
@@ -246,8 +247,9 @@ void nvhost_scale3d_suspend(struct nvhost_device *dev)
 
 static int podgov_is_enabled(struct device *dev)
 {
-	struct nvhost_device *d = to_nvhost_device(dev);
-	struct devfreq *df = d->power_manager;
+	struct platform_device *d = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(d);
+	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
 	int enable;
 
@@ -272,8 +274,9 @@ static int podgov_is_enabled(struct device *dev)
 
 static void podgov_enable(struct device *dev, int enable)
 {
-	struct nvhost_device *d = to_nvhost_device(dev);
-	struct devfreq *df = d->power_manager;
+	struct platform_device *d = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(d);
+	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
 
 	if (!df)
@@ -615,8 +618,8 @@ static void podgov_idle_handler(struct work_struct *work)
 
 	/* Retrieve device driver ops and the device struct */
 	struct device *d = df->dev.parent;
-	struct nvhost_driver *drv = to_nvhost_driver(d->driver);
-	struct nvhost_device *dev = to_nvhost_device(d);
+	struct platform_device *dev = to_platform_device(d);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	int notify_idle = 0;
 
@@ -633,8 +636,8 @@ static void podgov_idle_handler(struct work_struct *work)
 
 	mutex_unlock(&df->lock);
 
-	if (drv->idle && notify_idle)
-		drv->idle(dev);
+	if (pdata->idle && notify_idle)
+		pdata->idle(dev);
 }
 
 /*******************************************************************************
@@ -748,13 +751,14 @@ EXPORT_SYMBOL(nvhost_scale3d_set_throughput_hint);
 static void nvhost_scale3d_debug_init(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
-	struct nvhost_device *dev = to_nvhost_device(df->dev.parent);
+	struct platform_device *dev = to_platform_device(df->dev.parent);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct dentry *f;
 
 	if (!podgov)
 		return;
 
-	podgov->debugdir = debugfs_create_dir("scaling", dev->debugfs);
+	podgov->debugdir = debugfs_create_dir("scaling", pdata->debugfs);
 	if (!podgov->debugdir) {
 		pr_err("podgov: can\'t create debugfs directory\n");
 		return;
@@ -948,8 +952,9 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 
 static int nvhost_pod_init(struct devfreq *df)
 {
-	struct nvhost_device *d = to_nvhost_device(df->dev.parent);
 	struct podgov_info_rec *podgov;
+	struct platform_device *d = to_platform_device(df->dev.parent);
+	struct nvhost_device_data *pdata = platform_get_drvdata(d);
 	ktime_t now = ktime_get();
 	int error = 0;
 
@@ -1022,8 +1027,7 @@ static int nvhost_pod_init(struct devfreq *df)
 			pr_err("%s: too many frequencies\n", __func__);
 			break;
 		}
-		rounded_rate =
-			clk_round_rate(clk_get_parent(d->clk[0]), rate);
+		rounded_rate = clk_round_rate(pdata->clk[0], rate);
 		freqs[podgov->freq_count++] = rounded_rate;
 		rate = rounded_rate + 2000;
 	}
@@ -1071,7 +1075,7 @@ err_alloc_podgov:
 static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
-	struct nvhost_device *d = to_nvhost_device(df->dev.parent);
+	struct platform_device *d = to_platform_device(df->dev.parent);
 
 	cancel_work_sync(&podgov->work);
 	cancel_delayed_work(&podgov->idle_timer);

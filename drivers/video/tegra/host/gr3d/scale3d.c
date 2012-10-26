@@ -69,7 +69,7 @@ struct power_profile_gr3d {
 	long				emc_dip_offset;
 	long				emc_xmid;
 
-	struct nvhost_device		*dev;
+	struct platform_device		*dev;
 	int				clk_3d;
 	int				clk_3d2;
 	int				clk_3d_emc;
@@ -90,7 +90,9 @@ static struct power_profile_gr3d power_profile;
 /* Convert clk index to struct clk * */
 static inline struct clk *clk(int index)
 {
-	return power_profile.dev->clk[index];
+	struct nvhost_device_data *pdata =
+		platform_get_drvdata(power_profile.dev);
+	return pdata->clk[index];
 }
 
 /*******************************************************************************
@@ -100,9 +102,10 @@ static inline struct clk *clk(int index)
  * used to estimate the current load
  ******************************************************************************/
 
-static void nvhost_scale3d_notify(struct nvhost_device *dev, int busy)
+static void nvhost_scale3d_notify(struct platform_device *dev, int busy)
 {
-	struct devfreq *df = dev->power_manager;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct devfreq *df = pdata->power_manager;
 	struct nvhost_devfreq_ext_stat *ext_stat;
 	ktime_t t;
 	unsigned long dt;
@@ -141,13 +144,13 @@ static void nvhost_scale3d_notify(struct nvhost_device *dev, int busy)
 	mutex_unlock(&df->lock);
 }
 
-void nvhost_scale3d_notify_idle(struct nvhost_device *dev)
+void nvhost_scale3d_notify_idle(struct platform_device *dev)
 {
 	nvhost_scale3d_notify(dev, 0);
 
 }
 
-void nvhost_scale3d_notify_busy(struct nvhost_device *dev)
+void nvhost_scale3d_notify_busy(struct platform_device *dev)
 {
 	nvhost_scale3d_notify(dev, 1);
 }
@@ -334,13 +337,13 @@ static void nvhost_scale3d_calibrate_emc(void)
  * pod_scaling governor to handle the clock scaling.
  ******************************************************************************/
 
-void nvhost_scale3d_init(struct nvhost_device *dev)
+void nvhost_scale3d_init(struct platform_device *dev)
 {
 	struct nvhost_devfreq_ext_stat *ext_stat;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	if (power_profile.init)
 		return;
-
 
 	/* Get clocks */
 	power_profile.dev = dev;
@@ -385,7 +388,7 @@ void nvhost_scale3d_init(struct nvhost_device *dev)
 	power_profile.init = 1;
 
 	/* Start using devfreq */
-	dev->power_manager = devfreq_add_device(&dev->dev,
+	pdata->power_manager = devfreq_add_device(&dev->dev,
 				&nvhost_scale3d_devfreq_profile,
 				&nvhost_podgov,
 				NULL);
@@ -407,13 +410,14 @@ err_bad_power_profile:
  * Stop 3d scaling for the given device.
  ******************************************************************************/
 
-void nvhost_scale3d_deinit(struct nvhost_device *dev)
+void nvhost_scale3d_deinit(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	if (!power_profile.init)
 		return;
 
-	if (dev->power_manager)
-		devfreq_remove_device(dev->power_manager);
+	if (pdata->power_manager)
+		devfreq_remove_device(pdata->power_manager);
 
 	kfree(power_profile.dev_stat->private_data);
 	kfree(power_profile.dev_stat);

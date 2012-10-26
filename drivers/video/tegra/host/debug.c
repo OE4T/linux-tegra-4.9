@@ -23,7 +23,6 @@
 
 #include <linux/io.h>
 
-#include "bus.h"
 #include "dev.h"
 #include "debug.h"
 #include "nvhost_acm.h"
@@ -48,24 +47,27 @@ void nvhost_debug_output(struct output *o, const char* fmt, ...)
 	o->fn(o->ctx, o->buf, len);
 }
 
-static int show_channels(struct device *dev, void *data)
+static int show_channels(struct platform_device *pdev, void *data)
 {
 	struct nvhost_channel *ch;
-	struct nvhost_device *nvdev = to_nvhost_device(dev);
 	struct output *o = data;
 	struct nvhost_master *m;
+	struct nvhost_device_data *pdata;
 
-	if (nvdev == NULL)
+	if (pdev == NULL)
 		return 0;
 
-	m = nvhost_get_host(nvdev);
-	ch = nvdev->channel;
+	pdata = platform_get_drvdata(pdev);
+	m = nvhost_get_host(pdev);
+	ch = pdata->channel;
 	if (ch) {
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
 			mutex_lock(&ch->cdma.lock);
-			nvhost_get_chip_ops()->debug.show_channel_fifo(m, ch, o, nvdev->index);
-			nvhost_get_chip_ops()->debug.show_channel_cdma(m, ch, o, nvdev->index);
+			nvhost_get_chip_ops()->debug.show_channel_fifo(
+				m, ch, o, pdata->index);
+			nvhost_get_chip_ops()->debug.show_channel_cdma(
+				m, ch, o, pdata->index);
 			mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
@@ -107,31 +109,31 @@ static void show_all(struct nvhost_master *m, struct output *o)
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o,
-			show_channels);
+	nvhost_device_list_for_all(o, show_channels);
 
 	nvhost_module_idle(m->dev);
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int show_channels_no_fifo(struct device *dev, void *data)
+static int show_channels_no_fifo(struct platform_device *pdev, void *data)
 {
 	struct nvhost_channel *ch;
-	struct nvhost_device *nvdev = to_nvhost_device(dev);
 	struct output *o = data;
 	struct nvhost_master *m;
+	struct nvhost_device_data *pdata;
 
-	if (nvdev == NULL)
+	if (pdev == NULL)
 		return 0;
 
-	m = nvhost_get_host(nvdev);
-	ch = nvdev->channel;
+	pdata = platform_get_drvdata(pdev);
+	m = nvhost_get_host(pdev);
+	ch = pdata->channel;
 	if (ch) {
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
 			mutex_lock(&ch->cdma.lock);
 			nvhost_get_chip_ops()->debug.show_channel_cdma(m,
-					ch, o, nvdev->index);
+					ch, o, pdata->index);
 			mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
@@ -147,8 +149,7 @@ static void show_all_no_fifo(struct nvhost_master *m, struct output *o)
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	bus_for_each_dev(&(nvhost_bus_get())->nvhost_bus_type, NULL, o,
-			show_channels_no_fifo);
+	nvhost_device_list_for_all(o, show_channels_no_fifo);
 
 	nvhost_module_idle(m->dev);
 }
@@ -162,6 +163,7 @@ static int nvhost_debug_show_all(struct seq_file *s, void *unused)
 	show_all(s->private, &o);
 	return 0;
 }
+
 static int nvhost_debug_show(struct seq_file *s, void *unused)
 {
 	struct output o = {
@@ -233,6 +235,7 @@ static const struct file_operations actmon_above_wmark_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
+
 static int actmon_avg_show(struct seq_file *s, void *unused)
 {
 	struct nvhost_master *host = s->private;
@@ -398,7 +401,7 @@ static const struct file_operations actmon_k_fops = {
 
 static int tickcount_show(struct seq_file *s, void *unused)
 {
-	struct nvhost_device *dev = s->private;
+	struct platform_device *dev = s->private;
 	u64 cnt;
 	int err;
 
@@ -425,7 +428,7 @@ static const struct file_operations tickcount_fops = {
 
 static int stallcount_show(struct seq_file *s, void *unused)
 {
-	struct nvhost_device *dev = s->private;
+	struct platform_device *dev = s->private;
 	u64 cnt;
 	int err;
 
@@ -452,7 +455,7 @@ static const struct file_operations stallcount_fops = {
 
 static int xfercount_show(struct seq_file *s, void *unused)
 {
-	struct nvhost_device *dev = s->private;
+	struct platform_device *dev = s->private;
 	u64 cnt;
 	int err;
 
@@ -477,26 +480,30 @@ static const struct file_operations xfercount_fops = {
 	.release	= single_release,
 };
 
-void nvhost_device_debug_init(struct nvhost_device *dev)
+void nvhost_device_debug_init(struct platform_device *dev)
 {
-	struct dentry *de = nvhost_get_parent(dev)->debugfs;
+	struct dentry *de = NULL;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	de = debugfs_create_dir(dev->name, de);
 	debugfs_create_file("stallcount", S_IRUGO, de, dev, &stallcount_fops);
 	debugfs_create_file("xfercount", S_IRUGO, de, dev, &xfercount_fops);
 
-	dev->debugfs = de;
+	pdata->debugfs = de;
 }
 
 void nvhost_debug_init(struct nvhost_master *master)
 {
+	struct nvhost_device_data *pdata;
 	struct dentry *de = debugfs_create_dir("tegra_host", NULL);
 
 	if (!de)
 		return;
 
+	pdata = platform_get_drvdata(master->dev);
+
 	/* Store the created entry */
-	master->dev->debugfs = de;
+	pdata->debugfs = de;
 
 	debugfs_create_file("status", S_IRUGO, de,
 			master, &nvhost_debug_fops);

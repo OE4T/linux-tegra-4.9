@@ -24,19 +24,19 @@
 /* Clumsy way of getting enums from the header */
 #include "scale3d.h"
 
-struct nvhost_device;
+struct platform_device;
 struct device;
 struct dentry;
 
 /* Initialization and de-initialization for module */
-void nvhost_scale3d_actmon_init(struct nvhost_device *);
-void nvhost_scale3d_actmon_deinit(struct nvhost_device *);
+void nvhost_scale3d_actmon_init(struct platform_device *);
+void nvhost_scale3d_actmon_deinit(struct platform_device *);
 
 /*
  * call when performing submit to notify scaling mechanism that 3d module is
  * in use
  */
-void nvhost_scale3d_actmon_notify_busy(struct nvhost_device *);
-void nvhost_scale3d_actmon_notify_idle(struct nvhost_device *);
+void nvhost_scale3d_actmon_notify_busy(struct platform_device *);
+void nvhost_scale3d_actmon_notify_idle(struct platform_device *);
 
 #endif

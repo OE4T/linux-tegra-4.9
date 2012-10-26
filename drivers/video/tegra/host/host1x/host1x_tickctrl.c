@@ -45,9 +45,10 @@ static void host1x_tickctrl_deinit_host(struct nvhost_master *host)
 			regs + host1x_channel_channelctrl_r());
 }
 
-static int host1x_tickctrl_init_channel(struct nvhost_device *dev)
+static int host1x_tickctrl_init_channel(struct platform_device *dev)
 {
-	void __iomem *regs = dev->channel->aperture;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *regs = pdata->channel->aperture;
 
 	/* Initialize counter */
 	writel(0, regs + host1x_channel_stallcount_hi_r());
@@ -63,9 +64,10 @@ static int host1x_tickctrl_init_channel(struct nvhost_device *dev)
 	return 0;
 }
 
-static void host1x_tickctrl_deinit_channel(struct nvhost_device *dev)
+static void host1x_tickctrl_deinit_channel(struct platform_device *dev)
 {
-	void __iomem *regs = dev->channel->aperture;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *regs = pdata->channel->aperture;
 
 	writel(host1x_channel_stallctrl_enable_channel_stall_f(0),
 			regs + host1x_channel_stallctrl_r());
@@ -84,7 +86,7 @@ static u64 readl64(void __iomem *reg_hi, void __iomem *reg_lo)
 	return ((u64)hi << 32) | (u64)lo;
 }
 
-static int host1x_tickctrl_tickcount(struct nvhost_device *dev, u64 *val)
+static int host1x_tickctrl_tickcount(struct platform_device *dev, u64 *val)
 {
 	void __iomem *regs = nvhost_get_host(dev)->aperture;
 
@@ -95,9 +97,10 @@ static int host1x_tickctrl_tickcount(struct nvhost_device *dev, u64 *val)
 	return 0;
 }
 
-static int host1x_tickctrl_stallcount(struct nvhost_device *dev, u64 *val)
+static int host1x_tickctrl_stallcount(struct platform_device *dev, u64 *val)
 {
-	void __iomem *regs = dev->channel->aperture;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *regs = pdata->channel->aperture;
 
 	*val = readl64(regs + host1x_channel_stallcount_hi_r(),
 		regs + host1x_channel_stallcount_lo_r());
@@ -106,9 +109,10 @@ static int host1x_tickctrl_stallcount(struct nvhost_device *dev, u64 *val)
 	return 0;
 }
 
-static int host1x_tickctrl_xfercount(struct nvhost_device *dev, u64 *val)
+static int host1x_tickctrl_xfercount(struct platform_device *dev, u64 *val)
 {
-	void __iomem *regs = dev->channel->aperture;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *regs = pdata->channel->aperture;
 
 	*val = readl64(regs + host1x_channel_xfercount_hi_r(),
 		regs + host1x_channel_xfercount_lo_r());

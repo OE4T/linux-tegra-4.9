@@ -46,7 +46,7 @@ struct nvhost_syncpt {
 	struct nvhost_syncpt_attr *syncpt_attrs;
 };
 
-int nvhost_syncpt_init(struct nvhost_device *, struct nvhost_syncpt *);
+int nvhost_syncpt_init(struct platform_device *, struct nvhost_syncpt *);
 void nvhost_syncpt_deinit(struct nvhost_syncpt *);
 
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)

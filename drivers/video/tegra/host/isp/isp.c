@@ -26,10 +26,14 @@
 #include "dev.h"
 #include "bus_client.h"
 
-static int isp_probe(struct nvhost_device *dev,
-	struct nvhost_device_id *id_table)
+static int isp_probe(struct platform_device *dev)
 {
 	int err = 0;
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
+
+	pdata->pdev = dev;
+	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -38,26 +42,26 @@ static int isp_probe(struct nvhost_device *dev,
 	return nvhost_client_device_init(dev);
 }
 
-static int __exit isp_remove(struct nvhost_device *dev)
+static int __exit isp_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int isp_suspend(struct nvhost_device *dev, pm_message_t state)
+static int isp_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int isp_resume(struct nvhost_device *dev)
+static int isp_resume(struct platform_device *dev)
 {
 	dev_info(&dev->dev, "resuming\n");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver isp_driver = {
+static struct platform_driver isp_driver = {
 	.probe = isp_probe,
 	.remove = __exit_p(isp_remove),
 #ifdef CONFIG_PM
@@ -72,12 +76,12 @@ static struct nvhost_driver isp_driver = {
 
 static int __init isp_init(void)
 {
-	return nvhost_driver_register(&isp_driver);
+	return platform_driver_register(&isp_driver);
 }
 
 static void __exit isp_exit(void)
 {
-	nvhost_driver_unregister(&isp_driver);
+	platform_driver_unregister(&isp_driver);
 }
 
 module_init(isp_init);

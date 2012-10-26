@@ -75,9 +75,10 @@ static void host1x_actmon_update_sample_period_safe(struct nvhost_master *host)
 {
 	void __iomem *sync_regs = host->sync_aperture;
 	long freq_mhz, clks_per_sample;
+	struct nvhost_device_data *pdata = platform_get_drvdata(host->dev);
 
 	/* We use MHz and us instead of Hz and s due to numerical limitations */
-	freq_mhz = clk_get_rate(host->dev->clk[0]) / 1000000;
+	freq_mhz = clk_get_rate(pdata->clk[0]) / 1000000;
 	clks_per_sample = (freq_mhz * actmon_status.usecs_per_sample) / 256;
 	actmon_status.clks_per_sample = clks_per_sample;
 

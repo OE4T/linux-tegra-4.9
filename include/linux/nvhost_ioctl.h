@@ -384,10 +384,6 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
 	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
 
-#define NVHOST_IOCTL_CHANNEL_MAP_BUFFER        \
-	_IOWR(NVHOST_IOCTL_MAGIC, 118, struct nvhost_map_buffer_args)
-#define NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER \
-	_IOWR(NVHOST_IOCTL_MAGIC, 119, struct nvhost_unmap_buffer_args)
 #define NVHOST_IOCTL_CHANNEL_ZCULL_GET_SIZE    \
 	_IOWR(NVHOST_IOCTL_MAGIC, 123, struct nvhost_zcull_get_size_args)
 #define NVHOST_IOCTL_CHANNEL_ZCULL_GET_INFO    \

@@ -82,10 +82,6 @@ struct nvhost_channel_ops {
 			u32 num_entries,
 			struct nvhost_fence *fence,
 			u32 flags);
-	int (*map_buffer)(struct nvhost_hwctx *,
-			  struct nvhost_map_buffer_args *args);
-	int (*unmap_buffer)(struct nvhost_hwctx *,
-			    struct nvhost_unmap_buffer_args *args);
 	int (*wait)(struct nvhost_hwctx *,
 		    struct nvhost_wait_args *args);
 	struct nvhost_zcull_ops zcull;

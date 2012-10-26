@@ -397,13 +397,24 @@ int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 	/* args->o_a.offset will be set if !err */
 
  finish:
-	mem_op().put_mgr(memmgr);
 	return err;
 }
 
 int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 				 struct nvhost_as_unmap_buffer_args *args)
 {
+	struct mem_mgr *memmgr = NULL;
+	struct mem_handle *r = NULL;
+	int err;
+
 	nvhost_dbg_fn("");
-	return as_share->as->ops->unmap_buffer(as_share, args->offset);
+
+	err = as_share->as->ops->unmap_buffer(as_share,
+			args->offset, &memmgr, &r);
+	BUG_ON(memmgr == NULL || r == NULL);
+
+	mem_op().put(memmgr, r);
+	mem_op().put_mgr(memmgr);
+
+	return err;
 }

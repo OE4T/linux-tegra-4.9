@@ -161,8 +161,15 @@ struct vm_gk20a {
 		   u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
 		   u32 kind);
 
+	/* unmap handle from kernel */
 	void (*unmap)(struct vm_gk20a *vm,
-		      u64 offset);
+		u64 offset);
+
+	/* unmap handle from user */
+	void (*unmap_user)(struct vm_gk20a *vm,
+		u64 offset,
+		struct mem_mgr **memmgr,
+		struct mem_handle **r);
 
 	void (*remove_support)(struct vm_gk20a *vm);
 };

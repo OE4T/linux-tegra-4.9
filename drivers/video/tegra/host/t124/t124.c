@@ -296,20 +296,6 @@ static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 					fence, flags);
 }
 
-static int t124_channel_map_buffer(struct nvhost_hwctx *hwctx,
-				    struct nvhost_map_buffer_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_map_buffer(hwctx->priv, args);
-}
-
-static int t124_channel_unmap_buffer(struct nvhost_hwctx *hwctx,
-				    struct nvhost_unmap_buffer_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_unmap_buffer(hwctx->priv, args);
-}
-
 static int t124_channel_wait(struct nvhost_hwctx *hwctx,
 			    struct nvhost_wait_args *args)
 {
@@ -409,8 +395,6 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	op->channel.free_obj      = t124_channel_free_obj;
 	op->channel.alloc_gpfifo  = t124_channel_alloc_gpfifo;
 	op->channel.submit_gpfifo = t124_channel_submit_gpfifo;
-	op->channel.map_buffer    = t124_channel_map_buffer;
-	op->channel.unmap_buffer  = t124_channel_unmap_buffer;
 	op->channel.wait          = t124_channel_wait;
 
 	op->channel.zcull.get_size = t124_channel_zcull_get_size;

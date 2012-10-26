@@ -45,8 +45,8 @@ struct nvhost_as_moduleops {
 			  struct mem_handle *r,
 			  u64 *offset_align,
 			  u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/);
-	int (*unmap_buffer)(struct nvhost_as_share *,
-			    u64 offset);
+	int (*unmap_buffer)(struct nvhost_as_share *, u64 offset,
+			  struct mem_mgr **memmgr, struct mem_handle **r);
 };
 
 struct nvhost_as_share {

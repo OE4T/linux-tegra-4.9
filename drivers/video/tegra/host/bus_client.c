@@ -488,28 +488,6 @@ clean_up:
 	return ret;
 }
 
-static int nvhost_ioctl_channel_map_buffer(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_map_buffer_args *map_buffer_args)
-{
-	int ret = 0;
-
-	BUG_ON(!channel_op().map_buffer);
-	ret = channel_op().map_buffer(ctx->hwctx, map_buffer_args);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_unmap_buffer(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_unmap_buffer_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_op().unmap_buffer);
-	ret = channel_op().unmap_buffer(ctx->hwctx, args);
-	return ret;
-}
-
 static int nvhost_ioctl_channel_wait(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_wait_args *args)
@@ -1142,12 +1120,6 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
 		err = nvhost_ioctl_channel_submit_gpfifo(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_MAP_BUFFER:
-		err = nvhost_ioctl_channel_map_buffer(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER:
-		err = nvhost_ioctl_channel_unmap_buffer(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_WAIT:
 		err = nvhost_ioctl_channel_wait(priv, (void *)buf);

@@ -136,10 +136,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			struct nvhost_gpfifo *gpfifo, u32 num_entries,
 			struct nvhost_fence *fence, u32 flags);
 void gk20a_free_channel(struct nvhost_hwctx *ctx);
-int gk20a_channel_map_buffer(struct channel_gk20a *ch,
-			     struct nvhost_map_buffer_args *a);
-int gk20a_channel_unmap_buffer(struct channel_gk20a *ch,
-			       struct nvhost_unmap_buffer_args *a);
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args);
 int gk20a_channel_zcull_get_size(struct channel_gk20a *ch,

@@ -1110,40 +1110,6 @@ int gk20a_channel_free_obj(struct nvhost_channel *channel, u32 obj_id)
 	return 0;
 }
 
-int gk20a_channel_map_buffer(struct channel_gk20a *ch,
-			     struct nvhost_map_buffer_args *a)
-{
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
-	struct nvhost_device *dev = ch->ch->dev;
-	u64 ret_va;
-	struct mem_handle *r;
-
-	r = mem_op().get(memmgr, a->nvmap_handle, dev); /*id, really*/
-
-	nvhost_dbg_info("id=0x%x r=%p", a->nvmap_handle, r);
-
-	if (!r)
-		return -EINVAL;
-
-	ret_va = ch->vm->map(ch->vm, memmgr, r,
-			    a->offset_alignment.align,
-			    a->flags, a->kind);
-	if (!ret_va)
-		return -EINVAL;
-
-	a->offset_alignment.offset = ret_va;
-	return 0;
-}
-int gk20a_channel_unmap_buffer(struct channel_gk20a *ch,
-			       struct nvhost_unmap_buffer_args *a)
-{
-	nvhost_dbg_info("offset=%llx", a->offset);
-
-	ch->vm->unmap(ch->vm, a->offset);
-
-	return 0;
-}
-
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args)
 {

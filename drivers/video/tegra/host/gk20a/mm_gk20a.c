@@ -1060,13 +1060,20 @@ clean_up:
 
 }
 
-static void gk20a_vm_unmap(struct vm_gk20a *vm,
-			 u64 offset)
+/* return mem_mgr and mem_handle to caller. If the mem_handle is a kernel dup
+   from user space (as_ioctl), caller releases the kernel duplicated handle */
+static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
+			struct mem_mgr **memmgr, struct mem_handle **r)
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvhost_allocator *comp_tags = &g->gr.comp_tags;
 	int err = 0;
+
+	BUG_ON(memmgr == NULL || r == NULL);
+
+	*memmgr = NULL;
+	*r = NULL;
 
 	nvhost_dbg_fn("offset=0x%llx", offset);
 
@@ -1090,7 +1097,6 @@ static void gk20a_vm_unmap(struct vm_gk20a *vm,
 			       0, 0, false /* n/a for unmap */);
 	if (err) {
 		nvhost_dbg(dbg_err, "failed to update ptes on unmap");
-		goto clean_up;
 	}
 
 	mem_op().unpin(mapped_buffer->memmgr,
@@ -1099,19 +1105,29 @@ static void gk20a_vm_unmap(struct vm_gk20a *vm,
 
 	/* remove from mapped buffer tree, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+
+	*memmgr = mapped_buffer->memmgr;
+	*r = mapped_buffer->handle_ref;
 	kfree(mapped_buffer);
 
 	return;
+}
 
-clean_up:
+/* called by kernel, mem_mgr and mem_handle are ignored */
+static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
+{
+	struct mem_mgr *memmgr;
+	struct mem_handle *r;
 
-	return;
+	gk20a_vm_unmap_user(vm, offset, &memmgr, &r);
 }
 
 void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct rb_node *node;
+	struct mem_mgr *memmgr;
+	struct mem_handle *r;
 
 	nvhost_dbg_fn("");
 
@@ -1119,7 +1135,11 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	while (node) {
 		mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		vm->unmap(vm, mapped_buffer->addr);
+		vm->unmap_user(vm, mapped_buffer->addr, &memmgr, &r);
+		if (memmgr != mem_mgr_from_vm(vm)) {
+			mem_op().put(memmgr, r);
+			mem_op().put_mgr(memmgr);
+		}
 		node = rb_first(&vm->mapped_buffers);
 	}
 
@@ -1194,9 +1214,10 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->mapped_buffers = RB_ROOT;
 
 	vm->alloc_va = gk20a_vm_alloc_va;
-	vm->free_va =  gk20a_vm_free_va;
-	vm->map =  gk20a_vm_map;
-	vm->unmap =  gk20a_vm_unmap;
+	vm->free_va = gk20a_vm_free_va;
+	vm->map = gk20a_vm_map;
+	vm->unmap = gk20a_vm_unmap;
+	vm->unmap_user = gk20a_vm_unmap_user;
 	vm->remove_support = gk20a_vm_remove_support;
 
 	return 0;
@@ -1273,15 +1294,15 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 
 }
 
-static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share,
-				 u64 offset)
+static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
+				 struct mem_mgr **memmgr, struct mem_handle **r)
 {
 	int err = 0;
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
 
 	nvhost_dbg_fn("");
 
-	vm->unmap(vm, offset);
+	vm->unmap_user(vm, offset, memmgr, r);
 
 	return err;
 }
@@ -1412,9 +1433,10 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->mapped_buffers = RB_ROOT;
 
 	vm->alloc_va = gk20a_vm_alloc_va;
-	vm->free_va =  gk20a_vm_free_va;
-	vm->map =  gk20a_vm_map;
-	vm->unmap =  gk20a_vm_unmap;
+	vm->free_va = gk20a_vm_free_va;
+	vm->map = gk20a_vm_map;
+	vm->unmap = gk20a_vm_unmap;
+	vm->unmap_user = gk20a_vm_unmap_user;
 	vm->remove_support = gk20a_vm_remove_support;
 
 	return 0;
@@ -1542,6 +1564,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->free_va	    = gk20a_vm_free_va;
 	vm->map		    = gk20a_vm_map;
 	vm->unmap	    = gk20a_vm_unmap;
+	vm->unmap_user	    = gk20a_vm_unmap_user;
 	vm->remove_support  = gk20a_vm_remove_support;
 
 	return 0;

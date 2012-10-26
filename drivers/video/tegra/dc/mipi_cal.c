@@ -49,7 +49,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		goto fail;
 	}
 
-	res = nvhost_get_resource_byname(dc->ndev, IORESOURCE_MEM, "mipi_cal");
+	res = platform_get_resource_byname(dc->ndev, IORESOURCE_MEM, "mipi_cal");
 	if (!res) {
 		dev_err(&dc->ndev->dev, "mipi_cal: no entry in resource\n");
 		err = -ENOENT;

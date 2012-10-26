@@ -49,7 +49,7 @@
 
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
-	struct nvhost_device	*ndev;
+	struct platform_device	*ndev;
 	struct fb_info		*info;
 	bool			valid;
 
@@ -521,7 +521,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	mutex_unlock(&fb_info->info->lock);
 }
 
-struct tegra_fb_info *tegra_fb_register(struct nvhost_device *ndev,
+struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,
 					struct resource *fb_mem)

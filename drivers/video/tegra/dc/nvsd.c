@@ -804,8 +804,8 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
-	struct nvhost_device *ndev = to_nvhost_device(dev);
-	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 	ssize_t res = 0;
 
@@ -976,8 +976,8 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
-	struct nvhost_device *ndev = to_nvhost_device(dev);
-	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 	ssize_t res = count;
 	bool settings_updated = false;
@@ -1136,8 +1136,8 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
-	struct nvhost_device *ndev = to_nvhost_device(dev);
-	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	ssize_t res = 0;
 
 	mutex_lock(&dc->lock);

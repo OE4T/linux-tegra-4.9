@@ -1582,14 +1582,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	if (!hdmi)
 		return -ENOMEM;
 
-	res = nvhost_get_resource_byname(dc->ndev, IORESOURCE_MEM, "hdmi_regs");
+	res = platform_get_resource_byname(dc->ndev,
+		IORESOURCE_MEM, "hdmi_regs");
 	if (!res) {
 		dev_err(&dc->ndev->dev, "hdmi: no mem resource\n");
 		err = -ENOENT;
 		goto err_free_hdmi;
 	}
 
-	base_res = request_mem_region(res->start, resource_size(res), dc->ndev->name);
+	base_res = request_mem_region(res->start,
+		resource_size(res), dc->ndev->name);
 	if (!base_res) {
 		dev_err(&dc->ndev->dev, "hdmi: request_mem_region failed\n");
 		err = -EBUSY;

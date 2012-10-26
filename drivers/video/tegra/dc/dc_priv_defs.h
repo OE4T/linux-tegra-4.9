@@ -101,7 +101,7 @@ struct tegra_dc_shift_clk_div {
 };
 
 struct tegra_dc {
-	struct nvhost_device		*ndev;
+	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
 
 	struct resource			*base_res;

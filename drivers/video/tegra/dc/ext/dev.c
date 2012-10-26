@@ -272,8 +272,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 				"Window atrributes are invalid.\n");
 
 	if ((s32)flip_win->attr.pre_syncpt_id >= 0) {
-		nvhost_syncpt_wait_timeout(
-				&nvhost_get_host(ext->dc->ndev)->syncpt,
+		nvhost_syncpt_wait_timeout_ext(ext->dc->ndev,
 				flip_win->attr.pre_syncpt_id,
 				flip_win->attr.pre_syncpt_val,
 				msecs_to_jiffies(500), NULL);
@@ -1032,7 +1031,7 @@ static const struct file_operations tegra_dc_devops = {
 	.unlocked_ioctl =	tegra_dc_ioctl,
 };
 
-struct tegra_dc_ext *tegra_dc_ext_register(struct nvhost_device *ndev,
+struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 					   struct tegra_dc *dc)
 {
 	int ret;

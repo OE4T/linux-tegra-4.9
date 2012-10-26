@@ -53,8 +53,7 @@
 
 static int t148_num_alloc_channels = 0;
 
-
-#define HOST_EMC_FLOOR 300000000
+#define HOST_EMC_FLOOR	300000000
 
 static struct resource tegra_host1x03_resources[] = {
 	{
@@ -100,60 +99,61 @@ static struct host1x_device_info host1x03_info = {
 	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
 
-static struct nvhost_device tegra_host1x03_device = {
-	.dev		= {.platform_data = &host1x03_info},
+static struct nvhost_device_data tegra_host1x03_info = {
+	.clocks		= { {"host1x", INT_MAX}, {} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+};
+
+static struct platform_device tegra_host1x03_device = {
 	.name		= "host1x",
 	.id		= -1,
 	.resource	= tegra_host1x03_resources,
 	.num_resources	= ARRAY_SIZE(tegra_host1x03_resources),
-	.clocks		= {{"host1x", INT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.dev		= {
+		.platform_data = &tegra_host1x03_info,
+	},
 };
 
-static struct nvhost_device tegra_display01_device = {
-	.name	       = "display",
-	.id            = -1,
-	.index         = 0,
-	.syncpts       = BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
-			 BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) |
-			 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) |
-			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
-	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
+static struct nvhost_device_data tegra_gr3d03_info = {
+	.version	= 3,
+	.index		= 1,
+	.syncpts	= BIT(NVSYNCPT_3D),
+	.waitbases	= BIT(NVWAITBASE_3D),
+	.modulemutexes	= BIT(NVMODMUTEX_3D),
+	.class		= NV_GRAPHICS_3D_CLASS_ID,
+	.clocks		= { {"gr3d", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+	.moduleid	= NVHOST_MODULE_NONE,
 };
 
-static struct nvhost_device tegra_gr3d03_device = {
-	.name	       = "gr3d",
-	.version       = 3,
-	.id            = -1,
-	.index         = 1,
-	.syncpts       = BIT(NVSYNCPT_3D),
-	.waitbases     = BIT(NVWAITBASE_3D),
-	.modulemutexes = BIT(NVMODMUTEX_3D),
-	.class	       = NV_GRAPHICS_3D_CLASS_ID,
-	.clocks = {{"gr3d", UINT_MAX},
-			{"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+static struct platform_device tegra_gr3d03_device = {
+	.name		= "gr3d03", /* same as t114 */
+	.id		= -1,
+	.dev		= {
+		.platform_data = &tegra_gr3d03_info,
+	},
 };
 
-static struct nvhost_device tegra_gr2d03_device = {
-	.name	       = "gr2d",
-	.id            = -1,
-	.index         = 2,
-	.syncpts       = BIT(NVSYNCPT_2D_0) | BIT(NVSYNCPT_2D_1),
-	.waitbases     = BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
-	.modulemutexes = BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
-			 BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.clocks = {{"gr2d", 0},
-			{"epp", UINT_MAX},
-			{"emc", HOST_EMC_FLOOR} },
+static struct nvhost_device_data tegra_gr2d03_info = {
+	.index		= 2,
+	.syncpts	= BIT(NVSYNCPT_2D_0) | BIT(NVSYNCPT_2D_1),
+	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
+	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
+			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
+	.clocks		= { {"gr2d", 0}, {"epp", UINT_MAX},
+			    {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+	.moduleid	= NVHOST_MODULE_NONE,
+};
+
+static struct platform_device tegra_gr2d03_device = {
+	.name		= "gr2d02", /* same as t114 */
+	.id		= -1,
+	.dev		= {
+		.platform_data = &tegra_gr2d03_info,
+	},
 };
 
 static struct resource isp_resources[] = {
@@ -165,16 +165,22 @@ static struct resource isp_resources[] = {
 	}
 };
 
-static struct nvhost_device tegra_isp01_device = {
-	.name	 = "isp",
-	.id      = -1,
-	.resource = isp_resources,
-	.num_resources = ARRAY_SIZE(isp_resources),
-	.index   = 3,
-	.syncpts = 0,
+static struct nvhost_device_data tegra_isp01_info = {
+	.index		= 3,
+	.syncpts	= 0,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_ISP,
+	.moduleid	= NVHOST_MODULE_ISP,
+};
+
+static struct platform_device tegra_isp01_device = {
+	.name		= "isp",
+	.id		= -1,
+	.resource	= isp_resources,
+	.num_resources	= ARRAY_SIZE(isp_resources),
+	.dev		= {
+		.platform_data = &tegra_isp01_info,
+	},
 };
 
 static struct resource vi_resources[] = {
@@ -186,21 +192,27 @@ static struct resource vi_resources[] = {
 	},
 };
 
-static struct nvhost_device tegra_vi01_device = {
-	.name	       = "vi",
-	.id            = -1,
-	.resource      = vi_resources,
-	.num_resources = ARRAY_SIZE(vi_resources),
-	.index         = 4,
-	.syncpts       = BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
-			 BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
-			 BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
-			 BIT(NVSYNCPT_VI_ISP_4),
-	.modulemutexes = BIT(NVMODMUTEX_VI_0),
-	.exclusive     = true,
+static struct nvhost_device_data tegra_vi01_info = {
+	.index		= 4,
+	.syncpts	= BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
+			  BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
+			  BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
+			  BIT(NVSYNCPT_VI_ISP_4),
+	.modulemutexes	= BIT(NVMODMUTEX_VI_0),
+	.exclusive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
+	.moduleid	= NVHOST_MODULE_VI,
+};
+
+static struct platform_device tegra_vi01_device = {
+	.name		= "vi",
+	.id		= -1,
+	.resource	= vi_resources,
+	.num_resources	= ARRAY_SIZE(vi_resources),
+	.dev		= {
+		.platform_data = &tegra_vi01_info,
+	},
 };
 
 static struct resource msenc_resources[] = {
@@ -212,33 +224,28 @@ static struct resource msenc_resources[] = {
 	},
 };
 
-static struct nvhost_device tegra_msenc03_device = {
-	.name	       = "msenc",
-	.version       = NVHOST_ENCODE_MSENC_VER(3, 0),
-	.id            = -1,
-	.resource      = msenc_resources,
-	.num_resources = ARRAY_SIZE(msenc_resources),
-	.index         = 5,
-	.syncpts       = BIT(NVSYNCPT_MSENC),
-	.waitbases     = BIT(NVWAITBASE_MSENC),
-	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.exclusive     = false,
-	.keepalive     = true,
-	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+static struct nvhost_device_data tegra_msenc03_info = {
+	.version	= NVHOST_ENCODE_MSENC_VER(3, 0),
+	.index		= 5,
+	.syncpts	= BIT(NVSYNCPT_MSENC),
+	.waitbases	= BIT(NVWAITBASE_MSENC),
+	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
+	.clocks		= { {"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_MSENC,
+	.powergate_delay = 100,
+	.can_powergate = false,
+	.moduleid	= NVHOST_MODULE_MSENC,
 };
 
-static struct nvhost_device tegra_dsi01_device = {
-	.name	       = "dsi",
-	.id            = -1,
-	.index         = 6,
-	.syncpts       = BIT(NVSYNCPT_DSI),
-	.modulemutexes = BIT(NVMODMUTEX_DSI),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
+static struct platform_device tegra_msenc03_device = {
+	.name		= "msenc",
+	.id		= -1,
+	.resource	= msenc_resources,
+	.num_resources	= ARRAY_SIZE(msenc_resources),
+	.dev		= {
+		.platform_data = &tegra_msenc03_info,
+	},
 };
 
 static struct resource tsec_resources[] = {
@@ -250,39 +257,65 @@ static struct resource tsec_resources[] = {
 	},
 };
 
-static struct nvhost_device tegra_tsec01_device = {
-	/* channel 7 */
-	.name          = "tsec",
-	.version       = NVHOST_ENCODE_TSEC_VER(1,0),
-	.id            = -1,
-	.resource      = tsec_resources,
-	.num_resources = ARRAY_SIZE(tsec_resources),
-	.index         = 7,
-	.syncpts       = BIT(NVSYNCPT_TSEC),
-	.waitbases     = BIT(NVWAITBASE_TSEC),
-	.class         = NV_TSEC_CLASS_ID,
-	.exclusive     = false,
-	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+static struct nvhost_device_data tegra_tsec01_info = {
+	.version	= NVHOST_ENCODE_TSEC_VER(1,0),
+	.index		= 7,
+	.syncpts	= BIT(NVSYNCPT_TSEC),
+	.waitbases	= BIT(NVWAITBASE_TSEC),
+	.class		= NV_TSEC_CLASS_ID,
+	.exclusive	= false,
+	.clocks		= { {"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_TSEC,
+	.moduleid	= NVHOST_MODULE_TSEC,
 };
 
-static struct nvhost_device *t14_devices[] = {
-	&tegra_host1x03_device,
-	&tegra_display01_device,
+static struct platform_device tegra_tsec01_device = {
+	.name		= "tsec",
+	.id		= -1,
+	.resource	= tsec_resources,
+	.num_resources	= ARRAY_SIZE(tsec_resources),
+	.dev		= {
+		.platform_data = &tegra_tsec01_info,
+	},
+};
+
+static struct platform_device *t14_devices[] = {
 	&tegra_gr3d03_device,
 	&tegra_gr2d03_device,
 	&tegra_isp01_device,
 	&tegra_vi01_device,
 	&tegra_msenc03_device,
-	&tegra_dsi01_device,
 	&tegra_tsec01_device,
 };
 
-int tegra14_register_host1x_devices(void)
+struct platform_device *tegra14_register_host1x_devices(void)
 {
-	return nvhost_add_devices(t14_devices, ARRAY_SIZE(t14_devices));
+	int index = 0;
+	struct platform_device *pdev;
+
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)tegra_host1x03_device.dev.platform_data;
+	pdata->private_data = &host1x03_info;
+
+	/* register host1x device first */
+	platform_device_register(&tegra_host1x03_device);
+	tegra_host1x03_device.dev.parent = NULL;
+
+	/* register clients with host1x device as parent */
+	for (index = 0; index < ARRAY_SIZE(t14_devices); index++) {
+		pdev = t14_devices[index];
+		pdev->dev.parent = &tegra_host1x03_device.dev;
+		if (pdev == &tegra_gr3d03_device) {
+			const char *real_name = pdev->name;
+			pdev->name = "gr3d";
+			platform_device_register(pdev);
+			pdev->name = real_name;
+		} else
+			platform_device_register(pdev);
+	}
+
+	return &tegra_host1x03_device;
 }
 
 static void t148_free_nvhost_channel(struct nvhost_channel *ch)
@@ -291,9 +324,10 @@ static void t148_free_nvhost_channel(struct nvhost_channel *ch)
 }
 
 static struct nvhost_channel *t148_alloc_nvhost_channel(
-		struct nvhost_device *dev)
+		struct platform_device *dev)
 {
-	return nvhost_alloc_channel_internal(dev->index,
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	return nvhost_alloc_channel_internal(pdata->index,
 		nvhost_get_host(dev)->info.nb_channels,
 		&t148_num_alloc_channels);
 }

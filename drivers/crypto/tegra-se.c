@@ -460,6 +460,9 @@ static void tegra_se_write_key_table(u8 *pdata, u32 data_len,
 	u8 pkt = 0, quad = 0;
 	u32 val = 0, i;
 
+	if (pdata_buf == NULL)
+		return;
+
 	if ((type == SE_KEY_TABLE_TYPE_KEY) && (slot_num == ssk_slot.slot_num))
 		return;
 

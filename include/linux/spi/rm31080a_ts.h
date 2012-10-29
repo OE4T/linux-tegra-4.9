@@ -115,8 +115,6 @@ struct rm_spi_ts_platform_data {
 	unsigned char *config;
 	int platform_id;
 	unsigned char *name_of_clock;
-	unsigned char *name_of_3v3;
-	unsigned char *name_of_1v8;
 };
 
 int rm31080_spi_byte_write(unsigned char u8Addr, unsigned char u8Value);

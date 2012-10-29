@@ -239,8 +239,11 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		return -ENOMEM;
 	}
 
-	if ((crypt_req->keylen < 0) || (crypt_req->keylen > AES_MAX_KEY_SIZE))
-		return -EINVAL;
+	if ((crypt_req->keylen < 0) || (crypt_req->keylen > AES_MAX_KEY_SIZE)) {
+		ret = -EINVAL;
+		pr_err("crypt_req keylen invalid");
+		goto process_req_out;
+	}
 
 	crypto_ablkcipher_clear_flags(tfm, ~0);
 

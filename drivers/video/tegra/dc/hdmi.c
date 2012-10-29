@@ -1910,6 +1910,11 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
 			  AUDIO_CNTRL0_FRAMES_PER_BLOCK(0xc0),
 			  HDMI_NV_PDISP_AUDIO_CNTRL0);
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	tegra_hdmi_writel(hdmi, (1 << HDMI_AUDIO_HBR_ENABLE_SHIFT) |
+	   tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_SOR_AUDIO_SPARE0_0),
+	   HDMI_NV_PDISP_SOR_AUDIO_SPARE0_0);
+#endif
 #else
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |

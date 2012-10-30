@@ -2840,7 +2840,15 @@ static int tegra_se_lp_keytable_context_save(struct tegra_se_dev *se_dev)
 
 	*se_dev->dst_ll_buf = 0;
 	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
-	dst_ll->addr = (se_dev->ctx_save_buf_adr + SE_CONTEXT_SAVE_KEYS_OFFSET);
+	if (!se_dev->chipdata->drbg_supported)
+		dst_ll->addr =
+			(se_dev->ctx_save_buf_adr +
+			SE_CONTEXT_SAVE_KEYS_OFFSET);
+	else
+		dst_ll->addr =
+			(se_dev->ctx_save_buf_adr +
+			SE11_CONTEXT_SAVE_KEYS_OFFSET);
+
 	dst_ll->data_len = TEGRA_SE_KEY_128_SIZE;
 
 	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
@@ -3042,7 +3050,10 @@ static int tegra_se_suspend(struct device *dev)
 
 	/* Original iv context save*/
 	err = tegra_se_lp_iv_context_save(se_dev,
-		true, SE_CONTEXT_ORIGINAL_IV_OFFSET);
+		true,
+		(se_dev->chipdata->drbg_supported ?
+			SE11_CONTEXT_ORIGINAL_IV_OFFSET :
+			SE_CONTEXT_ORIGINAL_IV_OFFSET));
 	if (err) {
 		dev_err(se_dev->dev, "\n LP original iv save failure\n");
 		goto out;
@@ -3050,7 +3061,10 @@ static int tegra_se_suspend(struct device *dev)
 
 	/* Updated iv context save*/
 	err = tegra_se_lp_iv_context_save(se_dev,
-		false, SE_CONTEXT_UPDATED_IV_OFFSET);
+		false,
+		(se_dev->chipdata->drbg_supported ?
+		SE11_CONTEXT_UPDATED_IV_OFFSET :
+		SE_CONTEXT_UPDATED_IV_OFFSET));
 	if (err) {
 		dev_err(se_dev->dev, "\n LP updated iv save failure\n");
 		goto out;

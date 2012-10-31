@@ -266,6 +266,16 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	}
 }
 
+/* bw in kByte/second. returns Hz for EMC frequency */
+static inline unsigned long tegra_dc_kbps_to_emc(unsigned long bw)
+{
+	if (bw >= (ULONG_MAX / 1000))
+		return ULONG_MAX;
+	if (WARN_ONCE((bw * 1000) < bw, "Bandwidth Overflow"))
+		return ULONG_MAX;
+	return tegra_emc_bw_to_freq_req(bw) * 1000;
+}
+
 int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 {
 	unsigned long new_rate;
@@ -276,15 +286,11 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 
 	dc = windows[0]->dc;
 
-	/* calculate the new rate based on this POST */
-	new_rate = tegra_dc_get_bandwidth(windows, n);
-	if (WARN_ONCE(new_rate > (ULONG_MAX / 1000), "bandwidth maxed out\n"))
-		new_rate = ULONG_MAX;
-	else
-		new_rate = EMC_BW_TO_FREQ(new_rate * 1000);
-
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;
+	else
+		new_rate = tegra_dc_kbps_to_emc(
+			tegra_dc_get_bandwidth(windows, n));
 
 	dc->new_emc_clk_rate = new_rate;
 	trace_set_dynamic_emc(dc);

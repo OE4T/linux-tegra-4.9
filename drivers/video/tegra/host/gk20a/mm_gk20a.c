@@ -838,7 +838,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	/* keep track of the buffer for unmapping */
 	/* TBD: check for multiple mapping of same buffer */
-	mapped_buffer = kzalloc(GFP_KERNEL, sizeof(*mapped_buffer));
+	mapped_buffer = kzalloc(sizeof(*mapped_buffer), GFP_KERNEL);
 	if (!mapped_buffer) {
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
@@ -1152,7 +1152,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 
 	nvhost_dbg_fn("");
 
-	vm = kzalloc(GFP_KERNEL, sizeof(*vm));
+	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
 	if (!vm)
 		return -ENOMEM;
 
@@ -1172,9 +1172,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		vm->pdes.num_pdes = pde_hi + 1;
 	}
 
-	vm->pdes.ptes = kzalloc(GFP_KERNEL,
-				sizeof(struct page_table_gk20a) *
-				vm->pdes.num_pdes);
+	vm->pdes.ptes = kzalloc(sizeof(struct page_table_gk20a) *
+				vm->pdes.num_pdes, GFP_KERNEL);
 	if (!vm->pdes.ptes)
 		return -ENOMEM;
 
@@ -1336,9 +1335,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		vm->pdes.num_pdes = pde_hi + 1;
 	}
 
-	vm->pdes.ptes = kzalloc(GFP_KERNEL,
-				sizeof(struct page_table_gk20a) *
-				vm->pdes.num_pdes);
+	vm->pdes.ptes = kzalloc(sizeof(struct page_table_gk20a) *
+				vm->pdes.num_pdes, GFP_KERNEL);
 	if (!vm->pdes.ptes)
 		return -ENOMEM;
 
@@ -1465,9 +1463,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		vm->pdes.num_pdes = pde_hi + 1;
 	}
 
-	vm->pdes.ptes = kzalloc(GFP_KERNEL,
-				sizeof(struct page_table_gk20a) *
-				vm->pdes.num_pdes);
+	vm->pdes.ptes = kzalloc(sizeof(struct page_table_gk20a) *
+				vm->pdes.num_pdes, GFP_KERNEL);
 	if (!vm->pdes.ptes)
 		return -ENOMEM;
 

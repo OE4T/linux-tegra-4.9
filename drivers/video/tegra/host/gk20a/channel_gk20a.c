@@ -569,7 +569,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	/* pre-alloc a few entries and put them on free list */
 	for (i = 0; i < GK20A_PRIV_CMDBUF_ENTRY_PRE_ALLOC_NUM; i++) {
-		e = kzalloc(GFP_KERNEL, sizeof(struct priv_cmd_entry));
+		e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 		if (!e) {
 			nvhost_err(d, "ch %d: fail to pre-alloc cmd entry",
 				c->hw_chid);
@@ -659,7 +659,7 @@ TRY_AGAIN:
 		nvhost_dbg_info("ch %d: run out of pre-alloc entries",
 			c->hw_chid);
 
-		e = kzalloc(GFP_KERNEL, sizeof(struct priv_cmd_entry));
+		e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 		if (!e) {
 			nvhost_err(dev_from_gk20a(c->g),
 				"ch %d: fail to allocate priv cmd entry",

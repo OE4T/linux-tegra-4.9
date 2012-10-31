@@ -456,11 +456,6 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	vm->pdes.dirty = true;
 
 	smp_mb();
-	/* !!! FIXME : Bug 963594 !!!
-	   Volatile pde/pte doesn't look working.
-	   Flush everything (slowest) for now. */
-	gk20a_mm_fb_flush(vm->mm->g);
-	gk20a_mm_l2_flush(vm->mm->g, true);
 	gk20a_mm_tlb_invalidate(vm->mm->g, vm);
 
 	return 0;
@@ -1044,11 +1039,6 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 	}
 
 	smp_mb();
-	/* !!! FIXME : Bug 963594 !!!
-	   Volatile pde/pte doesn't look working.
-	   Flush everything (slowest) for now. */
-	gk20a_mm_fb_flush(vm->mm->g);
-	gk20a_mm_l2_flush(vm->mm->g, true);
 	gk20a_mm_tlb_invalidate(vm->mm->g, vm);
 
 	return 0;

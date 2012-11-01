@@ -1543,7 +1543,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		return IRQ_HANDLED;
 	}
 
-	clk_enable(dc->clk);
+	clk_prepare_enable(dc->clk);
 	tegra_dc_io_start(dc);
 	tegra_dc_hold_dc_out(dc);
 
@@ -1553,7 +1553,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
 		tegra_dc_release_dc_out(dc);
 		tegra_dc_io_end(dc);
-		clk_disable(dc->clk);
+		clk_disable_unprepare(dc->clk);
 		mutex_unlock(&dc->lock);
 		return IRQ_HANDLED;
 	}
@@ -1590,7 +1590,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 
 	tegra_dc_release_dc_out(dc);
 	tegra_dc_io_end(dc);
-	clk_disable(dc->clk);
+	clk_disable_unprepare(dc->clk);
 	mutex_unlock(&dc->lock);
 
 	return IRQ_HANDLED;

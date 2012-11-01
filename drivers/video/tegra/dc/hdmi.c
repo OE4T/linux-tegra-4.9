@@ -168,7 +168,7 @@ const struct tmds_config tmds_config[] = {
 	.drive_current = 0x0f0f0f0f,
 	},
 };
-#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#elif defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 const struct tmds_config tmds_config[] = {
 	{ /* 480p/576p / 25.2MHz/27MHz modes */
 	.pclk = 27000000,

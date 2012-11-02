@@ -57,8 +57,7 @@
 #define NVC_IMAGER_IDENTIFIER_MAX	32
 #define NVC_IMAGER_FORMAT_MAX		4
 #define NVC_IMAGER_CLOCK_PROFILE_MAX	2
-#define NVC_IMAGER_CAPABILITIES_END	((0x3434 << 16) | \
-					NVC_IMAGER_API_CAPS_VER)
+#define NVC_IMAGER_CAPABILITIES_VERSION2	((0x3434 << 16) | 2)
 
 #define NVC_IMAGER_INT2FLOAT_DIVISOR	1000
 
@@ -203,8 +202,11 @@ struct nvc_imager_cap {
 	__u32 preferred_mode_index;
 	__u64 focuser_guid;
 	__u64 torch_guid;
-	__u32 cap_end;
-	__u32 align4;
+	__u32 cap_version;
+	__u8 flash_control_enabled;
+	__u8 adjustable_flash_timing;
+	__u8 align4;
+	__u8 align5;
 } __packed;
 
 struct nvc_imager_ae {
@@ -215,6 +217,35 @@ struct nvc_imager_ae {
 	__u32 gain;
 	__u8  gain_enable;
 } __packed;
+
+union nvc_imager_flash_control {
+	__u16 mode;
+	struct {
+		__u16 enable:1;		/* enable the on-sensor flash control */
+		__u16 edge_trig_en:1;	/* two types of flash controls:
+					 * 0 - LED_FLASH_EN - supports continued
+					 *     flash level only, doesn't
+					 *     support start edge/repeat/dly.
+					 * 1 - FLASH_EN - supports control pulse
+					 *     control pulse attributes are
+					 *     defined below.
+					 */
+		__u16 start_edge:1;	/* flash control pulse rise position:
+					 * 0 - at the start of the next frame.
+					 * 1 - at the effective pixel end
+					 *     position of the next frame.
+					 */
+		__u16 repeat:1;		/* flash control pulse repeat:
+					 * 0 - only triggers one frame.
+					 * 1 - trigger repeats every frame until
+					 * Flash_EN = 0.
+					 */
+		__u16 delay_frm:2;	/* flash control pulse can be delayed
+					 * in frame units: (0 - 3) - frame
+					 * numbers the pulse is delayed.
+					 */
+	} settings;
+};
 
 #define NVC_IOCTL_CAPS_RD	_IOWR('o', 106, struct nvc_imager_cap)
 #define NVC_IOCTL_MODE_WR	_IOW('o', 107, struct nvc_imager_bayer)

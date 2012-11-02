@@ -1177,12 +1177,11 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	/* TBD: post reset again? */
 
 	/* PMU_INIT message handler will send PG_INIT */
-	remain = wait_event_interruptible_timeout(
+	remain = wait_event_interruptible(
 			pmu->pg_wq,
 			(status = (pmu->elpg_ready &&
 				pmu->stat_dmem_offset != 0 &&
-				pmu->elpg_stat == PMU_ELPG_STAT_OFF)),
-			2 * HZ /* 2 sec */);
+				pmu->elpg_stat == PMU_ELPG_STAT_OFF)));
 	if (status == 0) {
 		nvhost_err(dev_from_gk20a(g),
 			"PG_INIT_ACK failed, remaining timeout : 0x%08x", remain);
@@ -1220,10 +1219,9 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
-	remain = wait_event_interruptible_timeout(
+	remain = wait_event_interruptible(
 			pmu->pg_wq,
-			pmu->buf_loaded,
-			2 * HZ /* 2 sec */);
+			pmu->buf_loaded);
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG FECS buffer load failed, remaining timeout : 0x%08x",
@@ -1246,10 +1244,9 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
-	remain = wait_event_interruptible_timeout(
+	remain = wait_event_interruptible(
 			pmu->pg_wq,
-			pmu->buf_loaded,
-			2 * HZ /* 2 sec */);
+			pmu->buf_loaded);
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG ZBC buffer load failed, remaining timeout 0x%08x",
@@ -2016,10 +2013,9 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	}
 	/* wait if on_pending */
 	else if (pmu->elpg_stat == PMU_ELPG_STAT_ON_PENDING) {
-		remain = wait_event_interruptible_timeout(
+		remain = wait_event_interruptible(
 			pmu->pg_wq,
-			pmu->elpg_stat == PMU_ELPG_STAT_ON,
-			2 * HZ /* 2 sec */);
+			pmu->elpg_stat == PMU_ELPG_STAT_ON);
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvhost_err(dev_from_gk20a(g),
 				"ELPG_ALLOW_ACK failed, remaining timeout 0x%08x",
@@ -2041,10 +2037,9 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
-	remain = wait_event_interruptible_timeout(
+	remain = wait_event_interruptible(
 			pmu->pg_wq,
-			pmu->elpg_stat == PMU_ELPG_STAT_OFF,
-			2 * HZ /* 2 sec */);
+			pmu->elpg_stat == PMU_ELPG_STAT_OFF);
 	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
 		nvhost_err(dev_from_gk20a(g),
 			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%08x",

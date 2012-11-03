@@ -5294,7 +5294,7 @@ static inline u32 pwr_pmu_mutex_id_value_not_avail_f(void)
 {
 	return 0xff;
 }
-static inline u32 pwr_pmu_mutex_id_release_v(void)
+static inline u32 pwr_pmu_mutex_id_release_r(void)
 {
 	return 0x0010a48c;
 }

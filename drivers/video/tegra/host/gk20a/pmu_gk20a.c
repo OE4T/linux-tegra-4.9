@@ -563,13 +563,14 @@ static inline void pmu_queue_write(struct pmu_gk20a *pmu,
 	pmu_copy_to_dmem(pmu, offset, src, size, 0);
 }
 
-static int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
+int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_mutex *mutex;
-	u32 owner, data;
-	bool acquired = false;
-	int err;
+	u32 data, owner, max_retry;
+
+	if (!pmu->initialized)
+		return 0;
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));
@@ -581,52 +582,64 @@ static int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 		gk20a_readl(g, pwr_pmu_mutex_r(mutex->index)));
 
 	if (*token != PMU_INVALID_MUTEX_OWNER_ID && *token == owner) {
+		BUG_ON(mutex->ref_cnt == 0);
 		nvhost_dbg_pmu("already acquired by owner : 0x%08x", *token);
 		mutex->ref_cnt++;
 		return 0;
 	}
 
+	max_retry = 40;
 	do {
-		data = gk20a_readl(g, pwr_pmu_mutex_id_r());
-		owner = pwr_pmu_mutex_id_value_v(data);
-		if (owner == pwr_pmu_mutex_id_value_init_v() ||
-		    owner == pwr_pmu_mutex_id_value_not_avail_v()) {
+		data = pwr_pmu_mutex_id_value_v(
+			gk20a_readl(g, pwr_pmu_mutex_id_r()));
+		if (data == pwr_pmu_mutex_id_value_init_v() ||
+		    data == pwr_pmu_mutex_id_value_not_avail_v()) {
 			nvhost_warn(dev_from_gk20a(g),
 				"fail to generate mutex token: val 0x%08x",
-				data);
+				owner);
+			udelay(20);
 			continue;
 		}
 
+		owner = data;
 		gk20a_writel(g, pwr_pmu_mutex_r(mutex->index),
 			pwr_pmu_mutex_value_f(owner));
 
 		data = pwr_pmu_mutex_value_v(
 			gk20a_readl(g, pwr_pmu_mutex_r(mutex->index)));
 
-		if (data == owner) {
-			acquired = true;
+		if (owner == data) {
 			mutex->ref_cnt = 1;
-			mutex->acquired = 1;
+			nvhost_dbg_pmu("mutex acquired: id=%d, token=0x%x",
+				mutex->index, *token);
+			*token = owner;
+			return 0;
 		} else {
-			nvhost_warn(dev_from_gk20a(g),
-				"fail to acquire mutex idx=0x%08x",
+			nvhost_dbg_info("fail to acquire mutex idx=0x%08x",
 				mutex->index);
 
-			gk20a_writel(g,
-				pwr_pmu_mutex_id_r(),
-				pwr_pmu_mutex_id_release_value_f(mutex->index));
+			data = gk20a_readl(g, pwr_pmu_mutex_id_release_r());
+			data = set_field(data,
+				pwr_pmu_mutex_id_release_value_m(),
+				pwr_pmu_mutex_id_release_value_f(owner));
+			gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
+
+			udelay(20);
 			continue;
 		}
-	} while (!acquired);
+	} while (max_retry-- > 0);
 
-	return err;
+	return -EBUSY;
 }
 
-static int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
+int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_mutex *mutex;
-	u32 owner;
+	u32 owner, data;
+
+	if (!pmu->initialized)
+		return 0;
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));
@@ -644,11 +657,17 @@ static int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 		return -EINVAL;
 	}
 
-	if (!mutex->acquired || --mutex->ref_cnt == 0) {
+	if (--mutex->ref_cnt == 0) {
 		gk20a_writel(g, pwr_pmu_mutex_r(mutex->index),
 			pwr_pmu_mutex_value_initial_lock_f());
-		gk20a_writel(g, pwr_pmu_mutex_id_r(),
+
+		data = gk20a_readl(g, pwr_pmu_mutex_id_release_r());
+		data = set_field(data, pwr_pmu_mutex_id_release_value_m(),
 			pwr_pmu_mutex_id_release_value_f(owner));
+		gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
+
+		nvhost_dbg_pmu("mutex released: id=%d, token=0x%x",
+			mutex->index, *token);
 	}
 
 	return 0;

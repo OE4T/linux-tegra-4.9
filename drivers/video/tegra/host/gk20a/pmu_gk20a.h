@@ -334,6 +334,26 @@ struct pmu_sha1_gid_data {
 #define PMU_MESSAGE_QUEUE		4	/* write by pmu, read by sw, accessed by interrupt handler, no lock */
 #define PMU_QUEUE_COUNT			5
 
+enum {
+	PMU_MUTEX_ID_RSVD1 = 0	,
+	PMU_MUTEX_ID_GPUSER	,
+	PMU_MUTEX_ID_QUEUE_BIOS	,
+	PMU_MUTEX_ID_QUEUE_SMI	,
+	PMU_MUTEX_ID_GPMUTEX	,
+	PMU_MUTEX_ID_I2C	,
+	PMU_MUTEX_ID_RMLOCK	,
+	PMU_MUTEX_ID_MSGBOX	,
+	PMU_MUTEX_ID_FIFO	,
+	PMU_MUTEX_ID_PG		,
+	PMU_MUTEX_ID_GR		,
+	PMU_MUTEX_ID_CLK	,
+	PMU_MUTEX_ID_RSVD6	,
+	PMU_MUTEX_ID_RSVD7	,
+	PMU_MUTEX_ID_RSVD8	,
+	PMU_MUTEX_ID_RSVD9	,
+	PMU_MUTEX_ID_INVALID
+};
+
 #define PMU_IS_COMMAND_QUEUE(id)	\
 		((id)  < PMU_MESSAGE_QUEUE)
 
@@ -399,26 +419,6 @@ struct pmu_queue {
 	bool locked; /* check free space after setting locked but before setting opened */
 };
 
-enum
-{
-	PMU_MUTEX_ID_RSVD1 = 0	,
-	PMU_MUTEX_ID_GPUSER	,
-	PMU_MUTEX_ID_QUEUE_BIOS	,
-	PMU_MUTEX_ID_QUEUE_SMI	,
-	PMU_MUTEX_ID_GPMUTEX	,
-	PMU_MUTEX_ID_I2C	,
-	PMU_MUTEX_ID_RMLOCK	,
-	PMU_MUTEX_ID_MSGBOX	,
-	PMU_MUTEX_ID_FIFO	,
-	PMU_MUTEX_ID_PG		,
-	PMU_MUTEX_ID_GR		,
-	PMU_MUTEX_ID_CLK	,
-	PMU_MUTEX_ID_RSVD6	,
-	PMU_MUTEX_ID_RSVD7	,
-	PMU_MUTEX_ID_RSVD8	,
-	PMU_MUTEX_ID_RSVD9	,
-	PMU_MUTEX_ID_INVALID
-};
 
 #define PMU_MUTEX_ID_IS_VALID(id)	\
 		((id) < PMU_MUTEX_ID_INVALID)
@@ -429,7 +429,6 @@ struct pmu_mutex {
 	u32 id;
 	u32 index;
 	u32 ref_cnt;
-	bool acquired;
 };
 
 #define PMU_MAX_NUM_SEQUENCES		(256)
@@ -563,5 +562,8 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
+
+int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
+int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 
 #endif /*__PMU_GK20A_H__*/

@@ -558,6 +558,8 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	u32 runlist_id;
 	u32 timeout = 2000; /* 2 sec */
 	u32 ret = 0;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 elpg_off = 0;
 
 	nvhost_dbg_fn("%d", hw_chid);
 
@@ -565,6 +567,11 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	runlist = &f->runlist_info[runlist_id];
 
 	mutex_lock(&runlist->mutex);
+
+	/* disable elpg if failed to acquire pmu mutex */
+	elpg_off = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	if (elpg_off)
+		gk20a_pmu_disable_elpg(g);
 
 	/* issue preempt */
 	gk20a_writel(g, fifo_preempt_r(),
@@ -586,6 +593,12 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 		}
 		mdelay(1);
 	} while (1);
+
+	/* re-enable elpg or release pmu mutex */
+	if (elpg_off)
+		gk20a_pmu_enable_elpg(g);
+	else
+		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	mutex_unlock(&runlist->mutex);
 
@@ -688,11 +701,18 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 	int remain;
 	bool pending;
 	u32 ret = 0;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 elpg_off;
 
 	runlist_id = f->engine_info[engine_id].runlist_id;
 	runlist = &f->runlist_info[runlist_id];
 
 	mutex_lock(&runlist->mutex);
+
+	/* disable elpg if failed to acquire pmu mutex */
+	elpg_off = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	if (elpg_off)
+		gk20a_pmu_disable_elpg(g);
 
 	/* valid channel, add/remove it from active list.
 	   Otherwise, keep active list untouched for suspend/resume. */
@@ -783,6 +803,13 @@ clean_up:
 	mem_op().munmap(runlist->mem[new_buf].ref,
 		     runlist_entry_base);
 done:
+
+	/* re-enable elpg or release pmu mutex */
+	if (elpg_off)
+		gk20a_pmu_enable_elpg(g);
+	else
+		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
 	mutex_unlock(&runlist->mutex);
 	return ret;
 }

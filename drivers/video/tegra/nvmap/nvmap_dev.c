@@ -60,6 +60,13 @@ static bool carveout_killer;
 #endif
 module_param(carveout_killer, bool, 0640);
 
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+size_t cache_maint_inner_threshold = 8 << PAGE_SHIFT;
+#endif
+#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+size_t cache_maint_outer_threshold = SZ_1M;
+#endif
+
 struct nvmap_carveout_node {
 	unsigned int		heap_bit;
 	struct nvmap_heap	*carveout;
@@ -302,12 +309,14 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	if (len >= FLUSH_CLEAN_BY_SET_WAY_THRESHOLD_INNER) {
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+	if (len >= cache_maint_inner_threshold) {
 		inner_flush_cache_all();
 		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 			outer_flush_range(block->base, block->base + len);
 		goto out;
 	}
+#endif
 
 	pte = nvmap_alloc_pte((client ? client->dev : nvmap_dev), &addr);
 	if (IS_ERR(pte))
@@ -1347,6 +1356,16 @@ static int nvmap_probe(struct platform_device *pdev)
 			}
 #endif
 		}
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+		debugfs_create_size_t("cache_maint_inner_threshold", 0600,
+				      nvmap_debug_root,
+				      &cache_maint_inner_threshold);
+#endif
+#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+		debugfs_create_size_t("cache_maint_outer_threshold", 0600,
+				      nvmap_debug_root,
+				      &cache_maint_outer_threshold);
+#endif
 	}
 
 	platform_set_drvdata(pdev, dev);

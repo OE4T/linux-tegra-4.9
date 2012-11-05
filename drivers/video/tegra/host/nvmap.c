@@ -152,8 +152,10 @@ int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
 	for (i = 0; i < result; i++)
 		unpin_data[i].h = (struct mem_handle *)unique_handle_refs[i];
 
-	for (i = 0; i < count; i++)
-		phys_addr[i] = (dma_addr_t)_nvmap_get_addr_from_id(ids[i]);
+	for (i = 0; i < count; i++) {
+		if ((ids[i] & id_type_mask) == id_type)
+			phys_addr[i] = (dma_addr_t)_nvmap_get_addr_from_id(ids[i]);
+	}
 
 fail:
 	kfree(ptrs);

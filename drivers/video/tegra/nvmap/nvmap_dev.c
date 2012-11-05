@@ -1360,6 +1360,8 @@ static int nvmap_probe(struct platform_device *pdev)
 		debugfs_create_size_t("cache_maint_inner_threshold", 0600,
 				      nvmap_debug_root,
 				      &cache_maint_inner_threshold);
+		if (IS_ENABLED(CONFIG_ARCH_TEGRA_11x_SOC))
+			cache_maint_inner_threshold = SZ_2M;
 #endif
 #ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
 		debugfs_create_size_t("cache_maint_outer_threshold", 0600,

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/gr2d/gr2d_t114.c
+ * drivers/video/tegra/host/gr2d/gr2d_common.c
  *
- * Tegra Graphics 2D Tegra11 specific parts
+ * Tegra Graphics 2D common parts
  *
  * Copyright (c) 2012, NVIDIA Corporation.
  *
@@ -21,11 +21,12 @@
 #include <linux/nvhost.h>
 #include <linux/io.h>
 #include "host1x/host1x.h"
-#include "host1x/hw_host1x02_sync.h"
 
-#include "gr2d_common.c"
-
-void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
+static void gr2d_reset(struct platform_device *dev)
 {
-	gr2d_reset(dev);
+	void __iomem *sync_aperture = nvhost_get_host(dev)->sync_aperture;
+
+	writel(host1x_sync_mod_teardown_epp_teardown_f(1)
+			+ host1x_sync_mod_teardown_gr2d_teardown_f(1),
+			sync_aperture + host1x_sync_mod_teardown_r());
 }

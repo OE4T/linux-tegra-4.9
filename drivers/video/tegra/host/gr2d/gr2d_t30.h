@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/gr2d/gr2d_t114.c
+ * drivers/video/tegra/host/gr2d/gr2d_t30.h
  *
- * Tegra Graphics 2D Tegra11 specific parts
+ * Tegra Graphics Host 2D Tegra3 specific parts
  *
  * Copyright (c) 2012, NVIDIA Corporation.
  *
@@ -18,14 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/nvhost.h>
-#include <linux/io.h>
-#include "host1x/host1x.h"
-#include "host1x/hw_host1x02_sync.h"
+#ifndef __NVHOST_2D_T30_H
+#define __NVHOST_2D_T30_H
 
-#include "gr2d_common.c"
+struct platform_device;
 
-void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
-{
-	gr2d_reset(dev);
-}
+void nvhost_gr2d_t30_finalize_poweron(struct platform_device *dev);
+
+#endif

@@ -23,6 +23,7 @@
 
 #include "dev.h"
 #include "bus_client.h"
+#include "gr2d_t30.h"
 #include "gr2d_t114.h"
 
 enum gr2d_ip_ver {
@@ -36,7 +37,7 @@ struct gr2d_desc {
 
 static const struct gr2d_desc gr2d[] = {
 	[gr2d_01] = {
-		.finalize_poweron = NULL,
+		.finalize_poweron = nvhost_gr2d_t30_finalize_poweron,
 	},
 	[gr2d_02] = {
 		.finalize_poweron = nvhost_gr2d_t114_finalize_poweron,

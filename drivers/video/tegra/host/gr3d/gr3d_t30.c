@@ -490,11 +490,16 @@ int nvhost_gr3d_t30_read_reg(
 	}
 
 	mem_sgt = mem_op().pin(memmgr, mem);
+	if (IS_ERR_OR_NULL(mem_sgt)) {
+		err = -ENOMEM;
+		goto done;
+	}
+
+	mem_dma = sg_dma_address(mem_sgt->sgl);
 	if (IS_ERR_VALUE(mem_dma)) {
 		err = mem_dma;
 		goto done;
 	}
-	mem_dma = sg_dma_address(mem_sgt->sgl);
 
 	ctx_waiter = nvhost_intr_alloc_waiter();
 	read_waiter = nvhost_intr_alloc_waiter();

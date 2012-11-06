@@ -201,11 +201,10 @@ static inline void tegra_dc_restore_interrupt(struct tegra_dc *dc, u32 val)
 
 static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 {
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
+	if (!tegra_platform_is_silicon())
+		return dc->mode.pclk;
+
 	return clk_get_rate(dc->clk);
-#else
-	return dc->mode.pclk;
-#endif
 }
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC

@@ -57,14 +57,7 @@ static const u32 tegra_dc_rgb_enable_out_sel_pintable[] = {
 	DC_COM_PIN_OUTPUT_SELECT0,	0x00000000,
 	DC_COM_PIN_OUTPUT_SELECT1,	0x00000000,
 	DC_COM_PIN_OUTPUT_SELECT2,	0x00000000,
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	DC_COM_PIN_OUTPUT_SELECT3,	0x00000000,
-#else
-	/* The display panel sub-board used on FPGA platforms (panel 86)
-	   is non-standard. It expects the Data Enable signal on the WR
-	   pin instead of the DE pin. */
-	DC_COM_PIN_OUTPUT_SELECT3,	0x00200000,
-#endif
 	DC_COM_PIN_OUTPUT_SELECT4,	0x00210222,
 	DC_COM_PIN_OUTPUT_SELECT5,	0x00002200,
 	DC_COM_PIN_OUTPUT_SELECT6,	0x00020000,
@@ -114,6 +107,12 @@ static void tegra_dc_rgb_enable(struct tegra_dc *dc)
 
 	memcpy(out_sel_pintable, tegra_dc_rgb_enable_out_sel_pintable,
 		sizeof(tegra_dc_rgb_enable_out_sel_pintable));
+
+	/* The display panel sub-board used on FPGA platforms (panel 86)
+	   is non-standard. It expects the Data Enable signal on the WR
+	   pin instead of the DE pin. */
+	if (tegra_platform_is_fpga())
+		out_sel_pintable[3*2+1] = 0x00200000;
 
 	if (dc->out && dc->out->out_sel_configs) {
 		u8 *out_sels = dc->out->out_sel_configs;

@@ -821,11 +821,9 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 				struct dsi_phy_timing_inclk *phy_timing_clk,
 				u32 clk_ns, u8 lphs)
 {
-	if (!(dsi->info.ganged_type)) {
-#ifndef CONFIG_TEGRA_SILICON_PLATFORM
+	if (tegra_platform_is_fpga() && !(dsi->info.ganged_type)) {
 		clk_ns = (1000 * 1000) / (dsi->info.fpga_freq_khz ?
 			dsi->info.fpga_freq_khz : DEFAULT_FPGA_FREQ_KHZ);
-#endif
 	}
 
 	phy_timing_clk->t_hsdexit = dsi->info.phy_timing.t_hsdexit_ns ?
@@ -855,11 +853,10 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		((min) == NOT_DEFINED ? 0 : (val) < (min)) || \
 		((max) == NOT_DEFINED ? 0 : (val) > (max)) ? -EINVAL : 0)
 
-#ifndef CONFIG_TEGRA_SILICON_PLATFORM
-	clk_ns = dsi->info.fpga_freq_khz ?
-		((1000 * 1000) / dsi->info.fpga_freq_khz) :
-		DEFAULT_FPGA_FREQ_KHZ;
-#endif
+	if (tegra_platform_is_fpga())
+		clk_ns = dsi->info.fpga_freq_khz ?
+			((1000 * 1000) / dsi->info.fpga_freq_khz) :
+			DEFAULT_FPGA_FREQ_KHZ;
 
 	err = CHECK_RANGE(
 	DSI_CONVERT_T_PHY_TO_T_PHY_NS(
@@ -1123,8 +1120,7 @@ static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi, u8 lphs)
 	tegra_dsi_constraint_phy_timing(dsi, &phy_timing,
 					dsi->current_bit_clk_ns, lphs);
 
-	if (dsi->info.ganged_type) {
-#ifndef CONFIG_TEGRA_SILICON_PLATFORM
+	if (tegra_platform_is_fpga() && dsi->info.ganged_type) {
 		phy_timing.t_hsdexit += T_HSEXIT_HW_INC;
 		phy_timing.t_hstrail += T_HSTRAIL_HW_INC + 3;
 		phy_timing.t_datzero += T_DATZERO_HW_INC;
@@ -1142,7 +1138,6 @@ static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi, u8 lphs)
 		phy_timing.t_taget += T_TAGET_HW_INC;
 		phy_timing.t_tasure += T_TASURE_HW_INC;
 		phy_timing.t_tago += T_TAGO_HW_INC;
-#endif
 	}
 	val = DSI_PHY_TIMING_0_THSDEXIT(phy_timing.t_hsdexit) |
 			DSI_PHY_TIMING_0_THSTRAIL(phy_timing.t_hstrail) |
@@ -1751,11 +1746,11 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 				dsi->shift_clk_div.div) * 2 /
 				dsi->shift_clk_div.div;
 
-#ifndef CONFIG_TEGRA_SILICON_PLATFORM
-	shift_clk_div_register = 1;
-	if (dsi->info.ganged_type)
-		shift_clk_div_register = 0;
-#endif
+	if (tegra_platform_is_fpga()) {
+		shift_clk_div_register = 1;
+		if (dsi->info.ganged_type)
+			shift_clk_div_register = 0;
+	}
 
 	val = PIXEL_CLK_DIVIDER_PCD1 |
 		SHIFT_CLK_DIVIDER(shift_clk_div_register + 2);

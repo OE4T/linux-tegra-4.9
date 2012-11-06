@@ -213,15 +213,14 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 		return -EFAULT;
 
 	trace_sync_windows(windows[0]->dc);
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	/* Don't want to timeout on simulator */
-	ret = wait_event_interruptible(windows[0]->dc->wq,
-		tegra_dc_windows_are_clean(windows, n));
-#else
-	ret = wait_event_interruptible_timeout(windows[0]->dc->wq,
-		tegra_dc_windows_are_clean(windows, n),
-		HZ);
-#endif
+	if (tegra_platform_is_linsim())
+		/* Don't want to timeout on simulator */
+		ret = wait_event_interruptible(windows[0]->dc->wq,
+			tegra_dc_windows_are_clean(windows, n));
+	else
+		ret = wait_event_interruptible_timeout(windows[0]->dc->wq,
+			tegra_dc_windows_are_clean(windows, n),
+			HZ);
 	/* tegra_dc_io_start() done in update_windows */
 	tegra_dc_io_end(windows[0]->dc);
 	return ret;
@@ -522,14 +521,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	if (!no_vsync) {
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
-			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT);
+			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT());
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		set_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 		tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
 #endif
 	} else {
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
-		tegra_dc_mask_interrupt(dc, V_BLANK_INT | ALL_UF_INT);
+		tegra_dc_mask_interrupt(dc, V_BLANK_INT | ALL_UF_INT());
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
@@ -568,19 +567,19 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-		/* FIXME: this is not needed when the simulator
-		   clears WIN_x_UPDATE bits as in HW */
-		dc->windows[i].dirty = 0;
-		completed = 1;
-#else
-		if (!(val & (WIN_A_ACT_REQ << i))) {
+		if (tegra_platform_is_linsim()) {
+			/* FIXME: this is not needed when the simulator
+			 * clears WIN_x_UPDATE bits as in HW */
 			dc->windows[i].dirty = 0;
 			completed = 1;
 		} else {
-			dirty = 1;
+			if (!(val & (WIN_A_ACT_REQ << i))) {
+				dc->windows[i].dirty = 0;
+				completed = 1;
+			} else {
+				dirty = 1;
+			}
 		}
-#endif
 	}
 
 	if (!dirty) {

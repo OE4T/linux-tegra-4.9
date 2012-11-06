@@ -33,6 +33,7 @@
 #include <mach/dc.h>
 
 #include <mach/tegra_dc_ext.h>
+#include <mach/hardware.h>
 #include <mach/clk.h>
 
 #include "dc_reg.h"
@@ -46,11 +47,17 @@
 #define CURSOR_CLIP_SHIFT_BITS(win)	(win << 29)
 #define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 29) & 3)
 
-#ifndef CONFIG_TEGRA_FPGA_PLATFORM
-#define ALL_UF_INT (WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT)
+static inline u32 ALL_UF_INT(void)
+{
+	if (tegra_platform_is_fpga())
+		return 0;
+	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT;
+}
+
+#if defined(CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
+#define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #else
-/* ignore underflows when on simulation and fpga platform */
-#define ALL_UF_INT (0)
+#define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * 2)
 #endif
 
 struct tegra_dc;

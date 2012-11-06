@@ -217,10 +217,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 {
 	int err = 0;
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
-#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
-	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 	s64 timestamp_ns;
-#endif
 
 	if (flip_win->handle[TEGRA_DC_Y] == NULL) {
 		win->flags = 0;
@@ -290,18 +287,19 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (err < 0)
 		return err;
 
-#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
-	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
-	timestamp_ns = timespec_to_ns(&flip_win->attr.timestamp);
+	if (tegra_platform_is_silicon()) {
+		timestamp_ns = timespec_to_ns(&flip_win->attr.timestamp);
 
-	if (timestamp_ns) {
-		/* XXX: Should timestamping be overridden by "no_vsync" flag */
-		tegra_dc_config_frame_end_intr(win->dc, true);
-		err = wait_event_interruptible(win->dc->timestamp_wq,
+		if (timestamp_ns) {
+			/* XXX: Should timestamping be overridden by "no_vsync"
+			 * flag */
+			tegra_dc_config_frame_end_intr(win->dc, true);
+			err = wait_event_interruptible(win->dc->timestamp_wq,
 				tegra_dc_is_within_n_vsync(win->dc, timestamp_ns));
-		tegra_dc_config_frame_end_intr(win->dc, false);
+			tegra_dc_config_frame_end_intr(win->dc, false);
+		}
 	}
-#endif
+
 	return err;
 }
 
@@ -358,12 +356,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		int index = flip_win->attr.index;
 		struct tegra_dc_win *win;
 		struct tegra_dc_ext_win *ext_win;
-#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
-	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 		struct tegra_dc_ext_flip_data *temp = NULL;
 		s64 head_timestamp = 0;
 		int j = 0;
-#endif
 
 		if (index < 0)
 			continue;
@@ -376,10 +371,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			skip_flip = true;
 
 		mutex_lock(&ext_win->queue_lock);
-#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && \
-	!defined(CONFIG_TEGRA_FPGA_PLATFORM)
 		list_for_each_entry(temp, &ext_win->timestamp_queue,
 				timestamp_node) {
+			if (!tegra_platform_is_silicon())
+				continue;
 			if (j == 0) {
 				if (unlikely(temp != data))
 					dev_err(&win->dc->ndev->dev,
@@ -398,7 +393,6 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			}
 			j++;
 		}
-#endif
 		if (!list_empty(&ext_win->timestamp_queue))
 			list_del(&data->timestamp_node);
 		mutex_unlock(&ext_win->queue_lock);

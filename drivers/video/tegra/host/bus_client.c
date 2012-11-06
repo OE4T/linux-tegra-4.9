@@ -499,17 +499,6 @@ static int nvhost_ioctl_channel_wait(
 	return ret;
 }
 
-static int nvhost_ioctl_channel_zcull_get_size(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_zcull_get_size_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_zcull_op().get_size);
-	ret = channel_zcull_op().get_size(ctx->hwctx, args);
-	return ret;
-}
-
 static int nvhost_ioctl_channel_zcull_bind(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_zcull_bind_args *args)
@@ -518,17 +507,6 @@ static int nvhost_ioctl_channel_zcull_bind(
 
 	BUG_ON(!channel_zcull_op().bind);
 	ret = channel_zcull_op().bind(ctx->hwctx, args);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_zcull_get_info(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_zcull_get_info_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_zcull_op().get_info);
-	ret = channel_zcull_op().get_info(ctx->hwctx, args);
 	return ret;
 }
 
@@ -1124,14 +1102,8 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_WAIT:
 		err = nvhost_ioctl_channel_wait(priv, (void *)buf);
 		break;
-	case NVHOST_IOCTL_CHANNEL_ZCULL_GET_SIZE:
-		err = nvhost_ioctl_channel_zcull_get_size(priv, (void *)buf);
-		break;
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
 		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_ZCULL_GET_INFO:
-		err = nvhost_ioctl_channel_zcull_get_info(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE:
 		err = nvhost_ioctl_channel_zbc_set_table(priv, (void *)buf);

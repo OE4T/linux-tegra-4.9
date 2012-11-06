@@ -1185,19 +1185,6 @@ notif_clean_up:
 	return 0;
 }
 
-int gk20a_channel_zcull_get_size(struct channel_gk20a *ch,
-			    struct nvhost_zcull_get_size_args *args)
-{
-	struct gk20a *g = ch->g;
-	struct gr_gk20a *gr = &g->gr;
-
-	nvhost_dbg_fn("");
-
-	args->size = gr_gk20a_get_ctxsw_zcull_size(g, gr);
-
-	return 0;
-}
-
 int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvhost_zcull_bind_args *args)
 {
@@ -1208,34 +1195,6 @@ int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 
 	return gr_gk20a_bind_ctxsw_zcull(g, gr, ch,
 				args->gpu_va, args->mode);
-}
-
-int gk20a_channel_zcull_get_info(struct channel_gk20a *ch,
-			    struct nvhost_zcull_get_info_args *args)
-{
-	struct gk20a *g = ch->g;
-	struct gr_gk20a *gr = &g->gr;
-	struct gr_zcull_info zcull_info;
-	int err;
-
-	nvhost_dbg_fn("");
-
-	memset(&zcull_info, 0, sizeof(struct gr_zcull_info));
-
-	err = gr_gk20a_get_zcull_info(g, gr, &zcull_info);
-
-	args->width_align_pixels = zcull_info.width_align_pixels;
-	args->height_align_pixels = zcull_info.height_align_pixels;
-	args->pixel_squares_by_aliquots = zcull_info.pixel_squares_by_aliquots;
-	args->aliquot_total = zcull_info.aliquot_total;
-	args->region_byte_multiplier = zcull_info.region_byte_multiplier;
-	args->region_header_size = zcull_info.region_header_size;
-	args->subregion_header_size = zcull_info.subregion_header_size;
-	args->subregion_width_align_pixels = zcull_info.subregion_width_align_pixels;
-	args->subregion_height_align_pixels = zcull_info.subregion_height_align_pixels;
-	args->subregion_count = zcull_info.subregion_count;
-
-	return err;
 }
 
 int gk20a_channel_zbc_set_table(struct channel_gk20a *ch,

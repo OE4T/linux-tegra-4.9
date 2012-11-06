@@ -233,10 +233,6 @@ struct nvhost_set_priority_args {
 	__u32 priority;
 } __packed;
 
-struct nvhost_zcull_get_size_args {
-	__u32 size;
-};
-
 #define NVHOST_ZCULL_MODE_GLOBAL		0
 #define NVHOST_ZCULL_MODE_NO_CTXSW		1
 #define NVHOST_ZCULL_MODE_SEPARATE_BUFFER	2
@@ -245,19 +241,6 @@ struct nvhost_zcull_get_size_args {
 struct nvhost_zcull_bind_args {
 	__u64 gpu_va;
 	__u32 mode;
-};
-
-struct nvhost_zcull_get_info_args {
-	__u32 width_align_pixels;
-	__u32 height_align_pixels;
-	__u32 pixel_squares_by_aliquots;
-	__u32 aliquot_total;
-	__u32 region_byte_multiplier;
-	__u32 region_header_size;
-	__u32 subregion_header_size;
-	__u32 subregion_width_align_pixels;
-	__u32 subregion_height_align_pixels;
-	__u32 subregion_count;
 };
 
 #define NVHOST_ZBC_COLOR_VALUE_SIZE	4
@@ -384,10 +367,6 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
 	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
 
-#define NVHOST_IOCTL_CHANNEL_ZCULL_GET_SIZE    \
-	_IOWR(NVHOST_IOCTL_MAGIC, 123, struct nvhost_zcull_get_size_args)
-#define NVHOST_IOCTL_CHANNEL_ZCULL_GET_INFO    \
-	_IOWR(NVHOST_IOCTL_MAGIC, 125, struct nvhost_zcull_get_info_args)
 #define NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE     \
 	_IOWR(NVHOST_IOCTL_MAGIC, 126, struct nvhost_zbc_set_table_args)
 #define NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE   \

@@ -109,14 +109,12 @@ static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
 int channel_gk20a_commit_va(struct channel_gk20a *c);
 
 struct nvhost_unmap_buffer_args;
-struct nvhost_zcull_get_size_args;
 struct nvhost_zbc_query_table_args;
 struct nvhost_fence;
 struct nvhost_alloc_gpfifo_args;
 struct nvhost_map_buffer_args;
 struct nvhost_wait_args;
 struct nvhost_zcull_bind_args;
-struct nvhost_zcull_get_info_args;
 struct nvhost_gpfifo;
 struct nvhost_zbc_set_table_args;
 
@@ -138,12 +136,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 void gk20a_free_channel(struct nvhost_hwctx *ctx);
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args);
-int gk20a_channel_zcull_get_size(struct channel_gk20a *ch,
-			    struct nvhost_zcull_get_size_args *args);
 int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvhost_zcull_bind_args *args);
-int gk20a_channel_zcull_get_info(struct channel_gk20a *ch,
-			    struct nvhost_zcull_get_info_args *args);
 int gk20a_channel_zbc_set_table(struct channel_gk20a *ch,
 			    struct nvhost_zbc_set_table_args *args);
 int gk20a_channel_zbc_query_table(struct channel_gk20a *ch,

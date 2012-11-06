@@ -303,25 +303,11 @@ static int t124_channel_wait(struct nvhost_hwctx *hwctx,
 	return gk20a_channel_wait(hwctx->priv, args);
 }
 
-static int t124_channel_zcull_get_size(struct nvhost_hwctx *hwctx,
-			    struct nvhost_zcull_get_size_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_zcull_get_size(hwctx->priv, args);
-}
-
 static int t124_channel_zcull_bind(struct nvhost_hwctx *hwctx,
 			    struct nvhost_zcull_bind_args *args)
 {
 	nvhost_dbg_fn("");
 	return gk20a_channel_zcull_bind(hwctx->priv, args);
-}
-
-static int t124_channel_zcull_get_info(struct nvhost_hwctx *hwctx,
-			    struct nvhost_zcull_get_info_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_zcull_get_info(hwctx->priv, args);
 }
 
 static int t124_channel_zbc_set_table(struct nvhost_hwctx *hwctx,
@@ -397,9 +383,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	op->channel.submit_gpfifo = t124_channel_submit_gpfifo;
 	op->channel.wait          = t124_channel_wait;
 
-	op->channel.zcull.get_size = t124_channel_zcull_get_size;
 	op->channel.zcull.bind     = t124_channel_zcull_bind;
-	op->channel.zcull.get_info = t124_channel_zcull_get_info;
 
 	op->channel.zbc.set_table   = t124_channel_zbc_set_table;
 	op->channel.zbc.query_table = t124_channel_zbc_query_table;

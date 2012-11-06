@@ -47,12 +47,8 @@ struct platform_device;
 struct host1x_actmon;
 
 struct nvhost_zcull_ops {
-	int (*get_size)(struct nvhost_hwctx *,
-		    struct nvhost_zcull_get_size_args *args);
 	int (*bind)(struct nvhost_hwctx *,
 		    struct nvhost_zcull_bind_args *args);
-	int (*get_info)(struct nvhost_hwctx *,
-		    struct nvhost_zcull_get_info_args *args);
 };
 
 struct nvhost_zbc_ops {

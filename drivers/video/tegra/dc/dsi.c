@@ -3382,8 +3382,11 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	tegra_dsi_init_sw(dc, dsi);
 
-	if (!dsi->mipi_cal)
+	if (!dsi->mipi_cal) {
 		dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
+		if (PTR_ERR(dsi->mipi_cal) < 0)
+			dsi->mipi_cal = NULL;
+	}
 }
 
 static int tegra_dc_dsi_cp_p_cmd(struct tegra_dsi_cmd *src,

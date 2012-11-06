@@ -50,6 +50,7 @@
 #include <mach/mc.h>
 #include <linux/nvhost.h>
 #include <mach/latency_allowance.h>
+#include <mach/iomap.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"
@@ -1602,47 +1603,9 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 
 static u32 get_syncpt(struct tegra_dc *dc, int idx)
 {
-	u32 syncpt_id;
-
-	switch (dc->ndev->id) {
-	case 0:
-		switch (idx) {
-		case 0:
-			syncpt_id = NVSYNCPT_DISP0_A;
-			break;
-		case 1:
-			syncpt_id = NVSYNCPT_DISP0_B;
-			break;
-		case 2:
-			syncpt_id = NVSYNCPT_DISP0_C;
-			break;
-		default:
-			BUG();
-			break;
-		}
-		break;
-	case 1:
-		switch (idx) {
-		case 0:
-			syncpt_id = NVSYNCPT_DISP1_A;
-			break;
-		case 1:
-			syncpt_id = NVSYNCPT_DISP1_B;
-			break;
-		case 2:
-			syncpt_id = NVSYNCPT_DISP1_C;
-			break;
-		default:
-			BUG();
-			break;
-		}
-		break;
-	default:
-		BUG();
-		break;
-	}
-
-	return syncpt_id;
+	if (idx >= 0 && idx < ARRAY_SIZE(dc->win_syncpt))
+		return dc->win_syncpt[idx];
+	BUG();
 }
 
 static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
@@ -2218,6 +2181,22 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		ret = -EBUSY;
 		goto err_release_resource_reg;
 	}
+	if (TEGRA_DISPLAY_BASE == res->start) {
+		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
+		dc->win_syncpt[0] = NVSYNCPT_DISP0_A;
+		dc->win_syncpt[1] = NVSYNCPT_DISP0_B;
+		dc->win_syncpt[2] = NVSYNCPT_DISP0_C;
+	} else if (TEGRA_DISPLAY2_BASE == res->start) {
+		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
+		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
+		dc->win_syncpt[1] = NVSYNCPT_DISP1_B;
+		dc->win_syncpt[2] = NVSYNCPT_DISP1_C;
+	} else {
+		dev_err(&ndev->dev,
+			"Unknown base address %#08x: unable to assign syncpt\n",
+			res->start);
+	}
+
 
 	fb_mem = platform_get_resource_byname(ndev, IORESOURCE_MEM, "fbmem");
 
@@ -2302,9 +2281,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tegra_dc_set_out(dc, dc->pdata->default_out);
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
-
-	dc->vblank_syncpt = (dc->ndev->id == 0) ?
-		NVSYNCPT_VBLANK0 : NVSYNCPT_VBLANK1;
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {

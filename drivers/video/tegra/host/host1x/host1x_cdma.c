@@ -451,6 +451,8 @@ static void cdma_timeout_handler(struct work_struct *work)
 	sp = &dev->syncpt;
 	ch = cdma_to_channel(cdma);
 
+	nvhost_debug_dump(cdma_to_dev(cdma));
+
 	mutex_lock(&cdma->lock);
 
 	if (!cdma->timeout.clientid) {

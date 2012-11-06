@@ -412,18 +412,18 @@ void nvhost_job_unpin(struct nvhost_job *job)
  */
 void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 {
-	dev_dbg(dev, "    SYNCPT_ID   %d\n",
+	dev_info(dev, "    SYNCPT_ID   %d\n",
 		job->syncpt_id);
-	dev_dbg(dev, "    SYNCPT_VAL  %d\n",
+	dev_info(dev, "    SYNCPT_VAL  %d\n",
 		job->syncpt_end);
-	dev_dbg(dev, "    FIRST_GET   0x%x\n",
+	dev_info(dev, "    FIRST_GET   0x%x\n",
 		job->first_get);
-	dev_dbg(dev, "    TIMEOUT     %d\n",
+	dev_info(dev, "    TIMEOUT     %d\n",
 		job->timeout);
-	dev_dbg(dev, "    CTX 0x%p\n",
+	dev_info(dev, "    CTX 0x%p\n",
 		job->hwctx);
-	dev_dbg(dev, "    NUM_SLOTS   %d\n",
+	dev_info(dev, "    NUM_SLOTS   %d\n",
 		job->num_slots);
-	dev_dbg(dev, "    NUM_HANDLES %d\n",
+	dev_info(dev, "    NUM_HANDLES %d\n",
 		job->num_unpins);
 }

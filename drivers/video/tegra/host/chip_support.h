@@ -166,7 +166,6 @@ struct nvhost_actmon_ops {
 	int (*read_avg)(struct nvhost_master *host, u32 *val);
 	int (*above_wmark_count)(struct nvhost_master *host);
 	int (*below_wmark_count)(struct nvhost_master *host);
-	int (*isr)(u32 hintstatus, void __iomem *sync_regs);
 	int (*read_avg_norm)(struct nvhost_master *host, u32 *val);
 	void (*update_sample_period)(struct nvhost_master *host);
 	void (*set_sample_period_norm)(struct nvhost_master *host, long usecs);

@@ -193,8 +193,6 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + host1x_sync_hintstatus_r());
 	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
 
-	actmon_op().isr(stat, sync_regs);
-
 	if (host1x_sync_hintstatus_ext_ip_read_int_v(ext_stat)) {
 		addr = readl(sync_regs + host1x_sync_ip_read_timeout_addr_r());
 		pr_err("Host read timeout at address %x\n", addr);
@@ -210,6 +208,7 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
+
 static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 {
 	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;

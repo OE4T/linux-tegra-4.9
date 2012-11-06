@@ -121,16 +121,9 @@ static int host1x_actmon_init(struct nvhost_master *host)
 	/* Clear interrupt status */
 	writel(0xffffffff, sync_regs + host1x_sync_actmon_intr_status_r());
 
-	/* Set watermarks - arbitrary for now */
-	writel(0x100, sync_regs + host1x_sync_actmon_avg_upper_wmark_r());
-	writel(0x50, sync_regs + host1x_sync_actmon_avg_lower_wmark_r());
-
 	val = readl(sync_regs + host1x_sync_actmon_ctrl_r());
 	/* Enable periodic mode */
 	val |= host1x_sync_actmon_ctrl_enb_periodic_f(1);
-	/* Enable watermark interrupts */
-	val |= host1x_sync_actmon_ctrl_avg_above_wmark_en_f(1);
-	val |= host1x_sync_actmon_ctrl_avg_below_wmark_en_f(1);
 	/* Moving avg IIR filter window size 2^6=128 */
 	val |= host1x_sync_actmon_ctrl_k_val_f(actmon_status.k);
 	/* Enable ACTMON */
@@ -206,16 +199,6 @@ static int host1x_actmon_avg_norm(struct nvhost_master *host, u32 *avg)
 	return 0;
 }
 
-static void host1x_actmon_intr_above_wmark(void)
-{
-	actmon_status.above_wmark++;
-}
-
-static void host1x_actmon_intr_below_wmark(void)
-{
-	actmon_status.below_wmark++;
-}
-
 static int host1x_actmon_above_wmark_count(struct nvhost_master *host)
 {
 	return actmon_status.above_wmark;
@@ -224,22 +207,6 @@ static int host1x_actmon_above_wmark_count(struct nvhost_master *host)
 static int host1x_actmon_below_wmark_count(struct nvhost_master *host)
 {
 	return actmon_status.below_wmark;
-}
-
-static int host1x_actmon_process_isr(u32 hintstatus, void __iomem *sync_regs)
-{
-	if (host1x_sync_hintstatus_gr3d_actmon_intr_v(hintstatus)) {
-		u32 actmon =
-			readl(sync_regs + host1x_sync_actmon_intr_status_r());
-		if (host1x_sync_actmon_intr_status_avg_below_wmark_v(actmon))
-			host1x_actmon_intr_below_wmark();
-		if (host1x_sync_actmon_intr_status_avg_above_wmark_v(actmon))
-			host1x_actmon_intr_above_wmark();
-
-		writel(actmon, sync_regs + host1x_sync_actmon_intr_status_r());
-		return 1;
-	} else
-		return 0;
 }
 
 static void host1x_actmon_update_sample_period(struct nvhost_master *host)
@@ -294,7 +261,6 @@ static const struct nvhost_actmon_ops host1x_actmon_ops = {
 	.read_avg = host1x_actmon_avg,
 	.above_wmark_count = host1x_actmon_above_wmark_count,
 	.below_wmark_count = host1x_actmon_below_wmark_count,
-	.isr = host1x_actmon_process_isr,
 	.read_avg_norm = host1x_actmon_avg_norm,
 	.update_sample_period = host1x_actmon_update_sample_period,
 	.set_sample_period_norm = host1x_actmon_set_sample_period_norm,

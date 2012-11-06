@@ -75,8 +75,10 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		return ERR_PTR(-ENOMEM);
 
 	err = __sg_alloc_table(sgt, 1, 1, (gfp_t)(sgt+1), sg_kmalloc);
-	if (err)
+	if (err) {
+		kfree(sgt);
 		return ERR_PTR(err);
+	}
 
 	ret = nvmap_pin((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);

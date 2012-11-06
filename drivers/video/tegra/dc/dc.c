@@ -862,9 +862,13 @@ EXPORT_SYMBOL(tegra_dc_update_cmu);
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
+	clk_enable(dc->clk);
+	tegra_dc_io_start(dc);
 	dc->pdata->cmu_enable = cmu_enable;
 	tegra_dc_update_cmu(dc, &dc->cmu);
 	tegra_dc_set_color_control(dc);
+	tegra_dc_io_end(dc);
+	clk_disable(dc->clk);
 }
 #else
 #define tegra_dc_cache_cmu(dst_cmu, src_cmu)

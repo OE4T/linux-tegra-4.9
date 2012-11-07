@@ -3074,6 +3074,15 @@ static int gr_gk20a_init_zbc(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
+int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
+			struct zbc_entry *zbc_val)
+{
+	nvhost_dbg_fn("");
+
+	return gr_gk20a_elpg_protected_call(g,
+		gr_gk20a_add_zbc(g, gr, zbc_val));
+}
+
 static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl, idle_filter;

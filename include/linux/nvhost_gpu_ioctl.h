@@ -61,14 +61,41 @@ struct nvhost_gpu_zcull_get_info_args {
 	__u32 subregion_count;
 };
 
+#define NVHOST_ZBC_COLOR_VALUE_SIZE	4
+#define NVHOST_ZBC_TYPE_INVALID		0
+#define NVHOST_ZBC_TYPE_COLOR		1
+#define NVHOST_ZBC_TYPE_DEPTH		2
+
+struct nvhost_gpu_zbc_set_table_args {
+	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 depth;
+	__u32 format;
+	__u32 type;	/* color or depth */
+};
+
+struct nvhost_gpu_zbc_query_table_args {
+	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+	__u32 depth;
+	__u32 ref_cnt;
+	__u32 format;
+	__u32 type;		/* color or depth */
+	__u32 index_size;	/* [out] size, [in] index */
+};
+
 #define NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVHOST_GPU_IOCTL_MAGIC, 1, struct nvhost_gpu_zcull_get_ctx_size_args)
 #define NVHOST_GPU_IOCTL_ZCULL_GET_INFO \
 	_IOR(NVHOST_GPU_IOCTL_MAGIC, 2, struct nvhost_gpu_zcull_get_info_args)
+#define NVHOST_GPU_IOCTL_ZBC_SET_TABLE	\
+	_IOW(NVHOST_GPU_IOCTL_MAGIC, 3, struct nvhost_gpu_zbc_set_table_args)
+#define NVHOST_GPU_IOCTL_ZBC_QUERY_TABLE	\
+	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 4, struct nvhost_gpu_zbc_query_table_args)
 
 #define NVHOST_GPU_IOCTL_LAST		\
-	_IOC_NR(NVHOST_GPU_IOCTL_ZCULL_GET_INFO)
+	_IOC_NR(NVHOST_GPU_IOCTL_ZBC_QUERY_TABLE)
 #define NVHOST_GPU_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvhost_gpu_zcull_get_info_args)
+	sizeof(struct nvhost_gpu_zbc_query_table_args)
 
 #endif

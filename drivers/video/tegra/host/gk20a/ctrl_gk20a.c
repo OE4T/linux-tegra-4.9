@@ -58,9 +58,13 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct gk20a *g = get_gk20a(dev);
 	struct nvhost_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
 	struct nvhost_gpu_zcull_get_info_args *get_info_args;
-	struct gr_zcull_info zcull_info;
+	struct nvhost_gpu_zbc_set_table_args *set_table_args;
+	struct nvhost_gpu_zbc_query_table_args *query_table_args;
 	u8 buf[NVHOST_GPU_IOCTL_MAX_ARG_SIZE];
-	int err = 0;
+	struct gr_zcull_info *zcull_info;
+	struct zbc_entry *zbc_val;
+	struct zbc_query_params *zbc_tbl;
+	int i, err = 0;
 
 	nvhost_dbg_fn("");
 
@@ -89,23 +93,96 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		get_info_args = (struct nvhost_gpu_zcull_get_info_args *)buf;
 
 		memset(get_info_args, 0, sizeof(struct nvhost_gpu_zcull_get_info_args));
-		memset(&zcull_info, 0, sizeof(struct gr_zcull_info));
 
-		err = gr_gk20a_get_zcull_info(g, &g->gr, &zcull_info);
+		zcull_info = kzalloc(sizeof(struct gr_zcull_info), GFP_KERNEL);
+		if (zcull_info == NULL)
+			return -ENOMEM;
+
+		err = gr_gk20a_get_zcull_info(g, &g->gr, zcull_info);
 		if (err)
 			break;
 
-		get_info_args->width_align_pixels = zcull_info.width_align_pixels;
-		get_info_args->height_align_pixels = zcull_info.height_align_pixels;
-		get_info_args->pixel_squares_by_aliquots = zcull_info.pixel_squares_by_aliquots;
-		get_info_args->aliquot_total = zcull_info.aliquot_total;
-		get_info_args->region_byte_multiplier = zcull_info.region_byte_multiplier;
-		get_info_args->region_header_size = zcull_info.region_header_size;
-		get_info_args->subregion_header_size = zcull_info.subregion_header_size;
-		get_info_args->subregion_width_align_pixels = zcull_info.subregion_width_align_pixels;
-		get_info_args->subregion_height_align_pixels = zcull_info.subregion_height_align_pixels;
-		get_info_args->subregion_count = zcull_info.subregion_count;
+		get_info_args->width_align_pixels = zcull_info->width_align_pixels;
+		get_info_args->height_align_pixels = zcull_info->height_align_pixels;
+		get_info_args->pixel_squares_by_aliquots = zcull_info->pixel_squares_by_aliquots;
+		get_info_args->aliquot_total = zcull_info->aliquot_total;
+		get_info_args->region_byte_multiplier = zcull_info->region_byte_multiplier;
+		get_info_args->region_header_size = zcull_info->region_header_size;
+		get_info_args->subregion_header_size = zcull_info->subregion_header_size;
+		get_info_args->subregion_width_align_pixels = zcull_info->subregion_width_align_pixels;
+		get_info_args->subregion_height_align_pixels = zcull_info->subregion_height_align_pixels;
+		get_info_args->subregion_count = zcull_info->subregion_count;
 
+		if (zcull_info)
+			kfree(zcull_info);
+		break;
+	case NVHOST_GPU_IOCTL_ZBC_SET_TABLE:
+		set_table_args = (struct nvhost_gpu_zbc_set_table_args *)buf;
+
+		zbc_val = kzalloc(sizeof(struct zbc_entry), GFP_KERNEL);
+		if (zbc_val == NULL)
+			return -ENOMEM;
+
+		zbc_val->format = set_table_args->format;
+		zbc_val->type = set_table_args->type;
+
+		switch (zbc_val->type) {
+		case GK20A_ZBC_TYPE_COLOR:
+			for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
+				zbc_val->color_ds[i] = set_table_args->color_ds[i];
+				zbc_val->color_l2[i] = set_table_args->color_l2[i];
+			}
+			break;
+		case GK20A_ZBC_TYPE_DEPTH:
+			zbc_val->depth = set_table_args->depth;
+			break;
+		default:
+			err = -EINVAL;
+		}
+
+		if (!err)
+			err = gk20a_gr_zbc_set_table(g, &g->gr, zbc_val);
+
+		if (zbc_val)
+			kfree(zbc_val);
+		break;
+	case NVHOST_GPU_IOCTL_ZBC_QUERY_TABLE:
+		query_table_args = (struct nvhost_gpu_zbc_query_table_args *)buf;
+
+		zbc_tbl = kzalloc(sizeof(struct zbc_query_params), GFP_KERNEL);
+		if (zbc_tbl == NULL)
+			return -ENOMEM;
+
+		zbc_tbl->type = query_table_args->type;
+		zbc_tbl->index_size = query_table_args->index_size;
+
+		err = gr_gk20a_query_zbc(g, &g->gr, zbc_tbl);
+
+		if (!err) {
+			switch (zbc_tbl->type) {
+			case GK20A_ZBC_TYPE_COLOR:
+				for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
+					query_table_args->color_ds[i] = zbc_tbl->color_ds[i];
+					query_table_args->color_l2[i] = zbc_tbl->color_l2[i];
+				}
+				break;
+			case GK20A_ZBC_TYPE_DEPTH:
+				query_table_args->depth = zbc_tbl->depth;
+				break;
+			case GK20A_ZBC_TYPE_INVALID:
+				query_table_args->index_size = zbc_tbl->index_size;
+				break;
+			default:
+				err = -EINVAL;
+			}
+			if (!err) {
+				query_table_args->format = zbc_tbl->format;
+				query_table_args->ref_cnt = zbc_tbl->ref_cnt;
+			}
+		}
+
+		if (zbc_tbl)
+			kfree(zbc_tbl);
 		break;
 	default:
 		nvhost_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

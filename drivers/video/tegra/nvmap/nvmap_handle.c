@@ -794,8 +794,10 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	if (!h)
 		return -EINVAL;
 
-	if (h->alloc)
-		goto out;
+	if (h->alloc) {
+		nvmap_handle_put(h);
+		return -EEXIST;
+	}
 
 	trace_nvmap_alloc_handle_id(client, id, heap_mask, align, flags);
 	h->userflags = flags;

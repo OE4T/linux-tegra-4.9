@@ -42,21 +42,23 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	if (properties->handle > 2)
 		return -EINVAL;
 
-	switch (properties->handle) {
-	case 0:
+	properties->associated_head = properties->handle;
+	properties->head_mask = (1 << properties->associated_head);
+
+	dc = tegra_dc_get_dc(properties->associated_head);
+	switch (tegra_dc_get_out(dc)) {
+	case TEGRA_DC_OUT_DSI:
+		properties->type = TEGRA_DC_EXT_DSI;
+		break;
+	case TEGRA_DC_OUT_RGB:
 		properties->type = TEGRA_DC_EXT_LVDS;
 		break;
-	case 1:
+	case TEGRA_DC_OUT_HDMI:
 		properties->type = TEGRA_DC_EXT_HDMI;
 		break;
 	default:
 		return -EINVAL;
 	}
-
-	properties->associated_head = properties->handle;
-	properties->head_mask = (1 << properties->associated_head);
-
-	dc = tegra_dc_get_dc(properties->associated_head);
 	properties->connected = tegra_dc_get_connected(dc);
 
 	return 0;

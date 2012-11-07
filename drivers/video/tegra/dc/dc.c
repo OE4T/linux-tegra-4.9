@@ -1088,6 +1088,15 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops->init(dc);
 }
 
+/* returns on error: -EINVAL
+ * on success: TEGRA_DC_OUT_RGB, TEGRA_DC_OUT_HDMI, or TEGRA_DC_OUT_DSI. */
+int tegra_dc_get_out(const struct tegra_dc *dc)
+{
+	if (dc && dc->out)
+		return dc->out->type;
+	return -EINVAL;
+}
+
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc)
 {
 	if (dc->out)

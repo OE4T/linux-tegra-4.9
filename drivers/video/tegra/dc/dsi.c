@@ -100,6 +100,7 @@
 #if DSI_USE_SYNC_POINTS
 static atomic_t dsi_syncpt_rst = ATOMIC_INIT(0);
 #endif
+
 static bool enable_read_debug;
 module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,

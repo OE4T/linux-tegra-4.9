@@ -185,11 +185,6 @@ static int tegra_fb_set_par(struct fb_info *info)
 			return -EINVAL;
 		}
 
-		/* Reflect mode chnage on DC HW */
-		if (dc->enabled)
-			tegra_dc_disable(dc);
-		tegra_dc_enable(dc);
-
 		tegra_fb->win->w.full = dfixed_const(info->mode->xres);
 		tegra_fb->win->h.full = dfixed_const(info->mode->yres);
 		tegra_fb->win->out_w = info->mode->xres;

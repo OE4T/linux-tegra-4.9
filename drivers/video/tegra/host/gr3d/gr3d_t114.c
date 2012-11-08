@@ -41,6 +41,8 @@ static const struct hwctx_reginfo ctxsave_regs_3d_per_pipe[] = {
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	/* bug 962360. Reg 0xe44 has to be the first one to be restored*/
+	HWCTX_REGINFO_RST(0x40e, 1, DIRECT, 0xe44),
+	/* remove following line for part 2 checkin */
 	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe44),
 	HWCTX_REGINFO(0xe00,   35, DIRECT),
 	HWCTX_REGINFO(0xe25,    2, DIRECT),
@@ -57,8 +59,17 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0x300,   64, DIRECT),
 	HWCTX_REGINFO(0x343,   25, DIRECT),
 	HWCTX_REGINFO(0x363,    2, DIRECT),
+	HWCTX_REGINFO(0x400,    3, DIRECT),
 	/* bug 976976 requires reg 0x403 to be restored before reg 0xe45 */
-	HWCTX_REGINFO(0x400,   19, DIRECT),
+	/* bug 972588 requires reg 0x403 to be restored with reg 0x411's
+	   value */
+	/* remove #if 1 for part 3 checkin */
+	#if 1
+	HWCTX_REGINFO(0x403,    1, DIRECT),
+	#else
+	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0x403),
+	#endif
+	HWCTX_REGINFO(0x404,   15, DIRECT),
 	/* bug 955371 requires reg 0x7e0 to be restored with 0x410,s value.
 	   bug 982750 requires reg 0x7e0 to be restored before 0x804.
 	   note: 0x803 is the offset reg for 0x804 */
@@ -95,7 +106,14 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xa02,   10, DIRECT),
 	HWCTX_REGINFO(0xe2a,    1, DIRECT),
 	/* bug 976976 requires reg 0xe45 to be restored after reg 0x403 */
+	/* bug 972588 requires reg 0x403 to be restored with reg 0x411's
+	   value */
+	/* remove #if 1 for part 3 checkin */
+	#if 1
 	HWCTX_REGINFO(0xe45,    1, DIRECT),
+	#else
+	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe45),
+	#endif
 	HWCTX_REGINFO(0xe50,   49, DIRECT),
 	/* bug 930456 requires reg 0xe2b to be restored with 0x126's value */
 	HWCTX_REGINFO_RST(0x126, 1, DIRECT, 0xe2b),
@@ -162,6 +180,12 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 			AR3D_FDC_CONTROL_0_RESET_VAL
 				| AR3D_FDC_CONTROL_0_INVALIDATE),
 		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
+	/* bug 972588 requires SW to clear the reg 0x403 and 0xe45 */
+	/* enable the following line for part 3 checkin
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_imm(0xe45, 0),
+		nvhost_opcode_imm(0x403, 0));
+	*/
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
 		ctx->restore_phys);

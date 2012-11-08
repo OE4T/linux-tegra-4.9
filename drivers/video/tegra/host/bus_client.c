@@ -206,13 +206,17 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	}
 	ctx->job = nvhost_job_alloc(ctx->ch,
 			ctx->hwctx,
-			&ctx->hdr,
-			ctx->memmgr,
-			ctx->priority,
-			ctx->clientid);
+			ctx->hdr.num_cmdbufs,
+			ctx->hdr.num_relocs,
+			ctx->hdr.num_waitchks,
+			ctx->memmgr);
 	if (!ctx->job)
 		return -ENOMEM;
 	ctx->job->timeout = ctx->timeout;
+	ctx->job->syncpt_id = ctx->hdr.syncpt_id;
+	ctx->job->syncpt_incrs = ctx->hdr.syncpt_incrs;
+	ctx->job->priority = ctx->priority;
+	ctx->job->clientid = ctx->clientid;
 
 	if (ctx->hdr.submit_version >= NVHOST_SUBMIT_VERSION_V2)
 		ctx->num_relocshifts = ctx->hdr.num_relocs;
@@ -317,8 +321,7 @@ static ssize_t nvhost_channelwrite(struct file *filp, const char __user *buf,
 				break;
 			}
 			trace_nvhost_channel_write_waitchks(
-			  chname, numwaitchks,
-			  hdr->waitchk_mask);
+			  chname, numwaitchks);
 			job->num_waitchk += numwaitchks;
 			hdr->num_waitchks -= numwaitchks;
 		} else if (priv->num_relocshifts) {
@@ -398,6 +401,101 @@ fail:
 	nvhost_job_put(ctx->job);
 	ctx->job = NULL;
 
+	return err;
+}
+
+static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
+		struct nvhost_submit_args *args)
+{
+	struct nvhost_job *job;
+	int num_cmdbufs = args->num_cmdbufs;
+	int num_relocs = args->num_relocs;
+	int num_waitchks = args->num_waitchks;
+	struct nvhost_cmdbuf __user *cmdbufs = args->cmdbufs;
+	struct nvhost_reloc __user *relocs = args->relocs;
+	struct nvhost_reloc_shift __user *reloc_shifts = args->reloc_shifts;
+	struct nvhost_waitchk __user *waitchks = args->waitchks;
+	struct nvhost_syncpt_incr syncpt_incr;
+	int err;
+
+	/* We don't yet support other than one nvhost_syncpt_incrs per submit */
+	if (args->num_syncpt_incrs != 1)
+		return -EINVAL;
+
+	job = nvhost_job_alloc(ctx->ch,
+			ctx->hwctx,
+			args->num_cmdbufs,
+			args->num_relocs,
+			args->num_waitchks,
+			ctx->memmgr);
+	if (!job)
+		return -ENOMEM;
+
+	job->num_relocs = args->num_relocs;
+	job->num_waitchk = args->num_waitchks;
+	job->priority = ctx->priority;
+	job->clientid = ctx->clientid;
+
+	while (num_cmdbufs) {
+		struct nvhost_cmdbuf cmdbuf;
+		err = copy_from_user(&cmdbuf, cmdbufs, sizeof(cmdbuf));
+		if (err)
+			goto fail;
+		nvhost_job_add_gather(job,
+				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
+		num_cmdbufs--;
+		cmdbufs++;
+	}
+
+	err = copy_from_user(job->relocarray,
+			relocs, sizeof(*relocs) * num_relocs);
+	if (err)
+		goto fail;
+
+	err = copy_from_user(job->relocshiftarray,
+			reloc_shifts, sizeof(*reloc_shifts) * num_relocs);
+	if (err)
+		goto fail;
+
+	err = copy_from_user(job->waitchk,
+			waitchks, sizeof(*waitchks) * num_waitchks);
+	if (err)
+		goto fail;
+
+	err = copy_from_user(&syncpt_incr,
+			args->syncpt_incrs, sizeof(syncpt_incr));
+	if (err)
+		goto fail;
+	job->syncpt_id = syncpt_incr.syncpt_id;
+	job->syncpt_incrs = syncpt_incr.syncpt_incrs;
+
+	trace_nvhost_channel_submit(ctx->ch->dev->name,
+		job->num_gathers, job->num_relocs, job->num_waitchk,
+		job->syncpt_id, job->syncpt_incrs);
+
+	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
+	if (err)
+		goto fail;
+
+	if (args->timeout)
+		job->timeout = min(ctx->timeout, args->timeout);
+	else
+		job->timeout = ctx->timeout;
+
+	err = nvhost_channel_submit(job);
+	if (err)
+		goto fail_submit;
+
+	args->fence = job->syncpt_end;
+
+	nvhost_job_put(job);
+
+	return 0;
+
+fail_submit:
+	nvhost_job_unpin(job);
+fail:
+	nvhost_job_put(job);
 	return err;
 }
 
@@ -639,6 +737,9 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR:
 		err = nvhost_ioctl_channel_module_regrdwr(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SUBMIT:
+		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;

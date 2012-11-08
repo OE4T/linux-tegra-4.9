@@ -66,7 +66,6 @@ struct nvhost_job {
 	/* Wait checks to be processed at submit time */
 	struct nvhost_waitchk *waitchk;
 	int num_waitchk;
-	u32 waitchk_mask;
 
 	/* Array of handles to be pinned & unpinned */
 	struct nvhost_reloc *relocarray;
@@ -107,9 +106,8 @@ struct nvhost_job {
  */
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
-		struct nvhost_submit_hdr_ext *hdr,
-		struct mem_mgr *memmgr,
-		int priority, int clientid);
+		int num_cmdbufs, int num_relocs, int num_waitchks,
+		struct mem_mgr *memmgr);
 
 /*
  * Add a gather to a job.

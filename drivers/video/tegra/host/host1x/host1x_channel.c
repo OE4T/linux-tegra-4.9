@@ -407,9 +407,8 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
-	job = nvhost_job_alloc(ch, hwctx_to_save,
-			NULL,
-			nvhost_get_host(ch->dev)->memmgr, 0, 0);
+	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0,
+			nvhost_get_host(ch->dev)->memmgr);
 	if (IS_ERR_OR_NULL(job)) {
 		err = PTR_ERR(job);
 		mutex_unlock(&ch->submitlock);

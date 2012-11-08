@@ -87,6 +87,11 @@ struct nvhost_waitchk {
 	__u32 thresh;
 };
 
+struct nvhost_syncpt_incr {
+	__u32 syncpt_id;
+	__u32 syncpt_incrs;
+};
+
 struct nvhost_get_param_args {
 	__u32 value;
 };
@@ -122,6 +127,23 @@ struct nvhost_ctrl_module_regrdwr_args {
 	__u32 write;
 };
 
+struct nvhost_submit_args {
+	__u32 submit_version;
+	__u32 num_syncpt_incrs;
+	__u32 num_cmdbufs;
+	__u32 num_relocs;
+	__u32 num_waitchks;
+	__u32 timeout;
+	struct nvhost_syncpt_incr *syncpt_incrs;
+	struct nvhost_cmdbuf *cmdbufs;
+	struct nvhost_reloc *relocs;
+	struct nvhost_reloc_shift *reloc_shifts;
+	struct nvhost_waitchk *waitchks;
+
+	__u32 pad[5];		/* future expansion */
+	__u32 fence;		/* Return value */
+};
+
 #define NVHOST_IOCTL_CHANNEL_FLUSH		\
 	_IOR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS	\
@@ -150,9 +172,11 @@ struct nvhost_ctrl_module_regrdwr_args {
 	_IOW(NVHOST_IOCTL_MAGIC, 13, struct nvhost_set_priority_args)
 #define NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_module_regrdwr_args)
+#define NVHOST_IOCTL_CHANNEL_SUBMIT		\
+	_IOWR(NVHOST_IOCTL_MAGIC, 15, struct nvhost_submit_args)
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR)
-#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_hdr_ext)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_SUBMIT)
+#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {
 	__u32 id;

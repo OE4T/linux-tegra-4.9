@@ -35,11 +35,8 @@
 /* Magic to use to fill freed handle slots */
 #define BAD_MAGIC 0xdeadbeef
 
-static size_t job_size(struct nvhost_submit_hdr_ext *hdr)
+static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 {
-	s64 num_relocs = hdr ? (int)hdr->num_relocs : 0;
-	s64 num_waitchks = hdr ? (int)hdr->num_waitchks : 0;
-	s64 num_cmdbufs = hdr ? (int)hdr->num_cmdbufs : 0;
 	s64 num_unpins = num_cmdbufs + num_relocs;
 	s64 total;
 
@@ -59,19 +56,14 @@ static size_t job_size(struct nvhost_submit_hdr_ext *hdr)
 	return (size_t)total;
 }
 
+
 static void init_fields(struct nvhost_job *job,
-		struct nvhost_submit_hdr_ext *hdr,
-		int priority, int clientid)
+		u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 {
-	int num_relocs = hdr ? hdr->num_relocs : 0;
-	int num_waitchks = hdr ? hdr->num_waitchks : 0;
-	int num_cmdbufs = hdr ? hdr->num_cmdbufs : 0;
 	int num_unpins = num_cmdbufs + num_relocs;
 	void *mem = job;
 
 	/* First init state to zero */
-	job->priority = priority;
-	job->clientid = clientid;
 
 	/*
 	 * Redistribute memory to the structs.
@@ -93,25 +85,15 @@ static void init_fields(struct nvhost_job *job,
 
 	job->reloc_addr_phys = job->addr_phys;
 	job->gather_addr_phys = &job->addr_phys[num_relocs];
-
-
-	/* Copy information from header */
-	if (hdr) {
-		job->waitchk_mask = hdr->waitchk_mask;
-		job->syncpt_id = hdr->syncpt_id;
-		job->syncpt_incrs = hdr->syncpt_incrs;
-	}
 }
 
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
-		struct nvhost_submit_hdr_ext *hdr,
-		struct mem_mgr *memmgr,
-		int priority,
-		int clientid)
+		int num_cmdbufs, int num_relocs, int num_waitchks,
+		struct mem_mgr *memmgr)
 {
 	struct nvhost_job *job = NULL;
-	size_t size = job_size(hdr);
+	size_t size = job_size(num_cmdbufs, num_relocs, num_waitchks);
 
 	if(!size)
 		return NULL;
@@ -126,7 +108,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		hwctx->h->get(hwctx);
 	job->memmgr = memmgr ? mem_op().get_mgr(memmgr) : NULL;
 
-	init_fields(job, hdr, priority, clientid);
+	init_fields(job, num_cmdbufs, num_relocs, num_waitchks);
 
 	return job;
 }
@@ -189,6 +171,10 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 	/* compare syncpt vs wait threshold */
 	for (i = 0; i < job->num_waitchk; i++) {
 		struct nvhost_waitchk *wait = &job->waitchk[i];
+
+		/* validate syncpt id */
+		if (wait->syncpt_id > nvhost_syncpt_nb_pts(sp))
+			continue;
 
 		/* skip all other gathers */
 		if (patch_mem != wait->mem)
@@ -341,11 +327,18 @@ static int do_relocs(struct nvhost_job *job,
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
-	unsigned long waitchk_mask = job->waitchk_mask;
+	unsigned long waitchk_mask[nvhost_syncpt_nb_pts(sp) / BITS_PER_LONG];
 
+	memset(&waitchk_mask[0], 0, sizeof(waitchk_mask));
+	for (i = 0; i < job->num_waitchk; i++) {
+		u32 syncpt_id = job->waitchk[i].syncpt_id;
+		if (syncpt_id < nvhost_syncpt_nb_pts(sp))
+			waitchk_mask[BIT_WORD(syncpt_id)]
+				|= BIT_MASK(syncpt_id);
+	}
 
 	/* get current syncpt values for waitchk */
-	for_each_set_bit(i, &waitchk_mask, sizeof(job->waitchk_mask))
+	for_each_set_bit(i, &waitchk_mask[0], sizeof(waitchk_mask))
 		nvhost_syncpt_update_min(sp, i);
 
 	/* pin memory */

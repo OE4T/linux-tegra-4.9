@@ -509,9 +509,8 @@ int nvhost_gr3d_t30_read_reg(
 		goto done;
 	}
 
-	job = nvhost_job_alloc(channel, hwctx,
-			NULL,
-			nvhost_get_host(dev)->memmgr, 0, 0);
+	job = nvhost_job_alloc(channel, hwctx, 0, 0, 0,
+			nvhost_get_host(dev)->memmgr);
 	if (!job) {
 		err = -ENOMEM;
 		goto done;

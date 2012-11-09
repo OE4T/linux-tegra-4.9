@@ -94,6 +94,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 void nvhost_nvmap_unpin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct sg_table *sgt)
 {
+	kfree(sgt);
 	return nvmap_unpin((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);
 }

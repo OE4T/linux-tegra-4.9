@@ -29,8 +29,10 @@
 #define TEGRA_CRYPTO_IOCTL_SET_SEED	_IOWR(0x98, 102, int*)
 #define TEGRA_CRYPTO_IOCTL_GET_RANDOM	_IOWR(0x98, 103, int*)
 #define TEGRA_CRYPTO_IOCTL_GET_SHA	_IOWR(0x98, 104, int*)
+#define TEGRA_CRYPTO_IOCTL_RSA_REQ	_IOWR(0x98, 105, int*)
 
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
+#define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
 #define DEFAULT_RNG_BLK_SZ	16
 
@@ -70,6 +72,18 @@ struct tegra_rng_req {
 	u8 *rdata; /* random generated data */
 	int nbytes; /* random data length */
 	int type;
+};
+
+struct tegra_rsa_req {
+	char *key;
+	int keylen;
+	char *algo;
+	char *message;
+	int msg_len;
+	int modlen;
+	int pub_explen;
+	int prv_explen;
+	char *result;
 };
 
 struct tegra_sha_req {

@@ -1536,6 +1536,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	unsigned long status;
 	unsigned long underflow_mask;
 	u32 val;
+	int need_disable = 0;
 
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
@@ -1586,13 +1587,16 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 
 	/* update video mode if it has changed since the last frame */
 	if (status & (FRAME_END_INT | V_BLANK_INT))
-		tegra_dc_update_mode(dc);
+		if (tegra_dc_update_mode(dc))
+			need_disable = 1; /* force display off on error */
 
 	tegra_dc_release_dc_out(dc);
 	tegra_dc_io_end(dc);
 	clk_disable_unprepare(dc->clk);
 	mutex_unlock(&dc->lock);
 
+	if (need_disable)
+		tegra_dc_disable(dc);
 	return IRQ_HANDLED;
 #else /* CONFIG_TEGRA_FPGA_PLATFORM */
 	return IRQ_NONE;

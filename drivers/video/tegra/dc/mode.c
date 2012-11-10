@@ -327,16 +327,20 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 		fbmode->sync |=  FB_SYNC_HOR_HIGH_ACT;
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC))
 		fbmode->sync |= FB_SYNC_VERT_HIGH_ACT;
-	/* round up refresh rate for fractions above 0.500Hz */
-	fbmode->refresh = (tegra_dc_calc_refresh(mode) + 500) / 1000;
+	if (mode->rated_pclk >= 1000)
+		fbmode->pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
+	else if (mode->pclk >= 1000)
+		fbmode->pixclock = KHZ2PICOS(mode->pclk / 1000);
+	fbmode->refresh = tegra_dc_calc_refresh(mode) / 1000;
 
 	return 0;
 }
 
-void tegra_dc_update_mode(struct tegra_dc *dc)
+int tegra_dc_update_mode(struct tegra_dc *dc)
 {
 	if (dc->mode_dirty)
-		tegra_dc_program_mode(dc, &dc->mode);
+		return tegra_dc_program_mode(dc, &dc->mode);
+	return 0;
 }
 
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,

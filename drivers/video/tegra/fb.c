@@ -531,6 +531,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	unsigned long fb_size = 0;
 	unsigned long fb_phys = 0;
 	int ret = 0;
+	int mode_idx;
 	unsigned stride;
 	struct fb_videomode m;
 
@@ -635,24 +636,16 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
 	}
 
-	if (dc->mode.pclk > 1000) {
-		struct tegra_dc_mode *mode = &dc->mode;
+	for (mode_idx = 1; mode_idx < dc->out->n_modes; mode_idx++) {
+		struct tegra_dc_mode mode = dc->out->modes[mode_idx];
 		struct fb_videomode vmode;
 
-		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-			info->var.pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
-		else
-			info->var.pixclock = KHZ2PICOS(mode->pclk / 1000);
-		info->var.left_margin = mode->h_back_porch;
-		info->var.right_margin = mode->h_front_porch;
-		info->var.upper_margin = mode->v_back_porch;
-		info->var.lower_margin = mode->v_front_porch;
-		info->var.hsync_len = mode->h_sync_width;
-		info->var.vsync_len = mode->v_sync_width;
+		mode.pclk = dc->mode.pclk;
 
-		/* Keep info->var consistent with info->modelist. */
-		fb_var_to_videomode(&vmode, &info->var);
-		fb_add_videomode(&vmode, &info->modelist);
+		if (mode.pclk > 1000) {
+			tegra_dc_to_fb_videomode(&vmode, &mode);
+			fb_add_videomode(&vmode, &info->modelist);
+		}
 	}
 
 	return tegra_fb;

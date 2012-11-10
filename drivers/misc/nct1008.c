@@ -92,6 +92,7 @@ struct nct1008_data {
 	long current_lo_limit;
 	long current_hi_limit;
 	int conv_period_ms;
+	long etemp;
 
 	struct thermal_cooling_device *passive_cdev;
 	struct thermal_cooling_device *active_cdev[NCT1008_MAX_ACTIVE];
@@ -837,6 +838,7 @@ static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
 				temp_ext_lo * 250;
 
 	*temp = temp_ext_milli;
+	data->etemp = temp_ext_milli;
 
 	return 0;
 }
@@ -913,6 +915,25 @@ static int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
 	return 0;
 }
 
+static int nct1008_ext_get_trend(struct thermal_zone_device *thz,
+				int trip, enum thermal_trend *trend)
+{
+	struct nct1008_data *data = thz->devdata;
+
+	if (trip > 0) {
+		/* aggressive active cooling */
+		*trend = THERMAL_TREND_RAISING;
+		return 0;
+	}
+
+	if (data->etemp > data->plat_data.passive.trip_temp)
+		*trend = THERMAL_TREND_RAISING;
+	else
+		*trend = THERMAL_TREND_DROPPING;
+
+	return 0;
+}
+
 static int nct1008_int_get_temp(struct thermal_zone_device *thz,
 					unsigned long *temp)
 {
@@ -969,6 +990,7 @@ static struct thermal_zone_device_ops nct_ext_ops = {
 	.get_trip_type = nct1008_ext_get_trip_type,
 	.get_trip_temp = nct1008_ext_get_trip_temp,
 	.set_trip_temp = nct1008_ext_set_trip_temp,
+	.get_trend = nct1008_ext_get_trend,
 };
 #endif
 

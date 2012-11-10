@@ -114,6 +114,8 @@ struct tegra_dc {
 	int				new_emc_clk_rate;
 	struct tegra_dc_shift_clk_div	shift_clk_div;
 
+	u32				powergate_id;
+
 	bool				connected;
 	bool				enabled;
 	bool				suspended;

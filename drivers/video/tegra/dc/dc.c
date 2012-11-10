@@ -1084,6 +1084,13 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 	}
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	if (out->type == TEGRA_DC_OUT_HDMI)
+		dc->powergate_id = TEGRA_POWERGATE_DISB;
+	else
+		dc->powergate_id = TEGRA_POWERGATE_DISA;
+#endif
+
 	if (dc->out_ops && dc->out_ops->init)
 		dc->out_ops->init(dc);
 }
@@ -1490,6 +1497,11 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	u32 val;
 
 	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return IRQ_HANDLED;
+	}
+
 	clk_enable(dc->clk);
 	tegra_dc_io_start(dc);
 	tegra_dc_hold_dc_out(dc);
@@ -1745,6 +1757,8 @@ static int tegra_dc_init(struct tegra_dc *dc)
 static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 {
 	int failed_init = 0;
+
+	tegra_dc_unpowergate_locked(dc);
 
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
@@ -2020,6 +2034,8 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 	_tegra_dc_controller_disable(dc);
 	tegra_dc_io_end(dc);
+
+	tegra_dc_powergate_locked(dc);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
@@ -2356,6 +2372,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->out_ops->detect(dc);
 	else
 		dc->connected = true;
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	/* Powergate display module when it's unconnected. */
+	if (!tegra_dc_get_connected(dc))
+		tegra_dc_powergate_locked(dc);
+#endif
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);
 

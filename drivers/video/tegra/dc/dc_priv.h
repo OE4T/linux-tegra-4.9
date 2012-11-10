@@ -24,6 +24,7 @@
 #ifndef CREATE_TRACE_POINTS
 # include <trace/events/display.h>
 #endif
+#include <mach/powergate.h>
 
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
 {
@@ -206,6 +207,23 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 	return dc->mode.pclk;
 #endif
 }
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
+{
+	if (tegra_powergate_is_powered(dc->powergate_id))
+		tegra_powergate_partition(dc->powergate_id);
+}
+
+static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
+{
+	if (!tegra_powergate_is_powered(dc->powergate_id))
+		tegra_unpowergate_partition(dc->powergate_id);
+}
+#else
+static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
+static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }
+#endif
 
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;

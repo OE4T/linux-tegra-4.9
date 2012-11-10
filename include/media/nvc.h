@@ -1,18 +1,16 @@
-/* Copyright (C) 2012 NVIDIA Corporation.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
+/* Copyright (c) 2012 - 2013, NVIDIA CORPORATION.  All rights reserved.
+
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- * 02111-1307, USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __NVC_H__
@@ -27,6 +25,7 @@
 struct nvc_param {
 	int param;
 	__u32 sizeofvalue;
+	__u32 variant;
 	void *p_value;
 } __packed;
 
@@ -80,6 +79,9 @@ enum nvc_params {
 	NVC_PARAM_DEV_ID,
 	NVC_PARAM_GROUP_HOLD,
 	NVC_PARAM_SET_SENSOR_FLASH_MODE,
+	NVC_PARAM_TORCH_QUERY,
+	NVC_PARAM_FLASH_EXT_CAPS,
+	NVC_PARAM_TORCH_EXT_CAPS,
 	NVC_PARAM_BEGIN_VENDOR_EXTENSIONS = 0x10000000,
 	NVC_PARAM_CALIBRATION_STATUS,
 	NVC_PARAM_TEST_PATTERN,

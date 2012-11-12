@@ -1213,6 +1213,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	struct nvmap_handle_ref *ref;
 	int idx;
+	phys_addr_t dummy;
 
 	BUG_ON(!client || client->dev != nvmap_dev);
 
@@ -1239,7 +1240,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 	nvmap_ref_lock(client);
 	ref = _nvmap_validate_id_locked(client, id);
 	if (ref)
-		nvmap_pin(client, ref);
+		nvmap_pin(client, ref, &dummy);
 	nvmap_ref_unlock(client);
 
 	return 0;

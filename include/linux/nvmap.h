@@ -108,7 +108,8 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 
 void nvmap_client_put(struct nvmap_client *c);
 
-phys_addr_t nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
+int nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r,
+	      phys_addr_t *phys);
 
 phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 					 unsigned long user_id);

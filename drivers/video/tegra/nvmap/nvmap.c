@@ -585,12 +585,11 @@ phys_addr_t nvmap_get_addr_from_user_id(ulong user_id)
 /*
  * Pin handle without slow validation step
  */
-phys_addr_t _nvmap_pin(struct nvmap_client *client,
-			struct nvmap_handle_ref *ref)
+int _nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
+	       phys_addr_t *phys)
 {
 	int ret = 0;
 	struct nvmap_handle *h;
-	phys_addr_t phys;
 
 	if (!virt_addr_valid(client) ||
 	    !virt_addr_valid(ref) ||
@@ -617,10 +616,10 @@ phys_addr_t _nvmap_pin(struct nvmap_client *client,
 			ret = map_iovmm_area(h);
 		if (ret)
 			goto err_out_unpin;
-		phys = handle_phys(h);
+		*phys = handle_phys(h);
 	}
 
-	return phys;
+	return 0;
 
 err_out_unpin:
 	nvmap_handle_get(h);
@@ -631,8 +630,8 @@ err_out:
 	return ret;
 }
 
-phys_addr_t nvmap_pin(struct nvmap_client *client,
-			struct nvmap_handle_ref *ref)
+int nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
+	      phys_addr_t *phys)
 {
 	struct nvmap_handle *h;
 
@@ -647,7 +646,7 @@ phys_addr_t nvmap_pin(struct nvmap_client *client,
 		h = ref->handle;
 	nvmap_ref_unlock(client);
 
-	return _nvmap_pin(client, ref);
+	return _nvmap_pin(client, ref, phys);
 }
 EXPORT_SYMBOL(nvmap_pin);
 

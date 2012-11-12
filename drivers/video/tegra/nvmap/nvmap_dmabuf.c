@@ -72,11 +72,9 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	if (IS_ERR(sgt))
 		return sgt;
 
-	addr = nvmap_pin(info->client, info->ref);
-	if (IS_ERR_VALUE(addr)) {
-		err = addr;
+	err = nvmap_pin(info->client, info->ref, &addr);
+	if (err)
 		goto err_pin;
-	}
 
 	sg_dma_address(sgt->sgl) = addr;
 

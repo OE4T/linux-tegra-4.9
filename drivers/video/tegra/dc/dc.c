@@ -463,6 +463,17 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_COM_PM1_CONTROL);
 	DUMP_REG(DC_COM_PM1_DUTY_CYCLE);
 	DUMP_REG(DC_DISP_SD_CONTROL);
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	DUMP_REG(DC_COM_CMU_CSC_KRR);
+	DUMP_REG(DC_COM_CMU_CSC_KGR);
+	DUMP_REG(DC_COM_CMU_CSC_KBR);
+	DUMP_REG(DC_COM_CMU_CSC_KRG);
+	DUMP_REG(DC_COM_CMU_CSC_KGG);
+	DUMP_REG(DC_COM_CMU_CSC_KBR);
+	DUMP_REG(DC_COM_CMU_CSC_KRB);
+	DUMP_REG(DC_COM_CMU_CSC_KGB);
+	DUMP_REG(DC_COM_CMU_CSC_KBB);
+#endif
 
 	tegra_dc_release_dc_out(dc);
 	tegra_dc_io_end(dc);
@@ -827,7 +838,7 @@ void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 EXPORT_SYMBOL(tegra_dc_get_cmu);
 
-int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
 	u32 val;
 
@@ -856,20 +867,32 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 		tegra_dc_set_cmu(dc, &dc->cmu);
 	}
+	tegra_dc_set_color_control(dc);
 
 	return 0;
+}
+
+int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+{
+	int ret;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_io_start(dc);
+	tegra_dc_hold_dc_out(dc);
+
+	ret = _tegra_dc_update_cmu(dc, cmu);
+
+	tegra_dc_release_dc_out(dc);
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
-	clk_enable(dc->clk);
-	tegra_dc_io_start(dc);
-	dc->pdata->cmu_enable = cmu_enable;
 	tegra_dc_update_cmu(dc, &dc->cmu);
-	tegra_dc_set_color_control(dc);
-	tegra_dc_io_end(dc);
-	clk_disable(dc->clk);
 }
 #else
 #define tegra_dc_cache_cmu(dst_cmu, src_cmu)
@@ -1713,9 +1736,9 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_DC_CMU
 	if (dc->pdata->cmu)
-		tegra_dc_update_cmu(dc, dc->pdata->cmu);
+		_tegra_dc_update_cmu(dc, dc->pdata->cmu);
 	else
-		tegra_dc_update_cmu(dc, &default_cmu);
+		_tegra_dc_update_cmu(dc, &default_cmu);
 #endif
 	tegra_dc_set_color_control(dc);
 	for (i = 0; i < DC_N_WINDOWS; i++) {

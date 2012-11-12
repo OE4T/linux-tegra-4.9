@@ -174,6 +174,13 @@ struct tegra_dc_ext_csc {
 	__u16 kvb;	/* s.2.8 */
 };
 
+struct tegra_dc_ext_cmu {
+	__u16 cmu_enable;
+	__u16 csc[9];
+	__u16 lut1[256];
+	__u16 lut2[960];
+};
+
 /*
  * RGB Lookup table
  *
@@ -258,6 +265,9 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_CURSOR_CLIP \
 	_IOW('D', 0x0C, __s32)
+
+#define TEGRA_DC_EXT_SET_CMU \
+	_IOW('D', 0x0D, struct tegra_dc_ext_cmu)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

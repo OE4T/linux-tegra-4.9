@@ -774,11 +774,12 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 		fifo_eng_runlist_length_f(count));
 
 	remain =
-		wait_event_interruptible(
+		wait_event_timeout(
 			runlist->runlist_wq,
 			((pending =
 				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
-				fifo_eng_runlist_pending_true_f()) == 0));
+				fifo_eng_runlist_pending_true_f()) == 0),
+			MAX_SCHEDULE_TIMEOUT);
 
 	if (remain == 0 && pending != 0) {
 		nvhost_err(dev_from_gk20a(g), "runlist update timeout");

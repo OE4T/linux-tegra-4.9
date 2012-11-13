@@ -80,11 +80,11 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		return ERR_PTR(err);
 	}
 
-	ret = nvmap_pin((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle);
-	if (IS_ERR_VALUE(ret)) {
+	err = nvmap_pin((struct nvmap_client *)mgr,
+			(struct nvmap_handle_ref *)handle, &ret);
+	if (err) {
 		kfree(sgt);
-		return ERR_PTR(ret);
+		return ERR_PTR(err);
 	}
 	sg_dma_address(sgt->sgl) = ret;
 

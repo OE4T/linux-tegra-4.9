@@ -31,7 +31,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	struct tegra_dc_ext *ext = user->ext;
 	struct nvmap_handle_ref *win_dup;
 	ulong win_handle_id;
-	dma_addr_t phys;
+	int err;
 
 	if (!id) {
 		*handle = NULL;
@@ -61,14 +61,12 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	if (IS_ERR(win_dup))
 		return PTR_ERR(win_dup);
 
-	phys = nvmap_pin(ext->nvmap, win_dup);
-	/* XXX this isn't correct for non-pointers... */
-	if (IS_ERR((void *)phys)) {
+	err = nvmap_pin(ext->nvmap, win_dup, phys_addr);
+	if (err) {
 		nvmap_free(ext->nvmap, win_dup);
-		return PTR_ERR((void *)phys);
+		return err;
 	}
 
-	*phys_addr = phys;
 	*handle = win_dup;
 
 	return 0;

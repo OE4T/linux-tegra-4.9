@@ -171,10 +171,10 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 
 	if (val == 1) {
 		tegra_dc_enable_crc(dc);
-		dev_err(&dc->ndev->dev, "crc is enabled.\n");
+		dev_dbg(&dc->ndev->dev, "crc is enabled.\n");
 	} else if (val == 0) {
 		tegra_dc_disable_crc(dc);
-		dev_err(&dc->ndev->dev, "crc is disabled.\n");
+		dev_dbg(&dc->ndev->dev, "crc is disabled.\n");
 	} else
 		dev_err(&dc->ndev->dev, "Invalid input.\n");
 

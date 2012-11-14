@@ -116,7 +116,7 @@ static struct nvhost_device_data tegra_gr3d02_info = {
 	.modulemutexes	= BIT(NVMODMUTEX_3D),
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
 	.clocks		= { {"gr3d", UINT_MAX, 8, true},
-			    {"gr3d2", UINT_MAX, true},
+			    {"gr3d2", UINT_MAX, 0, true},
 			    {"emc", UINT_MAX, 75} },
 	.powergate_ids = { TEGRA_POWERGATE_3D,
 			   TEGRA_POWERGATE_3D1 },

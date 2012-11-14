@@ -66,6 +66,38 @@ static inline u32 host1x_sync_hintstatus_r(void)
 {
 	return 0x20;
 }
+static inline u32 host1x_sync_hintstatus_unit1_actmon_intr_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_hintstatus_unit1_actmon_intr_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 host1x_sync_hintstatus_unit1_actmon_intr_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 host1x_sync_hintstatus_unit1_actmon_intr_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 host1x_sync_hintstatus_unit2_actmon_intr_s(void)
+{
+	return 1;
+}
+static inline u32 host1x_sync_hintstatus_unit2_actmon_intr_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 host1x_sync_hintstatus_unit2_actmon_intr_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 host1x_sync_hintstatus_unit2_actmon_intr_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
 static inline u32 host1x_sync_hintmask_r(void)
 {
 	return 0x24;
@@ -110,93 +142,41 @@ static inline u32 host1x_sync_hintmask_ext_r(void)
 {
 	return 0x2c;
 }
-static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
-{
-	return 0x40;
-}
-static inline u32 host1x_sync_syncpt_thresh_cpu1_int_status_r(void)
-{
-	return 0x58;
-}
-static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
-{
-	return 0xa0;
-}
-static inline u32 host1x_sync_syncpt_thresh_int_enable_cpu0_r(void)
-{
-	return 0xb8;
-}
-static inline u32 host1x_sync_cf0_setup_r(void)
-{
-	return 0x100;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_base_s(void)
-{
-	return 10;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_base_f(u32 v)
-{
-	return (v & 0x3ff) << 0;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_base_m(void)
-{
-	return 0x3ff << 0;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_base_v(u32 r)
-{
-	return (r >> 0) & 0x3ff;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_limit_s(void)
-{
-	return 10;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_limit_f(u32 v)
-{
-	return (v & 0x3ff) << 16;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_limit_m(void)
-{
-	return 0x3ff << 16;
-}
-static inline u32 host1x_sync_cf0_setup_cf0_limit_v(u32 r)
-{
-	return (r >> 16) & 0x3ff;
-}
 static inline u32 host1x_sync_cmdproc_stop_r(void)
 {
-	return 0x13c;
+	return 0xac;
 }
 static inline u32 host1x_sync_ch_teardown_r(void)
 {
-	return 0x140;
+	return 0xb0;
 }
 static inline u32 host1x_sync_usec_clk_r(void)
 {
-	return 0x244;
+	return 0x1a4;
 }
 static inline u32 host1x_sync_ctxsw_timeout_cfg_r(void)
 {
-	return 0x248;
+	return 0x1a8;
 }
 static inline u32 host1x_sync_ip_busy_timeout_r(void)
 {
-	return 0x25c;
+	return 0x1bc;
 }
 static inline u32 host1x_sync_ip_read_timeout_addr_r(void)
 {
-	return 0x260;
+	return 0x1c0;
 }
 static inline u32 host1x_sync_ip_write_timeout_addr_r(void)
 {
-	return 0x264;
+	return 0x1c4;
 }
 static inline u32 host1x_sync_mlock_0_r(void)
 {
-	return 0x380;
+	return 0x2c0;
 }
 static inline u32 host1x_sync_mlock_owner_0_r(void)
 {
-	return 0x400;
+	return 0x340;
 }
 static inline u32 host1x_sync_mlock_owner_0_mlock_owner_chid_0_s(void)
 {
@@ -246,29 +226,13 @@ static inline u32 host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(u32 r)
 {
 	return (r >> 0) & 0x1;
 }
-static inline u32 host1x_sync_syncpt_0_r(void)
-{
-	return 0x500;
-}
-static inline u32 host1x_sync_syncpt_int_thresh_0_r(void)
-{
-	return 0x800;
-}
 static inline u32 host1x_sync_syncpt_base_0_r(void)
 {
-	return 0xb00;
-}
-static inline u32 host1x_sync_syncpt_cpu_incr_r(void)
-{
-	return 0xc00;
-}
-static inline u32 host1x_sync_cbread0_r(void)
-{
-	return 0xc20;
+	return 0x600;
 }
 static inline u32 host1x_sync_cfpeek_ctrl_r(void)
 {
-	return 0xc5c;
+	return 0x74c;
 }
 static inline u32 host1x_sync_cfpeek_ctrl_cfpeek_addr_s(void)
 {
@@ -320,11 +284,11 @@ static inline u32 host1x_sync_cfpeek_ctrl_cfpeek_ena_v(u32 r)
 }
 static inline u32 host1x_sync_cfpeek_read_r(void)
 {
-	return 0xc60;
+	return 0x750;
 }
 static inline u32 host1x_sync_cfpeek_ptrs_r(void)
 {
-	return 0xc64;
+	return 0x754;
 }
 static inline u32 host1x_sync_cfpeek_ptrs_cf_rd_ptr_s(void)
 {
@@ -358,9 +322,49 @@ static inline u32 host1x_sync_cfpeek_ptrs_cf_wr_ptr_v(u32 r)
 {
 	return (r >> 16) & 0x3ff;
 }
+static inline u32 host1x_sync_cf0_setup_r(void)
+{
+	return 0xc00;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_base_s(void)
+{
+	return 10;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_base_f(u32 v)
+{
+	return (v & 0x3ff) << 0;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_base_m(void)
+{
+	return 0x3ff << 0;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_base_v(u32 r)
+{
+	return (r >> 0) & 0x3ff;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_limit_s(void)
+{
+	return 10;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_limit_f(u32 v)
+{
+	return (v & 0x3ff) << 16;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_limit_m(void)
+{
+	return 0x3ff << 16;
+}
+static inline u32 host1x_sync_cf0_setup_cf0_limit_v(u32 r)
+{
+	return (r >> 16) & 0x3ff;
+}
+static inline u32 host1x_sync_cbread0_r(void)
+{
+	return 0xc80;
+}
 static inline u32 host1x_sync_cbstat_0_r(void)
 {
-	return 0xc68;
+	return 0xcc0;
 }
 static inline u32 host1x_sync_cbstat_0_cboffset0_s(void)
 {
@@ -393,6 +397,34 @@ static inline u32 host1x_sync_cbstat_0_cbclass0_m(void)
 static inline u32 host1x_sync_cbstat_0_cbclass0_v(u32 r)
 {
 	return (r >> 16) & 0x3ff;
+}
+static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
+{
+	return 0xe80;
+}
+static inline u32 host1x_sync_syncpt_thresh_cpu1_int_status_r(void)
+{
+	return 0xea0;
+}
+static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
+{
+	return 0xf00;
+}
+static inline u32 host1x_sync_syncpt_thresh_int_enable_cpu0_r(void)
+{
+	return 0xf20;
+}
+static inline u32 host1x_sync_syncpt_cpu_incr_r(void)
+{
+	return 0xf60;
+}
+static inline u32 host1x_sync_syncpt_0_r(void)
+{
+	return 0xf80;
+}
+static inline u32 host1x_sync_syncpt_int_thresh_0_r(void)
+{
+	return 0x1380;
 }
 
 #endif /* __hw_host1x04_sync_h__ */

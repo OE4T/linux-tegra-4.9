@@ -406,6 +406,10 @@ static inline u32 host1x_uclass_indoff_indmodid_msenc_v(void)
 {
 	return 19;
 }
+static inline u32 host1x_uclass_indoff_indmodid_ispb_v(void)
+{
+	return 26;
+}
 static inline u32 host1x_uclass_indoff_indroffset_s(void)
 {
 	return 16;

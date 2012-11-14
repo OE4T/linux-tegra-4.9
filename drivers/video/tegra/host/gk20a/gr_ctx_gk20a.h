@@ -27,7 +27,7 @@
 /* emulation netlists, match majorV with HW */
 #define GK20A_NETLIST_IMAGE_A	"NETA_img.bin"
 #define GK20A_NETLIST_IMAGE_B	"NETB_img.bin"
-#undef  GK20A_NETLIST_IMAGE_C
+#define GK20A_NETLIST_IMAGE_C	"NETC_img.bin"
 #undef  GK20A_NETLIST_IMAGE_D
 
 union __max_name {

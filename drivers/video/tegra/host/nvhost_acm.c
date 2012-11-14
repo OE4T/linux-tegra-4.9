@@ -462,6 +462,7 @@ int nvhost_module_init(struct platform_device *dev)
 		pdata->clk[pdata->num_clks++] = c;
 		i++;
 	}
+	pdata->num_clks = i;
 
 	/* reset the module */
 	mutex_lock(&pdata->lock);

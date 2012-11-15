@@ -21,6 +21,7 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <linux/scatterlist.h>
@@ -307,6 +308,8 @@ clean_up:
 
 void nvhost_msenc_init(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 	int err = 0;
 	struct msenc *m;
 	char *fw_name;
@@ -332,6 +335,12 @@ void nvhost_msenc_init(struct platform_device *dev)
 	if (err || !m->valid) {
 		dev_err(&dev->dev, "ucode not valid");
 		goto clean_up;
+	}
+
+	if (!pdata->can_powergate) {
+		nvhost_module_busy(dev);
+		msenc_boot(dev);
+		nvhost_module_idle(dev);
 	}
 
 	return;

@@ -42,8 +42,6 @@ static const struct hwctx_reginfo ctxsave_regs_3d_per_pipe[] = {
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	/* bug 962360. Reg 0xe44 has to be the first one to be restored*/
 	HWCTX_REGINFO_RST(0x40e, 1, DIRECT, 0xe44),
-	/* remove following line for part 2 checkin */
-	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe44),
 	HWCTX_REGINFO(0xe00,   35, DIRECT),
 	HWCTX_REGINFO(0xe25,    2, DIRECT),
 	HWCTX_REGINFO(0xe28,    2, DIRECT),

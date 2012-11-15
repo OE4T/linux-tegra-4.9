@@ -53,6 +53,7 @@ struct clk_gk20a {
 
 int gk20a_init_clk_support(struct gk20a *g, bool reinit);
 
+u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
 
 #endif /* _NVHOST_CLK_GK20A_H_ */

@@ -143,6 +143,12 @@ struct pmu_hdr {
 
 #define PMU_QUEUE_COUNT		5
 
+struct pmu_allocation {
+	u8 pad[2];
+	u16 size;
+	u32 offset;
+};
+
 enum {
 	PMU_INIT_MSG_TYPE_PMU_INIT = 0,
 };
@@ -232,32 +238,23 @@ struct pmu_rc_msg {
 	struct pmu_rc_msg_unhandled_cmd unhandled_cmd;
 };
 
-struct pmu_msg {
-	struct pmu_hdr hdr;
-	union {
-		struct pmu_init_msg init;
-		struct pmu_pg_msg pg;
-		struct pmu_rc_msg rc;
-	} msg;
-};
-
 enum {
-	PMU_PG_CMD_TYPE_ELPG_CMD = 0,
-	PMU_PG_CMD_TYPE_ENG_BUF_LOAD,
-	PMU_PG_CMD_TYPE_ENG_BUF_UNLOAD,
-	PMU_PG_CMD_TYPE_PG_STAT,
-	PMU_PG_CMD_TYPE_PG_LOG_INIT,
-	PMU_PG_CMD_TYPE_PG_LOG_FLUSH,
-	PMU_PG_CMD_TYPE_PG_PARAM,
-	PMU_PG_CMD_TYPE_ELPG_INIT,
-	PMU_PG_CMD_TYPE_ELPG_POLL_CTXSAVE,
-	PMU_PG_CMD_TYPE_ELPG_ABORT_POLL,
-	PMU_PG_CMD_TYPE_ELPG_PWR_UP,
-	PMU_PG_CMD_TYPE_ELPG_DISALLOW,
-	PMU_PG_CMD_TYPE_ELPG_ALLOW,
-	PMU_PG_CMD_TYPE_PWR_RAIL_GATE_DISABLE = 0x20,
-	PMU_PG_CMD_TYPE_PWR_RAIL_GATE_ENABLE,
-	PMU_PG_CMD_TYPE_PWR_RAIL_SMU_MSG_DISABLE
+	PMU_PG_CMD_ID_ELPG_CMD = 0,
+	PMU_PG_CMD_ID_ENG_BUF_LOAD,
+	PMU_PG_CMD_ID_ENG_BUF_UNLOAD,
+	PMU_PG_CMD_ID_PG_STAT,
+	PMU_PG_CMD_ID_PG_LOG_INIT,
+	PMU_PG_CMD_ID_PG_LOG_FLUSH,
+	PMU_PG_CMD_ID_PG_PARAM,
+	PMU_PG_CMD_ID_ELPG_INIT,
+	PMU_PG_CMD_ID_ELPG_POLL_CTXSAVE,
+	PMU_PG_CMD_ID_ELPG_ABORT_POLL,
+	PMU_PG_CMD_ID_ELPG_PWR_UP,
+	PMU_PG_CMD_ID_ELPG_DISALLOW,
+	PMU_PG_CMD_ID_ELPG_ALLOW,
+	PMU_PG_CMD_ID_PWR_RAIL_GATE_DISABLE = 0x20,
+	PMU_PG_CMD_ID_PWR_RAIL_GATE_ENABLE,
+	PMU_PG_CMD_ID_PWR_RAIL_SMU_MSG_DISABLE
 };
 
 enum {
@@ -306,11 +303,106 @@ struct pmu_pg_cmd {
 	};
 };
 
+/* PERFMON */
+#define PMU_DOMAIN_GROUP_PSTATE		0
+#define PMU_DOMAIN_GROUP_GPC2CLK	1
+#define PMU_DOMAIN_GROUP_NUM		2
+
+/* TBD: smart strategy */
+#define PMU_PERFMON_PCT_TO_INC		58
+#define PMU_PERFMON_PCT_TO_DEC		23
+
+struct pmu_perfmon_counter {
+	u8 index;
+	u8 flags;
+	u8 group_id;
+	u8 valid;
+	u16 upper_threshold; /* units of 0.01% */
+	u16 lower_threshold; /* units of 0.01% */
+};
+
+#define PMU_PERFMON_FLAG_ENABLE_INCREASE	(0x00000001)
+#define PMU_PERFMON_FLAG_ENABLE_DECREASE	(0x00000002)
+#define PMU_PERFMON_FLAG_CLEAR_PREV		(0x00000004)
+
+/* PERFMON CMD */
+enum {
+	PMU_PERFMON_CMD_ID_START = 0,
+	PMU_PERFMON_CMD_ID_STOP  = 1,
+	PMU_PERFMON_CMD_ID_INIT  = 2
+};
+
+struct pmu_perfmon_cmd_start {
+	u8 cmd_type;
+	u8 group_id;
+	u8 state_id;
+	u8 flags;
+	struct pmu_allocation counter_alloc;
+};
+
+struct pmu_perfmon_cmd_stop {
+	u8 cmdType;
+};
+
+struct pmu_perfmon_cmd_init {
+	u8 cmd_type;
+	u8 to_decrease_count;
+	u8 base_counter_id;
+	u32 sample_period_us;
+	struct pmu_allocation counter_alloc;
+	u8 num_counters;
+	u8 samples_in_moving_avg;
+	u16 sample_buffer;
+};
+
+struct pmu_perfmon_cmd {
+	union {
+		u8 cmd_type;
+		struct pmu_perfmon_cmd_start start;
+		struct pmu_perfmon_cmd_stop stop;
+		struct pmu_perfmon_cmd_init init;
+	};
+};
+
+/* PERFMON MSG */
+enum {
+	PMU_PERFMON_MSG_ID_INCREASE_EVENT = 0,
+	PMU_PERFMON_MSG_ID_DECREASE_EVENT = 1,
+	PMU_PERFMON_MSG_ID_INIT_EVENT     = 2,
+	PMU_PERFMON_MSG_ID_ACK            = 3
+};
+
+struct pmu_perfmon_msg_generic {
+	u8 msg_type;
+	u8 state_id;
+	u8 group_id;
+	u8 data;
+};
+
+struct pmu_perfmon_msg {
+	union {
+		u8 msg_type;
+		struct pmu_perfmon_msg_generic gen;
+	};
+};
+
+
 struct pmu_cmd {
 	struct pmu_hdr hdr;
 	union {
+		struct pmu_perfmon_cmd perfmon;
 		struct pmu_pg_cmd pg;
 	} cmd;
+};
+
+struct pmu_msg {
+	struct pmu_hdr hdr;
+	union {
+		struct pmu_init_msg init;
+		struct pmu_perfmon_msg perfmon;
+		struct pmu_pg_msg pg;
+		struct pmu_rc_msg rc;
+	} msg;
 };
 
 #define PMU_SHA1_GID_SIGNATURE		0xA7C66AD2
@@ -447,12 +539,6 @@ enum
 	PMU_SEQ_STATE_CANCELLED
 };
 
-struct pmu_allocation {
-	u8 pad[2];
-	u16 size;
-	u32 offset;
-};
-
 struct pmu_payload {
 	struct {
 		void *buf;
@@ -545,6 +631,9 @@ struct pmu_gk20a {
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
 	struct timer_list elpg_timer;
 	bool elpg_enable_allow; /* true after init, false after disable, true after delay */
+
+	struct pmu_perfmon_counter perfmon_counters[2];
+	u32 perfmon_state_id[2];
 
 	bool initialized;
 

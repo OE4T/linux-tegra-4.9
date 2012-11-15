@@ -1112,6 +1112,11 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	pmu->elpg_timer.function = pmu_elpg_enable_allow;
 	pmu->elpg_timer.data = (unsigned long)pmu;
 
+	pmu->perfmon_counters[0].index = 3; /* GR */
+	pmu->perfmon_counters[0].group_id = PMU_DOMAIN_GROUP_PSTATE;
+	pmu->perfmon_counters[1].index = 4; /* MEM */
+	pmu->perfmon_counters[1].group_id = PMU_DOMAIN_GROUP_PSTATE;
+
 	pmu->remove_support = gk20a_remove_pmu_support;
 
 	nvhost_dbg_fn("done");
@@ -1227,7 +1232,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_eng_buf_load);
-	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_TYPE_ENG_BUF_LOAD;
+	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_ID_ENG_BUF_LOAD;
 	cmd.cmd.pg.eng_buf_load.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.eng_buf_load.buf_idx = PMU_PGENG_GR_BUFFER_IDX_FECS;
 	cmd.cmd.pg.eng_buf_load.buf_size = pmu->pg_buf.mem.size;
@@ -1253,7 +1258,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_eng_buf_load);
-	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_TYPE_ENG_BUF_LOAD;
+	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_ID_ENG_BUF_LOAD;
 	cmd.cmd.pg.eng_buf_load.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.eng_buf_load.buf_idx = PMU_PGENG_GR_BUFFER_IDX_ZBC;
 	cmd.cmd.pg.eng_buf_load.buf_size = pmu->seq_buf.mem.size;
@@ -1390,7 +1395,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_TYPE_ELPG_CMD;
+	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
@@ -1402,7 +1407,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_stat);
-	cmd.cmd.pg.stat.cmd_type = PMU_PG_CMD_TYPE_PG_STAT;
+	cmd.cmd.pg.stat.cmd_type = PMU_PG_CMD_ID_PG_STAT;
 	cmd.cmd.pg.stat.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.stat.sub_cmd_id = PMU_PG_STAT_CMD_ALLOC_DMEM;
 	cmd.cmd.pg.stat.data = 0;
@@ -1416,12 +1421,88 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_TYPE_ELPG_CMD;
+	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+
+	return 0;
+}
+
+static int pmu_init_perfmon(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = pmu->g;
+	struct pmu_cmd cmd;
+	struct pmu_payload payload;
+	u32 sample_buffer;
+	u32 seq;
+	u32 data;
+	int err;
+
+	nvhost_dbg_fn("");
+
+	/* GR */
+	gk20a_writel(g, pwr_pmu_idle_mask_r(3),
+		pwr_pmu_idle_mask_gr_enabled_f());
+
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(3));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
+			pwr_pmu_idle_ctrl_value_busy_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
+
+	/* MEM */
+	gk20a_writel(g, pwr_pmu_idle_mask_r(4), 0);
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(4));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
+			pwr_pmu_idle_ctrl_value_busy_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(4), data);
+
+	/* TOTAL */
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(7));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
+			pwr_pmu_idle_ctrl_value_always_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(7), data);
+
+	err = pmu->dmem.alloc(&pmu->dmem, &sample_buffer, 2 * sizeof(u16));
+	if (err) {
+		nvhost_err(dev_from_gk20a(g),
+			"failed to allocate perfmon sample buffer");
+		return -ENOMEM;
+	}
+
+	/* init PERFMON */
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_init);
+	cmd.cmd.perfmon.cmd_type = PMU_PERFMON_CMD_ID_INIT;
+	/* buffer to save counter values for pmu perfmon */
+	cmd.cmd.perfmon.init.sample_buffer = (u16)sample_buffer;
+	/* number of sample periods below lower threshold
+	   before pmu triggers perfmon decrease event
+	   TBD: = 15 */
+	cmd.cmd.perfmon.init.to_decrease_count = 3;
+	/* index of base counter, aka. always ticking counter */
+	cmd.cmd.perfmon.init.base_counter_id = 7;
+	/* microseconds interval between pmu polls perf counters
+	   TBD: = 1000 * (1000 * (vblank=)10 + 30) / 60 = 167000 */
+	cmd.cmd.perfmon.init.sample_period_us = 100;
+	/* number of perfmon counters
+	   GR(3) and MEM(4) for gk20a */
+	cmd.cmd.perfmon.init.num_counters = 2;
+	/* moving average window for sample periods
+	   TBD: = 3000000 / sample_period_us = 17 */
+	cmd.cmd.perfmon.init.samples_in_moving_avg = 3;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	payload.in.buf = &pmu->perfmon_counters;
+	payload.in.size = 2 * sizeof(struct pmu_perfmon_counter);
+	payload.in.offset =
+		offsetof(struct pmu_perfmon_cmd_init, counter_alloc);
+
+	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
+			NULL, NULL, &seq, ~0);
 
 	return 0;
 }
@@ -1627,7 +1708,101 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 
 	/* TBD: notify client waiting for available dmem */
 
+	nvhost_dbg_fn("done");
+
 	return 0;
+}
+
+static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = pmu->g;
+	struct pmu_cmd cmd;
+	struct pmu_payload payload;
+	u32 seq;
+
+	/* PERFMON Start */
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_start);
+	cmd.cmd.perfmon.start.cmd_type = PMU_PERFMON_CMD_ID_START;
+	cmd.cmd.perfmon.start.group_id = PMU_DOMAIN_GROUP_PSTATE;
+	cmd.cmd.perfmon.start.state_id = pmu->perfmon_state_id[PMU_DOMAIN_GROUP_PSTATE];
+	cmd.cmd.perfmon.start.flags =
+				PMU_PERFMON_FLAG_ENABLE_INCREASE |
+				PMU_PERFMON_FLAG_ENABLE_DECREASE |
+				PMU_PERFMON_FLAG_CLEAR_PREV;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+
+	/* TBD: PMU_PERFMON_PCT_TO_INC * 100 */
+	pmu->perfmon_counters[0].upper_threshold = 1000; /* 10% = */
+	/* TBD: PMU_PERFMON_PCT_TO_DEC * 100 */
+	pmu->perfmon_counters[0].lower_threshold = 500; /* 5% */
+	pmu->perfmon_counters[0].valid = true;
+
+	payload.in.buf = &pmu->perfmon_counters;
+	payload.in.size = 2 * sizeof(pmu->perfmon_counters);
+	payload.in.offset =
+		offsetof(struct pmu_perfmon_cmd_start, counter_alloc);
+
+	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
+			NULL, NULL, &seq, ~0);
+
+	return 0;
+}
+
+static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
+			struct pmu_perfmon_msg *msg)
+{
+	struct gk20a *g = pmu->g;
+	u32 rate;
+
+	nvhost_dbg_fn("");
+
+	switch (msg->msg_type) {
+	case PMU_PERFMON_MSG_ID_INCREASE_EVENT:
+		nvhost_dbg_pmu("perfmon increase event: "
+			"state_id %d, ground_id %d, pct %d",
+			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
+		/* increase gk20a clock freq by 20% */
+		rate = gk20a_clk_get_rate(g);
+		gk20a_clk_set_rate(g, rate * 6 / 5);
+		break;
+	case PMU_PERFMON_MSG_ID_DECREASE_EVENT:
+		nvhost_dbg_pmu("perfmon decrease event: "
+			"state_id %d, ground_id %d, pct %d",
+			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
+		/* decrease gk20a clock freq by 10% */
+		rate = gk20a_clk_get_rate(g);
+		gk20a_clk_set_rate(g, (rate / 10) * 9);
+		break;
+	case PMU_PERFMON_MSG_ID_INIT_EVENT:
+		nvhost_dbg_pmu("perfmon init event");
+		break;
+	default:
+		break;
+	}
+
+	/* restart sampling */
+	return pmu_perfmon_start_sampling(pmu);
+}
+
+
+static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
+{
+	int err;
+
+	nvhost_dbg_fn("");
+
+	switch (msg->hdr.unit_id) {
+	case PMU_UNIT_PERFMON:
+		err = pmu_handle_perfmon_event(pmu, &msg->msg.perfmon);
+		break;
+	default:
+		break;
+	}
+
+	return err;
 }
 
 static int pmu_process_message(struct pmu_gk20a *pmu)
@@ -1638,6 +1813,7 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 	if (unlikely(!pmu->pmu_ready)) {
 		pmu_process_init_msg(pmu, &msg);
 		pmu_init_powergating(pmu);
+		pmu_init_perfmon(pmu);
 		return 0;
 	}
 
@@ -1653,7 +1829,7 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 		msg.hdr.ctrl_flags &= ~PMU_CMD_FLAGS_PMU_MASK;
 
 		if (msg.hdr.ctrl_flags == PMU_CMD_FLAGS_EVENT) {
-			/* TBD: handle event callbacks */
+			pmu_handle_event(pmu, &msg);
 		} else {
 			pmu_response_handle(pmu, &msg);
 		}
@@ -1950,6 +2126,13 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		i = gk20a_readl(g, pwr_pmu_pg_intren_r(0));
 		nvhost_dbg_pmu("pwr_pmu_pg_intren_r(0): 0x%08x", i);
 
+		nvhost_dbg_pmu("pwr_pmu_idle_count_r(3): 0x%08x",
+			gk20a_readl(g, pwr_pmu_idle_count_r(3)));
+		nvhost_dbg_pmu("pwr_pmu_idle_count_r(4): 0x%08x",
+			gk20a_readl(g, pwr_pmu_idle_count_r(4)));
+		nvhost_dbg_pmu("pwr_pmu_idle_count_r(7): 0x%08x",
+			gk20a_readl(g, pwr_pmu_idle_count_r(7)));
+
 		/* TBD: script can't generate those registers correctly
 		i = gk20a_readl(g, pwr_pmu_idle_status_r());
 		nvhost_dbg_pmu("pwr_pmu_idle_status_r(): 0x%08x", i);
@@ -2000,7 +2183,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_TYPE_ELPG_CMD;
+	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
 
@@ -2053,7 +2236,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_TYPE_ELPG_CMD;
+	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 

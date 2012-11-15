@@ -43,6 +43,7 @@ enum nvhost_dbg_categories {
 	dbg_pte     = BIT(4),  /* gmmu ptes */
 	dbg_intr    = BIT(5),  /* interrupts */
 	dbg_pmu     = BIT(6),  /* gk20a pmu */
+	dbg_clk     = BIT(7),  /* gk20a clk */
 	dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

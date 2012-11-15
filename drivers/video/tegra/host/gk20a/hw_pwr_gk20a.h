@@ -5474,6 +5474,694 @@ static inline u32 pwr_pmu_msgq_tail_val_init_f(void)
 {
 	return 0x0;
 }
+static inline u32 pwr_pmu_idle_mask_r(u32 i)
+{
+	return 0x0010a504+(i)*16;
+}
+static inline u32 pwr_pmu_idle_mask__size_1_v(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_idle_mask_gr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_init_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_gr_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_enabled_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_init_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_sys_enabled_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_init_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_gpc_enabled_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_init_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_gr_be_enabled_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_init_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_fb_niso_enabled_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_init_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_ltc_idle_enabled_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_init_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_ce_2_enabled_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_init_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_host_ext_enabled_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_init_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_host_int_enabled_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pwr_pmu_idle_mask_1_r(u32 i)
+{
+	return 0x0010aa34+(i)*8;
+}
+static inline u32 pwr_pmu_idle_mask_1__size_1_v(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_init_f(void)
+{
+	return 0x10;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_ms_mmu_enabled_f(void)
+{
+	return 0x10;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_init_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_gr_intr_nostall_enabled_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_init_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_mask_1_ce2_intr_nostall_enabled_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_idle_count_r(u32 i)
+{
+	return 0x0010a508+(i)*16;
+}
+static inline u32 pwr_pmu_idle_count__size_1_v(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_idle_count_value_s(void)
+{
+	return 31;
+}
+static inline u32 pwr_pmu_idle_count_value_f(u32 v)
+{
+	return (v & 0x7fffffff) << 0;
+}
+static inline u32 pwr_pmu_idle_count_value_m(void)
+{
+	return 0x7fffffff << 0;
+}
+static inline u32 pwr_pmu_idle_count_value_v(u32 r)
+{
+	return (r >> 0) & 0x7fffffff;
+}
+static inline u32 pwr_pmu_idle_count_value_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_count_value_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_count_reset_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_count_reset_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pwr_pmu_idle_count_reset_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pwr_pmu_idle_count_reset_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pwr_pmu_idle_count_reset_done_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_count_reset_done_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_count_reset_not_done_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_count_reset_not_done_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pwr_pmu_idle_ctrl_r(u32 i)
+{
+	return 0x0010a50c+(i)*16;
+}
+static inline u32 pwr_pmu_idle_ctrl__size_1_v(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_m(void)
+{
+	return 0x3 << 0;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_never_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_never_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_idle_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_idle_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_busy_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_busy_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_always_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_idle_ctrl_value_always_f(void)
+{
+	return 0x3;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_init_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_idle_ctrl_filter_enabled_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_idle_threshold_r(u32 i)
+{
+	return 0x0010a8a0+(i)*4;
+}
+static inline u32 pwr_pmu_idle_threshold__size_1_v(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_idle_threshold_value_s(void)
+{
+	return 31;
+}
+static inline u32 pwr_pmu_idle_threshold_value_f(u32 v)
+{
+	return (v & 0x7fffffff) << 0;
+}
+static inline u32 pwr_pmu_idle_threshold_value_m(void)
+{
+	return 0x7fffffff << 0;
+}
+static inline u32 pwr_pmu_idle_threshold_value_v(u32 r)
+{
+	return (r >> 0) & 0x7fffffff;
+}
+static inline u32 pwr_pmu_idle_threshold_value_init_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 pwr_pmu_idle_threshold_value_init_f(void)
+{
+	return 0xff;
+}
 static inline u32 pwr_pmu_idle_mask_supp_r(u32 i)
 {
 	return 0x0010a9f0+(i)*8;

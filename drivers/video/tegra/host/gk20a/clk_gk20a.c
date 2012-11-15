@@ -28,12 +28,15 @@
 #include "gk20a.h"
 #include "hw_trim_gk20a.h"
 
+#define nvhost_dbg_clk(fmt, arg...) \
+	nvhost_dbg(dbg_clk, fmt, ##arg)
+
 #define KHz 1000
 #define MHz 1000000
 
 /* from vbios PLL info table */
 static struct pll_parms gpc_pll_params = {
-	810, 405,	/* freq */
+	403, 806,	/* freq */
 	1100, 2200,	/* vco */
 	25, 100,	/* u */
 	1, 255,		/* M */
@@ -137,8 +140,7 @@ found_match:
 	BUG_ON(best_delta == ~0);
 
 	if (best_fit && best_delta != 0)
-		nvhost_warn(dev_from_gk20a(clk->g),
-			"no best match for target freq @ %d on gpc_pll",
+		nvhost_dbg_clk("no best match for target @ %dMHz on gpc_pll",
 			target_clk_f);
 
 	pll->M = best_M;
@@ -150,7 +152,7 @@ found_match:
 
 	*target_freq = pll->freq;
 
-	nvhost_dbg_info("actual target freq %d MHz, M %d, N %d, PL %d",
+	nvhost_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d",
 		*target_freq, pll->M, pll->N, pll->PL);
 
 	nvhost_dbg_fn("done");
@@ -197,12 +199,12 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk)
 	}
 
 	/* wait pll lock */
-	timeout = clk->pll_delay / 20 + 1;
+	timeout = clk->pll_delay / 100 + 1;
 	do {
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
 			goto pll_locked;
-		udelay(20);
+		udelay(100);
 	} while (--timeout > 0);
 
 	/* PLL is messed up. What can we do here? */
@@ -232,7 +234,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g, bool reinit)
 	nvhost_dbg_fn("");
 
 	/* TBD: set this according to different environments */
-	clk->pll_delay = 5000; /* usec */
+	clk->pll_delay = 5000000; /* usec */
 
 	/* target gpc2clk = 806MHz, gpcclk = 403MHz */
 	clk->gpc_pll.id = GK20A_GPC_PLL;
@@ -289,11 +291,16 @@ int gk20a_init_clk_support(struct gk20a *g, bool reinit)
 	if (err)
 		return err;
 
-	/* TBD: remove this below when we export it to therm/edp.
-	   Added here just for coverage */
-	gk20a_clk_set_rate(g, 780 /* MHz */);
+	/* set to minimal freq */
+	gk20a_clk_set_rate(g, gpc_pll_params.min_freq);
 
 	return err;
+}
+
+u32 gk20a_clk_get_rate(struct gk20a *g)
+{
+	struct clk_gk20a *clk = &g->clk;
+	return clk->gpc_pll.freq;
 }
 
 /* TBD: interface to change clock and dvfs in one function */
@@ -305,7 +312,13 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	u32 freq = clk->gpc_pll.freq;
 	int err = 0;
 
-	nvhost_dbg_fn("");
+	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
+		freq, rate);
+
+	if (rate > gpc_pll_params.max_freq)
+		rate = gpc_pll_params.max_freq;
+	else if (rate < gpc_pll_params.min_freq)
+		rate = gpc_pll_params.min_freq;
 
 	if (rate == freq)
 		return 0;

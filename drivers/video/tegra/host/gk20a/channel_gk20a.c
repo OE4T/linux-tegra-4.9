@@ -989,21 +989,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		nvhost_dbg_info("put %d, get %d, size %d",
 			c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
-		/* TBD: remove else condition and deprecate the flag */
-		if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT) {
-			struct nvhost_gpfifo_hw *gpfifo_hw =
-				(struct nvhost_gpfifo_hw *)gpfifo;
-			c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
-				gpfifo_hw[i].entry0;
-			c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
-				gpfifo_hw[i].entry1;
-		} else {
-			c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
-				u64_lo32(gpfifo[i].gpu_va);
-			c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
-				u64_hi32(gpfifo[i].gpu_va) |
-				(gpfifo[i].words << 10);
-		}
+		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
+			gpfifo[i].entry0; /* cmd buf va low 32 */
+		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
+			gpfifo[i].entry1; /* cmd buf va high 32 | words << 10 */
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);

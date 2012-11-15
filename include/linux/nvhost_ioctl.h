@@ -90,13 +90,6 @@ struct nvhost_waitchk {
 };
 
 struct nvhost_gpfifo {
-	__u64 gpu_va; /* gpu va of gpfifo entry */
-	__u32 words; /* size of the entry, in words */
-};
-
-/* TBD: deprecate above nvhost_gpfifo
-   rename nvhost_gpfifo_hw to nvhost_gpfifo */
-struct nvhost_gpfifo_hw {
 	__u32 entry0; /* first word of gpfifo entry */
 	__u32 entry1; /* second word of gpfifo entry */
 };

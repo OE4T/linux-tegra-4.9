@@ -304,7 +304,7 @@ const struct tdms_config tdms_config[] = {
 	/* TODO: 720p modes */
 	{ /* 1080p modes */
 	.pclk = INT_MAX,
-	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) | SOR_PLL_RESISTORSEL |
+	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) | SOR_PLL_RESISTORSEL_EXT |
 		SOR_PLL_VCOCAP(3) | SOR_PLL_TX_REG_LOAD(0),
 	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
 		SOR_PLL_TMDS_TERMADJ(0x6),

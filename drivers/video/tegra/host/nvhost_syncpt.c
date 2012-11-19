@@ -254,7 +254,6 @@ bool nvhost_syncpt_is_expired(
 {
 	u32 current_val;
 	u32 future_val;
-	smp_rmb();
 	current_val = (u32)atomic_read(&sp->min_val[id]);
 	future_val = (u32)atomic_read(&sp->max_val[id]);
 

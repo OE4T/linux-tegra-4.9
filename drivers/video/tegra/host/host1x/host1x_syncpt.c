@@ -102,7 +102,6 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 	}
 	writel(BIT_MASK(id), dev->sync_aperture +
 			host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4);
-	wmb();
 }
 
 /* remove a wait pointed to by patch_addr */

@@ -353,7 +353,6 @@ static void cdma_kick(struct nvhost_cdma *cdma)
 
 	if (put != cdma->last_put) {
 		void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
-		wmb();
 		writel(put, chan_regs + host1x_channel_dmaput_r());
 		cdma->last_put = put;
 	}

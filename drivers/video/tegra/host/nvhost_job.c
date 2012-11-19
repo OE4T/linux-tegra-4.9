@@ -377,8 +377,6 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 		}
 	}
 fail:
-	wmb();
-
 	return err;
 }
 

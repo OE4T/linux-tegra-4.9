@@ -40,11 +40,10 @@ struct active_temp_state {
 #define MAX_ACTIVE_TEMP_STATE 16
 
 struct nct1008_cdev {
-	struct thermal_cooling_device *(*create_cdev)(void *);
-	void *cdev_data;
+	bool enable;
+	char *type;
 	long trip_temp;
 	long hysteresis;
-	enum thermal_trip_type type;
 	int tc1;
 	int tc2;
 	int passive_delay;

@@ -94,8 +94,6 @@ struct nct1008_data {
 	int conv_period_ms;
 	long etemp;
 
-	struct thermal_cooling_device *passive_cdev;
-	struct thermal_cooling_device *active_cdev;
 	struct thermal_zone_device *nct_int;
 	struct thermal_zone_device *nct_ext;
 };
@@ -849,16 +847,20 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 	int i;
 	struct nct1008_data *data = thz->devdata;
 
-	if (cdev == data->passive_cdev)
-		return thermal_zone_bind_cooling_device(thz, 0, cdev,
-							THERMAL_NO_LIMIT,
-							THERMAL_NO_LIMIT);
+	if (!strcmp(cdev->type, data->plat_data.passive.type)) {
+		thermal_zone_bind_cooling_device(thz, 0, cdev,
+						 THERMAL_NO_LIMIT,
+						 THERMAL_NO_LIMIT);
+		nct1008_update(data);
+	}
 
-	if (cdev == data->active_cdev)
+	if (!strcmp(cdev->type, data->plat_data.active.type)) {
 		for (i = 0; i < data->plat_data.active.states[i].trip_temp; i++)
 			thermal_zone_bind_cooling_device(thz, i+1, cdev,
 					data->plat_data.active.states[i].state,
 					data->plat_data.active.states[i].state);
+		nct1008_update(data);
+	}
 
 	return 0;
 }
@@ -869,10 +871,10 @@ static int nct1008_ext_unbind(struct thermal_zone_device *thz,
 	int i;
 	struct nct1008_data *data = thz->devdata;
 
-	if (cdev == data->passive_cdev)
-		return thermal_zone_unbind_cooling_device(thz, 0, cdev);
+	if (!strcmp(cdev->type, data->plat_data.passive.type))
+		thermal_zone_unbind_cooling_device(thz, 0, cdev);
 
-	if (cdev == data->active_cdev)
+	if (!strcmp(cdev->type, data->plat_data.active.type))
 		for (i = 0; i < data->plat_data.active.states[i].trip_temp; i++)
 			thermal_zone_unbind_cooling_device(thz, i+1, cdev);
 
@@ -1059,15 +1061,12 @@ static int nct1008_probe(struct i2c_client *client,
 		err = 0; /* without debugfs we may continue */
 
 #ifdef CONFIG_THERMAL
-	if (data->plat_data.passive.create_cdev) {
-		data->passive_cdev = data->plat_data.passive.create_cdev(
-					data->plat_data.passive.cdev_data);
+	if (data->plat_data.passive.enable) {
 		mask |= (1 << num_trips);
 		num_trips++;
 	}
 
-	if (data->plat_data.active.create_cdev) {
-		data->active_cdev = data->plat_data.active.create_cdev(NULL);
+	if (data->plat_data.active.enable) {
 		for (i = 0; data->plat_data.active.states[i].trip_temp; i++) {
 			mask |= (1 << num_trips);
 			num_trips++;

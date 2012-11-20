@@ -401,6 +401,262 @@ static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
 
+static int nct1008_thermal_set_limits(struct nct1008_data *data,
+				      long lo_limit_milli,
+				      long hi_limit_milli)
+{
+	int err;
+	u8 value;
+	bool extended_range = data->plat_data.ext_range;
+	long lo_limit = MILLICELSIUS_TO_CELSIUS(lo_limit_milli);
+	long hi_limit = MILLICELSIUS_TO_CELSIUS(hi_limit_milli);
+
+	if (lo_limit >= hi_limit)
+		return -EINVAL;
+
+	if (data->current_lo_limit != lo_limit) {
+		value = temperature_to_value(extended_range, lo_limit);
+		pr_debug("%s: set lo_limit %ld\n", __func__, lo_limit);
+		err = i2c_smbus_write_byte_data(data->client,
+				EXT_TEMP_LO_LIMIT_HI_BYTE_WR, value);
+		if (err)
+			return err;
+
+		data->current_lo_limit = lo_limit;
+	}
+
+	if (data->current_hi_limit != hi_limit) {
+		value = temperature_to_value(extended_range, hi_limit);
+		pr_debug("%s: set hi_limit %ld\n", __func__, hi_limit);
+		err = i2c_smbus_write_byte_data(data->client,
+				EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
+		if (err)
+			return err;
+
+		data->current_hi_limit = hi_limit;
+	}
+
+	return 0;
+}
+
+#ifdef CONFIG_THERMAL
+static void nct1008_update(struct nct1008_data *data)
+{
+	struct thermal_zone_device *thz = data->nct_ext;
+	long temp, trip_temp, low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
+	int count;
+
+	if (!thz)
+		return;
+
+	if (!thz->passive)
+		thermal_zone_device_update(thz);
+
+	thz->ops->get_temp(thz, &temp);
+
+	for (count = 0; count < thz->trips; count++) {
+		thz->ops->get_trip_temp(thz, count, &trip_temp);
+
+		if ((trip_temp >= temp) && (trip_temp < high_temp))
+			high_temp = trip_temp;
+
+		if ((trip_temp < temp) && (trip_temp > low_temp)) {
+			low_temp = trip_temp -
+				   data->plat_data.trips[count].hysteresis;
+		}
+	}
+
+	nct1008_thermal_set_limits(data, low_temp, high_temp);
+}
+
+static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
+					unsigned long *temp)
+{
+	struct nct1008_data *data = thz->devdata;
+	struct i2c_client *client = data->client;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	s8 temp_ext_hi;
+	s8 temp_ext_lo;
+	long temp_ext_milli;
+	u8 value;
+
+	/* Read External Temp */
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	if (value < 0)
+		return -1;
+	temp_ext_lo = (value >> 6);
+
+	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+	if (value < 0)
+		return -1;
+	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
+
+	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
+			 temp_ext_lo * 250;
+	*temp = temp_ext_milli;
+	data->etemp = temp_ext_milli;
+
+	return 0;
+}
+
+static int nct1008_ext_bind(struct thermal_zone_device *thz,
+			    struct thermal_cooling_device *cdev)
+{
+	struct nct1008_data *data = thz->devdata;
+	int i;
+	bool bind = false;
+
+	for (i = 0; i < data->plat_data.num_trips; i++) {
+		if (!strcmp(data->plat_data.trips[i].cdev_type, cdev->type)) {
+			thermal_zone_bind_cooling_device(thz, i, cdev,
+					data->plat_data.trips[i].state,
+					data->plat_data.trips[i].state);
+			bind = true;
+		}
+	}
+
+	if (bind)
+		nct1008_update(data);
+
+	return 0;
+}
+
+static int nct1008_ext_unbind(struct thermal_zone_device *thz,
+			      struct thermal_cooling_device *cdev)
+{
+	struct nct1008_data *data = thz->devdata;
+	int i;
+
+	for (i = 0; i < data->plat_data.num_trips; i++) {
+		if (!strcmp(data->plat_data.trips[i].cdev_type, cdev->type))
+			thermal_zone_unbind_cooling_device(thz, i, cdev);
+	}
+	return 0;
+}
+
+static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
+				     int trip,
+				     unsigned long *temp)
+{
+	struct nct1008_data *data = thz->devdata;
+
+	*temp = data->plat_data.trips[trip].trip_temp;
+	return 0;
+}
+
+static int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
+				     int trip,
+				     unsigned long temp)
+{
+	struct nct1008_data *data = thz->devdata;
+
+	data->plat_data.trips[trip].trip_temp = temp;
+	nct1008_update(data);
+	return 0;
+}
+
+static int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
+				     int trip,
+				     enum thermal_trip_type *type)
+{
+	struct nct1008_data *data = thz->devdata;
+
+	*type = data->plat_data.trips[trip].trip_type;
+	return 0;
+}
+
+static int nct1008_ext_get_trend(struct thermal_zone_device *thz,
+				 int trip,
+				 enum thermal_trend *trend)
+{
+	struct nct1008_data *data = thz->devdata;
+	struct nct_trip_temp *trip_state;
+
+	trip_state = &data->plat_data.trips[trip];
+
+	switch (trip_state->trip_type) {
+	case THERMAL_TRIP_ACTIVE:
+		/* aggressive active cooling */
+		*trend = THERMAL_TREND_RAISING;
+		break;
+	case THERMAL_TRIP_PASSIVE:
+		if (data->etemp > trip_state->trip_temp)
+			*trend = THERMAL_TREND_RAISING;
+		else
+			*trend = THERMAL_TREND_DROPPING;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int nct1008_int_get_temp(struct thermal_zone_device *thz,
+				unsigned long *temp)
+{
+	struct nct1008_data *data = thz->devdata;
+	struct i2c_client *client = data->client;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	s8 temp_local;
+	long temp_local_milli;
+	u8 value;
+
+	/* Read Local Temp */
+	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	if (value < 0)
+		return -1;
+	temp_local = value_to_temperature(pdata->ext_range, value);
+
+	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
+	*temp = temp_local_milli;
+
+	return 0;
+}
+
+static int nct1008_int_bind(struct thermal_zone_device *thz,
+			    struct thermal_cooling_device *cdev)
+{
+	return 0;
+}
+
+static int nct1008_int_get_trip_temp(struct thermal_zone_device *thz,
+				     int trip,
+				     unsigned long *temp)
+{
+	return -1;
+}
+
+static int nct1008_int_get_trip_type(struct thermal_zone_device *thz,
+				     int trip,
+				     enum thermal_trip_type *type)
+{
+	return -1;
+}
+
+static struct thermal_zone_device_ops nct_int_ops = {
+	.get_temp = nct1008_int_get_temp,
+	.bind = nct1008_int_bind,
+	.unbind = nct1008_int_bind,
+	.get_trip_type = nct1008_int_get_trip_type,
+	.get_trip_temp = nct1008_int_get_trip_temp,
+};
+
+static struct thermal_zone_device_ops nct_ext_ops = {
+	.get_temp = nct1008_ext_get_temp,
+	.bind = nct1008_ext_bind,
+	.unbind = nct1008_ext_unbind,
+	.get_trip_type = nct1008_ext_get_trip_type,
+	.get_trip_temp = nct1008_ext_get_trip_temp,
+	.set_trip_temp = nct1008_ext_set_trip_temp,
+	.get_trend = nct1008_ext_get_trend,
+};
+#else
+static void nct1008_update(struct nct1008_data *data)
+{
+}
+#endif /* CONFIG_THERMAL */
+
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -490,7 +746,7 @@ static int nct1008_debuginit(struct nct1008_data *nct)
 {
 	return 0;
 }
-#endif
+#endif /* CONFIG_DEBUG_FS */
 
 static int nct1008_enable(struct i2c_client *client)
 {
@@ -526,81 +782,6 @@ static int nct1008_within_limits(struct nct1008_data *data)
 
 	return !(intr_status & (BIT(3) | BIT(4)));
 }
-
-static int nct1008_thermal_set_limits(struct nct1008_data *data,
-				long lo_limit_milli,
-				long hi_limit_milli)
-{
-	int err;
-	u8 value;
-	bool extended_range = data->plat_data.ext_range;
-	long lo_limit = MILLICELSIUS_TO_CELSIUS(lo_limit_milli);
-	long hi_limit = MILLICELSIUS_TO_CELSIUS(hi_limit_milli);
-
-	if (lo_limit >= hi_limit)
-		return -EINVAL;
-
-	if (data->current_lo_limit != lo_limit) {
-		value = temperature_to_value(extended_range, lo_limit);
-		pr_debug("%s: set lo_limit %ld\n", __func__, lo_limit);
-		err = i2c_smbus_write_byte_data(data->client,
-				EXT_TEMP_LO_LIMIT_HI_BYTE_WR, value);
-		if (err)
-			return err;
-
-		data->current_lo_limit = lo_limit;
-	}
-
-	if (data->current_hi_limit != hi_limit) {
-		value = temperature_to_value(extended_range, hi_limit);
-		pr_debug("%s: set hi_limit %ld\n", __func__, hi_limit);
-		err = i2c_smbus_write_byte_data(data->client,
-				EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
-		if (err)
-			return err;
-
-		data->current_hi_limit = hi_limit;
-	}
-
-	return 0;
-}
-
-#ifdef CONFIG_THERMAL
-static void nct1008_update(struct nct1008_data *data)
-{
-	struct thermal_zone_device *thz = data->nct_ext;
-	struct nct1008_cdev *cdev;
-	long temp, trip_temp, low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
-	int count;
-
-	if (!thz)
-		return;
-
-	if (!thz->passive)
-		thermal_zone_device_update(thz);
-
-	thz->ops->get_temp(thz, &temp);
-
-	for (count = 0; count < thz->trips; count++) {
-		thz->ops->get_trip_temp(thz, count, &trip_temp);
-
-		if ((trip_temp >= temp) && (trip_temp < high_temp))
-			high_temp = trip_temp;
-
-		if ((trip_temp < temp) && (trip_temp > low_temp)) {
-			cdev = count ? &data->plat_data.active :
-					&data->plat_data.passive;
-			low_temp = trip_temp - cdev->hysteresis;
-		}
-	}
-
-	nct1008_thermal_set_limits(data, low_temp, high_temp);
-}
-#else
-static void nct1008_update(struct nct1008_data *data)
-{
-}
-#endif
 
 static void nct1008_work_func(struct work_struct *work)
 {
@@ -809,192 +990,6 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 			data);
 }
 
-#ifdef CONFIG_THERMAL
-static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
-					unsigned long *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_ext_hi;
-	s8 temp_ext_lo;
-	long temp_ext_milli;
-	u8 value;
-
-	/* Read External Temp */
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
-	if (value < 0)
-		return -1;
-	temp_ext_lo = (value >> 6);
-
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
-	if (value < 0)
-		return -1;
-	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
-
-	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
-				temp_ext_lo * 250;
-
-	*temp = temp_ext_milli;
-	data->etemp = temp_ext_milli;
-
-	return 0;
-}
-
-static int nct1008_ext_bind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
-{
-	int i;
-	struct nct1008_data *data = thz->devdata;
-
-	if (!strcmp(cdev->type, data->plat_data.passive.type)) {
-		thermal_zone_bind_cooling_device(thz, 0, cdev,
-						 THERMAL_NO_LIMIT,
-						 THERMAL_NO_LIMIT);
-		nct1008_update(data);
-	}
-
-	if (!strcmp(cdev->type, data->plat_data.active.type)) {
-		for (i = 0; i < data->plat_data.active.states[i].trip_temp; i++)
-			thermal_zone_bind_cooling_device(thz, i+1, cdev,
-					data->plat_data.active.states[i].state,
-					data->plat_data.active.states[i].state);
-		nct1008_update(data);
-	}
-
-	return 0;
-}
-
-static int nct1008_ext_unbind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
-{
-	int i;
-	struct nct1008_data *data = thz->devdata;
-
-	if (!strcmp(cdev->type, data->plat_data.passive.type))
-		thermal_zone_unbind_cooling_device(thz, 0, cdev);
-
-	if (!strcmp(cdev->type, data->plat_data.active.type))
-		for (i = 0; i < data->plat_data.active.states[i].trip_temp; i++)
-			thermal_zone_unbind_cooling_device(thz, i+1, cdev);
-
-	return 0;
-}
-
-static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-	if (trip == 0)
-		*temp = data->plat_data.passive.trip_temp;
-	else
-		*temp = data->plat_data.active.states[trip-1].trip_temp;
-	return 0;
-}
-
-static int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long temp)
-{
-	struct nct1008_data *data = thz->devdata;
-	if (trip == 0)
-		data->plat_data.passive.trip_temp = temp;
-	else
-		data->plat_data.active.states[trip-1].trip_temp = temp;
-
-	nct1008_update(data);
-
-	return 0;
-}
-
-static int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
-					int trip,
-					enum thermal_trip_type *type)
-{
-	*type = (trip == 0) ? THERMAL_TRIP_PASSIVE : THERMAL_TRIP_ACTIVE;
-	return 0;
-}
-
-static int nct1008_ext_get_trend(struct thermal_zone_device *thz,
-				int trip, enum thermal_trend *trend)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	if (trip > 0) {
-		/* aggressive active cooling */
-		*trend = THERMAL_TREND_RAISING;
-		return 0;
-	}
-
-	if (data->etemp > data->plat_data.passive.trip_temp)
-		*trend = THERMAL_TREND_RAISING;
-	else
-		*trend = THERMAL_TREND_DROPPING;
-
-	return 0;
-}
-
-static int nct1008_int_get_temp(struct thermal_zone_device *thz,
-					unsigned long *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_local;
-	long temp_local_milli;
-	u8 value;
-
-	/* Read Local Temp */
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
-	if (value < 0)
-		return -1;
-	temp_local = value_to_temperature(pdata->ext_range, value);
-	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
-
-	*temp = temp_local_milli;
-	return 0;
-}
-
-static int nct1008_int_bind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
-{
-	return 0;
-}
-
-static int nct1008_int_get_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long *temp)
-{
-	return -1;
-}
-
-static int nct1008_int_get_trip_type(struct thermal_zone_device *thz,
-					int trip,
-					enum thermal_trip_type *type)
-{
-	return -1;
-}
-
-static struct thermal_zone_device_ops nct_int_ops = {
-	.get_temp = nct1008_int_get_temp,
-	.bind = nct1008_int_bind,
-	.unbind = nct1008_int_bind,
-	.get_trip_type = nct1008_int_get_trip_type,
-	.get_trip_temp = nct1008_int_get_trip_temp,
-};
-
-static struct thermal_zone_device_ops nct_ext_ops = {
-	.get_temp = nct1008_ext_get_temp,
-	.bind = nct1008_ext_bind,
-	.unbind = nct1008_ext_unbind,
-	.get_trip_type = nct1008_ext_get_trip_type,
-	.get_trip_temp = nct1008_ext_get_trip_temp,
-	.set_trip_temp = nct1008_ext_set_trip_temp,
-	.get_trend = nct1008_ext_get_trend,
-};
-#endif
-
 /*
  * Manufacturer(OnSemi) recommended sequence for
  * Extended Range mode is as follows
@@ -1017,7 +1012,6 @@ static int nct1008_probe(struct i2c_client *client,
 	struct nct1008_data *data;
 	int err;
 	int i;
-	int num_trips = 0;
 	int mask = 0;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
@@ -1061,17 +1055,8 @@ static int nct1008_probe(struct i2c_client *client,
 		err = 0; /* without debugfs we may continue */
 
 #ifdef CONFIG_THERMAL
-	if (data->plat_data.passive.enable) {
-		mask |= (1 << num_trips);
-		num_trips++;
-	}
-
-	if (data->plat_data.active.enable) {
-		for (i = 0; data->plat_data.active.states[i].trip_temp; i++) {
-			mask |= (1 << num_trips);
-			num_trips++;
-		}
-	}
+	for (i = 0; i < data->plat_data.num_trips; i++)
+		mask |= (1 << i);
 
 	data->nct_int = thermal_zone_device_register("nct_int",
 						0,
@@ -1085,12 +1070,12 @@ static int nct1008_probe(struct i2c_client *client,
 		goto error;
 
 	data->nct_ext = thermal_zone_device_register("nct_ext",
-					num_trips,
+					data->plat_data.num_trips,
 					mask,
 					data,
 					&nct_ext_ops,
 					NULL,
-					data->plat_data.passive.passive_delay,
+					data->plat_data.passive_delay,
 					0);
 	if (IS_ERR_OR_NULL(data->nct_ext)) {
 		thermal_zone_device_unregister(data->nct_int);

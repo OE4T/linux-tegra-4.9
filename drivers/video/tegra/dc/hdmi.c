@@ -1923,3 +1923,8 @@ void tegra_dc_put_edid(struct tegra_dc_edid *edid)
 	tegra_edid_put_data(edid);
 }
 EXPORT_SYMBOL(tegra_dc_put_edid);
+
+struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi)
+{
+	return hdmi ? hdmi->dc : NULL;
+}

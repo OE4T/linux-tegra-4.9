@@ -218,5 +218,5 @@ unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 				unsigned long reg);
 void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 				unsigned long val, unsigned long reg);
-
+struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi);
 #endif

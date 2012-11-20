@@ -829,12 +829,14 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
 	struct tegra_dc_hdmi_data *hdmi = nvhdcp->hdmi;
+	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
 	u8 b_caps;
 	u32 tmp;
 	u32 res;
 
 	nvhdcp_vdbg("%s():started thread %s\n", __func__, nvhdcp->name);
+	tegra_dc_io_start(dc);
 
 	mutex_lock(&nvhdcp->lock);
 	if (nvhdcp->state == STATE_OFF) {
@@ -997,8 +999,10 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 		mutex_unlock(&nvhdcp->lock);
+		tegra_dc_io_end(dc);
 		wait_event_interruptible_timeout(wq_worker,
 			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
+		tegra_dc_io_start(dc);
 		mutex_lock(&nvhdcp->lock);
 
 	}
@@ -1021,11 +1025,13 @@ lost_hdmi:
 
 err:
 	mutex_unlock(&nvhdcp->lock);
+	tegra_dc_io_end(dc);
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
+	tegra_dc_io_end(dc);
 	return;
 }
 

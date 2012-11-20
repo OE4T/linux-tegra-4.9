@@ -565,6 +565,13 @@ int nvhost_gr3d_t30_read_reg(
 				->restore_size),
 			to_host1x_hwctx(channel->cur_ctx)->restore_phys);
 
+	/* Wait for idle first */
+	nvhost_cdma_push(&channel->cdma,
+		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+			host1x_uclass_wait_syncpt_r(), 1),
+		nvhost_class_host_wait_syncpt(p->syncpt,
+			syncval - syncpt_incrs));
+
 	/* Switch to 3D - set up output to memory */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),

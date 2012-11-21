@@ -615,7 +615,8 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 	int ret = 0;
 	u32 val = 0;
 
-	if (nblocks > SE_MAX_LAST_BLOCK_SIZE)
+	if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
+				nblocks > SE_MAX_LAST_BLOCK_SIZE)
 		return -EINVAL;
 
 	/* clear any pending interrupts */

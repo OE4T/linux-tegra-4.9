@@ -41,6 +41,7 @@
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
 #include <linux/pm_runtime.h>
+#include <mach/hardware.h>
 
 #include "tegra-se.h"
 
@@ -2963,7 +2964,8 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 		return ret;
 	}
 
-	if (se_dev->chipdata->drbg_supported) {
+	if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
+				se_dev->chipdata->drbg_supported) {
 		/* clear any pending interrupts */
 		val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 		se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);

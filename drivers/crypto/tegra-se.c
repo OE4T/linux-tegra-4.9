@@ -570,7 +570,8 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
 
 	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
-		if (force_reseed_count <= 0) {
+		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
+						force_reseed_count <= 0) {
 			se_writel(se_dev,
 				SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
 				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
@@ -582,7 +583,9 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
 				SE_RNG_CONFIG_REG_OFFSET);
 		}
-		--force_reseed_count;
+		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11))
+			--force_reseed_count;
+
 		se_writel(se_dev, RNG_RESEED_INTERVAL,
 			SE_RNG_RESEED_INTERVAL_REG_OFFSET);
 	}

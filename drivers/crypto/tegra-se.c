@@ -3102,7 +3102,7 @@ static int tegra_se_suspend(struct device *dev)
 	}
 
 	/* Write lp context buffer address into PMC scratch register */
-	writel(se_dev->ctx_save_buf_adr,
+	writel(page_to_phys(vmalloc_to_page(se_dev->ctx_save_buf)),
 		se_dev->pmc_io_reg + PMC_SCRATCH43_REG_OFFSET);
 
 	/* Saves SRK in secure scratch */

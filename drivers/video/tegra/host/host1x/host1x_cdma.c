@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -225,7 +225,7 @@ static void cdma_timeout_destroy(struct nvhost_cdma *cdma)
  */
 static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 				u32 syncpt_incrs, u32 syncval, u32 nr_slots,
-				u32 waitbases)
+				u32 *waitbases)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct push_buffer *pb = &cdma->push_buffer;
@@ -240,12 +240,12 @@ static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
 	/* Synchronize wait bases. 2D wait bases are synchronized with
 	 * syncpoint 19. Hence wait bases are not updated when syncptid=18. */
 
-	if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 && waitbases) {
+	if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 && waitbases[0]) {
 		void __iomem *p;
 		p = dev->sync_aperture + host1x_sync_syncpt_base_0_r() +
-				(__ffs(waitbases) * sizeof(u32));
+				(waitbases[0] * sizeof(u32));
 		writel(syncval, p);
-		dev->syncpt.base_val[__ffs(waitbases)] = syncval;
+		dev->syncpt.base_val[waitbases[0]] = syncval;
 	}
 
 	/* NOP all the PB slots */

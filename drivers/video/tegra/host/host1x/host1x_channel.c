@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,9 +39,8 @@ static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 {
 	unsigned long waitbase;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	unsigned long int waitbase_mask = pdata->waitbases;
 	if (pdata->waitbasesync) {
-		waitbase = find_first_bit(&waitbase_mask, BITS_PER_LONG);
+		waitbase = pdata->waitbases[0];
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 				host1x_uclass_load_syncpt_base_r(),
@@ -481,10 +480,8 @@ static inline int host1x_hwctx_handler_init(struct nvhost_channel *ch)
 	int err = 0;
 
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	unsigned long syncpts = pdata->syncpts;
-	unsigned long waitbases = pdata->waitbases;
-	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
-	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
+	u32 syncpt = pdata->syncpts[0];
+	u32 waitbase = pdata->waitbases[0];
 
 	if (pdata->alloc_hwctx_handler) {
 		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,

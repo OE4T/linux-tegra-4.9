@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,7 +68,7 @@ struct nvhost_cdma_ops {
 				 u32 syncpt_incrs,
 				 u32 syncval,
 				 u32 nr_slots,
-				 u32 waitbases);
+				 u32 *waitbases);
 };
 
 struct nvhost_pushbuffer_ops {

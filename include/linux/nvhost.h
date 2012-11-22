@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,9 @@ struct nvhost_device_power_attr;
 
 #define NVHOST_MODULE_MAX_CLOCKS		3
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
+#define NVHOST_MODULE_MAX_SYNCPTS		8
+#define NVHOST_MODULE_MAX_WAITBASES		3
+#define NVHOST_MODULE_MAX_MODMUTEXES		5
 #define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
 #define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
 #define NVHOST_NAME_SIZE			24
@@ -88,9 +91,9 @@ struct nvhost_device_data {
 	int		index;		/* Hardware channel number */
 	void __iomem	*aperture;	/* Iomem mapped to kernel */
 
-	u32		syncpts;	/* Bitfield of sync points used */
-	u32		waitbases;	/* Bit field of wait bases */
-	u32		modulemutexes;	/* Bit field of module mutexes */
+	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
+	u32		waitbases[NVHOST_MODULE_MAX_WAITBASES];
+	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
 
 	u32		class;		/* Device class */

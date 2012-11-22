@@ -4,7 +4,7 @@
  * Tegra Graphics Host Interrupt Management
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 	unsigned long reg;
 	int i, id;
 
-	for (i = 0; i < dev->info.nb_pts / BITS_PER_LONG; i++) {
+	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, BITS_PER_LONG); i++) {
 		reg = readl(sync_regs +
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
@@ -143,7 +143,7 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	void __iomem *sync_regs = dev->sync_aperture;
 	u32 reg;
 
-	for (reg = 0; reg <= BIT_WORD(dev->info.nb_pts) * REGISTER_STRIDE;
+	for (reg = 0; reg < BIT_WORD(dev->info.nb_pts) * REGISTER_STRIDE;
 			reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
 		writel(0xffffffffu, sync_regs +

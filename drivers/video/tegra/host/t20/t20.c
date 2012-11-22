@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T20 Architecture Chips
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,9 +109,9 @@ struct platform_device tegra_host1x01_device = {
 static struct nvhost_device_data tegra_gr3d01_info = {
 	.version	= 1,
 	.index		= 1,
-	.syncpts	= BIT(NVSYNCPT_3D),
-	.waitbases	= BIT(NVWAITBASE_3D),
-	.modulemutexes	= BIT(NVMODMUTEX_3D),
+	.syncpts	= {NVSYNCPT_3D},
+	.waitbases	= {NVWAITBASE_3D},
+	.modulemutexes	= {NVMODMUTEX_3D},
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
 	.clocks		= {{"gr3d", UINT_MAX, 8, true},
 			   {"emc", UINT_MAX, 75}, {} },
@@ -131,10 +131,10 @@ static struct platform_device tegra_gr3d01_device = {
 static struct nvhost_device_data tegra_gr2d01_info = {
 	.version	= 1,
 	.index		= 2,
-	.syncpts	= BIT(NVSYNCPT_2D_0) | BIT(NVSYNCPT_2D_1),
-	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
-	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
-			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
+	.syncpts	= {NVSYNCPT_2D_0, NVSYNCPT_2D_1},
+	.waitbases	= {NVWAITBASE_2D_0, NVWAITBASE_2D_1},
+	.modulemutexes	= {NVMODMUTEX_2D_FULL, NVMODMUTEX_2D_SIMPLE,
+			  NVMODMUTEX_2D_SB_A, NVMODMUTEX_2D_SB_B},
 	.clocks		= { {"gr2d", UINT_MAX, 7, true},
 			    {"epp", UINT_MAX, 10, true},
 			    {"emc", UINT_MAX, 75} },
@@ -172,7 +172,6 @@ static struct resource isp_resources[] = {
 
 static struct nvhost_device_data tegra_isp01_info = {
 	.index		= 3,
-	.syncpts	= 0,
 	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -200,11 +199,11 @@ static struct resource vi_resources[] = {
 
 static struct nvhost_device_data tegra_vi01_info = {
 	.index		= 4,
-	.syncpts	= BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) |
-			  BIT(NVSYNCPT_VI_ISP_0) | BIT(NVSYNCPT_VI_ISP_1) |
-			  BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
-			  BIT(NVSYNCPT_VI_ISP_4),
-	.modulemutexes	= BIT(NVMODMUTEX_VI),
+	.syncpts	= {NVSYNCPT_CSI_VI_0, NVSYNCPT_CSI_VI_1,
+			  NVSYNCPT_VI_ISP_0, NVSYNCPT_VI_ISP_1,
+			  NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
+			  NVSYNCPT_VI_ISP_4},
+	.modulemutexes	= {NVMODMUTEX_VI},
 	.exclusive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -224,9 +223,9 @@ static struct platform_device tegra_vi01_device = {
 static struct nvhost_device_data tegra_mpe01_info = {
 	.version	= 1,
 	.index		= 5,
-	.syncpts	= BIT(NVSYNCPT_MPE) | BIT(NVSYNCPT_MPE_EBM_EOF) |
-			  BIT(NVSYNCPT_MPE_WR_SAFE),
-	.waitbases	= BIT(NVWAITBASE_MPE),
+	.syncpts	= {NVSYNCPT_MPE, NVSYNCPT_MPE_EBM_EOF,
+			  NVSYNCPT_MPE_WR_SAFE},
+	.waitbases	= {NVWAITBASE_MPE},
 	.class		= NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.waitbasesync	= true,
 	.keepalive	= true,

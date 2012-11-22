@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -416,6 +416,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	struct nvhost_reloc_shift __user *reloc_shifts = args->reloc_shifts;
 	struct nvhost_waitchk __user *waitchks = args->waitchks;
 	struct nvhost_syncpt_incr syncpt_incr;
+	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
 	int err;
 
 	/* We don't yet support other than one nvhost_syncpt_incrs per submit */
@@ -467,6 +468,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 	job->syncpt_id = syncpt_incr.syncpt_id;
+	if (job->syncpt_id > host->info.nb_pts) {
+		err = -EINVAL;
+		goto fail;
+	}
 	job->syncpt_incrs = syncpt_incr.syncpt_incrs;
 
 	trace_nvhost_channel_submit(ctx->ch->dev->name,
@@ -598,6 +603,16 @@ static int nvhost_ioctl_channel_module_regrdwr(
 	return 0;
 }
 
+static u32 create_mask(u32 *words, int num)
+{
+	int i;
+	u32 word = 0;
+	for (i = 0; i < num && words[i] && words[i] < BITS_PER_LONG; i++)
+		word |= BIT(words[i]);
+
+	return word;
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -658,11 +673,22 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 	{
-		/* host syncpt ID is used by the RM (and never be given out) */
 		struct nvhost_device_data *pdata = \
 			platform_get_drvdata(priv->ch->dev);
 		((struct nvhost_get_param_args *)buf)->value =
-			pdata->syncpts;
+			create_mask(pdata->syncpts, NVHOST_MODULE_MAX_SYNCPTS);
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT:
+	{
+		struct nvhost_device_data *pdata = \
+			platform_get_drvdata(priv->ch->dev);
+		struct nvhost_get_param_arg *arg =
+			(struct nvhost_get_param_arg *)buf;
+		if (arg->param >= NVHOST_MODULE_MAX_SYNCPTS
+				|| !pdata->syncpts[arg->param])
+			return -EINVAL;
+		arg->value = pdata->syncpts[arg->param];
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_WAITBASES:
@@ -670,7 +696,20 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_device_data *pdata = \
 			platform_get_drvdata(priv->ch->dev);
 		((struct nvhost_get_param_args *)buf)->value =
-			pdata->waitbases;
+			create_mask(pdata->waitbases,
+					NVHOST_MODULE_MAX_WAITBASES);
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_GET_WAITBASE:
+	{
+		struct nvhost_device_data *pdata = \
+			platform_get_drvdata(priv->ch->dev);
+		struct nvhost_get_param_arg *arg =
+			(struct nvhost_get_param_arg *)buf;
+		if (arg->param >= NVHOST_MODULE_MAX_WAITBASES
+				|| !pdata->waitbases[arg->param])
+			return -EINVAL;
+		arg->value = pdata->waitbases[arg->param];
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_MODMUTEXES:
@@ -678,7 +717,20 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_device_data *pdata = \
 			platform_get_drvdata(priv->ch->dev);
 		((struct nvhost_get_param_args *)buf)->value =
-			pdata->modulemutexes;
+			create_mask(pdata->modulemutexes,
+					NVHOST_MODULE_MAX_MODMUTEXES);
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_GET_MODMUTEX:
+	{
+		struct nvhost_device_data *pdata = \
+			platform_get_drvdata(priv->ch->dev);
+		struct nvhost_get_param_arg *arg =
+			(struct nvhost_get_param_arg *)buf;
+		if (arg->param >= NVHOST_MODULE_MAX_MODMUTEXES
+				|| !pdata->modulemutexes[arg->param])
+			return -EINVAL;
+		arg->value = pdata->modulemutexes[arg->param];
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:

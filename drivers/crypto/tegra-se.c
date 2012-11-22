@@ -521,8 +521,9 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	case SE_AES_OP_MODE_RNG_DRBG:
 		val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
 			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
-			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT)|
-			SE_CRYPTO_KEY_INDEX(slot_num);
+			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11))
+			val = val | SE_CRYPTO_KEY_INDEX(slot_num);
 		break;
 	case SE_AES_OP_MODE_ECB:
 		if (encrypt) {

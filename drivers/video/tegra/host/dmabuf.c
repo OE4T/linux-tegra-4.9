@@ -45,7 +45,10 @@ struct mem_handle *nvhost_dmabuf_alloc(size_t size, size_t align, int flags)
 
 void nvhost_dmabuf_put(struct mem_handle *handle)
 {
-	dma_buf_put(to_dmabuf(handle));
+	struct dma_buf_attachment *attach = to_dmabuf_att(handle);
+	struct dma_buf *dmabuf = attach->dmabuf;
+	dma_buf_detach(dmabuf, attach);
+	dma_buf_put(dmabuf);
 }
 
 struct sg_table *nvhost_dmabuf_pin(struct mem_handle *handle)

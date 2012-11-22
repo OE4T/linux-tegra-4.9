@@ -870,7 +870,6 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 		tegra_dc_set_cmu(dc, &dc->cmu);
 	}
-	tegra_dc_set_color_control(dc);
 
 	return 0;
 }
@@ -884,6 +883,7 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	tegra_dc_hold_dc_out(dc);
 
 	ret = _tegra_dc_update_cmu(dc, cmu);
+	tegra_dc_set_color_control(dc);
 
 	tegra_dc_release_dc_out(dc);
 	tegra_dc_io_end(dc);
@@ -895,6 +895,7 @@ EXPORT_SYMBOL(tegra_dc_update_cmu);
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
+	dc->pdata->cmu_enable = cmu_enable;
 	tegra_dc_update_cmu(dc, &dc->cmu);
 }
 #else

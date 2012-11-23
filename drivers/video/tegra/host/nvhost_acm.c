@@ -675,9 +675,6 @@ void nvhost_module_deinit(struct platform_device *dev)
 	int i;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (pdata->deinit)
-		pdata->deinit(dev);
-
 	nvhost_module_suspend(dev);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_put(pdata->clk[i]);

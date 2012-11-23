@@ -93,6 +93,7 @@ static int host1x_actmon_init(struct nvhost_master *host)
 {
 	void __iomem *sync_regs = host->sync_aperture;
 	u32 val;
+	unsigned long timeout = jiffies + msecs_to_jiffies(25);
 
 	if (actmon_status.init == ACTMON_READY)
 		return 0;
@@ -113,7 +114,10 @@ static int host1x_actmon_init(struct nvhost_master *host)
 	/* Wait for actmon to be disabled */
 	do {
 		val = readl(sync_regs + host1x_sync_actmon_status_r());
-	} while (val & host1x_sync_actmon_status_gr3d_mon_act_f(1));
+	} while (!time_after(jiffies, timeout) &&
+			val & host1x_sync_actmon_status_gr3d_mon_act_f(1));
+
+	WARN_ON(time_after(jiffies, timeout));
 
 	/* Write (normalised) sample period. */
 	host1x_actmon_update_sample_period_safe(host);

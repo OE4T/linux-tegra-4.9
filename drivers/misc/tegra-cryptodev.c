@@ -273,7 +273,8 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		size = min(total, PAGE_SIZE);
 		ret = copy_from_user((void *)xbuf[0],
 			(void __user *)crypt_req->plaintext, size);
-		if (ret < 0) {
+		if (ret) {
+			ret = -EFAULT;
 			pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
 			goto process_req_buf_out;
 		}
@@ -308,8 +309,12 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 
 		ret = copy_to_user((void __user *)crypt_req->result,
 			(const void *)xbuf[1], size);
-		if (ret < 0)
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
+					ret);
 			goto process_req_buf_out;
+		}
 
 		total -= size;
 		crypt_req->result += size;
@@ -370,7 +375,7 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 
 	init_completion(&rsa_complete.restart);
 
-	result = kzalloc(rsa_req->keylen >> 16 , GFP_KERNEL);
+	result = kzalloc(rsa_req->keylen >> 16, GFP_KERNEL);
 	if (!result) {
 		pr_err("\nresult alloc fail\n");
 		goto result_fail;
@@ -411,8 +416,11 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 
 	ret = copy_to_user((void __user *)rsa_req->result, (const void *)result,
 		crypto_ahash_digestsize(tfm));
-	if (ret < 0)
-		goto rsa_fail;
+	if (ret) {
+		ret = -EFAULT;
+		pr_err("alg: hash: copy_to_user failed (%d) for %s\n",
+				ret, rsa_req->algo);
+	}
 
 rsa_fail:
 	kfree(result);
@@ -504,8 +512,11 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 
 	ret = copy_to_user((void __user *)sha_req->result,
 		(const void *)result, crypto_ahash_digestsize(tfm));
-	if (ret < 0)
-		goto out;
+	if (ret) {
+		ret = -EFAULT;
+		pr_err("alg: hash: copy_to_user failed (%d) for %s\n",
+				ret, sha_req->algo);
+	}
 
 out:
 	free_bufs(xbuf);
@@ -518,7 +529,6 @@ out_noreq:
 
 out_alloc:
 	return ret;
-
 }
 
 static long tegra_crypto_dev_ioctl(struct file *filp,
@@ -533,6 +543,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	int ret = 0;
 
 	switch (ioctl_num) {
+
 	case TEGRA_CRYPTO_IOCTL_NEED_SSK:
 		ctx->use_ssk = (int)arg;
 		break;
@@ -540,7 +551,8 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	case TEGRA_CRYPTO_IOCTL_PROCESS_REQ:
 		ret = copy_from_user(&crypt_req, (void __user *)arg,
 			sizeof(crypt_req));
-		if (ret < 0) {
+		if (ret) {
+			ret = -EFAULT;
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			break;
 		}
@@ -550,8 +562,12 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 
 	case TEGRA_CRYPTO_IOCTL_SET_SEED:
 		if (copy_from_user(&rng_req, (void __user *)arg,
-			sizeof(rng_req)))
-			return -EFAULT;
+			sizeof(rng_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
+			return ret;
+		}
+
 		memcpy(ctx->seed, rng_req.seed, TEGRA_CRYPTO_RNG_SEED_SIZE);
 
 		if (rng_req.type == RNG_DRBG)
@@ -564,8 +580,11 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 
 	case TEGRA_CRYPTO_IOCTL_GET_RANDOM:
 		if (copy_from_user(&rng_req, (void __user *)arg,
-			sizeof(rng_req)))
-			return -EFAULT;
+			sizeof(rng_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
+			return ret;
+		}
 
 		rng = kzalloc(rng_req.nbytes, GFP_KERNEL);
 		if (!rng) {
@@ -573,6 +592,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 				pr_err("mem alloc for rng_drbg fail");
 			else
 				pr_err("mem alloc for rng fail");
+
 			ret = -ENODATA;
 			goto rng_out;
 		}
@@ -595,7 +615,12 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 
 		ret = copy_to_user((void __user *)rng_req.rdata,
 			(const void *)rng, rng_req.nbytes);
-		ret = (ret < 0) ? -ENODATA : 0;
+		if (ret) {
+			ret = -EFAULT;
+			pr_err("%s: copy_to_user fail(%d)\n", __func__, ret);
+			return ret;
+		}
+
 rng_out:
 		if (rng)
 			kfree(rng);
@@ -604,8 +629,13 @@ rng_out:
 	case TEGRA_CRYPTO_IOCTL_GET_SHA:
 		if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA2) {
 			if (copy_from_user(&sha_req, (void __user *)arg,
-				sizeof(sha_req)))
-				return -EFAULT;
+				sizeof(sha_req))) {
+				ret = -EFAULT;
+				pr_err("%s: copy_from_user fail(%d)\n",
+						__func__, ret);
+				return ret;
+			}
+
 			ret = tegra_crypto_sha(&sha_req);
 		} else {
 			ret = -EINVAL;
@@ -614,8 +644,11 @@ rng_out:
 
 	case TEGRA_CRYPTO_IOCTL_RSA_REQ:
 		if (copy_from_user(&rsa_req, (void __user *)arg,
-			sizeof(rsa_req)))
-			return -EFAULT;
+			sizeof(rsa_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
+			return ret;
+		}
 
 		ret = tegra_crypt_rsa(&rsa_req);
 		break;

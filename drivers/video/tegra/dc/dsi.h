@@ -108,6 +108,8 @@ struct tegra_dc_dsi_data {
 	u16 current_bit_clk_ns;
 	u32 current_dsi_clk_khz;
 
+	struct regulator *avdd_dsi_csi;
+
 	u32 dsi_control_val;
 };
 

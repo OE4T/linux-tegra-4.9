@@ -161,6 +161,7 @@ struct tegra_dc {
 
 	struct work_struct		vblank_work;
 	long				vblank_ref_count;
+	struct work_struct		vpulse2_work;
 	long				vpulse2_ref_count;
 
 	struct {

@@ -1264,6 +1264,23 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	return ret;
 }
 
+static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
+{
+	/* Do the actual brightness update outside of the mutex dc->lock */
+	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
+		dc->out->sd_settings->bl_device_name) {
+		char *bl_device_name =
+			dc->out->sd_settings->bl_device_name;
+		dc->out->sd_settings->bl_device =
+			get_backlight_device_by_name(bl_device_name);
+	}
+
+	if (dc->out->sd_settings && dc->out->sd_settings->bl_device) {
+		struct backlight_device *bl = dc->out->sd_settings->bl_device;
+		backlight_update_status(bl);
+	}
+}
+
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
@@ -1308,21 +1325,9 @@ static void tegra_dc_vblank(struct work_struct *work)
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dc->lock);
 
-	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
-		dc->out->sd_settings->bl_device_name) {
-		char *bl_device_name =
-			dc->out->sd_settings->bl_device_name;
-		dc->out->sd_settings->bl_device =
-			get_backlight_device_by_name(bl_device_name);
-	}
-
-	/* Do the actual brightness update outside of the mutex */
-	if (nvsd_updated && dc->out->sd_settings &&
-	    dc->out->sd_settings->bl_device) {
-
-		struct backlight_device *bl = dc->out->sd_settings->bl_device;
-		backlight_update_status(bl);
-	}
+	/* Do the actual brightness update outside of the mutex dc->lock */
+	if (nvsd_updated)
+		tegra_dc_prism_update_backlight(dc);
 }
 
 static void tegra_dc_one_shot_worker(struct work_struct *work)
@@ -1411,13 +1416,21 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	trace_underflow(dc);
 }
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static void tegra_dc_vpulse2_locked(struct tegra_dc *dc)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+static void tegra_dc_vpulse2(struct work_struct *work)
 {
+	struct tegra_dc *dc = container_of(work, struct tegra_dc, vpulse2_work);
 	bool nvsd_updated = false;
 
-	if (!dc->enabled)
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
 		return;
+	}
+
+	tegra_dc_io_start(dc);
+	tegra_dc_hold_dc_out(dc);
 
 	/* Clear the V_PULSE2_FLIP if no update */
 	if (!tegra_dc_windows_are_dirty(dc))
@@ -1437,6 +1450,14 @@ static void tegra_dc_vpulse2_locked(struct tegra_dc *dc)
 	/* Mask vpulse2 interrupt if ref-count is zero. */
 	if (!dc->vpulse2_ref_count)
 		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+
+	tegra_dc_release_dc_out(dc);
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
+
+	/* Do the actual brightness update outside of the mutex dc->lock */
+	if (nvsd_updated)
+		tegra_dc_prism_update_backlight(dc);
 }
 #endif
 
@@ -1464,9 +1485,9 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 			complete(&dc->frame_end_complete);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	if (status & V_PULSE2_INT)
-		tegra_dc_vpulse2_locked(dc);
+		queue_work(system_freezable_wq, &dc->vpulse2_work);
 #endif
 }
 
@@ -1488,9 +1509,9 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 		tegra_dc_trigger_windows(dc);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	if (status & V_PULSE2_INT)
-		tegra_dc_vpulse2_locked(dc);
+		queue_work(system_freezable_wq, &dc->vpulse2_work);
 #endif
 }
 
@@ -1658,7 +1679,7 @@ static u32 get_syncpt(struct tegra_dc *dc, int idx)
 
 static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
 {
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	u32 start, end;
 	unsigned long val;
 
@@ -2313,6 +2334,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
 	dc->vblank_ref_count = 0;
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	INIT_WORK(&dc->vpulse2_work, tegra_dc_vpulse2);
+#endif
 	dc->vpulse2_ref_count = 0;
 	INIT_DELAYED_WORK(&dc->underflow_work, tegra_dc_underflow_worker);
 	INIT_DELAYED_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);

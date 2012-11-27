@@ -40,9 +40,6 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 	s64 num_unpins = num_cmdbufs + num_relocs;
 	s64 total;
 
-	if(num_relocs < 0 || num_waitchks < 0 || num_cmdbufs < 0)
-		return 0;
-
 	total = sizeof(struct nvhost_job)
 			+ num_relocs * sizeof(struct nvhost_reloc)
 			+ num_relocs * sizeof(struct nvhost_reloc_shift)

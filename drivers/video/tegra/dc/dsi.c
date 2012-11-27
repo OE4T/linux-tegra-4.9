@@ -276,6 +276,9 @@ const u32 init_reg_vs1_ext[] = {
 static int tegra_dsi_host_suspend(struct tegra_dc *dc);
 static int tegra_dsi_host_resume(struct tegra_dc *dc);
 static void tegra_dc_dsi_idle_work(struct work_struct *work);
+static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
+				     struct tegra_dc_dsi_data *dsi,
+				     int no_of_frames);
 
 inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
@@ -2641,6 +2644,10 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 				       cur_cmd->data_id);
 		} else if (cur_cmd->cmd_type == TEGRA_DSI_DELAY_MS) {
 			mdelay(cur_cmd->sp_len_dly.delay_ms);
+		} else if (cur_cmd->cmd_type == TEGRA_DSI_SEND_FRAME) {
+				tegra_dsi_send_dc_frames(dc,
+						dsi,
+						cur_cmd->sp_len_dly.frame_cnt);
 		} else {
 			err = tegra_dsi_write_data_nosync(dc, dsi,
 						cur_cmd->pdata,

@@ -350,6 +350,7 @@ static void tegra_fb_imageblit(struct fb_info *info,
 static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 {
 	struct tegra_fb_info *tegra_fb = (struct tegra_fb_info *)info->par;
+	struct tegra_dc *dc = tegra_fb->win->dc;
 	struct tegra_fb_modedb modedb;
 	struct fb_modelist *modelist;
 	struct fb_vblank vblank = {};
@@ -372,6 +373,8 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			memset(&var, 0x0, sizeof(var));
 
 			fb_videomode_to_var(&var, &modelist->mode);
+			var.width = tegra_dc_get_out_width(dc);
+			var.height = tegra_dc_get_out_height(dc);
 
 			if (copy_to_user((void __user *)&modedb.modedb[i],
 					 &var, sizeof(var)))

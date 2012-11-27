@@ -124,11 +124,12 @@ long nvhost_as_dev_ctl(struct file *filp, unsigned int cmd, unsigned long arg)
 }
 
 
-int nvhost_as_init_device(struct nvhost_device *dev)
+int nvhost_as_init_device(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_host(dev);
 	struct nvhost_chip_support *op = nvhost_get_chip_ops();
-	struct nvhost_channel *ch = dev->channel;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	struct nvhost_channel *ch = pdata->channel;
 	struct nvhost_as *as;
 	int err = 0;
 

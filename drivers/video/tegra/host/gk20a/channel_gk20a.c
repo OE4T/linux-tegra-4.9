@@ -887,6 +887,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags)
 {
 	struct gk20a *g = c->g;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	struct device *d = dev_from_gk20a(g);
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
 	u32 new_put, new_get;
@@ -1009,7 +1010,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (get_cmd) {
-		fence->syncpt_id = c->hw_chid + gk20a_device.syncpt_base;
+		fence->syncpt_id = c->hw_chid + pdata->syncpt_base;
 		fence->value     = nvhost_syncpt_incr_max(sp, fence->syncpt_id, 1);
 
 		trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
@@ -1114,7 +1115,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args)
 {
 	struct device *d = dev_from_gk20a(ch->g);
-	struct nvhost_device *dev = ch->ch->dev;
+	struct platform_device *dev = ch->ch->dev;
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct mem_handle *handle_ref;
 	struct notification *notif;

@@ -45,14 +45,12 @@ struct sim_gk20a;
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 
-#define get_gk20a(ndev) ((struct gk20a *)(ndev)->dev.platform_data)
-#define set_gk20a(ndev, f) ((ndev)->dev.platform_data = f)
 
-extern struct nvhost_device gk20a_device;
+extern struct platform_device tegra_gk20a_device;
 
 struct gk20a {
 	struct nvhost_master *host;
-	struct nvhost_device *dev;
+	struct platform_device *dev;
 
 	struct resource *reg_mem;
 	void __iomem *regs;
@@ -70,8 +68,13 @@ struct gk20a {
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
 
-	void (*remove_support)(struct nvhost_device *);
+	void (*remove_support)(struct platform_device *);
 };
+
+static inline struct gk20a *get_gk20a(struct platform_device *dev)
+{
+	return (struct gk20a *)nvhost_get_private_data(dev);
+}
 
 extern const struct nvhost_as_moduleops gk20a_as_moduleops;
 
@@ -142,7 +145,7 @@ static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
  * 1. nvhost calls this for gk20a driver init when client opens first gk20a channel.
  * 2. client opens gk20a ctrl node.
  */
-void nvhost_gk20a_init(struct nvhost_device *dev);
+void nvhost_gk20a_init(struct platform_device *dev);
 
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */

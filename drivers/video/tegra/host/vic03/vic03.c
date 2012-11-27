@@ -50,8 +50,7 @@ static struct resource vic03_resources[] = {
 },
 };
 
-struct nvhost_device vic03_device = {
-	.name	       = "vic03",
+struct nvhost_device_data vic03_info = {
 	/*.syncpts       = BIT(NVSYNCPT_VIC),*/
 	/*.modulemutexes = BIT(NVMODMUTEX_VIC),*/
 	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
@@ -59,18 +58,29 @@ struct nvhost_device vic03_device = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-	.num_resources = 1,
-	.resource = vic03_resources,
+
 };
 
-
-#define get_vic03(ndev) ((struct vic03 *)(ndev)->dev.platform_data)
-#define set_vic03(ndev, f) ((ndev)->dev.platform_data = f)
-
+struct platform_device tegra_vic03_device = {
+	.name	       = "vic03",
+	.num_resources = 1,
+	.resource      = vic03_resources,
+	.dev           = {
+		.platform_data = &vic03_info,
+	},
+};
+static inline struct vic03 *get_vic03(struct platform_device *dev)
+{
+	return (struct vic03 *)nvhost_get_private_data(dev);
+}
+static inline void set_vic03(struct platform_device *dev, struct vic03 *vic03)
+{
+	nvhost_set_private_data(dev, vic03);
+}
 
 #define VIC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define VIC_IDLE_CHECK_PERIOD	10		/* 10 usec */
-static int vic03_flcn_wait_idle(struct nvhost_device *dev,
+static int vic03_flcn_wait_idle(struct platform_device *dev,
 				u32 *timeout)
 {
 	struct vic03 *v = get_vic03(dev);
@@ -97,7 +107,7 @@ static int vic03_flcn_wait_idle(struct nvhost_device *dev,
 	return -1;
 }
 
-static int vic03_flcn_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
+static int vic03_flcn_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
 	struct vic03 *v = get_vic03(dev);
 	nvhost_dbg_fn("");
@@ -124,7 +134,7 @@ static int vic03_flcn_dma_wait_idle(struct nvhost_device *dev, u32 *timeout)
 }
 
 
-static int vic03_flcn_dma_pa_to_internal_256b(struct nvhost_device *dev,
+static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *dev,
 					      phys_addr_t pa,
 					      u32 internal_offset,
 					      bool imem)
@@ -147,7 +157,7 @@ static int vic03_flcn_dma_pa_to_internal_256b(struct nvhost_device *dev,
 
 }
 
-static int vic03_setup_ucode_image(struct nvhost_device *dev,
+static int vic03_setup_ucode_image(struct platform_device *dev,
 				   u32 *ucode_ptr,
 				   const struct firmware *ucode_fw)
 {
@@ -223,7 +233,7 @@ static int vic03_setup_ucode_image(struct nvhost_device *dev,
 	return 0;
 }
 
-static int vic03_read_ucode(struct nvhost_device *dev)
+static int vic03_read_ucode(struct platform_device *dev)
 {
 	struct vic03 *v = get_vic03(dev);
 	struct mem_mgr *nvmap_c = v->host->memmgr;
@@ -273,7 +283,7 @@ static int vic03_read_ucode(struct nvhost_device *dev)
 	return err;
 }
 
-static int vic03_boot(struct nvhost_device *dev)
+static int vic03_boot(struct platform_device *dev)
 {
 	struct vic03 *v = get_vic03(dev);
 	u32 fifoctrl, timeout;
@@ -329,13 +339,14 @@ static int vic03_boot(struct nvhost_device *dev)
 	return 0;
 }
 
-void nvhost_vic03_init(struct nvhost_device *dev)
+void nvhost_vic03_init(struct platform_device *dev)
 {
 	int err = 0;
-	struct vic03 *v;
-	nvhost_dbg_fn("");
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	struct vic03 *v = get_vic03(dev);
 
-	v=get_vic03(dev);
+	nvhost_dbg_fn("in dev:%p v:%p", dev, v);
+
 	if (!v) {
 		nvhost_dbg_fn("allocating vic03 support");
 		v = kzalloc(sizeof(*v), GFP_KERNEL);
@@ -346,9 +357,10 @@ void nvhost_vic03_init(struct nvhost_device *dev)
 		}
 		set_vic03(dev, v);
 	}
+	nvhost_dbg_fn("primed dev:%p v:%p", dev, v);
 
 	v->host = nvhost_get_host(dev);
-	v->regs = dev->aperture[0];
+	v->regs = pdata->aperture[0];
 
 	if (!v->ucode.valid)
 		err = vic03_read_ucode(dev);
@@ -381,7 +393,7 @@ void nvhost_vic03_init(struct nvhost_device *dev)
 
 }
 
-void nvhost_vic03_deinit(struct nvhost_device *dev)
+void nvhost_vic03_deinit(struct platform_device *dev)
 {
 
 	struct vic03 *v = get_vic03(dev);
@@ -412,7 +424,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx *ctx;
 	bool map_restore = true;
 	u32 *ptr;
-	unsigned long syncpts = ch->dev->syncpts;
+	unsigned long syncpts = nvhost_get_devdata(ch->dev)->syncpts;
 	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
 	u32 nvhost_vic03_restore_size = 11; /* number of words written below */
 
@@ -546,16 +558,28 @@ struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
 }
 
 
-void nvhost_vic03_finalize_poweron(struct nvhost_device *dev)
+void nvhost_vic03_finalize_poweron(struct platform_device *dev)
 {
 	vic03_boot(dev);
 }
 
-static int __devinit vic03_probe(struct nvhost_device *dev,
-		struct nvhost_device_id *id_table)
+static int __devinit vic03_probe(struct platform_device *dev)
 {
 	int err;
-	nvhost_dbg_fn("");
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
+
+	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
+
+	pdata->init                = nvhost_vic03_init;
+	pdata->deinit              = nvhost_vic03_deinit;
+	pdata->alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler;
+	pdata->finalize_poweron    = nvhost_vic03_finalize_poweron;
+
+	pdata->pdev = dev;
+
+	platform_set_drvdata(dev, pdata);
+	/*nvhost_set_private_data(dev, vic03);*/
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -576,31 +600,28 @@ static int __devinit vic03_probe(struct nvhost_device *dev,
 	return 0;
 }
 
-static int __exit vic03_remove(struct nvhost_device *dev)
+static int __exit vic03_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int vic03_suspend(struct nvhost_device *dev, pm_message_t state)
+static int vic03_suspend(struct platform_device *dev, pm_message_t state)
 {
 	return nvhost_client_device_suspend(dev);
 }
 
-static int vic03_resume(struct nvhost_device *dev)
+static int vic03_resume(struct platform_device *dev)
 {
 	return 0;
 }
 #endif
 
-static struct nvhost_driver vic03_driver = {
+static struct platform_driver vic03_driver = {
 	.probe = vic03_probe,
 	.remove = __exit_p(vic03_remove),
-	.init = nvhost_vic03_init,
-	.deinit = nvhost_vic03_deinit,
-	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-	.finalize_poweron = nvhost_vic03_finalize_poweron,
+
 #ifdef CONFIG_PM
 	.suspend = vic03_suspend,
 	.resume = vic03_resume,
@@ -613,12 +634,12 @@ static struct nvhost_driver vic03_driver = {
 
 static int __init vic03_init(void)
 {
-	return nvhost_driver_register(&vic03_driver);
+	return platform_driver_register(&vic03_driver);
 }
 
 static void __exit vic03_exit(void)
 {
-	nvhost_driver_unregister(&vic03_driver);
+	platform_driver_unregister(&vic03_driver);
 }
 
 module_init(vic03_init);

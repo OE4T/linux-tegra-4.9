@@ -24,7 +24,7 @@
 #include <linux/firmware.h>
 
 
-extern struct nvhost_device vic03_device;
+extern struct platform_device tegra_vic03_device;
 struct mem_handle;
 
 #define VIC03_UCODE_FW_NAME    "vic03_ucode.bin"
@@ -115,13 +115,13 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(
 		struct nvhost_channel *ch);
 
 
-int nvhost_vic03_prepare_poweroff(struct nvhost_device *);
-void nvhost_vic03_finalize_poweron(struct nvhost_device *);
-void nvhost_vic03_busy(struct nvhost_device *);
-void nvhost_vic03_idle(struct nvhost_device *);
-void nvhost_vic03_suspend(struct nvhost_device *);
-void nvhost_vic03_init(struct nvhost_device *);
-void nvhost_vic03_deinit(struct nvhost_device *);
+int nvhost_vic03_prepare_poweroff(struct platform_device *);
+void nvhost_vic03_finalize_poweron(struct platform_device *);
+void nvhost_vic03_busy(struct platform_device *);
+void nvhost_vic03_idle(struct platform_device *);
+void nvhost_vic03_suspend(struct platform_device *);
+void nvhost_vic03_init(struct platform_device *);
+void nvhost_vic03_deinit(struct platform_device *);
 
 
 

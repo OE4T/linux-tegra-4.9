@@ -30,11 +30,14 @@
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
-	struct nvhost_device *dev;
+	struct nvhost_device_data *pdata;
+	struct platform_device *dev;
 
 	nvhost_dbg_fn("");
 
-	dev = container_of(inode->i_cdev, struct nvhost_device, ctrl_cdev);
+	pdata = container_of(inode->i_cdev,
+			     struct nvhost_device_data, ctrl_cdev);
+	dev = pdata->pdev;
 
 	BUG_ON(dev == NULL);
 
@@ -54,7 +57,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct nvhost_device *dev = filp->private_data;
+	struct platform_device *dev = filp->private_data;
 	struct gk20a *g = get_gk20a(dev);
 	struct nvhost_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
 	struct nvhost_gpu_zcull_get_info_args *get_info_args;

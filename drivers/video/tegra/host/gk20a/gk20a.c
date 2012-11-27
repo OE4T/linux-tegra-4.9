@@ -37,11 +37,17 @@
 
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
+static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
+{
+	nvhost_set_private_data(dev, gk20a);
+}
+
+
 #define APBDEV_PMC_GPU_RG_CNTRL_0	0x448
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 
-static void nvhost_gk20a_deinit(struct nvhost_device *dev);
+static void nvhost_gk20a_deinit(struct platform_device *dev);
 static struct nvhost_hwctx_handler *
     nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 base,
 				     struct nvhost_channel *ch);
@@ -85,8 +91,7 @@ static const struct file_operations gk20a_ctrl_ops = {
 	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
 };
 
-struct nvhost_device gk20a_device = {
-	.name	       = "gk20a",
+static struct nvhost_device_data tegra_gk20a_info = {
 	/* the following are set by the platform (e.g. t124) support
 	.syncpts       = BIT(NVSYNCPT_3D),
 	.waitbases     = BIT(NVWAITBASE_3D),
@@ -100,12 +105,19 @@ struct nvhost_device gk20a_device = {
 	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
 	.ctrl_ops = &gk20a_ctrl_ops,
 	.moduleid      = NVHOST_MODULE_GPU,
+};
+
+struct platform_device tegra_gk20a_device = {
+	.name          = "gk20a",
+	.resource      = gk20a_resources,
 #if CONFIG_GK20A_SIM
 	.num_resources = 3, /* this is num ioresource_mem, not the sum */
 #else
 	.num_resources = 2, /* this is num ioresource_mem, not the sum */
 #endif
-	.resource = gk20a_resources,
+	.dev           = {
+		.platform_data = &tegra_gk20a_info,
+	},
 };
 
 
@@ -182,15 +194,16 @@ static int alloc_and_kmap_iopage(struct device *d,
 
 }
 /* TBD: strip from released */
-static int gk20a_init_sim_support(struct nvhost_device *dev)
+static int gk20a_init_sim_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 	struct device *d = &dev->dev;
 	phys_addr_t phys;
 
 	g->sim.g = g;
-	g->sim.regs = dev->aperture[GK20A_SIM_IORESOURCE_MEM];
+	g->sim.regs = pdata->aperture[GK20A_SIM_IORESOURCE_MEM];
 	if (!g->sim.regs) {
 		dev_err(d, "failed to remap gk20a sim regs\n");
 		err = -ENXIO;
@@ -357,7 +370,7 @@ static int rpc_recv_poll(struct gk20a *g)
 		recv_phys_addr = recv_phys_addr_lo << PAGE_SHIFT;
 
 		if (recv_phys_addr != g->sim.msg_bfr.phys) {
-			dev_err(&g->dev->dev, "%s Error in RPC reply\n",
+			dev_err(dev_from_gk20a(g), "%s Error in RPC reply\n",
 				__func__);
 			return -1;
 		}
@@ -381,20 +394,21 @@ static int issue_rpc_and_wait(struct gk20a *g)
 
 	err = rpc_send_message(g);
 	if (err) {
-		dev_err(&g->dev->dev, "%s failed rpc_send_message\n",
+		dev_err(dev_from_gk20a(g), "%s failed rpc_send_message\n",
 			__func__);
 		return err;
 	}
 
 	err = rpc_recv_poll(g);
 	if (err) {
-		dev_err(&g->dev->dev, "%s failed rpc_recv_poll\n", __func__);
+		dev_err(dev_from_gk20a(g), "%s failed rpc_recv_poll\n",
+			__func__);
 		return err;
 	}
 
 	/* Now check if RPC really succeeded */
 	if (*sim_msg_hdr(g, sim_msg_result_r()) != sim_msg_result_success_v()) {
-		dev_err(&g->dev->dev, "%s received failed status!\n",
+		dev_err(dev_from_gk20a(g), "%s received failed status!\n",
 			__func__);
 		return -(*sim_msg_hdr(g, sim_msg_result_r()));
 	}
@@ -424,11 +438,11 @@ int gk20a_sim_esc_read(struct gk20a *g, char*path, u32 index, u32 count, u32 *da
 
 
 #else /*CONFIG_GK20A_SIM*/
-static inline int gk20a_init_sim_support(struct nvhost_device *dev);
+static inline int gk20a_init_sim_support(struct platform_device *dev);
 {
 	return 0;
 }
-static void gk20a_remove_sim_support(struct nvhost_device *dev)
+static void gk20a_remove_sim_support(struct platform_device *dev)
 {
 }
 #endif /*!CONFIG_GK20A_SIM*/
@@ -490,7 +504,7 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 
 
 
-static void gk20a_remove_support(struct nvhost_device *dev)
+static void gk20a_remove_support(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
@@ -513,22 +527,22 @@ static void gk20a_remove_support(struct nvhost_device *dev)
 	}
 }
 
-int nvhost_init_gk20a_support(struct nvhost_device *dev)
+int nvhost_init_gk20a_support(struct platform_device *dev)
 {
 	int err = 0;
-
 	struct gk20a *g = get_gk20a(dev);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
-	g->regs = dev->aperture[GK20A_BAR0_IORESOURCE_MEM];
+	g->regs = pdata->aperture[GK20A_BAR0_IORESOURCE_MEM];
 	if (!g->regs) {
-		dev_err(&g->dev->dev, "failed to remap gk20a registers\n");
+		dev_err(dev_from_gk20a(g), "failed to remap gk20a registers\n");
 		err = -ENXIO;
 		goto fail;
 	}
 
-	g->bar1 = dev->aperture[GK20A_BAR1_IORESOURCE_MEM];
+	g->bar1 = pdata->aperture[GK20A_BAR1_IORESOURCE_MEM];
 	if (!g->bar1) {
-		dev_err(&g->dev->dev, "failed to remap gk20a bar1\n");
+		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
 		err = -ENXIO;
 		goto fail;
 	}
@@ -537,7 +551,7 @@ int nvhost_init_gk20a_support(struct nvhost_device *dev)
 			gk20a_intr_isr, gk20a_intr_thread,
 			0, "gk20a", g);
 	if (err) {
-		dev_err(&g->dev->dev, "failed to request stall interrupt irq @ %d\n",
+		dev_err(dev_from_gk20a(g), "failed to request stall interrupt irq @ %d\n",
 			gk20a_intr.start);
 		goto fail;
 	}
@@ -582,7 +596,7 @@ int nvhost_init_gk20a_support(struct nvhost_device *dev)
 	return err;
 }
 
-void nvhost_gk20a_init(struct nvhost_device *dev)
+void nvhost_gk20a_init(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int err;
@@ -598,7 +612,7 @@ void nvhost_gk20a_init(struct nvhost_device *dev)
 	if (err)
 		nvhost_err(&dev->dev, "failed init gk20a pmu support\n");
 }
-static void nvhost_gk20a_deinit(struct nvhost_device *dev)
+static void nvhost_gk20a_deinit(struct platform_device *dev)
 {
 
 	struct gk20a *g = get_gk20a(dev);
@@ -687,13 +701,22 @@ static struct nvhost_hwctx_handler *
 	return h;
 }
 
-static int __devinit gk20a_probe(struct nvhost_device *dev,
-		struct nvhost_device_id *id_table)
+static int __devinit gk20a_probe(struct platform_device *dev)
 {
 	int err;
 	struct gk20a *gk20a;
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)dev->dev.platform_data;
 
 	nvhost_dbg_fn("");
+
+	pdata->pdev = dev;
+	platform_set_drvdata(dev, pdata);
+
+	pdata->init                = nvhost_gk20a_init;
+	pdata->deinit              = nvhost_gk20a_deinit;
+	pdata->alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler;
+	pdata->syncpt_base = 32; /*hack*/
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -737,32 +760,29 @@ static int __devinit gk20a_probe(struct nvhost_device *dev,
 	return err;
 }
 
-static int __exit gk20a_remove(struct nvhost_device *dev)
+static int __exit gk20a_remove(struct platform_device *dev)
 {
 	/* Add clean-up */
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int gk20a_suspend(struct nvhost_device *dev, pm_message_t state)
+static int gk20a_suspend(struct platform_device *dev, pm_message_t state)
 {
 	nvhost_dbg_fn("");
 	return nvhost_client_device_suspend(dev);
 }
 
-static int gk20a_resume(struct nvhost_device *dev)
+static int gk20a_resume(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
 	return 0;
 }
 #endif
 
-static struct nvhost_driver gk20a_driver = {
+static struct platform_driver gk20a_driver = {
 	.probe = gk20a_probe,
 	.remove = __exit_p(gk20a_remove),
-	.init = nvhost_gk20a_init,
-	.deinit = nvhost_gk20a_deinit,
-	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
 #ifdef CONFIG_PM
 	.suspend = gk20a_suspend,
 	.resume = gk20a_resume,
@@ -775,12 +795,12 @@ static struct nvhost_driver gk20a_driver = {
 
 static int __init gk20a_init(void)
 {
-	return nvhost_driver_register(&gk20a_driver);
+	return platform_driver_register(&gk20a_driver);
 }
 
 static void __exit gk20a_exit(void)
 {
-	nvhost_driver_unregister(&gk20a_driver);
+	platform_driver_unregister(&gk20a_driver);
 }
 
 module_init(gk20a_init);

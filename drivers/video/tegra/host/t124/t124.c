@@ -40,6 +40,8 @@
 
 static int t124_num_alloc_channels = 0;
 
+#define HOST_EMC_FLOOR 300000000
+
 static struct resource tegra_host1x04_resources[] = {
 	{
 		.start = TEGRA_HOST1X_BASE,
@@ -93,22 +95,143 @@ static struct host1x_device_info host1x04_info = {
 	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
 
-static struct nvhost_device tegra_host1x04_device = {
-	.dev		= {.platform_data = &host1x04_info},
-	.name		= "host1x",
-	.id		= -1,
-	.resource	= tegra_host1x04_resources,
-	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
+static struct nvhost_device_data tegra_host1x04_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 
+
+static struct platform_device tegra_host1x04_device = {
+	.name		= "host1x",
+	.resource	= tegra_host1x04_resources,
+	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
+	.dev            = {
+		.platform_data = &tegra_host1x04_info,
+	},
+};
+
+
+static struct resource isp_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_ISP_BASE,
+		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	}
+};
+
+static struct nvhost_device_data tegra_isp01_info = {
+	.syncpts = NV_ISP_0_SYNCPTS,
+	.modulemutexes = BIT(NVMODMUTEX_ISP_0),
+	.clocks = {{"isp", UINT_MAX}, {} },
+	.exclusive     = true,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_ISP,
+};
+static struct platform_device tegra_isp01_device = {
+	.name          = "isp",
+	.resource      = isp_resources,
+	.num_resources = ARRAY_SIZE(isp_resources),
+	.dev           = {
+		.platform_data = &tegra_isp01_info,
+	},
+};
+
+static struct nvhost_device_data tegra_isp01b_info = {
+	.syncpts = NV_ISP_1_SYNCPTS,
+	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
+	.clocks = {{"isp.1", UINT_MAX}, {} },
+	.exclusive     = true,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = (1 << 16) | NVHOST_MODULE_ISP,
+};
+
+static struct platform_device tegra_isp01b_device = {
+	.name          = "isp",
+	.id            = 1, /* .1 on the dev node */
+	.dev  = {
+		.platform_data = &tegra_isp01b_info,
+	},
+};
+
+static struct resource vi_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_VI_BASE,
+		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device_data tegra_vi01_info = {
+	.syncpts       = NV_VI_0_SYNCPTS,
+	.modulemutexes = BIT(NVMODMUTEX_VI_0),
+	.exclusive     = true,
+	.clocks = {{"vi", UINT_MAX}, {} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
+};
+
+
+static struct platform_device tegra_vi01_device = {
+	.name		= "vi",
+	.resource	= vi_resources,
+	.num_resources	= ARRAY_SIZE(vi_resources),
+	.dev		= {
+		.platform_data = &tegra_vi01_info,
+	},
+};
+
+#if 0
+static struct nvhost_device_data tegra_vi01b_info = {
+	.syncpts       = NV_VI_1_SYNCPTS,
+	.modulemutexes = BIT(NVMODMUTEX_VI_1),
+	.exclusive     = true,
+	.clocks = {{"vi.1", UINT_MAX}, {} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = (1 << 16 | NVHOST_MODULE_VI),
+};
+
+static struct platform_device tegra_vi01b_device = {
+	.name		= "vi",
+	.id		= 1, /* .1 on the dev node */
+	.dev		= {
+		.platform_data = &tegra_vi01b_info,
+	},
+};
+#endif
 static struct resource msenc_resources[] = {
 	{
 		.name = "regs",
 		.start = TEGRA_MSENC_BASE,
 		.end = TEGRA_MSENC_BASE + TEGRA_MSENC_SIZE - 1,
 		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct nvhost_device_data tegra_msenc03_info = {
+	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
+	.syncpts       = BIT(NVSYNCPT_MSENC),
+	.waitbases     = BIT(NVWAITBASE_MSENC),
+	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
+	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.exclusive     = true,
+	.keepalive     = true,
+	.moduleid	= NVHOST_MODULE_MSENC,
+};
+
+struct platform_device tegra_msenc03_device = {
+	.name	       = "msenc",
+	.resource      = msenc_resources,
+	.num_resources = ARRAY_SIZE(msenc_resources),
+	.dev           = {
+		.platform_data = &tegra_msenc03_info,
 	},
 };
 
@@ -121,113 +244,68 @@ static struct resource tsec_resources[] = {
 	},
 };
 
-static struct nvhost_device *channel_devices[] = {
-	&tegra_host1x04_device,
-(struct nvhost_device []){{
-	.name	       = "display",
-	.syncpts       = BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) |
-			 BIT(NVSYNCPT_DISP0_B) | /* BIT(NVSYNCPT_DISP1_B) |
-	!!!FIXME!!!	 BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) | */
-			 BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1),
-	.modulemutexes = BIT(NVMODMUTEX_DISPLAYA) | BIT(NVMODMUTEX_DISPLAYB),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
-},},
-(struct nvhost_device []){{
-	.name	 = "isp",
-	.syncpts = NV_ISP_0_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_ISP_0),
-	.clocks = {{"isp", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_ISP,
-},},
-(struct nvhost_device []){{
-	.name	 = "isp",
-	.id      = 1, /* .1 on the dev node */
-	.syncpts = NV_ISP_1_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
-	.clocks = {{"isp.1", UINT_MAX}, {} },
-	.exclusive     = true,
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = (1 << 16) | NVHOST_MODULE_ISP,
-},},
-(struct nvhost_device [])
-{{	.name	       = "vi",
-	.syncpts       = NV_VI_0_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_VI_0),
-	.exclusive     = true,
-	.clocks = {{"vi", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
-},},
-(struct nvhost_device [])
-{{	.name	       = "vi",
-	.id            = 1, /* .1 on the dev node */
-	.syncpts       = NV_VI_1_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_VI_1),
-	.exclusive     = true,
-	.clocks = {{"vi.1", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = (1 << 16 | NVHOST_MODULE_VI),
-},},
-(struct nvhost_device []){{
-	.name	       = "msenc",
-	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
-	.resource      = msenc_resources,
-	.num_resources = ARRAY_SIZE(msenc_resources),
-	.syncpts       = BIT(NVSYNCPT_MSENC),
-	.waitbases     = BIT(NVWAITBASE_MSENC),
-	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.exclusive     = true,
-	.keepalive     = true,
-	.init          = nvhost_msenc_init,
-	.deinit        = nvhost_msenc_deinit,
-#define HOST_EMC_FLOOR 300000000
-	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_MSENC,
-},},
-(struct nvhost_device []){{
-	.name	       = "dsi",
-	.syncpts       = BIT(NVSYNCPT_DSI),
-	.modulemutexes = BIT(NVMODMUTEX_DSI),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_NONE,
-},},
-(struct nvhost_device []){{
-	.name          = "tsec",
+static struct nvhost_device_data tegra_tsec01_info = {
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.resource      = tsec_resources,
-	.num_resources = ARRAY_SIZE(tsec_resources),
+	.syncpts       = BIT(NVSYNCPT_TSEC),
 	.waitbases     = BIT(NVWAITBASE_TSEC),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
 	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
-},},
+};
+
+static struct platform_device tegra_tsec01_device = {
+	.name		= "tsec",
+	.resource	= tsec_resources,
+	.num_resources	= ARRAY_SIZE(tsec_resources),
+	.dev		= {
+		.platform_data = &tegra_tsec01_info,
+	},
+};
+
+
+
+static struct platform_device *t12_devices[] = {
+	&tegra_isp01_device,
+	&tegra_isp01b_device,
+	&tegra_vi01_device,
+	&tegra_msenc03_device,
+	&tegra_tsec01_device,
 #if defined(CONFIG_TEGRA_GK20A)
-	&gk20a_device,
+	&tegra_gk20a_device,
 #endif
 #if defined(CONFIG_ARCH_TEGRA_VIC)
-	&vic03_device,
+	&tegra_vic03_device,
 #endif
 };
 
-int tegra12_register_host1x_devices(void)
+
+struct platform_device *tegra12_register_host1x_devices(void)
 {
+	int index = 0;
+	struct platform_device *pdev;
+
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)tegra_host1x04_device.dev.platform_data;
+
 	nvhost_dbg_fn("");
-	return nvhost_add_devices(channel_devices, ARRAY_SIZE(channel_devices));
+
+	pdata->private_data = &host1x04_info;
+
+	/* register host1x device first */
+	platform_device_register(&tegra_host1x04_device);
+	tegra_host1x04_device.dev.parent = NULL;
+
+	/* register clients with host1x device as parent */
+	for (index = 0; index < ARRAY_SIZE(t12_devices); index++) {
+		pdev = t12_devices[index];
+		pdev->dev.parent = &tegra_host1x04_device.dev;
+		platform_device_register(pdev);
+	}
+
+	return &tegra_host1x04_device;
 }
 
 static inline void __iomem *t124_channel_aperture(void __iomem *p, int ndx)
@@ -258,7 +336,7 @@ static int t124_channel_submit(struct nvhost_job *job)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (job->ch->dev == &gk20a_device)
+	if (job->ch->dev == &tegra_gk20a_device)
 		return gk20a_channel_submit(job);
 	else
 #endif
@@ -332,10 +410,11 @@ static void t124_free_nvhost_channel(struct nvhost_channel *ch)
 }
 
 static struct nvhost_channel *t124_alloc_nvhost_channel(
-		struct nvhost_device *dev)
+		struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 	nvhost_dbg_fn("");
-	return nvhost_alloc_channel_internal(dev->index,
+	return nvhost_alloc_channel_internal(pdata->index,
 		nvhost_get_host(dev)->info.nb_channels,
 		&t124_num_alloc_channels);
 }
@@ -346,29 +425,31 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	int i, nb_channels;
 	nvhost_dbg_fn("max channels=%d devices=%d",
 		      NV_HOST1X_CHANNELS,
-		      ARRAY_SIZE(channel_devices));
-	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(channel_devices));
+		      ARRAY_SIZE(t12_devices));
+	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(t12_devices));
 
-	nb_channels =  ARRAY_SIZE(channel_devices);
+	nb_channels =  ARRAY_SIZE(t12_devices);
 
 	/* Set indices dynamically as we can have
 	 * missing/non-static devices above (e.g.: vic, gk20a).
 	 */
 
 	for (i = 0; i < nb_channels; i++ ) {
-		struct nvhost_device *dev = channel_devices[i];
-
-		dev->index = i;
-
-		if (dev == &vic03_device) {
-			dev->modulemutexes = BIT(NVMODMUTEX_VIC);
-			dev->syncpts = BIT(NVSYNCPT_VIC);
+		struct platform_device *dev = t12_devices[i];
+		struct nvhost_device_data *pdata =
+			(struct nvhost_device_data *)dev->dev.platform_data;
+		pdata->index = i;
+#if defined(CONFIG_ARCH_TEGRA_VIC)
+		if (dev == &tegra_vic03_device) {
+			pdata->modulemutexes = BIT(NVMODMUTEX_VIC);
+			pdata->syncpts = BIT(NVSYNCPT_VIC);
 		}
+#endif
 #if defined(CONFIG_TEGRA_GK20A)
-		if (dev == &gk20a_device) {
-			dev->syncpts       = BIT(NVSYNCPT_3D);
-			dev->waitbases     = BIT(NVWAITBASE_3D);
-			dev->modulemutexes = BIT(NVMODMUTEX_3D);
+		if (dev == &tegra_gk20a_device) {
+			pdata->syncpts       = BIT(NVSYNCPT_3D);
+			pdata->waitbases     = BIT(NVWAITBASE_3D);
+			pdata->modulemutexes = BIT(NVMODMUTEX_3D);
 		}
 #endif
 	}
@@ -397,15 +478,16 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 int t124_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
 	int err = 0;
-	unsigned long syncpts = ch->dev->syncpts;
-	unsigned long waitbases = ch->dev->waitbases;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
+	unsigned long syncpts = pdata->syncpts;
+	unsigned long waitbases = pdata->waitbases;
 	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
 	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev->alloc_hwctx_handler) {
-		ch->ctxhandler = ch->dev->alloc_hwctx_handler(syncpt,
+	if (pdata->alloc_hwctx_handler) {
+		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,
 				waitbase, ch);
 		if (!ch->ctxhandler)
 			err = -ENOMEM;
@@ -441,10 +523,6 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	err = nvhost_init_t124_debug_support(op);
 	if (err)
 		return err;
-
-#if defined(CONFIG_TEGRA_GK20A)
-	gk20a_device.syncpt_base = NVSYNCPT_GK20A_BASE;
-#endif
 
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;

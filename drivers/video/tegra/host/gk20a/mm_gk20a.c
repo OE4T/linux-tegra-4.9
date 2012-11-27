@@ -1143,8 +1143,7 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 {
 	struct nvhost_as *as = as_share->as;
-	struct nvhost_device *host_dev = as->ch->dev;
-	struct gk20a *gk20a = get_gk20a(host_dev);
+	struct gk20a *gk20a = get_gk20a(as->ch->dev);
 	struct mm_gk20a *mm = &gk20a->mm;
 	struct vm_gk20a *vm;
 	char name[32];

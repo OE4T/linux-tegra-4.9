@@ -1236,19 +1236,22 @@ static struct {
 	{ NVHOST_MODULE_VIC, "vic"},
 };
 
-static const char *get_device_name_for_dev(struct nvhost_device *dev)
+static const char *get_device_name_for_dev(struct platform_device *dev)
 {
 	int i;
 	/* first choice is to use the class id if specified */
-	for (i = 0; i < ARRAY_SIZE(class_id_dev_name_map); i++)
-		if (dev->class == class_id_dev_name_map[i].class_id)
+	for (i = 0; i < ARRAY_SIZE(class_id_dev_name_map); i++) {
+		struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+		if (pdata->class == class_id_dev_name_map[i].class_id)
 			return class_id_dev_name_map[i].dev_name;
+	}
 
 	/* second choice is module name if specified */
-	for (i = 0; i < ARRAY_SIZE(module_id_dev_name_map); i++)
-		if (dev->moduleid == module_id_dev_name_map[i].module_id)
+	for (i = 0; i < ARRAY_SIZE(module_id_dev_name_map); i++) {
+		struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+		if (pdata->moduleid == module_id_dev_name_map[i].module_id)
 			return module_id_dev_name_map[i].dev_name;
-
+	}
 
 	/* last choice is to just use the given dev name */
 	return dev->name;
@@ -1260,10 +1263,12 @@ static struct device *nvhost_client_device_create(
 	const struct file_operations *ops)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	const char *use_dev_name;
 	struct device *dev;
 	int err;
+
+	nvhost_dbg_fn("");
 
 	BUG_ON(!host);
 
@@ -1273,7 +1278,23 @@ static struct device *nvhost_client_device_create(
 	err = cdev_add(cdev, devno, 1);
 	if (err < 0) {
 		dev_err(&pdev->dev,
-			"failed to add chan %i cdev\n", pdev->index);
+			"failed to add chan %i cdev\n", pdata->index);
+		return NULL;
+	}
+	use_dev_name = get_device_name_for_dev(pdev);
+
+	dev = device_create(host->nvhost_class,
+			NULL, devno, NULL,
+			(pdev->id == 0) ?
+			IFACE_NAME "-%s%s" :
+			IFACE_NAME "-%s%s.%d",
+			cdev_name, use_dev_name, pdev->id);
+
+	if (IS_ERR(dev)) {
+		err = PTR_ERR(dev);
+		dev_err(&pdev->dev,
+			"failed to create %s %s device for %s\n",
+			use_dev_name, cdev_name, pdev->name);
 		return NULL;
 	}
 
@@ -1298,7 +1319,6 @@ int nvhost_client_user_init(struct platform_device *dev)
 				"", devno, &nvhost_channelops);
 	if (ch->node == NULL)
 		goto fail;
-
 	++devno;
 	ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,
 				"as-", devno, &nvhost_asops);
@@ -1452,7 +1472,7 @@ fail:
 	for (n = 0; n < dev->num_resources; n++ ) {
 		if (r[n]) {
 			if (pdata->aperture[n])
-				iounmap(dev->aperture[n]);
+				iounmap(pdata->aperture[n]);
 			if (pdata->reg_mem[n])
 				release_mem_region(r[n]->start, resource_size(r[n]));
 		}

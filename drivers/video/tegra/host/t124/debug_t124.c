@@ -42,7 +42,7 @@ static void t124_debug_show_channel_cdma(struct nvhost_master *m,
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (ch->dev == &gk20a_device)
+	if (ch->dev == &tegra_gk20a_device)
 		gk20a_debug_show_channel_cdma(m, ch, o, chid);
 	else
 #endif
@@ -55,7 +55,7 @@ void t124_debug_show_channel_fifo(struct nvhost_master *m,
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (ch->dev == &gk20a_device)
+	if (ch->dev == &tegra_gk20a_device)
 		gk20a_debug_show_channel_fifo(m, ch, o, chid);
 	else
 #endif

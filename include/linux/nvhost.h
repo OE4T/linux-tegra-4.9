@@ -162,25 +162,7 @@ struct nvhost_device_data {
 	struct cdev ctrl_cdev;
 	const struct file_operations *ctrl_ops;    /* ctrl ops for the module */
 
-	void	*priv;
-
-	/* Allocates a context handler for the device */
-	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
-			u32 waitbase, struct nvhost_channel *ch);
-	/* Preparing for power off. Used for context save. */
-	int (*prepare_poweroff)(struct nvhost_device *dev);
-	/* Finalize power on. Can be used for context restore. */
-	void (*finalize_poweron)(struct nvhost_device *dev);
-	/* Device is busy. */
-	void (*busy)(struct nvhost_device *);
-	/* Device is idle. */
-	void (*idle)(struct nvhost_device *);
-	/* Device is going to be suspended */
-	void (*suspend)(struct nvhost_device *);
-	/* Device is initialized */
-	void (*init)(struct nvhost_device *dev);
-	/* Device is de-initialized. */
-	void (*deinit)(struct nvhost_device *dev);
+	/*	void	*priv;*/
 
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
@@ -249,6 +231,13 @@ struct nvhost_device_data {
 	/* Callback when a clock is changed */
 	void (*update_clk)(struct platform_device *dev);
 };
+
+
+static inline
+struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
+{
+	return (struct nvhost_device_data *)platform_get_drvdata(pdev);
+}
 
 enum nvhost_devfreq_busy {
 	DEVICE_UNKNOWN = 0,

@@ -278,7 +278,8 @@ int nvhost_module_add_client(struct platform_device *dev, void *priv)
 	struct nvhost_module_client *client;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	nvhost_dbg_fn("%s num_clks=%d priv=%p", dev->name, dev->num_clks, priv);
+	nvhost_dbg_fn("%s num_clks=%d priv=%p", dev->name,
+		      pdata->num_clks, priv);
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
@@ -433,8 +434,7 @@ int nvhost_module_init(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	/* initialize clocks to known state (=enabled) */
-
-	dev->num_clks = 0;
+	pdata->num_clks = 0;
 	INIT_LIST_HEAD(&pdata->client_list);
 	while (pdata->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
@@ -446,15 +446,15 @@ int nvhost_module_init(struct platform_device *dev)
 			 dev->name, dev->id);
 		c = clk_get_sys(devname, pdata->clocks[i].name);
 		if (IS_ERR(c)) {
-			dev_err(&dev->dev, "Cannot get clock %s\n",
-					pdata->clocks[i].name);
+			dev_err(&dev->dev, "clk_get_sys failed for i=%d %s:%s",
+				i, devname, pdata->clocks[i].name);
 			/* arguably we should fail init here instead... */
 			i++;
 			continue;
 		}
 		nvhost_dbg_fn("%s->clk[%d] -> %s:%s:%p",
-			      dev->name, dev->num_clks,
-			      devname, dev->clocks[i].name,
+			      dev->name, pdata->num_clks,
+			      devname, pdata->clocks[i].name,
 			      c);
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
@@ -730,6 +730,8 @@ void nvhost_module_busy_ext(struct platform_device *dev)
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
+	nvhost_dbg_fn("dev:%s parent:%s",
+		      dev->name, pdev->name);
 
 	nvhost_module_busy(pdev);
 }

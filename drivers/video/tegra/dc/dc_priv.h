@@ -213,12 +213,14 @@ static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 	if (tegra_powergate_is_powered(dc->powergate_id))
 		tegra_powergate_partition(dc->powergate_id);
+	dc->powered = 0;
 }
 
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	if (!tegra_powergate_is_powered(dc->powergate_id))
 		tegra_unpowergate_partition(dc->powergate_id);
+	dc->powered = 1;
 }
 #else
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }

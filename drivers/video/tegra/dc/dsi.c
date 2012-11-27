@@ -406,16 +406,12 @@ static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	if (!tegra_is_clk_enabled(dsi->dsi_clk))
 		clk_prepare_enable(dsi->dsi_clk);
-
-	tegra_mipi_cal_clk_enable(dsi->mipi_cal);
 }
 
 static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	if (tegra_is_clk_enabled(dsi->dsi_clk))
 		clk_disable_unprepare(dsi->dsi_clk);
-
-	tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 }
 
 static void __maybe_unused tegra_dsi_syncpt_reset(
@@ -1988,6 +1984,18 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		/* TODO: characterization parameters */
+		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+
+		tegra_mipi_cal_init_hw(dsi->mipi_cal);
+
+		tegra_mipi_cal_write(dsi->mipi_cal,
+				MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		tegra_mipi_cal_write(dsi->mipi_cal,
+				PAD_PDVREG(0x0),
+				MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+
+		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
 		val &= ~(DSI_PAD_CONTROL_PAD_LPUPADJ(0x3) |
@@ -2079,16 +2087,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 			tegra_dsi_writel(dsi, 0, init_reg_vs1_ext[i]);
 	}
 
-	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
-
 	tegra_dsi_pad_calibration(dsi);
-
-	tegra_mipi_cal_init_hw(dsi->mipi_cal);
-
-	tegra_mipi_cal_write(dsi->mipi_cal, MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
-					MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-	tegra_mipi_cal_write(dsi->mipi_cal, PAD_PDVREG(0x0),
-				MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
 
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
@@ -3232,12 +3231,9 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
-	u32 val;
-	u32 i;
 
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
-	tegra_dc_dsi_hold_host(dc);
 
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
@@ -3340,28 +3336,9 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 	if (dsi->out_ops && dsi->out_ops->enable)
 		dsi->out_ops->enable(dsi);
 
-	//enable clk to mipi_cal block
-	val = readl(IO_ADDRESS(0x60006000 + 0x14));
-	val |= (1<<24);
-	writel(val, IO_ADDRESS(0x60006000 + 0x14));
-
-	//zero out mipi cal
-	for (i = 0; i <= 0x60; i += 4) {
-		writel(0x0, IO_ADDRESS(0x700e3000 + i));
-	}
-
-	//enable vclamp ref voltage
-	writel(0x1, IO_ADDRESS(0x700e3058));
-	writel(0x0, IO_ADDRESS(0x700e3000 + 0x60));
-
-	tegra_dsi_writel(dsi, 20, DSI_SOL_DELAY);
-
-	tegra_dsi_writel(dsi, 0x0, DSI_MAX_THRESHOLD);
-
 	if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
 		tegra_dsi_start_dc_stream(dc, dsi);
 fail:
-	tegra_dc_dsi_release_host(dc);
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
 }
@@ -3386,7 +3363,7 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	if (!dsi->mipi_cal) {
 		dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
-		if (PTR_ERR(dsi->mipi_cal) < 0)
+		if (IS_ERR(dsi->mipi_cal))
 			dsi->mipi_cal = NULL;
 	}
 }

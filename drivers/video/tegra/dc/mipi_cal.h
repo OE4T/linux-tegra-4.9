@@ -25,24 +25,19 @@ struct tegra_mipi_cal {
 	struct clk *clk;
 	void __iomem *base;
 	struct mutex lock;
-	bool power_on;
 };
 
 #ifdef CONFIG_TEGRA_MIPI_CAL
 static inline void tegra_mipi_cal_clk_enable(struct tegra_mipi_cal *mipi_cal)
 {
-	if (mipi_cal && !mipi_cal->power_on) {
-		clk_prepare_enable(mipi_cal->clk);
-		mipi_cal->power_on = true;
-	}
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
+	clk_prepare_enable(mipi_cal->clk);
 }
 
 static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal *mipi_cal)
 {
-	if (mipi_cal && mipi_cal->power_on) {
-		clk_disable_unprepare(mipi_cal->clk);
-		mipi_cal->power_on = false;
-	}
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
+	clk_disable_unprepare(mipi_cal->clk);
 }
 
 /* reg is word offset */
@@ -50,8 +45,9 @@ static inline unsigned long tegra_mipi_cal_read(
 					struct tegra_mipi_cal *mipi_cal,
 					unsigned long reg)
 {
-	return mipi_cal && mipi_cal->power_on ?
-		readl(mipi_cal->base + reg) : 0;
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
+		!tegra_is_clk_enabled(mipi_cal->clk));
+	return readl(mipi_cal->base + reg);
 }
 
 /* reg is word offset */
@@ -59,19 +55,20 @@ static inline void tegra_mipi_cal_write(struct tegra_mipi_cal *mipi_cal,
 							unsigned long val,
 							unsigned long reg)
 {
-	if (mipi_cal && mipi_cal->power_on)
-		writel(val, mipi_cal->base + reg);
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
+		!tegra_is_clk_enabled(mipi_cal->clk));
+	writel(val, mipi_cal->base + reg);
 }
 
 extern struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc);
 extern int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal);
 #else
-static inline void tegra_mipi_cal_clk_enable(struct tegra_mipi_cal  *mipi_cal)
+static inline void tegra_mipi_cal_clk_enable(struct tegra_mipi_cal *mipi_cal)
 {
 	/* dummy */
 }
 
-static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal  *mipi_cal)
+static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal *mipi_cal)
 {
 	/* dummy */
 }

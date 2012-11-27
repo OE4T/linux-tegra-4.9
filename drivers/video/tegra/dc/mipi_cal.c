@@ -20,22 +20,21 @@
 #include "mipi_cal.h"
 #include "mipi_cal_regs.h"
 
-/* must be called with clocks enabled */
 int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 {
 	unsigned cnt = MIPI_CAL_MIPI_CAL_CTRL_0;
 
-	if (!mipi_cal)
-		goto success;
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
 
 	mutex_lock(&mipi_cal->lock);
+	clk_prepare_enable(mipi_cal->clk);
 
 	for (; cnt <= MIPI_CAL_MIPI_BIAS_PAD_CFG2_0; cnt += 4)
 		tegra_mipi_cal_write(mipi_cal, 0, cnt);
 
+	clk_disable_unprepare(mipi_cal->clk);
 	mutex_unlock(&mipi_cal->lock);
 
-success:
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mipi_cal_init_hw);
@@ -81,7 +80,6 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	mipi_cal->res = res;
 	mipi_cal->base = base;
 	mipi_cal->clk = clk;
-	mipi_cal->power_on = false;
 
 	return mipi_cal;
 

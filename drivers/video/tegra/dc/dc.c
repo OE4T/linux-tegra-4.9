@@ -2412,12 +2412,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 	disable_dc_irq(dc);
 
-	mutex_lock(&dc->lock);
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 	}
-	mutex_unlock(&dc->lock);
 
 	tegra_dc_create_debugfs(dc);
 

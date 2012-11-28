@@ -63,7 +63,7 @@ void t124_debug_show_channel_fifo(struct nvhost_master *m,
 static void t124_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 {
 	u32 __iomem *mlo_regs = m->sync_aperture +
-		host1x_sync_mlock_owner_0_0_r();
+		host1x_sync_mlock_owner_0_r();
 	int i;
 
 	nvhost_debug_output(o, "---- mlocks ----\n");

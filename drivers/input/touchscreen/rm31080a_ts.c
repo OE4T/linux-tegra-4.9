@@ -2313,6 +2313,10 @@ static int rm31080_spi_probe(struct spi_device *spi)
 #ifdef ENABLE_RAW_DATA_QUEUE
 	rm31080_queue_init();
 #endif
+
+	/* Enable async suspend/resume to reduce LP0 latency */
+	device_enable_async_suspend(&spi->dev);
+
 	return 0;
 
 err_unregister_notifier:

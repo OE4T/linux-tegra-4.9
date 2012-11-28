@@ -2396,6 +2396,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tegra_dc_set_out(dc, dc->pdata->default_out);
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
+	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {

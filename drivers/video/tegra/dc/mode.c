@@ -153,11 +153,20 @@ static s64 calc_frametime_ns(const struct tegra_dc_mode *m)
 int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 {
 	long h_total, v_total, refresh;
+	long pclk;
+
+	if (m->rated_pclk >= 0)
+		pclk = m->rated_pclk;
+	else
+		pclk = m->pclk;
+
 	h_total = m->h_active + m->h_front_porch + m->h_back_porch +
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	refresh = m->pclk / h_total;
+	if (!pclk || !h_total || !v_total)
+		return 0;
+	refresh = pclk / h_total;
 	refresh *= 1000;
 	refresh /= v_total;
 	return refresh;
@@ -256,6 +265,8 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
+	dc->mode_dirty = false;
+
 	trace_display_mode(dc, &dc->mode);
 	return 0;
 }
@@ -324,10 +335,8 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 
 void tegra_dc_update_mode(struct tegra_dc *dc)
 {
-	if (dc->mode_dirty) {
+	if (dc->mode_dirty)
 		tegra_dc_program_mode(dc, &dc->mode);
-		dc->mode_dirty = false;
-	}
 }
 
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,

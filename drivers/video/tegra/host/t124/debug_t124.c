@@ -32,8 +32,6 @@
 
 #include "chip_support.h"
 
-#include "host1x/hw_host1x02_sync.h"
-#include "host1x/hw_host1x02_channel.h"
 #include "host1x/host1x_debug.c"
 
 static void t124_debug_show_channel_cdma(struct nvhost_master *m,

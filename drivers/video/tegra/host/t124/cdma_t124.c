@@ -23,8 +23,6 @@
 
 #include "t124.h"
 #include "hardware_t124.h"
-#include "host1x/hw_host1x02_sync.h"
-#include "host1x/hw_host1x02_channel.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/cdma_gk20a.h"

@@ -138,6 +138,16 @@ static struct platform_device tegra_isp01_device = {
 	},
 };
 
+static struct resource ispb_resources[] = {
+	{
+		.name = "regs",
+		.start = TEGRA_ISPB_BASE,
+		.end = TEGRA_ISPB_BASE + TEGRA_ISPB_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	}
+};
+
+
 static struct nvhost_device_data tegra_isp01b_info = {
 	.syncpts = NV_ISP_1_SYNCPTS,
 	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
@@ -151,6 +161,8 @@ static struct nvhost_device_data tegra_isp01b_info = {
 static struct platform_device tegra_isp01b_device = {
 	.name          = "isp",
 	.id            = 1, /* .1 on the dev node */
+	.resource      = ispb_resources,
+	.num_resources = ARRAY_SIZE(ispb_resources),
 	.dev  = {
 		.platform_data = &tegra_isp01b_info,
 	},
@@ -185,7 +197,6 @@ static struct platform_device tegra_vi01_device = {
 	},
 };
 
-#if 0
 static struct nvhost_device_data tegra_vi01b_info = {
 	.syncpts       = NV_VI_1_SYNCPTS,
 	.modulemutexes = BIT(NVMODMUTEX_VI_1),
@@ -203,7 +214,7 @@ static struct platform_device tegra_vi01b_device = {
 		.platform_data = &tegra_vi01b_info,
 	},
 };
-#endif
+
 static struct resource msenc_resources[] = {
 	{
 		.name = "regs",
@@ -271,6 +282,7 @@ static struct platform_device *t12_devices[] = {
 	&tegra_isp01_device,
 	&tegra_isp01b_device,
 	&tegra_vi01_device,
+	&tegra_vi01b_device,
 	&tegra_msenc03_device,
 	&tegra_tsec01_device,
 #if defined(CONFIG_TEGRA_GK20A)

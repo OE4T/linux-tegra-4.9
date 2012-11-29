@@ -2168,6 +2168,7 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	input_dev->close = rm31080_input_close;
 	input_dev->enable = rm31080_input_enable;
 	input_dev->disable = rm31080_input_disable;
+	input_dev->enabled = true;
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);

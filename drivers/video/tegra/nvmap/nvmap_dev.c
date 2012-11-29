@@ -1018,10 +1018,11 @@ static void allocations_stringify(struct nvmap_client *client,
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && handle->heap_pgalloc == iovmm) {
-			unsigned long base = iovmm ? 0:
-				(unsigned long)(handle->carveout->base);
-			seq_printf(s, "%-18s %-18s %8lx %10u %8x\n", "", "",
-					base, handle->size, handle->userflags);
+			phys_addr_t base = iovmm ? 0 :
+					   (handle->carveout->base);
+			seq_printf(s, "%-18s %-18s %8llx %10u %8x\n", "", "",
+					(unsigned long long)base,
+					handle->size, handle->userflags);
 		}
 	}
 }

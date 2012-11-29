@@ -581,7 +581,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 #endif
 	gfp_t gfp = GFP_NVMAP;
-	unsigned long kaddr, paddr;
+	unsigned long kaddr;
+	phys_addr_t paddr;
 	pte_t **pte = NULL;
 
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES) {

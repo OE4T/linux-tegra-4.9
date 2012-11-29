@@ -634,7 +634,7 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 void *nvmap_kmap(struct nvmap_handle_ref *ref, unsigned int pagenum)
 {
 	struct nvmap_handle *h;
-	unsigned long paddr;
+	phys_addr_t paddr;
 	unsigned long kaddr;
 	pgprot_t prot;
 	pte_t **pte;
@@ -668,7 +668,7 @@ void nvmap_kunmap(struct nvmap_handle_ref *ref, unsigned int pagenum,
 		  void *addr)
 {
 	struct nvmap_handle *h;
-	unsigned long paddr;
+	phys_addr_t paddr;
 	pte_t **pte;
 
 	BUG_ON(!addr || !ref);

@@ -108,7 +108,7 @@ struct list_block {
 	struct nvmap_heap_block block;
 	struct list_head all_list;
 	unsigned int mem_prot;
-	unsigned long orig_addr;
+	phys_addr_t orig_addr;
 	size_t size;
 	size_t align;
 	struct nvmap_heap *heap;
@@ -187,11 +187,11 @@ static void buddy_stat(struct buddy_heap *heap, struct heap_stat *stat)
 /* returns the free size of the heap (including any free blocks in any
  * buddy-heap suballocators; must be called while holding the parent
  * heap's lock. */
-static unsigned long heap_stat(struct nvmap_heap *heap, struct heap_stat *stat)
+static phys_addr_t heap_stat(struct nvmap_heap *heap, struct heap_stat *stat)
 {
 	struct buddy_heap *bh;
 	struct list_block *l = NULL;
-	unsigned long base = -1ul;
+	phys_addr_t base = -1ul;
 
 	memset(stat, 0, sizeof(*stat));
 	mutex_lock(&heap->lock);
@@ -280,7 +280,7 @@ static ssize_t heap_stat_show(struct device *dev,
 {
 	struct nvmap_heap *heap = container_of(dev, struct nvmap_heap, dev);
 	struct heap_stat stat;
-	unsigned long base;
+	phys_addr_t base;
 
 	base = heap_stat(heap, &stat);
 
@@ -297,7 +297,7 @@ static ssize_t heap_stat_show(struct device *dev,
 	else if (attr == &heap_stat_free_size)
 		return sprintf(buf, "%u\n", stat.free);
 	else if (attr == &heap_stat_base)
-		return sprintf(buf, "%08lx\n", base);
+		return sprintf(buf, "%08llx\n", (unsigned long long)base);
 	else
 		return -EINVAL;
 }
@@ -392,12 +392,12 @@ static struct buddy_heap *do_buddy_free(struct nvmap_heap_block *block)
 static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 					      size_t len, size_t align,
 					      unsigned int mem_prot,
-					      unsigned long base_max)
+					      phys_addr_t base_max)
 {
 	struct list_block *b = NULL;
 	struct list_block *i = NULL;
 	struct list_block *rem = NULL;
-	unsigned long fix_base;
+	phys_addr_t fix_base;
 	enum direction dir;
 
 	/* since pages are only mappable with one cache attribute,
@@ -620,7 +620,7 @@ static struct nvmap_heap_block *do_buddy_alloc(struct nvmap_heap *h,
 #ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
 
 static int do_heap_copy_listblock(struct nvmap_device *dev,
-		 unsigned long dst_base, unsigned long src_base, size_t len)
+		 phys_addr_t dst_base, phys_addr_t src_base, size_t len)
 {
 	pte_t **pte_src = NULL;
 	pte_t **pte_dst = NULL;
@@ -628,8 +628,8 @@ static int do_heap_copy_listblock(struct nvmap_device *dev,
 	void *addr_dst = NULL;
 	unsigned long kaddr_src;
 	unsigned long kaddr_dst;
-	unsigned long phys_src = src_base;
-	unsigned long phys_dst = dst_base;
+	phys_addr_t phys_src = src_base;
+	phys_addr_t phys_dst = dst_base;
 	unsigned long pfn_src;
 	unsigned long pfn_dst;
 	int error = 0;
@@ -694,8 +694,8 @@ static struct nvmap_heap_block *do_heap_relocate_listblock(
 	struct nvmap_heap_block *heap_block_new = NULL;
 	struct nvmap_heap *heap = block->heap;
 	struct nvmap_handle *handle = heap_block->handle;
-	unsigned long src_base = heap_block->base;
-	unsigned long dst_base;
+	phys_addr_t src_base = heap_block->base;
+	phys_addr_t dst_base;
 	size_t src_size = block->size;
 	size_t src_align = block->align;
 	unsigned int src_prot = block->mem_prot;
@@ -976,7 +976,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	}
 
 	if (WARN_ON(buddy_size && (base & (buddy_size - 1)))) {
-		unsigned long orig = base;
+		phys_addr_t orig = base;
 		dev_warn(parent, "%s: base address %p not aligned to "
 			 "buddy_size %u\n", __func__, (void *)base, buddy_size);
 		base = ALIGN(base, buddy_size);

@@ -42,6 +42,8 @@
 #define TSEC_KEY_OFFSET			(TSEC_RESERVE - TSEC_KEY_LENGTH)
 #define TSEC_HOST1X_STATUS_OFFSET	(TSEC_KEY_OFFSET - 4)
 
+#define TSEC_OS_START_OFFSET    256
+
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
 
@@ -221,10 +223,14 @@ int tsec_boot(struct platform_device *dev)
 					   m->os.data_offset + offset,
 					   offset, false);
 
-	tsec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
+	tsec_dma_pa_to_internal_256b(dev,
+				     m->os.code_offset+TSEC_OS_START_OFFSET,
+				     TSEC_OS_START_OFFSET, true);
+
 
 	/* boot tsec */
-	nvhost_device_writel(dev, tsec_bootvec_r(), tsec_bootvec_vec_f(0));
+	nvhost_device_writel(dev, tsec_bootvec_r(),
+			     tsec_bootvec_vec_f(TSEC_OS_START_OFFSET));
 	nvhost_device_writel(dev, tsec_cpuctl_r(),
 			tsec_cpuctl_startcpu_true_f());
 

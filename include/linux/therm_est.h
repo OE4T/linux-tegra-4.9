@@ -21,6 +21,8 @@
 
 #define HIST_LEN (20)
 
+#define MAX_ACTIVE_STATES 10
+
 struct therm_est_subdevice {
 	void *dev_data;
 	int (*get_temp)(void *, long *);
@@ -40,4 +42,18 @@ struct therm_est_data {
 	struct therm_est_subdevice devs[];
 };
 
+struct therm_fan_est_subdevice {
+	void *dev_data;
+	int (*get_temp)(void *, long *);
+	long coeffs[HIST_LEN];
+	long hist[HIST_LEN];
+};
+
+struct therm_fan_est_data {
+	long toffset;
+	long polling_period;
+	int ndevs;
+	int active_trip_temps[MAX_ACTIVE_STATES];
+	struct therm_fan_est_subdevice devs[];
+};
 #endif /* _LINUX_THERM_EST_H */

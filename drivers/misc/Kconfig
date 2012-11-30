@@ -820,6 +820,15 @@ config THERM_EST
 	---help---
 	Thermal driver which estimates temperature based of other sensors.
 
+config FAN_THERM_EST
+	bool "Fan driving temp estimator"
+	---help---
+	Thermal driver that estimates the fan driving temperature based on
+	other sensors.
+
+	This enables a virtual sensor that polls other registered thermal
+	zone devices for temperature updates.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

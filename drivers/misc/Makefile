@@ -80,3 +80,4 @@ $(obj)/lkdtm_rodata_objcopy.o: $(obj)/lkdtm_rodata.o FORCE
 	$(call if_changed,objcopy)
 obj-$(CONFIG_SENSORS_NCT1008)	+= nct1008.o
 obj-$(CONFIG_THERM_EST)		+= therm_est.o
+obj-$(CONFIG_FAN_THERM_EST)	+= therm_fan_est.o

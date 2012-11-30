@@ -1994,7 +1994,10 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	disable_irq_nosync(dc->irq);
 
 	tegra_dc_clear_bandwidth(dc);
-	if (dc->out_ops->release) /* ugly hack */
+
+	/* ugly hack */
+	if (dc->out_ops->release &&
+		(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE))
 		tegra_dc_release_dc_out(dc);
 	else
 		tegra_dc_clk_disable(dc);

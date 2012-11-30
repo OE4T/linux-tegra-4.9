@@ -2087,7 +2087,9 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 	/* Get the handler of the other display controller. */
 	dc_partner = tegra_dc_get_dc(dc->ndev->id ^ 1);
-	if (dc->powergate_id == TEGRA_POWERGATE_DISA) {
+	if (!dc_partner)
+		tegra_dc_powergate_locked(dc);
+	else if (dc->powergate_id == TEGRA_POWERGATE_DISA) {
 		/* If DISB is powergated, then powergate DISA. */
 		if (!dc_partner->powered)
 			tegra_dc_powergate_locked(dc);

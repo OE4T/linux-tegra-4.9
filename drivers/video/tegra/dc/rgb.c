@@ -163,8 +163,42 @@ static void tegra_dc_rgb_disable(struct tegra_dc *dc)
 	tegra_dc_io_end(dc);
 }
 
+static long tegra_dc_rgb_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	unsigned long rate;
+	struct clk *parent_clk =
+		clk_get_sys(NULL, dc->out->parent_clk ? : "pll_p");
+
+	if (dc->out->parent_clk_backup &&
+	    (parent_clk == clk_get_sys(NULL, "pll_p"))) {
+		rate = tegra_dc_pclk_predict_rate(
+			parent_clk, dc->mode.pclk);
+		/* use pll_d as last resort */
+		if (rate < (dc->mode.pclk / 100 * 99) ||
+		    rate > (dc->mode.pclk / 100 * 109))
+			parent_clk = clk_get_sys(
+				NULL, dc->out->parent_clk_backup);
+	}
+
+	if (clk_get_parent(clk) != parent_clk)
+		clk_set_parent(clk, parent_clk);
+
+	if (parent_clk != clk_get_sys(NULL, "pll_p")) {
+		struct clk *base_clk = clk_get_parent(parent_clk);
+
+		/* Assuming either pll_d or pll_d2 is used */
+		rate = dc->mode.pclk * 2;
+
+		if (rate != clk_get_rate(base_clk))
+			clk_set_rate(base_clk, rate);
+	}
+
+	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
+}
+
 struct tegra_dc_out_ops tegra_dc_rgb_ops = {
 	.enable = tegra_dc_rgb_enable,
 	.disable = tegra_dc_rgb_disable,
+	.setup_clk = tegra_dc_rgb_setup_clk,
 };
 

@@ -84,6 +84,8 @@ struct tegra_dc_out_ops {
 	/* mode filter. to provide a list of supported modes*/
 	bool (*mode_filter)(const struct tegra_dc *dc,
 			struct fb_videomode *mode);
+	/* setup pixel clock and parent clock programming */
+	long (*setup_clk)(struct tegra_dc *dc, struct clk *clk);
 };
 
 struct tegra_dc_shift_clk_div {

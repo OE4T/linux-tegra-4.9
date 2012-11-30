@@ -1893,6 +1893,29 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_dvfs_set_rate(hdmi->clk, 0);
 }
 
+static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	unsigned long rate;
+	struct clk *parent_clk = clk_get_sys(NULL,
+		dc->out->parent_clk ? : "pll_d_out0");
+	struct clk *base_clk = clk_get_parent(parent_clk);
+
+	/*
+	 * Providing dynamic frequency rate setting for T20/T30 HDMI.
+	 * The required rate needs to be setup at 4x multiplier,
+	 * as out0 is 1/2 of the actual PLL output.
+	 */
+
+	rate = dc->mode.pclk * 4;
+	if (rate != clk_get_rate(base_clk))
+		clk_set_rate(base_clk, rate);
+
+	if (clk_get_parent(clk) != parent_clk)
+		clk_set_parent(clk, parent_clk);
+
+	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -1902,6 +1925,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.suspend = tegra_dc_hdmi_suspend,
 	.resume = tegra_dc_hdmi_resume,
 	.mode_filter = tegra_dc_hdmi_mode_filter,
+	.setup_clk = tegra_dc_hdmi_setup_clk,
 };
 
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)

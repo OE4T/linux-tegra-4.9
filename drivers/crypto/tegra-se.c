@@ -806,12 +806,7 @@ static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
 	struct ablkcipher_request *req)
 {
 	struct scatterlist *src_sg, *dst_sg;
-	u32 num_src_sgs, num_dst_sgs;
-	int src_chained, dst_chained;
 	u32 total;
-
-	num_src_sgs = tegra_se_count_sgs(req->src, req->nbytes, &src_chained);
-	num_dst_sgs = tegra_se_count_sgs(req->dst, req->nbytes, &dst_chained);
 
 	if (req) {
 		src_sg = req->src;

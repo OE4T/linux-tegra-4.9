@@ -2,7 +2,7 @@
  * Raydium RM31080 touchscreen driver
  *
  * Copyright (C) 2012 Raydium Semiconductor Corporation
- * Copyright (C) 2012 NVIDIA Corporation
+ * Copyright (C) 2012 NVIDIA Corporation, All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -509,7 +509,7 @@ int rm_noise_detect(signed char *pSource)
 #endif
 		pbBaseline = g_pbBaseline;
 
-	if (g_stCtrl.bBaselineReady)
+	if (!g_stCtrl.bBaselineReady)
 		return tRet;
 
 	if (g_stCtrl.bChannelDetectorNum <= 0)

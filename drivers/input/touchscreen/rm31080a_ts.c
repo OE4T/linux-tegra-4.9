@@ -43,10 +43,9 @@
 /*#define ENABLE_CALC_QUEUE_COUNT */
 /*#define ENABLE_SPI_BURST_READ_WRITE */
 /*#define ENABLE_SPI_SETTING */
-#define ENABLE_SLOW_SCAN
 #define ENABLE_SMOOTH_LEVEL
-/*#define ENABLE_REGULATOR_SETTING*/
 /*#define ENABLE_SUPPORT_4_7*/  /* for 4.7 inch display  */
+#define ENABLE_NEW_INPUT_DEV
 
 #define MAX_SPI_FREQ_HZ      50000000
 #define TS_PEN_UP_TIMEOUT    msecs_to_jiffies(50)
@@ -69,36 +68,18 @@
 #define RM_NEED_TO_SEND_SIGNAL       0x04
 #endif
 
-#ifdef ENABLE_SLOW_SCAN
-#define RM_SLOW_SCAN_LEVEL_NORMAL    0
-#define RM_SLOW_SCAN_LEVEL_20       20
-#define RM_SLOW_SCAN_LEVEL_40       40
-#define RM_SLOW_SCAN_LEVEL_60       60
-#define RM_SLOW_SCAN_LEVEL_80       80
-#define RM_SLOW_SCAN_LEVEL_100     100
-#define RM_SLOW_SCAN_LEVEL_120     120
-#define RM_SLOW_SCAN_LEVEL_140     140
-#define RM_SLOW_SCAN_LEVEL_160     160
-#define RM_SLOW_SCAN_LEVEL_180     180
-#define RM_SLOW_SCAN_LEVEL_200     200
-#define RM_SLOW_SCAN_LEVEL_220     220
-#define RM_SLOW_SCAN_LEVEL_240     240
-#endif
 
 #ifdef ENABLE_SMOOTH_LEVEL
 #define RM_SMOOTH_LEVEL_NORMAL    0
 #define RM_SMOOTH_LEVEL_MAX       4
 #endif
 
-#define RM_AUO_10_CHANNEL_X 48
-#define RM_WINTEK_7_CHANNEL_X 30
-
 #ifdef ENABLE_WORK_QUEUE
 #include <linux/workqueue.h>
 #endif
 
-#define rm_printk(msg...)	dev_info(&g_spi->dev, msg)
-#define rmd_printk(msg...)
+#define rm_printk(msg...)	do { dev_info(&g_spi->dev, msg); } while (0)
+#define rmd_printk(msg...)	do {  } while (0)
 /*=========================================================================*/
 /*STRUCTURE DECLARATION */
 /*=========================================================================*/
@@ -147,7 +128,6 @@ struct rm31080_ts {
 	struct regulator *regulator_3v3;
 	struct regulator *regulator_1v8;
 	struct notifier_block nb;
-
 };
 
 struct rm31080_bus_ops {
@@ -176,7 +156,7 @@ struct rm31080_queue_info g_stQ;
 #endif
 
 #ifdef ENABLE_SLOW_SCAN
-struct rm_cmd_slow_scan g_stCmdSlowScan[2];
+struct rm_cmd_slow_scan g_stCmdSlowScan[RM_SLOW_SCAN_LEVEL_COUNT];
 #endif
 /*========================================================================= */
 /*FUNCTION DECLARATION */
@@ -825,7 +805,6 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 	usleep_range(8000, 9000);/*msleep(8); */
 	rm31080_ctrl_clear_int();
 	/*disable auto scan */
-	/* 1.disable (3.3v) */
 
 #if ENABLE_T007B1_SETTING
 	if (g_stCtrl.bICVersion == T007A6) {
@@ -840,6 +819,7 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 #endif
 	rm31080_spi_byte_write(RM31080_REG_11, 0x06);
 
+	/* 1.disable (3.3v) */
 	if (ts->regulator_3v3 && ts->regulator_1v8) {
 		error = regulator_disable(ts->regulator_3v3);
 		if (error < 0)
@@ -851,7 +831,6 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 			dev_err(&g_spi->dev,
 			"raydium regulator disable failed: %d\n", error);
 	}
-
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 	return 1;
 }
@@ -1197,6 +1176,8 @@ void rm31080_send_command(struct rm_cmd_list *rm_cmd_list)
 void rm31080_set_command(struct rm_cmd_list *cmd_list, char *buf, int count)
 {
 	int i;
+	if (count > RM_SLOW_SCAN_CMD_COUNT)
+		count = RM_SLOW_SCAN_CMD_COUNT;
 	cmd_list->count = count;
 	for (i = 0; i < count; i++) {
 		cmd_list->cmd[i].addr  = buf[(i<<1) + 0];
@@ -1204,257 +1185,27 @@ void rm31080_set_command(struct rm_cmd_list *cmd_list, char *buf, int count)
 	}
 }
 
+static void rm31080_set_slowscan_para(u8 *p, int index)
+{
+	ssize_t missing;
+	u8 buf[256];
+	u8 size = p[0];
+	missing = copy_from_user(buf, p, size);
+	if (missing != 0)
+		return;
+	if (index > RM_SLOW_SCAN_LEVEL_MAX)
+		return;
+	rm31080_set_command((struct rm_cmd_list *)
+		&g_stCmdSlowScan[index],
+		&buf[1],
+		(size - 1) >> 1);
+}
+
 void rm31080_slow_scan_init(void)
 {
-	char buf_20[] = { 0x42, 0x30,
-		0x43, 0x80,
-		0x10, 0x80
-	};
-	char buf_300[] = { 0x42, 0x02,
-		0x43, 0x80,
-		0x10, 0x90
-	};
-
-	rm31080_set_command((struct rm_cmd_list *)&g_stCmdSlowScan[0],
-			buf_20,
-			sizeof(buf_20) >> 1);
-	rm31080_set_command((struct rm_cmd_list *)&g_stCmdSlowScan[1],
-			buf_300,
-			sizeof(buf_300) >> 1);
-}
-
-void rm31080_ctrl_ddsc_enable(void)
-{
-	rm31080_spi_byte_write(RM31080_REG_10, 0x40 | 0x10);
-}
-
-void rm31080_ctrl_ddsc_disable(void)
-{
-	rm31080_spi_byte_write(RM31080_REG_10, 0x40);
-}
-
-void rm31080_ctrl_hw_average(int iTimes)
-{
-	switch (iTimes) {
-	case 1:
-		rm31080_spi_byte_write(RM31080_REG_0E, 0x38);
-		rm31080_spi_byte_write(RM31080_REG_1F, 0x00);
-		break;
-	case 2:
-		rm31080_spi_byte_write(RM31080_REG_0E, 0x38 | 0x01);
-		rm31080_spi_byte_write(RM31080_REG_1F, 0x04);
-		break;
-	case 3:
-		rm31080_spi_byte_write(RM31080_REG_0E, 0x38 | 0x02);
-		rm31080_spi_byte_write(RM31080_REG_1F, 0x05);
-		break;
-	case 5:
-		rm31080_spi_byte_write(RM31080_REG_0E, 0x38 | 0x04);
-		rm31080_spi_byte_write(RM31080_REG_1F, 0x07);
-		break;
-	}
-}
-
-static void rm31080_ctrl_slowscan_c210(u32 level)
-{
-	u8 buf[] = { RM31080_REG_40, 0x04, 0x38, 0x06, 0xA0 };
-	rmd_printk("change level:%d\n", level);
-
-	switch (level) {
-	case RM_SLOW_SCAN_LEVEL_NORMAL:
-		/*do nothing */
-		break;
-	case RM_SLOW_SCAN_LEVEL_20:	/*20Hz */
-		buf[1] = 0x0F;
-		buf[2] = 0xFF;
-		buf[3] = 0x0A;
-		buf[4] = 0xFA;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_40:	/*40Hz */
-		buf[3] = 0x06;
-		buf[4] = 0xA0;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_60:	/*60Hz */
-		buf[3] = 0x04;
-		buf[4] = 0x32;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_80:	/*80Hz */
-		buf[3] = 0x03;
-		buf[4] = 0x20;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_100:	/*100Hz */
-		buf[3] = 0x02;
-		buf[4] = 0x90;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_120:	/*120Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x32);
-		break;
-	case RM_SLOW_SCAN_LEVEL_140:	/*140Hz  default */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(5);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x36);
-		break;
-	case RM_SLOW_SCAN_LEVEL_160:	/*160Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(3);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x50);
-		break;
-	case RM_SLOW_SCAN_LEVEL_180:	/*180Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(3);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x48);
-		break;
-	case RM_SLOW_SCAN_LEVEL_200:	/*200Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(3);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x3C);
-		break;
-	case RM_SLOW_SCAN_LEVEL_220:	/*220Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(3);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x34);
-		break;
-	case RM_SLOW_SCAN_LEVEL_240:	/*240Hz */
-		rm31080_ctrl_ddsc_enable();
-		rm31080_ctrl_hw_average(3);
-		rm31080_spi_byte_write(RM31080_REG_2F, 0x2C);
-		break;
-	default:
-		break;
-	}
-
-}
-
-static void rm31080_ctrl_slowscan_k107(u32 level)
-{
-	u8 buf[] = { RM31080_REG_40, 0x04, 0x38, 0x06, 0xA0 };
-	rmd_printk("change level:%d\n", level);
-	switch (level) {
-	case RM_SLOW_SCAN_LEVEL_NORMAL:
-		/*do nothing */
-		break;
-	case RM_SLOW_SCAN_LEVEL_20:	/*20Hz */
-		buf[1] = 0x0F;
-		buf[2] = 0xFF;
-		buf[3] = 0x0F;
-		buf[4] = 0x80;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_spi_byte_write(RM31080_REG_10, 0x41);
-		break;
-	case RM_SLOW_SCAN_LEVEL_40:	/*40Hz */
-		buf[1] = 0x0F;
-		buf[2] = 0xFF;
-		buf[3] = 0x0A;
-		buf[4] = 0xFA;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_60:	/*60Hz */
-		buf[3] = 0x08;
-		buf[4] = 0xC0;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_80:	/*80Hz */
-		buf[3] = 0x06;
-		buf[4] = 0xA0;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_100:	/*100Hz */
-		buf[3] = 0x04;
-		buf[4] = 0xFA;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_120:	/*120Hz */
-		buf[3] = 0x04;
-		buf[4] = 0x32;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_140:	/*140Hz */
-		buf[3] = 0x03;
-		buf[4] = 0xBA;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_160:	/*160Hz */
-		buf[3] = 0x03;
-		buf[4] = 0x20;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_180:	/*180Hz */
-		buf[3] = 0x02;
-		buf[4] = 0xC8;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_200:	/*200Hz */
-		buf[3] = 0x02;
-		buf[4] = 0xA0;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_220:	/*220Hz */
-		buf[3] = 0x02;
-		buf[4] = 0x50;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	case RM_SLOW_SCAN_LEVEL_240:	/*240Hz */
-		buf[3] = 0x02;
-		buf[4] = 0x10;
-		rm31080_spi_burst_write(buf, sizeof(buf));
-		rm31080_ctrl_ddsc_disable();
-		break;
-	default:
-		break;
-	}
-
-}
-
-static void rm31080_ctrl_slowscan_p005(u32 level)
-{
-	rmd_printk("P005:change level:%d\n", level);
-	switch (level) {
-	case RM_SLOW_SCAN_LEVEL_NORMAL:
-		/*do nothing */
-		break;
-	case RM_SLOW_SCAN_LEVEL_20:	/*20Hz */
-		rm31080_send_command((struct rm_cmd_list *)&g_stCmdSlowScan[0]);
-		break;
-
-	case RM_SLOW_SCAN_LEVEL_240:
-		rm31080_send_command((struct rm_cmd_list *)&g_stCmdSlowScan[1]);
-		break;
-	default:
-		break;
-	}
-
+	int i;
+	for (i = 0; i < RM_SLOW_SCAN_LEVEL_COUNT; i++)
+		g_stCmdSlowScan[i].count = 0;
 }
 
 /*=============================================================================
@@ -1477,26 +1228,21 @@ static void rm31080_ctrl_slowscan_p005(u32 level)
  */
 static void rm31080_ctrl_slowscan(u32 level)
 {
-	struct rm_spi_ts_platform_data *pdata;
 	if (g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN)
 		rm31080_ctrl_pause_auto_mode();
 
 	rm31080_ctrl_wait_for_scan_finish();
 
-	pdata = g_input_dev->dev.parent->platform_data;
+	rmd_printk("P005:change level:%d\n", level);
 
-	switch (pdata->platform_id) {
-	case RM_PLATFORM_K007:
-	case RM_PLATFORM_K107:
-		rm31080_ctrl_slowscan_k107(level);
-		break;
-	case RM_PLATFORM_C210:
-		rm31080_ctrl_slowscan_c210(level);
-		break;
-	case RM_PLATFORM_P005:
-		rm31080_ctrl_slowscan_p005(level);
-		break;
-	}
+	if (level == RM_SLOW_SCAN_LEVEL_NORMAL)
+		level = RM_SLOW_SCAN_LEVEL_20;
+
+	if (level > RM_SLOW_SCAN_LEVEL_100)
+		level = RM_SLOW_SCAN_LEVEL_MAX;
+
+	rm31080_send_command((struct rm_cmd_list *)
+				&g_stCmdSlowScan[level]);
 
 	if (g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN) {
 		rm31080_ctrl_enter_auto_mode();
@@ -1508,8 +1254,8 @@ static void rm31080_ctrl_slowscan(u32 level)
 static u32 rm31080_slowscan_round(u32 val)
 {
 	u32 i;
-	for (i = RM_SLOW_SCAN_LEVEL_20; i < RM_SLOW_SCAN_LEVEL_240; i += 20) {
-		if (i >= val)
+	for (i = 0; i < RM_SLOW_SCAN_LEVEL_COUNT; i++) {
+		if ((i * RM_SLOW_SCAN_INTERVAL) >= val)
 			break;
 	}
 	return i;
@@ -1557,14 +1303,14 @@ static ssize_t rm31080_slowscan_show(struct device *dev,
 {
 #ifdef ENABLE_SLOW_SCAN
 	return sprintf(buf, "Slow Scan:%s\nScan Rate:%dHz\n",
-				g_stTs.bEnableSlowScan ?
-				"Enabled" : "Disabled",
-				g_stTs.bEnableSlowScan ?
-				RM_SLOW_SCAN_LEVEL_20 :
-				g_stTs.u32SlowScanLevel);
+			g_stTs.bEnableSlowScan ?
+			"Enabled" : "Disabled",
+			g_stTs.bEnableSlowScan ?
+			RM_SLOW_SCAN_LEVEL_20 * RM_SLOW_SCAN_INTERVAL :
+			g_stTs.u32SlowScanLevel * RM_SLOW_SCAN_INTERVAL);
 
 #else
-	return sprintf(buf, "Not implemented yet\n");
+	return sprintf(buf, "0\n");
 #endif
 }
 
@@ -1875,7 +1621,7 @@ static void rm31080_init_ts_structure(void)
 
 #ifdef ENABLE_SLOW_SCAN
 	rm31080_slow_scan_init();
-	g_stTs.u32SlowScanLevel = RM_SLOW_SCAN_LEVEL_240;
+	g_stTs.u32SlowScanLevel = RM_SLOW_SCAN_LEVEL_140;
 #endif
 
 #ifdef ENABLE_WORK_QUEUE
@@ -1985,7 +1731,6 @@ static int rm31080_voltage_notifier(struct notifier_block *nb,
 	if (event == REGULATOR_EVENT_DISABLE) {
 		/* 1.sleep 5ms */
 		/* 2.disable 1.8 */
-		/* Don't care 1.8 */
 
 		/* 3. pull low reset */
 
@@ -2010,7 +1755,6 @@ static void rm31080_start(struct rm31080_ts *ts)
 	mutex_lock(&g_stTs.mutex_scan_mode);
 #ifdef ENABLE_RM31080_DEEP_SLEEP
 	pdata = g_input_dev->dev.parent->platform_data;
-
 	/* 1.enable (3.3v) */
 	if (ts->regulator_3v3 && ts->regulator_1v8) {
 		error = regulator_enable(ts->regulator_3v3);
@@ -2031,11 +1775,9 @@ static void rm31080_start(struct rm31080_ts *ts)
 		usleep_range(1000, 2000);/*msleep(1); */
 
 		/* 4.enable 1.8 */
-		/* Don't care 1.8 */
 	}
 
-	/* 5. pull hight reset */
-
+	/* 5. pull high reset */
 	gpio_set_value(pdata->gpio_reset, 0);
 	msleep(120);
 	gpio_set_value(pdata->gpio_reset, 1);
@@ -2087,7 +1829,8 @@ static const struct dev_pm_ops rm31080_pm_ops = {
 
 #endif				/*CONFIG_PM */
 
-
+/* NVIDIA 20121026*/
+#ifdef ENABLE_NEW_INPUT_DEV
 static int rm31080_input_enable(struct input_dev *in_dev)
 {
 	int error = 0;
@@ -2117,6 +1860,7 @@ static int rm31080_input_disable(struct input_dev *in_dev)
 
 	return error;
 }
+#endif /*ENABLE_NEW_INPUT_DEV */
 
 static void rm31080_set_input_resolution(unsigned int x, unsigned int y)
 {
@@ -2166,9 +1910,11 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 
 	input_dev->open = rm31080_input_open;
 	input_dev->close = rm31080_input_close;
+#ifdef ENABLE_NEW_INPUT_DEV
 	input_dev->enable = rm31080_input_enable;
 	input_dev->disable = rm31080_input_disable;
 	input_dev->enabled = true;
+#endif
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);
@@ -2290,7 +2036,7 @@ dev_write(struct file *filp, const char __user *buf,
 
 /*==============================================================================
  * Description:
- *      I/O Control routin.
+ *      I/O Control routine.
  * Input:
  *      file:
  *      cmd :
@@ -2368,6 +2114,11 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case RM_IOCTL_GET_VARIABLE:
 		ret = rm31080_get_variable(index, arg);
 		break;
+#ifdef ENABLE_SLOW_SCAN
+	case RM_IOCTL_SET_SLOWSCAN_PARA:
+		rm31080_set_slowscan_para((u8 *) arg, index);
+		break;
+#endif
 
 	default:
 		break;
@@ -2485,15 +2236,6 @@ static int rm31080_spi_probe(struct spi_device *spi)
 	g_spi = spi;
 
 	rm31080_init_ts_structure();
-	rm31080_init_ts_structure_part();
-
-	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
-		dev_err(&spi->dev, "SPI CLK %d Hz?\n", spi->max_speed_hz);
-		return -EINVAL;
-	}
-
-	if (!rm31080_spi_checking(0))
-		return -EINVAL;
 
 	ts = rm31080_input_init(&spi->dev, spi->irq, &rm31080_spi_bus_ops);
 	if (IS_ERR(ts))
@@ -2501,6 +2243,16 @@ static int rm31080_spi_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, ts);
 
 	rm31080_init_regulator(ts);
+
+	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
+		dev_err(&spi->dev, "SPI CLK %d Hz?\n", spi->max_speed_hz);
+		return -EINVAL;
+	}
+
+	rm31080_init_ts_structure_part();
+
+	if (!rm31080_spi_checking(0))
+		return -EINVAL;
 
 	if (misc_register(&raydium_ts_miscdev) != 0) {
 		dev_err(&spi->dev, "Raydium TS: cannot register miscdev\n");

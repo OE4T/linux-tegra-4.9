@@ -3560,11 +3560,11 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 	input_dev->dev.parent = dev;
 	input_dev->id.bustype = bops->bustype;
 
-	input_dev->open = rm31080_input_open;
-	input_dev->close = rm31080_input_close;
-	input_dev->enable = rm31080_input_enable;
-	input_dev->disable = rm31080_input_disable;
+	input_dev->enable = rm_tch_input_enable;
+	input_dev->disable = rm_tch_input_disable;
 	input_dev->enabled = true;
+	input_dev->open = rm_tch_input_open;
+	input_dev->close = rm_tch_input_close;
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);

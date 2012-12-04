@@ -125,6 +125,8 @@ static struct nvhost_device_data tegra_isp01_info = {
 	.modulemutexes = BIT(NVMODMUTEX_ISP_0),
 	.clocks = {{"isp", UINT_MAX}, {} },
 	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_ISP,
@@ -153,6 +155,8 @@ static struct nvhost_device_data tegra_isp01b_info = {
 	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
 	.clocks = {{"isp", UINT_MAX}, {} },
 	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = (1 << 16) | NVHOST_MODULE_ISP,
@@ -181,6 +185,8 @@ static struct nvhost_device_data tegra_vi01_info = {
 	.syncpts       = NV_VI_0_SYNCPTS,
 	.modulemutexes = BIT(NVMODMUTEX_VI_0),
 	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
 	.clocks = {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -201,6 +207,8 @@ static struct nvhost_device_data tegra_vi01b_info = {
 	.syncpts       = NV_VI_1_SYNCPTS,
 	.modulemutexes = BIT(NVMODMUTEX_VI_1),
 	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
 	.clocks = {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,

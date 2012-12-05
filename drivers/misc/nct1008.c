@@ -853,7 +853,7 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 			(data->chip == NCT72) ? "72" : "1008");
 }
 
-static int nct1008_configure_sensor(struct nct1008_data* data)
+static int nct1008_configure_sensor(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
@@ -961,13 +961,6 @@ static int nct1008_configure_sensor(struct nct1008_data* data)
 	if (err < 0)
 		goto error;
 
-	/* register sysfs hooks */
-	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
-	if (err < 0) {
-		dev_err(&client->dev, "\n sysfs create err=%d ", err);
-		goto error;
-	}
-
 	return 0;
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
@@ -1050,6 +1043,13 @@ static int nct1008_probe(struct i2c_client *client,
 		goto error;
 	}
 
+	/* register sysfs hooks */
+	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
+	if (err < 0) {
+		dev_err(&client->dev, "\n sysfs create err=%d ", err);
+		goto error;
+	}
+
 	err = nct1008_debuginit(data);
 	if (err < 0)
 		err = 0; /* without debugfs we may continue */
@@ -1120,22 +1120,28 @@ static int nct1008_remove(struct i2c_client *client)
 static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 {
 	int err;
+	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	disable_irq(client->irq);
 	err = nct1008_disable(client);
+	nct1008_power_control(data, false);
 	return err;
 }
 
 static int nct1008_resume(struct i2c_client *client)
 {
 	int err;
+	struct nct1008_data *data = i2c_get_clientdata(client);
 
+	nct1008_power_control(data, true);
+	nct1008_configure_sensor(data);
 	err = nct1008_enable(client);
 	if (err < 0) {
 		dev_err(&client->dev, "Error: %s, error=%d\n",
 			__func__, err);
 		return err;
 	}
+	nct1008_update(data);
 	enable_irq(client->irq);
 
 	return 0;

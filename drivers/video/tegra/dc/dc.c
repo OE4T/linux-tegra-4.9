@@ -471,7 +471,7 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_COM_PM1_CONTROL);
 	DUMP_REG(DC_COM_PM1_DUTY_CYCLE);
 	DUMP_REG(DC_DISP_SD_CONTROL);
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#ifdef CONFIG_TEGRA_DC_CMU
 	DUMP_REG(DC_COM_CMU_CSC_KRR);
 	DUMP_REG(DC_COM_CMU_CSC_KGR);
 	DUMP_REG(DC_COM_CMU_CSC_KBR);
@@ -857,6 +857,7 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 		return 0;
 	}
 
+#ifdef CONFIG_TEGRA_DC_CMU
 	if (cmu != &dc->cmu) {
 		tegra_dc_cache_cmu(&dc->cmu, cmu);
 
@@ -875,6 +876,7 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 		tegra_dc_set_cmu(dc, &dc->cmu);
 	}
+#endif
 
 	return 0;
 }

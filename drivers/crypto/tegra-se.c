@@ -80,6 +80,14 @@ struct tegra_se_chipdata {
 	bool cprng_supported;
 	bool drbg_supported;
 	bool rsa_supported;
+	unsigned long aes_freq;
+	unsigned long rng_freq;
+	unsigned long sha1_freq;
+	unsigned long sha224_freq;
+	unsigned long sha256_freq;
+	unsigned long sha384_freq;
+	unsigned long sha512_freq;
+	unsigned long rsa_freq;
 };
 
 struct tegra_se_dev {
@@ -497,6 +505,8 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	enum tegra_se_aes_op_mode mode, bool encrypt, u8 slot_num, bool org_iv)
 {
 	u32 val = 0;
+	unsigned long freq = 0;
+	int err = 0;
 
 	switch (mode) {
 	case SE_AES_OP_MODE_CMAC:
@@ -512,11 +522,13 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 				SE_CRYPTO_XOR_POS(XOR_BOTTOM) |
 				SE_CRYPTO_CORE_SEL(CORE_DECRYPT);
 		}
+		freq = se_dev->chipdata->aes_freq;
 		break;
 	case SE_AES_OP_MODE_RNG_X931:
 		val = SE_CRYPTO_INPUT_SEL(INPUT_AHB) |
 			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		freq = se_dev->chipdata->rng_freq;
 		break;
 	case SE_AES_OP_MODE_RNG_DRBG:
 		val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
@@ -524,6 +536,7 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
 		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11))
 			val = val | SE_CRYPTO_KEY_INDEX(slot_num);
+		freq = se_dev->chipdata->rng_freq;
 		break;
 	case SE_AES_OP_MODE_ECB:
 		if (encrypt) {
@@ -535,18 +548,21 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 				SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 				SE_CRYPTO_CORE_SEL(CORE_DECRYPT);
 		}
+		freq = se_dev->chipdata->aes_freq;
 		break;
 	case SE_AES_OP_MODE_CTR:
 		val = SE_CRYPTO_INPUT_SEL(INPUT_LNR_CTR) |
 			SE_CRYPTO_VCTRAM_SEL(VCTRAM_AHB) |
 			SE_CRYPTO_XOR_POS(XOR_BOTTOM) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		freq = se_dev->chipdata->aes_freq;
 		break;
 	case SE_AES_OP_MODE_OFB:
 		val = SE_CRYPTO_INPUT_SEL(INPUT_AESOUT) |
 			SE_CRYPTO_VCTRAM_SEL(VCTRAM_AHB) |
 			SE_CRYPTO_XOR_POS(XOR_BOTTOM) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		freq = se_dev->chipdata->aes_freq;
 		break;
 	default:
 		dev_warn(se_dev->dev, "Invalid operation mode\n");
@@ -562,6 +578,12 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 			SE_CRYPTO_KEY_INDEX(slot_num) |
 			(org_iv ? SE_CRYPTO_IV_SEL(IV_ORIGINAL) :
 			SE_CRYPTO_IV_SEL(IV_UPDATED));
+	}
+
+	err = clk_set_rate(se_dev->pclk, freq);
+	if (err) {
+		dev_err(se_dev->dev, "clock set_rate failed.\n");
+		return;
 	}
 
 	/* enable hash for CMAC */
@@ -599,15 +621,23 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 
 }
 
-static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count)
+static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count,
+	unsigned long freq)
 {
 	int i;
+	int err = 0;
 
 	se_writel(se_dev, (count * 8), SE_SHA_MSG_LENGTH_REG_OFFSET);
 	se_writel(se_dev, (count * 8), SE_SHA_MSG_LEFT_REG_OFFSET);
 	for (i = 1; i < 4; i++) {
 		se_writel(se_dev, 0, SE_SHA_MSG_LENGTH_REG_OFFSET + (4 * i));
 		se_writel(se_dev, 0, SE_SHA_MSG_LEFT_REG_OFFSET + (4 * i));
+	}
+
+	err = clk_set_rate(se_dev->pclk, freq);
+	if (err) {
+		dev_err(se_dev->dev, "clock set_rate failed.\n");
+		return;
 	}
 	se_writel(se_dev, SHA_ENABLE, SE_SHA_CONFIG_REG_OFFSET);
 }
@@ -1369,26 +1399,37 @@ int tegra_se_sha_final(struct ahash_request *req)
 	struct scatterlist *src_sg;
 	struct tegra_se_ll *src_ll;
 	u32 total, num_sgs;
+	unsigned long freq = 0;
 	int err = 0;
 	int chained;
 
 	if (!req->nbytes)
 		return -EINVAL;
 
-	if (crypto_ahash_digestsize(tfm) == SHA1_DIGEST_SIZE)
+	if (crypto_ahash_digestsize(tfm) == SHA1_DIGEST_SIZE) {
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
+		freq = se_dev->chipdata->sha1_freq;
+	}
 
-	if (crypto_ahash_digestsize(tfm) == SHA224_DIGEST_SIZE)
+	if (crypto_ahash_digestsize(tfm) == SHA224_DIGEST_SIZE) {
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA224;
+		freq = se_dev->chipdata->sha224_freq;
+	}
 
-	if (crypto_ahash_digestsize(tfm) == SHA256_DIGEST_SIZE)
+	if (crypto_ahash_digestsize(tfm) == SHA256_DIGEST_SIZE) {
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA256;
+		freq = se_dev->chipdata->sha256_freq;
+	}
 
-	if (crypto_ahash_digestsize(tfm) == SHA384_DIGEST_SIZE)
+	if (crypto_ahash_digestsize(tfm) == SHA384_DIGEST_SIZE) {
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA384;
+		freq = se_dev->chipdata->sha384_freq;
+	}
 
-	if (crypto_ahash_digestsize(tfm) == SHA512_DIGEST_SIZE)
+	if (crypto_ahash_digestsize(tfm) == SHA512_DIGEST_SIZE) {
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA512;
+		freq = se_dev->chipdata->sha512_freq;
+	}
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -1412,7 +1453,7 @@ int tegra_se_sha_final(struct ahash_request *req)
 							src_ll, total);
 
 	tegra_se_config_algo(se_dev, sha_ctx->op_mode, false, 0);
-	tegra_se_config_sha(se_dev, req->nbytes);
+	tegra_se_config_sha(se_dev, req->nbytes, freq);
 	err = tegra_se_start_operation(se_dev, 0, false);
 	if (!err) {
 		tegra_se_read_hash_result(se_dev, req->result,
@@ -1871,6 +1912,8 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	u32 *pkeydata = (u32 *)key;
 	s32 i = 0;
 	struct tegra_se_rsa_slot *pslot;
+	unsigned long freq = 0;
+	int err = 0;
 
 	if (!ctx || !key)
 		return -EINVAL;
@@ -1890,6 +1933,13 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	if (!(((module_key_length / 64) >= 1) &&
 			((module_key_length / 64) <= 4)))
 		return -EINVAL;
+
+	freq = se_dev->chipdata->rsa_freq;
+	err = clk_set_rate(se_dev->pclk, freq);
+	if (err) {
+		dev_err(se_dev->dev, "clock set_rate failed.\n");
+		return err;
+	}
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -3152,12 +3202,27 @@ static struct tegra_se_chipdata tegra_se_chipdata = {
 	.rsa_supported = false,
 	.cprng_supported = true,
 	.drbg_supported = false,
+	.aes_freq = 300000000,
+	.rng_freq = 300000000,
+	.sha1_freq = 300000000,
+	.sha224_freq = 300000000,
+	.sha256_freq = 300000000,
+	.sha384_freq = 300000000,
+	.sha512_freq = 300000000,
 };
 
 static struct tegra_se_chipdata tegra11_se_chipdata = {
 	.rsa_supported = true,
 	.cprng_supported = false,
 	.drbg_supported = true,
+	.aes_freq = 150000000,
+	.rng_freq = 150000000,
+	.sha1_freq = 200000000,
+	.sha224_freq = 250000000,
+	.sha256_freq = 250000000,
+	.sha384_freq = 150000000,
+	.sha512_freq = 150000000,
+	.rsa_freq = 350000000,
 
 };
 

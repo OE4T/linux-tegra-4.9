@@ -99,7 +99,7 @@ static struct host1x_device_info host1x02_info = {
 };
 
 static struct nvhost_device_data tegra_host1x02_info = {
-	.clocks		= { {"host1x", 102000000} },
+	.clocks		= { {"host1x", 136000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 

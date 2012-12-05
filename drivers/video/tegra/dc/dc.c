@@ -63,9 +63,6 @@
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
 #define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
 
-/* A mutex used to protect the critical section used by both DC heads. */
-static struct mutex status_lock;
-
 static struct fb_videomode tegra_dc_hdmi_fallback_mode = {
 	.refresh = 60,
 	.xres = 640,
@@ -1811,9 +1808,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 {
 	int failed_init = 0;
 
-	mutex_lock(&status_lock);
 	tegra_dc_unpowergate_locked(dc);
-	mutex_unlock(&status_lock);
 
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
@@ -2084,38 +2079,16 @@ void tegra_dc_blank(struct tegra_dc *dc)
 
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
-	struct tegra_dc *dc_partner;
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->one_shot_lock);
 		cancel_delayed_work_sync(&dc->one_shot_work);
 	}
 
-	mutex_lock(&status_lock);
-
 	tegra_dc_io_start(dc);
 	_tegra_dc_controller_disable(dc);
 	tegra_dc_io_end(dc);
 
-	/* Get the handler of the other display controller. */
-	dc_partner = tegra_dc_get_dc(dc->ndev->id ^ 1);
-	if (!dc_partner)
-		tegra_dc_powergate_locked(dc);
-	else if (dc->powergate_id == TEGRA_POWERGATE_DISA) {
-		/* If DISB is powergated, then powergate DISA. */
-		if (!dc_partner->powered)
-			tegra_dc_powergate_locked(dc);
-	} else if (dc->powergate_id == TEGRA_POWERGATE_DISB) {
-		/* If DISA is enabled, only powergate DISB;
-		 * otherwise, powergate DISA and DISB.
-		 * */
-		if (dc_partner->enabled) {
-			tegra_dc_powergate_locked(dc);
-		} else {
-			tegra_dc_powergate_locked(dc);
-			tegra_dc_powergate_locked(dc_partner);
-		}
-	}
-	mutex_unlock(&status_lock);
+	tegra_dc_powergate_locked(dc);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
@@ -2219,6 +2192,56 @@ static void tegra_dc_underflow_worker(struct work_struct *work)
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dc->lock);
 }
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+/* A mutex used to protect the critical section used by both DC heads. */
+static struct mutex tegra_dc_powergate_status_lock;
+
+/* defer turning off DISA until DISB is turned off */
+void tegra_dc_powergate_locked(struct tegra_dc *dc)
+{
+	struct tegra_dc *dc_partner;
+
+	mutex_lock(&tegra_dc_powergate_status_lock);
+	/* Get the handler of the other display controller. */
+	dc_partner = tegra_dc_get_dc(dc->ndev->id ^ 1);
+	if (!dc_partner)
+		_tegra_dc_powergate_locked(dc);
+	else if (dc->powergate_id == TEGRA_POWERGATE_DISA) {
+		/* If DISB is powergated, then powergate DISA. */
+		if (!dc_partner->powered)
+			_tegra_dc_powergate_locked(dc);
+	} else if (dc->powergate_id == TEGRA_POWERGATE_DISB) {
+		/* If DISA is enabled, only powergate DISB;
+		 * otherwise, powergate DISA and DISB.
+		 * */
+		if (dc_partner->enabled) {
+			_tegra_dc_powergate_locked(dc);
+		} else {
+			_tegra_dc_powergate_locked(dc);
+			_tegra_dc_powergate_locked(dc_partner);
+		}
+	}
+	mutex_unlock(&tegra_dc_powergate_status_lock);
+}
+
+
+/* to turn on DISB we must first power on DISA */
+void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
+{
+	mutex_lock(&tegra_dc_powergate_status_lock);
+	if (dc->powergate_id == TEGRA_POWERGATE_DISB) {
+		struct tegra_dc *dc_partner;
+
+		/* Get the handler of the other display controller. */
+		dc_partner = tegra_dc_get_dc(dc->ndev->id ^ 1);
+		if (dc_partner)
+			_tegra_dc_unpowergate_locked(dc_partner);
+	}
+	_tegra_dc_unpowergate_locked(dc);
+	mutex_unlock(&tegra_dc_powergate_status_lock);
+}
+#endif
 
 #ifdef CONFIG_SWITCH
 static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
@@ -2360,7 +2383,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);
-	mutex_init(&status_lock);
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	mutex_init(&tegra_dc_powergate_status_lock);
+#endif
 	init_completion(&dc->frame_end_complete);
 	init_waitqueue_head(&dc->wq);
 	init_waitqueue_head(&dc->timestamp_wq);
@@ -2472,13 +2497,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	else
 		dc->connected = true;
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	mutex_lock(&status_lock);
 	/* Powergate display module when it's unconnected. */
 	if (!tegra_dc_get_connected(dc))
 		tegra_dc_powergate_locked(dc);
-	mutex_unlock(&status_lock);
-#endif
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);
 

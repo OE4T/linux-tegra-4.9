@@ -209,19 +209,22 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 }
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
+static inline void _tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 	if (tegra_powergate_is_powered(dc->powergate_id))
 		tegra_powergate_partition(dc->powergate_id);
 	dc->powered = 0;
 }
 
-static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
+static inline void _tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	if (!tegra_powergate_is_powered(dc->powergate_id))
 		tegra_unpowergate_partition(dc->powergate_id);
 	dc->powered = 1;
 }
+
+void tegra_dc_powergate_locked(struct tegra_dc *dc);
+void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
 #else
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }

@@ -2138,5 +2138,253 @@ static inline u32 tsec_thi_int_status_falcon_int_clear_f(void)
 {
 	return 0x1;
 }
+static inline u32 tsec_tegra_ctl_r(void)
+{
+	return 0x00001838;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_init_f(void)
+{
+	return 0x10000;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_tegra_ctl_tkfi_kfuse_enable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_v(u32 r)
+{
+	return (r >> 17) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tkfi_restart_fsm_kfuse_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_init_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_enable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_disable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_tegra_ctl_tmpi_force_idle_inputs_i2c_disable_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_host1x_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_restart_fsm_apb_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_m(void)
+{
+	return 0x1 << 27;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_v(u32 r)
+{
+	return (r >> 27) & 0x1;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_tegra_ctl_tmpi_disable_output_i2c_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_scp_ctl_pkey_r(void)
+{
+	return 0x00001418;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_idle_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_idle_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_scp_ctl_pkey_request_reload_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_scp_ctl_pkey_loaded_true_f(void)
+{
+	return 0x2;
+}
 
 #endif /* __hw_tsec_h__ */

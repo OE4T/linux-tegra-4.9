@@ -208,6 +208,34 @@ static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
 	return -1;
 }
 
+static int tsec_load_kfuse(struct platform_device *pdev)
+{
+	u32 val;
+	u32 timeout;
+
+	val = nvhost_device_readl(pdev, tsec_tegra_ctl_r());
+	val &= ~tsec_tegra_ctl_tkfi_kfuse_m();
+	nvhost_device_writel(pdev, tsec_tegra_ctl_r(), val);
+
+	val = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+	val |= tsec_scp_ctl_pkey_request_reload_s();
+	nvhost_device_writel(pdev, tsec_scp_ctl_pkey_r(), val);
+
+	timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
+
+	do {
+		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, timeout);
+		u32 w = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+
+		if (w & tsec_scp_ctl_pkey_loaded_m())
+			return 0;
+		udelay(TSEC_IDLE_CHECK_PERIOD);
+		timeout -= check;
+	} while (timeout);
+
+	return -1;
+}
+
 int tsec_boot(struct platform_device *dev)
 {
 	u32 timeout;
@@ -256,7 +284,7 @@ int tsec_boot(struct platform_device *dev)
 			(tsec_itfen_mthden_enable_f() |
 				tsec_itfen_ctxen_enable_f()));
 
-	return 0;
+	return tsec_load_kfuse(dev);
 }
 
 static int tsec_setup_ucode_image(struct platform_device *dev,

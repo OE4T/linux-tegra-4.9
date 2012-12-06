@@ -155,7 +155,7 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 	long h_total, v_total, refresh;
 	long pclk;
 
-	if (m->rated_pclk >= 0)
+	if (m->rated_pclk > 0)
 		pclk = m->rated_pclk;
 	else
 		pclk = m->pclk;

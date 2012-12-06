@@ -54,5 +54,6 @@ struct nct1008_platform_data {
 
 	int num_trips;
 	struct nct_trip_temp trips[NCT_MAX_TRIPS];
+	const char *loc_name;
 };
 #endif /* _LINUX_NCT1008_H */

@@ -169,6 +169,7 @@ enum nvc_params_isp {
 #define NVC_IOCTL_PARAM_RD		_IOWR('o', 105, struct nvc_param)
 #define NVC_IOCTL_PARAM_ISP_RD		_IOWR('o', 200, struct nvc_param_isp)
 #define NVC_IOCTL_PARAM_ISP_WR		_IOWR('o', 201, struct nvc_param_isp)
+#define NVC_IOCTL_FUSE_ID		_IOWR('o', 202, struct nvc_fuseid)
 
 
 #ifdef __KERNEL__
@@ -280,6 +281,11 @@ struct nvc_gpio {
 	bool active_high; /* used for GP GPIOs */
 	bool valid; /* set if struct data is valid */
 	bool flag; /* scratch flag for driver implementation */
+};
+
+struct nvc_fuseid {
+	__u32 size;
+	__u8 data[16];
 };
 
 #endif /* __KERNEL__ */

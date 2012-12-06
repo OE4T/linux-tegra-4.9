@@ -168,9 +168,12 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	u32 num_offsets = args->num_offsets;
 	u32 *offsets = args->offsets;
 	u32 *values = args->values;
-	u32 vals[64];
-	struct platform_device *ndev;
+	u32 *vals;
+	u32 *p1;
+	int remaining;
+	int err;
 
+	struct platform_device *ndev;
 	trace_nvhost_ioctl_ctrl_module_regrdwr(args->id,
 			args->num_offsets, args->write);
 
@@ -181,38 +184,60 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 
 	ndev = nvhost_device_list_match_by_id(args->id);
 
-	while (num_offsets--) {
-		int err;
-		int remaining = args->block_size >> 2;
-		u32 offs;
-		if (get_user(offs, offsets))
-			return -EFAULT;
-		offsets++;
-		while (remaining) {
-			int batch = min(remaining, 64);
-			if (args->write) {
-				if (copy_from_user(vals, values,
-							batch*sizeof(u32)))
-					return -EFAULT;
-				err = nvhost_write_module_regs(ndev,
-						offs, batch, vals);
-				if (err)
-					return err;
-			} else {
-				err = nvhost_read_module_regs(ndev,
-						offs, batch, vals);
-				if (err)
-					return err;
-				if (copy_to_user(values, vals,
-							batch*sizeof(u32)))
-					return -EFAULT;
-			}
-			remaining -= batch;
-			offs += batch*sizeof(u32);
-			values += batch;
-		}
-	}
+	remaining = args->block_size >> 2;
 
+	vals = kmalloc(num_offsets * args->block_size,
+				GFP_KERNEL);
+	if (!vals)
+		return -ENOMEM;
+	p1 = vals;
+
+	if (args->write) {
+		if (copy_from_user((char *)vals, (char *)values,
+				num_offsets * args->block_size)) {
+			kfree(vals);
+			return -EFAULT;
+		}
+		while (num_offsets--) {
+			u32 offs;
+			if (get_user(offs, offsets)) {
+				kfree(vals);
+				return -EFAULT;
+			}
+			offsets++;
+			err = nvhost_write_module_regs(ndev,
+					offs, remaining, p1);
+			if (err) {
+				kfree(vals);
+				return err;
+			}
+			p1 += remaining;
+		}
+		kfree(vals);
+	} else {
+		while (num_offsets--) {
+			u32 offs;
+			if (get_user(offs, offsets)) {
+				kfree(vals);
+				return -EFAULT;
+			}
+			offsets++;
+			err = nvhost_read_module_regs(ndev,
+					offs, remaining, p1);
+			if (err) {
+				kfree(vals);
+				return err;
+			}
+			p1 += remaining;
+		}
+
+		if (copy_to_user((char *)values, (char *)vals,
+				args->num_offsets * args->block_size)) {
+			kfree(vals);
+			return -EFAULT;
+		}
+		kfree(vals);
+	}
 	return 0;
 }
 

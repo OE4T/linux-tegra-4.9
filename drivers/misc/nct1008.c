@@ -1006,6 +1006,8 @@ static int nct1008_probe(struct i2c_client *client,
 	int err;
 	int i;
 	int mask = 0;
+	char nct_int_name[THERMAL_NAME_LENGTH];
+	char nct_ext_name[THERMAL_NAME_LENGTH];
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)
@@ -1058,7 +1060,19 @@ static int nct1008_probe(struct i2c_client *client,
 	for (i = 0; i < data->plat_data.num_trips; i++)
 		mask |= (1 << i);
 
-	data->nct_int = thermal_zone_device_register("nct_int",
+	if (data->plat_data.loc_name) {
+		strcpy(nct_int_name, "nct_int_");
+		strcpy(nct_ext_name, "nct_ext_");
+		strncat(nct_int_name, data->plat_data.loc_name,
+			(THERMAL_NAME_LENGTH - strlen("nct_int_")) - 1);
+		strncat(nct_ext_name, data->plat_data.loc_name,
+			(THERMAL_NAME_LENGTH - strlen("nct_ext_")) - 1);
+	} else {
+		strcpy(nct_int_name, "nct_int");
+		strcpy(nct_ext_name, "nct_ext");
+	}
+
+	data->nct_int = thermal_zone_device_register(nct_int_name,
 						0,
 						0x0,
 						data,
@@ -1069,7 +1083,7 @@ static int nct1008_probe(struct i2c_client *client,
 	if (IS_ERR_OR_NULL(data->nct_int))
 		goto error;
 
-	data->nct_ext = thermal_zone_device_register("nct_ext",
+	data->nct_ext = thermal_zone_device_register(nct_ext_name,
 					data->plat_data.num_trips,
 					mask,
 					data,

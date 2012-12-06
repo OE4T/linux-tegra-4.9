@@ -48,6 +48,7 @@
 #include "pod_scaling.h"
 #include "scale3d_actmon.h"
 #include "dev.h"
+#include "nvhost_acm.h"
 
 #define POW2(x) ((x) * (x))
 
@@ -70,6 +71,7 @@ struct power_profile_gr3d {
 	long				emc_dip_offset;
 	long				emc_xmid;
 
+	struct platform_device		*dev;
 	struct clk			*clk_3d;
 	struct clk			*clk_3d2;
 	struct clk			*clk_3d_emc;
@@ -86,6 +88,24 @@ struct power_profile_gr3d {
  ******************************************************************************/
 
 static struct power_profile_gr3d power_profile;
+
+/* Convert struct clk to clk index */
+static inline int clk_to_idx(struct clk *clk)
+{
+	struct nvhost_device_data *pdata =
+		platform_get_drvdata(power_profile.dev);
+	int i;
+
+	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
+		if (clk == pdata->clk[i])
+			break;
+	}
+
+	if (i == NVHOST_MODULE_MAX_CLOCKS)
+		pr_err("scale3d: there is no such clk!\n");
+
+	return i;
+}
 
 /*******************************************************************************
  * nvhost_scale3d_notify(dev, busy)
@@ -157,8 +177,10 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 
 	/* Set GPU clockrate */
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
-		clk_set_rate(power_profile.clk_3d2, 0);
-	clk_set_rate(power_profile.clk_3d, *freq);
+		nvhost_module_set_devfreq_rate(power_profile.dev,
+					clk_to_idx(power_profile.clk_3d2), 0);
+	nvhost_module_set_devfreq_rate(power_profile.dev,
+				clk_to_idx(power_profile.clk_3d), *freq);
 
 	/* Set EMC clockrate */
 	after = (long) clk_get_rate(power_profile.clk_3d);
@@ -168,7 +190,8 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 	hz -= (power_profile.emc_dip_slope *
 		POW2(after / 1000 - power_profile.emc_xmid) +
 		power_profile.emc_dip_offset);
-	clk_set_rate(power_profile.clk_3d_emc, hz);
+	nvhost_module_set_devfreq_rate(power_profile.dev,
+				clk_to_idx(power_profile.clk_3d_emc), hz);
 
 	/* Get the new clockrate */
 	*freq = clk_get_rate(power_profile.clk_3d);
@@ -324,6 +347,7 @@ void nvhost_scale3d_actmon_init(struct platform_device *dev)
 		return;
 
 	/* Get clocks */
+	power_profile.dev = dev;
 	power_profile.clk_3d = pdata->clk[0];
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
 		power_profile.clk_3d2 = pdata->clk[1];

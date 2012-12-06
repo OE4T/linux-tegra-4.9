@@ -308,6 +308,12 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	char __iomem *flush_end;
 	u32 addr;
 
+	/*
+	 * Do nothing if display parameters are same as current values.
+	 */
+	if (info->var.yoffset == var->yoffset)
+		return 0;
+
 	if (!tegra_fb->win->cur_handle) {
 		flush_start = info->screen_base + (var->yoffset * info->fix.line_length);
 		flush_end = flush_start + (var->yres * info->fix.line_length);

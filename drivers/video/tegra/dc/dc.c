@@ -879,6 +879,10 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	int ret;
 
 	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
 	tegra_dc_io_start(dc);
 	tegra_dc_hold_dc_out(dc);
 

@@ -861,7 +861,6 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_dc_hdmi_data, work);
 	struct tegra_dc *dc = hdmi->dc;
 
-	tegra_dc_unpowergate_locked(hdmi->dc);
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	/* Set default videomode on dc before enabling it*/
 	tegra_dc_set_default_videomode(dc);
@@ -873,7 +872,6 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		tegra_fb_update_monspecs(dc->fb, NULL, NULL);
 
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
-		tegra_dc_powergate_locked(hdmi->dc);
 	}
 }
 

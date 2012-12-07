@@ -3640,23 +3640,15 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi->dsi_clk = dsi_clk;
 	dsi->dsi_fixed_clk = dsi_fixed_clk;
 
-	dsi->avdd_dsi_csi = regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
-	if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
-		dev_err(&dc->ndev->dev, "dsi: avdd_dsi_csi reg get failed\n");
-		goto err_dc_clk_put;
-	}
-
 	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
 	if (err < 0)
-		goto err_reg_put;
+		goto err_dc_clk_put;
 
 	tegra_dc_set_outdata(dc, dsi);
 	__tegra_dc_dsi_init(dc);
 
 	return 0;
 
-err_reg_put:
-	regulator_put(dsi->avdd_dsi_csi);
 err_dc_clk_put:
 	clk_put(dc_clk);
 err_dsi_clk_put:
@@ -4100,13 +4092,23 @@ static void tegra_dc_dsi_resume(struct tegra_dc *dc)
 
 static int tegra_dc_dsi_init(struct tegra_dc *dc)
 {
+	struct tegra_dc_dsi_data *dsi;
 	int err = 0;
 
 	err = _tegra_dc_dsi_init(dc);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 			"dsi: Instance A init failed\n");
-		goto fail;
+		goto err;
+	}
+
+	dsi = tegra_dc_get_outdata(dc);
+
+	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
+	if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
+		dev_err(&dc->ndev->dev, "dsi: avdd_dsi_csi reg get failed\n");
+		err = PTR_ERR(dsi->avdd_dsi_csi);
+		goto err_reg;
 	}
 
 	if (dc->out->dsi->ganged_type) {
@@ -4114,16 +4116,28 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: Instance B init failed\n");
-			goto fail;
+			goto err_ganged;
 		}
+		tegra_dsi_instance[DSI_INSTANCE_1]->avdd_dsi_csi =
+							dsi->avdd_dsi_csi;
 		tegra_dc_set_outdata(dc, tegra_dsi_instance[DSI_INSTANCE_0]);
 	}
-fail:
+	return 0;
+err_ganged:
+	regulator_put(dsi->avdd_dsi_csi);
+err_reg:
+	_tegra_dc_dsi_destroy(dc);
+err:
 	return err;
 }
 
 static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 {
+	struct regulator *avdd_dsi_csi;
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	avdd_dsi_csi = dsi->avdd_dsi_csi;
+
 	_tegra_dc_dsi_destroy(dc);
 
 	if (dc->out->dsi->ganged_type) {
@@ -4131,6 +4145,8 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 		_tegra_dc_dsi_destroy(dc);
 		tegra_dc_set_outdata(dc, tegra_dsi_instance[DSI_INSTANCE_0]);
 	}
+
+	regulator_put(avdd_dsi_csi);
 }
 
 static void tegra_dc_dsi_enable(struct tegra_dc *dc)

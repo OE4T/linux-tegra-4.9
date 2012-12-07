@@ -897,7 +897,10 @@ EXPORT_SYMBOL(tegra_dc_update_cmu);
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
 	dc->pdata->cmu_enable = cmu_enable;
-	tegra_dc_update_cmu(dc, &dc->cmu);
+	if (dc->pdata->cmu)
+		tegra_dc_update_cmu(dc, dc->pdata->cmu);
+	else
+		tegra_dc_update_cmu(dc, &default_cmu);
 }
 #else
 #define tegra_dc_cache_cmu(dst_cmu, src_cmu)

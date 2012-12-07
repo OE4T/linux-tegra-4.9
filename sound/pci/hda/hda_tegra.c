@@ -31,6 +31,8 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/time.h>
+#include <linux/tegra-powergate.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -214,6 +216,8 @@ static int hda_tegra_enable_clocks(struct hda_tegra *data)
 {
 	int rc;
 
+	tegra_unpowergate_partition(TEGRA_POWERGATE_DISB);
+
 	rc = clk_prepare_enable(data->hda_clk);
 	if (rc)
 		return rc;
@@ -230,6 +234,7 @@ disable_codec_2x:
 	clk_disable_unprepare(data->hda2codec_2x_clk);
 disable_hda:
 	clk_disable_unprepare(data->hda_clk);
+	tegra_powergate_partition(TEGRA_POWERGATE_DISB);
 	return rc;
 }
 
@@ -239,6 +244,8 @@ static void hda_tegra_disable_clocks(struct hda_tegra *data)
 	clk_disable_unprepare(data->hda2hdmi_clk);
 	clk_disable_unprepare(data->hda2codec_2x_clk);
 	clk_disable_unprepare(data->hda_clk);
+
+	tegra_powergate_partition(TEGRA_POWERGATE_DISB);
 }
 
 /*

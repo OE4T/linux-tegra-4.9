@@ -42,9 +42,11 @@ enum global_ctx_buffer {
 	CIRCULAR		= 0,
 	PAGEPOOL		= 1,
 	ATTRIBUTE		= 2,
-	ATTRIBUTE_VPR		= 3,
-	GOLDEN_CTX		= 4,
-	NR_GLOBAL_CTX_BUF	= 5
+	CIRCULAR_VPR		= 3,
+	PAGEPOOL_VPR		= 4,
+	ATTRIBUTE_VPR		= 5,
+	GOLDEN_CTX		= 6,
+	NR_GLOBAL_CTX_BUF	= 7
 };
 
 /* either ATTRIBUTE or ATTRIBUTE_VPR maps to ATTRIBUTE_VA */

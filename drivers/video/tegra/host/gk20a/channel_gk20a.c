@@ -783,9 +783,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	u32 gpfifo_size = roundup_pow_of_two(args->num_entries);
 	u32 ret;
 
-	/* TBD: add kernel ioctl change
 	if (args->flags & NVHOST_ALLOC_GPFIFO_FLAGS_VPR_ENABLED)
-		c->vpr = true; */
+		c->vpr = true;
 
 	/* an address space needs to have been bound at this point.   */
 	if (!gk20a_channel_as_bound(c)) {

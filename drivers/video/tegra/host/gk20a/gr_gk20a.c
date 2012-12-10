@@ -1519,6 +1519,16 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	gr->global_ctx_buffer[CIRCULAR].ref = mem;
 	gr->global_ctx_buffer[CIRCULAR].size = cb_buffer_size;
 
+	mem = mem_op().alloc(memmgr, cb_buffer_size,
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0); /* TBD: use NVMAP_HEAP_CARVEOUT_VPR */
+	if (IS_ERR_OR_NULL(mem))
+		goto clean_up;
+
+	gr->global_ctx_buffer[CIRCULAR_VPR].ref = mem;
+	gr->global_ctx_buffer[CIRCULAR_VPR].size = cb_buffer_size;
+
 	nvhost_dbg_info("pagepool_buffer_size : %d", pagepool_buffer_size);
 
 	mem = mem_op().alloc(memmgr, pagepool_buffer_size,
@@ -1530,6 +1540,16 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	gr->global_ctx_buffer[PAGEPOOL].ref = mem;
 	gr->global_ctx_buffer[PAGEPOOL].size = pagepool_buffer_size;
+
+	mem = mem_op().alloc(memmgr, pagepool_buffer_size,
+			  DEFAULT_ALLOC_ALIGNMENT,
+			  DEFAULT_ALLOC_FLAGS,
+			  0); /* TBD: use NVMAP_HEAP_CARVEOUT_VPR */
+	if (IS_ERR_OR_NULL(mem))
+		goto clean_up;
+
+	gr->global_ctx_buffer[PAGEPOOL_VPR].ref = mem;
+	gr->global_ctx_buffer[PAGEPOOL_VPR].size = pagepool_buffer_size;
 
 	nvhost_dbg_info("attr_buffer_size : %d", attr_buffer_size);
 
@@ -1607,14 +1627,20 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	u32 i;
 	nvhost_dbg_fn("");
 
-	gpu_va = ch_vm->map(ch_vm, memmgr,
-			    gr->global_ctx_buffer[CIRCULAR].ref,
+	/* Circular Buffer */
+	if (!c->vpr)
+		handle_ref = gr->global_ctx_buffer[CIRCULAR].ref;
+	else
+		handle_ref = gr->global_ctx_buffer[CIRCULAR_VPR].ref;
+
+	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
 			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
 
+	/* Attribute Buffer */
 	if (!c->vpr)
 		handle_ref = gr->global_ctx_buffer[ATTRIBUTE].ref;
 	else
@@ -1627,14 +1653,20 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
 
-	gpu_va = ch_vm->map(ch_vm, memmgr,
-			    gr->global_ctx_buffer[PAGEPOOL].ref,
+	/* Page Pool */
+	if (!c->vpr)
+		handle_ref = gr->global_ctx_buffer[PAGEPOOL].ref;
+	else
+		handle_ref = gr->global_ctx_buffer[PAGEPOOL_VPR].ref;
+
+	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
 			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
 
+	/* Golden Image */
 	gpu_va = ch_vm->map(ch_vm, memmgr,
 			    gr->global_ctx_buffer[GOLDEN_CTX].ref,
 			    /*offset_align, flags, kind*/

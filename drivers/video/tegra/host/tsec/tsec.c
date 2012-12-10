@@ -21,6 +21,7 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 #include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
@@ -496,6 +497,11 @@ static int tsec_probe(struct platform_device *dev)
 	udelay(10);
 	tegra_periph_reset_deassert(pdata->clk[0]);
 	clk_disable(pdata->clk[0]);
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
 	nvhost_module_idle(to_platform_device(dev->dev.parent));
 	return err;
 }

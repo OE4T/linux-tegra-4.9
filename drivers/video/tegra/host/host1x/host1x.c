@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -489,6 +490,10 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_syncpt_reset(&host->syncpt);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_disable_unprepare(pdata->clk[i]);
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
 
 	nvhost_device_list_init();
 	err = nvhost_device_list_add(dev);

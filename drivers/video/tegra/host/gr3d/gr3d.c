@@ -22,6 +22,7 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/scatterlist.h>
+#include <linux/pm_runtime.h>
 #include <mach/gpufuse.h>
 
 #include "t20/t20.h"
@@ -222,6 +223,7 @@ MODULE_DEVICE_TABLE(nvhost, gr3d_id);
 static int gr3d_probe(struct platform_device *dev)
 {
 	int index = 0;
+	int err = 0;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
@@ -244,7 +246,15 @@ static int gr3d_probe(struct platform_device *dev)
 
 	platform_set_drvdata(dev, pdata);
 
-	return nvhost_client_device_init(dev);
+	err = nvhost_client_device_init(dev);
+	if (err)
+		return err;
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
+	return 0;
 }
 
 static int __exit gr3d_remove(struct platform_device *dev)

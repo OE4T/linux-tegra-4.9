@@ -26,6 +26,8 @@
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <trace/events/nvhost.h>
 
 #include <mach/powergate.h>
@@ -140,6 +142,11 @@ static void to_state_clockgated_locked(struct platform_device *dev)
 
 		if (dev->dev.parent)
 			nvhost_module_idle(to_platform_device(dev->dev.parent));
+
+		if (!pdata->can_powergate) {
+			pm_runtime_mark_last_busy(&dev->dev);
+			pm_runtime_put_autosuspend(&dev->dev);
+		}
 	} else if (pdata->powerstate == NVHOST_POWER_STATE_POWERGATED
 			&& pdata->can_powergate) {
 		do_unpowergate_locked(pdata->powergate_ids[0]);
@@ -156,11 +163,16 @@ static void to_state_running_locked(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int prev_state = pdata->powerstate;
 
-	if (pdata->powerstate == NVHOST_POWER_STATE_POWERGATED)
+	if (pdata->powerstate == NVHOST_POWER_STATE_POWERGATED) {
+		pm_runtime_get_sync(&dev->dev);
 		to_state_clockgated_locked(dev);
+	}
 
 	if (pdata->powerstate == NVHOST_POWER_STATE_CLOCKGATED) {
 		int i;
+
+		if (!pdata->can_powergate)
+			pm_runtime_get_sync(&dev->dev);
 
 		if (dev->dev.parent)
 			nvhost_module_busy(to_platform_device(dev->dev.parent));
@@ -213,6 +225,8 @@ static int to_state_powergated_locked(struct platform_device *dev)
 	}
 
 	pdata->powerstate = NVHOST_POWER_STATE_POWERGATED;
+	pm_runtime_mark_last_busy(&dev->dev);
+	pm_runtime_put_autosuspend(&dev->dev);
 	return 0;
 }
 

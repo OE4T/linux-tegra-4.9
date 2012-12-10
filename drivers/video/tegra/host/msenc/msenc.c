@@ -21,6 +21,7 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 #include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
@@ -386,7 +387,15 @@ static int msenc_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
-	return nvhost_client_device_init(dev);
+	err = nvhost_client_device_init(dev);
+	if (err)
+		return err;
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
+	return 0;
 }
 
 static int __exit msenc_remove(struct platform_device *dev)

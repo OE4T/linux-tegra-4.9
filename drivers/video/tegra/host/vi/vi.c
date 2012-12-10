@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/resource.h>
+#include <linux/pm_runtime.h>
 
 #include <mach/iomap.h>
 
@@ -39,7 +40,15 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
-	return nvhost_client_device_init(dev);
+	err = nvhost_client_device_init(dev);
+	if (err)
+		return err;
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
+	return 0;
 }
 
 static int __exit vi_remove(struct platform_device *dev)

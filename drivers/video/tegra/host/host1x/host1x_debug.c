@@ -165,15 +165,15 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
-	u32 val, rd_ptr, wr_ptr, start, end;
+	u32 val, rd_ptr, wr_ptr, start, end, max = 64;
 	struct nvhost_channel *channel = ch;
 
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
 
 	val = readl(channel->aperture + host1x_channel_fifostat_r());
-	nvhost_debug_output(o, "FIFOSTAT %08x\n", val);
 	if (host1x_channel_fifostat_cfempty_v(val)) {
-		nvhost_debug_output(o, "[empty]\n");
+		nvhost_debug_output(o, "FIFOSTAT %08x\n[empty]\n",
+				val);
 		return;
 	}
 
@@ -190,6 +190,8 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 	start = host1x_sync_cf0_setup_cf0_base_v(val);
 	end = host1x_sync_cf0_setup_cf0_limit_v(val);
 
+	nvhost_debug_output(o, "FIFOSTAT %08x, %03x - %03x, RD %03x, WR %03x\n",
+			val, start, end, rd_ptr, wr_ptr);
 	do {
 		writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
 		writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
@@ -204,7 +206,9 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 			rd_ptr = start;
 		else
 			rd_ptr++;
-	} while (rd_ptr != wr_ptr);
+
+		max--;
+	} while (max && rd_ptr != wr_ptr);
 
 	nvhost_debug_output(o, "\n");
 

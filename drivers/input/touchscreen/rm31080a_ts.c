@@ -2,7 +2,7 @@
  * Raydium RM31080 touchscreen driver
  *
  * Copyright (C) 2012 Raydium Semiconductor Corporation
- * Copyright (C) 2012 NVIDIA Corporation, All Rights Reserved.
+ * Copyright (C) 2012 - 2013 NVIDIA Corporation, All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -2225,6 +2225,22 @@ static void rm31080_init_regulator(struct rm31080_ts *ts)
 		goto err_put_regulator_3v3;
 	}
 
+	ts->nb_3v3.notifier_call = &rm31080_voltage_notifier_3v3;
+	error = regulator_register_notifier(ts->regulator_3v3, &ts->nb_3v3);
+	if (error) {
+		dev_err(&g_spi->dev,
+			"regulator notifier request failed: %d\n", error);
+		goto err_put_regulator_1v8;
+	}
+
+	ts->nb_1v8.notifier_call = &rm31080_voltage_notifier_1v8;
+	error = regulator_register_notifier(ts->regulator_1v8, &ts->nb_1v8);
+	if (error) {
+		dev_err(&g_spi->dev,
+			"regulator notifier request failed: %d\n", error);
+		goto err_unregister_notifier_3v3;
+	}
+
 	error = regulator_enable(ts->regulator_3v3);
 	if (error < 0)
 		dev_err(&g_spi->dev,
@@ -2235,30 +2251,10 @@ static void rm31080_init_regulator(struct rm31080_ts *ts)
 		dev_err(&g_spi->dev,
 			"Raydium TS: regulator enable failed: %d\n", error);
 
-	ts->nb_3v3.notifier_call = &rm31080_voltage_notifier_3v3;
-	error = regulator_register_notifier(ts->regulator_3v3, &ts->nb_3v3);
-	if (error) {
-		dev_err(&g_spi->dev,
-			"regulator notifier request failed: %d\n", error);
-		goto err_disable_regulator;
-	}
-
-	ts->nb_1v8.notifier_call = &rm31080_voltage_notifier_1v8;
-	error = regulator_register_notifier(ts->regulator_1v8, &ts->nb_1v8);
-	if (error) {
-		dev_err(&g_spi->dev,
-			"regulator notifier request failed: %d\n", error);
-		devm_regulator_put(ts->regulator_1v8);
-		goto err_unregister_notifier_3v3;
-	}
-
 	return;
 
 err_unregister_notifier_3v3:
 	regulator_unregister_notifier(ts->regulator_3v3, &ts->nb_3v3);
-err_disable_regulator:
-	regulator_disable(ts->regulator_3v3);
-	regulator_disable(ts->regulator_1v8);
 err_put_regulator_1v8:
 	devm_regulator_put(ts->regulator_1v8);
 err_put_regulator_3v3:

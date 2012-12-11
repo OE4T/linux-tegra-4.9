@@ -62,6 +62,7 @@ static inline void tegra_mipi_cal_write(struct tegra_mipi_cal *mipi_cal,
 
 extern struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc);
 extern int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal);
+extern void tegra_mipi_cal_destroy(struct tegra_dc *dc);
 #else
 static inline void tegra_mipi_cal_clk_enable(struct tegra_mipi_cal *mipi_cal)
 {
@@ -98,6 +99,11 @@ int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 {
 	/* dummy */
 	return 0;
+}
+
+void tegra_mipi_cal_destroy(struct tegra_dc *dc)
+{
+	/* dummy */
 }
 #endif
 #endif

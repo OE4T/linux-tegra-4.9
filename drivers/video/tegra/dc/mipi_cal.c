@@ -19,6 +19,7 @@
 #include "dc_priv.h"
 #include "mipi_cal.h"
 #include "mipi_cal_regs.h"
+#include "dsi.h"
 
 int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 {
@@ -54,7 +55,8 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		goto fail;
 	}
 
-	res = platform_get_resource_byname(dc->ndev, IORESOURCE_MEM, "mipi_cal");
+	res = platform_get_resource_byname(dc->ndev,
+				IORESOURCE_MEM, "mipi_cal");
 	if (!res) {
 		dev_err(&dc->ndev->dev, "mipi_cal: no entry in resource\n");
 		err = -ENOENT;
@@ -94,4 +96,27 @@ fail:
 	return ERR_PTR(err);
 }
 EXPORT_SYMBOL(tegra_mipi_cal_init_sw);
+
+void tegra_mipi_cal_destroy(struct tegra_dc *dc)
+{
+	struct tegra_mipi_cal *mipi_cal =
+		((struct tegra_dc_dsi_data *)
+		(tegra_dc_get_outdata(dc)))->mipi_cal;
+
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
+
+	mutex_lock(&mipi_cal->lock);
+
+	clk_put(mipi_cal->clk);
+	devm_iounmap(&dc->ndev->dev, mipi_cal->base);
+	devm_release_mem_region(&dc->ndev->dev, mipi_cal->res->start,
+					resource_size(mipi_cal->res));
+	release_resource(mipi_cal->res);
+
+	mutex_unlock(&mipi_cal->lock);
+
+	mutex_destroy(&mipi_cal->lock);
+	devm_kfree(&dc->ndev->dev, mipi_cal);
+}
+EXPORT_SYMBOL(tegra_mipi_cal_destroy);
 

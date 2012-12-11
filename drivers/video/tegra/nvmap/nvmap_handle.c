@@ -267,28 +267,31 @@ static void shrink_page_pools(int *total_pages, int *available_pages)
 {
 	struct shrink_control sc;
 
-	sc.gfp_mask = GFP_KERNEL;
-	sc.nr_to_scan = 0;
-	*total_pages = nvmap_page_pool_shrink(NULL, &sc);
-	sc.nr_to_scan = *total_pages * 2;
+	if (*total_pages == 0) {
+		sc.gfp_mask = GFP_KERNEL;
+		sc.nr_to_scan = 0;
+		*total_pages = nvmap_page_pool_shrink(NULL, &sc);
+	}
+	sc.nr_to_scan = *total_pages;
 	*available_pages = nvmap_page_pool_shrink(NULL, &sc);
 }
 
 #if NVMAP_TEST_PAGE_POOL_SHRINKER
-static bool shrink_pp;
+static int shrink_pp;
 static int shrink_set(const char *arg, const struct kernel_param *kp)
 {
 	int cpu = smp_processor_id();
 	unsigned long long t1, t2;
 	int total_pages, available_pages;
 
-	param_set_bool(arg, kp);
+	param_set_int(arg, kp);
 
 	if (shrink_pp) {
+		total_pages = shrink_pp;
 		t1 = cpu_clock(cpu);
 		shrink_page_pools(&total_pages, &available_pages);
 		t2 = cpu_clock(cpu);
-		pr_info("shrink page pools: time=%lldns, "
+		pr_debug("shrink page pools: time=%lldns, "
 			"total_pages_released=%d, free_pages_available=%d",
 			t2-t1, total_pages, available_pages);
 	}
@@ -297,7 +300,7 @@ static int shrink_set(const char *arg, const struct kernel_param *kp)
 
 static int shrink_get(char *buff, const struct kernel_param *kp)
 {
-	return param_get_bool(buff, kp);
+	return param_get_int(buff, kp);
 }
 
 static struct kernel_param_ops shrink_ops = {
@@ -315,6 +318,7 @@ static int enable_pp_set(const char *arg, const struct kernel_param *kp)
 	param_set_bool(arg, kp);
 
 	if (!enable_pp) {
+		total_pages = 0;
 		shrink_page_pools(&total_pages, &available_pages);
 		pr_info("disabled page pools and released pages, "
 			"total_pages_released=%d, free_pages_available=%d",

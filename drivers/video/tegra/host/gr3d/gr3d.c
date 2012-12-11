@@ -230,7 +230,7 @@ static int gr3d_probe(struct platform_device *dev)
 
 	pdata->pdev = dev;
 	index = (int)(platform_get_device_id(dev)->driver_data);
-	BUG_ON(index > gr3d_03);
+	WARN_ON(index > gr3d_03);
 
 	pdata->finalize_poweron		= gr3d[index].finalize_poweron;
 	pdata->busy			= gr3d[index].busy;

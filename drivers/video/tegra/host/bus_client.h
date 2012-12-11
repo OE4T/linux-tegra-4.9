@@ -43,6 +43,5 @@ nvhost_client_request_firmware(struct platform_device *dev,
 	const char *fw_name);
 
 int nvhost_client_device_get_resources(struct platform_device *dev);
-void nvhost_client_device_put_resources(struct platform_device *dev);
 
 #endif

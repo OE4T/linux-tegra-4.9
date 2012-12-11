@@ -62,7 +62,7 @@ static int gr2d_probe(struct platform_device *dev)
 	dev_set_name(&dev->dev, "%s", "gr2d");
 
 	index = (int)(platform_get_device_id(dev)->driver_data);
-	BUG_ON(index > gr2d_02);
+	WARN_ON(index > gr2d_02);
 
 	pdata->pdev = dev;
 	pdata->finalize_poweron = gr2d[index].finalize_poweron;

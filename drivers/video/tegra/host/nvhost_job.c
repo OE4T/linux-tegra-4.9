@@ -132,7 +132,8 @@ static void job_free(struct kref *ref)
  * memory. */
 void nvhost_job_get_hwctx(struct nvhost_job *job, struct nvhost_hwctx *hwctx)
 {
-	BUG_ON(job->hwctxref);
+	if (job->hwctxref)
+		job->hwctxref->h->put(job->hwctxref);
 
 	job->hwctxref = hwctx;
 	hwctx->h->get(hwctx);

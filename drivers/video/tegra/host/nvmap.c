@@ -150,7 +150,7 @@ int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
 	if (result < 0)
 		goto fail;
 
-	BUG_ON(result > count);
+	WARN_ON(result > count);
 
 	for (i = 0; i < result; i++)
 		unpin_data[i].h = (struct mem_handle *)unique_handle_refs[i];

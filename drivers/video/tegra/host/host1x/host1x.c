@@ -179,7 +179,6 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 
 	ndev = nvhost_device_list_match_by_id(args->id);
-	BUG_ON(!ndev);
 
 	while (num_offsets--) {
 		int err;
@@ -363,13 +362,11 @@ fail:
 
 struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev)
 {
-	BUG_ON(!host_device_op().alloc_nvhost_channel);
 	return host_device_op().alloc_nvhost_channel(dev);
 }
 
 void nvhost_free_channel(struct nvhost_channel *ch)
 {
-	BUG_ON(!host_device_op().free_nvhost_channel);
 	host_device_op().free_nvhost_channel(ch);
 }
 
@@ -402,21 +399,31 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
-	struct resource *regs, *intr0, *intr1;
+	struct resource *regs;
+	int syncpt_irq, generic_irq;
 	int i, err;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
 	regs = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	intr0 = platform_get_resource(dev, IORESOURCE_IRQ, 0);
-	intr1 = platform_get_resource(dev, IORESOURCE_IRQ, 1);
-
-	if (!regs || !intr0 || !intr1) {
-		dev_err(&dev->dev, "missing required platform resources\n");
+	if (!regs) {
+		dev_err(&dev->dev, "missing host1x regs\n");
 		return -ENXIO;
 	}
 
-	host = kzalloc(sizeof(*host), GFP_KERNEL);
+	syncpt_irq = platform_get_irq(dev, 0);
+	if (IS_ERR_VALUE(syncpt_irq)) {
+		dev_err(&dev->dev, "missing syncpt irq\n");
+		return -ENXIO;
+	}
+
+	generic_irq = platform_get_irq(dev, 1);
+	if (IS_ERR_VALUE(generic_irq)) {
+		dev_err(&dev->dev, "missing generic irq\n");
+		return -ENXIO;
+	}
+
+	host = devm_kzalloc(&dev->dev, sizeof(*host), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
 
@@ -442,17 +449,8 @@ static int nvhost_probe(struct platform_device *dev)
 	/* set private host1x device data */
 	nvhost_set_private_data(dev, host);
 
-	host->reg_mem = request_mem_region(regs->start,
-		resource_size(regs), dev->name);
-	if (!host->reg_mem) {
-		dev_err(&dev->dev, "failed to get host register memory\n");
-		err = -ENXIO;
-		goto fail;
-	}
-
-	host->aperture = ioremap(regs->start, resource_size(regs));
+	host->aperture = devm_request_and_ioremap(&dev->dev, regs);
 	if (!host->aperture) {
-		dev_err(&dev->dev, "failed to remap host registers\n");
 		err = -ENXIO;
 		goto fail;
 	}
@@ -474,7 +472,7 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	err = nvhost_intr_init(&host->intr, intr1->start, intr0->start);
+	err = nvhost_intr_init(&host->intr, generic_irq, syncpt_irq);
 	if (err)
 		goto fail;
 

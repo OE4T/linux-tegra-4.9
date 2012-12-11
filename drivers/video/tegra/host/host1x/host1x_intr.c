@@ -22,7 +22,6 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <asm/mach/irq.h>
 
 #include "nvhost_intr.h"
 #include "dev.h"
@@ -36,7 +35,7 @@ static void syncpt_thresh_cascade_fn(struct work_struct *work)
 {
 	struct nvhost_intr_syncpt *sp =
 		container_of(work, struct nvhost_intr_syncpt, work);
-	nvhost_syncpt_thresh_fn(sp->irq, sp);
+	nvhost_syncpt_thresh_fn(sp);
 }
 
 static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
@@ -76,7 +75,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	for (i = 0; i < dev->info.nb_pts; i++)
 		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
 
-	err = request_irq(INT_HOST1X_MPCORE_SYNCPT,
+	err = request_irq(intr->syncpt_irq,
 				syncpt_thresh_cascade_isr,
 				IRQF_SHARED, "host_syncpt", dev);
 	if (err)
@@ -235,7 +234,7 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_ext_r());
 	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_r());
 
-	err = request_threaded_irq(intr->host_general_irq,
+	err = request_threaded_irq(intr->general_irq,
 			t20_intr_host1x_isr, nvhost_intr_irq_fn,
 			0, "host_status", intr);
 	if (err)
@@ -263,7 +262,7 @@ static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
 	/* master disable for general (not syncpt) host interrupts */
 	writel(0, sync_regs + host1x_sync_intmask_r());
 
-	free_irq(intr->host_general_irq, intr);
+	free_irq(intr->general_irq, intr);
 }
 
 static void host1x_intr_enable_general_irq(struct nvhost_intr *intr, int irq)

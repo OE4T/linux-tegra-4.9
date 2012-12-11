@@ -61,7 +61,6 @@ struct nvhost_intr;
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u8 id;
-	u16 irq;
 	spinlock_t lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];
@@ -71,8 +70,8 @@ struct nvhost_intr_syncpt {
 struct nvhost_intr {
 	struct nvhost_intr_syncpt *syncpt;
 	struct mutex mutex;
-	int host_general_irq;
-	int host_syncpt_irq_base;
+	int general_irq;
+	int syncpt_irq;
 	struct workqueue_struct *wq;
 	void (*generic_isr[BITS_PER_LONG])(void);
 	void (*generic_isr_thread[BITS_PER_LONG])(void);
@@ -115,7 +114,7 @@ void nvhost_intr_deinit(struct nvhost_intr *intr);
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 void nvhost_intr_stop(struct nvhost_intr *intr);
 
-irqreturn_t nvhost_syncpt_thresh_fn(int irq, void *dev_id);
+irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);
 
 void nvhost_intr_enable_general_irq(struct nvhost_intr *intr, int irq,

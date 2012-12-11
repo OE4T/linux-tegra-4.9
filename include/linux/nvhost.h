@@ -86,7 +86,6 @@ struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
 	int		index;		/* Hardware channel number */
-	struct resource	*reg_mem;
 	void __iomem	*aperture;	/* Iomem mapped to kernel */
 
 	u32		syncpts;	/* Bitfield of sync points used */

@@ -224,7 +224,7 @@ static u32 *save_regs_v0(u32 *ptr, unsigned int *pending,
 		}
 		drain_result = nvhost_channel_drain_read_fifo(ch,
 			ptr, count, pending);
-		BUG_ON(drain_result < 0);
+		WARN_ON(drain_result < 0);
 		ptr += count;
 	}
 	return ptr;

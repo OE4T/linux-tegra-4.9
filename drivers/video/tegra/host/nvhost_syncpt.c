@@ -40,7 +40,6 @@ static const char *max_name = "max";
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 {
 	u32 i;
-	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
 
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++)
 		syncpt_op().reset(sp, i);
@@ -55,13 +54,12 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 void nvhost_syncpt_save(struct nvhost_syncpt *sp)
 {
 	u32 i;
-	BUG_ON(!(syncpt_op().update_min && syncpt_op().read_wait_base));
 
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
 		if (nvhost_syncpt_client_managed(sp, i))
 			syncpt_op().update_min(sp, i);
 		else
-			BUG_ON(!nvhost_syncpt_min_eq_max(sp, i));
+			WARN_ON(!nvhost_syncpt_min_eq_max(sp, i));
 	}
 
 	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++)
@@ -75,8 +73,6 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
 
-	BUG_ON(!syncpt_op().update_min);
-
 	val = syncpt_op().update_min(sp, id);
 	trace_nvhost_syncpt_update_min(id, val);
 
@@ -89,7 +85,6 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
-	BUG_ON(!syncpt_op().update_min);
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 	val = syncpt_op().update_min(sp, id);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
@@ -102,7 +97,6 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
-	BUG_ON(!syncpt_op().read_wait_base);
 	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 	syncpt_op().read_wait_base(sp, id);
 	val = sp->base_val[id];
@@ -116,7 +110,6 @@ u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
  */
 void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 {
-	BUG_ON(!syncpt_op().cpu_incr);
 	syncpt_op().cpu_incr(sp, id);
 }
 
@@ -488,7 +481,10 @@ u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	BUG_ON(!dev->dev.parent);
+	if (!dev->dev.parent) {
+		dev_err(&dev->dev, "Incr max called with wrong dev\n");
+		return 0;
+	}
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
@@ -502,7 +498,10 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	BUG_ON(!dev->dev.parent);
+	if (!dev->dev.parent) {
+		dev_err(&dev->dev, "Incr called with wrong dev\n");
+		return;
+	}
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
@@ -516,7 +515,10 @@ u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	BUG_ON(!dev->dev.parent);
+	if (!dev->dev.parent) {
+		dev_err(&dev->dev, "Read called with wrong dev\n");
+		return 0;
+	}
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
@@ -531,7 +533,10 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	BUG_ON(!dev->dev.parent);
+	if (!dev->dev.parent) {
+		dev_err(&dev->dev, "Wait called with wrong dev\n");
+		return -EINVAL;
+	}
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);

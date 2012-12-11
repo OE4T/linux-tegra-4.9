@@ -45,7 +45,6 @@ struct host1x_device_info {
 struct nvhost_master {
 	void __iomem *aperture;
 	void __iomem *sync_aperture;
-	struct resource *reg_mem;
 	struct class *nvhost_class;
 	struct cdev cdev;
 	struct device *ctrl;
@@ -72,7 +71,7 @@ static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(_dev);
-	BUG_ON(!pdata);
+	WARN_ON(!pdata);
 	return pdata->private_data ? pdata->private_data : NULL;
 }
 
@@ -81,7 +80,7 @@ static inline void nvhost_set_private_data(struct platform_device *_dev,
 {
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(_dev);
-	BUG_ON(!pdata);
+	WARN_ON(!pdata);
 	pdata->private_data = priv_data;
 }
 

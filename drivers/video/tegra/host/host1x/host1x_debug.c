@@ -170,17 +170,18 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
 
+	writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
+			| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid),
+		m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
+	wmb();
+
 	val = readl(channel->aperture + host1x_channel_fifostat_r());
 	if (host1x_channel_fifostat_cfempty_v(val)) {
+		writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
 		nvhost_debug_output(o, "FIFOSTAT %08x\n[empty]\n",
 				val);
 		return;
 	}
-
-	writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
-	writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
-			| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid),
-		m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
 
 	val = readl(m->sync_aperture + host1x_sync_cfpeek_ptrs_r());
 	rd_ptr = host1x_sync_cfpeek_ptrs_cf_rd_ptr_v(val);
@@ -193,12 +194,13 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 	nvhost_debug_output(o, "FIFOSTAT %08x, %03x - %03x, RD %03x, WR %03x\n",
 			val, start, end, rd_ptr, wr_ptr);
 	do {
-		writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
 		writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
 				| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid)
 				| host1x_sync_cfpeek_ctrl_cfpeek_addr_f(rd_ptr),
 			m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
+		wmb();
 		val = readl(m->sync_aperture + host1x_sync_cfpeek_read_r());
+		rmb();
 
 		nvhost_debug_output(o, "%08x ", val);
 

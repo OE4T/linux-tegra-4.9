@@ -748,6 +748,7 @@ extern int fb_videomode_from_videomode(const struct videomode *vm,
 #define VESA_MODEDB_SIZE 43
 #define CEA_MODEDB_SIZE 65
 #define DMT_SIZE 0x50
+#define HDMI_EXT_MODEDB_SIZE 5
 
 extern void fb_var_to_videomode(struct fb_videomode *mode,
 				const struct fb_var_screeninfo *var);
@@ -810,6 +811,7 @@ extern const char *fb_mode_option;
 extern const struct fb_videomode vesa_modes[];
 extern const struct fb_videomode cea_modes[];
 extern const struct dmt_videomode dmt_modes[];
+extern const struct fb_videomode hdmi_ext_modes[];
 
 struct fb_modelist {
 	struct list_head list;

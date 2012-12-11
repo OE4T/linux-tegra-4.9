@@ -1509,6 +1509,30 @@ static void tegra_dc_hdmi_write_infopack(struct tegra_dc *dc, int header_reg,
 	}
 }
 
+static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
+{
+	struct fb_videomode m;
+	unsigned i;
+
+	tegra_dc_to_fb_videomode(&m, mode);
+
+	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
+		const struct fb_videomode *curr = &cea_modes[i];
+		if (fb_mode_is_equal(&m, curr)) {
+			/* if either flag is set, then match is required */
+			if (m.flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
+				if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)
+					return i;
+				if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
+					return i;
+			} else {
+				return i;
+			}
+		}
+	}
+	return 0;
+}
+
 static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
@@ -1529,52 +1553,9 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 	else
 		tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
 
-	if (dc->mode.v_active == 480) {
-		if (dc->mode.h_active == 640) {
-			avi.m = HDMI_AVI_M_4_3;
-			avi.vic = 1;
-		} else {
-			avi.m = HDMI_AVI_M_16_9;
-			avi.vic = 3;
-		}
-	} else if (dc->mode.v_active == 576) {
-		/* CEC modes 17 and 18 differ only by the pysical size of the
-		 * screen so we have to calculation the physical aspect
-		 * ratio.  4 * 10 / 3  is 13
-		 */
-		if ((dc->out->h_size * 10) / dc->out->v_size > 14) {
-			avi.m = HDMI_AVI_M_16_9;
-			avi.vic = 18;
-		} else {
-			avi.m = HDMI_AVI_M_4_3;
-			avi.vic = 17;
-		}
-	} else if (dc->mode.v_active == 720 ||
-		(dc->mode.v_active == 1470 && dc->mode.stereo_mode)) {
-		/* VIC for both 720p and 720p 3D mode */
-		avi.m = HDMI_AVI_M_16_9;
-		if (dc->mode.h_front_porch == 110)
-			avi.vic = 4; /* 60 Hz */
-		else
-			avi.vic = 19; /* 50 Hz */
-	} else if (dc->mode.v_active == 1080 ||
-		(dc->mode.v_active == 2205 && dc->mode.stereo_mode)) {
-		/* VIC for both 1080p and 1080p 3D mode */
-		avi.m = HDMI_AVI_M_16_9;
-		if (dc->mode.h_front_porch == 88) {
-			if (dc->mode.pclk > 74250000)
-				avi.vic = 16; /* 60 Hz */
-			else
-				avi.vic = 34; /* 30 Hz */
-		} else if (dc->mode.h_front_porch == 528)
-			avi.vic = 31; /* 50 Hz */
-		else
-			avi.vic = 32; /* 24 Hz */
-	} else {
-		avi.m = HDMI_AVI_M_16_9;
-		avi.vic = 0;
-	}
-
+	avi.vic = tegra_dc_find_cea_vic(&dc->mode);
+	avi.m = dc->mode.avi_m;
+	dev_dbg(&dc->ndev->dev, "HDMI AVI vic=%d m=%d\n", avi.vic, avi.m);
 
 	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_HEADER,
 				     HDMI_INFOFRAME_TYPE_AVI,
@@ -1718,6 +1699,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	/* program HDMI registers and SOR sequencer */
 
+	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, VSYNC_H_POSITION(1), DC_DISP_DISP_TIMING_OPTIONS);
 	tegra_dc_writel(dc, DITHER_CONTROL_DISABLE | BASE_COLOR_SIZE888,
 			DC_DISP_DISP_COLOR_CONTROL);
@@ -1891,6 +1873,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 1);
+	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)

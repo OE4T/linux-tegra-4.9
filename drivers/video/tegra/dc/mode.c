@@ -327,6 +327,11 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 		fbmode->sync |=  FB_SYNC_HOR_HIGH_ACT;
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC))
 		fbmode->sync |= FB_SYNC_VERT_HIGH_ACT;
+	if (mode->avi_m == TEGRA_DC_MODE_AVI_M_16_9)
+		fbmode->flag |= FB_FLAG_RATIO_16_9;
+	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_4_3)
+		fbmode->flag |= FB_FLAG_RATIO_4_3;
+
 	if (mode->rated_pclk >= 1000)
 		fbmode->pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
 	else if (mode->pclk >= 1000)
@@ -361,6 +366,21 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
+	if (fbmode->flag & FB_FLAG_RATIO_16_9)
+		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
+	else if (fbmode->flag & FB_FLAG_RATIO_4_3)
+		mode.avi_m = TEGRA_DC_MODE_AVI_M_4_3;
+	else if (dc->out) { /* if ratio is unspecified, detect a default */
+		unsigned h_size = dc->out->h_size;
+		unsigned v_size = dc->out->v_size;
+
+		/* get aspect ratio */
+		if (h_size * 18 > v_size * 31 && h_size * 18 < v_size * 33)
+			mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
+		if (h_size * 18 > v_size * 23 && h_size * 18 < v_size * 25)
+			mode.avi_m = TEGRA_DC_MODE_AVI_M_4_3;
+	}
+
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 		/* HDMI controller requires h_ref=1, v_ref=1 */
 		mode.h_ref_to_sync = 1;

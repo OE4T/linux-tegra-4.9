@@ -1533,6 +1533,22 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 	return 0;
 }
 
+static int tegra_dc_find_hdmi_vic(const struct tegra_dc_mode *mode)
+{
+	struct fb_videomode m;
+	unsigned i;
+
+	tegra_dc_to_fb_videomode(&m, mode);
+
+	for (i = 1; i < HDMI_EXT_MODEDB_SIZE; i++) {
+		const struct fb_videomode *curr = &hdmi_ext_modes[i];
+
+		if (fb_mode_is_equal(&m, curr))
+			return i;
+	}
+	return 0;
+}
+
 static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
@@ -1566,18 +1582,24 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 			  HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_CTRL);
 }
 
+static void tegra_dc_hdmi_disable_generic_infoframe(struct tegra_dc *dc)
+{
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+	u32 val;
+
+	val  = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+	val &= ~GENERIC_CTRL_ENABLE;
+	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+}
+
 static void tegra_dc_hdmi_setup_stereo_infoframe(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	struct hdmi_stereo_infoframe stereo;
 	u32 val;
 
-	if (!dc->mode.stereo_mode) {
-		val  = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
-		val &= ~GENERIC_CTRL_ENABLE;
-		tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
-		return;
-	}
+	WARN(!dc->mode.stereo_mode,
+		"function assumes 3D/stereo mode is disabled\n");
 
 	memset(&stereo, 0x0, sizeof(stereo));
 
@@ -1600,6 +1622,35 @@ static void tegra_dc_hdmi_setup_stereo_infoframe(struct tegra_dc *dc)
 	val  = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
 	val |= GENERIC_CTRL_ENABLE;
 
+	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+}
+
+static void tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc)
+{
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+	struct hdmi_extres_infoframe extres;
+	int hdmi_vic;
+	u32 val;
+
+	hdmi_vic = tegra_dc_find_hdmi_vic(&dc->mode);
+	if (hdmi_vic <= 0) {
+		tegra_dc_hdmi_disable_generic_infoframe(dc);
+		return;
+	}
+
+	extres.csum = 0;
+	extres.regid0 = 0x03;
+	extres.regid1 = 0x0c;
+	extres.regid2 = 0x00;
+	extres.hdmi_video_format = 1; /* Extended Resolution Format */
+	extres.hdmi_vic = hdmi_vic;
+
+	tegra_dc_hdmi_write_infopack(dc,
+		HDMI_NV_PDISP_HDMI_GENERIC_HEADER,
+		HDMI_INFOFRAME_TYPE_VENDOR, HDMI_VENDOR_VERSION,
+		&extres, 5);
+	val = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+	val |= GENERIC_CTRL_ENABLE;
 	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
 }
 
@@ -1777,7 +1828,13 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
 	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
-	tegra_dc_hdmi_setup_stereo_infoframe(dc);
+
+	if (dc->mode.stereo_mode)
+		tegra_dc_hdmi_setup_stereo_infoframe(dc);
+	else if (dc->mode.avi_m) /* Extended resolution format */
+		tegra_dc_hdmi_setup_hdmi_vic_infoframe(dc);
+	else /* else disable sending of this infoframe */
+		tegra_dc_hdmi_disable_generic_infoframe(dc);
 
 	/* TMDS CONFIG */
 	for (i = 0; i < ARRAY_SIZE(tdms_config); i++) {

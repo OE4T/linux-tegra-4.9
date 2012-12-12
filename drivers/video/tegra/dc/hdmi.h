@@ -72,7 +72,7 @@ struct hdmi_avi_infoframe {
 
 	/* PB12-13 */
 	u16		right_bar_start_pixel;
-} __attribute__((packed));
+} __packed;
 
 #define HDMI_AVI_VERSION		0x02
 
@@ -133,7 +133,7 @@ struct hdmi_audio_infoframe {
 	u8		res8;
 	u8		res9;
 	u8		res10;
-} __attribute__((packed));
+} __packed;
 
 #define HDMI_AUDIO_VERSION		0x01
 
@@ -208,7 +208,29 @@ struct hdmi_stereo_infoframe {
 	unsigned	res3:4;
 	unsigned	_3d_ext_data:4;
 
-} __attribute__((packed));
+} __packed;
+
+/* Vendor Specific Infoframe - Extended resolution format */
+struct hdmi_extres_infoframe {
+	/* PB0 */
+	u8		csum;
+
+	/* PB1 */
+	u8		regid0;
+
+	/* PB2 */
+	u8		regid1;
+
+	/* PB3 */
+	u8		regid2;
+
+	/* PB4 */
+	unsigned	res1:5;
+	unsigned	hdmi_video_format:3;
+
+	/* PB5 */
+	u8		hdmi_vic;
+} __packed;
 
 #define HDMI_VENDOR_VERSION 0x01
 

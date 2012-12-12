@@ -511,28 +511,37 @@ static int __exit tsec_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int tsec_suspend(struct platform_device *dev, pm_message_t state)
+static int tsec_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int tsec_resume(struct platform_device *dev)
+static int tsec_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops tsec_pm_ops = {
+	.suspend = tsec_suspend,
+	.resume = tsec_resume,
+};
+
+#define TSEC_PM_OPS	(&tsec_pm_ops)
+
+#else
+
+#define TSEC_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver tsec_driver = {
 	.probe = tsec_probe,
 	.remove = __exit_p(tsec_remove),
-#ifdef CONFIG_PM
-	.suspend = tsec_suspend,
-	.resume = tsec_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tsec",
+		.pm = TSEC_PM_OPS,
 	}
 };
 

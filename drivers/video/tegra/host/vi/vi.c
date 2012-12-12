@@ -49,28 +49,37 @@ static int __exit vi_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int vi_suspend(struct platform_device *dev, pm_message_t state)
+static int vi_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int vi_resume(struct platform_device *dev)
+static int vi_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops vi_pm_ops = {
+	.suspend = vi_suspend,
+	.resume = vi_resume,
+};
+
+#define VI_PM_OPS	(&vi_pm_ops)
+
+#else
+
+#define VI_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver vi_driver = {
 	.probe = vi_probe,
 	.remove = __exit_p(vi_remove),
-#ifdef CONFIG_PM
-	.suspend = vi_suspend,
-	.resume = vi_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "vi",
+		.pm = VI_PM_OPS,
 	}
 };
 

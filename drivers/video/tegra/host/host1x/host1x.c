@@ -520,31 +520,45 @@ static int __exit nvhost_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int nvhost_suspend(struct platform_device *dev, pm_message_t state)
+#ifdef CONFIG_PM
+static int nvhost_suspend(struct device *dev)
 {
-	struct nvhost_master *host = nvhost_get_private_data(dev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_master *host = nvhost_get_private_data(pdev);
 	int ret = 0;
 
 	ret = nvhost_module_suspend(host->dev);
-	dev_info(&dev->dev, "suspend status: %d\n", ret);
+	dev_info(dev, "suspend status: %d\n", ret);
 
 	return ret;
 }
 
-static int nvhost_resume(struct platform_device *dev)
+static int nvhost_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops host1x_pm_ops = {
+	.suspend = nvhost_suspend,
+	.resume = nvhost_resume,
+};
+
+#define HOST1X_PM_OPS	(&host1x_pm_ops)
+
+#else
+
+#define HOST1X_PM_OPS	NULL
+
+#endif /* CONFIG_PM */
 
 static struct platform_driver platform_driver = {
 	.probe = nvhost_probe,
 	.remove = __exit_p(nvhost_remove),
-	.suspend = nvhost_suspend,
-	.resume = nvhost_resume,
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = DRIVER_NAME
+		.name = DRIVER_NAME,
+		.pm = HOST1X_PM_OPS,
 	},
 };
 

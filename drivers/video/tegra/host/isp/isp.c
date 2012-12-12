@@ -49,28 +49,37 @@ static int __exit isp_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int isp_suspend(struct platform_device *dev, pm_message_t state)
+static int isp_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int isp_resume(struct platform_device *dev)
+static int isp_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops isp_pm_ops = {
+	.suspend = isp_suspend,
+	.resume = isp_resume,
+};
+
+#define ISP_PM_OPS	(&isp_pm_ops)
+
+#else
+
+#define ISP_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver isp_driver = {
 	.probe = isp_probe,
 	.remove = __exit_p(isp_remove),
-#ifdef CONFIG_PM
-	.suspend = isp_suspend,
-	.resume = isp_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "isp",
+		.pm = ISP_PM_OPS,
 	}
 };
 

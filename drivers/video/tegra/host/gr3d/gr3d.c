@@ -254,28 +254,37 @@ static int __exit gr3d_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int gr3d_suspend(struct platform_device *dev, pm_message_t state)
+static int gr3d_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int gr3d_resume(struct platform_device *dev)
+static int gr3d_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops gr3d_pm_ops = {
+	.suspend = gr3d_suspend,
+	.resume = gr3d_resume,
+};
+
+#define GR3D_PM_OPS	(&gr3d_pm_ops)
+
+#else
+
+#define GR3D_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver gr3d_driver = {
 	.probe = gr3d_probe,
 	.remove = __exit_p(gr3d_remove),
-#ifdef CONFIG_PM
-	.suspend = gr3d_suspend,
-	.resume = gr3d_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr3d",
+		.pm = GR3D_PM_OPS,
 	},
 	.id_table = gr3d_id,
 };

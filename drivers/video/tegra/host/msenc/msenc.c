@@ -396,28 +396,37 @@ static int __exit msenc_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int msenc_suspend(struct platform_device *dev, pm_message_t state)
+static int msenc_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int msenc_resume(struct platform_device *dev)
+static int msenc_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops msenc_pm_ops = {
+	.suspend = msenc_suspend,
+	.resume = msenc_resume,
+};
+
+#define MSENC_PM_OPS	(&msenc_pm_ops)
+
+#else
+
+#define MSENC_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver msenc_driver = {
 	.probe = msenc_probe,
 	.remove = __exit_p(msenc_remove),
-#ifdef CONFIG_PM
-	.suspend = msenc_suspend,
-	.resume = msenc_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "msenc",
+		.pm = MSENC_PM_OPS,
 	}
 };
 

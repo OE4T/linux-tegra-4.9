@@ -110,6 +110,19 @@ struct nvhost_read_3d_reg_args {
 	__u32 value;
 };
 
+enum nvhost_clk_attr {
+	NVHOST_CLOCK = 0,
+	NVHOST_BW,
+};
+
+/*
+ * moduleid[15:0]  => module id
+ * moduleid[24:31] => nvhost_clk_attr
+ */
+#define NVHOST_MODULE_ID_BIT_POS	0
+#define NVHOST_MODULE_ID_BIT_WIDTH	16
+#define NVHOST_CLOCK_ATTR_BIT_POS	24
+#define NVHOST_CLOCK_ATTR_BIT_WIDTH	8
 struct nvhost_clk_rate_args {
 	__u32 rate;
 	__u32 moduleid;

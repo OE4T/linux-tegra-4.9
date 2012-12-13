@@ -33,6 +33,7 @@
 #include <mach/powergate.h>
 #include <mach/clk.h>
 #include <mach/hardware.h>
+#include <mach/mc.h>
 
 #include "nvhost_acm.h"
 #include "dev.h"
@@ -381,7 +382,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 }
 
 int nvhost_module_set_rate(struct platform_device *dev, void *priv,
-		unsigned long rate, int index)
+		unsigned long rate, int index, int bBW)
 {
 	struct nvhost_module_client *m;
 	int ret = 0;
@@ -389,9 +390,25 @@ int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &pdata->client_list, node) {
-		if (m->priv == priv)
-			m->rate[index] =
-				clk_round_rate(pdata->clk[index], rate);
+		if (m->priv == priv) {
+			if (bBW) {
+				/*
+				 * If client sets BW, then we need to
+				 * convert it to freq.
+				 * rate is Bps and input param of
+				 * tegra_emc_bw_to_freq_req is KBps.
+				 */
+				unsigned int freq_khz =
+				tegra_emc_bw_to_freq_req
+					((unsigned long)(rate >> 10));
+
+				m->rate[index] =
+					clk_round_rate(pdata->clk[index],
+					(unsigned long)(freq_khz << 10));
+			} else
+				m->rate[index] =
+					clk_round_rate(pdata->clk[index], rate);
+		}
 	}
 
 	ret = nvhost_module_update_rate(dev, index);

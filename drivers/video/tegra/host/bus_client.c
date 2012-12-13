@@ -527,11 +527,17 @@ static int moduleid_to_index(struct platform_device *dev, u32 moduleid)
 }
 
 static int nvhost_ioctl_channel_set_rate(struct nvhost_channel_userctx *ctx,
-	u32 moduleid, u32 rate)
+	struct nvhost_clk_rate_args *arg)
 {
-	int index = moduleid ? moduleid_to_index(ctx->ch->dev, moduleid) : 0;
+	u32 moduleid = (arg->moduleid >> NVHOST_MODULE_ID_BIT_POS)
+			& ((1 << NVHOST_MODULE_ID_BIT_WIDTH) - 1);
+	u32 attr = (arg->moduleid >> NVHOST_CLOCK_ATTR_BIT_POS)
+			& ((1 << NVHOST_CLOCK_ATTR_BIT_WIDTH) - 1);
+	int index = moduleid ?
+			moduleid_to_index(ctx->ch->dev, moduleid) : 0;
 
-	return nvhost_module_set_rate(ctx->ch->dev, ctx, rate, index);
+	return nvhost_module_set_rate(ctx->ch->dev,
+			ctx, arg->rate, index, attr);
 }
 
 static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
@@ -766,8 +772,7 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
 
-		err = nvhost_ioctl_channel_set_rate(priv,
-			arg->moduleid, arg->rate);
+		err = nvhost_ioctl_channel_set_rate(priv, arg);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:

@@ -589,6 +589,9 @@ int nvhost_module_init(struct platform_device *dev)
 	init_waitqueue_head(&pdata->idle_wq);
 	INIT_DELAYED_WORK(&pdata->powerstate_down, powerstate_down_handler);
 
+	/* reset the module */
+	do_module_reset_locked(dev);
+
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {
 		do_powergate_locked(pdata->powergate_ids[0]);

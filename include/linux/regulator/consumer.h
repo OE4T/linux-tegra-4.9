@@ -88,6 +88,19 @@ struct regmap;
 #define REGULATOR_MODE_OFF			0x10
 
 /*
+ * Regulator control modes.
+ *
+ * Regulators can be control through i2c or PWM or any other interface.
+ * The control mode provides the way to control the regulator.
+ *
+ *  Mode       Description
+ *  I2C        Regulator can be control through I2C interface.
+ *  PWM        Regulator can be control through PWM interface.
+ */
+#define REGULATOR_CONTROL_MODE_I2C		0x1
+#define REGULATOR_CONTROL_MODE_PWM		0x2
+
+/*
  * Regulator notifier events.
  *
  * UNDER_VOLTAGE  Regulator output is under voltage.
@@ -264,6 +277,9 @@ int regulator_get_hardware_vsel_register(struct regulator *regulator,
 					 unsigned *vsel_mask);
 int regulator_list_hardware_vsel(struct regulator *regulator,
 				 unsigned selector);
+
+int regulator_set_control_mode(struct regulator *regulator, unsigned int mode);
+unsigned int regulator_get_control_mode(struct regulator *regulator);
 
 /* regulator notifier block */
 int regulator_register_notifier(struct regulator *regulator,
@@ -527,6 +543,18 @@ static inline int regulator_list_hardware_vsel(struct regulator *regulator,
 					       unsigned selector)
 {
 	return -EOPNOTSUPP;
+}
+
+static inline int regulator_set_control_mode(struct regulator *regulator,
+		unsigned int mode)
+{
+	return 0;
+}
+
+static inline unsigned int regulator_get_control_mode(
+		struct regulator *regulator)
+{
+	return REGULATOR_CONTROL_MODE_I2C;
 }
 
 static inline int regulator_register_notifier(struct regulator *regulator,

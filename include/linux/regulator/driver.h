@@ -111,6 +111,9 @@ struct regulator_linear_range {
  * @set_bypass: Set the regulator in bypass mode.
  * @get_bypass: Get the regulator bypass mode state.
  *
+ * @set_control_mode: Set the control mode for the regulator.
+ * @get_control_mode: Get the control mode for the regulator.
+ *
  * @enable_time: Time taken for the regulator voltage output voltage to
  *               stabilise after being enabled, in microseconds.
  * @set_ramp_delay: Set the ramp delay for the regulator. The driver should
@@ -178,6 +181,10 @@ struct regulator_ops {
 	/* get/set regulator sleep mode (defined in consumer.h) */
 	int (*set_sleep_mode) (struct regulator_dev *, unsigned int sleep_mode);
 	unsigned int (*get_sleep_mode) (struct regulator_dev *);
+	
+	/* get/set regulator control mode (defined in consumer.h) */
+	int (*set_control_mode) (struct regulator_dev *, unsigned int mode);
+	unsigned int (*get_control_mode) (struct regulator_dev *);
 
 	/* Time taken to enable or set voltage on the regulator */
 	int (*enable_time) (struct regulator_dev *);

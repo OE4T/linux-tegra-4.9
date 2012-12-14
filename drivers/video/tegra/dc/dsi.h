@@ -82,11 +82,10 @@ struct tegra_dc_dsi_data {
 	bool ulpm;
 	bool enabled;
 	bool host_suspended;
-	struct mutex host_resume_lock;
+	struct mutex host_lock;
 	struct delayed_work idle_work;
 	unsigned long idle_delay;
-	spinlock_t host_ref_lock;
-	u8 host_ref;
+	atomic_t host_ref;
 
 	u8 driven_mode;
 	u8 controller_index;

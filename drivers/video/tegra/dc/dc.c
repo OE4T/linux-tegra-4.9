@@ -288,6 +288,9 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 
 void tegra_dc_hold_dc_out(struct tegra_dc *dc)
 {
+	/* extra reference to dc clk */
+	clk_prepare_enable(dc->clk);
+
 	if (dc->out_ops->hold)
 		dc->out_ops->hold(dc);
 }
@@ -296,6 +299,9 @@ void tegra_dc_release_dc_out(struct tegra_dc *dc)
 {
 	if (dc->out_ops->release)
 		dc->out_ops->release(dc);
+
+	/* balance extra dc clk reference */
+	clk_disable_unprepare(dc->clk);
 }
 
 #define DUMP_REG(a) do {			\

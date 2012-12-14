@@ -93,6 +93,7 @@ struct nct1008_data {
 	long current_hi_limit;
 	int conv_period_ms;
 	long etemp;
+	int shutdown_complete;
 
 	struct thermal_zone_device *nct_int;
 	struct thermal_zone_device *nct_ext;
@@ -111,6 +112,38 @@ static inline u8 temperature_to_value(bool extended, s8 temp)
 	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : (u8)temp;
 }
 
+static int nct1008_write_reg(struct i2c_client *client, u8 reg, u16 value)
+{
+	int ret = 0;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	if (data && data->shutdown_complete)
+		return -ENODEV;
+
+	ret = i2c_smbus_write_byte_data(client, reg, value);
+
+	if (ret < 0)
+		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+
+	return ret;
+}
+
+static int nct1008_read_reg(struct i2c_client *client, u8 reg)
+{
+	int ret = 0;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	if (data && data->shutdown_complete)
+		return -ENODEV;
+
+	ret = i2c_smbus_read_byte_data(client, reg);
+
+	if (ret < 0)
+		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+
+	return ret;
+}
+
 static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -124,7 +157,7 @@ static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 
 	/* Read Local Temp */
 	if (itemp) {
-		value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+		value = nct1008_read_reg(client, LOCAL_TEMP_RD);
 		if (value < 0)
 			goto error;
 		temp_local = value_to_temperature(pdata->ext_range, value);
@@ -135,12 +168,12 @@ static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 
 	/* Read External Temp */
 	if (etemp) {
-		value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+		value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
 		if (value < 0)
 			goto error;
 		temp_ext_lo = (value >> 6);
 
-		value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+		value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
 		if (value < 0)
 			goto error;
 		temp_ext_hi = value_to_temperature(pdata->ext_range, value);
@@ -171,16 +204,16 @@ static ssize_t nct1008_show_temp(struct device *dev,
 	if (!dev || !buf || !attr)
 		return -EINVAL;
 
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	value = nct1008_read_reg(client, LOCAL_TEMP_RD);
 	if (value < 0)
 		goto error;
 	temp1 = value_to_temperature(pdata->ext_range, value);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
 	if (value < 0)
 		goto error;
 	temp2 = (value >> 6);
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
 	if (value < 0)
 		goto error;
 	temp = value_to_temperature(pdata->ext_range, value);
@@ -203,13 +236,13 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 	s8 temp, temp2;
 
 	/* Local temperature h/w shutdown limit */
-	value = i2c_smbus_read_byte_data(client, LOCAL_THERM_LIMIT_WR);
+	value = nct1008_read_reg(client, LOCAL_THERM_LIMIT_WR);
 	if (value < 0)
 		goto error;
 	temp = value_to_temperature(pdata->ext_range, value);
 
 	/* External temperature h/w shutdown limit */
-	value = i2c_smbus_read_byte_data(client, EXT_THERM_LIMIT_WR);
+	value = nct1008_read_reg(client, EXT_THERM_LIMIT_WR);
 	if (value < 0)
 		goto error;
 	temp2 = value_to_temperature(pdata->ext_range, value);
@@ -263,13 +296,13 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 
 	/* External temperature h/w shutdown limit */
 	temp = temperature_to_value(pdata->ext_range, (s8)num);
-	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, temp);
+	err = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
 	temp = temperature_to_value(pdata->ext_range, (s8)num);
-	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, temp);
+	err = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
 	return count;
@@ -287,13 +320,13 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 	int value;
 	s8 temp_hi, temp_lo;
 	/* External Temperature Throttling hi-limit */
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
+	value = nct1008_read_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
 	if (value < 0)
 		goto error;
 	temp_hi = value_to_temperature(pdata->ext_range, value);
 
 	/* External Temperature Throttling lo-limit */
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
+	value = nct1008_read_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
 	if (value < 0)
 		goto error;
 	temp_lo = value_to_temperature(pdata->ext_range, value);
@@ -327,14 +360,12 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 
 	/* External Temperature Throttling limit */
 	value = temperature_to_value(pdata->ext_range, (s8)num);
-	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
-		value);
+	err = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
 	if (err < 0)
 		goto error;
 
 	/* Local Temperature Throttling limit */
-	err = i2c_smbus_write_byte_data(client, LOCAL_TEMP_HI_LIMIT_WR,
-		value);
+	err = nct1008_write_reg(client, LOCAL_TEMP_HI_LIMIT_WR, value);
 	if (err < 0)
 		goto error;
 
@@ -360,14 +391,14 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 	/* When reading the full external temperature value, read the
 	 * LSB first. This causes the MSB to be locked (that is, the
 	 * ADC does not write to it) until it is read */
-	data_lo = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	data_lo = nct1008_read_reg(client, EXT_TEMP_RD_LO);
 	if (data_lo < 0) {
 		dev_err(&client->dev, "%s: failed to read "
 			"ext_temperature, i2c error=%d\n", __func__, data_lo);
 		goto error;
 	}
 
-	data = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+	data = nct1008_read_reg(client, EXT_TEMP_RD_HI);
 	if (data < 0) {
 		dev_err(&client->dev, "%s: failed to read "
 			"ext_temperature, i2c error=%d\n", __func__, data);
@@ -417,7 +448,7 @@ static int nct1008_thermal_set_limits(struct nct1008_data *data,
 	if (data->current_lo_limit != lo_limit) {
 		value = temperature_to_value(extended_range, lo_limit);
 		pr_debug("%s: set lo_limit %ld\n", __func__, lo_limit);
-		err = i2c_smbus_write_byte_data(data->client,
+		err = nct1008_write_reg(data->client,
 				EXT_TEMP_LO_LIMIT_HI_BYTE_WR, value);
 		if (err)
 			return err;
@@ -428,7 +459,7 @@ static int nct1008_thermal_set_limits(struct nct1008_data *data,
 	if (data->current_hi_limit != hi_limit) {
 		value = temperature_to_value(extended_range, hi_limit);
 		pr_debug("%s: set hi_limit %ld\n", __func__, hi_limit);
-		err = i2c_smbus_write_byte_data(data->client,
+		err = nct1008_write_reg(data->client,
 				EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
 		if (err)
 			return err;
@@ -481,12 +512,12 @@ static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
 	u8 value;
 
 	/* Read External Temp */
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
 	if (value < 0)
 		return -1;
 	temp_ext_lo = (value >> 6);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
 	if (value < 0)
 		return -1;
 	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
@@ -603,7 +634,7 @@ static int nct1008_int_get_temp(struct thermal_zone_device *thz,
 	u8 value;
 
 	/* Read Local Temp */
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	value = nct1008_read_reg(client, LOCAL_TEMP_RD);
 	if (value < 0)
 		return -1;
 	temp_local = value_to_temperature(pdata->ext_range, value);
@@ -666,8 +697,7 @@ static void print_reg(const char *reg_name, struct seq_file *s,
 	struct nct1008_data *nct_data = s->private;
 	int ret;
 
-	ret = i2c_smbus_read_byte_data(nct_data->client,
-		offset);
+	ret = nct1008_read_reg(nct_data->client, offset);
 	if (ret >= 0)
 		seq_printf(s, "Reg %s Addr = 0x%02x Reg 0x%02x "
 		"Value 0x%02x\n", reg_name,
@@ -753,7 +783,7 @@ static int nct1008_enable(struct i2c_client *client)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	int err;
 
-	err = i2c_smbus_write_byte_data(client, CONFIG_WR, data->config);
+	err = nct1008_write_reg(client, CONFIG_WR, data->config);
 	if (err < 0)
 		dev_err(&client->dev, "%s, line=%d, i2c write error=%d\n",
 		__func__, __LINE__, err);
@@ -765,8 +795,8 @@ static int nct1008_disable(struct i2c_client *client)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	int err;
 
-	err = i2c_smbus_write_byte_data(client, CONFIG_WR,
-					data->config | STANDBY_BIT);
+	err = nct1008_write_reg(client, CONFIG_WR,
+				data->config | STANDBY_BIT);
 	if (err < 0)
 		dev_err(&client->dev, "%s, line=%d, i2c write error=%d\n",
 		__func__, __LINE__, err);
@@ -777,7 +807,9 @@ static int nct1008_within_limits(struct nct1008_data *data)
 {
 	int intr_status;
 
-	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
+	intr_status = nct1008_read_reg(data->client, STATUS_RD);
+	if (intr_status < 0)
+		return intr_status;
 
 	return !(intr_status & (BIT(3) | BIT(4)));
 }
@@ -786,22 +818,24 @@ static void nct1008_work_func(struct work_struct *work)
 {
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
-	int intr_status;
+	int err;
 	struct timespec ts;
 
-	nct1008_disable(data->client);
+	err = nct1008_disable(data->client);
+	if (err == -ENODEV)
+		return;
 
 	if (!nct1008_within_limits(data))
 		nct1008_update(data);
 
 	/* Initiate one-shot conversion */
-	i2c_smbus_write_byte_data(data->client, ONE_SHOT, 0x1);
+	nct1008_write_reg(data->client, ONE_SHOT, 0x1);
 
 	/* Give hardware necessary time to finish conversion */
 	ts = ns_to_timespec(MAX_CONV_TIME_ONESHOT_MS * 1000 * 1000);
 	hrtimer_nanosleep(&ts, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
 
-	intr_status = i2c_smbus_read_byte_data(data->client, STATUS_RD);
+	nct1008_read_reg(data->client, STATUS_RD);
 
 	nct1008_enable(data->client);
 
@@ -867,21 +901,21 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		return -ENODEV;
 
 	/* Initially place in Standby */
-	err = i2c_smbus_write_byte_data(client, CONFIG_WR, STANDBY_BIT);
+	err = nct1008_write_reg(client, CONFIG_WR, STANDBY_BIT);
 	if (err)
 		goto error;
 
 	/* External temperature h/w shutdown limit */
 	value = temperature_to_value(pdata->ext_range,
 					pdata->shutdown_ext_limit);
-	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
+	err = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
 	value = temperature_to_value(pdata->ext_range,
 					pdata->shutdown_local_limit);
-	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
+	err = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, value);
 	if (err)
 		goto error;
 
@@ -890,40 +924,38 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		data->config |= EXTENDED_RANGE_BIT;
 	data->config &= ~(THERM2_BIT | ALERT_BIT);
 
-	err = i2c_smbus_write_byte_data(client, CONFIG_WR, data->config);
+	err = nct1008_write_reg(client, CONFIG_WR, data->config);
 	if (err)
 		goto error;
 
 	/* Temperature conversion rate */
-	err = i2c_smbus_write_byte_data(client, CONV_RATE_WR, pdata->conv_rate);
+	err = nct1008_write_reg(client, CONV_RATE_WR, pdata->conv_rate);
 	if (err)
 		goto error;
 
 	data->conv_period_ms = conv_period_ms_table[pdata->conv_rate];
 
 	/* Setup local hi and lo limits */
-	err = i2c_smbus_write_byte_data(client,
+	err = nct1008_write_reg(client,
 		LOCAL_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
 	if (err)
 		goto error;
 
-	err = i2c_smbus_write_byte_data(client,
-		LOCAL_TEMP_LO_LIMIT_WR, 0);
+	err = nct1008_write_reg(client, LOCAL_TEMP_LO_LIMIT_WR, 0);
 	if (err)
 		goto error;
 
 	/* Setup external hi and lo limits */
-	err = i2c_smbus_write_byte_data(client,
-		EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
+	err = nct1008_write_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
 	if (err)
 		goto error;
-	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
+	err = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
 			NCT1008_MAX_TEMP);
 	if (err)
 		goto error;
 
 	/* read initial temperature */
-	value = i2c_smbus_read_byte_data(client, LOCAL_TEMP_RD);
+	value = nct1008_read_reg(client, LOCAL_TEMP_RD);
 	if (value < 0) {
 		err = value;
 		goto error;
@@ -931,13 +963,13 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	temp = value_to_temperature(pdata->ext_range, value);
 	dev_dbg(&client->dev, "\n initial local temp = %d ", temp);
 
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_LO);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
 	if (value < 0) {
 		err = value;
 		goto error;
 	}
 	temp2 = (value >> 6);
-	value = i2c_smbus_read_byte_data(client, EXT_TEMP_RD_HI);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
 	if (value < 0) {
 		err = value;
 		goto error;
@@ -951,12 +983,12 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
 
 	/* Remote channel offset */
-	err = i2c_smbus_write_byte_data(client, OFFSET_WR, pdata->offset / 4);
+	err = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
 	if (err < 0)
 		goto error;
 
 	/* Remote channel offset fraction (quarters) */
-	err = i2c_smbus_write_byte_data(client, OFFSET_QUARTER_WR,
+	err = nct1008_write_reg(client, OFFSET_QUARTER_WR,
 					(pdata->offset % 4) << 6);
 	if (err < 0)
 		goto error;
@@ -1130,6 +1162,18 @@ static int nct1008_remove(struct i2c_client *client)
 	return 0;
 }
 
+static void nct1008_shutdown(struct i2c_client *client)
+{
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	if (client->irq)
+		disable_irq(client->irq);
+
+	cancel_work_sync(&data->work);
+
+	data->shutdown_complete = 1;
+}
+
 #ifdef CONFIG_PM
 static int nct1008_suspend(struct device *dev)
 {
@@ -1187,7 +1231,7 @@ static struct i2c_driver nct1008_driver = {
 	.probe		= nct1008_probe,
 	.remove		= nct1008_remove,
 	.id_table	= nct1008_id,
-
+	.shutdown	= nct1008_shutdown,
 };
 
 static int __init nct1008_init(void)

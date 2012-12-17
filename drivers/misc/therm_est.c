@@ -31,6 +31,7 @@
 #include <linux/thermal.h>
 #include <linux/module.h>
 #include <linux/hwmon-sysfs.h>
+#include <linux/suspend.h>
 
 struct therm_estimator {
 	long cur_temp;
@@ -42,8 +43,11 @@ struct therm_estimator {
 	int ndevs;
 	struct therm_est_subdevice *devs;
 	struct thermal_zone_device *thz;
-	struct thermal_cooling_device *cdev;
+	char *cdev_type;
 	long trip_temp;
+#ifdef CONFIG_PM
+	struct notifier_block pm_nb;
+#endif
 };
 
 static void therm_est_work_func(struct work_struct *work)
@@ -88,8 +92,9 @@ static int therm_est_bind(struct thermal_zone_device *thz,
 {
 	struct therm_estimator *est = thz->devdata;
 
-	if (cdev == est->cdev)
-		thermal_zone_bind_cooling_device(thz, 0, cdev);
+	if (!strcmp(cdev->type, est->cdev_type))
+		thermal_zone_bind_cooling_device(thz, 0, cdev,
+			    THERMAL_NO_LIMIT, THERMAL_NO_LIMIT);
 
 	return 0;
 }
@@ -99,7 +104,7 @@ static int therm_est_unbind(struct thermal_zone_device *thz,
 {
 	struct therm_estimator *est = thz->devdata;
 
-	if (cdev == est->cdev)
+	if (!strcmp(cdev->type, est->cdev_type))
 		thermal_zone_unbind_cooling_device(thz, 0, cdev);
 
 	return 0;
@@ -233,7 +238,7 @@ static ssize_t set_offset(struct device *dev,
 }
 
 static ssize_t show_temps(struct device *dev,
-				struct device_attrbite *da,
+				struct device_attribute *da,
 				char *buf)
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
@@ -262,12 +267,54 @@ static struct sensor_device_attribute therm_est_nodes[] = {
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
 };
 
-static int __devinit therm_est_probe(struct platform_device *pdev)
+static int therm_est_init_history(struct therm_estimator *est)
 {
 	int i, j;
-	long temp;
-	struct therm_estimator *est;
 	struct therm_est_subdevice *dev;
+	long temp;
+
+	for (i = 0; i < est->ndevs; i++) {
+		dev = &est->devs[i];
+
+		if (dev->get_temp(dev->dev_data, &temp))
+			return -EINVAL;
+
+		for (j = 0; j < HIST_LEN; j++)
+			dev->hist[j] = temp;
+	}
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int therm_est_pm_notify(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct therm_estimator *est = container_of(
+					nb,
+					struct therm_estimator,
+					pm_nb);
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		cancel_delayed_work_sync(&est->therm_est_work);
+		break;
+	case PM_POST_SUSPEND:
+		therm_est_init_history(est);
+		queue_delayed_work(est->workqueue,
+				&est->therm_est_work,
+				msecs_to_jiffies(est->polling_period));
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
+
+static int __devinit therm_est_probe(struct platform_device *pdev)
+{
+	int i;
+	struct therm_estimator *est;
 	struct therm_est_data *data;
 
 	est = kzalloc(sizeof(struct therm_estimator), GFP_KERNEL);
@@ -284,33 +331,28 @@ static int __devinit therm_est_probe(struct platform_device *pdev)
 	est->polling_period = data->polling_period;
 
 	/* initialize history */
-	for (i = 0; i < data->ndevs; i++) {
-		dev = &est->devs[i];
+	therm_est_init_history(est);
 
-		if (dev->get_temp(dev->dev_data, &temp))
-			goto err;
-
-		for (j = 0; j < HIST_LEN; j++)
-			dev->hist[j] = temp;
-	}
-
-	est->workqueue = alloc_workqueue("therm_est",
+	est->workqueue = alloc_workqueue(dev_name(&pdev->dev),
 				    WQ_HIGHPRI | WQ_UNBOUND, 1);
+	if (!est->workqueue)
+		goto err;
+
 	INIT_DELAYED_WORK(&est->therm_est_work, therm_est_work_func);
 
 	queue_delayed_work(est->workqueue,
 				&est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
 
-	est->cdev = data->cdev;
 	est->trip_temp = data->trip_temp;
+	est->cdev_type = data->cdev_type;
 
-	est->thz = thermal_zone_device_register("therm_est",
+	est->thz = thermal_zone_device_register(dev_name(&pdev->dev),
 					1,
+					0x1,
 					est,
 					&therm_est_ops,
-					data->tc1,
-					data->tc2,
+					NULL,
 					data->passive_delay,
 					0);
 	if (IS_ERR_OR_NULL(est->thz))
@@ -318,6 +360,11 @@ static int __devinit therm_est_probe(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
 		device_create_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
+
+#ifdef CONFIG_PM
+	est->pm_nb.notifier_call = therm_est_pm_notify,
+	register_pm_notifier(&est->pm_nb);
+#endif
 
 	return 0;
 err:

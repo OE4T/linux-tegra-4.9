@@ -31,12 +31,13 @@ struct therm_est_subdevice {
 };
 
 struct therm_est_data {
+	/* trip point info : there's only 1 trip point */
+	char *cdev_type; /* cooling device for this trip */
+	long trip_temp;
+
+	/* zone parameters */
 	long toffset;
 	long polling_period;
-	struct thermal_cooling_device *cdev;
-	long trip_temp;
-	int tc1;
-	int tc2;
 	int passive_delay;
 	int ndevs;
 	struct therm_est_subdevice devs[];

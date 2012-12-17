@@ -170,9 +170,18 @@ int thermal_register_governor(struct thermal_governor *governor)
 				dev_err(&pos->device,
 					"Failed to set governor %s for thermal zone %s: %d\n",
 					governor->name, pos->type, ret);
+
+			if (governor->start) {
+				err = governor->start(pos);
+				if (err < 0) {
+					pos->governor = NULL;
+					goto exit;
+				}
+			}
 		}
 	}
 
+exit:
 	mutex_unlock(&thermal_list_lock);
 	mutex_unlock(&thermal_governor_lock);
 
@@ -195,8 +204,11 @@ void thermal_unregister_governor(struct thermal_governor *governor)
 
 	list_for_each_entry(pos, &thermal_tz_list, node) {
 		if (!strncasecmp(pos->governor->name, governor->name,
-						THERMAL_NAME_LENGTH))
+						THERMAL_NAME_LENGTH)) {
+			if (pos->governor->stop)
+				pos->governor->stop(pos);
 			thermal_set_governor(pos, NULL);
+		}
 	}
 
 	mutex_unlock(&thermal_list_lock);
@@ -965,6 +977,23 @@ policy_store(struct device *dev, struct device_attribute *attr,
 	gov = thermal_find_governor((const char *)strim(name));
 	if (!gov)
 		goto exit;
+
+	if (gov == tz->governor) {
+		ret = count;
+		goto exit;
+	}
+
+	if (tz->governor && tz->governor->stop)
+		tz->governor->stop(tz);
+
+	if (gov->start) {
+		ret = gov->start(tz);
+		if (ret < 0) {
+			if (tz->governor && tz->governor->start)
+				tz->governor->start(tz);
+			goto exit;
+		}
+	}
 
 	ret = thermal_set_governor(tz, gov);
 	if (!ret)
@@ -2087,6 +2116,14 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 		goto unregister;
 	}
 
+	if (tz->governor->start) {
+		result = tz->governor->start(tz);
+		if (result < 0) {
+			mutex_unlock(&thermal_governor_lock);
+			goto unregister;
+		}
+	}
+
 	mutex_unlock(&thermal_governor_lock);
 
 	if (!tz->tzp || !tz->tzp->no_hwmon) {
@@ -2114,6 +2151,9 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	return tz;
 
 unregister:
+	if (tz->governor && tz->governor->stop)
+		tz->governor->stop(tz);
+	tz->governor = NULL;
 	release_idr(&thermal_tz_idr, &thermal_idr_lock, tz->id);
 	device_unregister(&tz->device);
 	return ERR_PTR(result);
@@ -2179,8 +2219,9 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	device_remove_file(&tz->device, &dev_attr_policy);
 	device_remove_file(&tz->device, &dev_attr_available_policies);
 	remove_trip_attrs(tz);
+	if (tz->governor && tz->governor->stop)
+		tz->governor->stop(tz);
 	thermal_set_governor(tz, NULL);
-
 	thermal_remove_hwmon_sysfs(tz);
 	release_idr(&thermal_tz_idr, &thermal_idr_lock, tz->id);
 	idr_destroy(&tz->idr);

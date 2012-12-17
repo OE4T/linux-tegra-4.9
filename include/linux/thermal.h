@@ -251,6 +251,14 @@ struct thermal_governor {
 	char name[THERMAL_NAME_LENGTH];
 	int (*bind_to_tz)(struct thermal_zone_device *tz);
 	void (*unbind_from_tz)(struct thermal_zone_device *tz);
+	/*
+	 * The start and stop operations will be called when thermal zone is
+	 * registered and when change governor via sysfs. They will not be
+	 * called when cooling devices are registered or when cooling devices
+	 * are bound to thermal zones.
+	 */
+	int (*start)(struct thermal_zone_device *tz);
+	void (*stop)(struct thermal_zone_device *tz);
 	int (*throttle)(struct thermal_zone_device *tz, int trip);
 	int (*of_parse)(struct thermal_zone_params *tp, struct device_node *np);
 	struct list_head	governor_list;

@@ -98,6 +98,8 @@ static int host1x_actmon_init(struct nvhost_master *host)
 	if (actmon_status.init == ACTMON_READY)
 		return 0;
 
+	nvhost_module_busy(host->dev);
+
 	if (actmon_status.init == ACTMON_OFF) {
 		actmon_status.usecs_per_sample = 160;
 		actmon_status.above_wmark = 0;
@@ -135,6 +137,7 @@ static int host1x_actmon_init(struct nvhost_master *host)
 	writel(val, sync_regs + host1x_sync_actmon_ctrl_r());
 
 	actmon_status.init = ACTMON_READY;
+	nvhost_module_idle(host->dev);
 	return 0;
 }
 
@@ -145,6 +148,8 @@ static void host1x_actmon_deinit(struct nvhost_master *host)
 
 	if (actmon_status.init != ACTMON_READY)
 		return;
+
+	nvhost_module_busy(host->dev);
 
 	/* Disable actmon */
 	val = readl(sync_regs + host1x_sync_actmon_ctrl_r());
@@ -163,6 +168,7 @@ static void host1x_actmon_deinit(struct nvhost_master *host)
 	writel(0xffffffff, sync_regs + host1x_sync_actmon_intr_status_r());
 
 	actmon_status.init = ACTMON_SLEEP;
+	nvhost_module_idle(host->dev);
 }
 
 static int host1x_actmon_avg(struct nvhost_master *host, u32 *val)

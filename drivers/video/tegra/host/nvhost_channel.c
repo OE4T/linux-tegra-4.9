@@ -120,8 +120,6 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 	if (ch->refcount == 1) {
 		channel_cdma_op().stop(&ch->cdma);
 		nvhost_cdma_deinit(&ch->cdma);
-		nvhost_module_suspend(ch->dev);
-
 		if (pdata->deinit)
 			pdata->deinit(ch->dev);
 	}

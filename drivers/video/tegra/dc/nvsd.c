@@ -1140,7 +1140,7 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	ssize_t res = 0;
 
-	clk_enable(dc->clk);
+	clk_prepare_enable(dc->clk);
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&dc->lock);
@@ -1170,7 +1170,7 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 #endif
 
 	tegra_dc_io_end(dc);
-	clk_disable(dc->clk);
+	clk_disable_unprepare(dc->clk);
 
 	return res;
 }

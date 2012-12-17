@@ -520,11 +520,11 @@ static int tsec_probe(struct platform_device *dev)
 	nvhost_module_busy(to_platform_device(dev->dev.parent));
 
 	/* Reset TSEC at boot-up. Otherwise it starts sending interrupts. */
-	clk_enable(pdata->clk[0]);
+	clk_prepare_enable(pdata->clk[0]);
 	tegra_periph_reset_assert(pdata->clk[0]);
 	udelay(10);
 	tegra_periph_reset_deassert(pdata->clk[0]);
-	clk_disable(pdata->clk[0]);
+	clk_disable_unprepare(pdata->clk[0]);
 
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, 100);

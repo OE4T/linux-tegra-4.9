@@ -114,7 +114,7 @@ static void scale3d_clocks(unsigned long percent)
 	if (!tegra_is_clk_enabled(scale3d.clk_3d))
 		return;
 
-	if (tegra_chip_id == TEGRA30)
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
 		if (!tegra_is_clk_enabled(scale3d.clk_3d2))
 			return;
 
@@ -122,7 +122,7 @@ static void scale3d_clocks(unsigned long percent)
 	hz = percent * (curr / 100);
 
 	if (!(hz >= scale3d.max_rate_3d && curr == scale3d.max_rate_3d)) {
-		if (tegra_chip_id == TEGRA30)
+		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
 			clk_set_rate(scale3d.clk_3d2, 0);
 		clk_set_rate(scale3d.clk_3d, hz);
 
@@ -165,7 +165,7 @@ static void reset_3d_clocks(void)
 {
 	if (clk_get_rate(scale3d.clk_3d) != scale3d.max_rate_3d) {
 		clk_set_rate(scale3d.clk_3d, scale3d.max_rate_3d);
-		if (tegra_chip_id == TEGRA30)
+		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
 			clk_set_rate(scale3d.clk_3d2, scale3d.max_rate_3d);
 		if (scale3d.p_scale_emc)
 			clk_set_rate(scale3d.clk_3d_emc,
@@ -544,7 +544,7 @@ void nvhost_scale3d_init(struct nvhost_device *d)
 		INIT_DELAYED_WORK(&scale3d.idle_timer, scale3d_idle_handler);
 
 		scale3d.clk_3d = d->clk[0];
-		if (tegra_chip_id == TEGRA30) {
+		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
 			scale3d.clk_3d2 = d->clk[1];
 			scale3d.clk_3d_emc = d->clk[2];
 		} else

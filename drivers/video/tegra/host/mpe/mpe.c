@@ -18,7 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/module.h>
 #include "nvhost_hwctx.h"
 #include "nvhost_channel.h"
 #include "dev.h"
@@ -29,6 +28,7 @@
 #include "t20/t20.h"
 
 #include <linux/slab.h>
+#include <linux/export.h>
 #include <linux/resource.h>
 
 #include <mach/iomap.h>

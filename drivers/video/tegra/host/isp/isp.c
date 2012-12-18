@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/resource.h>
 
 #include <mach/iomap.h>

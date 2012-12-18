@@ -39,12 +39,12 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 
 	chip_ops = nvhost_get_chip_ops();
 
-	switch (tegra_chip_id) {
-	case TEGRA20:
+	switch (tegra_get_chipid()) {
+	case TEGRA_CHIPID_TEGRA2:
 		err = nvhost_init_t20_support(host, chip_ops);
 		break;
 
-	case TEGRA30:
+	case TEGRA_CHIPID_TEGRA3:
 		err = nvhost_init_t30_support(host, chip_ops);
 		break;
 

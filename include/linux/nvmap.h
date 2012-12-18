@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2011, NVIDIA Corporation.
+ * Copyright (c) 2009-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

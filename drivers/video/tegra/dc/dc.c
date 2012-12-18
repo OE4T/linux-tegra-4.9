@@ -40,6 +40,7 @@
 #include <linux/switch.h>
 #endif
 
+
 #include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -748,6 +749,8 @@ static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
 	tegra_dc_set_lut(dc, win);
 
 	mutex_unlock(&dc->lock);
+
+	tegra_dc_update_windows(&win, 1);
 
 	return 0;
 }

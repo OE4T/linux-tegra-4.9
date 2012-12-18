@@ -3,7 +3,7 @@
  *
  * Display event logging to ftrace.
  *
- * Copyright (c) 2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,8 +44,8 @@ DECLARE_EVENT_CLASS(display_basic_template,
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
 		__entry->dev_id = dc->ndev->id;
-		__entry->bw_rate = dc->emc_clk_rate;
-		__entry->new_bw_rate = dc->new_emc_clk_rate;
+		__entry->bw_rate = dc->bw_kbps;
+		__entry->new_bw_rate = dc->new_bw_kbps;
 		__entry->underflows_a = dc->stats.underflows_a;
 		__entry->underflows_b = dc->stats.underflows_b;
 		__entry->underflows_c = dc->stats.underflows_c;

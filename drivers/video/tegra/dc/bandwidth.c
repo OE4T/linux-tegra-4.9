@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
+ * Author: Jon Mayo <jmayo@nvidia.com>
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -86,7 +88,8 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 
 	/* our bandwidth is in kbytes/sec, but LA takes MBps.
 	 * round up bandwidth to next 1MBps */
-	bw = bw / 1000 + 1;
+	if (bw != ULONG_MAX)
+		bw = bw / 1000 + 1;
 
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -234,37 +237,92 @@ static unsigned long tegra_dc_get_bandwidth(
 	return tegra_dc_find_max_bandwidth(windows, n);
 }
 
+#ifdef CONFIG_TEGRA_ISOMGR
+/* to save power, call when display memory clients would be idle */
+void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
+{
+	int latency;
+
+	trace_clear_bandwidth(dc);
+	latency = tegra_isomgr_reserve(dc->isomgr_handle, 0, 1000);
+	WARN_ONCE(!latency, "tegra_isomgr_reserve failed\n");
+	if (latency) {
+		latency = tegra_isomgr_realize(dc->isomgr_handle);
+		WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
+	} else {
+		tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
+	}
+	dc->bw_kbps = 0;
+}
+#else
 /* to save power, call when display memory clients would be idle */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 {
 	trace_clear_bandwidth(dc);
 	if (tegra_is_clk_enabled(dc->emc_clk))
 		clk_disable_unprepare(dc->emc_clk);
-	dc->emc_clk_rate = 0;
+	dc->bw_kbps = 0;
 }
 
-/* use the larger of dc->emc_clk_rate or dc->new_emc_clk_rate, and copies
- * dc->new_emc_clk_rate into dc->emc_clk_rate.
+/* bw in kByte/second. returns Hz for EMC frequency */
+static inline unsigned long tegra_dc_kbps_to_emc(unsigned long bw)
+{
+	unsigned long freq;
+
+	if (bw == ULONG_MAX)
+		return ULONG_MAX;
+
+	freq = tegra_emc_bw_to_freq_req(bw);
+	if (freq >= (ULONG_MAX / 1000))
+		return ULONG_MAX; /* freq too big - clamp at max */
+
+	if (WARN_ONCE((freq * 1000) < freq, "Bandwidth Overflow"))
+		return ULONG_MAX; /* should never occur because of above. */
+	return freq * 1000;
+}
+#endif
+
+/* use the larger of dc->bw_kbps or dc->new_bw_kbps, and copies
+ * dc->new_bw_kbps into dc->bw_kbps.
  * calling this function both before and after a flip is sufficient to select
  * the best possible frequency and latency allowance.
- * set use_new to true to force dc->new_emc_clk_rate programming.
+ * set use_new to true to force dc->new_bw_kbps programming.
  */
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
 
-	if (use_new || dc->emc_clk_rate != dc->new_emc_clk_rate) {
+	if (use_new || dc->bw_kbps != dc->new_bw_kbps) {
+		long bw = max(dc->bw_kbps, dc->new_bw_kbps);
+
+#ifdef CONFIG_TEGRA_ISOMGR
+		int latency;
+
+		latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
+		if (latency) {
+			latency = tegra_isomgr_realize(dc->isomgr_handle);
+			WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
+		} else {
+			tegra_dc_ext_process_bandwidth_renegotiate(
+				dc->ndev->id);
+		}
+#else /* EMC version */
+		int emc_freq;
+
 		/* going from 0 to non-zero */
-		if (!dc->emc_clk_rate && !tegra_is_clk_enabled(dc->emc_clk))
+		if (!dc->bw_kbps && dc->new_bw_kbps &&
+			!tegra_is_clk_enabled(dc->emc_clk))
 			clk_prepare_enable(dc->emc_clk);
 
-		clk_set_rate(dc->emc_clk,
-			max(dc->emc_clk_rate, dc->new_emc_clk_rate));
-		dc->emc_clk_rate = dc->new_emc_clk_rate;
+		emc_freq = tegra_dc_kbps_to_emc(bw);
+		clk_set_rate(dc->emc_clk, emc_freq);
 
 		/* going from non-zero to 0 */
-		if (!dc->new_emc_clk_rate && tegra_is_clk_enabled(dc->emc_clk))
+		if (dc->bw_kbps && !dc->new_bw_kbps &&
+			tegra_is_clk_enabled(dc->emc_clk))
 			clk_disable_unprepare(dc->emc_clk);
+#endif
+		dc->bw_kbps = dc->new_bw_kbps;
 	}
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
@@ -278,16 +336,6 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	}
 }
 
-/* bw in kByte/second. returns Hz for EMC frequency */
-static inline unsigned long tegra_dc_kbps_to_emc(unsigned long bw)
-{
-	if (bw >= (ULONG_MAX / 1000))
-		return ULONG_MAX;
-	if (WARN_ONCE((bw * 1000) < bw, "Bandwidth Overflow"))
-		return ULONG_MAX;
-	return tegra_emc_bw_to_freq_req(bw) * 1000;
-}
-
 int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 {
 	unsigned long new_rate;
@@ -298,14 +346,60 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 
 	dc = windows[0]->dc;
 
+#ifdef CONFIG_TEGRA_ISOMGR
+	new_rate = tegra_dc_get_bandwidth(windows, n);
+#else
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;
 	else
-		new_rate = tegra_dc_kbps_to_emc(
-			tegra_dc_get_bandwidth(windows, n));
+		new_rate = tegra_dc_get_bandwidth(windows, n);
+#endif
 
-	dc->new_emc_clk_rate = new_rate;
+	dc->new_bw_kbps = new_rate;
 	trace_set_dynamic_emc(dc);
 
 	return 0;
 }
+
+/* return the minimum bandwidth in kbps for display to function */
+long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
+{
+	unsigned pclk = tegra_dc_get_out_max_pixclock(dc);
+
+	if (WARN_ONCE(!dc, "dc is NULL") ||
+		WARN_ONCE(!dc->out, "dc->out is NULL!"))
+		return 0;
+
+	if (!pclk && dc->out->type == TEGRA_DC_OUT_HDMI) {
+		pclk = tegra_dc_get_out_max_pixclock(dc);
+		if (!pclk) {
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+			pclk = 300000000; /* 300MHz max */
+#else
+			pclk = 150000000; /* 150MHz max */
+#endif
+		}
+	} else {
+		pclk = dc->mode.pclk;
+	}
+	return pclk / 1000 * 4; /* support a single 32bpp window */
+}
+
+#ifdef CONFIG_TEGRA_ISOMGR
+void tegra_dc_bandwidth_renegotiate(void *p)
+{
+	struct tegra_dc *dc = p;
+	unsigned long bw;
+
+	if (WARN_ONCE(!dc, "dc is NULL!"))
+		return;
+	tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
+
+	/* a bit of a hack, report the change in bandwidth before it
+	 * really happens.
+	 */
+	bw = tegra_dc_calc_min_bandwidth(dc);
+	if (tegra_isomgr_reserve(dc->isomgr_handle, 0, 1000))
+		tegra_isomgr_realize(dc->isomgr_handle);
+}
+#endif

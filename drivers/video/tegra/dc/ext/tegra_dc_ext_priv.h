@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/tegra_dc_ext_priv.h
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -144,6 +144,8 @@ extern int tegra_dc_ext_control_init(void);
 
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
 				      int output);
+extern int tegra_dc_ext_queue_bandwidth_renegotiate(
+				struct tegra_dc_ext_control *, int output);
 extern ssize_t tegra_dc_ext_event_read(struct file *filp, char __user *buf,
 				       size_t size, loff_t *ppos);
 extern unsigned int tegra_dc_ext_event_poll(struct file *, poll_table *);

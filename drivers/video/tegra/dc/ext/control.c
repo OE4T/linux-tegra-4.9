@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/control.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -275,4 +275,9 @@ int tegra_dc_ext_control_init(void)
 	INIT_LIST_HEAD(&control->users);
 
 	return ret;
+}
+
+int tegra_dc_ext_process_bandwidth_renegotiate(int output)
+{
+	return tegra_dc_ext_queue_bandwidth_renegotiate(&g_control, output);
 }

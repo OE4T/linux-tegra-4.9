@@ -2301,7 +2301,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	struct tegra_dc *dc;
 	struct tegra_dc_mode *mode;
 	struct clk *clk;
+#ifndef CONFIG_TEGRA_ISOMGR
 	struct clk *emc_clk;
+#endif
+	int isomgr_client_id = -1;
 	struct resource	*res;
 	struct resource *base_res;
 	struct resource *fb_mem = NULL;
@@ -2359,6 +2362,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[4] = NVSYNCPT_DISP0_H;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
+		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
@@ -2368,6 +2372,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[4] = NVSYNCPT_DISP1_H;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;
+		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
 	} else {
 		dev_err(&ndev->dev,
 			"Unknown base address %#08x: unable to assign syncpt\n",
@@ -2384,15 +2389,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_iounmap_reg;
 	}
 
-	emc_clk = clk_get(&ndev->dev, "emc");
-	if (IS_ERR_OR_NULL(emc_clk)) {
-		dev_err(&ndev->dev, "can't get emc clock\n");
-		ret = -ENOENT;
-		goto err_put_clk;
-	}
-
 	dc->clk = clk;
-	dc->emc_clk = emc_clk;
 	dc->shift_clk_div.mul = dc->shift_clk_div.div = 1;
 	/* Initialize one shot work delay, it will be assigned by dsi
 	 * according to refresh rate later. */
@@ -2404,11 +2401,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->ndev = ndev;
 	dc->pdata = ndev->dev.platform_data;
 
-	/*
-	 * The emc is a shared clock, it will be set based on
-	 * the requirements for each user on the bus.
-	 */
-	dc->emc_clk_rate = 0;
+	dc->bw_kbps = 0;
 
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);
@@ -2441,7 +2434,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	ret = tegra_dc_set(dc, ndev->id);
 	if (ret < 0) {
 		dev_err(&ndev->dev, "can't add dc\n");
-		goto err_put_emc_clk;
+		goto err_put_clk;
 	}
 
 	platform_set_drvdata(ndev, dc);
@@ -2462,6 +2455,35 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	else
 		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
+
+#ifdef CONFIG_TEGRA_ISOMGR
+	if (isomgr_client_id == -1) {
+		dc->isomgr_handle = NULL;
+	} else {
+		dc->isomgr_handle = tegra_isomgr_register(isomgr_client_id,
+			tegra_dc_calc_min_bandwidth(dc),
+			tegra_dc_bandwidth_renegotiate, dc);
+		if (IS_ERR(dc->isomgr_handle)) {
+			dev_err(&dc->ndev->dev,
+				"could not register isomgr. err=%ld\n",
+				PTR_ERR(dc->isomgr_handle));
+			ret = -ENOENT;
+			goto err_put_clk;
+		}
+	}
+#else
+	/*
+	 * The emc is a shared clock, it will be set based on
+	 * the requirements for each user on the bus.
+	 */
+	emc_clk = clk_get(&ndev->dev, "emc");
+	if (IS_ERR_OR_NULL(emc_clk)) {
+		dev_err(&ndev->dev, "can't get emc clock\n");
+		ret = -ENOENT;
+		goto err_put_clk;
+	}
+	dc->emc_clk = emc_clk;
+#endif
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {
@@ -2555,8 +2577,11 @@ err_disable_dc:
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&dc->modeset_switch);
 #endif
-err_put_emc_clk:
+#ifdef CONFIG_TEGRA_ISOMGR
+	tegra_isomgr_unregister(dc->isomgr_handle);
+#else
 	clk_put(emc_clk);
+#endif
 err_put_clk:
 	clk_put(clk);
 err_iounmap_reg:
@@ -2600,7 +2625,14 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	switch_dev_unregister(&dc->modeset_switch);
 #endif
 	free_irq(dc->irq, dc);
+#ifdef CONFIG_TEGRA_ISOMGR
+	if (dc->isomgr_handle) {
+		tegra_isomgr_unregister(dc->isomgr_handle);
+		dc->isomgr_handle = NULL;
+	}
+#else
 	clk_put(dc->emc_clk);
+#endif
 	clk_put(dc->clk);
 	iounmap(dc->base);
 	if (dc->fb_mem)

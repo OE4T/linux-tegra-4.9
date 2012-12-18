@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +23,7 @@
 
 #include <mach/clk.h>
 #include <mach/dc.h>
+#include <mach/mc.h>
 #include <trace/events/display.h>
 
 #include "dc_reg.h"
@@ -201,7 +202,8 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	print_mode(dc, mode, __func__);
 
 	/* use default EMC rate when switching modes */
-	dc->new_emc_clk_rate = tegra_dc_get_default_emc_clk_rate(dc);
+	dc->new_bw_kbps = tegra_emc_freq_req_to_bw(
+		tegra_dc_get_default_emc_clk_rate(dc) / 1000);
 	tegra_dc_program_bandwidth(dc, true);
 
 	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);

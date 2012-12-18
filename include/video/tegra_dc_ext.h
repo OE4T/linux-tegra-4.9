@@ -348,6 +348,10 @@ struct tegra_dc_ext_control_event_hotplug {
 	__u32 handle;
 };
 
+#define TEGRA_DC_EXT_EVENT_BANDWIDTH	0x2
+struct tegra_dc_ext_control_event_bandwidth {
+	__u32 handle;
+};
 
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE	(1 << 0)
 struct tegra_dc_ext_control_capabilities {

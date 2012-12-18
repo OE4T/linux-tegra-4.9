@@ -28,12 +28,20 @@ extern size_t cache_maint_outer_threshold;
 
 static inline void inner_flush_cache_all(void)
 {
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+	v7_flush_kern_cache_all();
+#else
 	on_each_cpu((smp_call_func_t)v7_flush_kern_cache_all, NULL, 1);
+#endif
 }
 
 static inline void inner_clean_cache_all(void)
 {
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+	v7_clean_kern_cache_all(NULL);
+#else
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
+#endif
 }
 
 extern void __flush_dcache_page(struct address_space *, struct page *);

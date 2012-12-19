@@ -23,43 +23,29 @@
 #include "dev.h"
 #include "chip_support.h"
 
-static int host1x_tickctrl_init_host(struct nvhost_master *host)
-{
-	void __iomem *regs = host->aperture;
-
-	/* Initialize counter */
-	writel(0, regs + host1x_channel_tickcount_hi_r());
-	writel(0, regs + host1x_channel_tickcount_lo_r());
-
-	writel(host1x_channel_channelctrl_enabletickcnt_f(1),
-			regs + host1x_channel_channelctrl_r());
-
-	return 0;
-}
-
-static void host1x_tickctrl_deinit_host(struct nvhost_master *host)
-{
-	void __iomem *regs = host->aperture;
-
-	writel(host1x_channel_channelctrl_enabletickcnt_f(0),
-			regs + host1x_channel_channelctrl_r());
-}
-
 static int host1x_tickctrl_init_channel(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	void __iomem *regs = pdata->channel->aperture;
 
+	nvhost_module_busy(nvhost_get_parent(dev));
+
 	/* Initialize counter */
+	writel(0, regs + host1x_channel_tickcount_hi_r());
+	writel(0, regs + host1x_channel_tickcount_lo_r());
 	writel(0, regs + host1x_channel_stallcount_hi_r());
 	writel(0, regs + host1x_channel_stallcount_lo_r());
 	writel(0, regs + host1x_channel_xfercount_hi_r());
 	writel(0, regs + host1x_channel_xfercount_lo_r());
 
+	writel(host1x_channel_channelctrl_enabletickcnt_f(1),
+			regs + host1x_channel_channelctrl_r());
 	writel(host1x_channel_stallctrl_enable_channel_stall_f(1),
 			regs + host1x_channel_stallctrl_r());
 	writel(host1x_channel_xferctrl_enable_channel_xfer_f(1),
 			regs + host1x_channel_xferctrl_r());
+
+	nvhost_module_idle(nvhost_get_parent(dev));
 
 	return 0;
 }
@@ -69,10 +55,14 @@ static void host1x_tickctrl_deinit_channel(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	void __iomem *regs = pdata->channel->aperture;
 
+	nvhost_module_busy(nvhost_get_parent(dev));
 	writel(host1x_channel_stallctrl_enable_channel_stall_f(0),
 			regs + host1x_channel_stallctrl_r());
 	writel(host1x_channel_xferctrl_enable_channel_xfer_f(0),
 			regs + host1x_channel_xferctrl_r());
+	writel(host1x_channel_channelctrl_enabletickcnt_f(0),
+			regs + host1x_channel_channelctrl_r());
+	nvhost_module_idle(nvhost_get_parent(dev));
 }
 
 static u64 readl64(void __iomem *reg_hi, void __iomem *reg_lo)
@@ -81,6 +71,7 @@ static u64 readl64(void __iomem *reg_hi, void __iomem *reg_lo)
 	do {
 		hi = readl(reg_hi);
 		lo = readl(reg_lo);
+		rmb();
 		hi2 = readl(reg_hi);
 	} while (hi2 != hi);
 	return ((u64)hi << 32) | (u64)lo;
@@ -88,11 +79,16 @@ static u64 readl64(void __iomem *reg_hi, void __iomem *reg_lo)
 
 static int host1x_tickctrl_tickcount(struct platform_device *dev, u64 *val)
 {
-	void __iomem *regs = nvhost_get_host(dev)->aperture;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *regs = pdata->channel->aperture;
+
+	nvhost_module_busy(nvhost_get_parent(dev));
 
 	*val = readl64(regs + host1x_channel_tickcount_hi_r(),
 		regs + host1x_channel_tickcount_lo_r());
+
 	rmb();
+	nvhost_module_idle(nvhost_get_parent(dev));
 
 	return 0;
 }
@@ -102,9 +98,11 @@ static int host1x_tickctrl_stallcount(struct platform_device *dev, u64 *val)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	void __iomem *regs = pdata->channel->aperture;
 
+	nvhost_module_busy(nvhost_get_parent(dev));
 	*val = readl64(regs + host1x_channel_stallcount_hi_r(),
 		regs + host1x_channel_stallcount_lo_r());
 	rmb();
+	nvhost_module_idle(nvhost_get_parent(dev));
 
 	return 0;
 }
@@ -114,16 +112,16 @@ static int host1x_tickctrl_xfercount(struct platform_device *dev, u64 *val)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	void __iomem *regs = pdata->channel->aperture;
 
+	nvhost_module_busy(nvhost_get_parent(dev));
 	*val = readl64(regs + host1x_channel_xfercount_hi_r(),
 		regs + host1x_channel_xfercount_lo_r());
 	rmb();
+	nvhost_module_idle(nvhost_get_parent(dev));
 
 	return 0;
 }
 
 static const struct nvhost_tickctrl_ops host1x_tickctrl_ops = {
-	.init_host = host1x_tickctrl_init_host,
-	.deinit_host = host1x_tickctrl_deinit_host,
 	.init_channel = host1x_tickctrl_init_channel,
 	.deinit_channel = host1x_tickctrl_deinit_channel,
 	.tickcount = host1x_tickctrl_tickcount,

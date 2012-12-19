@@ -179,8 +179,6 @@ struct nvhost_actmon_ops {
 };
 
 struct nvhost_tickctrl_ops {
-	int (*init_host)(struct nvhost_master *host);
-	void (*deinit_host)(struct nvhost_master *host);
 	int (*init_channel)(struct platform_device *dev);
 	void (*deinit_channel)(struct platform_device *dev);
 	int (*tickcount)(struct platform_device *dev, u64 *val);

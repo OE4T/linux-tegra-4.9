@@ -487,6 +487,7 @@ void nvhost_device_debug_init(struct platform_device *dev)
 	de = debugfs_create_dir(dev->name, de);
 	debugfs_create_file("stallcount", S_IRUGO, de, dev, &stallcount_fops);
 	debugfs_create_file("xfercount", S_IRUGO, de, dev, &xfercount_fops);
+	debugfs_create_file("tickcount", S_IRUGO, de, dev, &tickcount_fops);
 
 	pdata->debugfs = de;
 }
@@ -538,8 +539,6 @@ void nvhost_debug_init(struct nvhost_master *master)
 			master, &actmon_above_wmark_fops);
 	debugfs_create_file("3d_actmon_below_wmark", S_IRUGO, de,
 			master, &actmon_below_wmark_fops);
-	debugfs_create_file("tickcount", S_IRUGO, de,
-			master->dev, &tickcount_fops);
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

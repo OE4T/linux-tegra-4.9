@@ -296,20 +296,39 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	bool kick = false;
 
 	mutex_lock(&pdata->lock);
+
 	pdata->refcount -= refs;
-	if (pdata->refcount == 0) {
-		if (nvhost_module_powered(dev))
-			schedule_clockgating_locked(dev);
-		kick = true;
+
+	/* submits on the fly -> exit */
+	if (pdata->refcount)
+		goto out;
+
+	if (pdata->idle) {
+		/* give a reference for idle(). otherwise the dev can be
+		 * clockgated */
+		pdata->refcount++;
+		mutex_unlock(&pdata->lock);
+		pdata->idle(dev);
+		mutex_lock(&pdata->lock);
+		pdata->refcount--;
 	}
+
+	/* check that we don't have any new submits on the channel */
+	if (pdata->refcount)
+		goto out;
+
+	/* no new submits. just schedule clock gating */
+	kick = true;
+	if (nvhost_module_powered(dev))
+		schedule_clockgating_locked(dev);
+
+out:
 	mutex_unlock(&pdata->lock);
 
-	if (kick) {
+	/* wake up a waiting thread if we actually went to idle state */
+	if (kick)
 		wake_up(&pdata->idle_wq);
 
-		if (pdata->idle)
-			pdata->idle(dev);
-	}
 }
 
 int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,

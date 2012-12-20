@@ -107,7 +107,7 @@ static struct tegra_dsi_out dsi_a_1080p_11_6_pdata = {
 	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END,
 
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
-	.refresh_rate = 60,
+	.refresh_rate = 61,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
 	.dsi_instance = DSI_INSTANCE_0,
@@ -118,6 +118,12 @@ static struct tegra_dsi_out dsi_a_1080p_11_6_pdata = {
 	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.dsi_init_cmd = dsi_a_1080p_11_6_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_a_1080p_11_6_init_cmd),
+	.phy_timing = {
+		.t_hsdexit_ns = 123,
+		.t_hstrail_ns = 85,
+		.t_datzero_ns = 170,
+		.t_hsprepare_ns = 57,
+	},
 };
 
 static int dalmore_dsi_regulator_get(struct device *dev)
@@ -126,13 +132,15 @@ static int dalmore_dsi_regulator_get(struct device *dev)
 
 	if (reg_requested)
 		return 0;
+
 	dvdd_lcd_1v8 = regulator_get(dev, "dvdd_lcd");
-	if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
-		pr_err("dvdd_lcd regulator get failed\n");
-		err = PTR_ERR(dvdd_lcd_1v8);
-		dvdd_lcd_1v8 = NULL;
-		goto fail;
+		if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
+			pr_err("dvdd_lcd regulator get failed\n");
+			err = PTR_ERR(dvdd_lcd_1v8);
+			dvdd_lcd_1v8 = NULL;
+			goto fail;
 	}
+
 	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
 	if (IS_ERR_OR_NULL(vdd_ds_1v8)) {
 		pr_err("vdd_ds_1v8 regulator get failed\n");
@@ -140,6 +148,7 @@ static int dalmore_dsi_regulator_get(struct device *dev)
 		vdd_ds_1v8 = NULL;
 		goto fail;
 	}
+
 	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
 	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
 		pr_err("avdd_lcd regulator get failed\n");
@@ -163,6 +172,7 @@ static int dalmore_dsi_regulator_get(struct device *dev)
 		vdd_lcd_bl_en = NULL;
 		goto fail;
 	}
+
 	reg_requested = true;
 	return 0;
 fail:
@@ -207,6 +217,37 @@ fail:
 	return err;
 }
 
+static int dalmore_dsi2edp_bridge_enable(struct device *dev)
+{
+	int err = 0;
+
+	/* enable 1.2v */
+	if (dvdd_lcd_1v8) {
+		err = regulator_enable(dvdd_lcd_1v8);
+		if (err < 0) {
+			pr_err("dvdd_lcd regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	gpio_direction_output(en_vdd_bl, 1);
+
+	/* enable 1.8v */
+	if (vdd_ds_1v8) {
+		err = regulator_enable(vdd_ds_1v8);
+		if (err < 0) {
+			pr_err("vdd_ds_1v8 regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	gpio_direction_output(lvds_en, 1);
+
+	return 0;
+fail:
+	return err;
+}
+
 static int dsi_a_1080p_11_6_enable(struct device *dev)
 {
 	int err = 0;
@@ -222,28 +263,18 @@ static int dsi_a_1080p_11_6_enable(struct device *dev)
 		goto fail;
 	}
 
-	if (vdd_ds_1v8) {
-		err = regulator_enable(vdd_ds_1v8);
-		if (err < 0) {
-			pr_err("vdd_ds_1v8 regulator enable failed\n");
-			goto fail;
-		}
-	}
-
-	if (dvdd_lcd_1v8) {
-		err = regulator_enable(dvdd_lcd_1v8);
-		if (err < 0) {
-			pr_err("dvdd_lcd regulator enable failed\n");
-			goto fail;
-		}
-	}
-
 	if (avdd_lcd_3v3) {
 		err = regulator_enable(avdd_lcd_3v3);
 		if (err < 0) {
 			pr_err("avdd_lcd regulator enable failed\n");
 			goto fail;
 		}
+	}
+
+	err = dalmore_dsi2edp_bridge_enable(dev);
+	if (err < 0) {
+		pr_err("bridge enable failed\n");
+		goto fail;
 	}
 
 	if (vdd_lcd_bl) {
@@ -262,7 +293,6 @@ static int dsi_a_1080p_11_6_enable(struct device *dev)
 		}
 	}
 
-	msleep(100);
 #if DSI_PANEL_RESET
 	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
 	usleep_range(1000, 5000);
@@ -271,10 +301,8 @@ static int dsi_a_1080p_11_6_enable(struct device *dev)
 	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
 	msleep(1500);
 #endif
+	gpio_direction_output(DSI_PANEL_BL_PWM, 1);
 
-	gpio_direction_output(en_vdd_bl, 1);
-	msleep(100);
-	gpio_direction_output(lvds_en, 1);
 	return 0;
 fail:
 	return err;
@@ -283,8 +311,8 @@ fail:
 static int dsi_a_1080p_11_6_disable(void)
 {
 	gpio_set_value(lvds_en, 0);
-	msleep(100);
 	gpio_set_value(en_vdd_bl, 0);
+
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
 
@@ -310,17 +338,17 @@ static int dsi_a_1080p_11_6_postsuspend(void)
 
 static struct tegra_dc_mode dsi_a_1080p_11_6_modes[] = {
 	{
-		.pclk = 144250000,
+		.pclk = 137986200,
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
-		.h_sync_width = 28,
+		.h_sync_width = 72,
 		.v_sync_width = 5,
-		.h_back_porch = 148,
+		.h_back_porch = 28,
 		.v_back_porch = 23,
 		.h_active = 1920,
 		.v_active = 1080,
-		.h_front_porch = 66,
-		.v_front_porch = 4,
+		.h_front_porch = 60,
+		.v_front_porch = 3,
 	},
 };
 
@@ -429,15 +457,15 @@ dsi_a_1080p_11_6_sd_settings_init(struct tegra_dc_sd_settings *settings)
 	settings->bl_device_name = "pwm-backlight";
 }
 
-static struct i2c_board_info dalmore_tc358770_dsi2edp_board_info __initdata = {
-		I2C_BOARD_INFO("tc358770_dsi2edp", 0x68),
+static struct i2c_board_info dalmore_tc358767_dsi2edp_board_info __initdata = {
+		I2C_BOARD_INFO("tc358767_dsi2edp", 0x0f),
 };
 
 static int __init dsi_a_1080p_11_6_i2c_bridge_register(void)
 {
 	int err = 0;
 	err = i2c_register_board_info(0,
-			&dalmore_tc358770_dsi2edp_board_info, 1);
+			&dalmore_tc358767_dsi2edp_board_info, 1);
 	return err;
 }
 struct tegra_panel __initdata dsi_a_1080p_11_6 = {

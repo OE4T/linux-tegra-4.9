@@ -66,6 +66,8 @@
 #define DEFAULT_THERMAL_GOVERNOR       "user_space"
 #elif defined(CONFIG_THERMAL_DEFAULT_GOV_POWER_ALLOCATOR)
 #define DEFAULT_THERMAL_GOVERNOR       "power_allocator"
+#elif defined(CONFIG_THERMAL_DEFAULT_GOV_PID)
+#define DEFAULT_THERMAL_GOVERNOR       "pid_thermal_gov"
 #endif
 
 struct thermal_zone_device;

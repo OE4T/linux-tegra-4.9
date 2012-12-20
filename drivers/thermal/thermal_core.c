@@ -2396,6 +2396,10 @@ static int __init thermal_register_governors(void)
 	if (result)
 		return result;
 
+	result = pid_thermal_gov_register();
+	if (result)
+		return result;
+
 	result = thermal_gov_user_space_register();
 	if (result)
 		return result;
@@ -2408,6 +2412,7 @@ static void thermal_unregister_governors(void)
 	thermal_gov_step_wise_unregister();
 	thermal_gov_fair_share_unregister();
 	thermal_gov_bang_bang_unregister();
+	pid_thermal_gov_unregister();
 	thermal_gov_user_space_unregister();
 	thermal_gov_power_allocator_unregister();
 }

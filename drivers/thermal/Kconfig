@@ -1,0 +1,6 @@
+config THERMAL_GOV_PID
+	bool "PID thermal governor"
+	help
+	  This governor manages thermals based on output values of
+	  PID controller.
+

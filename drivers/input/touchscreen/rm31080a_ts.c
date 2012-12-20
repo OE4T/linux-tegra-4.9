@@ -47,6 +47,9 @@
 /*#define ENABLE_SUPPORT_4_7*/  /* for 4.7 inch display  */
 #define ENABLE_NEW_INPUT_DEV
 
+/* undef to disable CPU boost while leaving idle mode */
+#define NV_ENABLE_CPU_BOOST
+
 #define MAX_SPI_FREQ_HZ      50000000
 #define TS_PEN_UP_TIMEOUT    msecs_to_jiffies(50)
 
@@ -72,6 +75,13 @@
 #ifdef ENABLE_SMOOTH_LEVEL
 #define RM_SMOOTH_LEVEL_NORMAL    0
 #define RM_SMOOTH_LEVEL_MAX       4
+#endif
+
+#ifdef NV_ENABLE_CPU_BOOST
+/* disable CPU boosting if autoscan mode is disabled */
+#ifndef ENABLE_AUTO_SCAN
+#undef NV_ENABLE_CPU_BOOST
+#endif
 #endif
 
 #ifdef ENABLE_WORK_QUEUE
@@ -159,6 +169,7 @@ struct rm31080_queue_info g_stQ;
 #ifdef ENABLE_SLOW_SCAN
 struct rm_cmd_slow_scan g_stCmdSlowScan[RM_SLOW_SCAN_LEVEL_COUNT];
 #endif
+
 /*========================================================================= */
 /*FUNCTION DECLARATION */
 /*========================================================================= */
@@ -1536,6 +1547,12 @@ static irqreturn_t rm31080_irq(int irq, void *handle)
 	if (!g_stTs.bInitFinish)
 		return IRQ_HANDLED;
 
+#ifdef NV_ENABLE_CPU_BOOST
+	if (g_stCtrl.bfPowerMode &&
+			(g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN))
+		input_event(g_input_dev, EV_MSC, MSC_ACTIVITY, 1);
+#endif
+
 #ifdef ENABLE_WORK_QUEUE
 	queue_work(g_stTs.rm_workqueue, &g_stTs.rm_work);
 #endif
@@ -1952,6 +1969,7 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);
+	input_set_capability(input_dev, EV_MSC, MSC_ACTIVITY);
 
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(ABS_X, input_dev->absbit);

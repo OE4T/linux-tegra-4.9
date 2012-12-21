@@ -43,13 +43,6 @@
 
 #include "bus_client.h"
 
-static int nvhost_mpe_read_reg(
-	struct platform_device *dev,
-	struct nvhost_channel *channel,
-	struct nvhost_hwctx *hwctx,
-	u32 offset,
-	u32 *value);
-
 enum {
 	HWCTX_REGINFO_NORMAL = 0,
 	HWCTX_REGINFO_STASH,
@@ -622,58 +615,13 @@ int nvhost_mpe_prepare_power_off(struct platform_device *dev)
 	return nvhost_channel_save_context(pdata->channel);
 }
 
-enum mpe_ip_ver {
-	mpe_01 = 1,
-	mpe_02,
-};
-
-struct mpe_desc {
-	int (*prepare_poweroff)(struct platform_device *dev);
-	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
-			u32 waitbase, struct nvhost_channel *ch);
-	int (*read_reg)(struct platform_device *dev, struct nvhost_channel *ch,
-			struct nvhost_hwctx *hwctx, u32 offset, u32 *value);
-};
-
-static const struct mpe_desc mpe[] = {
-	[mpe_01] = {
-		.prepare_poweroff = nvhost_mpe_prepare_power_off,
-		.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
-		.read_reg = nvhost_mpe_read_reg,
-	},
-	[mpe_02] = {
-		.prepare_poweroff = nvhost_mpe_prepare_power_off,
-		.alloc_hwctx_handler = nvhost_mpe_ctxhandler_init,
-		.read_reg = nvhost_mpe_read_reg,
-	},
-};
-
-static struct platform_device_id mpe_id[] = {
-	{ "mpe01", mpe_01 },
-	{ "mpe02", mpe_02 },
-	{ },
-};
-
-MODULE_DEVICE_TABLE(nvhost, mpe_id);
-
 static int mpe_probe(struct platform_device *dev)
 {
 	int err = 0;
-	int index = 0;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	/* HACK: reset device name */
-	dev_set_name(&dev->dev, "%s", "mpe");
-
 	pdata->pdev = dev;
-
-	index = (int)(platform_get_device_id(dev)->driver_data);
-
-	pdata->prepare_poweroff		= mpe[index].prepare_poweroff;
-	pdata->alloc_hwctx_handler	= mpe[index].alloc_hwctx_handler;
-	pdata->read_reg			= mpe[index].read_reg;
-
 	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_get_resources(dev);
@@ -730,7 +678,6 @@ static struct platform_driver mpe_driver = {
 		.name = "mpe",
 		.pm = MPE_PM_OPS,
 	},
-	.id_table = mpe_id,
 };
 
 static int __init mpe_init(void)
@@ -746,8 +693,7 @@ static void __exit mpe_exit(void)
 module_init(mpe_init);
 module_exit(mpe_exit);
 
-static int nvhost_mpe_read_reg(
-	struct platform_device *dev,
+int nvhost_mpe_read_reg(struct platform_device *dev,
 	struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,
 	u32 offset,

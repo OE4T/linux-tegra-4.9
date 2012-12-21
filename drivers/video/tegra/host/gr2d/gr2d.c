@@ -27,48 +27,13 @@
 #include "gr2d_t30.h"
 #include "gr2d_t114.h"
 
-enum gr2d_ip_ver {
-	gr2d_01 = 1,
-	gr2d_02,
-};
-
-struct gr2d_desc {
-	void (*finalize_poweron)(struct platform_device *dev);
-};
-
-static const struct gr2d_desc gr2d[] = {
-	[gr2d_01] = {
-		.finalize_poweron = nvhost_gr2d_t30_finalize_poweron,
-	},
-	[gr2d_02] = {
-		.finalize_poweron = nvhost_gr2d_t114_finalize_poweron,
-	},
-};
-
-static struct platform_device_id gr2d_id[] = {
-	{ "gr2d01", gr2d_01 },
-	{ "gr2d02", gr2d_02 },
-	{ },
-};
-
-MODULE_DEVICE_TABLE(nvhost, gr2d_id);
-
 static int gr2d_probe(struct platform_device *dev)
 {
-	int index = 0;
 	int err = 0;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
-	/* HACK: reset device name */
-	dev_set_name(&dev->dev, "%s", "gr2d");
-
-	index = (int)(platform_get_device_id(dev)->driver_data);
-	WARN_ON(index > gr2d_02);
-
 	pdata->pdev = dev;
-	pdata->finalize_poweron = gr2d[index].finalize_poweron;
-
 	platform_set_drvdata(dev, pdata);
 
 	err = nvhost_client_device_init(dev);
@@ -121,7 +86,6 @@ static struct platform_driver gr2d_driver = {
 		.name = "gr2d",
 		.pm = GR2D_PM_OPS,
 	},
-	.id_table = gr2d_id,
 };
 
 static int __init gr2d_init(void)

@@ -23,4 +23,12 @@
 int nvhost_init_t148_support(struct nvhost_master *host,
 		struct nvhost_chip_support *);
 
+extern struct nvhost_device_data t14_host1x_info;
+extern struct nvhost_device_data t14_gr3d_info;
+extern struct nvhost_device_data t14_gr2d_info;
+extern struct nvhost_device_data t14_isp_info;
+extern struct nvhost_device_data t14_vi_info;
+extern struct nvhost_device_data t14_msenc_info;
+extern struct nvhost_device_data t14_tsec_info;
+
 #endif

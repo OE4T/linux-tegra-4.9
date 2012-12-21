@@ -21,12 +21,16 @@
 #ifndef __NVHOST_MPE_MPE_H
 #define __NVHOST_MPE_MPE_H
 
+struct platform_device;
 struct nvhost_hwctx_handler;
-struct nvhost_device;
+struct nvhost_channel;
+struct nvhost_hwctx;
 
-struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(
-		u32 syncpt, u32 waitbase,
-		struct nvhost_channel *ch);
+struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch);
 int nvhost_mpe_prepare_power_off(struct platform_device *dev);
+int nvhost_mpe_read_reg(struct platform_device *dev,
+	struct nvhost_channel *channel, struct nvhost_hwctx *hwctx,
+	u32 offset, u32 *value);
 
 #endif

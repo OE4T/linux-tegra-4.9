@@ -62,8 +62,8 @@ static struct resource tegra_host1x03_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.start = INT_SYNCPT_THRESH_BASE,
-		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
+		.start = INT_HOST1X_MPCORE_SYNCPT,
+		.end = INT_HOST1X_MPCORE_SYNCPT,
 		.flags = IORESOURCE_IRQ,
 	},
 	{

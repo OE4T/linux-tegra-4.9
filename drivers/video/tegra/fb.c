@@ -57,6 +57,8 @@ struct tegra_fb_info {
 
 	int			xres;
 	int			yres;
+	int			curr_xoffset;
+	int			curr_yoffset;
 };
 
 /* palette array used by the fbcon */
@@ -311,7 +313,8 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	/*
 	 * Do nothing if display parameters are same as current values.
 	 */
-	if (info->var.yoffset == var->yoffset)
+	if ((var->xoffset == tegra_fb->curr_xoffset) &&
+	    (var->yoffset == tegra_fb->curr_yoffset))
 		return 0;
 
 	if (!tegra_fb->win->cur_handle) {
@@ -320,6 +323,12 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 
 		info->var.xoffset = var->xoffset;
 		info->var.yoffset = var->yoffset;
+		/*
+		 * Save previous values of xoffset and yoffset so we can
+		 * pan display only when needed.
+		 */
+		tegra_fb->curr_xoffset = var->xoffset;
+		tegra_fb->curr_yoffset = var->yoffset;
 
 		addr = info->fix.smem_start + (var->yoffset * info->fix.line_length) +
 			(var->xoffset * (var->bits_per_pixel/8));

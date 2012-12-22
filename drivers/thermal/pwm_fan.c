@@ -302,10 +302,7 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 
 	if (!fan_data)
 		return -EINVAL;
-#ifdef CONFIG_DEBUG_FS
-	if (!fan_data->fan_temp_control_flag)
-		return 0;
-#endif
+
 	mutex_lock(&fan_data->fan_state_lock);
 
 	fan_data->next_state = cur_state;
@@ -313,11 +310,12 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 	if (fan_data->next_state <= 0)
 		fan_data->next_target_pwm = 0;
 	else
-		fan_data->next_target_pwm = fan_data->fan_pwm[cur_state - 1];
+		fan_data->next_target_pwm = fan_data->fan_pwm[cur_state];
 
 	fan_data->next_target_pwm =
 		min(fan_data->fan_cap_pwm, fan_data->next_target_pwm);
-	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
+	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm &&
+		(fan_data->fan_temp_control_flag))
 		queue_delayed_work(fan_data->workqueue,
 					&(fan_data->fan_ramp_work),
 					msecs_to_jiffies(fan_data->step_time));
@@ -621,6 +619,42 @@ static int pwm_fan_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if CONFIG_PM
+static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
+
+	mutex_lock(&fan_data->fan_state_lock);
+	cancel_delayed_work(&fan_data->fan_ramp_work);
+	/*Turn the fan off*/
+	fan_data->fan_cur_pwm = 0;
+	set_pwm_duty_cycle(0, fan_data);
+
+	/*Stop thermal control*/
+	fan_data->fan_temp_control_flag = 0;
+	mutex_unlock(&fan_data->fan_state_lock);
+	return 0;
+}
+
+static int pwm_fan_resume(struct platform_device *pdev)
+{
+	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
+
+	/*Sanity check, want to make sure fan is off when the driver resumes*/
+	mutex_lock(&fan_data->fan_state_lock);
+	set_pwm_duty_cycle(0, fan_data);
+
+	/*Start thermal control*/
+	fan_data->fan_temp_control_flag = 1;
+	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
+		queue_delayed_work(fan_data->workqueue,
+					&fan_data->fan_ramp_work,
+					msecs_to_jiffies(fan_data->step_time));
+	mutex_unlock(&fan_data->fan_state_lock);
+	return 0;
+}
+#endif
+
 static struct platform_driver pwm_fan_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
@@ -628,6 +662,10 @@ static struct platform_driver pwm_fan_driver = {
 	},
 	.probe = pwm_fan_probe,
 	.remove = pwm_fan_remove,
+#if CONFIG_PM
+	.suspend = pwm_fan_suspend,
+	.resume = pwm_fan_resume,
+#endif
 };
 
 module_platform_driver(pwm_fan_driver);

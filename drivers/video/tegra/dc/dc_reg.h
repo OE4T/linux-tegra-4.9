@@ -674,4 +674,9 @@
 #define  NUM_AGG_PRI_LVLS		4
 #define  SD_AGG_PRI_LVL(x)		((x) >> 3)
 #define  SD_GET_AGG(x)			((x) & 0x7)
+
+#define DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
+#define  WINH_CURS_SELECT(x)		(((x) & 0x1) << 28)
+#define  CURSOR_MODE_SELECT(x)		(((x) & 0x1) << 24)
+
 #endif

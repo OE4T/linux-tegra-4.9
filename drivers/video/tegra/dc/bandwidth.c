@@ -55,6 +55,12 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #endif
 	unsigned long bw;
 
+/* TODO: add support to latency allownce for t14x */
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	if (w->idx >= ARRAY_SIZE(*la_id_tab))
+		return;
+#endif
+
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));

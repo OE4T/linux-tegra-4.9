@@ -1790,6 +1790,11 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		tegra_dc_set_scaling_filter(dc);
 	}
 
+	/* Set window H to window mode by default for t14x. */
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	tegra_dc_writel(dc, WINH_CURS_SELECT(1),
+			DC_DISP_BLEND_CURSOR_CONTROL);
+#endif
 	for (i = 0; i < dc->n_windows; i++) {
 		u32 syncpt = get_syncpt(dc, i);
 
@@ -2346,12 +2351,19 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[0] = NVSYNCPT_DISP0_A;
 		dc->win_syncpt[1] = NVSYNCPT_DISP0_B;
 		dc->win_syncpt[2] = NVSYNCPT_DISP0_C;
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
+		dc->win_syncpt[4] = NVSYNCPT_DISP0_H;
+#endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
 		dc->win_syncpt[1] = NVSYNCPT_DISP1_B;
 		dc->win_syncpt[2] = NVSYNCPT_DISP1_C;
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+		dc->win_syncpt[4] = NVSYNCPT_DISP1_H;
+#endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;
 	} else {
 		dev_err(&ndev->dev,

@@ -56,7 +56,7 @@ struct tegra_dc_ext_flip_win {
 struct tegra_dc_ext_flip_data {
 	struct tegra_dc_ext		*ext;
 	struct work_struct		work;
-	struct tegra_dc_ext_flip_win	win[DC_N_WINDOWS];
+	struct tegra_dc_ext_flip_win	win[TEGRA_DC_EXT_FLIP_N_WINDOWS];
 	struct list_head		timestamp_node;
 };
 
@@ -334,14 +334,14 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	struct tegra_dc_ext_flip_data *data =
 		container_of(work, struct tegra_dc_ext_flip_data, work);
 	struct tegra_dc_ext *ext = data->ext;
-	struct tegra_dc_win *wins[DC_N_WINDOWS];
-	struct nvmap_handle_ref *unpin_handles[DC_N_WINDOWS *
+	struct tegra_dc_win *wins[TEGRA_DC_EXT_FLIP_N_WINDOWS];
+	struct nvmap_handle_ref *unpin_handles[TEGRA_DC_EXT_FLIP_N_WINDOWS *
 					       TEGRA_DC_NUM_PLANES];
 	struct nvmap_handle_ref *old_handle;
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = flip_win->attr.index;
 		struct tegra_dc_win *win;
@@ -428,7 +428,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			spin_unlock(&flip_callback_lock);
 		}
 
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 			struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 			int index = flip_win->attr.index;
 
@@ -456,7 +456,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		int index = args->win[i].index;
 
 		if (index < 0)
@@ -465,7 +465,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 		idx_mask |= BIT(index);
 	}
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		struct tegra_dc_ext_win *win;
 
 		if (!(idx_mask & BIT(i)))
@@ -499,7 +499,7 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		int index = args->win[i].index;
 
 		if (index < 0)
@@ -508,7 +508,7 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 		idx_mask |= BIT(index);
 	}
 
-	for (i = DC_N_WINDOWS - 1; i >= 0; i--) {
+	for (i = TEGRA_DC_EXT_FLIP_N_WINDOWS - 1; i >= 0; i--) {
 		if (!(idx_mask & BIT(i)))
 			continue;
 
@@ -521,7 +521,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 {
 	int i, used_windows = 0;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		int index = args->win[i].index;
 
 		if (index < 0)
@@ -552,7 +552,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	bool has_timestamp = false;
 
 #ifdef CONFIG_ANDROID
-	int index_check[DC_N_WINDOWS] = {0, };
+	int index_check[TEGRA_DC_EXT_FLIP_N_WINDOWS] = {0, };
 	int zero_index_id = 0;
 #endif
 
@@ -571,21 +571,22 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	data->ext = ext;
 
 #ifdef CONFIG_ANDROID
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		index_check[i] = args->win[i].index;
 		if (index_check[i] == 0)
 			zero_index_id = i;
 	}
 
-	if (index_check[DC_N_WINDOWS - 1] != 0) {
+	if (index_check[TEGRA_DC_EXT_FLIP_N_WINDOWS - 1] != 0) {
 		struct tegra_dc_ext_flip_windowattr win_temp;
-		win_temp = args->win[DC_N_WINDOWS - 1];
-		args->win[DC_N_WINDOWS - 1] = args->win[zero_index_id];
+		win_temp = args->win[TEGRA_DC_EXT_FLIP_N_WINDOWS - 1];
+		args->win[TEGRA_DC_EXT_FLIP_N_WINDOWS - 1] =
+						args->win[zero_index_id];
 		args->win[zero_index_id] = win_temp;
 	}
 #endif
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = args->win[i].index;
 
@@ -636,7 +637,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		goto unlock;
 	}
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		u32 syncpt_max;
 		int index = args->win[i].index;
 		struct tegra_dc_ext_win *ext_win;
@@ -679,7 +680,7 @@ unlock:
 	unlock_windows_for_flip(user, args);
 
 fail_pin:
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < TEGRA_DC_EXT_FLIP_N_WINDOWS; i++) {
 		int j;
 		for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
 			if (!data->win[i].handle[j])

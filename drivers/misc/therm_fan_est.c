@@ -42,12 +42,28 @@ struct therm_fan_estimator {
 	int ndevs;
 	struct therm_fan_est_subdevice *devs;
 	struct thermal_zone_device *thz;
+	int current_trip_index;
+	char *cdev_type;
 	int active_trip_temps[MAX_ACTIVE_STATES];
+	int active_hysteresis[MAX_ACTIVE_STATES];
+	int active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
 };
+
+
+static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
+							unsigned long hyst_temp,
+							unsigned long trip_temp)
+{
+	est->active_hysteresis[trip] = hyst_temp;
+	est->active_trip_temps[trip] = trip_temp;
+	est->active_trip_temps_hyst[(trip << 1)] = trip_temp;
+	est->active_trip_temps_hyst[((trip - 1) << 1) + 1] =
+						trip_temp - hyst_temp;
+}
 
 static void therm_fan_est_work_func(struct work_struct *work)
 {
-	int i, j, index, sum = 0;
+	int i, j, index, trip_index, sum = 0;
 	long temp;
 	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
@@ -72,10 +88,19 @@ static void therm_fan_est_work_func(struct work_struct *work)
 
 	est->cur_temp = sum / 100 + est->toffset;
 
-	est->ntemp++;
+	for (trip_index = 0;
+		trip_index < ((MAX_ACTIVE_STATES << 1) + 1); trip_index++) {
+		if (est->cur_temp < est->active_trip_temps_hyst[trip_index])
+			break;
+	}
 
-	if (est->thz)
-		thermal_zone_device_update(est->thz);
+	if (est->current_trip_index != (trip_index - 1)) {
+		est->current_trip_index = trip_index - 1;
+		if (!((trip_index - 1) % 2))
+			thermal_zone_device_update(est->thz);
+	}
+
+	est->ntemp++;
 
 	queue_delayed_work(est->workqueue, &est->therm_fan_est_work,
 				msecs_to_jiffies(est->polling_period));
@@ -85,11 +110,10 @@ static int therm_fan_est_bind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
 {
 	int i;
-
-	if (!strcmp(cdev->type, "pwm-fan")) {
+	struct therm_fan_estimator *est = thz->devdata;
+	if (!strcmp(cdev->type, est->cdev_type)) {
 		for (i = 0; i < MAX_ACTIVE_STATES; i++)
-			thermal_zone_bind_cooling_device(thz, i, cdev,
-								i + 1,  i + 1);
+			thermal_zone_bind_cooling_device(thz, i, cdev, i, i);
 	}
 
 	return 0;
@@ -99,8 +123,8 @@ static int therm_fan_est_unbind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
 {
 	int i;
-
-	if (!strcmp(cdev->type, "pwm-fan")) {
+	struct therm_fan_estimator *est = thz->devdata;
+	if (!strcmp(cdev->type, est->cdev_type)) {
 		for (i = 0; i < MAX_ACTIVE_STATES; i++)
 			thermal_zone_unbind_cooling_device(thz, i, cdev);
 	}
@@ -132,7 +156,11 @@ static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
-	est->active_trip_temps[trip] = temp;
+	/*Need trip 0 to remain as it is*/
+	if (((temp - est->active_hysteresis[trip]) < 0) || (trip <= 0))
+		return -EINVAL;
+
+	fan_set_trip_temp_hyst(est, trip, est->active_hysteresis[trip], temp);
 	return 0;
 }
 
@@ -145,10 +173,26 @@ static int therm_fan_est_get_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
-static int therm_fan_est_get_trend(struct thermal_zone_device *thz,
-					int trip, enum thermal_trend *trend)
+static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
+				int trip, unsigned long hyst_temp)
 {
-	*trend = THERMAL_TREND_RAISING;
+	struct therm_fan_estimator *est = thz->devdata;
+
+	/*Need trip 0 to remain as it is*/
+	if ((est->active_trip_temps[trip] - hyst_temp) < 0 || trip <= 0)
+		return -EINVAL;
+
+	fan_set_trip_temp_hyst(est, trip,
+			hyst_temp, est->active_trip_temps[trip]);
+	return 0;
+}
+
+static int therm_fan_est_get_trip_hyst(struct thermal_zone_device *thz,
+				int trip, unsigned long *temp)
+{
+	struct therm_fan_estimator *est = thz->devdata;
+
+	*temp = est->active_hysteresis[trip];
 	return 0;
 }
 
@@ -158,8 +202,9 @@ static struct thermal_zone_device_ops therm_fan_est_ops = {
 	.get_trip_type = therm_fan_est_get_trip_type,
 	.get_trip_temp = therm_fan_est_get_trip_temp,
 	.get_temp = therm_fan_est_get_temp,
-	.get_trend = therm_fan_est_get_trend,
 	.set_trip_temp = therm_fan_est_set_trip_temp,
+	.get_trip_hyst = therm_fan_est_get_trip_hyst,
+	.set_trip_hyst = therm_fan_est_set_trip_hyst,
 };
 
 static ssize_t show_coeff(struct device *dev,
@@ -292,8 +337,17 @@ static int __devinit therm_fan_est_probe(struct platform_device *pdev)
 	est->toffset = data->toffset;
 	est->polling_period = data->polling_period;
 
-	for (i = 0; i < MAX_ACTIVE_STATES; i++)
+	for (i = 0; i < MAX_ACTIVE_STATES; i++) {
 		est->active_trip_temps[i] = data->active_trip_temps[i];
+		est->active_hysteresis[i] = data->active_hysteresis[i];
+	}
+
+	est->active_trip_temps_hyst[0] = data->active_trip_temps[0];
+
+	for (i = 1; i < MAX_ACTIVE_STATES; i++)
+		fan_set_trip_temp_hyst(est, i,
+			data->active_hysteresis[i], est->active_trip_temps[i]);
+
 	/* initialize history */
 	for (i = 0; i < data->ndevs; i++) {
 		dev = &est->devs[i];
@@ -310,18 +364,19 @@ static int __devinit therm_fan_est_probe(struct platform_device *pdev)
 	if (!est->workqueue)
 		return -ENOMEM;
 
+	est->current_trip_index = 0;
+
 	INIT_DELAYED_WORK(&est->therm_fan_est_work, therm_fan_est_work_func);
 
 	queue_delayed_work(est->workqueue,
 				&est->therm_fan_est_work,
 				msecs_to_jiffies(est->polling_period));
-
+	est->cdev_type = data->cdev_type;
 	est->thz = thermal_zone_device_register((char *) dev_name(&pdev->dev),
 						10, 0x3FF, est,
 						&therm_fan_est_ops, NULL, 0, 0);
 	if (IS_ERR_OR_NULL(est->thz))
 		return -EINVAL;
-
 	for (i = 0; i < ARRAY_SIZE(therm_fan_est_nodes); i++)
 		device_create_file(&pdev->dev,
 			&therm_fan_est_nodes[i].dev_attr);

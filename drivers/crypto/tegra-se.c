@@ -653,6 +653,10 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 				nblocks > SE_MAX_LAST_BLOCK_SIZE)
 		return -EINVAL;
 
+	dma_sync_single_for_device(se_dev->dev, se_dev->src_ll_buf_adr,
+				nbytes, DMA_TO_DEVICE);
+	dma_sync_single_for_device(se_dev->dev, se_dev->dst_ll_buf_adr,
+				nbytes, DMA_TO_DEVICE);
 	/* clear any pending interrupts */
 	val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 	se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);
@@ -677,6 +681,11 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 
 	ret = wait_for_completion_timeout(&se_dev->complete,
 			msecs_to_jiffies(1000));
+
+	dma_sync_single_for_cpu(se_dev->dev, se_dev->src_ll_buf_adr,
+				nbytes, DMA_FROM_DEVICE);
+	dma_sync_single_for_cpu(se_dev->dev, se_dev->dst_ll_buf_adr,
+				nbytes, DMA_FROM_DEVICE);
 	if (ret == 0) {
 		dev_err(se_dev->dev, "operation timed out no interrupt\n");
 		return -ETIMEDOUT;
@@ -1191,13 +1200,23 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 	dst_ll->addr = rng_ctx->rng_buf_adr;
 	dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
 
+	dma_sync_single_for_device(se_dev->dev, rng_ctx->dt_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_TO_DEVICE);
+
 	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_X931, true,
 		TEGRA_SE_KEY_128_SIZE);
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_X931, true,
 				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
 	for (j = 0; j <= num_blocks; j++) {
+
+		dma_sync_single_for_device(se_dev->dev, rng_ctx->rng_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_TO_DEVICE);
+
 		ret = tegra_se_start_operation(se_dev,
 				TEGRA_SE_RNG_DT_SIZE, false);
+
+		dma_sync_single_for_cpu(se_dev->dev, rng_ctx->rng_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_FROM_DEVICE);
 
 		if (!ret) {
 			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
@@ -1224,7 +1243,11 @@ static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
 				SE_AES_OP_MODE_RNG_X931, true,
 				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
 		}
+
 	}
+
+	dma_sync_single_for_cpu(se_dev->dev, rng_ctx->dt_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_FROM_DEVICE);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -1328,14 +1351,23 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	dst_ll->addr = rng_ctx->rng_buf_adr;
 	dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
 
+	dma_sync_single_for_device(se_dev->dev, rng_ctx->dt_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_TO_DEVICE);
+
 	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_DRBG, true,
 		TEGRA_SE_KEY_128_SIZE);
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_DRBG, true,
 				0, true);
 	for (j = 0; j <= num_blocks; j++) {
+
+		dma_sync_single_for_device(se_dev->dev, rng_ctx->rng_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_TO_DEVICE);
+
 		ret = tegra_se_start_operation(se_dev,
 				TEGRA_SE_RNG_DT_SIZE, false);
 
+		dma_sync_single_for_cpu(se_dev->dev, rng_ctx->rng_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_FROM_DEVICE);
 		if (!ret) {
 			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
 
@@ -1349,6 +1381,10 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 			dlen = 0;
 		}
 	}
+
+	dma_sync_single_for_cpu(se_dev->dev, rng_ctx->dt_buf_adr,
+				TEGRA_SE_RNG_DT_SIZE, DMA_FROM_DEVICE);
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
@@ -1653,6 +1689,8 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
 	src_ll->addr = cmac_ctx->dma_addr;
 	src_ll->data_len = TEGRA_SE_AES_BLOCK_SIZE;
+	dma_sync_single_for_device(se_dev->dev, cmac_ctx->dma_addr,
+				TEGRA_SE_AES_BLOCK_SIZE, DMA_TO_DEVICE);
 
 	if (use_orig_iv) {
 		/* use zero IV, this is when num of bytes is
@@ -1672,12 +1710,16 @@ int tegra_se_aes_cmac_final(struct ahash_request *req)
 				TEGRA_SE_AES_CMAC_DIGEST_SIZE, false);
 
 out:
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
-	if (cmac_ctx->buffer)
+	if (cmac_ctx->buffer) {
+		dma_sync_single_for_cpu(se_dev->dev, cmac_ctx->dma_addr,
+				TEGRA_SE_AES_BLOCK_SIZE, DMA_FROM_DEVICE);
 		dma_free_coherent(se_dev->dev, TEGRA_SE_AES_BLOCK_SIZE,
 			cmac_ctx->buffer, cmac_ctx->dma_addr);
+	}
 
 	return 0;
 }
@@ -1764,11 +1806,18 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_CBC, true,
 		ctx->slot->slot_num, true);
 
+	dma_sync_single_for_device(se_dev->dev, pbuf_adr,
+			TEGRA_SE_AES_BLOCK_SIZE, DMA_TO_DEVICE);
+
 	ret = tegra_se_start_operation(se_dev, TEGRA_SE_AES_BLOCK_SIZE, false);
 	if (ret) {
 		dev_err(se_dev->dev, "tegra_se_aes_cmac_setkey:: start op failed\n");
 		goto out;
 	}
+
+	dma_sync_single_for_cpu(se_dev->dev, pbuf_adr,
+			TEGRA_SE_AES_BLOCK_SIZE, DMA_FROM_DEVICE);
+
 
 	/* compute K1 subkey */
 	memcpy(ctx->K1, pbuf, TEGRA_SE_AES_BLOCK_SIZE);
@@ -1786,6 +1835,9 @@ int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 out:
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
+
+	dma_sync_single_for_cpu(se_dev->dev, pbuf_adr,
+			TEGRA_SE_AES_BLOCK_SIZE, DMA_FROM_DEVICE);
 
 	if (pbuf) {
 		dma_free_coherent(se_dev->dev, TEGRA_SE_AES_BLOCK_SIZE,
@@ -2799,8 +2851,14 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 			SE_RNG_CONFIG_SRC(DRBG_SRC_ENTROPY),
 			SE_RNG_CONFIG_REG_OFFSET);
 
+	dma_sync_single_for_device(se_dev->dev, se_dev->ctx_save_buf_adr,
+			SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, DMA_TO_DEVICE);
+
 	ret = tegra_se_start_operation(se_dev,
-		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, false);
+			SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, false);
+
+	dma_sync_single_for_cpu(se_dev->dev, se_dev->ctx_save_buf_adr,
+		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, DMA_FROM_DEVICE);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);

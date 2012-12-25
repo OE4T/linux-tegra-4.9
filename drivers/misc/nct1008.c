@@ -474,7 +474,9 @@ static int nct1008_thermal_set_limits(struct nct1008_data *data,
 static void nct1008_update(struct nct1008_data *data)
 {
 	struct thermal_zone_device *thz = data->nct_ext;
-	long temp, trip_temp, low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
+	long low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
+	struct nct_trip_temp *trip_state;
+	long temp, trip_temp, hysteresis_temp;
 	int count;
 
 	if (!thz)
@@ -485,15 +487,16 @@ static void nct1008_update(struct nct1008_data *data)
 	thz->ops->get_temp(thz, &temp);
 
 	for (count = 0; count < thz->trips; count++) {
-		thz->ops->get_trip_temp(thz, count, &trip_temp);
+		trip_state = &data->plat_data.trips[count];
+		trip_temp = trip_state->trip_temp;
+		hysteresis_temp = trip_state->is_enabled ?
+				trip_temp - trip_state->hysteresis : trip_temp;
 
 		if ((trip_temp >= temp) && (trip_temp < high_temp))
 			high_temp = trip_temp;
 
-		if ((trip_temp < temp) && (trip_temp > low_temp)) {
-			low_temp = trip_temp -
-				   data->plat_data.trips[count].hysteresis;
-		}
+		if ((hysteresis_temp < temp) && (hysteresis_temp > low_temp))
+			low_temp = hysteresis_temp;
 	}
 
 	nct1008_thermal_set_limits(data, low_temp, high_temp);
@@ -569,8 +572,18 @@ static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
 				     unsigned long *temp)
 {
 	struct nct1008_data *data = thz->devdata;
+	struct nct_trip_temp *trip_state = &data->plat_data.trips[trip];
 
-	*temp = data->plat_data.trips[trip].trip_temp;
+	*temp = trip_state->trip_temp;
+
+	if (thz->temperature >= trip_state->trip_temp) {
+		trip_state->is_enabled = true;
+	} else if (trip_state->is_enabled) {
+		*temp -= trip_state->hysteresis;
+		if (thz->temperature < *temp)
+			trip_state->is_enabled = false;
+	}
+
 	return 0;
 }
 

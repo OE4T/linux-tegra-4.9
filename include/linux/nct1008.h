@@ -38,6 +38,7 @@ struct nct_trip_temp {
 	enum thermal_trip_type trip_type;
 	unsigned long state;
 	long hysteresis;
+	bool is_enabled;
 };
 
 #define NCT_MAX_TRIPS (32)

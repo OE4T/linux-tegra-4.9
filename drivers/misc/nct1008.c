@@ -480,8 +480,7 @@ static void nct1008_update(struct nct1008_data *data)
 	if (!thz)
 		return;
 
-	if (!thz->passive)
-		thermal_zone_device_update(thz);
+	thermal_zone_device_update(thz);
 
 	thz->ops->get_temp(thz, &temp);
 

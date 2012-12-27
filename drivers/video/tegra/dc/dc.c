@@ -2015,13 +2015,6 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 
 	tegra_dc_clear_bandwidth(dc);
 
-	/* ugly hack */
-	if (dc->out_ops->release &&
-		(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE))
-		tegra_dc_release_dc_out(dc);
-	else
-		tegra_dc_clk_disable(dc);
-
 	if (dc->out && dc->out->disable)
 		dc->out->disable();
 
@@ -2044,6 +2037,9 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		}
 	}
 	trace_display_disable(dc);
+
+	tegra_dc_clk_disable(dc);
+	tegra_dc_release_dc_out(dc);
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)

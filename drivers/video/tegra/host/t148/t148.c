@@ -53,8 +53,6 @@
 
 static int t148_num_alloc_channels = 0;
 
-#define HOST_EMC_FLOOR	300000000
-
 static struct resource tegra_host1x03_resources[] = {
 	{
 		.start = TEGRA_HOST1X_BASE,
@@ -100,7 +98,7 @@ static struct host1x_device_info host1x03_info = {
 };
 
 static struct nvhost_device_data tegra_host1x03_info = {
-	.clocks		= { {"host1x", INT_MAX}, {} },
+	.clocks		= { {"host1x", 81600000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 
@@ -121,14 +119,16 @@ static struct nvhost_device_data tegra_gr3d03_info = {
 	.waitbases	= {NVWAITBASE_3D},
 	.modulemutexes	= {NVMODMUTEX_3D},
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
-	.clocks		= { {"gr3d", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks		= { {"gr3d", UINT_MAX, 8, true},
+			    {"emc", UINT_MAX, 75} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powerup_reset	= true,
 	.moduleid	= NVHOST_MODULE_NONE,
 };
 
 static struct platform_device tegra_gr3d03_device = {
-	.name		= "gr3d03", /* same as t114 */
+	.name		= "gr3d03",
 	.id		= -1,
 	.dev		= {
 		.platform_data = &tegra_gr3d03_info,
@@ -141,15 +141,16 @@ static struct nvhost_device_data tegra_gr2d03_info = {
 	.waitbases	= {NVWAITBASE_2D_0, NVWAITBASE_2D_1},
 	.modulemutexes	= {NVMODMUTEX_2D_FULL, NVMODMUTEX_2D_SIMPLE,
 			  NVMODMUTEX_2D_SB_A, NVMODMUTEX_2D_SB_B},
-	.clocks		= { {"gr2d", 0}, {"epp", UINT_MAX},
-			    {"emc", HOST_EMC_FLOOR} },
+	.clocks		= { {"gr2d", 0, 7, true}, {"epp", 0, 10, true},
+			    {"emc", 300000000, 75 } },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_NONE,
+	.serialize	= true,
 };
 
 static struct platform_device tegra_gr2d03_device = {
-	.name		= "gr2d02", /* same as t114 */
+	.name		= "gr2d02",
 	.id		= -1,
 	.dev		= {
 		.platform_data = &tegra_gr2d03_info,
@@ -231,7 +232,8 @@ static struct nvhost_device_data tegra_msenc03_info = {
 	.syncpts	= {NVSYNCPT_MSENC},
 	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.clocks		= { {"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks		= { {"msenc", UINT_MAX, 107, true},
+			    {"emc", 300000000, 75} },
 	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay = 100,
@@ -265,7 +267,8 @@ static struct nvhost_device_data tegra_tsec01_info = {
 	.waitbases	= {NVWAITBASE_TSEC},
 	.class		= NV_TSEC_CLASS_ID,
 	.exclusive	= false,
-	.clocks		= { {"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks		= { {"tsec", UINT_MAX, 108, true},
+			    {"emc", 300000000, 75} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_TSEC,

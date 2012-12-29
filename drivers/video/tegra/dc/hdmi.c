@@ -93,6 +93,7 @@ struct tegra_dc_hdmi_data {
 #ifdef CONFIG_SWITCH
 	struct switch_dev		hpd_switch;
 #endif
+	struct tegra_hdmi_out		info;
 
 	spinlock_t			suspend_lock;
 	bool				suspended;
@@ -106,16 +107,6 @@ struct tegra_dc_hdmi_data {
 };
 
 struct tegra_dc_hdmi_data *dc_hdmi;
-
-/* table of electrical settings, must be in acending order. */
-struct tdms_config {
-	int pclk;
-	u32 pll0;
-	u32 pll1;
-	u32 pe_current; /* pre-emphasis */
-	u32 drive_current;
-	u32 peak_current; /* for TEGRA_11x_SOC */
-};
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 const struct tdms_config tdms_config[] = {
@@ -974,6 +965,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct clk *clk = NULL;
 	struct clk *disp1_clk = NULL;
 	struct clk *disp2_clk = NULL;
+	struct tegra_hdmi_out *hdmi_out = NULL;
 	int err;
 
 	hdmi = kzalloc(sizeof(*hdmi), GFP_KERNEL);
@@ -1046,6 +1038,11 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto err_put_clock;
 	}
 #endif
+
+	/* Get the pointer of board file settings */
+	hdmi_out = dc->pdata->default_out->hdmi_out;
+	if (hdmi_out)
+		memcpy(&hdmi->info, hdmi_out, sizeof(hdmi->info));
 
 	hdmi->edid = tegra_edid_create(dc->out->dcc_bus);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
@@ -1836,11 +1833,22 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	else /* else disable sending of this infoframe */
 		tegra_dc_hdmi_disable_generic_infoframe(dc);
 
-	/* TMDS CONFIG */
-	for (i = 0; i < ARRAY_SIZE(tdms_config); i++) {
-		if (dc->mode.pclk <= tdms_config[i].pclk) {
-			tegra_dc_hdmi_setup_tdms(hdmi, &tdms_config[i]);
-			break;
+	/* Set tdms config. Set it to custom values provided in board file;
+	 * otherwise, set it to default values. */
+	if (hdmi->info.tdms_config && hdmi->info.n_tdms_config) {
+		for (i = 0; i < hdmi->info.n_tdms_config; i++) {
+			if (dc->mode.pclk <= hdmi->info.tdms_config[i].pclk) {
+				tegra_dc_hdmi_setup_tdms(hdmi,
+						&hdmi->info.tdms_config[i]);
+				break;
+			}
+		}
+	} else {
+		for (i = 0; i < ARRAY_SIZE(tdms_config); i++) {
+			if (dc->mode.pclk <= tdms_config[i].pclk) {
+				tegra_dc_hdmi_setup_tdms(hdmi, &tdms_config[i]);
+				break;
+			}
 		}
 	}
 

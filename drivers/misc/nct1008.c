@@ -836,10 +836,12 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 			return;
 		}
 	}
-	if (is_enable)
+	if (is_enable) {
 		ret = regulator_enable(data->nct_reg);
-	else
+		usleep_range(100, 1000);
+	} else {
 		ret = regulator_disable(data->nct_reg);
+	}
 
 	if (ret < 0)
 		dev_err(&data->client->dev, "Error in %s rail vdd_nct%s, "

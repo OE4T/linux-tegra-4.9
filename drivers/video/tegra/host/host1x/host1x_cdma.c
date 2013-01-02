@@ -436,6 +436,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 	struct nvhost_master *dev;
 	struct nvhost_syncpt *sp;
 	struct nvhost_channel *ch;
+	int ret;
 
 	u32 syncpt_val;
 
@@ -449,7 +450,11 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	nvhost_debug_dump(cdma_to_dev(cdma));
 
-	mutex_lock(&cdma->lock);
+	ret = mutex_trylock(&cdma->lock);
+	if (!ret) {
+		schedule_delayed_work(&cdma->timeout.wq, msecs_to_jiffies(10));
+		return;
+	}
 
 	if (!cdma->timeout.clientid) {
 		dev_dbg(&dev->dev->dev,

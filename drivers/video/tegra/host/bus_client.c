@@ -906,6 +906,11 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	nvhost_device_debug_init(dev);
 
+	/* reset syncpoint values for this unit */
+	nvhost_module_busy(nvhost_master->dev);
+	nvhost_syncpt_reset_client(dev);
+	nvhost_module_idle(nvhost_master->dev);
+
 	dev_info(&dev->dev, "initialized\n");
 
 	return 0;

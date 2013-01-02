@@ -120,6 +120,7 @@ bool nvhost_syncpt_is_expired(struct nvhost_syncpt *sp, u32 id, u32 thresh);
 void nvhost_syncpt_save(struct nvhost_syncpt *sp);
 
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp);
+void nvhost_syncpt_reset_client(struct platform_device *pdev);
 
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id);
 u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id);

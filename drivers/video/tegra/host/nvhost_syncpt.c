@@ -49,6 +49,26 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 }
 
 /**
+ * Resets syncpoint and waitbase values of a
+ * single client to sw shadows
+ */
+void nvhost_syncpt_reset_client(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_master *nvhost_master = nvhost_get_host(pdev);
+	u32 id;
+
+	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
+
+	for_each_set_bit(id, (unsigned long *)&pdata->syncpts, BITS_PER_LONG)
+		syncpt_op().reset(&nvhost_master->syncpt, id);
+	for_each_set_bit(id, (unsigned long *)&pdata->waitbases, BITS_PER_LONG)
+		syncpt_op().reset_wait_base(&nvhost_master->syncpt, id);
+	wmb();
+}
+
+
+/**
  * Updates sw shadow state for client managed registers
  */
 void nvhost_syncpt_save(struct nvhost_syncpt *sp)

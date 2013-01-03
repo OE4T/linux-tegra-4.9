@@ -43,7 +43,7 @@ DECLARE_EVENT_CLASS(display_basic_template,
 	),
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
-		__entry->dev_id = dc->ndev->dev.id;
+		__entry->dev_id = dc->ndev->id;
 		__entry->bw_rate = dc->emc_clk_rate;
 		__entry->new_bw_rate = dc->new_emc_clk_rate;
 		__entry->underflows_a = dc->stats.underflows_a;
@@ -124,7 +124,7 @@ TRACE_EVENT(display_syncpt_flush,
 	),
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
-		__entry->dev_id = dc->ndev->dev.id;
+		__entry->dev_id = dc->ndev->id;
 		__entry->syncpt_id = id;
 		__entry->syncpt_min = min;
 		__entry->syncpt_max = max;
@@ -145,7 +145,7 @@ DECLARE_EVENT_CLASS(display_io_template,
 	),
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
-		__entry->dev_id = dc->ndev->dev.id;
+		__entry->dev_id = dc->ndev->id;
 		__entry->reg = reg;
 		__entry->val = val;
 	),
@@ -185,7 +185,7 @@ TRACE_EVENT(display_mode,
 	),
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
-		__entry->dev_id = dc->ndev->dev.id;
+		__entry->dev_id = dc->ndev->id;
 		__entry->pclk = mode->pclk;
 		__entry->stereo_mode = mode->stereo_mode;
 		__entry->h_active = mode->h_active;
@@ -234,7 +234,7 @@ TRACE_EVENT(window_update,
 	),
 	TP_fast_assign(
 		__entry->enabled = dc->enabled;
-		__entry->dev_id = dc->ndev->dev.id;
+		__entry->dev_id = dc->ndev->id;
 		__entry->win_fmt = win->fmt;
 		__entry->win_x = dfixed_trunc(win->x);
 		__entry->win_y = dfixed_trunc(win->y);

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics 2D
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,17 +21,47 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 
 #include "dev.h"
 #include "bus_client.h"
 #include "gr2d_t30.h"
 #include "gr2d_t114.h"
+#include "t20/t20.h"
+#include "t30/t30.h"
+#include "t114/t114.h"
+
+static struct of_device_id tegra_gr2d_of_match[] = {
+	{ .compatible = "nvidia,tegra20-gr2d",
+		.data = (struct nvhost_device_data *)&t20_gr2d_info },
+	{ .compatible = "nvidia,tegra30-gr2d",
+		.data = (struct nvhost_device_data *)&t30_gr2d_info },
+	{ .compatible = "nvidia,tegra114-gr2d",
+		.data = (struct nvhost_device_data *)&t11_gr2d_info },
+	{ },
+};
 
 static int gr2d_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_gr2d_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	pdata->pdev = dev;
 	platform_set_drvdata(dev, pdata);
@@ -85,6 +115,9 @@ static struct platform_driver gr2d_driver = {
 		.owner = THIS_MODULE,
 		.name = "gr2d",
 		.pm = GR2D_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = tegra_gr2d_of_match,
+#endif
 	},
 };
 

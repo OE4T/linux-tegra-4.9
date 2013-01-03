@@ -27,6 +27,9 @@
 #include <linux/delay.h>	/* for udelay */
 #include <linux/scatterlist.h>
 #include <linux/stop_machine.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
@@ -35,6 +38,7 @@
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "nvhost_intr.h"
+#include "t114/t114.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -496,11 +500,31 @@ void nvhost_tsec_finalize_poweron(struct platform_device *dev)
 	tsec_boot(dev);
 }
 
+static struct of_device_id tegra_tsec_of_match[] = {
+	{ .compatible = "nvidia,tegra114-tsec",
+		.data = (struct nvhost_device_data *)&t11_tsec_info },
+	{ },
+};
+
 static int tsec_probe(struct platform_device *dev)
 {
 	int err;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_tsec_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	pdata->pdev = dev;
 	pdata->init = nvhost_tsec_init;
@@ -577,6 +601,9 @@ static struct platform_driver tsec_driver = {
 		.owner = THIS_MODULE,
 		.name = "tsec",
 		.pm = TSEC_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = tegra_tsec_of_match,
+#endif
 	}
 };
 

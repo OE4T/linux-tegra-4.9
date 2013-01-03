@@ -24,6 +24,9 @@
 #include <linux/module.h>
 #include <linux/scatterlist.h>
 #include <linux/pm_runtime.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 
 #include <mach/iomap.h>
 #include <mach/hardware.h>
@@ -34,6 +37,8 @@
 #include "host1x/host1x01_hardware.h"
 #include "host1x/host1x_hwctx.h"
 #include "t20/t20.h"
+#include "t30/t30.h"
+#include "t114/t114.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "class_ids.h"
@@ -630,11 +635,33 @@ int nvhost_mpe_prepare_power_off(struct platform_device *dev)
 	return nvhost_channel_save_context(pdata->channel);
 }
 
+static struct of_device_id tegra_mpe_of_match[] = {
+	{ .compatible = "nvidia,tegra20-mpe",
+		.data = (struct nvhost_device_data *)&t20_mpe_info },
+	{ .compatible = "nvidia,tegra30-mpe",
+		.data = (struct nvhost_device_data *)&t30_mpe_info },
+	{ },
+};
+
 static int mpe_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_mpe_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	pdata->pdev = dev;
 	platform_set_drvdata(dev, pdata);
@@ -692,6 +719,9 @@ static struct platform_driver mpe_driver = {
 		.owner = THIS_MODULE,
 		.name = "mpe",
 		.pm = MPE_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = tegra_mpe_of_match,
+#endif
 	},
 };
 

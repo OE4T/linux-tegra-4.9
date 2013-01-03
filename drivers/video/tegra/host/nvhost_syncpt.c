@@ -508,7 +508,7 @@ u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Incr max called with wrong dev\n");
 		return 0;
 	}
@@ -525,7 +525,7 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Incr called with wrong dev\n");
 		return;
 	}
@@ -542,7 +542,7 @@ u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Read called with wrong dev\n");
 		return 0;
 	}
@@ -560,7 +560,7 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	struct platform_device *pdev;
 	struct nvhost_syncpt *sp;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Wait called with wrong dev\n");
 		return -EINVAL;
 	}

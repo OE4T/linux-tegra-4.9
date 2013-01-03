@@ -141,7 +141,7 @@ static void to_state_clockgated_locked(struct platform_device *dev)
 		for (i = 0; i < pdata->num_clks; i++)
 			clk_disable_unprepare(pdata->clk[i]);
 
-		if (dev->dev.parent)
+		if (nvhost_get_parent(dev))
 			nvhost_module_idle(to_platform_device(dev->dev.parent));
 
 		if (!pdata->can_powergate) {
@@ -175,7 +175,7 @@ static void to_state_running_locked(struct platform_device *dev)
 		if (!pdata->can_powergate)
 			pm_runtime_get_sync(&dev->dev);
 
-		if (dev->dev.parent)
+		if (nvhost_get_parent(dev))
 			nvhost_module_busy(to_platform_device(dev->dev.parent));
 
 		for (i = 0; i < pdata->num_clks; i++) {
@@ -742,7 +742,7 @@ bool nvhost_module_powered_ext(struct platform_device *dev)
 {
 	struct platform_device *pdev;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Module powered called with wrong dev\n");
 		return 0;
 	}
@@ -757,7 +757,7 @@ void nvhost_module_busy_ext(struct platform_device *dev)
 {
 	struct platform_device *pdev;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Module busy called with wrong dev\n");
 		return;
 	}
@@ -772,7 +772,7 @@ void nvhost_module_idle_ext(struct platform_device *dev)
 {
 	struct platform_device *pdev;
 
-	if (!dev->dev.parent) {
+	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Module idle called with wrong dev\n");
 		return;
 	}

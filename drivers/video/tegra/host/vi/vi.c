@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,17 +21,47 @@
 #include <linux/export.h>
 #include <linux/resource.h>
 #include <linux/pm_runtime.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 
 #include <mach/iomap.h>
 
 #include "dev.h"
 #include "bus_client.h"
+#include "t20/t20.h"
+#include "t30/t30.h"
+#include "t114/t114.h"
+
+static struct of_device_id tegra_vi_of_match[] = {
+	{ .compatible = "nvidia,tegra20-vi",
+		.data = (struct nvhost_device_data *)&t20_vi_info },
+	{ .compatible = "nvidia,tegra30-vi",
+		.data = (struct nvhost_device_data *)&t30_vi_info },
+	{ .compatible = "nvidia,tegra114-vi",
+		.data = (struct nvhost_device_data *)&t11_vi_info },
+	{ },
+};
 
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_vi_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	pdata->pdev = dev;
 	platform_set_drvdata(dev, pdata);
@@ -89,6 +119,9 @@ static struct platform_driver vi_driver = {
 		.owner = THIS_MODULE,
 		.name = "vi",
 		.pm = VI_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = tegra_vi_of_match,
+#endif
 	}
 };
 

@@ -26,7 +26,11 @@
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <linux/scatterlist.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include <mach/iomap.h>
+
 #include "dev.h"
 #include "msenc.h"
 #include "hw_msenc.h"
@@ -34,6 +38,7 @@
 #include "nvhost_acm.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "t114/t114.h"
 
 #define MSENC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define MSENC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -315,8 +320,7 @@ clean_up:
 
 void nvhost_msenc_init(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
 	struct msenc *m;
 	char *fw_name;
@@ -375,11 +379,31 @@ void nvhost_msenc_finalize_poweron(struct platform_device *dev)
 	msenc_boot(dev);
 }
 
+static struct of_device_id tegra_msenc_of_match[] = {
+	{ .compatible = "nvidia,tegra114-msenc",
+		.data = (struct nvhost_device_data *)&t11_msenc_info },
+	{ },
+};
+
 static int msenc_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_msenc_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	pdata->pdev = dev;
 	pdata->init = nvhost_msenc_init;
@@ -441,6 +465,9 @@ static struct platform_driver msenc_driver = {
 		.owner = THIS_MODULE,
 		.name = "msenc",
 		.pm = MSENC_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = tegra_msenc_of_match,
+#endif
 	}
 };
 

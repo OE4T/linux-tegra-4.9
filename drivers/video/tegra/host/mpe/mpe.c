@@ -766,7 +766,7 @@ static int nvhost_mpe_read_reg(
 	u32 syncval;
 	int err;
 
-	if (hwctx && hwctx->has_timedout)
+	if (hwctx->has_timedout)
 		return -ETIMEDOUT;
 
 	ctx_waiter = nvhost_intr_alloc_waiter();

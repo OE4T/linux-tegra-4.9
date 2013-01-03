@@ -313,9 +313,11 @@ module_param_cb(shrink_page_pools, &shrink_ops, &shrink_pp, 0644);
 
 static int enable_pp_set(const char *arg, const struct kernel_param *kp)
 {
-	int total_pages, available_pages;
+	int total_pages, available_pages, ret;
 
-	param_set_bool(arg, kp);
+	ret = param_set_bool(arg, kp);
+	if (ret)
+		return ret;
 
 	if (!enable_pp) {
 		total_pages = 0;

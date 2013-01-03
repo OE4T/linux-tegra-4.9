@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_est.c
  *
- * Copyright (C) 2010-2012 NVIDIA Corporation.
+ * Copyright (C) 2010-2013 NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -129,6 +129,17 @@ static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
+static int therm_est_set_trip_temp(struct thermal_zone_device *thz,
+					int trip,
+					unsigned long temp)
+{
+	struct therm_estimator *est = thz->devdata;
+
+	est->trip_temp = temp;
+
+	return 0;
+}
+
 static int therm_est_get_temp(struct thermal_zone_device *thz,
 				unsigned long *temp)
 {
@@ -142,6 +153,7 @@ static struct thermal_zone_device_ops therm_est_ops = {
 	.unbind = therm_est_unbind,
 	.get_trip_type = therm_est_get_trip_type,
 	.get_trip_temp = therm_est_get_trip_temp,
+	.set_trip_temp = therm_est_set_trip_temp,
 	.get_temp = therm_est_get_temp,
 };
 

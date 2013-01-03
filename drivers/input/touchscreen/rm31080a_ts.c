@@ -1487,15 +1487,15 @@ static ssize_t rm31080_registry_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(slowscan_enable, 0666, rm31080_slowscan_show,
+static DEVICE_ATTR(slowscan_enable, 0640, rm31080_slowscan_show,
 			rm31080_slowscan_store);
-static DEVICE_ATTR(smooth_level, 0666, rm31080_smooth_level_show,
+static DEVICE_ATTR(smooth_level, 0640, rm31080_smooth_level_show,
 			rm31080_smooth_level_store);
-static DEVICE_ATTR(self_test, 0666, rm31080_self_test_show,
+static DEVICE_ATTR(self_test, 0640, rm31080_self_test_show,
 			rm31080_self_test_store);
-static DEVICE_ATTR(version, 0666, rm31080_version_show,
+static DEVICE_ATTR(version, 0640, rm31080_version_show,
 			rm31080_version_store);
-static DEVICE_ATTR(registry, 0666, rm31080_registry_show,
+static DEVICE_ATTR(registry, 0640, rm31080_registry_show,
 			rm31080_registry_store);
 
 static struct attribute *rm_ts_attributes[] = {

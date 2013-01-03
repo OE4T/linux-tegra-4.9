@@ -1001,8 +1001,10 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		if (!args)
 			return -ENOMEM;
 
-		if (copy_from_user(args, user_arg, sizeof(*args)))
+		if (copy_from_user(args, user_arg, sizeof(*args))) {
+			kfree(args);
 			return -EFAULT;
+		}
 
 		ret = tegra_dc_ext_set_cmu(user, args);
 

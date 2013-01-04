@@ -45,6 +45,8 @@ struct therm_estimator {
 	struct thermal_zone_device *thz;
 	char *cdev_type;
 	long trip_temp;
+	int tc1;
+	int tc2;
 #ifdef CONFIG_PM
 	struct notifier_block pm_nb;
 #endif
@@ -148,6 +150,28 @@ static int therm_est_get_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
+static int therm_est_get_trend(struct thermal_zone_device *thz,
+				int trip,
+				enum thermal_trend *trend)
+{
+	struct therm_estimator *est = thz->devdata;
+	int new_trend;
+	int cur_temp;
+
+	cur_temp = thz->temperature;
+	new_trend = (est->tc1 * (cur_temp - thz->last_temperature)) +
+		    (est->tc2 * (cur_temp - est->trip_temp));
+
+	if (new_trend > 0)
+		*trend = THERMAL_TREND_RAISING;
+	else if (new_trend < 0)
+		*trend = THERMAL_TREND_DROPPING;
+	else
+		*trend = THERMAL_TREND_STABLE;
+
+	return 0;
+}
+
 static struct thermal_zone_device_ops therm_est_ops = {
 	.bind = therm_est_bind,
 	.unbind = therm_est_unbind,
@@ -155,6 +179,7 @@ static struct thermal_zone_device_ops therm_est_ops = {
 	.get_trip_temp = therm_est_get_trip_temp,
 	.set_trip_temp = therm_est_set_trip_temp,
 	.get_temp = therm_est_get_temp,
+	.get_trend = therm_est_get_trend,
 };
 
 static ssize_t show_coeff(struct device *dev,
@@ -341,6 +366,8 @@ static int __devinit therm_est_probe(struct platform_device *pdev)
 	est->ndevs = data->ndevs;
 	est->toffset = data->toffset;
 	est->polling_period = data->polling_period;
+	est->tc1 = data->tc1;
+	est->tc2 = data->tc2;
 
 	/* initialize history */
 	therm_est_init_history(est);

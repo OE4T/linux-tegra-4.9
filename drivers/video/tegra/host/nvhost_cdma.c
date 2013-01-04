@@ -455,7 +455,7 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 	struct push_buffer *pb = &cdma->push_buffer;
 
 	if (handle)
-		trace_write_gather(cdma, handle, offset, op1 & 0xffff);
+		trace_write_gather(cdma, handle, offset, op1 & 0x1fff);
 
 	if (slots_free == 0) {
 		cdma_op().kick(cdma);

@@ -298,9 +298,59 @@ static ssize_t show_temps(struct device *dev,
 	return strlen(buf);
 }
 
+static ssize_t show_tc1(struct device *dev,
+			struct device_attribute *da,
+			char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	snprintf(buf, PAGE_SIZE, "%d\n", est->tc1);
+	return strlen(buf);
+}
+
+static ssize_t set_tc1(struct device *dev,
+			struct device_attribute *da,
+			const char *buf, size_t count)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	int tc1;
+
+	if (kstrtoint(buf, 0, &tc1))
+		return -EINVAL;
+
+	est->tc1 = tc1;
+
+	return count;
+}
+
+static ssize_t show_tc2(struct device *dev,
+			struct device_attribute *da,
+			char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	snprintf(buf, PAGE_SIZE, "%d\n", est->tc2);
+	return strlen(buf);
+}
+
+static ssize_t set_tc2(struct device *dev,
+			struct device_attribute *da,
+			const char *buf, size_t count)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	int tc2;
+
+	if (kstrtoint(buf, 0, &tc2))
+		return -EINVAL;
+
+	est->tc2 = tc2;
+
+	return count;
+}
+
 static struct sensor_device_attribute therm_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
+	SENSOR_ATTR(tc1, S_IRUGO | S_IWUSR, show_tc1, set_tc1, 0),
+	SENSOR_ATTR(tc2, S_IRUGO | S_IWUSR, show_tc2, set_tc2, 0),
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
 };
 

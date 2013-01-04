@@ -266,6 +266,198 @@ static inline u32 tsec_irqsclr_ext_v(u32 r)
 {
 	return (r >> 8) & 0xff;
 }
+static inline u32 tsec_irqsclr_ext_extirq1_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq1_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 tsec_irqsclr_ext_extirq1_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 tsec_irqsclr_ext_extirq1_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq1_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq1_set_f(void)
+{
+	return 0x100;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq2_set_f(void)
+{
+	return 0x200;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq3_set_f(void)
+{
+	return 0x400;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq4_set_f(void)
+{
+	return 0x800;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq5_set_f(void)
+{
+	return 0x1000;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq6_set_f(void)
+{
+	return 0x2000;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq7_set_f(void)
+{
+	return 0x4000;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqsclr_ext_extirq8_set_f(void)
+{
+	return 0x8000;
+}
 static inline u32 tsec_irqmset_r(void)
 {
 	return 0x00001010;
@@ -477,6 +669,198 @@ static inline u32 tsec_irqmset_ext_m(void)
 static inline u32 tsec_irqmset_ext_v(u32 r)
 {
 	return (r >> 8) & 0xff;
+}
+static inline u32 tsec_irqmset_ext_extirq1_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq1_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 tsec_irqmset_ext_extirq1_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 tsec_irqmset_ext_extirq1_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq1_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq1_set_f(void)
+{
+	return 0x100;
+}
+static inline u32 tsec_irqmset_ext_extirq2_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq2_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 tsec_irqmset_ext_extirq2_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 tsec_irqmset_ext_extirq2_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq2_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq2_set_f(void)
+{
+	return 0x200;
+}
+static inline u32 tsec_irqmset_ext_extirq3_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq3_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 tsec_irqmset_ext_extirq3_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 tsec_irqmset_ext_extirq3_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq3_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq3_set_f(void)
+{
+	return 0x400;
+}
+static inline u32 tsec_irqmset_ext_extirq4_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq4_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 tsec_irqmset_ext_extirq4_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 tsec_irqmset_ext_extirq4_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq4_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq4_set_f(void)
+{
+	return 0x800;
+}
+static inline u32 tsec_irqmset_ext_extirq5_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq5_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 tsec_irqmset_ext_extirq5_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 tsec_irqmset_ext_extirq5_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq5_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq5_set_f(void)
+{
+	return 0x1000;
+}
+static inline u32 tsec_irqmset_ext_extirq6_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq6_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 tsec_irqmset_ext_extirq6_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 tsec_irqmset_ext_extirq6_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq6_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq6_set_f(void)
+{
+	return 0x2000;
+}
+static inline u32 tsec_irqmset_ext_extirq7_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq7_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 tsec_irqmset_ext_extirq7_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 tsec_irqmset_ext_extirq7_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq7_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq7_set_f(void)
+{
+	return 0x4000;
+}
+static inline u32 tsec_irqmset_ext_extirq8_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqmset_ext_extirq8_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 tsec_irqmset_ext_extirq8_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 tsec_irqmset_ext_extirq8_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 tsec_irqmset_ext_extirq8_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqmset_ext_extirq8_set_f(void)
+{
+	return 0x8000;
 }
 static inline u32 tsec_irqdest_r(void)
 {
@@ -817,6 +1201,262 @@ static inline u32 tsec_irqdest_host_ext_m(void)
 static inline u32 tsec_irqdest_host_ext_v(u32 r)
 {
 	return (r >> 8) & 0xff;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_host_f(void)
+{
+	return 0x100;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq1_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_host_f(void)
+{
+	return 0x200;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq2_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_host_f(void)
+{
+	return 0x400;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq3_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_host_f(void)
+{
+	return 0x800;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq4_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_host_f(void)
+{
+	return 0x1000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq5_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_host_f(void)
+{
+	return 0x2000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq6_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_host_f(void)
+{
+	return 0x4000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq7_falcon_f(void)
+{
+	return 0x0;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_s(void)
+{
+	return 1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_host_f(void)
+{
+	return 0x8000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_falcon_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 tsec_irqdest_host_ext_extirq8_falcon_f(void)
+{
+	return 0x0;
 }
 static inline u32 tsec_irqdest_target_gptmr_s(void)
 {

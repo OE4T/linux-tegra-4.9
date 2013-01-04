@@ -81,10 +81,10 @@ static const char *s_syncpt_names[32] = {
 	"2d_0", "2d_1",
 	"disp0_b", "disp1_b",
 	"3d",
-	"mpe",
+	"msenc",
 	"disp0_c", "disp1_c",
 	"vblank0", "vblank1",
-	"tsec", "mpe_wr_safe",
+	"tsec", "msenc_unused",
 	"2d_tinyblt",
 	"dsi"
 };

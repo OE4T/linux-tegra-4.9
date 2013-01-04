@@ -585,6 +585,12 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	if (err)
 		goto fail;
 
+	/* TBD: move this after graphics init in which blcg/slcg is enabled.
+	   This function removes SlowdownOnBoot which applies 32x divider
+	   on gpcpll bypass path. The purpose of slowdown is to save power
+	   during boot but it also significantly slows down gk20a init on
+	   simulation and emulation. We should remove SOB after graphics power
+	   saving features (blcg/slcg) are enabled. For now, do it here. */
 	err = gk20a_init_clk_support(g, false);
 	if (err)
 		goto fail;
@@ -627,6 +633,7 @@ void nvhost_gk20a_init(struct platform_device *dev)
 	if (err)
 		nvhost_err(&dev->dev, "failed init gk20a pmu support\n");
 }
+
 static void nvhost_gk20a_deinit(struct platform_device *dev)
 {
 

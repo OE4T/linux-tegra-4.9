@@ -40,6 +40,8 @@ struct therm_est_data {
 	long polling_period;
 	int passive_delay;
 	int ndevs;
+	int tc1;
+	int tc2;
 	struct therm_est_subdevice devs[];
 };
 

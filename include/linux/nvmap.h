@@ -205,8 +205,8 @@ struct nvmap_rw_handle {
 
 struct nvmap_pin_handle {
 #ifdef CONFIG_COMPAT
-	__u32 *handles;		/* array of handles to pin/unpin */
-	__u32 *addr;		/*  array of addresses to return */
+	__u32 handles;		/* array of handles to pin/unpin */
+	__u32 addr;		/*  array of addresses to return */
 #else
 	struct nvmap_handle **handles;	/* array of handles to pin/unpin */
 	unsigned long *addr;	/* array of addresses to return */

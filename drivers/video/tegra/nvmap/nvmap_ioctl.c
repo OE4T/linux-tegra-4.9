@@ -72,6 +72,17 @@ ulong unmarshal_user_handle(__u32 handle)
 	return h;
 }
 
+ulong unmarshal_user_handle_array(__u32 handles, __u32 idx)
+{
+	__u32 *ptr = (__u32 *)((uintptr_t)handles);
+	return unmarshal_user_handle(ptr[idx]);
+}
+
+ulong unmarshal_user_handle_array_single(__u32 handles)
+{
+	return unmarshal_user_handle((ulong)handles);
+}
+
 __u32 marshal_kernel_handle(ulong handle)
 {
 	return (__u32)handle;
@@ -104,6 +115,16 @@ ulong unmarshal_id(__u32 id)
 #endif
 }
 
+ulong *unmarshal_user_pointer(__u32 ptr)
+{
+	return (ulong *)((uintptr_t)ptr);
+}
+
+__u32 marshal_kernel_vaddr(ulong address)
+{
+	return (__u32)address;
+}
+
 #else
 #define NVMAP_XOR_HASH_MASK 0xFFFFFFFC
 ulong unmarshal_user_handle(struct nvmap_handle *handle)
@@ -119,6 +140,16 @@ ulong unmarshal_user_handle(struct nvmap_handle *handle)
 #else
 	return (ulong)handle;
 #endif
+}
+
+ulong unmarshal_user_handle_array(struct nvmap_handle **handles, __u32 idx)
+{
+	return unmarshal_user_handle(handles[idx]);
+}
+
+ulong unmarshal_user_handle_array_single(struct nvmap_handle **handles)
+{
+	return unmarshal_user_handle((struct nvmap_handle *)handles);
 }
 
 struct nvmap_handle *marshal_kernel_handle(ulong handle)
@@ -146,6 +177,16 @@ ulong marshal_id(ulong id)
 ulong unmarshal_id(ulong id)
 {
 	return id;
+}
+
+ulong *unmarshal_user_pointer(unsigned long __user *ptr)
+{
+	return ptr;
+}
+
+ulong marshal_kernel_vaddr(ulong address)
+{
+	return address;
 }
 #endif
 
@@ -202,8 +243,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		}
 	} else {
 		refs = on_stack;
-		on_stack[0] = unmarshal_user_handle(
-				(typeof(*op.handles))op.handles);
+		on_stack[0] = unmarshal_user_handle_array_single(op.handles);
 	}
 
 	trace_nvmap_ioctl_pinop(filp->private_data, is_pin, op.count, refs);
@@ -220,7 +260,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 	 * all of the handle_ref objects are valid, so dereferencing
 	 * directly here is safe */
 	if (op.count > 1)
-		output = (unsigned long __user *)op.addr;
+		output = unmarshal_user_pointer(op.addr);
 	else {
 		struct nvmap_pin_handle __user *tmp = arg;
 		output = (unsigned long __user *)&(tmp->addr);
@@ -241,7 +281,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		else
 			addr = h->carveout->base;
 
-		err = put_user(addr, &output[i]);
+		err = put_user(marshal_kernel_vaddr(addr), &output[i]);
 	}
 
 	if (err)
@@ -838,7 +878,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	if (fast_cache_maint(h, pstart, pend, op))
 		goto out;
 
-	prot = nvmap_pgprot(h, pgprot_kernel);
+	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 	pte = nvmap_alloc_pte(h->dev, (void **)&kaddr);
 	if (IS_ERR(pte)) {
 		err = PTR_ERR(pte);
@@ -915,7 +955,7 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 			  unsigned long start, unsigned long rw_addr,
 			  unsigned long bytes, unsigned long kaddr, pte_t *pte)
 {
-	pgprot_t prot = nvmap_pgprot(h, pgprot_kernel);
+	pgprot_t prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 	unsigned long end = start + bytes;
 	int err = 0;
 

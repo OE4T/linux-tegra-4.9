@@ -200,7 +200,7 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 
 	if (pagenum >= h->size >> PAGE_SHIFT)
 		goto out;
-	prot = nvmap_pgprot(h, pgprot_kernel);
+	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 	pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
 	if (!pte)
 		goto out;
@@ -266,7 +266,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (!h)
 		return NULL;
 
-	prot = nvmap_pgprot(h, pgprot_kernel);
+	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
 	if (h->heap_pgalloc)
 		return vm_map_ram(h->pgalloc.pages, h->size >> PAGE_SHIFT,

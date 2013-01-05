@@ -1,3 +1,7 @@
+ifeq ($(CONFIG_ARM64),y)
+ccflags-y += -Iarch/arm/mach-tegra/include
+endif
+
 obj-y += nvmap.o
 obj-y += nvmap_dev.o
 obj-y += nvmap_handle.o

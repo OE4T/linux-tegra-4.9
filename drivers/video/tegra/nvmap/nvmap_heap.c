@@ -33,6 +33,9 @@
 #include <linux/stat.h>
 #include <linux/debugfs.h>
 
+#include <asm/tlbflush.h>
+#include <asm/cacheflush.h>
+
 #include <linux/nvmap.h>
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
@@ -589,7 +592,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	inner_flush_cache_all();
+#ifndef CONFIG_ARM64
 	outer_flush_range(base, base + len);
+#endif
 	wmb();
 
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);

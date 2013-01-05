@@ -87,6 +87,16 @@ extern struct platform_device *nvmap_pdev;
 #define CACHE_MAINT_IMMEDIATE		0
 #define CACHE_MAINT_ALLOW_DEFERRED	1
 
+#ifdef CONFIG_ARM64
+#define PG_PROT_KERNEL PAGE_KERNEL
+#define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_range(addr, PAGE_SIZE)
+#define FLUSH_DCACHE_AREA __flush_dcache_area
+#else
+#define PG_PROT_KERNEL pgprot_kernel
+#define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_page(addr)
+#define FLUSH_DCACHE_AREA __cpuc_flush_dcache_area
+#endif
+
 /* handles allocated using shared system memory (either IOVMM- or high-order
  * page allocations */
 struct nvmap_pgalloc {
@@ -370,7 +380,7 @@ static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
 #ifdef CONFIG_ARM_ERRATA_798181
 	flush_tlb_kernel_page_skip_errata_798181(kaddr);
 #else
-	flush_tlb_kernel_page(kaddr);
+	FLUSH_TLB_PAGE(kaddr);
 #endif
 }
 
@@ -380,6 +390,7 @@ extern int inner_cache_maint_threshold;
 
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);
+extern void __flush_dcache_all(void *arg);
 extern void __flush_dcache_page(struct address_space *, struct page *);
 
 void inner_flush_cache_all(void);

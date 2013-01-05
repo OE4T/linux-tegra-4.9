@@ -24,13 +24,16 @@
 
 void inner_flush_cache_all(void)
 {
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
+#if defined(CONFIG_ARM64)
+	on_each_cpu(__flush_dcache_all, NULL, 1);
+#elif defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
 	v7_flush_kern_cache_all();
 #else
 	on_each_cpu(v7_flush_kern_cache_all, NULL, 1);
 #endif
 }
 
+#ifndef CONFIG_ARM64
 void inner_clean_cache_all(void)
 {
 #ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
@@ -39,6 +42,7 @@ void inner_clean_cache_all(void)
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
 #endif
 }
+#endif
 
 void nvmap_flush_cache(struct page **pages, int numpages)
 {
@@ -54,10 +58,14 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 #endif
 
 	for (i = 0; i < numpages; i++) {
+#ifdef CONFIG_ARM64 //__flush_dcache_page flushes inner and outer on ARM64
+		 __flush_dcache_page(page_mapping(pages[i]), pages[i]);
+#else
 		if (flush_inner)
 			__flush_dcache_page(page_mapping(pages[i]), pages[i]);
 		base = page_to_phys(pages[i]);
 		outer_flush_range(base, base + PAGE_SIZE);
+#endif
 	}
 }
 

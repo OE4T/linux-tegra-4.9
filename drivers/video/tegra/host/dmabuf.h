@@ -40,7 +40,7 @@ void nvhost_dmabuf_munmap(struct mem_handle *handle, void *addr);
 void *nvhost_dmabuf_kmap(struct mem_handle *handle, unsigned int pagenum);
 void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
-int nvhost_dmabuf_get(u32 id, struct platform_device *dev);
+struct mem_handle* nvhost_dmabuf_get(u32 id, struct platform_device *dev);
 int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
 			   u32 param, u32 *result);
 int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,

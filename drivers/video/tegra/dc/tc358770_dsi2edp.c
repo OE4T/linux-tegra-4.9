@@ -54,6 +54,7 @@ static inline void tc358770_reg_read(struct tegra_dc_dsi2edp_data *dsi2edp,
 					unsigned int addr, unsigned int *val)
 {
 	regmap_read(dsi2edp->regmap, addr, val);
+	*val = TO_LITTLE_ENDIAN ? __swab32(*val) : *val;
 }
 
 static const struct regmap_config tc358770_regmap_config = {
@@ -121,19 +122,27 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 
 	mutex_lock(&dsi2edp->lock);
 
-	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC0B1);
+	/* Chip ID */
+	tc358770_reg_read(dsi2edp, TC358770_CHIP_ID, &val);
+	pr_info("%s[%d]: 770 chip id = %x\n", __func__, __LINE__, val);
+
+	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC0B5);
 	tc358770_reg_write(dsi2edp, TC358770_SYSTEM_CLK_PARAM, 0x0105);
-	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x0f);
+	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x0F);
 	tc358770_reg_write(dsi2edp, TC358770_LINK_CLK_PLL_CTRL, 0x05);
 	msleep(70);
+
 	tc358770_reg_write(dsi2edp,
-		TC358770_STREAM_CLK_PLL_PARAM, 0x0153822A);
+		TC358770_STREAM_CLK_PLL_PARAM, 0x518146);
 	tc358770_reg_write(dsi2edp,
 		TC358770_STREAM_CLK_PLL_CTRL, 0x05);
+
+	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x1F);
+	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x0F);
 	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x1f);
-	tc358770_reg_write(dsi2edp, TC358770_PHY_CTRL, 0x0f);
-	msleep(70);
+
+	/* Check main channel ready */
+	tc358770_reg_read(dsi2edp, TC358770_PHY_CTRL, &val);
 
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG1, 0x01063F);
@@ -141,18 +150,28 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 		TC358770_AUX_CHANNEL_DPCD_ADDR, 0x01);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0, 0x09);
+	msleep(70);
+
+	/* Check aux channel status */
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_STATUS, &val);
+	if (val & (0x01 << 1))
+		goto timeout;
+
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA0, &val);
 
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_DPCD_ADDR, 0x02);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0, 0x09);
-
 	msleep(70);
+
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_STATUS, &val);
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA0, &val);
 
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_DPCD_ADDR, 0x0100);
 	tc358770_reg_write(dsi2edp,
-		TC358770_AUX_CHANNEL_DPCD_WR_DATA0, 0x0406);
+		TC358770_AUX_CHANNEL_DPCD_WR_DATA0, 0x040A);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0, 0x0108);
 	tc358770_reg_write(dsi2edp,
@@ -161,24 +180,22 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 		TC358770_AUX_CHANNEL_DPCD_WR_DATA0, 0x01);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0, 0x08);
-	msleep(70);
 	tc358770_reg_write(dsi2edp,
 		TC358770_LINK_TRAINING_SINK_CONFIG, 0x21);
 	tc358770_reg_write(dsi2edp,
 		TC358770_LINK_TRAINING_LOOP_CTRL, 0x7600000D);
-	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC1B1);
-	msleep(70);
+	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC1B5);
 	tc358770_reg_write(dsi2edp, TC358770_DP_CTRL, 0x41);
-
 	msleep(70);
+
+	tc358770_reg_read(dsi2edp, TC358770_LINK_TRAINING_STATUS, &val);
 
 	tc358770_reg_write(dsi2edp,
 		TC358770_LINK_TRAINING_SINK_CONFIG, 0x22);
+	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC2B5);
 	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC2B1);
 
-	msleep(70);
+	tc358770_reg_read(dsi2edp, TC358770_LINK_TRAINING_STATUS, &val);
 
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_DPCD_ADDR, 0x0102);
@@ -186,42 +203,65 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 		TC358770_AUX_CHANNEL_DPCD_WR_DATA0, 0x00);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0, 0x08);
+	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0x40B5);
 	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0x40b1);
-	msleep(70);
+
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_DPCD_ADDR , 0x0200);
 	tc358770_reg_write(dsi2edp,
 		TC358770_AUX_CHANNEL_CONFIG0 , 0x0409);
 
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_STATUS, &val);
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA0, &val);
+	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA1, &val);
 	msleep(100);
 
-	tc358770_reg_write(dsi2edp, TC358770_DSI0_PPI_TX_RX_TA , 0x040004);
+	/* DSI0 setting */
+	tc358770_reg_write(dsi2edp, TC358770_DSI0_PPI_TX_RX_TA , 0x000A000C);
 	tc358770_reg_write(dsi2edp,
-		TC358770_DSI0_PPI_LPTXTIMECNT , 0x04);
+		TC358770_DSI0_PPI_LPTXTIMECNT , 0x8);
 	tc358770_reg_write(dsi2edp,
-		TC358770_DSI0_PPI_D0S_CLRSIPOCOUNT , 0x07);
+		TC358770_DSI0_PPI_D0S_CLRSIPOCOUNT , 0x8);
 	tc358770_reg_write(dsi2edp,
-		TC358770_DSI0_PPI_D1S_CLRSIPOCOUNT , 0x07);
+		TC358770_DSI0_PPI_D1S_CLRSIPOCOUNT , 0x8);
 	tc358770_reg_write(dsi2edp,
-		TC358770_DSI0_PPI_D2S_CLRSIPOCOUNT , 0x07);
+		TC358770_DSI0_PPI_D2S_CLRSIPOCOUNT , 0x8);
 	tc358770_reg_write(dsi2edp,
-		TC358770_DSI0_PPI_D3S_CLRSIPOCOUNT , 0x07);
+		TC358770_DSI0_PPI_D3S_CLRSIPOCOUNT , 0x8);
 	tc358770_reg_write(dsi2edp,
 		TC358770_DSI0_PPI_LANEENABLE , 0x1F);
 	tc358770_reg_write(dsi2edp,
 		TC358770_DSI0_DSI_LANEENABLE , 0x1F);
 	tc358770_reg_write(dsi2edp, TC358770_DSI0_PPI_START , 0x01);
 	tc358770_reg_write(dsi2edp, TC358770_DSI0_DSI_START , 0x01);
-	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_CMD_CTRL , 0x00);
-	tc358770_reg_write(dsi2edp, TC358770_LR_SIZE , 0x02800000);
-	tc358770_reg_write(dsi2edp, TC358770_PG_SIZE , 0x00);
+
+	/* DSI1 setting */
+	tc358770_reg_write(dsi2edp, TC358770_DSI1_PPI_TX_RX_TA , 0x000A000C);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_LPTXTIMECNT , 0x08);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_D0S_CLRSIPOCOUNT , 0x8);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_D1S_CLRSIPOCOUNT , 0x8);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_D2S_CLRSIPOCOUNT , 0x8);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_D3S_CLRSIPOCOUNT , 0x8);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_PPI_LANEENABLE , 0x1F);
+	tc358770_reg_write(dsi2edp,
+		TC358770_DSI1_DSI_LANEENABLE , 0x1F);
+	tc358770_reg_write(dsi2edp, TC358770_DSI1_PPI_START , 0x01);
+	tc358770_reg_write(dsi2edp, TC358770_DSI1_DSI_START , 0x01);
+
+	/* Combiner logic */
+	tc358770_reg_write(dsi2edp, TC358770_CMD_CTRL , 0x1);
+	tc358770_reg_write(dsi2edp, TC358770_LR_SIZE , 0x05000500);
 	tc358770_reg_write(dsi2edp, TC358770_RM_PXL , 0x00);
-	tc358770_reg_write(dsi2edp, TC358770_HORI_SCLR_HCOEF , 0x00);
-	tc358770_reg_write(dsi2edp, TC358770_HORI_SCLR_LCOEF , 0x00);
 	msleep(70);
-	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_CTRL , 0x15400100);
+
+	/* lcd ctrl frame size */
+	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_CTRL , 0x28A00100);
 
 	val = dsi2edp->mode->h_back_porch << 16 | dsi2edp->mode->h_sync_width;
 	tc358770_reg_write(dsi2edp, TC358770_HORIZONTAL_TIME0 , val);
@@ -238,39 +278,45 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	tc358770_reg_write(dsi2edp,
 		TC358770_VIDEO_FRAME_UPDATE_ENABLE , 0x01);
 	msleep(70);
+
+	/* DP main stream attributes */
 	tc358770_reg_write(dsi2edp,
-		TC358770_VIDEO_FRAME_OUTPUT_DELAY , 0x1F030c);
-	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_SIZE , 0x020d0320);
-	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_START , 0x23008c);
+		TC358770_VIDEO_FRAME_OUTPUT_DELAY , 0x001F0A70);
+	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_SIZE , 0x066E0AA0);
+	tc358770_reg_write(dsi2edp, TC358770_VIDEO_FRAME_START , 0x002B0070);
 	tc358770_reg_write(dsi2edp,
-		TC358770_VIDEO_FRAME_ACTIVE_REGION_SIZE , 0x01e00280);
+		TC358770_VIDEO_FRAME_ACTIVE_REGION_SIZE , 0x06400A00);
 	tc358770_reg_write(dsi2edp,
-		TC358770_VIDEO_FRAME_SYNC_WIDTH , 0x80028060);
+		TC358770_VIDEO_FRAME_SYNC_WIDTH , 0x80068020);
 	msleep(70);
+
+	/* DP flow shape & timestamp */
 	tc358770_reg_write(dsi2edp, TC358770_DP_CONFIG , 0x1EBF0020);
 
 	tc358770_reg_write(dsi2edp,
-		TC358770_NVALUE_VIDEO_CLK_REGEN , 0x02A3);
+		TC358770_NVALUE_VIDEO_CLK_REGEN , 0x0465);
 	tc358770_reg_write(dsi2edp, TC358770_DP_CTRL , 0x41);
 	tc358770_reg_write(dsi2edp, TC358770_DP_CTRL , 0x43);
+
 	tc358770_reg_write(dsi2edp, TC358770_SYSTEM_CTRL , 0x01);
 
+	msleep(70);
 	dsi2edp->dsi2edp_enabled = true;
+
+timeout:
 	mutex_unlock(&dsi2edp->lock);
 }
 
 static void tc358770_dsi2edp_disable(struct tegra_dc_dsi_data *dsi)
 {
-	/* To be done */
+	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
+
+	dsi2edp->dsi2edp_enabled = false;
 }
 
 #ifdef CONFIG_PM
 static void tc358770_dsi2edp_suspend(struct tegra_dc_dsi_data *dsi)
 {
-	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
-
-	dsi2edp->dsi2edp_enabled = false;
-
 	/* To be done */
 }
 

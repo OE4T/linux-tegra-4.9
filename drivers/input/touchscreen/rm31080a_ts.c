@@ -827,12 +827,13 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 		rm31080_ctrl_scan_start();
 		rm31080_ctrl_scan_start();
 		usleep_range(15000, 20000);/*msleep(15); */
-#if ENABLE_T007B1_SETTING
 	}
-#endif
+
+	usleep_range(12000, 13000);	/*msleep(12); */
 	rm31080_spi_byte_write(RM31080_REG_11, 0x06);
 
-	/* 1) disable (3.3v) */
+	msleep(185);
+	/* 1.disable (3.3v) */
 	if (ts->regulator_3v3) {
 		error = regulator_disable(ts->regulator_3v3);
 		if (error < 0)

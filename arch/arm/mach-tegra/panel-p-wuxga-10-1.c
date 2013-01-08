@@ -488,7 +488,6 @@ static struct tegra_dc_cmu dsi_p_wuxga_10_1_cmu = {
 
 static int dsi_p_wuxga_10_1_bl_notify(struct device *unused, int brightness)
 {
-	atomic_t __maybe_unused sd_brightness = ATOMIC_INIT(255);
 	int cur_sd_brightness = atomic_read(&sd_brightness);
 
 	/* Apply any backlight response curve */

@@ -1005,6 +1005,21 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	if (err < 0)
 		goto error;
 
+	/* Reset current hi/lo limit values with register values */
+	value = nct1008_read_reg(data->client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
+	if (value < 0) {
+		err = value;
+		goto error;
+	}
+	data->current_lo_limit = value_to_temperature(pdata->ext_range, value);
+
+	value = nct1008_read_reg(data->client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
+	if (value < 0) {
+		err = value;
+		goto error;
+	}
+	data->current_hi_limit = value_to_temperature(pdata->ext_range, value);
+
 	return 0;
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);

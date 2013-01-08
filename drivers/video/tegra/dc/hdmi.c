@@ -1981,7 +1981,10 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	 * as out0 is 1/2 of the actual PLL output.
 	 */
 
-	rate = dc->mode.pclk * 4;
+	rate = dc->mode.pclk * 2;
+	while (rate < 500000000)
+		rate *= 2;
+
 	if (rate != clk_get_rate(base_clk))
 		clk_set_rate(base_clk, rate);
 

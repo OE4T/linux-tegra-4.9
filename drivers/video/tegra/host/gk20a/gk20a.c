@@ -57,7 +57,9 @@
 #include "gr3d/pod_scaling.h"
 #include "dbg_gpu_gk20a.h"
 
-#include "../../../../../arch/arm/mach-tegra/iomap.h"
+#ifdef CONFIG_ARM64
+#define __cpuc_flush_dcache_area __flush_dcache_area
+#endif
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */

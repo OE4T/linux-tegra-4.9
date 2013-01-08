@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,7 @@
 
 struct nvhost_channel;
 struct nvhost_cdma;
+struct mem_mgr;
 
 struct nvhost_hwctx {
 	struct kref ref;
@@ -35,6 +36,7 @@ struct nvhost_hwctx {
 	struct nvhost_channel *channel;
 	bool valid;
 	bool has_timedout;
+	struct mem_mgr *memmgr;
 };
 
 struct nvhost_hwctx_handler {

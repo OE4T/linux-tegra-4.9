@@ -279,7 +279,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	if (pdata->serialize) {
+	if (job->serialize || pdata->serialize) {
 		/* Force serialization by inserting a host wait for the
 		 * previous job to finish before this one can commence. */
 		nvhost_cdma_push(&ch->cdma,

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -98,6 +98,9 @@ struct nvhost_job {
 
 	/* Context to be freed */
 	struct nvhost_hwctx *hwctxref;
+
+	/* Set to true to force an added wait-for-idle before the job */
+	int serialize;
 };
 
 /*

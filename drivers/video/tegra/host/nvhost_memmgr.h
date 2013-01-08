@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Memory Management Abstraction header
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,6 +66,7 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
 static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
+u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle);
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,

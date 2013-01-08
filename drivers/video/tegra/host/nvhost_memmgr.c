@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Memory Management Abstraction
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include "nvhost_memmgr.h"
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 #include "nvmap.h"
+#include <linux/nvmap.h>
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 #include "dmabuf.h"
@@ -301,6 +302,26 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 	}
 #endif
 	return pin_count;
+}
+
+u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle)
+{
+	switch (nvhost_memmgr_type((u32)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return (u32)nvmap_ref_to_handle(handle);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		WARN_ON(1);
+		break;
+#endif
+	default:
+		break;
+	}
+
+	return 0;
 }
 
 static const struct nvhost_mem_ops mem_ops = {

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D for Tegra2
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -418,152 +418,92 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 	u32 offset,
 	u32 *value)
 {
-	struct host1x_hwctx *hwctx_to_save = NULL;
-	struct nvhost_hwctx_handler *h = hwctx->h;
-	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
-	bool need_restore = false;
+	struct host1x_hwctx_handler *h = to_host1x_hwctx_handler(hwctx->h);
 	u32 syncpt_incrs = 4;
 	unsigned int pending = 0;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref;
-	void *ctx_waiter, *read_waiter, *completed_waiter;
+	void *read_waiter = NULL;
 	struct nvhost_job *job;
-	u32 syncval;
 	int err;
+	struct mem_handle *mem = NULL;
+	u32 *cmdbuf_ptr = NULL;
+	struct mem_mgr *memmgr = hwctx->memmgr;
+	u32 opcodes[] = {
+		/* Switch to 3D - wait for it to complete what it was doing */
+		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
+		nvhost_opcode_imm_incr_syncpt(
+				host1x_uclass_incr_syncpt_cond_op_done_v(),
+				h->syncpt),
+		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_base_r(), 1),
+		nvhost_class_host_wait_syncpt_base(h->syncpt,
+				h->waitbase, 1),
+		/*  Tell 3D to send register value to FIFO */
+		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
+		nvhost_class_host_indoff_reg_read(
+				host1x_uclass_indoff_indmodid_gr3d_v(),
+				offset, false),
+		nvhost_opcode_imm(host1x_uclass_inddata_r(), 0),
+		/*  Increment syncpt to indicate that FIFO can be read */
+		nvhost_opcode_imm_incr_syncpt(
+				host1x_uclass_incr_syncpt_cond_immediate_v(),
+				h->syncpt),
+		/*  Wait for value to be read from FIFO */
+		nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1),
+		nvhost_class_host_wait_syncpt_base(h->syncpt,
+				h->waitbase, 3),
+		/*  Indicate submit complete */
+		nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1),
+		nvhost_class_host_incr_syncpt_base(h->waitbase, 4),
+		nvhost_opcode_imm_incr_syncpt(
+				host1x_uclass_incr_syncpt_cond_immediate_v(),
+				h->syncpt),
+	};
 
-	if (hwctx->has_timedout)
-		return -ETIMEDOUT;
+	mem = nvhost_memmgr_alloc(memmgr, sizeof(opcodes),
+			32, mem_mgr_flag_uncacheable);
+	if (IS_ERR(mem))
+		return PTR_ERR(mem);
 
-	ctx_waiter = nvhost_intr_alloc_waiter();
-	read_waiter = nvhost_intr_alloc_waiter();
-	completed_waiter = nvhost_intr_alloc_waiter();
-	if (!ctx_waiter || !read_waiter || !completed_waiter) {
+	cmdbuf_ptr = nvhost_memmgr_mmap(mem);
+	if (!cmdbuf_ptr) {
 		err = -ENOMEM;
 		goto done;
 	}
 
-	job = nvhost_job_alloc(channel, hwctx, 0, 0, 0,
-			nvhost_get_host(dev)->memmgr);
+	read_waiter = nvhost_intr_alloc_waiter();
+	if (!read_waiter) {
+		err = -ENOMEM;
+		goto done;
+	}
+
+	job = nvhost_job_alloc(channel, hwctx, 1, 0, 0, memmgr);
 	if (!job) {
 		err = -ENOMEM;
 		goto done;
 	}
 
-	/* keep module powered */
-	nvhost_module_busy(dev);
-
-	/* get submit lock */
-	err = mutex_lock_interruptible(&channel->submitlock);
-	if (err) {
-		nvhost_module_idle(dev);
-		return err;
-	}
-
-	/* context switch */
-	if (channel->cur_ctx != hwctx) {
-		hwctx_to_save = channel->cur_ctx ?
-			to_host1x_hwctx(channel->cur_ctx) : NULL;
-		if (hwctx_to_save) {
-			syncpt_incrs += hwctx_to_save->save_incrs;
-			hwctx_to_save->hwctx.valid = true;
-			nvhost_job_get_hwctx(job, &hwctx_to_save->hwctx);
-		}
-		channel->cur_ctx = hwctx;
-		if (channel->cur_ctx && channel->cur_ctx->valid) {
-			need_restore = true;
-			syncpt_incrs += to_host1x_hwctx(channel->cur_ctx)
-				->restore_incrs;
-		}
-	}
-
-	syncval = nvhost_syncpt_incr_max(&nvhost_get_host(dev)->syncpt,
-		p->syncpt, syncpt_incrs);
-
-	job->syncpt_id = p->syncpt;
+	job->syncpt_id = h->syncpt;
 	job->syncpt_incrs = syncpt_incrs;
-	job->syncpt_end = syncval;
+	job->serialize = 1;
+	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
 
-	/* begin a CDMA submit */
-	nvhost_cdma_begin(&channel->cdma, job);
+	/* Submit job */
+	nvhost_job_add_gather(job, nvhost_memmgr_handle_to_id(mem),
+			ARRAY_SIZE(opcodes), 0);
 
-	/* push save buffer (pre-gather setup depends on unit) */
-	if (hwctx_to_save)
-		h->save_push(&hwctx_to_save->hwctx, &channel->cdma);
+	err = nvhost_job_pin(job, &nvhost_get_host(dev)->syncpt);
+	if (err)
+		goto done;
 
-	/* gather restore buffer */
-	if (need_restore)
-		nvhost_cdma_push(&channel->cdma,
-			nvhost_opcode_gather(to_host1x_hwctx(channel->cur_ctx)
-				->restore_size),
-			to_host1x_hwctx(channel->cur_ctx)->restore_phys);
-
-	/* Switch to 3D - wait for it to complete what it was doing */
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
-		nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			p->syncpt));
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-			host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(p->syncpt,
-			p->waitbase, 1));
-	/*  Tell 3D to send register value to FIFO */
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
-		nvhost_class_host_indoff_reg_read(
-			host1x_uclass_indoff_indmodid_gr3d_v(),
-			offset, false));
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_imm(host1x_uclass_inddata_r(), 0),
-		NVHOST_OPCODE_NOOP);
-	/*  Increment syncpt to indicate that FIFO can be read */
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_immediate_v(),
-			p->syncpt),
-		NVHOST_OPCODE_NOOP);
-	/*  Wait for value to be read from FIFO */
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(p->syncpt,
-			p->waitbase, 3));
-	/*  Indicate submit complete */
-	nvhost_cdma_push(&channel->cdma,
-		nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1),
-		nvhost_class_host_incr_syncpt_base(p->waitbase, 4));
-	nvhost_cdma_push(&channel->cdma,
-		NVHOST_OPCODE_NOOP,
-		nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_immediate_v(),
-			p->syncpt));
-
-	/* end CDMA submit  */
-	nvhost_cdma_end(&channel->cdma, job);
-	nvhost_job_put(job);
-	job = NULL;
-
-	/*
-	 * schedule a context save interrupt (to drain the host FIFO
-	 * if necessary, and to release the restore buffer)
-	 */
-	if (hwctx_to_save) {
-		err = nvhost_intr_add_action(
-			&nvhost_get_host(dev)->intr,
-			p->syncpt,
-			syncval - syncpt_incrs
-				+ hwctx_to_save->save_incrs
-				- 1,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
-			ctx_waiter,
-			NULL);
-		ctx_waiter = NULL;
-		WARN(err, "Failed to set context save interrupt");
-	}
+	err = nvhost_channel_submit(job);
+	if (err)
+		goto done;
 
 	/* Wait for FIFO to be ready */
 	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			p->syncpt, syncval - 2,
+			h->syncpt, job->syncpt_end - 2,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
 			read_waiter,
 			&ref);
@@ -571,8 +511,8 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_is_expired(&nvhost_get_host(dev)->syncpt,
-				p->syncpt, syncval - 2));
-	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, p->syncpt,
+				h->syncpt, job->syncpt_end - 2));
+	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->syncpt,
 			ref);
 
 	/* Read the register value from FIFO */
@@ -580,22 +520,17 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 
 	/* Indicate we've read the value */
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(dev)->syncpt,
-			p->syncpt);
+			h->syncpt);
 
-	/* Schedule a submit complete interrupt */
-	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			p->syncpt, syncval,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel,
-			completed_waiter, NULL);
-	completed_waiter = NULL;
-	WARN(err, "Failed to set submit complete interrupt");
-
-	mutex_unlock(&channel->submitlock);
+	nvhost_job_put(job);
+	job = NULL;
 
 done:
-	kfree(ctx_waiter);
 	kfree(read_waiter);
-	kfree(completed_waiter);
+	if (cmdbuf_ptr)
+		nvhost_memmgr_munmap(mem, cmdbuf_ptr);
+	if (mem)
+		nvhost_memmgr_put(memmgr, mem);
 	return err;
 }
 

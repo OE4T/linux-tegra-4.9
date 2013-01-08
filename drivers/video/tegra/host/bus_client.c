@@ -753,6 +753,10 @@ static long nvhost_channelctl(struct file *filp,
 			nvhost_memmgr_put_mgr(priv->memmgr);
 
 		priv->memmgr = new_client;
+
+		if (priv->hwctx)
+			priv->hwctx->memmgr = new_client;
+
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:

@@ -960,6 +960,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 {
 	struct nvmap_heap *h = NULL;
 	struct list_block *l = NULL;
+	DEFINE_DMA_ATTRS(attrs);
 
 	if (WARN_ON(buddy_size && buddy_size < NVMAP_HEAP_MIN_BUDDY_SIZE)) {
 		dev_warn(parent, "%s: buddy_size %u too small\n", __func__,
@@ -1034,6 +1035,10 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	inner_flush_cache_all();
 	outer_flush_range(base, base + len);
 	wmb();
+
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE, &attrs);
+
 	return h;
 
 fail_register:

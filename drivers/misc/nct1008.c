@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,8 @@
 #define MAX_CONV_TIME_ONESHOT_MS (52)
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
+
+#define POWER_ON_DELAY 20 /* ms */
 
 struct nct1008_data {
 	struct workqueue_struct *workqueue;
@@ -884,7 +886,7 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 	}
 	if (is_enable) {
 		ret = regulator_enable(data->nct_reg);
-		usleep_range(100, 1000);
+		msleep(POWER_ON_DELAY);
 	} else {
 		ret = regulator_disable(data->nct_reg);
 	}
@@ -1201,7 +1203,7 @@ static void nct1008_shutdown(struct i2c_client *client)
 	data->shutdown_complete = 1;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 static int nct1008_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1251,8 +1253,8 @@ MODULE_DEVICE_TABLE(i2c, nct1008_id);
 static struct i2c_driver nct1008_driver = {
 	.driver = {
 		.name	= "nct1008_nct72",
-#ifdef CONFIG_PM
-		.pm	= &nct1008_pm_ops,
+#ifdef CONFIG_PM_SLEEP
+		.pm = &nct1008_pm_ops,
 #endif
 	},
 	.probe		= nct1008_probe,

@@ -3,7 +3,7 @@
  *
  * Tegra VIC03 Module Support
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -377,7 +377,11 @@ void nvhost_vic03_init(struct platform_device *dev)
 	}
 	v->ucode.pa = sg_dma_address(v->ucode.sgt->sgl);
 
-	err = vic03_boot(dev);
+	if (!pdata->can_powergate) {
+		nvhost_module_busy(dev);
+		err = vic03_boot(dev);
+		nvhost_module_idle(dev);
+	}
 
 	if (err)
 		goto clean_up;

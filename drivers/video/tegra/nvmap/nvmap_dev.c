@@ -866,11 +866,16 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	case NVMAP_IOC_CREATE:
 	case NVMAP_IOC_FROM_ID:
+	case NVMAP_IOC_FROM_FD:
 		err = nvmap_ioctl_create(filp, cmd, uarg);
 		break;
 
 	case NVMAP_IOC_GET_ID:
 		err = nvmap_ioctl_getid(filp, uarg);
+		break;
+
+	case NVMAP_IOC_GET_FD:
+		err = nvmap_ioctl_getfd(filp, uarg);
 		break;
 
 	case NVMAP_IOC_PARAM:

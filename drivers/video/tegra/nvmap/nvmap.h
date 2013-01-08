@@ -39,6 +39,7 @@ struct nvmap_device;
 struct page;
 struct tegra_iovmm_area;
 
+extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
 
 #if defined(CONFIG_TEGRA_NVMAP)
@@ -279,6 +280,9 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
+
+struct nvmap_handle_ref *nvmap_create_handle_from_fd(
+			struct nvmap_client *client, int fd);
 
 int nvmap_alloc_handle_id(struct nvmap_client *client,
 			  unsigned long id, unsigned int heap_mask,

@@ -43,13 +43,12 @@ enum {
 	NVMAP_CACHE_OP_WB_INV,
 };
 
-
 struct nvmap_create_handle {
 	union {
 		__u32 key;	/* ClaimPreservedHandle */
 		__u32 id;	/* FromId */
 		__u32 size;	/* CreateHandle */
-		int fd;		/* dmabuf fd */
+		__s32 fd;	/* DmaBufFd or FromFd */
 	};
 	__u32 handle;
 };
@@ -141,7 +140,14 @@ struct nvmap_cache_op {
  * reference to the same handle */
 #define NVMAP_IOC_SHARE  _IOWR(NVMAP_IOC_MAGIC, 14, struct nvmap_create_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_SHARE))
+/* Returns a file id that allows a remote process to create a handle
+ * reference to the same handle */
+#define NVMAP_IOC_GET_FD  _IOWR(NVMAP_IOC_MAGIC, 15, struct nvmap_create_handle)
+
+/* Create a new memory handle from file id passed */
+#define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_FROM_FD))
 
 #ifdef  __KERNEL__
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);
@@ -149,6 +155,8 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);
 int nvmap_ioctl_get_param(struct file *filp, void __user* arg);
 
 int nvmap_ioctl_getid(struct file *filp, void __user *arg);
+
+int nvmap_ioctl_getfd(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg);
 

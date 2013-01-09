@@ -138,7 +138,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	nvhost_putchannel(priv->ch, priv->hwctx);
 
 	if (priv->hwctx)
-		priv->ch->ctxhandler->put(priv->hwctx);
+		priv->hwctx->h->put(priv->hwctx);
 
 	if (priv->job)
 		nvhost_job_put(priv->job);

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -142,10 +142,9 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 static void action_ctxsave(struct nvhost_waitlist *waiter)
 {
 	struct nvhost_hwctx *hwctx = waiter->data;
-	struct nvhost_channel *channel = hwctx->channel;
 
-	if (channel->ctxhandler->save_service)
-		channel->ctxhandler->save_service(hwctx);
+	if (hwctx->h->save_service)
+		hwctx->h->save_service(hwctx);
 }
 
 static void action_wakeup(struct nvhost_waitlist *waiter)

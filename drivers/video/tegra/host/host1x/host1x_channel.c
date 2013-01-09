@@ -69,7 +69,7 @@ static void *pre_submit_ctxsave(struct nvhost_job *job,
 	}
 
 	/* Allocate save waiter if needed */
-	if (ch->ctxhandler->save_service) {
+	if (cur_ctx->h->save_service) {
 		ctxsave_waiter = nvhost_intr_alloc_waiter();
 		if (!ctxsave_waiter)
 			return ERR_PTR(-ENOMEM);
@@ -105,7 +105,7 @@ static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
 
 	/* Send the save to channel */
 	cur_ctx->valid = true;
-	ch->ctxhandler->save_push(cur_ctx, &ch->cdma);
+	cur_ctx->h->save_push(cur_ctx, &ch->cdma);
 	nvhost_job_get_hwctx(job, cur_ctx);
 
 	/* Notify save service */
@@ -427,7 +427,7 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
-	ch->ctxhandler->save_push(hwctx_to_save, &ch->cdma);
+	hwctx_to_save->h->save_push(hwctx_to_save, &ch->cdma);
 	nvhost_cdma_end(&ch->cdma, job);
 	nvhost_job_put(job);
 	job = NULL;

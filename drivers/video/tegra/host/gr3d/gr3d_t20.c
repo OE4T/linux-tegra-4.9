@@ -397,6 +397,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 	p->save_slots = 1;
 	p->h.alloc = ctx3d_alloc_v0;
 	p->h.save_push = save_push_v0;
+	p->h.restore_push = nvhost_3dctx_restore_push;
 	p->h.save_service = ctx3d_save_service;
 	p->h.get = nvhost_3dctx_get;
 	p->h.put = nvhost_3dctx_put;

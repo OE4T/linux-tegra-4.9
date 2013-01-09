@@ -142,12 +142,7 @@ static void submit_ctxrestore(struct nvhost_job *job)
 			ctx->restore_incrs);
 
 	/* Send restore buffer to channel */
-	nvhost_cdma_push_gather(&ch->cdma,
-		host->memmgr,
-		ctx->restore,
-		0,
-		nvhost_opcode_gather(ctx->restore_size),
-		ctx->restore_phys);
+	ctx->hwctx.h->restore_push(&ctx->hwctx, &ch->cdma);
 
 	trace_nvhost_channel_context_restore(ch->dev->name, &ctx->hwctx);
 }

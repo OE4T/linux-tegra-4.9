@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,7 @@
 
 struct nvhost_hwctx;
 struct nvhost_channel;
+struct nvhost_cdma;
 struct kref;
 
 /* Functions used commonly by all 3D context switch modules */
@@ -48,6 +49,8 @@ void nvhost_3dctx_restore_direct(u32 *ptr, u32 start_reg, u32 count);
 void nvhost_3dctx_restore_indirect(u32 *ptr, u32 offset_reg,
 		u32 offset,	u32 data_reg, u32 count);
 void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *h, u32 *ptr);
+void nvhost_3dctx_restore_push(struct nvhost_hwctx *ctx,
+		struct nvhost_cdma *cdma);
 struct host1x_hwctx *nvhost_3dctx_alloc_common(
 		struct host1x_hwctx_handler *p,
 		struct nvhost_channel *ch, bool map_restore);

@@ -529,6 +529,18 @@ static void ctxmpe_save_push(struct nvhost_hwctx *nctx,
 			h->save_phys);
 }
 
+static void ctxmpe_restore_push(struct nvhost_hwctx *nctx,
+		struct nvhost_cdma *cdma)
+{
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	nvhost_cdma_push_gather(cdma,
+		ctx->hwctx.memmgr,
+		ctx->restore,
+		0,
+		nvhost_opcode_gather(ctx->restore_size),
+		ctx->restore_phys);
+}
+
 static void ctxmpe_save_service(struct nvhost_hwctx *nctx)
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
@@ -594,6 +606,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 	p->save_slots = 1;
 	p->h.alloc = ctxmpe_alloc;
 	p->h.save_push = ctxmpe_save_push;
+	p->h.restore_push = ctxmpe_restore_push;
 	p->h.save_service = ctxmpe_save_service;
 	p->h.get = ctxmpe_get;
 	p->h.put = ctxmpe_put;

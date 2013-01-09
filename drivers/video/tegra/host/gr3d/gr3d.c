@@ -125,6 +125,18 @@ fail_alloc:
 	return NULL;
 }
 
+void nvhost_3dctx_restore_push(struct nvhost_hwctx *nctx,
+		struct nvhost_cdma *cdma)
+{
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	nvhost_cdma_push_gather(cdma,
+		ctx->hwctx.memmgr,
+		ctx->restore,
+		0,
+		nvhost_opcode_gather(ctx->restore_size),
+		ctx->restore_phys);
+}
+
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx)
 {
 	kref_get(&ctx->ref);

@@ -46,6 +46,8 @@ struct nvhost_hwctx_handler {
 	void (*put) (struct nvhost_hwctx *ctx);
 	void (*save_push) (struct nvhost_hwctx *ctx,
 			struct nvhost_cdma *cdma);
+	void (*restore_push) (struct nvhost_hwctx *ctx,
+			struct nvhost_cdma *cdma);
 	void (*save_service) (struct nvhost_hwctx *ctx);
 	void *priv;
 };

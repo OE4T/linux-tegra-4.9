@@ -138,12 +138,12 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 			nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_op_done_v(),
-				p->syncpt));
+				p->h.syncpt));
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1),
-			nvhost_class_host_wait_syncpt_base(p->syncpt,
-							p->waitbase, 1));
+			nvhost_class_host_wait_syncpt_base(p->h.syncpt,
+							p->h.waitbase, 1));
 	/* back to 3d */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
@@ -233,23 +233,23 @@ static void save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 	ptr += RESTORE_END_SIZE;
 	/* op_done syncpt incr to flush FDC */
 	ptr[1] = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
+		host1x_uclass_incr_syncpt_cond_op_done_v(), p->h.syncpt);
 	/* host wait for that syncpt incr, and advance the wait base */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 			host1x_uclass_wait_syncpt_base_r(),
 			nvhost_mask2(
 				host1x_uclass_wait_syncpt_base_r(),
 				host1x_uclass_incr_syncpt_base_r()));
-	ptr[3] = nvhost_class_host_wait_syncpt_base(p->syncpt,
-			p->waitbase, p->save_incrs - 1);
-	ptr[4] = nvhost_class_host_incr_syncpt_base(p->waitbase,
+	ptr[3] = nvhost_class_host_wait_syncpt_base(p->h.syncpt,
+			p->h.waitbase, p->save_incrs - 1);
+	ptr[4] = nvhost_class_host_incr_syncpt_base(p->h.waitbase,
 			p->save_incrs);
 	/* set class back to 3d */
 	ptr[5] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* send reg reads back to host */
 	ptr[6] = nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 0);
 	/* final syncpt increment to release waiters */
-	ptr[7] = nvhost_opcode_imm(0, p->syncpt);
+	ptr[7] = nvhost_opcode_imm(0, p->h.syncpt);
 }
 
 static void setup_save_regs(struct save_info *info,
@@ -394,7 +394,7 @@ static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 	p->save_size = info.save_count + SAVE_END_V1_SIZE;
 	p->restore_size = info.restore_count + RESTORE_END_SIZE;
 	p->save_incrs = info.save_incrs;
-	p->save_thresh = p->save_incrs;
+	p->h.save_thresh = p->save_incrs;
 	p->restore_incrs = info.restore_incrs;
 }
 
@@ -426,8 +426,8 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 
 	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
-	p->syncpt = syncpt;
-	p->waitbase = waitbase;
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);
 

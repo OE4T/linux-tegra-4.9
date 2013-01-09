@@ -154,16 +154,16 @@ static void save_begin_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	ptr[1] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			h->syncpt); /*  incr 1 */
+			h->h.syncpt); /*  incr 1 */
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1);
-	ptr[3] = nvhost_class_host_wait_syncpt_base(h->syncpt,
-						h->waitbase, 1);
+	ptr[3] = nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+						h->h.waitbase, 1);
 	/* host: signal context read thread to start reading */
 	ptr[4] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_immediate_v(),
-			h->syncpt); /* incr 2 */
+			h->h.syncpt); /* incr 2 */
 }
 
 static void save_direct_v0(u32 *ptr, u32 start_reg, u32 count)
@@ -193,11 +193,11 @@ static void save_end_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 {
 	/* Wait for context read service to finish (cpu incr 3) */
 	ptr[0] = nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1);
-	ptr[1] = nvhost_class_host_wait_syncpt_base(h->syncpt,
-			h->waitbase, h->save_incrs);
+	ptr[1] = nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+			h->h.waitbase, h->save_incrs);
 	/* Advance syncpoint base */
 	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1);
-	ptr[3] = nvhost_class_host_incr_syncpt_base(h->waitbase,
+	ptr[3] = nvhost_class_host_incr_syncpt_base(h->h.waitbase,
 			h->save_incrs);
 	/* set class back to the unit */
 	ptr[4] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
@@ -320,7 +320,7 @@ static void setup_save(struct host1x_hwctx_handler *h, u32 *ptr)
 	h->save_size = info.save_count + SAVE_END_V0_SIZE;
 	h->restore_size = info.restore_count + RESTORE_END_SIZE;
 	h->save_incrs = info.save_incrs;
-	h->save_thresh = h->save_incrs - SAVE_THRESH_OFFSET;
+	h->h.save_thresh = h->save_incrs - SAVE_THRESH_OFFSET;
 	h->restore_incrs = info.restore_incrs;
 }
 
@@ -354,7 +354,7 @@ static void ctx3d_save_service(struct nvhost_hwctx *nctx)
 
 	wmb();
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(nctx->channel->dev)->syncpt,
-			host1x_hwctx_handler(ctx)->syncpt);
+			ctx->hwctx.h->syncpt);
 }
 
 struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
@@ -370,8 +370,8 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 		return NULL;
 	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
-	p->syncpt = syncpt;
-	p->waitbase = waitbase;
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);
 
@@ -435,11 +435,11 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_op_done_v(),
-				h->syncpt),
+				h->h.syncpt),
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 				host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(h->syncpt,
-				h->waitbase, 1),
+		nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+				h->h.waitbase, 1),
 		/*  Tell 3D to send register value to FIFO */
 		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
 		nvhost_class_host_indoff_reg_read(
@@ -449,17 +449,17 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 		/*  Increment syncpt to indicate that FIFO can be read */
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_immediate_v(),
-				h->syncpt),
+				h->h.syncpt),
 		/*  Wait for value to be read from FIFO */
 		nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(h->syncpt,
-				h->waitbase, 3),
+		nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+				h->h.waitbase, 3),
 		/*  Indicate submit complete */
 		nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1),
-		nvhost_class_host_incr_syncpt_base(h->waitbase, 4),
+		nvhost_class_host_incr_syncpt_base(h->h.waitbase, 4),
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_immediate_v(),
-				h->syncpt),
+				h->h.syncpt),
 	};
 
 	mem = nvhost_memmgr_alloc(memmgr, sizeof(opcodes),
@@ -485,7 +485,7 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 		goto done;
 	}
 
-	job->syncpt_id = h->syncpt;
+	job->syncpt_id = h->h.syncpt;
 	job->syncpt_incrs = syncpt_incrs;
 	job->serialize = 1;
 	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
@@ -504,7 +504,7 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 
 	/* Wait for FIFO to be ready */
 	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			h->syncpt, job->syncpt_end - 2,
+			h->h.syncpt, job->syncpt_end - 2,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
 			read_waiter,
 			&ref);
@@ -512,8 +512,8 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_is_expired(&nvhost_get_host(dev)->syncpt,
-				h->syncpt, job->syncpt_end - 2));
-	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->syncpt,
+				h->h.syncpt, job->syncpt_end - 2));
+	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->h.syncpt,
 			ref);
 
 	/* Read the register value from FIFO */
@@ -521,7 +521,7 @@ int nvhost_gr3d_t20_read_reg(struct platform_device *dev,
 
 	/* Indicate we've read the value */
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(dev)->syncpt,
-			h->syncpt);
+			h->h.syncpt);
 
 	nvhost_job_put(job);
 	job = NULL;

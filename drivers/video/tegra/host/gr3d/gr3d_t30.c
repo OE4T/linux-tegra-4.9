@@ -118,12 +118,12 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
 			nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_op_done_v(),
-				p->syncpt));
+				p->h.syncpt));
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1),
-			nvhost_class_host_wait_syncpt_base(p->syncpt,
-							p->waitbase, 1));
+			nvhost_class_host_wait_syncpt_base(p->h.syncpt,
+							p->h.waitbase, 1));
 	/* back to 3d */
 	nvhost_cdma_push(cdma,
 			nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
@@ -217,23 +217,24 @@ static void save_end_v1(struct host1x_hwctx_handler *p, u32 *ptr)
 			(1 << 2) - 1);
 	/* op_done syncpt incr to flush FDC */
 	ptr[2] = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
+			host1x_uclass_incr_syncpt_cond_op_done_v(),
+			p->h.syncpt);
 	/* host wait for that syncpt incr, and advance the wait base */
 	ptr[3] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 			host1x_uclass_wait_syncpt_base_r(),
 			nvhost_mask2(
 				host1x_uclass_wait_syncpt_base_r(),
 				host1x_uclass_incr_syncpt_base_r()));
-	ptr[4] = nvhost_class_host_wait_syncpt_base(p->syncpt,
-				p->waitbase, p->save_incrs - 1);
-	ptr[5] = nvhost_class_host_incr_syncpt_base(p->waitbase,
+	ptr[4] = nvhost_class_host_wait_syncpt_base(p->h.syncpt,
+				p->h.waitbase, p->save_incrs - 1);
+	ptr[5] = nvhost_class_host_incr_syncpt_base(p->h.waitbase,
 			p->save_incrs);
 	/* set class back to 3d */
 	ptr[6] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
 	/* send reg reads back to host */
 	ptr[7] = nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 0);
 	/* final syncpt increment to release waiters */
-	ptr[8] = nvhost_opcode_imm(0, p->syncpt);
+	ptr[8] = nvhost_opcode_imm(0, p->h.syncpt);
 }
 
 /*** save ***/
@@ -375,7 +376,7 @@ static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 	p->save_size = info.save_count + save_end_size;
 	p->restore_size = info.restore_count + RESTORE_END_SIZE;
 	p->save_incrs = info.save_incrs;
-	p->save_thresh = p->save_incrs - SAVE_THRESH_OFFSET;
+	p->h.save_thresh = p->save_incrs - SAVE_THRESH_OFFSET;
 	p->restore_incrs = info.restore_incrs;
 }
 
@@ -408,8 +409,8 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 
 	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
-	p->syncpt = syncpt;
-	p->waitbase = waitbase;
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);
 
@@ -488,11 +489,11 @@ int nvhost_gr3d_t30_read_reg(
 		/* Finalize with syncpt increment */
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 				host1x_uclass_incr_syncpt_base_r(), 1),
-		nvhost_class_host_incr_syncpt_base(h->waitbase,
+		nvhost_class_host_incr_syncpt_base(h->h.waitbase,
 				1),
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_immediate_v(),
-				h->syncpt),
+				h->h.syncpt),
 	};
 
 	/* 12 slots for gather, and one slot for storing the result value */
@@ -529,7 +530,7 @@ int nvhost_gr3d_t30_read_reg(
 		goto done;
 	}
 
-	job->syncpt_id = h->syncpt;
+	job->syncpt_id = h->h.syncpt;
 	job->syncpt_incrs = syncpt_incrs;
 	job->serialize = 1;
 	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
@@ -548,7 +549,7 @@ int nvhost_gr3d_t30_read_reg(
 
 	/* Wait for read to be ready */
 	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			h->syncpt, job->syncpt_end,
+			h->h.syncpt, job->syncpt_end,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
 			read_waiter,
 			&ref);
@@ -556,10 +557,10 @@ int nvhost_gr3d_t30_read_reg(
 	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_is_expired(&nvhost_get_host(dev)->syncpt,
-				h->syncpt, job->syncpt_end));
+				h->h.syncpt, job->syncpt_end));
 	nvhost_job_put(job);
 	job = NULL;
-	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->syncpt,
+	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->h.syncpt,
 			ref);
 
 	*value = *mem_ptr;

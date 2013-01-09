@@ -37,6 +37,12 @@ struct nvhost_hwctx {
 	bool valid;
 	bool has_timedout;
 	struct mem_mgr *memmgr;
+
+	u32 save_incrs;
+	u32 save_thresh;
+	u32 save_slots;
+
+	u32 restore_incrs;
 };
 
 struct nvhost_hwctx_handler {
@@ -49,6 +55,10 @@ struct nvhost_hwctx_handler {
 	void (*restore_push) (struct nvhost_hwctx *ctx,
 			struct nvhost_cdma *cdma);
 	void (*save_service) (struct nvhost_hwctx *ctx);
+
+	u32 syncpt;
+	u32 waitbase;
+	u32 save_thresh;
 	void *priv;
 };
 

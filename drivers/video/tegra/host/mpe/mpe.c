@@ -152,7 +152,7 @@ static void restore_begin(struct host1x_hwctx_handler *h, u32 *ptr)
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_incr_syncpt_base_r(), 1);
 	/* increment sync point base */
-	ptr[1] = nvhost_class_host_incr_syncpt_base(h->waitbase, 1);
+	ptr[1] = nvhost_class_host_incr_syncpt_base(h->h.waitbase, 1);
 	/* set class to MPE */
 	ptr[2] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0);
 }
@@ -171,7 +171,7 @@ static void restore_end(struct host1x_hwctx_handler *h, u32 *ptr)
 	/* syncpt increment to track restore gather. */
 	ptr[0] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			h->syncpt);
+			h->h.syncpt);
 }
 #define RESTORE_END_SIZE 1
 
@@ -229,15 +229,16 @@ static void save_begin(struct host1x_hwctx_handler *h, u32 *ptr)
 	/* MPE: when done, increment syncpt to base+1 */
 	ptr[0] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0);
 	ptr[1] = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(), h->syncpt);
+		host1x_uclass_incr_syncpt_cond_op_done_v(), h->h.syncpt);
 	/* host: wait for syncpt base+1 */
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1);
-	ptr[3] = nvhost_class_host_wait_syncpt_base(h->syncpt, h->waitbase, 1);
+	ptr[3] = nvhost_class_host_wait_syncpt_base(
+			h->h.syncpt, h->h.waitbase, 1);
 	/* host: signal context read thread to start reading */
 	ptr[4] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_immediate_v(),
-			h->syncpt);
+			h->h.syncpt);
 }
 #define SAVE_BEGIN_SIZE 5
 
@@ -280,10 +281,11 @@ static void save_end(struct host1x_hwctx_handler *h, u32 *ptr)
 	/* Wait for context read service to finish (cpu incr 3) */
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_wait_syncpt_base_r(), 1);
-	ptr[1] = nvhost_class_host_wait_syncpt_base(h->syncpt, h->waitbase, 3);
+	ptr[1] = nvhost_class_host_wait_syncpt_base(
+			h->h.syncpt, h->h.waitbase, 3);
 	/* Advance syncpoint base */
 	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1);
-	ptr[3] = nvhost_class_host_incr_syncpt_base(h->waitbase, 3);
+	ptr[3] = nvhost_class_host_incr_syncpt_base(h->h.waitbase, 3);
 	/* set class back to the unit */
 	ptr[4] = nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0);
 }
@@ -474,11 +476,11 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.h = &p->h;
 	ctx->hwctx.channel = ch;
 	ctx->hwctx.valid = false;
-	ctx->save_incrs = 3;
-	ctx->save_thresh = 2;
-	ctx->save_slots = p->save_slots;
+	ctx->hwctx.save_incrs = 3;
+	ctx->hwctx.save_thresh = 2;
+	ctx->hwctx.save_slots = p->save_slots;
 	ctx->restore_size = restore_size;
-	ctx->restore_incrs = 1;
+	ctx->hwctx.restore_incrs = 1;
 
 	setup_restore(p, ctx->restore_virt);
 
@@ -564,7 +566,7 @@ static void ctxmpe_save_service(struct nvhost_hwctx *nctx)
 
 	wmb();
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(nctx->channel->dev)->syncpt,
-			h->syncpt);
+			h->h.syncpt);
 }
 
 struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
@@ -580,8 +582,8 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 	memmgr = nvhost_get_host(ch->dev)->memmgr;
 
-	p->syncpt = syncpt;
-	p->waitbase = waitbase;
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);
 
@@ -728,11 +730,11 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 		nvhost_opcode_setclass(NV_VIDEO_ENCODE_MPEG_CLASS_ID, 0, 0),
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_op_done_v(),
-				h->syncpt),
+				h->h.syncpt),
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 				host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(h->syncpt,
-				h->waitbase, 1),
+		nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+				h->h.waitbase, 1),
 		/*  Tell MPE to send register value to FIFO */
 		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
 		nvhost_class_host_indoff_reg_read(
@@ -742,17 +744,17 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 		/*  Increment syncpt to indicate that FIFO can be read */
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_immediate_v(),
-				h->syncpt),
+				h->h.syncpt),
 		/*  Wait for value to be read from FIFO */
 		nvhost_opcode_nonincr(host1x_uclass_wait_syncpt_base_r(), 1),
-		nvhost_class_host_wait_syncpt_base(h->syncpt,
-				h->waitbase, 3),
+		nvhost_class_host_wait_syncpt_base(h->h.syncpt,
+				h->h.waitbase, 3),
 		/*  Indicate submit complete */
 		nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_base_r(), 1),
-		nvhost_class_host_incr_syncpt_base(h->waitbase, 4),
+		nvhost_class_host_incr_syncpt_base(h->h.waitbase, 4),
 		nvhost_opcode_imm_incr_syncpt(
 				host1x_uclass_incr_syncpt_cond_immediate_v(),
-				h->syncpt),
+				h->h.syncpt),
 	};
 
 	mem = nvhost_memmgr_alloc(memmgr, sizeof(opcodes),
@@ -778,7 +780,7 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 		goto done;
 	}
 
-	job->syncpt_id = h->syncpt;
+	job->syncpt_id = h->h.syncpt;
 	job->syncpt_incrs = syncpt_incrs;
 	job->serialize = 1;
 	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
@@ -797,7 +799,7 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 
 	/* Wait for FIFO to be ready */
 	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			h->syncpt, job->syncpt_end - 2,
+			h->h.syncpt, job->syncpt_end - 2,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
 			read_waiter,
 			&ref);
@@ -805,8 +807,8 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_is_expired(&nvhost_get_host(dev)->syncpt,
-				h->syncpt, job->syncpt_end - 2));
-	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->syncpt,
+				h->h.syncpt, job->syncpt_end - 2));
+	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->h.syncpt,
 			ref);
 
 	/* Read the register value from FIFO */
@@ -814,7 +816,7 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 
 	/* Indicate we've read the value */
 	nvhost_syncpt_cpu_incr(&nvhost_get_host(dev)->syncpt,
-			h->syncpt);
+			h->h.syncpt);
 
 	nvhost_job_put(job);
 	job = NULL;

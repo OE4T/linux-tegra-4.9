@@ -29,7 +29,6 @@
 #include "nvhost_memmgr.h"
 
 #include "host1x_cdma.h"
-#include "host1x_hwctx.h"
 
 static inline u32 host1x_channel_dmactrl(int stop, int get_rst, int init_get)
 {

@@ -48,7 +48,7 @@ void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 	ptr[0] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_incr_syncpt_base_r(), 1);
 	/* increment sync point base */
-	ptr[1] = nvhost_class_host_incr_syncpt_base(p->waitbase,
+	ptr[1] = nvhost_class_host_incr_syncpt_base(p->h.waitbase,
 			p->restore_incrs);
 	/* set class to 3D */
 	ptr[2] = nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0);
@@ -72,7 +72,7 @@ void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	/* syncpt increment to track restore gather. */
 	ptr[0] = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(), p->syncpt);
+		host1x_uclass_incr_syncpt_cond_op_done_v(), p->h.syncpt);
 }
 
 /*** ctx3d ***/
@@ -107,12 +107,12 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->hwctx.h = &p->h;
 	ctx->hwctx.channel = ch;
 	ctx->hwctx.valid = false;
-	ctx->save_incrs = p->save_incrs;
-	ctx->save_thresh = p->save_thresh;
-	ctx->save_slots = p->save_slots;
+	ctx->hwctx.save_incrs = p->save_incrs;
+	ctx->hwctx.save_thresh = p->h.save_thresh;
+	ctx->hwctx.save_slots = p->save_slots;
 
 	ctx->restore_size = p->restore_size;
-	ctx->restore_incrs = p->restore_incrs;
+	ctx->hwctx.restore_incrs = p->restore_incrs;
 	return ctx;
 
 fail_pin:

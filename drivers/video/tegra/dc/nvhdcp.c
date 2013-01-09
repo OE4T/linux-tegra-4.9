@@ -473,11 +473,16 @@ static int verify_ksv(u64 k)
 static int get_nvhdcp_state(struct tegra_nvhdcp *nvhdcp,
 			struct tegra_nvhdcp_packet *pkt)
 {
+	int	i;
+
 	mutex_lock(&nvhdcp->lock);
 	if (nvhdcp->state != STATE_LINK_VERIFY) {
 		memset(pkt, 0, sizeof *pkt);
 		pkt->packet_results = TEGRA_NVHDCP_RESULT_LINK_FAILED;
 	} else {
+		pkt->num_bksv_list = nvhdcp->num_bksv_list;
+		for (i = 0; i < pkt->num_bksv_list; i++)
+			pkt->bksv_list[i] = nvhdcp->bksv_list[i];
 		pkt->packet_results = TEGRA_NVHDCP_RESULT_SUCCESS;
 	}
 	mutex_unlock(&nvhdcp->lock);

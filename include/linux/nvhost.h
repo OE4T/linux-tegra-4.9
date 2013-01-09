@@ -37,6 +37,7 @@ struct nvhost_device_power_attr;
 #define NVHOST_MODULE_MAX_SYNCPTS		8
 #define NVHOST_MODULE_MAX_WAITBASES		3
 #define NVHOST_MODULE_MAX_MODMUTEXES		5
+#define NVHOST_MODULE_MAX_IORESOURCE_MEM	3
 #define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
 #define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
 #define NVHOST_NAME_SIZE			24
@@ -89,7 +90,7 @@ struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
 	int		index;		/* Hardware channel number */
-	void __iomem	*aperture;	/* Iomem mapped to kernel */
+	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 	u32		waitbases[NVHOST_MODULE_MAX_WAITBASES];

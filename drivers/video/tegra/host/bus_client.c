@@ -69,7 +69,7 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
-	void __iomem *p = pdata->aperture + offset;
+	void __iomem *p = pdata->aperture[0] + offset;
 	int err;
 
 	/* verify offset */
@@ -95,7 +95,7 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	int err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
 
-	p = pdata->aperture + offset;
+	p = pdata->aperture[0] + offset;
 
 	/* verify offset */
 	err = validate_reg(ndev, offset, count);
@@ -913,19 +913,24 @@ int nvhost_client_device_suspend(struct platform_device *dev)
 
 int nvhost_client_device_get_resources(struct platform_device *dev)
 {
-	struct resource *r = NULL;
+	int i;
 	void __iomem *regs = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	r = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	if (!r)
-		goto fail;
+	for (i = 0; i < dev->num_resources; i++) {
+		struct resource *r = NULL;
 
-	regs = devm_request_and_ioremap(&dev->dev, r);
-	if (!regs)
-		goto fail;
+		r = platform_get_resource(dev, IORESOURCE_MEM, i);
+		/* We've run out of mem resources */
+		if (!r)
+			break;
 
-	pdata->aperture = regs;
+		regs = devm_request_and_ioremap(&dev->dev, r);
+		if (!regs)
+			goto fail;
+
+		pdata->aperture[i] = regs;
+	}
 
 	return 0;
 

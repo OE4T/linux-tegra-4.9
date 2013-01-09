@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -130,14 +130,14 @@ void nvhost_set_register_sets(unsigned int r)
 void nvhost_device_writel(struct platform_device *dev, u32 r, u32 v)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	writel(v, pdata->aperture + r);
+	writel(v, pdata->aperture[0] + r);
 }
 EXPORT_SYMBOL_GPL(nvhost_device_writel);
 
 u32 nvhost_device_readl(struct platform_device *dev, u32 r)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	return readl(pdata->aperture + r);
+	return readl(pdata->aperture[0] + r);
 }
 EXPORT_SYMBOL_GPL(nvhost_device_readl);
 

@@ -89,11 +89,6 @@ struct nvhost_waitchk {
 	__u32 thresh;
 };
 
-struct nvhost_syncpt_incr {
-	__u32 syncpt_id;
-	__u32 syncpt_incrs;
-};
-
 struct nvhost_gpfifo {
 	__u64 gpu_va; /* gpu va of gpfifo entry */
 	__u32 words; /* size of the entry, in words */
@@ -104,6 +99,11 @@ struct nvhost_gpfifo {
 struct nvhost_gpfifo_hw {
 	__u32 entry0; /* first word of gpfifo entry */
 	__u32 entry1; /* second word of gpfifo entry */
+};
+
+struct nvhost_syncpt_incr {
+	__u32 syncpt_id;
+	__u32 syncpt_incrs;
 };
 
 struct nvhost_get_param_args {
@@ -142,7 +142,7 @@ struct nvhost_fence {
 };
 
 struct nvhost_submit_gpfifo_args {
-	void *gpfifo;
+	struct nvhost_gpfifo *gpfifo;
 	__u32 num_entries;
 	struct nvhost_fence fence;
 	__u32 flags;
@@ -338,8 +338,8 @@ struct nvhost_set_ctxswitch_args {
 	_IOR(NVHOST_IOCTL_MAGIC, 12, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_SET_PRIORITY	\
 	_IOW(NVHOST_IOCTL_MAGIC, 13, struct nvhost_set_priority_args)
-#define NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR	\
-	_IOWR(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_module_regrdwr_args)
+#define	NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR	\
+	_IOW(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_module_regrdwr_args)
 #define NVHOST_IOCTL_CHANNEL_SUBMIT		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 15, struct nvhost_submit_args)
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT	\

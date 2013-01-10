@@ -79,7 +79,22 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_mm_setup_sw(struct gk20a *g)
+void gk20a_remove_mm_support(struct mm_gk20a *mm)
+{
+	struct gk20a *g = mm->g;
+	struct vm_gk20a *vm = &mm->bar1.vm;
+	struct inst_desc *inst_block = &mm->bar1.inst_block;
+	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+
+	nvhost_dbg_fn("");
+
+	mem_op().unpin(memmgr, inst_block->mem.ref,inst_block->mem.sgt);
+	mem_op().put(memmgr, inst_block->mem.ref);
+
+	vm->remove_support(vm);
+}
+
+int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	int i;
@@ -126,6 +141,7 @@ static int gk20a_init_mm_setup_sw(struct gk20a *g)
 	gk20a_init_uncompressed_kind_map();
 	gk20a_init_kind_attr();
 
+	mm->remove_support = gk20a_remove_mm_support;
 	mm->sw_ready = true;
 
 	nvhost_dbg_fn("done");
@@ -261,14 +277,16 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa,
 		return alloc_gmmu_sysmem_pages(vm, order, pa, handle, sgt);
 }
 
-static void free_gmmu_pages(struct vm_gk20a *vm, void *handle, u32 order)
+static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+			    struct sg_table *sgt, u32 order)
 {
-
 	nvhost_dbg_fn("");
 
 #ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
 	if (tegra_split_mem_active()) {
 		struct mem_mgr *client = mem_mgr_from_vm(vm);
+		BUG_ON(sgt == NULL);
+		mem_op().unpin(client, handle, sgt);
 		mem_op().put(client, handle);
 	} else
 #endif
@@ -736,7 +754,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u32 gmmu_page_size = 0;
 	u64 map_offset = 0;
 	int attr, err = 0;
-	struct buffer_attrs bfr;
+	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
 
 	/* query bfr attributes: size, align, heap, kind */
@@ -779,6 +797,10 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_err(d, "failure setting up kind and compression");
 		goto clean_up;
 	}
+
+	/* bar1 and pmu vm don't need ctag */
+	if (!vm->enable_ctag)
+		bfr.ctag_lines = 0;
 
 	/* allocate compression resources if needed */
 	if (bfr.ctag_lines) {
@@ -1041,7 +1063,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 			mem_wr32(pde, 1, gmmu_pde_aperture_small_invalid_f());
 			vm->pdes.dirty = true;
 			/* free page table */
-			free_gmmu_pages(vm, pte->ref,
+			free_gmmu_pages(vm, pte->ref, pte->sgt,
 					vm->mm->page_table_sizing[page_size_idx].order);
 			pte->ref = NULL;
 		}
@@ -1085,8 +1107,9 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	vm->free_va(vm, mapped_buffer->addr, mapped_buffer->size,
 		    mapped_buffer->page_size);
 
-	comp_tags->free(comp_tags,
-		mapped_buffer->ctag_offset, mapped_buffer->ctag_lines);
+	if (mapped_buffer->ctag_offset)
+		comp_tags->free(comp_tags,
+			mapped_buffer->ctag_offset, mapped_buffer->ctag_lines);
 
 	err = update_gmmu_ptes(vm,
 			       gmmu_page_size_idx(mapped_buffer->page_size),
@@ -1143,7 +1166,7 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	}
 
 	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.kv);
-	free_gmmu_pages(vm, vm->pdes.ref, 0);
+	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 	kfree(vm->pdes.ptes);
 	nvhost_allocator_destroy(&vm->vma);
 }
@@ -1195,7 +1218,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	}
 	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
 	if (err) {
-		free_gmmu_pages(vm, vm->pdes.ref, 0);
+		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		return -ENOMEM;
 	}
 	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%x",
@@ -1217,6 +1240,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->unmap_user = gk20a_vm_unmap_user;
 	vm->remove_support = gk20a_vm_remove_support;
 
+	vm->enable_ctag = true;
+
 	return 0;
 }
 
@@ -1228,6 +1253,9 @@ static int gk20a_as_release_share(struct nvhost_as_share *as_share)
 	nvhost_dbg_fn("");
 
 	gk20a_vm_remove_support(vm);
+
+	as_share->priv = NULL;
+	kfree(vm);
 
 	return 0;
 }
@@ -1359,7 +1387,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
 	if (err) {
-		free_gmmu_pages(vm, vm->pdes.ref, 0);
+		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
 	nvhost_dbg(dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%x",
@@ -1486,7 +1514,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
 	if (err) {
-		free_gmmu_pages(vm, vm->pdes.ref, 0);
+		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
 	nvhost_dbg_info("pmu pdes phys @ 0x%x",
@@ -1662,6 +1690,14 @@ void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm)
 	u32 addr_lo = u64_lo32(vm->pdes.phys) >> 12;
 	u32 data;
 	s32 retry = 200;
+
+	/* pagetables are considered sw states which are preserved after
+	   prepare_poweroff. When gk20a deinit releases those pagetables,
+	   common code in vm unmap path calls tlb invalidate that touches
+	   hw. Use the power_on flag to skip tlb invalidation when gpu
+	   power is turned off */
+	if (!g->power_on)
+		return;
 
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());

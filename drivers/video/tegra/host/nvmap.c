@@ -55,6 +55,8 @@ struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
 
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 {
+	if (!handle)
+		return;
 	_nvmap_free((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle);
 }

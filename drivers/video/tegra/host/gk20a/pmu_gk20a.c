@@ -917,8 +917,9 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-void gk20a_remove_pmu_support(struct gk20a *g, struct pmu_gk20a *pmu)
+void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
+	struct gk20a *g = pmu->g;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
@@ -931,6 +932,7 @@ void gk20a_remove_pmu_support(struct gk20a *g, struct pmu_gk20a *pmu)
 
 	release_firmware(pmu->ucode_fw);
 
+	mem_op().unpin(memmgr, inst_block->mem.ref,inst_block->mem.sgt);
 	mem_op().put(memmgr, inst_block->mem.ref);
 	vm->remove_support(vm);
 
@@ -941,6 +943,8 @@ void gk20a_remove_pmu_support(struct gk20a *g, struct pmu_gk20a *pmu)
 	nvhost_allocator_destroy(&pmu->dmem);
 	del_timer(&pmu->elpg_timer);
 
+	/* this function is also called by pmu_destory outside gk20a deinit that
+	   releases gk20a struct so fill up with zeros here. */
 	memset(pmu, 0, sizeof(struct pmu_gk20a));
 }
 
@@ -2404,7 +2408,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	pmu_enable_hw(pmu, false);
 
-	pmu->remove_support(g, pmu);
+	pmu->remove_support(pmu);
 
 	nvhost_dbg_fn("done");
 	return 0;

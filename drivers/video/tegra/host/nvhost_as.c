@@ -46,7 +46,11 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 		return -ENOENT;
 	}
 
-	nvhost_module_busy(ch->dev);
+	ch = nvhost_getchannel(ch);
+	if (!ch) {
+		nvhost_dbg_fn("fail to get channel!");
+		return -ENOMEM;
+	}
 
 	err = nvhost_as_alloc_share(ch, &as_share, true /*fd-attached path*/);
 	if (err) {
@@ -57,7 +61,6 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 	filp->private_data = as_share;
 
 clean_up:
-	nvhost_module_idle(ch->dev);
 	return 0;
 }
 
@@ -74,6 +77,8 @@ int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 	nvhost_module_busy(ch->dev);
 	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
 	nvhost_module_idle(ch->dev);
+
+	nvhost_putchannel(ch, NULL);
 
 	return ret;
 }

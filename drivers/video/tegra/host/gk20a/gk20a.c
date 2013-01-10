@@ -514,8 +514,17 @@ static void gk20a_remove_support(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
+	/* pmu support should already be removed when driver turns off
+	   gpu power rail in prepapre_poweroff */
+
+	if (g->gr.remove_support)
+		g->gr.remove_support(&g->gr);
+
 	if (g->fifo.remove_support)
 		g->fifo.remove_support(&g->fifo);
+
+	if (g->mm.remove_support)
+		g->mm.remove_support(&g->mm);
 
 	if (g->sim.remove_support)
 		g->sim.remove_support(&g->sim);
@@ -567,7 +576,13 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	/* hw init is deferred after turning on gpu power rail */
+	/* nvhost_as alloc_share can be called before gk20a is powered on.
+	   It requires mm sw states configured so init mm sw early here. */
+	err = gk20a_init_mm_setup_sw(g);
+	if (err)
+		goto fail;
+
+	/* other inits are deferred until gpu is powered up. */
 
 	g->remove_support = gk20a_remove_support;
 	return 0;
@@ -579,17 +594,32 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 
 void nvhost_gk20a_init(struct platform_device *dev)
 {
+	struct gk20a *gk20a;
 	nvhost_dbg_fn("");
+
+	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
+	if (!gk20a) {
+		dev_err(&dev->dev, "couldn't allocate gk20a support");
+		return;
+	}
+
+	set_gk20a(dev, gk20a);
+	gk20a->dev = dev;
+	gk20a->host = nvhost_get_host(dev);
+
+	nvhost_init_gk20a_support(dev);
+
+	return;
 }
 
 static void nvhost_gk20a_deinit(struct platform_device *dev)
 {
-
 	struct gk20a *g = get_gk20a(dev);
 	nvhost_dbg_fn("");
 
 	if (g && g->remove_support)
 		g->remove_support(dev);
+
 	set_gk20a(dev, 0);
 	kfree(g);
 }
@@ -691,6 +721,7 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	ret |= gk20a_pmu_destroy(g);
 	ret |= gk20a_mm_suspend(g);
 
+	g->power_on = false;
 	writel(0x1, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
 
 	return ret;
@@ -705,6 +736,7 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	/* remove gk20a clamp in t124 soc register */
 	writel(0, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
+	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_disabled_f());
@@ -746,7 +778,7 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 static int __devinit gk20a_probe(struct platform_device *dev)
 {
 	int err;
-	struct gk20a *gk20a;
+
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
@@ -781,28 +813,7 @@ static int __devinit gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 
-	nvhost_dbg_fn("allocating gk20a support");
-	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
-	if (!gk20a) {
-		dev_err(&dev->dev, "couldn't allocate gk20a support");
-		err = -ENOMEM;
-		goto fail;
-	}
-
-	set_gk20a(dev, gk20a);
-	gk20a->dev = dev;
-	gk20a->host = nvhost_get_host(dev);
-
-	err = nvhost_init_gk20a_support(dev);
-
-	if (err)
-		goto fail;
-
 	return 0;
-
- fail:
-	dev_err(&dev->dev, "failed: %d", err);
-	return err;
 }
 
 static int __exit gk20a_remove(struct platform_device *dev)

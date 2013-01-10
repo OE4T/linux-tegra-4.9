@@ -1610,6 +1610,8 @@ static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
 		mem_op().put(memmgr, gr->global_ctx_buffer[i].ref);
 		memset(&gr->global_ctx_buffer[i], 0, sizeof(struct mem_desc));
 	}
+
+	nvhost_dbg_fn("done");
 }
 
 static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
@@ -1970,8 +1972,9 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 	return 0;
 }
 
-static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
+static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
+	struct gk20a *g = gr->g;
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 
 	nvhost_dbg_fn("");
@@ -1980,18 +1983,33 @@ static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
 
 	mem_op().unpin(memmgr, gr->mmu_wr_mem.mem.ref, gr->mmu_wr_mem.mem.sgt);
 	mem_op().unpin(memmgr, gr->mmu_rd_mem.mem.ref, gr->mmu_rd_mem.mem.sgt);
-	mem_op().unpin(memmgr, gr->compbit_store.mem.ref,
-		       gr->compbit_store.mem.sgt);
+	mem_op().unpin(memmgr, gr->compbit_store.mem.ref, gr->compbit_store.mem.sgt);
 	mem_op().put(memmgr, gr->mmu_wr_mem.mem.ref);
 	mem_op().put(memmgr, gr->mmu_rd_mem.mem.ref);
 	mem_op().put(memmgr, gr->compbit_store.mem.ref);
+	memset(&gr->mmu_wr_mem, 0, sizeof(struct mem_desc));
+	memset(&gr->mmu_rd_mem, 0, sizeof(struct mem_desc));
+	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
+
 	kfree(gr->gpc_tpc_count);
+	kfree(gr->gpc_zcb_count);
 	kfree(gr->gpc_ppc_count);
 	kfree(gr->pes_tpc_count[0]);
 	kfree(gr->pes_tpc_count[1]);
 	kfree(gr->pes_tpc_mask[0]);
 	kfree(gr->pes_tpc_mask[1]);
 	kfree(gr->gpc_skip_mask);
+	kfree(gr->map_tiles);
+	gr->gpc_tpc_count = NULL;
+	gr->gpc_zcb_count = NULL;
+	gr->gpc_ppc_count = NULL;
+	gr->pes_tpc_count[0] = NULL;
+	gr->pes_tpc_count[1] = NULL;
+	gr->pes_tpc_mask[0] = NULL;
+	gr->pes_tpc_mask[1] = NULL;
+	gr->gpc_skip_mask = NULL;
+	gr->map_tiles = NULL;
+
 	kfree(gr->ctx_vars.ucode.fecs.inst.l);
 	kfree(gr->ctx_vars.ucode.fecs.data.l);
 	kfree(gr->ctx_vars.ucode.gpccs.inst.l);
@@ -2009,20 +2027,10 @@ static void gk20a_remove_gr_support(struct gk20a *g, struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.ctxsw_regs.pm_gpc.l);
 	kfree(gr->ctx_vars.ctxsw_regs.pm_tpc.l);
 
-	memset(&gr->mmu_wr_mem, 0, sizeof(struct mem_desc));
-	memset(&gr->mmu_rd_mem, 0, sizeof(struct mem_desc));
-	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
-	gr->gpc_tpc_count = NULL;
-	gr->gpc_ppc_count = NULL;
-	gr->pes_tpc_count[0] = NULL;
-	gr->pes_tpc_count[1] = NULL;
-	gr->pes_tpc_mask[0] = NULL;
-	gr->pes_tpc_mask[1] = NULL;
-	gr->gpc_skip_mask = NULL;
+	kfree(gr->ctx_vars.local_golden_image);
+	gr->ctx_vars.local_golden_image = NULL;
 
 	nvhost_allocator_destroy(&gr->comp_tags);
-
-	/*tbd*/
 }
 
 static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
@@ -2511,6 +2519,8 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvhost_allocator_init(&gr->comp_tags, "comptag",
 			1, max_comptag_lines, 1);
+
+	return 0;
 
 clean_up:
 	mem_op().put(memmgr, gr->compbit_store.mem.ref);
@@ -3705,7 +3715,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 
 clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
-	gk20a_remove_gr_support(g, gr);
+	gk20a_remove_gr_support(gr);
 	return err;
 }
 

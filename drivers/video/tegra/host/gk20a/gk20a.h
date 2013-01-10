@@ -58,7 +58,7 @@ struct gk20a {
 	struct resource *bar1_mem;
 	void __iomem *bar1;
 
-	bool first_init;
+	bool power_on;
 	bool irq_requested;
 
 	struct clk_gk20a clk;

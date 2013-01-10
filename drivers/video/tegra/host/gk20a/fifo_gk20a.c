@@ -75,6 +75,7 @@ static int init_engine_info_gk20a(struct fifo_gk20a *f)
 			engine_enum = top_device_info_type_enum_v(table_entry2);
 		}
 
+		/* we only care about GR engine here */
 		if (entry == top_device_info_entry_enum_v() &&
 		    engine_enum == gr_info->dev_info_id) {
 			int pbdma_id;
@@ -115,9 +116,14 @@ static int init_engine_info_gk20a(struct fifo_gk20a *f)
 	return 0;
 }
 
-static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
+void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 {
-	struct mem_mgr *memmgr = mem_mgr_from_g(f->g);
+	struct gk20a *g = f->g;
+	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct fifo_engine_info_gk20a *engine_info;
+	struct fifo_runlist_info_gk20a *runlist;
+	u32 runlist_id;
+	u32 i;
 
 	nvhost_dbg_fn("");
 
@@ -128,27 +134,38 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 				f->channel[c].remove_support(f->channel+c);
 		}
 		kfree(f->channel);
-		f->channel = 0;
 	}
+
+	g->mm.bar1.vm.unmap(&g->mm.bar1.vm, f->userd.gpu_va);
 
 	mem_op().munmap(f->userd.mem.ref, f->userd.cpu_va);
 	mem_op().unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
 	mem_op().put(memmgr, f->userd.mem.ref);
-	memset(&f->userd, 0, sizeof(struct userd_desc));
 
+	engine_info = f->engine_info + ENGINE_GR_GK20A;
+	runlist_id = engine_info->runlist_id;
+	runlist = &f->runlist_info[runlist_id];
+
+	if (runlist->cur_buffer != MAX_RUNLIST_BUFFERS)
+		mem_op().unpin(memmgr,
+			runlist->mem[runlist->cur_buffer].ref,
+			runlist->mem[runlist->cur_buffer].sgt);
+
+	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
+		mem_op().put(memmgr, runlist->mem[i].ref);
+
+	kfree(runlist->active_channels);
+
+	kfree(f->runlist_info);
 	kfree(f->pbdma_map);
-	f->pbdma_map = NULL;
-
 	kfree(f->engine_info);
-	f->engine_info = NULL;
 }
 
-static int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
+int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct fifo_engine_info_gk20a *engine_info;
 	struct fifo_runlist_info_gk20a *runlist;
-	u32 engine_id;
 	u32 runlist_id;
 	u32 i;
 	u64 runlist_size;
@@ -161,51 +178,50 @@ static int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	if (!f->runlist_info)
 		goto clean_up;
 
-	for (engine_id = 0; engine_id < ENGINE_INVAL_GK20A; engine_id++) {
-		engine_info = f->engine_info + engine_id;
-		runlist_id = engine_info->runlist_id;
-		runlist = &f->runlist_info[runlist_id];
+	engine_info = f->engine_info + ENGINE_GR_GK20A;
+	runlist_id = engine_info->runlist_id;
+	runlist = &f->runlist_info[runlist_id];
 
-		runlist->active_channels =
-			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-				GFP_KERNEL);
-		if (!runlist->active_channels)
-			goto clean_up;
+	runlist->active_channels =
+		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
+			GFP_KERNEL);
+	if (!runlist->active_channels)
+		goto clean_up_runlist_info;
 
-		runlist_size  = ram_rl_entry_size_v() * f->num_channels;
-		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			runlist->mem[i].ref =
-				mem_op().alloc(memmgr, runlist_size,
-					    DEFAULT_ALLOC_ALIGNMENT,
-					    DEFAULT_ALLOC_FLAGS,
-					    0);
-			if (!runlist->mem[i].ref)
-				goto clean_up;
-			runlist->mem[i].size = runlist_size;
-		}
-		mutex_init(&runlist->mutex);
-		init_waitqueue_head(&runlist->runlist_wq);
+	runlist_size  = ram_rl_entry_size_v() * f->num_channels;
+	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
+		runlist->mem[i].ref =
+			mem_op().alloc(memmgr, runlist_size,
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
+		if (!runlist->mem[i].ref)
+			goto clean_up_runlist;
+		runlist->mem[i].size = runlist_size;
 	}
+	mutex_init(&runlist->mutex);
+	init_waitqueue_head(&runlist->runlist_wq);
 
+	/* None of buffers is pinned if this value doesn't change.
+	    Otherwise, one of them (cur_buffer) must have been pinned. */
+	runlist->cur_buffer = MAX_RUNLIST_BUFFERS;
+
+	nvhost_dbg_fn("done");
 	return 0;
 
-clean_up:
-	nvhost_dbg_fn("fail");
-	for (engine_id = 0; engine_id < ENGINE_INVAL_GK20A; engine_id++) {
-		engine_info = f->engine_info + engine_id;
-		runlist_id = engine_info->runlist_id;
-		runlist = &f->runlist_info[runlist_id];
+clean_up_runlist:
+	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
+		mem_op().put(memmgr, runlist->mem[i].ref);
 
-		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
-			mem_op().put(memmgr,
-				   runlist->mem[i].ref);
+	kfree(runlist->active_channels);
+	runlist->active_channels = NULL;
 
-		kfree(runlist->active_channels);
-	}
-
+clean_up_runlist_info:
 	kfree(f->runlist_info);
 	f->runlist_info = NULL;
 
+clean_up:
+	nvhost_dbg_fn("fail");
 	return -ENOMEM;
 }
 
@@ -798,7 +814,7 @@ clean_up:
 	if (ret != 0)
 		mem_op().unpin(memmgr, runlist->mem[new_buf].ref,
 			runlist->mem[new_buf].sgt);
-	else
+	else if (old_buf != -1)
 		mem_op().unpin(memmgr, runlist->mem[old_buf].ref,
 			runlist->mem[old_buf].sgt);
 

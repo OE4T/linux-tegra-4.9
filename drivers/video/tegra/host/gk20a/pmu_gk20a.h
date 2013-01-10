@@ -678,7 +678,7 @@ struct pmu_gk20a {
 
 	bool initialized;
 
-	void (*remove_support)(struct gk20a *g, struct pmu_gk20a *pmu);
+	void (*remove_support)(struct pmu_gk20a *pmu);
 	bool sw_ready;
 };
 

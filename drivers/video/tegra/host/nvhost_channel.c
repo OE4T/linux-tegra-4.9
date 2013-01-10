@@ -121,10 +121,8 @@ void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
 		channel_cdma_op().stop(&ch->cdma);
 		nvhost_cdma_deinit(&ch->cdma);
 
-#if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		if (pdata->deinit)
 			pdata->deinit(ch->dev);
-#endif
 	}
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);

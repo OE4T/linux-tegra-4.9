@@ -143,6 +143,8 @@ struct vm_gk20a {
 	u64 va_start;
 	u64 va_limit;
 
+	bool enable_ctag;
+
 	struct page_directory_gk20a pdes;
 
 	struct nvhost_allocator vma; /* page interval allocator */
@@ -178,6 +180,7 @@ struct gk20a;
 struct channel_gk20a;
 
 int gk20a_init_mm_support(struct gk20a *g);
+int gk20a_init_mm_setup_sw(struct gk20a *g);
 int gk20a_init_bar1_vm(struct mm_gk20a *mm);
 int gk20a_init_pmu_vm(struct mm_gk20a *mm);
 
@@ -214,6 +217,7 @@ struct mm_gk20a {
 		struct inst_desc inst_block;
 	} pmu;
 
+	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
 };
 

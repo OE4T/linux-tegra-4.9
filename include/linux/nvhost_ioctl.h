@@ -38,6 +38,8 @@
 #define NVHOST_PRIORITY_MEDIUM 100
 #define NVHOST_PRIORITY_HIGH 150
 
+#define NVHOST_TIMEOUT_FLAG_DISABLE_DUMP	0
+
 /* version 0 header (used with write() submit interface) */
 struct nvhost_submit_hdr {
 	__u32 syncpt_id;
@@ -132,6 +134,11 @@ struct nvhost_set_timeout_args {
 	__u32 timeout;
 };
 
+struct nvhost_set_timeout_ex_args {
+	__u32 timeout;
+	__u32 flags;
+};
+
 struct nvhost_set_priority_args {
 	__u32 priority;
 };
@@ -196,6 +203,8 @@ struct nvhost_submit_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 16, struct nvhost_get_param_arg)
 #define NVHOST_IOCTL_CHANNEL_GET_WAITBASE	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 17, struct nvhost_get_param_arg)
+#define NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 18, struct nvhost_set_timeout_ex_args)
 #define NVHOST_IOCTL_CHANNEL_GET_MODMUTEX	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 23, struct nvhost_get_param_arg)
 #define NVHOST_IOCTL_CHANNEL_LAST		\

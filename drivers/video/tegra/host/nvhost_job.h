@@ -89,6 +89,9 @@ struct nvhost_job {
 	/* Maximum time to wait for this job */
 	int timeout;
 
+	/* Do debug dump after timeout */
+	bool timeout_debug_dump;
+
 	/* Null kickoff prevents submit from being sent to hardware */
 	bool null_kickoff;
 

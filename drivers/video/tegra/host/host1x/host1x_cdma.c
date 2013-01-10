@@ -23,6 +23,7 @@
 #include "nvhost_acm.h"
 #include "nvhost_cdma.h"
 #include "nvhost_channel.h"
+#include "debug.h"
 #include "dev.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
@@ -454,7 +455,9 @@ static void cdma_timeout_handler(struct work_struct *work)
 	sp = &dev->syncpt;
 	ch = cdma_to_channel(cdma);
 
-	nvhost_debug_dump(cdma_to_dev(cdma));
+	if (nvhost_debug_force_timeout_dump ||
+		cdma->timeout.timeout_debug_dump)
+		nvhost_debug_dump(cdma_to_dev(cdma));
 
 	ret = mutex_trylock(&cdma->lock);
 	if (!ret) {

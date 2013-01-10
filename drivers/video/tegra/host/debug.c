@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2012 NVIDIA Corporation
+ * Copyright (C) 2011-2013 NVIDIA Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -35,6 +35,7 @@ unsigned int nvhost_debug_trace_cmdbuf;
 pid_t nvhost_debug_force_timeout_pid;
 u32 nvhost_debug_force_timeout_val;
 u32 nvhost_debug_force_timeout_channel;
+u32 nvhost_debug_force_timeout_dump;
 
 void nvhost_debug_output(struct output *o, const char* fmt, ...)
 {
@@ -524,6 +525,9 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&nvhost_debug_force_timeout_val);
 	debugfs_create_u32("force_timeout_channel", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_channel);
+	debugfs_create_u32("force_timeout_dump", S_IRUGO|S_IWUSR, de,
+			&nvhost_debug_force_timeout_dump);
+	nvhost_debug_force_timeout_dump = 0;
 
 	debugfs_create_file("3d_actmon_k", S_IRUGO, de,
 			master, &actmon_k_fops);

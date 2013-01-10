@@ -123,6 +123,7 @@ struct nvhost_channel_userctx {
 	u32 timeout;
 	u32 priority;
 	int clientid;
+	bool timeout_debug_dump;
 };
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
@@ -177,6 +178,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(ch->dev)->clientid);
 	priv->timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+	priv->timeout_debug_dump = true;
 
 	return 0;
 fail:
@@ -217,6 +219,7 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 	ctx->job->syncpt_incrs = ctx->hdr.syncpt_incrs;
 	ctx->job->priority = ctx->priority;
 	ctx->job->clientid = ctx->clientid;
+	ctx->job->timeout_debug_dump = ctx->timeout_debug_dump;
 
 	if (ctx->hdr.submit_version >= NVHOST_SUBMIT_VERSION_V2)
 		ctx->num_relocshifts = ctx->hdr.num_relocs;
@@ -486,6 +489,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		job->timeout = min(ctx->timeout, args->timeout);
 	else
 		job->timeout = ctx->timeout;
+
+	job->timeout_debug_dump = ctx->timeout_debug_dump;
 
 	err = nvhost_channel_submit(job);
 	if (err)
@@ -799,6 +804,16 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_SUBMIT:
 		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
+		priv->timeout = (u32)
+			((struct nvhost_set_timeout_ex_args *)buf)->timeout;
+		priv->timeout_debug_dump = !((u32)
+			((struct nvhost_set_timeout_ex_args *)buf)->flags &
+			(1 << NVHOST_TIMEOUT_FLAG_DISABLE_DUMP));
+		dev_dbg(&priv->ch->dev->dev,
+			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
+			__func__, priv->timeout, priv);
 		break;
 	default:
 		err = -ENOTTY;

@@ -169,6 +169,24 @@ struct nvhost_submit_args {
 	__u32 fence;		/* Return value */
 };
 
+struct nvhost_set_ctxswitch_args {
+	__u32 num_cmdbufs_save;
+	__u32 num_save_incrs;
+	struct nvhost_syncpt_incr *save_incrs;
+	__u32 *save_waitbases;
+	struct nvhost_cmdbuf *cmdbuf_save;
+	__u32 num_cmdbufs_restore;
+	__u32 num_restore_incrs;
+	struct nvhost_syncpt_incr *restore_incrs;
+	__u32 *restore_waitbases;
+	struct nvhost_cmdbuf *cmdbuf_restore;
+	__u32 num_relocs;
+	struct nvhost_reloc *relocs;
+	struct nvhost_reloc_shift *reloc_shifts;
+
+	__u32 pad;
+};
+
 #define NVHOST_IOCTL_CHANNEL_FLUSH		\
 	_IOR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS	\
@@ -207,8 +225,10 @@ struct nvhost_submit_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 18, struct nvhost_set_timeout_ex_args)
 #define NVHOST_IOCTL_CHANNEL_GET_MODMUTEX	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 23, struct nvhost_get_param_arg)
+#define NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 25, struct nvhost_set_ctxswitch_args)
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_GET_MODMUTEX)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {

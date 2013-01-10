@@ -414,6 +414,27 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	cdma->torndown = true;
 }
 
+static void cdma_timeout_release_mlocks(struct nvhost_cdma *cdma)
+{
+	struct nvhost_master *dev = cdma_to_dev(cdma);
+	struct nvhost_syncpt *syncpt = &dev->syncpt;
+	unsigned int chid = cdma_to_channel(cdma)->chid;
+	int i;
+
+	for (i = 0; i < nvhost_syncpt_nb_mlocks(syncpt); i++) {
+		unsigned int owner;
+		bool ch_own, cpu_own;
+		syncpt_op().mutex_owner(syncpt, i, &cpu_own, &ch_own, &owner);
+
+		if (!(ch_own && owner == chid))
+			continue;
+
+		syncpt_op().mutex_unlock(&dev->syncpt, i);
+		dev_dbg(&dev->dev->dev, "released mlock %d\n", i);
+	}
+
+}
+
 static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
@@ -427,6 +448,8 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	cmdproc_stop = readl(dev->sync_aperture + host1x_sync_cmdproc_stop_r());
 	cmdproc_stop &= ~(BIT(ch->chid));
 	writel(cmdproc_stop, dev->sync_aperture + host1x_sync_cmdproc_stop_r());
+
+	cdma_timeout_release_mlocks(cdma);
 
 	cdma->torndown = false;
 	cdma_timeout_restart(cdma, getptr);

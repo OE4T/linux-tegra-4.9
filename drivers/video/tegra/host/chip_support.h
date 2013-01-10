@@ -113,6 +113,10 @@ struct nvhost_syncpt_ops {
 			      unsigned int idx);
 	void (*mutex_unlock)(struct nvhost_syncpt *,
 			     unsigned int idx);
+	void (*mutex_owner)(struct nvhost_syncpt *,
+			    unsigned int idx,
+			    bool *cpu, bool *ch,
+			    unsigned int *chid);
 };
 
 struct nvhost_intr_ops {

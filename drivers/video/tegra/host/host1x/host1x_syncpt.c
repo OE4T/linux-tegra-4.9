@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints for HOST1X
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -169,6 +169,21 @@ static void syncpt_mutex_unlock(struct nvhost_syncpt *sp,
 	writel(0, sync_regs + (host1x_sync_mlock_0_r() + idx * 4));
 }
 
+static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
+				unsigned int idx,
+				bool *cpu, bool *ch,
+				unsigned int *chid)
+{
+	struct nvhost_master *dev = syncpt_to_dev(sp);
+	u32 __iomem *mlo_regs = dev->sync_aperture +
+		host1x_sync_mlock_owner_0_r();
+	u32 owner = readl(mlo_regs + idx);
+
+	*chid = host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(owner);
+	*cpu = host1x_sync_mlock_owner_0_mlock_cpu_owns_0_v(owner);
+	*ch = host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(owner);
+}
+
 static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
 	.reset = t20_syncpt_reset,
 	.reset_wait_base = t20_syncpt_reset_wait_base,
@@ -180,4 +195,5 @@ static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
 	.name = t20_syncpt_name,
 	.mutex_try_lock = syncpt_mutex_try_lock,
 	.mutex_unlock = syncpt_mutex_unlock,
+	.mutex_owner = syncpt_mutex_owner,
 };

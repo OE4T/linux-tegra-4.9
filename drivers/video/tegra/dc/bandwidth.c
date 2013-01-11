@@ -39,13 +39,27 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
 {
 	/* windows A, B, C for first and second display */
-	static const enum tegra_la_id la_id_tab[2][3] = {
+	static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 		/* first display */
-		{ TEGRA_LA_DISPLAY_0A, TEGRA_LA_DISPLAY_0B,
-			TEGRA_LA_DISPLAY_0C },
+		{
+			TEGRA_LA_DISPLAY_0A,
+			TEGRA_LA_DISPLAY_0B,
+			TEGRA_LA_DISPLAY_0C,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			TEGRA_LA_DISPLAYD,
+			TEGRA_LA_DISPLAY_HC,
+#endif
+		},
 		/* second display */
-		{ TEGRA_LA_DISPLAY_0AB, TEGRA_LA_DISPLAY_0BB,
-			TEGRA_LA_DISPLAY_0CB },
+		{
+			TEGRA_LA_DISPLAY_0AB,
+			TEGRA_LA_DISPLAY_0BB,
+			TEGRA_LA_DISPLAY_0CB,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			0,
+			TEGRA_LA_DISPLAY_HCB,
+#endif
+		},
 	};
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* window B V-filter tap for first and second display. */
@@ -54,12 +68,6 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	};
 #endif
 	unsigned long bw;
-
-/* TODO: add support to latency allownce for t14x */
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	if (w->idx >= ARRAY_SIZE(*la_id_tab))
-		return;
-#endif
 
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)

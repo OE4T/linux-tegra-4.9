@@ -153,6 +153,12 @@ static inline u32 nvhost_opcode_gather_incr(unsigned offset, unsigned count)
 	return (6 << 28) | (offset << 16) | BIT(15) | BIT(14) | count;
 }
 
+static inline u32 nvhost_opcode_gather_insert(unsigned offset, unsigned incr,
+		unsigned count)
+{
+	return (6 << 28) | (offset << 16) | BIT(15) | (incr << 14) | count;
+}
+
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)
 
 static inline u32 nvhost_mask2(unsigned x, unsigned y)

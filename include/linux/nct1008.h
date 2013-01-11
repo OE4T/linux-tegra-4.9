@@ -3,7 +3,7 @@
  *
  * NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,22 +26,11 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 #include <linux/thermal.h>
+#include <linux/platform_data/thermal_sensors.h>
 
 struct nct1008_data;
 
 enum nct1008_chip { NCT1008, NCT72 };
-
-
-struct nct_trip_temp {
-	char *cdev_type;
-	long trip_temp;
-	enum thermal_trip_type trip_type;
-	unsigned long state;
-	long hysteresis;
-	bool is_enabled;
-};
-
-#define NCT_MAX_TRIPS (32)
 
 struct nct1008_platform_data {
 	bool supported_hwrev;
@@ -50,11 +39,9 @@ struct nct1008_platform_data {
 	u8 offset;
 	s16 shutdown_ext_limit;
 	s16 shutdown_local_limit;
-
 	int passive_delay;
-
 	int num_trips;
-	struct nct_trip_temp trips[NCT_MAX_TRIPS];
+	struct thermal_trip_info trips[THERMAL_MAX_TRIPS];
 	const char *loc_name;
 };
 #endif /* _LINUX_NCT1008_H */

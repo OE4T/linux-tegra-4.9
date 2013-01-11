@@ -477,7 +477,7 @@ static void nct1008_update(struct nct1008_data *data)
 {
 	struct thermal_zone_device *thz = data->nct_ext;
 	long low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
-	struct nct_trip_temp *trip_state;
+	struct thermal_trip_info *trip_state;
 	long temp, trip_temp, hysteresis_temp;
 	int count;
 
@@ -491,7 +491,7 @@ static void nct1008_update(struct nct1008_data *data)
 	for (count = 0; count < thz->trips; count++) {
 		trip_state = &data->plat_data.trips[count];
 		trip_temp = trip_state->trip_temp;
-		hysteresis_temp = trip_state->is_enabled ?
+		hysteresis_temp = trip_state->tripped ?
 				trip_temp - trip_state->hysteresis : trip_temp;
 
 		if ((trip_temp >= temp) && (trip_temp < high_temp))
@@ -544,8 +544,8 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 	for (i = 0; i < data->plat_data.num_trips; i++) {
 		if (!strcmp(data->plat_data.trips[i].cdev_type, cdev->type)) {
 			thermal_zone_bind_cooling_device(thz, i, cdev,
-					data->plat_data.trips[i].state,
-					data->plat_data.trips[i].state);
+					data->plat_data.trips[i].upper,
+					data->plat_data.trips[i].lower);
 			bind = true;
 		}
 	}
@@ -574,16 +574,16 @@ static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
 				     unsigned long *temp)
 {
 	struct nct1008_data *data = thz->devdata;
-	struct nct_trip_temp *trip_state = &data->plat_data.trips[trip];
+	struct thermal_trip_info *trip_state = &data->plat_data.trips[trip];
 
 	*temp = trip_state->trip_temp;
 
 	if (thz->temperature >= trip_state->trip_temp) {
-		trip_state->is_enabled = true;
-	} else if (trip_state->is_enabled) {
+		trip_state->tripped = true;
+	} else if (trip_state->tripped) {
 		*temp -= trip_state->hysteresis;
 		if (thz->temperature < *temp)
-			trip_state->is_enabled = false;
+			trip_state->tripped = false;
 	}
 
 	return 0;
@@ -615,7 +615,7 @@ static int nct1008_ext_get_trend(struct thermal_zone_device *thz,
 				 enum thermal_trend *trend)
 {
 	struct nct1008_data *data = thz->devdata;
-	struct nct_trip_temp *trip_state;
+	struct thermal_trip_info *trip_state;
 
 	trip_state = &data->plat_data.trips[trip];
 

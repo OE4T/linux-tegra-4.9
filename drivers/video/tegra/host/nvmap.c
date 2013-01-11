@@ -24,6 +24,7 @@
 #include <linux/err.h>
 #include "nvmap.h"
 #include "nvhost_job.h"
+#include "chip_support.h"
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 {

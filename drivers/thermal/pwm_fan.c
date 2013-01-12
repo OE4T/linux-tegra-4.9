@@ -78,9 +78,8 @@ static int fan_target_pwm_set(void *data, u64 val)
 
 	if (!fan_data)
 		return -EINVAL;
-	if (val < 0)
-		val = 0;
-	else if (val > fan_data->pwm_period)
+
+	if (val > fan_data->pwm_period)
 		val = fan_data->pwm_period;
 
 	mutex_lock(&fan_data->fan_state_lock);
@@ -127,9 +126,8 @@ static int fan_cap_pwm_set(void *data, u64 val)
 
 	if (!fan_data)
 		return -EINVAL;
-	if (val < 0)
-		val = 0;
-	else if (val > fan_data->pwm_period)
+
+	if (val > fan_data->pwm_period)
 		val = fan_data->pwm_period;
 	mutex_lock(&fan_data->fan_state_lock);
 	fan_data->fan_cap_pwm = val * fan_data->precision_multiplier;

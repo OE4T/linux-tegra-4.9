@@ -335,9 +335,40 @@ static int __devexit therm_fan_est_remove(struct platform_device *pdev)
 
 	if (!est)
 		return -EINVAL;
+
+	cancel_delayed_work(&est->therm_fan_est_work);
 	thermal_zone_device_unregister(est->thz);
+
 	return 0;
 }
+
+#if CONFIG_PM
+static int therm_fan_est_suspend(struct platform_device *pdev,
+							pm_message_t state)
+{
+	struct therm_fan_estimator *est = platform_get_drvdata(pdev);
+
+	if (!est)
+		return -EINVAL;
+
+	cancel_delayed_work(&est->therm_fan_est_work);
+
+	return 0;
+}
+
+static int therm_fan_est_resume(struct platform_device *pdev)
+{
+	struct therm_fan_estimator *est = platform_get_drvdata(pdev);
+
+	if (!est)
+		return -EINVAL;
+
+	queue_delayed_work(est->workqueue,
+				&est->therm_fan_est_work,
+				msecs_to_jiffies(est->polling_period));
+	return 0;
+}
+#endif
 
 static struct platform_driver therm_fan_est_driver = {
 	.driver = {
@@ -346,6 +377,10 @@ static struct platform_driver therm_fan_est_driver = {
 	},
 	.probe  = therm_fan_est_probe,
 	.remove = __devexit_p(therm_fan_est_remove),
+#if CONFIG_PM
+	.suspend = therm_fan_est_suspend,
+	.resume = therm_fan_est_resume,
+#endif
 };
 
 module_platform_driver(therm_fan_est_driver);

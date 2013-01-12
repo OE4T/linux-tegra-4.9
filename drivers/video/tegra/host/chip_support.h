@@ -51,13 +51,6 @@ struct nvhost_zcull_ops {
 		    struct nvhost_zcull_bind_args *args);
 };
 
-struct nvhost_zbc_ops {
-	int (*set_table)(struct nvhost_hwctx *,
-		    struct nvhost_zbc_set_table_args *args);
-	int (*query_table)(struct nvhost_hwctx *,
-		    struct nvhost_zbc_query_table_args *args);
-};
-
 struct nvhost_channel_ops {
 	const char * soc_name;
 	int (*init)(struct nvhost_channel *,
@@ -81,7 +74,6 @@ struct nvhost_channel_ops {
 	int (*wait)(struct nvhost_hwctx *,
 		    struct nvhost_wait_args *args);
 	struct nvhost_zcull_ops zcull;
-	struct nvhost_zbc_ops zbc;
 };
 
 struct nvhost_cdma_ops {

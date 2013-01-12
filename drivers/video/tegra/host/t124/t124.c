@@ -427,20 +427,6 @@ static int t124_channel_zcull_bind(struct nvhost_hwctx *hwctx,
 	nvhost_dbg_fn("");
 	return gk20a_channel_zcull_bind(hwctx->priv, args);
 }
-
-static int t124_channel_zbc_set_table(struct nvhost_hwctx *hwctx,
-				struct nvhost_zbc_set_table_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_zbc_set_table(hwctx->priv, args);
-}
-
-static int t124_channel_zbc_query_table(struct nvhost_hwctx *hwctx,
-				struct nvhost_zbc_query_table_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_zbc_query_table(hwctx->priv, args);
-}
 #endif /* CONFIG_TEGRA_GK20A */
 
 static void t124_free_nvhost_channel(struct nvhost_channel *ch)
@@ -503,11 +489,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	op->channel.alloc_gpfifo  = t124_channel_alloc_gpfifo;
 	op->channel.submit_gpfifo = t124_channel_submit_gpfifo;
 	op->channel.wait          = t124_channel_wait;
-
 	op->channel.zcull.bind     = t124_channel_zcull_bind;
-
-	op->channel.zbc.set_table   = t124_channel_zbc_set_table;
-	op->channel.zbc.query_table = t124_channel_zbc_query_table;
 #endif
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;

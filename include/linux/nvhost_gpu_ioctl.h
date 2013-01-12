@@ -73,6 +73,8 @@ struct nvhost_gpu_zbc_set_table_args {
 	__u32 format;
 	__u32 type;	/* color or depth */
 };
+/* TBD: remove this once mobilerm removed old references */
+#define nvhost_zbc_set_table_args nvhost_gpu_zbc_set_table_args
 
 struct nvhost_gpu_zbc_query_table_args {
 	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];

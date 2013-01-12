@@ -243,29 +243,6 @@ struct nvhost_zcull_bind_args {
 	__u32 mode;
 };
 
-#define NVHOST_ZBC_COLOR_VALUE_SIZE	4
-#define NVHOST_ZBC_TYPE_INVALID		0
-#define NVHOST_ZBC_TYPE_COLOR		1
-#define NVHOST_ZBC_TYPE_DEPTH		2
-
-struct nvhost_zbc_set_table_args {
-	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 depth;
-	__u32 format;
-	__u32 type;	/* color or depth */
-};
-
-struct nvhost_zbc_query_table_args {
-	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 depth;
-	__u32 ref_cnt;
-	__u32 format;
-	__u32 type;		/* color or depth */
-	__u32 index_size;	/* [out] size, [in] index */
-};
-
 struct nvhost_ctrl_module_regrdwr_args {
 	__u32 id;
 	__u32 num_offsets;
@@ -367,15 +344,10 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
 	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
 
-#define NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE     \
-	_IOWR(NVHOST_IOCTL_MAGIC, 126, struct nvhost_zbc_set_table_args)
-#define NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE   \
-	_IOWR(NVHOST_IOCTL_MAGIC, 127, struct nvhost_zbc_query_table_args)
-
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZCULL_BIND)
 
-#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_zbc_query_table_args)
+#define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {
 	__u32 id;

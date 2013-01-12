@@ -524,32 +524,6 @@ static int nvhost_ioctl_channel_zcull_bind(
 	return ret;
 }
 
-static int nvhost_ioctl_channel_zbc_set_table(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_zbc_set_table_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_zbc_op().set_table);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_zbc_op().set_table(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_zbc_query_table(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_zbc_query_table_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_zbc_op().query_table);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_zbc_op().query_table(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		struct nvhost_submit_args *args)
 {
@@ -1122,12 +1096,6 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
 		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_ZBC_SET_TABLE:
-		err = nvhost_ioctl_channel_zbc_set_table(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_ZBC_QUERY_TABLE:
-		err = nvhost_ioctl_channel_zbc_query_table(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
 		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);

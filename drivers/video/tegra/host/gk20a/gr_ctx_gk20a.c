@@ -327,7 +327,7 @@ done:
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
 {
-	if (tegra_revision == TEGRA_REVISION_SIM)
+	if (tegra_platform_is_linsim())
 		return gr_gk20a_init_ctx_vars_sim(g, gr);
 	else
 		return gr_gk20a_init_ctx_vars_fw(g, gr);

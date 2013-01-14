@@ -35,7 +35,6 @@ struct gr_gk20a;
 struct sim_gk20a;
 
 #include <mach/hardware.h>
-
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
@@ -166,7 +165,7 @@ enum {
 #if defined (CONFIG_TEGRA_GK20A_PMU)
 static inline int support_gk20a_pmu(void)
 {
-	return ((tegra_revision != TEGRA_REVISION_QT) ? 1 : 0);
+	return tegra_platform_is_qt() ? 0 : 1;
 }
 #else
 static inline int support_gk20a_pmu(void){return 0;}

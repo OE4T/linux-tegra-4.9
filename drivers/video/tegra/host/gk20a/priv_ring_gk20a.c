@@ -33,7 +33,7 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	u32 pmc_en, decode_cfg, data;
 	s32 retry = 200;
 
-	if (tegra_revision == TEGRA_REVISION_SIM)
+	if (tegra_platform_is_linsim())
 		return;
 
 	pmc_en = gk20a_readl(g, mc_enable_r());
@@ -90,7 +90,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 cmd;
 	s32 retry = 100;
 
-	if (tegra_revision == TEGRA_REVISION_SIM)
+	if (tegra_platform_is_linsim())
 		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());

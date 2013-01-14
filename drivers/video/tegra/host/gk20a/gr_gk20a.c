@@ -1332,7 +1332,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	/* gr_gk20a_ctx_zcull_setup(g, c, false); */
 	gr_gk20a_ctx_pm_setup(g, c, false);
 
-	if (tegra_revision == TEGRA_REVISION_SIM) {
+	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
 			u64_lo32(c->inst_block.cpu_pa) >> ram_in_base_shift_v();
 
@@ -1373,7 +1373,7 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvhost_dbg_fn("");
 
-	if (tegra_revision == TEGRA_REVISION_SIM) {
+	if (tegra_platform_is_linsim()) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),
@@ -3153,7 +3153,7 @@ static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 			"invalid elcg mode %d", mode);
 	}
 
-	if (tegra_revision == TEGRA_REVISION_SIM) {
+	if (tegra_platform_is_linsim()) {
 		gate_ctrl = set_field(gate_ctrl,
 			therm_gate_ctrl_eng_delay_after_m(),
 			therm_gate_ctrl_eng_delay_after_f(4));

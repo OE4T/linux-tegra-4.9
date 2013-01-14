@@ -32,6 +32,7 @@
 
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
+#include <mach/gpufuse.h>
 
 static const struct hwctx_reginfo ctxsave_regs_3d_per_pipe[] = {
 	HWCTX_REGINFO(0xc30,    1, DIRECT),
@@ -116,19 +117,6 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 #define RESTORE_DIRECT_SIZE 1
 #define RESTORE_INDIRECT_SIZE 2
 #define RESTORE_END_SIZE 1
-
-#if 1
-/* THIS IS THE CORRECT # for T148 asim (dolak_sim)
-  This # shouldn't be coming from an ifdef, ultimately.
-  It should be determined at runtime if *at all* possible.
-  Further, we do need a t148 version of this. So it may
-  be possible to leave this here and make the t148 version
-  more subtle
-*/
-#define NUM_3D_PIXEL_PIPES   2
-#else
-#define NUM_3D_PIXEL_PIPES   4
-#endif
 
 struct save_info {
 	u32 *ptr;
@@ -353,6 +341,7 @@ static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 {
 	int pipe, i;
 	unsigned int old_restore_count, incr_count;
+	struct gpu_info gpu_info;
 	struct save_info info = {
 		ptr,
 		SAVE_BEGIN_V1_SIZE,
@@ -366,14 +355,16 @@ static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 		info.ptr += SAVE_BEGIN_V1_SIZE;
 	}
 
+	tegra_gpu_get_info(&gpu_info);
+
 	/* save regs for per pixel pipe, this has to be before the global
 	 * one. Advance the rest of the pipes' output pointer to match with
 	 * the pipe 0's.
 	*/
-	for (pipe = 1; pipe < NUM_3D_PIXEL_PIPES; pipe++)
+	for (pipe = 1; pipe < gpu_info.num_pixel_pipes; pipe++)
 		incr_mem_output_pointer(&info, pipe, RESTORE_BEGIN_SIZE);
 
-	for (pipe = NUM_3D_PIXEL_PIPES - 1; pipe >= 0; pipe--) {
+	for (pipe = gpu_info.num_pixel_pipes - 1; pipe >= 0; pipe--) {
 		old_restore_count = info.restore_count;
 		setup_save_regs(&info,
 				ctxsave_regs_3d_per_pipe,

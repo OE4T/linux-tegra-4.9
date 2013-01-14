@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -339,7 +339,7 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	c = pdata->clk[index];
-	if (IS_ERR_OR_NULL(c))
+	if (!c)
 		return -EINVAL;
 
 	/* Need to enable client to get correct rate */
@@ -587,7 +587,7 @@ int nvhost_module_init(struct platform_device *dev)
 		snprintf(devname, MAX_DEVID_LENGTH, "tegra_%s",
 			dev_name(&dev->dev));
 		c = clk_get_sys(devname, pdata->clocks[i].name);
-		if (IS_ERR_OR_NULL(c)) {
+		if (IS_ERR(c)) {
 			dev_err(&dev->dev, "Cannot get clock %s\n",
 					pdata->clocks[i].name);
 			continue;

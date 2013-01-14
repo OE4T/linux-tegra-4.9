@@ -465,15 +465,15 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 
 	ctx->restore = nvhost_memmgr_alloc(memmgr, restore_size * 4, 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(ctx->restore))
+	if (IS_ERR(ctx->restore))
 		goto fail_alloc;
 
 	ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
-	if (IS_ERR_OR_NULL(ctx->restore_virt))
+	if (!ctx->restore_virt)
 		goto fail_mmap;
 
 	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
-	if (IS_ERR_OR_NULL(ctx->restore_sgt))
+	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 
@@ -582,15 +582,15 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 
 	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(p->save_buf))
+	if (IS_ERR(p->save_buf))
 		goto fail_alloc;
 
 	save_ptr = nvhost_memmgr_mmap(p->save_buf);
-	if (IS_ERR_OR_NULL(save_ptr))
+	if (!save_ptr)
 		goto fail_mmap;
 
 	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
-	if (IS_ERR_OR_NULL(p->save_sgt))
+	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 

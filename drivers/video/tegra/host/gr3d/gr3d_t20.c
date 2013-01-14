@@ -378,15 +378,15 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 	p->save_buf = nvhost_memmgr_alloc(memmgr,
 			p->save_size * sizeof(u32), 32,
 			mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(p->save_buf))
+	if (IS_ERR(p->save_buf))
 		goto fail_alloc;
 
 	save_ptr = nvhost_memmgr_mmap(p->save_buf);
-	if (IS_ERR_OR_NULL(save_ptr))
+	if (!save_ptr)
 		goto fail_mmap;
 
 	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
-	if (IS_ERR_OR_NULL(p->save_sgt))
+	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host DMA-BUF support
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -90,12 +90,14 @@ struct mem_handle *nvhost_dmabuf_get(u32 id, struct platform_device *dev)
 	struct dma_buf *buf;
 
 	buf = dma_buf_get(to_dmabuf_fd(id));
-	if (IS_ERR_OR_NULL(buf))
+	if (IS_ERR(buf))
 		return (struct mem_handle *)buf;
 	else {
 		h = (struct mem_handle *)dma_buf_attach(buf, &dev->dev);
-		if (IS_ERR_OR_NULL(h))
+		if (IS_ERR(h)) {
 			dma_buf_put(buf);
+			return (struct mem_handle *)h;
+		}
 	}
 
 	return (struct mem_handle *) ((u32)h | mem_mgr_type_dmabuf);
@@ -127,7 +129,7 @@ int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,
 		}
 
 		sgt = nvhost_dmabuf_pin(handle);
-		if (IS_ERR_OR_NULL(sgt)) {
+		if (IS_ERR(sgt)) {
 			nvhost_dmabuf_put(handle);
 			err = PTR_ERR(sgt);
 			goto fail;

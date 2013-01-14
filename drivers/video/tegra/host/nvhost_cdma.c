@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -406,11 +406,8 @@ static void trace_write_gather(struct nvhost_cdma *cdma,
 {
 	void *mem = NULL;
 
-	if (nvhost_debug_trace_cmdbuf) {
+	if (nvhost_debug_trace_cmdbuf)
 		mem = nvhost_memmgr_mmap(ref);
-		if (IS_ERR_OR_NULL(mem))
-			mem = NULL;
-	};
 
 	if (mem) {
 		u32 i;

@@ -65,6 +65,7 @@ static int push_buffer_init(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	struct mem_mgr *mgr = cdma_to_memmgr(cdma);
+	int err = 0;
 	pb->mem = NULL;
 	pb->mapped = NULL;
 	pb->phys = 0;
@@ -75,12 +76,14 @@ static int push_buffer_init(struct push_buffer *pb)
 	/* allocate and map pushbuffer memory */
 	pb->mem = nvhost_memmgr_alloc(mgr, PUSH_BUFFER_SIZE + 4, 32,
 			      mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(pb->mem)) {
+	if (IS_ERR(pb->mem)) {
+		err = PTR_ERR(pb->mem);
 		pb->mem = NULL;
 		goto fail;
 	}
 	pb->mapped = nvhost_memmgr_mmap(pb->mem);
-	if (IS_ERR_OR_NULL(pb->mapped)) {
+	if (!pb->mapped) {
+		err = -ENOMEM;
 		pb->mapped = NULL;
 		goto fail;
 	}
@@ -88,6 +91,7 @@ static int push_buffer_init(struct push_buffer *pb)
 	/* pin pushbuffer and get physical address */
 	pb->sgt = nvhost_memmgr_pin(mgr, pb->mem);
 	if (IS_ERR(pb->sgt)) {
+		err = PTR_ERR(pb->sgt);
 		pb->sgt = 0;
 		goto fail;
 	}
@@ -97,8 +101,10 @@ static int push_buffer_init(struct push_buffer *pb)
 	pb->client_handle = kzalloc(NVHOST_GATHER_QUEUE_SIZE *
 				sizeof(struct mem_mgr_handle),
 			GFP_KERNEL);
-	if (!pb->client_handle)
+	if (!pb->client_handle) {
+		err = -ENOMEM;
 		goto fail;
+	}
 
 	/* put the restart at the end of pushbuffer memory */
 	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) =
@@ -108,7 +114,7 @@ static int push_buffer_init(struct push_buffer *pb)
 
 fail:
 	push_buffer_destroy(pb);
-	return -ENOMEM;
+	return err;
 }
 
 /**

@@ -3,7 +3,7 @@
  *
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -378,7 +378,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	int err;
 
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
-	if (IS_ERR_OR_NULL(ucode_fw)) {
+	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get tsec firmware\n");
 		err = -ENOENT;
 		return err;
@@ -388,14 +388,15 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
 			     roundup(ucode_fw->size+256, PAGE_SIZE),
 			     PAGE_SIZE, mem_mgr_flag_uncacheable);
-	if (IS_ERR_OR_NULL(m->mem_r)) {
+	if (IS_ERR(m->mem_r)) {
 		dev_err(&dev->dev, "nvmap alloc failed");
-		err = -ENOMEM;
+		err = PTR_ERR(m->mem_r);
+		m->mem_r = NULL;
 		goto clean_up;
 	}
 
 	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r);
-	if (IS_ERR_OR_NULL(m->pa)) {
+	if (IS_ERR(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
 		m->pa = 0;
@@ -403,7 +404,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->mapped = nvhost_memmgr_mmap(m->mem_r);
-	if (IS_ERR_OR_NULL(m->mapped)) {
+	if (!m->mapped) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
 		goto clean_up;

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D
  *
- * Copyright (c) 2012 NVIDIA Corporation.
+ * Copyright (c) 2012-2013 NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -88,18 +88,18 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->restore = nvhost_memmgr_alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
 			    : mem_mgr_flag_uncacheable);
-	if (IS_ERR_OR_NULL(ctx->restore))
+	if (IS_ERR(ctx->restore))
 		goto fail_alloc;
 
 	if (map_restore) {
 		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
-		if (IS_ERR_OR_NULL(ctx->restore_virt))
+		if (!ctx->restore_virt)
 			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
 
 	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
-	if (IS_ERR_OR_NULL(ctx->restore_sgt))
+	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 

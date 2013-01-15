@@ -35,6 +35,7 @@
 #include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/platform_data/tegra_edp.h>
 
 #include <chip_support.h>
 #include <host1x/host1x.h>
@@ -238,6 +239,8 @@ static int nvhost_scale3d_get_dev_status(struct device *d,
 	power_profile.dev_stat->total_time = 0;
 	power_profile.dev_stat->busy_time = 0;
 	power_profile.last_event_type = DEVICE_UNKNOWN;
+
+	tegra_edp_notify_gpu_load(avg);
 
 	return 0;
 }

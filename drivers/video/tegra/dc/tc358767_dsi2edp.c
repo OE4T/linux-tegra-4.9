@@ -40,6 +40,13 @@ static inline void dsi2edp_reg_write(struct tegra_dsi2edp *dsi2edp,
 					unsigned int addr,
 					unsigned int val)
 {
+	BUG_ON(!dsi2edp);
+
+	if (dsi2edp->i2c_shutdown) {
+		pr_err("dsi2edp: i2c shutdown\n");
+		return;
+	}
+
 	/*
 	 * TC358767 requires register address in big endian
 	 * and register value in little endian.
@@ -53,6 +60,13 @@ static inline void dsi2edp_reg_read(struct tegra_dsi2edp *dsi2edp,
 					unsigned int addr,
 					unsigned int *val)
 {
+	BUG_ON(!dsi2edp);
+
+	if (dsi2edp->i2c_shutdown) {
+		pr_err("dsi2edp: i2c shutdown\n");
+		return;
+	}
+
 	regmap_read(dsi2edp->regmap, addr, val);
 
 	/*
@@ -250,6 +264,9 @@ static int dsi2edp_i2c_probe(struct i2c_client *client,
 {
 	dsi2edp_i2c_client = client;
 
+	if (dsi2edp)
+		dsi2edp->i2c_shutdown = false;
+
 	return 0;
 }
 
@@ -258,6 +275,12 @@ static int dsi2edp_i2c_remove(struct i2c_client *client)
 	dsi2edp_i2c_client = NULL;
 
 	return 0;
+}
+
+static void dsi2edp_i2c_shutdown(struct i2c_client *client)
+{
+	if (dsi2edp)
+		dsi2edp->i2c_shutdown = true;
 }
 
 static const struct i2c_device_id dsi2edp_id_table[] = {
@@ -272,6 +295,7 @@ static struct i2c_driver dsi2edp_i2c_drv = {
 	},
 	.probe = dsi2edp_i2c_probe,
 	.remove = dsi2edp_i2c_remove,
+	.shutdown = dsi2edp_i2c_shutdown,
 	.id_table = dsi2edp_id_table,
 };
 

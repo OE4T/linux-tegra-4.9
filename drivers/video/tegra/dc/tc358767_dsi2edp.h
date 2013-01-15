@@ -25,6 +25,7 @@ struct tegra_dsi2edp {
 	struct tegra_dc_mode *mode;
 
 	bool enabled;
+	bool i2c_shutdown;
 
 	struct mutex lock;
 };

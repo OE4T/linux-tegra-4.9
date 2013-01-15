@@ -48,8 +48,8 @@ struct nct1008_platform_data {
 	bool ext_range;
 	u8 conv_rate;
 	u8 offset;
-	s8 shutdown_ext_limit;
-	s8 shutdown_local_limit;
+	s16 shutdown_ext_limit;
+	s16 shutdown_local_limit;
 
 	int passive_delay;
 

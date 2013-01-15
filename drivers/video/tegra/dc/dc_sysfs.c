@@ -78,7 +78,7 @@ static ssize_t stats_enable_show(struct device *dev,
 	enabled = tegra_dc_stats_get(dc);
 	mutex_unlock(&dc->lock);
 
-	return snprintf(buf, PAGE_SIZE, "%d", enabled);
+	return snprintf(buf, PAGE_SIZE, "%d\n", enabled);
 }
 
 static ssize_t stats_enable_store(struct device *dev,
@@ -151,7 +151,7 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 
 	crc = tegra_dc_read_checksum_latched(dc);
 
-	return snprintf(buf, PAGE_SIZE, "%u", crc);
+	return snprintf(buf, PAGE_SIZE, "%u\n", crc);
 }
 
 static ssize_t crc_checksum_latched_store(struct device *dev,

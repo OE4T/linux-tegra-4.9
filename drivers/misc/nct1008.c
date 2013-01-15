@@ -102,12 +102,12 @@ struct nct1008_data {
 static int conv_period_ms_table[] =
 	{16000, 8000, 4000, 2000, 1000, 500, 250, 125, 63, 32, 16};
 
-static inline s8 value_to_temperature(bool extended, u8 value)
+static inline s16 value_to_temperature(bool extended, u8 value)
 {
-	return extended ? (s8)(value - EXTENDED_RANGE_OFFSET) : (s8)value;
+	return extended ? (s16)(value - EXTENDED_RANGE_OFFSET) : (s16)value;
 }
 
-static inline u8 temperature_to_value(bool extended, s8 temp)
+static inline u8 temperature_to_value(bool extended, s16 temp)
 {
 	return extended ? (u8)(temp + EXTENDED_RANGE_OFFSET) : (u8)temp;
 }
@@ -148,9 +148,9 @@ static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_local;
+	s16 temp_local;
 	u8 temp_ext_lo;
-	s8 temp_ext_hi;
+	s16 temp_ext_hi;
 	long temp_ext_milli;
 	long temp_local_milli;
 	u8 value;
@@ -196,8 +196,8 @@ static ssize_t nct1008_show_temp(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp1 = 0;
-	s8 temp = 0;
+	s16 temp1 = 0;
+	s16 temp = 0;
 	u8 temp2 = 0;
 	int value = 0;
 
@@ -233,7 +233,7 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	int value;
-	s8 temp, temp2;
+	s16 temp, temp2;
 
 	/* Local temperature h/w shutdown limit */
 	value = nct1008_read_reg(client, LOCAL_THERM_LIMIT_WR);
@@ -295,13 +295,13 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	}
 
 	/* External temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (s8)num);
+	temp = temperature_to_value(pdata->ext_range, (s16)num);
 	err = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (s8)num);
+	temp = temperature_to_value(pdata->ext_range, (s16)num);
 	err = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
@@ -318,7 +318,7 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	int value;
-	s8 temp_hi, temp_lo;
+	s16 temp_hi, temp_lo;
 	/* External Temperature Throttling hi-limit */
 	value = nct1008_read_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
 	if (value < 0)
@@ -359,7 +359,7 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 	}
 
 	/* External Temperature Throttling limit */
-	value = temperature_to_value(pdata->ext_range, (s8)num);
+	value = temperature_to_value(pdata->ext_range, (s16)num);
 	err = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
 	if (err < 0)
 		goto error;
@@ -381,7 +381,7 @@ static ssize_t nct1008_show_ext_temp(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_value;
+	s16 temp_value;
 	int data = 0;
 	int data_lo;
 
@@ -508,8 +508,8 @@ static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_ext_hi;
-	s8 temp_ext_lo;
+	s16 temp_ext_hi;
+	s16 temp_ext_lo;
 	long temp_ext_milli;
 	u8 value;
 
@@ -641,7 +641,7 @@ static int nct1008_int_get_temp(struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s8 temp_local;
+	s16 temp_local;
 	long temp_local_milli;
 	u8 value;
 
@@ -905,7 +905,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	u8 value;
-	s8 temp;
+	s16 temp;
 	u8 temp2;
 	int err;
 

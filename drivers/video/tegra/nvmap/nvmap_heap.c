@@ -1037,8 +1037,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	wmb();
 
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE, &attrs);
-
+#endif
 	return h;
 
 fail_register:

@@ -138,6 +138,238 @@ static inline u32 top_num_fbps_value_default_f(void)
 {
 	return 0x0;
 }
+static inline u32 top_fs_status_r(void)
+{
+	return 0x00022500;
+}
+static inline u32 top_fs_status_msdec_s(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msdec_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 top_fs_status_msdec_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 top_fs_status_msdec_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 top_fs_status_msdec_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_msdec_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_msdec_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msdec_disable_f(void)
+{
+	return 0x2;
+}
+static inline u32 top_fs_status_msvld_sec_s(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msvld_sec_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 top_fs_status_msvld_sec_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 top_fs_status_msvld_sec_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 top_fs_status_msvld_sec_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_msvld_sec_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_msvld_sec_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msvld_sec_disable_f(void)
+{
+	return 0x4;
+}
+static inline u32 top_fs_status_msenc_s(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msenc_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 top_fs_status_msenc_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 top_fs_status_msenc_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 top_fs_status_msenc_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_msenc_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_msenc_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_msenc_disable_f(void)
+{
+	return 0x8;
+}
+static inline u32 top_fs_status_ce_s(void)
+{
+	return 3;
+}
+static inline u32 top_fs_status_ce_f(u32 v)
+{
+	return (v & 0x7) << 8;
+}
+static inline u32 top_fs_status_ce_m(void)
+{
+	return 0x7 << 8;
+}
+static inline u32 top_fs_status_ce_v(u32 r)
+{
+	return (r >> 8) & 0x7;
+}
+static inline u32 top_fs_status_ce_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_ce_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_ce_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_ce_disable_f(void)
+{
+	return 0x100;
+}
+static inline u32 top_fs_status_fb_config_s(void)
+{
+	return 4;
+}
+static inline u32 top_fs_status_fb_config_f(u32 v)
+{
+	return (v & 0xf) << 12;
+}
+static inline u32 top_fs_status_fb_config_m(void)
+{
+	return 0xf << 12;
+}
+static inline u32 top_fs_status_fb_config_v(u32 r)
+{
+	return (r >> 12) & 0xf;
+}
+static inline u32 top_fs_status_fb_config_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_fb_config_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_fb_config_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_fb_config_disable_f(void)
+{
+	return 0x1000;
+}
+static inline u32 top_fs_status_pcie_lane_s(void)
+{
+	return 2;
+}
+static inline u32 top_fs_status_pcie_lane_f(u32 v)
+{
+	return (v & 0x3) << 16;
+}
+static inline u32 top_fs_status_pcie_lane_m(void)
+{
+	return 0x3 << 16;
+}
+static inline u32 top_fs_status_pcie_lane_v(u32 r)
+{
+	return (r >> 16) & 0x3;
+}
+static inline u32 top_fs_status_pcie_lane_enable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_pcie_lane_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_pcie_lane_disable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_pcie_lane_disable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 top_fs_status_priv_sec_v(void)
+{
+	return 0x00022560;
+}
+static inline u32 top_fs_status_priv_sec_en_s(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_priv_sec_en_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 top_fs_status_priv_sec_en_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 top_fs_status_priv_sec_en_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 top_fs_status_priv_sec_en_disable_v(void)
+{
+	return 0;
+}
+static inline u32 top_fs_status_priv_sec_en_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 top_fs_status_priv_sec_en_enable_v(void)
+{
+	return 1;
+}
+static inline u32 top_fs_status_priv_sec_en_enable_f(void)
+{
+	return 0x1;
+}
 static inline u32 top_device_info_r(u32 i)
 {
 	return 0x00022700+(i)*4;

@@ -1394,6 +1394,610 @@ static inline u32 pwr_falcon_irqstat_ext_chipctrl_false_f(void)
 {
 	return 0x0;
 }
+static inline u32 pwr_falcon_irqmode_r(void)
+{
+	return 0x0010a00c;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_gptmr_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_wdtmr_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_init_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_mthd_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ctxsw_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_halt_true_f(void)
+{
+	return 0x10;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_init_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_exterr_true_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen0_true_f(void)
+{
+	return 0x40;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_f(u32 v)
+{
+	return (v & 0x1) << 7;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_swgen1_true_f(void)
+{
+	return 0x80;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_s(void)
+{
+	return 8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_init_v(void)
+{
+	return 0x000000fc;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_init_f(void)
+{
+	return 0xfc00;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_true_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_ctxe_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_true_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_limitv_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_true_f(void)
+{
+	return 0x400;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_lowlat_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_true_f(void)
+{
+	return 0x800;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_second_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_true_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_therm_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_true_f(void)
+{
+	return 0x2000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_miscio_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_true_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_rttimer_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_true_f(void)
+{
+	return 0x8000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_irqmode_lvl_ext_chipctrl_false_f(void)
+{
+	return 0x0;
+}
 static inline u32 pwr_falcon_irqmset_r(void)
 {
 	return 0x0010a010;
@@ -3794,6 +4398,294 @@ static inline u32 pwr_falcon_irqdest_target_ext_v(u32 r)
 {
 	return (r >> 24) & 0xff;
 }
+static inline u32 pwr_falcon_curctx_r(void)
+{
+	return 0x0010a050;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_curctx_ctxvld_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_local_fb_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_local_fb_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_coherent_sysmem_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_coherent_sysmem_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_noncoherent_sysmem_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_falcon_curctx_ctxtgt_noncoherent_sysmem_f(void)
+{
+	return 0x30000000;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_s(void)
+{
+	return 28;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffffff;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_curctx_ctxptr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_nxtctx_r(void)
+{
+	return 0x0010a054;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_nxtctx_ctxvld_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_local_fb_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_local_fb_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_coherent_sysmem_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_coherent_sysmem_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_noncoherent_sysmem_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_falcon_nxtctx_ctxtgt_noncoherent_sysmem_f(void)
+{
+	return 0x30000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_s(void)
+{
+	return 28;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffffff;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_nxtctx_ctxptr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_mailbox0_r(void)
+{
+	return 0x0010a040;
+}
+static inline u32 pwr_falcon_mailbox0_data_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_falcon_mailbox0_data_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_falcon_mailbox0_data_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_falcon_mailbox0_data_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_falcon_mailbox0_data_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_mailbox0_data_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_mailbox1_r(void)
+{
+	return 0x0010a044;
+}
+static inline u32 pwr_falcon_mailbox1_data_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_falcon_mailbox1_data_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_falcon_mailbox1_data_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_falcon_mailbox1_data_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_falcon_mailbox1_data_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_mailbox1_data_init_f(void)
+{
+	return 0x0;
+}
 static inline u32 pwr_falcon_itfen_r(void)
 {
 	return 0x0010a048;
@@ -3955,6 +4847,202 @@ static inline u32 pwr_falcon_os_version_init_v(void)
 	return 0x00000000;
 }
 static inline u32 pwr_falcon_os_version_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_r(void)
+{
+	return 0x0010a0a4;
+}
+static inline u32 pwr_falcon_engctl_inv_context_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_inv_context_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_falcon_engctl_inv_context_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_falcon_engctl_inv_context_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_inv_context_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_inv_context_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_falcon_engctl_inv_context_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_inv_context_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_set_stallreq_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_clr_stallreq_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_switch_context_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_switch_context_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_falcon_engctl_switch_context_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_falcon_engctl_switch_context_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_switch_context_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_switch_context_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_falcon_engctl_switch_context_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_switch_context_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_stallreq_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_stallreq_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_falcon_engctl_stallreq_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 pwr_falcon_engctl_stallreq_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_stallreq_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_stallreq_true_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_falcon_engctl_stallreq_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_stallreq_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_engctl_stallack_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_engctl_stallack_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_falcon_engctl_stallack_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 pwr_falcon_engctl_stallack_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 pwr_falcon_engctl_stallack_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_engctl_stallack_true_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_falcon_engctl_stallack_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_engctl_stallack_false_f(void)
 {
 	return 0x0;
 }
@@ -5005,6 +6093,3310 @@ static inline u32 pwr_falcon_dmatrffboffs_offs_init_v(void)
 static inline u32 pwr_falcon_dmatrffboffs_offs_init_f(void)
 {
 	return 0x0;
+}
+static inline u32 pwr_falcon_exterraddr_r(void)
+{
+	return 0x0010a168;
+}
+static inline u32 pwr_falcon_exterraddr_addr_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_falcon_exterraddr_addr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_falcon_exterraddr_addr_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_falcon_exterraddr_addr_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_falcon_exterrstat_r(void)
+{
+	return 0x0010a16c;
+}
+static inline u32 pwr_falcon_exterrstat_pc_s(void)
+{
+	return 24;
+}
+static inline u32 pwr_falcon_exterrstat_pc_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 pwr_falcon_exterrstat_pc_m(void)
+{
+	return 0xffffff << 0;
+}
+static inline u32 pwr_falcon_exterrstat_pc_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
+static inline u32 pwr_falcon_exterrstat_stat_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_falcon_exterrstat_stat_f(u32 v)
+{
+	return (v & 0xf) << 24;
+}
+static inline u32 pwr_falcon_exterrstat_stat_m(void)
+{
+	return 0xf << 24;
+}
+static inline u32 pwr_falcon_exterrstat_stat_v(u32 r)
+{
+	return (r >> 24) & 0xf;
+}
+static inline u32 pwr_falcon_exterrstat_stat_ack_pos_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_exterrstat_stat_ack_pos_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_exterrstat_stat_ack_tout_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_exterrstat_stat_ack_tout_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 pwr_falcon_exterrstat_valid_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_falcon_exterrstat_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pwr_falcon_exterrstat_valid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pwr_falcon_exterrstat_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pwr_falcon_exterrstat_valid_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_exterrstat_valid_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_exterrstat_valid_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_falcon_exterrstat_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_falcon_exterrstat_valid_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_falcon_exterrstat_valid_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_r(void)
+{
+	return 0x0010a200;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_stop_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_stop_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_run_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_run_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jrun_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jrun_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_runb_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_runb_f(void)
+{
+	return 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jrunb_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jrunb_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_step_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_step_f(void)
+{
+	return 0x5;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jstep_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_jstep_f(void)
+{
+	return 0x6;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_emask_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_emask_f(void)
+{
+	return 0x7;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rreg_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rreg_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wreg_v(void)
+{
+	return 0x00000009;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wreg_f(void)
+{
+	return 0x9;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rdm_v(void)
+{
+	return 0x0000000a;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rdm_f(void)
+{
+	return 0xa;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wdm_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wdm_f(void)
+{
+	return 0xb;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rcm_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rcm_f(void)
+{
+	return 0xc;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wcm_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_wcm_f(void)
+{
+	return 0xd;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rstat_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_rstat_f(void)
+{
+	return 0xe;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_sbu_v(void)
+{
+	return 0x0000000f;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_opc_sbu_f(void)
+{
+	return 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_f(u32 v)
+{
+	return (v & 0x3) << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_m(void)
+{
+	return 0x3 << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_v(u32 r)
+{
+	return (r >> 6) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_b_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_b_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_hw_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_hw_f(void)
+{
+	return 0x40;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_w_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_sz_w_f(void)
+{
+	return 0x80;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_s(void)
+{
+	return 5;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_f(u32 v)
+{
+	return (v & 0x1f) << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_m(void)
+{
+	return 0x1f << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_v(u32 r)
+{
+	return (r >> 8) & 0x1f;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg0_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg0_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg1_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg1_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg2_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg2_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg3_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg3_f(void)
+{
+	return 0x300;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg4_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg4_f(void)
+{
+	return 0x400;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg5_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg5_f(void)
+{
+	return 0x500;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg6_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg6_f(void)
+{
+	return 0x600;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg7_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg7_f(void)
+{
+	return 0x700;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg8_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg8_f(void)
+{
+	return 0x800;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg9_v(void)
+{
+	return 0x00000009;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg9_f(void)
+{
+	return 0x900;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg10_v(void)
+{
+	return 0x0000000a;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg10_f(void)
+{
+	return 0xa00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg11_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg11_f(void)
+{
+	return 0xb00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg12_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg12_f(void)
+{
+	return 0xc00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg13_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg13_f(void)
+{
+	return 0xd00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg14_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg14_f(void)
+{
+	return 0xe00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg15_v(void)
+{
+	return 0x0000000f;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_reg15_f(void)
+{
+	return 0xf00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_iv0_v(void)
+{
+	return 0x00000010;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_iv0_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_iv1_v(void)
+{
+	return 0x00000011;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_iv1_f(void)
+{
+	return 0x1100;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ev_v(void)
+{
+	return 0x00000013;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ev_f(void)
+{
+	return 0x1300;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_sp_v(void)
+{
+	return 0x00000014;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_sp_f(void)
+{
+	return 0x1400;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_pc_v(void)
+{
+	return 0x00000015;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_pc_f(void)
+{
+	return 0x1500;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_imb_v(void)
+{
+	return 0x00000016;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_imb_f(void)
+{
+	return 0x1600;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_dmb_v(void)
+{
+	return 0x00000017;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_dmb_f(void)
+{
+	return 0x1700;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_csw_v(void)
+{
+	return 0x00000018;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_csw_f(void)
+{
+	return 0x1800;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ccr_v(void)
+{
+	return 0x00000019;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ccr_f(void)
+{
+	return 0x1900;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_sec_v(void)
+{
+	return 0x0000001a;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_sec_f(void)
+{
+	return 0x1a00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ctx_v(void)
+{
+	return 0x0000001b;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_ctx_f(void)
+{
+	return 0x1b00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_exci_v(void)
+{
+	return 0x0000001c;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_exci_f(void)
+{
+	return 0x1c00;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat0_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat0_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat1_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat1_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat2_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat2_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat3_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat3_f(void)
+{
+	return 0x300;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat4_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat4_f(void)
+{
+	return 0x400;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat5_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_rstat5_f(void)
+{
+	return 0x500;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb0_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb0_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb1_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb1_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb2_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb2_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb3_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_idx_wb3_f(void)
+{
+	return 0x300;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_true_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_error_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_true_f(void)
+{
+	return 0x8000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_rdvld_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_parm_s(void)
+{
+	return 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_parm_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_parm_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_parm_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_s(void)
+{
+	return 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_v(u32 r)
+{
+	return (r >> 17) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_true_f(void)
+{
+	return 0x20000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap1_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_v(u32 r)
+{
+	return (r >> 18) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_true_f(void)
+{
+	return 0x40000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap2_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_true_f(void)
+{
+	return 0x80000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_trap3_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_true_f(void)
+{
+	return 0x100000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_unimp_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_true_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imiss_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_imhit_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_m(void)
+{
+	return 0x1 << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_true_f(void)
+{
+	return 0x800000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_exc_ibreak_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_true_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_true_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv1_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_true_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_iv2_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_ext_s(void)
+{
+	return 5;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_ext_f(u32 v)
+{
+	return (v & 0x1f) << 27;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_ext_m(void)
+{
+	return 0x1f << 27;
+}
+static inline u32 pwr_pmu_falcon_icd_cmd_emask_ext_v(u32 r)
+{
+	return (r >> 27) & 0x1f;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_r(void)
+{
+	return 0x0010a20c;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_data_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_data_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_data_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_data_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mem_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_fence_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_div_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_true_f(void)
+{
+	return 0x10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmaq_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_true_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_dmwaiting_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_true_f(void)
+{
+	return 0x40;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_dma_stall_imwaiting_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_f(u32 v)
+{
+	return (v & 0x1) << 7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_true_f(void)
+{
+	return 0x80;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_any_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_true_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbfull_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_true_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sbhit_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_true_f(void)
+{
+	return 0x400;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_flow_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_true_f(void)
+{
+	return 0x800;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_sp_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_true_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_bl_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_true_f(void)
+{
+	return 0x2000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ipnd_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_true_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_ldstq_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_noinstr_stall_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_true_f(void)
+{
+	return 0x100000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_haltstop_flush_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_true_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_afill_flush_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_fasle_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_exc_flush_fasle_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_irq_flush_s(void)
+{
+	return 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_irq_flush_f(u32 v)
+{
+	return (v & 0x7) << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_irq_flush_m(void)
+{
+	return 0x7 << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_irq_flush_v(u32 r)
+{
+	return (r >> 23) & 0x7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_m(void)
+{
+	return 0x1 << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_true_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_validrd_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_m(void)
+{
+	return 0x1 << 29;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_true_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_waiting_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_halted_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat0_mthd_full_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_alloc_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_alloc_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_alloc_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_alloc_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_valid_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_valid_f(u32 v)
+{
+	return (v & 0xf) << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_valid_m(void)
+{
+	return 0xf << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb_valid_v(u32 r)
+{
+	return (r >> 4) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_f(u32 v)
+{
+	return (v & 0x3) << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_m(void)
+{
+	return 0x3 << 8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_v(u32 r)
+{
+	return (r >> 8) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_byte_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_byte_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_halfword_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_halfword_f(void)
+{
+	return 0x100;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_word_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_sz_is_word_f(void)
+{
+	return 0x200;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_f(u32 v)
+{
+	return (v & 0x3) << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_m(void)
+{
+	return 0x3 << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_v(u32 r)
+{
+	return (r >> 10) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_byte_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_byte_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_halfword_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_halfword_f(void)
+{
+	return 0x400;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_word_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_sz_is_word_f(void)
+{
+	return 0x800;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_f(u32 v)
+{
+	return (v & 0x3) << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_m(void)
+{
+	return 0x3 << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_v(u32 r)
+{
+	return (r >> 12) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_byte_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_byte_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_halfword_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_halfword_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_word_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_sz_is_word_f(void)
+{
+	return 0x2000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_f(u32 v)
+{
+	return (v & 0x3) << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_m(void)
+{
+	return 0x3 << 14;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_v(u32 r)
+{
+	return (r >> 14) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_byte_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_byte_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_halfword_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_halfword_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_word_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_sz_is_word_f(void)
+{
+	return 0x8000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_idx_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_idx_f(u32 v)
+{
+	return (v & 0xf) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_idx_m(void)
+{
+	return 0xf << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb0_idx_v(u32 r)
+{
+	return (r >> 16) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_idx_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_idx_f(u32 v)
+{
+	return (v & 0xf) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_idx_m(void)
+{
+	return 0xf << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb1_idx_v(u32 r)
+{
+	return (r >> 20) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_idx_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_idx_f(u32 v)
+{
+	return (v & 0xf) << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_idx_m(void)
+{
+	return 0xf << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb2_idx_v(u32 r)
+{
+	return (r >> 24) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_idx_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_idx_f(u32 v)
+{
+	return (v & 0xf) << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_idx_m(void)
+{
+	return 0xf << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat1_wb3_idx_v(u32 r)
+{
+	return (r >> 28) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dmaq_num_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dmaq_num_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dmaq_num_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dmaq_num_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dma_enable_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dma_enable_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dma_enable_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_dma_enable_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_ldstq_num_s(void)
+{
+	return 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_ldstq_num_f(u32 v)
+{
+	return (v & 0x7) << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_ldstq_num_m(void)
+{
+	return 0x7 << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_ldstq_num_v(u32 r)
+{
+	return (r >> 5) & 0x7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_busy_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_busy_f(u32 v)
+{
+	return (v & 0xf) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_busy_m(void)
+{
+	return 0xf << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_busy_v(u32 r)
+{
+	return (r >> 16) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_acked_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_acked_f(u32 v)
+{
+	return (v & 0xf) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_acked_m(void)
+{
+	return 0xf << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_acked_v(u32 r)
+{
+	return (r >> 20) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_iswr_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_iswr_f(u32 v)
+{
+	return (v & 0xf) << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_iswr_m(void)
+{
+	return 0xf << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_iswr_v(u32 r)
+{
+	return (r >> 24) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_dvld_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_dvld_f(u32 v)
+{
+	return (v & 0xf) << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_dvld_m(void)
+{
+	return 0xf << 28;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat2_em_dvld_v(u32 r)
+{
+	return (r >> 28) & 0xf;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_mthd_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_scp_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_true_f(void)
+{
+	return 0x10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_true_f(void)
+{
+	return 0x20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_sbwb_empty_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswie_s(void)
+{
+	return 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswie_f(u32 v)
+{
+	return (v & 0x7) << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswie_m(void)
+{
+	return 0x7 << 6;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswie_v(u32 r)
+{
+	return (r >> 6) & 0x7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswe_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswe_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswe_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_cswe_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_s(void)
+{
+	return 3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_f(u32 v)
+{
+	return (v & 0x7) << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_m(void)
+{
+	return 0x7 << 12;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_v(u32 r)
+{
+	return (r >> 12) & 0x7;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_idle_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_idle_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_check_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_check_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_save_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_save_f(void)
+{
+	return 0x2000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_save_wait_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_save_wait_f(void)
+{
+	return 0x3000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_blk_bind_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_blk_bind_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_reset_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_reset_f(void)
+{
+	return 0x5000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_resetwait_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_resetwait_f(void)
+{
+	return 0x6000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_ack_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_state_sm_ack_f(void)
+{
+	return 0x7000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_true_f(void)
+{
+	return 0x8000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ctxsw_pend_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_v(u32 r)
+{
+	return (r >> 17) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_true_f(void)
+{
+	return 0x20000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_fbreq_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_v(u32 r)
+{
+	return (r >> 18) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_true_f(void)
+{
+	return 0x40000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_ackq_empty_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_true_f(void)
+{
+	return 0x80000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rdq_empty_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_true_f(void)
+{
+	return 0x100000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_wr_busy_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_true_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_dma_rd_busy_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_busy_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_m(void)
+{
+	return 0x1 << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_true_f(void)
+{
+	return 0x800000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_ldst_xt_block_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_true_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat3_eng_idle_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_m(void)
+{
+	return 0x3 << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_normal_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_normal_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_wait_issue_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_wait_issue_clear_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_wait_exldq_clear_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_wait_exldq_clear_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_full_dbg_mode_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_state_full_dbg_mode_f(void)
+{
+	return 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_f(u32 v)
+{
+	return (v & 0x3) << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_m(void)
+{
+	return 0x3 << 2;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_v(u32 r)
+{
+	return (r >> 2) & 0x3;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_suppressicd_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_suppressicd_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_entericd_ibrk_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_entericd_ibrk_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_entericd_step_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_mode_entericd_step_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_s(void)
+{
+	return 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_v(u32 r)
+{
+	return (r >> 17) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_true_f(void)
+{
+	return 0x20000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap1_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_v(u32 r)
+{
+	return (r >> 18) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_true_f(void)
+{
+	return 0x40000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap2_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_true_f(void)
+{
+	return 0x80000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_trap3_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_true_f(void)
+{
+	return 0x100000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_unimp_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_true_f(void)
+{
+	return 0x200000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imiss_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_imhit_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_m(void)
+{
+	return 0x1 << 23;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_true_f(void)
+{
+	return 0x800000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_exc_ibreak_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_true_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_true_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv1_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_true_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_iv2_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_ext_s(void)
+{
+	return 5;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_ext_f(u32 v)
+{
+	return (v & 0x1f) << 27;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_ext_m(void)
+{
+	return 0x1f << 27;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat4_icd_emask_ext_v(u32 r)
+{
+	return (r >> 27) & 0x1f;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat5_lru_state_s(void)
+{
+	return 8;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat5_lru_state_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat5_lru_state_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 pwr_pmu_falcon_icd_rdata_rstat5_lru_state_v(u32 r)
+{
+	return (r >> 0) & 0xff;
 }
 static inline u32 pwr_falcon_dmemc_r(u32 i)
 {
@@ -6281,6 +10673,618 @@ static inline u32 pwr_pmu_idle_ctrl_supp_value_always_v(void)
 static inline u32 pwr_pmu_idle_ctrl_supp_value_always_f(void)
 {
 	return 0x3;
+}
+static inline u32 pwr_pmu_debug_r(u32 i)
+{
+	return 0x0010a5c0+(i)*4;
+}
+static inline u32 pwr_pmu_debug__size_1_v(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_debug_val_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_pmu_debug_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_pmu_debug_val_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_pmu_debug_val_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_pmu_debug_val_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_debug_val_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_mailbox_r(u32 i)
+{
+	return 0x0010a450+(i)*4;
+}
+static inline u32 pwr_pmu_mailbox__size_1_v(void)
+{
+	return 12;
+}
+static inline u32 pwr_pmu_mailbox_val_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_pmu_mailbox_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_pmu_mailbox_val_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_pmu_mailbox_val_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_pmu_mailbox_val_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_mailbox_val_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_addr_r(void)
+{
+	return 0x0010a7a0;
+}
+static inline u32 pwr_pmu_bar0_addr_value_s(void)
+{
+	return 26;
+}
+static inline u32 pwr_pmu_bar0_addr_value_f(u32 v)
+{
+	return (v & 0x3ffffff) << 0;
+}
+static inline u32 pwr_pmu_bar0_addr_value_m(void)
+{
+	return 0x3ffffff << 0;
+}
+static inline u32 pwr_pmu_bar0_addr_value_v(u32 r)
+{
+	return (r >> 0) & 0x3ffffff;
+}
+static inline u32 pwr_pmu_bar0_addr_value_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_addr_value_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_addr_blocking_enable_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 pwr_pmu_bar0_addr_target_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_addr_target_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 pwr_pmu_bar0_addr_target_m(void)
+{
+	return 0x1 << 27;
+}
+static inline u32 pwr_pmu_bar0_addr_target_v(u32 r)
+{
+	return (r >> 27) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_addr_target_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_addr_target_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_addr_target_host_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_addr_target_host_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_addr_target_fecs_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_addr_target_fecs_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 pwr_pmu_bar0_data_r(void)
+{
+	return 0x0010a7a4;
+}
+static inline u32 pwr_pmu_bar0_data_value_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_pmu_bar0_data_value_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_pmu_bar0_data_value_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_pmu_bar0_data_value_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_pmu_bar0_data_value_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_data_value_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_r(void)
+{
+	return 0x0010a7ac;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_s(void)
+{
+	return 2;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_m(void)
+{
+	return 0x3 << 0;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_read_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_read_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_write_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_write_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_rsvd_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_bar0_ctl_cmd_rsvd_f(void)
+{
+	return 0x3;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_s(void)
+{
+	return 4;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_f(u32 v)
+{
+	return (v & 0xf) << 4;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_m(void)
+{
+	return 0xf << 4;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_v(u32 r)
+{
+	return (r >> 4) & 0xf;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_ctl_wrbe_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_s(void)
+{
+	return 3;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_f(u32 v)
+{
+	return (v & 0x7) << 12;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_m(void)
+{
+	return 0x7 << 12;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_v(u32 r)
+{
+	return (r >> 12) & 0x7;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_busy_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_busy_f(void)
+{
+	return 0x1000;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_tout_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_tout_f(void)
+{
+	return 0x2000;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_dis_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_dis_f(void)
+{
+	return 0x3000;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_error_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pwr_pmu_bar0_ctl_status_error_f(void)
+{
+	return 0x4000;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_ctl_trig_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 pwr_pmu_bar0_timeout_r(void)
+{
+	return 0x0010a7a8;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_s(void)
+{
+	return 32;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_init_v(void)
+{
+	return 0x10000000;
+}
+static inline u32 pwr_pmu_bar0_timeout_value_init_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_r(void)
+{
+	return 0x0010a7b0;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_host_clear_f(void)
+{
+	return 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_timeout_fecs_clear_f(void)
+{
+	return 0x2;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_cmd_hwerr_clear_f(void)
+{
+	return 0x4;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_read_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_read_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_write_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_cmd_write_f(void)
+{
+	return 0x8;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_s(void)
+{
+	return 26;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_f(u32 v)
+{
+	return (v & 0x3ffffff) << 4;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_m(void)
+{
+	return 0x3ffffff << 4;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_v(u32 r)
+{
+	return (r >> 4) & 0x3ffffff;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_ini_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_error_addr_ini_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_hosterr_clear_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_s(void)
+{
+	return 1;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pwr_pmu_bar0_error_status_fecserr_clear_f(void)
+{
+	return 0x80000000;
 }
 static inline u32 pwr_pmu_pg_idlefilth_r(u32 i)
 {

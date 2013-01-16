@@ -30,6 +30,7 @@
 #include "gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_pwr_gk20a.h"
+#include "hw_top_gk20a.h"
 #include "chip_support.h"
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
@@ -1838,6 +1839,189 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 	return 0;
 }
 
+static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = pmu->g;
+	struct pmu_pg_stats stats;
+	u32 i, val[20];
+
+	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
+
+	nvhost_dbg_pmu("pg_entry_start_timestamp : 0x%016llx",
+		stats.pg_entry_start_timestamp);
+	nvhost_dbg_pmu("pg_exit_start_timestamp : 0x%016llx",
+		stats.pg_exit_start_timestamp);
+	nvhost_dbg_pmu("pg_ingating_start_timestamp : 0x%016llx",
+		stats.pg_ingating_start_timestamp);
+	nvhost_dbg_pmu("pg_ungating_start_timestamp : 0x%016llx",
+		stats.pg_ungating_start_timestamp);
+	nvhost_dbg_pmu("pg_avg_entry_time_us : 0x%08x",
+		stats.pg_avg_entry_time_us);
+	nvhost_dbg_pmu("pg_avg_exit_time_us : 0x%08x",
+		stats.pg_avg_exit_time_us);
+	nvhost_dbg_pmu("pg_ingating_cnt : 0x%08x",
+		stats.pg_ingating_cnt);
+	nvhost_dbg_pmu("pg_ingating_time_us : 0x%08x",
+		stats.pg_ingating_time_us);
+	nvhost_dbg_pmu("pg_ungating_count : 0x%08x",
+		stats.pg_ungating_count);
+	nvhost_dbg_pmu("pg_ungating_time_us 0x%08x: ",
+		stats.pg_ungating_time_us);
+	nvhost_dbg_pmu("pg_gating_cnt : 0x%08x",
+		stats.pg_gating_cnt);
+	nvhost_dbg_pmu("pg_gating_deny_cnt : 0x%08x",
+		stats.pg_gating_deny_cnt);
+
+	/* symbol "ElpgLog" offset 0x1000066c in ucode .nm file */
+	pmu_copy_from_dmem(pmu, 0x66c,
+		(u8 *)val, sizeof(val), 0);
+	nvhost_dbg_pmu("elpg log begin");
+	for (i = 0; i < 20; i++)
+		nvhost_dbg_pmu("0x%08x", val[i]);
+	nvhost_dbg_pmu("elpg log end");
+
+	nvhost_dbg_pmu("pwr_pmu_idle_mask_supp_r(3): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_mask_supp_r(3)));
+	nvhost_dbg_pmu("pwr_pmu_idle_mask_1_supp_r(3): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_mask_1_supp_r(3)));
+	nvhost_dbg_pmu("pwr_pmu_idle_ctrl_supp_r(3): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_ctrl_supp_r(3)));
+	nvhost_dbg_pmu("pwr_pmu_pg_idle_cnt_r(0): 0x%08x",
+		gk20a_readl(g, pwr_pmu_pg_idle_cnt_r(0)));
+	nvhost_dbg_pmu("pwr_pmu_pg_intren_r(0): 0x%08x",
+		gk20a_readl(g, pwr_pmu_pg_intren_r(0)));
+
+	nvhost_dbg_pmu("pwr_pmu_idle_count_r(3): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_count_r(3)));
+	nvhost_dbg_pmu("pwr_pmu_idle_count_r(4): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_count_r(4)));
+	nvhost_dbg_pmu("pwr_pmu_idle_count_r(7): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_count_r(7)));
+
+	/* TBD: script can't generate those registers correctly
+	nvhost_dbg_pmu("pwr_pmu_idle_status_r(): 0x%08x",
+		gk20a_readl(g, pwr_pmu_idle_status_r()));
+	nvhost_dbg_pmu("pwr_pmu_pg_ctrl_r(): 0x%08x",
+		gk20a_readl(g, pwr_pmu_pg_ctrl_r()));
+	*/
+}
+
+static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = pmu->g;
+	int i;
+
+	nvhost_dbg_pmu("pwr_falcon_os_r : %d",
+		gk20a_readl(g, pwr_falcon_os_r()));
+	nvhost_dbg_pmu("pwr_falcon_cpuctl_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_cpuctl_r()));
+	nvhost_dbg_pmu("pwr_falcon_idlestate_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_idlestate_r()));
+	nvhost_dbg_pmu("pwr_falcon_mailbox0_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_mailbox0_r()));
+	nvhost_dbg_pmu("pwr_falcon_mailbox1_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_mailbox1_r()));
+	nvhost_dbg_pmu("pwr_falcon_irqstat_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_irqstat_r()));
+	nvhost_dbg_pmu("pwr_falcon_irqmode_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_irqmode_r()));
+	nvhost_dbg_pmu("pwr_falcon_irqmask_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_irqmask_r()));
+	nvhost_dbg_pmu("pwr_falcon_irqdest_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_irqdest_r()));
+
+	for (i = 0; i < pwr_pmu_mailbox__size_1_v(); i++)
+		nvhost_dbg_pmu("pwr_pmu_mailbox_r(%d) : 0x%x",
+			i, gk20a_readl(g, pwr_pmu_mailbox_r(i)));
+
+	for (i = 0; i < pwr_pmu_debug__size_1_v(); i++)
+		nvhost_dbg_pmu("pwr_pmu_debug_r(%d) : 0x%x",
+			i, gk20a_readl(g, pwr_pmu_debug_r(i)));
+
+	for (i = 0; i < 6/*NV_PPWR_FALCON_ICD_IDX_RSTAT__SIZE_1*/; i++) {
+		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+			pwr_pmu_falcon_icd_cmd_opc_rstat_f() |
+			pwr_pmu_falcon_icd_cmd_idx_f(i));
+		nvhost_dbg_pmu("pmu_rstat (%d) : 0x%x",
+			i, gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+	}
+
+	i = gk20a_readl(g, pwr_pmu_bar0_error_status_r());
+	nvhost_dbg_pmu("pwr_pmu_bar0_error_status_r : 0x%x", i);
+	if (i != 0) {
+		nvhost_dbg_pmu("pwr_pmu_bar0_addr_r : 0x%x",
+			gk20a_readl(g, pwr_pmu_bar0_addr_r()));
+		nvhost_dbg_pmu("pwr_pmu_bar0_data_r : 0x%x",
+			gk20a_readl(g, pwr_pmu_bar0_data_r()));
+		nvhost_dbg_pmu("pwr_pmu_bar0_timeout_r : 0x%x",
+			gk20a_readl(g, pwr_pmu_bar0_timeout_r()));
+		nvhost_dbg_pmu("pwr_pmu_bar0_ctl_r : 0x%x",
+			gk20a_readl(g, pwr_pmu_bar0_ctl_r()));
+	}
+
+	i = gk20a_readl(g, pwr_falcon_exterrstat_r());
+	nvhost_dbg_pmu("pwr_falcon_exterrstat_r : 0x%x", i);
+	if (pwr_falcon_exterrstat_valid_v(i) ==
+			pwr_falcon_exterrstat_valid_true_v()) {
+		nvhost_dbg_pmu("pwr_falcon_exterraddr_r : 0x%x",
+			gk20a_readl(g, pwr_falcon_exterraddr_r()));
+		nvhost_dbg_pmu("top_fs_status_r : 0x%x",
+			gk20a_readl(g, top_fs_status_r()));
+	}
+
+	nvhost_dbg_pmu("pwr_falcon_engctl_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_engctl_r()));
+	nvhost_dbg_pmu("pwr_falcon_curctx_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_curctx_r()));
+	nvhost_dbg_pmu("pwr_falcon_nxtctx_r : 0x%x",
+		gk20a_readl(g, pwr_falcon_nxtctx_r()));
+
+	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_IMB));
+	nvhost_dbg_pmu("PMU_FALCON_REG_IMB : 0x%x",
+		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_DMB));
+	nvhost_dbg_pmu("PMU_FALCON_REG_DMB : 0x%x",
+		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CSW));
+	nvhost_dbg_pmu("PMU_FALCON_REG_CSW : 0x%x",
+		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CTX));
+	nvhost_dbg_pmu("PMU_FALCON_REG_CTX : 0x%x",
+		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_EXCI));
+	nvhost_dbg_pmu("PMU_FALCON_REG_EXCI : 0x%x",
+		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+	for (i = 0; i < 4; i++) {
+		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_PC));
+		nvhost_dbg_pmu("PMU_FALCON_REG_PC : 0x%x",
+			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+
+		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
+			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
+			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_SP));
+		nvhost_dbg_pmu("PMU_FALCON_REG_SP : 0x%x",
+			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
+	}
+}
+
 void gk20a_pmu_isr(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -1864,6 +2048,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	if (intr & pwr_falcon_irqstat_exterr_true_f()) {
 		nvhost_err(dev_from_gk20a(g),
 			"pmu exterr intr not implemented");
+		pmu_dump_falcon_stats(pmu);
 	}
 	if (intr & pwr_falcon_irqstat_swgen0_true_f()) {
 		pmu_process_message(pmu);
@@ -2075,72 +2260,6 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	nvhost_dbg_fn("done");
 
-	if (0) {
-		struct pmu_pg_stats stats;
-		u32 i, val[20];
-
-		pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
-			(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
-
-		nvhost_dbg_pmu("pg_entry_start_timestamp : 0x%016llx",
-			stats.pg_entry_start_timestamp);
-		nvhost_dbg_pmu("pg_exit_start_timestamp : 0x%016llx",
-			stats.pg_exit_start_timestamp);
-		nvhost_dbg_pmu("pg_ingating_start_timestamp : 0x%016llx",
-			stats.pg_ingating_start_timestamp);
-		nvhost_dbg_pmu("pg_ungating_start_timestamp : 0x%016llx",
-			stats.pg_ungating_start_timestamp);
-		nvhost_dbg_pmu("pg_avg_entry_time_us : 0x%08x",
-			stats.pg_avg_entry_time_us);
-		nvhost_dbg_pmu("pg_avg_exit_time_us : 0x%08x",
-			stats.pg_avg_exit_time_us);
-		nvhost_dbg_pmu("pg_ingating_cnt : 0x%08x",
-			stats.pg_ingating_cnt);
-		nvhost_dbg_pmu("pg_ingating_time_us : 0x%08x",
-			stats.pg_ingating_time_us);
-		nvhost_dbg_pmu("pg_ungating_count : 0x%08x",
-			stats.pg_ungating_count);
-		nvhost_dbg_pmu("pg_ungating_time_us 0x%08x: ",
-			stats.pg_ungating_time_us);
-		nvhost_dbg_pmu("pg_gating_cnt : 0x%08x",
-			stats.pg_gating_cnt);
-		nvhost_dbg_pmu("pg_gating_deny_cnt : 0x%08x",
-			stats.pg_gating_deny_cnt);
-
-		/* symbol "ElpgLog" offset 0x1000066c in ucode .nm file */
-		pmu_copy_from_dmem(pmu, 0x66c,
-			(u8 *)val, sizeof(val), 0);
-		nvhost_dbg_pmu("elpg log begin");
-		for (i = 0; i < 20; i++)
-			nvhost_dbg_pmu("0x%08x", val[i]);
-		nvhost_dbg_pmu("elpg log end");
-
-		i = gk20a_readl(g, pwr_pmu_idle_mask_supp_r(3));
-		nvhost_dbg_pmu("pwr_pmu_idle_mask_supp_r(3): 0x%08x", i);
-		i = gk20a_readl(g, pwr_pmu_idle_mask_1_supp_r(3));
-		nvhost_dbg_pmu("pwr_pmu_idle_mask_1_supp_r(3): 0x%08x", i);
-		i = gk20a_readl(g, pwr_pmu_idle_ctrl_supp_r(3));
-		nvhost_dbg_pmu("pwr_pmu_idle_ctrl_supp_r(3): 0x%08x", i);
-		i = gk20a_readl(g, pwr_pmu_pg_idle_cnt_r(0));
-		nvhost_dbg_pmu("pwr_pmu_pg_idle_cnt_r(0): 0x%08x", i);
-		i = gk20a_readl(g, pwr_pmu_pg_intren_r(0));
-		nvhost_dbg_pmu("pwr_pmu_pg_intren_r(0): 0x%08x", i);
-
-		nvhost_dbg_pmu("pwr_pmu_idle_count_r(3): 0x%08x",
-			gk20a_readl(g, pwr_pmu_idle_count_r(3)));
-		nvhost_dbg_pmu("pwr_pmu_idle_count_r(4): 0x%08x",
-			gk20a_readl(g, pwr_pmu_idle_count_r(4)));
-		nvhost_dbg_pmu("pwr_pmu_idle_count_r(7): 0x%08x",
-			gk20a_readl(g, pwr_pmu_idle_count_r(7)));
-
-		/* TBD: script can't generate those registers correctly
-		i = gk20a_readl(g, pwr_pmu_idle_status_r());
-		nvhost_dbg_pmu("pwr_pmu_idle_status_r(): 0x%08x", i);
-		i = gk20a_readl(g, pwr_pmu_pg_ctrl_r());
-		nvhost_dbg_pmu("pwr_pmu_pg_ctrl_r(): 0x%08x", i);
-		*/
-	}
-
 	return 0;
 
 clean_up:
@@ -2251,6 +2370,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 		nvhost_err(dev_from_gk20a(g),
 			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%08x",
 			remain);
+		pmu_dump_elpg_stats(pmu);
 		return -EBUSY;
 	}
 

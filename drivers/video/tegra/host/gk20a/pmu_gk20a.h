@@ -592,6 +592,42 @@ struct pmu_pg_stats {
 #define PMU_ELPG_STAT_ON_PENDING	2   /* elpg is off, ALLOW cmd has been sent, wait for ack */
 #define PMU_ELPG_STAT_OFF_ON_PENDING	3   /* elpg is off, caller has requested on, but ALLOW
 					       cmd hasn't been sent due to ENABLE_ALLOW delay */
+
+/* Falcon Register index */
+#define PMU_FALCON_REG_R0		(0)
+#define PMU_FALCON_REG_R1		(1)
+#define PMU_FALCON_REG_R2		(2)
+#define PMU_FALCON_REG_R3		(3)
+#define PMU_FALCON_REG_R4		(4)
+#define PMU_FALCON_REG_R5		(5)
+#define PMU_FALCON_REG_R6		(6)
+#define PMU_FALCON_REG_R7		(7)
+#define PMU_FALCON_REG_R8		(8)
+#define PMU_FALCON_REG_R9		(9)
+#define PMU_FALCON_REG_R10		(10)
+#define PMU_FALCON_REG_R11		(11)
+#define PMU_FALCON_REG_R12		(12)
+#define PMU_FALCON_REG_R13		(13)
+#define PMU_FALCON_REG_R14		(14)
+#define PMU_FALCON_REG_R15		(15)
+#define PMU_FALCON_REG_IV0		(16)
+#define PMU_FALCON_REG_IV1		(17)
+#define PMU_FALCON_REG_UNDEFINED	(18)
+#define PMU_FALCON_REG_EV		(19)
+#define PMU_FALCON_REG_SP		(20)
+#define PMU_FALCON_REG_PC		(21)
+#define PMU_FALCON_REG_IMB		(22)
+#define PMU_FALCON_REG_DMB		(23)
+#define PMU_FALCON_REG_CSW		(24)
+#define PMU_FALCON_REG_CCR		(25)
+#define PMU_FALCON_REG_SEC		(26)
+#define PMU_FALCON_REG_CTX		(27)
+#define PMU_FALCON_REG_EXCI		(28)
+#define PMU_FALCON_REG_RSVD0		(29)
+#define PMU_FALCON_REG_RSVD1		(30)
+#define PMU_FALCON_REG_RSVD2		(31)
+#define PMU_FALCON_REG_SIZE		(32)
+
 struct pmu_gk20a {
 
 	struct gk20a *g;

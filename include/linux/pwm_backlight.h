@@ -15,6 +15,7 @@ struct platform_pwm_backlight_data {
 	unsigned int *levels;
 	/* TODO remove once all users are switched to gpiod_* API */
 	int enable_gpio;
+	unsigned int pwm_gpio;
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
 	void (*notify_after)(struct device *dev, int brightness);

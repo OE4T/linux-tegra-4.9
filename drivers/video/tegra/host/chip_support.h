@@ -63,12 +63,8 @@ struct nvhost_cdma_ops {
 	void (*timeout_teardown_begin)(struct nvhost_cdma *);
 	void (*timeout_teardown_end)(struct nvhost_cdma *,
 				     u32 getptr);
-	void (*timeout_cpu_incr)(struct nvhost_cdma *,
-				 u32 getptr,
-				 u32 syncpt_incrs,
-				 u32 syncval,
-				 u32 nr_slots,
-				 u32 *waitbases);
+	void (*timeout_pb_cleanup)(struct nvhost_cdma *,
+				 u32 getptr, u32 nr_slots);
 };
 
 struct nvhost_pushbuffer_ops {

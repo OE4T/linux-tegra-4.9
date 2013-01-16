@@ -302,6 +302,8 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 
 	/* do CPU increments as long as this context continues */
 	list_for_each_entry_from(job, &cdma->sync_queue, list) {
+		int i;
+
 		/* different context, gets us out of this loop */
 		if (job->clientid != cdma->timeout.clientid)
 			break;
@@ -315,20 +317,31 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		dev_dbg(&dev->dev,
 			"%s: CPU incr (%d)\n", __func__, syncpt_incrs);
 
-		/* safe to use CPU to incr syncpts */
-		cdma_op().timeout_cpu_incr(cdma,
-				job->first_get,
-				syncpt_incrs,
-				job->syncpt_end,
-				job->num_slots,
-				pdata->waitbases);
+		/* do CPU increments */
+		for (i = 0; i < syncpt_incrs; i++)
+			nvhost_syncpt_cpu_incr(&cdma_to_dev(cdma)->syncpt,
+				cdma->timeout.syncpt_id);
+
+		/* ensure shadow is up to date */
+		nvhost_syncpt_update_min(&cdma_to_dev(cdma)->syncpt,
+			cdma->timeout.syncpt_id);
+
+		/* synchronize wait bases */
+		if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 &&
+			pdata->waitbases[0])
+			nvhost_syncpt_cpu_set_wait_base(dev,
+				pdata->waitbases[0], job->syncpt_end);
+
+		/* cleanup push buffer */
+		cdma_op().timeout_pb_cleanup(cdma, job->first_get,
+			job->num_slots);
 
 		syncpt_val += syncpt_incrs;
 	}
 
 	list_for_each_entry_from(job, &cdma->sync_queue, list)
 		if (job->clientid == cdma->timeout.clientid)
-			job->timeout = 500;
+			job->timeout = min(job->timeout, 500);
 
 	dev_dbg(&dev->dev,
 		"%s: finished sync_queue modification\n", __func__);

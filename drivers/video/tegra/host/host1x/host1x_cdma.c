@@ -229,30 +229,12 @@ static void cdma_timeout_destroy(struct nvhost_cdma *cdma)
 /**
  * Increment timedout buffer's syncpt via CPU.
  */
-static void cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
-				u32 syncpt_incrs, u32 syncval, u32 nr_slots,
-				u32 *waitbases)
+static void cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
+				u32 nr_slots)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct push_buffer *pb = &cdma->push_buffer;
-	u32 i, getidx;
-
-	for (i = 0; i < syncpt_incrs; i++)
-		nvhost_syncpt_cpu_incr(&dev->syncpt, cdma->timeout.syncpt_id);
-
-	/* after CPU incr, ensure shadow is up to date */
-	nvhost_syncpt_update_min(&dev->syncpt, cdma->timeout.syncpt_id);
-
-	/* Synchronize wait bases. 2D wait bases are synchronized with
-	 * syncpoint 19. Hence wait bases are not updated when syncptid=18. */
-
-	if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 && waitbases[0]) {
-		void __iomem *p;
-		p = dev->sync_aperture + host1x_sync_syncpt_base_0_r() +
-				(waitbases[0] * sizeof(u32));
-		writel(syncval, p);
-		dev->syncpt.base_val[waitbases[0]] = syncval;
-	}
+	u32 getidx;
 
 	/* NOP all the PB slots */
 	getidx = getptr - pb->phys;
@@ -543,7 +525,7 @@ static const struct nvhost_cdma_ops host1x_cdma_ops = {
 	.timeout_destroy = cdma_timeout_destroy,
 	.timeout_teardown_begin = cdma_timeout_teardown_begin,
 	.timeout_teardown_end = cdma_timeout_teardown_end,
-	.timeout_cpu_incr = cdma_timeout_cpu_incr,
+	.timeout_pb_cleanup = cdma_timeout_pb_cleanup,
 };
 
 static const struct nvhost_pushbuffer_ops host1x_pushbuffer_ops = {

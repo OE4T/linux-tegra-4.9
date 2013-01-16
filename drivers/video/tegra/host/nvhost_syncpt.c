@@ -597,6 +597,16 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 	nvhost_syncpt_cpu_incr(sp, id);
 }
 
+void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
+					u32 val)
+{
+	struct nvhost_syncpt *sp = &(nvhost_get_host(pdev)->syncpt);
+
+	sp->base_val[id] = val;
+	syncpt_op().reset_wait_base(sp, id);
+	wmb();
+}
+
 u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 {
 	struct platform_device *pdev;

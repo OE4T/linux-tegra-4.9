@@ -39,14 +39,19 @@ enum
 	GK20A_PMU_DMAIDX_END		= 7
 };
 
+struct pmu_mem {
+	u32 dma_base;
+	u8  dma_offset;
+	u8  dma_idx;
+};
+
 /* Make sure size of this structure is a multiple of 4 bytes */
-struct pmu_cmdline_args
-{
+struct pmu_cmdline_args {
 	u32 cpu_freq_HZ;		/* Frequency of the clock driving the PMU */
 	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
 	u32 falc_trace_dma_base;	/* 256-byte block address */
 	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	u32 gc6_ctx_dmem_addr;		/* dmem offset of gc6 context */
+	struct pmu_mem gc6_ctx;		/* dmem offset of gc6 context */
 };
 
 #define GK20A_PMU_DMEM_BLKSIZE2		8

@@ -1843,7 +1843,6 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_pg_stats stats;
-	u32 i, val[20];
 
 	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
@@ -1873,13 +1872,17 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 	nvhost_dbg_pmu("pg_gating_deny_cnt : 0x%08x",
 		stats.pg_gating_deny_cnt);
 
-	/* symbol "ElpgLog" offset 0x1000066c in ucode .nm file */
+	/*
+	   Turn on PG_DEBUG in ucode and locate symbol "ElpgLog" offset
+	   in .nm file, e.g. 0x1000066c. use 0x66c.
+	u32 i, val[20];
 	pmu_copy_from_dmem(pmu, 0x66c,
 		(u8 *)val, sizeof(val), 0);
 	nvhost_dbg_pmu("elpg log begin");
 	for (i = 0; i < 20; i++)
 		nvhost_dbg_pmu("0x%08x", val[i]);
 	nvhost_dbg_pmu("elpg log end");
+	*/
 
 	nvhost_dbg_pmu("pwr_pmu_idle_mask_supp_r(3): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_mask_supp_r(3)));
@@ -1899,7 +1902,8 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 	nvhost_dbg_pmu("pwr_pmu_idle_count_r(7): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_count_r(7)));
 
-	/* TBD: script can't generate those registers correctly
+	/*
+	 TBD: script can't generate those registers correctly
 	nvhost_dbg_pmu("pwr_pmu_idle_status_r(): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_status_r()));
 	nvhost_dbg_pmu("pwr_pmu_pg_ctrl_r(): 0x%08x",

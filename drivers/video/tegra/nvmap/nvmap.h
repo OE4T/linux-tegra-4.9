@@ -85,7 +85,11 @@ struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	atomic_t pin;		/* pin count */
-	unsigned int usecount;	/* how often is used */
+#ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
+	atomic_t usecount;	/* holds map count on carveout handle and is
+					used to avoid relocation during
+					carveout compaction */
+#endif
 	unsigned long flags;
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */

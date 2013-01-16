@@ -29,6 +29,7 @@
 
 #include "dev.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
 #include "gr2d_t30.h"
 #include "gr2d_t114.h"
 #include "t20/t20.h"
@@ -43,6 +44,79 @@ static struct of_device_id tegra_gr2d_of_match[] = {
 	{ .compatible = "nvidia,tegra114-gr2d",
 		.data = (struct nvhost_device_data *)&t11_gr2d_info },
 	{ },
+};
+
+struct gr2d_pm_domain {
+	struct platform_device *dev;
+	struct generic_pm_domain pd;
+};
+
+static int gr2d_unpowergate(struct generic_pm_domain *domain)
+{
+	struct gr2d_pm_domain *gr2d_pd;
+
+	gr2d_pd = container_of(domain, struct gr2d_pm_domain, pd);
+	return nvhost_module_power_on(gr2d_pd->dev);
+}
+
+static int gr2d_powergate(struct generic_pm_domain *domain)
+{
+	struct gr2d_pm_domain *gr2d_pd;
+
+	gr2d_pd = container_of(domain, struct gr2d_pm_domain, pd);
+	return nvhost_module_power_off(gr2d_pd->dev);
+}
+
+static int gr2d_enable_clock(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+
+static int gr2d_disable_clock(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int gr2d_restore_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(pdev);
+
+	return 0;
+}
+
+static int gr2d_suspend(struct device *dev)
+{
+	return nvhost_client_device_suspend(to_platform_device(dev));
+}
+
+static int gr2d_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
+}
+
+static struct gr2d_pm_domain gr2d_pd = {
+	.pd = {
+		.name = "gr2d",
+		.power_off = gr2d_powergate,
+		.power_on = gr2d_unpowergate,
+		.dev_ops = {
+			.start = gr2d_enable_clock,
+			.stop = gr2d_disable_clock,
+		},
+	},
 };
 
 static int gr2d_probe(struct platform_device *dev)
@@ -66,16 +140,27 @@ static int gr2d_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 
+	gr2d_pd.dev = dev;
+	err = nvhost_module_add_domain(&gr2d_pd.pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	gr2d_pd.pd.domain.ops.suspend = gr2d_suspend;
+	gr2d_pd.pd.domain.ops.resume = gr2d_resume;
+	gr2d_pd.pd.dev_ops.restore_state = gr2d_restore_context;
+
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_enable(&dev->dev);
+
+	pm_runtime_get_sync(&dev->dev);
 	err = nvhost_client_device_init(dev);
+	pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
-
-	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
-	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
-	pm_runtime_enable(&dev->dev);
 
 	return 0;
 }
@@ -86,38 +171,12 @@ static int __exit gr2d_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int gr2d_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int gr2d_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static const struct dev_pm_ops gr2d_pm_ops = {
-	.suspend = gr2d_suspend,
-	.resume = gr2d_resume,
-};
-
-#define GR2D_PM_OPS	(&gr2d_pm_ops)
-
-#else
-
-#define GR2D_PM_OPS	NULL
-
-#endif /* CONFIG_PM */
-
 static struct platform_driver gr2d_driver = {
 	.probe = gr2d_probe,
 	.remove = __exit_p(gr2d_remove),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr2d",
-		.pm = GR2D_PM_OPS,
 #ifdef CONFIG_OF
 		.of_match_table = tegra_gr2d_of_match,
 #endif

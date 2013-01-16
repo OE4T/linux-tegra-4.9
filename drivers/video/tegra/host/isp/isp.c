@@ -29,6 +29,7 @@
 
 #include "dev.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
@@ -64,7 +65,9 @@ static int isp_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -76,7 +79,7 @@ static int isp_probe(struct platform_device *dev)
 
 	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
 	pm_runtime_enable(&dev->dev);
 
 	return 0;
@@ -100,9 +103,25 @@ static int isp_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int isp_runtime_suspend(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int isp_runtime_resume(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+#endif /* CONFIG_PM_RUNTIME */
+
 static const struct dev_pm_ops isp_pm_ops = {
 	.suspend = isp_suspend,
 	.resume = isp_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend = isp_runtime_suspend,
+	.runtime_resume = isp_runtime_resume,
+#endif /* CONFIG_PM_RUNTIME */
 };
 
 #define ISP_PM_OPS	(&isp_pm_ops)

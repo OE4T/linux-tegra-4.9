@@ -109,7 +109,6 @@ struct mem_mgr;
 enum nvhost_power_sysfs_attributes {
 	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,
 	NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY,
-	NVHOST_POWER_SYSFS_ATTRIB_REFCOUNT,
 	NVHOST_POWER_SYSFS_ATTRIB_MAX
 };
 
@@ -119,13 +118,6 @@ struct nvhost_clock {
 	u32 moduleid;
 	int reset;
 	unsigned long devfreq_rate;
-};
-
-enum nvhost_device_powerstate_t {
-	NVHOST_POWER_STATE_DEINIT,
-	NVHOST_POWER_STATE_RUNNING,
-	NVHOST_POWER_STATE_CLOCKGATED,
-	NVHOST_POWER_STATE_POWERGATED
 };
 
 struct nvhost_device_data {
@@ -152,13 +144,9 @@ struct nvhost_device_data {
 	int		powergate_delay;/* Delay before power gated */
 	struct nvhost_clock clocks[NVHOST_MODULE_MAX_CLOCKS];/* Clock names */
 
-	struct delayed_work powerstate_down;/* Power state management */
 	int		num_clks;	/* Number of clocks opened for dev */
 	struct clk	*clk[NVHOST_MODULE_MAX_CLOCKS];
 	struct mutex	lock;		/* Power management lock */
-	int		powerstate;	/* Current power state */
-	int		refcount;	/* Number of tasks active */
-	wait_queue_head_t idle_wq;	/* Work queue for idle */
 	struct list_head client_list;	/* List of clients and rate requests */
 
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
@@ -200,10 +188,6 @@ struct nvhost_device_data {
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			u32 waitbase, struct nvhost_channel *ch);
-
-	/* Clock gating callbacks */
-	int (*prepare_clockoff)(struct platform_device *dev);
-	void (*finalize_clockon)(struct platform_device *dev);
 
 	/* Read module register into memory */
 	int (*read_reg)(struct platform_device *dev,

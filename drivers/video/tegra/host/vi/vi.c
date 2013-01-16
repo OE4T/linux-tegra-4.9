@@ -29,6 +29,7 @@
 
 #include "dev.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
@@ -84,7 +85,9 @@ static int vi_probe(struct platform_device *dev)
 	}
 #endif
 	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		goto camera_register_fail;
@@ -95,7 +98,7 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
 	pm_runtime_enable(&dev->dev);
 
 	return 0;
@@ -163,9 +166,25 @@ static int vi_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int vi_runtime_suspend(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int vi_runtime_resume(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+#endif /* CONFIG_PM_RUNTIME */
+
 static const struct dev_pm_ops vi_pm_ops = {
 	.suspend = vi_suspend,
 	.resume = vi_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend = vi_runtime_suspend,
+	.runtime_resume = vi_runtime_resume,
+#endif /* CONFIG_PM_RUNTIME */
 };
 
 #define VI_PM_OPS	(&vi_pm_ops)

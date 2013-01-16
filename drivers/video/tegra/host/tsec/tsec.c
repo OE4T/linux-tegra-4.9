@@ -547,7 +547,10 @@ static int tsec_probe(struct platform_device *dev)
 	pdata->init = nvhost_tsec_init;
 	pdata->deinit = nvhost_tsec_deinit;
 
+	mutex_init(&pdata->lock);
+
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -570,7 +573,7 @@ static int tsec_probe(struct platform_device *dev)
 
 	tegra_pd_add_device(&tegra_mc_chain_b, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
 	pm_runtime_enable(&dev->dev);
 
 	nvhost_module_idle(to_platform_device(dev->dev.parent));
@@ -599,9 +602,25 @@ static int tsec_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int tsec_runtime_suspend(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int tsec_runtime_resume(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+#endif /* CONFIG_PM_RUNTIME */
+
 static const struct dev_pm_ops tsec_pm_ops = {
 	.suspend = tsec_suspend,
 	.resume = tsec_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend = tsec_runtime_suspend,
+	.runtime_resume = tsec_runtime_resume,
+#endif /* CONFIG_PM_RUNTIME */
 };
 
 #define TSEC_PM_OPS	(&tsec_pm_ops)

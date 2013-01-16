@@ -26,6 +26,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/pm.h>
 
 #include <mach/pm_domains.h>
 #include <mach/gpufuse.h>
@@ -35,6 +36,7 @@
 #include "t114/t114.h"
 #include "host1x/host1x01_hardware.h"
 #include "nvhost_hwctx.h"
+#include "nvhost_acm.h"
 #include "dev.h"
 #include "gr3d.h"
 #include "gr3d_t20.h"
@@ -184,6 +186,98 @@ static struct of_device_id tegra_gr3d_of_match[] = {
 	{ },
 };
 
+struct gr3d_pm_domain {
+	struct platform_device *dev;
+	struct generic_pm_domain pd;
+};
+
+static int gr3d_unpowergate(struct generic_pm_domain *domain)
+{
+	struct gr3d_pm_domain *gr3d_pd;
+
+	gr3d_pd = container_of(domain, struct gr3d_pm_domain, pd);
+	return nvhost_module_power_on(gr3d_pd->dev);
+}
+
+static int gr3d_powergate(struct generic_pm_domain *domain)
+{
+	struct gr3d_pm_domain *gr3d_pd;
+
+	gr3d_pd = container_of(domain, struct gr3d_pm_domain, pd);
+	return nvhost_module_power_off(gr3d_pd->dev);
+}
+
+static int gr3d_enable_clock(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+
+static int gr3d_disable_clock(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int gr3d_save_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->prepare_poweroff)
+		pdata->prepare_poweroff(pdev);
+
+	return 0;
+}
+
+static int gr3d_restore_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(pdev);
+
+	return 0;
+}
+
+static int gr3d_suspend(struct device *dev)
+{
+	return nvhost_client_device_suspend(to_platform_device(dev));
+}
+
+static int gr3d_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
+}
+
+static struct gr3d_pm_domain gr3d_pd = {
+	.pd = {
+		.name = "gr3d",
+		.power_off = gr3d_powergate,
+		.power_on = gr3d_unpowergate,
+		.dev_ops = {
+			.start = gr3d_enable_clock,
+			.stop = gr3d_disable_clock,
+		},
+	},
+};
+
 static int gr3d_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -205,18 +299,30 @@ static int gr3d_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 
+	gr3d_pd.dev = dev;
+	err = nvhost_module_add_domain(&gr3d_pd.pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	gr3d_pd.pd.dev_ops.save_state = gr3d_save_context;
+	gr3d_pd.pd.dev_ops.restore_state = gr3d_restore_context;
+	gr3d_pd.pd.domain.ops.suspend = gr3d_suspend;
+	gr3d_pd.pd.domain.ops.resume = gr3d_resume;
+
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_enable(&dev->dev);
+
+	pm_runtime_get_sync(&dev->dev);
 	err = nvhost_client_device_init(dev);
+	pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
 
-	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
-	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
-	pm_runtime_enable(&dev->dev);
-
-	return 0;
+	return err;
 }
 
 static int __exit gr3d_remove(struct platform_device *dev)
@@ -225,38 +331,12 @@ static int __exit gr3d_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int gr3d_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int gr3d_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static const struct dev_pm_ops gr3d_pm_ops = {
-	.suspend = gr3d_suspend,
-	.resume = gr3d_resume,
-};
-
-#define GR3D_PM_OPS	(&gr3d_pm_ops)
-
-#else
-
-#define GR3D_PM_OPS	NULL
-
-#endif
-
 static struct platform_driver gr3d_driver = {
 	.probe = gr3d_probe,
 	.remove = __exit_p(gr3d_remove),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr3d",
-		.pm = GR3D_PM_OPS,
 #ifdef CONFIG_OF
 		.of_match_table = tegra_gr3d_of_match,
 #endif

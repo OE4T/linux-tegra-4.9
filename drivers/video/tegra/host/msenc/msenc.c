@@ -144,6 +144,10 @@ int msenc_boot(struct platform_device *dev)
 	int err = 0;
 	struct msenc *m = get_msenc(dev);
 
+	/* check if firmware is loaded or not */
+	if (!m)
+		return -ENOMEDIUM;
+
 	nvhost_device_writel(dev, msenc_dmactl_r(), 0);
 	nvhost_device_writel(dev, msenc_dmatrfbase_r(),
 		(sg_dma_address(m->pa->sgl) + m->os.bin_data_offset) >> 8);
@@ -395,6 +399,79 @@ static struct of_device_id tegra_msenc_of_match[] = {
 	{ },
 };
 
+struct msenc_pm_domain {
+	struct platform_device *dev;
+	struct generic_pm_domain pd;
+};
+
+static int msenc_unpowergate(struct generic_pm_domain *domain)
+{
+	struct msenc_pm_domain *msenc_pd;
+
+	msenc_pd = container_of(domain, struct msenc_pm_domain, pd);
+	return nvhost_module_power_on(msenc_pd->dev);
+}
+
+static int msenc_powergate(struct generic_pm_domain *domain)
+{
+	struct msenc_pm_domain *msenc_pd;
+
+	msenc_pd = container_of(domain, struct msenc_pm_domain, pd);
+	return nvhost_module_power_off(msenc_pd->dev);
+}
+
+static int msenc_enable_clock(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+
+static int msenc_disable_clock(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int msenc_restore_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(pdev);
+
+	return 0;
+}
+
+static int msenc_suspend(struct device *dev)
+{
+	return nvhost_client_device_suspend(to_platform_device(dev));
+}
+
+static int msenc_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
+}
+
+static struct msenc_pm_domain msenc_pd = {
+	.pd = {
+		.name = "msenc",
+		.power_off = msenc_powergate,
+		.power_on = msenc_unpowergate,
+		.dev_ops = {
+			.start = msenc_enable_clock,
+			.stop = msenc_disable_clock,
+		},
+	},
+};
+
 static int msenc_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -420,20 +497,39 @@ static int msenc_probe(struct platform_device *dev)
 	pdata->deinit = nvhost_msenc_deinit;
 	pdata->finalize_poweron = nvhost_msenc_finalize_poweron;
 
+	mutex_init(&pdata->lock);
+
 	platform_set_drvdata(dev, pdata);
+	dev->dev.platform_data = NULL;
+
+	/* get the module clocks to sane state */
+	nvhost_module_init(dev);
+
+	/* add module power domain and also add its domain
+	 * as sub-domain of MC domain */
+	msenc_pd.dev = dev;
+	err = nvhost_module_add_domain(&msenc_pd.pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	msenc_pd.pd.domain.ops.suspend = msenc_suspend;
+	msenc_pd.pd.domain.ops.resume = msenc_resume;
+	msenc_pd.pd.dev_ops.restore_state = msenc_restore_context;
+
+	/* enable runtime pm. this is needed now since we need to call
+	 * _get_sync/_put during boot-up to ensure MC domain is ON */
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_enable(&dev->dev);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
 
+	pm_runtime_get_sync(&dev->dev);
 	err = nvhost_client_device_init(dev);
+	pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
-
-	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
-	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
-	pm_runtime_enable(&dev->dev);
 
 	return 0;
 }
@@ -444,38 +540,12 @@ static int __exit msenc_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int msenc_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int msenc_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static const struct dev_pm_ops msenc_pm_ops = {
-	.suspend = msenc_suspend,
-	.resume = msenc_resume,
-};
-
-#define MSENC_PM_OPS	(&msenc_pm_ops)
-
-#else
-
-#define MSENC_PM_OPS	NULL
-
-#endif
-
 static struct platform_driver msenc_driver = {
 	.probe = msenc_probe,
 	.remove = __exit_p(msenc_remove),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "msenc",
-		.pm = MSENC_PM_OPS,
 #ifdef CONFIG_OF
 		.of_match_table = tegra_msenc_of_match,
 #endif

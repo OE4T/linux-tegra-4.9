@@ -24,10 +24,11 @@
 
 #define DRV_NAME	"pid_thermal_gov"
 
-#define MAX_ERR_TEMP_DEFAULT	10000	/* in mC */
-#define MAX_ERR_GAIN_DEFAULT	1000
-#define GAIN_P_DEFAULT		1000
-#define GAIN_D_DEFAULT		0
+#define MAX_ERR_TEMP_DEFAULT		10000	/* in mC */
+#define MAX_ERR_GAIN_DEFAULT		1000
+#define GAIN_P_DEFAULT			1000
+#define GAIN_D_DEFAULT			0
+#define COMPENSATION_RATE_DEFAULT	20
 
 struct pid_thermal_gov_attribute {
 	struct attribute attr;
@@ -46,6 +47,8 @@ struct pid_thermal_governor {
 	int gain_p; /* proportional gain */
 	int gain_i; /* integral gain */
 	int gain_d; /* derivative gain */
+
+	unsigned long compensation_rate;
 };
 
 #define tz_to_gov(t)		\
@@ -177,11 +180,44 @@ static ssize_t gain_d_store(struct kobject *kobj, struct attribute *attr,
 static struct pid_thermal_gov_attribute gain_d_attr =
 	__ATTR(gain_d, 0644, gain_d_show, gain_d_store);
 
+static ssize_t compensation_rate_show(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+
+	if (!gov)
+		return -ENODEV;
+
+	return sprintf(buf, "%lu\n", gov->compensation_rate);
+}
+
+static ssize_t compensation_rate_store(struct kobject *kobj,
+				       struct attribute *attr, const char *buf,
+				       size_t count)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+	unsigned long val;
+
+	if (!gov)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%lu\n", &val))
+		return -EINVAL;
+
+	gov->compensation_rate = val;
+	return count;
+}
+
+static struct pid_thermal_gov_attribute compensation_rate_attr =
+	__ATTR(compensation_rate, 0644,
+	       compensation_rate_show, compensation_rate_store);
+
 static struct attribute *pid_thermal_gov_default_attrs[] = {
 	&max_err_temp_attr.attr,
 	&max_err_gain_attr.attr,
 	&gain_p_attr.attr,
 	&gain_d_attr.attr,
+	&compensation_rate_attr.attr,
 	NULL,
 };
 
@@ -243,6 +279,7 @@ static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 	gov->max_err_gain = MAX_ERR_GAIN_DEFAULT;
 	gov->gain_p = GAIN_P_DEFAULT;
 	gov->gain_d = GAIN_D_DEFAULT;
+	gov->compensation_rate = COMPENSATION_RATE_DEFAULT;
 	tz->governor_data = gov;
 
 	return 0;
@@ -286,9 +323,12 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 	int last_temperature = tz->passive ? tz->last_temperature : trip_temp;
 	int passive_delay = tz->passive ? tz->passive_delay : MSEC_PER_SEC;
 	s64 proportional, derivative, sum_err, max_err;
-	unsigned long max_state;
+	unsigned long max_state, cur_state, target, compensation;
 
 	if (cdev->ops->get_max_state(cdev, &max_state) < 0)
+		return 0;
+
+	if (cdev->ops->get_cur_state(cdev, &cur_state) < 0)
 		return 0;
 
 	/* Calculate proportional term */
@@ -312,9 +352,24 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 		return max_state;
 
 	sum_err = sum_err * max_state + max_err - 1;
-	sum_err = div64_s64(sum_err, max_err);
+	target = (unsigned long)div64_s64(sum_err, max_err);
 
-	return (unsigned long)sum_err;
+	/* Apply compensation */
+	if (target == cur_state)
+		return target;
+
+	if (target > cur_state) {
+		compensation = DIV_ROUND_UP(gov->compensation_rate *
+					    (target - cur_state), 100);
+		target = min(cur_state + compensation, max_state);
+	} else if (target < cur_state) {
+		compensation = DIV_ROUND_UP(gov->compensation_rate *
+					    (cur_state - target), 100);
+		target = (cur_state > compensation) ?
+			 (cur_state - compensation) : 0;
+	}
+
+	return target;
 }
 
 static int pid_thermal_gov_throttle(struct thermal_zone_device *tz, int trip)

@@ -60,10 +60,14 @@ void nvhost_syncpt_reset_client(struct platform_device *pdev)
 
 	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
 
-	for_each_set_bit(id, (unsigned long *)&pdata->syncpts, BITS_PER_LONG)
-		syncpt_op().reset(&nvhost_master->syncpt, id);
-	for_each_set_bit(id, (unsigned long *)&pdata->waitbases, BITS_PER_LONG)
-		syncpt_op().reset_wait_base(&nvhost_master->syncpt, id);
+	for (id = 0; pdata->syncpts[id] &&
+		(id < NVHOST_MODULE_MAX_SYNCPTS); ++id)
+		syncpt_op().reset(&nvhost_master->syncpt, pdata->syncpts[id]);
+
+	for (id = 0; pdata->waitbases[id] &&
+		(id < NVHOST_MODULE_MAX_WAITBASES); ++id)
+		syncpt_op().reset_wait_base(&nvhost_master->syncpt,
+			pdata->waitbases[id]);
 	wmb();
 }
 

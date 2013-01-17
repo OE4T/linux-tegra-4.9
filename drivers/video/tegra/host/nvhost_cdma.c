@@ -49,11 +49,6 @@ static void add_to_sync_queue(struct nvhost_cdma *cdma,
 			      u32 nr_slots,
 			      u32 first_get)
 {
-	if (job->syncpt_id == NVSYNCPT_INVALID) {
-		dev_warn(&job->ch->dev->dev, "%s: Invalid syncpt\n",
-				__func__);
-		return;
-	}
 	job->first_get = first_get;
 	job->num_slots = nr_slots;
 	nvhost_job_get(job);
@@ -142,8 +137,8 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 
 	cdma->timeout.ctx = job->hwctx;
 	cdma->timeout.clientid = job->clientid;
-	cdma->timeout.syncpt_id = job->syncpt_id;
-	cdma->timeout.syncpt_val = job->syncpt_end;
+	cdma->timeout.sp = job->sp;
+	cdma->timeout.num_syncpts = job->num_syncpts;
 	cdma->timeout.start_ktime = ktime_get();
 	cdma->timeout.timeout_debug_dump = job->timeout_debug_dump;
 
@@ -191,9 +186,15 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	 * to consume as many sync queue entries as possible without blocking
 	 */
 	list_for_each_entry_safe(job, n, &cdma->sync_queue, list) {
+		bool completed = true;
+		int i;
+
 		/* Check whether this syncpt has completed, and bail if not */
-		if (!nvhost_syncpt_is_expired(sp,
-				job->syncpt_id, job->syncpt_end)) {
+		for (i = 0; completed && i < job->num_syncpts; ++i)
+			completed &= nvhost_syncpt_is_expired(sp,
+				job->sp[i].id, job->sp[i].fence);
+
+		if (!completed) {
 			/* Start timer on next pending syncpt */
 			if (job->timeout)
 				cdma_start_timer_locked(cdma, job);
@@ -243,20 +244,33 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	}
 }
 
+
+static void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
+					struct nvhost_job_syncpt *sp)
+{
+	u32 id = sp->id;
+	u32 fence = sp->fence;
+	u32 syncpt_val = nvhost_syncpt_read_min(syncpt, id);
+	u32 syncpt_incrs = fence - syncpt_val;
+
+	/* do CPU increments */
+	while (syncpt_incrs--)
+		nvhost_syncpt_cpu_incr(syncpt, id);
+
+	/* ensure shadow is up to date */
+	nvhost_syncpt_update_min(syncpt, id);
+}
+
 void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		struct nvhost_syncpt *syncpt, struct platform_device *dev)
 {
 	u32 get_restart;
-	u32 syncpt_incrs;
 	struct nvhost_job *job = NULL;
-	u32 syncpt_val;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int nb_pts = nvhost_syncpt_nb_pts(syncpt);
+	DECLARE_BITMAP(syncpt_used, nb_pts);
 
-	syncpt_val = nvhost_syncpt_update_min(syncpt, cdma->timeout.syncpt_id);
-
-	dev_dbg(&dev->dev,
-		"%s: starting cleanup (thresh %d)\n",
-		__func__, syncpt_val);
+	bitmap_zero(syncpt_used, nb_pts);
 
 	/*
 	 * Move the sync_queue read pointer to the first entry that hasn't
@@ -270,13 +284,23 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		__func__);
 
 	list_for_each_entry(job, &cdma->sync_queue, list) {
-		if (!nvhost_syncpt_is_expired(syncpt,
-			cdma->timeout.syncpt_id, job->syncpt_end))
-			break;
+		int i;
+		for (i = 0; i < job->num_syncpts; ++i) {
+			u32 id = cdma->timeout.sp[i].id;
+
+			if (!test_bit(id, syncpt_used))
+				nvhost_syncpt_update_min(syncpt, id);
+
+			set_bit(id, syncpt_used);
+
+			if (!nvhost_syncpt_is_expired(syncpt, id,
+				job->sp[i].fence))
+				goto out;
+		}
 
 		nvhost_job_dump(&dev->dev, job);
 	}
-
+out:
 	/*
 	 * Walk the sync_queue, first incrementing with the CPU syncpts that
 	 * are partially executed (the first buffer) or fully skipped while
@@ -313,30 +337,22 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		/* won't need a timeout when replayed */
 		job->timeout = 0;
 
-		syncpt_incrs = job->syncpt_end - syncpt_val;
-		dev_dbg(&dev->dev,
-			"%s: CPU incr (%d)\n", __func__, syncpt_incrs);
+		for (i = 0; i < job->num_syncpts; ++i)
+			nvhost_cdma_finalize_job_incrs(syncpt, job->sp + i);
 
-		/* do CPU increments */
-		for (i = 0; i < syncpt_incrs; i++)
-			nvhost_syncpt_cpu_incr(&cdma_to_dev(cdma)->syncpt,
-				cdma->timeout.syncpt_id);
+		/* synchronize wait base. only the channel syncpoint wait base
+		 * is maintained */
+		if (job->sp[job->hwctx_syncpt_idx].id != NVSYNCPT_2D_0 &&
+			pdata->waitbases[0]) {
 
-		/* ensure shadow is up to date */
-		nvhost_syncpt_update_min(&cdma_to_dev(cdma)->syncpt,
-			cdma->timeout.syncpt_id);
-
-		/* synchronize wait bases */
-		if (cdma->timeout.syncpt_id != NVSYNCPT_2D_0 &&
-			pdata->waitbases[0])
 			nvhost_syncpt_cpu_set_wait_base(dev,
-				pdata->waitbases[0], job->syncpt_end);
+				pdata->waitbases[0],
+				job->sp[job->hwctx_syncpt_idx].fence);
+		}
 
 		/* cleanup push buffer */
 		cdma_op().timeout_pb_cleanup(cdma, job->first_get,
 			job->num_slots);
-
-		syncpt_val += syncpt_incrs;
 	}
 
 	list_for_each_entry_from(job, &cdma->sync_queue, list)
@@ -399,7 +415,7 @@ int nvhost_cdma_begin(struct nvhost_cdma *cdma, struct nvhost_job *job)
 		if (!cdma->timeout.initialized) {
 			int err;
 			err = cdma_op().timeout_init(cdma,
-				job->syncpt_id);
+				job->sp->id);
 			if (err) {
 				mutex_unlock(&cdma->lock);
 				return err;

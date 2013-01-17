@@ -448,6 +448,8 @@ static void cdma_timeout_handler(struct work_struct *work)
 	struct nvhost_syncpt *sp;
 	struct nvhost_channel *ch;
 	int ret;
+	bool completed;
+	int i;
 
 	u32 syncpt_val;
 
@@ -484,13 +486,18 @@ static void cdma_timeout_handler(struct work_struct *work)
 	dev_dbg(&dev->dev->dev, "cdma_timeout: cmdproc was 0x%x is 0x%x\n",
 		prev_cmdproc, cmdproc_stop);
 
-	syncpt_val = nvhost_syncpt_update_min(&dev->syncpt,
-			cdma->timeout.syncpt_id);
+	completed = true;
+	for (i = 0; completed && i < cdma->timeout.num_syncpts; ++i) {
+		syncpt_val = nvhost_syncpt_update_min(&dev->syncpt,
+				cdma->timeout.sp[i].id);
+
+		if (!nvhost_syncpt_is_expired(&dev->syncpt,
+			cdma->timeout.sp[i].id, cdma->timeout.sp[i].fence))
+			completed = false;
+	}
 
 	/* has buffer actually completed? */
-	if (nvhost_syncpt_is_expired(&dev->syncpt,
-		cdma->timeout.syncpt_id, cdma->timeout.syncpt_val)) {
-
+	if (completed) {
 		dev_dbg(&dev->dev->dev,
 			 "cdma_timeout: expired, but buffer had completed\n");
 		/* restore */
@@ -501,13 +508,16 @@ static void cdma_timeout_handler(struct work_struct *work)
 		return;
 	}
 
-	dev_warn(&dev->dev->dev,
-		"%s: timeout: %d (%s) ctx 0x%p, HW thresh %d, done %d\n",
-		__func__,
-		cdma->timeout.syncpt_id,
-		syncpt_op().name(sp, cdma->timeout.syncpt_id),
-		cdma->timeout.ctx,
-		syncpt_val, cdma->timeout.syncpt_val);
+	for (i = 0; i < cdma->timeout.num_syncpts; ++i) {
+		syncpt_val = nvhost_syncpt_read_min(&dev->syncpt,
+				cdma->timeout.sp[i].id);
+		dev_warn(&dev->dev->dev,
+			"%s: timeout: %d (%s) ctx 0x%p, HW thresh %d, done %d\n",
+			__func__, cdma->timeout.sp[i].id,
+			syncpt_op().name(sp, cdma->timeout.sp[i].id),
+			cdma->timeout.ctx, syncpt_val,
+			cdma->timeout.sp[i].fence);
+	}
 
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma);

@@ -76,8 +76,8 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 			" first_get=%08x, timeout=%d, ctx=%p,"
 			" num_slots=%d, num_handles=%d\n",
 			job,
-			job->syncpt_id,
-			job->syncpt_end,
+			job->sp ? job->sp->id : -1,
+			job->sp ? job->sp->fence : -1,
 			job->first_get,
 			job->timeout,
 			job->hwctx,

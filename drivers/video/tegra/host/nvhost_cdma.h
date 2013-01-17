@@ -65,13 +65,13 @@ struct push_buffer {
 struct buffer_timeout {
 	struct delayed_work wq;		/* work queue */
 	bool initialized;		/* timer one-time setup flag */
-	u32 syncpt_id;			/* buffer completion syncpt id */
-	u32 syncpt_val;			/* syncpt value when completed */
+	struct nvhost_job_syncpt *sp;	/* buffer syncpoint information */
 	ktime_t start_ktime;		/* starting time */
 	/* context timeout information */
 	struct nvhost_hwctx *ctx;
 	int clientid;
 	bool timeout_debug_dump;
+	int num_syncpts;
 };
 
 enum cdma_event {

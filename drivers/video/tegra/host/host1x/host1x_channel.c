@@ -50,6 +50,37 @@ static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 	}
 }
 
+static void serialize(struct nvhost_job *job)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_syncpt *sp = &nvhost_get_host(ch->dev)->syncpt;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	int i;
+
+	if (!job->serialize && !pdata->serialize)
+		return;
+
+	/*
+	 * Force serialization by inserting a host wait for the
+	 * previous job to finish before this one can commence.
+	 *
+	 * NOTE! This cannot be packed because otherwise we might
+	 * overwrite the RESTART opcode at the end of the push
+	 * buffer.
+	 */
+
+	for (i = 0; i < job->num_syncpts; ++i) {
+		u32 id = job->sp[i].id;
+		u32 max = nvhost_syncpt_read_max(sp, id);
+
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_r(), 1),
+			nvhost_class_host_wait_syncpt(id, max));
+	}
+}
+
+
 static void *pre_submit_ctxsave(struct nvhost_job *job,
 		struct nvhost_hwctx *cur_ctx)
 {
@@ -94,13 +125,15 @@ static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
 	/* Retrieve save threshold if we have a waiter */
 	if (ctxsave_waiter)
 		save_thresh =
-			nvhost_syncpt_read_max(&host->syncpt, job->syncpt_id)
+			nvhost_syncpt_read_max(&host->syncpt,
+			job->sp[job->hwctx_syncpt_idx].id)
 			+ cur_ctx->save_thresh;
 
 	/* Adjust the syncpoint max */
-	job->syncpt_incrs += cur_ctx->save_incrs;
+	job->sp[job->hwctx_syncpt_idx].incrs +=
+		cur_ctx->save_incrs;
 	syncval = nvhost_syncpt_incr_max(&host->syncpt,
-			job->syncpt_id,
+			job->sp[job->hwctx_syncpt_idx].id,
 			cur_ctx->save_incrs);
 
 	/* Send the save to channel */
@@ -111,7 +144,7 @@ static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
 	/* Notify save service */
 	if (ctxsave_waiter) {
 		err = nvhost_intr_add_action(&host->intr,
-			job->syncpt_id,
+			job->sp[job->hwctx_syncpt_idx].id,
 			save_thresh,
 			NVHOST_INTR_ACTION_CTXSAVE, cur_ctx,
 			ctxsave_waiter,
@@ -135,9 +168,9 @@ static void submit_ctxrestore(struct nvhost_job *job)
 		return;
 
 	/* Increment syncpt max */
-	job->syncpt_incrs += ctx->restore_incrs;
+	job->sp[job->hwctx_syncpt_idx].incrs += ctx->restore_incrs;
 	syncval = nvhost_syncpt_incr_max(&host->syncpt,
-			job->syncpt_id,
+			job->sp[job->hwctx_syncpt_idx].id,
 			ctx->restore_incrs);
 
 	/* Send restore buffer to channel */
@@ -146,21 +179,26 @@ static void submit_ctxrestore(struct nvhost_job *job)
 	trace_nvhost_channel_context_restore(ch->dev->name, ctx);
 }
 
-static void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
+static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
 {
 	struct nvhost_channel *ch = job->ch;
-	int incr;
+	int incr, i;
 	u32 op_incr;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* push increments that correspond to nulled out commands */
-	op_incr = nvhost_opcode_imm_incr_syncpt(
+	for (i = 0; i < job->num_syncpts; ++i) {
+		u32 incrs = (i == job->hwctx_syncpt_idx) ?
+			user_syncpt_incrs : job->sp[i].incrs;
+		op_incr = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			job->syncpt_id);
-	for (incr = 0; incr < (user_syncpt_incrs >> 1); incr++)
-		nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
-	if (user_syncpt_incrs & 1)
-		nvhost_cdma_push(&ch->cdma, op_incr, NVHOST_OPCODE_NOOP);
+			job->sp[i].id);
+		for (incr = 0; incr < (incrs >> 1); incr++)
+			nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
+		if (incrs & 1)
+			nvhost_cdma_push(&ch->cdma, op_incr,
+				NVHOST_OPCODE_NOOP);
+	}
 
 	/* for 3d, waitbase needs to be incremented after each submit */
 	if (pdata->class == NV_GRAPHICS_3D_CLASS_ID) {
@@ -172,7 +210,7 @@ static void submit_nullkickoff(struct nvhost_job *job, int user_syncpt_incrs)
 				1),
 			nvhost_class_host_incr_syncpt_base(
 				waitbase,
-				user_syncpt_incrs));
+				job->sp[job->hwctx_syncpt_idx].incrs));
 	}
 }
 
@@ -223,28 +261,28 @@ static int host1x_channel_submit(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
 	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
-	u32 user_syncpt_incrs = job->syncpt_incrs;
+	u32 user_syncpt_incrs;
 	u32 prev_max = 0;
-	u32 syncval;
-	int err;
-	void *completed_waiter = NULL, *ctxsave_waiter = NULL;
+	int err, i;
+	void *completed_waiters[job->num_syncpts], *ctxsave_waiter = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
 
 	/* Bail out on timed out contexts */
 	if (job->hwctx && job->hwctx->has_timedout)
 		return -ETIMEDOUT;
 
 	/* Turn on the client module and host1x */
-	nvhost_module_busy(ch->dev);
+	for (i = 0; i < job->num_syncpts; ++i)
+		nvhost_module_busy(ch->dev);
 
 	/* before error checks, return current max */
-	prev_max = job->syncpt_end =
-		nvhost_syncpt_read_max(sp, job->syncpt_id);
+	prev_max = hwctx_sp->fence = nvhost_syncpt_read_max(sp, hwctx_sp->id);
 
 	/* get submit lock */
 	err = mutex_lock_interruptible(&ch->submitlock);
 	if (err) {
-		nvhost_module_idle(ch->dev);
+		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
 		goto error;
 	}
 
@@ -252,47 +290,58 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	ctxsave_waiter = pre_submit_ctxsave(job, ch->cur_ctx);
 	if (IS_ERR(ctxsave_waiter)) {
 		err = PTR_ERR(ctxsave_waiter);
-		nvhost_module_idle(ch->dev);
+		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
 		mutex_unlock(&ch->submitlock);
 		goto error;
 	}
 
-	completed_waiter = nvhost_intr_alloc_waiter();
-	if (!completed_waiter) {
-		nvhost_module_idle(ch->dev);
-		mutex_unlock(&ch->submitlock);
-		err = -ENOMEM;
-		goto error;
+	for (i = 0; i < job->num_syncpts; ++i) {
+		completed_waiters[i] = nvhost_intr_alloc_waiter();
+		if (!completed_waiters[i]) {
+			nvhost_module_idle_mult(ch->dev, job->num_syncpts);
+			mutex_unlock(&ch->submitlock);
+			err = -ENOMEM;
+			goto error;
+		}
 	}
 
 	/* begin a CDMA submit */
 	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {
 		mutex_unlock(&ch->submitlock);
-		nvhost_module_idle(ch->dev);
+		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
 		goto error;
 	}
 
-	if (job->serialize || pdata->serialize) {
-		/* Force serialization by inserting a host wait for the
-		 * previous job to finish before this one can commence. */
-		nvhost_cdma_push(&ch->cdma,
-				nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-					host1x_uclass_wait_syncpt_r(),
-					1),
-				nvhost_class_host_wait_syncpt(job->syncpt_id,
-					nvhost_syncpt_read_max(sp,
-						job->syncpt_id)));
-	}
+	serialize(job);
+
+	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
+	user_syncpt_incrs = hwctx_sp->incrs;
 
 	submit_ctxsave(job, ctxsave_waiter, ch->cur_ctx);
 	submit_ctxrestore(job);
 	ch->cur_ctx = job->hwctx;
 
-	syncval = nvhost_syncpt_incr_max(sp,
-			job->syncpt_id, user_syncpt_incrs);
+	/* determine fences for all syncpoints */
+	for (i = 0; i < job->num_syncpts; ++i) {
+		u32 incrs = (i == job->hwctx_syncpt_idx) ?
+			user_syncpt_incrs :
+			job->sp[i].incrs;
 
-	job->syncpt_end = syncval;
+		/* create a valid max for client managed syncpoints */
+		if (nvhost_syncpt_client_managed(sp, job->sp[i].id)) {
+			u32 min = nvhost_syncpt_read(sp, job->sp[i].id);
+			if (min)
+				dev_warn(&job->ch->dev->dev,
+					"converting an active unmanaged syncpoint %d to managed\n",
+					job->sp[i].id);
+			nvhost_syncpt_set_max(sp, job->sp[i].id, min);
+			nvhost_syncpt_set_manager(sp, job->sp[i].id, false);
+		}
+
+		job->sp[i].fence =
+			nvhost_syncpt_incr_max(sp, job->sp[i].id, incrs);
+	}
 
 	/* add a setclass for modules that require it */
 	if (pdata->class)
@@ -305,30 +354,33 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	else
 		submit_gathers(job);
 
-	sync_waitbases(ch, job->syncpt_end);
+	sync_waitbases(ch, hwctx_sp->fence);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);
 
-	trace_nvhost_channel_submitted(ch->dev->name,
-			prev_max, syncval);
+	trace_nvhost_channel_submitted(ch->dev->name, prev_max,
+		hwctx_sp->fence);
 
-	/* schedule a submit complete interrupt */
-	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
-			job->syncpt_id, syncval,
+	for (i = 0; i < job->num_syncpts; ++i) {
+		/* schedule a submit complete interrupt */
+		err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
+			job->sp[i].id, job->sp[i].fence,
 			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, ch,
-			completed_waiter,
+			completed_waiters[i],
 			NULL);
-	completed_waiter = NULL;
-	WARN(err, "Failed to set submit complete interrupt");
+		WARN(err, "Failed to set submit complete interrupt");
+	}
 
 	mutex_unlock(&ch->submitlock);
 
 	return 0;
 
 error:
+	for (i = 0; i < job->num_syncpts; ++i)
+		kfree(completed_waiters[i]);
+
 	kfree(ctxsave_waiter);
-	kfree(completed_waiter);
 	return err;
 }
 
@@ -400,7 +452,7 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
-	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0,
+	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0, 1,
 			nvhost_get_host(ch->dev)->memmgr);
 	if (!job) {
 		err = -ENOMEM;
@@ -416,9 +468,11 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	syncpt_val = nvhost_syncpt_incr_max(&nvhost_get_host(ch->dev)->syncpt,
 					syncpt_id, syncpt_incrs);
 
-	job->syncpt_id = syncpt_id;
-	job->syncpt_incrs = syncpt_incrs;
-	job->syncpt_end = syncpt_val;
+	job->hwctx_syncpt_idx = 0;
+	job->sp->id = syncpt_id;
+	job->sp->incrs = syncpt_incrs;
+	job->sp->fence = syncpt_val;
+	job->num_syncpts = 1;
 
 	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {

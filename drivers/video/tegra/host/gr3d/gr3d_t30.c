@@ -524,14 +524,16 @@ int nvhost_gr3d_t30_read_reg(
 		goto done;
 	}
 
-	job = nvhost_job_alloc(channel, hwctx, 1, 0, 0, memmgr);
+	job = nvhost_job_alloc(channel, hwctx, 1, 0, 0, 1, memmgr);
 	if (!job) {
 		err = -ENOMEM;
 		goto done;
 	}
 
-	job->syncpt_id = h->h.syncpt;
-	job->syncpt_incrs = syncpt_incrs;
+	job->hwctx_syncpt_idx = 0;
+	job->sp->id = h->h.syncpt;
+	job->sp->incrs = syncpt_incrs;
+	job->num_syncpts = 1;
 	job->serialize = 1;
 	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
 
@@ -549,7 +551,7 @@ int nvhost_gr3d_t30_read_reg(
 
 	/* Wait for read to be ready */
 	err = nvhost_intr_add_action(&nvhost_get_host(dev)->intr,
-			h->h.syncpt, job->syncpt_end,
+			h->h.syncpt, job->sp->fence,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
 			read_waiter,
 			&ref);
@@ -557,7 +559,7 @@ int nvhost_gr3d_t30_read_reg(
 	WARN(err, "Failed to set wakeup interrupt");
 	wait_event(wq,
 		nvhost_syncpt_is_expired(&nvhost_get_host(dev)->syncpt,
-				h->h.syncpt, job->syncpt_end));
+				h->h.syncpt, job->sp->fence));
 	nvhost_job_put(job);
 	job = NULL;
 	nvhost_intr_put_ref(&nvhost_get_host(dev)->intr, h->h.syncpt,

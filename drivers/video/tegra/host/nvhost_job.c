@@ -35,7 +35,8 @@
 /* Magic to use to fill freed handle slots */
 #define BAD_MAGIC 0xdeadbeef
 
-static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
+static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
+			u32 num_syncpts)
 {
 	s64 num_unpins = num_cmdbufs + num_relocs;
 	s64 total;
@@ -47,7 +48,8 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
 			+ num_unpins * sizeof(dma_addr_t)
-			+ num_unpins * sizeof(u32 *);
+			+ num_unpins * sizeof(u32 *)
+			+ num_syncpts * sizeof(struct nvhost_job_syncpt);
 
 	if(total > ULONG_MAX)
 		return 0;
@@ -56,7 +58,8 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 
 
 static void init_fields(struct nvhost_job *job,
-		u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
+		u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
+		u32 num_syncpts)
 {
 	int num_unpins = num_cmdbufs + num_relocs;
 	void *mem = job;
@@ -82,6 +85,8 @@ static void init_fields(struct nvhost_job *job,
 	job->addr_phys = num_unpins ? mem : NULL;
 	mem += num_unpins * sizeof(dma_addr_t);
 	job->pin_ids = num_unpins ? mem : NULL;
+	mem += num_unpins * sizeof(u32 *);
+	job->sp = num_syncpts ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;
 	job->gather_addr_phys = &job->addr_phys[num_relocs];
@@ -90,10 +95,11 @@ static void init_fields(struct nvhost_job *job,
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
-		struct mem_mgr *memmgr)
+		int num_syncpts, struct mem_mgr *memmgr)
 {
 	struct nvhost_job *job = NULL;
-	size_t size = job_size(num_cmdbufs, num_relocs, num_waitchks);
+	size_t size =
+		job_size(num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
 	if(!size)
 		return NULL;
@@ -108,7 +114,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		hwctx->h->get(hwctx);
 	job->memmgr = memmgr ? nvhost_memmgr_get_mgr(memmgr) : NULL;
 
-	init_fields(job, num_cmdbufs, num_relocs, num_waitchks);
+	init_fields(job, num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
 	return job;
 }
@@ -399,9 +405,9 @@ void nvhost_job_unpin(struct nvhost_job *job)
 void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 {
 	dev_info(dev, "    SYNCPT_ID   %d\n",
-		job->syncpt_id);
+		job->sp->id);
 	dev_info(dev, "    SYNCPT_VAL  %d\n",
-		job->syncpt_end);
+		job->sp->fence);
 	dev_info(dev, "    FIRST_GET   0x%x\n",
 		job->first_get);
 	dev_info(dev, "    TIMEOUT     %d\n",

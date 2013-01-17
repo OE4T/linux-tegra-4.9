@@ -39,6 +39,12 @@ struct nvhost_job_gather {
 	struct mem_handle *ref;
 };
 
+struct nvhost_job_syncpt {
+	u32 id;
+	u32 incrs;
+	u32 fence;
+};
+
 /*
  * Each submit is tracked as a nvhost_job.
  */
@@ -80,9 +86,11 @@ struct nvhost_job {
 	dma_addr_t *reloc_addr_phys;
 
 	/* Sync point id, number of increments and end related to the submit */
-	u32 syncpt_id;
-	u32 syncpt_incrs;
-	u32 syncpt_end;
+	struct nvhost_job_syncpt *sp;
+	int num_syncpts;
+
+	/* Hold number to the "stream syncpoint" index */
+	int hwctx_syncpt_idx;
 
 	/* Priority of this submit. */
 	int priority;
@@ -114,7 +122,7 @@ struct nvhost_job {
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
-		struct mem_mgr *memmgr);
+		int num_syncpts, struct mem_mgr *memmgr);
 
 /*
  * Add a gather to a job.

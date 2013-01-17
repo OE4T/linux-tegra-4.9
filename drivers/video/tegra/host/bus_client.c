@@ -213,12 +213,15 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 			ctx->hdr.num_cmdbufs,
 			ctx->hdr.num_relocs,
 			ctx->hdr.num_waitchks,
+			1,
 			ctx->memmgr);
 	if (!ctx->job)
 		return -ENOMEM;
 	ctx->job->timeout = ctx->timeout;
-	ctx->job->syncpt_id = ctx->hdr.syncpt_id;
-	ctx->job->syncpt_incrs = ctx->hdr.syncpt_incrs;
+	ctx->job->sp->id = ctx->hdr.syncpt_id;
+	ctx->job->sp->incrs = ctx->hdr.syncpt_incrs;
+	ctx->job->hwctx_syncpt_idx = 0;
+	ctx->job->num_syncpts = 1;
 	ctx->job->priority = ctx->priority;
 	ctx->job->clientid = ctx->clientid;
 	ctx->job->timeout_debug_dump = ctx->timeout_debug_dump;
@@ -397,7 +400,7 @@ static int nvhost_ioctl_channel_flush(
 
 	/* context switch if needed, and submit user's gathers to the channel */
 	err = nvhost_channel_submit(ctx->job);
-	args->value = ctx->job->syncpt_end;
+	args->value = ctx->job->sp->fence;
 
 fail:
 	if (err)
@@ -433,12 +436,14 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			args->num_cmdbufs,
 			args->num_relocs,
 			args->num_waitchks,
+			1,
 			ctx->memmgr);
 	if (!job)
 		return -ENOMEM;
 
 	job->num_relocs = args->num_relocs;
 	job->num_waitchk = args->num_waitchks;
+	job->num_syncpts = args->num_syncpt_incrs;
 	job->priority = ctx->priority;
 	job->clientid = ctx->clientid;
 
@@ -472,16 +477,17 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			args->syncpt_incrs, sizeof(syncpt_incr));
 	if (err)
 		goto fail;
-	job->syncpt_id = syncpt_incr.syncpt_id;
-	if (job->syncpt_id > host->info.nb_pts) {
+	job->sp->id = syncpt_incr.syncpt_id;
+	if (job->sp->id > host->info.nb_pts) {
 		err = -EINVAL;
 		goto fail;
 	}
-	job->syncpt_incrs = syncpt_incr.syncpt_incrs;
+	job->sp->incrs = syncpt_incr.syncpt_incrs;
+	job->hwctx_syncpt_idx = 0;
 
 	trace_nvhost_channel_submit(ctx->ch->dev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,
-		job->syncpt_id, job->syncpt_incrs);
+		job->sp->id, job->sp->incrs);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
 	if (err)
@@ -498,7 +504,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail_submit;
 
-	args->fence = job->syncpt_end;
+	args->fence = job->sp->fence;
 
 	nvhost_job_put(job);
 

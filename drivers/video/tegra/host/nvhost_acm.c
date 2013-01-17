@@ -577,7 +577,7 @@ int nvhost_module_init(struct platform_device *dev)
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	/* initialize clocks to known state */
+	/* initialize clocks to known state (=enabled) */
 	INIT_LIST_HEAD(&pdata->client_list);
 	while (pdata->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
@@ -596,18 +596,21 @@ int nvhost_module_init(struct platform_device *dev)
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
 		clk_set_rate(c, rate);
-		clk_disable_unprepare(c);
 		pdata->clk[i] = c;
 		i++;
 	}
 	pdata->num_clks = i;
 
+	/* reset the module */
+	do_module_reset_locked(dev);
+
+	/* disable the clocks */
+	for (i = 0; i < pdata->num_clks; ++i)
+		clk_disable_unprepare(pdata->clk[i]);
+
 	mutex_init(&pdata->lock);
 	init_waitqueue_head(&pdata->idle_wq);
 	INIT_DELAYED_WORK(&pdata->powerstate_down, powerstate_down_handler);
-
-	/* reset the module */
-	do_module_reset_locked(dev);
 
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {

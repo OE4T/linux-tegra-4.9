@@ -52,7 +52,7 @@ enum {
 	CAMERA_ISP_CLK,
 	CAMERA_CSUS_CLK,
 	CAMERA_CSI_CLK,
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	CAMERA_CILAB_CLK,
 	CAMERA_CILCD_CLK,
 	CAMERA_CILE_CLK,
@@ -61,10 +61,15 @@ enum {
 	CAMERA_CLK_MAX,
 };
 
+struct clock {
+	struct clk *clk;
+	bool on;
+};
+
 struct tegra_camera {
 	struct device *dev;
 	struct miscdevice misc_dev;
-	struct clk *clk[CAMERA_CLK_MAX];
+	struct clock clock[CAMERA_CLK_MAX];
 	struct regulator *reg;
 	struct tegra_camera_clk_info info;
 	struct mutex tegra_camera_lock;
@@ -75,9 +80,10 @@ struct tegra_camera {
 #endif
 };
 
-struct camera_clk {
+struct clock_data {
 	int index;
 	char *name;
+	bool init;
 };
 
 struct tegra_camera *tegra_camera_register(struct platform_device *ndev);

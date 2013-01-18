@@ -35,6 +35,9 @@
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi/rm31080a_ctrl.h>
 #include <../clock.h>
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/touchscreen_raydium.h>
 /*=========================================================================*/
 /*DEFINITIONS */
 /*=========================================================================*/
@@ -1529,6 +1532,7 @@ static irqreturn_t rm31080_irq(int irq, void *handle)
 			(g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN))
 		input_event(g_input_dev, EV_MSC, MSC_ACTIVITY, 1);
 #endif
+	trace_touchscreen_raydium_irq("Raydium_interrupt");
 
 #ifdef ENABLE_WORK_QUEUE
 	queue_work(g_stTs.rm_workqueue, &g_stTs.rm_work);

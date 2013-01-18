@@ -485,10 +485,15 @@ void nvhost_device_debug_init(struct platform_device *dev)
 	struct dentry *de = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	de = debugfs_create_dir(dev->name, de);
-	debugfs_create_file("stallcount", S_IRUGO, de, dev, &stallcount_fops);
-	debugfs_create_file("xfercount", S_IRUGO, de, dev, &xfercount_fops);
-	debugfs_create_file("tickcount", S_IRUGO, de, dev, &tickcount_fops);
+	if (tickctrl_op().init_channel) {
+		de = debugfs_create_dir(dev->name, de);
+		debugfs_create_file("stallcount", S_IRUGO, de, dev,
+				&stallcount_fops);
+		debugfs_create_file("xfercount", S_IRUGO, de, dev,
+				&xfercount_fops);
+		debugfs_create_file("tickcount", S_IRUGO, de, dev,
+				&tickcount_fops);
+	}
 
 	pdata->debugfs = de;
 }
@@ -529,20 +534,22 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&nvhost_debug_force_timeout_dump);
 	nvhost_debug_force_timeout_dump = 0;
 
-	debugfs_create_file("3d_actmon_k", S_IRUGO, de,
-			master, &actmon_k_fops);
-	debugfs_create_file("3d_actmon_sample_period", S_IRUGO, de,
-			master, &actmon_sample_period_fops);
-	debugfs_create_file("3d_actmon_sample_period_norm", S_IRUGO, de,
-			master, &actmon_sample_period_norm_fops);
-	debugfs_create_file("3d_actmon_avg_norm", S_IRUGO, de,
-			master, &actmon_avg_norm_fops);
-	debugfs_create_file("3d_actmon_avg", S_IRUGO, de,
-			master, &actmon_avg_fops);
-	debugfs_create_file("3d_actmon_above_wmark", S_IRUGO, de,
-			master, &actmon_above_wmark_fops);
-	debugfs_create_file("3d_actmon_below_wmark", S_IRUGO, de,
-			master, &actmon_below_wmark_fops);
+	if (actmon_op().init) {
+		debugfs_create_file("3d_actmon_k", S_IRUGO, de,
+				master, &actmon_k_fops);
+		debugfs_create_file("3d_actmon_sample_period", S_IRUGO, de,
+				master, &actmon_sample_period_fops);
+		debugfs_create_file("3d_actmon_sample_period_norm", S_IRUGO, de,
+				master, &actmon_sample_period_norm_fops);
+		debugfs_create_file("3d_actmon_avg_norm", S_IRUGO, de,
+				master, &actmon_avg_norm_fops);
+		debugfs_create_file("3d_actmon_avg", S_IRUGO, de,
+				master, &actmon_avg_fops);
+		debugfs_create_file("3d_actmon_above_wmark", S_IRUGO, de,
+				master, &actmon_above_wmark_fops);
+		debugfs_create_file("3d_actmon_below_wmark", S_IRUGO, de,
+				master, &actmon_below_wmark_fops);
+	}
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

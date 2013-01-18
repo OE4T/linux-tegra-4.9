@@ -28,7 +28,7 @@
 #define GK20A_NETLIST_IMAGE_A	"NETA_img.bin"
 #define GK20A_NETLIST_IMAGE_B	"NETB_img.bin"
 #define GK20A_NETLIST_IMAGE_C	"NETC_img.bin"
-#undef  GK20A_NETLIST_IMAGE_D
+#define GK20A_NETLIST_IMAGE_D   "NETD_img.bin"
 
 union __max_name {
 #ifdef GK20A_NETLIST_IMAGE_A

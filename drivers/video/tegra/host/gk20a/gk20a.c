@@ -44,7 +44,7 @@ static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 }
 
 
-#define APBDEV_PMC_GPU_RG_CNTRL_0	0x448
+#define APBDEV_PMC_GPU_RG_CNTRL_0	0x2d4
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 
@@ -60,7 +60,7 @@ static struct resource gk20a_intr = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct resource gk20a_resources [] = {
+struct resource gk20a_resources[] = {
 #define GK20A_BAR0_IORESOURCE_MEM 0
 {
 	.start = TEGRA_GK20A_BAR0_BASE,
@@ -100,7 +100,8 @@ static struct nvhost_device_data tegra_gk20a_info = {
 	*/
 	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
 	.keepalive     = true,
-	.clocks = {{"emc", UINT_MAX}, {}},
+	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", UINT_MAX}, \
+		   {"emc", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
@@ -424,7 +425,7 @@ static int issue_rpc_and_wait(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_sim_esc_read(struct gk20a *g, char*path, u32 index, u32 count, u32 *data)
+int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *data)
 {
 	int err;
 	size_t pathlen = strlen(path);
@@ -539,6 +540,7 @@ static void gk20a_remove_support(struct platform_device *dev)
 int nvhost_init_gk20a_support(struct platform_device *dev)
 {
 	int err = 0;
+	int i;
 	struct gk20a *g = get_gk20a(dev);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
@@ -568,6 +570,10 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 
 	/* remove gk20a clamp in t124 soc register */
 	writel(0, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
+
+	/* Enable all clocks */
+	for (i = 0; i < pdata->num_clks; ++i)
+		clk_prepare_enable(pdata->clk[i]);
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_disabled_f());
@@ -678,7 +684,7 @@ static void gk20a_put_hwctx(struct nvhost_hwctx *hwctx)
 	kref_put(&hwctx->ref, gk20a_free_hwctx);
 }
 
-static void gk20a_save_push_hwctx(struct nvhost_hwctx *ctx, struct nvhost_cdma *cdma )
+static void gk20a_save_push_hwctx(struct nvhost_hwctx *ctx, struct nvhost_cdma *cdma)
 {
 	nvhost_dbg_fn("");
 }

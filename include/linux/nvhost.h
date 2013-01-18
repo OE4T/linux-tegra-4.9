@@ -36,7 +36,7 @@ struct nvhost_device_power_attr;
 struct nvhost_device_profile;
 struct mem_mgr;
 
-#define NVHOST_MODULE_MAX_CLOCKS		3
+#define NVHOST_MODULE_MAX_CLOCKS		7
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
 #define NVHOST_MODULE_MAX_SYNCPTS		8
 #define NVHOST_MODULE_MAX_WAITBASES		3

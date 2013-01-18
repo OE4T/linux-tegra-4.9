@@ -1113,10 +1113,8 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	pmu->elpg_timer.function = pmu_elpg_enable_allow;
 	pmu->elpg_timer.data = (unsigned long)pmu;
 
-	pmu->perfmon_counters[0].index = 3; /* GR */
-	pmu->perfmon_counters[0].group_id = PMU_DOMAIN_GROUP_PSTATE;
-	pmu->perfmon_counters[1].index = 4; /* MEM */
-	pmu->perfmon_counters[1].group_id = PMU_DOMAIN_GROUP_PSTATE;
+	pmu->perfmon_counter.index = 3; /* GR & CE2 */
+	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
 
 	pmu->remove_support = gk20a_remove_pmu_support;
 
@@ -1444,23 +1442,17 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 
 	nvhost_dbg_fn("");
 
-	/* GR */
+	/* use counter #3 for GR && CE2 busy cycles */
 	gk20a_writel(g, pwr_pmu_idle_mask_r(3),
-		pwr_pmu_idle_mask_gr_enabled_f());
+		pwr_pmu_idle_mask_gr_enabled_f() |
+		pwr_pmu_idle_mask_ce_2_enabled_f());
 
 	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(3));
 	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
 			pwr_pmu_idle_ctrl_value_busy_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
 
-	/* MEM */
-	gk20a_writel(g, pwr_pmu_idle_mask_r(4), 0);
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(4));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
-			pwr_pmu_idle_ctrl_value_busy_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(4), data);
-
-	/* TOTAL */
+	/* use counter #7 for total cycles */
 	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(7));
 	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
 			pwr_pmu_idle_ctrl_value_always_f());
@@ -1490,15 +1482,15 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	   TBD: = 1000 * (1000 * (vblank=)10 + 30) / 60 = 167000 */
 	cmd.cmd.perfmon.init.sample_period_us = 100;
 	/* number of perfmon counters
-	   GR(3) and MEM(4) for gk20a */
-	cmd.cmd.perfmon.init.num_counters = 2;
+	   counter #3 (GR and CE2) for gk20a */
+	cmd.cmd.perfmon.init.num_counters = 1;
 	/* moving average window for sample periods
 	   TBD: = 3000000 / sample_period_us = 17 */
 	cmd.cmd.perfmon.init.samples_in_moving_avg = 3;
 
 	memset(&payload, 0, sizeof(struct pmu_payload));
-	payload.in.buf = &pmu->perfmon_counters;
-	payload.in.size = 2 * sizeof(struct pmu_perfmon_counter);
+	payload.in.buf = &pmu->perfmon_counter;
+	payload.in.size = sizeof(struct pmu_perfmon_counter);
 	payload.in.offset =
 		offsetof(struct pmu_perfmon_cmd_init, counter_alloc);
 
@@ -1736,13 +1728,13 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	memset(&payload, 0, sizeof(struct pmu_payload));
 
 	/* TBD: PMU_PERFMON_PCT_TO_INC * 100 */
-	pmu->perfmon_counters[0].upper_threshold = 1000; /* 10% = */
+	pmu->perfmon_counter.upper_threshold = 1000; /* 10% */
 	/* TBD: PMU_PERFMON_PCT_TO_DEC * 100 */
-	pmu->perfmon_counters[0].lower_threshold = 500; /* 5% */
-	pmu->perfmon_counters[0].valid = true;
+	pmu->perfmon_counter.lower_threshold = 500; /* 5% */
+	pmu->perfmon_counter.valid = true;
 
-	payload.in.buf = &pmu->perfmon_counters;
-	payload.in.size = 2 * sizeof(pmu->perfmon_counters);
+	payload.in.buf = &pmu->perfmon_counter;
+	payload.in.size = sizeof(pmu->perfmon_counter);
 	payload.in.offset =
 		offsetof(struct pmu_perfmon_cmd_start, counter_alloc);
 

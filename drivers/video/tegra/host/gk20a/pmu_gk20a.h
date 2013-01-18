@@ -673,8 +673,8 @@ struct pmu_gk20a {
 	struct timer_list elpg_timer;
 	bool elpg_enable_allow; /* true after init, false after disable, true after delay */
 
-	struct pmu_perfmon_counter perfmon_counters[2];
-	u32 perfmon_state_id[2];
+	struct pmu_perfmon_counter perfmon_counter;
+	u32 perfmon_state_id[PMU_DOMAIN_GROUP_NUM];
 
 	bool initialized;
 

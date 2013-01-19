@@ -317,7 +317,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 {
 	pte_t **pte;
 	void *addr;
-	phys_addr_t kaddr;
+	uintptr_t kaddr;
 	phys_addr_t phys = block->base;
 	phys_addr_t end = block->base + len;
 
@@ -337,7 +337,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (IS_ERR(pte))
 		return PTR_ERR(pte);
 
-	kaddr = (phys_addr_t)addr;
+	kaddr = (uintptr_t)addr;
 
 	while (phys < end) {
 		phys_addr_t next = (phys + PAGE_SIZE) & PAGE_MASK;

@@ -227,11 +227,16 @@ static int gk20a_init_clk_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_clk_setup_sw(struct gk20a *g, bool reinit)
+static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 
 	nvhost_dbg_fn("");
+
+	if (clk->sw_ready) {
+		nvhost_dbg_fn("skip init");
+		return 0;
+	}
 
 	/* TBD: set this according to different environments */
 	clk->pll_delay = 5000000; /* usec */
@@ -252,6 +257,10 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g, bool reinit)
 			"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
 		return -EINVAL;
 	}
+
+	clk->sw_ready = true;
+
+	nvhost_dbg_fn("done");
 	return 0;
 }
 
@@ -275,7 +284,7 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 	return clk_program_gpc_pll(g, clk);
 }
 
-int gk20a_init_clk_support(struct gk20a *g, bool reinit)
+int gk20a_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
@@ -288,7 +297,7 @@ int gk20a_init_clk_support(struct gk20a *g, bool reinit)
 	if (err)
 		return err;
 
-	err = gk20a_init_clk_setup_sw(g, reinit);
+	err = gk20a_init_clk_setup_sw(g);
 	if (err)
 		return err;
 

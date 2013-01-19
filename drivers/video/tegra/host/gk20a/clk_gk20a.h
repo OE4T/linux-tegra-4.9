@@ -49,9 +49,11 @@ struct clk_gk20a {
 	struct clk *tegra_clk;
 	struct pll gpc_pll;
 	u32 pll_delay; /* default PLL settle time */
+
+	bool sw_ready;
 };
 
-int gk20a_init_clk_support(struct gk20a *g, bool reinit);
+int gk20a_init_clk_support(struct gk20a *g);
 
 u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);

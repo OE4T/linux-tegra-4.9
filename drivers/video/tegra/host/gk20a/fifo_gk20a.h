@@ -77,9 +77,10 @@ struct fifo_gk20a {
 	struct mutex ch_inuse_mutex; /* protect unused chid look up */
 
 	void (*remove_support)(struct fifo_gk20a *);
+	bool sw_ready;
 };
 
-int gk20a_init_fifo_support(struct gk20a *g, bool reinit);
+int gk20a_init_fifo_support(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
 
@@ -94,5 +95,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 
 int gk20a_fifo_update_runlist(struct gk20a *g,
 			u32 engine_id, u32 hw_chid, bool add);
+
+int gk20a_fifo_suspend(struct gk20a *g);
 
 #endif /*__GR_GK20A_H__*/

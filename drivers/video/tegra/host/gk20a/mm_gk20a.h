@@ -177,7 +177,7 @@ struct vm_gk20a {
 struct gk20a;
 struct channel_gk20a;
 
-int gk20a_init_mm_support(struct gk20a *g, bool reinit);
+int gk20a_init_mm_support(struct gk20a *g);
 int gk20a_init_bar1_vm(struct mm_gk20a *mm);
 int gk20a_init_pmu_vm(struct mm_gk20a *mm);
 
@@ -213,7 +213,10 @@ struct mm_gk20a {
 		struct vm_gk20a vm;
 		struct inst_desc inst_block;
 	} pmu;
+
+	bool sw_ready;
 };
+
 int gk20a_mm_init(struct mm_gk20a *mm);
 
 #define gk20a_from_mm(mm) ((mm)->g)
@@ -255,5 +258,7 @@ static inline int max_vaddr_bits_gk20a(void)
 
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);
+
+int gk20a_mm_suspend(struct gk20a *g);
 
 #endif /*_MM_GK20A_H_ */

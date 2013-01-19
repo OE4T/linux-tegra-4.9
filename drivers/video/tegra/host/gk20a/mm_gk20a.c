@@ -79,14 +79,14 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_mm_setup_sw(struct gk20a *g, bool reinit)
+static int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	int i;
 
 	nvhost_dbg_fn("");
 
-	if (reinit) {
+	if (mm->sw_ready) {
 		nvhost_dbg_fn("skip init");
 		return 0;
 	}
@@ -126,6 +126,8 @@ static int gk20a_init_mm_setup_sw(struct gk20a *g, bool reinit)
 	gk20a_init_uncompressed_kind_map();
 	gk20a_init_kind_attr();
 
+	mm->sw_ready = true;
+
 	nvhost_dbg_fn("done");
 	return 0;
 }
@@ -163,7 +165,7 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_mm_support(struct gk20a *g, bool reinit)
+int gk20a_init_mm_support(struct gk20a *g)
 {
 	u32 err;
 
@@ -171,7 +173,7 @@ int gk20a_init_mm_support(struct gk20a *g, bool reinit)
 	if (err)
 		return err;
 
-	err = gk20a_init_mm_setup_sw(g, reinit);
+	err = gk20a_init_mm_setup_sw(g);
 	if (err)
 		return err;
 
@@ -1696,7 +1698,7 @@ void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm)
 			"mmu invalidate too many retries");
 }
 
-#if 0
+#if 0 /* VM DEBUG */
 
 /* print pdes/ptes for a gpu virtual address range under a vm */
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
@@ -1814,5 +1816,15 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 				pte);
 	}
 }
+#endif /* VM DEBUG */
 
-#endif
+int gk20a_mm_suspend(struct gk20a *g)
+{
+	nvhost_dbg_fn("");
+
+	gk20a_mm_fb_flush(g);
+	gk20a_mm_l2_flush(g, true);
+
+	nvhost_dbg_fn("done");
+	return 0;
+}

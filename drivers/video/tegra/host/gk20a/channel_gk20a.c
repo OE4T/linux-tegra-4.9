@@ -934,15 +934,16 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		}
 		extra_count++;
 	}
-	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
-		alloc_priv_cmdbuf(c, 6, &get_cmd);
-		if (get_cmd == NULL) {
-			nvhost_err(d, "not enough priv cmd buffer space");
-			err = -EAGAIN;
-			goto clean_up;
-		}
-		extra_count++;
+
+	/* always insert syncpt increment at end of gpfifo submission
+	   to keep track of method completion for idle railgating */
+	alloc_priv_cmdbuf(c, 6, &get_cmd);
+	if (get_cmd == NULL) {
+		nvhost_err(d, "not enough priv cmd buffer space");
+		err = -EAGAIN;
+		goto clean_up;
 	}
+	extra_count++;
 
 	if (num_entries + extra_count > free_count) {
 		nvhost_err(d, "not enough gpfifo space");
@@ -1265,4 +1266,65 @@ int gk20a_channel_zbc_query_table(struct channel_gk20a *ch,
 	}
 
 	return err;
+}
+
+int gk20a_channel_suspend(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
+	bool channels_in_use = false;
+
+	nvhost_dbg_fn("");
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		if (f->channel[chid].in_use) {
+
+			nvhost_dbg_info("suspend channel %d", chid);
+
+			/* disable channel */
+			gk20a_writel(g, ccsr_channel_r(chid),
+				gk20a_readl(g, ccsr_channel_r(chid)) |
+				ccsr_channel_enable_clr_true_f());
+			/* preempt the channel */
+			gk20a_fifo_preempt_channel(g,
+				ENGINE_GR_GK20A, chid);
+
+			channels_in_use = true;
+		}
+	}
+
+	if (channels_in_use) {
+		gk20a_fifo_update_runlist(g, ENGINE_GR_GK20A, ~0, false);
+
+		for (chid = 0; chid < f->num_channels; chid++) {
+			if (f->channel[chid].in_use)
+				channel_gk20a_unbind(&f->channel[chid]);
+		}
+	}
+
+	nvhost_dbg_fn("done");
+	return 0;
+}
+
+int gk20a_channel_resume(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
+	bool channels_in_use = false;
+
+	nvhost_dbg_fn("");
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		if (f->channel[chid].in_use) {
+			nvhost_dbg_info("resume channel %d", chid);
+			channel_gk20a_bind(&f->channel[chid]);
+			channels_in_use = true;
+		}
+	}
+
+	if (channels_in_use)
+		gk20a_fifo_update_runlist(g, ENGINE_GR_GK20A, ~0, true);
+
+	nvhost_dbg_fn("done");
+	return 0;
 }

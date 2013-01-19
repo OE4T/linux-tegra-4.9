@@ -141,8 +141,6 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 	u32 timeout = 2000; /* 2 sec */
 	u32 idle_stat;
 
-	nvhost_dbg_fn("");
-
 	/* wait for pmu idle */
 	do {
 		idle_stat = gk20a_readl(g, pwr_falcon_idlestate_r());
@@ -969,7 +967,7 @@ static void pmu_elpg_enable_allow(unsigned long arg)
 		gk20a_pmu_enable_elpg(g);
 }
 
-int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
+int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
@@ -981,6 +979,17 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	u8 *ptr;
 
 	nvhost_dbg_fn("");
+
+	if (pmu->sw_ready) {
+		for (i = 0; i < pmu->mutex_cnt; i++) {
+			pmu->mutex[i].id    = i;
+			pmu->mutex[i].index = i;
+		}
+		pmu_seq_init(pmu);
+
+		nvhost_dbg_fn("skip init");
+		return 0;
+	}
 
 	/* no infoRom script from vbios? */
 
@@ -1117,6 +1126,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g, bool reinit)
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
 
 	pmu->remove_support = gk20a_remove_pmu_support;
+	pmu->sw_ready = true;
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -1283,7 +1293,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_pmu_support(struct gk20a *g, bool reinit)
+int gk20a_init_pmu_support(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	u32 err;
@@ -1300,7 +1310,7 @@ int gk20a_init_pmu_support(struct gk20a *g, bool reinit)
 		return err;
 
 	if (support_gk20a_pmu()) {
-		err = gk20a_init_pmu_setup_sw(g, reinit);
+		err = gk20a_init_pmu_setup_sw(g);
 		if (err)
 			return err;
 
@@ -2379,5 +2389,23 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 
 	nvhost_dbg_fn("done");
 
+	return 0;
+}
+
+int gk20a_pmu_destroy(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	nvhost_dbg_fn("");
+
+	if (!support_gk20a_pmu())
+		return 0;
+
+	gk20a_pmu_disable_elpg(g);
+
+	pmu_enable_hw(pmu, false);
+
+	pmu->remove_support(g, pmu);
+
+	nvhost_dbg_fn("done");
 	return 0;
 }

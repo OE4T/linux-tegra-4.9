@@ -143,6 +143,9 @@ int gk20a_channel_zbc_set_table(struct channel_gk20a *ch,
 int gk20a_channel_zbc_query_table(struct channel_gk20a *ch,
 			    struct nvhost_zbc_query_table_args *args);
 
+int gk20a_channel_suspend(struct gk20a *g);
+int gk20a_channel_resume(struct gk20a *g);
+
 static inline
 struct mem_mgr *gk20a_channel_mem_mgr(struct channel_gk20a *ch)
 {

@@ -389,9 +389,29 @@ static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 				     struct nvhost_gpfifo *gpfifo, u32 num_entries,
 				     struct nvhost_fence *fence, u32 flags)
 {
+	struct nvhost_channel *ch = hwctx->channel;
+	void *completed_waiter = NULL;
+	int err, ret;
+
 	nvhost_dbg_fn("");
-	return gk20a_submit_channel_gpfifo(hwctx->priv, gpfifo, num_entries,
+
+	completed_waiter = nvhost_intr_alloc_waiter();
+	if (!completed_waiter)
+		return -ENOMEM;
+
+	nvhost_module_busy(ch->dev);
+
+	ret = gk20a_submit_channel_gpfifo(hwctx->priv, gpfifo, num_entries,
 					fence, flags);
+
+	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
+		fence->syncpt_id, fence->value,
+		NVHOST_INTR_ACTION_SUBMIT_COMPLETE, ch,
+		completed_waiter,
+		NULL);
+	WARN(err, "Failed to set submit complete interrupt");
+
+	return ret;
 }
 
 static int t124_channel_wait(struct nvhost_hwctx *hwctx,

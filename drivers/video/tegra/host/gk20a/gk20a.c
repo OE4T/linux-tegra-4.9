@@ -43,11 +43,6 @@ static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 	nvhost_set_private_data(dev, gk20a);
 }
 
-
-#define APBDEV_PMC_GPU_RG_CNTRL_0	0x2d4
-
-static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
-
 static void nvhost_gk20a_deinit(struct platform_device *dev);
 static struct nvhost_hwctx_handler *
     nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 base,
@@ -99,11 +94,12 @@ static struct nvhost_device_data tegra_gk20a_info = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	*/
 	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
-	.keepalive     = true,
 	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", UINT_MAX}, \
 		   {"emc", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay = 500,
+	.can_powergate = true,
 	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
 	.ctrl_ops = &gk20a_ctrl_ops,
 	.moduleid      = NVHOST_MODULE_GPU,
@@ -540,7 +536,6 @@ static void gk20a_remove_support(struct platform_device *dev)
 int nvhost_init_gk20a_support(struct platform_device *dev)
 {
 	int err = 0;
-	int i;
 	struct gk20a *g = get_gk20a(dev);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
@@ -568,46 +563,11 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	}
 	g->irq_requested = true;
 
-	/* remove gk20a clamp in t124 soc register */
-	writel(0, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
-
-	/* Enable all clocks */
-	for (i = 0; i < pdata->num_clks; ++i)
-		clk_prepare_enable(pdata->clk[i]);
-
-	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_disabled_f());
-
-	gk20a_writel(g, mc_intr_en_0_r(),
-		mc_intr_en_0_inta_hardware_f());
-
 	err = gk20a_init_sim_support(dev);
 	if (err)
 		goto fail;
 
-	/* TBD: move this after graphics init in which blcg/slcg is enabled.
-	   This function removes SlowdownOnBoot which applies 32x divider
-	   on gpcpll bypass path. The purpose of slowdown is to save power
-	   during boot but it also significantly slows down gk20a init on
-	   simulation and emulation. We should remove SOB after graphics power
-	   saving features (blcg/slcg) are enabled. For now, do it here. */
-	err = gk20a_init_clk_support(g, false);
-	if (err)
-		goto fail;
-
-	err = gk20a_init_mm_support(g, false);
-	if (err)
-		goto fail;
-
-	err = gk20a_init_fifo_support(g, false);
-	if (err)
-		goto fail;
-
-	err = gk20a_init_therm_support(g, false);
-	if (err)
-		goto fail;
-
-	/* init_gr & init_pmu are deferred */
+	/* hw init is deferred after turning on gpu power rail */
 
 	g->remove_support = gk20a_remove_support;
 	return 0;
@@ -619,19 +579,7 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 
 void nvhost_gk20a_init(struct platform_device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
-	int err;
-
-	BUG_ON(!g);
 	nvhost_dbg_fn("");
-
-	err = gk20a_init_gr_support(g, false);
-	if (err)
-		nvhost_err(&dev->dev, "failed init gk20a gr support\n");
-
-	err = gk20a_init_pmu_support(g, false);
-	if (err)
-		nvhost_err(&dev->dev, "failed init gk20a pmu support\n");
 }
 
 static void nvhost_gk20a_deinit(struct platform_device *dev)
@@ -652,7 +600,10 @@ static void gk20a_free_hwctx(struct kref *ref)
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 	nvhost_dbg_fn("");
 
+	nvhost_module_busy(ctx->channel->dev);
 	gk20a_free_channel(ctx);
+	nvhost_module_idle(ctx->channel->dev);
+
 	kfree(ctx);
 }
 
@@ -723,6 +674,75 @@ static struct nvhost_hwctx_handler *
 	return h;
 }
 
+#define APBDEV_PMC_GPU_RG_CNTRL_0	0x2d4
+static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
+
+int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+	int ret = 0;
+
+	nvhost_dbg_fn("");
+
+	ret |= gk20a_channel_suspend(g);
+
+	ret |= gk20a_fifo_suspend(g);
+	ret |= gk20a_gr_suspend(g);
+	ret |= gk20a_pmu_destroy(g);
+	ret |= gk20a_mm_suspend(g);
+
+	writel(0x1, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
+
+	return ret;
+}
+
+void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+	int err;
+
+	nvhost_dbg_fn("");
+
+	/* remove gk20a clamp in t124 soc register */
+	writel(0, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
+
+	gk20a_writel(g, mc_intr_en_1_r(),
+		mc_intr_en_1_inta_disabled_f());
+
+	gk20a_writel(g, mc_intr_en_0_r(),
+		mc_intr_en_0_inta_hardware_f());
+
+	/* TBD: move this after graphics init in which blcg/slcg is enabled.
+	   This function removes SlowdownOnBoot which applies 32x divider
+	   on gpcpll bypass path. The purpose of slowdown is to save power
+	   during boot but it also significantly slows down gk20a init on
+	   simulation and emulation. We should remove SOB after graphics power
+	   saving features (blcg/slcg) are enabled. For now, do it here. */
+	err = gk20a_init_clk_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a clk");
+
+	err = gk20a_init_mm_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a mm");
+
+	err = gk20a_init_fifo_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a fifo");
+
+	err = gk20a_init_gr_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a gr");
+
+	err = gk20a_init_pmu_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a pmu");
+
+	gk20a_channel_resume(g);
+
+	return;
+}
+
 static int __devinit gk20a_probe(struct platform_device *dev)
 {
 	int err;
@@ -738,12 +758,15 @@ static int __devinit gk20a_probe(struct platform_device *dev)
 	pdata->init                = nvhost_gk20a_init;
 	pdata->deinit              = nvhost_gk20a_deinit;
 	pdata->alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler;
+	pdata->prepare_poweroff    = nvhost_gk20a_prepare_poweroff,
+	pdata->finalize_poweron    = nvhost_gk20a_finalize_poweron,
 	pdata->syncpt_base = 32; /*hack*/
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
 
+	/* gpu power rail is turned off after this function */
 	err = nvhost_client_device_init(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",

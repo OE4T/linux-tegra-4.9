@@ -198,7 +198,7 @@ struct gr_gk20a {
 #define GR_NETLIST_STATIC_A	'A'
 	int netlist;
 
-	bool initialized;
+	int initialized;
 	u32 num_fbps;
 
 	u32 max_gpc_count;
@@ -265,9 +265,10 @@ struct gr_gk20a {
 	u32 channel_tlb_flush_index;
 
 	void (*remove_support)(struct gk20a *g, struct gr_gk20a *gr);
+	bool sw_ready;
 };
 
-int gk20a_init_gr_support(struct gk20a *g, bool reinit);
+int gk20a_init_gr_support(struct gk20a *g);
 int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
@@ -310,5 +311,7 @@ int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va);
 		gk20a_pmu_enable_elpg(g); \
 		err; \
 	})
+
+int gk20a_gr_suspend(struct gk20a *g);
 
 #endif /*__GR_GK20A_H__*/

@@ -281,7 +281,7 @@ static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
+static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct fifo_gk20a *f = &g->fifo;
@@ -289,7 +289,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 
 	nvhost_dbg_fn("");
 
-	if (reinit) {
+	if (f->sw_ready) {
 		nvhost_dbg_fn("skip init");
 		return 0;
 	}
@@ -375,6 +375,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g, bool reinit)
 	mutex_init(&f->ch_inuse_mutex);
 
 	f->remove_support = gk20a_remove_fifo_support;
+	f->sw_ready = true;
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -471,7 +472,7 @@ static int gk20a_init_fifo_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_fifo_support(struct gk20a *g, bool reinit)
+int gk20a_init_fifo_support(struct gk20a *g)
 {
 	u32 err;
 
@@ -479,7 +480,7 @@ int gk20a_init_fifo_support(struct gk20a *g, bool reinit)
 	if (err)
 		return err;
 
-	err = gk20a_init_fifo_setup_sw(g, reinit);
+	err = gk20a_init_fifo_setup_sw(g);
 	if (err)
 		return err;
 
@@ -813,4 +814,20 @@ done:
 
 	mutex_unlock(&runlist->mutex);
 	return ret;
+}
+
+int gk20a_fifo_suspend(struct gk20a *g)
+{
+	nvhost_dbg_fn("");
+
+	/* stop bar1 snooping */
+	gk20a_writel(g, fifo_bar1_base_r(),
+			fifo_bar1_base_valid_false_f());
+
+	/* disable fifo intr */
+	gk20a_writel(g, fifo_intr_en_0_r(), 0);
+	gk20a_writel(g, fifo_intr_en_1_r(), 0);
+
+	nvhost_dbg_fn("done");
+	return 0;
 }

@@ -25,6 +25,7 @@
 #include "dev.h"
 #include "class_ids.h"
 #include "bus_client.h"
+#include "nvhost_acm.h"
 
 #include "gk20a.h"
 
@@ -83,7 +84,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			return -EFAULT;
 	}
 
-	/* TBD: module busy here ? */
+	nvhost_module_busy(dev);
 
 	switch (cmd) {
 	case NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE:
@@ -193,7 +194,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 	}
 
-	/* TBD: module idle here ? */
+	nvhost_module_idle(dev);
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));

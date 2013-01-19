@@ -46,23 +46,36 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 		return -ENOENT;
 	}
 
+	nvhost_module_busy(ch->dev);
+
 	err = nvhost_as_alloc_share(ch, &as_share, true /*fd-attached path*/);
 	if (err) {
 		nvhost_dbg_fn("failed to alloc share");
-		return err;
+		goto clean_up;
 	}
 
 	filp->private_data = as_share;
 
+clean_up:
+	nvhost_module_idle(ch->dev);
 	return 0;
 }
 
 int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 {
 	struct nvhost_as_share *as_share = filp->private_data;
+	struct nvhost_channel *ch;
+	int ret;
+
 	nvhost_dbg_fn("");
 
-	return nvhost_as_release_share(as_share, 0/* no hwctx to release */);
+	ch = container_of(inode->i_cdev, struct nvhost_channel, as_cdev);
+
+	nvhost_module_busy(ch->dev);
+	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
+	nvhost_module_idle(ch->dev);
+
+	return ret;
 }
 
 long nvhost_as_dev_ctl(struct file *filp, unsigned int cmd, unsigned long arg)

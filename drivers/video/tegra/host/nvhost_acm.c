@@ -488,6 +488,7 @@ int nvhost_module_init(struct platform_device *dev)
 	attr->attr.mode = S_IWUSR | S_IRUGO;
 	attr->show = clockgate_delay_show;
 	attr->store = clockgate_delay_store;
+	sysfs_attr_init(&attr->attr);
 	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
 		dev_err(&dev->dev, "Could not create sysfs attribute clockgate_delay\n");
 		err = -EIO;
@@ -499,6 +500,7 @@ int nvhost_module_init(struct platform_device *dev)
 	attr->attr.mode = S_IWUSR | S_IRUGO;
 	attr->show = powergate_delay_show;
 	attr->store = powergate_delay_store;
+	sysfs_attr_init(&attr->attr);
 	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
 		dev_err(&dev->dev, "Could not create sysfs attribute powergate_delay\n");
 		err = -EIO;

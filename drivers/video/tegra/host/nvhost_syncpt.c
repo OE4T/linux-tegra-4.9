@@ -652,6 +652,8 @@ int nvhost_syncpt_init(struct platform_device *dev,
 		min->attr.attr.name = min_name;
 		min->attr.attr.mode = S_IRUGO;
 		min->attr.show = syncpt_min_show;
+		sysfs_attr_init(&min->attr.attr);
+		sysfs_attr_init(&max->attr.attr);
 		if (sysfs_create_file(kobj, &min->attr.attr)) {
 			err = -EIO;
 			goto fail;

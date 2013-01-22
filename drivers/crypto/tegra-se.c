@@ -583,10 +583,12 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 			SE_CRYPTO_IV_SEL(IV_UPDATED));
 	}
 
-	err = clk_set_rate(se_dev->pclk, freq);
-	if (err) {
-		dev_err(se_dev->dev, "clock set_rate failed.\n");
-		return;
+	if (se_dev->pclk) {
+		err = clk_set_rate(se_dev->pclk, freq);
+		if (err) {
+			dev_err(se_dev->dev, "clock set_rate failed.\n");
+			return;
+		}
 	}
 
 	/* enable hash for CMAC */
@@ -635,11 +637,14 @@ static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count,
 		se_writel(se_dev, 0, SE_SHA_MSG_LEFT_REG_OFFSET + (4 * i));
 	}
 
-	err = clk_set_rate(se_dev->pclk, freq);
-	if (err) {
-		dev_err(se_dev->dev, "clock set_rate failed.\n");
-		return;
+	if (se_dev->pclk) {
+		err = clk_set_rate(se_dev->pclk, freq);
+		if (err) {
+			dev_err(se_dev->dev, "clock set_rate failed.\n");
+			return;
+		}
 	}
+
 	se_writel(se_dev, SHA_ENABLE, SE_SHA_CONFIG_REG_OFFSET);
 }
 
@@ -2003,10 +2008,13 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 		return -EINVAL;
 
 	freq = se_dev->chipdata->rsa_freq;
-	err = clk_set_rate(se_dev->pclk, freq);
-	if (err) {
-		dev_err(se_dev->dev, "clock set_rate failed.\n");
-		return err;
+
+	if (se_dev->pclk) {
+		err = clk_set_rate(se_dev->pclk, freq);
+		if (err) {
+			dev_err(se_dev->dev, "clock set_rate failed.\n");
+			return err;
+		}
 	}
 
 	/* take access to the hw */
@@ -2575,19 +2583,21 @@ static int tegra_se_probe(struct platform_device *pdev)
 	se_dev->chipdata =
 		(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
 
-	/* Initialize the clock */
-	se_dev->pclk = clk_get(se_dev->dev, "se");
-	if (IS_ERR(se_dev->pclk)) {
-		dev_err(se_dev->dev, "clock intialization failed (%d)\n",
-			(int)se_dev->pclk);
-		err = -ENODEV;
-		goto clean;
-	}
+	if (!tegra_platform_is_fpga()) {
+		/* Initialize the clock */
+		se_dev->pclk = clk_get(se_dev->dev, "se");
+		if (IS_ERR(se_dev->pclk)) {
+			dev_err(se_dev->dev, "clock intialization failed (%ld)\n",
+				PTR_ERR(se_dev->pclk));
+			err = PTR_ERR(se_dev->pclk);
+			goto clean;
+		}
 
-	err = clk_set_rate(se_dev->pclk, ULONG_MAX);
-	if (err) {
-		dev_err(se_dev->dev, "clock set_rate failed.\n");
-		goto clean;
+		err = clk_set_rate(se_dev->pclk, ULONG_MAX);
+		if (err) {
+			dev_err(se_dev->dev, "clock set_rate failed.\n");
+			goto clean;
+		}
 	}
 
 	err = tegra_init_key_slot(se_dev);
@@ -2603,7 +2613,13 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	init_completion(&se_dev->complete);
-	se_work_q = alloc_workqueue("se_work_q", WQ_HIGHPRI | WQ_UNBOUND, 16);
+
+	if (tegra_platform_is_fpga())
+		se_work_q = alloc_workqueue("se_work_q", 0, 16);
+	else
+		se_work_q = alloc_workqueue("se_work_q",
+					WQ_HIGHPRI | WQ_UNBOUND, 16);
+
 	if (!se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
 		goto clean;

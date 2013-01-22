@@ -119,14 +119,18 @@ static int nct1008_write_reg(struct i2c_client *client, u8 reg, u16 value)
 	int ret = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
-	if (data && data->shutdown_complete)
+	mutex_lock(&data->mutex);
+	if (data && data->shutdown_complete) {
+		mutex_unlock(&data->mutex);
 		return -ENODEV;
+	}
 
 	ret = i2c_smbus_write_byte_data(client, reg, value);
 
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
+	mutex_unlock(&data->mutex);
 	return ret;
 }
 
@@ -134,15 +138,18 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 {
 	int ret = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
-
-	if (data && data->shutdown_complete)
+	mutex_lock(&data->mutex);
+	if (data && data->shutdown_complete) {
+		mutex_unlock(&data->mutex);
 		return -ENODEV;
+	}
 
 	ret = i2c_smbus_read_byte_data(client, reg);
 
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
+	mutex_unlock(&data->mutex);
 	return ret;
 }
 
@@ -1084,6 +1091,7 @@ static int nct1008_probe(struct i2c_client *client,
 	memcpy(&data->plat_data, client->dev.platform_data,
 		sizeof(struct nct1008_platform_data));
 	i2c_set_clientdata(client, data);
+	mutex_init(&data->mutex);
 
 	nct1008_power_control(data, true);
 	/* extended range recommended steps 1 through 4 taken care
@@ -1165,12 +1173,12 @@ static int nct1008_probe(struct i2c_client *client,
 
 	nct1008_update(data);
 #endif
-
 	return 0;
 
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
 	nct1008_power_control(data, false);
+	mutex_destroy(&data->mutex);
 	if (data->nct_reg)
 		regulator_put(data->nct_reg);
 	kfree(data);
@@ -1190,7 +1198,7 @@ static int nct1008_remove(struct i2c_client *client)
 	nct1008_power_control(data, false);
 	if (data->nct_reg)
 		regulator_put(data->nct_reg);
-
+	mutex_destroy(&data->mutex);
 	kfree(data);
 
 	return 0;
@@ -1199,13 +1207,14 @@ static int nct1008_remove(struct i2c_client *client)
 static void nct1008_shutdown(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
-
+	mutex_lock(&data->mutex);
 	if (client->irq)
 		disable_irq(client->irq);
 
 	cancel_work_sync(&data->work);
 
 	data->shutdown_complete = 1;
+	mutex_unlock(&data->mutex);
 }
 
 #ifdef CONFIG_PM_SLEEP

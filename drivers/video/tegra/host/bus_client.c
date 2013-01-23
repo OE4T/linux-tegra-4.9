@@ -420,24 +420,28 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int num_cmdbufs = args->num_cmdbufs;
 	int num_relocs = args->num_relocs;
 	int num_waitchks = args->num_waitchks;
+	int num_syncpt_incrs = args->num_syncpt_incrs;
 	struct nvhost_cmdbuf __user *cmdbufs = args->cmdbufs;
 	struct nvhost_reloc __user *relocs = args->relocs;
 	struct nvhost_reloc_shift __user *reloc_shifts = args->reloc_shifts;
 	struct nvhost_waitchk __user *waitchks = args->waitchks;
-	struct nvhost_syncpt_incr syncpt_incr;
-	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
-	int err;
+	struct nvhost_syncpt_incr __user *syncpt_incrs = args->syncpt_incrs;
+	u32 __user *waitbases = args->waitbases;
+	u32 __user *fences = args->fences;
 
-	/* We don't yet support other than one nvhost_syncpt_incrs per submit */
-	if (args->num_syncpt_incrs != 1)
+	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
+	u32 *local_waitbases = NULL;
+	int err, i, hwctx_syncpt_idx = -1;
+
+	if (num_syncpt_incrs > host->info.nb_pts)
 		return -EINVAL;
 
 	job = nvhost_job_alloc(ctx->ch,
 			ctx->hwctx,
-			args->num_cmdbufs,
-			args->num_relocs,
-			args->num_waitchks,
-			1,
+			num_cmdbufs,
+			num_relocs,
+			num_waitchks,
+			num_syncpt_incrs,
 			ctx->memmgr);
 	if (!job)
 		return -ENOMEM;
@@ -474,22 +478,78 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	err = copy_from_user(&syncpt_incr,
-			args->syncpt_incrs, sizeof(syncpt_incr));
-	if (err)
-		goto fail;
-	job->sp->id = syncpt_incr.syncpt_id;
-	if (job->sp->id > host->info.nb_pts) {
+	/* mass copy waitbases */
+	if (args->waitbases) {
+		local_waitbases = kzalloc(sizeof(u32) * num_syncpt_incrs,
+			GFP_KERNEL);
+		err = copy_from_user(local_waitbases, waitbases,
+			sizeof(u32) * num_syncpt_incrs);
+		if (err) {
+			err = -EINVAL;
+			goto fail;
+		}
+	}
+
+	/* set valid id for hwctx_syncpt_idx if no hwctx is present */
+	if (!ctx->hwctx)
+		hwctx_syncpt_idx = 0;
+
+	/*
+	 * Go through each syncpoint from userspace. Here we:
+	 * - Copy syncpoint information
+	 * - Validate each syncpoint
+	 * - Determine waitbase for each syncpoint
+	 * - Determine the index of hwctx syncpoint in the table
+	 */
+
+	for (i = 0; i < num_syncpt_incrs; ++i) {
+		u32 waitbase;
+		struct nvhost_syncpt_incr sp;
+
+		/* Copy */
+		err = copy_from_user(&sp, syncpt_incrs + i, sizeof(sp));
+		if (err)
+			goto fail;
+
+		/* Validate */
+		if (sp.syncpt_id > host->info.nb_pts) {
+			err = -EINVAL;
+			goto fail;
+		}
+
+		/* Determine waitbase */
+		if (waitbases && local_waitbases[i] != NVSYNCPT_INVALID)
+			waitbase = local_waitbases[i];
+		else
+			waitbase = nvhost_syncpt_get_waitbase(job->ch,
+				sp.syncpt_id);
+
+		/* Store */
+		job->sp[i].id = sp.syncpt_id;
+		job->sp[i].incrs = sp.syncpt_incrs;
+		job->sp[i].waitbase = waitbase;
+
+		/* Find hwctx syncpoint */
+		if (ctx->hwctx && (job->sp[i].id == ctx->hwctx->h->syncpt))
+			hwctx_syncpt_idx = i;
+	}
+
+	/* not needed anymore */
+	kfree(local_waitbases);
+	local_waitbases = NULL;
+
+	/* Is hwctx_syncpt_idx valid? */
+	if (hwctx_syncpt_idx == -1) {
 		err = -EINVAL;
 		goto fail;
 	}
-	job->sp->incrs = syncpt_incr.syncpt_incrs;
-	job->hwctx_syncpt_idx = 0;
-	job->sp->waitbase = nvhost_syncpt_get_waitbase(job->ch, job->sp->id);
+
+	job->hwctx_syncpt_idx = hwctx_syncpt_idx;
 
 	trace_nvhost_channel_submit(ctx->ch->dev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,
-		job->sp->id, job->sp->incrs);
+		job->sp[job->hwctx_syncpt_idx].id,
+		job->sp[job->hwctx_syncpt_idx].incrs);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
 	if (err)
@@ -499,14 +559,23 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		job->timeout = min(ctx->timeout, args->timeout);
 	else
 		job->timeout = ctx->timeout;
-
 	job->timeout_debug_dump = ctx->timeout_debug_dump;
 
 	err = nvhost_channel_submit(job);
 	if (err)
 		goto fail_submit;
 
-	args->fence = job->sp->fence;
+	/* Deliver multiple fences back to the userspace */
+	if (fences)
+		for (i = 0; i < num_syncpt_incrs; ++i) {
+			u32 fence = job->sp[i].fence;
+			err = copy_to_user(fences, &fence, sizeof(u32));
+			if (err)
+				break;
+			fences++;
+		}
+
+	args->fence = job->sp[job->hwctx_syncpt_idx].fence;
 
 	nvhost_job_put(job);
 
@@ -516,6 +585,7 @@ fail_submit:
 	nvhost_job_unpin(job);
 fail:
 	nvhost_job_put(job);
+	kfree(local_waitbases);
 	return err;
 }
 

@@ -164,8 +164,10 @@ struct nvhost_submit_args {
 	struct nvhost_reloc *relocs;
 	struct nvhost_reloc_shift *reloc_shifts;
 	struct nvhost_waitchk *waitchks;
+	__u32 *waitbases;
 
-	__u32 pad[5];		/* future expansion */
+	__u32 pad[3];		/* future expansion */
+	__u32 *fences;
 	__u32 fence;		/* Return value */
 };
 

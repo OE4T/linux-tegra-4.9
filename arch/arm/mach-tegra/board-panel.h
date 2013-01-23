@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-panel.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef __MACH_TEGRA_BOARD_PANEL_H
+#define __MACH_TEGRA_BOARD_PANEL_H
 
 #define    BOARD_E1627    0x065b
 #define    BOARD_E1639    0x0667
@@ -42,3 +45,4 @@ void tegra_dsi_resources_init(u8 dsi_instance,
 
 void tegra_dsi_update_init_cmd_gpio_rst(struct tegra_dc_out *dsi_disp1_out);
 
+#endif /* __MACH_TEGRA_BOARD_PANEL_H */

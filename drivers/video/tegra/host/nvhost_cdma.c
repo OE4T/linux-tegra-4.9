@@ -266,7 +266,6 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 {
 	u32 get_restart;
 	struct nvhost_job *job = NULL;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int nb_pts = nvhost_syncpt_nb_pts(syncpt);
 	DECLARE_BITMAP(syncpt_used, nb_pts);
 
@@ -337,17 +336,13 @@ out:
 		/* won't need a timeout when replayed */
 		job->timeout = 0;
 
-		for (i = 0; i < job->num_syncpts; ++i)
+		for (i = 0; i < job->num_syncpts; ++i) {
 			nvhost_cdma_finalize_job_incrs(syncpt, job->sp + i);
 
-		/* synchronize wait base. only the channel syncpoint wait base
-		 * is maintained */
-		if (job->sp[job->hwctx_syncpt_idx].id != NVSYNCPT_2D_0 &&
-			pdata->waitbases[0]) {
-
-			nvhost_syncpt_cpu_set_wait_base(dev,
-				pdata->waitbases[0],
-				job->sp[job->hwctx_syncpt_idx].fence);
+			if (job->sp[i].waitbase != NVSYNCPT_INVALID)
+				nvhost_syncpt_cpu_set_wait_base(dev,
+					job->sp[i].waitbase,
+					job->sp[i].fence);
 		}
 
 		/* cleanup push buffer */

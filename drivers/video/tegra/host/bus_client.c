@@ -48,6 +48,7 @@
 #include "chip_support.h"
 #include "nvhost_acm.h"
 
+#include "nvhost_syncpt.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"
@@ -484,6 +485,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	}
 	job->sp->incrs = syncpt_incr.syncpt_incrs;
 	job->hwctx_syncpt_idx = 0;
+	job->sp->waitbase = nvhost_syncpt_get_waitbase(job->ch, job->sp->id);
 
 	trace_nvhost_channel_submit(ctx->ch->dev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,

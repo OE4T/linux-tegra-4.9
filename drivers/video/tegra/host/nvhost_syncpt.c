@@ -27,6 +27,7 @@
 #include "nvhost_acm.h"
 #include "dev.h"
 #include "chip_support.h"
+#include "nvhost_channel.h"
 
 #define MAX_SYNCPT_LENGTH	5
 
@@ -50,6 +51,20 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++)
 		syncpt_op().reset_wait_base(sp, i);
 	wmb();
+}
+
+int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	int i;
+	bool ret = false;
+	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS && pdata->syncpts[i]; ++i)
+		ret |= (pdata->syncpts[i] == id);
+
+	if (!ret || (id == NVSYNCPT_2D_0))
+		return NVSYNCPT_INVALID;
+
+	return pdata->waitbases[0];
 }
 
 /**

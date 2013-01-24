@@ -532,6 +532,7 @@ int nvhost_gr3d_t30_read_reg(
 
 	job->hwctx_syncpt_idx = 0;
 	job->sp->id = h->h.syncpt;
+	job->sp->waitbase = h->h.waitbase;
 	job->sp->incrs = syncpt_incrs;
 	job->num_syncpts = 1;
 	job->serialize = 1;

@@ -121,6 +121,8 @@ static inline bool nvhost_syncpt_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 	return (min == max);
 }
 
+int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id);
+
 void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id);
 
 u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id);

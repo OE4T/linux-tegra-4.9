@@ -22,6 +22,9 @@
 #include "board-panel.h"
 #include "iomap.h"
 
+atomic_t sd_brightness = ATOMIC_INIT(255);
+EXPORT_SYMBOL(sd_brightness);
+
 void tegra_dsi_resources_init(u8 dsi_instance,
 			struct resource *resources, int n_resources)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, NVIDIA Corporation
+ * Copyright (C) 2011-2013, NVIDIA Corporation
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -105,6 +105,16 @@ struct tegra_dc_ext_flip {
 	struct tegra_dc_ext_flip_windowattr win[TEGRA_DC_EXT_FLIP_N_WINDOWS];
 	__u32	post_syncpt_id;
 	__u32	post_syncpt_val;
+};
+
+struct tegra_dc_ext_flip_2 {
+	struct tegra_dc_ext_flip_windowattr *win;
+	__u8 win_num;
+	__u8 reserved1; /* unused - must be 0 */
+	__u16 reserved2; /* unused - must be 0 */
+	__u32 post_syncpt_id;
+	__u32 post_syncpt_val;
+	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
 /*
@@ -268,6 +278,10 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_SET_CMU \
 	_IOW('D', 0x0D, struct tegra_dc_ext_cmu)
+
+#define TEGRA_DC_EXT_FLIP2 \
+	_IOWR('D', 0x0E, struct tegra_dc_ext_flip_2)
+
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

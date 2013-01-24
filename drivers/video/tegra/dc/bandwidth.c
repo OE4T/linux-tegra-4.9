@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/bandwidth.c
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,6 +38,7 @@ module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
 {
+	unsigned long bw;
 	/* windows A, B, C for first and second display */
 	static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 		/* first display */
@@ -67,7 +68,6 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
 	};
 #endif
-	unsigned long bw;
 
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)

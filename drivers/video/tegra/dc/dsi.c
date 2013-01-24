@@ -3345,6 +3345,8 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 
 	if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
 		tegra_dsi_start_dc_stream(dc, dsi);
+
+	dsi->host_suspended = false;
 fail:
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);

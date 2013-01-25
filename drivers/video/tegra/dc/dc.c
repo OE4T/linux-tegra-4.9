@@ -1789,11 +1789,12 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		tegra_dc_set_scaling_filter(dc);
 	}
 
-	/* Set window H to window mode by default for t14x. */
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#ifdef CONFIG_TEGRA_DC_WIN_H
+	/* Window H is set to window mode by default for t14x. */
 	tegra_dc_writel(dc, WINH_CURS_SELECT(1),
 			DC_DISP_BLEND_CURSOR_CONTROL);
 #endif
+
 	for (i = 0; i < dc->n_windows; i++) {
 		u32 syncpt = get_syncpt(dc, i);
 

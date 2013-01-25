@@ -132,8 +132,14 @@ struct tegra_dc_ext_flip_2 {
  *		  0	   1	foreground color
  * - Exactly one of the SIZE flags must be specified.
  */
-#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32	1
-#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64	2
+
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32	((1 & 0x7) << 0)
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64	((2 & 0x7) << 0)
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128	((3 & 0x7) << 0)
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256	((4 & 0x7) << 0)
+#define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(x)		(((x) & 0x7) >> 0)
+#define TEGRA_DC_EXT_CURSOR_FLAGS_2BIT_LEGACY		(0 << 16)
+#define TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL		(1 << 16)
 struct tegra_dc_ext_cursor_image {
 	struct {
 		__u8	r;
@@ -145,7 +151,7 @@ struct tegra_dc_ext_cursor_image {
 };
 
 /* Possible flags for struct nvdc_cursor's flags field */
-#define TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE	1
+#define TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE	(1 << 0)
 
 struct tegra_dc_ext_cursor {
 	__s16 x;

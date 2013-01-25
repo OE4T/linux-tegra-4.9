@@ -136,6 +136,62 @@ static ssize_t enable_store(struct device *dev,
 
 static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR, enable_show, enable_store);
 
+#ifdef CONFIG_TEGRA_DC_WIN_H
+static ssize_t win_h_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_io_start(dc);
+
+	val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
+
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", !!(val & WINH_CURS_SELECT(1)));
+}
+
+/* win_h sysfs controls hybrid window.
+ *
+ * 0 = cursor mode and 1 = window mode (default on T14x) */
+static ssize_t win_h_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned int val = 0;
+	unsigned long cursor_val = 0;
+
+	if (!dc->enabled) {
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
+		return -EFAULT;
+	}
+
+	if (kstrtouint(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_io_start(dc);
+
+	cursor_val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
+	cursor_val &= ~WINH_CURS_SELECT(1);
+	if (val)
+		cursor_val |= WINH_CURS_SELECT(1);
+	tegra_dc_writel(dc, cursor_val, DC_DISP_BLEND_CURSOR_CONTROL);
+
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
+
+	return count;
+}
+
+static DEVICE_ATTR(win_h, S_IRUGO|S_IWUSR, win_h_show, win_h_store);
+#endif
+
 static ssize_t crc_checksum_latched_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -363,6 +419,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
+#ifdef CONFIG_TEGRA_DC_WIN_H
+	device_remove_file(dev, &dev_attr_win_h);
+#endif
 #ifdef CONFIG_TEGRA_DC_CMU
 	device_remove_file(dev, &dev_attr_cmu_enable);
 #endif
@@ -391,6 +450,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
+#ifdef CONFIG_TEGRA_DC_WIN_H
+	error |= device_create_file(dev, &dev_attr_win_h);
+#endif
 #ifdef CONFIG_TEGRA_DC_CMU
 	error |= device_create_file(dev, &dev_attr_cmu_enable);
 #endif

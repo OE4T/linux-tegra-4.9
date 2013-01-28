@@ -257,6 +257,29 @@ irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id)
 
 /*** Main API ***/
 
+
+bool nvhost_intr_has_pending_jobs(struct nvhost_intr *intr, u32 id,
+			void *exclude_data)
+{
+	struct nvhost_intr_syncpt *syncpt;
+	struct nvhost_waitlist *waiter;
+	bool res = false;
+
+	syncpt = intr->syncpt + id;
+	spin_lock(&syncpt->lock);
+	list_for_each_entry(waiter, &syncpt->wait_head, list)
+		if (((waiter->action ==
+			NVHOST_INTR_ACTION_SUBMIT_COMPLETE) &&
+			(waiter->data != exclude_data))) {
+			res = true;
+			break;
+		}
+
+	spin_unlock(&syncpt->lock);
+
+	return res;
+}
+
 int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 			enum nvhost_intr_action action, void *data,
 			void *_waiter,

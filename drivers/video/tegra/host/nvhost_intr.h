@@ -97,6 +97,9 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 			void *waiter,
 			void **ref);
 
+bool nvhost_intr_has_pending_jobs(struct nvhost_intr *intr, u32 id,
+			void *exlude_data);
+
 /**
  * Allocate a waiter.
  */

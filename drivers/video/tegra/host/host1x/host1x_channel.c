@@ -303,6 +303,11 @@ static int host1x_channel_submit(struct nvhost_job *job)
 			err = -ENOMEM;
 			goto error;
 		}
+		if (nvhost_intr_has_pending_jobs(
+			&nvhost_get_host(ch->dev)->intr, job->sp[i].id, ch))
+			dev_warn(&ch->dev->dev,
+				"%s: cross-channel dependencies on syncpt %d\n",
+				__func__, job->sp[i].id);
 	}
 
 	/* begin a CDMA submit */

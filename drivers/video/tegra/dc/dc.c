@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2659,6 +2659,9 @@ static int tegra_dc_resume(struct platform_device *ndev)
 
 	mutex_lock(&dc->lock);
 	dc->suspended = false;
+
+	/* To pan the fb on resume */
+	tegra_fb_pan_display_reset(dc->fb);
 
 	if (dc->enabled) {
 		dc->enabled = false;

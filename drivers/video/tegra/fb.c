@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -287,6 +287,9 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 
 	case FB_BLANK_NORMAL:
 		dev_dbg(&tegra_fb->ndev->dev, "blank - normal\n");
+		/* To pan fb at the unblank */
+		if (tegra_fb->win->dc->enabled)
+			tegra_fb->curr_xoffset = -1;
 		tegra_dc_blank(tegra_fb->win->dc);
 		return 0;
 
@@ -294,6 +297,9 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
 		dev_dbg(&tegra_fb->ndev->dev, "blank - powerdown\n");
+		/* To pan fb while switching from X */
+		if (!tegra_fb->win->dc->suspended && tegra_fb->win->dc->enabled)
+			tegra_fb->curr_xoffset = -1;
 		tegra_dc_disable(tegra_fb->win->dc);
 		return 0;
 
@@ -480,6 +486,12 @@ static struct fb_ops tegra_fb_ops = {
 	.fb_imageblit = tegra_fb_imageblit,
 	.fb_ioctl = tegra_fb_ioctl,
 };
+
+/* Enabling the pan_display by resetting the cache of offset */
+void tegra_fb_pan_display_reset(struct tegra_fb_info *fb_info)
+{
+	fb_info->curr_xoffset = -1;
+}
 
 void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			      struct fb_monspecs *specs,

@@ -1,8 +1,8 @@
 /*
  * Raydium RM31080 touchscreen driver
  *
- * Copyright (C) 2012 Raydium Semiconductor Corporation
- * Copyright (C) 2012 - 2013 NVIDIA Corporation, All Rights Reserved.
+ * Copyright (C) 2012 - 2013, Raydium Semiconductor Corporation
+ * Copyright (C) 2012 - 2013, NVIDIA Corporation, All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -28,6 +28,9 @@
 #include <linux/uaccess.h>	/* copy_to_user(), */
 #include <linux/miscdevice.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>	/* pm qos for CPU boosting */
+#include <linux/sysfs.h>	/* sysfs for pm qos attributes */
+#include <linux/clk.h>
 
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi/rm31080a_ctrl.h>
@@ -35,6 +38,7 @@
 /*=========================================================================*/
 /*DEFINITIONS */
 /*=========================================================================*/
+#define ENABLE_RAW_DATA_QUEUE
 #define ENABLE_WORK_QUEUE
 #define ENABLE_REPORT_TO_UART
 #define ENABLE_RM31080_DEEP_SLEEP
@@ -44,7 +48,7 @@
 /*#define ENABLE_SPI_BURST_READ_WRITE */
 /*#define ENABLE_SPI_SETTING */
 #define ENABLE_SMOOTH_LEVEL
-/*#define ENABLE_SUPPORT_4_7*/  /* for 4.7 inch display  */
+/*#define ENABLE_SUPPORT_4_7*/ /* for 4.7 inch display  */
 #define ENABLE_NEW_INPUT_DEV
 
 /* undef to disable CPU boost while leaving idle mode */
@@ -55,10 +59,7 @@
 
 #ifdef ENABLE_RAW_DATA_QUEUE
 #define QUEUE_COUNT       128
-#if ENABLE_T007_ST_SCAN
 #define RAW_DATA_LENGTH  (RM_MAX_MT_COUNT + RM_MAX_CHANNEL_COUNT)
-#else
-#define RAW_DATA_LENGTH  2048
 #endif
 
 #define RM_SCAN_MODE_MANUAL          0x00
@@ -69,8 +70,6 @@
 #define RM_NEED_TO_SEND_SCAN         0x01
 #define RM_NEED_TO_READ_RAW_DATA     0x02
 #define RM_NEED_TO_SEND_SIGNAL       0x04
-#endif
-
 
 #ifdef ENABLE_SMOOTH_LEVEL
 #define RM_SMOOTH_LEVEL_NORMAL    0
@@ -139,6 +138,7 @@ struct rm31080_ts {
 	struct regulator *regulator_1v8;
 	struct notifier_block nb_3v3;
 	struct notifier_block nb_1v8;
+	struct clk *clk;
 };
 
 struct rm31080_bus_ops {
@@ -206,7 +206,7 @@ void my_calc_time(int iStart)
 	if (t2) {		/*more than 1 Second */
 		iTimebuffer[iIndex] = 999999;
 	} else {
-		iTimebuffer[iIndex] = nanosec_rem / 1000;/*micro second */
+		iTimebuffer[iIndex] = nanosec_rem / 1000; /*micro second */
 	}
 
 	iIndex++;
@@ -219,7 +219,7 @@ void my_calc_time(int iStart)
 	}
 
 }
-#endif				/*ENABLE_SPEED_TEST_FUNCTION */
+#endif /*ENABLE_SPEED_TEST_FUNCTION */
 /*=========================================================================
  * Description:
  *      RM31080 spi interface.
@@ -401,7 +401,7 @@ void raydium_change_scan_mode(u8 u8TouchCount)
 		u32NoTouchCount = 0;
 	}
 }
-#endif				/*ENABLE_AUTO_SCAN */
+#endif /*ENABLE_AUTO_SCAN */
 /*=========================================================================
   report touch data for scriber
 
@@ -428,7 +428,7 @@ void raydium_report_to_uart(void *p)
 	if (g_stTs.bEnableScriber == 0)
 		return;
 
-	spTP = (struct rm_touch_event *) p;
+	spTP = (struct rm_touch_event *)p;
 
 	ucData[0] = 0x8E;
 	ucData[1] = spTP->ucTouchCount;
@@ -506,9 +506,9 @@ void raydium_report_pointer(void *p)
 	struct rm_touch_event stTP;
 	unsigned long missing;
 #endif
-	spTP = (struct rm_touch_event *) p;
+	spTP = (struct rm_touch_event *)p;
 
-#if ENABLE_RESOLUTION_SWITCH
+
 	if ((g_stCtrl.u16ResolutionX != 0) &&
 		(g_stCtrl.u16ResolutionY != 0)) {
 		iMaxX = g_stCtrl.u16ResolutionX;
@@ -517,10 +517,6 @@ void raydium_report_pointer(void *p)
 		iMaxX = RM_INPUT_RESOLUTION_X;
 		iMaxY = RM_INPUT_RESOLUTION_Y;
 	}
-#else
-	iMaxX = RM_INPUT_RESOLUTION_X;
-	iMaxY = RM_INPUT_RESOLUTION_Y;
-#endif
 
 #ifdef ENABLE_SUPPORT_4_7
 	missing = copy_from_user(&stTP, p, sizeof(stTP));
@@ -602,11 +598,13 @@ void raydium_report_pointer(void *p)
 #ifdef ENABLE_RAW_DATA_QUEUE
 int rm31080_ctrl_read_raw_data(unsigned char *p)
 {
+#define T007B1_ST_DATA_ADDR				0x1CA0
+#define T007C1_ST_DATA_ADDR				0x0514
+#define T007B1_ST_NO_SWAP					0
+
 	int ret;
-#if ENABLE_T007B1_SETTING
-#if ENABLE_T007_ST_SCAN
+
 	char buf[3];
-#endif
 
 	if (g_stCtrl.bICVersion != T007A6) {
 		ret = rm31080_spi_byte_write(RM31080B1_REG_BANK0_00H, 0x00);
@@ -617,9 +615,7 @@ int rm31080_ctrl_read_raw_data(unsigned char *p)
 		if (ret)
 			ret = rm31080_spi_read(RM31080B1_REG_BANK0_03H|0x80, p,
 						g_stCtrl.u16DataLength);
-	} else
-#endif
-	{
+	} else {
 		ret = rm31080_spi_byte_write(RM31080_REG_01, 0x10);
 		if (ret)
 			ret = rm31080_spi_byte_write(RM31080_REG_02, 0x00);
@@ -629,28 +625,28 @@ int rm31080_ctrl_read_raw_data(unsigned char *p)
 						g_stCtrl.u16DataLength);
 	}
 
-#if ENABLE_T007_ST_SCAN
-	if (g_stCtrl.bICVersion == T007A6)
-		return ret;
+	if (g_stCtrl.bSTScan) {
+		if (g_stCtrl.bICVersion == T007A6)
+			return ret;
 
-	if (!ret)
-		return ret;
+		if (!ret)
+			return ret;
 
-	buf[0] = RM31080B1_REG_BANK0_00H;
-	if (g_stCtrl.bICVersion == T007_VERSION_B) {
-		buf[1] = (T007B1_ST_DATA_ADDR >> 8) & 0x1F;
-		buf[2] = T007B1_ST_DATA_ADDR & 0xFF;
-	} else if (g_stCtrl.bICVersion == T007_VERSION_C) {
-		buf[1] = (T007C1_ST_DATA_ADDR >> 8) & 0x1F;
-		buf[2] = T007C1_ST_DATA_ADDR & 0xFF;
+		buf[0] = RM31080B1_REG_BANK0_00H;
+		if (g_stCtrl.bICVersion == T007_VERSION_B) {
+			buf[1] = (T007B1_ST_DATA_ADDR >> 8) & 0x1F;
+			buf[2] = T007B1_ST_DATA_ADDR & 0xFF;
+		} else if (g_stCtrl.bICVersion == T007_VERSION_C) {
+			buf[1] = (T007C1_ST_DATA_ADDR >> 8) & 0x1F;
+			buf[2] = T007C1_ST_DATA_ADDR & 0xFF;
+		}
+		ret = rm31080_spi_burst_write(buf, sizeof(buf));
+
+		if (ret)
+			ret = rm31080_spi_read(RM31080B1_REG_BANK0_03H |
+				0x80, p + RM_MAX_MT_COUNT,
+				RM_MAX_CHANNEL_COUNT);
 	}
-	ret = rm31080_spi_burst_write(buf, sizeof(buf));
-
-	if (ret)
-		ret = rm31080_spi_read(RM31080B1_REG_BANK0_03H|0x80,
-					p + RM_MAX_MT_COUNT,/*Marty 20121015*/
-					RM_MAX_CHANNEL_COUNT);
-#endif
 	return ret;
 }
 
@@ -661,7 +657,7 @@ void rm_set_idle(u8 OnOff)
 	switch (OnOff) {
 	case 1:
 		rm31080_spi_read(0x46 | 0x80, &reg_46h, 1);
-		rm31080_spi_byte_write(0x46, reg_46h | 0x30);
+		rm31080_spi_byte_write(0x46, reg_46h | 0xF0);
 		break;
 	default:
 		rm31080_spi_read(0x46 | 0x80, &reg_46h, 1);
@@ -678,71 +674,50 @@ void rm_set_auto(u8 OnOff)
 	case 1:
 		rm31080_spi_read(0x09 | 0x80, &reg_09h, 1);
 		rm31080_spi_byte_write(0x09, reg_09h | 0x50);
-		rm31080_spi_read(0x0A|0x80, &reg_0Ah, 1);
-		rm31080_spi_byte_write(0x0A, reg_0Ah&0x0F);
+		rm31080_spi_read(0x0A | 0x80, &reg_0Ah, 1);
+		rm31080_spi_byte_write(0x0A, reg_0Ah & 0x0F);
 		break;
 	default:
 		rm31080_spi_read(0x09 | 0x80, &reg_09h, 1);
 		rm31080_spi_byte_write(0x09, reg_09h & 0x0F);
-		rm31080_spi_read(0x0A|0x80, &reg_0Ah, 1);
-		rm31080_spi_byte_write(0x0A, reg_0Ah|0x40);
+		rm31080_spi_read(0x0A | 0x80, &reg_0Ah, 1);
+		rm31080_spi_byte_write(0x0A, reg_0Ah | 0x40);
 		break;
 	}
 }
 
 void rm31080_ctrl_enter_auto_mode(void)
 {
-#if ENABLE_FILTER_SWITCH
-	/*rm_printk("Enable Analog Filter\n"); */
-#if ENABLE_T007B1_SETTING
 	if (g_stCtrl.bICVersion == T007A6)
-#endif
-		rm31080_analog_filter_config(REPEAT_1);
-#endif
+		rm31080_ts_send_signal(g_stTs.ulHalPID,
+				       RM_SIGNAL_ENTER_AUTO_SCAN);
+
 	/*Enable auto scan */
 	if (g_stCtrl.bfIdleMessage)
 		rm_printk("Enter Auto Scan Mode\n");
-#if ENABLE_T007B1_SETTING
-#if ENABLE_T007B1_STABLE_IDLE_MODE
-	if (g_stCtrl.bICVersion != T007A6) {
-		if (!g_stCtrl.bDummyRunCycle)
-			rm_set_idle(1);
-		rm_set_repeat_times(g_stCtrl.bIdleRepeatTimes[0]);
-	}
-#endif
-#endif
-#if ENABLE_T007_ST_SCAN
-	rm_set_auto(1);
-#else
-	rm31080_spi_byte_write(RM31080_REG_09, 0x10 | 0x40);
-#endif
+
+	if (g_stCtrl.bSTScan)
+		rm_set_auto(1);
+	else
+		rm31080_spi_byte_write(RM31080_REG_09, 0x10 | 0x40);
 }
 
 void rm31080_ctrl_leave_auto_mode(void)
 {
 	/*Disable auto scan */
+	g_stCtrl.bfIdleModeCheck = 1;
+
 	if (g_stCtrl.bfIdleMessage)
 		rm_printk("Leave Auto Scan Mode\n");
-#if ENABLE_T007B1_SETTING
-#if ENABLE_T007B1_STABLE_IDLE_MODE
-	if (g_stCtrl.bICVersion != T007A6) {
-		if (!g_stCtrl.bDummyRunCycle)
-			rm_set_idle(0);
-		rm_set_repeat_times(g_stCtrl.bRepeatTimes[0]);
-	}
-#endif
-#endif
-#if ENABLE_T007_ST_SCAN
-	rm_set_auto(0);
-#else
-	rm31080_spi_byte_write(RM31080_REG_09, 0x00);
-#endif
-#if ENABLE_FILTER_SWITCH
-#if ENABLE_T007B1_SETTING
+
+	if (g_stCtrl.bSTScan)
+		rm_set_auto(0);
+	else
+		rm31080_spi_byte_write(RM31080_REG_09, 0x00);
+
 	if (g_stCtrl.bICVersion == T007A6)
-#endif
-		rm31080_filter_config();
-#endif
+		rm31080_ts_send_signal(g_stTs.ulHalPID,
+			RM_SIGNAL_LEAVE_AUTO_SCAN);
 }
 
 void rm31080_ctrl_pause_auto_mode(void)
@@ -751,9 +726,10 @@ void rm31080_ctrl_pause_auto_mode(void)
 	rm31080_spi_byte_write(RM31080_REG_09, 0x40);	/*disable auto scan */
 	rm31080_spi_byte_read(RM31080_REG_11, &u8reg11);
 	u8reg11 &= ~0x01;
-	rm31080_spi_byte_write(RM31080_REG_11, u8reg11);/*set scan start=0 */
+	/*set scan start=0 */
+	rm31080_spi_byte_write(RM31080_REG_11, u8reg11);
 }
-#endif	/*ENABLE_AUTO_SCAN */
+#endif /*ENABLE_AUTO_SCAN */
 
 static u32 rm31080_ctrl_configure(void)
 {
@@ -764,14 +740,6 @@ static u32 rm31080_ctrl_configure(void)
 		u32Flag =
 			RM_NEED_TO_SEND_SCAN | RM_NEED_TO_READ_RAW_DATA |
 			RM_NEED_TO_SEND_SIGNAL;
-
-#if NOISE_SUM_CHECK
-		if (g_stTs.u8Repeat) {
-			rm_printk("Change Noise Mode\n");
-			rm_set_repeat_times(g_stTs.u8Repeat);
-			g_stTs.u8Repeat = 0;
-		}
-#endif
 
 		break;
 #ifdef ENABLE_AUTO_SCAN
@@ -784,17 +752,16 @@ static u32 rm31080_ctrl_configure(void)
 		rm31080_ctrl_leave_auto_mode();
 		rm31080_ctrl_scan_start();
 		g_stTs.u8ScanModeState = RM_SCAN_MODE_MANUAL;
-#if ENABLE_T007B1_SETTING
+
 		if (g_stCtrl.bICVersion != T007A6) {
 			u32Flag =
 				RM_NEED_TO_SEND_SCAN |
 				RM_NEED_TO_READ_RAW_DATA |
 				RM_NEED_TO_SEND_SIGNAL;
 		} else
-#endif
 			u32Flag = RM_NEED_TO_SEND_SCAN;
 		break;
-#endif				/*ENABLE_AUTO_SCAN */
+#endif /*ENABLE_AUTO_SCAN */
 	default:
 		u32Flag = RM_NEED_NONE;
 		break;
@@ -811,6 +778,7 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 {
 	/* handle touch suspend */
 	int error;
+	struct rm_spi_ts_platform_data *pdata;
 	/*Flow designed by Roger 20110930 */
 	/*rm31080_ts_send_signal(g_stTs.ulHalPID,RM_SIGNAL_SUSPEND); */
 	g_stTs.bInitFinish = 0;
@@ -819,32 +787,35 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 	rm31080_ctrl_clear_int();
 	/*disable auto scan */
 
-#if ENABLE_T007B1_SETTING
 	if (g_stCtrl.bICVersion == T007A6) {
-#endif
 		rm31080_spi_byte_write(RM31080_REG_09, 0x00);
 		rm31080_spi_byte_write(RM31080_REG_10, 0x14);
 		rm31080_ctrl_scan_start();
 		rm31080_ctrl_scan_start();
-		usleep_range(15000, 20000);/*msleep(15); */
+		usleep_range(15000, 20000);	/*msleep(15); */
 	}
 
-	usleep_range(12000, 13000);	/*msleep(12); */
 	rm31080_spi_byte_write(RM31080_REG_11, 0x06);
 
-	msleep(185);
+	msleep(100);
 	/* 1.disable (3.3v) */
 	if (ts->regulator_3v3) {
 		error = regulator_disable(ts->regulator_3v3);
 		if (error < 0)
 			dev_err(&g_spi->dev,
-			"raydium regulator 3.3V disable failed: %d\n", error);
+				"raydium regulator 3.3V disable failed: %d\n",
+				error);
 
 		usleep_range(5000, 6000);
 		/* notifier handles the rest of the touch suspend */
 	}
 
 	usleep_range(15000, 16000);
+	pdata = g_input_dev->dev.parent->platform_data;
+	if (pdata->platform_id == RM_PLATFORM_P005) {
+		if (ts->clk)
+			clk_disable(ts->clk);
+	}
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 	return 1;
 }
@@ -866,7 +837,7 @@ static void rm31080_enter_manual_mode(void)
 	if (g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN) {
 		rm31080_ctrl_leave_auto_mode();
 		g_stTs.u8ScanModeState = RM_SCAN_MODE_MANUAL;
-		usleep_range(10000, 12000);/*msleep(10); */
+		usleep_range(10000, 12000);	/*msleep(10); */
 	}
 }
 
@@ -886,13 +857,11 @@ static long rm31080_get_config(u8 *p, u32 u32Len)
 	u32 u32Ret;
 	struct rm_spi_ts_platform_data *pdata;
 
-#if ENABLE_T007B1_SETTING
 	u8 var;
 	if (rm31080_spi_byte_read(RM31080_REG_7E, &var))
 		g_stCtrl.bICVersion = var & 0xF0;
 	else
 		g_stCtrl.bICVersion = T007A6;
-#endif
 
 	pdata = g_input_dev->dev.parent->platform_data;
 
@@ -911,15 +880,6 @@ static long rm31080_get_config(u8 *p, u32 u32Len)
 		u32Ret = copy_to_user(p, pdata->config, u32Len);
 	}
 
-/*
-#if ENABLE_T007B1_SETTING
-	if (g_stCtrl.bICVersion != T007A6)
-		u32Ret = copy_to_user(p, pdata->config +
-					PARAMETER_AMOUNT, u32Len);
-	else
-#endif
-		u32Ret = copy_to_user(p, pdata->config, u32Len);
-*/
 	if (u32Ret != 0)
 		return 0;
 	return 1;
@@ -1118,7 +1078,7 @@ static long rm31080_queue_read_raw_data(u8 *p, u32 u32Len)
 	rm31080_dequeue_finish();
 	return 1;
 }
-#endif				/*ENABLE_RAW_DATA_QUEUE */
+#endif /*ENABLE_RAW_DATA_QUEUE */
 /*=====================================================================*/
 #ifdef ENABLE_WORK_QUEUE
 static void rm_work_handler(struct work_struct *work)
@@ -1143,10 +1103,7 @@ static void rm_work_handler(struct work_struct *work)
 		pKernelBuffer = rm31080_enqueue_start();
 		if (pKernelBuffer) {
 			iRet = rm31080_ctrl_read_raw_data((u8 *) pKernelBuffer);
-#if !NOISE_SUM_CHECK
-			if (iRet)
-				iRet = rm_noise_main((s8 *) pKernelBuffer);
-#endif
+
 			if (iRet)
 				rm31080_enqueue_finish();
 		}
@@ -1160,7 +1117,7 @@ static void rm_work_handler(struct work_struct *work)
 		}
 	}
 }
-#endif				/*ENABLE_WORK_QUEUE */
+#endif /*ENABLE_WORK_QUEUE */
 /*========================================================================= */
 static void __rm31080_enable(struct rm31080_ts *ts)
 {
@@ -1194,8 +1151,8 @@ void rm31080_set_command(struct rm_cmd_list *cmd_list, char *buf, int count)
 		count = RM_SLOW_SCAN_CMD_COUNT;
 	cmd_list->count = count;
 	for (i = 0; i < count; i++) {
-		cmd_list->cmd[i].addr  = buf[(i<<1) + 0];
-		cmd_list->cmd[i].value = buf[(i<<1) + 1];
+		cmd_list->cmd[i].addr = buf[(i << 1) + 0];
+		cmd_list->cmd[i].value = buf[(i << 1) + 1];
 	}
 }
 
@@ -1260,7 +1217,7 @@ static void rm31080_ctrl_slowscan(u32 level)
 
 	if (g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN) {
 		rm31080_ctrl_enter_auto_mode();
-		usleep_range(1000, 2000);/*msleep(1);*/
+		usleep_range(1000, 2000);	/*msleep(1); */
 		rm31080_ctrl_scan_start();
 	}
 }
@@ -1291,17 +1248,18 @@ static ssize_t rm31080_slowscan_handler(const char *buf, size_t count)
 	if (count == 2) {
 		if (buf[0] == '0') {
 			g_stTs.bEnableSlowScan = false;
-			rm31080_ctrl_slowscan(g_stTs.u32SlowScanLevel);
+			rm31080_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_MAX);
 		} else if (buf[0] == '1') {
 			g_stTs.bEnableSlowScan = true;
-			rm31080_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_20);
+			rm31080_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_60);
+			g_stTs.u32SlowScanLevel = RM_SLOW_SCAN_LEVEL_60;
 		}
 	} else if ((buf[0] == '2') && (buf[1] == ' ')) {
-		error = strict_strtoul(&buf[2], 10, &val);
+		error = kstrtoul(&buf[2], 10, &val);
 		if (error) {
 			ret = error;
 		} else {
-			g_stTs.bEnableSlowScan = false;
+			g_stTs.bEnableSlowScan = true;
 			g_stTs.u32SlowScanLevel = rm31080_slowscan_round(val);
 			rm31080_ctrl_slowscan(g_stTs.u32SlowScanLevel);
 		}
@@ -1319,8 +1277,6 @@ static ssize_t rm31080_slowscan_show(struct device *dev,
 	return sprintf(buf, "Slow Scan:%s\nScan Rate:%dHz\n",
 			g_stTs.bEnableSlowScan ?
 			"Enabled" : "Disabled",
-			g_stTs.bEnableSlowScan ?
-			RM_SLOW_SCAN_LEVEL_20 * RM_SLOW_SCAN_INTERVAL :
 			g_stTs.u32SlowScanLevel * RM_SLOW_SCAN_INTERVAL);
 
 #else
@@ -1365,7 +1321,7 @@ static ssize_t rm31080_smooth_level_handler(const char *buf, size_t count)
 		return count;
 
 	ret = (ssize_t) count;
-	error = strict_strtoul(buf, 10, &val);
+	error = kstrtoul(buf, 10, &val);
 	if (error)
 		ret = error;
 	else
@@ -1390,7 +1346,7 @@ static ssize_t rm31080_self_test_handler(const char *buf, size_t count)
 		return ret;
 	g_stTs.u8SelfTestResult = RM_SELF_TEST_RESULT_PASS;
 
-	error = strict_strtoul(buf, 10, &val);
+	error = kstrtoul(buf, 10, &val);
 	if (error) {
 		ret = error;
 	} else if (val == 0) {
@@ -1474,7 +1430,7 @@ static void rm31080_ctrl_registry(void)
 
 	if (g_stTs.u8ScanModeState == RM_SCAN_MODE_AUTO_SCAN) {
 		rm31080_ctrl_enter_auto_mode();
-		usleep_range(1000, 2000);/*msleep(1); */
+		usleep_range(1000, 2000);	/*msleep(1); */
 		rm31080_ctrl_scan_start();
 	}
 }
@@ -1610,6 +1566,12 @@ void rm31080_set_variable(unsigned int index, unsigned int arg)
 		dev_info(&g_spi->dev, "Raydium TS:Firmware v%d\n",
 				g_stTs.u8Version);
 		break;
+	case RM_VARIABLE_IDLEMODECHECK:
+		g_stCtrl.bfIdleModeCheck = (u8) arg;
+		if (g_stCtrl.bfIdleMessage)
+			rm_printk(
+			"## Raydium debug: bfIdleModeCheck %2x\n", arg);
+		break;
 	case RM_VARIABLE_REPEAT:
 		rm_printk("Repeat %d\n", arg);
 		g_stTs.u8Repeat = (u8) arg;
@@ -1649,7 +1611,6 @@ static void rm31080_init_ts_structure(void)
 	INIT_WORK(&g_stTs.rm_work, rm_work_handler);
 #endif
 	mutex_init(&g_stTs.mutex_scan_mode);
-
 }
 
 /*=========================================================================*/
@@ -1678,9 +1639,8 @@ static int rm31080_spi_checking(bool bInfinite)
 	unsigned char rbuf[sizeof(wbuf)];
 	unsigned int iLen;
 	int iFail;
-
-#if ENABLE_T007B1_SETTING
 	unsigned char var;
+
 	if (rm31080_spi_byte_read(RM31080_REG_7E, &var)) {
 		if ((var & 0xF0) != T007A6) {
 			wbuf[0] = 0x6E;
@@ -1688,7 +1648,6 @@ static int rm31080_spi_checking(bool bInfinite)
 			rm31080_spi_byte_write(RM31080_REG_7F, var);
 		}
 	}
-#endif
 
 	rbuf[0] = wbuf[0] | 0x80;	/*address */
 	iLen = sizeof(wbuf) - 1;
@@ -1728,12 +1687,10 @@ static int rm31080_spi_checking(bool bInfinite)
 	} while (bInfinite);
 
 	if (!iFail) {
-#if ENABLE_T007B1_SETTING
 		if (wbuf[0] == 0x6E) {
 			var = 0x00;
 			rm31080_spi_byte_write(RM31080_REG_7F, var);
 		}
-#endif
 		rm_printk("Raydium SPI Checking: ok\n");
 	}
 
@@ -1759,7 +1716,7 @@ static int rm31080_voltage_notifier_3v3(struct notifier_block *nb,
 			error = regulator_enable(ts->regulator_1v8);
 			if (error < 0)
 				dev_err(&g_spi->dev,
-				"raydium regulator 1.8V enable failed: %d\n",
+					"raydium regulator 1.8V enable failed: %d\n",
 					error);
 		}
 
@@ -1784,27 +1741,37 @@ static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 					unsigned long event, void *ignored)
 {
 	struct rm_spi_ts_platform_data *pdata;
+	struct rm31080_ts *ts;
+
 	pdata = g_input_dev->dev.parent->platform_data;
+	ts = input_get_drvdata(g_input_dev);
 
 	rm_printk("rm31080 REGULATOR EVENT:0x%x\n", (unsigned int)event);
 
-	/* if (event & REGULATOR_EVENT_POST_ENABLE) { */
-		/* 4. enable clock */
+	if (event & REGULATOR_EVENT_POST_ENABLE) {
+		if (ts->clk) {
+			/* 4. enable clock */
+			clk_enable(ts->clk);
 
-		/* 5. sleep 1ms */
+			/* 5. sleep 1ms */
+			usleep_range(1000, 2000);/*msleep(1);*/
+		}
+	}
 
 	if (event & REGULATOR_EVENT_DISABLE) {
 		/* 4) pull low reset */
 		gpio_set_value(pdata->gpio_reset, 0);
 
 		/* 5) disable clock */
+		if (ts->clk)
+			clk_disable(ts->clk);
 	}
 	return NOTIFY_OK;
 }
 
 /*=========================================================================*/
-static void rm31080_start(struct rm31080_ts *ts) /* handle touch resume */
-{
+static void rm31080_start(struct rm31080_ts *ts)
+{				/* handle touch resume */
 #ifdef ENABLE_RM31080_DEEP_SLEEP
 	struct rm_spi_ts_platform_data *pdata;
 #endif
@@ -1823,17 +1790,23 @@ static void rm31080_start(struct rm31080_ts *ts) /* handle touch resume */
 		error = regulator_enable(ts->regulator_3v3);
 		if (error < 0)
 			dev_err(&g_spi->dev,
-			"raydium regulator 3.3V enable failed: %d\n", error);
+				"raydium regulator 3.3V enable failed: %d\n",
+				error);
 
 		/* notifier handles the rest of the touch resume */
 		msleep(20);
+	}
+
+	if (pdata->platform_id == RM_PLATFORM_P005) {
+		if (ts->clk)
+			clk_enable(ts->clk);
 	}
 
 	/* 5. pull high reset */
 	gpio_set_value(pdata->gpio_reset, 0);
 	msleep(120);
 	gpio_set_value(pdata->gpio_reset, 1);
-	usleep_range(15000, 19000);/*msleep(10); */
+	usleep_range(15000, 19000);	/*msleep(10); */
 
 	rm31080_init_ts_structure_part();
 	rm31080_ts_send_signal(g_stTs.ulHalPID, RM_SIGNAL_RESUME);
@@ -1842,7 +1815,6 @@ static void rm31080_start(struct rm31080_ts *ts) /* handle touch resume */
 	rm31080_ctrl_scan_start();
 #endif
 	mutex_unlock(&g_stTs.mutex_scan_mode);
-
 }
 
 static void rm31080_stop(struct rm31080_ts *ts)
@@ -1879,7 +1851,7 @@ static const struct dev_pm_ops rm31080_pm_ops = {
 	.resume = rm31080_resume,
 };
 
-#endif				/*CONFIG_PM */
+#endif /*CONFIG_PM */
 
 /* NVIDIA 20121026*/
 #ifdef ENABLE_NEW_INPUT_DEV
@@ -1928,6 +1900,7 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 
 	struct rm31080_ts *ts;
 	struct input_dev *input_dev;
+	struct rm_spi_ts_platform_data *pdata;
 	int err;
 
 	if (!irq) {
@@ -1952,6 +1925,18 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	ts->dev = dev;
 	ts->input = input_dev;
 	ts->irq = irq;
+
+	pdata = dev->platform_data;
+	if (pdata->name_of_clock || pdata->name_of_clock_con) {
+		ts->clk = clk_get_sys(pdata->name_of_clock,
+			pdata->name_of_clock_con);
+		if (IS_ERR(ts->clk)) {
+			dev_err(&g_spi->dev, "failed to get touch_clk: (%s, %s)\n",
+				pdata->name_of_clock, pdata->name_of_clock_con);
+			err = -EINVAL;
+			goto err_free_mem;
+		}
+	}
 
 	snprintf(ts->phys, sizeof(ts->phys), "%s/input0", dev_name(dev));
 
@@ -2006,14 +1991,14 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 
 	return ts;
 
- err_remove_attr:
+err_remove_attr:
 	sysfs_remove_group(&dev->kobj, &rm_ts_attr_group);
- err_free_irq:
+err_free_irq:
 	free_irq(ts->irq, ts);
- err_free_mem:
+err_free_mem:
 	input_free_device(input_dev);
 	kfree(ts);
- err_out:
+err_out:
 	return ERR_PTR(err);
 }
 
@@ -2030,7 +2015,7 @@ static int dev_release(struct inode *inode, struct file *filp)
 }
 
 static ssize_t
-dev_read(struct file *filp, char __user * buf, size_t count, loff_t * pos)
+dev_read(struct file *filp, char __user *buf, size_t count, loff_t *pos)
 {
 	ssize_t missing, status;
 	int ret;
@@ -2143,23 +2128,14 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	case RM_IOCTL_GET_PARAMETER:
 		rm31080_ctrl_get_parameter((void *)arg);
-
-#if ENABLE_RESOLUTION_SWITCH
 		rm31080_set_input_resolution(g_stCtrl.u16ResolutionX,
 						g_stCtrl.u16ResolutionY);
-#endif
 		break;
 	case RM_IOCTL_SET_PARAMETER:
 		ret = rm31080_get_config((u8 *) arg, index);
 		break;
 	case RM_IOCTL_SEND_BASELINE:	/* Noise_Detector */
-		rm31080_ctrl_set_baseline((void *)arg);
 		break;
-#if ENABLE_NEW_NOISE_MODE
-	case RM_IOCTL_SEND_ANALOG_BASELINE:	/* Noise_Detector */
-		rm31080_ctrl_set_analog_baseline((void *)arg);
-		break;
-#endif
 	case RM_IOCTL_SET_VARIABLE:
 		rm31080_set_variable(index, arg);
 		break;
@@ -2172,6 +2148,9 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		rm31080_set_slowscan_para((u8 *) arg, index);
 		break;
 #endif
+	case RM_IOCTL_GET_SACN_MODE:
+		rm31080_ctrl_get_idle_mode((u8 *) arg);
+		break;
 
 	default:
 		break;
@@ -2289,6 +2268,10 @@ static int rm31080_spi_remove(struct spi_device *spi)
 		regulator_disable(ts->regulator_3v3);
 		regulator_disable(ts->regulator_1v8);
 	}
+
+	if (ts->clk)
+		clk_disable(ts->clk);
+
 	kfree(ts);
 	spi_set_drvdata(spi, NULL);
 	return 0;
@@ -2307,6 +2290,11 @@ static int rm31080_spi_probe(struct spi_device *spi)
 		return PTR_ERR(ts);
 	spi_set_drvdata(spi, ts);
 
+	if (ts->clk) {
+		clk_enable(ts->clk);
+		msleep(20);
+	}
+
 	rm31080_init_regulator(ts);
 
 	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
@@ -2321,6 +2309,7 @@ static int rm31080_spi_probe(struct spi_device *spi)
 
 	if (misc_register(&raydium_ts_miscdev) != 0) {
 		dev_err(&spi->dev, "Raydium TS: cannot register miscdev\n");
+		kfree(ts);
 		return 0;
 	}
 	rm31080_misc_init();

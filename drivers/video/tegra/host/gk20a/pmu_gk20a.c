@@ -2264,9 +2264,10 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		seq->out.offset = out->offset;
 	}
 
+	seq->state = PMU_SEQ_STATE_USED;
 	err = pmu_write_cmd(pmu, cmd, queue_id, timeout);
-	if (!err)
-		seq->state = PMU_SEQ_STATE_USED;
+	if (err)
+		seq->state = PMU_SEQ_STATE_PENDING;
 
 	nvhost_dbg_fn("done");
 
@@ -2316,12 +2317,12 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
 
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
-
 	/* no need to wait ack for ELPG enable but set pending to sync
 	   with follow up ELPG disable */
 	pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
+
+	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
 	nvhost_dbg_fn("done");
 

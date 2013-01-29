@@ -610,8 +610,6 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 	return 0;
 
 fail:
-	if (nhwctx)
-		nhwctx->h->put(nhwctx);
 	return err;
 }
 
@@ -920,6 +918,7 @@ static long nvhost_channelctl(struct file *filp,
 		dev_dbg(&priv->ch->dev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
+		break;
 	case NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH:
 		err = nvhost_ioctl_channel_set_ctxswitch(priv, (void *)buf);
 		break;

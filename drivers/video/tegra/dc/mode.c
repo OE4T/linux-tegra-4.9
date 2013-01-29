@@ -252,8 +252,24 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 
 	div = (rate * 2 / pclk) - 2;
 
+	/* SW WAR for bug 1045373. To make the shift clk dividor effect under
+	 * all circumstances, write N+2 to SHIFT_CLK_DIVIDER and activate it.
+	 * After 2us delay, write the target values to it. */
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div + 2),
+			DC_DISP_DISP_CLOCK_CONTROL);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	udelay(2);
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	/* Deprecated on t11x and t14x. */
 	tegra_dc_writel(dc, 0x00010001,
 			DC_DISP_SHIFT_CLOCK_OPTIONS);
+#endif
+
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
 

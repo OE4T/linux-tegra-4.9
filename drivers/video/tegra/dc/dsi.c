@@ -1759,9 +1759,24 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 		shift_clk_div_register = 0;
 #endif
 
+	val = PIXEL_CLK_DIVIDER_PCD1 |
+		SHIFT_CLK_DIVIDER(shift_clk_div_register + 2);
+
+	/* SW WAR for bug 1045373. To make the shift clk dividor effect under
+	 * all circumstances, write N+2 to SHIFT_CLK_DIVIDER and activate it.
+	 * After 2us delay, write the target values to it. */
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_dc_writel(dc, val, DC_DISP_DISP_CLOCK_CONTROL);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	udelay(2);
+#endif
+
 	/* TODO: find out if PCD3 option is required */
 	val = PIXEL_CLK_DIVIDER_PCD1 |
 		SHIFT_CLK_DIVIDER(shift_clk_div_register);
+
 	tegra_dc_writel(dc, val, DC_DISP_DISP_CLOCK_CONTROL);
 }
 

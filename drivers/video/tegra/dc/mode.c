@@ -19,6 +19,7 @@
 #include <linux/err.h>
 #include <linux/types.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>

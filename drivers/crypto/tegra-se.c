@@ -895,13 +895,16 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 static irqreturn_t tegra_se_irq(int irq, void *dev)
 {
 	struct tegra_se_dev *se_dev = dev;
-	u32 val;
+	u32 val, err_stat;
 
 	val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 	se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);
 
-	if (val & SE_INT_ERROR(INT_SET))
-		dev_err(se_dev->dev, "tegra_se_irq::error");
+	if (val & SE_INT_ERROR(INT_SET)) {
+		err_stat = se_readl(se_dev, SE_ERR_STATUS_0);
+		dev_err(se_dev->dev, "tegra_se_irq::error status is %x\n",
+								err_stat);
+	}
 
 	if (val & SE_INT_OP_DONE(INT_SET))
 		complete(&se_dev->complete);
@@ -1915,7 +1918,7 @@ static struct tegra_se_rsa_slot *tegra_se_alloc_rsa_key_slot(void)
 	bool found = false;
 
 	spin_lock(&rsa_key_slot_lock);
-	list_for_each_entry(slot, &key_slot, node) {
+	list_for_each_entry(slot, &rsa_key_slot, node) {
 		if (slot->available) {
 			slot->available = false;
 			found = true;
@@ -1942,7 +1945,7 @@ static int tegra_init_rsa_key_slot(struct tegra_se_dev *se_dev)
 		se_dev->rsa_slot_list[i].available = true;
 		se_dev->rsa_slot_list[i].slot_num = i;
 		INIT_LIST_HEAD(&se_dev->rsa_slot_list[i].node);
-		list_add_tail(&se_dev->rsa_slot_list[i].node, &key_slot);
+		list_add_tail(&se_dev->rsa_slot_list[i].node, &rsa_key_slot);
 	}
 	spin_unlock(&rsa_key_slot_lock);
 

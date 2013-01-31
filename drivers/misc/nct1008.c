@@ -491,8 +491,10 @@ static void nct1008_update(struct nct1008_data *data)
 	for (count = 0; count < thz->trips; count++) {
 		trip_state = &data->plat_data.trips[count];
 		trip_temp = trip_state->trip_temp;
-		hysteresis_temp = trip_state->tripped ?
-				trip_temp - trip_state->hysteresis : trip_temp;
+		hysteresis_temp = trip_temp - trip_state->hysteresis;
+		if ((trip_state->trip_type == THERMAL_TRIP_PASSIVE) &&
+		    !trip_state->tripped)
+			hysteresis_temp = trip_temp;
 
 		if ((trip_temp >= temp) && (trip_temp < high_temp))
 			high_temp = trip_temp;
@@ -578,7 +580,10 @@ static int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
 
 	*temp = trip_state->trip_temp;
 
-	if (thz->temperature >= trip_state->trip_temp) {
+	if (trip_state->trip_type != THERMAL_TRIP_PASSIVE)
+		return 0;
+
+	if (thz->temperature >= *temp) {
 		trip_state->tripped = true;
 	} else if (trip_state->tripped) {
 		*temp -= trip_state->hysteresis;

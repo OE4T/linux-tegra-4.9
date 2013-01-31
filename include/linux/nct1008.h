@@ -42,6 +42,7 @@ struct nct1008_platform_data {
 	int passive_delay;
 	int num_trips;
 	struct thermal_trip_info trips[THERMAL_MAX_TRIPS];
+	struct thermal_zone_params *tzp;
 	const char *loc_name;
 };
 #endif /* _LINUX_NCT1008_H */

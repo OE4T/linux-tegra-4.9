@@ -470,7 +470,7 @@ static int __maybe_unused tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 
 	ret = nvhost_syncpt_wait_timeout_ext(dsi->dc->ndev, dsi->syncpt_id,
-		dsi->syncpt_val + 1, MAX_SCHEDULE_TIMEOUT, NULL, NULL);
+		dsi->syncpt_val + 1, (u32)MAX_SCHEDULE_TIMEOUT, NULL, NULL);
 	if (ret < 0) {
 		dev_err(&dsi->dc->ndev->dev, "DSI sync point failure\n");
 		goto fail;

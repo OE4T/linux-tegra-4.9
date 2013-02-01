@@ -153,7 +153,7 @@ static void push_buffer_push_to(struct push_buffer *pb,
 		u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
-	u32 *p = (u32 *)((u32)pb->mapped + cur);
+	u32 *p = (u32 *)((uintptr_t)pb->mapped + cur);
 	u32 cur_nvmap = (cur/8) & (NVHOST_GATHER_QUEUE_SIZE - 1);
 	WARN_ON(cur == pb->fence);
 	*(p++) = op1;
@@ -242,7 +242,7 @@ static void cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
 	/* NOP all the PB slots */
 	getidx = getptr - pb->phys;
 	while (nr_slots--) {
-		u32 *p = (u32 *)((u32)pb->mapped + getidx);
+		u32 *p = (u32 *)((uintptr_t)pb->mapped + getidx);
 		*(p++) = NVHOST_OPCODE_NOOP;
 		*(p++) = NVHOST_OPCODE_NOOP;
 		dev_dbg(&dev->dev->dev, "%s: NOP at 0x%llx\n",

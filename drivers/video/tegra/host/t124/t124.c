@@ -461,7 +461,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
 	int i, nb_channels;
-	nvhost_dbg_fn("max channels=%d devices=%d",
+	nvhost_dbg_fn("max channels=%d devices=%zd",
 		      NV_HOST1X_CHANNELS,
 		      ARRAY_SIZE(t12_devices));
 	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(t12_devices));

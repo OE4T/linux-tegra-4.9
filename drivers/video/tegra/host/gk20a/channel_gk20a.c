@@ -1112,7 +1112,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 	u64 jiffies;
 	u32 id;
 	u32 offset;
-	u32 timeout;
+	long timeout;
 	int remain, ret = 0;
 
 	if (args->timeout == NVHOST_NO_TIMEOUT)
@@ -1138,7 +1138,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 			return -ENOMEM;
 		}
 
-		notif = (struct notification *)((u32)notif + offset);
+		notif = (struct notification *)((uintptr_t)notif + offset);
 
 		/* user should set status pending before
 		 * calling this ioctl */

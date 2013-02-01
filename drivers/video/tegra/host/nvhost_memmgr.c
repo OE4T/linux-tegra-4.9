@@ -126,7 +126,7 @@ struct mem_handle *nvhost_memmgr_get(struct mem_mgr *mgr,
 
 void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		nvhost_nvmap_put(mgr, handle);
@@ -145,7 +145,7 @@ void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct device *dev)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_pin(mgr, handle);
@@ -166,7 +166,7 @@ void nvhost_memmgr_unpin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct device *dev,
 		struct sg_table *sgt)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		nvhost_nvmap_unpin(mgr, handle, sgt);
@@ -184,7 +184,7 @@ void nvhost_memmgr_unpin(struct mem_mgr *mgr,
 
 void *nvhost_memmgr_mmap(struct mem_handle *handle)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_mmap(handle);
@@ -203,7 +203,7 @@ void *nvhost_memmgr_mmap(struct mem_handle *handle)
 
 void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		nvhost_nvmap_munmap(handle, addr);
@@ -223,7 +223,11 @@ int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
 			    u32 param, u32 *result)
 {
+#ifndef CONFIG_ARM64
 	switch (nvhost_memmgr_type((u32)mem_handle)) {
+#else
+	switch (nvhost_memmgr_type((u32)((uintptr_t)mem_handle))) {
+#endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_get_param(mem_mgr, mem_handle,
@@ -244,7 +248,7 @@ int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 
 void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_kmap(handle, pagenum);
@@ -264,7 +268,7 @@ void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
 void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr)
 {
-	switch (nvhost_memmgr_type((u32)handle)) {
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		nvhost_nvmap_kunmap(handle, pagenum, addr);

@@ -141,7 +141,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id, u32 thresh,
 static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thresh)
 {
 	return nvhost_syncpt_wait_timeout(sp, id, thresh,
-					  MAX_SCHEDULE_TIMEOUT, NULL, NULL);
+					  (u32)MAX_SCHEDULE_TIMEOUT, NULL, NULL);
 }
 
 int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr);

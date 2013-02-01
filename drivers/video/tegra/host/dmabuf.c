@@ -25,7 +25,7 @@
 
 static inline struct dma_buf_attachment *to_dmabuf_att(struct mem_handle *h)
 {
-	return (struct dma_buf_attachment *)(((u32)h) & ~0x3);
+	return (struct dma_buf_attachment *)(((uintptr_t)h) & ~0x3);
 }
 
 static inline struct dma_buf *to_dmabuf(struct mem_handle *h)
@@ -100,7 +100,7 @@ struct mem_handle *nvhost_dmabuf_get(u32 id, struct platform_device *dev)
 		}
 	}
 
-	return (struct mem_handle *) ((u32)h | mem_mgr_type_dmabuf);
+	return (struct mem_handle *) ((uintptr_t)h | mem_mgr_type_dmabuf);
 }
 
 int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,

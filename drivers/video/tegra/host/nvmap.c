@@ -63,7 +63,7 @@ void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 
 static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
 {
-	return (struct scatterlist *)gfp_mask;
+	return (struct scatterlist *)((uintptr_t)gfp_mask);
 }
 
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
@@ -76,7 +76,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 	if (!sgt)
 		return ERR_PTR(-ENOMEM);
 
-	err = __sg_alloc_table(sgt, 1, 1, (gfp_t)(sgt+1), sg_kmalloc);
+	err = __sg_alloc_table(sgt, 1, 1, (gfp_t)((uintptr_t)(sgt+1)), sg_kmalloc);
 	if (err) {
 		kfree(sgt);
 		return ERR_PTR(err);

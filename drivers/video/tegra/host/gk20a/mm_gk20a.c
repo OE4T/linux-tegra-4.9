@@ -862,7 +862,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	nvhost_dbg_info("comptag size=%d start=%d for 0x%llx",
 			bfr.ctag_lines, bfr.ctag_offset, (u64)bfr.addr);
 
-
 	/* keep track of the buffer for unmapping */
 	/* TBD: check for multiple mapping of same buffer */
 	mapped_buffer = kzalloc(sizeof(*mapped_buffer), GFP_KERNEL);
@@ -1223,7 +1222,6 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	}
 	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%llx",
 			vm->pdes.kv, (u64)vm->pdes.phys);
-
 	/* we could release vm->pdes.kv but it's only one page... */
 
 	/* alloc in 4K granularity */
@@ -1544,7 +1542,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
-		err = (int)inst_block->mem.sgt;
+		err = (int)((uintptr_t)inst_block->mem.sgt);
 		goto clean_up;
 	}
 	inst_block->cpu_pa = inst_pa =

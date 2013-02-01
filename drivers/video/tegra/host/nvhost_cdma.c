@@ -444,7 +444,7 @@ static void trace_write_gather(struct nvhost_cdma *cdma,
 		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
 			trace_nvhost_cdma_push_gather(
 				cdma_to_channel(cdma)->dev->name,
-				(u32)ref,
+				(u32)((uintptr_t)ref),
 				min(words - i, TRACE_MAX_LENGTH),
 				offset + i * sizeof(u32),
 				mem);

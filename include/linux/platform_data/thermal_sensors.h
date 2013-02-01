@@ -27,6 +27,7 @@ struct thermal_trip_info {
 	unsigned long lower;
 	long hysteresis;
 	bool tripped;
+	bool bound;
 	unsigned int level;
 	char *cdev_type;
 };

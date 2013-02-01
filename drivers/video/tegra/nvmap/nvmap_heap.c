@@ -286,17 +286,17 @@ static ssize_t heap_stat_show(struct device *dev,
 	base = heap_stat(heap, &stat);
 
 	if (attr == &heap_stat_total_max)
-		return sprintf(buf, "%u\n", stat.largest);
+		return sprintf(buf, "%zu\n", stat.largest);
 	else if (attr == &heap_stat_total_count)
-		return sprintf(buf, "%u\n", stat.count);
+		return sprintf(buf, "%zu\n", stat.count);
 	else if (attr == &heap_stat_total_size)
-		return sprintf(buf, "%u\n", stat.total);
+		return sprintf(buf, "%zu\n", stat.total);
 	else if (attr == &heap_stat_free_max)
-		return sprintf(buf, "%u\n", stat.free_largest);
+		return sprintf(buf, "%zu\n", stat.free_largest);
 	else if (attr == &heap_stat_free_count)
-		return sprintf(buf, "%u\n", stat.free_count);
+		return sprintf(buf, "%zu\n", stat.free_count);
 	else if (attr == &heap_stat_free_size)
-		return sprintf(buf, "%u\n", stat.free);
+		return sprintf(buf, "%zu\n", stat.free);
 	else if (attr == &heap_stat_base)
 		return sprintf(buf, "%08llx\n", (unsigned long long)base);
 	else
@@ -697,15 +697,15 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	DEFINE_DMA_ATTRS(attrs);
 
 	if (WARN_ON(buddy_size && buddy_size < NVMAP_HEAP_MIN_BUDDY_SIZE)) {
-		dev_warn(parent, "%s: buddy_size %u too small\n", __func__,
+		dev_warn(parent, "%s: buddy_size %zu too small\n", __func__,
 			buddy_size);
 		buddy_size = 0;
 	} else if (WARN_ON(buddy_size >= len)) {
-		dev_warn(parent, "%s: buddy_size %u too large\n", __func__,
+		dev_warn(parent, "%s: buddy_size %zu too large\n", __func__,
 			buddy_size);
 		buddy_size = 0;
 	} else if (WARN_ON(buddy_size & (buddy_size - 1))) {
-		dev_warn(parent, "%s: buddy_size %u not a power of 2\n",
+		dev_warn(parent, "%s: buddy_size %zu not a power of 2\n",
 			 __func__, buddy_size);
 		buddy_size = 1 << (ilog2(buddy_size) + 1);
 	}
@@ -713,14 +713,14 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	if (WARN_ON(buddy_size && (base & (buddy_size - 1)))) {
 		phys_addr_t orig = base;
 		dev_warn(parent, "%s: base address 0x%llx not aligned to "
-			 "buddy_size %u\n", __func__, (u64)base, buddy_size);
+			 "buddy_size %zu\n", __func__, (u64)base, buddy_size);
 		base = ALIGN(base, buddy_size);
 		len -= (base - orig);
 	}
 
 	if (WARN_ON(buddy_size && (len & (buddy_size - 1)))) {
-		dev_warn(parent, "%s: length %u not aligned to "
-			 "buddy_size %u\n", __func__, len, buddy_size);
+		dev_warn(parent, "%s: length %zu not aligned to "
+			 "buddy_size %zu\n", __func__, len, buddy_size);
 		len &= ~(buddy_size - 1);
 	}
 

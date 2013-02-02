@@ -472,12 +472,10 @@ void nvhost_gr3d_t114_init(struct platform_device *dev)
 {
 	if (actmon_op().init)
 		actmon_op().init(nvhost_get_host(dev));
-	nvhost_scale3d_actmon_init(dev);
 }
 
 void nvhost_gr3d_t114_deinit(struct platform_device *dev)
 {
-	nvhost_scale3d_actmon_deinit(dev);
 	if (actmon_op().deinit)
 		actmon_op().deinit(nvhost_get_host(dev));
 }

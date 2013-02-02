@@ -141,6 +141,12 @@ struct nvhost_device_data {
 	/* Device is going to be suspended */
 	void (*suspend_ndev)(struct platform_device *);
 
+	/* Scaling init is run on device registration */
+	void (*scaling_init)(struct platform_device *dev);
+
+	/* Scaling deinit is called on device unregistration */
+	void (*scaling_deinit)(struct platform_device *dev);
+
 	/* Device is initialized */
 	void (*init)(struct platform_device *dev);
 

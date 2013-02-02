@@ -1010,6 +1010,9 @@ int nvhost_client_device_init(struct platform_device *dev)
 	if (err)
 		goto fail;
 
+	if (pdata->scaling_init)
+		pdata->scaling_init(dev);
+
 	nvhost_device_debug_init(dev);
 
 	/* reset syncpoint values for this unit */

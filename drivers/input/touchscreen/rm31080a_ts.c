@@ -2276,13 +2276,13 @@ static int rm31080_spi_probe(struct spi_device *spi)
 
 	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
 		dev_err(&spi->dev, "SPI CLK %d Hz?\n", spi->max_speed_hz);
-		goto err_unregister_notifier;
+		goto err_free;
 	}
 
 	rm31080_init_ts_structure_part();
 
 	if (!rm31080_spi_checking(0))
-		goto err_unregister_notifier;
+		goto err_free;
 
 	if (misc_register(&raydium_ts_miscdev) != 0) {
 		dev_err(&spi->dev, "Raydium TS: cannot register miscdev\n");

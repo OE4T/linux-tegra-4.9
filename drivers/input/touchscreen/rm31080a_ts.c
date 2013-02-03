@@ -780,7 +780,6 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 {
 	/* handle touch suspend */
 	int error;
-	struct rm_spi_ts_platform_data *pdata;
 	/*Flow designed by Roger 20110930 */
 	/*rm31080_ts_send_signal(g_stTs.ulHalPID,RM_SIGNAL_SUSPEND); */
 	g_stTs.bInitFinish = 0;
@@ -807,17 +806,8 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 			dev_err(&g_spi->dev,
 				"raydium regulator 3.3V disable failed: %d\n",
 				error);
-
-		usleep_range(5000, 6000);
-		/* notifier handles the rest of the touch suspend */
 	}
 
-	usleep_range(15000, 16000);
-	pdata = g_input_dev->dev.parent->platform_data;
-	if (pdata->platform_id == RM_PLATFORM_P005) {
-		if (ts->clk)
-			clk_disable(ts->clk);
-	}
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 	return 1;
 }
@@ -1700,7 +1690,7 @@ static int rm31080_spi_checking(bool bInfinite)
 
 }
 
-static int rm31080_voltage_notifier_3v3(struct notifier_block *nb,
+static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 					unsigned long event, void *ignored)
 {
 	int error;
@@ -1709,41 +1699,28 @@ static int rm31080_voltage_notifier_3v3(struct notifier_block *nb,
 	rm_printk("rm31080 REGULATOR EVENT:0x%x\n", (unsigned int)event);
 
 	if (event & REGULATOR_EVENT_POST_ENABLE) {
-		/* handle the rest of touch resume */
-		/* 2. sleep 5ms */
+		/* 1. 1v8 power on */
+		/* 2. wait 5ms */
 		usleep_range(5000, 6000);
-
-		/* 3. enable 1.8 */
-		if (ts->regulator_1v8) {
-			error = regulator_enable(ts->regulator_1v8);
-			if (error < 0)
-				dev_err(&g_spi->dev,
-					"raydium regulator 1.8V enable failed: %d\n",
-					error);
-		}
-
-	} else if (event & REGULATOR_EVENT_DISABLE) {
-		/* handle the rest of touch suspend */
-		/* 2) sleep 5ms */
-		usleep_range(5000, 6000);
-		/* 3) disable 1.8 */
-		if (ts->regulator_1v8) {
-			error = regulator_disable(ts->regulator_1v8);
-			if (error < 0)
-				dev_err(&g_spi->dev,
-				"raydium regulator 1.8V disable failed: %d\n",
-					error);
+		/* 3. 3v3 power on */
+		error = regulator_enable(ts->regulator_3v3);
+		if (error < 0) {
+			dev_err(&g_spi->dev,
+				"raydium regulator 3V3 enable failed: %d\n",
+				error);
+			return NOTIFY_BAD;
 		}
 	}
 
 	return NOTIFY_OK;
 }
 
-static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
+static int rm31080_voltage_notifier_3v3(struct notifier_block *nb,
 					unsigned long event, void *ignored)
 {
 	struct rm_spi_ts_platform_data *pdata;
 	struct rm31080_ts *ts;
+	int error;
 
 	pdata = g_input_dev->dev.parent->platform_data;
 	ts = input_get_drvdata(g_input_dev);
@@ -1751,22 +1728,32 @@ static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 	rm_printk("rm31080 REGULATOR EVENT:0x%x\n", (unsigned int)event);
 
 	if (event & REGULATOR_EVENT_POST_ENABLE) {
-		if (ts->clk) {
-			/* 4. enable clock */
+		/* 4. sleep 5ms */
+		usleep_range(5000, 6000);
+		if (ts->clk)
+			/* 5. enable clock */
 			clk_enable(ts->clk);
-
-			/* 5. sleep 1ms */
-			usleep_range(1000, 2000);/*msleep(1);*/
-		}
+		/* 6. reset GPIO */
+		gpio_set_value(pdata->gpio_reset, 1);
 	}
 
 	if (event & REGULATOR_EVENT_DISABLE) {
-		/* 4) pull low reset */
+		/* 1. 3v3 power off */
+		/* 2. sleep 30ms */
+		msleep(30);
+		/* 3. pull low reset */
 		gpio_set_value(pdata->gpio_reset, 0);
-
-		/* 5) disable clock */
+		/* 4 disable clock */
 		if (ts->clk)
 			clk_disable(ts->clk);
+		/* 5. disable 1.8 */
+		error = regulator_disable(ts->regulator_1v8);
+		if (error < 0) {
+			dev_err(&g_spi->dev,
+			"raydium regulator 1.8V disable failed: %d\n",
+				error);
+			return NOTIFY_BAD;
+		}
 	}
 	return NOTIFY_OK;
 }
@@ -1774,9 +1761,6 @@ static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 /*=========================================================================*/
 static void rm31080_start(struct rm31080_ts *ts)
 {				/* handle touch resume */
-#ifdef ENABLE_RM31080_DEEP_SLEEP
-	struct rm_spi_ts_platform_data *pdata;
-#endif
 	int error;
 
 	if (!g_stTs.bIsSuspended)
@@ -1786,29 +1770,14 @@ static void rm31080_start(struct rm31080_ts *ts)
 	mutex_lock(&g_stTs.mutex_scan_mode);
 
 #ifdef ENABLE_RM31080_DEEP_SLEEP
-	pdata = g_input_dev->dev.parent->platform_data;
-	/* 1. enable (3.3v) */
-	if (ts->regulator_3v3) {
-		error = regulator_enable(ts->regulator_3v3);
+	/* 1. enable (1.8v) */
+	if (ts->regulator_1v8) {
+		error = regulator_enable(ts->regulator_1v8);
 		if (error < 0)
 			dev_err(&g_spi->dev,
-				"raydium regulator 3.3V enable failed: %d\n",
+				"raydium regulator 1.8V enable failed: %d\n",
 				error);
-
-		/* notifier handles the rest of the touch resume */
-		msleep(20);
 	}
-
-	if (pdata->platform_id == RM_PLATFORM_P005) {
-		if (ts->clk)
-			clk_enable(ts->clk);
-	}
-
-	/* 5. pull high reset */
-	gpio_set_value(pdata->gpio_reset, 0);
-	msleep(120);
-	gpio_set_value(pdata->gpio_reset, 1);
-	usleep_range(15000, 19000);	/*msleep(10); */
 
 	rm31080_init_ts_structure_part();
 	rm31080_ts_send_signal(g_stTs.ulHalPID, RM_SIGNAL_RESUME);
@@ -2204,7 +2173,28 @@ static void rm31080_init_regulator(struct rm31080_ts *ts)
 	if (IS_ERR(ts->regulator_1v8)) {
 		dev_err(&g_spi->dev, "Raydium TS: regulator_get failed: %ld\n",
 			PTR_ERR(ts->regulator_1v8));
-		goto err_put_regulator_3v3;
+		goto err_null_regulator;
+	}
+
+	/* Enable 1v8 first*/
+	error = regulator_enable(ts->regulator_1v8);
+	if (error < 0)
+		dev_err(&g_spi->dev,
+			"Raydium TS: regulator enable failed: %d\n", error);
+
+	usleep_range(5000, 6000);
+	/* Enable 1v8 first*/
+	error = regulator_enable(ts->regulator_3v3);
+	if (error < 0)
+		dev_err(&g_spi->dev,
+			"Raydium TS: regulator enable failed: %d\n", error);
+
+	ts->nb_1v8.notifier_call = &rm31080_voltage_notifier_1v8;
+	error = regulator_register_notifier(ts->regulator_1v8, &ts->nb_1v8);
+	if (error) {
+		dev_err(&g_spi->dev,
+			"regulator notifier request failed: %d\n", error);
+		goto err_disable_regulator;
 	}
 
 	ts->nb_3v3.notifier_call = &rm31080_voltage_notifier_3v3;
@@ -2212,35 +2202,16 @@ static void rm31080_init_regulator(struct rm31080_ts *ts)
 	if (error) {
 		dev_err(&g_spi->dev,
 			"regulator notifier request failed: %d\n", error);
-		goto err_put_regulator_1v8;
+		goto err_unregister_notifier;
 	}
-
-	ts->nb_1v8.notifier_call = &rm31080_voltage_notifier_1v8;
-	error = regulator_register_notifier(ts->regulator_1v8, &ts->nb_1v8);
-	if (error) {
-		dev_err(&g_spi->dev,
-			"regulator notifier request failed: %d\n", error);
-		goto err_unregister_notifier_3v3;
-	}
-
-	error = regulator_enable(ts->regulator_3v3);
-	if (error < 0)
-		dev_err(&g_spi->dev,
-			"Raydium TS: regulator enable failed: %d\n", error);
-
-	error = regulator_enable(ts->regulator_1v8);
-	if (error < 0)
-		dev_err(&g_spi->dev,
-			"Raydium TS: regulator enable failed: %d\n", error);
 
 	return;
 
-err_unregister_notifier_3v3:
-	regulator_unregister_notifier(ts->regulator_3v3, &ts->nb_3v3);
-err_put_regulator_1v8:
-	devm_regulator_put(ts->regulator_1v8);
-err_put_regulator_3v3:
-	devm_regulator_put(ts->regulator_3v3);
+err_unregister_notifier:
+	regulator_unregister_notifier(ts->regulator_1v8, &ts->nb_1v8);
+err_disable_regulator:
+	regulator_disable(ts->regulator_3v3);
+	regulator_disable(ts->regulator_1v8);
 err_null_regulator:
 	ts->regulator_3v3 = NULL;
 	ts->regulator_1v8 = NULL;
@@ -2270,10 +2241,8 @@ static int rm31080_spi_remove(struct spi_device *spi)
 		regulator_disable(ts->regulator_3v3);
 		regulator_disable(ts->regulator_1v8);
 	}
-
 	if (ts->clk)
 		clk_disable(ts->clk);
-
 	kfree(ts);
 	spi_set_drvdata(spi, NULL);
 	return 0;
@@ -2282,6 +2251,7 @@ static int rm31080_spi_remove(struct spi_device *spi)
 static int rm31080_spi_probe(struct spi_device *spi)
 {
 	struct rm31080_ts *ts;
+	struct rm_spi_ts_platform_data *pdata;
 
 	g_spi = spi;
 
@@ -2292,12 +2262,17 @@ static int rm31080_spi_probe(struct spi_device *spi)
 		return PTR_ERR(ts);
 	spi_set_drvdata(spi, ts);
 
-	if (ts->clk) {
-		clk_enable(ts->clk);
-		msleep(20);
-	}
-
 	rm31080_init_regulator(ts);
+
+	pdata = g_input_dev->dev.parent->platform_data;
+	usleep_range(5000, 6000);
+	if (ts->clk)
+		clk_enable(ts->clk);
+
+	gpio_set_value(pdata->gpio_reset, 0);
+	msleep(120);
+	gpio_set_value(pdata->gpio_reset, 1);
+	usleep_range(15000, 190000);
 
 	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
 		dev_err(&spi->dev, "SPI CLK %d Hz?\n", spi->max_speed_hz);
@@ -2325,12 +2300,20 @@ static int rm31080_spi_probe(struct spi_device *spi)
 
 	return 0;
 
-err_unregister_notifier:
-	regulator_unregister_notifier(ts->regulator_3v3, &ts->nb_3v3);
-	regulator_unregister_notifier(ts->regulator_1v8, &ts->nb_1v8);
-err_disable_regulator:
-	regulator_disable(ts->regulator_3v3);
-	regulator_disable(ts->regulator_1v8);
+err_free:
+	sysfs_remove_group(&ts->dev->kobj, &rm_ts_attr_group);
+	free_irq(ts->irq, ts);
+	input_unregister_device(ts->input);
+	if (ts->regulator_3v3 && ts->regulator_1v8) {
+		regulator_unregister_notifier(ts->regulator_3v3, &ts->nb_3v3);
+		regulator_unregister_notifier(ts->regulator_1v8, &ts->nb_1v8);
+		regulator_disable(ts->regulator_3v3);
+		regulator_disable(ts->regulator_1v8);
+	}
+	if (ts->clk)
+		clk_disable(ts->clk);
+	kfree(ts);
+	spi_set_drvdata(spi, NULL);
 	return -EINVAL;
 }
 

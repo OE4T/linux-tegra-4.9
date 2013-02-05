@@ -1968,7 +1968,7 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0, 32, 0, 0);
 
 	err = request_threaded_irq(ts->irq, NULL, rm31080_irq,
-					IRQF_TRIGGER_RISING, dev_name(dev), ts);
+					IRQF_ONESHOT | IRQF_TRIGGER_RISING, dev_name(dev), ts);
 	if (err) {
 		dev_err(dev, "irq %d busy?\n", ts->irq);
 		goto err_free_mem;

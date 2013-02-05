@@ -26,9 +26,6 @@
 #include <linux/nvhost.h>
 #include <linux/atomic.h>
 
-/* host managed and invalid syncpt id */
-#define NVSYNCPT_GRAPHICS_HOST		     (0)
-
 struct nvhost_syncpt;
 
 /* Attribute struct for sysfs min and max attributes */

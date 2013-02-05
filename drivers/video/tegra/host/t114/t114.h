@@ -27,13 +27,6 @@ struct nvhost_master;
 /* number of host channels */
 #define NV_HOST1X_CHANNELS_T114 9
 
-/*  T114 specicic sync point assignments */
-#define NVSYNCPT_MSENC			     (23)
-#define NVSYNCPT_TSEC			     (28)
-
-#define NVWAITBASE_MSENC  (4)
-#define NVWAITBASE_TSEC   (5)
-
 int nvhost_init_t114_channel_support(struct nvhost_master *,
 		struct nvhost_chip_support *);
 int nvhost_init_t114_support(struct nvhost_master *host,

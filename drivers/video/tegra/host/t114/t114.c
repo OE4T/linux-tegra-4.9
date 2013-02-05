@@ -39,23 +39,12 @@
 #include "chip_support.h"
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
-#include "host1x/host1x_syncpt.h"
 #include "chip_support.h"
 #include "gr3d/pod_scaling.h"
 #include "class_ids.h"
 
 /* HACK! This needs to come from DT */
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
-
-#define NVMODMUTEX_2D_FULL	(1)
-#define NVMODMUTEX_2D_SIMPLE	(2)
-#define NVMODMUTEX_2D_SB_A	(3)
-#define NVMODMUTEX_2D_SB_B	(4)
-#define NVMODMUTEX_3D		(5)
-#define NVMODMUTEX_DISPLAYA	(6)
-#define NVMODMUTEX_DISPLAYB	(7)
-#define NVMODMUTEX_VI		(8)
-#define NVMODMUTEX_DSI		(9)
 
 static int t114_num_alloc_channels = 0;
 

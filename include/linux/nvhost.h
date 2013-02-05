@@ -44,26 +44,67 @@ struct mem_mgr;
 #define NVHOST_NAME_SIZE			24
 #define NVSYNCPT_INVALID			(-1)
 
-/* FIXME:
- * Sync point ids are now split into 2 files.
- * 1 if this one and other is in
- * drivers/video/tegra/host/host1x/host1x_syncpt.h
- * So if someone decides to add new sync point in future
- * please check both the header files
- */
-#define NVSYNCPT_DISP0_D		(5)
-#define NVSYNCPT_DISP0_H		(6)
-#define NVSYNCPT_DISP1_H		(7)
-#define NVSYNCPT_DISP0_A		(8)
-#define NVSYNCPT_DISP1_A		(9)
-#define NVSYNCPT_AVP_0			(10)
-#define NVSYNCPT_DISP0_B		(20)
-#define NVSYNCPT_DISP1_B		(21)
-#define NVSYNCPT_DISP0_C		(24)
-#define NVSYNCPT_DISP1_C		(25)
-#define NVSYNCPT_VBLANK0		(26)
-#define NVSYNCPT_VBLANK1		(27)
-#define NVSYNCPT_DSI			(31)
+#define NVSYNCPT_GRAPHICS_HOST		(0)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP0_D		(5)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP0_H		(6)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP1_H		(7)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP0_A		(8)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP1_A		(9)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_AVP_0			(10)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_CSI_VI_0		(11)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_CSI_VI_1		(12)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VI_ISP_0		(13)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VI_ISP_1		(14)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VI_ISP_2		(15)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VI_ISP_3		(16)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VI_ISP_4		(17)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_2D_0			(18)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_2D_1			(19)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP0_B		(20)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP1_B		(21)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_3D			(22)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_MPE			(23)	/* t20, t30 */
+#define NVSYNCPT_MSENC			(23)	/* t114, t148 */
+#define NVSYNCPT_DISP0_C		(24)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_DISP1_C		(25)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VBLANK0		(26)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VBLANK1		(27)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_MPE_EBM_EOF		(28)	/* t20, t30 */
+#define NVSYNCPT_TSEC			(28)	/* t114, t148 */
+#define NVSYNCPT_MPE_WR_SAFE		(29)	/* t20, t30 */
+#define NVSYNCPT_DSI			(31)	/* t20, t30, t114, t148 */
+
+#define NVWAITBASE_2D_0			(1)	/* t20, t30, t114 */
+#define NVWAITBASE_2D_1			(2)	/* t20, t30, t114 */
+#define NVWAITBASE_3D			(3)	/* t20, t30, t114 */
+#define NVWAITBASE_MPE			(4)	/* t20, t30 */
+#define NVWAITBASE_MSENC		(4)	/* t114, t148 */
+#define NVWAITBASE_TSEC			(5)	/* t114, t148 */
+
+#define NVMODMUTEX_2D_FULL		(1)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_2D_SIMPLE		(2)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_2D_SB_A		(3)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_2D_SB_B		(4)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_3D			(5)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_DISPLAYA		(6)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_DISPLAYB		(7)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_VI			(8)	/* t20, t30, t114 */
+#define NVMODMUTEX_VI_0			(8)	/* t148 */
+#define NVMODMUTEX_DSI			(9)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_VI_1			(10)	/* t148 */
+
+/* sync points that are wholly managed by the client */
+#define NVSYNCPTS_CLIENT_MANAGED ( \
+	BIT(NVSYNCPT_DISP0_A) | BIT(NVSYNCPT_DISP1_A) | \
+	BIT(NVSYNCPT_DISP0_B) | BIT(NVSYNCPT_DISP1_B) | \
+	BIT(NVSYNCPT_DISP0_C) | BIT(NVSYNCPT_DISP1_C) | \
+	BIT(NVSYNCPT_DSI) | \
+	BIT(NVSYNCPT_VBLANK0) | BIT(NVSYNCPT_VBLANK1) | \
+	BIT(NVSYNCPT_CSI_VI_0) | BIT(NVSYNCPT_CSI_VI_1) | \
+	BIT(NVSYNCPT_VI_ISP_1) | BIT(NVSYNCPT_VI_ISP_2) | \
+	BIT(NVSYNCPT_VI_ISP_3) | BIT(NVSYNCPT_VI_ISP_4) | \
+	BIT(NVSYNCPT_MPE_EBM_EOF) | BIT(NVSYNCPT_MPE_WR_SAFE) | \
+	BIT(NVSYNCPT_2D_1) | BIT(NVSYNCPT_AVP_0))
 
 enum nvhost_power_sysfs_attributes {
 	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,

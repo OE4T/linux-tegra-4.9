@@ -19,12 +19,12 @@
  */
 
 #include <linux/slab.h>
-#include <linux/jiffies.h>
 #include <linux/printk.h>
-#include <linux/workqueue.h>
+#include <linux/kthread.h>
 #include <linux/input.h>
 #include <linux/module.h>
 #include <linux/pm_qos.h>
+#include <linux/sched/rt.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/input_cfboost.h>
@@ -52,8 +52,6 @@ MODULE_LICENSE("GPL v2");
 
 
 static struct pm_qos_request freq_req, core_req;
-static struct work_struct boost;
-static struct delayed_work unboost;
 static unsigned int boost_freq; /* kHz */
 static int boost_freq_set(const char *arg, const struct kernel_param *kp)
 {
@@ -76,29 +74,26 @@ static struct kernel_param_ops boost_freq_ops = {
 module_param_cb(boost_freq, &boost_freq_ops, &boost_freq, 0644);
 static unsigned long boost_time = 500; /* ms */
 module_param(boost_time, ulong, 0644);
-static struct workqueue_struct *cfb_wq;
 
-static void cfb_boost(struct work_struct *w)
+static void cfb_boost(struct kthread_work *w)
 {
 	trace_input_cfboost_params("boost_params", boost_freq, boost_time);
-	cancel_delayed_work_sync(&unboost);
-	pm_qos_update_request(&core_req, 1);
-	pm_qos_update_request(&freq_req, boost_freq);
-	queue_delayed_work(cfb_wq, &unboost, msecs_to_jiffies(boost_time));
+	pm_qos_update_request_timeout(&core_req, 1, boost_time * 1000);
+
+	if (boost_freq > 0)
+		pm_qos_update_request_timeout(&freq_req, boost_freq,
+				boost_time * 1000);
 }
 
-static void cfb_unboost(struct work_struct *w)
-{
-	pm_qos_update_request(&freq_req, PM_QOS_DEFAULT_VALUE);
-	pm_qos_update_request(&core_req, PM_QOS_DEFAULT_VALUE);
-}
+static struct task_struct *boost_kthread;
+static DEFINE_KTHREAD_WORKER(boost_worker);
+static DEFINE_KTHREAD_WORK(boost_work, &cfb_boost);
 
 static void cfb_input_event(struct input_handle *handle, unsigned int type,
 			    unsigned int code, int value)
 {
 	trace_input_cfboost_event("event", type, code, value);
-	if (!work_pending(&boost))
-		queue_work(cfb_wq, &boost);
+	kthread_queue_work(&boost_worker, &boost_work);
 }
 
 static int cfb_input_connect(struct input_handler *handler,
@@ -224,22 +219,34 @@ static struct input_handler cfb_input_handler = {
 
 static int __init cfboost_init(void)
 {
+	struct sched_param sparm = {
+		/* use the last RT priority */
+		.sched_priority = MAX_RT_PRIO - 10
+	};
 	int ret;
 
-	cfb_wq = create_workqueue("icfb-wq");
-	if (!cfb_wq)
-		return -ENOMEM;
-	INIT_WORK(&boost, cfb_boost);
-	INIT_DELAYED_WORK(&unboost, cfb_unboost);
+	/* create RT kthread */
+	boost_kthread = kthread_run(&kthread_worker_fn, &boost_worker,
+			"icfb-kthread");
+	if (IS_ERR(boost_kthread)) {
+		pr_err("icfboost: error creating worker thread\n");
+		return PTR_ERR(boost_kthread);
+	}
+
+	sched_setscheduler(boost_kthread, SCHED_RR, &sparm);
+
 	ret = input_register_handler(&cfb_input_handler);
 	if (ret) {
-		destroy_workqueue(cfb_wq);
+		pr_err("icfboost: unable to register input device\n");
+		kthread_stop(boost_kthread);
 		return ret;
 	}
+
 	pm_qos_add_request(&core_req, PM_QOS_MIN_ONLINE_CPUS,
 			   PM_QOS_DEFAULT_VALUE);
 	pm_qos_add_request(&freq_req, PM_QOS_CPU_FREQ_MIN,
 			   PM_QOS_DEFAULT_VALUE);
+
 	return 0;
 }
 
@@ -247,11 +254,7 @@ static void __exit cfboost_exit(void)
 {
 	/* stop input events */
 	input_unregister_handler(&cfb_input_handler);
-	/* cancel pending work requests */
-	cancel_work_sync(&boost);
-	cancel_delayed_work_sync(&unboost);
-	/* clean up */
-	destroy_workqueue(cfb_wq);
+	kthread_stop(boost_kthread);
 	pm_qos_remove_request(&freq_req);
 	pm_qos_remove_request(&core_req);
 }

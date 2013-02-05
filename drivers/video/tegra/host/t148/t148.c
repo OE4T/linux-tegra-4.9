@@ -254,7 +254,7 @@ struct nvhost_device_data t14_msenc_info = {
 	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay = 100,
-	.can_powergate = false,
+	.can_powergate = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
 };
 

@@ -351,6 +351,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
 
+	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = flip_win->attr.index;
@@ -434,7 +435,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			spin_unlock(&flip_callback_lock);
 		}
 
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for (i = 0; i < win_num; i++) {
 			struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 			int index = flip_win->attr.index;
 
@@ -463,6 +464,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
+	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		int index = win[i].index;
 
@@ -507,7 +509,7 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
-
+	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		int index = win[i].index;
 
@@ -530,6 +532,9 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 				int win_num)
 {
 	int i, used_windows = 0;
+
+	if (win_num > DC_N_WINDOWS)
+		return -EINVAL;
 
 	for (i = 0; i < win_num; i++) {
 		int index = win[i].index;
@@ -579,7 +584,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	data->ext = ext;
 	data->act_window_num = win_num;
 
-
+	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = win[i].index;
@@ -631,7 +636,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		goto unlock;
 	}
 
-
+	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		u32 syncpt_max;
 		int index = win[i].index;
@@ -874,7 +879,6 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 {
 	void __user *user_arg = (void __user *)arg;
 	struct tegra_dc_ext_user *user = filp->private_data;
-	struct tegra_dc_ext_flip_2 args_new;
 
 	switch (cmd) {
 	case TEGRA_DC_EXT_SET_NVMAP_FD:
@@ -894,9 +898,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		ret = tegra_dc_ext_flip(user, args.win,
-				DC_N_WINDOWS,
-				&args.post_syncpt_id,
-				&args.post_syncpt_val);
+			TEGRA_DC_EXT_FLIP_N_WINDOWS,
+			&args.post_syncpt_id, &args.post_syncpt_val);
 
 		if (copy_to_user(user_arg, &args, sizeof(args)))
 			return -EFAULT;
@@ -907,36 +910,31 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 	case TEGRA_DC_EXT_FLIP2:
 	{
 		int ret;
-		int num;
-		struct tegra_dc_ext_flip_windowattr *start;
-		struct tegra_dc_ext_flip_windowattr *temp;
+		int win_num;
+		struct tegra_dc_ext_flip_2 args;
+		struct tegra_dc_ext_flip_windowattr *win;
 
-		if (copy_from_user(&args_new, user_arg, sizeof(args_new)))
+		if (copy_from_user(&args, user_arg, sizeof(args)))
 			return -EFAULT;
 
-		num = args_new.win_num;
-		start = args_new.win;
+		win_num = args.win_num;
+		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
-		temp = kzalloc(sizeof(*start) * num, GFP_KERNEL);
+		if (copy_from_user(win, args.win, sizeof(*win) * win_num)) {
+			kfree(win);
+			return -EFAULT;
+		}
 
-		if (copy_from_user(temp, start, sizeof(*start) * num))
-				return -EFAULT;
+		ret = tegra_dc_ext_flip(user, win, win_num,
+			&args.post_syncpt_id, &args.post_syncpt_val);
 
-		args_new.win = temp;
+		if (copy_to_user(args.win, win, sizeof(*win) * win_num) ||
+			copy_to_user(user_arg, &args, sizeof(args))) {
+			kfree(win);
+			return -EFAULT;
+		}
 
-		ret = tegra_dc_ext_flip(user, args_new.win,
-				args_new.win_num,
-				&args_new.post_syncpt_id,
-				&args_new.post_syncpt_val);
-
-		if (copy_to_user(start, temp, sizeof(*start) * num))
-					return -EFAULT;
-
-		args_new.win = start;
-
-		if (copy_to_user(user_arg, &args_new, sizeof(args_new)))
-					return -EFAULT;
-		kfree(temp);
+		kfree(win);
 		return ret;
 	}
 

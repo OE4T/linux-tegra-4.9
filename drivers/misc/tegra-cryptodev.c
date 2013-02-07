@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,7 +134,8 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 		}
 	}
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) {
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA2 &&
+			tegra_get_chipid() != TEGRA_CHIPID_TEGRA3) {
 		ctx->rng_drbg = crypto_alloc_rng("rng_drbg-aes-tegra",
 			CRYPTO_ALG_TYPE_RNG, 0);
 		if (IS_ERR(ctx->rng_drbg)) {
@@ -186,7 +187,8 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 		crypto_free_ablkcipher(ctx->ctr_tfm);
 	}
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA2 &&
+			tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
 		crypto_free_rng(ctx->rng_drbg);
 	else
 		crypto_free_rng(ctx->rng);

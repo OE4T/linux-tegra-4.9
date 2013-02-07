@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -50,12 +50,14 @@ static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 
 int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 {
+	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, FRAME_END_INT, DC_CMD_INT_STATUS);
 	if (enable) {
 		atomic_inc(&frame_end_ref);
 		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
 	} else if (!atomic_dec_return(&frame_end_ref))
 		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
+	tegra_dc_io_end(dc);
 	return 0;
 }
 

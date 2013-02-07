@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/csc.c
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,12 +54,14 @@ int tegra_dc_update_csc(struct tegra_dc *dc, int win_idx)
 		return -EFAULT;
 	}
 
+	tegra_dc_io_start(dc);
 	tegra_dc_hold_dc_out(dc);
 	tegra_dc_writel(dc, WINDOW_A_SELECT << win_idx,
 			DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	tegra_dc_set_csc(dc, &dc->windows[win_idx].csc);
 	tegra_dc_release_dc_out(dc);
+	tegra_dc_io_end(dc);
 
 	mutex_unlock(&dc->lock);
 

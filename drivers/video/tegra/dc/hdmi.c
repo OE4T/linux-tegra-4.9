@@ -1735,6 +1735,8 @@ static void tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc)
 		return;
 	}
 
+	memset(&extres, 0x0, sizeof(extres));
+
 	extres.csum = 0;
 	extres.regid0 = 0x03;
 	extres.regid1 = 0x0c;
@@ -1745,7 +1747,7 @@ static void tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc)
 	tegra_dc_hdmi_write_infopack(dc,
 		HDMI_NV_PDISP_HDMI_GENERIC_HEADER,
 		HDMI_INFOFRAME_TYPE_VENDOR, HDMI_VENDOR_VERSION,
-		&extres, 5);
+		&extres, 6);
 	val = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
 	val |= GENERIC_CTRL_ENABLE;
 	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_GENERIC_CTRL);

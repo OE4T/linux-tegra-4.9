@@ -60,6 +60,11 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 		err = nvhost_init_t124_support(host, nvhost_chip_ops);
 		break;
 
+	case TEGRA_CHIPID_TEGRA13:
+		nvhost_chip_ops->soc_name = "tegra13x";
+		err = nvhost_init_t124_support(host, nvhost_chip_ops);
+		break;
+
 	case TEGRA_CHIPID_TEGRA14:
 		nvhost_chip_ops->soc_name = "tegra14x";
 		err = nvhost_init_t148_support(host, nvhost_chip_ops);

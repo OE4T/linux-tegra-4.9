@@ -449,12 +449,12 @@ static inline void tegra_hdmi_clrsetbits(struct tegra_dc_hdmi_data *hdmi,
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int dbg_hdmi_show(struct seq_file *s, void *unused)
+static int dbg_hdmi_show(struct seq_file *m, void *unused)
 {
-	struct tegra_dc_hdmi_data *hdmi = s->private;
+	struct tegra_dc_hdmi_data *hdmi = m->private;
 
 #define DUMP_REG(a) do {						\
-		seq_printf(s, "%-32s\t%03x\t%08lx\n",			\
+		seq_printf(m, "%-32s\t%03x\t%08lx\n",			\
 		       #a, a, tegra_hdmi_readl(hdmi, a));		\
 	} while (0)
 
@@ -626,14 +626,64 @@ static int dbg_hdmi_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-static int dbg_hdmi_open(struct inode *inode, struct file *file)
+static int dbg_hdmi_show_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, dbg_hdmi_show, inode->i_private);
 }
 
-static const struct file_operations dbg_fops = {
-	.open		= dbg_hdmi_open,
+static const struct file_operations dbg_hdmi_show_fops = {
+	.open		= dbg_hdmi_show_open,
 	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int dbg_hotplug_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_hdmi_data *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+
+	seq_put_decimal_ll(m, '\0', dc->out->hotplug_state);
+	seq_putc(m, '\n');
+	return 0;
+}
+
+static int dbg_hotplug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_hotplug_show, inode->i_private);
+}
+
+static int dbg_hotplug_write(struct file *file, const char __user *addr,
+	size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data; /* single_open() initialized */
+	struct tegra_dc_hdmi_data *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+	int ret;
+	long new_state;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_state);
+	if (ret < 0)
+		return ret;
+
+	dc->out->hotplug_state = new_state;
+
+	queue_delayed_work(system_nrt_wq, &hdmi->work,
+		msecs_to_jiffies(100));
+
+	return len;
+}
+
+static const struct file_operations dbg_hotplug_fops = {
+	.open		= dbg_hotplug_open,
+	.read		= seq_read,
+	.write		= dbg_hotplug_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -648,7 +698,11 @@ static void tegra_dc_hdmi_debug_create(struct tegra_dc_hdmi_data *hdmi)
 	if (!hdmidir)
 		return;
 	retval = debugfs_create_file("regs", S_IRUGO, hdmidir, hdmi,
-		&dbg_fops);
+		&dbg_hdmi_show_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("hotplug", S_IRUGO, hdmidir, hdmi,
+		&dbg_hotplug_fops);
 	if (!retval)
 		goto free_out;
 	return;
@@ -909,6 +963,7 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 	tegra_dc_set_default_videomode(dc);
 #endif
 	if (!tegra_dc_hdmi_detect(dc)) {
+		dev_dbg(&dc->ndev->dev, "HDMI disconnect\n");
 		dc->connected = false;
 		tegra_dc_disable(dc);
 

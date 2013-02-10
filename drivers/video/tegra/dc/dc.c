@@ -754,6 +754,15 @@ bool tegra_dc_hpd(struct tegra_dc *dc)
 	int sense;
 	int level;
 
+	if (WARN_ON(!dc || !dc->out))
+		return false;
+
+	if (dc->out->hotplug_state != 0) {
+		if (dc->out->hotplug_state == 1) /* force on */
+			return true;
+		if (dc->out->hotplug_state == -1) /* force off */
+			return false;
+	}
 	level = gpio_get_value_cansleep(dc->out->hotplug_gpio);
 
 	sense = dc->out->flags & TEGRA_DC_OUT_HOTPLUG_MASK;

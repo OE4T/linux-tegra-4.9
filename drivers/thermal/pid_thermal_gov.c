@@ -24,7 +24,7 @@
 
 #define DRV_NAME	"pid_thermal_gov"
 
-#define MAX_ERR_TEMP_DEFAULT		10000	/* in mC */
+#define MAX_ERR_TEMP_DEFAULT		9000	/* in mC */
 #define MAX_ERR_GAIN_DEFAULT		1000
 #define GAIN_P_DEFAULT			1000
 #define GAIN_D_DEFAULT			0

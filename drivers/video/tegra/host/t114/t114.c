@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for Tegra11 Architecture Chips
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -228,10 +228,12 @@ struct nvhost_device_data t11_vi_info = {
 			  NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
 			  NVSYNCPT_VI_ISP_4},
 	.modulemutexes	= {NVMODMUTEX_VI},
+	.clocks		= { {"host1x", 136000000, 6} },
 	.exclusive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_VI,
+	.update_clk	= nvhost_host1x_update_clk,
 };
 
 static struct platform_device tegra_vi01_device = {

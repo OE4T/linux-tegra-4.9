@@ -202,6 +202,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	struct nvhost_module_client *m;
 	unsigned long devfreq_rate, default_rate;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int ret;
 
 	if (!pdata->clk[index])
 		return -EINVAL;
@@ -224,7 +225,13 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	trace_nvhost_module_update_rate(dev->name,
 			pdata->clocks[index].name, rate);
 
-	return clk_set_rate(pdata->clk[index], rate);
+	ret = clk_set_rate(pdata->clk[index], rate);
+
+	if (pdata->update_clk)
+		pdata->update_clk(dev);
+
+	return ret;
+
 }
 
 int nvhost_module_set_rate(struct platform_device *dev, void *priv,

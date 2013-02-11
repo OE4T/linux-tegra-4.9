@@ -210,6 +210,9 @@ struct nvhost_device_data {
 			struct nvhost_hwctx *hwctx,
 			u32 offset,
 			u32 *value);
+
+	/* Callback when a clock is changed */
+	void (*update_clk)(struct platform_device *dev);
 };
 
 enum nvhost_devfreq_busy {

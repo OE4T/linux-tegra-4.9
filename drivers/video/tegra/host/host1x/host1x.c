@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,6 +46,7 @@
 #include "nvhost_job.h"
 #include "nvhost_memmgr.h"
 #include "nvhost_sync.h"
+#include "nvhost_scale.h"
 #include "chip_support.h"
 #include "t20/t20.h"
 #include "t30/t30.h"
@@ -520,6 +521,15 @@ static struct of_device_id tegra_host1x_of_match[] = {
 		.data = (struct nvhost_device_data *)&t14_host1x_info },
 	{ },
 };
+
+void nvhost_host1x_update_clk(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = &t11_gr3d_info;
+	struct nvhost_device_profile *profile = pdata->power_profile;
+
+	if (profile && profile->actmon)
+		actmon_op().update_sample_period(profile->actmon);
+}
 
 static int nvhost_probe(struct platform_device *dev)
 {

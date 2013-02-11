@@ -816,7 +816,7 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 	if (!tegra_dc_check_constraint(mode))
 		return false;
 
-	mode->flag = FB_MODE_IS_DETAILED;
+	mode->flag |= FB_MODE_IS_DETAILED;
 	mode->refresh = (PICOS2KHZ(mode->pixclock) * 1000) /
 				tegra_dc_calc_clock_per_frame(mode);
 	return true;
@@ -1622,9 +1622,8 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 					return i;
 				if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
 					return i;
-			} else {
-				return i;
 			}
+			return i;
 		}
 	}
 	return 0;

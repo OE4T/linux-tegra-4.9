@@ -1216,6 +1216,7 @@ static int nct1008_suspend(struct device *dev)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	disable_irq(client->irq);
+	cancel_work_sync(&data->work);
 	err = nct1008_disable(client);
 	nct1008_power_control(data, false);
 	return err;

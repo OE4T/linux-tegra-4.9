@@ -300,13 +300,10 @@ const struct tdms_config tdms_config[] = {
 	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
 		SOR_PLL_TMDS_TERMADJ(0x6),
 	.pe_current = PE_CURRENT0(PE_CURRENT_4_0_mA) |
-		PE_CURRENT1(PE_CURRENT_4_0_mA) |
-		PE_CURRENT2(PE_CURRENT_4_0_mA) |
-		PE_CURRENT3(PE_CURRENT_4_0_mA),
-	.drive_current = DRIVE_CURRENT_LANE0(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE1(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE2(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE3(DRIVE_CURRENT_10_500_mA),
+			PE_CURRENT1(PE_CURRENT_4_0_mA) |
+			PE_CURRENT2(PE_CURRENT_4_0_mA) |
+			PE_CURRENT3(PE_CURRENT_4_0_mA),
+	.drive_current = 0x18181818,
 	},
 };
 #else
@@ -1716,6 +1713,10 @@ static void tegra_dc_hdmi_setup_tdms(struct tegra_dc_hdmi_data *hdmi,
 
 	tegra_hdmi_writel(hdmi, tc->peak_current,
 		HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT);
+#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_hdmi_writel(hdmi, tc->drive_current,
+		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);
+	tegra_hdmi_writel(hdmi, 0x800034bb, HDMI_NV_PDISP_SOR_PAD_CTLS0);
 #else
 	tegra_hdmi_writel(hdmi, tc->drive_current | DRIVE_CURRENT_FUSE_OVERRIDE,
 		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);

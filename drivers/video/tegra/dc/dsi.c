@@ -1683,6 +1683,18 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 	tegra_dsi_reset_underflow_overflow(dsi);
 }
 
+static void tegra_dc_gpio_to_spio(struct tegra_dc_dsi_data *dsi, unsigned gpio)
+{
+	if (!gpio_is_valid(gpio)) {
+		dev_err(&dsi->dc->ndev->dev, "dsi: invalid TE gpio\n");
+		return;
+	}
+
+	/* convert to spio */
+	gpio_request(gpio, "temp_request");
+	gpio_free(gpio);
+}
+
 static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
@@ -1721,6 +1733,9 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 
 		/* Unmask the MSF interrupt. */
 		tegra_dc_unmask_interrupt(dc, MSF_INT);
+
+		if (dsi->info.te_gpio)
+			tegra_dc_gpio_to_spio(dsi, dsi->info.te_gpio);
 	} else {
 		/* set continuous mode */
 		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,

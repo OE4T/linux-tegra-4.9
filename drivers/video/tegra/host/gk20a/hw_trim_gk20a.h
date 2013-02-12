@@ -544,11 +544,11 @@ static inline u32 trim_sys_gpcpll_coeff_ndiv_v(u32 r)
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_init_v(void)
 {
-	return 0x00000037;
+	return 0x00000042;
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_init_f(void)
 {
-	return 0x3700;
+	return 0x4200;
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_min_v(void)
 {

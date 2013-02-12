@@ -5574,6 +5574,14 @@ static inline u32 gr_fecs_method_push_adr_restore_sm_perf_counters_f(void)
 {
 	return 0x53;
 }
+static inline u32 gr_fecs_method_push_adr_control_zbc_tables_save_v(void)
+{
+	return 0x00000061;
+}
+static inline u32 gr_fecs_method_push_adr_control_zbc_tables_save_f(void)
+{
+	return 0x61;
+}
 static inline u32 gr_fecs_method_push_a_v(void)
 {
 	return 0x00409508;

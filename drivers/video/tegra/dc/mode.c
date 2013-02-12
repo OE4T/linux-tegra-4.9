@@ -375,6 +375,7 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	if (!fbmode->pixclock)
 		return -EINVAL;
 
+	memset(&mode, 0, sizeof(mode));
 	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
 	mode.h_sync_width = fbmode->hsync_len;
 	mode.v_sync_width = fbmode->vsync_len;
@@ -385,6 +386,7 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
+	mode.avi_m = 0;
 	if (fbmode->flag & FB_FLAG_RATIO_16_9)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
 	else if (fbmode->flag & FB_FLAG_RATIO_4_3)

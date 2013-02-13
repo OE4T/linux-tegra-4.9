@@ -957,6 +957,8 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 
 out:
 	BUG_ON(!atomic_read(&h->ref));
+	if (nvmap_find_cache_maint_op(h->dev, h))
+		nvmap_cache_maint_ops_flush(h->dev, h);
 	nvmap_handle_put(h);
 }
 EXPORT_SYMBOL(nvmap_free_handle_id);

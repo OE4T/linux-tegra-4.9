@@ -219,6 +219,36 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	tegra_dc_writel(dc, mode->h_front_porch | (mode->v_front_porch << 16),
 			DC_DISP_FRONT_PORCH);
 
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if (mode->vmode == FB_VMODE_INTERLACED)
+		tegra_dc_writel(dc, INTERLACE_MODE_ENABLE |
+			INTERLACE_START_FIELD_1
+			| INTERLACE_STATUS_FIELD_1,
+			DC_DISP_INTERLACE_CONTROL);
+	else
+		tegra_dc_writel(dc, INTERLACE_MODE_DISABLE,
+			DC_DISP_INTERLACE_CONTROL);
+
+	if (mode->vmode == FB_VMODE_INTERLACED) {
+		tegra_dc_writel(dc, (mode->h_ref_to_sync |
+			((mode->h_sync_width + mode->h_back_porch +
+			mode->h_active + mode->h_front_porch) >> 1)
+			<< 16), DC_DISP_INTERLACE_FIELD2_REF_TO_SYNC);
+		tegra_dc_writel(dc, mode->h_sync_width |
+			(mode->v_sync_width << 16),
+			DC_DISP_INTERLACE_FIELD2_SYNC_WIDTH);
+		tegra_dc_writel(dc, mode->h_back_porch |
+			((mode->v_back_porch + 1) << 16),
+			DC_DISP_INTERLACE_FIELD2_BACK_PORCH);
+		tegra_dc_writel(dc, mode->h_active |
+			(mode->v_active << 16),
+			DC_DISP_INTERLACE_FIELD2_DISP_ACTIVE);
+		tegra_dc_writel(dc, mode->h_front_porch |
+			(mode->v_front_porch << 16),
+			DC_DISP_INTERLACE_FIELD2_FRONT_PORCH);
+	}
+#endif
+
 	tegra_dc_writel(dc, DE_SELECT_ACTIVE | DE_CONTROL_NORMAL,
 			DC_DISP_DATA_ENABLE_OPTIONS);
 
@@ -397,6 +427,7 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
+	mode.vmode = fbmode->vmode;
 	if (fbmode->flag & FB_FLAG_RATIO_16_9)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
 	else if (fbmode->flag & FB_FLAG_RATIO_4_3)

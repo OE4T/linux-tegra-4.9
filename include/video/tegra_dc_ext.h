@@ -79,6 +79,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA	(1 << 4)
 #define TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR	(1 << 5)
 #define TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN	(1 << 6)
+#define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
 
 struct tegra_dc_ext_flip_windowattr {
 	__s32	index;
@@ -114,10 +115,12 @@ struct tegra_dc_ext_flip_windowattr {
 	__u8	global_alpha; /* requires TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA */
 	/* log2(blockheight) for blocklinear format */
 	__u8	block_height_log2;
-
-	/* Leave some wiggle room for future expansion */
 	__u8	pad1[2];
-	__u32   pad2[4];
+	__u32	offset2;
+	__u32	offset_u2;
+	__u32	offset_v2;
+	/* Leave some wiggle room for future expansion */
+	__u32   pad2[1];
 };
 
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3

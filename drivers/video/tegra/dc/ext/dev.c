@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
-
+#include <linux/fb.h>
 #include <video/tegra_dc_ext.h>
 
 #include <mach/dc.h>
@@ -49,6 +49,10 @@ struct tegra_dc_ext_flip_win {
 	dma_addr_t				phys_addr;
 	dma_addr_t				phys_addr_u;
 	dma_addr_t				phys_addr_v;
+	/* field 2 */
+	dma_addr_t				phys_addr2;
+	dma_addr_t				phys_addr_u2;
+	dma_addr_t				phys_addr_v2;
 	u32					syncpt_max;
 };
 
@@ -260,6 +264,11 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		win->block_height_log2 = flip_win->attr.block_height_log2;
 	}
 #endif
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
+		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
+#endif
+
 	win->fmt = flip_win->attr.pixformat;
 	win->x.full = flip_win->attr.x;
 	win->y.full = flip_win->attr.y;
@@ -287,6 +296,32 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 
 	win->stride = flip_win->attr.stride;
 	win->stride_uv = flip_win->attr.stride_uv;
+
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if (ext->dc->mode.vmode == FB_VMODE_INTERLACED) {
+		if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE) {
+			win->phys_addr2 = flip_win->phys_addr +
+				flip_win->attr.offset2;
+
+			win->phys_addr_u2 = flip_win->handle[TEGRA_DC_U] ?
+				flip_win->phys_addr_u : flip_win->phys_addr;
+
+			win->phys_addr_u2 += flip_win->attr.offset_u2;
+
+			win->phys_addr_v2 = flip_win->handle[TEGRA_DC_V] ?
+				flip_win->phys_addr_v : flip_win->phys_addr;
+			win->phys_addr_v2 += flip_win->attr.offset_v2;
+		} else {
+			win->phys_addr2 = flip_win->phys_addr;
+
+			win->phys_addr_u2 = flip_win->handle[TEGRA_DC_U] ?
+				flip_win->phys_addr_u : flip_win->phys_addr;
+
+			win->phys_addr_v2 = flip_win->handle[TEGRA_DC_V] ?
+				flip_win->phys_addr_v : flip_win->phys_addr;
+		}
+	}
+#endif
 
 	err = tegra_dc_ext_check_windowattr(ext, win);
 	if (err < 0)

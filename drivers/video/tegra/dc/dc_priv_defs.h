@@ -38,8 +38,6 @@
 
 #include "dc_reg.h"
 
-#define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
-#define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
 
 #define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)
 

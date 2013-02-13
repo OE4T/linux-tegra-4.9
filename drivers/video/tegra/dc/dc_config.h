@@ -115,6 +115,8 @@
 /* Define the offset for TEGRA_DC_FEATURE_BLEND_TYPE. */
 #define BLEND_GENERATION	0
 
+#define INTERLACE		0
+
 /* Available operations on feature table. */
 enum {
 	HAS_SCALE,
@@ -125,6 +127,7 @@ enum {
 	GET_WIN_FORMATS,
 	GET_WIN_SIZE,
 	HAS_BLOCKLINEAR,
+	HAS_INTERLACE,
 };
 
 enum tegra_dc_feature_option {
@@ -136,6 +139,7 @@ enum tegra_dc_feature_option {
 	TEGRA_DC_FEATURE_LAYOUT_TYPE,
 	TEGRA_DC_FEATURE_INVERT_TYPE,
 	TEGRA_DC_FEATURE_PREFERRED_FORMATS,
+	TEGRA_DC_FEATURE_FIELD_TYPE,
 };
 
 struct tegra_dc_feature_entry {
@@ -152,6 +156,7 @@ struct tegra_dc_feature {
 int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx);
+int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation);
 int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx);
 

@@ -28,6 +28,13 @@
 #include <mach/powergate.h>
 #include <video/tegra_dc_ext.h>
 
+
+#define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
+#define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
+#define WIN_IS_FB(win)		((win)->flags & TEGRA_WIN_FLAG_FB)
+
+#define WIN_IS_INTERLACE(win) ((win)->flags & TEGRA_WIN_FLAG_INTERLACE)
+
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ | \
 	WIN_D_ACT_REQ | WIN_H_ACT_REQ)

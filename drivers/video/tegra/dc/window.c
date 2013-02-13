@@ -21,7 +21,7 @@
 #include <linux/export.h>
 #include <mach/dc.h>
 #include <trace/events/display.h>
-
+#include <linux/fb.h>
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
@@ -338,16 +338,30 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 {
 	u32 h_dda, h_dda_init;
 	u32 v_dda, v_dda_init;
-
 	h_dda_init = compute_initial_dda(win->x);
 	v_dda_init = compute_initial_dda(win->y);
 
 	if (scan_column) {
-		tegra_dc_writel(dc,
-			V_PRESCALED_SIZE(dfixed_trunc(win->w)) |
-			H_PRESCALED_SIZE(dfixed_trunc(win->h) * Bpp),
-			DC_WIN_PRESCALED_SIZE);
-
+		if (tegra_dc_feature_has_interlace(dc, win->idx)
+			&& (dc->mode.vmode == FB_VMODE_INTERLACED)) {
+			if (WIN_IS_INTERLACE(win))
+				tegra_dc_writel(dc,
+					V_PRESCALED_SIZE(dfixed_trunc(win->w)
+					>> 1) |
+					H_PRESCALED_SIZE(dfixed_trunc(win->h)
+					* Bpp),
+					DC_WIN_PRESCALED_SIZE);
+			else
+				tegra_dc_writel(dc,
+					V_PRESCALED_SIZE(dfixed_trunc(win->w))
+					| H_PRESCALED_SIZE(dfixed_trunc(win->h)
+					* Bpp), DC_WIN_PRESCALED_SIZE);
+		} else {
+			tegra_dc_writel(dc,
+				V_PRESCALED_SIZE(dfixed_trunc(win->w)) |
+				H_PRESCALED_SIZE(dfixed_trunc(win->h) * Bpp),
+				DC_WIN_PRESCALED_SIZE);
+		}
 		tegra_dc_writel(dc, v_dda_init, DC_WIN_H_INITIAL_DDA);
 		tegra_dc_writel(dc, h_dda_init, DC_WIN_V_INITIAL_DDA);
 		h_dda = compute_dda_inc(win->h, win->out_w,
@@ -355,11 +369,26 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 		v_dda = compute_dda_inc(win->w, win->out_h,
 				true, Bpp_bw);
 	} else {
-		tegra_dc_writel(dc,
-			V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
-			H_PRESCALED_SIZE(dfixed_trunc(win->w) * Bpp),
-			DC_WIN_PRESCALED_SIZE);
-
+		if (tegra_dc_feature_has_interlace(dc, win->idx)
+			&& (dc->mode.vmode == FB_VMODE_INTERLACED)) {
+			if (WIN_IS_INTERLACE(win))
+				tegra_dc_writel(dc,
+					V_PRESCALED_SIZE(dfixed_trunc(win->h)
+					>> 1) |
+					H_PRESCALED_SIZE(dfixed_trunc(win->w)
+					* Bpp), DC_WIN_PRESCALED_SIZE);
+			else
+				tegra_dc_writel(dc,
+					V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
+					H_PRESCALED_SIZE(dfixed_trunc(win->w)
+					* Bpp),
+					DC_WIN_PRESCALED_SIZE);
+		} else {
+			tegra_dc_writel(dc,
+				V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
+				H_PRESCALED_SIZE(dfixed_trunc(win->w) * Bpp),
+				DC_WIN_PRESCALED_SIZE);
+		}
 		tegra_dc_writel(dc, h_dda_init, DC_WIN_H_INITIAL_DDA);
 		tegra_dc_writel(dc, v_dda_init, DC_WIN_V_INITIAL_DDA);
 		h_dda = compute_dda_inc(win->w, win->out_w,
@@ -367,8 +396,20 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 		v_dda = compute_dda_inc(win->h, win->out_h,
 				true, Bpp_bw);
 	}
-	tegra_dc_writel(dc, V_DDA_INC(v_dda) |
-		H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
+
+	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
+		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+		if (WIN_IS_INTERLACE(win))
+			tegra_dc_writel(dc, V_DDA_INC(v_dda) |
+				H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
+		else
+			tegra_dc_writel(dc, V_DDA_INC(v_dda << 1) |
+				H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
+
+	} else {
+		tegra_dc_writel(dc, V_DDA_INC(v_dda) |
+			H_DDA_INC(h_dda), DC_WIN_DDA_INCREMENT);
+	}
 }
 
 /* Does not support updating windows on multiple dcs in one call.
@@ -474,9 +515,25 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc,
 			V_POSITION(win->out_y) | H_POSITION(win->out_x),
 			DC_WIN_POSITION);
-		tegra_dc_writel(dc,
-			V_SIZE(win->out_h) | H_SIZE(win->out_w),
-			DC_WIN_SIZE);
+
+		if (tegra_dc_feature_has_interlace(dc, win->idx) &&
+			(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+			if (WIN_IS_INTERLACE(win)) {
+				tegra_dc_writel(dc,
+					V_SIZE((win->out_h)) |
+					H_SIZE(win->out_w),
+					DC_WIN_SIZE);
+			} else {
+				tegra_dc_writel(dc,
+					V_SIZE((win->out_h) >> 1) |
+					H_SIZE(win->out_w),
+					DC_WIN_SIZE);
+			}
+		} else {
+			tegra_dc_writel(dc,
+				V_SIZE(win->out_h) | H_SIZE(win->out_w),
+				DC_WIN_SIZE);
+		}
 
 		/* Check scan_column flag to set window size and scaling. */
 		win_options = WIN_ENABLE;
@@ -533,14 +590,53 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		}
 
 		v_offset = win->y;
-		if (invert_v) {
+		if (invert_v)
 			v_offset.full += win->h.full - dfixed_const(1);
-		}
 
 		tegra_dc_writel(dc, dfixed_trunc(h_offset),
 				DC_WINBUF_ADDR_H_OFFSET);
 		tegra_dc_writel(dc, dfixed_trunc(v_offset),
 				DC_WINBUF_ADDR_V_OFFSET);
+
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if ((dc->mode.vmode == FB_VMODE_INTERLACED) && WIN_IS_FB(win)) {
+		if (!WIN_IS_INTERLACE(win))
+			win->phys_addr2 = win->phys_addr;
+	}
+
+	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
+		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+		tegra_dc_writel(dc,
+			(unsigned long)(win->phys_addr2),
+			DC_WINBUF_START_ADDR_FIELD2);
+
+		if (yuvp) {
+			tegra_dc_writel(dc,
+				(unsigned long)(win->phys_addr_u2),
+				DC_WINBUF_START_ADDR_FIELD2_U);
+
+			tegra_dc_writel(dc,
+				(unsigned long)(win->phys_addr_v2),
+				DC_WINBUF_START_ADDR_FIELD2_V);
+		} else if (yuvsp) {
+			tegra_dc_writel(dc,
+				(unsigned long)(win->phys_addr_u2),
+				DC_WINBUF_START_ADDR_FIELD2_U);
+		} else {
+		}
+		tegra_dc_writel(dc, dfixed_trunc(h_offset),
+			DC_WINBUF_ADDR_H_OFFSET_FIELD2);
+
+		if (WIN_IS_INTERLACE(win)) {
+			tegra_dc_writel(dc, dfixed_trunc(v_offset),
+					DC_WINBUF_ADDR_V_OFFSET_FIELD2);
+		} else {
+			v_offset.full += dfixed_const(1);
+			tegra_dc_writel(dc, dfixed_trunc(v_offset),
+					DC_WINBUF_ADDR_V_OFFSET_FIELD2);
+		}
+	}
+#endif
 
 #if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		if (tegra_dc_feature_has_tiling(dc, win->idx)) {
@@ -617,7 +713,12 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 		win_options |= H_DIRECTION_DECREMENT(invert_h);
 		win_options |= V_DIRECTION_DECREMENT(invert_v);
-
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+		if (tegra_dc_feature_has_interlace(dc, win->idx)) {
+			if (dc->mode.vmode == FB_VMODE_INTERLACED)
+				win_options |= INTERLACE_ENABLE;
+		}
+#endif
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
 		dc_win->dirty = no_vsync ? 0 : 1;
@@ -691,21 +792,42 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	u32 completed = 0;
 	u32 dirty = 0;
 
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	u32 val2 = 0;
+	if (dc->mode.vmode == FB_VMODE_INTERLACED)
+		val2 = tegra_dc_readl(dc, DC_DISP_INTERLACE_CONTROL);
+#endif
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
-		if (tegra_platform_is_linsim()) {
-			/* FIXME: this is not needed when the simulator
-			 * clears WIN_x_UPDATE bits as in HW */
-			dc->windows[i].dirty = 0;
-			completed = 1;
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+		if (val2 & INTERLACE_MODE_ENABLE) {
+			if (val2 & INTERLACE_STATUS_FIELD_2) {
+				if (tegra_platform_is_linsim()) {
+					/* FIXME: this is not needed when the simulator
+					 * clears WIN_x_UPDATE bits as in HW */
+					dc->windows[i].dirty = 0;
+					completed = 1;
+				} else {
+					if (!(val & (WIN_A_ACT_REQ << i))) {
+						dc->windows[i].dirty = 0;
+						completed = 1;
+					} else {
+						dirty = 1;
+					}
+				}
+			} else
+				; /* field 1 */
 		} else {
-			if (!(val & (WIN_A_ACT_REQ << i))) {
+#endif
+			if (tegra_platform_is_linsim()) {
 				dc->windows[i].dirty = 0;
 				completed = 1;
 			} else {
 				dirty = 1;
 			}
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
 		}
+#endif
 	}
 
 	if (!dirty) {
@@ -714,6 +836,11 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if ((val2 & INTERLACE_MODE_ENABLE) &&
+		!(val2 & INTERLACE_STATUS_FIELD_2))
+		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
+#endif
 	if (completed)
 		wake_up(&dc->wq);
 }

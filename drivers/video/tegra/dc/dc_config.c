@@ -28,6 +28,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -37,6 +38,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -45,6 +47,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
@@ -55,6 +58,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -64,6 +68,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -72,6 +77,7 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 struct tegra_dc_feature t20_feature_table_a = {
@@ -90,6 +96,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -99,6 +106,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -107,6 +115,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
@@ -117,6 +126,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -126,6 +136,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -134,6 +145,7 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 struct tegra_dc_feature t30_feature_table_a = {
@@ -152,6 +164,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -160,6 +173,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -168,6 +182,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
@@ -178,6 +193,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -186,6 +202,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -194,6 +211,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 struct tegra_dc_feature t114_feature_table_a = {
@@ -212,6 +230,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -221,6 +240,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {2,} },
@@ -229,6 +249,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 };
 
 static struct tegra_dc_feature_entry t124_feature_entries_b[] = {
@@ -239,6 +260,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_B,} },
 	{ 1, TEGRA_DC_FEATURE_PREFERRED_FORMATS, {TEGRA_WIN_PREF_FMT_WIN_B,} },
@@ -248,6 +270,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_C,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {2,} },
@@ -256,6 +279,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 };
 
 struct tegra_dc_feature t124_feature_table_a = {
@@ -274,6 +298,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -282,6 +307,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -290,6 +316,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 3, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_SIMPLE,} },
 	{ 3, TEGRA_DC_FEATURE_BLEND_TYPE, {2,} },
@@ -298,6 +325,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 3, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 3, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 0,} },
 	{ 3, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 3, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 4, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_SIMPLE,} },
 	{ 4, TEGRA_DC_FEATURE_BLEND_TYPE, {2,} },
@@ -306,6 +334,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 4, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 4, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 0,} },
 	{ 4, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 4, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
@@ -316,6 +345,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 1, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -324,6 +354,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -332,6 +363,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 4, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_SIMPLE,} },
 	{ 4, TEGRA_DC_FEATURE_BLEND_TYPE, {2,} },
@@ -340,6 +372,7 @@ static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
 	{ 4, TEGRA_DC_FEATURE_FILTER_TYPE, {0, 0,} },
 	{ 4, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 0,} },
 	{ 4, TEGRA_DC_FEATURE_INVERT_TYPE, {0, 0, 0,} },
+	{ 4, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
 struct tegra_dc_feature t148_feature_table_a = {
@@ -400,6 +433,9 @@ long *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 	case HAS_BLOCKLINEAR:
 		option = TEGRA_DC_FEATURE_LAYOUT_TYPE;
 		break;
+	case HAS_INTERLACE:
+		option = TEGRA_DC_FEATURE_FIELD_TYPE;
+		break;
 	default:
 		return NULL;
 	}
@@ -435,6 +471,13 @@ int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx)
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_BLOCKLINEAR);
 
 	return addr[BLOCK_LINEAR];
+}
+
+int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx)
+{
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_INTERLACE);
+
+	return addr[INTERLACE];
 }
 
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)

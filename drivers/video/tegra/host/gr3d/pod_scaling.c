@@ -1076,8 +1076,8 @@ static int nvhost_pod_init(struct devfreq *df)
 		podgov->idle_max = podgov->p_idle_max = 500;
 		podgov->p_hint_lo_limit = 500;
 		podgov->p_hint_hi_limit = 997;
-		podgov->p_scaleup_limit = 1400;
-		podgov->p_scaledown_limit = 1600;
+		podgov->p_scaleup_limit = 1100;
+		podgov->p_scaledown_limit = 1300;
 		podgov->p_smooth = 3;
 	} else {
 		podgov->idle_min = podgov->p_idle_min = 100;

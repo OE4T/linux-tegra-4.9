@@ -235,12 +235,19 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 		u32 w = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
 
 		if (w & tsec_scp_ctl_pkey_loaded_m())
-			return 0;
+			break;
 		udelay(TSEC_IDLE_CHECK_PERIOD);
 		timeout -= check;
 	} while (timeout);
 
-	return -1;
+	val = nvhost_device_readl(pdev, tsec_tegra_ctl_r());
+	val |= tsec_tegra_ctl_tkfi_kfuse_m();
+	nvhost_device_writel(pdev, tsec_tegra_ctl_r(), val);
+
+	if (timeout)
+		return 0;
+	else
+		return -1;
 }
 
 int tsec_boot(struct platform_device *dev)

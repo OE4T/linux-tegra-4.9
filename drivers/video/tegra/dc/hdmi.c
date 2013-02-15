@@ -1610,23 +1610,27 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 {
 	struct fb_videomode m;
 	unsigned i;
+	unsigned best = 0;
 
 	tegra_dc_to_fb_videomode(&m, mode);
 
 	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
-		if (fb_mode_is_equal(&m, curr)) {
-			/* if either flag is set, then match is required */
-			if (m.flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
-				if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)
-					return i;
-				if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
-					return i;
-			}
-			return i;
+
+		if (!fb_mode_is_equal(&m, curr))
+			continue;
+
+		/* if either flag is set, then match is required */
+		if (curr->flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
+			if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)
+				best = i;
+			else if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
+				best = i;
+		} else {
+			best = i;
 		}
 	}
-	return 0;
+	return best;
 }
 
 static int tegra_dc_find_hdmi_vic(const struct tegra_dc_mode *mode)

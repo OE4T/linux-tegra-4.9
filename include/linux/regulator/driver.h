@@ -175,6 +175,10 @@ struct regulator_ops {
 	int (*set_mode) (struct regulator_dev *, unsigned int mode);
 	unsigned int (*get_mode) (struct regulator_dev *);
 
+	/* get/set regulator sleep mode (defined in consumer.h) */
+	int (*set_sleep_mode) (struct regulator_dev *, unsigned int sleep_mode);
+	unsigned int (*get_sleep_mode) (struct regulator_dev *);
+
 	/* Time taken to enable or set voltage on the regulator */
 	int (*enable_time) (struct regulator_dev *);
 	int (*set_ramp_delay) (struct regulator_dev *, int ramp_delay);

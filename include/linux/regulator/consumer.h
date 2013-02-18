@@ -73,6 +73,7 @@ struct regmap;
  *             in a sleep/standby state. This mode is likely to be
  *             the most noisy and may not be able to handle fast load
  *             switching.
+ *  OFF        Regulator turn off completely.
  *
  * NOTE: Most regulators will only support a subset of these modes. Some
  * will only just support NORMAL.
@@ -84,6 +85,7 @@ struct regmap;
 #define REGULATOR_MODE_NORMAL			0x2
 #define REGULATOR_MODE_IDLE			0x4
 #define REGULATOR_MODE_STANDBY			0x8
+#define REGULATOR_MODE_OFF			0x10
 
 /*
  * Regulator notifier events.

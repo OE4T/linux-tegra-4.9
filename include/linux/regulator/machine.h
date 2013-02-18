@@ -150,6 +150,9 @@ struct regulation_constraints {
 	/* mode to set on startup */
 	unsigned int initial_mode;
 
+	/* mode to be set on sleep mode */
+	unsigned int sleep_mode;
+
 	unsigned int ramp_delay;
 	unsigned int settling_time;
 	unsigned int enable_time;

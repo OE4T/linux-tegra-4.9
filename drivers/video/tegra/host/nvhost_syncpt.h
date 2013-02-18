@@ -29,11 +29,19 @@
 /* host managed and invalid syncpt id */
 #define NVSYNCPT_GRAPHICS_HOST		     (0)
 
+struct nvhost_syncpt;
+
 /* Attribute struct for sysfs min and max attributes */
 struct nvhost_syncpt_attr {
 	struct kobj_attribute attr;
 	struct nvhost_master *host;
 	int id;
+};
+
+struct nvhost_capability_node {
+	struct kobj_attribute attr;
+	struct nvhost_syncpt *sp;
+	int (*func)(struct nvhost_syncpt *sp);
 };
 
 struct nvhost_syncpt {
@@ -44,6 +52,9 @@ struct nvhost_syncpt {
 	atomic_t *lock_counts;
 	const char **syncpt_names;
 	struct nvhost_syncpt_attr *syncpt_attrs;
+
+	struct kobject *caps_kobj;
+	struct nvhost_capability_node *caps_nodes;
 };
 
 int nvhost_syncpt_init(struct platform_device *, struct nvhost_syncpt *);

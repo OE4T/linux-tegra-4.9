@@ -48,6 +48,9 @@ struct pid_thermal_governor {
 	int gain_i; /* integral gain */
 	int gain_d; /* derivative gain */
 
+	/* max derivative output, percentage of max error */
+	unsigned long max_dout;
+
 	unsigned long compensation_rate;
 };
 
@@ -119,6 +122,36 @@ static ssize_t max_err_gain_store(struct kobject *kobj, struct attribute *attr,
 
 static struct pid_thermal_gov_attribute max_err_gain_attr =
 	__ATTR(max_err_gain, 0644, max_err_gain_show, max_err_gain_store);
+
+static ssize_t max_dout_show(struct kobject *kobj,
+			     struct attribute *attr, char *buf)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+
+	if (!gov)
+		return -ENODEV;
+
+	return sprintf(buf, "%lu\n", gov->max_dout);
+}
+
+static ssize_t max_dout_store(struct kobject *kobj, struct attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+	unsigned long val;
+
+	if (!gov)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%lu\n", &val))
+		return -EINVAL;
+
+	gov->max_dout = val;
+	return count;
+}
+
+static struct pid_thermal_gov_attribute max_dout_attr =
+	__ATTR(max_dout, 0644, max_dout_show, max_dout_store);
 
 static ssize_t gain_p_show(struct kobject *kobj, struct attribute *attr,
 			   char *buf)
@@ -217,6 +250,7 @@ static struct attribute *pid_thermal_gov_default_attrs[] = {
 	&max_err_gain_attr.attr,
 	&gain_p_attr.attr,
 	&gain_d_attr.attr,
+	&max_dout_attr.attr,
 	&compensation_rate_attr.attr,
 	NULL,
 };
@@ -331,6 +365,8 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 	if (cdev->ops->get_cur_state(cdev, &cur_state) < 0)
 		return 0;
 
+	max_err = (s64)gov->max_err_temp * (s64)gov->max_err_gain;
+
 	/* Calculate proportional term */
 	proportional = (s64)tz->temperature - (s64)trip_temp;
 	proportional *= gov->gain_p;
@@ -340,8 +376,14 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 	derivative *= gov->gain_d;
 	derivative *= MSEC_PER_SEC;
 	derivative = div64_s64(derivative, passive_delay);
+	if (gov->max_dout) {
+		s64 max_dout = div64_s64(max_err * gov->max_dout, 100);
+		if (derivative < 0)
+			derivative = -min_t(s64, abs64(derivative), max_dout);
+		else
+			derivative = min_t(s64, derivative, max_dout);
+	}
 
-	max_err = (s64)gov->max_err_temp * (s64)gov->max_err_gain;
 	sum_err = proportional + derivative;
 	sum_err = max_t(s64, sum_err, 0);
 	if (sum_err == 0)

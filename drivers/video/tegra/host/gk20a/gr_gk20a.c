@@ -40,9 +40,9 @@
 #include "hw_ltc_gk20a.h"
 #include "hw_fb_gk20a.h"
 #include "hw_therm_gk20a.h"
-#include "gk20a_gating_reglist.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "gk20a_gating_reglist.h"
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
@@ -3178,18 +3178,6 @@ static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 	gk20a_writel(g, therm_hubmmu_idle_filter_r(), idle_filter);
 }
 
-static void gr_gk20a_load_gating_prod(struct gk20a *g,
-		const struct gating_desc *desc, u32 size, bool prod)
-{
-	u32 i;
-	for (i = 0; i < size; i++) {
-		if (prod)
-			gk20a_writel(g, desc->addr, desc->prod);
-		else
-			gk20a_writel(g, desc->addr, desc->disable);
-	}
-}
-
 static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 gpc_index, gpc_tpc_count, gpc_zcull_count;
@@ -3329,10 +3317,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	/* slcg prod values */
-	gr_gk20a_load_gating_prod(g, gk20a_slcg_gr,
-		sizeof(gk20a_slcg_gr)/sizeof(struct gating_desc), true);
-	gr_gk20a_load_gating_prod(g, gk20a_slcg_perf,
-		sizeof(gk20a_slcg_perf)/sizeof(struct gating_desc), true);
+	gr_gk20a_slcg_gr_load_gating_prod(g, true);
+	gr_gk20a_slcg_perf_load_gating_prod(g, true);
 
 	/* init mmu debug buffer */
 	addr_lo = u64_lo32(gr->mmu_wr_mem.cpu_pa);
@@ -3363,10 +3349,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	gr_gk20a_load_gating_prod(g, gk20a_blcg_gr,
-		sizeof(gk20a_blcg_gr)/sizeof(struct gating_desc), true);
-	gr_gk20a_load_gating_prod(g, gk20a_pg_gr,
-		sizeof(gk20a_pg_gr)/sizeof(struct gating_desc), true);
+	gr_gk20a_blcg_gr_load_gating_prod(g, true);
+	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
 	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
 	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);

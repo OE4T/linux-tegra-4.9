@@ -17,6 +17,6 @@ nvhost-gk20a-objs  = \
 	clk_gk20a.o \
 	therm_gk20a.o \
 	gr_ctx_gk20a_sim.o \
-	gr_ctx_gk20a.o
-
+	gr_ctx_gk20a.o \
+	gk20a_gating_reglist.o
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-gk20a.o

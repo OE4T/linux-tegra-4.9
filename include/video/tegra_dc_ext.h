@@ -288,6 +288,11 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_FLIP2 \
 	_IOWR('D', 0x0E, struct tegra_dc_ext_flip_2)
 
+#define TEGRA_DC_EXT_GET_CMU \
+	_IOR('D', 0x0F, struct tegra_dc_ext_cmu)
+
+#define TEGRA_DC_EXT_GET_CUSTOM_CMU \
+	_IOR('D', 0x10, struct tegra_dc_ext_cmu)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

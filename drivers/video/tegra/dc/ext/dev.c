@@ -803,6 +803,40 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 }
 
 #ifdef CONFIG_TEGRA_DC_CMU
+static int tegra_dc_ext_get_cmu(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_cmu *args, bool custom_value)
+{
+	int i;
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_dc_cmu *cmu;
+
+	if (custom_value && dc->pdata->cmu)
+		cmu = dc->pdata->cmu;
+	else if (custom_value && !dc->pdata->cmu)
+		return -EACCES;
+	else
+		cmu = &dc->cmu;
+
+	args->cmu_enable = dc->pdata->cmu_enable;
+	for (i = 0; i < 256; i++)
+		args->lut1[i] = cmu->lut1[i];
+
+	args->csc[0] = cmu->csc.krr;
+	args->csc[1] = cmu->csc.kgr;
+	args->csc[2] = cmu->csc.kbr;
+	args->csc[3] = cmu->csc.krg;
+	args->csc[4] = cmu->csc.kgg;
+	args->csc[5] = cmu->csc.kbg;
+	args->csc[6] = cmu->csc.krb;
+	args->csc[7] = cmu->csc.kgb;
+	args->csc[8] = cmu->csc.kbb;
+
+	for (i = 0; i < 960; i++)
+		args->lut2[i] = cmu->lut2[i];
+
+	return 0;
+}
+
 static int tegra_dc_ext_set_cmu(struct tegra_dc_ext_user *user,
 				struct tegra_dc_ext_cmu *args)
 {
@@ -1026,6 +1060,55 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return tegra_dc_ext_cursor_clip(user, &args);
+	}
+
+	case TEGRA_DC_EXT_GET_CMU:
+	{
+#ifdef CONFIG_TEGRA_DC_CMU
+		struct tegra_dc_ext_cmu *args;
+
+		args = kzalloc(sizeof(*args), GFP_KERNEL);
+		if (!args)
+			return -ENOMEM;
+
+		tegra_dc_ext_get_cmu(user, args, 0);
+
+		if (copy_to_user(user_arg, args, sizeof(*args))) {
+			kfree(args);
+			return -EFAULT;
+		}
+
+		kfree(args);
+		return 0;
+#else
+		return -EACCES;
+#endif
+	}
+
+	case TEGRA_DC_EXT_GET_CUSTOM_CMU:
+	{
+#ifdef CONFIG_TEGRA_DC_CMU
+		struct tegra_dc_ext_cmu *args;
+
+		args = kzalloc(sizeof(*args), GFP_KERNEL);
+		if (!args)
+			return -ENOMEM;
+
+		if (tegra_dc_ext_get_cmu(user, args, 1)) {
+			kfree(args);
+			return -EACCES;
+		}
+
+		if (copy_to_user(user_arg, args, sizeof(*args))) {
+			kfree(args);
+			return -EFAULT;
+		}
+
+		kfree(args);
+		return 0;
+#else
+		return -EACCES;
+#endif
 	}
 
 	case TEGRA_DC_EXT_SET_CMU:

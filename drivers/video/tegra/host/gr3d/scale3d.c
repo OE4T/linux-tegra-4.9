@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D clock scaling
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -164,7 +164,7 @@ void nvhost_scale3d_notify_busy(struct platform_device *dev)
 static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 					u32 flags)
 {
-	unsigned long hz;
+	long hz;
 	long after;
 
 	/* Inform that the clock is disabled */
@@ -199,6 +199,7 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 		(power_profile.emc_dip_slope *
 		POW2(after / 1000 - power_profile.emc_xmid) +
 		power_profile.emc_dip_offset);
+	hz = (hz < 0) ? 0 : hz;
 	nvhost_module_set_devfreq_rate(power_profile.dev,
 			power_profile.clk_3d_emc, hz);
 

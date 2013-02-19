@@ -790,7 +790,6 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 {
 	/* handle touch suspend */
 	int error;
-	struct rm_spi_ts_platform_data *pdata;
 	/*Flow designed by Roger 20110930 */
 	/*rm31080_ts_send_signal(g_stTs.ulHalPID,RM_SIGNAL_SUSPEND); */
 	g_stTs.bInitFinish = 0;
@@ -821,14 +820,10 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 	/* handle platforms w/ and w/out regulator switches */
 	/* 2) delay for platforms w/ regulator switches */
 	usleep_range(15000, 20000);	/*msleep(15); */
-	/* 3) pull low reset */
-	pdata = g_input_dev->dev.parent->platform_data;
-	if (pdata->platform_id == RM_PLATFORM_P005)
-		gpio_set_value(pdata->gpio_reset, 0);
-	/* 4) disable clock */
+	/* 3) disable clock */
 	if (ts->clk)
 		clk_disable(ts->clk);
-	/* 5) disable 1.8 */
+	/* 4) disable 1.8 */
 	if (ts->regulator_1v8 && ts->regulator_3v3) {
 		error = regulator_disable(ts->regulator_1v8);
 		if (error < 0)
@@ -1792,9 +1787,11 @@ static void rm31080_start(struct rm31080_ts *ts)
 		clk_enable(ts->clk);
 	/* 6. reset */
 	pdata = g_input_dev->dev.parent->platform_data;
-	if (pdata->platform_id == RM_PLATFORM_P005)
+	if (pdata->platform_id == RM_PLATFORM_P005) {
+		gpio_set_value(pdata->gpio_reset, 0);
+		usleep_range(100, 200);
 		gpio_set_value(pdata->gpio_reset, 1);
-
+	}
 	/* 7. delay */
 	msleep(20);
 	rm31080_init_ts_structure_part();

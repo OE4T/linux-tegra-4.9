@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1614,6 +1614,8 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 
 	tegra_dc_to_fb_videomode(&m, mode);
 
+	m.vmode &= ~FB_VMODE_STEREO_MASK; /* stereo modes have the same VICs */
+
 	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
 
@@ -1660,18 +1662,18 @@ static void tegra_dc_hdmi_disable_generic_infoframe(struct tegra_dc *dc)
 }
 
 /* return 1 if generic infoframe is used, 0 if not used */
-static int tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc)
+static int tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	struct hdmi_extres_infoframe extres;
 	int hdmi_vic;
 	u32 val;
 
-	hdmi_vic = tegra_dc_find_hdmi_vic(&dc->mode);
-	if (hdmi_vic <= 0) {
-		tegra_dc_hdmi_disable_generic_infoframe(dc);
+	if (dvi)
 		return 0;
-	}
+	hdmi_vic = tegra_dc_find_hdmi_vic(&dc->mode);
+	if (hdmi_vic <= 0)
+		return 0;
 
 	memset(&extres, 0x0, sizeof(extres));
 
@@ -1692,9 +1694,7 @@ static int tegra_dc_hdmi_setup_hdmi_vic_infoframe(struct tegra_dc *dc)
 	return 1;
 }
 
-
-/* return 1 if generic infoframe is used, 0 if not used */
-static int tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
+static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	struct hdmi_avi_infoframe avi;
@@ -1702,7 +1702,7 @@ static int tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 	if (dvi) {
 		tegra_hdmi_writel(hdmi, 0x0,
 				  HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_CTRL);
-		return 0;
+		return;
 	}
 
 	memset(&avi, 0x0, sizeof(avi));
@@ -1718,9 +1718,6 @@ static int tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 	avi.m = dc->mode.avi_m;
 	dev_dbg(&dc->ndev->dev, "HDMI AVI vic=%d m=%d\n", avi.vic, avi.m);
 
-	if (!avi.vic) /* Extended resolution format */
-		return tegra_dc_hdmi_setup_hdmi_vic_infoframe(dc);
-
 	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_HEADER,
 				     HDMI_INFOFRAME_TYPE_AVI,
 				     HDMI_AVI_VERSION,
@@ -1728,8 +1725,6 @@ static int tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 
 	tegra_hdmi_writel(hdmi, INFOFRAME_CTRL_ENABLE,
 			  HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_CTRL);
-
-	return 0;
 }
 
 static void tegra_dc_hdmi_setup_stereo_infoframe(struct tegra_dc *dc)
@@ -1829,7 +1824,6 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	int err;
 	unsigned long val;
 	unsigned i;
-	int generic_used;
 
 	/* enbale power, clocks, resets, etc. */
 
@@ -1939,13 +1933,14 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 		tegra_hdmi_writel(hdmi, GENERIC_CTRL_AUDIO,
 				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
 
-	generic_used = tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
-	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
+	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
 
 	if (dc->mode.stereo_mode)
 		tegra_dc_hdmi_setup_stereo_infoframe(dc);
-	else if (!generic_used) /* else disable sending of this infoframe */
+	else if (!tegra_dc_hdmi_setup_hdmi_vic_infoframe(dc, hdmi->dvi))
 		tegra_dc_hdmi_disable_generic_infoframe(dc);
+
+	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
 
 	/* Set tdms config. Set it to custom values provided in board file;
 	 * otherwise, set it to default values. */

@@ -320,13 +320,17 @@ EXPORT_SYMBOL(tegra_dc_set_mode);
 int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	const struct tegra_dc_mode *mode)
 {
+	long mode_pclk;
+
 	if (!fbmode || !mode || !mode->pclk)
 		return -EINVAL;
-	memset(fbmode, 0, sizeof(*fbmode));
 	if (mode->rated_pclk >= 1000) /* handle DSI one-shot modes */
-		fbmode->pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
+		mode_pclk = mode->rated_pclk;
 	else if (mode->pclk >= 1000) /* normal continous modes */
-		fbmode->pixclock = KHZ2PICOS(mode->pclk / 1000);
+		mode_pclk = mode->pclk;
+	else
+		mode_pclk = 0;
+	memset(fbmode, 0, sizeof(*fbmode));
 	fbmode->right_margin = mode->h_front_porch;
 	fbmode->lower_margin = mode->v_front_porch;
 	fbmode->hsync_len = mode->h_sync_width;
@@ -336,12 +340,20 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	fbmode->xres = mode->h_active;
 	fbmode->yres = mode->v_active;
 	fbmode->vmode = FB_VMODE_NONINTERLACED;
-	if (mode->stereo_mode)
+	if (mode->stereo_mode) {
 #ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+		/* Double the pixel clock and update v_active only for
+		 * frame packed mode */
+		mode_pclk /= 2;
+		/* total v_active = yres*2 + activespace */
+		fbmode->yres = (mode->v_active - mode->v_sync_width -
+			mode->v_back_porch - mode->v_front_porch) / 2;
 		fbmode->vmode |= FB_VMODE_STEREO_FRAME_PACK;
 #else
 		fbmode->vmode |= FB_VMODE_STEREO_LEFT_RIGHT;
 #endif
+	}
+
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_H_SYNC))
 		fbmode->sync |=  FB_SYNC_HOR_HIGH_ACT;
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC))
@@ -351,10 +363,8 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_4_3)
 		fbmode->flag |= FB_FLAG_RATIO_4_3;
 
-	if (mode->rated_pclk >= 1000)
-		fbmode->pixclock = KHZ2PICOS(mode->rated_pclk / 1000);
-	else if (mode->pclk >= 1000)
-		fbmode->pixclock = KHZ2PICOS(mode->pclk / 1000);
+	if (mode_pclk >= 1000) /* else 0 */
+		fbmode->pixclock = KHZ2PICOS(mode_pclk / 1000);
 	fbmode->refresh = tegra_dc_calc_refresh(mode) / 1000;
 
 	return 0;
@@ -386,7 +396,6 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.h_front_porch = fbmode->right_margin;
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
-	mode.avi_m = 0;
 	if (fbmode->flag & FB_FLAG_RATIO_16_9)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
 	else if (fbmode->flag & FB_FLAG_RATIO_4_3)

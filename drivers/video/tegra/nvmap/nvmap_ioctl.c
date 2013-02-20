@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -154,7 +154,7 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 	if (!op.handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, op.handle);
+	h = nvmap_get_handle_id(client, (ulong)op.handle);
 
 	if (!h)
 		return -EPERM;
@@ -203,7 +203,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (!op.handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, op.handle);
+	h = nvmap_get_handle_id(client, (ulong)op.handle);
 
 	if (!h)
 		return -EPERM;
@@ -249,7 +249,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
 #endif
 
-	return nvmap_alloc_handle_id(client, op.handle, op.heap_mask,
+	return nvmap_alloc_handle_id(client, (ulong)op.handle, op.heap_mask,
 				     op.align, op.flags);
 }
 
@@ -281,10 +281,10 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
-	op.handle = nvmap_ref_to_id(ref);
+	op.handle = (typeof(op.handle))nvmap_ref_to_id(ref);
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
-		nvmap_free_handle_id(client, op.handle);
+		nvmap_free_handle_id(client, (ulong)op.handle);
 	}
 
 	return err;
@@ -306,7 +306,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	if (!op.handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, op.handle);
+	h = nvmap_get_handle_id(client, (ulong)op.handle);
 
 	if (!h)
 		return -EPERM;
@@ -414,7 +414,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	h = nvmap_get_handle_id(client, op.handle);
+	h = nvmap_get_handle_id(client, (ulong)op.handle);
 	if (!h)
 		return -EINVAL;
 
@@ -487,7 +487,7 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg)
 	if (!op.handle || !op.addr || !op.count || !op.elem_size)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, op.handle);
+	h = nvmap_get_handle_id(client, (ulong)op.handle);
 	if (!h)
 		return -EPERM;
 
@@ -543,7 +543,7 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg)
 
 	vpriv = (struct nvmap_vma_priv *)vma->vm_private_data;
 
-	if ((unsigned long)vpriv->handle != op.handle) {
+	if ((unsigned long)vpriv->handle != (ulong)op.handle) {
 		err = -EFAULT;
 		goto out;
 	}

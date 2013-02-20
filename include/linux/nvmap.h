@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,8 @@
 #include <linux/ioctl.h>
 #include <linux/file.h>
 #include <linux/rbtree.h>
+#if defined(__KERNEL__)
 #include <linux/dma-buf.h>
-
-#if !defined(__KERNEL__)
-#define __user
 #endif
 
 #ifndef _LINUX_NVMAP_H
@@ -53,10 +51,11 @@
 #define NVMAP_HANDLE_SECURE          (0x1ul << 2)
 #define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 3)
 
+struct nvmap_handle;
+
 #if defined(__KERNEL__)
 
 #if defined(CONFIG_TEGRA_NVMAP)
-struct nvmap_handle;
 struct nvmap_client;
 struct nvmap_device;
 
@@ -188,5 +187,169 @@ static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
 #endif	/* !CONFIG_DMA_SHARED_BUFFER */
 
 #endif /* __KERNEL__ */
+
+/*
+ * DOC: NvMap Userspace API
+ *
+ * create a client by opening /dev/nvmap
+ * most operations handled via following ioctls
+ *
+ */
+enum {
+	NVMAP_HANDLE_PARAM_SIZE = 1,
+	NVMAP_HANDLE_PARAM_ALIGNMENT,
+	NVMAP_HANDLE_PARAM_BASE,
+	NVMAP_HANDLE_PARAM_HEAP,
+};
+
+enum {
+	NVMAP_CACHE_OP_WB = 0,
+	NVMAP_CACHE_OP_INV,
+	NVMAP_CACHE_OP_WB_INV,
+};
+
+struct nvmap_create_handle {
+	union {
+		__u32 id;	/* FromId */
+		__u32 size;	/* CreateHandle */
+		__s32 fd;	/* DmaBufFd or FromFd */
+	};
+#ifdef CONFIG_COMPAT
+	__u32 handle;		/* returns nvmap handle */
+#else
+	struct nvmap_handle *handle; /* returns nvmap handle */
+#endif
+};
+
+struct nvmap_alloc_handle {
+#ifdef CONFIG_COMPAT
+	__u32 handle;		/* nvmap handle */
+#else
+	struct nvmap_handle *handle; /* nvmap handle */
+#endif
+	__u32 heap_mask;	/* heaps to allocate from */
+	__u32 flags;		/* wb/wc/uc/iwb etc. */
+	__u32 align;		/* min alignment necessary */
+};
+
+struct nvmap_map_caller {
+#ifdef CONFIG_COMPAT
+	__u32 handle;		/* nvmap handle */
+#else
+	struct nvmap_handle *handle; /* nvmap handle */
+#endif
+	__u32 offset;		/* offset into hmem; should be page-aligned */
+	__u32 length;		/* number of bytes to map */
+	__u32 flags;		/* maps as wb/iwb etc. */
+#ifdef CONFIG_COMPAT
+	__u32 addr;		/* user pointer*/
+#else
+	unsigned long addr;	/* user pointer */
+#endif
+};
+
+struct nvmap_rw_handle {
+#ifdef CONFIG_COMPAT
+	__u32 addr;		/* user pointer */
+	__u32 handle;		/* nvmap handle */
+#else
+	unsigned long addr;	/* user pointer*/
+	struct nvmap_handle *handle; /* nvmap handle */
+#endif
+	__u32 offset;		/* offset into hmem */
+	__u32 elem_size;	/* individual atom size */
+	__u32 hmem_stride;	/* delta in bytes between atoms in hmem */
+	__u32 user_stride;	/* delta in bytes between atoms in user */
+	__u32 count;		/* number of atoms to copy */
+};
+
+struct nvmap_pin_handle {
+#ifdef CONFIG_COMPAT
+	__u32 *handles;		/* array of handles to pin/unpin */
+	__u32 *addr;		/*  array of addresses to return */
+#else
+	struct nvmap_handle **handles;	/* array of handles to pin/unpin */
+	unsigned long *addr;	/* array of addresses to return */
+#endif
+	__u32 count;		/* number of entries in handles */
+};
+
+struct nvmap_handle_param {
+#ifdef CONFIG_COMPAT
+	__u32 handle;		/* nvmap handle */
+#else
+	struct nvmap_handle *handle;	/* nvmap handle */
+#endif
+	__u32 param;		/* size/align/base/heap etc. */
+#ifdef CONFIG_COMPAT
+	__u32 result;		/* returnes requested info*/
+#else
+	unsigned long result;	/* returnes requested info*/
+#endif
+};
+
+struct nvmap_cache_op {
+#ifdef CONFIG_COMPAT
+	__u32 addr;		/* user pointer*/
+	__u32 handle;		/* nvmap handle */
+#else
+	unsigned long addr;	/* user pointer*/
+	struct nvmap_handle *handle;	/* nvmap handle */
+#endif
+	__u32 len;		/* bytes to flush */
+	__s32 op;		/* wb/wb_inv/inv */
+};
+
+#define NVMAP_IOC_MAGIC 'N'
+
+/* Creates a new memory handle. On input, the argument is the size of the new
+ * handle; on return, the argument is the name of the new handle
+ */
+#define NVMAP_IOC_CREATE  _IOWR(NVMAP_IOC_MAGIC, 0, struct nvmap_create_handle)
+#define NVMAP_IOC_CLAIM   _IOWR(NVMAP_IOC_MAGIC, 1, struct nvmap_create_handle)
+#define NVMAP_IOC_FROM_ID _IOWR(NVMAP_IOC_MAGIC, 2, struct nvmap_create_handle)
+
+/* Actually allocates memory for the specified handle */
+#define NVMAP_IOC_ALLOC    _IOW(NVMAP_IOC_MAGIC, 3, struct nvmap_alloc_handle)
+
+/* Frees a memory handle, unpinning any pinned pages and unmapping any mappings
+ */
+#define NVMAP_IOC_FREE       _IO(NVMAP_IOC_MAGIC, 4)
+
+/* Maps the region of the specified handle into a user-provided virtual address
+ * that was previously created via an mmap syscall on this fd */
+#define NVMAP_IOC_MMAP       _IOWR(NVMAP_IOC_MAGIC, 5, struct nvmap_map_caller)
+
+/* Reads/writes data (possibly strided) from a user-provided buffer into the
+ * hmem at the specified offset */
+#define NVMAP_IOC_WRITE      _IOW(NVMAP_IOC_MAGIC, 6, struct nvmap_rw_handle)
+#define NVMAP_IOC_READ       _IOW(NVMAP_IOC_MAGIC, 7, struct nvmap_rw_handle)
+
+#define NVMAP_IOC_PARAM _IOWR(NVMAP_IOC_MAGIC, 8, struct nvmap_handle_param)
+
+/* Pins a list of memory handles into IO-addressable memory (either IOVMM
+ * space or physical memory, depending on the allocation), and returns the
+ * address. Handles may be pinned recursively. */
+#define NVMAP_IOC_PIN_MULT   _IOWR(NVMAP_IOC_MAGIC, 10, struct nvmap_pin_handle)
+#define NVMAP_IOC_UNPIN_MULT _IOW(NVMAP_IOC_MAGIC, 11, struct nvmap_pin_handle)
+
+#define NVMAP_IOC_CACHE      _IOW(NVMAP_IOC_MAGIC, 12, struct nvmap_cache_op)
+
+/* Returns a global ID usable to allow a remote process to create a handle
+ * reference to the same handle */
+#define NVMAP_IOC_GET_ID  _IOWR(NVMAP_IOC_MAGIC, 13, struct nvmap_create_handle)
+
+/* Returns a dma-buf fd usable to allow a remote process to create a handle
+ * reference to the same handle */
+#define NVMAP_IOC_SHARE  _IOWR(NVMAP_IOC_MAGIC, 14, struct nvmap_create_handle)
+
+/* Returns a file id that allows a remote process to create a handle
+ * reference to the same handle */
+#define NVMAP_IOC_GET_FD  _IOWR(NVMAP_IOC_MAGIC, 15, struct nvmap_create_handle)
+
+/* Create a new memory handle from file id passed */
+#define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_FROM_FD))
 
 #endif /* _LINUX_NVMAP_H */

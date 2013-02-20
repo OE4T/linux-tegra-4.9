@@ -3,7 +3,7 @@
  *
  * ioctl declarations for nvmap
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,14 @@
 #include <linux/nvmap.h>
 #endif
 
+/* Hack for L4T builds.
+ * gstreamer is directly including this header and
+ * looking for ioctls param struct definitions. This hack
+ * is necessary till user space gstreamer is fixed to use
+ * linux/nvmap.h file.
+ *
+ */
+#ifndef __KERNEL__
 enum {
 	NVMAP_HANDLE_PARAM_SIZE = 1,
 	NVMAP_HANDLE_PARAM_ALIGNMENT,
@@ -148,6 +156,7 @@ struct nvmap_cache_op {
 #define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
 
 #define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_FROM_FD))
+#endif
 
 #ifdef  __KERNEL__
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);

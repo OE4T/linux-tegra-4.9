@@ -257,14 +257,14 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 		}
 	}
 
-	msleep(100);
+	msleep(20);
 #if DSI_PANEL_RESET
 	gpio_direction_output(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
 	usleep_range(1000, 5000);
 	gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
-	msleep(150);
+	usleep_range(1000, 5000);
 	gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-	msleep(1500);
+	msleep(20);
 #endif
 
 	return 0;

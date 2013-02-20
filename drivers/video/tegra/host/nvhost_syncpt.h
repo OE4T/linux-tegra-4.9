@@ -97,6 +97,7 @@ int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
+void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
 
 static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp,
 		u32 id, u32 real)

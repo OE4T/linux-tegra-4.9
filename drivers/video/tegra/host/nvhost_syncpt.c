@@ -560,6 +560,13 @@ int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp)
 	return syncpt_to_dev(sp)->info.nb_mlocks;
 }
 
+void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client)
+{
+	u64 mask = 1ULL << id;
+	syncpt_to_dev(sp)->info.client_managed &= ~mask;
+	syncpt_to_dev(sp)->info.client_managed |= client ? mask : 0;
+}
+
 /* public sync point API */
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 {

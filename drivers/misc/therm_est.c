@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_est.c
  *
- * Copyright (C) 2010-2013 NVIDIA Corporation.
+ * Copyright (c) 2010-2013 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -190,14 +190,16 @@ static ssize_t show_coeff(struct device *dev,
 	ssize_t len, total_len = 0;
 	int i, j;
 	for (i = 0; i < est->ndevs; i++) {
-		len = snprintf(buf + total_len, PAGE_SIZE, "[%d]", i);
+		len = snprintf(buf + total_len,
+				PAGE_SIZE - total_len, "[%d]", i);
 		total_len += len;
 		for (j = 0; j < HIST_LEN; j++) {
-			len = snprintf(buf + total_len, PAGE_SIZE, " %ld",
+			len = snprintf(buf + total_len,
+					PAGE_SIZE - total_len, " %ld",
 					est->devs[i].coeffs[j]);
 			total_len += len;
 		}
-		len = snprintf(buf + total_len, PAGE_SIZE, "\n");
+		len = snprintf(buf + total_len, PAGE_SIZE - total_len, "\n");
 		total_len += len;
 	}
 	return strlen(buf);
@@ -245,7 +247,7 @@ static ssize_t set_coeff(struct device *dev,
 		return -EINVAL;
 
 	/* This has obvious locking issues but don't worry about it */
-	memcpy(est->devs[devid].coeffs, coeff, sizeof(long) * HIST_LEN);
+	memcpy(est->devs[devid].coeffs, coeff, sizeof(coeff[0]) * HIST_LEN);
 
 	return count;
 }
@@ -285,15 +287,16 @@ static ssize_t show_temps(struct device *dev,
 
 	/* This has obvious locking issues but don't worry about it */
 	for (i = 0; i < est->ndevs; i++) {
-		total_len += snprintf(buf + total_len, PAGE_SIZE, "[%d]", i);
+		total_len += snprintf(buf + total_len,
+					PAGE_SIZE - total_len, "[%d]", i);
 		for (j = 0; j < HIST_LEN; j++) {
 			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
 			total_len += snprintf(buf + total_len,
-						PAGE_SIZE,
-						" %ld",
+						PAGE_SIZE - total_len, " %ld",
 						est->devs[i].hist[index]);
 		}
-		total_len += snprintf(buf + total_len, PAGE_SIZE, "\n");
+		total_len += snprintf(buf + total_len,
+					PAGE_SIZE - total_len, "\n");
 	}
 	return strlen(buf);
 }

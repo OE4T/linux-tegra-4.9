@@ -25,7 +25,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 
-#include <linux/../../drivers/video/tegra/nvmap/nvmap.h>
+#include <linux/nvmap.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"

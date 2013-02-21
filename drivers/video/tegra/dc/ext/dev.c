@@ -37,7 +37,6 @@
 /* XXX ew 2 */
 #include "../../host/dev.h"
 /* XXX ew 3 */
-#include "../../nvmap/nvmap.h"
 #include "tegra_dc_ext_priv.h"
 
 int tegra_dc_ext_devno;

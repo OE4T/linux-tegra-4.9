@@ -22,9 +22,6 @@
 #include <mach/dc.h>
 #include <linux/nvmap.h>
 
-/* ugh */
-#include "../../nvmap/nvmap.h"
-
 #include "tegra_dc_ext_priv.h"
 
 int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,

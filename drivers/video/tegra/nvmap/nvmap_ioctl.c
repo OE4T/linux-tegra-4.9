@@ -30,6 +30,7 @@
 #include <linux/nvmap.h>
 
 #include <asm/cacheflush.h>
+#include <asm/memory.h>
 #include <asm/outercache.h>
 #include <asm/tlbflush.h>
 
@@ -57,6 +58,33 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 		       unsigned long start, unsigned long end, unsigned int op,
 		       unsigned int allow_deferred);
+
+#ifdef CONFIG_COMPAT
+ulong unmarshal_user_handle(__u32 handle)
+{
+	ulong h = (handle | PAGE_OFFSET);
+}
+
+__u32 marshal_kernel_handle(ulong handle)
+{
+	return (__u32)handle;
+}
+#else
+ulong unmarshal_user_handle(struct nvmap_handle *handle)
+{
+	return (ulong)handle;
+}
+
+struct nvmap_handle *marshal_kernel_handle(ulong handle)
+{
+	return (struct nvmap_handle *)handle;
+}
+#endif
+
+ulong unmarshal_user_id(u32 id)
+{
+	return unmarshal_user_handle((struct nvmap_handle *)id);
+}
 
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {

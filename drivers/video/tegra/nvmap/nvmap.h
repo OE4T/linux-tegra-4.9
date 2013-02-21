@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -290,5 +290,14 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
+
+#ifdef CONFIG_COMPAT
+ulong unmarshal_user_handle(__u32 handle);
+__u32 marshal_kernel_handle(ulong handle);
+#else
+ulong unmarshal_user_handle(struct nvmap_handle *handle);
+struct nvmap_handle *marshal_kernel_handle(ulong handle);
+#endif
+ulong unmarshal_user_id(u32 id);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

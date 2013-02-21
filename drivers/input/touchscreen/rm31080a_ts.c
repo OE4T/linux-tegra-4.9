@@ -101,11 +101,16 @@ struct rm31080a_ts_para {
 	bool bEnableAutoScan;
 	bool bIsSuspended;
 
+	bool bInitStartFlag;
+	bool bInitFailFlag;
+	bool bReissueSignalFlag;
+
 	struct mutex mutex_scan_mode;
 #ifdef ENABLE_WORK_QUEUE
 	struct workqueue_struct *rm_workqueue;
 	struct work_struct rm_work;
 #endif
+
 #ifdef ENABLE_RAW_DATA_QUEUE
 	u8 u8ScanModeState;
 #endif
@@ -690,13 +695,14 @@ void rm31080_ctrl_enter_auto_mode(void)
 {
 	if (g_stCtrl.bICVersion == T007A6)
 		rm31080_ts_send_signal(g_stTs.ulHalPID,
-				       RM_SIGNAL_ENTER_AUTO_SCAN);
+						RM_SIGNAL_ENTER_AUTO_SCAN);
 
 	/*Enable auto scan */
 	if (g_stCtrl.bfIdleMessage)
 		rm_printk("Enter Auto Scan Mode\n");
 	/*Set idle*/
 	rm_set_idle(1);
+
 	if (g_stCtrl.bSTScan)
 		rm_set_auto(1);
 	else
@@ -712,6 +718,7 @@ void rm31080_ctrl_leave_auto_mode(void)
 		rm_printk("Leave Auto Scan Mode\n");
 	/*leave idle*/
 	rm_set_idle(0);
+
 	if (g_stCtrl.bSTScan)
 		rm_set_auto(0);
 	else
@@ -826,6 +833,9 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 			"raydium regulator 1.8V disable failed: %d\n",
 				error);
 	}
+	printk(KERN_ALERT "Raydium Sending SUSPEND complete\n");
+	if (g_stTs.bInitStartFlag)
+		g_stTs.bInitFailFlag = 1;
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 	return 1;
 }
@@ -1620,6 +1630,11 @@ static void rm31080_init_ts_structure(void)
 	g_stTs.rm_workqueue = create_singlethread_workqueue("rm_work");
 	INIT_WORK(&g_stTs.rm_work, rm_work_handler);
 #endif
+
+	g_stTs.bInitStartFlag = 0;
+	g_stTs.bInitFailFlag = 0;
+	g_stTs.bReissueSignalFlag = 0;
+
 	mutex_init(&g_stTs.mutex_scan_mode);
 }
 
@@ -1779,7 +1794,18 @@ static void rm31080_start(struct rm31080_ts *ts)
 	/* 7. delay */
 	msleep(20);
 	rm31080_init_ts_structure_part();
-	rm31080_ts_send_signal(g_stTs.ulHalPID, RM_SIGNAL_RESUME);
+
+	if (g_stTs.bInitStartFlag) {
+		if (!g_stTs.bReissueSignalFlag) {
+			printk(KERN_ALERT "Raydium Re-Sending RESUME complete\n");
+			rm31080_ts_send_signal(g_stTs.ulHalPID,
+				RM_SIGNAL_RESUME);
+			g_stTs.bReissueSignalFlag = 1;
+		}
+	} else {
+		printk(KERN_ALERT "Raydium Sending RESUME complete\n");
+		rm31080_ts_send_signal(g_stTs.ulHalPID, RM_SIGNAL_RESUME);
+	}
 #elif defined(ENABLE_AUTO_SCAN)
 	rm31080_ctrl_clear_int();
 	rm31080_ctrl_scan_start();
@@ -1897,6 +1923,7 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	ts->irq = irq;
 
 	pdata = dev->platform_data;
+
 	if (pdata->name_of_clock || pdata->name_of_clock_con) {
 		ts->clk = clk_get_sys(pdata->name_of_clock,
 			pdata->name_of_clock_con);
@@ -2070,11 +2097,19 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	case RM_IOCTL_INIT_START:
 		g_stTs.bInitFinish = 0;
+		g_stTs.bInitStartFlag = 1;
+		printk(KERN_ALERT "Raydium Received RM_IOCTL_INIT_START.");
+		printk(KERN_ALERT " Touch not ready, ScanModeState = 0x%x\n",
+			g_stTs.u8ScanModeState);
 		rm31080_enter_manual_mode();
 		break;
 	case RM_IOCTL_INIT_END:
+		printk(KERN_ALERT "Raydium Received RM_IOCTL_INIT_END");
+		printk(KERN_ALERT " Touch ready.\n");
 		g_stTs.bInitFinish = 1;
 		g_stTs.bCalcFinish = 1;
+		g_stTs.bInitStartFlag = 0;
+		g_stTs.bReissueSignalFlag = 0;
 #ifdef ENABLE_RAW_DATA_QUEUE
 		ret = rm31080_ctrl_scan_start();
 #endif
@@ -2120,6 +2155,10 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 	case RM_IOCTL_GET_SACN_MODE:
 		rm31080_ctrl_get_idle_mode((u8 *) arg);
+		break;
+	case RM_IOCTL_CHECK_INIT_STATUS:
+		ret = g_stTs.bInitFailFlag;
+		g_stTs.bInitFailFlag = 0;
 		break;
 
 	default:

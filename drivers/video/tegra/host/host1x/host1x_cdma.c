@@ -506,7 +506,9 @@ static void cdma_timeout_handler(struct work_struct *work)
 			cdma->timeout.syncpt_id);
 
 	/* has buffer actually completed? */
-	if ((s32)(syncpt_val - cdma->timeout.syncpt_val) >= 0) {
+	if (nvhost_syncpt_is_expired(&dev->syncpt,
+		cdma->timeout.syncpt_id, cdma->timeout.syncpt_val)) {
+
 		dev_dbg(&dev->dev->dev,
 			 "cdma_timeout: expired, but buffer had completed\n");
 		/* restore */

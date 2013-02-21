@@ -270,7 +270,8 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 		__func__);
 
 	list_for_each_entry(job, &cdma->sync_queue, list) {
-		if (syncpt_val < job->syncpt_end)
+		if (!nvhost_syncpt_is_expired(syncpt,
+			cdma->timeout.syncpt_id, job->syncpt_end))
 			break;
 
 		nvhost_job_dump(&dev->dev, job);

@@ -202,17 +202,6 @@ static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 	return h;
 }
 
-static inline void nvmap_handle_put(struct nvmap_handle *h)
-{
-	int cnt = atomic_dec_return(&h->ref);
-
-	if (WARN_ON(cnt < 0)) {
-		pr_err("%s: %s put to negative references\n",
-			__func__, current->comm);
-	} else if (cnt == 0)
-		_nvmap_handle_free(h);
-}
-
 static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
@@ -263,7 +252,6 @@ void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 
 struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev);
 
-
 void nvmap_cache_maint_ops_flush(struct nvmap_device *dev,
 		struct nvmap_handle *h);
 
@@ -278,9 +266,6 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 
 struct nvmap_handle_ref *_nvmap_validate_id_locked(struct nvmap_client *priv,
 						   unsigned long id);
-
-struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
-					 unsigned long id);
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
@@ -305,10 +290,5 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
-
-struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
-	size_t size, size_t align, unsigned int flags, unsigned int iova_start);
-
-void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

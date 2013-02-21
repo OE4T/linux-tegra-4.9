@@ -899,3 +899,14 @@ void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 
 	nvmap_free_handle_id(client, nvmap_ref_to_id(r));
 }
+
+void nvmap_handle_put(struct nvmap_handle *h)
+{
+	int cnt = atomic_dec_return(&h->ref);
+
+	if (WARN_ON(cnt < 0)) {
+		pr_err("%s: %s put to negative references\n",
+			__func__, current->comm);
+	} else if (cnt == 0)
+		_nvmap_handle_free(h);
+}

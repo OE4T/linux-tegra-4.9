@@ -1828,8 +1828,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	tegra_dc_unpowergate_locked(dc);
 
-	if (!(dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE) &&
-	    dc->out->enable)
+	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
 
 	tegra_dc_setup_clk(dc, dc->clk);

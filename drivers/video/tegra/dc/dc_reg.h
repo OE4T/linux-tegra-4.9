@@ -77,6 +77,13 @@
 #define  WIN_A_UF_INT		(1 << 8)
 #define  WIN_B_UF_INT		(1 << 9)
 #define  WIN_C_UF_INT		(1 << 10)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
+#endif
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define  WIN_D_UF_INT		(1 << 24)
+#define  WIN_T_UF_INT		(1 << 25)
+#endif
 #define  MSF_INT		(1 << 12)
 #define  SSF_INT		(1 << 13)
 #define  WIN_A_OF_INT		(1 << 14)
@@ -576,6 +583,11 @@
 #define DC_WINBUF_AD_UFLOW_STATUS		0xbca
 #define DC_WINBUF_BD_UFLOW_STATUS		0xdca
 #define DC_WINBUF_CD_UFLOW_STATUS		0xfca
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define DC_WINBUF_DD_UFLOW_STATUS		0x0ca
+#define DC_WINBUF_HD_UFLOW_STATUS		0x1ca
+#define DC_WINBUF_TD_UFLOW_STATUS		0x14a
+#endif
 
 #define DC_DISP_SD_CONTROL			0x4c2
 #define  SD_ENABLE_NORMAL		(1 << 0)

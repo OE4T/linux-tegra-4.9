@@ -598,6 +598,15 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 		dc->stats.underflows_a,
 		dc->stats.underflows_b,
 		dc->stats.underflows_c);
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	seq_printf(s,
+		"underflows_d: %llu\n"
+		"underflows_h: %llu\n"
+		"underflows_t: %llu\n",
+		dc->stats.underflows_d,
+		dc->stats.underflows_h,
+		dc->stats.underflows_t);
+#endif
 	mutex_unlock(&dc->lock);
 
 	return 0;
@@ -1385,14 +1394,42 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	if (dc->underflow_mask & WIN_C_UF_INT)
 		dc->stats.underflows_c += tegra_dc_underflow_count(dc,
 			DC_WINBUF_CD_UFLOW_STATUS);
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	if (dc->underflow_mask & HC_UF_INT)
+		dc->stats.underflows_h += tegra_dc_underflow_count(dc,
+			DC_WINBUF_HD_UFLOW_STATUS);
+	if (dc->underflow_mask & WIN_D_UF_INT)
+		dc->stats.underflows_d += tegra_dc_underflow_count(dc,
+			DC_WINBUF_DD_UFLOW_STATUS);
+	if (dc->underflow_mask & WIN_T_UF_INT)
+		dc->stats.underflows_t += tegra_dc_underflow_count(dc,
+			DC_WINBUF_TD_UFLOW_STATUS);
+#endif
 
 	/* Check for any underflow reset conditions */
 	for (i = 0; i < DC_N_WINDOWS; i++) {
-		if (dc->underflow_mask & (WIN_A_UF_INT << i)) {
+		u32 masks[] = {
+			WIN_A_UF_INT,
+			WIN_B_UF_INT,
+			WIN_C_UF_INT,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			WIN_D_UF_INT,
+			HC_UF_INT,
+			WIN_T_UF_INT,
+#endif
+		};
+
+		if (WARN_ONCE(i >= ARRAY_SIZE(masks),
+			"underflow stats unsupported"))
+			break; /* bail if the table above is missing entries */
+		if (!masks[i])
+			continue; /* skip empty entries */
+
+		if (dc->underflow_mask & masks[i]) {
 			dc->windows[i].underflows++;
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
-			if (dc->windows[i].underflows > 4) {
+			if (i < 3 && dc->windows[i].underflows > 4) {
 				schedule_work(&dc->reset_work);
 				/* reset counter */
 				dc->windows[i].underflows = 0;
@@ -1400,7 +1437,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			}
 #endif
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
-			if (dc->windows[i].underflows > 4) {
+			if (i < 3 && dc->windows[i].underflows > 4) {
 				trace_display_reset(dc);
 				tegra_dc_writel(dc, UF_LINE_FLUSH,
 						DC_DISP_DISP_MISC_CONTROL);

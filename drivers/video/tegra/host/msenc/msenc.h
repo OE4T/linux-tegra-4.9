@@ -3,7 +3,7 @@
  *
  * Tegra MSENC Module Support
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,6 +56,7 @@ struct msenc {
 	} os;
 
 	struct sg_table *pa;
+	u8 *mapped;
 };
 
 struct msenc_ucode_bin_header_v1 {

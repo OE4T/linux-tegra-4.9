@@ -259,7 +259,6 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct msenc *m = get_msenc(dev);
 	const struct firmware *ucode_fw;
-	void *ucode_ptr = NULL;
 	int err;
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
@@ -287,14 +286,14 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	ucode_ptr = nvhost_memmgr_mmap(m->mem_r);
-	if (!ucode_ptr) {
+	m->mapped = mem_op().mmap(m->mem_r);
+	if (IS_ERR_OR_NULL(m->mapped)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = msenc_setup_ucode_image(dev, ucode_ptr, ucode_fw);
+	err = msenc_setup_ucode_image(dev, (u32 *)m->mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
 		return err;
@@ -302,19 +301,23 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->valid = true;
 
-	nvhost_memmgr_munmap(m->mem_r, ucode_ptr);
 	release_firmware(ucode_fw);
 
 	return 0;
 
 clean_up:
-	if (ucode_ptr)
-		nvhost_memmgr_munmap(m->mem_r, ucode_ptr);
-	if (m->pa)
-		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
-				m->mem_r, m->pa);
-	if (m->mem_r)
-		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
+	if (m->mapped) {
+		mem_op().munmap(m->mem_r, (u32 *)m->mapped);
+		m->mapped = NULL;
+	}
+	if (m->pa) {
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+		m->pa = NULL;
+	}
+	if (m->mem_r) {
+		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		m->mem_r = NULL;
+	}
 	release_firmware(ucode_fw);
 	return err;
 }
@@ -357,9 +360,8 @@ void nvhost_msenc_init(struct platform_device *dev)
 
 	return;
 
- clean_up:
+clean_up:
 	dev_err(&dev->dev, "failed");
-	nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
 void nvhost_msenc_deinit(struct platform_device *dev)
@@ -367,11 +369,18 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 	struct msenc *m = get_msenc(dev);
 
 	/* unpin, free ucode memory */
+	if (m->mapped) {
+		mem_op().munmap(m->mem_r, m->mapped);
+		m->mapped = NULL;
+	}
+	if (m->pa) {
+		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
+			m->pa);
+		m->pa = NULL;
+	}
 	if (m->mem_r) {
-		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
-				m->mem_r, m->pa);
-		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
-		m->mem_r = 0;
+		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		m->mem_r = NULL;
 	}
 }
 

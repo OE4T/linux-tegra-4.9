@@ -41,7 +41,6 @@
 #include <linux/nvmap.h>
 
 #include "host/dev.h"
-#include "nvmap/nvmap.h"
 #include "dc/dc_priv.h"
 
 /* Pad pitch to 256-byte boundary. */

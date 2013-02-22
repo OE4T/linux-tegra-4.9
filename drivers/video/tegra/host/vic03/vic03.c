@@ -428,8 +428,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx *ctx;
 	bool map_restore = true;
 	u32 *ptr;
-	unsigned long syncpts = nvhost_get_devdata(ch->dev)->syncpts;
-	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
+	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
 	u32 nvhost_vic03_restore_size = 11; /* number of words written below */
 
 	nvhost_dbg_fn("");

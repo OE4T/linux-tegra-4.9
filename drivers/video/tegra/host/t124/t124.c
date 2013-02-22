@@ -122,7 +122,7 @@ static struct resource isp_resources[] = {
 
 static struct nvhost_device_data tegra_isp01_info = {
 	.syncpts = NV_ISP_0_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_ISP_0),
+	.modulemutexes = {NVMODMUTEX_ISP_0},
 	.clocks = {{"isp", UINT_MAX}, {} },
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -152,7 +152,7 @@ static struct resource ispb_resources[] = {
 
 static struct nvhost_device_data tegra_isp01b_info = {
 	.syncpts = NV_ISP_1_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_ISP_1),
+	.modulemutexes = {NVMODMUTEX_ISP_1},
 	.clocks = {{"isp", UINT_MAX}, {} },
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -183,7 +183,7 @@ static struct resource vi_resources[] = {
 
 static struct nvhost_device_data tegra_vi01_info = {
 	.syncpts       = NV_VI_0_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_VI_0),
+	.modulemutexes = {NVMODMUTEX_VI_0},
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
@@ -205,7 +205,7 @@ static struct platform_device tegra_vi01_device = {
 
 static struct nvhost_device_data tegra_vi01b_info = {
 	.syncpts       = NV_VI_1_SYNCPTS,
-	.modulemutexes = BIT(NVMODMUTEX_VI_1),
+	.modulemutexes = {NVMODMUTEX_VI_1},
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
@@ -234,8 +234,8 @@ static struct resource msenc_resources[] = {
 
 static struct nvhost_device_data tegra_msenc03_info = {
 	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
-	.syncpts       = BIT(NVSYNCPT_MSENC),
-	.waitbases     = BIT(NVWAITBASE_MSENC),
+	.syncpts       = {NVSYNCPT_MSENC},
+	.waitbases     = {NVWAITBASE_MSENC},
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -265,8 +265,8 @@ static struct resource tsec_resources[] = {
 
 static struct nvhost_device_data tegra_tsec01_info = {
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.syncpts       = BIT(NVSYNCPT_TSEC),
-	.waitbases     = BIT(NVWAITBASE_TSEC),
+	.syncpts       = {NVSYNCPT_TSEC},
+	.waitbases     = {NVWAITBASE_TSEC},
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
 	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
@@ -467,15 +467,15 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 		pdata->index = i;
 #if defined(CONFIG_ARCH_TEGRA_VIC)
 		if (dev == &tegra_vic03_device) {
-			pdata->modulemutexes = BIT(NVMODMUTEX_VIC);
-			pdata->syncpts = BIT(NVSYNCPT_VIC);
+			pdata->modulemutexes[0] = NVMODMUTEX_VIC;
+			pdata->syncpts[0] = NVSYNCPT_VIC;
 		}
 #endif
 #if defined(CONFIG_TEGRA_GK20A)
 		if (dev == &tegra_gk20a_device) {
-			pdata->syncpts       = BIT(NVSYNCPT_3D);
-			pdata->waitbases     = BIT(NVWAITBASE_3D);
-			pdata->modulemutexes = BIT(NVMODMUTEX_3D);
+			pdata->syncpts[0]       = NVSYNCPT_3D;
+			pdata->waitbases[0]     = NVWAITBASE_3D;
+			pdata->modulemutexes[0] = NVMODMUTEX_3D;
 		}
 #endif
 	}
@@ -501,10 +501,8 @@ int t124_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
-	unsigned long syncpts = pdata->syncpts;
-	unsigned long waitbases = pdata->waitbases;
-	u32 syncpt = find_first_bit(&syncpts, BITS_PER_LONG);
-	u32 waitbase = find_first_bit(&waitbases, BITS_PER_LONG);
+	u32 syncpt = pdata->syncpts[0];
+	u32 waitbase = pdata->waitbases[0];
 
 	nvhost_dbg_fn("");
 

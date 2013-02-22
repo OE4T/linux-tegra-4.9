@@ -213,7 +213,7 @@ void t124_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 		host1x_cdma_ops.timeout_teardown_end(cdma, getptr);
 }
 static void t124_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
-       u32 syncpt_incrs, u32 syncval, u32 nr_slots, u32 waitbases)
+       u32 syncpt_incrs, u32 syncval, u32 nr_slots, u32 *waitbases)
 {
 	nvhost_dbg_fn("");
 

@@ -479,9 +479,9 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.h = &p->h;
 	ctx->hwctx.channel = ch;
 	ctx->hwctx.valid = true; /* this is a preconditioning sequence... */
-	ctx->save_incrs = 0;
-	ctx->save_thresh = 0;
-	ctx->save_slots = 0;
+	ctx->hwctx.save_incrs = 0;
+	ctx->hwctx.save_thresh = 0;
+	ctx->hwctx.save_slots = 0;
 
 	ctx->restore_sgt = mem_op().pin(nvmap, ctx->restore);
 	if (IS_ERR_VALUE(ctx->restore_phys))
@@ -489,7 +489,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 
 	ctx->restore_size = nvhost_vic03_restore_size;
-	ctx->restore_incrs = 1;
+	ctx->hwctx.restore_incrs = 1;
 
 	return &ctx->hwctx;
 
@@ -548,8 +548,8 @@ struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
 	if (!p)
 		return NULL;
 
-	p->syncpt = syncpt;
-	p->waitbase = waitbase;
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
 
 	p->h.alloc = vic03_alloc_hwctx;
 	p->h.get   = vic03_get_hwctx;

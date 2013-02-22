@@ -19,7 +19,6 @@
 
 #include <linux/regulator/consumer.h>
 #include <linux/i2c.h>
-#include <linux/nvhost.h>
 
 enum tegra_camera_port {
 	TEGRA_CAMERA_PORT_CSI_A = 1,
@@ -28,8 +27,8 @@ enum tegra_camera_port {
 };
 
 struct tegra_camera_platform_data {
-	int			(*enable_camera)(struct nvhost_device *ndev);
-	void			(*disable_camera)(struct nvhost_device *ndev);
+	int			(*enable_camera)(struct platform_device *pdev);
+	void			(*disable_camera)(struct platform_device *pdev);
 	bool			flip_h;
 	bool			flip_v;
 	enum tegra_camera_port	port;

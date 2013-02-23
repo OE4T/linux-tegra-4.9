@@ -123,15 +123,10 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 void nvmap_client_put(struct nvmap_client *c);
 
 phys_addr_t nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
-phys_addr_t _nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
-
 
 phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id);
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *r);
-
-void nvmap_unpin_handles(struct nvmap_client *client,
-			 struct nvmap_handle **h, int nr);
 
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 						   unsigned long id);
@@ -145,10 +140,6 @@ int nvmap_pin_array(struct nvmap_client *client,
 		int nr,
 		struct nvmap_handle **unique_arr,
 		struct nvmap_handle_ref **unique_arr_refs);
-
-
-struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id);
 
 struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id);
@@ -174,17 +165,6 @@ struct nvmap_platform_data {
 };
 
 extern struct nvmap_device *nvmap_dev;
-
-#ifdef CONFIG_DMA_SHARED_BUFFER
-/* dma-buf exporter */
-struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id);
-#else
-static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
-						 u32 id)
-{
-	return NULL;
-}
-#endif	/* !CONFIG_DMA_SHARED_BUFFER */
 
 #endif /* __KERNEL__ */
 

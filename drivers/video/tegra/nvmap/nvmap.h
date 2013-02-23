@@ -291,6 +291,22 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
 
+phys_addr_t _nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
+
+void nvmap_unpin_handles(struct nvmap_client *client,
+			 struct nvmap_handle **h, int nr);
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+/* dma-buf exporter */
+struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id);
+#else
+static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
+						 u32 id)
+{
+	return NULL;
+}
+#endif	/* !CONFIG_DMA_SHARED_BUFFER */
+
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);
 __u32 marshal_kernel_handle(ulong handle);

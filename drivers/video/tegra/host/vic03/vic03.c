@@ -536,6 +536,17 @@ static void vic03_save_push_hwctx ( struct nvhost_hwctx *ctx, struct nvhost_cdma
 	nvhost_dbg_fn("");
 }
 
+static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
+		struct nvhost_cdma *cdma)
+{
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	nvhost_cdma_push_gather(cdma,
+		ctx->hwctx.memmgr,
+		ctx->restore,
+		0,
+		nvhost_opcode_gather(ctx->restore_size),
+		ctx->restore_phys);
+}
 
 struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
       u32 syncpt, u32 waitbase,
@@ -555,6 +566,7 @@ struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
 	p->h.get   = vic03_get_hwctx;
 	p->h.put   = vic03_put_hwctx;
 	p->h.save_push = vic03_save_push_hwctx;
+	p->h.restore_push = ctxvic03_restore_push;
 	p->h.save_service = NULL;
 
 	return &p->h;

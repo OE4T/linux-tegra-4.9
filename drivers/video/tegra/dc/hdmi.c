@@ -1107,13 +1107,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_debug_create(hdmi);
 
-	err = gpio_is_valid(dc->out->hotplug_gpio);
-	if (!err) {
-		dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed");
+	err = gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed\n");
 		goto err_nvhdcp_destroy;
 	}
 
-	gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
 	gpio_direction_input(dc->out->hotplug_gpio);
 
 	/* TODO: support non-hotplug */

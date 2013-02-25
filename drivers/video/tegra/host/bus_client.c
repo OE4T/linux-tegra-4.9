@@ -1127,6 +1127,7 @@ fail:
 	nvhost_free_channel(ch);
 	return err;
 }
+EXPORT_SYMBOL(nvhost_client_device_init);
 
 int nvhost_client_device_suspend(struct platform_device *dev)
 {
@@ -1170,6 +1171,7 @@ fail:
 
 	return -ENXIO;
 }
+EXPORT_SYMBOL(nvhost_client_device_get_resources);
 
 /* This is a simple wrapper around request_firmware that takes
  * 'fw_name' and if available applies a SOC relative path prefix to it.

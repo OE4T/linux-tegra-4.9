@@ -23,6 +23,7 @@
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/err.h>
+#include <linux/export.h>
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
@@ -518,6 +519,7 @@ fail_attrib_alloc:
 
 	return err;
 }
+EXPORT_SYMBOL(nvhost_module_init);
 
 int nvhost_module_suspend(struct platform_device *dev)
 {
@@ -586,6 +588,7 @@ int nvhost_module_enable_clk(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_enable_clk);
 
 int nvhost_module_disable_clk(struct platform_device *pdev)
 {
@@ -605,6 +608,7 @@ int nvhost_module_disable_clk(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_disable_clk);
 
 int nvhost_module_power_on(struct platform_device *pdev)
 {
@@ -673,6 +677,7 @@ void nvhost_module_busy_ext(struct platform_device *dev)
 
 	nvhost_module_busy(pdev);
 }
+EXPORT_SYMBOL(nvhost_module_busy_ext);
 
 void nvhost_module_idle_ext(struct platform_device *dev)
 {
@@ -688,3 +693,4 @@ void nvhost_module_idle_ext(struct platform_device *dev)
 
 	nvhost_module_idle(pdev);
 }
+EXPORT_SYMBOL(nvhost_module_idle_ext);

@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
+#include <linux/export.h>
 #include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
 #include "nvhost_sync.h"
@@ -767,6 +768,7 @@ u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 
 	return nvhost_syncpt_incr_max(sp, id, incrs);
 }
+EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
 
 void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 {
@@ -784,6 +786,7 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 
 	nvhost_syncpt_cpu_incr(sp, id);
 }
+EXPORT_SYMBOL(nvhost_syncpt_cpu_incr_ext);
 
 void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
 					u32 val)
@@ -811,6 +814,7 @@ u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 
 	return nvhost_syncpt_read(sp, id);
 }
+EXPORT_SYMBOL(nvhost_syncpt_read_ext);
 
 int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	u32 thresh, u32 timeout, u32 *value, struct timespec *ts)
@@ -829,3 +833,4 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts);
 }
+EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);

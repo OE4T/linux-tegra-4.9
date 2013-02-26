@@ -126,11 +126,11 @@ static int nct1008_write_reg(struct i2c_client *client, u8 reg, u16 value)
 	}
 
 	ret = i2c_smbus_write_byte_data(client, reg, value);
+	mutex_unlock(&data->mutex);
 
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	mutex_unlock(&data->mutex);
 	return ret;
 }
 
@@ -145,11 +145,11 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 	}
 
 	ret = i2c_smbus_read_byte_data(client, reg);
+	mutex_unlock(&data->mutex);
 
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	mutex_unlock(&data->mutex);
 	return ret;
 }
 
@@ -1207,12 +1207,12 @@ static int nct1008_remove(struct i2c_client *client)
 static void nct1008_shutdown(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
-	mutex_lock(&data->mutex);
 	if (client->irq)
 		disable_irq(client->irq);
 
 	cancel_work_sync(&data->work);
 
+	mutex_lock(&data->mutex);
 	data->shutdown_complete = 1;
 	mutex_unlock(&data->mutex);
 }

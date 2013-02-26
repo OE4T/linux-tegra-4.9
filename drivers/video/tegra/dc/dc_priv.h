@@ -185,6 +185,21 @@ static inline u32 tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
 	return val;
 }
 
+static inline u32 tegra_dc_flush_interrupt(struct tegra_dc *dc, u32 int_val)
+{
+	u32 val;
+	unsigned long flag;
+
+	local_irq_save(flag);
+
+	val = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
+	tegra_dc_writel(dc, (val | int_val), DC_CMD_INT_STATUS);
+
+	local_irq_restore(flag);
+
+	return val;
+}
+
 static inline u32 tegra_dc_mask_interrupt(struct tegra_dc *dc, u32 int_val)
 {
 	u32 val;

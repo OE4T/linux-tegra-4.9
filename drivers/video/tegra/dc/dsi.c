@@ -1566,13 +1566,13 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 	u32 val;
 	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 	struct tegra_dc_mode mode = dsi->dc->mode;
-	u32 line_period = DIV_ROUND_UP(
-				MS_TO_US(frame_period),
-				mode.v_sync_width + mode.v_back_porch +
-				mode.v_active + mode.v_front_porch);
+	u32 tot_lines = mode.v_sync_width + mode.v_back_porch +
+				mode.v_active + mode.v_front_porch;
+	u32 line_period = DIV_ROUND_UP(MS_TO_US(frame_period), tot_lines);
 	u32 timeout_cnt = 0;
 
-#define DSI_IDLE_TIMEOUT	1000
+/* wait for 1 frame duration + few extra cycles for dsi to go idle */
+#define DSI_IDLE_TIMEOUT	(tot_lines + 5)
 
 	val = tegra_dsi_readl(dsi, DSI_STATUS);
 	while (!(val & DSI_STATUS_IDLE(0x1))) {
@@ -1629,6 +1629,9 @@ static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;
 }
 
+/* wait for frame end interrupt or (timeout_n_frames * 1 frame duration)
+ * whichever happens to occur first
+ */
 static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u32 timeout_n_frames)
@@ -1648,6 +1651,7 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 
 	reinit_completion(&dc->frame_end_complete);
 
+	tegra_dc_flush_interrupt(dc, FRAME_END_INT);
 	/* unmask frame end interrupt */
 	val = tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
 
@@ -1668,17 +1672,11 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi,
 						u32 timeout_n_frames)
 {
-	long timeout;
-
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
-	timeout = tegra_dsi_wait_frame_end(dc, dsi, timeout_n_frames);
+	tegra_dsi_wait_frame_end(dc, dsi, timeout_n_frames);
 
 	tegra_dsi_soft_reset(dsi);
-
-	if (timeout == 0)
-		dev_warn(&dc->ndev->dev,
-			"DC doesn't stop at end of frame.\n");
 
 	tegra_dsi_reset_underflow_overflow(dsi);
 }

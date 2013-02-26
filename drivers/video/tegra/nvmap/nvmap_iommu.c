@@ -62,6 +62,15 @@ void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 	kfree(area);
 }
 
+void tegra_iommu_zap_vm(struct tegra_iovmm_area *area)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_set_attr(DMA_ATTR_SKIP_FREE_IOVA, &attrs);
+	dma_unmap_single_attrs(area->dev, area->iovm_start, area->iovm_length,
+			       0, &attrs);
+}
+
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 
 static inline int tegra_iommu_create_map(struct device *dev)

@@ -43,10 +43,11 @@
 #define NVMAP_HANDLE_VISITED (0x1ul << 31)
 
 /* map the backing pages for a heap_pgalloc handle into its IOVMM area */
-static void map_iovmm_area(struct nvmap_handle *h)
+static int map_iovmm_area(struct nvmap_handle *h)
 {
 	tegra_iovmm_addr_t va;
 	unsigned long i;
+	int err;
 
 	BUG_ON(!h->heap_pgalloc || !h->pgalloc.area);
 	BUG_ON(h->size & ~PAGE_MASK);
@@ -59,9 +60,17 @@ static void map_iovmm_area(struct nvmap_handle *h)
 
 		pfn = page_to_pfn(h->pgalloc.pages[i]);
 		BUG_ON(!pfn_valid(pfn));
-		tegra_iovmm_vm_insert_pfn(h->pgalloc.area, va, pfn);
+		err = tegra_iovmm_vm_insert_pfn(h->pgalloc.area, va, pfn);
+		if (err)
+			goto err_out;
 	}
 	h->pgalloc.dirty = false;
+
+	return 0;
+
+err_out:
+	tegra_iovmm_zap_vm(h->pgalloc.area);
+	return err;
 }
 
 /* must be called inside nvmap_pin_lock, to ensure that an entire stream
@@ -328,8 +337,11 @@ int nvmap_pin_ids(struct nvmap_client *client,
 		ret = -EINTR;
 	} else {
 		for (i = 0; i < nr; i++) {
-			if (h[i]->heap_pgalloc && h[i]->pgalloc.dirty)
-				map_iovmm_area(h[i]);
+			if (h[i]->heap_pgalloc && h[i]->pgalloc.dirty) {
+				ret = map_iovmm_area(h[i]);
+				while (ret && --i >= 0)
+					tegra_iovmm_zap_vm(h[i]->pgalloc.area);
+			}
 		}
 	}
 
@@ -489,24 +501,36 @@ int nvmap_pin_array(struct nvmap_client *client,
 	mutex_unlock(&client->share->pin_lock);
 
 	if (WARN_ON(ret)) {
-		for (i = 0; i < count; i++) {
-			/* pin ref */
-			nvmap_handle_put(unique_arr[i]);
-			/* remove duplicate */
-			atomic_dec(&unique_arr_refs[i]->dupes);
-			nvmap_handle_put(unique_arr[i]);
-		}
-		return ret;
+		goto err_out;
 	} else {
 		for (i = 0; i < count; i++) {
 			if (unique_arr[i]->heap_pgalloc &&
-			    unique_arr[i]->pgalloc.dirty)
-				map_iovmm_area(unique_arr[i]);
+			    unique_arr[i]->pgalloc.dirty) {
+				ret = map_iovmm_area(unique_arr[i]);
+				while (ret && --i >= 0) {
+					tegra_iovmm_zap_vm(
+						unique_arr[i]->pgalloc.area);
+					atomic_dec(&unique_arr_refs[i]->pin);
+				}
+				if (ret)
+					goto err_out;
+			}
 
 			atomic_inc(&unique_arr_refs[i]->pin);
 		}
 	}
 	return count;
+
+err_out:
+	for (i = 0; i < count; i++) {
+		/* pin ref */
+		nvmap_handle_put(unique_arr[i]);
+		/* remove duplicate */
+		atomic_dec(&unique_arr_refs[i]->dupes);
+		nvmap_handle_put(unique_arr[i]);
+	}
+
+	return ret;
 }
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
@@ -565,15 +589,21 @@ phys_addr_t _nvmap_pin(struct nvmap_client *client,
 	}
 
 	if (ret) {
-		atomic_dec(&ref->pin);
-		nvmap_handle_put(h);
+		goto err_out;
 	} else {
 		if (h->heap_pgalloc && h->pgalloc.dirty)
-			map_iovmm_area(h);
+			ret = map_iovmm_area(h);
+		if (ret)
+			goto err_out;
 		phys = handle_phys(h);
 	}
 
-	return ret ?: phys;
+	return phys;
+
+err_out:
+	atomic_dec(&ref->pin);
+	nvmap_handle_put(h);
+	return ret;
 }
 
 phys_addr_t nvmap_pin(struct nvmap_client *client,

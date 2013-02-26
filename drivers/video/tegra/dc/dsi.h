@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.h
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -385,7 +385,7 @@ T_TLPX_NS_DEFAULT, clk_ns, T_TLPX_HW_INC))
 T_CLKPREPARE_NS_DEFAULT, clk_ns, T_CLKPREPARE_HW_INC))
 
 #define T_CLKPRE_DEFAULT	0x1
-#define T_WAKEUP_DEFAULT	0x7f
+#define T_WAKEUP_DEFAULT	0xff
 
 #define T_TAGO_DEFAULT(clk_ns) \
 (DSI_CONVERT_T_PHY_NS_TO_T_PHY( \

@@ -831,7 +831,7 @@ static int rm31080_ctrl_suspend(struct rm31080_ts *ts)
 			"raydium regulator 1.8V disable failed: %d\n",
 				error);
 	}
-	printk(KERN_ALERT "Raydium Sending SUSPEND complete\n");
+	printk(KERN_ALERT "Raydium Sending SUSPEND done\n");
 	if (g_stTs.bInitStartFlag)
 		g_stTs.bInitFailFlag = 1;
 	mutex_unlock(&g_stTs.mutex_scan_mode);
@@ -1789,22 +1789,28 @@ static void rm31080_start(struct rm31080_ts *ts)
 	pdata = g_input_dev->dev.parent->platform_data;
 	if (pdata->platform_id == RM_PLATFORM_P005) {
 		gpio_set_value(pdata->gpio_reset, 0);
-		usleep_range(100, 200);
+		usleep_range(200, 300);
 		gpio_set_value(pdata->gpio_reset, 1);
+	} else { /* sw reset */
+		usleep_range(15000, 20000);
+		rm31080_spi_byte_write(RM31080_REG_11, 0x04);
+		usleep_range(200, 300);
+		rm31080_spi_byte_write(RM31080_REG_11, 0x00);
 	}
 	/* 7. delay */
 	msleep(20);
+
 	rm31080_init_ts_structure_part();
 
 	if (g_stTs.bInitStartFlag) {
 		if (!g_stTs.bReissueSignalFlag) {
-			printk(KERN_ALERT "Raydium Re-Sending RESUME complete\n");
+			printk(KERN_ALERT "Raydium Re-Sending RESUME done\n");
 			rm31080_ts_send_signal(g_stTs.ulHalPID,
 				RM_SIGNAL_RESUME);
 			g_stTs.bReissueSignalFlag = 1;
 		}
 	} else {
-		printk(KERN_ALERT "Raydium Sending RESUME complete\n");
+		printk(KERN_ALERT "Raydium Sending RESUME done\n");
 		rm31080_ts_send_signal(g_stTs.ulHalPID, RM_SIGNAL_RESUME);
 	}
 #elif defined(ENABLE_AUTO_SCAN)

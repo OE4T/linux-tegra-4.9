@@ -101,7 +101,7 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 				     size_t align, unsigned int flags,
 				     unsigned int heap_mask);
 
-phys_addr_t _nvmap_get_addr_from_id(u32 id);
+phys_addr_t _nvmap_get_addr_from_id(u32 user_id);
 
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
@@ -131,11 +131,6 @@ phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
-struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id);
-struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id);
-
 struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
 						struct nvmap_client *client,
 						unsigned long user_id);
@@ -145,7 +140,7 @@ struct nvmap_handle_ref *_nvmap_duplicate_handle_user_id(
 						unsigned long user_id);
 
 int nvmap_pin_array(struct nvmap_client *client,
-		unsigned long	 *ids,
+		unsigned long	 *user_ids,
 		long unsigned id_type_mask,
 		long unsigned id_type,
 		int nr,
@@ -153,9 +148,6 @@ int nvmap_pin_array(struct nvmap_client *client,
 		struct nvmap_handle_ref **unique_arr_refs);
 
 struct nvmap_handle *nvmap_get_handle_user_id(struct nvmap_client *client,
-					 unsigned long id);
-
-struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id);
 
 void nvmap_handle_put(struct nvmap_handle *h);

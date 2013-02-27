@@ -455,7 +455,7 @@ static int nvmap_validate_get_pin_array(struct nvmap_client *client,
  * @client:       nvmap_client which should be used for validation;
  *                should be owned by the process which is submitting
  *                command buffers
- * @ids:          array of nvmap_handles to pin
+ * @user_ids:     array of user nvmap_handle ids to pin
  * @id_type_mask: bitmask which defines handle type field in handle id.
  * @id_type:      only handles with of this type will be pinned. Handles with
  *                other type are ignored.
@@ -466,7 +466,7 @@ static int nvmap_validate_get_pin_array(struct nvmap_client *client,
  *                  to unique_arr. Must be freed after use.
  */
 int nvmap_pin_array(struct nvmap_client *client,
-		unsigned long	*ids,
+		unsigned long	*user_ids,
 		long unsigned id_type_mask,
 		long unsigned id_type,
 		int nr,
@@ -476,12 +476,23 @@ int nvmap_pin_array(struct nvmap_client *client,
 	int count = 0;
 	int ret = 0;
 	int i;
+	unsigned long *ids;
+
+	ids = kmalloc(sizeof(ids) * nr, GFP_KERNEL);
+	if (!ids) {
+		ret = -ENOMEM;
+		goto exit;
+	}
 
 	if (mutex_lock_interruptible(&client->share->pin_lock)) {
 		nvmap_err(client, "%s interrupted when acquiring pin lock\n",
 			   current->group_leader->comm);
-		return -EINTR;
+		ret = -EINTR;
+		goto kfree_out;
 	}
+
+	for (i = 0; i < nr; i++)
+		ids[i] = unmarshal_user_id(user_ids[i]);
 
 	count = nvmap_validate_get_pin_array(client, ids,
 			id_type_mask, id_type, nr,
@@ -489,6 +500,7 @@ int nvmap_pin_array(struct nvmap_client *client,
 
 	if (count < 0) {
 		mutex_unlock(&client->share->pin_lock);
+		kfree(ids);
 		nvmap_warn(client, "failed to validate pin array\n");
 		return count;
 	}
@@ -519,7 +531,8 @@ int nvmap_pin_array(struct nvmap_client *client,
 			atomic_inc(&unique_arr_refs[i]->pin);
 		}
 	}
-	return count;
+	ret = count;
+	goto kfree_out;
 
 err_out:
 	for (i = 0; i < count; i++) {
@@ -529,7 +542,9 @@ err_out:
 		atomic_dec(&unique_arr_refs[i]->dupes);
 		nvmap_handle_put(unique_arr[i]);
 	}
-
+kfree_out:
+	kfree(ids);
+exit:
 	return ret;
 }
 
@@ -553,9 +568,10 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
  * Get physical address of the handle. Handle should be
  * already validated and pinned.
  */
-phys_addr_t _nvmap_get_addr_from_id(u32 id)
+phys_addr_t _nvmap_get_addr_from_id(u32 user_id)
 {
-	struct nvmap_handle *h = (struct nvmap_handle *)id;
+	struct nvmap_handle *h = (struct nvmap_handle *)unmarshal_user_id(
+								user_id);
 	return handle_phys(h);
 }
 

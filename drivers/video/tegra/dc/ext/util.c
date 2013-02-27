@@ -44,7 +44,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	 * Take a reference to the buffer using the user's nvmap context, to
 	 * make sure they have permissions to access it.
 	 */
-	win_handle = nvmap_get_handle_id(user->nvmap, id);
+	win_handle = nvmap_get_handle_user_id(user->nvmap, id);
 	if (!win_handle)
 		return -EACCES;
 
@@ -53,7 +53,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	 * context, to ensure that the handle won't be freed as long as it is
 	 * in use by display.
 	 */
-	win_dup = nvmap_duplicate_handle_id(ext->nvmap, id);
+	win_dup = nvmap_duplicate_handle_user_id(ext->nvmap, id);
 
 	/* Release the reference we took in the user's context above */
 	nvmap_handle_put(win_handle);

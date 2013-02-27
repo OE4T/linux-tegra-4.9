@@ -1,7 +1,7 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,16 @@
 #define DRBG_MODE_FORCE_INSTANTION	1
 #define DRBG_MODE_FORCE_RESEED		2
 #define SE_RNG_CONFIG_MODE(x)		(x << DRBG_MODE_SHIFT)
+
+#define SE_RNG_SRC_CONFIG_REG_OFFSET	0x344
+#define DRBG_RO_ENT_SRC_SHIFT	1
+#define DRBG_RO_ENT_SRC_ENABLE	1
+#define DRBG_RO_ENT_SRC_DISABLE	0
+#define SE_RNG_SRC_CONFIG_RO_ENT_SRC(x)	(x << DRBG_RO_ENT_SRC_SHIFT)
+#define DRBG_RO_ENT_SRC_LOCK_SHIFT	0
+#define DRBG_RO_ENT_SRC_LOCK_ENABLE	1
+#define DRBG_RO_ENT_SRC_LOCK_DISABLE	0
+#define SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(x) (x << DRBG_RO_ENT_SRC_LOCK_SHIFT)
 
 #define DRBG_SRC_SHIFT	2
 #define DRBG_SRC_NONE	0

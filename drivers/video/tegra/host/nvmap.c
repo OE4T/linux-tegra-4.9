@@ -121,9 +121,9 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 }
 
 int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
-		long unsigned *ids,
-		long unsigned id_type_mask,
-		long unsigned id_type,
+		u32 *ids,
+		u32 id_type_mask,
+		u32 id_type,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data,
 		dma_addr_t *phys_addr)
@@ -143,7 +143,7 @@ int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
 			&unique_handles[count];
 
 	result = nvmap_pin_array((struct nvmap_client *)mgr,
-		    ids, id_type_mask, id_type, count,
+		    (long unsigned *)ids, id_type_mask, id_type, count,
 		    unique_handles,
 		    unique_handle_refs);
 
@@ -169,6 +169,6 @@ struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		u32 id, struct platform_device *dev)
 {
 	return (struct mem_handle *)
-		_nvmap_duplicate_handle_id((struct nvmap_client *)mgr, id);
+		nvmap_duplicate_handle_id((struct nvmap_client *)mgr, id);
 }
 

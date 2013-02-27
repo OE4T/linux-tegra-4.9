@@ -256,7 +256,7 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,
-		long unsigned *ids,
+		u32 *ids,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data)

@@ -74,6 +74,7 @@ struct nvhost_job {
 	struct nvhost_job_unpin *unpins;
 	int num_unpins;
 
+	u32 *pin_ids;
 	dma_addr_t *addr_phys;
 	dma_addr_t *gather_addr_phys;
 	dma_addr_t *reloc_addr_phys;

@@ -156,7 +156,7 @@ struct nvhost_mem_ops {
 	void (*kunmap)(struct mem_handle *, unsigned int, void *);
 	int (*pin_array_ids)(struct mem_mgr *,
 			struct platform_device *,
-			long unsigned *,
+			u32 *,
 			dma_addr_t *,
 			u32,
 			struct nvhost_job_unpin *);

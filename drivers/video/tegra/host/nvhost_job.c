@@ -46,7 +46,8 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks)
 			+ num_unpins * sizeof(struct nvhost_job_unpin)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
-			+ (num_relocs + num_cmdbufs) * sizeof(dma_addr_t);
+			+ num_unpins * sizeof(dma_addr_t)
+			+ num_unpins * sizeof(u32 *);
 
 	if(total > ULONG_MAX)
 		return 0;
@@ -78,7 +79,9 @@ static void init_fields(struct nvhost_job *job,
 	mem += num_waitchks * sizeof(struct nvhost_waitchk);
 	job->gathers = num_cmdbufs ? mem : NULL;
 	mem += num_cmdbufs * sizeof(struct nvhost_job_gather);
-	job->addr_phys = (num_cmdbufs || num_relocs) ? mem : NULL;
+	job->addr_phys = num_unpins ? mem : NULL;
+	mem += num_unpins * sizeof(dma_addr_t);
+	job->pin_ids = num_unpins ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;
 	job->gather_addr_phys = &job->addr_phys[num_relocs];
@@ -226,31 +229,24 @@ static int pin_job_mem(struct nvhost_job *job)
 	int i;
 	int count = 0;
 	int result;
-	long unsigned *ids =
-			kmalloc(sizeof(u32 *) *
-				(job->num_relocs + job->num_gathers),
-				GFP_KERNEL);
-	if (!ids)
-		return -ENOMEM;
 
 	for (i = 0; i < job->num_relocs; i++) {
 		struct nvhost_reloc *reloc = &job->relocarray[i];
-		ids[count] = reloc->target;
+		job->pin_ids[count] = reloc->target;
 		count++;
 	}
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		ids[count] = g->mem_id;
+		job->pin_ids[count] = g->mem_id;
 		count++;
 	}
 
 	/* validate array and pin unique ids, get refs for unpinning */
 	result = nvhost_memmgr_pin_array_ids(job->memmgr, job->ch->dev,
-		ids, job->addr_phys,
+		job->pin_ids, job->addr_phys,
 		count,
 		job->unpins);
-	kfree(ids);
 
 	if (result > 0)
 		job->num_unpins = result;

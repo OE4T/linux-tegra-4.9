@@ -49,9 +49,9 @@ struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 phys_addr_t nvhost_nvmap_get_addr_from_id(u32 id);
 
 int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
-		long unsigned *ids,
-		long unsigned id_type_mask,
-		long unsigned id_type,
+		u32 *ids,
+		u32 id_type_mask,
+		u32 id_type,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data,
 		dma_addr_t *phys_addr);

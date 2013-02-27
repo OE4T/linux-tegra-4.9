@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2013, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -199,6 +199,7 @@ static struct workqueue_struct *se_work_q;
 #define PMC_SCRATCH43_REG_OFFSET 0x22c
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
 static int force_reseed_count;
+static int drbg_ro_entropy_src_enabled;
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 {
 	u8 carry;
@@ -1321,6 +1322,23 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 					rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
 		return -ENOMEM;
 	}
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	if (!drbg_ro_entropy_src_enabled
+		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
+		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+		se_writel(se_dev,
+			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
+		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
+			SE_RNG_SRC_CONFIG_REG_OFFSET);
+		drbg_ro_entropy_src_enabled = 1;
+	}
+
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
 
 	return 0;
 }
@@ -2731,6 +2749,16 @@ static int tegra_se_remove(struct platform_device *pdev)
 #if defined(CONFIG_PM)
 static int tegra_se_resume(struct device *dev)
 {
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	if ((tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
+		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+		se_writel(se_dev,
+			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
+		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
+			SE_RNG_SRC_CONFIG_REG_OFFSET);
+		drbg_ro_entropy_src_enabled = 1;
+	}
+
 	return 0;
 }
 

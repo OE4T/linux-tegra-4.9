@@ -65,12 +65,20 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 ulong unmarshal_user_handle(__u32 handle)
 {
 	ulong h = (handle | PAGE_OFFSET);
+
+	return h;
 }
 
 __u32 marshal_kernel_handle(ulong handle)
 {
 	return (__u32)handle;
 }
+
+ulong unmarshal_user_id(u32 id)
+{
+	return unmarshal_user_handle(id);
+}
+
 #else
 #define NVMAP_XOR_HASH_MASK 0xFFFFFFFC
 ulong unmarshal_user_handle(struct nvmap_handle *handle)
@@ -96,12 +104,13 @@ struct nvmap_handle *marshal_kernel_handle(ulong handle)
 	return (struct nvmap_handle *)handle;
 #endif
 }
-#endif
 
 ulong unmarshal_user_id(u32 id)
 {
 	return unmarshal_user_handle((struct nvmap_handle *)id);
 }
+
+#endif
 
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {

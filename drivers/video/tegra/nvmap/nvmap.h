@@ -301,10 +301,10 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 
 #ifdef CONFIG_DMA_SHARED_BUFFER
 /* dma-buf exporter */
-struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id);
+struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, ulong id);
 #else
 static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
-						 u32 id)
+						 ulong id)
 {
 	return NULL;
 }
@@ -313,10 +313,11 @@ static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);
 __u32 marshal_kernel_handle(ulong handle);
+ulong unmarshal_user_id(u32 id);
 #else
 ulong unmarshal_user_handle(struct nvmap_handle *handle);
 struct nvmap_handle *marshal_kernel_handle(ulong handle);
+ulong unmarshal_user_id(ulong id);
 #endif
-ulong unmarshal_user_id(u32 id);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

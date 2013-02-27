@@ -105,7 +105,7 @@ struct nvmap_handle *marshal_kernel_handle(ulong handle)
 #endif
 }
 
-ulong unmarshal_user_id(u32 id)
+ulong unmarshal_user_id(ulong id)
 {
 	return unmarshal_user_handle((struct nvmap_handle *)id);
 }

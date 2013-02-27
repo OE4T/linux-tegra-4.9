@@ -28,7 +28,7 @@
 
 struct nvmap_handle_info {
 	struct nvmap_client *client;
-	u32 id;
+	ulong id;
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *handle;
 };
@@ -46,7 +46,7 @@ static int nvmap_dmabuf_attach(struct dma_buf *dmabuf, struct device *dev,
 	info->ref = ref;
 	attach->priv = info;
 
-	dev_dbg(dev, "%s(%08x)\n", __func__, info->id);
+	dev_dbg(dev, "%s(%08lx)\n", __func__, info->id);
 	return 0;
 }
 
@@ -57,7 +57,7 @@ static void nvmap_dmabuf_detach(struct dma_buf *dmabuf,
 
 	nvmap_free(info->client, info->ref);
 
-	dev_dbg(attach->dev, "%s(%08x)\n", __func__, info->id);
+	dev_dbg(attach->dev, "%s(%08lx)\n", __func__, info->id);
 }
 
 static struct sg_table *nvmap_dmabuf_map_dma_buf(
@@ -97,7 +97,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	sg_dma_len(sgt->sgl) = handle->size;
 	sg_dma_address(sgt->sgl) = addr;
 
-	dev_dbg(attach->dev, "%s(%08x)\n", __func__, info->id);
+	dev_dbg(attach->dev, "%s(%08lx)\n", __func__, info->id);
 	return sgt;
 
 err_sgalloc:
@@ -117,14 +117,14 @@ static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	sg_free_table(sgt);
 	kfree(sgt);
 
-	dev_dbg(attach->dev, "%s(%08x)\n", __func__, info->id);
+	dev_dbg(attach->dev, "%s(%08lx)\n", __func__, info->id);
 }
 
 static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
-	pr_debug("%s(%08x)\n", __func__, info->id);
+	pr_debug("%s(%08lx)\n", __func__, info->id);
 
 	nvmap_handle_put(info->handle);
 	nvmap_client_put(info->client);
@@ -135,7 +135,7 @@ static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
-	pr_debug("%s(%08x)\n", __func__, info->id);
+	pr_debug("%s(%08lx)\n", __func__, info->id);
 	return nvmap_kmap(info->ref, page_num);
 }
 
@@ -144,7 +144,7 @@ static void nvmap_dmabuf_kunmap(struct dma_buf *dmabuf,
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
-	pr_debug("%s(%08x)\n", __func__, info->id);
+	pr_debug("%s(%08lx)\n", __func__, info->id);
 	nvmap_kunmap(info->ref, page_num, addr);
 }
 
@@ -165,7 +165,7 @@ static void *nvmap_dmabuf_vmap(struct dma_buf *dmabuf)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
-	pr_debug("%s(%08x)\n", __func__, info->id);
+	pr_debug("%s(%08lx)\n", __func__, info->id);
 	return nvmap_mmap(info->ref);
 }
 
@@ -173,7 +173,7 @@ static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, void *vaddr)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
-	pr_debug("%s(%08x)\n", __func__, info->id);
+	pr_debug("%s(%08lx)\n", __func__, info->id);
 	nvmap_munmap(info->ref, vaddr);
 }
 
@@ -191,7 +191,7 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.vunmap		= nvmap_dmabuf_vunmap,
 };
 
-struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id)
+struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, ulong id)
 {
 	struct dma_buf *dmabuf;
 	struct nvmap_handle_info *info;
@@ -222,7 +222,7 @@ struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id)
 		err = PTR_ERR(dmabuf);
 		goto err_export;
 	}
-	pr_debug("%s(%08x) %p\n", __func__, info->id, dmabuf);
+	pr_debug("%s(%08lx) %p\n", __func__, info->id, dmabuf);
 	return dmabuf;
 
 err_export:

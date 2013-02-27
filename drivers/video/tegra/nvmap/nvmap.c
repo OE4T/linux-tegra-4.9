@@ -575,7 +575,7 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
  * Get physical address of the handle. Handle should be
  * already validated and pinned.
  */
-phys_addr_t _nvmap_get_addr_from_id(u32 user_id)
+phys_addr_t _nvmap_get_addr_from_id(ulong user_id)
 {
 	struct nvmap_handle *h = (struct nvmap_handle *)unmarshal_user_id(
 								user_id);

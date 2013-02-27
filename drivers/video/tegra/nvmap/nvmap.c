@@ -641,6 +641,12 @@ phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 	return phys;
 }
 
+phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
+					unsigned long user_id)
+{
+	return nvmap_handle_address(c, unmarshal_user_id(user_id));
+}
+
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 {
 	if (!ref)

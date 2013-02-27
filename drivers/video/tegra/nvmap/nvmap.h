@@ -279,6 +279,8 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 
 void nvmap_free_handle_id(struct nvmap_client *c, unsigned long id);
 
+void nvmap_free_handle_user_id(struct nvmap_client *c, unsigned long user_id);
+
 int nvmap_pin_ids(struct nvmap_client *client,
 		  unsigned int nr, const unsigned long *ids);
 

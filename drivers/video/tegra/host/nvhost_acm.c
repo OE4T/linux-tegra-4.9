@@ -611,6 +611,7 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 
 	return ret;
 }
+EXPORT_SYMBOL(nvhost_module_add_domain);
 
 int nvhost_module_enable_clk(struct device *dev)
 {
@@ -678,6 +679,7 @@ int nvhost_module_power_on(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_power_on);
 
 int nvhost_module_power_off(struct platform_device *pdev)
 {
@@ -694,6 +696,7 @@ int nvhost_module_power_off(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_power_off);
 
 int nvhost_module_prepare_poweroff(struct device *dev)
 {

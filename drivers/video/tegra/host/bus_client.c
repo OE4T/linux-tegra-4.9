@@ -1523,12 +1523,14 @@ int nvhost_client_device_suspend(struct device *dev)
 
 	return ret;
 }
+EXPORT_SYMBOL(nvhost_client_device_suspend);
 
 int nvhost_client_device_resume(struct device *dev)
 {
 	dev_info(dev, "resuming\n");
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_client_device_resume);
 
 int nvhost_client_device_get_resources(struct platform_device *dev)
 {

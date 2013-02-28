@@ -19,6 +19,7 @@
  */
 
 #include <linux/export.h>
+#include <linux/module.h>
 #include <linux/resource.h>
 #include <linux/pm_runtime.h>
 #include <linux/of.h>
@@ -28,6 +29,7 @@
 
 #include <mach/pm_domains.h>
 #include <mach/clk.h>
+#include <media/tegra_v4l2_camera.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -83,6 +85,8 @@ static int vi_powergate(struct generic_pm_domain *domain)
 }
 #endif
 
+static struct i2c_camera_ctrl *i2c_ctrl;
+
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -104,6 +108,8 @@ static int vi_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	i2c_ctrl = pdata->private_data;
+
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 
 	tegra_vi = kzalloc(sizeof(struct vi), GFP_KERNEL);
@@ -114,12 +120,17 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_vi->ndev = dev;
 	pdata->private_data = tegra_vi;
+
+	/* Create I2C Devices according to settings from board file */
+	if (i2c_ctrl && i2c_ctrl->new_devices)
+		i2c_ctrl->new_devices(dev);
+
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
 	if (!tegra_vi->camera) {
 		dev_err(&dev->dev, "%s: can't register tegra_camera\n",
 				__func__);
-		goto camera_register_fail;
+		goto camera_i2c_unregister;
 	}
 #endif
 
@@ -146,11 +157,11 @@ static int vi_probe(struct platform_device *dev)
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
-		goto camera_register_fail;
+		goto camera_unregister;
 
 	err = nvhost_client_device_init(dev);
 	if (err)
-		goto camera_register_fail;
+		goto camera_unregister;
 
 #ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
@@ -165,7 +176,14 @@ static int vi_probe(struct platform_device *dev)
 
 	return 0;
 
-camera_register_fail:
+camera_unregister:
+#ifdef CONFIG_TEGRA_CAMERA
+	tegra_camera_unregister(tegra_vi->camera);
+#endif
+camera_i2c_unregister:
+	if (i2c_ctrl && i2c_ctrl->remove_devices)
+		i2c_ctrl->remove_devices(dev);
+	pdata->private_data = i2c_ctrl;
 	kfree(tegra_vi);
 	return err;
 }
@@ -174,12 +192,14 @@ static int __exit vi_remove(struct platform_device *dev)
 {
 #ifdef CONFIG_TEGRA_CAMERA
 	int err = 0;
+#endif
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(dev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
-#endif
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
+
+	nvhost_client_device_release(dev);
 
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
@@ -193,6 +213,12 @@ static int __exit vi_remove(struct platform_device *dev)
 #else
 	nvhost_module_disable_clk(&dev->dev);
 #endif
+	/* Remove I2C Devices according to settings from board file */
+	if (i2c_ctrl && i2c_ctrl->remove_devices)
+		i2c_ctrl->remove_devices(dev);
+
+	pdata->private_data = i2c_ctrl;
+	kfree(tegra_vi);
 
 	return 0;
 }
@@ -412,3 +438,4 @@ const struct file_operations tegra_vi_ctrl_ops = {
 
 late_initcall(vi_init);
 module_exit(vi_exit);
+MODULE_LICENSE("GPL v2");

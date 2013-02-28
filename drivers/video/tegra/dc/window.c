@@ -104,18 +104,54 @@ static u32 blend_3win(int idx, unsigned long behind_mask,
 						u32* flags, int win_num)
 {
 	unsigned long infront_mask;
-	int first;
+	int first, second;
 
 	infront_mask = ~(behind_mask | BIT(idx));
 	infront_mask &= (BIT(win_num) - 1);
 	first = ffs(infront_mask) - 1;
 
-	if (!infront_mask)
-		return blend_topwin(flags[idx]);
-	else if (behind_mask && first != -1 && flags[first])
-		return BLEND(NOKEY, DEPENDANT, 0x00, 0x00);
-	else
-		return BLEND(NOKEY, FIX, 0x0, 0x0);
+	if (win_num != 3) {
+		if (!infront_mask)
+			return blend_topwin(flags[idx]);
+		else if (behind_mask && first != -1 && flags[first])
+			return BLEND(NOKEY, DEPENDANT, 0x00, 0x00);
+		else
+			return BLEND(NOKEY, FIX, 0x0, 0x0);
+	} else {
+		if (!infront_mask) {
+			return blend_topwin(flags[idx]);
+		} else if (behind_mask) {
+			/* If the first (top) window is not opaque, check if the
+			 * current (middle) window is not opaque. If yes then we need
+			 * to enable appropriate blending mode otherwise current window
+			 * is dependent on the first window. If the first window is
+			 * opaque then the current window has no contribution and we
+			 * set its weight to 0.
+			 */
+
+			if (flags[first]) {
+				if (flags[idx])
+					return blend_topwin(flags[idx]);
+				else
+					return BLEND(NOKEY, DEPENDANT, 0x00, 0x00);
+			} else {
+				return BLEND(NOKEY, FIX, 0x00, 0x00);
+			}
+		} else {
+			infront_mask &= ~(BIT(first));
+			second = ffs(infront_mask) - 1;
+
+			/* If both windows above the bottom window are not opaque then
+			 * the bottom window is dependent otherwise the bottom window
+			 * has no contribution and we set its weight to 0.
+			 */
+
+			if (flags[first] && flags[second])
+				return BLEND(NOKEY, DEPENDANT, 0x00, 0x00);
+			else
+				return BLEND(NOKEY, FIX, 0x00, 0x00);
+		}
+	}
 }
 
 static void tegra_dc_blend_parallel(struct tegra_dc *dc,

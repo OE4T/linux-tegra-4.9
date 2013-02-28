@@ -302,4 +302,10 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id, u32 thre
 
 void nvhost_scale3d_set_throughput_hint(int hint);
 
+/* Hacky way to get access to struct nvhost_device_data for VI device. */
+extern struct nvhost_device_data t20_vi_info;
+extern struct nvhost_device_data t30_vi_info;
+extern struct nvhost_device_data t11_vi_info;
+extern struct nvhost_device_data t14_vi_info;
+
 #endif

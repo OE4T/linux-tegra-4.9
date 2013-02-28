@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+#include <linux/export.h>
 #include <linux/mutex.h>
 #include <linux/kernel.h>
 #include <linux/nvhost_ioctl.h>
@@ -226,6 +228,7 @@ struct nvhost_device_data t30_vi_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_VI,
 };
+EXPORT_SYMBOL(t30_vi_info);
 
 static struct platform_device tegra_vi01_device = {
 	.name		= "vi",

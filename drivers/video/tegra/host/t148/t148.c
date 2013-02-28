@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/export.h>
 #include <linux/mutex.h>
 #include <mach/powergate.h>
 #include <linux/nvhost.h>
@@ -233,6 +234,7 @@ struct nvhost_device_data t14_vi_info = {
 	.moduleid	= NVHOST_MODULE_VI,
 	.update_clk	= nvhost_host1x_update_clk,
 };
+EXPORT_SYMBOL(t14_vi_info);
 
 static struct platform_device tegra_vi01_device = {
 	.name		= "vi",

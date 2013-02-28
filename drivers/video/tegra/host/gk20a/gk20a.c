@@ -594,36 +594,13 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 
 void nvhost_gk20a_init(struct platform_device *dev)
 {
-	struct gk20a *gk20a;
 	nvhost_dbg_fn("");
-
-	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
-	if (!gk20a) {
-		dev_err(&dev->dev, "couldn't allocate gk20a support");
-		return;
-	}
-
-	set_gk20a(dev, gk20a);
-	gk20a->dev = dev;
-	gk20a->host = nvhost_get_host(dev);
-
-	nvhost_init_gk20a_support(dev);
-
-	return;
 }
 
 static void nvhost_gk20a_deinit(struct platform_device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
 	nvhost_dbg_fn("");
-
-	if (g && g->remove_support)
-		g->remove_support(dev);
-
-	set_gk20a(dev, 0);
-	kfree(g);
 }
-
 
 static void gk20a_free_hwctx(struct kref *ref)
 {
@@ -777,6 +754,7 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 static int __devinit gk20a_probe(struct platform_device *dev)
 {
+	struct gk20a *gk20a;
 	int err;
 
 	struct nvhost_device_data *pdata =
@@ -813,12 +791,32 @@ static int __devinit gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 
+	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
+	if (!gk20a) {
+		dev_err(&dev->dev, "couldn't allocate gk20a support");
+		return -ENOMEM;
+	}
+
+	set_gk20a(dev, gk20a);
+	gk20a->dev = dev;
+	gk20a->host = nvhost_get_host(dev);
+
+	nvhost_init_gk20a_support(dev);
+
 	return 0;
 }
 
 static int __exit gk20a_remove(struct platform_device *dev)
 {
-	/* Add clean-up */
+	struct gk20a *g = get_gk20a(dev);
+	nvhost_dbg_fn("");
+
+	if (g && g->remove_support)
+		g->remove_support(dev);
+
+	set_gk20a(dev, 0);
+	kfree(g);
+
 	return 0;
 }
 

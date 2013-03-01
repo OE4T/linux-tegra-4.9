@@ -42,6 +42,18 @@ static int t124_num_alloc_channels = 0;
 
 #define HOST_EMC_FLOOR 300000000
 
+#define BIT64(nr) (1ULL << (nr))
+#define NVSYNCPTS_CLIENT_MANAGED_T124 ( \
+	BIT64(NVSYNCPT_DISP0_A) | BIT64(NVSYNCPT_DISP1_A) | \
+	BIT64(NVSYNCPT_DISP0_B) | BIT64(NVSYNCPT_DISP1_B) | \
+	BIT64(NVSYNCPT_DISP0_C) | BIT64(NVSYNCPT_DISP1_C) | \
+	BIT64(NVSYNCPT_DSI) | \
+	BIT64(NVSYNCPT_VBLANK0) | BIT64(NVSYNCPT_VBLANK1) | \
+	BIT64(NVSYNCPT_ISP_0_0) | BIT64(NVSYNCPT_ISP_0_1) | \
+	BIT64(NVSYNCPT_ISP_0_3) | \
+	BIT64(NVSYNCPT_ISP_1_0) | BIT64(NVSYNCPT_ISP_1_1) | \
+	BIT64(NVSYNCPT_ISP_1_3) | BIT64(NVSYNCPT_AVP_0))
+
 static struct resource tegra_host1x04_resources[] = {
 	{
 		.start = TEGRA_HOST1X_BASE,
@@ -92,7 +104,7 @@ static struct host1x_device_info host1x04_info = {
 	.nb_mlocks	= NV_HOST1X_NB_MLOCKS,
 	.nb_bases	= NV_HOST1X_SYNCPT_NB_BASES,
 	.syncpt_names	= s_syncpt_names,
-	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
+	.client_managed	= NVSYNCPTS_CLIENT_MANAGED_T124,
 };
 
 static struct nvhost_device_data tegra_host1x04_info = {
@@ -234,7 +246,7 @@ static struct resource msenc_resources[] = {
 
 static struct nvhost_device_data tegra_msenc03_info = {
 	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
-	.syncpts       = {NVSYNCPT_MSENC},
+	.syncpts       = {NVSYNCPT_MSENC, NVSYNCPT_MSENC_SLICE},
 	.waitbases     = {NVWAITBASE_MSENC},
 	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },

@@ -24,29 +24,6 @@
 #define T124_NVHOST_NUMCHANNELS 12
 #define NVHOST_CHANNEL_BASE 0
 
-/*
- * NOTE: currently we have user-mode code which is relying upon
- * this *exact* ordering of module mutexes across *all* SOCs.
- * For now just deal with it as we have the space to accomodate.
- * The entries marked "n/a" below can be removed when that issue is
- * fixed (and the entries could then be re-ordered/packed).
- */
-#define NVMODMUTEX_2D_FULL_X   (1) /* n/a */
-#define NVMODMUTEX_2D_SIMPLE_X (2) /* n/a */
-#define NVMODMUTEX_2D_SB_A_X   (3) /* n/a */
-#define NVMODMUTEX_2D_SB_B_X   (4) /* n/a */
-#define NVMODMUTEX_3D        (5)
-#define NVMODMUTEX_DISPLAYA  (6)
-#define NVMODMUTEX_DISPLAYB  (7)
-#define NVMODMUTEX_VI_0      (8)
-#define NVMODMUTEX_DSI       (9)
-#ifdef CONFIG_ARCH_TEGRA_VIC
-#define NVMODMUTEX_VIC       (10)
-#endif
-#define NVMODMUTEX_VI_1      (11)
-#define NVMODMUTEX_ISP_0     (1) /* above "1" isn't used in practice on t124 */
-#define NVMODMUTEX_ISP_1     (2) /* above "2" isn't used in practice on t124 */
-
 struct nvhost_chip_support;
 
 int nvhost_init_t124_support(struct nvhost_master *,

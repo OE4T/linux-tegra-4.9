@@ -63,7 +63,9 @@ struct mem_mgr;
 #define NVSYNCPT_VI_ISP_3		(16)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VI_ISP_4		(17)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_2D_0			(18)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_VIC			(18)	/* t124 */
 #define NVSYNCPT_2D_1			(19)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_MSENC_SLICE		(19)	/* t124 */
 #define NVSYNCPT_DISP0_B		(20)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_DISP1_B		(21)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_3D			(22)	/* t20, t30, t114, t148 */
@@ -77,6 +79,24 @@ struct mem_mgr;
 #define NVSYNCPT_TSEC			(28)	/* t114, t148 */
 #define NVSYNCPT_MPE_WR_SAFE		(29)	/* t20, t30 */
 #define NVSYNCPT_DSI			(31)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_ISP_0_0		(32)	/* t124 */
+#define NVSYNCPT_ISP_0_1		(33)	/* t124 */
+#define NVSYNCPT_ISP_0_2		(34)	/* t124 */
+#define NVSYNCPT_ISP_0_3		(35)	/* t124 */
+#define NVSYNCPT_ISP_1_0		(36)	/* t124 */
+#define NVSYNCPT_ISP_1_1		(37)	/* t124 */
+#define NVSYNCPT_ISP_1_2		(38)	/* t124 */
+#define NVSYNCPT_ISP_1_3		(39)	/* t124 */
+#define NVSYNCPT_VI_0_0			(40)	/* t124 */
+#define NVSYNCPT_VI_0_1			(41)	/* t124 */
+#define NVSYNCPT_VI_0_2			(42)	/* t124 */
+#define NVSYNCPT_VI_0_3			(43)	/* t124 */
+#define NVSYNCPT_VI_0_4			(44)	/* t124 */
+#define NVSYNCPT_VI_1_0			(45)	/* t124 */
+#define NVSYNCPT_VI_1_1			(46)	/* t124 */
+#define NVSYNCPT_VI_1_2			(47)	/* t124 */
+#define NVSYNCPT_VI_1_3			(48)	/* t124 */
+#define NVSYNCPT_VI_1_4			(49)	/* t124 */
 
 #define NVWAITBASE_2D_0			(1)	/* t20, t30, t114 */
 #define NVWAITBASE_2D_1			(2)	/* t20, t30, t114 */
@@ -86,7 +106,9 @@ struct mem_mgr;
 #define NVWAITBASE_TSEC			(5)	/* t114, t148 */
 
 #define NVMODMUTEX_2D_FULL		(1)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_ISP_0		(1)	/* t124 */
 #define NVMODMUTEX_2D_SIMPLE		(2)	/* t20, t30, t114, t148 */
+#define NVMODMUTEX_ISP_1		(2)	/* t124 */
 #define NVMODMUTEX_2D_SB_A		(3)	/* t20, t30, t114, t148 */
 #define NVMODMUTEX_2D_SB_B		(4)	/* t20, t30, t114, t148 */
 #define NVMODMUTEX_3D			(5)	/* t20, t30, t114, t148 */
@@ -95,7 +117,8 @@ struct mem_mgr;
 #define NVMODMUTEX_VI			(8)	/* t20, t30, t114 */
 #define NVMODMUTEX_VI_0			(8)	/* t148 */
 #define NVMODMUTEX_DSI			(9)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_VI_1			(10)	/* t148 */
+#define NVMODMUTEX_VIC			(10)	/* t124 */
+#define NVMODMUTEX_VI_1			(11)	/* t124 */
 
 /* sync points that are wholly managed by the client */
 #define NVSYNCPTS_CLIENT_MANAGED ( \

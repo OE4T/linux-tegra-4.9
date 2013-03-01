@@ -37,7 +37,7 @@ struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
 	int		nb_bases;	/* host1x: num syncpoints supported */
-	u32		client_managed; /* host1x: client managed syncpts */
+	u64		client_managed; /* host1x: client managed syncpts */
 	int		nb_mlocks;	/* host1x: number of mlocks */
 	const char	**syncpt_names;	/* names of sync points */
 };

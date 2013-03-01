@@ -541,10 +541,8 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 
 int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id)
 {
-	if (id >= BITS_PER_LONG)
-		return 0;
-	else
-		return BIT(id) & syncpt_to_dev(sp)->info.client_managed;
+	u64 mask = 1ULL << id;
+	return !!(syncpt_to_dev(sp)->info.client_managed & mask);
 }
 
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp)

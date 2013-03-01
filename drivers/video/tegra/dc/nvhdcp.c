@@ -483,6 +483,8 @@ static int get_nvhdcp_state(struct tegra_nvhdcp *nvhdcp,
 		pkt->num_bksv_list = nvhdcp->num_bksv_list;
 		for (i = 0; i < pkt->num_bksv_list; i++)
 			pkt->bksv_list[i] = nvhdcp->bksv_list[i];
+		pkt->b_status = nvhdcp->b_status;
+		memcpy(pkt->v_prime, nvhdcp->v_prime, sizeof(nvhdcp->v_prime));
 		pkt->packet_results = TEGRA_NVHDCP_RESULT_SUCCESS;
 	}
 	mutex_unlock(&nvhdcp->lock);

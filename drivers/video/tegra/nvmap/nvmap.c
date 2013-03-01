@@ -788,15 +788,12 @@ void *nvmap_mmap(struct nvmap_handle_ref *ref)
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
 
-	nvmap_usecount_inc(h);
-
 	adj_size = h->carveout->base & ~PAGE_MASK;
 	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
 
 	v = alloc_vm_area(adj_size, NULL);
 	if (!v) {
-		nvmap_usecount_dec(h);
 		nvmap_handle_put(h);
 		return NULL;
 	}
@@ -828,7 +825,6 @@ void *nvmap_mmap(struct nvmap_handle_ref *ref)
 
 	if (offs != adj_size) {
 		free_vm_area(v);
-		nvmap_usecount_dec(h);
 		nvmap_handle_put(h);
 		return NULL;
 	}
@@ -867,7 +863,6 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 		vm = remove_vm_area(addr);
 		BUG_ON(!vm);
 		kfree(vm);
-		nvmap_usecount_dec(h);
 	}
 	nvmap_handle_put(h);
 }

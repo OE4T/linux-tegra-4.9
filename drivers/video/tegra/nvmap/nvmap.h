@@ -85,11 +85,6 @@ struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	atomic_t pin;		/* pin count */
-#ifdef CONFIG_NVMAP_CARVEOUT_COMPACTOR
-	atomic_t usecount;	/* holds map count on carveout handle and is
-					used to avoid relocation during
-					carveout compaction */
-#endif
 	unsigned long flags;
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
@@ -231,9 +226,6 @@ pte_t **nvmap_alloc_pte_irq(struct nvmap_device *dev, void **vaddr);
 void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte);
 
 pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr);
-
-void nvmap_usecount_inc(struct nvmap_handle *h);
-void nvmap_usecount_dec(struct nvmap_handle *h);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

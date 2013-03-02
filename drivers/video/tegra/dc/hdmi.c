@@ -693,6 +693,32 @@ static bool tegra_dc_check_constraint(const struct fb_videomode *mode)
 		mode->xres >= 16 && mode->yres >= 16;
 }
 
+/* adjusts pixclock to fit audio table */
+static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
+					struct fb_videomode *mode)
+{
+	const struct tegra_hdmi_audio_config *cfg = tegra_hdmi_audio_44_1k;
+	unsigned pclk;
+
+	if (!mode->pixclock)
+		return false;
+
+	pclk = PICOS2KHZ(mode->pixclock);
+
+	/* look on 44.1k audio table, if mode's pixel clock is within 1%, then
+	 * use the pixel clock from the audio table.*/
+	while (cfg->pix_clock) {
+		if (cfg->pix_clock > (pclk / 100 * 99) &&
+			cfg->pix_clock < (pclk / 100 * 101) &&
+			cfg->pix_clock >= 1000) {
+			mode->pixclock = KHZ2PICOS(cfg->pix_clock / 1000);
+			return true;
+		}
+		cfg++;
+	}
+	return false;
+}
+
 static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -718,6 +744,8 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 #else
 	/* don't filter any modes due to width - probably not what you want */
 #endif
+
+	tegra_dc_hdmi_adjust_pixclock(dc, mode);
 
 	/* Check if the mode's pixel clock is more than the max rate*/
 	if (!tegra_dc_hdmi_valid_pixclock(dc, mode))

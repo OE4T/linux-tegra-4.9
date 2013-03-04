@@ -57,6 +57,7 @@ struct user_hwctx_handler {
 
 struct nvhost_hwctx_handler *user_ctxhandler_init(u32 syncpt,
 		u32 waitbase, struct nvhost_channel *ch);
+void user_ctxhandler_free(struct nvhost_hwctx_handler *h);
 int user_hwctx_set_restore(struct user_hwctx *ctx,
 		u32 mem, u32 offset, u32 words);
 int user_hwctx_set_save(struct user_hwctx *ctx,

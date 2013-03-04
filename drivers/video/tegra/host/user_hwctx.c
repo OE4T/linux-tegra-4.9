@@ -56,7 +56,7 @@ static void user_hwctx_free(struct kref *ref)
 		container_of(ref, struct nvhost_hwctx, ref);
 	struct user_hwctx *uhwctx = to_user_hwctx(hwctx);
 
-	kfree(to_user_hwctx_handler(hwctx->h));
+	user_ctxhandler_free(hwctx->h);
 
 	if (uhwctx->save_sgt)
 		nvhost_memmgr_unpin(hwctx->memmgr,
@@ -185,4 +185,9 @@ struct nvhost_hwctx_handler *user_ctxhandler_init(u32 syncpt,
 	p->h.put = user_hwctx_put;
 
 	return &p->h;
+}
+
+void user_ctxhandler_free(struct nvhost_hwctx_handler *h)
+{
+	kfree(to_user_hwctx_handler(h));
 }

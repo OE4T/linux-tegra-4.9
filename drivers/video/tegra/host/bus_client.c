@@ -581,8 +581,10 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 	}
 
 	nhwctx = ctxhandler->alloc(ctxhandler, ctx->ch);
-	if (!nhwctx)
-		return -ENOMEM;
+	if (!nhwctx) {
+		err = -ENOMEM;
+		goto fail_hwctx;
+	}
 	hwctx = to_user_hwctx(nhwctx);
 
 	trace_nvhost_ioctl_channel_set_ctxswitch(ctx->ch->dev->name, nhwctx,
@@ -593,11 +595,15 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 			save_incr.syncpt_incrs, restore_incr.syncpt_incrs);
 
 	nhwctx->memmgr = ctx->hwctx->memmgr;
-	user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
+	err = user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
 			cmdbuf_restore.offset, cmdbuf_restore.words);
+	if (err)
+		goto fail_set_restore;
 
-	user_hwctx_set_save(hwctx, cmdbuf_save.mem,
+	err = user_hwctx_set_save(hwctx, cmdbuf_save.mem,
 			cmdbuf_save.offset, cmdbuf_save.words, &reloc);
+	if (err)
+		goto fail_set_save;
 
 	hwctx->hwctx.save_incrs = save_incr.syncpt_incrs;
 	hwctx->hwctx.restore_incrs = restore_incr.syncpt_incrs;
@@ -608,6 +614,11 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 
 	return 0;
 
+fail_set_save:
+fail_set_restore:
+	ctxhandler->put(&hwctx->hwctx);
+fail_hwctx:
+	user_ctxhandler_free(ctxhandler);
 fail:
 	return err;
 }

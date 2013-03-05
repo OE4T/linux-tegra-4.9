@@ -102,16 +102,6 @@ int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
 
-static inline bool nvhost_syncpt_check_max(struct nvhost_syncpt *sp,
-		u32 id, u32 real)
-{
-	u32 max;
-	if (nvhost_syncpt_client_managed(sp, id))
-		return true;
-	max = nvhost_syncpt_read_max(sp, id);
-	return (s32)(max - real) >= 0;
-}
-
 /**
  * Returns true if syncpoint min == max
  */

@@ -328,18 +328,17 @@ static int do_relocs(struct nvhost_job *job,
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
-	unsigned long waitchk_mask[nvhost_syncpt_nb_pts(sp) / BITS_PER_LONG];
+	DECLARE_BITMAP(waitchk_mask, nvhost_syncpt_nb_pts(sp));
 
-	memset(&waitchk_mask[0], 0, sizeof(waitchk_mask));
+	bitmap_zero(waitchk_mask, nvhost_syncpt_nb_pts(sp));
 	for (i = 0; i < job->num_waitchk; i++) {
 		u32 syncpt_id = job->waitchk[i].syncpt_id;
 		if (syncpt_id < nvhost_syncpt_nb_pts(sp))
-			waitchk_mask[BIT_WORD(syncpt_id)]
-				|= BIT_MASK(syncpt_id);
+			set_bit(syncpt_id, waitchk_mask);
 	}
 
 	/* get current syncpt values for waitchk */
-	for_each_set_bit(i, &waitchk_mask[0], sizeof(waitchk_mask))
+	for_each_set_bit(i, waitchk_mask, nvhost_syncpt_nb_pts(sp))
 		nvhost_syncpt_update_min(sp, i);
 
 	/* pin memory */

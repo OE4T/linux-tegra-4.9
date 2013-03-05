@@ -185,7 +185,7 @@ static DEFINE_SPINLOCK(rsa_key_slot_lock);
 
 #define RSA_MIN_SIZE	64
 #define RSA_MAX_SIZE	256
-#define RNG_RESEED_INTERVAL	100
+#define RNG_RESEED_INTERVAL	0x00773594
 #define TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT	4
 
 static DEFINE_SPINLOCK(key_slot_lock);
@@ -351,7 +351,7 @@ static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 	case SE_AES_OP_MODE_RNG_X931:
 	case SE_AES_OP_MODE_RNG_DRBG:
 		val = SE_CONFIG_ENC_ALG(ALG_RNG) |
-			SE_CONFIG_ENC_MODE(MODE_KEY128) |
+			SE_CONFIG_ENC_MODE(MODE_KEY192) |
 				SE_CONFIG_DST(DST_MEMORY);
 		break;
 	case SE_AES_OP_MODE_ECB:
@@ -596,21 +596,19 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
 
 	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
-		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
-						force_reseed_count <= 0) {
+		if (force_reseed_count <= 0) {
 			se_writel(se_dev,
 				SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
-				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
+				SE_RNG_CONFIG_SRC(DRBG_SRC_ENTROPY),
 				SE_RNG_CONFIG_REG_OFFSET);
 		force_reseed_count = RNG_RESEED_INTERVAL;
 		} else {
 			se_writel(se_dev,
 				SE_RNG_CONFIG_MODE(DRBG_MODE_NORMAL)|
-				SE_RNG_CONFIG_SRC(DRBG_SRC_LFSR),
+				SE_RNG_CONFIG_SRC(DRBG_SRC_ENTROPY),
 				SE_RNG_CONFIG_REG_OFFSET);
 		}
-		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11))
-			--force_reseed_count;
+		--force_reseed_count;
 
 		se_writel(se_dev, RNG_RESEED_INTERVAL,
 			SE_RNG_RESEED_INTERVAL_REG_OFFSET);

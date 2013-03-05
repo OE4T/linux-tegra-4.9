@@ -98,6 +98,9 @@ static const struct file_operations nvmap_user_fops = {
 	.open		= nvmap_open,
 	.release	= nvmap_release,
 	.unlocked_ioctl	= nvmap_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvmap_ioctl,
+#endif
 	.mmap		= nvmap_map,
 };
 
@@ -106,6 +109,9 @@ static const struct file_operations nvmap_super_fops = {
 	.open		= nvmap_open,
 	.release	= nvmap_release,
 	.unlocked_ioctl	= nvmap_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvmap_ioctl,
+#endif
 	.mmap		= nvmap_map,
 };
 

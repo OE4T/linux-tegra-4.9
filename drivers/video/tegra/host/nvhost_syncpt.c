@@ -294,16 +294,12 @@ done:
 /**
  * Returns true if syncpoint is expired, false if we may need to wait
  */
-bool nvhost_syncpt_is_expired(
-	struct nvhost_syncpt *sp,
-	u32 id,
+static bool _nvhost_syncpt_is_expired(
+	u32 current_val,
+	u32 future_val,
+	bool has_future_val,
 	u32 thresh)
 {
-	u32 current_val;
-	u32 future_val;
-	current_val = (u32)atomic_read(&sp->min_val[id]);
-	future_val = (u32)atomic_read(&sp->max_val[id]);
-
 	/* Note the use of unsigned arithmetic here (mod 1<<32).
 	 *
 	 * c = current_val = min_val	= the current value of the syncpoint.
@@ -346,10 +342,131 @@ bool nvhost_syncpt_is_expired(
 	 * If future valueis zero, we have a client managed sync point. In that
 	 * case we do a direct comparison.
 	 */
-	if (!nvhost_syncpt_client_managed(sp, id))
+	if (has_future_val)
 		return future_val - thresh >= current_val - thresh;
 	else
 		return (s32)(current_val - thresh) >= 0;
+}
+
+/**
+ * Compares syncpoint values a and b, both of which will trigger either before
+ * or after ref (i.e. a and b trigger before ref, or a and b trigger after
+ * ref). Supplying ref allows us to handle wrapping correctly.
+ *
+ * Returns -1 if a < b (a triggers before b)
+ *	    0 if a = b (a and b trigger at the same time)
+ *	    1 if a > b (b triggers before a)
+ */
+static int _nvhost_syncpt_compare_ref(
+	u32 ref,
+	u32 a,
+	u32 b)
+{
+	/*
+	 * We normalize both a and b by subtracting ref from them.
+	 * Denote the normalized values by a_n and b_n. Note that because
+	 * of wrapping, a_n and/or b_n may be negative.
+	 *
+	 * The normalized values a_n and b_n satisfy:
+	 * - a positive value triggers before a negative value
+	 * - a smaller positive value triggers before a greater positive value
+	 * - a smaller negative value (greater in absolute value) triggers
+	 *   before a greater negative value (smaller in absolute value).
+	 *
+	 * Thus we can just stick to unsigned arithmetic and compare
+	 * (u32)a_n to (u32)b_n.
+	 *
+	 * Just to reiterate the possible cases:
+	 *
+	 *	1A) ...ref..a....b....
+	 *	1B) ...ref..b....a....
+	 *	2A) ...b....ref..a....              b_n < 0
+	 *	2B) ...a....ref..b....     a_n > 0
+	 *	3A) ...a....b....ref..     a_n < 0, b_n < 0
+	 *	3A) ...b....a....ref..     a_n < 0, b_n < 0
+	 */
+	u32 a_n = a - ref;
+	u32 b_n = b - ref;
+	if (a_n < b_n)
+		return -1;
+	else if (a_n > b_n)
+		return 1;
+	else
+		return 0;
+}
+
+/**
+ * Returns -1 if a < b (a triggers before b)
+ *	    0 if a = b (a and b trigger at the same time)
+ *	    1 if a > b (b triggers before a)
+ */
+static int _nvhost_syncpt_compare(
+	u32 current_val,
+	u32 future_val,
+	bool has_future_val,
+	u32 a,
+	u32 b)
+{
+	bool a_expired;
+	bool b_expired;
+
+	/* Early out */
+	if (a == b)
+		return 0;
+
+	a_expired = _nvhost_syncpt_is_expired(current_val, future_val,
+					      has_future_val, a);
+	b_expired = _nvhost_syncpt_is_expired(current_val, future_val,
+					      has_future_val, b);
+	if (a_expired && !b_expired) {
+		/* Easy, a was earlier */
+		return -1;
+	} else if (!a_expired && b_expired) {
+		/* Easy, b was earlier */
+		return 1;
+	}
+
+	/* Both a and b are expired (trigger before current_val) or not
+	 * expired (trigger after current_val), so we can use current_val
+	 * as a reference value for _nvhost_syncpt_compare_ref.
+	 */
+	return _nvhost_syncpt_compare_ref(current_val, a, b);
+}
+
+/**
+ * Returns true if syncpoint is expired, false if we may need to wait
+ */
+bool nvhost_syncpt_is_expired(
+	struct nvhost_syncpt *sp,
+	u32 id,
+	u32 thresh)
+{
+	u32 current_val = (u32)atomic_read(&sp->min_val[id]);
+	u32 future_val = (u32)atomic_read(&sp->max_val[id]);
+	bool has_future_val = !nvhost_syncpt_client_managed(sp, id);
+	return _nvhost_syncpt_is_expired(current_val, future_val,
+					 has_future_val, thresh);
+}
+
+/**
+ * Returns -1 if a < b (a triggers before b)
+ *	    0 if a = b (a and b trigger at the same time)
+ *	    1 if a > b (b triggers before a)
+ */
+int nvhost_syncpt_compare(
+	struct nvhost_syncpt *sp,
+	u32 id,
+	u32 thresh_a,
+	u32 thresh_b)
+{
+	u32 current_val;
+	u32 future_val;
+	bool has_future_val = !nvhost_syncpt_client_managed(sp, id);
+
+	current_val = (u32)atomic_read(&sp->min_val[id]);
+	future_val = (u32)atomic_read(&sp->max_val[id]);
+	return _nvhost_syncpt_compare(current_val, future_val,
+				      has_future_val, thresh_a, thresh_b);
 }
 
 void nvhost_syncpt_debug(struct nvhost_syncpt *sp)

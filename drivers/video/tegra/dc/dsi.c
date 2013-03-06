@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1022,8 +1022,8 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 				struct dsi_phy_timing_inclk *phy_timing,
 				u32 clk_ns, u8 lphs)
 {
-	u32 hs_t_phy_ns;
-	u32 clk_t_phy_ns;
+	u32 hs_t_phy_ns = 0;
+	u32 clk_t_phy_ns = 0;
 	u32 t_phy_ns;
 	u32 h_blank_ns;
 	struct tegra_dc_mode *modes;
@@ -1033,11 +1033,19 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 	if (!(lphs == DSI_LPHS_IN_HS_MODE))
 		goto fail;
 
+	if (dsi->info.video_data_type ==
+		TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE &&
+		dsi->info.video_burst_mode <=
+		TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END)
+		goto fail;
+
 	modes = dsi->dc->out->modes;
 	t_pix_ns = clk_ns * BITS_PER_BYTE *
 		dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
 
 	hs_t_phy_ns =
+		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+		phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC) +
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
 		phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC) +
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
@@ -1049,7 +1057,8 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
 		phy_timing->t_hsdexit, clk_ns, T_HSEXIT_HW_INC);
 
-	clk_t_phy_ns =
+	if (dsi->info.video_clock_mode == TEGRA_DSI_VIDEO_CLOCK_TX_ONLY) {
+		clk_t_phy_ns =
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
 		phy_timing->t_clkpost, clk_ns, T_CLKPOST_HW_INC) +
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
@@ -1065,6 +1074,11 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 		DSI_CONVERT_T_PHY_TO_T_PHY_NS(
 		phy_timing->t_clkpre, clk_ns, T_CLKPRE_HW_INC);
 
+		/* clk_pre overlaps LP-11 hs mode start sequence */
+		hs_t_phy_ns -= DSI_CONVERT_T_PHY_TO_T_PHY_NS(
+			phy_timing->t_tlpx, clk_ns, T_TLPX_HW_INC);
+	}
+
 	h_blank_ns = t_pix_ns * (modes->h_sync_width + modes->h_back_porch +
 						modes->h_front_porch);
 
@@ -1076,7 +1090,7 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 
 	if (h_blank_ns < t_phy_ns) {
 		err = -EINVAL;
-		dev_err(&dsi->dc->ndev->dev,
+		dev_WARN(&dsi->dc->ndev->dev,
 			"dsi: Hblank is smaller than HS trans phy timing\n");
 		goto fail;
 	}

@@ -29,6 +29,7 @@
 #include <linux/of_platform.h>
 
 #include <mach/hardware.h>
+#include <mach/pm_domains.h>
 
 #include "nvhost_hwctx.h"
 #include "nvhost_channel.h"
@@ -673,6 +674,7 @@ static int mpe_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
+	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
 	pm_runtime_enable(&dev->dev);

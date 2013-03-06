@@ -37,6 +37,8 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
+#include <mach/pm_domains.h>
+
 #include "debug.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
@@ -542,6 +544,7 @@ static int nvhost_probe(struct platform_device *dev)
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_disable_unprepare(pdata->clk[i]);
 
+	tegra_pd_add_device(&tegra_mc_chain_b, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
 	pm_runtime_enable(&dev->dev);

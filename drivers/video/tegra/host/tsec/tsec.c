@@ -30,6 +30,9 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+
+#include <mach/pm_domains.h>
+
 #include "dev.h"
 #include "tsec.h"
 #include "hw_tsec.h"
@@ -551,6 +554,7 @@ static int tsec_probe(struct platform_device *dev)
 	tegra_periph_reset_deassert(pdata->clk[0]);
 	clk_disable_unprepare(pdata->clk[0]);
 
+	tegra_pd_add_device(&tegra_mc_chain_b, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
 	pm_runtime_enable(&dev->dev);

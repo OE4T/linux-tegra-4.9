@@ -669,6 +669,12 @@ static int setup_buffer_size_and_align(struct mem_mgr *memmgr,
 		bfr->iovmm_mapped = 0;
 		break;
 
+	case NVMAP_HEAP_CARVEOUT_VPR:
+		/* carveout vpr, contig */
+		bfr->contig = 1;
+		bfr->iovmm_mapped = 0;
+		break;
+
 	case NVMAP_HEAP_IOVMM:
 		/* sysmem, iovmm/smmu mapped */
 		bfr->contig = 1;

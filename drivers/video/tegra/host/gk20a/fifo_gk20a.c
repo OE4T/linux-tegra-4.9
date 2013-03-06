@@ -525,8 +525,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			engine_id,
 			fifo_intr_mmu_fault_info_engine_subid_v(fault_info),
 			fifo_intr_mmu_fault_info_client_v(fault_info),
-			fifo_intr_mmu_fault_hi_r(engine_id),
-			fifo_intr_mmu_fault_lo_r(engine_id),
+			gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id)),
+			gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id)),
 			fifo_intr_mmu_fault_info_type_v(fault_info),
 			fault_info);
 

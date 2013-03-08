@@ -2749,16 +2749,6 @@ static int tegra_se_remove(struct platform_device *pdev)
 #if defined(CONFIG_PM)
 static int tegra_se_resume(struct device *dev)
 {
-	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
-	if ((tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
-		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
-		se_writel(se_dev,
-			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
-		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
-			SE_RNG_SRC_CONFIG_REG_OFFSET);
-		drbg_ro_entropy_src_enabled = 1;
-	}
-
 	return 0;
 }
 

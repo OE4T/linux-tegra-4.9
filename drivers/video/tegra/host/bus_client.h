@@ -36,6 +36,8 @@ int nvhost_client_user_init(struct platform_device *dev);
 
 int nvhost_client_device_init(struct platform_device *dev);
 
+int nvhost_client_device_release(struct platform_device *dev);
+
 int nvhost_client_device_suspend(struct platform_device *dev);
 
 const struct firmware *

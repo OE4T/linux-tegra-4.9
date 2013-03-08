@@ -1129,6 +1129,31 @@ fail:
 }
 EXPORT_SYMBOL(nvhost_client_device_init);
 
+int nvhost_client_device_release(struct platform_device *dev)
+{
+	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
+	struct nvhost_channel *ch;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	ch = pdata->channel;
+
+	/* Release nvhost module resources */
+	nvhost_module_deinit(dev);
+
+	/* Remove from nvhost device list */
+	nvhost_device_list_remove(dev);
+
+	/* Release chardev and device node for user space */
+	device_destroy(nvhost_master->nvhost_class, ch->cdev.dev);
+	cdev_del(&ch->cdev);
+
+	/* Free nvhost channel */
+	nvhost_free_channel(ch);
+
+	return 0;
+}
+EXPORT_SYMBOL(nvhost_client_device_release);
+
 int nvhost_client_device_suspend(struct platform_device *dev)
 {
 	int ret = 0;

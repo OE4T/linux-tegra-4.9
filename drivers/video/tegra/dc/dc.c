@@ -1242,8 +1242,8 @@ static bool tegra_dc_windows_are_dirty(struct tegra_dc *dc)
 		return false;
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-	if (val & (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ))
-	    return true;
+	if (val & WIN_ALL_ACT_REQ)
+		return true;
 
 	return false;
 }

@@ -26,6 +26,13 @@
 #endif
 #include <mach/powergate.h>
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ | \
+	WIN_D_ACT_REQ | WIN_H_ACT_REQ)
+#else
+#define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
+#endif
+
 static inline void tegra_dc_io_start(struct tegra_dc *dc)
 {
 	nvhost_module_busy_ext(dc->ndev);

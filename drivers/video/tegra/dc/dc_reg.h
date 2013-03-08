@@ -107,10 +107,18 @@
 #define  WIN_A_ACT_REQ		(1 << 1)
 #define  WIN_B_ACT_REQ		(1 << 2)
 #define  WIN_C_ACT_REQ		(1 << 3)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define  WIN_D_ACT_REQ		(1 << 4)
+#define  WIN_H_ACT_REQ		(1 << 5)
+#endif
 #define  GENERAL_UPDATE		(1 << 8)
 #define  WIN_A_UPDATE		(1 << 9)
 #define  WIN_B_UPDATE		(1 << 10)
 #define  WIN_C_UPDATE		(1 << 11)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define  WIN_D_UPDATE		(1 << 12)
+#define  WIN_H_UPDATE		(1 << 13)
+#endif
 #define  NC_HOST_TRIG		(1 << 24)
 
 #define DC_CMD_DISPLAY_WINDOW_HEADER		0x042

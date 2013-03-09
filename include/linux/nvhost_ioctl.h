@@ -190,6 +190,11 @@ struct nvhost_wait_args {
 	} condition; /* determined by type field */
 };
 
+/* cycle stats support */
+struct nvhost_cycle_stats_args {
+	u32 nvmap_handle;
+};
+
 struct nvhost_read_3d_reg_args {
 	__u32 offset;
 	__u32 value;
@@ -336,9 +341,11 @@ struct nvhost_set_ctxswitch_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 104, struct nvhost_alloc_obj_ctx_args)
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
 	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
+#define NVHOST_IOCTL_CHANNEL_CYCLE_STATS	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 106, struct nvhost_cycle_stats_args)
 
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZCULL_BIND)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_CYCLE_STATS)
 
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics channel
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,8 @@
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
 #include "chip_support.h"
+
+#define NVMAP_HANDLE_PARAM_SIZE 1
 
 static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f);
 static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
@@ -311,7 +313,7 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 		goto clean_up;
 	}
 
-	ch->inst_block.mem.sgt = 
+	ch->inst_block.mem.sgt =
 		mem_op().pin(memmgr, ch->inst_block.mem.ref);
 	ch->inst_block.cpu_pa = sg_dma_address(ch->inst_block.mem.sgt->sgl);
 
@@ -1070,6 +1072,9 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->hw_chid = chid;
 	c->bound = false;
 	c->remove_support = gk20a_remove_channel_support;
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
+#endif
 	return 0;
 }
 
@@ -1174,6 +1179,55 @@ notif_clean_up:
 
 	return 0;
 }
+
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
+		       struct nvhost_cycle_stats_args *args)
+{
+	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
+	struct mem_handle *handle_ref;
+	void *virtual_address;
+	u32 cyclestate_buffer_size;
+	struct platform_device *dev = ch->ch->dev;
+
+	if (args->nvmap_handle && !ch->cyclestate.cyclestate_buffer_handler) {
+		/* set up new cyclestats buffer */
+		handle_ref = mem_op().get(memmgr, args->nvmap_handle, dev);
+		if (handle_ref == NULL)
+			return -ENOMEM;
+
+		virtual_address = mem_op().mmap(handle_ref);
+		if (IS_ERR(virtual_address))
+			return -ENOMEM;
+
+		mem_op().get_param(memmgr, handle_ref,
+			NVMAP_HANDLE_PARAM_SIZE, &cyclestate_buffer_size);
+
+		ch->cyclestate.cyclestate_buffer_handler = handle_ref;
+		ch->cyclestate.cyclestate_buffer = virtual_address;
+		ch->cyclestate.cyclestate_buffer_size = cyclestate_buffer_size;
+		return 0;
+
+	} else if (!args->nvmap_handle && ch->cyclestate.cyclestate_buffer_handler) {
+		/* disable existing cyclestats buffer */
+		mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
+		mem_op().munmap(ch->cyclestate.cyclestate_buffer_handler, ch->cyclestate.cyclestate_buffer);
+		mem_op().put(memmgr, ch->cyclestate.cyclestate_buffer_handler);
+		ch->cyclestate.cyclestate_buffer_handler = NULL;
+		ch->cyclestate.cyclestate_buffer = NULL;
+		ch->cyclestate.cyclestate_buffer_size = 0;
+		mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
+		return 0;
+
+	} else if (!args->nvmap_handle && !ch->cyclestate.cyclestate_buffer_handler) {
+		/* no requst from GL */
+		return 0;
+
+	} else {
+		return -EINVAL;
+	}
+}
+#endif
 
 int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvhost_zcull_bind_args *args)

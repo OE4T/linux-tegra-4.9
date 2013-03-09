@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -433,6 +433,15 @@ static int t124_channel_wait(struct nvhost_hwctx *hwctx,
 	return gk20a_channel_wait(hwctx->priv, args);
 }
 
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+static int t124_channel_cycle_stats(struct nvhost_hwctx *hwctx,
+				struct nvhost_cycle_stats_args *args)
+{
+	nvhost_dbg_fn("");
+	return gk20a_channel_cycle_stats(hwctx->priv, args);
+}
+#endif
+
 static int t124_channel_zcull_bind(struct nvhost_hwctx *hwctx,
 			    struct nvhost_zcull_bind_args *args)
 {
@@ -501,6 +510,10 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	op->channel.alloc_gpfifo  = t124_channel_alloc_gpfifo;
 	op->channel.submit_gpfifo = t124_channel_submit_gpfifo;
 	op->channel.wait          = t124_channel_wait;
+
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	op->channel.cycle_stats   = t124_channel_cycle_stats;
+#endif
 	op->channel.zcull.bind     = t124_channel_zcull_bind;
 #endif
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;

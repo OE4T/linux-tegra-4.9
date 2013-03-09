@@ -819,6 +819,18 @@ fail:
 	return err;
 }
 
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+static int nvhost_ioctl_channel_cycle_stats(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_cycle_stats_args *args)
+{
+	int ret;
+	BUG_ON(!channel_op().cycle_stats);
+	ret = channel_op().cycle_stats(ctx->hwctx, args);
+	return ret;
+}
+#endif
+
 static int nvhost_ioctl_channel_read_3d_reg(struct nvhost_channel_userctx *ctx,
 	struct nvhost_read_3d_reg_args *args)
 {
@@ -1092,6 +1104,12 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
 		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
 		break;
+
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:
+		err = nvhost_ioctl_channel_cycle_stats(priv, (void *)buf);
+		break;
+#endif
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
 		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
 		break;
@@ -1290,6 +1308,7 @@ int nvhost_client_user_init(struct platform_device *dev)
 
 	BUG_ON(!ch);
 	// reserve 3 minor #s for <dev> and as-<dev> and ctrl-<dev>
+
 	err = alloc_chrdev_region(&devno, 0, 3, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");

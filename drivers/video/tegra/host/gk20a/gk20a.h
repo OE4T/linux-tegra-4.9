@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -74,6 +74,32 @@ static inline struct gk20a *get_gk20a(struct platform_device *dev)
 {
 	return (struct gk20a *)nvhost_get_private_data(dev);
 }
+
+enum BAR0_DEBUG_OPERATION {
+	BARO_ZERO_NOP = 0,
+	OP_END,
+	BAR0_READ32,
+	BAR0_WRITE32,
+};
+
+struct share_buffer_head {
+	enum BAR0_DEBUG_OPERATION operation;
+/* size of the operation item */
+	u32 size;
+	u32 failed;
+	u32 completed;
+};
+
+struct gk20a_cyclestate_buffer_elem {
+	struct share_buffer_head	head;
+/* IN */
+	u32                       offsetBAR0;
+	u16                       firstBit;
+	u16                       lastBit;
+/* OUT */
+/* keep 64 bits to be consistent */
+	u64                       data;
+};
 
 extern const struct nvhost_as_moduleops gk20a_as_moduleops;
 

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2243,12 +2243,12 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 	memset(mmu_ptr, 0, gr->mmu_rd_mem.mem.size);
 	mem_op().munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
 
-	gr->mmu_wr_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_wr_mem.mem.ref); 
+	gr->mmu_wr_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_wr_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_wr_mem.mem.sgt))
 		goto clean_up;
 	gr->mmu_wr_mem.cpu_pa = sg_dma_address(gr->mmu_wr_mem.mem.sgt->sgl);
 
-	gr->mmu_rd_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_rd_mem.mem.ref); 
+	gr->mmu_rd_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_rd_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_rd_mem.mem.sgt))
 		goto clean_up;
 	gr->mmu_rd_mem.cpu_pa = sg_dma_address(gr->mmu_rd_mem.mem.sgt->sgl);
@@ -3928,10 +3928,110 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	void *virtual_address;
+	u32 buffer_size;
+	u32 offset;
+	u32 new_offset;
+	bool exit;
+	struct share_buffer_head *sh_hdr;
+	u32 raw_reg;
+	u64 mask_orig;
+	u64 v = 0;
+	struct gk20a_cyclestate_buffer_elem *op_elem;
+	/* GL will never use payload 0 for cycle state */
+	if ((ch->cyclestate.cyclestate_buffer == NULL) || (isr_data->data_lo == 0))
+		return 0;
+
+	mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
+
+	virtual_address = ch->cyclestate.cyclestate_buffer;
+	buffer_size = ch->cyclestate.cyclestate_buffer_size;
+	offset = isr_data->data_lo;
+	exit = false;
+	while (!exit) {
+		if (offset >= buffer_size) {
+			WARN_ON(1);
+			break;
+		}
+
+		sh_hdr = (struct share_buffer_head *)
+			((char *)virtual_address + offset);
+
+		if (sh_hdr->size < sizeof(struct share_buffer_head)) {
+			WARN_ON(1);
+			break;
+		}
+		new_offset = offset + sh_hdr->size;
+
+		switch (sh_hdr->operation) {
+		case OP_END:
+			exit = true;
+			break;
+
+		case BAR0_READ32:
+		case BAR0_WRITE32:
+		{
+			op_elem =
+				(struct gk20a_cyclestate_buffer_elem *)
+					sh_hdr;
+			if (op_elem->offsetBAR0 <
+				TEGRA_GK20A_BAR0_SIZE) {
+				mask_orig =
+					((1ULL <<
+					(op_elem->lastBit + 1))
+					-1)&~((1ULL <<
+					op_elem->firstBit)-1);
+
+				raw_reg =
+					gk20a_readl(g,
+						op_elem->offsetBAR0);
+
+				switch (sh_hdr->operation) {
+				case BAR0_READ32:
+					op_elem->data =
+					(raw_reg & mask_orig)
+						>> op_elem->firstBit;
+					break;
+
+				case BAR0_WRITE32:
+					v = 0;
+					if ((unsigned int)mask_orig !=
+					(unsigned int)~0) {
+						v = (unsigned int)
+							(raw_reg & ~mask_orig);
+					}
+
+					v |= ((op_elem->data
+						<< op_elem->firstBit)
+						& mask_orig);
+
+					gk20a_writel(g,
+						op_elem->offsetBAR0,
+						(unsigned int)v);
+						break;
+
+				default:
+						break;
+				}
+			} else {
+				sh_hdr->failed = true;
+				WARN_ON(1);
+			}
+		}
+		break;
+		default:
+		/* no operation content case */
+			exit = true;
+			break;
+		}
+		sh_hdr->completed = true;
+		offset = new_offset;
+	}
+	mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
+#endif
 	nvhost_dbg_fn("");
-
 	wake_up(&ch->notifier_wq);
-
 	return 0;
 }
 

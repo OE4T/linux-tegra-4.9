@@ -3,7 +3,7 @@
  *
  * GK20A graphics channel
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 #include <linux/log2.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
-
+#include <linux/mutex.h>
 struct gk20a;
 struct gr_gk20a;
 struct mem_mgr;
@@ -100,6 +100,14 @@ struct channel_gk20a {
 	wait_queue_head_t semaphore_wq;
 
 	void (*remove_support)(struct channel_gk20a *);
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	struct {
+	void *cyclestate_buffer;
+	u32 cyclestate_buffer_size;
+	struct mem_handle *cyclestate_buffer_handler;
+	struct mutex cyclestate_buffer_mutex;
+	} cyclestate;
+#endif
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -117,6 +125,7 @@ struct nvhost_wait_args;
 struct nvhost_zcull_bind_args;
 struct nvhost_gpfifo;
 struct nvhost_zbc_set_table_args;
+struct nvhost_cycle_stats_args;
 
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 int gk20a_channel_init(struct nvhost_channel *ch, struct nvhost_master *host,
@@ -142,6 +151,10 @@ int gk20a_channel_zbc_set_table(struct channel_gk20a *ch,
 			    struct nvhost_zbc_set_table_args *args);
 int gk20a_channel_zbc_query_table(struct channel_gk20a *ch,
 			    struct nvhost_zbc_query_table_args *args);
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
+			struct nvhost_cycle_stats_args *args);
+#endif
 
 int gk20a_channel_suspend(struct gk20a *g);
 int gk20a_channel_resume(struct gk20a *g);

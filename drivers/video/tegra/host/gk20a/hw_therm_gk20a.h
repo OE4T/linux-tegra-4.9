@@ -414,6 +414,342 @@ static inline u32 therm_use_a_ba_w2_t2h_yes_f(void)
 {
 	return 0x2000000;
 }
+static inline u32 therm_evt_ext_therm_0_r(void)
+{
+	return 0x00020700;
+}
+static inline u32 therm_evt_ext_therm_0__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_m(void)
+{
+	return 0x3f << 8;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_v(u32 r)
+{
+	return (r >> 8) & 0x3f;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_f(u32 v)
+{
+	return (v & 0xff) << 16;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_m(void)
+{
+	return 0xff << 16;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_evt_ext_therm_0_slow_pwm_maxpower_f(void)
+{
+	return 0xff0000;
+}
+static inline u32 therm_evt_ext_therm_0_priority_s(void)
+{
+	return 5;
+}
+static inline u32 therm_evt_ext_therm_0_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
+}
+static inline u32 therm_evt_ext_therm_0_priority_m(void)
+{
+	return 0x1f << 24;
+}
+static inline u32 therm_evt_ext_therm_0_priority_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 therm_evt_ext_therm_0_priority_highest_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_priority_highest_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_0_priority_lowest_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_0_priority_lowest_f(void)
+{
+	return 0x1f000000;
+}
+static inline u32 therm_evt_ext_therm_0_priority_default_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_0_priority_default_f(void)
+{
+	return 0x1f000000;
+}
+static inline u32 therm_evt_ext_therm_1_r(void)
+{
+	return 0x00020704;
+}
+static inline u32 therm_evt_ext_therm_1__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_m(void)
+{
+	return 0x3f << 8;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_v(u32 r)
+{
+	return (r >> 8) & 0x3f;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_f(u32 v)
+{
+	return (v & 0xff) << 16;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_m(void)
+{
+	return 0xff << 16;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_evt_ext_therm_1_slow_pwm_maxpower_f(void)
+{
+	return 0xff0000;
+}
+static inline u32 therm_evt_ext_therm_1_priority_s(void)
+{
+	return 5;
+}
+static inline u32 therm_evt_ext_therm_1_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
+}
+static inline u32 therm_evt_ext_therm_1_priority_m(void)
+{
+	return 0x1f << 24;
+}
+static inline u32 therm_evt_ext_therm_1_priority_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 therm_evt_ext_therm_1_priority_highest_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_priority_highest_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_1_priority_lowest_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_1_priority_lowest_f(void)
+{
+	return 0x1f000000;
+}
+static inline u32 therm_evt_ext_therm_1_priority_default_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_1_priority_default_f(void)
+{
+	return 0x1f000000;
+}
+static inline u32 therm_evt_ext_therm_2_r(void)
+{
+	return 0x00020708;
+}
+static inline u32 therm_evt_ext_therm_2__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_m(void)
+{
+	return 0x3f << 8;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_v(u32 r)
+{
+	return (r >> 8) & 0x3f;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_f(u32 v)
+{
+	return (v & 0xff) << 16;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_m(void)
+{
+	return 0xff << 16;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_evt_ext_therm_2_slow_pwm_maxpower_f(void)
+{
+	return 0xff0000;
+}
+static inline u32 therm_evt_ext_therm_2_priority_s(void)
+{
+	return 5;
+}
+static inline u32 therm_evt_ext_therm_2_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
+}
+static inline u32 therm_evt_ext_therm_2_priority_m(void)
+{
+	return 0x1f << 24;
+}
+static inline u32 therm_evt_ext_therm_2_priority_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 therm_evt_ext_therm_2_priority_highest_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_priority_highest_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_evt_ext_therm_2_priority_lowest_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_2_priority_lowest_f(void)
+{
+	return 0x1f000000;
+}
+static inline u32 therm_evt_ext_therm_2_priority_default_v(void)
+{
+	return 0x0000001f;
+}
+static inline u32 therm_evt_ext_therm_2_priority_default_f(void)
+{
+	return 0x1f000000;
+}
 static inline u32 therm_evt_ba_w0_t1h_r(void)
 {
 	return 0x00020750;
@@ -525,6 +861,78 @@ static inline u32 therm_evt_ba_w0_t1h_priority_default_v(void)
 static inline u32 therm_evt_ba_w0_t1h_priority_default_f(void)
 {
 	return 0x1f000000;
+}
+static inline u32 therm_ctrl_1_r(void)
+{
+	return 0x00020004;
+}
+static inline u32 therm_ctrl_1__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_ctrl_1_isob_disable_s(void)
+{
+	return 1;
+}
+static inline u32 therm_ctrl_1_isob_disable_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 therm_ctrl_1_isob_disable_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 therm_ctrl_1_isob_disable_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 therm_ctrl_1_isob_disable_off_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_ctrl_1_isob_disable_off_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_ctrl_1_isob_disable_on_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_ctrl_1_isob_disable_on_f(void)
+{
+	return 0x200000;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_s(void)
+{
+	return 1;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_ctrl_1_clk_slowdown_intr_gpcclk_enable_f(void)
+{
+	return 0x1000000;
 }
 static inline u32 therm_weight_1_r(void)
 {
@@ -1765,6 +2173,678 @@ static inline u32 therm_config1_ba_enable_yes_v(void)
 static inline u32 therm_config1_ba_enable_yes_f(void)
 {
 	return 0x100000;
+}
+static inline u32 therm_config2_r(void)
+{
+	return 0x00020130;
+}
+static inline u32 therm_config2__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_config2_grad_pwm_period_s(void)
+{
+	return 4;
+}
+static inline u32 therm_config2_grad_pwm_period_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 therm_config2_grad_pwm_period_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 therm_config2_grad_pwm_period_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 therm_config2_grad_pwm_period_max_v(void)
+{
+	return 0x0000000f;
+}
+static inline u32 therm_config2_grad_pwm_period_max_f(void)
+{
+	return 0xf;
+}
+static inline u32 therm_config2_grad_pwm_period_128k_v(void)
+{
+	return 0x0000000f;
+}
+static inline u32 therm_config2_grad_pwm_period_128k_f(void)
+{
+	return 0xf;
+}
+static inline u32 therm_config2_grad_pwm_period_64k_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 therm_config2_grad_pwm_period_64k_f(void)
+{
+	return 0xe;
+}
+static inline u32 therm_config2_grad_pwm_period_32k_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 therm_config2_grad_pwm_period_32k_f(void)
+{
+	return 0xd;
+}
+static inline u32 therm_config2_grad_pwm_period_16k_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 therm_config2_grad_pwm_period_16k_f(void)
+{
+	return 0xc;
+}
+static inline u32 therm_config2_grad_pwm_period_8k_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 therm_config2_grad_pwm_period_8k_f(void)
+{
+	return 0xb;
+}
+static inline u32 therm_config2_grad_pwm_period_4k_v(void)
+{
+	return 0x0000000a;
+}
+static inline u32 therm_config2_grad_pwm_period_4k_f(void)
+{
+	return 0xa;
+}
+static inline u32 therm_config2_grad_pwm_period_2k_v(void)
+{
+	return 0x00000009;
+}
+static inline u32 therm_config2_grad_pwm_period_2k_f(void)
+{
+	return 0x9;
+}
+static inline u32 therm_config2_grad_pwm_period_1k_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 therm_config2_grad_pwm_period_1k_f(void)
+{
+	return 0x8;
+}
+static inline u32 therm_config2_grad_pwm_period_512_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 therm_config2_grad_pwm_period_512_f(void)
+{
+	return 0x7;
+}
+static inline u32 therm_config2_grad_pwm_period_256_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 therm_config2_grad_pwm_period_256_f(void)
+{
+	return 0x6;
+}
+static inline u32 therm_config2_grad_pwm_period_128_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 therm_config2_grad_pwm_period_128_f(void)
+{
+	return 0x5;
+}
+static inline u32 therm_config2_grad_pwm_period_64_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_config2_grad_pwm_period_64_f(void)
+{
+	return 0x4;
+}
+static inline u32 therm_config2_grad_pwm_period_32_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_config2_grad_pwm_period_32_f(void)
+{
+	return 0x3;
+}
+static inline u32 therm_config2_grad_pwm_period_16_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_config2_grad_pwm_period_16_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_config2_grad_pwm_period_8_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_config2_grad_pwm_period_8_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_config2_grad_pwm_period_4_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_config2_grad_pwm_period_4_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_config2_grad_step_duration_s(void)
+{
+	return 4;
+}
+static inline u32 therm_config2_grad_step_duration_f(u32 v)
+{
+	return (v & 0xf) << 8;
+}
+static inline u32 therm_config2_grad_step_duration_m(void)
+{
+	return 0xf << 8;
+}
+static inline u32 therm_config2_grad_step_duration_v(u32 r)
+{
+	return (r >> 8) & 0xf;
+}
+static inline u32 therm_config2_grad_step_duration_128k_v(void)
+{
+	return 0x0000000f;
+}
+static inline u32 therm_config2_grad_step_duration_128k_f(void)
+{
+	return 0xf00;
+}
+static inline u32 therm_config2_grad_step_duration_512_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 therm_config2_grad_step_duration_512_f(void)
+{
+	return 0x700;
+}
+static inline u32 therm_config2_grad_step_duration_256_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 therm_config2_grad_step_duration_256_f(void)
+{
+	return 0x600;
+}
+static inline u32 therm_config2_grad_step_duration_128_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 therm_config2_grad_step_duration_128_f(void)
+{
+	return 0x500;
+}
+static inline u32 therm_config2_grad_step_duration_64_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_config2_grad_step_duration_64_f(void)
+{
+	return 0x400;
+}
+static inline u32 therm_config2_grad_step_duration_32_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_config2_grad_step_duration_32_f(void)
+{
+	return 0x300;
+}
+static inline u32 therm_config2_grad_step_duration_16_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_config2_grad_step_duration_16_f(void)
+{
+	return 0x200;
+}
+static inline u32 therm_config2_grad_step_duration_8_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_config2_grad_step_duration_8_f(void)
+{
+	return 0x100;
+}
+static inline u32 therm_config2_grad_step_duration_4_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_config2_grad_step_duration_4_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_s(void)
+{
+	return 4;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_f(u32 v)
+{
+	return (v & 0xf) << 12;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_m(void)
+{
+	return 0xf << 12;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_v(u32 r)
+{
+	return (r >> 12) & 0xf;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_init_f(void)
+{
+	return 0x1000;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_1_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_1_f(void)
+{
+	return 0x1000;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_2_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_2_f(void)
+{
+	return 0x2000;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_4_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_4_f(void)
+{
+	return 0x4000;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_8_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 therm_config2_grad_step_duration_cycle_8_f(void)
+{
+	return 0x8000;
+}
+static inline u32 therm_config2_slowdown_factor_extended_s(void)
+{
+	return 1;
+}
+static inline u32 therm_config2_slowdown_factor_extended_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 therm_config2_slowdown_factor_extended_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 therm_config2_slowdown_factor_extended_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 therm_config2_slowdown_factor_extended_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_config2_slowdown_factor_extended_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_config2_grad_enable_s(void)
+{
+	return 1;
+}
+static inline u32 therm_config2_grad_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 therm_config2_grad_enable_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 therm_config2_grad_enable_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 therm_config2_grad_enable_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_config2_grad_enable_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_r(u32 i)
+{
+	return 0x00020160+((i)*4);
+}
+static inline u32 therm_clk_slowdown_0__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 therm_clk_slowdown_0__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_m(void)
+{
+	return 0x3f << 0;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_v(u32 r)
+{
+	return (r >> 0) & 0x3f;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div2_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div2_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div4_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div4_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div8_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div8_f(void)
+{
+	return 0x3;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div16_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_factor_div16_f(void)
+{
+	return 0x4;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_s(void)
+{
+	return 1;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_f(u32 v)
+{
+	return (v & 0x1) << 7;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_no_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_no_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_use_local_yes_f(void)
+{
+	return 0x80;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_clk_slowdown_0_hw_failsafe_pwm_maxpower_f(void)
+{
+	return 0xff00;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_f(u32 v)
+{
+	return (v & 0x3f) << 16;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_m(void)
+{
+	return 0x3f << 16;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_v(u32 r)
+{
+	return (r >> 16) & 0x3f;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div2_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div2_f(void)
+{
+	return 0x10000;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div4_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div4_f(void)
+{
+	return 0x20000;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div8_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div8_f(void)
+{
+	return 0x30000;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div16_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_clk_slowdown_0_idle_factor_div16_f(void)
+{
+	return 0x40000;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_f(u32 v)
+{
+	return (v & 0xff) << 24;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_m(void)
+{
+	return 0xff << 24;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_v(u32 r)
+{
+	return (r >> 24) & 0xff;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_clk_slowdown_0_idle_pwm_maxpower_f(void)
+{
+	return 0xff000000;
+}
+static inline u32 therm_clk_slowdown_1_r(u32 i)
+{
+	return 0x00020180+((i)*4);
+}
+static inline u32 therm_clk_slowdown_1__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 therm_clk_slowdown_1__priv_level_mask_v(void)
+{
+	return 0x00000320;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_s(void)
+{
+	return 6;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_m(void)
+{
+	return 0x3f << 0;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_v(u32 r)
+{
+	return (r >> 0) & 0x3f;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div2_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div2_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div4_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div4_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div8_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div8_f(void)
+{
+	return 0x3;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div16_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_factor_div16_f(void)
+{
+	return 0x4;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_s(void)
+{
+	return 8;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_minpower_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_minpower_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_maxpower_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 therm_clk_slowdown_1_sw_therm_pwm_maxpower_f(void)
+{
+	return 0xff00;
 }
 static inline u32 therm_gate_ctrl_r(u32 i)
 {

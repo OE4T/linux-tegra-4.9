@@ -73,6 +73,10 @@ struct nvhost_channel_ops {
 			u32 flags);
 	int (*wait)(struct nvhost_hwctx *,
 		    struct nvhost_wait_args *args);
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	int (*cycle_stats)(struct nvhost_hwctx *,
+			struct nvhost_cycle_stats_args *args);
+#endif
 	struct nvhost_zcull_ops zcull;
 };
 

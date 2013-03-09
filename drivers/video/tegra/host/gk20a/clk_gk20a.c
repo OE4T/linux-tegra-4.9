@@ -166,10 +166,6 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk)
 
 	nvhost_dbg_fn("");
 
-	/* TBD: remove this once emulation supports gpcpll */
-	if (tegra_platform_is_qt())
-		return 0;
-
 	/* put PLL in bypass before programming it */
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),

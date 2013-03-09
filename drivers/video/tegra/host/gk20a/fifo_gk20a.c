@@ -239,13 +239,11 @@ static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	pmc_enable &= ~mc_enable_pfifo_enabled_f();
 	pmc_enable &= ~mc_enable_ce2_enabled_f();
-	pmc_enable &= ~mc_enable_priv_ring_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_enable);
 
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	pmc_enable |= mc_enable_pfifo_enabled_f();
 	pmc_enable |= mc_enable_ce2_enabled_f();
-	pmc_enable |= mc_enable_priv_ring_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_enable);
 	gk20a_readl(g, mc_enable_r());
 
@@ -289,8 +287,6 @@ static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	timeout = gk20a_readl(g, fifo_pb_timeout_r());
 	timeout &= ~fifo_pb_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_pb_timeout_r(), timeout);
-
-	gk20a_reset_priv_ring(g);
 
 	nvhost_dbg_fn("done");
 

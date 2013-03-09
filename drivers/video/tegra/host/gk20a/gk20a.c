@@ -719,6 +719,8 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
+	gk20a_reset_priv_ring(g);
+
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.
 	   This function removes SlowdownOnBoot which applies 32x divider
 	   on gpcpll bypass path. The purpose of slowdown is to save power

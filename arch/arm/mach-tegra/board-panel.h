@@ -65,4 +65,7 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel);
 
 int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
+
+int tegra_init_hdmi(struct platform_device *pdev,
+		     struct platform_device *phost1x);
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

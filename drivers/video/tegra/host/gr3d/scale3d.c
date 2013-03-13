@@ -35,14 +35,18 @@
 #include <linux/slab.h>
 #include <linux/ftrace.h>
 #include <linux/platform_data/tegra_edp.h>
+#include <linux/devfreq.h>
 
 #include <mach/hardware.h>
+
+#include <governor.h>
 
 #include "chip_support.h"
 #include "dev.h"
 #include "scale3d.h"
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
+#include "pod_scaling.h"
 
 #define POW2(x) ((x) * (x))
 
@@ -251,6 +255,10 @@ void nvhost_scale3d_init(struct platform_device *pdev)
 		emc_params->clk_3d_emc = 1;
 
 	profile->private_data = emc_params;
+
+	/* Start using devfreq */
+	if (devfreq_add_governor(&nvhost_podgov))
+		goto err_allocate_emc_params;
 
 	nvhost_scale3d_calibrate_emc(profile);
 

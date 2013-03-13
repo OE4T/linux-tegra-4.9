@@ -29,6 +29,6 @@ struct dentry;
 /* Suspend is called when powering down module */
 void nvhost_scale3d_suspend(struct platform_device *);
 
-extern const struct devfreq_governor nvhost_podgov;
+extern struct devfreq_governor nvhost_podgov;
 
 #endif

@@ -32,13 +32,22 @@ static int gk20a_init_therm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_therm_setup_sw(struct gk20a *g, bool reinit)
+static int gk20a_init_therm_setup_sw(struct gk20a *g)
 {
 	return 0;
 }
 
 static int gk20a_init_therm_setup_hw(struct gk20a *g)
 {
+	/* program NV_THERM registers */
+	gk20a_writel(g, therm_use_a_r(), NV_THERM_USE_A_INIT);
+	gk20a_writel(g, therm_evt_ext_therm_0_r(),
+		NV_THERM_EVT_EXT_THERM_0_INIT);
+	gk20a_writel(g, therm_evt_ext_therm_1_r(),
+		NV_THERM_EVT_EXT_THERM_1_INIT);
+	gk20a_writel(g, therm_evt_ext_therm_2_r(),
+		NV_THERM_EVT_EXT_THERM_2_INIT);
+
 /*
 	u32 data;
 
@@ -114,7 +123,7 @@ static int gk20a_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_therm_support(struct gk20a *g, bool reinit)
+int gk20a_init_therm_support(struct gk20a *g)
 {
 	u32 err;
 
@@ -124,7 +133,7 @@ int gk20a_init_therm_support(struct gk20a *g, bool reinit)
 	if (err)
 		return err;
 
-	err = gk20a_init_therm_setup_sw(g, reinit);
+	err = gk20a_init_therm_setup_sw(g);
 	if (err)
 		return err;
 

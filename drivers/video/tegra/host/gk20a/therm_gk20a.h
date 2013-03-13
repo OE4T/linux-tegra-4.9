@@ -21,6 +21,13 @@
 #ifndef _NVHOST_THERM_GK20A_H_
 #define _NVHOST_THERM_GK20A_H_
 
-int gk20a_init_therm_support(struct gk20a *g, bool reinit);
+/* priority for EXT_THERM_0 event set to highest */
+#define NV_THERM_EVT_EXT_THERM_0_INIT	0x3000100
+#define NV_THERM_EVT_EXT_THERM_1_INIT	0x2000200
+#define NV_THERM_EVT_EXT_THERM_2_INIT	0x1000300
+/* configures the thermal events that may cause clock slowdown */
+#define NV_THERM_USE_A_INIT	0x7
+
+int gk20a_init_therm_support(struct gk20a *g);
 
 #endif /* _NVHOST_THERM_GK20A_H_ */

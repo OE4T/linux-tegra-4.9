@@ -747,6 +747,10 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	if (err)
 		nvhost_err(&dev->dev, "failed to init gk20a pmu");
 
+	err = gk20a_init_therm_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a therm");
+
 	gk20a_channel_resume(g);
 
 	return;

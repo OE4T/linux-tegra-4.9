@@ -182,6 +182,10 @@ static inline u32 host1x_sync_cf0_setup_cf0_limit_v(u32 r)
 {
 	return (r >> 16) & 0x3ff;
 }
+static inline u32 host1x_sync_cmdproc_stat_r(void)
+{
+	return 0xa8;
+}
 static inline u32 host1x_sync_cmdproc_stop_r(void)
 {
 	return 0xac;

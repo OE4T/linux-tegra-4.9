@@ -130,6 +130,10 @@ static inline u32 host1x_sync_hintmask_ext_r(void)
 {
 	return 0x2c;
 }
+static inline u32 host1x_sync_cmdproc_stat_r(void)
+{
+	return 0xa8;
+}
 static inline u32 host1x_sync_cmdproc_stop_r(void)
 {
 	return 0xac;

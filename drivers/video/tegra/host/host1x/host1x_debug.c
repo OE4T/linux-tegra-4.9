@@ -108,7 +108,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	struct nvhost_channel *channel = ch;
 	struct nvhost_cdma *cdma = &channel->cdma;
 	u32 dmaput, dmaget, dmactrl;
-	u32 cbstat, cbread;
+	u32 cbstat, cbread, cmdstat;
 	u32 val, base, baseval;
 	struct nvhost_device_data *pdata = platform_get_drvdata(channel->dev);
 
@@ -117,6 +117,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	dmactrl = readl(channel->aperture + host1x_channel_dmactrl_r());
 	cbread = readl(m->sync_aperture + host1x_sync_cbread0_r() + 4 * chid);
 	cbstat = readl(m->sync_aperture + host1x_sync_cbstat_0_r() + 4 * chid);
+	cmdstat = readl(m->sync_aperture + host1x_sync_cmdproc_stat_r());
 
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
 			    channel->dev->name,
@@ -127,6 +128,9 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 		nvhost_debug_output(o, "inactive\n\n");
 		return;
 	}
+
+	if (cmdstat & BIT(chid))
+		nvhost_debug_output(o, "bad opcode observed, ");
 
 	switch (cbstat) {
 	case 0x00010008:
@@ -229,12 +233,10 @@ static void t20_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 		if (host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(owner))
 			nvhost_debug_output(o, "%d: locked by channel %d\n",
 				i,
-				host1x_sync_mlock_owner_0_mlock_owner_chid_0_f(
+				host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(
 					owner));
 		else if (host1x_sync_mlock_owner_0_mlock_cpu_owns_0_v(owner))
 			nvhost_debug_output(o, "%d: locked by cpu\n", i);
-		else
-			nvhost_debug_output(o, "%d: unlocked\n", i);
 	}
 	nvhost_debug_output(o, "\n");
 }

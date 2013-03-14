@@ -803,8 +803,9 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 		if (val2 & INTERLACE_MODE_ENABLE) {
 			if (val2 & INTERLACE_STATUS_FIELD_2) {
 				if (tegra_platform_is_linsim()) {
-					/* FIXME: this is not needed when the simulator
-					 * clears WIN_x_UPDATE bits as in HW */
+					/* FIXME: this is not needed when
+					the simulator clears WIN_x_UPDATE
+					bits as in HW */
 					dc->windows[i].dirty = 0;
 					completed = 1;
 				} else {

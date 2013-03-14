@@ -229,22 +229,20 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 	return clk_get_rate(dc->clk);
 }
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static inline void _tegra_dc_powergate_locked(struct tegra_dc *dc)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 	tegra_powergate_partition(dc->powergate_id);
-	dc->powered = 0;
 }
 
-static inline void _tegra_dc_unpowergate_locked(struct tegra_dc *dc)
+static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
-	int ret;
-	ret = tegra_unpowergate_partition(dc->powergate_id);
-	if (ret) {
-		dev_err(&dc->ndev->dev, "%s: unpowergate failed\n", __func__);
-		return;
-	}
-	dc->powered = 1;
+	tegra_unpowergate_partition(dc->powergate_id);
+}
+
+static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
+{
+	return tegra_powergate_is_powered(dc->powergate_id);
 }
 
 void tegra_dc_powergate_locked(struct tegra_dc *dc);
@@ -252,6 +250,10 @@ void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
 #else
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }
+static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
+{
+	return true;
+}
 #endif
 
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;

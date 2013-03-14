@@ -332,18 +332,16 @@ static void pid_thermal_gov_stop(struct thermal_zone_device *tz)
 
 static void pid_thermal_gov_update_passive(struct thermal_zone_device *tz,
 					   enum thermal_trip_type trip_type,
-					   unsigned long old_target,
-					   unsigned long target)
+					   unsigned long old,
+					   unsigned long new)
 {
 	if ((trip_type != THERMAL_TRIP_PASSIVE) &&
 			(trip_type != THERMAL_TRIPS_NONE))
 		return;
 
-	if ((!old_target || old_target == THERMAL_NO_TARGET) &&
-			(target && target != THERMAL_NO_TARGET))
+	if ((old == THERMAL_NO_TARGET) && (new != THERMAL_NO_TARGET))
 		tz->passive++;
-	else if ((old_target && old_target != THERMAL_NO_TARGET) &&
-			(!target || target == THERMAL_NO_TARGET))
+	else if ((old != THERMAL_NO_TARGET) && (new == THERMAL_NO_TARGET))
 		tz->passive--;
 }
 

@@ -578,7 +578,7 @@ void nvhost_vic03_finalize_poweron(struct platform_device *dev)
 	vic03_boot(dev);
 }
 
-static int __devinit vic03_probe(struct platform_device *dev)
+static int vic03_probe(struct platform_device *dev)
 {
 	int err;
 	struct nvhost_device_data *pdata =

@@ -1953,8 +1953,9 @@ struct rm31080_ts *rm31080_input_init(struct device *dev, unsigned int irq,
 	input_dev->hint_events_per_packet = 256U;
 
 	input_set_drvdata(input_dev, ts);
+#ifdef NV_ENABLE_CPU_BOOST
 	input_set_capability(input_dev, EV_MSC, MSC_ACTIVITY);
-
+#endif
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(ABS_X, input_dev->absbit);
 	__set_bit(ABS_Y, input_dev->absbit);

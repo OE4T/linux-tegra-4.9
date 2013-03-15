@@ -750,7 +750,7 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	return;
 }
 
-static int __devinit gk20a_probe(struct platform_device *dev)
+static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;

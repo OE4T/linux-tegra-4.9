@@ -610,12 +610,15 @@ phys_addr_t _nvmap_pin(struct nvmap_client *client,
 		if (h->heap_pgalloc && h->pgalloc.dirty)
 			ret = map_iovmm_area(h);
 		if (ret)
-			goto err_out;
+			goto err_out_unpin;
 		phys = handle_phys(h);
 	}
 
 	return phys;
 
+err_out_unpin:
+	nvmap_handle_get(h);
+	handle_unpin(client, h, true);
 err_out:
 	atomic_dec(&ref->pin);
 	nvmap_handle_put(h);

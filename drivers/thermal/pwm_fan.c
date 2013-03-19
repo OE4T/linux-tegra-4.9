@@ -33,6 +33,8 @@
 #include <linux/pwm.h>
 #include <linux/device.h>
 #include <linux/sysfs.h>
+#include <linux/gpio.h>
+#include <linux/interrupt.h>
 
 struct fan_dev_data {
 	int next_state;
@@ -54,6 +56,9 @@ struct fan_dev_data {
 	struct mutex fan_state_lock;
 	int pwm_period;
 	struct device *dev;
+	int tach_gpio;
+	int tach_irq;
+	int tach_enabled;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -117,6 +122,37 @@ static int fan_temp_control_set(void *data, u64 val)
 	mutex_lock(&fan_data->fan_state_lock);
 	fan_data->fan_temp_control_flag = val > 0 ? 1 : 0;
 	mutex_unlock(&fan_data->fan_state_lock);
+	return 0;
+}
+
+static int fan_tach_enabled_show(void *data, u64 *val)
+{
+	struct fan_dev_data *fan_data = (struct fan_dev_data *)data;
+
+	if (!fan_data)
+		return -EINVAL;
+
+	*val = fan_data->tach_enabled;
+
+	return 0;
+}
+
+static int fan_tach_enabled_set(void *data, u64 val)
+{
+	struct fan_dev_data *fan_data = (struct fan_dev_data *)data;
+
+	if (!fan_data)
+		return -EINVAL;
+
+	if (val == 1 && !fan_data->tach_enabled) {
+		enable_irq(fan_data->tach_irq);
+		fan_data->tach_enabled = val;
+	} else if (val == 0 && fan_data->tach_enabled &&
+				fan_data->tach_gpio != -1) {
+		disable_irq(fan_data->tach_irq);
+		fan_data->tach_enabled = val;
+	}
+
 	return 0;
 }
 
@@ -226,6 +262,9 @@ DEFINE_SIMPLE_ATTRIBUTE(fan_target_pwm_fops,
 DEFINE_SIMPLE_ATTRIBUTE(fan_cur_pwm_fops,
 			fan_cur_pwm_show,
 			NULL, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(fan_tach_enabled_fops,
+			fan_tach_enabled_show,
+			fan_tach_enabled_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(fan_step_time_fops,
 			fan_step_time_show,
 			fan_step_time_set, "%llu\n");
@@ -265,6 +304,11 @@ static int pwm_fan_debug_init(struct fan_dev_data *fan_data)
 	if (!debugfs_create_file("cur_pwm", 0444, fan_debugfs_root,
 		(void *)fan_data,
 		&fan_cur_pwm_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("tach_enable", 0644, fan_debugfs_root,
+		(void *)fan_data,
+		&fan_tach_enabled_fops))
 		goto err_out;
 	return 0;
 
@@ -503,6 +547,11 @@ static void remove_sysfs_entry(struct device *dev)
 	sysfs_remove_group(&dev->kobj, &pwm_fan_group);
 }
 
+irqreturn_t fan_tach_isr(int irq, void *data)
+{
+	return IRQ_HANDLED;
+}
+
 static int pwm_fan_probe(struct platform_device *pdev)
 {
 	int i;
@@ -578,6 +627,37 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "got pwm for fan\n");
 	}
 
+	/* init fan tach */
+	fan_data->tach_gpio = data->tach_gpio;
+	fan_data->tach_irq = gpio_to_irq(fan_data->tach_gpio);
+	fan_data->tach_enabled = 0;
+
+	if (fan_data->tach_gpio != -1) {
+		err = gpio_request(fan_data->tach_gpio, "pwm-fan-tach");
+		if (err) {
+			dev_err(&pdev->dev, "fan tach gpio request failed\n");
+			goto tach_gpio_request_fail;
+		}
+
+		err = gpio_direction_input(fan_data->tach_gpio);
+		if (err) {
+			dev_err(&pdev->dev, "fan tach set gpio direction input failed\n");
+			goto tach_request_irq_fail;
+		}
+
+		err = gpio_sysfs_set_active_low(fan_data->tach_gpio, 1);
+		if (err) {
+			dev_err(&pdev->dev, "fan tach set gpio active low failed\n");
+			goto tach_request_irq_fail;
+		}
+
+		err = request_irq(fan_data->tach_irq, fan_tach_isr,
+			IRQF_TRIGGER_FALLING , "pwm-fan-tach", NULL);
+		if (err)
+			goto tach_request_irq_fail;
+		disable_irq_nosync(fan_data->tach_irq);
+	}
+
 	platform_set_drvdata(pdev, fan_data);
 
 	/*turn temp control on*/
@@ -598,6 +678,10 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 sysfs_fail:
 	pwm_free(fan_data->pwm_dev);
+	free_irq(fan_data->tach_irq, NULL);
+tach_request_irq_fail:
+	gpio_free(fan_data->tach_gpio);
+tach_gpio_request_fail:
 pwm_req_fail:
 	thermal_cooling_device_unregister(fan_data->cdev);
 	return err;
@@ -609,6 +693,9 @@ static int pwm_fan_remove(struct platform_device *pdev)
 
 	if (!fan_data)
 		return -EINVAL;
+	debugfs_remove_recursive(fan_debugfs_root);
+	free_irq(fan_data->tach_irq, NULL);
+	gpio_free(fan_data->tach_gpio);
 	pwm_config(fan_data->pwm_dev, 0, fan_data->pwm_period);
 	pwm_disable(fan_data->pwm_dev);
 	pwm_free(fan_data->pwm_dev);

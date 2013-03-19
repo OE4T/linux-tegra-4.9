@@ -23,9 +23,6 @@
 
 #include "mm_gk20a.h"
 
-#define GK20A_PRIV_CMDBUF_ENTRY_NUM		1024
-#define GK20A_PRIV_CMDBUF_ENTRY_PRE_ALLOC_NUM	(GK20A_PRIV_CMDBUF_ENTRY_NUM / 8)
-
 struct priv_cmd_entry {
 	u32 *ptr;
 	u64 gva;

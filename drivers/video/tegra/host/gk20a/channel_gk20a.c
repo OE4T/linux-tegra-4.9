@@ -531,7 +531,18 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	struct priv_cmd_entry *e;
 	u32 i = 0, size;
 
-	size = GK20A_PRIV_CMDBUF_ENTRY_NUM * sizeof(u32);
+	/* Kernel can insert gpfifos before and after user gpfifos.
+	   Before user gpfifos, kernel inserts fence_wait, which takes
+	   syncpoint_a (2 dwords) + syncpoint_b (2 dwords) = 4 dwords.
+	   After user gpfifos, kernel inserts fence_get, which takes
+	   wfi (2 dwords) + syncpoint_a (2 dwords) + syncpoint_b (2 dwords)
+	   = 6 dwords.
+	   Worse case if kernel adds both of them for every user gpfifo,
+	   max size of priv_cmdbuf is :
+	   (gpfifo entry number * (2 / 3) * (4 + 6) * 4 bytes */
+	size = roundup_pow_of_two(
+		c->gpfifo.entry_num * 2 * 10 * sizeof(u32) / 3);
+
 	q->mem.ref = mem_op().alloc(memmgr,
 			size,
 			DEFAULT_ALLOC_ALIGNMENT,
@@ -564,13 +575,13 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 		goto clean_up;
 	}
 
-	q->size = GK20A_PRIV_CMDBUF_ENTRY_NUM;
+	q->size = q->mem.size / sizeof (u32);
 
 	INIT_LIST_HEAD(&q->head);
 	INIT_LIST_HEAD(&q->free);
 
-	/* pre-alloc a few entries and put them on free list */
-	for (i = 0; i < GK20A_PRIV_CMDBUF_ENTRY_PRE_ALLOC_NUM; i++) {
+	/* pre-alloc 25% of priv cmdbuf entries and put them on free list */
+	for (i = 0; i < q->size / 4; i++) {
 		e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 		if (!e) {
 			nvhost_err(d, "ch %d: fail to pre-alloc cmd entry",
@@ -782,8 +793,12 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
 	struct vm_gk20a *ch_vm;
-	u32 gpfifo_size = roundup_pow_of_two(args->num_entries);
+	u32 gpfifo_size;
 	u32 ret;
+
+	/* Kernel can insert one extra gpfifo entry before user submitted gpfifos
+	   and another one after, for internal usage. Triple the requested size. */
+	gpfifo_size = roundup_pow_of_two(args->num_entries * 3);
 
 	if (args->flags & NVHOST_ALLOC_GPFIFO_FLAGS_VPR_ENABLED)
 		c->vpr = true;

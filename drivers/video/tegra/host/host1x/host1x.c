@@ -416,7 +416,10 @@ static const struct file_operations nvhost_ctrlops = {
 	.owner = THIS_MODULE,
 	.release = nvhost_ctrlrelease,
 	.open = nvhost_ctrlopen,
-	.unlocked_ioctl = nvhost_ctrlctl
+	.unlocked_ioctl = nvhost_ctrlctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvhost_ctrlctl,
+#endif
 };
 
 #ifdef CONFIG_PM

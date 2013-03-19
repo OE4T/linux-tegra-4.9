@@ -52,6 +52,7 @@ extern atomic_t sd_brightness;
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
 extern struct tegra_panel dsi_s_wqxga_10_1;
+extern struct tegra_panel dsi_lgd_wxga_7_0;
 extern struct tegra_panel dsi_a_1080p_14_0;
 extern struct tegra_panel edp_a_1080p_14_0;
 extern struct tegra_panel lvds_c_1366_14;

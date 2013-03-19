@@ -1461,6 +1461,9 @@ static const struct file_operations tegra_dc_devops = {
 	.open =			tegra_dc_open,
 	.release =		tegra_dc_release,
 	.unlocked_ioctl =	tegra_dc_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl =	tegra_dc_ioctl,
+#endif
 };
 
 struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,

@@ -1221,6 +1221,9 @@ static const struct file_operations nvhdcp_fops = {
 	.unlocked_ioctl = nvhdcp_dev_ioctl,
 	.open           = nvhdcp_dev_open,
 	.release        = nvhdcp_dev_release,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = nvhdcp_dev_ioctl,
+#endif
 };
 
 /* we only support one AP right now, so should only call this once. */

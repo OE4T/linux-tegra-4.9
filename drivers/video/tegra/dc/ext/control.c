@@ -267,6 +267,9 @@ static const struct file_operations tegra_dc_ext_event_devops = {
 	.read =			tegra_dc_ext_event_read,
 	.poll =			tegra_dc_ext_event_poll,
 	.unlocked_ioctl =	tegra_dc_ext_control_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl =		tegra_dc_ext_control_ioctl
+#endif
 };
 
 int tegra_dc_ext_control_init(void)

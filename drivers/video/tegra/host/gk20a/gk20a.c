@@ -84,6 +84,9 @@ static const struct file_operations gk20a_ctrl_ops = {
 	.release = gk20a_ctrl_dev_release,
 	.open = gk20a_ctrl_dev_open,
 	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_ctrl_dev_ioctl,
+#endif
 };
 
 static const struct file_operations gk20a_dbg_ops = {

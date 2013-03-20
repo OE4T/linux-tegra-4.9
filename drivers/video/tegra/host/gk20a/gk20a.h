@@ -191,7 +191,7 @@ enum {
 #if defined (CONFIG_TEGRA_GK20A_PMU)
 static inline int support_gk20a_pmu(void)
 {
-	return tegra_platform_is_qt() ? 0 : 1;
+	return 1;
 }
 #else
 static inline int support_gk20a_pmu(void){return 0;}

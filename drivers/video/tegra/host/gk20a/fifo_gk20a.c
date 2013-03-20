@@ -711,7 +711,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 	u32 old_buf, new_buf;
 	u32 chid;
 	u32 count = 0;
-	int remain;
+	long remain;
 	bool pending;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;

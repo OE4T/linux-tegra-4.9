@@ -1181,7 +1181,8 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_cmd cmd;
 	u32 desc;
-	int remain, err;
+	long remain;
+	int err;
 	bool status;
 
 	nvhost_dbg_fn("");
@@ -1222,7 +1223,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 			MAX_SCHEDULE_TIMEOUT);
 	if (status == 0) {
 		nvhost_err(dev_from_gk20a(g),
-			"PG_INIT_ACK failed, remaining timeout : 0x%08x", remain);
+			"PG_INIT_ACK failed, remaining timeout : 0x%lx", remain);
 		return -EBUSY;
 	}
 
@@ -1263,7 +1264,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 			MAX_SCHEDULE_TIMEOUT);
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
-			"PGENG FECS buffer load failed, remaining timeout : 0x%08x",
+			"PGENG FECS buffer load failed, remaining timeout : 0x%lx",
 			remain);
 		return -EBUSY;
 	}
@@ -1289,7 +1290,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 			MAX_SCHEDULE_TIMEOUT);
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
-			"PGENG ZBC buffer load failed, remaining timeout 0x%08x",
+			"PGENG ZBC buffer load failed, remaining timeout 0x%lx",
 			remain);
 		return -EBUSY;
 	}
@@ -2352,7 +2353,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
-	int remain;
+	long remain;
 
 	nvhost_dbg_fn("");
 
@@ -2372,7 +2373,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 			MAX_SCHEDULE_TIMEOUT);
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvhost_err(dev_from_gk20a(g),
-				"ELPG_ALLOW_ACK failed, remaining timeout 0x%08x",
+				"ELPG_ALLOW_ACK failed, remaining timeout 0x%lx",
 				remain);
 			return -EBUSY;
 		}
@@ -2397,7 +2398,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 			MAX_SCHEDULE_TIMEOUT);
 	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
 		nvhost_err(dev_from_gk20a(g),
-			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%08x",
+			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%lx",
 			remain);
 		pmu_dump_elpg_stats(pmu);
 		return -EBUSY;

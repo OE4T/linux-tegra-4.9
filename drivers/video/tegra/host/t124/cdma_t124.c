@@ -212,20 +212,6 @@ void t124_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 #endif
 		host1x_cdma_ops.timeout_teardown_end(cdma, getptr);
 }
-static void t124_cdma_timeout_cpu_incr(struct nvhost_cdma *cdma, u32 getptr,
-       u32 syncpt_incrs, u32 syncval, u32 nr_slots, u32 *waitbases)
-{
-	nvhost_dbg_fn("");
-
-#if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
-		return; /*XXX gk20a_cdma_timeout_cpu_incr(cdma, getptr,
-			  syncpt_incrs, syncval, nr_slots);*/
-	else
-#endif
-		host1x_cdma_ops.timeout_cpu_incr(cdma, getptr, syncpt_incrs,
-					  syncval, nr_slots, waitbases);
-}
 
 /**
  * Start channel DMA
@@ -286,7 +272,6 @@ int nvhost_init_t124_cdma_support(struct nvhost_chip_support *op)
 	op->cdma.timeout_destroy = t124_cdma_timeout_destroy;
 	op->cdma.timeout_teardown_begin = t124_cdma_timeout_teardown_begin;
 	op->cdma.timeout_teardown_end = t124_cdma_timeout_teardown_end;
-	op->cdma.timeout_cpu_incr = t124_cdma_timeout_cpu_incr;
 
 	op->push_buffer.reset = t124_push_buffer_reset;
 	op->push_buffer.init = t124_push_buffer_init;

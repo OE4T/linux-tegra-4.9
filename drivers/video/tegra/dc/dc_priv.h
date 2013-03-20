@@ -237,7 +237,11 @@ static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
-	tegra_unpowergate_partition(dc->powergate_id);
+	int ret;
+	ret = tegra_unpowergate_partition(dc->powergate_id);
+	if (ret < 0)
+		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
+							__func__, ret);
 }
 
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)

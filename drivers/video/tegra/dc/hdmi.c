@@ -1130,7 +1130,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	/* TODO: support non-hotplug */
 	ret = request_threaded_irq(gpio_to_irq(dc->out->hotplug_gpio),
 		NULL, tegra_dc_hdmi_irq,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 		dev_name(&dc->ndev->dev), dc);
 
 	if (ret) {

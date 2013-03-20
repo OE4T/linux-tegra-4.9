@@ -391,6 +391,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
+		struct tegra_dc_win *dc_win = tegra_dc_get_window(dc, win->idx);
 		bool scan_column = 0;
 		fixed20_12 h_offset, v_offset;
 		bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
@@ -426,7 +427,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			update_mask |= WIN_A_ACT_REQ << win->idx;
 
 		if (!WIN_IS_ENABLED(win)) {
-			dc->windows[i].dirty = 1;
+			dc_win->dirty = no_vsync ? 0 : 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			continue;
 		}
@@ -533,7 +534,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
-		win->dirty = no_vsync ? 0 : 1;
+		dc_win->dirty = no_vsync ? 0 : 1;
 
 		trace_window_update(dc, win);
 	}

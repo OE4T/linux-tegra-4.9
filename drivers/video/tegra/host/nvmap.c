@@ -63,7 +63,11 @@ void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 
 static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
 {
+#ifdef CONFIG_COMPAT
+	return (struct scatterlist *)(((uintptr_t)gfp_mask)|PAGE_OFFSET);
+#else
 	return (struct scatterlist *)((uintptr_t)gfp_mask);
+#endif
 }
 
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,

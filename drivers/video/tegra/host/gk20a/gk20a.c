@@ -442,7 +442,7 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 
 
 #else /*CONFIG_GK20A_SIM*/
-static inline int gk20a_init_sim_support(struct platform_device *dev);
+static inline int gk20a_init_sim_support(struct platform_device *dev)
 {
 	return 0;
 }

@@ -1759,6 +1759,23 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	return 0;
 }
 
+static int pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = pmu->g;
+	struct pmu_cmd cmd;
+	u32 seq;
+
+	/* PERFMON Stop */
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_stop);
+	cmd.cmd.perfmon.stop.cmd_type = PMU_PERFMON_CMD_ID_STOP;
+
+	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+			NULL, NULL, &seq, ~0);
+	return 0;
+}
+
 static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 			struct pmu_perfmon_msg *msg)
 {
@@ -2396,6 +2413,21 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	nvhost_dbg_fn("done");
 
 	return 0;
+}
+
+int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	int err;
+
+	nvhost_dbg_fn("");
+
+	if (enable)
+		err = pmu_perfmon_start_sampling(pmu);
+	else
+		err = pmu_perfmon_stop_sampling(pmu);
+
+	return err;
 }
 
 int gk20a_pmu_destroy(struct gk20a *g)

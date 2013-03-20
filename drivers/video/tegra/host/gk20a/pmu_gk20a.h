@@ -346,7 +346,7 @@ struct pmu_perfmon_cmd_start {
 };
 
 struct pmu_perfmon_cmd_stop {
-	u8 cmdType;
+	u8 cmd_type;
 };
 
 struct pmu_perfmon_cmd_init {
@@ -694,6 +694,8 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
+
+int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
 
 int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);

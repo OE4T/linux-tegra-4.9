@@ -692,8 +692,9 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	ret |= gk20a_channel_suspend(g);
 
 	ret |= gk20a_fifo_suspend(g);
-	ret |= gk20a_gr_suspend(g);
+	/* disable elpg before gr suspend */
 	ret |= gk20a_pmu_destroy(g);
+	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
 
 	g->power_on = false;

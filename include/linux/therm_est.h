@@ -44,7 +44,7 @@ struct therm_est_data {
 	int tc1;
 	int tc2;
 	int ndevs;
-	struct therm_est_subdevice devs[];
+	struct therm_est_subdevice *devs;
 };
 
 struct therm_fan_est_subdevice {

@@ -27,7 +27,6 @@
 
 struct therm_est_subdevice {
 	void *dev_data;
-	int (*get_temp)(void *, long *);
 	long coeffs[HIST_LEN];
 	long hist[HIST_LEN];
 };

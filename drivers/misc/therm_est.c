@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_est.c
  *
- * Copyright (c) 2010-2013 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,32 +34,73 @@
 #include <linux/suspend.h>
 
 struct therm_estimator {
-	long cur_temp;
-	long polling_period;
+	struct thermal_zone_device *thz;
+	int num_trips;
+	struct thermal_trip_info *trips;
+	struct thermal_zone_params *tzp;
+
 	struct workqueue_struct *workqueue;
 	struct delayed_work therm_est_work;
-	long toffset;
+	long cur_temp;
+	long low_limit;
+	long high_limit;
 	int ntemp;
-	int ndevs;
-	struct therm_est_subdevice *devs;
-	struct thermal_zone_device *thz;
-	char *cdev_type;
-	long trip_temp;
+	long toffset;
+	long polling_period;
 	int tc1;
 	int tc2;
+	int ndevs;
+	struct therm_est_subdevice *devs;
+
 #ifdef CONFIG_PM
 	struct notifier_block pm_nb;
 #endif
 };
 
+static void therm_est_update_limits(struct therm_estimator *est)
+{
+	const int MAX_HIGH_TEMP = 128000;
+	long low_temp = 0, high_temp = MAX_HIGH_TEMP;
+	long trip_temp, passive_low_temp = MAX_HIGH_TEMP;
+	enum thermal_trip_type trip_type;
+	struct thermal_trip_info *trip_state;
+	int i;
+
+	for (i = 0; i < est->num_trips; i++) {
+		trip_state = &est->trips[i];
+		est->thz->ops->get_trip_temp(est->thz, i, &trip_temp);
+		est->thz->ops->get_trip_type(est->thz, i, &trip_type);
+
+		if (!trip_state->tripped) { /* not tripped? update high */
+			if (trip_temp < high_temp)
+				high_temp = trip_temp;
+		} else { /* tripped? update low */
+			if (trip_type != THERMAL_TRIP_PASSIVE) {
+				/* get highest ACTIVE */
+				if (trip_temp > low_temp)
+					low_temp = trip_temp;
+			} else {
+				/* get lowest PASSIVE */
+				if (trip_temp < passive_low_temp)
+					passive_low_temp = trip_temp;
+			}
+		}
+	}
+
+	if (passive_low_temp != MAX_HIGH_TEMP)
+		low_temp = max(low_temp, passive_low_temp);
+
+	est->low_limit = low_temp;
+	est->high_limit = high_temp;
+}
+
 static void therm_est_work_func(struct work_struct *work)
 {
 	int i, j, index, sum = 0;
 	long temp;
-	struct delayed_work *dwork = container_of (work,
+	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
-	struct therm_estimator *est = container_of(
-					dwork,
+	struct therm_estimator *est = container_of(dwork,
 					struct therm_estimator,
 					therm_est_work);
 
@@ -78,12 +119,13 @@ static void therm_est_work_func(struct work_struct *work)
 	}
 
 	est->cur_temp = sum / 100 + est->toffset;
-
 	est->ntemp++;
 
-	if (est->cur_temp >= est->trip_temp)
-		if (est->thz && !est->thz->passive)
-			thermal_zone_device_update(est->thz);
+	if (est->thz && ((est->cur_temp < est->low_limit) ||
+			(est->cur_temp >= est->high_limit))) {
+		thermal_zone_device_update(est->thz);
+		therm_est_update_limits(est);
+	}
 
 	queue_delayed_work(est->workqueue, &est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
@@ -93,10 +135,18 @@ static int therm_est_bind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
 {
 	struct therm_estimator *est = thz->devdata;
+	struct thermal_trip_info *trip_state;
+	int i;
 
-	if (!strcmp(cdev->type, est->cdev_type))
-		thermal_zone_bind_cooling_device(thz, 0, cdev,
-			    THERMAL_NO_LIMIT, THERMAL_NO_LIMIT);
+	for (i = 0; i < est->num_trips; i++) {
+		trip_state = &est->trips[i];
+		if (trip_state->cdev_type &&
+		    !strncmp(trip_state->cdev_type, cdev->type,
+			     THERMAL_NAME_LENGTH))
+			thermal_zone_bind_cooling_device(thz, i, cdev,
+							 trip_state->upper,
+							 trip_state->lower);
+	}
 
 	return 0;
 }
@@ -105,40 +155,59 @@ static int therm_est_unbind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
 {
 	struct therm_estimator *est = thz->devdata;
+	struct thermal_trip_info *trip_state;
+	int i;
 
-	if (!strcmp(cdev->type, est->cdev_type))
-		thermal_zone_unbind_cooling_device(thz, 0, cdev);
+	for (i = 0; i < est->num_trips; i++) {
+		trip_state = &est->trips[i];
+		if (trip_state->cdev_type &&
+		    !strncmp(trip_state->cdev_type, cdev->type,
+			     THERMAL_NAME_LENGTH))
+			thermal_zone_unbind_cooling_device(thz, i, cdev);
+	}
 
 	return 0;
 }
 
 static int therm_est_get_trip_type(struct thermal_zone_device *thz,
-					int trip,
-					enum thermal_trip_type *type)
+				   int trip, enum thermal_trip_type *type)
 {
-	*type = THERMAL_TRIP_PASSIVE;
+	struct therm_estimator *est = thz->devdata;
+
+	*type = est->trips[trip].trip_type;
 	return 0;
 }
 
 static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long *temp)
+				   int trip, unsigned long *temp)
 {
 	struct therm_estimator *est = thz->devdata;
+	struct thermal_trip_info *trip_state = &est->trips[trip];
+	unsigned long trip_temp, zone_temp;
 
-	*temp = est->trip_temp;
+	trip_temp = trip_state->trip_temp;
+	zone_temp = thz->temperature;
+
+	if (zone_temp >= trip_temp) {
+		trip_temp -= trip_state->hysteresis;
+		trip_state->tripped = true;
+	} else if (trip_state->tripped) {
+		trip_temp -= trip_state->hysteresis;
+		if (zone_temp < trip_temp)
+			trip_state->tripped = false;
+	}
+
+	*temp = trip_temp;
 
 	return 0;
 }
 
 static int therm_est_set_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long temp)
+				   int trip, unsigned long temp)
 {
 	struct therm_estimator *est = thz->devdata;
 
-	est->trip_temp = temp;
-
+	est->trips[trip].trip_temp = temp;
 	return 0;
 }
 
@@ -146,29 +215,42 @@ static int therm_est_get_temp(struct thermal_zone_device *thz,
 				unsigned long *temp)
 {
 	struct therm_estimator *est = thz->devdata;
+
 	*temp = est->cur_temp;
 	return 0;
 }
 
 static int therm_est_get_trend(struct thermal_zone_device *thz,
-				int trip,
-				enum thermal_trend *trend)
+			       int trip, enum thermal_trend *trend)
 {
 	struct therm_estimator *est = thz->devdata;
+	struct thermal_trip_info *trip_state = &est->trips[trip];
+	long trip_temp;
 	int new_trend;
 	int cur_temp;
 
+	thz->ops->get_trip_temp(thz, trip, &trip_temp);
+
 	cur_temp = thz->temperature;
 	new_trend = (est->tc1 * (cur_temp - thz->last_temperature)) +
-		    (est->tc2 * (cur_temp - est->trip_temp));
+		    (est->tc2 * (cur_temp - trip_temp));
 
-	if (new_trend > 0)
+	switch (trip_state->trip_type) {
+	case THERMAL_TRIP_ACTIVE:
+		/* aggressive active cooling */
 		*trend = THERMAL_TREND_RAISING;
-	else if (new_trend < 0)
-		*trend = THERMAL_TREND_DROPPING;
-	else
-		*trend = THERMAL_TREND_STABLE;
-
+		break;
+	case THERMAL_TRIP_PASSIVE:
+		if (new_trend > 0)
+			*trend = THERMAL_TREND_RAISING;
+		else if (new_trend < 0)
+			*trend = THERMAL_TREND_DROPPING;
+		else
+			*trend = THERMAL_TREND_STABLE;
+		break;
+	default:
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -390,6 +472,8 @@ static int therm_est_pm_notify(struct notifier_block *nb,
 		cancel_delayed_work_sync(&est->therm_est_work);
 		break;
 	case PM_POST_SUSPEND:
+		est->low_limit = 0;
+		est->high_limit = 0;
 		therm_est_init_history(est);
 		queue_delayed_work(est->workqueue,
 				&est->therm_est_work,
@@ -436,17 +520,18 @@ static int __devinit therm_est_probe(struct platform_device *pdev)
 				&est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
 
-	est->trip_temp = data->trip_temp;
-	est->cdev_type = data->cdev_type;
+	est->num_trips = data->num_trips;
+	est->trips = data->trips;
+	est->tzp = data->tzp;
 
 	est->thz = thermal_zone_device_register(dev_name(&pdev->dev),
-					1,
-					0x1,
-					est,
-					&therm_est_ops,
-					NULL,
-					data->passive_delay,
-					0);
+						est->num_trips,
+						(1 << est->num_trips) - 1,
+						est,
+						&therm_est_ops,
+						est->tzp,
+						data->passive_delay,
+						0);
 	if (IS_ERR_OR_NULL(est->thz))
 		goto err;
 

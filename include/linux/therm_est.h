@@ -1,7 +1,7 @@
 /*
  * include/linux/therm_est.h
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -18,6 +18,8 @@
 #define _LINUX_THERM_EST_H
 
 #include <linux/workqueue.h>
+#include <linux/thermal.h>
+#include <linux/platform_data/thermal_sensors.h>
 
 #define HIST_LEN (20)
 
@@ -31,17 +33,18 @@ struct therm_est_subdevice {
 };
 
 struct therm_est_data {
-	/* trip point info : there's only 1 trip point */
-	char *cdev_type; /* cooling device for this trip */
-	long trip_temp;
+	/* trip point info */
+	int num_trips;
+	struct thermal_trip_info *trips;
 
 	/* zone parameters */
+	struct thermal_zone_params *tzp;
 	long toffset;
 	long polling_period;
 	int passive_delay;
-	int ndevs;
 	int tc1;
 	int tc2;
+	int ndevs;
 	struct therm_est_subdevice devs[];
 };
 

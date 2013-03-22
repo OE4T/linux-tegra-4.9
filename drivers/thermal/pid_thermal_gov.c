@@ -382,15 +382,8 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 			derivative = min_t(s64, derivative, max_dout);
 	}
 
-	sum_err = proportional + derivative;
-	sum_err = max_t(s64, sum_err, 0);
-	if (sum_err == 0)
-		return 0;
-
+	sum_err = max_t(s64, proportional + derivative, 0);
 	sum_err = min_t(s64, sum_err, max_err);
-	if (sum_err == max_err)
-		return max_state;
-
 	sum_err = sum_err * max_state + max_err - 1;
 	target = (unsigned long)div64_s64(sum_err, max_err);
 

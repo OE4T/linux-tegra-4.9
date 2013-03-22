@@ -2621,7 +2621,8 @@ int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	zcull_ctx->gpu_va = zcull_va;
 
 	/* TBD: don't disable channel in sw method processing */
-	return gr_gk20a_ctx_zcull_setup(g, c, true);
+	return gr_gk20a_elpg_protected_call(g,
+		gr_gk20a_ctx_zcull_setup(g, c, true));
 }
 
 int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,

@@ -28,7 +28,8 @@
 #define MAX_ERR_GAIN_DEFAULT		1000
 #define GAIN_P_DEFAULT			1000
 #define GAIN_D_DEFAULT			0
-#define COMPENSATION_RATE_DEFAULT	20
+#define UP_COMPENSATION_DEFAULT		20
+#define DOWN_COMPENSATION_DEFAULT	20
 
 struct pid_thermal_gov_attribute {
 	struct attribute attr;
@@ -51,7 +52,8 @@ struct pid_thermal_governor {
 	/* max derivative output, percentage of max error */
 	unsigned long max_dout;
 
-	unsigned long compensation_rate;
+	unsigned long up_compensation;
+	unsigned long down_compensation;
 };
 
 #define tz_to_gov(t)		\
@@ -213,7 +215,39 @@ static ssize_t gain_d_store(struct kobject *kobj, struct attribute *attr,
 static struct pid_thermal_gov_attribute gain_d_attr =
 	__ATTR(gain_d, 0644, gain_d_show, gain_d_store);
 
-static ssize_t compensation_rate_show(struct kobject *kobj,
+static ssize_t up_compensation_show(struct kobject *kobj,
+				    struct attribute *attr, char *buf)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+
+	if (!gov)
+		return -ENODEV;
+
+	return sprintf(buf, "%lu\n", gov->up_compensation);
+}
+
+static ssize_t up_compensation_store(struct kobject *kobj,
+				     struct attribute *attr, const char *buf,
+				     size_t count)
+{
+	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
+	unsigned long val;
+
+	if (!gov)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%lu\n", &val))
+		return -EINVAL;
+
+	gov->up_compensation = val;
+	return count;
+}
+
+static struct pid_thermal_gov_attribute up_compensation_attr =
+	__ATTR(up_compensation, 0644,
+	       up_compensation_show, up_compensation_store);
+
+static ssize_t down_compensation_show(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
 	struct pid_thermal_governor *gov = kobj_to_gov(kobj);
@@ -221,10 +255,10 @@ static ssize_t compensation_rate_show(struct kobject *kobj,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%lu\n", gov->compensation_rate);
+	return sprintf(buf, "%lu\n", gov->down_compensation);
 }
 
-static ssize_t compensation_rate_store(struct kobject *kobj,
+static ssize_t down_compensation_store(struct kobject *kobj,
 				       struct attribute *attr, const char *buf,
 				       size_t count)
 {
@@ -237,13 +271,13 @@ static ssize_t compensation_rate_store(struct kobject *kobj,
 	if (!sscanf(buf, "%lu\n", &val))
 		return -EINVAL;
 
-	gov->compensation_rate = val;
+	gov->down_compensation = val;
 	return count;
 }
 
-static struct pid_thermal_gov_attribute compensation_rate_attr =
-	__ATTR(compensation_rate, 0644,
-	       compensation_rate_show, compensation_rate_store);
+static struct pid_thermal_gov_attribute down_compensation_attr =
+	__ATTR(down_compensation, 0644,
+	       down_compensation_show, down_compensation_store);
 
 static struct attribute *pid_thermal_gov_default_attrs[] = {
 	&max_err_temp_attr.attr,
@@ -251,7 +285,8 @@ static struct attribute *pid_thermal_gov_default_attrs[] = {
 	&gain_p_attr.attr,
 	&gain_d_attr.attr,
 	&max_dout_attr.attr,
-	&compensation_rate_attr.attr,
+	&up_compensation_attr.attr,
+	&down_compensation_attr.attr,
 	NULL,
 };
 
@@ -313,7 +348,8 @@ static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 	gov->max_err_gain = MAX_ERR_GAIN_DEFAULT;
 	gov->gain_p = GAIN_P_DEFAULT;
 	gov->gain_d = GAIN_D_DEFAULT;
-	gov->compensation_rate = COMPENSATION_RATE_DEFAULT;
+	gov->up_compensation = UP_COMPENSATION_DEFAULT;
+	gov->down_compensation = DOWN_COMPENSATION_DEFAULT;
 	tz->governor_data = gov;
 
 	return 0;
@@ -392,11 +428,11 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 		return target;
 
 	if (target > cur_state) {
-		compensation = DIV_ROUND_UP(gov->compensation_rate *
+		compensation = DIV_ROUND_UP(gov->up_compensation *
 					    (target - cur_state), 100);
 		target = min(cur_state + compensation, max_state);
 	} else if (target < cur_state) {
-		compensation = DIV_ROUND_UP(gov->compensation_rate *
+		compensation = DIV_ROUND_UP(gov->down_compensation *
 					    (cur_state - target), 100);
 		target = (cur_state > compensation) ?
 			 (cur_state - compensation) : 0;

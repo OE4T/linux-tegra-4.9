@@ -634,26 +634,26 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	if (fan_data->tach_gpio != -1) {
 		err = gpio_request(fan_data->tach_gpio, "pwm-fan-tach");
-		if (err) {
+		if (err < 0) {
 			dev_err(&pdev->dev, "fan tach gpio request failed\n");
 			goto tach_gpio_request_fail;
 		}
 
 		err = gpio_direction_input(fan_data->tach_gpio);
-		if (err) {
+		if (err < 0) {
 			dev_err(&pdev->dev, "fan tach set gpio direction input failed\n");
 			goto tach_request_irq_fail;
 		}
 
 		err = gpio_sysfs_set_active_low(fan_data->tach_gpio, 1);
-		if (err) {
+		if (err < 0) {
 			dev_err(&pdev->dev, "fan tach set gpio active low failed\n");
 			goto tach_request_irq_fail;
 		}
 
 		err = request_irq(fan_data->tach_irq, fan_tach_isr,
 			IRQF_TRIGGER_FALLING , "pwm-fan-tach", NULL);
-		if (err)
+		if (err < 0)
 			goto tach_request_irq_fail;
 		disable_irq_nosync(fan_data->tach_irq);
 	}

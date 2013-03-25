@@ -446,9 +446,9 @@ static inline int gk20a_init_sim_support(struct platform_device *dev)
 {
 	return 0;
 }
-static void gk20a_remove_sim_support(struct platform_device *dev)
+/*static void gk20a_remove_sim_support(struct platform_device *dev)
 {
-}
+}*/
 #endif /*!CONFIG_GK20A_SIM*/
 
 static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)

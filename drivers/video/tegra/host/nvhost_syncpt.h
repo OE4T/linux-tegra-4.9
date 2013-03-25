@@ -49,6 +49,9 @@ struct nvhost_syncpt {
 	atomic_t *lock_counts;
 	const char **syncpt_names;
 	struct nvhost_syncpt_attr *syncpt_attrs;
+#if CONFIG_TEGRA_GRHOST_SYNC
+	struct nvhost_sync_timeline **timeline;
+#endif
 
 	struct kobject *caps_kobj;
 	struct nvhost_capability_node *caps_nodes;
@@ -164,4 +167,6 @@ int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);
 
 void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx);
 
+struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
+		int idx);
 #endif

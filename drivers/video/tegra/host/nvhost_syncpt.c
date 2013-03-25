@@ -24,6 +24,7 @@
 #include <linux/stat.h>
 #include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
+#include "nvhost_sync.h"
 #include "nvhost_acm.h"
 #include "dev.h"
 #include "chip_support.h"
@@ -502,6 +503,14 @@ int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr)
 	return syncpt_op().patch_wait(sp, patch_addr);
 }
 
+#if CONFIG_TEGRA_GRHOST_SYNC
+struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
+		int idx)
+{
+	return sp->timeline[idx];
+}
+#endif
+
 /* Displays the current value of the sync point via sysfs */
 static ssize_t syncpt_min_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -568,6 +577,14 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			GFP_KERNEL);
 	sp->caps_nodes = kzalloc(sizeof(struct nvhost_capability_node) * 3,
 			GFP_KERNEL);
+#if CONFIG_TEGRA_GRHOST_SYNC
+	sp->timeline = kzalloc(sizeof(struct nvhost_sync_timeline *) *
+			nvhost_syncpt_nb_pts(sp), GFP_KERNEL);
+	if (!sp->timeline) {
+		err = -ENOMEM;
+		goto fail;
+	}
+#endif
 
 	if (!(sp->min_val && sp->max_val && sp->base_val && sp->lock_counts &&
 		sp->caps_nodes)) {
@@ -648,6 +665,13 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			err = -EIO;
 			goto fail;
 		}
+#if CONFIG_TEGRA_GRHOST_SYNC
+		sp->timeline[i] = nvhost_sync_timeline_create(sp, i);
+		if (!sp->timeline[i]) {
+			err = -ENOMEM;
+			goto fail;
+		}
+#endif
 	}
 
 	return err;
@@ -655,6 +679,21 @@ int nvhost_syncpt_init(struct platform_device *dev,
 fail:
 	nvhost_syncpt_deinit(sp);
 	return err;
+}
+
+static void nvhost_syncpt_deinit_timeline(struct nvhost_syncpt *sp)
+{
+#if CONFIG_TEGRA_GRHOST_SYNC
+	int i;
+	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
+		if (sp->timeline && sp->timeline[i]) {
+			sync_timeline_destroy(
+				(struct sync_timeline *)sp->timeline[i]);
+		}
+	}
+	kfree(sp->timeline);
+	sp->timeline = NULL;
+#endif
 }
 
 void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
@@ -680,6 +719,7 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 	kfree(sp->caps_nodes);
 	sp->caps_nodes = NULL;
 
+	nvhost_syncpt_deinit_timeline(sp);
 }
 
 int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id)

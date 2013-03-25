@@ -21,6 +21,7 @@
 #include "nvhost_intr.h"
 #include "dev.h"
 #include "nvhost_acm.h"
+#include "nvhost_sync.h"
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/irq.h>
@@ -174,11 +175,20 @@ static void action_wakeup_interruptible(struct nvhost_waitlist *waiter)
 	wake_up_interruptible(wq);
 }
 
+static void action_signal_sync_pt(struct nvhost_waitlist *waiter)
+{
+#if CONFIG_TEGRA_GRHOST_SYNC
+	struct nvhost_sync_pt *pt = waiter->data;
+	nvhost_sync_pt_signal(pt);
+#endif
+}
+
 typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_submit_complete,
 	action_ctxsave,
+	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,
 };

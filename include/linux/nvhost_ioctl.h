@@ -266,6 +266,18 @@ struct nvhost_ctrl_syncpt_waitmex_args {
 	__u32 reserved_2;
 };
 
+struct nvhost_ctrl_sync_fence_info {
+	__u32 id;
+	__u32 thresh;
+};
+
+struct nvhost_ctrl_sync_fence_create_args {
+	__u32 num_pts;
+	__u64 pts; /* struct nvhost_ctrl_sync_fence_info* */
+	__u64 name; /* const char* */
+	__s32 fence_fd; /* fd of new fence */
+};
+
 struct nvhost_ctrl_module_mutex_args {
 	__u32 id;
 	__u32 lock;
@@ -306,8 +318,11 @@ enum nvhost_module_id {
 #define NVHOST_IOCTL_CTRL_SYNCPT_WAITMEX	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 9, struct nvhost_ctrl_syncpt_waitmex_args)
 
+#define NVHOST_IOCTL_CTRL_SYNC_FENCE_CREATE	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 10, struct nvhost_ctrl_sync_fence_create_args)
+
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_SYNCPT_WAITMEX)
+	_IOC_NR(NVHOST_IOCTL_CTRL_SYNC_FENCE_CREATE)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_syncpt_waitmex_args)
 

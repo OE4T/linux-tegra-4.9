@@ -42,6 +42,12 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_CTXSAVE,
 
 	/**
+	 * Signal a nvhost_sync_pt.
+	 * 'data' points to a nvhost_sync_pt
+	 */
+	NVHOST_INTR_ACTION_SIGNAL_SYNC_PT,
+
+	/**
 	 * Wake up a  task.
 	 * 'data' points to a wait_queue_head_t
 	 */

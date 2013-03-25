@@ -2000,12 +2000,12 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct clk *base_clk = clk_get_parent(parent_clk);
 
 	if (clk != dc->clk) {
-		clk_set_rate(base_clk, dc->mode.pclk * 4);
+		clk_set_rate(base_clk, dc->mode.pclk);
 
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);
 
-		clk_set_rate(clk, dc->mode.pclk);
+		clk_set_rate(clk, dc->mode.pclk / 4);
 	}
 
 	/*

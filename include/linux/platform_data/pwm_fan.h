@@ -27,11 +27,10 @@ struct pwm_fan_platform_data {
 	int active_pwm[MAX_ACTIVE_STATES];
 	int active_rru[MAX_ACTIVE_STATES];
 	int active_rrd[MAX_ACTIVE_STATES];
-	int pwm_cap;
 	int pwm_period;
-	int active_temps[MAX_ACTIVE_STATES];
 	int pwm_id;
 	int step_time;
 	int precision_multiplier;
+	int state_cap;
 };
 #endif

@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013 NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -59,6 +59,7 @@ struct fan_dev_data {
 	int tach_gpio;
 	int tach_irq;
 	int tach_enabled;
+	int fan_state_cap;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -143,6 +144,8 @@ static int fan_tach_enabled_set(void *data, u64 val)
 
 	if (!fan_data)
 		return -EINVAL;
+	if (fan_data->tach_gpio < 0)
+		return -EPERM;
 
 	if (val == 1 && !fan_data->tach_enabled) {
 		enable_irq(fan_data->tach_irq);
@@ -526,10 +529,58 @@ static ssize_t set_fan_pwm_cap_sysfs(struct device *dev,
 	return count;
 }
 
+/*State cap sysfs fops*/
+static ssize_t show_fan_state_cap_sysfs(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
+	int ret;
+
+	if (!fan_data)
+		return -EINVAL;
+	mutex_lock(&fan_data->fan_state_lock);
+	ret = sprintf(buf, "%d\n", fan_data->fan_state_cap);
+	mutex_unlock(&fan_data->fan_state_lock);
+	return ret;
+}
+
+static ssize_t set_fan_state_cap_sysfs(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
+	long val;
+	int ret;
+
+	ret = kstrtol(buf, 10, &val);
+
+	if (ret < 0)
+		return -EINVAL;
+
+	if (!fan_data)
+		return -EINVAL;
+
+	if (val < 0)
+		val = 0;
+	else if (val >= MAX_ACTIVE_STATES)
+		val = MAX_ACTIVE_STATES - 1;
+
+	mutex_lock(&fan_data->fan_state_lock);
+	fan_data->fan_state_cap = val;
+	fan_data->fan_cap_pwm = fan_data->fan_pwm[val];
+	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
+					fan_data->next_target_pwm);
+	mutex_unlock(&fan_data->fan_state_lock);
+	return count;
+}
+
 static DEVICE_ATTR(pwm_cap, S_IWUSR | S_IRUGO, show_fan_pwm_cap_sysfs,
 							set_fan_pwm_cap_sysfs);
+static DEVICE_ATTR(state_cap, S_IWUSR | S_IRUGO,
+			show_fan_state_cap_sysfs, set_fan_state_cap_sysfs);
+
 static struct attribute *pwm_fan_attributes[] = {
 	&dev_attr_pwm_cap.attr,
+	&dev_attr_state_cap.attr,
 	NULL
 };
 
@@ -580,7 +631,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->fan_pwm = rpm_data + data->active_steps;
 	fan_data->fan_rru = fan_data->fan_pwm + data->active_steps;
 	fan_data->fan_rrd = fan_data->fan_rru + data->active_steps;
-
 	mutex_init(&fan_data->fan_state_lock);
 
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
@@ -591,11 +641,11 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 
 	fan_data->precision_multiplier = data->precision_multiplier;
-	fan_data->fan_cap_pwm = data->pwm_cap * data->precision_multiplier;
 	fan_data->step_time = data->step_time;
 	fan_data->active_steps = data->active_steps;
 	fan_data->pwm_period = data->pwm_period;
 	fan_data->dev = &pdev->dev;
+	fan_data->fan_state_cap = data->state_cap;
 
 	for (i = 0; i < fan_data->active_steps; i++) {
 		fan_data->fan_rpm[i] = data->active_rpm[i];
@@ -608,6 +658,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 						fan_data->fan_rru[i],
 						fan_data->fan_rrd[i]);
 	}
+	fan_data->fan_cap_pwm = data->active_pwm[data->state_cap];
+	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",
+			fan_data->fan_state_cap, fan_data->fan_cap_pwm);
 
 	fan_data->cdev =
 		thermal_cooling_device_register((char *)dev_name(&pdev->dev),
@@ -627,12 +680,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "got pwm for fan\n");
 	}
 
-	/* init fan tach */
+
 	fan_data->tach_gpio = data->tach_gpio;
-	fan_data->tach_irq = gpio_to_irq(fan_data->tach_gpio);
 	fan_data->tach_enabled = 0;
 
 	if (fan_data->tach_gpio != -1) {
+		/* init fan tach */
+		fan_data->tach_irq = gpio_to_irq(fan_data->tach_gpio);
 		err = gpio_request(fan_data->tach_gpio, "pwm-fan-tach");
 		if (err < 0) {
 			dev_err(&pdev->dev, "fan tach gpio request failed\n");

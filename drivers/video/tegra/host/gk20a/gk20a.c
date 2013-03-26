@@ -27,6 +27,7 @@
 #include <linux/export.h>
 #include <asm/cacheflush.h>
 
+#include <mach/powergate.h>
 #include <mach/pm_domains.h>
 
 #include "dev.h"
@@ -99,7 +100,7 @@ static struct nvhost_device_data tegra_gk20a_info = {
 	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
 	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", UINT_MAX}, \
 		   {"emc", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.powergate_ids = { TEGRA_POWERGATE_GPU, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay = 500,
 	.can_powergate = true,
@@ -680,8 +681,7 @@ static struct nvhost_hwctx_handler *
 	return h;
 }
 
-#define APBDEV_PMC_GPU_RG_CNTRL_0	0x2d4
-static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
+
 
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 {
@@ -699,7 +699,6 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	ret |= gk20a_mm_suspend(g);
 
 	g->power_on = false;
-	writel(0x1, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
 
 	return ret;
 }
@@ -711,8 +710,6 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	nvhost_dbg_fn("");
 
-	/* remove gk20a clamp in t124 soc register */
-	writel(0, pmc + APBDEV_PMC_GPU_RG_CNTRL_0);
 	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),

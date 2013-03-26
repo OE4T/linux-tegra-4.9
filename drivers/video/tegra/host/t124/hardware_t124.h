@@ -3,7 +3,7 @@
  *
  * Tegra T124 HOST1X Register Definitions
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,7 @@
 #include "host1x/hw_host1x04_sync.h"
 #include "host1x/hw_host1x04_uclass.h"
 #include "host1x/hw_host1x04_channel.h"
+#include "host1x/hw_host1x04_actmon.h"
 
 #define NV_HOST1X_CHANNELS	9
 #define NV_HOST1X_SYNC_MLOCK_NUM 16
@@ -35,6 +36,10 @@
 #define NV_HOST1X_NB_MLOCKS 16
 #define HOST1X_CHANNEL_SYNC_REG_BASE 0x2100
 #define NV_HOST1X_CHANNEL_MAP_SIZE_BYTES 16384
+
+/* actmon regs */
+#define HOST1X_CHANNEL_ACTMON1_REG_BASE 8192
+#define HOST1X_CHANNEL_ACTMON2_REG_BASE 8256
 
 /* Generic support */
 static inline u32 nvhost_class_host_wait_syncpt(

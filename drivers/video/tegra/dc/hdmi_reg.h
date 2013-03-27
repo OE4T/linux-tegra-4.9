@@ -304,83 +304,21 @@
 #define HDMI_NV_PDISP_SOR_TRIG					0x7c
 #define HDMI_NV_PDISP_SOR_MSCHECK				0x7d
 #define HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT			0x7e
-#define  DRIVE_CURRENT_LANE0(x)			(((x) & 0x3f) << 0)
-#define  DRIVE_CURRENT_LANE1(x)			(((x) & 0x3f) << 8)
-#define  DRIVE_CURRENT_LANE2(x)			(((x) & 0x3f) << 16)
-#define  DRIVE_CURRENT_LANE3(x)			(((x) & 0x3f) << 24)
+/* 31:24 - DRIVE_CURRENT_LANE3
+ * 23:16 - DRIVE_CURRENT_LANE2
+ * 15:8  - DRIVE_CURRENT_LANE1
+ * 7:0   - DRIVE_CURRENT_LANE0
+ */
 #define  DRIVE_CURRENT_FUSE_OVERRIDE		(1 << 31)
-#define  DRIVE_CURRENT_1_500_mA			0x00
-#define  DRIVE_CURRENT_1_875_mA			0x01
-#define  DRIVE_CURRENT_2_250_mA			0x02
-#define  DRIVE_CURRENT_2_625_mA			0x03
-#define  DRIVE_CURRENT_3_000_mA			0x04
-#define  DRIVE_CURRENT_3_375_mA			0x05
-#define  DRIVE_CURRENT_3_750_mA			0x06
-#define  DRIVE_CURRENT_4_125_mA			0x07
-#define  DRIVE_CURRENT_4_500_mA			0x08
-#define  DRIVE_CURRENT_4_875_mA			0x09
-#define  DRIVE_CURRENT_5_250_mA			0x0a
-#define  DRIVE_CURRENT_5_625_mA			0x0b
-#define  DRIVE_CURRENT_6_000_mA			0x0c
-#define  DRIVE_CURRENT_6_375_mA			0x0d
-#define  DRIVE_CURRENT_6_750_mA			0x0e
-#define  DRIVE_CURRENT_7_125_mA			0x0f
-#define  DRIVE_CURRENT_7_500_mA			0x10
-#define  DRIVE_CURRENT_7_875_mA			0x11
-#define  DRIVE_CURRENT_8_250_mA			0x12
-#define  DRIVE_CURRENT_8_625_mA			0x13
-#define  DRIVE_CURRENT_9_000_mA			0x14
-#define  DRIVE_CURRENT_9_375_mA			0x15
-#define  DRIVE_CURRENT_9_750_mA			0x16
-#define  DRIVE_CURRENT_10_125_mA		0x17
-#define  DRIVE_CURRENT_10_500_mA		0x18
-#define  DRIVE_CURRENT_10_875_mA		0x19
-#define  DRIVE_CURRENT_11_250_mA		0x1a
-#define  DRIVE_CURRENT_11_625_mA		0x1b
-#define  DRIVE_CURRENT_12_000_mA		0x1c
-#define  DRIVE_CURRENT_12_375_mA		0x1d
-#define  DRIVE_CURRENT_12_750_mA		0x1e
-#define  DRIVE_CURRENT_13_125_mA		0x1f
-#define  DRIVE_CURRENT_13_500_mA		0x20
-#define  DRIVE_CURRENT_13_875_mA		0x21
-#define  DRIVE_CURRENT_14_250_mA		0x22
-#define  DRIVE_CURRENT_14_625_mA		0x23
-#define  DRIVE_CURRENT_15_000_mA		0x24
-#define  DRIVE_CURRENT_15_375_mA		0x25
-#define  DRIVE_CURRENT_15_750_mA		0x26
-#define  DRIVE_CURRENT_16_125_mA		0x27
-#define  DRIVE_CURRENT_16_500_mA		0x28
-#define  DRIVE_CURRENT_16_875_mA		0x29
-#define  DRIVE_CURRENT_17_250_mA		0x2a
-#define  DRIVE_CURRENT_17_625_mA		0x2b
-#define  DRIVE_CURRENT_18_000_mA		0x2c
-#define  DRIVE_CURRENT_18_375_mA		0x2d
-#define  DRIVE_CURRENT_18_750_mA		0x2e
-#define  DRIVE_CURRENT_19_125_mA		0x2f
-#define  DRIVE_CURRENT_19_500_mA		0x30
-#define  DRIVE_CURRENT_19_875_mA		0x31
-#define  DRIVE_CURRENT_20_250_mA		0x32
-#define  DRIVE_CURRENT_20_625_mA		0x33
-#define  DRIVE_CURRENT_21_000_mA		0x34
-#define  DRIVE_CURRENT_21_375_mA		0x35
-#define  DRIVE_CURRENT_21_750_mA		0x36
-#define  DRIVE_CURRENT_22_125_mA		0x37
-#define  DRIVE_CURRENT_22_500_mA		0x38
-#define  DRIVE_CURRENT_22_875_mA		0x39
-#define  DRIVE_CURRENT_23_250_mA		0x3a
-#define  DRIVE_CURRENT_23_625_mA		0x3b
-#define  DRIVE_CURRENT_24_000_mA		0x3c
-#define  DRIVE_CURRENT_24_375_mA		0x3d
-#define  DRIVE_CURRENT_24_750_mA		0x3e
 
 #define HDMI_NV_PDISP_AUDIO_DEBUG0				0x7f
 #define HDMI_NV_PDISP_AUDIO_DEBUG1				0x80
 #define HDMI_NV_PDISP_AUDIO_DEBUG2				0x81
+
 /* note: datasheet defines FS1..FS7.  we have FS(0)..FS(6) */
 #define HDMI_NV_PDISP_AUDIO_FS(x)				(0x82 + (x))
 #define  AUDIO_FS_LOW(x)			(((x) & 0xfff) << 0)
 #define  AUDIO_FS_HIGH(x)			(((x) & 0xfff) << 16)
-
 
 #define HDMI_NV_PDISP_AUDIO_PULSE_WIDTH				0x89
 #define HDMI_NV_PDISP_AUDIO_THRESHOLD				0x8a
@@ -440,26 +378,11 @@
 
 #define HDMI_NV_PDISP_SCRATCH					0x98
 #define HDMI_NV_PDISP_PE_CURRENT				0x99
-#define  PE_CURRENT0(x)				(((x) & 0xf) << 0)
-#define  PE_CURRENT1(x)				(((x) & 0xf) << 8)
-#define  PE_CURRENT2(x)				(((x) & 0xf) << 16)
-#define  PE_CURRENT3(x)				(((x) & 0xf) << 24)
-#define  PE_CURRENT_0_0_mA			0x0
-#define  PE_CURRENT_0_5_mA			0x1
-#define  PE_CURRENT_1_0_mA			0x2
-#define  PE_CURRENT_1_5_mA			0x3
-#define  PE_CURRENT_2_0_mA			0x4
-#define  PE_CURRENT_2_5_mA			0x5
-#define  PE_CURRENT_3_0_mA			0x6
-#define  PE_CURRENT_3_5_mA			0x7
-#define  PE_CURRENT_4_0_mA			0x8
-#define  PE_CURRENT_4_5_mA			0x9
-#define  PE_CURRENT_5_0_mA			0xa
-#define  PE_CURRENT_5_5_mA			0xb
-#define  PE_CURRENT_6_0_mA			0xc
-#define  PE_CURRENT_6_5_mA			0xd
-#define  PE_CURRENT_7_0_mA			0xe
-#define  PE_CURRENT_7_5_mA			0xf
+/* 27:24 - PE_CURRENT3
+ * 19:16 - PE_CURRENT2
+ * 11:8  - PE_CURRENT1
+ * 3:0   - PE_CURRENT0
+ */
 
 #define HDMI_NV_PDISP_KEY_CTRL					0x9a
 #define  LOCAL_KEYS				(1 << 0)
@@ -478,10 +401,11 @@
 #define HDMI_NV_PDISP_KEY_SKEY_INDEX				0xa3
 
 #define HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT			0xd1
-#define  PEAK_CURRENT_LANE0(x)			(((x) & 0xf) << 0)
-#define  PEAK_CURRENT_LANE1(x)			(((x) & 0xf) << 8)
-#define  PEAK_CURRENT_LANE2(x)			(((x) & 0xf) << 16)
-#define  PEAK_CURRENT_LANE3(x)			(((x) & 0xf) << 24)
+/* 31:24 - PEAK_CURRENT_LANE3
+ * 23:16 - PEAK_CURRENT_LANE2
+ * 15:8  - PEAK_CURRENT_LANE1
+ * 7:0   - PEAK_CURRENT_LANE0
+ */
 
 #define HDMI_NV_PDISP_SOR_PAD_CTLS0				0xd2
 #define  DRIVE_CURRENT_FUSE_OVERRIDE_T11x	(1 << 31)

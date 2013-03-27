@@ -43,6 +43,7 @@ struct fan_dev_data {
 	int *fan_pwm;
 	int *fan_rru;
 	int *fan_rrd;
+	int *fan_state_cap_lookup;
 	struct workqueue_struct *workqueue;
 	int fan_temp_control_flag;
 	struct pwm_device *pwm_dev;
@@ -561,14 +562,18 @@ static ssize_t set_fan_state_cap_sysfs(struct device *dev,
 
 	if (val < 0)
 		val = 0;
-	else if (val >= MAX_ACTIVE_STATES)
-		val = MAX_ACTIVE_STATES - 1;
+	else if (val >= fan_data->active_steps)
+		val = fan_data->active_steps - 1;
 
 	mutex_lock(&fan_data->fan_state_lock);
 	fan_data->fan_state_cap = val;
-	fan_data->fan_cap_pwm = fan_data->fan_pwm[val];
+	fan_data->fan_cap_pwm =
+		fan_data->fan_pwm[fan_data->fan_state_cap_lookup[val]];
 	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
 					fan_data->next_target_pwm);
+	dev_info(dev, "pwm_cap=%d target_pwm=%d\n",
+		fan_data->fan_cap_pwm, fan_data->next_target_pwm);
+
 	mutex_unlock(&fan_data->fan_state_lock);
 	return count;
 }
@@ -623,7 +628,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	rpm_data = devm_kzalloc(&pdev->dev,
-			4 * sizeof(int) * data->active_steps, GFP_KERNEL);
+			5 * sizeof(int) * data->active_steps, GFP_KERNEL);
 	if (!rpm_data)
 		return -ENOMEM;
 
@@ -631,6 +636,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->fan_pwm = rpm_data + data->active_steps;
 	fan_data->fan_rru = fan_data->fan_pwm + data->active_steps;
 	fan_data->fan_rrd = fan_data->fan_rru + data->active_steps;
+	fan_data->fan_state_cap_lookup = fan_data->fan_rrd + data->active_steps;
+
 	mutex_init(&fan_data->fan_state_lock);
 
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
@@ -652,11 +659,14 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		fan_data->fan_pwm[i] = data->active_pwm[i];
 		fan_data->fan_rru[i] = data->active_rru[i];
 		fan_data->fan_rrd[i] = data->active_rrd[i];
-		dev_info(&pdev->dev, "rpm=%d, pwm=%d, rru=%d, rrd=%d\n",
-						fan_data->fan_rpm[i],
-						fan_data->fan_pwm[i],
-						fan_data->fan_rru[i],
-						fan_data->fan_rrd[i]);
+		fan_data->fan_state_cap_lookup[i] = data->state_cap_lookup[i];
+		dev_info(&pdev->dev,
+			"rpm=%d, pwm=%d, rru=%d, rrd=%d state:%d\n",
+			fan_data->fan_rpm[i],
+			fan_data->fan_pwm[i],
+			fan_data->fan_rru[i],
+			fan_data->fan_rrd[i],
+			fan_data->fan_state_cap_lookup[i]);
 	}
 	fan_data->fan_cap_pwm = data->active_pwm[data->state_cap];
 	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",

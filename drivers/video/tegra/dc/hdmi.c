@@ -1636,6 +1636,8 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 
 	memset(&avi, 0x0, sizeof(avi));
 
+	/* Indicate active format info is valid. */
+	avi.a = 1;
 	avi.r = HDMI_AVI_R_SAME;
 
 	if ((dc->mode.h_active == 720) && ((dc->mode.v_active == 480) || (dc->mode.v_active == 576)))
@@ -1645,6 +1647,8 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 
 	avi.vic = tegra_dc_find_cea_vic(&dc->mode);
 	avi.m = dc->mode.avi_m;
+	if (tegra_edid_underscan_supported(hdmi->edid))
+		avi.s = HDMI_AVI_S_UNDERSCAN;
 	dev_dbg(&dc->ndev->dev, "HDMI AVI vic=%d m=%d\n", avi.vic, avi.m);
 
 	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_HEADER,

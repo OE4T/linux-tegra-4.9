@@ -25,8 +25,6 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 
-#include <mach/iomap.h>
-
 #include "dev.h"
 #include "bus_client.h"
 #include "t20/t20.h"

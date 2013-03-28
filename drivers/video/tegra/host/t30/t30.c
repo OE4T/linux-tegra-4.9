@@ -22,7 +22,6 @@
 #include <linux/kernel.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/powergate.h>
-#include <mach/iomap.h>
 #include "t20/t20.h"
 #include "t30.h"
 #include "gr2d/gr2d_t30.h"
@@ -38,6 +37,9 @@
 #include "host1x/host1x_syncpt.h"
 #include "gr3d/pod_scaling.h"
 #include "class_ids.h"
+
+/* HACK! This should come from DT */
+#include "../../../../../arch/arm/mach-tegra/iomap.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)

@@ -29,7 +29,6 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-#include <mach/iomap.h>
 
 #include "dev.h"
 #include "msenc.h"

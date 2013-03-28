@@ -81,6 +81,7 @@ struct ov5693_platform_data {
 	unsigned lens_fnumber; /* / _INT2FLOAT_DIVISOR */
 	unsigned lens_view_angle_h; /* / _INT2FLOAT_DIVISOR */
 	unsigned lens_view_angle_v; /* / _INT2FLOAT_DIVISOR */
+	bool use_vcm_vdd;
 	int (*probe_clock)(unsigned long);
 	int (*power_on)(struct ov5693_power_rail *);
 	int (*power_off)(struct ov5693_power_rail *);

@@ -28,7 +28,6 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 
-#include <mach/iomap.h>
 #include <mach/hardware.h>
 
 #include "nvhost_hwctx.h"

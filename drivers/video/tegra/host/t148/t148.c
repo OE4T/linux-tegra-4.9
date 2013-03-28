@@ -20,7 +20,6 @@
 
 #include <linux/mutex.h>
 #include <mach/powergate.h>
-#include <mach/iomap.h>
 #include "dev.h"
 #include "host1x/host1x_cdma.h"
 #include "t20/t20.h"
@@ -43,6 +42,9 @@
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "class_ids.h"
+
+/* HACK! This needs to come from DT */
+#include "../../../../../arch/arm/mach-tegra/iomap.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)

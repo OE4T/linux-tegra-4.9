@@ -18,10 +18,12 @@
  */
 
 #include <linux/slab.h>
-#include <mach/iomap.h>
 #include <mach/iovmm.h>
 
 #include "nvmap.h"
+
+/* HACK: This should come from DT */
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 struct tegra_iovmm_area *tegra_iommu_create_vm(struct device *dev,
 			       dma_addr_t req, size_t size, pgprot_t prot)

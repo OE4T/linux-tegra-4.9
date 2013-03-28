@@ -52,6 +52,10 @@
 #include "nvhost_acm.h"
 
 #define POW2(x) ((x) * (x))
+#define SCALE_TO_MHZ(x) ((x) / 1000000)
+#define SCALE_TO_HZ(x) ((x) * 1000000)
+#define INT_TO_FIX(x) ((x) << 16)
+#define FIX_TO_INT(x) ((x) >> 16)
 
 static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 					u32 flags);
@@ -64,6 +68,13 @@ struct power_profile_gr3d {
 
 	int				init;
 
+	/*
+	 * Use emc_slope and emc_dip_slope as unsigned fixed point<32,16> to
+	 * have finer granularity. Without dong this, emc_dip_slope is zero all
+	 * the time. Need to scale down emc_offset and emc_dip_offset
+	 * from Hz to MHz to avoid integer overflow due to
+	 * increased emc_slope and emc_dip_slope values.
+	 */
 	unsigned long			max_rate_3d;
 	unsigned long			min_rate_3d;
 	long				emc_slope;
@@ -184,16 +195,18 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 				clk_to_idx(power_profile.clk_3d), *freq);
 
 	/* Set EMC clockrate */
-	after = (long) clk_get_rate(power_profile.clk_3d);
-	hz = after * power_profile.emc_slope +
+	after = (long)SCALE_TO_MHZ(clk_get_rate(power_profile.clk_3d));
+	hz = FIX_TO_INT(after * power_profile.emc_slope) +
 		power_profile.emc_offset;
 
-	hz -= (power_profile.emc_dip_slope *
-		POW2(after / 1000 - power_profile.emc_xmid) +
+	hz -= (FIX_TO_INT(power_profile.emc_dip_slope *
+		(long)POW2(after - power_profile.emc_xmid)) +
 		power_profile.emc_dip_offset);
-	hz = (hz < 0) ? 0 : hz;
+
+	hz = (hz < 0) ? 0 : SCALE_TO_HZ(hz);
+
 	nvhost_module_set_devfreq_rate(power_profile.dev,
-				clk_to_idx(power_profile.clk_3d_emc), hz);
+			clk_to_idx(power_profile.clk_3d_emc), hz);
 
 	/* Get the new clockrate */
 	*freq = clk_get_rate(power_profile.clk_3d);
@@ -305,34 +318,36 @@ static struct devfreq_dev_profile nvhost_scale3d_devfreq_profile = {
 static void nvhost_scale3d_calibrate_emc(void)
 {
 	long correction;
-	unsigned long max_emc = clk_round_rate(power_profile.clk_3d_emc,
-		UINT_MAX);
-	unsigned long min_emc = clk_round_rate(power_profile.clk_3d_emc, 0);
+	unsigned long max_emc = SCALE_TO_MHZ(clk_round_rate(
+			power_profile.clk_3d_emc, UINT_MAX));
+	unsigned long min_emc = 0;
 
-	power_profile.emc_slope = (max_emc - min_emc) /
-		(power_profile.max_rate_3d -
+	power_profile.emc_slope = INT_TO_FIX(max_emc - min_emc) /
+		SCALE_TO_MHZ(power_profile.max_rate_3d -
 		power_profile.min_rate_3d);
+
 	power_profile.emc_offset = max_emc -
-		power_profile.emc_slope * power_profile.max_rate_3d;
-	/* Guarantee max 3d rate maps to max emc rate */
-	power_profile.emc_offset += max_emc -
-		(power_profile.emc_slope * power_profile.max_rate_3d +
-		power_profile.emc_offset);
+		FIX_TO_INT(power_profile.emc_slope * SCALE_TO_MHZ(
+		power_profile.max_rate_3d));
 
 	power_profile.emc_dip_offset = (max_emc - min_emc) / 4;
+
 	power_profile.emc_dip_slope =
-		-4 * (power_profile.emc_dip_offset /
-		(POW2(power_profile.max_rate_3d -
-		power_profile.min_rate_3d)));
+		-4 * (INT_TO_FIX(power_profile.emc_dip_offset) /
+		(POW2(SCALE_TO_MHZ(power_profile.max_rate_3d -
+		power_profile.min_rate_3d))));
+
 	power_profile.emc_xmid =
-		(power_profile.max_rate_3d +
+		SCALE_TO_MHZ(power_profile.max_rate_3d +
 		power_profile.min_rate_3d) / 2;
+
 	correction =
 		power_profile.emc_dip_offset +
-			power_profile.emc_dip_slope *
-			POW2(power_profile.max_rate_3d -
-			power_profile.emc_xmid);
+			FIX_TO_INT(power_profile.emc_dip_slope *
+			(long)POW2(SCALE_TO_MHZ(power_profile.max_rate_3d) -
+			power_profile.emc_xmid));
 	power_profile.emc_dip_offset -= correction;
+
 }
 
 /*******************************************************************************
@@ -362,8 +377,7 @@ void nvhost_scale3d_actmon_init(struct platform_device *dev)
 	/* Get frequency settings */
 	power_profile.max_rate_3d =
 		clk_round_rate(power_profile.clk_3d, UINT_MAX);
-	power_profile.min_rate_3d =
-		clk_round_rate(power_profile.clk_3d, 0);
+	power_profile.min_rate_3d = 0;
 	nvhost_scale3d_devfreq_profile.initial_freq = power_profile.max_rate_3d;
 
 	if (power_profile.max_rate_3d == power_profile.min_rate_3d) {

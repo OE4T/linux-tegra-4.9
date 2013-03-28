@@ -36,7 +36,6 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/csi.h>
-#include <mach/iomap.h>
 #include <linux/nvhost.h>
 
 #include "dc_reg.h"
@@ -45,6 +44,9 @@
 #include "dsi_regs.h"
 #include "dsi.h"
 #include "mipi_cal.h"
+
+/* HACK! This needs to come from DT */
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2

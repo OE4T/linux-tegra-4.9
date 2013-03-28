@@ -40,7 +40,6 @@
 
 #include <mach/gpufuse.h>
 #include <mach/hardware.h>
-#include <mach/iomap.h>
 
 #include "debug.h"
 #include "bus_client.h"

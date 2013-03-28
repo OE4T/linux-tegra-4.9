@@ -17,7 +17,6 @@
  */
 
 #include <mach/dc.h>
-#include <mach/iomap.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>

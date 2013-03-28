@@ -52,13 +52,15 @@
 #include <mach/mc.h>
 #include <linux/nvhost.h>
 #include <mach/latency_allowance.h>
-#include <mach/iomap.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dev.h"
 #include "nvsd.h"
+
+/* HACK! This needs to come from DT */
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #define TEGRA_CRC_LATCHED_DELAY		34
 

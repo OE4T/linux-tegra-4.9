@@ -260,14 +260,6 @@ static inline int nvhost_init_t30_support(struct nvhost_master *host,
 }
 #endif
 
-#ifdef TEGRA_11X_OR_HIGHER_CONFIG
-#else
-static inline int nvhost_init_t114_support(struct nvhost_master *host,
-					   struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
 
 #ifdef TEGRA_14X_OR_HIGHER_CONFIG
 #else

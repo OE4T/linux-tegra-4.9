@@ -283,13 +283,10 @@ static void podgov_enable(struct device *dev, int enable)
 	} else {
 		cancel_work_sync(&podgov->work);
 		cancel_delayed_work(&podgov->idle_timer);
-
+		podgov->enable = 0;
 		podgov->adjustment_frequency = df->max_freq;
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
-
-		podgov->enable = 0;
-
 	}
 	mutex_unlock(&df->lock);
 }

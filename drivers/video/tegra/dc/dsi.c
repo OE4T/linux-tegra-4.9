@@ -4283,6 +4283,8 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		clk_set_parent(clk, parent_clk);
 
 skip_setup:
+	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 

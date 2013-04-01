@@ -345,11 +345,11 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 		gk20a_readl(g, pwr_falcon_itfen_r()) |
 		pwr_falcon_itfen_ctxen_enable_f());
-
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
-		pwr_pmu_new_instblk_ptr_f(mm->pmu.inst_block.cpu_pa >> 12) |
+		pwr_pmu_new_instblk_ptr_f(
+			sg_phys(mm->pmu.inst_block.mem.sgt->sgl) >> 12) |
 		pwr_pmu_new_instblk_valid_f(1) |
-		pwr_pmu_new_instblk_target_fb_f());
+		pwr_pmu_new_instblk_target_sys_coh_f());
 
 	/* TBD: load all other surfaces */
 
@@ -932,7 +932,8 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 	release_firmware(pmu->ucode_fw);
 
-	nvhost_memmgr_unpin(memmgr, inst_block->mem.ref, inst_block->mem.sgt);
+	nvhost_memmgr_free_sg_table(memmgr, inst_block->mem.ref,
+			inst_block->mem.sgt);
 	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
 	vm->remove_support(vm);
 
@@ -1049,7 +1050,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->ucode.pmu_va = vm->map(vm, memmgr, pmu->ucode.mem.ref,
 			/*offset_align, flags, kind*/
-			0, 0, 0);
+			0, 0, 0, NULL);
 	if (!pmu->ucode.pmu_va) {
 		nvhost_err(d, "failed to map pmu ucode memory!!");
 		return err;
@@ -1080,7 +1081,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->pg_buf.pmu_va = vm->map(vm, memmgr, pmu->pg_buf.mem.ref,
 			 /*offset_align, flags, kind*/
-			0, 0, 0);
+			0, 0, 0, NULL);
 	if (!pmu->pg_buf.pmu_va) {
 		nvhost_err(d, "failed to map fecs pg buffer");
 		err = -ENOMEM;
@@ -1100,7 +1101,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.pmu_va = vm->map(vm, memmgr, pmu->seq_buf.mem.ref,
 			/*offset_align, flags, kind*/
-			0, 0, 0);
+			0, 0, 0, NULL);
 	if (!pmu->seq_buf.pmu_va) {
 		nvhost_err(d, "failed to map zbc buffer");
 		err = -ENOMEM;
@@ -1230,7 +1231,8 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 
 	pmu->elpg_enable_allow = true;
 
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
+			sg_phys(mm->pmu.inst_block.mem.sgt->sgl));
 	if (err) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");

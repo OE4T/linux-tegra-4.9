@@ -93,6 +93,7 @@ static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c)
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
+	phys_addr_t addr;
 	u32 addr_lo;
 	u32 addr_hi;
 	void *inst_ptr;
@@ -103,11 +104,12 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	if (IS_ERR(inst_ptr))
 		return -ENOMEM;
 
-	addr_lo = u64_lo32(c->vm->pdes.phys) >> 12;
-	addr_hi = u64_hi32(c->vm->pdes.phys);
+	addr = sg_phys(c->vm->pdes.sgt->sgl);
+	addr_lo = u64_lo32(addr) >> 12;
+	addr_hi = u64_hi32(addr);
 
 	nvhost_dbg_info("pde pa=0x%llx addr_lo=0x%x addr_hi=0x%x",
-		   (u64)c->vm->pdes.phys, addr_lo, addr_hi);
+		   (u64)addr, addr_lo, addr_hi);
 
 	mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
 		ram_in_page_dir_base_target_vid_mem_f() |
@@ -258,7 +260,8 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 	struct fifo_engine_info_gk20a *engine_info =
 		f->engine_info + ENGINE_GR_GK20A;
 
-	u32 inst_ptr = ch_gk20a->inst_block.cpu_pa >> ram_in_base_shift_v();
+	u32 inst_ptr = sg_phys(ch_gk20a->inst_block.mem.sgt->sgl)
+		>> ram_in_base_shift_v();
 
 	nvhost_dbg_info("bind channel %d inst ptr 0x%08x",
 		ch_gk20a->hw_chid, inst_ptr);
@@ -314,18 +317,16 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 	}
 
 	ch->inst_block.mem.sgt =
-		nvhost_memmgr_pin(memmgr, ch->inst_block.mem.ref);
-	ch->inst_block.cpu_pa = sg_dma_address(ch->inst_block.mem.sgt->sgl);
+		nvhost_memmgr_sg_table(memmgr, ch->inst_block.mem.ref);
 
 	/* IS_ERR throws a warning here (expecting void *) */
-	if (ch->inst_block.cpu_pa == -EINVAL ||
-	    ch->inst_block.cpu_pa == -EINTR) {
-		ch->inst_block.cpu_pa = 0;
+	if (IS_ERR(ch->inst_block.mem.sgt)) {
+		ch->inst_block.mem.sgt = NULL;
 		goto clean_up;
 	}
 
 	nvhost_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, (u64)ch->inst_block.cpu_pa);
+		ch->hw_chid, (u64)sg_phys(ch->inst_block.mem.sgt->sgl));
 
 	ch->inst_block.mem.size = ram_in_alloc_size_v();
 
@@ -343,8 +344,8 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 
-	nvhost_memmgr_unpin(memmgr, ch->inst_block.mem.ref,
-			    ch->inst_block.mem.sgt);
+	nvhost_memmgr_free_sg_table(memmgr, ch->inst_block.mem.ref,
+			ch->inst_block.mem.sgt);
 	nvhost_memmgr_put(memmgr, ch->inst_block.mem.ref);
 	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
 }
@@ -582,7 +583,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	q->base_gva = ch_vm->map(ch_vm, memmgr,
 			q->mem.ref,
 			 /*offset_align, flags, kind*/
-			0, 0, 0);
+			0, 0, 0, NULL);
 	if (!q->base_gva) {
 		nvhost_err(d, "ch %d : failed to map gpu va"
 			   "for priv cmd buffer", c->hw_chid);
@@ -882,7 +883,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	c->gpfifo.gpu_va = ch_vm->map(ch_vm, memmgr,
 				c->gpfifo.mem.ref,
 				/*offset_align, flags, kind*/
-				0, 0, 0);
+				0, 0, 0, NULL);
 	if (!c->gpfifo.gpu_va) {
 		nvhost_err(d, "channel %d : failed to map"
 			   " gpu_va for gpfifo", c->hw_chid);

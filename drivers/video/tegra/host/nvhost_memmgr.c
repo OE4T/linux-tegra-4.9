@@ -355,6 +355,99 @@ u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle)
 	return 0;
 }
 
+struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
+		struct mem_handle *handle)
+{
+	switch (nvhost_memmgr_type((ulong)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvmap_sg_table((struct nvmap_client *)mgr,
+				(struct nvmap_handle_ref *)handle);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		WARN_ON(1);
+		break;
+#endif
+	default:
+		break;
+	}
+
+	return NULL;
+
+}
+
+void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt)
+{
+	switch (nvhost_memmgr_type((ulong)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvmap_free_sg_table((struct nvmap_client *)mgr,
+				(struct nvmap_handle_ref *)handle, sgt);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		WARN_ON(1);
+		break;
+#endif
+	default:
+		break;
+	}
+	return;
+}
+
+int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
+			   struct device *dev)
+{
+	int i;
+	struct scatterlist *sg;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t addr = dma_iova_alloc(dev, size);
+
+	if (unlikely(sg_dma_address(sgt->sgl) != 0))
+		return 0;
+
+	if (dma_mapping_error(dev, addr))
+		return -ENOMEM;
+
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+		dma_addr_t da;
+		void *va;
+		sg_dma_address(sg) = addr;
+		sg_dma_len(sg) = sg->length;
+		for (va = phys_to_virt(sg_phys(sg));
+		     va < phys_to_virt(sg_phys(sg)) + sg->length;
+		     va += PAGE_SIZE, addr += PAGE_SIZE) {
+			da = dma_map_single_at_attrs(dev, va, addr,
+				PAGE_SIZE, 0, &attrs);
+			if (dma_mapping_error(dev, da))
+				/*  TODO: Clean up */
+				return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
+		struct device *dev)
+{
+	int i;
+	struct scatterlist *sg;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_set_attr(DMA_ATTR_SKIP_FREE_IOVA, &attrs);
+	dma_unmap_single_attrs(dev, sg_dma_address(sgt->sgl), size, 0, &attrs);
+	dma_iova_free(dev, sg_dma_address(sgt->sgl), size);
+	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+		sg_dma_address(sg) = 0;
+		sg_dma_len(sg) = 0;
+	}
+}
+
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)
 {
 	return 0;

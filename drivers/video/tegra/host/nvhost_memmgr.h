@@ -25,6 +25,7 @@ struct nvhost_chip_support;
 struct mem_mgr;
 struct mem_handle;
 struct platform_device;
+struct device;
 
 struct nvhost_job_unpin {
 	struct mem_handle *h;
@@ -66,6 +67,10 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr);
 void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum);
 void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
+struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
+		struct mem_handle *handle);
+void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
+		struct mem_handle *handle, struct sg_table *sgt);
 static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
 u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle);
@@ -79,5 +84,9 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
 			    u32 param, u32 *result);
+int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
+			   struct device *dev);
+void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
+			   struct device *dev);
 
 #endif

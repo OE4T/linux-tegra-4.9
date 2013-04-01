@@ -21,7 +21,16 @@
 #ifndef __MM_GK20A_H__
 #define __MM_GK20A_H__
 
+#include <linux/scatterlist.h>
 #include "../nvhost_allocator.h"
+
+/* This "address bit" in the gmmu ptes (and other gk20a accesses)
+ * signals the address as presented should be translated by the SMMU.
+ * Without this bit present gk20a accesses are *not* translated.
+ */
+/* Hack, get this from manuals somehow... */
+#define NV_MC_SMMU_VADDR_TRANSLATION_BIT     34
+
 
 struct mem_desc {
 	struct mem_handle *ref;
@@ -54,13 +63,12 @@ struct mmu_desc {
 
 struct inst_desc {
 	struct mem_desc mem;
-	phys_addr_t cpu_pa;
 };
 
 struct userd_desc {
 	struct mem_desc mem;
 	void *cpu_va;
-	phys_addr_t cpu_pa;
+	u64 cpu_pa;
 	u64 gpu_va;
 };
 
@@ -97,7 +105,7 @@ struct gr_ctx_desc {
 
 struct compbit_store_desc {
 	struct mem_desc mem;
-	phys_addr_t base_pa;
+	u64 base_pa;
 	u32 alignment;
 };
 
@@ -116,7 +124,6 @@ struct page_directory_gk20a {
 	/* backing for */
 	u32 num_pdes;
 	void *kv;
-	phys_addr_t phys;
 	/* Either a *page or a *mem_handle */
 	void *ref;
 	bool dirty;
@@ -162,7 +169,8 @@ struct vm_gk20a {
 		   struct mem_handle *r,
 		   u64 offset_align,
 		   u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
-		   u32 kind);
+		   u32 kind,
+		   struct sg_table **sgt);
 
 	/* unmap handle from kernel */
 	void (*unmap)(struct vm_gk20a *vm,
@@ -267,5 +275,16 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);
 
 int gk20a_mm_suspend(struct gk20a *g);
+
+static inline u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
+{
+	u64 result = sg_phys(sgl);
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (sg_dma_address(sgl))
+		result = sg_dma_address(sgl) |
+			1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT;
+#endif
+	return result;
+}
 
 #endif /*_MM_GK20A_H_ */

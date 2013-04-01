@@ -45,6 +45,17 @@
 #include "kind_gk20a.h"
 
 
+#define FLUSH_CPU_DCACHE(va, pa, size)	\
+	do {	\
+		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
+		outer_flush_range(pa, pa + (size_t)(size));		\
+	} while (0)
+
+enum gmmu_page_smmu_type {
+	gmmu_page_smmu_type_physical,
+	gmmu_page_smmu_type_virtual,
+};
+
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
 /* we support 2 page sizes, define indexing based upon that */
 static inline int gmmu_page_size_idx(u32 ps)
@@ -52,6 +63,10 @@ static inline int gmmu_page_size_idx(u32 ps)
 	return (ps) != 4096; /* 4K:=0, all else := 1 */
 }
 static const u32 gmmu_page_sizes[2] = { 0x1000, 0x20000 }; /* 4KB and 128KB */
+static const u32 gmmu_page_smmu_types[2] = {
+	gmmu_page_smmu_type_physical,
+	gmmu_page_smmu_type_virtual,
+};
 static const u32 gmmu_page_shift[2] = { 12, 17 };
 static const u64 gmmu_page_offset_mask[2] = { 0xfffLL, 0x1ffffLL };
 static const u64 gmmu_page_mask[2] = { ~0xfffLL, ~0x1ffffLL };
@@ -90,7 +105,8 @@ void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 	nvhost_dbg_fn("");
 
-	nvhost_memmgr_unpin(memmgr, inst_block->mem.ref, inst_block->mem.sgt);
+	nvhost_memmgr_free_sg_table(memmgr, inst_block->mem.ref,
+			inst_block->mem.sgt);
 	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
 
 	vm->remove_support(vm);
@@ -155,7 +171,7 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = inst_block->cpu_pa;
+	phys_addr_t inst_pa = sg_phys(inst_block->mem.sgt->sgl);
 
 	nvhost_dbg_fn("");
 
@@ -202,16 +218,77 @@ int gk20a_init_mm_support(struct gk20a *g)
 	return err;
 }
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
-			    phys_addr_t *pa, void **handle,
+			    void **handle,
+			    struct sg_table **sgt)
+{
+	u32 num_pages = 1 << order;
+	u32 len = num_pages * PAGE_SIZE;
+	int err;
+	struct page *pages;
+
+	nvhost_dbg_fn("");
+
+	pages = alloc_pages(GFP_KERNEL, order);
+	if (!pages) {
+		nvhost_dbg(dbg_pte, "alloc_pages failed\n");
+		goto err_out;
+	}
+	*sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt) {
+		nvhost_dbg(dbg_pte, "cannot allocate sg table");
+		goto err_alloced;
+	}
+	err =  sg_alloc_table_from_pages(*sgt, &pages, 1, 0, len, GFP_KERNEL);
+	if (err) {
+		nvhost_dbg(dbg_pte, "sg_alloc_table failed\n");
+		goto err_sg_table;
+	}
+	*handle = page_address(pages);
+	memset(*handle, 0, len);
+
+	return 0;
+
+err_sg_table:
+	kfree(*sgt);
+err_alloced:
+	__free_pages(pages, order);
+err_out:
+	return -ENOMEM;
+}
+
+static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+			    struct sg_table *sgt, u32 order)
+{
+	nvhost_dbg_fn("");
+	BUG_ON(sgt == NULL);
+	free_pages((unsigned long)handle, order);
+	sg_free_table(sgt);
+	kfree(sgt);
+}
+
+static int map_gmmu_pages(void *handle, struct sg_table *sgt, void **va)
+{
+	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
+	*va = handle;
+	return 0;
+}
+
+static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, u32 *va)
+{
+	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
+}
+#else
+static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
+			    void **handle,
 			    struct sg_table **sgt)
 {
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	struct mem_handle *r;
-	phys_addr_t phys;
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
-	u32 *va;
+	void *va;
 
 	nvhost_dbg_fn("");
 
@@ -228,25 +305,24 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 		nvhost_dbg(dbg_pte, "nvmap_mmap failed\n");
 		goto err_alloced;
 	}
-	*sgt =  nvhost_memmgr_pin(client, r);
-	if (IS_ERR_OR_NULL(*sgt)) {
-		nvhost_dbg(dbg_pte, "nvmap_pin failed\n");
-		goto err_alloced;
+	*sgt = nvhost_memmgr_sg_table(client, r);
+	if (!*sgt) {
+		nvhost_dbg(dbg_pte, "cannot allocate sg table");
+		goto err_mmaped;
 	}
-	phys = sg_dma_address((*sgt)->sgl);
 	memset(va, 0, len);
 	nvhost_memmgr_munmap(r, va);
-	*pa = phys;
 	*handle = (void *)r;
 
 	return 0;
 
+err_mmaped:
+	nvhost_memmgr_munmap(r, va);
 err_alloced:
 	nvhost_memmgr_put(client, r);
 err_out:
 	return -ENOMEM;
 }
-
 
 static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order)
@@ -254,11 +330,11 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	nvhost_dbg_fn("");
 	BUG_ON(sgt == NULL);
-	nvhost_memmgr_unpin(client, handle, sgt);
+	nvhost_memmgr_free_sg_table(client, handle, sgt);
 	nvhost_memmgr_put(client, handle);
 }
 
-static int map_gmmu_pages(void *handle, void **va)
+static int map_gmmu_pages(void *handle, struct sg_table *sgt, void **va)
 {
 	struct mem_handle *r = handle;
 	u32 *tmp_va;
@@ -276,15 +352,16 @@ err_out:
 	return -ENOMEM;
 }
 
-static void unmap_gmmu_pages(void *handle, u32 *va)
+static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, u32 *va)
 {
 	struct mem_handle *r = handle;
 	nvhost_dbg_fn("");
 	nvhost_memmgr_munmap(r, va);
 }
+#endif
 
 static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
-			u64 bfr_addr, u64 first_vaddr, u64 last_vaddr,
+			struct sg_table *sgt, u64 first_vaddr, u64 last_vaddr,
 			u8 kind_v, u32 ctag_offset, bool cachable);
 
 /* allocate a phys contig region big enough for a full
@@ -294,12 +371,10 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 
 static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 				       u32 gmmu_page_size,
-				       struct page_table_gk20a *pte,
-				       phys_addr_t *pa)
+				       struct page_table_gk20a *pte)
 {
 	int err, page_size_idx;
 	u32 pte_order;
-	phys_addr_t phys;
 	void *handle;
 	struct sg_table *sgt;
 
@@ -309,13 +384,13 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	page_size_idx = gmmu_page_size_idx(gmmu_page_size);
 	pte_order = vm->mm->page_table_sizing[page_size_idx].order;
 
-	err = alloc_gmmu_pages(vm, pte_order, &phys, &handle, &sgt);
+	err = alloc_gmmu_pages(vm, pte_order, &handle, &sgt);
 	if (err)
 		return err;
 
-	nvhost_dbg(dbg_pte, "pte = 0x%p, phys = 0x%x", pte, (unsigned int)phys);
+	nvhost_dbg(dbg_pte, "pte = 0x%p, addr=%08llx, size %d",
+			pte, (u64)sg_phys(sgt->sgl), pte_order);
 
-	*pa = phys;
 	pte->ref = handle;
 	pte->sgt = sgt;
 	pte->page_size_idx = page_size_idx;
@@ -379,9 +454,9 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 					  u32 i,
 					  u32 gmmu_page_size)
 {
-	u32 err;
-	phys_addr_t pte_addr;
-	phys_addr_t dbg_addr;
+	int err;
+	u64 pte_addr;
+	u64 dbg_addr;
 	struct page_table_gk20a *pte = vm->pdes.ptes + i;
 	u32 *pde;
 
@@ -397,10 +472,11 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	if (pte->ref)
 		return 0;
 
-	err = zalloc_gmmu_page_table_gk20a(vm, gmmu_page_size, pte, &pte_addr);
+	err = zalloc_gmmu_page_table_gk20a(vm, gmmu_page_size, pte);
 	if (err)
 		return err;
 
+	pte_addr = sg_phys(pte->sgt->sgl);
 	dbg_addr = (u32)pte_addr;
 	pte_addr >>= gmmu_pde_address_shift_v();
 	pde = pde_from_index(vm, i);
@@ -564,7 +640,7 @@ static u32 nvmap_bfr_param[] = {
 #define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
 
 struct buffer_attrs {
-	phys_addr_t addr;
+	struct sg_table *sgt;
 	u64 size;
 	u64 align;
 	u32 ctag_offset;
@@ -691,21 +767,21 @@ static int setup_buffer_kind_and_compression(u32 flags,
 	return 0;
 }
 
-
 static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct mem_mgr *memmgr,
 			struct mem_handle *r,
 			u64 offset_align,
 			u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
-			u32 kind)
+			u32 kind,
+			struct sg_table **sgt)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvhost_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct device *d = &g->dev->dev;
 	struct mapped_buffer_node *mapped_buffer = 0;
-	struct sg_table *sgt;
 	bool inserted = false, va_allocated = false;
 	u32 gmmu_page_size = 0;
+	int gmmu_page_smmu_type = 0;
 	u64 map_offset = 0;
 	int attr, err = 0;
 	struct buffer_attrs bfr = {0};
@@ -744,6 +820,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	gmmu_page_size = gmmu_page_sizes[bfr.page_size_idx];
+	gmmu_page_smmu_type = gmmu_page_smmu_types[bfr.page_size_idx];
 
 	err = setup_buffer_kind_and_compression(flags, kind,
 						&bfr, gmmu_page_size);
@@ -775,14 +852,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 					bfr.ctag_offset + bfr.ctag_lines - 1);
 
 
-	/* TBD: need to get nvmap to assign the correct asid */
-	/* until then there's no point even trying */
-	if (bfr.iovmm_mapped) {
-		nvhost_err(d, "iovmm remapping is unsupported at this time");
-		err = -EINVAL;
-		goto clean_up;
-	}
-
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
 		map_offset = vm->alloc_va(vm, bfr.size,
@@ -801,20 +870,33 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	sgt = nvhost_memmgr_pin(memmgr, r);
-	if (IS_ERR_OR_NULL(sgt)) {
+	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
+	if (IS_ERR_OR_NULL(bfr.sgt)) {
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
 	}
-	bfr.addr = sg_dma_address(sgt->sgl);
-
-	nvhost_dbg_info("nvmap pinned buffer @ 0x%llx", (u64)bfr.addr);
-	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d "
+	if (sgt)
+		*sgt = bfr.sgt;
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (gmmu_page_smmu_type == gmmu_page_smmu_type_virtual) {
+		int err = nvhost_memmgr_smmu_map(bfr.sgt,
+				bfr.size, d);
+		if (err) {
+			nvhost_dbg(dbg_err, "Could not map to SMMU");
+			goto clean_up;
+		}
+		nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08x",
+				sg_dma_address(bfr.sgt->sgl));
+	}
+#endif
+	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d page_size=%d "
 		      "iovmm_mapped=%d kind=0x%x kind_uc=0x%x flags=0x%x",
-		      r, map_offset, bfr.contig, bfr.iovmm_mapped,
+		      r, map_offset, bfr.contig, gmmu_page_size,
+		      bfr.iovmm_mapped,
 		      bfr.kind_v, bfr.uc_kind_v, flags);
 	nvhost_dbg_info("comptag size=%d start=%d for 0x%llx",
-			bfr.ctag_lines, bfr.ctag_offset, (u64)bfr.addr);
+			bfr.ctag_lines, bfr.ctag_offset,
+			(u64)sg_phys(bfr.sgt->sgl));
 
 	/* keep track of the buffer for unmapping */
 	/* TBD: check for multiple mapping of same buffer */
@@ -825,7 +907,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 	mapped_buffer->memmgr     = memmgr;
 	mapped_buffer->handle_ref = r;
-	mapped_buffer->sgt        = sgt;
+	mapped_buffer->sgt        = bfr.sgt;
 	mapped_buffer->addr       = map_offset;
 	mapped_buffer->size       = bfr.size;
 	mapped_buffer->page_size  = gmmu_page_size;
@@ -842,7 +924,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
 
 	err = update_gmmu_ptes(vm, bfr.page_size_idx,
-			       bfr.addr,
+			       bfr.sgt,
 			       map_offset, map_offset + bfr.size - 1,
 			       bfr.kind_v,
 			       bfr.ctag_offset,
@@ -870,30 +952,33 @@ clean_up:
 }
 
 static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
-		       u64 bfr_addr, u64 first_vaddr, u64 last_vaddr,
+		       struct sg_table *sgt, u64 first_vaddr, u64 last_vaddr,
 		       u8 kind_v, u32 ctag_offset, bool cachable)
 {
 	int err;
-	u32 pde_lo, pde_hi, pde_i, cur_page;
+	u32 pde_lo, pde_hi, pde_i;
+	struct scatterlist *cur_chunk;
+	unsigned int cur_offset;
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 	u32 ctag = ctag_offset;
 	u32 ctag_ptes, ctag_pte_cnt;
+	u32 page_shift;
 
 	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
 				   &pde_lo, &pde_hi);
 
 	nvhost_dbg(dbg_pte, "pde_lo=%d, pde_hi=%d", pde_lo, pde_hi);
 
-	if (gmmu_page_sizes[page_size_idx] == 4096) {
-		cur_page = (u32)(bfr_addr >> 12);
-		ctag_ptes = COMP_TAG_LINE_SIZE >> 12;
-	} else {
-		cur_page = (u32)(bfr_addr >> 17);
-		ctag_ptes = COMP_TAG_LINE_SIZE >> 17;
-	}
+	page_shift = gmmu_page_shift[page_size_idx];
+	ctag_ptes = COMP_TAG_LINE_SIZE >> page_shift;
 
+	if (sgt)
+		cur_chunk = sgt->sgl;
+	else
+		cur_chunk = NULL;
+
+	cur_offset = 0;
 	ctag_pte_cnt = 0;
-
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
 		u32 pte_lo, pte_hi;
 		u32 pte_cur;
@@ -919,7 +1004,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 		/* need to worry about crossing pages when accessing the ptes */
 		pte_space_page_offset_from_index(pte_lo, &pte_space_page_cur,
 						 &pte_space_offset_cur);
-		err = map_gmmu_pages(pte->ref, &pte_kv_cur);
+		err = map_gmmu_pages(pte->ref, pte->sgt, &pte_kv_cur);
 		if (err) {
 			nvhost_err(dev_from_vm(vm),
 				   "couldn't map ptes for update");
@@ -937,23 +1022,33 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 				}
 			}
 
-			nvhost_dbg(dbg_pte, "pte_cur=%d cur_page=0x%x kind=%d ctag=%d",
-				pte_cur, cur_page, kind_v, ctag);
+			if (likely(sgt)) {
+				u64 addr = gk20a_mm_iova_addr(cur_chunk);
+				addr += cur_offset;
+				nvhost_dbg(dbg_pte, "pte_cur=%d cur_page=0x%08llx kind=%d ctag=%d",
+					   pte_cur, addr, kind_v, ctag);
 
-			if (likely(bfr_addr != 0)) {
+				addr >>= page_shift;
 				pte_w[0] = gmmu_pte_valid_true_f() |
-					gmmu_pte_address_sys_f(cur_page);
+					gmmu_pte_address_sys_f(addr);
 				pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 					gmmu_pte_kind_f(kind_v) |
 					gmmu_pte_comptagline_f(ctag);
 				if (!cachable)
 					pte_w[1] |= gmmu_pte_vol_true_f();
-				cur_page++;
-				pte->ref_cnt++;
-			} else
-				pte->ref_cnt--;
 
-			nvhost_dbg(dbg_pte, "pte[0]=0x%x pte[1]=0x%x", pte_w[0], pte_w[1]);
+				cur_offset += 1 << page_shift;
+				if (cur_offset >= cur_chunk->length) {
+					cur_chunk = sg_next(cur_chunk);
+					cur_offset = 0;
+				}
+				pte->ref_cnt++;
+			} else {
+				pte->ref_cnt--;
+			}
+
+			nvhost_dbg(dbg_pte, "vm %p, pte[0]=0x%x pte[1]=0x%x, ref_cnt=%d",
+					vm, pte_w[0], pte_w[1], pte->ref_cnt);
 			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 0,
 				 pte_w[0]);
 			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 1,
@@ -962,10 +1057,11 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 
 		__cpuc_flush_dcache_area(pte_kv_cur, PAGE_SIZE);
 
-		unmap_gmmu_pages(pte->ref, pte_kv_cur);
+		unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
 
 		if (pte->ref_cnt == 0) {
 			/* invalidate pde */
+			nvhost_dbg(dbg_pte, "free vm %p, pde=%d", vm, pde_i);
 			pde = pde_from_index(vm, pde_i);
 			mem_wr32(pde, 0, gmmu_pde_aperture_big_invalid_f());
 			mem_wr32(pde, 1, gmmu_pde_aperture_small_invalid_f());
@@ -974,7 +1070,9 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 			free_gmmu_pages(vm, pte->ref, pte->sgt,
 					vm->mm->page_table_sizing[page_size_idx].order);
 			pte->ref = NULL;
+			nvhost_dbg(dbg_pte, "free pde %d", pde_i);
 		}
+
 	}
 
 	smp_mb();
@@ -1029,9 +1127,17 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		nvhost_dbg(dbg_err, "failed to update ptes on unmap");
 	}
 
-	nvhost_memmgr_unpin(mapped_buffer->memmgr,
-			    mapped_buffer->handle_ref,
-			    mapped_buffer->sgt);
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (sg_dma_address(mapped_buffer->sgt->sgl)) {
+		nvhost_dbg(dbg_pte, "unmap from SMMU addr %08x",
+			   sg_dma_address(mapped_buffer->sgt->sgl));
+		nvhost_memmgr_smmu_unmap(mapped_buffer->sgt,
+					 mapped_buffer->size,
+					 dev_from_vm(vm));
+	}
+#endif
+	nvhost_memmgr_free_sg_table(mapped_buffer->memmgr,
+			mapped_buffer->handle_ref, mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
@@ -1073,7 +1179,7 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 		node = rb_first(&vm->mapped_buffers);
 	}
 
-	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.kv);
+	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
 	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 	kfree(vm->pdes.ptes);
 	nvhost_allocator_destroy(&vm->vma);
@@ -1120,18 +1226,18 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.ref,
 			       &vm->pdes.sgt);
 	if (err) {
 		return -ENOMEM;
 	}
-	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
+	err = map_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, &vm->pdes.kv);
 	if (err) {
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		return -ENOMEM;
 	}
 	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%llx",
-			vm->pdes.kv, (u64)vm->pdes.phys);
+			vm->pdes.kv, (u64)sg_phys(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
 	/* alloc in 4K granularity */
@@ -1219,7 +1325,8 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 
 	nvhost_dbg_fn("");
 
-	ret_va = vm->map(vm, nvmap, r, *offset_align, flags, 0/*no kind here, to be removed*/);
+	ret_va = vm->map(vm, nvmap, r, *offset_align,
+			flags, 0/*no kind here, to be removed*/, NULL);
 	*offset_align = ret_va;
 	if (!ret_va)
 		err = -EINVAL;
@@ -1284,6 +1391,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
+	phys_addr_t pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
 
@@ -1314,25 +1422,26 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.ref,
 			       &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
-	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
+	err = map_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, &vm->pdes.kv);
 	if (err) {
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
 	nvhost_dbg(dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%llx",
-			vm->pdes.kv, (u64)vm->pdes.phys);
+			vm->pdes.kv, (u64)sg_phys(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	pde_addr_lo = u64_lo32(vm->pdes.phys) >> 12;
-	pde_addr_hi = u64_hi32(vm->pdes.phys);
+	pde_addr = sg_phys(vm->pdes.sgt->sgl);
+	pde_addr_lo = u64_lo32(pde_addr) >> 12;
+	pde_addr_hi = u64_hi32(pde_addr);
 
 	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
-		(u64)vm->pdes.phys, pde_addr_lo, pde_addr_hi);
+		(u64)sg_phys(vm->pdes.sgt->sgl), pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for bar1 */
 	inst_block->mem.size = ram_in_alloc_size_v();
@@ -1348,14 +1457,15 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = nvhost_memmgr_pin(nvmap, inst_block->mem.ref);
+	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
+			inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
 		err = (int)inst_pa;
 		goto clean_up;
 	}
-	inst_block->cpu_pa = inst_pa = sg_dma_address(inst_block->mem.sgt->sgl);
+	inst_pa = sg_phys(inst_block->mem.sgt->sgl);
 
 	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
@@ -1384,7 +1494,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
-	nvhost_dbg_info("bar1 inst block ptr: %08x",  (u32)inst_pa);
+	nvhost_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
 	nvhost_allocator_init(&vm->vma, "gk20a_bar1",
 		1, (vm->va_limit >> 12) - 1, 1);
 
@@ -1414,6 +1524,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
+	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
 
@@ -1443,24 +1554,26 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.ref,
 			       &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
-	err = map_gmmu_pages(vm->pdes.ref, &vm->pdes.kv);
+	err = map_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, &vm->pdes.kv);
 	if (err) {
 		free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0);
 		goto clean_up;
 	}
-	nvhost_dbg_info("pmu pdes phys @ 0x%llx", (u64)vm->pdes.phys);
+	nvhost_dbg_info("pmu pdes phys @ 0x%llx",
+			(u64)sg_phys(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	pde_addr_lo = u64_lo32(vm->pdes.phys) >> 12;
-	pde_addr_hi = u64_hi32(vm->pdes.phys);
+	pde_addr = sg_phys(vm->pdes.sgt->sgl);
+	pde_addr_lo = u64_lo32(pde_addr) >> 12;
+	pde_addr_hi = u64_hi32(pde_addr);
 
 	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
-			(u64)vm->pdes.phys, pde_addr_lo, pde_addr_hi);
+			(u64)pde_addr, pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for pmu */
 	inst_block->mem.size = GK20A_PMU_INST_SIZE;
@@ -1476,15 +1589,15 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = nvhost_memmgr_pin(nvmap, inst_block->mem.ref);
+	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
+			inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
 		err = (int)((uintptr_t)inst_block->mem.sgt);
 		goto clean_up;
 	}
-	inst_block->cpu_pa = inst_pa =
-		sg_dma_address(inst_block->mem.sgt->sgl);
+	inst_pa = sg_phys(inst_block->mem.sgt->sgl);
 
 	nvhost_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
 
@@ -1626,7 +1739,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(vm->pdes.phys) >> 12;
+	u32 addr_lo = u64_lo32(sg_phys(vm->pdes.sgt->sgl)) >> 12;
 	u32 data;
 	s32 retry = 200;
 
@@ -1707,7 +1820,7 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		nvhost_err(dev_from_vm(vm),
 			"\t[0x%016llx -> 0x%016llx] pde @ 0x%08x: 0x%08x, 0x%08x\n",
 			pde_va, pde_va + mm->pde_stride - 1,
-			vm->pdes.phys + pde_i * gmmu_pde__size_v(),
+			sg_phys(vm->pdes.sgt->sgl) + pde_i * gmmu_pde__size_v(),
 			mem_rd32(pde, 0), mem_rd32(pde, 1));
 
 		pte_s = vm->pdes.ptes + pde_i;
@@ -1721,9 +1834,11 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 						&pte_space_page_cur,
 						&pte_space_offset_cur);
 
-		err = map_gmmu_pages(pte_s->ref, &pte);
-		pte_s->sgt = mem_op().pin(client, pte_s->ref);
-		pte_addr = sg_dma_address(pte_s->sgt->sgl);
+		err = map_gmmu_pages(pte_s->ref, pte_s->sgt, &pte);
+		pte_s->sgt = nvhost_memmgr_sg_table(client, pte_s->ref);
+		if (WARN_ON(IS_ERR(pte_s->sgt)))
+			return;
+		pte_addr = sg_phys(pte_s->sgt->sgl);
 
 		for (pte_i = pte_lo; pte_i <= pte_hi; pte_i++) {
 
@@ -1744,8 +1859,7 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 				mem_rd32(pte + pte_space_page_offset * 8, 1));
 		}
 
-		unmap_gmmu_pages(pte_s->ref, pte);
-		mem_op().unpin(client, pte_s->ref, pte_s->sgt);
+		unmap_gmmu_pages(pte_s->ref, pte_s->sgt, pte);
 	}
 }
 #endif /* VM DEBUG */

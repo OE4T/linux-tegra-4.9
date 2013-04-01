@@ -473,8 +473,8 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	u32 inst_base_ptr =
-		u64_lo32(c->inst_block.cpu_pa) >> ram_in_base_shift_v();
+	u32 inst_base_ptr = u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+				     >> ram_in_base_shift_v());
 	u32 ret;
 
 	nvhost_dbg_info("bind channel %d inst ptr 0x%08x",
@@ -1181,7 +1181,8 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	int ret;
 
 	u32 inst_base_ptr =
-		u64_lo32(c->inst_block.cpu_pa) >> ram_in_base_shift_v();
+		u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl))
+		>> ram_in_base_shift_v();
 
 	nvhost_dbg_fn("");
 
@@ -1335,7 +1336,8 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
-			u64_lo32(c->inst_block.cpu_pa) >> ram_in_base_shift_v();
+			u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl))
+			>> ram_in_base_shift_v();
 
 		ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0,
 				gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
@@ -1632,7 +1634,8 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
-			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
+			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
+			    NULL);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -1645,7 +1648,8 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
-			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
+			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
+			    NULL);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -1658,7 +1662,8 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
-			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
+			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
+			    NULL);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -1667,7 +1672,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = ch_vm->map(ch_vm, memmgr,
 			    gr->global_ctx_buffer[GOLDEN_CTX].ref,
 			    /*offset_align, flags, kind*/
-			    0, 0, 0);
+			    0, 0, 0, NULL);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
@@ -1731,7 +1736,7 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr_ctx->gpu_va = ch_vm->map(ch_vm, memmgr,
 		gr_ctx->mem.ref,
 		/*offset_align, flags, kind*/
-		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
+		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0, NULL);
 	if (!gr_ctx->gpu_va) {
 		nvhost_memmgr_put(memmgr, gr_ctx->mem.ref);
 		return -ENOMEM;
@@ -1771,7 +1776,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	patch_ctx->gpu_va = ch_vm->map(ch_vm, memmgr,
 				patch_ctx->mem.ref,
 				/*offset_align, flags, kind*/
-				0, 0, 0);
+				0, 0, 0, NULL);
 	if (!patch_ctx->gpu_va)
 		goto clean_up;
 
@@ -1981,12 +1986,18 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	nvhost_memmgr_unpin(memmgr, gr->mmu_wr_mem.mem.ref,
-			    gr->mmu_wr_mem.mem.sgt);
-	nvhost_memmgr_unpin(memmgr, gr->mmu_rd_mem.mem.ref,
-			    gr->mmu_rd_mem.mem.sgt);
-	nvhost_memmgr_unpin(memmgr, gr->compbit_store.mem.ref,
-			    gr->compbit_store.mem.sgt);
+	nvhost_memmgr_free_sg_table(memmgr, gr->mmu_wr_mem.mem.ref,
+			gr->mmu_wr_mem.mem.sgt);
+	nvhost_memmgr_free_sg_table(memmgr, gr->mmu_rd_mem.mem.ref,
+			gr->mmu_rd_mem.mem.sgt);
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (sg_dma_address(gr->compbit_store.mem.sgt->sgl))
+		nvhost_memmgr_smmu_unmap(gr->compbit_store.mem.sgt,
+				gr->compbit_store.mem.size,
+				dev_from_gk20a(g));
+#endif
+	nvhost_memmgr_free_sg_table(memmgr, gr->compbit_store.mem.ref,
+			gr->compbit_store.mem.sgt);
 	nvhost_memmgr_put(memmgr, gr->mmu_wr_mem.mem.ref);
 	nvhost_memmgr_put(memmgr, gr->mmu_rd_mem.mem.ref);
 	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
@@ -2249,16 +2260,14 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 	nvhost_memmgr_munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
 
 	gr->mmu_wr_mem.mem.sgt =
-		nvhost_memmgr_pin(memmgr, gr->mmu_wr_mem.mem.ref);
+		nvhost_memmgr_sg_table(memmgr, gr->mmu_wr_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_wr_mem.mem.sgt))
 		goto clean_up;
-	gr->mmu_wr_mem.cpu_pa = sg_dma_address(gr->mmu_wr_mem.mem.sgt->sgl);
 
 	gr->mmu_rd_mem.mem.sgt =
-		nvhost_memmgr_pin(memmgr, gr->mmu_rd_mem.mem.ref);
+		nvhost_memmgr_sg_table(memmgr, gr->mmu_rd_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_rd_mem.mem.sgt))
 		goto clean_up;
-	gr->mmu_rd_mem.cpu_pa = sg_dma_address(gr->mmu_rd_mem.mem.sgt->sgl);
 	return 0;
 
 clean_up:
@@ -2516,13 +2525,19 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	gr->compbit_store.mem.size = compbit_backing_size;
 
 	gr->compbit_store.mem.sgt =
-		nvhost_memmgr_pin(memmgr, gr->compbit_store.mem.ref);
+		nvhost_memmgr_sg_table(memmgr, gr->compbit_store.mem.ref);
 	if (IS_ERR_OR_NULL(gr->compbit_store.mem.sgt)) {
 		ret = -ENOMEM;
 		goto clean_up;
 	}
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	ret = nvhost_memmgr_smmu_map(gr->compbit_store.mem.sgt,
+			compbit_backing_size, dev_from_gk20a(g));
+	if (ret)
+		goto clean_up;
+#endif
 	gr->compbit_store.base_pa =
-		sg_dma_address(gr->compbit_store.mem.sgt->sgl);
+		gk20a_mm_iova_addr(gr->compbit_store.mem.sgt->sgl);
 
 	nvhost_allocator_init(&gr->comp_tags, "comptag",
 			1, max_comptag_lines, 1);
@@ -2530,6 +2545,9 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 
 clean_up:
+	if (gr->compbit_store.mem.sgt)
+		nvhost_memmgr_free_sg_table(memmgr, gr->compbit_store.mem.ref,
+				gr->compbit_store.mem.sgt);
 	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
 	return ret;
 }
@@ -3329,8 +3347,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_slcg_perf_load_gating_prod(g, true);
 
 	/* init mmu debug buffer */
-	addr_lo = u64_lo32(gr->mmu_wr_mem.cpu_pa);
-	addr_hi = u64_hi32(gr->mmu_wr_mem.cpu_pa);
+	addr_lo = u64_lo32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));
+	addr_hi = u64_hi32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));
 	addr = (addr_lo >> fb_mmu_debug_wr_addr_alignment_v()) |
 		(addr_hi << (32 - fb_mmu_debug_wr_addr_alignment_v()));
 
@@ -3339,8 +3357,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_v(addr));
 
-	addr_lo = u64_lo32(gr->mmu_rd_mem.cpu_pa);
-	addr_hi = u64_hi32(gr->mmu_rd_mem.cpu_pa);
+	addr_lo = u64_lo32(sg_phys(gr->mmu_rd_mem.mem.sgt->sgl));
+	addr_hi = u64_hi32(sg_phys(gr->mmu_rd_mem.mem.sgt->sgl));
 	addr = (addr_lo >> fb_mmu_debug_rd_addr_alignment_v()) |
 		(addr_hi << (32 - fb_mmu_debug_rd_addr_alignment_v()));
 
@@ -3446,19 +3464,12 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_init_zbc(g, gr);
 
-#ifdef CONFIG_PHYS_ADDR_T_64BIT
 	{
 		u64 compbit_base_post_divide64 = (gr->compbit_store.base_pa >>
 				ltc_ltc0_lts0_cbc_base_alignment_shift_v());
 		do_div(compbit_base_post_divide64, gr->num_fbps);
 		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
 	}
-#else
-	compbit_base_post_divide = u64_lo32(
-		(gr->compbit_store.base_pa >>
-			ltc_ltc0_lts0_cbc_base_alignment_shift_v()) /
-			gr->num_fbps);
-#endif
 
 	compbit_base_post_multiply = ((u64)compbit_base_post_divide *
 		gr->num_fbps) << ltc_ltc0_lts0_cbc_base_alignment_shift_v();
@@ -4044,7 +4055,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++)
-		if (f->channel[chid].inst_block.cpu_pa ==
+		if (sg_phys(f->channel[chid].inst_block.mem.sgt->sgl) ==
 		    curr_ctx << ram_in_base_shift_v())
 			break;
 

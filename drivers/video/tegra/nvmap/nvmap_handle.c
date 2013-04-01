@@ -173,11 +173,18 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 	return i;
 }
 
-static int nvmap_page_pool_get_unused_pages(void)
+ulong nvmap_page_pool_get_unused_pages(void)
 {
 	unsigned int i;
 	int total = 0;
-	struct nvmap_share *share = nvmap_get_share_from_dev(nvmap_dev);
+	struct nvmap_share *share;
+
+	if (!nvmap_dev)
+		return 0;
+
+	share = nvmap_get_share_from_dev(nvmap_dev);
+	if (!share)
+		return 0;
 
 	for (i = 0; i < NVMAP_NUM_POOLS; i++)
 		total += nvmap_page_pool_get_available_count(&share->pools[i]);

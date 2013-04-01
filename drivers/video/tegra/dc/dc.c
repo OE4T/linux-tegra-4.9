@@ -633,7 +633,7 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 		DUMP_REG(DC_WIN_BUF_STRIDE);
 		DUMP_REG(DC_WIN_UV_BUF_STRIDE);
 #endif
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		DUMP_REG(DC_WIN_BLEND_NOKEY);
 		DUMP_REG(DC_WIN_BLEND_1WIN);
 		DUMP_REG(DC_WIN_BLEND_2WIN_X);

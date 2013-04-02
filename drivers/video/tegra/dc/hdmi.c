@@ -679,7 +679,7 @@ static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
 	if (!mode->pixclock)
 		return false;
 
-	pclk = PICOS2KHZ(mode->pixclock);
+	pclk = PICOS2KHZ(mode->pixclock) * 1000;
 
 	/* look on 44.1k audio table, if mode's pixel clock is within 1%, then
 	 * use the pixel clock from the audio table.*/

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -185,11 +185,11 @@ static void tegra_cec_init(struct tegra_cec *cec)
 
 	writel(0x00, cec->cec_base + TEGRA_CEC_SW_CONTROL);
 
-	writel((TEGRA_CEC_LOGICAL_ADDR<<TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK)&
+	writel(((TEGRA_CEC_LOGICAL_ADDR<<TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK)&
 	   (~TEGRA_CEC_HW_CONTROL_RX_SNOOP) &
 	   (~TEGRA_CEC_HW_CONTROL_RX_NAK_MODE) &
 	   (~TEGRA_CEC_HW_CONTROL_TX_NAK_MODE) &
-	   (~TEGRA_CEC_HW_CONTROL_FAST_SIM_MODE) |
+	   (~TEGRA_CEC_HW_CONTROL_FAST_SIM_MODE)) |
 	   (TEGRA_CEC_HW_CONTROL_TX_RX_MODE),
 	   cec->cec_base + TEGRA_CEC_HW_CONTROL);
 
@@ -328,7 +328,7 @@ static int __devinit tegra_cec_probe(struct platform_device *pdev)
 	return 0;
 
 cec_error:
-	clk_disable(cec->clk)
+	clk_disable(cec->clk);
 	clk_put(cec->clk);
 clk_error:
 	return ret;
@@ -338,7 +338,7 @@ static int tegra_cec_remove(struct platform_device *pdev)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
 
-	clk_disable(cec->clk)
+	clk_disable(cec->clk);
 	clk_put(cec->clk);
 
 	misc_deregister(&cec->misc_dev);

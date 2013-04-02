@@ -2577,8 +2577,6 @@ static void tegra_dc_dsi_hold_host(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE) {
-		/* extra reference to dsi clk */
-		clk_prepare_enable(dsi->dsi_clk);
 		atomic_inc(&dsi->host_ref);
 		tegra_dsi_host_resume(dc);
 	}
@@ -2594,9 +2592,6 @@ static void tegra_dc_dsi_release_host(struct tegra_dc *dc)
 		if (!atomic_read(&dsi->host_ref) &&
 		    (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE))
 			schedule_delayed_work(&dsi->idle_work, dsi->idle_delay);
-
-		/* balance extra dsi clk reference */
-		clk_disable_unprepare(dsi->dsi_clk);
 	}
 }
 

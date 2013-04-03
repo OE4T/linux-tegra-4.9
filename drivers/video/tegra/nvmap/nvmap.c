@@ -46,32 +46,22 @@
 /* map the backing pages for a heap_pgalloc handle into its IOVMM area */
 static int map_iovmm_area(struct nvmap_handle *h)
 {
-	tegra_iovmm_addr_t va;
-	unsigned long i;
 	int err;
 
 	BUG_ON(!h->heap_pgalloc || !h->pgalloc.area);
 	BUG_ON(h->size & ~PAGE_MASK);
 	WARN_ON(!h->pgalloc.dirty);
 
-	for (va = h->pgalloc.area->iovm_start, i = 0;
-	     va < (h->pgalloc.area->iovm_start + h->size);
-	     i++, va += PAGE_SIZE) {
-		unsigned long pfn;
-
-		pfn = page_to_pfn(h->pgalloc.pages[i]);
-		BUG_ON(!pfn_valid(pfn));
-		err = tegra_iovmm_vm_insert_pfn(h->pgalloc.area, va, pfn);
-		if (err)
-			goto err_out;
+	err = tegra_iovmm_vm_insert_pages(h->pgalloc.area,
+					  h->pgalloc.area->iovm_start,
+					  h->pgalloc.pages,
+					  h->size >> PAGE_SHIFT);
+	if (err) {
+		tegra_iovmm_zap_vm(h->pgalloc.area);
+		return err;
 	}
 	h->pgalloc.dirty = false;
-
 	return 0;
-
-err_out:
-	tegra_iovmm_zap_vm(h->pgalloc.area);
-	return err;
 }
 
 /* must be called inside nvmap_pin_lock, to ensure that an entire stream

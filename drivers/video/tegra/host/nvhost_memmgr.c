@@ -19,6 +19,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/platform_device.h>
 #include <linux/err.h>
 
 #include "nvhost_memmgr.h"
@@ -141,7 +142,7 @@ void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 }
 
 struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
-		struct mem_handle *handle)
+		struct mem_handle *handle, struct device *dev)
 {
 	switch (nvhost_memmgr_type((u32)handle)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
@@ -161,7 +162,8 @@ struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
 }
 
 void nvhost_memmgr_unpin(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct sg_table *sgt)
+		struct mem_handle *handle, struct device *dev,
+		struct sg_table *sgt)
 {
 	switch (nvhost_memmgr_type((u32)handle)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
@@ -291,10 +293,10 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 				pin_count--;
 				/* unpin, put */
 				nvhost_memmgr_unpin(mgr,
-						unpin_data[pin_count].h,
-						unpin_data[pin_count].mem);
+					unpin_data[pin_count].h, &dev->dev,
+					unpin_data[pin_count].mem);
 				nvhost_memmgr_put(mgr,
-						unpin_data[pin_count].h);
+					unpin_data[pin_count].h);
 			}
 			return dmabuf_count;
 		}
@@ -324,26 +326,8 @@ u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle)
 	return 0;
 }
 
-static const struct nvhost_mem_ops mem_ops = {
-	.alloc_mgr = nvhost_memmgr_alloc_mgr,
-	.put_mgr = nvhost_memmgr_put_mgr,
-	.get_mgr = nvhost_memmgr_get_mgr,
-	.get_mgr_file = nvhost_memmgr_get_mgr_file,
-	.alloc = nvhost_memmgr_alloc,
-	.get = nvhost_memmgr_get,
-	.put = nvhost_memmgr_put,
-	.pin = nvhost_memmgr_pin,
-	.unpin = nvhost_memmgr_unpin,
-	.mmap = nvhost_memmgr_mmap,
-	.munmap = nvhost_memmgr_munmap,
-	.kmap = nvhost_memmgr_kmap,
-	.kunmap = nvhost_memmgr_kunmap,
-	.pin_array_ids = nvhost_memmgr_pin_array_ids,
-};
-
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)
 {
-	chip->mem = mem_ops;
 	return 0;
 }
 

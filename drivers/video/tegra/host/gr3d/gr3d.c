@@ -107,7 +107,8 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	} else
 		ctx->restore_virt = NULL;
 
-	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore,
+			&ch->dev->dev);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -160,7 +161,8 @@ void nvhost_3dctx_free(struct kref *ref)
 	if (ctx->restore_virt)
 		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 
-	nvhost_memmgr_unpin(memmgr, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_unpin(memmgr, ctx->restore, &nctx->channel->dev->dev,
+			ctx->restore_sgt);
 	nvhost_memmgr_put(memmgr, ctx->restore);
 	kfree(ctx);
 }

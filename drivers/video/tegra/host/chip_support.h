@@ -138,31 +138,6 @@ struct nvhost_dev_ops {
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
 };
 
-struct nvhost_mem_ops {
-	struct mem_mgr *(*alloc_mgr)(void);
-	void (*put_mgr)(struct mem_mgr *);
-	struct mem_mgr *(*get_mgr)(struct mem_mgr *);
-	struct mem_mgr *(*get_mgr_file)(int fd);
-	struct mem_handle *(*alloc)(struct mem_mgr *,
-			size_t size, size_t align,
-			int flags);
-	struct mem_handle *(*get)(struct mem_mgr *,
-			u32 id, struct platform_device *);
-	void (*put)(struct mem_mgr *, struct mem_handle *);
-	struct sg_table *(*pin)(struct mem_mgr *, struct mem_handle *);
-	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
-	void *(*mmap)(struct mem_handle *);
-	void (*munmap)(struct mem_handle *, void *);
-	void *(*kmap)(struct mem_handle *, unsigned int);
-	void (*kunmap)(struct mem_handle *, unsigned int, void *);
-	int (*pin_array_ids)(struct mem_mgr *,
-			struct platform_device *,
-			u32 *,
-			dma_addr_t *,
-			u32,
-			struct nvhost_job_unpin *);
-};
-
 struct nvhost_actmon_ops {
 	int (*init)(struct host1x_actmon *actmon);
 	void (*deinit)(struct host1x_actmon *actmon);
@@ -197,7 +172,6 @@ struct nvhost_chip_support {
 	struct nvhost_syncpt_ops syncpt;
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
-	struct nvhost_mem_ops mem;
 	struct nvhost_actmon_ops actmon;
 	struct nvhost_tickctrl_ops tickctrl;
 };
@@ -211,7 +185,6 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define intr_op()		(nvhost_get_chip_ops()->intr)
 #define cdma_op()		(nvhost_get_chip_ops()->cdma)
 #define cdma_pb_op()		(nvhost_get_chip_ops()->push_buffer)
-#define mem_op()		(nvhost_get_chip_ops()->mem)
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
 #define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)
 

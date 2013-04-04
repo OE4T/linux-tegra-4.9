@@ -89,7 +89,8 @@ static int push_buffer_init(struct push_buffer *pb)
 	}
 
 	/* pin pushbuffer and get physical address */
-	pb->sgt = nvhost_memmgr_pin(mgr, pb->mem);
+	pb->sgt = nvhost_memmgr_pin(mgr, pb->mem,
+			&cdma_to_dev(cdma)->dev->dev);
 	if (IS_ERR(pb->sgt)) {
 		err = PTR_ERR(pb->sgt);
 		pb->sgt = 0;
@@ -128,7 +129,8 @@ static void push_buffer_destroy(struct push_buffer *pb)
 		nvhost_memmgr_munmap(pb->mem, pb->mapped);
 
 	if (pb->phys != 0)
-		nvhost_memmgr_unpin(mgr, pb->mem, pb->sgt);
+		nvhost_memmgr_unpin(mgr, pb->mem,
+				&cdma_to_dev(cdma)->dev->dev, pb->sgt);
 
 	if (pb->mem)
 		nvhost_memmgr_put(mgr, pb->mem);

@@ -283,7 +283,8 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
+			&dev->dev);
 	if (IS_ERR(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
@@ -291,7 +292,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->mapped = mem_op().mmap(m->mem_r);
+	m->mapped = nvhost_memmgr_mmap(m->mem_r);
 	if (IS_ERR_OR_NULL(m->mapped)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
@@ -312,15 +313,16 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 
 clean_up:
 	if (m->mapped) {
-		mem_op().munmap(m->mem_r, (u32 *)m->mapped);
+		nvhost_memmgr_munmap(m->mem_r, (u32 *)m->mapped);
 		m->mapped = NULL;
 	}
 	if (m->pa) {
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
+				&dev->dev, m->pa);
 		m->pa = NULL;
 	}
 	if (m->mem_r) {
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = NULL;
 	}
 	release_firmware(ucode_fw);
@@ -375,16 +377,16 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mapped) {
-		mem_op().munmap(m->mem_r, m->mapped);
+		nvhost_memmgr_munmap(m->mem_r, m->mapped);
 		m->mapped = NULL;
 	}
 	if (m->pa) {
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			m->pa);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
+			&dev->dev, m->pa);
 		m->pa = NULL;
 	}
 	if (m->mem_r) {
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = NULL;
 	}
 	kfree(m);

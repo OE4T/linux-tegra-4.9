@@ -423,7 +423,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	if (!save_ptr)
 		goto fail_mmap;
 
-	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
@@ -509,7 +509,7 @@ int nvhost_gr3d_t30_read_reg(
 	}
 	cmdbuf_ptr = mem_ptr + 1;
 
-	mem_sgt = nvhost_memmgr_pin(memmgr, mem);
+	mem_sgt = nvhost_memmgr_pin(memmgr, mem, &channel->dev->dev);
 	if (IS_ERR(mem_sgt)) {
 		err = -ENOMEM;
 		mem_sgt = NULL;
@@ -573,7 +573,7 @@ done:
 	if (mem_ptr)
 		nvhost_memmgr_munmap(mem, mem_ptr);
 	if (mem_sgt)
-		nvhost_memmgr_unpin(memmgr, mem, mem_sgt);
+		nvhost_memmgr_unpin(memmgr, mem, &channel->dev->dev, mem_sgt);
 	if (mem)
 		nvhost_memmgr_put(memmgr, mem);
 	return err;

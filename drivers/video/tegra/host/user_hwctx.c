@@ -59,11 +59,11 @@ static void user_hwctx_free(struct kref *ref)
 	user_ctxhandler_free(hwctx->h);
 
 	if (uhwctx->save_sgt)
-		nvhost_memmgr_unpin(hwctx->memmgr,
-				uhwctx->save_buf, uhwctx->save_sgt);
+		nvhost_memmgr_unpin(hwctx->memmgr, uhwctx->save_buf,
+				&hwctx->channel->dev->dev, uhwctx->save_sgt);
 	if (uhwctx->restore_sgt)
-		nvhost_memmgr_unpin(hwctx->memmgr,
-				uhwctx->restore, uhwctx->restore_sgt);
+		nvhost_memmgr_unpin(hwctx->memmgr, uhwctx->restore,
+				&hwctx->channel->dev->dev, uhwctx->restore_sgt);
 
 	if (uhwctx->save_buf)
 		nvhost_memmgr_put(hwctx->memmgr, uhwctx->save_buf);
@@ -119,7 +119,8 @@ int user_hwctx_set_save(struct user_hwctx *ctx,
 	if (IS_ERR_OR_NULL(buf))
 		return -ENOMEM;
 
-	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf);
+	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
+			&ctx->hwctx.channel->dev->dev);
 	if (IS_ERR_OR_NULL(sgt))
 		return -ENOMEM;
 
@@ -154,7 +155,8 @@ int user_hwctx_set_restore(struct user_hwctx *ctx,
 	if (IS_ERR_OR_NULL(buf))
 		return -ENOMEM;
 
-	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf);
+	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
+			&ctx->hwctx.channel->dev->dev);
 	if (IS_ERR_OR_NULL(sgt))
 		return -ENOMEM;
 

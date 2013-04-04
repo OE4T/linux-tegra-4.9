@@ -393,7 +393,8 @@ void nvhost_job_unpin(struct nvhost_job *job)
 
 	for (i = 0; i < job->num_unpins; i++) {
 		struct nvhost_job_unpin *unpin = &job->unpins[i];
-		nvhost_memmgr_unpin(job->memmgr, unpin->h, unpin->mem);
+		nvhost_memmgr_unpin(job->memmgr, unpin->h,
+				&job->ch->dev->dev, unpin->mem);
 		nvhost_memmgr_put(job->memmgr, unpin->h);
 	}
 	job->num_unpins = 0;

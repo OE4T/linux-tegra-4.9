@@ -472,7 +472,8 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 	if (!ctx->restore_virt)
 		goto fail_mmap;
 
-	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore,
+			&ch->dev->dev);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -513,7 +514,8 @@ static void ctxmpe_free(struct kref *ref)
 
 	if (ctx->restore_virt)
 		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
-	nvhost_memmgr_unpin(memmgr, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_unpin(memmgr, ctx->restore,
+			&nctx->channel->dev->dev, ctx->restore_sgt);
 	nvhost_memmgr_put(memmgr, ctx->restore);
 	kfree(ctx);
 }
@@ -601,7 +603,7 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 	if (!save_ptr)
 		goto fail_mmap;
 
-	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);

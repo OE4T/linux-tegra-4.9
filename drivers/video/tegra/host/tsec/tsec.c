@@ -410,7 +410,8 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
+			&dev->dev);
 	if (IS_ERR(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
@@ -439,15 +440,16 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 clean_up:
 	if (m->mapped) {
-		mem_op().munmap(m->mem_r, m->mapped);
+		nvhost_memmgr_munmap(m->mem_r, m->mapped);
 		m->mapped = NULL;
 	}
 	if (m->pa) {
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
+				&dev->dev, m->pa);
 		m->pa = NULL;
 	}
 	if (m->mem_r) {
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = NULL;
 	}
 	release_firmware(ucode_fw);
@@ -503,12 +505,13 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
 		if (m->mapped)
-			mem_op().munmap(m->mem_r, m->mapped);
+			nvhost_memmgr_munmap(m->mem_r, m->mapped);
 		if (m->pa)
-			mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
-				m->pa);
+			nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
+					m->mem_r, &dev->dev, m->pa);
 		if (m->mem_r)
-			mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+			nvhost_memmgr_put(nvhost_get_host(dev)->memmgr,
+					m->mem_r);
 		m->mem_r = 0;
 	}
 	kfree(m);

@@ -1218,7 +1218,7 @@ static void nct1008_shutdown(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int nct1008_suspend(struct device *dev)
+static int nct1008_suspend_powerdown(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	int err;
@@ -1231,10 +1231,82 @@ static int nct1008_suspend(struct device *dev)
 	return err;
 }
 
-static int nct1008_resume(struct device *dev)
+static int nct1008_suspend_wakeup(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	int err;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+	long ext_temp;
+
+	err = nct1008_get_temp(dev, &ext_temp, 0);
+	if (err)
+		goto error;
+
+	if (ext_temp > data->plat_data.suspend_ext_limit_lo)
+		err = nct1008_thermal_set_limits(data,
+			data->plat_data.suspend_ext_limit_lo,
+			NCT1008_MAX_TEMP * 1000);
+	else
+		err = nct1008_thermal_set_limits(data,
+			NCT1008_MIN_TEMP * 1000,
+			data->plat_data.suspend_ext_limit_hi);
+
+	if (err)
+		goto error;
+
+	/* Enable NCT wake */
+	err = enable_irq_wake(client->irq);
+	if (err)
+		dev_err(&client->dev, "Error: %s, error=%d. failed to enable NCT "
+				"wakeup\n", __func__, err);
+
+
+	return err;
+
+error:
+	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
+		"error=%d. Can't set correct LP1 alarm limits or set wakeup irq, "
+		"shutting down device", __FILE__, __func__, __LINE__, err);
+
+	return nct1008_suspend_powerdown(dev);
+}
+
+static int nct1008_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	if (data->plat_data.suspend_with_wakeup &&
+		data->plat_data.suspend_with_wakeup())
+		return nct1008_suspend_wakeup(dev);
+	else
+		return nct1008_suspend_powerdown(dev);
+}
+
+
+static int nct1008_resume_wakeup(struct device *dev)
+{
+	int err = 0;
+	struct i2c_client *client = to_i2c_client(dev);
+
+	err = disable_irq_wake(client->irq);
+	if (err) {
+		dev_err(&client->dev, "Error: %s, error=%d. failed to disable NCT "
+				"wakeup\n", __func__, err);
+		return err;
+	}
+
+	/* NCT wasn't powered down, so IRQ is still enabled. */
+	/* Disable it before calling update */
+	disable_irq(client->irq);
+
+	return err;
+}
+
+static int nct1008_resume_powerdown(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	int err = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	nct1008_power_control(data, true);
@@ -1245,6 +1317,25 @@ static int nct1008_resume(struct device *dev)
 			__func__, err);
 		return err;
 	}
+
+	return err;
+}
+
+static int nct1008_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	int err;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	if (data->plat_data.suspend_with_wakeup &&
+		data->plat_data.suspend_with_wakeup())
+		err = nct1008_resume_wakeup(dev);
+	else
+		err = nct1008_resume_powerdown(dev);
+
+	if (err)
+		return err;
+
 	nct1008_update(data);
 	enable_irq(client->irq);
 

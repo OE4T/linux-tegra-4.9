@@ -930,16 +930,13 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+	bool hpd = tegra_dc_hdmi_hpd(dc);
 
 	rt_mutex_lock(&hdmi->suspend_lock);
 	hdmi->suspended = false;
 
-	if (tegra_dc_hdmi_hpd(dc))
-		queue_delayed_work(system_nrt_wq, &hdmi->work,
-				   msecs_to_jiffies(100));
-	else
-		queue_delayed_work(system_nrt_wq, &hdmi->work,
-				   msecs_to_jiffies(30));
+	queue_delayed_work(system_nrt_wq, &hdmi->work,
+			   msecs_to_jiffies(hpd ? 100 : 30));
 
 	rt_mutex_unlock(&hdmi->suspend_lock);
 

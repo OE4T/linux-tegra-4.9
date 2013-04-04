@@ -200,9 +200,9 @@ int gk20a_init_mm_support(struct gk20a *g)
 	return err;
 }
 
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-static int alloc_gmmu_nvmap_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa, void **handle,
-				  struct sg_table **sgt)
+static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
+			    phys_addr_t *pa, void **handle,
+			    struct sg_table **sgt)
 {
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	struct mem_handle *r;
@@ -244,75 +244,29 @@ err_alloced:
 err_out:
 	return -ENOMEM;
 }
-#endif
 
-static int alloc_gmmu_sysmem_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa,
-				   void **handle, struct sg_table **sgt)
-{
-	struct page *pte_page;
-
-	nvhost_dbg_fn("");
-
-	pte_page = alloc_pages(GFP_KERNEL | __GFP_ZERO, order);
-	if (!pte_page)
-		return -ENOMEM;
-
-	*pa = page_to_phys(pte_page);
-	*sgt = 0;
-	*handle = pte_page;
-	return 0;
-}
-
-static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order, phys_addr_t *pa,
-			    void **handle, struct sg_table **sgt)
-{
-
-	nvhost_dbg_fn("");
-
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-	if (tegra_split_mem_active())
-		return alloc_gmmu_nvmap_pages(vm, order, pa, handle, sgt);
-	else
-#endif
-		return alloc_gmmu_sysmem_pages(vm, order, pa, handle, sgt);
-}
 
 static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order)
 {
+	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	nvhost_dbg_fn("");
-
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-	if (tegra_split_mem_active()) {
-		struct mem_mgr *client = mem_mgr_from_vm(vm);
-		BUG_ON(sgt == NULL);
-		mem_op().unpin(client, handle, sgt);
-		mem_op().put(client, handle);
-	} else
-#endif
-		__free_pages((struct page *)handle, order);
+	BUG_ON(sgt == NULL);
+	mem_op().unpin(client, handle, sgt);
+	mem_op().put(client, handle);
 }
 
 static int map_gmmu_pages(void *handle, void **va)
 {
+	struct mem_handle *r = handle;
 	u32 *tmp_va;
 
 	nvhost_dbg_fn("");
 
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-	if (tegra_split_mem_active()) {
-		struct mem_handle *r = handle;
+	tmp_va = mem_op().mmap(r);
+	if (IS_ERR_OR_NULL(tmp_va))
+		goto err_out;
 
-		tmp_va = mem_op().mmap(r);
-		if (IS_ERR_OR_NULL(tmp_va))
-			goto err_out;
-	} else
-#endif
-	{
-		tmp_va = kmap((struct page *)handle);
-		if (!tmp_va)
-			goto err_out;
-	}
 	*va = tmp_va;
 	return 0;
 
@@ -322,16 +276,9 @@ err_out:
 
 static void unmap_gmmu_pages(void *handle, u32 *va)
 {
-
+	struct mem_handle *r = handle;
 	nvhost_dbg_fn("");
-
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-	if (tegra_split_mem_active()) {
-		struct mem_handle *r = handle;
-		mem_op().munmap(r, va);
-	} else
-#endif
-		kunmap((struct page *)handle);
+	mem_op().munmap(r, va);
 }
 
 static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
@@ -950,11 +897,9 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 		u32 pte_lo, pte_hi;
 		u32 pte_cur;
 		u32 pte_space_page_cur, pte_space_offset_cur;
-		u32 pte_space_page, pte_space_page_offset;
+		u32 pte_space_page_offset;
 		u32 *pde;
 		void *pte_kv_cur;
-
-		u32 pte_pfn0 = 0; 		/* Keep compiler quiet */
 
 		struct page_table_gk20a *pte = vm->pdes.ptes + pde_i;
 
@@ -973,18 +918,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 		/* need to worry about crossing pages when accessing the ptes */
 		pte_space_page_offset_from_index(pte_lo, &pte_space_page_cur,
 						 &pte_space_offset_cur);
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-		if (tegra_split_mem_active()) {
-			err = map_gmmu_pages(pte->ref, &pte_kv_cur);
-		} else
-#endif
-		{
-			pte_pfn0 = page_to_pfn((struct page *)pte->ref);
-			err = map_gmmu_pages((void *)pfn_to_page(pte_pfn0 +
-								 pte_space_page_cur),
-								 &pte_kv_cur);
-		}
-
+		err = map_gmmu_pages(pte->ref, &pte_kv_cur);
 		if (err) {
 			nvhost_err(dev_from_vm(vm),
 				   "couldn't map ptes for update");
@@ -993,33 +927,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 
 		nvhost_dbg(dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
-
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-			if (tegra_split_mem_active()) {
-				pte_space_page_offset = pte_cur;
-			} else
-#endif
-			{
-				pte_space_page_offset_from_index(pte_cur,
-								&pte_space_page,
-								&pte_space_page_offset);
-				if (unlikely(pte_space_page != pte_space_page_cur)) {
-					__cpuc_flush_dcache_area(pte_kv_cur,
-								 PAGE_SIZE);
-					unmap_gmmu_pages(pfn_to_page(pte_pfn0 +
-							 pte_space_page_cur),
-							 pte_kv_cur);
-					pte_space_page_cur = pte_space_page;
-					err = map_gmmu_pages(pfn_to_page(pte_pfn0 +
-							     pte_space_page_cur),
-							     &pte_kv_cur);
-					if (err) {
-						nvhost_err(dev_from_vm(vm),
-							   "couldn't map ptes for update");
-						goto clean_up;
-					}
-				}
-			}
+			pte_space_page_offset = pte_cur;
 			if (ctag) {
 				ctag_pte_cnt++;
 				if (ctag_pte_cnt > ctag_ptes) {
@@ -1053,13 +961,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 
 		__cpuc_flush_dcache_area(pte_kv_cur, PAGE_SIZE);
 
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-		if (tegra_split_mem_active())
-			unmap_gmmu_pages(pte->ref, pte_kv_cur);
-		else
-#endif
-			unmap_gmmu_pages(pfn_to_page(pte_pfn0 + pte_space_page_cur),
-					 pte_kv_cur);
+		unmap_gmmu_pages(pte->ref, pte_kv_cur);
 
 		if (pte->ref_cnt == 0) {
 			/* invalidate pde */
@@ -1217,7 +1119,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+			       &vm->pdes.sgt);
 	if (err) {
 		return -ENOMEM;
 	}
@@ -1385,7 +1288,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+			       &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
@@ -1512,7 +1416,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		   vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref, &vm->pdes.sgt);
+	err = alloc_gmmu_pages(vm, 0, &vm->pdes.phys, &vm->pdes.ref,
+			       &vm->pdes.sgt);
 	if (err)
 		goto clean_up;
 
@@ -1747,9 +1652,9 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 	struct page_table_gk20a *pte_s;
 	u64 pde_va, pte_va;
 	u32 pde_i, pde_lo, pde_hi;
-	u32 pte_i, pte_lo, pte_hi, pte_pfn0;
+	u32 pte_i, pte_lo, pte_hi;
 	u32 pte_space_page_cur, pte_space_offset_cur;
-	u32 pte_space_page, pte_space_page_offset;
+	u32 pte_space_page_offset;
 	u32 num_ptes, page_size;
 	void *pde, *pte;
 	phys_addr_t pte_addr;
@@ -1782,21 +1687,9 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 						&pte_space_page_cur,
 						&pte_space_offset_cur);
 
-		pte_pfn0 = 0;
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-		if (tegra_split_mem_active()) {
-			err = map_gmmu_pages(pte_s->ref, &pte);
-			pte_s->sgt = mem_op().pin(client, pte_s->ref);
-			pte_addr = sg_dma_address(pte_s->sgt->sgl);
-		} else
-#endif
-		{
-			pte_pfn0 = page_to_pfn((struct page *)pte_s->ref);
-			err = map_gmmu_pages((void *)pfn_to_page(pte_pfn0 +
-					pte_space_page_cur),
-					&pte);
-			pte_addr = __pfn_to_phys(pte_pfn0);
-		}
+		err = map_gmmu_pages(pte_s->ref, &pte);
+		pte_s->sgt = mem_op().pin(client, pte_s->ref);
+		pte_addr = sg_dma_address(pte_s->sgt->sgl);
 
 		for (pte_i = pte_lo; pte_i <= pte_hi; pte_i++) {
 
@@ -1807,33 +1700,7 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 			if (pte_va > va_end)
 				break;
 
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-			if (tegra_split_mem_active()) {
-				pte_space_page_offset = pte_i;
-			} else
-#endif
-			{
-				pte_space_page_offset_from_index(pte_i,
-						&pte_space_page,
-						&pte_space_page_offset);
-				if (unlikely(pte_space_page !=
-						pte_space_page_cur)) {
-					unmap_gmmu_pages(pfn_to_page(pte_pfn0 +
-							 pte_space_page_cur),
-							 pte);
-					pte_space_page_cur = pte_space_page;
-					err = map_gmmu_pages(
-							pfn_to_page(pte_pfn0 +
-							pte_space_page_cur),
-							&pte);
-					if (err) {
-						nvhost_err(dev_from_vm(vm),
-						"couldn't map pde %d, pte %d",
-							pde_i, pte_i);
-						continue;
-					}
-				}
-			}
+			pte_space_page_offset = pte_i;
 
 			nvhost_err(dev_from_vm(vm),
 				"\t\t[0x%016llx -> 0x%016llx] pte @ 0x%08x : 0x%08x, 0x%08x\n",
@@ -1843,15 +1710,8 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 				mem_rd32(pte + pte_space_page_offset * 8, 1));
 		}
 
-#ifdef CONFIG_TEGRA_SIMULATION_SPLIT_MEM
-		if (tegra_split_mem_active()) {
-			unmap_gmmu_pages(pte_s->ref, pte);
-			mem_op().unpin(client, pte_s->ref, pte_s->sgt);
-		} else
-#endif
-			unmap_gmmu_pages(
-				pfn_to_page(pte_pfn0 + pte_space_page_cur),
-				pte);
+		unmap_gmmu_pages(pte_s->ref, pte);
+		mem_op().unpin(client, pte_s->ref, pte_s->sgt);
 	}
 }
 #endif /* VM DEBUG */

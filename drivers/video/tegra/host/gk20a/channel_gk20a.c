@@ -909,10 +909,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	u32 new_put, new_get;
 	u32 free_count;
 	u32 extra_count = 0;
-	u32 i;
+	u32 i, incr_id = ~0, wait_id = ~0;
 	u32 err = 0;
 	struct priv_cmd_entry *wait_cmd = NULL;
-	struct priv_cmd_entry *get_cmd = NULL;
+	struct priv_cmd_entry *incr_cmd = NULL;
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
@@ -954,8 +954,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* always insert syncpt increment at end of gpfifo submission
 	   to keep track of method completion for idle railgating */
-	alloc_priv_cmdbuf(c, 6, &get_cmd);
-	if (get_cmd == NULL) {
+	alloc_priv_cmdbuf(c, 6, &incr_cmd);
+	if (incr_cmd == NULL) {
 		nvhost_err(d, "not enough priv cmd buffer space");
 		err = -EAGAIN;
 		goto clean_up;
@@ -969,6 +969,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (wait_cmd) {
+		wait_id = fence->syncpt_id;
 		/* syncpoint_a */
 		wait_cmd->ptr[0] = 0x2001001C;
 		/* payload */
@@ -976,7 +977,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		/* syncpoint_b */
 		wait_cmd->ptr[2] = 0x2001001D;
 		/* syncpt_id, switch_en, wait */
-		wait_cmd->ptr[3] = (fence->syncpt_id << 8) | 0x10;
+		wait_cmd->ptr[3] = (wait_id << 8) | 0x10;
 
 		nvhost_dbg_info("cmds for syncpt wait :\n"
 			"0x%08x, 0x%08x, 0x%08x, 0x%08x",
@@ -1015,49 +1016,56 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			(c->gpfifo.entry_num - 1);
 	}
 
-	if (get_cmd) {
-		fence->syncpt_id = c->hw_chid + pdata->syncpt_base;
-		fence->value     = nvhost_syncpt_incr_max(sp, fence->syncpt_id, 1);
+	if (incr_cmd) {
+		incr_id = c->hw_chid + pdata->syncpt_base;
+		fence->syncpt_id = incr_id;
+		fence->value     = nvhost_syncpt_incr_max(sp, incr_id, 1);
 
 		trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
 
 		/* wfi */
-		get_cmd->ptr[0] = 0x2001001E;
+		incr_cmd->ptr[0] = 0x2001001E;
 		/* handle, ignored */
-		get_cmd->ptr[1] = 0x00000000;
+		incr_cmd->ptr[1] = 0x00000000;
 		/* syncpoint_a */
-		get_cmd->ptr[2] = 0x2001001C;
+		incr_cmd->ptr[2] = 0x2001001C;
 		/* payload, ignored */
-		get_cmd->ptr[3] = 0;
+		incr_cmd->ptr[3] = 0;
 		/* syncpoint_b */
-		get_cmd->ptr[4] = 0x2001001D;
+		incr_cmd->ptr[4] = 0x2001001D;
 		/* syncpt_id, incr */
-		get_cmd->ptr[5] = (fence->syncpt_id << 8) | 0x1;
+		incr_cmd->ptr[5] = (fence->syncpt_id << 8) | 0x1;
 
 		nvhost_dbg_info("cmds for syncpt incr :\n"
 			"0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x",
-			get_cmd->ptr[0],
-			get_cmd->ptr[1],
-			get_cmd->ptr[2],
-			get_cmd->ptr[3],
-			get_cmd->ptr[4],
-			get_cmd->ptr[5]);
+			incr_cmd->ptr[0],
+			incr_cmd->ptr[1],
+			incr_cmd->ptr[2],
+			incr_cmd->ptr[3],
+			incr_cmd->ptr[4],
+			incr_cmd->ptr[5]);
 
 		nvhost_dbg_info("put %d, get %d, size %d",
 			c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
 		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
-			u64_lo32(get_cmd->gva);
+			u64_lo32(incr_cmd->gva);
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
-			u64_hi32(get_cmd->gva) |
-			(get_cmd->size << 10);
+			u64_hi32(incr_cmd->gva) |
+			(incr_cmd->size << 10);
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
 
 		/* save gp_put */
-		get_cmd->gp_put = c->gpfifo.put;
+		incr_cmd->gp_put = c->gpfifo.put;
 	}
+
+	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
+					   c->hw_chid,
+					   num_entries,
+					   flags,
+					   wait_id, incr_id);
 
 	nvhost_dbg_info("put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);

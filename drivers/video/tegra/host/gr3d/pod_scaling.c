@@ -333,6 +333,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	struct nvhost_device_data *pdata = platform_get_drvdata(d);
 	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
+	int cancel = 0;
 
 	if (!df)
 		return;
@@ -343,7 +344,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	trace_podgov_set_user_ctl(user);
 
 	if (podgov->enable && user && !podgov->p_user) {
-		cancel_work_sync(&podgov->work);
+		cancel = 1;
 		cancel_delayed_work(&podgov->idle_timer);
 
 		podgov->adjustment_frequency = podgov->p_freq_request;
@@ -354,6 +355,8 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	podgov->p_user = user;
 
 	mutex_unlock(&df->lock);
+	if (cancel)
+		cancel_work_sync(&podgov->work);
 }
 
 /*******************************************************************************

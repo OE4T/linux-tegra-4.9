@@ -99,6 +99,14 @@ struct channel_gk20a {
 	wait_queue_head_t notifier_wq;
 	wait_queue_head_t semaphore_wq;
 
+	bool cmds_pending;
+	struct {
+		bool valid;
+		bool wfi; /* was issued with preceding wfi */
+		u32 syncpt_value;
+		u32 syncpt_id;
+	} last_submit_fence;
+
 	void (*remove_support)(struct channel_gk20a *);
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 	struct {
@@ -130,7 +138,6 @@ struct nvhost_cycle_stats_args;
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 int gk20a_channel_init(struct nvhost_channel *ch, struct nvhost_master *host,
 		       int index);
-int gk20a_channel_submit(struct nvhost_job *job);
 int gk20a_channel_alloc_obj(struct nvhost_channel *channel,
 			u32 class_num, u32 *obj_id, u32 vaspace_share);
 int gk20a_channel_free_obj(struct nvhost_channel *channel,
@@ -143,6 +150,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			struct nvhost_gpfifo *gpfifo, u32 num_entries,
 			struct nvhost_fence *fence, u32 flags);
 void gk20a_free_channel(struct nvhost_hwctx *ctx);
+void gk20a_disable_channel(struct channel_gk20a *ch,
+			   bool wait_for_finish,
+			   long finish_timeout);
+int gk20a_channel_finish(struct channel_gk20a *ch, long timeout);
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args);
 int gk20a_channel_zcull_bind(struct channel_gk20a *ch,

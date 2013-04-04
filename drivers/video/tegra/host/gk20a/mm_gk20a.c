@@ -44,6 +44,8 @@
 
 #include "kind_gk20a.h"
 
+
+static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
 /* we support 2 page sizes, define indexing based upon that */
 static inline int gmmu_page_size_idx(u32 ps)
 {
@@ -373,7 +375,6 @@ static inline void pte_space_page_offset_from_index(u32 i, u32 *pte_page,
  * backing store and if not go ahead allocate it and
  * record it in the appropriate pde
  */
-
 static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 					  u32 i,
 					  u32 gmmu_page_size)
@@ -426,8 +427,8 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 
 	smp_mb();
 	__cpuc_flush_dcache_area(pde, sizeof(u32) * 2);
-	gk20a_mm_tlb_invalidate(vm->mm->g, vm);
-
+	vm->tlb_dirty = true;
+	nvhost_dbg_fn("set tlb dirty");
 	return 0;
 }
 
@@ -977,8 +978,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 	}
 
 	smp_mb();
-	gk20a_mm_tlb_invalidate(vm->mm->g, vm);
-
+	vm->tlb_dirty = true;
+	nvhost_dbg_fn("set tlb dirty");
 	return 0;
 
 clean_up:
@@ -1042,7 +1043,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	return;
 }
 
-/* called by kernel, mem_mgr and mem_handle are ignored */
+/* called by kernel. mem_mgr and mem_handle are ignored */
 static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 {
 	struct mem_mgr *memmgr;
@@ -1145,6 +1146,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->map = gk20a_vm_map;
 	vm->unmap = gk20a_vm_unmap;
 	vm->unmap_user = gk20a_vm_unmap_user;
+	vm->tlb_inval  = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
 
 	vm->enable_ctag = true;
@@ -1369,6 +1371,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->map = gk20a_vm_map;
 	vm->unmap = gk20a_vm_unmap;
 	vm->unmap_user = gk20a_vm_unmap_user;
+	vm->tlb_inval  = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
 
 	return 0;
@@ -1495,6 +1498,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->map		    = gk20a_vm_map;
 	vm->unmap	    = gk20a_vm_unmap;
 	vm->unmap_user	    = gk20a_vm_unmap_user;
+	vm->tlb_inval  = gk20a_mm_tlb_invalidate;
 	vm->remove_support  = gk20a_vm_remove_support;
 
 	return 0;
@@ -1508,6 +1512,8 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 {
 	u32 data;
 	s32 retry = 100;
+
+	nvhost_dbg_fn("");
 
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
@@ -1540,6 +1546,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	u32 data;
 	s32 retry = 200;
 
+	nvhost_dbg_fn("");
 	/* Flush all dirty lines from the L2 to DRAM. Lines are left in the L2
 	   as clean, so subsequent reads might hit in the L2. */
 	gk20a_writel(g, flush_l2_flush_dirty_r(),
@@ -1592,8 +1599,9 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			"l2_system_invalidate too many retries");
 }
 
-void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm)
+static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	u32 addr_lo = u64_lo32(vm->pdes.phys) >> 12;
 	u32 data;
 	s32 retry = 200;
@@ -1605,6 +1613,8 @@ void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm)
 	   power is turned off */
 	if (!g->power_on)
 		return;
+
+	nvhost_dbg_fn("");
 
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());

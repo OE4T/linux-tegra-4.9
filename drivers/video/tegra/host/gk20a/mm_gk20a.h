@@ -144,6 +144,7 @@ struct vm_gk20a {
 	u64 va_limit;
 
 	bool enable_ctag;
+	bool tlb_dirty;
 
 	struct page_directory_gk20a pdes;
 
@@ -173,6 +174,9 @@ struct vm_gk20a {
 		struct mem_mgr **memmgr,
 		struct mem_handle **r);
 
+	/* invalidate tlbs for the vm area */
+	void (*tlb_inval)(struct vm_gk20a *vm);
+
 	void (*remove_support)(struct vm_gk20a *vm);
 };
 
@@ -186,7 +190,6 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm);
 
 void gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
-void gk20a_mm_tlb_invalidate(struct gk20a *g, struct vm_gk20a *vm);
 
 struct mm_gk20a {
 	struct gk20a *g;

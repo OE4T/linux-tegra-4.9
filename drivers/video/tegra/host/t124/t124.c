@@ -373,7 +373,7 @@ static int t124_channel_submit(struct nvhost_job *job)
 
 #if defined(CONFIG_TEGRA_GK20A)
 	if (job->ch->dev == &tegra_gk20a_device)
-		return gk20a_channel_submit(job);
+		return -ENODEV; /* makes no sense/shouldn't happen */
 	else
 #endif
 		return host1x_channel_submit(job);

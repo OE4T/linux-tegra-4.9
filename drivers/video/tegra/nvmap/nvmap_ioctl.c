@@ -1105,6 +1105,7 @@ static int cache_maint(struct nvmap_client *client,
 			(inner_maint || outer_maint) &&
 			allow_deferred == CACHE_MAINT_ALLOW_DEFERRED &&
 			atomic_read(&h->pin) == 0 &&
+			!h->nvhost_priv &&
 			deferred_ops->enable_deferred_cache_maintenance) {
 
 		struct cache_maint_op *cache_op;

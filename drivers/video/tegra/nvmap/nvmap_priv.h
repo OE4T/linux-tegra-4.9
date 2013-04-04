@@ -108,6 +108,8 @@ struct nvmap_handle {
 	bool alloc;		/* handle has memory allocated */
 	unsigned int userflags;	/* flags passed from userspace */
 	struct mutex lock;
+	void *nvhost_priv;	/* nvhost private data */
+	void (*nvhost_priv_delete)(void *priv);
 };
 
 /* handle_ref objects are client-local references to an nvmap_handle;

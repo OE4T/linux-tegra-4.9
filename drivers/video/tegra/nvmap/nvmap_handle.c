@@ -506,6 +506,9 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	struct nvmap_page_pool *pool = NULL;
 #endif
 
+	if (h->nvhost_priv)
+		h->nvhost_priv_delete(h->nvhost_priv);
+
 	if (nvmap_handle_remove(h->dev, h) != 0)
 		return;
 

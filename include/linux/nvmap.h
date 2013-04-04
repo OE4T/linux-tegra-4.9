@@ -150,6 +150,9 @@ struct sg_table *nvmap_sg_table(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref);
 void nvmap_free_sg_table(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, struct sg_table *sgt);
+void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
+		void (*delete)(void *priv));
+void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref);
 
 struct nvmap_platform_carveout {
 	const char *name;

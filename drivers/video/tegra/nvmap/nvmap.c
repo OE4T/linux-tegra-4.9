@@ -1030,3 +1030,38 @@ void nvmap_free_sg_table(struct nvmap_client *client,
 	sg_free_table(sgt);
 	kfree(sgt);
 }
+
+void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
+		void (*delete)(void *priv))
+{
+	struct nvmap_handle *h;
+
+	if (!ref || !ref->handle)
+		return;
+
+	h = nvmap_handle_get(ref->handle);
+	if (!h)
+		return;
+
+	h->nvhost_priv = priv;
+	h->nvhost_priv_delete = delete;
+	nvmap_handle_put(ref->handle);
+}
+
+void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref)
+{
+	struct nvmap_handle *h;
+	void *priv;
+
+	if (!ref || !ref->handle)
+		return ERR_PTR(-EINVAL);
+
+	h = nvmap_handle_get(ref->handle);
+	if (!h)
+		return ERR_PTR(-EINVAL);
+
+	priv = h->nvhost_priv;
+	nvmap_handle_put(ref->handle);
+
+	return priv;
+}

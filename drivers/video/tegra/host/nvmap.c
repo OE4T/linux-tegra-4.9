@@ -17,14 +17,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <linux/nvmap.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/err.h>
+#include <trace/events/nvhost.h>
 #include "nvmap.h"
 #include "nvhost_job.h"
 #include "chip_support.h"
+
+#define FLAG_NVHOST_MAPPED 1
+#define FLAG_NVMAP_MAPPED 2
+#define FLAG_CARVEOUT 3
+
+struct nvhost_nvmap_data {
+	struct nvmap_client *client;
+	struct nvmap_handle_ref *ref;
+	struct sg_table *sgt;
+	size_t len;
+	struct device *dev;
+	int pin_count;
+	int flags;
+	struct mutex lock;
+};
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 {
@@ -61,48 +76,113 @@ void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 			(struct nvmap_handle_ref *)handle);
 }
 
-static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
+static void unmap_pages(struct device *dev, struct sg_table *sgt, size_t len)
 {
-#ifdef CONFIG_COMPAT
-	return (struct scatterlist *)(((uintptr_t)gfp_mask)|PAGE_OFFSET);
-#else
-	return (struct scatterlist *)((uintptr_t)gfp_mask);
-#endif
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_unmap_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
+}
+
+void delete_priv(void *_priv)
+{
+	struct nvhost_nvmap_data *priv = _priv;
+	if (priv->sgt) {
+		if (priv->flags & BIT(FLAG_NVHOST_MAPPED))
+			unmap_pages(priv->dev, priv->sgt, priv->len);
+		nvmap_free_sg_table(priv->client, priv->ref, priv->sgt);
+	}
+	kfree(priv);
 }
 
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
-		struct mem_handle *handle)
+		struct mem_handle *handle,
+		struct device *dev)
 {
-	int err = 0;
-	dma_addr_t ret = 0;
-	struct sg_table *sgt = kmalloc(sizeof(*sgt) + sizeof(*sgt->sgl),
-			GFP_KERNEL);
-	if (!sgt)
-		return ERR_PTR(-ENOMEM);
+	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
+	struct nvmap_client *nvmap = (struct nvmap_client *)mgr;
+	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	struct sg_table *sgt;
+	int ret;
 
-	err = __sg_alloc_table(sgt, 1, 1, (gfp_t)((uintptr_t)(sgt+1)), sg_kmalloc);
-	if (err) {
-		kfree(sgt);
-		return ERR_PTR(err);
+	if (!priv) {
+		u64 size = 0, addr = 0;
+
+		ret = nvmap_get_handle_param(nvmap, ref,
+				NVMAP_HANDLE_PARAM_SIZE, &size);
+		if (ret)
+			return ERR_PTR(ret);
+
+		ret = nvmap_get_handle_param(nvmap, ref,
+				NVMAP_HANDLE_PARAM_BASE, &addr);
+		if (ret)
+			return ERR_PTR(ret);
+
+		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+		if (!priv)
+			return ERR_PTR(-ENOMEM);
+
+		mutex_init(&priv->lock);
+		priv->client = nvmap;
+		priv->ref = ref;
+		priv->sgt = nvmap_sg_table(nvmap, ref);
+		priv->dev = dev;
+		priv->len = size;
+		if (IS_ERR(priv->sgt)) {
+			kfree(priv);
+			return priv->sgt;
+		}
+		nvmap_set_nvhost_private(ref, priv, delete_priv);
+
+		if (!IS_ERR_VALUE(addr))
+			priv->flags |= BIT(FLAG_NVMAP_MAPPED);
 	}
 
-	err = nvmap_pin((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle, &ret);
-	if (err) {
-		kfree(sgt);
-		return ERR_PTR(err);
-	}
-	sg_dma_address(sgt->sgl) = ret;
+	mutex_lock(&priv->lock);
+	sgt = priv->sgt;
 
+	if (priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
+			sg_dma_address(sgt->sgl) == 0) {
+		dma_addr_t addr = 0;
+		int err = nvmap_pin(priv->client, ref, &addr);
+		if (err)
+			return ERR_PTR(err);
+
+		sg_dma_address(sgt->sgl) = addr;
+	} else if (priv->pin_count == 0 && sg_dma_address(sgt->sgl) == 0) {
+		int ents;
+		DEFINE_DMA_ATTRS(attrs);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+
+		ents = dma_map_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
+		if (!ents) {
+			mutex_unlock(&priv->lock);
+			return ERR_PTR(-ENOMEM);
+		}
+		priv->flags |= BIT(FLAG_NVHOST_MAPPED);
+	}
+	trace_nvhost_nvmap_pin(dev_name(dev),
+			ref, priv->len, sg_dma_address(sgt->sgl));
+
+	priv->pin_count++;
+	mutex_unlock(&priv->lock);
+	nvmap_flush_deferred_cache(nvmap, ref);
 	return sgt;
 }
 
-void nvhost_nvmap_unpin(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct sg_table *sgt)
+void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
+		struct device *dev, struct sg_table *sgt)
 {
-	kfree(sgt);
-	return nvmap_unpin((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle);
+	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
+	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	if (!priv)
+		return;
+
+	mutex_lock(&priv->lock);
+	priv->pin_count--;
+	WARN_ON(priv->pin_count < 0);
+	mutex_unlock(&priv->lock);
+	trace_nvhost_nvmap_unpin(dev_name(dev),
+			ref, priv->len, sg_dma_address(sgt->sgl));
 }
 
 void *nvhost_nvmap_mmap(struct mem_handle *handle)
@@ -124,52 +204,6 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr)
 {
 	nvmap_kunmap((struct nvmap_handle_ref *)handle, pagenum, addr);
-}
-
-int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
-		long unsigned *ids,
-		u32 id_type_mask,
-		u32 id_type,
-		u32 count,
-		struct nvhost_job_unpin *unpin_data,
-		dma_addr_t *phys_addr)
-{
-	int i;
-	int result = 0;
-	struct nvmap_handle **unique_handles;
-	struct nvmap_handle_ref **unique_handle_refs;
-	void *ptrs = kmalloc(sizeof(void *) * count * 2,
-			GFP_KERNEL);
-
-	if (!ptrs)
-		return -ENOMEM;
-
-	unique_handles = (struct nvmap_handle **) ptrs;
-	unique_handle_refs = (struct nvmap_handle_ref **)
-			&unique_handles[count];
-
-	result = nvmap_pin_array((struct nvmap_client *)mgr,
-		    (long unsigned *)ids, id_type_mask, id_type, count,
-		    unique_handles,
-		    unique_handle_refs);
-
-	if (result < 0)
-		goto fail;
-
-	WARN_ON(result > count);
-
-	for (i = 0; i < result; i++)
-		unpin_data[i].h = (struct mem_handle *)unique_handle_refs[i];
-
-	for (i = 0; i < count; i++) {
-		if ((ids[i] & id_type_mask) == id_type)
-			phys_addr[i] = (dma_addr_t)nvmap_get_addr_from_user_id(
-								ids[i]);
-	}
-
-fail:
-	kfree(ptrs);
-	return result;
 }
 
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,

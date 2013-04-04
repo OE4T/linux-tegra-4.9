@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/err.h>
 #include <linux/bug.h>
+#include <linux/platform_device.h>
 
 #include "nvhost_memmgr.h"
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
@@ -31,6 +32,7 @@
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 #include "dmabuf.h"
 #endif
+#include <linux/sort.h>
 #include "chip_support.h"
 
 struct mem_mgr *nvhost_memmgr_alloc_mgr(void)
@@ -148,7 +150,7 @@ struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
 	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		return nvhost_nvmap_pin(mgr, handle);
+		return nvhost_nvmap_pin(mgr, handle, dev);
 		break;
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
@@ -169,7 +171,7 @@ void nvhost_memmgr_unpin(struct mem_mgr *mgr,
 	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		nvhost_nvmap_unpin(mgr, handle, sgt);
+		nvhost_nvmap_unpin(mgr, handle, dev, sgt);
 		break;
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
@@ -284,53 +286,58 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	}
 }
 
+static int id_cmp(const void *_id1, const void *_id2)
+{
+	u32 id1 = ((struct nvhost_memmgr_pinid *)_id1)->id;
+	u32 id2 = ((struct nvhost_memmgr_pinid *)_id2)->id;
+
+	if (id1 < id2)
+		return -1;
+	if (id1 > id2)
+		return 1;
+
+	return 0;
+}
+
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,
-		ulong *ids,
+		struct nvhost_memmgr_pinid *ids,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data)
 {
-	int pin_count = 0;
+	int i, pin_count = 0;
+	struct sg_table *sgt;
+	struct mem_handle *h;
+	u32 prev_id = 0;
+	dma_addr_t prev_addr = 0;
 
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	{
-		int nvmap_count = 0;
-		nvmap_count = nvhost_nvmap_pin_array_ids(mgr,
-			ids, MEMMGR_TYPE_MASK,
-			mem_mgr_type_nvmap,
-			count, unpin_data,
-			phys_addr);
-		if (nvmap_count < 0)
-			return nvmap_count;
-		pin_count += nvmap_count;
-	}
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	{
-		int dmabuf_count = 0;
-		dmabuf_count = nvhost_dmabuf_pin_array_ids(dev,
-			ids, MEMMGR_TYPE_MASK,
-			mem_mgr_type_dmabuf,
-			count, &unpin_data[pin_count],
-			phys_addr);
+	for (i = 0; i < count; i++)
+		ids[i].index = i;
 
-		if (dmabuf_count < 0) {
-			/* clean up previous handles */
-			while (pin_count) {
-				pin_count--;
-				/* unpin, put */
-				nvhost_memmgr_unpin(mgr,
-					unpin_data[pin_count].h, &dev->dev,
-					unpin_data[pin_count].mem);
-				nvhost_memmgr_put(mgr,
-					unpin_data[pin_count].h);
-			}
-			return dmabuf_count;
+	sort(ids, count, sizeof(*ids), id_cmp, NULL);
+
+	for (i = 0; i < count; i++) {
+		if (ids[i].id == prev_id) {
+			phys_addr[ids[i].index] = prev_addr;
+			continue;
 		}
-		pin_count += dmabuf_count;
+
+		h = nvhost_memmgr_get(mgr, ids[i].id, dev);
+		if (IS_ERR(h))
+			continue;
+
+		sgt = nvhost_memmgr_pin(mgr, h, &dev->dev);
+		if (IS_ERR(sgt))
+			return PTR_ERR(sgt);
+
+		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
+		unpin_data[pin_count].h = h;
+		unpin_data[pin_count++].mem = sgt;
+
+		prev_id = ids[i].id;
+		prev_addr = phys_addr[ids[i].index];
 	}
-#endif
 	return pin_count;
 }
 

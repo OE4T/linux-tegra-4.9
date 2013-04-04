@@ -48,7 +48,7 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
 			+ num_unpins * sizeof(dma_addr_t)
-			+ num_unpins * sizeof(u32 *)
+			+ num_unpins * sizeof(struct nvhost_memmgr_pinid)
 			+ num_syncpts * sizeof(struct nvhost_job_syncpt);
 
 	if(total > ULONG_MAX)
@@ -85,7 +85,7 @@ static void init_fields(struct nvhost_job *job,
 	job->addr_phys = num_unpins ? mem : NULL;
 	mem += num_unpins * sizeof(dma_addr_t);
 	job->pin_ids = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(u32 *);
+	mem += num_unpins * sizeof(struct nvhost_memmgr_pinid);
 	job->sp = num_syncpts ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;
@@ -238,13 +238,13 @@ static int pin_job_mem(struct nvhost_job *job)
 
 	for (i = 0; i < job->num_relocs; i++) {
 		struct nvhost_reloc *reloc = &job->relocarray[i];
-		job->pin_ids[count] = reloc->target;
+		job->pin_ids[count].id = reloc->target;
 		count++;
 	}
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		job->pin_ids[count] = g->mem_id;
+		job->pin_ids[count].id = g->mem_id;
 		count++;
 	}
 

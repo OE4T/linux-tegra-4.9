@@ -518,7 +518,8 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.save_thresh = 0;
 	ctx->hwctx.save_slots = 0;
 
-	ctx->restore_sgt = nvhost_memmgr_pin(nvmap, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(nvmap,
+			ctx->restore, &ch->dev->dev);
 	if (IS_ERR_VALUE(ctx->restore_phys))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -549,7 +550,8 @@ static void vic03_free_hwctx(struct kref *ref)
 		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 		ctx->restore_virt = NULL;
 	}
-	nvhost_memmgr_unpin(nvmap, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_unpin(nvmap, ctx->restore, &nctx->channel->dev->dev,
+			ctx->restore_sgt);
 	ctx->restore_phys = 0;
 	nvhost_memmgr_put(nvmap, ctx->restore);
 	ctx->restore = NULL;

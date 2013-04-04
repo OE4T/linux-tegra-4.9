@@ -32,6 +32,11 @@ struct nvhost_job_unpin {
 	struct sg_table *mem;
 };
 
+struct nvhost_memmgr_pinid {
+	u32 id;
+	u32 index;
+};
+
 enum mem_mgr_flag {
 	mem_mgr_flag_uncacheable = 0,
 	mem_mgr_flag_write_combine = 1,
@@ -77,7 +82,7 @@ u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle);
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,
-		ulong *ids,
+		struct nvhost_memmgr_pinid *ids,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data);

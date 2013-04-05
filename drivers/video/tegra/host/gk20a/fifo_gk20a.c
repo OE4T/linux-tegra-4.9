@@ -138,21 +138,21 @@ void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	g->mm.bar1.vm.unmap(&g->mm.bar1.vm, f->userd.gpu_va);
 
-	mem_op().munmap(f->userd.mem.ref, f->userd.cpu_va);
-	mem_op().unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
-	mem_op().put(memmgr, f->userd.mem.ref);
+	nvhost_memmgr_munmap(f->userd.mem.ref, f->userd.cpu_va);
+	nvhost_memmgr_unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
+	nvhost_memmgr_put(memmgr, f->userd.mem.ref);
 
 	engine_info = f->engine_info + ENGINE_GR_GK20A;
 	runlist_id = engine_info->runlist_id;
 	runlist = &f->runlist_info[runlist_id];
 
 	if (runlist->cur_buffer != MAX_RUNLIST_BUFFERS)
-		mem_op().unpin(memmgr,
-			runlist->mem[runlist->cur_buffer].ref,
-			runlist->mem[runlist->cur_buffer].sgt);
+		nvhost_memmgr_unpin(memmgr,
+				    runlist->mem[runlist->cur_buffer].ref,
+				    runlist->mem[runlist->cur_buffer].sgt);
 
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
-		mem_op().put(memmgr, runlist->mem[i].ref);
+		nvhost_memmgr_put(memmgr, runlist->mem[i].ref);
 
 	kfree(runlist->active_channels);
 
@@ -269,10 +269,10 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	runlist_size  = ram_rl_entry_size_v() * f->num_channels;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 		runlist->mem[i].ref =
-			mem_op().alloc(memmgr, runlist_size,
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    DEFAULT_ALLOC_FLAGS,
-				    0);
+			nvhost_memmgr_alloc(memmgr, runlist_size,
+					    DEFAULT_ALLOC_ALIGNMENT,
+					    DEFAULT_ALLOC_FLAGS,
+					    0);
 		if (!runlist->mem[i].ref)
 			goto clean_up_runlist;
 		runlist->mem[i].size = runlist_size;
@@ -289,7 +289,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 
 clean_up_runlist:
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
-		mem_op().put(memmgr, runlist->mem[i].ref);
+		nvhost_memmgr_put(memmgr, runlist->mem[i].ref);
 
 	kfree(runlist->active_channels);
 	runlist->active_channels = NULL;
@@ -441,16 +441,16 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 	f->userd_total_size = f->userd_entry_size * f->num_channels;
 
-	f->userd.mem.ref = mem_op().alloc(memmgr, f->userd_total_size,
-				       DEFAULT_ALLOC_ALIGNMENT,
-				       DEFAULT_ALLOC_FLAGS,
-				       0);
+	f->userd.mem.ref = nvhost_memmgr_alloc(memmgr, f->userd_total_size,
+					       DEFAULT_ALLOC_ALIGNMENT,
+					       DEFAULT_ALLOC_FLAGS,
+					       0);
 	if (IS_ERR_OR_NULL(f->userd.mem.ref)) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	f->userd.cpu_va = mem_op().mmap(f->userd.mem.ref);
+	f->userd.cpu_va = nvhost_memmgr_mmap(f->userd.mem.ref);
 	/* f->userd.cpu_va = g->bar1; */
 	if (IS_ERR_OR_NULL(f->userd.cpu_va)) {
 		f->userd.cpu_va = NULL;
@@ -458,7 +458,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	f->userd.mem.sgt = mem_op().pin(memmgr, f->userd.mem.ref);
+	f->userd.mem.sgt = nvhost_memmgr_pin(memmgr, f->userd.mem.ref);
 	f->userd.cpu_pa = sg_dma_address(f->userd.mem.sgt->sgl);
 	nvhost_dbg_info("userd physical address : 0x%08x",
 		   (u32)f->userd.cpu_pa);
@@ -520,9 +520,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 clean_up:
 	nvhost_dbg_fn("fail");
-	mem_op().munmap(f->userd.mem.ref, f->userd.cpu_va);
-	mem_op().unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
-	mem_op().put(memmgr, f->userd.mem.ref);
+	nvhost_memmgr_munmap(f->userd.mem.ref, f->userd.cpu_va);
+	nvhost_memmgr_unpin(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
+	nvhost_memmgr_put(memmgr, f->userd.mem.ref);
 	memset(&f->userd, 0, sizeof(struct userd_desc));
 
 	kfree(f->channel);
@@ -1178,7 +1178,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 		runlist_id, runlist->mem[new_buf].ref);
 
 	runlist->mem[new_buf].sgt =
-		mem_op().pin(memmgr, runlist->mem[new_buf].ref);
+		nvhost_memmgr_pin(memmgr, runlist->mem[new_buf].ref);
 
 	runlist_pa = sg_dma_address(runlist->mem[new_buf].sgt->sgl);
 	if (!runlist_pa) {
@@ -1186,7 +1186,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 		goto clean_up;
 	}
 
-	runlist_entry_base = mem_op().mmap(runlist->mem[new_buf].ref);
+	runlist_entry_base = nvhost_memmgr_mmap(runlist->mem[new_buf].ref);
 	if (IS_ERR_OR_NULL(runlist_entry_base)) {
 		ret = -ENOMEM;
 		goto clean_up;
@@ -1238,14 +1238,14 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 
 clean_up:
 	if (ret != 0)
-		mem_op().unpin(memmgr, runlist->mem[new_buf].ref,
-			runlist->mem[new_buf].sgt);
+		nvhost_memmgr_unpin(memmgr, runlist->mem[new_buf].ref,
+				    runlist->mem[new_buf].sgt);
 	else if (old_buf != -1)
-		mem_op().unpin(memmgr, runlist->mem[old_buf].ref,
-			runlist->mem[old_buf].sgt);
+		nvhost_memmgr_unpin(memmgr, runlist->mem[old_buf].ref,
+				    runlist->mem[old_buf].sgt);
 
-	mem_op().munmap(runlist->mem[new_buf].ref,
-		     runlist_entry_base);
+	nvhost_memmgr_munmap(runlist->mem[new_buf].ref,
+			     runlist_entry_base);
 done:
 
 	/* re-enable elpg or release pmu mutex */

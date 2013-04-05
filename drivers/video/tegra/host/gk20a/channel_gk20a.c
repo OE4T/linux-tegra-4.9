@@ -99,7 +99,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = mem_op().mmap(c->inst_block.mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (IS_ERR(inst_ptr))
 		return -ENOMEM;
 
@@ -123,7 +123,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(c->vm->va_limit)));
 
-	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	return 0;
 }
@@ -136,7 +136,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = mem_op().mmap(c->inst_block.mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (IS_ERR(inst_ptr))
 		return -ENOMEM;
 
@@ -154,7 +154,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 		 pbdma_userd_target_vid_mem_f() |
 		 pbdma_userd_hi_addr_f(addr_hi));
 
-	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	return 0;
 }
@@ -166,7 +166,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = mem_op().mmap(c->inst_block.mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (IS_ERR(inst_ptr))
 		return -ENOMEM;
 
@@ -226,7 +226,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 	mem_wr32(inst_ptr, ram_fc_hce_ctrl_w(),
 		 pbdma_hce_ctrl_hce_priv_mode_yes_f());
 
-	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	return 0;
 }
@@ -303,10 +303,10 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 	nvhost_dbg_fn("");
 
 	ch->inst_block.mem.ref =
-		mem_op().alloc(memmgr, ram_in_alloc_size_v(),
-			    DEFAULT_ALLOC_ALIGNMENT,
-			    DEFAULT_ALLOC_FLAGS,
-			    0);
+		nvhost_memmgr_alloc(memmgr, ram_in_alloc_size_v(),
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
 
 	if (IS_ERR(ch->inst_block.mem.ref)) {
 		ch->inst_block.mem.ref = 0;
@@ -314,7 +314,7 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 	}
 
 	ch->inst_block.mem.sgt =
-		mem_op().pin(memmgr, ch->inst_block.mem.ref);
+		nvhost_memmgr_pin(memmgr, ch->inst_block.mem.ref);
 	ch->inst_block.cpu_pa = sg_dma_address(ch->inst_block.mem.sgt->sgl);
 
 	/* IS_ERR throws a warning here (expecting void *) */
@@ -343,8 +343,9 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 
-	mem_op().unpin(memmgr, ch->inst_block.mem.ref, ch->inst_block.mem.sgt);
-	mem_op().put(memmgr, ch->inst_block.mem.ref);
+	nvhost_memmgr_unpin(memmgr, ch->inst_block.mem.ref,
+			    ch->inst_block.mem.sgt);
+	nvhost_memmgr_put(memmgr, ch->inst_block.mem.ref);
 	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
 }
 
@@ -406,8 +407,8 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 
 	/* free gpfifo */
 	ch_vm->unmap(ch_vm, ch->gpfifo.gpu_va);
-	mem_op().munmap(ch->gpfifo.mem.ref, ch->gpfifo.cpu_va);
-	mem_op().put(memmgr, ch->gpfifo.mem.ref);
+	nvhost_memmgr_munmap(ch->gpfifo.mem.ref, ch->gpfifo.cpu_va);
+	nvhost_memmgr_put(memmgr, ch->gpfifo.mem.ref);
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
 
 	ctx->priv = NULL;
@@ -476,7 +477,7 @@ static void dump_gpfifo(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = mem_op().mmap(c->inst_block.mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (IS_ERR(inst_ptr))
 		return;
 
@@ -529,7 +530,7 @@ static void dump_gpfifo(struct channel_gk20a *c)
 		gk20a_readl(c->g, pbdma_put_hi_r(0)),
 		gk20a_readl(c->g, ccsr_channel_r(chid)));
 
-	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 }
 #endif
 
@@ -556,11 +557,11 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	size = roundup_pow_of_two(
 		c->gpfifo.entry_num * 2 * 10 * sizeof(u32) / 3);
 
-	q->mem.ref = mem_op().alloc(memmgr,
-			size,
-			DEFAULT_ALLOC_ALIGNMENT,
-			DEFAULT_ALLOC_FLAGS,
-			0);
+	q->mem.ref = nvhost_memmgr_alloc(memmgr,
+					 size,
+					 DEFAULT_ALLOC_ALIGNMENT,
+					 DEFAULT_ALLOC_FLAGS,
+					 0);
 	if (IS_ERR_OR_NULL(q->mem.ref)) {
 		nvhost_err(d, "ch %d : failed to allocate"
 			   " priv cmd buffer(size: %d bytes)",
@@ -569,7 +570,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	}
 	q->mem.size = size;
 
-	q->base_ptr = (u32 *)mem_op().mmap(q->mem.ref);
+	q->base_ptr = (u32 *)nvhost_memmgr_mmap(q->mem.ref);
 	if (IS_ERR_OR_NULL(q->base_ptr)) {
 		nvhost_err(d, "ch %d : failed to map cpu va"
 			   "for priv cmd buffer", c->hw_chid);
@@ -624,8 +625,8 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 		return;
 
 	ch_vm->unmap(ch_vm, q->base_gva);
-	mem_op().munmap(q->mem.ref, q->base_ptr);
-	mem_op().put(memmgr, q->mem.ref);
+	nvhost_memmgr_munmap(q->mem.ref, q->base_ptr);
+	nvhost_memmgr_put(memmgr, q->mem.ref);
 
 	/* free used list */
 	head = &q->head;
@@ -856,11 +857,12 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		return -EEXIST;
 	}
 
-	c->gpfifo.mem.ref = mem_op().alloc(memmgr,
-			gpfifo_size * sizeof(struct gpfifo),
-			DEFAULT_ALLOC_ALIGNMENT,
-			DEFAULT_ALLOC_FLAGS,
-			0);
+	c->gpfifo.mem.ref =
+		nvhost_memmgr_alloc(memmgr,
+				    gpfifo_size * sizeof(struct gpfifo),
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
 	if (IS_ERR_OR_NULL(c->gpfifo.mem.ref)) {
 		nvhost_err(d, "channel %d :"
 			   " failed to allocate gpfifo (size: %d bytes)",
@@ -870,7 +872,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	}
 	c->gpfifo.entry_num = gpfifo_size;
 
-	c->gpfifo.cpu_va = (struct gpfifo *)mem_op().mmap(c->gpfifo.mem.ref);
+	c->gpfifo.cpu_va =
+		(struct gpfifo *)nvhost_memmgr_mmap(c->gpfifo.mem.ref);
 	if (IS_ERR_OR_NULL(c->gpfifo.cpu_va))
 		goto clean_up;
 
@@ -910,8 +913,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
 	ch_vm->unmap(ch_vm, c->gpfifo.gpu_va);
-	mem_op().munmap(c->gpfifo.mem.ref, c->gpfifo.cpu_va);
-	mem_op().put(memmgr, c->gpfifo.mem.ref);
+	nvhost_memmgr_munmap(c->gpfifo.mem.ref, c->gpfifo.cpu_va);
+	nvhost_memmgr_put(memmgr, c->gpfifo.mem.ref);
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
 	return -ENOMEM;
 }
@@ -1312,14 +1315,14 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		id = args->condition.notifier.nvmap_handle;
 		offset = args->condition.notifier.offset;
 
-		handle_ref = mem_op().get(memmgr, id, dev);
+		handle_ref = nvhost_memmgr_get(memmgr, id, dev);
 		if (!handle_ref) {
 			nvhost_err(d, "invalid notifier nvmap handle 0x%08x",
 				   id);
 			return -EINVAL;
 		}
 
-		notif = mem_op().mmap(handle_ref);
+		notif = nvhost_memmgr_mmap(handle_ref);
 		if (IS_ERR_OR_NULL(notif)) {
 			nvhost_err(d, "failed to map notifier memory");
 			return -ENOMEM;
@@ -1351,7 +1354,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		notif->info16 = ch->hw_chid; /* should be method offset */
 
 notif_clean_up:
-		mem_op().munmap(handle_ref, notif);
+		nvhost_memmgr_munmap(handle_ref, notif);
 		return ret;
 	case NVHOST_WAIT_TYPE_SEMAPHORE:
 		break;
@@ -1374,16 +1377,17 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 
 	if (args->nvmap_handle && !ch->cyclestate.cyclestate_buffer_handler) {
 		/* set up new cyclestats buffer */
-		handle_ref = mem_op().get(memmgr, args->nvmap_handle, dev);
+		handle_ref = nvhost_memmgr_get(memmgr, args->nvmap_handle, dev);
 		if (handle_ref == NULL)
 			return -ENOMEM;
 
-		virtual_address = mem_op().mmap(handle_ref);
+		virtual_address = nvhost_memmgr_mmap(handle_ref);
 		if (IS_ERR(virtual_address))
 			return -ENOMEM;
 
-		mem_op().get_param(memmgr, handle_ref,
-			NVMAP_HANDLE_PARAM_SIZE, &cyclestate_buffer_size);
+		nvhost_memmgr_get_param(memmgr, handle_ref,
+					NVMAP_HANDLE_PARAM_SIZE,
+					&cyclestate_buffer_size);
 
 		ch->cyclestate.cyclestate_buffer_handler = handle_ref;
 		ch->cyclestate.cyclestate_buffer = virtual_address;
@@ -1393,8 +1397,10 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	} else if (!args->nvmap_handle && ch->cyclestate.cyclestate_buffer_handler) {
 		/* disable existing cyclestats buffer */
 		mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
-		mem_op().munmap(ch->cyclestate.cyclestate_buffer_handler, ch->cyclestate.cyclestate_buffer);
-		mem_op().put(memmgr, ch->cyclestate.cyclestate_buffer_handler);
+		nvhost_memmgr_munmap(ch->cyclestate.cyclestate_buffer_handler,
+				     ch->cyclestate.cyclestate_buffer);
+		nvhost_memmgr_put(memmgr,
+				  ch->cyclestate.cyclestate_buffer_handler);
 		ch->cyclestate.cyclestate_buffer_handler = NULL;
 		ch->cyclestate.cyclestate_buffer = NULL;
 		ch->cyclestate.cyclestate_buffer_size = 0;

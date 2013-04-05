@@ -250,10 +250,11 @@ static int vic03_read_ucode(struct platform_device *dev)
 	}
 
 	/* allocate pages for ucode */
-	v->ucode.mem_r = mem_op().alloc(nvmap_c,
-				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, mem_mgr_flag_uncacheable,
-				     0);
+	v->ucode.mem_r = nvhost_memmgr_alloc(nvmap_c,
+					     roundup(ucode_fw->size, PAGE_SIZE),
+					     PAGE_SIZE,
+					     mem_mgr_flag_uncacheable,
+					     0);
 	if (IS_ERR_OR_NULL(v->ucode.mem_r)) {
 		nvhost_dbg_fn("nvmap alloc failed");
 		err = -ENOMEM;
@@ -261,7 +262,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 	}
 
 
-	ucode_ptr = mem_op().mmap(v->ucode.mem_r);
+	ucode_ptr = nvhost_memmgr_mmap(v->ucode.mem_r);
 	if (!ucode_ptr) {
 		nvhost_dbg_fn("nvmap mmap failed");
 		err = -ENOMEM;
@@ -276,7 +277,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 
 	v->ucode.valid = true;
 
-	mem_op().munmap(v->ucode.mem_r, ucode_ptr);
+	nvhost_memmgr_munmap(v->ucode.mem_r, ucode_ptr);
 
  clean_up:
 	release_firmware(ucode_fw);
@@ -370,7 +371,7 @@ void nvhost_vic03_init(struct platform_device *dev)
 		return;
 	}
 
-	v->ucode.sgt = mem_op().pin(v->host->memmgr, v->ucode.mem_r);
+	v->ucode.sgt = nvhost_memmgr_pin(v->host->memmgr, v->ucode.mem_r);
 	if (IS_ERR_OR_NULL(v->ucode.sgt)){
 		nvhost_err(&dev->dev, "nvmap pin failed for ucode");
 		goto clean_up;
@@ -390,8 +391,8 @@ void nvhost_vic03_init(struct platform_device *dev)
 
  clean_up:
 	nvhost_err(&dev->dev, "failed");
-	mem_op().unpin(nvhost_get_host(dev)->memmgr, v->ucode.mem_r,
-		       v->ucode.sgt);
+	nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, v->ucode.mem_r,
+			    v->ucode.sgt);
 	return /*err*/;
 
 
@@ -403,8 +404,9 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 	struct vic03 *v = get_vic03(dev);
 	/* unpin, free ucode memory */
 	if (v->ucode.mem_r) {
-		mem_op().unpin(v->host->memmgr, v->ucode.mem_r, v->ucode.sgt);
-		mem_op().put(v->host->memmgr, v->ucode.mem_r);
+		nvhost_memmgr_unpin(v->host->memmgr, v->ucode.mem_r,
+				    v->ucode.sgt);
+		nvhost_memmgr_put(v->host->memmgr, v->ucode.mem_r);
 		v->ucode.mem_r = 0;
 	}
 	/* free mappings to registers, etc*/
@@ -437,16 +439,17 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	if (!ctx)
 		return NULL;
 
-	ctx->restore = mem_op().alloc(nvmap,
-				   nvhost_vic03_restore_size * 4, 32,
-				   map_restore ? mem_mgr_flag_write_combine
-				      : mem_mgr_flag_uncacheable,
-				   0);
+	ctx->restore = nvhost_memmgr_alloc(nvmap,
+					   nvhost_vic03_restore_size * 4, 32,
+					   map_restore ?
+						mem_mgr_flag_write_combine
+					      : mem_mgr_flag_uncacheable,
+					   0);
 	if (IS_ERR_OR_NULL(ctx->restore))
 		goto fail_alloc;
 
 	if (map_restore) {
-		ctx->restore_virt = mem_op().mmap(ctx->restore);
+		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
 		if (IS_ERR_OR_NULL(ctx->restore_virt))
 			goto fail_mmap;
 	} else
@@ -483,7 +486,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.save_thresh = 0;
 	ctx->hwctx.save_slots = 0;
 
-	ctx->restore_sgt = mem_op().pin(nvmap, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(nvmap, ctx->restore);
 	if (IS_ERR_VALUE(ctx->restore_phys))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -495,9 +498,9 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
  fail_pin:
 	if (map_restore)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
  fail_mmap:
-	mem_op().put(nvmap, ctx->restore);
+	nvhost_memmgr_put(nvmap, ctx->restore);
  fail_alloc:
 	kfree(ctx);
 	return NULL;
@@ -511,12 +514,12 @@ static void vic03_free_hwctx(struct kref *ref)
 		nvhost_get_host(nctx->channel->dev)->memmgr;
 
 	if (ctx->restore_virt) {
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 		ctx->restore_virt = NULL;
 	}
-	mem_op().unpin(nvmap, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_unpin(nvmap, ctx->restore, ctx->restore_sgt);
 	ctx->restore_phys = 0;
-	mem_op().put(nvmap, ctx->restore);
+	nvhost_memmgr_put(nvmap, ctx->restore);
 	ctx->restore = NULL;
 	kfree(ctx);
 }

@@ -397,14 +397,14 @@ int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 	/* note: this bumps up the ref cnt in the nvmap client.
 	 * be sure to drop it with put later... we're not
 	 * holding onto the nvmap client pointer */
-	memmgr = mem_op().get_mgr_file(args->nvmap_fd);
+	memmgr = nvhost_memmgr_get_mgr_file(args->nvmap_fd);
 
 	if (IS_ERR(memmgr)) {
 		err = PTR_ERR(memmgr);
 		return err;
 	}
 
-	r = mem_op().get(memmgr, args->nvmap_handle, /*XXX:get device*/0);
+	r = nvhost_memmgr_get(memmgr, args->nvmap_handle, /*XXX:get device*/0);
 	if (!r) {
 		err = -EINVAL;
 		goto finish;
@@ -432,8 +432,8 @@ int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 			args->offset, &memmgr, &r);
 	BUG_ON(memmgr == NULL || r == NULL);
 
-	mem_op().put(memmgr, r);
-	mem_op().put_mgr(memmgr);
+	nvhost_memmgr_put(memmgr, r);
+	nvhost_memmgr_put_mgr(memmgr);
 
 	return err;
 }

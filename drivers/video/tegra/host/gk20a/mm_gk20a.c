@@ -90,8 +90,8 @@ void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 	nvhost_dbg_fn("");
 
-	mem_op().unpin(memmgr, inst_block->mem.ref,inst_block->mem.sgt);
-	mem_op().put(memmgr, inst_block->mem.ref);
+	nvhost_memmgr_unpin(memmgr, inst_block->mem.ref, inst_block->mem.sgt);
+	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
 
 	vm->remove_support(vm);
 }
@@ -215,34 +215,34 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 
 	nvhost_dbg_fn("");
 
-	r = mem_op().alloc(client, len,
-			DEFAULT_ALLOC_ALIGNMENT,
-			DEFAULT_ALLOC_FLAGS,
-			0);
+	r = nvhost_memmgr_alloc(client, len,
+				DEFAULT_ALLOC_ALIGNMENT,
+				DEFAULT_ALLOC_FLAGS,
+				0);
 	if (IS_ERR_OR_NULL(r)) {
 		nvhost_dbg(dbg_pte, "nvmap_alloc failed\n");
 		goto err_out;
 	}
-	va = mem_op().mmap(r);
+	va = nvhost_memmgr_mmap(r);
 	if (IS_ERR_OR_NULL(va)) {
 		nvhost_dbg(dbg_pte, "nvmap_mmap failed\n");
 		goto err_alloced;
 	}
-	*sgt =  mem_op().pin(client, r);
+	*sgt =  nvhost_memmgr_pin(client, r);
 	if (IS_ERR_OR_NULL(*sgt)) {
 		nvhost_dbg(dbg_pte, "nvmap_pin failed\n");
 		goto err_alloced;
 	}
 	phys = sg_dma_address((*sgt)->sgl);
 	memset(va, 0, len);
-	mem_op().munmap(r, va);
+	nvhost_memmgr_munmap(r, va);
 	*pa = phys;
 	*handle = (void *)r;
 
 	return 0;
 
 err_alloced:
-	mem_op().put(client, r);
+	nvhost_memmgr_put(client, r);
 err_out:
 	return -ENOMEM;
 }
@@ -254,8 +254,8 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	nvhost_dbg_fn("");
 	BUG_ON(sgt == NULL);
-	mem_op().unpin(client, handle, sgt);
-	mem_op().put(client, handle);
+	nvhost_memmgr_unpin(client, handle, sgt);
+	nvhost_memmgr_put(client, handle);
 }
 
 static int map_gmmu_pages(void *handle, void **va)
@@ -265,7 +265,7 @@ static int map_gmmu_pages(void *handle, void **va)
 
 	nvhost_dbg_fn("");
 
-	tmp_va = mem_op().mmap(r);
+	tmp_va = nvhost_memmgr_mmap(r);
 	if (IS_ERR_OR_NULL(tmp_va))
 		goto err_out;
 
@@ -280,7 +280,7 @@ static void unmap_gmmu_pages(void *handle, u32 *va)
 {
 	struct mem_handle *r = handle;
 	nvhost_dbg_fn("");
-	mem_op().munmap(r, va);
+	nvhost_memmgr_munmap(r, va);
 }
 
 static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
@@ -714,9 +714,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	/* query bfr attributes: size, align, heap, kind */
 	for (attr = 0; attr < BFR_ATTRS; attr++) {
 		query[attr].err =
-			mem_op().get_param(memmgr, r,
-					nvmap_bfr_param[attr],
-					&query[attr].v);
+			nvhost_memmgr_get_param(memmgr, r,
+						nvmap_bfr_param[attr],
+						&query[attr].v);
 		if (unlikely(query[attr].err != 0)) {
 			nvhost_err(d,
 				   "failed to get nvmap buffer param %d: %d\n",
@@ -801,7 +801,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	sgt = mem_op().pin(memmgr, r);
+	sgt = nvhost_memmgr_pin(memmgr, r);
 	if (IS_ERR_OR_NULL(sgt)) {
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
@@ -1029,9 +1029,9 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		nvhost_dbg(dbg_err, "failed to update ptes on unmap");
 	}
 
-	mem_op().unpin(mapped_buffer->memmgr,
-		       mapped_buffer->handle_ref,
-		       mapped_buffer->sgt);
+	nvhost_memmgr_unpin(mapped_buffer->memmgr,
+			    mapped_buffer->handle_ref,
+			    mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
@@ -1067,8 +1067,8 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 			container_of(node, struct mapped_buffer_node, node);
 		vm->unmap_user(vm, mapped_buffer->addr, &memmgr, &r);
 		if (memmgr != mem_mgr_from_vm(vm)) {
-			mem_op().put(memmgr, r);
-			mem_op().put_mgr(memmgr);
+			nvhost_memmgr_put(memmgr, r);
+			nvhost_memmgr_put_mgr(memmgr);
 		}
 		node = rb_first(&vm->mapped_buffers);
 	}
@@ -1337,10 +1337,10 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	/* allocate instance mem for bar1 */
 	inst_block->mem.size = ram_in_alloc_size_v();
 	inst_block->mem.ref =
-		mem_op().alloc(nvmap, inst_block->mem.size,
-			    DEFAULT_ALLOC_ALIGNMENT,
-			    DEFAULT_ALLOC_FLAGS,
-			    0);
+		nvhost_memmgr_alloc(nvmap, inst_block->mem.size,
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
 
 	if (IS_ERR(inst_block->mem.ref)) {
 		inst_block->mem.ref = 0;
@@ -1348,7 +1348,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = mem_op().pin(nvmap, inst_block->mem.ref);
+	inst_block->mem.sgt = nvhost_memmgr_pin(nvmap, inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
@@ -1357,7 +1357,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	}
 	inst_block->cpu_pa = inst_pa = sg_dma_address(inst_block->mem.sgt->sgl);
 
-	inst_ptr = mem_op().mmap(inst_block->mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
 		return -ENOMEM;
 		goto clean_up;
@@ -1382,7 +1382,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	mem_op().munmap(inst_block->mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
 	nvhost_dbg_info("bar1 inst block ptr: %08x",  (u32)inst_pa);
 	nvhost_allocator_init(&vm->vma, "gk20a_bar1",
@@ -1465,10 +1465,10 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	/* allocate instance mem for pmu */
 	inst_block->mem.size = GK20A_PMU_INST_SIZE;
 	inst_block->mem.ref =
-		mem_op().alloc(nvmap, inst_block->mem.size,
-			    DEFAULT_ALLOC_ALIGNMENT,
-			    DEFAULT_ALLOC_FLAGS,
-			    0);
+		nvhost_memmgr_alloc(nvmap, inst_block->mem.size,
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
 
 	if (IS_ERR(inst_block->mem.ref)) {
 		inst_block->mem.ref = 0;
@@ -1476,7 +1476,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = mem_op().pin(nvmap, inst_block->mem.ref);
+	inst_block->mem.sgt = nvhost_memmgr_pin(nvmap, inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
 	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
 		inst_pa = 0;
@@ -1488,7 +1488,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	nvhost_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
 
-	inst_ptr = mem_op().mmap(inst_block->mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
 		return -ENOMEM;
 		goto clean_up;
@@ -1510,7 +1510,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	mem_op().munmap(inst_block->mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
 	nvhost_allocator_init(&vm->vma, "gk20a_pmu",
 		(vm->va_start >> 12), (vm->va_limit >> 12) - 1, 1);

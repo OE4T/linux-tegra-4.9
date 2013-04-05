@@ -328,7 +328,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 
 	nvhost_dbg_fn("");
 
-	ucode_ptr = mem_op().mmap(pmu->ucode.mem.ref);
+	ucode_ptr = nvhost_memmgr_mmap(pmu->ucode.mem.ref);
 	if (IS_ERR_OR_NULL(ucode_ptr)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to map pmu ucode memory");
@@ -340,7 +340,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 		mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
 	}
 
-	mem_op().munmap(pmu->ucode.mem.ref, ucode_ptr);
+	nvhost_memmgr_munmap(pmu->ucode.mem.ref, ucode_ptr);
 
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 		gk20a_readl(g, pwr_falcon_itfen_r()) |
@@ -932,13 +932,13 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 	release_firmware(pmu->ucode_fw);
 
-	mem_op().unpin(memmgr, inst_block->mem.ref,inst_block->mem.sgt);
-	mem_op().put(memmgr, inst_block->mem.ref);
+	nvhost_memmgr_unpin(memmgr, inst_block->mem.ref, inst_block->mem.sgt);
+	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
 	vm->remove_support(vm);
 
-	mem_op().put(memmgr, pmu->ucode.mem.ref);
-	mem_op().put(memmgr, pmu->pg_buf.mem.ref);
-	mem_op().put(memmgr, pmu->seq_buf.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 
 	nvhost_allocator_destroy(&pmu->dmem);
 	del_timer(&pmu->elpg_timer);
@@ -1037,11 +1037,11 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	gk20a_init_pmu_vm(mm);
 
-	pmu->ucode.mem.ref = mem_op().alloc(memmgr,
-			GK20A_PMU_UCODE_SIZE_MAX,
-			DEFAULT_ALLOC_ALIGNMENT,
-			DEFAULT_ALLOC_FLAGS,
-			0);
+	pmu->ucode.mem.ref = nvhost_memmgr_alloc(memmgr,
+						 GK20A_PMU_UCODE_SIZE_MAX,
+						 DEFAULT_ALLOC_ALIGNMENT,
+						 DEFAULT_ALLOC_FLAGS,
+						 0);
 	if (IS_ERR_OR_NULL(pmu->ucode.mem.ref)) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -1065,10 +1065,11 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	pmu->pg_buf.mem.ref = mem_op().alloc(memmgr, size,
-				DEFAULT_ALLOC_ALIGNMENT, /* TBD: 256 bytes alignment is sufficient */
-				DEFAULT_ALLOC_FLAGS,
-				0);
+	/* TBD: 256 bytes alignment is sufficient */
+	pmu->pg_buf.mem.ref = nvhost_memmgr_alloc(memmgr, size,
+						  DEFAULT_ALLOC_ALIGNMENT,
+						  DEFAULT_ALLOC_FLAGS,
+						  0);
 	if (IS_ERR_OR_NULL(pmu->pg_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate fecs pg buffer");
@@ -1086,10 +1087,10 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	pmu->seq_buf.mem.ref = mem_op().alloc(memmgr, 4096,
-				DEFAULT_ALLOC_ALIGNMENT,
-				DEFAULT_ALLOC_FLAGS,
-				0);
+	pmu->seq_buf.mem.ref = nvhost_memmgr_alloc(memmgr, 4096,
+						   DEFAULT_ALLOC_ALIGNMENT,
+						   DEFAULT_ALLOC_FLAGS,
+						   0);
 	if (IS_ERR_OR_NULL(pmu->seq_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate zbc buffer");
@@ -1106,7 +1107,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	ptr = (u8 *)mem_op().mmap(pmu->seq_buf.mem.ref);
+	ptr = (u8 *)nvhost_memmgr_mmap(pmu->seq_buf.mem.ref);
 	if (IS_ERR_OR_NULL(ptr)) {
 		nvhost_err(d, "failed to map cpu ptr for zbc buffer");
 		goto clean_up;
@@ -1120,7 +1121,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.mem.size = 8;
 
-	mem_op().munmap(pmu->seq_buf.mem.ref, ptr);
+	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
 
 	init_timer(&pmu->elpg_timer);
 	pmu->elpg_timer.function = pmu_elpg_enable_allow;
@@ -1144,9 +1145,9 @@ clean_up:
 	vm->unmap(vm, pmu->ucode.pmu_va);
 	vm->unmap(vm, pmu->pg_buf.pmu_va);
 	vm->unmap(vm, pmu->seq_buf.pmu_va);
-	mem_op().put(memmgr, pmu->ucode.mem.ref);
-	mem_op().put(memmgr, pmu->pg_buf.mem.ref);
-	mem_op().put(memmgr, pmu->seq_buf.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
+	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 	return err;
 }
 

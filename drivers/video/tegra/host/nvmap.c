@@ -186,21 +186,3 @@ int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 			nvmap_ref_to_handle((struct nvmap_handle_ref *)handle),
 			param, result);
 }
-
-int nvhost_init_nvmap_support(struct nvhost_chip_support *chip)
-{
-	chip->mem.alloc_mgr = nvhost_nvmap_alloc_mgr;
-	chip->mem.put_mgr = nvhost_nvmap_put_mgr;
-	chip->mem.get_mgr = nvhost_nvmap_get_mgr;
-	chip->mem.get_mgr_file = nvhost_nvmap_get_mgr_file;
-	chip->mem.alloc = nvhost_nvmap_alloc;
-	chip->mem.put = nvhost_nvmap_put;
-	chip->mem.get = nvhost_nvmap_get;
-	chip->mem.pin = nvhost_nvmap_pin;
-	chip->mem.unpin = nvhost_nvmap_unpin;
-	chip->mem.mmap = nvhost_nvmap_mmap;
-	chip->mem.munmap = nvhost_nvmap_munmap;
-	chip->mem.get_param = nvhost_nvmap_get_param;
-
-	return 0;
-}

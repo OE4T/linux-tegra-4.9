@@ -414,7 +414,7 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	gk20a_mm_fb_flush(c->g);
 	gk20a_mm_l2_flush(c->g, true);
 
-	inst_ptr = mem_op().mmap(c->inst_block.mem.ref);
+	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (IS_ERR(inst_ptr)) {
 		ret = -ENOMEM;
 		goto clean_up;
@@ -430,13 +430,13 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	mem_wr32(inst_ptr, ram_in_gr_wfi_ptr_hi_w(),
 		 ram_in_gr_wfi_ptr_hi_f(addr_hi));
 
-	mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	return 0;
 
 clean_up:
 	if (inst_ptr)
-		mem_op().munmap(c->inst_block.mem.ref, inst_ptr);
+		nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	return ret;
 }
@@ -452,7 +452,7 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
 
 	if (patch) {
 		ch_ctx = &c->ch_ctx;
-		patch_ptr = mem_op().mmap(ch_ctx->patch_ctx.mem.ref);
+		patch_ptr = nvhost_memmgr_mmap(ch_ctx->patch_ctx.mem.ref);
 		if (IS_ERR(patch_ptr))
 			return -ENOMEM;
 
@@ -461,7 +461,7 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
 		mem_wr32(patch_ptr, patch_slot++, addr);
 		mem_wr32(patch_ptr, patch_slot++, data);
 
-		mem_op().munmap(ch_ctx->patch_ctx.mem.ref, patch_ptr);
+		nvhost_memmgr_munmap(ch_ctx->patch_ctx.mem.ref, patch_ptr);
 		ch_ctx->patch_ctx.data_count++;
 	} else {
 		gk20a_writel(g, addr, data);
@@ -505,7 +505,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 
 	nvhost_dbg_fn("");
 
-	ctx_ptr = mem_op().mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
 	if (IS_ERR(ctx_ptr))
 		return -ENOMEM;
 
@@ -549,7 +549,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 	}
 
 clean_up:
-	mem_op().munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
 	return ret;
 }
@@ -564,7 +564,7 @@ static int gr_gk20a_ctx_pm_setup(struct gk20a *g, struct channel_gk20a *c,
 
 	nvhost_dbg_fn("");
 
-	ctx_ptr = mem_op().mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
 	if (IS_ERR(ctx_ptr))
 		return -ENOMEM;
 
@@ -608,7 +608,7 @@ clean_up:
 	else
 		nvhost_dbg_fn("done");
 
-	mem_op().munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 	return ret;
 }
 
@@ -1221,11 +1221,11 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (err)
 		goto clean_up;
 
-	gold_ptr = mem_op().mmap(gr->global_ctx_buffer[GOLDEN_CTX].ref);
+	gold_ptr = nvhost_memmgr_mmap(gr->global_ctx_buffer[GOLDEN_CTX].ref);
 	if (IS_ERR(gold_ptr))
 		goto clean_up;
 
-	ctx_ptr = mem_op().mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
 	if (IS_ERR(ctx_ptr))
 		goto clean_up;
 
@@ -1278,10 +1278,10 @@ clean_up:
 		nvhost_dbg_fn("done");
 
 	if (gold_ptr)
-		mem_op().munmap(gr->global_ctx_buffer[GOLDEN_CTX].ref,
-				gold_ptr);
+		nvhost_memmgr_munmap(gr->global_ctx_buffer[GOLDEN_CTX].ref,
+				     gold_ptr);
 	if (ctx_ptr)
-		mem_op().munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+		nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
 	return err;
 }
@@ -1308,7 +1308,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	gk20a_mm_fb_flush(g);
 	gk20a_mm_l2_flush(g, true);
 
-	ctx_ptr = mem_op().mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
 	if (IS_ERR(ctx_ptr))
 		return -ENOMEM;
 
@@ -1328,7 +1328,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_v(), 0,
 		 virt_addr_hi);
 
-	mem_op().munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
 	/* gr_gk20a_ctx_zcull_setup(g, c, false); */
 	gr_gk20a_ctx_pm_setup(g, c, false);
@@ -1507,20 +1507,20 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	nvhost_dbg_info("cb_buffer_size : %d", cb_buffer_size);
 
-	mem = mem_op().alloc(memmgr, cb_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  0);
+	mem = nvhost_memmgr_alloc(memmgr, cb_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
 	gr->global_ctx_buffer[CIRCULAR].ref = mem;
 	gr->global_ctx_buffer[CIRCULAR].size = cb_buffer_size;
 
-	mem = mem_op().alloc(memmgr, cb_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_VPR);
+	mem = nvhost_memmgr_alloc(memmgr, cb_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  NVMAP_HEAP_CARVEOUT_VPR);
 	if (!IS_ERR_OR_NULL(mem)) {
 		gr->global_ctx_buffer[CIRCULAR_VPR].ref = mem;
 		gr->global_ctx_buffer[CIRCULAR_VPR].size = cb_buffer_size;
@@ -1528,20 +1528,20 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	nvhost_dbg_info("pagepool_buffer_size : %d", pagepool_buffer_size);
 
-	mem = mem_op().alloc(memmgr, pagepool_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  0);
+	mem = nvhost_memmgr_alloc(memmgr, pagepool_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
 	gr->global_ctx_buffer[PAGEPOOL].ref = mem;
 	gr->global_ctx_buffer[PAGEPOOL].size = pagepool_buffer_size;
 
-	mem = mem_op().alloc(memmgr, pagepool_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_VPR);
+	mem = nvhost_memmgr_alloc(memmgr, pagepool_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  NVMAP_HEAP_CARVEOUT_VPR);
 	if (!IS_ERR_OR_NULL(mem)) {
 		gr->global_ctx_buffer[PAGEPOOL_VPR].ref = mem;
 		gr->global_ctx_buffer[PAGEPOOL_VPR].size = pagepool_buffer_size;
@@ -1549,20 +1549,20 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	nvhost_dbg_info("attr_buffer_size : %d", attr_buffer_size);
 
-	mem = mem_op().alloc(memmgr, attr_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  0);
+	mem = nvhost_memmgr_alloc(memmgr, attr_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
 	gr->global_ctx_buffer[ATTRIBUTE].ref = mem;
 	gr->global_ctx_buffer[ATTRIBUTE].size = attr_buffer_size;
 
-	mem = mem_op().alloc(memmgr, attr_buffer_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  NVMAP_HEAP_CARVEOUT_VPR);
+	mem = nvhost_memmgr_alloc(memmgr, attr_buffer_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  NVMAP_HEAP_CARVEOUT_VPR);
 	if (!IS_ERR_OR_NULL(mem)) {
 		gr->global_ctx_buffer[ATTRIBUTE_VPR].ref = mem;
 		gr->global_ctx_buffer[ATTRIBUTE_VPR].size = attr_buffer_size;
@@ -1571,10 +1571,10 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	nvhost_dbg_info("golden_image_size : %d",
 		   gr->ctx_vars.golden_image_size);
 
-	mem = mem_op().alloc(memmgr, gr->ctx_vars.golden_image_size,
-			  DEFAULT_ALLOC_ALIGNMENT,
-			  DEFAULT_ALLOC_FLAGS,
-			  0);
+	mem = nvhost_memmgr_alloc(memmgr, gr->ctx_vars.golden_image_size,
+				  DEFAULT_ALLOC_ALIGNMENT,
+				  DEFAULT_ALLOC_FLAGS,
+				  0);
 	if (IS_ERR_OR_NULL(mem))
 		goto clean_up;
 
@@ -1589,8 +1589,8 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
 	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
 		if (gr->global_ctx_buffer[i].ref) {
-			mem_op().put(memmgr,
-				gr->global_ctx_buffer[i].ref);
+			nvhost_memmgr_put(memmgr,
+					  gr->global_ctx_buffer[i].ref);
 			memset(&gr->global_ctx_buffer[i],
 				0, sizeof(struct mem_desc));
 		}
@@ -1605,7 +1605,7 @@ static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
 	u32 i;
 
 	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
-		mem_op().put(memmgr, gr->global_ctx_buffer[i].ref);
+		nvhost_memmgr_put(memmgr, gr->global_ctx_buffer[i].ref);
 		memset(&gr->global_ctx_buffer[i], 0, sizeof(struct mem_desc));
 	}
 
@@ -1719,11 +1719,11 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	gr_ctx->mem.ref = mem_op().alloc(memmgr,
-				gr->ctx_vars.buffer_total_size,
-				DEFAULT_ALLOC_ALIGNMENT,
-				DEFAULT_ALLOC_FLAGS,
-				0);
+	gr_ctx->mem.ref = nvhost_memmgr_alloc(memmgr,
+					      gr->ctx_vars.buffer_total_size,
+					      DEFAULT_ALLOC_ALIGNMENT,
+					      DEFAULT_ALLOC_FLAGS,
+					      0);
 
 	if (IS_ERR(gr_ctx->mem.ref))
 		return -ENOMEM;
@@ -1733,7 +1733,7 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 		/*offset_align, flags, kind*/
 		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0);
 	if (!gr_ctx->gpu_va) {
-		mem_op().put(memmgr, gr_ctx->mem.ref);
+		nvhost_memmgr_put(memmgr, gr_ctx->mem.ref);
 		return -ENOMEM;
 	}
 
@@ -1749,7 +1749,7 @@ static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 	nvhost_dbg_fn("");
 
 	ch_vm->unmap(ch_vm, ch_ctx->gr_ctx.gpu_va);
-	mem_op().put(ch_nvmap, ch_ctx->gr_ctx.mem.ref);
+	nvhost_memmgr_put(ch_nvmap, ch_ctx->gr_ctx.mem.ref);
 }
 
 static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
@@ -1761,10 +1761,10 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 
 	nvhost_dbg_fn("");
 
-	patch_ctx->mem.ref = mem_op().alloc(memmgr, 128 * sizeof(u32),
-				DEFAULT_ALLOC_ALIGNMENT,
-				DEFAULT_ALLOC_FLAGS,
-				0);
+	patch_ctx->mem.ref = nvhost_memmgr_alloc(memmgr, 128 * sizeof(u32),
+						 DEFAULT_ALLOC_ALIGNMENT,
+						 DEFAULT_ALLOC_FLAGS,
+						 0);
 	if (IS_ERR(patch_ctx->mem.ref))
 		return -ENOMEM;
 
@@ -1781,7 +1781,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
  clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
 	if (patch_ctx->mem.ref) {
-		mem_op().put(memmgr, patch_ctx->mem.ref);
+		nvhost_memmgr_put(memmgr, patch_ctx->mem.ref);
 		patch_ctx->mem.ref = 0;
 	}
 
@@ -1810,7 +1810,7 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c)
 	gr_gk20a_unmap_channel_patch_ctx(c);
 
 	if (patch_ctx->mem.ref) {
-		mem_op().put(memmgr, patch_ctx->mem.ref);
+		nvhost_memmgr_put(memmgr, patch_ctx->mem.ref);
 		patch_ctx->mem.ref = 0;
 	}
 }
@@ -1981,12 +1981,15 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	mem_op().unpin(memmgr, gr->mmu_wr_mem.mem.ref, gr->mmu_wr_mem.mem.sgt);
-	mem_op().unpin(memmgr, gr->mmu_rd_mem.mem.ref, gr->mmu_rd_mem.mem.sgt);
-	mem_op().unpin(memmgr, gr->compbit_store.mem.ref, gr->compbit_store.mem.sgt);
-	mem_op().put(memmgr, gr->mmu_wr_mem.mem.ref);
-	mem_op().put(memmgr, gr->mmu_rd_mem.mem.ref);
-	mem_op().put(memmgr, gr->compbit_store.mem.ref);
+	nvhost_memmgr_unpin(memmgr, gr->mmu_wr_mem.mem.ref,
+			    gr->mmu_wr_mem.mem.sgt);
+	nvhost_memmgr_unpin(memmgr, gr->mmu_rd_mem.mem.ref,
+			    gr->mmu_rd_mem.mem.sgt);
+	nvhost_memmgr_unpin(memmgr, gr->compbit_store.mem.ref,
+			    gr->compbit_store.mem.sgt);
+	nvhost_memmgr_put(memmgr, gr->mmu_wr_mem.mem.ref);
+	nvhost_memmgr_put(memmgr, gr->mmu_rd_mem.mem.ref);
+	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
 	memset(&gr->mmu_wr_mem, 0, sizeof(struct mem_desc));
 	memset(&gr->mmu_rd_mem, 0, sizeof(struct mem_desc));
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
@@ -2215,40 +2218,44 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->mmu_wr_mem_size = gr->mmu_rd_mem_size = 0x1000;
 
-	gr->mmu_wr_mem.mem.ref = mem_op().alloc(memmgr, gr->mmu_wr_mem_size,
-					     DEFAULT_ALLOC_ALIGNMENT,
-					     DEFAULT_ALLOC_FLAGS,
-					     0);
+	gr->mmu_wr_mem.mem.ref = nvhost_memmgr_alloc(memmgr,
+						     gr->mmu_wr_mem_size,
+						     DEFAULT_ALLOC_ALIGNMENT,
+						     DEFAULT_ALLOC_FLAGS,
+						     0);
 	if (!gr->mmu_wr_mem.mem.ref)
 		goto clean_up;
 	gr->mmu_wr_mem.mem.size = gr->mmu_wr_mem_size;
 
-	gr->mmu_rd_mem.mem.ref = mem_op().alloc(memmgr, gr->mmu_rd_mem_size,
-					     DEFAULT_ALLOC_ALIGNMENT,
-					     DEFAULT_ALLOC_FLAGS,
-					     0);
+	gr->mmu_rd_mem.mem.ref = nvhost_memmgr_alloc(memmgr,
+						     gr->mmu_rd_mem_size,
+						     DEFAULT_ALLOC_ALIGNMENT,
+						     DEFAULT_ALLOC_FLAGS,
+						     0);
 	if (!gr->mmu_rd_mem.mem.ref)
 		goto clean_up;
 	gr->mmu_rd_mem.mem.size = gr->mmu_rd_mem_size;
 
-	mmu_ptr = mem_op().mmap(gr->mmu_wr_mem.mem.ref);
+	mmu_ptr = nvhost_memmgr_mmap(gr->mmu_wr_mem.mem.ref);
 	if (!mmu_ptr)
 		goto clean_up;
 	memset(mmu_ptr, 0, gr->mmu_wr_mem.mem.size);
-	mem_op().munmap(gr->mmu_wr_mem.mem.ref, mmu_ptr);
+	nvhost_memmgr_munmap(gr->mmu_wr_mem.mem.ref, mmu_ptr);
 
-	mmu_ptr = mem_op().mmap(gr->mmu_rd_mem.mem.ref);
+	mmu_ptr = nvhost_memmgr_mmap(gr->mmu_rd_mem.mem.ref);
 	if (!mmu_ptr)
 		goto clean_up;
 	memset(mmu_ptr, 0, gr->mmu_rd_mem.mem.size);
-	mem_op().munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
+	nvhost_memmgr_munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
 
-	gr->mmu_wr_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_wr_mem.mem.ref);
+	gr->mmu_wr_mem.mem.sgt =
+		nvhost_memmgr_pin(memmgr, gr->mmu_wr_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_wr_mem.mem.sgt))
 		goto clean_up;
 	gr->mmu_wr_mem.cpu_pa = sg_dma_address(gr->mmu_wr_mem.mem.sgt->sgl);
 
-	gr->mmu_rd_mem.mem.sgt = mem_op().pin(memmgr, gr->mmu_rd_mem.mem.ref);
+	gr->mmu_rd_mem.mem.sgt =
+		nvhost_memmgr_pin(memmgr, gr->mmu_rd_mem.mem.ref);
 	if (IS_ERR_OR_NULL(gr->mmu_rd_mem.mem.sgt))
 		goto clean_up;
 	gr->mmu_rd_mem.cpu_pa = sg_dma_address(gr->mmu_rd_mem.mem.sgt->sgl);
@@ -2496,10 +2503,10 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 		max_comptag_lines);
 
 	gr->compbit_store.mem.ref =
-		mem_op().alloc(memmgr, compbit_backing_size,
-			    DEFAULT_ALLOC_ALIGNMENT,
-			    DEFAULT_ALLOC_FLAGS,
-			    0);
+		nvhost_memmgr_alloc(memmgr, compbit_backing_size,
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    DEFAULT_ALLOC_FLAGS,
+				    0);
 	if (IS_ERR_OR_NULL(gr->compbit_store.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g), "failed to allocate"
 			   "backing store for compbit : size %d",
@@ -2509,7 +2516,7 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	gr->compbit_store.mem.size = compbit_backing_size;
 
 	gr->compbit_store.mem.sgt =
-		mem_op().pin(memmgr, gr->compbit_store.mem.ref);
+		nvhost_memmgr_pin(memmgr, gr->compbit_store.mem.ref);
 	if (IS_ERR_OR_NULL(gr->compbit_store.mem.sgt)) {
 		ret = -ENOMEM;
 		goto clean_up;
@@ -2523,7 +2530,7 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 
 clean_up:
-	mem_op().put(memmgr, gr->compbit_store.mem.ref);
+	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
 	return ret;
 }
 

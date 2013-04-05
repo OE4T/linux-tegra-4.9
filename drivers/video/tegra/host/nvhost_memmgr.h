@@ -76,5 +76,8 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data);
+int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
+			    struct mem_handle *mem_handle,
+			    u32 param, u32 *result);
 
 #endif

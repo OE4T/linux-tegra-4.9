@@ -99,8 +99,8 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #endif
 }
 
-static unsigned int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
-						   struct tegra_dc_win *b)
+static int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
+	struct tegra_dc_win *b)
 {
 	if (!WIN_IS_ENABLED(a) || !WIN_IS_ENABLED(b))
 		return 0;
@@ -111,59 +111,24 @@ static unsigned int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
 		((b->out_y + b->out_h > a->out_y) && (b->out_y <= a->out_y));
 }
 
+/* check overlapping window combinations to find the max bandwidth. */
 static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
-						 int n)
+						 unsigned n)
 {
 	unsigned i;
 	unsigned j;
-	unsigned overlap_count;
-	unsigned max_bw = 0;
+	unsigned long bw;
+	unsigned long max = 0;
 
-	WARN_ONCE(n > 3, "Code assumes at most 3 windows, bandwidth is likely"
-			 "inaccurate.\n");
-
-	/* If we had a large number of windows, we would compute adjacency
-	 * graph representing 2 window overlaps, find all cliques in the graph,
-	 * assign bandwidth to each clique, and then select the clique with
-	 * maximum bandwidth. But because we have at most 3 windows,
-	 * implementing proper Bron-Kerbosh algorithm would be an overkill,
-	 * brute force will suffice.
-	 *
-	 * Thus: find maximum bandwidth for either single or a pair of windows
-	 * and count number of window pair overlaps. If there are three
-	 * pairs, all 3 window overlap.
-	 */
-
-	overlap_count = 0;
 	for (i = 0; i < n; i++) {
-		unsigned int bw1;
-
-		if (wins[i] == NULL)
-			continue;
-		bw1 = wins[i]->new_bandwidth;
-		if (bw1 > max_bw)
-			/* Single window */
-			max_bw = bw1;
-
-		for (j = i + 1; j < n; j++) {
-			if (wins[j] == NULL)
-				continue;
-			if (tegra_dc_windows_is_overlapped(wins[i], wins[j])) {
-				unsigned int bw2 = wins[j]->new_bandwidth;
-				if (bw1 + bw2 > max_bw)
-					/* Window pair overlaps */
-					max_bw = bw1 + bw2;
-				overlap_count++;
-			}
-		}
+		bw = wins[i]->new_bandwidth;
+		for (j = 0; j < n; j++)
+			if (tegra_dc_windows_is_overlapped(wins[i], wins[j]))
+				bw += wins[j]->new_bandwidth;
+		if (max < bw)
+			max = bw;
 	}
-
-	if (overlap_count == 3)
-		/* All three windows overlap */
-		max_bw = wins[0]->new_bandwidth + wins[1]->new_bandwidth +
-			 wins[2]->new_bandwidth;
-
-	return max_bw;
+	return max;
 }
 
 /*

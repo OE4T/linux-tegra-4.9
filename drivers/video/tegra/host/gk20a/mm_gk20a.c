@@ -1231,10 +1231,34 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 				 struct mem_mgr **memmgr, struct mem_handle **r)
 {
-	int err = 0;
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	int err = 0;
+	struct nvhost_hwctx *hwctx;
+	struct channel_gk20a *ch;
+	struct list_head *pos;
 
 	nvhost_dbg_fn("");
+
+	/* User mode clients expect to be able to cleanly free a buffers after
+	 * launching work against them.  To avoid causing mmu faults we wait
+	 * for all pending work with respect to the share to clear before
+	 * unmapping the pages...
+	 * Note: the finish call below takes care to wait only if necessary.
+	 * So only the first in a series of unmappings will cause a wait for
+	 * idle.
+	 */
+	/* TODO: grab bound list lock, release during wait */
+	/* TODO: even better: schedule deferred (finish,unmap) and return
+	 * immediately */
+	list_for_each(pos, &as_share->bound_list) {
+		hwctx = container_of(pos, struct nvhost_hwctx,
+				     as_share_bound_list_node);
+		if (likely(!hwctx->has_timedout)) {
+			ch =  (struct channel_gk20a *)hwctx->priv;
+			BUG_ON(!ch);
+			gk20a_channel_finish(ch, 15000 /* 15sec swag */);
+		}
+	}
 
 	vm->unmap_user(vm, offset, memmgr, r);
 

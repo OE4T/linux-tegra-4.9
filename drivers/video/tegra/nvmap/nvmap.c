@@ -975,3 +975,51 @@ void nvmap_put_handle_user_id(ulong user_id)
 	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
 	nvmap_handle_put(h);
 }
+
+struct sg_table *nvmap_sg_table(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref)
+{
+	struct nvmap_handle *h;
+	struct sg_table *sgt = NULL;
+	int err, npages;
+
+	if (!ref || !ref->handle)
+		return ERR_PTR(-EINVAL);
+
+	h = nvmap_handle_get(ref->handle);
+	if (!h)
+		return ERR_PTR(-EINVAL);
+
+	npages = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt) {
+		err = -ENOMEM;
+		goto err;
+	}
+
+	if (!h->heap_pgalloc) {
+		err = sg_alloc_table(sgt, 1, GFP_KERNEL);
+		if (err)
+			goto err;
+		sg_set_buf(sgt->sgl, phys_to_virt(handle_phys(h)), h->size);
+	} else {
+		err = sg_alloc_table_from_pages(sgt, h->pgalloc.pages,
+				npages, 0, h->size, GFP_KERNEL);
+		if (err)
+			goto err;
+	}
+	nvmap_handle_put(h);
+	return sgt;
+
+err:
+	kfree(sgt);
+	nvmap_handle_put(h);
+	return ERR_PTR(err);
+}
+
+void nvmap_free_sg_table(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref, struct sg_table *sgt)
+{
+	sg_free_table(sgt);
+	kfree(sgt);
+}

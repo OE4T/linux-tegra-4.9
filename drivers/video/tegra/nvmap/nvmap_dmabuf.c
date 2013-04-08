@@ -64,17 +64,13 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	struct dma_buf_attachment *attach, enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
-	struct nvmap_handle *handle = info->ref->handle;
-	int err, npages = PAGE_ALIGN(handle->size) >> PAGE_SHIFT;
+	int err;
 	struct sg_table *sgt;
 	dma_addr_t addr;
 
-	if (WARN_ON(!handle->heap_pgalloc))
-		return ERR_PTR(-EINVAL);
-
-	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
-	if (!sgt)
-		return ERR_PTR(-ENOMEM);
+	sgt = nvmap_sg_table(info->client, info->ref);
+	if (IS_ERR(sgt))
+		return sgt;
 
 	addr = nvmap_pin(info->client, info->ref);
 	if (IS_ERR_VALUE(addr)) {
@@ -82,28 +78,13 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		goto err_pin;
 	}
 
-	if (info->ref->handle->pgalloc.contig) {
-		err = sg_alloc_table(sgt, 1, GFP_KERNEL);
-		if (err)
-			goto err_sgalloc;
-		sg_set_page(sgt->sgl, *handle->pgalloc.pages, handle->size, 0);
-	} else {
-		err = sg_alloc_table_from_pages(sgt, handle->pgalloc.pages,
-						npages, 0, handle->size,
-						GFP_KERNEL);
-		if (err)
-			goto err_sgalloc;
-	}
-	sg_dma_len(sgt->sgl) = handle->size;
 	sg_dma_address(sgt->sgl) = addr;
 
 	dev_dbg(attach->dev, "%s(%08lx)\n", __func__, info->id);
 	return sgt;
 
-err_sgalloc:
-	nvmap_unpin(info->client, info->ref);
 err_pin:
-	kfree(sgt);
+	nvmap_free_sg_table(info->client, info->ref, sgt);
 	return ERR_PTR(err);
 }
 
@@ -114,8 +95,7 @@ static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
 
 	nvmap_unpin(info->client, info->ref);
-	sg_free_table(sgt);
-	kfree(sgt);
+	nvmap_free_sg_table(info->client, info->ref, sgt);
 
 	dev_dbg(attach->dev, "%s(%08lx)\n", __func__, info->id);
 }

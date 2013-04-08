@@ -141,6 +141,16 @@ struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
 
 void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
+/*
+ * Create a sg_table struct from the pages allocated for a handle. Note that
+ * this does not increment refcount of the handle, so keep a reference to the
+ * buffer for as long as you use the sg_table.
+ */
+struct sg_table *nvmap_sg_table(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref);
+void nvmap_free_sg_table(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref, struct sg_table *sgt);
+
 struct nvmap_platform_carveout {
 	const char *name;
 	unsigned int usage_mask;

@@ -2443,7 +2443,10 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	pmu_enable_hw(pmu, false);
 
-	pmu->remove_support(pmu);
+	if (pmu->remove_support) {
+		pmu->remove_support(pmu);
+		pmu->remove_support = NULL;
+	}
 
 	nvhost_dbg_fn("done");
 	return 0;

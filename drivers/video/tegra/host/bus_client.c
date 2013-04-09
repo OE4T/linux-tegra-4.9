@@ -1282,6 +1282,9 @@ static struct device *nvhost_client_device_create(
 	}
 	use_dev_name = get_device_name_for_dev(pdev);
 
+	if (pdev->id == -1)
+		pdev->id = 0;
+
 	dev = device_create(host->nvhost_class,
 			NULL, devno, NULL,
 			(pdev->id == 0) ?

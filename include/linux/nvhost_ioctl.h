@@ -248,8 +248,9 @@ struct nvhost_submit_args {
 	__u32 reloc_shifts;
 	__u32 waitchks;
 	__u32 waitbases;
+	__u32 class_ids;
 
-	__u32 pad[3];		/* future expansion */
+	__u32 pad[2];		/* future expansion */
 	__u32 fences;
 	__u32 fence;		/* Return value */
 } __packed;

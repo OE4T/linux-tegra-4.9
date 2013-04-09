@@ -359,9 +359,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		(struct nvhost_syncpt_incr *)(uintptr_t)args->syncpt_incrs;
 	u32 __user *waitbases = (u32 *)(uintptr_t)args->waitbases;
 	u32 __user *fences = (u32 *)(uintptr_t)args->fences;
+	u32 __user *class_ids = (u32 *)(uintptr_t)args->class_ids;
 
 	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
-	u32 *local_waitbases = NULL;
+	u32 *local_waitbases = NULL, *local_class_ids = NULL;
 	int err, i, hwctx_syncpt_idx = -1;
 
 	if (num_syncpt_incrs > host->info.nb_pts)
@@ -383,16 +384,36 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->priority = ctx->priority;
 	job->clientid = ctx->clientid;
 
-	while (num_cmdbufs) {
+	/* mass copy class_ids */
+	if (args->class_ids) {
+		local_class_ids = kzalloc(sizeof(u32) * num_cmdbufs,
+			GFP_KERNEL);
+		if (!local_class_ids) {
+			err = -ENOMEM;
+			goto fail;
+		}
+		err = copy_from_user(local_class_ids, class_ids,
+			sizeof(u32) * num_cmdbufs);
+		if (err) {
+			err = -EINVAL;
+			goto fail;
+		}
+	}
+
+	for (i = 0; i < num_cmdbufs; ++i) {
 		struct nvhost_cmdbuf cmdbuf;
-		err = copy_from_user(&cmdbuf, cmdbufs, sizeof(cmdbuf));
+		u32 class_id = class_ids ? local_class_ids[i] : 0;
+
+		err = copy_from_user(&cmdbuf, cmdbufs + i, sizeof(cmdbuf));
 		if (err)
 			goto fail;
-		nvhost_job_add_gather(job,
-				cmdbuf.mem, cmdbuf.words, cmdbuf.offset, 0);
-		num_cmdbufs--;
-		cmdbufs++;
+
+		nvhost_job_add_gather(job, cmdbuf.mem, cmdbuf.words,
+				cmdbuf.offset, class_id);
 	}
+
+	kfree(local_class_ids);
+	local_class_ids = NULL;
 
 	err = copy_from_user(job->relocarray,
 			relocs, sizeof(*relocs) * num_relocs);
@@ -527,6 +548,7 @@ fail_submit:
 	nvhost_job_unpin(job);
 fail:
 	nvhost_job_put(job);
+	kfree(local_class_ids);
 	kfree(local_waitbases);
 	return err;
 }

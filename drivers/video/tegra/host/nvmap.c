@@ -123,7 +123,7 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 }
 
 int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
-		u32 *ids,
+		long unsigned *ids,
 		u32 id_type_mask,
 		u32 id_type,
 		u32 count,

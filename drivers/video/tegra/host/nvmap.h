@@ -50,7 +50,7 @@ int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 phys_addr_t nvhost_nvmap_get_addr_from_id(ulong id);
 
 int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
-		u32 *ids,
+		long unsigned *ids,
 		u32 id_type_mask,
 		u32 id_type,
 		u32 count,

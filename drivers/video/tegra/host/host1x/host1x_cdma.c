@@ -28,6 +28,7 @@
 #include "class_ids.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "nvhost_job.h"
 
 #include "host1x_cdma.h"
 

@@ -233,12 +233,21 @@ static inline u32 gather_count(u32 word)
 
 static void submit_gathers(struct nvhost_job *job)
 {
-	/* push user gathers */
+	u32 class_id = 0;
 	int i;
+
+	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
 		u32 op1;
 		u32 op2;
+
+		if (g->class_id != class_id) {
+			nvhost_cdma_push(&job->ch->cdma,
+				nvhost_opcode_setclass(g->class_id, 0, 0),
+				NVHOST_OPCODE_NOOP);
+			class_id = g->class_id;
+		}
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from
@@ -267,7 +276,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	u32 prev_max = 0;
 	int err, i;
 	void *completed_waiters[job->num_syncpts], *ctxsave_waiter = NULL;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
@@ -351,12 +359,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		job->sp[i].fence =
 			nvhost_syncpt_incr_max(sp, job->sp[i].id, incrs);
 	}
-
-	/* add a setclass for modules that require it */
-	if (pdata->class)
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(pdata->class, 0, 0),
-			NVHOST_OPCODE_NOOP);
 
 	if (job->null_kickoff)
 		submit_nullkickoff(job, user_syncpt_incrs);

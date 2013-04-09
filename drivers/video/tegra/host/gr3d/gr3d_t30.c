@@ -542,7 +542,7 @@ int nvhost_gr3d_t30_read_reg(
 
 	/* Submit job */
 	nvhost_job_add_gather(job, nvhost_memmgr_handle_to_id(mem),
-			ARRAY_SIZE(opcodes), 4);
+			ARRAY_SIZE(opcodes), 4, 0);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(dev)->syncpt);
 	if (err)

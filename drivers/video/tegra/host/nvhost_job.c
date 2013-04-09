@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Job
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -154,14 +154,16 @@ void nvhost_job_put(struct nvhost_job *job)
 }
 
 void nvhost_job_add_gather(struct nvhost_job *job,
-		u32 mem_id, u32 words, u32 offset)
+		u32 mem_id, u32 words, u32 offset, u32 class_id)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	struct nvhost_job_gather *cur_gather =
 			&job->gathers[job->num_gathers];
 
 	cur_gather->words = words;
 	cur_gather->mem_id = mem_id;
 	cur_gather->offset = offset;
+	cur_gather->class_id = class_id ? class_id : pdata->class;
 	job->num_gathers += 1;
 }
 

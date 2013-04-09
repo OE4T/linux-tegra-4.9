@@ -810,7 +810,7 @@ int nvhost_mpe_read_reg(struct platform_device *dev,
 
 	/* Submit job */
 	nvhost_job_add_gather(job, nvhost_memmgr_handle_to_id(mem),
-			ARRAY_SIZE(opcodes), 0);
+			ARRAY_SIZE(opcodes), 0, 0);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(dev)->syncpt);
 	if (err)

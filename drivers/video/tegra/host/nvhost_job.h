@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@ struct nvhost_job_gather {
 	struct sg_table *mem_sgt;
 	dma_addr_t mem_base;
 	ulong mem_id;
+	u32 class_id;
 	int offset;
 	struct mem_handle *ref;
 };
@@ -129,7 +130,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
  * Add a gather to a job.
  */
 void nvhost_job_add_gather(struct nvhost_job *job,
-		u32 mem_id, u32 words, u32 offset);
+		u32 mem_id, u32 words, u32 offset, u32 class_id);
 
 /*
  * Increment reference going to nvhost_job.

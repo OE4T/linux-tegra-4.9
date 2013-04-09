@@ -389,7 +389,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		if (err)
 			goto fail;
 		nvhost_job_add_gather(job,
-				cmdbuf.mem, cmdbuf.words, cmdbuf.offset);
+				cmdbuf.mem, cmdbuf.words, cmdbuf.offset, 0);
 		num_cmdbufs--;
 		cmdbufs++;
 	}

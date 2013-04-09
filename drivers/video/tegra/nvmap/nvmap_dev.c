@@ -539,7 +539,8 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 
 	atomic_set(&client->iovm_commit, 0);
 
-	client->iovm_limit = nvmap_mru_vm_size(client->share->iovmm);
+	/* !!!FIXME!!!:- Remove this hack */
+	//client->iovm_limit = nvmap_mru_vm_size(client->share->iovmm);
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		INIT_LIST_HEAD(&client->carveout_commit[i].list);

@@ -268,6 +268,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
 
+	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
+
 	/* Bail out on timed out contexts */
 	if (job->hwctx && job->hwctx->has_timedout)
 		return -ETIMEDOUT;

@@ -54,6 +54,8 @@ struct nvhost_master {
 	struct platform_device *dev;
 	atomic_t clientid;
 	struct host1x_device_info info;
+	struct kobject *caps_kobj;
+	struct nvhost_capability_node *caps_nodes;
 };
 
 extern struct nvhost_master *nvhost;

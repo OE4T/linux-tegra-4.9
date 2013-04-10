@@ -35,12 +35,6 @@ struct nvhost_syncpt_attr {
 	int id;
 };
 
-struct nvhost_capability_node {
-	struct kobj_attribute attr;
-	struct nvhost_syncpt *sp;
-	int (*func)(struct nvhost_syncpt *sp);
-};
-
 struct nvhost_syncpt {
 	struct kobject *kobj;
 	atomic_t *min_val;
@@ -52,9 +46,6 @@ struct nvhost_syncpt {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_timeline **timeline;
 #endif
-
-	struct kobject *caps_kobj;
-	struct nvhost_capability_node *caps_nodes;
 };
 
 int nvhost_syncpt_init(struct platform_device *, struct nvhost_syncpt *);

@@ -255,6 +255,7 @@ struct tegra_dc_hdmi_data {
 
 #ifdef CONFIG_SWITCH
 	struct switch_dev		hpd_switch;
+	struct switch_dev		audio_switch;
 #endif
 	struct tegra_hdmi_out		info;
 

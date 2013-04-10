@@ -62,4 +62,5 @@ void tegra_edid_put_data(struct tegra_dc_edid *data);
 
 int tegra_edid_underscan_supported(struct tegra_edid *edid);
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data);
+int tegra_edid_audio_supported(struct tegra_edid *edid);
 #endif

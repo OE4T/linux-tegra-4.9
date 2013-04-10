@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,6 +32,7 @@ struct tegra_edid_pvt {
 	struct tegra_edid_hdmi_eld	eld;
 	bool				support_stereo;
 	bool				support_underscan;
+	bool				support_audio;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -196,6 +197,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	int i;
 	bool basic_audio = false;
 
+	edid->support_audio = 0;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
@@ -210,6 +212,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			 * If there is a Speaker Alloc block this will
 			 * get over written with that value */
 			basic_audio = true;
+			edid->support_audio = 1;
 		}
 	}
 
@@ -495,6 +498,14 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 fail:
 	vfree(new_data);
 	return ret;
+}
+
+int tegra_edid_audio_supported(struct tegra_edid *edid)
+{
+	if ((!edid) || (!edid->data))
+		return 0;
+
+	return edid->data->support_audio;
 }
 
 int tegra_edid_underscan_supported(struct tegra_edid *edid)

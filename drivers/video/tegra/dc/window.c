@@ -26,7 +26,6 @@
 #include "dc_priv.h"
 
 static int no_vsync;
-static atomic_t frame_end_ref = ATOMIC_INIT(0);
 
 module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
 
@@ -50,14 +49,16 @@ static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 
 int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 {
+
+	mutex_lock(&dc->lock);
 	tegra_dc_io_start(dc);
-	tegra_dc_writel(dc, FRAME_END_INT, DC_CMD_INT_STATUS);
 	if (enable) {
-		atomic_inc(&frame_end_ref);
+		atomic_inc(&dc->frame_end_ref);
 		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
-	} else if (!atomic_dec_return(&frame_end_ref))
+	} else if (!atomic_dec_return(&dc->frame_end_ref))
 		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
 	return 0;
 }
 
@@ -570,7 +571,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
 #endif
-		if (!atomic_read(&frame_end_ref))
+		if (!atomic_read(&dc->frame_end_ref))
 			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 
@@ -620,7 +621,7 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 
 	if (!dirty) {
 		if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-			&& !atomic_read(&frame_end_ref))
+			&& !atomic_read(&dc->frame_end_ref))
 			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 

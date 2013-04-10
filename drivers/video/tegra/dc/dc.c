@@ -2140,6 +2140,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	if (dc->out->postpoweron)
 		dc->out->postpoweron();
 
+	tegra_log_resume_time();
+
 	tegra_dc_io_end(dc);
 	return true;
 }

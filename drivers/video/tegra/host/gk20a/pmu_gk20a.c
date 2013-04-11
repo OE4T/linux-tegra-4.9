@@ -927,6 +927,8 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 	nvhost_dbg_fn("");
 
+	cancel_delayed_work_sync(&pmu->elpg_enable);
+
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
 
@@ -942,7 +944,6 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 
 	nvhost_allocator_destroy(&pmu->dmem);
-	del_timer(&pmu->elpg_timer);
 
 	/* this function is also called by pmu_destory outside gk20a deinit that
 	   releases gk20a struct so fill up with zeros here. */
@@ -960,17 +961,7 @@ int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void pmu_elpg_enable_allow(unsigned long arg)
-{
-	struct pmu_gk20a *pmu = (struct pmu_gk20a *)arg;
-	struct gk20a *g = pmu->g;
-
-	nvhost_dbg_fn("");
-
-	pmu->elpg_enable_allow = true;
-	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING)
-		gk20a_pmu_enable_elpg(g);
-}
+static void pmu_elpg_enable_allow(struct work_struct *work);
 
 int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
@@ -1124,9 +1115,8 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
 
-	init_timer(&pmu->elpg_timer);
-	pmu->elpg_timer.function = pmu_elpg_enable_allow;
-	pmu->elpg_timer.data = (unsigned long)pmu;
+	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
+	mutex_init(&pmu->elpg_mutex);
 
 	pmu->perfmon_counter.index = 3; /* GR & CE2 */
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
@@ -1444,6 +1434,9 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+
+	/* start with elpg disabled until first enable call */
+	pmu->elpg_refcnt = 0;
 
 	return 0;
 }
@@ -2312,6 +2305,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 	struct pmu_cmd cmd;
 	u32 seq;
+	int ret = 0;
 
 	nvhost_dbg_fn("");
 
@@ -2323,13 +2317,24 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	if (unlikely(!gr->ctx_vars.golden_image_initialized))
 		return 0;
 
+	mutex_lock(&pmu->elpg_mutex);
+
 	/* return if ELPG is already on or on_pending or off_on_pending */
-	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF)
-		return 0;
+	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
+		ret = 0;
+		goto exit_unlock;
+	}
+
+	pmu->elpg_refcnt++;
+	if (pmu->elpg_refcnt <= 0) {
+		ret = 0;
+		goto exit_unlock;
+	}
 
 	if (!pmu->elpg_enable_allow) {
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF_ON_PENDING;
-		return 0;
+		ret = 0;
+		goto exit_unlock;
 	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -2346,27 +2351,51 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
+exit_unlock:
+	mutex_unlock(&pmu->elpg_mutex);
 	nvhost_dbg_fn("done");
-
 	return 0;
 }
 
-int gk20a_pmu_disable_elpg(struct gk20a *g)
+static void pmu_elpg_enable_allow(struct work_struct *work)
+{
+	struct pmu_gk20a *pmu = container_of(to_delayed_work(work),
+					struct pmu_gk20a, elpg_enable);
+
+	nvhost_dbg_fn("");
+
+	mutex_lock(&pmu->elpg_mutex);
+	pmu->elpg_enable_allow = true;
+	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
+		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
+		mutex_unlock(&pmu->elpg_mutex);
+		gk20a_pmu_enable_elpg(pmu->g);
+	} else
+		mutex_unlock(&pmu->elpg_mutex);
+
+	nvhost_dbg_fn("done");
+}
+
+static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 	long remain;
+	int ret = 0;
 
 	nvhost_dbg_fn("");
 
 	if (!pmu->elpg_ready)
 		return 0;
 
+	mutex_lock(&pmu->elpg_mutex);
+
 	/* cancel off_on_pending and return */
 	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
-		return 0;
+		ret = 0;
+		goto exit_unlock;
 	}
 	/* wait if on_pending */
 	else if (pmu->elpg_stat == PMU_ELPG_STAT_ON_PENDING) {
@@ -2378,12 +2407,21 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 			nvhost_err(dev_from_gk20a(g),
 				"ELPG_ALLOW_ACK failed, remaining timeout 0x%lx",
 				remain);
-			return -EBUSY;
+			ret = -EBUSY;
+			goto exit_unlock;
 		}
 	}
 	/* return if ELPG is already off */
-	else if (pmu->elpg_stat != PMU_ELPG_STAT_ON)
-		return 0;
+	else if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
+		ret = 0;
+		goto exit_unlock;
+	}
+
+	pmu->elpg_refcnt--;
+	if (pmu->elpg_refcnt > 0) {
+		ret = 0;
+		goto exit_unlock;
+	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -2391,6 +2429,8 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
+
+	pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
 
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
@@ -2404,19 +2444,24 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%lx",
 			remain);
 		pmu_dump_elpg_stats(pmu);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto exit_unlock;
 	}
 
-	if (!timer_pending(&pmu->elpg_timer)) {
-		pmu->elpg_enable_allow = false;
-		pmu->elpg_timer.expires = jiffies +
-			msecs_to_jiffies(PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC);
-		add_timer(&pmu->elpg_timer);
+	if (enable) {
+		schedule_delayed_work(&pmu->elpg_enable,
+			msecs_to_jiffies(PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC));
 	}
 
+exit_unlock:
+	mutex_unlock(&pmu->elpg_mutex);
 	nvhost_dbg_fn("done");
+	return ret;
+}
 
-	return 0;
+int gk20a_pmu_disable_elpg(struct gk20a *g)
+{
+	return gk20a_pmu_disable_elpg_defer_enable(g, true);
 }
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
@@ -2442,7 +2487,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	if (!support_gk20a_pmu())
 		return 0;
 
-	gk20a_pmu_disable_elpg(g);
+	gk20a_pmu_disable_elpg_defer_enable(g, false);
 
 	pmu_enable_hw(pmu, false);
 

@@ -595,7 +595,8 @@ struct pmu_pg_stats {
 #define PMU_ELPG_STAT_OFF		0   /* elpg is off */
 #define PMU_ELPG_STAT_ON		1   /* elpg is on */
 #define PMU_ELPG_STAT_ON_PENDING	2   /* elpg is off, ALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_OFF_ON_PENDING	3   /* elpg is off, caller has requested on, but ALLOW
+#define PMU_ELPG_STAT_OFF_PENDING	3   /* elpg is on, DISALLOW cmd has been sent, wait for ack */
+#define PMU_ELPG_STAT_OFF_ON_PENDING	4   /* elpg is off, caller has requested on, but ALLOW
 					       cmd hasn't been sent due to ENABLE_ALLOW delay */
 
 /* Falcon Register index */
@@ -670,8 +671,10 @@ struct pmu_gk20a {
 	wait_queue_head_t pg_wq;
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
-	struct timer_list elpg_timer;
+	struct delayed_work elpg_enable; /* deferred elpg enable */
 	bool elpg_enable_allow; /* true after init, false after disable, true after delay */
+	struct mutex elpg_mutex; /* protect elpg enable/disable */
+	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
 
 	struct pmu_perfmon_counter perfmon_counter;
 	u32 perfmon_state_id[PMU_DOMAIN_GROUP_NUM];

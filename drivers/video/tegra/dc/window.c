@@ -791,44 +791,34 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	u32 val, i;
 	u32 completed = 0;
 	u32 dirty = 0;
+	bool interlace_done = true;
 
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
-	u32 val2 = 0;
-	if (dc->mode.vmode == FB_VMODE_INTERLACED)
-		val2 = tegra_dc_readl(dc, DC_DISP_INTERLACE_CONTROL);
+	if (dc->mode.vmode == FB_VMODE_INTERLACED) {
+		val = tegra_dc_readl(dc, DC_DISP_INTERLACE_CONTROL);
+		interlace_done = (val & INTERLACE_ENABLE) &&
+			(val & INTERLACE_STATUS_FIELD_2);
+	}
 #endif
+
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for (i = 0; i < DC_N_WINDOWS; i++) {
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
-		if (val2 & INTERLACE_MODE_ENABLE) {
-			if (val2 & INTERLACE_STATUS_FIELD_2) {
-				if (tegra_platform_is_linsim()) {
-					/* FIXME: this is not needed when
-					the simulator clears WIN_x_UPDATE
-					bits as in HW */
-					dc->windows[i].dirty = 0;
-					completed = 1;
-				} else {
-					if (!(val & (WIN_A_ACT_REQ << i))) {
-						dc->windows[i].dirty = 0;
-						completed = 1;
-					} else {
-						dirty = 1;
-					}
-				}
-			} else
-				; /* field 1 */
+		if (tegra_platform_is_linsim()) {
+			/* FIXME: this is not needed when
+			   the simulator clears WIN_x_UPDATE
+			   bits as in HW */
+			if (interlace_done) {
+				dc->windows[i].dirty = 0;
+				completed = 1;
+			}
 		} else {
-#endif
-			if (tegra_platform_is_linsim()) {
+			if (!(val & (WIN_A_ACT_REQ << i)) && interlace_done) {
 				dc->windows[i].dirty = 0;
 				completed = 1;
 			} else {
 				dirty = 1;
 			}
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 		}
-#endif
 	}
 
 	if (!dirty) {
@@ -837,11 +827,6 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
-	if ((val2 & INTERLACE_MODE_ENABLE) &&
-		!(val2 & INTERLACE_STATUS_FIELD_2))
-		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
-#endif
 	if (completed)
 		wake_up(&dc->wq);
 }

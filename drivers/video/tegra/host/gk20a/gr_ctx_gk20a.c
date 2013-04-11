@@ -59,6 +59,8 @@ static int gr_gk20a_alloc_load_netlist_aiv(u32 *src, u32 len,
 	if (!alloc_aiv_list_gk20a(aiv_list))
 		return -ENOMEM;
 
+	memcpy(aiv_list->l, src, len);
+
 	return 0;
 }
 

@@ -788,9 +788,53 @@ static int dbg_dc_stats_open(struct inode *inode, struct file *file)
 	return single_open(file, dbg_dc_stats_show, inode->i_private);
 }
 
+static int dbg_dc_event_inject_show(struct seq_file *s, void *unused)
+{
+	return 0;
+}
+
+static int dbg_dc_event_inject_write(struct file *file, const char __user *addr,
+	size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data; /* single_open() initialized */
+	struct tegra_dc *dc = m ? m->private : NULL;
+	long event;
+	int ret;
+
+	if (!dc)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &event);
+	if (ret < 0)
+		return ret;
+
+	if (event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
+		tegra_dc_ext_process_hotplug(dc->ndev->id);
+	else if (event == 0x2) /* TEGRA_DC_EXT_EVENT_BANDWIDTH */
+		tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
+	else {
+		dev_err(&dc->ndev->dev, "Unknown event 0x%lx\n", event);
+		return -EINVAL; /* unknown event number */
+	}
+	return len;
+}
+
 static const struct file_operations stats_fops = {
 	.open		= dbg_dc_stats_open,
 	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int dbg_dc_event_inject_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_event_inject_show, inode->i_private);
+}
+
+static const struct file_operations event_inject_fops = {
+	.open		= dbg_dc_event_inject_open,
+	.read		= seq_read,
+	.write		= dbg_dc_event_inject_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -822,6 +866,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("stats", S_IRUGO, dc->debugdir, dc,
 		&stats_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("event_inject", S_IRUGO, dc->debugdir, dc,
+		&event_inject_fops);
 	if (!retval)
 		goto remove_out;
 

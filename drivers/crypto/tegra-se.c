@@ -42,7 +42,6 @@
 #include <crypto/sha.h>
 #include <linux/pm_runtime.h>
 #include <mach/hardware.h>
-
 #include <mach/pm_domains.h>
 
 #include "tegra-se.h"
@@ -82,6 +81,7 @@ struct tegra_se_chipdata {
 	bool cprng_supported;
 	bool drbg_supported;
 	bool rsa_supported;
+	bool drbg_src_entropy_clk_enable;
 	unsigned long aes_freq;
 	unsigned long rng_freq;
 	unsigned long sha1_freq;
@@ -99,6 +99,7 @@ struct tegra_se_dev {
 	int irq;	/* irq allocated */
 	spinlock_t lock;	/* spin lock */
 	struct clk *pclk;	/* Security Engine clock */
+	struct clk *enclk;	/* Entropy clock */
 	struct crypto_queue queue; /* Security Engine crypto queue */
 	struct tegra_se_slot *slot_list;	/* pointer to key slots */
 	struct tegra_se_rsa_slot *rsa_slot_list; /* rsa key slot pointer */
@@ -199,7 +200,6 @@ static struct workqueue_struct *se_work_q;
 #define PMC_SCRATCH43_REG_OFFSET 0x22c
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
 static int force_reseed_count;
-static int drbg_ro_entropy_src_enabled;
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 {
 	u8 carry;
@@ -1321,23 +1321,6 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 		return -ENOMEM;
 	}
 
-	/* take access to the hw */
-	mutex_lock(&se_hw_lock);
-	pm_runtime_get_sync(se_dev->dev);
-
-	if (!drbg_ro_entropy_src_enabled
-		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
-		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
-		se_writel(se_dev,
-			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
-		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
-			SE_RNG_SRC_CONFIG_REG_OFFSET);
-		drbg_ro_entropy_src_enabled = 1;
-	}
-
-	pm_runtime_put(se_dev->dev);
-	mutex_unlock(&se_hw_lock);
-
 	return 0;
 }
 
@@ -1359,6 +1342,15 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
+
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
+		/* enable clock for entropy */
+		ret = clk_enable(se_dev->enclk);
+		if (ret) {
+			dev_err(se_dev->dev, "entropy clock enable failed\n");
+			return ret;
+		}
+	}
 
 	*se_dev->src_ll_buf = 0;
 	*se_dev->dst_ll_buf = 0;
@@ -1402,6 +1394,9 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 
 	dma_sync_single_for_cpu(se_dev->dev, rng_ctx->dt_buf_adr,
 				TEGRA_SE_RNG_DT_SIZE, DMA_FROM_DEVICE);
+
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
+		clk_disable(se_dev->enclk);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -2671,6 +2666,33 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 #endif
 
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	if (se_dev->chipdata->drbg_supported
+		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+		se_writel(se_dev,
+			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
+		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
+			SE_RNG_SRC_CONFIG_REG_OFFSET);
+		se_dev->chipdata->drbg_src_entropy_clk_enable = true;
+	}
+
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
+		/* Initialize the entropy clock */
+		se_dev->enclk = clk_get_sys("entropy", NULL);
+		if (IS_ERR(se_dev->enclk)) {
+			err = PTR_ERR(se_dev->enclk);
+			dev_err(se_dev->dev,
+				"entropy clock init failed(%d)\n", err);
+			goto clean;
+		}
+	}
+
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
@@ -2686,6 +2708,9 @@ clean:
 
 	if (se_work_q)
 		destroy_workqueue(se_work_q);
+
+	if (se_dev->enclk)
+		clk_put(se_dev->enclk);
 
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
@@ -2723,6 +2748,10 @@ static int tegra_se_remove(struct platform_device *pdev)
 		crypto_unregister_alg(&aes_algs[i]);
 	for (i = 0; i < ARRAY_SIZE(hash_algs); i++)
 		crypto_unregister_ahash(&hash_algs[i]);
+
+	if (se_dev->enclk)
+		clk_put(se_dev->enclk);
+
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
 	tegra_se_free_ll_buf(se_dev);
@@ -2785,6 +2814,15 @@ static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
 
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
+		/* enable clock for entropy */
+		ret = clk_enable(se_dev->enclk);
+		if (ret) {
+			dev_err(se_dev->dev, "entropy clock enable failed\n");
+			return ret;
+		}
+	}
+
 	ret = tegra_se_generate_rng_key(se_dev);
 	if (ret) {
 		pm_runtime_put(se_dev->dev);
@@ -2824,6 +2862,9 @@ static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
 	}
 	ret = tegra_se_start_operation(se_dev, TEGRA_SE_KEY_128_SIZE, false);
 
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
+		clk_disable(se_dev->enclk);
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
@@ -2838,6 +2879,15 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
+
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
+		/* enable clock for entropy */
+		ret = clk_enable(se_dev->enclk);
+		if (ret) {
+			dev_err(se_dev->dev, "entropy clock enable failed\n");
+			return ret;
+		}
+	}
 
 	*se_dev->src_ll_buf = 0;
 	*se_dev->dst_ll_buf = 0;
@@ -2874,11 +2924,13 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 	dma_sync_single_for_cpu(se_dev->dev, se_dev->ctx_save_buf_adr,
 		SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, DMA_FROM_DEVICE);
 
+	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
+		clk_disable(se_dev->enclk);
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
 	return ret;
-
 }
 
 static int tegra_se_lp_encrypt_context_data(struct tegra_se_dev *se_dev,
@@ -3244,8 +3296,27 @@ out:
 
 static int tegra_se_resume(struct device *dev)
 {
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+
 	/* pair with tegra_se_suspend, no need to actually enable clock */
 	pm_runtime_get_noresume(dev);
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	if ((tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
+		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+		se_writel(se_dev,
+			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
+		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
+			SE_RNG_SRC_CONFIG_REG_OFFSET);
+		se_dev->chipdata->drbg_src_entropy_clk_enable = true;
+	}
+
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
 	return 0;
 }
 #endif

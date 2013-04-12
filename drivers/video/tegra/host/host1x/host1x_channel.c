@@ -520,6 +520,26 @@ static inline int hwctx_handler_init(struct nvhost_channel *ch)
 	return err;
 }
 
+#ifdef _hw_host1x04_channel_h_
+static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
+{
+
+	struct platform_device *pdev = ch->dev;
+	void __iomem *regs = ch->aperture;
+	struct nvhost_master *master = nvhost_get_host(pdev);
+
+	if (!nvhost_gather_filter_enabled(&master->syncpt))
+		return -EINVAL;
+
+	nvhost_module_busy(nvhost_get_parent(pdev));
+	writel(host1x_channel_channelctrl_kernel_filter_gbuffer_f(1),
+	       regs + host1x_channel_channelctrl_r());
+	nvhost_module_idle(nvhost_get_parent(pdev));
+
+	return 0;
+}
+#endif
+
 static int host1x_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev)
 {
@@ -535,4 +555,5 @@ static const struct nvhost_channel_ops host1x_channel_ops = {
 	.init = host1x_channel_init,
 	.submit = host1x_channel_submit,
 	.save_context = host1x_save_context,
+	.init_gather_filter = t124_channel_init_gather_filter,
 };

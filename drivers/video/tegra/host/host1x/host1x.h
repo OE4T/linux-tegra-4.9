@@ -75,6 +75,8 @@ int nvhost_host1x_prepare_poweroff(struct platform_device *dev);
 
 void nvhost_set_chanops(struct nvhost_channel *ch);
 
+int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
+
 extern pid_t nvhost_debug_null_kickoff_pid;
 
 static inline void *nvhost_get_private_data(struct platform_device *_dev)

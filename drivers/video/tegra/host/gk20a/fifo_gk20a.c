@@ -34,7 +34,7 @@
 #include "hw_top_gk20a.h"
 #include "hw_mc_gk20a.h"
 
-static int init_engine_info_gk20a(struct fifo_gk20a *f)
+static int init_engine_info(struct fifo_gk20a *f)
 {
 	struct fifo_engine_info_gk20a *gr_info;
 	const u32 gr_sw_id = ENGINE_GR_GK20A;
@@ -161,7 +161,85 @@ void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	kfree(f->engine_info);
 }
 
-int fifo_gk20a_init_runlist(struct gk20a *g, struct fifo_gk20a *f)
+/* reads info from hardware and fills in pbmda exception info record */
+static inline void get_exception_pbdma_info(
+	struct gk20a *g,
+	struct fifo_engine_info_gk20a *eng_info)
+{
+	struct fifo_pbdma_exception_info_gk20a *e =
+		&eng_info->pbdma_exception_info;
+
+	u32 pbdma_status_r = e->status_r = gk20a_readl(g,
+		   fifo_pbdma_status_r(eng_info->pbdma_id));
+	e->id = fifo_pbdma_status_id_v(pbdma_status_r); /* vs. id_hw_v()? */
+	e->id_is_chid = fifo_pbdma_status_id_type_v(pbdma_status_r) ==
+		fifo_pbdma_status_id_type_chid_v();
+	e->chan_status_v  = fifo_pbdma_status_chan_status_v(pbdma_status_r);
+	e->next_id_is_chid =
+		fifo_pbdma_status_next_id_type_v(pbdma_status_r) ==
+		fifo_pbdma_status_next_id_type_chid_v();
+	e->next_id = fifo_pbdma_status_next_id_v(pbdma_status_r);
+	e->chsw_in_progress =
+		fifo_pbdma_status_chsw_v(pbdma_status_r) ==
+		fifo_pbdma_status_chsw_in_progress_v();
+}
+
+static void fifo_pbdma_exception_status(struct gk20a *g,
+	struct fifo_engine_info_gk20a *eng_info)
+{
+	struct fifo_pbdma_exception_info_gk20a *e;
+	get_exception_pbdma_info(g, eng_info);
+	e = &eng_info->pbdma_exception_info;
+
+	nvhost_dbg_fn("pbdma_id %d, "
+		      "id_type %s, id %d, chan_status %d, "
+		      "next_id_type %s, next_id %d, "
+		      "chsw_in_progress %d",
+		      eng_info->pbdma_id,
+		      e->id_is_chid ? "chid" : "tsgid", e->id, e->chan_status_v,
+		      e->next_id_is_chid ? "chid" : "tsgid", e->next_id,
+		      e->chsw_in_progress);
+}
+
+/* reads info from hardware and fills in pbmda exception info record */
+static inline void get_exception_engine_info(
+	struct gk20a *g,
+	struct fifo_engine_info_gk20a *eng_info)
+{
+	struct fifo_engine_exception_info_gk20a *e =
+		&eng_info->engine_exception_info;
+	u32 engine_status_r = e->status_r =
+		gk20a_readl(g, fifo_engine_status_r(eng_info->engine_id));
+	e->id = fifo_engine_status_id_v(engine_status_r); /* vs. id_hw_v()? */
+	e->id_is_chid = fifo_engine_status_id_type_v(engine_status_r) ==
+		fifo_engine_status_id_type_chid_v();
+	e->ctx_status_v = fifo_engine_status_ctx_status_v(engine_status_r);
+	e->faulted =
+		fifo_engine_status_faulted_v(engine_status_r) ==
+		fifo_engine_status_faulted_true_v();
+	e->idle =
+		fifo_engine_status_engine_v(engine_status_r) ==
+		fifo_engine_status_engine_idle_v();
+	e->ctxsw_in_progress =
+		fifo_engine_status_ctxsw_v(engine_status_r) ==
+		fifo_engine_status_ctxsw_in_progress_v();
+}
+
+static void fifo_engine_exception_status(struct gk20a *g,
+			       struct fifo_engine_info_gk20a *eng_info)
+{
+	struct fifo_engine_exception_info_gk20a *e;
+	get_exception_engine_info(g, eng_info);
+	e = &eng_info->engine_exception_info;
+
+	nvhost_dbg_fn("engine_id %d, id_type %s, id %d, ctx_status %d, "
+		      "faulted %d, idle %d, ctxsw_in_progress %d, ",
+		      eng_info->engine_id, e->id_is_chid ? "chid" : "tsgid",
+		      e->id, e->ctx_status_v,
+		      e->faulted, e->idle,  e->ctxsw_in_progress);
+}
+
+static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct fifo_engine_info_gk20a *engine_info;
@@ -293,6 +371,51 @@ static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
+static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
+{
+	/* These are all errors which indicate something really wrong
+	 * going on in the device. */
+	f->intr.pbdma.device_fatal_0 =
+		pbdma_intr_0_memreq_pending_f() |
+		pbdma_intr_0_memack_timeout_pending_f() |
+		pbdma_intr_0_memack_extra_pending_f() |
+		pbdma_intr_0_memdat_timeout_pending_f() |
+		pbdma_intr_0_memdat_extra_pending_f() |
+		pbdma_intr_0_memflush_pending_f() |
+		pbdma_intr_0_memop_pending_f() |
+		pbdma_intr_0_lbconnect_pending_f() |
+		pbdma_intr_0_lbreq_pending_f() |
+		pbdma_intr_0_lback_timeout_pending_f() |
+		pbdma_intr_0_lback_extra_pending_f() |
+		pbdma_intr_0_lbdat_timeout_pending_f() |
+		pbdma_intr_0_lbdat_extra_pending_f() |
+		pbdma_intr_0_xbarconnect_pending_f() |
+		pbdma_intr_0_pri_pending_f();
+
+	/* These are data parsing, framing errors or others which can be
+	 * recovered from with intervention... or just resetting the
+	 * channel. */
+	f->intr.pbdma.channel_fatal_0 =
+		pbdma_intr_0_gpfifo_pending_f() |
+		pbdma_intr_0_gpptr_pending_f() |
+		pbdma_intr_0_gpentry_pending_f() |
+		pbdma_intr_0_gpcrc_pending_f() |
+		pbdma_intr_0_pbptr_pending_f() |
+		pbdma_intr_0_pbentry_pending_f() |
+		pbdma_intr_0_pbcrc_pending_f() |
+		pbdma_intr_0_method_pending_f() |
+		pbdma_intr_0_methodcrc_pending_f() |
+		pbdma_intr_0_semaphore_pending_f() |
+		pbdma_intr_0_pbseg_pending_f() |
+		pbdma_intr_0_signature_pending_f();
+
+	/* Can be used for sw-methods, or represents
+	 * a recoverable timeout. */
+	f->intr.pbdma.restartable_0 =
+		pbdma_intr_0_device_pending_f() |
+		pbdma_intr_0_acquire_pending_f();
+}
+
 static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
@@ -307,6 +430,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	}
 
 	f->g = g;
+
+	mutex_init(&f->intr.isr.mutex);
+	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
 	f->num_channels = ccsr_channel__size_1_v();
 	f->num_pbdma = proj_host_num_pbdma_v();
@@ -370,9 +496,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	for (i = 0; i < f->num_pbdma; ++i)
 		f->pbdma_map[i] = gk20a_readl(g, fifo_pbdma_map_r(i));
 
-	init_engine_info_gk20a(f);
+	init_engine_info(f);
 
-	fifo_gk20a_init_runlist(g, f);
+	init_runlist(g, f);
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_cpu_va =
@@ -502,66 +628,370 @@ int gk20a_init_fifo_support(struct gk20a *g)
 
 	return err;
 }
+/* these lookups aren't used much (errors), so linear search is fine for now */
+static struct channel_gk20a *
+channel_from_hw_chid(struct fifo_gk20a *f, u32 hw_chid)
+{
+	int ci;
+	if (unlikely(IS_ERR_OR_NULL(f->channel)))
+		return NULL;
+	for (ci = 0; ci < f->num_channels; ci++) {
+		struct channel_gk20a *c = f->channel+ci;
+		if (IS_ERR_OR_NULL(c))
+			continue;
+		if (c->hw_chid == hw_chid)
+			return f->channel+ci;
+	}
+	return NULL;
+}
+
+static struct channel_gk20a *
+channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
+{
+	int ci;
+	if (unlikely(IS_ERR_OR_NULL(f->channel)))
+		return NULL;
+	for (ci = 0; ci < f->num_channels; ci++) {
+		struct channel_gk20a *c = f->channel+ci;
+		if (IS_ERR_OR_NULL(c))
+			continue;
+		if (c->inst_block.mem.ref &&
+		    (inst_ptr == (u64)(c->inst_block.cpu_pa)))
+			return f->channel+ci;
+	}
+	return NULL;
+}
+
+/* fault info/descriptions.
+ * tbd: move to setup
+ *  */
+static const char * const fault_type_descs[] = {
+	 "pde", /*fifo_intr_mmu_fault_info_type_pde_v() == 0 */
+	 "pde size",
+	 "pte",
+	 "va limit viol",
+	 "unbound inst",
+	 "priv viol",
+	 "ro viol",
+	 "wo viol",
+	 "pitch mask",
+	 "work creation",
+	 "bad aperture",
+	 "compression failure",
+	 "bad kind",
+	 "region viol",
+	 "dual ptes",
+	 "poisoned",
+};
+/* engine descriptions */
+static const char * const engine_subid_descs[] = {
+	"gpc",
+	"hub",
+};
+
+static const char * const hub_client_descs[] = {
+	"vip", "ce0", "ce1", "dniso", "fe", "fecs", "host", "host cpu",
+	"host cpu nb", "iso", "mmu", "mspdec", "msppp", "msvld",
+	"niso", "p2p", "pd", "perf", "pmu", "raster twod", "scc",
+	"scc nb", "sec", "ssync", "gr copy", "ce2", "xv", "mmu nb",
+	"msenc", "d falcon", "sked", "a falcon", "n/a",
+};
+
+static const char * const gpc_client_descs[] = {
+	"l1 0", "t1 0", "pe 0",
+	"l1 1", "t1 1", "pe 1",
+	"l1 2", "t1 2", "pe 2",
+	"l1 3", "t1 3", "pe 3",
+	"rast", "gcc", "gpccs",
+	"prop 0", "prop 1", "prop 2", "prop 3",
+	"l1 4", "t1 4", "pe 4",
+	"l1 5", "t1 5", "pe 5",
+	"l1 6", "t1 6", "pe 6",
+	"l1 7", "t1 7", "pe 7",
+	"gpm",
+	"ltp utlb 0", "ltp utlb 1", "ltp utlb 2", "ltp utlb 3",
+	"rgg utlb",
+};
+
+/* reads info from hardware and fills in mmu fault info record */
+static inline void get_exception_mmu_fault_info(
+	struct gk20a *g,
+	struct fifo_engine_info_gk20a *eng_info)
+{
+	u32 fault_info_r;
+	u32 engine_id = eng_info->engine_id;
+
+	struct fifo_mmu_fault_info_gk20a *f =
+		&eng_info->mmu_fault_info;
+
+	nvhost_dbg_fn("engine_id %d", engine_id);
+
+	memset(f, 0, sizeof(*f));
+
+	f->fault_info_r = fault_info_r = gk20a_readl(g,
+	     fifo_intr_mmu_fault_info_r(engine_id));
+	f->fault_type_v =
+		fifo_intr_mmu_fault_info_type_v(fault_info_r);
+	f->engine_subid_v =
+		fifo_intr_mmu_fault_info_engine_subid_v(fault_info_r);
+	f->client_v = fifo_intr_mmu_fault_info_client_v(fault_info_r);
+
+	BUG_ON(f->fault_type_v >= ARRAY_SIZE(fault_type_descs));
+	f->fault_type_desc =  fault_type_descs[f->fault_type_v];
+
+	BUG_ON(f->engine_subid_v >= ARRAY_SIZE(engine_subid_descs));
+	f->engine_subid_desc = engine_subid_descs[f->engine_subid_v];
+
+	if (f->engine_subid_v ==
+	    fifo_intr_mmu_fault_info_engine_subid_hub_v()) {
+
+		BUG_ON(f->client_v >= ARRAY_SIZE(hub_client_descs));
+		f->client_desc = hub_client_descs[f->client_v];
+	} else if (f->engine_subid_v ==
+		   fifo_intr_mmu_fault_info_engine_subid_gpc_v()) {
+		BUG_ON(f->client_v >= ARRAY_SIZE(gpc_client_descs));
+		f->client_desc = gpc_client_descs[f->client_v];
+	} else {
+		BUG_ON(1);
+	}
+
+	f->fault_hi_r = fifo_intr_mmu_fault_hi_r(engine_id);
+	f->fault_lo_r = fifo_intr_mmu_fault_lo_r(engine_id);
+	/* note:ignoreing aperture on gk20a... */
+	f->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
+		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(engine_id)));
+	/* note: inst_ptr is a 40b phys addr.  */
+	f->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
+}
 
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	u32 fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
-	u32 fault_info;
+	struct channel_gk20a *fault_ch;
 	u32 engine_id;
 
+	nvhost_dbg_fn("");
+
+	/* one bit for each engine... */
 	for (engine_id = 0;
 	     engine_id < fifo_intr_mmu_fault_id_field__size_1_v();
 	     engine_id++) {
+		struct fifo_mmu_fault_info_gk20a *f;
+
 		if ((fault_id & (1 << engine_id)) ==
 		    fifo_intr_mmu_fault_id_field_not_pending_v())
 			continue;
 
-		fault_info = gk20a_readl(g,
-			fifo_intr_mmu_fault_info_r(engine_id));
+		get_exception_mmu_fault_info(g,
+		     &g->fifo.engine_info[engine_id]);
+		f = &g->fifo.engine_info[engine_id].mmu_fault_info;
 
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
-			"engine_subid %d, client %d, "
-			"addr 0x%08x:0x%08x, type %d, info 0x%08x\n",
-			engine_id,
-			fifo_intr_mmu_fault_info_engine_subid_v(fault_info),
-			fifo_intr_mmu_fault_info_client_v(fault_info),
-			gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id)),
-			gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id)),
-			fifo_intr_mmu_fault_info_type_v(fault_info),
-			fault_info);
+			   "engined subid %d (%s), client %d (%s), "
+			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
+			   "inst_ptr 0x%llx\n",
+			   engine_id,
+			   f->engine_subid_v, f->engine_subid_desc,
+			   f->client_v, f->client_desc,
+			   f->fault_hi_r, f->fault_lo_r,
+			   f->fault_type_v, f->fault_type_desc,
+			   f->fault_info_r, f->inst_ptr);
 
-		/* don't clear it yet */
-		/* gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id); */
+		/* TBD: we're clearing this here so the system is
+		 * fairly useable still.  But as of yet we're not
+		 * resetting the engine, etc to recover the channel... */
+		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+
+		fault_ch = channel_from_inst_ptr(&g->fifo, f->inst_ptr);
+		if (!IS_ERR_OR_NULL(fault_ch)) {
+			if (!IS_ERR_OR_NULL(fault_ch->hwctx)) {
+				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
+				fault_ch->hwctx->has_timedout = true;
+			}
+		} else {
+			nvhost_dbg_fn("couldn't locate channel for mmu fault");
+			fault_ch = channel_from_hw_chid(&g->fifo, 0/*hack*/);
+			if (!IS_ERR_OR_NULL(fault_ch))
+				fault_ch->hwctx->has_timedout = true;
+			BUG_ON(1);
+		}
 	}
+}
+
+
+static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
+{
+	bool reset_channel = false, reset_engine = false;
+	struct device *dev = dev_from_gk20a(g);
+	u32 handled = 0;
+
+	nvhost_dbg_fn("");
+
+	if (fifo_intr & fifo_intr_0_pio_error_pending_f()) {
+		/* pio mode is unused.  this shouldn't happen, ever. */
+		/* should we clear it or just leave it pending? */
+		nvhost_err(dev, "fifo pio error!\n");
+		BUG_ON(1);
+	}
+
+	if (fifo_intr & fifo_intr_0_bind_error_pending_f()) {
+		u32 bind_error = gk20a_readl(g, fifo_intr_bind_error_r());
+		nvhost_err(dev, "fifo bind error: 0x%08x", bind_error);
+		reset_channel = true;
+		handled |= fifo_intr_0_bind_error_pending_f();
+	}
+
+	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
+		u32 sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
+		nvhost_err(dev,	"fifo sched error : 0x%08x", sched_error);
+		reset_channel = true;
+		handled |= fifo_intr_0_sched_error_pending_f();
+	}
+
+	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {
+		gk20a_fifo_handle_mmu_fault(g);
+		reset_channel = true;
+		reset_engine  = true;
+		handled |= fifo_intr_0_mmu_fault_pending_f();
+	}
+
+	reset_channel = reset_channel || fifo_intr;
+
+	if (reset_channel) {
+		int engine_id;
+		nvhost_err(dev_from_gk20a(g),
+			   "channel reset initated from %s", __func__);
+		for (engine_id = 0;
+		     engine_id < g->fifo.max_engines;
+		     engine_id++) {
+			nvhost_dbg_fn("enum:%d -> engine_id:%d", engine_id,
+				      g->fifo.engine_info[engine_id].engine_id);
+			fifo_pbdma_exception_status(g,
+					&g->fifo.engine_info[engine_id]);
+			fifo_engine_exception_status(g,
+					&g->fifo.engine_info[engine_id]);
+		}
+	}
+
+	return handled;
+}
+
+
+static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
+					struct gk20a *g,
+					struct fifo_gk20a *f,
+					u32 pbdma_id)
+{
+	u32 pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
+	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
+	u32 handled = 0;
+	bool reset_device = false;
+	bool reset_channel = false;
+
+	nvhost_dbg_fn("");
+
+	if (pbdma_intr_0) {
+		if (f->intr.pbdma.device_fatal_0 & pbdma_intr_0) {
+			dev_err(dev, "unrecoverable device error: "
+				"pbdma_intr_0(%d):0x%08x", pbdma_id, pbdma_intr_0);
+			reset_device = true;
+			/* TODO: disable pbdma intrs */
+			handled |= f->intr.pbdma.device_fatal_0 & pbdma_intr_0;
+		}
+		if (f->intr.pbdma.channel_fatal_0 & pbdma_intr_0) {
+			dev_warn(dev, "channel error: "
+				 "pbdma_intr_0(%d):0x%08x", pbdma_id, pbdma_intr_0);
+			reset_channel = true;
+			/* TODO: clear pbdma channel errors */
+			handled |= f->intr.pbdma.channel_fatal_0 & pbdma_intr_0;
+		}
+		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
+	}
+
+	/* all intrs in _intr_1 are "host copy engine" related,
+	 * which gk20a doesn't have. for now just make them channel fatal. */
+	if (pbdma_intr_1) {
+		dev_err(dev, "channel hce error: pbdma_intr_1(%d): 0x%08x",
+			pbdma_id, pbdma_intr_1);
+		reset_channel = true;
+		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
+	}
+
+
+
+	return handled;
+}
+
+static u32 fifo_channel_isr(struct gk20a *g, u32 fifo_intr)
+{
+	struct device *dev = dev_from_gk20a(g);
+	/* Note: we don't have any of these in use (yet) for gk20a.
+	 * These are usually if not always coming from non-stall,
+	 * notification type interrupts.  It isn't necessarily
+	 * anything to do with the channel currently running.
+	 * Clear it and warn...
+	 */
+	dev_warn(dev, "unexpected channel (non-stall?) interrupt");
+	return fifo_intr_0_channel_intr_pending_f();
+}
+
+
+static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
+{
+	struct device *dev = dev_from_gk20a(g);
+	struct fifo_gk20a *f = &g->fifo;
+	u32 clear_intr = 0, i;
+	u32 pbdma_pending = gk20a_readl(g, fifo_intr_pbdma_id_r());
+
+	for (i = 0; i < fifo_intr_pbdma_id_status__size_1_v(); i++) {
+		if (fifo_intr_pbdma_id_status_f(pbdma_pending, i)) {
+			nvhost_dbg_fn("pbdma id %d intr pending", i);
+			clear_intr |=
+				gk20a_fifo_handle_pbdma_intr(dev, g, f, i);
+		}
+	}
+	return fifo_intr_0_pbdma_intr_pending_f();
 }
 
 void gk20a_fifo_isr(struct gk20a *g)
 {
+	u32 error_intr_mask =
+		fifo_intr_0_bind_error_pending_f() |
+		fifo_intr_0_sched_error_pending_f() |
+		fifo_intr_0_chsw_error_pending_f() |
+		fifo_intr_0_fb_flush_timeout_pending_f() |
+		fifo_intr_0_dropped_mmu_fault_pending_f() |
+		fifo_intr_0_mmu_fault_pending_f() |
+		fifo_intr_0_lb_error_pending_f() |
+		fifo_intr_0_pio_error_pending_f();
+
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
+	u32 clear_intr = 0;
+
+	/* note we're not actually in an "isr", but rather
+	 * in a threaded interrupt context... */
+	mutex_lock(&g->fifo.intr.isr.mutex);
+
 
 	/* handle runlist update */
 	if (fifo_intr & fifo_intr_0_runlist_event_pending_f()) {
 		gk20a_fifo_handle_runlist_event(g);
-		fifo_intr &= ~fifo_intr_0_runlist_event_pending_f();
+		clear_intr |= fifo_intr_0_runlist_event_pending_f();
 	}
+	if (fifo_intr & fifo_intr_0_pbdma_intr_pending_f())
+		clear_intr |= fifo_pbdma_isr(g, fifo_intr);
 
-	/* don't clear this for now
-	 * print more info for debugging */
-	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
-		nvhost_err(dev_from_gk20a(g),
-			"fifo sched error : 0x%08x",
-			gk20a_readl(g, fifo_intr_sched_error_r()));
-	}
+	if (fifo_intr & fifo_intr_0_channel_intr_pending_f())
+		clear_intr |= fifo_channel_isr(g, fifo_intr);
 
-	/* don't clear this for now
-	 * print more info for debugging */
-	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f())
-		gk20a_fifo_handle_mmu_fault(g);
+	if (unlikely(fifo_intr & error_intr_mask))
+		clear_intr = fifo_error_isr(g, fifo_intr);
 
-	if (fifo_intr)
-		nvhost_err(dev_from_gk20a(g),
-			   "unhandled fifo interrupt 0x%08x\n",
-			   fifo_intr);
+	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
+
+	mutex_unlock(&g->fifo.intr.isr.mutex);
+
+	return;
 }
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)

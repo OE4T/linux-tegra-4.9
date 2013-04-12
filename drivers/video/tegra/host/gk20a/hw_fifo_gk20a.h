@@ -1766,6 +1766,82 @@ static inline u32 fifo_intr_en_1_channel_intr_enabled_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 fifo_intr_bind_error_r(void)
+{
+	return 0x0000252C;
+}
+static inline u32 fifo_intr_bind_error_code_s(void)
+{
+	return 8;
+}
+static inline u32 fifo_intr_bind_error_code_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 fifo_intr_bind_error_code_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 fifo_intr_bind_error_code_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 fifo_intr_bind_error_code_no_error_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_bind_error_code_no_error_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_intr_bind_error_code_bind_not_unbound_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_bind_error_code_bind_not_unbound_f(void)
+{
+	return 0x1;
+}
+static inline u32 fifo_intr_bind_error_code_snoop_without_bar1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fifo_intr_bind_error_code_snoop_without_bar1_f(void)
+{
+	return 0x2;
+}
+static inline u32 fifo_intr_bind_error_code_unbind_while_running_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fifo_intr_bind_error_code_unbind_while_running_f(void)
+{
+	return 0x3;
+}
+static inline u32 fifo_intr_bind_error_code_invalid_runlist_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 fifo_intr_bind_error_code_invalid_runlist_f(void)
+{
+	return 0x5;
+}
+static inline u32 fifo_intr_bind_error_code_invalid_ctx_tgt_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 fifo_intr_bind_error_code_invalid_ctx_tgt_f(void)
+{
+	return 0x6;
+}
+static inline u32 fifo_intr_bind_error_code_unbind_while_parked_v(void)
+{
+	return 0x0000000B;
+}
+static inline u32 fifo_intr_bind_error_code_unbind_while_parked_f(void)
+{
+	return 0xb;
+}
 static inline u32 fifo_intr_sched_error_r(void)
 {
 	return 0x0000254C;
@@ -3250,6 +3326,82 @@ static inline u32 fifo_intr_mmu_fault_eng_id_graphics_v(void)
 {
 	return 0x00000000;
 }
+static inline u32 fifo_intr_mmu_fault_inst_r(u32 i)
+{
+	return 0x00002800+(i)*16;
+}
+static inline u32 fifo_intr_mmu_fault_inst__size_1_v(void)
+{
+	return 32;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_s(void)
+{
+	return 28;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffffff;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_zero_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_zero_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_s(void)
+{
+	return 2;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_vid_mem_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_sys_mem_coherent_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_sys_mem_coherent_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_sys_mem_noncoherent_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fifo_intr_mmu_fault_inst_target_sys_mem_noncoherent_f(void)
+{
+	return 0x30000000;
+}
+static inline u32 fifo_intr_mmu_fault_inst_ptr_align_shift_v(void)
+{
+	return 12;
+}
 static inline u32 fifo_intr_mmu_fault_lo_r(u32 i)
 {
 	return 0x00002804+(i)*16;
@@ -4201,6 +4353,78 @@ static inline u32 fifo_intr_mmu_fault_info_gpc_id_zero_v(void)
 static inline u32 fifo_intr_mmu_fault_info_gpc_id_zero_f(void)
 {
 	return 0x0;
+}
+static inline u32 fifo_intr_pbdma_id_r(void)
+{
+	return 0x000025A0;
+}
+static inline u32 fifo_intr_pbdma_id_0_s(void)
+{
+	return 1;
+}
+static inline u32 fifo_intr_pbdma_id_0_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fifo_intr_pbdma_id_0_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fifo_intr_pbdma_id_0_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_intr_pbdma_id_0_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_pbdma_id_0_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_intr_pbdma_id_0_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_pbdma_id_0_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 fifo_intr_pbdma_id_status_s(u32 i)
+{
+	return 1;
+}
+static inline u32 fifo_intr_pbdma_id_status_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (i);
+}
+static inline u32 fifo_intr_pbdma_id_status_m(u32 i)
+{
+	return 0x1 << (i);
+}
+static inline u32 fifo_intr_pbdma_id_status_v(u32 r, u32 i)
+{
+	return (r >> (i)) & 0x1;
+}
+static inline u32 fifo_intr_pbdma_id_status__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 fifo_intr_pbdma_id_status_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_pbdma_id_status_not_pending_f(u32 i)
+{
+	return (0x00000000 & 0x1) << (i);
+}
+static inline u32 fifo_intr_pbdma_id_status_pending_v(u32 i)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_pbdma_id_status_pending_f(u32 i)
+{
+	return (0x00000001 & 0x1) << (i);
 }
 static inline u32 fifo_intr_runlist_r(void)
 {

@@ -3524,11 +3524,11 @@ static inline u32 gr_fe_go_idle_timeout_count_init_f(void)
 }
 static inline u32 gr_fe_go_idle_timeout_count__prod_v(void)
 {
-	return 0x00000400;
+	return 0x00000800;
 }
 static inline u32 gr_fe_go_idle_timeout_count__prod_f(void)
 {
-	return 0x400;
+	return 0x800;
 }
 static inline u32 gr_fe_go_idle_timeout_count_disabled_v(void)
 {
@@ -25151,6 +25151,46 @@ static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_disable_nic_cg_fix_init_v(void)
 	return 0x00000000;
 }
 static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_disable_nic_cg_fix_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_s(void)
+{
+	return 1;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_disabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_disabled_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_enabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_enabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_debug_pe2mpcdone_order_disable_init_f(void)
 {
 	return 0x0;
 }

@@ -3036,11 +3036,11 @@ static inline u32 therm_gate_ctrl_eng_idle_filt_exp_max_f(void)
 }
 static inline u32 therm_gate_ctrl_eng_idle_filt_exp__prod_v(void)
 {
-	return 0x00000000;
+	return 0x00000002;
 }
 static inline u32 therm_gate_ctrl_eng_idle_filt_exp__prod_f(void)
 {
-	return 0x0;
+	return 0x200;
 }
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant_s(void)
 {
@@ -3076,11 +3076,11 @@ static inline u32 therm_gate_ctrl_eng_idle_filt_mant_max_f(void)
 }
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant__prod_v(void)
 {
-	return 0x00000000;
+	return 0x00000001;
 }
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant__prod_f(void)
 {
-	return 0x0;
+	return 0x2000;
 }
 static inline u32 therm_gate_ctrl_eng_delay_before_s(void)
 {

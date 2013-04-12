@@ -440,7 +440,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx *ctx;
 	u32 *ptr;
 	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
-	u32 nvhost_vic03_restore_size = 11; /* number of words written below */
+	u32 nvhost_vic03_restore_size = 10; /* number of words written below */
 
 	nvhost_dbg_fn("");
 
@@ -461,24 +461,21 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
 	ptr = ctx->cpuva;
 
-	/* set class to vic */
-	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID, 0, 0);
-
 	/* set app id, fce ucode size, offset */
-	ptr[1] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[2] = NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID  >> 2;
-	ptr[3] = 1;
+	ptr[0] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
+	ptr[1] = NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID  >> 2;
+	ptr[2] = 1;
 
-	ptr[4] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[5] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2;
-	ptr[6] = v->ucode.fce.size;
+	ptr[3] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
+	ptr[4] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2;
+	ptr[5] = v->ucode.fce.size;
 
-	ptr[7] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[8] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2;
-	ptr[9] = (v->ucode.dma_addr + v->ucode.fce.data_offset) >> 8;
+	ptr[6] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
+	ptr[7] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2;
+	ptr[8] = (v->ucode.dma_addr + v->ucode.fce.data_offset) >> 8;
 
 	/* syncpt increment to track restore gather. */
-	ptr[10] = nvhost_opcode_imm_incr_syncpt(
+	ptr[9] = nvhost_opcode_imm_incr_syncpt(
 			host1x_uclass_incr_syncpt_cond_op_done_v(),
 			syncpt);
 
@@ -533,6 +530,9 @@ static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID, 0, 0),
+		NVHOST_OPCODE_NOOP);
 	_nvhost_cdma_push_gather(cdma,
 		ctx->cpuva,
 		ctx->iova,

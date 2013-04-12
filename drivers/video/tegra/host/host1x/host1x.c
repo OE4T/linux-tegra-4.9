@@ -49,6 +49,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 
 #define DRIVER_NAME		"host1x"
 
@@ -463,6 +464,8 @@ static struct of_device_id tegra_host1x_of_match[] = {
 		.data = (struct nvhost_device_data *)&t30_host1x_info },
 	{ .compatible = "nvidia,tegra114-host1x",
 		.data = (struct nvhost_device_data *)&t11_host1x_info },
+	{ .compatible = "nvidia,tegra148-host1x",
+		.data = (struct nvhost_device_data *)&t14_host1x_info },
 	{ },
 };
 

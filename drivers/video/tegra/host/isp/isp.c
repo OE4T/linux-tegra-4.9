@@ -33,6 +33,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 
 static struct of_device_id tegra_isp_of_match[] = {
 	{ .compatible = "nvidia,tegra20-isp",
@@ -41,6 +42,8 @@ static struct of_device_id tegra_isp_of_match[] = {
 		.data = (struct nvhost_device_data *)&t30_isp_info },
 	{ .compatible = "nvidia,tegra114-isp",
 		.data = (struct nvhost_device_data *)&t11_isp_info },
+	{ .compatible = "nvidia,tegra148-isp",
+		.data = (struct nvhost_device_data *)&t14_isp_info },
 	{ },
 };
 

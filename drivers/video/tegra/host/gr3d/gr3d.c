@@ -34,6 +34,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 #include "host1x/host1x01_hardware.h"
 #include "nvhost_hwctx.h"
 #include "nvhost_acm.h"
@@ -183,6 +184,8 @@ static struct of_device_id tegra_gr3d_of_match[] = {
 		.data = (struct nvhost_device_data *)&t30_gr3d_info },
 	{ .compatible = "nvidia,tegra114-gr3d",
 		.data = (struct nvhost_device_data *)&t11_gr3d_info },
+	{ .compatible = "nvidia,tegra148-gr3d",
+		.data = (struct nvhost_device_data *)&t14_gr3d_info },
 	{ },
 };
 

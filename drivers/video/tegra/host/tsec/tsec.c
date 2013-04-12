@@ -42,6 +42,7 @@
 #include "nvhost_memmgr.h"
 #include "nvhost_intr.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -520,6 +521,8 @@ void nvhost_tsec_finalize_poweron(struct platform_device *dev)
 static struct of_device_id tegra_tsec_of_match[] = {
 	{ .compatible = "nvidia,tegra114-tsec",
 		.data = (struct nvhost_device_data *)&t11_tsec_info },
+	{ .compatible = "nvidia,tegra148-tsec",
+		.data = (struct nvhost_device_data *)&t14_tsec_info },
 	{ },
 };
 

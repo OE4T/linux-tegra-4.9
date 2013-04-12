@@ -40,6 +40,7 @@
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 
 #define MSENC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define MSENC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -396,6 +397,8 @@ void nvhost_msenc_finalize_poweron(struct platform_device *dev)
 static struct of_device_id tegra_msenc_of_match[] = {
 	{ .compatible = "nvidia,tegra114-msenc",
 		.data = (struct nvhost_device_data *)&t11_msenc_info },
+	{ .compatible = "nvidia,tegra148-msenc",
+		.data = (struct nvhost_device_data *)&t14_msenc_info },
 	{ },
 };
 

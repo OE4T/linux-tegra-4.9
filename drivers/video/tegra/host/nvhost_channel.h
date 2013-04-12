@@ -75,6 +75,7 @@ struct nvhost_channel_ops {
 			struct nvhost_cycle_stats_args *args);
 #endif
 	struct nvhost_zcull_ops zcull;
+	int (*init_gather_filter)(struct nvhost_channel *ch);
 };
 
 struct nvhost_channel {
@@ -128,6 +129,7 @@ void nvhost_free_channel_internal(struct nvhost_channel *ch,
 	int *current_channel_count);
 
 int nvhost_channel_save_context(struct nvhost_channel *ch);
+void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
 
 struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
 

@@ -277,6 +277,9 @@ static void cdma_start(struct nvhost_cdma *cdma)
 	writel(host1x_channel_dmactrl(true, true, true),
 		chan_regs + host1x_channel_dmactrl_r());
 
+	/* prevent using setclass inside gathers */
+	nvhost_channel_init_gather_filter(cdma_to_channel(cdma));
+
 	/* start the command DMA */
 	writel(host1x_channel_dmactrl(false, false, false),
 		chan_regs + host1x_channel_dmactrl_r());
@@ -322,6 +325,9 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 	writel(host1x_channel_dmactrl(true, false, false),
 		chan_regs + host1x_channel_dmactrl_r());
 	writel(cdma->last_put, chan_regs + host1x_channel_dmaput_r());
+
+	/* reinitialise gather filter for the channel */
+	nvhost_channel_init_gather_filter(cdma_to_channel(cdma));
 
 	/* start the command DMA */
 	writel(host1x_channel_dmactrl(false, false, false),

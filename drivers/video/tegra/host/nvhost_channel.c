@@ -48,6 +48,12 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 	return 0;
 }
 
+void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
+{
+	if (channel_op(ch).init_gather_filter)
+		channel_op(ch).init_gather_filter(ch);
+}
+
 int nvhost_channel_submit(struct nvhost_job *job)
 {
 	/*

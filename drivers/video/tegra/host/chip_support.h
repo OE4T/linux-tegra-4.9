@@ -41,6 +41,7 @@ struct nvhost_intr_syncpt;
 struct mem_handle;
 struct mem_mgr;
 struct platform_device;
+struct host1x_actmon;
 
 struct nvhost_channel_ops {
 	const char * soc_name;
@@ -163,19 +164,20 @@ struct nvhost_mem_ops {
 };
 
 struct nvhost_actmon_ops {
-	int (*init)(struct nvhost_master *host);
-	void (*deinit)(struct nvhost_master *host);
-	int (*read_avg)(struct nvhost_master *host, u32 *val);
-	int (*above_wmark_count)(struct nvhost_master *host);
-	int (*below_wmark_count)(struct nvhost_master *host);
-	int (*read_avg_norm)(struct nvhost_master *host, u32 *val);
-	void (*update_sample_period)(struct nvhost_master *host);
-	void (*set_sample_period_norm)(struct nvhost_master *host, long usecs);
-	long (*get_sample_period_norm)(struct nvhost_master *host);
-	long (*get_sample_period)(struct nvhost_master *host);
-	void (*set_k)(struct nvhost_master *host, u32 k);
-	u32 (*get_k)(struct nvhost_master *host);
-	void (*debug_init)(struct nvhost_master *host, struct dentry *de);
+	int (*init)(struct host1x_actmon *actmon);
+	void (*deinit)(struct host1x_actmon *actmon);
+	int (*read_avg)(struct host1x_actmon *actmon, u32 *val);
+	int (*above_wmark_count)(struct host1x_actmon *actmon);
+	int (*below_wmark_count)(struct host1x_actmon *actmon);
+	int (*read_avg_norm)(struct host1x_actmon *actmon, u32 *val);
+	void (*update_sample_period)(struct host1x_actmon *actmon);
+	void (*set_sample_period_norm)(struct host1x_actmon *actmon,
+				       long usecs);
+	long (*get_sample_period_norm)(struct host1x_actmon *actmon);
+	long (*get_sample_period)(struct host1x_actmon *actmon);
+	void (*set_k)(struct host1x_actmon *actmon, u32 k);
+	u32 (*get_k)(struct host1x_actmon *actmon);
+	void (*debug_init)(struct host1x_actmon *actmon, struct dentry *de);
 };
 
 struct nvhost_tickctrl_ops {

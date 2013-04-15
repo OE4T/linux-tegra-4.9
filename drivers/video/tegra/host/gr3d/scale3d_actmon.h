@@ -36,4 +36,7 @@ void nvhost_scale3d_actmon_deinit(struct platform_device *);
 void nvhost_scale3d_actmon_notify_busy(struct platform_device *);
 void nvhost_scale3d_actmon_notify_idle(struct platform_device *);
 
+void nvhost_scale3d_actmon_hw_init(struct platform_device *dev);
+void nvhost_scale3d_actmon_hw_deinit(struct platform_device *dev);
+
 #endif

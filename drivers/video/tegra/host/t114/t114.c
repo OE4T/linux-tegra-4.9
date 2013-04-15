@@ -126,8 +126,8 @@ struct nvhost_device_data t11_gr3d_info = {
 	.busy		= nvhost_scale3d_actmon_notify_busy,
 	.idle		= nvhost_scale3d_actmon_notify_idle,
 	.suspend_ndev	= nvhost_scale3d_suspend,
-	.init		= nvhost_gr3d_t114_init,
-	.deinit		= nvhost_gr3d_t114_deinit,
+	.init		= nvhost_scale3d_actmon_hw_init,
+	.deinit		= nvhost_scale3d_actmon_hw_deinit,
 	.scaling_init	= nvhost_scale3d_actmon_init,
 	.scaling_deinit	= nvhost_scale3d_actmon_deinit,
 	.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,
@@ -346,7 +346,7 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(
 #include "host1x/host1x_debug.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
-#include "host1x/host1x_actmon.c"
+#include "host1x/host1x_actmon_t114.c"
 #include "host1x/host1x_tickctrl.c"
 
 int nvhost_init_t114_support(struct nvhost_master *host,

@@ -192,13 +192,17 @@ static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
 
 	/* Set EMC clockrate */
 	after = (long) clk_get_rate(clk(power_profile.clk_3d));
-	hz = after * power_profile.emc_slope +
+	after = INT_TO_FX(HZ_TO_MHZ(after));
+	hz = FXMUL(after, power_profile.emc_slope) +
 		power_profile.emc_offset;
 
-	hz -=
-		(power_profile.emc_dip_slope *
-		POW2(after / 1000 - power_profile.emc_xmid) +
-		power_profile.emc_dip_offset);
+	hz -= FXMUL(power_profile.emc_dip_slope,
+		FXMUL(after - power_profile.emc_xmid,
+			after - power_profile.emc_xmid)) +
+		power_profile.emc_dip_offset;
+
+	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
+
 	hz = (hz < 0) ? 0 : hz;
 	nvhost_module_set_devfreq_rate(power_profile.dev,
 			power_profile.clk_3d_emc, hz);
@@ -300,34 +304,40 @@ static struct devfreq_dev_profile nvhost_scale3d_devfreq_profile = {
 static void nvhost_scale3d_calibrate_emc(void)
 {
 	long correction;
-	unsigned long max_emc = clk_round_rate(clk(power_profile.clk_3d_emc),
-		UINT_MAX);
-	unsigned long min_emc = clk_round_rate(clk(power_profile.clk_3d_emc),
-		0);
+	unsigned long max_emc;
+	unsigned long min_emc;
+	unsigned long min_rate_3d;
+	unsigned long max_rate_3d;
 
-	power_profile.emc_slope = (max_emc - min_emc) /
-		(power_profile.max_rate_3d -
-		power_profile.min_rate_3d);
+	max_emc = clk_round_rate(clk(power_profile.clk_3d_emc), UINT_MAX);
+	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
+
+	min_emc = clk_round_rate(clk(power_profile.clk_3d_emc), 0);
+	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
+
+	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(power_profile.max_rate_3d));
+	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(power_profile.min_rate_3d));
+
+	power_profile.emc_slope =
+		FXDIV((max_emc - min_emc), (max_rate_3d - min_rate_3d));
 	power_profile.emc_offset = max_emc -
-		power_profile.emc_slope * power_profile.max_rate_3d;
+		FXMUL(power_profile.emc_slope, max_rate_3d);
 	/* Guarantee max 3d rate maps to max emc rate */
 	power_profile.emc_offset += max_emc -
-		(power_profile.emc_slope * power_profile.max_rate_3d +
+		(FXMUL(power_profile.emc_slope, max_rate_3d) +
 		power_profile.emc_offset);
 
 	power_profile.emc_dip_offset = (max_emc - min_emc) / 4;
 	power_profile.emc_dip_slope =
-		-4 * (power_profile.emc_dip_offset /
-		(POW2(power_profile.max_rate_3d -
-		power_profile.min_rate_3d)));
-	power_profile.emc_xmid =
-		(power_profile.max_rate_3d +
-		power_profile.min_rate_3d) / 2;
+		-4 * FXDIV(power_profile.emc_dip_offset,
+		(FXMUL(max_rate_3d - min_rate_3d,
+			max_rate_3d - min_rate_3d)));
+	power_profile.emc_xmid = (max_rate_3d + min_rate_3d) / 2;
 	correction =
 		power_profile.emc_dip_offset +
-			power_profile.emc_dip_slope *
-			POW2(power_profile.max_rate_3d -
-			power_profile.emc_xmid);
+			FXMUL(power_profile.emc_dip_slope,
+			FXMUL(max_rate_3d - power_profile.emc_xmid,
+				max_rate_3d - power_profile.emc_xmid));
 	power_profile.emc_dip_offset -= correction;
 }
 
@@ -424,5 +434,41 @@ void nvhost_scale3d_deinit(struct platform_device *dev)
 	kfree(power_profile.dev_stat);
 
 	power_profile.init = 0;
+}
+
+/******************************************************************************
+ * 20.12 fixed point arithmetic
+ *
+ * int FXMUL(int x, int y)
+ * int FXDIV(int x, int y)
+ *****************************************************************************/
+
+int FXMUL(int x, int y)
+{
+	return ((long long) x * (long long) y) >> FXFRAC;
+}
+
+int FXDIV(int x, int y)
+{
+	/* long long div operation not supported, must shift manually. This
+	 * would have been
+	 *
+	 *    return (((long long) x) << FXFRAC) / (long long) y;
+	 */
+	int pos, t;
+	if (x == 0)
+		return 0;
+
+	/* find largest allowable right shift to numerator, limit to FXFRAC */
+	t = x < 0 ? -x : x;
+	pos = 31 - fls(t); /* fls can't be 32 if x != 0 */
+	if (pos > FXFRAC)
+		pos = FXFRAC;
+
+	y >>= FXFRAC - pos;
+	if (y == 0)
+		return 0x7FFFFFFF; /* overflow, return MAX_FIXED */
+
+	return (x << pos) / y;
 }
 

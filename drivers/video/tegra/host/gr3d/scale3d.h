@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D Clock Scaling
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,5 +41,25 @@ void nvhost_scale3d_deinit(struct platform_device *);
  */
 void nvhost_scale3d_notify_busy(struct platform_device *);
 void nvhost_scale3d_notify_idle(struct platform_device *);
+
+/*
+ * Helpers for converting frequencies
+ */
+
+#define MHZ_TO_HZ(x) ((x) * 1000000)
+#define HZ_TO_MHZ(x) ((x) / 1000000)
+
+/*
+ * 20.12 fixed point arithmetic
+ */
+
+static const int FXFRAC = 12;
+static const int FX_HALF = (1 << 12) / 2;
+
+#define INT_TO_FX(x) ((x) << FXFRAC)
+#define FX_TO_INT(x) ((x) >> FXFRAC)
+
+int FXMUL(int x, int y);
+int FXDIV(int x, int y);
 
 #endif

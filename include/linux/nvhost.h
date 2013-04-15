@@ -31,6 +31,7 @@
 struct nvhost_master;
 struct nvhost_hwctx;
 struct nvhost_device_power_attr;
+struct nvhost_device_profile;
 struct mem_mgr;
 
 #define NVHOST_MODULE_MAX_CLOCKS		3
@@ -152,8 +153,18 @@ struct nvhost_device_data {
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
-	struct devfreq	*power_manager;	/* Device power management */
 	struct dentry *debugfs;		/* debugfs directory */
+
+	/* Data for devfreq usage */
+	struct devfreq			*power_manager;
+	/* Private device profile data */
+	struct nvhost_device_profile	*power_profile;
+	/* Should we read load estimate from hardware? */
+	bool				actmon_enabled;
+	/* Offset to actmon registers */
+	u32				actmon_regs;
+	/* Pointer to governor operations */
+	const struct devfreq_governor	*devfreq_governor;
 
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
@@ -175,6 +186,10 @@ struct nvhost_device_data {
 
 	/* Scaling deinit is called on device unregistration */
 	void (*scaling_deinit)(struct platform_device *dev);
+
+	/* Postscale callback is called after frequency change */
+	void (*scaling_post_cb)(struct nvhost_device_profile *profile,
+				unsigned long freq);
 
 	/* Device is initialized */
 	void (*init)(struct platform_device *dev);

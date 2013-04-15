@@ -74,9 +74,7 @@ int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 
 	ch = container_of(inode->i_cdev, struct nvhost_channel, as_cdev);
 
-	nvhost_module_busy(ch->dev);
 	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
-	nvhost_module_idle(ch->dev);
 
 	nvhost_putchannel(ch, NULL);
 

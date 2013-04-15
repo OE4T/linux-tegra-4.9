@@ -175,7 +175,7 @@ struct nvhost_actmon_ops {
 	long (*get_sample_period)(struct nvhost_master *host);
 	void (*set_k)(struct nvhost_master *host, u32 k);
 	u32 (*get_k)(struct nvhost_master *host);
-
+	void (*debug_init)(struct nvhost_master *host, struct dentry *de);
 };
 
 struct nvhost_tickctrl_ops {

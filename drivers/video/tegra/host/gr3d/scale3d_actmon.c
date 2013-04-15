@@ -411,6 +411,9 @@ void nvhost_scale3d_actmon_init(struct platform_device *dev)
 
 	nvhost_scale3d_calibrate_emc();
 
+	/* Initialize actmon */
+	actmon_op().debug_init(nvhost_get_host(dev), pdata->debugfs);
+
 	/* Start using devfreq */
 	pdata->power_manager = devfreq_add_device(&dev->dev,
 				&nvhost_scale3d_devfreq_profile,

@@ -1080,6 +1080,9 @@ int nvhost_client_device_init(struct platform_device *dev)
 	/* store the pointer to this device for channel */
 	ch->dev = dev;
 
+	/* Create debugfs directory for the device */
+	nvhost_device_debug_init(dev);
+
 	err = nvhost_channel_init(ch, nvhost_master, pdata->index);
 	if (err)
 		goto fail;
@@ -1097,8 +1100,6 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	if (pdata->scaling_init)
 		pdata->scaling_init(dev);
-
-	nvhost_device_debug_init(dev);
 
 	/* reset syncpoint values for this unit */
 	nvhost_module_busy(nvhost_master->dev);

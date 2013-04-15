@@ -20,8 +20,11 @@
 
 #include <linux/nvhost.h>
 #include <linux/io.h>
+#include <linux/debugfs.h>
 #include "dev.h"
 #include "chip_support.h"
+
+static void host1x_tickctrl_debug_init(struct platform_device *dev);
 
 static int host1x_tickctrl_init_channel(struct platform_device *dev)
 {
@@ -46,6 +49,8 @@ static int host1x_tickctrl_init_channel(struct platform_device *dev)
 			regs + host1x_channel_xferctrl_r());
 
 	nvhost_module_idle(nvhost_get_parent(dev));
+
+	host1x_tickctrl_debug_init(dev);
 
 	return 0;
 }
@@ -119,6 +124,99 @@ static int host1x_tickctrl_xfercount(struct platform_device *dev, u64 *val)
 	nvhost_module_idle(nvhost_get_parent(dev));
 
 	return 0;
+}
+
+static int tickcount_show(struct seq_file *s, void *unused)
+{
+	struct platform_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().tickcount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int tickcount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().tickcount)
+		return -ENODEV;
+
+	return single_open(file, tickcount_show, inode->i_private);
+}
+
+static const struct file_operations tickcount_fops = {
+	.open		= tickcount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int stallcount_show(struct seq_file *s, void *unused)
+{
+	struct platform_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().stallcount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int stallcount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().stallcount)
+		return -ENODEV;
+
+	return single_open(file, stallcount_show, inode->i_private);
+}
+
+static const struct file_operations stallcount_fops = {
+	.open		= stallcount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int xfercount_show(struct seq_file *s, void *unused)
+{
+	struct platform_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().xfercount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int xfercount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().xfercount)
+		return -ENODEV;
+
+	return single_open(file, xfercount_show, inode->i_private);
+}
+
+static const struct file_operations xfercount_fops = {
+	.open		= xfercount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static void host1x_tickctrl_debug_init(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	debugfs_create_file("stallcount", S_IRUGO, pdata->debugfs, dev,
+			&stallcount_fops);
+	debugfs_create_file("xfercount", S_IRUGO, pdata->debugfs, dev,
+			&xfercount_fops);
+	debugfs_create_file("tickcount", S_IRUGO, pdata->debugfs, dev,
+			&tickcount_fops);
 }
 
 static const struct nvhost_tickctrl_ops host1x_tickctrl_ops = {

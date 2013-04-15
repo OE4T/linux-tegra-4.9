@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/cursor.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -138,7 +138,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 #endif
 
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	if (args->flags && TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
+	if (args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
 		return -EINVAL;
 #endif
 

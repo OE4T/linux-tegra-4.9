@@ -821,6 +821,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	gmmu_page_size = gmmu_page_sizes[bfr.page_size_idx];
 	gmmu_page_smmu_type = gmmu_page_smmu_types[bfr.page_size_idx];
+	if (!bfr.iovmm_mapped)
+		gmmu_page_smmu_type = gmmu_page_smmu_type_physical;
 
 	err = setup_buffer_kind_and_compression(flags, kind,
 						&bfr, gmmu_page_size);

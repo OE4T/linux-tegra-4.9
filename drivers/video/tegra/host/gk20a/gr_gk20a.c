@@ -1214,6 +1214,14 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	nvhost_dbg_fn("");
 
+	/* golden ctx is global to all channels. Although only the first
+	   channel initializes golden image, driver needs to prevent multiple
+	   channels from initializing golden ctx at the same time */
+	mutex_lock(&gr->ctx_mutex);
+
+	if (gr->ctx_vars.golden_image_initialized)
+		goto clean_up;
+
 	err = gr_gk20a_fecs_ctx_bind_channel(g, c);
 	if (err)
 		goto clean_up;
@@ -1284,6 +1292,7 @@ clean_up:
 	if (ctx_ptr)
 		nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
+	mutex_unlock(&gr->ctx_mutex);
 	return err;
 }
 
@@ -1838,7 +1847,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			struct nvhost_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
-	struct gr_gk20a *gr = &g->gr;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	bool change_to_compute_mode = false;
 	int err = 0;
@@ -1923,13 +1931,11 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* init gloden image, ELPG enabled after this is done */
-	if (!gr->ctx_vars.golden_image_initialized) {
-		err = gr_gk20a_init_golden_ctx_image(g, c);
-		if (err) {
-			nvhost_err(dev_from_gk20a(g),
-				"fail to init golden ctx image");
-			goto out;
-		}
+	err = gr_gk20a_init_golden_ctx_image(g, c);
+	if (err) {
+		nvhost_err(dev_from_gk20a(g),
+			"fail to init golden ctx image");
+		goto out;
 	}
 
 	/* load golden image */
@@ -3718,6 +3724,8 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	err = gr_gk20a_alloc_global_ctx_buffers(g);
 	if (err)
 		goto clean_up;
+
+	mutex_init(&gr->ctx_mutex);
 
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;

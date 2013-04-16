@@ -163,16 +163,14 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	ext->cursor.cur_handle = handle;
 
 	mutex_lock(&dc->lock);
-	tegra_dc_io_start(dc);
-	tegra_dc_hold_dc_out(dc);
+	tegra_dc_get(dc);
 
 	set_cursor_image_hw(dc, args, phys_addr);
 
 	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_release_dc_out(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 	/* XXX sync here? */
 
 	mutex_unlock(&dc->lock);
@@ -216,8 +214,7 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	enable = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 
 	mutex_lock(&dc->lock);
-	tegra_dc_io_start(dc);
-	tegra_dc_hold_dc_out(dc);
+	tegra_dc_get(dc);
 
 	val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
 	val &= ~WINH_CURS_SELECT(1);
@@ -240,8 +237,7 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	/* TODO: need to sync here?  hopefully can avoid this, but need to
 	 * figure out interaction w/ rest of GENERAL_ACT_REQ */
 
-	tegra_dc_release_dc_out(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
 	mutex_unlock(&ext->cursor.lock);
@@ -275,16 +271,14 @@ int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
 	}
 
 	mutex_lock(&dc->lock);
-	tegra_dc_io_start(dc);
-	tegra_dc_hold_dc_out(dc);
+	tegra_dc_get(dc);
 
 	reg_val = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
 	reg_val &= ~CURSOR_CLIP_SHIFT_BITS(3); /* Clear out the old value */
 	tegra_dc_writel(dc, reg_val | CURSOR_CLIP_SHIFT_BITS(*args),
 			DC_DISP_CURSOR_START_ADDR);
 
-	tegra_dc_release_dc_out(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
 	mutex_unlock(&ext->cursor.lock);

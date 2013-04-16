@@ -1089,11 +1089,9 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				return -ENODEV;
 			}
 
-			tegra_dc_io_start(dc);
-			tegra_dc_hold_dc_out(dc);
+			tegra_dc_get(dc);
 			nvsd_init(dc, sd_settings);
-			tegra_dc_release_dc_out(dc);
-			tegra_dc_io_end(dc);
+			tegra_dc_put(dc);
 
 			mutex_unlock(&dc->lock);
 

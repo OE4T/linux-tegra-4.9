@@ -288,6 +288,10 @@ void tegra_dc_clk_enable(struct tegra_dc *dc);
 void tegra_dc_clk_disable(struct tegra_dc *dc);
 
 /* defined in dc.c, used in nvsd.c and dsi.c */
+void tegra_dc_get(struct tegra_dc *dc);
+void tegra_dc_put(struct tegra_dc *dc);
+
+/* defined in dc.c, used in window.c */
 void tegra_dc_hold_dc_out(struct tegra_dc *dc);
 void tegra_dc_release_dc_out(struct tegra_dc *dc);
 

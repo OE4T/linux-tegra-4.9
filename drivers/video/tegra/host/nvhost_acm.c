@@ -616,11 +616,10 @@ int nvhost_module_power_on(struct platform_device *pdev)
 int nvhost_module_power_off(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
 
 	if (pdata->can_powergate) {
-		if (!pdata)
-			return -EINVAL;
-
 		do_powergate_locked(pdata->powergate_ids[0]);
 		do_powergate_locked(pdata->powergate_ids[1]);
 	}

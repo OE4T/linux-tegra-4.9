@@ -92,7 +92,7 @@ static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext_win *win;
 	int ret = 0;
 
-	if (n >= DC_N_WINDOWS)
+	if ((n >= DC_N_WINDOWS) || !(ext->dc->valid_windows & BIT(n)))
 		return -EINVAL;
 
 	win = &ext->win[n];

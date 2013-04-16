@@ -187,14 +187,15 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 	int i;
 
 	tegra_dc_io_start(dc);
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		if (!tegra_dc_feature_is_gen2_blender(dc, i))
+	for (i = 0; i < dc->feature->num_entries; i++) {
+		u32 idx = dc->feature->entries[i].window_index;
+		if (!tegra_dc_feature_is_gen2_blender(dc, idx))
 			continue;
 
-		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+		tegra_dc_writel(dc, WINDOW_A_SELECT << idx,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
 
-		if (blend->flags[i] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
+		if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
 			tegra_dc_writel(dc,
 					WIN_K1(0xff) |
 					WIN_K2(0xff) |
@@ -212,7 +213,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					WIN_ALPHA_1BIT_WEIGHT0(0) |
 					WIN_ALPHA_1BIT_WEIGHT1(0xff),
 					DC_WINBUF_BLEND_ALPHA_1BIT);
-		} else if (blend->flags[i] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
+		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
 			tegra_dc_writel(dc,
 					WIN_K1(0xff) |
 					WIN_K2(0xff) |
@@ -402,24 +403,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		unsigned Bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
 		/* Bytes per pixel of bandwidth, used for dda_inc calculation */
 		unsigned Bpp_bw = Bpp * (yuvp ? 2 : 1);
-		const bool filter_h = win_use_h_filter(dc, win);
-		const bool filter_v = win_use_v_filter(dc, win);
+		bool filter_h;
+		bool filter_v;
 #if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
 		scan_column = (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN);
 #endif
-
-		/* Update blender */
-		if ((win->z != dc->blend.z[win->idx]) ||
-			((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
-			dc->blend.flags[win->idx])) {
-			dc->blend.z[win->idx] = win->z;
-			dc->blend.flags[win->idx] =
-				win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
-			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
-				update_blend_seq = true;
-			else
-				update_blend_par = true;
-		}
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << win->idx,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -431,6 +419,22 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			dc_win->dirty = no_vsync ? 0 : 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			continue;
+		}
+
+		filter_h = win_use_h_filter(dc, win);
+		filter_v = win_use_v_filter(dc, win);
+
+		/* Update blender */
+		if ((win->z != dc->blend.z[win->idx]) ||
+				((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
+						dc->blend.flags[win->idx])) {
+			dc->blend.z[win->idx] = win->z;
+			dc->blend.flags[win->idx] =
+					win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
+			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
+				update_blend_seq = true;
+			else
+				update_blend_par = true;
 		}
 
 		tegra_dc_writel(dc, win->fmt & 0x1f, DC_WIN_COLOR_DEPTH);

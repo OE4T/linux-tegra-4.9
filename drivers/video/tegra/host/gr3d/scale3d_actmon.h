@@ -21,9 +21,6 @@
 #ifndef NVHOST_T30_SCALE3D_ACTMON_H
 #define NVHOST_T30_SCALE3D_ACTMON_H
 
-/* Clumsy way of getting enums from the header */
-#include "scale3d.h"
-
 struct platform_device;
 struct device;
 struct dentry;

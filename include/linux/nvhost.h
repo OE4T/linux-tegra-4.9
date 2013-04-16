@@ -212,10 +212,16 @@ struct nvhost_device_data {
 			u32 *value);
 };
 
+enum nvhost_devfreq_busy {
+	DEVICE_UNKNOWN = 0,
+	DEVICE_IDLE = 1,
+	DEVICE_BUSY = 2
+};
+
 struct nvhost_devfreq_ext_stat {
-	int		busy;
-	unsigned long	max_freq;
-	unsigned long	min_freq;
+	enum nvhost_devfreq_busy	busy;
+	unsigned long			max_freq;
+	unsigned long			min_freq;
 };
 
 struct nvhost_device_power_attr {

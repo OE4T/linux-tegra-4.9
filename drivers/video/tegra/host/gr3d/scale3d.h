@@ -21,12 +21,6 @@
 #ifndef NVHOST_T30_SCALE3D_H
 #define NVHOST_T30_SCALE3D_H
 
-enum power_profile_status {
-	DEVICE_UNKNOWN = 0,
-	DEVICE_IDLE = 1,
-	DEVICE_BUSY = 2
-};
-
 struct platform_device;
 struct device;
 struct dentry;

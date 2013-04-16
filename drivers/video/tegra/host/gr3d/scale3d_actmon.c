@@ -47,6 +47,7 @@
 #include <governor.h>
 
 #include "pod_scaling.h"
+#include "scale3d.h"
 #include "scale3d_actmon.h"
 #include "dev.h"
 #include "nvhost_acm.h"

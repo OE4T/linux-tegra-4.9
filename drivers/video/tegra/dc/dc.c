@@ -2631,6 +2631,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->valid_windows |= 0x18;
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
+		dc->valid_windows |= 0x08;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;

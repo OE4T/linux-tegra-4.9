@@ -29,227 +29,100 @@
  * bezier-like factor added to pull 3d.emc rate a bit lower.
  */
 
-#include <linux/devfreq.h>
-#include <linux/debugfs.h>
 #include <linux/types.h>
 #include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/ftrace.h>
+#include <linux/platform_data/tegra_edp.h>
 
-#include <mach/clk.h>
 #include <mach/hardware.h>
 
-#include <governor.h>
-
-#include "pod_scaling.h"
-#include "scale3d.h"
+#include "chip_support.h"
 #include "dev.h"
+#include "scale3d.h"
 #include "nvhost_acm.h"
+#include "nvhost_scale.h"
 
 #define POW2(x) ((x) * (x))
 
-static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
-					u32 flags);
+/*
+ * 20.12 fixed point arithmetic
+ */
 
-/*******************************************************************************
- * power_profile_rec - Device specific power management variables
- ******************************************************************************/
+static const int FXFRAC = 12;
+static const int FX_HALF = (1 << 12) / 2;
 
-struct power_profile_gr3d {
+#define INT_TO_FX(x) ((x) << FXFRAC)
+#define FX_TO_INT(x) ((x) >> FXFRAC)
 
-	int				init;
+static int FXMUL(int x, int y);
+static int FXDIV(int x, int y);
 
-	int				is_busy;
 
-	unsigned long			max_rate_3d;
-	unsigned long			min_rate_3d;
+#define MHZ_TO_HZ(x) ((x) * 1000000)
+#define HZ_TO_MHZ(x) ((x) / 1000000)
+
+/*
+ * nvhost_gr3d_params - Parameters for emc (and gr3d2) scaling
+ */
+
+struct nvhost_gr3d_params {
 	long				emc_slope;
 	long				emc_offset;
 	long				emc_dip_slope;
 	long				emc_dip_offset;
 	long				emc_xmid;
 
-	struct platform_device		*dev;
 	int				clk_3d;
 	int				clk_3d2;
 	int				clk_3d_emc;
-
-	struct devfreq_dev_status	*dev_stat;
-
-	ktime_t				last_event_time;
-
-	int				last_event_type;
 };
 
-/*******************************************************************************
- * Static variables for holding the device specific data
- ******************************************************************************/
-
-static struct power_profile_gr3d power_profile;
-
 /* Convert clk index to struct clk * */
-static inline struct clk *clk(int index)
+static inline struct clk *clk(struct nvhost_device_profile *profile, int index)
 {
 	struct nvhost_device_data *pdata =
-		platform_get_drvdata(power_profile.dev);
+		platform_get_drvdata(profile->pdev);
 	return pdata->clk[index];
 }
 
-/*******************************************************************************
- * nvhost_scale3d_notify(dev, busy)
- *
- * Calling this function informs that gr3d is idling (..or busy). This data is
- * used to estimate the current load
- ******************************************************************************/
-
-static void nvhost_scale3d_notify(struct platform_device *dev, int busy)
+void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
+			     unsigned long freq)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct devfreq *df = pdata->power_manager;
-	struct nvhost_devfreq_ext_stat *ext_stat;
-	ktime_t t;
-	unsigned long dt;
-
-	/* If defreq is disabled, do nothing */
-	if (!df) {
-
-		/* Ok.. make sure the 3d gets highest frequency always */
-		if (busy) {
-			unsigned long freq = power_profile.max_rate_3d;
-			nvhost_scale3d_target(&dev->dev, &freq, 0);
-		}
-
-		return;
-	}
-
-	/* get_dev_status() may run simulatanously. Hence lock. */
-	mutex_lock(&df->lock);
-
-	ext_stat = power_profile.dev_stat->private_data;
-	power_profile.last_event_type = busy ? DEVICE_BUSY : DEVICE_IDLE;
-
-	t = ktime_get();
-	dt = ktime_us_delta(t, power_profile.last_event_time);
-	power_profile.dev_stat->total_time += dt;
-	power_profile.last_event_time = t;
-
-	/* Sustain the busyness variable */
-	if (power_profile.is_busy)
-		power_profile.dev_stat->busy_time += dt;
-	power_profile.is_busy = busy;
-
-	/* Ask devfreq to re-evaluate the current settings */
-	update_devfreq(df);
-
-	mutex_unlock(&df->lock);
-}
-
-void nvhost_scale3d_notify_idle(struct platform_device *dev)
-{
-	nvhost_scale3d_notify(dev, 0);
-
-}
-
-void nvhost_scale3d_notify_busy(struct platform_device *dev)
-{
-	nvhost_scale3d_notify(dev, 1);
-}
-
-/*******************************************************************************
- * nvhost_scale3d_target(dev, *freq, flags)
- *
- * This function scales the clock
- ******************************************************************************/
-
-static int nvhost_scale3d_target(struct device *d, unsigned long *freq,
-					u32 flags)
-{
+	struct nvhost_gr3d_params *emc_params = profile->private_data;
 	long hz;
 	long after;
 
-	/* Inform that the clock is disabled */
-	if (!tegra_is_clk_enabled(clk(power_profile.clk_3d))) {
-		*freq = 0;
-		return 0;
-	}
-
-	/* Limit the frequency */
-	if (*freq < power_profile.min_rate_3d)
-		*freq = power_profile.min_rate_3d;
-	if (*freq > power_profile.max_rate_3d)
-		*freq = power_profile.max_rate_3d;
-
-	/* Check if we're already running at the desired speed */
-	if (*freq == clk_get_rate(clk(power_profile.clk_3d)))
-		return 0;
-
-	/* Set GPU clockrate */
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
-		nvhost_module_set_devfreq_rate(power_profile.dev,
-				power_profile.clk_3d2, 0);
-	nvhost_module_set_devfreq_rate(power_profile.dev,
-			power_profile.clk_3d, *freq);
+		nvhost_module_set_devfreq_rate(profile->pdev,
+					       emc_params->clk_3d2, freq);
 
 	/* Set EMC clockrate */
-	after = (long) clk_get_rate(clk(power_profile.clk_3d));
+	after = (long) clk_get_rate(clk(profile, emc_params->clk_3d));
 	after = INT_TO_FX(HZ_TO_MHZ(after));
-	hz = FXMUL(after, power_profile.emc_slope) +
-		power_profile.emc_offset;
+	hz = FXMUL(after, emc_params->emc_slope) + emc_params->emc_offset;
 
-	hz -= FXMUL(power_profile.emc_dip_slope,
-		FXMUL(after - power_profile.emc_xmid,
-			after - power_profile.emc_xmid)) +
-		power_profile.emc_dip_offset;
+	hz -= FXMUL(emc_params->emc_dip_slope,
+		FXMUL(after - emc_params->emc_xmid,
+			after - emc_params->emc_xmid)) +
+		emc_params->emc_dip_offset;
 
 	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
 
 	hz = (hz < 0) ? 0 : hz;
-	nvhost_module_set_devfreq_rate(power_profile.dev,
-			power_profile.clk_3d_emc, hz);
 
-	/* Get the new clockrate */
-	*freq = clk_get_rate(clk(power_profile.clk_3d));
+	nvhost_module_set_devfreq_rate(profile->pdev, emc_params->clk_3d_emc,
+				       hz);
 
-	return 0;
+	if (profile->actmon) {
+		u32 avg = 0;
+		actmon_op().read_avg_norm(profile->actmon, &avg);
+		tegra_edp_notify_gpu_load(avg);
+	}
 }
 
-/*******************************************************************************
- * nvhost_scale3d_get_dev_status(dev, *stat)
- *
- * This function queries the current device status. *stat will have its private
- * field set to an instance of nvhost_devfreq_ext_stat.
- ******************************************************************************/
-
-static int nvhost_scale3d_get_dev_status(struct device *d,
-		      struct devfreq_dev_status *stat)
-{
-	struct nvhost_devfreq_ext_stat *ext_stat =
-		power_profile.dev_stat->private_data;
-
-	/* Make sure there are correct values for the current frequency */
-	power_profile.dev_stat->current_frequency =
-		clk_get_rate(clk(power_profile.clk_3d));
-
-	/* Copy the contents of the current device status */
-	ext_stat->busy = power_profile.last_event_type;
-	*stat = *power_profile.dev_stat;
-
-	/* Finally, clear out the local values */
-	power_profile.dev_stat->total_time = 0;
-	power_profile.dev_stat->busy_time = 0;
-	power_profile.last_event_type = DEVICE_UNKNOWN;
-
-	return 0;
-}
-
-static struct devfreq_dev_profile nvhost_scale3d_devfreq_profile = {
-	.initial_freq   = 400000,
-	.polling_ms     = 0,
-	.target         = nvhost_scale3d_target,
-	.get_dev_status = nvhost_scale3d_get_dev_status,
-};
-
-/*******************************************************************************
+/*
  * nvhost_scale3d_calibrate_emc()
  *
  * Compute emc scaling parameters
@@ -299,149 +172,118 @@ static struct devfreq_dev_profile nvhost_scale3d_devfreq_profile = {
  *   | Od = (emc-max - emc-min) / 4 |
  *   +------------------------------+
  *
- ******************************************************************************/
+ */
 
-static void nvhost_scale3d_calibrate_emc(void)
+static void nvhost_scale3d_calibrate_emc(struct nvhost_device_profile *profile)
 {
+	struct nvhost_gr3d_params *emc_params = profile->private_data;
 	long correction;
 	unsigned long max_emc;
 	unsigned long min_emc;
 	unsigned long min_rate_3d;
 	unsigned long max_rate_3d;
 
-	max_emc = clk_round_rate(clk(power_profile.clk_3d_emc), UINT_MAX);
+	max_emc =
+		clk_round_rate(clk(profile, emc_params->clk_3d_emc), UINT_MAX);
 	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
 
-	min_emc = clk_round_rate(clk(power_profile.clk_3d_emc), 0);
+	min_emc = clk_round_rate(clk(profile, emc_params->clk_3d_emc), 0);
 	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
 
-	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(power_profile.max_rate_3d));
-	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(power_profile.min_rate_3d));
+	max_rate_3d =
+		clk_round_rate(clk(profile, emc_params->clk_3d), UINT_MAX);
+	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(max_rate_3d));
 
-	power_profile.emc_slope =
+	min_rate_3d =
+		clk_round_rate(clk(profile, emc_params->clk_3d), 0);
+	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(min_rate_3d));
+
+	emc_params->emc_slope =
 		FXDIV((max_emc - min_emc), (max_rate_3d - min_rate_3d));
-	power_profile.emc_offset = max_emc -
-		FXMUL(power_profile.emc_slope, max_rate_3d);
+	emc_params->emc_offset = max_emc -
+		FXMUL(emc_params->emc_slope, max_rate_3d);
 	/* Guarantee max 3d rate maps to max emc rate */
-	power_profile.emc_offset += max_emc -
-		(FXMUL(power_profile.emc_slope, max_rate_3d) +
-		power_profile.emc_offset);
+	emc_params->emc_offset += max_emc -
+		(FXMUL(emc_params->emc_slope, max_rate_3d) +
+		emc_params->emc_offset);
 
-	power_profile.emc_dip_offset = (max_emc - min_emc) / 4;
-	power_profile.emc_dip_slope =
-		-4 * FXDIV(power_profile.emc_dip_offset,
+	emc_params->emc_dip_offset = (max_emc - min_emc) / 4;
+	emc_params->emc_dip_slope =
+		-4 * FXDIV(emc_params->emc_dip_offset,
 		(FXMUL(max_rate_3d - min_rate_3d,
 			max_rate_3d - min_rate_3d)));
-	power_profile.emc_xmid = (max_rate_3d + min_rate_3d) / 2;
+	emc_params->emc_xmid = (max_rate_3d + min_rate_3d) / 2;
 	correction =
-		power_profile.emc_dip_offset +
-			FXMUL(power_profile.emc_dip_slope,
-			FXMUL(max_rate_3d - power_profile.emc_xmid,
-				max_rate_3d - power_profile.emc_xmid));
-	power_profile.emc_dip_offset -= correction;
+		emc_params->emc_dip_offset +
+			FXMUL(emc_params->emc_dip_slope,
+			FXMUL(max_rate_3d - emc_params->emc_xmid,
+				max_rate_3d - emc_params->emc_xmid));
+	emc_params->emc_dip_offset -= correction;
 }
 
-/*******************************************************************************
+/*
  * nvhost_scale3d_init(dev)
  *
  * Initialise 3d clock scaling for the given device. This function installs
  * pod_scaling governor to handle the clock scaling.
- ******************************************************************************/
+ */
 
-void nvhost_scale3d_init(struct platform_device *dev)
+void nvhost_scale3d_init(struct platform_device *pdev)
 {
-	struct nvhost_devfreq_ext_stat *ext_stat;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile;
+	struct nvhost_gr3d_params *emc_params;
 
-	if (power_profile.init)
+	nvhost_scale_init(pdev);
+	profile = pdata->power_profile;
+	if (!profile)
 		return;
 
-	/* Get clocks */
-	power_profile.dev = dev;
-	power_profile.clk_3d = 0;
+	emc_params = kzalloc(sizeof(*emc_params), GFP_KERNEL);
+	if (!emc_params)
+		goto err_allocate_emc_params;
+
+	emc_params->clk_3d = 0;
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
-		power_profile.clk_3d2 = 1;
-		power_profile.clk_3d_emc = 2;
+		emc_params->clk_3d2 = 1;
+		emc_params->clk_3d_emc = 2;
 	} else
-		power_profile.clk_3d_emc = 1;
+		emc_params->clk_3d_emc = 1;
 
-	/* Get maximum and minimum clocks */
-	power_profile.max_rate_3d =
-		clk_round_rate(clk(power_profile.clk_3d), UINT_MAX);
-	power_profile.min_rate_3d =
-		clk_round_rate(clk(power_profile.clk_3d), 0);
+	profile->private_data = emc_params;
 
-	nvhost_scale3d_devfreq_profile.initial_freq = power_profile.max_rate_3d;
-
-	if (power_profile.max_rate_3d == power_profile.min_rate_3d) {
-		pr_warn("scale3d: 3d max rate = min rate (%lu), disabling\n",
-			power_profile.max_rate_3d);
-		goto err_bad_power_profile;
-	}
-
-	/* Reserve space for devfreq structures (dev_stat and ext_dev_stat) */
-	power_profile.dev_stat =
-		kzalloc(sizeof(struct power_profile_gr3d), GFP_KERNEL);
-	if (!power_profile.dev_stat)
-		goto err_devfreq_alloc;
-	ext_stat = kzalloc(sizeof(struct nvhost_devfreq_ext_stat), GFP_KERNEL);
-	if (!ext_stat)
-		goto err_devfreq_ext_stat_alloc;
-
-	/* Initialise the dev_stat and ext_stat structures */
-	power_profile.dev_stat->private_data = ext_stat;
-	power_profile.last_event_type = DEVICE_UNKNOWN;
-	ext_stat->min_freq = power_profile.min_rate_3d;
-	ext_stat->max_freq = power_profile.max_rate_3d;
-
-	nvhost_scale3d_calibrate_emc();
-
-	power_profile.init = 1;
-
-	/* Start using devfreq */
-	pdata->power_manager = devfreq_add_device(&dev->dev,
-				&nvhost_scale3d_devfreq_profile,
-				&nvhost_podgov,
-				NULL);
+	nvhost_scale3d_calibrate_emc(profile);
 
 	return;
 
-err_devfreq_ext_stat_alloc:
-	kfree(power_profile.dev_stat);
-err_devfreq_alloc:
-err_bad_power_profile:
-
-	return;
-
+err_allocate_emc_params:
+	nvhost_scale_deinit(pdev);
 }
 
-/*******************************************************************************
+/*
  * nvhost_scale3d_deinit(dev)
  *
  * Stop 3d scaling for the given device.
- ******************************************************************************/
+ */
 
-void nvhost_scale3d_deinit(struct platform_device *dev)
+void nvhost_scale3d_deinit(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	if (!power_profile.init)
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	if (!pdata->power_profile)
 		return;
 
-	if (pdata->power_manager)
-		devfreq_remove_device(pdata->power_manager);
+	kfree(pdata->power_profile->private_data);
+	pdata->power_profile->private_data = NULL;
 
-	kfree(power_profile.dev_stat->private_data);
-	kfree(power_profile.dev_stat);
-
-	power_profile.init = 0;
+	nvhost_scale_deinit(pdev);
 }
 
-/******************************************************************************
+/*
  * 20.12 fixed point arithmetic
  *
  * int FXMUL(int x, int y)
  * int FXDIV(int x, int y)
- *****************************************************************************/
+ */
 
 int FXMUL(int x, int y)
 {
@@ -471,4 +313,3 @@ int FXDIV(int x, int y)
 
 	return (x << pos) / y;
 }
-

@@ -21,39 +21,18 @@
 #ifndef NVHOST_T30_SCALE3D_H
 #define NVHOST_T30_SCALE3D_H
 
+struct nvhost_device_profile;
 struct platform_device;
 struct device;
 struct dentry;
 
 /* Initialization and de-initialization for module */
-void nvhost_scale3d_init(struct platform_device *);
-void nvhost_scale3d_deinit(struct platform_device *);
+void nvhost_scale3d_init(struct platform_device *pdev);
+void nvhost_scale3d_deinit(struct platform_device *pdev);
 
-/*
- * call when performing submit to notify scaling mechanism that 3d module is
- * in use
- */
-void nvhost_scale3d_notify_busy(struct platform_device *);
-void nvhost_scale3d_notify_idle(struct platform_device *);
-
-/*
- * Helpers for converting frequencies
- */
-
-#define MHZ_TO_HZ(x) ((x) * 1000000)
-#define HZ_TO_MHZ(x) ((x) / 1000000)
-
-/*
- * 20.12 fixed point arithmetic
- */
-
-static const int FXFRAC = 12;
-static const int FX_HALF = (1 << 12) / 2;
-
-#define INT_TO_FX(x) ((x) << FXFRAC)
-#define FX_TO_INT(x) ((x) >> FXFRAC)
-
-int FXMUL(int x, int y);
-int FXDIV(int x, int y);
+/* Callback for generic profile. The callback handles setting
+ * the frequencies of EMC and the second 3d unit (if available) */
+void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
+			     unsigned long freq);
 
 #endif

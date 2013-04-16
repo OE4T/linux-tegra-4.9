@@ -29,7 +29,8 @@
 #include "t114.h"
 #include "gr2d/gr2d_t114.h"
 #include "gr3d/gr3d_t114.h"
-#include "gr3d/scale3d_actmon.h"
+#include "gr3d/scale3d.h"
+#include "nvhost_scale.h"
 #include "gr3d/gr3d_t30.h"
 #include "gr3d/scale3d.h"
 #include "host1x/host1x02_hardware.h"
@@ -123,13 +124,18 @@ struct nvhost_device_data t11_gr3d_info = {
 	.powergate_delay = 250,
 	.powerup_reset	= true,
 	.moduleid	= NVHOST_MODULE_NONE,
-	.busy		= nvhost_scale3d_actmon_notify_busy,
-	.idle		= nvhost_scale3d_actmon_notify_idle,
+
+	.busy		= nvhost_scale_notify_busy,
+	.idle		= nvhost_scale_notify_idle,
+	.init		= nvhost_scale_hw_init,
+	.deinit		= nvhost_scale_hw_deinit,
+	.scaling_init	= nvhost_scale3d_init,
+	.scaling_deinit	= nvhost_scale3d_deinit,
+	.scaling_post_cb = &nvhost_scale3d_callback,
+	.devfreq_governor = &nvhost_podgov,
+	.actmon_enabled	= true,
+
 	.suspend_ndev	= nvhost_scale3d_suspend,
-	.init		= nvhost_scale3d_actmon_hw_init,
-	.deinit		= nvhost_scale3d_actmon_hw_deinit,
-	.scaling_init	= nvhost_scale3d_actmon_init,
-	.scaling_deinit	= nvhost_scale3d_actmon_deinit,
 	.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,
 	.finalize_poweron = nvhost_gr3d_t114_finalize_power_on,
 	.alloc_hwctx_handler = nvhost_gr3d_t114_ctxhandler_init,

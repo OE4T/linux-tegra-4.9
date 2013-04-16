@@ -28,6 +28,7 @@
 #include "gr3d/gr3d.h"
 #include "gr3d/gr3d_t30.h"
 #include "gr3d/scale3d.h"
+#include "nvhost_scale.h"
 #include "mpe/mpe.h"
 #include "host1x/host1x.h"
 #include "host1x/host1x01_hardware.h"
@@ -120,11 +121,15 @@ struct nvhost_device_data t30_gr3d_info = {
 	.powergate_delay = 250,
 	.moduleid	= NVHOST_MODULE_NONE,
 	.finalize_poweron = NULL,
-	.busy		= nvhost_scale3d_notify_busy,
-	.idle		= nvhost_scale3d_notify_idle,
+
+	.busy		= nvhost_scale_notify_busy,
+	.idle		= nvhost_scale_notify_idle,
 	.suspend_ndev	= nvhost_scale3d_suspend,
 	.scaling_init	= nvhost_scale3d_init,
 	.scaling_deinit	= nvhost_scale3d_deinit,
+	.scaling_post_cb = &nvhost_scale3d_callback,
+	.devfreq_governor = &nvhost_podgov,
+
 	.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 	.alloc_hwctx_handler = nvhost_gr3d_t30_ctxhandler_init,
 	.read_reg	= nvhost_gr3d_t30_read_reg,

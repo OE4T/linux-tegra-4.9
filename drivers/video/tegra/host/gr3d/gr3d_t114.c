@@ -25,7 +25,7 @@
 #include "gr3d.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
-#include "scale3d_actmon.h"
+#include "nvhost_scale.h"
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
 #include "class_ids.h"
@@ -470,7 +470,7 @@ fail_alloc:
 
 int nvhost_gr3d_t114_prepare_power_off(struct platform_device *dev)
 {
-	nvhost_scale3d_actmon_hw_deinit(dev);
+	nvhost_scale_hw_deinit(dev);
 	return nvhost_gr3d_prepare_power_off(dev);
 }
 
@@ -478,5 +478,5 @@ void nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev)
 {
 	/* actmon needs to be reinitialized when we come back from
 	 * power gated state */
-	nvhost_scale3d_actmon_hw_init(dev);
+	nvhost_scale_hw_init(dev);
 }

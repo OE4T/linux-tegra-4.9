@@ -54,7 +54,7 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *,
 		size_t size, size_t align,
 		int flags, unsigned int heap_mask);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
-		u32 id, struct platform_device *dev);
+		ulong id, struct platform_device *dev);
 void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle);
 struct sg_table *nvhost_memmgr_pin(struct mem_mgr *,
 		struct mem_handle *handle,
@@ -71,13 +71,13 @@ struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
 		struct mem_handle *handle);
 void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct sg_table *sgt);
-static inline int nvhost_memmgr_type(u32 id) { return id & MEMMGR_TYPE_MASK; }
-static inline int nvhost_memmgr_id(u32 id) { return id & MEMMGR_ID_MASK; }
+static inline int nvhost_memmgr_type(ulong id) { return id & MEMMGR_TYPE_MASK; }
+static inline int nvhost_memmgr_id(ulong id) { return id & MEMMGR_ID_MASK; }
 u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle);
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,
-		u32 *ids,
+		ulong *ids,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data);

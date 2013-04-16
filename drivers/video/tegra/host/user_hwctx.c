@@ -105,7 +105,7 @@ static struct nvhost_hwctx *user_hwctx_alloc(struct nvhost_hwctx_handler *h,
 }
 
 int user_hwctx_set_save(struct user_hwctx *ctx,
-		u32 mem, u32 offset, u32 words, struct nvhost_reloc *reloc)
+		ulong mem, u32 offset, u32 words, struct nvhost_reloc *reloc)
 {
 	struct mem_handle *buf;
 	struct sg_table *sgt;
@@ -146,7 +146,7 @@ int user_hwctx_set_save(struct user_hwctx *ctx,
 }
 
 int user_hwctx_set_restore(struct user_hwctx *ctx,
-		u32 mem, u32 offset, u32 words)
+		ulong mem, u32 offset, u32 words)
 {
 	struct mem_handle *buf;
 	struct sg_table *sgt;

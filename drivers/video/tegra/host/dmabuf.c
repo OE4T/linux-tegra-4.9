@@ -33,7 +33,7 @@ static inline struct dma_buf *to_dmabuf(struct mem_handle *h)
 	return to_dmabuf_att(h)->dmabuf;
 }
 
-static inline int to_dmabuf_fd(u32 id)
+static inline int to_dmabuf_fd(ulong id)
 {
 	return nvhost_memmgr_id(id) >> 2;
 }
@@ -84,7 +84,7 @@ void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	dma_buf_kunmap(to_dmabuf(handle), pagenum, addr);
 }
 
-struct mem_handle *nvhost_dmabuf_get(u32 id, struct platform_device *dev)
+struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev)
 {
 	struct mem_handle *h;
 	struct dma_buf *buf;
@@ -111,7 +111,7 @@ int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
 }
 
 int nvhost_dmabuf_pin_array_ids(struct platform_device *dev,
-		u32 *ids,
+		ulong *ids,
 		u32 id_type_mask,
 		u32 id_type,
 		u32 count,

@@ -102,7 +102,7 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *mgr,
 }
 
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *mgr,
-		u32 id, struct platform_device *dev)
+		ulong id, struct platform_device *dev)
 {
 	struct mem_handle *h = NULL;
 
@@ -286,7 +286,7 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,
-		u32 *ids,
+		ulong *ids,
 		dma_addr_t *phys_addr,
 		u32 count,
 		struct nvhost_job_unpin *unpin_data)

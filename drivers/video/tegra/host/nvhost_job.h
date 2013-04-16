@@ -34,7 +34,7 @@ struct nvhost_job_gather {
 	u32 words;
 	struct sg_table *mem_sgt;
 	dma_addr_t mem_base;
-	u32 mem_id;
+	ulong mem_id;
 	int offset;
 	struct mem_handle *ref;
 };

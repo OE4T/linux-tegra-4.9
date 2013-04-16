@@ -578,7 +578,7 @@ static int dbg_hotplug_open(struct inode *inode, struct file *file)
 	return single_open(file, dbg_hotplug_show, inode->i_private);
 }
 
-static int dbg_hotplug_write(struct file *file, const char __user *addr,
+static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	size_t len, loff_t *pos)
 {
 	struct seq_file *m = file->private_data; /* single_open() initialized */

@@ -154,7 +154,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_waitmex_args *args)
 {
-	u32 timeout;
+	ulong timeout;
 	int err;
 	struct timespec ts;
 	if (args->id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt))

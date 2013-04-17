@@ -28,7 +28,7 @@
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 #define GR_IDLE_CHECK_DEFAULT		100 /* usec */
 #define GR_IDLE_CHECK_MAX		5000 /* usec */
-#define GR_IDLE_TIMEOUT_DEFAULT		20000 /* usec */
+#define GR_IDLE_TIMEOUT_DEFAULT		40000 /* usec */
 #else
 #define GR_IDLE_CHECK_DEFAULT		100 /* usec */
 #define GR_IDLE_CHECK_MAX		5000 /* usec */

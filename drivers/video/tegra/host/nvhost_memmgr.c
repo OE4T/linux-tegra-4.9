@@ -399,6 +399,7 @@ void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 	return;
 }
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
 			   struct device *dev)
 {
@@ -447,6 +448,7 @@ void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 		sg_dma_len(sg) = 0;
 	}
 }
+#endif
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)
 {

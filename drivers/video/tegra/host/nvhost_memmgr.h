@@ -84,9 +84,12 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
 			    u32 param, u32 *result);
+
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
 			   struct device *dev);
 void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 			   struct device *dev);
+#endif
 
 #endif

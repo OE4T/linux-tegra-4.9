@@ -578,7 +578,7 @@ phys_addr_t nvmap_get_addr_from_user_id(ulong user_id)
 {
 	struct nvmap_handle *h;
 
-	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
+	h = (struct nvmap_handle *)((uintptr_t)unmarshal_user_id(user_id));
 	return handle_phys(h);
 }
 
@@ -780,7 +780,9 @@ void nvmap_kunmap(struct nvmap_handle_ref *ref, unsigned int pagenum,
 	if (h->flags != NVMAP_HANDLE_UNCACHEABLE &&
 	    h->flags != NVMAP_HANDLE_WRITE_COMBINE) {
 		dmac_flush_range(addr, addr + PAGE_SIZE);
-		outer_flush_range(paddr, paddr + PAGE_SIZE);
+#ifndef CONFIG_ARM64
+		outer_flush_range(paddr, paddr + PAGE_SIZE); /* FIXME */
+#endif
 	}
 
 	pte = nvmap_vaddr_to_pte(nvmap_dev, (unsigned long)addr);

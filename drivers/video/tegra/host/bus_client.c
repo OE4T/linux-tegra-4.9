@@ -1497,6 +1497,13 @@ nvhost_client_request_firmware(struct platform_device *dev, const char *fw_name)
 	char *fw_path = NULL;
 	int path_len, err;
 
+	/* This field is NULL when calling from SYS_EXIT.
+	   Add a check here to prevent crash in request_firmware */
+	if (!current->fs) {
+		BUG();
+		return NULL;
+	}
+
 	if (!fw_name)
 		return NULL;
 

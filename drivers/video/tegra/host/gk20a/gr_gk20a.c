@@ -3726,6 +3726,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 		goto clean_up;
 
 	mutex_init(&gr->ctx_mutex);
+	spin_lock_init(&gr->ch_tlb_lock);
 
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;
@@ -4053,30 +4054,39 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct gr_gk20a *gr = &g->gr;
-	u32 chid;
+	u32 chid = -1;
 	u32 i;
 
+	spin_lock(&gr->ch_tlb_lock);
+
 	/* check cache first */
-	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++)
-		if (gr->chid_tlb[i].curr_ctx == curr_ctx)
-			return gr->chid_tlb[i].hw_chid;
+	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
+		if (gr->chid_tlb[i].curr_ctx == curr_ctx) {
+			chid = gr->chid_tlb[i].hw_chid;
+			goto unlock;
+		}
+	}
 
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++)
-		if (sg_phys(f->channel[chid].inst_block.mem.sgt->sgl) ==
+		if (f->channel[chid].in_use &&
+		    sg_phys(f->channel[chid].inst_block.mem.sgt->sgl) ==
 		    curr_ctx << ram_in_base_shift_v())
 			break;
 
-	if (chid >= f->num_channels)
-		return -1;
+	if (chid >= f->num_channels) {
+		chid = -1;
+		goto unlock;
+	}
 
 	/* add to free tlb entry */
-	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++)
+	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
 		if (gr->chid_tlb[i].curr_ctx == 0) {
 			gr->chid_tlb[i].curr_ctx = curr_ctx;
 			gr->chid_tlb[i].hw_chid = chid;
-			return chid;
+			goto unlock;
 		}
+	}
 
 	/* no free entry, flush one */
 	gr->chid_tlb[gr->channel_tlb_flush_index].curr_ctx = curr_ctx;
@@ -4086,6 +4096,8 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 		(gr->channel_tlb_flush_index + 1) &
 		(GR_CHANNEL_MAP_TLB_SIZE - 1);
 
+unlock:
+	spin_unlock(&gr->ch_tlb_lock);
 	return chid;
 }
 

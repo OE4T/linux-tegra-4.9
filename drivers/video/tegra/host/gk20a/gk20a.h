@@ -161,9 +161,11 @@ static inline u32 set_field(u32 val, u32 mask, u32 field)
 /* invalidate channel lookup tlb */
 static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
 {
+	spin_lock(&gr->ch_tlb_lock);
 	memset(gr->chid_tlb, 0,
 		sizeof(struct gr_channel_map_tlb_entry) *
 		GR_CHANNEL_MAP_TLB_SIZE);
+	spin_unlock(&gr->ch_tlb_lock);
 }
 
 /* This function can be called from two places, whichever comes first.

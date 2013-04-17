@@ -265,6 +265,7 @@ struct gr_gk20a {
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];
 	u32 channel_tlb_flush_index;
+	spinlock_t ch_tlb_lock;
 
 	void (*remove_support)(struct gr_gk20a *gr);
 	bool sw_ready;

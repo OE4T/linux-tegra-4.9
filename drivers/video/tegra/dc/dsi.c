@@ -2016,28 +2016,126 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 	}
 }
-
-static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
+	/* Calibration settings begin */
+	val = (DSI_PAD_SLEWUPADJ(0x7) | DSI_PAD_SLEWDNADJ(0x7) |
+		DSI_PAD_LPUPADJ(0x1) | DSI_PAD_LPDNADJ(0x1) |
+		DSI_PAD_OUTADJCLK(0x0));
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_2_VS1);
 
+	if (!dsi->controller_index) {
+		val = tegra_dsi_readl(dsi,
+			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
+		val = MIPI_CAL_OVERIDEDSIA(0x0) |
+			MIPI_CAL_SELDSIA(0x1) |
+			MIPI_CAL_HSPDOSDSIA(0x2) |
+			MIPI_CAL_HSPUOSDSIA(0x0) |
+			MIPI_CAL_TERMOSDSIA(0x5);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIB_MIPI_CAL_CONFIG_0);
+
+		/* Deselect PAD C */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
+		val &= ~(MIPI_CAL_SELDSIC(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
+
+		/* Deselect PAD D */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_DSID_MIPI_CAL_CONFIG_0);
+		val &= ~(MIPI_CAL_SELDSID(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSID_MIPI_CAL_CONFIG_0);
+	} else {
+		val = tegra_dsi_readl(dsi,
+			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
+		val = MIPI_CAL_OVERIDEDSIC(0x0) |
+			MIPI_CAL_SELDSIC(0x1) |
+			MIPI_CAL_HSPDOSDSIC(0x2) |
+			MIPI_CAL_HSPUOSDSIC(0x0) |
+			MIPI_CAL_TERMOSDSIC(0x5);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSID_MIPI_CAL_CONFIG_0);
+
+		/* Deselect PAD A */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
+		val &= ~(MIPI_CAL_SELDSIA(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
+
+		/* Deselect PAD B */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_DSIB_MIPI_CAL_CONFIG_0);
+		val &= ~(MIPI_CAL_SELDSIB(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_DSIB_MIPI_CAL_CONFIG_0);
+	}
+
+	val = tegra_mipi_cal_read(dsi->mipi_cal,
+		MIPI_CAL_MIPI_CAL_CTRL_0);
+	val = MIPI_CAL_NOISE_FLT(0xa) |
+		  MIPI_CAL_PRESCALE(0x2) |
+		  MIPI_CAL_CLKEN_OVR(0x1) |
+		  MIPI_CAL_AUTOCAL_EN(0x0);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_MIPI_CAL_CTRL_0);
+
+}
+#endif
+static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val = 0;
+	u32 timeout = 0;
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
 	else
 		tegra_dsi_pad_disable(dsi);
 
 	if (dsi->info.controller_vs == DSI_VS_1) {
-		/* TODO: characterization parameters */
-		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
 
 		tegra_mipi_cal_init_hw(dsi->mipi_cal);
 
+		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+
 		tegra_mipi_cal_write(dsi->mipi_cal,
-				MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
+			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 		tegra_mipi_cal_write(dsi->mipi_cal,
-				PAD_PDVREG(0x0),
-				MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+			PAD_PDVREG(0x0) | PAD_VCLAMP_LEVEL(0x0),
+			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+		tegra_dsi_mipi_calibration_11x(dsi);
+#endif
+		/* Start calibration */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_MIPI_CAL_CTRL_0);
+		val |= (MIPI_CAL_STARTCAL(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_MIPI_CAL_CTRL_0);
+
+			for (timeout = MIPI_DSI_AUTOCAL_TIMEOUT_USEC;
+					timeout; timeout -= 100) {
+				val = tegra_mipi_cal_read(dsi->mipi_cal,
+				MIPI_CAL_CIL_MIPI_CAL_STATUS_0);
+				if (!(val & MIPI_CAL_ACTIVE(0x1)) &&
+					(val & MIPI_AUTO_CAL_DONE(0x1))) {
+						dev_info(&dsi->dc->ndev->dev, "DSI pad calibration done\n");
+						break;
+				}
+				usleep_range(10, 100);
+			}
+			if (timeout <= 0)
+				dev_err(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
 
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {

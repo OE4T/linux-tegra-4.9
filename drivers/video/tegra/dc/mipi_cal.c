@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -28,12 +28,31 @@ int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
 
 	mutex_lock(&mipi_cal->lock);
-	clk_prepare_enable(mipi_cal->clk);
+
+	tegra_mipi_cal_clk_enable(mipi_cal);
 
 	for (; cnt <= MIPI_CAL_MIPI_BIAS_PAD_CFG2_0; cnt += 4)
 		tegra_mipi_cal_write(mipi_cal, 0, cnt);
 
-	clk_disable_unprepare(mipi_cal->clk);
+	/* Clear MIPI cal status register */
+	tegra_mipi_cal_write(mipi_cal,
+			MIPI_AUTO_CAL_DONE_DSID(0x1) |
+			MIPI_AUTO_CAL_DONE_DSIC(0x1) |
+			MIPI_AUTO_CAL_DONE_DSIB(0x1) |
+			MIPI_AUTO_CAL_DONE_DSIA(0x1) |
+			MIPI_AUTO_CAL_DONE_CSIE(0x1) |
+			MIPI_AUTO_CAL_DONE_CSID(0x1) |
+			MIPI_AUTO_CAL_DONE_CSIC(0x1) |
+			MIPI_AUTO_CAL_DONE_CSIB(0x1) |
+			MIPI_AUTO_CAL_DONE_CSIA(0x1) |
+			MIPI_AUTO_CAL_DONE(0x1) |
+			MIPI_CAL_DRIV_DN_ADJ(0x0) |
+			MIPI_CAL_DRIV_UP_ADJ(0x0) |
+			MIPI_CAL_TERMADJ(0x0) |
+			MIPI_CAL_ACTIVE(0x0),
+		MIPI_CAL_CIL_MIPI_CAL_STATUS_0);
+
+	tegra_mipi_cal_clk_disable(mipi_cal);
 	mutex_unlock(&mipi_cal->lock);
 
 	return 0;
@@ -45,6 +64,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	struct tegra_mipi_cal *mipi_cal;
 	struct resource *res;
 	struct clk *clk;
+	struct clk *fixed_clk;
 	void __iomem *base;
 	int err = 0;
 
@@ -76,12 +96,19 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		err = PTR_ERR(clk);
 		goto fail_free_map;
 	}
+	fixed_clk = clk_get_sys("mipi-cal-fixed", NULL);
+	if (IS_ERR_OR_NULL(fixed_clk)) {
+		dev_err(&dc->ndev->dev, "mipi_cal: fixed clk get failed\n");
+		err = PTR_ERR(fixed_clk);
+		goto fail_free_map;
+	}
 
 	mutex_init(&mipi_cal->lock);
 	mipi_cal->dc = dc;
 	mipi_cal->res = res;
 	mipi_cal->base = base;
 	mipi_cal->clk = clk;
+	mipi_cal->fixed_clk = fixed_clk;
 
 	return mipi_cal;
 

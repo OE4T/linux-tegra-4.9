@@ -387,6 +387,8 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = NULL;
 	}
+	kfree(m);
+	set_msenc(dev, NULL);
 }
 
 void nvhost_msenc_finalize_poweron(struct platform_device *dev)

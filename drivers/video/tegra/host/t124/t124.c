@@ -114,6 +114,7 @@ static struct host1x_device_info host1x04_info = {
 static struct nvhost_device_data tegra_host1x04_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.private_data	= &host1x04_info,
 };
 
 
@@ -323,12 +324,7 @@ struct platform_device *tegra12_register_host1x_devices(void)
 	int index = 0;
 	struct platform_device *pdev;
 
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)tegra_host1x04_device.dev.platform_data;
-
 	nvhost_dbg_fn("");
-
-	pdata->private_data = &host1x04_info;
 
 	/* register host1x device first */
 	platform_device_register(&tegra_host1x04_device);

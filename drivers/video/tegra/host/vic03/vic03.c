@@ -409,11 +409,8 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 		nvhost_memmgr_put(v->host->memmgr, v->ucode.mem_r);
 		v->ucode.mem_r = 0;
 	}
-	/* free mappings to registers, etc*/
-	if (v->regs) {
-		iounmap(v->regs);
+	if (v->regs)
 		v->regs = 0;
-	}
 
 	/* zap, free */
 	set_vic03(dev,0);

@@ -957,6 +957,7 @@ static inline u32 update_gp_get(struct gk20a *g,
 		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_get_w());
 	if (new_get < c->gpfifo.get)
 		c->gpfifo.wrap = !c->gpfifo.wrap;
+	c->gpfifo.get = new_get;
 	return new_get;
 }
 
@@ -1286,6 +1287,7 @@ int gk20a_channel_finish(struct channel_gk20a *ch, long timeout)
 			 "timed out waiting for gk20a channel to finish");
 	else
 		ch->cmds_pending = false;
+
 	return err;
 }
 

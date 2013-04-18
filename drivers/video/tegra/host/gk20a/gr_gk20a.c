@@ -386,6 +386,11 @@ int gr_gk20a_submit_fecs_method(struct gk20a *g,
 			u32 mtd_data, u32 mtd_adr, u32 *mb_ret,
 			u32 opc_ok, u32 mb_ok, u32 opc_fail, u32 mb_fail)
 {
+	struct gr_gk20a *gr = &g->gr;
+	int ret;
+
+	mutex_lock(&gr->fecs_mutex);
+
 	if (mb_id != 0)
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(mb_id),
 			mb_data);
@@ -397,8 +402,12 @@ int gr_gk20a_submit_fecs_method(struct gk20a *g,
 	gk20a_writel(g, gr_fecs_method_push_r(),
 		gr_fecs_method_push_adr_f(mtd_adr));
 
-	return gr_gk20a_ctx_wait_ucode(g, 0, mb_ret,
+	ret = gr_gk20a_ctx_wait_ucode(g, 0, mb_ret,
 		opc_ok, mb_ok, opc_fail, mb_fail);
+
+	mutex_unlock(&gr->fecs_mutex);
+
+	return ret;
 }
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
@@ -3629,6 +3638,9 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 			nvhost_err(dev_from_gk20a(g),
 				"fail to load gr init ctx");
 	}
+
+	/* this is required before gr_gk20a_init_ctx_state */
+	mutex_init(&g->gr.fecs_mutex);
 
 	return err;
 }

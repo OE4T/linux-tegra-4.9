@@ -194,7 +194,9 @@ struct gr_gk20a {
 		int regs_base_index;
 		bool valid;
 	} ctx_vars;
+
 	struct mutex ctx_mutex; /* protect golden ctx init */
+	struct mutex fecs_mutex; /* protect fecs method */
 
 #define GR_NETLIST_DYNAMIC	-1
 #define GR_NETLIST_STATIC_A	'A'

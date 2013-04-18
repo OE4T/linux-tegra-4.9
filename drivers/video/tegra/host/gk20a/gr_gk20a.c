@@ -563,64 +563,6 @@ clean_up:
 	return ret;
 }
 
-static int gr_gk20a_ctx_pm_setup(struct gk20a *g, struct channel_gk20a *c,
-				 bool disable_fifo)
-{
-	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	u32 va_lo, va_hi, va;
-	int ret;
-	void *ctx_ptr = NULL;
-
-	nvhost_dbg_fn("");
-
-	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
-	if (IS_ERR(ctx_ptr))
-		return -ENOMEM;
-
-	if (ch_ctx->pm_ctx.ctx_sw_mode ==
-	    ctxsw_prog_main_image_pm_mode_ctxsw_v()) {
-
-		if (ch_ctx->pm_ctx.gpu_va == 0) {
-			ret = -ENOMEM;
-			goto clean_up;
-		}
-
-		va_lo = u64_lo32(ch_ctx->pm_ctx.gpu_va);
-		va_hi = u64_hi32(ch_ctx->pm_ctx.gpu_va);
-		va = ((va_lo >> 8) & 0x00FFFFFF) | ((va_hi << 24) & 0xFF000000);
-	} else {
-		va_lo = va_hi = 0;
-		va = 0;
-	}
-
-	/* TBD
-	if (disable_fifo)
-		disable_engine_activity(...);
-	*/
-
-	/* Channel gr_ctx buffer is gpu cacheable.
-	   Flush and invalidate before cpu update. */
-	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
-
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_v(), 0, ch_ctx->pm_ctx.ctx_sw_mode);
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_v(), 0, va);
-
-	/* TBD
-	if (disable_fifo)
-		enable_engine_activity(...);
-	*/
-
-clean_up:
-	if (ret)
-		nvhost_dbg_fn("fail");
-	else
-		nvhost_dbg_fn("done");
-
-	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
-	return ret;
-}
-
 static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, u32 patch)
 {
@@ -1347,10 +1289,15 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_v(), 0,
 		 virt_addr_hi);
 
-	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	/* no user for client managed performance counter ctx */
+	ch_ctx->pm_ctx.ctx_sw_mode =
+		ctxsw_prog_main_image_pm_mode_no_ctxsw_v();
 
-	/* gr_gk20a_ctx_zcull_setup(g, c, false); */
-	gr_gk20a_ctx_pm_setup(g, c, false);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_v(), 0,
+		ch_ctx->pm_ctx.ctx_sw_mode);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_v(), 0, 0);
+
+	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
@@ -1912,10 +1859,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			"fail to commit gr ctx buffer");
 		goto out;
 	}
-
-	/* set misc. might be possible to move around later */
-	ch_ctx->pm_ctx.ctx_sw_mode =
-		ctxsw_prog_main_image_pm_mode_no_ctxsw_v();
 
 	/* allocate patch buffer */
 	if (ch_ctx->patch_ctx.mem.ref == NULL) {

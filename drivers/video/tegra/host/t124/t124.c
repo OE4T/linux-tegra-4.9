@@ -120,6 +120,7 @@ static struct nvhost_device_data tegra_host1x04_info = {
 
 static struct platform_device tegra_host1x04_device = {
 	.name		= "host1x",
+	.id		= -1,
 	.resource	= tegra_host1x04_resources,
 	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
 	.dev            = {
@@ -264,6 +265,7 @@ static struct nvhost_device_data tegra_msenc03_info = {
 
 struct platform_device tegra_msenc03_device = {
 	.name	       = "msenc",
+	.id	       = -1,
 	.resource      = msenc_resources,
 	.num_resources = ARRAY_SIZE(msenc_resources),
 	.dev           = {
@@ -294,6 +296,7 @@ static struct nvhost_device_data tegra_tsec01_info = {
 
 static struct platform_device tegra_tsec01_device = {
 	.name		= "tsec",
+	.id		= -1,
 	.resource	= tsec_resources,
 	.num_resources	= ARRAY_SIZE(tsec_resources),
 	.dev		= {

@@ -1280,7 +1280,7 @@ static struct {
 	{ NV_VIDEO_ENCODE_MPEG_CLASS_ID, "mpe" },
 	{ NV_VIDEO_ENCODE_MSENC_CLASS_ID, "msenc" },
 	{ NV_GRAPHICS_3D_CLASS_ID, "gr3d" },
-	{ NV_GRAPHICS_GPU_CLASS_ID, "gr3d"},  /* TBD: move to "gpu" */
+	{ NV_GRAPHICS_GPU_CLASS_ID, "gpu"},
 	{ NV_GRAPHICS_VIC_CLASS_ID, "vic"},
 	{ NV_TSEC_CLASS_ID, "tsec" },
 };

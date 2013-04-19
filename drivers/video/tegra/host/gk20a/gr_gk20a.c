@@ -1975,7 +1975,12 @@ out:
 int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 		       struct nvhost_free_obj_ctx_args *args)
 {
+	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+
 	nvhost_dbg_fn("");
+
+	if (tegra_platform_is_linsim())
+		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	if (c->num_objects == 0)
 		return 0;
@@ -1985,7 +1990,7 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 	if (c->num_objects == 0) {
 		c->first_init = false;
 		gk20a_disable_channel(c, true, /*wait for finish*/
-				      15000/* 15sec swag*/);
+				      timeout);
 		gr_gk20a_unmap_channel_patch_ctx(c);
 	}
 

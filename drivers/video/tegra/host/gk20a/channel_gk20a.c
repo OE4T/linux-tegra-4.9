@@ -385,6 +385,9 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 	struct gr_gk20a *gr = &g->gr;
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct vm_gk20a *ch_vm = ch->vm;
+	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+
+	nvhost_dbg_fn("");
 
 	if (!ch->bound)
 		return;
@@ -392,11 +395,15 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
 
-	nvhost_dbg_fn("freeing bound channel context");
+	if (tegra_platform_is_linsim())
+		timeout = MAX_SCHEDULE_TIMEOUT;
+
+	nvhost_dbg_info("freeing bound channel context, timeout=%ld",
+			timeout);
 
 	gk20a_disable_channel(ch,
 			      true /*wait for finish*/,
-			      15000/* 15secs swag */);
+			      timeout);
 
 
 	/* release channel ctx */
@@ -1282,7 +1289,7 @@ int gk20a_channel_finish(struct channel_gk20a *ch, long timeout)
 					 ch->last_submit_fence.syncpt_id,
 					 ch->last_submit_fence.syncpt_value,
 					 timeout, &fence.value, NULL);
-	if (err)
+	if (WARN_ON(err))
 		dev_warn(dev_from_gk20a(ch->g),
 			 "timed out waiting for gk20a channel to finish");
 	else

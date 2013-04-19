@@ -1345,8 +1345,12 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 	struct nvhost_hwctx *hwctx;
 	struct channel_gk20a *ch;
 	struct list_head *pos;
+	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 
 	nvhost_dbg_fn("");
+
+	if (tegra_platform_is_linsim())
+		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	/* User mode clients expect to be able to cleanly free a buffers after
 	 * launching work against them.  To avoid causing mmu faults we wait
@@ -1365,7 +1369,7 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 		if (likely(!hwctx->has_timedout)) {
 			ch =  (struct channel_gk20a *)hwctx->priv;
 			BUG_ON(!ch);
-			gk20a_channel_finish(ch, 15000 /* 15sec swag */);
+			gk20a_channel_finish(ch, timeout);
 		}
 	}
 

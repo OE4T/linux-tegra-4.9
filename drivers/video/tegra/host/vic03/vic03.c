@@ -30,6 +30,7 @@
 #include "bus_client.h"
 #include "nvhost_as.h"
 #include "nvhost_acm.h"
+#include "nvhost_scale.h"
 
 #include "host1x/host1x_hwctx.h"
 
@@ -401,6 +402,9 @@ int nvhost_vic03_init(struct platform_device *dev)
 	if (err)
 		goto clean_up;
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(dev);
+
 	return 0;
 
  clean_up:
@@ -414,6 +418,11 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 {
 
 	struct vic03 *v = get_vic03(dev);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_deinit(dev);
+
 	/* unpin, free ucode memory */
 	if (v->ucode.mem_r) {
 		nvhost_memmgr_unpin(v->host->memmgr, v->ucode.mem_r,
@@ -672,6 +681,15 @@ static int vic03_probe(struct platform_device *dev)
 	pdata->init			= nvhost_vic03_init;
 	pdata->deinit			= nvhost_vic03_deinit;
 	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
+	pdata->alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler;
+	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
+	pdata->scaling_init		= nvhost_scale_init;
+	pdata->scaling_deinit		= nvhost_scale_deinit;
+	pdata->idle			= nvhost_scale_notify_idle;
+	pdata->busy			= nvhost_scale_notify_busy;
+	pdata->actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE;
+	pdata->actmon_enabled		= true;
+
 	pdata->pdev = dev;
 
 	mutex_init(&pdata->lock);

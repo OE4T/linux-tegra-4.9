@@ -252,7 +252,7 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 	writel(BIT(30) | BIT(31), sync_regs + host1x_sync_hintmask_ext_r());
 
 	/* enable extra interrupt sources */
-	writel(BIT(12) | BIT(31), sync_regs + host1x_sync_hintmask_r());
+	writel(BIT(31), sync_regs + host1x_sync_hintmask_r());
 
 	/* enable host module interrupt to CPU0 */
 	writel(BIT(0), sync_regs + host1x_sync_intc0mask_r());

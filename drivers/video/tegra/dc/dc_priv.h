@@ -318,6 +318,15 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 }
 #endif
 
+static inline u32 tegra_dc_reg_l32(dma_addr_t reg)
+{
+	return reg & 0xffffffff;
+}
+
+static inline u32 tegra_dc_reg_h32(dma_addr_t reg)
+{
+	return reg >> 32;
+}
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;

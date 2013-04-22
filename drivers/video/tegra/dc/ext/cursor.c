@@ -96,10 +96,19 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 	clip_win = CURSOR_CLIP_GET_WINDOW(tegra_dc_readl(dc,
 					  DC_DISP_CURSOR_START_ADDR));
 	val |= clip_win;
-
+#if defined(CONFIG_TEGRA_DC_64BIT_SUPPORT)
+	/* TO DO: check calculation with HW */
+	tegra_dc_writel(dc,
+		(u32)(CURSOR_START_ADDR_HI(phys_addr)),
+		DC_DISP_CURSOR_START_ADDR_HI);
+	tegra_dc_writel(dc, (u32)(val |
+			CURSOR_START_ADDR_LOW(phys_addr)),
+		DC_DISP_CURSOR_START_ADDR);
+#else
 	tegra_dc_writel(dc,
 		val | CURSOR_START_ADDR(((unsigned long) phys_addr)),
 		DC_DISP_CURSOR_START_ADDR);
+#endif
 
 	if (args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
 		tegra_dc_writel(dc,

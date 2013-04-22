@@ -37,6 +37,7 @@
 #include "hw_msenc.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "nvhost_scale.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "t114/t114.h"
@@ -365,6 +366,9 @@ int nvhost_msenc_init(struct platform_device *dev)
 		nvhost_module_idle(dev);
 	}
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(dev);
+
 	return 0;
 
 clean_up:
@@ -375,6 +379,10 @@ clean_up:
 void nvhost_msenc_deinit(struct platform_device *dev)
 {
 	struct msenc *m = get_msenc(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_deinit(dev);
 
 	/* unpin, free ucode memory */
 	if (m->mapped) {

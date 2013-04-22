@@ -37,6 +37,7 @@
 
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
+#include "nvhost_scale.h"
 
 static int t124_num_alloc_channels = 0;
 
@@ -254,6 +255,12 @@ static struct nvhost_device_data tegra_msenc03_info = {
 	.exclusive     = true,
 	.keepalive     = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
+	.scaling_init	= nvhost_scale_init,
+	.scaling_deinit	= nvhost_scale_deinit,
+	.idle		= nvhost_scale_notify_idle,
+	.busy		= nvhost_scale_notify_busy,
+	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
+	.actmon_enabled	= true,
 };
 
 struct platform_device tegra_msenc03_device = {

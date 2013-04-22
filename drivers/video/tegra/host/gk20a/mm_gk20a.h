@@ -3,7 +3,7 @@
  *
  * GK20A memory management
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -116,9 +116,14 @@ struct page_table_gk20a {
 	/* track mapping cnt on this page table */
 	u32 ref_cnt;
 	struct sg_table *sgt;
-	/* 4k or 128k */
-	u32 page_size_idx;
 };
+
+enum gmmu_pgsz_gk20a {
+	gmmu_page_size_small = 0,
+	gmmu_page_size_big   = 1,
+	gmmu_nr_page_sizes   = 2
+};
+
 
 struct page_directory_gk20a {
 	/* backing for */
@@ -128,7 +133,7 @@ struct page_directory_gk20a {
 	void *ref;
 	bool dirty;
 	struct sg_table *sgt;
-	struct page_table_gk20a *ptes;
+	struct page_table_gk20a *ptes[gmmu_nr_page_sizes];
 };
 
 struct mapped_buffer_node {
@@ -138,7 +143,7 @@ struct mapped_buffer_node {
 	struct mem_mgr *memmgr;
 	struct mem_handle *handle_ref;
 	struct sg_table *sgt;
-	u32 page_size;
+	u32 pgsz_idx;
 	u32 ctag_offset;
 	u32 ctag_lines;
 };
@@ -158,11 +163,11 @@ struct vm_gk20a {
 	struct nvhost_allocator vma; /* page interval allocator */
 	struct rb_root mapped_buffers;
 
-	u64 (*alloc_va)(struct vm_gk20a *vm,
-			u64 size,
-			u32 page_size);
+	u64 (*alloc_va)(struct vm_gk20a *vm, u64 size,
+			enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
 
-	void (*free_va)(struct vm_gk20a *vm, u64 offset, u64 size, u32 page_size);
+	void (*free_va)(struct vm_gk20a *vm, u64 offset, u64 size,
+			enum gmmu_pgsz_gk20a pgsz_idx);
 
 	u64 (*map)(struct vm_gk20a *vm,
 		   struct mem_mgr *memmgr,
@@ -209,7 +214,7 @@ struct mm_gk20a {
 	struct {
 		u32 order;
 		u32 num_ptes;
-	} page_table_sizing[2];
+	} page_table_sizing[gmmu_nr_page_sizes];
 
 
 	struct {

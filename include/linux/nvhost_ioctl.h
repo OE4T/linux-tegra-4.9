@@ -314,7 +314,7 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_SET_PRIORITY	\
 	_IOW(NVHOST_IOCTL_MAGIC, 13, struct nvhost_set_priority_args)
 #define	NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR	\
-	_IOW(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_module_regrdwr_args)
+	_IOWR(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_module_regrdwr_args)
 #define NVHOST_IOCTL_CHANNEL_SUBMIT		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 15, struct nvhost_submit_args)
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT	\

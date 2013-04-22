@@ -437,6 +437,20 @@ static int nvhost_ioctl_channel_alloc_obj_ctx(
 	return ret;
 }
 
+static int nvhost_ioctl_channel_alloc_obj_ctx_old(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_alloc_obj_ctx_old_args *args)
+{
+	struct nvhost_alloc_obj_ctx_args new_args;
+	int err;
+
+	new_args.class_num = args->class_num;
+	err = nvhost_ioctl_channel_alloc_obj_ctx(ctx, &new_args);
+	if (!err)
+		args->obj_id = new_args.obj_id;
+	return err;
+}
+
 static int nvhost_ioctl_channel_free_obj_ctx(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_free_obj_ctx_args *args)
@@ -448,6 +462,15 @@ static int nvhost_ioctl_channel_free_obj_ctx(
 	ret = channel_op().free_obj(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
+}
+
+static int nvhost_ioctl_channel_free_obj_ctx_old(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_free_obj_ctx_old_args *args)
+{
+	struct nvhost_free_obj_ctx_args new_args;
+	new_args.obj_id = args->obj_id;
+	return nvhost_ioctl_channel_free_obj_ctx(ctx, &new_args);
 }
 
 static int nvhost_ioctl_channel_alloc_gpfifo(
@@ -477,7 +500,8 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 	if (IS_ERR_OR_NULL(gpfifo))
 		return -ENOMEM;
 
-	if (copy_from_user(gpfifo, (void __user *)args->gpfifo, size)) {
+	if (copy_from_user(gpfifo,
+			   (void __user *)(uintptr_t)args->gpfifo, size)) {
 		ret = -EINVAL;
 		goto clean_up;
 	}
@@ -490,6 +514,22 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 	nvhost_module_idle(ctx->ch->dev);
 clean_up:
 	kfree(gpfifo);
+	return ret;
+}
+
+static int nvhost_ioctl_channel_submit_gpfifo_old(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_submit_gpfifo_old_args *args)
+{
+	int ret;
+	struct nvhost_submit_gpfifo_args new_args;
+
+	new_args.gpfifo = (u64)(uintptr_t)args->gpfifo;
+	new_args.num_entries = args->num_entries;
+	new_args.flags = args->flags;
+	ret = nvhost_ioctl_channel_submit_gpfifo(ctx, &new_args);
+	if (!ret)
+		args->fence = new_args.fence;
 	return ret;
 }
 
@@ -517,6 +557,17 @@ static int nvhost_ioctl_channel_zcull_bind(
 	ret = channel_zcull_op().bind(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
+}
+
+static int nvhost_ioctl_channel_zcull_bind_old(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_zcull_bind_old_args *args)
+{
+	struct nvhost_zcull_bind_args new_args;
+
+	new_args.gpu_va = args->gpu_va;
+	new_args.mode = args->mode;
+	return nvhost_ioctl_channel_zcull_bind(ctx, &new_args);
 }
 
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
@@ -1089,8 +1140,14 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
 		err = nvhost_ioctl_channel_alloc_obj_ctx(priv, (void *)buf);
 		break;
+	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX_OLD:
+		err = nvhost_ioctl_channel_alloc_obj_ctx_old(priv, (void *)buf);
+		break;
 	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
 		err = nvhost_ioctl_channel_free_obj_ctx(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX_OLD:
+		err = nvhost_ioctl_channel_free_obj_ctx_old(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
 		err = nvhost_ioctl_channel_alloc_gpfifo(priv, (void *)buf);
@@ -1098,11 +1155,17 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
 		err = nvhost_ioctl_channel_submit_gpfifo(priv, (void *)buf);
 		break;
+	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO_OLD:
+		err = nvhost_ioctl_channel_submit_gpfifo_old(priv, (void *)buf);
+		break;
 	case NVHOST_IOCTL_CHANNEL_WAIT:
 		err = nvhost_ioctl_channel_wait(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
 		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND_OLD:
+		err = nvhost_ioctl_channel_zcull_bind_old(priv, (void *)buf);
 		break;
 
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)

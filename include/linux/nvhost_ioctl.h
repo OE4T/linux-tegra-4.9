@@ -112,14 +112,24 @@ struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
 
-struct nvhost_alloc_obj_ctx_args {
+struct nvhost_alloc_obj_ctx_old_args {
 	__u32 class_num; /* kepler3d, 2d, compute, etc       */
 	__u32 obj_id;    /* output, used to free later       */
 	__u32 vaspace_share; /*XXX to be removed */
 };
 
-struct nvhost_free_obj_ctx_args {
+struct nvhost_alloc_obj_ctx_args {
+	__u32 class_num; /* kepler3d, 2d, compute, etc       */
+	__u32 padding;
+	__u64 obj_id;    /* output, used to free later       */
+};
+
+struct nvhost_free_obj_ctx_old_args {
 	__u32 obj_id; /* obj ctx to free */
+};
+
+struct nvhost_free_obj_ctx_args {
+	__u64 obj_id; /* obj ctx to free */
 };
 
 struct nvhost_alloc_gpfifo_args {
@@ -134,7 +144,7 @@ struct nvhost_fence {
 	__u32 value;     /* syncpoint value to wait or value for other to wait */
 };
 
-struct nvhost_submit_gpfifo_args {
+struct nvhost_submit_gpfifo_old_args {
 	struct nvhost_gpfifo *gpfifo;
 	__u32 num_entries;
 	struct nvhost_fence fence;
@@ -146,6 +156,13 @@ struct nvhost_submit_gpfifo_args {
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
 /* choose between different gpfifo entry format */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
+};
+
+struct nvhost_submit_gpfifo_args {
+	__u64 gpfifo;
+	__u32 num_entries;
+	struct nvhost_fence fence;
+	__u32 flags;
 };
 
 struct nvhost_map_buffer_args {
@@ -192,7 +209,7 @@ struct nvhost_wait_args {
 
 /* cycle stats support */
 struct nvhost_cycle_stats_args {
-	u32 nvmap_handle;
+	__u32 nvmap_handle;
 };
 
 struct nvhost_read_3d_reg_args {
@@ -236,9 +253,15 @@ struct nvhost_set_priority_args {
 #define NVHOST_ZCULL_MODE_SEPARATE_BUFFER	2
 #define NVHOST_ZCULL_MODE_PART_OF_REGULAR_BUF	3
 
+struct nvhost_zcull_bind_old_args {
+	__u64 gpu_va;
+	__u32 mode;
+};
+
 struct nvhost_zcull_bind_args {
 	__u64 gpu_va;
 	__u32 mode;
+	__u32 padding;
 };
 
 struct nvhost_ctrl_module_regrdwr_args {
@@ -331,21 +354,29 @@ struct nvhost_set_ctxswitch_args {
 /* START of T124 IOCTLS */
 #define NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO	\
 	_IOW(NVHOST_IOCTL_MAGIC,  100, struct nvhost_alloc_gpfifo_args)
-#define NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO	\
-	_IOWR(NVHOST_IOCTL_MAGIC, 101, struct nvhost_submit_gpfifo_args)
+#define NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO_OLD	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 101, struct nvhost_submit_gpfifo_old_args)
 #define NVHOST_IOCTL_CHANNEL_WAIT		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 102, struct nvhost_wait_args)
-#define NVHOST_IOCTL_CHANNEL_ZCULL_BIND		\
+#define NVHOST_IOCTL_CHANNEL_ZCULL_BIND_OLD	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 103, struct nvhost_zcull_bind_args)
-#define NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX	\
-	_IOWR(NVHOST_IOCTL_MAGIC, 104, struct nvhost_alloc_obj_ctx_args)
-#define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
-	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_args)
+#define NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX_OLD	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 104, struct nvhost_alloc_obj_ctx_old_args)
+#define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX_OLD	\
+	_IOR(NVHOST_IOCTL_MAGIC,  105, struct nvhost_free_obj_ctx_old_args)
 #define NVHOST_IOCTL_CHANNEL_CYCLE_STATS	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 106, struct nvhost_cycle_stats_args)
+#define NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 107, struct nvhost_submit_gpfifo_args)
+#define NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 108, struct nvhost_alloc_obj_ctx_args)
+#define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
+	_IOR(NVHOST_IOCTL_MAGIC,  109, struct nvhost_free_obj_ctx_args)
+#define NVHOST_IOCTL_CHANNEL_ZCULL_BIND		\
+	_IOWR(NVHOST_IOCTL_MAGIC, 110, struct nvhost_zcull_bind_old_args)
 
 #define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_CYCLE_STATS)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZCULL_BIND)
 
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 

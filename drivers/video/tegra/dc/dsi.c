@@ -2027,12 +2027,12 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_2_VS1);
 
 	if (!dsi->controller_index) {
-		val = tegra_dsi_readl(dsi,
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
 			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
 		val = MIPI_CAL_OVERIDEDSIA(0x0) |
 			MIPI_CAL_SELDSIA(0x1) |
-			MIPI_CAL_HSPDOSDSIA(0x2) |
-			MIPI_CAL_HSPUOSDSIA(0x0) |
+			MIPI_CAL_HSPDOSDSIA(0x0) |
+			MIPI_CAL_HSPUOSDSIA(0x4) |
 			MIPI_CAL_TERMOSDSIA(0x5);
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
@@ -2053,12 +2053,12 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_DSID_MIPI_CAL_CONFIG_0);
 	} else {
-		val = tegra_dsi_readl(dsi,
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
 			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
 		val = MIPI_CAL_OVERIDEDSIC(0x0) |
 			MIPI_CAL_SELDSIC(0x1) |
-			MIPI_CAL_HSPDOSDSIC(0x2) |
-			MIPI_CAL_HSPUOSDSIC(0x0) |
+			MIPI_CAL_HSPDOSDSIC(0x0) |
+			MIPI_CAL_HSPUOSDSIC(0x4) |
 			MIPI_CAL_TERMOSDSIC(0x5);
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
@@ -2123,19 +2123,19 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_MIPI_CAL_CTRL_0);
 
-			for (timeout = MIPI_DSI_AUTOCAL_TIMEOUT_USEC;
-					timeout; timeout -= 100) {
-				val = tegra_mipi_cal_read(dsi->mipi_cal,
-				MIPI_CAL_CIL_MIPI_CAL_STATUS_0);
-				if (!(val & MIPI_CAL_ACTIVE(0x1)) &&
-					(val & MIPI_AUTO_CAL_DONE(0x1))) {
-						dev_info(&dsi->dc->ndev->dev, "DSI pad calibration done\n");
-						break;
-				}
-				usleep_range(10, 100);
+		for (timeout = MIPI_DSI_AUTOCAL_TIMEOUT_USEC;
+				timeout; timeout -= 100) {
+			val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_CIL_MIPI_CAL_STATUS_0);
+			if (!(val & MIPI_CAL_ACTIVE(0x1)) &&
+				(val & MIPI_AUTO_CAL_DONE(0x1))) {
+					dev_info(&dsi->dc->ndev->dev, "DSI pad calibration done\n");
+					break;
 			}
-			if (timeout <= 0)
-				dev_err(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
+			usleep_range(10, 100);
+		}
+		if (timeout <= 0)
+			dev_err(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
 
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {

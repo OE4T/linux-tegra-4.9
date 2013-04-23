@@ -151,7 +151,6 @@ struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
 	int		index;		/* Hardware channel number */
-	struct resource	*reg_mem[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];

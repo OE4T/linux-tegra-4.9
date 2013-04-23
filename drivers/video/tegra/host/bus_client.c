@@ -1437,47 +1437,30 @@ int nvhost_client_device_resume(struct device *dev)
 
 int nvhost_client_device_get_resources(struct platform_device *dev)
 {
-	struct resource *r[NVHOST_MODULE_MAX_IORESOURCE_MEM];
+	int i;
+	void __iomem *regs = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	int n;
 
-	if (dev->num_resources > NVHOST_MODULE_MAX_IORESOURCE_MEM) {
-		dev_err(&dev->dev, "too many io mem resources: %d, max is %d\n",
-			dev->num_resources, NVHOST_MODULE_MAX_IORESOURCE_MEM);
-		return -ENOMEM;
-	}
+	for (i = 0; i < dev->num_resources; i++) {
+		struct resource *r = NULL;
 
-	for (n = 0; n < NVHOST_MODULE_MAX_IORESOURCE_MEM; n++)
-		r[n] = NULL;
+		r = platform_get_resource(dev, IORESOURCE_MEM, i);
+		/* We've run out of mem resources */
+		if (!r)
+			break;
 
-	for (n = 0; n < dev->num_resources; n++ ) {
-		r[n] = platform_get_resource(dev, IORESOURCE_MEM, n);
-		if (!r[n])
+		regs = devm_request_and_ioremap(&dev->dev, r);
+		if (!regs)
 			goto fail;
 
-		pdata->reg_mem[n] = request_mem_region(r[n]->start,
-						     resource_size(r[n]),
-						     dev_name(&dev->dev));
-		if (!pdata->reg_mem[n])
-			goto fail;
-
-		pdata->aperture[n] = ioremap(r[n]->start, resource_size(r[n]));
-		if (!pdata->aperture[n])
-			goto fail;
+		pdata->aperture[i] = regs;
 	}
 
 	return 0;
 
 fail:
-	for (n = 0; n < dev->num_resources; n++ ) {
-		if (r[n]) {
-			if (pdata->aperture[n])
-				iounmap(pdata->aperture[n]);
-			if (pdata->reg_mem[n])
-				release_mem_region(r[n]->start, resource_size(r[n]));
-		}
-	}
 	dev_err(&dev->dev, "failed to get register memory\n");
+
 	return -ENXIO;
 }
 EXPORT_SYMBOL(nvhost_client_device_get_resources);

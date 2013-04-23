@@ -52,14 +52,23 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
 		for_each_set_bit(id, &reg, BITS_PER_LONG) {
-			struct nvhost_intr_syncpt *sp =
-				intr->syncpt + (i * BITS_PER_LONG + id);
+			struct nvhost_intr_syncpt *sp;
+			int sp_id = i * BITS_PER_LONG + id;
+
+			if (unlikely(sp_id >= dev->info.nb_pts)) {
+				dev_err(&dev->dev->dev, "%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
+					__func__, sp_id, dev->info.nb_pts);
+				goto out;
+			}
+
+			sp = intr->syncpt + sp_id;
 			ktime_get_ts(&sp->isr_recv);
 			t20_intr_syncpt_thresh_isr(sp);
 			queue_work(intr->wq, &sp->work);
 		}
 	}
 
+out:
 	return IRQ_HANDLED;
 }
 
@@ -69,10 +78,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	void __iomem *sync_regs = dev->sync_aperture;
 	int i, err;
 
-	writel(0xffffffffUL,
-		sync_regs + host1x_sync_syncpt_thresh_int_disable_r());
-	writel(0xffffffffUL,
-		sync_regs + host1x_sync_syncpt_thresh_cpu0_int_status_r());
+	intr_op().disable_all_syncpt_intrs(intr);
 
 	for (i = 0; i < dev->info.nb_pts; i++)
 		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);

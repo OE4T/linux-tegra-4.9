@@ -47,8 +47,8 @@ obj-$(t14x_or_higher_config) += t148/
 obj-$(t11x_or_higher_config) += msenc/
 obj-$(t11x_or_higher_config) += tsec/
 obj-$(CONFIG_TEGRA_GRHOST) += gr2d/
-obj-$(t11x_or_higher_config) += isp/
-obj-$(t11x_or_higher_config) += vi/
+obj-$(CONFIG_TEGRA_GRHOST) += isp/
+obj-$(CONFIG_TEGRA_GRHOST) += vi/
 obj-$(t12x_or_higher_config) += t124/
 ifeq ($(CONFIG_TEGRA_GK20A),y)
 obj-$(t12x_or_higher_config) += gk20a/

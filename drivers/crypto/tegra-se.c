@@ -2607,7 +2607,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	sg_tegra_se_dev = se_dev;
-	tegra_pd_add_device(&tegra_mc_chain_b, se_dev->dev);
+	tegra_pd_add_device(se_dev->dev);
 	pm_runtime_enable(se_dev->dev);
 	tegra_se_key_read_disable_all();
 

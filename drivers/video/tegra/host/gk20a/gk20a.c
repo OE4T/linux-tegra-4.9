@@ -21,6 +21,7 @@
 #include <linux/highmem.h>
 #include <linux/cdev.h>
 #include <linux/delay.h>
+#include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
@@ -526,6 +527,8 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	if (g->sim.remove_support)
 		g->sim.remove_support(&g->sim);
+
+	release_firmware(g->pmu_fw);
 
 	if (g->irq_requested) {
 		free_irq(gk20a_intr.start, g);

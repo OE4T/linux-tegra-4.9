@@ -638,7 +638,6 @@ struct pmu_gk20a {
 
 	struct gk20a *g;
 
-	const struct firmware *ucode_fw;
 	struct pmu_ucode_desc *desc;
 	struct pmu_mem_desc ucode;
 

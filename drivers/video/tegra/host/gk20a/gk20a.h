@@ -67,6 +67,11 @@ struct gk20a {
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
 
+	/* Save pmu fw here so that it lives cross suspend/resume.
+	   pmu suspend destroys all pmu sw/hw states. Loading pmu
+	   fw in resume crashes when the resume is from sys_exit. */
+	const struct firmware *pmu_fw;
+
 	void (*remove_support)(struct platform_device *);
 };
 

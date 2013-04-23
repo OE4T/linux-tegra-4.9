@@ -932,8 +932,6 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
 
-	release_firmware(pmu->ucode_fw);
-
 	nvhost_memmgr_free_sg_table(memmgr, inst_block->mem.ref,
 			inst_block->mem.sgt);
 	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
@@ -1013,17 +1011,19 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu_seq_init(pmu);
 
-	pmu->ucode_fw = nvhost_client_request_firmware(g->dev,
-				GK20A_PMU_UCODE_IMAGE);
-	if (IS_ERR_OR_NULL(pmu->ucode_fw)) {
-		nvhost_err(d, "failed to load pmu ucode!!");
-		err = -ENOENT;
-		return err;
+	if (!g->pmu_fw) {
+		g->pmu_fw = nvhost_client_request_firmware(g->dev,
+					GK20A_PMU_UCODE_IMAGE);
+		if (IS_ERR_OR_NULL(g->pmu_fw)) {
+			nvhost_err(d, "failed to load pmu ucode!!");
+			err = -ENOENT;
+			return err;
+		}
 	}
 
 	nvhost_dbg_fn("firmware loaded");
 
-	pmu->desc = (struct pmu_ucode_desc *)pmu->ucode_fw->data;
+	pmu->desc = (struct pmu_ucode_desc *)g->pmu_fw->data;
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
@@ -1129,8 +1129,8 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 clean_up:
 	nvhost_dbg_fn("fail");
-	if (pmu->ucode_fw)
-		release_firmware(pmu->ucode_fw);
+	if (g->pmu_fw)
+		release_firmware(g->pmu_fw);
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
 	vm->unmap(vm, pmu->ucode.pmu_va);

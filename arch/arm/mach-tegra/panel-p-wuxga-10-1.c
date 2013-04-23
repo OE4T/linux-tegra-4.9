@@ -514,7 +514,7 @@ static struct platform_pwm_backlight_data dsi_p_wuxga_10_1_bl_data = {
 };
 
 static struct platform_device __maybe_unused
-		dsi_p_wuxga_10_1_bl_device __initdata = {
+		dsi_p_wuxga_10_1_bl_device = {
 	.name	= "pwm-backlight",
 	.id	= -1,
 	.dev	= {

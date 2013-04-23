@@ -537,11 +537,22 @@ int nvhost_module_suspend(struct platform_device *dev)
 void nvhost_module_deinit(struct platform_device *dev)
 {
 	int i;
+	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	nvhost_module_suspend(dev);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_put(pdata->clk[i]);
+
+	if (pdata->power_kobj) {
+		for (i = 0; i < NVHOST_POWER_SYSFS_ATTRIB_MAX; i++) {
+			attr = &pdata->power_attrib->power_attr[i];
+			sysfs_remove_file(pdata->power_kobj, &attr->attr);
+		}
+
+		kobject_put(pdata->power_kobj);
+	}
+
 }
 
 /* common runtime pm and power domain APIs */

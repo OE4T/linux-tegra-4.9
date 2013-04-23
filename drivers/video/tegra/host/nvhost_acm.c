@@ -542,7 +542,7 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	ret = pm_genpd_add_device(domain, &pdev->dev);
 	if (pdata->powergate_delay)
 		pm_genpd_set_poweroff_delay(domain, pdata->powergate_delay);
-	tegra_pd_add_sd(&tegra_mc_chain_a, domain);
+	tegra_pd_add_sd(domain);
 
 	return ret;
 }

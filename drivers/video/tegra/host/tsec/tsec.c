@@ -576,7 +576,7 @@ static int tsec_probe(struct platform_device *dev)
 	tegra_periph_reset_deassert(pdata->clk[0]);
 	clk_disable_unprepare(pdata->clk[0]);
 
-	tegra_pd_add_device(&tegra_mc_chain_b, &dev->dev);
+	tegra_pd_add_device(&dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
 	pm_runtime_enable(&dev->dev);

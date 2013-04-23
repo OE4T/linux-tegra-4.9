@@ -95,9 +95,9 @@ static void therm_fan_est_work_func(struct work_struct *work)
 	}
 
 	if (est->current_trip_index != (trip_index - 1)) {
-		est->current_trip_index = trip_index - 1;
-		if (!((trip_index - 1) % 2))
+		if (!((trip_index - 1) % 2) || (!est->current_trip_index))
 			thermal_zone_device_update(est->thz);
+		est->current_trip_index = trip_index - 1;
 	}
 
 	est->ntemp++;
@@ -406,6 +406,7 @@ static int therm_fan_est_suspend(struct platform_device *pdev,
 	if (!est)
 		return -EINVAL;
 
+	est->current_trip_index = 0;
 	cancel_delayed_work(&est->therm_fan_est_work);
 
 	return 0;

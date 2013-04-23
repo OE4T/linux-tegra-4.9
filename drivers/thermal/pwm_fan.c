@@ -777,6 +777,7 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 	cancel_delayed_work(&fan_data->fan_ramp_work);
 	/*Turn the fan off*/
 	fan_data->fan_cur_pwm = 0;
+	fan_data->next_target_pwm = 0;
 	set_pwm_duty_cycle(0, fan_data);
 
 	/*Stop thermal control*/
@@ -795,10 +796,7 @@ static int pwm_fan_resume(struct platform_device *pdev)
 
 	/*Start thermal control*/
 	fan_data->fan_temp_control_flag = 1;
-	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
-		queue_delayed_work(fan_data->workqueue,
-					&fan_data->fan_ramp_work,
-					msecs_to_jiffies(fan_data->step_time));
+
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }

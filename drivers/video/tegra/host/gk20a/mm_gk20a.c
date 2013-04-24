@@ -1040,9 +1040,10 @@ static int update_gmmu_ptes(struct vm_gk20a *vm, u32 page_size_idx,
 					pte_w[1] |= gmmu_pte_vol_true_f();
 
 				cur_offset += 1 << page_shift;
-				if (cur_offset >= cur_chunk->length) {
+				while (cur_chunk &&
+					cur_offset >= cur_chunk->length) {
+					cur_offset -= cur_chunk->length;
 					cur_chunk = sg_next(cur_chunk);
-					cur_offset = 0;
 				}
 				pte->ref_cnt++;
 			} else {

@@ -1436,7 +1436,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
 	/* start with elpg disabled until first enable call */
-	pmu->elpg_refcnt = 0;
+	pmu->elpg_refcnt = 1;
 
 	return 0;
 }
@@ -2312,21 +2312,23 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	if (!pmu->elpg_ready)
 		return 0;
 
-	/* do NOT enable elpg until golden ctx is created,
-	   which is related with the ctx that ELPG save and restore. */
-	if (unlikely(!gr->ctx_vars.golden_image_initialized))
-		return 0;
-
 	mutex_lock(&pmu->elpg_mutex);
 
-	/* return if ELPG is already on or on_pending or off_on_pending */
-	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
+	pmu->elpg_refcnt++;
+	if (pmu->elpg_refcnt <= 0) {
 		ret = 0;
 		goto exit_unlock;
 	}
 
-	pmu->elpg_refcnt++;
-	if (pmu->elpg_refcnt <= 0) {
+	/* do NOT enable elpg until golden ctx is created,
+	   which is related with the ctx that ELPG save and restore. */
+	if (unlikely(!gr->ctx_vars.golden_image_initialized)) {
+		ret = 0;
+		goto exit_unlock;
+	}
+
+	/* return if ELPG is already on or on_pending or off_on_pending */
+	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
 		ret = 0;
 		goto exit_unlock;
 	}
@@ -2391,6 +2393,12 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 
 	mutex_lock(&pmu->elpg_mutex);
 
+	pmu->elpg_refcnt--;
+	if (pmu->elpg_refcnt > 0) {
+		ret = 0;
+		goto exit_unlock;
+	}
+
 	/* cancel off_on_pending and return */
 	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
@@ -2413,12 +2421,6 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	}
 	/* return if ELPG is already off */
 	else if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
-		ret = 0;
-		goto exit_unlock;
-	}
-
-	pmu->elpg_refcnt--;
-	if (pmu->elpg_refcnt > 0) {
 		ret = 0;
 		goto exit_unlock;
 	}

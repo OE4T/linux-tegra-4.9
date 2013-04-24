@@ -32,6 +32,8 @@
 #include <linux/module.h>
 #include <linux/hwmon-sysfs.h>
 
+#define DEFERRED_RESUME_TIME 3000
+
 struct therm_fan_estimator {
 	long cur_temp;
 	long polling_period;
@@ -421,7 +423,7 @@ static int therm_fan_est_resume(struct platform_device *pdev)
 
 	queue_delayed_work(est->workqueue,
 				&est->therm_fan_est_work,
-				msecs_to_jiffies(est->polling_period));
+				msecs_to_jiffies(DEFERRED_RESUME_TIME));
 	return 0;
 }
 #endif

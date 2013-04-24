@@ -887,8 +887,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			nvhost_dbg(dbg_err, "Could not map to SMMU");
 			goto clean_up;
 		}
-		nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08x",
-				sg_dma_address(bfr.sgt->sgl));
+		nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08llx",
+				(u64)sg_dma_address(bfr.sgt->sgl));
 	}
 #endif
 	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d page_size=%d "
@@ -1131,8 +1131,8 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
 	if (sg_dma_address(mapped_buffer->sgt->sgl)) {
-		nvhost_dbg(dbg_pte, "unmap from SMMU addr %08x",
-			   sg_dma_address(mapped_buffer->sgt->sgl));
+		nvhost_dbg(dbg_pte, "unmap from SMMU addr %08llx",
+			   (u64)sg_dma_address(mapped_buffer->sgt->sgl));
 		nvhost_memmgr_smmu_unmap(mapped_buffer->sgt,
 					 mapped_buffer->size,
 					 dev_from_vm(vm));

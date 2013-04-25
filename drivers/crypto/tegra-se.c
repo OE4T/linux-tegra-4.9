@@ -3405,6 +3405,10 @@ static struct platform_device_id tegra_dev_se_devtype[] = {
 	{
 			.name = "tegra11-se",
 			.driver_data = (unsigned long)&tegra11_se_chipdata,
+	},
+	{
+		.name = "tegra12-se",
+		.driver_data = (unsigned long)&tegra11_se_chipdata,
 	}
 };
 

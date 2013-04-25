@@ -63,10 +63,6 @@ static inline int gmmu_page_size_idx(u32 ps)
 	return (ps) != 4096; /* 4K:=0, all else := 1 */
 }
 static const u32 gmmu_page_sizes[2] = { 0x1000, 0x20000 }; /* 4KB and 128KB */
-static const u32 gmmu_page_smmu_types[2] = {
-	gmmu_page_smmu_type_physical,
-	gmmu_page_smmu_type_virtual,
-};
 static const u32 gmmu_page_shift[2] = { 12, 17 };
 static const u64 gmmu_page_offset_mask[2] = { 0xfffLL, 0x1ffffLL };
 static const u64 gmmu_page_mask[2] = { ~0xfffLL, ~0x1ffffLL };
@@ -819,10 +815,35 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		}
 	}
 
+	gmmu_page_smmu_type = bfr.iovmm_mapped ?
+		gmmu_page_smmu_type_virtual : gmmu_page_smmu_type_physical;
+
+	/* pin buffer to get phys/iovmm addr */
+	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
+	if (IS_ERR_OR_NULL(bfr.sgt)) {
+		nvhost_warn(d, "oom allocating tracking buffer");
+		goto clean_up;
+	}
+	if (sgt)
+		*sgt = bfr.sgt;
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (gmmu_page_smmu_type == gmmu_page_smmu_type_virtual) {
+		int err = nvhost_memmgr_smmu_map(bfr.sgt,
+				bfr.size, d);
+		if (err) {
+			/* if mapping fails, fall back to physical, small
+			 * pages */
+			bfr.iovmm_mapped = 0;
+			bfr.page_size_idx = 0;
+			gmmu_page_smmu_type = gmmu_page_smmu_type_physical;
+			nvhost_warn(dbg_pte, "Failed to map to SMMU\n");
+		} else
+			nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08llx",
+					(u64)sg_dma_address(bfr.sgt->sgl));
+	}
+#endif
+
 	gmmu_page_size = gmmu_page_sizes[bfr.page_size_idx];
-	gmmu_page_smmu_type = gmmu_page_smmu_types[bfr.page_size_idx];
-	if (!bfr.iovmm_mapped)
-		gmmu_page_smmu_type = gmmu_page_smmu_type_physical;
 
 	err = setup_buffer_kind_and_compression(flags, kind,
 						&bfr, gmmu_page_size);
@@ -871,26 +892,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_warn(d, "other mappings may collide!");
 	}
 
-	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
-	if (IS_ERR_OR_NULL(bfr.sgt)) {
-		nvhost_warn(d, "oom allocating tracking buffer");
-		goto clean_up;
-	}
-	if (sgt)
-		*sgt = bfr.sgt;
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (gmmu_page_smmu_type == gmmu_page_smmu_type_virtual) {
-		int err = nvhost_memmgr_smmu_map(bfr.sgt,
-				bfr.size, d);
-		if (err) {
-			nvhost_dbg(dbg_err, "Could not map to SMMU");
-			goto clean_up;
-		}
-		nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08llx",
-				(u64)sg_dma_address(bfr.sgt->sgl));
-	}
-#endif
 	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d page_size=%d "
 		      "iovmm_mapped=%d kind=0x%x kind_uc=0x%x flags=0x%x",
 		      r, map_offset, bfr.contig, gmmu_page_size,
@@ -948,6 +949,13 @@ clean_up:
 		ctag_allocator->free(ctag_allocator,
 				     bfr.ctag_offset,
 				     bfr.ctag_lines);
+	if (bfr.sgt) {
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+		if (sg_dma_address(bfr.sgt->sgl))
+			nvhost_memmgr_smmu_unmap(bfr.sgt, bfr.size, d);
+#endif
+		nvhost_memmgr_free_sg_table(memmgr, r, bfr.sgt);
+	}
 
 	nvhost_dbg_info("err=%d\n", err);
 	return 0;

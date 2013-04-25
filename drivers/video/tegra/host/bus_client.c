@@ -421,13 +421,18 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int num_relocs = args->num_relocs;
 	int num_waitchks = args->num_waitchks;
 	int num_syncpt_incrs = args->num_syncpt_incrs;
-	struct nvhost_cmdbuf __user *cmdbufs = args->cmdbufs;
-	struct nvhost_reloc __user *relocs = args->relocs;
-	struct nvhost_reloc_shift __user *reloc_shifts = args->reloc_shifts;
-	struct nvhost_waitchk __user *waitchks = args->waitchks;
-	struct nvhost_syncpt_incr __user *syncpt_incrs = args->syncpt_incrs;
-	u32 __user *waitbases = args->waitbases;
-	u32 __user *fences = args->fences;
+	struct nvhost_cmdbuf __user *cmdbufs =
+		(struct nvhost_cmdbuf *)(uintptr_t)args->cmdbufs;
+	struct nvhost_reloc __user *relocs =
+		(struct nvhost_reloc *)(uintptr_t)args->relocs;
+	struct nvhost_reloc_shift __user *reloc_shifts =
+		(struct nvhost_reloc_shift *)(uintptr_t)args->reloc_shifts;
+	struct nvhost_waitchk __user *waitchks =
+		(struct nvhost_waitchk *)(uintptr_t)args->waitchks;
+	struct nvhost_syncpt_incr __user *syncpt_incrs =
+		(struct nvhost_syncpt_incr *)(uintptr_t)args->syncpt_incrs;
+	u32 __user *waitbases = (u32 *)(uintptr_t)args->waitbases;
+	u32 __user *fences = (u32 *)(uintptr_t)args->fences;
 
 	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
 	u32 *local_waitbases = NULL;
@@ -617,32 +622,39 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 		return -EINVAL;
 
 	err = copy_from_user(&cmdbuf_save,
-			args->cmdbuf_save, sizeof(cmdbuf_save));
+			(void *)(uintptr_t)args->cmdbuf_save,
+			sizeof(cmdbuf_save));
 	if (err)
 		goto fail;
 
 	err = copy_from_user(&cmdbuf_restore,
-			args->cmdbuf_restore, sizeof(cmdbuf_restore));
+			(void *)(uintptr_t)args->cmdbuf_restore,
+			sizeof(cmdbuf_restore));
 	if (err)
 		goto fail;
 
-	err = copy_from_user(&reloc, args->relocs, sizeof(reloc));
+	err = copy_from_user(&reloc, (void *)(uintptr_t)args->relocs,
+			sizeof(reloc));
 	if (err)
 		goto fail;
 
 	err = copy_from_user(&save_incr,
-			args->save_incrs, sizeof(save_incr));
+			(void *)(uintptr_t)args->save_incrs,
+			sizeof(save_incr));
 	if (err)
 		goto fail;
 	err = copy_from_user(&save_waitbase,
-			args->save_waitbases, sizeof(save_waitbase));
+			(void *)(uintptr_t)args->save_waitbases,
+			sizeof(save_waitbase));
 
 	err = copy_from_user(&restore_incr,
-			args->restore_incrs, sizeof(restore_incr));
+			(void *)(uintptr_t)args->restore_incrs,
+			sizeof(restore_incr));
 	if (err)
 		goto fail;
 	err = copy_from_user(&restore_waitbase,
-			args->restore_waitbases, sizeof(restore_waitbase));
+			(void *)(uintptr_t)args->restore_waitbases,
+			sizeof(restore_waitbase));
 
 	if (save_incr.syncpt_id != pdata->syncpts[0]
 			|| restore_incr.syncpt_id != pdata->syncpts[0]
@@ -751,8 +763,8 @@ static int nvhost_ioctl_channel_module_regrdwr(
 	struct nvhost_ctrl_module_regrdwr_args *args)
 {
 	u32 num_offsets = args->num_offsets;
-	u32 *offsets = args->offsets;
-	u32 *values = args->values;
+	u32 __user *offsets = (u32 *)(uintptr_t)args->offsets;
+	u32 __user *values = (u32 *)(uintptr_t)args->values;
 	u32 vals[64];
 	struct platform_device *ndev;
 

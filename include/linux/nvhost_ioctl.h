@@ -69,7 +69,7 @@ struct nvhost_cmdbuf {
 	__u32 mem;
 	__u32 offset;
 	__u32 words;
-};
+} __packed;
 
 struct nvhost_reloc {
 	__u32 cmdbuf_mem;
@@ -80,7 +80,7 @@ struct nvhost_reloc {
 
 struct nvhost_reloc_shift {
 	__u32 shift;
-};
+} __packed;
 
 struct nvhost_waitchk {
 	__u32 mem;
@@ -96,7 +96,7 @@ struct nvhost_syncpt_incr {
 
 struct nvhost_get_param_args {
 	__u32 value;
-};
+} __packed;
 
 struct nvhost_get_param_arg {
 	__u32 param;
@@ -105,7 +105,7 @@ struct nvhost_get_param_arg {
 
 struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
-};
+} __packed;
 
 struct nvhost_read_3d_reg_args {
 	__u32 offset;
@@ -132,7 +132,7 @@ struct nvhost_clk_rate_args {
 
 struct nvhost_set_timeout_args {
 	__u32 timeout;
-};
+} __packed;
 
 struct nvhost_set_timeout_ex_args {
 	__u32 timeout;
@@ -141,14 +141,14 @@ struct nvhost_set_timeout_ex_args {
 
 struct nvhost_set_priority_args {
 	__u32 priority;
-};
+} __packed;
 
 struct nvhost_ctrl_module_regrdwr_args {
 	__u32 id;
 	__u32 num_offsets;
 	__u32 block_size;
-	__u32 *offsets;
-	__u32 *values;
+	__u32 offsets;
+	__u32 values;
 	__u32 write;
 };
 
@@ -159,32 +159,32 @@ struct nvhost_submit_args {
 	__u32 num_relocs;
 	__u32 num_waitchks;
 	__u32 timeout;
-	struct nvhost_syncpt_incr *syncpt_incrs;
-	struct nvhost_cmdbuf *cmdbufs;
-	struct nvhost_reloc *relocs;
-	struct nvhost_reloc_shift *reloc_shifts;
-	struct nvhost_waitchk *waitchks;
-	__u32 *waitbases;
+	__u32 syncpt_incrs;
+	__u32 cmdbufs;
+	__u32 relocs;
+	__u32 reloc_shifts;
+	__u32 waitchks;
+	__u32 waitbases;
 
 	__u32 pad[3];		/* future expansion */
-	__u32 *fences;
+	__u32 fences;
 	__u32 fence;		/* Return value */
-};
+} __packed;
 
 struct nvhost_set_ctxswitch_args {
 	__u32 num_cmdbufs_save;
 	__u32 num_save_incrs;
-	struct nvhost_syncpt_incr *save_incrs;
-	__u32 *save_waitbases;
-	struct nvhost_cmdbuf *cmdbuf_save;
+	__u32 save_incrs;
+	__u32 save_waitbases;
+	__u32 cmdbuf_save;
 	__u32 num_cmdbufs_restore;
 	__u32 num_restore_incrs;
-	struct nvhost_syncpt_incr *restore_incrs;
-	__u32 *restore_waitbases;
-	struct nvhost_cmdbuf *cmdbuf_restore;
+	__u32 restore_incrs;
+	__u32 restore_waitbases;
+	__u32 cmdbuf_restore;
 	__u32 num_relocs;
-	struct nvhost_reloc *relocs;
-	struct nvhost_reloc_shift *reloc_shifts;
+	__u32 relocs;
+	__u32 reloc_shifts;
 
 	__u32 pad;
 };
@@ -240,13 +240,13 @@ struct nvhost_ctrl_syncpt_read_args {
 
 struct nvhost_ctrl_syncpt_incr_args {
 	__u32 id;
-};
+} __packed;
 
 struct nvhost_ctrl_syncpt_wait_args {
 	__u32 id;
 	__u32 thresh;
 	__s32 timeout;
-};
+} __packed;
 
 struct nvhost_ctrl_syncpt_waitex_args {
 	__u32 id;

@@ -286,7 +286,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	nvhost_dbg_fn("");
 
 	while (check == WAIT_UCODE_LOOP) {
-		if (timeout == 0)
+		if (timeout == 0 && tegra_platform_is_silicon())
 			check = WAIT_UCODE_TIMEOUT;
 
 		/* XXX when this register read was sped up by removing printks

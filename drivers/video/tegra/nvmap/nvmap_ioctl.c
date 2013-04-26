@@ -398,7 +398,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 		goto out;
 	}
 
-	if (op.offset > h->size || (op.offset + op.length) > h->size) {
+	if (op.offset >= h->size || op.length > h->size - op.offset) {
 		err = -EADDRNOTAVAIL;
 		goto out;
 	}
@@ -602,7 +602,9 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg)
 
 	vma = find_vma(current->active_mm, (unsigned long)op.addr);
 	if (!vma || !is_nvmap_vma(vma) ||
-	    (unsigned long)op.addr + op.len > vma->vm_end) {
+	    (ulong)op.addr < vma->vm_start ||
+	    (ulong)op.addr >= vma->vm_end ||
+	    op.len > vma->vm_end - (ulong)op.addr) {
 		err = -EADDRNOTAVAIL;
 		goto out;
 	}
@@ -614,7 +616,8 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg)
 		goto out;
 	}
 
-	start = (unsigned long)op.addr - vma->vm_start;
+	start = (unsigned long)op.addr - vma->vm_start +
+		(vma->vm_pgoff << PAGE_SHIFT);
 	end = start + op.len;
 
 	err = cache_maint(client, vpriv->handle, start, end, op.op,

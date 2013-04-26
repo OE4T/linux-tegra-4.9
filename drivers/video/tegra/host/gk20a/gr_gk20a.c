@@ -1922,7 +1922,7 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 
 	nvhost_dbg_fn("");
 
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	if (c->num_objects == 0)

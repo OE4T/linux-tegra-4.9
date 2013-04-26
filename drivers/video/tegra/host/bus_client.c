@@ -191,7 +191,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 			&nvhost_get_host(ch->dev)->clientid);
 	priv->timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 	priv->timeout_debug_dump = true;
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
 
 	return 0;

@@ -1350,7 +1350,7 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 
 	nvhost_dbg_fn("");
 
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	/* User mode clients expect to be able to cleanly free a buffers after

@@ -395,7 +395,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx)
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
 
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	nvhost_dbg_info("freeing bound channel context, timeout=%ld",

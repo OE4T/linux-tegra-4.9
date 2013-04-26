@@ -428,7 +428,8 @@ int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 
 	err = as_share->as->ops->unmap_buffer(as_share,
 			args->offset, &memmgr, &r);
-	BUG_ON(memmgr == NULL || r == NULL);
+	if (err)
+		return err;
 
 	nvhost_memmgr_put(memmgr, r);
 	nvhost_memmgr_put_mgr(memmgr);

@@ -29,6 +29,7 @@
 #include "class_ids.h"
 #include "bus_client.h"
 #include "nvhost_as.h"
+#include "nvhost_acm.h"
 
 #include "host1x/host1x_hwctx.h"
 
@@ -38,6 +39,7 @@
 
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
 
+#include <mach/pm_domains.h>
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -299,6 +301,10 @@ static int vic03_boot(struct platform_device *dev)
 	u32 offset;
 	int err = 0;
 
+	/* check if firmware is loaded or not */
+	if (!v)
+		return -ENOMEDIUM;
+
 	vic03_writel(v, flcn_dmactl_r(), 0);
 
 	/* FIXME : disable clock gating, remove when clock gating problem is resolved from MCCIF*/
@@ -554,11 +560,9 @@ static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
 		ctx->restore_phys);
 }
 
-struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
-      u32 syncpt, u32 waitbase,
-      struct nvhost_channel *ch)
+struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch)
 {
-
 	struct host1x_hwctx_handler *p;
 
 	p = kmalloc(sizeof(*p), GFP_KERNEL);
@@ -584,6 +588,79 @@ int nvhost_vic03_finalize_poweron(struct platform_device *dev)
 	return vic03_boot(dev);
 }
 
+struct vic03_pm_domain {
+	struct platform_device *dev;
+	struct generic_pm_domain pd;
+};
+
+static int vic03_unpowergate(struct generic_pm_domain *domain)
+{
+	struct vic03_pm_domain *vic03_pd;
+
+	vic03_pd = container_of(domain, struct vic03_pm_domain, pd);
+	return nvhost_module_power_on(vic03_pd->dev);
+}
+
+static int vic03_powergate(struct generic_pm_domain *domain)
+{
+	struct vic03_pm_domain *vic03_pd;
+
+	vic03_pd = container_of(domain, struct vic03_pm_domain, pd);
+	return nvhost_module_power_off(vic03_pd->dev);
+}
+
+static int vic03_enable_clock(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+
+static int vic03_disable_clock(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int vic03_restore_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(pdev);
+
+	return 0;
+}
+
+static int vic03_suspend(struct device *dev)
+{
+	return nvhost_client_device_suspend(to_platform_device(dev));
+}
+
+static int vic03_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
+}
+
+static struct vic03_pm_domain vic03_pd = {
+	.pd = {
+		.name = "vic03",
+		.power_off = vic03_powergate,
+		.power_on = vic03_unpowergate,
+		.dev_ops = {
+			.start = vic03_enable_clock,
+			.stop = vic03_disable_clock,
+		},
+	},
+};
+
 static int vic03_probe(struct platform_device *dev)
 {
 	int err;
@@ -592,32 +669,58 @@ static int vic03_probe(struct platform_device *dev)
 
 	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
 
-	pdata->init                = nvhost_vic03_init;
-	pdata->deinit              = nvhost_vic03_deinit;
-	pdata->alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler;
-	pdata->finalize_poweron    = nvhost_vic03_finalize_poweron;
-
+	pdata->init			= nvhost_vic03_init;
+	pdata->deinit			= nvhost_vic03_deinit;
+	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
 	pdata->pdev = dev;
 
+	mutex_init(&pdata->lock);
+
 	platform_set_drvdata(dev, pdata);
-	/*nvhost_set_private_data(dev, vic03);*/
+	dev->dev.platform_data = NULL;
+
+	nvhost_module_init(dev);
+
+	/* add module power domain and also add its domain
+	 * as sub-domain of MC domain */
+	vic03_pd.dev = dev;
+	err = nvhost_module_add_domain(&vic03_pd.pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	vic03_pd.pd.domain.ops.suspend = vic03_suspend;
+	vic03_pd.pd.domain.ops.resume = vic03_resume;
+	vic03_pd.pd.dev_ops.restore_state = vic03_restore_context;
+
+	/* enable runtime pm. this is needed now since we need to call
+	 * _get_sync/_put during boot-up to ensure MC domain is ON */
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_enable(&dev->dev);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
 
+	pm_runtime_get_sync(&dev->dev);
+
 	err = nvhost_client_device_init(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",
 			      dev->name);
+		pm_runtime_put(&dev->dev);
 		return err;
 	}
+
 	err = nvhost_as_init_device(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client address space"
 			      " device for %s", dev->name);
+		pm_runtime_put(&dev->dev);
 		return err;
 	}
+
+	pm_runtime_put(&dev->dev);
+
 	return 0;
 }
 
@@ -627,26 +730,9 @@ static int __exit vic03_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int vic03_suspend(struct platform_device *dev, pm_message_t state)
-{
-	return nvhost_client_device_suspend(dev);
-}
-
-static int vic03_resume(struct platform_device *dev)
-{
-	return 0;
-}
-#endif
-
 static struct platform_driver vic03_driver = {
 	.probe = vic03_probe,
 	.remove = __exit_p(vic03_remove),
-
-#ifdef CONFIG_PM
-	.suspend = vic03_suspend,
-	.resume = vic03_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "vic03",

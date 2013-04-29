@@ -27,6 +27,8 @@
 #include <linux/export.h>
 #include <asm/cacheflush.h>
 
+#include <mach/pm_domains.h>
+
 #include "dev.h"
 #include "class_ids.h"
 #include "bus_client.h"
@@ -761,6 +763,98 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	return err;
 }
 
+struct gk20a_pm_domain {
+	struct platform_device *dev;
+	struct generic_pm_domain pd;
+};
+
+static int gk20a_unpowergate(struct generic_pm_domain *domain)
+{
+	struct gk20a_pm_domain *gk20a_pd;
+
+	gk20a_pd = container_of(domain, struct gk20a_pm_domain, pd);
+	return nvhost_module_power_on(gk20a_pd->dev);
+}
+
+static int gk20a_powergate(struct generic_pm_domain *domain)
+{
+	struct gk20a_pm_domain *gk20a_pd;
+
+	gk20a_pd = container_of(domain, struct gk20a_pm_domain, pd);
+	return nvhost_module_power_off(gk20a_pd->dev);
+}
+
+static int gk20a_enable_clock(struct device *dev)
+{
+	return nvhost_module_enable_clk(to_platform_device(dev));
+}
+
+static int gk20a_disable_clock(struct device *dev)
+{
+	return nvhost_module_disable_clk(to_platform_device(dev));
+}
+
+static int gk20a_save_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->prepare_poweroff)
+		pdata->prepare_poweroff(pdev);
+
+	return 0;
+}
+
+static int gk20a_restore_context(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+
+	pdev = to_platform_device(dev);
+	if (!pdev)
+		return -EINVAL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(pdev);
+
+	return 0;
+}
+
+static int gk20a_suspend(struct device *dev)
+{
+	return nvhost_client_device_suspend(to_platform_device(dev));
+}
+
+static int gk20a_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
+}
+
+static struct gk20a_pm_domain gk20a_pd = {
+	.pd = {
+		.name = "gk20a",
+		.power_off = gk20a_powergate,
+		.power_on = gk20a_unpowergate,
+		.dev_ops = {
+			.start = gk20a_enable_clock,
+			.stop = gk20a_disable_clock,
+		},
+	},
+};
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
@@ -772,33 +866,16 @@ static int gk20a_probe(struct platform_device *dev)
 	nvhost_dbg_fn("");
 
 	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	nvhost_module_init(dev);
 
-	pdata->init                = nvhost_gk20a_init;
-	pdata->deinit              = nvhost_gk20a_deinit;
-	pdata->alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler;
-	pdata->prepare_poweroff    = nvhost_gk20a_prepare_poweroff,
-	pdata->finalize_poweron    = nvhost_gk20a_finalize_poweron,
-	pdata->syncpt_base = 32; /*hack*/
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
-
-	/* gpu power rail is turned off after this function */
-	err = nvhost_client_device_init(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client device for %s",
-			      dev->name);
-		return err;
-	}
-
-	err = nvhost_as_init_device(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client address space"
-			      " device for %s", dev->name);
-		return err;
-	}
+	pdata->init			= nvhost_gk20a_init;
+	pdata->deinit			= nvhost_gk20a_deinit;
+	pdata->alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler;
+	pdata->prepare_poweroff		= nvhost_gk20a_prepare_poweroff,
+	pdata->finalize_poweron		= nvhost_gk20a_finalize_poweron,
+	pdata->syncpt_base		= 32; /*hack*/
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
@@ -810,7 +887,47 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->dev = dev;
 	gk20a->host = nvhost_get_host(dev);
 
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
+	pm_runtime_get_sync(&dev->dev);
+
 	nvhost_init_gk20a_support(dev);
+
+	/* add module power domain and also add its domain
+	 * as sub-domain of MC domain */
+	gk20a_pd.dev = dev;
+	err = nvhost_module_add_domain(&gk20a_pd.pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	gk20a_pd.pd.domain.ops.suspend = gk20a_suspend;
+	gk20a_pd.pd.domain.ops.resume = gk20a_resume;
+	gk20a_pd.pd.dev_ops.restore_state = gk20a_restore_context;
+	gk20a_pd.pd.dev_ops.save_state = gk20a_save_context;
+
+	/* enable runtime pm. this is needed now since we need to call
+	 * _get_sync/_put during boot-up to ensure MC domain is ON */
+	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_enable(&dev->dev);
+
+	err = nvhost_client_device_init(dev);
+	if (err) {
+		nvhost_dbg_fn("failed to init client device for %s",
+			      dev->name);
+		pm_runtime_put(&dev->dev);
+		return err;
+	}
+
+	err = nvhost_as_init_device(dev);
+	if (err) {
+		nvhost_dbg_fn("failed to init client address space"
+			      " device for %s", dev->name);
+		return err;
+	}
+
+	pm_runtime_put_autosuspend(&dev->dev);
 
 	return 0;
 }
@@ -829,27 +946,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int gk20a_suspend(struct platform_device *dev, pm_message_t state)
-{
-	nvhost_dbg_fn("");
-	return nvhost_client_device_suspend(dev);
-}
-
-static int gk20a_resume(struct platform_device *dev)
-{
-	nvhost_dbg_fn("");
-	return 0;
-}
-#endif
-
 static struct platform_driver gk20a_driver = {
 	.probe = gk20a_probe,
 	.remove = __exit_p(gk20a_remove),
-#ifdef CONFIG_PM
-	.suspend = gk20a_suspend,
-	.resume = gk20a_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gk20a",

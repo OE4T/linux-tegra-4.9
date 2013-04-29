@@ -1,7 +1,7 @@
 /*
  * drivers/thermal/pid_thermal_gov.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -456,12 +456,14 @@ static int pid_thermal_gov_throttle(struct thermal_zone_device *tz, int trip)
 				 (instance->target == THERMAL_NO_TARGET)))
 			continue;
 
-		target = pid_thermal_gov_get_target(tz, instance->cdev,
-						    trip_type, trip_temp);
-		if (target >= instance->upper)
+		if (instance->upper == instance->lower) {
 			target = instance->upper;
-		else if (target < instance->lower)
-			target = instance->lower;
+		} else {
+			target = pid_thermal_gov_get_target(tz, instance->cdev,
+							trip_type, trip_temp);
+			target = min(max(target, instance->lower),
+				     instance->upper);
+		}
 
 		if ((tz->temperature < trip_temp) &&
 				(instance->target == instance->lower) &&

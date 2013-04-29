@@ -382,9 +382,10 @@ static int find_free_area(struct nvhost_allocator *allocator,
 			u32 *addr, u32 len)
 {
 	struct nvhost_alloc_block *block;
-	u32 start_addr;
+	u32 start_addr, search_base, search_limit;
 
 	/* fixed addr allocation */
+	/* note: constraints for fixed are handled by caller */
 	if (*addr) {
 		block = find_block(allocator, *addr);
 		if (allocator->limit - len >= *addr &&
@@ -394,6 +395,15 @@ static int find_free_area(struct nvhost_allocator *allocator,
 			return 0;
 		} else
 			return -ENOMEM;
+	}
+
+	if (!allocator->constraint.enable) {
+		search_base  = allocator->base;
+		search_limit = allocator->limit;
+	} else {
+		start_addr = *addr = allocator->constraint.base;
+		search_base = allocator->constraint.base;
+		search_limit = allocator->constraint.limit;
 	}
 
 	/* cached_hole_size has max free space up to last_free_addr */
@@ -408,10 +418,10 @@ static int find_free_area(struct nvhost_allocator *allocator,
 
 full_search:
 	for (block = find_block(allocator, *addr); ; block = block->next) {
-		if (allocator->limit - len < *addr) {
+		if (search_limit - len < *addr) {
 			/* start a new search in case we missed any hole */
-			if (start_addr != allocator->base) {
-				start_addr = *addr = allocator->base;
+			if (start_addr != search_base) {
+				start_addr = *addr = search_base;
 				allocator->cached_hole_size = 0;
 				allocator_dbg(allocator, "start a new search from base");
 				goto full_search;
@@ -806,6 +816,29 @@ static void block_free_list_locked(struct nvhost_allocator *allocator,
 	}
 }
 
+static int
+nvhost_allocator_constrain(struct nvhost_allocator *a,
+			   bool enable, u32 base, u32 limit)
+{
+	if (enable) {
+		a->constraint.enable = (base >= a->base &&
+					limit <= a->limit);
+		if (!a->constraint.enable)
+			return -EINVAL;
+		a->constraint.base  = base;
+		a->constraint.limit = limit;
+		a->first_free_addr = a->last_free_addr = base;
+
+	} else {
+		a->constraint.enable = false;
+		a->first_free_addr = a->last_free_addr = a->base;
+	}
+
+	a->cached_hole_size = 0;
+
+	return 0;
+}
+
 /* init allocator struct */
 int nvhost_allocator_init(struct nvhost_allocator *allocator,
 		const char *name, u32 start, u32 len, u32 align)
@@ -840,6 +873,7 @@ int nvhost_allocator_init(struct nvhost_allocator *allocator,
 	allocator->alloc_nc = nvhost_block_alloc_nc;
 	allocator->free = nvhost_block_free;
 	allocator->free_nc = nvhost_block_free_nc;
+	allocator->constrain = nvhost_allocator_constrain;
 
 	return 0;
 }
@@ -891,6 +925,11 @@ int nvhost_block_alloc(struct nvhost_allocator *allocator, u32 *addr, u32 len)
 	if (*addr + len > allocator->limit || /* check addr range */
 	    *addr & (allocator->align - 1) || /* check addr alignment */
 	     len == 0)			      /* check len */
+		return -EINVAL;
+
+	if (allocator->constraint.enable &&
+	    (*addr + len > allocator->constraint.limit ||
+	     *addr > allocator->constraint.base))
 		return -EINVAL;
 
 	len = ALIGN(len, allocator->align);

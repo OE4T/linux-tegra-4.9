@@ -53,6 +53,13 @@ struct nvhost_allocator {
 	struct rw_semaphore rw_sema;	/* lock */
 	struct kmem_cache *block_cache;	/* slab cache */
 
+	/* if enabled, constrain to [base, limit) */
+	struct {
+		bool enable;
+		u32 base;
+		u32 limit;
+	} constraint;
+
 	int (*alloc)(struct nvhost_allocator *allocator,
 		u32 *addr, u32 len);
 	int (*alloc_nc)(struct nvhost_allocator *allocator,
@@ -62,6 +69,10 @@ struct nvhost_allocator {
 		u32 addr, u32 len);
 	void (*free_nc)(struct nvhost_allocator *allocator,
 		struct nvhost_alloc_block *block);
+
+	int (*constrain)(struct nvhost_allocator *a,
+			 bool enable,
+			 u32 base, u32 limit);
 };
 
 /* a block of linear space range [start, end) */

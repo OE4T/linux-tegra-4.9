@@ -474,7 +474,7 @@ int nvhost_gr3d_t114_prepare_power_off(struct platform_device *dev)
 	return nvhost_gr3d_prepare_power_off(dev);
 }
 
-void nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev)
+int nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev)
 {
 	/* actmon needs to be reinitialized when we come back from
 	 * power gated state */

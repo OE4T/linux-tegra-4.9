@@ -26,8 +26,8 @@
 struct mem_handle;
 struct sg_table;
 
-void nvhost_msenc_finalize_poweron(struct platform_device *dev);
-void nvhost_msenc_init(struct platform_device *dev);
+int nvhost_msenc_finalize_poweron(struct platform_device *dev);
+int nvhost_msenc_init(struct platform_device *dev);
 void nvhost_msenc_deinit(struct platform_device *dev);
 
 /* Would have preferred a static inline here... but we're using this

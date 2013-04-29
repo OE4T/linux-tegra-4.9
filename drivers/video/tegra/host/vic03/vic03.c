@@ -238,7 +238,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 	struct vic03 *v = get_vic03(dev);
 	struct mem_mgr *nvmap_c = v->host->memmgr;
 	const struct firmware *ucode_fw;
-	void *ucode_ptr;
+	void *ucode_ptr = 0;
 	int err;
 
 	ucode_fw = nvhost_client_request_firmware(dev, VIC03_UCODE_FW_NAME);
@@ -255,12 +255,12 @@ static int vic03_read_ucode(struct platform_device *dev)
 					     PAGE_SIZE,
 					     mem_mgr_flag_uncacheable,
 					     0);
-	if (IS_ERR_OR_NULL(v->ucode.mem_r)) {
+	if (IS_ERR(v->ucode.mem_r)) {
 		nvhost_dbg_fn("nvmap alloc failed");
-		err = -ENOMEM;
+		err = PTR_ERR(v->ucode.mem_r);
+		v->ucode.mem_r = NULL;
 		goto clean_up;
 	}
-
 
 	ucode_ptr = nvhost_memmgr_mmap(v->ucode.mem_r);
 	if (!ucode_ptr) {
@@ -277,9 +277,17 @@ static int vic03_read_ucode(struct platform_device *dev)
 
 	v->ucode.valid = true;
 
-	nvhost_memmgr_munmap(v->ucode.mem_r, ucode_ptr);
+	release_firmware(ucode_fw);
+
+	return 0;
 
  clean_up:
+	if (ucode_ptr)
+		nvhost_memmgr_munmap(v->ucode.mem_r, ucode_ptr);
+	if (v->ucode.mem_r) {
+		nvhost_memmgr_put(nvmap_c, v->ucode.mem_r);
+		v->ucode.mem_r = NULL;
+	}
 	release_firmware(ucode_fw);
 	return err;
 }
@@ -340,7 +348,7 @@ static int vic03_boot(struct platform_device *dev)
 	return 0;
 }
 
-void nvhost_vic03_init(struct platform_device *dev)
+int nvhost_vic03_init(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
@@ -353,8 +361,7 @@ void nvhost_vic03_init(struct platform_device *dev)
 		v = kzalloc(sizeof(*v), GFP_KERNEL);
 		if (!v) {
 			dev_err(&dev->dev, "couldn't alloc vic03 support");
-			err = -ENOMEM;
-			goto clean_up;
+			return -ENOMEM;
 		}
 		set_vic03(dev, v);
 	}
@@ -366,15 +373,16 @@ void nvhost_vic03_init(struct platform_device *dev)
 	if (!v->ucode.valid)
 		err = vic03_read_ucode(dev);
 
-	if (err || !v->ucode.valid) {
+	if (err) {
 		nvhost_err(&dev->dev, "ucode image is not valid");
-		return;
+		return err;
 	}
 
 	v->ucode.sgt = nvhost_memmgr_pin(v->host->memmgr, v->ucode.mem_r);
-	if (IS_ERR_OR_NULL(v->ucode.sgt)){
-		nvhost_err(&dev->dev, "nvmap pin failed for ucode");
-		goto clean_up;
+	if (IS_ERR(v->ucode.sgt)) {
+		nvhost_err(&dev->dev, "nvmap pin failed for ucode, %ld",
+				PTR_ERR(v->ucode.sgt));
+		return PTR_ERR(v->ucode.sgt);
 	}
 	v->ucode.pa = sg_dma_address(v->ucode.sgt->sgl);
 
@@ -387,15 +395,13 @@ void nvhost_vic03_init(struct platform_device *dev)
 	if (err)
 		goto clean_up;
 
-	return /*0*/;
+	return 0;
 
  clean_up:
 	nvhost_err(&dev->dev, "failed");
 	nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, v->ucode.mem_r,
 			    v->ucode.sgt);
-	return /*err*/;
-
-
+	return err;
 }
 
 void nvhost_vic03_deinit(struct platform_device *dev)
@@ -573,9 +579,9 @@ struct nvhost_hwctx_handler * nvhost_vic03_alloc_hwctx_handler(
 }
 
 
-void nvhost_vic03_finalize_poweron(struct platform_device *dev)
+int nvhost_vic03_finalize_poweron(struct platform_device *dev)
 {
-	vic03_boot(dev);
+	return vic03_boot(dev);
 }
 
 static int vic03_probe(struct platform_device *dev)

@@ -30,9 +30,9 @@ struct mem_mgr;
 struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(u32 syncpt,
 	u32 base, struct nvhost_channel *ch);
 
-void nvhost_gr3d_t114_init(struct platform_device *dev);
+int nvhost_gr3d_t114_init(struct platform_device *dev);
 void nvhost_gr3d_t114_deinit(struct platform_device *dev);
 int nvhost_gr3d_t114_prepare_power_off(struct platform_device *dev);
-void nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev);
+int nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev);
 
 #endif

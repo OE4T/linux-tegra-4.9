@@ -23,6 +23,6 @@
 
 struct platform_device;
 
-void nvhost_gr2d_t30_finalize_poweron(struct platform_device *dev);
+int nvhost_gr2d_t30_finalize_poweron(struct platform_device *dev);
 
 #endif

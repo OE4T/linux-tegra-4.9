@@ -456,7 +456,7 @@ clean_up:
 	return err;
 }
 
-void nvhost_tsec_init(struct platform_device *dev)
+int nvhost_tsec_init(struct platform_device *dev)
 {
 	int err = 0;
 	struct tsec *m;
@@ -465,14 +465,14 @@ void nvhost_tsec_init(struct platform_device *dev)
 	fw_name = tsec_get_fw_name(dev);
 	if (!fw_name) {
 		dev_err(&dev->dev, "couldn't determine firmware name");
-		return;
+		return -EINVAL;
 	}
 
 	m = kzalloc(sizeof(struct tsec), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't alloc ucode");
 		kfree(fw_name);
-		return;
+		return -ENOMEM;
 	}
 	set_tsec(dev, m);
 
@@ -487,13 +487,17 @@ void nvhost_tsec_init(struct platform_device *dev)
 
 	nvhost_module_busy(dev);
 
-	tsec_boot(dev);
+	err = tsec_boot(dev);
+	if (err)
+		goto clean_up;
+
 	enable_tsec_irq(dev);
 	nvhost_module_idle(dev);
-	return;
+	return 0;
 
 clean_up:
 	dev_err(&dev->dev, "failed");
+	return err;
 }
 
 void nvhost_tsec_deinit(struct platform_device *dev)

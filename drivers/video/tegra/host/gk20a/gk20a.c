@@ -593,9 +593,10 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	return err;
 }
 
-void nvhost_gk20a_init(struct platform_device *dev)
+int nvhost_gk20a_init(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
+	return 0;
 }
 
 static void nvhost_gk20a_deinit(struct platform_device *dev)
@@ -706,7 +707,7 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	return ret;
 }
 
-void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
+int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int err;
@@ -757,7 +758,7 @@ void nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	gk20a_channel_resume(g);
 
-	return;
+	return err;
 }
 
 static int gk20a_probe(struct platform_device *dev)

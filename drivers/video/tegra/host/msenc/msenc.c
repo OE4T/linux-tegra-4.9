@@ -329,7 +329,7 @@ clean_up:
 	return err;
 }
 
-void nvhost_msenc_init(struct platform_device *dev)
+int nvhost_msenc_init(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
@@ -339,14 +339,14 @@ void nvhost_msenc_init(struct platform_device *dev)
 	fw_name = msenc_get_fw_name(dev);
 	if (!fw_name) {
 		dev_err(&dev->dev, "couldn't determine firmware name");
-		return;
+		return -EINVAL;
 	}
 
 	m = kzalloc(sizeof(struct msenc), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't alloc ucode");
 		kfree(fw_name);
-		return;
+		return -ENOMEM;
 	}
 	set_msenc(dev, m);
 
@@ -365,10 +365,11 @@ void nvhost_msenc_init(struct platform_device *dev)
 		nvhost_module_idle(dev);
 	}
 
-	return;
+	return 0;
 
 clean_up:
 	dev_err(&dev->dev, "failed");
+	return err;
 }
 
 void nvhost_msenc_deinit(struct platform_device *dev)
@@ -393,9 +394,9 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 	set_msenc(dev, NULL);
 }
 
-void nvhost_msenc_finalize_poweron(struct platform_device *dev)
+int nvhost_msenc_finalize_poweron(struct platform_device *dev)
 {
-	msenc_boot(dev);
+	return msenc_boot(dev);
 }
 
 static struct of_device_id tegra_msenc_of_match[] = {

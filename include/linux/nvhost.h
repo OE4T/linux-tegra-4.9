@@ -209,7 +209,7 @@ struct nvhost_device_data {
 #endif
 
 	/* Finalize power on. Can be used for context restore. */
-	void (*finalize_poweron)(struct platform_device *dev);
+	int (*finalize_poweron)(struct platform_device *dev);
 
 	/* Device is busy. */
 	void (*busy)(struct platform_device *);
@@ -231,7 +231,7 @@ struct nvhost_device_data {
 				unsigned long freq);
 
 	/* Device is initialized */
-	void (*init)(struct platform_device *dev);
+	int (*init)(struct platform_device *dev);
 
 	/* Device is de-initialized. */
 	void (*deinit)(struct platform_device *dev);

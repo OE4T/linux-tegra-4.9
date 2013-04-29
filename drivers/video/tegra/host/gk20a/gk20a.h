@@ -177,7 +177,7 @@ static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
  * 1. nvhost calls this for gk20a driver init when client opens first gk20a channel.
  * 2. client opens gk20a ctrl node.
  */
-void nvhost_gk20a_init(struct platform_device *dev);
+int nvhost_gk20a_init(struct platform_device *dev);
 
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */

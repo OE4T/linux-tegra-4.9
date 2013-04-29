@@ -116,11 +116,11 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(
 
 
 int nvhost_vic03_prepare_poweroff(struct platform_device *);
-void nvhost_vic03_finalize_poweron(struct platform_device *);
+int nvhost_vic03_finalize_poweron(struct platform_device *);
 void nvhost_vic03_busy(struct platform_device *);
 void nvhost_vic03_idle(struct platform_device *);
 void nvhost_vic03_suspend(struct platform_device *);
-void nvhost_vic03_init(struct platform_device *);
+int nvhost_vic03_init(struct platform_device *);
 void nvhost_vic03_deinit(struct platform_device *);
 
 

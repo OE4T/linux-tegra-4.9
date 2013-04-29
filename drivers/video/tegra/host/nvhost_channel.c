@@ -84,8 +84,9 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
 		if (pdata->init)
-			pdata->init(ch->dev);
-		err = nvhost_cdma_init(&ch->cdma);
+			err = pdata->init(ch->dev);
+		if (!err)
+			err = nvhost_cdma_init(&ch->cdma);
 	} else if (pdata->exclusive) {
 		err = -EBUSY;
 	}

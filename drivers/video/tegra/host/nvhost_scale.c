@@ -51,7 +51,7 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 		return 0;
 	}
 
-	*freq = clk_round_rate(profile->clk, *freq);
+	*freq = clk_round_rate(clk_get_parent(profile->clk), *freq);
 	if (clk_get_rate(profile->clk) == *freq)
 		return 0;
 
@@ -122,6 +122,10 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 	struct devfreq *devfreq = pdata->power_manager;
+
+	/* Is the device profile initialised? */
+	if (!profile)
+		return;
 
 	/* If defreq is disabled, set the freq to max or min */
 	if (!devfreq) {
@@ -200,14 +204,17 @@ void nvhost_scale_init(struct platform_device *pdev)
 	profile = kzalloc(sizeof(struct nvhost_device_profile), GFP_KERNEL);
 	if (!profile)
 		return;
+	pdata->power_profile = profile;
 	profile->pdev = pdev;
 	profile->clk = pdata->clk[0];
 	profile->last_event_type = DEVICE_UNKNOWN;
 
 	/* Initialize devfreq related structures */
 	profile->dev_stat.private_data = &profile->ext_stat;
-	profile->ext_stat.min_freq = clk_round_rate(profile->clk, 0);
-	profile->ext_stat.max_freq = clk_round_rate(profile->clk, UINT_MAX);
+	profile->ext_stat.min_freq =
+		clk_round_rate(clk_get_parent(profile->clk), 0);
+	profile->ext_stat.max_freq =
+		clk_round_rate(clk_get_parent(profile->clk), UINT_MAX);
 	profile->ext_stat.busy = DEVICE_UNKNOWN;
 
 	if (profile->ext_stat.min_freq == profile->ext_stat.max_freq) {
@@ -232,18 +239,23 @@ void nvhost_scale_init(struct platform_device *pdev)
 		actmon_op().deinit(profile->actmon);
 	}
 
-	pdata->power_profile = profile;
-
-	if (pdata->devfreq_governor)
-		pdata->power_manager = devfreq_add_device(&pdev->dev,
+	if (pdata->devfreq_governor) {
+		struct devfreq *devfreq = devfreq_add_device(&pdev->dev,
 					&nvhost_scale_devfreq_profile,
 					pdata->devfreq_governor, NULL);
+
+		if (IS_ERR(devfreq))
+			devfreq = NULL;
+
+		pdata->power_manager = devfreq;
+	}
 
 	return;
 
 err_allocate_actmon:
 err_fetch_clocks:
 	kfree(pdata->power_profile);
+	pdata->power_profile = NULL;
 }
 
 /*

@@ -58,6 +58,45 @@ static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
 static DEVICE_ATTR(load, S_IRUGO, nvhost_gk20a_scale_load_show, NULL);
 
 /*
+ * nvhost_scale_make_freq_table(profile)
+ *
+ * This function initialises the frequency table for the given device profile
+ */
+
+static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
+{
+	struct gk20a *g = get_gk20a(profile->pdev);
+	unsigned long *freqs;
+	int num_freqs, err, i;
+
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return -ENOSYS;
+
+	/* get gpu dvfs table */
+	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
+	if (err)
+		return -ENOSYS;
+
+	/* allocate space for a duplicate table */
+	profile->devfreq_profile.freq_table =
+		kzalloc(num_freqs * sizeof(unsigned int), GFP_KERNEL);
+	if (!profile->devfreq_profile.freq_table)
+		return -ENOMEM;
+
+	/* copy the table */
+	memcpy(profile->devfreq_profile.freq_table, freqs,
+	       num_freqs * sizeof(unsigned int));
+	profile->devfreq_profile.max_state = num_freqs;
+
+	/* convert gpc2clk to gpcclk */
+	for (i = 0; i < num_freqs; i++)
+		profile->devfreq_profile.freq_table[i] /= 2;
+
+	return 0;
+}
+
+/*
  * gk20a_scale_target(dev, *freq, flags)
  *
  * This function scales the clock
@@ -69,13 +108,16 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	struct gk20a *g = get_gk20a(to_platform_device(dev));
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
+	unsigned long rounded_rate = gk20a_clk_round_rate(g, *freq);
 
-	if (gk20a_clk_get_rate(g) == *freq)
+	if (gk20a_clk_get_rate(g) == rounded_rate) {
+		*freq = rounded_rate;
 		return 0;
+	}
 
-	gk20a_clk_set_rate(g, *freq);
+	gk20a_clk_set_rate(g, rounded_rate);
 	if (pdata->scaling_post_cb)
-		pdata->scaling_post_cb(profile, *freq);
+		pdata->scaling_post_cb(profile, rounded_rate);
 	*freq = gk20a_clk_get_rate(g);
 
 	return 0;
@@ -176,6 +218,7 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 
 void nvhost_gk20a_scale_init(struct platform_device *pdev)
 {
+	struct gk20a *g = get_gk20a(pdev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
 
@@ -190,8 +233,8 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 
 	/* Initialize devfreq related structures */
 	profile->dev_stat.private_data = &profile->ext_stat;
-	profile->ext_stat.min_freq = gpc_pll_params.min_freq;
-	profile->ext_stat.max_freq = gpc_pll_params.max_freq;
+	profile->ext_stat.min_freq = gk20a_clk_round_rate(g, 0);
+	profile->ext_stat.max_freq = gk20a_clk_round_rate(g, UINT_MAX);
 	profile->ext_stat.busy = DEVICE_UNKNOWN;
 
 	if (profile->ext_stat.min_freq == profile->ext_stat.max_freq) {
@@ -209,10 +252,14 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 
 	if (pdata->devfreq_governor) {
 		struct devfreq *devfreq;
+		int err;
 
 		profile->devfreq_profile.target = gk20a_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;
+		err = nvhost_scale_make_freq_table(profile);
+		if (err)
+			goto err_get_freqs;
 
 		devfreq = devfreq_add_device(&pdev->dev,
 					&profile->devfreq_profile,
@@ -225,6 +272,8 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	}
 	return;
 
+err_get_freqs:
+	device_remove_file(&pdev->dev, &dev_attr_load);
 err_create_sysfs_entry:
 err_fetch_clocks:
 	kfree(pdata->power_profile);

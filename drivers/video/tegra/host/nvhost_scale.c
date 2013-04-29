@@ -52,6 +52,28 @@ static ssize_t nvhost_scale_load_show(struct device *dev,
 static DEVICE_ATTR(load, S_IRUGO, nvhost_scale_load_show, NULL);
 
 /*
+ * nvhost_scale_make_freq_table(profile)
+ *
+ * This function initialises the frequency table for the given device profile
+ */
+
+static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
+{
+	unsigned long *freqs;
+	int num_freqs, err;
+
+	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
+				   &freqs, &num_freqs);
+	if (err)
+		return -ENOSYS;
+
+	profile->devfreq_profile.freq_table = (unsigned int *)freqs;
+	profile->devfreq_profile.max_state = num_freqs;
+
+	return 0;
+}
+
+/*
  * nvhost_scale_target(dev, *freq, flags)
  *
  * This function scales the clock
@@ -64,7 +86,7 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
 	if (!tegra_is_clk_enabled(profile->clk)) {
-		*freq = 0;
+		*freq = profile->ext_stat.min_freq;
 		return 0;
 	}
 
@@ -76,7 +98,7 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	if (pdata->scaling_post_cb)
 		pdata->scaling_post_cb(profile, *freq);
 
-	*freq = (long) clk_get_rate(profile->clk);
+	*freq = clk_get_rate(profile->clk);
 
 	return 0;
 }
@@ -199,13 +221,6 @@ static int nvhost_scale_get_dev_status(struct device *dev,
 	return 0;
 }
 
-static struct devfreq_dev_profile nvhost_scale_devfreq_profile = {
-	.initial_freq   = 0,
-	.polling_ms     = 0,
-	.target         = nvhost_scale_target,
-	.get_dev_status = nvhost_scale_get_dev_status,
-};
-
 /*
  * nvhost_scale_init(pdev)
  */
@@ -262,9 +277,19 @@ void nvhost_scale_init(struct platform_device *pdev)
 	}
 
 	if (pdata->devfreq_governor) {
-		struct devfreq *devfreq = devfreq_add_device(&pdev->dev,
-					&nvhost_scale_devfreq_profile,
-					pdata->devfreq_governor, NULL);
+		struct devfreq *devfreq;
+		int err;
+
+		profile->devfreq_profile.target = nvhost_scale_target;
+		profile->devfreq_profile.get_dev_status =
+			nvhost_scale_get_dev_status;
+		err = nvhost_scale_make_freq_table(profile);
+		if (err)
+			goto err_get_freqs;
+
+		devfreq = devfreq_add_device(&pdev->dev,
+					&profile->devfreq_profile,
+					pdata->devfreq_governor->name, NULL);
 
 		if (IS_ERR(devfreq))
 			devfreq = NULL;
@@ -274,6 +299,7 @@ void nvhost_scale_init(struct platform_device *pdev)
 
 	return;
 
+err_get_freqs:
 err_allocate_actmon:
 	device_remove_file(&pdev->dev, &dev_attr_load);
 err_create_sysfs_entry:
@@ -302,6 +328,7 @@ void nvhost_scale_deinit(struct platform_device *pdev)
 	if (pdata->actmon_enabled)
 		device_remove_file(&pdev->dev, &dev_attr_load);
 
+	kfree(profile->devfreq_profile.freq_table);
 	kfree(profile->actmon);
 	kfree(profile);
 	pdata->power_profile = NULL;

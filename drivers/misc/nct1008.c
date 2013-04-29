@@ -96,7 +96,7 @@ struct nct1008_data {
 	int conv_period_ms;
 	long etemp;
 	int shutdown_complete;
-
+	int stop_workqueue;
 	struct thermal_zone_device *nct_int;
 	struct thermal_zone_device *nct_ext;
 };
@@ -847,6 +847,13 @@ static void nct1008_work_func(struct work_struct *work)
 	int err;
 	struct timespec ts;
 
+	mutex_lock(&data->mutex);
+	if (data->stop_workqueue) {
+		mutex_unlock(&data->mutex);
+		return;
+	}
+	mutex_unlock(&data->mutex);
+
 	err = nct1008_disable(data->client);
 	if (err == -ENODEV)
 		return;
@@ -1192,8 +1199,11 @@ static int nct1008_remove(struct i2c_client *client)
 	if (data->dent)
 		debugfs_remove(data->dent);
 
-	free_irq(data->client->irq, data);
+	mutex_lock(&data->mutex);
+	data->stop_workqueue = 1;
+	mutex_unlock(&data->mutex);
 	cancel_work_sync(&data->work);
+	free_irq(data->client->irq, data);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);
 	nct1008_power_control(data, false);
 	if (data->nct_reg)
@@ -1207,10 +1217,13 @@ static int nct1008_remove(struct i2c_client *client)
 static void nct1008_shutdown(struct i2c_client *client)
 {
 	struct nct1008_data *data = i2c_get_clientdata(client);
+
+	mutex_lock(&data->mutex);
+	data->stop_workqueue = 1;
+	mutex_unlock(&data->mutex);
+	cancel_work_sync(&data->work);
 	if (client->irq)
 		disable_irq(client->irq);
-
-	cancel_work_sync(&data->work);
 
 	mutex_lock(&data->mutex);
 	data->shutdown_complete = 1;
@@ -1224,8 +1237,11 @@ static int nct1008_suspend_powerdown(struct device *dev)
 	int err;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
-	disable_irq(client->irq);
+	mutex_lock(&data->mutex);
+	data->stop_workqueue = 1;
+	mutex_unlock(&data->mutex);
 	cancel_work_sync(&data->work);
+	disable_irq(client->irq);
 	err = nct1008_disable(client);
 	nct1008_power_control(data, false);
 	return err;
@@ -1337,6 +1353,9 @@ static int nct1008_resume(struct device *dev)
 		return err;
 
 	nct1008_update(data);
+	mutex_lock(&data->mutex);
+	data->stop_workqueue = 0;
+	mutex_unlock(&data->mutex);
 	enable_irq(client->irq);
 
 	return 0;

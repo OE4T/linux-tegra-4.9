@@ -798,7 +798,7 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 		dc->stats.underflows_a,
 		dc->stats.underflows_b,
 		dc->stats.underflows_c);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	seq_printf(s,
 		"underflows_d: %llu\n"
 		"underflows_h: %llu\n"
@@ -1660,7 +1660,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	if (dc->underflow_mask & WIN_C_UF_INT)
 		dc->stats.underflows_c += tegra_dc_underflow_count(dc,
 			DC_WINBUF_CD_UFLOW_STATUS);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	if (dc->underflow_mask & HC_UF_INT)
 		dc->stats.underflows_h += tegra_dc_underflow_count(dc,
 			DC_WINBUF_HD_UFLOW_STATUS);
@@ -1678,7 +1678,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			WIN_A_UF_INT,
 			WIN_B_UF_INT,
 			WIN_C_UF_INT,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 			WIN_D_UF_INT,
 			HC_UF_INT,
 			WIN_T_UF_INT,
@@ -2629,6 +2629,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
 		dc->win_syncpt[4] = NVSYNCPT_DISP0_H;
 		dc->valid_windows |= 0x18;
+#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
+		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;

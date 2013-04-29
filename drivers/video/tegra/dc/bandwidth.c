@@ -51,6 +51,8 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 			TEGRA_LA_DISPLAYD,
 			TEGRA_LA_DISPLAY_HC,
+#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
+			TEGRA_LA_DISPLAYD,
 #endif
 		},
 		/* second display */

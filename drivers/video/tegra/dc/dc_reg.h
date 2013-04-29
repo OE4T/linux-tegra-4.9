@@ -77,10 +77,11 @@
 #define  WIN_A_UF_INT		(1 << 8)
 #define  WIN_B_UF_INT		(1 << 9)
 #define  WIN_C_UF_INT		(1 << 10)
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC) ||\
+	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
 #endif
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_UF_INT		(1 << 24)
 #define  WIN_T_UF_INT		(1 << 25)
 #endif
@@ -107,7 +108,7 @@
 #define  WIN_A_ACT_REQ		(1 << 1)
 #define  WIN_B_ACT_REQ		(1 << 2)
 #define  WIN_C_ACT_REQ		(1 << 3)
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_ACT_REQ		(1 << 4)
 #define  WIN_H_ACT_REQ		(1 << 5)
 #endif
@@ -115,7 +116,7 @@
 #define  WIN_A_UPDATE		(1 << 9)
 #define  WIN_B_UPDATE		(1 << 10)
 #define  WIN_C_UPDATE		(1 << 11)
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_UPDATE		(1 << 12)
 #define  WIN_H_UPDATE		(1 << 13)
 #endif
@@ -644,7 +645,7 @@
 #define DC_WINBUF_AD_UFLOW_STATUS		0xbca
 #define DC_WINBUF_BD_UFLOW_STATUS		0xdca
 #define DC_WINBUF_CD_UFLOW_STATUS		0xfca
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define DC_WINBUF_DD_UFLOW_STATUS		0x0ca
 #define DC_WINBUF_HD_UFLOW_STATUS		0x1ca
 #define DC_WINBUF_TD_UFLOW_STATUS		0x14a

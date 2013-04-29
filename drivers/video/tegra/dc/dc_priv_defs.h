@@ -49,7 +49,7 @@ static inline u32 ALL_UF_INT(void)
 {
 	if (tegra_platform_is_fpga())
 		return 0;
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT | HC_UF_INT |
 		WIN_D_UF_INT | WIN_T_UF_INT;
 #else
@@ -180,7 +180,7 @@ struct tegra_dc {
 		u64			underflows_a;
 		u64			underflows_b;
 		u64			underflows_c;
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		u64			underflows_d;
 		u64			underflows_h;
 		u64			underflows_t;

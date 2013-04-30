@@ -22,6 +22,7 @@
 struct tegra_mipi_cal {
 	struct tegra_dc *dc;
 	struct resource *res;
+	struct resource *base_res;
 	struct clk *clk;
 	struct clk *fixed_clk;
 	void __iomem *base;

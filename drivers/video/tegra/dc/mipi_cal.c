@@ -22,6 +22,7 @@
 #include "mipi_cal.h"
 #include "mipi_cal_regs.h"
 #include "dsi.h"
+#include <linux/of_address.h>
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -137,11 +138,18 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 {
 	struct tegra_mipi_cal *mipi_cal;
 	struct resource *res;
+	struct resource mipi_res;
+	struct resource *base_res;
 	struct clk *clk;
 	struct clk *fixed_clk;
 	void __iomem *base;
 	int err = 0;
-
+#ifdef CONFIG_USE_OF
+	struct device_node *np_mipi_cal =
+		of_find_node_by_path("/mipical");
+#else
+	struct device_node *np_mipi_cal = NULL;
+#endif
 	mipi_cal = devm_kzalloc(&dc->ndev->dev, sizeof(*mipi_cal), GFP_KERNEL);
 	if (!mipi_cal) {
 		dev_err(&dc->ndev->dev, "mipi_cal: memory allocation fail\n");
@@ -149,15 +157,24 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		goto fail;
 	}
 
-	res = platform_get_resource_byname(dc->ndev,
+	if (np_mipi_cal && of_device_is_available(np_mipi_cal)) {
+			of_address_to_resource(
+				np_mipi_cal, 0, &mipi_res);
+			res = &mipi_res;
+	} else {
+		res = platform_get_resource_byname(dc->ndev,
 				IORESOURCE_MEM, "mipi_cal");
+	}
 	if (!res) {
 		dev_err(&dc->ndev->dev, "mipi_cal: no entry in resource\n");
 		err = -ENOENT;
 		goto fail_free_mipi_cal;
 	}
 
-	base = devm_request_and_ioremap(&dc->ndev->dev, res);
+	base_res = devm_request_mem_region(&dc->ndev->dev, res->start,
+		resource_size(res), dc->ndev->name);
+	base = devm_ioremap(&dc->ndev->dev, res->start,
+			resource_size(res));
 	if (!base) {
 		dev_err(&dc->ndev->dev, "mipi_cal: bus to virtual mapping failed\n");
 		err = -EBUSY;
@@ -181,6 +198,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	mipi_cal->dc = dc;
 	mipi_cal->res = res;
 	mipi_cal->base = base;
+	mipi_cal->base_res = base_res;
 	mipi_cal->clk = clk;
 	mipi_cal->fixed_clk = fixed_clk;
 	dbg_dsi_mipi_dir_create(mipi_cal);
@@ -188,9 +206,11 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 
 fail_free_map:
 	devm_iounmap(&dc->ndev->dev, base);
-	devm_release_mem_region(&dc->ndev->dev, res->start, resource_size(res));
+	devm_release_mem_region(&dc->ndev->dev,
+		res->start, resource_size(res));
 fail_free_res:
-	release_resource(res);
+	if (!np_mipi_cal || !of_device_is_available(np_mipi_cal))
+		release_resource(res);
 fail_free_mipi_cal:
 	devm_kfree(&dc->ndev->dev, mipi_cal);
 fail:
@@ -200,6 +220,12 @@ EXPORT_SYMBOL(tegra_mipi_cal_init_sw);
 
 void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 {
+#ifdef CONFIG_USE_OF
+	struct device_node *np_mipi_cal =
+		of_find_node_by_path("/mipical");
+#else
+	struct device_node *np_mipi_cal = NULL;
+#endif
 	struct tegra_mipi_cal *mipi_cal =
 		((struct tegra_dc_dsi_data *)
 		(tegra_dc_get_outdata(dc)))->mipi_cal;
@@ -210,9 +236,12 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 
 	clk_put(mipi_cal->clk);
 	devm_iounmap(&dc->ndev->dev, mipi_cal->base);
-	devm_release_mem_region(&dc->ndev->dev, mipi_cal->res->start,
-					resource_size(mipi_cal->res));
-	release_resource(mipi_cal->res);
+	devm_release_mem_region(&dc->ndev->dev,
+		mipi_cal->res->start,
+		resource_size(mipi_cal->res));
+
+	if (!np_mipi_cal || !of_device_is_available(np_mipi_cal))
+		release_resource(mipi_cal->res);
 
 	mutex_unlock(&mipi_cal->lock);
 

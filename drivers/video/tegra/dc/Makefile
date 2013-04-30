@@ -1,6 +1,7 @@
 EXTRA_CFLAGS += -Idrivers/video/tegra/host
 obj-y += dc.o bandwidth.o mode.o clock.o lut.o csc.o window.o
 obj-y += rgb.o
+obj-y += of_dc.o
 obj-y += hdmi.o
 obj-y += hdmi_state_machine.o
 obj-y += dsi2lvds.o

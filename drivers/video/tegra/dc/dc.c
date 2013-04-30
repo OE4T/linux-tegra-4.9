@@ -43,6 +43,8 @@
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
@@ -2647,13 +2649,18 @@ static int tegra_dc_probe(struct platform_device *ndev)
 {
 	struct tegra_dc *dc;
 	struct tegra_dc_mode *mode;
+	struct tegra_dc_platform_data *dt_pdata = NULL;
+	struct tegra_dc_platform_data *temp_pdata;
+	struct of_tegra_dc_data *of_pdata = NULL;
 	struct clk *clk;
 #ifndef CONFIG_TEGRA_ISOMGR
 	struct clk *emc_clk;
 #else
 	int isomgr_client_id = -1;
 #endif
-	struct resource	*res;
+	struct device_node *np = ndev->dev.of_node;
+	struct resource *res;
+	struct resource dt_res;
 	struct resource *base_res;
 	struct resource *fb_mem = NULL;
 	int ret = 0;
@@ -2675,18 +2682,44 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		return -ENOMEM;
 	}
 
-	irq = platform_get_irq_byname(ndev, "irq");
-	if (irq <= 0) {
-		dev_err(&ndev->dev, "no irq\n");
-		ret = -ENOENT;
-		goto err_free;
-	}
+	if (np) {
+		dt_pdata = of_dc_parse_platform_data(ndev);
+		if (dt_pdata == NULL)
+			goto err_free;
 
-	res = platform_get_resource_byname(ndev, IORESOURCE_MEM, "regs");
-	if (!res) {
-		dev_err(&ndev->dev, "no mem resource\n");
-		ret = -ENOENT;
-		goto err_free;
+#ifdef CONFIG_OF
+		irq = of_irq_to_resource(np, 0, NULL);
+		if (!irq)
+			goto err_free;
+#endif
+
+		ret = of_address_to_resource(np, 0, &dt_res);
+		if (ret)
+			goto err_free;
+
+		if (dt_res.start == TEGRA_DISPLAY_BASE)
+			ndev->id = 0;
+		else if (dt_res.start == TEGRA_DISPLAY2_BASE)
+			ndev->id = 1;
+		else
+			goto err_free;
+
+		res = &dt_res;
+	} else {
+		irq = platform_get_irq_byname(ndev, "irq");
+		if (irq <= 0) {
+			dev_err(&ndev->dev, "no irq\n");
+			ret = -ENOENT;
+			goto err_free;
+		}
+
+		res = platform_get_resource_byname(ndev,
+			IORESOURCE_MEM, "regs");
+		if (!res) {
+			dev_err(&ndev->dev, "no mem resource\n");
+			ret = -ENOENT;
+			goto err_free;
+		}
 	}
 
 	base_res = request_mem_region(res->start, resource_size(res),
@@ -2745,8 +2778,24 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			(u64)res->start);
 	}
 
-
-	fb_mem = platform_get_resource_byname(ndev, IORESOURCE_MEM, "fbmem");
+	if (np) {
+		temp_pdata = (struct tegra_dc_platform_data *)
+			ndev->dev.platform_data;
+		of_pdata = &(temp_pdata->of_data);
+		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
+		if (fb_mem == NULL) {
+			ret = -ENOMEM;
+			goto err_iounmap_reg;
+		}
+		fb_mem->name = "fbmem";
+		fb_mem->flags = IORESOURCE_MEM;
+		fb_mem->start = (resource_size_t) of_pdata->fb_start;
+		fb_mem->end = fb_mem->start +
+			(resource_size_t)of_pdata->fb_size - 1;
+	} else {
+		fb_mem = platform_get_resource_byname(ndev,
+			IORESOURCE_MEM, "fbmem");
+	}
 
 	clk = clk_get(&ndev->dev, NULL);
 	if (IS_ERR_OR_NULL(clk)) {
@@ -2765,7 +2814,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->base = base;
 	dc->irq = irq;
 	dc->ndev = ndev;
-	dc->pdata = ndev->dev.platform_data;
+
+	if (!np)
+		dc->pdata = ndev->dev.platform_data;
+	else
+		dc->pdata = dt_pdata;
 
 	dc->bw_kbps = 0;
 
@@ -2977,8 +3030,12 @@ err_put_clk:
 	clk_put(clk);
 err_iounmap_reg:
 	iounmap(base);
-	if (fb_mem)
-		release_resource(fb_mem);
+	if (fb_mem) {
+		if (!np)
+			release_resource(fb_mem);
+		else
+			kfree(fb_mem);
+	}
 err_release_resource_reg:
 	release_resource(base_res);
 err_free:
@@ -2990,14 +3047,19 @@ err_free:
 static int tegra_dc_remove(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	struct device_node *np = ndev->dev.of_node;
 
 	tegra_dc_remove_sysfs(&dc->ndev->dev);
 	tegra_dc_remove_debugfs(dc);
 
 	if (dc->fb) {
 		tegra_fb_unregister(dc->fb);
-		if (dc->fb_mem)
-			release_resource(dc->fb_mem);
+		if (dc->fb_mem) {
+			if (!np)
+				release_resource(dc->fb_mem);
+			else
+				kfree(dc->fb_mem);
+		}
 	}
 
 	tegra_dc_ext_disable(dc->ext);
@@ -3139,10 +3201,23 @@ int suspend;
 
 module_param_call(suspend, suspend_set, suspend_get, &suspend, 0644);
 
+
+#ifdef CONFIG_OF
+static struct of_device_id tegra_display_of_match[] = {
+	{.compatible = "nvidia,tegra114-dc", },
+	{.compatible = "nvidia,tegra124-dc", },
+	{ },
+};
+#endif
+
 struct platform_driver tegra_dc_driver = {
 	.driver = {
 		.name = "tegradc",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table =
+			of_match_ptr(tegra_display_of_match),
+#endif
 	},
 	.probe = tegra_dc_probe,
 	.remove = tegra_dc_remove,

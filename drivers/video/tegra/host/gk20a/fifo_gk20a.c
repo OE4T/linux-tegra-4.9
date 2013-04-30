@@ -1051,12 +1051,28 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 				struct fifo_engine_info_gk20a *eng_info)
 {
-	u32 enable = gk20a_readl(g, fifo_sched_disable_r());
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 elpg_off;
+	u32 enable;
+
+	nvhost_dbg_fn("");
+
+	/* disable elpg if failed to acquire pmu mutex */
+	elpg_off = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	if (elpg_off)
+		gk20a_pmu_disable_elpg(g);
+
+	enable = gk20a_readl(g, fifo_sched_disable_r());
 	enable &= ~(fifo_sched_disable_true_v() >> eng_info->runlist_id);
 	gk20a_writel(g, fifo_sched_disable_r(), enable);
 
-	/* no buffered-mode ? */
+	/* re-enable elpg or release pmu mutex */
+	if (elpg_off)
+		gk20a_pmu_enable_elpg(g);
+	else
+		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
+	nvhost_dbg_fn("done");
 	return 0;
 }
 
@@ -1066,7 +1082,11 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 {
 	u32 gr_stat, pbdma_stat, chan_stat, eng_stat, ctx_stat;
 	u32 pbdma_chid = ~0, engine_chid = ~0, disable;
-	u32 err;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 elpg_off;
+	u32 err = 0;
+
+	nvhost_dbg_fn("");
 
 	gr_stat =
 		gk20a_readl(g, fifo_engine_status_r(eng_info->engine_id));
@@ -1074,14 +1094,17 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	    fifo_engine_status_engine_busy_v() && !wait_for_idle)
 		return -EBUSY;
 
+	/* disable elpg if failed to acquire pmu mutex */
+	elpg_off = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	if (elpg_off)
+		gk20a_pmu_disable_elpg(g);
+
 	disable = gk20a_readl(g, fifo_sched_disable_r());
 	disable = set_field(disable,
 			fifo_sched_disable_runlist_m(eng_info->runlist_id),
 			fifo_sched_disable_runlist_f(fifo_sched_disable_true_v(),
 				eng_info->runlist_id));
 	gk20a_writel(g, fifo_sched_disable_r(), disable);
-
-	/* no buffered-mode ? */
 
 	/* chid from pbdma status */
 	pbdma_stat = gk20a_readl(g, fifo_pbdma_status_r(eng_info->pbdma_id));
@@ -1117,10 +1140,19 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 			goto clean_up;
 	}
 
-	return 0;
-
 clean_up:
-	gk20a_fifo_enable_engine_activity(g, eng_info);
+	/* re-enable elpg or release pmu mutex */
+	if (elpg_off)
+		gk20a_pmu_enable_elpg(g);
+	else
+		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	if (err) {
+		nvhost_dbg_fn("failed");
+		gk20a_fifo_enable_engine_activity(g, eng_info);
+	} else {
+		nvhost_dbg_fn("done");
+	}
 	return err;
 }
 

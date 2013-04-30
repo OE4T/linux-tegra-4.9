@@ -1226,6 +1226,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 				mem_rd32(gold_ptr, i);
 	}
 
+	gr_gk20a_commit_inst(c, ch_ctx->gr_ctx.gpu_va);
+
 	gr->ctx_vars.golden_image_initialized = true;
 
 	gk20a_writel(g, gr_fecs_current_ctx_r(),
@@ -2611,8 +2613,7 @@ int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	zcull_ctx->gpu_va = zcull_va;
 
 	/* TBD: don't disable channel in sw method processing */
-	return gr_gk20a_elpg_protected_call(g,
-		gr_gk20a_ctx_zcull_setup(g, c, true));
+	return gr_gk20a_ctx_zcull_setup(g, c, true);
 }
 
 int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,

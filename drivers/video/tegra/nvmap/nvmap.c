@@ -725,7 +725,7 @@ void *nvmap_kmap(struct nvmap_handle_ref *ref, unsigned int pagenum)
 
 	set_pte_at(&init_mm, kaddr, *pte,
 				pfn_pte(__phys_to_pfn(paddr), prot));
-	flush_tlb_kernel_page(kaddr);
+	nvmap_flush_tlb_kernel_page(kaddr);
 	return (void *)kaddr;
 out:
 	nvmap_handle_put(ref->handle);
@@ -820,7 +820,7 @@ void *nvmap_mmap(struct nvmap_handle_ref *ref)
 		if (!pte)
 			break;
 		set_pte_at(&init_mm, addr, pte, pfn_pte(pfn, prot));
-		flush_tlb_kernel_page(addr);
+		nvmap_flush_tlb_kernel_page(addr);
 	}
 
 	if (offs != adj_size) {

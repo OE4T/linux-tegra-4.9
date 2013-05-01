@@ -648,7 +648,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 					set_pte_at(&init_mm, kaddr, *pte,
 						   pfn_pte(__phys_to_pfn(paddr),
 							   prot));
-					flush_tlb_kernel_page(kaddr);
+					nvmap_flush_tlb_kernel_page(kaddr);
 					memset((char *)kaddr, 0, PAGE_SIZE);
 				}
 			}

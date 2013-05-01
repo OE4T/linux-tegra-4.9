@@ -682,7 +682,7 @@ static void heap_page_cache_maint(
 			BUG_ON(!kaddr);
 			set_pte_at(&init_mm, kaddr, *pte,
 				pfn_pte(__phys_to_pfn(paddr), prot));
-			flush_tlb_kernel_page(kaddr);
+			nvmap_flush_tlb_kernel_page(kaddr);
 			inner_cache_maint(op, vaddr, size);
 		}
 
@@ -900,7 +900,7 @@ static void cache_maint_work_funct(struct cache_maint_op *cache_work)
 
 		set_pte_at(&init_mm, kaddr, *pte,
 			   pfn_pte(__phys_to_pfn(loop), prot));
-		flush_tlb_kernel_page(kaddr);
+		nvmap_flush_tlb_kernel_page(kaddr);
 
 		inner_cache_maint(op, base, next - loop);
 		loop = next;
@@ -1170,7 +1170,7 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 
 		set_pte_at(&init_mm, kaddr, pte,
 			   pfn_pte(__phys_to_pfn(phys), prot));
-		flush_tlb_kernel_page(kaddr);
+		nvmap_flush_tlb_kernel_page(kaddr);
 
 		src = (void *)kaddr + (phys & ~PAGE_MASK);
 		phys = PAGE_SIZE - (phys & ~PAGE_MASK);

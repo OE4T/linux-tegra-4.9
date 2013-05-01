@@ -34,6 +34,7 @@
 #include <linux/nvmap.h>
 #include "nvmap_heap.h"
 #include <linux/workqueue.h>
+#include <asm/tlbflush.h>
 
 struct nvmap_device;
 struct page;
@@ -319,5 +320,14 @@ ulong unmarshal_user_handle(struct nvmap_handle *handle);
 struct nvmap_handle *marshal_kernel_handle(ulong handle);
 ulong unmarshal_user_id(ulong id);
 #endif
+
+static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
+{
+#ifdef CONFIG_ARM_ERRATA_798181
+	flush_tlb_kernel_page_skip_errata_798181(kaddr);
+#else
+	flush_tlb_kernel_page(kaddr);
+#endif
+}
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

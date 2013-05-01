@@ -338,7 +338,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 
 		next = min(next, end);
 		set_pte_at(&init_mm, kaddr, *pte, pfn_pte(pfn, pgprot_kernel));
-		flush_tlb_kernel_page(kaddr);
+		nvmap_flush_tlb_kernel_page(kaddr);
 		__cpuc_flush_dcache_area(base, next - phys);
 		phys = next;
 	}

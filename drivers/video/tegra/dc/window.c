@@ -184,11 +184,11 @@ static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 				struct tegra_dc_blend *blend)
 {
-	int i;
+	int idx;
+	unsigned long mask = dc->valid_windows;
 
 	tegra_dc_io_start(dc);
-	for (i = 0; i < dc->feature->num_entries; i++) {
-		u32 idx = dc->feature->entries[i].window_index;
+	for_each_set_bit(idx, &mask, DC_N_WINDOWS) {
 		if (!tegra_dc_feature_is_gen2_blender(dc, idx))
 			continue;
 

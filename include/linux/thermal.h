@@ -292,6 +292,7 @@ struct thermal_bind_params {
 /* Structure to define Thermal Zone parameters */
 struct thermal_zone_params {
 	char governor_name[THERMAL_NAME_LENGTH];
+	void *governor_params;
 
 	/*
 	 * a boolean to indicate if the thermal to hwmon sysfs interface

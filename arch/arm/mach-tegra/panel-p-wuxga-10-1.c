@@ -213,6 +213,7 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 		pr_err("dsi regulator get failed\n");
 		goto fail;
 	}
+
 	err = dalmore_dsi_gpio_get();
 	if (err < 0) {
 		pr_err("dsi gpio request failed\n");

@@ -1119,67 +1119,42 @@ void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 EXPORT_SYMBOL(tegra_dc_get_cmu);
 
-int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
-	u32 val;
-
-	if (dc->pdata->cmu_enable) {
-		dc->pdata->flags |= TEGRA_DC_FLAG_CMU_ENABLE;
-	} else {
-		dc->pdata->flags &= ~TEGRA_DC_FLAG_CMU_ENABLE;
-		return 0;
-	}
-
-#ifdef CONFIG_TEGRA_DC_CMU
 	if (cmu != &dc->cmu) {
 		tegra_dc_cache_cmu(&dc->cmu, cmu);
-
-		/* Disable CMU */
-		val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
-		if (val & CMU_ENABLE) {
-			val &= ~CMU_ENABLE;
-			tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
-			val = GENERAL_UPDATE;
-			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
-			val = GENERAL_ACT_REQ;
-			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
-			/*TODO: Sync up with vsync */
-			mdelay(20);
-		}
-
-		tegra_dc_set_cmu(dc, &dc->cmu);
+		dc->cmu_cached = true;
 	}
-#endif
+
+	/* Schedule the actual update to the frame end. */
+	dc->cmu_dirty = true;
 
 	return 0;
 }
 
-int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+/* Call this only at the frame end. */
+int _tegra_dc_update_cmu(struct tegra_dc *dc)
 {
-	int ret;
+	dc->cmu_dirty = false;
 
-	mutex_lock(&dc->lock);
-	if (!dc->enabled) {
-		mutex_unlock(&dc->lock);
-		return 0;
-	}
+	if (dc->pdata->cmu_enable)
+		dc->pdata->flags |= TEGRA_DC_FLAG_CMU_ENABLE;
+	else
+		dc->pdata->flags &= ~TEGRA_DC_FLAG_CMU_ENABLE;
 
-	tegra_dc_get(dc);
-
-	ret = _tegra_dc_update_cmu(dc, cmu);
+	tegra_dc_set_cmu(dc, &dc->cmu);
 	tegra_dc_set_color_control(dc);
 
-	tegra_dc_put(dc);
-	mutex_unlock(&dc->lock);
-
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
 	dc->pdata->cmu_enable = cmu_enable;
-	if (dc->pdata->cmu) {
+	if (dc->cmu_cached) {
+		tegra_dc_update_cmu(dc, &dc->cmu);
+	} else if (dc->pdata->cmu) {
 		tegra_dc_update_cmu(dc, dc->pdata->cmu);
 	} else {
 		if (dc->out->type == TEGRA_DC_OUT_HDMI)
@@ -1928,9 +1903,15 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		tegra_dc_continuous_irq(dc, status);
 
 	/* update video mode if it has changed since the last frame */
-	if (status & (FRAME_END_INT | V_BLANK_INT))
+	if (status & (FRAME_END_INT | V_BLANK_INT)) {
 		if (tegra_dc_update_mode(dc))
 			need_disable = 1; /* force display off on error */
+
+#ifdef CONFIG_TEGRA_DC_CMU
+		if (dc->cmu_dirty)
+			_tegra_dc_update_cmu(dc);
+#endif
+	}
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
@@ -2120,13 +2101,15 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	if (dc->pdata->cmu) {
-		_tegra_dc_update_cmu(dc, dc->pdata->cmu);
+	if (dc->cmu_cached) {
+		tegra_dc_update_cmu(dc, &dc->cmu);
+	} else if (dc->pdata->cmu) {
+		tegra_dc_update_cmu(dc, dc->pdata->cmu);
 	} else {
 		if (dc->out->type == TEGRA_DC_OUT_HDMI)
-			_tegra_dc_update_cmu(dc, &default_limited_cmu);
+			tegra_dc_update_cmu(dc, &default_limited_cmu);
 		else
-			_tegra_dc_update_cmu(dc, &default_cmu);
+			tegra_dc_update_cmu(dc, &default_cmu);
 	}
 #endif
 	tegra_dc_set_color_control(dc);

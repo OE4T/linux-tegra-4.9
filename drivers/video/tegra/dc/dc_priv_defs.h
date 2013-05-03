@@ -153,6 +153,8 @@ struct tegra_dc {
 	int				n_windows;
 #ifdef CONFIG_TEGRA_DC_CMU
 	struct tegra_dc_cmu		cmu;
+	bool				cmu_cached;
+	bool				cmu_dirty;
 #endif
 	wait_queue_head_t		wq;
 	wait_queue_head_t		timestamp_wq;

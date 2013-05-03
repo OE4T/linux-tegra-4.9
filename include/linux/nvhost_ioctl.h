@@ -196,6 +196,8 @@ struct nvhost_wait_args {
 			/* handle and offset for notifier memory */
 			__u32 nvmap_handle;
 			__u32 offset;
+			__u32 padding1;
+			__u32 padding2;
 		} notifier;
 		struct {
 			/* handle and offset for semaphore memory */
@@ -203,6 +205,7 @@ struct nvhost_wait_args {
 			__u32 offset;
 			/* semaphore payload to wait for */
 			__u32 payload;
+			__u32 padding;
 		} semaphore;
 	} condition; /* determined by type field */
 };

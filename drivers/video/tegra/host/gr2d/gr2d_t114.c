@@ -25,7 +25,8 @@
 
 #include "gr2d_common.c"
 
-void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
+int nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
 {
 	gr2d_reset(dev);
+	return 0;
 }

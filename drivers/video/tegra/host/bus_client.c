@@ -737,7 +737,13 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			fences++;
 		}
 
-	args->fence = job->sp[job->hwctx_syncpt_idx].fence;
+	/* Deliver the fence using the old mechanism _only_ if a single
+	 * syncpoint is used. */
+
+	if (num_syncpt_incrs == 1)
+		args->fence = job->sp[job->hwctx_syncpt_idx].fence;
+	else
+		args->fence = 0;
 
 	nvhost_job_put(job);
 

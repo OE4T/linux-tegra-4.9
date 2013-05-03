@@ -19,6 +19,7 @@
 #include <linux/kobject.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
+#include <linux/pid_thermal_gov.h>
 
 #include "thermal_core.h"
 
@@ -326,6 +327,7 @@ static struct kobj_type pid_thermal_gov_ktype = {
 static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 {
 	struct pid_thermal_governor *gov;
+	struct pid_thermal_gov_params *params;
 	int ret;
 
 	gov = kzalloc(sizeof(struct pid_thermal_governor), GFP_KERNEL);
@@ -344,12 +346,23 @@ static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 		return ret;
 	}
 
-	gov->max_err_temp = MAX_ERR_TEMP_DEFAULT;
-	gov->max_err_gain = MAX_ERR_GAIN_DEFAULT;
-	gov->gain_p = GAIN_P_DEFAULT;
-	gov->gain_d = GAIN_D_DEFAULT;
-	gov->up_compensation = UP_COMPENSATION_DEFAULT;
-	gov->down_compensation = DOWN_COMPENSATION_DEFAULT;
+	if (tz->tzp->governor_params) {
+		params = (struct pid_thermal_gov_params *)
+					tz->tzp->governor_params;
+		gov->max_err_temp = params->max_err_temp;
+		gov->max_err_gain = params->max_err_gain;
+		gov->gain_p = params->gain_p;
+		gov->gain_d = params->gain_d;
+		gov->up_compensation = params->up_compensation;
+		gov->down_compensation = params->down_compensation;
+	} else {
+		gov->max_err_temp = MAX_ERR_TEMP_DEFAULT;
+		gov->max_err_gain = MAX_ERR_GAIN_DEFAULT;
+		gov->gain_p = GAIN_P_DEFAULT;
+		gov->gain_d = GAIN_D_DEFAULT;
+		gov->up_compensation = UP_COMPENSATION_DEFAULT;
+		gov->down_compensation = DOWN_COMPENSATION_DEFAULT;
+	}
 	tz->governor_data = gov;
 
 	return 0;

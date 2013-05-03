@@ -1463,11 +1463,11 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_value_busy_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
 
-	/* use counter #7 for total cycles */
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(7));
+	/* use counter #6 for total cycles */
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(6));
 	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
 			pwr_pmu_idle_ctrl_value_always_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(7), data);
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
 
 	sample_buffer = 0;
 	err = pmu->dmem.alloc(&pmu->dmem, &sample_buffer, 2 * sizeof(u16));
@@ -1489,7 +1489,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	   TBD: = 15 */
 	cmd.cmd.perfmon.init.to_decrease_count = 3;
 	/* index of base counter, aka. always ticking counter */
-	cmd.cmd.perfmon.init.base_counter_id = 7;
+	cmd.cmd.perfmon.init.base_counter_id = 6;
 	/* microseconds interval between pmu polls perf counters
 	   TBD: = 1000 * (1000 * (vblank=)10 + 30) / 60 = 167000 */
 	cmd.cmd.perfmon.init.sample_period_us = 100;

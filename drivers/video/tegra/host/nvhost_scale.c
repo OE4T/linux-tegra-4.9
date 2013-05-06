@@ -34,6 +34,23 @@
 #include "nvhost_scale.h"
 #include "host1x/host1x_actmon.h"
 
+static ssize_t nvhost_scale_load_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+	u32 busy_time;
+	ssize_t res;
+
+	actmon_op().read_avg_norm(profile->actmon, &busy_time);
+	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
+
+	return res;
+}
+
+static DEVICE_ATTR(load, S_IRUGO, nvhost_scale_load_show, NULL);
+
 /*
  * nvhost_scale_target(dev, *freq, flags)
  *
@@ -225,6 +242,11 @@ void nvhost_scale_init(struct platform_device *pdev)
 
 	/* Initialize actmon */
 	if (pdata->actmon_enabled) {
+
+		if (device_create_file(&pdev->dev,
+		    &dev_attr_load))
+			goto err_create_sysfs_entry;
+
 		profile->actmon = kzalloc(sizeof(struct host1x_actmon),
 					  GFP_KERNEL);
 		if (!profile->actmon)
@@ -253,6 +275,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 	return;
 
 err_allocate_actmon:
+	device_remove_file(&pdev->dev, &dev_attr_load);
+err_create_sysfs_entry:
 err_fetch_clocks:
 	kfree(pdata->power_profile);
 	pdata->power_profile = NULL;
@@ -274,6 +298,9 @@ void nvhost_scale_deinit(struct platform_device *pdev)
 
 	if (pdata->power_manager)
 		devfreq_remove_device(pdata->power_manager);
+
+	if (pdata->actmon_enabled)
+		device_remove_file(&pdev->dev, &dev_attr_load);
 
 	kfree(profile->actmon);
 	kfree(profile);

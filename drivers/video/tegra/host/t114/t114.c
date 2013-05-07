@@ -213,6 +213,12 @@ static struct resource vi_resources[] = {
 		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
 		.flags = IORESOURCE_MEM,
 	},
+	{
+		.name = "irq",
+		.start = INT_VI_GENERAL,
+		.end = INT_VI_GENERAL,
+		.flags = IORESOURCE_IRQ,
+	},
 };
 
 struct nvhost_device_data t11_vi_info = {

@@ -43,7 +43,7 @@ static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 
 static int alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,
 			     struct priv_cmd_entry **entry);
-static void free_priv_cmdbuf(struct priv_cmd_queue *q,
+static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e);
 static void recycle_priv_cmdbuf(struct channel_gk20a *c);
 
@@ -644,7 +644,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	head = &q->head;
 	list_for_each_safe(pos, tmp, head) {
 		e = container_of(pos, struct priv_cmd_entry, list);
-		free_priv_cmdbuf(q, e);
+		free_priv_cmdbuf(c, e);
 	}
 
 	/* free free list */
@@ -652,7 +652,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	list_for_each_safe(pos, tmp, head) {
 		e = container_of(pos, struct priv_cmd_entry, list);
 		e->pre_alloc = false;
-		free_priv_cmdbuf(q, e);
+		free_priv_cmdbuf(c, e);
 	}
 
 	memset(q, 0, sizeof(struct priv_cmd_queue));
@@ -743,9 +743,11 @@ TRY_AGAIN:
 
 /* Don't call this to free an explict cmd entry.
  * It doesn't update priv_cmd_queue get/put */
-static void free_priv_cmdbuf(struct priv_cmd_queue *q,
+static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
+	struct priv_cmd_queue *q = &c->priv_cmd_q;
+
 	if (!e)
 		return;
 
@@ -805,7 +807,7 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 	head = pos->prev;
 	list_for_each_safe(pos, tmp, head) {
 		e = container_of(pos, struct priv_cmd_entry, list);
-		free_priv_cmdbuf(q, e);
+		free_priv_cmdbuf(c, e);
 	}
 
 	nvhost_dbg_fn("done");
@@ -1083,16 +1085,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 */
 	wfi_cmd = !!(flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET);
 
-	/* Invalidate tlb if it's dirty...                                   */
-	/* TBD: this should be done in the cmd stream, not with PRIs.        */
-	/* We don't know what context is currently running...                */
-	/* Note also: there can be more than one context associated with the */
-	/* address space (vm).   */
-	if (c->vm->tlb_dirty) {
-		c->vm->tlb_inval(c->vm);
-		c->vm->tlb_dirty = false;
-	}
-
+	/* optionally insert syncpt wait in the beginning of gpfifo submission
+	   when user requested and the wait hasn't expired.
+	*/
 	if ((flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) &&
 	    !nvhost_syncpt_is_expired(sp, fence->syncpt_id, fence->value)) {
 		alloc_priv_cmdbuf(c, 4, &wait_cmd);
@@ -1195,6 +1190,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		incr_cmd->gp_put = c->gpfifo.put;
 	}
 
+	/* Invalidate tlb if it's dirty...                                   */
+	/* TBD: this should be done in the cmd stream, not with PRIs.        */
+	/* We don't know what context is currently running...                */
+	/* Note also: there can be more than one context associated with the */
+	/* address space (vm).   */
 	if (c->vm->tlb_dirty) {
 		/* Note this is coming *before* the buffer is submitted.   */
 		/* TBD: perform this "in-band" instead of with pri writes. */
@@ -1222,6 +1222,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	free_priv_cmdbuf(c, wait_cmd);
+	free_priv_cmdbuf(c, incr_cmd);
 	return err;
 }
 

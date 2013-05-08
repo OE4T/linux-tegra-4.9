@@ -1133,8 +1133,8 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	int ret;
 
 	u32 inst_base_ptr =
-		u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl))
-		>> ram_in_base_shift_v();
+		u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+		>> ram_in_base_shift_v());
 
 	nvhost_dbg_fn("");
 
@@ -1304,8 +1304,8 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
-			u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl))
-			>> ram_in_base_shift_v();
+			u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+			>> ram_in_base_shift_v());
 
 		ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0,
 				gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
@@ -4070,7 +4070,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	for (chid = 0; chid < f->num_channels; chid++)
 		if (f->channel[chid].in_use &&
 		    sg_phys(f->channel[chid].inst_block.mem.sgt->sgl) ==
-		    curr_ctx << ram_in_base_shift_v())
+		    gr_fecs_current_ctx_ptr_v(curr_ctx) << ram_in_base_shift_v())
 			break;
 
 	if (chid >= f->num_channels) {

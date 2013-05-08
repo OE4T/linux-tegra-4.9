@@ -1919,7 +1919,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(sg_phys(vm->pdes.sgt->sgl)) >> 12;
+	u32 addr_lo = u64_lo32(sg_phys(vm->pdes.sgt->sgl) >> 12);
 	u32 data;
 	s32 retry = 200;
 

@@ -5,3 +5,4 @@ obj-y += camera.o
 obj-y += camera_power.o
 obj-y += camera_emc.o
 obj-y += camera_clk.o
+obj-y += camera_irq.o

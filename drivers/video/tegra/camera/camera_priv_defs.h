@@ -73,6 +73,10 @@ struct clock {
 	bool on;
 };
 
+struct vi_stats {
+	atomic_t overflow;
+};
+
 struct tegra_camera {
 	struct device *dev;
 	struct miscdevice misc_dev;
@@ -82,6 +86,11 @@ struct tegra_camera {
 	struct mutex tegra_camera_lock;
 	atomic_t in_use;
 	int power_on;
+	int irq;
+	struct dentry *debugdir;
+	struct vi_stats vi_out0;
+	struct vi_stats vi_out1;
+	struct work_struct stats_work;
 #if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif

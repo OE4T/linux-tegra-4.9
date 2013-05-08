@@ -904,12 +904,8 @@ static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)
 
 	if (!hdmi->suspended) {
 		cancel_delayed_work(&hdmi->work);
-		if (tegra_dc_hdmi_hpd(dc))
-			queue_delayed_work(system_nrt_wq, &hdmi->work,
-					   msecs_to_jiffies(100));
-		else
-			queue_delayed_work(system_nrt_wq, &hdmi->work,
-					   msecs_to_jiffies(30));
+		queue_delayed_work(system_nrt_wq, &hdmi->work,
+				   msecs_to_jiffies(100));
 	}
 
 	rt_mutex_unlock(&hdmi->suspend_lock);

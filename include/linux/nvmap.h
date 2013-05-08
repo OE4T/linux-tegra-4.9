@@ -153,6 +153,12 @@ void nvmap_free_sg_table(struct nvmap_client *client,
 void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
 		void (*delete)(void *priv));
 void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref);
+/*
+ * Flush cache maintenance operations for the handle that have been deferred.
+ * Use this if you don't use nvmap_pin for mapping the buffer to IOVA.
+ */
+void nvmap_flush_deferred_cache(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref);
 
 struct nvmap_platform_carveout {
 	const char *name;

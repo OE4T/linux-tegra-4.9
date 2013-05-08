@@ -1065,3 +1065,23 @@ void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref)
 
 	return priv;
 }
+
+void nvmap_flush_deferred_cache(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref)
+{
+#if CONFIG_NVMAP_DEFERRED_CACHE_MAINT
+	struct nvmap_handle *h;
+
+	if (!ref || !ref->handle)
+		return;
+
+	h = nvmap_handle_get(ref->handle);
+	if (!h)
+		return;
+
+	if (nvmap_find_cache_maint_op(h->dev, h))
+		nvmap_cache_maint_ops_flush(h->dev, h);
+
+	nvmap_handle_put(ref->handle);
+#endif
+}

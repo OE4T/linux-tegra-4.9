@@ -594,6 +594,20 @@ static int dbg_hotplug_write(struct file *file, const char __user *addr,
 	if (ret < 0)
 		return ret;
 
+	if (dc->out->hotplug_state == 0 && new_state != 0) {
+		/* was 0, now -1 or 1.
+		 * we are overriding the hpd GPIO, so ignore the interrupt. */
+		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
+
+		disable_irq(gpio_irq);
+	} else if (dc->out->hotplug_state != 0 && new_state == 0) {
+		/* was -1 or 1, and now 0
+		 * restore the interrupt for hpd GPIO. */
+		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
+
+		enable_irq(gpio_irq);
+	}
+
 	dc->out->hotplug_state = new_state;
 
 	queue_delayed_work(system_nrt_wq, &hdmi->work,

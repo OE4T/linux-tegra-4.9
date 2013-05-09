@@ -294,7 +294,8 @@ int tegra_dc_ext_control_init(void)
 	return ret;
 }
 
-int tegra_dc_ext_process_bandwidth_renegotiate(int output)
+int tegra_dc_ext_process_bandwidth_renegotiate(int output,
+						struct tegra_dc_bw_data *bw)
 {
-	return tegra_dc_ext_queue_bandwidth_renegotiate(&g_control, output);
+	return tegra_dc_ext_queue_bandwidth_renegotiate(&g_control, output, bw);
 }

@@ -197,14 +197,27 @@ int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output)
 }
 
 int tegra_dc_ext_queue_bandwidth_renegotiate(
-	struct tegra_dc_ext_control *control, int output)
+		struct tegra_dc_ext_control *control, int output,
+		struct tegra_dc_bw_data *data)
 {
 	struct {
 		struct tegra_dc_ext_event event;
 		struct tegra_dc_ext_control_event_bandwidth bandwidth;
 	} __packed pack;
 
-	pack.event.type = TEGRA_DC_EXT_EVENT_BANDWIDTH;
+	if (data == NULL)
+		pack.event.type = TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC;
+	else {
+		if (data->avail_bw > data->resvd_bw)
+			pack.event.type = TEGRA_DC_EXT_EVENT_BANDWIDTH_INC;
+		else
+			pack.event.type = TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC;
+
+		pack.bandwidth.total_bw = data->total_bw;
+		pack.bandwidth.avail_bw = data->avail_bw;
+		pack.bandwidth.resvd_bw = data->resvd_bw;
+	}
+
 	pack.event.data_size = sizeof(pack.bandwidth);
 
 	pack.bandwidth.handle = output;

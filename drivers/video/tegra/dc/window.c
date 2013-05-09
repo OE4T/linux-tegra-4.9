@@ -826,7 +826,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		}
 	}
 
-	tegra_dc_set_dynamic_emc(windows, n);
+	tegra_dc_set_dynamic_emc(dc);
 
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 

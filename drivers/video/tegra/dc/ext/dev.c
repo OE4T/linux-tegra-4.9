@@ -225,6 +225,57 @@ fail:
 	return -EINVAL;
 }
 
+static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
+		       const struct tegra_dc_ext_flip_windowattr *flip_win)
+{
+	win->flags = TEGRA_WIN_FLAG_ENABLED;
+	if (flip_win->blend == TEGRA_DC_EXT_BLEND_PREMULT)
+		win->flags |= TEGRA_WIN_FLAG_BLEND_PREMULT;
+	else if (flip_win->blend == TEGRA_DC_EXT_BLEND_COVERAGE)
+		win->flags |= TEGRA_WIN_FLAG_BLEND_COVERAGE;
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_TILED)
+		win->flags |= TEGRA_WIN_FLAG_TILED;
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INVERT_H)
+		win->flags |= TEGRA_WIN_FLAG_INVERT_H;
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INVERT_V)
+		win->flags |= TEGRA_WIN_FLAG_INVERT_V;
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA)
+		win->global_alpha = flip_win->global_alpha;
+	else
+		win->global_alpha = 255;
+#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
+		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
+#endif
+#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR) {
+		win->flags |= TEGRA_WIN_FLAG_BLOCKLINEAR;
+		win->block_height_log2 = flip_win->block_height_log2;
+	}
+#endif
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
+		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
+#endif
+
+	win->fmt = flip_win->pixformat;
+	win->x.full = flip_win->x;
+	win->y.full = flip_win->y;
+	win->w.full = flip_win->w;
+	win->h.full = flip_win->h;
+	/* XXX verify that this doesn't go outside display's active region */
+	win->out_x = flip_win->out_x;
+	win->out_y = flip_win->out_y;
+	win->out_w = flip_win->out_w;
+	win->out_h = flip_win->out_h;
+	win->z = flip_win->z;
+
+	win->stride = flip_win->stride;
+	win->stride_uv = flip_win->stride_uv;
+}
+
+
+
 static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 			       struct tegra_dc_win *win,
 			       const struct tegra_dc_ext_flip_win *flip_win)
@@ -239,47 +290,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		return 0;
 	}
 
-	win->flags = TEGRA_WIN_FLAG_ENABLED;
-	if (flip_win->attr.blend == TEGRA_DC_EXT_BLEND_PREMULT)
-		win->flags |= TEGRA_WIN_FLAG_BLEND_PREMULT;
-	else if (flip_win->attr.blend == TEGRA_DC_EXT_BLEND_COVERAGE)
-		win->flags |= TEGRA_WIN_FLAG_BLEND_COVERAGE;
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_TILED)
-		win->flags |= TEGRA_WIN_FLAG_TILED;
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INVERT_H)
-		win->flags |= TEGRA_WIN_FLAG_INVERT_H;
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INVERT_V)
-		win->flags |= TEGRA_WIN_FLAG_INVERT_V;
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA)
-		win->global_alpha = flip_win->attr.global_alpha;
-	else
-		win->global_alpha = 255;
-#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
-		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
-#endif
-#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR) {
-		win->flags |= TEGRA_WIN_FLAG_BLOCKLINEAR;
-		win->block_height_log2 = flip_win->attr.block_height_log2;
-	}
-#endif
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
-	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
-		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
-#endif
+	tegra_dc_ext_set_windowattr_basic(win, &flip_win->attr);
 
-	win->fmt = flip_win->attr.pixformat;
-	win->x.full = flip_win->attr.x;
-	win->y.full = flip_win->attr.y;
-	win->w.full = flip_win->attr.w;
-	win->h.full = flip_win->attr.h;
-	/* XXX verify that this doesn't go outside display's active region */
-	win->out_x = flip_win->attr.out_x;
-	win->out_y = flip_win->attr.out_y;
-	win->out_w = flip_win->attr.out_w;
-	win->out_h = flip_win->attr.out_h;
-	win->z = flip_win->attr.z;
 	memcpy(ext_win->cur_handle, flip_win->handle,
 	       sizeof(ext_win->cur_handle));
 
@@ -294,8 +306,6 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		flip_win->phys_addr_v : flip_win->phys_addr;
 	win->phys_addr_v += flip_win->attr.offset_v;
 
-	win->stride = flip_win->attr.stride;
-	win->stride_uv = flip_win->attr.stride_uv;
 
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (ext->dc->mode.vmode == FB_VMODE_INTERLACED) {
@@ -612,6 +622,60 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
+static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_flip_windowattr *wins,
+				int win_num,
+				struct tegra_dc_ext_flip_win *flip_wins,
+				bool *has_timestamp)
+{
+	int i, ret;
+
+	for (i = 0; i < win_num; i++) {
+		struct tegra_dc_ext_flip_win *flip_win = &flip_wins[i];
+		int index = wins[i].index;
+
+		memcpy(&flip_win->attr, &wins[i], sizeof(flip_win->attr));
+		if (has_timestamp && timespec_to_ns(&flip_win->attr.timestamp))
+			*has_timestamp = true;
+
+		if (index < 0)
+			continue;
+
+		ret = tegra_dc_ext_pin_window(user, flip_win->attr.buff_id,
+					      &flip_win->handle[TEGRA_DC_Y],
+					      &flip_win->phys_addr);
+		if (ret)
+			return ret;
+
+		if (flip_win->attr.buff_id_u) {
+			ret = tegra_dc_ext_pin_window(user,
+					      flip_win->attr.buff_id_u,
+					      &flip_win->handle[TEGRA_DC_U],
+					      &flip_win->phys_addr_u);
+			if (ret)
+				return ret;
+		} else {
+			flip_win->handle[TEGRA_DC_U] = NULL;
+			flip_win->phys_addr_u = 0;
+		}
+
+		if (flip_win->attr.buff_id_v) {
+			ret = tegra_dc_ext_pin_window(user,
+					      flip_win->attr.buff_id_v,
+					      &flip_win->handle[TEGRA_DC_V],
+					      &flip_win->phys_addr_v);
+			if (ret)
+				return ret;
+		} else {
+			flip_win->handle[TEGRA_DC_V] = NULL;
+			flip_win->phys_addr_v = 0;
+		}
+	}
+
+	return 0;
+}
+
+
 static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 			     struct tegra_dc_ext_flip_windowattr *win,
 				 int win_num,
@@ -640,47 +704,10 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	data->act_window_num = win_num;
 
 	BUG_ON(win_num > DC_N_WINDOWS);
-	for (i = 0; i < win_num; i++) {
-		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
-		int index = win[i].index;
 
-		memcpy(&flip_win->attr, &win[i], sizeof(flip_win->attr));
-		if (timespec_to_ns(&flip_win->attr.timestamp))
-			has_timestamp = true;
-
-		if (index < 0)
-			continue;
-
-		ret = tegra_dc_ext_pin_window(user, flip_win->attr.buff_id,
-					      &flip_win->handle[TEGRA_DC_Y],
-					      &flip_win->phys_addr);
-		if (ret)
-			goto fail_pin;
-
-		if (flip_win->attr.buff_id_u) {
-			ret = tegra_dc_ext_pin_window(user,
-					      flip_win->attr.buff_id_u,
-					      &flip_win->handle[TEGRA_DC_U],
-					      &flip_win->phys_addr_u);
-			if (ret)
-				goto fail_pin;
-		} else {
-			flip_win->handle[TEGRA_DC_U] = NULL;
-			flip_win->phys_addr_u = 0;
-		}
-
-		if (flip_win->attr.buff_id_v) {
-			ret = tegra_dc_ext_pin_window(user,
-					      flip_win->attr.buff_id_v,
-					      &flip_win->handle[TEGRA_DC_V],
-					      &flip_win->phys_addr_v);
-			if (ret)
-				goto fail_pin;
-		} else {
-			flip_win->handle[TEGRA_DC_V] = NULL;
-			flip_win->phys_addr_v = 0;
-		}
-	}
+	if (tegra_dc_ext_pin_windows(user, win, win_num,
+					data->win, &has_timestamp))
+		goto fail_pin;
 
 	ret = lock_windows_for_flip(user, win, win_num);
 	if (ret)
@@ -932,6 +959,26 @@ static int tegra_dc_ext_set_cmu(struct tegra_dc_ext_user *user,
 }
 #endif
 
+#ifdef CONFIG_TEGRA_ISOMGR
+static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_flip_windowattr *wins, int win_num)
+{
+	int i;
+	int ret;
+	struct tegra_dc_win *dc_wins[DC_N_WINDOWS];
+	struct tegra_dc *dc = user->ext->dc;
+
+	for (i = 0; i < win_num; i++) {
+		tegra_dc_ext_set_windowattr_basic(&dc->tmp_wins[i], &wins[i]);
+		dc_wins[i] = &dc->tmp_wins[i];
+	}
+
+	ret = tegra_dc_bandwidth_negotiate_bw(dc, dc_wins, win_num);
+
+	return ret;
+}
+#endif
+
 static u32 tegra_dc_ext_get_vblank_syncpt(struct tegra_dc_ext_user *user)
 {
 	struct tegra_dc *dc = user->ext->dc;
@@ -1030,7 +1077,32 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		kfree(win);
 		return ret;
 	}
+#ifdef CONFIG_TEGRA_ISOMGR
+	case TEGRA_DC_EXT_SET_PROPOSED_BW:
+	{
+		int ret;
+		int win_num;
+		struct tegra_dc_ext_flip_2 args;
+		struct tegra_dc_ext_flip_windowattr *win;
 
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		win_num = args.win_num;
+		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
+
+		if (copy_from_user(win, args.win, sizeof(*win) * win_num)) {
+			kfree(win);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+
+		kfree(win);
+
+		return ret;
+	}
+#endif
 	case TEGRA_DC_EXT_GET_CURSOR:
 		return tegra_dc_ext_get_cursor(user);
 	case TEGRA_DC_EXT_PUT_CURSOR:

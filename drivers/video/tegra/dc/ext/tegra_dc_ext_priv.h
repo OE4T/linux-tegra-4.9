@@ -88,7 +88,8 @@ struct tegra_dc_ext {
 };
 
 #define TEGRA_DC_EXT_EVENT_MASK_ALL \
-	TEGRA_DC_EXT_EVENT_HOTPLUG
+	(TEGRA_DC_EXT_EVENT_HOTPLUG | TEGRA_DC_EXT_EVENT_BANDWIDTH_INC | \
+	 TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC)
 
 #define TEGRA_DC_EXT_EVENT_MAX_SZ	8
 
@@ -153,7 +154,8 @@ extern int tegra_dc_ext_control_init(void);
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
 				      int output);
 extern int tegra_dc_ext_queue_bandwidth_renegotiate(
-				struct tegra_dc_ext_control *, int output);
+			struct tegra_dc_ext_control *, int output,
+			struct tegra_dc_bw_data *data);
 extern ssize_t tegra_dc_ext_event_read(struct file *filp, char __user *buf,
 				       size_t size, loff_t *ppos);
 extern unsigned int tegra_dc_ext_event_poll(struct file *, poll_table *);

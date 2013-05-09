@@ -401,6 +401,21 @@ static ssize_t cmu_enable_show(struct device *dev,
 static DEVICE_ATTR(cmu_enable,
 		S_IRUGO|S_IWUSR, cmu_enable_show, cmu_enable_store);
 #endif
+
+#ifdef CONFIG_TEGRA_ISOMGR
+static ssize_t reserved_bw_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", dc->reserved_bw);
+}
+
+static DEVICE_ATTR(reserved_bw,
+		S_IRUGO, reserved_bw_show, NULL);
+#endif
+
 static ssize_t smart_panel_show(struct device *device,
 	struct device_attribute *attr, char  *buf)
 {
@@ -706,6 +721,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_DC_CMU
 	device_remove_file(dev, &dev_attr_cmu_enable);
 #endif
+#ifdef CONFIG_TEGRA_ISOMGR
+	device_remove_file(dev, &dev_attr_reserved_bw);
+#endif
 
 	if (dc->out->stereo) {
 		device_remove_file(dev, &dev_attr_stereo_orientation);
@@ -742,6 +760,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 #endif
 #ifdef CONFIG_TEGRA_DC_CMU
 	error |= device_create_file(dev, &dev_attr_cmu_enable);
+#endif
+#ifdef CONFIG_TEGRA_ISOMGR
+	error |= device_create_file(dev, &dev_attr_reserved_bw);
 #endif
 
 	if (dc->out->stereo) {

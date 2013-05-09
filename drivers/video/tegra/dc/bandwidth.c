@@ -602,7 +602,6 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 #endif
 		in_w / w->out_w * (WIN_IS_TILED(w) ?
 		tiled_windows_bw_multiplier : 1);
-
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	/*
 	 * Assuming 60% efficiency: i.e. if we calculate we need 70MBps, we
@@ -641,12 +640,14 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 
 	trace_clear_bandwidth(dc);
 	latency = tegra_isomgr_reserve(dc->isomgr_handle, 0, 1000);
-	WARN_ONCE(!latency, "tegra_isomgr_reserve failed\n");
 	if (latency) {
+		dc->reserved_bw = 0;
 		latency = tegra_isomgr_realize(dc->isomgr_handle);
 		WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
 	} else {
-		tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
+		dev_dbg(&dc->ndev->dev, "Failed to clear bw.\n");
+		tegra_dc_ext_process_bandwidth_renegotiate(
+				dc->ndev->id, NULL);
 	}
 	dc->bw_kbps = 0;
 }
@@ -696,11 +697,14 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 
 		latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
 		if (latency) {
+			dc->reserved_bw = bw;
 			latency = tegra_isomgr_realize(dc->isomgr_handle);
 			WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
 		} else {
+			dev_dbg(&dc->ndev->dev, "Failed to reserve bw %ld.\n",
+									bw);
 			tegra_dc_ext_process_bandwidth_renegotiate(
-				dc->ndev->id);
+				dc->ndev->id, NULL);
 		}
 #else /* EMC version */
 		int emc_freq;
@@ -732,23 +736,24 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	}
 }
 
-int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
+int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 {
 	unsigned long new_rate;
-	struct tegra_dc *dc;
+	struct tegra_dc_win *windows[DC_N_WINDOWS];
+	unsigned i;
 
 	if (!use_dynamic_emc)
 		return 0;
 
-	dc = windows[0]->dc;
-
+	for (i = 0; i < DC_N_WINDOWS; i++)
+		windows[i] = &dc->windows[i];
 #ifdef CONFIG_TEGRA_ISOMGR
-	new_rate = tegra_dc_get_bandwidth(windows, n);
+	new_rate = tegra_dc_get_bandwidth(windows, DC_N_WINDOWS);
 #else
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;
 	else
-		new_rate = tegra_dc_get_bandwidth(windows, n);
+		new_rate = tegra_dc_get_bandwidth(windows, DC_N_WINDOWS);
 #endif
 
 	dc->new_bw_kbps = new_rate;
@@ -782,20 +787,55 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 }
 
 #ifdef CONFIG_TEGRA_ISOMGR
+int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
+			struct tegra_dc_win *windows[], int n)
+{
+	int latency;
+	u32 bw;
+
+	mutex_lock(&dc->lock);
+	/* If proposed bw is larger than reserved bw, make it in effect
+	 * immediately. Otherwise, bandwidth will be adjusted in flips.
+	 * */
+	bw = tegra_dc_get_bandwidth(windows, n);
+	if (bw <= dc->reserved_bw) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+
+	latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
+	if (!latency) {
+		dev_dbg(&dc->ndev->dev, "Failed to reserve proposed bw %d.\n",
+									bw);
+		mutex_unlock(&dc->lock);
+		return -1;
+	}
+
+	dc->reserved_bw = bw;
+	latency = tegra_isomgr_realize(dc->isomgr_handle);
+	if (!latency) {
+		WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
+		mutex_unlock(&dc->lock);
+		return -1;
+	}
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+
 void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw)
 {
+	struct tegra_dc_bw_data data;
 	struct tegra_dc *dc = p;
-	unsigned long bw;
 
 	if (WARN_ONCE(!dc, "dc is NULL!"))
 		return;
-	tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
 
-	/* a bit of a hack, report the change in bandwidth before it
-	 * really happens.
-	 */
-	bw = tegra_dc_calc_min_bandwidth(dc);
-	if (tegra_isomgr_reserve(dc->isomgr_handle, 0, 1000))
-		tegra_isomgr_realize(dc->isomgr_handle);
+	data.total_bw = tegra_isomgr_get_total_iso_bw();
+	data.avail_bw = avail_bw;
+	data.resvd_bw = dc->reserved_bw;
+
+	tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id, &data);
 }
 #endif

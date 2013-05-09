@@ -848,8 +848,9 @@ static int dbg_dc_event_inject_write(struct file *file, const char __user *addr,
 
 	if (event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
-	else if (event == 0x2) /* TEGRA_DC_EXT_EVENT_BANDWIDTH */
-		tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id);
+	else if (event == 0x2) /* TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC */
+		tegra_dc_ext_process_bandwidth_renegotiate(
+				dc->ndev->id, NULL);
 	else {
 		dev_err(&dc->ndev->dev, "Unknown event 0x%lx\n", event);
 		return -EINVAL; /* unknown event number */
@@ -2780,8 +2781,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->n_windows = DC_N_WINDOWS;
 	for (i = 0; i < dc->n_windows; i++) {
 		struct tegra_dc_win *win = &dc->windows[i];
+		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 		win->idx = i;
 		win->dc = dc;
+		tmp_win->idx = i;
+		tmp_win->dc = dc;
 		tegra_dc_init_csc_defaults(&win->csc);
 		tegra_dc_init_lut_defaults(&win->lut);
 	}
@@ -2831,6 +2835,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			ret = -ENOENT;
 			goto err_put_clk;
 		}
+		dc->reserved_bw = tegra_dc_calc_min_bandwidth(dc);
 	}
 #else
 	/*

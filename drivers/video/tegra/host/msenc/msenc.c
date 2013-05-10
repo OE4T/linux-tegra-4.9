@@ -522,8 +522,11 @@ static int msenc_probe(struct platform_device *dev)
 
 	/* enable runtime pm. this is needed now since we need to call
 	 * _get_sync/_put during boot-up to ensure MC domain is ON */
-	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
-	pm_runtime_use_autosuspend(&dev->dev);
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
 	pm_runtime_enable(&dev->dev);
 
 	err = nvhost_client_device_get_resources(dev);
@@ -532,7 +535,10 @@ static int msenc_probe(struct platform_device *dev)
 
 	pm_runtime_get_sync(&dev->dev);
 	err = nvhost_client_device_init(dev);
-	pm_runtime_put(&dev->dev);
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
 

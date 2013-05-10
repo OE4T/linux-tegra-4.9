@@ -314,13 +314,19 @@ static int gr3d_probe(struct platform_device *dev)
 	gr3d_pd.pd.domain.ops.suspend = gr3d_suspend;
 	gr3d_pd.pd.domain.ops.resume = gr3d_resume;
 
-	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
-	pm_runtime_use_autosuspend(&dev->dev);
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
 	pm_runtime_enable(&dev->dev);
 
 	pm_runtime_get_sync(&dev->dev);
 	err = nvhost_client_device_init(dev);
-	pm_runtime_put(&dev->dev);
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
 

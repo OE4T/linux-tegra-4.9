@@ -158,7 +158,10 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 
 	while (refs--) {
 		pm_runtime_mark_last_busy(&dev->dev);
-		pm_runtime_put_autosuspend(&dev->dev);
+		if (pdata->clockgate_delay)
+			pm_runtime_put_sync_autosuspend(&dev->dev);
+		else
+			pm_runtime_put(&dev->dev);
 	}
 
 #ifdef CONFIG_PM_RUNTIME
@@ -604,16 +607,15 @@ int nvhost_module_power_on(struct platform_device *pdev)
 	if (!pdata)
 		return -EINVAL;
 
+	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		do_unpowergate_locked(pdata->powergate_ids[0]);
 		do_unpowergate_locked(pdata->powergate_ids[1]);
 	}
 
-	if (pdata->powerup_reset) {
-		mutex_lock(&pdata->lock);
+	if (pdata->powerup_reset)
 		do_module_reset_locked(pdev);
-		mutex_unlock(&pdata->lock);
-	}
+	mutex_unlock(&pdata->lock);
 
 	return 0;
 }
@@ -624,10 +626,12 @@ int nvhost_module_power_off(struct platform_device *pdev)
 	if (!pdata)
 		return -EINVAL;
 
+	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		do_powergate_locked(pdata->powergate_ids[0]);
 		do_powergate_locked(pdata->powergate_ids[1]);
 	}
+	mutex_unlock(&pdata->lock);
 
 	return 0;
 }

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D clock scaling
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1038,13 +1038,10 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
  * Governor initialisation.
  ******************************************************************************/
 
-#define MAX_FREQ_COUNT 0x40 /* 64 frequencies should be enough for anyone */
-
 static int nvhost_pod_init(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov;
 	struct platform_device *d = to_platform_device(df->dev.parent);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
 	ktime_t now = ktime_get();
 	enum tegra_chipid cid = tegra_get_chipid();
 	int error = 0;
@@ -1052,9 +1049,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	struct nvhost_devfreq_ext_stat *ext_stat;
 	struct devfreq_dev_status dev_stat;
 	int stat = 0;
-
-	long rate;
-	int freqs[MAX_FREQ_COUNT];
 
 	podgov = kzalloc(sizeof(struct podgov_info_rec), GFP_KERNEL);
 	if (!podgov)
@@ -1152,44 +1146,10 @@ static int nvhost_pod_init(struct devfreq *df)
 	if (error)
 		goto err_create_sysfs_entry;
 
-	/* We do not have DVFS table for T124 in any format.
-	 * Hack to get some table available. */
-
-	if (cid == TEGRA_CHIPID_TEGRA12) {
-		long addition;
-		int i;
-
-		addition = (df->max_freq - df->min_freq) / MAX_FREQ_COUNT;
-		rate = df->min_freq;
-
-		for (i = 0; i < MAX_FREQ_COUNT; ++i) {
-			freqs[podgov->freq_count++] = rate;
-			rate += addition;
-		}
-
-	} else {
-		rate = 0;
-		podgov->freq_count = 0;
-		while (rate <= df->max_freq) {
-			long rounded_rate;
-			if (unlikely(podgov->freq_count == MAX_FREQ_COUNT)) {
-				pr_err("%s: too many frequencies\n", __func__);
-				break;
-			}
-			rounded_rate = clk_round_rate(
-					clk_get_parent(pdata->clk[0]), rate);
-			freqs[podgov->freq_count++] = rounded_rate;
-			rate = rounded_rate + 2000;
-		}
-	}
-
-	podgov->freqlist =
-		kmalloc(podgov->freq_count * sizeof(int), GFP_KERNEL);
-	if (podgov->freqlist == NULL)
-		goto err_allocate_freq_list;
-
-	memcpy(podgov->freqlist, freqs,
-		podgov->freq_count * sizeof(int));
+	podgov->freq_count = df->profile->max_state;
+	podgov->freqlist = df->profile->freq_table;
+	if (!podgov->freq_count || !podgov->freqlist)
+		goto err_get_freqs;
 
 	podgov->idle_avg = 0;
 	podgov->hint_avg = 0;
@@ -1198,7 +1158,7 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	return 0;
 
-err_allocate_freq_list:
+err_get_freqs:
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
 	device_remove_file(&d->dev, &dev_attr_user);
 	device_remove_file(&d->dev, &dev_attr_freq_request);
@@ -1224,8 +1184,6 @@ static void nvhost_pod_exit(struct devfreq *df)
 
 	cancel_work_sync(&podgov->work);
 	cancel_delayed_work(&podgov->idle_timer);
-
-	kfree(podgov->freqlist);
 
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
 	device_remove_file(&d->dev, &dev_attr_user);

@@ -1566,11 +1566,10 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 					DSI_PKT_SEQ_3_LO_PKT_32_ID(rgb_info);
 				pkt_seq = dsi_pkt_seq_video_non_burst;
 			}
+
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 			/* Simulator does not support EOT packet yet */
 			pkt_seq = dsi_pkt_seq_video_non_burst_no_eot;
-#else
-			pkt_seq = dsi_pkt_seq_video_non_burst;
 #endif
 			break;
 		}

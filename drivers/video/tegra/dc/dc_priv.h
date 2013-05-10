@@ -300,7 +300,7 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);
 int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n);
 #ifdef CONFIG_TEGRA_ISOMGR
-void tegra_dc_bandwidth_renegotiate(void *p);
+void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw);
 #endif
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc);
 

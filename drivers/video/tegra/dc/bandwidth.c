@@ -357,7 +357,7 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 }
 
 #ifdef CONFIG_TEGRA_ISOMGR
-void tegra_dc_bandwidth_renegotiate(void *p)
+void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw)
 {
 	struct tegra_dc *dc = p;
 	unsigned long bw;

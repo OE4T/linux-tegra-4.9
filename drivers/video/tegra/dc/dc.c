@@ -2390,6 +2390,8 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	 * is enabled.
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
+
+	tegra_log_suspend_time();
 }
 
 void tegra_dc_disable(struct tegra_dc *dc)

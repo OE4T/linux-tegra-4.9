@@ -29,6 +29,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_hwctx.h"
 #include "chip_support.h"
+#include "gk20a/channel_gk20a.h"
 
 /*** Wait list management ***/
 
@@ -153,6 +154,15 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 
 }
 
+static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
+{
+	struct channel_gk20a *ch20a = waiter->data;
+	int nr_completed = waiter->count;
+	wake_up(&ch20a->submit_wq);
+	nvhost_module_idle_mult(ch20a->ch->dev, nr_completed);
+	/* TODO: add trace function */
+}
+
 static void action_ctxsave(struct nvhost_waitlist *waiter)
 {
 	struct nvhost_hwctx *hwctx = waiter->data;
@@ -187,6 +197,7 @@ typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_submit_complete,
+	action_gpfifo_submit_complete,
 	action_ctxsave,
 	action_signal_sync_pt,
 	action_wakeup,

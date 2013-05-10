@@ -404,7 +404,8 @@ static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 				     struct nvhost_gpfifo *gpfifo, u32 num_entries,
 				     struct nvhost_fence *fence, u32 flags)
 {
-	struct nvhost_channel *ch = hwctx->channel;
+	struct channel_gk20a *ch = hwctx->priv;
+	struct nvhost_channel *nvhost_ch = hwctx->channel;
 	void *completed_waiter = NULL;
 	int err, ret;
 
@@ -414,18 +415,22 @@ static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 	if (!completed_waiter)
 		return -ENOMEM;
 
-	nvhost_module_busy(ch->dev);
+	nvhost_module_busy(nvhost_ch->dev);
+
 
 	ret = gk20a_submit_channel_gpfifo(hwctx->priv, gpfifo, num_entries,
 					fence, flags);
 	if (!ret) {
-		err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
+		err = nvhost_intr_add_action(
+			&nvhost_get_host(nvhost_ch->dev)->intr,
 			fence->syncpt_id, fence->value,
-			NVHOST_INTR_ACTION_SUBMIT_COMPLETE, ch,
+			NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
+			ch,
 			completed_waiter,
 			NULL);
 		WARN(err, "Failed to set submit complete interrupt");
 	} else {
+		pr_err("submit error %d\n", ret);
 		kfree(completed_waiter);
 	}
 	return ret;

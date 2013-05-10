@@ -476,6 +476,7 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 
 	init_waitqueue_head(&ch_gk20a->notifier_wq);
 	init_waitqueue_head(&ch_gk20a->semaphore_wq);
+	init_waitqueue_head(&ch_gk20a->submit_wq);
 
 	return ctx;
 }
@@ -1050,6 +1051,12 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 	return 0;
 }
 
+static u32 get_gp_free_count(struct channel_gk20a *c)
+{
+	update_gp_get(c->g, c);
+	return gp_free_count(c);
+}
+
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
@@ -1060,14 +1067,15 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	struct device *d = dev_from_gk20a(g);
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
-	u32 free_count;
-	u32 extra_count = 0;
 	u32 i, incr_id = ~0, wait_id = ~0;
 	u32 err = 0;
 	int incr_cmd_size;
 	bool wfi_cmd;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
+	/* we might need two extra gpfifo entries - one for syncpoint
+	 * wait and one for syncpoint increment */
+	const int extra_entries = 2;
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
@@ -1077,13 +1085,34 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	nvhost_dbg_info("pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
-	free_count = gp_free_count(c);
-
 	/* If the caller has requested a fence "get" then we need to be
 	 * sure the fence represents work completion.  In that case
 	 * issue a wait-for-idle before the syncpoint increment.
 	 */
 	wfi_cmd = !!(flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET);
+
+	/* Invalidate tlb if it's dirty...                                   */
+	/* TBD: this should be done in the cmd stream, not with PRIs.        */
+	/* We don't know what context is currently running...                */
+	/* Note also: there can be more than one context associated with the */
+	/* address space (vm).   */
+	if (c->vm->tlb_dirty) {
+		c->vm->tlb_inval(c->vm);
+		c->vm->tlb_dirty = false;
+	}
+
+	/* Make sure we have enough space for gpfifo entries. If not,
+	 * wait for signals from completed submits */
+	if (gp_free_count(c) < num_entries + extra_entries) {
+		err = wait_event_interruptible(c->submit_wq,
+			get_gp_free_count(c) >= num_entries + extra_entries);
+	}
+
+	if (err) {
+		nvhost_err(d, "not enough gpfifo space");
+		err = -EAGAIN;
+		goto clean_up;
+	}
 
 	/* optionally insert syncpt wait in the beginning of gpfifo submission
 	   when user requested and the wait hasn't expired.
@@ -1096,7 +1125,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			err = -EAGAIN;
 			goto clean_up;
 		}
-		extra_count++;
 	}
 
 	/* always insert syncpt increment at end of gpfifo submission
@@ -1110,13 +1138,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
 	if (incr_cmd == NULL) {
 		nvhost_err(d, "not enough priv cmd buffer space");
-		err = -EAGAIN;
-		goto clean_up;
-	}
-	extra_count++;
-
-	if (num_entries + extra_count > free_count) {
-		nvhost_err(d, "not enough gpfifo space");
 		err = -EAGAIN;
 		goto clean_up;
 	}

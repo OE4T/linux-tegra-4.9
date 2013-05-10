@@ -98,6 +98,7 @@ struct channel_gk20a {
 
 	wait_queue_head_t notifier_wq;
 	wait_queue_head_t semaphore_wq;
+	wait_queue_head_t submit_wq;
 
 	bool cmds_pending;
 	struct {

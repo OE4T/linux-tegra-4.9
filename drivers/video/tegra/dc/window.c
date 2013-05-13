@@ -521,7 +521,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			win_options |= COLOR_EXPAND;
 
-#if  defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 		if (win->global_alpha == 255) {
 			tegra_dc_writel(dc, 0, DC_WIN_GLOBAL_ALPHA);
 		} else {

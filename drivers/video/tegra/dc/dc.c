@@ -503,6 +503,8 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
+	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+		DC_CMD_STATE_ACCESS);
 
 	DUMP_REG(DC_CMD_DISPLAY_COMMAND_OPTION0);
 	DUMP_REG(DC_CMD_DISPLAY_COMMAND);

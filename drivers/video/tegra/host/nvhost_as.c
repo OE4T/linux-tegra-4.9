@@ -76,7 +76,7 @@ int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 
 	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
 
-	nvhost_putchannel(ch, NULL);
+	nvhost_putchannel(ch);
 
 	return ret;
 }

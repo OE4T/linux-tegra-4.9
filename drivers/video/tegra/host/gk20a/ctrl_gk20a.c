@@ -61,7 +61,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 
 	nvhost_dbg_fn("");
 
-	nvhost_putchannel(pdata->channel, NULL);
+	nvhost_putchannel(pdata->channel);
 	return 0;
 }
 

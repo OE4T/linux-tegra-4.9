@@ -145,13 +145,22 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 
 	nvhost_module_remove_client(priv->ch->dev, priv);
 
-	if (priv->hwctx)
+	if (priv->hwctx) {
+		struct nvhost_channel *ch = priv->ch;
+		struct nvhost_hwctx *ctx = priv->hwctx;
+
+		mutex_lock(&ch->submitlock);
+		if (ch->cur_ctx == ctx)
+			ch->cur_ctx = NULL;
+		mutex_unlock(&ch->submitlock);
+
 		priv->hwctx->h->put(priv->hwctx);
+	}
 
 	if (priv->job)
 		nvhost_job_put(priv->job);
 
-	nvhost_putchannel(priv->ch, priv->hwctx);
+	nvhost_putchannel(priv->ch);
 
 	nvhost_memmgr_put_mgr(priv->memmgr);
 	kfree(priv);
@@ -171,7 +180,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		nvhost_putchannel(ch, NULL);
+		nvhost_putchannel(ch);
 		return -ENOMEM;
 	}
 	filp->private_data = priv;

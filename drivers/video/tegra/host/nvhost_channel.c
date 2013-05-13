@@ -102,16 +102,9 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 	return err ? NULL : ch;
 }
 
-void nvhost_putchannel(struct nvhost_channel *ch, struct nvhost_hwctx *ctx)
+void nvhost_putchannel(struct nvhost_channel *ch)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-
-	if (ctx) {
-		mutex_lock(&ch->submitlock);
-		if (ch->cur_ctx == ctx)
-			ch->cur_ctx = NULL;
-		mutex_unlock(&ch->submitlock);
-	}
 
 	/* Allow keep-alive'd module to be turned off */
 	if (pdata->keepalive)

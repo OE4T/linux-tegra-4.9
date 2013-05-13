@@ -95,7 +95,7 @@ struct nct1008_data {
 	long current_hi_limit;
 	int conv_period_ms;
 	long etemp;
-	int shutdown_complete;
+	int nct_disabled;
 	int stop_workqueue;
 	struct thermal_zone_device *nct_int;
 	struct thermal_zone_device *nct_ext;
@@ -120,7 +120,7 @@ static int nct1008_write_reg(struct i2c_client *client, u8 reg, u16 value)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	mutex_lock(&data->mutex);
-	if (data && data->shutdown_complete) {
+	if (data && data->nct_disabled) {
 		mutex_unlock(&data->mutex);
 		return -ENODEV;
 	}
@@ -139,7 +139,7 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 	int ret = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	mutex_lock(&data->mutex);
-	if (data && data->shutdown_complete) {
+	if (data && data->nct_disabled) {
 		mutex_unlock(&data->mutex);
 		return -ENODEV;
 	}
@@ -888,6 +888,7 @@ static irqreturn_t nct1008_irq(int irq, void *dev_id)
 static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 {
 	int ret;
+	mutex_lock(&data->mutex);
 	if (!data->nct_reg) {
 		data->nct_reg = regulator_get(&data->client->dev, "vdd");
 		if (IS_ERR_OR_NULL(data->nct_reg)) {
@@ -900,6 +901,7 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 					"getting the regulator handle for"
 					" vdd\n", PTR_ERR(data->nct_reg));
 			data->nct_reg = NULL;
+			mutex_unlock(&data->mutex);
 			return;
 		}
 	}
@@ -919,6 +921,8 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 		dev_info(&data->client->dev, "success in %s rail vdd_nct%s\n",
 			(is_enable) ? "enabling" : "disabling",
 			(data->chip == NCT72) ? "72" : "1008");
+	data->nct_disabled = !is_enable;
+	mutex_unlock(&data->mutex);
 }
 
 static int nct1008_configure_sensor(struct nct1008_data *data)
@@ -1226,7 +1230,7 @@ static void nct1008_shutdown(struct i2c_client *client)
 		disable_irq(client->irq);
 
 	mutex_lock(&data->mutex);
-	data->shutdown_complete = 1;
+	data->nct_disabled = 1;
 	mutex_unlock(&data->mutex);
 }
 

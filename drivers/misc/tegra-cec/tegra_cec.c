@@ -46,6 +46,8 @@ int tegra_cec_open(struct inode *inode, struct file *file)
 	struct tegra_cec *cec = container_of(miscdev,
 		struct tegra_cec, misc_dev);
 	dev_dbg(cec->dev, "%s\n", __func__);
+
+	wait_event_interruptible(cec->init_waitq, cec->init_done == 1);
 	file->private_data = cec;
 
 	return 0;
@@ -67,6 +69,8 @@ ssize_t tegra_cec_write(struct file *file, const char __user *buffer,
 	unsigned long write_buff;
 
 	count = 4;
+
+	wait_event_interruptible(cec->init_waitq, cec->init_done == 1);
 
 	if (copy_from_user(&write_buff, buffer, count))
 		return -EFAULT;
@@ -102,6 +106,8 @@ ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	struct tegra_cec *cec = file->private_data;
 	count = 2;
 
+	wait_event_interruptible(cec->init_waitq, cec->init_done == 1);
+
 	if (cec->rx_wake == 0)
 		if (file->f_flags & O_NONBLOCK)
 			return -EAGAIN;
@@ -121,6 +127,8 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 	struct device *dev = data;
 	struct tegra_cec *cec = dev_get_drvdata(dev);
 	unsigned long status;
+
+	wait_event_interruptible(cec->init_waitq, cec->init_done == 1);
 
 	status = readl(cec->cec_base + TEGRA_CEC_INT_STAT);
 
@@ -175,6 +183,10 @@ static const struct file_operations tegra_cec_fops = {
 
 static void tegra_cec_init(struct tegra_cec *cec)
 {
+
+	dev_notice(cec->dev, "%s started\n", __func__);
+
+	cec->init_done = 0;
 
 	writel(0x00, cec->cec_base + TEGRA_CEC_HW_CONTROL);
 	writel(0x00, cec->cec_base + TEGRA_CEC_INT_MASK);
@@ -232,6 +244,11 @@ static void tegra_cec_init(struct tegra_cec *cec)
 	    TEGRA_CEC_INT_MASK_RX_REGISTER_FULL |
 	    TEGRA_CEC_INT_MASK_RX_REGISTER_OVERRUN),
 	   cec->cec_base + TEGRA_CEC_INT_MASK);
+
+	cec->init_done = 1;
+	wake_up_interruptible(&cec->init_waitq);
+
+	dev_notice(cec->dev, "%s Done.\n", __func__);
 }
 
 static void tegra_cec_init_worker(struct work_struct *work)
@@ -301,6 +318,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	cec->tx_wake = 0;
 	init_waitqueue_head(&cec->rx_waitq);
 	init_waitqueue_head(&cec->tx_waitq);
+	init_waitqueue_head(&cec->init_waitq);
 
 	platform_set_drvdata(pdev, cec);
 	/* clear out the hardware. */
@@ -360,12 +378,15 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 
 	clk_disable(cec->clk);
 
+	dev_notice(&pdev->dev, "suspended\n");
 	return 0;
 }
 
 static int tegra_cec_resume(struct platform_device *pdev)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
+
+	dev_notice(&pdev->dev, "Resuming\n");
 
 	clk_enable(cec->clk);
 	schedule_work(&cec->work);

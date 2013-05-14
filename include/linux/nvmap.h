@@ -30,7 +30,6 @@
 #ifndef _LINUX_NVMAP_H
 #define _LINUX_NVMAP_H
 
-#define NVMAP_HEAP_SYSMEM  (1ul<<31)
 #define NVMAP_HEAP_IOVMM   (1ul<<30)
 
 /* common carveout heaps */

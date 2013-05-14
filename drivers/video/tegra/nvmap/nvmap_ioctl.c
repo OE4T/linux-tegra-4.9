@@ -521,9 +521,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 			mutex_lock(&h->lock);
 			op.result = nvmap_carveout_usage(client, h->carveout);
 			mutex_unlock(&h->lock);
-		} else if (h->pgalloc.contig)
-			op.result = NVMAP_HEAP_SYSMEM;
-		else
+		} else
 			op.result = NVMAP_HEAP_IOVMM;
 		break;
 	default:

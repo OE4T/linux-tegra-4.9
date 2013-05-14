@@ -758,12 +758,6 @@ static void alloc_handle(struct nvmap_client *client,
 			atomic_sub(reserved, &client->iovm_commit);
 		}
 
-	} else if (type & NVMAP_HEAP_SYSMEM) {
-		if (handle_page_alloc(client, h, true) == 0) {
-			BUG_ON(!h->pgalloc.contig);
-			h->heap_pgalloc = true;
-			h->alloc = true;
-		}
 	}
 }
 
@@ -774,9 +768,6 @@ static void alloc_handle(struct nvmap_client *client,
 static const unsigned int heap_policy_small[] = {
 	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
-#ifdef CONFIG_NVMAP_ALLOW_SYSMEM
-	NVMAP_HEAP_SYSMEM,
-#endif
 	NVMAP_HEAP_CARVEOUT_MASK,
 	NVMAP_HEAP_IOVMM,
 	0,
@@ -787,9 +778,6 @@ static const unsigned int heap_policy_large[] = {
 	NVMAP_HEAP_CARVEOUT_IRAM,
 	NVMAP_HEAP_IOVMM,
 	NVMAP_HEAP_CARVEOUT_MASK,
-#ifdef CONFIG_NVMAP_ALLOW_SYSMEM
-	NVMAP_HEAP_SYSMEM,
-#endif
 	0,
 };
 
@@ -825,22 +813,6 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |
 			    NVMAP_HEAP_CARVEOUT_GENERIC;
 	}
-#endif
-#ifdef CONFIG_NVMAP_ALLOW_SYSMEM
-	/* Allow single pages allocations in system memory to save
-	 * carveout space and avoid extra iovm mappings */
-	if (nr_page == 1) {
-		if (heap_mask &
-		    (NVMAP_HEAP_IOVMM | NVMAP_HEAP_CARVEOUT_GENERIC))
-			heap_mask |= NVMAP_HEAP_SYSMEM;
-	}
-#endif
-#ifndef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
-	/* This restriction is deprecated as alignments greater than
-	   PAGE_SIZE are now correctly handled, but it is retained for
-	   AP20 compatibility. */
-	if (h->align > PAGE_SIZE)
-		heap_mask &= NVMAP_HEAP_CARVEOUT_MASK;
 #endif
 	/* secure allocations can only be served from secure heaps */
 	if (h->secure)

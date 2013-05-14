@@ -578,12 +578,16 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 {
 	int ret = 0;
 	struct nvhost_device_data *pdata;
+	struct dev_power_governor *pm_domain_gov = NULL;
 
 	pdata = platform_get_drvdata(pdev);
 	if (!pdata)
 		return -EINVAL;
 
-	pm_genpd_init(domain, NULL, true);
+	if (!pdata->can_powergate)
+		pm_domain_gov = &pm_domain_always_on_gov;
+
+	pm_genpd_init(domain, pm_domain_gov, true);
 	ret = pm_genpd_add_device(domain, &pdev->dev);
 	if (pdata->powergate_delay)
 		pm_genpd_set_poweroff_delay(domain, pdata->powergate_delay);

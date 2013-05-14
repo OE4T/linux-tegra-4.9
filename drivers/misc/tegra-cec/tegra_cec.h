@@ -30,6 +30,7 @@ struct tegra_cec {
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
 	unsigned short		rx_buffer;
+	struct work_struct	work;
 };
 static int tegra_cec_remove(struct platform_device *pdev);
 

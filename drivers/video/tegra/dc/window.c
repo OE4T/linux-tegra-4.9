@@ -169,8 +169,6 @@ static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
 		tegra_dc_writel(dc, BLEND(NOKEY, FIX, 0xff, 0xff),
 				DC_WIN_BLEND_NOKEY);
-		tegra_dc_writel(dc, BLEND(NOKEY, FIX, 0xff, 0xff),
-				DC_WIN_BLEND_1WIN);
 		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 0,
 				win_num), DC_WIN_BLEND_2WIN_X);
 		tegra_dc_writel(dc, blend_2win(idx, mask, blend->flags, 1,
@@ -530,6 +528,20 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			win_options |= CP_ENABLE;
 		}
 #endif
+		if (!tegra_dc_feature_is_gen2_blender(dc, win->idx)) {
+			if (win->flags &
+					TEGRA_WIN_FLAG_BLEND_COVERAGE) {
+				tegra_dc_writel(dc,
+					BLEND(NOKEY, ALPHA, 0xff, 0xff),
+					DC_WIN_BLEND_1WIN);
+			} else {
+				/* global_alpha is 255 if not in use */
+				tegra_dc_writel(dc,
+					BLEND(NOKEY, FIX, win->global_alpha,
+						win->global_alpha),
+					DC_WIN_BLEND_1WIN);
+			}
+		}
 
 		if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
 			win_options |= CP_ENABLE;

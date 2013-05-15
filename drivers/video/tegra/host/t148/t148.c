@@ -362,6 +362,7 @@ static struct nvhost_channel *t148_alloc_nvhost_channel(
 #include "host1x/host1x_actmon_t114.c"
 #include "host1x/host1x_tickctrl.c"
 
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 int nvhost_init_t148_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
@@ -384,3 +385,5 @@ int nvhost_init_t148_support(struct nvhost_master *host,
 
 	return 0;
 }
+#endif
+

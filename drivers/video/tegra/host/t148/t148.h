@@ -20,8 +20,10 @@
 #ifndef _NVHOST_T148_H_
 #define _NVHOST_T148_H_
 
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 int nvhost_init_t148_support(struct nvhost_master *host,
 		struct nvhost_chip_support *);
+#endif
 
 extern struct nvhost_device_data t14_host1x_info;
 extern struct nvhost_device_data t14_gr3d_info;

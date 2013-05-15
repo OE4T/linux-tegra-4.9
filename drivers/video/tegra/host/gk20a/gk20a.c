@@ -612,7 +612,8 @@ static void gk20a_free_hwctx(struct kref *ref)
 	nvhost_dbg_fn("");
 
 	nvhost_module_busy(ctx->channel->dev);
-	gk20a_free_channel(ctx);
+	if (ctx->priv)
+		gk20a_free_channel(ctx, true);
 	nvhost_module_idle(ctx->channel->dev);
 
 	kfree(ctx);

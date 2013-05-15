@@ -31,7 +31,7 @@ static void t124_ctx3d_free(struct kref *ref)
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 
 #if defined(CONFIG_TEGRA_GK20A)
-	gk20a_free_channel(ctx);
+	gk20a_free_channel(ctx, true);
 #endif
 	kfree(ctx);
 }

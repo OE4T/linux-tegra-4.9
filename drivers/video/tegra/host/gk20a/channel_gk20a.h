@@ -149,7 +149,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			struct nvhost_gpfifo *gpfifo, u32 num_entries,
 			struct nvhost_fence *fence, u32 flags);
-void gk20a_free_channel(struct nvhost_hwctx *ctx);
+void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish);
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool wait_for_finish,
 			   long finish_timeout);

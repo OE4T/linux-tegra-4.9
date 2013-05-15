@@ -836,3 +836,9 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts);
 }
 EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);
+
+void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id)
+{
+	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));
+	syncpt_op().reset(sp, id);
+}

@@ -715,14 +715,10 @@ static const char * const gpc_client_descs[] = {
 
 /* reads info from hardware and fills in mmu fault info record */
 static inline void get_exception_mmu_fault_info(
-	struct gk20a *g,
-	struct fifo_engine_info_gk20a *eng_info)
+	struct gk20a *g, u32 engine_id,
+	struct fifo_mmu_fault_info_gk20a *f)
 {
 	u32 fault_info_r;
-	u32 engine_id = eng_info->engine_id;
-
-	struct fifo_mmu_fault_info_gk20a *f =
-		&eng_info->mmu_fault_info;
 
 	nvhost_dbg_fn("engine_id %d", engine_id);
 
@@ -764,57 +760,80 @@ static inline void get_exception_mmu_fault_info(
 	f->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
 }
 
+static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
+{
+	u32 pmc_enable = gk20a_readl(g, mc_enable_r());
+	u32 pmc_enable_reset = pmc_enable;
+
+	nvhost_dbg_fn("");
+
+	if (engine_id == top_device_info_type_enum_graphics_v())
+		pmc_enable_reset &= ~mc_enable_pgraph_m();
+	if (engine_id == top_device_info_type_enum_copy0_v())
+		pmc_enable_reset &= ~mc_enable_ce0_m();
+
+	nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
+			pmc_enable, pmc_enable_reset);
+
+	gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
+	udelay(1000);
+	gk20a_writel(g, mc_enable_r(), pmc_enable);
+	gk20a_readl(g, mc_enable_r());
+}
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
-	u32 fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
+	ulong fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
 	struct channel_gk20a *fault_ch;
 	u32 engine_id;
 
 	nvhost_dbg_fn("");
 
-	/* one bit for each engine... */
-	for (engine_id = 0;
-	     engine_id < fifo_intr_mmu_fault_id_field__size_1_v();
-	     engine_id++) {
-		struct fifo_mmu_fault_info_gk20a *f;
+	/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to engines */
+	for_each_set_bit(engine_id, &fault_id, BITS_PER_LONG) {
+		struct fifo_mmu_fault_info_gk20a f;
 
-		if ((fault_id & (1 << engine_id)) ==
-		    fifo_intr_mmu_fault_id_field_not_pending_v())
-			continue;
+		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d\n",
+				engine_id);
 
-		get_exception_mmu_fault_info(g,
-		     &g->fifo.engine_info[engine_id]);
-		f = &g->fifo.engine_info[engine_id].mmu_fault_info;
+		get_exception_mmu_fault_info(g, engine_id, &f);
 
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
 			   "engined subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
 			   "inst_ptr 0x%llx\n",
 			   engine_id,
-			   f->engine_subid_v, f->engine_subid_desc,
-			   f->client_v, f->client_desc,
-			   f->fault_hi_r, f->fault_lo_r,
-			   f->fault_type_v, f->fault_type_desc,
-			   f->fault_info_r, f->inst_ptr);
+			   f.engine_subid_v, f.engine_subid_desc,
+			   f.client_v, f.client_desc,
+			   f.fault_hi_r, f.fault_lo_r,
+			   f.fault_type_v, f.fault_type_desc,
+			   f.fault_info_r, f.inst_ptr);
 
 		/* TBD: we're clearing this here so the system is
 		 * fairly useable still.  But as of yet we're not
 		 * resetting the engine, etc to recover the channel... */
 		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
 
-		fault_ch = channel_from_inst_ptr(&g->fifo, f->inst_ptr);
+		/* Reset engine and MMU fault */
+		gk20a_fifo_reset_engine(g, engine_id);
+		gk20a_writel(g, fifo_error_sched_disable_r(), ~0);
+
+		fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
 		if (!IS_ERR_OR_NULL(fault_ch)) {
 			if (!IS_ERR_OR_NULL(fault_ch->hwctx)) {
 				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
 				fault_ch->hwctx->has_timedout = true;
 			}
-		} else {
+			if (fault_ch->in_use)
+				gk20a_free_channel(fault_ch->hwctx, false);
+		} else if (f.inst_ptr ==
+				sg_phys(g->mm.bar1.inst_block.mem.sgt->sgl)) {
+			nvhost_dbg_fn("mmu fault from bar1");
+		} else if (f.inst_ptr ==
+				sg_phys(g->mm.pmu.inst_block.mem.sgt->sgl)) {
+			nvhost_dbg_fn("mmu fault from pmu");
+		} else
 			nvhost_dbg_fn("couldn't locate channel for mmu fault");
-			fault_ch = channel_from_hw_chid(&g->fifo, 0/*hack*/);
-			if (!IS_ERR_OR_NULL(fault_ch))
-				fault_ch->hwctx->has_timedout = true;
-			BUG_ON(1);
-		}
 	}
 }
 

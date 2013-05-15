@@ -4698,6 +4698,82 @@ static inline u32 fifo_sched_disable_restart_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fifo_error_sched_disable_r(void)
+{
+	return 0x0000262C;
+}
+static inline u32 fifo_error_sched_disable_runlist_s(u32 i)
+{
+	return 1;
+}
+static inline u32 fifo_error_sched_disable_runlist_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (i);
+}
+static inline u32 fifo_error_sched_disable_runlist_m(u32 i)
+{
+	return 0x1 << (i);
+}
+static inline u32 fifo_error_sched_disable_runlist_v(u32 r, u32 i)
+{
+	return (r >> (i)) & 0x1;
+}
+static inline u32 fifo_error_sched_disable_runlist__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 fifo_error_sched_disable_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_error_sched_disable_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_error_sched_disable_restart_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_error_sched_disable_0_s(void)
+{
+	return 1;
+}
+static inline u32 fifo_error_sched_disable_0_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fifo_error_sched_disable_0_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fifo_error_sched_disable_0_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_error_sched_disable_0_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_error_sched_disable_0_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_error_sched_disable_0_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_error_sched_disable_0_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 fifo_error_sched_disable_0_restart_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_error_sched_disable_0_restart_f(void)
+{
+	return 0x1;
+}
 static inline u32 fifo_preempt_r(void)
 {
 	return 0x00002634;

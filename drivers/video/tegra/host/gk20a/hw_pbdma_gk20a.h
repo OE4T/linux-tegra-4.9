@@ -1214,6 +1214,254 @@ static inline u32 pbdma_subdevice_channel_dma_enable_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 pbdma_method0_r(u32 i)
+{
+	return 0x000400c0+(i)*8192;
+}
+static inline u32 pbdma_method0__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_incr_s(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_incr_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 pbdma_method0_incr_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 pbdma_method0_incr_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pbdma_method0_incr_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_incr_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_incr_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_method0_incr_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 pbdma_method0_priv_s(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_priv_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pbdma_method0_priv_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pbdma_method0_priv_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pbdma_method0_priv_user_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_priv_user_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_priv_kernel_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_method0_priv_kernel_f(void)
+{
+	return 0x2;
+}
+static inline u32 pbdma_method0_addr_s(void)
+{
+	return 12;
+}
+static inline u32 pbdma_method0_addr_f(u32 v)
+{
+	return (v & 0xfff) << 2;
+}
+static inline u32 pbdma_method0_addr_m(void)
+{
+	return 0xfff << 2;
+}
+static inline u32 pbdma_method0_addr_v(u32 r)
+{
+	return (r >> 2) & 0xfff;
+}
+static inline u32 pbdma_method0_addr_null_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_addr_null_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_subch_s(void)
+{
+	return 3;
+}
+static inline u32 pbdma_method0_subch_f(u32 v)
+{
+	return (v & 0x7) << 16;
+}
+static inline u32 pbdma_method0_subch_m(void)
+{
+	return 0x7 << 16;
+}
+static inline u32 pbdma_method0_subch_v(u32 r)
+{
+	return (r >> 16) & 0x7;
+}
+static inline u32 pbdma_method0_subch_zero_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_subch_zero_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_first_s(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_first_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 pbdma_method0_first_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 pbdma_method0_first_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 pbdma_method0_first_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_first_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_first_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_method0_first_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pbdma_method0_dual_s(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_dual_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 pbdma_method0_dual_m(void)
+{
+	return 0x1 << 23;
+}
+static inline u32 pbdma_method0_dual_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
+static inline u32 pbdma_method0_dual_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_dual_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_dual_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_method0_dual_true_f(void)
+{
+	return 0x800000;
+}
+static inline u32 pbdma_method0_valid_s(void)
+{
+	return 1;
+}
+static inline u32 pbdma_method0_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pbdma_method0_valid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pbdma_method0_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 pbdma_method0_valid_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_method0_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_method0_valid_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_method0_valid_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pbdma_data0_r(u32 i)
+{
+	return 0x000400c4+(i)*8192;
+}
+static inline u32 pbdma_data0__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 pbdma_data0_value_s(void)
+{
+	return 32;
+}
+static inline u32 pbdma_data0_value_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pbdma_data0_value_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pbdma_data0_value_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pbdma_data0_value_zero_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_data0_value_zero_f(void)
+{
+	return 0x0;
+}
 static inline u32 pbdma_target_r(u32 i)
 {
 	return 0x000400ac+(i)*8192;
@@ -5957,6 +6205,26 @@ static inline u32 pbdma_intr_stall_1_hce_illegal_class_enabled_v(void)
 static inline u32 pbdma_intr_stall_1_hce_illegal_class_enabled_f(void)
 {
 	return 0x10;
+}
+static inline u32 pbdma_udma_nop_r(void)
+{
+	return 0x00000008;
+}
+static inline u32 pbdma_udma_nop_handle_s(void)
+{
+	return 32;
+}
+static inline u32 pbdma_udma_nop_handle_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 pbdma_udma_nop_handle_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pbdma_udma_nop_handle_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
 }
 
 #endif /* __hw_pbdma_gk20a_h__ */

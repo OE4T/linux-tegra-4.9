@@ -41,6 +41,7 @@
 #include "hw_ltc_gk20a.h"
 #include "hw_fb_gk20a.h"
 #include "hw_therm_gk20a.h"
+#include "hw_pbdma_gk20a.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "gk20a_gating_reglist.h"
@@ -3864,6 +3865,27 @@ static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g,
 	}
 }
 
+static void gk20a_gr_reset(struct gk20a *g)
+{
+	u32 pmc_enable = gk20a_readl(g, mc_enable_r());
+	u32 pmc_enable_reset = pmc_enable & ~mc_enable_pgraph_m();
+
+	nvhost_dbg_fn("");
+
+	gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
+	udelay(1000);
+	gk20a_writel(g, mc_enable_r(), pmc_enable);
+	gk20a_readl(g, mc_enable_r());
+}
+
+static void gk20a_gr_nop_method(struct gk20a *g)
+{
+	/* Reset method in PBDMA 0 */
+	gk20a_writel(g, pbdma_method0_r(0),
+			pbdma_udma_nop_r());
+	gk20a_writel(g, pbdma_data0_r(0), 0);
+}
+
 static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -3881,6 +3903,9 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 			gk20a_gr_set_alpha_circular_buffer_size(g, isr_data);
 			break;
 		default:
+			gk20a_gr_reset(g);
+
+			gk20a_gr_nop_method(g);
 			nvhost_err(dev_from_gk20a(g), "invalid method "
 				   "class 0x%08x, offset 0x%08x",
 				   isr_data->class_num, isr_data->offset);
@@ -3895,6 +3920,19 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 	return -EINVAL;
 }
 
+static int gk20a_gr_handle_illegal_class(struct gk20a *g,
+					  struct gr_isr_data *isr_data)
+{
+	nvhost_dbg_fn("");
+
+	gk20a_gr_reset(g);
+
+	gk20a_gr_nop_method(g);
+	nvhost_err(dev_from_gk20a(g),
+		   "invalid class 0x%08x, offset 0x%08x",
+		   isr_data->class_num, isr_data->offset);
+	return -EINVAL;
+}
 static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -4062,12 +4100,18 @@ unlock:
 	return chid;
 }
 
+static struct channel_gk20a *
+channel_from_hw_chid(struct gk20a *g, u32 hw_chid)
+{
+	return g->fifo.channel+hw_chid;
+}
+
 void gk20a_gr_isr(struct gk20a *g)
 {
 	struct gr_isr_data isr_data;
 	u32 grfifo_ctl;
 	u32 obj_table;
-	u32 ret;
+	int ret = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 
 	nvhost_dbg_fn("");
@@ -4119,11 +4163,38 @@ void gk20a_gr_isr(struct gk20a *g)
 
 	if (gr_intr & gr_intr_illegal_method_pending_f()) {
 		ret = gk20a_gr_handle_illegal_method(g, &isr_data);
-		if (!ret) {
-			gk20a_writel(g, gr_intr_r(),
-				gr_intr_illegal_method_reset_f());
-			gr_intr &= ~gr_intr_illegal_method_pending_f();
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_illegal_method_reset_f());
+		gr_intr &= ~gr_intr_illegal_method_pending_f();
+	}
+
+	if (gr_intr & gr_intr_illegal_class_pending_f()) {
+		ret = gk20a_gr_handle_illegal_class(g, &isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_illegal_class_reset_f());
+		gr_intr &= ~gr_intr_illegal_class_pending_f();
+	}
+
+	if (gr_intr & gr_intr_exception_pending_f()) {
+		u32 exception = gk20a_readl(g, gr_exception_r());
+
+		nvhost_dbg(dbg_intr, "exception %08x\n", exception);
+
+		if (exception & gr_exception_fe_m()) {
+			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
+			nvhost_dbg(dbg_intr, "fe warning %08x\n", fe);
+			gk20a_writel(g, gr_fe_hww_esr_r(), fe);
 		}
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_exception_reset_f());
+		gr_intr &= ~gr_intr_exception_pending_f();
+	}
+
+	if (ret) {
+		struct channel_gk20a *fault_ch =
+			channel_from_hw_chid(g, isr_data.chid);
+		if (fault_ch && fault_ch->hwctx)
+			gk20a_free_channel(fault_ch->hwctx, false);
 	}
 
 clean_up:

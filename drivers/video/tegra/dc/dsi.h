@@ -63,6 +63,7 @@ struct tegra_dc_dsi_data {
 	struct clk *dc_clk;
 	struct clk *dsi_clk;
 	struct clk *dsi_fixed_clk;
+	struct clk *dsi_lp_clk;
 	bool clk_ref;
 
 	struct mutex lock;

@@ -3109,10 +3109,15 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	int err = 0;
 	struct dsi_status *init_status;
 
+	if (!dsi->enabled) {
+		dev_err(&dc->ndev->dev, "DSI controller suspended\n");
+		return -EINVAL;
+	}
+	tegra_dc_dsi_hold_host(dc);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 	clk_prepare_enable(dsi->dsi_fixed_clk);
-
+	clk_prepare_enable(dsi->dsi_lp_clk);
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
 	if (IS_ERR_OR_NULL(init_status)) {
@@ -3168,9 +3173,11 @@ fail:
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
+	clk_disable_unprepare(dsi->dsi_lp_clk);
 	clk_disable_unprepare(dsi->dsi_fixed_clk);
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
+	tegra_dc_dsi_release_host(dc);
 	return err;
 }
 EXPORT_SYMBOL(tegra_dsi_read_data);
@@ -3184,8 +3191,14 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	static struct tegra_dsi_cmd dsi_nop_cmd =
 			DSI_CMD_SHORT(0x05, 0x0, 0x0);
 
+	if (!dsi->enabled) {
+		dev_err(&dc->ndev->dev, "DSI controller suspended\n");
+		return -EINVAL;
+	}
+	tegra_dc_dsi_hold_host(dc);
 	tegra_dc_io_start(dc);
 	clk_prepare_enable(dsi->dsi_fixed_clk);
+	clk_prepare_enable(dsi->dsi_lp_clk);
 
 	init_status = tegra_dsi_prepare_host_transmission(
 					dc, dsi, DSI_LP_OP_WRITE);
@@ -3233,8 +3246,10 @@ fail:
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
+	clk_disable_unprepare(dsi->dsi_lp_clk);
 	clk_disable_unprepare(dsi->dsi_fixed_clk);
 	tegra_dc_io_end(dc);
+	tegra_dc_dsi_release_host(dc);
 	return err;
 }
 EXPORT_SYMBOL(tegra_dsi_panel_sanity_check);
@@ -3705,6 +3720,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dc_clk = NULL;
 	struct clk *dsi_clk = NULL;
 	struct clk *dsi_fixed_clk = NULL;
+	struct clk *dsi_lp_clk = NULL;
 	struct tegra_dsi_out *dsi_pdata;
 	int err = 0;
 	int dsi_enum = -1;
@@ -3767,11 +3783,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
 		goto err_release_regs;
 	}
-
-	if (dsi_enum)
+	if (dsi_enum) {
 		dsi_clk = clk_get(&dc->ndev->dev, "dsib");
-	else
+		dsi_lp_clk = clk_get(&dc->ndev->dev, "dsiblp");
+	} else {
 		dsi_clk = clk_get(&dc->ndev->dev, "dsia");
+		dsi_lp_clk = clk_get(&dc->ndev->dev, "dsialp");
+	}
 
 	dsi_fixed_clk = clk_get(&dc->ndev->dev, "dsi-fixed");
 
@@ -3797,6 +3815,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi->dc_clk = dc_clk;
 	dsi->dsi_clk = dsi_clk;
 	dsi->dsi_fixed_clk = dsi_fixed_clk;
+	dsi->dsi_lp_clk = dsi_lp_clk;
 
 	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
 	if (err < 0)

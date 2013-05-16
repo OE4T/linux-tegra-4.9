@@ -31,6 +31,7 @@
 #include <linux/nvhost.h>
 #include <linux/lcm.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_runtime.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -4037,6 +4038,9 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	/* Shutting down. Drop any reference to dc clk */
 	while (tegra_is_clk_enabled(dc->clk))
 		clk_disable_unprepare(dc->clk);
+
+	pm_runtime_put_sync(&dc->ndev->dev);
+
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dc->one_shot_lp_lock);
 	mutex_unlock(&dc->lock);
@@ -4130,6 +4134,8 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 	clk_prepare_enable(dc->clk);
+
+	pm_runtime_get_sync(&dc->ndev->dev);
 
 	err = _tegra_dsi_host_resume(dc, dsi, dsi->info.suspend_aggr);
 	if (err < 0) {

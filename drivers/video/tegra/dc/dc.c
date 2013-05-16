@@ -1512,6 +1512,7 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	 * c) Initialize completion for next iteration.
 	 */
 
+	mutex_lock(&dc->one_shot_lp_lock);
 	tegra_dc_get(dc);
 	dc->out->user_needs_vblank = true;
 	tegra_dc_unmask_interrupt(dc, MSF_INT);
@@ -1520,6 +1521,7 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	init_completion(&dc->out->user_vblank_comp);
 	tegra_dc_mask_interrupt(dc, MSF_INT);
 	tegra_dc_put(dc);
+	mutex_unlock(&dc->one_shot_lp_lock);
 
 	return ret;
 }
@@ -2635,6 +2637,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);
+	mutex_init(&dc->one_shot_lp_lock);
 	init_completion(&dc->frame_end_complete);
 	init_waitqueue_head(&dc->wq);
 	init_waitqueue_head(&dc->timestamp_wq);

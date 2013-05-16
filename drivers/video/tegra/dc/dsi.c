@@ -1625,16 +1625,14 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
-	/* extra reference to dc clk */
-	clk_prepare_enable(dc->clk);
+	tegra_dc_get(dc);
 
 	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ , DC_CMD_STATE_CONTROL);
 
-	/* balance extra dc clk reference */
-	clk_disable_unprepare(dc->clk);
+	tegra_dc_put(dc);
 
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;
 }
@@ -1661,6 +1659,8 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 
 	reinit_completion(&dc->frame_end_complete);
 
+	tegra_dc_get(dc);
+
 	tegra_dc_flush_interrupt(dc, FRAME_END_INT);
 	/* unmask frame end interrupt */
 	val = tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
@@ -1674,6 +1674,8 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 
 	/* wait for v_ref_to_sync no. of lines after frame end interrupt */
 	udelay(mode.v_ref_to_sync * line_period);
+
+	tegra_dc_put(dc);
 
 	return timeout;
 }
@@ -1710,8 +1712,8 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 {
 	u32 val;
 
-	/* take extra reference to dc clk */
-	clk_prepare_enable(dc->clk);
+	tegra_dc_get(dc);
+	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
 
 	tegra_dc_writel(dc, DSI_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
@@ -1751,8 +1753,7 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 	}
 
-	/* balance extra dc clk reference */
-	clk_disable_unprepare(dc->clk);
+	tegra_dc_put(dc);
 
 	dsi->status.dc_stream = DSI_DC_STREAM_ENABLE;
 }
@@ -4020,6 +4021,9 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 		return 0;
 
 	mutex_lock(&dsi->host_lock);
+	mutex_lock(&dc->one_shot_lock);
+	mutex_lock(&dc->lock);
+	mutex_lock(&dc->one_shot_lp_lock);
 	tegra_dc_io_start(dc);
 	dsi->host_suspended = true;
 
@@ -4030,7 +4034,13 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev,
 			"DSI host suspend failed\n");
 
+	/* Shutting down. Drop any reference to dc clk */
+	while (tegra_is_clk_enabled(dc->clk))
+		clk_disable_unprepare(dc->clk);
 	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->one_shot_lp_lock);
+	mutex_unlock(&dc->lock);
+	mutex_unlock(&dc->one_shot_lock);
 	mutex_unlock(&dsi->host_lock);
 	return err;
 }
@@ -4119,6 +4129,7 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 	}
 
 	tegra_dc_io_start(dc);
+	clk_prepare_enable(dc->clk);
 
 	err = _tegra_dsi_host_resume(dc, dsi, dsi->info.suspend_aggr);
 	if (err < 0) {

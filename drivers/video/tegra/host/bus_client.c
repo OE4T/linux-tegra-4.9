@@ -56,6 +56,16 @@
 
 DEFINE_MUTEX(channel_lock);
 
+int nvhost_check_bondout(unsigned int id)
+{
+#ifdef CONFIG_NVHOST_BONDOUT_CHECK
+	if (!tegra_platform_is_silicon())
+		return tegra_bonded_out_dev(id);
+#endif
+	return 0;
+}
+EXPORT_SYMBOL(nvhost_check_bondout);
+
 static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 {
 	int err = 0;

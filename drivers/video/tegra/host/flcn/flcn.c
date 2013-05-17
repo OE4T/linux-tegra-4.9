@@ -628,6 +628,12 @@ static int flcn_probe(struct platform_device *dev)
 
 	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
 
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_err(&dev->dev, "flcn unit not present. err:%d", err);
+		return err;
+	}
+
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);

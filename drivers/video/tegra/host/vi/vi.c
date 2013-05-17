@@ -135,6 +135,7 @@ static int vi_probe(struct platform_device *dev)
 	int err = 0;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
+
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
 
@@ -157,6 +158,12 @@ static int vi_probe(struct platform_device *dev)
 	if (!pdata) {
 		dev_info(&dev->dev, "no platform data\n");
 		return -ENODATA;
+	}
+
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_warn(&dev->dev, "No VI unit present. err:%d", err);
+		return err;
 	}
 
 	pdata->pdev = dev;

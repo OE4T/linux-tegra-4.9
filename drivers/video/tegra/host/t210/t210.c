@@ -20,6 +20,7 @@
 
 #include <mach/mc.h>
 #include <linux/tegra-powergate.h>
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include "nvhost_job.h"
@@ -57,6 +58,7 @@ struct nvhost_device_data t21_host1x_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
+	.bond_out_id   = BOND_OUT_HOST1X,
 };
 
 struct nvhost_device_data t21_isp_info = {
@@ -71,6 +73,7 @@ struct nvhost_device_data t21_isp_info = {
 	.moduleid      = NVHOST_MODULE_ISP,
 	.ctrl_ops      = &tegra_isp_ctrl_ops,
 	.num_channels  = 1,
+	.bond_out_id   = BOND_OUT_ISP,
 };
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
@@ -89,6 +92,7 @@ struct nvhost_device_data t21_vi_info = {
 		{"cile", 102000000} },
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.num_channels  = 4,
+	.bond_out_id   = BOND_OUT_VI,
 };
 #else
 struct nvhost_device_data t21_vib_info = {
@@ -103,6 +107,7 @@ struct nvhost_device_data t21_vib_info = {
 	.moduleid      = NVHOST_MODULE_VI,
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.num_channels  = 1,
+	.bond_out_id   = BOND_OUT_VI,
 };
 
 static struct platform_device tegra_vi01b_device = {
@@ -129,6 +134,7 @@ struct nvhost_device_data t21_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.slave         = &tegra_vi01b_device,
 	.num_channels  = 1,
+	.bond_out_id   = BOND_OUT_VI,
 };
 #endif
 
@@ -151,7 +157,8 @@ struct nvhost_device_data t21_msenc_info = {
 	.finalize_poweron	= nvhost_nvenc_t210_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
 	.num_channels		= 1,
-	.firmware_name		= "nvhost_nvenc050.fw"
+	.firmware_name		= "nvhost_nvenc050.fw",
+	.bond_out_id		= BOND_OUT_NVENC
 };
 
 struct nvhost_device_data t21_nvdec_info = {
@@ -168,6 +175,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
 	.num_channels		= 1,
+	.bond_out_id		= BOND_OUT_NVDEC,
 };
 
 struct nvhost_device_data t21_nvjpg_info = {
@@ -183,6 +191,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.finalize_poweron	= nvhost_nvjpg_t210_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_NVJPG,
 	.num_channels		= 1,
+	.bond_out_id		= BOND_OUT_NVJPG,
 };
 
 struct nvhost_device_data t21_tsec_info = {
@@ -201,6 +210,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 	.gather_filter_enabled	= false,
+	.bond_out_id		= BOND_OUT_TSEC,
 };
 
 struct nvhost_device_data t21_tsecb_info = {
@@ -219,6 +229,7 @@ struct nvhost_device_data t21_tsecb_info = {
 	.deinit			= nvhost_tsec_deinit,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.bond_out_id		= BOND_OUT_TSEC,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
@@ -238,7 +249,8 @@ struct nvhost_device_data t21_vic_info = {
 	.deinit			= nvhost_flcn_deinit,
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
-	.firmware_name		= "vic04_ucode.bin"
+	.firmware_name		= "vic04_ucode.bin",
+	.bond_out_id		= BOND_OUT_VIC
 };
 #endif
 

@@ -284,6 +284,12 @@ static int isp_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_err(&dev->dev, "No ISP unit present. err:%d", err);
+		return err;
+	}
+
 	tegra_isp = devm_kzalloc(&dev->dev, sizeof(struct isp), GFP_KERNEL);
 	if (!tegra_isp) {
 		dev_err(&dev->dev, "can't allocate memory for isp\n");

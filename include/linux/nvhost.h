@@ -240,6 +240,9 @@ struct nvhost_device_data {
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			struct nvhost_channel *ch);
+
+	/* bond out device id */
+	unsigned int bond_out_id;
 };
 
 

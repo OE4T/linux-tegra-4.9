@@ -709,6 +709,12 @@ static int nvhost_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_err(&dev->dev, "No HOST1X unit present. err:%d", err);
+		return err;
+	}
+
 	regs = platform_get_resource(dev, IORESOURCE_MEM, 0);
 	if (!regs) {
 		dev_err(&dev->dev, "missing host1x regs\n");

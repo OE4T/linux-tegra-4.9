@@ -719,6 +719,12 @@ static int nvdec_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_err(&dev->dev, "No NVDEC unit present. err:%d", err);
+		return err;
+	}
+
 	pdata->pdev = dev;
 
 	mutex_init(&pdata->lock);

@@ -536,6 +536,12 @@ static int tsec_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	err = nvhost_check_bondout(pdata->bond_out_id);
+	if (err) {
+		dev_err(&dev->dev, "No TSEC unit present. err:%d", err);
+		return err;
+	}
+
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);

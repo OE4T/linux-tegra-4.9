@@ -482,20 +482,14 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 
-	/* loop as many as three more times in case new interrupts come up
-	 * while we're processing current ones */
-	while (mc_intr_0 && loop++ < 3) {
-		if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
-			gk20a_gr_isr(g);
-		if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
-			gk20a_fifo_isr(g);
-		if (mc_intr_0 & mc_intr_0_pmu_pending_f())
-			gk20a_pmu_isr(g);
-		if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
-			gk20a_priv_ring_isr(g);
-		mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
-	}
-
+	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
+		gk20a_gr_isr(g);
+	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
+		gk20a_fifo_isr(g);
+	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
+		gk20a_pmu_isr(g);
+	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
+		gk20a_priv_ring_isr(g);
 	if (mc_intr_0)
 		nvhost_dbg_info("leaving isr with interrupt pending 0x%08x",
 				mc_intr_0);

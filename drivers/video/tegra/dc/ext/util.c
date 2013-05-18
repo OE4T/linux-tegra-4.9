@@ -30,7 +30,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct nvmap_handle_ref *win_dup;
-	struct nvmap_handle *win_handle;
+	ulong win_handle_id;
 	dma_addr_t phys;
 
 	if (!id) {
@@ -44,8 +44,8 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	 * Take a reference to the buffer using the user's nvmap context, to
 	 * make sure they have permissions to access it.
 	 */
-	win_handle = nvmap_get_handle_user_id(user->nvmap, id);
-	if (!win_handle)
+	win_handle_id = nvmap_get_handle_user_id(user->nvmap, id);
+	if (!win_handle_id)
 		return -EACCES;
 
 	/*
@@ -56,7 +56,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	win_dup = nvmap_duplicate_handle_user_id(ext->nvmap, id);
 
 	/* Release the reference we took in the user's context above */
-	nvmap_handle_put(win_handle);
+	nvmap_put_handle_user_id(win_handle_id);
 
 	if (IS_ERR(win_dup))
 		return PTR_ERR(win_dup);

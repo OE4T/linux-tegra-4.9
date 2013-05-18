@@ -311,7 +311,8 @@ u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle)
 	switch (nvhost_memmgr_type((u32)handle)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		return (u32)nvmap_ref_to_handle(handle);
+		return (u32)nvmap_ref_to_user_id(
+				(struct nvmap_handle_ref *)handle);
 		break;
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF

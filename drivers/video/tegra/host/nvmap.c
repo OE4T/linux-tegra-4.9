@@ -157,7 +157,8 @@ int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,
 
 	for (i = 0; i < count; i++) {
 		if ((ids[i] & id_type_mask) == id_type)
-			phys_addr[i] = (dma_addr_t)_nvmap_get_addr_from_id(ids[i]);
+			phys_addr[i] = (dma_addr_t)nvmap_get_addr_from_user_id(
+								ids[i]);
 	}
 
 fail:

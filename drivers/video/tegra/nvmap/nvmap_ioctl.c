@@ -112,6 +112,11 @@ ulong unmarshal_user_id(ulong id)
 
 #endif
 
+ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref)
+{
+	return (ulong)marshal_kernel_handle(nvmap_ref_to_id(ref));
+}
+
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {
 	struct nvmap_pin_handle op;

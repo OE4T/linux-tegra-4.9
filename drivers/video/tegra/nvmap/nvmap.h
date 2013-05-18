@@ -110,6 +110,17 @@ struct nvmap_handle {
 	struct mutex lock;
 };
 
+/* handle_ref objects are client-local references to an nvmap_handle;
+ * they are distinct objects so that handles can be unpinned and
+ * unreferenced the correct number of times when a client abnormally
+ * terminates */
+struct nvmap_handle_ref {
+	struct nvmap_handle *handle;
+	struct rb_node	node;
+	atomic_t	dupes;	/* number of times to free on file close */
+	atomic_t	pin;	/* number of times to unpin on free */
+};
+
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 #define NVMAP_UC_POOL NVMAP_HANDLE_UNCACHEABLE
 #define NVMAP_WC_POOL NVMAP_HANDLE_WRITE_COMBINE
@@ -259,6 +270,8 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 
 struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id);
+
+void nvmap_handle_put(struct nvmap_handle *h);
 
 struct nvmap_handle_ref *_nvmap_validate_id_locked(struct nvmap_client *priv,
 						   unsigned long id);

@@ -261,10 +261,13 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 	return h;
 }
 
-struct nvmap_handle *nvmap_get_handle_user_id(struct nvmap_client *client,
+ulong nvmap_get_handle_user_id(struct nvmap_client *client,
 					 unsigned long user_id)
 {
-	return nvmap_get_handle_id(client, unmarshal_user_id(user_id));
+	struct nvmap_handle *h;
+
+	h = nvmap_get_handle_id(client, unmarshal_user_id(user_id));
+	return (ulong)marshal_kernel_handle((ulong)h);
 }
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,

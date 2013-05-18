@@ -575,10 +575,11 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
  * Get physical address of the handle. Handle should be
  * already validated and pinned.
  */
-phys_addr_t _nvmap_get_addr_from_id(ulong user_id)
+phys_addr_t nvmap_get_addr_from_user_id(ulong user_id)
 {
-	struct nvmap_handle *h = (struct nvmap_handle *)unmarshal_user_id(
-								user_id);
+	struct nvmap_handle *h;
+
+	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
 	return handle_phys(h);
 }
 
@@ -965,4 +966,12 @@ void nvmap_handle_put(struct nvmap_handle *h)
 			__func__, current->comm);
 	} else if (cnt == 0)
 		_nvmap_handle_free(h);
+}
+
+void nvmap_put_handle_user_id(ulong user_id)
+{
+	struct nvmap_handle *h;
+
+	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
+	nvmap_handle_put(h);
 }

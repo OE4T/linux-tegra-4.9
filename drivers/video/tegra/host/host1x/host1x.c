@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <mach/hardware.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -524,8 +525,18 @@ static struct of_device_id tegra_host1x_of_match[] = {
 
 void nvhost_host1x_update_clk(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = &t11_gr3d_info;
-	struct nvhost_device_profile *profile = pdata->power_profile;
+	struct nvhost_device_data *pdata = NULL;
+	struct nvhost_device_profile *profile;
+
+	/* There are only two chips which need this workaround, so hardcode */
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
+		pdata = &t11_gr3d_info;
+	else if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA14)
+		pdata = &t14_gr3d_info;
+	if (!pdata)
+		return;
+
+	profile = pdata->power_profile;
 
 	if (profile && profile->actmon)
 		actmon_op().update_sample_period(profile->actmon);

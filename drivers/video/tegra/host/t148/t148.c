@@ -225,10 +225,12 @@ struct nvhost_device_data t14_vi_info = {
 			  NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
 			  NVSYNCPT_VI_ISP_4},
 	.modulemutexes	= {NVMODMUTEX_VI_0},
+	.clocks		= { {"host1x", 136000000, 6} },
 	.exclusive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_VI,
+	.update_clk	= nvhost_host1x_update_clk,
 };
 
 static struct platform_device tegra_vi01_device = {

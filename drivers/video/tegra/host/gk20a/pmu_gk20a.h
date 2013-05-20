@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -702,5 +702,7 @@ int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
 int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
+int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
+void gk20a_pmu_load_reset(struct gk20a *g);
 
 #endif /*__PMU_GK20A_H__*/

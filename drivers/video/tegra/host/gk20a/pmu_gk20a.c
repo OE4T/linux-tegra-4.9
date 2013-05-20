@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2500,4 +2500,33 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	nvhost_dbg_fn("done");
 	return 0;
+}
+
+int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
+{
+	unsigned long busy_cycles;
+	unsigned long total_cycles;
+
+	/* total cycles should always be larger than busy cycles. therefore,
+	 * enforce the order */
+	busy_cycles = pwr_pmu_idle_count_value_v(
+		gk20a_readl(g, pwr_pmu_idle_count_r(3)));
+	rmb();
+	total_cycles = pwr_pmu_idle_count_value_v(
+		gk20a_readl(g, pwr_pmu_idle_count_r(6)));
+
+	*load = busy_cycles * 1000 / total_cycles;
+
+	return 0;
+}
+
+void gk20a_pmu_load_reset(struct gk20a *g)
+{
+	u32 val = pwr_pmu_idle_count_reset_f(1);
+
+	/* total cycles should always be larger than busy cycles. therefore,
+	 * enforce the order */
+	gk20a_writel(g, pwr_pmu_idle_count_r(6), val);
+	wmb();
+	gk20a_writel(g, pwr_pmu_idle_count_r(3), val);
 }

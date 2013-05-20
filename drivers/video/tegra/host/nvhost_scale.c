@@ -313,13 +313,15 @@ void nvhost_scale_deinit(struct platform_device *pdev)
  * Initialize hardware portion of the device
  */
 
-void nvhost_scale_hw_init(struct platform_device *pdev)
+int nvhost_scale_hw_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
 	if (profile && profile->actmon)
 		actmon_op().init(profile->actmon);
+
+	return 0;
 }
 
 /*

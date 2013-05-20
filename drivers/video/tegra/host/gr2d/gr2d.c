@@ -38,14 +38,22 @@
 #include "t148/t148.h"
 
 static struct of_device_id tegra_gr2d_of_match[] = {
+#ifdef TEGRA_2X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra20-gr2d",
 		.data = (struct nvhost_device_data *)&t20_gr2d_info },
+#endif
+#ifdef TEGRA_3X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra30-gr2d",
 		.data = (struct nvhost_device_data *)&t30_gr2d_info },
+#endif
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-gr2d",
 		.data = (struct nvhost_device_data *)&t11_gr2d_info },
+#endif
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra148-gr2d",
 		.data = (struct nvhost_device_data *)&t14_gr2d_info },
+#endif
 	{ },
 };
 

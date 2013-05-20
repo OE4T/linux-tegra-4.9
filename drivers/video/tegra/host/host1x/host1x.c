@@ -517,14 +517,22 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 }
 
 static struct of_device_id tegra_host1x_of_match[] = {
+#ifdef TEGRA_2X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra20-host1x",
 		.data = (struct nvhost_device_data *)&t20_host1x_info },
+#endif
+#ifdef TEGRA_3X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra30-host1x",
 		.data = (struct nvhost_device_data *)&t30_host1x_info },
+#endif
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-host1x",
 		.data = (struct nvhost_device_data *)&t11_host1x_info },
+#endif
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra148-host1x",
 		.data = (struct nvhost_device_data *)&t14_host1x_info },
+#endif
 	{ },
 };
 

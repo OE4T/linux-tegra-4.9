@@ -20,14 +20,24 @@
 #ifndef _NVHOST_T20_H_
 #define _NVHOST_T20_H_
 
+#include "chip_support.h"
+
 struct nvhost_master;
 struct nvhost_chip_support;
 struct output;
 struct nvhost_job;
 struct nvhost_channel;
 
+#ifdef TEGRA_2X_OR_HIGHER_CONFIG
 int nvhost_init_t20_support(struct nvhost_master *,
 	struct nvhost_chip_support *);
+#else
+static inline int nvhost_init_t20_support(struct nvhost_master *host,
+					  struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
 
 extern struct nvhost_device_data t20_host1x_info;
 extern struct nvhost_device_data t20_gr3d_info;

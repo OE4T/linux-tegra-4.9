@@ -478,5 +478,5 @@ int nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev)
 {
 	/* actmon needs to be reinitialized when we come back from
 	 * power gated state */
-	nvhost_scale_hw_init(dev);
+	return nvhost_scale_hw_init(dev);
 }

@@ -179,14 +179,22 @@ int nvhost_gr3d_prepare_power_off(struct platform_device *dev)
 }
 
 static struct of_device_id tegra_gr3d_of_match[] = {
+#ifdef TEGRA_2X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra20-gr3d",
 		.data = (struct nvhost_device_data *)&t20_gr3d_info },
+#endif
+#ifdef TEGRA_3X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra30-gr3d",
 		.data = (struct nvhost_device_data *)&t30_gr3d_info },
+#endif
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-gr3d",
 		.data = (struct nvhost_device_data *)&t11_gr3d_info },
+#endif
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra148-gr3d",
 		.data = (struct nvhost_device_data *)&t14_gr3d_info },
+#endif
 	{ },
 };
 

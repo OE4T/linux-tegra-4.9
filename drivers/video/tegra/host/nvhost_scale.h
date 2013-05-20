@@ -58,7 +58,7 @@ void nvhost_scale_deinit(struct platform_device *);
 void nvhost_scale_notify_busy(struct platform_device *);
 void nvhost_scale_notify_idle(struct platform_device *);
 
-void nvhost_scale_hw_init(struct platform_device *);
+int nvhost_scale_hw_init(struct platform_device *);
 void nvhost_scale_hw_deinit(struct platform_device *);
 
 #endif

@@ -22,15 +22,23 @@
 #ifndef _NVHOST_T114_H_
 #define _NVHOST_T114_H_
 
+#include "chip_support.h"
+
 struct nvhost_master;
 
 /* number of host channels */
 #define NV_HOST1X_CHANNELS_T114 9
 
-int nvhost_init_t114_channel_support(struct nvhost_master *,
-		struct nvhost_chip_support *);
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 int nvhost_init_t114_support(struct nvhost_master *host,
 		struct nvhost_chip_support *);
+#else
+static inline int nvhost_init_t114_support(struct nvhost_master *host,
+					   struct nvhost_chip_support *op)
+{
+	return -ENODEV;
+}
+#endif
 
 extern struct nvhost_device_data t11_host1x_info;
 extern struct nvhost_device_data t11_gr3d_info;

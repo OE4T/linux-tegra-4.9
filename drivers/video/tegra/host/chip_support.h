@@ -242,44 +242,6 @@ struct nvhost_chip_support {
 #define TEGRA_2X_OR_HIGHER_CONFIG
 #endif
 
-#ifdef TEGRA_2X_OR_HIGHER_CONFIG
-#else
-static inline int nvhost_init_t20_support(struct nvhost_master *host,
-					  struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
-
-#ifdef TEGRA_3X_OR_HIGHER_CONFIG
-#else
-static inline int nvhost_init_t30_support(struct nvhost_master *host,
-					  struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
-
-
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-#else
-static inline int nvhost_init_t148_support(struct nvhost_master *host,
-					   struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
-
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-#else
-static inline int nvhost_init_t124_support(struct nvhost_master *host,
-					   struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
-
-
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
 
 #define host_device_op()	(nvhost_get_chip_ops()->nvhost_dev)

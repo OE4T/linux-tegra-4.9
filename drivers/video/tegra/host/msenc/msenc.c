@@ -400,10 +400,14 @@ int nvhost_msenc_finalize_poweron(struct platform_device *dev)
 }
 
 static struct of_device_id tegra_msenc_of_match[] = {
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-msenc",
 		.data = (struct nvhost_device_data *)&t11_msenc_info },
+#endif
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra148-msenc",
 		.data = (struct nvhost_device_data *)&t14_msenc_info },
+#endif
 	{ },
 };
 

@@ -104,6 +104,9 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 static int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
 	struct tegra_dc_win *b)
 {
+	if (a == b)
+		return 0;
+
 	if (!WIN_IS_ENABLED(a) || !WIN_IS_ENABLED(b))
 		return 0;
 

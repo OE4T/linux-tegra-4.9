@@ -585,7 +585,9 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		return -EINVAL;
 
 	if (!pdata->can_powergate)
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 		pm_domain_gov = &pm_domain_always_on_gov;
+#endif
 
 	pm_genpd_init(domain, pm_domain_gov, true);
 	ret = pm_genpd_add_device(domain, &pdev->dev);

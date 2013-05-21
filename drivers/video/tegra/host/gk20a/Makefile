@@ -1,6 +1,6 @@
 
 GCOV_PROFILE := y
-EXTRA_CFLAGS += -Idrivers/video/tegra/host
+EXTRA_CFLAGS += -Idrivers/video/tegra/host -Idrivers/devfreq
 
 nvhost-gk20a-objs  = \
 	gk20a.o \
@@ -18,5 +18,6 @@ nvhost-gk20a-objs  = \
 	therm_gk20a.o \
 	gr_ctx_gk20a_sim.o \
 	gr_ctx_gk20a.o \
-	gk20a_gating_reglist.o
+	gk20a_gating_reglist.o \
+	gk20a_scale.o
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-gk20a.o

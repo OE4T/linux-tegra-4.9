@@ -1,0 +1,267 @@
+/*
+ * gk20a clock scaling profile
+ *
+ * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <linux/devfreq.h>
+#include <linux/debugfs.h>
+#include <linux/types.h>
+#include <linux/clk.h>
+#include <linux/export.h>
+#include <linux/slab.h>
+
+#include <mach/clk.h>
+#include <mach/hardware.h>
+
+#include <governor.h>
+
+#include "dev.h"
+#include "chip_support.h"
+#include "nvhost_acm.h"
+#include "gk20a.h"
+#include "pmu_gk20a.h"
+#include "clk_gk20a.h"
+#include "gk20a_scale.h"
+
+static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
+					    struct device_attribute *attr,
+					    char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
+	u32 busy_time;
+	ssize_t res;
+
+	nvhost_module_busy(g->dev);
+	gk20a_pmu_load_norm(g, &busy_time);
+	nvhost_module_idle(g->dev);
+
+	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
+
+	return res;
+}
+
+static DEVICE_ATTR(load, S_IRUGO, nvhost_gk20a_scale_load_show, NULL);
+
+/*
+ * gk20a_scale_target(dev, *freq, flags)
+ *
+ * This function scales the clock
+ */
+
+static int gk20a_scale_target(struct device *dev, unsigned long *freq,
+			      u32 flags)
+{
+	struct gk20a *g = get_gk20a(to_platform_device(dev));
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+
+	if (gk20a_clk_get_rate(g) == *freq)
+		return 0;
+
+	gk20a_clk_set_rate(g, *freq);
+	if (pdata->scaling_post_cb)
+		pdata->scaling_post_cb(profile, *freq);
+	*freq = gk20a_clk_get_rate(g);
+
+	return 0;
+}
+
+/*
+ * update_load_estimate_gpmu(profile)
+ *
+ * Update load estimate using gpmu. The gpmu value is normalised
+ * based on the time it was asked last time.
+ */
+
+static void update_load_estimate_gpmu(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+	struct gk20a *g = get_gk20a(pdev);
+	unsigned long dt;
+	u32 busy_time;
+	ktime_t t;
+
+	t = ktime_get();
+	dt = ktime_us_delta(t, profile->last_event_time);
+
+	profile->dev_stat.total_time = dt;
+	profile->last_event_time = t;
+	gk20a_pmu_load_norm(g, &busy_time);
+	gk20a_pmu_load_reset(g);
+	profile->dev_stat.busy_time = (busy_time * dt) / 1000;
+}
+
+/*
+ * gk20a_scale_notify(pdev, busy)
+ *
+ * Calling this function informs that the device is idling (..or busy). This
+ * data is used to estimate the current load
+ */
+
+static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+	struct devfreq *devfreq = pdata->power_manager;
+
+	/* Is the device profile initialised? */
+	if (!(profile && devfreq))
+		return;
+
+	mutex_lock(&devfreq->lock);
+	profile->last_event_type = busy ? DEVICE_BUSY : DEVICE_IDLE;
+	update_devfreq(devfreq);
+	mutex_unlock(&devfreq->lock);
+}
+
+void nvhost_gk20a_scale_notify_idle(struct platform_device *pdev)
+{
+	gk20a_scale_notify(pdev, false);
+
+}
+
+void nvhost_gk20a_scale_notify_busy(struct platform_device *pdev)
+{
+	gk20a_scale_notify(pdev, true);
+}
+
+/*
+ * gk20a_scale_get_dev_status(dev, *stat)
+ *
+ * This function queries the current device status.
+ */
+
+static int gk20a_scale_get_dev_status(struct device *dev,
+				      struct devfreq_dev_status *stat)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+	struct gk20a *g = get_gk20a(to_platform_device(dev));
+
+	/* Make sure there are correct values for the current frequency */
+	profile->dev_stat.current_frequency = gk20a_clk_get_rate(g);
+
+	/* Update load estimate */
+	update_load_estimate_gpmu(to_platform_device(dev));
+
+	/* Copy the contents of the current device status */
+	*stat = profile->dev_stat;
+
+	/* Finally, clear out the local values */
+	profile->dev_stat.total_time = 0;
+	profile->dev_stat.busy_time = 0;
+	profile->last_event_type = DEVICE_UNKNOWN;
+
+	return 0;
+}
+
+static struct devfreq_dev_profile gk20a_scale_devfreq_profile = {
+	.initial_freq   = 0,
+	.polling_ms     = 0,
+	.target         = gk20a_scale_target,
+	.get_dev_status = gk20a_scale_get_dev_status,
+};
+
+/*
+ * gk20a_scale_init(pdev)
+ */
+
+void nvhost_gk20a_scale_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile;
+
+	if (pdata->power_profile)
+		return;
+
+	profile = kzalloc(sizeof(struct nvhost_device_profile), GFP_KERNEL);
+	if (!profile)
+		return;
+	pdata->power_profile = profile;
+	profile->pdev = pdev;
+	profile->last_event_type = DEVICE_UNKNOWN;
+
+	/* Initialize devfreq related structures */
+	profile->dev_stat.private_data = &profile->ext_stat;
+	profile->ext_stat.min_freq = gpc_pll_params.min_freq;
+	profile->ext_stat.max_freq = gpc_pll_params.max_freq;
+	profile->ext_stat.busy = DEVICE_UNKNOWN;
+
+	if (profile->ext_stat.min_freq == profile->ext_stat.max_freq) {
+		dev_warn(&pdev->dev, "max rate = min rate (%lu), disabling scaling\n",
+			 profile->ext_stat.min_freq);
+		goto err_fetch_clocks;
+	}
+
+	if (device_create_file(&pdev->dev, &dev_attr_load))
+		goto err_create_sysfs_entry;
+
+	pdata->power_manager = devfreq_add_device(&pdev->dev,
+				&gk20a_scale_devfreq_profile,
+				"", NULL);
+
+	if (IS_ERR(pdata->power_manager))
+		pdata->power_manager = NULL;
+
+	return;
+
+err_create_sysfs_entry:
+err_fetch_clocks:
+	kfree(pdata->power_profile);
+	pdata->power_profile = NULL;
+}
+
+/*
+ * gk20a_scale_deinit(dev)
+ *
+ * Stop scaling for the given device.
+ */
+
+void nvhost_gk20a_scale_deinit(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+
+	if (!profile)
+		return;
+
+	if (pdata->power_manager)
+		devfreq_remove_device(pdata->power_manager);
+
+	device_remove_file(&pdev->dev, &dev_attr_load);
+
+	kfree(profile);
+	pdata->power_profile = NULL;
+}
+
+/*
+ * gk20a_scale_hw_init(dev)
+ *
+ * Initialize hardware portion of the device
+ */
+
+void nvhost_gk20a_scale_hw_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+	struct gk20a *g = get_gk20a(pdev);
+
+	gk20a_pmu_load_reset(g);
+	profile->dev_stat.total_time = 0;
+	profile->last_event_time = ktime_get();
+}

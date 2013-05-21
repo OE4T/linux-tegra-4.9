@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011 - 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011 - 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,5 +57,7 @@ int gk20a_init_clk_support(struct gk20a *g);
 
 u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
+
+extern struct pll_parms gpc_pll_params;
 
 #endif /* _NVHOST_CLK_GK20A_H_ */

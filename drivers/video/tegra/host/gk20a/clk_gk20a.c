@@ -3,7 +3,7 @@
  *
  * GK20A Clocks
  *
- * Copyright (c) 2011 - 2012, NVIDIA Corporation.
+ * Copyright (c) 2011 - 2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +35,7 @@
 #define MHz 1000000
 
 /* from vbios PLL info table */
-static struct pll_parms gpc_pll_params = {
+struct pll_parms gpc_pll_params = {
 	403, 806,	/* freq */
 	1100, 2200,	/* vco */
 	25, 100,	/* u */

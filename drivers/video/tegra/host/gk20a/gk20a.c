@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,6 +39,7 @@
 #include "ctrl_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_sim_gk20a.h"
+#include "gk20a_scale.h"
 
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -592,6 +593,8 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 int nvhost_gk20a_init(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ))
+		nvhost_gk20a_scale_hw_init(dev);
 	return 0;
 }
 
@@ -867,6 +870,13 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->prepare_poweroff		= nvhost_gk20a_prepare_poweroff,
 	pdata->finalize_poweron		= nvhost_gk20a_finalize_poweron,
 	pdata->syncpt_base		= 32; /*hack*/
+
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ)) {
+		pdata->busy		= nvhost_gk20a_scale_notify_busy;
+		pdata->idle		= nvhost_gk20a_scale_notify_idle;
+		pdata->scaling_init	= nvhost_gk20a_scale_init;
+		pdata->scaling_deinit	= nvhost_gk20a_scale_deinit;
+	}
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {

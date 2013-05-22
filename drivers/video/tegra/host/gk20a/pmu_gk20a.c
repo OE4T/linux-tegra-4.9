@@ -1469,6 +1469,9 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_value_always_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
 
+	if (!IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
+		return 0;
+
 	sample_buffer = 0;
 	err = pmu->dmem.alloc(&pmu->dmem, &sample_buffer, 2 * sizeof(u16));
 	if (err) {

@@ -836,7 +836,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	/* an address space needs to have been bound at this point.   */
 	if (!gk20a_channel_as_bound(c)) {
 		int err;
-		nvhost_warn(dev_from_gk20a(g),
+		nvhost_warn(d,
 			    "not bound to an address space at time of gpfifo"
 			    " allocation.  Attempting to create and bind to"
 			    " one...");
@@ -849,7 +849,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		 */
 		err = nvhost_as_alloc_and_bind_share(c->ch, c->hwctx);
 		if (err || !gk20a_channel_as_bound(c)) {
-			nvhost_err(dev_from_gk20a(g),
+			nvhost_err(d,
 				   "not bound to address space at time"
 				   " of gpfifo allocation");
 			return err;
@@ -1077,6 +1077,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * wait and one for syncpoint increment */
 	const int extra_entries = 2;
 
+	if ((flags & (NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
+		      NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
+	    !fence)
+		return -EINVAL;
+
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
 	check_gp_put(g, c);
@@ -1117,6 +1122,17 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* optionally insert syncpt wait in the beginning of gpfifo submission
 	   when user requested and the wait hasn't expired.
 	*/
+
+	/* validate that the id makes sense, elide if not */
+	/* the only reason this isn't being unceremoniously killed is to
+	 * keep running some tests which trigger this condition*/
+	if ((flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) &&
+	    ((fence->syncpt_id < 0) ||
+	     (fence->syncpt_id >= nvhost_syncpt_nb_pts(sp)))) {
+		dev_warn(d, "invalid wait id in gpfifo submit, elided");
+		flags &= ~NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT;
+	}
+
 	if ((flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) &&
 	    !nvhost_syncpt_is_expired(sp, fence->syncpt_id, fence->value)) {
 		alloc_priv_cmdbuf(c, 4, &wait_cmd);
@@ -1217,8 +1233,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
 	if (c->vm->tlb_dirty) {
-		/* Note this is coming *before* the buffer is submitted.   */
-		/* TBD: perform this "in-band" instead of with pri writes. */
 		c->vm->tlb_inval(c->vm);
 		c->vm->tlb_dirty = false;
 	}

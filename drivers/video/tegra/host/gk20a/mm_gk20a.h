@@ -155,12 +155,13 @@ struct vm_gk20a {
 	u64 va_start;
 	u64 va_limit;
 
+	bool big_pages;   /* enable large page support */
 	bool enable_ctag;
 	bool tlb_dirty;
 
 	struct page_directory_gk20a pdes;
 
-	struct nvhost_allocator vma; /* page interval allocator */
+	struct nvhost_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
 
 	u64 (*alloc_va)(struct vm_gk20a *vm, u64 size,

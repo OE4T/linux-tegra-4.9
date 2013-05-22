@@ -497,13 +497,11 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 			     enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 
 {
-	struct nvhost_allocator *vma = &vm->vma;
+	struct nvhost_allocator *vma = &vm->vma[gmmu_pgsz_idx];
 	int err;
 	u64 offset;
 	u32 start_page_nr = 0, num_pages;
 	u32 i, pde_lo, pde_hi;
-	int small_per_big_page = 1;
-	u32 page_shift_diff;
 	u64 gmmu_page_size = gmmu_page_sizes[gmmu_pgsz_idx];
 
 	if (gmmu_pgsz_idx >= ARRAY_SIZE(gmmu_page_sizes)) {
@@ -512,49 +510,33 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 		return -EINVAL;
 	}
 
-	page_shift_diff = gmmu_page_shifts[gmmu_page_size_big] -
-		gmmu_page_shifts[gmmu_pgsz_idx];
+	if ((gmmu_pgsz_idx == gmmu_page_size_big) && !vm->big_pages) {
+		dev_warn(dev_from_vm(vm),
+			 "unsupportd page size requested");
+		return -EINVAL;
+
+	}
 
 	/* be certain we round up to gmmu_page_size if needed */
 	/* TBD: DIV_ROUND_UP -> undefined reference to __aeabi_uldivmod */
 	size = (size + ((u64)gmmu_page_size - 1)) & ~((u64)gmmu_page_size - 1);
 
-	nvhost_dbg_info("size=0x%llx", size);
+	nvhost_dbg_info("size=0x%llx @ pgsz=%dKB", size,
+			gmmu_page_sizes[gmmu_pgsz_idx]>>10);
 
-	/* The vma allocator represents "smallest size" page accounting.
-	 * Cast down and back up from that granularity if needed. */
+	/* The vma allocator represents page accounting. */
 	num_pages = size >> gmmu_page_shifts[gmmu_pgsz_idx];
-	if (gmmu_pgsz_idx != gmmu_page_size_small) {
-		small_per_big_page = 1 << page_shift_diff;
-		num_pages = num_pages * small_per_big_page;
 
-		/* Allow for internal up-alignment as the allocator
-		 * doesn't yet know to start 128KB pages on 128KB boundaries.
-		 */
-		num_pages += (small_per_big_page - 1);
-	}
-
-	/*TBD: get current base, limit and alignment wired in here */
 	err = vma->alloc(vma, &start_page_nr, num_pages);
-
-	/* If we used internal up-alignment slop, take care of it */
-	if (gmmu_pgsz_idx != gmmu_page_size_small) {
-		u32 new_start_page_nr = DIV_ROUND_UP(start_page_nr,
-						     small_per_big_page);
-		if (new_start_page_nr > start_page_nr)
-			vma->free(vma, start_page_nr,
-				  new_start_page_nr - start_page_nr);
-		start_page_nr = new_start_page_nr;
-	}
-
-	offset = (u64)start_page_nr <<
-		gmmu_page_shifts[gmmu_page_size_small];
 
 	if (err) {
 		nvhost_err(dev_from_vm(vm),
-			   "oom: sz=0x%llx", size);
+			   "%s oom: sz=0x%llx", vma->name, size);
 		return 0;
 	}
+
+	offset = (u64)start_page_nr << gmmu_page_shifts[gmmu_pgsz_idx];
+	nvhost_dbg_fn("%s found addr: 0x%llx", vma->name, offset);
 
 	pde_range_from_vaddr_range(vm,
 				   offset, offset + size - 1,
@@ -564,7 +546,6 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	for (i = pde_lo; i <= pde_hi; i++) {
 
 		err = validate_gmmu_page_table_gk20a(vm, i, gmmu_pgsz_idx);
-
 
 		if (err) {
 			nvhost_err(dev_from_vm(vm),
@@ -583,14 +564,14 @@ static void gk20a_vm_free_va(struct vm_gk20a *vm,
 			     u64 offset, u64 size,
 			     enum gmmu_pgsz_gk20a pgsz_idx)
 {
-	struct nvhost_allocator *vma = &vm->vma;
-	/* The allocator deals in small-sized pages... */
-	u32 page_size = gmmu_page_sizes[gmmu_page_size_small];
-	u32 page_shift = gmmu_page_shifts[gmmu_page_size_small];
+	struct nvhost_allocator *vma = &vm->vma[pgsz_idx];
+	u32 page_size = gmmu_page_sizes[pgsz_idx];
+	u32 page_shift = gmmu_page_shifts[pgsz_idx];
 	u32 start_page_nr, num_pages;
 	int err;
 
-	nvhost_dbg_info("offset=0x%llx, size=0x%llx", offset, size);
+	nvhost_dbg_info("%s free addr=0x%llx, size=0x%llx",
+			vma->name, offset, size);
 
 	start_page_nr = (u32)(offset >> page_shift);
 	num_pages = (u32)((size + page_size - 1) >> page_shift);
@@ -598,7 +579,7 @@ static void gk20a_vm_free_va(struct vm_gk20a *vm,
 	err = vma->free(vma, start_page_nr, num_pages);
 	if (err) {
 		nvhost_err(dev_from_vm(vm),
-			   "oom: offset=0x%llx, sz=0x%llx",
+			   "not found: offset=0x%llx, sz=0x%llx",
 			   offset, size);
 	}
 }
@@ -679,8 +660,7 @@ struct buffer_attrs {
 	u8 uc_kind_v;
 };
 
-static int setup_buffer_size_and_align(struct mem_mgr *memmgr,
-				       struct mem_handle *hdl,
+static int setup_buffer_size_and_align(struct device *d,
 				       struct buffer_attrs *bfr,
 				       struct bfr_attr_query *query)
 {
@@ -701,10 +681,9 @@ static int setup_buffer_size_and_align(struct mem_mgr *memmgr,
 			break;
 		}
 
-	if (unlikely(0 > bfr->pgsz_idx)) {
-		nvhost_err(0, "unsupported nvmap buffer allocation "
-			   "alignment, size: 0x%llx, 0x%llx\n",
-			   bfr->align, bfr->size);
+	if (unlikely(bfr->pgsz_idx == -1)) {
+		nvhost_warn(d, "unsupported buffer alignment: 0x%llx",
+			   bfr->align);
 		return -EINVAL;
 	}
 	switch (query[BFR_HEAP].v) {
@@ -744,7 +723,8 @@ static int setup_buffer_size_and_align(struct mem_mgr *memmgr,
 }
 
 
-static int setup_buffer_kind_and_compression(u32 flags,
+static int setup_buffer_kind_and_compression(struct device *d,
+					     u32 flags,
 					     u32 kind,
 					     struct buffer_attrs *bfr,
 					     enum gmmu_pgsz_gk20a pgsz_idx)
@@ -761,7 +741,7 @@ static int setup_buffer_kind_and_compression(u32 flags,
 		bfr->kind_v = gmmu_pte_kind_pitch_v();
 
 	if (unlikely(!gk20a_kind_is_supported(bfr->kind_v))) {
-		nvhost_err(0, "kind 0x%x not supported", bfr->kind_v);
+		nvhost_err(d, "kind 0x%x not supported", bfr->kind_v);
 		return -EINVAL;
 	}
 
@@ -772,7 +752,7 @@ static int setup_buffer_kind_and_compression(u32 flags,
 		bfr->uc_kind_v = gk20a_get_uncompressed_kind(bfr->kind_v);
 		if (unlikely(bfr->uc_kind_v == gmmu_pte_kind_invalid_v())) {
 			/* shouldn't happen, but it is worth cross-checking */
-			nvhost_err(0, "comptag kind 0x%x can't be"
+			nvhost_err(d, "comptag kind 0x%x can't be"
 				   " downgraded to uncompressed kind",
 				   bfr->kind_v);
 			return -EINVAL;
@@ -781,7 +761,7 @@ static int setup_buffer_kind_and_compression(u32 flags,
 	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (unlikely(kind_compressible &&
 		     (gmmu_page_sizes[pgsz_idx] != 128*1024))) {
-		nvhost_warn(0, "comptags specified"
+		nvhost_warn(d, "comptags specified"
 			    " but pagesize being used doesn't support it");
 		/* it is safe to fall back to uncompressed as
 		   functionality is not harmed */
@@ -789,7 +769,8 @@ static int setup_buffer_kind_and_compression(u32 flags,
 		kind_compressible = false;
 	}
 	if (kind_compressible)
-		bfr->ctag_lines = bfr->size >> COMP_TAG_LINE_SIZE_SHIFT;
+		bfr->ctag_lines = ALIGN(bfr->size, COMP_TAG_LINE_SIZE) >>
+			COMP_TAG_LINE_SIZE_SHIFT;
 	else
 		bfr->ctag_lines = 0;
 
@@ -832,9 +813,16 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* validate/adjust bfr attributes */
-	err = setup_buffer_size_and_align(memmgr, r, &bfr, query);
+	err = setup_buffer_size_and_align(d, &bfr, query);
 	if (unlikely(err))
 		goto clean_up;
+	if (unlikely(bfr.pgsz_idx < gmmu_page_size_small ||
+		     bfr.pgsz_idx > gmmu_page_size_big)) {
+		BUG_ON(1);
+		err = -EINVAL;
+		goto clean_up;
+	}
+	gmmu_page_size = gmmu_page_sizes[bfr.pgsz_idx];
 
 	/* if specified the map offset must be bfr page size aligned */
 	if (flags & NVHOST_MAP_BUFFER_FLAGS_OFFSET) {
@@ -847,16 +835,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			goto clean_up;
 		}
 	}
-
-	BUG_ON(!(bfr.pgsz_idx == gmmu_page_size_big ||
-		 bfr.pgsz_idx == gmmu_page_size_small));
-
-	if (bfr.pgsz_idx == gmmu_page_size_big) {
-		nvhost_dbg_fn("degrading large pages in vm:%s", vm->vma.name);
-		bfr.pgsz_idx = gmmu_page_size_small;
-	}
-
-	gmmu_page_size = gmmu_page_sizes[bfr.pgsz_idx];
 
 	/* works ok with 4k phys.  works 4k,smmu if buffers in
 	 * sim invocation is bumped up again */
@@ -888,7 +866,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 #endif
 
-	err = setup_buffer_kind_and_compression(flags, kind,
+	err = setup_buffer_kind_and_compression(d, flags, kind,
 						&bfr, bfr.pgsz_idx);
 	if (unlikely(err)) {
 		nvhost_err(d, "failure setting up kind and compression");
@@ -1336,7 +1314,8 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 
 	kfree(vm->pdes.ptes[gmmu_page_size_small]);
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);
-	nvhost_allocator_destroy(&vm->vma);
+	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_small]);
+	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 }
 
 /* address space interfaces for the gk20a module */
@@ -1346,6 +1325,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	struct gk20a *gk20a = get_gk20a(as->ch->dev);
 	struct mm_gk20a *mm = &gk20a->mm;
 	struct vm_gk20a *vm;
+	u64 vma_size;
+	u32 num_pages;
 	char name[32];
 	int err;
 
@@ -1359,6 +1340,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 
 	vm->mm = mm;
 	vm->as_share = as_share;
+
+	vm->big_pages = true;
 
 	vm->va_start  = 0; /* we have a one page hole though so zeros fault*/
 	vm->va_limit  = mm->channel.size;
@@ -1401,10 +1384,30 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 			vm->pdes.kv, (u64)sg_phys(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	/* alloc in 4K granularity/pages */
-	snprintf(name, sizeof(name), "gk20a_as_%d", as_share->id);
-	nvhost_allocator_init(&vm->vma, name,
-		1, mm->channel.size >> 12, 1);
+
+	/* low-half: alloc small pages */
+	/* high-half: alloc big pages */
+	vma_size = mm->channel.size >> 1;
+
+	snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
+		 gmmu_page_sizes[gmmu_page_size_small]>>10);
+
+	num_pages = (u32)(vma_size >> gmmu_page_shifts[gmmu_page_size_small]);
+	/* note the "1" below as the start for the allocator. *
+	 * it's what keeps us from using the zero-page        */
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], name,
+	      1, /* start */
+	      num_pages - 1, /* length */
+	      1); /* align */
+
+
+	snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
+		 gmmu_page_sizes[gmmu_page_size_big]>>10);
+	num_pages = (u32)(vma_size >> gmmu_page_shifts[gmmu_page_size_big]);
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], name,
+			      num_pages, /* start */
+			      num_pages, /* length */
+			      1); /* align */
 
 	vm->mapped_buffers = RB_ROOT;
 
@@ -1669,8 +1672,14 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
 	nvhost_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
-	nvhost_allocator_init(&vm->vma, "gk20a_bar1",
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_bar1",
 		1, (vm->va_limit >> 12) - 1, 1);
+	/* initialize just in case we try to use it anyway */
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_bar1-unused",
+			      0x0badc0de, /* start */
+			      1, /* length */
+			      1); /* align */
+
 
 	vm->mapped_buffers = RB_ROOT;
 
@@ -1808,8 +1817,14 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
-	nvhost_allocator_init(&vm->vma, "gk20a_pmu",
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_pmu",
 		(vm->va_start >> 12), (vm->va_limit >> 12) - 1, 1);
+	/* initialize just in case we try to use it anyway */
+	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_pmu-unused",
+			      0x0badc0de, /* start */
+			      1, /* length */
+			      1); /* align */
+
 
 	vm->mapped_buffers = RB_ROOT;
 

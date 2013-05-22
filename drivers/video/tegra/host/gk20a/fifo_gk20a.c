@@ -628,22 +628,6 @@ int gk20a_init_fifo_support(struct gk20a *g)
 
 	return err;
 }
-/* these lookups aren't used much (errors), so linear search is fine for now */
-static struct channel_gk20a *
-channel_from_hw_chid(struct fifo_gk20a *f, u32 hw_chid)
-{
-	int ci;
-	if (unlikely(IS_ERR_OR_NULL(f->channel)))
-		return NULL;
-	for (ci = 0; ci < f->num_channels; ci++) {
-		struct channel_gk20a *c = f->channel+ci;
-		if (IS_ERR_OR_NULL(c))
-			continue;
-		if (c->hw_chid == hw_chid)
-			return f->channel+ci;
-	}
-	return NULL;
-}
 
 static struct channel_gk20a *
 channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)

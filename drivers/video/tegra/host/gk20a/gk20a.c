@@ -477,7 +477,6 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 	u32 mc_intr_0;
-	u32 loop = 0;
 
 	nvhost_dbg(dbg_intr, "interrupt thread launched");
 

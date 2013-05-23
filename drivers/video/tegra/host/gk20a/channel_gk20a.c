@@ -1335,7 +1335,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 	struct notification *notif;
 	struct timespec tv;
 	u64 jiffies;
-	u32 id;
+	ulong id;
 	u32 offset;
 	long timeout;
 	int remain, ret = 0;
@@ -1354,7 +1354,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 
 		handle_ref = nvhost_memmgr_get(memmgr, id, dev);
 		if (!handle_ref) {
-			nvhost_err(d, "invalid notifier nvmap handle 0x%08x",
+			nvhost_err(d, "invalid notifier nvmap handle 0x%lx",
 				   id);
 			return -EINVAL;
 		}

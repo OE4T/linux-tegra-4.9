@@ -28,6 +28,7 @@
 # include <unistd.h>
 #endif
 
+/* pixformat - color format */
 #define TEGRA_DC_EXT_FMT_P1		0
 #define TEGRA_DC_EXT_FMT_P2		1
 #define TEGRA_DC_EXT_FMT_P4		2
@@ -50,6 +51,22 @@
 #define TEGRA_DC_EXT_FMT_YUV422R	23
 #define TEGRA_DC_EXT_FMT_YCbCr422RA	24
 #define TEGRA_DC_EXT_FMT_YUV422RA	25
+/* color format type field is 8-bits */
+#define TEGRA_DC_EXT_FMT_SHIFT		0
+#define TEGRA_DC_EXT_FMT_MASK		(0xff << TEGRA_DC_EXT_FMT_SHIFT)
+
+/* pixformat - byte order options ( w x y z ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_NOSWAP	(0 << 8) /* ( 3 2 1 0 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP2	(1 << 8) /* ( 2 3 0 1 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4	(2 << 8) /* ( 0 1 2 3 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4HW	(3 << 8) /* ( 1 0 3 2 ) */
+/* the next two are not available on T30 or earlier */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP02	(4 << 8) /* ( 3 0 1 2 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAPLEFT	(5 << 8) /* ( 2 1 0 3 ) */
+/* byte order field is 4-bits */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT	8
+#define TEGRA_DC_EXT_FMT_BYTEORDER_MASK		\
+		(0x0f << TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT)
 
 #define TEGRA_DC_EXT_BLEND_NONE		0
 #define TEGRA_DC_EXT_BLEND_PREMULT	1

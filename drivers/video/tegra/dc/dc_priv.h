@@ -25,6 +25,7 @@
 # include <trace/events/display.h>
 #endif
 #include <mach/powergate.h>
+#include <video/tegra_dc_ext.h>
 
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ | \
@@ -103,9 +104,22 @@ static inline unsigned long tegra_dc_get_default_emc_clk_rate(
 	return dc->pdata->emc_clk_rate ? dc->pdata->emc_clk_rate : ULONG_MAX;
 }
 
+/* return the color format field */
+static inline int tegra_dc_fmt(int fmt)
+{
+	return (fmt & TEGRA_DC_EXT_FMT_MASK) >> TEGRA_DC_EXT_FMT_SHIFT;
+}
+
+/* return the byte swap field */
+static inline int tegra_dc_fmt_byteorder(int fmt)
+{
+	return (fmt & TEGRA_DC_EXT_FMT_BYTEORDER_MASK) >>
+		TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT;
+}
+
 static inline int tegra_dc_fmt_bpp(int fmt)
 {
-	switch (fmt) {
+	switch (tegra_dc_fmt(fmt)) {
 	case TEGRA_WIN_FMT_P1:
 		return 1;
 
@@ -151,7 +165,7 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 
 static inline bool tegra_dc_is_yuv(int fmt)
 {
-	switch (fmt) {
+	switch (tegra_dc_fmt(fmt)) {
 	case TEGRA_WIN_FMT_YUV420P:
 	case TEGRA_WIN_FMT_YCbCr420P:
 	case TEGRA_WIN_FMT_YCbCr422P:
@@ -169,7 +183,7 @@ static inline bool tegra_dc_is_yuv(int fmt)
 
 static inline bool tegra_dc_is_yuv_planar(int fmt)
 {
-	switch (fmt) {
+	switch (tegra_dc_fmt(fmt)) {
 	case TEGRA_WIN_FMT_YUV420P:
 	case TEGRA_WIN_FMT_YCbCr420P:
 	case TEGRA_WIN_FMT_YCbCr422P:

@@ -435,8 +435,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				update_blend_par = true;
 		}
 
-		tegra_dc_writel(dc, win->fmt & 0x1f, DC_WIN_COLOR_DEPTH);
-		tegra_dc_writel(dc, win->fmt >> 6, DC_WIN_BYTE_SWAP);
+		tegra_dc_writel(dc, tegra_dc_fmt(win->fmt),
+			DC_WIN_COLOR_DEPTH);
+		tegra_dc_writel(dc, tegra_dc_fmt_byteorder(win->fmt),
+			DC_WIN_BYTE_SWAP);
 
 		tegra_dc_writel(dc,
 			V_POSITION(win->out_y) | H_POSITION(win->out_x),

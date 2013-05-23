@@ -255,12 +255,15 @@ static struct nvhost_device_data tegra_msenc03_info = {
 	.exclusive     = true,
 	.keepalive     = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
+	/* VIC scaling is disabled by default. remove #if/endif to enable */
+#if 0
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
 	.idle		= nvhost_scale_notify_idle,
 	.busy		= nvhost_scale_notify_busy,
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
+#endif
 };
 
 struct platform_device tegra_msenc03_device = {

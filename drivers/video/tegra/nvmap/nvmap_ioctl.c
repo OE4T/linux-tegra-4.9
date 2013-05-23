@@ -39,7 +39,7 @@
 #include <linux/vmalloc.h>
 
 #include "nvmap_ioctl.h"
-#include "nvmap.h"
+#include "nvmap_priv.h"
 #include "nvmap_common.h"
 
 #include <linux/list.h>

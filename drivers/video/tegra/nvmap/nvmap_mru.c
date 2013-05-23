@@ -27,7 +27,7 @@
 
 #include <mach/iovmm.h>
 
-#include "nvmap.h"
+#include "nvmap_priv.h"
 #include "nvmap_mru.h"
 
 /* if IOVMM reclamation is enabled (CONFIG_NVMAP_RECLAIM_UNPINNED_VM),

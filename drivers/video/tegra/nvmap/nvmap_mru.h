@@ -26,7 +26,7 @@
 
 #include <linux/spinlock.h>
 
-#include "nvmap.h"
+#include "nvmap_priv.h"
 
 struct tegra_iovmm_area;
 struct tegra_iovmm_client;

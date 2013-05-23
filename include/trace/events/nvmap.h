@@ -26,44 +26,47 @@
 #if !defined(_TRACE_NVMAP_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _TRACE_NVMAP_H
 
-#include "../../../drivers/video/tegra/nvmap/nvmap.h"
 #include <linux/nvmap.h>
 #include <linux/tracepoint.h>
 
 DECLARE_EVENT_CLASS(nvmap,
-	TP_PROTO(struct nvmap_client *client),
-	TP_ARGS(client),
+	TP_PROTO(struct nvmap_client *client, const char *name),
+	TP_ARGS(client, name),
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
+		__string(sname, name)
 	),
 	TP_fast_assign(
 		__entry->client = client;
+		__assign_str(sname, name)
 	),
 	TP_printk("client=%p, name=%s",
-		__entry->client, __entry->client->name)
+		__entry->client, __get_str(sname))
 );
 
 DEFINE_EVENT(nvmap, nvmap_open,
-	TP_PROTO(struct nvmap_client *client),
-	TP_ARGS(client)
+	TP_PROTO(struct nvmap_client *client, const char *name),
+	TP_ARGS(client, name)
 );
 
 DEFINE_EVENT(nvmap, nvmap_release,
-	TP_PROTO(struct nvmap_client *client),
-	TP_ARGS(client)
+	TP_PROTO(struct nvmap_client *client, const char *name),
+	TP_ARGS(client, name)
 );
 
 TRACE_EVENT(nvmap_create_handle,
 	TP_PROTO(struct nvmap_client *client,
+		 const char *name,
 		 struct nvmap_handle *h,
 		 u32 size,
 		 struct nvmap_handle_ref *ref
 	),
 
-	TP_ARGS(client, h, size, ref),
+	TP_ARGS(client, name, h, size, ref),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
+		__string(sname, name)
 		__field(struct nvmap_handle *, h)
 		__field(u32, size)
 		__field(struct nvmap_handle_ref *, ref)
@@ -71,13 +74,14 @@ TRACE_EVENT(nvmap_create_handle,
 
 	TP_fast_assign(
 		__entry->client = client;
+		__assign_str(sname, name)
 		__entry->h = h;
 		__entry->size = size;
 		__entry->ref = ref;
 	),
 
 	TP_printk("client=%p, name=%s, handle=%p, size=%d, ref=%p",
-		__entry->client, __entry->client->name,
+		__entry->client, __get_str(sname),
 		__entry->h, __entry->size, __entry->ref)
 );
 
@@ -300,51 +304,57 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 
 DECLARE_EVENT_CLASS(pin_unpin,
 	TP_PROTO(struct nvmap_client *client,
+		 const char *name,
 		 struct nvmap_handle *h,
 		 u32 pin_count
 	),
 
-	TP_ARGS(client, h, pin_count),
+	TP_ARGS(client, name, h, pin_count),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
+		__string(sname, name)
 		__field(struct nvmap_handle *, h)
 		__field(u32, pin_count)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
+		__assign_str(sname, name)
 		__entry->h = h;
 		__entry->pin_count = pin_count;
 	),
 
 	TP_printk("client=%p, name=%s, h=%p, pin_count=%d",
-		__entry->client, __entry->client->name,
+		__entry->client, __get_str(sname),
 		__entry->h, __entry->pin_count)
 );
 
 DEFINE_EVENT(pin_unpin, handle_pin,
 	TP_PROTO(struct nvmap_client *client,
+		 const char *name,
 		 struct nvmap_handle *h,
 		 u32 pin_count
 	),
-	TP_ARGS(client, h, pin_count)
+	TP_ARGS(client, name, h, pin_count)
 );
 
 DEFINE_EVENT(pin_unpin, handle_unpin,
 	TP_PROTO(struct nvmap_client *client,
+		 const char *name,
 		 struct nvmap_handle *h,
 		 u32 pin_count
 	),
-	TP_ARGS(client, h, pin_count)
+	TP_ARGS(client, name, h, pin_count)
 );
 
 DEFINE_EVENT(pin_unpin, handle_unpin_error,
 	TP_PROTO(struct nvmap_client *client,
+		 const char *name,
 		 struct nvmap_handle *h,
 		 u32 pin_count
 	),
-	TP_ARGS(client, h, pin_count)
+	TP_ARGS(client, name, h, pin_count)
 );
 
 #endif /* _TRACE_NVMAP_H */

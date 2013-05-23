@@ -30,7 +30,7 @@
 #include <linux/err.h>
 
 #include <linux/nvmap.h>
-#include "nvmap.h"
+#include "nvmap_priv.h"
 #include "nvmap_heap.h"
 #include "nvmap_common.h"
 

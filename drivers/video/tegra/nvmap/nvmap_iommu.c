@@ -20,7 +20,7 @@
 #include <linux/slab.h>
 #include <mach/iovmm.h>
 
-#include "nvmap.h"
+#include "nvmap_priv.h"
 
 /* HACK: This should come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"

@@ -45,7 +45,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
 
-#include "nvmap.h"
+#include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 #include "nvmap_mru.h"
 #include "nvmap_common.h"
@@ -661,7 +661,7 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	priv = nvmap_create_client(dev, "user");
 	if (!priv)
 		return -ENOMEM;
-	trace_nvmap_open(priv);
+	trace_nvmap_open(priv, priv->name);
 
 	priv->super = (filp->f_op == &nvmap_super_fops);
 
@@ -673,8 +673,10 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 
 static int nvmap_release(struct inode *inode, struct file *filp)
 {
-	trace_nvmap_release(filp->private_data);
-	nvmap_client_put(filp->private_data);
+	struct nvmap_client *priv = filp->private_data;
+
+	trace_nvmap_release(priv, priv->name);
+	nvmap_client_put(priv);
 	return 0;
 }
 

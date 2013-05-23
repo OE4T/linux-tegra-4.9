@@ -452,6 +452,8 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
+	nvhost_module_busy(nvhost_get_parent(ch->dev));
+
 	mutex_lock(&ch->submitlock);
 	hwctx_to_save = ch->cur_ctx;
 	if (!hwctx_to_save) {
@@ -518,6 +520,7 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	nvhost_cdma_update(&ch->cdma);
 
 	mutex_unlock(&ch->submitlock);
+	nvhost_module_idle(nvhost_get_parent(ch->dev));
 
 done:
 	kfree(ctx_waiter);

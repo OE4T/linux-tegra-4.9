@@ -1154,18 +1154,24 @@ int nvhost_client_device_release(struct platform_device *dev)
 }
 EXPORT_SYMBOL(nvhost_client_device_release);
 
-int nvhost_client_device_suspend(struct platform_device *dev)
+int nvhost_client_device_suspend(struct device *dev)
 {
 	int ret = 0;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
 	ret = nvhost_channel_suspend(pdata->channel);
 	if (ret)
 		return ret;
 
-	dev_info(&dev->dev, "suspend status: %d\n", ret);
+	dev_info(dev, "suspend status: %d\n", ret);
 
 	return ret;
+}
+
+int nvhost_client_device_resume(struct device *dev)
+{
+	dev_info(dev, "resuming\n");
+	return 0;
 }
 
 int nvhost_client_device_get_resources(struct platform_device *dev)

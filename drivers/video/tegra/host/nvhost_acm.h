@@ -62,9 +62,11 @@ static inline void nvhost_module_idle(struct platform_device *dev)
 /* common runtime pm and power domain APIs */
 int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev);
-int nvhost_module_enable_clk(struct platform_device *pdev);
-int nvhost_module_disable_clk(struct platform_device *pdev);
+int nvhost_module_enable_clk(struct device *dev);
+int nvhost_module_disable_clk(struct device *dev);
 int nvhost_module_power_on(struct platform_device *pdev);
 int nvhost_module_power_off(struct platform_device *pdev);
+int nvhost_module_prepare_poweroff(struct device *dev);
+int nvhost_module_finalize_poweron(struct device *dev);
 
 #endif

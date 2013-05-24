@@ -98,44 +98,14 @@ static int __exit isp_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int isp_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int isp_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-#ifdef CONFIG_PM_RUNTIME
-static int isp_runtime_suspend(struct device *dev)
-{
-	return nvhost_module_disable_clk(to_platform_device(dev));
-}
-
-static int isp_runtime_resume(struct device *dev)
-{
-	return nvhost_module_enable_clk(to_platform_device(dev));
-}
-#endif /* CONFIG_PM_RUNTIME */
-
 static const struct dev_pm_ops isp_pm_ops = {
-	.suspend = isp_suspend,
-	.resume = isp_resume,
+	.suspend = nvhost_client_device_suspend,
+	.resume = nvhost_client_device_resume,
 #ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = isp_runtime_suspend,
-	.runtime_resume = isp_runtime_resume,
-#endif /* CONFIG_PM_RUNTIME */
+	.runtime_suspend = nvhost_module_disable_clk,
+	.runtime_resume = nvhost_module_enable_clk,
+#endif
 };
-
-#define ISP_PM_OPS	(&isp_pm_ops)
-
-#else
-
-#define ISP_PM_OPS	NULL
-
 #endif
 
 static struct platform_driver isp_driver = {
@@ -144,7 +114,9 @@ static struct platform_driver isp_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "isp",
-		.pm = ISP_PM_OPS,
+#ifdef CONFIG_PM
+		.pm = &isp_pm_ops,
+#endif
 #ifdef CONFIG_OF
 		.of_match_table = tegra_isp_of_match,
 #endif

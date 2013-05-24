@@ -406,78 +406,23 @@ static struct of_device_id tegra_msenc_of_match[] = {
 	{ },
 };
 
-struct msenc_pm_domain {
-	struct platform_device *dev;
-	struct generic_pm_domain pd;
-};
-
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static int msenc_unpowergate(struct generic_pm_domain *domain)
 {
-	struct msenc_pm_domain *msenc_pd;
+	struct nvhost_device_data *pdata;
 
-	msenc_pd = container_of(domain, struct msenc_pm_domain, pd);
-	return nvhost_module_power_on(msenc_pd->dev);
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_on(pdata->pdev);
 }
 
 static int msenc_powergate(struct generic_pm_domain *domain)
 {
-	struct msenc_pm_domain *msenc_pd;
-
-	msenc_pd = container_of(domain, struct msenc_pm_domain, pd);
-	return nvhost_module_power_off(msenc_pd->dev);
-}
-
-static int msenc_enable_clock(struct device *dev)
-{
-	return nvhost_module_enable_clk(to_platform_device(dev));
-}
-
-static int msenc_disable_clock(struct device *dev)
-{
-	return nvhost_module_disable_clk(to_platform_device(dev));
-}
-
-static int msenc_restore_context(struct device *dev)
-{
-	struct platform_device *pdev;
 	struct nvhost_device_data *pdata;
 
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(pdev);
-
-	return 0;
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_off(pdata->pdev);
 }
-
-static int msenc_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int msenc_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static struct msenc_pm_domain msenc_pd = {
-	.pd = {
-		.name = "msenc",
-		.power_off = msenc_powergate,
-		.power_on = msenc_unpowergate,
-		.dev_ops = {
-			.start = msenc_enable_clock,
-			.stop = msenc_disable_clock,
-		},
-	},
-};
+#endif
 
 static int msenc_probe(struct platform_device *dev)
 {
@@ -512,15 +457,22 @@ static int msenc_probe(struct platform_device *dev)
 	/* get the module clocks to sane state */
 	nvhost_module_init(dev);
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	pdata->pd.name = "msenc";
+	pdata->pd.power_off = msenc_powergate;
+	pdata->pd.power_on = msenc_unpowergate;
+	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
+	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
+
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */
-	msenc_pd.dev = dev;
-	err = nvhost_module_add_domain(&msenc_pd.pd, dev);
+	err = nvhost_module_add_domain(&pdata->pd, dev);
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
-	msenc_pd.pd.domain.ops.suspend = msenc_suspend;
-	msenc_pd.pd.domain.ops.resume = msenc_resume;
-	msenc_pd.pd.dev_ops.restore_state = msenc_restore_context;
+	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
+	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
+#endif
 
 	/* enable runtime pm. this is needed now since we need to call
 	 * _get_sync/_put during boot-up to ensure MC domain is ON */

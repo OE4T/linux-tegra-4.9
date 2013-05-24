@@ -190,97 +190,23 @@ static struct of_device_id tegra_gr3d_of_match[] = {
 	{ },
 };
 
-struct gr3d_pm_domain {
-	struct platform_device *dev;
-	struct generic_pm_domain pd;
-};
-
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static int gr3d_unpowergate(struct generic_pm_domain *domain)
 {
-	struct gr3d_pm_domain *gr3d_pd;
+	struct nvhost_device_data *pdata;
 
-	gr3d_pd = container_of(domain, struct gr3d_pm_domain, pd);
-	return nvhost_module_power_on(gr3d_pd->dev);
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_on(pdata->pdev);
 }
 
 static int gr3d_powergate(struct generic_pm_domain *domain)
 {
-	struct gr3d_pm_domain *gr3d_pd;
-
-	gr3d_pd = container_of(domain, struct gr3d_pm_domain, pd);
-	return nvhost_module_power_off(gr3d_pd->dev);
-}
-
-static int gr3d_enable_clock(struct device *dev)
-{
-	return nvhost_module_enable_clk(to_platform_device(dev));
-}
-
-static int gr3d_disable_clock(struct device *dev)
-{
-	return nvhost_module_disable_clk(to_platform_device(dev));
-}
-
-static int gr3d_save_context(struct device *dev)
-{
-	struct platform_device *pdev;
 	struct nvhost_device_data *pdata;
 
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->prepare_poweroff)
-		pdata->prepare_poweroff(pdev);
-
-	return 0;
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_off(pdata->pdev);
 }
-
-static int gr3d_restore_context(struct device *dev)
-{
-	struct platform_device *pdev;
-	struct nvhost_device_data *pdata;
-
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(pdev);
-
-	return 0;
-}
-
-static int gr3d_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(to_platform_device(dev));
-}
-
-static int gr3d_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static struct gr3d_pm_domain gr3d_pd = {
-	.pd = {
-		.name = "gr3d",
-		.power_off = gr3d_powergate,
-		.power_on = gr3d_unpowergate,
-		.dev_ops = {
-			.start = gr3d_enable_clock,
-			.stop = gr3d_disable_clock,
-		},
-	},
-};
+#endif
 
 static int gr3d_probe(struct platform_device *dev)
 {
@@ -307,14 +233,21 @@ static int gr3d_probe(struct platform_device *dev)
 	platform_set_drvdata(dev, pdata);
 	nvhost_module_init(dev);
 
-	gr3d_pd.dev = dev;
-	err = nvhost_module_add_domain(&gr3d_pd.pd, dev);
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	pdata->pd.name = "gr3d";
+	pdata->pd.power_off = gr3d_powergate;
+	pdata->pd.power_on = gr3d_unpowergate;
+	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
+	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
+
+	err = nvhost_module_add_domain(&pdata->pd, dev);
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
-	gr3d_pd.pd.dev_ops.save_state = gr3d_save_context;
-	gr3d_pd.pd.dev_ops.restore_state = gr3d_restore_context;
-	gr3d_pd.pd.domain.ops.suspend = gr3d_suspend;
-	gr3d_pd.pd.domain.ops.resume = gr3d_resume;
+	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
+	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
+	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
+	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+#endif
 
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,

@@ -151,7 +151,7 @@ static int vi_suspend(struct device *dev)
 	tegra_camera_suspend(tegra_vi->camera);
 #endif
 
-	return nvhost_client_device_suspend(to_platform_device(dev));
+	return nvhost_client_device_suspend(dev);
 }
 
 static int vi_resume(struct device *dev)
@@ -172,33 +172,14 @@ static int vi_resume(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
-static int vi_runtime_suspend(struct device *dev)
-{
-	return nvhost_module_disable_clk(to_platform_device(dev));
-}
-
-static int vi_runtime_resume(struct device *dev)
-{
-	return nvhost_module_enable_clk(to_platform_device(dev));
-}
-#endif /* CONFIG_PM_RUNTIME */
-
 static const struct dev_pm_ops vi_pm_ops = {
 	.suspend = vi_suspend,
 	.resume = vi_resume,
 #ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = vi_runtime_suspend,
-	.runtime_resume = vi_runtime_resume,
-#endif /* CONFIG_PM_RUNTIME */
+	.runtime_suspend = nvhost_module_disable_clk,
+	.runtime_resume = nvhost_module_enable_clk,
+#endif
 };
-
-#define VI_PM_OPS	(&vi_pm_ops)
-
-#else
-
-#define VI_PM_OPS	NULL
-
 #endif
 
 static struct platform_driver vi_driver = {
@@ -207,7 +188,9 @@ static struct platform_driver vi_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "vi",
-		.pm = VI_PM_OPS,
+#ifdef CONFIG_PM
+		.pm = &vi_pm_ops,
+#endif
 #ifdef CONFIG_OF
 		.of_match_table = tegra_vi_of_match,
 #endif

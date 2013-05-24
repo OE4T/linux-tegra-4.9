@@ -689,10 +689,10 @@ static int nvhost_suspend(struct device *dev)
 	struct nvhost_master *host = nvhost_get_private_data(pdev);
 	int ret = 0;
 
-	nvhost_module_enable_clk(pdev);
+	nvhost_module_enable_clk(dev);
 	power_off_host(pdev);
 	clock_off_host(pdev);
-	nvhost_module_disable_clk(pdev);
+	nvhost_module_disable_clk(dev);
 
 	ret = nvhost_module_suspend(host->dev);
 	dev_info(dev, "suspend status: %d\n", ret);
@@ -704,61 +704,24 @@ static int nvhost_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 
-	nvhost_module_enable_clk(pdev);
+	nvhost_module_enable_clk(dev);
 	clock_on_host(pdev);
 	power_on_host(pdev);
-	nvhost_module_disable_clk(pdev);
+	nvhost_module_disable_clk(dev);
 
 	dev_info(dev, "resuming\n");
 
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
-static int host1x_runtime_suspend(struct device *dev)
-{
-	struct nvhost_device_data *pdata;
-	struct platform_device *pdev;
-
-	pdev = to_platform_device(dev);
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	return nvhost_module_disable_clk(pdev);
-}
-
-static int host1x_runtime_resume(struct device *dev)
-{
-	struct nvhost_device_data *pdata;
-	struct platform_device *pdev;
-
-	pdev = to_platform_device(dev);
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	nvhost_module_enable_clk(pdev);
-
-	return 0;
-}
-#endif /* CONFIG_PM_RUNTIME */
-
 static const struct dev_pm_ops host1x_pm_ops = {
 	.suspend = nvhost_suspend,
 	.resume = nvhost_resume,
 #ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = host1x_runtime_suspend,
-	.runtime_resume = host1x_runtime_resume,
-#endif /* CONFIG_PM_RUNTIME */
+	.runtime_suspend = nvhost_module_disable_clk,
+	.runtime_resume = nvhost_module_enable_clk,
+#endif
 };
-
-#define HOST1X_PM_OPS	(&host1x_pm_ops)
-
-#else
-
-#define HOST1X_PM_OPS	NULL
-
 #endif /* CONFIG_PM */
 
 static struct platform_driver platform_driver = {
@@ -767,7 +730,9 @@ static struct platform_driver platform_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = DRIVER_NAME,
-		.pm = HOST1X_PM_OPS,
+#ifdef CONFIG_PM
+		.pm = &host1x_pm_ops,
+#endif
 #ifdef CONFIG_OF
 		.of_match_table = tegra_host1x_of_match,
 #endif

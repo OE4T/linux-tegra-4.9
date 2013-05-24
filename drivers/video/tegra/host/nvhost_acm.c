@@ -575,23 +575,23 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	return ret;
 }
 
-int nvhost_module_enable_clk(struct platform_device *pdev)
+int nvhost_module_enable_clk(struct device *dev)
 {
 	int index = 0;
 	struct nvhost_device_data *pdata;
 
 	/* enable parent's clock if required */
-	if (pdev->dev.parent && pdev->dev.parent != &platform_bus)
-		nvhost_module_enable_clk(to_platform_device(pdev->dev.parent));
+	if (dev->parent && dev->parent != &platform_bus)
+		nvhost_module_enable_clk(dev->parent);
 
-	pdata = platform_get_drvdata(pdev);
+	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
 
 	for (index = 0; index < pdata->num_clks; index++) {
 		int err = clk_prepare_enable(pdata->clk[index]);
 		if (err) {
-			dev_err(&pdev->dev, "Cannot turn on clock %s",
+			dev_err(dev, "Cannot turn on clock %s",
 				pdata->clocks[index].name);
 			return -EINVAL;
 		}
@@ -601,12 +601,12 @@ int nvhost_module_enable_clk(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(nvhost_module_enable_clk);
 
-int nvhost_module_disable_clk(struct platform_device *pdev)
+int nvhost_module_disable_clk(struct device *dev)
 {
 	int index = 0;
 	struct nvhost_device_data *pdata;
 
-	pdata = platform_get_drvdata(pdev);
+	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
 
@@ -614,8 +614,8 @@ int nvhost_module_disable_clk(struct platform_device *pdev)
 		clk_disable_unprepare(pdata->clk[index]);
 
 	/* disable parent's clock if required */
-	if (pdev->dev.parent && pdev->dev.parent != &platform_bus)
-		nvhost_module_disable_clk(to_platform_device(pdev->dev.parent));
+	if (dev->parent && dev->parent != &platform_bus)
+		nvhost_module_disable_clk(dev->parent);
 
 	return 0;
 }
@@ -654,6 +654,34 @@ int nvhost_module_power_off(struct platform_device *pdev)
 		do_powergate_locked(pdata->powergate_ids[1]);
 	}
 	mutex_unlock(&pdata->lock);
+
+	return 0;
+}
+
+int nvhost_module_prepare_poweroff(struct device *dev)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = dev_get_drvdata(dev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->prepare_poweroff)
+		pdata->prepare_poweroff(to_platform_device(dev));
+
+	return 0;
+}
+
+int nvhost_module_finalize_poweron(struct device *dev)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = dev_get_drvdata(dev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(to_platform_device(dev));
 
 	return 0;
 }

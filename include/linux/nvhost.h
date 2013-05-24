@@ -27,6 +27,7 @@
 #include <linux/types.h>
 #include <linux/devfreq.h>
 #include <linux/platform_device.h>
+#include <linux/pm_domain.h>
 
 struct nvhost_master;
 struct nvhost_hwctx;
@@ -168,6 +169,10 @@ struct nvhost_device_data {
 
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	struct generic_pm_domain pd;	/* power domain representing power partition */
+#endif
 
 	/* Finalize power on. Can be used for context restore. */
 	void (*finalize_poweron)(struct platform_device *dev);

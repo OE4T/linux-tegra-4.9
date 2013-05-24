@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -60,8 +60,8 @@ struct tegra_dc_dp_link_config {
 	u32	active_frac;
 	u32	watermark;
 
-	u32	hblank_sym;
-	u32	vblank_sym;
+	s32	hblank_sym;
+	s32	vblank_sym;
 };
 
 
@@ -92,7 +92,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
-void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
+	bool balanced, bool conforming);
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);
 
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor,
@@ -106,11 +108,14 @@ void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
 	bool power_up);
 void tegra_dc_sor_set_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	u32 pwm_dutycycle, u32 pwm_clksrc);
-int  tegra_dc_sor_power_dplanes(struct tegra_dc_sor_data *sor, u32 lane_count);
+int  tegra_dc_sor_power_dplanes(struct tegra_dc_sor_data *sor, u32 lane_count,
+	bool pu, bool lvds);
 void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
 	u32 lane, u32 pre_emphasis, u32 drive_current, u32 tx_pu);
 void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
-	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg,
-	bool use_scramble);
+	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg);
+void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor, bool ena);
+void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
+	bool is_lvds);
 
 #endif

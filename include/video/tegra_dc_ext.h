@@ -157,6 +157,7 @@ struct tegra_dc_ext_flip_2 {
  * - Exactly one of the SIZE flags must be specified.
  */
 
+
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32	((1 & 0x7) << 0)
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64	((2 & 0x7) << 0)
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128	((3 & 0x7) << 0)
@@ -164,6 +165,12 @@ struct tegra_dc_ext_flip_2 {
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(x)		(((x) & 0x7) >> 0)
 #define TEGRA_DC_EXT_CURSOR_FLAGS_2BIT_LEGACY		(0 << 16)
 #define TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL		(1 << 16)
+
+enum CR_MODE {
+	legacy,
+	normal,
+};
+
 struct tegra_dc_ext_cursor_image {
 	struct {
 		__u8	r;
@@ -172,6 +179,10 @@ struct tegra_dc_ext_cursor_image {
 	} foreground, background;
 	__u32	buff_id;
 	__u32	flags;
+	__s16	x;
+	__s16	y;
+	__u32	vis;
+	enum CR_MODE mode;
 };
 
 /* Possible flags for struct nvdc_cursor's flags field */
@@ -317,6 +328,12 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_GET_CUSTOM_CMU \
 	_IOR('D', 0x10, struct tegra_dc_ext_cmu)
+
+#define TEGRA_DC_EXT_SET_CURSOR_IMAGE_LOW_LATENCY \
+	_IOW('D', 0x11, struct tegra_dc_ext_cursor_image)
+
+#define TEGRA_DC_EXT_SET_CURSOR_LOW_LATENCY \
+	_IOW('D', 0x12, struct tegra_dc_ext_cursor_image)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

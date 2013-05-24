@@ -112,6 +112,7 @@
 #define  WIN_D_ACT_REQ		(1 << 4)
 #define  WIN_H_ACT_REQ		(1 << 5)
 #endif
+#define  CURSOR_ACT_REQ		(1 << 7)
 #define  GENERAL_UPDATE		(1 << 8)
 #define  WIN_A_UPDATE		(1 << 9)
 #define  WIN_B_UPDATE		(1 << 10)
@@ -120,6 +121,7 @@
 #define  WIN_D_UPDATE		(1 << 12)
 #define  WIN_H_UPDATE		(1 << 13)
 #endif
+#define  CURSOR_UPDATE		(1 << 15)
 #define  NC_HOST_TRIG		(1 << 24)
 
 #define DC_CMD_DISPLAY_WINDOW_HEADER		0x042
@@ -130,6 +132,10 @@
 #define  WINDOW_H_SELECT		(1 << 8)
 
 #define DC_CMD_REG_ACT_CONTROL			0x043
+#define CURSOR_ACT_CNTR_SEL_V	0
+#define CURSOR_ACT_CNTR_SEL_H	1
+#define CURSOR_ACT_CNTR_SEL		7
+
 
 #define DC_COM_CRC_CONTROL			0x300
 #define  CRC_ALWAYS_ENABLE		(1 << 3)
@@ -419,6 +425,10 @@
 	(((_x) & ((1 << 16) - 1)) |		\
 	(((_y) & ((1 << 16) - 1)) << 16))
 
+#define   CURSOR_POSITION_124(_x, _y)		\
+	(((_x) & ((1 << 14) - 1)) |		\
+	(((_y) & ((1 << 14) - 1)) << 16))
+
 #define DC_DISP_CURSOR_POSITION_NS		0x441
 #define DC_DISP_INIT_SEQ_CONTROL		0x442
 #define DC_DISP_SPI_INIT_SEQ_DATA_A		0x443
@@ -433,6 +443,12 @@
 #define DC_DISP_DAC_CRT_CTRL			0x4c0
 #define DC_DISP_DISP_MISC_CONTROL		0x4c1
 #define   UF_LINE_FLUSH                         (1 << 1)
+
+#define	DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
+#define CURSOR_MODE_CAL(x) ((x) << 24)
+#define CURSOR_DST_BLEND_FACTOR_SELECT(x) ((x) << 16)
+#define CURSOR_SRC_BLEND_FACTOR_SELECT(x) ((x) << 8)
+#define CURSOR_ALPHA	0xff
 
 #define DC_WIN_COLOR_PALETTE(x)			(0x500 + (x))
 

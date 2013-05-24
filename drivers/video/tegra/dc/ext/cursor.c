@@ -17,7 +17,7 @@
  */
 
 #include <video/tegra_dc_ext.h>
-
+#include <linux/../../drivers/video/tegra/nvmap/nvmap.h>
 #include "tegra_dc_ext_priv.h"
 
 /* ugh */
@@ -299,3 +299,186 @@ unlock:
 
 	return ret;
 }
+
+int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_cursor_image *args)
+{
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc *dc = ext->dc;
+	int ret;
+
+	mutex_lock(&ext->cursor.lock);
+	if (ext->cursor.user != user) {
+		ret = -EACCES;
+		goto unlock;
+	}
+
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
+	}
+
+	mutex_lock(&dc->lock);
+
+	tegra_dc_io_start(dc);
+	tegra_dc_hold_dc_out(dc);
+
+	tegra_dc_writel(dc,
+		CURSOR_COLOR(args->foreground.r,
+			args->foreground.g,
+			args->foreground.b),
+		DC_DISP_CURSOR_FOREGROUND);
+
+	tegra_dc_writel(dc,
+		CURSOR_COLOR(args->background.r,
+		args->background.g,
+		args->background.b),
+		DC_DISP_CURSOR_BACKGROUND);
+
+	tegra_dc_writel(dc,
+		(CURSOR_MODE_CAL(args->mode) | CURSOR_ALPHA |
+		CURSOR_SRC_BLEND_FACTOR_SELECT(0) |
+		CURSOR_DST_BLEND_FACTOR_SELECT(2)),
+		DC_DISP_BLEND_CURSOR_CONTROL);
+
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_release_dc_out(dc);
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dc->lock);
+
+	mutex_unlock(&ext->cursor.lock);
+
+	return 0;
+
+unlock:
+	mutex_unlock(&ext->cursor.lock);
+
+	return ret;
+}
+
+int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_cursor_image *args)
+{
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc *dc = ext->dc;
+	u32 cursor_start;
+	int ret;
+	struct nvmap_handle_ref *handle, *old_handle;
+	dma_addr_t phys_addr;
+
+	bool enable;
+	u32 win_options;
+	u32 reg = 0;
+
+	u8 *win_ptr;
+
+	if (!user->nvmap)
+		return -EFAULT;
+	mutex_lock(&ext->cursor.lock);
+
+
+	if (ext->cursor.user != user) {
+		ret = -EACCES;
+		goto unlock;
+	}
+
+	if (!ext->enabled) {
+		ret = -ENXIO;
+		goto unlock;
+	}
+
+	old_handle = ext->cursor.cur_handle;
+
+	ret = tegra_dc_ext_pin_window(user, args->buff_id, &handle, &phys_addr);
+
+	if (ret)
+		goto unlock;
+
+	ext->cursor.cur_handle = handle;
+	/* debugging purpose to dump the buffer content */
+	win_ptr = nvmap_mmap(handle);
+
+	mutex_lock(&dc->lock);
+
+	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
+	tegra_dc_io_start(dc);	win_options =
+		tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+	if (!!(win_options & CURSOR_ENABLE) != enable) {
+		win_options &= ~CURSOR_ENABLE;
+		if (enable)
+			win_options |= CURSOR_ENABLE;
+		tegra_dc_writel(dc, win_options, DC_DISP_DISP_WIN_OPTIONS);
+	}
+	tegra_dc_hold_dc_out(dc);
+
+	if (args->flags == TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64) {
+		tegra_dc_writel(dc,
+			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
+			CURSOR_SIZE_64,
+			DC_DISP_CURSOR_START_ADDR);
+	} else if (args->flags ==
+		TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128) {
+		tegra_dc_writel(dc,
+			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
+			CURSOR_SIZE_128,
+			DC_DISP_CURSOR_START_ADDR);
+	} else if (args->flags ==
+		TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256) {
+		tegra_dc_writel(dc,
+			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
+			CURSOR_SIZE_256,
+			DC_DISP_CURSOR_START_ADDR);
+	} else {
+		tegra_dc_writel(dc,
+			CURSOR_START_ADDR(((unsigned long) phys_addr)),
+			DC_DISP_CURSOR_START_ADDR);
+	}
+
+	cursor_start = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
+
+	tegra_dc_writel(dc, CURSOR_POSITION_124(args->x, args->y),
+		DC_DISP_CURSOR_POSITION);
+
+	reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
+	reg &= ~(1 << CURSOR_ACT_CNTR_SEL);
+	reg |= (CURSOR_ACT_CNTR_SEL_V << CURSOR_ACT_CNTR_SEL);
+
+	tegra_dc_writel(dc, reg, DC_CMD_REG_ACT_CONTROL);
+
+	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	win_options = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+	enable = (args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
+
+	if (!!(win_options & CURSOR_ENABLE) != enable) {
+		win_options &= ~CURSOR_ENABLE;
+		if (enable)
+			win_options |= CURSOR_ENABLE;
+		tegra_dc_writel(dc, win_options, DC_DISP_DISP_WIN_OPTIONS);
+	}
+
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_release_dc_out(dc);
+	tegra_dc_io_end(dc);
+
+	mutex_unlock(&dc->lock);
+
+	mutex_unlock(&ext->cursor.lock);
+
+	if (old_handle) {
+		nvmap_unpin(ext->nvmap, old_handle);
+		nvmap_free(ext->nvmap, old_handle);
+	}
+	return 0;
+
+unlock:
+		mutex_unlock(&ext->cursor.lock);
+		return ret;
+}
+
+

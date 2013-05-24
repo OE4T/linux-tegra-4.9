@@ -1105,6 +1105,11 @@ static int nct1008_probe(struct i2c_client *client,
 	mutex_init(&data->mutex);
 
 	nct1008_power_control(data, true);
+	if (!data->nct_reg) {
+		/* power up failure */
+		err = -EIO;
+		goto cleanup;
+	}
 	/* extended range recommended steps 1 through 4 taken care
 	 * in nct1008_configure_sensor function */
 	err = nct1008_configure_sensor(data);	/* sensor is in standby */
@@ -1189,6 +1194,7 @@ static int nct1008_probe(struct i2c_client *client,
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
 	nct1008_power_control(data, false);
+cleanup:
 	mutex_destroy(&data->mutex);
 	if (data->nct_reg)
 		regulator_put(data->nct_reg);

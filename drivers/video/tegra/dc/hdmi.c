@@ -1425,8 +1425,11 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_sourc
 		AUDIO_FREQ_176_4K== audio_freq ||
 		AUDIO_FREQ_192K== audio_freq) {
 		/* If we can program HDMI, then proceed */
-		if (hdmi->clk_enabled)
+		if (hdmi->clk_enabled) {
+			tegra_dc_io_start(hdmi->dc);
 			tegra_dc_hdmi_setup_audio(hdmi->dc, audio_freq,audio_source);
+			tegra_dc_io_end(hdmi->dc);
+		}
 
 		/* Store it for using it in enable */
 		hdmi->audio_freq = audio_freq;

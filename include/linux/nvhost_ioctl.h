@@ -161,8 +161,8 @@ struct nvhost_submit_gpfifo_old_args {
 struct nvhost_submit_gpfifo_args {
 	__u64 gpfifo;
 	__u32 num_entries;
-	struct nvhost_fence fence;
 	__u32 flags;
+	struct nvhost_fence fence;
 };
 
 struct nvhost_map_buffer_args {

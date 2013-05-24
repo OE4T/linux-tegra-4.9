@@ -526,6 +526,7 @@ static int nvhost_ioctl_channel_submit_gpfifo_old(
 
 	new_args.gpfifo = (u64)(uintptr_t)args->gpfifo;
 	new_args.num_entries = args->num_entries;
+	new_args.fence = args->fence;
 	new_args.flags = args->flags;
 	ret = nvhost_ioctl_channel_submit_gpfifo(ctx, &new_args);
 	if (!ret)

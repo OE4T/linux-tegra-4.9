@@ -46,6 +46,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_mru.h"
 #include "nvmap_common.h"
+#include "nvmap_ioctl.h"
 
 #define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM | \
 				 NVMAP_HEAP_CARVEOUT_VPR)
@@ -1268,3 +1269,48 @@ int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
 	return 0;
 }
 EXPORT_SYMBOL(nvmap_release_page_list);
+
+int nvmap_get_handle_param(struct nvmap_client *client,
+			   struct nvmap_handle_ref *ref, u32 param, u64 *result)
+{
+	int err = 0;
+	struct nvmap_handle *h = nvmap_handle_get(ref->handle);
+
+	switch (param) {
+	case NVMAP_HANDLE_PARAM_SIZE:
+		*result = h->orig_size;
+		break;
+	case NVMAP_HANDLE_PARAM_ALIGNMENT:
+		*result = h->align;
+		break;
+	case NVMAP_HANDLE_PARAM_BASE:
+		if (!h->alloc || !atomic_add_return(0, &h->pin))
+			*result = -EINVAL;
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
+			*result = h->carveout->base;
+			mutex_unlock(&h->lock);
+		} else if (h->pgalloc.contig)
+			*result = page_to_phys(h->pgalloc.pages[0]);
+		else if (h->pgalloc.area)
+			*result = h->pgalloc.area->iovm_start;
+		else
+			*result = -EINVAL;
+		break;
+	case NVMAP_HANDLE_PARAM_HEAP:
+		if (!h->alloc)
+			*result = 0;
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
+			*result = nvmap_carveout_usage(client, h->carveout);
+			mutex_unlock(&h->lock);
+		} else
+			*result = NVMAP_HEAP_IOVMM;
+		break;
+	default:
+		err = -EINVAL;
+		break;
+	}
+	nvmap_handle_put(h);
+	return err;
+}

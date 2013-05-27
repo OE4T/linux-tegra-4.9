@@ -159,6 +159,8 @@ void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref);
  */
 void nvmap_flush_deferred_cache(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref);
+int nvmap_get_handle_param(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 
 struct nvmap_platform_carveout {
 	const char *name;

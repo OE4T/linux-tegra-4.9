@@ -30,6 +30,8 @@
 #include <linux/seq_file.h>
 #include <linux/nvhost.h>
 #include <linux/lcm.h>
+#include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 
@@ -3550,6 +3552,158 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 	tegra_dsi_init_sw(dc, dsi);
 }
 
+struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct tegra_dc_dsi_data *dsi,
+						const struct device_node *node,
+						struct property *prop,
+						u32 n_cmd)
+{
+	struct tegra_dsi_cmd *dsi_cmd, *temp;
+	u32 *prop_val_ptr = prop->value;
+	u32 cnt = 0, i = 0;
+	u8 arg1, arg2;
+
+	if (!prop)
+		return NULL;
+
+	dsi_cmd = kzalloc(sizeof(*dsi_cmd) * n_cmd, GFP_KERNEL);
+	if (!dsi_cmd) {
+		dev_err(&dsi->dc->ndev->dev,
+			"dsi: cmd memory allocation failed\n");
+		return ERR_PTR(-ENOMEM);
+	}
+	temp = dsi_cmd;
+
+	for (cnt  = 0; cnt < n_cmd; cnt++, temp++) {
+		temp->cmd_type = be32_to_cpu(*prop_val_ptr++);
+		if (temp->cmd_type == TEGRA_DSI_PACKET_CMD) {
+			temp->data_id = be32_to_cpu(*prop_val_ptr++);
+			arg1 = be32_to_cpu(*prop_val_ptr++);
+			arg2 = be32_to_cpu(*prop_val_ptr++);
+			prop_val_ptr++; /* skip ecc */
+			if (temp->data_id == DSI_GENERIC_LONG_WRITE ||
+				temp->data_id == DSI_DCS_LONG_WRITE ||
+				temp->data_id == DSI_NULL_PKT_NO_DATA ||
+				temp->data_id == DSI_BLANKING_PKT_NO_DATA) {
+				/* long pkt */
+				temp->sp_len_dly.data_len =
+					(arg2 << NUMOF_BIT_PER_BYTE) | arg1;
+				temp->pdata = kzalloc(
+					temp->sp_len_dly.data_len, GFP_KERNEL);
+				for (i = 0; i < temp->sp_len_dly.data_len; i++)
+					(temp->pdata)[i] =
+					be32_to_cpu(*prop_val_ptr++);
+				prop_val_ptr += 2; /* skip checksum */
+			} else {
+				temp->sp_len_dly.sp.data0 = arg1;
+				temp->sp_len_dly.sp.data1 = arg2;
+			}
+		} else if (temp->cmd_type == TEGRA_DSI_DELAY_MS) {
+			temp->sp_len_dly.delay_ms =
+				be32_to_cpu(*prop_val_ptr++);
+		}
+	}
+
+	return dsi_cmd;
+}
+
+struct device_node *tegra_dsi_panel_detect(void)
+{
+	/* TODO: currently only lg 720p panel has dt support */
+	return of_find_compatible_node(NULL, NULL, "lg,720p-5");
+}
+
+static int tegra_dc_dsi_cp_info_dt(struct tegra_dc_dsi_data *dsi)
+{
+	struct device_node *panel_dt_node = tegra_dsi_panel_detect();
+	struct device_node *dsi_dt_node =
+		of_find_compatible_node(NULL, NULL, "nvidia,tegra114-dsi");
+	struct tegra_dsi_out *dsi_pdata = &dsi->info;
+	int err = 0;
+
+	if (!panel_dt_node || !dsi_dt_node) {
+		dev_info(&dsi->dc->ndev->dev,
+			"dsi dt support not available\n");
+		err = -ENOENT;
+		goto fail;
+	}
+
+	if (panel_dt_node && dsi_dt_node) {
+		const char *panel_dt_status;
+		const char *dsi_dt_status;
+		of_property_read_string(panel_dt_node,
+				"status", &panel_dt_status);
+		of_property_read_string(dsi_dt_node,
+				"status", &dsi_dt_status);
+		if (strcmp(panel_dt_status, "okay") ||
+				strcmp(dsi_dt_status, "okay")) {
+			dev_info(&dsi->dc->ndev->dev,
+				"dsi dt support disabled\n");
+			err = -ENOENT;
+			goto fail;
+		}
+	}
+
+	of_property_read_u32(panel_dt_node, "nvidia,n-data-lanes",
+					(u32 *)&dsi_pdata->n_data_lanes);
+
+	of_property_read_u32(panel_dt_node, "nvidia,pixel-format",
+					(u32 *)&dsi_pdata->pixel_format);
+
+	of_property_read_u32(panel_dt_node, "nvidia,refresh-rate",
+					(u32 *)&dsi_pdata->refresh_rate);
+
+	of_property_read_u32(panel_dt_node, "nvidia,video-data-type",
+					(u32 *)&dsi_pdata->video_data_type);
+
+	of_property_read_u32(panel_dt_node, "nvidia,video-clock-mode",
+					(u32 *)&dsi_pdata->video_clock_mode);
+
+	of_property_read_u32(panel_dt_node, "nvidia,video-burst-mode",
+					(u32 *)&dsi_pdata->video_burst_mode);
+
+	of_property_read_u32(panel_dt_node, "nvidia,virtual-channel",
+					(u32 *)&dsi_pdata->virtual_channel);
+
+	of_property_read_u32(panel_dt_node, "nvidia,panel-reset",
+					(u32 *)&dsi_pdata->panel_reset);
+
+	dsi_pdata->power_saving_suspend = of_property_read_bool(panel_dt_node,
+						"nvidia,power-saving-suspend");
+
+	of_property_read_u32(dsi_dt_node, "nvidia,controller-vs",
+					(u32 *)&dsi_pdata->controller_vs);
+
+	dsi_pdata->dsi_panel_rst_gpio = of_get_named_gpio(dsi_dt_node,
+					"nvidia,dsi-panel-rst-gpio", 0);
+
+	dsi_pdata->dsi_panel_bl_en_gpio = of_get_named_gpio(dsi_dt_node,
+					"nvidia,dsi-panel-bl-en-gpio", 0);
+
+	dsi_pdata->dsi_panel_bl_pwm_gpio = of_get_named_gpio(dsi_dt_node,
+					"nvidia,dsi-panel-bl-pwm-gpio", 0);
+
+	of_property_read_u32(panel_dt_node, "nvidia,n-init-cmd",
+					(u32 *)&dsi_pdata->n_init_cmd);
+
+	dsi_pdata->dsi_init_cmd = tegra_dsi_parse_cmd_dt(dsi, panel_dt_node,
+				of_find_property(
+				panel_dt_node, "nvidia,dsi-init-cmd", NULL),
+				dsi_pdata->n_init_cmd);
+	if (IS_ERR_OR_NULL(dsi_pdata->dsi_init_cmd)) {
+		dev_err(&dsi->dc->ndev->dev,
+			"dsi: copy init cmd from dt failed\n");
+		err = PTR_ERR(dsi_pdata->dsi_init_cmd);
+		goto fail;
+	}
+
+	dsi->dc->pdata->default_out->dsi = &dsi->info;
+	dsi->dc->out->dsi = &dsi->info;
+fail:
+	of_node_put(dsi_dt_node);
+	of_node_put(panel_dt_node);
+	return err;
+}
+
 static int tegra_dc_dsi_cp_p_cmd(struct tegra_dsi_cmd *src,
 					struct tegra_dsi_cmd *dst, u16 n_cmd)
 {
@@ -3577,17 +3731,14 @@ free_cmd_pdata:
 	return -ENOMEM;
 }
 
-static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
-					struct tegra_dsi_out *p_dsi)
+static int tegra_dc_dsi_cp_info_board(struct tegra_dc_dsi_data *dsi,
+						struct tegra_dsi_out *p_dsi)
 {
 	struct tegra_dsi_cmd *p_init_cmd;
 	struct tegra_dsi_cmd *p_early_suspend_cmd = NULL;
 	struct tegra_dsi_cmd *p_late_resume_cmd = NULL;
 	struct tegra_dsi_cmd *p_suspend_cmd;
-	int err;
-
-	if (p_dsi->n_data_lanes > MAX_DSI_DATA_LANES)
-		return -EINVAL;
+	int err = 0;
 
 	p_init_cmd = kzalloc(sizeof(*p_init_cmd) *
 				p_dsi->n_init_cmd, GFP_KERNEL);
@@ -3657,10 +3808,48 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 		goto err_free;
 	dsi->info.dsi_suspend_cmd = p_suspend_cmd;
 
+	return 0;
+err_free:
+	kfree(p_suspend_cmd);
+err_free_p_late_resume_cmd:
+	kfree(p_late_resume_cmd);
+err_free_p_early_suspend_cmd:
+	kfree(p_early_suspend_cmd);
+err_free_init_cmd:
+	kfree(p_init_cmd);
+	return err;
+}
+
+static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi)
+{
+	int err;
+
+	err = tegra_dc_dsi_cp_info_dt(dsi);
+	if (err < 0) {
+		/* resort to platform files */
+		struct tegra_dsi_out *p_dsi;
+		dev_warn(&dsi->dc->ndev->dev,
+			"dsi: copy from dt failed, trying platform file\n");
+		p_dsi = dsi->dc->pdata->default_out->dsi;
+		if (!p_dsi) {
+			dev_err(&dsi->dc->ndev->dev,
+				"dsi: platform dsi data not available\n");
+			return -EINVAL;
+		}
+		err = tegra_dc_dsi_cp_info_board(dsi, p_dsi);
+		if (err < 0) {
+			dev_err(&dsi->dc->ndev->dev,
+				"dsi: copy from platform files failed\n");
+			return err;
+		}
+	}
+
+	if (dsi->info.n_data_lanes > MAX_DSI_DATA_LANES)
+		return -EINVAL;
+
 	if (!dsi->info.panel_reset_timeout_msec)
 		dsi->info.panel_reset_timeout_msec =
 						DEFAULT_PANEL_RESET_TIMEOUT;
-
 	if (!dsi->info.panel_buffer_size_byte)
 		dsi->info.panel_buffer_size_byte = DEFAULT_PANEL_BUFFER_BYTE;
 
@@ -3690,16 +3879,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	/* host mode is for testing only */
 	dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
 	return 0;
-
-err_free:
-	kfree(p_suspend_cmd);
-err_free_p_late_resume_cmd:
-	kfree(p_late_resume_cmd);
-err_free_p_early_suspend_cmd:
-	kfree(p_early_suspend_cmd);
-err_free_init_cmd:
-	kfree(p_init_cmd);
-	return err;
 }
 
 /* returns next null enumeration from  tegra_dsi_instance */
@@ -3723,25 +3902,21 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dsi_clk = NULL;
 	struct clk *dsi_fixed_clk = NULL;
 	struct clk *dsi_lp_clk = NULL;
-	struct tegra_dsi_out *dsi_pdata;
 	int err = 0;
 	int dsi_enum = -1;
-
-	if (dc->pdata->default_out->dsi->dsi_instance)
-		dsi_enum = 1;
-	else
-		dsi_enum = tegra_dsi_get_enumeration();
-	if (dsi_enum < 0) {
-		err = -EINVAL;
-		dev_err(&dc->ndev->dev, "dsi: invalid enum retured\n");
-		return err;
-	}
 
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, "dsi: memory allocation failed\n");
 		return -ENOMEM;
 	}
+
+	dsi->dc = dc;
+	err = tegra_dc_dsi_cp_info(dsi);
+	if (err < 0)
+		goto err_free_dsi;
+
+	dsi_enum = dsi->info.dsi_instance ? : tegra_dsi_get_enumeration();
 	tegra_dsi_instance[dsi_enum] = dsi;
 
 	if (dc->out->dsi->ganged_type) {
@@ -3780,11 +3955,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_release_regs;
 	}
 
-	dsi_pdata = dc->pdata->default_out->dsi;
-	if (!dsi_pdata) {
-		dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
-		goto err_release_regs;
-	}
 	if (dsi_enum) {
 		dsi_clk = clk_get(&dc->ndev->dev, "dsib");
 		dsi_lp_clk = clk_get(&dc->ndev->dev, "dsiblp");
@@ -3811,7 +3981,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	mutex_init(&dsi->lock);
 	dsi->controller_index = dsi_enum;
-	dsi->dc = dc;
 	dsi->base = base;
 	dsi->base_res = base_res;
 	dsi->dc_clk = dc_clk;
@@ -3819,17 +3988,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi->dsi_fixed_clk = dsi_fixed_clk;
 	dsi->dsi_lp_clk = dsi_lp_clk;
 
-	err = tegra_dc_dsi_cp_info(dsi, dsi_pdata);
-	if (err < 0)
-		goto err_dc_clk_put;
-
 	tegra_dc_set_outdata(dc, dsi);
 	__tegra_dc_dsi_init(dc);
 
 	return 0;
 
-err_dc_clk_put:
-	clk_put(dc_clk);
 err_dsi_clk_put:
 	clk_put(dsi_clk);
 	clk_put(dsi_fixed_clk);

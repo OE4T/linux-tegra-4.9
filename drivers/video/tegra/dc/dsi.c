@@ -2099,7 +2099,7 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
-	u32 timeout = 0;
+	u32 __maybe_unused timeout = 0;
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
 	else
@@ -2121,6 +2121,8 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		tegra_dsi_mipi_calibration_11x(dsi);
 #endif
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		/* Start calibration */
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
 			MIPI_CAL_MIPI_CAL_CTRL_0);
@@ -2141,6 +2143,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		}
 		if (timeout <= 0)
 			dev_err(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
+#endif
 
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {

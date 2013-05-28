@@ -362,7 +362,7 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_WAIT		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 102, struct nvhost_wait_args)
 #define NVHOST_IOCTL_CHANNEL_ZCULL_BIND_OLD	\
-	_IOWR(NVHOST_IOCTL_MAGIC, 103, struct nvhost_zcull_bind_args)
+	_IOWR(NVHOST_IOCTL_MAGIC, 103, struct nvhost_zcull_bind_old_args)
 #define NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX_OLD	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 104, struct nvhost_alloc_obj_ctx_old_args)
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX_OLD	\
@@ -376,7 +376,7 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX	\
 	_IOR(NVHOST_IOCTL_MAGIC,  109, struct nvhost_free_obj_ctx_args)
 #define NVHOST_IOCTL_CHANNEL_ZCULL_BIND		\
-	_IOWR(NVHOST_IOCTL_MAGIC, 110, struct nvhost_zcull_bind_old_args)
+	_IOWR(NVHOST_IOCTL_MAGIC, 110, struct nvhost_zcull_bind_args)
 
 #define NVHOST_IOCTL_CHANNEL_LAST		\
 	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZCULL_BIND)

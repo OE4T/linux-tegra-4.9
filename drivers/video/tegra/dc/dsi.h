@@ -415,7 +415,12 @@ struct tegra_dsi_out_ops {
 	void (*resume)(struct tegra_dc_dsi_data *);
 };
 extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
+#if defined(CONFIG_TEGRA_DSI2EDP_TC358767) || \
+		defined(CONFIG_TEGRA_DSI2EDP_SN65DSI86)
 extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
+#else
+#define tegra_dsi2edp_ops (*NULL)
+#endif
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

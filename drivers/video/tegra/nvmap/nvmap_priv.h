@@ -268,7 +268,7 @@ int nvmap_find_cache_maint_op(struct nvmap_device *dev,
 		struct nvmap_handle *h);
 
 struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
-					unsigned long handle);
+					unsigned long handle, bool skip_val);
 
 struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id);
@@ -282,7 +282,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
 
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id);
+					unsigned long id, bool skip_val);
 
 struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
 						   unsigned long id);

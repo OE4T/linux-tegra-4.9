@@ -208,7 +208,7 @@ static int handle_unpin_noref(struct nvmap_client *client, unsigned long id)
 	struct nvmap_handle *h;
 	int w;
 
-	h = nvmap_validate_get(client, id);
+	h = nvmap_validate_get(client, id, 0);
 	if (unlikely(!h)) {
 		nvmap_err(client, "%s attempting to unpin invalid handle %p\n",
 			  current->group_leader->comm, (void *)id);
@@ -294,7 +294,7 @@ int nvmap_pin_ids(struct nvmap_client *client,
 		} else {
 			struct nvmap_handle *verify;
 			nvmap_ref_unlock(client);
-			verify = nvmap_validate_get(client, ids[i]);
+			verify = nvmap_validate_get(client, ids[i], 0);
 			if (verify) {
 				nvmap_warn(client, "%s pinning unreferenced "
 					   "handle %p\n",

@@ -39,7 +39,7 @@ static int nvmap_dmabuf_attach(struct dma_buf *dmabuf, struct device *dev,
 	struct nvmap_handle_info *info = dmabuf->priv;
 	struct nvmap_handle_ref *ref;
 
-	ref = nvmap_duplicate_handle_id(info->client, info->id);
+	ref = nvmap_duplicate_handle_id(info->client, info->id, 0);
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
@@ -181,7 +181,7 @@ struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, ulong id)
 	if (!nvmap_client_get(client))
 		return ERR_PTR(-EINVAL);
 
-	handle = nvmap_validate_get(client, id);
+	handle = nvmap_validate_get(client, id, 0);
 	if (!handle) {
 		err = -EINVAL;
 		goto err_nvmap_validate_get;

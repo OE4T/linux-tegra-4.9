@@ -481,7 +481,7 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 /* validates that a handle is in the device master tree, and that the
  * client has permission to access it */
 struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
-					unsigned long id)
+					unsigned long id, bool skip_val)
 {
 	struct nvmap_handle *h = NULL;
 	struct rb_node *n;
@@ -493,7 +493,8 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 	while (n) {
 		h = rb_entry(n, struct nvmap_handle, node);
 		if ((unsigned long)h == id) {
-			if (client->super || h->global || (h->owner == client))
+			if (client->super || h->global ||
+			    (h->owner == client) || skip_val)
 				h = nvmap_handle_get(h);
 			else
 				h = NULL;

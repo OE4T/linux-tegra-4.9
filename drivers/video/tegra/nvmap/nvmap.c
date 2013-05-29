@@ -95,6 +95,7 @@ static int handle_unpin(struct nvmap_client *client,
 		struct nvmap_handle *h, int free_vm)
 {
 	int ret = 0;
+
 	nvmap_mru_lock(client->share);
 
 	if (atomic_read(&h->pin) == 0) {
@@ -668,7 +669,13 @@ phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 {
-	if (!ref)
+	if (WARN_ON(!virt_addr_valid(client)))
+		return;
+
+	if (WARN_ON(!virt_addr_valid(ref)))
+		return;
+
+	if (WARN_ON(!virt_addr_valid(ref->handle)))
 		return;
 
 	atomic_dec(&ref->pin);

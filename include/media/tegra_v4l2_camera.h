@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,4 +36,8 @@ struct tegra_camera_platform_data {
 	bool			continuous_clk;	/* For CSI port only */
 };
 
+struct i2c_camera_ctrl {
+	int	(*new_devices)(struct platform_device *pdev);
+	void	(*remove_devices)(struct platform_device *pdev);
+};
 #endif /* _TEGRA_CAMERA_H_ */

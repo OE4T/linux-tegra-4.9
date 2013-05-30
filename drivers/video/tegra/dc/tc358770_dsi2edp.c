@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/tc358770_dsi2edp.c
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -116,6 +116,7 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 {
 	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
 	unsigned val;
+	unsigned chip_id;
 
 	if (dsi2edp && dsi2edp->dsi2edp_enabled)
 		return;
@@ -123,8 +124,7 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	mutex_lock(&dsi2edp->lock);
 
 	/* Chip ID */
-	tc358770_reg_read(dsi2edp, TC358770_CHIP_ID, &val);
-	pr_info("%s[%d]: 770 chip id = %x\n", __func__, __LINE__, val);
+	tc358770_reg_read(dsi2edp, TC358770_CHIP_ID, &chip_id);
 
 	tc358770_reg_write(dsi2edp, TC358770_LINK_TRAINING_CTRL, 0xC0B5);
 	tc358770_reg_write(dsi2edp, TC358770_SYSTEM_CLK_PARAM, 0x0105);
@@ -215,6 +215,29 @@ static void tc358770_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA0, &val);
 	tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_DPCD_RD_DATA1, &val);
 	msleep(100);
+
+	/* ASSR configuration, 770A(reg 0x0500[0] = 1) supports ASSR,
+	 * need to check the ASSR capability for eDP panel(0x0500[1] = 0).
+	 */
+	if (chip_id & 0x01) {
+		tc358770_reg_write(dsi2edp,
+			TC358770_AUX_CHANNEL_DPCD_ADDR , 0x000D);
+		tc358770_reg_write(dsi2edp,
+			TC358770_AUX_CHANNEL_CONFIG0 , 0x0009);
+		tc358770_reg_read(dsi2edp, TC358770_AUX_CHANNEL_STATUS, &val);
+		tc358770_reg_read(dsi2edp,
+			TC358770_AUX_CHANNEL_DPCD_RD_DATA0, &val);
+
+		if (val & 0x01) {
+			/* Enable ASSR*/
+			tc358770_reg_write(dsi2edp,
+				TC358770_AUX_CHANNEL_DPCD_ADDR, 0x010A);
+			tc358770_reg_write(dsi2edp,
+				TC358770_AUX_CHANNEL_DPCD_WR_DATA0, 0x01);
+			tc358770_reg_write(dsi2edp,
+				TC358770_AUX_CHANNEL_CONFIG0, 0x08);
+		}
+	}
 
 	/* DSI0 setting */
 	tc358770_reg_write(dsi2edp, TC358770_DSI0_PPI_TX_RX_TA , 0x000A000C);

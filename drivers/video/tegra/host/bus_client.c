@@ -684,7 +684,7 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 			pdata->syncpts[0], pdata->waitbases[0],
 			save_incr.syncpt_incrs, restore_incr.syncpt_incrs);
 
-	nhwctx->memmgr = ctx->hwctx->memmgr;
+	nhwctx->memmgr = nvhost_memmgr_get_mgr(ctx->memmgr);
 	err = user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
 			cmdbuf_restore.offset, cmdbuf_restore.words);
 	if (err)

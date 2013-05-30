@@ -71,6 +71,7 @@ static void user_hwctx_free(struct kref *ref)
 	if (uhwctx->restore)
 		nvhost_memmgr_put(hwctx->memmgr, uhwctx->restore);
 
+	nvhost_memmgr_put_mgr(hwctx->memmgr);
 	kfree(uhwctx);
 }
 

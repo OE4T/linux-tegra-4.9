@@ -221,13 +221,18 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	struct nvmap_create_handle op;
 	struct nvmap_client *client = filp->private_data;
 	struct dma_buf *dmabuf;
+	ulong handle;
 
 	BUG_ON(!client);
 
 	if (copy_from_user(&op, (void __user *)arg, sizeof(op)))
 		return -EFAULT;
 
-	dmabuf = nvmap_share_dmabuf(client, op.id);
+	handle = unmarshal_user_id(op.id);
+	if (!handle)
+		return -EINVAL;
+
+	dmabuf = nvmap_share_dmabuf(client, handle);
 	if (IS_ERR(dmabuf))
 		return -EINVAL;
 

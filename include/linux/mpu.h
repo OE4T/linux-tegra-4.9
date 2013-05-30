@@ -62,6 +62,20 @@
 **********************************************************************/
 #define	DEBUG_SYSFS_INTERFACE		1
 
+/* Mount maxtices for mount orientation.
+ * MTMAT_XXX_CCW_YYY
+ *     XXX : mount position. TOP for top and BOT for bottom.
+ *     YYY : couter-clockwise rotation angle in degree.
+ */
+#define MTMAT_TOP_CCW_0			{  1,  0,  0,  0,  1,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_90		{  0, -1,  0,  1,  0,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_180		{ -1,  0,  0,  0, -1,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_270		{  0,  1,  0, -1,  0,  0,  0,  0,  1 }
+#define MTMAT_BOT_CCW_0			{ -1,  0,  0,  0,  1,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_90		{  0, -1,  0, -1,  0,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_180		{  1,  0,  0,  0, -1,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_270		{  0,  1,  0,  1,  0,  0,  0,  0, -1 }
+
 /*********************************************************************/
 /* Structure and function prototypes				     */
 /*********************************************************************/

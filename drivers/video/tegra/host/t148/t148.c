@@ -265,6 +265,7 @@ struct nvhost_device_data t14_msenc_info = {
 	.powergate_delay = 100,
 	.can_powergate = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
+	.powerup_reset	= true,
 };
 
 static struct platform_device tegra_msenc03_device = {

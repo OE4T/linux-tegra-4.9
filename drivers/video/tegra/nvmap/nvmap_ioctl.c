@@ -114,6 +114,8 @@ ulong unmarshal_user_id(ulong id)
 
 ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref)
 {
+	if (!virt_addr_valid(ref))
+		return 0;
 	return (ulong)marshal_kernel_handle(nvmap_ref_to_id(ref));
 }
 

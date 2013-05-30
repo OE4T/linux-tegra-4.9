@@ -48,8 +48,9 @@ static int map_iovmm_area(struct nvmap_handle *h)
 {
 	int err;
 
-	BUG_ON(!h->heap_pgalloc || !h->pgalloc.area);
-	BUG_ON(h->size & ~PAGE_MASK);
+	BUG_ON(!h->heap_pgalloc ||
+	       !h->pgalloc.area ||
+	       h->size & ~PAGE_MASK);
 	WARN_ON(!h->pgalloc.dirty);
 
 	err = tegra_iovmm_vm_insert_pages(h->pgalloc.area,
@@ -233,7 +234,7 @@ void nvmap_unpin_ids(struct nvmap_client *client,
 	for (i = 0; i < nr; i++) {
 		struct nvmap_handle_ref *ref;
 
-		if (!ids[i])
+		if (!ids[i] || WARN_ON(!virt_addr_valid(ids[i])))
 			continue;
 
 		nvmap_ref_lock(client);
@@ -470,6 +471,12 @@ int nvmap_pin_array(struct nvmap_client *client,
 	int i;
 	unsigned long *ids;
 
+	if (!virt_addr_valid(client) ||
+	    !user_ids ||
+	    !unique_arr ||
+	    !unique_arr_refs)
+		return -EINVAL;
+
 	ids = kmalloc(sizeof(ids) * nr, GFP_KERNEL);
 	if (!ids) {
 		ret = -ENOMEM;
@@ -585,13 +592,12 @@ phys_addr_t _nvmap_pin(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	phys_addr_t phys;
 
-	if (!ref)
+	if (!virt_addr_valid(client) ||
+	    !virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
 		return -EINVAL;
 
 	h = ref->handle;
-
-	if (WARN_ON(!h))
-		return -EINVAL;
 
 	h = nvmap_handle_get(h);
 
@@ -630,9 +636,9 @@ phys_addr_t nvmap_pin(struct nvmap_client *client,
 {
 	struct nvmap_handle *h;
 
-	if (!ref)
-		return -EINVAL;
-	if (WARN_ON(!ref->handle))
+	if (!virt_addr_valid(client) ||
+	    !virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
 		return -EINVAL;
 
 	nvmap_ref_lock(client);
@@ -645,7 +651,8 @@ phys_addr_t nvmap_pin(struct nvmap_client *client,
 }
 EXPORT_SYMBOL(nvmap_pin);
 
-phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
+static phys_addr_t nvmap_handle_address(struct nvmap_client *c,
+					unsigned long id)
 {
 	struct nvmap_handle *h;
 	phys_addr_t phys;
@@ -664,18 +671,17 @@ phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id)
 phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 					unsigned long user_id)
 {
+	if (!virt_addr_valid(c))
+		return -EINVAL;
 	return nvmap_handle_address(c, unmarshal_user_id(user_id));
 }
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 {
-	if (WARN_ON(!virt_addr_valid(client)))
-		return;
-
-	if (WARN_ON(!virt_addr_valid(ref)))
-		return;
-
-	if (WARN_ON(!virt_addr_valid(ref->handle)))
+	if (!ref ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(ref->handle)))
 		return;
 
 	atomic_dec(&ref->pin);
@@ -690,6 +696,9 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 	int i;
 	int do_wake = 0;
 
+	if (!virt_addr_valid(client) ||
+	    !virt_addr_valid(h))
+		return;
 	for (i = 0; i < nr; i++) {
 		if (WARN_ON(!h[i]))
 			continue;
@@ -708,12 +717,16 @@ void *nvmap_kmap(struct nvmap_handle_ref *ref, unsigned int pagenum)
 	pgprot_t prot;
 	pte_t **pte;
 
-	BUG_ON(!ref);
+	if (!virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
+		return NULL;
+
 	h = nvmap_handle_get(ref->handle);
 	if (!h)
 		return NULL;
 
-	BUG_ON(pagenum >= h->size >> PAGE_SHIFT);
+	if (pagenum >= h->size >> PAGE_SHIFT)
+		goto out;
 	prot = nvmap_pgprot(h, pgprot_kernel);
 	pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
 	if (!pte)
@@ -740,8 +753,16 @@ void nvmap_kunmap(struct nvmap_handle_ref *ref, unsigned int pagenum,
 	phys_addr_t paddr;
 	pte_t **pte;
 
-	BUG_ON(!addr || !ref);
+	if (!ref ||
+	    WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(ref->handle)) ||
+	    WARN_ON(!addr))
+		return;
+
 	h = ref->handle;
+
+	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
+		return;
 
 	if (nvmap_find_cache_maint_op(h->dev, h)) {
 		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
@@ -776,6 +797,10 @@ void *nvmap_mmap(struct nvmap_handle_ref *ref)
 	unsigned long offs;
 	struct vm_struct *v;
 	void *p;
+
+	if (!virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
+		return NULL;
 
 	h = nvmap_handle_get(ref->handle);
 	if (!h)
@@ -841,7 +866,9 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 {
 	struct nvmap_handle *h;
 
-	if (!ref)
+	if (!ref ||
+	    WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!addr))
 		return;
 
 	h = ref->handle;
@@ -878,6 +905,9 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 	struct nvmap_handle_ref *r = NULL;
 	int err;
 
+	if (!virt_addr_valid(client))
+		return ERR_PTR(-EINVAL);
+
 	if (heap_mask == 0)
 		heap_mask = default_heap;
 
@@ -905,6 +935,9 @@ struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
 	struct nvmap_handle *h;
 	struct nvmap_handle_ref *r;
 	const unsigned int default_heap = NVMAP_HEAP_IOVMM;
+
+	if (!virt_addr_valid(client))
+		return ERR_PTR(-EINVAL);
 
 	/* size need to be more than one page.
 	 * otherwise heap preference would change to system heap.
@@ -948,22 +981,36 @@ void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r)
 {
 	unsigned long ref_id = nvmap_ref_to_id(r);
 
+	if (!r ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!virt_addr_valid(r)) ||
+	    WARN_ON(!virt_addr_valid(ref_id)))
+		return;
 	nvmap_unpin_ids(client, 1, &ref_id);
 	nvmap_free_handle_id(client, ref_id);
 }
 
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 {
-	if (!r)
+	unsigned long ref_id = nvmap_ref_to_id(r);
+
+	if (!r ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!virt_addr_valid(r)) ||
+	    WARN_ON(!virt_addr_valid(ref_id)))
 		return;
 
-	nvmap_free_handle_id(client, nvmap_ref_to_id(r));
+	nvmap_free_handle_id(client, ref_id);
 }
 EXPORT_SYMBOL(nvmap_free);
 
 void nvmap_handle_put(struct nvmap_handle *h)
 {
-	int cnt = atomic_dec_return(&h->ref);
+	int cnt;
+
+	if (WARN_ON(!virt_addr_valid(h)))
+		return;
+	cnt = atomic_dec_return(&h->ref);
 
 	if (WARN_ON(cnt < 0)) {
 		pr_err("%s: %s put to negative references\n",
@@ -987,7 +1034,8 @@ struct sg_table *nvmap_sg_table(struct nvmap_client *client,
 	struct sg_table *sgt = NULL;
 	int err, npages;
 
-	if (!ref || !ref->handle)
+	if (!virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
 		return ERR_PTR(-EINVAL);
 
 	h = nvmap_handle_get(ref->handle);
@@ -1024,6 +1072,8 @@ err:
 void nvmap_free_sg_table(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, struct sg_table *sgt)
 {
+	if (WARN_ON(!virt_addr_valid(sgt)))
+		return;
 	sg_free_table(sgt);
 	kfree(sgt);
 }
@@ -1033,11 +1083,12 @@ void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
 {
 	struct nvmap_handle *h;
 
-	if (!ref || !ref->handle)
+	if (WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(ref->handle)))
 		return;
 
 	h = nvmap_handle_get(ref->handle);
-	if (!h)
+	if (WARN_ON(!h))
 		return;
 
 	h->nvhost_priv = priv;
@@ -1050,7 +1101,8 @@ void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref)
 	struct nvmap_handle *h;
 	void *priv;
 
-	if (!ref || !ref->handle)
+	if (!virt_addr_valid(ref) ||
+	    !virt_addr_valid(ref->handle))
 		return ERR_PTR(-EINVAL);
 
 	h = nvmap_handle_get(ref->handle);
@@ -1069,7 +1121,8 @@ void nvmap_flush_deferred_cache(struct nvmap_client *client,
 #if CONFIG_NVMAP_DEFERRED_CACHE_MAINT
 	struct nvmap_handle *h;
 
-	if (!ref || !ref->handle)
+	if (WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(ref->handle)))
 		return;
 
 	h = nvmap_handle_get(ref->handle);

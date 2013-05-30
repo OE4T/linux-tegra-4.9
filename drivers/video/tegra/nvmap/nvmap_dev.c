@@ -266,6 +266,8 @@ ulong nvmap_get_handle_user_id(struct nvmap_client *client,
 {
 	struct nvmap_handle *h;
 
+	if (!virt_addr_valid(client))
+		return 0;
 	h = nvmap_get_handle_id(client, unmarshal_user_id(user_id));
 	return (ulong)marshal_kernel_handle((ulong)h);
 }
@@ -612,10 +614,10 @@ static void destroy_client(struct nvmap_client *client)
 
 struct nvmap_client *nvmap_client_get(struct nvmap_client *client)
 {
-	if (WARN_ON(!client))
+	if (!virt_addr_valid(client))
 		return NULL;
 
-	if (WARN_ON(!atomic_add_unless(&client->count, 1, 0)))
+	if (!atomic_add_unless(&client->count, 1, 0))
 		return NULL;
 
 	return client;

@@ -284,9 +284,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 					unsigned long id, bool skip_val);
 
-struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id);
-
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 

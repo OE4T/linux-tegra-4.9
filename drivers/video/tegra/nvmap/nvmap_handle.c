@@ -864,6 +864,11 @@ void _nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 	int dupes;
 	struct nvmap_handle *h = r->handle;
 
+	if (!r ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!virt_addr_valid(r)))
+		return;
+
 	nvmap_ref_lock(client);
 retry:
 	dupes = atomic_read(&r->dupes);
@@ -1015,8 +1020,9 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 /*
  * Duplicate handle without slow validation step.
  */
-struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
-						   unsigned long id)
+static struct nvmap_handle_ref *_nvmap_duplicate_handle_id(
+						struct nvmap_client *client,
+						unsigned long id)
 {
 	struct nvmap_handle *h = (struct nvmap_handle *)id;
 	struct nvmap_handle_ref *ref = h->owner_ref;
@@ -1039,6 +1045,8 @@ struct nvmap_handle_ref *_nvmap_duplicate_handle_user_id(
 						struct nvmap_client *client,
 						unsigned long user_id)
 {
+	if (!virt_addr_valid(client))
+		return ERR_PTR(-EINVAL);
 	return _nvmap_duplicate_handle_id(client, unmarshal_user_id(user_id));
 }
 
@@ -1120,6 +1128,8 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
 						struct nvmap_client *client,
 						unsigned long user_id)
 {
+	if (!virt_addr_valid(client))
+		return ERR_PTR(-EINVAL);
 	return nvmap_duplicate_handle_id(client, unmarshal_user_id(user_id), 0);
 }
 

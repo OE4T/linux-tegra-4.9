@@ -1243,3 +1243,18 @@ struct devfreq_governor nvhost_podgov = {
 	.event_handler = nvhost_pod_event_handler,
 };
 
+
+static int __init podgov_init(void)
+{
+	return devfreq_add_governor(&nvhost_podgov);
+}
+
+static void __exit podgov_exit(void)
+{
+	devfreq_remove_governor(&nvhost_podgov);
+}
+
+/* governor must be registered before initialising client devices */
+rootfs_initcall(podgov_init);
+module_exit(podgov_exit);
+

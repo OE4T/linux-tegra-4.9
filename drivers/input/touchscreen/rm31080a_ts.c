@@ -1745,8 +1745,6 @@ static void rm_ctrl_stop(struct rm_tch_ts *ts)
 
 	rm_tch_cmd_process(0, g_stRmEndCmd, ts);
 
-	printk(KERN_ALERT "Raydium Sending SUSPEND done\n");
-
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 }
 

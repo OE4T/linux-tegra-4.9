@@ -3677,15 +3677,6 @@ static int tegra_dc_dsi_cp_info_dt(struct tegra_dc_dsi_data *dsi)
 	of_property_read_u32(dsi_dt_node, "nvidia,controller-vs",
 					(u32 *)&dsi_pdata->controller_vs);
 
-	dsi_pdata->dsi_panel_rst_gpio = of_get_named_gpio(dsi_dt_node,
-					"nvidia,dsi-panel-rst-gpio", 0);
-
-	dsi_pdata->dsi_panel_bl_en_gpio = of_get_named_gpio(dsi_dt_node,
-					"nvidia,dsi-panel-bl-en-gpio", 0);
-
-	dsi_pdata->dsi_panel_bl_pwm_gpio = of_get_named_gpio(dsi_dt_node,
-					"nvidia,dsi-panel-bl-pwm-gpio", 0);
-
 	of_property_read_u32(panel_dt_node, "nvidia,n-init-cmd",
 					(u32 *)&dsi_pdata->n_init_cmd);
 

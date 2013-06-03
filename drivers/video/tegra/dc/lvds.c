@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lvds.c
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012 - 2013, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -40,6 +40,8 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 		lvds->sor = NULL;
 		goto err_init;
 	}
+	tegra_dc_set_outdata(dc, lvds);
+
 	return 0;
 
 err_init:
@@ -67,8 +69,11 @@ static void tegra_dc_lvds_enable(struct tegra_dc *dc)
 	/* TODO: this probalby requires to use i2c.
 	   Need to confirm the right way to power on LVDS panel */
 	tegra_dc_sor_set_panel_power(lvds->sor, true);
+	tegra_dc_sor_set_internal_panel(lvds->sor, true);
 
-	tegra_dc_sor_enable_lvds(lvds->sor);
+	/* tegra_dc_writel(dc, 6, DC_DISP_DISP_CLOCK_CONTROL); */
+
+	tegra_dc_sor_enable_lvds(lvds->sor, false, false);
 }
 
 static void tegra_dc_lvds_disable(struct tegra_dc *dc)
@@ -82,20 +87,51 @@ static void tegra_dc_lvds_disable(struct tegra_dc *dc)
 
 static void tegra_dc_lvds_suspend(struct tegra_dc *dc)
 {
-	/* TBD */
+	struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
+
+	tegra_dc_lvds_disable(dc);
+	lvds->suspended = true;
 }
 
 
 static void tegra_dc_lvds_resume(struct tegra_dc *dc)
 {
-	/* TBD */
+	struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
+
+	if (!lvds->suspended)
+		return;
+	tegra_dc_lvds_enable(dc);
+}
+
+static long tegra_dc_lvds_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
+	struct clk *parent_clk;
+	struct clk *base_clk;
+	struct clk *sor_clk = lvds->sor->sor_clk;
+	unsigned long rate = lvds->sor->dc->mode.pclk;
+
+	tegra_dc_sor_setup_clk(lvds->sor, clk, true);
+
+	parent_clk = clk_get_sys(NULL, "pll_d2");
+	base_clk   = clk_get_parent(parent_clk);
+
+	if (clk_get_parent(sor_clk) != parent_clk)
+		clk_set_parent(sor_clk, parent_clk);
+	if (clk_get_rate(base_clk) != rate)
+		clk_set_rate(base_clk, rate);
+	if (!tegra_is_clk_enabled(parent_clk))
+		clk_prepare_enable(parent_clk);
+
+	return tegra_dc_pclk_round_rate(lvds->sor->dc, rate);
 }
 
 struct tegra_dc_out_ops tegra_dc_lvds_ops = {
-	.init	 = tegra_dc_lvds_init,
-	.destroy = tegra_dc_lvds_destroy,
-	.enable	 = tegra_dc_lvds_enable,
-	.disable = tegra_dc_lvds_disable,
-	.suspend = tegra_dc_lvds_suspend,
-	.resume	 = tegra_dc_lvds_resume,
+	.init	   = tegra_dc_lvds_init,
+	.destroy   = tegra_dc_lvds_destroy,
+	.enable	   = tegra_dc_lvds_enable,
+	.disable   = tegra_dc_lvds_disable,
+	.suspend   = tegra_dc_lvds_suspend,
+	.resume	   = tegra_dc_lvds_resume,
+	.setup_clk = tegra_dc_lvds_setup_clk,
 };

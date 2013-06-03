@@ -23,6 +23,8 @@
 struct tegra_dc_lvds_data {
 	struct tegra_dc			*dc;
 	struct tegra_dc_sor_data	*sor;
+
+	bool   suspended;
 };
 
 

@@ -248,9 +248,9 @@ static int nvhost_ioctl_channel_alloc_obj_ctx(
 {
 	int ret;
 
-	BUG_ON(!channel_op().alloc_obj);
+	BUG_ON(!channel_op(ctx->ch).alloc_obj);
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op().alloc_obj(ctx->hwctx, args);
+	ret = channel_op(ctx->ch).alloc_obj(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
 }
@@ -261,9 +261,9 @@ static int nvhost_ioctl_channel_free_obj_ctx(
 {
 	int ret;
 
-	BUG_ON(!channel_op().free_obj);
+	BUG_ON(!channel_op(ctx->ch).free_obj);
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op().free_obj(ctx->hwctx, args);
+	ret = channel_op(ctx->ch).free_obj(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
 }
@@ -274,9 +274,9 @@ static int nvhost_ioctl_channel_alloc_gpfifo(
 {
 	int ret;
 
-	BUG_ON(!channel_op().alloc_gpfifo);
+	BUG_ON(!channel_op(ctx->ch).alloc_gpfifo);
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op().alloc_gpfifo(ctx->hwctx, args);
+	ret = channel_op(ctx->ch).alloc_gpfifo(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
 }
@@ -304,10 +304,10 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 		goto clean_up;
 	}
 
-	BUG_ON(!channel_op().submit_gpfifo);
+	BUG_ON(!channel_op(ctx->ch).submit_gpfifo);
 
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op().submit_gpfifo(ctx->hwctx, gpfifo,
+	ret = channel_op(ctx->ch).submit_gpfifo(ctx->hwctx, gpfifo,
 			args->num_entries, &args->fence, args->flags);
 	nvhost_module_idle(ctx->ch->dev);
 clean_up:
@@ -321,9 +321,9 @@ static int nvhost_ioctl_channel_wait(
 {
 	int ret;
 
-	BUG_ON(!channel_op().wait);
+	BUG_ON(!channel_op(ctx->ch).wait);
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op().wait(ctx->hwctx, args);
+	ret = channel_op(ctx->ch).wait(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
 }
@@ -334,9 +334,9 @@ static int nvhost_ioctl_channel_zcull_bind(
 {
 	int ret;
 
-	BUG_ON(!channel_zcull_op().bind);
+	BUG_ON(!channel_zcull_op(ctx->ch).bind);
 	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_zcull_op().bind(ctx->hwctx, args);
+	ret = channel_zcull_op(ctx->ch).bind(ctx->hwctx, args);
 	nvhost_module_idle(ctx->ch->dev);
 	return ret;
 }
@@ -661,8 +661,8 @@ static int nvhost_ioctl_channel_cycle_stats(
 	struct nvhost_cycle_stats_args *args)
 {
 	int ret;
-	BUG_ON(!channel_op().cycle_stats);
-	ret = channel_op().cycle_stats(ctx->hwctx, args);
+	BUG_ON(!channel_op(ctx->ch).cycle_stats);
+	ret = channel_op(ctx->ch).cycle_stats(ctx->hwctx, args);
 	return ret;
 }
 #endif

@@ -350,6 +350,14 @@ struct platform_device *tegra14_register_host1x_devices(void)
 	return &tegra_host1x03_device;
 }
 
+#include "host1x/host1x_channel.c"
+#include "host1x/host1x_cdma.c"
+#include "host1x/host1x_debug.c"
+#include "host1x/host1x_syncpt.c"
+#include "host1x/host1x_intr.c"
+#include "host1x/host1x_actmon_t114.c"
+#include "host1x/host1x_tickctrl.c"
+
 static void t148_free_nvhost_channel(struct nvhost_channel *ch)
 {
 	nvhost_free_channel_internal(ch, &t148_num_alloc_channels);
@@ -359,25 +367,19 @@ static struct nvhost_channel *t148_alloc_nvhost_channel(
 		struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	return nvhost_alloc_channel_internal(pdata->index,
+	struct nvhost_channel *ch = nvhost_alloc_channel_internal(pdata->index,
 		nvhost_get_host(dev)->info.nb_channels,
 		&t148_num_alloc_channels);
+	if (ch)
+		ch->ops = host1x_channel_ops;
+	return ch;
 }
-
-#include "host1x/host1x_channel.c"
-#include "host1x/host1x_cdma.c"
-#include "host1x/host1x_debug.c"
-#include "host1x/host1x_syncpt.c"
-#include "host1x/host1x_intr.c"
-#include "host1x/host1x_actmon_t114.c"
-#include "host1x/host1x_tickctrl.c"
 
 int nvhost_init_t148_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
 	int err;
 
-	op->channel = host1x_channel_ops;
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;

@@ -34,8 +34,51 @@ struct nvhost_master;
 struct platform_device;
 struct nvhost_channel;
 struct nvhost_hwctx;
+struct nvhost_alloc_obj_ctx_args;
+struct nvhost_free_obj_ctx_args;
+struct nvhost_alloc_gpfifo_args;
+struct nvhost_gpfifo;
+struct nvhost_fence;
+struct nvhost_wait_args;
+struct nvhost_cycle_stats_args;
+struct nvhost_zcull_bind_args;
+
+struct nvhost_zcull_ops {
+	int (*bind)(struct nvhost_hwctx *,
+		    struct nvhost_zcull_bind_args *args);
+};
+
+struct nvhost_channel_ops {
+	const char *soc_name;
+	int (*init)(struct nvhost_channel *,
+		    struct nvhost_master *,
+		    int chid);
+	int (*submit)(struct nvhost_job *job);
+	int (*save_context)(struct nvhost_channel *channel);
+	int (*drain_read_fifo)(struct nvhost_channel *ch,
+	u32 *ptr, unsigned int count, unsigned int *pending);
+	int (*alloc_obj)(struct nvhost_hwctx *,
+			struct nvhost_alloc_obj_ctx_args *args);
+	int (*free_obj)(struct nvhost_hwctx *,
+			struct nvhost_free_obj_ctx_args *args);
+	int (*alloc_gpfifo)(struct nvhost_hwctx *,
+			struct nvhost_alloc_gpfifo_args *args);
+	int (*submit_gpfifo)(struct nvhost_hwctx *,
+			struct nvhost_gpfifo *gpfifo,
+			u32 num_entries,
+			struct nvhost_fence *fence,
+			u32 flags);
+	int (*wait)(struct nvhost_hwctx *,
+		    struct nvhost_wait_args *args);
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+	int (*cycle_stats)(struct nvhost_hwctx *,
+			struct nvhost_cycle_stats_args *args);
+#endif
+	struct nvhost_zcull_ops zcull;
+};
 
 struct nvhost_channel {
+	struct nvhost_channel_ops ops;
 	int refcount;
 	int chid;
 	u32 syncpt_id;
@@ -56,6 +99,10 @@ struct nvhost_channel {
 	struct cdev as_cdev;
 	struct nvhost_as *as;
 };
+
+#define channel_op(ch)		(ch->ops)
+#define channel_zcull_op(ch)	(ch->ops.zcull)
+#define channel_zbc_op(ch)	(ch->zbc)
 
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev, int index);

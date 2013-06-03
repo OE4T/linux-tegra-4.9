@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,40 +45,6 @@ struct mem_handle;
 struct mem_mgr;
 struct platform_device;
 struct host1x_actmon;
-
-struct nvhost_zcull_ops {
-	int (*bind)(struct nvhost_hwctx *,
-		    struct nvhost_zcull_bind_args *args);
-};
-
-struct nvhost_channel_ops {
-	const char * soc_name;
-	int (*init)(struct nvhost_channel *,
-		    struct nvhost_master *,
-		    int chid);
-	int (*submit)(struct nvhost_job *job);
-	int (*save_context)(struct nvhost_channel *channel);
-	int (*drain_read_fifo)(struct nvhost_channel *ch,
-	u32 *ptr, unsigned int count, unsigned int *pending);
-	int (*alloc_obj)(struct nvhost_hwctx *,
-			struct nvhost_alloc_obj_ctx_args *args);
-	int (*free_obj)(struct nvhost_hwctx *,
-			struct nvhost_free_obj_ctx_args *args);
-	int (*alloc_gpfifo)(struct nvhost_hwctx *,
-			struct nvhost_alloc_gpfifo_args *args);
-	int (*submit_gpfifo)(struct nvhost_hwctx *,
-			struct nvhost_gpfifo *gpfifo,
-			u32 num_entries,
-			struct nvhost_fence *fence,
-			u32 flags);
-	int (*wait)(struct nvhost_hwctx *,
-		    struct nvhost_wait_args *args);
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
-	int (*cycle_stats)(struct nvhost_hwctx *,
-			struct nvhost_cycle_stats_args *args);
-#endif
-	struct nvhost_zcull_ops zcull;
-};
 
 struct nvhost_cdma_ops {
 	void (*start)(struct nvhost_cdma *);
@@ -195,7 +161,6 @@ struct nvhost_tickctrl_ops {
 
 struct nvhost_chip_support {
 	const char * soc_name;
-	struct nvhost_channel_ops channel;
 	struct nvhost_cdma_ops cdma;
 	struct nvhost_pushbuffer_ops push_buffer;
 	struct nvhost_debug_ops debug;
@@ -246,13 +211,10 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 
 #define host_device_op()	(nvhost_get_chip_ops()->nvhost_dev)
 #define channel_cdma_op()	(nvhost_get_chip_ops()->cdma)
-#define channel_op()		(nvhost_get_chip_ops()->channel)
 #define syncpt_op()		(nvhost_get_chip_ops()->syncpt)
 #define intr_op()		(nvhost_get_chip_ops()->intr)
 #define cdma_op()		(nvhost_get_chip_ops()->cdma)
 #define cdma_pb_op()		(nvhost_get_chip_ops()->push_buffer)
-#define channel_zcull_op() 	(nvhost_get_chip_ops()->channel.zcull)
-#define channel_zbc_op()	(nvhost_get_chip_ops()->channel.zbc)
 
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
 #define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)

@@ -509,40 +509,7 @@ struct platform_device *tegra12_register_host1x_devices(void)
 	return &tegra_host1x04_device;
 }
 
-static inline void __iomem *t124_channel_aperture(void __iomem *p, int ndx)
-{
-	return p + (ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES);
-}
-
-static int t124_channel_init(struct nvhost_channel *ch,
-			    struct nvhost_master *dev, int index)
-{
-	ch->chid = index;
-	mutex_init(&ch->reflock);
-	mutex_init(&ch->submitlock);
-
-	ch->aperture = t124_channel_aperture(dev->aperture, index);
-
-	nvhost_dbg_fn("dev=%s chid=%d ap=%p",
-		      dev_name(&ch->dev->dev),
-		      ch->chid,
-		      ch->aperture);
-
-	return t124_nvhost_hwctx_handler_init(ch);
-}
-
 #include "host1x/host1x_channel.c"
-static int t124_channel_submit(struct nvhost_job *job)
-{
-	nvhost_dbg_fn("");
-
-#if defined(CONFIG_TEGRA_GK20A)
-	if (is_gk20a_module(job->ch->dev))
-		return -ENODEV; /* makes no sense/shouldn't happen */
-	else
-#endif
-		return host1x_channel_submit(job);
-}
 
 #if defined(CONFIG_TEGRA_GK20A)
 static int t124_channel_alloc_obj(struct nvhost_hwctx *hwctx,
@@ -638,10 +605,31 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 		struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	struct nvhost_channel *ch;
 	nvhost_dbg_fn("");
-	return nvhost_alloc_channel_internal(pdata->index,
+	ch = nvhost_alloc_channel_internal(pdata->index,
 		nvhost_get_host(dev)->info.nb_channels,
 		&t124_num_alloc_channels);
+	if (ch) {
+#if defined(CONFIG_TEGRA_GK20A)
+		if (dev == &tegra_gk20a_device) {
+			ch->ops.init          = host1x_channel_ops.init;
+			ch->ops.alloc_obj     = t124_channel_alloc_obj;
+			ch->ops.free_obj      = t124_channel_free_obj;
+			ch->ops.alloc_gpfifo  = t124_channel_alloc_gpfifo;
+			ch->ops.submit_gpfifo = t124_channel_submit_gpfifo;
+			ch->ops.wait          = t124_channel_wait;
+
+#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+			ch->ops.cycle_stats   = t124_channel_cycle_stats;
+#endif
+			ch->ops.zcull.bind    = t124_channel_zcull_bind;
+		} else
+#endif
+			ch->ops = host1x_channel_ops;
+
+	}
+	return ch;
 }
 
 int nvhost_init_t124_channel_support(struct nvhost_master *host,
@@ -690,44 +678,10 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 		return -ENODEV;
 	}
 
-	op->channel.init          = t124_channel_init;
-	op->channel.submit        = t124_channel_submit;
-
-#if defined(CONFIG_TEGRA_GK20A)
-	op->channel.alloc_obj     = t124_channel_alloc_obj;
-	op->channel.free_obj      = t124_channel_free_obj;
-	op->channel.alloc_gpfifo  = t124_channel_alloc_gpfifo;
-	op->channel.submit_gpfifo = t124_channel_submit_gpfifo;
-	op->channel.wait          = t124_channel_wait;
-
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
-	op->channel.cycle_stats   = t124_channel_cycle_stats;
-#endif
-	op->channel.zcull.bind     = t124_channel_zcull_bind;
-#endif
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
 
 	return 0;
-}
-
-int t124_nvhost_hwctx_handler_init(struct nvhost_channel *ch)
-{
-	int err = 0;
-	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
-	u32 syncpt = pdata->syncpts[0];
-	u32 waitbase = pdata->waitbases[0];
-
-	nvhost_dbg_fn("");
-
-	if (pdata->alloc_hwctx_handler) {
-		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,
-				waitbase, ch);
-		if (!ch->ctxhandler)
-			err = -ENOMEM;
-	}
-
-	return err;
 }
 
 static void t124_remove_support(struct nvhost_chip_support *op)
@@ -736,6 +690,7 @@ static void t124_remove_support(struct nvhost_chip_support *op)
 	op->priv = 0;
 }
 
+#include "host1x/host1x_cdma.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
 #include "host1x/host1x_actmon_t124.c"
@@ -751,9 +706,8 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	if (err)
 		return err;
 
-	err = nvhost_init_t124_cdma_support(op);
-	if (err)
-		return err;
+	op->cdma = host1x_cdma_ops;
+	op->push_buffer = host1x_pushbuffer_ops;
 
 	err = nvhost_init_t124_debug_support(op);
 	if (err)
@@ -781,8 +735,6 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	t124->host = host;
 	op->priv = t124;
 	op->remove_support = t124_remove_support;
-	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
-	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
 
 	return 0;
 

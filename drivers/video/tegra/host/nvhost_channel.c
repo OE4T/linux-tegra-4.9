@@ -37,7 +37,7 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* Link platform_device to nvhost_channel */
-	err = channel_op().init(ch, dev, index);
+	err = channel_op(ch).init(ch, dev, index);
 	if (err < 0) {
 		dev_err(&dev->dev->dev, "failed to init channel %d\n",
 				index);
@@ -73,7 +73,7 @@ int nvhost_channel_submit(struct nvhost_job *job)
 		(void)nvhost_cdma_flush(&job->ch->cdma,
 				NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT);
 
-	return channel_op().submit(job);
+	return channel_op(job->ch).submit(job);
 }
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
@@ -167,7 +167,7 @@ int nvhost_channel_save_context(struct nvhost_channel *ch)
 	struct nvhost_hwctx *cur_ctx = ch->cur_ctx;
 	int err = 0;
 	if (cur_ctx)
-		err = channel_op().save_context(ch);
+		err = channel_op(ch).save_context(ch);
 
 	return err;
 
@@ -187,5 +187,5 @@ int nvhost_channel_read_reg(struct nvhost_channel *ch,
 int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
 	u32 *ptr, unsigned int count, unsigned int *pending)
 {
-	return channel_op().drain_read_fifo(ch, ptr, count, pending);
+	return channel_op(ch).drain_read_fifo(ch, ptr, count, pending);
 }

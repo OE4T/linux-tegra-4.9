@@ -501,7 +501,7 @@ int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_GEN2_BLEND);
 
-	if (addr[BLEND_GENERATION] == 2)
+	if (addr && addr[BLEND_GENERATION] == 2)
 		return 1;
 
 	return 0;

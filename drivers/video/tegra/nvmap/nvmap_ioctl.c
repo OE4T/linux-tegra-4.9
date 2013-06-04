@@ -59,8 +59,6 @@ static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 		       unsigned long start, unsigned long end, unsigned int op,
 		       unsigned int allow_deferred);
 
-#define NVMAP_USE_XOR_HASHING 0
-
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle)
 {
@@ -86,7 +84,7 @@ ulong unmarshal_user_handle(struct nvmap_handle *handle)
 	if ((ulong)handle == 0)
 		return (ulong)handle;
 
-#if NVMAP_USE_XOR_HASHING
+#ifdef CONFIG_NVMAP_HANDLE_MARSHAL
 	return (ulong)handle ^ NVMAP_XOR_HASH_MASK;
 #else
 	return (ulong)handle;
@@ -98,7 +96,7 @@ struct nvmap_handle *marshal_kernel_handle(ulong handle)
 	if (handle == 0)
 		return (struct nvmap_handle *)handle;
 
-#if NVMAP_USE_XOR_HASHING
+#ifdef CONFIG_NVMAP_HANDLE_MARSHAL
 	return (struct nvmap_handle *)(handle ^ NVMAP_XOR_HASH_MASK);
 #else
 	return (struct nvmap_handle *)handle;

@@ -677,6 +677,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	win->stride = info->fix.line_length;
 	win->stride_uv = 0;
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
+	win->global_alpha = 0xFF;
 
 	if (fb_mem)
 		tegra_fb_set_par(info);

@@ -1084,6 +1084,7 @@ static int nvhost_pod_init(struct devfreq *df)
 		podgov->p_smooth = 3;
 		break;
 	case TEGRA_CHIPID_TEGRA11:
+	case TEGRA_CHIPID_TEGRA12:
 		podgov->idle_min = podgov->p_idle_min = 400;
 		podgov->idle_max = podgov->p_idle_max = 500;
 		podgov->p_hint_lo_limit = 500;
@@ -1149,18 +1150,35 @@ static int nvhost_pod_init(struct devfreq *df)
 	if (error)
 		goto err_create_sysfs_entry;
 
-	rate = 0;
-	podgov->freq_count = 0;
-	while (rate <= df->max_freq) {
-		long rounded_rate;
-		if (unlikely(podgov->freq_count == MAX_FREQ_COUNT)) {
-			pr_err("%s: too many frequencies\n", __func__);
-			break;
+	/* We do not have DVFS table for T124 in any format.
+	 * Hack to get some table available. */
+
+	if (cid == TEGRA_CHIPID_TEGRA12) {
+		long addition;
+		int i;
+
+		addition = (df->max_freq - df->min_freq) / MAX_FREQ_COUNT;
+		rate = df->min_freq;
+
+		for (i = 0; i < MAX_FREQ_COUNT; ++i) {
+			freqs[podgov->freq_count++] = rate;
+			rate += addition;
 		}
-		rounded_rate =
-			clk_round_rate(clk_get_parent(pdata->clk[0]), rate);
-		freqs[podgov->freq_count++] = rounded_rate;
-		rate = rounded_rate + 2000;
+
+	} else {
+		rate = 0;
+		podgov->freq_count = 0;
+		while (rate <= df->max_freq) {
+			long rounded_rate;
+			if (unlikely(podgov->freq_count == MAX_FREQ_COUNT)) {
+				pr_err("%s: too many frequencies\n", __func__);
+				break;
+			}
+			rounded_rate = clk_round_rate(
+					clk_get_parent(pdata->clk[0]), rate);
+			freqs[podgov->freq_count++] = rounded_rate;
+			rate = rounded_rate + 2000;
+		}
 	}
 
 	podgov->freqlist =

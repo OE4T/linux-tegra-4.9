@@ -29,7 +29,22 @@ struct tegra_panel {
 	void (*set_disp_device)(struct platform_device *);
 	int (*register_bl_dev)(void);
 	int (*register_i2c_bridge)(void);
+};
 
+enum {
+	TEGRA_GPIO_RESET,
+	TEGRA_GPIO_BL_ENABLE,
+	TEGRA_GPIO_PWM,
+	TEGRA_GPIO_TE,
+	TEGRA_N_GPIO_PANEL, /* add new gpio above this entry */
+};
+
+/* tegra_panel_of will replace tegra_panel once we completely move to DT */
+struct tegra_panel_of {
+	int panel_gpio[TEGRA_N_GPIO_PANEL];
+};
+static struct tegra_panel_of __maybe_unused panel_of = {
+	.panel_gpio = {-1, -1, -1, -1},
 };
 
 extern atomic_t sd_brightness;
@@ -42,4 +57,8 @@ void tegra_dsi_resources_init(u8 dsi_instance,
 
 void tegra_dsi_update_init_cmd_gpio_rst(struct tegra_dc_out *dsi_disp1_out);
 
+int tegra_panel_gpio_get_dt(const char *comp_str,
+				struct tegra_panel_of *panel);
+
+int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

@@ -218,8 +218,10 @@ void nvhost_scale3d_suspend(struct platform_device *dev)
 		return;
 
 	mutex_lock(&df->lock);
+
 	podgov = df->data;
-	if (!(podgov && podgov->enable)) {
+	if (!(df->governor == &nvhost_podgov &&
+	      podgov && podgov->enable)) {
 		mutex_unlock(&df->lock);
 		return;
 	}

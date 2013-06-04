@@ -158,16 +158,8 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	int original_refs = refs;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	while (refs--) {
-		pm_runtime_mark_last_busy(&dev->dev);
-		if (pdata->clockgate_delay)
-			pm_runtime_put_sync_autosuspend(&dev->dev);
-		else
-			pm_runtime_put(&dev->dev);
-	}
-
 #ifdef CONFIG_PM_RUNTIME
-	if (atomic_read(&dev->dev.power.usage_count) == 0) {
+	if (atomic_read(&dev->dev.power.usage_count) == refs) {
 		if (pdata->idle)
 			pdata->idle(dev);
 	}
@@ -175,6 +167,14 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	if (pdata->idle)
 		pdata->idle(dev);
 #endif
+
+	while (refs--) {
+		pm_runtime_mark_last_busy(&dev->dev);
+		if (pdata->clockgate_delay)
+			pm_runtime_put_sync_autosuspend(&dev->dev);
+		else
+			pm_runtime_put(&dev->dev);
+	}
 
 	/* Explicitly turn off the host1x clocks */
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))

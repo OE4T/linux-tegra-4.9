@@ -3561,12 +3561,13 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct tegra_dc_dsi_data *dsi,
 						u32 n_cmd)
 {
 	struct tegra_dsi_cmd *dsi_cmd, *temp;
-	u32 *prop_val_ptr = prop->value;
+	u32 *prop_val_ptr;
 	u32 cnt = 0, i = 0;
 	u8 arg1, arg2;
 
 	if (!prop)
 		return NULL;
+	prop_val_ptr = prop->value;
 
 	dsi_cmd = kzalloc(sizeof(*dsi_cmd) * n_cmd, GFP_KERNEL);
 	if (!dsi_cmd) {
@@ -3920,6 +3921,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_free_dsi;
 
 	dsi_enum = dsi->info.dsi_instance ? : tegra_dsi_get_enumeration();
+	if (dsi_enum < 0) {
+		dev_err(&dc->ndev->dev, "dsi: invalid enumeration\n");
+		err = -EINVAL;
+		goto err_free_dsi;
+	}
 	tegra_dsi_instance[dsi_enum] = dsi;
 
 	if (dc->out->dsi->ganged_type) {

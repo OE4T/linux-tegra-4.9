@@ -2518,7 +2518,10 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 	total_cycles = pwr_pmu_idle_count_value_v(
 		gk20a_readl(g, pwr_pmu_idle_count_r(6)));
 
-	*load = busy_cycles * 1000 / total_cycles;
+	if (total_cycles)
+		*load = busy_cycles * 1000 / total_cycles;
+	else
+		*load = 0;
 
 	return 0;
 }

@@ -40,6 +40,7 @@
 #include "hw_mc_gk20a.h"
 #include "hw_sim_gk20a.h"
 #include "gk20a_scale.h"
+#include "gr3d/pod_scaling.h"
 
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -876,6 +877,7 @@ static int gk20a_probe(struct platform_device *dev)
 		pdata->idle		= nvhost_gk20a_scale_notify_idle;
 		pdata->scaling_init	= nvhost_gk20a_scale_init;
 		pdata->scaling_deinit	= nvhost_gk20a_scale_deinit;
+		pdata->suspend_ndev	= nvhost_scale3d_suspend;
 	}
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);

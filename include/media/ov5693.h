@@ -85,6 +85,7 @@ struct ov5693_platform_data {
 	int (*probe_clock)(unsigned long);
 	int (*power_on)(struct ov5693_power_rail *);
 	int (*power_off)(struct ov5693_power_rail *);
+	const char *mclk_name;
 };
 
 #endif  /* __OV5693_H__ */

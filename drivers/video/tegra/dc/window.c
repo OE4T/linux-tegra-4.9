@@ -195,7 +195,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 
 		if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
 			tegra_dc_writel(dc,
-					WIN_K1(0xff) |
+					WIN_K1(blend->alpha[idx]) |
 					WIN_K2(0xff) |
 					WIN_BLEND_ENABLE,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
@@ -213,7 +213,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					DC_WINBUF_BLEND_ALPHA_1BIT);
 		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
 			tegra_dc_writel(dc,
-					WIN_K1(0xff) |
+					WIN_K1(blend->alpha[idx]) |
 					WIN_K2(0xff) |
 					WIN_BLEND_ENABLE,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
@@ -521,16 +521,21 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			win_options |= COLOR_EXPAND;
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-		if (win->global_alpha == 255) {
-			tegra_dc_writel(dc, 0, DC_WIN_GLOBAL_ALPHA);
-		} else {
-			tegra_dc_writel(dc, GLOBAL_ALPHA_ENABLE |
-				win->global_alpha, DC_WIN_GLOBAL_ALPHA);
-			win_options |= CP_ENABLE;
-		}
-#endif
+		/* Cache the global alpha of each window here. It is necessary
+		 * for in-order blending settings. */
+		dc->blend.alpha[win->idx] = win->global_alpha;
 		if (!tegra_dc_feature_is_gen2_blender(dc, win->idx)) {
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+			/* Update global alpha if blender is gen1. */
+			if (win->global_alpha == 255) {
+				tegra_dc_writel(dc, 0, DC_WIN_GLOBAL_ALPHA);
+			} else {
+				tegra_dc_writel(dc, GLOBAL_ALPHA_ENABLE |
+					win->global_alpha, DC_WIN_GLOBAL_ALPHA);
+				win_options |= CP_ENABLE;
+			}
+#endif
+
 			if (win->flags &
 					TEGRA_WIN_FLAG_BLEND_COVERAGE) {
 				tegra_dc_writel(dc,

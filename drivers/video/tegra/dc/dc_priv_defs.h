@@ -70,6 +70,7 @@ struct tegra_dc;
 struct tegra_dc_blend {
 	unsigned z[DC_N_WINDOWS];
 	unsigned flags[DC_N_WINDOWS];
+	u8 alpha[DC_N_WINDOWS];
 };
 
 struct tegra_dc_out_ops {

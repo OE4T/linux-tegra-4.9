@@ -344,9 +344,11 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	/*
 	 * Do nothing if display parameters are same as current values.
 	 */
+#if defined(CONFIG_ANDROID)
 	if ((var->xoffset == tegra_fb->curr_xoffset) &&
 	    (var->yoffset == tegra_fb->curr_yoffset))
 		return 0;
+#endif
 
 	if (!tegra_fb->win->cur_handle) {
 		flush_start = info->screen_base +

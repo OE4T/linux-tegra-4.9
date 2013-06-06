@@ -17,6 +17,8 @@
 #define __NVC_H__
 
 #include <linux/ioctl.h>
+#include <linux/regulator/consumer.h>
+#include <mach/pinmux.h>
 
 #define NVC_INT2FLOAT_DIVISOR_1K	1000
 #define NVC_INT2FLOAT_DIVISOR_1M	1000000
@@ -171,25 +173,6 @@ enum nvc_params_isp {
 #define NVC_IOCTL_PARAM_ISP_WR		_IOWR('o', 201, struct nvc_param_isp)
 #define NVC_IOCTL_FUSE_ID		_IOWR('o', 202, struct nvc_fuseid)
 
-
-#ifdef __KERNEL__
-
-#include <linux/regulator/consumer.h>
-
-/* The NVC_CFG_ defines are for the .cfg entry in the
- * platform data structure.
- */
-/* Device not registered if not found */
-#define NVC_CFG_NODEV			(1 << 0)
-/* Don't return errors */
-#define NVC_CFG_NOERR			(1 << 1)
-/* Always go to _PWR_STDBY instead of _PWR_OFF */
-#define NVC_CFG_OFF2STDBY		(1 << 2)
-/* Init device at sys boot */
-#define NVC_CFG_BOOT_INIT		(1 << 3)
-/* Sync mode uses an I2C MUX to send at same time */
-#define NVC_CFG_SYNC_I2C_MUX		(1 << 4)
-
 /* Expected higher level power calls are:
  * 1 = OFF
  * 2 = STANDBY
@@ -221,6 +204,25 @@ enum nvc_params_isp {
 #define NVC_PWR_STDBY			4
 #define NVC_PWR_COMM			5
 #define NVC_PWR_ON			6
+
+
+#ifdef __KERNEL__
+
+#include <linux/regulator/consumer.h>
+
+/* The NVC_CFG_ defines are for the .cfg entry in the
+ * platform data structure.
+ */
+/* Device not registered if not found */
+#define NVC_CFG_NODEV			(1 << 0)
+/* Don't return errors */
+#define NVC_CFG_NOERR			(1 << 1)
+/* Always go to _PWR_STDBY instead of _PWR_OFF */
+#define NVC_CFG_OFF2STDBY		(1 << 2)
+/* Init device at sys boot */
+#define NVC_CFG_BOOT_INIT		(1 << 3)
+/* Sync mode uses an I2C MUX to send at same time */
+#define NVC_CFG_SYNC_I2C_MUX		(1 << 4)
 
 struct nvc_regulator_init {
 	unsigned vreg_num;
@@ -286,6 +288,13 @@ struct nvc_gpio {
 struct nvc_fuseid {
 	__u32 size;
 	__u8 data[16];
+};
+
+struct nvc_pinmux {
+	struct tegra_pingroup_config pcfg;
+	bool valid; /* set if struct data is valid */
+	bool own; /* gets set if driver initializes */
+	bool flag; /* scratch flag for driver implementation */
 };
 
 #endif /* __KERNEL__ */

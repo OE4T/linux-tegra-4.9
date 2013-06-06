@@ -40,25 +40,25 @@
 *	Adds SYSFS attributes to read/write MPU registers from ADB
 *	shell:
 *	dbg_reg	= REGISTER
-*		- A write to dbg_reg sets the device register to use
-*		- A read reads the current value of dbg_reg
+*		A write to dbg_reg sets the device register to use.
+*		A read reads the current value of dbg_reg.
 *	dbg_dat = DATA
-*		- A write to dbg_dat initiates an I2C write transaction
-*		  to the device register defined by dbg_reg with the
-*		  data defined by dbg_dat
-*		- A read to dbg_dat initiates an I2C read transaction
-*		  to the device register defined by dbg_reg.
+*		A write to dbg_dat initiates an I2C write transaction
+*		to the device register defined by dbg_reg with the
+*		data defined by dbg_dat
+*		A read to dbg_dat initiates an I2C read transaction
+*		to the device register defined by dbg_reg.
 *	dbg_i2c_addr = I2C device address
-*		- if set to 0 (default) the MPU I2C address is used.
-*		- other devices can be accessed by setting this to the
-*		  that device I2C address.  When used after enabling
-*		  bypass mode, devices behind the MPU can be accessed.
+*		If set to 0 (default) the MPU I2C address is used.
+*		Other devices can be accessed by setting this to
+*		that device's I2C address.  When used after enabling
+*		bypass mode, devices behind the MPU can be accessed.
 *	aux_dbg = write 1 to spew auxiliary port register dumps after
-*		  after each external driver call.
-*		  Write 0 to disable the spew.
-*		  Writing anything takes a snapshot of the registers.
-*		  Therefore, a write of 0 can take snapshots whenever
-*		  without the external driver call spew.
+*		each external driver call.
+*		Write 0 to disable the spew.
+*		Writing anything takes a snapshot of the registers.
+*		Therefore, a write of 0 can take snapshots whenever
+*		without the external driver call spew.
 **********************************************************************/
 #define	DEBUG_SYSFS_INTERFACE		1
 
@@ -67,14 +67,14 @@
  *     XXX : mount position. TOP for top and BOT for bottom.
  *     YYY : couter-clockwise rotation angle in degree.
  */
-#define MTMAT_TOP_CCW_0			{  1,  0,  0,  0,  1,  0,  0,  0,  1 }
-#define MTMAT_TOP_CCW_90		{  0, -1,  0,  1,  0,  0,  0,  0,  1 }
-#define MTMAT_TOP_CCW_180		{ -1,  0,  0,  0, -1,  0,  0,  0,  1 }
-#define MTMAT_TOP_CCW_270		{  0,  1,  0, -1,  0,  0,  0,  0,  1 }
-#define MTMAT_BOT_CCW_0			{ -1,  0,  0,  0,  1,  0,  0,  0, -1 }
-#define MTMAT_BOT_CCW_90		{  0, -1,  0, -1,  0,  0,  0,  0, -1 }
-#define MTMAT_BOT_CCW_180		{  1,  0,  0,  0, -1,  0,  0,  0, -1 }
-#define MTMAT_BOT_CCW_270		{  0,  1,  0,  1,  0,  0,  0,  0, -1 }
+#define MTMAT_TOP_CCW_0		{  1,  0,  0,  0,  1,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_90	{  0, -1,  0,  1,  0,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_180	{ -1,  0,  0,  0, -1,  0,  0,  0,  1 }
+#define MTMAT_TOP_CCW_270	{  0,  1,  0, -1,  0,  0,  0,  0,  1 }
+#define MTMAT_BOT_CCW_0		{ -1,  0,  0,  0,  1,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_90	{  0, -1,  0, -1,  0,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_180	{  1,  0,  0,  0, -1,  0,  0,  0, -1 }
+#define MTMAT_BOT_CCW_270	{  0,  1,  0,  1,  0,  0,  0,  0, -1 }
 
 /*********************************************************************/
 /* Structure and function prototypes				     */
@@ -372,7 +372,7 @@ struct ext_slave_descr {
 
 #define NVI_CONFIG_BOOT_AUTO		(0) /* auto detect connection to MPU */
 #define NVI_CONFIG_BOOT_MPU		(1) /* connected to MPU */
-#define NVI_CONFIG_BOOT_EXTERNAL	(2) /* connected to host */
+#define NVI_CONFIG_BOOT_HOST		(2) /* connected to host */
 #define NVI_CONFIG_BOOT_MASK		(0x03)
 
 /**
@@ -488,7 +488,7 @@ struct nvi_mpu_port {
  *      connected to the host (that the MPU is connected to).
  *      This is a global connection switch affecting all ports
  *      so a mechanism is in place of whether the request is
- *      honored or not.  See the funtion notes for
+ *      honored or not.  See the function notes for
  *      nvi_mpu_bypass_request.
  */
 
@@ -670,13 +670,8 @@ int nvi_mpu_bypass_request(bool enable);
 
 /**
  * See the nvi_mpu_bypass_request notes.
- * @return int error: calls that return with an error must be
- *            tried again.
- *            Possible errors are:
- *            - -EAGAIN: MPU is not initialized yet.
- *            - -EPERM: MPU is shutdown.  MPU API won't be
- *                 available until a system restart.
- *            - -EBUSY: MPU is busy with another request.
+ * @return int 0: Always returns 0.  The call return should be
+ *         void but for backward compatibility it returns 0.
  */
 int nvi_mpu_bypass_release(void);
 

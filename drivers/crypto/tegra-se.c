@@ -2583,21 +2583,19 @@ static int tegra_se_probe(struct platform_device *pdev)
 	se_dev->chipdata =
 		(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
 
-	if (!tegra_platform_is_fpga()) {
-		/* Initialize the clock */
-		se_dev->pclk = clk_get(se_dev->dev, "se");
-		if (IS_ERR(se_dev->pclk)) {
-			dev_err(se_dev->dev, "clock intialization failed (%ld)\n",
-				PTR_ERR(se_dev->pclk));
-			err = PTR_ERR(se_dev->pclk);
-			goto clean;
-		}
+	/* Initialize the clock */
+	se_dev->pclk = clk_get(se_dev->dev, "se");
+	if (IS_ERR(se_dev->pclk)) {
+		dev_err(se_dev->dev, "clock intialization failed (%ld)\n",
+			PTR_ERR(se_dev->pclk));
+		err = PTR_ERR(se_dev->pclk);
+		goto clean;
+	}
 
-		err = clk_set_rate(se_dev->pclk, ULONG_MAX);
-		if (err) {
-			dev_err(se_dev->dev, "clock set_rate failed.\n");
-			goto clean;
-		}
+	err = clk_set_rate(se_dev->pclk, ULONG_MAX);
+	if (err) {
+		dev_err(se_dev->dev, "clock set_rate failed.\n");
+		goto clean;
 	}
 
 	err = tegra_init_key_slot(se_dev);
@@ -2614,12 +2612,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	init_completion(&se_dev->complete);
 
-	if (tegra_platform_is_fpga())
-		se_work_q = alloc_workqueue("se_work_q", 0, 16);
-	else
-		se_work_q = alloc_workqueue("se_work_q",
-					WQ_HIGHPRI | WQ_UNBOUND, 16);
-
+	se_work_q = alloc_workqueue("se_work_q",
+				WQ_HIGHPRI | WQ_UNBOUND, 16);
 	if (!se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
 		goto clean;

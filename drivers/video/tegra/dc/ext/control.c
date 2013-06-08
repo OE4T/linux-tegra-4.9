@@ -56,6 +56,12 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	case TEGRA_DC_OUT_HDMI:
 		properties->type = TEGRA_DC_EXT_HDMI;
 		break;
+	case TEGRA_DC_OUT_LVDS:
+		properties->type = TEGRA_DC_EXT_LVDS;
+		break;
+	case TEGRA_DC_OUT_DP:
+		properties->type = TEGRA_DC_EXT_DP;
+		break;
 	default:
 		return -EINVAL;
 	}

@@ -1585,11 +1585,14 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 		if (likely(!hwctx->has_timedout)) {
 			ch =  (struct channel_gk20a *)hwctx->priv;
 			BUG_ON(!ch);
-			gk20a_channel_finish(ch, timeout);
+			err = gk20a_channel_finish(ch, timeout);
+			if (err)
+				break;
 		}
 	}
 
-	vm->unmap_user(vm, offset, memmgr, r);
+	if (!err)
+		vm->unmap_user(vm, offset, memmgr, r);
 
 	return err;
 }

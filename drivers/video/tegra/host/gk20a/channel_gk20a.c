@@ -363,9 +363,12 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
 	struct nvhost_master *host = host_from_gk20a_channel(ch);
+	int err;
 
-	if (finish)
-		gk20a_channel_finish(ch, finish_timeout);
+	if (finish) {
+		err = gk20a_channel_finish(ch, finish_timeout);
+		WARN_ON(err);
+	}
 
 	/* ensure no fences are pending */
 	nvhost_syncpt_set_min_eq_max(&host->syncpt,

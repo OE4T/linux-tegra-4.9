@@ -1329,7 +1329,7 @@ int gk20a_channel_finish(struct channel_gk20a *ch, long timeout)
 	err = nvhost_syncpt_wait_timeout(sp,
 					 ch->last_submit_fence.syncpt_id,
 					 ch->last_submit_fence.syncpt_value,
-					 timeout, &fence.value, NULL);
+					 timeout, &fence.value, NULL, false);
 	if (WARN_ON(err))
 		dev_warn(dev_from_gk20a(ch->g),
 			 "timed out waiting for gk20a channel to finish");

@@ -188,7 +188,7 @@ static bool syncpt_update_min_is_expired(
  */
 int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			u32 thresh, u32 timeout, u32 *value,
-			struct timespec *ts)
+			struct timespec *ts, bool interruptible)
 {
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref;
@@ -248,7 +248,13 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	/* wait for the syncpoint, or timeout, or signal */
 	while (timeout) {
 		u32 check = min_t(u32, SYNCPT_CHECK_PERIOD, timeout);
-		int remain = wait_event_interruptible_timeout(wq,
+		int remain;
+		if (interruptible)
+			remain = wait_event_interruptible_timeout(wq,
+				syncpt_update_min_is_expired(sp, id, thresh),
+				check);
+		else
+			remain = wait_event_timeout(wq,
 				syncpt_update_min_is_expired(sp, id, thresh),
 				check);
 		if (remain > 0 || nvhost_syncpt_is_expired(sp, id, thresh)) {
@@ -833,7 +839,8 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	pdev = to_platform_device(dev->dev.parent);
 	sp = &(nvhost_get_host(pdev)->syncpt);
 
-	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts);
+	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts,
+			true);
 }
 EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);
 

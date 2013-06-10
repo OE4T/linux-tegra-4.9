@@ -144,7 +144,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 
 	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
 					args->thresh, timeout, &args->value,
-					NULL);
+					NULL, true);
 	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
 	  args->timeout, args->value, err);
 
@@ -166,7 +166,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 
 	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
 					args->thresh, timeout, &args->value,
-					&ts);
+					&ts, true);
 	args->tv_sec = ts.tv_sec;
 	args->tv_nsec = ts.tv_nsec;
 	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,

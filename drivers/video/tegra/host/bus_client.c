@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,6 +73,9 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 	void __iomem *p = pdata->aperture[0] + offset;
 	int err;
 
+	if (!pdata->aperture[0])
+		return -ENODEV;
+
 	/* verify offset */
 	err = validate_reg(ndev, offset, count);
 	if (err)
@@ -95,6 +98,9 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	void __iomem *p;
 	int err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
+
+	if (!pdata->aperture[0])
+		return -ENODEV;
 
 	p = pdata->aperture[0] + offset;
 

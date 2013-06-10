@@ -268,6 +268,8 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 
 	ndev = nvhost_device_list_match_by_id(args->id);
+	if (!ndev)
+		return -ENODEV;
 
 	remaining = args->block_size >> 2;
 

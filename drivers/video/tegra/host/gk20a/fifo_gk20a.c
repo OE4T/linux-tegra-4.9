@@ -1009,6 +1009,9 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 
 	nvhost_dbg_fn("%d", hw_chid);
 
+	if (!tegra_platform_is_silicon())
+		timeout = MAX_SCHEDULE_TIMEOUT;
+
 	runlist_id = f->engine_info[engine_id].runlist_id;
 	runlist = &f->runlist_info[runlist_id];
 
@@ -1037,7 +1040,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 			ret = -EBUSY;
 			break;
 		}
-		mdelay(1);
+		schedule();
 	} while (1);
 
 	/* re-enable elpg or release pmu mutex */

@@ -44,7 +44,7 @@ struct tegra_dc_dp_link_config {
 	u8	max_lane_count;
 	bool	downspread;
 	bool	support_enhanced_framing;
-	u32	bytes_per_pixel;
+	u32	bits_per_pixel;
 	bool	alt_scramber_reset_cap; /* true for eDP */
 	bool	only_enhanced_framing;	/* enhanced_frame_en ignored */
 

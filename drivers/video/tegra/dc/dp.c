@@ -510,8 +510,8 @@ static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 		cfg->support_enhanced_framing ? "Y" : "N");
 	dev_info(&dp->dc->ndev->dev, "           Bandwidth           %d\n",
 		cfg->max_link_bw);
-	dev_info(&dp->dc->ndev->dev, "           BPP                 %d\n",
-		cfg->bytes_per_pixel);
+	dev_info(&dp->dc->ndev->dev, "           bpp                 %d\n",
+		cfg->bits_per_pixel);
 	dev_info(&dp->dc->ndev->dev, "           EnhancedFraming     %s\n\n",
 		cfg->enhanced_framing ? "Y" : "N");
 	dev_info(&dp->dc->ndev->dev, "           Scramble_enabled    %s\n",
@@ -592,18 +592,18 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 
 
 	if (!link_rate || !cfg->lane_count || !mode->pclk ||
-		!cfg->bytes_per_pixel)
+		!cfg->bits_per_pixel)
 		return false;
 
-	if (mode->pclk * cfg->bytes_per_pixel >=
+	if (mode->pclk * cfg->bits_per_pixel >=
 		8 * link_rate * cfg->lane_count)
 		return false;
 
 	num_linkclk_line = (u32)tegra_div64(
 		(u64)link_rate * mode->h_active, mode->pclk);
 
-	ratio_f = (u64)mode->pclk * cfg->bytes_per_pixel * f;
-	/* ratio_f /= 8; */
+	ratio_f = (u64)mode->pclk * cfg->bits_per_pixel * f;
+	ratio_f /= 8;
 	ratio_f = tegra_div64(ratio_f, link_rate * cfg->lane_count);
 
 	for (i = 64; i >= 32; --i) {
@@ -686,9 +686,9 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 
 	watermark_f = tegra_div64(ratio_f * cfg->tu_size * (f - ratio_f), f);
 	cfg->watermark = (u32)tegra_div64(watermark_f + lowest_neg_error_f,
-		f) + 2 * cfg->bytes_per_pixel - 1;
-	num_symbols_per_line = (mode->h_active * cfg->bytes_per_pixel) /
-		cfg->lane_count;
+		f) + cfg->bits_per_pixel / 4 - 1;
+	num_symbols_per_line = (mode->h_active * cfg->bits_per_pixel) /
+		(8 * cfg->lane_count);
 	if (cfg->watermark > 30) {
 		dev_dbg(&dp->dc->ndev->dev,
 			"dp: sor setting: unable to get a good tusize, "
@@ -757,7 +757,7 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
 			&cfg->max_link_bw));
 
-	cfg->bytes_per_pixel = dp->dc->pdata->fb->bits_per_pixel / 8;
+	cfg->bits_per_pixel = dp->dc->pdata->default_out->depth;
 
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));

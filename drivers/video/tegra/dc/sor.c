@@ -791,7 +791,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		}
 	}
 
-	reg_val |= (sor->dc->pdata->fb->bits_per_pixel > 18) ?
+	reg_val |= (sor->dc->pdata->default_out->depth > 18) ?
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
 
@@ -1053,7 +1053,7 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		NV_SOR_LVDS_PD_TXDA_2_ENABLE |
 		NV_SOR_LVDS_PD_TXDA_1_ENABLE |
 		NV_SOR_LVDS_PD_TXDA_0_ENABLE;
-	if (!conforming && (sor->dc->pdata->fb->bits_per_pixel < 18))
+	if (!conforming && (sor->dc->pdata->default_out->depth == 18))
 		reg_val |= (NV_SOR_LVDS_PD_TXDA_3_DISABLE);
 
 	tegra_sor_writel(sor, NV_SOR_LVDS, reg_val);

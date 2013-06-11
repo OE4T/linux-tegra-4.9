@@ -37,6 +37,8 @@
 #include "t124/t124.h"
 #include "vi.h"
 
+#define MAX_DEVID_LENGTH	16
+
 static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_2X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra20-vi",
@@ -84,6 +86,9 @@ static int vi_probe(struct platform_device *dev)
 	int err = 0;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	char devname[MAX_DEVID_LENGTH];
+#endif
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -101,6 +106,7 @@ static int vi_probe(struct platform_device *dev)
 	}
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
+
 	tegra_vi = kzalloc(sizeof(struct vi), GFP_KERNEL);
 	if (!tegra_vi) {
 		dev_err(&dev->dev, "can't allocate memory for vi\n");
@@ -108,8 +114,19 @@ static int vi_probe(struct platform_device *dev)
 	}
 
 	tegra_vi->ndev = dev;
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	snprintf(devname, MAX_DEVID_LENGTH,
+		 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
+		 dev->name, dev->id);
+	if (dev->id == 1)
+		tegra_vi->clk_gate = clk_get_sys(devname, "vim2_clk");
+	else
+		tegra_vi->clk_gate = clk_get_sys(devname, "csus");
+	if (IS_ERR(tegra_vi->clk_gate))
+		dev_err(&dev->dev, "clk_get_sys failed for clk_gate of %s",
+			devname);
+#endif
 	pdata->private_data = tegra_vi;
-
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
 	if (!tegra_vi->camera) {
@@ -118,6 +135,7 @@ static int vi_probe(struct platform_device *dev)
 		goto camera_register_fail;
 	}
 #endif
+
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
@@ -163,7 +181,6 @@ static int vi_probe(struct platform_device *dev)
 camera_register_fail:
 	kfree(tegra_vi);
 	return err;
-
 }
 
 static int __exit vi_remove(struct platform_device *dev)
@@ -263,5 +280,74 @@ static void __exit vi_exit(void)
 	platform_driver_unregister(&vi_driver);
 }
 
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+int nvhost_vi_init(struct platform_device *dev)
+{
+	int ret = 0;
+	struct vi *tegra_vi;
+	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+
+	tegra_vi->reg = regulator_get(&dev->dev, "avdd_dsi_csi");
+	if (IS_ERR_OR_NULL(tegra_vi->reg)) {
+		if (tegra_vi->reg == ERR_PTR(-ENODEV)) {
+			ret = -ENODEV;
+			dev_info(&dev->dev,
+				"%s: no regulator device\n",
+				__func__);
+		} else {
+			dev_err(&dev->dev,
+				"%s: couldn't get regulator\n",
+				__func__);
+		}
+		tegra_vi->reg = NULL;
+	}
+	if (tegra_vi->clk_gate)
+		clk_prepare_enable(tegra_vi->clk_gate);
+	return ret;
+}
+
+void nvhost_vi_deinit(struct platform_device *dev)
+{
+	struct vi *tegra_vi;
+	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+
+	if (tegra_vi->reg)
+		regulator_put(tegra_vi->reg);
+	if (tegra_vi->clk_gate)
+		clk_disable_unprepare(tegra_vi->clk_gate);
+}
+
+int nvhost_vi_finalize_poweron(struct platform_device *dev)
+{
+	int ret = 0;
+	struct vi *tegra_vi;
+	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+
+	if (tegra_vi->reg) {
+		ret = regulator_enable(tegra_vi->reg);
+		if (ret)
+			dev_err(&dev->dev,
+				"%s: enable csi regulator failed.\n",
+				__func__);
+	}
+	return ret;
+}
+
+int nvhost_vi_prepare_poweroff(struct platform_device *dev)
+{
+	int ret = 0;
+	struct vi *tegra_vi;
+	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+
+	if (tegra_vi->reg) {
+		ret = regulator_disable(tegra_vi->reg);
+		if (ret)
+			dev_err(&dev->dev,
+				"%s: disable csi regulator failed.\n",
+				__func__);
+	}
+	return ret;
+}
+#endif
 late_initcall(vi_init);
 module_exit(vi_exit);

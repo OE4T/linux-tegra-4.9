@@ -34,14 +34,22 @@
 #include "vic03/vic03.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
+#include "vi/vi.h"
 
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
 
+#include "mach/powergate.h"
+
 static int t124_num_alloc_channels = 0;
 
 #define HOST_EMC_FLOOR 300000000
+/* FIXME: Tune Powergate and clockgate delays */
+#define VI_CLOCKGATE_DELAY 60
+#define VI_POWERGATE_DELAY 500
+#define ISP_CLOCKGATE_DELAY 60
+#define ISP_POWERGATE_DELAY 500
 
 #define BIT64(nr) (1ULL << (nr))
 #define NVSYNCPTS_CLIENT_MANAGED_T124 ( \
@@ -71,13 +79,24 @@ static struct resource tegra_host1x04_resources[] = {
 };
 
 static const char *s_syncpt_names[NV_HOST1X_SYNCPT_NB_PTS] = {
-	[NVSYNCPT_CSI_VI_0]	= "csi_vi_0",
-	[NVSYNCPT_CSI_VI_1]	= "csi_vi_1",
-	[NVSYNCPT_VI_ISP_0]	= "vi_isp_0",
-	[NVSYNCPT_VI_ISP_1]	= "vi_isp_1",
-	[NVSYNCPT_VI_ISP_2]	= "vi_isp_2",
-	[NVSYNCPT_VI_ISP_3]	= "vi_isp_3",
-	[NVSYNCPT_VI_ISP_4]	= "vi_isp_4",
+	[NVSYNCPT_ISP_0_0]	= "ispa_memory",
+	[NVSYNCPT_ISP_0_1]	= "ispa_stats",
+	[NVSYNCPT_ISP_0_2]	= "ispa_stream",
+	[NVSYNCPT_ISP_0_3]	= "ispa_loadv",
+	[NVSYNCPT_ISP_1_0]	= "ispb_memory",
+	[NVSYNCPT_ISP_1_1]	= "ispb_stats",
+	[NVSYNCPT_ISP_1_2]	= "ispb_stream",
+	[NVSYNCPT_ISP_1_3]	= "ispb_loadv",
+	[NVSYNCPT_VI_0_0]	= "vi0_ispa",
+	[NVSYNCPT_VI_0_1]	= "vi0_ispb",
+	[NVSYNCPT_VI_0_2]	= "vi0_stream",
+	[NVSYNCPT_VI_0_3]	= "vi0_memory",
+	[NVSYNCPT_VI_0_4]	= "vi0_flash",
+	[NVSYNCPT_VI_1_0]	= "vi1_ispa",
+	[NVSYNCPT_VI_1_1]	= "vi1_ispb",
+	[NVSYNCPT_VI_1_2]	= "vi1_stream",
+	[NVSYNCPT_VI_1_3]	= "vi1_memory",
+	[NVSYNCPT_VI_1_4]	= "vi1_flash",
 	[NVSYNCPT_3D]		= "3d",
 	[NVSYNCPT_MPE]		= "mpe",
 	[NVSYNCPT_MPE_EBM_EOF]	= "mpe_ebm_eof",
@@ -134,16 +153,18 @@ static struct resource isp_resources[] = {
 
 static struct platform_device tegra_isp01b_device;
 struct nvhost_device_data t124_isp_info = {
-	.syncpts = NV_ISP_0_SYNCPTS,
-	.modulemutexes = {NVMODMUTEX_ISP_0},
-	.clocks = {{"isp", UINT_MAX}, {} },
-	.exclusive     = true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_ISP,
-	.slave         = &tegra_isp01b_device,
+	/* FIXME: control clocks from user space instead of hard-coding here */
+	/* FIXME: Add control for sclk/emc */
+	.syncpts         = NV_ISP_0_SYNCPTS,
+	.moduleid        = NVHOST_MODULE_ISP,
+	.modulemutexes   = {NVMODMUTEX_ISP_0},
+	.exclusive       = true,
+	.powergate_ids   = {TEGRA_POWERGATE_VENC, -1},
+	.can_powergate   = false,
+	.clockgate_delay = ISP_CLOCKGATE_DELAY,
+	.powergate_delay = ISP_POWERGATE_DELAY,
+	.clocks          = { {"isp", UINT_MAX} },
+	.slave           = &tegra_isp01b_device,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -165,15 +186,19 @@ static struct resource ispb_resources[] = {
 
 
 struct nvhost_device_data t124_ispb_info = {
-	.syncpts = NV_ISP_1_SYNCPTS,
-	.modulemutexes = {NVMODMUTEX_ISP_1},
-	.clocks = {{"isp", UINT_MAX}, {} },
-	.exclusive     = true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = (1 << 16) | NVHOST_MODULE_ISP,
+	/* FIXME: control clocks from user space instead of hard-coding here */
+	/* FIXME: Add control for sclk/emc */
+	.syncpts         = NV_ISP_1_SYNCPTS,
+	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
+	.modulemutexes   = {NVMODMUTEX_ISP_1},
+	.exclusive       = true,
+	.powergate_ids   = {TEGRA_POWERGATE_VENC, -1},
+	.can_powergate   = false,
+	.clockgate_delay = ISP_CLOCKGATE_DELAY,
+	.powergate_delay = ISP_POWERGATE_DELAY,
+	.clocks          = {
+		{"isp", UINT_MAX},
+		{"ispb", 0} }
 };
 
 static struct platform_device tegra_isp01b_device = {
@@ -197,15 +222,25 @@ static struct resource vi_resources[] = {
 
 static struct platform_device tegra_vi01b_device;
 struct nvhost_device_data t124_vi_info = {
-	.syncpts       = NV_VI_0_SYNCPTS,
-	.modulemutexes = {NVMODMUTEX_VI_0},
-	.exclusive     = true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
-	.clocks = {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
+	/* FIXME: resolve powergating dependency with DIS */
+	/* FIXME: control clocks from user space instead of hard-coding here */
+	/* FIXME: Add control for sclk/emc */
+	.syncpts          = NV_VI_0_SYNCPTS,
+	.moduleid         = NVHOST_MODULE_VI,
+	.modulemutexes    = {NVMODMUTEX_VI_0},
+	.exclusive        = true,
+	.powergate_ids    = {TEGRA_POWERGATE_VENC, -1},
+	.can_powergate    = false,
+	.clockgate_delay  = VI_CLOCKGATE_DELAY,
+	.powergate_delay  = VI_POWERGATE_DELAY,
+	.clocks           = {
+		{"vi", UINT_MAX},
+		{"csi", 0},
+		{"cilab", 102000000} },
+	.init             = nvhost_vi_init,
+	.deinit           = nvhost_vi_deinit,
+	.prepare_poweroff = nvhost_vi_prepare_poweroff,
+	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.slave         = &tegra_vi01b_device,
 };
 
@@ -220,15 +255,26 @@ static struct platform_device tegra_vi01_device = {
 };
 
 struct nvhost_device_data t124_vib_info = {
-	.syncpts       = NV_VI_1_SYNCPTS,
-	.modulemutexes = {NVMODMUTEX_VI_1},
-	.exclusive     = true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
-	.clocks = {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = (1 << 16 | NVHOST_MODULE_VI),
+	/* FIXME: resolve powergating dependency with DIS */
+	/* FIXME: control clocks from user space instead of hard-coding here */
+	/* FIXME: Add control for sclk/emc */
+	.syncpts          = NV_VI_1_SYNCPTS,
+	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
+	.modulemutexes    = {NVMODMUTEX_VI_1},
+	.exclusive        = true,
+	.powergate_ids    = {TEGRA_POWERGATE_VENC, -1},
+	.can_powergate    = false,
+	.clockgate_delay  = VI_CLOCKGATE_DELAY,
+	.powergate_delay  = VI_POWERGATE_DELAY,
+	.clocks           = {
+		{"vi", UINT_MAX},
+		{"csi", 0},
+		{"cilcd", 102000000},
+		{"cile", 102000000} },
+	.init             = nvhost_vi_init,
+	.deinit           = nvhost_vi_deinit,
+	.prepare_poweroff = nvhost_vi_prepare_poweroff,
+	.finalize_poweron = nvhost_vi_finalize_poweron,
 };
 
 static struct platform_device tegra_vi01b_device = {

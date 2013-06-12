@@ -3081,9 +3081,6 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	if (!dc->enabled)
 		return;
 
-	/* Hack: no windows blanking for simulation to save shutdown time */
-	if (!tegra_platform_is_linsim())
-		tegra_dc_blank(dc);
 	tegra_dc_disable(dc);
 }
 

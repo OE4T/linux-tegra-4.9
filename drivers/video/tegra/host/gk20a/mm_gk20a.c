@@ -250,7 +250,7 @@ int gk20a_init_mm_support(struct gk20a *g)
 	return err;
 }
 
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
+#ifdef TEGRA_GRHOST_GK20A_PHYS_PAGE_TABLES
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    void **handle,
 			    struct sg_table **sgt)
@@ -339,19 +339,19 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 		nvhost_dbg(dbg_pte, "nvmap_mmap failed\n");
 		goto err_alloced;
 	}
-	*sgt = nvhost_memmgr_sg_table(client, r);
-	if (!*sgt) {
-		nvhost_dbg(dbg_pte, "cannot allocate sg table");
-		goto err_mmaped;
-	}
 	memset(va, 0, len);
 	nvhost_memmgr_munmap(r, va);
+
+	*sgt = nvhost_memmgr_pin(client, r, dev_from_vm(vm));
+	if (IS_ERR(*sgt)) {
+		*sgt = NULL;
+		goto err_alloced;
+	}
+
 	*handle = (void *)r;
 
 	return 0;
 
-err_mmaped:
-	nvhost_memmgr_munmap(r, va);
 err_alloced:
 	nvhost_memmgr_put(client, r);
 err_out:
@@ -364,7 +364,7 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	struct mem_mgr *client = mem_mgr_from_vm(vm);
 	nvhost_dbg_fn("");
 	BUG_ON(sgt == NULL);
-	nvhost_memmgr_free_sg_table(client, handle, sgt);
+	nvhost_memmgr_unpin(client, handle, dev_from_vm(vm), sgt);
 	nvhost_memmgr_put(client, handle);
 }
 

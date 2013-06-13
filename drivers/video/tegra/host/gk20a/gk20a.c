@@ -29,6 +29,9 @@
 
 #include <mach/powergate.h>
 #include <mach/pm_domains.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -758,6 +761,12 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	return err;
 }
 
+static struct of_device_id tegra_gk20a_of_match[] = {
+	{ .compatible = "nvidia,tegra124-gk20a",
+		.data = (struct nvhost_device_data *)&tegra_gk20a_info },
+	{ },
+};
+
 struct gk20a_pm_domain {
 	struct platform_device *dev;
 	struct generic_pm_domain pd;
@@ -854,9 +863,16 @@ static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;
+	struct nvhost_device_data *pdata = NULL;
 
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_gk20a_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
 	nvhost_dbg_fn("");
 
@@ -955,6 +971,9 @@ static struct platform_driver gk20a_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gk20a",
+#ifdef CONFIG_OF
+		.of_match_table = tegra_gk20a_of_match,
+#endif
 	}
 };
 

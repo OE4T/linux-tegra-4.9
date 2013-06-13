@@ -59,4 +59,12 @@ struct t124 {
 	struct gk20a *gk20a;
 };
 
+extern struct nvhost_device_data t124_host1x_info;
+extern struct nvhost_device_data t124_isp_info;
+extern struct nvhost_device_data t124_ispb_info;
+extern struct nvhost_device_data t124_vi_info;
+extern struct nvhost_device_data t124_vib_info;
+extern struct nvhost_device_data t124_msenc_info;
+extern struct nvhost_device_data t124_tsec_info;
+
 #endif /* _NVHOST_T124_H_ */

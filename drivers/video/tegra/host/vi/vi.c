@@ -34,6 +34,7 @@
 #include "t30/t30.h"
 #include "t114/t114.h"
 #include "t148/t148.h"
+#include "t124/t124.h"
 #include "vi.h"
 
 static struct of_device_id tegra_vi_of_match[] = {
@@ -52,6 +53,10 @@ static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_14X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra148-vi",
 		.data = (struct nvhost_device_data *)&t14_vi_info },
+#endif
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra124-vi",
+		.data = (struct nvhost_device_data *)&t124_vi_info },
 #endif
 	{ },
 };

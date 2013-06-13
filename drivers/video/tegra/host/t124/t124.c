@@ -105,7 +105,7 @@ static struct host1x_device_info host1x04_info = {
 	.client_managed	= NVSYNCPTS_CLIENT_MANAGED_T124,
 };
 
-static struct nvhost_device_data tegra_host1x04_info = {
+struct nvhost_device_data t124_host1x_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
@@ -118,7 +118,7 @@ static struct platform_device tegra_host1x04_device = {
 	.resource	= tegra_host1x04_resources,
 	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
 	.dev            = {
-		.platform_data = &tegra_host1x04_info,
+		.platform_data = &t124_host1x_info,
 	},
 };
 
@@ -132,7 +132,8 @@ static struct resource isp_resources[] = {
 	}
 };
 
-static struct nvhost_device_data tegra_isp01_info = {
+static struct platform_device tegra_isp01b_device;
+struct nvhost_device_data t124_isp_info = {
 	.syncpts = NV_ISP_0_SYNCPTS,
 	.modulemutexes = {NVMODMUTEX_ISP_0},
 	.clocks = {{"isp", UINT_MAX}, {} },
@@ -142,13 +143,14 @@ static struct nvhost_device_data tegra_isp01_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_ISP,
+	.slave         = &tegra_isp01b_device,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
 	.resource      = isp_resources,
 	.num_resources = ARRAY_SIZE(isp_resources),
 	.dev           = {
-		.platform_data = &tegra_isp01_info,
+		.platform_data = &t124_isp_info,
 	},
 };
 
@@ -162,7 +164,7 @@ static struct resource ispb_resources[] = {
 };
 
 
-static struct nvhost_device_data tegra_isp01b_info = {
+struct nvhost_device_data t124_ispb_info = {
 	.syncpts = NV_ISP_1_SYNCPTS,
 	.modulemutexes = {NVMODMUTEX_ISP_1},
 	.clocks = {{"isp", UINT_MAX}, {} },
@@ -180,7 +182,7 @@ static struct platform_device tegra_isp01b_device = {
 	.resource      = ispb_resources,
 	.num_resources = ARRAY_SIZE(ispb_resources),
 	.dev  = {
-		.platform_data = &tegra_isp01b_info,
+		.platform_data = &t124_ispb_info,
 	},
 };
 
@@ -193,7 +195,8 @@ static struct resource vi_resources[] = {
 	},
 };
 
-static struct nvhost_device_data tegra_vi01_info = {
+static struct platform_device tegra_vi01b_device;
+struct nvhost_device_data t124_vi_info = {
 	.syncpts       = NV_VI_0_SYNCPTS,
 	.modulemutexes = {NVMODMUTEX_VI_0},
 	.exclusive     = true,
@@ -203,6 +206,7 @@ static struct nvhost_device_data tegra_vi01_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
+	.slave         = &tegra_vi01b_device,
 };
 
 
@@ -211,11 +215,11 @@ static struct platform_device tegra_vi01_device = {
 	.resource	= vi_resources,
 	.num_resources	= ARRAY_SIZE(vi_resources),
 	.dev		= {
-		.platform_data = &tegra_vi01_info,
+		.platform_data = &t124_vi_info,
 	},
 };
 
-static struct nvhost_device_data tegra_vi01b_info = {
+struct nvhost_device_data t124_vib_info = {
 	.syncpts       = NV_VI_1_SYNCPTS,
 	.modulemutexes = {NVMODMUTEX_VI_1},
 	.exclusive     = true,
@@ -231,7 +235,7 @@ static struct platform_device tegra_vi01b_device = {
 	.name		= "vi",
 	.id		= 1, /* .1 on the dev node */
 	.dev		= {
-		.platform_data = &tegra_vi01b_info,
+		.platform_data = &t124_vib_info,
 	},
 };
 
@@ -244,7 +248,7 @@ static struct resource msenc_resources[] = {
 	},
 };
 
-static struct nvhost_device_data tegra_msenc03_info = {
+struct nvhost_device_data t124_msenc_info = {
 	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
 	.syncpts       = {NVSYNCPT_MSENC, NVSYNCPT_MSENC_SLICE},
 	.waitbases     = {NVWAITBASE_MSENC},
@@ -272,7 +276,7 @@ struct platform_device tegra_msenc03_device = {
 	.resource      = msenc_resources,
 	.num_resources = ARRAY_SIZE(msenc_resources),
 	.dev           = {
-		.platform_data = &tegra_msenc03_info,
+		.platform_data = &t124_msenc_info,
 	},
 };
 
@@ -285,7 +289,7 @@ static struct resource tsec_resources[] = {
 	},
 };
 
-static struct nvhost_device_data tegra_tsec01_info = {
+struct nvhost_device_data t124_tsec_info = {
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
 	.syncpts       = {NVSYNCPT_TSEC},
 	.waitbases     = {NVWAITBASE_TSEC},
@@ -303,17 +307,15 @@ static struct platform_device tegra_tsec01_device = {
 	.resource	= tsec_resources,
 	.num_resources	= ARRAY_SIZE(tsec_resources),
 	.dev		= {
-		.platform_data = &tegra_tsec01_info,
+		.platform_data = &t124_tsec_info,
 	},
 };
 
 
 
-static struct platform_device *t12_devices[] = {
+static struct platform_device *t124_devices[] = {
 	&tegra_isp01_device,
-	&tegra_isp01b_device,
 	&tegra_vi01_device,
-	&tegra_vi01b_device,
 	&tegra_msenc03_device,
 	&tegra_tsec01_device,
 #if defined(CONFIG_TEGRA_GK20A)
@@ -337,8 +339,8 @@ struct platform_device *tegra12_register_host1x_devices(void)
 	tegra_host1x04_device.dev.parent = NULL;
 
 	/* register clients with host1x device as parent */
-	for (index = 0; index < ARRAY_SIZE(t12_devices); index++) {
-		pdev = t12_devices[index];
+	for (index = 0; index < ARRAY_SIZE(t124_devices); index++) {
+		pdev = t124_devices[index];
 		pdev->dev.parent = &tegra_host1x04_device.dev;
 		platform_device_register(pdev);
 	}
@@ -485,17 +487,17 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 	int i, nb_channels;
 	nvhost_dbg_fn("max channels=%d devices=%zd",
 		      NV_HOST1X_CHANNELS,
-		      ARRAY_SIZE(t12_devices));
-	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(t12_devices));
+		      ARRAY_SIZE(t124_devices));
+	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(t124_devices));
 
-	nb_channels =  ARRAY_SIZE(t12_devices);
+	nb_channels =  ARRAY_SIZE(t124_devices);
 
 	/* Set indices dynamically as we can have
 	 * missing/non-static devices above (e.g.: vic, gk20a).
 	 */
 
 	for (i = 0; i < nb_channels; i++ ) {
-		struct platform_device *dev = t12_devices[i];
+		struct platform_device *dev = t124_devices[i];
 		struct nvhost_device_data *pdata =
 			(struct nvhost_device_data *)dev->dev.platform_data;
 		pdata->index = i;

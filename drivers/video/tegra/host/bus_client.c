@@ -1460,6 +1460,11 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	dev_info(&dev->dev, "initialized\n");
 
+	if (pdata->slave) {
+		pdata->slave->dev.parent = dev->dev.parent;
+		platform_device_register(pdata->slave);
+	}
+
 	return 0;
 
 fail:

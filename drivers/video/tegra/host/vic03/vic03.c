@@ -24,6 +24,9 @@
 #include <linux/export.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -658,6 +661,12 @@ static int vic03_resume(struct device *dev)
 	return 0;
 }
 
+static struct of_device_id tegra_vic_of_match[] = {
+	{ .compatible = "nvidia,tegra124-vic",
+		.data = (struct nvhost_device_data *)&vic03_info },
+	{ },
+};
+
 static struct vic03_pm_domain vic03_pd = {
 	.pd = {
 		.name = "vic03",
@@ -673,8 +682,16 @@ static struct vic03_pm_domain vic03_pd = {
 static int vic03_probe(struct platform_device *dev)
 {
 	int err;
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)dev->dev.platform_data;
+	struct nvhost_device_data *pdata = NULL;
+
+	if (dev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra_vic_of_match, &dev->dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)match->data;
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
 	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
 
@@ -758,6 +775,9 @@ static struct platform_driver vic03_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "vic03",
+#ifdef CONFIG_OF
+		.of_match_table = tegra_vic_of_match,
+#endif
 	}
 };
 

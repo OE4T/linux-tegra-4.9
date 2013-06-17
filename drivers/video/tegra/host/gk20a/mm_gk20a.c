@@ -58,6 +58,8 @@ enum gmmu_page_smmu_type {
 
 
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
+static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
+		struct mem_mgr **memmgr, struct mem_handle **r, u64 *offset);
 static int update_gmmu_ptes(struct vm_gk20a *vm,
 			    enum gmmu_pgsz_gk20a pgsz_idx, struct sg_table *sgt,
 			    u64 first_vaddr, u64 last_vaddr,
@@ -626,6 +628,23 @@ static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
 			node = node->rb_right;
 		else
 			return mapped_buffer;
+	}
+	return 0;
+}
+
+static struct mapped_buffer_node *find_mapped_buffer_range(struct rb_root *root,
+							   u64 addr)
+{
+	struct rb_node *node = root->rb_node;
+	while (node) {
+		struct mapped_buffer_node *m =
+			container_of(node, struct mapped_buffer_node, node);
+		if (m->addr <= addr && m->addr + m->size > addr)
+			return m;
+		else if (m->addr > addr) /* u64 cmp */
+			node = node->rb_left;
+		else
+			node = node->rb_right;
 	}
 	return 0;
 }
@@ -1417,6 +1436,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->unmap          = gk20a_vm_unmap;
 	vm->unmap_user     = gk20a_vm_unmap_user;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
+	vm->find_buffer    = gk20a_vm_find_buffer;
 	vm->remove_support = gk20a_vm_remove_support;
 
 	vm->enable_ctag = true;
@@ -1986,6 +2006,22 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
+}
+
+static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
+		struct mem_mgr **mgr, struct mem_handle **r, u64 *offset)
+{
+	struct mapped_buffer_node *mapped_buffer;
+
+	nvhost_dbg_fn("gpu_va=0x%llx", gpu_va);
+	mapped_buffer = find_mapped_buffer_range(&vm->mapped_buffers, gpu_va);
+	if (!mapped_buffer)
+		return -EINVAL;
+
+	*mgr = mapped_buffer->memmgr;
+	*r = mapped_buffer->handle_ref;
+	*offset = gpu_va - mapped_buffer->addr;
+	return 0;
 }
 
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)

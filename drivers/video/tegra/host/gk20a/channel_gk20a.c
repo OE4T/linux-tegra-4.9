@@ -27,6 +27,7 @@
 
 #include "../dev.h"
 #include "../nvhost_as.h"
+#include "debug.h"
 
 #include "gk20a.h"
 
@@ -1037,7 +1038,7 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 
 	c->gpfifo.cpu_va[c->gpfifo.put].entry0 = u64_lo32(cmd->gva);
 	c->gpfifo.cpu_va[c->gpfifo.put].entry1 = u64_hi32(cmd->gva) |
-		(cmd->size << 10);
+		pbdma_gp_entry1_length_f(cmd->size);
 
 	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
 
@@ -1060,6 +1061,43 @@ static u32 get_gp_free_count(struct channel_gk20a *c)
 	return gp_free_count(c);
 }
 
+static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
+{
+	void *mem = NULL;
+	unsigned int words;
+	u64 offset;
+	struct mem_handle *r = NULL;
+
+	if (nvhost_debug_trace_cmdbuf) {
+		u64 gpu_va = (u64)g->entry0 |
+			(u64)((u64)pbdma_gp_entry1_get_hi_v(g->entry1) << 32);
+		struct mem_mgr *memmgr = NULL;
+		int err;
+
+		words = pbdma_gp_entry1_length_v(g->entry1);
+		err = c->vm->find_buffer(c->vm, gpu_va, &memmgr, &r, &offset);
+		if (!err)
+			mem = nvhost_memmgr_mmap(r);
+	}
+
+	if (mem) {
+		u32 i;
+		/*
+		 * Write in batches of 128 as there seems to be a limit
+		 * of how much you can output to ftrace at once.
+		 */
+		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
+			trace_nvhost_cdma_push_gather(
+				c->ch->dev->name,
+				0,
+				min(words - i, TRACE_MAX_LENGTH),
+				offset + i * sizeof(u32),
+				mem);
+		}
+		nvhost_memmgr_munmap(r, mem);
+	}
+}
+
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
@@ -1070,7 +1108,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	struct device *d = dev_from_gk20a(g);
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
-	u32 i, incr_id = ~0, wait_id = ~0;
+	u32 i, incr_id = ~0, wait_id = ~0, wait_value = 0;
 	u32 err = 0;
 	int incr_cmd_size;
 	bool wfi_cmd;
@@ -1087,6 +1125,12 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
+	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
+					   c->hw_chid,
+					   num_entries,
+					   flags,
+					   fence->syncpt_id, fence->value,
+					   c->hw_chid + pdata->syncpt_base);
 	check_gp_put(g, c);
 	update_gp_get(g, c);
 
@@ -1163,6 +1207,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	if (wait_cmd) {
 		wait_id = fence->syncpt_id;
+		wait_value = fence->value;
 		/* syncpoint_a */
 		wait_cmd->ptr[0] = 0x2001001C;
 		/* payload */
@@ -1176,7 +1221,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			u64_lo32(wait_cmd->gva);
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
 			u64_hi32(wait_cmd->gva) |
-			(wait_cmd->size << 10);
+			pbdma_gp_entry1_length_f(wait_cmd->size);
+		trace_write_pushbuffer(c, &c->gpfifo.cpu_va[c->gpfifo.put]);
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
@@ -1190,6 +1236,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			gpfifo[i].entry0; /* cmd buf va low 32 */
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
 			gpfifo[i].entry1; /* cmd buf va high 32 | words << 10 */
+		trace_write_pushbuffer(c, &c->gpfifo.cpu_va[c->gpfifo.put]);
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
 	}
@@ -1221,7 +1268,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			u64_lo32(incr_cmd->gva);
 		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
 			u64_hi32(incr_cmd->gva) |
-			(incr_cmd->size << 10);
+			pbdma_gp_entry1_length_f(incr_cmd->size);
+		trace_write_pushbuffer(c, &c->gpfifo.cpu_va[c->gpfifo.put]);
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
@@ -1240,11 +1288,12 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->vm->tlb_dirty = false;
 	}
 
-	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
+	trace_nvhost_channel_submitted_gpfifo(c->ch->dev->name,
 					   c->hw_chid,
 					   num_entries,
 					   flags,
-					   wait_id, incr_id);
+					   wait_id, wait_value,
+					   incr_id, fence->value);
 
 
 	c->cmds_pending = true;

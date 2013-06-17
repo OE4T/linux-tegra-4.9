@@ -191,6 +191,11 @@ struct vm_gk20a {
 	/* invalidate tlbs for the vm area */
 	void (*tlb_inval)(struct vm_gk20a *vm);
 
+	/* find buffer corresponding to va */
+	int (*find_buffer)(struct vm_gk20a *vm, u64 gpu_va,
+			struct mem_mgr **memmgr, struct mem_handle **r,
+			u64 *offset);
+
 	void (*remove_support)(struct vm_gk20a *vm);
 };
 

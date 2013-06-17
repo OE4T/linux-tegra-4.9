@@ -315,7 +315,7 @@ static struct sensor_device_attribute therm_fan_est_nodes[] = {
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
 };
 
-static int __devinit therm_fan_est_probe(struct platform_device *pdev)
+static int therm_fan_est_probe(struct platform_device *pdev)
 {
 	int i, j;
 	long temp;
@@ -384,7 +384,7 @@ static int __devinit therm_fan_est_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit therm_fan_est_remove(struct platform_device *pdev)
+static int therm_fan_est_remove(struct platform_device *pdev)
 {
 	struct therm_fan_estimator *est = platform_get_drvdata(pdev);
 
@@ -431,7 +431,7 @@ static struct platform_driver therm_fan_est_driver = {
 		.name  = "therm-fan-est",
 	},
 	.probe  = therm_fan_est_probe,
-	.remove = __devexit_p(therm_fan_est_remove),
+	.remove = therm_fan_est_remove,
 #if CONFIG_PM
 	.suspend = therm_fan_est_suspend,
 	.resume = therm_fan_est_resume,

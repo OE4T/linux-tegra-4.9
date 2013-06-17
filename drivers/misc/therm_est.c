@@ -694,7 +694,7 @@ static int therm_est_pm_notify(struct notifier_block *nb,
 }
 #endif
 
-static int __devinit therm_est_probe(struct platform_device *pdev)
+static int therm_est_probe(struct platform_device *pdev)
 {
 	int i;
 	struct therm_estimator *est;
@@ -769,7 +769,7 @@ err:
 	return -EINVAL;
 }
 
-static int __devexit therm_est_remove(struct platform_device *pdev)
+static int therm_est_remove(struct platform_device *pdev)
 {
 	struct therm_estimator *est = platform_get_drvdata(pdev);
 	int i;
@@ -794,7 +794,7 @@ static struct platform_driver therm_est_driver = {
 		.name  = "therm_est",
 	},
 	.probe  = therm_est_probe,
-	.remove = __devexit_p(therm_est_remove),
+	.remove = therm_est_remove,
 };
 
 static int __init therm_est_driver_init(void)

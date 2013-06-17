@@ -78,6 +78,8 @@ struct nvhost_as_alloc_space_args {
  */
 struct nvhost_as_free_space_args {
 	__u64 offset; /* in, byte address */
+	__u32 pages;     /* in, pages */
+	__u32 page_size; /* in, bytes */
 };
 
 /*

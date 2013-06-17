@@ -1439,13 +1439,43 @@ static int gk20a_as_release_share(struct nvhost_as_share *as_share)
 	return 0;
 }
 
+
 static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 				struct nvhost_as_alloc_space_args *args)
 
 {	int err = -ENOMEM;
-	/*struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;*/
+	int pgsz_idx;
+	u32 start_page_nr;
+	struct nvhost_allocator *vma;
+	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
 
-	nvhost_dbg_fn("");
+	nvhost_dbg_fn("flags=0x%x pgsz=0x%x nr_pages=0x%x o/a=0x%llx",
+			args->flags, args->page_size, args->pages,
+			args->o_a.offset);
+
+	/* determine pagesz idx */
+	for (pgsz_idx = gmmu_page_size_small;
+	     pgsz_idx < gmmu_nr_page_sizes;
+	     pgsz_idx++) {
+		if (gmmu_page_sizes[pgsz_idx] == args->page_size)
+			break;
+	}
+
+	if (pgsz_idx >= gmmu_nr_page_sizes) {
+		err = -EINVAL;
+		goto clean_up;
+	}
+
+	start_page_nr = ~(u32)0;
+	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
+		start_page_nr = (u32)(args->o_a.offset >>
+				      gmmu_page_shifts[pgsz_idx]);
+
+	vma = &vm->vma[pgsz_idx];
+	err = vma->alloc(vma, &start_page_nr, args->pages);
+	args->o_a.offset = start_page_nr;
+
+ clean_up:
 	return err;
 }
 
@@ -1453,11 +1483,35 @@ static int gk20a_as_free_space(struct nvhost_as_share *as_share,
 			       struct nvhost_as_free_space_args *args)
 {
 	int err = -ENOMEM;
-	/*struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;*/
-	nvhost_dbg_fn("");
+	int pgsz_idx;
+	u32 start_page_nr;
+	struct nvhost_allocator *vma;
+	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
 
+	nvhost_dbg_fn("pgsz=0x%x nr_pages=0x%x o/a=0x%llx", args->page_size,
+			args->pages, args->offset);
+
+	/* determine pagesz idx */
+	for (pgsz_idx = gmmu_page_size_small;
+	     pgsz_idx < gmmu_nr_page_sizes;
+	     pgsz_idx++) {
+		if (gmmu_page_sizes[pgsz_idx] == args->page_size)
+			break;
+	}
+
+	if (pgsz_idx >= gmmu_nr_page_sizes) {
+		err = -EINVAL;
+		goto clean_up;
+	}
+
+	start_page_nr = (u32)(args->offset >>
+			      gmmu_page_shifts[pgsz_idx]);
+
+	vma = &vm->vma[pgsz_idx];
+	err = vma->free(vma, start_page_nr, args->pages);
+
+clean_up:
 	return err;
-
 }
 
 static int gk20a_as_bind_hwctx(struct nvhost_as_share *as_share,

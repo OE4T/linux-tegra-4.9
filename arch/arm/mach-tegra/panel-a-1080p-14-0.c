@@ -40,7 +40,7 @@ static bool reg_requested;
 static bool gpio_requested;
 static struct platform_device *disp_device;
 static struct regulator *avdd_lcd_3v3;
-static struct regulator *vdd_lcd_bl;
+static struct regulator *vdd_1v2_en;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
@@ -143,11 +143,11 @@ static int laguna_dsi_regulator_get(struct device *dev)
 		goto fail;
 	}
 
-	vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
-		pr_err("vdd_lcd_bl regulator get failed\n");
-		err = PTR_ERR(vdd_lcd_bl);
-		vdd_lcd_bl = NULL;
+	vdd_1v2_en = regulator_get(dev, "vdd_1v2_en");
+	if (IS_ERR_OR_NULL(vdd_1v2_en)) {
+		pr_err("vdd_1v2_en regulator get failed\n");
+		err = PTR_ERR(vdd_1v2_en);
+		vdd_1v2_en = NULL;
 		goto fail;
 	}
 
@@ -260,10 +260,10 @@ static int dsi_a_1080p_14_0_enable(struct device *dev)
 		}
 	}
 
-	if (vdd_lcd_bl) {
-		err = regulator_enable(vdd_lcd_bl);
+	if (vdd_1v2_en) {
+		err = regulator_enable(vdd_1v2_en);
 		if (err < 0) {
-			pr_err("vdd_lcd_bl regulator enable failed\n");
+			pr_err("vdd_1v2_en regulator enable failed\n");
 			goto fail;
 		}
 	}
@@ -295,8 +295,8 @@ static int dsi_a_1080p_14_0_disable(void)
 	gpio_set_value(refclk_en, 0);
 	gpio_set_value(en_vdd_bl, 0);
 
-	if (vdd_lcd_bl)
-		regulator_disable(vdd_lcd_bl);
+	if (vdd_1v2_en)
+		regulator_disable(vdd_1v2_en);
 
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

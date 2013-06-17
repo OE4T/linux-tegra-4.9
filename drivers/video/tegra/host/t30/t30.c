@@ -128,7 +128,7 @@ struct nvhost_device_data t30_gr3d_info = {
 	.scaling_init	= nvhost_scale3d_init,
 	.scaling_deinit	= nvhost_scale3d_deinit,
 	.scaling_post_cb = &nvhost_scale3d_callback,
-	.devfreq_governor = &nvhost_podgov,
+	.devfreq_governor = "nvhost_podgov",
 
 	.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 	.alloc_hwctx_handler = nvhost_gr3d_t30_ctxhandler_init,

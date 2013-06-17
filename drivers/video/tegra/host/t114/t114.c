@@ -132,7 +132,7 @@ struct nvhost_device_data t11_gr3d_info = {
 	.scaling_init	= nvhost_scale3d_init,
 	.scaling_deinit	= nvhost_scale3d_deinit,
 	.scaling_post_cb = &nvhost_scale3d_callback,
-	.devfreq_governor = &nvhost_podgov,
+	.devfreq_governor = "nvhost_podgov",
 	.actmon_enabled	= true,
 
 	.suspend_ndev	= nvhost_scale3d_suspend,

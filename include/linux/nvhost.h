@@ -163,8 +163,8 @@ struct nvhost_device_data {
 	bool				actmon_enabled;
 	/* Offset to actmon registers */
 	u32				actmon_regs;
-	/* Pointer to governor operations */
-	const struct devfreq_governor	*devfreq_governor;
+	/* Devfreq governor name */
+	const char			*devfreq_governor;
 
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */

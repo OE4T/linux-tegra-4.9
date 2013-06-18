@@ -60,6 +60,24 @@ static struct of_device_id tegra_isp_of_match[] = {
 	{ },
 };
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int isp_unpowergate(struct generic_pm_domain *domain)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_on(pdata->pdev);
+}
+
+static int isp_powergate(struct generic_pm_domain *domain)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_off(pdata->pdev);
+}
+#endif
+
 static int isp_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -85,6 +103,22 @@ static int isp_probe(struct platform_device *dev)
 	platform_set_drvdata(dev, pdata);
 	nvhost_module_init(dev);
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	pdata->pd.name = "ve";
+	pdata->pd.power_off = isp_powergate;
+	pdata->pd.power_on = isp_unpowergate;
+	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
+	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
+
+	/* add module power domain and also add its domain
+	 * as sub-domain of MC domain */
+	err = nvhost_module_add_domain(&pdata->pd, dev);
+
+	/* overwrite save/restore fptrs set by pm_genpd_init */
+	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
+	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+#endif
+
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
@@ -93,12 +127,12 @@ static int isp_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
-	tegra_pd_add_device(&dev->dev);
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
+
 	pm_runtime_enable(&dev->dev);
 
 	return 0;

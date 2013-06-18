@@ -589,11 +589,14 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		pm_domain_gov = &pm_domain_always_on_gov;
 #endif
 
-	pm_genpd_init(domain, pm_domain_gov, true);
-	ret = pm_genpd_add_device(domain, &pdev->dev);
-	if (pdata->powergate_delay)
-		pm_genpd_set_poweroff_delay(domain, pdata->powergate_delay);
-	tegra_pd_add_sd(domain);
+	if (__pm_genpd_name_add_device(domain->name, &pdev->dev, NULL)) {
+		pm_genpd_init(domain, pm_domain_gov, true);
+		ret = pm_genpd_add_device(domain, &pdev->dev);
+		if (pdata->powergate_delay)
+			pm_genpd_set_poweroff_delay(domain,
+					pdata->powergate_delay);
+		tegra_pd_add_sd(domain);
+	}
 
 	return ret;
 }

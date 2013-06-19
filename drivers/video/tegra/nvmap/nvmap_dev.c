@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1065,6 +1065,25 @@ static const struct file_operations debug_iovmm_allocations_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+
+ulong nvmap_iovmm_get_used_pages(void)
+{
+	unsigned long flags;
+	unsigned int total = 0;
+	struct nvmap_client *client;
+	struct nvmap_device *dev = nvmap_dev;
+
+	if (!dev)
+		return 0;
+
+	spin_lock_irqsave(&dev->clients_lock, flags);
+	list_for_each_entry(client, &dev->clients, list) {
+		total += atomic_read(&client->iovm_commit);
+	}
+	spin_unlock_irqrestore(&dev->clients_lock, flags);
+
+	return total >> PAGE_SHIFT;
+}
 
 static void nvmap_deferred_ops_init(struct nvmap_deferred_ops *deferred_ops)
 {

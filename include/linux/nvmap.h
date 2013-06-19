@@ -175,6 +175,8 @@ static inline nvmap_page_pool_get_unused_pages(void)
 }
 #endif
 
+ulong nvmap_iovmm_get_used_pages(void);
+
 struct nvmap_platform_carveout {
 	const char *name;
 	unsigned int usage_mask;

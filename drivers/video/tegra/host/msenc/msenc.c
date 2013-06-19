@@ -147,7 +147,7 @@ int msenc_boot(struct platform_device *dev)
 	struct msenc *m = get_msenc(dev);
 
 	/* check if firmware is loaded or not */
-	if (!m)
+	if (!m || !m->valid)
 		return -ENOMEDIUM;
 
 	nvhost_device_writel(dev, msenc_dmactl_r(), 0);
@@ -360,11 +360,9 @@ int nvhost_msenc_init(struct platform_device *dev)
 		goto clean_up;
 	}
 
-	if (!pdata->can_powergate) {
-		nvhost_module_busy(dev);
-		msenc_boot(dev);
-		nvhost_module_idle(dev);
-	}
+	nvhost_module_busy(dev);
+	msenc_boot(dev);
+	nvhost_module_idle(dev);
 
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);
@@ -384,6 +382,9 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 	if (pdata->scaling_init)
 		nvhost_scale_hw_deinit(dev);
 
+	if (!m)
+		return;
+
 	/* unpin, free ucode memory */
 	if (m->mapped) {
 		nvhost_memmgr_munmap(m->mem_r, m->mapped);
@@ -400,6 +401,7 @@ void nvhost_msenc_deinit(struct platform_device *dev)
 	}
 	kfree(m);
 	set_msenc(dev, NULL);
+	m->valid = false;
 }
 
 int nvhost_msenc_finalize_poweron(struct platform_device *dev)

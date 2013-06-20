@@ -139,11 +139,6 @@ ulong nvmap_get_handle_user_id(struct nvmap_client *client,
 
 void nvmap_put_handle_user_id(ulong user_id);
 
-struct nvmap_handle_ref *nvmap_alloc_iovm(struct nvmap_client *client,
-	size_t size, size_t align, unsigned int flags, unsigned int iova_start);
-
-void nvmap_free_iovm(struct nvmap_client *client, struct nvmap_handle_ref *r);
-
 /*
  * Create a sg_table struct from the pages allocated for a handle. Note that
  * this does not increment refcount of the handle, so keep a reference to the

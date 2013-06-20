@@ -1217,18 +1217,18 @@ static void nvhost_pod_exit(struct devfreq *df)
 	local_podgov = NULL;
 }
 
-static int nvhost_pod_handler(struct devfreq *devfreq, unsigned int event,
-				void *data)
+static int nvhost_pod_event_handler(struct devfreq *df,
+			unsigned int event, void *data)
 {
 	int ret = 0;
 
-	switch(event) {
+	switch (event) {
 	case DEVFREQ_GOV_START:
-		ret = nvhost_pod_init(devfreq);
+		ret = nvhost_pod_init(df);
 		break;
-	
+
 	case DEVFREQ_GOV_STOP:
-		nvhost_pod_exit(devfreq);
+		nvhost_pod_exit(df);
 		break;
 	default:
 		break;
@@ -1240,6 +1240,6 @@ static int nvhost_pod_handler(struct devfreq *devfreq, unsigned int event,
 struct devfreq_governor nvhost_podgov = {
 	.name = "nvhost_podgov",
 	.get_target_freq = nvhost_pod_estimate_freq,
-	.event_handler = nvhost_pod_handler,
+	.event_handler = nvhost_pod_event_handler,
 };
 

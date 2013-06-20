@@ -790,12 +790,12 @@ static int gk20a_powergate(struct generic_pm_domain *domain)
 
 static int gk20a_enable_clock(struct device *dev)
 {
-	return nvhost_module_enable_clk(to_platform_device(dev));
+	return nvhost_module_enable_clk(dev);
 }
 
 static int gk20a_disable_clock(struct device *dev)
 {
-	return nvhost_module_disable_clk(to_platform_device(dev));
+	return nvhost_module_disable_clk(dev);
 }
 
 static int gk20a_save_context(struct device *dev)
@@ -838,7 +838,7 @@ static int gk20a_restore_context(struct device *dev)
 
 static int gk20a_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(to_platform_device(dev));
+	return nvhost_client_device_suspend(dev);
 }
 
 static int gk20a_resume(struct device *dev)

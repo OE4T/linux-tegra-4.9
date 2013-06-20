@@ -623,12 +623,12 @@ static int vic03_powergate(struct generic_pm_domain *domain)
 
 static int vic03_enable_clock(struct device *dev)
 {
-	return nvhost_module_enable_clk(to_platform_device(dev));
+	return nvhost_module_enable_clk(dev);
 }
 
 static int vic03_disable_clock(struct device *dev)
 {
-	return nvhost_module_disable_clk(to_platform_device(dev));
+	return nvhost_module_disable_clk(dev);
 }
 
 static int vic03_restore_context(struct device *dev)
@@ -652,7 +652,7 @@ static int vic03_restore_context(struct device *dev)
 
 static int vic03_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(to_platform_device(dev));
+	return nvhost_client_device_suspend(dev);
 }
 
 static int vic03_resume(struct device *dev)

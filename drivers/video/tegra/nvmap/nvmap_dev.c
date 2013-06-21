@@ -880,6 +880,23 @@ static struct attribute_group heap_extra_attr_group = {
 	.attrs = heap_extra_attrs,
 };
 
+#define DEBUGFS_OPEN_FOPS(name) \
+static int nvmap_debug_##name##_open(struct inode *inode, \
+					    struct file *file) \
+{ \
+	return single_open(file, nvmap_debug_##name##_show, \
+			    inode->i_private); \
+} \
+\
+static const struct file_operations debug_##name##_fops = { \
+	.open = nvmap_debug_##name##_open, \
+	.read = seq_read, \
+	.llseek = seq_lseek, \
+	.release = single_release, \
+}
+
+#define K(x) (x >> 10)
+
 static void client_stringify(struct nvmap_client *client, struct seq_file *s)
 {
 	char task_comm[TASK_COMM_LEN];
@@ -895,8 +912,10 @@ static void client_stringify(struct nvmap_client *client, struct seq_file *s)
 static void allocations_stringify(struct nvmap_client *client,
 				  struct seq_file *s, bool iovmm)
 {
-	struct rb_node *n = rb_first(&client->handle_refs);
+	struct rb_node *n;
 
+	nvmap_ref_lock(client);
+	n = rb_first(&client->handle_refs);
 	for (; n != NULL; n = rb_next(n)) {
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
@@ -905,15 +924,16 @@ static void allocations_stringify(struct nvmap_client *client,
 			phys_addr_t base = iovmm ? 0 :
 					   (handle->carveout->base);
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zu %8x %6u %6u %6u\n",
+				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u\n",
 				"", "",
-				(unsigned long long)base, handle->size,
+				(unsigned long long)base, K(handle->size),
 				handle->userflags,
 				atomic_read(&handle->ref),
 				atomic_read(&ref->dupes),
 				atomic_read(&ref->pin));
 		}
 	}
+	nvmap_ref_unlock(client);
 }
 
 static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
@@ -924,38 +944,27 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n",
+	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
-	seq_printf(s, "%-18s %18s %8s %10s %8s %6s %6s %6s\n",
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s\n",
 			"", "", "BASE", "SIZE", "FLAGS", "REFS",
 			"DUPES", "PINS");
 	list_for_each_entry(commit, &node->clients, list) {
 		struct nvmap_client *client =
 			get_client_from_carveout_commit(node, commit);
 		client_stringify(client, s);
-		seq_printf(s, " %10zu\n", commit->commit);
+		seq_printf(s, " %10zuK\n", K(commit->commit));
 		allocations_stringify(client, s, false);
 		seq_printf(s, "\n");
 		total += commit->commit;
 	}
-	seq_printf(s, "%-18s %-18s %8u %10u\n", "total", "", 0, total);
+	seq_printf(s, "%-18s %-18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 
 	return 0;
 }
 
-static int nvmap_debug_allocations_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, nvmap_debug_allocations_show,
-			   inode->i_private);
-}
-
-static const struct file_operations debug_allocations_fops = {
-	.open = nvmap_debug_allocations_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
+DEBUGFS_OPEN_FOPS(allocations);
 
 static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 {
@@ -965,31 +974,21 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	unsigned int total = 0;
 
 	spin_lock_irqsave(&node->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE");
+	seq_printf(s, "%-18s %18s %8s %11s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
 	list_for_each_entry(commit, &node->clients, list) {
 		struct nvmap_client *client =
 			get_client_from_carveout_commit(node, commit);
 		client_stringify(client, s);
-		seq_printf(s, " %10zu\n", commit->commit);
+		seq_printf(s, " %10zu\n", K(commit->commit));
 		total += commit->commit;
 	}
-	seq_printf(s, "%-18s %18s %8u %10u\n", "total", "", 0, total);
+	seq_printf(s, "%-18s %18s %8s %10uK\n", "Total", "", "", K(total));
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 	return 0;
 }
 
-static int nvmap_debug_clients_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, nvmap_debug_clients_show, inode->i_private);
-}
-
-static const struct file_operations debug_clients_fops = {
-	.open = nvmap_debug_clients_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
+DEBUGFS_OPEN_FOPS(clients);
 
 static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
 {
@@ -999,32 +998,21 @@ static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 
 	spin_lock_irqsave(&dev->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n", "CLIENT", "PROCESS", "PID",
-		"SIZE");
+	seq_printf(s, "%-18s %18s %8s %11s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
 	list_for_each_entry(client, &dev->clients, list) {
+		int iovm_commit = atomic_read(&client->iovm_commit);
 		client_stringify(client, s);
-		seq_printf(s, " %10u\n", atomic_read(&client->iovm_commit));
-		total += atomic_read(&client->iovm_commit);
+		seq_printf(s, " %10uK\n", K(iovm_commit));
+		total += iovm_commit;
 	}
-	seq_printf(s, "%-18s %18s %8u %10u\n", "total", "", 0, total);
+	seq_printf(s, "%-18s %18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&dev->clients_lock, flags);
 
 	return 0;
 }
 
-static int nvmap_debug_iovmm_clients_open(struct inode *inode,
-					    struct file *file)
-{
-	return single_open(file, nvmap_debug_iovmm_clients_show,
-			    inode->i_private);
-}
-
-static const struct file_operations debug_iovmm_clients_fops = {
-	.open = nvmap_debug_iovmm_clients_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
+DEBUGFS_OPEN_FOPS(iovmm_clients);
 
 static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 {
@@ -1034,37 +1022,85 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 
 	spin_lock_irqsave(&dev->clients_lock, flags);
-	seq_printf(s, "%-18s %18s %8s %10s\n",
+	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
-	seq_printf(s, "%-18s %18s %8s %10s %8s %6s %6s %6s\n",
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s\n",
 			"", "", "BASE", "SIZE", "FLAGS", "REFS",
 			"DUPES", "PINS");
 	list_for_each_entry(client, &dev->clients, list) {
+		int iovm_commit = atomic_read(&client->iovm_commit);
 		client_stringify(client, s);
-		seq_printf(s, " %10u\n", atomic_read(&client->iovm_commit));
+		seq_printf(s, " %10uK\n", K(iovm_commit));
 		allocations_stringify(client, s, true);
 		seq_printf(s, "\n");
-		total += atomic_read(&client->iovm_commit);
+		total += iovm_commit;
 	}
-	seq_printf(s, "%-18s %-18s %8u %10u\n", "total", "", 0, total);
+	seq_printf(s, "%-18s %-18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&dev->clients_lock, flags);
 
 	return 0;
 }
 
-static int nvmap_debug_iovmm_allocations_open(struct inode *inode,
-						struct file *file)
+DEBUGFS_OPEN_FOPS(iovmm_allocations);
+
+static void nvmap_get_client_mss(struct nvmap_client *client, u64 *pss,
+				   u64 *non_pss, u64 *total)
 {
-	return single_open(file, nvmap_debug_iovmm_allocations_show,
-			    inode->i_private);
+	int i;
+	struct rb_node *n;
+
+	*pss = *non_pss = *total = 0;
+	nvmap_ref_lock(client);
+	n = rb_first(&client->handle_refs);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle_ref *ref =
+			rb_entry(n, struct nvmap_handle_ref, node);
+		struct nvmap_handle *h = ref->handle;
+
+		if (!h || !h->alloc || !h->heap_pgalloc)
+			continue;
+
+		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
+			int mapcount = page_mapcount(h->pgalloc.pages[i]);
+			if (!mapcount)
+				*non_pss += PAGE_SIZE;
+			*total += PAGE_SIZE;
+		}
+		*pss = *total - *non_pss;
+	}
+	nvmap_ref_unlock(client);
 }
 
-static const struct file_operations debug_iovmm_allocations_fops = {
-	.open = nvmap_debug_iovmm_allocations_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
+static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
+{
+	unsigned long flags;
+	u64 pss, non_pss, total;
+	struct nvmap_client *client;
+	struct nvmap_device *dev = s->private;
+	u64 total_memory, total_pss, total_non_pss;
+
+	total_memory = total_pss = total_non_pss = 0;
+	spin_lock_irqsave(&dev->clients_lock, flags);
+	seq_printf(s, "%-18s %18s %8s %11s %11s %11s\n",
+		"CLIENT", "PROCESS", "PID", "PSS", "NON-PSS", "TOTAL");
+	list_for_each_entry(client, &dev->clients, list) {
+		client_stringify(client, s);
+		nvmap_get_client_mss(client, &pss, &non_pss, &total);
+		seq_printf(s, " %10lluK %10lluK %10lluK\n", K(pss),
+			K(non_pss), K(total));
+		total_memory += total;
+		total_pss += pss;
+		total_non_pss += non_pss;
+	}
+	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
+		"Total", "", "", K(total_pss),
+		K(total_non_pss), K(total_memory));
+	spin_unlock_irqrestore(&dev->clients_lock, flags);
+
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(iovmm_procrank);
 
 ulong nvmap_iovmm_get_used_pages(void)
 {
@@ -1296,6 +1332,8 @@ static int nvmap_probe(struct platform_device *pdev)
 				dev, &debug_iovmm_clients_fops);
 			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_allocations_fops);
+			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
+				dev, &debug_iovmm_procrank_fops);
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 			for (i = 0; i < NVMAP_NUM_POOLS; i++) {
 				char name[40];

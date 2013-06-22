@@ -787,6 +787,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			}
 #endif
 
+#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 			if (win->flags &
 					TEGRA_WIN_FLAG_BLEND_COVERAGE) {
 				tegra_dc_writel(dc,
@@ -799,6 +800,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 						win->global_alpha),
 					DC_WIN_BLEND_1WIN);
 			}
+#endif
 		}
 
 		if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)

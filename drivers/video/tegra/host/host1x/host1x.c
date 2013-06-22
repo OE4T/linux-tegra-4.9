@@ -547,10 +547,14 @@ void nvhost_host1x_update_clk(struct platform_device *pdev)
 	struct nvhost_device_profile *profile;
 
 	/* There are only two chips which need this workaround, so hardcode */
+#ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
 		pdata = &t11_gr3d_info;
-	else if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA14)
+#endif
+#ifdef TEGRA_14X_OR_HIGHER_CONFIG
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA14)
 		pdata = &t14_gr3d_info;
+#endif
 	if (!pdata)
 		return;
 

@@ -28,7 +28,7 @@
 #include <mach/hardware.h>
 #include <asm/cacheflush.h>
 
-#include "../../nvmap/nvmap.h"
+#include "../../nvmap/nvmap_priv.h"
 #include "../../nvmap/nvmap_ioctl.h"
 
 #include "../dev.h"

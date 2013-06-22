@@ -74,6 +74,8 @@ struct tegra_dc_sor_data {
 
 	u8					 portnum;	/* 0 or 1 */
 	const struct tegra_dc_dp_link_config	*link_cfg;
+
+	bool   power_is_up;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000

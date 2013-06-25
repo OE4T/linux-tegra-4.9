@@ -220,6 +220,7 @@ struct tegra_dc {
 	bool				mode_dirty;
 
 	u32				reserved_bw;
+	u32				available_bw;
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];
 };
 

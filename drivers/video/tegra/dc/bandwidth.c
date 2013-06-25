@@ -794,11 +794,17 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 	u32 bw;
 
 	mutex_lock(&dc->lock);
-	/* If proposed bw is larger than reserved bw, make it in effect
+	/*
+	 * isomgr will update available bandwidth through a callback.
+	 * If available bandwidth is less than proposed bw fail the ioctl.
+	 * If proposed bw is larger than reserved bw, make it in effect
 	 * immediately. Otherwise, bandwidth will be adjusted in flips.
-	 * */
+	 */
 	bw = tegra_dc_get_bandwidth(windows, n);
-	if (bw <= dc->reserved_bw) {
+	if (bw > dc->available_bw) {
+		mutex_unlock(&dc->lock);
+		return -1;
+	} else if (bw <= dc->reserved_bw) {
 		mutex_unlock(&dc->lock);
 		return 0;
 	}
@@ -837,5 +843,9 @@ void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw)
 	data.resvd_bw = dc->reserved_bw;
 
 	tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id, &data);
+
+	mutex_lock(&dc->lock);
+	dc->available_bw = avail_bw;
+	mutex_unlock(&dc->lock);
 }
 #endif

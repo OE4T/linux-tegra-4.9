@@ -508,8 +508,6 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-
-
 static void gk20a_remove_support(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -620,7 +618,6 @@ static void gk20a_free_hwctx(struct kref *ref)
 	kfree(ctx);
 }
 
-
 static struct nvhost_hwctx *gk20a_alloc_hwctx(struct nvhost_hwctx_handler *h,
 					      struct nvhost_channel *ch)
 {
@@ -665,7 +662,6 @@ static void gk20a_save_service_hwctx(struct nvhost_hwctx *ctx)
 	nvhost_dbg_fn("");
 }
 
-
 static struct nvhost_hwctx_handler *
     nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 waitbase,
 				     struct nvhost_channel *ch)
@@ -686,8 +682,6 @@ static struct nvhost_hwctx_handler *
 
 	return h;
 }
-
-
 
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 {
@@ -767,97 +761,23 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ },
 };
 
-struct gk20a_pm_domain {
-	struct platform_device *dev;
-	struct generic_pm_domain pd;
-};
-
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static int gk20a_unpowergate(struct generic_pm_domain *domain)
 {
-	struct gk20a_pm_domain *gk20a_pd;
+	struct nvhost_device_data *pdata;
 
-	gk20a_pd = container_of(domain, struct gk20a_pm_domain, pd);
-	return nvhost_module_power_on(gk20a_pd->dev);
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_on(pdata->pdev);
 }
 
 static int gk20a_powergate(struct generic_pm_domain *domain)
 {
-	struct gk20a_pm_domain *gk20a_pd;
-
-	gk20a_pd = container_of(domain, struct gk20a_pm_domain, pd);
-	return nvhost_module_power_off(gk20a_pd->dev);
-}
-
-static int gk20a_enable_clock(struct device *dev)
-{
-	return nvhost_module_enable_clk(dev);
-}
-
-static int gk20a_disable_clock(struct device *dev)
-{
-	return nvhost_module_disable_clk(dev);
-}
-
-static int gk20a_save_context(struct device *dev)
-{
-	struct platform_device *pdev;
 	struct nvhost_device_data *pdata;
 
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->prepare_poweroff)
-		pdata->prepare_poweroff(pdev);
-
-	return 0;
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_off(pdata->pdev);
 }
-
-static int gk20a_restore_context(struct device *dev)
-{
-	struct platform_device *pdev;
-	struct nvhost_device_data *pdata;
-
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(pdev);
-
-	return 0;
-}
-
-static int gk20a_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(dev);
-}
-
-static int gk20a_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
-}
-
-static struct gk20a_pm_domain gk20a_pd = {
-	.pd = {
-		.name = "gk20a",
-		.power_off = gk20a_powergate,
-		.power_on = gk20a_unpowergate,
-		.dev_ops = {
-			.start = gk20a_enable_clock,
-			.stop = gk20a_disable_clock,
-		},
-	},
-};
+#endif
 
 static int gk20a_probe(struct platform_device *dev)
 {
@@ -910,26 +830,30 @@ static int gk20a_probe(struct platform_device *dev)
 	if (err)
 		return err;
 
-	pm_runtime_get_sync(&dev->dev);
-
 	nvhost_init_gk20a_support(dev);
 
-	/* add module power domain and also add its domain
-	 * as sub-domain of MC domain */
-	gk20a_pd.dev = dev;
-	err = nvhost_module_add_domain(&gk20a_pd.pd, dev);
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	pdata->pd.name = "gk20a";
+	pdata->pd.power_off = gk20a_powergate;
+	pdata->pd.power_on = gk20a_unpowergate;
+	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
+	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
+
+	err = nvhost_module_add_domain(&pdata->pd, dev);
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
-	gk20a_pd.pd.domain.ops.suspend = gk20a_suspend;
-	gk20a_pd.pd.domain.ops.resume = gk20a_resume;
-	gk20a_pd.pd.dev_ops.restore_state = gk20a_restore_context;
-	gk20a_pd.pd.dev_ops.save_state = gk20a_save_context;
+	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
+	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
+#endif
 
-	/* enable runtime pm. this is needed now since we need to call
-	 * _get_sync/_put during boot-up to ensure MC domain is ON */
-	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
-	pm_runtime_use_autosuspend(&dev->dev);
-	pm_runtime_enable(&dev->dev);
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
+ 	pm_runtime_enable(&dev->dev);
+	pm_runtime_get_sync(&dev->dev);
 
 	err = nvhost_client_device_init(dev);
 	if (err) {
@@ -946,7 +870,10 @@ static int gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 
-	pm_runtime_put_autosuspend(&dev->dev);
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
 
 	return 0;
 }

@@ -64,7 +64,6 @@ struct nvhost_device_data vic03_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-
 };
 
 struct platform_device tegra_vic03_device = {
@@ -594,71 +593,9 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 	return &p->h;
 }
 
-
 int nvhost_vic03_finalize_poweron(struct platform_device *dev)
 {
 	return vic03_boot(dev);
-}
-
-struct vic03_pm_domain {
-	struct platform_device *dev;
-	struct generic_pm_domain pd;
-};
-
-static int vic03_unpowergate(struct generic_pm_domain *domain)
-{
-	struct vic03_pm_domain *vic03_pd;
-
-	vic03_pd = container_of(domain, struct vic03_pm_domain, pd);
-	return nvhost_module_power_on(vic03_pd->dev);
-}
-
-static int vic03_powergate(struct generic_pm_domain *domain)
-{
-	struct vic03_pm_domain *vic03_pd;
-
-	vic03_pd = container_of(domain, struct vic03_pm_domain, pd);
-	return nvhost_module_power_off(vic03_pd->dev);
-}
-
-static int vic03_enable_clock(struct device *dev)
-{
-	return nvhost_module_enable_clk(dev);
-}
-
-static int vic03_disable_clock(struct device *dev)
-{
-	return nvhost_module_disable_clk(dev);
-}
-
-static int vic03_restore_context(struct device *dev)
-{
-	struct platform_device *pdev;
-	struct nvhost_device_data *pdata;
-
-	pdev = to_platform_device(dev);
-	if (!pdev)
-		return -EINVAL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(pdev);
-
-	return 0;
-}
-
-static int vic03_suspend(struct device *dev)
-{
-	return nvhost_client_device_suspend(dev);
-}
-
-static int vic03_resume(struct device *dev)
-{
-	dev_info(dev, "resuming\n");
-	return 0;
 }
 
 static struct of_device_id tegra_vic_of_match[] = {
@@ -667,17 +604,23 @@ static struct of_device_id tegra_vic_of_match[] = {
 	{ },
 };
 
-static struct vic03_pm_domain vic03_pd = {
-	.pd = {
-		.name = "vic03",
-		.power_off = vic03_powergate,
-		.power_on = vic03_unpowergate,
-		.dev_ops = {
-			.start = vic03_enable_clock,
-			.stop = vic03_disable_clock,
-		},
-	},
-};
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int vic03_unpowergate(struct generic_pm_domain *domain)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_on(pdata->pdev);
+}
+
+static int vic03_powergate(struct generic_pm_domain *domain)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(domain, struct nvhost_device_data, pd);
+	return nvhost_module_power_off(pdata->pdev);
+}
+#endif
 
 static int vic03_probe(struct platform_device *dev)
 {
@@ -699,7 +642,6 @@ static int vic03_probe(struct platform_device *dev)
 	pdata->deinit			= nvhost_vic03_deinit;
 	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
 	pdata->alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler;
-	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
 
 	/* VIC scaling is disabled by default. remove #if/endif to enable */
 #if 0
@@ -720,20 +662,26 @@ static int vic03_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
-	/* add module power domain and also add its domain
-	 * as sub-domain of MC domain */
-	vic03_pd.dev = dev;
-	err = nvhost_module_add_domain(&vic03_pd.pd, dev);
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	pdata->pd.name = "vic03";
+	pdata->pd.power_off = vic03_powergate;
+	pdata->pd.power_on = vic03_unpowergate;
+	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
+	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
+
+	err = nvhost_module_add_domain(&pdata->pd, dev);
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
-	vic03_pd.pd.domain.ops.suspend = vic03_suspend;
-	vic03_pd.pd.domain.ops.resume = vic03_resume;
-	vic03_pd.pd.dev_ops.restore_state = vic03_restore_context;
+	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
+	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
+#endif
 
-	/* enable runtime pm. this is needed now since we need to call
-	 * _get_sync/_put during boot-up to ensure MC domain is ON */
-	pm_runtime_set_autosuspend_delay(&dev->dev, pdata->clockgate_delay);
-	pm_runtime_use_autosuspend(&dev->dev);
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
 	pm_runtime_enable(&dev->dev);
 
 	err = nvhost_client_device_get_resources(dev);
@@ -758,7 +706,10 @@ static int vic03_probe(struct platform_device *dev)
 		return err;
 	}
 
-	pm_runtime_put(&dev->dev);
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
 
 	return 0;
 }

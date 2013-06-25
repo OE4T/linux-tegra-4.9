@@ -195,11 +195,20 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
 
 		if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
+#if defined(CONFIG_TEGRA_DC_BLENDER_DEPTH)
+			tegra_dc_writel(dc,
+					WIN_K1(blend->alpha[idx]) |
+					WIN_K2(0xff) |
+					WIN_BLEND_ENABLE |
+					WIN_DEPTH(dc->blend.z[idx]),
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+#else
 			tegra_dc_writel(dc,
 					WIN_K1(blend->alpha[idx]) |
 					WIN_K2(0xff) |
 					WIN_BLEND_ENABLE,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
+#endif
 
 			tegra_dc_writel(dc,
 			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1_TIMES_SRC |
@@ -220,11 +229,20 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					WIN_ALPHA_1BIT_WEIGHT1(0xff),
 					DC_WINBUF_BLEND_ALPHA_1BIT);
 		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
+#if defined(CONFIG_TEGRA_DC_BLENDER_DEPTH)
+			tegra_dc_writel(dc,
+					WIN_K1(blend->alpha[idx]) |
+					WIN_K2(0xff) |
+					WIN_BLEND_ENABLE |
+					WIN_DEPTH(dc->blend.z[idx]),
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+#else
 			tegra_dc_writel(dc,
 					WIN_K1(blend->alpha[idx]) |
 					WIN_K2(0xff) |
 					WIN_BLEND_ENABLE,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
+#endif
 
 			tegra_dc_writel(dc,
 			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 |
@@ -245,9 +263,16 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					WIN_ALPHA_1BIT_WEIGHT1(0xff),
 					DC_WINBUF_BLEND_ALPHA_1BIT);
 		} else {
+#if defined(CONFIG_TEGRA_DC_BLENDER_DEPTH)
+			tegra_dc_writel(dc,
+					WIN_BLEND_BYPASS |
+					WIN_DEPTH(dc->blend.z[idx]),
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+#else
 			tegra_dc_writel(dc,
 					WIN_BLEND_BYPASS,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
+#endif
 		}
 	}
 	tegra_dc_io_end(dc);
@@ -790,6 +815,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			tegra_dc_blend_parallel(dc, &dc->blend);
 		if (update_blend_seq)
 			tegra_dc_blend_sequential(dc, &dc->blend);
+
 		for (i = 0; i < DC_N_WINDOWS; i++) {
 			if (!no_vsync)
 				dc->windows[i].dirty = 1;

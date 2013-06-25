@@ -649,25 +649,6 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	offset = (u64)start_page_nr << gmmu_page_shifts[gmmu_pgsz_idx];
 	nvhost_dbg_fn("%s found addr: 0x%llx", vma->name, offset);
 
-	pde_range_from_vaddr_range(vm,
-				   offset, offset + size - 1,
-				   &pde_lo, &pde_hi);
-
-	/* mark the addr range valid (but with 0 phys addr, which will fault) */
-	for (i = pde_lo; i <= pde_hi; i++) {
-
-		err = validate_gmmu_page_table_gk20a(vm, i, gmmu_pgsz_idx);
-
-		if (err) {
-			nvhost_err(dev_from_vm(vm),
-				   "failed to validate page table %d: %d",
-				   i, err);
-			return 0;
-		}
-	}
-
-	nvhost_dbg_fn("ret=0x%llx", offset);
-
 	return offset;
 }
 
@@ -940,6 +921,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	int attr, err = 0;
 	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
+	u32 i, pde_lo, pde_hi;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -1091,19 +1073,35 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_warn(d, "other mappings may collide!");
 	}
 
+	pde_range_from_vaddr_range(vm,
+				   map_offset,
+				   map_offset + bfr.size - 1,
+				   &pde_lo, &pde_hi);
+
+	/* mark the addr range valid (but with 0 phys addr, which will fault) */
+	for (i = pde_lo; i <= pde_hi; i++) {
+		err = validate_gmmu_page_table_gk20a(vm, i, bfr.pgsz_idx);
+		if (err) {
+			nvhost_err(dev_from_vm(vm),
+				   "failed to validate page table %d: %d",
+				   i, err);
+			goto clean_up;
+		}
+	}
+
 	nvhost_dbg(dbg_map,
-		   "as=%d pgsz=%d "
-		   "iovmm=%d kind=0x%x kind_uc=0x%x flags=0x%x "
-		   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
-		   vm_aspace_id(vm), gmmu_page_size,
-		   bfr.iovmm_mapped,
-		   bfr.kind_v, bfr.uc_kind_v, flags,
-		   bfr.ctag_lines, bfr.ctag_offset,
-		   hi32(map_offset), lo32(map_offset),
-		   bfr.iovmm_mapped ? hi32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
-		   bfr.iovmm_mapped ? lo32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
-		   hi32((u64)sg_phys(bfr.sgt->sgl)),
-		   lo32((u64)sg_phys(bfr.sgt->sgl)));
+	   "as=%d pgsz=%d "
+	   "iovmm=%d kind=0x%x kind_uc=0x%x flags=0x%x "
+	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+	   vm_aspace_id(vm), gmmu_page_size,
+	   bfr.iovmm_mapped,
+	   bfr.kind_v, bfr.uc_kind_v, flags,
+	   bfr.ctag_lines, bfr.ctag_offset,
+	   hi32(map_offset), lo32(map_offset),
+	   bfr.iovmm_mapped ? hi32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
+	   bfr.iovmm_mapped ? lo32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
+	   hi32((u64)sg_phys(bfr.sgt->sgl)),
+	   lo32((u64)sg_phys(bfr.sgt->sgl)));
 
 #if defined(NVHOST_DEBUG)
 	{
@@ -1732,9 +1730,9 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 
 	vma = &vm->vma[pgsz_idx];
 	err = vma->alloc(vma, &start_page_nr, args->pages);
-	args->o_a.offset = start_page_nr;
+	args->o_a.offset = (u64)start_page_nr << gmmu_page_shifts[pgsz_idx];
 
- clean_up:
+clean_up:
 	return err;
 }
 

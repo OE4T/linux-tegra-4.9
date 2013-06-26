@@ -957,7 +957,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 
+	mutex_lock(&vm->mapped_buffers_lock);
 	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
+	mutex_unlock(&vm->mapped_buffers_lock);
 	if (err) {
 		nvhost_err(d, "failed to insert into mapped buffer tree");
 		goto clean_up;
@@ -980,8 +982,11 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	return map_offset;
 
 clean_up:
-	if (inserted)
+	if (inserted) {
+		mutex_lock(&vm->mapped_buffers_lock);
 		rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+		mutex_unlock(&vm->mapped_buffers_lock);
+	}
 	kfree(mapped_buffer);
 	if (va_allocated)
 		vm->free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
@@ -1228,7 +1233,8 @@ static void update_gmmu_pde(struct vm_gk20a *vm, u32 i)
 
 /* return mem_mgr and mem_handle to caller. If the mem_handle is a kernel dup
    from user space (as_ioctl), caller releases the kernel duplicated handle */
-static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
+/* NOTE! mapped_buffers lock must be held */
+static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 			struct mem_mgr **memmgr, struct mem_handle **r)
 {
 	struct mapped_buffer_node *mapped_buffer;
@@ -1292,6 +1298,14 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	return;
 }
 
+static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
+			struct mem_mgr **memmgr, struct mem_handle **r)
+{
+	mutex_lock(&vm->mapped_buffers_lock);
+	gk20a_vm_unmap_locked(vm, offset, memmgr, r);
+	mutex_unlock(&vm->mapped_buffers_lock);
+}
+
 /* called by kernel. mem_mgr and mem_handle are ignored */
 static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 {
@@ -1313,17 +1327,19 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
 
+	mutex_lock(&vm->mapped_buffers_lock);
 	node = rb_first(&vm->mapped_buffers);
 	while (node) {
 		mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		vm->unmap_user(vm, mapped_buffer->addr, &memmgr, &r);
+		gk20a_vm_unmap_locked(vm, mapped_buffer->addr, &memmgr, &r);
 		if (memmgr != mem_mgr_from_vm(vm)) {
 			nvhost_memmgr_put(memmgr, r);
 			nvhost_memmgr_put_mgr(memmgr);
 		}
 		node = rb_first(&vm->mapped_buffers);
 	}
+	mutex_unlock(&vm->mapped_buffers_lock);
 
 	/* TBD: unmapping all buffers above may not actually free
 	 * all vm ptes.  jettison them here for certain... */
@@ -1429,6 +1445,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 			      1); /* align */
 
 	vm->mapped_buffers = RB_ROOT;
+	mutex_init(&vm->mapped_buffers_lock);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -1759,6 +1776,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 
 	vm->mapped_buffers = RB_ROOT;
+	mutex_init(&vm->mapped_buffers_lock);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -1904,6 +1922,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 
 	vm->mapped_buffers = RB_ROOT;
+	mutex_init(&vm->mapped_buffers_lock);
 
 	vm->alloc_va	   = gk20a_vm_alloc_va;
 	vm->free_va	   = gk20a_vm_free_va;

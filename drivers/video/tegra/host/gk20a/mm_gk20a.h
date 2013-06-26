@@ -163,6 +163,7 @@ struct vm_gk20a {
 
 	struct nvhost_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
+	struct mutex mapped_buffers_lock;
 
 	u64 (*alloc_va)(struct vm_gk20a *vm, u64 size,
 			enum gmmu_pgsz_gk20a gmmu_pgsz_idx);

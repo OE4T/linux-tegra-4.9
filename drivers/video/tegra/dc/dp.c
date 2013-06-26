@@ -965,7 +965,7 @@ static int tegra_dc_dp_lt_clock_recovery(struct tegra_dc_dp_data *dp,
 
 	/* Set pattern on the source side */
 	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_1,
-		cfg, false);
+		cfg);
 
 	/* Now the sink side */
 	ret = tegra_dc_dp_set_lane_config(dp, cfg->lane_count, edc_data,
@@ -1067,7 +1067,7 @@ static int tegra_dc_dp_lt_channel_equalization(struct tegra_dc_dp_data *dp,
 
 	/* Set pattern on the source side */
 	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_2,
-		cfg, true);
+		cfg);
 
 	/* Now the sink side */
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_TRAINING_PATTERN_SET,

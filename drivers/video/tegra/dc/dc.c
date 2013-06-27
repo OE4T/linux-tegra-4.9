@@ -2836,6 +2836,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			goto err_put_clk;
 		}
 		dc->reserved_bw = tegra_dc_calc_min_bandwidth(dc);
+		/*
+		 * Use maximum value so we can try to reserve as much as
+		 * needed until we are told by isomgr to backoff.
+		 */
+		dc->available_bw = UINT_MAX;
 	}
 #else
 	/*

@@ -770,20 +770,19 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 	if (WARN_ONCE(!dc, "dc is NULL") ||
 		WARN_ONCE(!dc->out, "dc->out is NULL!"))
 		return 0;
-
-	if (!pclk && dc->out->type == TEGRA_DC_OUT_HDMI) {
-		pclk = tegra_dc_get_out_max_pixclock(dc);
-		if (!pclk) {
+	if (!pclk) {
+		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-			pclk = 300000000; /* 300MHz max */
+			pclk = KHZ2PICOS(300000); /* 300MHz max */
 #else
-			pclk = 150000000; /* 150MHz max */
+			pclk = KHZ2PICOS(150000); /* 150MHz max */
 #endif
+		} else {
+			pclk = KHZ2PICOS(dc->mode.pclk / 1000);
 		}
-	} else {
-		pclk = dc->mode.pclk;
 	}
-	return pclk / 1000 * 4; /* support a single 32bpp window */
+
+	return PICOS2KHZ(pclk) * 4; /* support a single 32bpp window */
 }
 
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -834,6 +833,9 @@ void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw)
 {
 	struct tegra_dc_bw_data data;
 	struct tegra_dc *dc = p;
+
+	if (dc->available_bw == avail_bw)
+		return;
 
 	if (WARN_ONCE(!dc, "dc is NULL!"))
 		return;

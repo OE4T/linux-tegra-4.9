@@ -960,7 +960,6 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	}
 	seq_printf(s, "%-18s %-18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&node->clients_lock, flags);
-
 	return 0;
 }
 
@@ -983,17 +982,53 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 		seq_printf(s, " %10zu\n", K(commit->commit));
 		total += commit->commit;
 	}
-	seq_printf(s, "%-18s %18s %8s %10uK\n", "Total", "", "", K(total));
+	seq_printf(s, "%-18s %18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&node->clients_lock, flags);
 	return 0;
 }
 
 DEBUGFS_OPEN_FOPS(clients);
 
+static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
+{
+	int i;
+	struct rb_node *n;
+	unsigned long flags;
+	struct nvmap_device *dev = nvmap_dev;
+
+	*pss = *non_pss = *total = 0;
+	spin_lock_irqsave(&dev->handle_lock, flags);
+	n = rb_first(&dev->handles);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle *h =
+			rb_entry(n, struct nvmap_handle, node);
+
+		if (!h || !h->alloc || !h->heap_pgalloc)
+			continue;
+
+		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
+			int mapcount = page_mapcount(h->pgalloc.pages[i]);
+			if (!mapcount)
+				*non_pss += PAGE_SIZE;
+			*total += PAGE_SIZE;
+		}
+	}
+	*pss = *total - *non_pss;
+	spin_unlock_irqrestore(&dev->handle_lock, flags);
+}
+
+#define PRINT_MEM_STATS_NOTE(x) \
+do { \
+	seq_printf(s, "Note: total memory is precise account of pages " \
+		"allocated by NvMap.\nIt doesn't match with all clients " \
+		"\"%s\" accumulated as shared memory \nis accounted in " \
+		"full in each clients \"%s\" that shared memory.\n", #x, #x); \
+} while (0)
+
 static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
 {
+	u64 dummy, total;
 	unsigned long flags;
-	unsigned int total = 0;
 	struct nvmap_client *client;
 	struct nvmap_device *dev = s->private;
 
@@ -1004,11 +1039,11 @@ static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
 		int iovm_commit = atomic_read(&client->iovm_commit);
 		client_stringify(client, s);
 		seq_printf(s, " %10uK\n", K(iovm_commit));
-		total += iovm_commit;
 	}
-	seq_printf(s, "%-18s %18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&dev->clients_lock, flags);
-
+	nvmap_iovmm_get_total_mss(&dummy, &dummy, &total);
+	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
+	PRINT_MEM_STATS_NOTE(SIZE);
 	return 0;
 }
 
@@ -1016,8 +1051,8 @@ DEBUGFS_OPEN_FOPS(iovmm_clients);
 
 static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 {
+	u64 dummy, total;
 	unsigned long flags;
-	unsigned int total = 0;
 	struct nvmap_client *client;
 	struct nvmap_device *dev = s->private;
 
@@ -1033,17 +1068,17 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 		seq_printf(s, " %10uK\n", K(iovm_commit));
 		allocations_stringify(client, s, true);
 		seq_printf(s, "\n");
-		total += iovm_commit;
 	}
-	seq_printf(s, "%-18s %-18s %8s %10uK\n", "total", "", "", K(total));
 	spin_unlock_irqrestore(&dev->clients_lock, flags);
-
+	nvmap_iovmm_get_total_mss(&dummy, &dummy, &total);
+	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
+	PRINT_MEM_STATS_NOTE(SIZE);
 	return 0;
 }
 
 DEBUGFS_OPEN_FOPS(iovmm_allocations);
 
-static void nvmap_get_client_mss(struct nvmap_client *client, u64 *pss,
+static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 				   u64 *non_pss, u64 *total)
 {
 	int i;
@@ -1079,24 +1114,22 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 	u64 total_memory, total_pss, total_non_pss;
 
-	total_memory = total_pss = total_non_pss = 0;
 	spin_lock_irqsave(&dev->clients_lock, flags);
 	seq_printf(s, "%-18s %18s %8s %11s %11s %11s\n",
 		"CLIENT", "PROCESS", "PID", "PSS", "NON-PSS", "TOTAL");
 	list_for_each_entry(client, &dev->clients, list) {
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &pss, &non_pss, &total);
+		nvmap_iovmm_get_client_mss(client, &pss, &non_pss, &total);
 		seq_printf(s, " %10lluK %10lluK %10lluK\n", K(pss),
 			K(non_pss), K(total));
-		total_memory += total;
-		total_pss += pss;
-		total_non_pss += non_pss;
 	}
-	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
-		"Total", "", "", K(total_pss),
-		K(total_non_pss), K(total_memory));
 	spin_unlock_irqrestore(&dev->clients_lock, flags);
 
+	nvmap_iovmm_get_total_mss(&total_pss, &total_non_pss, &total_memory);
+	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
+		"total", "", "", K(total_pss),
+		K(total_non_pss), K(total_memory));
+	PRINT_MEM_STATS_NOTE(TOTAL);
 	return 0;
 }
 
@@ -1104,20 +1137,9 @@ DEBUGFS_OPEN_FOPS(iovmm_procrank);
 
 ulong nvmap_iovmm_get_used_pages(void)
 {
-	unsigned long flags;
-	unsigned int total = 0;
-	struct nvmap_client *client;
-	struct nvmap_device *dev = nvmap_dev;
+	u64 dummy, total;
 
-	if (!dev)
-		return 0;
-
-	spin_lock_irqsave(&dev->clients_lock, flags);
-	list_for_each_entry(client, &dev->clients, list) {
-		total += atomic_read(&client->iovm_commit);
-	}
-	spin_unlock_irqrestore(&dev->clients_lock, flags);
-
+	nvmap_iovmm_get_total_mss(&dummy, &dummy, &total);
 	return total >> PAGE_SHIFT;
 }
 

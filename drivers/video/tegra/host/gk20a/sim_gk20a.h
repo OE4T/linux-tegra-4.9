@@ -3,7 +3,7 @@
  *
  * GK20A sim support
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,20 +40,22 @@ struct sim_gk20a {
 };
 
 
-#if CONFIG_GK20A_SIM
 int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index,
 			  u32 count, u32 *data);
-#else
-static inline int gk20a_sim_esc_read(struct gk20a *g, char *p,
+
+static inline int gk20a_sim_esc_read_no_sim(struct gk20a *g, char *p,
 				     u32 i, u32 c, u32 *d)
 {
 	*d = ~(u32)0;
 	return -1;
 }
-#endif
+
 static inline int gk20a_sim_esc_readl(struct gk20a *g, char * p, u32 i, u32 *d)
 {
-	return gk20a_sim_esc_read(g, p, i, sizeof(u32), d);
+	if (tegra_cpu_is_asim())
+		return gk20a_sim_esc_read(g, p, i, sizeof(u32), d);
+
+	return gk20a_sim_esc_read_no_sim(g, p, i, sizeof(u32), d);
 }
 
 

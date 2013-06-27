@@ -80,7 +80,21 @@ struct resource gk20a_resources[] = {
 	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 },
-#if CONFIG_GK20A_SIM
+};
+
+struct resource gk20a_resources_sim[] = {
+#define GK20A_BAR0_IORESOURCE_MEM 0
+{
+	.start = TEGRA_GK20A_BAR0_BASE,
+	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+},
+#define GK20A_BAR1_IORESOURCE_MEM 1
+{
+	.start = TEGRA_GK20A_BAR1_BASE,
+	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+},
 #define GK20A_SIM_IORESOURCE_MEM 2
 {
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h should get this or replacement */
@@ -89,8 +103,8 @@ struct resource gk20a_resources[] = {
 	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 },
-#endif
 };
+
 
 static const struct file_operations gk20a_ctrl_ops = {
 	.owner = THIS_MODULE,
@@ -123,17 +137,12 @@ struct nvhost_device_data tegra_gk20a_info = {
 struct platform_device tegra_gk20a_device = {
 	.name		= "gk20a",
 	.resource	= gk20a_resources,
-#if CONFIG_GK20A_SIM
-	.num_resources	= 3, /* this is num ioresource_mem, not the sum */
-#else
 	.num_resources	= 2, /* this is num ioresource_mem, not the sum */
-#endif
 	.dev		= {
 		.platform_data = &tegra_gk20a_info,
 	},
 };
 
-#if CONFIG_GK20A_SIM
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
 	writel(v, g->sim.regs+r);
@@ -455,16 +464,6 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 	return err;
 }
 
-#else /*CONFIG_GK20A_SIM*/
-static inline int gk20a_init_sim_support(struct platform_device *dev)
-{
-	return 0;
-}
-/*static void gk20a_remove_sim_support(struct platform_device *dev)
-{
-}*/
-#endif /*!CONFIG_GK20A_SIM*/
-
 static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -581,9 +580,11 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	}
 	g->irq_requested = true;
 
-	err = gk20a_init_sim_support(dev);
-	if (err)
-		goto fail;
+	if (tegra_cpu_is_asim()) {
+		err = gk20a_init_sim_support(dev);
+		if (err)
+			goto fail;
+	}
 
 	/* nvhost_as alloc_share can be called before gk20a is powered on.
 	   It requires mm sw states configured so init mm sw early here. */
@@ -1094,6 +1095,10 @@ static int gk20a_suspend(struct device *dev)
 
 static int __init gk20a_init(void)
 {
+		if (tegra_cpu_is_asim()) {
+			tegra_gk20a_device.resource = gk20a_resources_sim;
+			tegra_gk20a_device.num_resources = 3;
+		}
 	return platform_driver_register(&gk20a_driver);
 }
 

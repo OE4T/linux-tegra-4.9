@@ -22,12 +22,6 @@
 #define _NVHOST_GK20A_H_
 
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) && defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
-#define CONFIG_GK20A_SIM 1
-#else
-#define CONFIG_GK20A_SIM 0
-#endif
-
 struct gk20a;
 struct fifo_gk20a;
 struct channel_gk20a;

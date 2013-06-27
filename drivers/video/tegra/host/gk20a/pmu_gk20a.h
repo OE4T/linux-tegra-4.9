@@ -589,13 +589,11 @@ struct pmu_pg_stats {
 	u32 pg_gating_deny_cnt;
 };
 
-#if defined (CONFIG_TEGRA_SIMULATION_PLATFORM) /* SIM */
-#define PMU_PG_IDLE_THRESHOLD			1000
-#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	4000000
-#else /* TBD: QT or else ? */
+#define PMU_PG_IDLE_THRESHOLD_SIM		1000
+#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
+/* TBD: QT or else ? */
 #define PMU_PG_IDLE_THRESHOLD			15000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	1000000
-#endif
 
 /* state transition :
     OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF

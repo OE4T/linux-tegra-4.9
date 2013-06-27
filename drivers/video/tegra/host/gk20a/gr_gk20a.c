@@ -24,6 +24,8 @@
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 
+#include <mach/hardware.h>
+
 #include "../dev.h"
 
 #include "gk20a.h"
@@ -286,6 +288,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
+
 	nvhost_dbg_fn("");
 
 	while (check == WAIT_UCODE_LOOP) {
@@ -3706,12 +3709,13 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-#if CONFIG_GK20A_SIM
-	gr->max_comptag_mem = 1; /* MBs worth of comptag coverage */
-#else
-	nvhost_dbg_info("total ram pages : %lu", totalram_pages);
-	gr->max_comptag_mem = totalram_pages >> (10 - (PAGE_SHIFT - 10));
-#endif
+	if (tegra_cpu_is_asim())
+		gr->max_comptag_mem = 1; /* MBs worth of comptag coverage */
+	else {
+		nvhost_dbg_info("total ram pages : %lu", totalram_pages);
+		gr->max_comptag_mem = totalram_pages
+					 >> (10 - (PAGE_SHIFT - 10));
+	}
 	err = gr_gk20a_init_comptag(g, gr);
 	if (err)
 		goto clean_up;

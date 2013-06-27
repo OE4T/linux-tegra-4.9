@@ -1394,11 +1394,19 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 
 	nvhost_dbg_fn("");
 
-	/* TBD: calculate threshold for silicon */
-	gk20a_writel(g, pwr_pmu_pg_idlefilth_r(ENGINE_GR_GK20A),
-		PMU_PG_IDLE_THRESHOLD);
-	gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
-		PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
+	if (tegra_cpu_is_asim()) {
+		/* TBD: calculate threshold for silicon */
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(ENGINE_GR_GK20A),
+				PMU_PG_IDLE_THRESHOLD_SIM);
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
+				PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM);
+	} else {
+		/* TBD: calculate threshold for silicon */
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(ENGINE_GR_GK20A),
+				PMU_PG_IDLE_THRESHOLD);
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
+				PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
+	}
 
 	/* init ELPG */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));

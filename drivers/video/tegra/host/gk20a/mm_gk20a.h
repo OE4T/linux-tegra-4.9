@@ -137,12 +137,15 @@ struct page_directory_gk20a {
 };
 
 struct mapped_buffer_node {
+	struct vm_gk20a *vm;
 	struct rb_node node;
 	u64 addr;
 	u64 size;
 	struct mem_mgr *memmgr;
 	struct mem_handle *handle_ref;
 	struct sg_table *sgt;
+	struct kref ref;
+	bool user_mapped;
 	u32 pgsz_idx;
 	u32 ctag_offset;
 	u32 ctag_lines;
@@ -155,9 +158,12 @@ struct vm_gk20a {
 	u64 va_start;
 	u64 va_limit;
 
+	int num_user_mapped_buffers;
+
 	bool big_pages;   /* enable large page support */
 	bool enable_ctag;
 	bool tlb_dirty;
+	bool mapped;
 
 	struct page_directory_gk20a pdes;
 
@@ -184,10 +190,17 @@ struct vm_gk20a {
 		u64 offset);
 
 	/* unmap handle from user */
-	void (*unmap_user)(struct vm_gk20a *vm,
-		u64 offset,
-		struct mem_mgr **memmgr,
-		struct mem_handle **r);
+	void (*unmap_user)(struct vm_gk20a *vm, u64 offset);
+
+	/* get reference to all currently mapped buffers */
+	int (*get_buffers)(struct vm_gk20a *vm,
+		 struct mapped_buffer_node ***mapped_buffers,
+		 int *num_buffers);
+
+	/* put references on the given buffers */
+	void (*put_buffers)(struct vm_gk20a *vm,
+		 struct mapped_buffer_node **mapped_buffers,
+		 int num_buffers);
 
 	/* invalidate tlbs for the vm area */
 	void (*tlb_inval)(struct vm_gk20a *vm);

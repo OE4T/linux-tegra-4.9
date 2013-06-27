@@ -159,6 +159,7 @@ static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
 	struct channel_gk20a *ch20a = waiter->data;
 	int nr_completed = waiter->count;
 	wake_up(&ch20a->submit_wq);
+	gk20a_channel_update(ch20a);
 	nvhost_module_idle_mult(ch20a->ch->dev, nr_completed);
 	/* TODO: add trace function */
 }

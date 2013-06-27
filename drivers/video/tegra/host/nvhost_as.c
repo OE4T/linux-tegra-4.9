@@ -420,19 +420,8 @@ int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 				 struct nvhost_as_unmap_buffer_args *args)
 {
-	struct mem_mgr *memmgr = NULL;
-	struct mem_handle *r = NULL;
-	int err;
-
 	nvhost_dbg_fn("");
 
-	err = as_share->as->ops->unmap_buffer(as_share,
-			args->offset, &memmgr, &r);
-	if (err)
-		return err;
-
-	nvhost_memmgr_put(memmgr, r);
-	nvhost_memmgr_put_mgr(memmgr);
-
-	return err;
+	return as_share->as->ops->unmap_buffer(as_share,
+			args->offset, NULL, NULL);
 }

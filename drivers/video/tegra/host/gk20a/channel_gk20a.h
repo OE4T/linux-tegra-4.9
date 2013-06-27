@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/mutex.h>
+#include <linux/nvhost_ioctl.h>
 struct gk20a;
 struct gr_gk20a;
 struct mem_mgr;
@@ -66,6 +67,13 @@ struct channel_ctx_gk20a {
 	bool	global_ctx_buffer_mapped;
 };
 
+struct channel_gk20a_job {
+	struct mapped_buffer_node **mapped_buffers;
+	int num_mapped_buffers;
+	struct nvhost_fence fence;
+	struct list_head list;
+};
+
 /* this is the priv element of struct nvhost_channel */
 struct channel_gk20a {
 	struct gk20a *g;
@@ -78,6 +86,9 @@ struct channel_gk20a {
 	struct mem_mgr *memmgr;
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;
+
+	struct list_head jobs;
+	struct mutex jobs_lock;
 
 	struct vm_gk20a *vm;
 
@@ -136,6 +147,7 @@ struct nvhost_gpfifo;
 struct nvhost_zbc_set_table_args;
 struct nvhost_cycle_stats_args;
 
+void gk20a_channel_update(struct channel_gk20a *c);
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 int gk20a_channel_init(struct nvhost_channel *ch, struct nvhost_master *host,
 		       int index);

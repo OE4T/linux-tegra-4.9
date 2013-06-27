@@ -56,7 +56,10 @@ enum gmmu_page_smmu_type {
 	gmmu_page_smmu_type_virtual,
 };
 
-
+static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
+			struct mem_mgr **memmgr, struct mem_handle **r);
+static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
+						     u64 addr);
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
 static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 		struct mem_mgr **memmgr, struct mem_handle **r, u64 *offset);
@@ -492,6 +495,94 @@ static int validate_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 	update_gmmu_pde(vm, i);
 
 	return 0;
+}
+
+static int gk20a_vm_get_buffers(struct vm_gk20a *vm,
+				struct mapped_buffer_node ***mapped_buffers,
+				int *num_buffers)
+{
+	struct mapped_buffer_node *mapped_buffer;
+	struct mapped_buffer_node **buffer_list;
+	struct rb_node *node;
+	int i = 0;
+
+	mutex_lock(&vm->mapped_buffers_lock);
+
+	buffer_list = kzalloc(sizeof(*buffer_list) *
+			      vm->num_user_mapped_buffers, GFP_KERNEL);
+	if (!buffer_list) {
+		mutex_unlock(&vm->mapped_buffers_lock);
+		return -ENOMEM;
+	}
+
+	node = rb_first(&vm->mapped_buffers);
+	while (node) {
+		mapped_buffer =
+			container_of(node, struct mapped_buffer_node, node);
+		if (mapped_buffer->user_mapped) {
+			buffer_list[i] = mapped_buffer;
+			kref_get(&mapped_buffer->ref);
+			i++;
+		}
+		node = rb_next(&mapped_buffer->node);
+	}
+
+	BUG_ON(i != vm->num_user_mapped_buffers);
+
+	*num_buffers = vm->num_user_mapped_buffers;
+	*mapped_buffers = buffer_list;
+
+	mutex_unlock(&vm->mapped_buffers_lock);
+
+	return 0;
+}
+
+static void gk20a_vm_unmap_buffer(struct kref *ref)
+{
+	struct mapped_buffer_node *mapped_buffer =
+		container_of(ref, struct mapped_buffer_node, ref);
+	struct vm_gk20a *vm = mapped_buffer->vm;
+	struct mem_mgr *memmgr = NULL;
+	struct mem_handle *r = NULL;
+
+	gk20a_vm_unmap_locked(vm, mapped_buffer->addr, &memmgr, &r);
+	nvhost_memmgr_put(memmgr, r);
+	nvhost_memmgr_put_mgr(memmgr);
+}
+
+static void gk20a_vm_put_buffers(struct vm_gk20a *vm,
+				 struct mapped_buffer_node **mapped_buffers,
+				 int num_buffers)
+{
+	int i;
+
+	mutex_lock(&vm->mapped_buffers_lock);
+	for (i = 0; i < num_buffers; ++i)
+		kref_put(&mapped_buffers[i]->ref,
+			 gk20a_vm_unmap_buffer);
+	mutex_unlock(&vm->mapped_buffers_lock);
+
+	kfree(mapped_buffers);
+}
+
+static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
+{
+	struct mapped_buffer_node *mapped_buffer;
+
+	mutex_lock(&vm->mapped_buffers_lock);
+
+	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
+	if (!mapped_buffer) {
+		mutex_unlock(&vm->mapped_buffers_lock);
+		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
+		return;
+	}
+
+	mapped_buffer->user_mapped = false;
+	vm->num_user_mapped_buffers--;
+	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_buffer);
+
+	mutex_unlock(&vm->mapped_buffers_lock);
 }
 
 static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
@@ -956,15 +1047,20 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->pgsz_idx    = bfr.pgsz_idx;
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
+	mapped_buffer->vm          = vm;
+	mapped_buffer->user_mapped = true;
+	kref_init(&mapped_buffer->ref);
 
 	mutex_lock(&vm->mapped_buffers_lock);
 	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
-	mutex_unlock(&vm->mapped_buffers_lock);
 	if (err) {
+		mutex_unlock(&vm->mapped_buffers_lock);
 		nvhost_err(d, "failed to insert into mapped buffer tree");
 		goto clean_up;
 	}
 	inserted = true;
+	vm->num_user_mapped_buffers++;
+	mutex_unlock(&vm->mapped_buffers_lock);
 
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
 
@@ -985,6 +1081,7 @@ clean_up:
 	if (inserted) {
 		mutex_lock(&vm->mapped_buffers_lock);
 		rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+		vm->num_user_mapped_buffers--;
 		mutex_unlock(&vm->mapped_buffers_lock);
 	}
 	kfree(mapped_buffer);
@@ -1291,19 +1388,15 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 	/* remove from mapped buffer tree, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
 
+	/* keep track of mapped buffers */
+	if (mapped_buffer->user_mapped)
+		vm->num_user_mapped_buffers--;
+
 	*memmgr = mapped_buffer->memmgr;
 	*r = mapped_buffer->handle_ref;
 	kfree(mapped_buffer);
 
 	return;
-}
-
-static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
-			struct mem_mgr **memmgr, struct mem_handle **r)
-{
-	mutex_lock(&vm->mapped_buffers_lock);
-	gk20a_vm_unmap_locked(vm, offset, memmgr, r);
-	mutex_unlock(&vm->mapped_buffers_lock);
 }
 
 /* called by kernel. mem_mgr and mem_handle are ignored */
@@ -1312,7 +1405,9 @@ static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	struct mem_mgr *memmgr;
 	struct mem_handle *r;
 
-	gk20a_vm_unmap_user(vm, offset, &memmgr, &r);
+	mutex_lock(&vm->mapped_buffers_lock);
+	gk20a_vm_unmap_locked(vm, offset, &memmgr, &r);
+	mutex_unlock(&vm->mapped_buffers_lock);
 }
 
 void gk20a_vm_remove_support(struct vm_gk20a *vm)
@@ -1452,6 +1547,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->map            = gk20a_vm_map;
 	vm->unmap          = gk20a_vm_unmap;
 	vm->unmap_user     = gk20a_vm_unmap_user;
+	vm->put_buffers    = gk20a_vm_put_buffers;
+	vm->get_buffers    = gk20a_vm_get_buffers;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->find_buffer    = gk20a_vm_find_buffer;
 	vm->remove_support = gk20a_vm_remove_support;
@@ -1594,44 +1691,17 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
 				 struct mem_mgr **memmgr, struct mem_handle **r)
 {
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
-	int err = 0;
-	struct nvhost_hwctx *hwctx;
-	struct channel_gk20a *ch;
-	struct list_head *pos;
-	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 
 	nvhost_dbg_fn("");
 
-	if (!tegra_platform_is_silicon())
-		timeout = MAX_SCHEDULE_TIMEOUT;
+	vm->unmap_user(vm, offset);
 
-	/* User mode clients expect to be able to cleanly free a buffers after
-	 * launching work against them.  To avoid causing mmu faults we wait
-	 * for all pending work with respect to the share to clear before
-	 * unmapping the pages...
-	 * Note: the finish call below takes care to wait only if necessary.
-	 * So only the first in a series of unmappings will cause a wait for
-	 * idle.
-	 */
-	/* TODO: grab bound list lock, release during wait */
-	/* TODO: even better: schedule deferred (finish,unmap) and return
-	 * immediately */
-	list_for_each(pos, &as_share->bound_list) {
-		hwctx = container_of(pos, struct nvhost_hwctx,
-				     as_share_bound_list_node);
-		if (likely(!hwctx->has_timedout)) {
-			ch =  (struct channel_gk20a *)hwctx->priv;
-			BUG_ON(!ch);
-			err = gk20a_channel_finish(ch, timeout);
-			if (err)
-				break;
-		}
-	}
-
-	if (!err)
-		vm->unmap_user(vm, offset, memmgr, r);
-
-	return err;
+	/* these are not available */
+	if (memmgr)
+		*memmgr = NULL;
+	if (r)
+		*r = NULL;
+	return 0;
 }
 
 
@@ -1783,6 +1853,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->map            = gk20a_vm_map;
 	vm->unmap          = gk20a_vm_unmap;
 	vm->unmap_user     = gk20a_vm_unmap_user;
+	vm->put_buffers    = gk20a_vm_put_buffers;
+	vm->get_buffers    = gk20a_vm_get_buffers;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
 
@@ -1929,6 +2001,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->map		   = gk20a_vm_map;
 	vm->unmap	   = gk20a_vm_unmap;
 	vm->unmap_user	   = gk20a_vm_unmap_user;
+	vm->put_buffers    = gk20a_vm_put_buffers;
+	vm->get_buffers    = gk20a_vm_get_buffers;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
 

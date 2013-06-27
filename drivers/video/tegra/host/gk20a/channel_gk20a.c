@@ -19,6 +19,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/list.h>
 #include <linux/delay.h>
 #include <linux/highmem.h> /* need for nvmap.h*/
 #include <trace/events/nvhost.h>
@@ -1098,6 +1099,57 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 	}
 }
 
+static int gk20a_channel_add_job(struct channel_gk20a *c,
+				 struct nvhost_fence *fence)
+{
+	struct vm_gk20a *vm = c->vm;
+	struct channel_gk20a_job *job = NULL;
+	struct mapped_buffer_node **mapped_buffers = NULL;
+	int err = 0, num_mapped_buffers;
+
+	err = vm->get_buffers(vm, &mapped_buffers, &num_mapped_buffers);
+	if (err)
+		return err;
+
+	job = kzalloc(sizeof(*job), GFP_KERNEL);
+	if (!job) {
+		vm->put_buffers(vm, mapped_buffers, num_mapped_buffers);
+		return -ENOMEM;
+	}
+
+	job->num_mapped_buffers = num_mapped_buffers;
+	job->mapped_buffers = mapped_buffers;
+	job->fence = *fence;
+
+	mutex_lock(&c->jobs_lock);
+	list_add_tail(&job->list, &c->jobs);
+	mutex_unlock(&c->jobs_lock);
+
+	return 0;
+}
+
+void gk20a_channel_update(struct channel_gk20a *c)
+{
+	struct gk20a *g = c->g;
+	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
+	struct vm_gk20a *vm = c->vm;
+	struct channel_gk20a_job *job, *n;
+
+	mutex_lock(&c->jobs_lock);
+	list_for_each_entry_safe(job, n, &c->jobs, list) {
+		bool completed = nvhost_syncpt_is_expired(sp,
+			job->fence.syncpt_id, job->fence.value);
+		if (!completed)
+			break;
+
+		vm->put_buffers(vm, job->mapped_buffers,
+				job->num_mapped_buffers);
+		list_del_init(&job->list);
+		kfree(job);
+	}
+	mutex_unlock(&c->jobs_lock);
+}
+
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
@@ -1296,6 +1348,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					   incr_id, fence->value);
 
 
+	/* TODO! Check for errors... */
+	gk20a_channel_add_job(c, fence);
+
 	c->cmds_pending = true;
 	gk20a_bar1_writel(g,
 		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
@@ -1327,6 +1382,8 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->hw_chid = chid;
 	c->bound = false;
 	c->remove_support = gk20a_remove_channel_support;
+	mutex_init(&c->jobs_lock);
+	INIT_LIST_HEAD(&c->jobs);
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 #endif

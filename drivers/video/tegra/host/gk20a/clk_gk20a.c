@@ -37,8 +37,8 @@
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
 	403, 806,	/* freq */
-	1100, 2200,	/* vco */
-	25, 100,	/* u */
+	1000, 1700,	/* vco */
+	12, 38,		/* u */
 	1, 255,		/* M */
 	8, 255,		/* N */
 	1, 63,		/* PL */
@@ -243,7 +243,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 	/* target gpc2clk = 806MHz, gpcclk = 403MHz */
 	clk->gpc_pll.id = GK20A_GPC_PLL;
-	clk->gpc_pll.clk_in = 26; /* MHz */
+	clk->gpc_pll.clk_in = 12; /* MHz */
 	/* settings in vbios */
 	clk->gpc_pll.M = 1;
 	clk->gpc_pll.N = 31;

@@ -172,6 +172,15 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk)
 		trim_sys_sel_vco_gpc2clk_out_bypass_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
+	/* get out from IDDQ */
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	if (trim_sys_gpcpll_cfg_iddq_v(cfg)) {
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
+				trim_sys_gpcpll_cfg_iddq_power_on_v());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		udelay(2);
+	}
+
 	/* disable PLL before changing coefficients */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),

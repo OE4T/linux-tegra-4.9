@@ -25,13 +25,14 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_platform.h>
+
 #include <asm/cacheflush.h>
 
 #include <mach/powergate.h>
 #include <mach/pm_domains.h>
-#include <linux/of.h>
-#include <linux/of_device.h>
-#include <linux/of_platform.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -710,6 +711,9 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	nvhost_dbg_fn("");
 
+	if (g->power_on)
+		return 0;
+
 	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),
@@ -845,6 +849,7 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
 	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
 	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
+	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
 #endif
 
 	if (pdata->clockgate_delay) {
@@ -853,7 +858,6 @@ static int gk20a_probe(struct platform_device *dev)
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
  	pm_runtime_enable(&dev->dev);
-	pm_runtime_get_sync(&dev->dev);
 
 	err = nvhost_client_device_init(dev);
 	if (err) {
@@ -869,11 +873,6 @@ static int gk20a_probe(struct platform_device *dev)
 			      " device for %s", dev->name);
 		return err;
 	}
-
-	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
-	else
-		pm_runtime_put(&dev->dev);
 
 	return 0;
 }

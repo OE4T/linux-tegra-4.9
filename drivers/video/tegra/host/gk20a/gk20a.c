@@ -596,6 +596,11 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 int nvhost_gk20a_init(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
+
+#ifndef CONFIG_PM_RUNTIME
+	nvhost_gk20a_finalize_poweron(dev);
+#endif
+
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ))
 		nvhost_gk20a_scale_hw_init(dev);
 	return 0;
@@ -604,6 +609,9 @@ int nvhost_gk20a_init(struct platform_device *dev)
 static void nvhost_gk20a_deinit(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
+#ifndef CONFIG_PM_RUNTIME
+	nvhost_gk20a_prepare_poweroff(dev);
+#endif
 }
 
 static void gk20a_free_hwctx(struct kref *ref)
@@ -852,12 +860,16 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
- 	pm_runtime_enable(&dev->dev);
+	pm_runtime_enable(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
 
 	err = nvhost_client_device_init(dev);
 	if (err) {
@@ -888,6 +900,13 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	set_gk20a(dev, 0);
 	kfree(g);
 
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
+#endif
+
 	return 0;
 }
 
@@ -899,6 +918,9 @@ static struct platform_driver gk20a_driver = {
 		.name = "gk20a",
 #ifdef CONFIG_OF
 		.of_match_table = tegra_gk20a_of_match,
+#endif
+#ifdef CONFIG_PM
+		.pm = &nvhost_module_pm_ops,
 #endif
 	}
 };

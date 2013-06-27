@@ -565,7 +565,7 @@ static int nvhost_probe(struct platform_device *dev)
 	struct nvhost_master *host;
 	struct resource *regs;
 	int syncpt_irq, generic_irq;
-	int i, err;
+	int err;
 	struct nvhost_device_data *pdata = NULL;
 
 	if (dev->dev.of_node) {
@@ -658,13 +658,11 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	for (i = 0; i < pdata->num_clks; i++)
-		clk_prepare_enable(pdata->clk[i]);
-	nvhost_syncpt_reset(&host->syncpt);
-	for (i = 0; i < pdata->num_clks; i++)
-		clk_disable_unprepare(pdata->clk[i]);
-
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 	tegra_pd_add_device(&dev->dev);
+#endif
+
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
@@ -672,6 +670,12 @@ static int nvhost_probe(struct platform_device *dev)
 	}
 	pm_runtime_enable(&dev->dev);
 	pm_suspend_ignore_children(&dev->dev, true);
+	pm_runtime_get_sync(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
+
+	nvhost_syncpt_reset(&host->syncpt);
 
 	nvhost_device_list_init();
 	err = nvhost_device_list_add(dev);
@@ -679,6 +683,15 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 
 	nvhost_debug_init(host);
+
+#ifdef CONFIG_PM_RUNTIME
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
+	if (err)
+		return err;
+#endif
 
 	dev_info(&dev->dev, "initialized\n");
 	return 0;
@@ -697,6 +710,12 @@ static int __exit nvhost_remove(struct platform_device *dev)
 	nvhost_intr_deinit(&host->intr);
 	nvhost_syncpt_deinit(&host->syncpt);
 	nvhost_free_resources(host);
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
+#endif
 	return 0;
 }
 

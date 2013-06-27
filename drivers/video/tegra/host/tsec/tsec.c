@@ -579,15 +579,21 @@ static int tsec_probe(struct platform_device *dev)
 
 	tsec = dev;
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 	tegra_pd_add_device(&dev->dev);
+#endif
+
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
 	pm_runtime_enable(&dev->dev);
-
 	pm_runtime_get_sync(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
 
 	err = nvhost_client_device_init(dev);
 	if (err)
@@ -598,10 +604,12 @@ static int tsec_probe(struct platform_device *dev)
 	udelay(10);
 	tegra_periph_reset_deassert(pdata->clk[0]);
 
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay)
 		pm_runtime_put_sync_autosuspend(&dev->dev);
 	else
 		pm_runtime_put(&dev->dev);
+#endif
 
 	return err;
 }
@@ -610,9 +618,16 @@ static int __exit tsec_remove(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_host(dev);
 
-	/* Add clean-up */
 	host->intr.generic_isr[20] = NULL;
 	host->intr.generic_isr_thread[20] = NULL;
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
+#endif
+
 	return 0;
 }
 

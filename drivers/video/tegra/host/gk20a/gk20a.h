@@ -199,5 +199,7 @@ static inline int support_gk20a_pmu(void)
 static inline int support_gk20a_pmu(void){return 0;}
 #endif
 
+int nvhost_gk20a_finalize_poweron(struct platform_device *dev);
+int nvhost_gk20a_prepare_poweroff(struct platform_device *dev);
 
 #endif /* _NVHOST_GK20A_H_ */

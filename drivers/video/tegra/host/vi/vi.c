@@ -147,13 +147,16 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto camera_register_fail;
 
-	tegra_pd_add_device(&dev->dev);
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
 	pm_runtime_enable(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
 
 	return 0;
 
@@ -178,6 +181,13 @@ static int __exit vi_remove(struct platform_device *dev)
 	err = tegra_camera_unregister(tegra_vi->camera);
 	if (err)
 		return err;
+#endif
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
 #endif
 
 	return 0;
@@ -223,10 +233,8 @@ static int vi_resume(struct device *dev)
 static const struct dev_pm_ops vi_pm_ops = {
 	.suspend = vi_suspend,
 	.resume = vi_resume,
-#ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = nvhost_module_disable_clk,
-	.runtime_resume = nvhost_module_enable_clk,
-#endif
+	SET_RUNTIME_PM_OPS(nvhost_module_disable_clk,
+		nvhost_module_enable_clk, NULL)
 };
 #endif
 

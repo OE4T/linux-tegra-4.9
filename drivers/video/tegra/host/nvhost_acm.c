@@ -147,7 +147,9 @@ void nvhost_module_busy(struct platform_device *dev)
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 		nvhost_module_busy(nvhost_get_parent(dev));
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_get_sync(&dev->dev);
+#endif
 
 	if (pdata->busy)
 		pdata->busy(dev);
@@ -163,10 +165,6 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 		if (pdata->idle)
 			pdata->idle(dev);
 	}
-#else
-	if (pdata->idle)
-		pdata->idle(dev);
-#endif
 
 	while (refs--) {
 		pm_runtime_mark_last_busy(&dev->dev);
@@ -175,6 +173,10 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 		else
 			pm_runtime_put(&dev->dev);
 	}
+#else
+	if (pdata->idle)
+		pdata->idle(dev);
+#endif
 
 	/* Explicitly turn off the host1x clocks */
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
@@ -572,6 +574,13 @@ void nvhost_module_deinit(struct platform_device *dev)
 
 }
 
+#ifdef CONFIG_PM
+const struct dev_pm_ops nvhost_module_pm_ops = {
+	SET_RUNTIME_PM_OPS(nvhost_module_disable_clk,
+		nvhost_module_enable_clk, NULL)
+};
+#endif
+
 /* common runtime pm and power domain APIs */
 int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev)
@@ -587,7 +596,6 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	if (!pdata->can_powergate)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 		pm_domain_gov = &pm_domain_always_on_gov;
-#endif
 
 	if (__pm_genpd_name_add_device(domain->name, &pdev->dev, NULL)) {
 		pm_genpd_init(domain, pm_domain_gov, true);
@@ -597,6 +605,7 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 					pdata->powergate_delay);
 		tegra_pd_add_sd(domain);
 	}
+#endif
 
 	return ret;
 }

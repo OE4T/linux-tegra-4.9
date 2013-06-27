@@ -257,28 +257,39 @@ static int gr3d_probe(struct platform_device *dev)
 	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
 	pm_runtime_enable(&dev->dev);
-
 	pm_runtime_get_sync(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
 	err = nvhost_client_device_init(dev);
+
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay)
 		pm_runtime_put_sync_autosuspend(&dev->dev);
 	else
 		pm_runtime_put(&dev->dev);
 	if (err)
 		return err;
+#endif
 
 	return err;
 }
 
 static int __exit gr3d_remove(struct platform_device *dev)
 {
-	/* Add clean-up */
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
+#endif
 	return 0;
 }
 
@@ -290,6 +301,9 @@ static struct platform_driver gr3d_driver = {
 		.name = "gr3d",
 #ifdef CONFIG_OF
 		.of_match_table = tegra_gr3d_of_match,
+#endif
+#ifdef CONFIG_PM
+		.pm = &nvhost_module_pm_ops,
 #endif
 	},
 };

@@ -677,18 +677,21 @@ static int vic03_probe(struct platform_device *dev)
 	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
 			pdata->clockgate_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
 	pm_runtime_enable(&dev->dev);
+	pm_runtime_get_sync(&dev->dev);
+#else
+	nvhost_module_enable_clk(&dev->dev);
+#endif
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
-
-	pm_runtime_get_sync(&dev->dev);
 
 	err = nvhost_client_device_init(dev);
 	if (err) {
@@ -706,17 +709,24 @@ static int vic03_probe(struct platform_device *dev)
 		return err;
 	}
 
+#ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay)
 		pm_runtime_put_sync_autosuspend(&dev->dev);
 	else
 		pm_runtime_put(&dev->dev);
+#endif
 
 	return 0;
 }
 
 static int __exit vic03_remove(struct platform_device *dev)
 {
-	/* Add clean-up */
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
+#endif
 	return 0;
 }
 
@@ -728,6 +738,9 @@ static struct platform_driver vic03_driver = {
 		.name = "vic03",
 #ifdef CONFIG_OF
 		.of_match_table = tegra_vic_of_match,
+#endif
+#ifdef CONFIG_PM
+		.pm = &nvhost_module_pm_ops,
 #endif
 	}
 };

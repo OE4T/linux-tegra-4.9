@@ -976,6 +976,9 @@ static const struct file_operations nvhost_channelops = {
 	.owner = THIS_MODULE,
 	.release = nvhost_channelrelease,
 	.open = nvhost_channelopen,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvhost_channelctl,
+#endif
 	.unlocked_ioctl = nvhost_channelctl
 };
 
@@ -1001,6 +1004,9 @@ static const struct file_operations nvhost_asops = {
 	.owner = THIS_MODULE,
 	.release = nvhost_as_dev_release,
 	.open = nvhost_as_dev_open,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvhost_as_dev_ctl,
+#endif
 	.unlocked_ioctl = nvhost_as_dev_ctl,
 };
 

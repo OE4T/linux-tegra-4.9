@@ -20,6 +20,7 @@
 #include <linux/moduleparam.h>
 #include <linux/export.h>
 #include <mach/dc.h>
+#include <mach/hardware.h>
 #include <trace/events/display.h>
 #include <linux/fb.h>
 #include "dc_reg.h"
@@ -835,9 +836,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT, DC_CMD_INT_STATUS);
-#endif
+	if (tegra_cpu_is_asim())
+		tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT,
+						 DC_CMD_INT_STATUS);
 
 	if (!no_vsync) {
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);

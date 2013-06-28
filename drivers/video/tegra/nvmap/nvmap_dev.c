@@ -997,6 +997,8 @@ static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
 	struct nvmap_device *dev = nvmap_dev;
 
 	*pss = *non_pss = *total = 0;
+	if (!dev)
+		return;
 	spin_lock_irqsave(&dev->handle_lock, flags);
 	n = rb_first(&dev->handles);
 	for (; n != NULL; n = rb_next(n)) {

@@ -44,6 +44,7 @@ struct sim_gk20a;
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 
+#include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
 extern struct platform_device tegra_gk20a_device;
 
@@ -188,12 +189,6 @@ enum {
 	KEPLER_INLINE_TO_MEMORY_A = 0xA040,
 	KEPLER_DMA_COPY_A         = 0xA0B5, /*not sure about this one*/
 };
-
-/* TBD: these should come from tegra iomap.h &&|| be in the device resources */
-#define TEGRA_GK20A_BAR0_BASE  0x57000000
-#define TEGRA_GK20A_BAR0_SIZE  0x01000000
-#define TEGRA_GK20A_BAR1_BASE  0x58000000
-#define TEGRA_GK20A_BAR1_SIZE  0x01000000
 
 #if defined (CONFIG_TEGRA_GK20A_PMU)
 static inline int support_gk20a_pmu(void)

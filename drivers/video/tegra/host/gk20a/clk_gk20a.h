@@ -21,6 +21,9 @@
 #ifndef _NVHOST_CLK_GK20A_H_
 #define _NVHOST_CLK_GK20A_H_
 
+#include <linux/mutex.h>
+
+#define GPUFREQ_TABLE_END     ~(u32)1
 enum {
 	/* only one PLL for gk20a */
 	GK20A_GPC_PLL = 0,
@@ -49,9 +52,18 @@ struct clk_gk20a {
 	struct clk *tegra_clk;
 	struct pll gpc_pll;
 	u32 pll_delay; /* default PLL settle time */
-
+	struct mutex clk_mutex;
 	bool sw_ready;
 };
+
+struct gpufreq_table_data {
+	unsigned int index;
+	unsigned int frequency; /* MHz */
+};
+
+struct gpufreq_table_data *tegra_gpufreq_table_get(void);
+
+unsigned int tegra_gpufreq_table_size_get(void);
 
 int gk20a_init_clk_support(struct gk20a *g);
 

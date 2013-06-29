@@ -48,6 +48,13 @@ struct sim_gk20a;
 
 extern struct platform_device tegra_gk20a_device;
 
+struct cooling_device_gk20a {
+	struct thermal_cooling_device *gk20a_cooling_dev;
+	unsigned int gk20a_freq_state;
+	unsigned int gk20a_freq_table_size;
+	struct gk20a *g;
+};
+
 struct gk20a {
 	struct nvhost_master *host;
 	struct platform_device *dev;
@@ -67,6 +74,7 @@ struct gk20a {
 	struct sim_gk20a sim;
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
+	struct cooling_device_gk20a gk20a_cdev;
 
 	/* Save pmu fw here so that it lives cross suspend/resume.
 	   pmu suspend destroys all pmu sw/hw states. Loading pmu

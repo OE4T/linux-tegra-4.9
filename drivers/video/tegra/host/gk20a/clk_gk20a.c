@@ -44,6 +44,26 @@ struct pll_parms gpc_pll_params = {
 	1, 63,		/* PL */
 };
 
+/*  dummy data for now */
+static struct gpufreq_table_data
+						gpu_cooling_freq[] = {
+	{0, 700},
+	{1, 650},
+	{2, 600},
+	{3, 450},
+	{4,	GPUFREQ_TABLE_END},
+};
+
+struct gpufreq_table_data *tegra_gpufreq_table_get(void)
+{
+	return &gpu_cooling_freq[0];
+}
+
+unsigned int tegra_gpufreq_table_size_get(void)
+{
+	return ARRAY_SIZE(gpu_cooling_freq);
+}
+
 /* Calculate and update M/N/PL as well as pll->freq
     ref_clk_f = clk_in_f / src_div = clk_in_f; (src_div = 1 on gk20a)
     u_f = ref_clk_f / M;
@@ -267,6 +287,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		return -EINVAL;
 	}
 
+	mutex_init(&clk->clk_mutex);
+
 	clk->sw_ready = true;
 
 	nvhost_dbg_fn("done");
@@ -331,13 +353,14 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 {
 	struct clk_gk20a *clk = &g->clk;
 	struct clk *tegra_clk = clk->tegra_clk;
+
 	/* save old freq for compare and recover */
 	u32 freq = clk->gpc_pll.freq;
 	int err = 0;
 
 	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
 		freq, rate);
-
+	mutex_lock(&clk->clk_mutex);
 	if (rate > gpc_pll_params.max_freq)
 		rate = gpc_pll_params.max_freq;
 	else if (rate < gpc_pll_params.min_freq)
@@ -371,6 +394,9 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	}
 
 clean_up:
+
+	mutex_unlock(&clk->clk_mutex);
+
 	/* Just report error but not restore PLL since dvfs could already changed
 	    voltage even when it returns error. */
 	if (err)

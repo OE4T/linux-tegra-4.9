@@ -28,7 +28,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-
+#include <linux/thermal.h>
 #include <asm/cacheflush.h>
 
 #include <mach/powergate.h>
@@ -515,6 +515,8 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	/* pmu support should already be removed when driver turns off
 	   gpu power rail in prepapre_poweroff */
+	if (g->gk20a_cdev.gk20a_cooling_dev)
+		thermal_cooling_device_unregister(g->gk20a_cdev.gk20a_cooling_dev);
 
 	if (g->gr.remove_support)
 		g->gr.remove_support(&g->gr);
@@ -791,11 +793,59 @@ static int gk20a_powergate(struct generic_pm_domain *domain)
 }
 #endif
 
+int tegra_gpu_get_max_state(struct thermal_cooling_device *cdev,
+		unsigned long *max_state)
+{
+	struct cooling_device_gk20a *gk20a_gpufreq_device = cdev->devdata;
+
+	*max_state = gk20a_gpufreq_device->gk20a_freq_table_size - 1;
+	return 0;
+}
+
+int tegra_gpu_get_cur_state(struct thermal_cooling_device *cdev,
+		unsigned long *cur_state)
+{
+	struct cooling_device_gk20a  *gk20a_gpufreq_device = cdev->devdata;
+
+	*cur_state = gk20a_gpufreq_device->gk20a_freq_state;
+	return 0;
+}
+
+int tegra_gpu_set_cur_state(struct thermal_cooling_device *c_dev,
+		unsigned long cur_state)
+{
+	u32 target_freq;
+	struct gk20a *g;
+	struct gpufreq_table_data *gpu_cooling_table;
+	struct cooling_device_gk20a *gk20a_gpufreq_device = c_dev->devdata;
+
+	BUG_ON(cur_state >= gk20a_gpufreq_device->gk20a_freq_table_size);
+
+	g = container_of(gk20a_gpufreq_device, struct gk20a, gk20a_cdev);
+
+	gpu_cooling_table = tegra_gpufreq_table_get();
+	target_freq = gpu_cooling_table[cur_state].frequency;
+
+	/* ensure a query for state will get the proper value */
+	gk20a_gpufreq_device->gk20a_freq_state = cur_state;
+
+	gk20a_clk_set_rate(g, target_freq);
+
+	return 0;
+}
+
+static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
+	.get_max_state = tegra_gpu_get_max_state,
+	.get_cur_state = tegra_gpu_get_cur_state,
+	.set_cur_state = tegra_gpu_set_cur_state,
+};
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;
 	struct nvhost_device_data *pdata = NULL;
+	struct cooling_device_gk20a *gpu_cdev = NULL;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -807,7 +857,6 @@ static int gk20a_probe(struct platform_device *dev)
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
 	nvhost_dbg_fn("");
-
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
@@ -885,6 +934,24 @@ static int gk20a_probe(struct platform_device *dev)
 			      " device for %s", dev->name);
 		return err;
 	}
+
+	gpu_cdev = &gk20a->gk20a_cdev;
+
+	if (IS_ERR_OR_NULL(gpu_cdev)) {
+		dev_err(&dev->dev, "error accessing gpu cooling device");
+		return -ENOMEM;
+	}
+
+	gpu_cdev->gk20a_freq_table_size = tegra_gpufreq_table_size_get();
+	gpu_cdev->gk20a_freq_state = 0;
+	gpu_cdev->g = gk20a;
+	gpu_cdev->gk20a_cooling_dev = thermal_cooling_device_register("gk20a_cdev", gpu_cdev,
+					&tegra_gpu_cooling_ops);
+
+	if (pdata->clockgate_delay)
+		pm_runtime_put_sync_autosuspend(&dev->dev);
+	else
+		pm_runtime_put(&dev->dev);
 
 	return 0;
 }

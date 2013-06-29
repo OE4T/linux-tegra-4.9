@@ -26,8 +26,9 @@
 
 static int t124_as_init(struct nvhost_master *host, struct nvhost_as *as)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(as->ch->dev);
 #if defined(CONFIG_TEGRA_GK20A)
-	if (as->ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(as->ch->dev))
 		as->ops = &gk20a_as_moduleops;
 #endif
 	return 0;

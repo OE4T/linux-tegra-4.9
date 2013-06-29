@@ -31,6 +31,11 @@
 
 #include "host1x/host1x_cdma.c"
 
+static inline bool is_cdma_gk20a_module(struct nvhost_cdma *cdma)
+{
+	return is_gk20a_module(cdma_to_channel(cdma)->dev);
+}
+
 static void t124_push_buffer_reset(struct push_buffer *pb)
 {
 #if defined(CONFIG_TEGRA_GK20A)
@@ -39,7 +44,7 @@ static void t124_push_buffer_reset(struct push_buffer *pb)
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		gk20a_push_buffer_reset(pb);
 	else
 #endif
@@ -57,7 +62,7 @@ static int t124_push_buffer_init(struct push_buffer *pb)
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		return gk20a_push_buffer_init(pb);
 	else
 #endif
@@ -75,7 +80,7 @@ static void t124_push_buffer_destroy(struct push_buffer *pb)
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		gk20a_push_buffer_destroy(pb);
 	else
 #endif
@@ -96,7 +101,7 @@ static void t124_push_buffer_push_to(struct push_buffer *pb,
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		gk20a_push_buffer_push_to(pb, client, handle, op1, op2);
 	else
 #endif
@@ -115,7 +120,7 @@ static void t124_push_buffer_pop_from(struct push_buffer *pb, unsigned int slots
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		gk20a_push_buffer_pop_from(pb, slots);
 	else
 #endif
@@ -133,7 +138,7 @@ static u32 t124_push_buffer_space(struct push_buffer *pb)
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		return gk20a_push_buffer_space(pb);
 	else
 #endif
@@ -148,7 +153,7 @@ static u32 t124_push_buffer_putptr(struct push_buffer *pb)
 
 	nvhost_dbg_fn("");
 
-	if (ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(ch->dev))
 		return gk20a_push_buffer_putptr(pb);
 	else
 #endif
@@ -171,7 +176,7 @@ static int t124_cdma_timeout_init(struct nvhost_cdma *cdma,
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		return -EINVAL; /*XXX gk20a_cdma_timeout_init(cdma, syncpt_id);*/
 	else
 #endif
@@ -182,7 +187,7 @@ static void t124_cdma_timeout_destroy(struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		return; /*XXX gk20a_cdma_timeout_destroy(cdma);*/
 	else
 #endif
@@ -194,7 +199,7 @@ void t124_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		return; /*XXX gk20a_cdma_teardown_begin(cdma);*/
 	else
 #endif
@@ -206,7 +211,7 @@ void t124_cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		return; /*XXX gk20a_cdma_teardown_end(cdma, getptr);*/
 	else
 #endif
@@ -221,7 +226,7 @@ static void t124_cdma_start(struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		gk20a_cdma_start(cdma);
 	else
 #endif
@@ -236,7 +241,7 @@ static void t124_cdma_kick(struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		gk20a_cdma_kick(cdma);
 	else
 #endif
@@ -248,7 +253,7 @@ static void t124_cdma_stop(struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (cdma_to_channel(cdma)->dev == &tegra_gk20a_device)
+	if (is_cdma_gk20a_module(cdma))
 		gk20a_cdma_stop(cdma);
 	else
 #endif

@@ -97,7 +97,7 @@ static const struct file_operations gk20a_ctrl_ops = {
 	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
 };
 
-static struct nvhost_device_data tegra_gk20a_info = {
+struct nvhost_device_data tegra_gk20a_info = {
 	/* the following are set by the platform (e.g. t124) support
 	.syncpts       = BIT(NVSYNCPT_3D),
 	.waitbases     = BIT(NVWAITBASE_3D),

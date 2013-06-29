@@ -376,7 +376,7 @@ static int t124_channel_submit(struct nvhost_job *job)
 	nvhost_dbg_fn("");
 
 #if defined(CONFIG_TEGRA_GK20A)
-	if (job->ch->dev == &tegra_gk20a_device)
+	if (is_gk20a_module(job->ch->dev))
 		return -ENODEV; /* makes no sense/shouldn't happen */
 	else
 #endif
@@ -508,7 +508,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 		}
 #endif
 #if defined(CONFIG_TEGRA_GK20A)
-		if (dev == &tegra_gk20a_device) {
+		if (is_gk20a_module(dev)) {
 			pdata->syncpts[0]       = NVSYNCPT_3D;
 			pdata->waitbases[0]     = NVWAITBASE_3D;
 			pdata->modulemutexes[0] = NVMODMUTEX_3D;

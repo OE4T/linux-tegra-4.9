@@ -47,6 +47,12 @@ struct sim_gk20a;
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
 extern struct platform_device tegra_gk20a_device;
+extern struct nvhost_device_data tegra_gk20a_info;
+
+static inline bool is_gk20a_module(struct platform_device *dev)
+{
+	return &tegra_gk20a_info == nvhost_get_devdata(dev);
+}
 
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;

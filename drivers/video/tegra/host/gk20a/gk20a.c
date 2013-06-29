@@ -66,20 +66,20 @@ static struct resource gk20a_intr = {
 };
 
 struct resource gk20a_resources[] = {
-#define GK20A_BAR0_IORESOURCE_MEM 0
+#define GK20A_BAR0_IORESOURCE_MEM 1
 {
 	.start = TEGRA_GK20A_BAR0_BASE,
 	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 },
-#define GK20A_BAR1_IORESOURCE_MEM 1
+#define GK20A_BAR1_IORESOURCE_MEM 2
 {
 	.start = TEGRA_GK20A_BAR1_BASE,
 	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 },
 #if CONFIG_GK20A_SIM
-#define GK20A_SIM_IORESOURCE_MEM 2
+#define GK20A_SIM_IORESOURCE_MEM 0
 {
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h should get this or replacement */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */

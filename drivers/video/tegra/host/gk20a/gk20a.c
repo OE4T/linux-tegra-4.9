@@ -953,6 +953,10 @@ static int gk20a_probe(struct platform_device *dev)
 	else
 		pm_runtime_put(&dev->dev);
 
+#ifdef CONFIG_DEBUG_FS
+	clk_gk20a_debugfs_init(dev);
+#endif
+
 	return 0;
 }
 

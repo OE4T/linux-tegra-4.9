@@ -216,4 +216,8 @@ static inline int support_gk20a_pmu(void){return 0;}
 int nvhost_gk20a_finalize_poweron(struct platform_device *dev);
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev);
 
+#ifdef CONFIG_DEBUG_FS
+int clk_gk20a_debugfs_init(struct platform_device *dev);
+#endif
+
 #endif /* _NVHOST_GK20A_H_ */

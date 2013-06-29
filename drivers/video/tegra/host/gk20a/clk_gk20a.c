@@ -20,6 +20,8 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>	/* for mdelay */
+#include <linux/module.h>
+#include <linux/debugfs.h>
 
 #include <mach/clk.h>
 
@@ -404,3 +406,71 @@ clean_up:
 			"failed to set rate to @ %d", rate);
 	return err;
 }
+
+#ifdef CONFIG_DEBUG_FS
+
+static int init_set(void *data, u64 val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	return gk20a_init_clk_support(g);
+}
+DEFINE_SIMPLE_ATTRIBUTE(init_fops, NULL, init_set, "%llu\n");
+
+static int rate_get(void *data, u64 *val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	*val = (u64)gk20a_clk_get_rate(g);
+	return 0;
+}
+static int rate_set(void *data, u64 val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	return gk20a_clk_set_rate(g, (u32)val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");
+
+static int cap_get(void *data, u64 *val)
+{
+	*val = (u64)gpc_pll_params.max_freq;
+	return 0;
+}
+static int cap_set(void *data, u64 val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	gpc_pll_params.max_freq = (u32)val;
+	if (gk20a_clk_get_rate(g) <= val)
+		return 0;
+	return gk20a_clk_set_rate(g, (u32)val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(cap_fops, cap_get, cap_set, "%llu\n");
+
+int clk_gk20a_debugfs_init(struct platform_device *dev)
+{
+	struct dentry *d;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	d = debugfs_create_file(
+		"init", S_IRUGO|S_IWUSR, pdata->debugfs, g, &init_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"rate", S_IRUGO|S_IWUSR, pdata->debugfs, g, &rate_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"cap", S_IRUGO|S_IWUSR, pdata->debugfs, g, &cap_fops);
+	if (!d)
+		goto err_out;
+
+	return 0;
+
+err_out:
+	pr_err("%s: Failed to make debugfs node\n", __func__);
+	debugfs_remove_recursive(pdata->debugfs);
+	return -ENOMEM;
+}
+
+#endif /* CONFIG_DEBUG_FS */

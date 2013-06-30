@@ -43,7 +43,7 @@ struct pll_parms gpc_pll_params = {
 	12, 38,		/* u */
 	1, 255,		/* M */
 	8, 255,		/* N */
-	1, 63,		/* PL */
+	1, 32,		/* PL */
 };
 
 /*  dummy data for now */
@@ -66,6 +66,10 @@ unsigned int tegra_gpufreq_table_size_get(void)
 	return ARRAY_SIZE(gpu_cooling_freq);
 }
 
+static u8 pl_to_div[] = {
+/* PL:   0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14 */
+/* p: */ 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 12, 16, 20, 24, 32 };
+
 /* Calculate and update M/N/PL as well as pll->freq
     ref_clk_f = clk_in_f / src_div = clk_in_f; (src_div = 1 on gk20a)
     u_f = ref_clk_f / M;
@@ -78,10 +82,11 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	u32 min_vco_f, max_vco_f;
 	u32 best_M, best_N;
 	u32 low_PL, high_PL, best_PL;
-	u32 pl, m, n, n2;
+	u32 m, n, n2;
 	u32 target_vco_f, vco_f;
 	u32 ref_clk_f, target_clk_f, u_f;
 	u32 delta, lwv, best_delta = ~0;
+	int pl;
 
 	BUG_ON(target_freq == NULL);
 
@@ -107,10 +112,24 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	low_PL = min(low_PL, pll_params->max_PL);
 	low_PL = max(low_PL, pll_params->min_PL);
 
-	nvhost_dbg_info("low_PL %d, high_PL %d", low_PL, high_PL);
+	/* Find Indices of high_PL and low_PL */
+	for (pl = 0; pl < 14; pl++) {
+		if (pl_to_div[pl] >= low_PL) {
+			low_PL = pl;
+			break;
+		}
+	}
+	for (pl = 0; pl < 14; pl++) {
+		if (pl_to_div[pl] >= high_PL) {
+			high_PL = pl;
+			break;
+		}
+	}
+	nvhost_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
+			low_PL, pl_to_div[low_PL], high_PL, pl_to_div[high_PL]);
 
-	for (pl = high_PL; pl >= low_PL; pl--) {
-		target_vco_f = target_clk_f * pl;
+	for (pl = high_PL; pl >= (int)low_PL; pl--) {
+		target_vco_f = target_clk_f * pl_to_div[pl];
 
 		for (m = pll_params->min_M; m <= pll_params->max_M; m++) {
 			u_f = ref_clk_f / m;
@@ -135,7 +154,8 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 				vco_f = ref_clk_f * n / m;
 
 				if (vco_f >= min_vco_f && vco_f <= max_vco_f) {
-					lwv = (vco_f + (pl / 2)) / pl;
+					lwv = (vco_f + (pl_to_div[pl] / 2))
+						/ pl_to_div[pl];
 					delta = abs(lwv - target_clk_f);
 
 					if (delta < best_delta) {
@@ -170,12 +190,12 @@ found_match:
 	pll->PL = best_PL;
 
 	/* save current frequency */
-	pll->freq = ref_clk_f * pll->N / (pll->M * pll->PL);
+	pll->freq = ref_clk_f * pll->N / (pll->M * pl_to_div[pll->PL]);
 
 	*target_freq = pll->freq;
 
-	nvhost_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d",
-		*target_freq, pll->M, pll->N, pll->PL);
+	nvhost_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d(div%d)",
+		*target_freq, pll->M, pll->N, pll->PL, pl_to_div[pll->PL]);
 
 	nvhost_dbg_fn("done");
 

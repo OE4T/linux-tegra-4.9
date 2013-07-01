@@ -63,7 +63,6 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 static int get_topmost_window(u32 *depths, unsigned long *wins, int win_num)
 {
 	int idx, best = -1;
@@ -156,12 +155,10 @@ static u32 blend_3win(int idx, unsigned long behind_mask,
 		}
 	}
 }
-#endif
 
 static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 				struct tegra_dc_blend *blend)
 {
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	int win_num = dc->gen1_blend_num;
 	unsigned long mask = BIT(win_num) - 1;
 
@@ -180,14 +177,12 @@ static void tegra_dc_blend_parallel(struct tegra_dc *dc,
 		tegra_dc_writel(dc, blend_3win(idx, mask, blend->flags,
 				win_num), DC_WIN_BLEND_3WIN_XY);
 	}
-#endif
 	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 				struct tegra_dc_blend *blend)
 {
-#if defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 	int idx;
 	unsigned long mask = dc->valid_windows;
 
@@ -255,7 +250,6 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					DC_WINBUF_BLEND_LAYER_CONTROL);
 		}
 	}
-#endif
 	tegra_dc_io_end(dc);
 }
 
@@ -551,7 +545,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 			tegra_dc_update_scaling(dc, win, Bpp, Bpp_bw,
 								scan_column);
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
 #endif
@@ -705,7 +699,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	}
 #endif
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 		if (tegra_dc_feature_has_tiling(dc, win->idx)) {
 			if (WIN_IS_TILED(win))
 				tegra_dc_writel(dc,
@@ -718,7 +711,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 					DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
 					DC_WIN_BUFFER_ADDR_MODE);
 		}
-#endif
 
 #if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
 		if (tegra_dc_feature_has_blocklinear(dc, win->idx) ||

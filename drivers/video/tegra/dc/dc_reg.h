@@ -394,13 +394,7 @@
 
 #define DC_DISP_SERIAL_INTERFACE_OPTIONS	0x433
 #define DC_DISP_LCD_SPI_OPTIONS			0x434
-
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-
 #define DC_DISP_BORDER_COLOR			0x435
-
-#endif
-
 #define DC_DISP_COLOR_KEY0_LOWER		0x436
 #define DC_DISP_COLOR_KEY0_UPPER		0x437
 #define DC_DISP_COLOR_KEY1_LOWER		0x438
@@ -536,8 +530,6 @@
 #define  GET_LINE_STRIDE(x)	((x) & 0xffff)
 #define  GET_UV_LINE_STRIDE(x)	(((x) >> 16) & 0xffff)
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-
 #define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
 #define  WIN_K1(x)			(((x) & 0xff) << 8)
 #define  WIN_K2(x)			(((x) & 0xff) << 16)
@@ -579,12 +571,7 @@
 #define  DC_WIN_BUFFER_ADDR_MODE_TILE		(1 << 0)
 #define  DC_WIN_BUFFER_ADDR_MODE_TILE_UV	(1 << 16)
 
-#endif
-
 #define DC_WIN_DV_CONTROL			0x70e
-
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-
 #define DC_WIN_BLEND_NOKEY			0x70f
 #define DC_WIN_BLEND_1WIN			0x710
 #define DC_WIN_BLEND_2WIN_X			0x711
@@ -603,8 +590,6 @@
 #define  BLEND(key, control, weight0, weight1)			\
 	  (CKEY_ ## key | BLEND_CONTROL_ ## control |		\
 	   BLEND_WEIGHT0(weight0) | BLEND_WEIGHT1(weight1))
-
-#endif
 
 #if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
 
@@ -666,8 +651,6 @@
 #define DC_WINBUF_HD_UFLOW_STATUS		0x1ca
 #define DC_WINBUF_TD_UFLOW_STATUS		0x14a
 #endif
-
-#if defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 
 #define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
 #define  WIN_DEPTH(x)			(((x) & 0xff) << 0)
@@ -774,8 +757,6 @@
 #define DC_WINBUF_BLEND_ALPHA_1BIT		0x719
 #define  WIN_ALPHA_1BIT_WEIGHT0(x)	(((x) & 0xff) << 0)
 #define  WIN_ALPHA_1BIT_WEIGHT1(x)	(((x) & 0xff) << 8)
-
-#endif
 
 
 #define DC_DISP_SD_CONTROL			0x4c2
@@ -884,10 +865,6 @@
 #define  WINH_CURS_SELECT(x)		(((x) & 0x1) << 28)
 #define  CURSOR_MODE_SELECT(x)		(((x) & 0x1) << 24)
 
-#if defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-
 #define DC_DISP_BLEND_BACKGROUND_COLOR		0x4e4
-
-#endif
 
 #endif

@@ -580,6 +580,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 
 	mapped_buffer->user_mapped = false;
 	vm->num_user_mapped_buffers--;
+	list_add_tail(&mapped_buffer->unmap_list, &vm->deferred_unmaps);
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_buffer);
 
 	mutex_unlock(&vm->mapped_buffers_lock);
@@ -703,6 +704,21 @@ static int insert_mapped_buffer(struct rb_root *root,
 	rb_insert_color(&mapped_buffer->node, root);
 
 	return 0;
+}
+
+static struct mapped_buffer_node *find_deferred_unmap(struct vm_gk20a *vm,
+						      u64 paddr, u64 vaddr,
+						      u32 flags)
+{
+	struct mapped_buffer_node *node;
+
+	list_for_each_entry(node, &vm->deferred_unmaps, unmap_list)
+		if ((sg_phys(node->sgt->sgl) == paddr) &&
+		    (node->flags == flags) &&
+		    (!vaddr || (node->addr == vaddr)))
+			return node;
+
+	return NULL;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
@@ -907,6 +923,41 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
 
+	/* pin buffer to get phys/iovmm addr */
+	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
+	if (IS_ERR_OR_NULL(bfr.sgt)) {
+		nvhost_warn(d, "oom allocating tracking buffer");
+		goto clean_up;
+	}
+
+	mutex_lock(&vm->mapped_buffers_lock);
+	mapped_buffer = find_deferred_unmap(vm, sg_phys(bfr.sgt->sgl),
+					    offset_align, flags);
+	if (mapped_buffer) {
+
+		nvhost_memmgr_free_sg_table(memmgr, r, bfr.sgt);
+		if (sgt)
+			*sgt = mapped_buffer->sgt;
+
+		/* mark the buffer as used */
+		mapped_buffer->user_mapped = true;
+		kref_get(&mapped_buffer->ref);
+		vm->num_user_mapped_buffers++;
+		list_del_init(&mapped_buffer->unmap_list);
+
+		/* replace the old reference by the new reference */
+		nvhost_memmgr_put(mapped_buffer->memmgr,
+				  mapped_buffer->handle_ref);
+		nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
+		mapped_buffer->memmgr = memmgr;
+		mapped_buffer->handle_ref = r;
+
+		mutex_unlock(&vm->mapped_buffers_lock);
+		return mapped_buffer->addr;
+	}
+
+	mutex_unlock(&vm->mapped_buffers_lock);
+
 	/* query bfr attributes: size, align, heap, kind */
 	for (attr = 0; attr < BFR_ATTRS; attr++) {
 		query[attr].err =
@@ -918,7 +969,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 				   "failed to get nvmap buffer param %d: %d\n",
 				   nvmap_bfr_param[attr],
 				   query[attr].err);
-			return query[attr].err;
+			err = query[attr].err;
+			goto clean_up;
 		}
 	}
 
@@ -951,14 +1003,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gmmu_page_smmu_type = bfr.iovmm_mapped ?
 		gmmu_page_smmu_type_virtual : gmmu_page_smmu_type_physical;
 
-	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
-	if (IS_ERR_OR_NULL(bfr.sgt)) {
-		nvhost_warn(d, "oom allocating tracking buffer");
-		goto clean_up;
-	}
 	if (sgt)
 		*sgt = bfr.sgt;
+
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
 	if (gmmu_page_smmu_type == gmmu_page_smmu_type_virtual) {
 		int err = nvhost_memmgr_smmu_map(bfr.sgt,
@@ -1048,7 +1095,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->vm          = vm;
+	mapped_buffer->flags       = flags;
 	mapped_buffer->user_mapped = true;
+	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
 	kref_init(&mapped_buffer->ref);
 
 	mutex_lock(&vm->mapped_buffers_lock);
@@ -1385,8 +1434,9 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 	nvhost_memmgr_free_sg_table(mapped_buffer->memmgr,
 			mapped_buffer->handle_ref, mapped_buffer->sgt);
 
-	/* remove from mapped buffer tree, free */
+	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+	list_del_init(&mapped_buffer->unmap_list);
 
 	/* keep track of mapped buffers */
 	if (mapped_buffer->user_mapped)
@@ -1541,6 +1591,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 
 	vm->mapped_buffers = RB_ROOT;
 	mutex_init(&vm->mapped_buffers_lock);
+
+	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -1848,6 +1900,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->mapped_buffers = RB_ROOT;
 	mutex_init(&vm->mapped_buffers_lock);
 
+	INIT_LIST_HEAD(&vm->deferred_unmaps);
+
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
 	vm->map            = gk20a_vm_map;
@@ -1995,6 +2049,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	vm->mapped_buffers = RB_ROOT;
 	mutex_init(&vm->mapped_buffers_lock);
+
+	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
 	vm->alloc_va	   = gk20a_vm_alloc_va;
 	vm->free_va	   = gk20a_vm_free_va;

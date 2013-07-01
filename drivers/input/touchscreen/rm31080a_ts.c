@@ -35,7 +35,9 @@
 #include <linux/random.h>	/* random32() */
 #include <linux/suspend.h>	/* pm_notifier */
 #include <linux/workqueue.h>
+#ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h> /* wakelock */
+#endif
 #include <linux/regulator/consumer.h> /* regulator & voltage */
 #include <linux/clk.h> /* clock */
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -154,8 +156,9 @@ struct rm31080a_ts_para {
 	u8 u8TestVersion;
 	u8 u8Repeat;
 
+#ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock Wakelock_Initialization;
-
+#endif
 	struct mutex mutex_scan_mode;
 
 	struct workqueue_struct *rm_workqueue;
@@ -1675,9 +1678,10 @@ static void rm_tch_init_ts_structure(void)
 	g_stTs.rm_timer_workqueue = create_singlethread_workqueue("rm_idle_work");
 	INIT_WORK(&g_stTs.rm_timer_work, rm_timer_work_handler);
 
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&g_stTs.Wakelock_Initialization,
 		WAKE_LOCK_SUSPEND, "TouchInitialLock");
-
+#endif
 	mutex_init(&g_stTs.mutex_scan_mode);
 
 }
@@ -1759,8 +1763,10 @@ static int rm_tch_suspend(struct device *dev)
 static int rm_tch_resume(struct device *dev)
 {
 	struct rm_tch_ts *ts = dev_get_drvdata(dev);
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_timeout(&g_stTs.Wakelock_Initialization,
 		TCH_WAKE_LOCK_TIMEOUT);
+#endif
 	rm_ctrl_start(ts);
 	return 0;
 }
@@ -2051,8 +2057,10 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		case RM_IOCTL_INIT_END:
 			g_stTs.bInitFinish = 1;
 			g_stTs.bCalcFinish = 1;
+#ifdef CONFIG_HAS_WAKELOCK
 			if (wake_lock_active(&g_stTs.Wakelock_Initialization))
 				wake_unlock(&g_stTs.Wakelock_Initialization);
+#endif
 			ret = rm_tch_ctrl_scan_start();
 			break;
 		case RM_IOCTL_FINISH_CALC:
@@ -2158,9 +2166,10 @@ static int rm_tch_spi_remove(struct spi_device *spi)
 	if (g_stTs.rm_workqueue)
 		destroy_workqueue(g_stTs.rm_workqueue);
 
+#ifdef CONFIG_HAS_WAKELOCK
 	if (&g_stTs.Wakelock_Initialization)
 		wake_lock_destroy(&g_stTs.Wakelock_Initialization);
-
+#endif
 	sysfs_remove_group(&raydium_ts_miscdev.this_device->kobj,
 						&rm_ts_attr_group);
 	misc_deregister(&raydium_ts_miscdev);

@@ -46,7 +46,6 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_mru.h"
-#include "nvmap_common.h"
 #include "nvmap_ioctl.h"
 
 #define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM | \

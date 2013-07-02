@@ -33,7 +33,6 @@
 #include <linux/nvmap.h>
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
-#include "nvmap_common.h"
 
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>

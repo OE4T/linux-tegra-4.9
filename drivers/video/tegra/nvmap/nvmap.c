@@ -38,7 +38,6 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_mru.h"
-#include "nvmap_common.h"
 
 /* private nvmap_handle flag for pinning duplicate detection */
 #define NVMAP_HANDLE_VISITED (0x1ul << 31)

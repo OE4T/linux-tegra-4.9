@@ -42,7 +42,6 @@
 
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
-#include "nvmap_common.h"
 
 #include <linux/list.h>
 

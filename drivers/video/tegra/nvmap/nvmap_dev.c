@@ -49,7 +49,6 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 #include "nvmap_mru.h"
-#include "nvmap_common.h"
 
 #define NVMAP_NUM_PTES		64
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */

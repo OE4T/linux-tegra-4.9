@@ -40,6 +40,8 @@ static inline int update_devfreq(struct devfreq *devfreq)
 
 #endif /* !CONFIG_PM_DEVFREQ */
 
+#if defined(CONFIG_PM_DEVFREQ)
+
 extern void devfreq_monitor_start(struct devfreq *devfreq);
 extern void devfreq_monitor_stop(struct devfreq *devfreq);
 extern void devfreq_monitor_suspend(struct devfreq *devfreq);
@@ -49,5 +51,40 @@ extern void devfreq_interval_update(struct devfreq *devfreq,
 
 extern int devfreq_add_governor(struct devfreq_governor *governor);
 extern int devfreq_remove_governor(struct devfreq_governor *governor);
+
+#else /* !CONFIG_PM_DEVFREQ */
+
+static inline void devfreq_monitor_start(struct devfreq *devfreq)
+{
+}
+
+static inline void devfreq_monitor_stop(struct devfreq *devfreq)
+{
+}
+
+static inline void devfreq_monitor_suspend(struct devfreq *devfreq)
+{
+}
+
+static inline void devfreq_monitor_resume(struct devfreq *devfreq)
+{
+}
+
+static inline void devfreq_interval_update(struct devfreq *devfreq,
+					   unsigned int *delay)
+{
+}
+
+static inline int devfreq_add_governor(struct devfreq_governor *governor)
+{
+	return 0;
+}
+
+static inline int devfreq_remove_governor(struct devfreq_governor *governor)
+{
+	return 0;
+}
+
+#endif /* CONFIG_PM_DEVFREQ */
 
 #endif /* _GOVERNOR_H */

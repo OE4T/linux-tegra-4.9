@@ -2241,7 +2241,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	/* stabilization delay */
 	udelay(300);
 
-	if (dsi->info.dsi_instance)
+	if (dsi->info.dsi_instance || dsi->info.ganged_type)
 		tegra_dsi_panelB_enable();
 
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);

@@ -36,36 +36,445 @@ static int use_dynamic_emc = 1;
 
 module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 
+static unsigned int tegra_dcs_total_bw[TEGRA_MAX_DC] = {0};
+DEFINE_MUTEX(tegra_dcs_total_bw_lock);
+
+/* windows A, B, C for first and second display */
+static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
+	/* first display */
+	{
+		TEGRA_LA_DISPLAY_0A,
+		TEGRA_LA_DISPLAY_0B,
+		TEGRA_LA_DISPLAY_0C,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) && defined(CONFIG_ARCH_TEGRA_12x_SOC)
+		TEGRA_LA_DISPLAYD,
+#endif
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		TEGRA_LA_DISPLAY_HC,
+#endif
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+		TEGRA_LA_DISPLAY_T,
+#endif
+	},
+	/* second display */
+	{
+		TEGRA_LA_DISPLAY_0AB,
+		TEGRA_LA_DISPLAY_0BB,
+		TEGRA_LA_DISPLAY_0CB,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		0,
+		TEGRA_LA_DISPLAY_HCB,
+#endif
+	},
+};
+
+bool is_internal_win(enum tegra_la_id id)
+{
+	return ((id == TEGRA_LA_DISPLAY_0A) || (id == TEGRA_LA_DISPLAY_0B) ||
+		(id == TEGRA_LA_DISPLAY_0C) || (id == TEGRA_LA_DISPLAYD) ||
+		(id == TEGRA_LA_DISPLAY_HC) || (id == TEGRA_LA_DISPLAY_T));
+}
+
+static unsigned int num_active_internal_wins(struct tegra_dc *dc)
+{
+	unsigned int num_active_internal_wins = 0;
+	int i = 0;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_win *curr_win = &dc->windows[i];
+		enum tegra_la_id curr_win_la_id =
+				la_id_tab[dc->ndev->id][curr_win->idx];
+
+		if (!is_internal_win(curr_win_la_id))
+			continue;
+
+		if (WIN_IS_ENABLED(curr_win))
+			num_active_internal_wins++;
+	}
+
+	return num_active_internal_wins;
+}
+
+static unsigned int num_active_external_wins(struct tegra_dc *dc)
+{
+	unsigned int num_active_external_wins = 0;
+	int i = 0;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_win *curr_win = &dc->windows[i];
+		enum tegra_la_id curr_win_la_id =
+				la_id_tab[dc->ndev->id][curr_win->idx];
+
+		if (is_internal_win(curr_win_la_id))
+			continue;
+
+		if (WIN_IS_ENABLED(curr_win))
+			num_active_external_wins++;
+	}
+
+	return num_active_external_wins;
+}
+
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+/*
+ * Note about fixed point arithmetic:
+ * ----------------------------------
+ * calc_disp_params(...) contains fixed point values and arithmetic due to the
+ * need to use floating point values. All fixed point values have the "_fp" or
+ * "_FP" suffix in their name. Functions/values used to convert between real and
+ * fixed point values are listed below:
+ *    - la_params.fp_factor
+ *    - la_params.la_real_to_fp(real_val)
+ *    - la_params.la_fp_to_real(fp_val)
+ */
+
+#define T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP			1342000
+#define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	54000
+#define T12X_LA_CONS_MEM_EFFICIENCY_FP				500
+#define T12X_LA_ROW_SRT_SZ_BYTES	(64 * (T12X_LA_MC_EMEM_NUM_SLOTS + 1))
+#define T12X_LA_MC_EMEM_NUM_SLOTS				63
+#define T12X_LA_MAX_DRAIN_TIME_USEC				10
+
+/*
+ * Function outputs:
+ *    - disp_params->thresh_lwm_bytes
+ *    - disp_params->spool_up_buffering_adj_bytes
+ *    - disp_params->total_dc0_bw
+ *    - disp_params->total_dc1_bw
+ */
+static void calc_disp_params(struct tegra_dc *dc,
+				struct tegra_dc_win *w,
+				enum tegra_la_id la_id,
+				unsigned int bw_mbps,
+				struct dc_to_la_params *disp_params) {
+	const struct disp_client *disp_clients_info =
+						tegra_la_disp_clients_info;
+	struct la_to_dc_params la_params = tegra_get_la_to_dc_params();
+	unsigned int bw_mbps_fp = la_params.la_real_to_fp(bw_mbps);
+	bool active = WIN_IS_ENABLED(w);
+	bool win_rotated = false;
+	unsigned int window_width = dfixed_trunc(w->w);
+	unsigned int surface_width = 0;
+	bool vertical_scaling_enabled = false;
+	bool pitch = !WIN_IS_BLOCKLINEAR(w) && !WIN_IS_TILED(w);
+	bool planar = tegra_dc_is_yuv_planar(w->fmt);
+	bool packed_yuv422 = ((w->fmt == TEGRA_WIN_FMT_YCbCr422) ||
+				(w->fmt == TEGRA_WIN_FMT_YUV422));
+	/* all of tegra's YUV formats(420 and 422) fetch 2 bytes per pixel,
+	 * but the size reported by tegra_dc_fmt_bpp for the planar version
+	 * is of the luma plane's size only. */
+	unsigned int bytes_per_pixel = tegra_dc_is_yuv_planar(w->fmt) ?
+				2 * tegra_dc_fmt_bpp(w->fmt) / 8 :
+				tegra_dc_fmt_bpp(w->fmt) / 8;
+	struct tegra_dc_mode mode = dc->mode;
+	unsigned int total_h = mode.h_active +
+				mode.h_front_porch +
+				mode.h_back_porch +
+				mode.h_sync_width;
+	unsigned int total_v = mode.v_active +
+				mode.v_front_porch +
+				mode.v_back_porch +
+				mode.v_sync_width;
+	unsigned int total_screen_area = total_h * total_v;
+	unsigned int total_active_area = mode.h_active * mode.v_active;
+	unsigned int total_blank_area = total_screen_area - total_active_area;
+	unsigned int reqd_buffering_thresh_disp_bytes_fp = 0;
+	unsigned int latency_buffering_available_in_reqd_buffering_fp = 0;
+	struct clk *emc_clk = clk_get(NULL, "emc");
+	unsigned long emc_freq_mhz = clk_get_rate(emc_clk)/1000000;
+	unsigned int bw_disruption_time_usec_fp =
+					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
+					emc_freq_mhz;
+	unsigned int effective_row_srt_sz_bytes_fp =
+		min(la_params.la_real_to_fp(min(
+					T12X_LA_ROW_SRT_SZ_BYTES,
+					16 * min(emc_freq_mhz + 50,
+						400))),
+			((T12X_LA_MAX_DRAIN_TIME_USEC *
+			emc_freq_mhz -
+			la_params.la_fp_to_real(
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP) *
+			2 *
+			la_params.dram_width_bits /
+			8 *
+			T12X_LA_CONS_MEM_EFFICIENCY_FP)));
+	unsigned int drain_time_usec_fp =
+			effective_row_srt_sz_bytes_fp *
+			la_params.fp_factor /
+			(emc_freq_mhz *
+				la_params.dram_width_bits /
+				4 *
+				T12X_LA_CONS_MEM_EFFICIENCY_FP) +
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP /
+			emc_freq_mhz;
+	unsigned int total_latency_usec_fp =
+		drain_time_usec_fp +
+		la_params.static_la_minus_snap_arb_to_row_srt_emcclks_fp /
+		emc_freq_mhz;
+	unsigned int bw_disruption_buffering_bytes_fp =
+					bw_mbps *
+					max(bw_disruption_time_usec_fp,
+						total_latency_usec_fp) +
+					la_params.la_real_to_fp(1);
+	unsigned int reqd_lines = 0;
+	unsigned int lines_of_latency = 0;
+	unsigned int thresh_lwm_bytes = 0;
+	unsigned int total_buf_sz_bytes =
+	disp_clients_info[DISP_CLIENT_LA_ID(la_id)].line_buf_sz_bytes +
+	disp_clients_info[DISP_CLIENT_LA_ID(la_id)].mccif_size_bytes;
+	unsigned int num_active_wins_to_use = is_internal_win(la_id) ?
+						num_active_internal_wins(dc) :
+						num_active_external_wins(dc);
+	unsigned int total_active_space_bw = 0;
+	unsigned int total_vblank_bw = 0;
+	unsigned int bw_other_wins = 0;
+	unsigned int bw_display_fp = 0;
+	unsigned int bw_delta_fp = 0;
+	unsigned int fill_rate_other_wins_fp = 0;
+	unsigned int dvfs_time_nsec = tegra_get_dvfs_time_nsec(emc_freq_mhz);
+	unsigned int data_shortfall_other_wins_fp = 0;
+	unsigned int duration_usec_fp = 0;
+	unsigned int spool_up_buffering_adj_bytes = 0;
+	unsigned int curr_dc_head_bw = 0;
+
+	if (w->flags & TEGRA_WIN_FLAG_SCAN_COLUMN) {
+		win_rotated = true;
+		surface_width = dfixed_trunc(w->h);
+		vertical_scaling_enabled = (dfixed_trunc(w->w) == w->out_w) ?
+					false : true;
+	} else {
+		win_rotated = false;
+		surface_width = dfixed_trunc(w->w);
+		vertical_scaling_enabled = (dfixed_trunc(w->h) == w->out_h) ?
+					false : true;
+	}
+
+	if ((disp_clients_info[DISP_CLIENT_LA_ID(la_id)].line_buf_sz_bytes
+									== 0) ||
+		(pitch == true)) {
+		reqd_lines = 0;
+	} else if (win_rotated && planar) {
+		if (vertical_scaling_enabled)
+			reqd_lines = 17;
+		else
+			reqd_lines = 16;
+	} else {
+		if (win_rotated) {
+			if (vertical_scaling_enabled)
+				reqd_lines = 16 / bytes_per_pixel + 1;
+			else
+				reqd_lines = 16 / bytes_per_pixel;
+		} else {
+			if (vertical_scaling_enabled)
+				reqd_lines = 3;
+			else
+				reqd_lines = 1;
+		}
+	}
+
+	if (reqd_lines > 0 && !vertical_scaling_enabled && win_rotated)
+		lines_of_latency = 1;
+	else
+		lines_of_latency = 0;
+
+
+	if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0A) ||
+		(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0B) ||
+		(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0C)) {
+		unsigned int c1 =
+			((w->fmt == TEGRA_WIN_FMT_YUV420P &&
+				win_rotated == false) ||
+			(tegra_dc_is_yuv(w->fmt) && win_rotated == true)) ?
+			3 : bytes_per_pixel;
+		unsigned int c2 = (w->fmt == packed_yuv422 &&
+					win_rotated == true) ? 2 : 1;
+
+		reqd_buffering_thresh_disp_bytes_fp =
+					la_params.la_real_to_fp(active *
+							surface_width *
+							reqd_lines *
+							c1 *
+							c2);
+		latency_buffering_available_in_reqd_buffering_fp =
+					la_params.la_real_to_fp(active *
+							surface_width *
+							lines_of_latency *
+							c1 *
+							c2);
+
+		if ((w->fmt == TEGRA_WIN_FMT_YUV422R) &&
+			(win_rotated == false)) {
+			reqd_buffering_thresh_disp_bytes_fp =
+				reqd_buffering_thresh_disp_bytes_fp * 5 / 2;
+			latency_buffering_available_in_reqd_buffering_fp =
+			latency_buffering_available_in_reqd_buffering_fp *
+			5 /
+			2;
+		}
+	} else if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAYD) ||
+			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_T) ||
+			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_HC)) {
+		reqd_buffering_thresh_disp_bytes_fp =
+					la_params.la_real_to_fp(active *
+							bytes_per_pixel *
+							window_width *
+							reqd_lines);
+		latency_buffering_available_in_reqd_buffering_fp =
+					la_params.la_real_to_fp(active *
+							bytes_per_pixel *
+							window_width *
+							lines_of_latency);
+	} else if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0AB) ||
+			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0BB) ||
+			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0CB)) {
+		unsigned int c = (w->fmt == TEGRA_WIN_FMT_YUV420P) ?
+					3 : bytes_per_pixel;
+		reqd_buffering_thresh_disp_bytes_fp =
+					la_params.la_real_to_fp(c *
+							window_width *
+							reqd_lines *
+							active);
+		latency_buffering_available_in_reqd_buffering_fp =
+					la_params.la_real_to_fp(c *
+							window_width *
+							lines_of_latency *
+							active);
+
+		if (w->fmt == TEGRA_WIN_FMT_YUV422R) {
+			reqd_buffering_thresh_disp_bytes_fp =
+				reqd_buffering_thresh_disp_bytes_fp * 5 / 2;
+			latency_buffering_available_in_reqd_buffering_fp =
+			latency_buffering_available_in_reqd_buffering_fp *
+			5 /
+			2;
+		}
+	}
+
+
+	thresh_lwm_bytes =
+		la_params.la_fp_to_real(
+			reqd_buffering_thresh_disp_bytes_fp +
+			bw_disruption_buffering_bytes_fp -
+			latency_buffering_available_in_reqd_buffering_fp);
+	disp_params->thresh_lwm_bytes = thresh_lwm_bytes;
+
+
+	if (is_internal_win(la_id)) {
+		int i = 0;
+		for (i = 0; i < DC_N_WINDOWS; i++) {
+			struct tegra_dc_win *curr_win = &dc->windows[i];
+			enum tegra_la_id curr_win_la_id =
+					la_id_tab[dc->ndev->id][curr_win->idx];
+			unsigned int curr_win_bw = 0;
+
+			if (!is_internal_win(curr_win_la_id))
+				continue;
+
+			curr_win_bw = max(curr_win->bandwidth,
+						curr_win->new_bandwidth);
+			/* our bandwidth is in kbytes/sec, but LA takes MBps.
+			 * round up bandwidth to next 1MBps */
+			if (curr_win_bw != UINT_MAX)
+				curr_win_bw = curr_win_bw / 1000 + 1;
+
+			total_active_space_bw += curr_win_bw;
+		}
+	} else {
+		int i = 0;
+		for (i = 0; i < DC_N_WINDOWS; i++) {
+			struct tegra_dc_win *curr_win = &dc->windows[i];
+			enum tegra_la_id curr_win_la_id =
+					la_id_tab[dc->ndev->id][curr_win->idx];
+			unsigned int curr_win_bw = 0;
+
+			if (is_internal_win(curr_win_la_id))
+				continue;
+
+			curr_win_bw = max(curr_win->bandwidth,
+						curr_win->new_bandwidth);
+			/* our bandwidth is in kbytes/sec, but LA takes MBps.
+			 * round up bandwidth to next 1MBps */
+			if (curr_win_bw != UINT_MAX)
+				curr_win_bw = curr_win_bw / 1000 + 1;
+
+			total_active_space_bw += curr_win_bw;
+		}
+	}
+
+
+	if ((disp_clients_info[DISP_CLIENT_LA_ID(la_id)].win_type  ==
+						TEGRA_LA_DISP_WIN_TYPE_FULL) ||
+		(disp_clients_info[DISP_CLIENT_LA_ID(la_id)].win_type  ==
+						TEGRA_LA_DISP_WIN_TYPE_FULLA) ||
+		(disp_clients_info[DISP_CLIENT_LA_ID(la_id)].win_type  ==
+						TEGRA_LA_DISP_WIN_TYPE_FULLB)) {
+		total_vblank_bw = total_buf_sz_bytes / total_blank_area;
+	} else {
+		total_vblank_bw = 0;
+	}
+
+
+	bw_display_fp = la_params.disp_catchup_factor_fp *
+			max(total_active_space_bw,
+				total_vblank_bw);
+	if (active)
+		bw_delta_fp = bw_mbps_fp -
+				(bw_display_fp /
+				num_active_wins_to_use);
+
+
+	bw_other_wins = total_active_space_bw - bw_mbps;
+
+	if (num_active_wins_to_use > 0) {
+		fill_rate_other_wins_fp =
+				bw_display_fp *
+				(num_active_wins_to_use - active) /
+				num_active_wins_to_use -
+				la_params.la_real_to_fp(bw_other_wins);
+	} else {
+		fill_rate_other_wins_fp = 0;
+	}
+
+	data_shortfall_other_wins_fp = dvfs_time_nsec *
+					bw_other_wins *
+					la_params.fp_factor /
+					1000;
+
+	duration_usec_fp = (fill_rate_other_wins_fp == 0) ? 0 :
+				data_shortfall_other_wins_fp *
+				la_params.fp_factor /
+				fill_rate_other_wins_fp;
+
+
+	spool_up_buffering_adj_bytes = (bw_delta_fp > 0) ?
+					(bw_delta_fp *
+					duration_usec_fp /
+					(la_params.fp_factor *
+					la_params.fp_factor)) :
+					0;
+	disp_params->spool_up_buffering_adj_bytes =
+						spool_up_buffering_adj_bytes;
+
+	mutex_lock(&tegra_dcs_total_bw_lock);
+	curr_dc_head_bw = max(dc->new_bw_kbps, dc->bw_kbps);
+	/* our bandwidth is in kbytes/sec, but LA takes MBps.
+	 * round up bandwidth to next 1MBps */
+	if (curr_dc_head_bw != ULONG_MAX)
+		curr_dc_head_bw = curr_dc_head_bw / 1000 + 1;
+	tegra_dcs_total_bw[dc->ndev->id] = curr_dc_head_bw;
+	disp_params->total_dc0_bw = tegra_dcs_total_bw[0];
+	disp_params->total_dc1_bw = tegra_dcs_total_bw[1];
+	mutex_unlock(&tegra_dcs_total_bw_lock);
+}
+#endif
+
+
 /* uses the larger of w->bandwidth or w->new_bandwidth */
 static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
 {
 	unsigned long bw;
-	/* windows A, B, C for first and second display */
-	static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
-		/* first display */
-		{
-			TEGRA_LA_DISPLAY_0A,
-			TEGRA_LA_DISPLAY_0B,
-			TEGRA_LA_DISPLAY_0C,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			TEGRA_LA_DISPLAYD,
-			TEGRA_LA_DISPLAY_HC,
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			TEGRA_LA_DISPLAYD,
-#endif
-		},
-		/* second display */
-		{
-			TEGRA_LA_DISPLAY_0AB,
-			TEGRA_LA_DISPLAY_0BB,
-			TEGRA_LA_DISPLAY_0CB,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			0,
-			TEGRA_LA_DISPLAY_HCB,
-#endif
-		},
-	};
+	struct dc_to_la_params disp_params;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* window B V-filter tap for first and second display. */
 	static const enum tegra_la_id vfilter_tab[2] = {
@@ -93,7 +502,16 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	if (bw != ULONG_MAX)
 		bw = bw / 1000 + 1;
 
-	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+	calc_disp_params(dc,
+			w,
+			la_id_tab[dc->ndev->id][w->idx],
+			bw,
+			&disp_params);
+#endif
+	tegra_set_disp_latency_allowance(la_id_tab[dc->ndev->id][w->idx],
+						bw,
+						disp_params);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)

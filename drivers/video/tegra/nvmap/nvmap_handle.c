@@ -1029,39 +1029,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	return ref;
 }
 
-/*
- * Duplicate handle without slow validation step.
- */
-static struct nvmap_handle_ref *_nvmap_duplicate_handle_id(
-						struct nvmap_client *client,
-						unsigned long id)
-{
-	struct nvmap_handle *h = (struct nvmap_handle *)id;
-	struct nvmap_handle_ref *ref = h->owner_ref;
-
-	nvmap_ref_lock(client);
-	if (client == h->owner) {
-		/* handle already duplicated in client; just increment
-		 * the reference count rather than re-duplicating it */
-		atomic_inc(&ref->dupes);
-		nvmap_handle_get(h);
-		nvmap_ref_unlock(client);
-		return ref;
-	} else {
-		nvmap_ref_unlock(client);
-		return nvmap_duplicate_handle_id(client, id, 0);
-	}
-}
-
-struct nvmap_handle_ref *_nvmap_duplicate_handle_user_id(
-						struct nvmap_client *client,
-						unsigned long user_id)
-{
-	if (!virt_addr_valid(client))
-		return ERR_PTR(-EINVAL);
-	return _nvmap_duplicate_handle_id(client, unmarshal_user_id(user_id));
-}
-
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 					unsigned long id, bool skip_val)
 {

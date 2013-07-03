@@ -122,10 +122,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
 						struct nvmap_client *client,
 						unsigned long user_id);
 
-struct nvmap_handle_ref *_nvmap_duplicate_handle_user_id(
-						struct nvmap_client *client,
-						unsigned long user_id);
-
 int nvmap_pin_array(struct nvmap_client *client,
 		unsigned long	 *user_ids,
 		long unsigned id_type_mask,

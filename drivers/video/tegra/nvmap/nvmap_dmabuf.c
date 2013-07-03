@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -169,11 +169,11 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.vunmap		= nvmap_dmabuf_vunmap,
 };
 
-struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, ulong id)
+struct dma_buf *nvmap_get_dmabuf(struct nvmap_client *client, ulong id)
 {
+	int err;
 	struct dma_buf *dmabuf;
 	struct nvmap_handle_info *info;
-	int err;
 	struct nvmap_handle *handle;
 
 	if (!nvmap_client_get(client))
@@ -211,14 +211,46 @@ err_nvmap_validate_get:
 	nvmap_client_put(client);
 	return ERR_PTR(err);
 }
-EXPORT_SYMBOL_GPL(nvmap_share_dmabuf);
+
+int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id)
+{
+	int fd;
+	struct dma_buf *dmabuf;
+
+	dmabuf = nvmap_get_dmabuf(client, id);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+	fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+	if (fd < 0)
+		goto err_out;
+	return fd;
+
+err_out:
+	dma_buf_put(dmabuf);
+	return fd;
+}
+
+ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd)
+{
+	ulong id = -EINVAL;
+	struct dma_buf *dmabuf;
+	struct nvmap_handle_info *info;
+
+	dmabuf = dma_buf_get(fd);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+	if (dmabuf->ops == &nvmap_dma_buf_ops) {
+		info = dmabuf->priv;
+		id = info->id;
+	}
+	dma_buf_put(dmabuf);
+	return id;
+}
 
 int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 {
-	int err;
 	struct nvmap_create_handle op;
 	struct nvmap_client *client = filp->private_data;
-	struct dma_buf *dmabuf;
 	ulong handle;
 
 	BUG_ON(!client);
@@ -230,23 +262,13 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	dmabuf = nvmap_share_dmabuf(client, handle);
-	if (IS_ERR(dmabuf))
-		return -EINVAL;
-
-	op.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
-	if (op.fd < 0) {
-		err = op.fd;
-		goto err_out;
-	}
+	op.fd = nvmap_get_dmabuf_fd(client, handle);
+	if (op.fd < 0)
+		return op.fd;
 
 	if (copy_to_user((void __user *)arg, &op, sizeof(op))) {
-		err = -EFAULT;
-		goto err_out;
+		sys_close(op.fd);
+		return -EFAULT;
 	}
 	return 0;
-
-err_out:
-	nvmap_dmabuf_release(dmabuf);
-	return err;
 }

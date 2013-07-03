@@ -31,6 +31,7 @@
 #include <linux/wait.h>
 #include <linux/atomic.h>
 #include <linux/dma-buf.h>
+#include <linux/syscalls.h>
 #include <linux/nvmap.h>
 #include "nvmap_heap.h"
 #include <linux/workqueue.h>
@@ -318,16 +319,8 @@ int _nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r,
 void nvmap_unpin_handles(struct nvmap_client *client,
 			 struct nvmap_handle **h, int nr);
 
-#ifdef CONFIG_DMA_SHARED_BUFFER
-/* dma-buf exporter */
-struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, ulong id);
-#else
-static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
-						 ulong id)
-{
-	return NULL;
-}
-#endif	/* !CONFIG_DMA_SHARED_BUFFER */
+int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id);
+ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd);
 
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);

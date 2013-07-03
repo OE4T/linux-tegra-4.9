@@ -1115,23 +1115,15 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd)
 {
-	struct nvmap_handle_ref *ref = NULL;
-	struct file *file = fget(fd);
 	unsigned long id;
+	struct nvmap_handle_ref *ref;
 
 	BUG_ON(!client || client->dev != nvmap_dev);
 
-	if (!file)
-		return ERR_PTR(-EINVAL);
-
-	if (file->f_op != &nvmap_fd_fops) {
-		fput(file);
-		return ERR_PTR(-EINVAL);
-	}
-
-	id = (unsigned long)file->private_data;
+	id = nvmap_get_id_from_dmabuf_fd(client, fd);
+	if (IS_ERR_VALUE(id))
+		return ERR_PTR(id);
 	ref = nvmap_duplicate_handle_id(client, id, 1);
-	fput(file);
 	return ref;
 }
 

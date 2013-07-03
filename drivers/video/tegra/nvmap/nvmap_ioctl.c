@@ -20,7 +20,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <linux/anon_inodes.h>
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/fs.h>
@@ -257,12 +256,9 @@ const struct file_operations nvmap_fd_fops = {
 
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 {
-	struct nvmap_client *client = filp->private_data;
-	struct nvmap_create_handle op;
-	struct nvmap_handle *h = NULL;
-	int fd;
-	struct file *file;
 	ulong handle;
+	struct nvmap_create_handle op;
+	struct nvmap_client *client = filp->private_data;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -271,29 +267,15 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, handle);
+	op.fd = nvmap_get_dmabuf_fd(client, handle);
+	if (op.fd < 0)
+		return op.fd;
 
-	if (!h)
-		return -EPERM;
-
-	fd = get_unused_fd();
-	if (fd < 0)
-		goto fail_fd;
-
-	file = anon_inode_getfile("nvmap_share_fd",
-				    &nvmap_fd_fops, h, O_RDWR);
-	if (IS_ERR_OR_NULL(file))
-		goto fail_file;
-	fd_install(fd, file);
-
-	op.fd = fd;
-	return copy_to_user(arg, &op, sizeof(op)) ? -EFAULT : 0;
-
-fail_file:
-	put_unused_fd(fd);
-fail_fd:
-	nvmap_handle_put(h);
-	return -ENFILE;
+	if (copy_to_user(arg, &op, sizeof(op))) {
+		sys_close(op.fd);
+		return -EFAULT;
+	}
+	return 0;
 }
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg)

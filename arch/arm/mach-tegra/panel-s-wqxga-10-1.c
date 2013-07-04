@@ -39,7 +39,11 @@
 
 #define DSI_PANEL_RESET		1
 
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#define DC_CTRL_MODE	TEGRA_DC_OUT_ONE_SHOT_MODE
+#else
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
+#endif
 
 #define en_vdd_bl	TEGRA_GPIO_PG0
 #define lvds_en		TEGRA_GPIO_PG3
@@ -97,6 +101,8 @@ static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 	DSI_DLY_MS(120),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
 	DSI_DLY_MS(20),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+	DSI_DLY_MS(20),
 };
 
 static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
@@ -110,14 +116,17 @@ static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
 	.n_data_lanes = 8,
 	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD,
+	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
 
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
-	.refresh_rate = 60,
+	.refresh_rate = 62,
+	.rated_refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
+
+	.te_polarity_low = true,
 
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
-	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
 	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.dsi_init_cmd = dsi_s_wqxga_10_1_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_s_wqxga_10_1_init_cmd),
@@ -352,7 +361,7 @@ static int dsi_s_wqxga_10_1_postsuspend(void)
 
 static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 	{
-		.pclk = 268460000,
+		.pclk = 277412800,
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
 		.h_sync_width = 16,

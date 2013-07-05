@@ -48,10 +48,9 @@
 #define NVMAP_HANDLE_CACHE_FLAG      (0x3ul << 0)
 
 #define NVMAP_HANDLE_SECURE          (0x1ul << 2)
-#define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 3)
-
 #define NVMAP_HANDLE_KIND_SPECIFIED  (0x1ul << 3)
 #define NVMAP_HANDLE_COMPR_SPECIFIED (0x1ul << 4)
+#define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 5)
 
 struct nvmap_handle;
 

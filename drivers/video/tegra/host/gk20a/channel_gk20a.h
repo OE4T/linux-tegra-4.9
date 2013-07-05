@@ -147,7 +147,14 @@ struct nvhost_gpfifo;
 struct nvhost_zbc_set_table_args;
 struct nvhost_cycle_stats_args;
 
+#if defined(CONFIG_TEGRA_GK20A)
 void gk20a_channel_update(struct channel_gk20a *c);
+#else
+static inline void gk20a_channel_update(struct channel_gk20a *c)
+{
+}
+#endif
+
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 int gk20a_channel_init(struct nvhost_channel *ch, struct nvhost_master *host,
 		       int index);

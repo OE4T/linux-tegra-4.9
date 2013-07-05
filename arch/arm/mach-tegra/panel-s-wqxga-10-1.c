@@ -48,7 +48,6 @@
 #define en_vdd_bl	TEGRA_GPIO_PG0
 #define lvds_en		TEGRA_GPIO_PG3
 
-
 static bool reg_requested;
 static bool gpio_requested;
 static struct platform_device *disp_device;
@@ -96,27 +95,41 @@ static tegra_dc_bl_output dsi_s_wqxga_10_1_bl_output_measured = {
 	248, 249, 250, 251, 252, 253, 254, 255,
 };
 
+u8 fbuf_mode_sel[] = {0x10, 0x00, 0x2A}; /* left-right */
+u8 mipi_if_sel[] = {0x10, 0x01, 0x01}; /* cmd mode */
 static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
 	DSI_DLY_MS(120),
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, fbuf_mode_sel),
 	DSI_DLY_MS(20),
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
+	DSI_DLY_MS(20),
+	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, mipi_if_sel),
+	DSI_DLY_MS(20),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
+	DSI_DLY_MS(20),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
+				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+	DSI_DLY_MS(20),
+#endif
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
 	DSI_DLY_MS(20),
 };
 
 static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	.n_data_lanes = 2,
-	.controller_vs = DSI_VS_0,
-#else
 	.controller_vs = DSI_VS_1,
-#endif
 
 	.n_data_lanes = 8,
-	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
+
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
+	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT,
+#else
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
+	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
+#endif
 
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 	.refresh_rate = 62,
@@ -361,7 +374,11 @@ static int dsi_s_wqxga_10_1_postsuspend(void)
 
 static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 	{
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+		.pclk = 292915280,
+#else
 		.pclk = 277412800,
+#endif
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
 		.h_sync_width = 16,
@@ -370,7 +387,11 @@ static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 		.v_back_porch = 33,
 		.h_active = 2560,
 		.v_active = 1600,
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+		.h_front_porch = 280,
+#else
 		.h_front_porch = 128,
+#endif
 		.v_front_porch = 10,
 	},
 };

@@ -1736,7 +1736,7 @@ static void tegra_dc_hdmi_setup_audio_infoframe(struct tegra_dc *dc, bool dvi)
 static void tegra_dc_hdmi_setup_tmds(struct tegra_dc_hdmi_data *hdmi,
 		const struct tmds_config *tc)
 {
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	u32 val;
 #endif
 
@@ -1745,7 +1745,7 @@ static void tegra_dc_hdmi_setup_tmds(struct tegra_dc_hdmi_data *hdmi,
 
 	tegra_hdmi_writel(hdmi, tc->pe_current, HDMI_NV_PDISP_PE_CURRENT);
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	tegra_hdmi_writel(hdmi, tc->drive_current,
 		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);
 	val = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_SOR_PAD_CTLS0);

@@ -2029,10 +2029,15 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	unsigned long rate;
 	struct clk *parent_clk = clk_get_sys(NULL,
 		dc->out->parent_clk ? : "pll_d_out0");
+#if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	struct clk *base_clk = clk_get_parent(parent_clk);
-
+#endif
 	if (clk != dc->clk) {
+#if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		clk_set_rate(base_clk, dc->mode.pclk);
+#else
+		clk_set_rate(parent_clk, dc->mode.pclk);
+#endif
 
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);
@@ -2048,10 +2053,13 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	rate = dc->mode.pclk * 2;
 	while (rate < 500000000)
 		rate *= 2;
-
+#if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	if (rate != clk_get_rate(base_clk))
 		clk_set_rate(base_clk, rate);
-
+#else
+	if (rate != clk_get_rate(parent_clk))
+		clk_set_rate(parent_clk, rate);
+#endif
 	if (clk_get_parent(clk) != parent_clk)
 		clk_set_parent(clk, parent_clk);
 

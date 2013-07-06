@@ -67,6 +67,8 @@ struct nvmap_carveout_node {
 	int			index;
 	struct list_head	clients;
 	spinlock_t		clients_lock;
+	phys_addr_t			base;
+	size_t			size;
 };
 
 struct nvmap_device {
@@ -1315,10 +1317,13 @@ static int nvmap_probe(struct platform_device *pdev)
 	for (i = 0; i < plat->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[dev->nr_carveouts];
 		const struct nvmap_platform_carveout *co = &plat->carveouts[i];
+		node->base = round_up(co->base, PAGE_SIZE);
+		node->size = round_down(co->size -
+					(node->base - co->base), PAGE_SIZE);
 		if (!co->size)
 			continue;
 		node->carveout = nvmap_heap_create(dev->dev_user.this_device,
-				   co->name, co->base, co->size,
+				   co->name, node->base, node->size,
 				   co->buddy_size, node);
 		if (!node->carveout) {
 			e = -ENOMEM;
@@ -1345,6 +1350,10 @@ static int nvmap_probe(struct platform_device *pdev)
 					heap_root, node, &debug_clients_fops);
 				debugfs_create_file("allocations", S_IRUGO,
 				    heap_root, node, &debug_allocations_fops);
+				debugfs_create_x32("base", S_IRUGO,
+				    heap_root, &node->base);
+				debugfs_create_x32("size", S_IRUGO,
+				    heap_root, &node->size);
 			}
 		}
 	}

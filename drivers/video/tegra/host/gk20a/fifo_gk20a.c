@@ -735,8 +735,8 @@ static inline void get_exception_mmu_fault_info(
 		BUG_ON(1);
 	}
 
-	f->fault_hi_r = fifo_intr_mmu_fault_hi_r(engine_id);
-	f->fault_lo_r = fifo_intr_mmu_fault_lo_r(engine_id);
+	f->fault_hi_r = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id));
+	f->fault_lo_r = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id));
 	/* note:ignoreing aperture on gk20a... */
 	f->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
 		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(engine_id)));

@@ -266,13 +266,15 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 		nvhost_dbg(dbg_pte, "cannot allocate sg table");
 		goto err_alloced;
 	}
-	err =  sg_alloc_table_from_pages(*sgt, &pages, 1, 0, len, GFP_KERNEL);
+	err = sg_alloc_table(*sgt, 1, GFP_KERNEL);
 	if (err) {
 		nvhost_dbg(dbg_pte, "sg_alloc_table failed\n");
 		goto err_sg_table;
 	}
+	sg_set_page((*sgt)->sgl, pages, len, 0);
 	*handle = page_address(pages);
 	memset(*handle, 0, len);
+	FLUSH_CPU_DCACHE(*handle, sg_phys((*sgt)->sgl), len);
 
 	return 0;
 
@@ -1264,8 +1266,6 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 1,
 				 pte_w[1]);
 		}
-
-		__cpuc_flush_dcache_area(pte_kv_cur, PAGE_SIZE);
 
 		unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
 

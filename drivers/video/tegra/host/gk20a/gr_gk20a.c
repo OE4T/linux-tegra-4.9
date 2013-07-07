@@ -2505,7 +2505,9 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 		gk20a_mm_iova_addr(gr->compbit_store.mem.sgt->sgl);
 
 	nvhost_allocator_init(&gr->comp_tags, "comptag",
-			1, max_comptag_lines, 1);
+			      1, /* start */
+			      max_comptag_lines - 1, /* length*/
+			      1); /* align */
 
 	return 0;
 

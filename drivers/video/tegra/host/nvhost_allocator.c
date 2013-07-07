@@ -857,7 +857,7 @@ int nvhost_allocator_init(struct nvhost_allocator *allocator,
 	allocator->rb_root = RB_ROOT;
 
 	allocator->base = start;
-	allocator->limit = start + len;
+	allocator->limit = start + len - 1;
 	allocator->align = align;
 
 	allocator_dbg(allocator, "%s : base %d, limit %d, align %d",

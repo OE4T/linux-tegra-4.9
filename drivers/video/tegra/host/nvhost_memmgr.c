@@ -440,9 +440,8 @@ void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 	struct scatterlist *sg;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	dma_set_attr(DMA_ATTR_SKIP_FREE_IOVA, &attrs);
-	dma_unmap_single_attrs(dev, sg_dma_address(sgt->sgl), size, 0, &attrs);
-	dma_iova_free(dev, sg_dma_address(sgt->sgl), size);
+	/* dma_unmap_sg_attrs will also free the iova */
+	dma_unmap_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
 	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
 		sg_dma_address(sg) = 0;
 		sg_dma_len(sg) = 0;

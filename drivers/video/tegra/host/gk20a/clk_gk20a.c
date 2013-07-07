@@ -331,7 +331,7 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 			trim_sys_gpc2clk_out_bypdiv_m(),
 			trim_sys_gpc2clk_out_sdiv14_indiv4_mode_f() |
 			trim_sys_gpc2clk_out_vcodiv_by1_f() |
-			trim_sys_gpc2clk_out_bypdiv_by1_f());
+			trim_sys_gpc2clk_out_bypdiv_by31_f());
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	return clk_program_gpc_pll(g, clk);

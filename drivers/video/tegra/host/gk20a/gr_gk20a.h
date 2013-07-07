@@ -274,6 +274,8 @@ struct gr_gk20a {
 };
 
 int gk20a_init_gr_support(struct gk20a *g);
+void gk20a_gr_reset(struct gk20a *g);
+
 int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);

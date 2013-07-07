@@ -3588,10 +3588,6 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 			nvhost_err(dev_from_gk20a(g),
 				"fail to load gr init ctx");
 	}
-
-	/* this is required before gr_gk20a_init_ctx_state */
-	mutex_init(&g->gr.fecs_mutex);
-
 	return err;
 }
 
@@ -3711,6 +3707,9 @@ int gk20a_init_gr_support(struct gk20a *g)
 	err = gk20a_init_gr_prepare(g);
 	if (err)
 		return err;
+
+	/* this is required before gr_gk20a_init_ctx_state */
+	mutex_init(&g->gr.fecs_mutex);
 
 	err = gk20a_init_gr_reset_enable_hw(g);
 	if (err)
@@ -3865,17 +3864,15 @@ static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g,
 	}
 }
 
-static void gk20a_gr_reset(struct gk20a *g)
+void gk20a_gr_reset(struct gk20a *g)
 {
-	u32 pmc_enable = gk20a_readl(g, mc_enable_r());
-	u32 pmc_enable_reset = pmc_enable & ~mc_enable_pgraph_m();
-
-	nvhost_dbg_fn("");
-
-	gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
-	udelay(1000);
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-	gk20a_readl(g, mc_enable_r());
+	int err;
+	err = gk20a_init_gr_prepare(g);
+	BUG_ON(err);
+	err = gk20a_init_gr_reset_enable_hw(g);
+	BUG_ON(err);
+	err = gk20a_init_gr_setup_hw(g);
+	BUG_ON(err);
 }
 
 static void gk20a_gr_nop_method(struct gk20a *g)

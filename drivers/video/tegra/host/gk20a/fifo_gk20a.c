@@ -751,18 +751,21 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 
 	nvhost_dbg_fn("");
 
-	if (engine_id == top_device_info_type_enum_graphics_v())
-		pmc_enable_reset &= ~mc_enable_pgraph_m();
-	if (engine_id == top_device_info_type_enum_copy0_v())
+	if (engine_id == top_device_info_type_enum_graphics_v()) {
+		/* resetting engine using mc_enable_r() is not enough,
+		 * we do full init sequence */
+		gk20a_gr_reset(g);
+	}
+	if (engine_id == top_device_info_type_enum_copy0_v()) {
 		pmc_enable_reset &= ~mc_enable_ce0_m();
 
-	nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
-			pmc_enable, pmc_enable_reset);
-
-	gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
-	udelay(1000);
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-	gk20a_readl(g, mc_enable_r());
+		nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
+				pmc_enable, pmc_enable_reset);
+		gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
+		udelay(1000);
+		gk20a_writel(g, mc_enable_r(), pmc_enable);
+		gk20a_readl(g, mc_enable_r());
+	}
 }
 
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
@@ -793,14 +796,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			   f.fault_type_v, f.fault_type_desc,
 			   f.fault_info_r, f.inst_ptr);
 
-		/* TBD: we're clearing this here so the system is
-		 * fairly useable still.  But as of yet we're not
-		 * resetting the engine, etc to recover the channel... */
-		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-
 		/* Reset engine and MMU fault */
 		gk20a_fifo_reset_engine(g, engine_id);
-		gk20a_writel(g, fifo_error_sched_disable_r(), ~0);
 
 		fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
 		if (!IS_ERR_OR_NULL(fault_ch)) {
@@ -808,6 +805,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
 				fault_ch->hwctx->has_timedout = true;
 			}
+			/* remove faulty engine from the runlist */
 			if (fault_ch->in_use)
 				gk20a_free_channel(fault_ch->hwctx, false);
 		} else if (f.inst_ptr ==
@@ -818,6 +816,13 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			nvhost_dbg_fn("mmu fault from pmu");
 		} else
 			nvhost_dbg_fn("couldn't locate channel for mmu fault");
+
+		/* clear mmu interrupt */
+		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+
+		/* resume scheduler */
+		gk20a_writel(g, fifo_error_sched_disable_r(),
+				gk20a_readl(g, fifo_error_sched_disable_r()));
 	}
 }
 

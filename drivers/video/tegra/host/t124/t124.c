@@ -484,23 +484,19 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 int nvhost_init_t124_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
-	int i, nb_channels;
-	nvhost_dbg_fn("max channels=%d devices=%zd",
-		      NV_HOST1X_CHANNELS,
-		      ARRAY_SIZE(t124_devices));
-	BUILD_BUG_ON(T124_NVHOST_NUMCHANNELS < ARRAY_SIZE(t124_devices));
-
-	nb_channels =  ARRAY_SIZE(t124_devices);
+	int i, num_channels;
 
 	/* Set indices dynamically as we can have
 	 * missing/non-static devices above (e.g.: vic, gk20a).
 	 */
 
-	for (i = 0; i < nb_channels; i++ ) {
+	for (num_channels = i = 0; i < ARRAY_SIZE(t124_devices); i++) {
 		struct platform_device *dev = t124_devices[i];
 		struct nvhost_device_data *pdata =
 			(struct nvhost_device_data *)dev->dev.platform_data;
-		pdata->index = i;
+		pdata->index = num_channels++;
+		nvhost_dbg_fn("assigned channel %d to %s",
+			      pdata->index, dev_name(&dev->dev));
 #if defined(CONFIG_ARCH_TEGRA_VIC)
 		if (dev == &tegra_vic03_device) {
 			pdata->modulemutexes[0] = NVMODMUTEX_VIC;
@@ -514,6 +510,20 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 			pdata->modulemutexes[0] = NVMODMUTEX_3D;
 		}
 #endif
+		if (pdata->slave) {
+			struct nvhost_device_data *slave_pdata =
+				(struct nvhost_device_data *)pdata->slave->dev.platform_data;
+			slave_pdata->index = num_channels++;
+			nvhost_dbg_fn("assigned channel %d to %s",
+				      slave_pdata->index,
+				      dev_name(&pdata->slave->dev));
+		}
+	}
+	nvhost_dbg_fn("max channels=%d num channels=%zd",
+		      NV_HOST1X_CHANNELS, num_channels);
+	if (num_channels > T124_NVHOST_NUMCHANNELS) {
+		WARN(-ENODEV, "too many channel devices");
+		return -ENODEV;
 	}
 
 	op->channel.init          = t124_channel_init;

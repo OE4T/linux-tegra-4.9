@@ -21,6 +21,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
+#include <trace/events/nvhost.h>
 
 #include "../dev.h"
 #include "../nvhost_as.h"
@@ -702,19 +703,19 @@ static inline void get_exception_mmu_fault_info(
 	struct gk20a *g, u32 engine_id,
 	struct fifo_mmu_fault_info_gk20a *f)
 {
-	u32 fault_info_r;
+	u32 fault_info_v;
 
 	nvhost_dbg_fn("engine_id %d", engine_id);
 
 	memset(f, 0, sizeof(*f));
 
-	f->fault_info_r = fault_info_r = gk20a_readl(g,
+	f->fault_info_v = fault_info_v = gk20a_readl(g,
 	     fifo_intr_mmu_fault_info_r(engine_id));
 	f->fault_type_v =
-		fifo_intr_mmu_fault_info_type_v(fault_info_r);
+		fifo_intr_mmu_fault_info_type_v(fault_info_v);
 	f->engine_subid_v =
-		fifo_intr_mmu_fault_info_engine_subid_v(fault_info_r);
-	f->client_v = fifo_intr_mmu_fault_info_client_v(fault_info_r);
+		fifo_intr_mmu_fault_info_engine_subid_v(fault_info_v);
+	f->client_v = fifo_intr_mmu_fault_info_client_v(fault_info_v);
 
 	BUG_ON(f->fault_type_v >= ARRAY_SIZE(fault_type_descs));
 	f->fault_type_desc =  fault_type_descs[f->fault_type_v];
@@ -735,9 +736,9 @@ static inline void get_exception_mmu_fault_info(
 		BUG_ON(1);
 	}
 
-	f->fault_hi_r = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id));
-	f->fault_lo_r = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id));
-	/* note:ignoreing aperture on gk20a... */
+	f->fault_hi_v = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id));
+	f->fault_lo_v = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id));
+	/* note:ignoring aperture on gk20a... */
 	f->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
 		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(engine_id)));
 	/* note: inst_ptr is a 40b phys addr.  */
@@ -780,10 +781,16 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	for_each_set_bit(engine_id, &fault_id, BITS_PER_LONG) {
 		struct fifo_mmu_fault_info_gk20a f;
 
-		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d\n",
-				engine_id);
-
 		get_exception_mmu_fault_info(g, engine_id, &f);
+
+		trace_nvhost_gk20a_mmu_fault(f.fault_hi_v,
+					     f.fault_lo_v,
+					     f.fault_info_v,
+					     f.inst_ptr,
+					     engine_id,
+					     f.engine_subid_desc,
+					     f.client_desc,
+					     f.fault_type_desc);
 
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
 			   "engined subid %d (%s), client %d (%s), "
@@ -792,9 +799,9 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			   engine_id,
 			   f.engine_subid_v, f.engine_subid_desc,
 			   f.client_v, f.client_desc,
-			   f.fault_hi_r, f.fault_lo_r,
+			   f.fault_hi_v, f.fault_lo_v,
 			   f.fault_type_v, f.fault_type_desc,
-			   f.fault_info_r, f.inst_ptr);
+			   f.fault_info_v, f.inst_ptr);
 
 		/* Reset engine and MMU fault */
 		gk20a_fifo_reset_engine(g, engine_id);

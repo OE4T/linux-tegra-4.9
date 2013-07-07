@@ -24,6 +24,8 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 
+#include <trace/events/nvhost.h>
+
 #include <linux/nvhost_as_ioctl.h>
 
 #include "dev.h"
@@ -106,22 +108,28 @@ long nvhost_as_dev_ctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case NVHOST_AS_IOCTL_BIND_CHANNEL:
+		trace_nvhost_as_ioctl_bind_channel(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_bind_channel(as_share,
 			       (struct nvhost_as_bind_channel_args *)buf);
+
 		break;
 	case NVHOST_AS_IOCTL_ALLOC_SPACE:
+		trace_nvhost_as_ioctl_alloc_space(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_alloc_space(as_share,
 				  (struct nvhost_as_alloc_space_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_FREE_SPACE:
+		trace_nvhost_as_ioctl_free_space(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_free_space(as_share,
 				       (struct nvhost_as_free_space_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_MAP_BUFFER:
+		trace_nvhost_as_ioctl_map_buffer(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_map_buffer(as_share,
 				       (struct nvhost_as_map_buffer_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_UNMAP_BUFFER:
+		trace_nvhost_as_ioctl_unmap_buffer(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_unmap_buffer(as_share,
 			       (struct nvhost_as_unmap_buffer_args *)buf);
 		break;

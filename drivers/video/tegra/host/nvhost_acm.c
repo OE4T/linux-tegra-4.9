@@ -748,8 +748,6 @@ void nvhost_module_busy_ext(struct platform_device *dev)
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
-	nvhost_dbg_fn("dev:%s parent:%s",
-		      dev->name, pdev->name);
 
 	nvhost_module_busy(pdev);
 }

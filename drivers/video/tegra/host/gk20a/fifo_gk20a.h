@@ -63,12 +63,12 @@ struct fifo_engine_exception_info_gk20a {
 };
 
 struct fifo_mmu_fault_info_gk20a {
-	u32 fault_info_r;
+	u32 fault_info_v;
 	u32 fault_type_v;
 	u32 engine_subid_v;
 	u32 client_v;
-	u32 fault_hi_r;
-	u32 fault_lo_r;
+	u32 fault_hi_v;
+	u32 fault_lo_v;
 	u64 inst_ptr;
 	const char *fault_type_desc;
 	const char *engine_subid_desc;

@@ -53,12 +53,6 @@
 *		Other devices can be accessed by setting this to
 *		that device's I2C address.  When used after enabling
 *		bypass mode, devices behind the MPU can be accessed.
-*	aux_dbg = write 1 to spew auxiliary port register dumps after
-*		each external driver call.
-*		Write 0 to disable the spew.
-*		Writing anything takes a snapshot of the registers.
-*		Therefore, a write of 0 can take snapshots whenever
-*		without the external driver call spew.
 **********************************************************************/
 #define	DEBUG_SYSFS_INTERFACE		1
 

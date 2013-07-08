@@ -354,7 +354,7 @@ extern size_t cache_maint_outer_threshold;
 
 static inline void inner_flush_cache_all(void)
 {
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
 	v7_flush_kern_cache_all();
 #else
 	on_each_cpu((smp_call_func_t)v7_flush_kern_cache_all, NULL, 1);
@@ -363,7 +363,7 @@ static inline void inner_flush_cache_all(void)
 
 static inline void inner_clean_cache_all(void)
 {
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
 	v7_clean_kern_cache_all(NULL);
 #else
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);

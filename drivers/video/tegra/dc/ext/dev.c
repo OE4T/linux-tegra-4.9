@@ -970,6 +970,10 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 	struct tegra_dc_dmabuf *handle;
 	dma_addr_t phys_addr;
 
+	/* If display has been disconnected return with error. */
+	if (!dc->connected)
+		return -1;
+
 	for (i = 0; i < win_num; i++) {
 		ret = tegra_dc_ext_pin_window(user, wins[i].buff_id,
 					      &handle, &phys_addr);

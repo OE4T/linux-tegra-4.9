@@ -64,11 +64,6 @@ static inline u32 lo32(u64 f)
 		outer_flush_range(pa, pa + (size_t)(size));		\
 	} while (0)
 
-enum gmmu_page_smmu_type {
-	gmmu_page_smmu_type_physical,
-	gmmu_page_smmu_type_virtual,
-};
-
 static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 			struct mem_mgr **memmgr, struct mem_handle **r);
 static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
@@ -777,8 +772,6 @@ struct buffer_attrs {
 	u64 align;
 	u32 ctag_offset;
 	u32 ctag_lines;
-	int contig;
-	int iovmm_mapped;
 	int pgsz_idx;
 	u8 kind_v;
 	u8 uc_kind_v;
@@ -808,36 +801,6 @@ static int setup_buffer_size_and_align(struct device *d,
 	if (unlikely(bfr->pgsz_idx == -1)) {
 		nvhost_warn(d, "unsupported buffer alignment: 0x%llx",
 			   bfr->align);
-		return -EINVAL;
-	}
-	switch (query[BFR_HEAP].v) {
-	case NVMAP_HEAP_SYSMEM:
-		/* sysmem, contig
-		 * Fall through to carveout...
-		 * TBD: Need nvmap support for scattered sysmem allocs
-		 * w/o mapping through smmu.
-		 */
-
-	case NVMAP_HEAP_CARVEOUT_GENERIC:
-		/* carveout sysmem, contig */
-		bfr->contig = 1;
-		bfr->iovmm_mapped = 0;
-		break;
-
-	case NVMAP_HEAP_CARVEOUT_VPR:
-		/* carveout vpr, contig */
-		bfr->contig = 1;
-		bfr->iovmm_mapped = 0;
-		break;
-
-	case NVMAP_HEAP_IOVMM:
-		/* sysmem, iovmm/smmu mapped */
-		bfr->contig = 0;
-		bfr->iovmm_mapped = 1;
-		break;
-	default:
-		nvhost_err(0, "unsupported nvmap buffer heap: 0x%llx\n",
-			   query[BFR_HEAP].v);
 		return -EINVAL;
 	}
 
@@ -916,7 +879,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct mapped_buffer_node *mapped_buffer = 0;
 	bool inserted = false, va_allocated = false;
 	u32 gmmu_page_size = 0;
-	int gmmu_page_smmu_type = 0;
 	u64 map_offset = 0;
 	int attr, err = 0;
 	struct buffer_attrs bfr = {0};
@@ -926,8 +888,16 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mutex_lock(&vm->update_gmmu_lock);
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
+	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d);
 	if (IS_ERR_OR_NULL(bfr.sgt)) {
+		/* Falling back to physical is actually possible
+		 * here in many cases if we use 4K phys pages in the
+		 * gmmu.  However we have some regions which require
+		 * contig regions to work properly (either phys-contig
+		 * or contig through smmu io_vaspace).  Until we can
+		 * track the difference between those two cases we have
+		 * to fail the mapping when we run out of SMMU space.
+		 */
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
 	}
@@ -936,7 +906,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 					    offset_align, flags);
 	if (mapped_buffer) {
 
-		nvhost_memmgr_free_sg_table(memmgr, r, bfr.sgt);
+		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
 		if (sgt)
 			*sgt = mapped_buffer->sgt;
 
@@ -956,6 +926,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		mutex_unlock(&vm->update_gmmu_lock);
 		return mapped_buffer->addr;
 	}
+
+	if (sgt)
+		*sgt = bfr.sgt;
 
 	/* query bfr attributes: size, align, heap, kind */
 	for (attr = 0; attr < BFR_ATTRS; attr++) {
@@ -997,34 +970,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		}
 	}
 
-	gmmu_page_smmu_type = bfr.iovmm_mapped ?
-		gmmu_page_smmu_type_virtual : gmmu_page_smmu_type_physical;
-
 	if (sgt)
 		*sgt = bfr.sgt;
-
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (gmmu_page_smmu_type == gmmu_page_smmu_type_virtual) {
-		int err = nvhost_memmgr_smmu_map(bfr.sgt,
-				bfr.size, d);
-		if (err) {
-			nvhost_warn(d, "Failed to map to SMMU\n");
-			/* Falling back to physical is actually possible
-			 * here in many cases if we use 4K phys pages in the
-			 * gmmu.  However we have some regions which require
-			 * contig regions to work properly (either phys-contig
-			 * or contig through smmu io_vaspace).  Until we can
-			 * track the difference between those two cases we have
-			 * to fail the mapping when we run out of SMMU space.
-			 */
-			goto clean_up;
-		} else {
-			nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08llx",
-					(u64)sg_dma_address(bfr.sgt->sgl));
-			bfr.iovmm_mapped = 1;
-		}
-	}
-#endif
 
 	err = setup_buffer_kind_and_compression(d, flags, kind,
 						&bfr, bfr.pgsz_idx);
@@ -1091,15 +1038,14 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	nvhost_dbg(dbg_map,
 	   "as=%d pgsz=%d "
-	   "iovmm=%d kind=0x%x kind_uc=0x%x flags=0x%x "
+	   "kind=0x%x kind_uc=0x%x flags=0x%x "
 	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
 	   vm_aspace_id(vm), gmmu_page_size,
-	   bfr.iovmm_mapped,
 	   bfr.kind_v, bfr.uc_kind_v, flags,
 	   bfr.ctag_lines, bfr.ctag_offset,
 	   hi32(map_offset), lo32(map_offset),
-	   bfr.iovmm_mapped ? hi32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
-	   bfr.iovmm_mapped ? lo32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
+	   hi32((u64)sg_dma_address(bfr.sgt->sgl)),
+	   lo32((u64)sg_dma_address(bfr.sgt->sgl)),
 	   hi32((u64)sg_phys(bfr.sgt->sgl)),
 	   lo32((u64)sg_phys(bfr.sgt->sgl)));
 
@@ -1177,11 +1123,7 @@ clean_up:
 				     bfr.ctag_offset,
 				     bfr.ctag_lines);
 	if (bfr.sgt) {
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-		if (sg_dma_address(bfr.sgt->sgl))
-			nvhost_memmgr_smmu_unmap(bfr.sgt, bfr.size, d);
-#endif
-		nvhost_memmgr_free_sg_table(memmgr, r, bfr.sgt);
+		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
 	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -1496,17 +1438,10 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
 
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (sg_dma_address(mapped_buffer->sgt->sgl)) {
-		nvhost_dbg(dbg_pte, "unmap from SMMU addr %08llx",
-			   (u64)sg_dma_address(mapped_buffer->sgt->sgl));
-		nvhost_memmgr_smmu_unmap(mapped_buffer->sgt,
-					 mapped_buffer->size,
-					 dev_from_vm(vm));
-	}
-#endif
-	nvhost_memmgr_free_sg_table(mapped_buffer->memmgr,
-			mapped_buffer->handle_ref, mapped_buffer->sgt);
+	nvhost_memmgr_unpin(mapped_buffer->memmgr,
+			    mapped_buffer->handle_ref,
+			    dev_from_vm(vm),
+			    mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);

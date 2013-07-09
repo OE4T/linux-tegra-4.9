@@ -179,7 +179,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 	if (as_priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
 			sg_dma_address(sgt->sgl) == 0) {
 		dma_addr_t addr = 0;
-		int err = nvmap_pin(priv->client, ref, &addr);
+		int err = nvmap_pin(as_priv->client, ref, &addr);
 		if (err)
 			return ERR_PTR(err);
 

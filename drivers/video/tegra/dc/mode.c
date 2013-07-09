@@ -212,12 +212,24 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			DC_DISP_REF_TO_SYNC);
 	tegra_dc_writel(dc, mode->h_sync_width | (mode->v_sync_width << 16),
 			DC_DISP_SYNC_WIDTH);
-	tegra_dc_writel(dc, mode->h_back_porch | (mode->v_back_porch << 16),
+	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
+		tegra_dc_writel(dc, mode->h_back_porch |
+			((mode->v_back_porch - mode->v_ref_to_sync) << 16),
 			DC_DISP_BACK_PORCH);
+		tegra_dc_writel(dc, mode->h_front_porch |
+			((mode->v_front_porch + mode->v_ref_to_sync) << 16),
+			DC_DISP_FRONT_PORCH);
+	} else {
+		tegra_dc_writel(dc, mode->h_back_porch |
+			(mode->v_back_porch << 16),
+			DC_DISP_BACK_PORCH);
+		tegra_dc_writel(dc, mode->h_front_porch |
+			(mode->v_front_porch << 16),
+			DC_DISP_FRONT_PORCH);
+	}
 	tegra_dc_writel(dc, mode->h_active | (mode->v_active << 16),
 			DC_DISP_DISP_ACTIVE);
-	tegra_dc_writel(dc, mode->h_front_porch | (mode->v_front_porch << 16),
-			DC_DISP_FRONT_PORCH);
 
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (mode->vmode == FB_VMODE_INTERLACED)

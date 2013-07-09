@@ -283,7 +283,6 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
-
 	nvhost_dbg_fn("");
 
 	while (check == WAIT_UCODE_LOOP) {
@@ -3572,7 +3571,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 
 	pmc_en = gk20a_readl(g, mc_enable_r());
 	pmc_en |= mc_enable_pgraph_enabled_f();
-	pmc_en |= mc_enable_blg_enabled_f();
+	/*pmc_en |= mc_enable_blg_enabled_f();*/
 	pmc_en |= mc_enable_perfmon_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_en);
 	pmc_en = gk20a_readl(g, mc_enable_r());

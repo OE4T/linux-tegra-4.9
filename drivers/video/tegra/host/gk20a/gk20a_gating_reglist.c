@@ -280,6 +280,7 @@ void gr_gk20a_slcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_gr) / sizeof(struct gating_desc);
+	prod = false;
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_gr[i].addr,
@@ -295,6 +296,7 @@ void gr_gk20a_slcg_perf_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_perf) / sizeof(struct gating_desc);
+        prod = false;
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_perf[i].addr,
@@ -310,6 +312,7 @@ void gr_gk20a_blcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_blcg_gr) / sizeof(struct gating_desc);
+	prod = false;
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_blcg_gr[i].addr,
@@ -325,6 +328,7 @@ void gr_gk20a_pg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_pg_gr) / sizeof(struct gating_desc);
+	prod = false;
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_pg_gr[i].addr,
@@ -340,6 +344,7 @@ void gr_gk20a_slcg_therm_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_therm) / sizeof(struct gating_desc);
+	prod = false;
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_therm[i].addr,

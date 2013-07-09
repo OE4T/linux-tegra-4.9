@@ -48,6 +48,8 @@
 
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
+extern int hack_tegra12x_gpu_unpowergate(void);
+
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
 	nvhost_set_private_data(dev, gk20a);
@@ -104,7 +106,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	*/
 	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
-	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", UINT_MAX}, \
+	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", 204000000}, \
 		   {"emc", UINT_MAX}, {} },
 	.powergate_ids = { TEGRA_POWERGATE_GPU, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -725,6 +727,12 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 		return 0;
 
 	g->power_on = true;
+
+	/* FIXME: We probably don't need to call this routine, and hence
+	 * should remove it.
+	 */
+	hack_tegra12x_gpu_unpowergate();
+	writel(0x1, IO_TO_VIRT(0x700f0000));
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_disabled_f());

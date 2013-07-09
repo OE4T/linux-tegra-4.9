@@ -99,7 +99,9 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	nvhost_dbg_info("ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
-	gk20a_reset_priv_ring(g);
+	if (status0 & (0x1 | 0x2 | 0x4)) {
+		gk20a_reset_priv_ring(g);
+	}
 
 	cmd = gk20a_readl(g, pri_ringmaster_command_r());
 	cmd = set_field(cmd, pri_ringmaster_command_cmd_m(),

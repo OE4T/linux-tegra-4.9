@@ -23,7 +23,8 @@
 
 
 /* production netlist, one and only one from below */
-#undef GK20A_NETLIST_IMAGE_FW_NAME
+/*#undef GK20A_NETLIST_IMAGE_FW_NAME*/
+#define GK20A_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_B
 /* emulation netlists, match majorV with HW */
 #define GK20A_NETLIST_IMAGE_A	"NETA_img.bin"
 #define GK20A_NETLIST_IMAGE_B	"NETB_img.bin"

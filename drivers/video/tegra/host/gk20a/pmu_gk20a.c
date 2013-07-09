@@ -1837,8 +1837,8 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 
 	if (unlikely(!pmu->pmu_ready)) {
 		pmu_process_init_msg(pmu, &msg);
-		pmu_init_powergating(pmu);
-		pmu_init_perfmon(pmu);
+		/* pmu_init_powergating(pmu); */
+		/* pmu_init_perfmon(pmu); */
 		return 0;
 	}
 

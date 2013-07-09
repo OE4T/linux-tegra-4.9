@@ -38,7 +38,7 @@
 
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
-	403, 806,	/* freq */
+	204, 204,	/* freq */
 	1000, 1700,	/* vco */
 	12, 38,		/* u */
 	1, 255,		/* M */
@@ -361,6 +361,8 @@ int gk20a_init_clk_support(struct gk20a *g)
 	/* set to minimal freq */
 	gk20a_clk_set_rate(g, gpc_pll_params.min_freq);
 
+	gk20a_writel(g, 0x9080, 0x00100000);
+
 	return err;
 }
 
@@ -380,6 +382,7 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	u32 freq = clk->gpc_pll.freq;
 	int err = 0;
 
+	rate = 264;
 	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
 		freq, rate);
 	mutex_lock(&clk->clk_mutex);

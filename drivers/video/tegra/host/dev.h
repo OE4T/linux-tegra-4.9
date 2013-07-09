@@ -32,7 +32,7 @@ void nvhost_device_list_remove(struct platform_device *pdev);
 
 
 /* debug info */
-/*#define NVHOST_DEBUG*/
+/* #define NVHOST_DEBUG */
 #define NVHOST_DBG_MASK (dbg_info|dbg_fn)
 
 enum nvhost_dbg_categories {

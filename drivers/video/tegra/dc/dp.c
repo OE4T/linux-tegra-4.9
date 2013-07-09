@@ -490,18 +490,10 @@ static void tegra_dc_dpaux_enable(struct tegra_dc_dp_data *dp)
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 }
 
-static void tegra_dc_dpaux_disable(struct tegra_dc_dp_data *dp)
-{
-	tegra_dpaux_writel(dp, NV_DPCD_SET_POWER,
-		NV_DPCD_SET_POWER_VAL_D3_PWRDWN);
-
-	/* TODO: power down DPAUX_HYBRID_SPARE too? */
-}
-
 static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 	const struct tegra_dc_dp_link_config *cfg)
 {
-	BUG_ON(!cfg || !cfg->is_valid);
+	BUG_ON(!cfg);
 
 	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name       cfg_value\n");
 	dev_info(&dp->dc->ndev->dev, "           Lane Count          %d\n",
@@ -595,8 +587,8 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 		!cfg->bits_per_pixel)
 		return false;
 
-	if (mode->pclk * cfg->bits_per_pixel >=
-		8 * link_rate * cfg->lane_count)
+	if ((u64)mode->pclk * cfg->bits_per_pixel >=
+		(u64)link_rate * 8 * cfg->lane_count)
 		return false;
 
 	num_linkclk_line = (u32)tegra_div64(
@@ -759,6 +751,12 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	cfg->bits_per_pixel = dp->dc->pdata->default_out->depth;
 
+	/* TODO: need to come from the board file */
+	cfg->drive_current = 0x40404040;
+	cfg->preemphasis = 0x0f0f0f0f;
+	cfg->postcursor = 0;
+	cfg->max_link_bw = SOR_LINK_SPEED_G1_62;
+
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));
 	cfg->alt_scramber_reset_cap =
@@ -768,15 +766,11 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_FRAMING_CHANGE_YES) ?
 		true : false;
 
-	if (tegra_platform_is_fpga()) /* hardcoded to 1.62G on fpga */
-		cfg->max_link_bw = SOR_LINK_SPEED_G1_62;
 	cfg->lane_count	      = cfg->max_lane_count;
 	cfg->link_bw	      = cfg->max_link_bw;
 	cfg->enhanced_framing = cfg->support_enhanced_framing;
 
 	tegra_dc_dp_calc_config(dp, dp->mode, cfg);
-	tegra_dc_dp_dump_link_cfg(dp, cfg);
-
 	return 0;
 }
 
@@ -821,6 +815,7 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp,
 	tegra_dc_sor_set_lane_count(dp->sor, cfg->lane_count);
 
 	/* Also power down lanes that will not be used */
+	return 0;
 }
 
 static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
@@ -896,6 +891,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 		temp_edc[0] &= NV_DPCD_TRAINING_PATTERN_SET_TPS_MASK;
 		temp_edc[0] |= (training_pattern &
 			NV_DPCD_TRAINING_PATTERN_SET_TPS_MASK);
+		temp_edc[0] |= NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T;
 
 		size = 4;
 		ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
@@ -1197,28 +1193,72 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 	const struct tegra_dc_dp_link_config *cfg)
 {
 	struct tegra_dc_sor_data *sor = dp->sor;
-	u8 link_bw;
-	u8 lane_count;
+	u8	link_bw;
+	u8	lane_count;
+	u32	data;
+	u32	size;
+	u32	status;
+	int	j;
+	u32	mask = 0xffff >> ((4 - cfg->lane_count) * 4);
 
 	BUG_ON(!cfg || !cfg->is_valid);
-	tegra_dc_sor_set_link_bandwidth(sor, cfg->link_bw);
-	tegra_dc_sor_set_lane_count(sor, cfg->lane_count);
+
+	tegra_dc_sor_set_lane_parm(sor, cfg);
+	tegra_dc_dp_dpcd_write(dp, NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET,
+		NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET_ANSI_8B10B);
 
 	/* Send TP1 */
 	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_1, cfg);
+	tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET,
+		NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1);
 
+	for (j = 0; j < cfg->lane_count; ++j)
+		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_LANE0_SET + j,
+			0x24);
 	usleep_range(500, 1000);
+	size = 2;
+	tegra_dc_dpaux_read(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+		NV_DPCD_LANE0_1_STATUS, (u8 *)&data, &size, &status);
+	status = mask & 0x1111;
+	if ((data & status) != status) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Link training error for TP1 (0x%x)\n", data);
+		return -EFAULT;
+	}
+
+	if ((data & status) != status) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Link training error for TP1 (0x%x)\n", data);
+		return -EFAULT;
+	}
+
 	/* enable ASSR */
 	tegra_dc_dp_set_assr(dp, true);
-	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_2, cfg);
+	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_3, cfg);
 
+	tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET,
+		cfg->link_bw == 20 ? 0x23 : 0x22);
+	for (j = 0; j < cfg->lane_count; ++j)
+		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_LANE0_SET + j,
+			0x24);
 	usleep_range(500, 1000);
+
+	size = 4;
+	tegra_dc_dpaux_read(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+		NV_DPCD_LANE0_1_STATUS, (u8 *)&data, &size, &status);
+	if ((data & mask) != (0x7777 & mask)) {
+		dev_info(&dp->dc->ndev->dev,
+			"dp: Link training error for TP2/3 (0x%x)\n", data);
+		return -EFAULT;
+	}
+
 	tegra_dc_sor_set_dp_linkctl(sor, true, trainingPattern_Disabled, cfg);
+	tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET, 0);
 
 	if (!tegra_dc_dp_link_trained(dp, cfg)) {
 		tegra_dc_sor_read_link_config(dp->sor, &link_bw,
 			&lane_count);
-		dev_info(&dp->dc->ndev->dev,
+		dev_err(&dp->dc->ndev->dev,
 			"Fast link trainging failed, link bw %d, lane # %d\n",
 			link_bw, lane_count);
 		return -EFAULT;
@@ -1274,7 +1314,6 @@ static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 		dev_err(&dp->dc->ndev->dev, "dp: Failed to set lane count\n");
 		return ret;
 	}
-	tegra_dc_dp_dump_link_cfg(dp, cfg);
 	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_None, cfg);
 
 	/* Now do the fast link training for eDP */
@@ -1432,6 +1471,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	/* TODO: confirm interrupt num is acquired from gpio_to_irq,
 	   Also how to differentiate them from HDMI HPD.
 	 */
+#if 0
 	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_dp_hpd_irq,
 			IRQF_DISABLED | IRQF_TRIGGER_RISING |
 			IRQF_TRIGGER_FALLING, dev_name(&dc->ndev->dev), dc)) {
@@ -1440,6 +1480,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = -EBUSY;
 		goto err_get_clk;
 	}
+#endif
 
 
 	dp->dc		 = dc;
@@ -1487,8 +1528,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_dpaux_enable(dp);
 
 	/* Power on panel */
-	tegra_dc_sor_set_panel_power(dp->sor, true);
-
 	if (tegra_dc_dp_init_max_link_cfg(dp, &dp->link_cfg)) {
 		dev_err(&dc->ndev->dev,
 			"dp: failed to init link configuration\n");
@@ -1497,8 +1536,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_sor_enable_dp(dp->sor);
 
-	/* Enable backlight -- TODO: need to go through I2C */
 	msleep(DP_LCDVCC_TO_HPD_DELAY_MS);
+
+	tegra_dc_sor_set_panel_power(dp->sor, true);
 
 	/* Write power on to DPCD */
 	data = NV_DPCD_SET_POWER_VAL_D0_NORMAL;
@@ -1527,14 +1567,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: failed to read the revision number from sink\n");
 
-	if (tegra_dp_link_config(dp, &dp->link_cfg)) {
-		dev_err(&dp->dc->ndev->dev, "dp: Could not setup link\n");
-		return;
-	}
-
 	tegra_dc_dp_explore_link_cfg(dp, &dp->link_cfg, dp->mode);
 
-	mdelay(100);
+	tegra_dc_sor_set_power_state(dp->sor, 1);
 	tegra_dc_sor_attach(dp->sor);
 
 error_enable:
@@ -1558,15 +1593,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	/* TODO: confirm that dpaux_disable is not needed for eDP */
-	tegra_dc_dpaux_disable(dp);
-
 	/* Power down SOR */
 	tegra_dc_sor_disable(dp->sor, false);
 
 	clk_disable(dp->clk);
-	/* TODO: Now power down the panel -- through GPIO */
-	/* Make sure the timing meet the eDP specs */
 }
 
 extern struct clk *tegra_get_clock_by_name(const char *name);

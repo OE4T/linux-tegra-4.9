@@ -62,6 +62,11 @@ struct tegra_dc_dp_link_config {
 
 	s32	hblank_sym;
 	s32	vblank_sym;
+
+	/* Training data */
+	u32	drive_current;
+	u32     preemphasis;
+	u32	postcursor;
 };
 
 
@@ -116,5 +121,9 @@ void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
 	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg);
 void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds);
+void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
+	const struct tegra_dc_dp_link_config *cfg);
+int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
+	int pu_pd);
 
 #endif

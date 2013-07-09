@@ -81,6 +81,9 @@
 
 #define POWER_ON_DELAY 20 /* ms */
 
+#define THERM_WARN_RANGE_HIGH_OFFSET	2000
+#define THERM_WARN_RANGE_LOW_OFFSET	7000
+
 struct nct1008_data {
 	struct workqueue_struct *workqueue;
 	struct work_struct work;
@@ -487,6 +490,7 @@ static void nct1008_update(struct nct1008_data *data)
 	struct thermal_trip_info *trip_state;
 	long temp, trip_temp, hysteresis_temp;
 	int count;
+	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
 
 	if (!thz)
 		return;
@@ -494,6 +498,16 @@ static void nct1008_update(struct nct1008_data *data)
 	thermal_zone_device_update(thz);
 
 	thz->ops->get_temp(thz, &temp);
+
+	if ((data->plat_data.num_trips == 0) &&
+	    (temp >= ext_limit - THERM_WARN_RANGE_HIGH_OFFSET)) {
+		pr_warn("NCT1008: Temperature %ld close to shutdown.\n", temp);
+	}
+
+	if ((data->plat_data.num_trips == 0) &&
+	    (temp <= ext_limit - THERM_WARN_RANGE_LOW_OFFSET)) {
+		pr_warn("NCT1008: Temperature %ld in safe level.\n", temp);
+	}
 
 	for (count = 0; count < thz->trips; count++) {
 		trip_state = &data->plat_data.trips[count];
@@ -933,6 +947,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	s16 temp;
 	u8 temp2;
 	int err;
+	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
 
 	if (!pdata || !pdata->supported_hwrev)
 		return -ENODEV;
@@ -1044,6 +1059,12 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		goto error;
 	}
 	data->current_hi_limit = value_to_temperature(pdata->ext_range, value);
+
+	if (data->plat_data.num_trips == 0 ) {
+		nct1008_thermal_set_limits(data,
+		ext_limit - THERM_WARN_RANGE_LOW_OFFSET,
+		ext_limit - THERM_WARN_RANGE_HIGH_OFFSET);
+	}
 
 	return 0;
 error:

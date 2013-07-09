@@ -48,6 +48,8 @@
 
 #define DRIVER_NAME	"tegra-se"
 
+static struct device *save_se_device;
+
 /* Security Engine operation modes */
 enum tegra_se_aes_op_mode {
 	SE_AES_OP_MODE_CBC,	/* Cipher Block Chaining (CBC) mode */
@@ -114,6 +116,7 @@ struct tegra_se_dev {
 	dma_addr_t ctx_save_buf_adr;	/* LP context buffer dma address*/
 	struct completion complete;	/* Tells the task completion */
 	bool work_q_busy;	/* Work queue busy status */
+	bool polling;
 	struct tegra_se_chipdata *chipdata; /* chip specific data */
 };
 
@@ -652,7 +655,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 	bool context_save)
 {
 	u32 nblocks = nbytes / TEGRA_SE_AES_BLOCK_SIZE;
-	int ret = 0;
+	int ret = 0, err = 0;
 	u32 val = 0;
 
 	if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
@@ -672,11 +675,13 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 	if (nblocks)
 		se_writel(se_dev, nblocks-1, SE_BLOCK_COUNT_REG_OFFSET);
 
-	/* enable interupts */
-	val = SE_INT_ERROR(INT_ENABLE) | SE_INT_OP_DONE(INT_ENABLE);
-	se_writel(se_dev, val, SE_INT_ENABLE_REG_OFFSET);
+	if (!se_dev->polling) {
+		/* enable interupts */
+		val = SE_INT_ERROR(INT_ENABLE) | SE_INT_OP_DONE(INT_ENABLE);
+		se_writel(se_dev, val, SE_INT_ENABLE_REG_OFFSET);
 
-	reinit_completion(&se_dev->complete);
+		reinit_completion(&se_dev->complete);
+	}
 
 	if (context_save)
 		se_writel(se_dev, SE_OPERATION(OP_CTX_SAVE),
@@ -685,19 +690,30 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 		se_writel(se_dev, SE_OPERATION(OP_SRART),
 			SE_OPERATION_REG_OFFSET);
 
-	ret = wait_for_completion_timeout(&se_dev->complete,
-			msecs_to_jiffies(1000));
+	if (se_dev->polling) {
+		/* polling */
+		val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
+		while (!SE_OP_DONE(val, OP_DONE))
+			val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
+
+		if (!SE_OP_DONE(val, OP_DONE)) {
+			dev_err(se_dev->dev, "\nAbrupt end of operation\n");
+			err = -EINVAL;
+		}
+	} else {
+		ret = wait_for_completion_timeout(&se_dev->complete,
+				msecs_to_jiffies(1000));
+		if (ret == 0) {
+			dev_err(se_dev->dev, "operation timed out no interrupt\n");
+			err = -ETIMEDOUT;
+		}
+	}
 
 	dma_sync_single_for_cpu(se_dev->dev, se_dev->src_ll_buf_adr,
 				nbytes, DMA_FROM_DEVICE);
 	dma_sync_single_for_cpu(se_dev->dev, se_dev->dst_ll_buf_adr,
 				nbytes, DMA_FROM_DEVICE);
-	if (ret == 0) {
-		dev_err(se_dev->dev, "operation timed out no interrupt\n");
-		return -ETIMEDOUT;
-	}
-
-	return 0;
+	return err;
 }
 
 static void tegra_se_read_hash_result(struct tegra_se_dev *se_dev,
@@ -3157,26 +3173,50 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 		val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 		se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);
 
-		/* enable interupts */
-		val = SE_INT_ERROR(INT_ENABLE) | SE_INT_OP_DONE(INT_ENABLE);
-		se_writel(se_dev, val, SE_INT_ENABLE_REG_OFFSET);
+		if (!se_dev->polling) {
+			/* enable interupts */
+			val = SE_INT_ERROR(INT_ENABLE)
+				| SE_INT_OP_DONE(INT_ENABLE);
+			se_writel(se_dev, val, SE_INT_ENABLE_REG_OFFSET);
+
+			reinit_completion(&se_dev->complete);
+		}
 
 		val = SE_CONFIG_ENC_ALG(ALG_NOP) |
 				SE_CONFIG_DEC_ALG(ALG_NOP);
 		se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
 
-		reinit_completion(&se_dev->complete);
-
 		se_writel(se_dev, SE_OPERATION(OP_CTX_SAVE),
 			SE_OPERATION_REG_OFFSET);
-		ret = wait_for_completion_timeout(&se_dev->complete,
-				msecs_to_jiffies(1000));
 
-		if (ret == 0) {
-			dev_err(se_dev->dev, "\n LP SRK timed out no interrupt\n");
-			pm_runtime_put(se_dev->dev);
-			mutex_unlock(&se_hw_lock);
-			return -ETIMEDOUT;
+		if (se_dev->polling) {
+			/*polling*/
+			val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
+			while (!SE_OP_DONE(val, OP_DONE))
+				val = se_readl(se_dev,
+					SE_INT_STATUS_REG_OFFSET);
+
+			if (SE_OP_DONE(val, OP_DONE)) {
+				pm_runtime_put(se_dev->dev);
+				mutex_unlock(&se_hw_lock);
+				return 0;
+			} else {
+				dev_err(se_dev->dev,
+					"\nAbrupt end of operation\n");
+				pm_runtime_put(se_dev->dev);
+				mutex_unlock(&se_hw_lock);
+				return -EINVAL;
+			}
+		} else {
+			ret = wait_for_completion_timeout(&se_dev->complete,
+					msecs_to_jiffies(1000));
+			if (ret == 0) {
+				dev_err(se_dev->dev,
+					"\n LP SRK timed out no interrupt\n");
+				pm_runtime_put(se_dev->dev);
+				mutex_unlock(&se_hw_lock);
+				return -ETIMEDOUT;
+			}
 		}
 	}
 
@@ -3186,7 +3226,7 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
-static int tegra_se_suspend(struct device *dev)
+int se_suspend(struct device *dev, bool polling)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_se_dev *se_dev = platform_get_drvdata(pdev);
@@ -3198,6 +3238,10 @@ static int tegra_se_suspend(struct device *dev)
 
 	if (!se_dev)
 		return -ENODEV;
+
+	save_se_device = dev;
+
+	se_dev->polling = polling;
 
 	/* Generate SRK */
 	err = tegra_se_generate_srk(se_dev);
@@ -3305,6 +3349,21 @@ out:
 	/* put the device into runtime suspend state - disable clock */
 	pm_runtime_put_sync(dev);
 	return err;
+}
+EXPORT_SYMBOL(se_suspend);
+
+struct device *get_se_device(void)
+{
+	return save_se_device;
+}
+EXPORT_SYMBOL(get_se_device);
+
+static int tegra_se_suspend(struct device *dev)
+{
+	int ret = 0;
+	ret = se_suspend(dev, false);
+
+	return ret;
 }
 
 static int tegra_se_resume(struct device *dev)

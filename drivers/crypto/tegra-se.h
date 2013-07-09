@@ -1,7 +1,7 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,6 +112,10 @@
 #define SE_KEYTABLE_TABLE_SEL(x)	(x << SE_KEYTABLE_TABLE_SEL_SHIFT)
 #define SE_KEYTABLE_PKT_SHIFT		0
 #define SE_KEYTABLE_PKT(x)			(x << SE_KEYTABLE_PKT_SHIFT)
+
+#define SE_OP_DONE_SHIFT	4
+#define OP_DONE	1
+#define SE_OP_DONE(x, y)	((x) && (y << SE_OP_DONE_SHIFT))
 
 #define SE_CRYPTO_REG_OFFSET		0x304
 #define SE_CRYPTO_HASH_SHIFT		0

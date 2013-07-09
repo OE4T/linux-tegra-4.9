@@ -32,8 +32,8 @@ void nvhost_device_list_remove(struct platform_device *pdev);
 
 
 /* debug info */
-/* #define NVHOST_DEBUG */
-#define NVHOST_DBG_MASK (dbg_info|dbg_fn)
+/*#define NVHOST_DEBUG*/
+#define NVHOST_DBG_MASK (dbg_map)
 
 enum nvhost_dbg_categories {
 	dbg_info    = BIT(0),  /* lightly verbose info */
@@ -44,6 +44,7 @@ enum nvhost_dbg_categories {
 	dbg_intr    = BIT(5),  /* interrupts */
 	dbg_pmu     = BIT(6),  /* gk20a pmu */
 	dbg_clk     = BIT(7),  /* gk20a clk */
+	dbg_map     = BIT(8),  /* mem mappings */
 	dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

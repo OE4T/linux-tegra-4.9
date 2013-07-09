@@ -227,6 +227,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm);
 
 void gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
+void gk20a_mm_l2_invalidate(struct gk20a *g);
 
 struct mm_gk20a {
 	struct gk20a *g;
@@ -305,15 +306,6 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 
 int gk20a_mm_suspend(struct gk20a *g);
 
-static inline u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
-{
-	u64 result = sg_phys(sgl);
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (sg_dma_address(sgl))
-		result = sg_dma_address(sgl) |
-			1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT;
-#endif
-	return result;
-}
+u64 gk20a_mm_iova_addr(struct scatterlist *sgl);
 
 #endif /*_MM_GK20A_H_ */

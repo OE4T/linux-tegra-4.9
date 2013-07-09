@@ -44,6 +44,19 @@
 
 #include "kind_gk20a.h"
 
+static inline int vm_aspace_id(struct vm_gk20a *vm)
+{
+	/* -1 is bar1 or pmu, etc. */
+	return vm->as_share ? vm->as_share->id : -1;
+}
+static inline u32 hi32(u64 f)
+{
+	return (u32)(f >> 32);
+}
+static inline u32 lo32(u64 f)
+{
+	return (u32)(f & 0xffffffff);
+}
 
 #define FLUSH_CPU_DCACHE(va, pa, size)	\
 	do {	\
@@ -836,7 +849,7 @@ static int setup_buffer_size_and_align(struct device *d,
 
 	case NVMAP_HEAP_IOVMM:
 		/* sysmem, iovmm/smmu mapped */
-		bfr->contig = 1;
+		bfr->contig = 0;
 		bfr->iovmm_mapped = 1;
 		break;
 	default:
@@ -889,8 +902,9 @@ static int setup_buffer_kind_and_compression(struct device *d,
 	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (unlikely(kind_compressible &&
 		     (gmmu_page_sizes[pgsz_idx] != 128*1024))) {
+		/*
 		nvhost_warn(d, "comptags specified"
-			    " but pagesize being used doesn't support it");
+		" but pagesize being used doesn't support it");*/
 		/* it is safe to fall back to uncompressed as
 		   functionality is not harmed */
 		bfr->kind_v = bfr->uc_kind_v;
@@ -1000,8 +1014,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		}
 	}
 
-	/* works ok with 4k phys.  works 4k,smmu if buffers in
-	 * sim invocation is bumped up again */
 	gmmu_page_smmu_type = bfr.iovmm_mapped ?
 		gmmu_page_smmu_type_virtual : gmmu_page_smmu_type_physical;
 
@@ -1013,15 +1025,21 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		int err = nvhost_memmgr_smmu_map(bfr.sgt,
 				bfr.size, d);
 		if (err) {
-			/* if mapping fails, fall back to physical, small
-			 * pages */
-			bfr.iovmm_mapped = 0;
-			bfr.pgsz_idx = gmmu_page_size_small;
-			gmmu_page_smmu_type = gmmu_page_smmu_type_physical;
 			nvhost_warn(d, "Failed to map to SMMU\n");
-		} else
+			/* Falling back to physical is actually possible
+			 * here in many cases if we use 4K phys pages in the
+			 * gmmu.  However we have some regions which require
+			 * contig regions to work properly (either phys-contig
+			 * or contig through smmu io_vaspace).  Until we can
+			 * track the difference between those two cases we have
+			 * to fail the mapping when we run out of SMMU space.
+			 */
+			goto clean_up;
+		} else {
 			nvhost_dbg(dbg_pte, "Mapped to SMMU, address %08llx",
 					(u64)sg_dma_address(bfr.sgt->sgl));
+			bfr.iovmm_mapped = 1;
+		}
 	}
 #endif
 
@@ -1035,6 +1053,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	/* bar1 and pmu vm don't need ctag */
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
+
 
 	/* allocate compression resources if needed */
 	if (bfr.ctag_lines) {
@@ -1072,14 +1091,35 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_warn(d, "other mappings may collide!");
 	}
 
-	nvhost_dbg_fn("r=%p, map_offset=0x%llx, contig=%d page_size=%d "
-		      "iovmm_mapped=%d kind=0x%x kind_uc=0x%x flags=0x%x",
-		      r, map_offset, bfr.contig, gmmu_page_size,
-		      bfr.iovmm_mapped,
-		      bfr.kind_v, bfr.uc_kind_v, flags);
-	nvhost_dbg_info("comptag size=%d start=%d for 0x%llx",
-			bfr.ctag_lines, bfr.ctag_offset,
-			(u64)sg_phys(bfr.sgt->sgl));
+	nvhost_dbg(dbg_fn | dbg_map,
+		   "as=%d pgsz=%d "
+		   "iovmm=%d kind=0x%x kind_uc=0x%x flags=0x%x "
+		   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+		   vm_aspace_id(vm), gmmu_page_size,
+		   bfr.iovmm_mapped,
+		   bfr.kind_v, bfr.uc_kind_v, flags,
+		   bfr.ctag_lines, bfr.ctag_offset,
+		   hi32(map_offset), lo32(map_offset),
+		   bfr.iovmm_mapped ? hi32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
+		   bfr.iovmm_mapped ? lo32((u64)sg_dma_address(bfr.sgt->sgl)) : ~0,
+		   hi32((u64)sg_phys(bfr.sgt->sgl)),
+		   lo32((u64)sg_phys(bfr.sgt->sgl)));
+
+#if defined(NVHOST_DEBUG)
+	{
+		int i;
+		struct scatterlist *sg = NULL;
+		nvhost_dbg(dbg_map, "for_each_sg(bfr.sgt->sgl, sg, bfr.sgt->nents, i)");
+		for_each_sg(bfr.sgt->sgl, sg, bfr.sgt->nents, i ) {
+			u64 da = sg_dma_address(sg);
+			u64 pa = sg_phys(sg);
+			u64 len = sg->length;
+			nvhost_dbg(dbg_map, "i=%d pa=0x%x,%08x da=0x%x,%08x len=0x%x,%08x",
+				   i, hi32(pa), lo32(pa), hi32(da), lo32(da),
+				   hi32(len), lo32(len));
+		}
+	}
+#endif
 
 	/* keep track of the buffer for unmapping */
 	/* TBD: check for multiple mapping of same buffer */
@@ -1154,10 +1194,23 @@ clean_up:
 	return 0;
 }
 
+u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
+{
+	u64 result = sg_phys(sgl);
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (sg_dma_address(sgl))
+		result = sg_dma_address(sgl) |
+			1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT;
+#endif
+	return result;
+}
+
 static int update_gmmu_ptes(struct vm_gk20a *vm,
 			    enum gmmu_pgsz_gk20a pgsz_idx,
-		       struct sg_table *sgt, u64 first_vaddr, u64 last_vaddr,
-		       u8 kind_v, u32 ctag_offset, bool cacheable)
+			    struct sg_table *sgt,
+			    u64 first_vaddr, u64 last_vaddr,
+			    u8 kind_v, u32 ctag_offset,
+			    bool cacheable)
 {
 	int err;
 	u32 pde_lo, pde_hi, pde_i;
@@ -1393,7 +1446,8 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 	*memmgr = NULL;
 	*r = NULL;
 
-	nvhost_dbg_fn("offset=0x%llx", offset);
+	nvhost_dbg(dbg_fn|dbg_map, "aspace=%d vaddr=0x%x,%08x",
+		   vm_aspace_id(vm), hi32(offset), lo32(offset));
 
 	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
@@ -1417,6 +1471,15 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 			       0, 0, false /* n/a for unmap */);
 
 	/* detect which if any pdes/ptes can now be released */
+
+	/* flush l2 so any dirty lines are written out *now*.
+	 *  also as we could potentially be switching this buffer
+	 * from nonvolatile (l2 cacheable) to volatile (l2 non-cacheable) at
+	 * some point in the future we need to invalidate l2.  e.g. switching
+	 * from a render buffer unmap (here) to later using the same memory
+	 * for gmmu ptes.  note the positioning of this relative to any smmu
+	 * unmapping (below). */
+	gk20a_mm_l2_flush(g, true);
 
 	if (err)
 		dev_err(dev_from_vm(vm),
@@ -2138,6 +2201,16 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	if (!invalidate)
 		return;
+
+	gk20a_mm_l2_invalidate(g);
+
+	return;
+}
+
+void gk20a_mm_l2_invalidate(struct gk20a *g)
+{
+	u32 data;
+	s32 retry = 200;
 
 	/* Invalidate any clean lines from the L2 so subsequent reads go to
 	   DRAM. Dirty lines are not affected by this operation. */

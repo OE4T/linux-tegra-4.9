@@ -129,6 +129,8 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 
 	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
+	gk20a_mm_l2_invalidate(c->g);
+
 	return 0;
 }
 
@@ -159,6 +161,8 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 		 pbdma_userd_hi_addr_f(addr_hi));
 
 	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
+
+	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
 }
@@ -232,6 +236,8 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
+	gk20a_mm_l2_invalidate(c->g);
+
 	return 0;
 }
 
@@ -251,6 +257,8 @@ static int channel_gk20a_setup_userd(struct channel_gk20a *c)
 	mem_wr32(c->userd_cpu_va, ram_userd_get_hi_w(), 0);
 	mem_wr32(c->userd_cpu_va, ram_userd_gp_get_w(), 0);
 	mem_wr32(c->userd_cpu_va, ram_userd_gp_put_w(), 0);
+
+	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
 }
@@ -425,6 +433,8 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	/* free gpfifo */
 	ch_vm->unmap(ch_vm, ch->gpfifo.gpu_va);
 	nvhost_memmgr_munmap(ch->gpfifo.mem.ref, ch->gpfifo.cpu_va);
+	gk20a_mm_l2_invalidate(ch->g);
+
 	nvhost_memmgr_put(memmgr, ch->gpfifo.mem.ref);
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
 
@@ -549,6 +559,7 @@ static void dump_gpfifo(struct channel_gk20a *c)
 		gk20a_readl(c->g, ccsr_channel_r(chid)));
 
 	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
+	gk20a_mm_l2_invalidate(c->g);
 }
 #endif
 
@@ -916,6 +927,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	channel_gk20a_setup_userd(c);
 	channel_gk20a_commit_userd(c);
+
+	gk20a_mm_l2_invalidate(c->g);
 
 	/* TBD: setup engine contexts */
 

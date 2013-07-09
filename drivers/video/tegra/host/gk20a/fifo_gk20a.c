@@ -450,8 +450,10 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 	f->userd_total_size = f->userd_entry_size * f->num_channels;
 
+	nvhost_dbg(dbg_map,"userd size: 0x%x", f->userd_total_size);
+
 	f->userd.mem.ref = nvhost_memmgr_alloc(memmgr, f->userd_total_size,
-					       DEFAULT_ALLOC_ALIGNMENT,
+					       4096, /* 4K pages */
 					       DEFAULT_ALLOC_FLAGS,
 					       0);
 	if (IS_ERR_OR_NULL(f->userd.mem.ref)) {
@@ -475,9 +477,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					    4096, 0, 0,
 					    &f->userd.mem.sgt);
 	f->userd.cpu_pa = gk20a_mm_iova_addr(f->userd.mem.sgt->sgl);
-	nvhost_dbg_info("userd physical address : 0x%08llx - 0x%08llx",
+	nvhost_dbg(dbg_map, "userd physical address : 0x%08llx - 0x%08llx",
 			f->userd.cpu_pa, f->userd.cpu_pa + f->userd_total_size);
-	nvhost_dbg_info("userd bar1 va = 0x%llx", f->userd.gpu_va);
+	nvhost_dbg(dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
 	f->userd.mem.size = f->userd_total_size;
 

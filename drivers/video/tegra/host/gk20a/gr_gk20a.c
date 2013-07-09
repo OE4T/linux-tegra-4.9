@@ -441,6 +441,8 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
+	gk20a_mm_l2_invalidate(c->g);
+
 	return 0;
 
 clean_up:
@@ -471,6 +473,8 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
 		mem_wr32(patch_ptr, patch_slot++, data);
 
 		nvhost_memmgr_munmap(ch_ctx->patch_ctx.mem.ref, patch_ptr);
+		gk20a_mm_l2_invalidate(g);
+
 		ch_ctx->patch_ctx.data_count++;
 	} else {
 		gk20a_writel(g, addr, data);
@@ -556,6 +560,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 			goto clean_up;
 		}
 	}
+	gk20a_mm_l2_invalidate(g);
 
 clean_up:
 	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
@@ -1230,6 +1235,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	gr->ctx_vars.golden_image_initialized = true;
 
+	gk20a_mm_l2_invalidate(g);
+
 	gk20a_writel(g, gr_fecs_current_ctx_r(),
 		gr_fecs_current_ctx_valid_false_f());
 
@@ -1300,6 +1307,8 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_v(), 0, 0);
 
 	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+
+	gk20a_mm_l2_invalidate(g);
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
@@ -1903,7 +1912,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		}
 		c->first_init = true;
 	}
-
+	gk20a_mm_l2_invalidate(g);
 	c->num_objects++;
 
 	nvhost_dbg_fn("done");
@@ -3544,6 +3553,8 @@ restore_fe_go_idle:
 			gr_pri_mme_shadow_raw_index_write_trigger_f() |
 			sw_method_init->l[i].addr);
 	}
+
+	gk20a_mm_l2_invalidate(g);
 
 	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)

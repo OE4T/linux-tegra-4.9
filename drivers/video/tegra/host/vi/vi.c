@@ -250,8 +250,10 @@ static int vi_resume(struct device *dev)
 static const struct dev_pm_ops vi_pm_ops = {
 	.suspend = vi_suspend,
 	.resume = vi_resume,
-	SET_RUNTIME_PM_OPS(nvhost_module_disable_clk,
-		nvhost_module_enable_clk, NULL)
+#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
+	.runtime_suspend = nvhost_module_disable_clk,
+	.runtime_resume = nvhost_module_enable_clk,
+#endif
 };
 #endif
 

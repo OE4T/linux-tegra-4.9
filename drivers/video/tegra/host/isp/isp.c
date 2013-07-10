@@ -154,7 +154,7 @@ static int __exit isp_remove(struct platform_device *dev)
 static const struct dev_pm_ops isp_pm_ops = {
 	.suspend = nvhost_client_device_suspend,
 	.resume = nvhost_client_device_resume,
-#ifdef CONFIG_PM_RUNTIME
+#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
 	.runtime_suspend = nvhost_module_disable_clk,
 	.runtime_resume = nvhost_module_enable_clk,
 #endif

@@ -576,8 +576,10 @@ void nvhost_module_deinit(struct platform_device *dev)
 
 #ifdef CONFIG_PM
 const struct dev_pm_ops nvhost_module_pm_ops = {
-	SET_RUNTIME_PM_OPS(nvhost_module_disable_clk,
-		nvhost_module_enable_clk, NULL)
+#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
+	.runtime_suspend = nvhost_module_disable_clk,
+	.runtime_resume = nvhost_module_enable_clk,
+#endif
 };
 #endif
 

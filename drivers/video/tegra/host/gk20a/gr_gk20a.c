@@ -3571,7 +3571,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 
 	pmc_en = gk20a_readl(g, mc_enable_r());
 	pmc_en |= mc_enable_pgraph_enabled_f();
-	/*pmc_en |= mc_enable_blg_enabled_f();*/
+	pmc_en |= mc_enable_blg_enabled_f();
 	pmc_en |= mc_enable_perfmon_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_en);
 	pmc_en = gk20a_readl(g, mc_enable_r());

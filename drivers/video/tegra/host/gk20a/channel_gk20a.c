@@ -36,6 +36,7 @@
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
+#include "hw_ltc_gk20a.h"
 #include "chip_support.h"
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
@@ -1161,6 +1162,26 @@ void gk20a_channel_update(struct channel_gk20a *c)
 	}
 	mutex_unlock(&c->jobs_lock);
 }
+#ifdef CONFIG_DEBUG_FS
+static void gk20a_sync_debugfs(struct gk20a *g)
+{
+	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
+	spin_lock(&g->debugfs_lock);
+	if (g->mm.ltc_enabled != g->mm.debugfs_ltc_enabled) {
+		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
+		if (g->mm.debugfs_ltc_enabled)
+			/* bypass disabled (normal caching ops)*/
+			reg &= ~reg_f;
+		else
+			/* bypass enabled (no caching) */
+			reg |= reg_f;
+
+		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
+		g->mm.ltc_enabled = g->mm.debugfs_ltc_enabled;
+	}
+	spin_unlock(&g->debugfs_lock);
+}
+#endif
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
@@ -1186,6 +1207,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		      NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
 	    !fence)
 		return -EINVAL;
+#ifdef CONFIG_DEBUG_FS
+	/* update debug settings */
+	gk20a_sync_debugfs(g);
+#endif
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 

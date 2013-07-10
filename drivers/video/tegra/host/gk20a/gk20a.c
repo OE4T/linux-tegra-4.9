@@ -30,6 +30,8 @@
 #include <linux/of_platform.h>
 #include <linux/thermal.h>
 #include <asm/cacheflush.h>
+#include <linux/debugfs.h>
+#include <linux/spinlock.h>
 
 #include <mach/powergate.h>
 #include <mach/pm_domains.h>
@@ -963,6 +965,13 @@ static int gk20a_probe(struct platform_device *dev)
 
 #ifdef CONFIG_DEBUG_FS
 	clk_gk20a_debugfs_init(dev);
+
+	spin_lock_init(&gk20a->debugfs_lock);
+	gk20a->mm.ltc_enabled = true;
+	gk20a->mm.debugfs_ltc_enabled = true;
+	gk20a->debugfs = debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
+				 pdata->debugfs,
+				 &gk20a->mm.debugfs_ltc_enabled);
 #endif
 
 	return 0;
@@ -977,6 +986,10 @@ static int __exit gk20a_remove(struct platform_device *dev)
 		g->remove_support(dev);
 
 	set_gk20a(dev, 0);
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove(g->debugfs);
+#endif
+
 	kfree(g);
 
 #ifdef CONFIG_PM_RUNTIME

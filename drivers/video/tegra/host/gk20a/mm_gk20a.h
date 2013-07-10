@@ -260,6 +260,10 @@ struct mm_gk20a {
 
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
+#ifdef CONFIG_DEBUG_FS
+	u32 ltc_enabled;
+	u32 debugfs_ltc_enabled;
+#endif
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

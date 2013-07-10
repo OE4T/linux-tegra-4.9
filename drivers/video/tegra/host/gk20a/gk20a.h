@@ -35,6 +35,7 @@ struct gr_gk20a;
 struct sim_gk20a;
 
 #include <mach/hardware.h>
+#include <linux/spinlock.h>
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
@@ -87,6 +88,10 @@ struct gk20a {
 	   fw in resume crashes when the resume is from sys_exit. */
 	const struct firmware *pmu_fw;
 
+#ifdef CONFIG_DEBUG_FS
+	spinlock_t debugfs_lock;
+	struct dentry *debugfs;
+#endif
 	void (*remove_support)(struct platform_device *);
 };
 

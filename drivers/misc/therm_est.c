@@ -788,6 +788,11 @@ static int therm_est_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void therm_est_shutdown(struct platform_device *pdev)
+{
+	therm_est_remove(pdev);
+}
+
 static struct platform_driver therm_est_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
@@ -795,6 +800,7 @@ static struct platform_driver therm_est_driver = {
 	},
 	.probe  = therm_est_probe,
 	.remove = therm_est_remove,
+	.shutdown = therm_est_shutdown,
 };
 
 static int __init therm_est_driver_init(void)

@@ -113,28 +113,32 @@ static inline struct gk20a *get_gk20a(struct platform_device *dev)
 
 enum BAR0_DEBUG_OPERATION {
 	BARO_ZERO_NOP = 0,
-	OP_END,
-	BAR0_READ32,
-	BAR0_WRITE32,
+	OP_END = 'DONE',
+	BAR0_READ32 = '0R32',
+	BAR0_WRITE32 = '0W32',
 };
 
 struct share_buffer_head {
 	enum BAR0_DEBUG_OPERATION operation;
 /* size of the operation item */
 	u32 size;
-	u32 failed;
 	u32 completed;
+	u32 failed;
+	u64 context;
+	u64 completion_callback;
 };
 
 struct gk20a_cyclestate_buffer_elem {
 	struct share_buffer_head	head;
-/* IN */
-	u32                       offsetBAR0;
-	u16                       firstBit;
-	u16                       lastBit;
-/* OUT */
+/* in */
+	u64 p_data;
+	u64 p_done;
+	u32 offset_bar0;
+	u16 first_bit;
+	u16 last_bit;
+/* out */
 /* keep 64 bits to be consistent */
-	u64                       data;
+	u64 data;
 };
 
 extern const struct nvhost_as_moduleops gk20a_as_moduleops;

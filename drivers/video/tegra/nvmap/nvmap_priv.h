@@ -398,4 +398,7 @@ int __nvmap_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			unsigned long start, unsigned long end,
 			unsigned int op, unsigned int allow_deferred);
 
+void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root);
+int nvmap_dmabuf_stash_init(void);
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

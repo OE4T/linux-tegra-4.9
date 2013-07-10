@@ -1441,6 +1441,13 @@ static int nvmap_probe(struct platform_device *pdev)
 	nvmap_dev = dev;
 	nvmap_share = &dev->iovmm_master;
 
+#ifdef CONFIG_NVMAP_DMABUF_STASH
+	nvmap_dmabuf_debugfs_init(nvmap_debug_root);
+	e = nvmap_dmabuf_stash_init();
+	if (e)
+		goto fail_heaps;
+#endif
+
 	return 0;
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {

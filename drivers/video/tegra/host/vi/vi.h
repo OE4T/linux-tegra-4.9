@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,8 @@ struct vi {
 	struct platform_device *ndev;
 	struct regulator *reg;
 };
+
+extern const struct file_operations tegra_vi_ctrl_ops;
 
 int nvhost_vi_prepare_poweroff(struct platform_device *);
 int nvhost_vi_finalize_poweron(struct platform_device *);

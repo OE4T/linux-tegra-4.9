@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -241,6 +241,7 @@ struct nvhost_device_data t124_vi_info = {
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
+	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.slave         = &tegra_vi01b_device,
 };
 

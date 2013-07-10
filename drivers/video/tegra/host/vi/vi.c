@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,8 +24,10 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/nvhost_vi_ioctl.h>
 
 #include <mach/pm_domains.h>
+#include <mach/clk.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -331,6 +333,76 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	}
 	return ret;
 }
+
+long tegra_vi_ioctl(struct file *file,
+		unsigned int cmd, unsigned long arg)
+{
+	struct vi *tegra_vi;
+
+	if (_IOC_TYPE(cmd) != NVHOST_VI_IOCTL_MAGIC)
+		return -EFAULT;
+
+	tegra_vi = file->private_data;
+	switch (cmd) {
+	case NVHOST_VI_IOCTL_ENABLE_TPG: {
+		uint enable;
+		int ret;
+		struct clk *clk;
+
+		if (copy_from_user(&enable,
+			(const void __user *)arg, sizeof(uint))) {
+			dev_err(&tegra_vi->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+		}
+
+		clk = clk_get(&tegra_vi->ndev->dev, "pll_d");
+		if (enable)
+			ret = tegra_clk_cfg_ex(clk,
+				TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+		else
+			ret = tegra_clk_cfg_ex(clk,
+				TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
+		clk_put(clk);
+
+		return ret;
+	}
+	default:
+		dev_err(&tegra_vi->ndev->dev,
+			"%s: Unknown vi ioctl.\n", __func__);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int tegra_vi_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata;
+	struct vi *vi;
+
+	pdata = container_of(inode->i_cdev,
+		struct nvhost_device_data, ctrl_cdev);
+	BUG_ON(pdata == NULL);
+
+	vi = (struct vi *)pdata->private_data;
+	BUG_ON(vi == NULL);
+
+	file->private_data = vi;
+	return 0;
+}
+
+static int tegra_vi_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+const struct file_operations tegra_vi_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.open = tegra_vi_open,
+	.unlocked_ioctl = tegra_vi_ioctl,
+	.release = tegra_vi_release,
+};
 #endif
+
 late_initcall(vi_init);
 module_exit(vi_exit);

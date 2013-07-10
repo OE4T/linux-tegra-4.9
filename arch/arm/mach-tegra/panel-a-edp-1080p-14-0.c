@@ -345,6 +345,7 @@ static void edp_a_1080p_14_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->width = 320;
 	dc->height = 205;
 	dc->hotplug_gpio = TEGRA_GPIO_PFF0;
+	dc->dither = TEGRA_DC_TEMPORAL_DITHER;
 }
 
 static void edp_a_1080p_14_0_fb_data_init(struct tegra_fb_data *fb)

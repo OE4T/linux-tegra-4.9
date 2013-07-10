@@ -682,6 +682,8 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
+	pdata->nvhost_timeout_default =
+			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 	nvhost_debug_init(host);
 
 #ifdef CONFIG_PM_RUNTIME

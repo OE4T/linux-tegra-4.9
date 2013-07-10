@@ -963,15 +963,29 @@ static int gk20a_probe(struct platform_device *dev)
 	else
 		pm_runtime_put(&dev->dev);
 
+	gk20a->gr_idle_timeout_default = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+	gk20a->timeouts_enabled = true;
+
 #ifdef CONFIG_DEBUG_FS
 	clk_gk20a_debugfs_init(dev);
 
 	spin_lock_init(&gk20a->debugfs_lock);
 	gk20a->mm.ltc_enabled = true;
-	gk20a->mm.debugfs_ltc_enabled = true;
-	gk20a->debugfs = debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
+	gk20a->mm.ltc_enabled_debug = true;
+	gk20a->debugfs_ltc_enabled =
+			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
 				 pdata->debugfs,
-				 &gk20a->mm.debugfs_ltc_enabled);
+				 &gk20a->mm.ltc_enabled_debug);
+	gk20a->mm.ltc_enabled_debug = true;
+	gk20a->debugfs_gr_idle_timeout_default =
+			debugfs_create_u32("gr_idle_timeout_default_us",
+					S_IRUGO|S_IWUSR, pdata->debugfs,
+					 &gk20a->gr_idle_timeout_default);
+	gk20a->debugfs_timeouts_enabled =
+			debugfs_create_bool("timeouts_enabled",
+					S_IRUGO|S_IWUSR,
+					pdata->debugfs,
+					&gk20a->timeouts_enabled);
 #endif
 
 	return 0;
@@ -987,7 +1001,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	set_gk20a(dev, 0);
 #ifdef CONFIG_DEBUG_FS
-	debugfs_remove(g->debugfs);
+	debugfs_remove(g->debugfs_ltc_enabled);
+	debugfs_remove(g->debugfs_gr_idle_timeout_default);
+	debugfs_remove(g->debugfs_timeouts_enabled);
 #endif
 
 	kfree(g);

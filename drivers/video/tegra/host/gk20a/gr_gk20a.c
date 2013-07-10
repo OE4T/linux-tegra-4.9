@@ -279,7 +279,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 mailbox_ok, u32 opc_fail,
 				   u32 mailbox_fail)
 {
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
@@ -1929,7 +1929,7 @@ out:
 int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 		       struct nvhost_free_obj_ctx_args *args)
 {
-	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+	unsigned long timeout = gk20a_get_gr_idle_timeout(c->g);
 
 	nvhost_dbg_fn("");
 
@@ -2532,7 +2532,7 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
@@ -2663,7 +2663,7 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -2736,7 +2736,7 @@ static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -2890,7 +2890,7 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i, j;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -3309,7 +3309,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 addr_lo, addr_hi, addr;
 	u32 compbit_base_post_divide;
 	u32 compbit_base_post_multiply;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 fe_go_idle_timeout_save;
 	u32 last_bundle_data = 0;
 	u32 last_method_data = 0;
@@ -3607,7 +3607,7 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct av_list_gk20a *sw_non_ctx_load = &g->gr.ctx_vars.sw_non_ctx_load;
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 i, err = 0;
 
 	nvhost_dbg_fn("");
@@ -4242,7 +4242,7 @@ int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va)
 
 int gk20a_gr_suspend(struct gk20a *g)
 {
-	u32 timeout = GR_IDLE_TIMEOUT_DEFAULT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 ret = 0;
 
 	nvhost_dbg_fn("");

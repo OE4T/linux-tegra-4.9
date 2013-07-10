@@ -262,7 +262,7 @@ struct mm_gk20a {
 	bool sw_ready;
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
-	u32 debugfs_ltc_enabled;
+	u32 ltc_enabled_debug;
 #endif
 };
 

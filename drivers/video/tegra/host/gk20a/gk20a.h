@@ -88,12 +88,23 @@ struct gk20a {
 	   fw in resume crashes when the resume is from sys_exit. */
 	const struct firmware *pmu_fw;
 
+	u32 gr_idle_timeout_default;
+	u32 timeouts_enabled;
+
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;
-	struct dentry *debugfs;
+	struct dentry *debugfs_ltc_enabled;
+	struct dentry *debugfs_timeouts_enabled;
+	struct dentry *debugfs_gr_idle_timeout_default;
 #endif
 	void (*remove_support)(struct platform_device *);
 };
+
+static inline u32 gk20a_get_gr_idle_timeout(struct gk20a *g)
+{
+	return g->timeouts_enabled ?
+		g->gr_idle_timeout_default : MAX_SCHEDULE_TIMEOUT;
+}
 
 static inline struct gk20a *get_gk20a(struct platform_device *dev)
 {

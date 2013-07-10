@@ -192,6 +192,8 @@ struct nvhost_device_data {
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
 	struct dentry *debugfs;		/* debugfs directory */
 
+	u32 nvhost_timeout_default;
+
 	/* Data for devfreq usage */
 	struct devfreq			*power_manager;
 	/* Private device profile data */

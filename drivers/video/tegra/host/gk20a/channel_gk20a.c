@@ -406,7 +406,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	struct gr_gk20a *gr = &g->gr;
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct vm_gk20a *ch_vm = ch->vm;
-	unsigned long timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
 
 	nvhost_dbg_fn("");
 
@@ -1167,9 +1167,9 @@ static void gk20a_sync_debugfs(struct gk20a *g)
 {
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 	spin_lock(&g->debugfs_lock);
-	if (g->mm.ltc_enabled != g->mm.debugfs_ltc_enabled) {
+	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
 		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
-		if (g->mm.debugfs_ltc_enabled)
+		if (g->mm.ltc_enabled_debug)
 			/* bypass disabled (normal caching ops)*/
 			reg &= ~reg_f;
 		else
@@ -1177,7 +1177,7 @@ static void gk20a_sync_debugfs(struct gk20a *g)
 			reg |= reg_f;
 
 		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
-		g->mm.ltc_enabled = g->mm.debugfs_ltc_enabled;
+		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
 	}
 	spin_unlock(&g->debugfs_lock);
 }

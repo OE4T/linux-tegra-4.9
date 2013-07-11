@@ -79,8 +79,6 @@
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
 
-#define POWER_ON_DELAY 20 /* ms */
-
 #define THERM_WARN_RANGE_HIGH_OFFSET	2000
 #define THERM_WARN_RANGE_LOW_OFFSET	7000
 
@@ -919,12 +917,10 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 			return;
 		}
 	}
-	if (is_enable) {
+	if (is_enable)
 		ret = regulator_enable(data->nct_reg);
-		msleep(POWER_ON_DELAY);
-	} else {
+	else
 		ret = regulator_disable(data->nct_reg);
-	}
 
 	if (ret < 0)
 		dev_err(&data->client->dev, "Error in %s rail vdd_nct%s, "

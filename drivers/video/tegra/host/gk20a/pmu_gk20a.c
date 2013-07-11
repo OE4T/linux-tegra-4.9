@@ -1458,15 +1458,20 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 		pwr_pmu_idle_mask_gr_enabled_f() |
 		pwr_pmu_idle_mask_ce_2_enabled_f());
 
+	/* disable idle filtering for counters 3 and 6 */
 	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(3));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
-			pwr_pmu_idle_ctrl_value_busy_f());
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_busy_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
 
 	/* use counter #6 for total cycles */
 	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(6));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m(),
-			pwr_pmu_idle_ctrl_value_always_f());
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_always_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
 
 	if (!IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))

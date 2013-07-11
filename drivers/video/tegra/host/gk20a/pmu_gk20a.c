@@ -1837,8 +1837,8 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 
 	if (unlikely(!pmu->pmu_ready)) {
 		pmu_process_init_msg(pmu, &msg);
-		/* pmu_init_powergating(pmu); */
-		/* pmu_init_perfmon(pmu); */
+		pmu_init_powergating(pmu);
+		pmu_init_perfmon(pmu);
 		return 0;
 	}
 
@@ -2311,6 +2311,12 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	int ret = 0;
 
 	nvhost_dbg_fn("");
+
+	/* Until ZBC save/restore is implemented, we keep ELPG off */
+	nvhost_err(dev_from_gk20a(g),
+		"ELPG functionality currently disabled\n");
+
+	return -EINVAL;
 
 	if (!pmu->elpg_ready)
 		return 0;

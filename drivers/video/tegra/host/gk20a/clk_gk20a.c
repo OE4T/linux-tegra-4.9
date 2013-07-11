@@ -382,7 +382,6 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	u32 freq = clk->gpc_pll.freq;
 	int err = 0;
 
-	rate = 264;
 	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
 		freq, rate);
 	mutex_lock(&clk->clk_mutex);

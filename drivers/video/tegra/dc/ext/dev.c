@@ -195,7 +195,7 @@ int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
 		}
 
 	if (nr_win) {
-		tegra_dc_update_windows(&wins[0], nr_win, NULL);
+		tegra_dc_update_windows(&wins[0], nr_win, NULL, true);
 		tegra_dc_sync_windows(&wins[0], nr_win);
 		tegra_dc_program_bandwidth(ext->dc, true);
 	}
@@ -468,6 +468,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	struct tegra_dc_dmabuf *old_handle;
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
+	bool wait_for_vblank = false;
 
 	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
@@ -541,6 +542,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		if (!skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
 
+		if (flip_win->attr.swap_interval && !no_vsync)
+			wait_for_vblank = true;
+
 		ext_win->enabled = !!(win->flags & TEGRA_WIN_FLAG_ENABLED);
 		wins[nr_win++] = win;
 	}
@@ -548,7 +552,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	if (ext->dc->enabled && !skip_flip) {
 		ext->dc->blanked = false;
 		tegra_dc_update_windows(wins, nr_win,
-			data->dirty_rect_valid ? data->dirty_rect : NULL);
+			data->dirty_rect_valid ? data->dirty_rect : NULL,
+			wait_for_vblank);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
 		tegra_dc_program_bandwidth(ext->dc, true);

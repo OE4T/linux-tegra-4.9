@@ -402,6 +402,8 @@ void tegra_dc_call_flip_callback(void);
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc,
 u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us,
 u32 timeout_ms);
+/* defined in dc.c, used by ext/dev.c */
+extern int no_vsync;
 
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
@@ -443,5 +445,8 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
+
+/* defined in dc.c, used in dc.c and window.c */
+bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask);
 
 #endif

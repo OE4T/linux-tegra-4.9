@@ -19,6 +19,7 @@
 #include <linux/types.h>
 #include <linux/moduleparam.h>
 #include <linux/export.h>
+#include <linux/delay.h>
 #include <mach/dc.h>
 #include <mach/hardware.h>
 #include <trace/events/display.h>
@@ -27,7 +28,7 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 
-static int no_vsync;
+int no_vsync;
 
 module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
 
@@ -437,10 +438,11 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 /* Does not support updating windows on multiple dcs in one call.
  * Requires a matching sync_windows to avoid leaking ref-count on clocks. */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect)
+	u16 *dirty_rect, bool wait_for_vblank)
 {
 	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
+	unsigned long act_control = 0;
 	unsigned long win_options;
 	bool update_blend_par = false;
 	bool update_blend_seq = false;
@@ -487,11 +489,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		dc->out_ops->hold(dc);
 
 	if (no_vsync)
-		tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
-			DC_CMD_STATE_ACCESS);
-	else
-		tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
-			DC_CMD_STATE_ACCESS);
+		wait_for_vblank = 0;
 
 	if (dirty_rect) {
 		xoff = dirty_rect[0];
@@ -564,6 +562,22 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 				update_blend_seq = true;
 			else
 				update_blend_par = true;
+		}
+
+		tegra_dc_writel(dc, WINDOW_A_SELECT << win->idx,
+				DC_CMD_DISPLAY_WINDOW_HEADER);
+
+		update_mask |= WIN_A_ACT_REQ << win->idx;
+
+		if (wait_for_vblank)
+			act_control &= ~WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
+		else
+			act_control |= WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
+
+		if (!WIN_IS_ENABLED(win)) {
+			dc_win->dirty = 1;
+			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
+			continue;
 		}
 
 		tegra_dc_writel(dc, tegra_dc_fmt(win->fmt),
@@ -887,7 +901,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 #endif
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
-		dc_win->dirty = no_vsync ? 0 : 1;
+		dc_win->dirty = 1;
 
 		trace_window_update(dc, win);
 	}
@@ -899,8 +913,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			tegra_dc_blend_sequential(dc, &dc->blend);
 
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-			if (!no_vsync)
-				dc->windows[i].dirty = 1;
+			dc->windows[i].dirty = 1;
 			update_mask |= WIN_A_ACT_REQ << i;
 		}
 	}
@@ -913,7 +926,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT,
 						DC_CMD_INT_STATUS);
 
-	if (!no_vsync) {
+	tegra_dc_writel(dc, act_control, DC_CMD_REG_ACT_CONTROL);
+
+	if (wait_for_vblank) {
+		/* Use the interrupt handler.  ISR will clear the dirty flags
+		   when the flip is completed */
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
 			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT());
@@ -921,15 +938,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		set_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 		tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
 #endif
-	} else {
-		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
-		tegra_dc_mask_interrupt(dc, V_BLANK_INT | ALL_UF_INT());
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
-		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
-		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
-#endif
-		if (!atomic_read(&dc->frame_end_ref))
-			tegra_dc_mask_interrupt(dc, FRAME_END_INT);
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
@@ -951,6 +959,23 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	 * out_ops->release called in tegra_dc_sync_windows.
 	 */
 	tegra_dc_io_end(dc);
+
+	if (!wait_for_vblank) {
+		/* Don't use a interrupt handler for the update, but leave
+		   vblank interrupts unmasked since they could be used by other
+		   windows.  One window could flip on HBLANK while others flip
+		   on VBLANK.  Poll HW until this window update is completed
+		   which could block for as long as it takes to display one
+		   scanline. */
+
+		unsigned int winmask = update_mask & WIN_ALL_ACT_REQ;
+		while (tegra_dc_windows_are_dirty(dc, winmask))
+			udelay(1);
+
+		for_each_set_bit(i, &dc->valid_windows, n)
+			tegra_dc_get_window(dc, windows[i]->idx)->dirty = 0;
+	}
+
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);

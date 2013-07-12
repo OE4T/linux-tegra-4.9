@@ -136,6 +136,7 @@
 #define CURSOR_ACT_CNTR_SEL_H	1
 #define CURSOR_ACT_CNTR_SEL		7
 
+#define  WIN_ACT_CNTR_SEL_HCOUNTER(x)	(1 << ((x) * 2 + 2))
 
 #define DC_COM_CRC_CONTROL			0x300
 #define  CRC_ALWAYS_ENABLE		(1 << 3)

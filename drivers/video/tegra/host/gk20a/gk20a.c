@@ -50,8 +50,6 @@
 
 #include "../../../../../../arch/arm/mach-tegra/iomap.h"
 
-extern int hack_tegra12x_gpu_unpowergate(void);
-
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
 	nvhost_set_private_data(dev, gk20a);
@@ -108,38 +106,39 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.waitbases,
 	.modulemutexes,
 	*/
-	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
-	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", 204000000}, \
-		   {"emc", UINT_MAX}, {} },
-	.powergate_ids = { TEGRA_POWERGATE_GPU, -1 },
+	.class			= NV_GRAPHICS_GPU_CLASS_ID,
+	.clocks			= {{"PLLG_ref", UINT_MAX},
+				   {"pwr", 408000000},
+				   {"emc", UINT_MAX},
+				   {} },
+	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay = 500,
-	.can_powergate = false,
-	.alloc_hwctx_handler = nvhost_gk20a_alloc_hwctx_handler,
-	.ctrl_ops = &gk20a_ctrl_ops,
-	.moduleid      = NVHOST_MODULE_GPU,
+	.powergate_delay	= 750,
+	.can_powergate		= true,
+	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
+	.ctrl_ops		= &gk20a_ctrl_ops,
+	.moduleid		= NVHOST_MODULE_GPU,
 };
 
 struct platform_device tegra_gk20a_device = {
-	.name          = "gk20a",
-	.resource      = gk20a_resources,
+	.name		= "gk20a",
+	.resource	= gk20a_resources,
 #if CONFIG_GK20A_SIM
-	.num_resources = 3, /* this is num ioresource_mem, not the sum */
+	.num_resources	= 3, /* this is num ioresource_mem, not the sum */
 #else
-	.num_resources = 2, /* this is num ioresource_mem, not the sum */
+	.num_resources	= 2, /* this is num ioresource_mem, not the sum */
 #endif
-	.dev           = {
+	.dev		= {
 		.platform_data = &tegra_gk20a_info,
 	},
 };
-
-
 
 #if CONFIG_GK20A_SIM
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
 	writel(v, g->sim.regs+r);
 }
+
 static inline u32 sim_readl(struct gk20a *g, u32 r)
 {
 	return readl(g->sim.regs+r);
@@ -319,10 +318,12 @@ static inline u32 sim_escape_read_hdr_size(void)
 {
 	return 12; /*TBD: fix NV_VGPU_SIM_ESCAPE_READ_HEADER*/
 }
+
 static u32 *sim_send_ring_bfr(struct gk20a *g, u32 byte_offset)
 {
 	return (u32 *)(g->sim.send_bfr.kvaddr + byte_offset);
 }
+
 static int rpc_send_message(struct gk20a *g)
 {
 	/* calculations done in units of u32s */
@@ -406,7 +407,6 @@ static int rpc_recv_poll(struct gk20a *g)
 	return 0;
 }
 
-
 static int issue_rpc_and_wait(struct gk20a *g)
 {
 	int err;
@@ -454,7 +454,6 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 		memcpy(data, sim_msg_param(g, data_offset), count);
 	return err;
 }
-
 
 #else /*CONFIG_GK20A_SIM*/
 static inline int gk20a_init_sim_support(struct platform_device *dev)
@@ -706,6 +705,9 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 
 	nvhost_dbg_fn("");
 
+	if (!g->power_on)
+		return 0;
+
 	ret |= gk20a_channel_suspend(g);
 
 	ret |= gk20a_fifo_suspend(g);
@@ -729,13 +731,10 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	if (g->power_on)
 		return 0;
 
-	g->power_on = true;
-
-	/* FIXME: We probably don't need to call this routine, and hence
-	 * should remove it.
-	 */
-	hack_tegra12x_gpu_unpowergate();
+	/* FIXME: fix this correctly. this is enabling ARCH timer */
 	writel(0x1, IO_TO_VIRT(0x700f0000));
+
+	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_disabled_f());

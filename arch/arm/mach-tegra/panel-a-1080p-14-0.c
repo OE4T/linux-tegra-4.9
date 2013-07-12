@@ -44,6 +44,7 @@ static struct regulator *vdd_1v2_en;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
+static struct regulator *vdd_lcd_bl;
 
 static tegra_dc_bl_output dsi_a_1080p_14_0_bl_output_measured = {
 	0, 0, 1, 2, 3, 4, 5, 6,
@@ -160,6 +161,14 @@ static int laguna_dsi_regulator_get(struct device *dev)
 		goto fail;
 	}
 
+	vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
+	if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
+		pr_err("vdd_lcd_bl regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_bl);
+		vdd_lcd_bl = NULL;
+		goto fail;
+	}
+
 	reg_requested = true;
 	return 0;
 fail:
@@ -195,12 +204,6 @@ static int laguna_dsi_gpio_get(void)
 	err = gpio_request(LCD_TE, "lcd_te");
 	if (err < 0) {
 		pr_err("panel lcd te request failed\n");
-		goto fail;
-	}
-
-	err = gpio_request(en_vdd_bl, "edp bridge 1v2 enable");
-	if (err < 0) {
-		pr_err("edp bridge 1v2 enable gpio request failed\n");
 		goto fail;
 	}
 
@@ -275,7 +278,14 @@ static int dsi_a_1080p_14_0_enable(struct device *dev)
 			goto fail;
 		}
 	}
-	gpio_direction_output(en_vdd_bl, 1);
+
+	if (vdd_lcd_bl) {
+		err = regulator_enable(vdd_lcd_bl);
+		if (err < 0) {
+			pr_err("vdd_lcd_bl regulator enable failed\n");
+			goto fail;
+		}
+	}
 	gpio_direction_output(DSI_PANEL_RST_GPIO, 0);
 	usleep_range(10000, 12000);
 	gpio_direction_output(lvds_en, 1);
@@ -293,7 +303,9 @@ static int dsi_a_1080p_14_0_disable(void)
 {
 	gpio_set_value(lvds_en, 0);
 	gpio_set_value(refclk_en, 0);
-	gpio_set_value(en_vdd_bl, 0);
+
+	if (vdd_lcd_bl)
+		regulator_disable(vdd_lcd_bl);
 
 	if (vdd_1v2_en)
 		regulator_disable(vdd_1v2_en);

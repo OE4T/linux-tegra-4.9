@@ -1083,7 +1083,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVHDCP
 	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
-			dc->out->dcc_bus);
+			dc->out->ddc_bus);
 	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create nvhdcp\n");
 		err = PTR_ERR(hdmi->nvhdcp);

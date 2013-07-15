@@ -240,6 +240,13 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_u32("force_timeout_dump", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_dump);
 	nvhost_debug_force_timeout_dump = 0;
+
+#if defined(NVHOST_DEBUG)
+	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR, de,
+			&nvhost_dbg_mask);
+#endif
+
+
 }
 
 void nvhost_debug_dump(struct nvhost_master *master)

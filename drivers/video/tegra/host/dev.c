@@ -32,7 +32,7 @@
 #include "dev.h"
 
 #if defined(NVHOST_DEBUG)
-u32 nvhost_dbg_mask = NVHOST_DBG_MASK; /* can be changed dynamically, as well */
+u32 nvhost_dbg_mask = NVHOST_DEFAULT_DBG_MASK;
 #endif
 
 /* host1x device list is used in 2 places:

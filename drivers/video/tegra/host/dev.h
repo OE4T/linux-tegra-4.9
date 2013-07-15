@@ -31,9 +31,15 @@ struct platform_device *nvhost_device_list_match_by_id(u32 id);
 void nvhost_device_list_remove(struct platform_device *pdev);
 
 
-/* debug info */
-/*#define NVHOST_DEBUG*/
-#define NVHOST_DBG_MASK (dbg_map)
+#ifdef CONFIG_DEBUG_FS
+    /* debug info, default is compiled-in but effectively disabled (0 mask) */
+    #define NVHOST_DEBUG
+    #define NVHOST_DEFAULT_DBG_MASK 0 /*e.g: echo 1 > /d/tegra_host/dbg_mask */
+#else
+    /* manually enable and turn it on the mask */
+    /*#define NVHOST_DEBUG*/
+    #define NVHOST_DEFAULT_DBG_MASK (dbg_info)
+#endif
 
 enum nvhost_dbg_categories {
 	dbg_info    = BIT(0),  /* lightly verbose info */
@@ -53,14 +59,14 @@ extern u32 nvhost_dbg_mask;
 #define nvhost_dbg(dbg_mask, format, arg...)				\
 do {									\
 	if ((dbg_mask) & nvhost_dbg_mask)				\
-		printk(KERN_DEBUG "nvhost %s: " format "\n", __func__, ##arg);\
+		printk(KERN_INFO "nvhost %s: " format "\n", __func__, ##arg);\
 } while (0)
 
 #else /* NVHOST_DEBUG */
 #define nvhost_dbg(dbg_mask, format, arg...)				\
 do {									\
 	if (0)								\
-		printk(KERN_DEBUG "nvhost %s: " format "\n", __func__, ##arg);\
+		printk(KERN_INFO "nvhost %s: " format "\n", __func__, ##arg);\
 } while (0)
 
 #endif

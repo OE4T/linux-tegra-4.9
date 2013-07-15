@@ -919,6 +919,30 @@ passive_delay_show(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t
+polling_delay_store(struct device *dev, struct device_attribute *attr,
+		    const char *buf, size_t count)
+{
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+	int polling_delay;
+
+	if (!sscanf(buf, "%d\n", &polling_delay))
+		return -EINVAL;
+
+	tz->polling_delay = polling_delay;
+	thermal_zone_device_update(tz, THERMAL_EVENT_UNSPECIFIED);
+	return count;
+}
+
+static ssize_t
+polling_delay_show(struct device *dev, struct device_attribute *attr,
+		   char *buf)
+{
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+
+	return sprintf(buf, "%d\n", tz->polling_delay);
+}
+
+static ssize_t
 policy_store(struct device *dev, struct device_attribute *attr,
 		    const char *buf, size_t count)
 {
@@ -1189,6 +1213,8 @@ static DEVICE_ATTR(mode, 0644, mode_show, mode_store);
 static DEVICE_ATTR(passive, S_IRUGO | S_IWUSR, passive_show, passive_store);
 static DEVICE_ATTR(passive_delay, S_IRUGO | S_IWUSR,
 		   passive_delay_show, passive_delay_store);
+static DEVICE_ATTR(polling_delay, S_IRUGO | S_IWUSR,
+		   polling_delay_show, polling_delay_store);
 static DEVICE_ATTR(policy, S_IRUGO | S_IWUSR, policy_show, policy_store);
 static DEVICE_ATTR(available_policies, S_IRUGO, available_policies_show, NULL);
 
@@ -2003,6 +2029,11 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	if (result)
 		goto unregister;
 
+	/* Create polling_delay attribute */
+	result = device_create_file(&tz->device, &dev_attr_polling_delay);
+	if (result)
+		goto unregister;
+
 	/* Create available_policies attribute */
 	result = device_create_file(&tz->device, &dev_attr_available_policies);
 	if (result)
@@ -2108,6 +2139,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	if (tz->ops->get_mode)
 		device_remove_file(&tz->device, &dev_attr_mode);
 	device_remove_file(&tz->device, &dev_attr_passive_delay);
+	device_remove_file(&tz->device, &dev_attr_polling_delay);
 	device_remove_file(&tz->device, &dev_attr_policy);
 	device_remove_file(&tz->device, &dev_attr_available_policies);
 	remove_trip_attrs(tz);

@@ -1284,7 +1284,7 @@ static int nct1008_probe(struct i2c_client *client,
 					&nct_ext_ops,
 					data->plat_data.tzp,
 					data->plat_data.passive_delay,
-					0);
+					data->plat_data.polling_delay);
 	if (IS_ERR_OR_NULL(data->nct_ext)) {
 		thermal_zone_device_unregister(data->nct_int);
 		data->nct_int = NULL;

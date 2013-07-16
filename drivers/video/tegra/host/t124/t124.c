@@ -375,18 +375,22 @@ static struct platform_device *t124_devices[] = {
 
 struct platform_device *tegra12_register_host1x_devices(void)
 {
-	int index = 0;
+	int i = 0;
 	struct platform_device *pdev;
 
 	nvhost_dbg_fn("");
+
+	for (i = NVSYNCPT_GK20A_BASE; i <= NVSYNCPT_GK20A_LAST; i++) {
+		s_syncpt_names[i] = "gk20a";
+	}
 
 	/* register host1x device first */
 	platform_device_register(&tegra_host1x04_device);
 	tegra_host1x04_device.dev.parent = NULL;
 
 	/* register clients with host1x device as parent */
-	for (index = 0; index < ARRAY_SIZE(t124_devices); index++) {
-		pdev = t124_devices[index];
+	for (i = 0; i < ARRAY_SIZE(t124_devices); i++) {
+		pdev = t124_devices[i];
 		pdev->dev.parent = &tegra_host1x04_device.dev;
 		platform_device_register(pdev);
 	}
@@ -550,8 +554,9 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 		}
 #endif
 #if defined(CONFIG_TEGRA_GK20A)
-		if (is_gk20a_module(dev)) {
-			pdata->syncpts[0]       = NVSYNCPT_3D;
+		if (dev == &tegra_gk20a_device) {
+			pdata->syncpts[0]       = NVSYNCPT_GK20A_BASE;
+			pdata->syncpt_base      = NVSYNCPT_GK20A_BASE;
 			pdata->waitbases[0]     = NVWAITBASE_3D;
 			pdata->modulemutexes[0] = NVMODMUTEX_3D;
 		}

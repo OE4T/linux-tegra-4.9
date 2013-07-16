@@ -101,9 +101,10 @@ static const struct file_operations gk20a_ctrl_ops = {
 
 struct nvhost_device_data tegra_gk20a_info = {
 	/* the following are set by the platform (e.g. t124) support
-	.syncpts       = BIT(NVSYNCPT_3D),
-	.waitbases     = BIT(NVWAITBASE_3D),
-	.modulemutexes = BIT(NVMODMUTEX_3D),
+	.syncpts,
+	.syncpt_base,
+	.waitbases,
+	.modulemutexes,
 	*/
 	.class	       = NV_GRAPHICS_GPU_CLASS_ID,
 	.clocks = {{"PLLG_ref", UINT_MAX}, {"pwr", 204000000}, \
@@ -873,9 +874,8 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->init			= nvhost_gk20a_init;
 	pdata->deinit			= nvhost_gk20a_deinit;
 	pdata->alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler;
-	pdata->prepare_poweroff		= nvhost_gk20a_prepare_poweroff,
-	pdata->finalize_poweron		= nvhost_gk20a_finalize_poweron,
-	pdata->syncpt_base		= 32; /*hack*/
+	pdata->prepare_poweroff		= nvhost_gk20a_prepare_poweroff;
+	pdata->finalize_poweron		= nvhost_gk20a_finalize_poweron;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ)) {
 		pdata->busy		= nvhost_gk20a_scale_notify_busy;

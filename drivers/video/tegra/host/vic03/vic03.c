@@ -57,8 +57,8 @@ static struct resource vic03_resources[] = {
 };
 
 struct nvhost_device_data vic03_info = {
-	/*.syncpts       = BIT(NVSYNCPT_VIC),*/
-	/*.modulemutexes = BIT(NVMODMUTEX_VIC),*/
+	/*.syncpts*/
+	/*.modulemutexes*/
 	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,

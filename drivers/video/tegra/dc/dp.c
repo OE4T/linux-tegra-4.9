@@ -400,7 +400,7 @@ static int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 		cmd, &data, &size, &status);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
-			"dp: Failed to read DPCD data. CMD 0x%x, Status 0x%x\n",
+			"dp: Failed to write DPCD data. CMD 0x%x, Status 0x%x\n",
 			cmd, status);
 	return ret;
 }
@@ -495,36 +495,37 @@ static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 {
 	BUG_ON(!cfg);
 
-	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name       cfg_value\n");
-	dev_info(&dp->dc->ndev->dev, "           Lane Count          %d\n",
+	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name               "\
+		"cfg_value\n");
+	dev_info(&dp->dc->ndev->dev, "           Lane Count             %d\n",
 		cfg->max_lane_count);
 	dev_info(&dp->dc->ndev->dev, "           SupportEnhancedFraming %s\n",
 		cfg->support_enhanced_framing ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           Bandwidth           %d\n",
+	dev_info(&dp->dc->ndev->dev, "           Bandwidth              %d\n",
 		cfg->max_link_bw);
-	dev_info(&dp->dc->ndev->dev, "           bpp                 %d\n",
+	dev_info(&dp->dc->ndev->dev, "           bpp                    %d\n",
 		cfg->bits_per_pixel);
-	dev_info(&dp->dc->ndev->dev, "           EnhancedFraming     %s\n\n",
+	dev_info(&dp->dc->ndev->dev, "           EnhancedFraming        %s\n",
 		cfg->enhanced_framing ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           Scramble_enabled    %s\n",
+	dev_info(&dp->dc->ndev->dev, "           Scramble_enabled       %s\n",
 		cfg->scramble_ena ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           LinkBW              %d\n",
+	dev_info(&dp->dc->ndev->dev, "           LinkBW                 %d\n",
 		cfg->link_bw);
-	dev_info(&dp->dc->ndev->dev, "           lane_count          %d\n",
+	dev_info(&dp->dc->ndev->dev, "           lane_count             %d\n",
 		cfg->lane_count);
-	dev_info(&dp->dc->ndev->dev, "           activespolarity     %d\n",
+	dev_info(&dp->dc->ndev->dev, "           activespolarity        %d\n",
 		cfg->activepolarity);
-	dev_info(&dp->dc->ndev->dev, "           active_count        %d\n",
+	dev_info(&dp->dc->ndev->dev, "           active_count           %d\n",
 		cfg->active_count);
-	dev_info(&dp->dc->ndev->dev, "           tu_size             %d\n",
+	dev_info(&dp->dc->ndev->dev, "           tu_size                %d\n",
 		cfg->tu_size);
-	dev_info(&dp->dc->ndev->dev, "           active_frac         %d\n",
+	dev_info(&dp->dc->ndev->dev, "           active_frac            %d\n",
 		cfg->active_frac);
-	dev_info(&dp->dc->ndev->dev, "           watermark           %d\n",
+	dev_info(&dp->dc->ndev->dev, "           watermark              %d\n",
 		cfg->watermark);
-	dev_info(&dp->dc->ndev->dev, "           hblank_sym          %d\n",
+	dev_info(&dp->dc->ndev->dev, "           hblank_sym             %d\n",
 		cfg->hblank_sym);
-	dev_info(&dp->dc->ndev->dev, "           vblank_sym          %d\n",
+	dev_info(&dp->dc->ndev->dev, "           vblank_sym             %d\n",
 		cfg->vblank_sym);
 };
 

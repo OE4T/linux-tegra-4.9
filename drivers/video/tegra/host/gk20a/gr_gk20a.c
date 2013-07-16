@@ -3314,6 +3314,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 last_bundle_data = 0;
 	u32 last_method_data = 0;
 	u32 i, err;
+	u32 l1c_dbg_reg_val;
 
 	nvhost_dbg_fn("");
 
@@ -3555,6 +3556,17 @@ restore_fe_go_idle:
 	}
 
 	gk20a_mm_l2_invalidate(g);
+
+    /* hack: using hard-coded bits for now until
+     * the reg l1c_dbg reg makes it into hw_gr_gk20a.h
+     */
+    {
+
+        l1c_dbg_reg_val = gk20a_readl(g, 0x005044b0);
+        // set the cya15 bit (27:27) to 1
+        l1c_dbg_reg_val = l1c_dbg_reg_val | 0x08000000;
+        gk20a_writel(g, 0x005044b0, l1c_dbg_reg_val);
+    }
 
 	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
 	if (err)

@@ -391,7 +391,7 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 		rate = gpc_pll_params.min_freq;
 
 	if (rate == freq)
-		return 0;
+		goto clean_up;
 
 	/* gpc_pll.freq is changed to new value here */
 	err = clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,

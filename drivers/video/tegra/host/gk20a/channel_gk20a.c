@@ -783,16 +783,14 @@ static void free_priv_cmdbuf(struct channel_gk20a *c,
 static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct priv_cmd_entry *e;
-	struct list_head *pos, *tmp, *head = &q->head;
-	bool wrap_around;
+	struct priv_cmd_entry *e, *tmp;
+	struct list_head *head = &q->head;
+	bool wrap_around, found = false;
 
 	nvhost_dbg_fn("");
 
 	/* Find the most recent free entry. Free it and everything before it */
-	list_for_each(pos, head) {
-
-		e = list_entry(pos, struct priv_cmd_entry, list);
+	list_for_each_entry(e, head, list) {
 
 		nvhost_dbg_info("ch %d: cmd entry get:put:wrap %d:%d:%d "
 			"curr get:put:wrap %d:%d:%d",
@@ -802,28 +800,29 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 		wrap_around = (c->gpfifo.wrap != e->gp_wrap);
 		if (e->gp_get < e->gp_put) {
 			if (c->gpfifo.get >= e->gp_put ||
-			    wrap_around)
+			    wrap_around) {
+				found = true;
 				break;
-			else
+			} else
 				e->gp_get = c->gpfifo.get;
 		} else if (e->gp_get > e->gp_put) {
 			if (wrap_around &&
-			    c->gpfifo.get >= e->gp_put)
+			    c->gpfifo.get >= e->gp_put) {
+				found = true;
 				break;
-			else
+			} else
 				e->gp_get = c->gpfifo.get;
 		}
 	}
 
-	if (pos != head)
+	if (found)
 		q->get = (e->ptr - q->base_ptr) + e->size;
-	else
+	else {
 		nvhost_dbg_info("no free entry recycled");
 		return;
+	}
 
-	head = pos->prev;
-	list_for_each_safe(pos, tmp, head) {
-		e = container_of(pos, struct priv_cmd_entry, list);
+	list_for_each_entry_safe_continue(e, tmp, head, list) {
 		free_priv_cmdbuf(c, e);
 	}
 

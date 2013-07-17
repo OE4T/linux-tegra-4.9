@@ -69,6 +69,8 @@ int gk20a_init_clk_support(struct gk20a *g);
 
 u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
+u32 gk20a_clk_get_cap(struct gk20a *g);
+int gk20a_clk_set_cap(struct gk20a *g, u32 rate);
 
 extern struct pll_parms gpc_pll_params;
 

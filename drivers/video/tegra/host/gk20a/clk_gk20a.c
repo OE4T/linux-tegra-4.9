@@ -429,6 +429,19 @@ clean_up:
 	return err;
 }
 
+u32 gk20a_clk_get_cap(struct gk20a *g)
+{
+	return gpc_pll_params.max_freq;
+}
+
+int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
+{
+	gpc_pll_params.max_freq = rate;
+	if (gk20a_clk_get_rate(g) <= rate)
+		return 0;
+	return gk20a_clk_set_rate(g, rate);
+}
+
 #ifdef CONFIG_DEBUG_FS
 
 static int init_set(void *data, u64 val)
@@ -453,16 +466,14 @@ DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");
 
 static int cap_get(void *data, u64 *val)
 {
-	*val = (u64)gpc_pll_params.max_freq;
+	struct gk20a *g = (struct gk20a *)data;
+	*val = (u64)gk20a_clk_get_cap(g);
 	return 0;
 }
 static int cap_set(void *data, u64 val)
 {
 	struct gk20a *g = (struct gk20a *)data;
-	gpc_pll_params.max_freq = (u32)val;
-	if (gk20a_clk_get_rate(g) <= val)
-		return 0;
-	return gk20a_clk_set_rate(g, (u32)val);
+	return gk20a_clk_set_cap(g, (u32)val);
 }
 DEFINE_SIMPLE_ATTRIBUTE(cap_fops, cap_get, cap_set, "%llu\n");
 

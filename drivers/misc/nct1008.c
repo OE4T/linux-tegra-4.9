@@ -105,6 +105,8 @@ struct nct1008_data {
 static int conv_period_ms_table[] =
 	{16000, 8000, 4000, 2000, 1000, 500, 250, 125, 63, 32, 16};
 
+static void nct1008_setup_shutdown_warning(struct nct1008_data *data);
+
 static inline s16 value_to_temperature(bool extended, u8 value)
 {
 	return extended ? (s16)(value - EXTENDED_RANGE_OFFSET) : (s16)value;
@@ -273,7 +275,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	u8 temp;
 	long currTemp;
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
 	char bufTemp[MAX_STR_PRINT];
 	char bufOverheat[MAX_STR_PRINT];
 	unsigned int ret;
@@ -305,16 +307,20 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	}
 
 	/* External temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (s16)num);
+	temp = temperature_to_value(data->plat_data.ext_range, (s16)num);
 	err = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
-	temp = temperature_to_value(pdata->ext_range, (s16)num);
+	temp = temperature_to_value(data->plat_data.ext_range, (s16)num);
 	err = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, temp);
 	if (err < 0)
 		goto error;
+
+	data->plat_data.shutdown_ext_limit = num;
+	nct1008_setup_shutdown_warning(data);
+
 	return count;
 error:
 	dev_err(dev, " %s: failed to set temperature-overheat\n", __func__);
@@ -442,6 +448,93 @@ static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
 
+static int nct1008_ext_get_temp_common(struct nct1008_data *data,
+					unsigned long *temp)
+{
+	struct i2c_client *client = data->client;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	s16 temp_ext_hi;
+	s16 temp_ext_lo;
+	long temp_ext_milli;
+	u8 value;
+
+	/* Read External Temp */
+	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
+	if (value < 0)
+		return -1;
+	temp_ext_lo = (value >> 6);
+
+	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
+	if (value < 0)
+		return -1;
+	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
+
+	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
+			 temp_ext_lo * 250;
+	*temp = temp_ext_milli;
+	data->etemp = temp_ext_milli;
+
+	return 0;
+}
+
+static int nct1008_shutdown_warning_get_max_state(
+					struct thermal_cooling_device *cdev,
+					unsigned long *max_state)
+{
+	*max_state = 1;
+	return 0;
+}
+
+static int nct1008_shutdown_warning_get_cur_state(
+					struct thermal_cooling_device *cdev,
+					unsigned long *cur_state)
+{
+	struct nct1008_data *data = cdev->devdata;
+	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
+	unsigned long temp;
+
+	if (nct1008_ext_get_temp_common(data, &temp))
+		return -1;
+
+	if (temp >= (ext_limit - THERM_WARN_RANGE_HIGH_OFFSET))
+		*cur_state = 1;
+	else
+		*cur_state = 0;
+
+	return 0;
+}
+
+static int nct1008_shutdown_warning_set_cur_state(
+					struct thermal_cooling_device *cdev,
+					unsigned long cur_state)
+{
+	static long temp_sav;
+	struct nct1008_data *data = cdev->devdata;
+	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
+	unsigned long temp;
+
+	if (nct1008_ext_get_temp_common(data, &temp))
+		return -1;
+
+	if ((temp >= (ext_limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
+	    (temp != temp_sav)) {
+		pr_warn("NCT%s: Warning: Temperature (%ld.%02ldC) is %s SHUTDOWN (%c)\n",
+			(data->chip == NCT72) ? "72" : "1008",
+			temp / 1000, (temp % 1000) / 10,
+			temp > ext_limit ? "above" :
+			temp == ext_limit ? "at" : "near",
+			temp > temp_sav ? '^' : 'v');
+		temp_sav = temp;
+	}
+	return 0;
+}
+
+static struct thermal_cooling_device_ops nct1008_shutdown_warning_ops = {
+	.get_max_state = nct1008_shutdown_warning_get_max_state,
+	.get_cur_state = nct1008_shutdown_warning_get_cur_state,
+	.set_cur_state = nct1008_shutdown_warning_set_cur_state,
+};
+
 static int nct1008_thermal_set_limits(struct nct1008_data *data,
 				      long lo_limit_milli,
 				      long hi_limit_milli)
@@ -488,7 +581,6 @@ static void nct1008_update(struct nct1008_data *data)
 	struct thermal_trip_info *trip_state;
 	long temp, trip_temp, hysteresis_temp;
 	int count;
-	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
 
 	if (!thz)
 		return;
@@ -496,16 +588,6 @@ static void nct1008_update(struct nct1008_data *data)
 	thermal_zone_device_update(thz);
 
 	thz->ops->get_temp(thz, &temp);
-
-	if ((data->plat_data.num_trips == 0) &&
-	    (temp >= ext_limit - THERM_WARN_RANGE_HIGH_OFFSET)) {
-		pr_warn("NCT1008: Temperature %ld close to shutdown.\n", temp);
-	}
-
-	if ((data->plat_data.num_trips == 0) &&
-	    (temp <= ext_limit - THERM_WARN_RANGE_LOW_OFFSET)) {
-		pr_warn("NCT1008: Temperature %ld in safe level.\n", temp);
-	}
 
 	for (count = 0; count < thz->trips; count++) {
 		trip_state = &data->plat_data.trips[count];
@@ -529,30 +611,8 @@ static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
 					unsigned long *temp)
 {
 	struct nct1008_data *data = thz->devdata;
-	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s16 temp_ext_hi;
-	s16 temp_ext_lo;
-	long temp_ext_milli;
-	u8 value;
 
-	/* Read External Temp */
-	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
-	if (value < 0)
-		return -1;
-	temp_ext_lo = (value >> 6);
-
-	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
-	if (value < 0)
-		return -1;
-	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
-
-	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
-			 temp_ext_lo * 250;
-	*temp = temp_ext_milli;
-	data->etemp = temp_ext_milli;
-
-	return 0;
+	return nct1008_ext_get_temp_common(data, temp);
 }
 
 static int nct1008_ext_bind(struct thermal_zone_device *thz,
@@ -935,6 +995,36 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 	mutex_unlock(&data->mutex);
 }
 
+static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
+{
+	static struct thermal_cooling_device *cdev;
+	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
+	long warn_temp = ext_limit - THERM_WARN_RANGE_HIGH_OFFSET;
+	int i;
+
+	if (cdev)
+		thermal_cooling_device_unregister(cdev);
+	cdev = thermal_cooling_device_register("shutdown_warning", data,
+					&nct1008_shutdown_warning_ops);
+	if (IS_ERR_OR_NULL(cdev)) {
+		cdev = NULL;
+		return;
+	}
+
+	for (i = 0; i < data->plat_data.num_trips; i++) {
+		if (!strcmp(data->plat_data.trips[i].cdev_type,
+						"shutdown_warning")) {
+			data->plat_data.trips[i].trip_temp = warn_temp;
+			nct1008_update(data);
+			break;
+		}
+	}
+
+	pr_info("NCT%s: Register overheat warning at %ld.%02ldC\n",
+			(data->chip == NCT72) ? "72" : "1008",
+			warn_temp / 1000, (warn_temp % 1000) / 10);
+}
+
 static int nct1008_configure_sensor(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
@@ -943,7 +1033,6 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	s16 temp;
 	u8 temp2;
 	int err;
-	long ext_limit = data->plat_data.shutdown_ext_limit * 1000;
 
 	if (!pdata || !pdata->supported_hwrev)
 		return -ENODEV;
@@ -1056,11 +1145,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	}
 	data->current_hi_limit = value_to_temperature(pdata->ext_range, value);
 
-	if (data->plat_data.num_trips == 0 ) {
-		nct1008_thermal_set_limits(data,
-		ext_limit - THERM_WARN_RANGE_LOW_OFFSET,
-		ext_limit - THERM_WARN_RANGE_HIGH_OFFSET);
-	}
+	nct1008_setup_shutdown_warning(data);
 
 	return 0;
 error:
@@ -1165,7 +1250,9 @@ static int nct1008_probe(struct i2c_client *client,
 
 #ifdef CONFIG_THERMAL
 	for (i = 0; i < data->plat_data.num_trips; i++)
-		mask |= (1 << i);
+		if (strcmp(data->plat_data.trips[i].cdev_type,
+						"shutdown_warning"))
+			mask |= (1 << i);
 
 	if (data->plat_data.loc_name) {
 		strcpy(nct_int_name, "nct_int_");

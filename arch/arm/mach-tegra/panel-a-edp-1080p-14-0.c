@@ -195,6 +195,7 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 			goto fail;
 		}
 	}
+	msleep(180);
 
 	return 0;
 fail:

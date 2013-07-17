@@ -934,7 +934,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_enable_dc(sor);
 	tegra_dc_sor_config_panel(sor, false);
 
-	tegra_dc_writel(sor->dc, 0x20, DC_CMD_DISPLAY_WINDOW_HEADER);
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	/* Attach head */
@@ -987,7 +986,6 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 
 	tegra_dc_sor_enable_dc(sor);
 	tegra_dc_sor_config_panel(sor, true);
-	tegra_dc_writel(sor->dc, 0x20, DC_CMD_DISPLAY_WINDOW_HEADER);
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	tegra_sor_writel(sor, NV_SOR_PLL2, 0);
@@ -1081,6 +1079,10 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 			"Failed to power down dp lanes\n");
 		return;
 	}
+
+	tegra_dc_writel(sor->dc, 0, DC_DISP_DISP_WIN_OPTIONS);
+	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_dc_sor_disable_clk(sor);
 	/* Reset SOR clk */

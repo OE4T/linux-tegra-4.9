@@ -1183,10 +1183,8 @@ void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 
 	tegra_dc_sor_enable_clk(sor);
 
-	parent_clk = clk_get_sys(NULL, "pll_d2");
-
-	if (clk_get_parent(clk) != parent_clk)
-		clk_set_parent(clk, parent_clk);
+	parent_clk = clk_get_parent(clk);
+	BUG_ON(!parent_clk);
 
 	if (sor->dc->mode.pclk != clk_get_rate(parent_clk))
 		clk_set_rate(parent_clk, sor->dc->mode.pclk);

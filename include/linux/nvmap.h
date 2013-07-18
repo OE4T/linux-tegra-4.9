@@ -87,6 +87,10 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 				     size_t align, unsigned int flags,
 				     unsigned int heap_mask);
 
+struct dma_buf *nvmap_get_dmabuf(struct nvmap_client *client, ulong user_id);
+
+struct dma_buf *nvmap_get_dmabuf_from_ref(struct nvmap_handle_ref *ref);
+
 ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref);
 
 phys_addr_t nvmap_get_addr_from_user_id(ulong user_id);

@@ -33,6 +33,7 @@
 #include <linux/shrinker.h>
 #include <linux/moduleparam.h>
 #include <linux/module.h>
+#include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 
 #include <asm/cacheflush.h>
@@ -843,6 +844,16 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 		goto out;
 	}
 
+	/*
+	 * This takes out 1 ref on the dambuf. This corresponds to the
+	 * handle_ref that gets automatically made by nvmap_create_handle().
+	 */
+	h->dmabuf = __nvmap_make_dmabuf(client, h);
+	if (!h->dmabuf) {
+		err = -ENOMEM;
+		goto out;
+	}
+
 	alloc_policy = (nr_page == 1) ? heap_policy_small : heap_policy_large;
 
 	while (!h->alloc && *alloc_policy) {
@@ -955,6 +966,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 		h->owner_ref = NULL;
 	}
 
+	dma_buf_put(ref->handle->dmabuf);
 	kfree(ref);
 
 out:
@@ -1026,6 +1038,10 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 
 	nvmap_handle_add(nvmap_dev, h);
 
+	/*
+	 * Major assumption here: the dma_buf object that the handle contains
+	 * is created with a ref count of 1.
+	 */
 	atomic_set(&ref->dupes, 1);
 	ref->handle = h;
 	atomic_set(&ref->pin, 0);
@@ -1104,6 +1120,15 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	ref->handle = h;
 	atomic_set(&ref->pin, 0);
 	add_handle_ref(client, ref);
+
+	/*
+	 * Ref counting on the dma_bufs follows the creation and destruction of
+	 * nvmap_handle_refs. That is every time a handle_ref is made the
+	 * dma_buf ref count goes up and everytime a handle_ref is destroyed
+	 * the dma_buf ref count goes down.
+	 */
+	get_dma_buf(h->dmabuf);
+
 	trace_nvmap_duplicate_handle_id(client, id, ref);
 	return ref;
 }

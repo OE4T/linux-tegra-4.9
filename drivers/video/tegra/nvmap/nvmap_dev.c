@@ -580,7 +580,6 @@ static void destroy_client(struct nvmap_client *client)
 	if (!client)
 		return;
 
-
 	while ((n = rb_first(&client->handle_refs))) {
 		struct nvmap_handle_ref *ref;
 		int pins, dupes;
@@ -595,6 +594,8 @@ static void destroy_client(struct nvmap_client *client)
 			ref->handle->owner = NULL;
 			ref->handle->owner_ref = NULL;
 		}
+
+		dma_buf_put(ref->handle->dmabuf);
 
 		while (pins--)
 			nvmap_unpin_handles(client, &ref->handle, 1);

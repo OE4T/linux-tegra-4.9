@@ -104,6 +104,7 @@ struct nvmap_handle {
 			original client destroy ref, this field
 			has to be set to zero. In this case ref should be
 			obtained through validation */
+	struct dma_buf *dmabuf;
 	struct nvmap_device *dev;
 	union {
 		struct nvmap_pgalloc pgalloc;
@@ -205,6 +206,11 @@ static inline void nvmap_ref_unlock(struct nvmap_client *priv)
 	mutex_unlock(&priv->ref_lock);
 }
 
+/*
+ * NOTE: this does not ensure the continued existence of the underlying
+ * dma_buf. If you want ensure the existence of the dma_buf you must get an
+ * nvmap_handle_ref as that is what tracks the dma_buf refs.
+ */
 static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 {
 	if (unlikely(atomic_inc_return(&h->ref) <= 1)) {
@@ -366,6 +372,10 @@ static inline void inner_clean_cache_all(void)
 extern void __flush_dcache_page(struct address_space *, struct page *);
 
 /* Internal API to support dmabuf */
+struct dma_buf *__nvmap_get_dmabuf(struct nvmap_client *client,
+				 unsigned long id);
+struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
+				    struct nvmap_handle *handle);
 struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
 void __nvmap_free_sg_table(struct nvmap_client *client,

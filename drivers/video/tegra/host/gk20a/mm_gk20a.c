@@ -45,6 +45,37 @@
 
 #include "kind_gk20a.h"
 
+/*
+ * GPU mapping life cycle
+ * ======================
+ *
+ * Kernel mappings
+ * ---------------
+ *
+ * Kernel mappings are created through vm.map(..., false):
+ *
+ *  - Mappings to the same allocations are reused and refcounted.
+ *  - This path does not support deferred unmapping (i.e. kernel must wait for
+ *    all hw operations on the buffer to complete before unmapping).
+ *  - References to memmgr and mem_handle are owned and managed by the (kernel)
+ *    clients of the gk20a_vm layer.
+ *
+ *
+ * User space mappings
+ * -------------------
+ *
+ * User space mappings are created through as.map_buffer -> vm.map(..., true):
+ *
+ *  - Mappings to the same allocations are reused and refcounted.
+ *  - This path supports deferred unmapping (i.e. we delay the actual unmapping
+ *    until all hw operations have completed).
+ *  - References to memmgr and mem_handle are owned and managed by the vm_gk20a
+ *    layer itself. vm.map acquires these refs, and sets
+ *    mapped_buffer->own_mem_ref to record that we must release the refs when we
+ *    actually unmap.
+ *
+ */
+
 static inline int vm_aspace_id(struct vm_gk20a *vm)
 {
 	/* -1 is bar1 or pmu, etc. */
@@ -65,10 +96,11 @@ static inline u32 lo32(u64 f)
 		outer_flush_range(pa, pa + (size_t)(size));		\
 	} while (0)
 
-static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
-			struct mem_mgr **memmgr, struct mem_handle **r);
+static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
 static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
 						     u64 addr);
+static struct mapped_buffer_node *find_mapped_buffer_r(struct rb_root *root,
+						       struct mem_handle *r);
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
 static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 		struct mem_mgr **memmgr, struct mem_handle **r, u64 *offset);
@@ -545,17 +577,11 @@ static int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 	return 0;
 }
 
-static void gk20a_vm_unmap_buffer(struct kref *ref)
+static void gk20a_vm_unmap_locked_kref(struct kref *ref)
 {
 	struct mapped_buffer_node *mapped_buffer =
 		container_of(ref, struct mapped_buffer_node, ref);
-	struct vm_gk20a *vm = mapped_buffer->vm;
-	struct mem_mgr *memmgr = NULL;
-	struct mem_handle *r = NULL;
-
-	gk20a_vm_unmap_locked(vm, mapped_buffer->addr, &memmgr, &r);
-	nvhost_memmgr_put(memmgr, r);
-	nvhost_memmgr_put_mgr(memmgr);
+	gk20a_vm_unmap_locked(mapped_buffer);
 }
 
 static void gk20a_vm_put_buffers(struct vm_gk20a *vm,
@@ -568,7 +594,7 @@ static void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 
 	for (i = 0; i < num_buffers; ++i)
 		kref_put(&mapped_buffers[i]->ref,
-			 gk20a_vm_unmap_buffer);
+			 gk20a_vm_unmap_locked_kref);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
@@ -588,10 +614,10 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 		return;
 	}
 
-	mapped_buffer->user_mapped = false;
-	vm->num_user_mapped_buffers--;
-	list_add_tail(&mapped_buffer->unmap_list, &vm->deferred_unmaps);
-	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_buffer);
+	mapped_buffer->user_mapped--;
+	if (mapped_buffer->user_mapped == 0)
+		vm->num_user_mapped_buffers--;
+	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 }
@@ -696,19 +722,18 @@ static int insert_mapped_buffer(struct rb_root *root,
 	return 0;
 }
 
-static struct mapped_buffer_node *find_deferred_unmap(struct vm_gk20a *vm,
-						      u64 paddr, u64 vaddr,
-						      u32 flags)
+static struct mapped_buffer_node *find_mapped_buffer_r(struct rb_root *root,
+						       struct mem_handle *r)
 {
-	struct mapped_buffer_node *node;
-
-	list_for_each_entry(node, &vm->deferred_unmaps, unmap_list)
-		if ((sg_phys(node->sgt->sgl) == paddr) &&
-		    (node->flags == flags) &&
-		    (!vaddr || (node->addr == vaddr)))
-			return node;
-
-	return NULL;
+	struct rb_node *node = rb_first(root);
+	while (node) {
+		struct mapped_buffer_node *mapped_buffer =
+			container_of(node, struct mapped_buffer_node, node);
+		if (mapped_buffer->handle_ref == r)
+			return mapped_buffer;
+		node = rb_next(&mapped_buffer->node);
+	}
+	return 0;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer(struct rb_root *root,
@@ -822,17 +847,10 @@ static int setup_buffer_size_and_align(struct device *d,
 
 static int setup_buffer_kind_and_compression(struct device *d,
 					     u32 flags,
-					     u32 kind,
 					     struct buffer_attrs *bfr,
 					     enum gmmu_pgsz_gk20a pgsz_idx)
 {
 	bool kind_compressible;
-
-	/* This flag (which comes from map_buffer ioctl) is for override now.
-	   It will be removed when all clients which use it have been
-	   changed to specify kind in the nvmap buffer alloc. */
-	if (flags & NVHOST_MAP_BUFFER_FLAGS_KIND_SPECIFIED)
-		bfr->kind_v = kind;
 
 	if (unlikely(bfr->kind_v == gmmu_pte_kind_invalid_v()))
 		bfr->kind_v = gmmu_pte_kind_pitch_v();
@@ -899,6 +917,55 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	mutex_lock(&vm->update_gmmu_lock);
 
+	mapped_buffer = find_mapped_buffer_r(&vm->mapped_buffers, r);
+	if (mapped_buffer) {
+
+		WARN_ON(mapped_buffer->flags != flags);
+		WARN_ON(mapped_buffer->memmgr != memmgr);
+		BUG_ON(mapped_buffer->vm != vm);
+
+		if (sgt)
+			*sgt = mapped_buffer->sgt;
+
+		/* mark the buffer as used */
+		if (user_mapped) {
+			if (mapped_buffer->user_mapped == 0)
+				vm->num_user_mapped_buffers++;
+			mapped_buffer->user_mapped++;
+			/* If the mapping comes from user space, we own
+			 * the memmgr and handle refs. Since we reuse an
+			 * existing mapping here, we need to give back those
+			 * refs once in order not to leak.
+			 */
+			if (mapped_buffer->own_mem_ref) {
+				nvhost_memmgr_put(mapped_buffer->memmgr,
+						  mapped_buffer->handle_ref);
+				nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
+			} else {
+				mapped_buffer->own_mem_ref = true;
+			}
+		}
+		kref_get(&mapped_buffer->ref);
+
+		mutex_unlock(&vm->update_gmmu_lock);
+		nvhost_dbg(dbg_map,
+			   "reusing as=%d pgsz=%d flags=0x%x ctags=%d "
+			   "start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x "
+			   "own_mem_ref=%d user_mapped=%d",
+			   vm_aspace_id(vm), mapped_buffer->pgsz_idx,
+			   mapped_buffer->flags,
+			   mapped_buffer->ctag_lines,
+			   mapped_buffer->ctag_offset,
+			   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
+			   hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+			   lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+			   hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+			   lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+			   mapped_buffer->own_mem_ref, user_mapped);
+
+		return mapped_buffer->addr;
+	}
+
 	/* pin buffer to get phys/iovmm addr */
 	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d);
 	if (IS_ERR(bfr.sgt)) {
@@ -912,30 +979,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		 */
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
-	}
-
-	mapped_buffer = find_deferred_unmap(vm, sg_phys(bfr.sgt->sgl),
-					    offset_align, flags);
-	if (mapped_buffer) {
-		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
-		if (sgt)
-			*sgt = mapped_buffer->sgt;
-
-		/* mark the buffer as used */
-		mapped_buffer->user_mapped = true;
-		kref_get(&mapped_buffer->ref);
-		vm->num_user_mapped_buffers++;
-		list_del_init(&mapped_buffer->unmap_list);
-
-		/* replace the old reference by the new reference */
-		nvhost_memmgr_put(mapped_buffer->memmgr,
-				  mapped_buffer->handle_ref);
-		nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
-		mapped_buffer->memmgr = memmgr;
-		mapped_buffer->handle_ref = r;
-
-		mutex_unlock(&vm->update_gmmu_lock);
-		return mapped_buffer->addr;
 	}
 
 	if (sgt)
@@ -984,8 +1027,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (sgt)
 		*sgt = bfr.sgt;
 
-	err = setup_buffer_kind_and_compression(d, flags, kind,
-						&bfr, bfr.pgsz_idx);
+	err = setup_buffer_kind_and_compression(d, flags, &bfr, bfr.pgsz_idx);
 	if (unlikely(err)) {
 		nvhost_err(d, "failure setting up kind and compression");
 		goto clean_up;
@@ -1099,7 +1141,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
-	mapped_buffer->user_mapped = user_mapped;
+	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
+	mapped_buffer->own_mem_ref = user_mapped;
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
 	kref_init(&mapped_buffer->ref);
 
@@ -1391,30 +1434,19 @@ static void update_gmmu_pde(struct vm_gk20a *vm, u32 i)
 /* return mem_mgr and mem_handle to caller. If the mem_handle is a kernel dup
    from user space (as_ioctl), caller releases the kernel duplicated handle */
 /* NOTE! mapped_buffers lock must be held */
-static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
-			struct mem_mgr **memmgr, struct mem_handle **r)
+static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
-	struct mapped_buffer_node *mapped_buffer;
+	struct vm_gk20a *vm = mapped_buffer->vm;
 	struct gk20a *g = gk20a_from_vm(vm);
 	int err = 0;
-
-	BUG_ON(memmgr == NULL || r == NULL);
-
-	*memmgr = NULL;
-	*r = NULL;
-
-	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
-	if (!mapped_buffer) {
-		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
-		return;
-	}
 
 	vm->free_va(vm, mapped_buffer->addr, mapped_buffer->size,
 		    mapped_buffer->pgsz_idx);
 
-	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x",
+	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
 		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],
-		   hi32(offset), lo32(offset));
+		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
+		   mapped_buffer->own_mem_ref);
 
 	/* unmap here needs to know the page size we assigned at mapping */
 	err = update_gmmu_ptes(vm,
@@ -1446,29 +1478,33 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 
 	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
-	list_del_init(&mapped_buffer->unmap_list);
 
 	/* keep track of mapped buffers */
 	if (mapped_buffer->user_mapped)
 		vm->num_user_mapped_buffers--;
 
-	*memmgr = mapped_buffer->memmgr;
-	*r = mapped_buffer->handle_ref;
+	if (mapped_buffer->own_mem_ref) {
+		nvhost_memmgr_put(mapped_buffer->memmgr,
+				  mapped_buffer->handle_ref);
+		nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
+	}
 	kfree(mapped_buffer);
 
 	return;
 }
 
-/* called by kernel. mem_mgr and mem_handle are ignored */
 static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 {
-	struct mem_mgr *memmgr;
-	struct mem_handle *r;
+	struct mapped_buffer_node *mapped_buffer;
 
 	mutex_lock(&vm->update_gmmu_lock);
-
-	gk20a_vm_unmap_locked(vm, offset, &memmgr, &r);
-
+	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
+	if (!mapped_buffer) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
+		return;
+	}
+	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
 	mutex_unlock(&vm->update_gmmu_lock);
 }
 
@@ -1476,8 +1512,6 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct rb_node *node;
-	struct mem_mgr *memmgr;
-	struct mem_handle *r;
 
 	nvhost_dbg_fn("");
 	mutex_lock(&vm->update_gmmu_lock);
@@ -1489,11 +1523,7 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	while (node) {
 		mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		gk20a_vm_unmap_locked(vm, mapped_buffer->addr, &memmgr, &r);
-		if (memmgr != mem_mgr_from_vm(vm)) {
-			nvhost_memmgr_put(memmgr, r);
-			nvhost_memmgr_put_mgr(memmgr);
-		}
+		gk20a_vm_unmap_locked(mapped_buffer);
 		node = rb_first(&vm->mapped_buffers);
 	}
 
@@ -1608,8 +1638,6 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
-
-	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -1735,41 +1763,48 @@ static int gk20a_as_bind_hwctx(struct nvhost_as_share *as_share,
 }
 
 static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
-			       struct mem_mgr *nvmap,
-			       struct mem_handle *r,
+			       int memmgr_fd,
+			       ulong mem_id,
 			       u64 *offset_align,
 			       u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/)
 {
 	int err = 0;
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct gk20a *g = gk20a_from_vm(vm);
+	struct mem_mgr *memmgr;
+	struct mem_handle *r;
 	u64 ret_va;
 
 	nvhost_dbg_fn("");
 
-	ret_va = vm->map(vm, nvmap, r, *offset_align,
+	/* get ref to the memmgr (released on unmap_locked) */
+	memmgr = nvhost_memmgr_get_mgr_file(memmgr_fd);
+	if (IS_ERR(memmgr))
+		return 0;
+
+	/* get ref to the mem handle (released on unmap_locked) */
+	r = nvhost_memmgr_get(memmgr, mem_id, g->dev);
+	if (!r) {
+		nvhost_memmgr_put_mgr(memmgr);
+		return 0;
+	}
+
+	ret_va = vm->map(vm, memmgr, r, *offset_align,
 			flags, 0/*no kind here, to be removed*/, NULL, true);
 	*offset_align = ret_va;
 	if (!ret_va)
 		err = -EINVAL;
 
 	return err;
-
 }
 
-static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset,
-				 struct mem_mgr **memmgr, struct mem_handle **r)
+static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset)
 {
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
 
 	nvhost_dbg_fn("");
 
 	vm->unmap_user(vm, offset);
-
-	/* these are not available */
-	if (memmgr)
-		*memmgr = NULL;
-	if (r)
-		*r = NULL;
 	return 0;
 }
 
@@ -1921,8 +1956,6 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	mutex_init(&vm->update_gmmu_lock);
 
-	INIT_LIST_HEAD(&vm->deferred_unmaps);
-
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
 	vm->map            = gk20a_vm_map;
@@ -2073,8 +2106,6 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
-
-	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
 	vm->alloc_va	   = gk20a_vm_alloc_va;
 	vm->free_va	   = gk20a_vm_free_va;

@@ -394,35 +394,12 @@ int nvhost_as_ioctl_free_space(struct nvhost_as_share *as_share,
 int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 			       struct nvhost_as_map_buffer_args *args)
 {
-	int err = 0;
-	struct mem_mgr *memmgr;
-	struct mem_handle *r;
-
 	nvhost_dbg_fn("");
 
-	/* note: this bumps up the ref cnt in the nvmap client.
-	 * be sure to drop it with put later... we're not
-	 * holding onto the nvmap client pointer */
-	memmgr = nvhost_memmgr_get_mgr_file(args->nvmap_fd);
-
-	if (IS_ERR(memmgr)) {
-		err = PTR_ERR(memmgr);
-		return err;
-	}
-
-	r = nvhost_memmgr_get(memmgr, args->nvmap_handle, /*XXX:get device*/0);
-	if (IS_ERR(r)) {
-		err = PTR_ERR(r);
-		goto finish;
-	}
-
-	err = as_share->as->ops->map_buffer(as_share,
-					    memmgr,
-					    r, &args->o_a.align, args->flags);
+	return as_share->as->ops->map_buffer(as_share,
+					     args->nvmap_fd, args->nvmap_handle,
+					     &args->o_a.align, args->flags);
 	/* args->o_a.offset will be set if !err */
-
- finish:
-	return err;
 }
 
 int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
@@ -430,6 +407,5 @@ int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 {
 	nvhost_dbg_fn("");
 
-	return as_share->as->ops->unmap_buffer(as_share,
-			args->offset, NULL, NULL);
+	return as_share->as->ops->unmap_buffer(as_share, args->offset);
 }

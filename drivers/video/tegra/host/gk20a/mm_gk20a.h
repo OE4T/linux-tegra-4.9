@@ -149,7 +149,8 @@ struct mapped_buffer_node {
 	struct mem_handle *handle_ref;
 	struct sg_table *sgt;
 	struct kref ref;
-	bool user_mapped;
+	u32 user_mapped;
+	bool own_mem_ref;
 	u32 pgsz_idx;
 	u32 ctag_offset;
 	u32 ctag_lines;
@@ -176,8 +177,6 @@ struct vm_gk20a {
 
 	struct nvhost_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
-
-	struct list_head deferred_unmaps;
 
 	u64 (*alloc_va)(struct vm_gk20a *vm, u64 size,
 			enum gmmu_pgsz_gk20a gmmu_pgsz_idx);

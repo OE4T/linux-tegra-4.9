@@ -1422,10 +1422,10 @@ static void update_gmmu_pde(struct vm_gk20a *vm, u32 i)
 
 	smp_mb();
 	__cpuc_flush_dcache_area(pde, sizeof(u32) * 2);
-
+	gk20a_mm_l2_invalidate(vm->mm->g);
 
 	nvhost_dbg(dbg_pte, "pde:%d = 0x%x,0x%08x\n", i, pde_v[1], pde_v[0]);
-	vm->pdes.dirty = true;
+
 	vm->tlb_dirty  = true;
 }
 

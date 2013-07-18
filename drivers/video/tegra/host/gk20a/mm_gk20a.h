@@ -131,7 +131,6 @@ struct page_directory_gk20a {
 	void *kv;
 	/* Either a *page or a *mem_handle */
 	void *ref;
-	bool dirty;
 	struct sg_table *sgt;
 	struct page_table_gk20a *ptes[gmmu_nr_page_sizes];
 };

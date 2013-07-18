@@ -166,11 +166,12 @@ struct vm_gk20a {
 	bool tlb_dirty;
 	bool mapped;
 
+	struct mutex update_gmmu_lock;
+
 	struct page_directory_gk20a pdes;
 
 	struct nvhost_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
-	struct mutex mapped_buffers_lock;
 
 	struct list_head deferred_unmaps;
 

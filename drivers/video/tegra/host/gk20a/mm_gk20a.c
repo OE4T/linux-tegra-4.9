@@ -521,12 +521,12 @@ static int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 	struct rb_node *node;
 	int i = 0;
 
-	mutex_lock(&vm->mapped_buffers_lock);
+	mutex_lock(&vm->update_gmmu_lock);
 
 	buffer_list = kzalloc(sizeof(*buffer_list) *
 			      vm->num_user_mapped_buffers, GFP_KERNEL);
 	if (!buffer_list) {
-		mutex_unlock(&vm->mapped_buffers_lock);
+		mutex_unlock(&vm->update_gmmu_lock);
 		return -ENOMEM;
 	}
 
@@ -547,7 +547,7 @@ static int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 	*num_buffers = vm->num_user_mapped_buffers;
 	*mapped_buffers = buffer_list;
 
-	mutex_unlock(&vm->mapped_buffers_lock);
+	mutex_unlock(&vm->update_gmmu_lock);
 
 	return 0;
 }
@@ -571,11 +571,13 @@ static void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 {
 	int i;
 
-	mutex_lock(&vm->mapped_buffers_lock);
+	mutex_lock(&vm->update_gmmu_lock);
+
 	for (i = 0; i < num_buffers; ++i)
 		kref_put(&mapped_buffers[i]->ref,
 			 gk20a_vm_unmap_buffer);
-	mutex_unlock(&vm->mapped_buffers_lock);
+
+	mutex_unlock(&vm->update_gmmu_lock);
 
 	kfree(mapped_buffers);
 }
@@ -584,11 +586,11 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 {
 	struct mapped_buffer_node *mapped_buffer;
 
-	mutex_lock(&vm->mapped_buffers_lock);
+	mutex_lock(&vm->update_gmmu_lock);
 
 	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
-		mutex_unlock(&vm->mapped_buffers_lock);
+		mutex_unlock(&vm->update_gmmu_lock);
 		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
@@ -598,7 +600,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	list_add_tail(&mapped_buffer->unmap_list, &vm->deferred_unmaps);
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_buffer);
 
-	mutex_unlock(&vm->mapped_buffers_lock);
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
@@ -939,6 +941,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
 
+	mutex_lock(&vm->update_gmmu_lock);
+
 	/* pin buffer to get phys/iovmm addr */
 	bfr.sgt = nvhost_memmgr_sg_table(memmgr, r);
 	if (IS_ERR_OR_NULL(bfr.sgt)) {
@@ -946,7 +950,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	mutex_lock(&vm->mapped_buffers_lock);
 	mapped_buffer = find_deferred_unmap(vm, sg_phys(bfr.sgt->sgl),
 					    offset_align, flags);
 	if (mapped_buffer) {
@@ -968,11 +971,9 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		mapped_buffer->memmgr = memmgr;
 		mapped_buffer->handle_ref = r;
 
-		mutex_unlock(&vm->mapped_buffers_lock);
+		mutex_unlock(&vm->update_gmmu_lock);
 		return mapped_buffer->addr;
 	}
-
-	mutex_unlock(&vm->mapped_buffers_lock);
 
 	/* query bfr attributes: size, align, heap, kind */
 	for (attr = 0; attr < BFR_ATTRS; attr++) {
@@ -1054,7 +1055,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
 
-
 	/* allocate compression resources if needed */
 	if (bfr.ctag_lines) {
 		err = ctag_allocator->alloc(ctag_allocator, &bfr.ctag_offset,
@@ -1091,7 +1091,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_warn(d, "other mappings may collide!");
 	}
 
-	nvhost_dbg(dbg_fn | dbg_map,
+	nvhost_dbg(dbg_map,
 		   "as=%d pgsz=%d "
 		   "iovmm=%d kind=0x%x kind_uc=0x%x flags=0x%x "
 		   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
@@ -1109,12 +1109,12 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	{
 		int i;
 		struct scatterlist *sg = NULL;
-		nvhost_dbg(dbg_map, "for_each_sg(bfr.sgt->sgl, sg, bfr.sgt->nents, i)");
+		nvhost_dbg(dbg_pte, "for_each_sg(bfr.sgt->sgl, sg, bfr.sgt->nents, i)");
 		for_each_sg(bfr.sgt->sgl, sg, bfr.sgt->nents, i ) {
 			u64 da = sg_dma_address(sg);
 			u64 pa = sg_phys(sg);
 			u64 len = sg->length;
-			nvhost_dbg(dbg_map, "i=%d pa=0x%x,%08x da=0x%x,%08x len=0x%x,%08x",
+			nvhost_dbg(dbg_pte, "i=%d pa=0x%x,%08x da=0x%x,%08x len=0x%x,%08x",
 				   i, hi32(pa), lo32(pa), hi32(da), lo32(da),
 				   hi32(len), lo32(len));
 		}
@@ -1142,16 +1142,13 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
 	kref_init(&mapped_buffer->ref);
 
-	mutex_lock(&vm->mapped_buffers_lock);
 	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
 	if (err) {
-		mutex_unlock(&vm->mapped_buffers_lock);
 		nvhost_err(d, "failed to insert into mapped buffer tree");
 		goto clean_up;
 	}
 	inserted = true;
 	vm->num_user_mapped_buffers++;
-	mutex_unlock(&vm->mapped_buffers_lock);
 
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
 
@@ -1166,14 +1163,13 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
+	mutex_unlock(&vm->update_gmmu_lock);
 	return map_offset;
 
 clean_up:
 	if (inserted) {
-		mutex_lock(&vm->mapped_buffers_lock);
 		rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
 		vm->num_user_mapped_buffers--;
-		mutex_unlock(&vm->mapped_buffers_lock);
 	}
 	kfree(mapped_buffer);
 	if (va_allocated)
@@ -1190,6 +1186,7 @@ clean_up:
 		nvhost_memmgr_free_sg_table(memmgr, r, bfr.sgt);
 	}
 
+	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);
 	return 0;
 }
@@ -1263,7 +1260,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 		err = map_gmmu_pages(pte->ref, pte->sgt, &pte_kv_cur);
 		if (err) {
 			nvhost_err(dev_from_vm(vm),
-				   "couldn't map ptes for update");
+				   "couldn't map ptes for update as=%d pte_ref=%p pte_ref_cnt=%d pte_sgt=%p",
+				   vm_aspace_id(vm), pte->ref, pte->ref_cnt, pte->sgt);
 			goto clean_up;
 		}
 
@@ -1343,6 +1341,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 	smp_mb();
 	vm->tlb_dirty = true;
 	nvhost_dbg_fn("set tlb dirty");
+
 	return 0;
 
 clean_up:
@@ -1421,7 +1420,11 @@ static void update_gmmu_pde(struct vm_gk20a *vm, u32 i)
 	mem_wr32(pde, 1, pde_v[1]);
 
 	smp_mb();
-	__cpuc_flush_dcache_area(pde, sizeof(u32) * 2);
+
+	FLUSH_CPU_DCACHE(pde,
+			 sg_phys(vm->pdes.sgt->sgl) + (i*gmmu_pde__size_v()),
+			 sizeof(u32)*2);
+
 	gk20a_mm_l2_invalidate(vm->mm->g);
 
 	nvhost_dbg(dbg_pte, "pde:%d = 0x%x,0x%08x\n", i, pde_v[1], pde_v[0]);
@@ -1446,9 +1449,6 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 	*memmgr = NULL;
 	*r = NULL;
 
-	nvhost_dbg(dbg_fn|dbg_map, "aspace=%d vaddr=0x%x,%08x",
-		   vm_aspace_id(vm), hi32(offset), lo32(offset));
-
 	mapped_buffer = find_mapped_buffer(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
@@ -1461,6 +1461,10 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 	if (mapped_buffer->ctag_offset)
 		comp_tags->free(comp_tags,
 			mapped_buffer->ctag_offset, mapped_buffer->ctag_lines);
+
+	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x",
+		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],
+		   hi32(offset), lo32(offset));
 
 	/* unmap here needs to know the page size we assigned at mapping */
 	err = update_gmmu_ptes(vm,
@@ -1518,9 +1522,11 @@ static void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	struct mem_mgr *memmgr;
 	struct mem_handle *r;
 
-	mutex_lock(&vm->mapped_buffers_lock);
+	mutex_lock(&vm->update_gmmu_lock);
+
 	gk20a_vm_unmap_locked(vm, offset, &memmgr, &r);
-	mutex_unlock(&vm->mapped_buffers_lock);
+
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 void gk20a_vm_remove_support(struct vm_gk20a *vm)
@@ -1531,11 +1537,11 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	struct mem_handle *r;
 
 	nvhost_dbg_fn("");
+	mutex_lock(&vm->update_gmmu_lock);
 
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
 
-	mutex_lock(&vm->mapped_buffers_lock);
 	node = rb_first(&vm->mapped_buffers);
 	while (node) {
 		mapped_buffer =
@@ -1547,7 +1553,6 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 		}
 		node = rb_first(&vm->mapped_buffers);
 	}
-	mutex_unlock(&vm->mapped_buffers_lock);
 
 	/* TBD: unmapping all buffers above may not actually free
 	 * all vm ptes.  jettison them here for certain... */
@@ -1559,6 +1564,8 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);
 	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_small]);
 	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_big]);
+
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 /* address space interfaces for the gk20a module */
@@ -1655,7 +1662,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 			      1); /* align */
 
 	vm->mapped_buffers = RB_ROOT;
-	mutex_init(&vm->mapped_buffers_lock);
+
+	mutex_init(&vm->update_gmmu_lock);
 
 	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
@@ -1965,7 +1973,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 
 	vm->mapped_buffers = RB_ROOT;
-	mutex_init(&vm->mapped_buffers_lock);
+
+	mutex_init(&vm->update_gmmu_lock);
 
 	INIT_LIST_HEAD(&vm->deferred_unmaps);
 
@@ -2117,7 +2126,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 
 	vm->mapped_buffers = RB_ROOT;
-	mutex_init(&vm->mapped_buffers_lock);
+
+	mutex_init(&vm->update_gmmu_lock);
 
 	INIT_LIST_HEAD(&vm->deferred_unmaps);
 

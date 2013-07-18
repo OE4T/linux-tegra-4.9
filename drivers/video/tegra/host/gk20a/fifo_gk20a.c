@@ -450,8 +450,6 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 	f->userd_total_size = f->userd_entry_size * f->num_channels;
 
-	nvhost_dbg(dbg_map,"userd size: 0x%x", f->userd_total_size);
-
 	f->userd.mem.ref = nvhost_memmgr_alloc(memmgr, f->userd_total_size,
 					       4096, /* 4K pages */
 					       DEFAULT_ALLOC_FLAGS,

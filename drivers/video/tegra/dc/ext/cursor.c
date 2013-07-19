@@ -399,15 +399,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	tegra_dc_get(dc);
 
-	win_options =
-		tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
-	if (!!(win_options & CURSOR_ENABLE) != enable) {
-		win_options &= ~CURSOR_ENABLE;
-		if (enable)
-			win_options |= CURSOR_ENABLE;
-		tegra_dc_writel(dc, win_options, DC_DISP_DISP_WIN_OPTIONS);
-	}
-
 	if (args->flags == TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64) {
 		tegra_dc_writel(dc,
 			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
@@ -446,7 +437,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	win_options = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
-	enable = (args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
+	enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 
 	if (!!(win_options & CURSOR_ENABLE) != enable) {
 		win_options &= ~CURSOR_ENABLE;

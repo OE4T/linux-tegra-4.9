@@ -695,6 +695,8 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 #ifdef CONFIG_TEGRA_ISOMGR
 		int latency;
 
+		/* reserve atleast the minimum bandwidth. */
+		bw = max(dc->bw_kbps, tegra_dc_calc_min_bandwidth(dc));
 		latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
 		if (latency) {
 			dc->reserved_bw = bw;

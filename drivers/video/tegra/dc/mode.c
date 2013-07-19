@@ -220,8 +220,12 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	print_mode(dc, mode, __func__);
 
 	/* use default EMC rate when switching modes */
+#ifdef CONFIG_TEGRA_ISOMGR
+	dc->new_bw_kbps = tegra_dc_calc_min_bandwidth(dc);
+#else
 	dc->new_bw_kbps = tegra_emc_freq_req_to_bw(
 		tegra_dc_get_default_emc_clk_rate(dc) / 1000);
+#endif
 	tegra_dc_program_bandwidth(dc, true);
 
 	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);

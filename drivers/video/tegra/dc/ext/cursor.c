@@ -320,8 +320,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 
 	mutex_lock(&dc->lock);
 
-	tegra_dc_io_start(dc);
-	tegra_dc_hold_dc_out(dc);
+	tegra_dc_get(dc);
 
 	tegra_dc_writel(dc,
 		CURSOR_COLOR(args->foreground.r,
@@ -344,8 +343,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_release_dc_out(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
 	mutex_unlock(&ext->cursor.lock);
@@ -403,7 +401,10 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	mutex_lock(&dc->lock);
 
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
-	tegra_dc_io_start(dc);	win_options =
+
+	tegra_dc_get(dc);
+
+	win_options =
 		tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
 	if (!!(win_options & CURSOR_ENABLE) != enable) {
 		win_options &= ~CURSOR_ENABLE;
@@ -411,7 +412,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 			win_options |= CURSOR_ENABLE;
 		tegra_dc_writel(dc, win_options, DC_DISP_DISP_WIN_OPTIONS);
 	}
-	tegra_dc_hold_dc_out(dc);
 
 	if (args->flags == TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64) {
 		tegra_dc_writel(dc,
@@ -463,8 +463,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_release_dc_out(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 
 	mutex_unlock(&dc->lock);
 

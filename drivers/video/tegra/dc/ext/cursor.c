@@ -433,7 +433,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	cursor_start = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
 
-	tegra_dc_writel(dc, CURSOR_POSITION_124(args->x, args->y),
+	tegra_dc_writel(dc, CURSOR_POSITION(args->x, args->y),
 		DC_DISP_CURSOR_POSITION);
 
 	reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);

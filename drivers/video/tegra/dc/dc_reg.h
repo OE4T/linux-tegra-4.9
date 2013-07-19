@@ -416,10 +416,6 @@
 
 #define DC_DISP_CURSOR_POSITION			0x440
 #define   CURSOR_POSITION(_x, _y)		\
-	(((_x) & ((1 << 16) - 1)) |		\
-	(((_y) & ((1 << 16) - 1)) << 16))
-
-#define   CURSOR_POSITION_124(_x, _y)		\
 	(((_x) & ((1 << 14) - 1)) |		\
 	(((_y) & ((1 << 14) - 1)) << 16))
 

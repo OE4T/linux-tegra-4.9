@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Nvmap support
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/err.h>
+#include <mach/tegra_smmu.h>
 #include <trace/events/nvhost.h>
 #include "nvmap.h"
 #include "nvhost_job.h"
@@ -30,15 +31,19 @@
 #define FLAG_NVMAP_MAPPED 2
 #define FLAG_CARVEOUT 3
 
-struct nvhost_nvmap_data {
+struct nvhost_nvmap_as_data {
 	struct nvmap_client *client;
 	struct nvmap_handle_ref *ref;
-	struct sg_table *sgt;
-	size_t len;
 	struct device *dev;
+	size_t len;
+	struct sg_table *sgt;
 	int pin_count;
 	int flags;
+};
+
+struct nvhost_nvmap_data {
 	struct mutex lock;
+	struct nvhost_nvmap_as_data *as[TEGRA_IOMMU_NUM_ASIDS];
 };
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
@@ -86,10 +91,19 @@ static void unmap_pages(struct device *dev, struct sg_table *sgt, size_t len)
 void delete_priv(void *_priv)
 {
 	struct nvhost_nvmap_data *priv = _priv;
-	if (priv->sgt) {
-		if (priv->flags & BIT(FLAG_NVHOST_MAPPED))
-			unmap_pages(priv->dev, priv->sgt, priv->len);
-		nvmap_free_sg_table(priv->client, priv->ref, priv->sgt);
+	int i;
+	for (i = 0; i < ARRAY_SIZE(priv->as); i++) {
+		struct nvhost_nvmap_as_data *as = priv->as[i];
+		if (!as)
+			continue;
+		if (as->sgt) {
+			if (as->flags & BIT(FLAG_NVHOST_MAPPED))
+				unmap_pages(as->dev,
+					    as->sgt, as->len);
+			nvmap_free_sg_table(as->client, as->ref,
+					    as->sgt);
+		}
+		kfree(as);
 	}
 	kfree(priv);
 }
@@ -100,47 +114,69 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 {
 	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
 	struct nvmap_client *nvmap = (struct nvmap_client *)mgr;
-	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	struct nvhost_nvmap_data *priv;
+	struct nvhost_nvmap_as_data *as_priv;
+	int asid = tegra_smmu_get_asid(dev);
 	struct sg_table *sgt;
 	int ret;
 
+	/* create the nvhost priv if needed */
+	priv = nvmap_get_nvhost_private(ref);
 	if (!priv) {
+		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+		if (!priv)
+			return ERR_PTR(-ENOMEM);
+		mutex_init(&priv->lock);
+		nvmap_set_nvhost_private(ref, priv, delete_priv);
+	}
+
+	mutex_lock(&priv->lock);
+
+	/* create the per-as part of the priv if needed */
+	as_priv = priv->as[asid];
+	if (!as_priv) {
 		u64 size = 0, addr = 0;
 
 		ret = nvmap_get_handle_param(nvmap, ref,
 				NVMAP_HANDLE_PARAM_SIZE, &size);
-		if (ret)
+		if (ret) {
+			mutex_unlock(&priv->lock);
 			return ERR_PTR(ret);
+		}
 
 		ret = nvmap_get_handle_param(nvmap, ref,
 				NVMAP_HANDLE_PARAM_BASE, &addr);
-		if (ret)
+		if (ret) {
+			mutex_unlock(&priv->lock);
 			return ERR_PTR(ret);
-
-		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-		if (!priv)
-			return ERR_PTR(-ENOMEM);
-
-		mutex_init(&priv->lock);
-		priv->client = nvmap;
-		priv->ref = ref;
-		priv->sgt = nvmap_sg_table(nvmap, ref);
-		priv->dev = dev;
-		priv->len = size;
-		if (IS_ERR(priv->sgt)) {
-			kfree(priv);
-			return priv->sgt;
 		}
-		nvmap_set_nvhost_private(ref, priv, delete_priv);
+
+		as_priv = kzalloc(sizeof(*as_priv), GFP_KERNEL);
+		if (!as_priv) {
+			mutex_unlock(&priv->lock);
+			return ERR_PTR(-ENOMEM);
+		}
+		as_priv->client = nvmap;
+		as_priv->ref = ref;
+		as_priv->len = size;
+		as_priv->dev = dev;
+		as_priv->sgt = nvmap_sg_table(nvmap, ref);
+
+		if (IS_ERR(as_priv->sgt)) {
+			kfree(as_priv);
+			mutex_unlock(&priv->lock);
+			return ERR_PTR(-ENOMEM);
+		}
 
 		if (!IS_ERR_VALUE(addr))
-			priv->flags |= BIT(FLAG_NVMAP_MAPPED);
+			as_priv->flags |= BIT(FLAG_NVMAP_MAPPED);
+
+		priv->as[asid] = as_priv;
 	}
 
-	mutex_lock(&priv->lock);
-	sgt = priv->sgt;
+	sgt = as_priv->sgt;
 
-	if (priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
+	if (as_priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
 			sg_dma_address(sgt->sgl) == 0) {
 		dma_addr_t addr = 0;
 		int err = nvmap_pin(priv->client, ref, &addr);
@@ -148,7 +184,8 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 			return ERR_PTR(err);
 
 		sg_dma_address(sgt->sgl) = addr;
-	} else if (priv->pin_count == 0 && sg_dma_address(sgt->sgl) == 0) {
+	} else if (as_priv->pin_count == 0 &&
+		   sg_dma_address(sgt->sgl) == 0) {
 		int ents;
 		DEFINE_DMA_ATTRS(attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
@@ -158,12 +195,12 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 			mutex_unlock(&priv->lock);
 			return ERR_PTR(-ENOMEM);
 		}
-		priv->flags |= BIT(FLAG_NVHOST_MAPPED);
+		as_priv->flags |= BIT(FLAG_NVHOST_MAPPED);
 	}
 	trace_nvhost_nvmap_pin(dev_name(dev),
-			ref, priv->len, sg_dma_address(sgt->sgl));
+			ref, as_priv->len, sg_dma_address(sgt->sgl));
 
-	priv->pin_count++;
+	as_priv->pin_count++;
 	mutex_unlock(&priv->lock);
 	nvmap_flush_deferred_cache(nvmap, ref);
 	return sgt;
@@ -174,15 +211,19 @@ void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 {
 	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
 	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	struct nvhost_nvmap_as_data *as;
 	if (!priv)
 		return;
 
 	mutex_lock(&priv->lock);
-	priv->pin_count--;
-	WARN_ON(priv->pin_count < 0);
+	as = priv->as[tegra_smmu_get_asid(dev)];
+	if (as) {
+		as->pin_count--;
+		WARN_ON(as->pin_count < 0);
+	}
 	mutex_unlock(&priv->lock);
 	trace_nvhost_nvmap_unpin(dev_name(dev),
-			ref, priv->len, sg_dma_address(sgt->sgl));
+			ref, as->len, sg_dma_address(sgt->sgl));
 }
 
 void *nvhost_nvmap_mmap(struct mem_handle *handle)

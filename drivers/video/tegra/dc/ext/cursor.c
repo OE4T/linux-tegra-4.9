@@ -64,17 +64,6 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 	unsigned long val;
 	int clip_win;
 
-	tegra_dc_writel(dc,
-		CURSOR_COLOR(args->foreground.r,
-			     args->foreground.g,
-			     args->foreground.b),
-		DC_DISP_CURSOR_FOREGROUND);
-	tegra_dc_writel(dc,
-		CURSOR_COLOR(args->background.r,
-			     args->background.g,
-			     args->background.b),
-		DC_DISP_CURSOR_BACKGROUND);
-
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
 
 	switch (TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags)) {
@@ -173,6 +162,31 @@ static int set_cursor_blend(struct tegra_dc *dc, bool rgba)
 	return 0;
 }
 
+static int set_cursor_fg_bg(struct tegra_dc *dc,
+			    struct tegra_dc_ext_cursor_image *args)
+{
+	int general_update_needed = 0;
+
+	u32 fg = CURSOR_COLOR(args->foreground.r,
+			      args->foreground.g,
+			      args->foreground.b);
+	u32 bg = CURSOR_COLOR(args->background.r,
+			      args->background.g,
+			      args->background.b);
+
+	if (fg != tegra_dc_readl(dc, DC_DISP_CURSOR_FOREGROUND)) {
+		tegra_dc_writel(dc, fg, DC_DISP_CURSOR_FOREGROUND);
+		general_update_needed |= 1;
+	}
+
+	if (bg != tegra_dc_readl(dc, DC_DISP_CURSOR_BACKGROUND)) {
+		tegra_dc_writel(dc, bg, DC_DISP_CURSOR_BACKGROUND);
+		general_update_needed |= 1;
+	}
+
+	return general_update_needed;
+}
+
 int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 				  struct tegra_dc_ext_cursor_image *args)
 {
@@ -230,6 +244,8 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	tegra_dc_get(dc);
 
 	set_cursor_image_hw(dc, args, phys_addr);
+
+	need_general_update |= set_cursor_fg_bg(dc, args);
 
 	need_general_update |= set_cursor_blend(dc, rgba);
 
@@ -358,7 +374,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
 	int ret;
-	int need_general_update = 1;
+	int need_general_update = 0;
 
 	mutex_lock(&ext->cursor.lock);
 	if (ext->cursor.user != user) {
@@ -375,17 +391,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 
 	tegra_dc_get(dc);
 
-	tegra_dc_writel(dc,
-		CURSOR_COLOR(args->foreground.r,
-			args->foreground.g,
-			args->foreground.b),
-		DC_DISP_CURSOR_FOREGROUND);
-
-	tegra_dc_writel(dc,
-		CURSOR_COLOR(args->background.r,
-		args->background.g,
-		args->background.b),
-		DC_DISP_CURSOR_BACKGROUND);
+	need_general_update |= set_cursor_fg_bg(dc, args);
 
 	need_general_update |= set_cursor_blend(dc, !!args->mode);
 

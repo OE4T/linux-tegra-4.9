@@ -17,7 +17,6 @@
  */
 
 #include <video/tegra_dc_ext.h>
-#include <linux/../../drivers/video/tegra/nvmap/nvmap.h>
 #include "tegra_dc_ext_priv.h"
 
 /* ugh */
@@ -370,8 +369,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	u32 win_options;
 	u32 reg = 0;
 
-	u8 *win_ptr;
-
 	if (!user->nvmap)
 		return -EFAULT;
 	mutex_lock(&ext->cursor.lock);
@@ -395,8 +392,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 		goto unlock;
 
 	ext->cursor.cur_handle = handle;
-	/* debugging purpose to dump the buffer content */
-	win_ptr = nvmap_mmap(handle);
 
 	mutex_lock(&dc->lock);
 

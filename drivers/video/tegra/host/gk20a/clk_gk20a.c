@@ -38,13 +38,16 @@
 
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
-	204, 204,	/* freq */
+	204, 1248,	/* freq */
 	1000, 1700,	/* vco */
 	12, 38,		/* u */
 	1, 255,		/* M */
 	8, 255,		/* N */
 	1, 32,		/* PL */
 };
+
+/* Initial frequency of gpu */
+static u32 gpc_initial_freq = 700;
 
 /*  dummy data for now */
 static struct gpufreq_table_data
@@ -358,8 +361,8 @@ int gk20a_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	/* set to minimal freq */
-	gk20a_clk_set_rate(g, gpc_pll_params.min_freq);
+	/* set to initial freq */
+	gk20a_clk_set_rate(g, gpc_initial_freq);
 
 	gk20a_writel(g, 0x9080, 0x00100000);
 

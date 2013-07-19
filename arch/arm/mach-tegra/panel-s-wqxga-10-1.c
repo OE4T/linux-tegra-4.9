@@ -126,6 +126,7 @@ static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
 #if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT,
+	.suspend_aggr = DSI_HOST_SUSPEND_LV2,
 #else
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,

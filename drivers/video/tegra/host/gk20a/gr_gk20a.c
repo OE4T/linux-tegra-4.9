@@ -3353,8 +3353,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_blcg_gr_load_gating_prod(g, true);
 	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
-	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

@@ -57,16 +57,15 @@ int tegra_dc_ext_put_cursor(struct tegra_dc_ext_user *user)
 	return ret;
 }
 
-static void set_cursor_image_hw(struct tegra_dc *dc,
-				struct tegra_dc_ext_cursor_image *args,
-				dma_addr_t phys_addr)
+static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
+					  u32 size, dma_addr_t phys_addr)
 {
 	unsigned long val;
 	int clip_win;
 
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
 
-	switch (TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags)) {
+	switch (size) {
 	case TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64:
 		val = CURSOR_SIZE_64;
 		break;
@@ -96,6 +95,14 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 	tegra_dc_writel(dc,
 		val | CURSOR_START_ADDR(((unsigned long) phys_addr)),
 		DC_DISP_CURSOR_START_ADDR);
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
+	return 0;
+#else
+	return 1;
 #endif
 }
 
@@ -212,7 +219,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	dma_addr_t phys_addr;
 	u32 size;
 	int ret;
-	int need_general_update = 1;
+	int need_general_update = 0;
 	bool rgba = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL);
 
 	if (!user->nvmap)
@@ -251,7 +258,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
-	set_cursor_image_hw(dc, args, phys_addr);
+	need_general_update |= set_cursor_start_addr(dc, size, phys_addr);
 
 	need_general_update |= set_cursor_fg_bg(dc, args);
 
@@ -427,13 +434,11 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
 	u32 size;
-	u32 cursor_start;
 	int ret;
 	struct nvmap_handle_ref *handle, *old_handle;
 	dma_addr_t phys_addr;
-
-	bool enable;
-	int need_general_update = 1;
+	bool enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
+	int need_general_update = 0;
 
 	if (!user->nvmap)
 		return -EFAULT;
@@ -466,40 +471,13 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	mutex_lock(&dc->lock);
 
-	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
-
 	tegra_dc_get(dc);
 
-	if (args->flags == TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64) {
-		tegra_dc_writel(dc,
-			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
-			CURSOR_SIZE_64,
-			DC_DISP_CURSOR_START_ADDR);
-	} else if (args->flags ==
-		TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128) {
-		tegra_dc_writel(dc,
-			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
-			CURSOR_SIZE_128,
-			DC_DISP_CURSOR_START_ADDR);
-	} else if (args->flags ==
-		TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256) {
-		tegra_dc_writel(dc,
-			CURSOR_START_ADDR(((unsigned long) phys_addr)) |
-			CURSOR_SIZE_256,
-			DC_DISP_CURSOR_START_ADDR);
-	} else {
-		tegra_dc_writel(dc,
-			CURSOR_START_ADDR(((unsigned long) phys_addr)),
-			DC_DISP_CURSOR_START_ADDR);
-	}
-
-	cursor_start = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
+	need_general_update |= set_cursor_start_addr(dc, size, phys_addr);
 
 	need_general_update |= set_cursor_position(dc, args->x, args->y);
 
 	need_general_update |= set_cursor_activation_control(dc);
-
-	enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 
 	need_general_update |= set_cursor_enable(dc, enable);
 

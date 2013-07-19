@@ -205,12 +205,18 @@ static int vi_suspend(struct device *dev)
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(pdev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
+	int ret;
 #endif
 
 	dev_info(dev, "%s: ++\n", __func__);
 
 #ifdef CONFIG_TEGRA_CAMERA
-	tegra_camera_suspend(tegra_vi->camera);
+	ret = tegra_camera_suspend(tegra_vi->camera);
+	if (ret) {
+		dev_info(dev, "%s: tegra_camera_suspend error=%d\n",
+		__func__, ret);
+		return ret;
+	}
 #endif
 
 	return nvhost_client_device_suspend(dev);

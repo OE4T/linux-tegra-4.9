@@ -128,6 +128,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	dma_addr_t phys_addr;
 	u32 size;
 	int ret;
+	int need_general_update = 1;
 
 	if (!user->nvmap)
 		return -EFAULT;
@@ -175,8 +176,10 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	set_cursor_image_hw(dc, args, phys_addr);
 
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	if (need_general_update) {
+		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	}
 
 	tegra_dc_put(dc);
 	/* XXX sync here? */
@@ -206,6 +209,7 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	u32 val;
 	bool enable;
 	int ret;
+	int need_general_update = 1;
 
 	mutex_lock(&ext->cursor.lock);
 
@@ -239,8 +243,10 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	tegra_dc_writel(dc, CURSOR_POSITION(args->x, args->y),
 		DC_DISP_CURSOR_POSITION);
 
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	if (need_general_update) {
+		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	}
 
 	/* TODO: need to sync here?  hopefully can avoid this, but need to
 	 * figure out interaction w/ rest of GENERAL_ACT_REQ */
@@ -305,6 +311,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
 	int ret;
+	int need_general_update = 1;
 
 	mutex_lock(&ext->cursor.lock);
 	if (ext->cursor.user != user) {
@@ -339,8 +346,10 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 		CURSOR_DST_BLEND_FACTOR_SELECT(2)),
 		DC_DISP_BLEND_CURSOR_CONTROL);
 
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	if (need_general_update) {
+		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	}
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
@@ -368,6 +377,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	bool enable;
 	u32 win_options;
 	u32 reg = 0;
+	int need_general_update = 1;
 
 	if (!user->nvmap)
 		return -EFAULT;
@@ -446,8 +456,10 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 		tegra_dc_writel(dc, win_options, DC_DISP_DISP_WIN_OPTIONS);
 	}
 
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	if (need_general_update) {
+		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	}
 
 	tegra_dc_put(dc);
 

@@ -4149,15 +4149,26 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 			}
 		}
 
-		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
-		val |= DSI_PAD_CONTROL_PAD_PDIO(0x3) |
-				DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
-				DSI_PAD_CONTROL_PAD_PULLDN_ENAB(0x1);
-		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+		tegra_dsi_pad_disable(dsi);
 
 		/* Suspend core-logic */
 		val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE);
 		tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
+
+		/* disable HS logic */
+		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+		val |= DSI_PAD_PDVCLAMP(0x1);
+		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
+		/* disable mipi bias pad */
+		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
+
 		/* fall through */
 	case DSI_HOST_SUSPEND_LV1:
 		/* Disable dsi fast and slow clock */
@@ -4198,6 +4209,20 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 		tegra_dsi_clk_enable(dsi);
 
+		/* enable mipi bias pad */
+		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
+
+		/* enable HS logic */
+		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+		val &= ~DSI_PAD_PDVCLAMP(0x1);
+		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
 		tegra_dsi_writel(dsi,
 			DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
 			DSI_POWER_CONTROL);
@@ -4210,11 +4235,7 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 				goto fail;
 			}
 
-			val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
-			val &= ~(DSI_PAD_CONTROL_PAD_PDIO(0x3) |
-				DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
-				DSI_PAD_CONTROL_PAD_PULLDN_ENAB(0x1));
-			tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+			tegra_dsi_pad_enable(dsi);
 
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
 				dev_err(&dc->ndev->dev,
@@ -4256,16 +4277,30 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
 
 	err = _tegra_dsi_host_suspend(dc, dsi, dsi->info.suspend_aggr);
-	if (err < 0)
+	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 			"DSI host suspend failed\n");
+		goto fail;
+	}
+
+	if (dsi->info.ganged_type) {
+		err = _tegra_dsi_host_suspend(dc,
+				tegra_dsi_instance[DSI_INSTANCE_1],
+				dsi->info.suspend_aggr);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+					"DSIb host suspend failed\n");
+			goto fail;
+		}
+		tegra_dsi_instance[DSI_INSTANCE_1]->host_suspended = true;
+	}
 
 	/* Shutting down. Drop any reference to dc clk */
 	while (tegra_is_clk_enabled(dc->clk))
 		clk_disable_unprepare(dc->clk);
 
 	pm_runtime_put_sync(&dc->ndev->dev);
-
+fail:
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dc->one_shot_lp_lock);
 	mutex_unlock(&dc->lock);
@@ -4367,6 +4402,18 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev,
 			"DSI host resume failed\n");
 		goto fail;
+	}
+
+	if (dsi->info.ganged_type) {
+		err = _tegra_dsi_host_resume(dc,
+				tegra_dsi_instance[DSI_INSTANCE_1],
+				dsi->info.suspend_aggr);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+					"DSIb host resume failed\n");
+			goto fail;
+		}
+		tegra_dsi_instance[DSI_INSTANCE_1]->host_suspended = false;
 	}
 
 	tegra_dsi_start_dc_stream(dc, dsi);

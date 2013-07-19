@@ -132,6 +132,22 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 #endif
 }
 
+static int set_cursor_activation_control(struct tegra_dc *dc)
+{
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	u32 reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
+
+	if ((reg & (1 << CURSOR_ACT_CNTR_SEL)) ==
+	    (CURSOR_ACT_CNTR_SEL_V << CURSOR_ACT_CNTR_SEL)) {
+		reg &= ~(1 << CURSOR_ACT_CNTR_SEL);
+		reg |= (CURSOR_ACT_CNTR_SEL_V << CURSOR_ACT_CNTR_SEL);
+		tegra_dc_writel(dc, reg, DC_CMD_REG_ACT_CONTROL);
+		return 1;
+	}
+#endif
+	return 0;
+}
+
 int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 				  struct tegra_dc_ext_cursor_image *args)
 {
@@ -254,6 +270,8 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	}
 
 	need_general_update |= set_cursor_position(dc, args->x, args->y);
+
+	need_general_update |= set_cursor_activation_control(dc);
 
 	if (need_general_update) {
 		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
@@ -388,7 +406,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	bool enable;
 	u32 win_options;
-	u32 reg = 0;
 	int need_general_update = 1;
 
 	if (!user->nvmap)
@@ -448,11 +465,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	need_general_update |= set_cursor_position(dc, args->x, args->y);
 
-	reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
-	reg &= ~(1 << CURSOR_ACT_CNTR_SEL);
-	reg |= (CURSOR_ACT_CNTR_SEL_V << CURSOR_ACT_CNTR_SEL);
-
-	tegra_dc_writel(dc, reg, DC_CMD_REG_ACT_CONTROL);
+	need_general_update |= set_cursor_activation_control(dc);
 
 	win_options = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
 	enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);

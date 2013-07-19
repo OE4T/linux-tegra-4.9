@@ -108,15 +108,6 @@ static void set_cursor_image_hw(struct tegra_dc *dc,
 		val | CURSOR_START_ADDR(((unsigned long) phys_addr)),
 		DC_DISP_CURSOR_START_ADDR);
 #endif
-
-	if (args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
-		tegra_dc_writel(dc,
-				CURSOR_MODE_SELECT(1),
-				DC_DISP_BLEND_CURSOR_CONTROL);
-	else
-		tegra_dc_writel(dc,
-				CURSOR_MODE_SELECT(0),
-				DC_DISP_BLEND_CURSOR_CONTROL);
 }
 
 static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
@@ -161,6 +152,27 @@ static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
+static int set_cursor_blend(struct tegra_dc *dc, bool rgba)
+{
+	u32 val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
+
+	u32 newval = WINH_CURS_SELECT(0);
+
+	if (rgba)
+		newval |= (CURSOR_MODE_SELECT(1) | CURSOR_ALPHA |
+			   CURSOR_SRC_BLEND_FACTOR_SELECT(0) |
+			   CURSOR_DST_BLEND_FACTOR_SELECT(2));
+	else
+		newval |= CURSOR_MODE_SELECT(0);
+
+	if (val != newval) {
+		tegra_dc_writel(dc, newval, DC_DISP_BLEND_CURSOR_CONTROL);
+		return 1;
+	}
+
+	return 0;
+}
+
 int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 				  struct tegra_dc_ext_cursor_image *args)
 {
@@ -171,6 +183,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	u32 size;
 	int ret;
 	int need_general_update = 1;
+	bool rgba = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL);
 
 	if (!user->nvmap)
 		return -EFAULT;
@@ -218,6 +231,8 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	set_cursor_image_hw(dc, args, phys_addr);
 
+	need_general_update |= set_cursor_blend(dc, rgba);
+
 	if (need_general_update) {
 		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
@@ -248,10 +263,9 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
-	u32 val;
 	bool enable;
 	int ret;
-	int need_general_update = 1;
+	int need_general_update = 0;
 
 	mutex_lock(&ext->cursor.lock);
 
@@ -269,10 +283,6 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
-
-	val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
-	val &= ~WINH_CURS_SELECT(1);
-	tegra_dc_writel(dc, val, DC_DISP_BLEND_CURSOR_CONTROL);
 
 	need_general_update |= set_cursor_enable(dc, enable);
 
@@ -377,11 +387,7 @@ int tegra_dc_ext_set_cursor_image_low_latency(struct tegra_dc_ext_user *user,
 		args->background.b),
 		DC_DISP_CURSOR_BACKGROUND);
 
-	tegra_dc_writel(dc,
-		(CURSOR_MODE_CAL(args->mode) | CURSOR_ALPHA |
-		CURSOR_SRC_BLEND_FACTOR_SELECT(0) |
-		CURSOR_DST_BLEND_FACTOR_SELECT(2)),
-		DC_DISP_BLEND_CURSOR_CONTROL);
+	need_general_update |= set_cursor_blend(dc, !!args->mode);
 
 	if (need_general_update) {
 		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
@@ -495,8 +501,8 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	return 0;
 
 unlock:
-		mutex_unlock(&ext->cursor.lock);
-		return ret;
+	mutex_unlock(&ext->cursor.lock);
+	return ret;
 }
 
 

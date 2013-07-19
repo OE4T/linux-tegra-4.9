@@ -187,6 +187,22 @@ static int set_cursor_fg_bg(struct tegra_dc *dc,
 	return general_update_needed;
 }
 
+static bool check_cursor_size(struct tegra_dc *dc, u32 size)
+{
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	if (size != TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32 &&
+	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64)
+		return false;
+#else
+	if (size != TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32 &&
+	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64 &&
+	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128 &&
+	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256)
+		return false;
+#endif
+	return true;
+}
+
 int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 				  struct tegra_dc_ext_cursor_image *args)
 {
@@ -203,17 +219,9 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 		return -EFAULT;
 
 	size = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	if (size != TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32 &&
-	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64)
+
+	if (!check_cursor_size(dc, size))
 		return -EINVAL;
-#else
-	if (size != TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32 &&
-	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_64x64 &&
-	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128 &&
-	    size !=  TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256)
-		return -EINVAL;
-#endif
 
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	if (args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
@@ -418,6 +426,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
+	u32 size;
 	u32 cursor_start;
 	int ret;
 	struct nvmap_handle_ref *handle, *old_handle;
@@ -428,8 +437,13 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 
 	if (!user->nvmap)
 		return -EFAULT;
-	mutex_lock(&ext->cursor.lock);
 
+	size = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
+
+	if (!check_cursor_size(dc, size))
+		return -EINVAL;
+
+	mutex_lock(&ext->cursor.lock);
 
 	if (ext->cursor.user != user) {
 		ret = -EACCES;

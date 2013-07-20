@@ -3741,6 +3741,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 #define NVA297_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc
 #define NVA297_SET_CIRCULAR_BUFFER_SIZE		0x1280
 #define NVA297_SET_SHADER_EXCEPTIONS		0x1528
+#define NVA0C0_SET_SHADER_EXCEPTIONS		0x1528
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
 
@@ -3900,6 +3901,16 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 {
 	nvhost_dbg_fn("");
 
+	if (isr_data->class_num == KEPLER_COMPUTE_A) {
+		switch (isr_data->offset << 2) {
+		case NVA0C0_SET_SHADER_EXCEPTIONS:
+			gk20a_gr_set_shader_exceptions(g, isr_data);
+			break;
+		default:
+			goto fail;
+		}
+	}
+
 	if (isr_data->class_num == KEPLER_C) {
 		switch (isr_data->offset << 2) {
 		case NVA297_SET_SHADER_EXCEPTIONS:
@@ -3912,20 +3923,17 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 			gk20a_gr_set_alpha_circular_buffer_size(g, isr_data);
 			break;
 		default:
-			gk20a_gr_reset(g);
-
-			gk20a_gr_nop_method(g);
-			nvhost_err(dev_from_gk20a(g), "invalid method "
-				   "class 0x%08x, offset 0x%08x",
-				   isr_data->class_num, isr_data->offset);
-			return -EINVAL;
+			goto fail;
 		}
-		return 0;
 	}
+	return 0;
 
-	nvhost_err(dev_from_gk20a(g),
-		   "invalid method class 0x%08x, offset 0x%08x",
-		   isr_data->class_num, isr_data->offset);
+fail:
+	gk20a_gr_reset(g);
+	gk20a_gr_nop_method(g);
+	nvhost_err(dev_from_gk20a(g), "invalid method class 0x%08x"
+		", offset 0x%08x address 0x%08x\n",
+		isr_data->class_num, isr_data->offset, isr_data->addr);
 	return -EINVAL;
 }
 

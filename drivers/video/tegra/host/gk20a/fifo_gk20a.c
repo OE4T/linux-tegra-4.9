@@ -1014,7 +1014,8 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist;
 	u32 runlist_id;
-	u32 timeout = g->timeouts_enabled ? 5000 : MAX_SCHEDULE_TIMEOUT;
+	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 elpg_off = 0;
@@ -1052,8 +1053,10 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 			ret = -EBUSY;
 			break;
 		}
-		schedule();
-	} while (1);
+		udelay(delay);
+		timeout -= min_t(u32, delay, timeout);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (timeout);
 
 	/* re-enable elpg or release pmu mutex */
 	if (elpg_off)

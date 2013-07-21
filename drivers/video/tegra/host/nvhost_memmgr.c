@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Memory Management Abstraction
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -429,6 +429,29 @@ void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 	dma_unmap_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
 }
 #endif
+
+void nvhost_memmgr_get_comptags(struct mem_handle *mem,
+				struct nvhost_comptags *comptags)
+{
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	return nvhost_nvmap_get_comptags(mem, comptags);
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	WARN_ON(1);
+#endif
+}
+
+int nvhost_memmgr_alloc_comptags(struct mem_handle *mem,
+				 struct nvhost_allocator *allocator,
+				 int lines)
+{
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	return nvhost_nvmap_alloc_comptags(mem, allocator, lines);
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	WARN_ON(1);
+#endif
+}
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)
 {

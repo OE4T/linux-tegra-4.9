@@ -884,6 +884,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
 	u32 i, pde_lo, pde_hi;
+	struct nvhost_comptags comptags;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -984,24 +985,30 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
 
-	/* allocate compression resources if needed */
-	if (bfr.ctag_lines) {
-		err = ctag_allocator->alloc(ctag_allocator, &bfr.ctag_offset,
-					    bfr.ctag_lines);
-		/* ok to fall back here if we ran out */
-		/* TBD: we can partially alloc ctags as well... */
+	nvhost_memmgr_get_comptags(r, &comptags);
+
+	if (bfr.ctag_lines && !comptags.lines) {
+		/* allocate compression resources if needed */
+		err = nvhost_memmgr_alloc_comptags(r,
+				ctag_allocator, bfr.ctag_lines);
 		if (err) {
+			/* ok to fall back here if we ran out */
+			/* TBD: we can partially alloc ctags as well... */
 			bfr.ctag_lines = bfr.ctag_offset = 0;
 			bfr.kind_v = bfr.uc_kind_v;
+		} else {
+			nvhost_memmgr_get_comptags(r, &comptags);
+
+			/* init/clear the ctag buffer */
+			gk20a_gr_clear_comptags(g,
+				comptags.offset,
+				comptags.offset + comptags.lines - 1);
 		}
 	}
 
-	/* init/clear the ctag buffer */
-	if (bfr.ctag_lines)
-		gk20a_gr_clear_comptags(g,
-					bfr.ctag_offset,
-					bfr.ctag_offset + bfr.ctag_lines - 1);
-
+	/* store the comptag info */
+	WARN_ON(bfr.ctag_lines != comptags.lines);
+	bfr.ctag_offset = comptags.offset;
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
@@ -1128,7 +1135,7 @@ clean_up:
 
 	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);
-	return 0;
+	return err;
 }
 
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl)

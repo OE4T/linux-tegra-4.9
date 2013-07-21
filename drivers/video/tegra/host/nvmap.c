@@ -26,6 +26,7 @@
 #include "nvmap.h"
 #include "nvhost_job.h"
 #include "chip_support.h"
+#include "nvhost_allocator.h"
 
 #define FLAG_NVHOST_MAPPED 1
 #define FLAG_NVMAP_MAPPED 2
@@ -44,6 +45,8 @@ struct nvhost_nvmap_as_data {
 struct nvhost_nvmap_data {
 	struct mutex lock;
 	struct nvhost_nvmap_as_data *as[TEGRA_IOMMU_NUM_ASIDS];
+	struct nvhost_comptags comptags;
+	struct nvhost_allocator *comptag_allocator;
 };
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
@@ -104,6 +107,12 @@ void delete_priv(void *_priv)
 					    as->sgt);
 		}
 		kfree(as);
+	}
+	if (priv->comptags.lines) {
+		BUG_ON(!priv->comptag_allocator);
+		priv->comptag_allocator->free(priv->comptag_allocator,
+					      priv->comptags.offset,
+					      priv->comptags.lines);
 	}
 	kfree(priv);
 }
@@ -260,4 +269,37 @@ int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 	return nvmap_get_handle_param((struct nvmap_client *)mgr,
 			(struct nvmap_handle_ref *)handle,
 			param, result);
+}
+
+void nvhost_nvmap_get_comptags(struct mem_handle *mem,
+			       struct nvhost_comptags *comptags)
+{
+	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)mem;
+	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+
+	BUG_ON(!priv || !comptags);
+
+	*comptags = priv->comptags;
+}
+
+int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
+				struct nvhost_allocator *allocator,
+				int lines)
+{
+	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)mem;
+	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	int err;
+	u32 offset = 0;
+
+	BUG_ON(!priv);
+	BUG_ON(!lines);
+
+	/* store the allocator so we can use it when we free the ctags */
+	priv->comptag_allocator = allocator;
+	err = allocator->alloc(allocator, &offset, lines);
+	if (!err) {
+		priv->comptags.lines = lines;
+		priv->comptags.offset = offset;
+	}
+	return err;
 }

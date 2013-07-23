@@ -652,6 +652,8 @@ static int vic03_powergate(struct generic_pm_domain *domain)
 		v->is_booted = false;
 	return nvhost_module_power_off(pdata->pdev);
 }
+
+static int vic03_resume(struct device *dev);
 #endif
 
 static int vic03_probe(struct platform_device *dev)
@@ -705,7 +707,7 @@ static int vic03_probe(struct platform_device *dev)
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
 	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
-	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.domain.ops.resume = vic03_resume;
 	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
 	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
 #endif
@@ -777,6 +779,27 @@ static struct platform_driver vic03_driver = {
 #endif
 	}
 };
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int vic03_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	if (!pdata->can_powergate)
+		ret = vic03_boot(pdev);
+
+	if (ret) {
+		dev_err(&pdev->dev,
+			" %s(): couldn't boot vic03\n",
+			__func__);
+		return ret;
+	}
+
+	return nvhost_client_device_resume(dev);
+}
+#endif
 
 static int __init vic03_init(void)
 {

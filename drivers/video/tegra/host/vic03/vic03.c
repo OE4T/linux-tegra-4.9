@@ -64,6 +64,7 @@ struct nvhost_device_data vic03_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
+	.force_context_restore	= true,
 };
 
 struct platform_device tegra_vic03_device = {

@@ -3160,10 +3160,10 @@ static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 			therm_gate_ctrl_eng_delay_after_f(4));
 	}
 
-	/* 2 * (1 << 5) = 64 clks */
+	/* 2 * (1 << 9) = 1024 clks */
 	gate_ctrl = set_field(gate_ctrl,
 		therm_gate_ctrl_eng_idle_filt_exp_m(),
-		therm_gate_ctrl_eng_idle_filt_exp_f(5));
+		therm_gate_ctrl_eng_idle_filt_exp_f(9));
 	gate_ctrl = set_field(gate_ctrl,
 		therm_gate_ctrl_eng_idle_filt_mant_m(),
 		therm_gate_ctrl_eng_idle_filt_mant_f(2));
@@ -3353,8 +3353,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_blcg_gr_load_gating_prod(g, true);
 	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

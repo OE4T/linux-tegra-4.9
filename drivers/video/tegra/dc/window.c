@@ -763,6 +763,14 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)
 			win_options |= COLOR_EXPAND;
 
+		/*
+		 * For gen2 blending, change in the global alpha needs rewrite
+		 * to blending regs.
+		 */
+		if ((dc->blend.alpha[win->idx] != win->global_alpha) &&
+		    (tegra_dc_feature_is_gen2_blender(dc, win->idx)))
+			update_blend_seq = true;
+
 		/* Cache the global alpha of each window here. It is necessary
 		 * for in-order blending settings. */
 		dc->blend.alpha[win->idx] = win->global_alpha;

@@ -1299,3 +1299,54 @@ int nvmap_get_handle_param(struct nvmap_client *client,
 	nvmap_handle_put(h);
 	return err;
 }
+
+int nvmap_get_handle_param(struct nvmap_client *client,
+			   struct nvmap_handle_ref *ref, u32 param, u64 *result)
+{
+	int err = 0;
+	struct nvmap_handle *h = nvmap_handle_get(ref->handle);
+
+	switch (param) {
+	case NVMAP_HANDLE_PARAM_SIZE:
+		*result = h->orig_size;
+		break;
+	case NVMAP_HANDLE_PARAM_ALIGNMENT:
+		*result = h->align;
+		break;
+	case NVMAP_HANDLE_PARAM_BASE:
+		if (!h->alloc || !atomic_add_return(0, &h->pin))
+			*result = -EINVAL;
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
+			*result = h->carveout->base;
+			mutex_unlock(&h->lock);
+		} else if (h->pgalloc.contig)
+			*result = page_to_phys(h->pgalloc.pages[0]);
+		else if (h->pgalloc.area)
+			*result = h->pgalloc.area->iovm_start;
+		else
+			*result = -EINVAL;
+		break;
+	case NVMAP_HANDLE_PARAM_HEAP:
+		if (!h->alloc)
+			*result = 0;
+		else if (!h->heap_pgalloc) {
+			mutex_lock(&h->lock);
+			*result = nvmap_carveout_usage(client, h->carveout);
+			mutex_unlock(&h->lock);
+		} else
+			*result = NVMAP_HEAP_IOVMM;
+		break;
+	case NVMAP_HANDLE_PARAM_KIND:
+		*result = h->kind;
+		break;
+	case NVMAP_HANDLE_PARAM_COMPR:
+		/* ignored, to be removed */
+		break;
+	default:
+		err = -EINVAL;
+		break;
+	}
+	nvmap_handle_put(h);
+	return err;
+}

@@ -505,13 +505,13 @@ out:
 	return err;
 }
 
-
 int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 {
 	struct nvmap_handle_param op;
 	struct nvmap_client *client = filp->private_data;
+	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h;
-	u32 result;
+	u64 result;
 	int err = 0;
 	ulong handle;
 
@@ -523,12 +523,21 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 	if (!h)
 		return -EINVAL;
 
-	err = nvmap_get_handle_param_u32(client, h, op.param, &result);
+	nvmap_ref_lock(client);
+	ref = _nvmap_validate_id_locked(client, handle);
+	if (IS_ERR_OR_NULL(ref)) {
+		err = ref ? PTR_ERR(ref) : -EINVAL;
+		goto ref_fail;
+	}
+
+	err = nvmap_get_handle_param(client, ref, op.param, &result);
 	op.result = (long unsigned int)result;
 
 	if (!err && copy_to_user(arg, &op, sizeof(op)))
 		err = -EFAULT;
 
+ref_fail:
+	nvmap_ref_unlock(client);
 	nvmap_handle_put(h);
 	return err;
 }

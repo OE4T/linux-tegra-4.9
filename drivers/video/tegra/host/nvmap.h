@@ -46,7 +46,7 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev);
 int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
-			   u32 param, u32 *result);
+			   u32 param, u64 *result);
 phys_addr_t nvhost_nvmap_get_addr_from_id(ulong id);
 
 int nvhost_nvmap_pin_array_ids(struct mem_mgr *mgr,

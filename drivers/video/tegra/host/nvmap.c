@@ -180,9 +180,9 @@ struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 }
 
 int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
-		u32 param, u32 *result)
+		u32 param, u64 *result)
 {
-	return nvmap_get_handle_param_u32((struct nvmap_client *)mgr,
-			nvmap_ref_to_handle((struct nvmap_handle_ref *)handle),
+	return nvmap_get_handle_param((struct nvmap_client *)mgr,
+			(struct nvmap_handle_ref *)handle,
 			param, result);
 }

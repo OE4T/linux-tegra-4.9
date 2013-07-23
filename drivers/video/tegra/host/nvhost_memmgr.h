@@ -83,7 +83,7 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct nvhost_job_unpin *unpin_data);
 int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
-			    u32 param, u32 *result);
+			    u32 param, u64 *result);
 
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,

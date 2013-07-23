@@ -221,7 +221,7 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 
 int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
-			    u32 param, u32 *result)
+			    u32 param, u64 *result)
 {
 #ifndef CONFIG_ARM64
 	switch (nvhost_memmgr_type((u32)mem_handle)) {

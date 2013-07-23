@@ -104,7 +104,7 @@ struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev)
 }
 
 int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
-			    u32 param, u32 *result)
+			    u32 param, u64 *result)
 {
 	/* TBD: find a way to associate size, kind, etc */
 	return -EINVAL;

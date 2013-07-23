@@ -757,7 +757,7 @@ static struct mapped_buffer_node *find_mapped_buffer_range(struct rb_root *root,
 /* convenience setup for nvmap buffer attr queries */
 struct bfr_attr_query {
 	int err;
-	u32 v;
+	u64 v;
 };
 static u32 nvmap_bfr_param[] = {
 #define BFR_SIZE   0
@@ -836,7 +836,7 @@ static int setup_buffer_size_and_align(struct device *d,
 		bfr->iovmm_mapped = 1;
 		break;
 	default:
-		nvhost_err(0, "unsupported nvmap buffer heap: 0x%x\n",
+		nvhost_err(0, "unsupported nvmap buffer heap: 0x%llx\n",
 			   query[BFR_HEAP].v);
 		return -EINVAL;
 	}

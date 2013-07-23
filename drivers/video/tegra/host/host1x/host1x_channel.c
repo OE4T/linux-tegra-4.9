@@ -163,10 +163,14 @@ static void submit_ctxrestore(struct nvhost_job *job)
 	struct nvhost_channel *ch = job->ch;
 	u32 syncval;
 	struct nvhost_hwctx *ctx = job->hwctx;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* First check if we have a valid context to restore */
-	if(ch->cur_ctx == job->hwctx || !job->hwctx || !job->hwctx->valid)
-		return;
+	if (!pdata->force_context_restore) {
+		if (ch->cur_ctx == job->hwctx || !job->hwctx ||
+			!job->hwctx->valid)
+			return;
+	}
 
 	/* Increment syncpt max */
 	job->sp[job->hwctx_syncpt_idx].incrs += ctx->restore_incrs;

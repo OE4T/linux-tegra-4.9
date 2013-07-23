@@ -211,6 +211,8 @@ struct nvhost_device_data {
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	struct generic_pm_domain pd;	/* power domain representing power partition */
 #endif
+	/* forces the context restore gather for each submit */
+	bool		force_context_restore;
 
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);

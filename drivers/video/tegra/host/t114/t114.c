@@ -190,7 +190,6 @@ struct nvhost_device_data t11_isp_info = {
 	.index		= 3,
 	.syncpts	= {NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
 			  NVSYNCPT_VI_ISP_4},
-	.clocks		= { {"epp", 0} },
 	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,

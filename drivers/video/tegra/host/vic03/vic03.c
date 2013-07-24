@@ -44,6 +44,7 @@
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
 
 #include <mach/pm_domains.h>
+#include <mach/powergate.h>
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -65,6 +66,9 @@ struct nvhost_device_data vic03_info = {
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
 	.force_context_restore	= true,
+	.can_powergate		= true,
+	.powergate_delay	= 500,
+	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
 };
 
 struct platform_device tegra_vic03_device = {

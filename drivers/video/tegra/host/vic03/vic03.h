@@ -75,6 +75,7 @@ struct vic03 {
 
 	struct resource *reg_mem;
 	void __iomem *regs;
+	bool is_booted;
 
 	struct {
 		bool valid;
@@ -91,6 +92,7 @@ struct vic03 {
 
 		struct sg_table *sgt;
 		phys_addr_t pa;
+		void *va;
 	} ucode;
 
 	void (*remove_support)(struct vic03 *);

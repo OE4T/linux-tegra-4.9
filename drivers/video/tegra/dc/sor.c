@@ -391,6 +391,7 @@ void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
 		d_cur &= ~NV_SOR_DC_LANE3_DP_LANE3_MASK;
 		d_cur |= (drive_current <<
 			NV_SOR_DC_LANE3_DP_LANE3_SHIFT);
+		break;
 	default:
 		dev_err(&sor->dc->ndev->dev,
 			"dp: sor lane count %d is invalid\n", lane);

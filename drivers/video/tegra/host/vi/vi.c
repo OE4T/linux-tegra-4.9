@@ -86,9 +86,6 @@ static int vi_probe(struct platform_device *dev)
 	int err = 0;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-	char devname[MAX_DEVID_LENGTH];
-#endif
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -114,18 +111,6 @@ static int vi_probe(struct platform_device *dev)
 	}
 
 	tegra_vi->ndev = dev;
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-	snprintf(devname, MAX_DEVID_LENGTH,
-		 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
-		 dev->name, dev->id);
-	if (dev->id == 1)
-		tegra_vi->clk_gate = clk_get_sys(devname, "vim2_clk");
-	else
-		tegra_vi->clk_gate = clk_get_sys(devname, "csus");
-	if (IS_ERR(tegra_vi->clk_gate))
-		dev_err(&dev->dev, "clk_get_sys failed for clk_gate of %s",
-			devname);
-#endif
 	pdata->private_data = tegra_vi;
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
@@ -303,8 +288,6 @@ int nvhost_vi_init(struct platform_device *dev)
 		}
 		tegra_vi->reg = NULL;
 	}
-	if (tegra_vi->clk_gate)
-		clk_prepare_enable(tegra_vi->clk_gate);
 	return ret;
 }
 
@@ -315,8 +298,6 @@ void nvhost_vi_deinit(struct platform_device *dev)
 
 	if (tegra_vi->reg)
 		regulator_put(tegra_vi->reg);
-	if (tegra_vi->clk_gate)
-		clk_disable_unprepare(tegra_vi->clk_gate);
 }
 
 int nvhost_vi_finalize_poweron(struct platform_device *dev)

@@ -27,7 +27,6 @@ struct vi {
 	struct tegra_camera *camera;
 	struct platform_device *ndev;
 	struct regulator *reg;
-	struct clk *clk_gate;
 };
 
 int nvhost_vi_prepare_poweroff(struct platform_device *);

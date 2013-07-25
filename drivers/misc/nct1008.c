@@ -82,6 +82,11 @@
 #define THERM_WARN_RANGE_HIGH_OFFSET	2000
 #define THERM_WARN_RANGE_LOW_OFFSET	7000
 
+struct nct1008_adjust_offset_table {
+	int temp;
+	int offset;
+};
+
 struct nct1008_data {
 	struct workqueue_struct *workqueue;
 	struct work_struct work;
@@ -99,6 +104,7 @@ struct nct1008_data {
 	int stop_workqueue;
 	struct thermal_zone_device *nct_int;
 	struct thermal_zone_device *nct_ext;
+	struct nct1008_adjust_offset_table ext_offset_table[16];
 };
 
 static int conv_period_ms_table[] =
@@ -482,6 +488,52 @@ static ssize_t nct1008_show_regs(struct device *dev,
 	return sz;
 }
 
+static ssize_t nct1008_set_offsets(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct nct1008_data *nct = i2c_get_clientdata(client);
+	int index, temp, off;
+	int rv = count;
+
+	strim((char *)buf);
+	sscanf(buf, "[%u] %u %d", &index, &temp, &off);
+
+	if (index >= ARRAY_SIZE(nct->ext_offset_table)) {
+		pr_info("%s: invalid index [%d]\n", __func__, index);
+		rv = -EINVAL;
+	} else {
+		nct->ext_offset_table[index].temp = temp;
+		nct->ext_offset_table[index].offset = off;
+	}
+
+	return rv;
+}
+
+static ssize_t nct1008_show_offsets(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct nct1008_data *nct = i2c_get_clientdata(client);
+	char *name = nct->chip == NCT72 ? "nct72" : "nct1008";
+	int i, sz = 0;
+
+	sz += snprintf(buf + sz, PAGE_SIZE - sz,
+				"%s offsets table\n", name);
+	sz += snprintf(buf + sz, PAGE_SIZE - sz,
+				"%2s  %4s  %s\n", " #", "temp", "offset");
+	sz += snprintf(buf + sz, PAGE_SIZE - sz,
+				"%2s  %4s  %s\n", "--", "----", "------");
+
+	for (i = 0; i < ARRAY_SIZE(nct->ext_offset_table); i++)
+		sz += snprintf(buf + sz, PAGE_SIZE - sz,
+					"%2d  %4d  %3d\n",
+					i, nct->ext_offset_table[i].temp,
+					nct->ext_offset_table[i].offset);
+	return sz;
+}
+
 static DEVICE_ATTR(temperature, S_IRUGO, nct1008_show_temp, NULL);
 static DEVICE_ATTR(temperature_overheat, (S_IRUGO | (S_IWUSR | S_IWGRP)),
 		nct1008_show_temp_overheat, nct1008_set_temp_overheat);
@@ -489,6 +541,8 @@ static DEVICE_ATTR(temperature_alert, (S_IRUGO | (S_IWUSR | S_IWGRP)),
 		nct1008_show_temp_alert, nct1008_set_temp_alert);
 static DEVICE_ATTR(ext_temperature, S_IRUGO, nct1008_show_ext_temp, NULL);
 static DEVICE_ATTR(registers, S_IRUGO, nct1008_show_regs, NULL);
+static DEVICE_ATTR(offsets, (S_IRUGO | (S_IWUSR | S_IWGRP)),
+		nct1008_show_offsets, nct1008_set_offsets);
 
 static struct attribute *nct1008_attributes[] = {
 	&dev_attr_temperature.attr,
@@ -496,6 +550,7 @@ static struct attribute *nct1008_attributes[] = {
 	&dev_attr_temperature_alert.attr,
 	&dev_attr_ext_temperature.attr,
 	&dev_attr_registers.attr,
+	&dev_attr_offsets.attr,
 	NULL
 };
 
@@ -511,6 +566,7 @@ static int nct1008_ext_get_temp_common(struct nct1008_data *data,
 	s16 temp_ext_hi;
 	s16 temp_ext_lo;
 	long temp_ext_milli;
+	int i, off = 0;
 	u8 value;
 
 	/* Read External Temp */
@@ -526,6 +582,15 @@ static int nct1008_ext_get_temp_common(struct nct1008_data *data,
 
 	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
 			 temp_ext_lo * 250;
+
+	for (i = 0; i < ARRAY_SIZE(data->ext_offset_table); i++) {
+		if (temp_ext_milli < (data->ext_offset_table[i].temp * 1000)) {
+			off = data->ext_offset_table[i].offset * 1000;
+			break;
+		}
+	}
+	temp_ext_milli += off;
+
 	*temp = temp_ext_milli;
 	data->etemp = temp_ext_milli;
 

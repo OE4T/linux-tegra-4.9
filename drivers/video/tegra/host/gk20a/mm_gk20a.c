@@ -165,10 +165,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	/*TBD: make channel vm size configurable */
-	/* For now keep the size relatively small-ish compared
-	 * to the full 40b va.  8GB for now (as it allows for two separate,
-	 * 32b regions.) */
-	mm->channel.size = 1ULL << 33ULL;
+	mm->channel.size = 1ULL << NV_GMMU_VA_RANGE;
 
 	nvhost_dbg_info("channel vm size: %dMB", (int)(mm->channel.size >> 20));
 
@@ -777,17 +774,9 @@ struct buffer_attrs {
 	u8 uc_kind_v;
 };
 
-static int setup_buffer_size_and_align(struct device *d,
-				       struct buffer_attrs *bfr,
-				       struct bfr_attr_query *query)
+static void gmmu_select_page_size(struct buffer_attrs *bfr)
 {
 	int i;
-	/* buffer allocation size and alignment must be a multiple
-	   of one of the supported page sizes.*/
-	bfr->size = query[BFR_SIZE].v;
-	bfr->align = query[BFR_ALIGN].v;
-	bfr->pgsz_idx = -1;
-
 	/*  choose the biggest first (top->bottom) */
 	for (i = (gmmu_nr_page_sizes-1); i >= 0; i--)
 		if (!(gmmu_page_offset_masks[i] & bfr->align)) {
@@ -797,6 +786,27 @@ static int setup_buffer_size_and_align(struct device *d,
 			bfr->pgsz_idx = i;
 			break;
 		}
+}
+
+static int setup_buffer_size_and_align(struct device *d,
+				       struct buffer_attrs *bfr,
+				       struct bfr_attr_query *query,
+				       u64 offset, u32 flags)
+{
+	/* buffer allocation size and alignment must be a multiple
+	   of one of the supported page sizes.*/
+	bfr->size = query[BFR_SIZE].v;
+	bfr->align = query[BFR_ALIGN].v;
+	bfr->pgsz_idx = -1;
+
+	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
+	 * page size according to memory alignment */
+	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		bfr->pgsz_idx = NV_GMMU_VA_IS_UPPER(offset) ?
+				gmmu_page_size_big : gmmu_page_size_small;
+	} else {
+		gmmu_select_page_size(bfr);
+	}
 
 	if (unlikely(bfr->pgsz_idx == -1)) {
 		nvhost_warn(d, "unsupported buffer alignment: 0x%llx",
@@ -869,7 +879,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct mem_mgr *memmgr,
 			struct mem_handle *r,
 			u64 offset_align,
-			u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
+			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
 			u32 kind,
 			struct sg_table **sgt)
 {
@@ -906,7 +916,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer = find_deferred_unmap(vm, sg_phys(bfr.sgt->sgl),
 					    offset_align, flags);
 	if (mapped_buffer) {
-
 		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
 		if (sgt)
 			*sgt = mapped_buffer->sgt;
@@ -948,7 +957,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* validate/adjust bfr attributes */
-	err = setup_buffer_size_and_align(d, &bfr, query);
+	err = setup_buffer_size_and_align(d, &bfr, query, offset_align, flags);
 	if (unlikely(err))
 		goto clean_up;
 	if (unlikely(bfr.pgsz_idx < gmmu_page_size_small ||
@@ -960,7 +969,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gmmu_page_size = gmmu_page_sizes[bfr.pgsz_idx];
 
 	/* if specified the map offset must be bfr page size aligned */
-	if (flags & NVHOST_MAP_BUFFER_FLAGS_OFFSET) {
+	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
 		map_offset = offset_align;
 		if (map_offset & gmmu_page_offset_masks[bfr.pgsz_idx]) {
 			nvhost_err(d,

@@ -31,6 +31,10 @@
 /* Hack, get this from manuals somehow... */
 #define NV_MC_SMMU_VADDR_TRANSLATION_BIT     34
 
+/* For now keep the size relatively small-ish compared to the full
+ * 40b va.  8GB for now. It consists of two 4GB spaces. */
+#define NV_GMMU_VA_RANGE	33ULL
+#define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)0x1 << (NV_GMMU_VA_RANGE-1)))
 
 struct mem_desc {
 	struct mem_handle *ref;

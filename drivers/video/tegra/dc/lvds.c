@@ -65,6 +65,7 @@ static void tegra_dc_lvds_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
 
+	tegra_dc_io_start(dc);
 	/* Power on panel */
 	/* TODO: this probalby requires to use i2c.
 	   Need to confirm the right way to power on LVDS panel */
@@ -74,6 +75,7 @@ static void tegra_dc_lvds_enable(struct tegra_dc *dc)
 	/* tegra_dc_writel(dc, 6, DC_DISP_DISP_CLOCK_CONTROL); */
 
 	tegra_dc_sor_enable_lvds(lvds->sor, false, false);
+	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_lvds_disable(struct tegra_dc *dc)

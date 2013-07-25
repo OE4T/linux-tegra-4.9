@@ -1525,6 +1525,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	if (!tegra_is_clk_enabled(dp->clk))
 		clk_prepare_enable(dp->clk);
 
+	tegra_dc_io_start(dc);
 	tegra_dc_dpaux_enable(dp);
 
 	/* Power on panel */
@@ -1551,7 +1552,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	if (ret) {
 		dev_err(&dp->dc->ndev->dev,
 			"dp: failed to power on panel (0x%x)\n", ret);
-		return;
+		goto error_enable;
 	}
 
 	/* Confirm DP is plugging status */
@@ -1559,7 +1560,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		!(tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT) &
 			DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
 		dev_err(&dp->dc->ndev->dev, "dp: could not detect HPD\n");
-		return;
+		goto error_enable;
 	}
 
 	/* Check DP version */
@@ -1573,6 +1574,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_sor_attach(dp->sor);
 
 error_enable:
+	tegra_dc_io_end(dc);
 	return;
 }
 

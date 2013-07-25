@@ -968,6 +968,8 @@ static int gk20a_probe(struct platform_device *dev)
 			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT * 1000;
 	gk20a->timeouts_enabled = true;
 
+	gk20a_create_sysfs(dev);
+
 #ifdef CONFIG_DEBUG_FS
 	clk_gk20a_debugfs_init(dev);
 

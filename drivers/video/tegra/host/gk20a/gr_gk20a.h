@@ -303,6 +303,8 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size);
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr);
 int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va);
 
+void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
+
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \
 		int err; \

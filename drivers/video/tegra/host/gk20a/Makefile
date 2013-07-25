@@ -19,5 +19,6 @@ nvhost-gk20a-objs  = \
 	gr_ctx_gk20a_sim.o \
 	gr_ctx_gk20a.o \
 	gk20a_gating_reglist.o \
-	gk20a_scale.o
+	gk20a_scale.o \
+	gk20a_sysfs.o
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-gk20a.o

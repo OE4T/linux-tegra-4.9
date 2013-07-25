@@ -3123,7 +3123,7 @@ int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 		gr_gk20a_add_zbc(g, gr, zbc_val));
 }
 
-static void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
+void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl, idle_filter;
 

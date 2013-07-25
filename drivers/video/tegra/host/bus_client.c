@@ -29,6 +29,7 @@
 #include <linux/hrtimer.h>
 #include <linux/export.h>
 #include <linux/firmware.h>
+#include <linux/dma-mapping.h>
 
 #include <trace/events/nvhost.h>
 
@@ -1459,6 +1460,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 	nvhost_module_busy(nvhost_master->dev);
 	nvhost_syncpt_reset_client(dev);
 	nvhost_module_idle(nvhost_master->dev);
+
+	/* Initialize dma parameters */
+	dev->dev.dma_parms = &pdata->dma_parms;
+	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
 	dev_info(&dev->dev, "initialized\n");
 

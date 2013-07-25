@@ -152,6 +152,7 @@ struct nvhost_device_data {
 	int		id;		/* Separates clients of same hw */
 	int		index;		/* Hardware channel number */
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
+	struct device_dma_parameters dma_parms;
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 	u32		syncpt_base;	/* Device sync point base */

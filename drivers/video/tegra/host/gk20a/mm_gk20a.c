@@ -1193,9 +1193,12 @@ u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
 {
 	u64 result = sg_phys(sgl);
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (sg_dma_address(sgl))
+	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
+		result = 0;
+	else if (sg_dma_address(sgl)) {
 		result = sg_dma_address(sgl) |
 			1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT;
+	}
 #endif
 	return result;
 }
@@ -1236,6 +1239,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 		u32 pte_cur;
 		u32 pte_space_page_cur, pte_space_offset_cur;
 		u32 pte_space_page_offset;
+		u64 addr = 0;
 		void *pte_kv_cur;
 
 		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
@@ -1275,16 +1279,20 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 			}
 
 			if (likely(sgt)) {
-				u64 addr = gk20a_mm_iova_addr(cur_chunk);
-				addr += cur_offset;
+				u64 new_addr = gk20a_mm_iova_addr(cur_chunk);
+				if (new_addr) {
+					addr = new_addr;
+					addr += cur_offset;
+				}
+
 
 				nvhost_dbg(dbg_pte,
 				   "pte_cur=%d addr=0x%08llx kind=%d ctag=%d",
 				   pte_cur, addr, kind_v, ctag);
 
-				addr >>= gmmu_pte_address_shift_v();
 				pte_w[0] = gmmu_pte_valid_true_f() |
-					gmmu_pte_address_sys_f(addr);
+					gmmu_pte_address_sys_f(addr
+						>> gmmu_pte_address_shift_v());
 				pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 					gmmu_pte_kind_f(kind_v) |
 					gmmu_pte_comptagline_f(ctag);
@@ -1296,6 +1304,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 					pte_w[1] |= gmmu_pte_vol_true_f();
 
 				cur_offset += 1 << page_shift;
+				addr += 1 << page_shift;
 				while (cur_chunk &&
 					cur_offset >= cur_chunk->length) {
 					cur_offset -= cur_chunk->length;

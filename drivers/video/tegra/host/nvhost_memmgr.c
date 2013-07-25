@@ -410,49 +410,23 @@ void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
 			   struct device *dev)
 {
-	int i;
-	struct scatterlist *sg;
+	int ents;
 	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t addr = dma_iova_alloc(dev, size);
-
-	if (unlikely(sg_dma_address(sgt->sgl) != 0))
-		return 0;
-
-	if (dma_mapping_error(dev, addr))
-		return -ENOMEM;
 
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
-		dma_addr_t da;
-		void *va;
-		sg_dma_address(sg) = addr;
-		sg_dma_len(sg) = sg->length;
-		for (va = phys_to_virt(sg_phys(sg));
-		     va < phys_to_virt(sg_phys(sg)) + sg->length;
-		     va += PAGE_SIZE, addr += PAGE_SIZE) {
-			da = dma_map_single_at_attrs(dev, va, addr,
-				PAGE_SIZE, 0, &attrs);
-			if (dma_mapping_error(dev, da))
-				/*  TODO: Clean up */
-				return -EINVAL;
-		}
-	}
+	ents = dma_map_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
+	if (!ents)
+		return -EINVAL;
 	return 0;
 }
 
 void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 		struct device *dev)
 {
-	int i;
-	struct scatterlist *sg;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 	/* dma_unmap_sg_attrs will also free the iova */
 	dma_unmap_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
-	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
-		sg_dma_address(sg) = 0;
-		sg_dma_len(sg) = 0;
-	}
 }
 #endif
 

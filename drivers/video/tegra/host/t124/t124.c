@@ -125,7 +125,7 @@ static struct host1x_device_info host1x04_info = {
 };
 
 struct nvhost_device_data t124_host1x_info = {
-	.clocks		= {{"host1x", UINT_MAX}, {} },
+	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
 };

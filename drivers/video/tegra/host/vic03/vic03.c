@@ -677,15 +677,10 @@ static int vic03_probe(struct platform_device *dev)
 	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
 	pdata->alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler;
 
-	/* VIC scaling is disabled by default. remove #if/endif to enable */
-#if 0
 	pdata->scaling_init		= nvhost_scale_init;
 	pdata->scaling_deinit		= nvhost_scale_deinit;
-	pdata->idle			= nvhost_scale_notify_idle;
-	pdata->busy			= nvhost_scale_notify_busy;
 	pdata->actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE;
 	pdata->actmon_enabled		= true;
-#endif
 
 	pdata->pdev = dev;
 

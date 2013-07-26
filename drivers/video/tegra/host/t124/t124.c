@@ -304,14 +304,10 @@ struct nvhost_device_data t124_msenc_info = {
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
 	.can_powergate	= true,
-#if 0
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
-	.idle		= nvhost_scale_notify_idle,
-	.busy		= nvhost_scale_notify_busy,
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
-#endif
 };
 
 struct platform_device tegra_msenc03_device = {

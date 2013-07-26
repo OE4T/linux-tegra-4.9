@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T124
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,18 @@
 #include "chip_support.h"
 #include "host1x/host1x_actmon.h"
 
+void actmon_writel(struct host1x_actmon *actmon, u32 val, u32 reg)
+{
+	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);
+	writel(val, actmon->regs + reg);
+}
+
+u32 actmon_readl(struct host1x_actmon *actmon, u32 reg)
+{
+	u32 val = readl(actmon->regs + reg);
+	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);
+	return val;
+}
 /*
  * actmon_update_sample_period_safe(host)
  *
@@ -44,13 +56,13 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 	clks_per_sample = freq_mhz * actmon->usecs_per_sample;
 	actmon->clks_per_sample = clks_per_sample;
 
-	val = readl(actmon->regs + actmon_ctrl_r());
+	val = actmon_readl(actmon, actmon_ctrl_r());
 	val &= ~actmon_ctrl_sample_period_m();
 	val |= actmon_ctrl_sample_period_f(clks_per_sample);
-	writel(val, actmon->regs + actmon_ctrl_r());
+	actmon_writel(actmon, val, actmon_ctrl_r());
 
 	/* AVG value depends on sample period => clear it */
-	writel(0, actmon->regs + actmon_init_avg_r());
+	actmon_writel(actmon, 0, actmon_init_avg_r());
 }
 
 static int host1x_actmon_init(struct host1x_actmon *actmon)
@@ -75,20 +87,20 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	nvhost_module_busy(actmon->host->dev);
 
 	/* Clear average and control registers */
-	writel(0, actmon->regs + actmon_init_avg_r());
-	writel(0, actmon->regs + actmon_ctrl_r());
+	actmon_writel(actmon, 0, actmon_init_avg_r());
+	actmon_writel(actmon, 0, actmon_ctrl_r());
 
 	/* Write (normalised) sample period. */
 	actmon_update_sample_period_safe(actmon);
 
 	/* Clear interrupt status */
-	writel(0xffffffff, actmon->regs + actmon_intr_status_r());
+	actmon_writel(actmon, 0xffffffff, actmon_intr_status_r());
 
-	val = readl(actmon->regs + actmon_ctrl_r());
+	val = actmon_readl(actmon, actmon_ctrl_r());
 	val |= actmon_ctrl_enb_periodic_f(1);
 	val |= actmon_ctrl_k_val_f(actmon->k);
 	val |= actmon_ctrl_actmon_enable_f(1);
-	writel(val, actmon->regs + actmon_ctrl_r());
+	actmon_writel(actmon, val, actmon_ctrl_r());
 
 	nvhost_module_idle(actmon->host->dev);
 
@@ -118,8 +130,8 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 
 	/* Disable actmon and clear interrupt status */
 	nvhost_module_busy(actmon->host->dev);
-	writel(0, actmon->regs + actmon_ctrl_r());
-	writel(0xffffffff, actmon->regs + actmon_intr_status_r());
+	actmon_writel(actmon, 0, actmon_ctrl_r());
+	actmon_writel(actmon, 0xffffffff, actmon_intr_status_r());
 	nvhost_module_idle(actmon->host->dev);
 }
 
@@ -131,7 +143,7 @@ static int host1x_actmon_avg(struct host1x_actmon *actmon, u32 *val)
 	}
 
 	nvhost_module_busy(actmon->host->dev);
-	*val = readl(actmon->regs + actmon_avg_count_r());
+	*val = actmon_readl(actmon, actmon_avg_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
@@ -149,7 +161,7 @@ static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 
 	/* Read load from hardware */
 	nvhost_module_busy(actmon->host->dev);
-	val = readl(actmon->regs + actmon_avg_count_r());
+	val = actmon_readl(actmon, actmon_avg_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
@@ -167,7 +179,7 @@ static int host1x_actmon_count(struct host1x_actmon *actmon, u32 *val)
 
 	/* Read load from hardware */
 	nvhost_module_busy(actmon->host->dev);
-	*val = readl(actmon->regs + actmon_count_r());
+	*val = actmon_readl(actmon, actmon_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
@@ -185,7 +197,7 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 
 	/* Read load from hardware */
 	nvhost_module_busy(actmon->host->dev);
-	val = readl(actmon->regs + actmon_count_r());
+	val = actmon_readl(actmon, actmon_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
@@ -229,10 +241,10 @@ static void host1x_actmon_set_k(struct host1x_actmon *actmon, u32 k)
 	actmon->k = k;
 
 	nvhost_module_busy(actmon->host->dev);
-	val = readl(actmon->regs + actmon_ctrl_r());
+	val = actmon_readl(actmon, actmon_ctrl_r());
 	val &= ~(actmon_ctrl_k_val_m());
 	val |= actmon_ctrl_k_val_f(actmon->k);
-	writel(val, actmon->regs + actmon_ctrl_r());
+	actmon_writel(actmon, val, actmon_ctrl_r());
 	nvhost_module_idle(actmon->host->dev);
 }
 

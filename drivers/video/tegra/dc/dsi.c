@@ -4352,10 +4352,7 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 		}
 	}
 
-	val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
-		DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
-		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
-	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
+	tegra_dsi_pad_disable(dsi);
 
 	/* Suspend core-logic */
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE);

@@ -54,19 +54,22 @@ struct dsi_status {
 
 	unsigned dc_stream:1;
 };
+#define MAX_DSI_INSTANCE	2
 
 struct tegra_dc_dsi_data {
 	struct tegra_dc *dc;
-	void __iomem *base;
-	struct resource *base_res;
+	void __iomem *base[MAX_DSI_INSTANCE];
+	struct resource *base_res[MAX_DSI_INSTANCE];
 
 	struct clk *dc_clk;
-	struct clk *dsi_clk;
+	struct clk *dsi_clk[MAX_DSI_INSTANCE];
 	struct clk *dsi_fixed_clk;
-	struct clk *dsi_lp_clk;
+	struct clk *dsi_lp_clk[MAX_DSI_INSTANCE];
 	bool clk_ref;
 
 	struct mutex lock;
+
+	int max_instances;
 
 	struct tegra_dsi_out_ops *out_ops;
 	void			*out_data;
@@ -112,8 +115,6 @@ struct tegra_dc_dsi_data {
 
 	u32 dsi_control_val;
 };
-
-#define MAX_DSI_INSTANCE	2
 
 /* Max number of data lanes supported */
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || \

@@ -39,7 +39,7 @@
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
 	204, 1248,	/* freq */
-	1000, 1700,	/* vco */
+	1000, 2000,	/* vco */
 	12, 38,		/* u */
 	1, 255,		/* M */
 	8, 255,		/* N */

@@ -102,7 +102,6 @@ static void update_load_estimate_gpmu(struct platform_device *pdev)
 	profile->dev_stat.total_time = dt;
 	profile->last_event_time = t;
 	gk20a_pmu_load_norm(g, &busy_time);
-	gk20a_pmu_load_reset(g);
 	profile->dev_stat.busy_time = (busy_time * dt) / 1000;
 }
 
@@ -259,9 +258,11 @@ void nvhost_gk20a_scale_hw_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
-	struct gk20a *g = get_gk20a(pdev);
 
-	gk20a_pmu_load_reset(g);
+	/* make sure that scaling has bee initialised */
+	if (!profile)
+		return;
+
 	profile->dev_stat.total_time = 0;
 	profile->last_event_time = ktime_get();
 }

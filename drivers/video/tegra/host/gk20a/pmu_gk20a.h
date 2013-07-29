@@ -690,6 +690,9 @@ struct pmu_gk20a {
 
 	void (*remove_support)(struct pmu_gk20a *pmu);
 	bool sw_ready;
+	bool perfmon_ready;
+
+	u32 sample_buffer;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
@@ -711,6 +714,5 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
-void gk20a_pmu_load_reset(struct gk20a *g);
 
 #endif /*__PMU_GK20A_H__*/

@@ -1448,12 +1448,13 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	struct gk20a *g = pmu->g;
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
-	u32 sample_buffer;
 	u32 seq;
 	u32 data;
 	int err;
 
 	nvhost_dbg_fn("");
+
+	pmu->perfmon_ready = 0;
 
 	/* use counter #3 for GR && CE2 busy cycles */
 	gk20a_writel(g, pwr_pmu_idle_mask_r(3),
@@ -1499,11 +1500,8 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
 
-	if (!IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
-		return 0;
-
-	sample_buffer = 0;
-	err = pmu->dmem.alloc(&pmu->dmem, &sample_buffer, 2 * sizeof(u16));
+	pmu->sample_buffer = 0;
+	err = pmu->dmem.alloc(&pmu->dmem, &pmu->sample_buffer, 2 * sizeof(u16));
 	if (err) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to allocate perfmon sample buffer");
@@ -1516,7 +1514,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_init);
 	cmd.cmd.perfmon.cmd_type = PMU_PERFMON_CMD_ID_INIT;
 	/* buffer to save counter values for pmu perfmon */
-	cmd.cmd.perfmon.init.sample_buffer = (u16)sample_buffer;
+	cmd.cmd.perfmon.init.sample_buffer = (u16)pmu->sample_buffer;
 	/* number of sample periods below lower threshold
 	   before pmu triggers perfmon decrease event
 	   TBD: = 15 */
@@ -1849,6 +1847,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 		gk20a_clk_set_rate(g, (rate / 10) * 9);
 		break;
 	case PMU_PERFMON_MSG_ID_INIT_EVENT:
+		pmu->perfmon_ready = 1;
 		nvhost_dbg_pmu("perfmon init event");
 		init = true;
 		break;
@@ -1857,7 +1856,9 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 	}
 
 	/* restart sampling */
-	return pmu_perfmon_start_sampling(pmu, init);
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
+		return pmu_perfmon_start_sampling(pmu, init);
+	return 0;
 }
 
 
@@ -2564,34 +2565,18 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 {
-	unsigned long busy_cycles;
-	unsigned long total_cycles;
+	struct pmu_gk20a *pmu = &g->pmu;
+	u16 _load = 0;
 
-	/* total cycles should always be larger than busy cycles. therefore,
-	 * enforce the order */
-	busy_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(3)));
-	rmb();
-	total_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(6)));
-
-	if (total_cycles)
-		*load = busy_cycles * 1000 / total_cycles;
-	else
+	if (!pmu->perfmon_ready) {
 		*load = 0;
+		return 0;
+	}
+
+	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&_load, 2, 0);
+	*load = _load / 10;
 
 	return 0;
-}
-
-void gk20a_pmu_load_reset(struct gk20a *g)
-{
-	u32 val = pwr_pmu_idle_count_reset_f(1);
-
-	/* total cycles should always be larger than busy cycles. therefore,
-	 * enforce the order */
-	gk20a_writel(g, pwr_pmu_idle_count_r(6), val);
-	wmb();
-	gk20a_writel(g, pwr_pmu_idle_count_r(3), val);
 }
 
 #ifdef CONFIG_DEBUG_FS

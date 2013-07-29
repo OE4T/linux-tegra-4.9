@@ -22,28 +22,11 @@
 #include <linux/nvhost.h>
 #include <linux/devfreq.h>
 
+#include "nvhost_scale.h"
+
 struct platform_device;
 struct host1x_actmon;
 struct clk;
-
-/*
- * profile_rec - Device specific power management variables
- */
-
-struct nvhost_device_profile {
-	struct platform_device		*pdev;
-	struct host1x_actmon		*actmon;
-	struct clk			*clk;
-
-	bool				busy;
-	ktime_t				last_event_time;
-	enum nvhost_devfreq_busy	last_event_type;
-
-	struct devfreq_dev_status	dev_stat;
-	struct nvhost_devfreq_ext_stat	ext_stat;
-
-	void				*private_data;
-};
 
 /* Initialization and de-initialization for module */
 void nvhost_gk20a_scale_init(struct platform_device *);

@@ -34,6 +34,7 @@
 #include "gk20a.h"
 #include "pmu_gk20a.h"
 #include "clk_gk20a.h"
+#include "nvhost_scale.h"
 #include "gk20a_scale.h"
 
 static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
@@ -169,13 +170,6 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 	return 0;
 }
 
-static struct devfreq_dev_profile gk20a_scale_devfreq_profile = {
-	.initial_freq   = 0,
-	.polling_ms     = 0,
-	.target         = gk20a_scale_target,
-	.get_dev_status = gk20a_scale_get_dev_status,
-};
-
 /*
  * gk20a_scale_init(pdev)
  */
@@ -191,7 +185,6 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	profile = kzalloc(sizeof(struct nvhost_device_profile), GFP_KERNEL);
 	if (!profile)
 		return;
-	pdata->power_profile = profile;
 	profile->pdev = pdev;
 	profile->last_event_type = DEVICE_UNKNOWN;
 
@@ -210,13 +203,26 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	if (device_create_file(&pdev->dev, &dev_attr_load))
 		goto err_create_sysfs_entry;
 
-	pdata->power_manager = devfreq_add_device(&pdev->dev,
-				&gk20a_scale_devfreq_profile,
-				"", NULL);
+	/* Store device profile so we can access it if devfreq governor
+	 * init needs that */
+	pdata->power_profile = profile;
 
-	if (IS_ERR(pdata->power_manager))
-		pdata->power_manager = NULL;
+	if (pdata->devfreq_governor) {
+		struct devfreq *devfreq;
 
+		profile->devfreq_profile.target = gk20a_scale_target;
+		profile->devfreq_profile.get_dev_status =
+			gk20a_scale_get_dev_status;
+
+		devfreq = devfreq_add_device(&pdev->dev,
+					&profile->devfreq_profile,
+					pdata->devfreq_governor->name, NULL);
+
+		if (IS_ERR(devfreq))
+			devfreq = NULL;
+
+		pdata->power_manager = devfreq;
+	}
 	return;
 
 err_create_sysfs_entry:

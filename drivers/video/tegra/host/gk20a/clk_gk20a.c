@@ -269,6 +269,23 @@ static int gk20a_init_clk_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
+struct clk *gk20a_clk_get(struct gk20a *g)
+{
+	if (!g->clk.tegra_clk) {
+		struct clk *clk;
+
+		clk = clk_get_sys("tegra_gk20a", "PLLG_ref");
+		if (IS_ERR_OR_NULL(clk)) {
+			nvhost_err(dev_from_gk20a(g),
+				"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
+			return NULL;
+		}
+		g->clk.tegra_clk = clk;
+	}
+
+	return g->clk.tegra_clk;
+}
+
 static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -298,12 +315,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 	}
 
-	clk->tegra_clk = clk_get_sys("tegra_gk20a", "PLLG_ref");
-	if (IS_ERR_OR_NULL(clk->tegra_clk)) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
+	if (!gk20a_clk_get(g))
 		return -EINVAL;
-	}
 
 	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
 	if (!err) {
@@ -397,6 +410,31 @@ u32 gk20a_clk_get_rate(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
+}
+
+int gk20a_clk_round_rate(struct gk20a *g, u32 rate)
+{
+	unsigned long *freqs;
+	int i, err, num_freqs;
+
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return rate;
+
+	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
+	if (err)
+		return rate;
+
+	for (i = 0; i < num_freqs; i++) {
+		/* dvfs is for gpc2pll in Hz => convert it to kHz gpu freq */
+		unsigned long gpu_freq = freqs[i] / 2;
+		if (rate <= gpu_freq)
+			break;
+	}
+
+	i = min(num_freqs - 1, i);
+
+	return freqs[i] / 2;
 }
 
 /* TBD: interface to change clock and dvfs in one function */

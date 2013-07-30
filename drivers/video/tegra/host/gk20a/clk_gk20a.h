@@ -73,6 +73,8 @@ int gk20a_clk_init_cap_freqs(struct gk20a *g);
 u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
 int gk20a_clk_disable_gpcpll(struct gk20a *g);
+struct clk *gk20a_clk_get(struct gk20a *g);
+int gk20a_clk_round_rate(struct gk20a *g, u32 rate);
 
 extern struct pll_parms gpc_pll_params;
 

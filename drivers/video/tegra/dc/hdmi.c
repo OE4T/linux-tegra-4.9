@@ -2035,14 +2035,18 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	if (clk != dc->clk) {
 #if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		clk_set_rate(base_clk, dc->mode.pclk);
-#else
-		clk_set_rate(parent_clk, dc->mode.pclk);
-#endif
 
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);
 
 		clk_set_rate(clk, dc->mode.pclk / 4);
+#else
+		rate = 100000000;
+		clk_set_rate(parent_clk, rate);
+		if (clk_get_parent(clk) != parent_clk)
+			clk_set_parent(clk, parent_clk);
+		clk_set_rate(clk,  rate / 4);
+#endif
 	}
 
 	/*
@@ -2050,9 +2054,19 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	 * The required rate needs to be setup at 4x multiplier,
 	 * as out0 is 1/2 of the actual PLL output.
 	 */
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	if (dc->mode.pclk == 25200000)
+		rate = dc->mode.pclk  * 10;
+	else {
+		rate = dc->mode.pclk * 2;
+		while (rate < 400000000)
+			rate *= 2;
+	}
+#else
 	rate = dc->mode.pclk * 2;
 	while (rate < 500000000)
 		rate *= 2;
+#endif
 #if !defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	if (rate != clk_get_rate(base_clk))
 		clk_set_rate(base_clk, rate);

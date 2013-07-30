@@ -1306,8 +1306,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 				cur_offset += 1 << page_shift;
 				addr += 1 << page_shift;
 				while (cur_chunk &&
-					cur_offset >= cur_chunk->length) {
-					cur_offset -= cur_chunk->length;
+					cur_offset >= sg_dma_len(cur_chunk)) {
+					cur_offset -= sg_dma_len(cur_chunk);
 					cur_chunk = sg_next(cur_chunk);
 				}
 				pte->ref_cnt++;

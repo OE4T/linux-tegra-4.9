@@ -1,6 +1,17 @@
+/*
+ * Raydium RM31080 touchscreen header
+ *
+ * Copyright (C) 2012-2013, Raydium Semiconductor Corporation.
+ * Copyright (C) 2012-2013, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * This program is free software; you can redistribute  it and/or modify it
+ * under  the terms of  the GNU General  Public License as published by the
+ * Free Software Foundation;  either version 2 of the  License, or (at your
+ * option) any later version.
+ *
+ */
 #ifndef _RM31080A_TS_H_
 #define _RM31080A_TS_H_
-
 
 #define ENABLE_MANUAL_IDLE_MODE			0
 
@@ -22,8 +33,7 @@
 #define RM_IOCTL_FINISH_CALC				0x1005
 #define RM_IOCTL_SCRIBER_CTRL				0x1006
 #define RM_IOCTL_READ_RAW_DATA				0x1007
-#define RM_IOCTL_AUTOSCAN_CTRL				0x1008
-#define RM_IOCTL_GET_PARAMETER				0x100A
+#define RM_IOCTL_SET_PARAMETER				0x100A
 #define RM_IOCTL_SET_VARIABLE				0x1010
 #define RM_VARIABLE_SELF_TEST_RESULT			0x01
 #define RM_VARIABLE_SCRIBER_FLAG				0x02
@@ -69,6 +79,8 @@
 #define RM_PLATFORM_D010	0x03
 #define RM_PLATFORM_P005	0x04
 #define RM_PLATFORM_R005	0x05
+#define RM_PLATFORM_M010	0x06
+#define RM_PLATFORM_P140	0x07
 #define RM_PLATFORM_RAYPRJ	0x80
 
 /***************************************************************************
@@ -165,15 +177,14 @@ struct rm_spi_ts_platform_data {
 	int platform_id;
 	unsigned char *name_of_clock;
 	unsigned char *name_of_clock_con;
-/* wait to be implemented...
-	int gpio_sensor_select0;
-	int gpio_sensor_select1;
-*/
+	/* wait to be implemented...
+		int gpio_sensor_select0;
+		int gpio_sensor_select1;
+	*/
 };
 
 int rm_tch_spi_byte_write(unsigned char u8Addr, unsigned char u8Value);
 int rm_tch_spi_byte_read(unsigned char u8Addr, unsigned char *pu8Value);
 int rm_tch_spi_burst_write(unsigned char *pBuf, unsigned int u32Len);
-void rm_tch_set_autoscan(unsigned char val);
 
 #endif				/*_RM31080A_TS_H_*/

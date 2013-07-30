@@ -2148,7 +2148,7 @@ static int rm_tch_spi_setting(u32 speed)
 }
 #endif
 
-static int __devexit rm_tch_spi_remove(struct spi_device *spi)
+static int rm_tch_spi_remove(struct spi_device *spi)
 {
 	struct rm_tch_ts *ts = spi_get_drvdata(spi);
 	del_timer(&ts_timer_triggle);
@@ -2248,7 +2248,7 @@ err_null_regulator:
 	return 1;
 }
 
-static int __devinit rm_tch_spi_probe(struct spi_device *spi)
+static int rm_tch_spi_probe(struct spi_device *spi)
 {
 	struct rm_tch_ts *ts;
 	struct rm_spi_ts_platform_data *pdata;
@@ -2361,7 +2361,7 @@ static struct spi_driver rm_tch_spi_driver = {
 #endif
 	},
 	.probe = rm_tch_spi_probe,
-	.remove = __devexit_p(rm_tch_spi_remove),
+	.remove = rm_tch_spi_remove,
 };
 
 static int __init rm_tch_spi_init(void)

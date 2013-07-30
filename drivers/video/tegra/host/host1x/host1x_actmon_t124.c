@@ -67,8 +67,10 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 
 static int host1x_actmon_init(struct host1x_actmon *actmon)
 {
+	struct platform_device *pdev = actmon->host->dev;
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)platform_get_drvdata(pdev);
 	u32 val;
-	u32 err = 0;
 
 	if (actmon->init == ACTMON_READY)
 		return 0;
@@ -80,10 +82,7 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 		actmon->k = 1;
 	}
 
-	actmon->clk = clk_get_sys("clk_m", "clk_m");
-	if (IS_ERR(actmon->clk))
-		return PTR_ERR(actmon->clk);
-
+	actmon->clk = pdata->clk[1];
 	nvhost_module_busy(actmon->host->dev);
 
 	/* Clear average and control registers */
@@ -104,14 +103,6 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 
 	nvhost_module_idle(actmon->host->dev);
 
-	/* Start actmon */
-	err = clk_prepare_enable(actmon->clk);
-	if (err) {
-		nvhost_module_idle(actmon->host->dev);
-		clk_put(actmon->clk);
-		return err;
-	}
-
 	actmon->init = ACTMON_READY;
 
 	return 0;
@@ -123,10 +114,6 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 		return;
 
 	actmon->init = ACTMON_SLEEP;
-
-	/* Disable actmon clock */
-	clk_disable_unprepare(actmon->clk);
-	clk_put(actmon->clk);
 
 	/* Disable actmon and clear interrupt status */
 	nvhost_module_busy(actmon->host->dev);

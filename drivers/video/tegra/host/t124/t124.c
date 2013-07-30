@@ -296,17 +296,16 @@ static struct resource msenc_resources[] = {
 };
 
 struct nvhost_device_data t124_msenc_info = {
-	.version       = NVHOST_ENCODE_MSENC_VER(3, 1),
-	.syncpts       = {NVSYNCPT_MSENC, NVSYNCPT_MSENC_SLICE},
-	.waitbases     = {NVWAITBASE_MSENC},
-	.class	       = NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.clocks = {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
+	.syncpts	= {NVSYNCPT_MSENC, NVSYNCPT_MSENC_SLICE},
+	.waitbases	= {NVWAITBASE_MSENC},
+	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
+	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.exclusive     = true,
-	.keepalive     = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
-	/* VIC scaling is disabled by default. remove #if/endif to enable */
+	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
+	.powergate_delay = 100,
+	.can_powergate	= true,
 #if 0
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,

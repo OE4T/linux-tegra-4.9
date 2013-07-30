@@ -177,10 +177,8 @@ struct rm_spi_ts_platform_data {
 	int platform_id;
 	unsigned char *name_of_clock;
 	unsigned char *name_of_clock_con;
-	/* wait to be implemented...
-		int gpio_sensor_select0;
-		int gpio_sensor_select1;
-	*/
+	int gpio_sensor_select0;
+	int gpio_sensor_select1;
 };
 
 int rm_tch_spi_byte_write(unsigned char u8Addr, unsigned char u8Value);

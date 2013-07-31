@@ -56,10 +56,16 @@ enum nvhost_dbg_categories {
 
 #if defined(NVHOST_DEBUG)
 extern u32 nvhost_dbg_mask;
+extern u32 nvhost_dbg_ftrace;
 #define nvhost_dbg(dbg_mask, format, arg...)				\
 do {									\
-	if ((dbg_mask) & nvhost_dbg_mask)				\
-		printk(KERN_INFO "nvhost %s: " format "\n", __func__, ##arg);\
+	if ((dbg_mask) & nvhost_dbg_mask) {				\
+		if (nvhost_dbg_ftrace)					\
+			trace_printk(format "\n", ##arg);		\
+		else							\
+			pr_info("nvhost %s: " format "\n",		\
+					__func__, ##arg);		\
+	}								\
 } while (0)
 
 #else /* NVHOST_DEBUG */

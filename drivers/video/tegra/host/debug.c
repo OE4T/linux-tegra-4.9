@@ -244,6 +244,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 #if defined(NVHOST_DEBUG)
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR, de,
 			&nvhost_dbg_mask);
+	debugfs_create_u32("dbg_ftrace", S_IRUGO|S_IWUSR, de,
+			&nvhost_dbg_ftrace);
 #endif
 	debugfs_create_u32("timeout_default_ms", S_IRUGO|S_IWUSR, de,
 			&pdata->nvhost_timeout_default);

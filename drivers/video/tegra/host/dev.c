@@ -33,6 +33,7 @@
 
 #if defined(NVHOST_DEBUG)
 u32 nvhost_dbg_mask = NVHOST_DEFAULT_DBG_MASK;
+u32 nvhost_dbg_ftrace;
 #endif
 
 /* host1x device list is used in 2 places:

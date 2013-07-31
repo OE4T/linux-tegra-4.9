@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -606,14 +606,17 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 /* 3	1	1	0	1	1	0	1 */
 /* 4	1	0	0	0	0	0	1 */
 /* 5	0	0	0	0	0	0	1 */
-static void tegra_dc_sor_power_up(struct tegra_dc_sor_data *sor)
+static void tegra_dc_sor_power_up(struct tegra_dc_sor_data *sor,
+				  bool is_lvds)
 {
 	if (sor->power_is_up)
 		return;
 
 	/* Enable safe clock */
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
-	tegra_dc_sor_set_link_bandwidth(sor, 6);
+	tegra_dc_sor_set_link_bandwidth(sor,
+		is_lvds ? NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS :
+		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
 
 	/* step 1 */
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
@@ -657,11 +660,8 @@ static void tegra_dc_sor_power_up(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK, /* PDPORT */
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
 
-	/* re-enable SOR clock */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 	sor->power_is_up = true;
 }
-
 
 /* Powerdown steps from the spec: */
 /* STEP	PDPORT	PDPLL	PDBG	PLLVCOD	PLLCAPD	E_DPD	PDCAL */
@@ -816,8 +816,6 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	struct tegra_dc		*dc   = sor->dc;
 	u32	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 
-	tegra_dc_sor_enable_clk(sor);
-
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
 
 	if (tegra_platform_is_fpga()) {
@@ -919,7 +917,10 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN |
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
 
-	tegra_dc_sor_power_up(sor);
+	tegra_dc_sor_power_up(sor, false);
+
+	/* re-enable SOR clock */
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 
 	/* Power up lanes */
 	BUG_ON(!cfg);
@@ -989,20 +990,18 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_config_panel(sor, true);
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
-	tegra_sor_writel(sor, NV_SOR_PLL2, 0);
-
 	tegra_sor_write_field(sor, NV_SOR_PLL3,
 		NV_SOR_PLL3_PLLVDD_MODE_MASK,
 		NV_SOR_PLL3_PLLVDD_MODE_V1_8);
-	tegra_sor_write_field(sor, NV_SOR_PLL0,
-		NV_SOR_PLL0_ICHPMP_DEFAULT_MASK |
-		NV_SOR_PLL0_PLLREG_LEVEL_DEFAULT_MASK |
-		NV_SOR_PLL0_VCOPD_MASK |
-		NV_SOR_PLL0_PWR_MASK,
-		0xf << NV_SOR_PLL0_ICHPMP_SHFIT |
-		NV_SOR_PLL0_PLLREG_LEVEL_V45 |
-		NV_SOR_PLL0_VCOPD_RESCIND |
-		NV_SOR_PLL0_PWR_ON);
+
+	tegra_sor_writel(sor, NV_SOR_PLL1,
+		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE);
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+		NV_SOR_PLL2_AUX1_SEQ_MASK |
+		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
+		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
+		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
+
 
 	reg_val = NV_SOR_LVDS_LINKACTB_DISABLE |
 		NV_SOR_LVDS_LINKACTA_ENABLE |
@@ -1019,6 +1018,8 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		reg_val |= (NV_SOR_LVDS_PD_TXDA_3_DISABLE);
 
 	tegra_sor_writel(sor, NV_SOR_LVDS, reg_val);
+	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
+		0x40404040);
 
 #if 0
 	tegra_sor_write_field(sor, NV_SOR_LVDS,
@@ -1030,6 +1031,16 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		conforming ? 6 << NV_SOR_LVDS_ROTDAT_SHIFT :
 		0 << NV_SOR_LVDS_ROTDAT_SHIFT);
 #endif
+
+	tegra_dc_sor_power_up(sor, true);
+
+	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
+		NV_SOR_SEQ_INST_LANE_SEQ_RUN |
+		NV_SOR_SEQ_INST_HALT_TRUE);
+	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum),
+		NV_SOR_DP_SPARE_SEQ_ENABLE_YES |
+		NV_SOR_DP_SPARE_PANEL_INTERNAL |
+		NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK);
 
 	tegra_dc_sor_enable_lane_sequencer(sor, true, true);
 	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
@@ -1043,7 +1054,16 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 		DC_CMD_DISPLAY_POWER_CONTROL);
 
-	tegra_dc_sor_power_up(sor);
+	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK |
+		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS);
+
+
+
+
+	/* re-enable SOR clock */
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+
 	if ((tegra_dc_sor_set_power_state(sor, 1))) {
 		dev_err(&sor->dc->ndev->dev,
 			"Failed to power up SOR sequencer for LVDS\n");
@@ -1063,27 +1083,26 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
 	struct tegra_dc *dc = sor->dc;
-	u32    reg_val;
 
 	tegra_dc_sor_power_down(sor);
 
 	/* Power down the SOR sequencer */
 	if (tegra_dc_sor_set_power_state(sor, 0)) {
-		dev_err(&sor->dc->ndev->dev,
+		dev_err(&dc->ndev->dev,
 			"Failed to power down SOR sequencer\n");
 		return;
 	}
 
 	/* Power down DP lanes */
 	if (!is_lvds && tegra_dc_sor_power_dplanes(sor, 4, false)) {
-		dev_err(&sor->dc->ndev->dev,
+		dev_err(&dc->ndev->dev,
 			"Failed to power down dp lanes\n");
 		return;
 	}
 
-	tegra_dc_writel(sor->dc, 0, DC_DISP_DISP_WIN_OPTIONS);
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_dc_sor_disable_clk(sor);
 	/* Reset SOR clk */

@@ -325,7 +325,7 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 
 		h = nvhost_memmgr_get(mgr, ids[i].id, dev);
 		if (IS_ERR(h))
-			continue;
+			return -EINVAL;
 
 		sgt = nvhost_memmgr_pin(mgr, h, &dev->dev);
 		if (IS_ERR(sgt))

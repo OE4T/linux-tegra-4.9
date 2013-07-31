@@ -630,4 +630,15 @@ err_out:
 	return -ENOMEM;
 }
 
+int gk20a_clk_disable_gpcpll(struct gk20a *g)
+{
+	u32 cfg;
+
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+			trim_sys_gpcpll_cfg_enable_no_f());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+
+	return 0;
+}
 #endif /* CONFIG_DEBUG_FS */

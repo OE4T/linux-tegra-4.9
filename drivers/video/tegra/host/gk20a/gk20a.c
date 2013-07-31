@@ -720,6 +720,12 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
 
+	/* Disable GPCPLL.
+	 * TODO: Remove this once gk20a clock driver is moved to
+	 * common clock framework
+	 */
+	ret |= gk20a_clk_disable_gpcpll(g);
+
 	g->power_on = false;
 
 	return ret;

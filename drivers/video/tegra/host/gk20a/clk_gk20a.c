@@ -480,6 +480,37 @@ static int cap_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(cap_fops, cap_get, cap_set, "%llu\n");
 
+static int monitor_get(void *data, u64 *val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	struct clk_gk20a *clk = &g->clk;
+
+	u32 NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG = 0x00134124;
+	u32 NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT = 0x00134128;
+	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
+	u32 clkin = clk->gpc_pll.clk_in;
+	u32 count1, count2;
+
+	gk20a_writel(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG,
+		(1<<24)); /* reset */
+	gk20a_writel(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG,
+		(1<<20) | (1<<16) | ncycle); /* start */
+
+	/* It should take about 8us to finish 100 cycle of 12MHz.
+	   But longer than 100us delay is required here. */
+	udelay(2000);
+
+	count1 = gk20a_readl(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT);
+	udelay(100);
+	count2 = gk20a_readl(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT);
+	*val = (u64)(count2 * clkin / ncycle);
+
+	if (count1 != count2)
+		return -EBUSY;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
+
 int clk_gk20a_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
@@ -498,6 +529,11 @@ int clk_gk20a_debugfs_init(struct platform_device *dev)
 
 	d = debugfs_create_file(
 		"cap", S_IRUGO|S_IWUSR, pdata->debugfs, g, &cap_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"monitor", S_IRUGO, pdata->debugfs, g, &monitor_fops);
 	if (!d)
 		goto err_out;
 

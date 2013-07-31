@@ -1218,6 +1218,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 	u32 ctag = ctag_offset;
 	u32 ctag_ptes, ctag_pte_cnt;
 	u32 page_shift = gmmu_page_shifts[pgsz_idx];
+	u64 addr = 0;
 
 	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
 				   &pde_lo, &pde_hi);
@@ -1239,7 +1240,6 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 		u32 pte_cur;
 		u32 pte_space_page_cur, pte_space_offset_cur;
 		u32 pte_space_page_offset;
-		u64 addr = 0;
 		void *pte_kv_cur;
 
 		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
@@ -1306,8 +1306,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 				cur_offset += 1 << page_shift;
 				addr += 1 << page_shift;
 				while (cur_chunk &&
-					cur_offset >= sg_dma_len(cur_chunk)) {
-					cur_offset -= sg_dma_len(cur_chunk);
+					cur_offset >= cur_chunk->length) {
+					cur_offset -= cur_chunk->length;
 					cur_chunk = sg_next(cur_chunk);
 				}
 				pte->ref_cnt++;

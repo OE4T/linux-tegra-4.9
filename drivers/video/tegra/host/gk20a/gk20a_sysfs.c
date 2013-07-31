@@ -28,6 +28,14 @@
 #include "fifo_gk20a.h"
 #include "gk20a_gating_reglist.h"
 #include "nvhost_acm.h"
+#include <mach/clk.h>
+
+
+#define PTIMER_FP_FACTOR			1000000
+/* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds. 32 ns is
+   the resolution of ptimer. */
+#define PTIMER_REF_FREQ_HZ			31250000
+
 
 static ssize_t elcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -146,11 +154,34 @@ static ssize_t slcg_enable_read(struct device *device,
 
 static DEVICE_ATTR(slcg_enable, S_IRWXUGO, slcg_enable_read, slcg_enable_store);
 
+static ssize_t ptimer_scale_factor_show(struct device *dev,
+						struct device_attribute *attr,
+						char *buf)
+{
+	u32 tsc_freq_hz = clk_get_rate(clk_get_sys(NULL, "clk_m"));
+	u32 scaling_factor_fp = (u32)(PTIMER_REF_FREQ_HZ) /
+				((u32)(tsc_freq_hz) /
+				(u32)(PTIMER_FP_FACTOR));
+	ssize_t res = snprintf(buf,
+				PAGE_SIZE,
+				"%u.%u\n",
+				scaling_factor_fp / PTIMER_FP_FACTOR,
+				scaling_factor_fp % PTIMER_FP_FACTOR);
+
+	return res;
+}
+
+static DEVICE_ATTR(ptimer_scale_factor,
+			S_IRUGO,
+			ptimer_scale_factor_show,
+			NULL);
+
 void gk20a_remove_sysfs(struct device *dev)
 {
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
+	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -160,6 +191,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_elcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_blcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_slcg_enable);
+	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");

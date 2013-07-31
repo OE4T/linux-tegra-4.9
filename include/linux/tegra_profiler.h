@@ -20,7 +20,9 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	16
-#define QUADD_IO_VERSION	4
+#define QUADD_IO_VERSION	5
+
+#define QUADD_IO_VERSION_DYNAMIC_RB	5
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -226,6 +228,10 @@ struct quadd_record_data {
 };
 
 #define QUADD_MAX_PACKAGE_NAME	320
+
+enum {
+	QUADD_PARAM_IDX_SIZE_OF_RB = 0,
+};
 
 struct quadd_parameters {
 	u32 freq;

@@ -29,8 +29,6 @@
 #include "comm.h"
 #include "version.h"
 
-#define QUADD_SIZE_RB_BUFFER	(0x100000 * 8)	/* 8 MB */
-
 struct quadd_comm_ctx comm_ctx;
 
 static inline void *rb_alloc(unsigned long size)
@@ -60,9 +58,9 @@ static int rb_init(struct quadd_ring_buffer *rb, size_t size)
 	rb->buf = (char *) rb_alloc(rb->size);
 	if (!rb->buf) {
 		pr_err("Ring buffer alloc error\n");
-		return 1;
+		return -ENOMEM;
 	}
-	pr_debug("data buffer size: %u\n", (unsigned int)rb->size);
+	pr_info("rb: data buffer size: %u\n", (unsigned int)rb->size);
 
 	rb_reset(rb);
 
@@ -444,7 +442,7 @@ device_ioctl(struct file *file,
 	     unsigned long ioctl_param)
 {
 	int err;
-	struct quadd_parameters user_params;
+	struct quadd_parameters *user_params;
 	struct quadd_comm_cap cap;
 	struct quadd_module_state state;
 	struct quadd_module_version versions;
@@ -470,28 +468,44 @@ device_ioctl(struct file *file,
 			return -EBUSY;
 		}
 
-		if (copy_from_user(&user_params, (void __user *)ioctl_param,
+		user_params = vmalloc(sizeof(*user_params));
+		if (!user_params)
+			return -ENOMEM;
+
+		if (copy_from_user(user_params, (void __user *)ioctl_param,
 				   sizeof(struct quadd_parameters))) {
 			pr_err("setup failed\n");
+			vfree(user_params);
 			mutex_unlock(&comm_ctx.io_mutex);
 			return -EFAULT;
 		}
 
-		err = comm_ctx.control->set_parameters(&user_params,
+		err = comm_ctx.control->set_parameters(user_params,
 						       &comm_ctx.debug_app_uid);
 		if (err) {
 			pr_err("error: setup failed\n");
+			vfree(user_params);
 			mutex_unlock(&comm_ctx.io_mutex);
 			return err;
 		}
 		comm_ctx.params_ok = 1;
-		comm_ctx.process_pid = user_params.pids[0];
+		comm_ctx.process_pid = user_params->pids[0];
+
+		if (user_params->reserved[QUADD_PARAM_IDX_SIZE_OF_RB] == 0) {
+			pr_err("error: too old version of daemon\n");
+			vfree(user_params);
+			mutex_unlock(&comm_ctx.io_mutex);
+			return -EINVAL;
+		}
+		comm_ctx.rb_size = user_params->reserved[0];
 
 		pr_info("setup success: freq/mafreq: %u/%u, backtrace: %d, pid: %d\n",
-			user_params.freq,
-			user_params.ma_freq,
-			user_params.backtrace,
-			user_params.pids[0]);
+			user_params->freq,
+			user_params->ma_freq,
+			user_params->backtrace,
+			user_params->pids[0]);
+
+		vfree(user_params);
 		break;
 
 	case IOCTL_GET_CAP:
@@ -522,11 +536,11 @@ device_ioctl(struct file *file,
 	case IOCTL_GET_STATE:
 		comm_ctx.control->get_state(&state);
 
-		state.buffer_size = QUADD_SIZE_RB_BUFFER;
+		state.buffer_size = comm_ctx.rb_size;
 
 		spin_lock_irqsave(&rb->lock, flags);
 		state.buffer_fill_size =
-			QUADD_SIZE_RB_BUFFER - rb_get_free_space(rb);
+			comm_ctx.rb_size - rb_get_free_space(rb);
 		spin_unlock_irqrestore(&rb->lock, flags);
 
 		if (copy_to_user((void __user *)ioctl_param, &state,
@@ -546,6 +560,14 @@ device_ioctl(struct file *file,
 				return -EFAULT;
 			}
 
+			err = rb_init(rb, comm_ctx.rb_size);
+			if (err) {
+				pr_err("error: rb_init failed\n");
+				atomic_set(&comm_ctx.active, 0);
+				mutex_unlock(&comm_ctx.io_mutex);
+				return err;
+			}
+
 			if (comm_ctx.control->start()) {
 				pr_err("error: start failed\n");
 				atomic_set(&comm_ctx.active, 0);
@@ -559,6 +581,7 @@ device_ioctl(struct file *file,
 	case IOCTL_STOP:
 		if (atomic_cmpxchg(&comm_ctx.active, 1, 0)) {
 			comm_ctx.control->stop();
+			rb_deinit(&comm_ctx.rb);
 			pr_info("Stop profiling success\n");
 		}
 		break;
@@ -596,7 +619,6 @@ static int comm_init(void)
 {
 	int res;
 	struct miscdevice *misc_dev;
-	struct quadd_ring_buffer *rb = &comm_ctx.rb;
 
 	misc_dev = kzalloc(sizeof(*misc_dev), GFP_KERNEL);
 	if (!misc_dev) {
@@ -621,12 +643,6 @@ static int comm_init(void)
 	comm_ctx.params_ok = 0;
 	comm_ctx.process_pid = 0;
 	comm_ctx.nr_users = 0;
-
-	if (rb_init(rb, QUADD_SIZE_RB_BUFFER)) {
-		free_ctx();
-		unregister();
-		return -ENOMEM;
-	}
 
 	return 0;
 }

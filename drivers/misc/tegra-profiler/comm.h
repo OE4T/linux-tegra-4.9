@@ -53,7 +53,9 @@ struct quadd_comm_data_interface {
 
 struct quadd_comm_ctx {
 	struct quadd_comm_control_interface *control;
+
 	struct quadd_ring_buffer rb;
+	size_t rb_size;
 
 	atomic_t active;
 

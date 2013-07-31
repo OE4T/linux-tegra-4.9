@@ -4015,23 +4015,23 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 			op_elem =
 				(struct gk20a_cyclestate_buffer_elem *)
 					sh_hdr;
-			if (op_elem->offsetBAR0 <
+			if (op_elem->offset_bar0 <
 				TEGRA_GK20A_BAR0_SIZE) {
 				mask_orig =
 					((1ULL <<
-					(op_elem->lastBit + 1))
+					(op_elem->last_bit + 1))
 					-1)&~((1ULL <<
-					op_elem->firstBit)-1);
+					op_elem->first_bit)-1);
 
 				raw_reg =
 					gk20a_readl(g,
-						op_elem->offsetBAR0);
+						op_elem->offset_bar0);
 
 				switch (sh_hdr->operation) {
 				case BAR0_READ32:
 					op_elem->data =
 					(raw_reg & mask_orig)
-						>> op_elem->firstBit;
+						>> op_elem->first_bit;
 					break;
 
 				case BAR0_WRITE32:
@@ -4043,11 +4043,11 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					}
 
 					v |= ((op_elem->data
-						<< op_elem->firstBit)
+						<< op_elem->first_bit)
 						& mask_orig);
 
 					gk20a_writel(g,
-						op_elem->offsetBAR0,
+						op_elem->offset_bar0,
 						(unsigned int)v);
 						break;
 

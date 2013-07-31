@@ -688,11 +688,11 @@ static int nvhost_probe(struct platform_device *dev)
 
 #ifdef CONFIG_PM_RUNTIME
 	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
+		err = pm_runtime_put_sync_autosuspend(&dev->dev);
 	else
-		pm_runtime_put(&dev->dev);
+		err = pm_runtime_put(&dev->dev);
 	if (err)
-		return err;
+		goto fail;
 #endif
 
 	dev_info(&dev->dev, "initialized\n");

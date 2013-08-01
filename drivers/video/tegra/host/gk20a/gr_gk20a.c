@@ -36,6 +36,9 @@
 #include "hw_mc_gk20a.h"
 #include "hw_ram_gk20a.h"
 #include "hw_pri_ringmaster_gk20a.h"
+#include "hw_pri_ringstation_sys_gk20a.h"
+#include "hw_pri_ringstation_gpc_gk20a.h"
+#include "hw_pri_ringstation_fbp_gk20a.h"
 #include "hw_proj_gk20a.h"
 #include "hw_top_gk20a.h"
 #include "hw_ltc_gk20a.h"
@@ -3357,6 +3360,13 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
 	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+
+	/* Bug 1340570: increase the clock timeout to avoid potential
+	 * operation failure at high gpcclk rate. Default values are 0x400.
+	 */
+	gk20a_writel(g, pri_ringstation_sys_master_config_r(0x15), 0x800);
+	gk20a_writel(g, pri_ringstation_gpc_master_config_r(0xa), 0x800);
+	gk20a_writel(g, pri_ringstation_fbp_master_config_r(0x8), 0x800);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

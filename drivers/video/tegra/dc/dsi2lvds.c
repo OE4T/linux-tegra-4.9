@@ -18,6 +18,7 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/export.h>
 
 #include <mach/dc.h>
 

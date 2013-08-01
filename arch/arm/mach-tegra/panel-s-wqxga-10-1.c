@@ -25,7 +25,10 @@
 #include <linux/max8831_backlight.h>
 #include <linux/leds.h>
 #include <linux/ioport.h>
+#include <linux/export.h>
+
 #include <generated/mach-types.h>
+
 #include "board.h"
 #include "board-panel.h"
 #include "devices.h"

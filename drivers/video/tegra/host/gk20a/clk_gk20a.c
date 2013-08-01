@@ -34,9 +34,6 @@
 #define nvhost_dbg_clk(fmt, arg...) \
 	nvhost_dbg(dbg_clk, fmt, ##arg)
 
-#define KHZ 1000
-#define MHZ 1000000
-
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
 	204, 1248,	/* freq */
@@ -50,10 +47,10 @@ struct pll_parms gpc_pll_params = {
 /*  dummy data for now */
 static struct gpufreq_table_data
 						gpu_cooling_freq[] = {
-	{0, 700},
-	{1, 650},
-	{2, 600},
-	{3, 450},
+	{0, 350000000},
+	{1, 325000000},
+	{2, 300000000},
+	{3, 225000000},
 	{4,	GPUFREQ_TABLE_END},
 };
 
@@ -374,7 +371,7 @@ int gk20a_init_clk_support(struct gk20a *g)
 u32 gk20a_clk_get_rate(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
-	return clk->gpc_pll.freq;
+	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
 }
 
 /* TBD: interface to change clock and dvfs in one function */
@@ -390,6 +387,9 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
 		freq, rate);
 	mutex_lock(&clk->clk_mutex);
+
+	rate = rate_gpu_to_gpc2clk(rate);
+
 	if (rate > gpc_pll_params.max_freq)
 		rate = gpc_pll_params.max_freq;
 	else if (rate < gpc_pll_params.min_freq)
@@ -448,19 +448,19 @@ clean_up:
 static u32 gk20a_clk_get_cap(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
-	return clk->cap_freq;
+	return rate_gpc2clk_to_gpu(clk->cap_freq);
 }
 
 static int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
 {
 	struct clk_gk20a *clk = &g->clk;
 
-	if (rate > gpc_pll_params.max_freq)
-		rate = gpc_pll_params.max_freq;
-	else if (rate < gpc_pll_params.min_freq)
-		rate = gpc_pll_params.min_freq;
+	if (rate > rate_gpc2clk_to_gpu(gpc_pll_params.max_freq))
+		rate = rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
+	else if (rate < rate_gpc2clk_to_gpu(gpc_pll_params.min_freq))
+		rate = rate_gpc2clk_to_gpu(gpc_pll_params.min_freq);
 
-	clk->cap_freq = rate;
+	clk->cap_freq = rate_gpu_to_gpc2clk(rate);
 	if (gk20a_clk_get_rate(g) <= rate)
 		return 0;
 	return gk20a_clk_set_rate(g, rate);
@@ -469,19 +469,19 @@ static int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
 static u32 gk20a_clk_get_cap_thermal(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
-	return clk->cap_freq_thermal;
+	return rate_gpc2clk_to_gpu(clk->cap_freq_thermal);
 }
 
 static int gk20a_clk_set_cap_thermal(struct gk20a *g, unsigned long rate)
 {
 	struct clk_gk20a *clk = &g->clk;
 
-	if (rate > gpc_pll_params.max_freq)
-		rate = gpc_pll_params.max_freq;
-	else if (rate < gpc_pll_params.min_freq)
-		rate = gpc_pll_params.min_freq;
+	if (rate > rate_gpc2clk_to_gpu(gpc_pll_params.max_freq))
+		rate = rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
+	else if (rate < rate_gpc2clk_to_gpu(gpc_pll_params.min_freq))
+		rate = rate_gpc2clk_to_gpu(gpc_pll_params.min_freq);
 
-	clk->cap_freq_thermal = rate;
+	clk->cap_freq_thermal = rate_gpu_to_gpc2clk(rate);
 	if (gk20a_clk_get_rate(g) <= rate)
 		return 0;
 	return gk20a_clk_set_rate(g, rate);
@@ -489,7 +489,7 @@ static int gk20a_clk_set_cap_thermal(struct gk20a *g, unsigned long rate)
 
 static unsigned long gk20a_clk_get_max(void)
 {
-	return gpc_pll_params.max_freq;
+	return rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
 }
 
 static struct gk20a_clk_cap_info gk20a_clk_cap = {

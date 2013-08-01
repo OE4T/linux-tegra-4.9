@@ -1769,7 +1769,7 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu, bool init)
 	if (init) {
 		cmd.cmd.perfmon.start.flags = PMU_PERFMON_FLAG_ENABLE_INCREASE;
 	} else {
-		current_rate = gk20a_clk_get_rate(g);
+		current_rate = rate_gpu_to_gpc2clk(gk20a_clk_get_rate(g));
 		if (current_rate >= gpc_pll_params.max_freq)
 			cmd.cmd.perfmon.start.flags =
 				PMU_PERFMON_FLAG_ENABLE_DECREASE;

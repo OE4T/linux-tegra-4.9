@@ -76,4 +76,18 @@ int gk20a_clk_disable_gpcpll(struct gk20a *g);
 
 extern struct pll_parms gpc_pll_params;
 
+#define KHZ 1000
+#define MHZ 1000000
+
+static inline unsigned long rate_gpc2clk_to_gpu(unsigned long rate)
+{
+	/* convert the MHz gpc2clk frequency to Hz gpcpll frequency */
+	return (rate * MHZ) / 2;
+}
+static inline unsigned long rate_gpu_to_gpc2clk(unsigned long rate)
+{
+	/* convert the Hz gpcpll frequency to MHz gpc2clk frequency */
+	return (rate * 2) / MHZ;
+}
+
 #endif /* _NVHOST_CLK_GK20A_H_ */

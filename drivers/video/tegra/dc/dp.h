@@ -78,6 +78,7 @@ struct tegra_dc_dp_data {
 	struct tegra_dc_mode		*mode;
 	struct tegra_dc_dp_link_config	 link_cfg;
 
+	bool				 enabled;
 	bool				 suspended;
 };
 

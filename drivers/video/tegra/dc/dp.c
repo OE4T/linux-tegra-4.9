@@ -1573,6 +1573,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_sor_set_power_state(dp->sor, 1);
 	tegra_dc_sor_attach(dp->sor);
+	dp->enabled = true;
 
 error_enable:
 	tegra_dc_io_end(dc);
@@ -1596,10 +1597,14 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
+	if (!dp->enabled)
+		return;
+
 	/* Power down SOR */
 	tegra_dc_sor_disable(dp->sor, false);
 
 	clk_disable(dp->clk);
+	dp->enabled = false;
 }
 
 extern struct clk *tegra_get_clock_by_name(const char *name);

@@ -16,6 +16,7 @@
 
 #include <linux/err.h>
 #include <linux/types.h>
+#include <linux/export.h>
 #include <mach/dc.h>
 
 #include "dc_reg.h"

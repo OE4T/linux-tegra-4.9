@@ -16,6 +16,7 @@
 
 #include <linux/ioport.h>
 #include <linux/gfp.h>
+#include <linux/export.h>
 #include "dc_priv.h"
 #include "mipi_cal.h"
 #include "mipi_cal_regs.h"

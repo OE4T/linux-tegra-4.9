@@ -82,6 +82,8 @@ struct tegra_dc_out_ops {
 	void (*enable)(struct tegra_dc *dc);
 	/* disable output.  dc clocks are on at this point */
 	void (*disable)(struct tegra_dc *dc);
+	/* dc client is disabled.  dc clocks are on at this point */
+	void (*postpoweroff) (struct tegra_dc *dc);
 	/* hold output.  keeps dc clocks on. */
 	void (*hold)(struct tegra_dc *dc);
 	/* release output.  dc clocks may turn off after this. */

@@ -4420,6 +4420,15 @@ fail:
 	return err;
 }
 
+static void tegra_dsi_bl_off(struct backlight_device *bd)
+{
+	if (!bd)
+		return;
+
+	bd->props.brightness = 0;
+	backlight_update_status(bd);
+}
+
 static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
@@ -4428,6 +4437,8 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 
 	if (!dsi->enabled)
 		return 0;
+
+	tegra_dsi_bl_off(get_backlight_device_by_name(dsi->info.bl_name));
 
 	err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 	if (err < 0) {
@@ -4475,14 +4486,20 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 	/* Disable dsi source clock */
 	tegra_dsi_clk_disable(dsi);
 
-	regulator_disable(dsi->avdd_dsi_csi);
-
 	dsi->enabled = false;
 	dsi->host_suspended = true;
 
 	return 0;
 fail:
 	return err;
+}
+
+static void tegra_dc_dsi_postpoweroff(struct tegra_dc *dc)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	if (!dsi->enabled)
+		regulator_disable(dsi->avdd_dsi_csi);
 }
 
 static int tegra_dsi_host_resume(struct tegra_dc *dc)
@@ -4721,6 +4738,7 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.destroy = tegra_dc_dsi_destroy,
 	.enable = tegra_dc_dsi_enable,
 	.disable = tegra_dc_dsi_disable,
+	.postpoweroff = tegra_dc_dsi_postpoweroff,
 	.hold = tegra_dc_dsi_hold_host,
 	.release = tegra_dc_dsi_release_host,
 #ifdef CONFIG_PM

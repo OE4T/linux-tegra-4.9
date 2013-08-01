@@ -2361,6 +2361,9 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	}
 	trace_display_disable(dc);
 
+	if (dc->out_ops && dc->out_ops->postpoweroff)
+		dc->out_ops->postpoweroff(dc);
+
 	tegra_dc_clk_disable(dc);
 	tegra_dc_put(dc);
 }

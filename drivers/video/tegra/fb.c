@@ -346,7 +346,8 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	 */
 #if defined(CONFIG_ANDROID)
 	if ((var->xoffset == tegra_fb->curr_xoffset) &&
-	    (var->yoffset == tegra_fb->curr_yoffset))
+	    (var->yoffset == tegra_fb->curr_yoffset) &&
+	    !(var->activate & FB_ACTIVATE_FORCE))
 		return 0;
 #endif
 

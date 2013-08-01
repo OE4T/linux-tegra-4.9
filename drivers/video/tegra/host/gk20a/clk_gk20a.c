@@ -22,6 +22,7 @@
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <mach/thermal.h>
 
 #include <mach/clk.h>
 
@@ -394,6 +395,12 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	else if (rate < gpc_pll_params.min_freq)
 		rate = gpc_pll_params.min_freq;
 
+	if (rate > clk->cap_freq)
+		rate = clk->cap_freq;
+
+	if (rate > clk->cap_freq_thermal)
+		rate = clk->cap_freq_thermal;
+
 	if (rate == freq)
 		goto clean_up;
 
@@ -438,17 +445,69 @@ clean_up:
 	return err;
 }
 
-u32 gk20a_clk_get_cap(struct gk20a *g)
+static u32 gk20a_clk_get_cap(struct gk20a *g)
+{
+	struct clk_gk20a *clk = &g->clk;
+	return clk->cap_freq;
+}
+
+static int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
+{
+	struct clk_gk20a *clk = &g->clk;
+
+	if (rate > gpc_pll_params.max_freq)
+		rate = gpc_pll_params.max_freq;
+	else if (rate < gpc_pll_params.min_freq)
+		rate = gpc_pll_params.min_freq;
+
+	clk->cap_freq = rate;
+	if (gk20a_clk_get_rate(g) <= rate)
+		return 0;
+	return gk20a_clk_set_rate(g, rate);
+}
+
+static u32 gk20a_clk_get_cap_thermal(struct gk20a *g)
+{
+	struct clk_gk20a *clk = &g->clk;
+	return clk->cap_freq_thermal;
+}
+
+static int gk20a_clk_set_cap_thermal(struct gk20a *g, u32 rate)
+{
+	struct clk_gk20a *clk = &g->clk;
+
+	if (rate > gpc_pll_params.max_freq)
+		rate = gpc_pll_params.max_freq;
+	else if (rate < gpc_pll_params.min_freq)
+		rate = gpc_pll_params.min_freq;
+
+	clk->cap_freq_thermal = rate;
+	if (gk20a_clk_get_rate(g) <= rate)
+		return 0;
+	return gk20a_clk_set_rate(g, rate);
+}
+
+static u32 gk20a_clk_get_max(void)
 {
 	return gpc_pll_params.max_freq;
 }
 
-int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
+static struct gk20a_clk_cap_info gk20a_clk_cap = {
+	.set_cap_thermal = gk20a_clk_set_cap_thermal,
+	.get_max = gk20a_clk_get_max,
+};
+
+int gk20a_clk_init_cap_freqs(struct gk20a *g)
 {
-	gpc_pll_params.max_freq = rate;
-	if (gk20a_clk_get_rate(g) <= rate)
-		return 0;
-	return gk20a_clk_set_rate(g, rate);
+	struct clk_gk20a *clk = &g->clk;
+
+	/* init cap_freq == max_freq */
+	clk->cap_freq = gpc_pll_params.max_freq;
+	clk->cap_freq_thermal = gpc_pll_params.max_freq;
+
+	gk20a_clk_cap.g = g;
+
+	tegra_throttle_gk20a_clk_cap_register(&gk20a_clk_cap);
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -485,6 +544,20 @@ static int cap_set(void *data, u64 val)
 	return gk20a_clk_set_cap(g, (u32)val);
 }
 DEFINE_SIMPLE_ATTRIBUTE(cap_fops, cap_get, cap_set, "%llu\n");
+
+static int cap_thermal_get(void *data, u64 *val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	*val = (u64)gk20a_clk_get_cap_thermal(g);
+	return 0;
+}
+static int cap_thermal_set(void *data, u64 val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	return gk20a_clk_set_cap_thermal(g, (u32)val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(cap_thermal_fops, cap_thermal_get,
+		cap_thermal_set, "%llu\n");
 
 static int monitor_get(void *data, u64 *val)
 {
@@ -535,6 +608,12 @@ int clk_gk20a_debugfs_init(struct platform_device *dev)
 
 	d = debugfs_create_file(
 		"cap", S_IRUGO|S_IWUSR, pdata->debugfs, g, &cap_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"cap_thermal", S_IRUGO|S_IWUSR, pdata->debugfs, g,
+							&cap_thermal_fops);
 	if (!d)
 		goto err_out;
 

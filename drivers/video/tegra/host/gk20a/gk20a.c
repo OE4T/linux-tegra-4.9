@@ -591,6 +591,8 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 	if (err)
 		goto fail;
 
+	gk20a_clk_init_cap_freqs(g);
+
 	/* other inits are deferred until gpu is powered up. */
 
 	g->remove_support = gk20a_remove_support;

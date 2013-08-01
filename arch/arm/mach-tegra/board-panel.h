@@ -19,6 +19,7 @@
 #ifndef __MACH_TEGRA_BOARD_PANEL_H
 #define __MACH_TEGRA_BOARD_PANEL_H
 
+#include <linux/platform_device.h>
 #include "tegra-board-id.h"
 
 struct tegra_panel {

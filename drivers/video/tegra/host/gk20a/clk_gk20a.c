@@ -44,24 +44,17 @@ struct pll_parms gpc_pll_params = {
 	1, 32,		/* PL */
 };
 
-/*  dummy data for now */
-static struct gpufreq_table_data
-						gpu_cooling_freq[] = {
-	{0, 350000000},
-	{1, 325000000},
-	{2, 300000000},
-	{3, 225000000},
-	{4,	GPUFREQ_TABLE_END},
-};
+static int num_gpu_cooling_freq;
+static struct gpufreq_table_data *gpu_cooling_freq;
 
 struct gpufreq_table_data *tegra_gpufreq_table_get(void)
 {
-	return &gpu_cooling_freq[0];
+	return gpu_cooling_freq;
 }
 
 unsigned int tegra_gpufreq_table_size_get(void)
 {
-	return ARRAY_SIZE(gpu_cooling_freq);
+	return num_gpu_cooling_freq;
 }
 
 static u8 pl_to_div[] = {
@@ -280,6 +273,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	static int initialized;
+	unsigned long *freqs;
+	int err, num_freqs;
 
 	nvhost_dbg_fn("");
 
@@ -308,6 +303,36 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		nvhost_err(dev_from_gk20a(g),
 			"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
 		return -EINVAL;
+	}
+
+	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
+	if (!err) {
+		int i, j;
+
+		/* pll params are for gpc2clk in MHzs */
+		gpc_pll_params.min_freq = freqs[0] / MHZ;
+		gpc_pll_params.max_freq = freqs[num_freqs - 1] / MHZ;
+
+		/* init j for inverse traversal of frequencies */
+		j = num_freqs - 1;
+
+		gpu_cooling_freq = kzalloc(
+				(1 + num_freqs) * sizeof(*gpu_cooling_freq),
+				GFP_KERNEL);
+
+		/* store frequencies in inverse order */
+		for (i = 0; i < num_freqs; ++i, --j) {
+			gpu_cooling_freq[i].index = i;
+			gpu_cooling_freq[i].frequency =
+				rate_gpc2clk_to_gpu(freqs[j] / MHZ);
+		}
+
+		/* add 'end of table' marker */
+		gpu_cooling_freq[i].index = i;
+		gpu_cooling_freq[i].frequency = GPUFREQ_TABLE_END;
+
+		/* store number of frequencies */
+		num_gpu_cooling_freq = num_freqs + 1;
 	}
 
 	mutex_init(&clk->clk_mutex);

@@ -4467,6 +4467,39 @@ fail:
 	return err;
 }
 
+static int tegra_dsi_host_suspend_trylock(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi)
+{
+	if (!mutex_trylock(&dc->one_shot_lp_lock))
+		goto fail;
+	if (!mutex_trylock(&dc->lock))
+		goto unlock_one_shot_lp;
+	if (!mutex_trylock(&dsi->host_lock))
+		goto unlock_dc_lock;
+	if (!mutex_trylock(&dc->one_shot_lock))
+		goto unlock_host_lock;
+
+	return 1;
+
+unlock_host_lock:
+	mutex_unlock(&dsi->host_lock);
+unlock_dc_lock:
+	mutex_unlock(&dc->lock);
+unlock_one_shot_lp:
+	mutex_unlock(&dc->one_shot_lp_lock);
+fail:
+	return 0;
+}
+
+static void tegra_dsi_host_suspend_unlock(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi)
+{
+	mutex_unlock(&dc->one_shot_lock);
+	mutex_unlock(&dsi->host_lock);
+	mutex_unlock(&dc->lock);
+	mutex_unlock(&dc->one_shot_lp_lock);
+}
+
 static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 {
 	int err = 0;
@@ -4478,10 +4511,9 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	if (dsi->host_suspended)
 		return 0;
 
-	mutex_lock(&dsi->host_lock);
-	mutex_lock(&dc->one_shot_lock);
-	mutex_lock(&dc->lock);
-	mutex_lock(&dc->one_shot_lp_lock);
+	while (!tegra_dsi_host_suspend_trylock(dc, dsi))
+		cond_resched();
+
 	tegra_dc_io_start(dc);
 	dsi->host_suspended = true;
 
@@ -4501,10 +4533,7 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	pm_runtime_put_sync(&dc->ndev->dev);
 fail:
 	tegra_dc_io_end(dc);
-	mutex_unlock(&dc->one_shot_lp_lock);
-	mutex_unlock(&dc->lock);
-	mutex_unlock(&dc->one_shot_lock);
-	mutex_unlock(&dsi->host_lock);
+	tegra_dsi_host_suspend_unlock(dc, dsi);
 	return err;
 }
 
@@ -4598,8 +4627,8 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 	if (!dsi->enabled)
 		return -EINVAL;
 
+	cancel_delayed_work(&dsi->idle_work);
 	mutex_lock(&dsi->host_lock);
-	cancel_delayed_work_sync(&dsi->idle_work);
 	if (!dsi->host_suspended) {
 		mutex_unlock(&dsi->host_lock);
 		return 0;

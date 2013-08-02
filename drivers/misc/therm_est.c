@@ -265,6 +265,10 @@ static void therm_est_work_func(struct work_struct *work)
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
 		thermal_zone_device_update(est->thz);
+		if (!(est->thz)) {
+			kfree(est);
+			return;
+		}
 		therm_est_update_timer_trips(est);
 		therm_est_update_limits(est);
 	}
@@ -783,6 +787,7 @@ static int therm_est_remove(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
 		device_remove_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
 	thermal_zone_device_unregister(est->thz);
+	kfree(est->thz);
 	destroy_workqueue(est->workqueue);
 	kfree(est);
 	return 0;
@@ -790,7 +795,21 @@ static int therm_est_remove(struct platform_device *pdev)
 
 static void therm_est_shutdown(struct platform_device *pdev)
 {
-	therm_est_remove(pdev);
+
+	struct therm_estimator *est = platform_get_drvdata(pdev);
+	int i;
+
+	cancel_delayed_work(&est->therm_est_work);
+	cancel_delayed_work_sync(&est->timer_trip_work);
+
+#ifdef CONFIG_PM
+	unregister_pm_notifier(&est->pm_nb);
+#endif
+	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
+		device_remove_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
+	thermal_zone_device_unregister(est->thz);
+	kfree(est->thz);
+	est->thz = NULL;
 }
 
 static struct platform_driver therm_est_driver = {

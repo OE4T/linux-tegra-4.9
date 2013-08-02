@@ -907,9 +907,11 @@ static u32 rm_tch_get_platform_id(u8 *p)
 static u32 rm_tch_get_gpio_sensor_select(u8 *p)
 {
 	u32 u32Ret = 0;
-	struct rm_spi_ts_platform_data *pdata;
-	pdata = g_input_dev->dev.parent->platform_data;
-	u32Ret = pdata->gpio_sensor_select0 | pdata->gpio_sensor_select1 << 1;
+	/* wait to be implemented...
+		struct rm_spi_ts_platform_data *pdata;
+		pdata = g_input_dev->dev.parent->platform_data;
+		u32Ret = gpio_set_value(pdata->gpio_sensor_select0) | (1 << gpio_set_value(pdata->gpio_sensor_select1));
+	*/
 	u32Ret = copy_to_user(p, &u32Ret, sizeof(u32Ret));
 	if (u32Ret != 0)
 		return FAIL;

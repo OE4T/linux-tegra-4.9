@@ -1952,6 +1952,7 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	}
 
 	switch (dc->out->dither) {
+	case TEGRA_DC_UNDEFINED_DITHER:
 	case TEGRA_DC_DISABLE_DITHER:
 		color_control |= DITHER_CONTROL_DISABLE;
 		break;

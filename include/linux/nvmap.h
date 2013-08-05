@@ -159,7 +159,7 @@ int nvmap_get_handle_param(struct nvmap_client *client,
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);
 #else
-static inline nvmap_page_pool_get_unused_pages(void)
+static inline int nvmap_page_pool_get_unused_pages(void)
 {
 	return 0;
 }

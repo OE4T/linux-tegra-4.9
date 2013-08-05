@@ -1776,7 +1776,8 @@ static void gr_gk20a_unmap_channel_patch_ctx(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	ch_vm->unmap(ch_vm, patch_ctx->gpu_va);
+	if (patch_ctx->gpu_va)
+		ch_vm->unmap(ch_vm, patch_ctx->gpu_va);
 	patch_ctx->gpu_va = 0;
 	patch_ctx->data_count = 0;
 }

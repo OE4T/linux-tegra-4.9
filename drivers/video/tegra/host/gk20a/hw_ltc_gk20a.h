@@ -210,6 +210,494 @@ static inline u32 ltc_ltc0_lts0_cbc_ctrl1_disable_invalidate_disable_f(void)
 {
 	return 0x0;
 }
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_r(void)
+{
+	return 0x0014111c;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_s(void)
+{
+	return 5;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_f(u32 v)
+{
+	return (v & 0x1f) << 0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_m(void)
+{
+	return 0x1f << 0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_init_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_init_f(void)
+{
+	return 0xe;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_s(void)
+{
+	return 5;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_f(u32 v)
+{
+	return (v & 0x1f) << 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_m(void)
+{
+	return 0x1f << 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_v(u32 r)
+{
+	return (r >> 8) & 0x1f;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_init_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_init_f(void)
+{
+	return 0xd00;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_s(void)
+{
+	return 5;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(u32 v)
+{
+	return (v & 0x1f) << 16;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_m(void)
+{
+	return 0x1f << 16;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_v(u32 r)
+{
+	return (r >> 16) & 0x1f;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_init_f(void)
+{
+	return 0x10000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_s(void)
+{
+	return 5;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_f(u32 v)
+{
+	return (v & 0x1f) << 24;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_m(void)
+{
+	return 0x1f << 24;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_init_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_init_f(void)
+{
+	return 0xd000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_r(void)
+{
+	return 0x00141124;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_s(void)
+{
+	return 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_init_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_init_f(void)
+{
+	return 0xff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_one_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_one_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_max_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_max_f(void)
+{
+	return 0xff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_s(void)
+{
+	return 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_init_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_init_f(void)
+{
+	return 0xe00;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_one_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_one_f(void)
+{
+	return 0x100;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_max_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_max_f(void)
+{
+	return 0xff00;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_true_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_true_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_enabled_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_m(void)
+{
+	return 0x1 << 27;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_v(u32 r)
+{
+	return (r >> 27) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_init_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_enabled_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_m(void)
+{
+	return 0x1 << 28;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_m(void)
+{
+	return 0x1 << 29;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_init_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_enable_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_init_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_enable_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_init_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_enabled_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_disabled_f(void)
+{
+	return 0x0;
+}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
 	return 0x0017e8c8;
@@ -789,494 +1277,6 @@ static inline u32 ltc_ltcs_ltss_cbc_param_slices_per_fbp_4_v(void)
 static inline u32 ltc_ltcs_ltss_cbc_param_slices_per_fbp_4_f(void)
 {
 	return 0x40000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_r(void)
-{
-	return 0x0014111c;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_s(void)
-{
-	return 5;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_f(u32 v)
-{
-	return (v & 0x1f) << 0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_m(void)
-{
-	return 0x1f << 0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_v(u32 r)
-{
-	return (r >> 0) & 0x1f;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_init_v(void)
-{
-	return 0x0000000e;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_init_f(void)
-{
-	return 0xe;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_s(void)
-{
-	return 5;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_f(u32 v)
-{
-	return (v & 0x1f) << 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_m(void)
-{
-	return 0x1f << 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_v(u32 r)
-{
-	return (r >> 8) & 0x1f;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_init_v(void)
-{
-	return 0x0000000d;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_sysmem_rd_pinned_init_f(void)
-{
-	return 0xd00;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_s(void)
-{
-	return 5;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(u32 v)
-{
-	return (v & 0x1f) << 16;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_m(void)
-{
-	return 0x1f << 16;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_v(u32 r)
-{
-	return (r >> 16) & 0x1f;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_init_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_init_f(void)
-{
-	return 0x10000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_s(void)
-{
-	return 5;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_f(u32 v)
-{
-	return (v & 0x1f) << 24;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_m(void)
-{
-	return 0x1f << 24;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_v(u32 r)
-{
-	return (r >> 24) & 0x1f;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_init_v(void)
-{
-	return 0x0000000d;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_init_f(void)
-{
-	return 0xd000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_r(void)
-{
-	return 0x00141124;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_s(void)
-{
-	return 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_f(u32 v)
-{
-	return (v & 0xff) << 0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_m(void)
-{
-	return 0xff << 0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_v(u32 r)
-{
-	return (r >> 0) & 0xff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_init_v(void)
-{
-	return 0x000000ff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_init_f(void)
-{
-	return 0xff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_one_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_one_f(void)
-{
-	return 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_max_v(void)
-{
-	return 0x000000ff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_max_f(void)
-{
-	return 0xff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_s(void)
-{
-	return 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_f(u32 v)
-{
-	return (v & 0xff) << 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_m(void)
-{
-	return 0xff << 8;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_v(u32 r)
-{
-	return (r >> 8) & 0xff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_init_v(void)
-{
-	return 0x0000000e;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_init_f(void)
-{
-	return 0xe00;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_one_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_one_f(void)
-{
-	return 0x100;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_max_v(void)
-{
-	return 0x000000ff;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_wr_miss_max_f(void)
-{
-	return 0xff00;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_f(u32 v)
-{
-	return (v & 0x1) << 24;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_m(void)
-{
-	return 0x1 << 24;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_v(u32 r)
-{
-	return (r >> 24) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_true_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_true_f(void)
-{
-	return 0x1000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_false_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_write_false_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_f(u32 v)
-{
-	return (v & 0x1) << 25;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_m(void)
-{
-	return 0x1 << 25;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_v(u32 r)
-{
-	return (r >> 25) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_true_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_true_f(void)
-{
-	return 0x2000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_false_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_update_lru_on_prefetch_false_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_f(u32 v)
-{
-	return (v & 0x1) << 26;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_m(void)
-{
-	return 0x1 << 26;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_v(u32 r)
-{
-	return (r >> 26) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_init_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_init_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_disabled_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_disabled_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_enabled_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_only_allow_writes_to_clean_enabled_f(void)
-{
-	return 0x4000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_f(u32 v)
-{
-	return (v & 0x1) << 27;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_m(void)
-{
-	return 0x1 << 27;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_v(u32 r)
-{
-	return (r >> 27) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_init_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_init_f(void)
-{
-	return 0x8000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_disabled_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_disabled_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_enabled_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_issue_dirty_on_evict_last_enabled_f(void)
-{
-	return 0x8000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_f(u32 v)
-{
-	return (v & 0x1) << 28;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_m(void)
-{
-	return 0x1 << 28;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_v(u32 r)
-{
-	return (r >> 28) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_init_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_init_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_disabled_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_disabled_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f(void)
-{
-	return 0x10000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_f(u32 v)
-{
-	return (v & 0x1) << 29;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_m(void)
-{
-	return 0x1 << 29;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_v(u32 r)
-{
-	return (r >> 29) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_init_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_init_f(void)
-{
-	return 0x20000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_enable_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_enable_f(void)
-{
-	return 0x20000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_disable_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_padr_hit_disable_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_f(u32 v)
-{
-	return (v & 0x1) << 30;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_m(void)
-{
-	return 0x1 << 30;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_v(u32 r)
-{
-	return (r >> 30) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_init_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_init_f(void)
-{
-	return 0x40000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_enable_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_enable_f(void)
-{
-	return 0x40000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_disable_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_fasttrack_across_vc_disable_f(void)
-{
-	return 0x0;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_s(void)
-{
-	return 1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_f(u32 v)
-{
-	return (v & 0x1) << 31;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_m(void)
-{
-	return 0x1 << 31;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_v(u32 r)
-{
-	return (r >> 31) & 0x1;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_init_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_init_f(void)
-{
-	return 0x80000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_enabled_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_enabled_f(void)
-{
-	return 0x80000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_disabled_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_disabled_f(void)
-{
-	return 0x0;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_index_r(void)
 {

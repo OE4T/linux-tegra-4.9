@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/hw_fifo_gk20a.h
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -4410,7 +4410,7 @@ static inline u32 fifo_intr_pbdma_id_status__size_1_v(void)
 {
 	return 1;
 }
-static inline u32 fifo_intr_pbdma_id_status_not_pending_v(void)
+static inline u32 fifo_intr_pbdma_id_status_not_pending_v(u32 i)
 {
 	return 0x00000000;
 }
@@ -4622,82 +4622,6 @@ static inline u32 fifo_pb_timeout_detection_enabled_f(void)
 {
 	return 0x80000000;
 }
-static inline u32 fifo_sched_disable_r(void)
-{
-	return 0x00002630;
-}
-static inline u32 fifo_sched_disable_runlist_mask_s(void)
-{
-	return 1;
-}
-static inline u32 fifo_sched_disable_runlist_mask_f(u32 v)
-{
-	return (v & 0x1) << 0;
-}
-static inline u32 fifo_sched_disable_runlist_mask_m(void)
-{
-	return 0x1 << 0;
-}
-static inline u32 fifo_sched_disable_runlist_mask_v(u32 r)
-{
-	return (r >> 0) & 0x1;
-}
-static inline u32 fifo_sched_disable_runlist_mask_init_v(void)
-{
-	return 0;
-}
-static inline u32 fifo_sched_disable_runlist_mask_init_f(void)
-{
-	return 0x0;
-}
-static inline u32 fifo_sched_disable_engine_mask_s(void)
-{
-	return 1;
-}
-static inline u32 fifo_sched_disable_engine_mask_f(u32 v)
-{
-	return (v & 0x1) << 0;
-}
-static inline u32 fifo_sched_disable_engine_mask_m(void)
-{
-	return 0x1 << 0;
-}
-static inline u32 fifo_sched_disable_engine_mask_v(u32 r)
-{
-	return (r >> 0) & 0x1;
-}
-static inline u32 fifo_sched_disable_runlist_s(u32 i)
-{
-	return 1;
-}
-static inline u32 fifo_sched_disable_runlist_f(u32 v, u32 i)
-{
-	return (v & 0x1) << (i);
-}
-static inline u32 fifo_sched_disable_runlist_m(u32 i)
-{
-	return 0x1 << (i);
-}
-static inline u32 fifo_sched_disable_runlist_v(u32 r, u32 i)
-{
-	return (r >> (i)) & 0x1;
-}
-static inline u32 fifo_sched_disable_runlist__size_1_v(void)
-{
-	return 1;
-}
-static inline u32 fifo_sched_disable_false_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 fifo_sched_disable_true_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 fifo_sched_disable_restart_v(void)
-{
-	return 0x00000001;
-}
 static inline u32 fifo_error_sched_disable_r(void)
 {
 	return 0x0000262C;
@@ -4773,6 +4697,82 @@ static inline u32 fifo_error_sched_disable_0_restart_v(void)
 static inline u32 fifo_error_sched_disable_0_restart_f(void)
 {
 	return 0x1;
+}
+static inline u32 fifo_sched_disable_r(void)
+{
+	return 0x00002630;
+}
+static inline u32 fifo_sched_disable_runlist_mask_s(void)
+{
+	return 1;
+}
+static inline u32 fifo_sched_disable_runlist_mask_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fifo_sched_disable_runlist_mask_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fifo_sched_disable_runlist_mask_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_sched_disable_runlist_mask_init_v(void)
+{
+	return 0;
+}
+static inline u32 fifo_sched_disable_runlist_mask_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_sched_disable_engine_mask_s(void)
+{
+	return 1;
+}
+static inline u32 fifo_sched_disable_engine_mask_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fifo_sched_disable_engine_mask_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fifo_sched_disable_engine_mask_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_sched_disable_runlist_s(u32 i)
+{
+	return 1;
+}
+static inline u32 fifo_sched_disable_runlist_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (i);
+}
+static inline u32 fifo_sched_disable_runlist_m(u32 i)
+{
+	return 0x1 << (i);
+}
+static inline u32 fifo_sched_disable_runlist_v(u32 r, u32 i)
+{
+	return (r >> (i)) & 0x1;
+}
+static inline u32 fifo_sched_disable_runlist__size_1_v(void)
+{
+	return 1;
+}
+static inline u32 fifo_sched_disable_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_sched_disable_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_sched_disable_restart_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 fifo_preempt_r(void)
 {

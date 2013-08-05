@@ -94,8 +94,6 @@ static tegra_dc_bl_output dsi_s_wqxga_10_1_bl_output_measured = {
 u8 fbuf_mode_sel[] = {0x10, 0x00, 0x2A}; /* left-right */
 u8 mipi_if_sel[] = {0x10, 0x01, 0x01}; /* cmd mode */
 static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
-	DSI_DLY_MS(120),
 #if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, fbuf_mode_sel),
 	DSI_DLY_MS(20),
@@ -109,20 +107,24 @@ static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
 	DSI_DLY_MS(20),
 #endif
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
+	DSI_DLY_MS(120),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
 	DSI_DLY_MS(20),
+	DSI_SEND_FRAME(1),
+	DSI_DLY_MS(120),
 };
 
 static struct tegra_dsi_cmd dsi_s_wqxga_10_1_suspend_cmd[] = {
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_OFF, 0x0),
 	DSI_DLY_MS(50),
-#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
-				DSI_DCS_SET_TEARING_EFFECT_OFF, 0x0),
-	DSI_DLY_MS(20),
-#endif
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_ENTER_SLEEP_MODE, 0x0),
 	DSI_DLY_MS(200),
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
+			DSI_DCS_SET_TEARING_EFFECT_OFF, 0x0),
+	DSI_DLY_MS(20),
+#endif
 };
 
 static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
@@ -155,6 +157,8 @@ static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
 	.dsi_suspend_cmd = dsi_s_wqxga_10_1_suspend_cmd,
 	.n_suspend_cmd = ARRAY_SIZE(dsi_s_wqxga_10_1_suspend_cmd),
 	.bl_name = "pwm-backlight",
+	.lp00_pre_panel_wakeup = true,
+	.ulpm_not_supported = true,
 };
 
 static int dalmore_dsi_regulator_get(struct device *dev)
@@ -282,7 +286,8 @@ static int macallan_dsi_gpio_get(void)
 fail:
 	return err;
 }
-static int dsi_s_wqxga_10_1_enable(struct device *dev)
+
+static int dsi_s_wqxga_10_1_postpoweron(struct device *dev)
 {
 	int err = 0;
 
@@ -328,6 +333,9 @@ static int dsi_s_wqxga_10_1_enable(struct device *dev)
 		}
 	}
 
+	/* panel ic requirement after vcc enable */
+	msleep(260);
+
 	if (vdd_lcd_bl) {
 		err = regulator_enable(vdd_lcd_bl);
 		if (err < 0) {
@@ -357,6 +365,11 @@ static int dsi_s_wqxga_10_1_enable(struct device *dev)
 	return 0;
 fail:
 	return err;
+}
+
+static int dsi_s_wqxga_10_1_enable(struct device *dev)
+{
+	return 0;
 }
 
 static int dsi_s_wqxga_10_1_disable(void)
@@ -648,6 +661,7 @@ static void dsi_s_wqxga_10_1_dc_out_init(struct tegra_dc_out *dc)
 	dc->modes = dsi_s_wqxga_10_1_modes;
 	dc->n_modes = ARRAY_SIZE(dsi_s_wqxga_10_1_modes);
 	dc->enable = dsi_s_wqxga_10_1_enable;
+	dc->postpoweron = dsi_s_wqxga_10_1_postpoweron;
 	dc->disable = dsi_s_wqxga_10_1_disable;
 	dc->postsuspend	= dsi_s_wqxga_10_1_postsuspend,
 	dc->width = 216;

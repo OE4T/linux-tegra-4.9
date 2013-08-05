@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/hw_ltc_gk20a.h
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -792,7 +792,7 @@ static inline u32 ltc_ltcs_ltss_cbc_param_slices_per_fbp_4_f(void)
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_r(void)
 {
-	return 0x0017e91c;
+	return 0x0014111c;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_rd_pinned_s(void)
 {
@@ -892,7 +892,7 @@ static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_atomic_init_f(void)
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_r(void)
 {
-	return 0x0017e924;
+	return 0x00141124;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_sysmem_rd_miss_s(void)
 {

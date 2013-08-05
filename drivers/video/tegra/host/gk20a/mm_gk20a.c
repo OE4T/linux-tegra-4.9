@@ -41,6 +41,7 @@
 #include "hw_ram_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_flush_gk20a.h"
+#include "hw_ltc_gk20a.h"
 
 #include "kind_gk20a.h"
 
@@ -2349,4 +2350,13 @@ int gk20a_mm_suspend(struct gk20a *g)
 
 	nvhost_dbg_fn("done");
 	return 0;
+}
+
+void gk20a_mm_ltc_isr(struct gk20a *g)
+{
+	u32 intr;
+
+	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
+	nvhost_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
+	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }

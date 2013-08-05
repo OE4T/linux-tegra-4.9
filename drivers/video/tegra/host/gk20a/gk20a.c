@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -500,6 +500,8 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 		gk20a_pmu_isr(g);
 	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
 		gk20a_priv_ring_isr(g);
+	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
+		gk20a_mm_ltc_isr(g);
 	if (mc_intr_0)
 		nvhost_dbg_info("leaving isr with interrupt pending 0x%08x",
 				mc_intr_0);

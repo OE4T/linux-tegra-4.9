@@ -698,6 +698,946 @@ static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_max_gpc_include_rop_disabled_f(v
 {
 	return 0x0;
 }
+static inline u32 ltc_ltc0_ltss_intr_r(void)
+{
+	return 0x00140820;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_iq_reset_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_pending_f(void)
+{
+	return 0x2;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_cbc_reset_f(void)
+{
+	return 0x2;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_pending_f(void)
+{
+	return 0x4;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_tstg_reset_f(void)
+{
+	return 0x4;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_pending_f(void)
+{
+	return 0x8;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_idle_error_dstg_reset_f(void)
+{
+	return 0x8;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_pending_f(void)
+{
+	return 0x10;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_evicted_cb_reset_f(void)
+{
+	return 0x10;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_pending_f(void)
+{
+	return 0x20;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_compstat_reset_f(void)
+{
+	return 0x20;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_pending_f(void)
+{
+	return 0x40;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_blocklinear_cb_reset_f(void)
+{
+	return 0x40;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_pending_f(void)
+{
+	return 0x100;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_sec_error_reset_f(void)
+{
+	return 0x100;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_m(void)
+{
+	return 0x1 << 9;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_pending_f(void)
+{
+	return 0x200;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_ecc_ded_error_reset_f(void)
+{
+	return 0x200;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_m(void)
+{
+	return 0x1 << 10;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_pending_f(void)
+{
+	return 0x400;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_debug_reset_f(void)
+{
+	return 0x400;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_atomic_to_z_reset_f(void)
+{
+	return 0x800;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_illegal_atomic_reset_f(void)
+{
+	return 0x1000;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_m(void)
+{
+	return 0x1 << 13;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_blkactivity_err_reset_f(void)
+{
+	return 0x2000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_enabled_f(void)
+{
+	return 0x10000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_iq_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_v(u32 r)
+{
+	return (r >> 17) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_enabled_f(void)
+{
+	return 0x20000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_cbc_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_v(u32 r)
+{
+	return (r >> 18) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_enabled_f(void)
+{
+	return 0x40000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_tstg_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_enabled_f(void)
+{
+	return 0x80000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_idle_error_dstg_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_enabled_f(void)
+{
+	return 0x100000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_evicted_cb_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_f(u32 v)
+{
+	return (v & 0x1) << 21;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_m(void)
+{
+	return 0x1 << 21;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_v(u32 r)
+{
+	return (r >> 21) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_enabled_f(void)
+{
+	return 0x200000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_compstat_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_m(void)
+{
+	return 0x1 << 22;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_enabled_f(void)
+{
+	return 0x400000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blocklinear_cb_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_enabled_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_sec_error_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_enabled_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_ecc_ded_error_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_m(void)
+{
+	return 0x1 << 26;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_debug_enabled_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_m(void)
+{
+	return 0x1 << 27;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_v(u32 r)
+{
+	return (r >> 27) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_atomic_to_z_enabled_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_m(void)
+{
+	return 0x1 << 28;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_illegal_atomic_enabled_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_s(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_m(void)
+{
+	return 0x1 << 29;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_enabled_f(void)
+{
+	return 0x20000000;
+}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
 	return 0x0017e8c8;

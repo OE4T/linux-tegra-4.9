@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/hw_mc_gk20a.h
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -5445,6 +5445,78 @@ static inline u32 mc_intr_read_2_inta_not_active_v(void)
 static inline u32 mc_intr_read_2_inta_not_active_f(void)
 {
 	return 0x1;
+}
+static inline u32 mc_intr_ltc_r(void)
+{
+	return 0x0000017c;
+}
+static inline u32 mc_intr_ltc_part_mask_s(void)
+{
+	return 17;
+}
+static inline u32 mc_intr_ltc_part_mask_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 mc_intr_ltc_part_mask_m(void)
+{
+	return 0x1ffff << 0;
+}
+static inline u32 mc_intr_ltc_part_mask_v(u32 r)
+{
+	return (r >> 0) & 0x1ffff;
+}
+static inline u32 mc_intr_ltc_part_mask_not_pending_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 mc_intr_ltc_part_mask_not_pending_f(void)
+{
+	return 0x0;
+}
+static inline u32 mc_intr_ltc_part_mask_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 mc_intr_ltc_part_mask_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 mc_intr_ltc_part_s(u32 i)
+{
+	return 1;
+}
+static inline u32 mc_intr_ltc_part_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (i);
+}
+static inline u32 mc_intr_ltc_part_m(u32 i)
+{
+	return 0x1 << (i);
+}
+static inline u32 mc_intr_ltc_part_v(u32 r, u32 i)
+{
+	return (r >> (i)) & 0x1;
+}
+static inline u32 mc_intr_ltc_part__size_1_v(void)
+{
+	return 16;
+}
+static inline u32 mc_intr_ltc_part_not_pending_v(u32 i)
+{
+	return 0x00000000;
+}
+static inline u32 mc_intr_ltc_part_not_pending_f(u32 i)
+{
+	return (0x00000000 & 0x1) << (i);
+}
+static inline u32 mc_intr_ltc_part_pending_v(u32 i)
+{
+	return 0x00000001;
+}
+static inline u32 mc_intr_ltc_part_pending_f(u32 i)
+{
+	return (0x00000001 & 0x1) << (i);
 }
 static inline u32 mc_enable_r(void)
 {

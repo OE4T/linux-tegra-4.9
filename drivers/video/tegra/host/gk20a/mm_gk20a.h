@@ -312,4 +312,6 @@ int gk20a_mm_suspend(struct gk20a *g);
 
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl);
 
+void gk20a_mm_ltc_isr(struct gk20a *g);
+
 #endif /*_MM_GK20A_H_ */

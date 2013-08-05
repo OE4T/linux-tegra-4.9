@@ -18,7 +18,7 @@
 #ifndef __QUADD_VERSION_H
 #define __QUADD_VERSION_H
 
-#define QUADD_MODULE_VERSION		"1.25"
+#define QUADD_MODULE_VERSION		"1.26"
 #define QUADD_MODULE_BRANCH		"Blackrock2"
 
 #endif	/* __QUADD_VERSION_H */

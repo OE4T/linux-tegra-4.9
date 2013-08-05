@@ -39,12 +39,14 @@ quadd_callchain_store(struct quadd_callchain *callchain_data, u32 ip)
 static int
 check_vma_address(unsigned long addr, struct vm_area_struct *vma)
 {
-	unsigned long start, end;
+	unsigned long start, end, length;
 
 	if (vma) {
 		start = vma->vm_start;
 		end = vma->vm_end;
-		if (addr >= start && addr + sizeof(unsigned long) <= end)
+		length = end - start;
+		if (length > sizeof(unsigned long) &&
+		    addr >= start && addr <= end - sizeof(unsigned long))
 			return 0;
 	}
 	return -EINVAL;

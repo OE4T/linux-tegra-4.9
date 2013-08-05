@@ -2176,7 +2176,8 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-static void tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
+static void __maybe_unused
+tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
 	u32 timeout = 0;
@@ -3453,6 +3454,9 @@ static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 	u32 val;
 	int ret = 0;
 
+	if (dsi->info.ulpm_not_supported)
+		return 0;
+
 #if DSI_USE_SYNC_POINTS
 	if (atomic_read(&dsi_syncpt_rst))
 		tegra_dsi_syncpt_reset(dsi);
@@ -3696,8 +3700,40 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			goto fail;
 		}
 
+		if (dsi->info.lp00_pre_panel_wakeup)
+			tegra_dsi_pad_disable(dsi);
+
+		dsi->enabled = true;
+	}
+
+	if (dsi->out_ops && dsi->out_ops->enable)
+		dsi->out_ops->enable(dsi);
+fail:
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dsi->lock);
+}
+
+static void tegra_dc_dsi_postpoweron(struct tegra_dc *dc)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+	int err = 0;
+
+	/*
+	 * Do not configure. Use bootloader configuration.
+	 * This avoids periods of blanking during boot.
+	 */
+	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
+		return;
+
+	mutex_lock(&dsi->lock);
+	tegra_dc_io_start(dc);
+
+	if (dsi->enabled) {
+		if (dsi->info.lp00_pre_panel_wakeup)
+			tegra_dsi_pad_enable(dsi);
+
 		err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_init_cmd,
-						dsi->info.n_init_cmd);
+							dsi->info.n_init_cmd);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: error while sending dsi init cmd\n");
@@ -3712,16 +3748,11 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			goto fail;
 		}
 
-		dsi->enabled = true;
+		if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
+			tegra_dsi_start_dc_stream(dc, dsi);
+
+		dsi->host_suspended = false;
 	}
-
-	if (dsi->out_ops && dsi->out_ops->enable)
-		dsi->out_ops->enable(dsi);
-
-	if (dsi->status.driven == DSI_DRIVEN_MODE_DC)
-		tegra_dsi_start_dc_stream(dc, dsi);
-
-	dsi->host_suspended = false;
 fail:
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
@@ -4737,6 +4768,7 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
 	.destroy = tegra_dc_dsi_destroy,
 	.enable = tegra_dc_dsi_enable,
+	.postpoweron = tegra_dc_dsi_postpoweron,
 	.disable = tegra_dc_dsi_disable,
 	.postpoweroff = tegra_dc_dsi_postpoweroff,
 	.hold = tegra_dc_dsi_hold_host,

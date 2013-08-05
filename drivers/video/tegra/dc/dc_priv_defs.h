@@ -80,6 +80,8 @@ struct tegra_dc_out_ops {
 	bool (*detect)(struct tegra_dc *dc);
 	/* enable output.  dc clocks are on at this point */
 	void (*enable)(struct tegra_dc *dc);
+	/* enable dc client.  Panel is enable at this point */
+	void (*postpoweron)(struct tegra_dc *dc);
 	/* disable output.  dc clocks are on at this point */
 	void (*disable)(struct tegra_dc *dc);
 	/* dc client is disabled.  dc clocks are on at this point */

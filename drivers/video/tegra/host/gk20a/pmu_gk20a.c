@@ -1116,7 +1116,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	ptr[1] = 0; ptr[2] = 1; ptr[3] = 0;
 	ptr[4] = 0; ptr[5] = 0; ptr[6] = 0; ptr[7] = 0;
 
-	pmu->seq_buf.mem.size = 8;
+	pmu->seq_buf.mem.size = 4096;
 
 	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
 
@@ -1330,6 +1330,9 @@ int gk20a_init_pmu_support(struct gk20a *g)
 			return err;
 
 		pmu->initialized = true;
+
+		/* Save zbc table after PMU is initialized. */
+		pmu_save_zbc(g, 0xf);
 	}
 
 	return err;
@@ -1766,6 +1769,27 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	/* TBD: notify client waiting for available dmem */
 
 	nvhost_dbg_fn("done");
+
+	return 0;
+}
+
+void pmu_save_zbc(struct gk20a *g, u32 entries)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_cmd cmd;
+	u32 seq;
+
+	if (!pmu->pmu_ready || !entries)
+		return;
+
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PG;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_zbc_cmd);
+	cmd.cmd.zbc.cmd_type = PMU_PG_CMD_ID_ZBC_TABLE_UPDATE;
+	cmd.cmd.zbc.entry_mask = ZBC_MASK(entries);
+
+	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+					NULL, pmu, &seq, ~0);
 
 	return 0;
 }

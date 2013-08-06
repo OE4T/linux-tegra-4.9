@@ -27,6 +27,8 @@
 #define GK20A_PMU_INST_SIZE		(4 * 1024)
 #define GK20A_PMU_UCODE_SIZE_MAX	(256 * 1024)
 
+#define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
+
 enum
 {
 	GK20A_PMU_DMAIDX_UCODE		= 0,
@@ -265,6 +267,8 @@ enum {
 	PMU_PG_CMD_ID_ELPG_PWR_UP,
 	PMU_PG_CMD_ID_ELPG_DISALLOW,
 	PMU_PG_CMD_ID_ELPG_ALLOW,
+	PMU_PG_CMD_ID_AP,
+	PMU_PG_CMD_ID_ZBC_TABLE_UPDATE,
 	PMU_PG_CMD_ID_PWR_RAIL_GATE_DISABLE = 0x20,
 	PMU_PG_CMD_ID_PWR_RAIL_GATE_ENABLE,
 	PMU_PG_CMD_ID_PWR_RAIL_SMU_MSG_DISABLE
@@ -377,6 +381,12 @@ struct pmu_perfmon_cmd {
 	};
 };
 
+struct pmu_zbc_cmd {
+	u8 cmd_type;
+	u8 pad;
+	u16 entry_mask;
+};
+
 /* PERFMON MSG */
 enum {
 	PMU_PERFMON_MSG_ID_INCREASE_EVENT = 0,
@@ -405,6 +415,7 @@ struct pmu_cmd {
 	union {
 		struct pmu_perfmon_cmd perfmon;
 		struct pmu_pg_cmd pg;
+		struct pmu_zbc_cmd zbc;
 	} cmd;
 };
 
@@ -705,6 +716,8 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
+
+void pmu_save_zbc(struct gk20a *g, u32 entries);
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
 

@@ -2843,6 +2843,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	struct zbc_depth_table *d_tbl;
 	u32 i, ret = -ENOMEM;
 	bool added = false;
+	u32 entries;
 
 	/* no endian swap ? */
 
@@ -2920,8 +2921,11 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 		return -EINVAL;
 	}
 
-	if (added && ret == 0) {
-		/* update zbc for elpg */
+	if (!added && ret == 0) {
+		/* update zbc for elpg only when new entry is added */
+		entries = max(gr->max_used_color_index,
+					gr->max_used_depth_index);
+		pmu_save_zbc(g, entries);
 	}
 
 	return ret;

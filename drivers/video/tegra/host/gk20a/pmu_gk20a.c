@@ -2402,12 +2402,6 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 
-	/* Until ZBC save/restore is implemented, we keep ELPG off */
-	nvhost_err(dev_from_gk20a(g),
-		"ELPG functionality currently disabled\n");
-
-	return -EINVAL;
-
 	if (!pmu->elpg_ready)
 		return 0;
 

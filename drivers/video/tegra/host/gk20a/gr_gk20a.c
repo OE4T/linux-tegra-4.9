@@ -3319,8 +3319,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	/* slcg prod values */
-	gr_gk20a_slcg_gr_load_gating_prod(g, true);
-	gr_gk20a_slcg_perf_load_gating_prod(g, true);
+	gr_gk20a_slcg_gr_load_gating_prod(g, false);
+	gr_gk20a_slcg_perf_load_gating_prod(g, false);
 
 	/* init mmu debug buffer */
 	addr_lo = u64_lo32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));

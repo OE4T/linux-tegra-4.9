@@ -55,7 +55,7 @@
 	DEFINITIONS
 =============================================================================*/
 /*#define ENABLE_CALC_QUEUE_COUNT*/
-#define ENABLE_SLOW_SCAN
+/*#define ENABLE_SLOW_SCAN*/
 #define ENABLE_SMOOTH_LEVEL
 #define ENABLE_SPI_SETTING		0
 

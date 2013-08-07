@@ -3,7 +3,7 @@
  *
  * GK20A Clocks
  *
- * Copyright (c) 2011 - 2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,8 +33,8 @@
 #define nvhost_dbg_clk(fmt, arg...) \
 	nvhost_dbg(dbg_clk, fmt, ##arg)
 
-#define KHz 1000
-#define MHz 1000000
+#define KHZ 1000
+#define MHZ 1000000
 
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
@@ -45,9 +45,6 @@ struct pll_parms gpc_pll_params = {
 	8, 255,		/* N */
 	1, 32,		/* PL */
 };
-
-/* Initial frequency of gpu */
-static u32 gpc_initial_freq = 700;
 
 /*  dummy data for now */
 static struct gpufreq_table_data
@@ -284,6 +281,7 @@ static int gk20a_init_clk_reset_enable_hw(struct gk20a *g)
 static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
+	static int initialized;
 
 	nvhost_dbg_fn("");
 
@@ -295,15 +293,17 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	/* TBD: set this according to different environments */
 	clk->pll_delay = 5000000; /* usec */
 
-	/* target gpc2clk = 806MHz, gpcclk = 403MHz */
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = 12; /* MHz */
-	/* settings in vbios */
-	clk->gpc_pll.M = 1;
-	clk->gpc_pll.N = 31;
-	clk->gpc_pll.PL = 1;
-	clk->gpc_pll.freq = (clk->gpc_pll.clk_in * clk->gpc_pll.N) /
-		(clk->gpc_pll.M * clk->gpc_pll.PL);
+
+	/* Decide initial frequency */
+	if (!initialized) {
+		initialized = 1;
+		clk->gpc_pll.M = 1;
+		clk->gpc_pll.N = 60; /* 12 x 60 = 720 MHz */
+		clk->gpc_pll.PL = 0;
+		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
+	}
 
 	clk->tegra_clk = clk_get_sys("tegra_gk20a", "PLLG_ref");
 	if (IS_ERR_OR_NULL(clk->tegra_clk)) {
@@ -357,12 +357,13 @@ int gk20a_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gk20a_init_clk_setup_hw(g);
+	err = tegra_dvfs_set_rate(clk->tegra_clk, clk->gpc_pll.freq * MHZ);
 	if (err)
 		return err;
 
-	/* set to initial freq */
-	gk20a_clk_set_rate(g, gpc_initial_freq);
+	err = gk20a_init_clk_setup_hw(g);
+	if (err)
+		return err;
 
 	gk20a_writel(g, 0x9080, 0x00100000);
 
@@ -402,22 +403,27 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	if (err)
 		goto clean_up;
 
-	/* raise freq, call dvfs first to raise voltage */
-	if (rate > freq) {
-		err = tegra_dvfs_set_rate(tegra_clk, rate * MHz);
+	/* change frequency only if power is on */
+	/* FIXME: Need a lock to protect power gating state during
+	   clk_program_gpc_pll(g, clk) */
+	if (g->power_on) {
+		/* raise freq, call dvfs first to raise voltage */
+		if (rate > freq) {
+			err = tegra_dvfs_set_rate(tegra_clk, rate * MHZ);
+			if (err)
+				goto clean_up;
+		}
+
+		err = clk_program_gpc_pll(g, clk);
 		if (err)
 			goto clean_up;
-	}
 
-	err = clk_program_gpc_pll(g, clk);
-	if (err)
-		goto clean_up;
-
-	/* lower freq, call dvfs after to lower voltage */
-	if (rate < freq) {
-		err = tegra_dvfs_set_rate(tegra_clk, rate * MHz);
-		if (err)
-			goto clean_up;
+		/* lower freq, call dvfs after to lower voltage */
+		if (rate < freq) {
+			err = tegra_dvfs_set_rate(tegra_clk, rate * MHZ);
+			if (err)
+				goto clean_up;
+		}
 	}
 
 clean_up:

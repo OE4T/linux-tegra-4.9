@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,8 @@ struct tegra_crypt_req {
 	u8 *plaintext;
 	int plaintext_sz;
 	u8 *result;
+	int skip_key;
+	int skip_iv;
 };
 
 /* pointer to this struct should be passed to:

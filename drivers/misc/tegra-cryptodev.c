@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -253,10 +253,12 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 	if (!ctx->use_ssk)
 		key = crypt_req->key;
 
-	ret = crypto_ablkcipher_setkey(tfm, key, crypt_req->keylen);
-	if (ret < 0) {
-		pr_err("setkey failed");
-		goto process_req_out;
+	if (!crypt_req->skip_key) {
+		ret = crypto_ablkcipher_setkey(tfm, key, crypt_req->keylen);
+		if (ret < 0) {
+			pr_err("setkey failed");
+			goto process_req_out;
+		}
 	}
 
 	ret = alloc_bufs(xbuf);
@@ -283,15 +285,20 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		sg_init_one(&in_sg, xbuf[0], size);
 		sg_init_one(&out_sg, xbuf[1], size);
 
-		ablkcipher_request_set_crypt(req, &in_sg,
-			&out_sg, size, crypt_req->iv);
+		if (!crypt_req->skip_iv)
+			ablkcipher_request_set_crypt(req, &in_sg,
+				&out_sg, size, crypt_req->iv);
+		else
+			ablkcipher_request_set_crypt(req, &in_sg,
+				&out_sg, size, NULL);
 
 		reinit_completion(&tcrypt_complete.restart);
+
 		tcrypt_complete.req_err = 0;
+
 		ret = crypt_req->encrypt ?
 			crypto_ablkcipher_encrypt(req) :
 			crypto_ablkcipher_decrypt(req);
-
 		if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 			/* crypto driver is asynchronous */
 			ret = wait_for_completion_interruptible(&tcrypt_complete.restart);

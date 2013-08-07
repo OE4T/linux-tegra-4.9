@@ -3308,7 +3308,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 data;
 	u32 addr_lo, addr_hi, addr;
 	u32 compbit_base_post_divide;
-	u32 compbit_base_post_multiply;
+	u64 compbit_base_post_multiply64;
 	u32 timeout = gk20a_get_gr_idle_timeout(g);
 	u32 fe_go_idle_timeout_save;
 	u32 last_bundle_data = 0;
@@ -3447,14 +3447,20 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
 	}
 
-	compbit_base_post_multiply = ((u64)compbit_base_post_divide *
+	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
 		gr->num_fbps) << ltc_ltc0_lts0_cbc_base_alignment_shift_v();
 
-	if (compbit_base_post_multiply < gr->compbit_store.base_pa)
+	if (compbit_base_post_multiply64 < gr->compbit_store.base_pa)
 		compbit_base_post_divide++;
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
+
+	nvhost_dbg(dbg_info | dbg_map | dbg_pte,
+		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
+		   (u32)(gr->compbit_store.base_pa>>32),
+		   (u32)(gr->compbit_store.base_pa & 0xffffffff),
+		   compbit_base_post_divide);
 
 	/* load ctx init */
 	for (i = 0; i < sw_ctx_load->count; i++)

@@ -32,7 +32,7 @@ int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 
 	tegra_mipi_cal_clk_enable(mipi_cal);
 
-	for (; cnt <= MIPI_CAL_MIPI_BIAS_PAD_CFG2_0; cnt += 4)
+	for (; cnt <= MIPI_VALID_REG_LIMIT; cnt += 4)
 		tegra_mipi_cal_write(mipi_cal, 0, cnt);
 
 	/* Clear MIPI cal status register */

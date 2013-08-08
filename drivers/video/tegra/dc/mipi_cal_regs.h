@@ -19,6 +19,12 @@
 
 #define MIPI_DSI_AUTOCAL_TIMEOUT_USEC 2000
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_DSIB_MIPI_CAL_CONFIG_2_0
+#else
+	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_MIPI_BIAS_PAD_CFG2_0
+#endif
+
 #define MIPI_CAL_MIPI_CAL_CTRL_0	0x0
 #define MIPI_CAL_NOISE_FLT(x)		(((x) & 0xf) << 26)
 #define MIPI_CAL_PRESCALE(x)		(((x) & 0x3) << 24)
@@ -105,6 +111,28 @@
 #define MIPI_CAL_HSPDOSDSID(x)		(((x) & 0x1f) << 16)
 #define MIPI_CAL_HSPUOSDSID(x)		(((x) & 0x1f) << 8)
 #define MIPI_CAL_TERMOSDSID(x)		(((x) & 0x1f) << 0)
+
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#define MIPI_CAL_CILA_MIPI_CAL_CONFIG_2_0	0x64
+#define MIPI_CAL_HSCLKPDOSA(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSA(x)		(((x) & 0x1f) << 0)
+
+#define MIPI_CAL_CILB_MIPI_CAL_CONFIG_2_0	0x68
+#define MIPI_CAL_HSCLKPDOSB(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSB(x)		(((x) & 0x1f) << 0)
+
+#define MIPI_CAL_CILE_MIPI_CAL_CONFIG_2_0	0x6c
+#define MIPI_CAL_HSCLKPDOSE(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSE(x)		(((x) & 0x1f) << 0)
+
+#define MIPI_CAL_DSIA_MIPI_CAL_CONFIG_2_0	0x70
+#define MIPI_CAL_HSCLKPDOSDSIA(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSDSIA(x)		(((x) & 0x1f) << 0)
+
+#define MIPI_CAL_DSIB_MIPI_CAL_CONFIG_2_0	0x74
+#define MIPI_CAL_HSCLKPDOSDSIB(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSDSIB(x)		(((x) & 0x1f) << 0)
+#endif
 
 #define MIPI_CAL_MIPI_CAL_AUTOCAL_CTRL0_0 0x4
 #define MIPI_CAL_AUTOCAL_PERIOD(x)  ((x) << 0)

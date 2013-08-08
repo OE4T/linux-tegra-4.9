@@ -2203,6 +2203,61 @@ tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 		dev_info(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
 }
 
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+void tegra_dsi_mipi_calibration_14x(struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+	struct clk *clk72mhz = NULL;
+
+	clk72mhz = clk_get_sys("clk72mhz", NULL);
+	if (IS_ERR_OR_NULL(clk72mhz)) {
+		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
+		return;
+	}
+	clk_prepare_enable(clk72mhz);
+
+	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
+	val |= (DSI_PAD_CONTROL_0_VS1_PAD_PULLDN_CLK_ENAB(0x1));
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_0_VS1);
+
+	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_2_VS1);
+	val &= ~(DSI_PAD_OUTADJCLK(0x7));
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_2_VS1);
+
+	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+	val |= (DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
+	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
+	val = MIPI_CAL_HSCLKPDOSDSIA(0x2) |
+		MIPI_CAL_HSCLKPUOSDSIA(0x2);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_DSIA_MIPI_CAL_CONFIG_2_0);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_DSIB_MIPI_CAL_CONFIG_2_0);
+
+	val = MIPI_CAL_OVERIDEDSIA(0x0) |
+		MIPI_CAL_SELDSIA(0x1) |
+		MIPI_CAL_HSPDOSDSIA(0x0) |
+		MIPI_CAL_HSPUOSDSIA(0x0) |
+		MIPI_CAL_TERMOSDSIA(0x0);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_DSIB_MIPI_CAL_CONFIG_0);
+
+	val = MIPI_CAL_NOISE_FLT(0xa) |
+		  MIPI_CAL_PRESCALE(0x2) |
+		  MIPI_CAL_CLKEN_OVR(0x1) |
+		  MIPI_CAL_AUTOCAL_EN(0x0);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+		MIPI_CAL_MIPI_CAL_CTRL_0);
+
+	tegra_dsi_mipi_calibration_status(dsi);
+
+	clk_disable_unprepare(clk72mhz);
+}
+#endif
+
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 {
@@ -2317,8 +2372,10 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			PAD_PDVREG(0x0) | PAD_VCLAMP_LEVEL(0x0),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		tegra_dsi_mipi_calibration_11x(dsi);
+#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		tegra_dsi_mipi_calibration_14x(dsi);
 #endif
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {

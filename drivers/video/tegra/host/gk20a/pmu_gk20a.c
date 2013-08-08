@@ -463,8 +463,8 @@ static void pmu_seq_release(struct pmu_gk20a *pmu,
 	seq->cb_params	= NULL;
 	seq->msg	= NULL;
 	seq->out_payload = NULL;
-	seq->in.size	= 0;
-	seq->out.size	= 0;
+	seq->in.alloc.dmem.size	= 0;
+	seq->out.alloc.dmem.size = 0;
 
 	clear_bit(seq->id, pmu->pmu_seq_tbl);
 }
@@ -1718,11 +1718,11 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 		if (seq->msg) {
 			if (seq->msg->hdr.size >= msg->hdr.size) {
 				memcpy(seq->msg, msg, msg->hdr.size);
-				if (seq->out.size != 0) {
+				if (seq->out.alloc.dmem.size != 0) {
 					pmu_copy_from_dmem(pmu,
-						seq->out.offset,
+						seq->out.alloc.dmem.offset,
 						seq->out_payload,
-						seq->out.size,
+						seq->out.alloc.dmem.size,
 						0);
 				}
 			} else {
@@ -1734,10 +1734,12 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	} else
 		seq->callback = NULL;
 
-	if (seq->in.size != 0)
-		pmu->dmem.free(&pmu->dmem, seq->in.offset, seq->in.size);
-	if (seq->out.size != 0)
-		pmu->dmem.free(&pmu->dmem, seq->out.offset, seq->out.size);
+	if (seq->in.alloc.dmem.size != 0)
+		pmu->dmem.free(&pmu->dmem, seq->in.alloc.dmem.offset,
+			seq->in.alloc.dmem.size);
+	if (seq->out.alloc.dmem.size != 0)
+		pmu->dmem.free(&pmu->dmem, seq->out.alloc.dmem.offset,
+			seq->out.alloc.dmem.size);
 
 	if (seq->callback)
 		seq->callback(g, msg, seq->cb_params, seq->desc, ret);
@@ -2276,40 +2278,41 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 			((u8 *)&cmd->cmd + payload->in.offset);
 
 		if (payload->in.buf != payload->out.buf)
-			in->size = (u16)payload->in.size;
+			in->alloc.dmem.size = (u16)payload->in.size;
 		else
-			in->size = (u16)max(payload->in.size,
+			in->alloc.dmem.size = (u16)max(payload->in.size,
 				payload->out.size);
 
-		err = pmu->dmem.alloc(&pmu->dmem, &in->offset, in->size);
+		err = pmu->dmem.alloc(&pmu->dmem, &in->alloc.dmem.offset,
+			in->alloc.dmem.size);
 		if (err)
 			goto clean_up;
 
-		pmu_copy_to_dmem(pmu, in->offset,
+		pmu_copy_to_dmem(pmu, in->alloc.dmem.offset,
 			payload->in.buf, payload->in.size, 0);
 
-		seq->in.size = in->size;
-		seq->in.offset = in->offset;
+		seq->in.alloc.dmem.size = in->alloc.dmem.size;
+		seq->in.alloc.dmem.offset = in->alloc.dmem.offset;
 	}
 
 	if (payload && payload->out.offset != 0) {
 		out = (struct pmu_allocation *)
 			((u8 *)&cmd->cmd + payload->out.offset);
 
-		out->size = (u16)payload->out.size;
+		out->alloc.dmem.size = (u16)payload->out.size;
 
 		if (payload->out.buf != payload->in.buf) {
 			err = pmu->dmem.alloc(&pmu->dmem,
-				&out->offset, out->size);
+				&out->alloc.dmem.offset, out->alloc.dmem.size);
 			if (err)
 				goto clean_up;
 		} else {
 			BUG_ON(in == NULL);
-			out->offset = in->offset;
+			out->alloc.dmem.offset = in->alloc.dmem.offset;
 		}
 
-		seq->out.size = out->size;
-		seq->out.offset = out->offset;
+		seq->out.alloc.dmem.size = out->alloc.dmem.size;
+		seq->out.alloc.dmem.offset = out->alloc.dmem.offset;
 	}
 
 	seq->state = PMU_SEQ_STATE_USED;
@@ -2324,9 +2327,11 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 clean_up:
 	nvhost_dbg_fn("fail");
 	if (in)
-		pmu->dmem.free(&pmu->dmem, in->offset, in->size);
+		pmu->dmem.free(&pmu->dmem, in->alloc.dmem.offset,
+			in->alloc.dmem.size);
 	if (out)
-		pmu->dmem.free(&pmu->dmem, out->offset, out->size);
+		pmu->dmem.free(&pmu->dmem, out->alloc.dmem.offset,
+			out->alloc.dmem.size);
 
 	pmu_seq_release(pmu, seq);
 	return err;

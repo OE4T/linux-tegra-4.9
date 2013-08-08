@@ -45,6 +45,11 @@ struct pmu_mem {
 	u8  dma_idx;
 };
 
+struct pmu_dmem {
+	u16 size;
+	u32 offset;
+};
+
 /* Make sure size of this structure is a multiple of 4 bytes */
 struct pmu_cmdline_args {
 	u32 cpu_freq_HZ;		/* Frequency of the clock driving the PMU */
@@ -149,9 +154,12 @@ struct pmu_hdr {
 #define PMU_QUEUE_COUNT		5
 
 struct pmu_allocation {
-	u8 pad[2];
-	u16 size;
-	u32 offset;
+	u8 pad[3];
+	u8 fb_mem_use;
+	struct {
+		struct pmu_dmem dmem;
+		struct pmu_mem fb;
+	} alloc;
 };
 
 enum {

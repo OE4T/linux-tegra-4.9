@@ -113,7 +113,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 				   {} },
 	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 750,
+	.powergate_delay	= 1000*60*60*24,
 	.can_powergate		= true,
 	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
 	.ctrl_ops		= &gk20a_ctrl_ops,

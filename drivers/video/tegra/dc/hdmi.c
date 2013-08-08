@@ -183,32 +183,35 @@ const struct tmds_config tmds_config[] = {
 	{ /* 480p modes */
 	.pclk = 27000000,
 	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) |
-		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0xF) |
+		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0x0) |
 		SOR_PLL_TX_REG_LOAD(0),
-	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
-		SOR_PLL_TMDS_TERMADJ(0x7) | SOR_PLL_LOADADJ(3),
-	.pe_current = 0x08080808,
-	.drive_current = 0x26262626,
+	.pll1 = SOR_PLL_TMDS_TERM_ENABLE |
+		SOR_PLL_TMDS_TERMADJ(0xD) | SOR_PLL_LOADADJ(3),
+	.pe_current = 0x0,
+	.drive_current = 0x1f1f1f1f,
+	.peak_current = 0x0,
 	},
 	{ /* 720p modes */
 	.pclk = 74250000,
 	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) |
-		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0xF) |
+		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0x1) |
 		SOR_PLL_TX_REG_LOAD(0),
-	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
-		SOR_PLL_TMDS_TERMADJ(0x7) | SOR_PLL_LOADADJ(3),
-	.pe_current = 0x08080808,
-	.drive_current = 0x2a2a2a2a,
+	.pll1 = SOR_PLL_TMDS_TERM_ENABLE |
+		SOR_PLL_TMDS_TERMADJ(0xD) | SOR_PLL_LOADADJ(3),
+	.pe_current = 0x0,
+	.drive_current = 0x20202020,
+	.peak_current = 0x0,
 	},
 	{ /* 1080p modes */
 	.pclk = INT_MAX,
 	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) |
-		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0xF) |
+		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(0x3) |
 		SOR_PLL_TX_REG_LOAD(0),
-	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
-		SOR_PLL_TMDS_TERMADJ(0x7) | SOR_PLL_LOADADJ(3),
-	.pe_current = 0x08080808,
-	.drive_current = 0x26262626,
+	.pll1 = SOR_PLL_TMDS_TERM_ENABLE |
+		SOR_PLL_TMDS_TERMADJ(0xD) | SOR_PLL_LOADADJ(3),
+	.pe_current = 0x0,
+	.drive_current = 0x22222222,
+	.peak_current = 0x04040404,
 	},
 };
 #else
@@ -1629,6 +1632,9 @@ static void tegra_dc_hdmi_setup_tmds(struct tegra_dc_hdmi_data *hdmi,
 	tegra_hdmi_writel(hdmi, tc->drive_current,
 		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);
 	tegra_hdmi_writel(hdmi, 0x800034bb, HDMI_NV_PDISP_SOR_PAD_CTLS0);
+
+	tegra_hdmi_writel(hdmi, tc->peak_current,
+		HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT);
 #else
 	tegra_hdmi_writel(hdmi, tc->drive_current | DRIVE_CURRENT_FUSE_OVERRIDE,
 		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);

@@ -93,7 +93,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			return -EFAULT;
 	}
 
-	nvhost_module_busy(dev);
 
 	switch (cmd) {
 	case NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE:
@@ -153,8 +152,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			err = -EINVAL;
 		}
 
-		if (!err)
+		if (!err) {
+			gk20a_busy(dev);
 			err = gk20a_gr_zbc_set_table(g, &g->gr, zbc_val);
+			gk20a_idle(dev);
+		}
 
 		if (zbc_val)
 			kfree(zbc_val);
@@ -202,8 +204,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = -ENOTTY;
 		break;
 	}
-
-	nvhost_module_idle(dev);
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));

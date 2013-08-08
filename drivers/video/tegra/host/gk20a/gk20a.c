@@ -641,12 +641,12 @@ static void gk20a_free_hwctx(struct kref *ref)
 	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 	nvhost_dbg_fn("");
 
-	nvhost_module_busy(ctx->channel->dev);
+	gk20a_busy(ctx->channel->dev);
 
 	if (ctx->priv)
 		gk20a_free_channel(ctx, true);
 
-	nvhost_module_idle(ctx->channel->dev);
+	gk20a_idle(ctx->channel->dev);
 
 	kfree(ctx);
 }
@@ -1076,6 +1076,28 @@ static int __init gk20a_init(void)
 static void __exit gk20a_exit(void)
 {
 	platform_driver_unregister(&gk20a_driver);
+}
+
+void gk20a_busy(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	pm_runtime_get_sync(&pdev->dev);
+	if (pdata->busy)
+		pdata->busy(pdev);
+}
+
+void gk20a_idle(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+#ifdef CONFIG_PM_RUNTIME
+	if (pdata->busy && atomic_read(&pdev->dev.power.usage_count) == 1)
+		pdata->idle(pdev);
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_sync_autosuspend(&pdev->dev);
+#else
+	if (pdata->idle)
+		pdata->idle(dev);
+#endif
 }
 
 module_init(gk20a_init);

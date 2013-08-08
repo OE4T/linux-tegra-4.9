@@ -47,7 +47,7 @@ static ssize_t elcg_enable_store(struct device *device,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	nvhost_module_busy(g->dev);
+	gk20a_busy(g->dev);
 	if (val) {
 		g->elcg_enabled = true;
 		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
@@ -57,7 +57,7 @@ static ssize_t elcg_enable_store(struct device *device,
 		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
 		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
 	}
-	nvhost_module_idle(g->dev);
+	gk20a_idle(g->dev);
 
 	dev_info(device, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
 			"disabled");
@@ -91,9 +91,9 @@ static ssize_t blcg_enable_store(struct device *device,
 	else
 		g->blcg_enabled = false;
 
-	nvhost_module_busy(g->dev);
+	gk20a_busy(g->dev);
 	gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
-	nvhost_module_idle(g->dev);
+	gk20a_idle(g->dev);
 
 	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
 			"disabled");
@@ -132,10 +132,10 @@ static ssize_t slcg_enable_store(struct device *device,
 	 * init. Therefore, it would be incongruous to add it here. Once
 	 * it is added to init, we should add it here too.
 	 */
-	nvhost_module_busy(g->dev);
+	gk20a_busy(g->dev);
 	gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
 	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
-	nvhost_module_idle(g->dev);
+	gk20a_idle(g->dev);
 
 	dev_info(device, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
 			"disabled");

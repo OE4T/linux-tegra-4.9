@@ -274,4 +274,7 @@ struct nvhost_hwctx_handler *nvhost_gk20a_alloc_hwctx_handler(u32 syncpt,
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
+void gk20a_busy(struct platform_device *pdev);
+void gk20a_idle(struct platform_device *pdev);
+
 #endif /* _NVHOST_GK20A_H_ */

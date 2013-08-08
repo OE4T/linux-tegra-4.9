@@ -50,9 +50,9 @@ static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
 	if (!g->power_on) {
 		busy_time = 0;
 	} else {
-		nvhost_module_busy(g->dev);
+		gk20a_busy(g->dev);
 		gk20a_pmu_load_norm(g, &busy_time);
-		nvhost_module_idle(g->dev);
+		gk20a_idle(g->dev);
 	}
 
 	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);

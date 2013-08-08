@@ -608,7 +608,6 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	int err;
 	u64 offset;
 	u32 start_page_nr = 0, num_pages;
-	u32 i, pde_lo, pde_hi;
 	u64 gmmu_page_size = gmmu_page_sizes[gmmu_pgsz_idx];
 
 	if (gmmu_pgsz_idx >= ARRAY_SIZE(gmmu_page_sizes)) {
@@ -1166,8 +1165,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 	unsigned int cur_offset;
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 	u32 ctag = ctag_offset;
-	u32 ctag_ptes, ctag_pte_cnt;
-	u32 page_shift = gmmu_page_shifts[pgsz_idx];
+	u32 ctag_incr;
+	u32 page_size  = gmmu_page_sizes[pgsz_idx];
 	u64 addr = 0;
 
 	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
@@ -1176,7 +1175,10 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 	nvhost_dbg(dbg_pte, "size_idx=%d, pde_lo=%d, pde_hi=%d",
 		   pgsz_idx, pde_lo, pde_hi);
 
-	ctag_ptes = COMP_TAG_LINE_SIZE >> page_shift;
+	/* If ctag_offset !=0 add 1 else add 0.  The idea is to avoid a branch
+	 * below (per-pte). Note: this doesn't work unless page size (when
+	 * comptags are active) is 128KB. We have checks elsewhere for that. */
+	ctag_incr = !!ctag_offset;
 
 	if (sgt)
 		cur_chunk = sgt->sgl;
@@ -1184,12 +1186,10 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 		cur_chunk = NULL;
 
 	cur_offset = 0;
-	ctag_pte_cnt = 0;
+
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
 		u32 pte_lo, pte_hi;
 		u32 pte_cur;
-		u32 pte_space_page_cur, pte_space_offset_cur;
-		u32 pte_space_page_offset;
 		void *pte_kv_cur;
 
 		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
@@ -1206,27 +1206,19 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 			pte_hi = pte_index_from_vaddr(vm, last_vaddr,
 						      pgsz_idx);
 
-		/* need to worry about crossing pages when accessing the ptes */
-		pte_space_page_offset_from_index(pte_lo, &pte_space_page_cur,
-						 &pte_space_offset_cur);
+		/* get cpu access to the ptes */
 		err = map_gmmu_pages(pte->ref, pte->sgt, &pte_kv_cur);
 		if (err) {
 			nvhost_err(dev_from_vm(vm),
-				   "couldn't map ptes for update as=%d pte_ref=%p pte_ref_cnt=%d pte_sgt=%p",
-				   vm_aspace_id(vm), pte->ref, pte->ref_cnt, pte->sgt);
+				   "couldn't map ptes for update as=%d pte_ref_cnt=%d",
+				   vm_aspace_id(vm), pte->ref_cnt);
 			goto clean_up;
 		}
 
 		nvhost_dbg(dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
-			pte_space_page_offset = pte_cur;
-			if (ctag) {
-				if (ctag_pte_cnt >= ctag_ptes) {
-					ctag++;
-					ctag_pte_cnt = 0;
-				}
-				ctag_pte_cnt++;
-			}
+
+			ctag += ctag_incr;
 
 			if (likely(sgt)) {
 				u64 new_addr = gk20a_mm_iova_addr(cur_chunk);
@@ -1235,11 +1227,6 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 					addr += cur_offset;
 				}
 
-
-				nvhost_dbg(dbg_pte,
-				   "pte_cur=%d addr=0x%08llx kind=%d ctag=%d",
-				   pte_cur, addr, kind_v, ctag);
-
 				pte_w[0] = gmmu_pte_valid_true_f() |
 					gmmu_pte_address_sys_f(addr
 						>> gmmu_pte_address_shift_v());
@@ -1247,32 +1234,36 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 					gmmu_pte_kind_f(kind_v) |
 					gmmu_pte_comptagline_f(ctag);
 
-				nvhost_dbg(dbg_pte, "\t0x%x,%x",
-					   pte_w[1], pte_w[0]);
-
 				if (!cacheable)
 					pte_w[1] |= gmmu_pte_vol_true_f();
 
-				cur_offset += 1 << page_shift;
-				addr += 1 << page_shift;
+				pte->ref_cnt++;
+
+				nvhost_dbg(dbg_pte,
+					   "pte_cur=%d addr=0x%x,%08x kind=%d"
+					   " ctag=%d vol=%d refs=%d"
+					   " [0x%08x,0x%08x]",
+					   pte_cur, hi32(addr), lo32(addr),
+					   kind_v, ctag, !cacheable,
+					   pte->ref_cnt, pte_w[1], pte_w[0]);
+
+				cur_offset += page_size;
+				addr += page_size;
 				while (cur_chunk &&
 					cur_offset >= cur_chunk->length) {
 					cur_offset -= cur_chunk->length;
 					cur_chunk = sg_next(cur_chunk);
 				}
-				pte->ref_cnt++;
+
 			} else {
 				pte->ref_cnt--;
+				nvhost_dbg(dbg_pte,
+					   "pte_cur=%d ref=%d [0x0,0x0]",
+					   pte_cur, pte->ref_cnt);
 			}
 
-			nvhost_dbg(dbg_pte,
-			   "vm %p, pte[1]=0x%x, pte[0]=0x%x, ref_cnt=%d",
-			   vm, pte_w[1], pte_w[0], pte->ref_cnt);
-
-			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 0,
-				 pte_w[0]);
-			mem_wr32(pte_kv_cur + pte_space_page_offset*8, 1,
-				 pte_w[1]);
+			mem_wr32(pte_kv_cur + pte_cur*8, 0, pte_w[0]);
+			mem_wr32(pte_kv_cur + pte_cur*8, 1, pte_w[1]);
 		}
 
 		unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);

@@ -308,6 +308,7 @@ static struct platform_pwm_backlight_data lvds_c_1366_14_bl_data = {
 	.max_brightness	= 255,
 	.dft_brightness	= 224,
 	.pwm_period_ns	= 1000000,
+	.pwm_gpio	= TEGRA_GPIO_INVALID,
 	.notify		= lvds_c_1366_14_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= lvds_c_1366_14_check_fb,

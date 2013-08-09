@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1080p-11-6.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -379,6 +379,7 @@ static struct platform_pwm_backlight_data dsi_a_1080p_11_6_bl_data = {
 	.max_brightness	= 255,
 	.dft_brightness	= 224,
 	.pwm_period_ns	= 1000000,
+	.pwm_gpio	= TEGRA_GPIO_INVALID,
 	.notify		= dsi_a_1080p_11_6_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= dsi_a_1080p_11_6_check_fb,

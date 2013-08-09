@@ -372,6 +372,7 @@ static struct platform_pwm_backlight_data dsi_a_1080p_14_0_bl_data = {
 	.max_brightness	= 255,
 	.dft_brightness	= 224,
 	.pwm_period_ns	= 1000000,
+	.pwm_gpio	= TEGRA_GPIO_INVALID,
 	.notify		= dsi_a_1080p_14_0_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= dsi_a_1080p_14_0_check_fb,

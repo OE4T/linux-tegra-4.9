@@ -1638,6 +1638,26 @@ static inline u32 ltc_ltc0_ltss_intr_en_blkactivity_err_enabled_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 ltc_ltss_g_elpg_r(void)
+{
+	return 0x0017e828;
+}
+static inline u32 ltc_ltss_g_elpg_flush_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 ltc_ltss_g_elpg_flush_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltss_g_elpg_flush_pending_v(void)
+{
+	return 1;
+}
+static inline u32 ltc_ltss_g_elpg_flush_pending_f(void)
+{
+	return 0x1;
+}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
 	return 0x0017e8c8;

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -105,10 +105,6 @@ static DEVICE_ATTR(slcg_enable, S_IRWXUGO, NULL, slcg_enable_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {
-	struct platform_device *ndev = to_platform_device(dev);
-	/*struct tegra_dc *dc = platform_get_drvdata(ndev);*/
-	/*struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;*/
-
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
@@ -116,8 +112,6 @@ void gk20a_remove_sysfs(struct device *dev)
 
 void gk20a_create_sysfs(struct platform_device *dev)
 {
-	/*struct tegra_dc *dc = platform_get_drvdata(ndev);*/
-	/*struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;*/
 	int error = 0;
 
 	error |= device_create_file(&dev->dev, &dev_attr_elcg_enable);

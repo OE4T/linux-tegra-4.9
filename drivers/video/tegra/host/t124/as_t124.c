@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Address Space Support for T124 Architecture Chips
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,7 +26,6 @@
 
 static int t124_as_init(struct nvhost_master *host, struct nvhost_as *as)
 {
-	struct nvhost_device_data *pdata = nvhost_get_devdata(as->ch->dev);
 #if defined(CONFIG_TEGRA_GK20A)
 	if (is_gk20a_module(as->ch->dev))
 		as->ops = &gk20a_as_moduleops;

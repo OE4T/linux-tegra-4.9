@@ -1,5 +1,6 @@
 GCOV_PROFILE := y
-EXTRA_CFLAGS += -Idrivers/video/tegra/host -Idrivers/devfreq
+ccflags-y += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/devfreq
 
 nvhost-gr3d-objs  = \
 		gr3d.o \

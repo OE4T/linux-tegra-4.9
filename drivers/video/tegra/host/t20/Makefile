@@ -1,4 +1,4 @@
-EXTRA_CFLAGS += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/host
 
 nvhost-t20-objs  = \
 	t20.o

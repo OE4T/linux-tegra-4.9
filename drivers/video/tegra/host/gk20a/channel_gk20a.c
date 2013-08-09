@@ -423,7 +423,7 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct mem_handle *handle_ref;
 	void *virtual_address;
-	u32 cyclestate_buffer_size;
+	u64 cyclestate_buffer_size;
 	struct platform_device *dev = ch->ch->dev;
 
 	if (args->nvmap_handle && !ch->cyclestate.cyclestate_buffer_handler) {

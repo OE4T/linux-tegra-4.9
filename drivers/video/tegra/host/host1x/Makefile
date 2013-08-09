@@ -1,6 +1,5 @@
 GCOV_PROFILE := y
-
-EXTRA_CFLAGS += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/host
 
 nvhost-host1x-objs  = \
 	host1x.o

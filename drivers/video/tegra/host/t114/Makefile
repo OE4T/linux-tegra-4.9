@@ -1,5 +1,5 @@
 GCOV_PROFILE := y
-EXTRA_CFLAGS += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/host
 
 nvhost-t114-objs  = \
         t114.o

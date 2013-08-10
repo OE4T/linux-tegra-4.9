@@ -3361,8 +3361,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_blcg_gr_load_gating_prod(g, true);
 	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
 
 	/* Bug 1340570: increase the clock timeout to avoid potential
 	 * operation failure at high gpcclk rate. Default values are 0x400.

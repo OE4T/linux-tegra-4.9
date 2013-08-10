@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/gk20a_gating_reglist.c
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,7 +76,7 @@ const struct gating_desc gk20a_slcg_gr[] = {
 	{.addr = 0x00419ff4, .prod = 0x00000000, .disable = 0x00003ffe},
 	{.addr = 0x00419ffc, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x0041be2c, .prod = 0x020bbfc0, .disable = 0xfffffffe},
-	{.addr = 0x0041bfec, .prod = 0x00000000, .disable = 0xfffffffe},
+	{.addr = 0x0041bfec, .prod = 0xfffffffe, .disable = 0xfffffffe},
 	{.addr = 0x0041bed4, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x00408814, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x0040881c, .prod = 0x00000000, .disable = 0x0001fffe},

@@ -148,7 +148,7 @@ const struct gating_desc gk20a_blcg_gr[] = {
 	{.addr = 0x00419ff8, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x00419f90, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x0041be28, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x0041bfe8, .prod = 0x00004044, .disable = 0x00000000},
+	{.addr = 0x0041bfe8, .prod = 0x00000000, .disable = 0x00000000},
 	{.addr = 0x0041bed0, .prod = 0x00004044, .disable = 0x00000000},
 	{.addr = 0x00408810, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x00408818, .prod = 0x00004042, .disable = 0x00000000},

@@ -3352,7 +3352,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	gr_gk20a_blcg_gr_load_gating_prod(g, false);
+	gr_gk20a_blcg_gr_load_gating_prod(g, true);
 	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
 	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);

@@ -196,9 +196,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.can_powergate   = false,
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = {
-		{"isp", UINT_MAX},
-		{"ispb", 0} }
+	.clocks          = { {"isp", UINT_MAX} }
 };
 
 static struct platform_device tegra_isp01b_device = {

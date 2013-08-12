@@ -3,7 +3,7 @@
  *
  * Tegra VIC03 Module Support
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,10 +65,10 @@ struct nvhost_device_data vic03_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-	.force_context_restore	= true,
 	.can_powergate		= true,
 	.powergate_delay	= 500,
 	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
+	.prepare_poweroff	= nvhost_vic03_prepare_poweroff,
 };
 
 struct platform_device tegra_vic03_device = {
@@ -612,6 +612,20 @@ int nvhost_vic03_finalize_poweron(struct platform_device *dev)
 	return vic03_boot(dev);
 }
 
+int nvhost_vic03_prepare_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	struct nvhost_channel *ch = pdata->channel;
+
+	if (ch) {
+		mutex_lock(&ch->submitlock);
+		ch->cur_ctx = NULL;
+		mutex_unlock(&ch->submitlock);
+	}
+
+	return 0;
+}
+
 static struct of_device_id tegra_vic_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&vic03_info },
@@ -692,6 +706,7 @@ static int vic03_probe(struct platform_device *dev)
 	/* overwrite save/restore fptrs set by pm_genpd_init */
 	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
 	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
 	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
 #endif
 

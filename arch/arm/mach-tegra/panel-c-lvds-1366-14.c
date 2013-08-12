@@ -362,7 +362,6 @@ static void lvds_c_1366_14_dc_out_init(struct tegra_dc_out *dc)
 	dc->postsuspend	= lvds_c_1366_14_postsuspend,
 	dc->width = 309;
 	dc->height = 174;
-	dc->dither = TEGRA_DC_TEMPORAL_DITHER;
 }
 
 static void lvds_c_1366_14_fb_data_init(struct tegra_fb_data *fb)

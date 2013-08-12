@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1080p-11-6.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -346,7 +346,6 @@ static void edp_a_1080p_14_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->width = 320;
 	dc->height = 205;
 	dc->hotplug_gpio = TEGRA_GPIO_PFF0;
-	dc->dither = TEGRA_DC_TEMPORAL_DITHER;
 }
 
 static void edp_a_1080p_14_0_fb_data_init(struct tegra_fb_data *fb)

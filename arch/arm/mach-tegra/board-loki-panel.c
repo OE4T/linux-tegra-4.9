@@ -776,7 +776,7 @@ static void loki_hdmi_hotplug_report(bool state)
 static struct tegra_dc_out loki_disp2_out = {
 	.type		= TEGRA_DC_OUT_HDMI,
 	.flags		= TEGRA_DC_OUT_HOTPLUG_HIGH,
-	.parent_clk	= "pll_d2_out0",
+	.parent_clk	= "pll_d2",
 
 	.dcc_bus	= 3,
 	.hotplug_gpio	= loki_hdmi_hpd,

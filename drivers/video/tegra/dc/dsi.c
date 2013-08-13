@@ -231,8 +231,6 @@ const u32 dsi_pkt_seq_video_non_burst_no_eot[NUMOF_PKT_SEQ] = {
 	PKT_ID3(CMD_BLNK) | PKT_LEN3(4),
 };
 
-
-/* TODO: verify with hw about this format */
 const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
 	0,
 	0,
@@ -240,25 +238,13 @@ const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
 	0,
 	0,
 	0,
-	PKT_ID0(CMD_LONGW) | PKT_LEN0(3) | PKT_ID1(CMD_EOT) | PKT_LEN1(7),
+	PKT_ID0(CMD_LONGW) | PKT_LEN0(3) | PKT_ID1(CMD_EOT) |
+		PKT_LEN1(7) | PKT_LP,
 	0,
 	0,
 	0,
-	PKT_ID0(CMD_LONGW) | PKT_LEN0(3) | PKT_ID1(CMD_EOT) | PKT_LEN1(7),
-	0,
-};
-const u32 dsi_pkt_seq_cmd_mode_ganged[NUMOF_PKT_SEQ] = {
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	PKT_ID0(CMD_LONGW) | PKT_LEN0(3) | PKT_LP,
-	0,
-	0,
-	0,
-	PKT_ID0(CMD_LONGW) | PKT_LEN0(5) | PKT_LP,
+	PKT_ID0(CMD_LONGW) | PKT_LEN0(3) | PKT_ID1(CMD_EOT) |
+		PKT_LEN1(7) | PKT_LP,
 	0,
 };
 
@@ -760,13 +746,14 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->enabled = false;
 	dsi->clk_ref = false;
 
+	n_data_lanes = dsi->info.n_data_lanes;
 	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT ||
 		dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD)
-		n_data_lanes = dsi->info.n_data_lanes / 2;
+		n_data_lanes /= 2;
 
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
-			DSI_CONTROL_NUM_DATA_LANES(dsi->info.n_data_lanes - 1) |
+			DSI_CONTROL_NUM_DATA_LANES(n_data_lanes - 1) |
 			DSI_CONTROL_VID_SOURCE(dc->ndev->id) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
@@ -1653,12 +1640,8 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 		pkt_seq = dsi->info.pkt_seq;
 	else if (dsi->info.video_data_type ==
 		TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE) {
-		if (dsi->info.ganged_type)
-			pkt_seq = dsi_pkt_seq_cmd_mode_ganged;
-		else
 			pkt_seq = dsi_pkt_seq_cmd_mode;
-	}
-	else {
+	} else {
 		switch (dsi->info.video_burst_mode) {
 		case TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED:
 		case TEGRA_DSI_VIDEO_BURST_MODE_LOW_SPEED:
@@ -4453,6 +4436,8 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 					"DSI failed to exit ulpm\n");
 				goto fail;
 			}
+		} else {
+			tegra_dsi_pad_enable(dsi);
 		}
 		break;
 	case DSI_NO_SUSPEND:

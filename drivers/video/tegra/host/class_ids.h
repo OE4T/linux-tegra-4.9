@@ -3,7 +3,7 @@
  *
  * Tegra Host Module Class IDs
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,10 +26,13 @@ enum {
 	NV_HOST1X_CLASS_ID		= 0x1,
 	NV_VIDEO_ENCODE_MPEG_CLASS_ID	= 0x20,
 	NV_VIDEO_ENCODE_MSENC_CLASS_ID	= 0x21,
+	NV_VIDEO_ENCODE_NVENC_CLASS_ID	= 0x21,
 	NV_GRAPHICS_3D_CLASS_ID		= 0x60,
 	NV_GRAPHICS_GPU_CLASS_ID	= 0x61,
 	NV_GRAPHICS_VIC_CLASS_ID	= 0x5D,
 	NV_TSEC_CLASS_ID		= 0xE0,
+	NV_NVJPG_CLASS_ID		= 0xC0,
+	NV_NVDEC_CLASS_ID		= 0xF0,
 };
 
 #endif /*__NVHOST_CLASS_IDS_H */

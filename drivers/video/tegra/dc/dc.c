@@ -1476,10 +1476,16 @@ void tegra_dc_enable_crc(struct tegra_dc *dc)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
+
+	/* Register a client of frame_end interrupt */
+	tegra_dc_config_frame_end_intr(dc, true);
 }
 
 void tegra_dc_disable_crc(struct tegra_dc *dc)
 {
+	/* Unregister a client of frame_end interrupt */
+	tegra_dc_config_frame_end_intr(dc, false);
+
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 	tegra_dc_writel(dc, 0x0, DC_COM_CRC_CONTROL);
@@ -1499,10 +1505,13 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 		goto crc_error;
 	}
 
-	if (!tegra_platform_is_linsim())
-		/* TODO: Replace mdelay with code to sync VBlANK, since
-		 * DC_COM_CRC_CHECKSUM_LATCHED is available after VBLANK */
-		mdelay(TEGRA_CRC_LATCHED_DELAY);
+	if (!tegra_platform_is_linsim()) {
+		reinit_completion(&dc->crc_complete);
+		if (wait_for_completion_interruptible(&dc->crc_complete)) {
+			pr_err("CRC read interrupted.\n");
+			goto crc_error;
+		}
+	}
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
@@ -1812,6 +1821,8 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
+		if (!completion_done(&dc->crc_complete))
+			complete(&dc->crc_complete);
 	}
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -1834,6 +1845,8 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
+		if (!completion_done(&dc->crc_complete))
+			complete(&dc->crc_complete);
 
 		tegra_dc_trigger_windows(dc);
 	}
@@ -2724,6 +2737,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	mutex_init(&dc->one_shot_lock);
 	mutex_init(&dc->one_shot_lp_lock);
 	init_completion(&dc->frame_end_complete);
+	init_completion(&dc->crc_complete);
 	init_waitqueue_head(&dc->wq);
 	init_waitqueue_head(&dc->timestamp_wq);
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC

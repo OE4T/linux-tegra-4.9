@@ -173,6 +173,7 @@ struct tegra_dc {
 #endif
 
 	struct completion		frame_end_complete;
+	struct completion		crc_complete;
 
 	struct work_struct		vblank_work;
 	long				vblank_ref_count;

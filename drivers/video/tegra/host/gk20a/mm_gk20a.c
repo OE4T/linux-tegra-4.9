@@ -1218,8 +1218,6 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 		nvhost_dbg(dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
 
-			ctag += ctag_incr;
-
 			if (likely(sgt)) {
 				u64 new_addr = gk20a_mm_iova_addr(cur_chunk);
 				if (new_addr) {
@@ -1247,6 +1245,7 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 					   kind_v, ctag, !cacheable,
 					   pte->ref_cnt, pte_w[1], pte_w[0]);
 
+				ctag += ctag_incr;
 				cur_offset += page_size;
 				addr += page_size;
 				while (cur_chunk &&

@@ -466,12 +466,14 @@ static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 
 	nvhost_dbg_fn("");
 
+	if (hwctx->has_timedout || !ch)
+		return -ETIMEDOUT;
+
 	completed_waiter = nvhost_intr_alloc_waiter();
 	if (!completed_waiter)
 		return -ENOMEM;
 
 	nvhost_module_busy(nvhost_ch->dev);
-
 
 	ret = gk20a_submit_channel_gpfifo(hwctx->priv, gpfifo, num_entries,
 					fence, flags);

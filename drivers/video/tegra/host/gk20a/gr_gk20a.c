@@ -3969,6 +3969,21 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 		   isr_data->class_num, isr_data->offset);
 	return -EINVAL;
 }
+
+static int gk20a_gr_handle_class_error(struct gk20a *g,
+					  struct gr_isr_data *isr_data)
+{
+	nvhost_dbg_fn("");
+
+	gk20a_gr_reset(g);
+
+	gk20a_gr_nop_method(g);
+	nvhost_err(dev_from_gk20a(g),
+		   "class error 0x%08x, offset 0x%08x",
+		   isr_data->class_num, isr_data->offset);
+	return -EINVAL;
+}
+
 static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -4209,6 +4224,13 @@ void gk20a_gr_isr(struct gk20a *g)
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_class_reset_f());
 		gr_intr &= ~gr_intr_illegal_class_pending_f();
+	}
+
+	if (gr_intr & gr_intr_class_error_pending_f()) {
+		ret = gk20a_gr_handle_class_error(g, &isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_class_error_reset_f());
+		gr_intr &= ~gr_intr_class_error_pending_f();
 	}
 
 	if (gr_intr & gr_intr_exception_pending_f()) {

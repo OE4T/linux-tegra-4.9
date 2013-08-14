@@ -96,34 +96,46 @@ do {									\
 static inline u8 mem_rd08(void *ptr, int b)
 {
 	u8 _b = ((const u8 *)ptr)[b];
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr+sizeof(u8)*b, _b);
+#endif
 	return _b;
 }
 static inline u16 mem_rd16(void *ptr, int s)
 {
 	u16 _s = ((const u16 *)ptr)[s];
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr+sizeof(u16)*s, _s);
+#endif
 	return _s;
 }
 static inline u32 mem_rd32(void *ptr, int w)
 {
 	u32 _w = ((const u32 *)ptr)[w];
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr + sizeof(u32)*w, _w);
+#endif
 	return _w;
 }
 static inline void mem_wr08(void *ptr, int b, u8 data)
 {
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr+sizeof(u8)*b, data);
+#endif
 	((u8 *)ptr)[b] = data;
 }
 static inline void mem_wr16(void *ptr, int s, u16 data)
 {
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr+sizeof(u16)*s, data);
+#endif
 	((u16 *)ptr)[s] = data;
 }
 static inline void mem_wr32(void *ptr, int w, u32 data)
 {
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 	nvhost_dbg(dbg_mem, " %p = 0x%x", ptr+sizeof(u32)*w, data);
+#endif
 	((u32 *)ptr)[w] = data;
 }
 

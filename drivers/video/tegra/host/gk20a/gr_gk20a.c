@@ -3325,8 +3325,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	/* slcg prod values */
-	gr_gk20a_slcg_gr_load_gating_prod(g, true);
-	gr_gk20a_slcg_perf_load_gating_prod(g, true);
+	gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
 
 	/* init mmu debug buffer */
 	addr_lo = u64_lo32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));
@@ -3357,11 +3357,16 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	gr_gk20a_blcg_gr_load_gating_prod(g, true);
+	gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
 	gr_gk20a_pg_gr_load_gating_prod(g, true);
 
-	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-	gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+	if (g->elcg_enabled) {
+		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
+		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+	} else {
+		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+	}
 
 	/* Bug 1340570: increase the clock timeout to avoid potential
 	 * operation failure at high gpcclk rate. Default values are 0x400.

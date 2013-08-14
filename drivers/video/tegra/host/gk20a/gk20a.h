@@ -85,6 +85,10 @@ struct gk20a {
 	u32 gr_idle_timeout_default;
 	u32 timeouts_enabled;
 
+	bool slcg_enabled;
+	bool blcg_enabled;
+	bool elcg_enabled;
+
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;
 	struct dentry *debugfs_ltc_enabled;

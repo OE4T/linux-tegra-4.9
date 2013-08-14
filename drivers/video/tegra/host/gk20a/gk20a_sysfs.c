@@ -27,6 +27,7 @@
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gk20a_gating_reglist.h"
+#include "nvhost_acm.h"
 
 static ssize_t elcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -38,20 +39,34 @@ static ssize_t elcg_enable_store(struct device *device,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
+	nvhost_module_busy(g->dev);
 	if (val) {
+		g->elcg_enabled = true;
 		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
 		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
-		dev_info(device, "ELCG is enabled.\n");
 	} else {
+		g->elcg_enabled = false;
 		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
 		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
-		dev_info(device, "ELCG is disabled.\n");
 	}
+	nvhost_module_idle(g->dev);
+
+	dev_info(device, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
+			"disabled");
 
 	return count;
 }
 
-static DEVICE_ATTR(elcg_enable, S_IRWXUGO, NULL, elcg_enable_store);
+static ssize_t elcg_enable_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->elcg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(elcg_enable, S_IRWXUGO, elcg_enable_read, elcg_enable_store);
 
 static ssize_t blcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -63,18 +78,31 @@ static ssize_t blcg_enable_store(struct device *device,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	if (val) {
-		gr_gk20a_blcg_gr_load_gating_prod(g, true);
-		dev_info(device, "BLCG is enabled.\n");
-	} else {
-		gr_gk20a_blcg_gr_load_gating_prod(g, false);
-		dev_info(device, "BLCG is disabled.\n");
-	}
+	if (val)
+		g->blcg_enabled = true;
+	else
+		g->blcg_enabled = false;
+
+	nvhost_module_busy(g->dev);
+	gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	nvhost_module_idle(g->dev);
+
+	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
+			"disabled");
 
 	return count;
 }
 
-static DEVICE_ATTR(blcg_enable, S_IRWXUGO, NULL, blcg_enable_store);
+static ssize_t blcg_enable_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->blcg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(blcg_enable, S_IRWXUGO, blcg_enable_read, blcg_enable_store);
 
 static ssize_t slcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -86,22 +114,37 @@ static ssize_t slcg_enable_store(struct device *device,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	if (val) {
-		gr_gk20a_slcg_gr_load_gating_prod(g, true);
-		gr_gk20a_slcg_perf_load_gating_prod(g, true);
-		gr_gk20a_slcg_therm_load_gating_prod(g, true);
-		dev_info(device, "SLCG is enabled.\n");
-	} else {
-		gr_gk20a_slcg_gr_load_gating_prod(g, false);
-		gr_gk20a_slcg_perf_load_gating_prod(g, false);
-		gr_gk20a_slcg_therm_load_gating_prod(g, false);
-		dev_info(device, "SLCG is disabled.\n");
-	}
+	if (val)
+		g->slcg_enabled = true;
+	else
+		g->slcg_enabled = false;
+
+	/*
+	 * TODO: slcg_therm_load_gating is not enabled anywhere during
+	 * init. Therefore, it would be incongruous to add it here. Once
+	 * it is added to init, we should add it here too.
+	 */
+	nvhost_module_busy(g->dev);
+	gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
+	nvhost_module_idle(g->dev);
+
+	dev_info(device, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
+			"disabled");
 
 	return count;
 }
 
-static DEVICE_ATTR(slcg_enable, S_IRWXUGO, NULL, slcg_enable_store);
+static ssize_t slcg_enable_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->slcg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(slcg_enable, S_IRWXUGO, slcg_enable_read, slcg_enable_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {

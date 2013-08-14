@@ -2279,7 +2279,7 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 		dc->out_ops->enable(dc);
 
 	if (dc->out->postpoweron)
-		dc->out->postpoweron();
+		dc->out->postpoweron(&dc->ndev->dev);
 
 	/* force a full blending update */
 	dc->blend.z[0] = -1;

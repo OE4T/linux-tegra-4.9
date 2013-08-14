@@ -993,8 +993,10 @@ int __init loki_panel_init(int board_id)
 	/*
 	 * only loki supports initialized mode.
 	 */
+#if	0
 	if (!board_id)
 		loki_disp1_out.flags |= TEGRA_DC_OUT_INITIALIZED_MODE;
+#endif
 
 	loki_disp1_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&loki_disp1_device);

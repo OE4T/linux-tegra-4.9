@@ -812,6 +812,9 @@ static int gk20a_powergate(struct generic_pm_domain *domain)
 	pdata = container_of(domain, struct nvhost_device_data, pd);
 	return nvhost_module_power_off(pdata->pdev);
 }
+
+static int gk20a_resume(struct device *dev);
+static int gk20a_suspend(struct device *dev);
 #endif
 
 int tegra_gpu_get_max_state(struct thermal_cooling_device *cdev,
@@ -923,8 +926,8 @@ static int gk20a_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 
 	/* overwrite save/restore fptrs set by pm_genpd_init */
-	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
-	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
+	pdata->pd.domain.ops.suspend = gk20a_suspend;
+	pdata->pd.domain.ops.resume = gk20a_resume;
 	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
 	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
 #endif
@@ -1047,6 +1050,47 @@ static struct platform_driver gk20a_driver = {
 #endif
 	}
 };
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int gk20a_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	if (!pdata->can_powergate)
+		ret = nvhost_gk20a_finalize_poweron(pdev);
+
+	if (ret) {
+		dev_err(&pdev->dev,
+			"%s(): couldn't initialize gk20a\n",
+			__func__);
+		return ret;
+	}
+
+	return nvhost_client_device_resume(dev);
+}
+
+static int gk20a_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	ret = nvhost_client_device_suspend(dev);
+
+	if (!pdata->can_powergate)
+		ret |= nvhost_gk20a_prepare_poweroff(pdev);
+
+	if (ret) {
+		dev_err(&pdev->dev,
+			"%s(): couldn't suspend gk20a\n",
+			__func__);
+	}
+
+	return ret;
+}
+#endif
 
 static int __init gk20a_init(void)
 {

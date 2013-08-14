@@ -2575,8 +2575,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	struct clk *clk;
 #ifndef CONFIG_TEGRA_ISOMGR
 	struct clk *emc_clk;
-#endif
+#else
 	int isomgr_client_id = -1;
+#endif
 	struct resource	*res;
 	struct resource *base_res;
 	struct resource *fb_mem = NULL;
@@ -2639,7 +2640,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->valid_windows |= 0x08;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
+#ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
+#endif
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
@@ -2651,7 +2654,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->valid_windows |= 0x10;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;
+#ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
+#endif
 	} else {
 		dev_err(&ndev->dev,
 			"Unknown base address %llx: unable to assign syncpt\n",

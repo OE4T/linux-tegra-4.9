@@ -4106,6 +4106,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
 	u32 i;
+	struct scatterlist *ctx_sg;
 
 	spin_lock(&gr->ch_tlb_lock);
 
@@ -4119,10 +4120,12 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++)
-		if (f->channel[chid].in_use &&
-		    sg_phys(f->channel[chid].inst_block.mem.sgt->sgl) ==
-		    gr_fecs_current_ctx_ptr_v(curr_ctx) << ram_in_base_shift_v())
-			break;
+		if (f->channel[chid].in_use) {
+			ctx_sg = f->channel[chid].inst_block.mem.sgt->sgl;
+			if ((u32)(sg_phys(ctx_sg) >> ram_in_base_shift_v()) ==
+				gr_fecs_current_ctx_ptr_v(curr_ctx))
+				break;
+	}
 
 	if (chid >= f->num_channels) {
 		chid = -1;

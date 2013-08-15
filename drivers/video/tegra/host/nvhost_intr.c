@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,7 +21,11 @@
 #include "nvhost_intr.h"
 #include "dev.h"
 #include "nvhost_acm.h"
+
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "nvhost_sync.h"
+#endif
+
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/irq.h>
@@ -188,7 +192,7 @@ static void action_wakeup_interruptible(struct nvhost_waitlist *waiter)
 
 static void action_signal_sync_pt(struct nvhost_waitlist *waiter)
 {
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_pt *pt = waiter->data;
 	nvhost_sync_pt_signal(pt);
 #endif

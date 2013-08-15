@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,7 +25,11 @@
 #include <linux/export.h>
 #include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
+
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "nvhost_sync.h"
+#endif
+
 #include "nvhost_acm.h"
 #include "dev.h"
 #include "chip_support.h"
@@ -510,7 +514,7 @@ int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr)
 	return syncpt_op().patch_wait(sp, patch_addr);
 }
 
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 		int idx)
 {
@@ -584,7 +588,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			GFP_KERNEL);
 	sp->caps_nodes = kzalloc(sizeof(struct nvhost_capability_node) * 3,
 			GFP_KERNEL);
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 	sp->timeline = kzalloc(sizeof(struct nvhost_sync_timeline *) *
 			nvhost_syncpt_nb_pts(sp), GFP_KERNEL);
 	if (!sp->timeline) {
@@ -674,7 +678,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			err = -EIO;
 			goto fail;
 		}
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 		sp->timeline[i] = nvhost_sync_timeline_create(sp, i);
 		if (!sp->timeline[i]) {
 			err = -ENOMEM;
@@ -692,7 +696,7 @@ fail:
 
 static void nvhost_syncpt_deinit_timeline(struct nvhost_syncpt *sp)
 {
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 	int i;
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
 		if (sp->timeline && sp->timeline[i]) {

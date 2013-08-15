@@ -46,7 +46,11 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_memmgr.h"
+
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "nvhost_sync.h"
+#endif
+
 #include "nvhost_scale.h"
 #include "chip_support.h"
 #include "t20/t20.h"
@@ -179,7 +183,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_sync_fence_create_args *args)
 {
-#if CONFIG_TEGRA_GRHOST_SYNC
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 	int err;
 	int i;
 	struct nvhost_ctrl_sync_fence_info *pts;

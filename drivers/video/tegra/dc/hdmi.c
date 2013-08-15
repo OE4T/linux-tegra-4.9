@@ -1018,9 +1018,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct tegra_dc_hdmi_data *hdmi;
 	struct resource *res;
 	struct resource *base_res;
-#ifdef CONFIG_SWITCH
 	int ret;
-#endif
 	void __iomem *base;
 	struct clk *clk = NULL;
 	struct clk *disp1_clk = NULL;

@@ -106,7 +106,7 @@ struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *mgr,
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev)
 {
-	struct mem_handle *h = NULL;
+	struct mem_handle *h = ERR_PTR(-EINVAL);
 
 	switch (nvhost_memmgr_type(id)) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP

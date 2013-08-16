@@ -669,4 +669,10 @@ int nvi_mpu_bypass_request(bool enable);
  */
 int nvi_mpu_bypass_release(void);
 
+/**
+ * Register the sysfs node from secondary i2c to mpu so that
+ * it can be managed together
+ */
+int nvi_mpu_sysfs_register(struct kobject *target, char *name);
+
 #endif	/* __MPU_H_ */

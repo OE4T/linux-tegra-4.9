@@ -712,6 +712,8 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	if (!g->power_on)
 		return 0;
 
+	g->power_on = false;
+
 	ret |= gk20a_channel_suspend(g);
 
 	ret |= gk20a_fifo_suspend(g);
@@ -725,8 +727,6 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	 * common clock framework
 	 */
 	ret |= gk20a_clk_disable_gpcpll(g);
-
-	g->power_on = false;
 
 	return ret;
 }
@@ -743,8 +743,6 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	/* FIXME: fix this correctly. this is enabling ARCH timer */
 	writel(0x1, IO_TO_VIRT(0x700f0000));
-
-	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_disabled_f());
@@ -785,6 +783,9 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 		nvhost_err(&dev->dev, "failed to init gk20a therm");
 
 	gk20a_channel_resume(g);
+
+	g->power_on = true;
+
 
 	return err;
 }

@@ -108,7 +108,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	*/
 	.class			= NV_GRAPHICS_GPU_CLASS_ID,
 	.clocks			= {{"PLLG_ref", UINT_MAX},
-				   {"pwr", 408000000},
+				   {"pwr", 204000000},
 				   {"emc", UINT_MAX},
 				   {} },
 	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },

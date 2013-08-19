@@ -170,6 +170,9 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 			*debug_app_uid = uid;
 			pr_info("debug_app_uid: %u\n", uid);
 		}
+		ctx.collect_kernel_ips = 0;
+	} else {
+		ctx.collect_kernel_ips = 1;
 	}
 
 	for (i = 0; i < param->nr_pids; i++)

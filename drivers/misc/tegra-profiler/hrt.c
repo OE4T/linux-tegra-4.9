@@ -240,6 +240,7 @@ static void read_source(struct quadd_event_source_interface *source,
 	unsigned int extra_length = 0, callchain_nr = 0;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_callchain *callchain_data = &cpu_ctx->callchain_data;
+	struct quadd_ctx *quadd_ctx = hrt.quadd_ctx;
 
 	if (!source)
 		return;
@@ -268,6 +269,11 @@ static void read_source(struct quadd_event_source_interface *source,
 		record_data.record_type = QUADD_RECORD_TYPE_SAMPLE;
 		record_data.cpu_mode = user_mode(regs) ?
 			QUADD_CPU_MODE_USER : QUADD_CPU_MODE_KERNEL;
+
+		/* For security reasons, hide IPs from the kernel space. */
+		if (record_data.cpu_mode == QUADD_CPU_MODE_KERNEL &&
+		    !quadd_ctx->collect_kernel_ips)
+			record_data.sample.ip = 0;
 
 		record_data.sample.callchain_nr = callchain_nr;
 

@@ -57,6 +57,8 @@ struct quadd_ctx {
 	struct quadd_mmap_ctx *mmap;
 
 	atomic_t started;
+
+	int collect_kernel_ips;
 };
 
 #endif	/* __QUADD_H */

@@ -149,8 +149,14 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 			goto out;
 		}
 
-		for (i = 0; i < op.count; i++)
-			refs[i] = unmarshal_user_handle(op.handles[i]);
+		for (i = 0; i < op.count; i++) {
+			u32 handle;
+			if (__get_user(handle, &op.handles[i])) {
+				err = -EFAULT;
+				goto out;
+			}
+			refs[i] = unmarshal_user_handle(handle);
+		}
 	} else {
 		refs = on_stack;
 		on_stack[0] = unmarshal_user_handle(

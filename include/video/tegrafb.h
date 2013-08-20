@@ -21,9 +21,16 @@
 #include <linux/fb.h>
 #include <linux/types.h>
 #include <linux/ioctl.h>
+#if defined(__KERNEL__)
+#include <linux/compat.h>
+#endif
 
 struct tegra_fb_modedb {
+#ifdef CONFIG_COMPAT
+	__u32 modedb;
+#else
 	struct fb_var_screeninfo *modedb;
+#endif
 	__u32 modedb_len;
 };
 

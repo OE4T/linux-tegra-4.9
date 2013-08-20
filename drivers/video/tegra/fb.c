@@ -46,6 +46,12 @@
 /* Pad pitch to 256-byte boundary. */
 #define TEGRA_LINEAR_PITCH_ALIGNMENT 256
 
+#ifdef CONFIG_COMPAT
+#define user_ptr(p) ((void __user *)(__u64)(p))
+#else
+#define user_ptr(p) (p)
+#endif
+
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
 	struct platform_device	*ndev;
@@ -397,6 +403,7 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	struct tegra_fb_modedb modedb;
 	struct fb_modelist *modelist;
 	struct fb_vblank vblank = {};
+	struct fb_var_screeninfo *modedb_ptr;
 	unsigned i;
 
 	switch (cmd) {
@@ -405,6 +412,7 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			return -EFAULT;
 
 		i = 0;
+		modedb_ptr = user_ptr(modedb.modedb);
 		list_for_each_entry(modelist, &info->modelist, list) {
 			struct fb_var_screeninfo var;
 
@@ -417,7 +425,7 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			var.height = tegra_dc_get_out_height(dc);
 
 			if (i < modedb.modedb_len) {
-				void __user *ptr = &modedb.modedb[i];
+				void __user *ptr = &modedb_ptr[i];
 				if (copy_to_user(ptr, &var, sizeof(var)))
 					return -EFAULT;
 			}
@@ -425,7 +433,7 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 
 			if (var.vmode & FB_VMODE_STEREO_MASK) {
 				if (i < modedb.modedb_len) {
-					void __user *ptr = &modedb.modedb[i];
+					void __user *ptr = &modedb_ptr[i];
 					var.vmode &= ~FB_VMODE_STEREO_MASK;
 					if (copy_to_user(ptr,
 						&var, sizeof(var)))
@@ -514,6 +522,9 @@ static struct fb_ops tegra_fb_ops = {
 	.fb_copyarea = tegra_fb_copyarea,
 	.fb_imageblit = tegra_fb_imageblit,
 	.fb_ioctl = tegra_fb_ioctl,
+#ifdef CONFIG_COMPAT
+	.fb_compat_ioctl = tegra_fb_ioctl,
+#endif
 };
 
 /* Enabling the pan_display by resetting the cache of offset */

@@ -365,4 +365,17 @@ static inline void inner_clean_cache_all(void)
 
 extern void __flush_dcache_page(struct address_space *, struct page *);
 
+/* Internal API to support dmabuf */
+struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
+				  struct nvmap_handle *h);
+void __nvmap_free_sg_table(struct nvmap_client *client,
+			   struct nvmap_handle *h, struct sg_table *sgt);
+int __nvmap_pin(struct nvmap_client *client, struct nvmap_handle *h,
+		phys_addr_t *phys);
+void __nvmap_unpin(struct nvmap_client *client, struct nvmap_handle *h);
+void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum);
+void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum, void *addr);
+void *__nvmap_mmap(struct nvmap_handle *h);
+void __nvmap_munmap(struct nvmap_handle *h, void *addr);
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

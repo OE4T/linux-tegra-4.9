@@ -90,8 +90,7 @@ void nvmap_mru_remove(struct nvmap_share *s, struct nvmap_handle *h)
  * and if that fails, iteratively evict handles from the MRU lists and free
  * their allocations, until the new allocation succeeds.
  */
-struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
-					    struct nvmap_handle *h)
+struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_handle *h)
 {
 	struct list_head *mru;
 	struct nvmap_handle *evict = NULL;
@@ -99,7 +98,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 	unsigned int i, idx;
 	pgprot_t prot;
 
-	BUG_ON(!h || !c);
+	BUG_ON(!h);
 
 	prot = nvmap_pgprot(h, pgprot_kernel);
 

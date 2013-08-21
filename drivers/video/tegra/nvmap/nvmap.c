@@ -74,7 +74,7 @@ static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
 	BUG_ON(!h->alloc);
 	if (atomic_inc_return(&h->pin) == 1) {
 		if (h->heap_pgalloc && !h->pgalloc.contig) {
-			area = nvmap_handle_iovmm_locked(client, h);
+			area = nvmap_handle_iovmm_locked(h);
 			if (!area) {
 				/* no race here, inside the pin mutex */
 				atomic_dec(&h->pin);
@@ -85,7 +85,8 @@ static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
 			h->pgalloc.area = area;
 		}
 	}
-	trace_handle_pin(client, client->name, h, atomic_read(&h->pin));
+	trace_handle_pin(client, client ? client->name : "kernel",
+			 h, atomic_read(&h->pin));
 	return 0;
 }
 
@@ -99,7 +100,9 @@ static int handle_unpin(struct nvmap_client *client,
 	nvmap_mru_lock(nvmap_share);
 
 	if (atomic_read(&h->pin) == 0) {
-		trace_handle_unpin_error(client, client->name, h, atomic_read(&h->pin));
+		trace_handle_unpin_error(client,
+			client ? client->name : "kernel",
+			h, atomic_read(&h->pin));
 		nvmap_err(client, "%s unpinning unpinned handle %p\n",
 			  current->group_leader->comm, h);
 		nvmap_mru_unlock(nvmap_share);
@@ -125,12 +128,12 @@ static int handle_unpin(struct nvmap_client *client,
 		}
 	}
 
-	trace_handle_unpin(client, client->name, h, atomic_read(&h->pin));
+	trace_handle_unpin(client, client ? client->name : "kernel",
+			   h, atomic_read(&h->pin));
 	nvmap_mru_unlock(nvmap_share);
 	nvmap_handle_put(h);
 	return ret;
 }
-
 
 static int pin_array_locked(struct nvmap_client *client,
 		struct nvmap_handle **h, int count)
@@ -164,7 +167,7 @@ static int pin_array_locked(struct nvmap_client *client,
 	}
 
 	if (err && tegra_iovmm_get_max_free(nvmap_share->iovmm) >=
-							client->iovm_limit) {
+		   nvmap_mru_vm_size(nvmap_share->iovmm)) {
 		/* First attempt to pin in empty iovmm
 		 * may still fail because of fragmentation caused by
 		 * placing handles in MRU areas. After such failure

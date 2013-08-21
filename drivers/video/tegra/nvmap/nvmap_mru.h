@@ -3,7 +3,7 @@
  *
  * IOVMM virtualization support for nvmap
  *
- * Copyright (c) 2009-2010, NVIDIA Corporation.
+ * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,8 +53,7 @@ void nvmap_mru_insert_locked(struct nvmap_share *share, struct nvmap_handle *h);
 
 void nvmap_mru_remove(struct nvmap_share *s, struct nvmap_handle *h);
 
-struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
-					    struct nvmap_handle *h);
+struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_handle *h);
 
 #else
 
@@ -72,8 +71,8 @@ static inline void nvmap_mru_remove(struct nvmap_share *s,
 				    struct nvmap_handle *h)
 { }
 
-static inline struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
-							  struct nvmap_handle *h)
+static inline struct tegra_iovmm_area *nvmap_handle_iovmm_locked(
+							struct nvmap_handle *h)
 {
 	BUG_ON(!h->pgalloc.area);
 	return h->pgalloc.area;

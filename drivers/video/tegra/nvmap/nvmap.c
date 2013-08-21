@@ -141,8 +141,8 @@ static int pin_array_locked(struct nvmap_client *client,
 
 	/* Flush deferred cache maintenance if needed */
 	for (pinned = 0; pinned < count; pinned++)
-		if (nvmap_find_cache_maint_op(client->dev, h[pinned]))
-			nvmap_cache_maint_ops_flush(client->dev, h[pinned]);
+		if (nvmap_find_cache_maint_op(nvmap_dev, h[pinned]))
+			nvmap_cache_maint_ops_flush(nvmap_dev, h[pinned]);
 
 	nvmap_mru_lock(nvmap_share);
 	for (pinned = 0; pinned < count; pinned++) {

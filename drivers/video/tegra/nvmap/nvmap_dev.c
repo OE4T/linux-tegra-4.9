@@ -141,9 +141,9 @@ struct device *nvmap_client_to_device(struct nvmap_client *client)
 	if (!client)
 		return 0;
 	if (client->super)
-		return client->dev->dev_super.this_device;
+		return nvmap_dev->dev_super.this_device;
 	else
-		return client->dev->dev_user.this_device;
+		return nvmap_dev->dev_user.this_device;
 }
 
 struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev)
@@ -285,8 +285,8 @@ unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 	struct nvmap_carveout_node *n;
 	int i;
 
-	for (i = 0; i < c->dev->nr_carveouts; i++) {
-		n = &c->dev->heaps[i];
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+		n = &nvmap_dev->heaps[i];
 		if (n->carveout == h)
 			return n->heap_bit;
 	}
@@ -336,7 +336,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	}
 #endif
 
-	pte = nvmap_alloc_pte((client ? client->dev : nvmap_dev), &addr);
+	pte = nvmap_alloc_pte(nvmap_dev, &addr);
 	if (IS_ERR(pte))
 		return PTR_ERR(pte);
 
@@ -357,7 +357,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 		outer_flush_range(block->base, block->base + len);
 
-	nvmap_free_pte((client ? client->dev : nvmap_dev), pte);
+	nvmap_free_pte(nvmap_dev, pte);
 out:
 	wmb();
 	return 0;
@@ -417,7 +417,7 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 					      unsigned long type)
 {
 	struct nvmap_carveout_node *co_heap;
-	struct nvmap_device *dev = client->dev;
+	struct nvmap_device *dev = nvmap_dev;
 	int i;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
@@ -494,9 +494,9 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 	struct nvmap_handle *h = NULL;
 	struct rb_node *n;
 
-	spin_lock(&client->dev->handle_lock);
+	spin_lock(&nvmap_dev->handle_lock);
 
-	n = client->dev->handles.rb_node;
+	n = nvmap_dev->handles.rb_node;
 
 	while (n) {
 		h = rb_entry(n, struct nvmap_handle, node);
@@ -506,7 +506,7 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 				h = nvmap_handle_get(h);
 			else
 				h = NULL;
-			spin_unlock(&client->dev->handle_lock);
+			spin_unlock(&nvmap_dev->handle_lock);
 			return h;
 		}
 		if (id > (unsigned long)h)
@@ -514,7 +514,7 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 		else
 			n = n->rb_left;
 	}
-	spin_unlock(&client->dev->handle_lock);
+	spin_unlock(&nvmap_dev->handle_lock);
 	return NULL;
 }
 
@@ -535,7 +535,7 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 
 	client->name = name;
 	client->super = true;
-	client->dev = dev;
+	nvmap_dev = dev;
 	client->handle_refs = RB_ROOT;
 
 	atomic_set(&client->iovm_commit, 0);
@@ -606,15 +606,15 @@ static void destroy_client(struct nvmap_client *client)
 		kfree(ref);
 	}
 
-	for (i = 0; i < client->dev->nr_carveouts; i++)
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++)
 		list_del(&client->carveout_commit[i].list);
 
 	if (client->task)
 		put_task_struct(client->task);
 
-	spin_lock(&client->dev->clients_lock);
+	spin_lock(&nvmap_dev->clients_lock);
 	list_del(&client->list);
-	spin_unlock(&client->dev->clients_lock);
+	spin_unlock(&nvmap_dev->clients_lock);
 	kfree(client);
 }
 

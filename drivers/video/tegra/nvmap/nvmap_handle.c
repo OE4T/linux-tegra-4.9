@@ -619,7 +619,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES) {
 		gfp |= __GFP_ZERO;
 		prot = nvmap_pgprot(h, pgprot_kernel);
-		pte = nvmap_alloc_pte(client->dev, (void **)&kaddr);
+		pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
 		if (IS_ERR(pte))
 			return -ENOMEM;
 	}
@@ -707,7 +707,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 skip_attr_change:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
-		nvmap_free_pte(client->dev, pte);
+		nvmap_free_pte(nvmap_dev, pte);
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
@@ -716,7 +716,7 @@ skip_attr_change:
 
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
-		nvmap_free_pte(client->dev, pte);
+		nvmap_free_pte(nvmap_dev, pte);
 	err = set_pages_array_wb(pages, i);
 	BUG_ON(err);
 	while (i--)
@@ -1018,13 +1018,13 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	atomic_set(&h->pin, 0);
 	h->owner = client;
 	h->owner_ref = ref;
-	h->dev = client->dev;
+	h->dev = nvmap_dev;
 	BUG_ON(!h->owner);
 	h->size = h->orig_size = size;
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;
 	mutex_init(&h->lock);
 
-	nvmap_handle_add(client->dev, h);
+	nvmap_handle_add(nvmap_dev, h);
 
 	atomic_set(&ref->dupes, 1);
 	ref->handle = h;
@@ -1040,7 +1040,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	struct nvmap_handle_ref *ref = NULL;
 	struct nvmap_handle *h = NULL;
 
-	BUG_ON(!client || client->dev != nvmap_dev);
+	BUG_ON(!client);
 	/* on success, the reference count for the handle should be
 	 * incremented, so the success paths will not call nvmap_handle_put */
 	h = nvmap_validate_get(client, id, skip_val);
@@ -1123,7 +1123,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	unsigned long id;
 	struct nvmap_handle_ref *ref;
 
-	BUG_ON(!client || client->dev != nvmap_dev);
+	BUG_ON(!client);
 
 	id = nvmap_get_id_from_dmabuf_fd(client, fd);
 	if (IS_ERR_VALUE(id))
@@ -1151,7 +1151,7 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 	struct nvmap_handle *h;
 
 	BUG_ON(!size || !flags || !nr_page || !contig);
-	BUG_ON(!client || client->dev != nvmap_dev);
+	BUG_ON(!client);
 
 	*size = 0;
 	*flags = 0;
@@ -1190,7 +1190,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 	int idx;
 	phys_addr_t dummy;
 
-	BUG_ON(!client || client->dev != nvmap_dev);
+	BUG_ON(!client);
 
 	h = nvmap_validate_get(client, id, 0);
 
@@ -1227,7 +1227,7 @@ int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h = NULL;
 
-	BUG_ON(!client || client->dev != nvmap_dev);
+	BUG_ON(!client);
 
 	nvmap_ref_lock(client);
 

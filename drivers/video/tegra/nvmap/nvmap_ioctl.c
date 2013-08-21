@@ -1060,7 +1060,7 @@ static int cache_maint(struct nvmap_client *client,
 {
 	int err = 0;
 	struct nvmap_deferred_ops *deferred_ops =
-		nvmap_get_deferred_ops_from_dev(client->dev);
+		nvmap_get_deferred_ops_from_dev(nvmap_dev);
 	bool inner_maint = false;
 	bool outer_maint = false;
 
@@ -1213,7 +1213,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		count = 1;
 	}
 
-	pte = nvmap_alloc_pte(client->dev, &addr);
+	pte = nvmap_alloc_pte(nvmap_dev, &addr);
 	if (IS_ERR(pte))
 		return PTR_ERR(pte);
 
@@ -1244,6 +1244,6 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		h_offs += h_stride;
 	}
 
-	nvmap_free_pte(client->dev, pte);
+	nvmap_free_pte(nvmap_dev, pte);
 	return ret ?: copied;
 }

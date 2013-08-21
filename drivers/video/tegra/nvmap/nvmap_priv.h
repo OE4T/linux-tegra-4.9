@@ -178,7 +178,6 @@ struct nvmap_carveout_commit {
 
 struct nvmap_client {
 	const char			*name;
-	struct nvmap_device		*dev;
 	struct rb_root			handle_refs;
 	atomic_t			iovm_commit;
 	size_t				iovm_limit;

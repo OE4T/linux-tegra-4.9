@@ -92,6 +92,8 @@ struct nvmap_device {
 
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
+struct nvmap_share *nvmap_share;
+EXPORT_SYMBOL(nvmap_share);
 
 static struct backing_dev_info nvmap_bdi = {
 	.ra_pages	= 0,
@@ -534,14 +536,12 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 	client->name = name;
 	client->super = true;
 	client->dev = dev;
-	/* TODO: allocate unique IOVMM client for each nvmap client */
-	client->share = &dev->iovmm_master;
 	client->handle_refs = RB_ROOT;
 
 	atomic_set(&client->iovm_commit, 0);
 
 #ifdef CONFIG_IOMMU_API
-	client->iovm_limit = nvmap_mru_vm_size(client->share->iovmm);
+	client->iovm_limit = nvmap_mru_vm_size(nvmap_share->iovmm);
 #endif
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
@@ -1395,6 +1395,7 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dev);
 	nvmap_dev = dev;
+	nvmap_share = &dev->iovmm_master;
 
 	return 0;
 fail_heaps:

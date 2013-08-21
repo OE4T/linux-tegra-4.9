@@ -3,7 +3,7 @@
  *
  * IOVMM virtualization support for nvmap
  *
- * Copyright (c) 2009-2011, NVIDIA Corporation.
+ * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 	unsigned int i, idx;
 	pgprot_t prot;
 
-	BUG_ON(!h || !c || !c->share);
+	BUG_ON(!h || !c);
 
 	prot = nvmap_pgprot(h, pgprot_kernel);
 
@@ -110,7 +110,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 		return h->pgalloc.area;
 	}
 
-	vm = tegra_iovmm_create_vm(c->share->iovmm, NULL,
+	vm = tegra_iovmm_create_vm(nvmap_share->iovmm, NULL,
 			h->size, h->align, prot,
 			h->pgalloc.iovm_addr);
 
@@ -125,7 +125,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 	 * same size bin as the current handle. If that fails, iteratively
 	 * evict handles (starting from the current bin) until an allocation
 	 * succeeds or no more areas can be evicted */
-	mru = mru_list(c->share, h->size);
+	mru = mru_list(nvmap_share, h->size);
 	if (!list_empty(mru))
 		evict = list_first_entry(mru, struct nvmap_handle,
 					 pgalloc.mru_list);
@@ -138,12 +138,12 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 		return vm;
 	}
 
-	idx = mru - c->share->mru_lists;
+	idx = mru - nvmap_share->mru_lists;
 
-	for (i = 0; i < c->share->nr_mru && !vm; i++, idx++) {
-		if (idx >= c->share->nr_mru)
+	for (i = 0; i < nvmap_share->nr_mru && !vm; i++, idx++) {
+		if (idx >= nvmap_share->nr_mru)
 			idx = 0;
-		mru = &c->share->mru_lists[idx];
+		mru = &nvmap_share->mru_lists[idx];
 		while (!list_empty(mru) && !vm) {
 			evict = list_first_entry(mru, struct nvmap_handle,
 						 pgalloc.mru_list);
@@ -154,7 +154,7 @@ struct tegra_iovmm_area *nvmap_handle_iovmm_locked(struct nvmap_client *c,
 			INIT_LIST_HEAD(&evict->pgalloc.mru_list);
 			tegra_iovmm_free_vm(evict->pgalloc.area);
 			evict->pgalloc.area = NULL;
-			vm = tegra_iovmm_create_vm(c->share->iovmm,
+			vm = tegra_iovmm_create_vm(nvmap_share->iovmm,
 					NULL, h->size, h->align,
 					prot, h->pgalloc.iovm_addr);
 		}

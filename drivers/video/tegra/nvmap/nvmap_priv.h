@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,11 +39,13 @@
 #include <asm/cacheflush.h>
 
 struct nvmap_device;
+struct nvmap_share;
 struct page;
 struct tegra_iovmm_area;
 
 extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
+extern struct nvmap_share *nvmap_share;
 
 #if defined(CONFIG_TEGRA_NVMAP)
 #define nvmap_err(_client, _fmt, ...)				\
@@ -177,7 +179,6 @@ struct nvmap_carveout_commit {
 struct nvmap_client {
 	const char			*name;
 	struct nvmap_device		*dev;
-	struct nvmap_share		*share;
 	struct rb_root			handle_refs;
 	atomic_t			iovm_commit;
 	size_t				iovm_limit;

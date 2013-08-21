@@ -96,13 +96,13 @@ static int handle_unpin(struct nvmap_client *client,
 {
 	int ret = 0;
 
-	nvmap_mru_lock(client->share);
+	nvmap_mru_lock(nvmap_share);
 
 	if (atomic_read(&h->pin) == 0) {
 		trace_handle_unpin_error(client, client->name, h, atomic_read(&h->pin));
 		nvmap_err(client, "%s unpinning unpinned handle %p\n",
 			  current->group_leader->comm, h);
-		nvmap_mru_unlock(client->share);
+		nvmap_mru_unlock(nvmap_share);
 		return 0;
 	}
 
@@ -120,13 +120,13 @@ static int handle_unpin(struct nvmap_client *client,
 				tegra_iovmm_free_vm(h->pgalloc.area);
 				h->pgalloc.area = NULL;
 			} else
-				nvmap_mru_insert_locked(client->share, h);
+				nvmap_mru_insert_locked(nvmap_share, h);
 			ret = 1;
 		}
 	}
 
 	trace_handle_unpin(client, client->name, h, atomic_read(&h->pin));
-	nvmap_mru_unlock(client->share);
+	nvmap_mru_unlock(nvmap_share);
 	nvmap_handle_put(h);
 	return ret;
 }
@@ -144,13 +144,13 @@ static int pin_array_locked(struct nvmap_client *client,
 		if (nvmap_find_cache_maint_op(client->dev, h[pinned]))
 			nvmap_cache_maint_ops_flush(client->dev, h[pinned]);
 
-	nvmap_mru_lock(client->share);
+	nvmap_mru_lock(nvmap_share);
 	for (pinned = 0; pinned < count; pinned++) {
 		err = pin_locked(client, h[pinned]);
 		if (err)
 			break;
 	}
-	nvmap_mru_unlock(client->share);
+	nvmap_mru_unlock(nvmap_share);
 
 	if (err) {
 		/* unpin pinned handles */
@@ -163,7 +163,7 @@ static int pin_array_locked(struct nvmap_client *client,
 		}
 	}
 
-	if (err && tegra_iovmm_get_max_free(client->share->iovmm) >=
+	if (err && tegra_iovmm_get_max_free(nvmap_share->iovmm) >=
 							client->iovm_limit) {
 		/* First attempt to pin in empty iovmm
 		 * may still fail because of fragmentation caused by
@@ -173,13 +173,13 @@ static int pin_array_locked(struct nvmap_client *client,
 		 * We have to do pinning again here since there might be is
 		 * no more incoming pin_wait wakeup calls from unpin
 		 * operations */
-		nvmap_mru_lock(client->share);
+		nvmap_mru_lock(nvmap_share);
 		for (pinned = 0; pinned < count; pinned++) {
 			err = pin_locked(client, h[pinned]);
 			if (err)
 				break;
 		}
-		nvmap_mru_unlock(client->share);
+		nvmap_mru_unlock(nvmap_share);
 
 		if (err) {
 			pr_err("Pinning in empty iovmm failed!!!\n");
@@ -197,7 +197,7 @@ static int wait_pin_array_locked(struct nvmap_client *client,
 	ret = pin_array_locked(client, h, count);
 
 	if (ret) {
-		ret = wait_event_interruptible(client->share->pin_wait,
+		ret = wait_event_interruptible(nvmap_share->pin_wait,
 				!pin_array_locked(client, h, count));
 	}
 	return ret ? -EINTR : 0;
@@ -263,7 +263,7 @@ void nvmap_unpin_ids(struct nvmap_client *client,
 	}
 
 	if (do_wake)
-		wake_up(&client->share->pin_wait);
+		wake_up(&nvmap_share->pin_wait);
 }
 
 /* pins a list of handle_ref objects; same conditions apply as to
@@ -317,13 +317,13 @@ int nvmap_pin_ids(struct nvmap_client *client,
 	if (ret)
 		goto out;
 
-	ret = mutex_lock_interruptible(&client->share->pin_lock);
+	ret = mutex_lock_interruptible(&nvmap_share->pin_lock);
 	if (WARN_ON(ret))
 		goto out;
 
 	ret = wait_pin_array_locked(client, h, nr);
 
-	mutex_unlock(&client->share->pin_lock);
+	mutex_unlock(&nvmap_share->pin_lock);
 
 	if (ret) {
 		ret = -EINTR;
@@ -482,7 +482,7 @@ int nvmap_pin_array(struct nvmap_client *client,
 		goto exit;
 	}
 
-	if (mutex_lock_interruptible(&client->share->pin_lock)) {
+	if (mutex_lock_interruptible(&nvmap_share->pin_lock)) {
 		nvmap_err(client, "%s interrupted when acquiring pin lock\n",
 			   current->group_leader->comm);
 		ret = -EINTR;
@@ -497,7 +497,7 @@ int nvmap_pin_array(struct nvmap_client *client,
 			unique_arr, unique_arr_refs);
 
 	if (count < 0) {
-		mutex_unlock(&client->share->pin_lock);
+		mutex_unlock(&nvmap_share->pin_lock);
 		kfree(ids);
 		nvmap_warn(client, "failed to validate pin array\n");
 		return count;
@@ -508,7 +508,7 @@ int nvmap_pin_array(struct nvmap_client *client,
 
 	ret = wait_pin_array_locked(client, unique_arr, count);
 
-	mutex_unlock(&client->share->pin_lock);
+	mutex_unlock(&nvmap_share->pin_lock);
 
 	if (WARN_ON(ret)) {
 		goto err_out;
@@ -601,11 +601,11 @@ int _nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
 
 	atomic_inc(&ref->pin);
 
-	if (WARN_ON(mutex_lock_interruptible(&client->share->pin_lock))) {
+	if (WARN_ON(mutex_lock_interruptible(&nvmap_share->pin_lock))) {
 		ret = -EINTR;
 	} else {
 		ret = wait_pin_array_locked(client, &h, 1);
-		mutex_unlock(&client->share->pin_lock);
+		mutex_unlock(&nvmap_share->pin_lock);
 	}
 
 	if (ret) {
@@ -684,7 +684,7 @@ void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 
 	atomic_dec(&ref->pin);
 	if (handle_unpin(client, ref->handle, false))
-		wake_up(&client->share->pin_wait);
+		wake_up(&nvmap_share->pin_wait);
 }
 EXPORT_SYMBOL(nvmap_unpin);
 
@@ -704,7 +704,7 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 	}
 
 	if (do_wake)
-		wake_up(&client->share->pin_wait);
+		wake_up(&nvmap_share->pin_wait);
 }
 
 void *nvmap_kmap(struct nvmap_handle_ref *ref, unsigned int pagenum)

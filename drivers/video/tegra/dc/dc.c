@@ -478,13 +478,13 @@ void tegra_dc_put(struct tegra_dc *dc)
 void tegra_dc_hold_dc_out(struct tegra_dc *dc)
 {
 	tegra_dc_get(dc);
-	if (dc->out_ops->hold)
+	if (dc->out_ops && dc->out_ops->hold)
 		dc->out_ops->hold(dc);
 }
 
 void tegra_dc_release_dc_out(struct tegra_dc *dc)
 {
-	if (dc->out_ops->release)
+	if (dc->out_ops && dc->out_ops->release)
 		dc->out_ops->release(dc);
 	tegra_dc_put(dc);
 }
@@ -1369,9 +1369,10 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		return NULL;
 }
 
-static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
+static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 {
 	struct tegra_dc_mode *mode;
+	int err = 0;
 
 	dc->out = out;
 	mode = tegra_dc_get_override_mode(dc);
@@ -1410,8 +1411,15 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 	}
 
-	if (dc->out_ops && dc->out_ops->init)
-		dc->out_ops->init(dc);
+	if (dc->out_ops && dc->out_ops->init) {
+		err = dc->out_ops->init(dc);
+		if (err < 0) {
+			dc->out = dc->out_ops = NULL;
+			return err;
+		}
+	}
+
+	return err;
 }
 
 /* returns on error: -EINVAL
@@ -1631,7 +1639,7 @@ static void tegra_dc_one_shot_worker(struct work_struct *work)
 	/* memory client has gone idle */
 	tegra_dc_clear_bandwidth(dc);
 
-	if (dc->out_ops->idle) {
+	if (dc->out_ops && dc->out_ops->idle) {
 		tegra_dc_io_start(dc);
 		dc->out_ops->idle(dc);
 		tegra_dc_io_end(dc);
@@ -2143,6 +2151,9 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	int failed_init = 0;
 	int i;
 
+	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
+		return false;
+
 	tegra_dc_unpowergate_locked(dc);
 
 	if (dc->out->enable)
@@ -2206,6 +2217,9 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 {
 	bool ret = true;
+
+	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
+		return false;
 
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
@@ -2321,6 +2335,9 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 
 void tegra_dc_enable(struct tegra_dc *dc)
 {
+	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
+		return;
+
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled)
@@ -2448,6 +2465,9 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 void tegra_dc_disable(struct tegra_dc *dc)
 {
+	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
+		return;
+
 	tegra_dc_ext_disable(dc->ext);
 
 	/* it's important that new underflow work isn't scheduled before the
@@ -2741,10 +2761,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	tegra_dc_feature_register(dc);
 
-	if (dc->pdata->default_out)
-		tegra_dc_set_out(dc, dc->pdata->default_out);
-	else
-		dev_err(&ndev->dev, "No default output specified.  Leaving output disabled.\n");
+	if (dc->pdata->default_out) {
+		ret = tegra_dc_set_out(dc, dc->pdata->default_out);
+		if (ret < 0) {
+			dev_err(&dc->ndev->dev, "failed to initialize DC out ops\n");
+			goto err_put_clk;
+		}
+	} else {
+		dev_err(&ndev->dev,
+			"No default output specified.  Leaving output disabled.\n");
+	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
 
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -3007,7 +3033,10 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 
-	if (!dc || !dc->enabled)
+	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
+		return;
+
+	if (!dc->enabled)
 		return;
 
 	/* Hack: no windows blanking for simulation to save shutdown time */

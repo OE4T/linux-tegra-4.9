@@ -4244,6 +4244,7 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	u32 val;
 
 	mutex_lock(&dsi->lock);
+	tegra_dc_io_start(dc);
 
 	if (dsi->out_ops && dsi->out_ops->destroy)
 		dsi->out_ops->destroy(dsi);
@@ -4274,6 +4275,7 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	for (i = 0; i < dsi->max_instances; i++)
 		clk_put(dsi->dsi_clk[i]);
 
+	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
 	mutex_destroy(&dsi->lock);
 	kfree(dsi);
@@ -4755,6 +4757,7 @@ err_mipi:
 	regulator_put(dsi->avdd_dsi_csi);
 err_reg:
 	_tegra_dc_dsi_destroy(dc);
+	tegra_dc_set_outdata(dc, NULL);
 err:
 	return err;
 }

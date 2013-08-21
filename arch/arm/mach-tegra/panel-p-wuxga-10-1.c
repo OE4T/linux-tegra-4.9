@@ -155,6 +155,14 @@ static int dalmore_dsi_regulator_get(struct device *dev)
 		goto fail;
 	}
 
+	dvdd_lcd_1v8 = regulator_get(dev, "dvdd_lcd");
+	if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
+		pr_err("dvdd_lcd_1v8 regulator get failed\n");
+		err = PTR_ERR(dvdd_lcd_1v8);
+		dvdd_lcd_1v8 = NULL;
+		goto fail;
+	}
+
 	vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
 	if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
 		pr_err("vdd_lcd_bl regulator get failed\n");

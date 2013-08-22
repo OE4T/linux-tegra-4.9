@@ -25,7 +25,7 @@
 
 #ifdef __KERNEL__
 
-#include <linux/sync.h>
+#include "../../../staging/android/sync.h"
 
 struct nvhost_syncpt;
 struct nvhost_ctrl_sync_fence_info;

@@ -196,7 +196,7 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id)
 	int fd;
 	struct dma_buf *dmabuf;
 
-	dmabuf = __nvmap_get_dmabuf(client, id);
+	dmabuf = __nvmap_dmabuf_export(client, id);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
 	fd = dma_buf_fd(dmabuf, O_CLOEXEC);
@@ -209,8 +209,8 @@ err_out:
 	return fd;
 }
 
-struct dma_buf *__nvmap_get_dmabuf(struct nvmap_client *client,
-				   unsigned long id)
+struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
+				 unsigned long id)
 {
 	struct nvmap_handle *handle;
 	struct dma_buf *buf;
@@ -238,18 +238,18 @@ struct dma_buf *__nvmap_get_dmabuf(struct nvmap_client *client,
  * Increments ref count on the dma_buf. You are reponsbile for calling
  * dma_buf_put() on the returned dma_buf object.
  */
-struct dma_buf *nvmap_get_dmabuf(struct nvmap_client *client,
+struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client,
 				 unsigned long user_id)
 {
-	return __nvmap_get_dmabuf(client, unmarshal_user_id(user_id));
+	return __nvmap_dmabuf_export(client, unmarshal_user_id(user_id));
 }
 
 /*
- * Similar to nvmap_get_dmabuf() only use a ref to get the buf instead of a
+ * Similar to nvmap_dmabuf_export() only use a ref to get the buf instead of a
  * user_id. You must dma_buf_put() the dma_buf object when you are done with
  * it.
  */
-struct dma_buf *nvmap_get_dmabuf_from_ref(struct nvmap_handle_ref *ref)
+struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
 		return ERR_PTR(-EINVAL);

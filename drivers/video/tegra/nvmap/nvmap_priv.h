@@ -372,7 +372,7 @@ static inline void inner_clean_cache_all(void)
 extern void __flush_dcache_page(struct address_space *, struct page *);
 
 /* Internal API to support dmabuf */
-struct dma_buf *__nvmap_get_dmabuf(struct nvmap_client *client,
+struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 				 unsigned long id);
 struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
 				    struct nvmap_handle *handle);

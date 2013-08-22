@@ -1012,16 +1012,14 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist;
 	u32 runlist_id;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies
+		+ usecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 elpg_off = 0;
 
 	nvhost_dbg_fn("%d", hw_chid);
-
-	if (!tegra_platform_is_silicon())
-		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	runlist_id = f->engine_info[engine_id].runlist_id;
 	runlist = &f->runlist_info[runlist_id];
@@ -1039,22 +1037,23 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 		fifo_preempt_type_channel_f());
 
 	/* wait for preempt */
+	ret = -EBUSY;
 	do {
 		if (!(gk20a_readl(g, fifo_preempt_r()) &
-			fifo_preempt_pending_true_f()))
-			break;
-
-		if (--timeout == 0) {
-			nvhost_err(dev_from_gk20a(g),
-				    "preempt channel %d timeout\n",
-				    hw_chid);
-			ret = -EBUSY;
+			fifo_preempt_pending_true_f())) {
+			ret = 0;
 			break;
 		}
-		udelay(delay);
-		timeout -= min_t(u32, delay, timeout);
+
+		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (timeout);
+	} while (time_before(jiffies, end_jiffies) |
+			!tegra_platform_is_silicon());
+
+	if (ret)
+		nvhost_err(dev_from_gk20a(g),
+			    "preempt channel %d timeout\n",
+			    hw_chid);
 
 	/* re-enable elpg or release pmu mutex */
 	if (elpg_off)

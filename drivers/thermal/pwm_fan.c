@@ -535,7 +535,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	mutex_init(&fan_data->fan_state_lock);
 
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
-				WQ_HIGHPRI | WQ_UNBOUND | WQ_RESCUER, 1);
+				WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!fan_data->workqueue)
 		return -ENOMEM;
 

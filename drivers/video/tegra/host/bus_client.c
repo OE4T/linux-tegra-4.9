@@ -510,6 +510,9 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 	u32 size;
 	int ret = 0;
 
+	if (!ctx->hwctx || ctx->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	size = args->num_entries * sizeof(struct nvhost_gpfifo);
 
 	gpfifo = kzalloc(size, GFP_KERNEL);

@@ -387,5 +387,6 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum);
 void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum, void *addr);
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
+int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

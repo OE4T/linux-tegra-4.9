@@ -123,8 +123,9 @@ static void *nvmap_dmabuf_kmap_atomic(struct dma_buf *dmabuf,
 
 static int nvmap_dmabuf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
-	WARN(1, "%s() not implemented yet\n", __func__);
-	return -1;
+	struct nvmap_handle_info *info = dmabuf->priv;
+
+	return __nvmap_map(info->handle, vma);
 }
 
 static void *nvmap_dmabuf_vmap(struct dma_buf *dmabuf)

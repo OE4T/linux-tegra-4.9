@@ -690,6 +690,32 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
+{
+	struct nvmap_vma_priv *priv;
+
+	/* after NVMAP_IOC_MMAP, the handle that is mapped by this VMA
+	 * will be stored in vm_private_data and faulted in. until the
+	 * ioctl is made, the VMA is mapped no-access */
+	vma->vm_private_data = NULL;
+
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->offs = 0;
+	priv->handle = h;
+	atomic_set(&priv->count, 1);
+
+	vma->vm_flags |= (VM_SHARED | VM_IO | VM_DONTEXPAND |
+			  VM_MIXEDMAP | VM_DONTDUMP);
+	vma->vm_ops = &nvmap_vma_ops;
+	vma->vm_private_data = priv;
+	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
+
+	return 0;
+}
+
 static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv;

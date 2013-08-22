@@ -446,7 +446,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	pool_size[flags] = pool->max_pages;
 	pr_info("nvmap %s page pool size=%d pages\n",
 		s_memtype_str[flags], pool->max_pages);
-	pool->page_array = vzalloc(sizeof(void *) * pool->max_pages);
+	pool->page_array = vzalloc(sizeof(struct page *) * pool->max_pages);
 	pool->shrink_array = vzalloc(sizeof(struct page *) * pool->max_pages);
 	if (!pool->page_array || !pool->shrink_array)
 		goto fail;
@@ -479,8 +479,10 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		s_memtype_str[flags], highmem_pages, pool->max_pages,
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
-	err = (*s_cpa[flags])(pool->page_array, pool->npages);
-	BUG_ON(err);
+	if (pool->npages) {
+		err = (*s_cpa[flags])(pool->page_array, pool->npages);
+		BUG_ON(err);
+	}
 	nvmap_page_pool_unlock(pool);
 #endif
 	return 0;
@@ -645,6 +647,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 		if (h->flags < NVMAP_NUM_POOLS)
 			pool = &share->pools[h->flags];
+		else
+			BUG();
 
 		for (i = 0; i < nr_page; i++) {
 			/* Get pages from pool, if available. */
@@ -718,8 +722,10 @@ skip_attr_change:
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(nvmap_dev, pte);
-	err = set_pages_array_wb(pages, i);
-	BUG_ON(err);
+	if (i) {
+		err = set_pages_array_wb(pages, i);
+		BUG_ON(err);
+	}
 	while (i--)
 		__free_page(pages[i]);
 	altfree(pages, nr_page * sizeof(*pages));
@@ -1275,7 +1281,14 @@ int nvmap_get_handle_param(struct nvmap_client *client,
 			   struct nvmap_handle_ref *ref, u32 param, u64 *result)
 {
 	int err = 0;
-	struct nvmap_handle *h = nvmap_handle_get(ref->handle);
+	struct nvmap_handle *h;
+
+	if (WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!result))
+		return -EINVAL;
+
+	h = nvmap_handle_get(ref->handle);
 
 	switch (param) {
 	case NVMAP_HANDLE_PARAM_SIZE:

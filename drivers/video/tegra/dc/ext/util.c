@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/util.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -20,54 +20,53 @@
 #include <linux/types.h>
 
 #include <mach/dc.h>
+#include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 
 #include "tegra_dc_ext_priv.h"
 
 int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
-			    struct nvmap_handle_ref **handle,
+			    struct tegra_dc_dmabuf **dc_buf,
 			    dma_addr_t *phys_addr)
 {
 	struct tegra_dc_ext *ext = user->ext;
-	struct nvmap_handle_ref *win_dup;
-	ulong win_handle_id;
-	int err;
+	struct tegra_dc_dmabuf *dc_dmabuf;
 
-	if (!id) {
-		*handle = NULL;
-		*phys_addr = -1;
-
+	*dc_buf = NULL;
+	*phys_addr = -1;
+	if (!id)
 		return 0;
-	}
+
+	dc_dmabuf = kzalloc(sizeof(*dc_dmabuf), GFP_KERNEL);
+	if (!dc_dmabuf)
+		return -ENOMEM;
 
 	/*
 	 * Take a reference to the buffer using the user's nvmap context, to
 	 * make sure they have permissions to access it.
 	 */
-	win_handle_id = nvmap_get_handle_user_id(user->nvmap, id);
-	if (!win_handle_id)
-		return -EACCES;
+	dc_dmabuf->buf = nvmap_dmabuf_export(user->nvmap, id);
+	if (IS_ERR_OR_NULL(dc_dmabuf->buf))
+		goto buf_fail;
 
-	/*
-	 * Duplicate the buffer's handle into the dc_ext driver's nvmap
-	 * context, to ensure that the handle won't be freed as long as it is
-	 * in use by display.
-	 */
-	win_dup = nvmap_duplicate_handle_user_id(ext->nvmap, id);
+	dc_dmabuf->attach = dma_buf_attach(dc_dmabuf->buf, ext->dev);
+	if (IS_ERR_OR_NULL(dc_dmabuf->attach))
+		goto attach_fail;
 
-	/* Release the reference we took in the user's context above */
-	nvmap_put_handle_user_id(win_handle_id);
+	dc_dmabuf->sgt = dma_buf_map_attachment(dc_dmabuf->attach,
+						DMA_TO_DEVICE);
+	if (IS_ERR_OR_NULL(dc_dmabuf->sgt))
+		goto sgt_fail;
 
-	if (IS_ERR(win_dup))
-		return PTR_ERR(win_dup);
-
-	err = nvmap_pin(ext->nvmap, win_dup, phys_addr);
-	if (err) {
-		nvmap_free(ext->nvmap, win_dup);
-		return err;
-	}
-
-	*handle = win_dup;
+	*phys_addr = sg_dma_address(dc_dmabuf->sgt->sgl);
+	*dc_buf = dc_dmabuf;
 
 	return 0;
+sgt_fail:
+	dma_buf_detach(dc_dmabuf->buf, dc_dmabuf->attach);
+attach_fail:
+	dma_buf_put(dc_dmabuf->buf);
+buf_fail:
+	kfree(dc_dmabuf);
+	return -ENOMEM;
 }

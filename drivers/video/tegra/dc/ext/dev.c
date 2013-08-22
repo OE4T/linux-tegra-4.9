@@ -45,7 +45,7 @@ static int head_count;
 
 struct tegra_dc_ext_flip_win {
 	struct tegra_dc_ext_flip_windowattr	attr;
-	struct nvmap_handle_ref			*handle[TEGRA_DC_NUM_PLANES];
+	struct tegra_dc_dmabuf			*handle[TEGRA_DC_NUM_PLANES];
 	dma_addr_t				phys_addr;
 	dma_addr_t				phys_addr_u;
 	dma_addr_t				phys_addr_v;
@@ -396,9 +396,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	int win_num = data->act_window_num;
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc_win *wins[DC_N_WINDOWS];
-	struct nvmap_handle_ref *unpin_handles[DC_N_WINDOWS *
+	struct tegra_dc_dmabuf *unpin_handles[DC_N_WINDOWS *
 					       TEGRA_DC_NUM_PLANES];
-	struct nvmap_handle_ref *old_handle;
+	struct tegra_dc_dmabuf *old_handle;
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
 
@@ -500,8 +500,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	/* unpin and deref previous front buffers */
 	for (i = 0; i < nr_unpin; i++) {
-		nvmap_unpin(ext->nvmap, unpin_handles[i]);
-		nvmap_free(ext->nvmap, unpin_handles[i]);
+		dma_buf_unmap_attachment(unpin_handles[i]->attach,
+			unpin_handles[i]->sgt, DMA_TO_DEVICE);
+		dma_buf_put(unpin_handles[i]->buf);
+		kfree(unpin_handles[i]);
 	}
 
 	kfree(data);
@@ -741,8 +743,10 @@ fail_pin:
 			if (!data->win[i].handle[j])
 				continue;
 
-			nvmap_unpin(ext->nvmap, data->win[i].handle[j]);
-			nvmap_free(ext->nvmap, data->win[i].handle[j]);
+			dma_buf_unmap_attachment(data->win[i].handle[j]->attach,
+				data->win[i].handle[j]->sgt, DMA_TO_DEVICE);
+			dma_buf_put(data->win[i].handle[j]->buf);
+			kfree(data->win[i].handle[j]);
 		}
 	}
 	kfree(data);

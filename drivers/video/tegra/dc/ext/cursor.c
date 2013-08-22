@@ -215,7 +215,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc *dc = ext->dc;
-	struct nvmap_handle_ref *handle, *old_handle;
+	struct tegra_dc_dmabuf *handle, *old_handle;
 	dma_addr_t phys_addr;
 	u32 size;
 	int ret;
@@ -277,8 +277,10 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	mutex_unlock(&ext->cursor.lock);
 
 	if (old_handle) {
-		nvmap_unpin(ext->nvmap, old_handle);
-		nvmap_free(ext->nvmap, old_handle);
+		dma_buf_unmap_attachment(old_handle->attach,
+			old_handle->sgt, DMA_TO_DEVICE);
+		dma_buf_put(old_handle->buf);
+		kfree(old_handle);
 	}
 
 	return 0;
@@ -435,7 +437,7 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	struct tegra_dc *dc = ext->dc;
 	u32 size;
 	int ret;
-	struct nvmap_handle_ref *handle, *old_handle;
+	struct tegra_dc_dmabuf *handle, *old_handle;
 	dma_addr_t phys_addr;
 	bool enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 	int need_general_update = 0;
@@ -493,8 +495,10 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	mutex_unlock(&ext->cursor.lock);
 
 	if (old_handle) {
-		nvmap_unpin(ext->nvmap, old_handle);
-		nvmap_free(ext->nvmap, old_handle);
+		dma_buf_unmap_attachment(old_handle->attach,
+			old_handle->sgt, DMA_TO_DEVICE);
+		dma_buf_put(old_handle->buf);
+		kfree(old_handle);
 	}
 	return 0;
 

@@ -36,6 +36,12 @@ struct tegra_dc_ext_user {
 	struct nvmap_client	*nvmap;
 };
 
+struct tegra_dc_dmabuf {
+	struct dma_buf *buf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+};
+
 enum {
 	TEGRA_DC_Y,
 	TEGRA_DC_U,
@@ -53,7 +59,7 @@ struct tegra_dc_ext_win {
 	struct mutex		lock;
 
 	/* Current nvmap handle (if any) for Y, U, V planes */
-	struct nvmap_handle_ref	*cur_handle[TEGRA_DC_NUM_PLANES];
+	struct tegra_dc_dmabuf	*cur_handle[TEGRA_DC_NUM_PLANES];
 
 	struct workqueue_struct	*flip_wq;
 
@@ -76,7 +82,7 @@ struct tegra_dc_ext {
 
 	struct {
 		struct tegra_dc_ext_user	*user;
-		struct nvmap_handle_ref		*cur_handle;
+		struct tegra_dc_dmabuf		*cur_handle;
 		struct mutex			lock;
 	} cursor;
 
@@ -129,7 +135,7 @@ extern int tegra_dc_ext_devno;
 extern struct class *tegra_dc_ext_class;
 
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
-				   struct nvmap_handle_ref **handle,
+				   struct tegra_dc_dmabuf **handle,
 				   dma_addr_t *phys_addr);
 
 extern int tegra_dc_ext_get_cursor(struct tegra_dc_ext_user *user);

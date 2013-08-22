@@ -82,6 +82,7 @@ struct channel_gk20a {
 	bool bound;
 	bool first_init;
 	bool vpr;
+	pid_t pid;
 
 	struct mem_mgr *memmgr;
 	struct nvhost_channel *ch;

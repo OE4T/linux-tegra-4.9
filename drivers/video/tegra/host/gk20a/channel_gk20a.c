@@ -554,6 +554,7 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 		return 0;
 	}
 	channel_gk20a_bind(ch_gk20a);
+	ch_gk20a->pid = current->pid;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */

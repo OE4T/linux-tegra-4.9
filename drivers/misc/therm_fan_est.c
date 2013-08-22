@@ -360,7 +360,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 
 	est->workqueue = alloc_workqueue(dev_name(&pdev->dev),
-				    WQ_HIGHPRI | WQ_UNBOUND | WQ_RESCUER, 1);
+				    WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!est->workqueue)
 		return -ENOMEM;
 

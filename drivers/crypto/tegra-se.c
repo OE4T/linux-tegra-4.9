@@ -190,7 +190,7 @@ static DEFINE_SPINLOCK(rsa_key_slot_lock);
 #define RSA_MIN_SIZE	64
 #define RSA_MAX_SIZE	256
 #define RNG_RESEED_INTERVAL	0x00773594
-#define TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT	4
+#define TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT	2
 
 static DEFINE_SPINLOCK(key_slot_lock);
 static DEFINE_MUTEX(se_hw_lock);
@@ -3078,7 +3078,7 @@ static int tegra_se_lp_keytable_context_save(struct tegra_se_dev *se_dev)
 static int tegra_se_lp_rsakeytable_context_save(struct tegra_se_dev *se_dev)
 {
 	struct tegra_se_ll *dst_ll;
-	int ret = 0, i, j;
+	int ret = 0, index, word_quad, k, slot;
 	u32 val = 0;
 
 	/* take access to the hw */
@@ -3091,20 +3091,37 @@ static int tegra_se_lp_rsakeytable_context_save(struct tegra_se_dev *se_dev)
 		(se_dev->ctx_save_buf_adr + SE_CONTEXT_SAVE_RSA_KEYS_OFFSET);
 	dst_ll->data_len = TEGRA_SE_KEY_128_SIZE;
 
-	for (i = 0; i < TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT; i++) {
-		for (j = 0; j < 16; j++) {
-			val = SE_CONTEXT_SAVE_SRC(RSA_KEYTABLE) |
-				SE_CONTEXT_SAVE_RSA_KEY_INDEX(i) |
-				SE_CONTEXT_RSA_WORD_QUAD(j);
-			se_writel(se_dev,
-				val, SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
-			ret = tegra_se_start_operation(se_dev,
-				TEGRA_SE_KEY_128_SIZE, true);
-			if (ret) {
-				dev_err(se_dev->dev, "tegra_se_lp_rsakeytable_context_save error\n");
-				break;
+	for (slot = 0; slot < TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT; slot++) {
+		/* First the modulus and then the exponent must be
+		 * encrypted and saved. This is repeated for SLOT 0
+		 * and SLOT 1. Hence the order:
+		 * SLOT 0 modulus : RSA_KEY_INDEX : 1
+		 * SLOT 0 exponent : RSA_KEY_INDEX : 0
+		 * SLOT 1 modulus : RSA_KEY_INDEX : 3
+		 * SLOT 1 exponent : RSA_KEY_INDEX : 2
+		 */
+		if (slot == 0)
+			index = 1;
+		else
+			index = 3;
+
+		/* loop for modulus and exponent */
+		for (k = 0; k < 2; k++, index--) {
+			for (word_quad = 0; word_quad < 16; word_quad++) {
+				val = SE_CONTEXT_SAVE_SRC(RSA_KEYTABLE) |
+					SE_CONTEXT_SAVE_RSA_KEY_INDEX(index) |
+					SE_CONTEXT_RSA_WORD_QUAD(word_quad);
+				se_writel(se_dev,
+					val, SE_CONTEXT_SAVE_CONFIG_REG_OFFSET);
+				ret = tegra_se_start_operation(se_dev,
+					TEGRA_SE_KEY_128_SIZE, true);
+				if (ret) {
+					dev_err(se_dev->dev,
+					"rsakeytable_context_save error\n");
+					break;
+				}
+				dst_ll->addr += TEGRA_SE_KEY_128_SIZE;
 			}
-			dst_ll->addr += TEGRA_SE_KEY_128_SIZE;
 		}
 	}
 

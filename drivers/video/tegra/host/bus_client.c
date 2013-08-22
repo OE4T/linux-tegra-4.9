@@ -664,6 +664,11 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (args->waitbases) {
 		local_waitbases = kzalloc(sizeof(u32) * num_syncpt_incrs,
 			GFP_KERNEL);
+		if (!local_waitbases) {
+			err = -ENOMEM;
+			goto fail;
+		}
+
 		err = copy_from_user(local_waitbases, waitbases,
 			sizeof(u32) * num_syncpt_incrs);
 		if (err) {

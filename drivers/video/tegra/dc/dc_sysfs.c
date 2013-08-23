@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_sysfs.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -340,103 +340,6 @@ static ssize_t mode_3d_store(struct device *dev,
 static DEVICE_ATTR(stereo_mode,
 	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
 
-static ssize_t colorbar_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct platform_device *ndev = to_platform_device(dev);
-	struct tegra_dc *dc = platform_get_drvdata(ndev);
-
-	struct nvmap_client	*test_nvmap;
-	struct nvmap_handle_ref *win;
-	int i, j;
-	phys_addr_t phys_addr;
-	u8 *win_ptr;
-	u32 *ptr;
-	u32 val;
-	int width, height;
-
-	printk(KERN_INFO"===== display colorbar test is started ====\n");
-	width  = dc->mode.h_active;
-	height = dc->mode.v_active;
-
-	test_nvmap = nvmap_create_client(nvmap_dev, "wint_test");
-	win = nvmap_alloc(test_nvmap, width*height*4*2, 32,
-				NVMAP_HANDLE_WRITE_COMBINE, 0);
-	nvmap_pin(test_nvmap, win, &phys_addr);
-	tegra_dc_io_start(dc);
-	win_ptr = nvmap_mmap(win);
-
-	ptr = (u32 *) win_ptr;
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = 0xff0000ff;
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = 0xff00ff00;
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = 0xffff0000;
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = 0xff0000ff;
-
-	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
-				DC_CMD_STATE_ACCESS);
-
-	tegra_dc_writel(dc, WINDOW_A_SELECT << 0, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = 0;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_A_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_A_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(dc, WINDOW_A_SELECT << 2, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = 0;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_C_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_C_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(dc, WINDOW_A_SELECT << 1, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = WIN_ENABLE;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_B_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_B_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	/* TEGRA_WIN_FMT_R8G8B8A8
-	   13: R8G8B8A8 */
-	tegra_dc_writel(dc, 13, DC_WIN_COLOR_DEPTH);
-	tegra_dc_writel(dc, 0, DC_WIN_BYTE_SWAP);
-
-	tegra_dc_writel(dc, V_POSITION(0) | H_POSITION(0), DC_WIN_POSITION);
-	tegra_dc_writel(dc, V_SIZE(height) | H_SIZE(width), DC_WIN_SIZE);
-	tegra_dc_writel(dc, V_PRESCALED_SIZE(height) |
-				H_PRESCALED_SIZE(width * 4),
-				DC_WIN_PRESCALED_SIZE);
-
-	tegra_dc_writel(dc, V_DDA_INC(0x1000) | H_DDA_INC(0x1000),
-				DC_WIN_DDA_INCREMENT);
-	tegra_dc_writel(dc, width*4, DC_WIN_LINE_STRIDE);
-	tegra_dc_writel(dc, (unsigned long)phys_addr, DC_WINBUF_START_ADDR);
-	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_H_OFFSET);
-	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_V_OFFSET);
-
-#if 0
-	tegra_dc_writel(dc, DC_WIN_BUFFER_ADDR_MODE_LINEAR |
-				DC_WIN_BUFFER_ADDR_MODE_LINEAR_UV,
-				DC_WIN_BUFFER_ADDR_MODE);
-	tegra_dc_writel(dc, 0xff00, DC_WIN_BLEND_1WIN);
-#endif
-	tegra_dc_writel(dc, WIN_B_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_B_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	return 0;
-}
-
-static DEVICE_ATTR(colorbar, S_IRUGO|S_IWUSR, colorbar_show, NULL);
-
 static ssize_t nvdps_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -516,7 +419,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
-	device_remove_file(dev, &dev_attr_colorbar);
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	device_remove_file(dev, &dev_attr_win_h);
 #endif
@@ -548,7 +450,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
-	error |= device_create_file(dev, &dev_attr_colorbar);
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	error |= device_create_file(dev, &dev_attr_win_h);
 #endif

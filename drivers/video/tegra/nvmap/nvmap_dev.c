@@ -535,7 +535,6 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 
 	client->name = name;
 	client->super = true;
-	nvmap_dev = dev;
 	client->handle_refs = RB_ROOT;
 
 	atomic_set(&client->iovm_commit, 0);

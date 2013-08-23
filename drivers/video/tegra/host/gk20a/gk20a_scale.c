@@ -74,7 +74,8 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 		return -ENOSYS;
 
 	/* get gpu dvfs table */
-	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
+	err = tegra_dvfs_get_freqs(clk_get_parent(g->clk.tegra_clk),
+				   &freqs, &num_freqs);
 	if (err)
 		return -ENOSYS;
 

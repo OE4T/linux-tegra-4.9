@@ -260,6 +260,21 @@ pll_locked:
 		trim_sys_sel_vco_gpc2clk_out_vco_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
+	clk->gpc_pll.enabled = true;
+	return 0;
+}
+
+static int clk_disable_gpcpll(struct gk20a *g)
+{
+	u32 cfg;
+	struct clk_gk20a *clk = &g->clk;
+
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+			trim_sys_gpcpll_cfg_enable_no_f());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+
+	clk->gpc_pll.enabled = false;
 	return 0;
 }
 
@@ -274,10 +289,10 @@ struct clk *gk20a_clk_get(struct gk20a *g)
 	if (!g->clk.tegra_clk) {
 		struct clk *clk;
 
-		clk = clk_get_sys("tegra_gk20a", "PLLG_ref");
+		clk = clk_get_sys("tegra_gk20a", "gpu");
 		if (IS_ERR(clk)) {
 			nvhost_err(dev_from_gk20a(g),
-				"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
+				"fail to get tegra gpu clk tegra_gk20a/gpu");
 			return NULL;
 		}
 		g->clk.tegra_clk = clk;
@@ -318,7 +333,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	if (!gk20a_clk_get(g))
 		return -EINVAL;
 
-	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
+	err = tegra_dvfs_get_freqs(clk_get_parent(clk->tegra_clk),
+				   &freqs, &num_freqs);
 	if (!err) {
 		int i, j;
 
@@ -332,8 +348,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		/* store frequencies in inverse order */
 		for (i = 0; i < num_freqs; ++i, --j) {
 			gpu_cooling_freq[i].index = i;
-			gpu_cooling_freq[i].frequency =
-				rate_gpc2clk_to_gpu(freqs[j] / MHZ);
+			gpu_cooling_freq[i].frequency = freqs[j];
 		}
 
 		/* add 'end of table' marker */
@@ -372,6 +387,143 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 	return clk_program_gpc_pll(g, clk);
 }
 
+static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
+{
+	struct clk_gk20a *clk = &g->clk;
+
+	if (freq > gpc_pll_params.max_freq)
+		freq = gpc_pll_params.max_freq;
+	else if (freq < gpc_pll_params.min_freq)
+		freq = gpc_pll_params.min_freq;
+
+	if (freq > clk->cap_freq)
+		freq = clk->cap_freq;
+
+	if (freq > clk->cap_freq_thermal)
+		freq = clk->cap_freq_thermal;
+
+	if (freq != old_freq) {
+		/* gpc_pll.freq is changed to new value here */
+		if (clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
+				   &freq, true)) {
+			nvhost_err(dev_from_gk20a(g),
+				   "failed to set pll target for %d", freq);
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
+{
+	struct clk_gk20a *clk = &g->clk;
+	int err = 0;
+
+	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz", old_freq, freq);
+
+	if ((freq == old_freq) && clk->gpc_pll.enabled)
+		return 0;
+
+	/* change frequency only if power is on */
+	/* FIXME: Need a lock to protect power gating state during
+	   clk_program_gpc_pll(g, clk) */
+	if (g->power_on)
+		err = clk_program_gpc_pll(g, clk);
+
+	/* Just report error but not restore PLL since dvfs could already change
+	    voltage even when it returns error. */
+	if (err)
+		nvhost_err(dev_from_gk20a(g),
+			"failed to set pll to %d", freq);
+	return err;
+}
+
+static int gk20a_clk_export_set_rate(void *data, unsigned long *rate)
+{
+	u32 old_freq;
+	int ret = -ENODATA;
+	struct gk20a *g = data;
+	struct clk_gk20a *clk = &g->clk;
+
+	if (rate) {
+		mutex_lock(&clk->clk_mutex);
+		old_freq = clk->gpc_pll.freq;
+		ret = set_pll_target(g, rate_gpu_to_gpc2clk(*rate), old_freq);
+		if (!ret && clk->gpc_pll.enabled)
+			ret = set_pll_freq(g, clk->gpc_pll.freq, old_freq);
+		if (!ret)
+			*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
+		mutex_unlock(&clk->clk_mutex);
+	}
+	return ret;
+}
+
+static int gk20a_clk_export_enable(void *data)
+{
+	int ret;
+	struct gk20a *g = data;
+	struct clk_gk20a *clk = &g->clk;
+
+	mutex_lock(&clk->clk_mutex);
+	ret = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
+	mutex_unlock(&clk->clk_mutex);
+	return ret;
+}
+
+static void gk20a_clk_export_disable(void *data)
+{
+	struct gk20a *g = data;
+	struct clk_gk20a *clk = &g->clk;
+
+	mutex_lock(&clk->clk_mutex);
+	if (g->power_on)
+		clk_disable_gpcpll(g);
+	mutex_unlock(&clk->clk_mutex);
+}
+
+static void gk20a_clk_export_init(void *data, unsigned long *rate, bool *state)
+{
+	struct gk20a *g = data;
+	struct clk_gk20a *clk = &g->clk;
+
+	mutex_lock(&clk->clk_mutex);
+	if (state)
+		*state = clk->gpc_pll.enabled;
+	if (rate)
+		*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
+	mutex_unlock(&clk->clk_mutex);
+}
+
+static struct tegra_clk_export_ops gk20a_clk_export_ops = {
+	.init = gk20a_clk_export_init,
+	.enable = gk20a_clk_export_enable,
+	.disable = gk20a_clk_export_disable,
+	.set_rate = gk20a_clk_export_set_rate,
+};
+
+static int gk20a_clk_register_export_ops(struct gk20a *g)
+{
+	int ret;
+	struct clk *c;
+
+	if (gk20a_clk_export_ops.data)
+		return 0;
+
+	gk20a_clk_export_ops.data = (void *)g;
+	c = g->clk.tegra_clk;
+	if (!c || !clk_get_parent(c))
+		return -ENOSYS;
+
+	ret = tegra_clk_register_export_ops(clk_get_parent(c),
+					    &gk20a_clk_export_ops);
+
+	/* FIXME: this effectively prevents host level clock gating */
+	if (!ret)
+		ret = clk_enable(c);
+
+	return ret;
+}
+
 int gk20a_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -389,11 +541,11 @@ int gk20a_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = tegra_dvfs_set_rate(clk->tegra_clk, clk->gpc_pll.freq * MHZ);
+	err = gk20a_init_clk_setup_hw(g);
 	if (err)
 		return err;
 
-	err = gk20a_init_clk_setup_hw(g);
+	err = gk20a_clk_register_export_ops(g);
 	if (err)
 		return err;
 
@@ -410,98 +562,16 @@ u32 gk20a_clk_get_rate(struct gk20a *g)
 
 int gk20a_clk_round_rate(struct gk20a *g, u32 rate)
 {
-	unsigned long *freqs;
-	int i, err, num_freqs;
-
 	/* make sure the clock is available */
 	if (!gk20a_clk_get(g))
 		return rate;
 
-	err = tegra_dvfs_get_freqs(g->clk.tegra_clk, &freqs, &num_freqs);
-	if (err)
-		return rate;
-
-	for (i = 0; i < num_freqs; i++) {
-		/* dvfs is for gpc2pll in Hz => convert it to kHz gpu freq */
-		unsigned long gpu_freq = freqs[i] / 2;
-		if (rate <= gpu_freq)
-			break;
-	}
-
-	i = min(num_freqs - 1, i);
-
-	return freqs[i] / 2;
+	return clk_round_rate(clk_get_parent(g->clk.tegra_clk), rate);
 }
 
-/* TBD: interface to change clock and dvfs in one function */
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 {
-	struct clk_gk20a *clk = &g->clk;
-	struct clk *tegra_clk = clk->tegra_clk;
-
-	/* save old freq for compare and recover */
-	u32 freq = clk->gpc_pll.freq;
-	int err = 0;
-
-	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz",
-		freq, rate);
-	mutex_lock(&clk->clk_mutex);
-
-	rate = rate_gpu_to_gpc2clk(rate);
-
-	if (rate > gpc_pll_params.max_freq)
-		rate = gpc_pll_params.max_freq;
-	else if (rate < gpc_pll_params.min_freq)
-		rate = gpc_pll_params.min_freq;
-
-	if (rate > clk->cap_freq)
-		rate = clk->cap_freq;
-
-	if (rate > clk->cap_freq_thermal)
-		rate = clk->cap_freq_thermal;
-
-	if (rate == freq)
-		goto clean_up;
-
-	/* gpc_pll.freq is changed to new value here */
-	err = clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
-			&rate, true);
-	if (err)
-		goto clean_up;
-
-	/* change frequency only if power is on */
-	/* FIXME: Need a lock to protect power gating state during
-	   clk_program_gpc_pll(g, clk) */
-	if (g->power_on) {
-		/* raise freq, call dvfs first to raise voltage */
-		if (rate > freq) {
-			err = tegra_dvfs_set_rate(tegra_clk, rate * MHZ);
-			if (err)
-				goto clean_up;
-		}
-
-		err = clk_program_gpc_pll(g, clk);
-		if (err)
-			goto clean_up;
-
-		/* lower freq, call dvfs after to lower voltage */
-		if (rate < freq) {
-			err = tegra_dvfs_set_rate(tegra_clk, rate * MHZ);
-			if (err)
-				goto clean_up;
-		}
-	}
-
-clean_up:
-
-	mutex_unlock(&clk->clk_mutex);
-
-	/* Just report error but not restore PLL since dvfs could already changed
-	    voltage even when it returns error. */
-	if (err)
-		nvhost_err(dev_from_gk20a(g),
-			"failed to set rate to @ %d", rate);
-	return err;
+	return clk_set_rate(g->clk.tegra_clk, rate);
 }
 
 static u32 gk20a_clk_get_cap(struct gk20a *g)
@@ -569,6 +639,11 @@ int gk20a_clk_init_cap_freqs(struct gk20a *g)
 	tegra_throttle_gk20a_clk_cap_register(&gk20a_clk_cap);
 
 	return 0;
+}
+
+int gk20a_clk_disable_gpcpll(struct gk20a *g)
+{
+	return clk_disable_gpcpll(g);
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -733,15 +808,4 @@ err_out:
 	return -ENOMEM;
 }
 
-int gk20a_clk_disable_gpcpll(struct gk20a *g)
-{
-	u32 cfg;
-
-	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
-			trim_sys_gpcpll_cfg_enable_no_f());
-	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-
-	return 0;
-}
 #endif /* CONFIG_DEBUG_FS */

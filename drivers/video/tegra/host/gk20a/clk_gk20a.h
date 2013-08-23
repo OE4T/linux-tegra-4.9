@@ -36,6 +36,7 @@ struct pll {
 	u32 N;
 	u32 PL;
 	u32 freq;	/* MHz */
+	bool enabled;
 };
 
 struct pll_parms {

@@ -138,7 +138,18 @@ static int set_event_mask(struct tegra_dc_ext_control_user *user, u32 mask)
 
 static int get_capabilities(struct tegra_dc_ext_control_capabilities *caps)
 {
-	caps->caps = TEGRA_DC_EXT_CAPABILITIES;
+	caps->caps = TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE |
+			TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR |
+			TEGRA_DC_EXT_CAPABILITIES_CURSOR_TWO_COLOR;
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	caps->caps |= TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_NON_PREMULT_ALPHA;
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	caps->caps |= TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_PREMULT_ALPHA;
+#endif
 	return 0;
 }
 

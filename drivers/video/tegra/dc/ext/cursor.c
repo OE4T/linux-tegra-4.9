@@ -148,18 +148,28 @@ static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
-static int set_cursor_blend(struct tegra_dc *dc, bool rgba)
+static int set_cursor_blend(struct tegra_dc *dc, u32 format)
 {
 	u32 val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
 
 	u32 newval = WINH_CURS_SELECT(0);
 
-	if (rgba)
-		newval |= (CURSOR_MODE_SELECT(1) | CURSOR_ALPHA |
-			   CURSOR_SRC_BLEND_FACTOR_SELECT(0) |
-			   CURSOR_DST_BLEND_FACTOR_SELECT(2));
-	else
+	switch (format) {
+	case TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY:
 		newval |= CURSOR_MODE_SELECT(0);
+		break;
+	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
+	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
+		newval |= CURSOR_MODE_SELECT(1);
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		newval |= CURSOR_ALPHA | CURSOR_DST_BLEND_FACTOR_SELECT(2);
+		if (format == TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA)
+			newval |= CURSOR_SRC_BLEND_FACTOR_SELECT(0);
+		else
+			newval |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
+#endif
+		break;
+	}
 
 	if (val != newval) {
 		tegra_dc_writel(dc, newval, DC_DISP_BLEND_CURSOR_CONTROL);
@@ -220,7 +230,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	u32 size;
 	int ret;
 	int need_general_update = 0;
-	bool rgba = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL);
+	u32 format = TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS(args->flags);
 
 	if (!user->nvmap)
 		return -EFAULT;
@@ -230,10 +240,22 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	if (!check_cursor_size(dc, size))
 		return -EINVAL;
 
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	if (args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL)
-		return -EINVAL;
+	switch (format) {
+	case TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY:
+		break;
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
+		break;
 #endif
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
+		break;
+#endif
+	default:
+		return -EINVAL;
+	}
 
 	mutex_lock(&ext->cursor.lock);
 
@@ -262,7 +284,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	need_general_update |= set_cursor_fg_bg(dc, args);
 
-	need_general_update |= set_cursor_blend(dc, rgba);
+	need_general_update |= set_cursor_blend(dc, format);
 
 	if (need_general_update) {
 		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);

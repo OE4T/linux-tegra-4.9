@@ -155,18 +155,46 @@ struct tegra_dc_ext_flip_2 {
 
 /*
  * Cursor image format:
- * - Tegra hardware supports two colors: foreground and background, specified
- *   by the client in RGB8.
- * - The image should be specified as two 1bpp bitmaps immediately following
- *   each other in memory.  Each pixel in the final cursor will be constructed
- *   from the bitmaps with the following logic:
+ *
+ * Tegra hardware supports two different cursor formats:
+ *
+ * (1) Two color cursor: foreground and background colors are
+ *     specified by the client in RGB8.
+ *
+ *     The two-color image should be specified as two 1bpp bitmaps
+ *     immediately following each other in memory.  Each pixel in the
+ *     final cursor will be constructed from the bitmaps with the
+ *     following logic:
+ *
  *		bitmap1 bitmap0
  *		(mask)  (color)
  *		  1	   0	transparent
  *		  1	   1	inverted
  *		  0	   0	background color
  *		  0	   1	foreground color
- * - Exactly one of the SIZE flags must be specified.
+ *
+ *     This format is supported when TEGRA_DC_EXT_CONTROL_GET_CAPABILITIES
+ *     reports the TEGRA_DC_EXT_CAPABILITIES_CURSOR_TWO_COLOR bit.
+ *
+ * (2) RGBA cursor: in this case the image is four bytes per pixel,
+ *     with alpha in the low eight bits.
+ *
+ *     The RGB components of the cursor image can be either
+ *     premultipled by alpha:
+ *
+ *         cursor[r,g,b] + desktop[r,g,b] * (1 - cursor[a])
+ *
+ *     or not:
+ *
+ *         cursor[r,g,b] * cursor[a] + desktop[r,g,b] * (1 - cursor[a])
+ *
+ *     TEGRA_DC_EXT_CONTROL_GET_CAPABILITIES will report one or more of
+ *     TEGRA_DC_EXT_CURSOR_FLAGS_RGBA{,_NON}_PREMULT_ALPHA to indicate
+ *     which are supported on the current hardware.
+ *
+ * Specify one of TEGRA_DC_EXT_CURSOR_FLAGS to indicate the format.
+ *
+ * Exactly one of the SIZE flags must be specified.
  */
 
 
@@ -175,8 +203,25 @@ struct tegra_dc_ext_flip_2 {
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_128x128	((3 & 0x7) << 0)
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_256x256	((4 & 0x7) << 0)
 #define TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(x)		(((x) & 0x7) >> 0)
-#define TEGRA_DC_EXT_CURSOR_FLAGS_2BIT_LEGACY		(0 << 16)
-#define TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL		(1 << 16)
+
+#define TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY			(0)
+#define TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA	(1)
+#define TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA		(3)
+
+#define TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS_2BIT_LEGACY \
+	(TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY << 16)
+#define TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS_RGBA_NON_PREMULT_ALPHA	\
+	(TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA << 16)
+#define TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS_RGBA_PREMULT_ALPHA \
+	(TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA << 16)
+
+#define TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS(x)	(((x) >> 16) & 0x7)
+
+/* aliases for source-level backwards compatibility */
+#define TEGRA_DC_EXT_CURSOR_FLAGS_RGBA_NORMAL \
+	TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS_RGBA_NON_PREMULT_ALPHA
+#define TEGRA_DC_EXT_CURSOR_FLAGS_2BIT_LEGACY \
+	TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS_2BIT_LEGACY
 
 enum CR_MODE {
 	legacy,
@@ -407,8 +452,13 @@ struct tegra_dc_ext_control_event_bandwidth {
 	__u32 handle;
 };
 
-#define TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE	(1 << 0)
-#define TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR   (1 << 1)
+#define TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE			(1 << 0)
+#define TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR			(1 << 1)
+
+#define TEGRA_DC_EXT_CAPABILITIES_CURSOR_TWO_COLOR		(1 << 2)
+#define TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_NON_PREMULT_ALPHA	(1 << 3)
+#define TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_PREMULT_ALPHA	(1 << 4)
+
 struct tegra_dc_ext_control_capabilities {
 	__u32 caps;
 	/* Leave some wiggle room for future expansion */

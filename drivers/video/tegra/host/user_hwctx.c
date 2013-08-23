@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -117,13 +117,13 @@ int user_hwctx_set_save(struct user_hwctx *ctx,
 
 	buf = nvhost_memmgr_get(ctx->hwctx.memmgr,
 			mem, ctx->hwctx.channel->dev);
-	if (IS_ERR_OR_NULL(buf))
-		return -ENOMEM;
+	if (IS_ERR(buf))
+		return PTR_ERR(buf);
 
 	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
 			&ctx->hwctx.channel->dev->dev);
-	if (IS_ERR_OR_NULL(sgt))
-		return -ENOMEM;
+	if (IS_ERR(sgt))
+		return PTR_ERR(sgt);
 
 	ctx->save_offset = offset;
 	ctx->save_size = words;
@@ -153,13 +153,13 @@ int user_hwctx_set_restore(struct user_hwctx *ctx,
 
 	buf = nvhost_memmgr_get(ctx->hwctx.memmgr,
 			mem, ctx->hwctx.channel->dev);
-	if (IS_ERR_OR_NULL(buf))
-		return -ENOMEM;
+	if (IS_ERR(buf))
+		return PTR_ERR(buf);
 
 	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
 			&ctx->hwctx.channel->dev->dev);
-	if (IS_ERR_OR_NULL(sgt))
-		return -ENOMEM;
+	if (IS_ERR(sgt))
+		return PTR_ERR(sgt);
 
 	ctx->restore_offset = offset;
 	ctx->restore_size = words;

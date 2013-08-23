@@ -330,12 +330,12 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 				DEFAULT_ALLOC_ALIGNMENT,
 				DEFAULT_ALLOC_FLAGS,
 				0);
-	if (IS_ERR_OR_NULL(r)) {
+	if (IS_ERR(r)) {
 		nvhost_dbg(dbg_pte, "nvmap_alloc failed\n");
 		goto err_out;
 	}
 	va = nvhost_memmgr_mmap(r);
-	if (IS_ERR_OR_NULL(va)) {
+	if (!va) {
 		nvhost_dbg(dbg_pte, "nvmap_mmap failed\n");
 		goto err_alloced;
 	}
@@ -376,7 +376,7 @@ static int map_gmmu_pages(void *handle, struct sg_table *sgt, void **va)
 	nvhost_dbg_fn("");
 
 	tmp_va = nvhost_memmgr_mmap(r);
-	if (IS_ERR_OR_NULL(tmp_va))
+	if (!tmp_va)
 		goto err_out;
 
 	*va = tmp_va;
@@ -900,7 +900,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	/* pin buffer to get phys/iovmm addr */
 	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d);
-	if (IS_ERR_OR_NULL(bfr.sgt)) {
+	if (IS_ERR(bfr.sgt)) {
 		/* Falling back to physical is actually possible
 		 * here in many cases if we use 4K phys pages in the
 		 * gmmu.  However we have some regions which require
@@ -1875,7 +1875,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
 			inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
-	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
+	if (IS_ERR(inst_block->mem.sgt)) {
 		inst_pa = 0;
 		err = (int)inst_pa;
 		goto clean_up;
@@ -2030,7 +2030,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
 			inst_block->mem.ref);
 	/* IS_ERR throws a warning here (expecting void *) */
-	if (IS_ERR_OR_NULL(inst_block->mem.sgt)) {
+	if (IS_ERR(inst_block->mem.sgt)) {
 		inst_pa = 0;
 		err = (int)((uintptr_t)inst_block->mem.sgt);
 		goto clean_up;

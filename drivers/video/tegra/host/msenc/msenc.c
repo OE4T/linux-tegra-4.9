@@ -295,7 +295,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->mapped = nvhost_memmgr_mmap(m->mem_r);
-	if (IS_ERR_OR_NULL(m->mapped)) {
+	if (!m->mapped) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
 		goto clean_up;

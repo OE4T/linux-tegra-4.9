@@ -960,12 +960,6 @@ static int gk20a_probe(struct platform_device *dev)
 	}
 
 	gpu_cdev = &gk20a->gk20a_cdev;
-
-	if (IS_ERR_OR_NULL(gpu_cdev)) {
-		dev_err(&dev->dev, "error accessing gpu cooling device");
-		return -ENOMEM;
-	}
-
 	gpu_cdev->gk20a_freq_table_size = tegra_gpufreq_table_size_get();
 	gpu_cdev->gk20a_freq_state = 0;
 	gpu_cdev->g = gk20a;

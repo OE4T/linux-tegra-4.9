@@ -3,7 +3,7 @@
  *
  * Tegra Host Address Spaces
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -411,8 +411,8 @@ int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 	}
 
 	r = nvhost_memmgr_get(memmgr, args->nvmap_handle, /*XXX:get device*/0);
-	if (!r) {
-		err = -EINVAL;
+	if (IS_ERR(r)) {
+		err = PTR_ERR(r);
 		goto finish;
 	}
 

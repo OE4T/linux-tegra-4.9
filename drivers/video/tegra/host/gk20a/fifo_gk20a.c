@@ -3,7 +3,7 @@
  *
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -273,7 +273,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 					    DEFAULT_ALLOC_ALIGNMENT,
 					    DEFAULT_ALLOC_FLAGS,
 					    0);
-		if (!runlist->mem[i].ref)
+		if (IS_ERR(runlist->mem[i].ref))
 			goto clean_up_runlist;
 		sgt = nvhost_memmgr_sg_table(memmgr, runlist->mem[i].ref);
 		if (IS_ERR(sgt))
@@ -454,14 +454,14 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					       4096, /* 4K pages */
 					       DEFAULT_ALLOC_FLAGS,
 					       0);
-	if (IS_ERR_OR_NULL(f->userd.mem.ref)) {
-		err = -ENOMEM;
+	if (IS_ERR(f->userd.mem.ref)) {
+		err = PTR_ERR(f->userd.mem.ref);
 		goto clean_up;
 	}
 
 	f->userd.cpu_va = nvhost_memmgr_mmap(f->userd.mem.ref);
 	/* f->userd.cpu_va = g->bar1; */
-	if (IS_ERR_OR_NULL(f->userd.cpu_va)) {
+	if (!f->userd.cpu_va) {
 		f->userd.cpu_va = NULL;
 		err = -ENOMEM;
 		goto clean_up;
@@ -634,12 +634,10 @@ static struct channel_gk20a *
 channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
 {
 	int ci;
-	if (unlikely(IS_ERR_OR_NULL(f->channel)))
+	if (unlikely(!f->channel))
 		return NULL;
 	for (ci = 0; ci < f->num_channels; ci++) {
 		struct channel_gk20a *c = f->channel+ci;
-		if (IS_ERR_OR_NULL(c))
-			continue;
 		if (c->inst_block.mem.ref &&
 		    (inst_ptr == (u64)(sg_phys(c->inst_block.mem.sgt->sgl))))
 			return f->channel+ci;
@@ -807,8 +805,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		gk20a_fifo_reset_engine(g, engine_id);
 
 		fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
-		if (!IS_ERR_OR_NULL(fault_ch)) {
-			if (!IS_ERR_OR_NULL(fault_ch->hwctx)) {
+		if (fault_ch) {
+			if (fault_ch->hwctx) {
 				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
 				fault_ch->hwctx->has_timedout = true;
 			}
@@ -1232,7 +1230,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 	runlist_pa = sg_phys(runlist->mem[new_buf].sgt->sgl);
 
 	runlist_entry_base = nvhost_memmgr_mmap(runlist->mem[new_buf].ref);
-	if (IS_ERR_OR_NULL(runlist_entry_base)) {
+	if (!runlist_entry_base) {
 		ret = -ENOMEM;
 		goto clean_up;
 	}

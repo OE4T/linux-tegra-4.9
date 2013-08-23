@@ -3,7 +3,7 @@
  *
  * GK20A Graphics Context
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -130,7 +130,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 		}
 
 		netlist_fw = nvhost_client_request_firmware(g->dev, name);
-		if (IS_ERR_OR_NULL(netlist_fw)) {
+		if (!netlist_fw) {
 			nvhost_warn(d, "failed to load netlist %s", name);
 			continue;
 		}

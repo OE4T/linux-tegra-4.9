@@ -275,7 +275,7 @@ struct clk *gk20a_clk_get(struct gk20a *g)
 		struct clk *clk;
 
 		clk = clk_get_sys("tegra_gk20a", "PLLG_ref");
-		if (IS_ERR_OR_NULL(clk)) {
+		if (IS_ERR(clk)) {
 			nvhost_err(dev_from_gk20a(g),
 				"fail to get tegra ref clk tegra_gk20a/PLLG_ref");
 			return NULL;

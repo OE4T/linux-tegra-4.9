@@ -513,7 +513,7 @@ static int nvhost_ioctl_channel_submit_gpfifo(
 	size = args->num_entries * sizeof(struct nvhost_gpfifo);
 
 	gpfifo = kzalloc(size, GFP_KERNEL);
-	if (IS_ERR_OR_NULL(gpfifo))
+	if (!gpfifo)
 		return -ENOMEM;
 
 	if (copy_from_user(gpfifo,
@@ -865,6 +865,9 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 			save_incr.syncpt_incrs, restore_incr.syncpt_incrs);
 
 	nhwctx->memmgr = nvhost_memmgr_get_mgr(ctx->memmgr);
+	if (!nhwctx->memmgr)
+		goto fail_set_restore;
+
 	err = user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
 			cmdbuf_restore.offset, cmdbuf_restore.words);
 	if (err)

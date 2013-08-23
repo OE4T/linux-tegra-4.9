@@ -250,7 +250,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 	int err;
 
 	ucode_fw = nvhost_client_request_firmware(dev, VIC03_UCODE_FW_NAME);
-	if (IS_ERR_OR_NULL(ucode_fw)) {
+	if (!ucode_fw) {
 		nvhost_dbg_fn("request firmware failed");
 		dev_err(&dev->dev, "failed to get vic03 firmware\n");
 		err = -ENOENT;
@@ -477,12 +477,12 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 						mem_mgr_flag_write_combine
 					      : mem_mgr_flag_uncacheable,
 					   0);
-	if (IS_ERR_OR_NULL(ctx->restore))
+	if (IS_ERR(ctx->restore))
 		goto fail_alloc;
 
 	if (map_restore) {
 		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
-		if (IS_ERR_OR_NULL(ctx->restore_virt))
+		if (!ctx->restore_virt)
 			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
@@ -520,7 +520,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
 	ctx->restore_sgt = nvhost_memmgr_pin(nvmap,
 			ctx->restore, &ch->dev->dev);
-	if (IS_ERR_VALUE(ctx->restore_phys))
+	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 

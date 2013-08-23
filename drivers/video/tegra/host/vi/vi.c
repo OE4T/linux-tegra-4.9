@@ -309,7 +309,7 @@ int nvhost_vi_init(struct platform_device *dev)
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 
 	tegra_vi->reg = regulator_get(&dev->dev, "avdd_dsi_csi");
-	if (IS_ERR_OR_NULL(tegra_vi->reg)) {
+	if (IS_ERR(tegra_vi->reg)) {
 		if (tegra_vi->reg == ERR_PTR(-ENODEV)) {
 			ret = -ENODEV;
 			dev_info(&dev->dev,

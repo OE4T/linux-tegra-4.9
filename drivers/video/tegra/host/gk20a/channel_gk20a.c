@@ -104,7 +104,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	nvhost_dbg_fn("");
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
-	if (IS_ERR(inst_ptr))
+	if (!inst_ptr)
 		return -ENOMEM;
 
 	addr = sg_phys(c->vm->pdes.sgt->sgl);
@@ -144,7 +144,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	nvhost_dbg_fn("");
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
-	if (IS_ERR(inst_ptr))
+	if (!inst_ptr)
 		return -ENOMEM;
 
 	addr_lo = u64_lo32(c->userd_cpu_pa >> ram_userd_base_shift_v());
@@ -176,7 +176,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 	nvhost_dbg_fn("");
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
-	if (IS_ERR(inst_ptr))
+	if (!inst_ptr)
 		return -ENOMEM;
 
 	memset(inst_ptr, 0, ram_fc_size_val_v());
@@ -431,10 +431,10 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		/* set up new cyclestats buffer */
 		handle_ref = nvhost_memmgr_get(memmgr,
 				args->nvmap_handle, dev);
-		if (handle_ref == NULL)
-			return -ENOMEM;
+		if (IS_ERR(handle_ref))
+			return PTR_ERR(handle_ref);
 		virtual_address = nvhost_memmgr_mmap(handle_ref);
-		if (IS_ERR(virtual_address))
+		if (!virtual_address)
 			return -ENOMEM;
 
 		nvhost_memmgr_get_param(memmgr, handle_ref,
@@ -576,7 +576,7 @@ static void dump_gpfifo(struct channel_gk20a *c)
 	nvhost_dbg_fn("");
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
-	if (IS_ERR(inst_ptr))
+	if (!inst_ptr)
 		return;
 
 	nvhost_dbg_info("ramfc for channel %d:\n"
@@ -661,7 +661,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 					 DEFAULT_ALLOC_ALIGNMENT,
 					 DEFAULT_ALLOC_FLAGS,
 					 0);
-	if (IS_ERR_OR_NULL(q->mem.ref)) {
+	if (IS_ERR(q->mem.ref)) {
 		nvhost_err(d, "ch %d : failed to allocate"
 			   " priv cmd buffer(size: %d bytes)",
 			   c->hw_chid, size);
@@ -670,7 +670,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	q->mem.size = size;
 
 	q->base_ptr = (u32 *)nvhost_memmgr_mmap(q->mem.ref);
-	if (IS_ERR_OR_NULL(q->base_ptr)) {
+	if (!q->base_ptr) {
 		nvhost_err(d, "ch %d : failed to map cpu va"
 			   "for priv cmd buffer", c->hw_chid);
 		goto clean_up;
@@ -963,18 +963,18 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 				    DEFAULT_ALLOC_ALIGNMENT,
 				    DEFAULT_ALLOC_FLAGS,
 				    0);
-	if (IS_ERR_OR_NULL(c->gpfifo.mem.ref)) {
+	if (IS_ERR(c->gpfifo.mem.ref)) {
 		nvhost_err(d, "channel %d :"
 			   " failed to allocate gpfifo (size: %d bytes)",
 			   c->hw_chid, gpfifo_size);
 		c->gpfifo.mem.ref = 0;
-		return -ENOMEM;
+		return PTR_ERR(c->gpfifo.mem.ref);
 	}
 	c->gpfifo.entry_num = gpfifo_size;
 
 	c->gpfifo.cpu_va =
 		(struct gpfifo *)nvhost_memmgr_mmap(c->gpfifo.mem.ref);
-	if (IS_ERR_OR_NULL(c->gpfifo.cpu_va))
+	if (!c->gpfifo.cpu_va)
 		goto clean_up;
 
 	c->gpfifo.get = c->gpfifo.put = 0;
@@ -1080,6 +1080,7 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 	struct priv_cmd_entry *cmd = NULL;
 	int cmd_size, j = 0;
 	u32 free_count;
+	int err;
 
 	cmd_size =  4 + wfi_cmd_size();
 
@@ -1091,11 +1092,11 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 		return -EAGAIN;
 	}
 
-	alloc_priv_cmdbuf(c, cmd_size, &cmd);
-	if (unlikely(IS_ERR_OR_NULL(cmd))) {
+	err = alloc_priv_cmdbuf(c, cmd_size, &cmd);
+	if (unlikely(err)) {
 		nvhost_err(dev_from_gk20a(g),
 			   "not enough priv cmd buffer space");
-		return -EAGAIN;
+		return err;
 	}
 
 	fence->value = nvhost_syncpt_incr_max(sp, fence->syncpt_id, 1);
@@ -1582,14 +1583,14 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		offset = args->condition.notifier.offset;
 
 		handle_ref = nvhost_memmgr_get(memmgr, id, dev);
-		if (!handle_ref) {
+		if (IS_ERR(handle_ref)) {
 			nvhost_err(d, "invalid notifier nvmap handle 0x%lx",
 				   id);
 			return -EINVAL;
 		}
 
 		notif = nvhost_memmgr_mmap(handle_ref);
-		if (IS_ERR_OR_NULL(notif)) {
+		if (!notif) {
 			nvhost_err(d, "failed to map notifier memory");
 			return -ENOMEM;
 		}

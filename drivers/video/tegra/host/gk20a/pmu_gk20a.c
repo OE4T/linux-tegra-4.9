@@ -331,7 +331,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 	nvhost_dbg_fn("");
 
 	ucode_ptr = nvhost_memmgr_mmap(pmu->ucode.mem.ref);
-	if (IS_ERR_OR_NULL(ucode_ptr)) {
+	if (!ucode_ptr) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to map pmu ucode memory");
 		return -ENOMEM;
@@ -1016,7 +1016,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	if (!g->pmu_fw) {
 		g->pmu_fw = nvhost_client_request_firmware(g->dev,
 					GK20A_PMU_UCODE_IMAGE);
-		if (IS_ERR_OR_NULL(g->pmu_fw)) {
+		if (!g->pmu_fw) {
 			nvhost_err(d, "failed to load pmu ucode!!");
 			err = -ENOENT;
 			return err;
@@ -1036,8 +1036,8 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 						 DEFAULT_ALLOC_ALIGNMENT,
 						 DEFAULT_ALLOC_FLAGS,
 						 0);
-	if (IS_ERR_OR_NULL(pmu->ucode.mem.ref)) {
-		err = -ENOMEM;
+	if (IS_ERR(pmu->ucode.mem.ref)) {
+		err = PTR_ERR(pmu->ucode.mem.ref);
 		goto clean_up;
 	}
 
@@ -1064,10 +1064,10 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 						  DEFAULT_ALLOC_ALIGNMENT,
 						  DEFAULT_ALLOC_FLAGS,
 						  0);
-	if (IS_ERR_OR_NULL(pmu->pg_buf.mem.ref)) {
+	if (IS_ERR(pmu->pg_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate fecs pg buffer");
-		err = -ENOMEM;
+		err = PTR_ERR(pmu->pg_buf.mem.ref);
 		goto clean_up;
 	}
 	pmu->pg_buf.mem.size = size;
@@ -1085,10 +1085,10 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 						   DEFAULT_ALLOC_ALIGNMENT,
 						   DEFAULT_ALLOC_FLAGS,
 						   0);
-	if (IS_ERR_OR_NULL(pmu->seq_buf.mem.ref)) {
+	if (IS_ERR(pmu->seq_buf.mem.ref)) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to allocate zbc buffer");
-		err = -ENOMEM;
+		err = PTR_ERR(pmu->seq_buf.mem.ref);
 		goto clean_up;
 	}
 
@@ -1102,7 +1102,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	}
 
 	ptr = (u8 *)nvhost_memmgr_mmap(pmu->seq_buf.mem.ref);
-	if (IS_ERR_OR_NULL(ptr)) {
+	if (!ptr) {
 		nvhost_err(d, "failed to map cpu ptr for zbc buffer");
 		goto clean_up;
 	}

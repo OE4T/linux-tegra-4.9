@@ -34,6 +34,7 @@
 #include "hw_proj_gk20a.h"
 #include "hw_top_gk20a.h"
 #include "hw_mc_gk20a.h"
+#include "hw_gr_gk20a.h"
 
 static int init_engine_info(struct fifo_gk20a *f)
 {
@@ -770,10 +771,17 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	ulong fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
-	struct channel_gk20a *fault_ch;
+	struct channel_gk20a *fault_ch = NULL;
 	u32 engine_id;
 
 	nvhost_dbg_fn("");
+
+	/* If we have recovery in progress, MMU fault id is invalid */
+	if (g->fifo.mmu_fault_channel) {
+		fault_ch = g->fifo.mmu_fault_channel;
+		fault_id = BIT(ENGINE_GR_GK20A);
+		g->fifo.mmu_fault_channel = NULL;
+	}
 
 	/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to engines */
 	for_each_set_bit(engine_id, &fault_id, BITS_PER_LONG) {
@@ -804,15 +812,18 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		/* Reset engine and MMU fault */
 		gk20a_fifo_reset_engine(g, engine_id);
 
-		fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
+		if (!fault_ch)
+			fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
 		if (fault_ch) {
 			if (fault_ch->hwctx) {
 				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
 				fault_ch->hwctx->has_timedout = true;
 			}
-			/* remove faulty engine from the runlist */
-			if (fault_ch->in_use)
-				gk20a_free_channel(fault_ch->hwctx, false);
+			if (fault_ch->in_use) {
+				gk20a_disable_channel(fault_ch, false,
+						gk20a_get_gr_idle_timeout(g));
+				fault_ch->hwctx->has_timedout = true;
+			}
 		} else if (f.inst_ptr ==
 				sg_phys(g->mm.bar1.inst_block.mem.sgt->sgl)) {
 			nvhost_dbg_fn("mmu fault from bar1");
@@ -831,6 +842,81 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	}
 }
 
+static void gk20a_fifo_recover(struct gk20a *g, u32 chid)
+{
+	/*
+	 * Force preempt by faking an MMU fault. Because fault
+	 * id is bogus for fake MMU faults, store the data
+	 * needed for processing the fault in CPU.
+	 */
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	int ret;
+
+	g->fifo.mmu_fault_channel = g->fifo.channel + chid;
+	gk20a_writel(g, fifo_intr_0_r(),
+			fifo_intr_0_sched_error_reset_f());
+	gk20a_writel(g, fifo_trigger_mmu_fault_r(0),
+			fifo_trigger_mmu_fault_id_f(0) |
+			fifo_trigger_mmu_fault_enable_f(1));
+
+	/* Wait for MMU fault to trigger */
+	ret = -EBUSY;
+	do {
+		if (gk20a_readl(g, fifo_intr_0_r()) &
+				fifo_intr_0_mmu_fault_pending_f()) {
+			ret = 0;
+			break;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (time_before(jiffies, end_jiffies) |
+			!tegra_platform_is_silicon());
+
+	if (ret)
+		nvhost_err(dev_from_gk20a(g),
+				"mmu fault timeout");
+
+	/* Fault triggered - don't force fake fault anymore */
+	gk20a_writel(g, fifo_trigger_mmu_fault_r(0), 0);
+}
+
+static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
+	u32 curr_ctx = gk20a_readl(g, gr_fecs_current_ctx_r());
+	struct channel_gk20a *fault_ch = NULL;
+	u32 chid;
+
+	for (chid = 0; chid < f->num_channels; chid++)
+		if (f->channel[chid].in_use) {
+			struct scatterlist *ctx_sg =
+				f->channel[chid].inst_block.mem.sgt->sgl;
+			if ((u32)(sg_phys(ctx_sg) >> ram_in_base_shift_v()) ==
+				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
+				fault_ch = &f->channel[chid];
+				break;
+			}
+		}
+
+	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, ch=%d",
+			sched_error, fault_ch ? fault_ch->hw_chid : -1);
+
+	/* Couldn't find the channel - should never happen */
+	if (unlikely(!fault_ch))
+		return true;
+
+	if (fifo_intr_sched_error_code_f(sched_error) ==
+			fifo_intr_sched_error_code_ctxsw_timeout_v()) {
+		gk20a_fifo_recover(g, fault_ch->hw_chid);
+		return false;
+	}
+
+	return true;
+}
 
 static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 {
@@ -855,9 +941,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
-		u32 sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
-		nvhost_err(dev,	"fifo sched error : 0x%08x", sched_error);
-		reset_channel = true;
+		reset_channel = gk20a_fifo_handle_sched_error(g);
 		handled |= fifo_intr_0_sched_error_pending_f();
 	}
 
@@ -1050,10 +1134,12 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	} while (time_before(jiffies, end_jiffies) |
 			!tegra_platform_is_silicon());
 
-	if (ret)
+	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			    "preempt channel %d timeout\n",
 			    hw_chid);
+		gk20a_fifo_recover(g, hw_chid);
+	}
 
 	/* re-enable elpg or release pmu mutex */
 	if (elpg_off)

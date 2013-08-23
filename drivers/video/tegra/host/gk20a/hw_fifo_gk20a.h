@@ -4914,6 +4914,70 @@ static inline u32 fifo_preempt_chid_null_f(void)
 {
 	return 0x0;
 }
+static inline u32 fifo_trigger_mmu_fault_r(u32 i)
+{
+	return 0x00002A30+(i)*4;
+}
+static inline u32 fifo_trigger_mmu_fault__size_1_v(void)
+{
+	return 2;
+}
+static inline u32 fifo_trigger_mmu_fault_id_s(void)
+{
+	return 5;
+}
+static inline u32 fifo_trigger_mmu_fault_id_f(u32 v)
+{
+	return (v & 0x1f) << 0;
+}
+static inline u32 fifo_trigger_mmu_fault_id_m(void)
+{
+	return 0x1f << 0;
+}
+static inline u32 fifo_trigger_mmu_fault_id_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 fifo_trigger_mmu_fault_id_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_trigger_mmu_fault_id_init_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_s(void)
+{
+	return 1;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_trigger_mmu_fault_enable_true_f(void)
+{
+	return 0x100;
+}
 static inline u32 fifo_engine_status_r(u32 i)
 {
 	return 0x00002640+(i)*8;

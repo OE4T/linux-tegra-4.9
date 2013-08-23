@@ -87,6 +87,10 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 				     size_t align, unsigned int flags,
 				     unsigned int heap_mask);
 
+struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
+				   unsigned int flags,
+				   unsigned int heap_mask);
+
 struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client, ulong user_id);
 
 struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);

@@ -945,6 +945,40 @@ void nvmap_munmap(struct nvmap_handle_ref *ref, void *addr)
 }
 EXPORT_SYMBOL(nvmap_munmap);
 
+static struct nvmap_client *nvmap_get_dmabuf_client(void)
+{
+	static struct nvmap_client *client;
+
+	if (!client) {
+		struct nvmap_client *temp;
+
+		temp = nvmap_create_client(nvmap_dev, "dmabuf_client");
+		if (!temp)
+			return NULL;
+		if (cmpxchg(&client, NULL, temp))
+			nvmap_client_put(temp);
+	}
+	BUG_ON(!client);
+	return client;
+}
+
+struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
+				   unsigned int flags,
+				   unsigned int heap_mask)
+{
+	struct dma_buf *dmabuf;
+	struct nvmap_handle_ref *ref;
+	struct nvmap_client *client = nvmap_get_dmabuf_client();
+
+	ref = nvmap_alloc(client, size, align, flags, heap_mask);
+	if (!ref)
+		return -ENOMEM;
+
+	dmabuf = nvmap_dmabuf_export_from_ref(ref);
+	nvmap_free(client, ref);
+	return dmabuf;
+}
+
 struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 				     size_t align, unsigned int flags,
 				     unsigned int heap_mask)

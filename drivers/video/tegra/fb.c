@@ -60,6 +60,7 @@ struct tegra_fb_info {
 	int			curr_yoffset;
 
 	struct fb_videomode	mode;
+	phys_addr_t		phys_start;
 };
 
 /* palette array used by the fbcon */
@@ -321,7 +322,7 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	struct tegra_fb_info *tegra_fb = info->par;
 	char __iomem *flush_start;
 	char __iomem *flush_end;
-	u32 addr;
+	phys_addr_t    addr;
 
 	/*
 	 * Do nothing if display parameters are same as current values.
@@ -347,7 +348,7 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 		tegra_fb->curr_xoffset = var->xoffset;
 		tegra_fb->curr_yoffset = var->yoffset;
 
-		addr = info->fix.smem_start + (var->yoffset * info->fix.line_length) +
+		addr = tegra_fb->phys_start + (var->yoffset * info->fix.line_length) +
 			(var->xoffset * (var->bits_per_pixel/8));
 
 		tegra_fb->win->phys_addr = addr;
@@ -576,8 +577,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	struct fb_info *info;
 	struct tegra_fb_info *tegra_fb;
 	void __iomem *fb_base = NULL;
-	unsigned long fb_size = 0;
-	unsigned long fb_phys = 0;
+	phys_addr_t fb_size = 0;
 	int ret = 0;
 	int mode_idx;
 	unsigned stride;
@@ -605,8 +605,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	if (fb_mem) {
 		fb_size = resource_size(fb_mem);
-		fb_phys = fb_mem->start;
-		fb_base = ioremap_nocache(fb_phys, fb_size);
+		tegra_fb->phys_start = fb_mem->start;
+		fb_base = ioremap_nocache(tegra_fb->phys_start, fb_size);
 		if (!fb_base) {
 			dev_err(&ndev->dev, "fb can't be mapped\n");
 			ret = -EBUSY;
@@ -633,10 +633,15 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	info->fix.xpanstep	= 1;
 	info->fix.ypanstep	= 1;
 	info->fix.accel		= FB_ACCEL_NONE;
-	info->fix.smem_start	= fb_phys;
+#ifdef CONFIG_ARM_LPAE
+	/* Note:- Use tegra_fb_info.phys_start instead of
+	 *        fb_info.fix->smem_start when LPAE is enabled. */
+	info->fix.smem_start	= 0;
+#else
+	info->fix.smem_start	= tegra_fb->phys_start;
+#endif
 	info->fix.smem_len	= fb_size;
 	info->fix.line_length = stride;
-
 	INIT_LIST_HEAD(&info->modelist);
 	/* pick first mode as the default for initialization */
 	tegra_dc_to_fb_videomode(&m, &dc->mode);
@@ -658,7 +663,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	win->out_w = fb_data->xres;
 	win->out_h = fb_data->yres;
 	win->z = 0;
-	win->phys_addr = fb_phys;
+	win->phys_addr = tegra_fb->phys_start;
 	win->virt_addr = fb_base;
 	win->phys_addr_u = 0;
 	win->phys_addr_v = 0;

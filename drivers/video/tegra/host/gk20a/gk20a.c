@@ -970,9 +970,8 @@ static int gk20a_probe(struct platform_device *dev)
 	else
 		pm_runtime_put(&dev->dev);
 
-	/* Kconfig defines timeout in milliseconds, grhost uses microseconds */
 	gk20a->gr_idle_timeout_default =
-			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT * 1000;
+			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 	gk20a->timeouts_enabled = true;
 
 	gk20a_create_sysfs(dev);

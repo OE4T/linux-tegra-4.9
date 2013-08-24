@@ -701,7 +701,7 @@ void gk20a_pmu_isr(struct gk20a *g);
 int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg,
 		struct pmu_payload *payload, u32 queue_id,
 		pmu_callback callback, void* cb_param,
-		u32 *seq_desc, u32 timeout);
+		u32 *seq_desc, unsigned long timeout);
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);

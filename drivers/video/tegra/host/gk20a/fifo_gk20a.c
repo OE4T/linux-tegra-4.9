@@ -1013,7 +1013,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	struct fifo_runlist_info_gk20a *runlist;
 	u32 runlist_id;
 	unsigned long end_jiffies = jiffies
-		+ usecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+		+ msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
@@ -1264,7 +1264,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 			((pending =
 				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
 				fifo_eng_runlist_pending_true_f()) == 0),
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 
 	if (remain == 0 && pending != 0) {
 		nvhost_err(dev_from_gk20a(g), "runlist update timeout");

@@ -140,7 +140,8 @@ static void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 static int pmu_idle(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
-	u32 timeout = 2000; /* 2 sec */
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(2000);
 	u32 idle_stat;
 
 	/* wait for pmu idle */
@@ -152,7 +153,7 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 			break;
 		}
 
-		if (--timeout == 0) {
+		if (time_after_eq(jiffies, end_jiffies)) {
 			nvhost_err(dev_from_gk20a(g),
 				"timeout waiting pmu idle : 0x%08x",
 				idle_stat);
@@ -248,7 +249,8 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = pmu->g;
 	u32 pmc_enable;
-	u32 timeout = 2000; /* 2 sec */
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(2000);
 	int err;
 
 	nvhost_dbg_fn("");
@@ -265,7 +267,8 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 				pmc_enable = gk20a_readl(g, mc_enable_r());
 				if (mc_enable_pwr_v(pmc_enable) !=
 				    mc_enable_pwr_disabled_v()) {
-					if (--timeout == 0) {
+					if (time_after_eq(jiffies,
+								end_jiffies)) {
 						nvhost_err(dev_from_gk20a(g),
 							"timeout waiting pmu to reset");
 						return -EBUSY;
@@ -1214,7 +1217,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 			(status = (pmu->elpg_ready &&
 				pmu->stat_dmem_offset != 0 &&
 				pmu->elpg_stat == PMU_ELPG_STAT_OFF)),
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 	if (status == 0) {
 		nvhost_err(dev_from_gk20a(g),
 			"PG_INIT_ACK failed, remaining timeout : 0x%lx", remain);
@@ -1256,7 +1259,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	remain = wait_event_timeout(
 			pmu->pg_wq,
 			pmu->buf_loaded,
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG FECS buffer load failed, remaining timeout : 0x%lx",
@@ -1282,7 +1285,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	remain = wait_event_timeout(
 			pmu->pg_wq,
 			pmu->buf_loaded,
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 	if (!pmu->buf_loaded) {
 		nvhost_err(dev_from_gk20a(g),
 			"PGENG ZBC buffer load failed, remaining timeout 0x%lx",
@@ -2216,10 +2219,12 @@ invalid_cmd:
 }
 
 static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
-			u32 queue_id, u32 timeout)
+			u32 queue_id, unsigned long timeout)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_queue *queue;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(timeout);
 	int err;
 
 	nvhost_dbg_fn("");
@@ -2228,13 +2233,11 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
-		if (err == -EAGAIN && timeout >= 0) {
-			timeout--;
+		if (err == -EAGAIN && time_before(jiffies, end_jiffies))
 			msleep(1);
-		} else
+		else
 			break;
-	}
-	while (1);
+	} while (1);
 
 	if (err)
 		goto clean_up;
@@ -2256,7 +2259,7 @@ clean_up:
 int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		struct pmu_msg *msg, struct pmu_payload *payload,
 		u32 queue_id, pmu_callback callback, void* cb_param,
-		u32 *seq_desc, u32 timeout)
+		u32 *seq_desc, unsigned long timeout)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_sequence *seq;
@@ -2474,7 +2477,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 		remain = wait_event_timeout(
 			pmu->pg_wq,
 			pmu->elpg_stat == PMU_ELPG_STAT_ON,
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvhost_err(dev_from_gk20a(g),
 				"ELPG_ALLOW_ACK failed, remaining timeout 0x%lx",
@@ -2504,7 +2507,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	remain = wait_event_timeout(
 			pmu->pg_wq,
 			pmu->elpg_stat == PMU_ELPG_STAT_OFF,
-			MAX_SCHEDULE_TIMEOUT);
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
 	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
 		nvhost_err(dev_from_gk20a(g),
 			"ELPG_DISALLOW_ACK failed, remaining timeout 0x%lx",

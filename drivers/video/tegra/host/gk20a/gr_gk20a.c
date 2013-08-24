@@ -195,7 +195,8 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 	}
 }
 
-static int gr_gk20a_wait_idle(struct gk20a *g, u32 *timeout, u32 expect_delay)
+static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
+		u32 expect_delay)
 {
 	u32 delay = expect_delay;
 	bool gr_enabled;
@@ -225,10 +226,9 @@ static int gr_gk20a_wait_idle(struct gk20a *g, u32 *timeout, u32 expect_delay)
 		}
 
 		udelay(delay);
-		*timeout -= min_t(u32, delay, *timeout);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (*timeout);
+	} while (time_before(jiffies, end_jiffies));
 
 	nvhost_err(dev_from_gk20a(g),
 		"timeout, ctxsw busy : %d, gr busy : %d",
@@ -284,7 +284,8 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 mailbox_ok, u32 opc_fail,
 				   u32 mailbox_fail)
 {
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
@@ -292,13 +293,10 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	nvhost_dbg_fn("");
 
 	while (check == WAIT_UCODE_LOOP) {
-		if (timeout == 0 && tegra_platform_is_silicon())
+		if (!time_before(jiffies, end_jiffies) &&
+				tegra_platform_is_silicon())
 			check = WAIT_UCODE_TIMEOUT;
 
-		/* XXX when this register read was sped up by removing printks
-		 * (in sim) we had to increase GR_IDLE_TIMEOUT_DEFAULT in order
-		 * not to get spurious timeouts... that says to me udelay is
-		 * not doing what we think below...? */
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(mailbox_id));
 
 		if (mailbox_ret)
@@ -368,7 +366,6 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 		}
 
 		udelay(delay);
-		timeout -= min_t(u32, delay, timeout);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	}
 
@@ -1940,9 +1937,6 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 
 	nvhost_dbg_fn("");
 
-	if (!tegra_platform_is_silicon())
-		timeout = MAX_SCHEDULE_TIMEOUT;
-
 	if (c->num_objects == 0)
 		return 0;
 
@@ -2539,7 +2533,8 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
@@ -2574,13 +2569,13 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 					break;
 
 				udelay(delay);
-				timeout -= min_t(u32, delay, timeout);
 				delay = min_t(u32, delay << 1,
 					GR_IDLE_CHECK_MAX);
 
-			} while (timeout);
+			} while (time_before(jiffies, end_jiffies) |
+					!tegra_platform_is_silicon());
 
-			if (timeout == 0) {
+			if (!time_before(jiffies, end_jiffies)) {
 				nvhost_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				return -EBUSY;
@@ -2670,7 +2665,8 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -2680,7 +2676,7 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -2743,7 +2739,8 @@ static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -2753,7 +2750,7 @@ static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -2897,7 +2894,8 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i, j;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret;
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
@@ -2907,7 +2905,7 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 		return ret;
 	}
 
-	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -3316,7 +3314,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 addr_lo, addr_hi, addr;
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 fe_go_idle_timeout_save;
 	u32 last_bundle_data = 0;
 	u32 last_method_data = 0;
@@ -3483,7 +3482,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	/* TBD: add gr ctx overrides */
 
-	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 
@@ -3501,7 +3500,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	/* floorsweep anything left */
 	gr_gk20a_ctx_state_floorsweep(g);
 
-	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto restore_fe_go_idle;
 
@@ -3524,7 +3523,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 		if (gr_pipe_bundle_address_value_v(sw_bundle_init->l[i].addr) ==
 		    GR_GO_IDLE_BUNDLE)
-			err |= gr_gk20a_wait_idle(g, &timeout,
+			err |= gr_gk20a_wait_idle(g, end_jiffies,
 					GR_IDLE_CHECK_DEFAULT);
 		else if (0) { /* IS_SILICON */
 			u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -3536,11 +3535,11 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 					break;
 
 				udelay(delay);
-				timeout -= min_t(u32, delay, timeout);
 				delay = min_t(u32, delay << 1,
 					GR_IDLE_CHECK_MAX);
 
-			} while (timeout);
+			} while (time_before(jiffies, end_jiffies) |
+					!tegra_platform_is_silicon());
 		}
 	}
 
@@ -3552,7 +3551,7 @@ restore_fe_go_idle:
 	/* restore fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(), fe_go_idle_timeout_save);
 
-	if (err || gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT))
+	if (err || gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT))
 		goto out;
 
 	/* load method init */
@@ -3588,7 +3587,7 @@ restore_fe_go_idle:
         gk20a_writel(g, 0x005044b0, l1c_dbg_reg_val);
     }
 
-	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 
@@ -3639,7 +3638,8 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct av_list_gk20a *sw_non_ctx_load = &g->gr.ctx_vars.sw_non_ctx_load;
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 i, err = 0;
 
 	nvhost_dbg_fn("");
@@ -3660,7 +3660,7 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, sw_non_ctx_load->l[i].addr,
 			sw_non_ctx_load->l[i].value);
 
-	err = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
 
@@ -4308,12 +4308,13 @@ int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va)
 
 int gk20a_gr_suspend(struct gk20a *g)
 {
-	u32 timeout = gk20a_get_gr_idle_timeout(g);
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret = 0;
 
 	nvhost_dbg_fn("");
 
-	ret = gr_gk20a_wait_idle(g, &timeout, GR_IDLE_CHECK_DEFAULT);
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret)
 		return ret;
 

@@ -94,7 +94,7 @@ struct gk20a {
 	void (*remove_support)(struct platform_device *);
 };
 
-static inline u32 gk20a_get_gr_idle_timeout(struct gk20a *g)
+static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 {
 	return g->timeouts_enabled ?
 		g->gr_idle_timeout_default : MAX_SCHEDULE_TIMEOUT;

@@ -173,8 +173,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish);
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool wait_for_finish,
-			   long finish_timeout);
-int gk20a_channel_finish(struct channel_gk20a *ch, long timeout);
+			   unsigned long finish_timeout);
+int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args);
 int gk20a_channel_zcull_bind(struct channel_gk20a *ch,

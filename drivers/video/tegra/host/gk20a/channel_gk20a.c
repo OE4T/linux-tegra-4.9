@@ -370,7 +370,7 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool finish,
-			   long finish_timeout)
+			   unsigned long finish_timeout)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
 	struct nvhost_master *host = host_from_gk20a_channel(ch);
@@ -480,9 +480,6 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
-
-	if (!tegra_platform_is_silicon())
-		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	nvhost_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
@@ -1519,7 +1516,7 @@ int gk20a_channel_free_obj(struct nvhost_channel *channel, u32 obj_id)
 	return 0;
 }
 
-int gk20a_channel_finish(struct channel_gk20a *ch, long timeout)
+int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 {
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(ch->g);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
@@ -1568,7 +1565,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 	u64 jiffies;
 	ulong id;
 	u32 offset;
-	long timeout;
+	unsigned long timeout;
 	int remain, ret = 0;
 
 	nvhost_dbg_fn("");

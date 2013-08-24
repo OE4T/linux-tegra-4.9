@@ -761,7 +761,7 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
 				pmc_enable, pmc_enable_reset);
 		gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
-		udelay(1000);
+		usleep_range(1000, 2000);
 		gk20a_writel(g, mc_enable_r(), pmc_enable);
 		gk20a_readl(g, mc_enable_r());
 	}

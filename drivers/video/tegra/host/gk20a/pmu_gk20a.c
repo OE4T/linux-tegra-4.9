@@ -159,7 +159,7 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 				idle_stat);
 			return -EBUSY;
 		}
-		mdelay(1);
+		usleep_range(1000, 2000);
 	} while (1);
 
 	nvhost_dbg_fn("done");
@@ -273,7 +273,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 							"timeout waiting pmu to reset");
 						return -EBUSY;
 					}
-					mdelay(1);
+					usleep_range(1000, 2000);
 				} else
 					break;
 			} while (1);
@@ -2234,7 +2234,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
 		if (err == -EAGAIN && time_before(jiffies, end_jiffies))
-			msleep(1);
+			usleep_range(1000, 2000);
 		else
 			break;
 	} while (1);

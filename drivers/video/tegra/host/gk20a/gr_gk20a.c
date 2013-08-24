@@ -225,7 +225,7 @@ static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 			return 0;
 		}
 
-		udelay(delay);
+		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
 	} while (time_before(jiffies, end_jiffies));
@@ -365,7 +365,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			break;
 		}
 
-		udelay(delay);
+		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	}
 
@@ -2568,7 +2568,7 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 				    ltc_ltc0_lts0_cbc_ctrl1_clear_active_v())
 					break;
 
-				udelay(delay);
+				usleep_range(delay, delay * 2);
 				delay = min_t(u32, delay << 1,
 					GR_IDLE_CHECK_MAX);
 
@@ -3534,7 +3534,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 				    gr_status_fe_method_lower_idle_v())
 					break;
 
-				udelay(delay);
+				usleep_range(delay, delay * 2);
 				delay = min_t(u32, delay << 1,
 					GR_IDLE_CHECK_MAX);
 

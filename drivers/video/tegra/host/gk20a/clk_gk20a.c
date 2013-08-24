@@ -322,10 +322,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	if (!err) {
 		int i, j;
 
-		/* pll params are for gpc2clk in MHzs */
-		gpc_pll_params.min_freq = freqs[0] / MHZ;
-		gpc_pll_params.max_freq = freqs[num_freqs - 1] / MHZ;
-
 		/* init j for inverse traversal of frequencies */
 		j = num_freqs - 1;
 

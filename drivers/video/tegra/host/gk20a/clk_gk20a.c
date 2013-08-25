@@ -624,6 +624,43 @@ static int cap_thermal_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(cap_thermal_fops, cap_thermal_get,
 		cap_thermal_set, "%llu\n");
 
+static int pll_reg_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 reg, m, n, pl, f;
+
+	if (!g->power_on) {
+		seq_printf(s, "gk20a powered down - no access to registers\n");
+		return 0;
+	}
+
+	reg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	seq_printf(s, "cfg  = 0x%x : %s : %s\n", reg,
+		   trim_sys_gpcpll_cfg_enable_v(reg) ? "enabled" : "disabled",
+		   trim_sys_gpcpll_cfg_pll_lock_v(reg) ? "locked" : "unlocked");
+
+	reg = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+	m = trim_sys_gpcpll_coeff_mdiv_v(reg);
+	n = trim_sys_gpcpll_coeff_ndiv_v(reg);
+	pl = trim_sys_gpcpll_coeff_pldiv_v(reg);
+	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div[pl]);
+	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
+	seq_printf(s, " : pll_f(gpu_f) = %u(%u) MHz\n", f, f/2);
+	return 0;
+}
+
+static int pll_reg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pll_reg_show, inode->i_private);
+}
+
+static const struct file_operations pll_reg_fops = {
+	.open		= pll_reg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int monitor_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
@@ -679,6 +716,11 @@ int clk_gk20a_debugfs_init(struct platform_device *dev)
 	d = debugfs_create_file(
 		"cap_thermal", S_IRUGO|S_IWUSR, pdata->debugfs, g,
 							&cap_thermal_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"pll_reg", S_IRUGO, pdata->debugfs, g, &pll_reg_fops);
 	if (!d)
 		goto err_out;
 

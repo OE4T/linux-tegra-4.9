@@ -2120,7 +2120,7 @@ static void gk20a_mm_g_elpg_flush(struct gk20a *g)
 		    ltc_ltss_g_elpg_flush_pending_v()) {
 			nvhost_dbg_info("g_elpg_flush 0x%x", data);
 			retry--;
-			udelay(20);
+			usleep_range(20, 40);
 		} else
 			break;
 	} while (retry >= 0);
@@ -2155,7 +2155,7 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 			flush_fb_flush_pending_busy_v()) {
 				nvhost_dbg_info("fb_flush 0x%x", data);
 				retry--;
-				udelay(20);
+				usleep_range(20, 40);
 		} else
 			break;
 	} while (retry >= 0);
@@ -2185,7 +2185,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			flush_l2_flush_dirty_pending_busy_v()) {
 				nvhost_dbg_info("l2_flush_dirty 0x%x", data);
 				retry--;
-				udelay(20);
+				usleep_range(20, 40);
 		} else
 			break;
 	} while (retry >= 0);
@@ -2221,7 +2221,7 @@ void gk20a_mm_l2_invalidate(struct gk20a *g)
 			flush_l2_system_invalidate_pending_busy_v()) {
 				nvhost_dbg_info("l2_system_invalidate 0x%x", data);
 				retry--;
-				udelay(20);
+				usleep_range(20, 40);
 		} else
 			break;
 	} while (retry >= 0);
@@ -2268,7 +2268,7 @@ static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
 			break;
-		udelay(20);
+		usleep_range(20, 40);
 		retry--;
 	} while (retry >= 0);
 
@@ -2292,7 +2292,7 @@ static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 			fb_mmu_ctrl_pri_fifo_empty_false_f())
 			break;
 		retry--;
-		udelay(20);
+		usleep_range(20, 40);
 	} while (retry >= 0);
 
 	if (retry < 0)

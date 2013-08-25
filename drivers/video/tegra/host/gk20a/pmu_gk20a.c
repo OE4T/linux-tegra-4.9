@@ -601,7 +601,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 			nvhost_warn(dev_from_gk20a(g),
 				"fail to generate mutex token: val 0x%08x",
 				owner);
-			udelay(20);
+			usleep_range(20, 40);
 			continue;
 		}
 
@@ -628,7 +628,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 				pwr_pmu_mutex_id_release_value_f(owner));
 			gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
 
-			udelay(20);
+			usleep_range(20, 40);
 			continue;
 		}
 	} while (max_retry-- > 0);

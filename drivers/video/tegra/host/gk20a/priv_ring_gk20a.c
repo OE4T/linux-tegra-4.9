@@ -3,7 +3,7 @@
  *
  * GK20A priv ring
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -53,7 +53,7 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
 		pri_ringmaster_global_ctl_ring_reset_asserted_f());
 
-	udelay(20);
+	usleep_range(20, 40);
 
 	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
 		pri_ringmaster_global_ctl_ring_reset_deasserted_f());
@@ -65,7 +65,7 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	do {
 		data = pri_ringmaster_command_cmd_v(
 				gk20a_readl(g, pri_ringmaster_command_r()));
-		udelay(20);
+		usleep_range(20, 40);
 	} while (data != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
 
 	gk20a_writel(g, pri_ringmaster_command_data_r(), 0x503B4B49);
@@ -76,7 +76,7 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	do {
 		data = pri_ringmaster_start_results_connectivity_v(
 				gk20a_readl(g, pri_ringmaster_start_results_r()));
-		udelay(20);
+		usleep_range(20, 40);
 	} while (data != pri_ringmaster_start_results_connectivity_pass_v() && --retry);
 
 	if (retry <= 0)
@@ -111,7 +111,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	do {
 		cmd = pri_ringmaster_command_cmd_v(
 			gk20a_readl(g, pri_ringmaster_command_r()));
-		udelay(20);
+		usleep_range(20, 40);
 	} while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
 
 	if (retry <= 0)

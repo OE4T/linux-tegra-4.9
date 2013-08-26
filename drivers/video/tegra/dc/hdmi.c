@@ -994,7 +994,7 @@ static ssize_t underscan_show(struct device *dev,
 		return 0;
 }
 
-static DEVICE_ATTR(underscan, S_IRUGO | S_IWUSR, underscan_show, NULL);
+static DEVICE_ATTR(underscan, S_IRUGO, underscan_show, NULL);
 #endif
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)

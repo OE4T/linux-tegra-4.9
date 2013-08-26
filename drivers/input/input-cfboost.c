@@ -1,7 +1,7 @@
 /*
  * drivers/input/input-cfboost.c
  *
- * Copyright (C) 2012 NVIDIA Corporation
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -218,7 +218,7 @@ static int __init cfboost_init(void)
 		destroy_workqueue(cfb_wq);
 		return ret;
 	}
-	pm_qos_add_request(&core_req, PM_QOS_CPU_FREQ_MIN,
+	pm_qos_add_request(&core_req, PM_QOS_MIN_ONLINE_CPUS,
 			   PM_QOS_DEFAULT_VALUE);
 	pm_qos_add_request(&freq_req, PM_QOS_CPU_FREQ_MIN,
 			   PM_QOS_DEFAULT_VALUE);

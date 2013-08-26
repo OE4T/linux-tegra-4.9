@@ -131,6 +131,8 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 
 	/* create the nvhost priv if needed */
 	priv = nvmap_get_nvhost_private(ref);
+	if (IS_ERR(priv))
+		return priv;
 	if (!priv) {
 		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 		if (!priv)
@@ -221,7 +223,7 @@ void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
 	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
 	struct nvhost_nvmap_as_data *as;
-	if (!priv)
+	if (IS_ERR_OR_NULL(priv))
 		return;
 
 	mutex_lock(&priv->lock);

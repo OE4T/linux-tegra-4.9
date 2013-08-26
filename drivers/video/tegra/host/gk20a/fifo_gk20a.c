@@ -883,6 +883,17 @@ static void gk20a_fifo_recover(struct gk20a *g, u32 chid)
 	gk20a_writel(g, fifo_trigger_mmu_fault_r(0), 0);
 }
 
+static void gk20a_fifo_recover_eng(struct gk20a *g, u32 engine_id)
+{
+	u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
+
+	/* We know only about channels - not TSG's */
+	if (fifo_engine_status_id_type_v(status)) {
+		gk20a_fifo_recover(g,
+				fifo_engine_status_id_v(status));
+	}
+}
+
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -1354,7 +1365,16 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 
 	if (remain == 0 && pending != 0) {
 		nvhost_err(dev_from_gk20a(g), "runlist update timeout");
-		ret = -ETIMEDOUT;
+		gk20a_fifo_recover_eng(g, engine_id);
+		wait_event_timeout(
+			runlist->runlist_wq,
+			((pending =
+				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
+				fifo_eng_runlist_pending_true_f()) == 0),
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
+
+		if (remain == 0 && pending != 0)
+			ret = -ETIMEDOUT;
 		goto clean_up;
 	} else if (remain < 0) {
 		nvhost_err(dev_from_gk20a(g), "runlist update interrupted");

@@ -794,8 +794,10 @@
 #define MSC_RAW			0x03
 #define MSC_SCAN		0x04
 #define MSC_TIMESTAMP		0x05
-#define MSC_ACTIVITY		0x06
-#define MSC_MAX			0x07
+#define MSC_TIMESEC			0x06
+#define MSC_TIMEUSEC		0x07
+#define MSC_ACTIVITY		0x08
+#define MSC_MAX			0x09
 #define MSC_CNT			(MSC_MAX+1)
 
 /*

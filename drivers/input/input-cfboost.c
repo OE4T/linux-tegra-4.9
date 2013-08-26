@@ -26,6 +26,9 @@
 #include <linux/module.h>
 #include <linux/pm_qos.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/input_cfboost.h>
+
 /* This module listens to input events and sets a temporary frequency
  * floor upon input event detection. This is based on changes to
  * cpufreq ondemand governor by:
@@ -59,6 +62,7 @@ static struct workqueue_struct *cfb_wq;
 
 static void cfb_boost(struct work_struct *w)
 {
+	trace_input_cfboost_params("boost_params", boost_freq, boost_time);
 	cancel_delayed_work_sync(&unboost);
 	pm_qos_update_request(&core_req, 1);
 	pm_qos_update_request(&freq_req, boost_freq);
@@ -74,6 +78,7 @@ static void cfb_unboost(struct work_struct *w)
 static void cfb_input_event(struct input_handle *handle, unsigned int type,
 			    unsigned int code, int value)
 {
+	trace_input_cfboost_event("event", type, code, value);
 	if (!work_pending(&boost))
 		queue_work(cfb_wq, &boost);
 }
@@ -130,6 +135,64 @@ static const struct input_device_id cfb_ids[] = {
 		.evbit = { BIT_MASK(EV_REL) },
 		.keybit = {[BIT_WORD(BTN_MOUSE)] = BIT_MASK(BTN_MOUSE) },
 	},
+	/* keypad */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = {[BIT_WORD(KEY_HOME)] = BIT_MASK(KEY_HOME) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = {[BIT_WORD(KEY_VOLUMEUP)] = BIT_MASK(KEY_VOLUMEUP) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = {[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER) },
+	},
+	/* joystick */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { BIT_MASK(ABS_X) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { BIT_MASK(ABS_WHEEL) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { BIT_MASK(ABS_THROTTLE) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = {[BIT_WORD(BTN_JOYSTICK)] = BIT_MASK(BTN_JOYSTICK) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = { [BIT_WORD(BTN_GAMEPAD)] = BIT_MASK(BTN_GAMEPAD) },
+	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+		.keybit = { [BIT_WORD(BTN_TRIGGER_HAPPY)] =
+			BIT_MASK(BTN_TRIGGER_HAPPY) },
+	},
+	/* terminating entry */
 	{ },
 };
 

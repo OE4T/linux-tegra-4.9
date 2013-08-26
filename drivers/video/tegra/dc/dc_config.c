@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_config.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -460,6 +460,9 @@ int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx)
 	int i;
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_SCALE);
 
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
+
 	for (i = 0; i < ENTRY_SIZE; i++)
 		if (addr[i] != 1)
 			return 1;
@@ -470,12 +473,18 @@ int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_TILED);
 
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
+
 	return addr[TILED_LAYOUT];
 }
 
 int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_BLOCKLINEAR);
+
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
 
 	return addr[BLOCK_LINEAR];
 }
@@ -484,12 +493,18 @@ int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_INTERLACE);
 
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
+
 	return addr[INTERLACE];
 }
 
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, operation);
+
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
 
 	if (operation == HAS_V_FILTER)
 		return addr[V_FILTER];
@@ -501,7 +516,10 @@ int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx)
 {
 	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_GEN2_BLEND);
 
-	if (addr && addr[BLEND_GENERATION] == 2)
+	if (WARN_ONCE(!addr, "window does not exist"))
+		return 0;
+
+	if (addr[BLEND_GENERATION] == 2)
 		return 1;
 
 	return 0;
@@ -545,4 +563,5 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 					entry->arg[BLEND_GENERATION] == 1)
 			dc->gen1_blend_num++;
 	}
+
 }

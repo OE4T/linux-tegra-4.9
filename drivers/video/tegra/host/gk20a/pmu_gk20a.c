@@ -1759,7 +1759,7 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu, bool init)
+static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_cmd cmd;
@@ -1774,21 +1774,18 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu, bool init)
 	cmd.cmd.perfmon.start.cmd_type = PMU_PERFMON_CMD_ID_START;
 	cmd.cmd.perfmon.start.group_id = PMU_DOMAIN_GROUP_PSTATE;
 	cmd.cmd.perfmon.start.state_id = pmu->perfmon_state_id[PMU_DOMAIN_GROUP_PSTATE];
-	if (init) {
-		cmd.cmd.perfmon.start.flags = PMU_PERFMON_FLAG_ENABLE_INCREASE;
-	} else {
-		current_rate = rate_gpu_to_gpc2clk(gk20a_clk_get_rate(g));
-		if (current_rate >= gpc_pll_params.max_freq)
-			cmd.cmd.perfmon.start.flags =
-				PMU_PERFMON_FLAG_ENABLE_DECREASE;
-		else if (current_rate <= gpc_pll_params.min_freq)
-			cmd.cmd.perfmon.start.flags =
-				PMU_PERFMON_FLAG_ENABLE_INCREASE;
-		else
-			cmd.cmd.perfmon.start.flags =
-				PMU_PERFMON_FLAG_ENABLE_INCREASE |
-				PMU_PERFMON_FLAG_ENABLE_DECREASE;
-	}
+
+	current_rate = rate_gpu_to_gpc2clk(gk20a_clk_get_rate(g));
+	if (current_rate >= gpc_pll_params.max_freq)
+		cmd.cmd.perfmon.start.flags =
+			PMU_PERFMON_FLAG_ENABLE_DECREASE;
+	else if (current_rate <= gpc_pll_params.min_freq)
+		cmd.cmd.perfmon.start.flags =
+			PMU_PERFMON_FLAG_ENABLE_INCREASE;
+	else
+		cmd.cmd.perfmon.start.flags =
+			PMU_PERFMON_FLAG_ENABLE_INCREASE |
+			PMU_PERFMON_FLAG_ENABLE_DECREASE;
 
 	cmd.cmd.perfmon.start.flags |= PMU_PERFMON_FLAG_CLEAR_PREV;
 
@@ -1833,7 +1830,6 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 {
 	struct gk20a *g = pmu->g;
 	u32 rate;
-	bool init = false;
 
 	nvhost_dbg_fn("");
 
@@ -1852,12 +1848,11 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
 		/* decrease gk20a clock freq by 10% */
 		rate = gk20a_clk_get_rate(g);
-		gk20a_clk_set_rate(g, (rate / 10) * 9);
+		gk20a_clk_set_rate(g, (rate / 10) * 7);
 		break;
 	case PMU_PERFMON_MSG_ID_INIT_EVENT:
 		pmu->perfmon_ready = 1;
 		nvhost_dbg_pmu("perfmon init event");
-		init = true;
 		break;
 	default:
 		break;
@@ -1865,7 +1860,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 
 	/* restart sampling */
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
-		return pmu_perfmon_start_sampling(pmu, init);
+		return pmu_perfmon_start_sampling(pmu);
 	return 0;
 }
 
@@ -2543,7 +2538,7 @@ int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
 	nvhost_dbg_fn("");
 
 	if (enable)
-		err = pmu_perfmon_start_sampling(pmu, true);
+		err = pmu_perfmon_start_sampling(pmu);
 	else
 		err = pmu_perfmon_stop_sampling(pmu);
 

@@ -225,7 +225,7 @@ struct nvhost_device_data {
 	void (*idle)(struct platform_device *);
 
 	/* Device is going to be suspended */
-	void (*suspend_ndev)(struct platform_device *);
+	void (*suspend_ndev)(struct device *);
 
 	/* Scaling init is run on device registration */
 	void (*scaling_init)(struct platform_device *dev);

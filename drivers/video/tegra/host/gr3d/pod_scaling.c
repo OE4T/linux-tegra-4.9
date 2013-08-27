@@ -208,9 +208,9 @@ static void podgov_clocks_handler(struct work_struct *work)
  * Prepare the device for suspend
  ******************************************************************************/
 
-void nvhost_scale3d_suspend(struct platform_device *dev)
+void nvhost_scale3d_suspend(struct device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
 

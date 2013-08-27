@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,7 +34,8 @@ extern const struct dev_pm_ops nvhost_module_pm_ops;
 /* Sets clocks and powergating state for a module */
 int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
-int nvhost_module_suspend(struct platform_device *dev);
+int nvhost_module_suspend(struct device *dev);
+int nvhost_module_resume(struct device *dev);
 
 void nvhost_module_reset(struct platform_device *dev);
 void nvhost_module_busy(struct platform_device *dev);

@@ -540,15 +540,31 @@ fail_attrib_alloc:
 }
 EXPORT_SYMBOL(nvhost_module_init);
 
-int nvhost_module_suspend(struct platform_device *dev)
+int nvhost_module_suspend(struct device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
-	if (pm_runtime_barrier(&dev->dev))
+	if (pm_runtime_suspended(dev))
+		return 0;
+
+	if (pm_runtime_barrier(dev))
 		return -EBUSY;
 
 	if (pdata->suspend_ndev)
 		pdata->suspend_ndev(dev);
+
+	return 0;
+}
+
+int nvhost_module_resume(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if (!pdata->can_powergate && pdata->finalize_poweron) {
+		nvhost_module_enable_clk(dev);
+		pdata->finalize_poweron(to_platform_device(dev));
+		nvhost_module_disable_clk(dev);
+	}
 
 	return 0;
 }
@@ -559,7 +575,7 @@ void nvhost_module_deinit(struct platform_device *dev)
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	nvhost_module_suspend(dev);
+	nvhost_module_suspend(&dev->dev);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_put(pdata->clk[i]);
 

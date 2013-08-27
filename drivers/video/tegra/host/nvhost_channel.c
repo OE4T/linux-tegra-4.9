@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -128,9 +128,7 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 	mutex_lock(&ch->reflock);
 
 	if (ch->refcount) {
-		ret = nvhost_module_suspend(ch->dev);
-		if (!ret)
-			channel_cdma_op().stop(&ch->cdma);
+		channel_cdma_op().stop(&ch->cdma);
 	}
 	mutex_unlock(&ch->reflock);
 

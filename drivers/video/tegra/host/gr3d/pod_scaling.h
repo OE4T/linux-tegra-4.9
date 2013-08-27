@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Power-On-Demand Scaling
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,7 +27,7 @@ struct dentry;
 #define GET_TARGET_FREQ_DONTSCALE	1
 
 /* Suspend is called when powering down module */
-void nvhost_scale3d_suspend(struct platform_device *);
+void nvhost_scale3d_suspend(struct device *);
 
 extern struct devfreq_governor nvhost_podgov;
 

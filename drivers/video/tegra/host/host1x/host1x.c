@@ -737,7 +737,7 @@ static int nvhost_suspend(struct device *dev)
 	clock_off_host(pdev);
 	nvhost_module_disable_clk(dev);
 
-	ret = nvhost_module_suspend(host->dev);
+	ret = nvhost_module_suspend(&host->dev->dev);
 	dev_info(dev, "suspend status: %d\n", ret);
 
 	return ret;

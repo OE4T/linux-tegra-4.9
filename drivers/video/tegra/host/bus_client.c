@@ -1526,6 +1526,10 @@ int nvhost_client_device_suspend(struct device *dev)
 	int ret = 0;
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
+	ret = nvhost_module_suspend(dev);
+	if (ret)
+		return ret;
+
 	ret = nvhost_channel_suspend(pdata->channel);
 	if (ret)
 		return ret;
@@ -1538,6 +1542,7 @@ EXPORT_SYMBOL(nvhost_client_device_suspend);
 
 int nvhost_client_device_resume(struct device *dev)
 {
+	nvhost_module_resume(dev);
 	dev_info(dev, "resuming\n");
 	return 0;
 }

@@ -972,7 +972,7 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 
 	ref = nvmap_alloc(client, size, align, flags, heap_mask);
 	if (!ref)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
 	dmabuf = nvmap_dmabuf_export_from_ref(ref);
 	nvmap_free(client, ref);

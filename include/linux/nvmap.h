@@ -97,6 +97,8 @@ struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
 
 ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref);
 
+ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf);
+
 phys_addr_t nvmap_get_addr_from_user_id(ulong user_id);
 
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
@@ -155,6 +157,14 @@ void nvmap_free_sg_table(struct nvmap_client *client,
 void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
 		void (*delete)(void *priv));
 void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref);
+
+struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
+void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);
+
+void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
+			      void (*delete)(void *priv));
+void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf);
+
 /*
  * Flush cache maintenance operations for the handle that have been deferred.
  * Use this if you don't use nvmap_pin for mapping the buffer to IOVA.

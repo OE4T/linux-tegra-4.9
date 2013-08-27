@@ -315,3 +315,60 @@ int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
 	info = dmabuf->priv;
 	return __nvmap_get_handle_param(NULL, info->handle, param, result);
 }
+
+struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf)
+{
+	struct nvmap_handle_info *info;
+
+	if (WARN_ON(!virt_addr_valid(dmabuf)))
+		return ERR_PTR(-EINVAL);
+
+	info = dmabuf->priv;
+	return __nvmap_sg_table(NULL, info->handle);
+}
+
+void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt)
+{
+	if (WARN_ON(!virt_addr_valid(sgt)))
+		return;
+
+	sg_free_table(sgt);
+	kfree(sgt);
+}
+
+void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
+		void (*delete)(void *priv))
+{
+	struct nvmap_handle_info *info;
+
+	if (WARN_ON(!virt_addr_valid(dmabuf)))
+		return;
+
+	info = dmabuf->priv;
+	info->handle->nvhost_priv = priv;
+	info->handle->nvhost_priv_delete = delete;
+}
+
+void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf)
+{
+	void *priv;
+	struct nvmap_handle_info *info;
+
+	if (WARN_ON(!virt_addr_valid(dmabuf)))
+		return ERR_PTR(-EINVAL);
+
+	info = dmabuf->priv;
+	priv = info->handle->nvhost_priv;
+	return priv;
+}
+
+ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf)
+{
+	struct nvmap_handle_info *info;
+
+	if (!virt_addr_valid(dmabuf))
+		return 0;
+
+	info = dmabuf->priv;
+	return (ulong)marshal_kernel_handle((ulong)info->handle);
+}

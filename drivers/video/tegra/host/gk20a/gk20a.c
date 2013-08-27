@@ -48,7 +48,7 @@
 #include "gk20a_scale.h"
 #include "gr3d/pod_scaling.h"
 
-#include "../../../../../../arch/arm/mach-tegra/iomap.h"
+#include "../../../../../arch/arm/mach-tegra/iomap.h"
 
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {

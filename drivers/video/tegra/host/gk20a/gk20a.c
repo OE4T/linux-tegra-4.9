@@ -901,17 +901,6 @@ static int gk20a_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-#else
-	nvhost_module_enable_clk(&dev->dev);
-#endif
-
 	err = nvhost_client_device_init(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",
@@ -933,11 +922,6 @@ static int gk20a_probe(struct platform_device *dev)
 	gpu_cdev->g = gk20a;
 	gpu_cdev->gk20a_cooling_dev = thermal_cooling_device_register("gk20a_cdev", gpu_cdev,
 					&tegra_gpu_cooling_ops);
-
-	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
-	else
-		pm_runtime_put(&dev->dev);
 
 	gk20a->gr_idle_timeout_default =
 			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;

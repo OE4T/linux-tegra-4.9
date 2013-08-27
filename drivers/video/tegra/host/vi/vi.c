@@ -137,17 +137,6 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto camera_unregister;
 
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-#else
-	nvhost_module_enable_clk(&dev->dev);
-#endif
-
 	return 0;
 
 camera_unregister:

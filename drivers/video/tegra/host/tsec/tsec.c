@@ -583,33 +583,16 @@ static int tsec_probe(struct platform_device *dev)
 	tegra_pd_add_device(&dev->dev);
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-	pm_runtime_get_sync(&dev->dev);
-#else
-	nvhost_module_enable_clk(&dev->dev);
-#endif
-
 	err = nvhost_client_device_init(dev);
 	if (err)
 		return err;
 
+	nvhost_module_busy(dev);
 	/* Reset TSEC at boot-up. Otherwise it starts sending interrupts. */
 	tegra_periph_reset_assert(pdata->clk[0]);
 	udelay(10);
 	tegra_periph_reset_deassert(pdata->clk[0]);
-
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
-	else
-		pm_runtime_put(&dev->dev);
-#endif
+	nvhost_module_idle(dev);
 
 	return err;
 }

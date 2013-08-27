@@ -678,18 +678,6 @@ static int vic03_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-	pm_runtime_get_sync(&dev->dev);
-#else
-	nvhost_module_enable_clk(&dev->dev);
-#endif
-
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
@@ -709,13 +697,6 @@ static int vic03_probe(struct platform_device *dev)
 		pm_runtime_put(&dev->dev);
 		return err;
 	}
-
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
-	else
-		pm_runtime_put(&dev->dev);
-#endif
 
 	return 0;
 }

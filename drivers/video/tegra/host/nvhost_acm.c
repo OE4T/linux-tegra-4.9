@@ -530,6 +530,14 @@ int nvhost_module_init(struct platform_device *dev)
 		goto fail_powergatedelay;
 	}
 
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
+	pm_runtime_enable(&dev->dev);
+	if (!pm_runtime_enabled(&dev->dev))
+		nvhost_module_enable_clk(&dev->dev);
 	return 0;
 
 fail_powergatedelay:

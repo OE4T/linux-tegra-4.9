@@ -39,7 +39,7 @@ struct sim_gk20a;
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 
-#include "../../../../../../arch/arm/mach-tegra/iomap.h"
+#include "../../../../../arch/arm/mach-tegra/iomap.h"
 
 extern struct platform_device tegra_gk20a_device;
 extern struct nvhost_device_data tegra_gk20a_info;

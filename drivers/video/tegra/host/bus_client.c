@@ -127,6 +127,18 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	return 0;
 }
 
+void nvhost_client_writel(struct platform_device *pdev, u32 val, u32 reg)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	writel(val, pdata->aperture[0] + reg * 4);
+}
+
+u32 nvhost_client_readl(struct platform_device *pdev, u32 reg)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	return readl(pdata->aperture[0] + reg * 4);
+}
+
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;

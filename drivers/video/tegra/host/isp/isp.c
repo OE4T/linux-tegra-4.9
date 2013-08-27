@@ -36,6 +36,9 @@
 #include "t148/t148.h"
 #include "t124/t124.h"
 
+#define T12_ISP_CG_CTRL		0x1d
+#define T12_CG_2ND_LEVEL_EN	1
+
 static struct of_device_id tegra_isp_of_match[] = {
 #ifdef TEGRA_2X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra20-isp",
@@ -59,6 +62,12 @@ static struct of_device_id tegra_isp_of_match[] = {
 #endif
 	{ },
 };
+
+int nvhost_isp_t124_finalize_poweron(struct platform_device *pdev)
+{
+	nvhost_client_writel(pdev, T12_CG_2ND_LEVEL_EN, T12_ISP_CG_CTRL);
+	return 0;
+}
 
 static int isp_probe(struct platform_device *dev)
 {

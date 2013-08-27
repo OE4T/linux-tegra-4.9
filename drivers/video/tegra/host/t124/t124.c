@@ -35,6 +35,7 @@
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
+#include "isp/isp.h"
 
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
@@ -170,6 +171,7 @@ struct nvhost_device_data t124_isp_info = {
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = { {"isp", UINT_MAX} },
 	.slave           = &tegra_isp01b_device,
+	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",

@@ -33,13 +33,12 @@
 #define FLAG_CARVEOUT 3
 
 struct nvhost_nvmap_as_data {
-	struct nvmap_client *client;
-	struct nvmap_handle_ref *ref;
 	struct device *dev;
 	size_t len;
 	struct sg_table *sgt;
 	int pin_count;
 	int flags;
+	struct dma_buf_attachment *attach;
 };
 
 struct nvhost_nvmap_data {
@@ -72,7 +71,7 @@ struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd)
 struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
 		size_t size, size_t align, int flags, unsigned int heap_mask)
 {
-	return (struct mem_handle *)nvmap_alloc((struct nvmap_client *)mgr,
+	return (struct mem_handle *)nvmap_alloc_dmabuf(
 			size, align, flags, heap_mask);
 }
 
@@ -80,15 +79,7 @@ void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle)
 {
 	if (!handle)
 		return;
-	_nvmap_free((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle);
-}
-
-static void unmap_pages(struct device *dev, struct sg_table *sgt, size_t len)
-{
-	DEFINE_DMA_ATTRS(attrs);
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	dma_unmap_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
+	dma_buf_put((struct dma_buf *)handle);
 }
 
 void delete_priv(void *_priv)
@@ -99,13 +90,8 @@ void delete_priv(void *_priv)
 		struct nvhost_nvmap_as_data *as = priv->as[i];
 		if (!as)
 			continue;
-		if (as->sgt) {
-			if (as->flags & BIT(FLAG_NVHOST_MAPPED))
-				unmap_pages(as->dev,
-					    as->sgt, as->len);
-			nvmap_free_sg_table(as->client, as->ref,
-					    as->sgt);
-		}
+		if (as->sgt && as->flags & BIT(FLAG_CARVEOUT))
+			nvmap_dmabuf_free_sg_table(NULL, as->sgt);
 		kfree(as);
 	}
 	if (priv->comptags.lines) {
@@ -122,48 +108,47 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		struct device *dev,
 		int rw_flag)
 {
-	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
-	struct nvmap_client *nvmap = (struct nvmap_client *)mgr;
 	struct nvhost_nvmap_data *priv;
 	struct nvhost_nvmap_as_data *as_priv;
-	int asid = tegra_smmu_get_asid(dev);
 	struct sg_table *sgt;
 	int ret;
+	struct dma_buf *dmabuf = (struct dma_buf *)handle;
+	static DEFINE_MUTEX(priv_lock);
 
 	/* create the nvhost priv if needed */
-	priv = nvmap_get_nvhost_private(ref);
-	if (IS_ERR(priv))
-		return ERR_PTR(-EINVAL);
+	priv = nvmap_get_dmabuf_private(dmabuf);
 	if (!priv) {
+		mutex_lock(&priv_lock);
+		priv = nvmap_get_dmabuf_private(dmabuf);
+		if (priv)
+			goto priv_exist_or_err;
 		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-		if (!priv)
-			return ERR_PTR(-ENOMEM);
+		if (!priv) {
+			priv = ERR_PTR(-ENOMEM);
+			goto priv_exist_or_err;
+		}
 		mutex_init(&priv->lock);
-		nvmap_set_nvhost_private(ref, priv, delete_priv);
+		nvmap_set_dmabuf_private(dmabuf, priv, delete_priv);
+priv_exist_or_err:
+		mutex_unlock(&priv_lock);
 	}
+	if (IS_ERR(priv))
+		return (struct sg_table *)priv;
 
 	mutex_lock(&priv->lock);
-
 	/* create the per-as part of the priv if needed */
-	as_priv = priv->as[asid];
+	as_priv = priv->as[tegra_smmu_get_asid(dev)];
 	if (!as_priv) {
-		u64 size = 0, addr = 0, heap = 0;
+		u64 size = 0, heap = 0;
 
-		ret = nvmap_get_handle_param(nvmap, ref,
+		ret = nvmap_get_dmabuf_param(dmabuf,
 				NVMAP_HANDLE_PARAM_SIZE, &size);
 		if (ret) {
 			mutex_unlock(&priv->lock);
 			return ERR_PTR(ret);
 		}
 
-		ret = nvmap_get_handle_param(nvmap, ref,
-				NVMAP_HANDLE_PARAM_BASE, &addr);
-		if (ret) {
-			mutex_unlock(&priv->lock);
-			return ERR_PTR(ret);
-		}
-
-		ret = nvmap_get_handle_param(nvmap, ref,
+		ret = nvmap_get_dmabuf_param(dmabuf,
 				NVMAP_HANDLE_PARAM_HEAP, &heap);
 		if (ret) {
 			mutex_unlock(&priv->lock);
@@ -175,131 +160,117 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 			mutex_unlock(&priv->lock);
 			return ERR_PTR(-ENOMEM);
 		}
-		as_priv->client = nvmap;
-		as_priv->ref = ref;
-		as_priv->len = size;
-		as_priv->dev = dev;
-		as_priv->sgt = nvmap_sg_table(nvmap, ref);
-
-		if (IS_ERR(as_priv->sgt)) {
-			kfree(as_priv);
-			mutex_unlock(&priv->lock);
-			return ERR_PTR(-ENOMEM);
-		}
-
-		if (IS_ENABLED(CONFIG_TEGRA_GRHOST_FORCE_NVMAP)
-				|| (asid == tegra_smmu_get_asid(NULL)
-					&& !IS_ERR_VALUE(addr)))
-			as_priv->flags |= BIT(FLAG_NVMAP_MAPPED);
-
 		if (heap & NVMAP_HEAP_CARVEOUT_MASK)
 			as_priv->flags |= BIT(FLAG_CARVEOUT);
-
-		priv->as[asid] = as_priv;
+		as_priv->len = size;
+		as_priv->dev = dev;
+		priv->as[tegra_smmu_get_asid(dev)] = as_priv;
 	}
 
+	if (as_priv->flags & BIT(FLAG_CARVEOUT)) {
+		if (!as_priv->sgt) {
+			as_priv->sgt = nvmap_dmabuf_sg_table(dmabuf);
+			if (IS_ERR(as_priv->sgt)) {
+				sgt = as_priv->sgt;
+				as_priv->sgt = NULL;
+				return sgt;
+			}
+		}
+	} else if (as_priv->pin_count == 0) {
+		as_priv->attach = dma_buf_attach(dmabuf, dev);
+		if (IS_ERR(as_priv->attach))
+			return (struct sg_table *)as_priv->attach;
+
+		as_priv->sgt = dma_buf_map_attachment(as_priv->attach,
+						      DMA_BIDIRECTIONAL);
+		if (IS_ERR(as_priv->sgt)) {
+			dma_buf_detach(dmabuf, as_priv->attach);
+			return as_priv->sgt;
+		}
+	}
+
+	trace_nvhost_nvmap_pin(dev_name(dev), dmabuf, as_priv->len,
+			       sg_dma_address(as_priv->sgt->sgl));
 	sgt = as_priv->sgt;
-
-	if (as_priv->flags & BIT(FLAG_CARVEOUT))
-		;
-	else if (as_priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
-			sg_dma_address(sgt->sgl) == 0) {
-		dma_addr_t addr = 0;
-		int err = nvmap_pin(as_priv->client, ref, &addr);
-		if (err) {
-			mutex_unlock(&priv->lock);
-			return ERR_PTR(err);
-		}
-
-		sg_dma_address(sgt->sgl) = addr;
-	} else if (as_priv->pin_count == 0 &&
-		   sg_dma_address(sgt->sgl) == 0) {
-		int ents;
-		DEFINE_DMA_ATTRS(attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-
-		if (rw_flag == mem_flag_read_only)
-			dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-		else if (rw_flag == mem_flag_write_only)
-			dma_set_attr(DMA_ATTR_WRITE_ONLY, &attrs);
-
-		ents = dma_map_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
-		if (!ents) {
-			mutex_unlock(&priv->lock);
-			return ERR_PTR(-ENOMEM);
-		}
-		as_priv->flags |= BIT(FLAG_NVHOST_MAPPED);
-	}
-	trace_nvhost_nvmap_pin(dev_name(dev),
-			ref, as_priv->len, sg_dma_address(sgt->sgl));
-
 	as_priv->pin_count++;
 	mutex_unlock(&priv->lock);
-	nvmap_flush_deferred_cache(nvmap, ref);
 	return sgt;
 }
 
 void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 		struct device *dev, struct sg_table *sgt)
 {
-	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
-	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
-	struct nvhost_nvmap_as_data *as;
-	if (IS_ERR_OR_NULL(priv))
+	struct dma_buf *dmabuf = (struct dma_buf *)handle;
+	struct nvhost_nvmap_data *priv = nvmap_get_dmabuf_private(dmabuf);
+	struct nvhost_nvmap_as_data *as_priv;
+	dma_addr_t dma_addr;
+
+	if (IS_ERR(priv) || !priv)
 		return;
 
 	mutex_lock(&priv->lock);
-	as = priv->as[tegra_smmu_get_asid(dev)];
-	if (as) {
-		as->pin_count--;
-		WARN_ON(as->pin_count < 0);
+	as_priv = priv->as[tegra_smmu_get_asid(dev)];
+	if (as_priv) {
+		WARN_ON(as_priv->sgt != sgt);
+		as_priv->pin_count--;
+		WARN_ON(as_priv->pin_count < 0);
+		dma_addr = sg_dma_address(as_priv->sgt->sgl);
+		if (as_priv->pin_count == 0 &&
+		    as_priv->flags & BIT(FLAG_CARVEOUT)) {
+			/* do nothing. sgt free is deferred to delete_priv */
+		} else if (as_priv->pin_count == 0) {
+			dma_buf_unmap_attachment(as_priv->attach,
+				as_priv->sgt, DMA_BIDIRECTIONAL);
+			dma_buf_detach(dmabuf, as_priv->attach);
+		}
+		trace_nvhost_nvmap_unpin(dev_name(dev),
+			dmabuf, as_priv->len, dma_addr);
 	}
 	mutex_unlock(&priv->lock);
-	trace_nvhost_nvmap_unpin(dev_name(dev),
-			ref, as->len, sg_dma_address(sgt->sgl));
 }
 
 void *nvhost_nvmap_mmap(struct mem_handle *handle)
 {
-	return nvmap_mmap((struct nvmap_handle_ref *)handle);
+	return dma_buf_vmap((struct dma_buf *)handle);
 }
 
 void nvhost_nvmap_munmap(struct mem_handle *handle, void *addr)
 {
-	nvmap_munmap((struct nvmap_handle_ref *)handle, addr);
+	dma_buf_vunmap((struct dma_buf *)handle, addr);
 }
 
 void *nvhost_nvmap_kmap(struct mem_handle *handle, unsigned int pagenum)
 {
-	return nvmap_kmap((struct nvmap_handle_ref *)handle, pagenum);
+	return dma_buf_kmap((struct dma_buf *)handle, pagenum);
 }
 
 void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr)
 {
-	nvmap_kunmap((struct nvmap_handle_ref *)handle, pagenum, addr);
+	dma_buf_kunmap((struct dma_buf *)handle, pagenum, addr);
 }
 
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev)
 {
 	return (struct mem_handle *)
-		nvmap_duplicate_handle_user_id((struct nvmap_client *)mgr, id);
+		nvmap_dmabuf_export((struct nvmap_client *)mgr, id);
 }
 
 int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 		u32 param, u64 *result)
 {
-	return nvmap_get_handle_param((struct nvmap_client *)mgr,
-			(struct nvmap_handle_ref *)handle,
+	return nvmap_get_dmabuf_param(
+			(struct dma_buf *)handle,
 			param, result);
 }
 
 void nvhost_nvmap_get_comptags(struct mem_handle *mem,
 			       struct nvhost_comptags *comptags)
 {
-	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)mem;
-	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
+	struct nvhost_nvmap_data *priv;
+
+	priv = nvmap_get_dmabuf_private((struct dma_buf *)mem);
 
 	BUG_ON(!priv || !comptags);
 
@@ -310,10 +281,11 @@ int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
 				struct nvhost_allocator *allocator,
 				int lines)
 {
-	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)mem;
-	struct nvhost_nvmap_data *priv = nvmap_get_nvhost_private(ref);
 	int err;
 	u32 offset = 0;
+	struct nvhost_nvmap_data *priv;
+
+	priv = nvmap_get_dmabuf_private((struct dma_buf *)mem);
 
 	BUG_ON(!priv);
 	BUG_ON(!lines);

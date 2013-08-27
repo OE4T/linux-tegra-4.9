@@ -29,6 +29,7 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"
+#include "hdmi.h"
 
 static ssize_t mode_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -408,6 +409,275 @@ static ssize_t smart_panel_show(struct device *device,
 
 static DEVICE_ATTR(smart_panel, S_IRUGO, smart_panel_show, NULL);
 
+static ssize_t pclk_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+				hdmi_out->tmds_config[0].pclk);
+		mutex_unlock(&dc->lock);
+	}
+
+	return res;
+}
+
+static ssize_t pclk_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtol(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].pclk = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(pclk, S_IRUGO|S_IWUSR, pclk_show, pclk_store);
+
+static ssize_t pll0_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+			hdmi_out->tmds_config[0].pll0);
+		mutex_unlock(&dc->lock);
+	}
+
+	return res;
+}
+
+static ssize_t pll0_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].pll0 = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(pll0, S_IRUGO|S_IWUSR, pll0_show, pll0_store);
+static ssize_t pll1_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+			hdmi_out->tmds_config[0].pll1);
+		mutex_unlock(&dc->lock);
+	}
+
+	return res;
+}
+
+static ssize_t pll1_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].pll1 = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(pll1, S_IRUGO|S_IWUSR, pll1_show, pll1_store);
+static ssize_t pe_current_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+				hdmi_out->tmds_config[0].pe_current);
+		mutex_unlock(&dc->lock);
+	}
+
+	return res;
+}
+
+static ssize_t pe_current_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].pe_current = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(pe_current, S_IRUGO|S_IWUSR, pe_current_show,
+		pe_current_store);
+
+static ssize_t drive_current_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+				hdmi_out->tmds_config[0].drive_current);
+		mutex_unlock(&dc->lock);
+	}
+	return res;
+}
+
+static ssize_t drive_current_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].drive_current = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(drive_current, S_IRUGO|S_IWUSR, drive_current_show,
+		drive_current_store);
+
+static ssize_t peak_current_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE, "%d\n",
+				hdmi_out->tmds_config[0].peak_current);
+		mutex_unlock(&dc->lock);
+	}
+	return res;
+}
+
+static ssize_t peak_current_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config)
+		hdmi_out->tmds_config[0].peak_current = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(peak_current, S_IRUGO|S_IWUSR, peak_current_show,
+		peak_current_store);
+
+static ssize_t dump_config_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	struct tegra_hdmi_out *hdmi_out = dc->out->hdmi_out;
+	ssize_t res = 0;
+
+	if (hdmi_out->tmds_config && hdmi_out->n_tmds_config) {
+		mutex_lock(&dc->lock);
+		res = snprintf(buf, PAGE_SIZE,
+			"pclk: %d\n"
+			"pll0: %d\n"
+			"pll1: %d\n"
+			"pe_current: %d\n"
+			"drive_current: %d\n"
+			"peak_current: %d\n",
+			hdmi_out->tmds_config[0].pclk,
+			hdmi_out->tmds_config[0].pll0,
+			hdmi_out->tmds_config[0].pll1,
+			hdmi_out->tmds_config[0].pe_current,
+			hdmi_out->tmds_config[0].drive_current,
+			hdmi_out->tmds_config[0].peak_current
+			);
+		mutex_unlock(&dc->lock);
+	}
+
+	return res;
+}
+
+static DEVICE_ATTR(dump_config, S_IRUGO, dump_config_show, NULL);
+
+static struct attribute *hdmi_config_attrs[] = {
+	&dev_attr_pclk.attr,
+	&dev_attr_pll0.attr,
+	&dev_attr_pll1.attr,
+	&dev_attr_pe_current.attr,
+	&dev_attr_drive_current.attr,
+	&dev_attr_peak_current.attr,
+	&dev_attr_dump_config.attr,
+	NULL
+};
+
+static struct attribute_group hdmi_config_attr_group = {
+	.attrs = hdmi_config_attrs,
+	.name = "hdmi_config"
+};
+
 void tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
@@ -436,6 +706,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		device_remove_file(dev, &dev_attr_smart_panel);
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		sysfs_remove_group(&dev->kobj, &hdmi_config_attr_group);
 }
 
 void tegra_dc_create_sysfs(struct device *dev)
@@ -467,6 +740,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		error |= device_create_file(dev, &dev_attr_smart_panel);
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		error |= sysfs_create_group(&dev->kobj,
+					&hdmi_config_attr_group);
 
 	if (error)
 		dev_err(&ndev->dev, "Failed to create sysfs attributes!\n");

@@ -1277,18 +1277,13 @@ int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
 }
 EXPORT_SYMBOL(nvmap_release_page_list);
 
-int nvmap_get_handle_param(struct nvmap_client *client,
-			   struct nvmap_handle_ref *ref, u32 param, u64 *result)
+int __nvmap_get_handle_param(struct nvmap_client *client,
+			     struct nvmap_handle *h, u32 param, u64 *result)
 {
 	int err = 0;
-	struct nvmap_handle *h;
 
-	if (WARN_ON(!virt_addr_valid(ref)) ||
-	    WARN_ON(!virt_addr_valid(client)) ||
-	    WARN_ON(!result))
+	if (WARN_ON(!virt_addr_valid(h)))
 		return -EINVAL;
-
-	h = nvmap_handle_get(ref->handle);
 
 	switch (param) {
 	case NVMAP_HANDLE_PARAM_SIZE:
@@ -1331,6 +1326,16 @@ int nvmap_get_handle_param(struct nvmap_client *client,
 		err = -EINVAL;
 		break;
 	}
-	nvmap_handle_put(h);
 	return err;
+}
+
+int nvmap_get_handle_param(struct nvmap_client *client,
+			   struct nvmap_handle_ref *ref, u32 param, u64 *result)
+{
+	if (WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(client)) ||
+	    WARN_ON(!result))
+		return -EINVAL;
+
+	return __nvmap_get_handle_param(client, ref->handle, param, result);
 }

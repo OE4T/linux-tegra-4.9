@@ -164,6 +164,8 @@ void nvmap_flush_deferred_cache(struct nvmap_client *client,
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 
+int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
+
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);
 #else

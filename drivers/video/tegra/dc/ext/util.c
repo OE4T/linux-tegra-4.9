@@ -49,7 +49,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	if (IS_ERR_OR_NULL(dc_dmabuf->buf))
 		goto buf_fail;
 
-	dc_dmabuf->attach = dma_buf_attach(dc_dmabuf->buf, ext->dev);
+	dc_dmabuf->attach = dma_buf_attach(dc_dmabuf->buf, ext->dev->parent);
 	if (IS_ERR_OR_NULL(dc_dmabuf->attach))
 		goto attach_fail;
 

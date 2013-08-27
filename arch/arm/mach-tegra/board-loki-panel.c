@@ -724,6 +724,39 @@ static int loki_hdmi_hotplug_init(struct device *dev)
 	}
 	return 0;
 }
+/* Table of electrical characteristics for Roth HDMI.
+ * All modes must be declared here
+ */
+struct tmds_config loki_tmds_config[] = {
+	{ /* 720p / 74.25MHz modes */
+		.pclk = 74250000,
+		.pll0 = 0x01003f10,
+		.pll1 = 0x10300b00,
+		.pe_current = 0x00000000,
+		.drive_current = 0x2e2e2e2e,
+		.peak_current = 0x05050505,
+	},
+	{ /* 1080p / 148.5MHz modes */
+		.pclk = 148500000,
+		.pll0 = 0x01003f10,
+		.pll1 = 0x10300b00,
+		.pe_current = 0x00000000,
+		.drive_current = 0x2e2e2e2e,
+		.peak_current = 0x05050505,
+	},
+	{ /* 297MHz modes */
+		.pclk = INT_MAX,
+		.pll0 = 0x01003f10,
+		.pll1 = 0x13300b00,
+		.pe_current = 0x00000000,
+		.drive_current = 0x34343434,
+		.peak_current = 0x07070707,
+	},
+};
+struct tegra_hdmi_out loki_hdmi_out = {
+	.tmds_config = loki_tmds_config,
+	.n_tmds_config = 3,
+};
 
 static void loki_hdmi_hotplug_report(bool state)
 {
@@ -1003,6 +1036,7 @@ int __init loki_panel_init(int board_id)
 	}
 
 	loki_disp2_device.dev.parent = &phost1x->dev;
+	loki_disp2_out.hdmi_out = &loki_hdmi_out;
 	err = platform_device_register(&loki_disp2_device);
 	if (err) {
 		pr_err("disp2 device registration failed\n");

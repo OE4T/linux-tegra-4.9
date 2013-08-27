@@ -67,8 +67,6 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev);
 int nvhost_module_enable_clk(struct device *dev);
 int nvhost_module_disable_clk(struct device *dev);
-int nvhost_module_power_on(struct platform_device *pdev);
-int nvhost_module_power_off(struct platform_device *pdev);
 int nvhost_module_prepare_poweroff(struct device *dev);
 int nvhost_module_finalize_poweron(struct device *dev);
 

@@ -39,10 +39,16 @@
 
 #include "nvhost_acm.h"
 #include "dev.h"
+#include "bus_client.h"
 
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT	(2 * HZ)
 #define POWERGATE_DELAY 			10
 #define MAX_DEVID_LENGTH			16
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int nvhost_module_power_on(struct generic_pm_domain *domain);
+static int nvhost_module_power_off(struct generic_pm_domain *domain);
+#endif
 
 DEFINE_MUTEX(client_list_lock);
 
@@ -617,6 +623,17 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 
 	if (__pm_genpd_name_add_device(domain->name, &pdev->dev, NULL)) {
 		pm_genpd_init(domain, pm_domain_gov, true);
+
+		domain->power_off = nvhost_module_power_off;
+		domain->power_on = nvhost_module_power_on;
+		domain->dev_ops.start = nvhost_module_enable_clk;
+		domain->dev_ops.stop = nvhost_module_disable_clk;
+		domain->dev_ops.save_state = nvhost_module_prepare_poweroff;
+		domain->dev_ops.restore_state = nvhost_module_finalize_poweron;
+		/* overwrite save/restore fptrs set by pm_genpd_init */
+		domain->domain.ops.suspend = nvhost_client_device_suspend;
+		domain->domain.ops.resume = nvhost_client_device_resume;
+
 		ret = pm_genpd_add_device(domain, &pdev->dev);
 		if (pdata->powergate_delay)
 			pm_genpd_set_poweroff_delay(domain,
@@ -675,13 +692,12 @@ int nvhost_module_disable_clk(struct device *dev)
 }
 EXPORT_SYMBOL(nvhost_module_disable_clk);
 
-int nvhost_module_power_on(struct platform_device *pdev)
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {
 	struct nvhost_device_data *pdata;
 
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
+	pdata = container_of(domain, struct nvhost_device_data, pd);
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
@@ -690,18 +706,17 @@ int nvhost_module_power_on(struct platform_device *pdev)
 	}
 
 	if (pdata->powerup_reset)
-		do_module_reset_locked(pdev);
+		do_module_reset_locked(pdata->pdev);
 	mutex_unlock(&pdata->lock);
 
 	return 0;
 }
-EXPORT_SYMBOL(nvhost_module_power_on);
 
-int nvhost_module_power_off(struct platform_device *pdev)
+static int nvhost_module_power_off(struct generic_pm_domain *domain)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(domain, struct nvhost_device_data, pd);
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
@@ -712,7 +727,6 @@ int nvhost_module_power_off(struct platform_device *pdev)
 
 	return 0;
 }
-EXPORT_SYMBOL(nvhost_module_power_off);
 
 int nvhost_module_prepare_poweroff(struct device *dev)
 {
@@ -741,6 +755,7 @@ int nvhost_module_finalize_poweron(struct device *dev)
 
 	return 0;
 }
+#endif
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev)

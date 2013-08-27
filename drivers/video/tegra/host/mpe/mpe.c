@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host MPE
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -647,24 +647,6 @@ static struct of_device_id tegra_mpe_of_match[] = {
 	{ },
 };
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static int mpe_unpowergate(struct generic_pm_domain *domain)
-{
-	struct nvhost_device_data *pdata;
-
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-	return nvhost_module_power_on(pdata->pdev);
-}
-
-static int mpe_powergate(struct generic_pm_domain *domain)
-{
-	struct nvhost_device_data *pdata;
-
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-	return nvhost_module_power_off(pdata->pdev);
-}
-#endif
-
 static int mpe_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -696,18 +678,8 @@ static int mpe_probe(struct platform_device *dev)
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	pdata->pd.name = "mpe";
-	pdata->pd.power_off = mpe_powergate;
-	pdata->pd.power_on = mpe_unpowergate;
-	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
-	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
 
 	err = nvhost_module_add_domain(&pdata->pd, dev);
-
-	/* overwrite save/restore fptrs set by pm_genpd_init */
-	pdata->pd.dev_ops.save_state = nvhost_module_prepare_poweroff;
-	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
-	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
-	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
 #endif
 
 #ifdef CONFIG_PM_RUNTIME

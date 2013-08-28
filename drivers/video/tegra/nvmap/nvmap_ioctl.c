@@ -507,7 +507,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		return -EINVAL;
 
 	nvmap_ref_lock(client);
-	ref = _nvmap_validate_id_locked(client, handle);
+	ref = __nvmap_validate_id_locked(client, handle);
 	if (IS_ERR_OR_NULL(ref)) {
 		err = ref ? PTR_ERR(ref) : -EINVAL;
 		goto ref_fail;

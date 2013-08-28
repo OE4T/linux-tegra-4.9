@@ -236,8 +236,8 @@ pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr)
 
 /* verifies that the handle ref value "ref" is a valid handle ref for the
  * file. caller must hold the file's ref_lock prior to calling this function */
-struct nvmap_handle_ref *_nvmap_validate_id_locked(struct nvmap_client *c,
-						   unsigned long id)
+struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
+						    unsigned long id)
 {
 	struct rb_node *n = c->handle_refs.rb_node;
 
@@ -262,7 +262,7 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 	struct nvmap_handle *h = NULL;
 
 	nvmap_ref_lock(client);
-	ref = _nvmap_validate_id_locked(client, id);
+	ref = __nvmap_validate_id_locked(client, id);
 	if (ref)
 		h = ref->handle;
 	if (h)

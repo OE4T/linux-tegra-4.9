@@ -240,7 +240,7 @@ void nvmap_unpin_ids(struct nvmap_client *client,
 			continue;
 
 		nvmap_ref_lock(client);
-		ref = _nvmap_validate_id_locked(client, ids[i]);
+		ref = __nvmap_validate_id_locked(client, ids[i]);
 		if (ref) {
 			struct nvmap_handle *h = ref->handle;
 			int e = atomic_add_unless(&ref->pin, -1, 0);
@@ -290,7 +290,7 @@ int nvmap_pin_ids(struct nvmap_client *client,
 	 * will be permanently leaked. */
 	nvmap_ref_lock(client);
 	for (i = 0; i < nr; i++) {
-		ref = _nvmap_validate_id_locked(client, ids[i]);
+		ref = __nvmap_validate_id_locked(client, ids[i]);
 		if (ref) {
 			atomic_inc(&ref->pin);
 			nvmap_handle_get(h[i]);
@@ -347,7 +347,7 @@ out:
 			if (!ids[i])
 				continue;
 
-			ref = _nvmap_validate_id_locked(client, ids[i]);
+			ref = __nvmap_validate_id_locked(client, ids[i]);
 			if (!ref) {
 				nvmap_warn(client, "%s freed handle %p "
 					   "during pinning\n",
@@ -465,7 +465,7 @@ int nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
 		return -EINVAL;
 
 	nvmap_ref_lock(client);
-	ref = _nvmap_validate_id_locked(client, (unsigned long)ref->handle);
+	ref = __nvmap_validate_id_locked(client, (unsigned long)ref->handle);
 	if (ref)
 		h = ref->handle;
 	nvmap_ref_unlock(client);

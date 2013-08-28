@@ -289,7 +289,7 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 
 void nvmap_handle_put(struct nvmap_handle *h);
 
-struct nvmap_handle_ref *_nvmap_validate_id_locked(struct nvmap_client *priv,
+struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *priv,
 						   unsigned long id);
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,

@@ -238,8 +238,36 @@ static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 
 static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 {
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 reg;
+
 	nvhost_dbg_fn("");
-	/* FE_PWR_MODE_MODE_FORCE_ON for RTLSim and EMulation? */
+
+	/* Force clocks on */
+	gk20a_writel(g, NV_PGRAPH_PRI_FE_PWR_MODE,
+			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_SEND |
+			NV_PGRAPH_PRI_FE_PWR_MODE_MODE_FORCE_ON);
+
+	/* Wait for the clocks to indicate that they are on */
+	do {
+		reg = gk20a_readl(g, NV_PGRAPH_PRI_FE_PWR_MODE);
+
+		if ((reg & NV_PGRAPH_PRI_FE_PWR_MODE_REQ_MASK) ==
+			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_DONE)
+			break;
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+
+	} while (time_before(jiffies, end_jiffies));
+
+	if (!time_before(jiffies, end_jiffies)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "failed to force the clocks on\n");
+		WARN_ON(1);
+	}
 
 	if (rst_mask) {
 		gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(), rst_mask);
@@ -273,7 +301,31 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 	/* Delay for > 10 nvclks after writing reset. */
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 
-	/* FE_PWR_MODE_MODE_AUTO for RTLSim and EMulation? */
+	end_jiffies = jiffies + msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+	/* Set power mode back to auto */
+	gk20a_writel(g, NV_PGRAPH_PRI_FE_PWR_MODE,
+			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_SEND |
+			NV_PGRAPH_PRI_FE_PWR_MODE_MODE_AUTO);
+
+	/* Wait for the request to complete */
+	do {
+		reg = gk20a_readl(g, NV_PGRAPH_PRI_FE_PWR_MODE);
+
+		if ((reg & NV_PGRAPH_PRI_FE_PWR_MODE_REQ_MASK) ==
+			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_DONE)
+			break;
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+
+	} while (time_before(jiffies, end_jiffies));
+
+	if (!time_before(jiffies, end_jiffies)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "failed to set power mode to auto\n");
+		WARN_ON(1);
+	}
 
 	return 0;
 }

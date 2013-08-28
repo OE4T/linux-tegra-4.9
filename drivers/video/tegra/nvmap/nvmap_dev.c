@@ -101,6 +101,10 @@ static struct backing_dev_info nvmap_bdi = {
 			   BDI_CAP_READ_MAP | BDI_CAP_WRITE_MAP),
 };
 
+static struct device_dma_parameters nvmap_dma_parameters = {
+	.max_segment_size = UINT_MAX,
+};
+
 static int nvmap_open(struct inode *inode, struct file *filp);
 static int nvmap_release(struct inode *inode, struct file *filp);
 static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
@@ -1201,6 +1205,14 @@ static int nvmap_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no platform data?\n");
 		return -ENODEV;
 	}
+
+	/*
+	 * The DMA mapping API uses these parameters to decide how to map the
+	 * passed buffers. If the maximum physical segment size is set to
+	 * smaller than the size of the buffer, then the buffer will be mapped
+	 * as separate IO virtual address ranges.
+	 */
+	pdev->dev.dma_parms = &nvmap_dma_parameters;
 
 	if (WARN_ON(nvmap_dev != NULL)) {
 		dev_err(&pdev->dev, "only one nvmap device may be present\n");

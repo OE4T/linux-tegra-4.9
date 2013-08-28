@@ -505,7 +505,8 @@ static int tegra_fb_ioctl(struct fb_info *info,
 		break;
 
 	case FBIOGET_VBLANK:
-		tegra_dc_get_fbvblank(tegra_fb->win->dc, &vblank);
+		if (tegra_dc_has_vsync(tegra_fb->win->dc))
+			vblank.flags = FB_VBLANK_HAVE_VSYNC;
 
 		if (copy_to_user(
 			(void __user *)arg, &vblank, sizeof(vblank)))

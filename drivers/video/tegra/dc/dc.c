@@ -1552,10 +1552,9 @@ static inline void enable_dc_irq(const struct tegra_dc *dc)
 		enable_irq(dc->irq);
 }
 
-void tegra_dc_get_fbvblank(struct tegra_dc *dc, struct fb_vblank *vblank)
+bool tegra_dc_has_vsync(struct tegra_dc *dc)
 {
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		vblank->flags = FB_VBLANK_HAVE_VSYNC;
+	return !!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE);
 }
 
 int tegra_dc_wait_for_vsync(struct tegra_dc *dc)

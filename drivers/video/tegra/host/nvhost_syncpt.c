@@ -73,6 +73,13 @@ int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id)
 	return pdata->waitbases[0];
 }
 
+void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp)
+{
+	/* reset syncpoint value back to 0 */
+	atomic_set(&sp->min_val[0], 0);
+	syncpt_op().reset(sp, 0);
+}
+
 /**
  * Resets syncpoint and waitbase values of a
  * single client to sw shadows

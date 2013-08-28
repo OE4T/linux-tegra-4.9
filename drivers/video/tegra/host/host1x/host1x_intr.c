@@ -4,7 +4,7 @@
  * Tegra Graphics Host Interrupt Management
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,7 +30,11 @@
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
 
-static void t20_intr_syncpt_thresh_isr(struct nvhost_intr_syncpt *syncpt);
+static void t20_intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
+				     bool disable_intr);
+static void t20_intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id);
+static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr,
+					  u32 id, u32 thresh);
 
 static void syncpt_thresh_cascade_fn(struct work_struct *work)
 {
@@ -63,8 +67,17 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 
 			sp = intr->syncpt + sp_id;
 			ktime_get_ts(&sp->isr_recv);
-			t20_intr_syncpt_thresh_isr(sp);
-			queue_work(intr->wq, &sp->work);
+
+			/* handle syncpoint 0 increments immediately */
+			if (sp_id == 0) {
+				dev_warn(&dev->dev->dev, "%s(): syncpoint id 0 incremented\n",
+					 __func__);
+				nvhost_syncpt_patch_check(&dev->syncpt);
+				t20_intr_syncpt_intr_ack(sp, false);
+			} else {
+				t20_intr_syncpt_intr_ack(sp, true);
+				queue_work(intr->wq, &sp->work);
+			}
 		}
 	}
 
@@ -98,6 +111,10 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	 * otherwise on ap20.
 	 */
 	writel(0xff, sync_regs + host1x_sync_ctxsw_timeout_cfg_r());
+
+	/* enable syncpoint 0 interrupt */
+	t20_intr_set_syncpt_threshold(intr, 0, 1);
+	t20_intr_enable_syncpt_intr(intr, 0);
 }
 
 static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
@@ -166,11 +183,12 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	}
 }
 
-/**
- * Sync point threshold interrupt service function
- * Handles sync point threshold triggers, in interrupt context
+/*
+ * Acknowledge that the syncpoint interrupt is handled. If disable_intr is set,
+ * the syncpoint interrupt is also disabled.
  */
-static void t20_intr_syncpt_thresh_isr(struct nvhost_intr_syncpt *syncpt)
+static void t20_intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
+				     bool disable_intr)
 {
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
@@ -179,8 +197,10 @@ static void t20_intr_syncpt_thresh_isr(struct nvhost_intr_syncpt *syncpt)
 
 	u32 reg = BIT_WORD(id) * REGISTER_STRIDE;
 
-	writel(BIT_MASK(id), sync_regs +
-		host1x_sync_syncpt_thresh_int_disable_r() + reg);
+	if (disable_intr)
+		writel(BIT_MASK(id), sync_regs +
+		       host1x_sync_syncpt_thresh_int_disable_r() + reg);
+
 	writel(BIT_MASK(id), sync_regs +
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg);
 }
@@ -296,6 +316,10 @@ static void host1x_intr_disable_general_irq(struct nvhost_intr *intr, int irq)
 static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
+
+	/* disable syncpoint 0 interrupt */
+	t20_intr_disable_syncpt_intr(intr, 0);
+
 	free_irq(INT_HOST1X_MPCORE_SYNCPT, dev);
 	flush_workqueue(intr->wq);
 	return 0;

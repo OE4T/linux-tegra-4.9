@@ -96,6 +96,7 @@ static inline u32 nvhost_syncpt_read_min(struct nvhost_syncpt *sp, u32 id)
 	return (u32)atomic_read(&sp->min_val[id]);
 }
 
+void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);

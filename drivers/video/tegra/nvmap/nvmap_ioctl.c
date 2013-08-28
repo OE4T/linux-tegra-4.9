@@ -126,6 +126,11 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 	unsigned long __user *output;
 	unsigned int i;
 	int err = 0;
+#ifdef CONFIG_COMPAT
+	u32 handle;
+#else
+	struct nvmap_handle *handle;
+#endif
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -150,7 +155,6 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		}
 
 		for (i = 0; i < op.count; i++) {
-			u32 handle;
 			if (__get_user(handle, &op.handles[i])) {
 				err = -EFAULT;
 				goto out;

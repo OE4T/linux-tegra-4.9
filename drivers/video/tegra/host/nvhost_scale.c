@@ -289,7 +289,7 @@ void nvhost_scale_init(struct platform_device *pdev)
 
 		devfreq = devfreq_add_device(&pdev->dev,
 					&profile->devfreq_profile,
-					pdata->devfreq_governor->name, NULL);
+					pdata->devfreq_governor, NULL);
 
 		if (IS_ERR(devfreq))
 			devfreq = NULL;

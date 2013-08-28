@@ -403,9 +403,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	mutex_init(&intr->mutex);
 	intr->syncpt_irq = irq_sync;
 	intr->wq = create_workqueue("host_syncpt");
-	intr_op().init_host_sync(intr);
 	intr->general_irq = irq_gen;
-	intr_op().request_host_general_irq(intr);
 
 	for (id = 0, syncpt = intr->syncpt;
 	     id < nb_pts;

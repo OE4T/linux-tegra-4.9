@@ -326,6 +326,7 @@ void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
 	else
 		reg_val &= NV_SOR_DP_LINKCTL_ENABLE_NO;
 
+	reg_val &= ~NV_SOR_DP_LINKCTL_TUSIZE_MASK;
 	reg_val |= (cfg->tu_size << NV_SOR_DP_LINKCTL_TUSIZE_SHIFT);
 
 	if (cfg->enhanced_framing)

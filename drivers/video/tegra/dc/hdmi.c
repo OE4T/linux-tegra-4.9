@@ -730,8 +730,10 @@ static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
 static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
+#ifndef CONFIG_ARCH_TEGRA_12x_SOC
 	if (mode->vmode & FB_VMODE_INTERLACED)
 		return false;
+#endif
 
 	/* Ignore modes with a 0 pixel clock */
 	if (!mode->pixclock)

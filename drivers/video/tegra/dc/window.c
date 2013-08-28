@@ -366,8 +366,7 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 			&& (dc->mode.vmode == FB_VMODE_INTERLACED)) {
 			if (WIN_IS_INTERLACE(win))
 				tegra_dc_writel(dc,
-					V_PRESCALED_SIZE(dfixed_trunc(win->w)
-					>> 1) |
+					V_PRESCALED_SIZE(dfixed_trunc(win->w)) |
 					H_PRESCALED_SIZE(dfixed_trunc(win->h)
 					* Bpp),
 					DC_WIN_PRESCALED_SIZE);
@@ -538,17 +537,10 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 
 		if (tegra_dc_feature_has_interlace(dc, win->idx) &&
 			(dc->mode.vmode == FB_VMODE_INTERLACED)) {
-			if (WIN_IS_INTERLACE(win)) {
-				tegra_dc_writel(dc,
-					V_SIZE((win->out_h)) |
-					H_SIZE(win->out_w),
-					DC_WIN_SIZE);
-			} else {
 				tegra_dc_writel(dc,
 					V_SIZE((win->out_h) >> 1) |
 					H_SIZE(win->out_w),
 					DC_WIN_SIZE);
-			}
 		} else {
 			tegra_dc_writel(dc,
 				V_SIZE(win->out_h) | H_SIZE(win->out_w),
@@ -892,7 +884,7 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (dc->mode.vmode == FB_VMODE_INTERLACED) {
 		val = tegra_dc_readl(dc, DC_DISP_INTERLACE_CONTROL);
-		interlace_done = (val & INTERLACE_ENABLE) &&
+		interlace_done = (val & INTERLACE_MODE_ENABLE) &&
 			(val & INTERLACE_STATUS_FIELD_2);
 	}
 #endif

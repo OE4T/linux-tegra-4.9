@@ -200,6 +200,23 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	unsigned long div;
 	unsigned long pclk;
 
+	unsigned long v_back_porch;
+	unsigned long v_front_porch;
+	unsigned long v_sync_width;
+	unsigned long v_active;
+
+	v_back_porch = mode->v_back_porch;
+	v_front_porch = mode->v_front_porch;
+	v_sync_width = mode->v_sync_width;
+	v_active = mode->v_active;
+
+	if (mode->vmode == FB_VMODE_INTERLACED) {
+		v_back_porch /= 2;
+		v_front_porch /= 2;
+		v_sync_width /= 2;
+		v_active /= 2;
+	}
+
 	print_mode(dc, mode, __func__);
 
 	/* use default EMC rate when switching modes */
@@ -210,25 +227,25 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);
 	tegra_dc_writel(dc, mode->h_ref_to_sync | (mode->v_ref_to_sync << 16),
 			DC_DISP_REF_TO_SYNC);
-	tegra_dc_writel(dc, mode->h_sync_width | (mode->v_sync_width << 16),
+	tegra_dc_writel(dc, mode->h_sync_width | (v_sync_width << 16),
 			DC_DISP_SYNC_WIDTH);
 	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
 		tegra_dc_writel(dc, mode->h_back_porch |
-			((mode->v_back_porch - mode->v_ref_to_sync) << 16),
+			((v_back_porch - mode->v_ref_to_sync) << 16),
 			DC_DISP_BACK_PORCH);
 		tegra_dc_writel(dc, mode->h_front_porch |
-			((mode->v_front_porch + mode->v_ref_to_sync) << 16),
+			((v_front_porch + mode->v_ref_to_sync) << 16),
 			DC_DISP_FRONT_PORCH);
 	} else {
 		tegra_dc_writel(dc, mode->h_back_porch |
-			(mode->v_back_porch << 16),
+			(v_back_porch << 16),
 			DC_DISP_BACK_PORCH);
 		tegra_dc_writel(dc, mode->h_front_porch |
-			(mode->v_front_porch << 16),
+			(v_front_porch << 16),
 			DC_DISP_FRONT_PORCH);
 	}
-	tegra_dc_writel(dc, mode->h_active | (mode->v_active << 16),
+	tegra_dc_writel(dc, mode->h_active | (v_active << 16),
 			DC_DISP_DISP_ACTIVE);
 
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
@@ -247,16 +264,16 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			mode->h_active + mode->h_front_porch) >> 1)
 			<< 16), DC_DISP_INTERLACE_FIELD2_REF_TO_SYNC);
 		tegra_dc_writel(dc, mode->h_sync_width |
-			(mode->v_sync_width << 16),
+			(v_sync_width << 16),
 			DC_DISP_INTERLACE_FIELD2_SYNC_WIDTH);
 		tegra_dc_writel(dc, mode->h_back_porch |
-			((mode->v_back_porch + 1) << 16),
+			((v_back_porch + 1) << 16),
 			DC_DISP_INTERLACE_FIELD2_BACK_PORCH);
 		tegra_dc_writel(dc, mode->h_active |
-			(mode->v_active << 16),
+			(v_active << 16),
 			DC_DISP_INTERLACE_FIELD2_DISP_ACTIVE);
 		tegra_dc_writel(dc, mode->h_front_porch |
-			(mode->v_front_porch << 16),
+			(v_front_porch << 16),
 			DC_DISP_INTERLACE_FIELD2_FRONT_PORCH);
 	}
 #endif
@@ -382,7 +399,7 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	fbmode->upper_margin = mode->v_back_porch;
 	fbmode->xres = mode->h_active;
 	fbmode->yres = mode->v_active;
-	fbmode->vmode = FB_VMODE_NONINTERLACED;
+	fbmode->vmode = mode->vmode;
 	if (mode->stereo_mode) {
 #ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 		/* Double the pixel clock and update v_active only for

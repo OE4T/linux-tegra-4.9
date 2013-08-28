@@ -92,6 +92,10 @@ struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 DEFINE_MUTEX(tegra_dc_lock);
 DEFINE_MUTEX(shared_lock);
 
+static struct device_dma_parameters tegra_dc_dma_parameters = {
+	.max_segment_size = UINT_MAX,
+};
+
 static const struct {
 	bool h;
 	bool v;
@@ -2616,6 +2620,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dev_err(&ndev->dev, "no platform data\n");
 		return -ENOENT;
 	}
+
+	/* Specify parameters for the maximum physical segment size. */
+	ndev->dev.dma_parms = &tegra_dc_dma_parameters;
 
 	dc = kzalloc(sizeof(struct tegra_dc), GFP_KERNEL);
 	if (!dc) {

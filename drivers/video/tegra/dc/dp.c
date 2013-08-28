@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.c
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -895,7 +895,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 		temp_edc[0] |= NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T;
 
 		size = 4;
-		ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+		ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 			NV_DPCD_TRAINING_PATTERN_SET, temp_edc, &size, &status);
 		if (ret) {
 			dev_err(&dp->dc->ndev->dev,
@@ -904,7 +904,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 		}
 	} else {		/* No training pattern, only set LANE config */
 		size = 3;
-		ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+		ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 			NV_DPCD_TRAINING_LANE0_SET, temp_edc+1, &size, &status);
 		if (ret) {
 			dev_err(&dp->dc->ndev->dev,
@@ -914,7 +914,7 @@ static int tegra_dc_dp_set_lane_config(struct tegra_dc_dp_data *dp,
 	}
 
 	size = 1;
-	ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+	ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		NV_DPCD_TRAINING_LANE0_1_SET2, temp_c2, &size, &status);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
@@ -1221,12 +1221,6 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 	tegra_dc_dpaux_read(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
 		NV_DPCD_LANE0_1_STATUS, (u8 *)&data, &size, &status);
 	status = mask & 0x1111;
-	if ((data & status) != status) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: Link training error for TP1 (0x%x)\n", data);
-		return -EFAULT;
-	}
-
 	if ((data & status) != status) {
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Link training error for TP1 (0x%x)\n", data);
@@ -1618,9 +1612,6 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	tegra_dc_sor_setup_clk(dp->sor, clk, false);
 
 	parent_clk = tegra_get_clock_by_name("pll_dp");
-
-	if (clk_get_parent(sor_clk) != parent_clk)
-		clk_set_parent(sor_clk, parent_clk);
 	clk_set_rate(parent_clk, 270000000);
 
 	if (!tegra_is_clk_enabled(parent_clk))

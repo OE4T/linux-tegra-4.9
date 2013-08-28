@@ -966,10 +966,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 		DC_CMD_DISPLAY_POWER_CONTROL);
 
-	tegra_dc_writel(sor->dc, CRC_ALWAYS_ENABLE |
-		CRC_INPUT_DATA_ACTIVE_DATA | CRC_ENABLE_ENABLE,
-		DC_COM_CRC_CONTROL);
-
 	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 

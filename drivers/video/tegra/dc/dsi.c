@@ -488,18 +488,22 @@ static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
-	for (i = 0; i < dsi->max_instances; i++) {
-		clk_prepare_enable(dsi->dsi_clk[i]);
-		udelay(800);
+	if (!tegra_is_clk_enabled(dsi->dsi_clk[0])) {
+		for (i = 0; i < dsi->max_instances; i++) {
+			clk_prepare_enable(dsi->dsi_clk[i]);
+			udelay(800);
+		}
 	}
 }
 
 static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
-	for (i = 0; i < dsi->max_instances; i++) {
-		clk_disable_unprepare(dsi->dsi_clk[i]);
-		udelay(800);
+	if (tegra_is_clk_enabled(dsi->dsi_clk[0])) {
+		for (i = 0; i < dsi->max_instances; i++) {
+			clk_disable_unprepare(dsi->dsi_clk[i]);
+			udelay(800);
+		}
 	}
 }
 

@@ -14,6 +14,7 @@
  *
  */
 
+#include <linux/debugfs.h>
 #include <linux/ioport.h>
 #include <linux/gfp.h>
 #include <linux/export.h>
@@ -21,6 +22,74 @@
 #include "mipi_cal.h"
 #include "mipi_cal_regs.h"
 #include "dsi.h"
+
+#include "../../../../arch/arm/mach-tegra/iomap.h"
+
+#ifdef CONFIG_DEBUG_FS
+static int dbg_dsi_mipi_show(struct seq_file *s, void *unused)
+{
+	struct tegra_mipi_cal *mipi_cal = s->private;
+	unsigned long i = 0;
+	u32 col = 0;
+
+	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
+	mutex_lock(&mipi_cal->lock);
+	tegra_mipi_cal_clk_enable(mipi_cal);
+
+	/* mem dd dump */
+	for (col = 0, i = 0; i <= MIPI_VALID_REG_LIMIT ; i += 4) {
+		if (col == 0)
+			seq_printf(s, "%08lX:", TEGRA_MIPI_BASE + i);
+		seq_printf(s, "%c%08lX", col == 2 ? '-' : ' ',
+			tegra_mipi_cal_read(mipi_cal, i));
+		if (col == 3) {
+			seq_printf(s, "\n");
+			col = 0;
+		} else
+			col++;
+	}
+	seq_printf(s, "\n");
+
+	tegra_mipi_cal_clk_disable(mipi_cal);
+	mutex_unlock(&mipi_cal->lock);
+	return 0;
+}
+
+static int dbg_dsi_mipi_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dsi_mipi_show, inode->i_private);
+}
+
+static const struct file_operations dbg_fops = {
+	.open		= dbg_dsi_mipi_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static struct dentry *mipidir;
+
+static void dbg_dsi_mipi_dir_create(struct tegra_mipi_cal *mipi_cal)
+{
+	struct dentry *retval;
+
+	mipidir = debugfs_create_dir("tegra_mipi_cal", NULL);
+	if (!mipidir)
+		return;
+	retval = debugfs_create_file("regs", S_IRUGO, mipidir, mipi_cal,
+		&dbg_fops);
+	if (!retval)
+		goto free_out;
+	return;
+free_out:
+	debugfs_remove_recursive(mipidir);
+	mipidir = NULL;
+	return;
+}
+#else
+static inline void dbg_dsi_mipi_dir_create(struct tegra_mipi_cal *mipi_cal)
+{ }
+#endif
 
 int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 {
@@ -110,7 +179,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	mipi_cal->base = base;
 	mipi_cal->clk = clk;
 	mipi_cal->fixed_clk = fixed_clk;
-
+	dbg_dsi_mipi_dir_create(mipi_cal);
 	return mipi_cal;
 
 fail_free_map:
@@ -145,6 +214,9 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 
 	mutex_destroy(&mipi_cal->lock);
 	devm_kfree(&dc->ndev->dev, mipi_cal);
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove_recursive(mipidir);
+#endif
 }
 EXPORT_SYMBOL(tegra_mipi_cal_destroy);
 

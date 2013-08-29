@@ -62,6 +62,9 @@ extern struct nvmap_share *nvmap_share;
 
 #define nvmap_ref_to_id(_ref)		((unsigned long)(_ref)->handle)
 
+#define CACHE_MAINT_IMMEDIATE		0
+#define CACHE_MAINT_ALLOW_DEFERRED	1
+
 /*
  *
  */
@@ -390,5 +393,9 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);
 int __nvmap_get_handle_param(struct nvmap_client *client,
 			     struct nvmap_handle *h, u32 param, u64 *result);
+int __nvmap_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
+			unsigned long start, unsigned long end,
+			unsigned int op, unsigned int allow_deferred);
+
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

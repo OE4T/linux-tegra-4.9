@@ -44,20 +44,11 @@
 
 #include <linux/list.h>
 
-#define CACHE_MAINT_IMMEDIATE		0
-#define CACHE_MAINT_ALLOW_DEFERRED	1
-
-#define FLUSH_ALL_HANDLES		0
-
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 int is_read, unsigned long h_offs,
 			 unsigned long sys_addr, unsigned long h_stride,
 			 unsigned long sys_stride, unsigned long elem_size,
 			 unsigned long count);
-
-static int cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
-		       unsigned long start, unsigned long end, unsigned int op,
-		       unsigned int allow_deferred);
 
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle)
@@ -616,8 +607,8 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg)
 		(vma->vm_pgoff << PAGE_SHIFT);
 	end = start + op.len;
 
-	err = cache_maint(client, vpriv->handle, start, end, op.op,
-		CACHE_MAINT_ALLOW_DEFERRED);
+	err = __nvmap_cache_maint(client, vpriv->handle, start, end, op.op,
+				  CACHE_MAINT_ALLOW_DEFERRED);
 out:
 	up_read(&current->mm->mmap_sem);
 	return err;
@@ -1057,7 +1048,7 @@ void nvmap_cache_maint_ops_flush(struct nvmap_device *dev,
 	}
 }
 
-static int cache_maint(struct nvmap_client *client,
+int __nvmap_cache_maint(struct nvmap_client *client,
 			struct nvmap_handle *h,
 			unsigned long start, unsigned long end,
 			unsigned int op, unsigned int allow_deferred)
@@ -1228,7 +1219,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			break;
 		}
 		if (is_read)
-			cache_maint(client, h, h_offs,
+			__nvmap_cache_maint(client, h, h_offs,
 				h_offs + elem_size, NVMAP_CACHE_OP_INV,
 				CACHE_MAINT_IMMEDIATE);
 
@@ -1239,7 +1230,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			break;
 
 		if (!is_read)
-			cache_maint(client, h, h_offs,
+			__nvmap_cache_maint(client, h, h_offs,
 				h_offs + elem_size, NVMAP_CACHE_OP_WB_INV,
 				CACHE_MAINT_IMMEDIATE);
 

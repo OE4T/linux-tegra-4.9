@@ -3,7 +3,7 @@
  *
  * nvhost allocator
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -624,9 +624,11 @@ static int split_block(struct nvhost_allocator *allocator,
 static void free_blocks(struct nvhost_allocator *allocator,
 			struct nvhost_alloc_block *block)
 {
+	struct nvhost_alloc_block *curr_block;
 	while (block) {
-		kmem_cache_free(allocator->block_cache, block);
+		curr_block = block;
 		block = block->next;
+		kmem_cache_free(allocator->block_cache, curr_block);
 	}
 }
 

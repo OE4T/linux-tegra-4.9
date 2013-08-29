@@ -248,7 +248,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 		err = PTR_ERR(v->ucode.sgt);
 		goto clean_up;
 	}
-	v->ucode.pa = sg_dma_address(v->ucode.sgt->sgl);
+	v->ucode.pa = nvhost_memmgr_dma_addr(v->ucode.sgt);
 
 	v->ucode.va = nvhost_memmgr_mmap(v->ucode.mem_r);
 	if (!v->ucode.va) {
@@ -492,7 +492,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 			ctx->restore, &ch->dev->dev);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
-	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
+	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);
 
 	ctx->restore_size = nvhost_vic03_restore_size;
 	ctx->hwctx.restore_incrs = 1;

@@ -426,7 +426,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
-	p->save_phys = sg_dma_address(p->save_sgt->sgl);
+	p->save_phys = nvhost_memmgr_dma_addr(p->save_sgt);
 
 	setup_save(p, save_ptr);
 
@@ -516,7 +516,7 @@ int nvhost_gr3d_t30_read_reg(
 		goto done;
 	}
 	/* Set address of target memory slot to the stream */
-	opcodes[3] = sg_dma_address(mem_sgt->sgl);
+	opcodes[3] = nvhost_memmgr_dma_addr(mem_sgt);
 
 	read_waiter = nvhost_intr_alloc_waiter();
 	if (!read_waiter) {

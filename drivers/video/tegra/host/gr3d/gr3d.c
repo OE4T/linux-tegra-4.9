@@ -111,7 +111,7 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 			&ch->dev->dev);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
-	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
+	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);
 
 	kref_init(&ctx->hwctx.ref);
 	ctx->hwctx.h = &p->h;

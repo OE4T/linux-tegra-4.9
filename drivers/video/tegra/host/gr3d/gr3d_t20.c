@@ -388,7 +388,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
-	p->save_phys = sg_dma_address(p->save_sgt->sgl);
+	p->save_phys = nvhost_memmgr_dma_addr(p->save_sgt);
 
 	setup_save(p, save_ptr);
 

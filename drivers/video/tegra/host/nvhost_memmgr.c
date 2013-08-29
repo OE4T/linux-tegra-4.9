@@ -331,7 +331,7 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		if (IS_ERR(sgt))
 			return PTR_ERR(sgt);
 
-		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
+		phys_addr[ids[i].index] = nvhost_memmgr_dma_addr(sgt);
 		unpin_data[pin_count].h = h;
 		unpin_data[pin_count++].mem = sgt;
 

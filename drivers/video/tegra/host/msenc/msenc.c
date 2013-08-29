@@ -153,7 +153,7 @@ int msenc_boot(struct platform_device *dev)
 
 	nvhost_device_writel(dev, msenc_dmactl_r(), 0);
 	nvhost_device_writel(dev, msenc_dmatrfbase_r(),
-		(sg_dma_address(m->pa->sgl) + m->os.bin_data_offset) >> 8);
+		(nvhost_memmgr_dma_addr(m->pa) + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
 		msenc_dma_pa_to_internal_256b(dev,

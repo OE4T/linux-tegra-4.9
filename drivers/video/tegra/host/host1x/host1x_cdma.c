@@ -98,7 +98,7 @@ static int push_buffer_init(struct push_buffer *pb)
 		pb->sgt = 0;
 		goto fail;
 	}
-	pb->phys = sg_dma_address(pb->sgt->sgl);
+	pb->phys = nvhost_memmgr_dma_addr(pb->sgt);
 
 	/* memory for storing nvmap client and handles for each opcode pair */
 	pb->client_handle = kzalloc(NVHOST_GATHER_QUEUE_SIZE *

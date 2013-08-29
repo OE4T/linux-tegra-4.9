@@ -21,6 +21,9 @@
 #ifndef _NVHOST_MEM_MGR_H_
 #define _NVHOST_MEM_MGR_H_
 
+#include <linux/dma-mapping.h>
+#include <linux/scatterlist.h>
+
 struct nvhost_chip_support;
 struct mem_mgr;
 struct mem_handle;
@@ -108,5 +111,17 @@ int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,
 void nvhost_memmgr_smmu_unmap(struct sg_table *sgt, size_t size,
 			   struct device *dev);
 #endif
+
+/*
+ * Return IOVA for buffers allocated from IOVMM heap and have IOVA assigned.
+ * Otherwise assume the buffer was allocated from carveout and return physical
+ * address.
+ */
+static inline dma_addr_t nvhost_memmgr_dma_addr(struct sg_table *sgt)
+{
+	return sg_dma_address(sgt->sgl) && sg_dma_address(sgt->sgl) != DMA_ERROR_CODE ?
+		sg_dma_address(sgt->sgl) :
+		sg_phys(sgt->sgl);
+}
 
 #endif

@@ -146,7 +146,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 	/* create the per-as part of the priv if needed */
 	as_priv = priv->as[asid];
 	if (!as_priv) {
-		u64 size = 0, addr = 0;
+		u64 size = 0, addr = 0, heap = 0;
 
 		ret = nvmap_get_handle_param(nvmap, ref,
 				NVMAP_HANDLE_PARAM_SIZE, &size);
@@ -157,6 +157,13 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 
 		ret = nvmap_get_handle_param(nvmap, ref,
 				NVMAP_HANDLE_PARAM_BASE, &addr);
+		if (ret) {
+			mutex_unlock(&priv->lock);
+			return ERR_PTR(ret);
+		}
+
+		ret = nvmap_get_handle_param(nvmap, ref,
+				NVMAP_HANDLE_PARAM_HEAP, &heap);
 		if (ret) {
 			mutex_unlock(&priv->lock);
 			return ERR_PTR(ret);
@@ -182,17 +189,24 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		if (asid == tegra_smmu_get_asid(NULL) && !IS_ERR_VALUE(addr))
 			as_priv->flags |= BIT(FLAG_NVMAP_MAPPED);
 
+		if (heap & NVMAP_HEAP_CARVEOUT_MASK)
+			as_priv->flags |= BIT(FLAG_CARVEOUT);
+
 		priv->as[asid] = as_priv;
 	}
 
 	sgt = as_priv->sgt;
 
-	if (as_priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
+	if (as_priv->flags & BIT(FLAG_CARVEOUT))
+		;
+	else if (as_priv->flags & BIT(FLAG_NVMAP_MAPPED) &&
 			sg_dma_address(sgt->sgl) == 0) {
 		dma_addr_t addr = 0;
 		int err = nvmap_pin(as_priv->client, ref, &addr);
-		if (err)
+		if (err) {
+			mutex_unlock(&priv->lock);
 			return ERR_PTR(err);
+		}
 
 		sg_dma_address(sgt->sgl) = addr;
 	} else if (as_priv->pin_count == 0 &&

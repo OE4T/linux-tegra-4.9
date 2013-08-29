@@ -215,7 +215,7 @@ struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 	struct nvmap_handle *handle;
 	struct dma_buf *buf;
 
-	handle = nvmap_validate_get(client, id, 0);
+	handle = nvmap_get_handle_id(client, id);
 	if (!handle)
 		return ERR_PTR(-EINVAL);
 	buf = handle->dmabuf;

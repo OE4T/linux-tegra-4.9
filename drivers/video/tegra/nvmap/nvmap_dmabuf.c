@@ -97,6 +97,27 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	kfree(info);
 }
 
+static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
+					  size_t start, size_t len,
+					  enum dma_data_direction dir)
+{
+	struct nvmap_handle_info *info = dmabuf->priv;
+
+	return __nvmap_cache_maint(NULL, info->handle, start, start + len,
+				   NVMAP_CACHE_OP_INV, 1);
+}
+
+static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
+					size_t start, size_t len,
+					enum dma_data_direction dir)
+{
+	struct nvmap_handle_info *info = dmabuf->priv;
+
+	__nvmap_cache_maint(NULL, info->handle, start, start + len,
+				   NVMAP_CACHE_OP_WB_INV, 1);
+
+}
+
 static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
@@ -150,6 +171,8 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.map_dma_buf	= nvmap_dmabuf_map_dma_buf,
 	.unmap_dma_buf	= nvmap_dmabuf_unmap_dma_buf,
 	.release	= nvmap_dmabuf_release,
+	.begin_cpu_access = nvmap_dmabuf_begin_cpu_access,
+	.end_cpu_access = nvmap_dmabuf_end_cpu_access,
 	.kmap_atomic	= nvmap_dmabuf_kmap_atomic,
 	.kmap		= nvmap_dmabuf_kmap,
 	.kunmap		= nvmap_dmabuf_kunmap,

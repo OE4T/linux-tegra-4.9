@@ -509,7 +509,7 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 			    (h->owner == client) || skip_val)
 				h = nvmap_handle_get(h);
 			else
-				h = NULL;
+				h = nvmap_get_handle_id(client, id);
 			spin_unlock(&nvmap_dev->handle_lock);
 			return h;
 		}

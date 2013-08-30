@@ -1142,6 +1142,7 @@ static void tegra_se_aes_cra_exit(struct crypto_tfm *tfm)
 	ctx->slot = NULL;
 }
 
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 static int tegra_se_rng_init(struct crypto_tfm *tfm)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
@@ -1322,6 +1323,7 @@ static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 
 	return 0;
 }
+#endif
 
 static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 {
@@ -2281,7 +2283,9 @@ static struct crypto_alg aes_algs[] = {
 			.decrypt = tegra_se_aes_ofb_decrypt,
 			.geniv = "eseqiv",
 		}
-	}, {
+	},
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	{
 		.cra_name = "ansi_cprng",
 		.cra_driver_name = "rng-aes-tegra",
 		.cra_priority = 100,
@@ -2298,7 +2302,9 @@ static struct crypto_alg aes_algs[] = {
 				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
 			}
 		}
-	}, {
+	},
+#endif
+	{
 		.cra_name = "rng_drbg",
 		.cra_driver_name = "rng_drbg-aes-tegra",
 		.cra_priority = 100,

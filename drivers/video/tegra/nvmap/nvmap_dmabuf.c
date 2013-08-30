@@ -92,8 +92,8 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 
 	pr_debug("%s() 0x%p\n", __func__, info->handle);
 
-	nvmap_handle_put(info->handle);
 	info->handle->dmabuf = NULL;
+	nvmap_handle_put(info->handle);
 	kfree(info);
 }
 

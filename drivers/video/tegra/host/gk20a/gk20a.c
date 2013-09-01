@@ -119,7 +119,6 @@ static const struct file_operations gk20a_prof_ops = {
 #endif
 };
 
-
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
 	writel(v, g->sim.regs+r);

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Chip support for T124
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,5 +66,6 @@ extern struct nvhost_device_data t124_vi_info;
 extern struct nvhost_device_data t124_vib_info;
 extern struct nvhost_device_data t124_msenc_info;
 extern struct nvhost_device_data t124_tsec_info;
+extern struct nvhost_device_data t124_vic_info;
 
 #endif /* _NVHOST_T124_H_ */

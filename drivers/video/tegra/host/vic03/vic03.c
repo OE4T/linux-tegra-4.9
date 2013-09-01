@@ -43,42 +43,12 @@
 #include "hw_tfbif_vic03.h"
 
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
+#include "t124/t124.h"
 
 #include <mach/pm_domains.h>
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 
-static struct resource vic03_resources[] = {
-{
-	.name = "base",
-	.start = TEGRA_VIC_BASE,
-	.end = TEGRA_VIC_BASE + TEGRA_VIC_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-},
-};
-
-struct nvhost_device_data vic03_info = {
-	/*.syncpts*/
-	/*.modulemutexes*/
-	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VIC,
-	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-	.can_powergate		= true,
-	.powergate_delay	= 500,
-	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
-	.prepare_poweroff	= nvhost_vic03_prepare_poweroff,
-};
-
-struct platform_device tegra_vic03_device = {
-	.name	       = "vic03",
-	.num_resources = 1,
-	.resource      = vic03_resources,
-	.dev           = {
-		.platform_data = &vic03_info,
-	},
-};
 static inline struct vic03 *get_vic03(struct platform_device *dev)
 {
 	return (struct vic03 *)nvhost_get_private_data(dev);
@@ -633,7 +603,7 @@ int nvhost_vic03_prepare_poweroff(struct platform_device *dev)
 
 static struct of_device_id tegra_vic_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
-		.data = (struct nvhost_device_data *)&vic03_info },
+		.data = (struct nvhost_device_data *)&t124_vic_info },
 	{ },
 };
 
@@ -657,11 +627,6 @@ static int vic03_probe(struct platform_device *dev)
 	pdata->deinit			= nvhost_vic03_deinit;
 	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
 	pdata->alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler;
-
-	pdata->scaling_init		= nvhost_scale_init;
-	pdata->scaling_deinit		= nvhost_scale_deinit;
-	pdata->actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE;
-	pdata->actmon_enabled		= true;
 
 	pdata->pdev = dev;
 

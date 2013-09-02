@@ -881,7 +881,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			u64 offset_align,
 			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
 			u32 kind,
-			struct sg_table **sgt)
+			struct sg_table **sgt,
+			bool user_mapped)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvhost_allocator *ctag_allocator = &g->gr.comp_tags;
@@ -1098,7 +1099,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
-	mapped_buffer->user_mapped = true;
+	mapped_buffer->user_mapped = user_mapped;
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
 	kref_init(&mapped_buffer->ref);
 
@@ -1108,7 +1109,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 	inserted = true;
-	vm->num_user_mapped_buffers++;
+	if (user_mapped)
+		vm->num_user_mapped_buffers++;
 
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
 
@@ -1129,7 +1131,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 clean_up:
 	if (inserted) {
 		rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
-		vm->num_user_mapped_buffers--;
+		if (user_mapped)
+			vm->num_user_mapped_buffers--;
 	}
 	kfree(mapped_buffer);
 	if (va_allocated)
@@ -1144,7 +1147,7 @@ clean_up:
 
 	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);
-	return err;
+	return 0;
 }
 
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
@@ -1752,7 +1755,7 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 	nvhost_dbg_fn("");
 
 	ret_va = vm->map(vm, nvmap, r, *offset_align,
-			flags, 0/*no kind here, to be removed*/, NULL);
+			flags, 0/*no kind here, to be removed*/, NULL, true);
 	*offset_align = ret_va;
 	if (!ret_va)
 		err = -EINVAL;

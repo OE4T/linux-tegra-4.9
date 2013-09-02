@@ -191,7 +191,8 @@ struct vm_gk20a {
 		   u64 offset_align,
 		   u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
 		   u32 kind,
-		   struct sg_table **sgt);
+		   struct sg_table **sgt,
+		   bool user_mapped);
 
 	/* unmap handle from kernel */
 	void (*unmap)(struct vm_gk20a *vm,

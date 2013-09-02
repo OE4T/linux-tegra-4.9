@@ -1614,7 +1614,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
 			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			    NULL);
+			    NULL, false);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -1628,7 +1628,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
 			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			    NULL);
+			    NULL, false);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -1642,7 +1642,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = ch_vm->map(ch_vm, memmgr, handle_ref,
 			    /*offset_align, flags, kind*/
 			    0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			    NULL);
+			    NULL, false);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -1651,7 +1651,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = ch_vm->map(ch_vm, memmgr,
 			    gr->global_ctx_buffer[GOLDEN_CTX].ref,
 			    /*offset_align, flags, kind*/
-			    0, 0, 0, NULL);
+			    0, 0, 0, NULL, false);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
@@ -1715,7 +1715,7 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr_ctx->gpu_va = ch_vm->map(ch_vm, memmgr,
 		gr_ctx->mem.ref,
 		/*offset_align, flags, kind*/
-		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0, NULL);
+		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0, NULL, false);
 	if (!gr_ctx->gpu_va) {
 		nvhost_memmgr_put(memmgr, gr_ctx->mem.ref);
 		return -ENOMEM;
@@ -1755,7 +1755,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	patch_ctx->gpu_va = ch_vm->map(ch_vm, memmgr,
 				patch_ctx->mem.ref,
 				/*offset_align, flags, kind*/
-				0, 0, 0, NULL);
+				0, 0, 0, NULL, false);
 	if (!patch_ctx->gpu_va)
 		goto clean_up;
 

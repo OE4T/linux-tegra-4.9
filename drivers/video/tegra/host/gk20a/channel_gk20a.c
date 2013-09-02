@@ -679,7 +679,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	q->base_gva = ch_vm->map(ch_vm, memmgr,
 			q->mem.ref,
 			 /*offset_align, flags, kind*/
-			0, 0, 0, NULL);
+			0, 0, 0, NULL, false);
 	if (!q->base_gva) {
 		nvhost_err(d, "ch %d : failed to map gpu va"
 			   "for priv cmd buffer", c->hw_chid);
@@ -980,7 +980,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	c->gpfifo.gpu_va = ch_vm->map(ch_vm, memmgr,
 				c->gpfifo.mem.ref,
 				/*offset_align, flags, kind*/
-				0, 0, 0, NULL);
+				0, 0, 0, NULL, false);
 	if (!c->gpfifo.gpu_va) {
 		nvhost_err(d, "channel %d : failed to map"
 			   " gpu_va for gpfifo", c->hw_chid);

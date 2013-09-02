@@ -1046,7 +1046,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->ucode.pmu_va = vm->map(vm, memmgr, pmu->ucode.mem.ref,
 			/*offset_align, flags, kind*/
-			0, 0, 0, NULL);
+			0, 0, 0, NULL, false);
 	if (!pmu->ucode.pmu_va) {
 		nvhost_err(d, "failed to map pmu ucode memory!!");
 		return err;
@@ -1077,7 +1077,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->pg_buf.pmu_va = vm->map(vm, memmgr, pmu->pg_buf.mem.ref,
 			 /*offset_align, flags, kind*/
-			0, 0, 0, NULL);
+			0, 0, 0, NULL, false);
 	if (!pmu->pg_buf.pmu_va) {
 		nvhost_err(d, "failed to map fecs pg buffer");
 		err = -ENOMEM;
@@ -1097,7 +1097,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.pmu_va = vm->map(vm, memmgr, pmu->seq_buf.mem.ref,
 			/*offset_align, flags, kind*/
-			0, 0, 0, NULL);
+			0, 0, 0, NULL, false);
 	if (!pmu->seq_buf.pmu_va) {
 		nvhost_err(d, "failed to map zbc buffer");
 		err = -ENOMEM;

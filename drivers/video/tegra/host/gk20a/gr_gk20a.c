@@ -1599,7 +1599,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	struct vm_gk20a *ch_vm = c->vm;
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct mem_handle *handle_ref;
-	u32 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
+	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	struct gr_gk20a *gr = &g->gr;
 	u64 gpu_va;
 	u32 i;
@@ -1672,7 +1672,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 {
 	struct vm_gk20a *ch_vm = c->vm;
-	u32 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
+	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u32 i;
 
 	nvhost_dbg_fn("");

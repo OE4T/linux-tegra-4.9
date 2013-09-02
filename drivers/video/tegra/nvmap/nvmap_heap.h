@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,11 +33,9 @@ struct nvmap_heap_block {
 	struct nvmap_handle *handle;
 };
 
-#define NVMAP_HEAP_MIN_BUDDY_SIZE	8192
-
 struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
-				     phys_addr_t base, size_t len,
-				     size_t buddy_size, void *arg);
+				phys_addr_t base, size_t len,
+				size_t buddy_size, void *arg);
 
 void nvmap_heap_destroy(struct nvmap_heap *heap);
 

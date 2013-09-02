@@ -1370,6 +1370,10 @@ static int nvmap_probe(struct platform_device *pdev)
 					(node->base - co->base), PAGE_SIZE);
 		if (!co->size)
 			continue;
+
+		dev_info(&pdev->dev, "heap (%s) base (0x%x) size (%d)\n",
+			co->name, node->base, node->size);
+
 		node->carveout = nvmap_heap_create(dev->dev_user.this_device,
 				   co->name, node->base, node->size, node);
 		if (!node->carveout) {

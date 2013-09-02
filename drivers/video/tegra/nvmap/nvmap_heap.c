@@ -20,6 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define pr_fmt(fmt)	"%s: " fmt, __func__
+
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
@@ -36,6 +38,8 @@
 
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
+
+#include <linux/dma-mapping.h>
 
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory
@@ -84,7 +88,7 @@ struct nvmap_heap {
 	struct device dev;
 };
 
-static struct kmem_cache *block_cache;
+static struct kmem_cache *heap_block_cache;
 
 /* returns the free size of the heap (must be called while holding the parent
  * heap's lock. */
@@ -202,10 +206,9 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 					      unsigned int mem_prot,
 					      phys_addr_t base_max)
 {
-	struct list_block *b = NULL;
-	struct list_block *i = NULL;
-	struct list_block *rem = NULL;
-	phys_addr_t fix_base;
+	struct list_block *heap_block = NULL;
+	void *dev_addr = NULL;
+	dma_addr_t dev_base;
 
 	/* since pages are only mappable with one cache attribute,
 	 * and most allocations from carveout heaps are DMA coherent
@@ -218,76 +221,37 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		len = PAGE_ALIGN(len);
 	}
 
-	list_for_each_entry(i, &heap->free_list, free_list) {
-		size_t fix_size;
-		fix_base = ALIGN(i->block.base, align);
-		if (!fix_base || fix_base >= i->block.base + i->size)
-			continue;
-
-		fix_size = i->size - (fix_base - i->block.base);
-
-		/* needed for compaction. relocated chunk
-		 * should never go up */
-		if (base_max && fix_base > base_max)
-			break;
-
-		if (fix_size >= len) {
-			b = i;
-			break;
-		}
+	heap_block = kmem_cache_zalloc(heap_block_cache, GFP_KERNEL);
+	if (!heap_block) {
+		dev_err(&heap->dev, "%s: failed to alloc heap block %s\n",
+			__func__, dev_name(&heap->dev));
+		goto fail_heap_block_alloc;
 	}
 
-	if (!b)
-		return NULL;
-
-	b->block.type = BLOCK_FIRST_FIT;
-
-	/* split free block */
-	if (b->block.base != fix_base) {
-		/* insert a new free block before allocated */
-		rem = kmem_cache_zalloc(block_cache, GFP_KERNEL);
-		if (!rem) {
-			b->orig_addr = b->block.base;
-			b->block.base = fix_base;
-			b->size -= (b->block.base - b->orig_addr);
-			goto out;
-		}
-
-		rem->block.type = BLOCK_EMPTY;
-		rem->block.base = b->block.base;
-		rem->orig_addr = rem->block.base;
-		rem->size = fix_base - rem->block.base;
-		b->block.base = fix_base;
-		b->orig_addr = fix_base;
-		b->size -= rem->size;
-		list_add_tail(&rem->all_list,  &b->all_list);
-		list_add_tail(&rem->free_list, &b->free_list);
+	dev_addr = dma_alloc_coherent(&heap->dev, len, &dev_base,
+					DMA_MEMORY_NOMAP);
+	if (dev_base == DMA_ERROR_CODE) {
+		dev_err(&heap->dev, "%s: failed to alloc DMA coherent mem %s\n",
+			__func__, dev_name(&heap->dev));
+		goto fail_dma_alloc;
 	}
+	pr_debug("dma_alloc_coherent base (0x%x) size (%d) heap (%s)\n",
+		dev_base, len, heap->name);
 
-	b->orig_addr = b->block.base;
+	heap_block->block.base = dev_base;
+	heap_block->orig_addr = dev_base;
+	heap_block->size = len;
 
-	if (b->size > len) {
-		/* insert a new free block after allocated */
-		rem = kmem_cache_zalloc(block_cache, GFP_KERNEL);
-		if (!rem)
-			goto out;
+	list_add_tail(&heap_block->all_list, &heap->all_list);
+	heap_block->heap = heap;
+	heap_block->mem_prot = mem_prot;
+	heap_block->align = align;
+	return &heap_block->block;
 
-		rem->block.type = BLOCK_EMPTY;
-		rem->block.base = b->block.base + len;
-		rem->size = b->size - len;
-		BUG_ON(rem->size > b->size);
-		rem->orig_addr = rem->block.base;
-		b->size = len;
-		list_add(&rem->all_list,  &b->all_list);
-		list_add(&rem->free_list, &b->free_list);
-	}
-
-out:
-	list_del(&b->free_list);
-	b->heap = heap;
-	b->mem_prot = mem_prot;
-	b->align = align;
-	return &b->block;
+fail_dma_alloc:
+	kmem_cache_free(heap_block_cache, heap_block);
+fail_heap_block_alloc:
+	return NULL;
 }
 
 #ifdef DEBUG_FREE_LIST
@@ -313,56 +277,17 @@ static void freelist_debug(struct nvmap_heap *heap, const char *title,
 static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 {
 	struct list_block *b = container_of(block, struct list_block, block);
-	struct list_block *n = NULL;
 	struct nvmap_heap *heap = b->heap;
 
-	BUG_ON(b->block.base > b->orig_addr);
-	b->size += (b->block.base - b->orig_addr);
-	b->block.base = b->orig_addr;
+	list_del(&b->all_list);
 
-	freelist_debug(heap, "free list before", b);
+	pr_debug("dma_free_coherent base (0x%x) size (%d) heap (%s)\n",
+		block->base, b->size, heap->name);
+	dma_free_coherent(&heap->dev, b->size, (void *)block->base,
+				block->base);
 
-	/* Find position of first free block to the right of freed one */
-	list_for_each_entry(n, &heap->free_list, free_list) {
-		if (n->block.base > b->block.base)
-			break;
-	}
+	kmem_cache_free(heap_block_cache, b);
 
-	/* Add freed block before found free one */
-	list_add_tail(&b->free_list, &n->free_list);
-	BUG_ON(list_empty(&b->all_list));
-
-	freelist_debug(heap, "free list pre-merge", b);
-
-	/* merge freed block with next if they connect
-	 * freed block becomes bigger, next one is destroyed */
-	if (!list_is_last(&b->free_list, &heap->free_list)) {
-		n = list_first_entry(&b->free_list, struct list_block, free_list);
-		if (n->block.base == b->block.base + b->size) {
-			list_del(&n->all_list);
-			list_del(&n->free_list);
-			BUG_ON(b->orig_addr >= n->orig_addr);
-			b->size += n->size;
-			kmem_cache_free(block_cache, n);
-		}
-	}
-
-	/* merge freed block with prev if they connect
-	 * previous free block becomes bigger, freed one is destroyed */
-	if (b->free_list.prev != &heap->free_list) {
-		n = list_entry(b->free_list.prev, struct list_block, free_list);
-		if (n->block.base + n->size == b->block.base) {
-			list_del(&b->all_list);
-			list_del(&b->free_list);
-			BUG_ON(n->orig_addr >= b->orig_addr);
-			n->size += b->size;
-			kmem_cache_free(block_cache, b);
-			b = n;
-		}
-	}
-
-	freelist_debug(heap, "free list after", b);
-	b->block.type = BLOCK_EMPTY;
 	return b;
 }
 
@@ -423,17 +348,11 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 				     phys_addr_t base, size_t len, void *arg)
 {
 	struct nvmap_heap *h = NULL;
-	struct list_block *l = NULL;
+	int err = 0;
 	DEFINE_DMA_ATTRS(attrs);
 
 	h = kzalloc(sizeof(*h), GFP_KERNEL);
 	if (!h) {
-		dev_err(parent, "%s: out of memory\n", __func__);
-		goto fail_alloc;
-	}
-
-	l = kmem_cache_zalloc(block_cache, GFP_KERNEL);
-	if (!l) {
 		dev_err(parent, "%s: out of memory\n", __func__);
 		goto fail_alloc;
 	}
@@ -444,24 +363,29 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	h->dev.parent = parent;
 	h->dev.driver = NULL;
 	h->dev.release = heap_release;
+
 	if (device_register(&h->dev)) {
 		dev_err(parent, "%s: failed to register %s\n", __func__,
 			dev_name(&h->dev));
-		goto fail_alloc;
-	}
-	if (sysfs_create_group(&h->dev.kobj, &heap_stat_attr_group)) {
-		dev_err(&h->dev, "%s: failed to create attributes\n", __func__);
 		goto fail_register;
 	}
+
+	if (sysfs_create_group(&h->dev.kobj, &heap_stat_attr_group)) {
+		dev_err(&h->dev, "%s: failed to create attributes\n", __func__);
+		goto fail_sysfs_create_group;
+	}
+
 	INIT_LIST_HEAD(&h->free_list);
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
-	l->block.base = base;
-	l->block.type = BLOCK_EMPTY;
-	l->size = len;
-	l->orig_addr = base;
-	list_add_tail(&l->free_list, &h->free_list);
-	list_add_tail(&l->all_list, &h->all_list);
+
+	err = dma_declare_coherent_memory(&h->dev, 0, base, len,
+		DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+	if (!(err & DMA_MEMORY_NOMAP) || (base == 0)) {
+		dev_err(&h->dev, "%s: Unable to declare dma coherent memory\n",
+			__func__);
+		goto fail_dma_declare;
+	}
 
 	inner_flush_cache_all();
 	outer_flush_range(base, base + len);
@@ -471,14 +395,16 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE, &attrs);
 #endif
+
 	return h;
 
-fail_register:
+fail_dma_declare:
+	sysfs_remove_group(&h->dev.kobj, &heap_stat_attr_group);
+fail_sysfs_create_group:
 	device_unregister(&h->dev);
-fail_alloc:
-	if (l)
-		kmem_cache_free(block_cache, l);
+fail_register:
 	kfree(h);
+fail_alloc:
 	return NULL;
 }
 
@@ -506,7 +432,7 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 		l = list_first_entry(&heap->all_list, struct list_block,
 				     all_list);
 		list_del(&l->all_list);
-		kmem_cache_free(block_cache, l);
+		kmem_cache_free(heap_block_cache, l);
 	}
 
 	kfree(heap);
@@ -528,18 +454,19 @@ void nvmap_heap_remove_group(struct nvmap_heap *heap,
 
 int nvmap_heap_init(void)
 {
-	block_cache = KMEM_CACHE(list_block, 0);
-	if (!block_cache) {
-		pr_err("%s: unable to create block cache\n", __func__);
+	heap_block_cache = KMEM_CACHE(list_block, 0);
+	if (!heap_block_cache) {
+		pr_err("%s: unable to create heap block cache\n", __func__);
 		return -ENOMEM;
 	}
+	pr_info("%s: created heap block cache\n", __func__);
 	return 0;
 }
 
 void nvmap_heap_deinit(void)
 {
-	if (block_cache)
-		kmem_cache_destroy(block_cache);
+	if (heap_block_cache)
+		kmem_cache_destroy(heap_block_cache);
 
-	block_cache = NULL;
+	heap_block_cache = NULL;
 }

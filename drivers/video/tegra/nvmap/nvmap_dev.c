@@ -1335,6 +1335,9 @@ static int nvmap_probe(struct platform_device *pdev)
 		S_IRUGO|S_IWUSR, nvmap_debug_root,
 		(u32 *)&dev->deferred_ops.enable_deferred_cache_maintenance);
 
+	debugfs_create_u32("max_handle_count", S_IRUGO,
+			nvmap_debug_root, &nvmap_max_handle_count);
+
 	debugfs_create_u64("deferred_maint_inner_requested", S_IRUGO|S_IWUSR,
 			nvmap_debug_root,
 			&dev->deferred_ops.deferred_maint_inner_requested);

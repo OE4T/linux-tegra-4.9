@@ -46,6 +46,8 @@ struct tegra_iovmm_area;
 extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
 extern struct nvmap_share *nvmap_share;
+/* holds max number of handles allocted per process at any time */
+extern u32 nvmap_max_handle_count;
 
 #if defined(CONFIG_TEGRA_NVMAP)
 #define nvmap_err(_client, _fmt, ...)				\
@@ -190,6 +192,7 @@ struct nvmap_client {
 	atomic_t			count;
 	struct task_struct		*task;
 	struct list_head		list;
+	u32				handle_count;
 	struct nvmap_carveout_commit	carveout_commit[0];
 };
 

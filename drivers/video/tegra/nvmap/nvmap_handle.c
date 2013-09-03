@@ -49,6 +49,8 @@
 #include "nvmap_mru.h"
 #include "nvmap_ioctl.h"
 
+u32 nvmap_max_handle_count;
+
 #define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM | \
 				 NVMAP_HEAP_CARVEOUT_VPR)
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
@@ -946,6 +948,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 	smp_rmb();
 	pins = atomic_read(&ref->pin);
 	rb_erase(&ref->node, &client->handle_refs);
+	client->handle_count--;
 
 	if (h->alloc && h->heap_pgalloc && !h->pgalloc.contig)
 		atomic_sub(h->size, &client->iovm_commit);
@@ -1007,6 +1010,9 @@ static void add_handle_ref(struct nvmap_client *client,
 	}
 	rb_link_node(&ref->node, parent, p);
 	rb_insert_color(&ref->node, &client->handle_refs);
+	client->handle_count++;
+	if (client->handle_count > nvmap_max_handle_count)
+		nvmap_max_handle_count = client->handle_count;
 	nvmap_ref_unlock(client);
 }
 

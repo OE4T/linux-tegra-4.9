@@ -90,6 +90,8 @@ struct nvmap_device {
 	struct nvmap_deferred_ops deferred_ops;
 };
 
+struct platform_device *nvmap_pdev;
+EXPORT_SYMBOL(nvmap_pdev);
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
 struct nvmap_share *nvmap_share;
@@ -1435,6 +1437,7 @@ static int nvmap_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, dev);
+	nvmap_pdev = pdev;
 	nvmap_dev = dev;
 	nvmap_share = &dev->iovmm_master;
 

@@ -285,6 +285,9 @@ fail:
 
 static int dsi_p_wuxga_10_1_disable(void)
 {
+	if (gpio_is_valid(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio))
+		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
+
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
 

@@ -3380,8 +3380,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
 
 	/* init mmu debug buffer */
-	addr_lo = u64_lo32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));
-	addr_hi = u64_hi32(sg_phys(gr->mmu_wr_mem.mem.sgt->sgl));
+	addr = gk20a_mm_iova_addr(gr->mmu_wr_mem.mem.sgt->sgl);
+	addr_lo = u64_lo32(addr);
+	addr_hi = u64_hi32(addr);
 	addr = (addr_lo >> fb_mmu_debug_wr_addr_alignment_v()) |
 		(addr_hi << (32 - fb_mmu_debug_wr_addr_alignment_v()));
 
@@ -3390,8 +3391,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_v(addr));
 
-	addr_lo = u64_lo32(sg_phys(gr->mmu_rd_mem.mem.sgt->sgl));
-	addr_hi = u64_hi32(sg_phys(gr->mmu_rd_mem.mem.sgt->sgl));
+	addr = gk20a_mm_iova_addr(gr->mmu_rd_mem.mem.sgt->sgl);
+	addr_lo = u64_lo32(addr);
+	addr_hi = u64_hi32(addr);
 	addr = (addr_lo >> fb_mmu_debug_rd_addr_alignment_v()) |
 		(addr_hi << (32 - fb_mmu_debug_rd_addr_alignment_v()));
 

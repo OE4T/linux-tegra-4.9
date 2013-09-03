@@ -418,7 +418,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 		return err;
 
 	nvhost_dbg(dbg_pte, "pte = 0x%p, addr=%08llx, size %d",
-			pte, (u64)sg_phys(sgt->sgl), pte_order);
+			pte, gk20a_mm_iova_addr(sgt->sgl), pte_order);
 
 	pte->ref = handle;
 	pte->sgt = sgt;
@@ -1348,10 +1348,10 @@ static void update_gmmu_pde(struct vm_gk20a *vm, u32 i)
 
 	if (small_valid)
 		pte_addr[gmmu_page_size_small] =
-			sg_phys(small_pte->sgt->sgl);
+			gk20a_mm_iova_addr(small_pte->sgt->sgl);
 	if (big_valid)
 		pte_addr[gmmu_page_size_big] =
-			sg_phys(big_pte->sgt->sgl);
+			gk20a_mm_iova_addr(big_pte->sgt->sgl);
 
 	pde_v[0] = gmmu_pde_size_full_f();
 	pde_v[0] |= big_valid ?
@@ -1574,7 +1574,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 		return -ENOMEM;
 	}
 	nvhost_dbg(dbg_pte, "pdes.kv = 0x%p, pdes.phys = 0x%llx",
-			vm->pdes.kv, (u64)sg_phys(vm->pdes.sgt->sgl));
+			vm->pdes.kv,
+			gk20a_mm_iova_addr(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
 
@@ -1791,7 +1792,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t pde_addr;
+	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
 
@@ -1842,15 +1843,16 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 	nvhost_dbg(dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%llx",
-			vm->pdes.kv, (u64)sg_phys(vm->pdes.sgt->sgl));
+			vm->pdes.kv, gk20a_mm_iova_addr(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	pde_addr = sg_phys(vm->pdes.sgt->sgl);
-	pde_addr_lo = u64_lo32(pde_addr) >> 12;
+	pde_addr = gk20a_mm_iova_addr(vm->pdes.sgt->sgl);
+	pde_addr_lo = u64_lo32(pde_addr >> 12);
 	pde_addr_hi = u64_hi32(pde_addr);
 
 	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
-		(u64)sg_phys(vm->pdes.sgt->sgl), pde_addr_lo, pde_addr_hi);
+		(u64)gk20a_mm_iova_addr(vm->pdes.sgt->sgl),
+		pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for bar1 */
 	inst_block->mem.size = ram_in_alloc_size_v();
@@ -1997,11 +1999,11 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 		goto clean_up;
 	}
 	nvhost_dbg_info("pmu pdes phys @ 0x%llx",
-			(u64)sg_phys(vm->pdes.sgt->sgl));
+			(u64)gk20a_mm_iova_addr(vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	pde_addr = sg_phys(vm->pdes.sgt->sgl);
-	pde_addr_lo = u64_lo32(pde_addr) >> 12;
+	pde_addr = gk20a_mm_iova_addr(vm->pdes.sgt->sgl);
+	pde_addr_lo = u64_lo32(pde_addr >> 12);
 	pde_addr_hi = u64_hi32(pde_addr);
 
 	nvhost_dbg_info("pde pa=0x%llx pde_addr_lo=0x%x pde_addr_hi=0x%x",
@@ -2244,7 +2246,7 @@ static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(sg_phys(vm->pdes.sgt->sgl) >> 12);
+	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->pdes.sgt->sgl) >> 12);
 	u32 data;
 	s32 retry = 200;
 
@@ -2326,7 +2328,8 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		nvhost_err(dev_from_vm(vm),
 			"\t[0x%016llx -> 0x%016llx] pde @ 0x%08x: 0x%08x, 0x%08x\n",
 			pde_va, pde_va + mm->pde_stride - 1,
-			sg_phys(vm->pdes.sgt->sgl) + pde_i * gmmu_pde__size_v(),
+			gk20a_mm_iova_addr(vm->pdes.sgt->sgl)
+				+ pde_i * gmmu_pde__size_v(),
 			mem_rd32(pde, 0), mem_rd32(pde, 1));
 
 		pte_s = vm->pdes.ptes[pte_s->pgsz_idx] + pde_i;
@@ -2344,7 +2347,7 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		pte_s->sgt = nvhost_memmgr_sg_table(client, pte_s->ref);
 		if (WARN_ON(IS_ERR(pte_s->sgt)))
 			return;
-		pte_addr = sg_phys(pte_s->sgt->sgl);
+		pte_addr = gk20a_mm_iova_addr(pte_s->sgt->sgl);
 
 		for (pte_i = pte_lo; pte_i <= pte_hi; pte_i++) {
 

@@ -96,7 +96,7 @@ static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c)
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
-	phys_addr_t addr;
+	u64 addr;
 	u32 addr_lo;
 	u32 addr_hi;
 	void *inst_ptr;
@@ -107,8 +107,8 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	if (!inst_ptr)
 		return -ENOMEM;
 
-	addr = sg_phys(c->vm->pdes.sgt->sgl);
-	addr_lo = u64_lo32(addr) >> 12;
+	addr = gk20a_mm_iova_addr(c->vm->pdes.sgt->sgl);
+	addr_lo = u64_lo32(addr >> 12);
 	addr_hi = u64_hi32(addr);
 
 	nvhost_dbg_info("pde pa=0x%llx addr_lo=0x%x addr_hi=0x%x",

@@ -1120,8 +1120,12 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			if (edid[pos] == 3 && edid[pos + 1] == 0xc &&
 			    edid[pos + 2] == 0)
 				specs->misc |= FB_MISC_HDMI;
-			fb_hvd_parse(edid, &hvd, pos + 3);
-			hdmi_num = hvd.hdmi_vic_len;
+
+			/* HDMI_Video_Format @HDMI 1.4 ch8.2.3*/
+			if (edid[pos + 2] >> 5 != 0) {
+				fb_hvd_parse(edid, &hvd, pos + 3);
+				hdmi_num = hvd.hdmi_vic_len;
+			}
 		}
 		pos += len + 1;
 	}

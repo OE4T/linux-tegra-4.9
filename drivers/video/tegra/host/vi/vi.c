@@ -42,6 +42,8 @@
 #include "vi.h"
 
 #define MAX_DEVID_LENGTH	16
+#define T12_VI_CFG_CG_CTRL	0x2e
+#define T12_CG_2ND_LEVEL_EN	1
 
 static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_2X_OR_HIGHER_CONFIG
@@ -142,8 +144,8 @@ static int vi_probe(struct platform_device *dev)
 camera_unregister:
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_camera_unregister(tegra_vi->camera);
-#endif
 camera_i2c_unregister:
+#endif
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
@@ -310,6 +312,10 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 				"%s: enable csi regulator failed.\n",
 				__func__);
 	}
+
+	if (nvhost_client_can_writel(dev))
+		nvhost_client_writel(dev,
+				T12_CG_2ND_LEVEL_EN, T12_VI_CFG_CG_CTRL);
 	return ret;
 }
 

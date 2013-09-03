@@ -127,6 +127,13 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	return 0;
 }
 
+bool nvhost_client_can_writel(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	return !!pdata->aperture[0];
+}
+EXPORT_SYMBOL(nvhost_client_can_writel);
+
 void nvhost_client_writel(struct platform_device *pdev, u32 val, u32 reg)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);

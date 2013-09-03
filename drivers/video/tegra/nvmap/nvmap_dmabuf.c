@@ -732,6 +732,59 @@ ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf)
 	return (ulong)marshal_kernel_handle((ulong)info->handle);
 }
 
+/*
+ * List detailed info for all buffers allocated.
+ */
+static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
+{
+	struct nvmap_handle_sgt *nvmap_sgt;
+	struct nvmap_handle *handle;
+	struct nvmap_client *client;
+	const char *name;
+
+	mutex_lock(&nvmap_stashed_maps_lock);
+	list_for_each_entry(nvmap_sgt, &nvmap_stashed_maps, stash_entry) {
+		handle = nvmap_sgt->owner->handle;
+		client = nvmap_client_get(handle->owner);
+		name = "unknown";
+
+		if (client) {
+			if (strcmp(client->name, "user") == 0)
+				name = client->task->comm;
+			else
+				name = client->name;
+		}
+
+		seq_printf(s, "%s: ", name);
+		seq_printf(s, " flags = 0x%08lx, refs = %d\n",
+			   handle->flags, atomic_read(&handle->ref));
+
+		seq_printf(s, "  device = %s\n",
+			   dev_name(handle->attachment->dev));
+		seq_printf(s, "  IO addr = 0x%08x + 0x%x\n",
+			   sg_dma_address(nvmap_sgt->sgt->sgl), handle->size);
+
+		/* Cleanup. */
+		nvmap_client_put(client);
+	}
+	mutex_unlock(&nvmap_stashed_maps_lock);
+
+	return 0;
+}
+
+static int __nvmap_dmabuf_stashes_open(struct inode *inode,
+				       struct file *file)
+{
+	return single_open(file, __nvmap_dmabuf_stashes_show, NULL);
+}
+
+static const struct file_operations nvmap_dmabuf_stashes_fops = {
+	.open    = __nvmap_dmabuf_stashes_open,
+	.read    = seq_read,
+	.llseek  = seq_lseek,
+	.release = single_release,
+};
+
 #define NVMAP_DMABUF_WO_TRIGGER_NODE(trigger, name)			\
 	DEFINE_SIMPLE_ATTRIBUTE(__nvmap_dmabuf_##name##_fops, NULL,	\
 				trigger, "%llu");
@@ -787,4 +840,14 @@ void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root)
 	CACHE_STAT(dmabuf_root, stashed_maps);
 	NVMAP_DMABUF_WO_DEBUGFS(clear_stats, dmabuf_root);
 #endif
+
+#define DMABUF_INFO_FILE(root, file)					\
+	do {								\
+		if (!debugfs_create_file(__stringify(file), S_IRUGO,	\
+					 root, NULL,			\
+					 &nvmap_dmabuf_##file##_fops))	\
+			return;						\
+	} while (0)
+
+	DMABUF_INFO_FILE(dmabuf_root, stashes);
 }

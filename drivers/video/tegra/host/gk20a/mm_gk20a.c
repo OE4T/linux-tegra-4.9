@@ -1137,10 +1137,6 @@ clean_up:
 	kfree(mapped_buffer);
 	if (va_allocated)
 		vm->free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
-	if (bfr.ctag_lines)
-		ctag_allocator->free(ctag_allocator,
-				     bfr.ctag_offset,
-				     bfr.ctag_lines);
 	if (bfr.sgt) {
 		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
 	}
@@ -1400,7 +1396,6 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct nvhost_allocator *comp_tags = &g->gr.comp_tags;
 	int err = 0;
 
 	BUG_ON(memmgr == NULL || r == NULL);
@@ -1416,10 +1411,6 @@ static void gk20a_vm_unmap_locked(struct vm_gk20a *vm, u64 offset,
 
 	vm->free_va(vm, mapped_buffer->addr, mapped_buffer->size,
 		    mapped_buffer->pgsz_idx);
-
-	if (mapped_buffer->ctag_offset)
-		comp_tags->free(comp_tags,
-			mapped_buffer->ctag_offset, mapped_buffer->ctag_lines);
 
 	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x",
 		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],

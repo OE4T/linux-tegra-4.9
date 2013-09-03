@@ -34,8 +34,7 @@ struct nvmap_heap_block {
 };
 
 struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
-				phys_addr_t base, size_t len,
-				size_t buddy_size, void *arg);
+				phys_addr_t base, size_t len, void *arg);
 
 void nvmap_heap_destroy(struct nvmap_heap *heap);
 

@@ -72,6 +72,7 @@
 
 #define NCT1008_MIN_TEMP -64
 #define NCT1008_MAX_TEMP 191
+#define NCT1008_MAX_TEMP_MILLI	191750
 
 #define MAX_STR_PRINT 50
 
@@ -161,51 +162,43 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 	return ret;
 }
 
-static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
+static int nct1008_ext_get_temp_common(struct nct1008_data *data,
+					unsigned long *temp)
 {
-	struct i2c_client *client = to_i2c_client(dev);
+	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s16 temp_local;
-	u8 temp_ext_lo;
 	s16 temp_ext_hi;
+	s16 temp_ext_lo;
 	long temp_ext_milli;
-	long temp_local_milli;
+	int i, off = 0;
 	u8 value;
 
-	/* Read Local Temp */
-	if (itemp) {
-		value = nct1008_read_reg(client, LOCAL_TEMP_RD);
-		if (value < 0)
-			goto error;
-		temp_local = value_to_temperature(pdata->ext_range, value);
-		temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
-
-		*itemp = temp_local_milli;
-	}
-
 	/* Read External Temp */
-	if (etemp) {
-		value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
-		if (value < 0)
-			goto error;
-		temp_ext_lo = (value >> 6);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
+	if (value < 0)
+		return -1;
+	temp_ext_lo = (value >> 6);
 
-		value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
-		if (value < 0)
-			goto error;
-		temp_ext_hi = value_to_temperature(pdata->ext_range, value);
+	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
+	if (value < 0)
+		return -1;
+	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
 
-		temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
-					temp_ext_lo * 250;
+	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
+			 temp_ext_lo * 250;
 
-		*etemp = temp_ext_milli;
+	for (i = 0; i < ARRAY_SIZE(data->ext_offset_table); i++) {
+		if (temp_ext_milli < (data->ext_offset_table[i].temp * 1000)) {
+			off = data->ext_offset_table[i].offset * 1000;
+			break;
+		}
 	}
+	temp_ext_milli += off;
+
+	*temp = temp_ext_milli;
+	data->etemp = temp_ext_milli;
 
 	return 0;
-error:
-	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
-		"error=%d ", __FILE__, __func__, __LINE__, value);
-	return value;
 }
 
 static ssize_t nct1008_show_temp(struct device *dev,
@@ -296,7 +289,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 		return -EINVAL;
 	}
 	/* check for system power down */
-	err = nct1008_get_temp(dev, &currTemp, NULL);
+	err = nct1008_ext_get_temp_common(data, &currTemp);
 	if (err)
 		goto error;
 
@@ -467,24 +460,24 @@ static ssize_t nct1008_show_regs(struct device *dev,
 	sz += snprintf(buf + sz, PAGE_SIZE - sz, "%20s  %4s  %4s  %s\n",
 			"--------------------", "----", "----", "-----");
 
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local Temp Value    ", 0x00);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Value Hi   ", 0x01);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Status              ", 0x02);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Configuration       ", 0x03);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Conversion Rate     ", 0x04);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Hysteresis          ", 0x21);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Consecutive Alert   ", 0x22);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local Temp Value    ", 0x00);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local Temp Hi Limit ", 0x05);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local Temp Lo Limit ", 0x06);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local Therm Limit   ", 0x20);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Value Hi   ", 0x01);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Value Lo   ", 0x10);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Hi Limit Hi", 0x07);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Hi Limit Lo", 0x13);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Lo Limit Hi", 0x08);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Lo Limit Lo", 0x14);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Value Lo   ", 0x10);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Offset Hi  ", 0x11);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Temp Offset Lo  ", 0x12);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext THERM Limit     ", 0x19);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Local THERM Limit   ", 0x20);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "THERM Hysteresis    ", 0x21);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Consecutive ALERT   ", 0x22);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz, "Ext Therm Limit     ", 0x19);
 	return sz;
 }
 
@@ -557,45 +550,6 @@ static struct attribute *nct1008_attributes[] = {
 static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
-
-static int nct1008_ext_get_temp_common(struct nct1008_data *data,
-					unsigned long *temp)
-{
-	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
-	s16 temp_ext_hi;
-	s16 temp_ext_lo;
-	long temp_ext_milli;
-	int i, off = 0;
-	u8 value;
-
-	/* Read External Temp */
-	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
-	if (value < 0)
-		return -1;
-	temp_ext_lo = (value >> 6);
-
-	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
-	if (value < 0)
-		return -1;
-	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
-
-	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
-			 temp_ext_lo * 250;
-
-	for (i = 0; i < ARRAY_SIZE(data->ext_offset_table); i++) {
-		if (temp_ext_milli < (data->ext_offset_table[i].temp * 1000)) {
-			off = data->ext_offset_table[i].offset * 1000;
-			break;
-		}
-	}
-	temp_ext_milli += off;
-
-	*temp = temp_ext_milli;
-	data->etemp = temp_ext_milli;
-
-	return 0;
-}
 
 static int nct1008_shutdown_warning_get_max_state(
 					struct thermal_cooling_device *cdev,
@@ -741,14 +695,24 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 	int i;
 	bool bind = false;
+	int err;
+	long temp;
+
+	err = nct1008_ext_get_temp_common(data, &temp);
+	if (!err && (temp == NCT1008_MAX_TEMP_MILLI))
+		err = -ENXIO; /* potential faulty skin-tdiode connection */
 
 	for (i = 0; i < data->plat_data.num_trips; i++) {
-		if (!strcmp(data->plat_data.trips[i].cdev_type, cdev->type)) {
-			thermal_zone_bind_cooling_device(thz, i, cdev,
+		if (err && !strcmp(data->plat_data.trips[i].cdev_type,
+							"skin-balanced"))
+			dev_info(&data->client->dev,
+				 "No skin-tdiode flex connector found.\n");
+		else if (!strcmp(data->plat_data.trips[i].cdev_type,
+							cdev->type) &&
+			 !thermal_zone_bind_cooling_device(thz, i, cdev,
 					data->plat_data.trips[i].upper,
-					data->plat_data.trips[i].lower);
+					data->plat_data.trips[i].lower))
 			bind = true;
-		}
 	}
 
 	if (bind)
@@ -1391,7 +1355,7 @@ static int nct1008_suspend_wakeup(struct device *dev)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	long ext_temp;
 
-	err = nct1008_get_temp(dev, &ext_temp, 0);
+	err = nct1008_ext_get_temp_common(data, &ext_temp);
 	if (err)
 		goto error;
 

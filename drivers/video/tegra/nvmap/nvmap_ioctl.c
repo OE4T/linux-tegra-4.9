@@ -107,6 +107,15 @@ ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref)
 		return 0;
 	return (ulong)marshal_kernel_handle(nvmap_ref_to_id(ref));
 }
+EXPORT_SYMBOL(nvmap_ref_to_user_id);
+
+ulong nvmap_ref_to_id(struct nvmap_handle_ref *ref)
+{
+	if (!virt_addr_valid(ref))
+		return 0;
+	return (unsigned long)ref->handle;
+}
+EXPORT_SYMBOL(nvmap_ref_to_id);
 
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {

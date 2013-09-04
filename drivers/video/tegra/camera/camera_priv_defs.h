@@ -29,9 +29,9 @@
 #include <linux/delay.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/clk/tegra.h>
 
 #include <mach/powergate.h>
-#include <mach/clk.h>
 #include <mach/mc.h>
 #if defined(CONFIG_TEGRA_ISOMGR)
 #include <mach/isomgr.h>

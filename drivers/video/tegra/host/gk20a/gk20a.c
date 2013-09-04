@@ -32,8 +32,8 @@
 #include <asm/cacheflush.h>
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
+#include <linux/tegra-powergate.h>
 
-#include <mach/powergate.h>
 #include <mach/pm_domains.h>
 
 #include "dev.h"

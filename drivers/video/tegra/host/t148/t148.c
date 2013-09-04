@@ -20,7 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/mutex.h>
-#include <mach/powergate.h>
+#include <linux/tegra-powergate.h>
 #include <linux/nvhost.h>
 
 #include "dev.h"

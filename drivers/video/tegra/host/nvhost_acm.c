@@ -30,9 +30,9 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-powergate.h>
 #include <trace/events/nvhost.h>
 
-#include <mach/powergate.h>
 #include <mach/hardware.h>
 #include <mach/mc.h>
 #include <mach/pm_domains.h>

@@ -21,8 +21,7 @@
 #include <linux/export.h>
 #include <linux/init.h>
 #include <linux/nvhost_ioctl.h>
-
-#include <mach/powergate.h>
+#include <linux/tegra-powergate.h>
 
 #include "class_ids.h"
 #include "t20.h"

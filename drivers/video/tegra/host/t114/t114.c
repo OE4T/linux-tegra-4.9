@@ -22,8 +22,7 @@
 #include <linux/mutex.h>
 #include <linux/kernel.h>
 #include <linux/nvhost_ioctl.h>
-
-#include <mach/powergate.h>
+#include <linux/tegra-powergate.h>
 
 #include "class_ids.h"
 #include "t20/t20.h"

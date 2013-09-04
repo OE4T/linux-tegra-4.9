@@ -27,6 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/tegra-powergate.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -44,7 +45,6 @@
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
 
 #include <mach/pm_domains.h>
-#include <mach/powergate.h>
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 

@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <linux/slab.h>
+#include <linux/tegra-powergate.h>
 
 #include "dev.h"
 #include "nvhost_job.h"
@@ -40,8 +41,6 @@
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
-
-#include "mach/powergate.h"
 
 static int t124_num_alloc_channels = 0;
 

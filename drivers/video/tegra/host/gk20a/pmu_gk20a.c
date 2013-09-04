@@ -1293,6 +1293,14 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 		return -EBUSY;
 	}
 
+	/*
+	 * FIXME: To enable ELPG, we increase the PMU ext2priv timeout unit to
+	 * 7. This prevents PMU stalling on Host register accesses. Once the
+	 * cause for this hang is discovered and fixed, this WAR should be
+	 * removed.
+	 */
+	gk20a_writel(g, 0x10a164, 0x109ff);
+
 	return 0;
 }
 

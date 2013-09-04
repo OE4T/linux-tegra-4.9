@@ -29,10 +29,10 @@
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
+#include <linux/clk/tegra.h>
 #include <trace/events/nvhost.h>
 
 #include <mach/powergate.h>
-#include <mach/clk.h>
 #include <mach/hardware.h>
 #include <mach/mc.h>
 #include <mach/pm_domains.h>

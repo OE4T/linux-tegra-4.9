@@ -38,11 +38,11 @@
 #include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/clk/tegra.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost_podgov.h>
 
-#include <mach/clk.h>
 #include <mach/hardware.h>
 
 #include <governor.h>

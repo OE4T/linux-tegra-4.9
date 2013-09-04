@@ -22,9 +22,8 @@
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <linux/clk/tegra.h>
 #include <mach/thermal.h>
-
-#include <mach/clk.h>
 
 #include "../dev.h"
 

@@ -22,8 +22,8 @@
 #include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/hardware.h>
 
 #include <governor.h>

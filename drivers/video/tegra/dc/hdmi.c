@@ -34,8 +34,8 @@
 #include <linux/seq_file.h>
 #include <linux/device.h>
 #include <linux/export.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <linux/nvhost.h>

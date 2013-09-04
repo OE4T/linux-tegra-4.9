@@ -19,8 +19,8 @@
 #include <linux/err.h>
 #include <linux/types.h>
 #include <linux/clk.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 
 #include "dc_reg.h"

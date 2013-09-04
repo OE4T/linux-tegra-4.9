@@ -21,8 +21,8 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/export.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/mc.h>
 #include <trace/events/display.h>

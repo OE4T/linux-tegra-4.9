@@ -22,8 +22,8 @@
 #include <linux/delay.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 
 #include "sor.h"

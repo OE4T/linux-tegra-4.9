@@ -19,8 +19,8 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/clk.h>
+#include <linux/clk/tegra.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/mc.h>

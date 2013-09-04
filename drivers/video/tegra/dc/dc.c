@@ -37,6 +37,7 @@
 #include <linux/backlight.h>
 #include <linux/gpio.h>
 #include <linux/nvhost.h>
+#include <linux/clk/tegra.h>
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
 #ifdef CONFIG_SWITCH
@@ -46,7 +47,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
 
-#include <mach/clk.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/mc.h>

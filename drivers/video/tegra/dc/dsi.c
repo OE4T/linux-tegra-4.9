@@ -2961,13 +2961,21 @@ fail:
 }
 
 static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
-					u8 *pdata, u8 data_id, u16 data_len)
+					struct tegra_dsi_cmd *cmd)
 {
 	u8 virtual_channel;
 	u32 val;
 	int err;
+	u8 *pdata = cmd->pdata;
+	u8 data_id = cmd->data_id;
+	u16 data_len = cmd->sp_len_dly.data_len;
 
 	err = 0;
+
+	if (!dsi->info.ganged_type && cmd->link_id == TEGRA_DSI_LINK1) {
+		dev_err(&dsi->dc->ndev->dev, "DSI invalid command\n");
+		return -EINVAL;
+	}
 
 	virtual_channel = dsi->info.virtual_channel <<
 						DSI_VIR_CHANNEL_BIT_POSITION;
@@ -2975,7 +2983,7 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 	/* always use hw for ecc */
 	val = (virtual_channel | data_id) << 0 |
 			data_len << 8;
-	tegra_dsi_controller_writel(dsi, val, DSI_WR_DATA, 0);
+	tegra_dsi_controller_writel(dsi, val, DSI_WR_DATA, cmd->link_id);
 
 	/* if pdata != NULL, pkt type is long pkt */
 	if (pdata != NULL) {
@@ -2990,7 +2998,8 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 				pdata += data_len;
 				data_len = 0;
 			}
-			tegra_dsi_controller_writel(dsi, val, DSI_WR_DATA, 0);
+			tegra_dsi_controller_writel(dsi, val,
+				DSI_WR_DATA, cmd->link_id);
 		}
 	}
 
@@ -3035,7 +3044,7 @@ static void tegra_dc_dsi_idle_work(struct work_struct *work)
 
 static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
-			u8 *pdata, u8 data_id, u16 data_len)
+			struct tegra_dsi_cmd *cmd)
 {
 	int err = 0;
 	struct dsi_status *init_status;
@@ -3048,7 +3057,7 @@ static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	err = _tegra_dsi_write_data(dsi, pdata, data_id, data_len);
+	err = _tegra_dsi_write_data(dsi, cmd);
 fail:
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
@@ -3059,14 +3068,14 @@ fail:
 
 int tegra_dsi_write_data(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
-			u8 *pdata, u8 data_id, u16 data_len)
+			struct tegra_dsi_cmd *cmd)
 {
 	int err;
 
 	tegra_dc_io_start(dc);
 	tegra_dc_dsi_hold_host(dc);
 
-	err = tegra_dsi_write_data_nosync(dc, dsi, pdata, data_id, data_len);
+	err = tegra_dsi_write_data_nosync(dc, dsi, cmd);
 
 	tegra_dc_dsi_release_host(dc);
 	tegra_dc_io_end(dc);
@@ -3102,10 +3111,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 						dsi,
 						cur_cmd->sp_len_dly.frame_cnt);
 		} else {
-			err = tegra_dsi_write_data_nosync(dc, dsi,
-						cur_cmd->pdata,
-						cur_cmd->data_id,
-						cur_cmd->sp_len_dly.data_len);
+			err = tegra_dsi_write_data_nosync(dc, dsi, cur_cmd);
 			mdelay(1);
 			if (err < 0)
 				break;
@@ -3439,11 +3445,12 @@ fail:
 
 int tegra_dsi_read_data(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
-				u32 max_ret_payload_size,
-				u32 panel_reg_addr, u8 *read_data)
+				u16 max_ret_payload_size,
+				u8 panel_reg_addr, u8 *read_data)
 {
 	int err = 0;
 	struct dsi_status *init_status;
+	static struct tegra_dsi_cmd temp_cmd;
 
 	if (!dsi->enabled) {
 		dev_err(&dc->ndev->dev, "DSI controller suspended\n");
@@ -3463,9 +3470,9 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	}
 
 	/* Set max return payload size in words */
-	err = _tegra_dsi_write_data(dsi, NULL,
-		dsi_command_max_return_pkt_size,
-		max_ret_payload_size);
+	temp_cmd.data_id = dsi_command_max_return_pkt_size;
+	temp_cmd.sp_len_dly.data_len = max_ret_payload_size;
+	err = _tegra_dsi_write_data(dsi, &temp_cmd);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 				"DSI write failed\n");
@@ -3473,9 +3480,10 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	}
 
 	/* DCS to read given panel register */
-	err = _tegra_dsi_write_data(dsi, NULL,
-		dsi_command_dcs_read_with_no_params,
-		panel_reg_addr);
+	temp_cmd.data_id = dsi_command_dcs_read_with_no_params;
+	temp_cmd.sp_len_dly.sp.data0 = panel_reg_addr;
+	temp_cmd.sp_len_dly.sp.data1 = 0;
+	err = _tegra_dsi_write_data(dsi, &temp_cmd);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 				"DSI write failed\n");
@@ -3544,7 +3552,7 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 		goto fail;
 	}
 
-	err = _tegra_dsi_write_data(dsi, NULL, dsi_nop_cmd.data_id, 0x0);
+	err = _tegra_dsi_write_data(dsi, &dsi_nop_cmd);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev, "DSI nop write failed\n");
 		goto fail;

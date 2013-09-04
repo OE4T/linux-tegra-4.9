@@ -35,6 +35,7 @@
 #include <linux/module.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
+#include <linux/tegra-soc.h>
 
 #include <asm/cacheflush.h>
 #include <asm/outercache.h>
@@ -42,7 +43,6 @@
 #include <asm/pgtable.h>
 
 #include <mach/iovmm.h>
-#include <mach/hardware.h>
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"

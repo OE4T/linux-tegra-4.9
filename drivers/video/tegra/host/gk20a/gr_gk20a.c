@@ -2014,16 +2014,8 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	nvhost_memmgr_free_sg_table(memmgr, gr->mmu_wr_mem.mem.ref,
 			gr->mmu_wr_mem.mem.sgt);
-	nvhost_memmgr_free_sg_table(memmgr, gr->mmu_rd_mem.mem.ref,
-			gr->mmu_rd_mem.mem.sgt);
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	if (sg_dma_address(gr->compbit_store.mem.sgt->sgl))
-		nvhost_memmgr_smmu_unmap(gr->compbit_store.mem.sgt,
-				gr->compbit_store.mem.size,
-				dev_from_gk20a(g));
-#endif
-	nvhost_memmgr_free_sg_table(memmgr, gr->compbit_store.mem.ref,
-			gr->compbit_store.mem.sgt);
+	nvhost_memmgr_unpin(memmgr, gr->mmu_rd_mem.mem.ref,
+			dev_from_gk20a(g), gr->mmu_rd_mem.mem.sgt);
 	nvhost_memmgr_put(memmgr, gr->mmu_wr_mem.mem.ref);
 	nvhost_memmgr_put(memmgr, gr->mmu_rd_mem.mem.ref);
 	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
@@ -2551,17 +2543,12 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	gr->compbit_store.mem.size = compbit_backing_size;
 
 	gr->compbit_store.mem.sgt =
-		nvhost_memmgr_sg_table(memmgr, gr->compbit_store.mem.ref);
+		nvhost_memmgr_pin(memmgr, gr->compbit_store.mem.ref,
+				dev_from_gk20a(g));
 	if (IS_ERR(gr->compbit_store.mem.sgt)) {
 		ret = PTR_ERR(gr->compbit_store.mem.sgt);
 		goto clean_up;
 	}
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
-	ret = nvhost_memmgr_smmu_map(gr->compbit_store.mem.sgt,
-			compbit_backing_size, dev_from_gk20a(g));
-	if (ret)
-		goto clean_up;
-#endif
 	gr->compbit_store.base_pa =
 		gk20a_mm_iova_addr(gr->compbit_store.mem.sgt->sgl);
 

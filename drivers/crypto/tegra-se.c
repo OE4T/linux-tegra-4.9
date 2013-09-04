@@ -34,6 +34,7 @@
 #include <linux/interrupt.h>
 #include <linux/types.h>
 #include <linux/errno.h>
+#include <linux/tegra-soc.h>
 #include <crypto/scatterwalk.h>
 #include <crypto/algapi.h>
 #include <crypto/aes.h>
@@ -41,7 +42,6 @@
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
 #include <linux/pm_runtime.h>
-#include <mach/hardware.h>
 #include <mach/pm_domains.h>
 
 #include "tegra-se.h"

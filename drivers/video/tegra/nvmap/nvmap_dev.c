@@ -37,6 +37,8 @@
 #include <linux/vmalloc.h>
 #include <linux/nvmap.h>
 #include <linux/module.h>
+#include <linux/resource.h>
+#include <linux/security.h>
 #include <linux/stat.h>
 
 #include <asm/cacheflush.h>
@@ -668,6 +670,7 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	struct nvmap_device *dev = dev_get_drvdata(miscdev->parent);
 	struct nvmap_client *priv;
 	int ret;
+	__attribute__((unused)) struct rlimit old_rlim, new_rlim;
 
 	ret = nonseekable_open(inode, filp);
 	if (unlikely(ret))
@@ -685,6 +688,18 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	filp->f_mapping->backing_dev_info = &nvmap_bdi;
 
 	filp->private_data = priv;
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	/* increase file id limit to max */
+	if (do_prlimit(current, RLIMIT_NOFILE, NULL, &old_rlim)) {
+		pr_err("RLIMIT_NO_FILE get failed");
+	} else {
+		new_rlim.rlim_cur = old_rlim.rlim_max;
+		new_rlim.rlim_max = old_rlim.rlim_max;
+		if (do_prlimit(current->group_leader,
+			       RLIMIT_NOFILE, &new_rlim, &old_rlim))
+			pr_err("RLIMIT_NOFILE set failed");
+	}
+#endif
 	return 0;
 }
 

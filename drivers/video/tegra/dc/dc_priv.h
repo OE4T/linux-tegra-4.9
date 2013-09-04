@@ -25,7 +25,7 @@
 # include <trace/events/display.h>
 #define WIN_IS_BLOCKLINEAR(win)	((win)->flags & TEGRA_WIN_FLAG_BLOCKLINEAR)
 #endif
-#include <mach/powergate.h>
+#include <linux/tegra-powergate.h>
 #include <video/tegra_dc_ext.h>
 
 

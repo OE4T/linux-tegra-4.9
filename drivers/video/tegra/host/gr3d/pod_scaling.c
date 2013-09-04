@@ -39,11 +39,10 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-soc.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost_podgov.h>
-
-#include <mach/hardware.h>
 
 #include <governor.h>
 

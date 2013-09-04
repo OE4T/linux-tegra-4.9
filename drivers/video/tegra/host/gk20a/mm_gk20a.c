@@ -25,7 +25,7 @@
 #include <linux/nvhost.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 #include <asm/cacheflush.h>
 
 #include "../../nvmap/nvmap_priv.h"

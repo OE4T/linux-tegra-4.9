@@ -28,7 +28,7 @@ struct channel_gk20a;
 struct gr_gk20a;
 struct sim_gk20a;
 
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 #include <linux/spinlock.h>
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"

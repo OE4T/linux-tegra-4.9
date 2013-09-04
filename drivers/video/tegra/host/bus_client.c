@@ -30,6 +30,7 @@
 #include <linux/export.h>
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
+#include <linux/tegra-soc.h>
 
 #include <trace/events/nvhost.h>
 
@@ -40,7 +41,6 @@
 #include <linux/nvhost_ioctl.h>
 
 #include <mach/gpufuse.h>
-#include <mach/hardware.h>
 
 #include "debug.h"
 #include "bus_client.h"

@@ -31,7 +31,7 @@
 #include "class_ids.h"
 
 #include <mach/gpufuse.h>
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 

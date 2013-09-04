@@ -22,6 +22,7 @@
 #include <linux/types.h>
 #include <linux/bug.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 
 #include "chip_support.h"
 #include "t20/t20.h"
@@ -29,8 +30,6 @@
 #include "t114/t114.h"
 #include "t124/t124.h"
 #include "t148/t148.h"
-
-#include <mach/hardware.h>
 
 struct nvhost_chip_support *nvhost_chip_ops;
 

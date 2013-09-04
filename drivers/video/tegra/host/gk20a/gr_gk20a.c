@@ -23,8 +23,7 @@
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
-
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 
 #include "../dev.h"
 

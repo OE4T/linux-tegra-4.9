@@ -23,8 +23,7 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
-
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 
 #include <governor.h>
 

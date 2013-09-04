@@ -30,7 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>

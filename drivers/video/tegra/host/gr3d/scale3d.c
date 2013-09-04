@@ -35,8 +35,7 @@
 #include <linux/slab.h>
 #include <linux/ftrace.h>
 #include <linux/platform_data/tegra_edp.h>
-
-#include <mach/hardware.h>
+#include <linux/tegra-soc.h>
 
 #include "chip_support.h"
 #include "dev.h"

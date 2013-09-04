@@ -132,7 +132,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 	/* create the nvhost priv if needed */
 	priv = nvmap_get_nvhost_private(ref);
 	if (IS_ERR(priv))
-		return priv;
+		return ERR_PTR(-EINVAL);
 	if (!priv) {
 		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 		if (!priv)

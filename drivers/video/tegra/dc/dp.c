@@ -22,10 +22,10 @@
 #include <linux/interrupt.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/tegra-soc.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/hardware.h>
 
 #include "dp.h"
 #include "sor.h"

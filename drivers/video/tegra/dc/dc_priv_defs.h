@@ -29,11 +29,11 @@
 #include <linux/nvhost.h>
 #include <linux/types.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-soc.h>
 
 #include <mach/dc.h>
 
 #include <mach/tegra_dc_ext.h>
-#include <mach/hardware.h>
 #include <mach/isomgr.h>
 
 #include "dc_reg.h"

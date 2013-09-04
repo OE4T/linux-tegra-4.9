@@ -35,11 +35,11 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-soc.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/csi.h>
-#include <mach/hardware.h>
 #include <linux/nvhost.h>
 
 #include "dc_reg.h"

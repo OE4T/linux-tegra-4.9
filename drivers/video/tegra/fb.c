@@ -388,7 +388,7 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	struct tegra_fb_modedb modedb;
 	struct fb_modelist *modelist;
 	struct fb_vblank vblank = {};
-	int i;
+	unsigned i;
 
 	switch (cmd) {
 	case FBIO_TEGRA_GET_MODEDB:

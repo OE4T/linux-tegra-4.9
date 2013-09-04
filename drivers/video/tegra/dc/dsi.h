@@ -420,7 +420,7 @@ extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
 		defined(CONFIG_TEGRA_DSI2EDP_SN65DSI86)
 extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
 #else
-#define tegra_dsi2edp_ops (*NULL)
+#define tegra_dsi2edp_ops (*(struct tegra_dsi_out_ops *)NULL)
 #endif
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)

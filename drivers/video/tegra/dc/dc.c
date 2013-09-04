@@ -1418,7 +1418,8 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	if (dc->out_ops && dc->out_ops->init) {
 		err = dc->out_ops->init(dc);
 		if (err < 0) {
-			dc->out = dc->out_ops = NULL;
+			dc->out = NULL;
+			dc->out_ops = NULL;
 			return err;
 		}
 	}

@@ -36,8 +36,10 @@ static int use_dynamic_emc = 1;
 
 module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
 static unsigned int tegra_dcs_total_bw[TEGRA_MAX_DC] = {0};
 DEFINE_MUTEX(tegra_dcs_total_bw_lock);
+#endif
 
 /* windows A, B, C for first and second display */
 static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
@@ -46,7 +48,7 @@ static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 		TEGRA_LA_DISPLAY_0A,
 		TEGRA_LA_DISPLAY_0B,
 		TEGRA_LA_DISPLAY_0C,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) && defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		TEGRA_LA_DISPLAYD,
 #endif
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
@@ -68,7 +70,8 @@ static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 	},
 };
 
-bool is_internal_win(enum tegra_la_id id)
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+static bool is_internal_win(enum tegra_la_id id)
 {
 	return ((id == TEGRA_LA_DISPLAY_0A) || (id == TEGRA_LA_DISPLAY_0B) ||
 		(id == TEGRA_LA_DISPLAY_0C) || (id == TEGRA_LA_DISPLAYD) ||
@@ -115,7 +118,6 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
 	return num_active_external_wins;
 }
 
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
 /*
  * Note about fixed point arithmetic:
  * ----------------------------------

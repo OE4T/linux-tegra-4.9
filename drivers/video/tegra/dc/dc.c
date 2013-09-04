@@ -1608,6 +1608,23 @@ static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 	}
 }
 
+void tegra_dc_vsync_enable(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	set_bit(V_BLANK_USER, &dc->vblank_ref_count);
+	tegra_dc_unmask_interrupt(dc, V_BLANK_INT);
+	mutex_unlock(&dc->lock);
+}
+
+void tegra_dc_vsync_disable(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	clear_bit(V_BLANK_USER, &dc->vblank_ref_count);
+	if (!dc->vblank_ref_count)
+		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
+	mutex_unlock(&dc->lock);
+}
+
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);

@@ -758,7 +758,7 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		gk20a_gr_reset(g);
 	}
 	if (engine_id == top_device_info_type_enum_copy0_v()) {
-		pmc_enable_reset &= ~mc_enable_ce0_m();
+		pmc_enable_reset &= ~mc_enable_ce2_m();
 
 		nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
 				pmc_enable, pmc_enable_reset);

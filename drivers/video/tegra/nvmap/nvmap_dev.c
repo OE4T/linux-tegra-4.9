@@ -236,8 +236,12 @@ pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr)
 	return &(dev->ptes[bit]);
 }
 
-/* verifies that the handle ref value "ref" is a valid handle ref for the
- * file. caller must hold the file's ref_lock prior to calling this function */
+/*
+ * Verifies that the passed ID is a valid handle ID. Then the passed client's
+ * reference to the handle is returned.
+ *
+ * Note: to call this function make sure you own the client ref lock.
+ */
 struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
 						    unsigned long id)
 {

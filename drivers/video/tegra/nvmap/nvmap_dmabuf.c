@@ -35,10 +35,8 @@
 
 struct nvmap_handle_info {
 	struct nvmap_handle *handle;
-#ifdef CONFIG_NVMAP_DMABUF_STASH
 	struct list_head maps;
 	struct mutex maps_lock;
-#endif
 };
 
 #ifdef CONFIG_NVMAP_DMABUF_STASH
@@ -219,7 +217,7 @@ void __nvmap_dmabuf_evict_stash(struct nvmap_handle_sgt *nvmap_sgt)
 /*
  * Prepare an SGT for potential stashing later on.
  */
-static int __nvmap_dmabuf_prep_sgt(struct dma_buf_attachment *attach,
+static int __nvmap_dmabuf_prep_sgt_locked(struct dma_buf_attachment *attach,
 				   enum dma_data_direction dir,
 				   struct sg_table *sgt)
 {
@@ -228,9 +226,9 @@ static int __nvmap_dmabuf_prep_sgt(struct dma_buf_attachment *attach,
 
 	pr_debug("Prepping SGT.\n");
 	nvmap_sgt = kmem_cache_alloc(handle_sgt_cache, GFP_KERNEL);
-	if (IS_ERR(nvmap_sgt)) {
+	if (IS_ERR_OR_NULL(nvmap_sgt)) {
 		pr_err("Prepping SGT failed.\n");
-		return PTR_ERR(nvmap_sgt);
+		return -ENOMEM;
 	}
 
 	nvmap_sgt->mapping = attach->dev->archdata.mapping;
@@ -239,10 +237,7 @@ static int __nvmap_dmabuf_prep_sgt(struct dma_buf_attachment *attach,
 	nvmap_sgt->owner = info;
 	INIT_LIST_HEAD(&nvmap_sgt->stash_entry);
 	atomic_set(&nvmap_sgt->refs, 1);
-
-	mutex_lock(&info->maps_lock);
 	list_add(&nvmap_sgt->maps_entry, &info->maps);
-	mutex_unlock(&info->maps_lock);
 	return 0;
 }
 
@@ -285,7 +280,7 @@ done:
  * If it turns out there is a map, this also checks to see if the map needs to
  * be removed from the stash - if so, the map is removed.
  */
-static struct sg_table *__nvmap_dmabuf_get_sgt(
+static struct sg_table *__nvmap_dmabuf_get_sgt_locked(
 	struct dma_buf_attachment *attach, enum dma_data_direction dir)
 {
 	struct nvmap_handle_sgt *nvmap_sgt;
@@ -293,42 +288,25 @@ static struct sg_table *__nvmap_dmabuf_get_sgt(
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
 
 	pr_debug("Getting SGT from stash.\n");
-	mutex_lock(&info->maps_lock);
 	list_for_each_entry(nvmap_sgt, &info->maps, maps_entry) {
 		if (attach->dev->archdata.mapping != nvmap_sgt->mapping)
 			continue;
-
-		/*
-		 * Special case: if we find a mapping for a dmabuf already
-		 * exists but with a different access direction then destroy
-		 * the old mapping and make a new one.
-		 */
-		if (nvmap_sgt->dir != dir) {
-			WARN_ONCE(1,
-				"Remapping dmabuf with new access direction");
-			__nvmap_dmabuf_evict_stash(nvmap_sgt);
-			__nvmap_dmabuf_free_sgt_locked(nvmap_sgt);
-			break;
-		}
-
 		/* We have a hit. */
 		pr_debug("Stash hit!\n");
 		sgt = nvmap_sgt->sgt;
 		atomic_inc(&nvmap_sgt->refs);
 		__nvmap_dmabuf_del_stash(nvmap_sgt);
-
 		stash_stat_inc(all_hits);
 		break;
 	}
-	mutex_unlock(&info->maps_lock);
 
 	if (!sgt)
 		stash_stat_inc(misses);
 	return sgt;
 }
 #else
-#define __nvmap_dmabuf_prep_sgt(attach, dir, sgt)   (0)
-#define __nvmap_dmabuf_get_sgt(attach, dir)         (NULL)
+#define __nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)   (0)
+#define __nvmap_dmabuf_get_sgt_locked(attach, dir)         (NULL)
 #define __nvmap_dmabuf_stash_sgt(atatch, dir, sgt)
 #endif
 
@@ -343,7 +321,8 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	struct sg_table *sgt;
 	dma_addr_t addr;
 
-	sgt = __nvmap_dmabuf_get_sgt(attach, dir);
+	mutex_lock(&info->maps_lock);
+	sgt = __nvmap_dmabuf_get_sgt_locked(attach, dir);
 	if (sgt)
 		goto cache_hit;
 
@@ -358,7 +337,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	sg_dma_address(sgt->sgl) = addr;
 	sg_dma_len(sgt->sgl) = info->handle->size;
 
-	if (__nvmap_dmabuf_prep_sgt(attach, dir, sgt)) {
+	if (__nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)) {
 		WARN(1, "No mem to prep sgt.\n");
 		err = -ENOMEM;
 		goto err_map;
@@ -366,10 +345,12 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 
 cache_hit:
 	dev_dbg(attach->dev, "%s() 0x%p\n", __func__, info->handle);
+	mutex_unlock(&info->maps_lock);
 	return sgt;
 
 err_map:
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
+	mutex_unlock(&info->maps_lock);
 	return ERR_PTR(err);
 }
 
@@ -395,15 +376,15 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 #ifdef CONFIG_NVMAP_DMABUF_STASH
 	struct nvmap_handle_sgt *nvmap_sgt;
 
+	mutex_lock(&info->maps_lock);
 	while (!list_empty(&info->maps)) {
 		nvmap_sgt = list_first_entry(&info->maps,
 					     struct nvmap_handle_sgt,
 					     maps_entry);
 		__nvmap_dmabuf_evict_stash(nvmap_sgt);
-		mutex_lock(&nvmap_sgt->owner->maps_lock);
 		__nvmap_dmabuf_free_sgt_locked(nvmap_sgt);
-		mutex_unlock(&nvmap_sgt->owner->maps_lock);
 	}
+	mutex_unlock(&info->maps_lock);
 #endif
 
 	pr_debug("%s() 0x%p\n", __func__, info->handle);
@@ -513,10 +494,8 @@ struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
 		goto err_nomem;
 	}
 	info->handle = handle;
-#ifdef CONFIG_NVMAP_DMABUF_STASH
 	INIT_LIST_HEAD(&info->maps);
 	mutex_init(&info->maps_lock);
-#endif
 
 	dmabuf = dma_buf_export(info, &nvmap_dma_buf_ops, handle->size,
 				O_RDWR);

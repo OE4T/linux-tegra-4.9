@@ -168,7 +168,6 @@ struct nvhost_device_data t124_isp_info = {
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = { {"isp", UINT_MAX} },
-	.slave           = &tegra_isp01b_device,
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 static struct platform_device tegra_isp01_device = {
@@ -442,6 +441,7 @@ struct platform_device tegra_gk20a_device = {
 
 static struct platform_device *t124_devices[] = {
 	&tegra_isp01_device,
+	&tegra_isp01b_device,
 	&tegra_vi01_device,
 	&tegra_msenc03_device,
 	&tegra_tsec01_device,

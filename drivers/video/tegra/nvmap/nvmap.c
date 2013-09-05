@@ -893,8 +893,6 @@ struct sg_table *nvmap_sg_table(struct nvmap_client *client,
 void __nvmap_free_sg_table(struct nvmap_client *client,
 		struct nvmap_handle *h, struct sg_table *sgt)
 {
-	if (WARN_ON(!virt_addr_valid(sgt)))
-		return;
 	sg_free_table(sgt);
 	kfree(sgt);
 }
@@ -902,7 +900,9 @@ void __nvmap_free_sg_table(struct nvmap_client *client,
 void nvmap_free_sg_table(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, struct sg_table *sgt)
 {
-	if (WARN_ON(!virt_addr_valid(ref)))
+	if (WARN_ON(!virt_addr_valid(ref)) ||
+	    WARN_ON(!virt_addr_valid(ref->handle)) ||
+	    WARN_ON(!virt_addr_valid(sgt)))
 		return;
 	__nvmap_free_sg_table(client, ref->handle, sgt);
 }

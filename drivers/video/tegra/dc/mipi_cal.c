@@ -39,7 +39,7 @@ static int dbg_dsi_mipi_show(struct seq_file *s, void *unused)
 	/* mem dd dump */
 	for (col = 0, i = 0; i <= MIPI_VALID_REG_LIMIT ; i += 4) {
 		if (col == 0)
-			seq_printf(s, "%08lX:", TEGRA_MIPI_BASE + i);
+			seq_printf(s, "%08lX:", TEGRA_MIPI_CAL_BASE + i);
 		seq_printf(s, "%c%08lX", col == 2 ? '-' : ' ',
 			tegra_mipi_cal_read(mipi_cal, i));
 		if (col == 3) {

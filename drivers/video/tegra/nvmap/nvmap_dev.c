@@ -541,6 +541,7 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 
 	client->name = name;
 	client->super = true;
+	client->kernel_client = true;
 	client->handle_refs = RB_ROOT;
 
 	atomic_set(&client->iovm_commit, 0);
@@ -678,6 +679,7 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 	trace_nvmap_open(priv, priv->name);
 
+	priv->kernel_client = false;
 	priv->super = (filp->f_op == &nvmap_super_fops);
 
 	filp->f_mapping->backing_dev_info = &nvmap_bdi;

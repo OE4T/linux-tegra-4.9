@@ -395,6 +395,9 @@ void tegra_dc_put(struct tegra_dc *dc);
 void tegra_dc_hold_dc_out(struct tegra_dc *dc);
 void tegra_dc_release_dc_out(struct tegra_dc *dc);
 
+/* defined in dc.c, used in ext/dev.c */
+void tegra_dc_call_flip_callback(void);
+
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);

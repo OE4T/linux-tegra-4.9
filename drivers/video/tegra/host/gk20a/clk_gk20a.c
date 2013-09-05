@@ -615,16 +615,6 @@ static int gk20a_clk_set_cap_thermal(struct gk20a *g, unsigned long rate)
 	return gk20a_clk_set_rate(g, rate);
 }
 
-static unsigned long gk20a_clk_get_max(void)
-{
-	return rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
-}
-
-static struct gk20a_clk_cap_info gk20a_clk_cap = {
-	.set_cap_thermal = gk20a_clk_set_cap_thermal,
-	.get_max = gk20a_clk_get_max,
-};
-
 int gk20a_clk_init_cap_freqs(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -632,10 +622,6 @@ int gk20a_clk_init_cap_freqs(struct gk20a *g)
 	/* init cap_freq == max_freq */
 	clk->cap_freq = gpc_pll_params.max_freq;
 	clk->cap_freq_thermal = gpc_pll_params.max_freq;
-
-	gk20a_clk_cap.g = g;
-
-	tegra_throttle_gk20a_clk_cap_register(&gk20a_clk_cap);
 
 	return 0;
 }

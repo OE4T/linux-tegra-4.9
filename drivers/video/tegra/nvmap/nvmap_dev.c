@@ -25,6 +25,7 @@
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/kernel.h>
+#include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/oom.h>
@@ -48,7 +49,6 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
-#include "nvmap_mru.h"
 
 #define NVMAP_NUM_PTES		64
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
@@ -550,10 +550,6 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 
 	atomic_set(&client->iovm_commit, 0);
 
-#ifdef CONFIG_IOMMU_API
-	client->iovm_limit = nvmap_mru_vm_size(nvmap_share->iovmm);
-#endif
-
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		INIT_LIST_HEAD(&client->carveout_commit[i].list);
 		client->carveout_commit[i].commit = 0;
@@ -595,10 +591,12 @@ static void destroy_client(struct nvmap_client *client)
 		int pins, dupes;
 
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
-		rb_erase(&ref->node, &client->handle_refs);
 
 		smp_rmb();
 		pins = atomic_read(&ref->pin);
+
+		while (pins--)
+			nvmap_unpin(client, ref);
 
 		if (ref->handle->owner == client) {
 			ref->handle->owner = NULL;
@@ -606,9 +604,7 @@ static void destroy_client(struct nvmap_client *client)
 		}
 
 		dma_buf_put(ref->handle->dmabuf);
-
-		while (pins--)
-			nvmap_unpin_handles(client, &ref->handle, 1);
+		rb_erase(&ref->node, &client->handle_refs);
 
 		dupes = atomic_read(&ref->dupes);
 		while (dupes--)
@@ -1257,25 +1253,10 @@ static int nvmap_probe(struct platform_device *pdev)
 		nvmap_page_pool_init(&dev->iovmm_master.pools[i], i);
 #endif
 
-	dev->iovmm_master.iovmm =
-		tegra_iovmm_alloc_client(&pdev->dev, NULL,
-			&(dev->dev_user));
-#if defined(CONFIG_TEGRA_IOVMM) || defined(CONFIG_IOMMU_API)
-	if (!dev->iovmm_master.iovmm) {
-		e = PTR_ERR(dev->iovmm_master.iovmm);
-		dev_err(&pdev->dev, "couldn't create iovmm client\n");
-		goto fail;
-	}
-#endif
-	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, 0);
+	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, NULL);
 	if (!dev->vm_rgn) {
 		e = -ENOMEM;
 		dev_err(&pdev->dev, "couldn't allocate remapping region\n");
-		goto fail;
-	}
-	e = nvmap_mru_init(&dev->iovmm_master);
-	if (e) {
-		dev_err(&pdev->dev, "couldn't initialize MRU lists\n");
 		goto fail;
 	}
 
@@ -1450,12 +1431,10 @@ static int nvmap_probe(struct platform_device *pdev)
 	nvmap_dev = dev;
 	nvmap_share = &dev->iovmm_master;
 
-#ifdef CONFIG_NVMAP_DMABUF_STASH
 	nvmap_dmabuf_debugfs_init(nvmap_debug_root);
 	e = nvmap_dmabuf_stash_init();
 	if (e)
 		goto fail_heaps;
-#endif
 
 	return 0;
 fail_heaps:
@@ -1466,13 +1445,10 @@ fail_heaps:
 	}
 fail:
 	kfree(dev->heaps);
-	nvmap_mru_destroy(&dev->iovmm_master);
 	if (dev->dev_super.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_super);
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
-	if (!IS_ERR_OR_NULL(dev->iovmm_master.iovmm))
-		tegra_iovmm_free_client(dev->iovmm_master.iovmm);
 	if (dev->vm_rgn)
 		free_vm_area(dev->vm_rgn);
 	kfree(dev);
@@ -1495,11 +1471,6 @@ static int nvmap_remove(struct platform_device *pdev)
 		rb_erase(&h->node, &dev->handles);
 		kfree(h);
 	}
-
-	if (!IS_ERR_OR_NULL(dev->iovmm_master.iovmm))
-		tegra_iovmm_free_client(dev->iovmm_master.iovmm);
-
-	nvmap_mru_destroy(&dev->iovmm_master);
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];

@@ -33,10 +33,16 @@
 #include <linux/dma-buf.h>
 #include <linux/syscalls.h>
 #include <linux/nvmap.h>
-#include "nvmap_heap.h"
+
 #include <linux/workqueue.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-direction.h>
+#include <linux/platform_device.h>
+
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
+
+#include "nvmap_heap.h"
 
 struct nvmap_device;
 struct nvmap_share;
@@ -48,6 +54,8 @@ void _nvmap_handle_free(struct nvmap_handle *h);
 extern struct nvmap_share *nvmap_share;
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
+
+extern struct platform_device *nvmap_pdev;
 
 #if defined(CONFIG_TEGRA_NVMAP)
 #define nvmap_err(_client, _fmt, ...)				\
@@ -107,7 +115,17 @@ struct nvmap_handle {
 			original client destroy ref, this field
 			has to be set to zero. In this case ref should be
 			obtained through validation */
+
+	/*
+	 * dma_buf necessities. An attachment is made on dma_buf allocation to
+	 * facilitate the nvmap_pin* APIs.
+	 *
+	 * TODO: remove all all places where "pins" are used so that the pin
+	 * APIs can be removed.
+	 */
 	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attachment;
+
 	struct nvmap_device *dev;
 	union {
 		struct nvmap_pgalloc pgalloc;
@@ -184,7 +202,6 @@ struct nvmap_client {
 	const char			*name;
 	struct rb_root			handle_refs;
 	atomic_t			iovm_commit;
-	size_t				iovm_limit;
 	struct mutex			ref_lock;
 	bool				super;
 	bool				kernel_client;
@@ -382,9 +399,6 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
 void __nvmap_free_sg_table(struct nvmap_client *client,
 			   struct nvmap_handle *h, struct sg_table *sgt);
-int __nvmap_pin(struct nvmap_client *client, struct nvmap_handle *h,
-		phys_addr_t *phys);
-void __nvmap_unpin(struct nvmap_client *client, struct nvmap_handle *h);
 void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum);
 void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum, void *addr);
 void *__nvmap_mmap(struct nvmap_handle *h);

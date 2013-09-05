@@ -46,7 +46,6 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
-#include "nvmap_mru.h"
 #include "nvmap_ioctl.h"
 
 u32 nvmap_max_handle_count;
@@ -543,8 +542,6 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	BUG_ON(h->size & ~PAGE_MASK);
 	BUG_ON(!h->pgalloc.pages);
 
-	nvmap_mru_remove(share, h);
-
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	if (h->flags < NVMAP_NUM_POOLS)
 		pool = &share->pools[h->flags];
@@ -571,9 +568,6 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	}
 
 skip_attr_restore:
-	if (h->pgalloc.area)
-		tegra_iovmm_free_vm(h->pgalloc.area);
-
 	for (i = page_index; i < nr_page; i++)
 		__free_page(h->pgalloc.pages[i]);
 
@@ -635,7 +629,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	prot = nvmap_pgprot(h, pgprot_kernel);
 
-	h->pgalloc.area = NULL;
 	if (contiguous) {
 		struct page *page;
 		page = nvmap_alloc_pages_exact(gfp, size);
@@ -683,16 +676,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 			if (!pages[i])
 				goto fail;
 		}
-
-#ifndef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
-		h->pgalloc.area = tegra_iovmm_create_vm(nvmap_share->iovmm,
-					NULL, size, h->align, prot,
-					h->pgalloc.iovm_addr);
-		if (!h->pgalloc.area)
-			goto fail;
-
-		h->pgalloc.dirty = true;
-#endif
 	}
 
 	if (nr_page == page_index)
@@ -718,7 +701,6 @@ skip_attr_change:
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
-	INIT_LIST_HEAD(&h->pgalloc.mru_list);
 	return 0;
 
 fail:
@@ -761,28 +743,18 @@ static void alloc_handle(struct nvmap_client *client,
 				h->size);
 		}
 	} else if (type & iovmm_mask) {
-		size_t reserved = PAGE_ALIGN(h->size);
-		int commit = 0;
 		int ret;
+		size_t reserved = PAGE_ALIGN(h->size);
 
-		/* increment the committed IOVM space prior to allocation
-		 * to avoid race conditions with other threads simultaneously
-		 * allocating. */
-		commit = atomic_add_return(reserved,
-					    &client->iovm_commit);
-
-		if (commit < client->iovm_limit)
-			ret = handle_page_alloc(client, h, false);
-		else
-			ret = -ENOMEM;
-
-		if (!ret) {
-			h->heap_pgalloc = true;
-			h->alloc = true;
-		} else {
+		atomic_add_return(reserved, &client->iovm_commit);
+		ret = handle_page_alloc(client, h, false);
+		if (ret) {
 			atomic_sub(reserved, &client->iovm_commit);
+			return;
 		}
 
+		h->heap_pgalloc = true;
+		h->alloc = true;
 	}
 }
 
@@ -859,6 +831,16 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	h->dmabuf = __nvmap_make_dmabuf(client, h);
 	if (!h->dmabuf) {
 		err = -ENOMEM;
+		goto out;
+	}
+
+	/*
+	 * Pre-attach nvmap to this new dmabuf. This gets unattached during the
+	 * dma_buf_release() operation.
+	 */
+	h->attachment = dma_buf_attach(h->dmabuf, &nvmap_pdev->dev);
+	if (IS_ERR(h->attachment)) {
+		err = PTR_ERR(h->attachment);
 		goto out;
 	}
 
@@ -951,7 +933,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 	client->handle_count--;
 
 	if (h->alloc && h->heap_pgalloc && !h->pgalloc.contig)
-		atomic_sub(h->size, &client->iovm_commit);
+		atomic_sub_return(h->size, &client->iovm_commit);
 
 	if (h->alloc && !h->heap_pgalloc) {
 		mutex_lock(&h->lock);
@@ -967,8 +949,8 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 		nvmap_debug(client, "%s freeing pinned handle %p\n",
 			    current->group_leader->comm, h);
 
-	while (pins--)
-		nvmap_unpin_handles(client, &ref->handle, 1);
+	while (atomic_read(&ref->pin))
+		nvmap_unpin(client, ref);
 
 	if (h->owner == client) {
 		h->owner = NULL;
@@ -1099,21 +1081,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 
 	nvmap_ref_unlock(client);
 
-	/* verify that adding this handle to the process' access list
-	 * won't exceed the IOVM limit */
-	if (h->heap_pgalloc && !h->pgalloc.contig) {
-		int oc;
-		oc = atomic_add_return(h->size, &client->iovm_commit);
-		if (oc > client->iovm_limit && !client->super) {
-			atomic_sub(h->size, &client->iovm_commit);
-			nvmap_handle_put(h);
-			nvmap_err(client, "duplicating %p in %s over-commits"
-				  " IOVMM space\n", (void *)id,
-				  current->group_leader->comm);
-			return ERR_PTR(-ENOMEM);
-		}
-	}
-
 	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
 	if (!ref) {
 		nvmap_handle_put(h);
@@ -1126,6 +1093,8 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
 			h->size);
 		mutex_unlock(&h->lock);
+	} else if (!h->pgalloc.contig) {
+		atomic_add(h->size, &client->iovm_commit);
 	}
 
 	atomic_set(&ref->dupes, 1);
@@ -1299,7 +1268,7 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 		*result = h->align;
 		break;
 	case NVMAP_HANDLE_PARAM_BASE:
-		if (!h->alloc || !atomic_add_return(0, &h->pin))
+		if (!h->alloc || !atomic_read(&h->pin))
 			*result = -EINVAL;
 		else if (!h->heap_pgalloc) {
 			mutex_lock(&h->lock);
@@ -1307,8 +1276,9 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 			mutex_unlock(&h->lock);
 		} else if (h->pgalloc.contig)
 			*result = page_to_phys(h->pgalloc.pages[0]);
-		else if (h->pgalloc.area)
-			*result = h->pgalloc.area->iovm_start;
+		else if (h->attachment->priv)
+			*result = sg_dma_address(
+				((struct sg_table *)h->attachment->priv)->sgl);
 		else
 			*result = -EINVAL;
 		break;

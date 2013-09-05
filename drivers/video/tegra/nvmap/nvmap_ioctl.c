@@ -20,6 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
+
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/fs.h>
@@ -194,11 +196,11 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		unsigned long addr;
 
 		h = (struct nvmap_handle *)refs[i];
-
 		if (h->heap_pgalloc && h->pgalloc.contig)
 			addr = page_to_phys(h->pgalloc.pages[0]);
 		else if (h->heap_pgalloc)
-			addr = h->pgalloc.area->iovm_start;
+			addr = sg_dma_address(
+				((struct sg_table *)h->attachment->priv)->sgl);
 		else
 			addr = h->carveout->base;
 

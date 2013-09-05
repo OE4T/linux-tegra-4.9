@@ -20,6 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
+
 #include <linux/err.h>
 #include <linux/highmem.h>
 #include <linux/io.h>
@@ -37,335 +39,9 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
-#include "nvmap_mru.h"
 
 /* private nvmap_handle flag for pinning duplicate detection */
 #define NVMAP_HANDLE_VISITED (0x1ul << 31)
-
-/* map the backing pages for a heap_pgalloc handle into its IOVMM area */
-static int map_iovmm_area(struct nvmap_handle *h)
-{
-	int err;
-
-	BUG_ON(!h->heap_pgalloc ||
-	       !h->pgalloc.area ||
-	       h->size & ~PAGE_MASK);
-	WARN_ON(!h->pgalloc.dirty);
-
-	err = tegra_iovmm_vm_insert_pages(h->pgalloc.area,
-					  h->pgalloc.area->iovm_start,
-					  h->pgalloc.pages,
-					  h->size >> PAGE_SHIFT);
-	if (err) {
-		tegra_iovmm_zap_vm(h->pgalloc.area);
-		return err;
-	}
-	h->pgalloc.dirty = false;
-	return 0;
-}
-
-/* must be called inside nvmap_pin_lock, to ensure that an entire stream
- * of pins will complete without racing with a second stream. handle should
- * have nvmap_handle_get (or nvmap_validate_get) called before calling
- * this function. */
-static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
-{
-	struct tegra_iovmm_area *area;
-	BUG_ON(!h->alloc);
-	if (atomic_inc_return(&h->pin) == 1) {
-		if (h->heap_pgalloc && !h->pgalloc.contig) {
-			area = nvmap_handle_iovmm_locked(h);
-			if (!area) {
-				/* no race here, inside the pin mutex */
-				atomic_dec(&h->pin);
-				return -ENOMEM;
-			}
-			if (area != h->pgalloc.area)
-				h->pgalloc.dirty = true;
-			h->pgalloc.area = area;
-		}
-	}
-	trace_handle_pin(client, client ? client->name : "kernel",
-			 h, atomic_read(&h->pin));
-	return 0;
-}
-
-/* doesn't need to be called inside nvmap_pin_lock, since this will only
- * expand the available VM area */
-static int handle_unpin(struct nvmap_client *client,
-		struct nvmap_handle *h, int free_vm)
-{
-	int ret = 0;
-
-	nvmap_mru_lock(nvmap_share);
-
-	if (atomic_read(&h->pin) == 0) {
-		trace_handle_unpin_error(client,
-			client ? client->name : "kernel",
-			h, atomic_read(&h->pin));
-		nvmap_err(client, "%s unpinning unpinned handle %p\n",
-			  current->group_leader->comm, h);
-		nvmap_mru_unlock(nvmap_share);
-		return 0;
-	}
-
-	BUG_ON(!h->alloc);
-
-	if (!atomic_dec_return(&h->pin)) {
-		if (h->heap_pgalloc && h->pgalloc.area) {
-			/* if a secure handle is clean (i.e., mapped into
-			 * IOVMM, it needs to be zapped on unpin. */
-			if (h->secure && !h->pgalloc.dirty) {
-				tegra_iovmm_zap_vm(h->pgalloc.area);
-				h->pgalloc.dirty = true;
-			}
-			if (free_vm) {
-				tegra_iovmm_free_vm(h->pgalloc.area);
-				h->pgalloc.area = NULL;
-			} else
-				nvmap_mru_insert_locked(nvmap_share, h);
-			ret = 1;
-		}
-	}
-
-	trace_handle_unpin(client, client ? client->name : "kernel",
-			   h, atomic_read(&h->pin));
-	nvmap_mru_unlock(nvmap_share);
-	nvmap_handle_put(h);
-	return ret;
-}
-
-static int pin_array_locked(struct nvmap_client *client,
-		struct nvmap_handle **h, int count)
-{
-	int pinned;
-	int i;
-	int err = 0;
-
-	/* Flush deferred cache maintenance if needed */
-	for (pinned = 0; pinned < count; pinned++)
-		if (nvmap_find_cache_maint_op(nvmap_dev, h[pinned]))
-			nvmap_cache_maint_ops_flush(nvmap_dev, h[pinned]);
-
-	nvmap_mru_lock(nvmap_share);
-	for (pinned = 0; pinned < count; pinned++) {
-		err = pin_locked(client, h[pinned]);
-		if (err)
-			break;
-	}
-	nvmap_mru_unlock(nvmap_share);
-
-	if (err) {
-		/* unpin pinned handles */
-		for (i = 0; i < pinned; i++) {
-			/* inc ref counter, because
-			 * handle_unpin decrements it */
-			nvmap_handle_get(h[i]);
-			/* unpin handles and free vm */
-			handle_unpin(client, h[i], true);
-		}
-	}
-
-	if (err && tegra_iovmm_get_max_free(nvmap_share->iovmm) >=
-		   nvmap_mru_vm_size(nvmap_share->iovmm)) {
-		/* First attempt to pin in empty iovmm
-		 * may still fail because of fragmentation caused by
-		 * placing handles in MRU areas. After such failure
-		 * all MRU gets cleaned and iovm space is freed.
-		 *
-		 * We have to do pinning again here since there might be is
-		 * no more incoming pin_wait wakeup calls from unpin
-		 * operations */
-		nvmap_mru_lock(nvmap_share);
-		for (pinned = 0; pinned < count; pinned++) {
-			err = pin_locked(client, h[pinned]);
-			if (err)
-				break;
-		}
-		nvmap_mru_unlock(nvmap_share);
-
-		if (err) {
-			pr_err("Pinning in empty iovmm failed!!!\n");
-			BUG_ON(1);
-		}
-	}
-	return err;
-}
-
-static int wait_pin_array_locked(struct nvmap_client *client,
-		struct nvmap_handle **h, int count)
-{
-	int ret = 0;
-
-	ret = pin_array_locked(client, h, count);
-
-	if (ret) {
-		ret = wait_event_interruptible(nvmap_share->pin_wait,
-				!pin_array_locked(client, h, count));
-	}
-	return ret ? -EINTR : 0;
-}
-
-static int handle_unpin_noref(struct nvmap_client *client, unsigned long id)
-{
-	struct nvmap_handle *h;
-	int w;
-
-	h = nvmap_validate_get(client, id, 0);
-	if (unlikely(!h)) {
-		nvmap_err(client, "%s attempting to unpin invalid handle %p\n",
-			  current->group_leader->comm, (void *)id);
-		return 0;
-	}
-
-	nvmap_err(client, "%s unpinning unreferenced handle %p\n",
-		  current->group_leader->comm, h);
-	WARN_ON(1);
-
-	w = handle_unpin(client, h, false);
-	nvmap_handle_put(h);
-	return w;
-}
-
-void nvmap_unpin_ids(struct nvmap_client *client,
-		     unsigned int nr, const unsigned long *ids)
-{
-	unsigned int i;
-	int do_wake = 0;
-
-	for (i = 0; i < nr; i++) {
-		struct nvmap_handle_ref *ref;
-
-		if (!ids[i] || WARN_ON(!virt_addr_valid(ids[i])))
-			continue;
-
-		nvmap_ref_lock(client);
-		ref = __nvmap_validate_id_locked(client, ids[i]);
-		if (ref) {
-			struct nvmap_handle *h = ref->handle;
-			int e = atomic_add_unless(&ref->pin, -1, 0);
-
-			nvmap_ref_unlock(client);
-
-			if (!e) {
-				nvmap_err(client, "%s unpinning unpinned "
-					  "handle %08lx\n",
-					  current->group_leader->comm, ids[i]);
-			} else {
-				do_wake |= handle_unpin(client, h, false);
-			}
-		} else {
-			nvmap_ref_unlock(client);
-			if (client->super)
-				do_wake |= handle_unpin_noref(client, ids[i]);
-			else
-				nvmap_err(client, "%s unpinning invalid "
-					  "handle %08lx\n",
-					  current->group_leader->comm, ids[i]);
-		}
-	}
-
-	if (do_wake)
-		wake_up(&nvmap_share->pin_wait);
-}
-
-/* pins a list of handle_ref objects; same conditions apply as to
- * _nvmap_handle_pin, but also bumps the pin count of each handle_ref. */
-int nvmap_pin_ids(struct nvmap_client *client,
-		  unsigned int nr, const unsigned long *ids)
-{
-	int ret = 0;
-	int i;
-	struct nvmap_handle **h = (struct nvmap_handle **)ids;
-	struct nvmap_handle_ref *ref;
-
-	/* to optimize for the common case (client provided valid handle
-	 * references and the pin succeeds), increment the handle_ref pin
-	 * count during validation. in error cases, the tree will need to
-	 * be re-walked, since the handle_ref is discarded so that an
-	 * allocation isn't required. if a handle_ref is not found,
-	 * locally validate that the caller has permission to pin the handle;
-	 * handle_refs are not created in this case, so it is possible that
-	 * if the caller crashes after pinning a global handle, the handle
-	 * will be permanently leaked. */
-	nvmap_ref_lock(client);
-	for (i = 0; i < nr; i++) {
-		ref = __nvmap_validate_id_locked(client, ids[i]);
-		if (ref) {
-			atomic_inc(&ref->pin);
-			nvmap_handle_get(h[i]);
-		} else {
-			struct nvmap_handle *verify;
-			nvmap_ref_unlock(client);
-			verify = nvmap_validate_get(client, ids[i], 0);
-			if (verify) {
-				nvmap_warn(client, "%s pinning unreferenced "
-					   "handle %p\n",
-					   current->group_leader->comm, h[i]);
-			} else {
-				ret = -EPERM;
-				nr = i;
-				break;
-			}
-			nvmap_ref_lock(client);
-		}
-		if (!h[i]->alloc) {
-			ret = -EFAULT;
-			nr = i + 1;
-			break;
-		}
-	}
-	nvmap_ref_unlock(client);
-
-	if (ret)
-		goto out;
-
-	ret = mutex_lock_interruptible(&nvmap_share->pin_lock);
-	if (WARN_ON(ret))
-		goto out;
-
-	ret = wait_pin_array_locked(client, h, nr);
-
-	mutex_unlock(&nvmap_share->pin_lock);
-
-	if (ret) {
-		ret = -EINTR;
-	} else {
-		for (i = 0; i < nr; i++) {
-			if (h[i]->heap_pgalloc && h[i]->pgalloc.dirty) {
-				ret = map_iovmm_area(h[i]);
-				while (ret && --i >= 0)
-					tegra_iovmm_zap_vm(h[i]->pgalloc.area);
-			}
-		}
-	}
-
-out:
-	if (ret) {
-		nvmap_ref_lock(client);
-		for (i = 0; i < nr; i++) {
-			if (!ids[i])
-				continue;
-
-			ref = __nvmap_validate_id_locked(client, ids[i]);
-			if (!ref) {
-				nvmap_warn(client, "%s freed handle %p "
-					   "during pinning\n",
-					   current->group_leader->comm,
-					   (void *)ids[i]);
-				continue;
-			}
-			atomic_dec(&ref->pin);
-		}
-		nvmap_ref_unlock(client);
-
-		for (i = 0; i < nr; i++)
-			if(h[i])
-				nvmap_handle_put(h[i]);
-	}
-
-	return ret;
-}
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
@@ -374,8 +50,9 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 	if (h->heap_pgalloc && h->pgalloc.contig) {
 		addr = page_to_phys(h->pgalloc.pages[0]);
 	} else if (h->heap_pgalloc) {
-		BUG_ON(!h->pgalloc.area);
-		addr = h->pgalloc.area->iovm_start;
+		BUG_ON(!h->attachment->priv);
+		addr = sg_dma_address(
+				((struct sg_table *)h->attachment->priv)->sgl);
 	} else {
 		addr = h->carveout->base;
 	}
@@ -391,70 +68,144 @@ phys_addr_t nvmap_get_addr_from_user_id(ulong user_id)
 {
 	struct nvmap_handle *h;
 
-	h = (struct nvmap_handle *)((uintptr_t)unmarshal_user_id(user_id));
+	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
 	return handle_phys(h);
 }
 
-int __nvmap_pin(struct nvmap_client *client, struct nvmap_handle *h,
-	       phys_addr_t *phys)
+/*
+ * Do the actual pin. Just calls to the dma_buf code.
+ */
+static int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys)
 {
-	int ret = 0;
+	struct nvmap_handle *h = ref->handle;
+	struct sg_table *sgt = NULL;
 
-	if (!virt_addr_valid(h))
-		return -EINVAL;
+	atomic_inc(&ref->pin);
 
-	h = nvmap_handle_get(h);
-
-	if (WARN_ON(mutex_lock_interruptible(&nvmap_share->pin_lock))) {
-		ret = -EINTR;
-	} else {
-		ret = wait_pin_array_locked(client, &h, 1);
-		mutex_unlock(&nvmap_share->pin_lock);
-	}
-
-	if (ret) {
-		goto err_out;
-	} else {
-		if (h->heap_pgalloc && h->pgalloc.dirty)
-			ret = map_iovmm_area(h);
-		if (ret)
-			goto err_out_unpin;
-		*phys = handle_phys(h);
-	}
-
+	/*
+	 * We should not be using a bidirectional mapping here; however, nvmap
+	 * does not really keep track of whether memory is readable, writable,
+	 * or both so this keeps everyone happy.
+	 */
+	sgt = dma_buf_map_attachment(h->attachment, DMA_BIDIRECTIONAL);
+	if (IS_ERR(sgt))
+		goto err;
+	*phys = sg_dma_address(sgt->sgl);
 	return 0;
 
-err_out_unpin:
-	nvmap_handle_get(h);
-	handle_unpin(client, h, true);
-err_out:
-	nvmap_handle_put(h);
-	return ret;
+err:
+	atomic_dec(&ref->pin);
+	return PTR_ERR(sgt);
 }
 
-int nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
+/*
+ * Map a handle's memory into the IO virtual address space. This function
+ * should be called on a handle before its memory is used by a device.
+ */
+int nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *ref,
 	      phys_addr_t *phys)
 {
-	int ret = 0;
-
-	if (!virt_addr_valid(client) ||
-	    !virt_addr_valid(ref) ||
+	if (!virt_addr_valid(ref) ||
 	    !virt_addr_valid(ref->handle))
 		return -EINVAL;
 
-	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, (unsigned long)ref->handle);
-	nvmap_ref_unlock(client);
-	if (!ref)
-		return -EINVAL;
-
-	atomic_inc(&ref->pin);
-	ret = __nvmap_pin(client, ref->handle, phys);
-	if (ret)
-		atomic_dec(&ref->pin);
-	return ret;
+	return __nvmap_pin(ref, phys);
 }
 EXPORT_SYMBOL(nvmap_pin);
+
+void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
+{
+	struct nvmap_handle *h = ref->handle;
+
+	/*
+	 * If the handle has been pinned by other refs it is possible to arrive
+	 * here: the passed ref has a 0 pin count. This is of course invalid.
+	 */
+	if (!atomic_add_unless(&ref->pin, -1, 0))
+		return;
+
+	dma_buf_unmap_attachment(h->attachment,
+		h->attachment->priv, DMA_BIDIRECTIONAL);
+}
+EXPORT_SYMBOL(nvmap_unpin);
+
+int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
+		  const unsigned long *ids)
+{
+	int i, err = 0;
+	phys_addr_t phys;
+	struct nvmap_handle_ref *ref;
+
+	/*
+	 * Just try and pin every handle.
+	 */
+	nvmap_ref_lock(client);
+	for (i = 0; i < nr; i++) {
+		if (!ids[i] || !virt_addr_valid(ids[i]))
+			continue;
+
+		ref = __nvmap_validate_id_locked(client, ids[i]);
+		if (!ref) {
+			err = -EPERM;
+			goto err_cleanup;
+		}
+		if (!ref->handle) {
+			err = -EINVAL;
+			goto err_cleanup;
+		}
+
+		err = __nvmap_pin(ref, &phys);
+		if (err)
+			goto err_cleanup;
+	}
+	nvmap_ref_unlock(client);
+	return 0;
+
+err_cleanup:
+	for (--i; i >= 0; i--) {
+		if (!ids[i] || !virt_addr_valid(ids[i]))
+			continue;
+
+		/*
+		 * We will get the ref again - the ref lock has yet to be given
+		 * up so if this worked the first time it will work again.
+		 */
+		ref = __nvmap_validate_id_locked(client, ids[i]);
+		nvmap_unpin(client, ref);
+	}
+	nvmap_ref_unlock(client);
+	return err;
+}
+
+/*
+ * This will unpin every handle. If an error occurs on a handle later handles
+ * will still be unpinned.
+ */
+void nvmap_unpin_ids(struct nvmap_client *client, unsigned int nr,
+		     const unsigned long *ids)
+{
+	int i;
+	struct nvmap_handle_ref *ref;
+
+	nvmap_ref_lock(client);
+	for (i = 0; i < nr; i++) {
+		if (!ids[i] || !virt_addr_valid(ids[i]))
+			continue;
+
+		ref = __nvmap_validate_id_locked(client, ids[i]);
+		if (!ref) {
+			pr_info("ref is null during unpin.\n");
+			continue;
+		}
+		if (!ref->handle) {
+			WARN(1, "ref->handle is NULL.\n");
+			continue;
+		}
+
+		nvmap_unpin(client, ref);
+	}
+	nvmap_ref_unlock(client);
+}
 
 static phys_addr_t nvmap_handle_address(struct nvmap_client *c,
 					unsigned long id)
@@ -479,47 +230,6 @@ phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 	if (!virt_addr_valid(c))
 		return -EINVAL;
 	return nvmap_handle_address(c, unmarshal_user_id(user_id));
-}
-
-void __nvmap_unpin(struct nvmap_client *client, struct nvmap_handle *h)
-{
-	if (!h)
-		return;
-
-	if (handle_unpin(client, h, false))
-		wake_up(&nvmap_share->pin_wait);
-}
-
-void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
-{
-	if (!ref ||
-	    WARN_ON(!virt_addr_valid(client)) ||
-	    WARN_ON(!virt_addr_valid(ref)) ||
-	    WARN_ON(!virt_addr_valid(ref->handle)))
-		return;
-
-	atomic_dec(&ref->pin);
-	__nvmap_unpin(client, ref->handle);
-}
-EXPORT_SYMBOL(nvmap_unpin);
-
-void nvmap_unpin_handles(struct nvmap_client *client,
-			 struct nvmap_handle **h, int nr)
-{
-	int i;
-	int do_wake = 0;
-
-	if (!virt_addr_valid(client) ||
-	    !virt_addr_valid(h))
-		return;
-	for (i = 0; i < nr; i++) {
-		if (WARN_ON(!h[i]))
-			continue;
-		do_wake |= handle_unpin(client, h[i], false);
-	}
-
-	if (do_wake)
-		wake_up(&nvmap_share->pin_wait);
 }
 
 void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)

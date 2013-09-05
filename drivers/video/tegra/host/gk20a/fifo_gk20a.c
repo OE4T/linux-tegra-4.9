@@ -777,6 +777,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 
+	nvhost_debug_dump(g->host);
+
 	/* If we have recovery in progress, MMU fault id is invalid */
 	if (g->fifo.mmu_fault_channel) {
 		fault_ch = g->fifo.mmu_fault_channel;

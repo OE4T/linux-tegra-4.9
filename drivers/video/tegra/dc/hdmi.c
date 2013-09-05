@@ -29,7 +29,6 @@
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
-#include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/device.h>
@@ -47,8 +46,7 @@
 #include "dc_priv.h"
 #include "hdmi_reg.h"
 #include "hdmi.h"
-#include "edid.h"
-#include "nvhdcp.h"
+#include "hdmi_state_machine.h"
 
 /* datasheet claims this will always be 216MHz */
 #define HDMI_AUDIOCLK_FREQ		216000000
@@ -72,39 +70,6 @@
      addition/removal from tegra_dc_hdmi_aspect_ratios[] */
 #define TEGRA_DC_HDMI_MIN_ASPECT_RATIO_PERCENT	80
 #define TEGRA_DC_HDMI_MAX_ASPECT_RATIO_PERCENT	320
-
-struct tegra_dc_hdmi_data {
-	struct tegra_dc			*dc;
-	struct tegra_edid		*edid;
-	struct tegra_edid_hdmi_eld		eld;
-	struct tegra_nvhdcp		*nvhdcp;
-	struct delayed_work		work;
-
-	struct resource			*base_res;
-	void __iomem			*base;
-	struct clk			*clk;
-
-	struct clk			*disp1_clk;
-	struct clk			*disp2_clk;
-	struct clk			*hda_clk;
-	struct clk			*hda2codec_clk;
-	struct clk			*hda2hdmi_clk;
-
-#ifdef CONFIG_SWITCH
-	struct switch_dev		hpd_switch;
-#endif
-	struct tegra_hdmi_out		info;
-
-	struct rt_mutex			suspend_lock;
-	bool				suspended;
-	bool				eld_retrieved;
-	bool				clk_enabled;
-	unsigned			audio_freq;
-	unsigned			audio_source;
-	bool				audio_inject_null;
-
-	bool				dvi;
-};
 
 struct tegra_dc_hdmi_data *dc_hdmi;
 
@@ -628,8 +593,7 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 
 	dc->out->hotplug_state = new_state;
 
-	queue_delayed_work(system_nrt_wq, &hdmi->work,
-		msecs_to_jiffies(100));
+	hdmi_state_machine_set_pending_hpd();
 
 	return len;
 }
@@ -727,7 +691,7 @@ static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
 	return false;
 }
 
-static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
+bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
 #ifndef CONFIG_ARCH_TEGRA_12x_SOC
@@ -778,165 +742,12 @@ static bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 	return true;
 }
 
-static bool tegra_dc_hdmi_hpd(struct tegra_dc *dc)
-{
-	return tegra_dc_hpd(dc);
-}
-
-
-void tegra_dc_hdmi_detect_config(struct tegra_dc *dc,
-						struct fb_monspecs *specs)
-{
-	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-
-	/* monitors like to lie about these but they are still useful for
-	 * detecting aspect ratios
-	 */
-	dc->out->h_size = specs->max_x * 1000;
-	dc->out->v_size = specs->max_y * 1000;
-
-	hdmi->dvi = !(specs->misc & FB_MISC_HDMI);
-
-	tegra_fb_update_monspecs(dc->fb, specs, tegra_dc_hdmi_mode_filter);
-#ifdef CONFIG_SWITCH
-	hdmi->hpd_switch.state = 0;
-	switch_set_state(&hdmi->hpd_switch, 1);
-#endif
-	dev_info(&dc->ndev->dev, "display detected\n");
-
-	dc->connected = true;
-	tegra_dc_ext_process_hotplug(dc->ndev->id);
-}
-
-/* This function is used to enable DC1 and HDMI for the purpose of testing. */
-bool tegra_dc_hdmi_detect_test(struct tegra_dc *dc, unsigned char *edid_ptr)
-{
-	int err;
-	struct fb_monspecs specs;
-	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-
-	if (!hdmi || !edid_ptr) {
-		dev_err(&dc->ndev->dev, "HDMI test failed to get arguments.\n");
-		return false;
-	}
-
-	err = tegra_edid_get_monspecs_test(hdmi->edid, &specs, edid_ptr);
-	if (err < 0) {
-		/* Check if there's a hard-wired mode, if so, enable it */
-		if (dc->out->n_modes)
-			tegra_dc_enable(dc);
-		else {
-			dev_err(&dc->ndev->dev, "error reading edid\n");
-			goto fail;
-		}
-#ifdef CONFIG_SWITCH
-		hdmi->hpd_switch.state = 0;
-		switch_set_state(&hdmi->hpd_switch, 1);
-#endif
-		dev_info(&dc->ndev->dev, "display detected\n");
-
-		dc->connected = true;
-		tegra_dc_ext_process_hotplug(dc->ndev->id);
-	} else {
-		err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
-		if (err < 0) {
-			dev_err(&dc->ndev->dev, "error populating eld\n");
-			goto fail;
-		}
-		hdmi->eld_retrieved = true;
-
-		tegra_dc_hdmi_detect_config(dc, &specs);
-	}
-
-	return true;
-
-fail:
-	hdmi->eld_retrieved = false;
-#ifdef CONFIG_SWITCH
-	switch_set_state(&hdmi->hpd_switch, 0);
-#endif
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
-	return false;
-}
-EXPORT_SYMBOL(tegra_dc_hdmi_detect_test);
-
+/* used by tegra_dc_probe() to detect hpd/hdmi status at boot */
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-	struct fb_monspecs specs;
-	int err;
-
-	mutex_lock(&dc->lock);
-
-	if (!tegra_dc_hdmi_hpd(dc))
-		goto fail;
-
-	if (dc->connected)
-		goto success;
-
-	err = tegra_edid_get_monspecs(hdmi->edid, &specs);
-	if (err < 0) {
-		if (dc->out->n_modes)
-			tegra_dc_enable(dc);
-		else {
-			dev_err(&dc->ndev->dev, "error reading edid\n");
-			goto fail;
-		}
-#ifdef CONFIG_SWITCH
-		hdmi->hpd_switch.state = 0;
-		switch_set_state(&hdmi->hpd_switch, 1);
-#endif
-		dev_info(&dc->ndev->dev, "display detected\n");
-
-		dc->connected = true;
-		tegra_dc_ext_process_hotplug(dc->ndev->id);
-	} else {
-		err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
-		if (err < 0) {
-			dev_err(&dc->ndev->dev, "error populating eld\n");
-			goto fail;
-		}
-		hdmi->eld_retrieved = true;
-
-		tegra_dc_hdmi_detect_config(dc, &specs);
-	}
-
-success:
-	mutex_unlock(&dc->lock);
-
+	hdmi_state_machine_set_pending_hpd();
+	/* result isn't used by dc */
 	return true;
-
-fail:
-	mutex_unlock(&dc->lock);
-
-	hdmi->eld_retrieved = false;
-#ifdef CONFIG_SWITCH
-	switch_set_state(&hdmi->hpd_switch, 0);
-#endif
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
-	return false;
-}
-
-
-static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
-{
-	struct tegra_dc_hdmi_data *hdmi =
-		container_of(to_delayed_work(work), struct tegra_dc_hdmi_data, work);
-	struct tegra_dc *dc = hdmi->dc;
-
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	/* Set default videomode on dc before enabling it*/
-	tegra_dc_set_default_videomode(dc);
-#endif
-	if (!tegra_dc_hdmi_detect(dc) && dc->connected) {
-		dev_dbg(&dc->ndev->dev, "HDMI disconnect\n");
-		dc->connected = false;
-		tegra_dc_disable(dc);
-
-		tegra_fb_update_monspecs(dc->fb, NULL, NULL);
-
-		tegra_dc_ext_process_hotplug(dc->ndev->id);
-	}
 }
 
 static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)
@@ -944,15 +755,12 @@ static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)
 	struct tegra_dc *dc = ptr;
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
+	pr_info("%s: start\n", __func__);
 	rt_mutex_lock(&hdmi->suspend_lock);
-
-	if (!hdmi->suspended) {
-		cancel_delayed_work(&hdmi->work);
-		queue_delayed_work(system_nrt_wq, &hdmi->work,
-				   msecs_to_jiffies(100));
-	}
-
+	if (!hdmi->suspended)
+		hdmi_state_machine_set_pending_hpd();
 	rt_mutex_unlock(&hdmi->suspend_lock);
+	pr_info("%s: end\n", __func__);
 	return IRQ_HANDLED;
 }
 
@@ -983,14 +791,10 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-	bool hpd = tegra_dc_hdmi_hpd(dc);
 
 	rt_mutex_lock(&hdmi->suspend_lock);
 	hdmi->suspended = false;
-
-	queue_delayed_work(system_nrt_wq, &hdmi->work,
-			   msecs_to_jiffies(hpd ? 100 : 30));
-
+	hdmi_state_machine_set_pending_hpd();
 	rt_mutex_unlock(&hdmi->suspend_lock);
 
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0)
@@ -1122,8 +926,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 #else
 	hdmi->nvhdcp = NULL;
 #endif
-
-	INIT_DELAYED_WORK(&hdmi->work, tegra_dc_hdmi_detect_worker);
+	hdmi_state_machine_init(hdmi);
 
 	hdmi->dc = dc;
 	hdmi->base = base;
@@ -1224,7 +1027,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
-	cancel_delayed_work_sync(&hdmi->work);
+	hdmi_state_machine_shutdown();
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
 #endif
@@ -1811,7 +1614,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	const struct tmds_config *tmds_ptr;
 	size_t tmds_len;
 
-	/* enbale power, clocks, resets, etc. */
+	/* enable power, clocks, resets, etc. */
 
 	/* The upstream DC needs to be clocked for accesses to HDMI to not
 	 * hard lock the system.  Because we don't know if HDMI is conencted

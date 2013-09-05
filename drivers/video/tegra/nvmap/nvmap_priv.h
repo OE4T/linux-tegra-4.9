@@ -47,7 +47,6 @@
 struct nvmap_device;
 struct nvmap_share;
 struct page;
-struct tegra_iovmm_area;
 
 extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
@@ -73,9 +72,6 @@ extern struct platform_device *nvmap_pdev;
 #define CACHE_MAINT_IMMEDIATE		0
 #define CACHE_MAINT_ALLOW_DEFERRED	1
 
-/*
- *
- */
 struct nvmap_deferred_ops {
 	struct list_head ops_list;
 	spinlock_t deferred_ops_lock;
@@ -90,10 +86,7 @@ struct nvmap_deferred_ops {
  * page allocations */
 struct nvmap_pgalloc {
 	struct page **pages;
-	struct tegra_iovmm_area *area;
-	struct list_head mru_list;	/* MRU entry for IOVMM reclamation */
 	bool contig;			/* contiguous system memory */
-	bool dirty;			/* area is invalid and needs mapping */
 	u32 iovm_addr;	/* is non-zero, if client need specific iova mapping */
 };
 
@@ -120,9 +113,6 @@ struct nvmap_handle {
 	/*
 	 * dma_buf necessities. An attachment is made on dma_buf allocation to
 	 * facilitate the nvmap_pin* APIs.
-	 *
-	 * TODO: remove all all places where "pins" are used so that the pin
-	 * APIs can be removed.
 	 */
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attachment;
@@ -186,11 +176,6 @@ struct nvmap_share {
 			struct nvmap_page_pool wb_pool;
 		};
 	};
-#endif
-#ifdef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
-	struct mutex mru_lock;
-	struct list_head *mru_lists;
-	int nr_mru;
 #endif
 };
 
@@ -341,9 +326,6 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
-
-void nvmap_unpin_handles(struct nvmap_client *client,
-			 struct nvmap_handle **h, int nr);
 
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id);
 ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd);

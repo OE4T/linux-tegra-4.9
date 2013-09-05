@@ -53,6 +53,7 @@
 #include <mach/fb.h>
 #include <mach/mc.h>
 #include <linux/nvhost.h>
+#include <linux/nvhost_ioctl.h>
 #include <mach/latency_allowance.h>
 #include <mach/pm_domains.h>
 
@@ -60,6 +61,7 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dev.h"
+#include "nvhost_sync.h"
 #include "nvsd.h"
 #include "dp.h"
 #include "nvsr.h"
@@ -1231,6 +1233,18 @@ void tegra_dc_incr_syncpt_min(struct tegra_dc *dc, int i, u32 val)
 		}
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
+}
+
+struct sync_fence *tegra_dc_create_fence(struct tegra_dc *dc, int i, u32 val)
+{
+	struct nvhost_ctrl_sync_fence_info syncpt;
+	struct nvhost_master *host = nvhost_get_host(dc->ndev);
+	u32 id = tegra_dc_get_syncpt_id(dc, i);
+
+	syncpt.id = id;
+	syncpt.thresh = val;
+	return nvhost_sync_create_fence(&host->syncpt, &syncpt, 1,
+			dev_name(&dc->ndev->dev));
 }
 
 void

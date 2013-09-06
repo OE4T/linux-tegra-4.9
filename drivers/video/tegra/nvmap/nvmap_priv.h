@@ -323,9 +323,6 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
 
-int _nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r, 
-	phys_addr_t *phys);
-
 void nvmap_unpin_handles(struct nvmap_client *client,
 			 struct nvmap_handle **h, int nr);
 

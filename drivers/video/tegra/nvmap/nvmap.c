@@ -432,32 +432,10 @@ err_out:
 	return ret;
 }
 
-/*
- * Pin handle without slow validation step
- */
-int _nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
-	       phys_addr_t *phys)
-{
-	int ret = 0;
-
-	if (!virt_addr_valid(client) ||
-	    !virt_addr_valid(ref) ||
-	    !virt_addr_valid(ref->handle) ||
-	    !phys)
-		return -EINVAL;
-
-	atomic_inc(&ref->pin);
-	ret = __nvmap_pin(client, ref->handle, phys);
-	if (ret)
-		atomic_dec(&ref->pin);
-
-	return ret;
-}
-
 int nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
 	      phys_addr_t *phys)
 {
-	struct nvmap_handle *h;
+	int ret = 0;
 
 	if (!virt_addr_valid(client) ||
 	    !virt_addr_valid(ref) ||
@@ -466,11 +444,15 @@ int nvmap_pin(struct nvmap_client *client, struct nvmap_handle_ref *ref,
 
 	nvmap_ref_lock(client);
 	ref = __nvmap_validate_id_locked(client, (unsigned long)ref->handle);
-	if (ref)
-		h = ref->handle;
 	nvmap_ref_unlock(client);
+	if (!ref)
+		return -EINVAL;
 
-	return _nvmap_pin(client, ref, phys);
+	atomic_inc(&ref->pin);
+	ret = __nvmap_pin(client, ref->handle, phys);
+	if (ret)
+		atomic_dec(&ref->pin);
+	return ret;
 }
 EXPORT_SYMBOL(nvmap_pin);
 

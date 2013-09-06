@@ -279,6 +279,7 @@ struct nvhost_device_data t124_vib_info = {
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
+	.master           = &tegra_vi01_device,
 };
 
 static struct platform_device tegra_vi01b_device = {

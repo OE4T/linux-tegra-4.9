@@ -173,6 +173,7 @@ struct nvhost_device_data {
 	int		powergate_delay;/* Delay before power gated */
 	struct nvhost_clock clocks[NVHOST_MODULE_MAX_CLOCKS];/* Clock names */
 
+	struct platform_device *master;	/* Master of a slave device */
 	struct platform_device *slave;	/* Slave device to create in probe */
 
 	int		num_clks;	/* Number of clocks opened for dev */

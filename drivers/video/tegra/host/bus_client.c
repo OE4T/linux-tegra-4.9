@@ -60,7 +60,11 @@
 static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 {
 	int err = 0;
-	struct resource *r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
+	struct resource *r;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
+
+	r = platform_get_resource(pdata->master ? pdata->master : ndev,
+			IORESOURCE_MEM, 0);
 	if (!r) {
 		dev_err(&ndev->dev, "failed to get memory resource\n");
 		return -ENODEV;
@@ -73,14 +77,23 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	return err;
 }
 
+static __iomem void *get_aperture(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (pdata->master)
+		pdata = platform_get_drvdata(pdata->master);
+
+	return pdata->aperture[0];
+}
+
 int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
-	void __iomem *p = pdata->aperture[0] + offset;
+	void __iomem *p = get_aperture(ndev);
 	int err;
 
-	if (!pdata->aperture[0])
+	if (!p)
 		return -ENODEV;
 
 	/* verify offset */
@@ -89,6 +102,7 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 		return err;
 
 	nvhost_module_busy(ndev);
+	p += offset;
 	while (count--) {
 		*(values++) = readl(p);
 		p += 4;
@@ -102,14 +116,11 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 int nvhost_write_module_regs(struct platform_device *ndev,
 			u32 offset, int count, const u32 *values)
 {
-	void __iomem *p;
 	int err;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
+	void __iomem *p = get_aperture(ndev);
 
-	if (!pdata->aperture[0])
+	if (!p)
 		return -ENODEV;
-
-	p = pdata->aperture[0] + offset;
 
 	/* verify offset */
 	err = validate_reg(ndev, offset, count);
@@ -117,6 +128,7 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 		return err;
 
 	nvhost_module_busy(ndev);
+	p += offset;
 	while (count--) {
 		writel(*(values++), p);
 		p += 4;
@@ -129,21 +141,18 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 
 bool nvhost_client_can_writel(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	return !!pdata->aperture[0];
+	return !!get_aperture(pdev);
 }
 EXPORT_SYMBOL(nvhost_client_can_writel);
 
 void nvhost_client_writel(struct platform_device *pdev, u32 val, u32 reg)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	writel(val, pdata->aperture[0] + reg * 4);
+	writel(val, get_aperture(pdev) + reg * 4);
 }
 
 u32 nvhost_client_readl(struct platform_device *pdev, u32 reg)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	return readl(pdata->aperture[0] + reg * 4);
+	return readl(get_aperture(pdev) + reg * 4);
 }
 
 struct nvhost_channel_userctx {

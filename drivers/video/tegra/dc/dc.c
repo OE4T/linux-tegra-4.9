@@ -2401,8 +2401,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		/* disable windows */
 		w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 
-		/* flush any pending syncpt waits */
-		while (dc->syncpt[i].min < dc->syncpt[i].max) {
+		/* flush any pending syncpt waits. Add 1 for sync framework. */
+		while (dc->syncpt[i].min < (dc->syncpt[i].max + 1)) {
 			trace_display_syncpt_flush(dc, dc->syncpt[i].id,
 				dc->syncpt[i].min, dc->syncpt[i].max);
 			dc->syncpt[i].min++;

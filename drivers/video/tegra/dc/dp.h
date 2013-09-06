@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.h
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,7 +17,12 @@
 #ifndef __DRIVER_VIDEO_TEGRA_DC_DP_H__
 #define __DRIVER_VIDEO_TEGRA_DC_DP_H__
 
+#include <linux/clk.h>
 #include "sor.h"
+#include "dc_priv.h"
+#include "dpaux_regs.h"
+
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #define DP_AUX_DEFER_MAX_TRIES		7
 #define DP_AUX_TIMEOUT_MAX_TRIES	2
@@ -207,5 +212,24 @@ struct tegra_dc_dp_data {
 #define NV_DPCD_HDCP_KSV_FIFO_OFFSET			(0x0006802C)
 #define NV_DPCD_HDCP_AINFO_OFFSET			(0x0006803B)
 
+static __maybe_unused
+void tegra_dp_aux_pad_on_off(struct tegra_dc *dc, bool on)
+{
+	struct clk *clk;
+
+	clk = clk_get_sys("dpaux", NULL);
+	if (IS_ERR_OR_NULL(clk))
+		return;
+
+	clk_prepare_enable(clk);
+	tegra_dc_io_start(dc);
+
+	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
+		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),
+		IO_ADDRESS(TEGRA_DPAUX_BASE + DPAUX_HYBRID_SPARE * 4));
+
+	tegra_dc_io_end(dc);
+	clk_disable_unprepare(clk);
+}
 
 #endif

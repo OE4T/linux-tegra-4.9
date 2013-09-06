@@ -59,6 +59,7 @@
 #include "dc_priv.h"
 #include "dev.h"
 #include "nvsd.h"
+#include "dp.h"
 
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
@@ -2203,6 +2204,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		tegra_dc_io_end(dc);
 		return false;
 	}
+
+	tegra_dp_aux_pad_on_off(dc, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);

@@ -488,6 +488,9 @@ static void tegra_dc_dpaux_enable(struct tegra_dc_dp_data *dp)
 		DPAUX_HYBRID_PADCTL_AUX_CMH_V0_70 |
 		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
+
+	tegra_dpaux_writel(dp, DPAUX_HYBRID_SPARE,
+			DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP);
 }
 
 static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
@@ -1142,7 +1145,8 @@ static int tegra_dc_dp_lt_channel_equalization(struct tegra_dc_dp_data *dp,
 }
 
 
-static int tegra_dc_dp_link_training(struct tegra_dc_dp_data *dp,
+static __maybe_unused
+int tegra_dc_dp_link_training(struct tegra_dc_dp_data *dp,
 	const struct tegra_dc_dp_link_config *cfg)
 {
 	int ret = tegra_dc_dp_lt_clock_recovery(dp, cfg);
@@ -1387,7 +1391,7 @@ static void tegra_dc_dp_lt_worker(struct work_struct *work)
 }
 
 
-static irqreturn_t tegra_dc_dp_hpd_irq(int irq, void *ptr)
+static irqreturn_t __maybe_unused tegra_dc_dp_hpd_irq(int irq, void *ptr)
 {
 	struct tegra_dc		*dc = ptr;
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -1594,6 +1598,9 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (!dp->enabled)
 		return;
 
+	tegra_dpaux_writel(dp, DPAUX_HYBRID_SPARE,
+			DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN);
+
 	/* Power down SOR */
 	tegra_dc_sor_disable(dp->sor, false);
 
@@ -1606,7 +1613,6 @@ extern struct clk *tegra_get_clock_by_name(const char *name);
 static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	struct clk		*sor_clk = dp->sor->sor_clk;
 	struct clk		*parent_clk;
 
 	tegra_dc_sor_setup_clk(dp->sor, clk, false);

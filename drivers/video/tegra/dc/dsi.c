@@ -1207,7 +1207,8 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 	if (h_blank_ns < t_phy_ns) {
 		err = -EINVAL;
 		dev_WARN(&dsi->dc->ndev->dev,
-			"dsi: Hblank is smaller than HS trans phy timing\n");
+			"dsi: Hblank is smaller than HS phy timing: %u pix\n",
+					(t_phy_ns - h_blank_ns) / t_pix_ns);
 		goto fail;
 	}
 

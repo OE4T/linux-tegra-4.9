@@ -141,18 +141,18 @@ static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT,
 	.suspend_aggr = DSI_HOST_SUSPEND_LV2,
+	.refresh_rate = 62,
+	.rated_refresh_rate = 60,
+	.te_polarity_low = true,
 #else
 	.ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
 	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
+	.refresh_rate = 60,
 #endif
 
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
-	.refresh_rate = 62,
-	.rated_refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
-
-	.te_polarity_low = true,
 
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
@@ -405,24 +405,20 @@ static int dsi_s_wqxga_10_1_postsuspend(void)
 static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 	{
 #if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-		.pclk = 292915280,
+		.pclk = 306156000, /* @62Hz */
 #else
-		.pclk = 277412800,
+		.pclk = 296280000, /* @60Hz */
 #endif
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
-		.h_sync_width = 16,
-		.v_sync_width = 2,
-		.h_back_porch = 16,
-		.v_back_porch = 33,
+		.h_sync_width = 32,
+		.v_sync_width = 6,
+		.h_back_porch = 80,
+		.v_back_porch = 37,
 		.h_active = 2560,
 		.v_active = 1600,
-#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-		.h_front_porch = 280,
-#else
-		.h_front_porch = 128,
-#endif
-		.v_front_porch = 10,
+		.h_front_porch = 328,
+		.v_front_porch = 3,
 	},
 };
 

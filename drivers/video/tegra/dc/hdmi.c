@@ -57,18 +57,25 @@
 
 #define HDMI_REKEY_DEFAULT		56
 
-#define HDMI_ELD_RESERVED1_INDEX		1
-#define HDMI_ELD_RESERVED2_INDEX		3
 #define HDMI_ELD_VER_INDEX			0
+#define HDMI_ELD_RESERVED1_INDEX		1
 #define HDMI_ELD_BASELINE_LEN_INDEX		2
+#define HDMI_ELD_RESERVED2_INDEX		3
 #define HDMI_ELD_CEA_VER_MNL_INDEX		4
 #define HDMI_ELD_SAD_CNT_CON_TYP_SAI_HDCP_INDEX		5
-#define HDMI_ELD_AUD_SYNC_DELAY_INDEX	6
+#define HDMI_ELD_AUD_SYNC_DELAY_INDEX		6
 #define HDMI_ELD_SPK_ALLOC_INDEX		7
-#define HDMI_ELD_PORT_ID_INDEX		8
-#define HDMI_ELD_MANF_NAME_INDEX		16
-#define HDMI_ELD_PRODUCT_CODE_INDEX		18
-#define HDMI_ELD_MONITOR_NAME_INDEX		20
+#define HDMI_ELD_PORT_ID_INDEX			8  /*  8 to 15  */
+#define HDMI_ELD_MANF_NAME_INDEX		16 /* 16 to 17 */
+#define HDMI_ELD_PRODUCT_CODE_INDEX		18 /* 18 to 19 */
+#define HDMI_ELD_MONITOR_NAME_INDEX		20 /* 20 to 20 + MNL - 1 */
+#define HDMI_ELD_BUF_SIZE			96
+
+/* According to HDA ELD spec, the maxmimum baseline
+ * eld size for tye 2 ELD_Ver encoding (which is
+ * what this code supports) is 80 bytes.
+ */
+#define MAX_BASELINE_ELD_SIZE			80
 
 /* These two values need to be cross checked in case of
      addition/removal from tegra_dc_hdmi_aspect_ratios[] */
@@ -409,6 +416,24 @@ void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 {
 	trace_display_writel(hdmi->dc, val, hdmi->base + reg * 4);
 	writel(val, hdmi->base + reg * 4);
+}
+
+static inline int tegra_hdmi_writel_eld_buf(struct tegra_dc_hdmi_data *hdmi,
+					    const u8 *buf,
+					    size_t buf_entries, size_t index,
+					    void __iomem *eld_buf_addr)
+{
+	size_t end_index = index + buf_entries;
+	do {
+		unsigned long val = (index << 8) | *buf;
+
+		trace_display_writel(hdmi->dc, val, eld_buf_addr);
+		writel(val, eld_buf_addr);
+		index++;
+		buf++;
+	} while (index < end_index);
+	/* outer for loop that uses this will increment index by 1 */
+	return index - 1;
 }
 
 static inline void tegra_hdmi_clrsetbits(struct tegra_dc_hdmi_data *hdmi,
@@ -1239,27 +1264,58 @@ static void tegra_dc_hdmi_setup_audio_fs_tables(struct tegra_dc *dc)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 static void tegra_dc_hdmi_setup_eld_buff(struct tegra_dc *dc)
 {
-	int i;
-	int j;
+	size_t i;
 	u8 tmp;
-
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+	void __iomem *eld_buf_addr;
+	int baseline_eld_len = (HDMI_ELD_MONITOR_NAME_INDEX -
+				HDMI_ELD_CEA_VER_MNL_INDEX +
+				hdmi->eld.mnl +
+				(3 * hdmi->eld.sad_count));
+	u8 baseline_eld_len_val;
 
-	/* program ELD stuff */
-	for (i = 0; i < HDMI_ELD_MONITOR_NAME_INDEX; i++) {
+	eld_buf_addr = hdmi->base + HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0 * 4;
+
+	/* the baseline_eld_len needs to be written as a
+	 * multiple of DWORDS (4 bytes).
+	 */
+	BUG_ON(baseline_eld_len > MAX_BASELINE_ELD_SIZE);
+	baseline_eld_len_val = DIV_ROUND_UP(baseline_eld_len, 4);
+
+	/* program ELD stuff.  we must write all bytes of the
+	 * ELD buffer.  when hda_eld.c tries to read it back,
+	 * it's query of the size returns not how many valid
+	 * were written, but the entire size, and will try to
+	 * read all the bytes in the buffer.  it will fail
+	 * if any invalid bytes are read back, so we have to
+	 * fill the entire buffer with something, even if it's
+	 * just zeroes.
+	 */
+	for (i = 0; i < HDMI_ELD_BUF_SIZE; i++) {
 		switch (i) {
 		case HDMI_ELD_VER_INDEX:
 			tmp = (hdmi->eld.eld_ver << 3);
 			tegra_hdmi_writel(hdmi, (i << 8) | tmp,
 				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
 			break;
+		case HDMI_ELD_RESERVED1_INDEX:
+		case HDMI_ELD_RESERVED2_INDEX:
+			/* must write a dummy byte or else hda_eld.c
+			 * will get an error when it tries to read a
+			 * complete eld buffer
+			 */
+			tegra_hdmi_writel(hdmi, (i << 8),
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+			break;
 		case HDMI_ELD_BASELINE_LEN_INDEX:
+			tegra_hdmi_writel(hdmi, (i << 8) | baseline_eld_len_val,
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
 			break;
 		case HDMI_ELD_CEA_VER_MNL_INDEX:
 			tmp = (hdmi->eld.cea_edid_ver << 5);
 			tmp |= (hdmi->eld.mnl & 0x1f);
 			tegra_hdmi_writel(hdmi, (i << 8) | tmp,
-					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
 			break;
 		case HDMI_ELD_SAD_CNT_CON_TYP_SAI_HDCP_INDEX:
 			tmp = (hdmi->eld.sad_count << 4);
@@ -1278,36 +1334,38 @@ static void tegra_dc_hdmi_setup_eld_buff(struct tegra_dc *dc)
 					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
 			break;
 		case HDMI_ELD_PORT_ID_INDEX:
-			for (j = 0; j < 8;j++) {
-				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.port_id[j]),
-					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
-			}
+			i = tegra_hdmi_writel_eld_buf(hdmi, hdmi->eld.port_id,
+						      8, i, eld_buf_addr);
 			break;
 		case HDMI_ELD_MANF_NAME_INDEX:
-			for (j = 0; j < 2;j++) {
-				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.manufacture_id[j]),
-					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
-			}
+			i = tegra_hdmi_writel_eld_buf(hdmi,
+						      hdmi->eld.manufacture_id,
+						      2, i, eld_buf_addr);
 			break;
 		case HDMI_ELD_PRODUCT_CODE_INDEX:
-			for (j = 0; j < 2;j++) {
-				tegra_hdmi_writel(hdmi, ((i +j) << 8) | (hdmi->eld.product_id[j]),
-					  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
-			}
+			i = tegra_hdmi_writel_eld_buf(hdmi,
+						      hdmi->eld.product_id,
+						      2, i, eld_buf_addr);
 			break;
+		case HDMI_ELD_MONITOR_NAME_INDEX:
+			/* write the eld.mnl bytes of the monitor name,
+			 * followed immediately the short audio descriptor bytes
+			 */
+			i = tegra_hdmi_writel_eld_buf(hdmi,
+						      hdmi->eld.monitor_name,
+						      hdmi->eld.mnl, i,
+						      eld_buf_addr) + 1;
+			i = tegra_hdmi_writel_eld_buf(hdmi, hdmi->eld.sad,
+						      hdmi->eld.sad_count * 3,
+						      i, eld_buf_addr);
+			break;
+		default:
+			tegra_hdmi_writel(hdmi, (i << 8),
+				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
 		}
 	}
-	for (j = 0; j < hdmi->eld.mnl;j++) {
-		tegra_hdmi_writel(hdmi, ((j + HDMI_ELD_MONITOR_NAME_INDEX) << 8) |
-				  (hdmi->eld.monitor_name[j]),
-				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
-	}
-	for (j = 0; j < hdmi->eld.sad_count;j++) {
-		tegra_hdmi_writel(hdmi, ((j + HDMI_ELD_MONITOR_NAME_INDEX + hdmi->eld.mnl) << 8) |
-				  (hdmi->eld.sad[j]),
-				  HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0);
-	}
-		/* set presence andvalid bit  */
+
+	/* set presence and valid bit  */
 	tegra_hdmi_writel(hdmi, 3, HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
 }
 #endif

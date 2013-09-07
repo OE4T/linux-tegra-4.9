@@ -25,12 +25,16 @@ struct quadd_mmap_data;
 
 #define QUADD_MMAP_SIZE_ARRAY	4096
 
+struct quadd_mmap_cpu_ctx {
+	char *tmp_buf;
+};
+
 struct quadd_mmap_ctx {
 	u32 *hash_array;
 	unsigned int nr_hashes;
 	spinlock_t lock;
 
-	char *tmp_buf;
+	struct quadd_mmap_cpu_ctx * __percpu cpu_ctx;
 
 	struct quadd_ctx *quadd_ctx;
 };

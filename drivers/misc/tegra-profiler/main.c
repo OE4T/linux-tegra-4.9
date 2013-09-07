@@ -33,6 +33,7 @@
 #include "power_clk.h"
 #include "auth.h"
 #include "version.h"
+#include "quadd_proc.h"
 
 static struct quadd_ctx ctx;
 
@@ -452,6 +453,9 @@ static int __init quadd_module_init(void)
 		return err;
 	}
 
+	get_capabilities(&ctx.cap);
+	quadd_proc_init(&ctx);
+
 	return 0;
 }
 
@@ -464,6 +468,7 @@ static void __exit quadd_module_exit(void)
 	quadd_power_clk_deinit();
 	quadd_comm_events_exit();
 	quadd_auth_deinit();
+	quadd_proc_deinit();
 }
 
 module_init(quadd_module_init);

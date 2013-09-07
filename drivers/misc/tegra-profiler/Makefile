@@ -14,5 +14,17 @@
 #
 
 obj-$(CONFIG_TEGRA_PROFILER) += tegra-profiler.o
-tegra-profiler-objs := main.o armv7_pmu.o pl310.o hrt.o comm.o mmap.o backtrace.o debug.o ma.o power_clk.o auth.o
 
+tegra-profiler-objs := \
+	main.o \
+	armv7_pmu.o \
+	pl310.o \
+	hrt.o \
+	comm.o \
+	mmap.o \
+	backtrace.o \
+	debug.o \
+	ma.o \
+	power_clk.o \
+	auth.o \
+	quadd_proc.o

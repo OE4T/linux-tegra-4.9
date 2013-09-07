@@ -45,6 +45,7 @@ struct source_info {
 
 struct quadd_ctx {
 	struct quadd_parameters param;
+	struct quadd_comm_cap cap;
 
 	struct quadd_event_source_interface *pmu;
 	struct source_info pmu_info;

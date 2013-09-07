@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/hrt.h
+ * drivers/misc/tegra-profiler/quadd_proc.h
  *
  * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,11 +14,21 @@
  *
  */
 
+#ifndef __QUADD_PROC_H
+#define __QUADD_PROC_H
 
-#ifndef __QUADD_VERSION_H
-#define __QUADD_VERSION_H
+struct quadd_ctx;
 
-#define QUADD_MODULE_VERSION		"1.29"
-#define QUADD_MODULE_BRANCH		"Dev"
+#ifdef CONFIG_PROC_FS
+void quadd_proc_init(struct quadd_ctx *context);
+void quadd_proc_deinit(void);
+#else
+static inline void quadd_proc_init(struct quadd_ctx *context)
+{
+}
+static inline void quadd_proc_deinit(void)
+{
+}
+#endif
 
-#endif	/* __QUADD_VERSION_H */
+#endif  /* __QUADD_PROC_H */

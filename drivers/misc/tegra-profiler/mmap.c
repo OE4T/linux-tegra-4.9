@@ -21,6 +21,7 @@
 #include <linux/crc32.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/err.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -103,14 +104,16 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 		     struct pt_regs *regs, struct quadd_mmap_data *sample,
 		     unsigned int *extra_length)
 {
+	u32 crc;
+	unsigned long ip;
+	int length, length_aligned;
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma;
 	struct file *vm_file;
 	struct path *path;
 	char *file_name = NULL;
-	int length, length_aligned;
-	u32 crc;
-	unsigned long ip;
+	struct quadd_mmap_cpu_ctx *mm_cpu_ctx = this_cpu_ptr(mmap_ctx.cpu_ctx);
+	char *tmp_buf = mm_cpu_ctx->tmp_buf;
 
 	if (!mm) {
 		*extra_length = 0;
@@ -130,8 +133,10 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 
 			path = &vm_file->f_path;
 
-			file_name = d_path(path, mmap_ctx.tmp_buf, PATH_MAX);
-			if (file_name) {
+			file_name = d_path(path, tmp_buf, PATH_MAX);
+			if (IS_ERR(file_name)) {
+				file_name = NULL;
+			} else {
 				sample->addr = vma->vm_start;
 				sample->len = vma->vm_end - vma->vm_start;
 				sample->pgoff =
@@ -184,29 +189,39 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 
 struct quadd_mmap_ctx *quadd_mmap_init(struct quadd_ctx *quadd_ctx)
 {
+	int cpu_id;
 	u32 *hash;
 	char *tmp;
+	struct quadd_mmap_cpu_ctx *cpu_ctx;
 
 	mmap_ctx.quadd_ctx = quadd_ctx;
 
 	hash = kzalloc(QUADD_MMAP_SIZE_ARRAY * sizeof(unsigned int),
 		       GFP_KERNEL);
 	if (!hash) {
-		pr_err("Alloc error\n");
-		return NULL;
+		pr_err("Failed to allocate mmap buffer\n");
+		return ERR_PTR(-ENOMEM);
 	}
 	mmap_ctx.hash_array = hash;
 
 	mmap_ctx.nr_hashes = 0;
 	spin_lock_init(&mmap_ctx.lock);
 
-	tmp = kzalloc(PATH_MAX + sizeof(unsigned long long),
-		      GFP_KERNEL);
-	if (!tmp) {
-		pr_err("Alloc error\n");
-		return NULL;
+	mmap_ctx.cpu_ctx = alloc_percpu(struct quadd_mmap_cpu_ctx);
+	if (!mmap_ctx.cpu_ctx)
+		return ERR_PTR(-ENOMEM);
+
+	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++) {
+		cpu_ctx = per_cpu_ptr(mmap_ctx.cpu_ctx, cpu_id);
+
+		tmp = kzalloc(PATH_MAX + sizeof(unsigned long long),
+			      GFP_KERNEL);
+		if (!tmp) {
+			pr_err("Failed to allocate mmap buffer\n");
+			return ERR_PTR(-ENOMEM);
+		}
+		cpu_ctx->tmp_buf = tmp;
 	}
-	mmap_ctx.tmp_buf = tmp;
 
 	return &mmap_ctx;
 }
@@ -222,15 +237,19 @@ void quadd_mmap_reset(void)
 
 void quadd_mmap_deinit(void)
 {
+	int cpu_id;
 	unsigned long flags;
+	struct quadd_mmap_cpu_ctx *cpu_ctx;
 
 	spin_lock_irqsave(&mmap_ctx.lock, flags);
-
 	kfree(mmap_ctx.hash_array);
 	mmap_ctx.hash_array = NULL;
 
-	kfree(mmap_ctx.tmp_buf);
-	mmap_ctx.tmp_buf = NULL;
+	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++) {
+		cpu_ctx = per_cpu_ptr(mmap_ctx.cpu_ctx, cpu_id);
+		kfree(cpu_ctx->tmp_buf);
+	}
+	free_percpu(mmap_ctx.cpu_ctx);
 
 	spin_unlock_irqrestore(&mmap_ctx.lock, flags);
 }

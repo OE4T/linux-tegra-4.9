@@ -18,6 +18,7 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/err.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -428,9 +429,9 @@ static int __init quadd_module_init(void)
 	}
 
 	ctx.mmap = quadd_mmap_init(&ctx);
-	if (!ctx.mmap) {
+	if (IS_ERR(ctx.mmap)) {
 		pr_err("error: MMAP init failed\n");
-		return -ENODEV;
+		return PTR_ERR(ctx.mmap);
 	}
 
 	err = quadd_power_clk_init(&ctx);

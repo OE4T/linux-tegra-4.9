@@ -57,6 +57,7 @@ struct clk_gk20a {
 	bool sw_ready;
 	u32 cap_freq;
 	u32 cap_freq_thermal;
+	bool clk_hw_on;
 };
 
 struct gpufreq_table_data {
@@ -73,7 +74,7 @@ int gk20a_init_clk_support(struct gk20a *g);
 int gk20a_clk_init_cap_freqs(struct gk20a *g);
 u32 gk20a_clk_get_rate(struct gk20a *g);
 int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
-int gk20a_clk_disable_gpcpll(struct gk20a *g);
+int gk20a_suspend_clk_support(struct gk20a *g);
 struct clk *gk20a_clk_get(struct gk20a *g);
 int gk20a_clk_round_rate(struct gk20a *g, u32 rate);
 

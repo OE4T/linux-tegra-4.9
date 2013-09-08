@@ -253,6 +253,9 @@ static void read_source(struct quadd_event_source_interface *source,
 		return;
 	}
 
+	if (atomic_read(&cpu_ctx->nr_active) == 0)
+		return;
+
 	if (user_mode(regs) && hrt.quadd_ctx->param.backtrace) {
 		callchain_nr = quadd_get_user_callchain(regs, callchain_data);
 		if (callchain_nr > 0) {
@@ -275,20 +278,20 @@ static void read_source(struct quadd_event_source_interface *source,
 		    !quadd_ctx->collect_kernel_ips)
 			record_data.sample.ip = 0;
 
-		record_data.sample.callchain_nr = callchain_nr;
-
 		if (pid > 0) {
 			record_data.sample.pid = pid;
+		} else {
+			t_data = &cpu_ctx->active_thread;
+			record_data.sample.pid = t_data->pid;
+		}
+
+		if (i == 0) {
+			record_data.sample.callchain_nr = callchain_nr;
 			quadd_put_sample(&record_data, extra_data,
 					 extra_length);
 		} else {
-			t_data = &cpu_ctx->active_thread;
-
-			if (atomic_read(&cpu_ctx->nr_active) > 0) {
-				record_data.sample.pid = t_data->pid;
-				quadd_put_sample(&record_data, extra_data,
-						 extra_length);
-			}
+			record_data.sample.callchain_nr = 0;
+			quadd_put_sample(&record_data, NULL, 0);
 		}
 	}
 }

@@ -20,6 +20,8 @@
 #include <linux/slab.h>
 #include <linux/tegra-powergate.h>
 
+#include <mach/mc.h>
+
 #include "dev.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
@@ -130,7 +132,7 @@ static struct host1x_device_info host1x04_info = {
 };
 
 struct nvhost_device_data t124_host1x_info = {
-	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX}, {} },
+	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
 };
@@ -168,7 +170,7 @@ struct nvhost_device_data t124_isp_info = {
 	.can_powergate   = false,
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = { {"isp", UINT_MAX} },
+	.clocks          = { {"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 static struct platform_device tegra_isp01_device = {
@@ -201,7 +203,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.can_powergate   = false,
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = { {"isp", UINT_MAX} },
+	.clocks          = { {"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 
@@ -238,7 +240,7 @@ struct nvhost_device_data t124_vi_info = {
 	.clockgate_delay  = VI_CLOCKGATE_DELAY,
 	.powergate_delay  = VI_POWERGATE_DELAY,
 	.clocks           = {
-		{"vi", UINT_MAX},
+		{"vi", UINT_MAX, 0},
 		{"csi", 0},
 		{"cilab", 102000000} },
 	.init             = nvhost_vi_init,
@@ -306,7 +308,8 @@ struct nvhost_device_data t124_msenc_info = {
 	.syncpts	= {NVSYNCPT_MSENC, NVSYNCPT_MSENC_SLICE},
 	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
+			  {"emc", HOST_EMC_FLOOR} },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
@@ -346,7 +349,8 @@ struct nvhost_device_data t124_tsec_info = {
 	.waitbases     = {NVWAITBASE_TSEC},
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
-	.clocks = {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
+			 {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
@@ -377,7 +381,8 @@ static struct resource vic03_resources[] = {
 struct nvhost_device_data t124_vic_info = {
 	/*.syncpts*/
 	/*.modulemutexes*/
-	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
+	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
+				  {"emc", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,

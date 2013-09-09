@@ -86,36 +86,28 @@ static void do_module_reset_locked(struct platform_device *dev)
 	}
 
 	/* assert module and mc client reset */
-	if (pdata->powergate_ids[0] != -1)
-		tegra_powergate_mc_flush(pdata->powergate_ids[0]);
-	if (pdata->powergate_ids[0] != -1)
-		tegra_powergate_mc_disable(pdata->powergate_ids[0]);
-	if (pdata->clocks[0].reset)
+	if (pdata->clocks[0].reset) {
+		tegra_mc_flush(pdata->clocks[0].reset);
 		tegra_periph_reset_assert(pdata->clk[0]);
+	}
 
-	if (pdata->powergate_ids[1] != -1)
-		tegra_powergate_mc_flush(pdata->powergate_ids[1]);
-	if (pdata->powergate_ids[1] != -1)
-		tegra_powergate_mc_disable(pdata->powergate_ids[1]);
-	if (pdata->clocks[1].reset)
+	if (pdata->clocks[1].reset) {
+		tegra_mc_flush(pdata->clocks[1].reset);
 		tegra_periph_reset_assert(pdata->clk[1]);
+	}
 
 	udelay(POWERGATE_DELAY);
 
 	/* deassert reset */
-	if (pdata->clocks[0].reset)
+	if (pdata->clocks[0].reset) {
 		tegra_periph_reset_deassert(pdata->clk[0]);
-	if (pdata->powergate_ids[0] != -1)
-		tegra_powergate_mc_enable(pdata->powergate_ids[0]);
-	if (pdata->powergate_ids[0] != -1)
-		tegra_powergate_mc_flush_done(pdata->powergate_ids[0]);
+		tegra_mc_flush_done(pdata->clocks[0].reset);
+	}
 
-	if (pdata->clocks[1].reset)
+	if (pdata->clocks[1].reset) {
 		tegra_periph_reset_deassert(pdata->clk[1]);
-	if (pdata->powergate_ids[1] != -1)
-		tegra_powergate_mc_enable(pdata->powergate_ids[1]);
-	if (pdata->powergate_ids[1] != -1)
-		tegra_powergate_mc_flush_done(pdata->powergate_ids[1]);
+		tegra_mc_flush_done(pdata->clocks[1].reset);
+	}
 }
 
 void nvhost_module_reset(struct platform_device *dev)

@@ -23,6 +23,8 @@
 #include <linux/tegra-powergate.h>
 #include <linux/nvhost.h>
 
+#include <mach/mc.h>
+
 #include "dev.h"
 #include "class_ids.h"
 #include "host1x/host1x_cdma.h"
@@ -118,7 +120,7 @@ struct nvhost_device_data t14_gr3d_info = {
 	.waitbases	= {NVWAITBASE_3D},
 	.modulemutexes	= {NVMODMUTEX_3D},
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
-	.clocks		= { {"gr3d", UINT_MAX, 8, true},
+	.clocks		= { {"gr3d", UINT_MAX, 8, TEGRA_MC_CLIENT_NV},
 			    {"emc", UINT_MAX, 75} },
 	.powergate_ids	= { TEGRA_POWERGATE_3D, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -158,7 +160,8 @@ struct nvhost_device_data t14_gr2d_info = {
 	.waitbases	= {NVWAITBASE_2D_0, NVWAITBASE_2D_1},
 	.modulemutexes	= {NVMODMUTEX_2D_FULL, NVMODMUTEX_2D_SIMPLE,
 			  NVMODMUTEX_2D_SB_A, NVMODMUTEX_2D_SB_B},
-	.clocks		= { {"gr2d", 0, 7, true}, {"epp", 0, 10, true},
+	.clocks		= { {"gr2d", 0, 7, TEGRA_MC_CLIENT_G2},
+			    {"epp", 0, 10, TEGRA_MC_CLIENT_EPP},
 			    {"emc", 300000000, 75 } },
 	.powergate_ids	= { TEGRA_POWERGATE_HEG, -1 },
 	.clockgate_delay = 0,
@@ -261,7 +264,7 @@ struct nvhost_device_data t14_msenc_info = {
 	.syncpts	= {NVSYNCPT_MSENC},
 	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
-	.clocks		= { {"msenc", UINT_MAX, 107, true},
+	.clocks		= { {"msenc", UINT_MAX, 107, TEGRA_MC_CLIENT_MSENC},
 			    {"emc", 300000000, 75} },
 	.powergate_ids = { TEGRA_POWERGATE_MPE, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -300,7 +303,7 @@ struct nvhost_device_data t14_tsec_info = {
 	.waitbases	= {NVWAITBASE_TSEC},
 	.class		= NV_TSEC_CLASS_ID,
 	.exclusive	= false,
-	.clocks		= { {"tsec", UINT_MAX, 108, true},
+	.clocks		= { {"tsec", UINT_MAX, 108, TEGRA_MC_CLIENT_TSEC},
 			    {"emc", 300000000, 75} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,

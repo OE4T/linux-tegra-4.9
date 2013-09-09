@@ -899,33 +899,53 @@ static void gk20a_fifo_recover_eng(struct gk20a *g, u32 engine_id)
 
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	u32 sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
-	u32 curr_ctx = gk20a_readl(g, gr_fecs_current_ctx_r());
-	struct channel_gk20a *fault_ch = NULL;
-	u32 chid;
+	u32 sched_error;
+	u32 engine_id;
+	int id = -1;
+	bool tsg = false;
 
-	for (chid = 0; chid < f->num_channels; chid++)
-		if (f->channel[chid].in_use) {
-			struct scatterlist *ctx_sg =
-				f->channel[chid].inst_block.mem.sgt->sgl;
-			if ((u32)(sg_phys(ctx_sg) >> ram_in_base_shift_v()) ==
-				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
-				fault_ch = &f->channel[chid];
-				break;
-			}
+	/* read and reset the scheduler error register */
+	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
+	gk20a_writel(g, fifo_intr_0_r(), fifo_intr_0_sched_error_reset_f());
+
+	for (engine_id = 0; engine_id < g->fifo.max_engines; engine_id++) {
+		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
+		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
+		bool failing_engine;
+
+		/* we are interested in busy engines */
+		failing_engine =
+			!!(status & fifo_engine_status_engine_busy_f());
+
+		/* ..that are doing context switch */
+		failing_engine = failing_engine &&
+			(ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_switch_v()
+			|| ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_save_v()
+			|| ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_load_v());
+
+		if (failing_engine) {
+			id = (ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
+				fifo_engine_status_next_id_v(status) :
+				fifo_engine_status_id_v(status);
+			tsg = !!(status & fifo_pbdma_status_id_type_tsgid_f());
+			break;
 		}
+	}
 
-	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, ch=%d",
-			sched_error, fault_ch ? fault_ch->hw_chid : -1);
+	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
+		   sched_error, engine_id, tsg ? "tsg" : "ch", id);
 
-	/* Couldn't find the channel - should never happen */
-	if (unlikely(!fault_ch))
+	/* could not find the engine - should never happen */
+	if (unlikely(engine_id >= g->fifo.max_engines))
 		return true;
 
 	if (fifo_intr_sched_error_code_f(sched_error) ==
-			fifo_intr_sched_error_code_ctxsw_timeout_v()) {
-		gk20a_fifo_recover(g, fault_ch->hw_chid);
+	    fifo_intr_sched_error_code_ctxsw_timeout_v()) {
+		gk20a_fifo_recover(g, id);
 		return false;
 	}
 

@@ -66,7 +66,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 {
 	struct gk20a *g = get_gk20a(profile->pdev);
 	unsigned long *freqs;
-	int num_freqs, err, i;
+	int num_freqs, err;
 
 	/* make sure the clock is available */
 	if (!gk20a_clk_get(g))
@@ -78,20 +78,8 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	if (err)
 		return -ENOSYS;
 
-	/* allocate space for a duplicate table */
-	profile->devfreq_profile.freq_table =
-		kzalloc(num_freqs * sizeof(unsigned int), GFP_KERNEL);
-	if (!profile->devfreq_profile.freq_table)
-		return -ENOMEM;
-
-	/* copy the table */
-	memcpy(profile->devfreq_profile.freq_table, freqs,
-	       num_freqs * sizeof(unsigned int));
+	profile->devfreq_profile.freq_table = (unsigned int *)freqs;
 	profile->devfreq_profile.max_state = num_freqs;
-
-	/* convert gpc2clk to gpcclk */
-	for (i = 0; i < num_freqs; i++)
-		profile->devfreq_profile.freq_table[i] /= 2;
 
 	return 0;
 }

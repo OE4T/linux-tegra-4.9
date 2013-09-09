@@ -92,6 +92,11 @@ static int isp_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
@@ -101,10 +106,6 @@ static int isp_probe(struct platform_device *dev)
 	 * as sub-domain of MC domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
 
 	err = nvhost_client_device_init(dev);
 	if (err)

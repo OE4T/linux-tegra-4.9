@@ -37,6 +37,7 @@
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
+#include "gr3d/pod_scaling.h"
 
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
@@ -310,6 +311,9 @@ struct nvhost_device_data t124_msenc_info = {
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
 	.can_powergate	= true,
+	.init           = nvhost_msenc_init,
+	.deinit         = nvhost_msenc_deinit,
+	.finalize_poweron = nvhost_msenc_finalize_poweron,
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
@@ -345,6 +349,8 @@ struct nvhost_device_data t124_tsec_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
+	.init          = nvhost_tsec_init,
+	.deinit        = nvhost_tsec_deinit,
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -378,6 +384,10 @@ struct nvhost_device_data t124_vic_info = {
 	.can_powergate		= true,
 	.powergate_delay	= 500,
 	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
+	.init			= nvhost_vic03_init,
+	.deinit			= nvhost_vic03_deinit,
+	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
+	.finalize_poweron	= nvhost_vic03_finalize_poweron,
 	.prepare_poweroff	= nvhost_vic03_prepare_poweroff,
 	.scaling_init		= nvhost_scale_init,
 	.scaling_deinit		= nvhost_scale_deinit,
@@ -428,6 +438,19 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
 	.ctrl_ops		= &tegra_gk20a_ctrl_ops,
 	.moduleid		= NVHOST_MODULE_GPU,
+	.init			= nvhost_gk20a_init,
+	.deinit			= nvhost_gk20a_deinit,
+	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
+	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
+	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
+#ifdef CONFIG_TEGRA_GK20A_DEVFREQ
+	.busy			= nvhost_gk20a_scale_notify_busy,
+	.idle			= nvhost_gk20a_scale_notify_idle,
+	.scaling_init		= nvhost_gk20a_scale_init,
+	.scaling_deinit		= nvhost_gk20a_scale_deinit,
+	.suspend_ndev		= nvhost_scale3d_suspend,
+	.devfreq_governor	= &nvhost_podgov,
+#endif
 };
 
 struct platform_device tegra_gk20a_device = {

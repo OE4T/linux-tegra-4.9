@@ -565,17 +565,14 @@ static int tsec_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
-	pdata->init = nvhost_tsec_init;
-	pdata->deinit = nvhost_tsec_deinit;
-
 	mutex_init(&pdata->lock);
-
 	platform_set_drvdata(dev, pdata);
-	nvhost_module_init(dev);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
+
+	nvhost_module_init(dev);
 
 	tsec = dev;
 

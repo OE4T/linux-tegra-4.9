@@ -92,6 +92,14 @@ static int vi_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	pdata->pdev = dev;
+	mutex_init(&pdata->lock);
+	platform_set_drvdata(dev, pdata);
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	i2c_ctrl = pdata->private_data;
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
@@ -118,9 +126,6 @@ static int vi_probe(struct platform_device *dev)
 	}
 #endif
 
-	pdata->pdev = dev;
-	mutex_init(&pdata->lock);
-	platform_set_drvdata(dev, pdata);
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
@@ -130,10 +135,6 @@ static int vi_probe(struct platform_device *dev)
 	 * as sub-domain of MC domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		goto camera_unregister;
 
 	err = nvhost_client_device_init(dev);
 	if (err)

@@ -623,16 +623,14 @@ static int vic03_probe(struct platform_device *dev)
 
 	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
 
-	pdata->init			= nvhost_vic03_init;
-	pdata->deinit			= nvhost_vic03_deinit;
-	pdata->finalize_poweron		= nvhost_vic03_finalize_poweron;
-	pdata->alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler;
-
 	pdata->pdev = dev;
-
 	mutex_init(&pdata->lock);
-
 	platform_set_drvdata(dev, pdata);
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	dev->dev.platform_data = NULL;
 
 	nvhost_module_init(dev);
@@ -642,10 +640,6 @@ static int vic03_probe(struct platform_device *dev)
 
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
 
 	err = nvhost_client_device_init(dev);
 	if (err) {

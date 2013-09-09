@@ -211,6 +211,7 @@ static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
  * 2. client opens gk20a ctrl node.
  */
 int nvhost_gk20a_init(struct platform_device *dev);
+void nvhost_gk20a_deinit(struct platform_device *dev);
 
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */
@@ -233,6 +234,10 @@ static inline int support_gk20a_pmu(void){return 0;}
 
 int nvhost_gk20a_finalize_poweron(struct platform_device *dev);
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev);
+void nvhost_gk20a_scale_notify_idle(struct platform_device *pdev);
+void nvhost_gk20a_scale_notify_busy(struct platform_device *pdev);
+void nvhost_gk20a_scale_init(struct platform_device *pdev);
+void nvhost_gk20a_scale_deinit(struct platform_device *pdev);
 
 void gk20a_create_sysfs(struct platform_device *dev);
 

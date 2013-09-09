@@ -80,6 +80,11 @@ static int gr2d_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS

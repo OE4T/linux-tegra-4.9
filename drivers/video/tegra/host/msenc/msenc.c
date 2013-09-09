@@ -447,13 +447,12 @@ static int msenc_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
-	pdata->init = nvhost_msenc_init;
-	pdata->deinit = nvhost_msenc_deinit;
-	pdata->finalize_poweron = nvhost_msenc_finalize_poweron;
-
 	mutex_init(&pdata->lock);
-
 	platform_set_drvdata(dev, pdata);
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	dev->dev.platform_data = NULL;
 
 	/* get the module clocks to sane state */
@@ -466,10 +465,6 @@ static int msenc_probe(struct platform_device *dev)
 	 * as sub-domain of MC domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
 
 	err = nvhost_client_device_init(dev);
 

@@ -55,8 +55,6 @@ static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 	nvhost_set_private_data(dev, gk20a);
 }
 
-static void nvhost_gk20a_deinit(struct platform_device *dev);
-
 /* TBD: should be able to put in the list below. */
 static struct resource gk20a_intr = {
 	.start = TEGRA_GK20A_INTR,
@@ -563,7 +561,7 @@ int nvhost_gk20a_init(struct platform_device *dev)
 	return 0;
 }
 
-static void nvhost_gk20a_deinit(struct platform_device *dev)
+void nvhost_gk20a_deinit(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
 #ifndef CONFIG_PM_RUNTIME
@@ -809,22 +807,12 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		return err;
+
 	nvhost_module_init(dev);
-
-	pdata->init			= nvhost_gk20a_init;
-	pdata->deinit			= nvhost_gk20a_deinit;
-	pdata->alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler;
-	pdata->prepare_poweroff		= nvhost_gk20a_prepare_poweroff;
-	pdata->finalize_poweron		= nvhost_gk20a_finalize_poweron;
-
-	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ)) {
-		pdata->busy		= nvhost_gk20a_scale_notify_busy;
-		pdata->idle		= nvhost_gk20a_scale_notify_idle;
-		pdata->scaling_init	= nvhost_gk20a_scale_init;
-		pdata->scaling_deinit	= nvhost_gk20a_scale_deinit;
-		pdata->suspend_ndev	= nvhost_scale3d_suspend;
-		pdata->devfreq_governor	= &nvhost_podgov;
-	}
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
@@ -835,10 +823,6 @@ static int gk20a_probe(struct platform_device *dev)
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
 	gk20a->host = nvhost_get_host(dev);
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
 
 	nvhost_init_gk20a_support(dev);
 

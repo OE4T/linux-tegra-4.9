@@ -269,6 +269,9 @@ struct nvhost_device_data t11_msenc_info = {
 	.powergate_delay = 100,
 	.can_powergate = true,
 	.moduleid	= NVHOST_MODULE_MSENC,
+	.init           = nvhost_msenc_init,
+	.deinit         = nvhost_msenc_deinit,
+	.finalize_poweron = nvhost_msenc_finalize_poweron,
 };
 
 static struct platform_device tegra_msenc02_device = {
@@ -302,6 +305,8 @@ struct nvhost_device_data t11_tsec_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_TSEC,
+	.init          = nvhost_tsec_init,
+	.deinit        = nvhost_tsec_deinit,
 };
 
 static struct platform_device tegra_tsec01_device = {

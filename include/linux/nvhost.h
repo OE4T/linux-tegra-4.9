@@ -223,7 +223,7 @@ struct nvhost_device_data {
 	 * Reset the unit. Used for timeout recovery, resetting the unit on
 	 * probe and when un-powergating.
 	 */
-	int (*reset)(struct platform_device *dev);
+	void (*reset)(struct platform_device *dev);
 
 	/* Device is busy. */
 	void (*busy)(struct platform_device *);

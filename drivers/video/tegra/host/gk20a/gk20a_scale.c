@@ -196,7 +196,6 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 	/* Finally, clear out the local values */
 	profile->dev_stat.total_time = 0;
 	profile->dev_stat.busy_time = 0;
-	profile->last_event_type = DEVICE_UNKNOWN;
 
 	return 0;
 }
@@ -218,13 +217,13 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	if (!profile)
 		return;
 	profile->pdev = pdev;
-	profile->last_event_type = DEVICE_UNKNOWN;
+	profile->last_event_type = DEVICE_IDLE;
 
 	/* Initialize devfreq related structures */
 	profile->dev_stat.private_data = &profile->ext_stat;
 	profile->ext_stat.min_freq = gk20a_clk_round_rate(g, 0);
 	profile->ext_stat.max_freq = gk20a_clk_round_rate(g, UINT_MAX);
-	profile->ext_stat.busy = DEVICE_UNKNOWN;
+	profile->ext_stat.busy = DEVICE_IDLE;
 
 	if (profile->ext_stat.min_freq == profile->ext_stat.max_freq) {
 		dev_warn(&pdev->dev, "max rate = min rate (%lu), disabling scaling\n",

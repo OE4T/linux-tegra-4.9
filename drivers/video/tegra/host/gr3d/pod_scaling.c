@@ -1016,10 +1016,6 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		cancel_delayed_work(&podgov->idle_timer);
 		*freq = scaling_state_check(df, now);
 		break;
-	case DEVICE_UNKNOWN:
-		*freq = scaling_state_check(df, now);
-		break;
-
 	}
 
 	if (!(*freq) || (*freq == df->previous_freq))

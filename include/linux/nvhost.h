@@ -269,9 +269,8 @@ struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
 }
 
 enum nvhost_devfreq_busy {
-	DEVICE_UNKNOWN = 0,
-	DEVICE_IDLE = 1,
-	DEVICE_BUSY = 2
+	DEVICE_IDLE = 0,
+	DEVICE_BUSY = 1
 };
 
 struct nvhost_devfreq_ext_stat {

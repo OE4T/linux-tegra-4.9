@@ -44,6 +44,9 @@
 #define MAX_DEVID_LENGTH	16
 #define T12_VI_CFG_CG_CTRL	0x2e
 #define T12_CG_2ND_LEVEL_EN	1
+#define T12_VI_CSI_0_SW_RESET	0x40
+#define T12_VI_CSI_1_SW_RESET	0x80
+#define T12_VI_CSI_SW_RESET_MCCIF_RESET 3
 
 static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_2X_OR_HIGHER_CONFIG
@@ -405,6 +408,23 @@ const struct file_operations tegra_vi_ctrl_ops = {
 	.release = tegra_vi_release,
 };
 #endif
+
+void nvhost_vi_reset(struct platform_device *pdev)
+{
+	u32 reset_reg;
+
+	if (pdev->id == 0)
+		reset_reg = T12_VI_CSI_0_SW_RESET;
+	else
+		reset_reg = T12_VI_CSI_1_SW_RESET;
+
+	nvhost_client_writel(pdev, T12_VI_CSI_SW_RESET_MCCIF_RESET,
+			reset_reg);
+
+	udelay(10);
+
+	nvhost_client_writel(pdev, 0, reset_reg);
+}
 
 late_initcall(vi_init);
 module_exit(vi_exit);

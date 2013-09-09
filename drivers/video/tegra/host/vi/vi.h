@@ -35,5 +35,6 @@ int nvhost_vi_prepare_poweroff(struct platform_device *);
 int nvhost_vi_finalize_poweron(struct platform_device *);
 int nvhost_vi_init(struct platform_device *);
 void nvhost_vi_deinit(struct platform_device *);
+void nvhost_vi_reset(struct platform_device *);
 
 #endif

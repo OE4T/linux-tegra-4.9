@@ -210,6 +210,7 @@ static int nvhost_scale_get_dev_status(struct device *dev,
 		update_load_estimate_actmon(profile);
 
 	/* Copy the contents of the current device status */
+	profile->ext_stat.busy = profile->last_event_type;
 	*stat = profile->dev_stat;
 
 	/* Finally, clear out the local values */

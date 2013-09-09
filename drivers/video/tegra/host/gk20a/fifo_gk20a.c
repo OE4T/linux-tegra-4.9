@@ -1373,29 +1373,62 @@ clean_up:
 	return err;
 }
 
+static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 engines = 0;
+	int i;
+
+	for (i = 0; i < f->max_engines; i++) {
+		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+
+		if ((status & fifo_engine_status_engine_busy_f()) &&
+		    (f->engine_info[i].runlist_id == runlist_id))
+			engines |= BIT(i);
+	}
+	gk20a_fifo_recover(g, engines);
+}
+
+static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
+{
+	struct fifo_runlist_info_gk20a *runlist;
+	u32 remain;
+	bool pending;
+
+	runlist = &g->fifo.runlist_info[runlist_id];
+
+	remain = wait_event_timeout(runlist->runlist_wq,
+		((pending = gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
+			fifo_eng_runlist_pending_true_f()) == 0),
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
+
+	if (remain == 0 && pending != 0)
+		return -ETIMEDOUT;
+	else if (remain < 0)
+		return -EINTR;
+
+	return 0;
+}
+
 /* add/remove a channel from runlist
    special cases below: runlist->active_channels will NOT be changed.
    (hw_chid == ~0 && !add) means remove all active channels from runlist.
    (hw_chid == ~0 &&  add) means restore all active channels on runlist. */
-int gk20a_fifo_update_runlist(struct gk20a *g,
-	u32 engine_id, u32 hw_chid, bool add)
+int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 hw_chid,
+			      bool add, bool wait_for_finish)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist = NULL;
-	u32 runlist_id = ~0;
 	u32 *runlist_entry_base = NULL;
 	u32 *runlist_entry = NULL;
 	phys_addr_t runlist_pa;
 	u32 old_buf, new_buf;
 	u32 chid;
 	u32 count = 0;
-	long remain;
-	bool pending;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 elpg_off;
 
-	runlist_id = f->engine_info[engine_id].runlist_id;
 	runlist = &f->runlist_info[runlist_id];
 
 	mutex_lock(&runlist->mutex);
@@ -1457,31 +1490,21 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 		fifo_runlist_engine_f(runlist_id) |
 		fifo_eng_runlist_length_f(count));
 
-	remain =
-		wait_event_timeout(
-			runlist->runlist_wq,
-			((pending =
-				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
-				fifo_eng_runlist_pending_true_f()) == 0),
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
+	if (wait_for_finish) {
+		ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
 
-	if (remain == 0 && pending != 0) {
-		nvhost_err(dev_from_gk20a(g), "runlist update timeout");
-		gk20a_fifo_recover(g, BIT(engine_id));
-		wait_event_timeout(
-			runlist->runlist_wq,
-			((pending =
-				gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
-				fifo_eng_runlist_pending_true_f()) == 0),
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
+		if (ret == -ETIMEDOUT) {
+			nvhost_err(dev_from_gk20a(g),
+				   "runlist update timeout");
 
-		if (remain == 0 && pending != 0)
-			ret = -ETIMEDOUT;
-		goto clean_up;
-	} else if (remain < 0) {
-		nvhost_err(dev_from_gk20a(g), "runlist update interrupted");
-		ret = -EINTR;
-		goto clean_up;
+			gk20a_fifo_runlist_reset_engines(g, runlist_id);
+			ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
+			if (ret)
+				nvhost_err(dev_from_gk20a(g),
+					   "runlist update failed: %d", ret);
+		} else if (ret == -EINTR)
+			nvhost_err(dev_from_gk20a(g),
+				   "runlist update interrupted");
 	}
 
 	runlist->cur_buffer = new_buf;

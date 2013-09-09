@@ -361,11 +361,9 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
 }
 
-static int channel_gk20a_update_runlist(struct channel_gk20a *c,
-					bool add)
+static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
-	return gk20a_fifo_update_runlist(c->g,
-		ENGINE_GR_GK20A, c->hw_chid, add);
+	return gk20a_fifo_update_runlist(c->g, 0, c->hw_chid, add, true);
 }
 
 void gk20a_disable_channel(struct channel_gk20a *ch,
@@ -1669,7 +1667,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	}
 
 	if (channels_in_use) {
-		gk20a_fifo_update_runlist(g, ENGINE_GR_GK20A, ~0, false);
+		gk20a_fifo_update_runlist(g, 0, ~0, false, true);
 
 		for (chid = 0; chid < f->num_channels; chid++) {
 			if (f->channel[chid].in_use)
@@ -1700,7 +1698,7 @@ int gk20a_channel_resume(struct gk20a *g)
 	}
 
 	if (channels_in_use)
-		gk20a_fifo_update_runlist(g, ENGINE_GR_GK20A, ~0, true);
+		gk20a_fifo_update_runlist(g, 0, ~0, true, true);
 
 	nvhost_dbg_fn("done");
 	return 0;

@@ -900,11 +900,9 @@ void __nvmap_free_sg_table(struct nvmap_client *client,
 void nvmap_free_sg_table(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, struct sg_table *sgt)
 {
-	if (WARN_ON(!virt_addr_valid(ref)) ||
-	    WARN_ON(!virt_addr_valid(ref->handle)) ||
-	    WARN_ON(!virt_addr_valid(sgt)))
+	if (WARN_ON(!virt_addr_valid(sgt)))
 		return;
-	__nvmap_free_sg_table(client, ref->handle, sgt);
+	__nvmap_free_sg_table(NULL, NULL, sgt);
 }
 
 void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,

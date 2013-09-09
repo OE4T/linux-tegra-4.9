@@ -823,6 +823,7 @@ static int gk20a_probe(struct platform_device *dev)
 		pdata->scaling_init	= nvhost_gk20a_scale_init;
 		pdata->scaling_deinit	= nvhost_gk20a_scale_deinit;
 		pdata->suspend_ndev	= nvhost_scale3d_suspend;
+		pdata->devfreq_governor	= &nvhost_podgov;
 	}
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);

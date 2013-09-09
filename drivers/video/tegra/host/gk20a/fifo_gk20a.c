@@ -1187,24 +1187,22 @@ void gk20a_fifo_isr(struct gk20a *g)
 	return;
 }
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
+int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_runlist_info_gk20a *runlist;
-	u32 runlist_id;
 	unsigned long end_jiffies = jiffies
 		+ msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 elpg_off = 0;
+	u32 i;
 
 	nvhost_dbg_fn("%d", hw_chid);
 
-	runlist_id = f->engine_info[engine_id].runlist_id;
-	runlist = &f->runlist_info[runlist_id];
-
-	mutex_lock(&runlist->mutex);
+	/* we have no idea which runlist we are using. lock all */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_lock(&f->runlist_info[i].mutex);
 
 	/* disable elpg if failed to acquire pmu mutex */
 	elpg_off = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
@@ -1231,10 +1229,30 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 			!tegra_platform_is_silicon());
 
 	if (ret) {
-		nvhost_err(dev_from_gk20a(g),
-			    "preempt channel %d timeout\n",
+		int i;
+		u32 engines = 0;
+
+		nvhost_err(dev_from_gk20a(g), "preempt channel %d timeout\n",
 			    hw_chid);
-		gk20a_fifo_recover(g, BIT(engine_id));
+
+		/* forcefully reset all busy engines using this channel */
+		for (i = 0; i < g->fifo.max_engines; i++) {
+			u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+			u32 ctx_status =
+				fifo_engine_status_ctx_status_v(status);
+			bool type_ch = !(status &
+				fifo_pbdma_status_id_type_tsgid_f());
+			bool busy = !!(status &
+				fifo_engine_status_engine_busy_f());
+			u32 id = (ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
+				fifo_engine_status_next_id_v(status) :
+				fifo_engine_status_id_v(status);
+
+			if (type_ch && busy && id == hw_chid)
+				engines |= BIT(i);
+		}
+		gk20a_fifo_recover(g, engines);
 	}
 
 	/* re-enable elpg or release pmu mutex */
@@ -1243,7 +1261,8 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 	else
 		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	mutex_unlock(&runlist->mutex);
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_unlock(&f->runlist_info[i].mutex);
 
 	return ret;
 }
@@ -1317,8 +1336,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 		pbdma_chid = fifo_pbdma_status_next_id_v(pbdma_stat);
 
 	if (pbdma_chid != ~0) {
-		err = gk20a_fifo_preempt_channel(g,
-				eng_info->engine_id, pbdma_chid);
+		err = gk20a_fifo_preempt_channel(g, pbdma_chid);
 		if (err)
 			goto clean_up;
 	}
@@ -1334,8 +1352,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 		engine_chid = fifo_engine_status_next_id_v(eng_stat);
 
 	if (engine_chid != ~0 && engine_chid != pbdma_chid) {
-		err = gk20a_fifo_preempt_channel(g,
-				eng_info->engine_id, engine_chid);
+		err = gk20a_fifo_preempt_channel(g, engine_chid);
 		if (err)
 			goto clean_up;
 	}

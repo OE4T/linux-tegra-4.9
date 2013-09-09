@@ -391,8 +391,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 		ccsr_channel_enable_clr_true_f());
 
 	/* preempt the channel */
-	gk20a_fifo_preempt_channel(ch->g,
-		ENGINE_GR_GK20A, ch->hw_chid);
+	gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
 
 	/* remove channel from runlist */
 	channel_gk20a_update_runlist(ch, false);
@@ -1663,8 +1662,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 				gk20a_readl(g, ccsr_channel_r(chid)) |
 				ccsr_channel_enable_clr_true_f());
 			/* preempt the channel */
-			gk20a_fifo_preempt_channel(g,
-				ENGINE_GR_GK20A, chid);
+			gk20a_fifo_preempt_channel(g, chid);
 
 			channels_in_use = true;
 		}

@@ -137,8 +137,7 @@ int gk20a_init_fifo_support(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
 
-int gk20a_fifo_preempt_channel(struct gk20a *g,
-			u32 engine_id, u32 hw_chid);
+int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid);
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 			struct fifo_engine_info_gk20a *eng_info);

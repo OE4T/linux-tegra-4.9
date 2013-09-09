@@ -219,6 +219,12 @@ struct nvhost_device_data {
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
 
+	/*
+	 * Reset the unit. Used for timeout recovery, resetting the unit on
+	 * probe and when un-powergating.
+	 */
+	int (*reset)(struct platform_device *dev);
+
 	/* Device is busy. */
 	void (*busy)(struct platform_device *);
 

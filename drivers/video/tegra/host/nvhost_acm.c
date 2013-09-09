@@ -80,6 +80,11 @@ static void do_module_reset_locked(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	if (pdata->reset) {
+		pdata->reset(dev);
+		return;
+	}
+
 	/* assert module and mc client reset */
 	if (pdata->powergate_ids[0] != -1)
 		tegra_powergate_mc_flush(pdata->powergate_ids[0]);

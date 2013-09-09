@@ -130,8 +130,7 @@ struct fifo_gk20a {
 
 	} intr;
 
-	/* Override for MMU fault in case of recovery procedure */
-	struct channel_gk20a *mmu_fault_channel;
+	u32 mmu_fault_engines;
 };
 
 int gk20a_init_fifo_support(struct gk20a *g);

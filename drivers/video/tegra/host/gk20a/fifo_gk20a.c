@@ -36,6 +36,37 @@
 #include "hw_mc_gk20a.h"
 #include "hw_gr_gk20a.h"
 
+/*
+ * Link engine IDs to MMU IDs and vice versa.
+ */
+
+static inline u32 gk20a_engine_id_to_mmu_id(u32 engine_id)
+{
+	switch (engine_id) {
+	case ENGINE_GR_GK20A:
+		return 0x00;
+	case ENGINE_CE2_GK20A:
+		return 0x1b;
+	default:
+		WARN_ON(true);
+		return ~0;
+	}
+}
+
+static inline u32 gk20a_mmu_id_to_engine_id(u32 engine_id)
+{
+	switch (engine_id) {
+	case 0x00:
+		return ENGINE_GR_GK20A;
+	case 0x1b:
+		return ENGINE_CE2_GK20A;
+	default:
+		WARN_ON(true);
+		return ~0;
+	}
+}
+
+
 static int init_engine_info(struct fifo_gk20a *f)
 {
 	struct fifo_engine_info_gk20a *gr_info;
@@ -771,24 +802,31 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
-	ulong fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
-	struct channel_gk20a *fault_ch = NULL;
-	u32 engine_id;
+	/* for storing (global) information about the fault */
+	bool fake_fault;
+	ulong fault_id;
+
+	u32 engine_mmu_id;
 
 	nvhost_dbg_fn("");
 
 	nvhost_debug_dump(g->host);
 
 	/* If we have recovery in progress, MMU fault id is invalid */
-	if (g->fifo.mmu_fault_channel) {
-		fault_ch = g->fifo.mmu_fault_channel;
-		fault_id = BIT(ENGINE_GR_GK20A);
-		g->fifo.mmu_fault_channel = NULL;
-	}
+	if (g->fifo.mmu_fault_engines) {
+		fault_id = g->fifo.mmu_fault_engines;
+		g->fifo.mmu_fault_engines = 0;
+		fake_fault = true;
+	} else
+		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
 
-	/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to engines */
-	for_each_set_bit(engine_id, &fault_id, BITS_PER_LONG) {
+	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
+		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
+		 * engines. Convert engine_mmu_id to engine_id */
+		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
 		struct fifo_mmu_fault_info_gk20a f;
+
+		struct channel_gk20a *fault_ch = NULL;
 
 		get_exception_mmu_fault_info(g, engine_id, &f);
 
@@ -811,6 +849,33 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			   f.fault_hi_v, f.fault_lo_v,
 			   f.fault_type_v, f.fault_type_desc,
 			   f.fault_info_v, f.inst_ptr);
+
+		/* get the channel */
+		if (fake_fault) {
+			/* read and parse engine status */
+			u32 status = gk20a_readl(g,
+				fifo_engine_status_r(engine_id));
+			u32 ctx_status =
+				fifo_engine_status_ctx_status_v(status);
+			bool type_ch = !(status &
+				fifo_pbdma_status_id_type_tsgid_f());
+
+			/* use next_id if context load is failing */
+			u32 id = (ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
+				fifo_engine_status_next_id_v(status) :
+				fifo_engine_status_id_v(status);
+
+			if (type_ch) {
+				fault_ch = g->fifo.channel + id;
+			} else {
+				nvhost_err(dev_from_gk20a(g), "TSG is not supported");
+				WARN_ON(1);
+			}
+		} else {
+			/* read channel based on instruction pointer */
+			fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
+		}
 
 		/* Reset engine and MMU fault */
 		gk20a_fifo_reset_engine(g, engine_id);
@@ -845,24 +910,32 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	}
 }
 
-static void gk20a_fifo_recover(struct gk20a *g, u32 chid)
+void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)
 {
-	/*
-	 * Force preempt by faking an MMU fault. Because fault
-	 * id is bogus for fake MMU faults, store the data
-	 * needed for processing the fault in CPU.
-	 */
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	u32 engine_id;
 	int ret;
 
-	g->fifo.mmu_fault_channel = g->fifo.channel + chid;
-	gk20a_writel(g, fifo_intr_0_r(),
-			fifo_intr_0_sched_error_reset_f());
-	gk20a_writel(g, fifo_trigger_mmu_fault_r(0),
-			fifo_trigger_mmu_fault_id_f(0) |
-			fifo_trigger_mmu_fault_enable_f(1));
+	/* store faulted engines in advance */
+	g->fifo.mmu_fault_engines = 0;
+	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG)
+		g->fifo.mmu_fault_engines |=
+			BIT(gk20a_engine_id_to_mmu_id(engine_id));
+
+	/* trigger faults for all bad engines */
+	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG) {
+		if (engine_id > g->fifo.max_engines) {
+			WARN_ON(true);
+			break;
+		}
+
+		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
+			     fifo_trigger_mmu_fault_id_f(
+			     gk20a_engine_id_to_mmu_id(engine_id)) |
+			     fifo_trigger_mmu_fault_enable_f(1));
+	}
 
 	/* Wait for MMU fault to trigger */
 	ret = -EBUSY;
@@ -879,22 +952,11 @@ static void gk20a_fifo_recover(struct gk20a *g, u32 chid)
 			!tegra_platform_is_silicon());
 
 	if (ret)
-		nvhost_err(dev_from_gk20a(g),
-				"mmu fault timeout");
+		nvhost_err(dev_from_gk20a(g), "mmu fault timeout");
 
-	/* Fault triggered - don't force fake fault anymore */
-	gk20a_writel(g, fifo_trigger_mmu_fault_r(0), 0);
-}
-
-static void gk20a_fifo_recover_eng(struct gk20a *g, u32 engine_id)
-{
-	u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
-
-	/* We know only about channels - not TSG's */
-	if (fifo_engine_status_id_type_v(status)) {
-		gk20a_fifo_recover(g,
-				fifo_engine_status_id_v(status));
-	}
+	/* release mmu fault trigger */
+	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG)
+		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
 }
 
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
@@ -945,7 +1007,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 
 	if (fifo_intr_sched_error_code_f(sched_error) ==
 	    fifo_intr_sched_error_code_ctxsw_timeout_v()) {
-		gk20a_fifo_recover(g, id);
+		gk20a_fifo_recover(g, BIT(engine_id));
 		return false;
 	}
 
@@ -1172,7 +1234,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 engine_id, u32 hw_chid)
 		nvhost_err(dev_from_gk20a(g),
 			    "preempt channel %d timeout\n",
 			    hw_chid);
-		gk20a_fifo_recover(g, hw_chid);
+		gk20a_fifo_recover(g, BIT(engine_id));
 	}
 
 	/* re-enable elpg or release pmu mutex */
@@ -1388,7 +1450,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g,
 
 	if (remain == 0 && pending != 0) {
 		nvhost_err(dev_from_gk20a(g), "runlist update timeout");
-		gk20a_fifo_recover_eng(g, engine_id);
+		gk20a_fifo_recover(g, BIT(engine_id));
 		wait_event_timeout(
 			runlist->runlist_wq,
 			((pending =

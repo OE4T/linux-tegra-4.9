@@ -802,11 +802,10 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
-	/* for storing (global) information about the fault */
 	bool fake_fault;
 	ulong fault_id;
-
 	u32 engine_mmu_id;
+	int i;
 
 	nvhost_dbg_fn("");
 
@@ -820,16 +819,22 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	} else
 		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
 
+	/* lock all runlists */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_lock(&g->fifo.runlist_info[i].mutex);
+
+	/* go through all faulted engines */
 	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
 		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
 		 * engines. Convert engine_mmu_id to engine_id */
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
+		u32 runlist_id = g->fifo.engine_info[engine_id].runlist_id;
+		struct fifo_runlist_info_gk20a *runlist =
+			&g->fifo.runlist_info[runlist_id];
 		struct fifo_mmu_fault_info_gk20a f;
-
-		struct channel_gk20a *fault_ch = NULL;
+		struct channel_gk20a *ch = NULL;
 
 		get_exception_mmu_fault_info(g, engine_id, &f);
-
 		trace_nvhost_gk20a_mmu_fault(f.fault_hi_v,
 					     f.fault_lo_v,
 					     f.fault_info_v,
@@ -838,7 +843,6 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 					     f.engine_subid_desc,
 					     f.client_desc,
 					     f.fault_type_desc);
-
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
 			   "engined subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
@@ -867,47 +871,67 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 				fifo_engine_status_id_v(status);
 
 			if (type_ch) {
-				fault_ch = g->fifo.channel + id;
+				ch = g->fifo.channel + id;
 			} else {
 				nvhost_err(dev_from_gk20a(g), "TSG is not supported");
 				WARN_ON(1);
 			}
 		} else {
 			/* read channel based on instruction pointer */
-			fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
+			ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
 		}
 
-		/* Reset engine and MMU fault */
-		gk20a_fifo_reset_engine(g, engine_id);
-
-		if (!fault_ch)
-			fault_ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
-		if (fault_ch) {
-			if (fault_ch->hwctx) {
-				nvhost_dbg_fn("channel with hwctx has generated an mmu fault");
-				fault_ch->hwctx->has_timedout = true;
+		if (ch) {
+			if (ch->hwctx) {
+				nvhost_err(dev_from_gk20a(g), "channel with hwctx has generated an mmu fault");
+				ch->hwctx->has_timedout = true;
 			}
-			if (fault_ch->in_use) {
-				gk20a_disable_channel(fault_ch, false,
-						gk20a_get_gr_idle_timeout(g));
-				fault_ch->hwctx->has_timedout = true;
+
+			if (ch->in_use) {
+
+				/* disable the channel from hw and increment
+				 * syncpoints */
+				gk20a_disable_channel_no_update(ch);
+
+				/* remove the channel from runlist */
+				clear_bit(ch->hw_chid,
+					  runlist->active_channels);
+
+				/* mark channel as faulted */
+				ch->hwctx->has_timedout = true;
 			}
 		} else if (f.inst_ptr ==
 				sg_phys(g->mm.bar1.inst_block.mem.sgt->sgl)) {
-			nvhost_dbg_fn("mmu fault from bar1");
+			nvhost_err(dev_from_gk20a(g), "mmu fault from bar1");
 		} else if (f.inst_ptr ==
 				sg_phys(g->mm.pmu.inst_block.mem.sgt->sgl)) {
-			nvhost_dbg_fn("mmu fault from pmu");
+			nvhost_err(dev_from_gk20a(g), "mmu fault from pmu");
 		} else
-			nvhost_dbg_fn("couldn't locate channel for mmu fault");
-
-		/* clear mmu interrupt */
-		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-
-		/* resume scheduler */
-		gk20a_writel(g, fifo_error_sched_disable_r(),
-				gk20a_readl(g, fifo_error_sched_disable_r()));
+			nvhost_err(dev_from_gk20a(g), "couldn't locate channel for mmu fault");
 	}
+
+	/* unlock all runlists */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_unlock(&g->fifo.runlist_info[i].mutex);
+
+	/* reset engines */
+	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
+		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
+		gk20a_fifo_reset_engine(g, engine_id);
+	}
+
+	/* update the runlists. Do not wait for runlist to start as
+	 * the scheduler is currently disabled and it would therefore
+	 * fail anyway */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		gk20a_fifo_update_runlist(g, i, ~0, true, false);
+
+	/* clear interrupt */
+	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+
+	/* resume scheduler */
+	gk20a_writel(g, fifo_error_sched_disable_r(),
+		     gk20a_readl(g, fifo_error_sched_disable_r()));
 }
 
 void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)

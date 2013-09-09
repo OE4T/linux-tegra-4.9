@@ -174,6 +174,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish);
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool wait_for_finish,
 			   unsigned long finish_timeout);
+void gk20a_disable_channel_no_update(struct channel_gk20a *ch);
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args);

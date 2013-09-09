@@ -366,27 +366,33 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 	return gk20a_fifo_update_runlist(c->g, 0, c->hw_chid, add, true);
 }
 
+void gk20a_disable_channel_no_update(struct channel_gk20a *ch)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
+	struct nvhost_master *host = host_from_gk20a_channel(ch);
+
+	/* ensure no fences are pending */
+	nvhost_syncpt_set_min_eq_max(&host->syncpt,
+				     ch->hw_chid + pdata->syncpt_base);
+
+	/* disable channel */
+	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+		     gk20a_readl(ch->g,
+		     ccsr_channel_r(ch->hw_chid)) |
+		     ccsr_channel_enable_clr_true_f());
+}
+
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool finish,
 			   unsigned long finish_timeout)
 {
-	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
-	struct nvhost_master *host = host_from_gk20a_channel(ch);
-	int err;
-
 	if (finish) {
-		err = gk20a_channel_finish(ch, finish_timeout);
+		int err = gk20a_channel_finish(ch, finish_timeout);
 		WARN_ON(err);
 	}
 
-	/* ensure no fences are pending */
-	nvhost_syncpt_set_min_eq_max(&host->syncpt,
-			ch->hw_chid + pdata->syncpt_base);
-
-	/* disable channel */
-	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-		gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
-		ccsr_channel_enable_clr_true_f());
+	/* disable the channel from hw and increment syncpoints */
+	gk20a_disable_channel_no_update(ch);
 
 	/* preempt the channel */
 	gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);

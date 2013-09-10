@@ -1508,7 +1508,8 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 
 	if (!tegra_platform_is_linsim()) {
 		reinit_completion(&dc->crc_complete);
-		if (wait_for_completion_interruptible(&dc->crc_complete)) {
+		if (dc->crc_pending &&
+		    wait_for_completion_interruptible(&dc->crc_complete)) {
 			pr_err("CRC read interrupted.\n");
 			goto crc_error;
 		}
@@ -1820,6 +1821,7 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 
 	if (status & FRAME_END_INT) {
 		/* Mark the frame_end as complete. */
+		dc->crc_pending = false;
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);
 		if (!completion_done(&dc->crc_complete))
@@ -2145,6 +2147,8 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		dc->syncpt[i].min = dc->syncpt[i].max =
 			nvhost_syncpt_read_ext(dc->ndev, syncpt);
 	}
+
+	dc->crc_pending = false;
 
 	trace_display_mode(dc, &dc->mode);
 

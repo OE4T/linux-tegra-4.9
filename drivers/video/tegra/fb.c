@@ -46,6 +46,10 @@
 /* Pad pitch to 256-byte boundary. */
 #define TEGRA_LINEAR_PITCH_ALIGNMENT 256
 
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+static struct fb_videomode tmp_mode;
+#endif
+
 struct tegra_fb_info {
 	struct tegra_dc_win	*win;
 	struct platform_device	*ndev;
@@ -161,8 +165,27 @@ static int tegra_fb_set_par(struct fb_info *info)
 		/* Load framebuffer info with new mode details*/
 		old_mode = info->mode;
 		old_len  = info->fix.line_length;
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		tmp_mode.name = NULL;
+		tmp_mode.xres = m.xres;
+		tmp_mode.yres = m.yres;
+		tmp_mode.pixclock = m.pixclock;
+		tmp_mode.hsync_len = m.hsync_len;
+		tmp_mode.vsync_len = m.vsync_len;
+		tmp_mode.left_margin = m.left_margin;
+		tmp_mode.right_margin = m.right_margin;
+		tmp_mode.upper_margin = m.upper_margin;
+		tmp_mode.lower_margin = m.lower_margin;
+		tmp_mode.sync = m.sync;
+		tmp_mode.vmode = m.vmode;
+		tmp_mode.flag = m.flag;
+		tmp_mode.refresh = m.refresh;
+		info->mode = &tmp_mode;
+#else
 		memcpy(&tegra_fb->mode, &m, sizeof(tegra_fb->mode));
+
 		info->mode = (struct fb_videomode *)&tegra_fb->mode;
+#endif
 		if (!info->mode) {
 			dev_warn(&tegra_fb->ndev->dev, "can't match video mode\n");
 			info->mode = old_mode;

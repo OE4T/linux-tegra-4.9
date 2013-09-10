@@ -26,6 +26,7 @@
 #include "nvhost_hwctx.h"
 #include <trace/events/nvhost.h>
 #include <linux/slab.h>
+#include "nvhost_sync.h"
 
 #include "nvhost_hwctx.h"
 #include "nvhost_intr.h"
@@ -111,6 +112,46 @@ static void submit_ctxsave(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
 	nvhost_job_get_hwctx(job, cur_ctx);
 
 	trace_nvhost_channel_context_save(ch->dev->name, cur_ctx);
+}
+
+static void add_sync_waits(struct nvhost_channel *ch, int fd)
+{
+	struct sync_fence *fence;
+	struct sync_pt *_pt;
+	struct nvhost_sync_pt *pt;
+	struct list_head *pos;
+
+	if (fd < 0)
+		return;
+
+	fence = nvhost_sync_fdget(fd);
+	if (!fence)
+		return;
+
+	/*
+	 * Force serialization by inserting a host wait for the
+	 * previous job to finish before this one can commence.
+	 *
+	 * NOTE! This cannot be packed because otherwise we might
+	 * overwrite the RESTART opcode at the end of the push
+	 * buffer.
+	 */
+
+	list_for_each(pos, &fence->pt_list_head) {
+		u32 id;
+		u32 thresh;
+
+		_pt = container_of(pos, struct sync_pt, pt_list);
+		pt = to_nvhost_sync_pt(_pt);
+		id = nvhost_sync_pt_id(pt);
+		thresh = nvhost_sync_pt_thresh(pt);
+
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_r(), 1),
+			nvhost_class_host_wait_syncpt(id, thresh));
+	}
+	sync_fence_put(fence);
 }
 
 static void submit_ctxrestore(struct nvhost_job *job)
@@ -206,6 +247,7 @@ static void submit_gathers(struct nvhost_job *job)
 			class_id = g->class_id;
 		}
 
+		add_sync_waits(job->ch, g->pre_fence);
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from
 		 * memory to a register. */

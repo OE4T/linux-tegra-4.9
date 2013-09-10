@@ -51,6 +51,11 @@ struct nvhost_cmdbuf {
 	__u32 words;
 } __packed;
 
+struct nvhost_cmdbuf_ext {
+	__s32 pre_fence;
+	__u32 reserved;
+};
+
 struct nvhost_reloc {
 	__u32 cmdbuf_mem;
 	__u32 cmdbuf_offset;
@@ -267,6 +272,7 @@ struct nvhost32_submit_args {
 	__u32 class_ids;
 
 	__u32 pad[2];		/* future expansion */
+
 	__u32 fences;
 	__u32 fence;		/* Return value */
 } __packed;
@@ -280,8 +286,9 @@ struct nvhost_submit_args {
 	__u32 timeout;
 	__u32 syncpt_incrs;
 	__u32 fence;		/* Return value */
+	__u64 cmdbuf_exts;
 
-	__u64 pad[4];		/* future expansion */
+	__u64 pad[3];		/* future expansion */
 
 	__u64 cmdbufs;
 	__u64 relocs;

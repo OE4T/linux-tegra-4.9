@@ -373,6 +373,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int num_syncpt_incrs = args->num_syncpt_incrs;
 	struct nvhost_cmdbuf __user *cmdbufs =
 		(struct nvhost_cmdbuf *)(uintptr_t)args->cmdbufs;
+	struct nvhost_cmdbuf __user *cmdbuf_exts =
+		(struct nvhost_cmdbuf *)(uintptr_t)args->cmdbuf_exts;
 	struct nvhost_reloc __user *relocs =
 		(struct nvhost_reloc *)(uintptr_t)args->relocs;
 	struct nvhost_reloc_shift __user *reloc_shifts =
@@ -426,14 +428,21 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	for (i = 0; i < num_cmdbufs; ++i) {
 		struct nvhost_cmdbuf cmdbuf;
+		struct nvhost_cmdbuf_ext cmdbuf_ext;
 		u32 class_id = class_ids ? local_class_ids[i] : 0;
 
 		err = copy_from_user(&cmdbuf, cmdbufs + i, sizeof(cmdbuf));
 		if (err)
 			goto fail;
 
+		err = copy_from_user(&cmdbuf_ext,
+				cmdbuf_exts + i, sizeof(cmdbuf_ext));
+		if (err)
+			cmdbuf_ext.pre_fence = -1;
+
 		nvhost_job_add_gather(job, cmdbuf.mem, cmdbuf.words,
-				cmdbuf.offset, class_id);
+				      cmdbuf.offset, class_id,
+				      cmdbuf_ext.pre_fence);
 	}
 
 	kfree(local_class_ids);

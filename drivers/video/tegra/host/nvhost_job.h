@@ -38,6 +38,7 @@ struct nvhost_job_gather {
 	u32 class_id;
 	int offset;
 	struct mem_handle *ref;
+	int pre_fence;
 };
 
 struct nvhost_job_syncpt {
@@ -130,7 +131,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
  * Add a gather to a job.
  */
 void nvhost_job_add_gather(struct nvhost_job *job,
-		u32 mem_id, u32 words, u32 offset, u32 class_id);
+		u32 mem_id, u32 words, u32 offset, u32 class_id, int pre_fence);
 
 /*
  * Increment reference going to nvhost_job.

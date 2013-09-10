@@ -154,7 +154,7 @@ void nvhost_job_put(struct nvhost_job *job)
 }
 
 void nvhost_job_add_gather(struct nvhost_job *job,
-		u32 mem_id, u32 words, u32 offset, u32 class_id)
+		u32 mem_id, u32 words, u32 offset, u32 class_id, int pre_fence)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	struct nvhost_job_gather *cur_gather =
@@ -164,6 +164,7 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	cur_gather->mem_id = mem_id;
 	cur_gather->offset = offset;
 	cur_gather->class_id = class_id ? class_id : pdata->class;
+	cur_gather->pre_fence = pre_fence;
 	job->num_gathers += 1;
 }
 

@@ -44,6 +44,7 @@ int nvhost_sync_create_fence(
 		const char *name,
 		s32 *fence_fd);
 struct sync_fence *nvhost_sync_fdget(int fd);
+int nvhost_sync_num_pts(struct sync_fence *fence);
 struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt);
 u32 nvhost_sync_pt_id(struct nvhost_sync_pt *pt);
 u32 nvhost_sync_pt_thresh(struct nvhost_sync_pt *pt);
@@ -74,6 +75,11 @@ static inline int nvhost_sync_create_fence(
 static inline struct sync_fence *nvhost_sync_fdget(int fd)
 {
 	return NULL;
+}
+
+static int nvhost_sync_num_pts(struct sync_fence *fence)
+{
+	return 0;
 }
 
 static inline struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt)

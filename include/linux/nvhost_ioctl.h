@@ -126,6 +126,8 @@ struct nvhost_fence {
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
 /* choose between different gpfifo entry format */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
+/* create a sync fence fd instead of raw fence */
+#define NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	BIT(3)
 
 struct nvhost_submit_gpfifo_args {
 	__u64 gpfifo;

@@ -901,7 +901,6 @@ static int gk20a_probe(struct platform_device *dev)
 					S_IRUGO|S_IWUSR,
 					pdata->debugfs,
 					&gk20a->timeouts_enabled);
-	pmu_gk20a_debugfs_init(dev);
 #endif
 
 	return 0;

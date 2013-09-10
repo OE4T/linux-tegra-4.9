@@ -238,7 +238,6 @@ void gk20a_create_sysfs(struct platform_device *dev);
 
 #ifdef CONFIG_DEBUG_FS
 int clk_gk20a_debugfs_init(struct platform_device *dev);
-int pmu_gk20a_debugfs_init(struct platform_device *dev);
 #endif
 
 extern const struct file_operations tegra_gk20a_ctrl_ops;

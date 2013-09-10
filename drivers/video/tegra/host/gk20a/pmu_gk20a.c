@@ -23,7 +23,6 @@
 #include <linux/firmware.h>
 #include <linux/nvmap.h>
 #include <linux/module.h>
-#include <linux/debugfs.h>
 
 #include "../dev.h"
 #include "../bus_client.h"
@@ -1499,29 +1498,6 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
 
-
-	/* We don't want to disturb counters #3 and #6, which are used by
-	 * perfmon, so we perfmon the same wiring for #1 and #2 and use
-	 * them to keep track of GPU load.
-	 */
-	gk20a_writel(g, pwr_pmu_idle_mask_r(1),
-		pwr_pmu_idle_mask_gr_enabled_f() |
-		pwr_pmu_idle_mask_ce_2_enabled_f());
-
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(1));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_busy_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(1), data);
-
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(2));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_always_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
-
 	pmu->sample_buffer = 0;
 	err = pmu->dmem.alloc(&pmu->dmem, &pmu->sample_buffer, 2 * sizeof(u16));
 	if (err) {
@@ -2610,102 +2586,3 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 
 	return 0;
 }
-
-#ifdef CONFIG_DEBUG_FS
-static int load_get(void *data, u64 *val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	struct pmu_gk20a *pmu = &(g->pmu);
-	unsigned long busy_cycles;
-	unsigned long total_cycles;
-	u64 busy_64, total_64;
-	u32 reg_val;
-
-	if (!pmu->initialized) {
-		nvhost_err(dev_from_gk20a(g),
-			"PMU isn't ready, can't retrieve stats\n");
-		return -ENODEV;
-	}
-
-	/* The counters will very easily overflow. Therefore we reset */
-	reg_val = pwr_pmu_idle_count_reset_f(1);
-
-	/* total cycles should always be larger than busy cycles. therefore,
-	 * enforce the order.
-	 * Counter #2, counting total cycles, resets first, then Counter #1*/
-	gk20a_writel(g, pwr_pmu_idle_count_r(2), reg_val);
-	wmb();
-	gk20a_writel(g, pwr_pmu_idle_count_r(1), reg_val);
-
-	/* Wait for 300ms as a sampling period */
-	msleep(300);
-
-	/* total cycles should always be larger than busy cycles. therefore,
-	 * enforce the order */
-	busy_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(1)));
-	rmb();
-	total_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(2)));
-
-	/* Result scaled to 10000 */
-	busy_64 = ((u64)busy_cycles * (u64)10000);
-	total_64 = total_cycles;
-
-
-	if (total_cycles)
-		*val = div64_u64(busy_64, total_64);
-	else
-		*val = 0;
-
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(load_fops, load_get, NULL, "%llu\n");
-
-static int elpg_stats_show(struct seq_file *s, void *data)
-{
-	/* FIXME: Add call to dump elpg stats */
-	seq_printf(s," ELPG: Stats will be dumped here\n");
-	return 0;
-}
-
-static int elpg_stats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, elpg_stats_show, inode->i_private);
-}
-
-static const struct file_operations elpg_stats_fops = {
-	.open		= elpg_stats_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-int pmu_gk20a_debugfs_init(struct platform_device *dev)
-{
-	struct dentry *d, *pmu_dir;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct gk20a *g = get_gk20a(dev);
-
-	pmu_dir = debugfs_create_dir("pmu", pdata->debugfs);
-	if (!pmu_dir)
-		goto err_out;
-
-	d = debugfs_create_file(
-		"gpu_load", S_IRUGO|S_IWUSR, pmu_dir, g, &load_fops);
-	if (!d)
-		goto err_out;
-
-	d = debugfs_create_file(
-		"elpg_stats", S_IRUGO|S_IWUSR, pmu_dir, g, &elpg_stats_fops);
-	if (!d)
-		goto err_out;
-
-	return 0;
-
-err_out:
-	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(pmu_dir);
-	return -ENOMEM;
-}
-#endif

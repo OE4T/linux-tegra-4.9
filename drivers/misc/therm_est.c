@@ -793,25 +793,6 @@ static int therm_est_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static void therm_est_shutdown(struct platform_device *pdev)
-{
-
-	struct therm_estimator *est = platform_get_drvdata(pdev);
-	int i;
-
-	cancel_delayed_work(&est->therm_est_work);
-	cancel_delayed_work_sync(&est->timer_trip_work);
-
-#ifdef CONFIG_PM
-	unregister_pm_notifier(&est->pm_nb);
-#endif
-	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
-		device_remove_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
-	thermal_zone_device_unregister(est->thz);
-	kfree(est->thz);
-	est->thz = NULL;
-}
-
 static struct platform_driver therm_est_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
@@ -819,7 +800,6 @@ static struct platform_driver therm_est_driver = {
 	},
 	.probe  = therm_est_probe,
 	.remove = therm_est_remove,
-	.shutdown = therm_est_shutdown,
 };
 
 static int __init therm_est_driver_init(void)

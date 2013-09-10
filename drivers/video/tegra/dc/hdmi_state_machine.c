@@ -132,6 +132,12 @@ static void hdmi_state_machine_handle_hpd_l(int cur_hpd)
 		work_state.edid_reads = 0;
 		tgt_state = HDMI_STATE_DONE_RECHECK_EDID;
 		timeout = CHECK_EDID_DELAY_MS;
+	} else
+	if (HDMI_STATE_DONE_ENABLED == work_state.state && cur_hpd) {
+		/* Looks like HPD dropped but came back quickly, ignore it.
+		 */
+		pr_info("%s: ignoring bouncing hpd\n", __func__);
+		return;
 	} else {
 		/* Looks like there was HPD activity while we were neither
 		 * waiting for it to go away during steady state output, nor

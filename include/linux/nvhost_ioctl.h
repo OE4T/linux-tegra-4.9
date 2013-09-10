@@ -277,6 +277,8 @@ struct nvhost32_submit_args {
 	__u32 fence;		/* Return value */
 } __packed;
 
+#define NVHOST_SUBMIT_FLAG_SYNC_FENCE_FD	0
+
 struct nvhost_submit_args {
 	__u32 submit_version;
 	__u32 num_syncpt_incrs;
@@ -287,8 +289,10 @@ struct nvhost_submit_args {
 	__u32 syncpt_incrs;
 	__u32 fence;		/* Return value */
 	__u64 cmdbuf_exts;
+	__u32 flags;
 
-	__u64 pad[3];		/* future expansion */
+	__u32 reserved;
+	__u64 pad[2];		/* future expansion */
 
 	__u64 cmdbufs;
 	__u64 relocs;

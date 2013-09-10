@@ -54,6 +54,7 @@
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"
 #include "user_hwctx.h"
+#include "nvhost_sync.h"
 
 static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 {
@@ -568,7 +569,20 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	/* Deliver the fence using the old mechanism _only_ if a single
 	 * syncpoint is used. */
 
-	if (num_syncpt_incrs == 1)
+	if (args->flags & BIT(NVHOST_SUBMIT_FLAG_SYNC_FENCE_FD)) {
+		struct nvhost_ctrl_sync_fence_info pts[num_syncpt_incrs];
+
+		for (i = 0; i < num_syncpt_incrs; i++) {
+			pts[i].id = job->sp[i].id;
+			pts[i].thresh = job->sp[i].fence;
+		}
+
+		err = nvhost_sync_create_fence(
+				&nvhost_get_host(ctx->ch->dev)->syncpt,
+				pts, num_syncpt_incrs, "fence", &args->fence);
+		if (err)
+			goto fail;
+	} else if (num_syncpt_incrs == 1)
 		args->fence = job->sp[job->hwctx_syncpt_idx].fence;
 	else
 		args->fence = 0;

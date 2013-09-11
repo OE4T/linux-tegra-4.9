@@ -39,7 +39,6 @@ struct nvhost_nvmap_as_data {
 	size_t len;
 	struct sg_table *sgt;
 	int pin_count;
-	int nvmap_pin_count;
 	int flags;
 };
 
@@ -210,7 +209,6 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		}
 
 		sg_dma_address(sgt->sgl) = addr;
-		as_priv->nvmap_pin_count++;
 	} else if (as_priv->pin_count == 0 &&
 		   sg_dma_address(sgt->sgl) == 0) {
 		int ents;
@@ -245,14 +243,6 @@ void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 	mutex_lock(&priv->lock);
 	as = priv->as[tegra_smmu_get_asid(dev)];
 	if (as) {
-		if (as->flags & BIT(FLAG_CARVEOUT))
-			;
-		else if (as->flags & BIT(FLAG_NVMAP_MAPPED) &&
-			 as->nvmap_pin_count) {
-			as->nvmap_pin_count--;
-			sg_dma_address(as->sgt->sgl) = 0;
-			nvmap_unpin(as->client, as->ref);
-		}
 		as->pin_count--;
 		WARN_ON(as->pin_count < 0);
 	}

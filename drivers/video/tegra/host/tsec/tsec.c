@@ -586,9 +586,11 @@ static int tsec_probe(struct platform_device *dev)
 
 	nvhost_module_busy(dev);
 	/* Reset TSEC at boot-up. Otherwise it starts sending interrupts. */
-	tegra_periph_reset_assert(pdata->clk[0]);
-	udelay(10);
-	tegra_periph_reset_deassert(pdata->clk[0]);
+	if (pdata->clocks[0].reset) {
+		tegra_periph_reset_assert(pdata->clk[0]);
+		udelay(10);
+		tegra_periph_reset_deassert(pdata->clk[0]);
+	}
 	nvhost_module_idle(dev);
 
 	return err;

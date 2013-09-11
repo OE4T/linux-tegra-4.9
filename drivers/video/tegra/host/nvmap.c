@@ -186,7 +186,9 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 			return ERR_PTR(-ENOMEM);
 		}
 
-		if (asid == tegra_smmu_get_asid(NULL) && !IS_ERR_VALUE(addr))
+		if (IS_ENABLED(CONFIG_TEGRA_GRHOST_FORCE_NVMAP)
+				|| (asid == tegra_smmu_get_asid(NULL)
+					&& !IS_ERR_VALUE(addr)))
 			as_priv->flags |= BIT(FLAG_NVMAP_MAPPED);
 
 		if (heap & NVMAP_HEAP_CARVEOUT_MASK)

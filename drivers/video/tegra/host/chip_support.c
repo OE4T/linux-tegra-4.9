@@ -56,6 +56,11 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 		err = nvhost_init_t124_support(host, nvhost_chip_ops);
 		break;
 
+	case TEGRA_CHIPID_TEGRA21:
+		nvhost_chip_ops->soc_name = "tegra21x";
+		err = nvhost_init_t124_support(host, nvhost_chip_ops);
+		break;
+
 	default:
 		err = -ENODEV;
 	}

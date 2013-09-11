@@ -653,6 +653,10 @@ static struct of_device_id tegra_host1x_of_match[] = {
 	{ .compatible = "nvidia,tegra124-host1x",
 		.data = (struct nvhost_device_data *)&t124_host1x_info },
 #endif
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-host1x",
+		.data = (struct nvhost_device_data *)&t21_host1x_info },
+#endif
 	{ },
 };
 

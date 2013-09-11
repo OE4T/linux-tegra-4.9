@@ -191,6 +191,15 @@ struct nvhost_chip_support {
 #define TEGRA_2X_OR_HIGHER_CONFIG
 #endif
 
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#define TEGRA_21X_OR_HIGHER_CONFIG
+#define TEGRA_12X_OR_HIGHER_CONFIG
+#define TEGRA_14X_OR_HIGHER_CONFIG
+#define TEGRA_11X_OR_HIGHER_CONFIG
+#define TEGRA_3X_OR_HIGHER_CONFIG
+#define TEGRA_2X_OR_HIGHER_CONFIG
+#endif
+
 struct nvhost_chip_support *nvhost_get_chip_ops(void);
 
 #define host_device_op()	(nvhost_get_chip_ops()->nvhost_dev)

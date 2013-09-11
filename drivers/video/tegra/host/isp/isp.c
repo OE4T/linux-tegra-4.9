@@ -55,6 +55,10 @@ static struct of_device_id tegra_isp_of_match[] = {
 	{ .compatible = "nvidia,tegra124-isp",
 		.data = (struct nvhost_device_data *)&t124_isp_info },
 #endif
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-isp",
+		.data = (struct nvhost_device_data *)&t21_isp_info },
+#endif
 	{ },
 };
 

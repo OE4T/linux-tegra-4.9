@@ -399,6 +399,10 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 }
 
 static struct of_device_id tegra_nvdec_of_match[] = {
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-nvdec",
+		.data = (struct nvhost_device_data *)&t21_nvdec_info },
+#endif
 	{ },
 };
 

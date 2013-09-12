@@ -55,6 +55,7 @@ extern struct tegra_panel dsi_s_wqxga_10_1;
 extern struct tegra_panel dsi_a_1080p_14_0;
 extern struct tegra_panel edp_a_1080p_14_0;
 extern struct tegra_panel lvds_c_1366_14;
+extern struct tegra_panel dsi_l_720p_5_loki;
 
 void tegra_dsi_resources_init(u8 dsi_instance,
 			struct resource *resources, int n_resources);

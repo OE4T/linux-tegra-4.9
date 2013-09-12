@@ -422,7 +422,7 @@ static void loki_panel_select(void)
 
 	switch (board.board_id) {
 	default:
-		panel = &dsi_l_720p_5;
+		panel = &dsi_l_720p_5_loki;
 		break;
 	}
 	if (panel) {

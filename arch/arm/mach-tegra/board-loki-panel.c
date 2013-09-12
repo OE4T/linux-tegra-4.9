@@ -420,7 +420,11 @@ static void loki_panel_select(void)
 
 	tegra_get_display_board_info(&board);
 
-	switch (board.board_id) {
+	switch (board.fab) {
+	case 0x1:
+		panel = &dsi_j_1440_810_5_8;
+		break;
+	case 0x0:
 	default:
 		panel = &dsi_l_720p_5_loki;
 		break;

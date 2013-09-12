@@ -713,6 +713,9 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
 
+	if (!tegra_platform_is_silicon())
+		return;
+
 	if (use_new || dc->bw_kbps != dc->new_bw_kbps) {
 		long bw = max(dc->bw_kbps, dc->new_bw_kbps);
 

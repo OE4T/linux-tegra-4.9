@@ -821,8 +821,8 @@ static int dbg_dc_event_inject_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-static int dbg_dc_event_inject_write(struct file *file, const char __user *addr,
-	size_t len, loff_t *pos)
+static ssize_t dbg_dc_event_inject_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
 {
 	struct seq_file *m = file->private_data; /* single_open() initialized */
 	struct tegra_dc *dc = m ? m->private : NULL;

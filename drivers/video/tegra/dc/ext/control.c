@@ -26,6 +26,12 @@
 
 #include "tegra_dc_ext_priv.h"
 
+#ifdef CONFIG_COMPAT
+#define user_ptr(p) ((void __user *)(__u64)(p))
+#else
+#define user_ptr(p) (p)
+#endif
+
 static struct tegra_dc_ext_control g_control;
 
 int tegra_dc_ext_process_hotplug(int output)
@@ -97,7 +103,8 @@ static int get_output_edid(struct tegra_dc_ext_control_output_edid *edid)
 			goto done;
 		}
 
-		if (copy_to_user(edid->data, dc_edid->buf, edid->size)) {
+		if (copy_to_user(user_ptr(edid->data),
+				dc_edid->buf, edid->size)) {
 			ret = -EFAULT;
 			goto done;
 		}

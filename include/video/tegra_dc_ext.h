@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -21,6 +21,7 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
+#include <linux/compat.h>
 #if defined(__KERNEL__)
 # include <linux/time.h>
 #else
@@ -93,6 +94,15 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN	(1 << 6)
 #define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
 
+#ifdef CONFIG_COMPAT
+struct tegra_timespec {
+	__s32	tv_sec;		/* seconds */
+	__s32	tv_nsec;	/* nanoseconds */
+};
+#else
+#define tegra_timespec timespec
+#endif
+
 struct tegra_dc_ext_flip_windowattr {
 	__s32	index;
 	__u32	buff_id;
@@ -117,7 +127,7 @@ struct tegra_dc_ext_flip_windowattr {
 	__u32	out_h;
 	__u32	z;
 	__u32	swap_interval;
-	struct timespec timestamp;
+	struct tegra_timespec timestamp;
 	union {
 		struct {
 			__u32 pre_syncpt_id;
@@ -149,7 +159,11 @@ struct tegra_dc_ext_flip {
 };
 
 struct tegra_dc_ext_flip_2 {
+#ifdef CONFIG_COMPAT
+	__u32 win;
+#else
 	struct tegra_dc_ext_flip_windowattr *win;
+#endif
 	__u8 win_num;
 	__u8 reserved1; /* unused - must be 0 */
 	__u16 reserved2; /* unused - must be 0 */
@@ -324,9 +338,15 @@ struct tegra_dc_ext_lut {
 	__u32  flags;     /* Flag bitmask, see TEGRA_DC_EXT_LUT_FLAGS_* */
 	__u32  start;     /* start index to update lut from */
 	__u32  len;       /* number of valid lut entries */
+#ifdef CONFIG_COMPAT
+	__u32 r;         /* array of 16-bit red values, 0 to reset */
+	__u32 g;         /* array of 16-bit green values, 0 to reset */
+	__u32 b;         /* array of 16-bit blue values, 0 to reset */
+#else
 	__u16 *r;         /* array of 16-bit red values, 0 to reset */
 	__u16 *g;         /* array of 16-bit green values, 0 to reset */
 	__u16 *b;         /* array of 16-bit blue values, 0 to reset */
+#endif
 };
 
 /* tegra_dc_ext_lut.flags - override global fb device lookup table.
@@ -343,7 +363,11 @@ struct tegra_dc_ext_status {
 
 struct tegra_dc_ext_feature {
 	__u32 length;
+#ifdef CONFIG_COMPAT
+	__u32 entries;
+#else
 	__u32 *entries;
+#endif
 };
 
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
@@ -453,12 +477,20 @@ struct tegra_dc_ext_control_output_properties {
 struct tegra_dc_ext_control_output_edid {
 	__u32 handle;
 	__u32 size;
+#ifdef CONFIG_COMPAT
+	__u32 data;
+#else
 	void *data;
+#endif
 };
 
 struct tegra_dc_ext_event {
 	__u32	type;
+#ifdef CONFIG_COMPAT
+	__u32	data_size;
+#else
 	ssize_t	data_size;
+#endif
 	char	data[0];
 };
 

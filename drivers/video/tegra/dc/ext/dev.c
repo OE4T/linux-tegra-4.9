@@ -46,6 +46,17 @@ int tegra_dc_ext_devno;
 struct class *tegra_dc_ext_class;
 static int head_count;
 
+#ifdef CONFIG_COMPAT
+#define user_ptr(p) ((void __user *)(__u64)(p))
+#define user_time(ts) ((struct timespec){ \
+	.tv_sec  = ts.tv_sec, \
+	.tv_nsec = ts.tv_nsec \
+})
+#else
+#define user_ptr(p) (p)
+#define user_time(ts) (ts)
+#endif
+
 struct tegra_dc_ext_flip_win {
 	struct tegra_dc_ext_flip_windowattr	attr;
 	struct tegra_dc_dmabuf			*handle[TEGRA_DC_NUM_PLANES];
@@ -166,10 +177,18 @@ void tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 	}
 }
 
+/*
+ * Derived from test_bit() to process 32bit numbers.
+ */
+static inline int test_bit32(int nr, const volatile u32 *addr)
+{
+	return 1U & (addr[nr/32] >> (nr & (32-1)));
+}
+
 int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 						struct tegra_dc_win *win)
 {
-	long *addr;
+	u32 *addr;
 	struct tegra_dc *dc = ext->dc;
 
 	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_FORMATS);
@@ -180,7 +199,7 @@ int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 		goto fail;
 	}
 	/* Check the window format */
-	if (!test_bit(win->fmt, addr)) {
+	if (!test_bit32(win->fmt, addr)) {
 		dev_err(&dc->ndev->dev,
 			"Color format of window %d is invalid.\n", win->idx);
 		goto fail;
@@ -342,7 +361,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		return err;
 
 	if (tegra_platform_is_silicon()) {
-		timestamp_ns = timespec_to_ns(&flip_win->attr.timestamp);
+		timestamp_ns = timespec_to_ns(
+				&user_time(flip_win->attr.timestamp));
 
 		if (timestamp_ns) {
 			/* XXX: Should timestamping be overridden by "no_vsync"
@@ -433,15 +453,17 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			if (!tegra_platform_is_silicon())
 				continue;
 			if (j == 0) {
-				if (unlikely(temp != data))
+				if (unlikely(temp != data)) {
 					dev_err(&win->dc->ndev->dev,
 							"work queue did NOT dequeue head!!!");
-				else
-					head_timestamp =
-						timespec_to_ns(&flip_win->attr.timestamp);
+				} else {
+					head_timestamp = timespec_to_ns(&
+						user_time(flip_win->attr.timestamp));
+				}
 			} else {
-				s64 timestamp =
-					timespec_to_ns(&temp->win[i].attr.timestamp);
+				s64 timestamp;
+				timestamp = timespec_to_ns(
+					&user_time(temp->win[i].attr.timestamp));
 
 				skip_flip = !tegra_dc_does_vsync_separate(ext->dc,
 						timestamp, head_timestamp);
@@ -637,7 +659,7 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 		int index = wins[i].index;
 
 		memcpy(&flip_win->attr, &wins[i], sizeof(flip_win->attr));
-		if (has_timestamp && timespec_to_ns(&flip_win->attr.timestamp))
+		if (has_timestamp && timespec_to_ns(&user_time(flip_win->attr.timestamp)))
 			*has_timestamp = true;
 
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
@@ -909,9 +931,9 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 		return -EACCES;
 	}
 
-	err = set_lut_channel(new_lut->r, lut->r, start, len) |
-	      set_lut_channel(new_lut->g, lut->g, start, len) |
-	      set_lut_channel(new_lut->b, lut->b, start, len);
+	err = set_lut_channel(user_ptr(new_lut->r), lut->r, start, len) |
+	      set_lut_channel(user_ptr(new_lut->g), lut->g, start, len) |
+	      set_lut_channel(user_ptr(new_lut->b), lut->b, start, len);
 
 	if (err) {
 		mutex_unlock(&ext_win->lock);
@@ -1067,8 +1089,9 @@ static int tegra_dc_ext_get_feature(struct tegra_dc_ext_user *user,
 
 	if (dc->enabled && feature->entries) {
 		feature->length = table->num_entries;
-		memcpy(feature->entries, table->entries, table->num_entries *
-					sizeof(struct tegra_dc_feature_entry));
+		memcpy(user_ptr(feature->entries), table->entries,
+			table->num_entries *
+			sizeof(struct tegra_dc_feature_entry));
 	}
 
 	return 0;
@@ -1120,7 +1143,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
-		if (copy_from_user(win, args.win, sizeof(*win) * win_num)) {
+		if (copy_from_user(win, user_ptr(args.win),
+				sizeof(*win) * win_num)) {
 			kfree(win);
 			return -EFAULT;
 		}
@@ -1128,7 +1152,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			&args.post_syncpt_id, &args.post_syncpt_val, NULL);
 
-		if (copy_to_user(args.win, win, sizeof(*win) * win_num) ||
+		if (copy_to_user(user_ptr(args.win),
+				win, sizeof(*win) * win_num) ||
 			copy_to_user(user_arg, &args, sizeof(args))) {
 			kfree(win);
 			return -EFAULT;

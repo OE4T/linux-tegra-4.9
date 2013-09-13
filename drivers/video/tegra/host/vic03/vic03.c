@@ -241,7 +241,7 @@ static int vic03_read_ucode(struct platform_device *dev)
 	}
 
 	v->ucode.sgt = nvhost_memmgr_pin(v->host->memmgr, v->ucode.mem_r,
-		&dev->dev);
+		&dev->dev, mem_flag_read_only);
 	if (IS_ERR(v->ucode.sgt)) {
 		nvhost_err(&dev->dev, "nvmap pin failed for ucode, %ld",
 			PTR_ERR(v->ucode.sgt));
@@ -489,7 +489,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.save_slots = 0;
 
 	ctx->restore_sgt = nvhost_memmgr_pin(nvmap,
-			ctx->restore, &ch->dev->dev);
+			ctx->restore, &ch->dev->dev, mem_flag_none);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);

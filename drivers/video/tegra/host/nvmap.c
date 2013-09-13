@@ -119,7 +119,8 @@ void delete_priv(void *_priv)
 
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		struct mem_handle *handle,
-		struct device *dev)
+		struct device *dev,
+		int rw_flag)
 {
 	struct nvmap_handle_ref *ref = (struct nvmap_handle_ref *)handle;
 	struct nvmap_client *nvmap = (struct nvmap_client *)mgr;
@@ -216,6 +217,11 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		int ents;
 		DEFINE_DMA_ATTRS(attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+
+		if (rw_flag == mem_flag_read_only)
+			dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+		else if (rw_flag == mem_flag_write_only)
+			dma_set_attr(DMA_ATTR_WRITE_ONLY, &attrs);
 
 		ents = dma_map_sg_attrs(dev, sgt->sgl, sgt->nents, 0, &attrs);
 		if (!ents) {

@@ -145,12 +145,12 @@ void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 }
 
 struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct device *dev)
+		struct mem_handle *handle, struct device *dev, int rw_flag)
 {
 	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		return nvhost_nvmap_pin(mgr, handle, dev);
+		return nvhost_nvmap_pin(mgr, handle, dev, rw_flag);
 		break;
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
@@ -327,7 +327,7 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		if (IS_ERR(h))
 			return -EINVAL;
 
-		sgt = nvhost_memmgr_pin(mgr, h, &dev->dev);
+		sgt = nvhost_memmgr_pin(mgr, h, &dev->dev, mem_flag_none);
 		if (IS_ERR(sgt))
 			return PTR_ERR(sgt);
 

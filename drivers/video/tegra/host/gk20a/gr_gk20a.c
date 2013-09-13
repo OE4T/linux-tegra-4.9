@@ -2544,7 +2544,7 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->compbit_store.mem.sgt =
 		nvhost_memmgr_pin(memmgr, gr->compbit_store.mem.ref,
-				dev_from_gk20a(g));
+				dev_from_gk20a(g), mem_flag_none);
 	if (IS_ERR(gr->compbit_store.mem.sgt)) {
 		ret = PTR_ERR(gr->compbit_store.mem.sgt);
 		goto clean_up;

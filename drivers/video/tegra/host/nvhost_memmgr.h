@@ -51,6 +51,12 @@ enum mem_mgr_flag {
 	mem_mgr_flag_write_combine = 1,
 };
 
+enum mem_rw_flag {
+	mem_flag_none = 0,
+	mem_flag_read_only = 1,
+	mem_flag_write_only = 2,
+};
+
 enum mem_mgr_type {
 	mem_mgr_type_nvmap = 0,
 	mem_mgr_type_dmabuf = 1,
@@ -72,7 +78,8 @@ struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
 void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle);
 struct sg_table *nvhost_memmgr_pin(struct mem_mgr *,
 		struct mem_handle *handle,
-		struct device *dev);
+		struct device *dev,
+		int rw_flag);
 void nvhost_memmgr_unpin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct device *dev,
 		struct sg_table *sgt);

@@ -475,7 +475,7 @@ static struct nvhost_hwctx *ctxmpe_alloc(struct nvhost_hwctx_handler *h,
 		goto fail_mmap;
 
 	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore,
-			&ch->dev->dev);
+			&ch->dev->dev, mem_flag_none);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -605,7 +605,8 @@ struct nvhost_hwctx_handler *nvhost_mpe_ctxhandler_init(u32 syncpt,
 	if (!save_ptr)
 		goto fail_mmap;
 
-	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev,
+								mem_flag_none);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);

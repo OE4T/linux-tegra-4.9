@@ -35,7 +35,7 @@ struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
 		size_t size, size_t align, int flags, unsigned int heap_flags);
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle);
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct device *dev);
+		struct mem_handle *handle, struct device *dev, int rw_flag);
 void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 		struct device *dev, struct sg_table *sgt);
 void *nvhost_nvmap_mmap(struct mem_handle *handle);

@@ -286,7 +286,7 @@ int msenc_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			&dev->dev);
+			&dev->dev, mem_flag_read_only);
 	if (IS_ERR(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);

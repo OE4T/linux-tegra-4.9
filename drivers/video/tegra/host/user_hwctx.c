@@ -121,7 +121,7 @@ int user_hwctx_set_save(struct user_hwctx *ctx,
 		return PTR_ERR(buf);
 
 	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
-			&ctx->hwctx.channel->dev->dev);
+			&ctx->hwctx.channel->dev->dev, mem_flag_none);
 	if (IS_ERR(sgt))
 		return PTR_ERR(sgt);
 
@@ -157,7 +157,7 @@ int user_hwctx_set_restore(struct user_hwctx *ctx,
 		return PTR_ERR(buf);
 
 	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
-			&ctx->hwctx.channel->dev->dev);
+			&ctx->hwctx.channel->dev->dev, mem_flag_none);
 	if (IS_ERR(sgt))
 		return PTR_ERR(sgt);
 

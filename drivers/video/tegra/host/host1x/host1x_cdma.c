@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,7 +92,7 @@ static int push_buffer_init(struct push_buffer *pb)
 
 	/* pin pushbuffer and get physical address */
 	pb->sgt = nvhost_memmgr_pin(mgr, pb->mem,
-			&cdma_to_dev(cdma)->dev->dev);
+			&cdma_to_dev(cdma)->dev->dev, mem_flag_none);
 	if (IS_ERR(pb->sgt)) {
 		err = PTR_ERR(pb->sgt);
 		pb->sgt = 0;

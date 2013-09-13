@@ -374,7 +374,7 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	memset(va, 0, len);
 	nvhost_memmgr_munmap(r, va);
 
-	*sgt = nvhost_memmgr_pin(client, r, dev_from_vm(vm));
+	*sgt = nvhost_memmgr_pin(client, r, dev_from_vm(vm), mem_flag_none);
 	if (IS_ERR(*sgt)) {
 		*sgt = NULL;
 		goto err_alloced;
@@ -967,7 +967,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d);
+	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d, mem_flag_none);
 	if (IS_ERR(bfr.sgt)) {
 		/* Falling back to physical is actually possible
 		 * here in many cases if we use 4K phys pages in the

@@ -108,7 +108,7 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 		ctx->restore_virt = NULL;
 
 	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore,
-			&ch->dev->dev);
+			&ch->dev->dev, mem_flag_none);
 	if (IS_ERR(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);

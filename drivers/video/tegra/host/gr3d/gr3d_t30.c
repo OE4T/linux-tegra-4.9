@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D for Tegra3
  *
- * Copyright (c) 2011-2013 NVIDIA Corporation.
+ * Copyright (c) 2011-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -423,7 +423,8 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t30_ctxhandler_init(
 	if (!save_ptr)
 		goto fail_mmap;
 
-	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev,
+								mem_flag_none);
 	if (IS_ERR(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = nvhost_memmgr_dma_addr(p->save_sgt);
@@ -509,7 +510,8 @@ int nvhost_gr3d_t30_read_reg(
 	}
 	cmdbuf_ptr = mem_ptr + 1;
 
-	mem_sgt = nvhost_memmgr_pin(memmgr, mem, &channel->dev->dev);
+	mem_sgt = nvhost_memmgr_pin(memmgr, mem, &channel->dev->dev,
+							mem_flag_none);
 	if (IS_ERR(mem_sgt)) {
 		err = -ENOMEM;
 		mem_sgt = NULL;

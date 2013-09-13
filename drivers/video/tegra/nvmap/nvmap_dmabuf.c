@@ -191,10 +191,12 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 
 	list_del(&nvmap_sgt->maps_entry);
 
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	dma_unmap_sg_attrs(info->handle->attachment->dev,
-			   nvmap_sgt->sgt->sgl, nvmap_sgt->sgt->nents,
-			   nvmap_sgt->dir, &attrs);
+	if (info->handle->heap_pgalloc) {
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_unmap_sg_attrs(info->handle->attachment->dev,
+				   nvmap_sgt->sgt->sgl, nvmap_sgt->sgt->nents,
+				   nvmap_sgt->dir, &attrs);
+	}
 	__nvmap_free_sg_table(NULL, info->handle, nvmap_sgt->sgt);
 
 	WARN(atomic_read(&nvmap_sgt->refs), "nvmap: Freeing reffed SGT!");
@@ -340,13 +342,23 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	if (IS_ERR(sgt))
 		return sgt;
 
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	ents = dma_map_sg_attrs(attach->dev, sgt->sgl, sgt->nents, dir, &attrs);
-	if (ents <= 0) {
-		err = -ENOMEM;
+	if (info->handle->heap_pgalloc && info->handle->alloc) {
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		ents = dma_map_sg_attrs(attach->dev, sgt->sgl,
+					sgt->nents, dir, &attrs);
+		if (ents <= 0) {
+			err = -ENOMEM;
+			goto err_map;
+		}
+		BUG_ON(ents != 1);
+	} else if (info->handle->alloc) {
+		/* carveout has linear map setup. */
+		mutex_lock(&info->handle->lock);
+		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
+		mutex_unlock(&info->handle->lock);
+	} else {
 		goto err_map;
 	}
-	BUG_ON(ents != 1) ;
 
 	if (__nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)) {
 		WARN(1, "No mem to prep sgt.\n");

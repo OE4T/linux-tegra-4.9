@@ -365,9 +365,12 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		err = -ENOMEM;
 		goto err_prep;
 	}
-	attach->priv = sgt;
 
 cache_hit:
+#ifdef CONFIG_NVMAP_DMABUF_STASH
+	BUG_ON(attach->priv && attach->priv != sgt);
+#endif
+	attach->priv = sgt;
 	mutex_unlock(&info->maps_lock);
 	if (nvmap_find_cache_maint_op(nvmap_dev, info->handle))
 		nvmap_cache_maint_ops_flush(nvmap_dev, info->handle);
@@ -391,21 +394,11 @@ static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	__attribute__((unused)) DEFINE_DMA_ATTRS(attrs);
 
 	mutex_lock(&info->maps_lock);
-
-	/*
-	 * Since we have the maps lock for this handle, we won't race with
-	 * other unmaps for the same handle. Thus we can do multiple operations
-	 * on the ref count without worrying about its consistency.
-	 */
-	if (atomic_read(&info->handle->pin) == 0) {
+	if (!atomic_add_unless(&info->handle->pin, -1, 0)) {
 		mutex_unlock(&info->maps_lock);
 		WARN(1, "Unpinning handle that has yet to be pinned!\n");
 		return;
 	}
-
-	if (!atomic_dec_return(&info->handle->pin))
-		attach->priv = NULL;
-
 	__nvmap_dmabuf_stash_sgt_locked(attach, dir, sgt);
 	mutex_unlock(&info->maps_lock);
 }

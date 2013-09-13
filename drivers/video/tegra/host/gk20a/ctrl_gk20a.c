@@ -3,7 +3,7 @@
  *
  * GK20A Ctrl
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,7 +45,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = dev;
 
-	ch = nvhost_getchannel(pdata->channel);
+	ch = nvhost_getchannel(pdata->channel, false);
 	if (!ch) {
 		nvhost_dbg_fn("fail to get channel!");
 		return -ENOMEM;

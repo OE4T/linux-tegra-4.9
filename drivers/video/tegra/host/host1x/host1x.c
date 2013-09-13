@@ -676,10 +676,6 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
 
 	nvhost_device_list_init();
-	err = nvhost_device_list_add(dev);
-	if (err)
-		goto fail;
-
 	pdata->nvhost_timeout_default =
 			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
 	nvhost_debug_init(host);

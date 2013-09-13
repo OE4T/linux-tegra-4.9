@@ -76,7 +76,8 @@ int nvhost_channel_submit(struct nvhost_job *job)
 	return channel_op().submit(job);
 }
 
-struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
+struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
+		bool force)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
@@ -87,9 +88,9 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch)
 			err = pdata->init(ch->dev);
 		if (!err)
 			err = nvhost_cdma_init(&ch->cdma);
-	} else if (pdata->exclusive) {
+	} else if (pdata->exclusive && !force)
 		err = -EBUSY;
-	}
+
 	if (!err)
 		ch->refcount++;
 

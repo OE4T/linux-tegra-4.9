@@ -48,7 +48,7 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 		return -ENOENT;
 	}
 
-	ch = nvhost_getchannel(ch);
+	ch = nvhost_getchannel(ch, false);
 	if (!ch) {
 		nvhost_dbg_fn("fail to get channel!");
 		return -ENOMEM;

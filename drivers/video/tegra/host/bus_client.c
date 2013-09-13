@@ -205,7 +205,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	struct nvhost_device_data *pdata;
 
 	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
-	ch = nvhost_getchannel(ch);
+	ch = nvhost_getchannel(ch, false);
 	if (!ch)
 		return -ENOMEM;
 	trace_nvhost_channel_open(dev_name(&ch->dev->dev));

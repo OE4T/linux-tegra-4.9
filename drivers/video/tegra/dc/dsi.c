@@ -443,6 +443,16 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	DUMP_REG(DSI_PAD_CONTROL_CD);
 	DUMP_REG(DSI_PAD_CD_STATUS);
 	DUMP_REG(DSI_VID_MODE_CONTROL);
+	DUMP_REG(DSI_PAD_CONTROL_0_VS1);
+	DUMP_REG(DSI_PAD_CONTROL_CD_VS1);
+	DUMP_REG(DSI_PAD_CD_STATUS_VS1);
+	DUMP_REG(DSI_PAD_CONTROL_1_VS1);
+	DUMP_REG(DSI_PAD_CONTROL_2_VS1);
+	DUMP_REG(DSI_PAD_CONTROL_3_VS1);
+	DUMP_REG(DSI_PAD_CONTROL_4_VS1);
+	DUMP_REG(DSI_GANGED_MODE_CONTROL);
+	DUMP_REG(DSI_GANGED_MODE_START);
+	DUMP_REG(DSI_GANGED_MODE_SIZE);
 #undef DUMP_REG
 
 	tegra_dsi_clk_disable(dsi);
@@ -2308,16 +2318,15 @@ void tegra_dsi_mipi_calibration_14x(struct tegra_dc_dsi_data *dsi)
 	}
 	clk_prepare_enable(clk72mhz);
 
-	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
-	val |= (DSI_PAD_CONTROL_0_VS1_PAD_PULLDN_CLK_ENAB(0x1));
-	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_0_VS1);
+	tegra_mipi_cal_write(dsi->mipi_cal,
+			PAD_DRIV_DN_REF(0x2),
+			MIPI_CAL_MIPI_BIAS_PAD_CFG1_0);
 
-	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_2_VS1);
-	val &= ~(DSI_PAD_OUTADJCLK(0x7));
+	val = (DSI_PAD_SLEWUPADJ(0x7) | DSI_PAD_SLEWDNADJ(0x7) |
+		     DSI_PAD_LPUPADJ(0x1) | DSI_PAD_LPDNADJ(0x1));
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_2_VS1);
 
-	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
-	val |= (DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
+	val = (DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
 
 	val = MIPI_CAL_HSCLKPDOSDSIA(0x2) |

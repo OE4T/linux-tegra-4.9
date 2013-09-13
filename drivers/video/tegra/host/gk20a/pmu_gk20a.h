@@ -702,6 +702,8 @@ struct pmu_gk20a {
 	bool perfmon_ready;
 
 	u32 sample_buffer;
+
+	struct mutex isr_mutex;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

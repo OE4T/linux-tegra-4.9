@@ -475,7 +475,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		wins[nr_win++] = win;
 	}
 
-	if (!skip_flip) {
+	if (ext->enabled && !skip_flip) {
 		tegra_dc_update_windows(wins, nr_win);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);

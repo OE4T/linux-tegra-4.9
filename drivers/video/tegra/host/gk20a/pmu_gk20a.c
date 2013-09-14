@@ -2026,112 +2026,112 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 	struct gk20a *g = pmu->g;
 	int i;
 
-	nvhost_dbg_pmu("pwr_falcon_os_r : %d",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_os_r : %d",
 		gk20a_readl(g, pwr_falcon_os_r()));
-	nvhost_dbg_pmu("pwr_falcon_cpuctl_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_cpuctl_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_cpuctl_r()));
-	nvhost_dbg_pmu("pwr_falcon_idlestate_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_idlestate_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_idlestate_r()));
-	nvhost_dbg_pmu("pwr_falcon_mailbox0_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_mailbox0_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_mailbox0_r()));
-	nvhost_dbg_pmu("pwr_falcon_mailbox1_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_mailbox1_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_mailbox1_r()));
-	nvhost_dbg_pmu("pwr_falcon_irqstat_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_irqstat_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqstat_r()));
-	nvhost_dbg_pmu("pwr_falcon_irqmode_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_irqmode_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqmode_r()));
-	nvhost_dbg_pmu("pwr_falcon_irqmask_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_irqmask_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqmask_r()));
-	nvhost_dbg_pmu("pwr_falcon_irqdest_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_irqdest_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqdest_r()));
 
 	for (i = 0; i < pwr_pmu_mailbox__size_1_v(); i++)
-		nvhost_dbg_pmu("pwr_pmu_mailbox_r(%d) : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_mailbox_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_mailbox_r(i)));
 
 	for (i = 0; i < pwr_pmu_debug__size_1_v(); i++)
-		nvhost_dbg_pmu("pwr_pmu_debug_r(%d) : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_debug_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_debug_r(i)));
 
 	for (i = 0; i < 6/*NV_PPWR_FALCON_ICD_IDX_RSTAT__SIZE_1*/; i++) {
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rstat_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(i));
-		nvhost_dbg_pmu("pmu_rstat (%d) : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pmu_rstat (%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
 
 	i = gk20a_readl(g, pwr_pmu_bar0_error_status_r());
-	nvhost_dbg_pmu("pwr_pmu_bar0_error_status_r : 0x%x", i);
+	nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_error_status_r : 0x%x", i);
 	if (i != 0) {
-		nvhost_dbg_pmu("pwr_pmu_bar0_addr_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_addr_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_addr_r()));
-		nvhost_dbg_pmu("pwr_pmu_bar0_data_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_data_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_data_r()));
-		nvhost_dbg_pmu("pwr_pmu_bar0_timeout_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_timeout_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_timeout_r()));
-		nvhost_dbg_pmu("pwr_pmu_bar0_ctl_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_ctl_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_ctl_r()));
 	}
 
 	i = gk20a_readl(g, pwr_falcon_exterrstat_r());
-	nvhost_dbg_pmu("pwr_falcon_exterrstat_r : 0x%x", i);
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_exterrstat_r : 0x%x", i);
 	if (pwr_falcon_exterrstat_valid_v(i) ==
 			pwr_falcon_exterrstat_valid_true_v()) {
-		nvhost_dbg_pmu("pwr_falcon_exterraddr_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "pwr_falcon_exterraddr_r : 0x%x",
 			gk20a_readl(g, pwr_falcon_exterraddr_r()));
-		nvhost_dbg_pmu("top_fs_status_r : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
 			gk20a_readl(g, top_fs_status_r()));
 	}
 
-	nvhost_dbg_pmu("pwr_falcon_engctl_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_engctl_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_engctl_r()));
-	nvhost_dbg_pmu("pwr_falcon_curctx_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_curctx_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_curctx_r()));
-	nvhost_dbg_pmu("pwr_falcon_nxtctx_r : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "pwr_falcon_nxtctx_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_nxtctx_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_IMB));
-	nvhost_dbg_pmu("PMU_FALCON_REG_IMB : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_IMB : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_DMB));
-	nvhost_dbg_pmu("PMU_FALCON_REG_DMB : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_DMB : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CSW));
-	nvhost_dbg_pmu("PMU_FALCON_REG_CSW : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_CSW : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CTX));
-	nvhost_dbg_pmu("PMU_FALCON_REG_CTX : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_CTX : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_EXCI));
-	nvhost_dbg_pmu("PMU_FALCON_REG_EXCI : 0x%x",
+	nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_EXCI : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	for (i = 0; i < 4; i++) {
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_PC));
-		nvhost_dbg_pmu("PMU_FALCON_REG_PC : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_PC : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_SP));
-		nvhost_dbg_pmu("PMU_FALCON_REG_SP : 0x%x",
+		nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_SP : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
 }
@@ -2162,6 +2162,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	if (intr & pwr_falcon_irqstat_halt_true_f()) {
 		nvhost_err(dev_from_gk20a(g),
 			"pmu halt intr not implemented");
+		pmu_dump_falcon_stats(pmu);
 	}
 	if (intr & pwr_falcon_irqstat_exterr_true_f()) {
 		nvhost_err(dev_from_gk20a(g),

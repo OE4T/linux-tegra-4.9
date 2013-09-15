@@ -83,6 +83,9 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	}
 
 	actmon->clk = pdata->clk[1];
+	if (!actmon->clk)
+		return -ENODEV;
+
 	nvhost_module_busy(actmon->host->dev);
 
 	/* Clear average and control registers */

@@ -33,7 +33,7 @@
  * This can be either stereo , leftOnly or rightOnly */
 #define OV5693_IOCTL_SET_CAMERA_MODE        _IOW('o', 10, __u32)
 #define OV5693_IOCTL_SYNC_SENSORS           _IOW('o', 11, __u32)
-#define OV5693_IOCTL_GET_FUSEID             _IOR('o', 12, struct ov5693_fuseid)
+#define OV5693_IOCTL_GET_FUSEID             _IOR('o', 12, struct nvc_fuseid)
 
 
 struct ov5693_mode {
@@ -52,11 +52,6 @@ struct ov5693_ae {
 	__u8  coarse_time_enable;
 	__s32 gain;
 	__u8  gain_enable;
-};
-
-struct ov5693_fuseid {
-	__u32 size;
-	__u8  id[16];
 };
 
 /* See notes in the nvc.h file on the GPIO usage */

@@ -1,5 +1,5 @@
 
-#line 3 "scripts/kconfig/zconf.lex.c_shipped"
+#line 3 "zconf.lex.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -2401,6 +2401,16 @@ void zconf_initscan(const char *name)
 
 	current_file = file_lookup(name);
 	current_file->lineno = 1;
+}
+
+void zconf_trynextfile(const char *name)
+{
+	FILE *file = zconf_fopen(name);
+
+	if (!file)
+		return;
+	fclose(file);
+	zconf_nextfile(name);
 }
 
 void zconf_nextfile(const char *name)

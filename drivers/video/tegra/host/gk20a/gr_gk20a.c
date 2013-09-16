@@ -246,16 +246,15 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 	nvhost_dbg_fn("");
 
 	/* Force clocks on */
-	gk20a_writel(g, NV_PGRAPH_PRI_FE_PWR_MODE,
-			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_SEND |
-			NV_PGRAPH_PRI_FE_PWR_MODE_MODE_FORCE_ON);
+	gk20a_writel(g, gr_fe_pwr_mode_r(),
+		     gr_fe_pwr_mode_req_send_f() |
+		     gr_fe_pwr_mode_mode_force_on_f());
 
 	/* Wait for the clocks to indicate that they are on */
 	do {
-		reg = gk20a_readl(g, NV_PGRAPH_PRI_FE_PWR_MODE);
+		reg = gk20a_readl(g, gr_fe_pwr_mode_r());
 
-		if ((reg & NV_PGRAPH_PRI_FE_PWR_MODE_REQ_MASK) ==
-			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_DONE)
+		if (gr_fe_pwr_mode_req_v(reg) == gr_fe_pwr_mode_req_done_v())
 			break;
 
 		usleep_range(delay, delay * 2);
@@ -304,16 +303,15 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 	end_jiffies = jiffies + msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 
 	/* Set power mode back to auto */
-	gk20a_writel(g, NV_PGRAPH_PRI_FE_PWR_MODE,
-			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_SEND |
-			NV_PGRAPH_PRI_FE_PWR_MODE_MODE_AUTO);
+	gk20a_writel(g, gr_fe_pwr_mode_r(),
+		     gr_fe_pwr_mode_req_send_f() |
+		     gr_fe_pwr_mode_mode_auto_f());
 
 	/* Wait for the request to complete */
 	do {
-		reg = gk20a_readl(g, NV_PGRAPH_PRI_FE_PWR_MODE);
+		reg = gk20a_readl(g, gr_fe_pwr_mode_r());
 
-		if ((reg & NV_PGRAPH_PRI_FE_PWR_MODE_REQ_MASK) ==
-			NV_PGRAPH_PRI_FE_PWR_MODE_REQ_DONE)
+		if (gr_fe_pwr_mode_req_v(reg) == gr_fe_pwr_mode_req_done_v())
 			break;
 
 		usleep_range(delay, delay * 2);
@@ -3625,16 +3623,10 @@ restore_fe_go_idle:
 
 	gk20a_mm_l2_invalidate(g);
 
-    /* hack: using hard-coded bits for now until
-     * the reg l1c_dbg reg makes it into hw_gr_gk20a.h
-     */
-    {
-
-        l1c_dbg_reg_val = gk20a_readl(g, 0x005044b0);
-        // set the cya15 bit (27:27) to 1
-        l1c_dbg_reg_val = l1c_dbg_reg_val | 0x08000000;
-        gk20a_writel(g, 0x005044b0, l1c_dbg_reg_val);
-    }
+	/* turn on cya15 bit for a default val that missed the cut */
+	l1c_dbg_reg_val = gk20a_readl(g, gr_gpc0_tpc0_l1c_dbg_r());
+	l1c_dbg_reg_val |= gr_gpc0_tpc0_l1c_dbg_cya15_en_f();
+	gk20a_writel(g, gr_gpc0_tpc0_l1c_dbg_r(), l1c_dbg_reg_val);
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)

@@ -316,14 +316,5 @@ void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 int gk20a_gr_suspend(struct gk20a *g);
 
-#define NV_PGRAPH_PRI_FE_PWR_MODE	0x404170
-#define NV_PGRAPH_PRI_FE_PWR_MODE_REQ_MASK	(1 << 4)
-#define NV_PGRAPH_PRI_FE_PWR_MODE_REQ_SEND	(1 << 4)
-#define NV_PGRAPH_PRI_FE_PWR_MODE_REQ_DONE	(0 << 4)
-#define NV_PGRAPH_PRI_FE_PWR_MODE_MODE_MASK	(3 << 0)
-#define NV_PGRAPH_PRI_FE_PWR_MODE_MODE_FORCE_ON	(2 << 0)
-#define NV_PGRAPH_PRI_FE_PWR_MODE_MODE_AUTO	(0 << 0)
-
-
 
 #endif /*__GR_GK20A_H__*/

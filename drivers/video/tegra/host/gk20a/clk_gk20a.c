@@ -722,25 +722,26 @@ static int monitor_get(void *data, u64 *val)
 	struct gk20a *g = (struct gk20a *)data;
 	struct clk_gk20a *clk = &g->clk;
 
-	u32 NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG = 0x00134124;
-	u32 NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT = 0x00134128;
 	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
 	u32 clkin = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
-	gk20a_writel(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG,
-		(1<<24)); /* reset */
-	gk20a_writel(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CFG,
-		(1<<20) | (1<<16) | ncycle); /* start */
+	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
+		     trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f());
+	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
+		     trim_gpc_clk_cntr_ncgpcclk_cfg_enable_asserted_f() |
+		     trim_gpc_clk_cntr_ncgpcclk_cfg_write_en_asserted_f() |
+		     trim_gpc_clk_cntr_ncgpcclk_cfg_noofipclks_f(ncycle));
+	/* start */
 
 	/* It should take about 8us to finish 100 cycle of 12MHz.
 	   But longer than 100us delay is required here. */
 	udelay(2000);
 
-	count1 = gk20a_readl(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT);
+	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
 	udelay(100);
-	count2 = gk20a_readl(g, NV_PTRIM_GPC_CLK_CNTR_NCGPCCLK_CNT);
-	*val = (u64)(count2 * clkin / ncycle);
+	count2 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
+	*val = (u64)(trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(count2) * clkin / ncycle);
 
 	if (count1 != count2)
 		return -EBUSY;

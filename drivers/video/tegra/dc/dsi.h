@@ -108,7 +108,7 @@ struct tegra_dc_dsi_data {
 	u32 syncpt_id;
 	u32 syncpt_val;
 
-	u16 current_bit_clk_ns;
+	u32 current_bit_clk_ps;
 	u32 current_dsi_clk_khz;
 
 	struct regulator *avdd_dsi_csi;
@@ -280,58 +280,60 @@ enum {
 
 /* Mipi v1.00.00 phy timing range */
 #define NOT_DEFINED			-1
-#define MIPI_T_HSEXIT_NS_MIN		100
-#define MIPI_T_HSEXIT_NS_MAX		NOT_DEFINED
-#define	MIPI_T_HSTRAIL_NS_MIN(clk_ns)	max((8 * (clk_ns)), (60 + 4 * (clk_ns)))
-#define MIPI_T_HSTRAIL_NS_MAX		NOT_DEFINED
-#define MIPI_T_HSZERO_NS_MIN		NOT_DEFINED
-#define MIPI_T_HSZERO_NS_MAX		NOT_DEFINED
-#define MIPI_T_HSPREPARE_NS_MIN(clk_ns)	(40 + 4 * (clk_ns))
-#define MIPI_T_HSPREPARE_NS_MAX(clk_ns)	(85 + 6 * (clk_ns))
-#define MIPI_T_CLKTRAIL_NS_MIN		60
-#define MIPI_T_CLKTRAIL_NS_MAX		NOT_DEFINED
-#define	MIPI_T_CLKPOST_NS_MIN(clk_ns)	(60 + 52 * (clk_ns))
-#define MIPI_T_CLKPOST_NS_MAX		NOT_DEFINED
-#define	MIPI_T_CLKZERO_NS_MIN		NOT_DEFINED
-#define MIPI_T_CLKZERO_NS_MAX		NOT_DEFINED
-#define MIPI_T_TLPX_NS_MIN		50
-#define MIPI_T_TLPX_NS_MAX		NOT_DEFINED
-#define MIPI_T_CLKPREPARE_NS_MIN	38
-#define MIPI_T_CLKPREPARE_NS_MAX	95
-#define MIPI_T_CLKPRE_NS_MIN		8
-#define MIPI_T_CLKPRE_NS_MAX		NOT_DEFINED
-#define	MIPI_T_WAKEUP_NS_MIN		1
-#define MIPI_T_WAKEUP_NS_MAX		NOT_DEFINED
-#define MIPI_T_TASURE_NS_MIN(tlpx_ns)	(tlpx_ns)
-#define MIPI_T_TASURE_NS_MAX(tlpx_ns)	(2 * (tlpx_ns))
-#define MIPI_T_HSPREPARE_ADD_HSZERO_NS_MIN(clk_ns)	(145 + 10 * (clk_ns))
-#define MIPI_T_HSPREPARE_ADD_HSZERO_NS_MAX		NOT_DEFINED
-#define	MIPI_T_CLKPREPARE_ADD_CLKZERO_NS_MIN		300
-#define MIPI_T_CLKPREPARE_ADD_CLKZERO_NS_MAX		NOT_DEFINED
+#define MIPI_T_HSEXIT_PS_MIN		(100 * 1000)
+#define MIPI_T_HSEXIT_PS_MAX		NOT_DEFINED
+#define	MIPI_T_HSTRAIL_PS_MIN(clk_ps)	max((8 * (clk_ps)), \
+					(60 * 1000 + 4 * (clk_ps)))
+#define MIPI_T_HSTRAIL_PS_MAX		NOT_DEFINED
+#define MIPI_T_HSZERO_PS_MIN		NOT_DEFINED
+#define MIPI_T_HSZERO_PS_MAX		NOT_DEFINED
+#define MIPI_T_HSPREPARE_PS_MIN(clk_ps)	(40 * 1000 + 4 * (clk_ps))
+#define MIPI_T_HSPREPARE_PS_MAX(clk_ps)	(85 * 1000 + 6 * (clk_ps))
+#define MIPI_T_CLKTRAIL_PS_MIN		(60 * 1000)
+#define MIPI_T_CLKTRAIL_PS_MAX		NOT_DEFINED
+#define	MIPI_T_CLKPOST_PS_MIN(clk_ps)	(60 * 1000 + 52 * (clk_ps))
+#define MIPI_T_CLKPOST_PS_MAX		NOT_DEFINED
+#define	MIPI_T_CLKZERO_PS_MIN		NOT_DEFINED
+#define MIPI_T_CLKZERO_PS_MAX		NOT_DEFINED
+#define MIPI_T_TLPX_PS_MIN		(50 * 1000)
+#define MIPI_T_TLPX_PS_MAX		NOT_DEFINED
+#define MIPI_T_CLKPREPARE_PS_MIN	(38 * 1000)
+#define MIPI_T_CLKPREPARE_PS_MAX	(95 * 1000)
+#define MIPI_T_CLKPRE_PS_MIN		(8 * 1000)
+#define MIPI_T_CLKPRE_PS_MAX		NOT_DEFINED
+#define	MIPI_T_WAKEUP_PS_MIN		(1 * 1000)
+#define MIPI_T_WAKEUP_PS_MAX		NOT_DEFINED
+#define MIPI_T_TASURE_PS_MIN(tlpx_ps)	(tlpx_ps)
+#define MIPI_T_TASURE_PS_MAX(tlpx_ps)	(2 * (tlpx_ps))
+#define MIPI_T_HSPREPARE_ADD_HSZERO_PS_MIN(clk_ps) \
+					(145 * 1000 + 10 * (clk_ps))
+#define MIPI_T_HSPREPARE_ADD_HSZERO_PS_MAX		NOT_DEFINED
+#define	MIPI_T_CLKPREPARE_ADD_CLKZERO_PS_MIN		(300 * 1000)
+#define MIPI_T_CLKPREPARE_ADD_CLKZERO_PS_MAX		NOT_DEFINED
 
-#define DSI_TBYTE(clk_ns)	((clk_ns) * (BITS_PER_BYTE))
-#define DSI_CONVERT_T_PHY_NS_TO_T_PHY(t_phy_ns, clk_ns, hw_inc) \
-				((int)((DIV_ROUND_CLOSEST((t_phy_ns), \
-				(DSI_TBYTE(clk_ns)))) - (hw_inc)))
+#define DSI_TBYTE(clk_ps)	((clk_ps) * (BITS_PER_BYTE))
+#define DSI_CONVERT_T_PHY_PS_TO_T_PHY(t_phy_ps, clk_ps, hw_inc) \
+				((int)((DIV_ROUND_CLOSEST((t_phy_ps), \
+				(DSI_TBYTE(clk_ps)))) - (hw_inc)))
 
-#define DSI_CONVERT_T_PHY_TO_T_PHY_NS(t_phy, clk_ns, hw_inc) \
-				(((t_phy) + (hw_inc)) * (DSI_TBYTE(clk_ns)))
+#define DSI_CONVERT_T_PHY_TO_T_PHY_PS(t_phy, clk_ps, hw_inc) \
+				(((t_phy) + (hw_inc)) * (DSI_TBYTE(clk_ps)))
 
 /* Default phy timing in ns */
-#define T_HSEXIT_NS_DEFAULT		120
-#define T_HSTRAIL_NS_DEFAULT(clk_ns) \
-			max((8 * (clk_ns)), (60 + 4 * (clk_ns)))
-
-#define T_DATZERO_NS_DEFAULT(clk_ns)	(145 + 5 * (clk_ns))
-#define T_HSPREPARE_NS_DEFAULT(clk_ns)	(65 + 5 * (clk_ns))
-#define T_CLKTRAIL_NS_DEFAULT		80
-#define T_CLKPOST_NS_DEFAULT(clk_ns)	(70 + 52 * (clk_ns))
-#define T_CLKZERO_NS_DEFAULT		260
-#define T_TLPX_NS_DEFAULT		60
-#define T_CLKPREPARE_NS_DEFAULT		65
-#define T_TAGO_NS_DEFAULT		(4 * (T_TLPX_NS_DEFAULT))
-#define T_TASURE_NS_DEFAULT		(2 * (T_TLPX_NS_DEFAULT))
-#define T_TAGET_NS_DEFAULT		(5 * (T_TLPX_NS_DEFAULT))
+#define T_HSEXIT_PS_DEFAULT		(120 * 1000)
+#define T_HSTRAIL_PS_DEFAULT(clk_ps) \
+					max((8 * (clk_ps)), \
+					(60 * 1000 + 4 * (clk_ps)))
+#define T_DATZERO_PS_DEFAULT(clk_ps)	(145 * 1000 + 5 * (clk_ps))
+#define T_HSPREPARE_PS_DEFAULT(clk_ps)	(65 * 1000 + 5 * (clk_ps))
+#define T_CLKTRAIL_PS_DEFAULT		(80 * 1000)
+#define T_CLKPOST_PS_DEFAULT(clk_ps)	(70 * 1000 + 52 * (clk_ps))
+#define T_CLKZERO_PS_DEFAULT		(260 * 1000)
+#define T_TLPX_PS_DEFAULT		(60 * 1000)
+#define T_CLKPREPARE_PS_DEFAULT		(65 * 1000)
+#define T_TAGO_PS_DEFAULT		(4 * (T_TLPX_PS_DEFAULT))
+#define T_TASURE_PS_DEFAULT		(2 * (T_TLPX_PS_DEFAULT))
+#define T_TAGET_PS_DEFAULT		(5 * (T_TLPX_PS_DEFAULT))
 
 /* HW increment to phy register values */
 #define T_HSEXIT_HW_INC		1
@@ -350,56 +352,56 @@ enum {
 #define T_WAKEUP_HW_INC		1
 
 /* Default phy timing reg values */
-#define T_HSEXIT_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_HSEXIT_NS_DEFAULT, clk_ns, T_HSEXIT_HW_INC))
+#define T_HSEXIT_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_HSEXIT_PS_DEFAULT, clk_ps, T_HSEXIT_HW_INC))
 
-#define T_HSTRAIL_DEFAULT(clk_ns) \
-(3 + (DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_HSTRAIL_NS_DEFAULT(clk_ns), clk_ns, T_HSTRAIL_HW_INC)))
+#define T_HSTRAIL_DEFAULT(clk_ps) \
+(3 + (DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_HSTRAIL_PS_DEFAULT(clk_ps), clk_ps, T_HSTRAIL_HW_INC)))
 
-#define T_DATZERO_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_DATZERO_NS_DEFAULT(clk_ns), clk_ns, T_DATZERO_HW_INC))
+#define T_DATZERO_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_DATZERO_PS_DEFAULT(clk_ps), clk_ps, T_DATZERO_HW_INC))
 
-#define T_HSPREPARE_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_HSPREPARE_NS_DEFAULT(clk_ns), clk_ns, T_HSPREPARE_HW_INC))
+#define T_HSPREPARE_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_HSPREPARE_PS_DEFAULT(clk_ps), clk_ps, T_HSPREPARE_HW_INC))
 
-#define T_CLKTRAIL_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_CLKTRAIL_NS_DEFAULT, clk_ns, T_CLKTRAIL_HW_INC))
+#define T_CLKTRAIL_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_CLKTRAIL_PS_DEFAULT, clk_ps, T_CLKTRAIL_HW_INC))
 
-#define T_CLKPOST_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_CLKPOST_NS_DEFAULT(clk_ns), clk_ns, T_CLKPOST_HW_INC))
+#define T_CLKPOST_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_CLKPOST_PS_DEFAULT(clk_ps), clk_ps, T_CLKPOST_HW_INC))
 
-#define T_CLKZERO_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_CLKZERO_NS_DEFAULT, clk_ns, T_CLKZERO_HW_INC))
+#define T_CLKZERO_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_CLKZERO_PS_DEFAULT, clk_ps, T_CLKZERO_HW_INC))
 
-#define T_TLPX_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_TLPX_NS_DEFAULT, clk_ns, T_TLPX_HW_INC))
+#define T_TLPX_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_TLPX_PS_DEFAULT, clk_ps, T_TLPX_HW_INC))
 
-#define T_CLKPREPARE_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_CLKPREPARE_NS_DEFAULT, clk_ns, T_CLKPREPARE_HW_INC))
+#define T_CLKPREPARE_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_CLKPREPARE_PS_DEFAULT, clk_ps, T_CLKPREPARE_HW_INC))
 
 #define T_CLKPRE_DEFAULT	0x1
 #define T_WAKEUP_DEFAULT	0xff
 
-#define T_TAGO_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_TAGO_NS_DEFAULT, clk_ns, T_TAGO_HW_INC))
+#define T_TAGO_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_TAGO_PS_DEFAULT, clk_ps, T_TAGO_HW_INC))
 
-#define T_TASURE_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_TASURE_NS_DEFAULT, clk_ns, T_TASURE_HW_INC))
+#define T_TASURE_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_TASURE_PS_DEFAULT, clk_ps, T_TASURE_HW_INC))
 
-#define T_TAGET_DEFAULT(clk_ns) \
-(DSI_CONVERT_T_PHY_NS_TO_T_PHY( \
-T_TAGET_NS_DEFAULT, clk_ns, T_TAGET_HW_INC))
+#define T_TAGET_DEFAULT(clk_ps) \
+(DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
+T_TAGET_PS_DEFAULT, clk_ps, T_TAGET_HW_INC))
 
 struct tegra_dsi_out_ops {
 	/* initialize output.  dsi clocks are not on at this point */

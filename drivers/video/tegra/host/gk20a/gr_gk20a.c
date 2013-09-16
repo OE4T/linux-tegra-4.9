@@ -551,7 +551,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 			gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
 			gr_fecs_current_ctx_target_vid_mem_f() |
 			gr_fecs_current_ctx_valid_f(1),
-			gr_fecs_method_push_adr_bind_pointer_f(),
+			gr_fecs_method_push_adr_bind_pointer_v(),
 			0, GR_IS_UCODE_OP_AND, 0x10, GR_IS_UCODE_OP_AND, 0x20);
 	if (ret)
 		nvhost_err(dev_from_gk20a(g),
@@ -601,10 +601,10 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 	gk20a_mm_fb_flush(g);
 	gk20a_mm_l2_flush(g, true);
 
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_v(), 0,
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_o(), 0,
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
 
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_ptr_v(), 0, va);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_ptr_o(), 0, va);
 
 	if (disable_fifo) {
 		ret = gk20a_fifo_enable_engine_activity(g, gr_info);
@@ -1261,14 +1261,14 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		mem_wr32(gold_ptr, i, data);
 	}
 
-	mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_v(), 0,
+	mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_o(), 0,
 		 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v());
 
-	mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_ptr_v(), 0, 0);
+	mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_ptr_o(), 0, 0);
 
 	gr_gk20a_commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 
-	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_f());
+	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_v());
 
 	if (gr->ctx_vars.local_golden_image == NULL) {
 
@@ -1339,26 +1339,26 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	for (i = 0; i < gr->ctx_vars.golden_image_size / 4; i++)
 		mem_wr32(ctx_ptr, i, gr->ctx_vars.local_golden_image[i]);
 
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_v(), 0, 0);
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_v(), 0, 0);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);
 
 	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.gpu_va);
 	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.gpu_va);
 
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_v(), 0,
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_o(), 0,
 		 ch_ctx->patch_ctx.data_count);
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_lo_v(), 0,
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_lo_o(), 0,
 		 virt_addr_lo);
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_v(), 0,
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_o(), 0,
 		 virt_addr_hi);
 
 	/* no user for client managed performance counter ctx */
 	ch_ctx->pm_ctx.ctx_sw_mode =
 		ctxsw_prog_main_image_pm_mode_no_ctxsw_v();
 
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_v(), 0,
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
 		ch_ctx->pm_ctx.ctx_sw_mode);
-	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_v(), 0, 0);
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, 0);
 
 	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
 
@@ -1373,7 +1373,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 				gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
 				gr_fecs_current_ctx_target_vid_mem_f() |
 				gr_fecs_current_ctx_valid_f(1),
-				gr_fecs_method_push_adr_restore_golden_f(), 0,
+				gr_fecs_method_push_adr_restore_golden_v(), 0,
 				GR_IS_UCODE_OP_EQUAL, gr_fecs_ctxsw_mailbox_value_pass_v(),
 				GR_IS_UCODE_OP_SKIP, 0);
 		if (ret)
@@ -1446,7 +1446,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	nvhost_dbg_fn("");
 
 	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_image_size_f(),
+			gr_fecs_method_push_adr_discover_image_size_v(),
 			&golden_ctx_image_size,
 			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
 	if (ret) {
@@ -1456,7 +1456,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_zcull_image_size_f(),
+			gr_fecs_method_push_adr_discover_zcull_image_size_v(),
 			&zcull_ctx_image_size,
 			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
 	if (ret) {
@@ -1466,7 +1466,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_pm_image_size_f(),
+			gr_fecs_method_push_adr_discover_pm_image_size_v(),
 			&pm_ctx_image_size,
 			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
 	if (ret) {
@@ -2512,7 +2512,7 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 
 	/* aligned to 2KB * num_fbps */
 	compbit_backing_size +=
-		gr->num_fbps << ltc_ltc0_lts0_cbc_base_alignment_shift_v();
+		gr->num_fbps << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	/* must be a multiple of 64KB */
 	compbit_backing_size = roundup(compbit_backing_size, 64*1024);
@@ -2597,13 +2597,13 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 			delay = GR_IDLE_CHECK_DEFAULT;
 
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
-				fbp * proj_ltc_pri_stride_v() +
-				slice * proj_lts_pri_stride_v();
+				fbp * proj_ltc_stride_v() +
+				slice * proj_lts_stride_v();
 
 			do {
 				val = gk20a_readl(g, ctrl1);
-				if (ltc_ltc0_lts0_cbc_ctrl1_clear_v(val) !=
-				    ltc_ltc0_lts0_cbc_ctrl1_clear_active_v())
+				if (ltc_ltcs_ltss_cbc_ctrl1_clear_v(val) !=
+				    ltc_ltcs_ltss_cbc_ctrl1_clear_active_v())
 					break;
 
 				usleep_range(delay, delay * 2);
@@ -3504,13 +3504,13 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	{
 		u64 compbit_base_post_divide64 = (gr->compbit_store.base_pa >>
-				ltc_ltc0_lts0_cbc_base_alignment_shift_v());
+				ltc_ltcs_ltss_cbc_base_alignment_shift_v());
 		do_div(compbit_base_post_divide64, gr->num_fbps);
 		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
 	}
 
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
-		gr->num_fbps) << ltc_ltc0_lts0_cbc_base_alignment_shift_v();
+		gr->num_fbps) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	if (compbit_base_post_multiply64 < gr->compbit_store.base_pa)
 		compbit_base_post_divide++;
@@ -4346,14 +4346,14 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 	return gr_gk20a_submit_fecs_method(g, 4,
 		gr_fecs_current_ctx_ptr_f(addr >> 12) |
 		gr_fecs_current_ctx_valid_f(1) | gr_fecs_current_ctx_target_vid_mem_f(),
-		~0, 1, gr_fecs_method_push_adr_set_reglist_bind_instance_f(),
+		~0, 1, gr_fecs_method_push_adr_set_reglist_bind_instance_v(),
 		0, GR_IS_UCODE_OP_EQUAL, 1, GR_IS_UCODE_OP_SKIP, 0);
 }
 
 int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va)
 {
 	return gr_gk20a_submit_fecs_method(g, 4, u64_lo32(pmu_va >> 8),
-		~0, 1, gr_fecs_method_push_adr_set_reglist_virtual_address_f(),
+		~0, 1, gr_fecs_method_push_adr_set_reglist_virtual_address_v(),
 		0, GR_IS_UCODE_OP_EQUAL, 1, GR_IS_UCODE_OP_SKIP, 0);
 }
 

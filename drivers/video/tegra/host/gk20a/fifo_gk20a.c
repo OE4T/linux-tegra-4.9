@@ -861,8 +861,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 				fifo_engine_status_r(engine_id));
 			u32 ctx_status =
 				fifo_engine_status_ctx_status_v(status);
-			bool type_ch = !(status &
-				fifo_pbdma_status_id_type_tsgid_f());
+			bool type_ch = fifo_pbdma_status_id_type_v(status) ==
+				fifo_pbdma_status_id_type_chid_v();
 
 			/* use next_id if context load is failing */
 			u32 id = (ctx_status ==
@@ -873,7 +873,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			if (type_ch) {
 				ch = g->fifo.channel + id;
 			} else {
-				nvhost_err(dev_from_gk20a(g), "TSG is not supported");
+				nvhost_err(dev_from_gk20a(g), "non-chid type not supported");
 				WARN_ON(1);
 			}
 		} else {
@@ -988,7 +988,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	u32 sched_error;
 	u32 engine_id;
 	int id = -1;
-	bool tsg = false;
+	bool non_chid = false;
 
 	/* read and reset the scheduler error register */
 	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
@@ -1000,8 +1000,8 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		bool failing_engine;
 
 		/* we are interested in busy engines */
-		failing_engine =
-			!!(status & fifo_engine_status_engine_busy_f());
+		failing_engine = fifo_engine_status_engine_v(status) ==
+			fifo_engine_status_engine_busy_v();
 
 		/* ..that are doing context switch */
 		failing_engine = failing_engine &&
@@ -1017,13 +1017,14 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
 				fifo_engine_status_next_id_v(status) :
 				fifo_engine_status_id_v(status);
-			tsg = !!(status & fifo_pbdma_status_id_type_tsgid_f());
+			non_chid = fifo_pbdma_status_id_type_v(status) !=
+				fifo_pbdma_status_id_type_chid_v();
 			break;
 		}
 	}
 
 	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
-		   sched_error, engine_id, tsg ? "tsg" : "ch", id);
+		   sched_error, engine_id, non_chid ? "non-ch" : "ch", id);
 
 	/* could not find the engine - should never happen */
 	if (unlikely(engine_id >= g->fifo.max_engines))
@@ -1264,10 +1265,10 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 			u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 			u32 ctx_status =
 				fifo_engine_status_ctx_status_v(status);
-			bool type_ch = !(status &
-				fifo_pbdma_status_id_type_tsgid_f());
-			bool busy = !!(status &
-				fifo_engine_status_engine_busy_f());
+			bool type_ch = fifo_pbdma_status_id_type_v(status) ==
+				fifo_pbdma_status_id_type_chid_v();
+			bool busy = fifo_engine_status_engine_v(status) ==
+				fifo_engine_status_engine_busy_v();
 			u32 id = (ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
 				fifo_engine_status_next_id_v(status) :
@@ -1405,8 +1406,10 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 
 	for (i = 0; i < f->max_engines; i++) {
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+		bool engine_busy = fifo_engine_status_engine_v(status) ==
+			fifo_engine_status_engine_busy_v();
 
-		if ((status & fifo_engine_status_engine_busy_f()) &&
+		if (engine_busy &&
 		    (f->engine_info[i].runlist_id == runlist_id))
 			engines |= BIT(i);
 	}

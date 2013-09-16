@@ -229,7 +229,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 		fifo_pb_timeslice_timescale_0_f() |
 		fifo_pb_timeslice_enable_true_f());
 
-	mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_f(c->hw_chid));
+	mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
 	/* TBD: alwasy priv mode? */
 	mem_wr32(inst_ptr, ram_fc_hce_ctrl_w(),

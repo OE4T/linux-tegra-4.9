@@ -36,9 +36,9 @@ struct tegra_iovmm_area *tegra_iommu_create_vm(struct device *dev,
 		return NULL;
 
 	if (!req)
-		iova = dma_iova_alloc(dev, size);
+		iova = dma_iova_alloc(dev, size, NULL);
 	else
-		iova = dma_iova_alloc_at(dev, &req, size);
+		iova = dma_iova_alloc_at(dev, &req, size, NULL);
 
 	if (iova == DMA_ERROR_CODE)
 		goto err_out;

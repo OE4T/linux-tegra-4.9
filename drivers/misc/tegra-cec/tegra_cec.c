@@ -100,7 +100,6 @@ ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	size_t count, loff_t *ppos)
 {
 	struct tegra_cec *cec = file->private_data;
-	unsigned short rx_buffer;
 	count = 2;
 
 	if (cec->rx_wake == 0)
@@ -109,12 +108,10 @@ ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 
 	wait_event_interruptible(cec->rx_waitq, cec->rx_wake == 1);
 
-	rx_buffer = readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
-
-	if (copy_to_user(buffer, &rx_buffer, count))
+	if (copy_to_user(buffer, &(cec->rx_buffer), count))
 		return -EFAULT;
 
-	rx_buffer = 0x0;
+	cec->rx_buffer = 0x0;
 	cec->rx_wake = 0;
 	return count;
 }
@@ -142,6 +139,7 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 	} else if (status & TEGRA_CEC_INT_STAT_RX_REGISTER_FULL) {
 		writel((TEGRA_CEC_INT_STAT_RX_REGISTER_FULL),
 			cec->cec_base + TEGRA_CEC_INT_STAT);
+		cec->rx_buffer = readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
 		cec->rx_wake = 1;
 		wake_up_interruptible(&cec->rx_waitq);
 	} else if ((status & TEGRA_CEC_INT_STAT_TX_REGISTER_UNDERRUN) ||

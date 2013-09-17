@@ -96,6 +96,8 @@ struct gk20a {
 	struct dentry *debugfs_gr_idle_timeout_default;
 #endif
 	void (*remove_support)(struct platform_device *);
+
+	struct notifier_block system_suspend_notifier;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

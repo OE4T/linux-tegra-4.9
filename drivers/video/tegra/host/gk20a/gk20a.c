@@ -34,6 +34,8 @@
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
 
+#include <linux/suspend.h>
+
 #include <mach/pm_domains.h>
 
 #include "dev.h"
@@ -787,6 +789,18 @@ static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
 	.set_cur_state = tegra_gpu_set_cur_state,
 };
 
+static int gk20a_suspend_notifier(struct notifier_block *notifier,
+				  unsigned long pm_event, void *unused)
+{
+	struct gk20a *g = container_of(notifier, struct gk20a,
+				       system_suspend_notifier);
+
+	if (pm_event == PM_USERSPACE_FROZEN)
+		return g->power_on ? NOTIFY_BAD : NOTIFY_OK;
+
+	return NOTIFY_DONE;
+}
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
@@ -831,6 +845,12 @@ static int gk20a_probe(struct platform_device *dev)
 
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
+
+	if (pdata->can_powergate) {
+		gk20a->system_suspend_notifier.notifier_call =
+			gk20a_suspend_notifier;
+		register_pm_notifier(&gk20a->system_suspend_notifier);
+	}
 
 	err = nvhost_client_device_init(dev);
 	if (err) {

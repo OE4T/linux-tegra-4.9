@@ -284,6 +284,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
 				trim_sys_gpcpll_cfg_iddq_power_on_v());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		udelay(2);
 	}
 
@@ -755,6 +756,7 @@ static int monitor_get(void *data, u64 *val)
 
 	/* It should take about 8us to finish 100 cycle of 12MHz.
 	   But longer than 100us delay is required here. */
+	gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
 	udelay(2000);
 
 	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));

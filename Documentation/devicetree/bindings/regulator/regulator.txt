@@ -52,6 +52,7 @@ Optional properties:
 	0: Disable active discharge.
 	1: Enable active discharge.
 	Absence of this property will leave configuration to default.
+- regulator-init-microvolt: Initial microvolt need to be set during registration
 
 Deprecated properties:
 - regulator-compatible: If a regulator chip contains multiple

@@ -39,7 +39,7 @@ void nvhost_device_list_remove(struct platform_device *pdev);
 #else
     /* manually enable and turn it on the mask */
     /*#define NVHOST_DEBUG*/
-    #define NVHOST_DEFAULT_DBG_MASK (dbg_info)
+    #define NVHOST_DEFAULT_DBG_MASK (dbg_err|dbg_info)
 #endif
 
 enum nvhost_dbg_categories {
@@ -52,6 +52,7 @@ enum nvhost_dbg_categories {
 	dbg_pmu     = BIT(6),  /* gk20a pmu */
 	dbg_clk     = BIT(7),  /* gk20a clk */
 	dbg_map     = BIT(8),  /* mem mappings */
+	dbg_gpu_dbg = BIT(9),  /* gpu debugger */
 	dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

@@ -1495,6 +1495,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 #endif
+	mutex_init(&c->dbg_s_lock);
 	return 0;
 }
 

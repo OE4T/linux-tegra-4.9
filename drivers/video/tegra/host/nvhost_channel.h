@@ -129,4 +129,6 @@ void nvhost_free_channel_internal(struct nvhost_channel *ch,
 
 int nvhost_channel_save_context(struct nvhost_channel *ch);
 
+struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
+
 #endif

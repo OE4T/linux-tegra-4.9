@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/gr_gk20a.h
- *
- * GK20A graphics
+ * GK20A Graphics Engine
  *
  * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,9 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef __GR_GK20A_H__
 #define __GR_GK20A_H__
@@ -31,7 +28,7 @@
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
 
-enum global_ctx_buffer {
+enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,
 	PAGEPOOL		= 1,
 	ATTRIBUTE		= 2,
@@ -43,7 +40,7 @@ enum global_ctx_buffer {
 };
 
 /* either ATTRIBUTE or ATTRIBUTE_VPR maps to ATTRIBUTE_VA */
-enum global_ctx_buffer_va {
+enum  /*global_ctx_buffer_va */ {
 	CIRCULAR_VA		= 0,
 	PAGEPOOL_VA		= 1,
 	ATTRIBUTE_VA		= 2,
@@ -316,5 +313,15 @@ void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 int gk20a_gr_suspend(struct gk20a *g);
 
+struct nvhost_dbg_gpu_reg_op;
+int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
+			  struct nvhost_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops);
+int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
+				    u32 addr,
+				    u32 max_offsets,
+				    u32 *offsets, u32 *offset_addrs,
+				    u32 *num_offsets,
+				    bool is_quad, u32 quad);
 
 #endif /*__GR_GK20A_H__*/

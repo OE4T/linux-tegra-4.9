@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/nvhost_hwctx.h
- *
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +27,7 @@
 struct nvhost_channel;
 struct nvhost_cdma;
 struct mem_mgr;
+struct nvhost_dbg_session;
 
 struct nvhost_hwctx {
 	struct kref ref;
@@ -47,6 +46,7 @@ struct nvhost_hwctx {
 
 	struct list_head as_share_bound_list_node;
 	struct nvhost_as_share *as_share;
+	struct nvhost_dbg_session *dbg_session;
 };
 
 struct nvhost_hwctx_handler {
@@ -82,4 +82,5 @@ enum {
 
 #define HWCTX_REGINFO(offset, count, type) {offset, count, HWCTX_REGINFO_##type, offset}
 #define HWCTX_REGINFO_RST(offset, count, type, rst) {offset, count, HWCTX_REGINFO_##type, rst}
+
 #endif

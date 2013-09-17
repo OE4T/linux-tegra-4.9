@@ -188,7 +188,10 @@ struct nvhost_device_data {
 	struct cdev ctrl_cdev;
 	const struct file_operations *ctrl_ops;    /* ctrl ops for the module */
 
-	/*	void	*priv;*/
+	/* module debugger */
+	struct device *dbg_node;
+	struct cdev dbg_cdev;
+	const struct file_operations *dbg_ops;
 
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */

@@ -49,6 +49,7 @@
 #include "hw_sim_gk20a.h"
 #include "gk20a_scale.h"
 #include "gr3d/pod_scaling.h"
+#include "dbg_gpu_gk20a.h"
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -87,6 +88,17 @@ const struct file_operations tegra_gk20a_ctrl_ops = {
 	.release = gk20a_ctrl_dev_release,
 	.open = gk20a_ctrl_dev_open,
 	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
+};
+
+const struct file_operations tegra_gk20a_dbg_gpu_ops = {
+	.owner = THIS_MODULE,
+	.release        = gk20a_dbg_gpu_dev_release,
+	.open           = gk20a_dbg_gpu_dev_open,
+	.unlocked_ioctl = gk20a_dbg_gpu_dev_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
+#endif
+
 };
 
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
@@ -531,6 +543,8 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 		if (err)
 			goto fail;
 	}
+
+	mutex_init(&g->dbg_sessions_lock);
 
 	/* nvhost_as alloc_share can be called before gk20a is powered on.
 	   It requires mm sw states configured so init mm sw early here. */

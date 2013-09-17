@@ -24,6 +24,7 @@
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 #include <linux/tegra-soc.h>
+#include <linux/nvhost_dbg_gpu_ioctl.h>
 
 #include "../dev.h"
 
@@ -49,10 +50,14 @@
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
 #include "gk20a_gating_reglist.h"
+#include "gr_pri_gk20a.h"
+#include "regops_gk20a.h"
+
+
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
-static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
-				    u32 addr, u32 data, u32 patch);
+static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
+				    u32 addr, u32 data, bool patch);
 
 /* global ctx buffer */
 static int  gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g);
@@ -433,34 +438,91 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	return 0;
 }
 
-int gr_gk20a_submit_fecs_method(struct gk20a *g,
-			u32 mb_id, u32 mb_data, u32 mb_clr,
-			u32 mtd_data, u32 mtd_adr, u32 *mb_ret,
-			u32 opc_ok, u32 mb_ok, u32 opc_fail, u32 mb_fail)
+/* The following is a less brittle way to call gr_gk20a_submit_fecs_method(...)
+ * We should replace most, if not all, fecs method calls to this instead. */
+struct fecs_method_op_gk20a {
+	struct {
+		u32 addr;
+		u32 data;
+	} method;
+
+	struct {
+		u32 id;
+		u32 data;
+		u32 clr;
+		u32 *ret;
+		u32 ok;
+		u32 fail;
+	} mailbox;
+
+	struct {
+		u32 ok;
+		u32 fail;
+	} cond;
+
+};
+
+int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+				   struct fecs_method_op_gk20a op)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int ret;
 
 	mutex_lock(&gr->fecs_mutex);
 
-	if (mb_id != 0)
-		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(mb_id),
-			mb_data);
+	if (op.mailbox.id != 0)
+		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(op.mailbox.id),
+			     op.mailbox.data);
 
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0),
-		gr_fecs_ctxsw_mailbox_clear_value_f(mb_clr));
+		gr_fecs_ctxsw_mailbox_clear_value_f(op.mailbox.clr));
 
-	gk20a_writel(g, gr_fecs_method_data_r(), mtd_data);
+	gk20a_writel(g, gr_fecs_method_data_r(), op.method.data);
 	gk20a_writel(g, gr_fecs_method_push_r(),
-		gr_fecs_method_push_adr_f(mtd_adr));
+		gr_fecs_method_push_adr_f(op.method.addr));
 
-	ret = gr_gk20a_ctx_wait_ucode(g, 0, mb_ret,
-		opc_ok, mb_ok, opc_fail, mb_fail);
+	/* op.mb.id == 4 cases require waiting for completion on
+	 * for op.mb.id == 0 */
+	if (op.mailbox.id == 4)
+		op.mailbox.id = 0;
+
+	ret = gr_gk20a_ctx_wait_ucode(g, op.mailbox.id, op.mailbox.ret,
+				      op.cond.ok, op.mailbox.ok,
+				      op.cond.fail, op.mailbox.fail);
 
 	mutex_unlock(&gr->fecs_mutex);
 
 	return ret;
 }
+
+int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
+{
+	return gr_gk20a_submit_fecs_method_op(g,
+	      (struct fecs_method_op_gk20a) {
+		      .method.addr = fecs_method,
+		      .method.data = ~0,
+		      .mailbox = { .id   = 1, /*sideband?*/
+				   .data = ~0, .clr = ~0, .ret = ret,
+				   .ok   = gr_fecs_ctxsw_mailbox_value_pass_v(),
+				   .fail = gr_fecs_ctxsw_mailbox_value_fail_v(), },
+		      .cond.ok = GR_IS_UCODE_OP_EQUAL,
+		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
+}
+
+/* Stop processing (stall) context switches at FECS */
+int gr_gk20a_disable_ctxsw(struct gk20a *g)
+{
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
+	return gr_gk20a_ctrl_ctxsw(g, gr_fecs_method_push_adr_stop_ctxsw_v(), 0);
+}
+
+/* Start processing (continue) context switches at FECS */
+int gr_gk20a_enable_ctxsw(struct gk20a *g)
+{
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
+	return gr_gk20a_ctrl_ctxsw(g, gr_fecs_method_push_adr_start_ctxsw_v(), 0);
+}
+
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
@@ -504,33 +566,92 @@ clean_up:
 	return ret;
 }
 
-static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_gk20a *c,
-				    u32 addr, u32 data, u32 patch)
+/*
+ * Context state can be written directly or "patched" at times.
+ * So that code can be used in either situation it is written
+ * using a series _ctx_patch_write(..., patch) statements.
+ * However any necessary cpu map/unmap and gpu l2 invalidates
+ * should be minimized (to avoid doing it once per patch write).
+ * Before a sequence of these set up with "_ctx_patch_write_begin"
+ * and close with "_ctx_patch_write_end."
+ */
+static int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
+					  struct channel_ctx_gk20a *ch_ctx)
 {
-	struct channel_ctx_gk20a *ch_ctx;
+	/* being defensive still... */
+	if (ch_ctx->patch_ctx.cpu_va) {
+		nvhost_err(dev_from_gk20a(g), "nested ctx patch begin?");
+		return -EBUSY;
+	}
+
+	ch_ctx->patch_ctx.cpu_va =
+		nvhost_memmgr_mmap(ch_ctx->patch_ctx.mem.ref);
+
+	if (!ch_ctx->patch_ctx.cpu_va)
+		return -ENOMEM;
+
+	return 0;
+}
+
+static int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
+					struct channel_ctx_gk20a *ch_ctx)
+{
+	/* being defensive still... */
+	if (!ch_ctx->patch_ctx.cpu_va) {
+		nvhost_err(dev_from_gk20a(g), "dangling ctx patch end?");
+		return -EINVAL;
+	}
+
+	nvhost_memmgr_munmap(ch_ctx->patch_ctx.mem.ref,
+			     ch_ctx->patch_ctx.cpu_va);
+	ch_ctx->patch_ctx.cpu_va = NULL;
+
+	gk20a_mm_l2_invalidate(g);
+	return 0;
+}
+
+static int gr_gk20a_ctx_patch_write(struct gk20a *g,
+				    struct channel_ctx_gk20a *ch_ctx,
+				    u32 addr, u32 data, bool patch)
+{
 	u32 patch_slot = 0;
 	void *patch_ptr = NULL;
+	bool mapped_here = false;
 
-	BUG_ON(patch != 0 && c == NULL);
+	BUG_ON(patch != 0 && ch_ctx == NULL);
 
 	if (patch) {
-		ch_ctx = &c->ch_ctx;
-		patch_ptr = nvhost_memmgr_mmap(ch_ctx->patch_ctx.mem.ref);
-		if (!patch_ptr)
-			return -ENOMEM;
+		if (!ch_ctx)
+			return -EINVAL;
+		/* we added an optimization prolog, epilog
+		 * to get rid of unnecessary maps and l2 invals.
+		 * but be defensive still... */
+		if (!ch_ctx->patch_ctx.cpu_va) {
+			int err;
+			nvhost_err(dev_from_gk20a(g),
+				   "per-write ctx patch begin?");
+			/* yes, gr_gk20a_ctx_patch_smpc causes this one */
+			err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+			if (err)
+				return err;
+			mapped_here = true;
+		} else {
+			mapped_here = false;
+			patch_ptr = ch_ctx->patch_ctx.cpu_va;
+		}
 
 		patch_slot = ch_ctx->patch_ctx.data_count * 2;
 
 		mem_wr32(patch_ptr, patch_slot++, addr);
 		mem_wr32(patch_ptr, patch_slot++, data);
 
-		nvhost_memmgr_munmap(ch_ctx->patch_ctx.mem.ref, patch_ptr);
-		gk20a_mm_l2_invalidate(g);
-
 		ch_ctx->patch_ctx.data_count++;
-	} else {
+
+		if (mapped_here)
+			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+
+	} else
 		gk20a_writel(g, addr, data);
-	}
 
 	return 0;
 }
@@ -545,12 +666,19 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 	nvhost_dbg_info("bind channel %d inst ptr 0x%08x",
 		   c->hw_chid, inst_base_ptr);
 
-	ret = gr_gk20a_submit_fecs_method(g, 0, 0, 0x30,
-			gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-			gr_fecs_current_ctx_target_vid_mem_f() |
-			gr_fecs_current_ctx_valid_f(1),
-			gr_fecs_method_push_adr_bind_pointer_v(),
-			0, GR_IS_UCODE_OP_AND, 0x10, GR_IS_UCODE_OP_AND, 0x20);
+	ret = gr_gk20a_submit_fecs_method_op(g,
+		     (struct fecs_method_op_gk20a) {
+		     .method.addr = gr_fecs_method_push_adr_bind_pointer_v(),
+		     .method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
+				     gr_fecs_current_ctx_target_vid_mem_f() |
+				     gr_fecs_current_ctx_valid_f(1)),
+		     .mailbox = { .id = 0, .data = 0,
+				  .clr = 0x30,
+				  .ret = NULL,
+				  .ok = 0x10,
+				  .fail = 0x20, },
+		     .cond.ok = GR_IS_UCODE_OP_AND,
+		     .cond.fail = GR_IS_UCODE_OP_AND});
 	if (ret)
 		nvhost_err(dev_from_gk20a(g),
 			"bind channel instance failed");
@@ -621,9 +749,10 @@ clean_up:
 }
 
 static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
-			struct channel_gk20a *c, u32 patch)
+			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
+	struct channel_ctx_gk20a *ch_ctx = NULL;
 	u32 attrib_offset_in_chunk = 0;
 	u32 alpha_offset_in_chunk = 0;
 	u32 pd_ab_max_output;
@@ -633,7 +762,15 @@ static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 
 	nvhost_dbg_fn("");
 
-	gr_gk20a_ctx_patch_write(g, c, gr_ds_tga_constraintlogic_r(),
+	if (patch) {
+		int err;
+		ch_ctx = &c->ch_ctx;
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err)
+			return err;
+	}
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_tga_constraintlogic_r(),
 		gr_ds_tga_constraintlogic_beta_cbsize_f(gr->attrib_cb_default_size) |
 		gr_ds_tga_constraintlogic_alpha_cbsize_f(gr->alpha_cb_default_size),
 		patch);
@@ -642,7 +779,7 @@ static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 		gr_gpc0_ppc0_cbm_cfg_size_granularity_v()) /
 		gr_pd_ab_dist_cfg1_max_output_granularity_v();
 
-	gr_gk20a_ctx_patch_write(g, c, gr_pd_ab_dist_cfg1_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg1_r(),
 		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
 		gr_pd_ab_dist_cfg1_max_batches_init_f(), patch);
 
@@ -658,7 +795,7 @@ static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 			cbm_cfg_size2 = gr->alpha_cb_default_size *
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
-			gr_gk20a_ctx_patch_write(g, c,
+			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_cfg_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
 				gr_gpc0_ppc0_cbm_cfg_timeslice_mode_f(gr->timeslice_mode) |
@@ -668,7 +805,7 @@ static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 			attrib_offset_in_chunk += gr->attrib_cb_size *
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
-			gr_gk20a_ctx_patch_write(g, c,
+			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_cfg2_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
 				gr_gpc0_ppc0_cbm_cfg2_start_offset_f(alpha_offset_in_chunk) |
@@ -679,11 +816,14 @@ static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 		}
 	}
 
+	if (patch)
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+
 	return 0;
 }
 
 static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
-			struct channel_gk20a *c, u32 patch)
+			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
@@ -692,6 +832,12 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	u32 data;
 
 	nvhost_dbg_fn("");
+	if (patch) {
+		int err;
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err)
+			return err;
+	}
 
 	/* global pagepool buffer */
 	addr = (u64_lo32(ch_ctx->global_ctx_buffer_va[PAGEPOOL_VA]) >>
@@ -708,20 +854,20 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvhost_dbg_info("pagepool buffer addr : 0x%016llx, size : %d",
 		addr, size);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_scc_pagepool_base_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_base_r(),
 		gr_scc_pagepool_base_addr_39_8_f(addr), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_scc_pagepool_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_r(),
 		gr_scc_pagepool_total_pages_f(size) |
 		gr_scc_pagepool_valid_true_f(), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_gcc_pagepool_base_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_base_r(),
 		gr_gpcs_gcc_pagepool_base_addr_39_8_f(addr), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_gcc_pagepool_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_r(),
 		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_pd_pagepool_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_pagepool_r(),
 		gr_pd_pagepool_total_pages_f(size) |
 		gr_pd_pagepool_valid_true_f(), patch);
 
@@ -736,17 +882,17 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvhost_dbg_info("bundle cb addr : 0x%016llx, size : %d",
 		addr, size);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_scc_bundle_cb_base_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_base_r(),
 		gr_scc_bundle_cb_base_addr_39_8_f(addr), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_scc_bundle_cb_size_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_size_r(),
 		gr_scc_bundle_cb_size_div_256b_f(size) |
 		gr_scc_bundle_cb_size_valid_true_f(), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_setup_bundle_cb_base_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_base_r(),
 		gr_gpcs_setup_bundle_cb_base_addr_39_8_f(addr), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_setup_bundle_cb_size_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_size_r(),
 		gr_gpcs_setup_bundle_cb_size_div_256b_f(size) |
 		gr_gpcs_setup_bundle_cb_size_valid_true_f(), patch);
 
@@ -760,7 +906,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvhost_dbg_info("bundle cb token limit : %d, state limit : %d",
 		   gr->bundle_cb_token_limit, data);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_pd_ab_dist_cfg2_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
 		gr_pd_ab_dist_cfg2_token_limit_f(gr->bundle_cb_token_limit) |
 		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
 
@@ -772,20 +918,24 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 
 	nvhost_dbg_info("attrib cb addr : 0x%016llx", addr);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_setup_attrib_cb_base_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_attrib_cb_base_r(),
 		gr_gpcs_setup_attrib_cb_base_addr_39_12_f(addr) |
 		gr_gpcs_setup_attrib_cb_base_valid_true_f(), patch);
 
-	gr_gk20a_ctx_patch_write(g, c, gr_gpcs_tpcs_pe_pin_cb_global_base_addr_r(),
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_pin_cb_global_base_addr_r(),
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_v_f(addr) |
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_valid_true_f(), patch);
+
+	if (patch)
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 	return 0;
 }
 
-static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c, u32 patch)
+static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
+	struct channel_ctx_gk20a *ch_ctx = NULL;
 	u32 gpm_pd_cfg;
 	u32 pd_ab_dist_cfg0;
 	u32 ds_debug;
@@ -800,6 +950,14 @@ static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20
 	ds_debug = gk20a_readl(g, gr_ds_debug_r());
 	mpc_vtg_debug = gk20a_readl(g, gr_gpcs_tpcs_mpc_vtg_debug_r());
 
+	if (patch) {
+		int err;
+		ch_ctx = &c->ch_ctx;
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err)
+			return err;
+	}
+
 	if (gr->timeslice_mode == gr_gpcs_ppcs_cbm_cfg_timeslice_mode_enable_v()) {
 		pe_vaf = gk20a_readl(g, gr_gpcs_tpcs_pe_vaf_r());
 		pe_vsc_vpc = gk20a_readl(g, gr_gpcs_tpcs_pes_vsc_vpc_r());
@@ -811,23 +969,26 @@ static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20
 		ds_debug = gr_ds_debug_timeslice_mode_enable_f() | ds_debug;
 		mpc_vtg_debug = gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_enabled_f() | mpc_vtg_debug;
 
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_tpcs_pes_vsc_vpc_r(), pe_vsc_vpc, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_ds_debug_r(), ds_debug, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pes_vsc_vpc_r(), pe_vsc_vpc, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
 	} else {
 		gpm_pd_cfg = gr_gpcs_gpm_pd_cfg_timeslice_mode_disable_f() | gpm_pd_cfg;
 		pd_ab_dist_cfg0 = gr_pd_ab_dist_cfg0_timeslice_enable_dis_f() | pd_ab_dist_cfg0;
 		ds_debug = gr_ds_debug_timeslice_mode_disable_f() | ds_debug;
 		mpc_vtg_debug = gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_disabled_f() | mpc_vtg_debug;
 
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_ds_debug_r(), ds_debug, patch);
-		gr_gk20a_ctx_patch_write(g, c, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
 	}
+
+	if (patch)
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 	return 0;
 }
@@ -1147,7 +1308,7 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 		gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(tpc_index), tpc_per_gpc);
 	}
 
-	/* grSetupPDMapping stubbed for gk20a */
+	/* gr__setup_pd_mapping stubbed for gk20a */
 	gr_gk20a_setup_rop_mapping(g, gr);
 	gr_gk20a_setup_alpha_beta_tables(g, gr);
 
@@ -1192,13 +1353,22 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 		u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
 		>> ram_in_base_shift_v());
 
+
 	nvhost_dbg_fn("");
 
-	ret = gr_gk20a_submit_fecs_method(g, 0, 0, 3,
-			gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-			gr_fecs_current_ctx_target_vid_mem_f() |
-			gr_fecs_current_ctx_valid_f(1), save_type, 0,
-			GR_IS_UCODE_OP_AND, 1, GR_IS_UCODE_OP_AND, 2);
+	ret = gr_gk20a_submit_fecs_method_op(g,
+		(struct fecs_method_op_gk20a) {
+		.method.addr = save_type,
+		.method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
+				gr_fecs_current_ctx_target_vid_mem_f() |
+				gr_fecs_current_ctx_valid_f(1)),
+		.mailbox = {.id = 0, .data = 0, .clr = 3, .ret = NULL,
+			.ok = 1, .fail = 2,
+		},
+		.cond.ok = GR_IS_UCODE_OP_AND,
+		.cond.fail = GR_IS_UCODE_OP_AND,
+		 });
+
 	if (ret)
 		nvhost_err(dev_from_gk20a(g), "save context image failed");
 
@@ -1234,7 +1404,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (err)
 		goto clean_up;
 
-	err = gr_gk20a_commit_global_ctx_buffers(g, c, 0);
+	err = gr_gk20a_commit_global_ctx_buffers(g, c, false);
 	if (err)
 		goto clean_up;
 
@@ -1367,13 +1537,22 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
 			>> ram_in_base_shift_v());
 
-		ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0,
-				gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-				gr_fecs_current_ctx_target_vid_mem_f() |
-				gr_fecs_current_ctx_valid_f(1),
-				gr_fecs_method_push_adr_restore_golden_v(), 0,
-				GR_IS_UCODE_OP_EQUAL, gr_fecs_ctxsw_mailbox_value_pass_v(),
-				GR_IS_UCODE_OP_SKIP, 0);
+		ret = gr_gk20a_submit_fecs_method_op(g,
+			  (struct fecs_method_op_gk20a) {
+				  .method.data =
+					  (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
+					   gr_fecs_current_ctx_target_vid_mem_f() |
+					   gr_fecs_current_ctx_valid_f(1)),
+				  .method.addr =
+					  gr_fecs_method_push_adr_restore_golden_v(),
+				  .mailbox = {
+					  .id = 0, .data = 0,
+					  .clr = ~0, .ret = NULL,
+					  .ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
+					  .fail = 0},
+				  .cond.ok = GR_IS_UCODE_OP_EQUAL,
+				  .cond.fail = GR_IS_UCODE_OP_SKIP});
+
 		if (ret)
 			nvhost_err(dev_from_gk20a(g),
 				   "restore context image failed");
@@ -1440,33 +1619,34 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	u32 zcull_ctx_image_size = 0;
 	u32 pm_ctx_image_size = 0;
 	u32 ret;
+	struct fecs_method_op_gk20a op = {
+		.mailbox = { .id = 0, .data = 0,
+			     .clr = ~0, .ok = 0, .fail = 0},
+		.method.data = 0,
+		.cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
+		.cond.fail = GR_IS_UCODE_OP_SKIP,
+		};
 
 	nvhost_dbg_fn("");
-
-	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_image_size_v(),
-			&golden_ctx_image_size,
-			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
+	op.method.addr = gr_fecs_method_push_adr_discover_image_size_v();
+	op.mailbox.ret = &golden_ctx_image_size;
+	ret = gr_gk20a_submit_fecs_method_op(g, op);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			   "query golden image size failed");
 		return ret;
 	}
-
-	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_zcull_image_size_v(),
-			&zcull_ctx_image_size,
-			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
+	op.method.addr = gr_fecs_method_push_adr_discover_zcull_image_size_v();
+	op.mailbox.ret = &zcull_ctx_image_size;
+	ret = gr_gk20a_submit_fecs_method_op(g, op);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			   "query zcull ctx image size failed");
 		return ret;
 	}
-
-	ret = gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 0,
-			gr_fecs_method_push_adr_discover_pm_image_size_v(),
-			&pm_ctx_image_size,
-			GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
+	op.method.addr = gr_fecs_method_push_adr_discover_pm_image_size_v();
+	op.mailbox.ret = &pm_ctx_image_size;
+	ret = gr_gk20a_submit_fecs_method_op(g, op);
 	if (ret) {
 		nvhost_err(dev_from_gk20a(g),
 			   "query pm ctx image size failed");
@@ -1943,10 +2123,10 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			goto out;
 		}
 		gr_gk20a_elpg_protected_call(g,
-			gr_gk20a_commit_global_ctx_buffers(g, c, 1));
+			gr_gk20a_commit_global_ctx_buffers(g, c, true));
 	}
 
-	/* init gloden image, ELPG enabled after this is done */
+	/* init golden image, ELPG enabled after this is done */
 	err = gr_gk20a_init_golden_ctx_image(g, c);
 	if (err) {
 		nvhost_err(dev_from_gk20a(g),
@@ -3527,8 +3707,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		gk20a_writel(g, sw_ctx_load->l[i].addr,
 			     sw_ctx_load->l[i].value);
 
-	/* TBD: add gr ctx overrides */
-
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto out;
@@ -3541,8 +3719,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	/* override a few ctx state registers */
-	gr_gk20a_commit_global_cb_manager(g, NULL, 0);
-	gr_gk20a_commit_global_timeslice(g, NULL, 0);
+	gr_gk20a_commit_global_cb_manager(g, NULL, false);
+	gr_gk20a_commit_global_timeslice(g, NULL, false);
 
 	/* floorsweep anything left */
 	gr_gk20a_ctx_state_floorsweep(g);
@@ -4328,25 +4506,52 @@ clean_up:
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)
 {
 	BUG_ON(size == NULL);
-	return gr_gk20a_submit_fecs_method(g, 0, 0, ~0, 1,
-		gr_fecs_method_push_adr_discover_reglist_image_size_v(),
-		size, GR_IS_UCODE_OP_NOT_EQUAL, 0, GR_IS_UCODE_OP_SKIP, 0);
+	return gr_gk20a_submit_fecs_method_op(g,
+		   (struct fecs_method_op_gk20a) {
+			   .mailbox.id = 0,
+			   .mailbox.data = 0,
+			   .mailbox.clr = ~0,
+			   .method.data = 1,
+			   .method.addr = gr_fecs_method_push_adr_discover_reglist_image_size_v(),
+			   .mailbox.ret = size,
+			   .cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
+			   .mailbox.ok = 0,
+			   .cond.fail = GR_IS_UCODE_OP_SKIP,
+			   .mailbox.fail = 0});
 }
 
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 {
-	return gr_gk20a_submit_fecs_method(g, 4,
-		gr_fecs_current_ctx_ptr_f(addr >> 12) |
-		gr_fecs_current_ctx_valid_f(1) | gr_fecs_current_ctx_target_vid_mem_f(),
-		~0, 1, gr_fecs_method_push_adr_set_reglist_bind_instance_v(),
-		0, GR_IS_UCODE_OP_EQUAL, 1, GR_IS_UCODE_OP_SKIP, 0);
+	return gr_gk20a_submit_fecs_method_op(g,
+		   (struct fecs_method_op_gk20a){
+			   .mailbox.id = 4,
+			   .mailbox.data = (gr_fecs_current_ctx_ptr_f(addr >> 12) |
+					    gr_fecs_current_ctx_valid_f(1) |
+					    gr_fecs_current_ctx_target_vid_mem_f()),
+			   .mailbox.clr = ~0,
+			   .method.data = 1,
+			   .method.addr = gr_fecs_method_push_adr_set_reglist_bind_instance_v(),
+			   .mailbox.ret = NULL,
+			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
+			   .mailbox.ok = 1,
+			   .cond.fail = GR_IS_UCODE_OP_SKIP,
+			   .mailbox.fail = 0});
 }
 
 int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va)
 {
-	return gr_gk20a_submit_fecs_method(g, 4, u64_lo32(pmu_va >> 8),
-		~0, 1, gr_fecs_method_push_adr_set_reglist_virtual_address_v(),
-		0, GR_IS_UCODE_OP_EQUAL, 1, GR_IS_UCODE_OP_SKIP, 0);
+	return gr_gk20a_submit_fecs_method_op(g,
+		   (struct fecs_method_op_gk20a) {
+			   .mailbox.id = 4,
+			   .mailbox.data = u64_lo32(pmu_va >> 8),
+			   .mailbox.clr = ~0,
+			   .method.data = 1,
+			   .method.addr = gr_fecs_method_push_adr_set_reglist_virtual_address_v(),
+			   .mailbox.ret = NULL,
+			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
+			   .mailbox.ok = 1,
+			   .cond.fail = GR_IS_UCODE_OP_SKIP,
+			   .mailbox.fail = 0});
 }
 
 int gk20a_gr_suspend(struct gk20a *g)
@@ -4380,4 +4585,1213 @@ int gk20a_gr_suspend(struct gk20a *g)
 
 	nvhost_dbg_fn("done");
 	return ret;
+}
+
+static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
+					       u32 addr,
+					       bool is_quad, u32 quad,
+					       u32 *context_buffer,
+					       u32 context_buffer_size,
+					       u32 *priv_offset);
+
+/* This function will decode a priv address and return the partition type and numbers. */
+int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
+			      int  *addr_type, /* enum ctxsw_addr_type */
+			      u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
+			      u32 *broadcast_flags)
+{
+	u32 gpc_addr;
+	u32 ppc_address;
+	u32 ppc_broadcast_addr;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+	/* setup defaults */
+	ppc_address = 0;
+	ppc_broadcast_addr = 0;
+	*addr_type = CTXSW_ADDR_TYPE_SYS;
+	*broadcast_flags = PRI_BROADCAST_FLAGS_NONE;
+	*gpc_num = 0;
+	*tpc_num = 0;
+	*ppc_num = 0;
+	*be_num  = 0;
+
+	if (pri_is_gpc_addr(addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_GPC;
+		gpc_addr = pri_gpccs_addr_mask(addr);
+		if (pri_is_gpc_addr_shared(addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_GPC;
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_GPC;
+		} else
+			*gpc_num = pri_get_gpc_num(addr);
+
+		if (pri_is_tpc_addr(gpc_addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_TPC;
+			if (pri_is_tpc_addr_shared(gpc_addr)) {
+				*broadcast_flags |= PRI_BROADCAST_FLAGS_TPC;
+				return 0;
+			}
+			*tpc_num = pri_get_tpc_num(gpc_addr);
+		}
+		return 0;
+	} else if (pri_is_be_addr(addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_BE;
+		if (pri_is_be_addr_shared(addr)) {
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_BE;
+			return 0;
+		}
+		*be_num = pri_get_be_num(addr);
+		return 0;
+	} else {
+		*addr_type = CTXSW_ADDR_TYPE_SYS;
+		return 0;
+	}
+	/* PPC!?!?!?! */
+
+	/*NOTREACHED*/
+	return -EINVAL;
+}
+
+static int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
+				      u32 gpc_num,
+				      u32 *priv_addr_table, u32 *t)
+{
+    u32 ppc_num;
+
+    nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+    for (ppc_num = 0; ppc_num < g->gr.pe_count_per_gpc; ppc_num++)
+	    priv_addr_table[(*t)++] = pri_ppc_addr(pri_ppccs_addr_mask(addr),
+						   gpc_num, ppc_num);
+
+    return 0;
+}
+
+/*
+ * The context buffer is indexed using BE broadcast addresses and GPC/TPC
+ * unicast addresses. This function will convert a BE unicast address to a BE
+ * broadcast address and split a GPC/TPC broadcast address into a table of
+ * GPC/TPC addresses.  The addresses generated by this function can be
+ * successfully processed by gr_gk20a_find_priv_offset_in_buffer
+ */
+static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
+					   u32 addr,
+					   u32 *priv_addr_table,
+					   u32 *num_registers)
+{
+	int addr_type; /*enum ctxsw_addr_type */
+	u32 gpc_num, tpc_num, ppc_num, be_num;
+	u32 broadcast_flags;
+	u32 t;
+	int err;
+
+	t = 0;
+	*num_registers = 0;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+	err = gr_gk20a_decode_priv_addr(g, addr, &addr_type,
+					&gpc_num, &tpc_num, &ppc_num, &be_num,
+					&broadcast_flags);
+	nvhost_dbg(dbg_gpu_dbg, "addr_type = %d", addr_type);
+	if (err)
+		return err;
+
+	if ((addr_type == CTXSW_ADDR_TYPE_SYS) ||
+	    (addr_type == CTXSW_ADDR_TYPE_BE)) {
+		/* The BE broadcast registers are included in the compressed PRI
+		 * table. Convert a BE unicast address to a broadcast address
+		 * so that we can look up the offset. */
+		if ((addr_type == CTXSW_ADDR_TYPE_BE) &&
+		    !(broadcast_flags & PRI_BROADCAST_FLAGS_BE))
+			priv_addr_table[t++] = pri_be_shared_addr(addr);
+		else
+			priv_addr_table[t++] = addr;
+
+		*num_registers = t;
+		return 0;
+	}
+
+	/* The GPC/TPC unicast registers are included in the compressed PRI
+	 * tables. Convert a GPC/TPC broadcast address to unicast addresses so
+	 * that we can look up the offsets. */
+	if (broadcast_flags & PRI_BROADCAST_FLAGS_GPC) {
+		for (gpc_num = 0; gpc_num < g->gr.gpc_count; gpc_num++) {
+
+			if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
+				for (tpc_num = 0;
+				     tpc_num < g->gr.gpc_tpc_count[gpc_num];
+				     tpc_num++)
+					priv_addr_table[t++] =
+						pri_tpc_addr(pri_tpccs_addr_mask(addr),
+							     gpc_num, tpc_num);
+
+			else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC) {
+				err = gr_gk20a_split_ppc_broadcast_addr(g, addr, gpc_num,
+							       priv_addr_table, &t);
+				if (err)
+					return err;
+			} else
+				priv_addr_table[t++] =
+					pri_gpc_addr(pri_gpccs_addr_mask(addr),
+						     gpc_num);
+		}
+	} else {
+		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
+			for (tpc_num = 0;
+			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
+			     tpc_num++)
+				priv_addr_table[t++] =
+					pri_tpc_addr(pri_tpccs_addr_mask(addr),
+						     gpc_num, tpc_num);
+		else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC)
+			err = gr_gk20a_split_ppc_broadcast_addr(g, addr, gpc_num,
+						       priv_addr_table, &t);
+		else
+			priv_addr_table[t++] = addr;
+	}
+
+	*num_registers = t;
+	return 0;
+}
+
+int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
+				    u32 addr,
+				    u32 max_offsets,
+				    u32 *offsets, u32 *offset_addrs,
+				    u32 *num_offsets,
+				    bool is_quad, u32 quad)
+{
+	u32 i;
+	u32 priv_offset = 0;
+	u32 *priv_registers;
+	u32 num_registers = 0;
+	int err = 0;
+	u32 potential_offsets = proj_scal_litter_num_gpcs_v() *
+		proj_scal_litter_num_tpc_per_gpc_v();
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+	/* implementation is crossed-up if either of these happen */
+	if (max_offsets > potential_offsets)
+		return -EINVAL;
+
+	if (!g->gr.ctx_vars.golden_image_initialized)
+		return -ENODEV;
+
+	priv_registers = kzalloc(sizeof(u32) * potential_offsets, GFP_KERNEL);
+	if (IS_ERR_OR_NULL(priv_registers)) {
+		nvhost_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
+		err = PTR_ERR(priv_registers);
+		goto cleanup;
+	}
+	memset(offsets,      0, sizeof(u32) * max_offsets);
+	memset(offset_addrs, 0, sizeof(u32) * max_offsets);
+	*num_offsets = 0;
+
+	gr_gk20a_create_priv_addr_table(g, addr, &priv_registers[0], &num_registers);
+
+	if ((max_offsets > 1) && (num_registers > max_offsets)) {
+		err = -EINVAL;
+		goto cleanup;
+	}
+
+	if ((max_offsets == 1) && (num_registers > 1))
+		num_registers = 1;
+
+	if (!g->gr.ctx_vars.local_golden_image) {
+		nvhost_dbg_fn("no context switch header info to work with");
+		err = -EINVAL;
+		goto cleanup;
+	}
+
+	for (i = 0; i < num_registers; i++) {
+		err = gr_gk20a_find_priv_offset_in_buffer(g,
+						  priv_registers[i],
+						  is_quad, quad,
+						  g->gr.ctx_vars.local_golden_image,
+						  g->gr.ctx_vars.golden_image_size,
+						  &priv_offset);
+		if (err) {
+			nvhost_dbg_fn("Could not determine priv_offset for addr:0x%x",
+				      addr); /*, grPriRegStr(addr)));*/
+			goto cleanup;
+		}
+
+		offsets[i] = priv_offset;
+		offset_addrs[i] = priv_registers[i];
+	}
+
+    *num_offsets = num_registers;
+
+ cleanup:
+
+    if (!IS_ERR_OR_NULL(priv_registers))
+	    kfree(priv_registers);
+
+    return err;
+}
+
+/* Setup some register tables.  This looks hacky; our
+ * register/offset functions are just that, functions.
+ * So they can't be used as initializers... TBD: fix to
+ * generate consts at least on an as-needed basis.
+ */
+static const u32 _num_ovr_perf_regs = 17;
+static u32 _ovr_perf_regs[17] = { 0, };
+/* Following are the blocks of registers that the ucode
+ stores in the extended region.*/
+/* ==  ctxsw_extended_sm_dsm_perf_counter_register_stride_v() ? */
+static const u32 _num_sm_dsm_perf_regs = 5;
+/* ==  ctxsw_extended_sm_dsm_perf_counter_control_register_stride_v() ?*/
+static const u32 _num_sm_dsm_perf_ctrl_regs = 4;
+static u32 _sm_dsm_perf_regs[5];
+static u32 _sm_dsm_perf_ctrl_regs[4];
+
+static void init_sm_dsm_reg_info(void)
+{
+	if (_ovr_perf_regs[0] != 0)
+		return;
+
+	_ovr_perf_regs[0] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control_sel0_r();
+	_ovr_perf_regs[1] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control_sel1_r();
+	_ovr_perf_regs[2] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control0_r();
+	_ovr_perf_regs[3] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control5_r();
+	_ovr_perf_regs[4] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_status1_r();
+	_ovr_perf_regs[5] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_control_r();
+	_ovr_perf_regs[6] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_control_r();
+	_ovr_perf_regs[7] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_control_r();
+	_ovr_perf_regs[8] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_control_r();
+	_ovr_perf_regs[9] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter4_control_r();
+	_ovr_perf_regs[10] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter5_control_r();
+	_ovr_perf_regs[11] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter6_control_r();
+	_ovr_perf_regs[12] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_control_r();
+	_ovr_perf_regs[13] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter4_r();
+	_ovr_perf_regs[14] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter5_r();
+	_ovr_perf_regs[15] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter6_r();
+	_ovr_perf_regs[16] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_r();
+
+
+	_sm_dsm_perf_regs[0] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_status_r();
+	_sm_dsm_perf_regs[1] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_r();
+	_sm_dsm_perf_regs[2] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_r();
+	_sm_dsm_perf_regs[3] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_r();
+	_sm_dsm_perf_regs[4] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_r();
+
+	_sm_dsm_perf_ctrl_regs[0] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control1_r();
+	_sm_dsm_perf_ctrl_regs[1] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control2_r();
+	_sm_dsm_perf_ctrl_regs[2] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control3_r();
+	_sm_dsm_perf_ctrl_regs[3] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control4_r();
+
+}
+
+/* TBD: would like to handle this elsewhere, at a higher level.
+ * these are currently constructed in a "test-then-write" style
+ * which makes it impossible to know externally whether a ctx
+ * write will actually occur. so later we should put a lazy,
+ *  map-and-hold system in the patch write state */
+int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
+			    struct channel_ctx_gk20a *ch_ctx,
+			    u32 addr, u32 data,
+			    u8 *context)
+{
+	u32 num_gpc = g->gr.gpc_count;
+	u32 num_tpc;
+	u32 tpc, gpc, reg;
+	u32 chk_addr;
+	u32 vaddr_lo;
+	u32 vaddr_hi;
+	u32 tmp;
+
+	init_sm_dsm_reg_info();
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+	for (reg = 0; reg < _num_ovr_perf_regs; reg++) {
+		for (gpc = 0; gpc < num_gpc; gpc++)  {
+			num_tpc = g->gr.gpc_tpc_count[gpc];
+			for (tpc = 0; tpc < num_tpc; tpc++) {
+				chk_addr = ((proj_gpc_stride_v() * gpc) +
+					    (proj_tpc_in_gpc_stride_v() * tpc) +
+					    _ovr_perf_regs[reg]);
+				if (chk_addr != addr)
+					continue;
+				/* reset the patch count from previous
+				   runs,if ucode has already processed
+				   it */
+				tmp = mem_rd32(context +
+				       ctxsw_prog_main_image_patch_count_o(), 0);
+
+				if (!tmp)
+					ch_ctx->patch_ctx.data_count = 0;
+
+				gr_gk20a_ctx_patch_write(g, ch_ctx,
+							 addr, data, true);
+
+				vaddr_lo = u64_lo32(ch_ctx->patch_ctx.gpu_va);
+				vaddr_hi = u64_hi32(ch_ctx->patch_ctx.gpu_va);
+
+				mem_wr32(context +
+					 ctxsw_prog_main_image_patch_count_o(),
+					 0, ch_ctx->patch_ctx.data_count);
+				mem_wr32(context +
+					 ctxsw_prog_main_image_patch_adr_lo_o(),
+					 0, vaddr_lo);
+				mem_wr32(context +
+					 ctxsw_prog_main_image_patch_adr_hi_o(),
+					 0, vaddr_hi);
+
+				/* we're not caching these on cpu side,
+				   but later watch for it */
+
+				/* the l2 invalidate in the patch_write
+				 * would be too early for this? */
+				gk20a_mm_l2_invalidate(g);
+				return 0;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
+{
+	u32 reg;
+	u32 quad_ctrl;
+	u32 half_ctrl;
+	u32 tpc, gpc;
+	u32 gpc_tpc_addr;
+	u32 gpc_tpc_stride;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "offset=0x%x", offset);
+
+	gpc = pri_get_gpc_num(offset);
+	gpc_tpc_addr = pri_gpccs_addr_mask(offset);
+	tpc = pri_get_tpc_num(gpc_tpc_addr);
+
+	quad_ctrl = quad & 0x1; /* first bit tells us quad */
+	half_ctrl = (quad >> 1) & 0x1; /* second bit tells us half */
+
+	gpc_tpc_stride = gpc * proj_gpc_stride_v() +
+		tpc * proj_tpc_in_gpc_stride_v();
+	gpc_tpc_addr = gr_gpc0_tpc0_sm_halfctl_ctrl_r() + gpc_tpc_stride;
+
+	reg = gk20a_readl(g, gpc_tpc_addr);
+	reg = set_field(reg,
+		gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_m(),
+		quad_ctrl);
+
+	gk20a_writel(g, gpc_tpc_addr, reg);
+
+	gpc_tpc_addr = gr_gpc0_tpc0_sm_debug_sfe_control_r() + gpc_tpc_stride;
+	reg = gk20a_readl(g, gpc_tpc_addr);
+	reg = set_field(reg,
+		gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_m(),
+		half_ctrl);
+	gk20a_writel(g, gpc_tpc_addr, reg);
+}
+
+#define ILLEGAL_ID (~0)
+
+static inline bool check_main_image_header_magic(void *context)
+{
+	u32 magic = mem_rd32(context +
+			     ctxsw_prog_main_image_magic_value_o(), 0);
+	nvhost_dbg(dbg_gpu_dbg, "main image magic=0x%x", magic);
+	return magic == ctxsw_prog_main_image_magic_value_v_value_v();
+}
+static inline bool check_local_header_magic(void *context)
+{
+	u32 magic = mem_rd32(context +
+			     ctxsw_prog_local_magic_value_o(), 0);
+	nvhost_dbg(dbg_gpu_dbg, "local magic=0x%x",  magic);
+	return magic == ctxsw_prog_local_magic_value_v_value_v();
+
+}
+
+/* most likely dupe of ctxsw_gpccs_header__size_1_v() */
+static inline int ctxsw_prog_ucode_header_size_in_bytes(void)
+{
+	return 256;
+}
+
+static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
+						   u32 addr,
+						   bool is_quad, u32 quad,
+						   u32 *context_buffer,
+						   u32 context_buffer_size,
+						   u32 *priv_offset)
+{
+	u32 i, data32;
+	u32 gpc_num, tpc_num;
+	u32 num_gpcs, num_tpcs;
+	u32 chk_addr;
+	u32 ext_priv_offset, ext_priv_size;
+	void *context;
+	u32 offset_to_segment, offset_to_segment_end;
+	u32 sm_dsm_perf_reg_id = ILLEGAL_ID;
+	u32 sm_dsm_perf_ctrl_reg_id = ILLEGAL_ID;
+	u32 num_ext_gpccs_ext_buffer_segments;
+	u32 inter_seg_offset;
+	u32 tpc_gpc_mask = (proj_tpc_in_gpc_stride_v() - 1);
+	u32 max_tpc_count;
+	u32 *sm_dsm_perf_ctrl_regs = NULL;
+	u32 num_sm_dsm_perf_ctrl_regs = 0;
+	u32 *sm_dsm_perf_regs = NULL;
+	u32 num_sm_dsm_perf_regs = 0;
+	u32 buffer_segments_size = 0;
+	u32 marker_size = 0;
+	u32 control_register_stride = 0;
+	u32 perf_register_stride = 0;
+
+	/* Only have TPC registers in extended region, so if not a TPC reg,
+	   then return error so caller can look elsewhere. */
+	if (pri_is_gpc_addr(addr))   {
+		u32 gpc_addr = 0;
+		gpc_num = pri_get_gpc_num(addr);
+		gpc_addr = pri_gpccs_addr_mask(addr);
+		if (pri_is_tpc_addr(gpc_addr))
+			tpc_num = pri_get_tpc_num(gpc_addr);
+		else
+			return -EINVAL;
+
+		nvhost_dbg_info(" gpc = %d tpc = %d",
+				gpc_num, tpc_num);
+	} else
+		return -EINVAL;
+
+	buffer_segments_size = ctxsw_prog_extended_buffer_segments_size_in_bytes_v();
+	/* note below is in words/num_registers */
+	marker_size = ctxsw_prog_extended_marker_size_in_bytes_v() >> 2;
+
+	context = context_buffer;
+	/* sanity check main header */
+	if (!check_main_image_header_magic(context)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "Invalid main header: magic value");
+		return -EINVAL;
+	}
+	num_gpcs = mem_rd32(context + ctxsw_prog_main_image_num_gpcs_o(), 0);
+	if (gpc_num >= num_gpcs) {
+		nvhost_err(dev_from_gk20a(g),
+		   "GPC 0x%08x is greater than total count 0x%08x!\n",
+			   gpc_num, num_gpcs);
+		return -EINVAL;
+	}
+
+	data32 = mem_rd32(context + ctxsw_prog_main_extended_buffer_ctl_o(), 0);
+	ext_priv_size   = ctxsw_prog_main_extended_buffer_ctl_size_v(data32);
+	if (0 == ext_priv_size) {
+		nvhost_dbg_info(" No extended memory in context buffer");
+		return -EINVAL;
+	}
+	ext_priv_offset = ctxsw_prog_main_extended_buffer_ctl_offset_v(data32);
+
+	offset_to_segment = ext_priv_offset * ctxsw_prog_ucode_header_size_in_bytes();
+	offset_to_segment_end = offset_to_segment +
+		(ext_priv_size * buffer_segments_size);
+
+	/* check local header magic */
+	context += ctxsw_prog_ucode_header_size_in_bytes();
+	if (!check_local_header_magic(context)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "Invalid local header: magic value\n");
+		return -EINVAL;
+	}
+
+	/*
+	 * See if the incoming register address is in the first table of
+	 * registers. We check this by decoding only the TPC addr portion.
+	 * If we get a hit on the TPC bit, we then double check the address
+	 * by computing it from the base gpc/tpc strides.  Then make sure
+	 * it is a real match.
+	 */
+	num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
+	sm_dsm_perf_regs = _sm_dsm_perf_regs;
+	perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
+
+	init_sm_dsm_reg_info();
+
+	for (i = 0; i < num_sm_dsm_perf_regs; i++) {
+		if ((addr & tpc_gpc_mask) == (sm_dsm_perf_regs[i] & tpc_gpc_mask)) {
+			sm_dsm_perf_reg_id = i;
+
+			nvhost_dbg_info("register match: 0x%08x",
+					sm_dsm_perf_regs[i]);
+
+			chk_addr = (proj_gpc_base_v() +
+				   (proj_gpc_stride_v() * gpc_num) +
+				   proj_tpc_in_gpc_base_v() +
+				   (proj_tpc_in_gpc_stride_v() * tpc_num) +
+				   (sm_dsm_perf_regs[sm_dsm_perf_reg_id] & tpc_gpc_mask));
+
+			if (chk_addr != addr) {
+				nvhost_err(dev_from_gk20a(g),
+				   "Oops addr miss-match! : 0x%08x != 0x%08x\n",
+					   addr, chk_addr);
+				return -EINVAL;
+			}
+			break;
+		}
+	}
+
+	/* Didn't find reg in supported group 1.
+	 *  so try the second group now */
+	num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
+	sm_dsm_perf_ctrl_regs     = _sm_dsm_perf_ctrl_regs;
+	control_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
+
+	if (ILLEGAL_ID == sm_dsm_perf_reg_id) {
+		for (i = 0; i < num_sm_dsm_perf_ctrl_regs; i++) {
+			if ((addr & tpc_gpc_mask) ==
+			    (sm_dsm_perf_ctrl_regs[i] & tpc_gpc_mask)) {
+				sm_dsm_perf_ctrl_reg_id = i;
+
+				nvhost_dbg_info("register match: 0x%08x",
+						sm_dsm_perf_ctrl_regs[i]);
+
+				chk_addr = (proj_gpc_base_v() +
+					   (proj_gpc_stride_v() * gpc_num) +
+					   proj_tpc_in_gpc_base_v() +
+					   (proj_tpc_in_gpc_stride_v() * tpc_num) +
+					   (sm_dsm_perf_ctrl_regs[sm_dsm_perf_ctrl_reg_id] &
+					    tpc_gpc_mask));
+
+				if (chk_addr != addr) {
+					nvhost_err(dev_from_gk20a(g),
+						   "Oops addr miss-match! : 0x%08x != 0x%08x\n",
+						   addr, chk_addr);
+					return -EINVAL;
+
+				}
+
+				break;
+			}
+		}
+	}
+
+	if ((ILLEGAL_ID == sm_dsm_perf_ctrl_reg_id) &&
+	    (ILLEGAL_ID == sm_dsm_perf_reg_id))
+		return -EINVAL;
+
+	/* Skip the FECS extended header, nothing there for us now. */
+	offset_to_segment += buffer_segments_size;
+
+	/* skip through the GPCCS extended headers until we get to the data for
+	 * our GPC.  The size of each gpc extended segment is enough to hold the
+	 * max tpc count for the gpcs,in 256b chunks.
+	 */
+
+	max_tpc_count = proj_scal_litter_num_tpc_per_gpc_v();
+
+	num_ext_gpccs_ext_buffer_segments = (u32)((max_tpc_count + 1) / 2);
+
+	offset_to_segment += (num_ext_gpccs_ext_buffer_segments *
+			      buffer_segments_size * gpc_num);
+
+	num_tpcs = g->gr.gpc_tpc_count[gpc_num];
+
+	/* skip the head marker to start with */
+	inter_seg_offset = marker_size;
+
+	if (ILLEGAL_ID != sm_dsm_perf_ctrl_reg_id) {
+		/* skip over control regs of TPC's before the one we want.
+		 *  then skip to the register in this tpc */
+		inter_seg_offset = inter_seg_offset +
+			(tpc_num * control_register_stride) +
+			sm_dsm_perf_ctrl_reg_id;
+	} else {
+		/* skip all the control registers */
+		inter_seg_offset = inter_seg_offset +
+			(num_tpcs * control_register_stride);
+
+		/* skip the marker between control and counter segments */
+		inter_seg_offset += marker_size;
+
+		/* skip over counter regs of TPCs before the one we want */
+		inter_seg_offset = inter_seg_offset +
+			(tpc_num * perf_register_stride) *
+			ctxsw_prog_extended_num_smpc_quadrants_v();
+
+		/* skip over the register for the quadrants we do not want.
+		 *  then skip to the register in this tpc */
+		inter_seg_offset = inter_seg_offset +
+			(perf_register_stride * quad) +
+			sm_dsm_perf_reg_id;
+	}
+
+	/* set the offset to the segment offset plus the inter segment offset to
+	 *  our register */
+	offset_to_segment += (inter_seg_offset * 4);
+
+	/* last sanity check: did we somehow compute an offset outside the
+	 * extended buffer? */
+	if (offset_to_segment > offset_to_segment_end) {
+		nvhost_err(dev_from_gk20a(g),
+			   "Overflow ctxsw buffer! 0x%08x > 0x%08x\n",
+			   offset_to_segment, offset_to_segment_end);
+		return -EINVAL;
+	}
+
+	*priv_offset = offset_to_segment;
+
+	return 0;
+}
+
+
+static int
+gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
+					     int addr_type,/* enum ctxsw_addr_type */
+					     u32 pri_addr,
+					     u32 gpc_num, u32 num_tpcs,
+					     u32 num_ppcs, u32 ppc_mask,
+					     u32 *priv_offset)
+{
+	u32 i;
+	u32 address, base_address;
+	u32 sys_offset, gpc_offset, tpc_offset, ppc_offset;
+	u32 ppc_num, tpc_num, tpc_addr, gpc_addr, ppc_addr;
+	struct aiv_gk20a *reg;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "pri_addr=0x%x", pri_addr);
+
+	if (!g->gr.ctx_vars.valid)
+		return -EINVAL;
+
+	/* Process the SYS/BE segment. */
+	if ((addr_type == CTXSW_ADDR_TYPE_SYS) ||
+	    (addr_type == CTXSW_ADDR_TYPE_BE)) {
+		for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.sys.count; i++) {
+			reg = &g->gr.ctx_vars.ctxsw_regs.sys.l[i];
+			address    = reg->addr;
+			sys_offset = reg->index;
+
+			if (pri_addr == address) {
+				*priv_offset = sys_offset;
+				return 0;
+			}
+		}
+	}
+
+	/* Process the TPC segment. */
+	if (addr_type == CTXSW_ADDR_TYPE_TPC) {
+		for (tpc_num = 0; tpc_num < num_tpcs; tpc_num++) {
+			for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.tpc.count; i++) {
+				reg = &g->gr.ctx_vars.ctxsw_regs.tpc.l[i];
+				address = reg->addr;
+				tpc_addr = pri_tpccs_addr_mask(address);
+				base_address = proj_gpc_base_v() +
+					(gpc_num * proj_gpc_stride_v()) +
+					proj_tpc_in_gpc_base_v() +
+					(tpc_num * proj_tpc_in_gpc_stride_v());
+				address = base_address + tpc_addr;
+				/*
+				 * The data for the TPCs is interleaved in the context buffer.
+				 * Example with num_tpcs = 2
+				 * 0    1    2    3    4    5    6    7    8    9    10   11 ...
+				 * 0-0  1-0  0-1  1-1  0-2  1-2  0-3  1-3  0-4  1-4  0-5  1-5 ...
+				 */
+				tpc_offset = (reg->index * num_tpcs) + (tpc_num * 4);
+
+				if (pri_addr == address) {
+					*priv_offset = tpc_offset;
+					return 0;
+				}
+			}
+		}
+	}
+
+	/* Process the PPC segment. */
+	if (addr_type == CTXSW_ADDR_TYPE_PPC) {
+		for (ppc_num = 0; ppc_num < num_ppcs; ppc_num++) {
+			for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.ppc.count; i++) {
+				reg = &g->gr.ctx_vars.ctxsw_regs.ppc.l[i];
+				address = reg->addr;
+				ppc_addr = pri_ppccs_addr_mask(address);
+				base_address = proj_gpc_base_v() +
+					(gpc_num * proj_gpc_stride_v()) +
+					proj_ppc_in_gpc_base_v() +
+					(ppc_num * proj_ppc_in_gpc_stride_v());
+				address = base_address + ppc_addr;
+				/*
+				 * The data for the PPCs is interleaved in the context buffer.
+				 * Example with numPpcs = 2
+				 * 0    1    2    3    4    5    6    7    8    9    10   11 ...
+				 * 0-0  1-0  0-1  1-1  0-2  1-2  0-3  1-3  0-4  1-4  0-5  1-5 ...
+				 */
+				ppc_offset = (reg->index * num_ppcs) + (ppc_num * 4);
+
+				if (pri_addr == address)  {
+					*priv_offset = ppc_offset;
+					return 0;
+				}
+			}
+		}
+	}
+
+
+	/* Process the GPC segment. */
+	if (addr_type == CTXSW_ADDR_TYPE_GPC) {
+		for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.gpc.count; i++) {
+			reg = &g->gr.ctx_vars.ctxsw_regs.gpc.l[i];
+
+			address = reg->addr;
+			gpc_addr = pri_gpccs_addr_mask(address);
+			gpc_offset = reg->index;
+
+			base_address = proj_gpc_base_v() +
+				(gpc_num * proj_gpc_stride_v());
+			address = base_address + gpc_addr;
+
+			if (pri_addr == address) {
+				*priv_offset = gpc_offset;
+				return 0;
+			}
+		}
+	}
+
+	return -EINVAL;
+}
+
+static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
+					       void *context,
+					       u32 *num_ppcs, u32 *ppc_mask,
+					       u32 *reg_ppc_count)
+{
+	u32 data32;
+	u32 litter_num_pes_per_gpc = proj_scal_litter_num_pes_per_gpc_v();
+
+	/*
+	 * if there is only 1 PES_PER_GPC, then we put the PES registers
+	 * in the GPC reglist, so we can't error out if ppc.count == 0
+	 */
+	if ((!g->gr.ctx_vars.valid) ||
+	    ((g->gr.ctx_vars.ctxsw_regs.ppc.count == 0) &&
+	     (litter_num_pes_per_gpc > 1)))
+		return -EINVAL;
+
+	data32 = mem_rd32(context + ctxsw_prog_local_image_ppc_info_o(), 0);
+
+	*num_ppcs = ctxsw_prog_local_image_ppc_info_num_ppcs_v(data32);
+	*ppc_mask = ctxsw_prog_local_image_ppc_info_ppc_mask_v(data32);
+
+	*reg_ppc_count = g->gr.ctx_vars.ctxsw_regs.ppc.count;
+
+	return 0;
+}
+
+
+
+/*
+ *  This function will return the 32 bit offset for a priv register if it is
+ *  present in the context buffer.
+ */
+static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
+					       u32 addr,
+					       bool is_quad, u32 quad,
+					       u32 *context_buffer,
+					       u32 context_buffer_size,
+					       u32 *priv_offset)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 i, data32;
+	int err;
+	int addr_type; /*enum ctxsw_addr_type */
+	u32 broadcast_flags;
+	u32 gpc_num, tpc_num, ppc_num, be_num;
+	u32 num_gpcs, num_tpcs, num_ppcs;
+	u32 offset;
+	u32 sys_priv_offset, gpc_priv_offset;
+	u32 ppc_mask, reg_list_ppc_count;
+	void *context;
+	u32 offset_to_segment;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "addr=0x%x", addr);
+
+	err = gr_gk20a_decode_priv_addr(g, addr, &addr_type,
+					&gpc_num, &tpc_num, &ppc_num, &be_num,
+					&broadcast_flags);
+	if (err)
+		return err;
+
+	context = context_buffer;
+	if (!check_main_image_header_magic(context)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "Invalid main header: magic value");
+		return -EINVAL;
+	}
+	num_gpcs = mem_rd32(context + ctxsw_prog_main_image_num_gpcs_o(), 0);
+
+	/* Parse the FECS local header. */
+	context += ctxsw_prog_ucode_header_size_in_bytes();
+	if (!check_local_header_magic(context)) {
+		nvhost_err(dev_from_gk20a(g),
+			   "Invalid FECS local header: magic value\n");
+		return -EINVAL;
+	}
+	data32 = mem_rd32(context + ctxsw_prog_local_priv_register_ctl_o(), 0);
+	sys_priv_offset = ctxsw_prog_local_priv_register_ctl_offset_v(data32);
+
+	/* If found in Ext buffer, ok.
+	 * If it failed and we expected to find it there (quad offset)
+	 * then return the error.  Otherwise continue on.
+	 */
+	err = gr_gk20a_find_priv_offset_in_ext_buffer(g,
+				      addr, is_quad, quad, context_buffer,
+				      context_buffer_size, priv_offset);
+	if (!err || (err && is_quad))
+		return err;
+
+	if ((addr_type == CTXSW_ADDR_TYPE_SYS) ||
+	    (addr_type == CTXSW_ADDR_TYPE_BE)) {
+		/* Find the offset in the FECS segment. */
+		offset_to_segment = sys_priv_offset *
+			ctxsw_prog_ucode_header_size_in_bytes();
+
+		err = gr_gk20a_process_context_buffer_priv_segment(g,
+					   addr_type, addr,
+					   0, 0, 0, 0,
+					   &offset);
+		if (err)
+			return err;
+
+		*priv_offset = (offset_to_segment + offset);
+		return 0;
+	}
+
+	if ((gpc_num + 1) > num_gpcs)  {
+		nvhost_err(dev_from_gk20a(g),
+			   "GPC %d not in this context buffer.\n",
+			   gpc_num);
+		return -EINVAL;
+	}
+
+	/* Parse the GPCCS local header(s).*/
+	for (i = 0; i < num_gpcs; i++) {
+		context += ctxsw_prog_ucode_header_size_in_bytes();
+		if (!check_local_header_magic(context)) {
+			nvhost_err(dev_from_gk20a(g),
+				   "Invalid GPCCS local header: magic value\n");
+			return -EINVAL;
+
+		}
+		data32 = mem_rd32(context + ctxsw_prog_local_priv_register_ctl_o(), 0);
+		gpc_priv_offset = ctxsw_prog_local_priv_register_ctl_offset_v(data32);
+
+		err = gr_gk20a_determine_ppc_configuration(g, context,
+							   &num_ppcs, &ppc_mask,
+							   &reg_list_ppc_count);
+		if (err)
+			return err;
+
+		num_tpcs = mem_rd32(context + ctxsw_prog_local_image_num_tpcs_o(), 0);
+
+		if ((i == gpc_num) && ((tpc_num + 1) > num_tpcs)) {
+			nvhost_err(dev_from_gk20a(g),
+			   "GPC %d TPC %d not in this context buffer.\n",
+				   gpc_num, tpc_num);
+			return -EINVAL;
+		}
+
+		/* Find the offset in the GPCCS segment.*/
+		if (i == gpc_num) {
+			offset_to_segment = gpc_priv_offset *
+				ctxsw_prog_ucode_header_size_in_bytes();
+
+			if (addr_type == CTXSW_ADDR_TYPE_TPC) {
+				/*reg = gr->ctx_vars.ctxsw_regs.tpc.l;*/
+			} else if (addr_type == CTXSW_ADDR_TYPE_PPC) {
+				/* The ucode stores TPC data before PPC data.
+				 * Advance offset past TPC data to PPC data. */
+				offset_to_segment +=
+					((gr->ctx_vars.ctxsw_regs.tpc.count *
+					  num_tpcs) << 2);
+			} else if (addr_type == CTXSW_ADDR_TYPE_GPC) {
+				/* The ucode stores TPC/PPC data before GPC data.
+				 * Advance offset past TPC/PPC data to GPC data. */
+				/* note 1 PES_PER_GPC case */
+				u32 litter_num_pes_per_gpc =
+					proj_scal_litter_num_pes_per_gpc_v();
+				if (litter_num_pes_per_gpc > 1) {
+					offset_to_segment +=
+						(((gr->ctx_vars.ctxsw_regs.tpc.count *
+						   num_tpcs) << 2) +
+						 ((reg_list_ppc_count * num_ppcs) << 2));
+				} else {
+					offset_to_segment +=
+						((gr->ctx_vars.ctxsw_regs.tpc.count *
+						  num_tpcs) << 2);
+				}
+			} else {
+				nvhost_err(dev_from_gk20a(g),
+					   " Unknown address type.\n");
+				return -EINVAL;
+			}
+			err = gr_gk20a_process_context_buffer_priv_segment(g,
+							   addr_type, addr,
+							   i, num_tpcs,
+							   num_ppcs, ppc_mask,
+							   &offset);
+			if (err)
+			    return -EINVAL;
+
+			*priv_offset = offset_to_segment + offset;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
+
+int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
+			  struct nvhost_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
+{
+	struct gk20a *g = ch->g;
+	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	void *ctx_ptr = NULL;
+	int curr_gr_chid, curr_gr_ctx;
+	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
+	bool restart_fifo_ctxsw = false;
+	u32 i, j, offset, v;
+	u32 max_offsets = proj_scal_max_gpcs_v() *
+		proj_scal_max_tpc_per_gpc_v();
+	u32 *offsets = NULL;
+	u32 *offset_addrs = NULL;
+	u32 ctx_op_nr, num_ctx_ops[2] = {num_ctx_wr_ops, num_ctx_rd_ops};
+	int err, pass;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "wr_ops=%d rd_ops=%d",
+		   num_ctx_wr_ops, num_ctx_rd_ops);
+
+	/* TBD: set timeout */
+	/* pin_context will disable channel switching.
+	 * at that point the hardware state can be inspected to
+	 * determine if the context we're interested in is current.
+	 */
+#if 0
+	err = fifo_gk20a_disable_fifo_ctxsw(g, c);
+	if (err) {
+		dev_warn(dev_from_gk20a(g), "failed to fifo ctxsw\n");
+		goto clean_up;
+	}
+	restart_fifo_ctxsw = true;
+#endif
+
+	{
+		u32 reg = gk20a_readl(g, 0x0041a084);
+		nvhost_dbg(dbg_gpu_dbg, "flcn_cfg_rm=0x%x",
+			   reg);
+	}
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		nvhost_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		/* this should probably be ctx-fatal... */
+		goto cleanup;
+	}
+
+	restart_gr_ctxsw = true;
+
+	curr_gr_ctx  = gk20a_readl(g, gr_fecs_current_ctx_r());
+	curr_gr_chid = gk20a_gr_get_chid_from_ctx(g, curr_gr_ctx);
+	ch_is_curr_ctx = (curr_gr_chid != -1) && (ch->hw_chid == curr_gr_chid);
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "is curr ctx=%d", ch_is_curr_ctx);
+	if (ch_is_curr_ctx) {
+		for (pass = 0; pass < 2; pass++) {
+			ctx_op_nr = 0;
+			for (i = 0; (ctx_op_nr < num_ctx_ops[pass]) && (i < num_ops); ++i) {
+				/* only do ctx ops and only on the right pass */
+				if ((ctx_ops[i].type == REGOP(TYPE_GLOBAL)) ||
+				    (((pass == 0) && reg_op_is_read(ctx_ops[i].op)) ||
+				     ((pass == 1) && !reg_op_is_read(ctx_ops[i].op))))
+					continue;
+
+				/* if this is a quad access, setup for special access*/
+				if (ctx_ops[i].is_quad)
+					gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
+								 ctx_ops[i].offset);
+				offset = ctx_ops[i].offset;
+
+				if (pass == 0) { /* write pass */
+					v = gk20a_readl(g, offset);
+					v &= ~ctx_ops[i].and_n_mask_lo;
+					v |= ctx_ops[i].value_lo;
+					gk20a_writel(g, offset, v);
+
+					nvhost_dbg(dbg_gpu_dbg,
+						   "direct wr: offset=0x%x v=0x%x",
+						   offset, v);
+
+					if (ctx_ops[i].op == REGOP(WRITE_64)) {
+						v = gk20a_readl(g, offset + 4);
+						v &= ~ctx_ops[i].and_n_mask_hi;
+						v |= ctx_ops[i].value_hi;
+						gk20a_writel(g, offset + 4, v);
+
+						nvhost_dbg(dbg_gpu_dbg,
+							   "direct wr: offset=0x%x v=0x%x",
+							   offset + 4, v);
+					}
+
+				} else { /* read pass */
+					ctx_ops[i].value_lo =
+						gk20a_readl(g, offset);
+
+					nvhost_dbg(dbg_gpu_dbg,
+						   "direct rd: offset=0x%x v=0x%x",
+						   offset, ctx_ops[i].value_lo);
+
+					if (ctx_ops[i].op == REGOP(READ_64)) {
+						ctx_ops[i].value_hi =
+							gk20a_readl(g, offset + 4);
+
+						nvhost_dbg(dbg_gpu_dbg,
+							   "direct rd: offset=0x%x v=0x%x",
+							   offset, ctx_ops[i].value_lo);
+					} else
+						ctx_ops[i].value_hi = 0;
+				}
+				ctx_op_nr++;
+			}
+		}
+		goto cleanup;
+	}
+
+	/* they're the same size, so just use one alloc for both */
+	offsets = kzalloc(2 * sizeof(u32) * max_offsets, GFP_KERNEL);
+	if (!offsets) {
+		err = -ENOMEM;
+		goto cleanup;
+	}
+	offset_addrs = offsets + max_offsets;
+
+	/* would have been a variant of gr_gk20a_apply_instmem_overrides */
+	/* recoded in-place instead.*/
+	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
+	if (!ctx_ptr) {
+		err = -ENOMEM;
+		ctx_ptr = NULL;
+		goto cleanup;
+	}
+
+	/* Channel gr_ctx buffer is gpu cacheable; so flush and invalidate.
+	 * There should be no on-going/in-flight references by the gpu now. */
+	gk20a_mm_fb_flush(g);
+	gk20a_mm_l2_flush(g, true);
+
+	/* write to appropriate place in context image,
+	 * first have to figure out where that really is */
+
+	/* first pass is writes, second reads */
+	for (pass = 0; pass < 2; pass++) {
+		ctx_op_nr = 0;
+		for (i = 0; (ctx_op_nr < num_ctx_ops[pass]) && (i < num_ops); ++i) {
+			u32 num_offsets;
+
+			/* only do ctx ops and only on the right pass */
+			if ((ctx_ops[i].type == REGOP(TYPE_GLOBAL)) ||
+			    (((pass == 0) && reg_op_is_read(ctx_ops[i].op)) ||
+			     ((pass == 1) && !reg_op_is_read(ctx_ops[i].op))))
+				continue;
+
+			gr_gk20a_get_ctx_buffer_offsets(g,
+						ctx_ops[i].offset,
+						max_offsets,
+						offsets, offset_addrs,
+						&num_offsets,
+						ctx_ops[i].is_quad,
+						ctx_ops[i].quad);
+
+			/* if this is a quad access, setup for special access*/
+			if (ctx_ops[i].is_quad)
+				gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
+							 ctx_ops[i].offset);
+
+			for (j = 0; j < num_offsets; j++) {
+				/* sanity check, don't write outside, worst case */
+				if (offsets[j] >= g->gr.ctx_vars.golden_image_size)
+					continue;
+				if (pass == 0) { /* write pass */
+					v = mem_rd32(ctx_ptr + offsets[j], 0);
+					v &= ~ctx_ops[i].and_n_mask_lo;
+					v |= ctx_ops[i].value_lo;
+					mem_wr32(ctx_ptr + offsets[j], 0, v);
+
+					nvhost_dbg(dbg_gpu_dbg,
+						   "context wr: offset=0x%x v=0x%x",
+						   offsets[j], v);
+
+					if (ctx_ops[i].op == REGOP(WRITE_64)) {
+						v = mem_rd32(ctx_ptr + offsets[j] + 4, 0);
+						v &= ~ctx_ops[i].and_n_mask_hi;
+						v |= ctx_ops[i].value_hi;
+						mem_wr32(ctx_ptr + offsets[j] + 4, 0, v);
+
+						nvhost_dbg(dbg_gpu_dbg,
+							   "context wr: offset=0x%x v=0x%x",
+							   offsets[j] + 4, v);
+					}
+
+					/* check to see if we need to add a special WAR
+					   for some of the SMPC perf regs */
+					gr_gk20a_ctx_patch_smpc(g, ch_ctx, offset_addrs[j],
+							v, ctx_ptr);
+
+				} else { /* read pass */
+					ctx_ops[i].value_lo =
+						mem_rd32(ctx_ptr + offsets[0], 0);
+
+					nvhost_dbg(dbg_gpu_dbg, "context rd: offset=0x%x v=0x%x",
+						   offsets[0], ctx_ops[i].value_lo);
+
+					if (ctx_ops[i].op == REGOP(READ_64)) {
+						ctx_ops[i].value_hi =
+							mem_rd32(ctx_ptr + offsets[0] + 4, 0);
+
+						nvhost_dbg(dbg_gpu_dbg,
+							   "context rd: offset=0x%x v=0x%x",
+							   offsets[0] + 4, ctx_ops[i].value_hi);
+					} else
+						ctx_ops[i].value_hi = 0;
+				}
+			}
+			ctx_op_nr++;
+		}
+	}
+#if 0
+	/* flush cpu caches for the ctx buffer? only if cpu cached, of course.
+	 * they aren't, yet */
+	if (cached) {
+		FLUSH_CPU_DCACHE(ctx_ptr,
+			 sg_phys(ch_ctx->gr_ctx.mem.ref), size);
+	}
+#endif
+
+ cleanup:
+	if (offsets)
+		kfree(offsets);
+
+	if (ctx_ptr)
+		nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+
+	if (restart_gr_ctxsw) {
+		int tmp_err = gr_gk20a_enable_ctxsw(g);
+		if (tmp_err) {
+			nvhost_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
+			err = tmp_err;
+		}
+	}
+
+	if (restart_fifo_ctxsw) {
+#if 0
+		fifo_gk20a_enable_fifo_ctxsw(g);
+#endif
+	}
+
+	return err;
 }

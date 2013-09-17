@@ -30,6 +30,7 @@ struct gk20a;
 struct gr_gk20a;
 struct mem_mgr;
 struct mem_handle;
+struct dbg_session_gk20a;
 
 #include "nvhost_channel.h"
 #include "nvhost_hwctx.h"
@@ -129,6 +130,8 @@ struct channel_gk20a {
 	struct mutex cyclestate_buffer_mutex;
 	} cyclestate;
 #endif
+	struct mutex dbg_s_lock;
+	struct dbg_session_gk20a *dbg_s;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

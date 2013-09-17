@@ -95,6 +95,12 @@ struct gk20a {
 	struct dentry *debugfs_timeouts_enabled;
 	struct dentry *debugfs_gr_idle_timeout_default;
 #endif
+
+	/* held while manipulating # of debug sessions present */
+	/* also prevents debug sessions from attaching until released */
+	struct mutex dbg_sessions_lock;
+	int dbg_sessions; /* number attached */
+
 	void (*remove_support)(struct platform_device *);
 
 	struct notifier_block system_suspend_notifier;
@@ -248,6 +254,7 @@ int clk_gk20a_debugfs_init(struct platform_device *dev);
 #endif
 
 extern const struct file_operations tegra_gk20a_ctrl_ops;
+extern const struct file_operations tegra_gk20a_dbg_gpu_ops;
 struct nvhost_hwctx_handler *nvhost_gk20a_alloc_hwctx_handler(u32 syncpt,
 		u32 waitbase, struct nvhost_channel *ch);
 

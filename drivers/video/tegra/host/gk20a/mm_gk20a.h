@@ -78,6 +78,7 @@ struct userd_desc {
 
 struct patch_desc {
 	struct mem_desc mem;
+	void *cpu_va;
 	u64 gpu_va;
 	u32 data_count;
 };

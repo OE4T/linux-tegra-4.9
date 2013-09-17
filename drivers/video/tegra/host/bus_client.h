@@ -55,6 +55,4 @@ nvhost_client_request_firmware(struct platform_device *dev,
 
 int nvhost_client_device_get_resources(struct platform_device *dev);
 
-struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
-
 #endif

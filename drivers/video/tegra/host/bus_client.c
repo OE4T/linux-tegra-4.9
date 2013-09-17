@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/bus_client.c
- *
  * Tegra Graphics Host Client Module
  *
  * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
@@ -217,7 +215,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	if(nvhost_module_add_client(ch->dev, priv))
+	if (nvhost_module_add_client(ch->dev, priv))
 		goto fail;
 
 	if (ch->ctxhandler && ch->ctxhandler->alloc) {
@@ -1108,9 +1106,10 @@ int nvhost_client_user_init(struct platform_device *dev)
 	struct nvhost_channel *ch = pdata->channel;
 
 	BUG_ON(!ch);
-	// reserve 3 minor #s for <dev> and as-<dev> and ctrl-<dev>
+	/* reserve 4 minor #s for <dev> and as-<dev>, ctrl-<dev>
+	 * and dbg-<dev> */
 
-	err = alloc_chrdev_region(&devno, 0, 3, IFACE_NAME);
+	err = alloc_chrdev_region(&devno, 0, 4, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
@@ -1134,6 +1133,16 @@ int nvhost_client_user_init(struct platform_device *dev)
 		if (pdata->ctrl_node == NULL)
 			goto fail;
 	}
+
+	if (pdata->dbg_ops) {
+		++devno;
+		pdata->dbg_node = nvhost_client_device_create(dev,
+					&pdata->dbg_cdev, "dbg-",
+					devno, pdata->dbg_ops);
+		if (pdata->dbg_node == NULL)
+			goto fail;
+	}
+
 
 	return 0;
 fail:

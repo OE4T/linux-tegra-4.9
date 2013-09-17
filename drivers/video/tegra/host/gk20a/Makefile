@@ -11,6 +11,8 @@ nvhost-gk20a-objs  = \
 	channel_gk20a.o \
 	cdma_gk20a.o \
 	debug_gk20a.o \
+	dbg_gpu_gk20a.o \
+	regops_gk20a.o \
 	gr_gk20a.o \
 	kind_gk20a.o \
 	mm_gk20a.o \

@@ -2420,6 +2420,9 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 		goto exit_unlock;
 	}
 
+	if (!g->elpg_enabled)
+		goto exit_unlock;
+
 	/* do NOT enable elpg until golden ctx is created,
 	   which is related with the ctx that ELPG save and restore. */
 	if (unlikely(!gr->ctx_vars.golden_image_initialized)) {

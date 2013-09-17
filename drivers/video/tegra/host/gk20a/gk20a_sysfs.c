@@ -176,12 +176,54 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
+static ssize_t elpg_enable_store(struct device *device,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long val = 0;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	/*
+	 * Since elpg is refcounted, we should not unnecessarily call
+	 * enable/disable if it is already so.
+	 */
+	nvhost_module_busy(g->dev);
+	if (val && !g->elpg_enabled) {
+		g->elpg_enabled = true;
+		gk20a_pmu_enable_elpg(g);
+	} else if (!val && g->elpg_enabled) {
+		g->elpg_enabled = false;
+		gk20a_pmu_disable_elpg(g);
+	}
+	nvhost_module_idle(g->dev);
+
+	dev_info(device, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
+			"disabled");
+
+	return count;
+}
+
+static ssize_t elpg_enable_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->elpg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(elpg_enable, S_IRWXUGO, elpg_enable_read, elpg_enable_store);
+
 void gk20a_remove_sysfs(struct device *dev)
 {
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
 	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
+	device_remove_file(dev, &dev_attr_elpg_enable);
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -192,6 +234,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_blcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_slcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
+	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");

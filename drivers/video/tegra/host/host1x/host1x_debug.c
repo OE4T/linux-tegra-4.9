@@ -73,7 +73,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 	int i;
 
 	if (list_empty(&cdma->sync_queue)) {
-		nvhost_debug_output(o, "\njob queue is empty\n");
+		nvhost_debug_output(o, "The CDMA sync queue is empty.\n");
 		return;
 	}
 

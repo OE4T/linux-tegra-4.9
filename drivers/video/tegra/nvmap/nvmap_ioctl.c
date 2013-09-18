@@ -203,14 +203,13 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 	struct nvmap_handle *h;
 	unsigned long on_stack[16];
 	unsigned long *refs;
+#ifdef CONFIG_COMPAT
+	u32 __user *output;
+#else
 	unsigned long __user *output;
+#endif
 	unsigned int i;
 	int err = 0;
-#ifdef CONFIG_COMPAT
-	u32 handle;
-#else
-	struct nvmap_handle *handle;
-#endif
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -235,7 +234,14 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		}
 
 		for (i = 0; i < op.count; i++) {
-			if (__get_user(handle, &op.handles[i])) {
+#ifdef CONFIG_COMPAT
+			u32 handle;
+			u32 *handles = (u32 *)op.handles;
+#else
+			struct nvmap_handle *handle;
+			struct nvmap_handle **handles = op.handles;
+#endif
+			if (__get_user(handle, &handles[i])) {
 				err = -EFAULT;
 				goto out;
 			}
@@ -260,10 +266,10 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 	 * all of the handle_ref objects are valid, so dereferencing
 	 * directly here is safe */
 	if (op.count > 1)
-		output = unmarshal_user_pointer(op.addr);
+		output = (typeof(output))op.addr;
 	else {
 		struct nvmap_pin_handle __user *tmp = arg;
-		output = (unsigned long __user *)&(tmp->addr);
+		output = (typeof(output))&(tmp->addr);
 	}
 
 	if (!output)

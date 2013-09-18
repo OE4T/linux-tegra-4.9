@@ -131,6 +131,8 @@ struct fifo_gk20a {
 	} intr;
 
 	u32 mmu_fault_engines;
+
+	struct work_struct fault_restore_thread;
 };
 
 int gk20a_init_fifo_support(struct gk20a *g);

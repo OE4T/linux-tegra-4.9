@@ -1333,6 +1333,9 @@ int gk20a_init_pmu_support(struct gk20a *g)
 
 		/* Save zbc table after PMU is initialized. */
 		pmu_save_zbc(g, 0xf);
+
+		/* wait for pmu idle */
+		err = pmu_idle(pmu);
 	}
 
 	return err;

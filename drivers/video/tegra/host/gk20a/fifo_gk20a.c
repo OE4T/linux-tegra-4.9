@@ -36,6 +36,8 @@
 #include "hw_mc_gk20a.h"
 #include "hw_gr_gk20a.h"
 
+static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work);
+
 /*
  * Link engine IDs to MMU IDs and vice versa.
  */
@@ -472,6 +474,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->g = g;
 
+	INIT_WORK(&f->fault_restore_thread,
+		  gk20a_fifo_handle_mmu_fault_thread);
 	mutex_init(&f->intr.isr.mutex);
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
@@ -800,6 +804,20 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	}
 }
 
+static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)
+{
+	struct fifo_gk20a *f = container_of(work, struct fifo_gk20a,
+					    fault_restore_thread);
+	struct gk20a *g = f->g;
+	int i;
+
+	gk20a_init_pmu_support(g);
+
+	/* Restore the runlist */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		gk20a_fifo_update_runlist(g, i, ~0, true, true);
+}
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
@@ -810,6 +828,9 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	nvhost_debug_dump(g->host);
+
+	/* PMU does not survive GR reset. */
+	gk20a_pmu_destroy(g);
 
 	/* If we have recovery in progress, MMU fault id is invalid */
 	if (g->fifo.mmu_fault_engines) {
@@ -920,11 +941,10 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		gk20a_fifo_reset_engine(g, engine_id);
 	}
 
-	/* update the runlists. Do not wait for runlist to start as
-	 * the scheduler is currently disabled and it would therefore
-	 * fail anyway */
+	/* CLEAR the runlists. Do not wait for runlist to start as
+	 * some engines may not be available right now */
 	for (i = 0; i < g->fifo.max_runlists; i++)
-		gk20a_fifo_update_runlist(g, i, ~0, true, false);
+		gk20a_fifo_update_runlist(g, i, ~0, false, false);
 
 	/* clear interrupt */
 	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
@@ -932,6 +952,9 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	/* resume scheduler */
 	gk20a_writel(g, fifo_error_sched_disable_r(),
 		     gk20a_readl(g, fifo_error_sched_disable_r()));
+
+	/* Spawn a work to enable PMU and restore runlists */
+	schedule_work(&g->fifo.fault_restore_thread);
 }
 
 void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)

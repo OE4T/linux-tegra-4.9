@@ -201,7 +201,7 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 	__nvmap_free_sg_table(NULL, info->handle, nvmap_sgt->sgt);
 
 	WARN(atomic_read(&nvmap_sgt->refs), "nvmap: Freeing reffed SGT!");
-	kfree(nvmap_sgt);
+	kmem_cache_free(handle_sgt_cache, nvmap_sgt);
 }
 
 /*
@@ -690,8 +690,7 @@ void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt)
 	if (WARN_ON(!virt_addr_valid(sgt)))
 		return;
 
-	sg_free_table(sgt);
-	kmem_cache_free(handle_sgt_cache, sgt);
+	__nvmap_free_sg_table(NULL, NULL, sgt);
 }
 
 void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,

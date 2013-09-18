@@ -160,13 +160,13 @@
  *	NOTE: Need to sync with HAL
  ***************************************************************************/
 
-typedef struct {
+struct rm_touch_event {
 	unsigned char ucTouchCount;
 	unsigned char ucID[RM_TS_MAX_POINTS];
 	unsigned short usX[RM_TS_MAX_POINTS];
 	unsigned short usY[RM_TS_MAX_POINTS];
 	unsigned short usZ[RM_TS_MAX_POINTS];
-} rm_touch_event;
+};
 
 struct rm_spi_ts_platform_data {
 	int gpio_reset;

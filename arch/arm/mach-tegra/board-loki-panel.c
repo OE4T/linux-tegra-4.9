@@ -43,12 +43,14 @@ struct platform_device * __init loki_host1x_init(void)
 {
 	struct platform_device *pdev = NULL;
 
+#ifdef CONFIG_TEGRA_GRHOST
 	pdev = tegra12_register_host1x_devices();
 
 	if (!pdev) {
 		pr_err("host1x devices registration failed\n");
 		return NULL;
 	}
+#endif
 	return pdev;
 }
 

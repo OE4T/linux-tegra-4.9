@@ -101,6 +101,7 @@ struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	atomic_t pin;		/* pin count */
+	atomic_t disable_deferred_cache;
 	unsigned long flags;
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */

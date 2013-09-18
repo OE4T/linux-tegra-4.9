@@ -374,8 +374,6 @@ cache_hit:
 #endif
 	attach->priv = sgt;
 	mutex_unlock(&info->maps_lock);
-	if (nvmap_find_cache_maint_op(nvmap_dev, info->handle))
-		nvmap_cache_maint_ops_flush(nvmap_dev, info->handle);
 	return sgt;
 
 err_prep:

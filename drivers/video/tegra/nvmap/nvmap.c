@@ -583,6 +583,14 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 		if (err)
 			goto err;
 	}
+	if (atomic_read(&h->disable_deferred_cache) <= 1) {
+		/* disable deferred cache maint */
+		atomic_set(&h->disable_deferred_cache, 1);
+		if (nvmap_find_cache_maint_op(nvmap_dev, h))
+			nvmap_cache_maint_ops_flush(nvmap_dev, h);
+		/* avoid unnecessary check for deferred cache maint */
+		atomic_set(&h->disable_deferred_cache, 2);
+	}
 	nvmap_handle_put(h);
 	return sgt;
 

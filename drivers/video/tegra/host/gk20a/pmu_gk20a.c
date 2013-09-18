@@ -1767,8 +1767,6 @@ void pmu_save_zbc(struct gk20a *g, u32 entries)
 
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 					NULL, pmu, &seq, ~0);
-
-	return 0;
 }
 
 static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)

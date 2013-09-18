@@ -277,8 +277,6 @@ unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 				unsigned long val, unsigned long reg);
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi);
-int tegra_hdmi_connector_is_dvi(struct tegra_dc *dc);
-int tegra_dc_find_cea_vic_from_fb_vmode(const struct fb_videomode *mode);
 bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 			       struct fb_videomode *mode);
 #endif

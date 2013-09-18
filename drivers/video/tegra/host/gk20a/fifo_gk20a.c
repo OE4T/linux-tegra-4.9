@@ -510,7 +510,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					    /*offset_align, flags, kind*/
 					    4096, 0, 0,
 					    &f->userd.mem.sgt,
-					    false);
+					    false,
+					    mem_flag_none);
 	f->userd.cpu_pa = gk20a_mm_iova_addr(f->userd.mem.sgt->sgl);
 	nvhost_dbg(dbg_map, "userd physical address : 0x%08llx - 0x%08llx",
 			f->userd.cpu_pa, f->userd.cpu_pa + f->userd_total_size);

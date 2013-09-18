@@ -107,7 +107,8 @@ static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 static int update_gmmu_ptes(struct vm_gk20a *vm,
 			    enum gmmu_pgsz_gk20a pgsz_idx, struct sg_table *sgt,
 			    u64 first_vaddr, u64 last_vaddr,
-			    u8 kind_v, u32 ctag_offset, bool cacheable);
+			    u8 kind_v, u32 ctag_offset, bool cacheable,
+			    int rw_flag);
 static void update_gmmu_pde(struct vm_gk20a *vm, u32 i);
 
 
@@ -917,7 +918,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
 			u32 kind,
 			struct sg_table **sgt,
-			bool user_mapped)
+			bool user_mapped,
+			int rw_flag)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvhost_allocator *ctag_allocator = &g->gr.comp_tags;
@@ -984,7 +986,7 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d, mem_flag_none);
+	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d, rw_flag);
 	if (IS_ERR(bfr.sgt)) {
 		/* Falling back to physical is actually possible
 		 * here in many cases if we use 4K phys pages in the
@@ -1178,7 +1180,8 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 			       map_offset, map_offset + bfr.size - 1,
 			       bfr.kind_v,
 			       bfr.ctag_offset,
-			       flags & NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE);
+			       flags & NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			       rw_flag);
 	if (err) {
 		nvhost_err(d, "failed to update ptes on map");
 		goto clean_up;
@@ -1224,7 +1227,8 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 			    struct sg_table *sgt,
 			    u64 first_vaddr, u64 last_vaddr,
 			    u8 kind_v, u32 ctag_offset,
-			    bool cacheable)
+			    bool cacheable,
+			    int rw_flag)
 {
 	int err;
 	u32 pde_lo, pde_hi, pde_i;
@@ -1298,6 +1302,14 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 				pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 					gmmu_pte_kind_f(kind_v) |
 					gmmu_pte_comptagline_f(ctag);
+
+				if (rw_flag == mem_flag_read_only) {
+					pte_w[0] |= gmmu_pte_read_only_true_f()
+					     | gmmu_pte_write_disable_true_f();
+				} else if (rw_flag == mem_flag_write_only) {
+					pte_w[0] |=
+						gmmu_pte_read_disable_true_f();
+				}
 
 				if (!cacheable)
 					pte_w[1] |= gmmu_pte_vol_true_f();
@@ -1470,7 +1482,8 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 			       0, /* n/a for unmap */
 			       mapped_buffer->addr,
 			       mapped_buffer->addr + mapped_buffer->size - 1,
-			       0, 0, false /* n/a for unmap */);
+			       0, 0, false /* n/a for unmap */,
+			       mem_flag_none);
 
 	/* detect which if any pdes/ptes can now be released */
 
@@ -1806,7 +1819,8 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 	}
 
 	ret_va = vm->map(vm, memmgr, r, *offset_align,
-			flags, 0/*no kind here, to be removed*/, NULL, true);
+			flags, 0/*no kind here, to be removed*/, NULL, true,
+			mem_flag_none);
 	*offset_align = ret_va;
 	if (!ret_va)
 		err = -EINVAL;

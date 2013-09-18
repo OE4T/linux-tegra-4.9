@@ -1,7 +1,8 @@
 /*
  * Raydium RM31080 touchscreen driver
  *
- * Copyright (C) 2012-2013, Raydium Semiconductor Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2013, Raydium Semiconductor Corporation.
+ * All Rights Reserved.
  * Copyright (C) 2012-2013, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
@@ -14,7 +15,7 @@
 	INCLUDED FILES
 =============================================================================*/
 #include <linux/device.h>
-#include <asm/uaccess.h>	/* copy_to_user() */
+#include <linux/uaccess.h>	/* copy_to_user() */
 #include <linux/delay.h>
 #include <linux/module.h>	/* Module definition */
 
@@ -131,7 +132,7 @@ void rm_tch_ctrl_set_parameter(void *arg)
 	memcpy(&g_stCtrl, arg, sizeof(struct rm_tch_ctrl_para));
 }
 
-/*=============================================================================*/
+/*===========================================================================*/
 MODULE_AUTHOR("xxxxxxxxxx <xxxxxxxx@rad-ic.com>");
 MODULE_DESCRIPTION("Raydium touchscreen control functions");
 MODULE_LICENSE("GPL");

@@ -223,7 +223,8 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 	}
 
 	for (i = 0; i < args->num_pts; i++) {
-		if (pts[i].id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt)) {
+		if (pts[i].id >= nvhost_syncpt_nb_pts(&ctx->dev->syncpt) &&
+		    pts[i].id != NVSYNCPT_INVALID) {
 			err = -EINVAL;
 			goto out;
 		}

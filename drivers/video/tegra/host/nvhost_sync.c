@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoint Integration to linux/sync Framework
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -119,7 +119,8 @@ static struct nvhost_sync_pt *nvhost_sync_pt_create_shared(
 	shared->thresh = thresh;
 	shared->has_intr = false;
 
-	if (!nvhost_syncpt_is_expired(obj->sp, obj->id, thresh)) {
+	if ((obj->id != NVSYNCPT_INVALID) &&
+	    !nvhost_syncpt_is_expired(obj->sp, obj->id, thresh)) {
 		if (nvhost_sync_pt_set_intr(shared)) {
 			kfree(shared);
 			return NULL;
@@ -173,8 +174,11 @@ static int nvhost_sync_pt_has_signaled(struct sync_pt *sync_pt)
 	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(sync_pt);
 	struct nvhost_sync_timeline *obj = pt->obj;
 
-	/* No need to update min */
-	return nvhost_syncpt_is_expired(obj->sp, obj->id, pt->thresh);
+	if (obj->id != NVSYNCPT_INVALID)
+		/* No need to update min */
+		return nvhost_syncpt_is_expired(obj->sp, obj->id, pt->thresh);
+	else
+		return 1;
 }
 
 static int nvhost_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)
@@ -184,14 +188,20 @@ static int nvhost_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)
 	struct nvhost_sync_timeline *obj = pt_a->obj;
 	BUG_ON(pt_a->obj != pt_b->obj);
 
-	/* No need to update min */
-	return nvhost_syncpt_compare(obj->sp, obj->id,
-				     pt_a->thresh, pt_b->thresh);
+	if (obj->id != NVSYNCPT_INVALID)
+		/* No need to update min */
+		return nvhost_syncpt_compare(obj->sp, obj->id,
+					     pt_a->thresh, pt_b->thresh);
+	else
+		return 0;
 }
 
 static u32 nvhost_sync_timeline_current(struct nvhost_sync_timeline *obj)
 {
-	return nvhost_syncpt_read_min(obj->sp, obj->id);
+	if (obj->id != NVSYNCPT_INVALID)
+		return nvhost_syncpt_read_min(obj->sp, obj->id);
+	else
+		return 0;
 }
 
 static void nvhost_sync_timeline_value_str(struct sync_timeline *timeline,
@@ -206,7 +216,12 @@ static void nvhost_sync_pt_value_str(struct sync_pt *sync_pt, char *str,
 		int size)
 {
 	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(sync_pt);
-	snprintf(str, size, "%d", pt->thresh);
+	struct nvhost_sync_timeline *obj = pt->obj;
+
+	if (obj->id != NVSYNCPT_INVALID)
+		snprintf(str, size, "%d", pt->thresh);
+	else
+		snprintf(str, size, "0");
 }
 
 static int nvhost_sync_fill_driver_data(struct sync_pt *sync_pt,
@@ -243,9 +258,11 @@ struct nvhost_sync_timeline *nvhost_sync_timeline_create(
 {
 	struct nvhost_sync_timeline *obj;
 	char name[30];
-	const char *syncpt_name;
+	const char *syncpt_name = NULL;
 
-	syncpt_name = syncpt_op().name(sp, id);
+	if (id != NVSYNCPT_INVALID)
+		syncpt_name = syncpt_op().name(sp, id);
+
 	if (syncpt_name && strlen(syncpt_name))
 		snprintf(name, sizeof(name), "%d_%s", id, syncpt_name);
 	else
@@ -294,7 +311,8 @@ int nvhost_sync_create_fence(struct nvhost_syncpt *sp,
 		u32 id = pts[i].id;
 		u32 thresh = pts[i].thresh;
 
-		BUG_ON(id >= nvhost_syncpt_nb_pts(sp));
+		BUG_ON(id >= nvhost_syncpt_nb_pts(sp) &&
+				(id != NVSYNCPT_INVALID));
 		obj = nvhost_syncpt_timeline(sp, id);
 		pt = nvhost_sync_pt_create_inst(obj, thresh);
 		if (pt == NULL) {

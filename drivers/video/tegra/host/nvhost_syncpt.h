@@ -45,6 +45,9 @@ struct nvhost_syncpt {
 	struct nvhost_syncpt_attr *syncpt_attrs;
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_timeline **timeline;
+	struct nvhost_sync_timeline *timeline_invalid;
+	struct nvhost_syncpt_attr invalid_min_attr;
+	struct nvhost_syncpt_attr invalid_max_attr;
 #endif
 };
 

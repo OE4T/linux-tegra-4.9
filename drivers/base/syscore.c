@@ -112,6 +112,78 @@ void syscore_resume(void)
 	trace_suspend_resume(TPS("syscore_resume"), 0, false);
 }
 EXPORT_SYMBOL_GPL(syscore_resume);
+
+/**
+ * syscore_save - Execute all the registered system core save callbacks.
+ *
+ * This function is executed when going into deep idle state to save system
+ * context.
+ */
+int syscore_save(void)
+{
+	struct syscore_ops *ops;
+	int ret = 0;
+
+	pr_debug("Checking wakeup interrupts\n");
+
+	/* Return error code if there are any wakeup interrupts pending. */
+	if (pm_wakeup_pending())
+		return -EBUSY;
+
+	WARN_ONCE(!irqs_disabled(),
+		"Interrupts enabled before system core suspend.\n");
+
+	list_for_each_entry_reverse(ops, &syscore_ops_list, node)
+		if (ops->save) {
+			if (initcall_debug)
+				pr_info("PM: Calling %pF\n", ops->save);
+			ret = ops->save();
+			if (ret)
+				goto err_out;
+			WARN_ONCE(!irqs_disabled(),
+				"Interrupts enabled after %pF\n", ops->save);
+		}
+
+	return 0;
+
+ err_out:
+	pr_err("PM: System core save callback %pF failed.\n", ops->save);
+
+	list_for_each_entry_continue(ops, &syscore_ops_list, node)
+		if (ops->restore)
+			ops->restore();
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(syscore_save);
+
+/**
+ * syscore_restore - Execute all the registered system core restore callbacks.
+ *
+ * This function is executed after resuming from deep idle state to restore
+ * system context.
+ */
+void syscore_restore(void)
+{
+	struct syscore_ops *ops;
+
+	WARN_ONCE(!irqs_disabled(),
+		"Interrupts enabled before system core resume.\n");
+
+	list_for_each_entry(ops, &syscore_ops_list, node)
+		if (ops->restore) {
+			ops->restore();
+			WARN_ONCE(!irqs_disabled(),
+				"Interrupts enabled after %pF\n", ops->restore);
+		}
+	if (initcall_debug) {
+		list_for_each_entry(ops, &syscore_ops_list, node)
+			if (ops->restore) {
+				pr_info("PM: Called %pF\n", ops->restore);
+			}
+	}
+}
+EXPORT_SYMBOL_GPL(syscore_restore);
 #endif /* CONFIG_PM_SLEEP */
 
 /**

@@ -463,7 +463,7 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 			trim_sys_gpc2clk_out_bypdiv_by31_f());
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
-	return clk_program_gpc_pll(g, clk, 0);
+	return 0;
 }
 
 static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
@@ -588,10 +588,6 @@ static int gk20a_clk_register_export_ops(struct gk20a *g)
 	ret = tegra_clk_register_export_ops(clk_get_parent(c),
 					    &gk20a_clk_export_ops);
 
-	/* FIXME: this effectively prevents host level clock gating */
-	if (!ret)
-		ret = clk_enable(c);
-
 	return ret;
 }
 
@@ -617,11 +613,22 @@ int gk20a_init_clk_support(struct gk20a *g)
 
 	err = gk20a_init_clk_setup_hw(g);
 	mutex_unlock(&clk->clk_mutex);
-
 	if (err)
 		return err;
 
 	err = gk20a_clk_register_export_ops(g);
+	if (err)
+		return err;
+
+	/* FIXME: this effectively prevents host level clock gating */
+	err = clk_enable(g->clk.tegra_clk);
+	if (err)
+		return err;
+
+	/* The prev call may not enable PLL if gbus is unbalanced - force it */
+	mutex_lock(&clk->clk_mutex);
+	err = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
+	mutex_unlock(&clk->clk_mutex);
 	if (err)
 		return err;
 
@@ -654,6 +661,9 @@ int gk20a_suspend_clk_support(struct gk20a *g)
 {
 	int ret;
 
+	clk_disable(g->clk.tegra_clk);
+
+	/* The prev call may not disable PLL if gbus is unbalanced - force it */
 	mutex_lock(&g->clk.clk_mutex);
 	ret = clk_disable_gpcpll(g);
 	g->clk.clk_hw_on = false;

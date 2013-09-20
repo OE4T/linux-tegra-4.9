@@ -35,6 +35,12 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
+#ifdef CONFIG_IOMMU_API
+#define nvmap_masid_mapping(attach)   to_dma_iommu_mapping((attach)->dev)
+#else
+#define nvmap_masid_mapping(attach)   NULL
+#endif
+
 struct nvmap_handle_info {
 	struct nvmap_handle *handle;
 	struct list_head maps;
@@ -245,7 +251,7 @@ static int __nvmap_dmabuf_prep_sgt_locked(struct dma_buf_attachment *attach,
 		return -ENOMEM;
 	}
 
-	nvmap_sgt->mapping = attach->dev->archdata.mapping;
+	nvmap_sgt->mapping = nvmap_masid_mapping(attach);
 	nvmap_sgt->dir = dir;
 	nvmap_sgt->sgt = sgt;
 	nvmap_sgt->dev = attach->dev;
@@ -307,8 +313,9 @@ static struct sg_table *__nvmap_dmabuf_get_sgt_locked(
 
 	pr_debug("Getting SGT from stash.\n");
 	list_for_each_entry(nvmap_sgt, &info->maps, maps_entry) {
-		if (attach->dev->archdata.mapping != nvmap_sgt->mapping)
+		if (nvmap_masid_mapping(attach) != nvmap_sgt->mapping)
 			continue;
+
 		/* We have a hit. */
 		pr_debug("Stash hit (%s)!\n", dev_name(attach->dev));
 		sgt = nvmap_sgt->sgt;

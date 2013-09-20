@@ -170,6 +170,30 @@ static inline u32 gmmu_pte_aperture_video_memory_f(void)
 {
 	return 0x0;
 }
+static inline u32 gmmu_pte_read_only_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_pte_read_only_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 gmmu_pte_write_disable_w(void)
+{
+	return 1;
+}
+static inline u32 gmmu_pte_write_disable_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 gmmu_pte_read_disable_w(void)
+{
+	return 1;
+}
+static inline u32 gmmu_pte_read_disable_true_f(void)
+{
+	return 0x40000000;
+}
 static inline u32 gmmu_pte_comptagline_f(u32 v)
 {
 	return (v & 0x1ffff) << 12;

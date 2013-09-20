@@ -73,6 +73,8 @@ struct tegra_dc_dp_data {
 	struct tegra_dc			*dc;
 	struct tegra_dc_sor_data	*sor;
 
+	u32				irq;
+
 	struct resource			*aux_base_res;
 	void __iomem			*aux_base;
 	struct clk			*clk;	/* dpaux clock */
@@ -85,6 +87,8 @@ struct tegra_dc_dp_data {
 
 	bool				 enabled;
 	bool				 suspended;
+
+	struct completion		hpd_plug;
 };
 
 

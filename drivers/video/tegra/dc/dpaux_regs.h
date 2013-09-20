@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dpaux_regs.h
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,7 +19,11 @@
 
 
 #define DPAUX_INTR_EN_AUX				(0x1)
+#define DPAUX_INTR_EN_AUX_PLUG_EVENT_EN			(0x1 << 0)
+#define DPAUX_INTR_EN_AUX_PLUG_EVENT_DIS		(0)
 #define DPAUX_INTR_AUX					(0x5)
+#define DPAUX_INTR_AUX_PLUG_EVENT_PENDING		(0x1 << 0)
+#define DPAUX_INTR_AUX_IRQ_EVENT_PENDING		(0x1 << 2)
 #define DPAUX_DP_AUXDATA_WRITE_W(i)		     (0x9 + 4*(i))
 #define DPAUX_DP_AUXDATA_READ_W(i)		     (0x19 + 4*(i))
 #define DPAUX_DP_AUXADDR				(0x29)
@@ -84,6 +88,7 @@
 #define DPAUX_DP_AUXSTAT_REPLY_M_SHIFT			(0)
 #define DPAUX_DP_AUXSTAT_REPLY_M_MASK			(0xff << 0)
 #define DPAUX_HPD_CONFIG				(0x3d)
+#define DPAUX_HPD_CONFIG_UNPLUG_MIN_TIME_SHIFT		(16)
 #define DPAUX_HPD_IRQ_CONFIG				(0x41)
 #define DPAUX_DP_AUX_CONFIG				(0x45)
 #define DPAUX_HYBRID_PADCTL				(0x49)

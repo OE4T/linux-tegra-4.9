@@ -46,6 +46,44 @@ static inline void tegra_dpaux_writel(struct tegra_dc_dp_data *dp,
 	writel(val, dp->aux_base + reg * 4);
 }
 
+static inline void tegra_dp_int_en(struct tegra_dc_dp_data *dp, u32 intr)
+{
+	u32 val;
+
+	/* clear pending interrupt */
+	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, intr);
+
+	val = tegra_dpaux_readl(dp, DPAUX_INTR_EN_AUX);
+	val |= intr;
+
+	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, val);
+}
+
+static inline void tegra_dp_int_dis(struct tegra_dc_dp_data *dp, u32 intr)
+{
+	u32 val;
+
+	val = tegra_dpaux_readl(dp, DPAUX_INTR_EN_AUX);
+	val &= intr;
+
+	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, val);
+}
+
+static inline void tegra_dp_enable_irq(u32 irq)
+{
+	if (tegra_platform_is_fpga())
+		return;
+
+	enable_irq(irq);
+}
+
+static inline void tegra_dp_disable_irq(u32 irq)
+{
+	if (tegra_platform_is_fpga())
+		return;
+
+	disable_irq(irq);
+}
 
 static inline u32 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 	u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
@@ -1390,36 +1428,55 @@ static void tegra_dc_dp_lt_worker(struct work_struct *work)
 	tegra_dc_enable(dp->dc);
 }
 
-
-static irqreturn_t __maybe_unused tegra_dc_dp_hpd_irq(int irq, void *ptr)
+static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 {
-	struct tegra_dc		*dc = ptr;
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	u8			 data;
-	u8			 clear_data = 0;
+	struct tegra_dc_dp_data *dp = ptr;
+	struct tegra_dc *dc = dp->dc;
+	u32 status;
+	u8 data;
+	u8 clear_data = 0;
 
-	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
-			&data))
-		dev_err(&dc->ndev->dev, "dp: failed to read IRQ_VECTOR\n");
+	if (tegra_platform_is_fpga())
+		return IRQ_NONE;
 
-	dev_dbg(&dc->ndev->dev,
-		"dp irq: Trying to handle HPD with DPCD_IRQ_VECTOR 0x%x\n",
-		data);
+	tegra_dc_io_start(dc);
 
-	/* For eDP only answer auto_test_request */
-	if (data & NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES &&
-		dp->link_cfg.is_valid) {
-		/* Schedule to do the link training */
-		schedule_work(&dp->lt_work);
+	/* clear pending bits */
+	status = tegra_dpaux_readl(dp, DPAUX_INTR_AUX);
+	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, status);
 
-		/* Now clear auto_test bit */
-		clear_data |= NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES;
+	if (status & DPAUX_INTR_AUX_PLUG_EVENT_PENDING)
+		complete_all(&dp->hpd_plug);
+
+	if (status & DPAUX_INTR_AUX_IRQ_EVENT_PENDING) {
+		if (tegra_dc_dp_dpcd_read(dp,
+					NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
+					&data))
+			dev_err(&dc->ndev->dev,
+					"dp: failed to read IRQ_VECTOR\n");
+
+		dev_dbg(&dc->ndev->dev,
+			"dp irq: Handle HPD with DPCD_IRQ_VECTOR 0x%x\n",
+			data);
+
+		/* For eDP only answer auto_test_request */
+		if (data & NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES &&
+			dp->link_cfg.is_valid) {
+			/* Schedule to do the link training */
+			schedule_work(&dp->lt_work);
+
+			/* Now clear auto_test bit */
+			clear_data |=
+			NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES;
+		}
+
+		if (clear_data)
+			tegra_dc_dp_dpcd_write(dp,
+					NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
+					clear_data);
 	}
 
-	if (clear_data)
-		tegra_dc_dp_dpcd_write(dp, NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
-			clear_data);
-
+	tegra_dc_io_end(dc);
 	return IRQ_HANDLED;
 }
 
@@ -1431,11 +1488,19 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	void __iomem		*base;
 	struct clk		*clk;
 	int			 err;
+	u32 irq;
 
 
 	dp = kzalloc(sizeof(*dp), GFP_KERNEL);
 	if (!dp)
 		return -ENOMEM;
+
+	irq = platform_get_irq_byname(dc->ndev, "irq_dp");
+	if (irq <= 0) {
+		dev_err(&dc->ndev->dev, "dp: no irq\n");
+		err = -ENOENT;
+		goto err_free_dp;
+	}
 
 	res = platform_get_resource_byname(dc->ndev, IORESOURCE_MEM, "dpaux");
 	if (!res) {
@@ -1467,27 +1532,24 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_iounmap_reg;
 	}
 
-	/* TODO: confirm interrupt num is acquired from gpio_to_irq,
-	   Also how to differentiate them from HDMI HPD.
-	 */
-#if 0
-	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_dp_hpd_irq,
-			IRQF_DISABLED | IRQF_TRIGGER_RISING |
-			IRQF_TRIGGER_FALLING, dev_name(&dc->ndev->dev), dc)) {
-		dev_err(&dc->ndev->dev, "dp: request_irq %d failed\n",
-			gpio_to_irq(dc->out->hotplug_gpio));
-		err = -EBUSY;
-		goto err_get_clk;
+	if (!tegra_platform_is_fpga()) {
+		if (request_threaded_irq(irq, NULL, tegra_dp_irq,
+					IRQF_ONESHOT, "tegra_dp", dp)) {
+			dev_err(&dc->ndev->dev,
+				"dp: request_irq %u failed\n", irq);
+			err = -EBUSY;
+			goto err_get_clk;
+		}
 	}
-#endif
+	tegra_dp_disable_irq(irq);
 
-
-	dp->dc		 = dc;
-	dp->aux_base	 = base;
+	dp->dc = dc;
+	dp->aux_base = base;
 	dp->aux_base_res = base_res;
-	dp->clk		 = clk;
-	dp->mode	 = &dc->mode;
-	dp->sor		 = tegra_dc_sor_init(dc, &dp->link_cfg);
+	dp->clk = clk;
+	dp->mode = &dc->mode;
+	dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
+	dp->irq = irq;
 
 	if (IS_ERR_OR_NULL(dp->sor)) {
 		err = PTR_ERR(dp->sor);
@@ -1496,6 +1558,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	INIT_WORK(&dp->lt_work, tegra_dc_dp_lt_worker);
+	init_completion(&dp->hpd_plug);
 
 	tegra_dc_set_outdata(dc, dp);
 	tegra_dc_dp_debug_create(dp);
@@ -1514,6 +1577,52 @@ err_free_dp:
 	return err;
 }
 
+static void tegra_dp_hpd_config(struct tegra_dc_dp_data *dp)
+{
+#define TEGRA_DP_HPD_UNPLUG_MIN_US	2000
+#define TEGRA_DP_HPD_PLUG_MIN_US	250
+#define TEGRA_DP_HPD_IRQ_MIN_US		250
+
+	u32 val;
+
+	val = TEGRA_DP_HPD_PLUG_MIN_US |
+		(TEGRA_DP_HPD_UNPLUG_MIN_US <<
+		DPAUX_HPD_CONFIG_UNPLUG_MIN_TIME_SHIFT);
+	tegra_dpaux_writel(dp, DPAUX_HPD_CONFIG, val);
+
+	tegra_dpaux_writel(dp, DPAUX_HPD_IRQ_CONFIG, TEGRA_DP_HPD_IRQ_MIN_US);
+
+#undef TEGRA_DP_HPD_IRQ_MIN_US
+#undef TEGRA_DP_HPD_PLUG_MIN_US
+#undef TEGRA_DP_HPD_UNPLUG_MIN_US
+}
+
+static int tegra_dp_hpd_plug(struct tegra_dc_dp_data *dp)
+{
+#define TEGRA_DP_HPD_PLUG_TIMEOUT_MS	10000
+	u32 val;
+	int err = 0;
+
+	might_sleep();
+
+	val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
+	if (likely(val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED))
+		return 0;
+
+	reinit_completion(&dp->hpd_plug);
+	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT_EN);
+	if (!wait_for_completion_timeout(&dp->hpd_plug,
+		msecs_to_jiffies(TEGRA_DP_HPD_PLUG_TIMEOUT_MS))) {
+		err = -ENODEV;
+		goto fail;
+	}
+fail:
+	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT_DIS);
+	return err;
+
+#undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -1526,6 +1635,14 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 	tegra_dc_dpaux_enable(dp);
+
+	tegra_dp_enable_irq(dp->irq);
+
+	tegra_dp_hpd_config(dp);
+	if (tegra_dp_hpd_plug(dp) < 0) {
+		dev_err(&dc->ndev->dev, "dp: hpd plug failed\n");
+		return;
+	}
 
 	/* Power on panel */
 	if (tegra_dc_dp_init_max_link_cfg(dp, &dp->link_cfg)) {
@@ -1598,6 +1715,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (!dp->enabled)
 		return;
 
+	tegra_dc_io_start(dc);
+
+	tegra_dp_disable_irq(dp->irq);
+
 	tegra_dpaux_writel(dp, DPAUX_HYBRID_SPARE,
 			DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN);
 
@@ -1605,6 +1726,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dc_sor_disable(dp->sor, false);
 
 	clk_disable(dp->clk);
+
+	tegra_dc_io_end(dc);
 	dp->enabled = false;
 }
 

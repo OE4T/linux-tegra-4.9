@@ -18,3 +18,7 @@ obj-$(CONFIG_SND_SOC_TEGRA30_XBAR_ALT) += snd-soc-tegra30-alt-xbar.o
 obj-$(CONFIG_SND_SOC_TEGRA30_I2S_ALT) += snd-soc-tegra30-alt-i2s.o
 obj-$(CONFIG_SND_SOC_TEGRA114_AMX_ALT) += snd-soc-tegra114-alt-amx.o
 obj-$(CONFIG_SND_SOC_TEGRA114_ADX_ALT) += snd-soc-tegra114-alt-adx.o
+
+# Tegra machine Support
+snd-soc-tegra-alt-vcm30t124-objs := tegra_vcm30t124_alt.o
+obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-vcm30t124.o

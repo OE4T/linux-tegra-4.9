@@ -603,6 +603,7 @@ static void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 {
+	int retries;
 	struct mapped_buffer_node *mapped_buffer;
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -612,6 +613,22 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 		mutex_unlock(&vm->update_gmmu_lock);
 		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
 		return;
+	}
+
+	if (mapped_buffer->flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		mutex_unlock(&vm->update_gmmu_lock);
+
+		retries = 1000;
+		while (retries) {
+			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
+				break;
+			retries--;
+			udelay(50);
+		}
+		if (!retries)
+			nvhost_dbg(dbg_err, "sync-unmap failed on 0x%llx",
+								offset);
+		mutex_lock(&vm->update_gmmu_lock);
 	}
 
 	mapped_buffer->user_mapped--;
@@ -1076,7 +1093,6 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 		/* TODO: allocate the offset to keep track? */
 		/* TODO: then we could warn on actual collisions... */
 		nvhost_warn(d, "fixed offset mapping isn't safe yet!");
-		nvhost_warn(d, "other mappings may collide!");
 	}
 
 	pde_range_from_vaddr_range(vm,

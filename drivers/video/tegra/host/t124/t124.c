@@ -379,8 +379,8 @@ static struct resource vic03_resources[] = {
 };
 
 struct nvhost_device_data t124_vic_info = {
-	/*.syncpts*/
-	/*.modulemutexes*/
+	.syncpts		= {NVSYNCPT_VIC},
+	.modulemutexes		= {NVMODMUTEX_VIC},
 	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
 				  {"emc", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -426,12 +426,8 @@ struct resource gk20a_resources[] = {
 };
 
 struct nvhost_device_data tegra_gk20a_info = {
-	/* the following are set by the platform (e.g. t124) support
-	.syncpts,
-	.syncpt_base,
-	.waitbases,
-	.modulemutexes,
-	*/
+	.syncpts		= {NVSYNCPT_GK20A_BASE},
+	.syncpt_base		= NVSYNCPT_GK20A_BASE,
 	.class			= NV_GRAPHICS_GPU_CLASS_ID,
 	.clocks			= {{"PLLG_ref", UINT_MAX},
 				   {"pwr", 204000000},
@@ -649,20 +645,6 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 		pdata->index = num_channels++;
 		nvhost_dbg_fn("assigned channel %d to %s",
 			      pdata->index, dev_name(&dev->dev));
-#if defined(CONFIG_ARCH_TEGRA_VIC)
-		if (dev == &tegra_vic03_device) {
-			pdata->modulemutexes[0] = NVMODMUTEX_VIC;
-			pdata->syncpts[0] = NVSYNCPT_VIC;
-		}
-#endif
-#if defined(CONFIG_TEGRA_GK20A)
-		if (dev == &tegra_gk20a_device) {
-			pdata->syncpts[0]       = NVSYNCPT_GK20A_BASE;
-			pdata->syncpt_base      = NVSYNCPT_GK20A_BASE;
-			pdata->waitbases[0]     = NVWAITBASE_3D;
-			pdata->modulemutexes[0] = NVMODMUTEX_3D;
-		}
-#endif
 		if (pdata->slave) {
 			struct nvhost_device_data *slave_pdata =
 				(struct nvhost_device_data *)pdata->slave->dev.platform_data;

@@ -3,7 +3,7 @@
  *
  * Tegra VIC03 Module Support
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,8 +26,6 @@
 
 extern struct platform_device tegra_vic03_device;
 struct mem_handle;
-
-#define VIC03_UCODE_FW_NAME    "vic03_ucode.bin"
 
 struct ucode_bin_header_v1_vic03 {
 	u32 bin_magic;        /* 0x10de */
@@ -132,5 +130,15 @@ void nvhost_vic03_deinit(struct platform_device *);
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE                                               (0x0000071C)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET                                             (0x0000072C)
 #define VIC_UCLASS_METHOD_OFFSET 0x10
+
+#define NVHOST_ENCODE_VIC_VER(maj, min) \
+	((((maj) & 0xff) << 8) | ((min) & 0xff))
+
+static inline void decode_vic_ver(int version, u8 *maj, u8 *min)
+{
+	u32 uv32 = (u32)version;
+	*maj = (u8)((uv32 >> 8) & 0xff);
+	*min = (u8)(uv32 & 0xff);
+}
 
 #endif /* __NVHOST_VIC_H__ */

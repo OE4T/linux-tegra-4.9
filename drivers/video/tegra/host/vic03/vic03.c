@@ -28,6 +28,7 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/tegra-powergate.h>
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -56,6 +57,25 @@ static inline struct vic03 *get_vic03(struct platform_device *dev)
 static inline void set_vic03(struct platform_device *dev, struct vic03 *vic03)
 {
 	nvhost_set_private_data(dev, vic03);
+}
+
+/* caller is responsible for freeing */
+static char *vic_get_fw_name(struct platform_device *dev)
+{
+	char *fw_name;
+	u8 maj, min;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	/* note size here is a little over...*/
+	fw_name = kzalloc(32, GFP_KERNEL);
+	if (!fw_name)
+		return NULL;
+
+	decode_vic_ver(pdata->version, &maj, &min);
+	sprintf(fw_name, "vic%02d_ucode.bin", maj);
+	dev_info(&dev->dev, "fw name:%s\n", fw_name);
+
+	return fw_name;
 }
 
 #define VIC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
@@ -213,13 +233,13 @@ static int vic03_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-static int vic03_read_ucode(struct platform_device *dev)
+static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct vic03 *v = get_vic03(dev);
 	const struct firmware *ucode_fw;
 	int err;
 
-	ucode_fw = nvhost_client_request_firmware(dev, VIC03_UCODE_FW_NAME);
+	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		nvhost_dbg_fn("request firmware failed");
 		dev_err(&dev->dev, "failed to get vic03 firmware\n");
@@ -353,15 +373,23 @@ int nvhost_vic03_init(struct platform_device *dev)
 	int err = 0;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 	struct vic03 *v = get_vic03(dev);
+	char *fw_name;
 
 	nvhost_dbg_fn("in dev:%p v:%p", dev, v);
+
+	fw_name = vic_get_fw_name(dev);
+	if (!fw_name) {
+		dev_err(&dev->dev, "couldn't determine firmware name");
+		return -EINVAL;
+	}
 
 	if (!v) {
 		nvhost_dbg_fn("allocating vic03 support");
 		v = kzalloc(sizeof(*v), GFP_KERNEL);
 		if (!v) {
 			dev_err(&dev->dev, "couldn't alloc vic03 support");
-			return -ENOMEM;
+			err = -ENOMEM;
+			goto clean_up;
 		}
 		set_vic03(dev, v);
 		v->is_booted = false;
@@ -372,9 +400,12 @@ int nvhost_vic03_init(struct platform_device *dev)
 	v->regs = pdata->aperture[0];
 
 	if (!v->ucode.valid)
-		err = vic03_read_ucode(dev);
+		err = vic03_read_ucode(dev, fw_name);
 	if (err)
 		goto clean_up;
+
+	kfree(fw_name);
+	fw_name = NULL;
 
 	nvhost_module_busy(dev);
 	err = vic03_boot(dev);
@@ -386,6 +417,7 @@ int nvhost_vic03_init(struct platform_device *dev)
 	return 0;
 
  clean_up:
+	kfree(fw_name);
 	nvhost_err(&dev->dev, "failed");
 
 	return err;

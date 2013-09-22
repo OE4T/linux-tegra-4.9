@@ -43,6 +43,7 @@
 
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
 #include "t124/t124.h"
+#include "t210/t210.h"
 
 
 static inline struct flcn *get_flcn(struct platform_device *dev);

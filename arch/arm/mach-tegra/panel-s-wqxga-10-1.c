@@ -96,20 +96,38 @@ static tegra_dc_bl_output dsi_s_wqxga_10_1_bl_output_measured = {
 	248, 249, 250, 251, 252, 253, 254, 255,
 };
 
-u8 fbuf_mode_sel[] = {0x10, 0x00, 0x2A}; /* left-right */
-u8 mipi_if_sel[] = {0x10, 0x01, 0x01}; /* cmd mode */
-static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 #if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
+static u8 fbuf_mode_sel[] = {0x10, 0x00, 0x2A}; /* left-right */
+#else
+static u8 fbuf_mode_sel[] = {0x10, 0x00, 0x17}; /* odd-even, DRAM through */
+#endif
+
+static u8 __maybe_unused mipi_if_sel[] = {0x10, 0x01, 0x01}; /* cmd mode */
+static u8 __maybe_unused smode[] = {0x10, 0x07, 0x07}; /* vsync mode */
+
+static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, fbuf_mode_sel),
 	DSI_DLY_MS(20),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
 	DSI_DLY_MS(20),
+
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, mipi_if_sel),
 	DSI_DLY_MS(20),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
 	DSI_DLY_MS(20),
+#endif
+
+#if !(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
+	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, smode),
+	DSI_DLY_MS(20),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
+	DSI_DLY_MS(20),
+#endif
+
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
-				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+			DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
 	DSI_DLY_MS(20),
 #endif
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
@@ -407,7 +425,7 @@ static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 #if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 		.pclk = 306156000, /* @62Hz */
 #else
-		.pclk = 296280000, /* @60Hz */
+		.pclk = 268627200, /* @60Hz */
 #endif
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
@@ -417,7 +435,11 @@ static struct tegra_dc_mode dsi_s_wqxga_10_1_modes[] = {
 		.v_back_porch = 37,
 		.h_active = 2560,
 		.v_active = 1600,
+#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
 		.h_front_porch = 328,
+#else
+		.h_front_porch = 48,
+#endif
 		.v_front_porch = 3,
 	},
 };

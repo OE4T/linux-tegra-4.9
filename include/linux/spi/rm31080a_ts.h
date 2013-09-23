@@ -82,6 +82,7 @@
 #define RM_PLATFORM_M010	0x06
 #define RM_PLATFORM_P140	0x07
 #define RM_PLATFORM_A010	0x08
+#define RM_PLATFORM_L005	0x09
 #define RM_PLATFORM_RAYPRJ	0x80
 
 /***************************************************************************

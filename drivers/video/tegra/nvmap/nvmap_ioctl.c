@@ -70,6 +70,28 @@ ulong unmarshal_user_id(u32 id)
 	return unmarshal_user_handle(id);
 }
 
+/*
+ * marshal_id/unmarshal_id are for get_id/handle_from_id.
+ * These are added to support using Fd's for handle.
+ */
+__u32 marshal_id(ulong id)
+{
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return (__u32)id;
+#else
+	return marshal_kernel_handle(id);
+#endif
+}
+
+ulong unmarshal_id(__u32 id)
+{
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return (ulong)(id | PAGE_OFFSET);
+#else
+	return unmarshal_user_id(id);
+#endif
+}
+
 #else
 #define NVMAP_XOR_HASH_MASK 0xFFFFFFFC
 ulong unmarshal_user_handle(struct nvmap_handle *handle)
@@ -101,6 +123,23 @@ ulong unmarshal_user_id(ulong id)
 	return unmarshal_user_handle((struct nvmap_handle *)id);
 }
 
+ulong marshal_id(ulong id)
+{
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return id;
+#else
+	return (ulong)marshal_kernel_handle(id);
+#endif
+}
+
+ulong unmarshal_id(ulong id)
+{
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return id;
+#else
+	return unmarshal_user_id(id);
+#endif
+}
 #endif
 
 ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref)
@@ -236,7 +275,7 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 	if (!h)
 		return -EPERM;
 
-	op.id = (__u32)marshal_kernel_handle((ulong)h);
+	op.id = marshal_id((ulong)h);
 	if (client == h->owner)
 		h->global = true;
 
@@ -366,7 +405,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		if (!IS_ERR(ref))
 			ref->handle->orig_size = op.size;
 	} else if (cmd == NVMAP_IOC_FROM_ID) {
-		ref = nvmap_duplicate_handle_user_id(client, op.id);
+		ref = nvmap_duplicate_handle_id(client, unmarshal_id(op.id), 0);
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
 		ref = nvmap_create_handle_from_fd(client, op.fd);
 	} else {

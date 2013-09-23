@@ -390,8 +390,6 @@ static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 				       enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
-	/* Not used when dmabufs are being stashed. */
-	__attribute__((unused)) DEFINE_DMA_ATTRS(attrs);
 
 	mutex_lock(&info->maps_lock);
 	if (!atomic_add_unless(&info->handle->pin, -1, 0)) {

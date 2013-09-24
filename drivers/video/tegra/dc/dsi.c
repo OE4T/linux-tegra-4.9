@@ -4505,6 +4505,8 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 						"is not supported.\n");
 	}
 
+	tegra_dvfs_set_rate(dc->clk, 0);
+
 	return 0;
 fail:
 	return err;
@@ -4572,6 +4574,8 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 		dev_err(&dc->ndev->dev, "DSI suspend aggressivenes"
 						"is not supported.\n");
 	}
+
+	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
 
 	return 0;
 fail:

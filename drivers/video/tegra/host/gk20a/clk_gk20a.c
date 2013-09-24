@@ -475,12 +475,6 @@ static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
 	else if (freq < gpc_pll_params.min_freq)
 		freq = gpc_pll_params.min_freq;
 
-	if (freq > clk->cap_freq)
-		freq = clk->cap_freq;
-
-	if (freq > clk->cap_freq_thermal)
-		freq = clk->cap_freq_thermal;
-
 	if (freq != old_freq) {
 		/* gpc_pll.freq is changed to new value here */
 		if (clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
@@ -656,59 +650,6 @@ int gk20a_clk_set_rate(struct gk20a *g, u32 rate)
 	return clk_set_rate(g->clk.tegra_clk, rate);
 }
 
-static u32 gk20a_clk_get_cap(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-	return rate_gpc2clk_to_gpu(clk->cap_freq);
-}
-
-static int gk20a_clk_set_cap(struct gk20a *g, u32 rate)
-{
-	struct clk_gk20a *clk = &g->clk;
-
-	if (rate > rate_gpc2clk_to_gpu(gpc_pll_params.max_freq))
-		rate = rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
-	else if (rate < rate_gpc2clk_to_gpu(gpc_pll_params.min_freq))
-		rate = rate_gpc2clk_to_gpu(gpc_pll_params.min_freq);
-
-	clk->cap_freq = rate_gpu_to_gpc2clk(rate);
-	if (gk20a_clk_get_rate(g) <= rate)
-		return 0;
-	return gk20a_clk_set_rate(g, rate);
-}
-
-static u32 gk20a_clk_get_cap_thermal(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-	return rate_gpc2clk_to_gpu(clk->cap_freq_thermal);
-}
-
-static int gk20a_clk_set_cap_thermal(struct gk20a *g, unsigned long rate)
-{
-	struct clk_gk20a *clk = &g->clk;
-
-	if (rate > rate_gpc2clk_to_gpu(gpc_pll_params.max_freq))
-		rate = rate_gpc2clk_to_gpu(gpc_pll_params.max_freq);
-	else if (rate < rate_gpc2clk_to_gpu(gpc_pll_params.min_freq))
-		rate = rate_gpc2clk_to_gpu(gpc_pll_params.min_freq);
-
-	clk->cap_freq_thermal = rate_gpu_to_gpc2clk(rate);
-	if (gk20a_clk_get_rate(g) <= rate)
-		return 0;
-	return gk20a_clk_set_rate(g, rate);
-}
-
-int gk20a_clk_init_cap_freqs(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-
-	/* init cap_freq == max_freq */
-	clk->cap_freq = gpc_pll_params.max_freq;
-	clk->cap_freq_thermal = gpc_pll_params.max_freq;
-
-	return 0;
-}
-
 int gk20a_suspend_clk_support(struct gk20a *g)
 {
 	int ret;
@@ -722,13 +663,6 @@ int gk20a_suspend_clk_support(struct gk20a *g)
 
 #ifdef CONFIG_DEBUG_FS
 
-static int init_set(void *data, u64 val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	return gk20a_init_clk_support(g);
-}
-DEFINE_SIMPLE_ATTRIBUTE(init_fops, NULL, init_set, "%llu\n");
-
 static int rate_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
@@ -741,33 +675,6 @@ static int rate_set(void *data, u64 val)
 	return gk20a_clk_set_rate(g, (u32)val);
 }
 DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");
-
-static int cap_get(void *data, u64 *val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	*val = (u64)gk20a_clk_get_cap(g);
-	return 0;
-}
-static int cap_set(void *data, u64 val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	return gk20a_clk_set_cap(g, (u32)val);
-}
-DEFINE_SIMPLE_ATTRIBUTE(cap_fops, cap_get, cap_set, "%llu\n");
-
-static int cap_thermal_get(void *data, u64 *val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	*val = (u64)gk20a_clk_get_cap_thermal(g);
-	return 0;
-}
-static int cap_thermal_set(void *data, u64 val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	return gk20a_clk_set_cap_thermal(g, (u32)val);
-}
-DEFINE_SIMPLE_ATTRIBUTE(cap_thermal_fops, cap_thermal_get,
-		cap_thermal_set, "%llu\n");
 
 static int pll_reg_show(struct seq_file *s, void *data)
 {
@@ -848,23 +755,7 @@ int clk_gk20a_debugfs_init(struct platform_device *dev)
 	struct gk20a *g = get_gk20a(dev);
 
 	d = debugfs_create_file(
-		"init", S_IRUGO|S_IWUSR, pdata->debugfs, g, &init_fops);
-	if (!d)
-		goto err_out;
-
-	d = debugfs_create_file(
 		"rate", S_IRUGO|S_IWUSR, pdata->debugfs, g, &rate_fops);
-	if (!d)
-		goto err_out;
-
-	d = debugfs_create_file(
-		"cap", S_IRUGO|S_IWUSR, pdata->debugfs, g, &cap_fops);
-	if (!d)
-		goto err_out;
-
-	d = debugfs_create_file(
-		"cap_thermal", S_IRUGO|S_IWUSR, pdata->debugfs, g,
-							&cap_thermal_fops);
 	if (!d)
 		goto err_out;
 

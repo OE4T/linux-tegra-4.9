@@ -74,8 +74,8 @@ static int show_capabilities(struct seq_file *f, void *offset)
 	seq_printf(f, "support polling mode:   %s\n",
 		   YES_NO(cap->blocked_read));
 
-	seq_printf(f, "\n");
-	seq_printf(f, "Supported events:\n");
+	seq_puts(f, "\n");
+	seq_puts(f, "Supported events:\n");
 	seq_printf(f, "cpu_cycles:             %s\n",
 		   YES_NO(event->cpu_cycles));
 	seq_printf(f, "instructions:           %s\n",
@@ -114,6 +114,38 @@ static const struct file_operations capabilities_proc_fops = {
 	.release	= single_release,
 };
 
+static int show_status(struct seq_file *f, void *offset)
+{
+	unsigned int status;
+	unsigned int is_auth_open, active;
+	struct quadd_module_state s;
+
+	quadd_get_state(&s);
+	status = s.reserved[QUADD_MOD_STATE_IDX_STATUS];
+
+	active = status & QUADD_MOD_STATE_STATUS_IS_ACTIVE;
+	is_auth_open = status & QUADD_MOD_STATE_STATUS_IS_AUTH_OPEN;
+
+	seq_printf(f, "status:          %s\n", active ? "active" : "waiting");
+	seq_printf(f, "auth:            %s\n", YES_NO(is_auth_open));
+	seq_printf(f, "all samples:     %llu\n", s.nr_all_samples);
+	seq_printf(f, "skipped samples: %llu\n", s.nr_skipped_samples);
+
+	return 0;
+}
+
+static int show_status_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, show_status, NULL);
+}
+
+static const struct file_operations status_proc_fops = {
+	.open		= show_status_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 void quadd_proc_init(struct quadd_ctx *context)
 {
 	ctx = context;
@@ -121,12 +153,14 @@ void quadd_proc_init(struct quadd_ctx *context)
 	proc_mkdir("quadd", NULL);
 	proc_create("quadd/version", 0, NULL, &version_proc_fops);
 	proc_create("quadd/capabilities", 0, NULL, &capabilities_proc_fops);
+	proc_create("quadd/status", 0, NULL, &status_proc_fops);
 }
 
 void quadd_proc_deinit(void)
 {
 	remove_proc_entry("quadd/version", NULL);
 	remove_proc_entry("quadd/capabilities", NULL);
+	remove_proc_entry("quadd/status", NULL);
 	remove_proc_entry("quadd", NULL);
 }
 

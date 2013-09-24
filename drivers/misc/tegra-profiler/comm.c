@@ -366,9 +366,15 @@ static void comm_reset(void)
 	spin_unlock_irqrestore(&comm_ctx.rb.lock, flags);
 }
 
+static int is_active(void)
+{
+	return atomic_read(&comm_ctx.active) != 0;
+}
+
 static struct quadd_comm_data_interface comm_data = {
 	.put_sample = put_sample,
 	.reset = comm_reset,
+	.is_active = is_active,
 };
 
 static int check_access_permission(void)

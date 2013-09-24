@@ -330,23 +330,8 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code, addr_data, addr_load;
 	u32 i, blocks, addr_args;
-	void *ucode_ptr;
 
 	nvhost_dbg_fn("");
-
-	ucode_ptr = nvhost_memmgr_mmap(pmu->ucode.mem.ref);
-	if (!ucode_ptr) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to map pmu ucode memory");
-		return -ENOMEM;
-	}
-
-	for (i = 0; i < (desc->app_start_offset + desc->app_size) >> 2; i++) {
-		/* nvhost_dbg_pmu("loading pmu ucode : 0x%08x", pmu->ucode_image[i]); */
-		mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
-	}
-
-	nvhost_memmgr_munmap(pmu->ucode.mem.ref, ucode_ptr);
 
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 		gk20a_readl(g, pwr_falcon_itfen_r()) |
@@ -923,35 +908,61 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 	return 0;
 }
 
+static void gk20a_save_pmu_sw_state(struct pmu_gk20a *pmu,
+			struct gk20a_pmu_save_state *save)
+{
+	save->seq = pmu->seq;
+	save->next_seq_desc = pmu->next_seq_desc;
+	save->mutex = pmu->mutex;
+	save->mutex_cnt = pmu->mutex_cnt;
+	save->desc = pmu->desc;
+	save->ucode = pmu->ucode;
+	save->elpg_enable = pmu->elpg_enable;
+	save->pg_wq = pmu->pg_wq;
+	save->seq_buf = pmu->seq_buf;
+	save->sw_ready = pmu->sw_ready;
+}
+
+static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
+			struct gk20a_pmu_save_state *save)
+{
+	pmu->seq = save->seq;
+	pmu->next_seq_desc = save->next_seq_desc;
+	pmu->mutex = save->mutex;
+	pmu->mutex_cnt = save->mutex_cnt;
+	pmu->desc = save->desc;
+	pmu->ucode = save->ucode;
+	pmu->elpg_enable = save->elpg_enable;
+	pmu->pg_wq = save->pg_wq;
+	pmu->seq_buf = save->seq_buf;
+	pmu->sw_ready = save->sw_ready;
+}
+
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct inst_desc *inst_block = &mm->pmu.inst_block;
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct gk20a_pmu_save_state save;
 
 	nvhost_dbg_fn("");
 
-	cancel_delayed_work_sync(&pmu->elpg_enable);
 
-	kfree(pmu->mutex);
-	kfree(pmu->seq);
-
-	nvhost_memmgr_free_sg_table(memmgr, inst_block->mem.ref,
-			inst_block->mem.sgt);
-	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
-	vm->remove_support(vm);
-
-	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
+	vm->unmap(vm, pmu->pg_buf.pmu_va);
 	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
-	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 
 	nvhost_allocator_destroy(&pmu->dmem);
+
+	/* Save the stuff you don't want to restore */
+	gk20a_save_pmu_sw_state(pmu, &save);
 
 	/* this function is also called by pmu_destory outside gk20a deinit that
 	   releases gk20a struct so fill up with zeros here. */
 	memset(pmu, 0, sizeof(struct pmu_gk20a));
+
+	/* Restore stuff you want to keep */
+	gk20a_restore_pmu_sw_state(pmu, &save);
 }
 
 int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
@@ -977,6 +988,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	u32 size;
 	int i, err = 0;
 	u8 *ptr;
+	void *ucode_ptr;
 
 	nvhost_dbg_fn("");
 
@@ -988,7 +1000,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		pmu_seq_init(pmu);
 
 		nvhost_dbg_fn("skip init");
-		return 0;
+		goto skip_init;
 	}
 
 	/* no infoRom script from vbios? */
@@ -1033,17 +1045,34 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
+
+	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
+
 	gk20a_init_pmu_vm(mm);
 
 	pmu->ucode.mem.ref = nvhost_memmgr_alloc(memmgr,
-						 GK20A_PMU_UCODE_SIZE_MAX,
-						 DEFAULT_ALLOC_ALIGNMENT,
-						 DEFAULT_ALLOC_FLAGS,
-						 0);
+					 GK20A_PMU_UCODE_SIZE_MAX,
+					 DEFAULT_ALLOC_ALIGNMENT,
+					 DEFAULT_ALLOC_FLAGS,
+					 0);
 	if (IS_ERR(pmu->ucode.mem.ref)) {
 		err = PTR_ERR(pmu->ucode.mem.ref);
 		goto clean_up;
 	}
+
+	pmu->seq_buf.mem.ref = nvhost_memmgr_alloc(memmgr, 4096,
+			DEFAULT_ALLOC_ALIGNMENT,
+			DEFAULT_ALLOC_FLAGS,
+			0);
+	if (IS_ERR(pmu->seq_buf.mem.ref)) {
+		nvhost_err(dev_from_gk20a(g),
+				"fail to allocate zbc buffer");
+		err = PTR_ERR(pmu->seq_buf.mem.ref);
+		goto clean_up;
+	}
+
+
+	init_waitqueue_head(&pmu->pg_wq);
 
 	pmu->ucode.pmu_va = vm->map(vm, memmgr, pmu->ucode.mem.ref,
 			/*offset_align, flags, kind*/
@@ -1053,7 +1082,45 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		return err;
 	}
 
-	init_waitqueue_head(&pmu->pg_wq);
+	pmu->seq_buf.pmu_va = vm->map(vm, memmgr, pmu->seq_buf.mem.ref,
+			/*offset_align, flags, kind*/
+			0, 0, 0, NULL, false, mem_flag_none);
+	if (!pmu->seq_buf.pmu_va) {
+		nvhost_err(d, "failed to map zbc buffer");
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
+	ptr = (u8 *)nvhost_memmgr_mmap(pmu->seq_buf.mem.ref);
+	if (!ptr) {
+		nvhost_err(d, "failed to map cpu ptr for zbc buffer");
+		goto clean_up;
+	}
+
+	/* TBD: remove this if ZBC save/restore is handled by PMU
+	 * end an empty ZBC sequence for now */
+	ptr[0] = 0x16; /* opcode EXIT */
+	ptr[1] = 0; ptr[2] = 1; ptr[3] = 0;
+	ptr[4] = 0; ptr[5] = 0; ptr[6] = 0; ptr[7] = 0;
+
+	pmu->seq_buf.mem.size = 4096;
+
+	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
+
+	ucode_ptr = nvhost_memmgr_mmap(pmu->ucode.mem.ref);
+	if (!ucode_ptr) {
+		nvhost_err(dev_from_gk20a(g),
+			"fail to map pmu ucode memory");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < (pmu->desc->app_start_offset +
+			pmu->desc->app_size) >> 2; i++)
+		mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
+
+	nvhost_memmgr_munmap(pmu->ucode.mem.ref, ucode_ptr);
+
+skip_init:
 
 	size = 0;
 	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
@@ -1085,43 +1152,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	pmu->seq_buf.mem.ref = nvhost_memmgr_alloc(memmgr, 4096,
-						   DEFAULT_ALLOC_ALIGNMENT,
-						   DEFAULT_ALLOC_FLAGS,
-						   0);
-	if (IS_ERR(pmu->seq_buf.mem.ref)) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to allocate zbc buffer");
-		err = PTR_ERR(pmu->seq_buf.mem.ref);
-		goto clean_up;
-	}
-
-	pmu->seq_buf.pmu_va = vm->map(vm, memmgr, pmu->seq_buf.mem.ref,
-			/*offset_align, flags, kind*/
-			0, 0, 0, NULL, false, mem_flag_none);
-	if (!pmu->seq_buf.pmu_va) {
-		nvhost_err(d, "failed to map zbc buffer");
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	ptr = (u8 *)nvhost_memmgr_mmap(pmu->seq_buf.mem.ref);
-	if (!ptr) {
-		nvhost_err(d, "failed to map cpu ptr for zbc buffer");
-		goto clean_up;
-	}
-
-	/* TBD: remove this if ZBC save/restore is handled by PMU
-	   send an empty ZBC sequence for now */
-	ptr[0] = 0x16; /* opcode EXIT */
-	ptr[1] = 0; ptr[2] = 1; ptr[3] = 0;
-	ptr[4] = 0; ptr[5] = 0; ptr[6] = 0; ptr[7] = 0;
-
-	pmu->seq_buf.mem.size = 4096;
-
-	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
-
-	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
 
@@ -1129,6 +1159,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
 
 	pmu->remove_support = gk20a_remove_pmu_support;
+
 	pmu->sw_ready = true;
 
 	nvhost_dbg_fn("done");

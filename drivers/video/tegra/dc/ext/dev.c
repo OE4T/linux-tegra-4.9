@@ -1333,24 +1333,15 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 
 	ext->dc = dc;
 
-	ext->nvmap = nvmap_create_client(nvmap_dev, "tegra_dc_ext");
-	if (!ext->nvmap) {
-		ret = -ENOMEM;
-		goto cleanup_device;
-	}
-
 	ret = tegra_dc_ext_setup_windows(ext);
 	if (ret)
-		goto cleanup_nvmap;
+		goto cleanup_device;
 
 	mutex_init(&ext->cursor.lock);
 
 	head_count++;
 
 	return ext;
-
-cleanup_nvmap:
-	nvmap_client_put(ext->nvmap);
 
 cleanup_device:
 	device_del(ext->dev);
@@ -1375,7 +1366,6 @@ void tegra_dc_ext_unregister(struct tegra_dc_ext *ext)
 		destroy_workqueue(win->flip_wq);
 	}
 
-	nvmap_client_put(ext->nvmap);
 	device_del(ext->dev);
 	cdev_del(&ext->cdev);
 

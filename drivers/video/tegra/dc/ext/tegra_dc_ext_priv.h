@@ -76,8 +76,6 @@ struct tegra_dc_ext {
 	struct cdev			cdev;
 	struct device			*dev;
 
-	struct nvmap_client		*nvmap;
-
 	struct tegra_dc_ext_win		win[DC_N_WINDOWS];
 
 	struct {

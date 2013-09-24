@@ -618,6 +618,7 @@ static void dsi_l_720p_5_loki_dc_out_init(struct tegra_dc_out *dc)
 	dc->postsuspend = dsi_l_720p_5_loki_postsuspend;
 	dc->width = 62;
 	dc->height = 110;
+	dc->rotation = 90;
 	/*
 	 * only thor panel supports initialized mode
 	 */

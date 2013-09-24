@@ -26,6 +26,14 @@ struct platform_device;
 struct device;
 struct dentry;
 
+struct nvhost_emc_params {
+	long				emc_slope;
+	long				emc_offset;
+	long				emc_dip_slope;
+	long				emc_dip_offset;
+	long				emc_xmid;
+};
+
 /* Initialization and de-initialization for module */
 void nvhost_scale3d_init(struct platform_device *pdev);
 void nvhost_scale3d_deinit(struct platform_device *pdev);
@@ -35,4 +43,6 @@ void nvhost_scale3d_deinit(struct platform_device *pdev);
 void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq);
 
+void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
+				  struct clk *clk_3d, struct clk *clk_3d_emc);
 #endif

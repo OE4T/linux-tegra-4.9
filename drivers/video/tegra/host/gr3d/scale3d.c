@@ -62,17 +62,8 @@ static int FXDIV(int x, int y);
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 #define HZ_TO_MHZ(x) ((x) / 1000000)
 
-/*
- * nvhost_gr3d_params - Parameters for emc (and gr3d2) scaling
- */
-
 struct nvhost_gr3d_params {
-	long				emc_slope;
-	long				emc_offset;
-	long				emc_dip_slope;
-	long				emc_dip_offset;
-	long				emc_xmid;
-
+	struct nvhost_emc_params	emc_params;
 	int				clk_3d;
 	int				clk_3d2;
 	int				clk_3d_emc;
@@ -86,32 +77,39 @@ static inline struct clk *clk(struct nvhost_device_profile *profile, int index)
 	return pdata->clk[index];
 }
 
+long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
+				 long freq)
+{
+	long hz;
+
+	freq = INT_TO_FX(HZ_TO_MHZ(freq));
+	hz = FXMUL(freq, emc_params->emc_slope) + emc_params->emc_offset;
+	hz -= FXMUL(emc_params->emc_dip_slope,
+		FXMUL(freq - emc_params->emc_xmid,
+			freq - emc_params->emc_xmid)) +
+		emc_params->emc_dip_offset;
+	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
+	hz = (hz < 0) ? 0 : hz;
+
+	return hz;
+}
+
 void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq)
 {
-	struct nvhost_gr3d_params *emc_params = profile->private_data;
+	struct nvhost_gr3d_params *gr3d_params = profile->private_data;
+	struct nvhost_emc_params *emc_params = &gr3d_params->emc_params;
 	long hz;
 	long after;
 
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
 		nvhost_module_set_devfreq_rate(profile->pdev,
-					       emc_params->clk_3d2, freq);
+					       gr3d_params->clk_3d2, freq);
 
 	/* Set EMC clockrate */
-	after = (long) clk_get_rate(clk(profile, emc_params->clk_3d));
-	after = INT_TO_FX(HZ_TO_MHZ(after));
-	hz = FXMUL(after, emc_params->emc_slope) + emc_params->emc_offset;
-
-	hz -= FXMUL(emc_params->emc_dip_slope,
-		FXMUL(after - emc_params->emc_xmid,
-			after - emc_params->emc_xmid)) +
-		emc_params->emc_dip_offset;
-
-	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
-
-	hz = (hz < 0) ? 0 : hz;
-
-	nvhost_module_set_devfreq_rate(profile->pdev, emc_params->clk_3d_emc,
+	after = (long) clk_get_rate(clk(profile, gr3d_params->clk_3d));
+	hz = nvhost_scale3d_get_emc_rate(emc_params, after);
+	nvhost_module_set_devfreq_rate(profile->pdev, gr3d_params->clk_3d_emc,
 				       hz);
 
 	if (profile->actmon) {
@@ -173,28 +171,25 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
  *
  */
 
-static void nvhost_scale3d_calibrate_emc(struct nvhost_device_profile *profile)
+void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
+				  struct clk *clk_3d, struct clk *clk_3d_emc)
 {
-	struct nvhost_gr3d_params *emc_params = profile->private_data;
 	long correction;
 	unsigned long max_emc;
 	unsigned long min_emc;
 	unsigned long min_rate_3d;
 	unsigned long max_rate_3d;
 
-	max_emc =
-		clk_round_rate(clk(profile, emc_params->clk_3d_emc), UINT_MAX);
+	max_emc = clk_round_rate(clk_3d_emc, UINT_MAX);
 	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
 
-	min_emc = clk_round_rate(clk(profile, emc_params->clk_3d_emc), 0);
+	min_emc = clk_round_rate(clk_3d_emc, 0);
 	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
 
-	max_rate_3d =
-		clk_round_rate(clk(profile, emc_params->clk_3d), UINT_MAX);
+	max_rate_3d = clk_round_rate(clk_3d, UINT_MAX);
 	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(max_rate_3d));
 
-	min_rate_3d =
-		clk_round_rate(clk(profile, emc_params->clk_3d), 0);
+	min_rate_3d = clk_round_rate(clk_3d, 0);
 	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(min_rate_3d));
 
 	emc_params->emc_slope =
@@ -231,31 +226,33 @@ void nvhost_scale3d_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
-	struct nvhost_gr3d_params *emc_params;
+	struct nvhost_gr3d_params *gr3d_params;
 
 	nvhost_scale_init(pdev);
 	profile = pdata->power_profile;
 	if (!profile)
 		return;
 
-	emc_params = kzalloc(sizeof(*emc_params), GFP_KERNEL);
-	if (!emc_params)
-		goto err_allocate_emc_params;
+	gr3d_params = kzalloc(sizeof(*gr3d_params), GFP_KERNEL);
+	if (!gr3d_params)
+		goto err_allocate_gr3d_params;
 
-	emc_params->clk_3d = 0;
+	gr3d_params->clk_3d = 0;
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
-		emc_params->clk_3d2 = 1;
-		emc_params->clk_3d_emc = 2;
+		gr3d_params->clk_3d2 = 1;
+		gr3d_params->clk_3d_emc = 2;
 	} else
-		emc_params->clk_3d_emc = 1;
+		gr3d_params->clk_3d_emc = 1;
 
-	profile->private_data = emc_params;
+	profile->private_data = gr3d_params;
 
-	nvhost_scale3d_calibrate_emc(profile);
+	nvhost_scale3d_calibrate_emc(&gr3d_params->emc_params,
+				     clk(profile, gr3d_params->clk_3d),
+				     clk(profile, gr3d_params->clk_3d_emc));
 
 	return;
 
-err_allocate_emc_params:
+err_allocate_gr3d_params:
 	nvhost_scale_deinit(pdev);
 }
 

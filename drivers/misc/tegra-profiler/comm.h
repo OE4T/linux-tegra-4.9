@@ -32,6 +32,7 @@ struct quadd_ring_buffer {
 	size_t pos_read;
 	size_t pos_write;
 	size_t fill_count;
+	size_t max_fill_count;
 };
 
 struct quadd_parameters;

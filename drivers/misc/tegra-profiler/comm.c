@@ -23,6 +23,7 @@
 #include <linux/vmalloc.h>
 #include <linux/miscdevice.h>
 #include <linux/sched.h>
+#include <linux/poll.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -90,6 +91,18 @@ static __attribute__((unused)) int rb_is_full(struct quadd_ring_buffer *rb)
 static int rb_is_empty(struct quadd_ring_buffer *rb)
 {
 	return rb->fill_count == 0;
+}
+
+static int rb_is_empty_lock(struct quadd_ring_buffer *rb)
+{
+	int res;
+	unsigned long flags;
+
+	spin_lock_irqsave(&rb->lock, flags);
+	res = rb->fill_count == 0;
+	spin_unlock_irqrestore(&rb->lock, flags);
+
+	return res;
 }
 
 static size_t
@@ -231,6 +244,8 @@ write_sample(struct quadd_record_data *sample, void *extra_data,
 		rb->max_fill_count = rb->fill_count;
 
 	spin_unlock_irqrestore(&rb->lock, flags);
+
+	wake_up_interruptible(&comm_ctx.read_wait);
 }
 
 static int read_sample(char __user *buffer, size_t max_length)
@@ -403,6 +418,23 @@ static int device_release(struct inode *inode, struct file *file)
 	mutex_unlock(&comm_ctx.io_mutex);
 
 	return 0;
+}
+
+static unsigned int
+device_poll(struct file *file, poll_table *wait)
+{
+	unsigned int mask = 0;
+	struct quadd_ring_buffer *rb = &comm_ctx.rb;
+
+	poll_wait(file, &comm_ctx.read_wait, wait);
+
+	if (!rb_is_empty_lock(rb))
+		mask |= POLLIN | POLLRDNORM;
+
+	if (!atomic_read(&comm_ctx.active))
+		mask |= POLLHUP;
+
+	return mask;
 }
 
 static ssize_t
@@ -588,6 +620,7 @@ device_ioctl(struct file *file,
 	case IOCTL_STOP:
 		if (atomic_cmpxchg(&comm_ctx.active, 1, 0)) {
 			comm_ctx.control->stop();
+			wake_up_interruptible(&comm_ctx.read_wait);
 			rb_deinit(&comm_ctx.rb);
 			pr_info("Stop profiling success\n");
 		}
@@ -617,6 +650,7 @@ static void free_ctx(void)
 
 static const struct file_operations qm_fops = {
 	.read		= device_read,
+	.poll		= device_poll,
 	.open		= device_open,
 	.release	= device_release,
 	.unlocked_ioctl	= device_ioctl
@@ -650,6 +684,8 @@ static int comm_init(void)
 	comm_ctx.params_ok = 0;
 	comm_ctx.process_pid = 0;
 	comm_ctx.nr_users = 0;
+
+	init_waitqueue_head(&comm_ctx.read_wait);
 
 	return 0;
 }

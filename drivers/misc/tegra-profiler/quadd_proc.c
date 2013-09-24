@@ -71,6 +71,9 @@ static int show_capabilities(struct seq_file *f, void *offset)
 			   YES_NO(cap->l2_multiple_events));
 	}
 
+	seq_printf(f, "support polling mode:   %s\n",
+		   YES_NO(cap->blocked_read));
+
 	seq_printf(f, "\n");
 	seq_printf(f, "Supported events:\n");
 	seq_printf(f, "cpu_cycles:             %s\n",

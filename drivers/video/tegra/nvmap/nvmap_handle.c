@@ -42,7 +42,6 @@
 #include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
-#include <mach/iovmm.h>
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"

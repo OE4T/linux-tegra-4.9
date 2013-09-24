@@ -34,7 +34,6 @@
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
 
-#include <mach/iovmm.h>
 #include <linux/nvmap.h>
 #include <trace/events/nvmap.h>
 

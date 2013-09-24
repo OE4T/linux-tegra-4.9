@@ -45,8 +45,6 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
-#include <mach/iovmm.h>
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
 

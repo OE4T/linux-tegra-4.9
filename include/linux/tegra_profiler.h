@@ -20,9 +20,10 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	16
-#define QUADD_IO_VERSION	5
+#define QUADD_IO_VERSION	6
 
-#define QUADD_IO_VERSION_DYNAMIC_RB	5
+#define QUADD_IO_VERSION_DYNAMIC_RB		5
+#define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -281,6 +282,10 @@ struct quadd_comm_cap {
 	struct quadd_events_cap events_cap;
 
 	u32 reserved[16];	/* reserved fields for future extensions */
+};
+
+enum {
+	QUADD_MOD_STATE_IDX_RB_MAX_FILL_COUNT = 0,
 };
 
 struct quadd_module_state {

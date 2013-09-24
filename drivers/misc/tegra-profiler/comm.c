@@ -46,6 +46,7 @@ static void rb_reset(struct quadd_ring_buffer *rb)
 	rb->pos_read = 0;
 	rb->pos_write = 0;
 	rb->fill_count = 0;
+	rb->max_fill_count = 0;
 }
 
 static int rb_init(struct quadd_ring_buffer *rb, size_t size)
@@ -225,6 +226,10 @@ write_sample(struct quadd_record_data *sample, void *extra_data,
 			return;
 		}
 	}
+
+	if (rb->fill_count > rb->max_fill_count)
+		rb->max_fill_count = rb->fill_count;
+
 	spin_unlock_irqrestore(&rb->lock, flags);
 }
 
@@ -541,6 +546,8 @@ device_ioctl(struct file *file,
 		spin_lock_irqsave(&rb->lock, flags);
 		state.buffer_fill_size =
 			comm_ctx.rb_size - rb_get_free_space(rb);
+		state.reserved[QUADD_MOD_STATE_IDX_RB_MAX_FILL_COUNT] =
+			rb->max_fill_count;
 		spin_unlock_irqrestore(&rb->lock, flags);
 
 		if (copy_to_user((void __user *)ioctl_param, &state,

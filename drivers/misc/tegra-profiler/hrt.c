@@ -203,7 +203,7 @@ static int get_sample_data(struct event_data *event,
 	sample->event_id = event->event_id;
 
 	sample->ip = instruction_pointer(regs);
-	sample->cpu = quadd_get_processor_id();
+	sample->cpu = quadd_get_processor_id(regs);
 	sample->time = get_sample_time();
 
 	if (prev_val <= val)
@@ -388,7 +388,7 @@ void __quadd_task_sched_in(struct task_struct *prev,
 /*
 	if (__ratelimit(&ratelimit_state))
 		pr_info("sch_in, cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
-			quadd_get_processor_id(), (unsigned int)prev->pid,
+			smp_processor_id(), (unsigned int)prev->pid,
 			(unsigned int)prev->tgid, (unsigned int)task->pid,
 			(unsigned int)task->tgid);
 */
@@ -424,11 +424,10 @@ void __quadd_task_sched_out(struct task_struct *prev,
 /*
 	if (__ratelimit(&ratelimit_state))
 		pr_info("sch_out: cpu: %d, prev: %u (%u) \t--> next: %u (%u)\n",
-			quadd_get_processor_id(), (unsigned int)prev->pid,
+			smp_processor_id(), (unsigned int)prev->pid,
 			(unsigned int)prev->tgid, (unsigned int)next->pid,
 			(unsigned int)next->tgid);
 */
-
 	prev_flag = is_profile_process(prev->tgid);
 
 	if (prev_flag) {

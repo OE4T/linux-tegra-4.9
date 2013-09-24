@@ -19,11 +19,13 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	16
+#define QUADD_SAMPLES_VERSION	17
 #define QUADD_IO_VERSION	6
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
+
+#define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -66,7 +68,8 @@
 
 #define QUADD_HRT_SCHED_IN_FUNC		"finish_task_switch"
 
-#define QM_TEGRA_POWER_CLUSTER_LP	(1 << 29) /* LP CPU */
+#define QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP	(1 << 29)	/* LP CPU */
+#define QUADD_CPUMODE_THUMB			(1 << 30)	/* thumb mode */
 
 enum quadd_events_id {
 	QUADD_EVENT_TYPE_CPU_CYCLES = 0,

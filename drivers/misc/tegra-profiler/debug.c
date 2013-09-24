@@ -42,7 +42,7 @@ init_sample(struct quadd_record_data *record, struct pt_regs *regs)
 		record->cpu_mode = user_mode(regs) ?
 			QUADD_CPU_MODE_USER : QUADD_CPU_MODE_KERNEL;
 
-	s->cpu = quadd_get_processor_id();
+	s->cpu = quadd_get_processor_id(regs);
 	s->pid = 0;
 	s->time = quadd_get_time();
 	s->timer_period = 0;

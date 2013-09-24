@@ -67,6 +67,8 @@ struct quadd_comm_ctx {
 	pid_t process_pid;
 	uid_t debug_app_uid;
 
+	wait_queue_head_t read_wait;
+
 	struct miscdevice *misc_dev;
 };
 

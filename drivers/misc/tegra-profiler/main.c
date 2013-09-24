@@ -356,7 +356,7 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 
 	cap->tegra_lp_cluster = quadd_is_cpu_with_lp_cluster();
 	cap->power_rate = 1;
-	cap->blocked_read = 0;
+	cap->blocked_read = 1;
 }
 
 static void get_state(struct quadd_module_state *state)

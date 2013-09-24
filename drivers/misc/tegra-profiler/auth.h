@@ -20,6 +20,7 @@
 struct quadd_ctx;
 
 int quadd_auth_check_debug_flag(const char *package_name);
+int quadd_auth_is_auth_open(void);
 
 int quadd_auth_init(struct quadd_ctx *quadd_ctx);
 void quadd_auth_deinit(void);

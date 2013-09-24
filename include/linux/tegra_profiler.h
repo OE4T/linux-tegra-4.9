@@ -20,10 +20,11 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	17
-#define QUADD_IO_VERSION	6
+#define QUADD_IO_VERSION	7
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
+#define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD	7
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 
@@ -289,7 +290,11 @@ struct quadd_comm_cap {
 
 enum {
 	QUADD_MOD_STATE_IDX_RB_MAX_FILL_COUNT = 0,
+	QUADD_MOD_STATE_IDX_STATUS,
 };
+
+#define QUADD_MOD_STATE_STATUS_IS_ACTIVE	(1 << 0)
+#define QUADD_MOD_STATE_STATUS_IS_AUTH_OPEN	(1 << 1)
 
 struct quadd_module_state {
 	u64 nr_all_samples;

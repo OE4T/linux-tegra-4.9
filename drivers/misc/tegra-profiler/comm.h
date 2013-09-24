@@ -50,6 +50,7 @@ struct quadd_comm_data_interface {
 	void (*put_sample)(struct quadd_record_data *data, char *extra_data,
 			   unsigned int extra_length);
 	void (*reset)(void);
+	int (*is_active)(void);
 };
 
 struct quadd_comm_ctx {

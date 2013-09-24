@@ -359,9 +359,19 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	cap->blocked_read = 1;
 }
 
-static void get_state(struct quadd_module_state *state)
+void quadd_get_state(struct quadd_module_state *state)
 {
+	unsigned int status = 0;
+
 	quadd_hrt_get_state(state);
+
+	if (ctx.comm->is_active())
+		status |= QUADD_MOD_STATE_STATUS_IS_ACTIVE;
+
+	if (quadd_auth_is_auth_open())
+		status |= QUADD_MOD_STATE_STATUS_IS_AUTH_OPEN;
+
+	state->reserved[QUADD_MOD_STATE_IDX_STATUS] = status;
 }
 
 static struct quadd_comm_control_interface control = {
@@ -369,7 +379,7 @@ static struct quadd_comm_control_interface control = {
 	.stop			= stop,
 	.set_parameters		= set_parameters,
 	.get_capabilities	= get_capabilities,
-	.get_state		= get_state,
+	.get_state		= quadd_get_state,
 };
 
 static int __init quadd_module_init(void)

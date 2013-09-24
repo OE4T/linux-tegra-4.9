@@ -296,6 +296,11 @@ int quadd_auth_check_debug_flag(const char *package_name)
 	}
 }
 
+int quadd_auth_is_auth_open(void)
+{
+	return atomic_read(&auth_ctx.opened) != 0;
+}
+
 int quadd_auth_init(struct quadd_ctx *quadd_ctx)
 {
 	int err;

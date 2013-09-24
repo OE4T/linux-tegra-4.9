@@ -35,6 +35,7 @@
 #include "clk_gk20a.h"
 #include "nvhost_scale.h"
 #include "gk20a_scale.h"
+#include "gr3d/scale3d.h"
 
 static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
 					    struct device_attribute *attr,
@@ -55,6 +56,25 @@ static ssize_t nvhost_gk20a_scale_load_show(struct device *dev,
 }
 
 static DEVICE_ATTR(load, S_IRUGO, nvhost_gk20a_scale_load_show, NULL);
+
+/*
+ * nvhost_gk20a_scale_callback(profile, freq)
+ *
+ * This function sets emc frequency based on current gpu frequency
+ */
+
+void nvhost_gk20a_scale_callback(struct nvhost_device_profile *profile,
+				 unsigned long freq)
+{
+	struct gk20a *g = get_gk20a(profile->pdev);
+	struct nvhost_device_data *pdata =
+		platform_get_drvdata(profile->pdev);
+	struct nvhost_emc_params *emc_params = profile->private_data;
+	long after = gk20a_clk_get_rate(g);
+	long emc_target = nvhost_scale3d_get_emc_rate(emc_params, after);
+
+	clk_set_rate(pdata->clk[2], emc_target);
+}
 
 /*
  * nvhost_scale_make_freq_table(profile)
@@ -209,15 +229,22 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	struct gk20a *g = get_gk20a(pdev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
+	struct nvhost_emc_params *emc_params;
 
 	if (pdata->power_profile)
 		return;
 
 	profile = kzalloc(sizeof(struct nvhost_device_profile), GFP_KERNEL);
-	if (!profile)
+	emc_params = kzalloc(sizeof(*emc_params), GFP_KERNEL);
+	if (!(profile && emc_params)) {
+		kfree(profile);
+		kfree(emc_params);
 		return;
+	}
+
 	profile->pdev = pdev;
 	profile->last_event_type = DEVICE_IDLE;
+	profile->private_data = emc_params;
 
 	/* Initialize devfreq related structures */
 	profile->dev_stat.private_data = &profile->ext_stat;
@@ -230,6 +257,9 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 			 profile->ext_stat.min_freq);
 		goto err_fetch_clocks;
 	}
+
+	nvhost_scale3d_calibrate_emc(emc_params,
+				     gk20a_clk_get(g), pdata->clk[2]);
 
 	if (device_create_file(&pdev->dev, &dev_attr_load))
 		goto err_create_sysfs_entry;

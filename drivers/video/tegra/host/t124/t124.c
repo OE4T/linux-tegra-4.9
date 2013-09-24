@@ -33,6 +33,7 @@
 #include "syncpt_t124.h"
 
 #include "gk20a/gk20a.h"
+#include "gk20a/gk20a_scale.h"
 #include "t20/t20.h"
 #include "vic03/vic03.h"
 #include "msenc/msenc.h"
@@ -454,6 +455,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.scaling_deinit		= nvhost_gk20a_scale_deinit,
 	.suspend_ndev		= nvhost_scale3d_suspend,
 	.devfreq_governor	= &nvhost_podgov,
+	.scaling_post_cb	= nvhost_gk20a_scale_callback,
 #endif
 };
 

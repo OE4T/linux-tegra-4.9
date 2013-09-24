@@ -45,4 +45,6 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 
 void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
 				  struct clk *clk_3d, struct clk *clk_3d_emc);
+long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
+				 long freq);
 #endif

@@ -409,6 +409,17 @@ static ssize_t smart_panel_show(struct device *device,
 
 static DEVICE_ATTR(smart_panel, S_IRUGO, smart_panel_show, NULL);
 
+static ssize_t panel_rotate_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", dc->out->rotation);
+}
+
+static DEVICE_ATTR(panel_rotation, S_IRUGO, panel_rotate_show, NULL);
+
 static ssize_t pclk_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -707,6 +718,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		device_remove_file(dev, &dev_attr_smart_panel);
 
+	if (dc->out->type != TEGRA_DC_OUT_HDMI)
+		device_remove_file(dev, &dev_attr_panel_rotation);
+
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		sysfs_remove_group(&dev->kobj, &hdmi_config_attr_group);
 }
@@ -740,6 +754,8 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		error |= device_create_file(dev, &dev_attr_smart_panel);
+	if (dc->out->type != TEGRA_DC_OUT_HDMI)
+		error |= device_create_file(dev, &dev_attr_panel_rotation);
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		error |= sysfs_create_group(&dev->kobj,
 					&hdmi_config_attr_group);

@@ -316,12 +316,12 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	}
 
 	/* wait pll lock */
-	timeout = clk->pll_delay / 100 + 1;
+	timeout = clk->pll_delay / 2 + 1;
 	do {
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
 			goto pll_locked;
-		udelay(100);
+		udelay(2);
 	} while (--timeout > 0);
 
 	/* PLL is messed up. What can we do here? */
@@ -470,7 +470,7 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 			trim_sys_gpc2clk_out_bypdiv_m(),
 			trim_sys_gpc2clk_out_sdiv14_indiv4_mode_f() |
 			trim_sys_gpc2clk_out_vcodiv_by1_f() |
-			trim_sys_gpc2clk_out_bypdiv_by31_f());
+			trim_sys_gpc2clk_out_bypdiv_f(0));
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	return 0;

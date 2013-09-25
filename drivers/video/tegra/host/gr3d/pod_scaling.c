@@ -1064,39 +1064,49 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->block = 0;
 	podgov->p_use_throughput_hint = 1;
 
-	switch (cid) {
-	case TEGRA_CHIPID_TEGRA14:
-		podgov->idle_min = podgov->p_idle_min = 500;
+	if (!strcmp(d->name, "vic03")) {
+		podgov->idle_min = podgov->p_idle_min = 300;
 		podgov->idle_max = podgov->p_idle_max = 700;
-		podgov->p_hint_lo_limit = 500;
-		podgov->p_hint_hi_limit = 997;
-		podgov->p_scaleup_limit = 1500;
-		podgov->p_scaledown_limit = 1700;
-		podgov->p_smooth = 3;
-		break;
-	case TEGRA_CHIPID_TEGRA11:
-	case TEGRA_CHIPID_TEGRA12:
-		podgov->idle_min = podgov->p_idle_min = 400;
-		podgov->idle_max = podgov->p_idle_max = 500;
 		podgov->p_hint_lo_limit = 500;
 		podgov->p_hint_hi_limit = 997;
 		podgov->p_scaleup_limit = 1100;
 		podgov->p_scaledown_limit = 1300;
 		podgov->p_smooth = 3;
-		break;
-	case TEGRA_CHIPID_TEGRA3:
-		podgov->idle_min = podgov->p_idle_min = 100;
-		podgov->idle_max = podgov->p_idle_max = 150;
-		podgov->p_hint_lo_limit = 800;
-		podgov->p_hint_hi_limit = 1015;
-		podgov->p_scaleup_limit = 1275;
-		podgov->p_scaledown_limit = 1475;
-		podgov->p_smooth = 7;
-		break;
-	default:
-		pr_err("%s: un-supported chip id\n", __func__);
-		goto err_unsupported_chip_id;
-		break;
+	} else {
+		switch (cid) {
+		case TEGRA_CHIPID_TEGRA14:
+			podgov->idle_min = podgov->p_idle_min = 500;
+			podgov->idle_max = podgov->p_idle_max = 700;
+			podgov->p_hint_lo_limit = 500;
+			podgov->p_hint_hi_limit = 997;
+			podgov->p_scaleup_limit = 1500;
+			podgov->p_scaledown_limit = 1700;
+			podgov->p_smooth = 3;
+			break;
+		case TEGRA_CHIPID_TEGRA11:
+		case TEGRA_CHIPID_TEGRA12:
+			podgov->idle_min = podgov->p_idle_min = 400;
+			podgov->idle_max = podgov->p_idle_max = 500;
+			podgov->p_hint_lo_limit = 500;
+			podgov->p_hint_hi_limit = 997;
+			podgov->p_scaleup_limit = 1100;
+			podgov->p_scaledown_limit = 1300;
+			podgov->p_smooth = 3;
+			break;
+		case TEGRA_CHIPID_TEGRA3:
+			podgov->idle_min = podgov->p_idle_min = 100;
+			podgov->idle_max = podgov->p_idle_max = 150;
+			podgov->p_hint_lo_limit = 800;
+			podgov->p_hint_hi_limit = 1015;
+			podgov->p_scaleup_limit = 1275;
+			podgov->p_scaledown_limit = 1475;
+			podgov->p_smooth = 7;
+			break;
+		default:
+			pr_err("%s: un-supported chip id\n", __func__);
+			goto err_unsupported_chip_id;
+			break;
+		}
 	}
 	podgov->p_estimation_window = 10000;
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;

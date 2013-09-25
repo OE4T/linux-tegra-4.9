@@ -84,10 +84,13 @@ long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
 
 	freq = INT_TO_FX(HZ_TO_MHZ(freq));
 	hz = FXMUL(freq, emc_params->emc_slope) + emc_params->emc_offset;
-	hz -= FXMUL(emc_params->emc_dip_slope,
-		FXMUL(freq - emc_params->emc_xmid,
-			freq - emc_params->emc_xmid)) +
-		emc_params->emc_dip_offset;
+
+	if (!emc_params->linear)
+		hz -= FXMUL(emc_params->emc_dip_slope,
+			FXMUL(freq - emc_params->emc_xmid,
+				freq - emc_params->emc_xmid)) +
+			emc_params->emc_dip_offset;
+
 	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
 	hz = (hz < 0) ? 0 : hz;
 
@@ -172,7 +175,8 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
  */
 
 void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
-				  struct clk *clk_3d, struct clk *clk_3d_emc)
+				  struct clk *clk_3d, struct clk *clk_3d_emc,
+				  bool linear_emc)
 {
 	long correction;
 	unsigned long max_emc;
@@ -200,6 +204,10 @@ void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
 	emc_params->emc_offset += max_emc -
 		(FXMUL(emc_params->emc_slope, max_rate_3d) +
 		emc_params->emc_offset);
+
+	emc_params->linear = linear_emc;
+	if (linear_emc)
+		return;
 
 	emc_params->emc_dip_offset = (max_emc - min_emc) / 4;
 	emc_params->emc_dip_slope =
@@ -248,7 +256,8 @@ void nvhost_scale3d_init(struct platform_device *pdev)
 
 	nvhost_scale3d_calibrate_emc(&gr3d_params->emc_params,
 				     clk(profile, gr3d_params->clk_3d),
-				     clk(profile, gr3d_params->clk_3d_emc));
+				     clk(profile, gr3d_params->clk_3d_emc),
+				     pdata->linear_emc);
 
 	return;
 

@@ -259,7 +259,8 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	}
 
 	nvhost_scale3d_calibrate_emc(emc_params,
-				     gk20a_clk_get(g), pdata->clk[2]);
+				     gk20a_clk_get(g), pdata->clk[2],
+				     pdata->linear_emc);
 
 	if (device_create_file(&pdev->dev, &dev_attr_load))
 		goto err_create_sysfs_entry;

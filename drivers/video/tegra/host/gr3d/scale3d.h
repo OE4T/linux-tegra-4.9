@@ -32,6 +32,7 @@ struct nvhost_emc_params {
 	long				emc_dip_slope;
 	long				emc_dip_offset;
 	long				emc_xmid;
+	bool				linear;
 };
 
 /* Initialization and de-initialization for module */
@@ -44,7 +45,8 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq);
 
 void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
-				  struct clk *clk_3d, struct clk *clk_3d_emc);
+				  struct clk *clk_3d, struct clk *clk_3d_emc,
+				  bool linear_emc);
 long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
 				 long freq);
 #endif

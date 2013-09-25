@@ -205,6 +205,8 @@ struct nvhost_device_data {
 	struct nvhost_device_profile	*power_profile;
 	/* Should we read load estimate from hardware? */
 	bool				actmon_enabled;
+	/* Should we do linear emc scaling? */
+	bool				linear_emc;
 	/* Offset to actmon registers */
 	u32				actmon_regs;
 	/* Devfreq governor name */

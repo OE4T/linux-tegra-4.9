@@ -853,36 +853,6 @@ out:
 	return err;
 }
 
-/*
- * Free handle without slow validation step
- */
-void _nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
-{
-	int dupes;
-	struct nvmap_handle *h = r->handle;
-
-	if (!r ||
-	    WARN_ON(!virt_addr_valid(client)) ||
-	    WARN_ON(!virt_addr_valid(r)))
-		return;
-
-	nvmap_ref_lock(client);
-retry:
-	dupes = atomic_read(&r->dupes);
-	if (r->handle->owner == client && dupes > 1) {
-		if (atomic_cmpxchg(&r->dupes, dupes, dupes - 1) != dupes)
-			goto retry;
-		nvmap_ref_unlock(client);
-		nvmap_handle_put(h);
-		return;
-	} else {
-		/* slow path */
-		nvmap_ref_unlock(client);
-		nvmap_free(client, r);
-		return;
-	}
-}
-
 void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 {
 	struct nvmap_handle_ref *ref;

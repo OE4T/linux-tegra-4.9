@@ -84,10 +84,6 @@ struct nvmap_device;
 struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 					 const char *name);
 
-struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
-				     size_t align, unsigned int flags,
-				     unsigned int heap_mask);
-
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
@@ -103,10 +99,6 @@ ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref);
 ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf);
 
 phys_addr_t nvmap_get_addr_from_user_id(ulong user_id);
-
-void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
-
-void _nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
 void *nvmap_mmap(struct nvmap_handle_ref *r);
 

@@ -464,26 +464,10 @@ static struct nvmap_client *nvmap_get_dmabuf_client(void)
 	return client;
 }
 
-struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
-				   unsigned int flags,
-				   unsigned int heap_mask)
-{
-	struct dma_buf *dmabuf;
-	struct nvmap_handle_ref *ref;
-	struct nvmap_client *client = nvmap_get_dmabuf_client();
-
-	ref = nvmap_alloc(client, size, align, flags, heap_mask);
-	if (!ref)
-		return ERR_PTR(-ENOMEM);
-
-	dmabuf = nvmap_dmabuf_export_from_ref(ref);
-	nvmap_free(client, ref);
-	return dmabuf;
-}
-
-struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
-				     size_t align, unsigned int flags,
-				     unsigned int heap_mask)
+static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
+					      size_t size, size_t align,
+					      unsigned int flags,
+					      unsigned int heap_mask)
 {
 	const unsigned int default_heap = NVMAP_HEAP_CARVEOUT_GENERIC;
 	struct nvmap_handle_ref *r = NULL;
@@ -512,9 +496,9 @@ struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 
 	return r;
 }
-EXPORT_SYMBOL(nvmap_alloc);
 
-void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
+static void __nvmap_free(struct nvmap_client *client,
+			 struct nvmap_handle_ref *r)
 {
 	unsigned long ref_id = nvmap_ref_to_id(r);
 
@@ -526,7 +510,23 @@ void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r)
 
 	nvmap_free_handle_id(client, ref_id);
 }
-EXPORT_SYMBOL(nvmap_free);
+
+struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
+				   unsigned int flags,
+				   unsigned int heap_mask)
+{
+	struct dma_buf *dmabuf;
+	struct nvmap_handle_ref *ref;
+	struct nvmap_client *client = nvmap_get_dmabuf_client();
+
+	ref = __nvmap_alloc(client, size, align, flags, heap_mask);
+	if (!ref)
+		return ERR_PTR(-ENOMEM);
+
+	dmabuf = nvmap_dmabuf_export_from_ref(ref);
+	__nvmap_free(client, ref);
+	return dmabuf;
+}
 
 void nvmap_handle_put(struct nvmap_handle *h)
 {

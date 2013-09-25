@@ -44,6 +44,9 @@
 #include <linux/notifier.h>
 #include <linux/tegra-throughput.h>
 
+#include <linux/notifier.h>
+#include <linux/tegra-throughput.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost_podgov.h>
 

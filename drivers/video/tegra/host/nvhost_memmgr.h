@@ -62,8 +62,13 @@ enum mem_mgr_type {
 	mem_mgr_type_dmabuf = 1,
 };
 
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+#define MEMMGR_TYPE_MASK	0x0
+#else
 #define MEMMGR_TYPE_MASK	0x3
-#define MEMMGR_ID_MASK		~0x3
+#endif
+#define MEMMGR_ID_MASK		(~MEMMGR_TYPE_MASK)
+
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip);
 struct mem_mgr *nvhost_memmgr_alloc_mgr(void);

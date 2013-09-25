@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,59 +47,55 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_bus_gk20a_h_
-#define _hw_bus_gk20a_h_
+#ifndef _hw_timer_gk20a_h_
+#define _hw_timer_gk20a_h_
 
-static inline u32 bus_bar1_block_r(void)
+static inline u32 timer_pri_timeout_r(void)
 {
-	return 0x00001704;
+	return 0x00009080;
 }
-static inline u32 bus_bar1_block_ptr_f(u32 v)
+static inline u32 timer_pri_timeout_period_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xffffff) << 0;
 }
-static inline u32 bus_bar1_block_target_vid_mem_f(void)
+static inline u32 timer_pri_timeout_period_m(void)
 {
-	return 0x0;
+	return 0xffffff << 0;
 }
-static inline u32 bus_bar1_block_mode_virtual_f(void)
+static inline u32 timer_pri_timeout_period_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
+static inline u32 timer_pri_timeout_en_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 timer_pri_timeout_en_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 timer_pri_timeout_en_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 timer_pri_timeout_en_en_enabled_f(void)
 {
 	return 0x80000000;
 }
-static inline u32 bus_bar1_block_ptr_shift_v(void)
+static inline u32 timer_pri_timeout_en_en_disabled_f(void)
 {
-	return 0x0000000c;
+	return 0x0;
 }
-static inline u32 bus_intr_0_r(void)
+static inline u32 timer_pri_timeout_save_0_r(void)
 {
-	return 0x00001100;
+	return 0x00009084;
 }
-static inline u32 bus_intr_0_pri_squash_m(void)
+static inline u32 timer_pri_timeout_save_1_r(void)
 {
-	return 0x1 << 1;
+	return 0x00009088;
 }
-static inline u32 bus_intr_0_pri_fecserr_m(void)
+static inline u32 timer_pri_timeout_fecs_errcode_r(void)
 {
-	return 0x1 << 2;
-}
-static inline u32 bus_intr_0_pri_timeout_m(void)
-{
-	return 0x1 << 3;
-}
-static inline u32 bus_intr_en_0_r(void)
-{
-	return 0x00001140;
-}
-static inline u32 bus_intr_en_0_pri_squash_m(void)
-{
-	return 0x1 << 1;
-}
-static inline u32 bus_intr_en_0_pri_fecserr_m(void)
-{
-	return 0x1 << 2;
-}
-static inline u32 bus_intr_en_0_pri_timeout_m(void)
-{
-	return 0x1 << 3;
+	return 0x0000908c;
 }
 #endif

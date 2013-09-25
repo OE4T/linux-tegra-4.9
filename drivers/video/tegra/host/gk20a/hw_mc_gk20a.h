@@ -74,6 +74,10 @@ static inline u32 mc_intr_0_priv_ring_pending_f(void)
 {
 	return 0x40000000;
 }
+static inline u32 mc_intr_0_pbus_pending_f(void)
+{
+	return 0x10000000;
+}
 static inline u32 mc_intr_mask_0_r(void)
 {
 	return 0x00000640;

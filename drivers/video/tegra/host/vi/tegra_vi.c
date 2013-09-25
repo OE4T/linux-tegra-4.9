@@ -303,6 +303,9 @@ const struct file_operations tegra_vi_ctrl_ops = {
 	.owner = THIS_MODULE,
 	.open = vi_open,
 	.unlocked_ioctl = vi_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = vi_ioctl,
+#endif
 	.release = vi_release,
 };
 #endif

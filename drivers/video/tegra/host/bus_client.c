@@ -147,6 +147,7 @@ void nvhost_client_writel(struct platform_device *pdev, u32 val, u32 reg)
 {
 	writel(val, get_aperture(pdev) + reg * 4);
 }
+EXPORT_SYMBOL(nvhost_client_writel);
 
 u32 nvhost_client_readl(struct platform_device *pdev, u32 reg)
 {

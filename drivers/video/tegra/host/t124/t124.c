@@ -262,7 +262,7 @@ struct nvhost_device_data t124_vi_info = {
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
 };
-
+EXPORT_SYMBOL(t124_vi_info);
 
 static struct platform_device tegra_vi01_device = {
 	.name		= "vi",

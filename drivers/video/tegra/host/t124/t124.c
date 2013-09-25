@@ -41,6 +41,7 @@
 #include "vi/vi.h"
 #include "isp/isp.h"
 #include "gr3d/pod_scaling.h"
+#include "gr3d/scale3d.h"
 
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
@@ -397,10 +398,16 @@ struct nvhost_device_data t124_vic_info = {
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic03_finalize_poweron,
 	.prepare_poweroff	= nvhost_vic03_prepare_poweroff,
-	.scaling_init		= nvhost_scale_init,
-	.scaling_deinit		= nvhost_scale_deinit,
+	.scaling_init		= nvhost_scale3d_init,
+	.scaling_deinit		= nvhost_scale3d_deinit,
+	.busy			= nvhost_scale_notify_busy,
+	.idle			= nvhost_scale_notify_idle,
+	.suspend_ndev		= nvhost_scale3d_suspend,
+	.scaling_post_cb	= &nvhost_scale3d_callback,
+	.devfreq_governor	= &nvhost_podgov,
 	.actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled		= true,
+	.linear_emc		= true,
 };
 
 struct platform_device tegra_vic03_device = {

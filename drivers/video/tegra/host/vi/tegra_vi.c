@@ -218,6 +218,9 @@ long vi_ioctl(struct file *file,
 		}
 
 		clk = clk_get(&tegra_vi->ndev->dev, "pll_d");
+		if (IS_ERR(clk))
+			return -EINVAL;
+
 		if (enable)
 			ret = tegra_clk_cfg_ex(clk,
 				TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);

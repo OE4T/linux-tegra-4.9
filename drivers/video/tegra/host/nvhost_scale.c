@@ -60,11 +60,29 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 {
 	unsigned long *freqs;
 	int num_freqs, err;
+	unsigned long max_freq =  clk_round_rate(profile->clk, UINT_MAX);
+	unsigned long min_freq =  clk_round_rate(profile->clk, 0);
 
 	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
 				   &freqs, &num_freqs);
 	if (err)
 		return -ENOSYS;
+
+	/* check for duplicate frequencies at higher end */
+	while ((num_freqs >= 2 &&
+		freqs[num_freqs - 2] == freqs[num_freqs - 1]) ||
+	       (num_freqs && max_freq < freqs[num_freqs - 1]))
+		num_freqs--;
+
+	/* check low end */
+	while ((num_freqs >= 2 && freqs[0] == freqs[1]) ||
+	       (num_freqs && freqs[0] < min_freq)) {
+		freqs++;
+		num_freqs--;
+	}
+
+	if (!num_freqs)
+		dev_warn(&profile->pdev->dev, "dvfs table had no applicable frequencies!\n");
 
 	profile->devfreq_profile.freq_table = (unsigned int *)freqs;
 	profile->devfreq_profile.max_state = num_freqs;

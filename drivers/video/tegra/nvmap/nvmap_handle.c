@@ -1089,15 +1089,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	return ref;
 }
 
-struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
-						struct nvmap_client *client,
-						unsigned long user_id)
-{
-	if (!virt_addr_valid(client))
-		return ERR_PTR(-EINVAL);
-	return nvmap_duplicate_handle_id(client, unmarshal_user_id(user_id), 0);
-}
-
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd)
 {

@@ -278,17 +278,6 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 	return h;
 }
 
-ulong nvmap_get_handle_user_id(struct nvmap_client *client,
-					 unsigned long user_id)
-{
-	struct nvmap_handle *h;
-
-	if (!virt_addr_valid(client))
-		return 0;
-	h = nvmap_get_handle_id(client, unmarshal_user_id(user_id));
-	return (ulong)marshal_kernel_handle((ulong)h);
-}
-
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 				   struct nvmap_heap_block *b)
 {

@@ -57,29 +57,8 @@ struct nvmap_handle_ref;
 
 #if defined(__KERNEL__)
 
-#if defined(CONFIG_TEGRA_NVMAP)
 struct nvmap_client;
 struct nvmap_device;
-
-/* Convert User space handle to Kernel. */
-#define nvmap_convert_handle_u2k(h) (h)
-
-#elif defined(CONFIG_ION_TEGRA)
-/* For Ion Mem Manager support through nvmap_* API's. */
-#include "../../../../../drivers/gpu/ion/ion_priv.h"
-#define nvmap_client ion_client
-#define nvmap_device ion_device
-#define nvmap_handle ion_handle
-#define nvmap_handle_ref ion_handle
-/* Convert User space handle to Kernel. */
-#define nvmap_convert_handle_u2k(h) ({ \
-	if ((u32)h >= TASK_SIZE) { \
-		pr_err("Invalid user space handle."); \
-		BUG(); \
-	} \
-	(*((u32 *)h)); })
-
-#endif /* CONFIG_ION_TEGRA */
 
 struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 					 const char *name);
@@ -100,15 +79,6 @@ ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf);
 
 phys_addr_t nvmap_get_addr_from_user_id(ulong user_id);
 
-void *nvmap_mmap(struct nvmap_handle_ref *r);
-
-void nvmap_munmap(struct nvmap_handle_ref *r, void *addr);
-
-void *nvmap_kmap(struct nvmap_handle_ref *r, unsigned int pagenum);
-
-void nvmap_kunmap(struct nvmap_handle_ref *r, unsigned int pagenum,
-		void *addr);
-
 struct nvmap_client *nvmap_client_get_file(int fd);
 
 struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
@@ -123,28 +93,6 @@ phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 
 void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
-struct nvmap_handle_ref *nvmap_duplicate_handle_user_id(
-						struct nvmap_client *client,
-						unsigned long user_id);
-
-ulong nvmap_get_handle_user_id(struct nvmap_client *client,
-					 unsigned long id);
-
-void nvmap_put_handle_user_id(ulong user_id);
-
-/*
- * Create a sg_table struct from the pages allocated for a handle. Note that
- * this does not increment refcount of the handle, so keep a reference to the
- * buffer for as long as you use the sg_table.
- */
-struct sg_table *nvmap_sg_table(struct nvmap_client *client,
-		struct nvmap_handle_ref *ref);
-void nvmap_free_sg_table(struct nvmap_client *client,
-		struct nvmap_handle_ref *ref, struct sg_table *sgt);
-void nvmap_set_nvhost_private(struct nvmap_handle_ref *ref, void *priv,
-		void (*delete)(void *priv));
-void *nvmap_get_nvhost_private(struct nvmap_handle_ref *ref);
-
 struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
 void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);
 
@@ -152,12 +100,6 @@ void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
 			      void (*delete)(void *priv));
 void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf);
 
-/*
- * Flush cache maintenance operations for the handle that have been deferred.
- * Use this if you don't use nvmap_pin for mapping the buffer to IOVA.
- */
-void nvmap_flush_deferred_cache(struct nvmap_client *client,
-		struct nvmap_handle_ref *ref);
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 

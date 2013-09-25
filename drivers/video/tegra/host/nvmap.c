@@ -50,16 +50,19 @@ struct nvhost_nvmap_data {
 
 struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 {
-	return (struct mem_mgr *)nvmap_create_client(nvmap_dev, "nvhost");
+	return (struct mem_mgr *)0x1;
 }
 
 void nvhost_nvmap_put_mgr(struct mem_mgr *mgr)
 {
-	nvmap_client_put((struct nvmap_client *)mgr);
+	if ((ulong)mgr != 0x1)
+		nvmap_client_put((struct nvmap_client *)mgr);
 }
 
 struct mem_mgr *nvhost_nvmap_get_mgr(struct mem_mgr *mgr)
 {
+	if ((ulong)mgr == 0x1)
+		return (struct mem_mgr *)0x1;
 	return (struct mem_mgr *)nvmap_client_get((struct nvmap_client *)mgr);
 }
 

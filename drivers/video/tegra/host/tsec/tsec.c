@@ -32,6 +32,7 @@
 #include <linux/of_platform.h>
 
 #include <mach/pm_domains.h>
+#include <mach/hardware.h>
 
 #include "dev.h"
 #include "tsec.h"
@@ -148,6 +149,9 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 {
 	u32 val;
 	u32 timeout;
+
+	if (tegra_platform_is_linsim())
+		return 0;
 
 	val = host1x_readl(pdev, tsec_tegra_ctl_r());
 	val &= ~tsec_tegra_ctl_tkfi_kfuse_m();

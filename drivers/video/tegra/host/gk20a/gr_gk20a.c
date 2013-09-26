@@ -635,11 +635,10 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g,
 			if (err)
 				return err;
 			mapped_here = true;
-		} else {
+		} else
 			mapped_here = false;
-			patch_ptr = ch_ctx->patch_ctx.cpu_va;
-		}
 
+		patch_ptr = ch_ctx->patch_ctx.cpu_va;
 		patch_slot = ch_ctx->patch_ctx.data_count * 2;
 
 		mem_wr32(patch_ptr, patch_slot++, addr);
@@ -5556,10 +5555,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	void *ctx_ptr = NULL;
 	int curr_gr_chid, curr_gr_ctx;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
-	bool restart_fifo_ctxsw = false;
 	u32 i, j, offset, v;
-	u32 max_offsets = proj_scal_max_gpcs_v() *
-		proj_scal_max_tpc_per_gpc_v();
+	u32 max_offsets = proj_scal_litter_num_gpcs_v() *
+		proj_scal_litter_num_tpc_per_gpc_v();
 	u32 *offsets = NULL;
 	u32 *offset_addrs = NULL;
 	u32 ctx_op_nr, num_ctx_ops[2] = {num_ctx_wr_ops, num_ctx_rd_ops};
@@ -5568,26 +5566,10 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "wr_ops=%d rd_ops=%d",
 		   num_ctx_wr_ops, num_ctx_rd_ops);
 
-	/* TBD: set timeout */
-	/* pin_context will disable channel switching.
+	/* disable channel switching.
 	 * at that point the hardware state can be inspected to
 	 * determine if the context we're interested in is current.
 	 */
-#if 0
-	err = fifo_gk20a_disable_fifo_ctxsw(g, c);
-	if (err) {
-		dev_warn(dev_from_gk20a(g), "failed to fifo ctxsw\n");
-		goto clean_up;
-	}
-	restart_fifo_ctxsw = true;
-#endif
-
-	{
-		u32 reg = gk20a_readl(g, 0x0041a084);
-		nvhost_dbg(dbg_gpu_dbg, "flcn_cfg_rm=0x%x",
-			   reg);
-	}
-
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
 		nvhost_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
@@ -5700,13 +5682,21 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			     ((pass == 1) && !reg_op_is_read(ctx_ops[i].op))))
 				continue;
 
-			gr_gk20a_get_ctx_buffer_offsets(g,
+			err = gr_gk20a_get_ctx_buffer_offsets(g,
 						ctx_ops[i].offset,
 						max_offsets,
 						offsets, offset_addrs,
 						&num_offsets,
 						ctx_ops[i].is_quad,
 						ctx_ops[i].quad);
+			if (err) {
+				nvhost_dbg(dbg_gpu_dbg,
+					   "ctx op invalid offset: offset=0x%x",
+					   ctx_ops[i].offset);
+				ctx_ops[i].status =
+					NVHOST_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
+				continue;
+			}
 
 			/* if this is a quad access, setup for special access*/
 			if (ctx_ops[i].is_quad)
@@ -5786,12 +5776,6 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			nvhost_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
 			err = tmp_err;
 		}
-	}
-
-	if (restart_fifo_ctxsw) {
-#if 0
-		fifo_gk20a_enable_fifo_ctxsw(g);
-#endif
 	}
 
 	return err;

@@ -209,8 +209,6 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	ch_gk20a->dbg_s = dbg_s;
 
 	if (g->dbg_sessions++ == 0) {
-		u32 curr = gk20a_clk_get_rate(g);
-
 		/* save off current powergate, clk state.
 		 * set gpu module's can_powergate = 0.
 		 * set gpu module's clk to max.

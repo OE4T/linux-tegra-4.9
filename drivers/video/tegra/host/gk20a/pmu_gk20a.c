@@ -39,6 +39,8 @@
 #define nvhost_dbg_pmu(fmt, arg...) \
 	nvhost_dbg(dbg_pmu, fmt, ##arg)
 
+static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
+
 static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			u32 src, u8* dst, u32 size, u8 port)
 {
@@ -1221,6 +1223,7 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	if (status == 0) {
 		nvhost_err(dev_from_gk20a(g),
 			"PG_INIT_ACK failed, remaining timeout : 0x%lx", remain);
+		pmu_dump_falcon_stats(pmu);
 		return -EBUSY;
 	}
 
@@ -2516,6 +2519,8 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvhost_err(dev_from_gk20a(g),
 				"ELPG_ALLOW_ACK failed");
+			pmu_dump_elpg_stats(pmu);
+			pmu_dump_falcon_stats(pmu);
 			ret = -EBUSY;
 			goto exit_unlock;
 		}
@@ -2544,6 +2549,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 		nvhost_err(dev_from_gk20a(g),
 			"ELPG_DISALLOW_ACK failed");
 		pmu_dump_elpg_stats(pmu);
+		pmu_dump_falcon_stats(pmu);
 		ret = -EBUSY;
 		goto exit_unlock;
 	}

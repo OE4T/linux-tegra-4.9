@@ -52,7 +52,7 @@
 
 static inline u32 host1x_uclass_incr_syncpt_r(void)
 {
-	return 0x00000000;
+	return 0x0;
 }
 static inline u32 host1x_uclass_incr_syncpt_cond_s(void)
 {
@@ -80,7 +80,7 @@ static inline u32 host1x_uclass_incr_syncpt_indx_f(u32 v)
 }
 static inline u32 host1x_uclass_incr_syncpt_base_r(void)
 {
-	return 0x0000000c;
+	return 0xc;
 }
 static inline u32 host1x_uclass_incr_syncpt_base_base_indx_f(u32 v)
 {
@@ -92,7 +92,7 @@ static inline u32 host1x_uclass_incr_syncpt_base_offset_f(u32 v)
 }
 static inline u32 host1x_uclass_wait_syncpt_base_r(void)
 {
-	return 0x00000009;
+	return 0x9;
 }
 static inline u32 host1x_uclass_wait_syncpt_base_indx_f(u32 v)
 {
@@ -108,11 +108,11 @@ static inline u32 host1x_uclass_wait_syncpt_base_offset_f(u32 v)
 }
 static inline u32 host1x_uclass_load_syncpt_base_r(void)
 {
-	return 0x0000000b;
+	return 0xb;
 }
 static inline u32 host1x_uclass_wait_syncpt_r(void)
 {
-	return 0x00000008;
+	return 0x8;
 }
 static inline u32 host1x_uclass_wait_syncpt_indx_f(u32 v)
 {
@@ -124,7 +124,7 @@ static inline u32 host1x_uclass_wait_syncpt_thresh_f(u32 v)
 }
 static inline u32 host1x_uclass_indoff_r(void)
 {
-	return 0x0000002d;
+	return 0x2d;
 }
 static inline u32 host1x_uclass_indoff_indbe_f(u32 v)
 {

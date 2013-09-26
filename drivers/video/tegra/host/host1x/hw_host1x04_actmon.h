@@ -52,7 +52,7 @@
 
 static inline u32 actmon_ctrl_r(void)
 {
-	return 0x00000000;
+	return 0x0;
 }
 static inline u32 actmon_ctrl_actmon_enable_f(u32 v)
 {
@@ -80,18 +80,18 @@ static inline u32 actmon_ctrl_sample_period_m(void)
 }
 static inline u32 actmon_init_avg_r(void)
 {
-	return 0x00000014;
+	return 0x14;
 }
 static inline u32 actmon_count_r(void)
 {
-	return 0x00000018;
+	return 0x18;
 }
 static inline u32 actmon_avg_count_r(void)
 {
-	return 0x0000001c;
+	return 0x1c;
 }
 static inline u32 actmon_intr_status_r(void)
 {
-	return 0x00000020;
+	return 0x20;
 }
 #endif

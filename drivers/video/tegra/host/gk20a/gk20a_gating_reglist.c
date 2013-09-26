@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/gk20a_gating_reglist.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -52,7 +52,7 @@
 
 static inline u32 host1x_channel_fifostat_r(void)
 {
-	return 0x00000000;
+	return 0x0;
 }
 static inline u32 host1x_channel_fifostat_cfempty_v(u32 r)
 {
@@ -64,27 +64,27 @@ static inline u32 host1x_channel_fifostat_outfentries_v(u32 r)
 }
 static inline u32 host1x_channel_inddata_r(void)
 {
-	return 0x0000000c;
+	return 0xc;
 }
 static inline u32 host1x_channel_dmastart_r(void)
 {
-	return 0x00000014;
+	return 0x14;
 }
 static inline u32 host1x_channel_dmaput_r(void)
 {
-	return 0x00000018;
+	return 0x18;
 }
 static inline u32 host1x_channel_dmaget_r(void)
 {
-	return 0x0000001c;
+	return 0x1c;
 }
 static inline u32 host1x_channel_dmaend_r(void)
 {
-	return 0x00000020;
+	return 0x20;
 }
 static inline u32 host1x_channel_dmactrl_r(void)
 {
-	return 0x00000024;
+	return 0x24;
 }
 static inline u32 host1x_channel_dmactrl_dmastop_f(u32 v)
 {
@@ -104,38 +104,38 @@ static inline u32 host1x_channel_dmactrl_dmainitget_f(u32 v)
 }
 static inline u32 host1x_channel_channelctrl_r(void)
 {
-	return 0x00000098;
+	return 0x98;
 }
 static inline u32 host1x_channel_stallcount_hi_r(void)
 {
-	return 0x000000a4;
+	return 0xa4;
 }
 static inline u32 host1x_channel_stallcount_lo_r(void)
 {
-	return 0x000000a8;
+	return 0xa8;
 }
 static inline u32 host1x_channel_stallctrl_r(void)
 {
-	return 0x000000a0;
+	return 0xa0;
 }
 static inline u32 host1x_channel_tickcount_hi_r(void)
 {
-	return 0x00000090;
+	return 0x90;
 }
 static inline u32 host1x_channel_tickcount_lo_r(void)
 {
-	return 0x00000094;
+	return 0x94;
 }
 static inline u32 host1x_channel_xfercount_hi_r(void)
 {
-	return 0x000000b0;
+	return 0xb0;
 }
 static inline u32 host1x_channel_xfercount_lo_r(void)
 {
-	return 0x000000b4;
+	return 0xb4;
 }
 static inline u32 host1x_channel_xferctrl_r(void)
 {
-	return 0x000000ac;
+	return 0xac;
 }
 #endif

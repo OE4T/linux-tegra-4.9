@@ -291,9 +291,11 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	switch (blank) {
 	case FB_BLANK_UNBLANK:
 		dev_dbg(&tegra_fb->ndev->dev, "unblank\n");
-#if !defined(CONFIG_ANDROID)
+#if defined(CONFIG_ANDROID)
 		/* Not restoring windows to avoid white screen on android */
-		tegra_fb->win->flags = TEGRA_WIN_FLAG_ENABLED;
+		tegra_fb->win->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+#else
+		tegra_fb->win->flags |= TEGRA_WIN_FLAG_ENABLED;
 #endif
 		tegra_dc_enable(tegra_fb->win->dc);
 		tegra_dc_update_windows(&tegra_fb->win, 1);

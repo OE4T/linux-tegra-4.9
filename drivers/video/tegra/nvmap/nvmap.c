@@ -178,31 +178,6 @@ void nvmap_unpin_ids(struct nvmap_client *client, unsigned int nr,
 	nvmap_ref_unlock(client);
 }
 
-static phys_addr_t nvmap_handle_address(struct nvmap_client *c,
-					unsigned long id)
-{
-	struct nvmap_handle *h;
-	phys_addr_t phys;
-
-	h = nvmap_get_handle_id(c, id);
-	if (!h)
-		return -EPERM;
-	mutex_lock(&h->lock);
-	phys = handle_phys(h);
-	mutex_unlock(&h->lock);
-	nvmap_handle_put(h);
-
-	return phys;
-}
-
-phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
-					unsigned long user_id)
-{
-	if (!virt_addr_valid(c))
-		return -EINVAL;
-	return nvmap_handle_address(c, unmarshal_user_id(user_id));
-}
-
 void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 {
 	phys_addr_t paddr;

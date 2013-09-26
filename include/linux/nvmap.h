@@ -74,9 +74,6 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 
 void nvmap_client_put(struct nvmap_client *c);
 
-phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
-					 unsigned long user_id);
-
 struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
 
 void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);

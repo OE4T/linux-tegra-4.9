@@ -385,6 +385,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	static int initialized;
 	unsigned long *freqs;
 	int err, num_freqs;
+	struct clk *ref;
+	unsigned long ref_rate;
 
 	nvhost_dbg_fn("");
 
@@ -393,11 +395,22 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		return 0;
 	}
 
+	if (!gk20a_clk_get(g))
+		return -EINVAL;
+
+	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
+	if (IS_ERR(ref)) {
+		nvhost_err(dev_from_gk20a(g),
+			"failed to get GPCPLL reference clock");
+		return -EINVAL;
+	}
+	ref_rate = clk_get_rate(ref);
+
 	/* TBD: set this according to different environments */
 	clk->pll_delay = 5000000; /* usec */
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
-	clk->gpc_pll.clk_in = 12; /* MHz */
+	clk->gpc_pll.clk_in = ref_rate / 1000000; /* MHz */
 
 	/* Decide initial frequency */
 	if (!initialized) {
@@ -408,9 +421,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.PL = 0;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 	}
-
-	if (!gk20a_clk_get(g))
-		return -EINVAL;
 
 	err = tegra_dvfs_get_freqs(clk_get_parent(clk->tegra_clk),
 				   &freqs, &num_freqs);

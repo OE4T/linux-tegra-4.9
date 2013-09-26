@@ -518,8 +518,8 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 	return NULL;
 }
 
-struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
-					 const char *name)
+struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
+					   const char *name)
 {
 	struct nvmap_client *client;
 	struct task_struct *task;
@@ -566,7 +566,6 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 	spin_unlock(&dev->clients_lock);
 	return client;
 }
-EXPORT_SYMBOL(nvmap_create_client);
 
 static void destroy_client(struct nvmap_client *client)
 {
@@ -586,7 +585,7 @@ static void destroy_client(struct nvmap_client *client)
 		pins = atomic_read(&ref->pin);
 
 		while (pins--)
-			nvmap_unpin(client, ref);
+			__nvmap_unpin(ref);
 
 		if (ref->handle->owner == client) {
 			ref->handle->owner = NULL;
@@ -665,7 +664,7 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 		return ret;
 
 	BUG_ON(dev != nvmap_dev);
-	priv = nvmap_create_client(dev, "user");
+	priv = __nvmap_create_client(dev, "user");
 	if (!priv)
 		return -ENOMEM;
 	trace_nvmap_open(priv, priv->name);

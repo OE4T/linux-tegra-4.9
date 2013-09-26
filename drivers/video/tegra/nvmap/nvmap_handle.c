@@ -899,7 +899,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 			    current->group_leader->comm, h);
 
 	while (atomic_read(&ref->pin))
-		nvmap_unpin(client, ref);
+		__nvmap_unpin(ref);
 
 	if (h->owner == client) {
 		h->owner = NULL;
@@ -1167,7 +1167,7 @@ unsigned long nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
 	if (IS_ERR(ref))
 		return 0;
 
-	return nvmap_ref_to_id(ref);
+	return __nvmap_ref_to_id(ref);
 }
 EXPORT_SYMBOL(nvmap_duplicate_handle_id_ex);
 
@@ -1242,7 +1242,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 	nvmap_ref_lock(client);
 	ref = __nvmap_validate_id_locked(client, id);
 	if (ref)
-		nvmap_pin(client, ref, &dummy);
+		__nvmap_pin(ref, &dummy);
 	nvmap_ref_unlock(client);
 
 	return 0;
@@ -1260,7 +1260,7 @@ int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
 
 	ref = __nvmap_validate_id_locked(client, id);
 	if (ref)
-		nvmap_unpin(client, ref);
+		__nvmap_unpin(ref);
 
 	nvmap_ref_unlock(client);
 

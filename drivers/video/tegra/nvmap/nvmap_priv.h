@@ -332,6 +332,9 @@ int is_nvmap_vma(struct vm_area_struct *vma);
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id);
 ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd);
 
+int nvmap_get_handle_param(struct nvmap_client *client,
+		struct nvmap_handle_ref *ref, u32 param, u64 *result);
+
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);
 __u32 marshal_kernel_handle(ulong handle);
@@ -394,6 +397,12 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 int __nvmap_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			unsigned long start, unsigned long end,
 			unsigned int op, unsigned int allow_deferred);
+struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
+					   const char *name);
+struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
+ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref);
+int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys);
+void __nvmap_unpin(struct nvmap_handle_ref *ref);
 
 void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root);
 int nvmap_dmabuf_stash_init(void);

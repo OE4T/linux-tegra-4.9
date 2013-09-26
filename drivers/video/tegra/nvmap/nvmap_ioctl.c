@@ -157,25 +157,16 @@ ulong unmarshal_id(ulong id)
 struct nvmap_handle *marshal_kernel_ref(struct nvmap_handle_ref *ref)
 {
 	if (ref->fd == -1)
-		return marshal_kernel_handle(nvmap_ref_to_id(ref));
+		return marshal_kernel_handle(__nvmap_ref_to_id(ref));
 	return (struct nvmap_handle *)ref->fd;
 }
 
-ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref)
-{
-	if (!virt_addr_valid(ref))
-		return 0;
-	return (ulong)marshal_kernel_handle(nvmap_ref_to_id(ref));
-}
-EXPORT_SYMBOL(nvmap_ref_to_user_id);
-
-ulong nvmap_ref_to_id(struct nvmap_handle_ref *ref)
+ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
 		return 0;
 	return (unsigned long)ref->handle;
 }
-EXPORT_SYMBOL(nvmap_ref_to_id);
 
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {
@@ -437,7 +428,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	op.handle = marshal_kernel_ref(ref);
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
-		nvmap_free_handle_id(client, nvmap_ref_to_id(ref));
+		nvmap_free_handle_id(client, __nvmap_ref_to_id(ref));
 	}
 
 	return err;

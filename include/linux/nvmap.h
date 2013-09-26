@@ -60,24 +60,13 @@ struct nvmap_handle_ref;
 struct nvmap_client;
 struct nvmap_device;
 
-struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
-					 const char *name);
-
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
 
 struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client, ulong user_id);
 
-struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
-
-ulong nvmap_ref_to_id(struct nvmap_handle_ref *ref);
-
-ulong nvmap_ref_to_user_id(struct nvmap_handle_ref *ref);
-
 ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf);
-
-phys_addr_t nvmap_get_addr_from_user_id(ulong user_id);
 
 struct nvmap_client *nvmap_client_get_file(int fd);
 
@@ -85,23 +74,17 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 
 void nvmap_client_put(struct nvmap_client *c);
 
-int nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r,
-	      phys_addr_t *phys);
-
 phys_addr_t nvmap_handle_address_user_id(struct nvmap_client *c,
 					 unsigned long user_id);
 
-void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *r);
-
 struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
+
 void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);
 
 void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
 			      void (*delete)(void *priv));
-void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf);
 
-int nvmap_get_handle_param(struct nvmap_client *client,
-		struct nvmap_handle_ref *ref, u32 param, u64 *result);
+void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf);
 
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
 

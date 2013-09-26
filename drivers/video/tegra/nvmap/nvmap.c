@@ -60,21 +60,9 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 }
 
 /*
- * Get physical address of the handle. Handle should be
- * already validated and pinned.
- */
-phys_addr_t nvmap_get_addr_from_user_id(ulong user_id)
-{
-	struct nvmap_handle *h;
-
-	h = (struct nvmap_handle *)unmarshal_user_id(user_id);
-	return handle_phys(h);
-}
-
-/*
  * Do the actual pin. Just calls to the dma_buf code.
  */
-static int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys)
+int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys)
 {
 	struct nvmap_handle *h = ref->handle;
 	struct sg_table *sgt = NULL;
@@ -97,22 +85,7 @@ err:
 	return PTR_ERR(sgt);
 }
 
-/*
- * Map a handle's memory into the IO virtual address space. This function
- * should be called on a handle before its memory is used by a device.
- */
-int nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *ref,
-	      phys_addr_t *phys)
-{
-	if (!virt_addr_valid(ref) ||
-	    !virt_addr_valid(ref->handle))
-		return -EINVAL;
-
-	return __nvmap_pin(ref, phys);
-}
-EXPORT_SYMBOL(nvmap_pin);
-
-void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
+void __nvmap_unpin(struct nvmap_handle_ref *ref)
 {
 	struct nvmap_handle *h = ref->handle;
 
@@ -126,7 +99,6 @@ void nvmap_unpin(struct nvmap_client *client, struct nvmap_handle_ref *ref)
 	dma_buf_unmap_attachment(h->attachment,
 		h->attachment->priv, DMA_BIDIRECTIONAL);
 }
-EXPORT_SYMBOL(nvmap_unpin);
 
 int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
 		  const unsigned long *ids)
@@ -170,7 +142,7 @@ err_cleanup:
 		 * up so if this worked the first time it will work again.
 		 */
 		ref = __nvmap_validate_id_locked(client, ids[i]);
-		nvmap_unpin(client, ref);
+		__nvmap_unpin(ref);
 	}
 	nvmap_ref_unlock(client);
 	return err;
@@ -201,7 +173,7 @@ void nvmap_unpin_ids(struct nvmap_client *client, unsigned int nr,
 			continue;
 		}
 
-		nvmap_unpin(client, ref);
+		__nvmap_unpin(ref);
 	}
 	nvmap_ref_unlock(client);
 }
@@ -414,7 +386,7 @@ static struct nvmap_client *nvmap_get_dmabuf_client(void)
 	if (!client) {
 		struct nvmap_client *temp;
 
-		temp = nvmap_create_client(nvmap_dev, "dmabuf_client");
+		temp = __nvmap_create_client(nvmap_dev, "dmabuf_client");
 		if (!temp)
 			return NULL;
 		if (cmpxchg(&client, NULL, temp))
@@ -443,14 +415,14 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 	if (IS_ERR(r))
 		return r;
 
-	err = nvmap_alloc_handle_id(client, nvmap_ref_to_id(r),
+	err = nvmap_alloc_handle_id(client, __nvmap_ref_to_id(r),
 				    heap_mask, align,
 				    0, /* kind n/a */
 				    flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
 					      NVMAP_HANDLE_COMPR_SPECIFIED));
 
 	if (err) {
-		nvmap_free_handle_id(client, nvmap_ref_to_id(r));
+		nvmap_free_handle_id(client, __nvmap_ref_to_id(r));
 		return ERR_PTR(err);
 	}
 
@@ -460,7 +432,7 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 static void __nvmap_free(struct nvmap_client *client,
 			 struct nvmap_handle_ref *r)
 {
-	unsigned long ref_id = nvmap_ref_to_id(r);
+	unsigned long ref_id = __nvmap_ref_to_id(r);
 
 	if (!r ||
 	    WARN_ON(!virt_addr_valid(client)) ||
@@ -483,7 +455,7 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 	if (!ref)
 		return ERR_PTR(-ENOMEM);
 
-	dmabuf = nvmap_dmabuf_export_from_ref(ref);
+	dmabuf = __nvmap_dmabuf_export_from_ref(ref);
 	__nvmap_free(client, ref);
 	return dmabuf;
 }

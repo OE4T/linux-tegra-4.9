@@ -609,7 +609,7 @@ struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client,
  * user_id. You must dma_buf_put() the dma_buf object when you are done with
  * it.
  */
-struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
+struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
 		return ERR_PTR(-EINVAL);
@@ -617,7 +617,6 @@ struct dma_buf *nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
 	get_dma_buf(ref->handle->dmabuf);
 	return ref->handle->dmabuf;
 }
-EXPORT_SYMBOL(nvmap_dmabuf_export_from_ref);
 
 /*
  * Returns the nvmap handle ID associated with the passed dma_buf's fd. This

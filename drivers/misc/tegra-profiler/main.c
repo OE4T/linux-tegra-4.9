@@ -407,7 +407,11 @@ static int __init quadd_module_init(void)
 				quadd_get_event_str(events[i]));
 	}
 
+#ifdef CONFIG_CACHE_L2X0
 	ctx.pl310 = quadd_l2x0_events_init();
+#else
+	ctx.pl310 = NULL;
+#endif
 	if (ctx.pl310) {
 		events = ctx.pl310_info.supported_events;
 		nr_events = ctx.pl310->get_supported_events(events);

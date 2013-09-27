@@ -14,6 +14,7 @@
  *
  */
 
+#ifdef CONFIG_CACHE_L2X0
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/module.h>
@@ -137,16 +138,16 @@ static void l2x0_clear_values(void)
 		per_cpu(pl310_prev_val, cpu_id) = 0;
 }
 
-static int l2x0_events_enable(void)
+static int __maybe_unused l2x0_events_enable(void)
 {
 	return 0;
 }
 
-static void l2x0_events_disable(void)
+static void __maybe_unused l2x0_events_disable(void)
 {
 }
 
-static void l2x0_events_start(void)
+static void __maybe_unused l2x0_events_start(void)
 {
 	unsigned long flags;
 
@@ -161,7 +162,7 @@ static void l2x0_events_start(void)
 	qm_debug_start_source(QUADD_EVENT_SOURCE_PL310);
 }
 
-static void l2x0_events_stop(void)
+static void __maybe_unused l2x0_events_stop(void)
 {
 	unsigned long flags;
 
@@ -222,7 +223,7 @@ static int __maybe_unused l2x0_events_read_emulate(struct event_data *events)
 	return 1;
 }
 
-static int l2x0_set_events(int *events, int size)
+static int __maybe_unused l2x0_set_events(int *events, int size)
 {
 	if (!events || size == 0) {
 		l2x0_ctx.l2x0_event_type = -1;
@@ -256,7 +257,7 @@ static int l2x0_set_events(int *events, int size)
 	return 0;
 }
 
-static int get_supported_events(int *events)
+static int __maybe_unused get_supported_events(int *events)
 {
 	events[0] = QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES;
 	events[1] = QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES;
@@ -282,7 +283,6 @@ static struct quadd_event_source_interface l2x0_int = {
 
 struct quadd_event_source_interface *quadd_l2x0_events_init(void)
 {
-#ifdef CONFIG_CACHE_L2X0
 	void __iomem *base;
 	unsigned long phys_addr;
 
@@ -315,7 +315,6 @@ struct quadd_event_source_interface *quadd_l2x0_events_init(void)
 
 	pr_debug("pl310 init success, l2x0_base: %p\n", base);
 	return &l2x0_int;
-#else /* CONFIG_CACHE_L2X0 */
 	return NULL;
-#endif /* CONFIG_CACHE_L2X0 */
 }
+#endif /* CONFIG_CACHE_L2X0 */

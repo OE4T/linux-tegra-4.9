@@ -502,6 +502,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	for (i = 0; i < nr_unpin; i++) {
 		dma_buf_unmap_attachment(unpin_handles[i]->attach,
 			unpin_handles[i]->sgt, DMA_TO_DEVICE);
+		dma_buf_detach(unpin_handles[i]->buf,
+			       unpin_handles[i]->attach);
 		dma_buf_put(unpin_handles[i]->buf);
 		kfree(unpin_handles[i]);
 	}

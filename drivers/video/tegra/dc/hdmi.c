@@ -1438,6 +1438,8 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 		if (!fb_mode_is_equal(&m, curr))
 			continue;
 
+		if (!best)
+			best = i;
 		/* if either flag is set, then match is required */
 		if (curr->flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
 			if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)

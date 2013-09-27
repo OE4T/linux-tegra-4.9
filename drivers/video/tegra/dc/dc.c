@@ -1507,13 +1507,11 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 		goto crc_error;
 	}
 
-	if (!tegra_platform_is_linsim()) {
-		reinit_completion(&dc->crc_complete);
-		if (dc->crc_pending &&
-		    wait_for_completion_interruptible(&dc->crc_complete)) {
-			pr_err("CRC read interrupted.\n");
-			goto crc_error;
-		}
+	reinit_completion(&dc->crc_complete);
+	if (dc->crc_pending &&
+	    wait_for_completion_interruptible(&dc->crc_complete)) {
+		pr_err("CRC read interrupted.\n");
+		goto crc_error;
 	}
 
 	mutex_lock(&dc->lock);

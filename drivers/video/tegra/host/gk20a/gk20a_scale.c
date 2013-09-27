@@ -67,13 +67,11 @@ void nvhost_gk20a_scale_callback(struct nvhost_device_profile *profile,
 				 unsigned long freq)
 {
 	struct gk20a *g = get_gk20a(profile->pdev);
-	struct nvhost_device_data *pdata =
-		platform_get_drvdata(profile->pdev);
 	struct nvhost_emc_params *emc_params = profile->private_data;
 	long after = gk20a_clk_get_rate(g);
 	long emc_target = nvhost_scale3d_get_emc_rate(emc_params, after);
 
-	clk_set_rate(pdata->clk[2], emc_target);
+	nvhost_module_set_devfreq_rate(profile->pdev, 2, emc_target);
 }
 
 /*

@@ -228,7 +228,7 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(ch->dev)->clientid);
-	pdata = platform_get_drvdata(ch->dev);
+	pdata = dev_get_drvdata(ch->dev->dev.parent);
 	priv->timeout = pdata->nvhost_timeout_default;
 	priv->timeout_debug_dump = true;
 	if (!tegra_platform_is_silicon())

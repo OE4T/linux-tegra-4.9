@@ -23,22 +23,38 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp);
 int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp);
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
+/* used by profiler driver interface */
+int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp);
+
 struct dbg_gpu_session_ops {
 	int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
 			    struct nvhost_dbg_gpu_reg_op *ops,
 			    u64 num_ops);
 };
 
+
 struct dbg_session_gk20a {
 	/* dbg session id used for trace/prints */
 	int id;
+
+	/* profiler session, if any */
+	bool is_profiler;
+
+	/*
+	 * There can be different versions of the whitelists
+	 * between both global and per-context sets; as well
+	 * as between debugger and profiler interfaces.
+	 */
+	struct regops_whitelist *global;
+	struct regops_whitelist *per_context;
 
 	/* gpu module vagaries */
 	struct device             *dev;
 	struct platform_device    *pdev;
 	struct nvhost_device_data *pdata;
+	struct gk20a              *g;
 
-	/* bound hwctx and channel */
+	/* bound hwctx and channel, if any */
 	struct file          *hwctx_f;
 	struct channel_gk20a *ch;
 

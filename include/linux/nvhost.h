@@ -193,6 +193,11 @@ struct nvhost_device_data {
 	struct cdev dbg_cdev;
 	const struct file_operations *dbg_ops;
 
+	/* module profiler */
+	struct device *prof_node;
+	struct cdev prof_cdev;
+	const struct file_operations *prof_ops;
+
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
 	struct dentry *debugfs;		/* debugfs directory */

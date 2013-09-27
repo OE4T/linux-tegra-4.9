@@ -98,8 +98,27 @@ const struct file_operations tegra_gk20a_dbg_gpu_ops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif
-
 };
+
+/*
+ * Note: We use a different 'open' to trigger handling of the profiler session.
+ * Most of the code is shared between them...  Though, at some point if the
+ * code does get too tangled trying to handle each in the same path we can
+ * separate them cleanly.
+ */
+const struct file_operations tegra_gk20a_prof_gpu_ops = {
+	.owner = THIS_MODULE,
+	.release        = gk20a_dbg_gpu_dev_release,
+	.open           = gk20a_prof_gpu_dev_open,
+	.unlocked_ioctl = gk20a_dbg_gpu_dev_ioctl,
+	/* .mmap           = gk20a_prof_gpu_dev_mmap,*/
+	/*int (*mmap) (struct file *, struct vm_area_struct *);*/
+	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
+#endif
+};
+
 
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {

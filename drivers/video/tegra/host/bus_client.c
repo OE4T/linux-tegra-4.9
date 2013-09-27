@@ -1128,10 +1128,10 @@ int nvhost_client_user_init(struct platform_device *dev)
 	struct nvhost_channel *ch = pdata->channel;
 
 	BUG_ON(!ch);
-	/* reserve 4 minor #s for <dev> and as-<dev>, ctrl-<dev>
-	 * and dbg-<dev> */
+	/* reserve 5 minor #s for <dev> and as-<dev>, ctrl-<dev>,
+	 * dbg-<dev> and prof-<dev> */
 
-	err = alloc_chrdev_region(&devno, 0, 4, IFACE_NAME);
+	err = alloc_chrdev_region(&devno, 0, 5, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
@@ -1147,6 +1147,7 @@ int nvhost_client_user_init(struct platform_device *dev)
 	if (ch->as_node == NULL)
 		goto fail;
 
+	/* module control (npn-channel based, global) interface */
 	if (pdata->ctrl_ops) {
 		++devno;
 		pdata->ctrl_node = nvhost_client_device_create(dev,
@@ -1156,6 +1157,7 @@ int nvhost_client_user_init(struct platform_device *dev)
 			goto fail;
 	}
 
+	/* module debugger interface (per channel and global) */
 	if (pdata->dbg_ops) {
 		++devno;
 		pdata->dbg_node = nvhost_client_device_create(dev,
@@ -1164,6 +1166,17 @@ int nvhost_client_user_init(struct platform_device *dev)
 		if (pdata->dbg_node == NULL)
 			goto fail;
 	}
+
+	/* module profiler interface (per channel and global) */
+	if (pdata->prof_ops) {
+		++devno;
+		pdata->prof_node = nvhost_client_device_create(dev,
+					&pdata->prof_cdev, "prof-",
+					devno, pdata->prof_ops);
+		if (pdata->prof_node == NULL)
+			goto fail;
+	}
+
 
 
 	return 0;

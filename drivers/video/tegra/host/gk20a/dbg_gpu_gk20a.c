@@ -1,5 +1,5 @@
 /*
- * Tegra GK20A GPU Debugger Driver
+ * Tegra GK20A GPU Debugger/Profiler Driver
  *
  * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -60,17 +60,22 @@ static int alloc_session(struct dbg_session_gk20a **_dbg_s)
 	return 0;
 }
 
-int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp)
+int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_profiler)
 {
 	struct dbg_session_gk20a *dbg_session;
 	struct nvhost_device_data *pdata;
+
 	struct platform_device *pdev;
 	struct device *dev;
 
 	int err;
 
-	pdata = container_of(inode->i_cdev,
+	if (!is_profiler)
+		pdata = container_of(inode->i_cdev,
 			     struct nvhost_device_data, dbg_cdev);
+	else
+		pdata = container_of(inode->i_cdev,
+				     struct nvhost_device_data, prof_cdev);
 	pdev = pdata->pdev;
 	dev  = &pdev->dev;
 
@@ -84,14 +89,28 @@ int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp)
 	dbg_session->pdata = pdata;
 	dbg_session->pdev  = pdev;
 	dbg_session->dev   = dev;
+	dbg_session->g     = get_gk20a(pdev);
+	dbg_session->is_profiler = is_profiler;
 
 	return 0;
+}
+
+int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp)
+{
+	nvhost_dbg_fn("");
+	return gk20a_dbg_gpu_do_dev_open(inode, filp, false /* not profiler */);
+}
+
+int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp)
+{
+	nvhost_dbg_fn("");
+	return gk20a_dbg_gpu_do_dev_open(inode, filp, true /* is profiler */);
 }
 
 static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 {
 	struct channel_gk20a *ch_gk20a = dbg_s->ch;
-	struct gk20a *g = dbg_s->ch->g;
+	struct gk20a *g = dbg_s->g;
 
 	nvhost_dbg_fn("");
 
@@ -190,7 +209,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	}
 
 	ch_gk20a = (struct channel_gk20a *)hwctx->priv;
-	g = ch_gk20a->g;
+	g = dbg_s->g;
 	nvhost_dbg_fn("%s hwchid=%d", dev_name(dbg_s->dev), ch_gk20a->hw_chid);
 
 	mutex_lock(&g->dbg_sessions_lock);

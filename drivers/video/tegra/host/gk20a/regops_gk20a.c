@@ -40,8 +40,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		      u64 num_ops)
 {
 	int err = 0, i;
-	struct channel_gk20a *ch = dbg_s->ch;
-	struct gk20a *g = dbg_s->ch->g;
+	struct channel_gk20a *ch = NULL;
+	struct gk20a *g = dbg_s->g;
 	/*struct gr_gk20a *gr = &g->gr;*/
 	u32 data32_lo = 0, data32_hi = 0;
 	u32 ctx_rd_count = 0, ctx_wr_count = 0;
@@ -49,6 +49,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	bool ok;
 
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
+
+	ch = dbg_s->ch;
 
 	ok = validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
@@ -199,42 +201,68 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
+static int validate_global_regop(struct dbg_session_gk20a *dbg_s,
+				 struct nvhost_dbg_gpu_reg_op *op)
+{
+	return 0;
+}
+
+static int validate_context_regop(struct dbg_session_gk20a *dbg_s,
+				  struct nvhost_dbg_gpu_reg_op *op)
+{
+	return 0;
+}
+
 static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 				  struct nvhost_dbg_gpu_reg_op *op)
 {
-	int err = 0, temp_err;
+	int err;
 	u32 buf_offset_lo, buf_offset_addr, num_offsets;
 	bool is_ctx_op = reg_op_is_gr_ctx(op->type);
 
 	op->status = 0;
 	/*TBD: get this size from the register resource directly */
-	if (!is_ctx_op && op->offset >= SZ_16M) {
-		op->status = REGOP(STATUS_INVALID_OFFSET);
-		err = -EINVAL;
-	} else if (is_ctx_op) {
-		if (!dbg_s->ch) {
-			nvhost_err(dbg_s->dev, "can't perform ctx regop unless bound");
-			temp_err = -EINVAL;
-		} else
-			temp_err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->ch->g,
-					   op->offset,
-					   1,
-					   &buf_offset_lo,
-					   &buf_offset_addr,
-					   &num_offsets,
-					   op->type == REGOP(TYPE_GR_CTX_QUAD),
-					   op->quad);
-		if (temp_err) {
-			op->status |= REGOP(STATUS_INVALID_OFFSET);
-			err = -EINVAL;
+	if (!is_ctx_op) {
+		err = validate_global_regop(dbg_s, op);
+		if (err) {
+			op->status = REGOP(STATUS_INVALID_OFFSET);
+			return -EINVAL;
 		}
-		if (!buf_offset_lo) {
-			op->status |= REGOP(STATUS_INVALID_OFFSET);
-			err = -EINVAL;
-		}
+		return 0;
 	}
 
-	return err;
+	/* it's a context-relative op */
+	if (!dbg_s->ch) {
+		nvhost_err(dbg_s->dev, "can't perform ctx regop unless bound");
+		op->status = REGOP(STATUS_UNSUPPORTED_OP);
+		return -ENODEV;
+
+	}
+
+	err = validate_context_regop(dbg_s, op);
+	if (err) {
+		op->status = REGOP(STATUS_INVALID_OFFSET);
+		return -EINVAL;
+	}
+
+	err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->g,
+					      op->offset,
+					      1,
+					      &buf_offset_lo,
+					      &buf_offset_addr,
+					      &num_offsets,
+					      op->type == REGOP(TYPE_GR_CTX_QUAD),
+					      op->quad);
+	if (err) {
+		op->status |= REGOP(STATUS_INVALID_OFFSET);
+		return -EINVAL;
+	}
+	if (!buf_offset_lo) {
+		op->status |= REGOP(STATUS_INVALID_OFFSET);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,

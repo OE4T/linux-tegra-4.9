@@ -559,7 +559,8 @@ static void __maybe_unused tegra_dsi_syncpt_reset(
 	udelay(300);
 }
 
-static int __maybe_unused tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
+static int __maybe_unused tegra_dsi_syncpt
+	(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
 	u32 val;
 	int ret = 0;
@@ -568,7 +569,7 @@ static int __maybe_unused tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 
 	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
 		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
-	tegra_dsi_controller_writel(dsi, val, DSI_INCR_SYNCPT, 0);
+	tegra_dsi_controller_writel(dsi, val, DSI_INCR_SYNCPT, link_id);
 
 	ret = nvhost_syncpt_wait_timeout_ext(dsi->dc->ndev, dsi->syncpt_id,
 		dsi->syncpt_val + 1, (u32)MAX_SCHEDULE_TIMEOUT, NULL, NULL);
@@ -2733,14 +2734,15 @@ fail:
 	return err;
 }
 
-static bool tegra_dsi_write_busy(struct tegra_dc_dsi_data *dsi)
+static bool tegra_dsi_write_busy(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
 	u32 timeout = 0;
 	bool retVal = true;
 
 	while (timeout <= DSI_MAX_COMMAND_DELAY_USEC) {
 		if (!(DSI_TRIGGER_HOST_TRIGGER(0x1) &
-			tegra_dsi_readl(dsi, DSI_TRIGGER))) {
+			tegra_dsi_controller_readl(dsi,
+					DSI_TRIGGER, link_id))) {
 			retVal = false;
 			break;
 		}
@@ -2751,14 +2753,15 @@ static bool tegra_dsi_write_busy(struct tegra_dc_dsi_data *dsi)
 	return retVal;
 }
 
-static bool tegra_dsi_read_busy(struct tegra_dc_dsi_data *dsi)
+static bool tegra_dsi_read_busy(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
 	u32 timeout = 0;
 	bool retVal = true;
 
 	while (timeout <  DSI_STATUS_POLLING_DURATION_USEC) {
 		if (!(DSI_HOST_DSI_CONTROL_IMM_BTA(0x1) &
-			tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL))) {
+			tegra_dsi_controller_readl(dsi,
+					DSI_HOST_DSI_CONTROL, link_id))) {
 			retVal = false;
 			break;
 		}
@@ -2769,18 +2772,18 @@ static bool tegra_dsi_read_busy(struct tegra_dc_dsi_data *dsi)
 	return retVal;
 }
 
-static bool tegra_dsi_host_busy(struct tegra_dc_dsi_data *dsi)
+static bool tegra_dsi_host_busy(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
 	int err = 0;
 
-	if (tegra_dsi_write_busy(dsi)) {
+	if (tegra_dsi_write_busy(dsi, link_id)) {
 		err = -EBUSY;
 		dev_err(&dsi->dc->ndev->dev,
 			"DSI trigger bit already set\n");
 		goto fail;
 	}
 
-	if (tegra_dsi_read_busy(dsi)) {
+	if (tegra_dsi_read_busy(dsi, link_id)) {
 		err = -EBUSY;
 		dev_err(&dsi->dc->ndev->dev,
 			"DSI immediate bta bit already set\n");
@@ -2855,6 +2858,7 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 				struct tegra_dc_dsi_data *dsi,
 				u8 lp_op)
 {
+	int i = 0;
 	int err = 0;
 	struct dsi_status *init_status;
 	bool restart_dc_stream = false;
@@ -2870,12 +2874,14 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
 	}
 
-	if (tegra_dsi_host_busy(dsi)) {
-		tegra_dsi_soft_reset(dsi);
-		if (tegra_dsi_host_busy(dsi)) {
-			err = -EBUSY;
-			dev_err(&dc->ndev->dev, "DSI host busy\n");
-			goto fail;
+	for (i = 0; i < dsi->max_instances; i++) {
+		if (tegra_dsi_host_busy(dsi, i)) {
+			tegra_dsi_soft_reset(dsi);
+			if (tegra_dsi_host_busy(dsi, i)) {
+				err = -EBUSY;
+				dev_err(&dc->ndev->dev, "DSI host busy\n");
+				goto fail;
+			}
 		}
 	}
 
@@ -2944,27 +2950,28 @@ fail:
 	return err;
 }
 
-static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
+static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
 	int status = 0;
 
-	if (tegra_dsi_readl(dsi, DSI_TRIGGER)) {
+	if (tegra_dsi_controller_readl(dsi, DSI_TRIGGER, link_id)) {
 		status = -EBUSY;
 		goto fail;
 	}
 
 	tegra_dsi_controller_writel(dsi,
-		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER, 0);
+		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE),
+				DSI_TRIGGER, link_id);
 
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS) {
-		status = tegra_dsi_syncpt(dsi);
+		status = tegra_dsi_syncpt(dsi, link_id);
 		if (status < 0) {
 			dev_err(&dsi->dc->ndev->dev,
 				"DSI syncpt for host trigger failed\n");
 			goto fail;
 		}
 	} else {
-		if (tegra_dsi_write_busy(dsi)) {
+		if (tegra_dsi_write_busy(dsi, link_id)) {
 			status = -EBUSY;
 			dev_err(&dsi->dc->ndev->dev,
 				"Timeout waiting on write completion\n");
@@ -3018,7 +3025,7 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 		}
 	}
 
-	err = tegra_dsi_host_trigger(dsi);
+	err = tegra_dsi_host_trigger(dsi, cmd->link_id);
 	if (err < 0)
 		dev_err(&dsi->dc->ndev->dev, "DSI host trigger failed\n");
 
@@ -3329,16 +3336,17 @@ static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 
 	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
 	val |= DSI_HOST_DSI_CONTROL_IMM_BTA(TEGRA_DSI_ENABLE);
-	tegra_dsi_controller_writel(dsi, val, DSI_HOST_DSI_CONTROL, 0);
+	tegra_dsi_controller_writel(dsi, val,
+				DSI_HOST_DSI_CONTROL, TEGRA_DSI_LINK0);
 
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS) {
-		err = tegra_dsi_syncpt(dsi);
+		err = tegra_dsi_syncpt(dsi, TEGRA_DSI_LINK0);
 		if (err < 0) {
 			dev_err(&dsi->dc->ndev->dev,
 				"DSI syncpt for bta failed\n");
 		}
 	} else {
-		if (tegra_dsi_read_busy(dsi)) {
+		if (tegra_dsi_read_busy(dsi, TEGRA_DSI_LINK0)) {
 			err = -EBUSY;
 			dev_err(&dsi->dc->ndev->dev,
 				"Timeout wating on read completion\n");
@@ -3571,7 +3579,7 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	tegra_dsi_lp_clk_enable(dsi);
 
 	init_status = tegra_dsi_prepare_host_transmission(
-					dc, dsi, DSI_LP_OP_WRITE);
+				dc, dsi, DSI_LP_OP_WRITE);
 	if (IS_ERR_OR_NULL(init_status)) {
 		err = PTR_ERR(init_status);
 		dev_err(&dc->ndev->dev, "DSI host config failed\n");
@@ -3642,7 +3650,7 @@ static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS) {
-		ret = tegra_dsi_syncpt(dsi);
+		ret = tegra_dsi_syncpt(dsi, TEGRA_DSI_LINK0);
 		if (ret < 0) {
 			dev_err(&dsi->dc->ndev->dev,
 				"DSI syncpt for ulpm enter failed\n");
@@ -3672,7 +3680,7 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
 
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS) {
-		ret = tegra_dsi_syncpt(dsi);
+		ret = tegra_dsi_syncpt(dsi, TEGRA_DSI_LINK0);
 		if (ret < 0) {
 			dev_err(&dsi->dc->ndev->dev,
 				"DSI syncpt for ulpm exit failed\n");

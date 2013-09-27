@@ -745,6 +745,8 @@ fail_pin:
 
 			dma_buf_unmap_attachment(data->win[i].handle[j]->attach,
 				data->win[i].handle[j]->sgt, DMA_TO_DEVICE);
+			dma_buf_detach(data->win[i].handle[j]->buf,
+				data->win[i].handle[j]->attach);
 			dma_buf_put(data->win[i].handle[j]->buf);
 			kfree(data->win[i].handle[j]);
 		}

@@ -929,6 +929,7 @@ static void gk20a_save_pmu_sw_state(struct pmu_gk20a *pmu,
 	save->elpg_enable = pmu->elpg_enable;
 	save->pg_wq = pmu->pg_wq;
 	save->seq_buf = pmu->seq_buf;
+	save->pg_buf = pmu->pg_buf;
 	save->sw_ready = pmu->sw_ready;
 }
 
@@ -944,26 +945,19 @@ static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
 	pmu->elpg_enable = save->elpg_enable;
 	pmu->pg_wq = save->pg_wq;
 	pmu->seq_buf = save->seq_buf;
+	pmu->pg_buf = save->pg_buf;
 	pmu->sw_ready = save->sw_ready;
 }
 
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct gk20a_pmu_save_state save;
 
 	nvhost_dbg_fn("");
 
-
-	vm->unmap(vm, pmu->pg_buf.pmu_va);
-	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
-
 	nvhost_allocator_destroy(&pmu->dmem);
 
-	/* Save the stuff you don't want to restore */
+	/* Save the stuff you don't want to lose */
 	gk20a_save_pmu_sw_state(pmu, &save);
 
 	/* this function is also called by pmu_destory outside gk20a deinit that
@@ -994,7 +988,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
 	struct mem_mgr *memmgr = mem_mgr_from_mm(mm);
-	u32 size;
 	int i, err = 0;
 	u8 *ptr;
 	void *ucode_ptr;
@@ -1130,37 +1123,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	nvhost_memmgr_munmap(pmu->ucode.mem.ref, ucode_ptr);
 
 skip_init:
-
-	size = 0;
-	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
-	if (err) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to query fecs pg buffer size");
-		goto clean_up;
-	}
-
-	/* TBD: 256 bytes alignment is sufficient */
-	pmu->pg_buf.mem.ref = nvhost_memmgr_alloc(memmgr, size,
-						  DEFAULT_ALLOC_ALIGNMENT,
-						  DEFAULT_ALLOC_FLAGS,
-						  0);
-	if (IS_ERR(pmu->pg_buf.mem.ref)) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to allocate fecs pg buffer");
-		err = PTR_ERR(pmu->pg_buf.mem.ref);
-		goto clean_up;
-	}
-	pmu->pg_buf.mem.size = size;
-
-	pmu->pg_buf.pmu_va = vm->map(vm, memmgr, pmu->pg_buf.mem.ref,
-			 /*offset_align, flags, kind*/
-			0, 0, 0, NULL, false, mem_flag_none);
-	if (!pmu->pg_buf.pmu_va) {
-		nvhost_err(d, "failed to map fecs pg buffer");
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
 	mutex_init(&pmu->pmu_copy_lock);
@@ -1169,8 +1131,6 @@ skip_init:
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
 
 	pmu->remove_support = gk20a_remove_pmu_support;
-
-	pmu->sw_ready = true;
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -1182,10 +1142,8 @@ clean_up:
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
 	vm->unmap(vm, pmu->ucode.pmu_va);
-	vm->unmap(vm, pmu->pg_buf.pmu_va);
 	vm->unmap(vm, pmu->seq_buf.pmu_va);
 	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
-	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
 	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 	return err;
 }
@@ -1215,15 +1173,10 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 	wake_up(&pmu->pg_wq);
 }
 
-int gk20a_init_pmu_setup_hw(struct gk20a *g)
+int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	struct mm_gk20a *mm = &g->mm;
-	struct pmu_cmd cmd;
-	u32 desc;
-	long remain;
 	int err;
-	bool status;
 
 	nvhost_dbg_fn("");
 
@@ -1245,12 +1198,69 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 		pwr_fbif_transcfg_mem_type_physical_f() |
 		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
-	/* TBD: acquire pmu hw mutex */
-
 	/* TBD: load pmu ucode */
 	err = pmu_bootstrap(pmu);
 	if (err)
 		return err;
+
+	return 0;
+
+}
+
+int gk20a_init_pmu_setup_hw2(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct device *d = dev_from_gk20a(g);
+	struct mem_mgr *memmgr = mem_mgr_from_mm(mm);
+	struct pmu_cmd cmd;
+	u32 desc;
+	long remain;
+	int err;
+	bool status;
+	u32 size;
+
+	nvhost_dbg_fn("");
+
+	size = 0;
+	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
+	if (err) {
+		nvhost_err(dev_from_gk20a(g),
+			"fail to query fecs pg buffer size");
+		return err;
+	}
+
+	if (!pmu->sw_ready) {
+		pmu->pg_buf.mem.ref = nvhost_memmgr_alloc(memmgr, size,
+						  DEFAULT_ALLOC_ALIGNMENT,
+						  DEFAULT_ALLOC_FLAGS,
+						  0);
+		if (IS_ERR(pmu->pg_buf.mem.ref)) {
+			nvhost_err(dev_from_gk20a(g),
+				"fail to allocate fecs pg buffer");
+			err = PTR_ERR(pmu->pg_buf.mem.ref);
+			goto clean_up;
+		}
+		pmu->pg_buf.mem.size = size;
+
+		pmu->pg_buf.pmu_va = vm->map(vm, memmgr, pmu->pg_buf.mem.ref,
+				 /*offset_align, flags, kind*/
+				0, 0, 0, NULL, false, mem_flag_none);
+		if (!pmu->pg_buf.pmu_va) {
+			nvhost_err(d, "failed to map fecs pg buffer");
+			err = -ENOMEM;
+			goto clean_up;
+		}
+	}
+
+	/*
+	 * This is the actual point at which sw setup is complete, so set the
+	 * sw_ready flag here.
+	 */
+	pmu->sw_ready = true;
+
+	/* TBD: acquire pmu hw mutex */
 
 	/* TBD: post reset again? */
 
@@ -1345,7 +1355,29 @@ int gk20a_init_pmu_setup_hw(struct gk20a *g)
 	 */
 	gk20a_writel(g, 0x10a164, 0x109ff);
 
+	pmu->initialized = true;
+	pmu->zbc_ready = true;
+
+	/* Save zbc table after PMU is initialized. */
+	pmu_save_zbc(g, 0xf);
+
+	/* wait for pmu idle */
+	err = pmu_idle(pmu);
+
+	/*
+	 * We can't guarantee that gr code to enable ELPG will be
+	 * invoked, so we explicitly call disable-enable here
+	 * to enable elpg.
+	 */
+	gk20a_pmu_disable_elpg(g);
+	gk20a_pmu_enable_elpg(g);
+
 	return 0;
+
+clean_up:
+	vm->unmap(vm, pmu->pg_buf.pmu_va);
+	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
+	return err;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)
@@ -1369,25 +1401,9 @@ int gk20a_init_pmu_support(struct gk20a *g)
 		if (err)
 			return err;
 
-		err = gk20a_init_pmu_setup_hw(g);
+		err = gk20a_init_pmu_setup_hw1(g);
 		if (err)
 			return err;
-
-		pmu->initialized = true;
-
-		/* Save zbc table after PMU is initialized. */
-		pmu_save_zbc(g, 0xf);
-
-		/* wait for pmu idle */
-		err = pmu_idle(pmu);
-
-		/*
-		 * We can't guarantee that gr code to enable ELPG will be
-		 * invoked, so we explicitly call disable-enable here
-		 * to enable elpg.
-		 */
-		gk20a_pmu_disable_elpg(g);
-		gk20a_pmu_enable_elpg(g);
 	}
 
 	return err;
@@ -1811,7 +1827,7 @@ void pmu_save_zbc(struct gk20a *g, u32 entries)
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	if (!pmu->pmu_ready || !entries)
+	if (!pmu->pmu_ready || !entries || !pmu->zbc_ready)
 		return;
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));

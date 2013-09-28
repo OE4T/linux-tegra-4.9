@@ -706,6 +706,7 @@ struct pmu_gk20a {
 	u32 sample_buffer;
 
 	struct mutex isr_mutex;
+	bool zbc_ready;
 };
 
 struct gk20a_pmu_save_state {
@@ -716,12 +717,14 @@ struct gk20a_pmu_save_state {
 	struct pmu_ucode_desc *desc;
 	struct pmu_mem_desc ucode;
 	struct pmu_mem_desc seq_buf;
+	struct pmu_mem_desc pg_buf;
 	struct delayed_work elpg_enable;
 	wait_queue_head_t pg_wq;
 	bool sw_ready;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
+int gk20a_init_pmu_setup_hw2(struct gk20a *g);
 
 void gk20a_pmu_isr(struct gk20a *g);
 

@@ -747,6 +747,10 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	if (err)
 		nvhost_err(&dev->dev, "failed to init gk20a mm");
 
+	err = gk20a_init_pmu_support(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to init gk20a pmu");
+
 	err = gk20a_init_fifo_support(g);
 	if (err)
 		nvhost_err(&dev->dev, "failed to init gk20a fifo");
@@ -755,9 +759,9 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	if (err)
 		nvhost_err(&dev->dev, "failed to init gk20a gr");
 
-	err = gk20a_init_pmu_support(g);
+	err = gk20a_init_pmu_setup_hw2(g);
 	if (err)
-		nvhost_err(&dev->dev, "failed to init gk20a pmu");
+		nvhost_err(&dev->dev, "failed to init gk20a pmu_hw2");
 
 	err = gk20a_init_therm_support(g);
 	if (err)

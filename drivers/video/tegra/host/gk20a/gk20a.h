@@ -30,6 +30,7 @@ struct sim_gk20a;
 
 #include <linux/tegra-soc.h>
 #include <linux/spinlock.h>
+#include <linux/pm_qos.h>
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
@@ -105,6 +106,8 @@ struct gk20a {
 	void (*remove_support)(struct platform_device *);
 
 	struct notifier_block system_suspend_notifier;
+	struct notifier_block fb_notifier;
+	struct dev_pm_qos_request no_poweroff_req;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

@@ -376,6 +376,9 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
 
+	/* cancel the work queue */
+	cancel_work_sync(&cec->work);
+
 	clk_disable(cec->clk);
 
 	dev_notice(&pdev->dev, "suspended\n");

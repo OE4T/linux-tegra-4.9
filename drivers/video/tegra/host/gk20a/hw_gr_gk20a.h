@@ -466,6 +466,54 @@ static inline u32 gr_fecs_dmemd_r(u32 i)
 {
 	return 0x004091c4 + i*8;
 }
+static inline u32 gr_fecs_dmatrfbase_r(void)
+{
+	return 0x00409110;
+}
+static inline u32 gr_fecs_dmatrfmoffs_r(void)
+{
+	return 0x00409114;
+}
+static inline u32 gr_fecs_dmatrffboffs_r(void)
+{
+	return 0x0040911c;
+}
+static inline u32 gr_fecs_dmatrfcmd_r(void)
+{
+	return 0x00409118;
+}
+static inline u32 gr_fecs_dmatrfcmd_imem_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 gr_fecs_dmatrfcmd_write_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 gr_fecs_dmatrfcmd_size_f(u32 v)
+{
+	return (v & 0x7) << 8;
+}
+static inline u32 gr_fecs_dmatrfcmd_ctxdma_f(u32 v)
+{
+	return (v & 0x7) << 12;
+}
+static inline u32 gr_fecs_bootvec_r(void)
+{
+	return 0x00409104;
+}
+static inline u32 gr_fecs_bootvec_vec_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_fecs_falcon_hwcfg_r(void)
+{
+	return 0x00409108;
+}
+static inline u32 gr_gpcs_gpccs_falcon_hwcfg_r(void)
+{
+	return 0x0041a108;
+}
 static inline u32 gr_fecs_falcon_rm_r(void)
 {
 	return 0x00409084;
@@ -749,6 +797,166 @@ static inline u32 gr_fecs_rc_lanes_num_chains_m(void)
 static inline u32 gr_fecs_rc_lanes_num_chains_v(u32 r)
 {
 	return (r >> 0) & 0x3f;
+}
+static inline u32 gr_fecs_ctxsw_status_1_r(void)
+{
+	return 0x00409400;
+}
+static inline u32 gr_fecs_ctxsw_status_1_arb_busy_s(void)
+{
+	return 1;
+}
+static inline u32 gr_fecs_ctxsw_status_1_arb_busy_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 gr_fecs_ctxsw_status_1_arb_busy_m(void)
+{
+	return 0x1 << 12;
+}
+static inline u32 gr_fecs_ctxsw_status_1_arb_busy_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 gr_fecs_arb_ctx_adr_r(void)
+{
+	return 0x00409a24;
+}
+static inline u32 gr_fecs_new_ctx_r(void)
+{
+	return 0x00409b04;
+}
+static inline u32 gr_fecs_new_ctx_ptr_s(void)
+{
+	return 28;
+}
+static inline u32 gr_fecs_new_ctx_ptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 gr_fecs_new_ctx_ptr_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 gr_fecs_new_ctx_ptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffffff;
+}
+static inline u32 gr_fecs_new_ctx_target_s(void)
+{
+	return 2;
+}
+static inline u32 gr_fecs_new_ctx_target_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 gr_fecs_new_ctx_target_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 gr_fecs_new_ctx_target_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 gr_fecs_new_ctx_valid_s(void)
+{
+	return 1;
+}
+static inline u32 gr_fecs_new_ctx_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 gr_fecs_new_ctx_valid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_fecs_new_ctx_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_r(void)
+{
+	return 0x00409a0c;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_ptr_s(void)
+{
+	return 28;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_ptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_ptr_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_ptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffffff;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_s(void)
+{
+	return 2;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 gr_fecs_arb_ctx_cmd_r(void)
+{
+	return 0x00409a10;
+}
+static inline u32 gr_fecs_arb_ctx_cmd_cmd_s(void)
+{
+	return 5;
+}
+static inline u32 gr_fecs_arb_ctx_cmd_cmd_f(u32 v)
+{
+	return (v & 0x1f) << 0;
+}
+static inline u32 gr_fecs_arb_ctx_cmd_cmd_m(void)
+{
+	return 0x1f << 0;
+}
+static inline u32 gr_fecs_arb_ctx_cmd_cmd_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 gr_fecs_current_ctx_target_s(void)
+{
+	return 2;
+}
+static inline u32 gr_fecs_current_ctx_target_f(u32 v)
+{
+	return (v & 0x3) << 28;
+}
+static inline u32 gr_fecs_current_ctx_target_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 gr_fecs_current_ctx_target_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 gr_fecs_current_ctx_valid_s(void)
+{
+	return 1;
+}
+static inline u32 gr_fecs_current_ctx_valid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_fecs_current_ctx_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
 }
 static inline u32 gr_rstr2d_gpc_map0_r(void)
 {

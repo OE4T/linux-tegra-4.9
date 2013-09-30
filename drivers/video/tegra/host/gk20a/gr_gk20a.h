@@ -261,9 +261,40 @@ struct gr_gk20a {
 
 	void (*remove_support)(struct gr_gk20a *gr);
 	bool sw_ready;
+	bool skip_ucode_init;
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
+
+struct gk20a_ctxsw_ucode_segment {
+	u32 offset;
+	u32 size;
+};
+
+struct gk20a_ctxsw_ucode_inst {
+	u32 boot_entry;
+	u32 boot_imem_offset;
+	struct gk20a_ctxsw_ucode_segment boot;
+	struct gk20a_ctxsw_ucode_segment code;
+	struct gk20a_ctxsw_ucode_segment data;
+};
+
+struct gk20a_ctxsw_ucode_info {
+	u64 *p_va;
+	struct mem_desc inst_blk_desc;
+	struct mem_desc surface_desc;
+	u64 ucode_va;
+	struct gk20a_ctxsw_ucode_inst fecs;
+	struct gk20a_ctxsw_ucode_inst gpcs;
+};
+
+struct gk20a_ctxsw_bootloader_desc {
+	u32 bootloader_start_offset;
+	u32 bootloader_size;
+	u32 bootloader_imem_offset;
+	u32 bootloader_entry_point;
+};
+
 int gk20a_init_gr_support(struct gk20a *g);
 void gk20a_gr_reset(struct gk20a *g);
 

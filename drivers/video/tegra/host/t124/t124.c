@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -187,6 +187,7 @@ struct nvhost_device_data t124_isp_info = {
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
+	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -224,6 +225,7 @@ struct nvhost_device_data t124_ispb_info = {
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
+	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 };
 
 static struct platform_device tegra_isp01b_device = {
@@ -271,6 +273,7 @@ struct nvhost_device_data t124_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
+	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -309,6 +312,7 @@ struct nvhost_device_data t124_vib_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
+	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 };
 
 static struct platform_device tegra_vi01b_device = {

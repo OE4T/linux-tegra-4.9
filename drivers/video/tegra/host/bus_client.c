@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -481,8 +481,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		}
 	}
 
-	/* set valid id for hwctx_syncpt_idx if no hwctx is present */
-	if (!ctx->hwctx)
+	/* set valid id for hwctx_syncpt_idx if hwctx does not provide one */
+	if (!ctx->hwctx || ctx->hwctx->h->syncpt == NVSYNCPT_INVALID)
 		hwctx_syncpt_idx = 0;
 
 	/*

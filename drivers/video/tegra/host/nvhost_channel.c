@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include "dev.h"
 #include "nvhost_acm.h"
 #include "nvhost_job.h"
+#include "nvhost_hwctx.h"
 #include "chip_support.h"
 
 #include <trace/events/nvhost.h>
@@ -179,4 +180,57 @@ int nvhost_channel_read_reg(struct nvhost_channel *ch,
 		return -EINVAL;
 
 	return pdata->read_reg(ch->dev, ch, hwctx, offset, value);
+}
+
+static struct nvhost_hwctx *alloc_hwctx(struct nvhost_hwctx_handler *h,
+		struct nvhost_channel *ch)
+{
+	struct nvhost_hwctx *ctx;
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return NULL;
+
+	kref_init(&ctx->ref);
+	ctx->h = h;
+	ctx->channel = ch;
+	ctx->valid = true;
+
+	return ctx;
+}
+
+static void free_hwctx(struct kref *ref)
+{
+	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
+
+	kfree(ctx);
+}
+
+static void get_hwctx(struct nvhost_hwctx *ctx)
+{
+	kref_get(&ctx->ref);
+}
+
+static void put_hwctx(struct nvhost_hwctx *ctx)
+{
+	kref_put(&ctx->ref, free_hwctx);
+}
+
+struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch)
+{
+	struct nvhost_hwctx_handler *p;
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return NULL;
+
+	p->syncpt = NVSYNCPT_INVALID;
+	p->waitbase = waitbase;
+
+	p->alloc = alloc_hwctx;
+	p->get   = get_hwctx;
+	p->put   = put_hwctx;
+
+	return p;
 }

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -133,5 +133,8 @@ int nvhost_channel_save_context(struct nvhost_channel *ch);
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
 
 struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
+
+struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch);
 
 #endif

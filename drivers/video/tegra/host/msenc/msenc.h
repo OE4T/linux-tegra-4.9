@@ -21,10 +21,9 @@
 #ifndef __NVHOST_MSENC_H__
 #define __NVHOST_MSENC_H__
 
+#include <linux/types.h>
+#include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
-
-struct mem_handle;
-struct sg_table;
 
 int nvhost_msenc_finalize_poweron(struct platform_device *dev);
 int nvhost_msenc_init(struct platform_device *dev);
@@ -44,8 +43,7 @@ static inline void decode_msenc_ver(int version, u8 *maj, u8 *min)
 
 struct msenc {
 	bool valid;
-	u32  size;
-	struct mem_handle *mem_r;
+	size_t size;
 
 	struct {
 		u32 bin_data_offset;
@@ -55,8 +53,9 @@ struct msenc {
 		u32 size;
 	} os;
 
-	struct sg_table *pa;
-	u8 *mapped;
+	struct dma_attrs attrs;
+	dma_addr_t phys;
+	u32 *mapped;
 };
 
 struct msenc_ucode_bin_header_v1 {
@@ -88,8 +87,6 @@ struct msenc_ucode_os_header_v1 {
 struct msenc_ucode_v1 {
 	struct msenc_ucode_bin_header_v1 *bin_header;
 	struct msenc_ucode_os_header_v1  *os_header;
-	struct mem_handle *mem;
-	struct sg_table *pa;
 	bool valid;
 };
 

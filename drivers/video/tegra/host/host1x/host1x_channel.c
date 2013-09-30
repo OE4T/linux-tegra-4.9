@@ -30,6 +30,7 @@
 #include "nvhost_hwctx.h"
 #include "nvhost_intr.h"
 #include "class_ids.h"
+#include "host1x_hwctx.h"
 
 #define NV_FIFO_READ_TIMEOUT 200000
 
@@ -550,6 +551,61 @@ static inline void __iomem *host1x_channel_aperture(void __iomem *p, int ndx)
 	return p;
 }
 
+static struct nvhost_hwctx *host1x_alloc_hwctx(struct nvhost_hwctx_handler *h,
+		struct nvhost_channel *ch)
+{
+	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
+	struct host1x_hwctx *ctx;
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return NULL;
+
+	kref_init(&ctx->hwctx.ref);
+	ctx->hwctx.h = &p->h;
+	ctx->hwctx.channel = ch;
+	ctx->hwctx.valid = true; /* this is a preconditioning sequence... */
+
+	return &ctx->hwctx;
+}
+
+static void host1x_free_hwctx(struct kref *ref)
+{
+	struct nvhost_hwctx *nctx = container_of(ref, struct nvhost_hwctx, ref);
+	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
+
+	kfree(ctx);
+}
+
+static void host1x_get_hwctx(struct nvhost_hwctx *ctx)
+{
+	kref_get(&ctx->ref);
+}
+
+static void host1x_put_hwctx(struct nvhost_hwctx *ctx)
+{
+	kref_put(&ctx->ref, host1x_free_hwctx);
+}
+
+static struct nvhost_hwctx_handler *host1x_alloc_hwctx_handler(u32 syncpt,
+	u32 waitbase, struct nvhost_channel *ch)
+{
+	struct host1x_hwctx_handler *p;
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return NULL;
+
+	p->h.syncpt = syncpt;
+	p->h.waitbase = waitbase;
+
+	p->h.alloc = host1x_alloc_hwctx;
+	p->h.get   = host1x_get_hwctx;
+	p->h.put   = host1x_put_hwctx;
+
+	return &p->h;
+}
+
 static inline int hwctx_handler_init(struct nvhost_channel *ch)
 {
 	int err = 0;
@@ -558,12 +614,16 @@ static inline int hwctx_handler_init(struct nvhost_channel *ch)
 	u32 syncpt = pdata->syncpts[0];
 	u32 waitbase = pdata->waitbases[0];
 
-	if (pdata->alloc_hwctx_handler) {
+	if (pdata->alloc_hwctx_handler)
 		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,
 				waitbase, ch);
-		if (!ch->ctxhandler)
-			err = -ENOMEM;
-	}
+	else
+		ch->ctxhandler =
+			host1x_alloc_hwctx_handler(NVSYNCPT_INVALID,
+				waitbase, ch);
+
+	if (!ch->ctxhandler)
+		err = -ENOMEM;
 
 	return err;
 }

@@ -447,8 +447,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		}
 	}
 
-	/* set valid id for hwctx_syncpt_idx if no hwctx is present */
-	if (!ctx->hwctx)
+	/* set valid id for hwctx_syncpt_idx if hwctx does not provide one */
+	if (ctx->hwctx->h->syncpt == NVSYNCPT_INVALID)
 		hwctx_syncpt_idx = 0;
 
 	/*

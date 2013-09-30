@@ -463,6 +463,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.suspend_ndev		= nvhost_scale3d_suspend,
 	.devfreq_governor	= &nvhost_podgov,
 	.scaling_post_cb	= nvhost_gk20a_scale_callback,
+	.gpu_edp_device		= true,
 #endif
 };
 

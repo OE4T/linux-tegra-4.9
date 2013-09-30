@@ -207,6 +207,8 @@ struct nvhost_device_data {
 	bool				actmon_enabled;
 	/* Should we do linear emc scaling? */
 	bool				linear_emc;
+	/* Should the load value be delivered forward to edp? */
+	bool				gpu_edp_device;
 	/* Offset to actmon registers */
 	u32				actmon_regs;
 	/* Devfreq governor name */

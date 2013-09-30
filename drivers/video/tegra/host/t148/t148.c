@@ -138,6 +138,7 @@ struct nvhost_device_data t14_gr3d_info = {
 	.scaling_post_cb = &nvhost_scale3d_callback,
 	.devfreq_governor = "nvhost_podgov",
 	.actmon_enabled	= true,
+	.gpu_edp_device	= true,
 
 	.suspend_ndev	= nvhost_scale3d_suspend,
 	.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,

@@ -160,7 +160,7 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 				idle_stat);
 			return -EBUSY;
 		}
-		usleep_range(1000, 2000);
+		usleep_range(100, 200);
 	} while (1);
 
 	nvhost_dbg_fn("done");

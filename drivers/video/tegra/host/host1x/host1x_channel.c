@@ -81,6 +81,17 @@ static void serialize(struct nvhost_job *job)
 	}
 }
 
+static bool ctxsave_needed(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
+{
+	struct nvhost_channel *ch = job->ch;
+
+	if (!cur_ctx || ch->cur_ctx == job->hwctx ||
+			ch->cur_ctx->has_timedout ||
+			!ch->cur_ctx->h->save_push)
+		return false;
+	else
+		return true;
+}
 
 static void *pre_submit_ctxsave(struct nvhost_job *job,
 		struct nvhost_hwctx *cur_ctx)
@@ -89,7 +100,7 @@ static void *pre_submit_ctxsave(struct nvhost_job *job,
 	void *ctxsave_waiter = NULL;
 
 	/* Is a save needed? */
-	if (!cur_ctx || ch->cur_ctx == job->hwctx)
+	if (!ctxsave_needed(job, cur_ctx))
 		return NULL;
 
 	if (cur_ctx->has_timedout) {
@@ -120,7 +131,7 @@ static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
 	u32 save_thresh = 0;
 
 	/* Is a save needed? */
-	if (!cur_ctx || cur_ctx == job->hwctx || cur_ctx->has_timedout)
+	if (!ctxsave_needed(job, cur_ctx))
 		return;
 
 	/* Retrieve save threshold if we have a waiter */
@@ -166,7 +177,8 @@ static void submit_ctxrestore(struct nvhost_job *job)
 
 	/* First check if we have a valid context to restore */
 	if (ch->cur_ctx == job->hwctx || !job->hwctx ||
-		!job->hwctx->valid)
+		!job->hwctx->valid ||
+		!ctx->h->restore_push)
 		return;
 
 	/* Increment syncpt max */

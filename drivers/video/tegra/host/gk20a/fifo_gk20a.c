@@ -53,7 +53,6 @@ static inline u32 gk20a_engine_id_to_mmu_id(u32 engine_id)
 	case ENGINE_CE2_GK20A:
 		return 0x1b;
 	default:
-		WARN_ON(true);
 		return ~0;
 	}
 }
@@ -66,7 +65,6 @@ static inline u32 gk20a_mmu_id_to_engine_id(u32 engine_id)
 	case 0x1b:
 		return ENGINE_CE2_GK20A;
 	default:
-		WARN_ON(true);
 		return ~0;
 	}
 }
@@ -846,8 +844,10 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		fault_id = g->fifo.mmu_fault_engines;
 		g->fifo.mmu_fault_engines = 0;
 		fake_fault = true;
-	} else
+	} else {
 		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
+		fake_fault = false;
+	}
 
 	/* lock all runlists. Note that locks are are released in
 	 * gk20a_fifo_handle_mmu_fault_thread() */
@@ -859,13 +859,11 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
 		 * engines. Convert engine_mmu_id to engine_id */
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
-		u32 runlist_id = g->fifo.engine_info[engine_id].runlist_id;
-		struct fifo_runlist_info_gk20a *runlist =
-			&g->fifo.runlist_info[runlist_id];
+		struct fifo_runlist_info_gk20a *runlist = g->fifo.runlist_info;
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 
-		get_exception_mmu_fault_info(g, engine_id, &f);
+		get_exception_mmu_fault_info(g, engine_mmu_id, &f);
 		trace_nvhost_gk20a_mmu_fault(f.fault_hi_v,
 					     f.fault_lo_v,
 					     f.fault_info_v,
@@ -944,7 +942,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	/* reset engines */
 	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
-		gk20a_fifo_reset_engine(g, engine_id);
+		if (engine_id != ~0)
+			gk20a_fifo_reset_engine(g, engine_id);
 	}
 
 	/* CLEAR the runlists. Do not wait for runlist to start as

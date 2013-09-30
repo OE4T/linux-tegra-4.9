@@ -2472,7 +2472,7 @@ clean_up:
 }
 
 static u32 prime_set[18] = {
-	2, 3, 5, 7, 11, 13, 17, 19, 23, 39, 31, 37, 41, 43, 47, 53, 59, 61 };
+	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61 };
 
 static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 {

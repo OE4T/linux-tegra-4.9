@@ -148,6 +148,8 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	u8 block_buf[] = {block >> 1};
 	u8 cmd_buf[] = {(block & 0x1) * 128};
 	int status;
+	u8 checksum = 0;
+	u8 i;
 	struct i2c_msg msg[] = {
 		{
 			.addr = 0x30,
@@ -185,6 +187,13 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 
 	if (status != msg_len)
 		return -EIO;
+
+	for (i = 0; i < 128; i++)
+		checksum += data[i];
+	if (checksum != 0) {
+		pr_err("%s: checksum failed\n", __func__);
+		return -EIO;
+	}
 
 	return 0;
 }
@@ -468,7 +477,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	for (i = 1; i <= extension_blocks; i++) {
 		ret = tegra_edid_read_block(edid, i, data + i * 128);
 		if (ret < 0)
-			break;
+			goto fail;
 
 		if (data[i * 128] == 0x2) {
 			fb_edid_add_monspecs(data + i * 128, specs);

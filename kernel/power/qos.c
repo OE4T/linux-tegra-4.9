@@ -26,6 +26,10 @@
  *
  * Mark Gross <mgross@linux.intel.com>
  * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Conversion of pm_qos_lock from spinlock to mutex
+ * Sai Gurrappadi <sgurrappadi@nvidia.com>
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -53,7 +57,7 @@
 /*
  * locking rule: all changes to constraints or notifiers lists
  * or pm_qos_object list and pm_qos_objects need to happen with pm_qos_lock
- * held, taken with _irqsave.  One lock to rule them all
+ * One lock to rule them all
  */
 struct pm_qos_object {
 	struct pm_qos_constraints *constraints;
@@ -61,7 +65,7 @@ struct pm_qos_object {
 	char *name;
 };
 
-static DEFINE_SPINLOCK(pm_qos_lock);
+static DEFINE_MUTEX(pm_qos_lock);
 
 static struct pm_qos_object null_pm_qos;
 
@@ -366,11 +370,10 @@ static const struct file_operations pm_qos_debug_fops = {
 int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 			 enum pm_qos_req_action action, int value)
 {
-	unsigned long flags;
 	int prev_value, curr_value, new_value;
 	int ret;
 
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	mutex_lock(&pm_qos_lock);
 	prev_value = pm_qos_get_value(c);
 	if (value == PM_QOS_DEFAULT_VALUE)
 		new_value = c->default_value;
@@ -404,8 +407,6 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 		curr_value = c->default_value;
 	}
 
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
-
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 	if (prev_value != curr_value) {
 		ret = 1;
@@ -416,6 +417,9 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	} else {
 		ret = 0;
 	}
+
+	mutex_unlock(&pm_qos_lock);
+
 	return ret;
 }
 
@@ -451,10 +455,9 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 			 struct pm_qos_flags_request *req,
 			 enum pm_qos_req_action action, s32 val)
 {
-	unsigned long irqflags;
 	s32 prev_value, curr_value;
 
-	spin_lock_irqsave(&pm_qos_lock, irqflags);
+	mutex_lock(&pm_qos_lock);
 
 	prev_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
@@ -477,7 +480,7 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 
 	curr_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
-	spin_unlock_irqrestore(&pm_qos_lock, irqflags);
+	mutex_unlock(&pm_qos_lock);
 
 	trace_pm_qos_update_flags(action, prev_value, curr_value);
 	return prev_value != curr_value;
@@ -653,7 +656,6 @@ EXPORT_SYMBOL_GPL(pm_qos_remove_request);
 
 static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 {
-	unsigned long flags;
 	bool old;
 	s32 prev[PM_QOS_NUM_CLASSES], curr[PM_QOS_NUM_CLASSES];
 	int ret, i;
@@ -665,7 +667,7 @@ static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 			__FUNCTION__, arg);
 		return ret;
 	}
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	mutex_lock(&pm_qos_lock);
 	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
 		prev[i] = pm_qos_read_value(pm_qos_array[i]->constraints);
 	if (old && !pm_qos_enabled) {
@@ -681,14 +683,13 @@ static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
 		}
 	}
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
 	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
 		if (prev[i] != curr[i])
 			blocking_notifier_call_chain(
 				pm_qos_array[i]->constraints->notifiers,
 				(unsigned long)curr[i],
 				NULL);
-
+	mutex_unlock(&pm_qos_lock);
 	return ret;
 }
 
@@ -806,7 +807,6 @@ static ssize_t pm_qos_power_read(struct file *filp, char __user *buf,
 		size_t count, loff_t *f_pos)
 {
 	s32 value;
-	unsigned long flags;
 	struct pm_qos_request *req = filp->private_data;
 
 	if (!req)
@@ -814,9 +814,9 @@ static ssize_t pm_qos_power_read(struct file *filp, char __user *buf,
 	if (!pm_qos_request_active(req))
 		return -EINVAL;
 
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	mutex_lock(&pm_qos_lock);
 	value = pm_qos_get_value(pm_qos_array[req->pm_qos_class]->constraints);
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	mutex_unlock(&pm_qos_lock);
 
 	return simple_read_from_buffer(buf, count, f_pos, &value, sizeof(s32));
 }

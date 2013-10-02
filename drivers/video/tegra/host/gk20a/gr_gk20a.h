@@ -22,8 +22,8 @@
 
 #include "gr_ctx_gk20a.h"
 
-#define GR_IDLE_CHECK_DEFAULT		100 /* usec */
-#define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_IDLE_CHECK_DEFAULT		10 /* usec */
+#define GR_IDLE_CHECK_MAX		200 /* usec */
 
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF

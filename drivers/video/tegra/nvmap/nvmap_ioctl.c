@@ -61,6 +61,7 @@ ulong unmarshal_user_handle(__u32 handle)
 	id = nvmap_get_id_from_dmabuf_fd(NULL, (int)handle);
 	if (!IS_ERR_VALUE(id))
 		return id;
+	return 0;
 #endif
 	return h;
 }
@@ -111,6 +112,7 @@ ulong unmarshal_user_handle(struct nvmap_handle *handle)
 	id = nvmap_get_id_from_dmabuf_fd(NULL, (int)handle);
 	if (!IS_ERR_VALUE(id))
 		return id;
+	return 0;
 #endif
 	return (ulong)handle ^ NVMAP_XOR_HASH_MASK;
 #else

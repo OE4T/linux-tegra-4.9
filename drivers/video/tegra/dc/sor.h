@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -66,6 +66,7 @@ struct tegra_dc_dp_link_config {
 	/* Training data */
 	u32	drive_current;
 	u32     preemphasis;
+	bool	vs_pe_valid;
 	u32	postcursor;
 };
 
@@ -125,5 +126,26 @@ void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
 	int pu_pd);
+
+static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
+{
+	u32 reg_val = readl(sor->base + reg * 4);
+	return reg_val;
+}
+
+static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
+	u32 reg, u32 val)
+{
+	writel(val, sor->base + reg * 4);
+}
+
+static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
+	u32 reg, u32 mask, u32 val)
+{
+	u32 reg_val = tegra_sor_readl(sor, reg);
+	reg_val &= ~mask;
+	reg_val |= val;
+	tegra_sor_writel(sor, reg, reg_val);
+}
 
 #endif

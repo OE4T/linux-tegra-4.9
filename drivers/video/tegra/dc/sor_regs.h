@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor_regs.h
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -630,17 +630,17 @@
 #define NV_SOR_PR_LANE2_DP_LANE0_D1_LEVEL2			(13 << 16)
 #define NV_SOR_PR_LANE2_DP_LANE0_D0_LEVEL3			(17 << 16)
 #define NV_SOR_PR_LANE1_DP_LANE1_SHIFT				(8)
-#define NV_SOR_PR_LANE1_DP_LANE1_MASK				(0xff >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL0			(0 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL0			(0 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D2_LEVEL0			(0 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D3_LEVEL0			(0 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL1			(4 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL1			(6 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D2_LEVEL1			(17 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL2			(8 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL2			(13 >> 8)
-#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL3			(17 >> 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_MASK				(0xff << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL0			(0 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL0			(0 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D2_LEVEL0			(0 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D3_LEVEL0			(0 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL1			(4 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL1			(6 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D2_LEVEL1			(17 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL2			(8 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D1_LEVEL2			(13 << 8)
+#define NV_SOR_PR_LANE1_DP_LANE1_D0_LEVEL3			(17 << 8)
 #define NV_SOR_PR_LANE0_DP_LANE2_SHIFT				(0)
 #define NV_SOR_PR_LANE0_DP_LANE2_MASK				(0xff)
 #define NV_SOR_PR_LANE0_DP_LANE2_D0_LEVEL0			(0)

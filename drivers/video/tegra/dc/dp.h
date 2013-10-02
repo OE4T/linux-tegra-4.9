@@ -43,11 +43,27 @@ enum {
 	driveCurrent_Level3 = 3,
 };
 
+static const u32 tegra_dp_vs_regs[][4] = {
+	/* pre-emphasis: L0, L1, L2, L3 */
+	{17, 21, 26, 34}, /* voltage swing: L0 */
+	{26, 32, 39}, /* L1 */
+	{34, 43}, /* L2 */
+	{51}, /* L3 */
+};
+
 enum {
 	preEmphasis_Disabled = 0,
 	preEmphasis_Level1   = 1,
 	preEmphasis_Level2   = 2,
 	preEmphasis_Level3   = 3,
+};
+
+static const u32 tegra_dp_pe_regs[][4] = {
+	/* pre-emphasis: L0, L1, L2, L3 */
+	{0, 4, 8, 17}, /* voltage swing: L0 */
+	{0, 6, 13}, /* L1 */
+	{0, 17}, /* L2 */
+	{0}, /* L3 */
 };
 
 enum {
@@ -57,6 +73,16 @@ enum {
 	postCursor2_Level3 = 3,
 	postCursor2_Supported
 };
+
+static inline int tegra_dp_is_max_vs(u32 pe, u32 vs)
+{
+	return (vs < (driveCurrent_Level3 - pe)) ? 0 : 1;
+}
+
+static inline int tegra_dp_is_max_pe(u32 pe, u32 vs)
+{
+	return (pe < (preEmphasis_Level3 - vs)) ? 0 : 1;
+}
 
 
 /* the +10ms is the time for power rail going up from 10-90% or
@@ -137,8 +163,10 @@ struct tegra_dc_dp_data {
 #define NV_DPCD_TRAINING_LANE3_SET			(0x00000106)
 #define NV_DPCD_TRAINING_LANEX_SET_DC_SHIFT		0
 #define NV_DPCD_TRAINING_LANEX_SET_DC_MAX_REACHED_T	(0x00000001 << 2)
+#define NV_DPCD_TRAINING_LANEX_SET_DC_MAX_REACHED_F	(0x00000000 << 2)
 #define NV_DPCD_TRAINING_LANEX_SET_PE_SHIFT		3
 #define NV_DPCD_TRAINING_LANEX_SET_PE_MAX_REACHED_T	(0x00000001 << 5)
+#define NV_DPCD_TRAINING_LANEX_SET_PE_MAX_REACHED_F	(0x00000000 << 5)
 #define NV_DPCD_DOWNSPREAD_CTRL				(0x00000107)
 #define NV_DPCD_DOWNSPREAD_CTRL_SPREAD_AMP_NONE		(0x00000000 << 4)
 #define NV_DPCD_DOWNSPREAD_CTRL_SPREAD_AMP_LT_0_5	(0x00000001 << 4)

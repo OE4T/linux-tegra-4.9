@@ -813,7 +813,7 @@ const struct fb_videomode hdmi_ext_modes[HDMI_EXT_MODEDB_SIZE] = {
 	 .left_margin = 296, .right_margin = 176,
 	 .upper_margin = 72, .lower_margin = 8,
 	 .hsync_len = 88, .vsync_len = 10,
-	 .sync = 0,
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	 .flag = FB_FLAG_RATIO_16_9,
 	 .vmode = FB_VMODE_NONINTERLACED},
 	/* HDMI_VIC 0x02: 3840x2160p @ 25Hz */
@@ -821,7 +821,7 @@ const struct fb_videomode hdmi_ext_modes[HDMI_EXT_MODEDB_SIZE] = {
 	 .left_margin = 296, .right_margin = 1056,
 	 .upper_margin = 72, .lower_margin = 8,
 	 .hsync_len = 88, .vsync_len = 10,
-	 .sync = 0,
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	 .flag = FB_FLAG_RATIO_16_9,
 	 .vmode = FB_VMODE_NONINTERLACED},
 	/* HDMI_VIC 0x03: 3840x2160p @ 23.98/24Hz */
@@ -829,7 +829,7 @@ const struct fb_videomode hdmi_ext_modes[HDMI_EXT_MODEDB_SIZE] = {
 	 .left_margin = 296, .right_margin = 1276,
 	 .upper_margin = 72, .lower_margin = 8,
 	 .hsync_len = 88, .vsync_len = 10,
-	 .sync = 0,
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	 .flag = FB_FLAG_RATIO_16_9,
 	 .vmode = FB_VMODE_NONINTERLACED},
 	/* HDMI_VIC 0x04: 4096x2160p @ 24Hz */
@@ -837,7 +837,7 @@ const struct fb_videomode hdmi_ext_modes[HDMI_EXT_MODEDB_SIZE] = {
 	 .left_margin = 296, .right_margin = 1020,
 	 .upper_margin = 72, .lower_margin = 8,
 	 .hsync_len = 88, .vsync_len = 10,
-	 .sync = 0,
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	 .flag = FB_FLAG_RATIO_16_9,
 	 .vmode = FB_VMODE_NONINTERLACED},
 };

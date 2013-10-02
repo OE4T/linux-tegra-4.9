@@ -104,7 +104,7 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 
 	/* Keep alive modules that needs to be when a channel is open */
 	if (!err && pdata->keepalive)
-		nvhost_module_busy(ch->dev);
+		nvhost_module_disable_poweroff(ch->dev);
 
 	return err ? NULL : ch;
 }
@@ -115,7 +115,7 @@ void nvhost_putchannel(struct nvhost_channel *ch)
 
 	/* Allow keep-alive'd module to be turned off */
 	if (pdata->keepalive)
-		nvhost_module_idle(ch->dev);
+		nvhost_module_enable_poweroff(ch->dev);
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 1) {

@@ -29,6 +29,7 @@
 #include <linux/devfreq.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
+#include <linux/pm_qos.h>
 
 struct nvhost_master;
 struct nvhost_hwctx;
@@ -221,6 +222,8 @@ struct nvhost_device_data {
 
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
+
+	struct dev_pm_qos_request no_poweroff_req;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	struct generic_pm_domain pd;	/* power domain representing power partition */

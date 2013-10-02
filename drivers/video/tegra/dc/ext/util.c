@@ -45,7 +45,11 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 	 * Take a reference to the buffer using the user's nvmap context, to
 	 * make sure they have permissions to access it.
 	 */
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	dc_dmabuf->buf = dma_buf_get(id);
+#else
 	dc_dmabuf->buf = nvmap_dmabuf_export(user->nvmap, id);
+#endif
 	if (IS_ERR_OR_NULL(dc_dmabuf->buf))
 		goto buf_fail;
 

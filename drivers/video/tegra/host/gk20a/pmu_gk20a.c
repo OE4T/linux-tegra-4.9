@@ -64,6 +64,8 @@ static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		return;
 	}
 
+	mutex_lock(&pmu->pmu_copy_lock);
+
 	words = size >> 2;
 	bytes = size & 0x3;
 
@@ -86,7 +88,7 @@ static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 					i, dst[(words << 2) + i]);
 		}
 	}
-
+	mutex_unlock(&pmu->pmu_copy_lock);
 	return;
 }
 
@@ -109,6 +111,8 @@ static void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 			"dst (0x%08x) not 4-byte aligned", dst);
 		return;
 	}
+
+	mutex_lock(&pmu->pmu_copy_lock);
 
 	words = size >> 2;
 	bytes = size & 0x3;
@@ -138,6 +142,7 @@ static void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 			"copy failed. bytes written %d, expected %d",
 			data - dst, size);
 	}
+	mutex_unlock(&pmu->pmu_copy_lock);
 	return;
 }
 
@@ -1157,6 +1162,7 @@ skip_init:
 
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
+	mutex_init(&pmu->pmu_copy_lock);
 
 	pmu->perfmon_counter.index = 3; /* GR & CE2 */
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;

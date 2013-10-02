@@ -151,7 +151,7 @@ static void hdmi_state_machine_handle_hpd_l(int cur_hpd)
  * internal state handlers and dispatch table
  *
  ************************************************************/
-static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
+static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi, bool power_gate)
 {
 #ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->audio_switch, 0);
@@ -167,6 +167,8 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 		tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
 		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 	}
+	if (power_gate)
+		tegra_dc_powergate_locked(hdmi->dc);
 }
 
 static void handle_reset_l(struct tegra_dc_hdmi_data *hdmi)
@@ -174,7 +176,7 @@ static void handle_reset_l(struct tegra_dc_hdmi_data *hdmi)
 	/* Were we just reset?  If so, shut everything down, then schedule a
 	 * check of the plug state in the near future.
 	 */
-	hdmi_disable_l(hdmi);
+	hdmi_disable_l(hdmi, false);
 	hdmi_state_machine_set_state_l(HDMI_STATE_CHECK_PLUG_STATE,
 				       CHECK_PLUG_STATE_DELAY_MS);
 }
@@ -193,7 +195,7 @@ static void handle_check_plug_state_l(struct tegra_dc_hdmi_data *hdmi)
 		/* nothing plugged in, so we are finished.  Go to the
 		 * DONE_DISABLED state and stay there until the next HPD event.
 		 * */
-		hdmi_disable_l(hdmi);
+		hdmi_disable_l(hdmi, true);
 		hdmi_state_machine_set_state_l(HDMI_STATE_DONE_DISABLED, -1);
 	}
 }
@@ -269,7 +271,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 
 end_disabled:
 	hdmi->eld_retrieved = false;
-	hdmi_disable_l(hdmi);
+	hdmi_disable_l(hdmi, true);
 	hdmi_state_machine_set_state_l(HDMI_STATE_DONE_DISABLED, -1);
 }
 

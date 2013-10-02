@@ -762,10 +762,6 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	hdmi_state_machine_set_pending_hpd();
 	/* result isn't used by dc */
 
-	hdmi_state = hdmi_state_machine_get_state();
-	if (hdmi_state != HDMI_STATE_DONE_DISABLED &&
-		hdmi_state != HDMI_STATE_RESET)
-		dc->connected = true;
 	return true;
 }
 

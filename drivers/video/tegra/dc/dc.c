@@ -2898,7 +2898,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->connected = true;
 
 	/* Powergate display module when it's unconnected. */
-	if (!tegra_dc_get_connected(dc))
+	/* detect() function, if presetns, responsible for the powergate */
+	if (!tegra_dc_get_connected(dc) && !dc->out_ops->detect)
 		tegra_dc_powergate_locked(dc);
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);

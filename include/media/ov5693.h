@@ -34,6 +34,13 @@
 #define OV5693_IOCTL_SET_CAMERA_MODE        _IOW('o', 10, __u32)
 #define OV5693_IOCTL_SYNC_SENSORS           _IOW('o', 11, __u32)
 #define OV5693_IOCTL_GET_FUSEID             _IOR('o', 12, struct nvc_fuseid)
+#define OV5693_IOCTL_SET_HDR_COARSE_TIME    _IOW('o', 13, struct ov5693_hdr)
+#define OV5693_IOCTL_READ_OTP_BANK          _IOWR('o', 14, \
+						struct ov5693_otp_bank)
+#define OV5693_IOCTL_SET_CAL_DATA           _IOW('o', 15, \
+						struct ov5693_cal_data)
+
+#define OV5693_INVALID_COARSE_TIME  -1
 
 
 struct ov5693_mode {
@@ -42,16 +49,43 @@ struct ov5693_mode {
 	int fps;
 	__u32 frame_length;
 	__u32 coarse_time;
+	__u32 coarse_time_short;
 	__u16 gain;
+	__u8 hdr_en;
 };
 
 struct ov5693_ae {
 	__u32 frame_length;
 	__u8  frame_length_enable;
 	__u32 coarse_time;
+	__u32 coarse_time_short;
 	__u8  coarse_time_enable;
 	__s32 gain;
 	__u8  gain_enable;
+};
+
+struct ov5693_fuseid {
+	__u32 size;
+	__u8  id[16];
+};
+
+struct ov5693_hdr {
+	__u32 coarse_time_long;
+	__u32 coarse_time_short;
+};
+
+struct ov5693_otp_bank {
+	__u32 id;
+	__u8  buf[16];
+};
+
+struct ov5693_cal_data {
+	int loaded;
+	int rg_ratio;
+	int bg_ratio;
+	int rg_ratio_typical;
+	int bg_ratio_typical;
+	__u8 lenc[62];
 };
 
 /* See notes in the nvc.h file on the GPIO usage */

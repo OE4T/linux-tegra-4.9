@@ -27,14 +27,20 @@
 #include "hw_mc_gk20a.h"
 #include "hw_pri_ringmaster_gk20a.h"
 #include "hw_pri_ringstation_sys_gk20a.h"
+#include "hw_trim_gk20a.h"
 
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
-	u32 pmc_en, decode_cfg, data;
-	s32 retry = 200;
+	u32 pmc_en, data;
 
 	if (tegra_platform_is_linsim())
 		return;
+
+	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	data = set_field(data,
+			trim_sys_gpc2clk_out_bypdiv_m(),
+			trim_sys_gpc2clk_out_bypdiv_f(0));
+	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	pmc_en = gk20a_readl(g, mc_enable_r());
 	pmc_en &= ~mc_enable_priv_ring_enabled_f();
@@ -45,43 +51,13 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	gk20a_writel(g, mc_enable_r(), pmc_en);
 	pmc_en = gk20a_readl(g, mc_enable_r());
 
-	decode_cfg = gk20a_readl(g, pri_ringstation_sys_decode_config_r());
-	decode_cfg = set_field(decode_cfg, pri_ringstation_sys_decode_config_ring_m(),
-		pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f());
-	gk20a_writel(g, pri_ringstation_sys_decode_config_r(), decode_cfg);
+	gk20a_writel(g,pri_ringmaster_command_r(),
+			0x4);
 
-	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
-		pri_ringmaster_global_ctl_ring_reset_asserted_f());
+	gk20a_writel(g, pri_ringstation_sys_decode_config_r(),
+			0x2);
 
-	usleep_range(20, 40);
-
-	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
-		pri_ringmaster_global_ctl_ring_reset_deasserted_f());
-
-	gk20a_writel(g, pri_ringmaster_command_r(),
-		pri_ringmaster_command_cmd_enumerate_stations_f() |
-		pri_ringmaster_command_cmd_enumerate_stations_bc_grp_all_f());
-
-	do {
-		data = pri_ringmaster_command_cmd_v(
-				gk20a_readl(g, pri_ringmaster_command_r()));
-		usleep_range(20, 40);
-	} while (data != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
-
-	gk20a_writel(g, pri_ringmaster_command_data_r(), 0x503B4B49);
-
-	gk20a_writel(g, pri_ringmaster_command_r(),
-		pri_ringmaster_command_cmd_start_ring_f());
-
-	do {
-		data = pri_ringmaster_start_results_connectivity_v(
-				gk20a_readl(g, pri_ringmaster_start_results_r()));
-		usleep_range(20, 40);
-	} while (data != pri_ringmaster_start_results_connectivity_pass_v() && --retry);
-
-	if (retry <= 0)
-		nvhost_warn(dev_from_gk20a(g),
-			"priv ringmaster reset too many retries");
+	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 }
 
 void gk20a_priv_ring_isr(struct gk20a *g)

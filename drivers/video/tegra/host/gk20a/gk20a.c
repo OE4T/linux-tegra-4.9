@@ -35,6 +35,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/fb.h>
 #include <linux/suspend.h>
+#include <linux/sched.h>
 
 #include <mach/pm_domains.h>
 
@@ -708,12 +709,15 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	int err;
+	int err, nice_value;
 
 	nvhost_dbg_fn("");
 
 	if (g->power_on)
 		return 0;
+
+	nice_value = task_nice(current);
+	set_user_nice(current, -20);
 
 	g->power_on = true;
 
@@ -756,6 +760,7 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 		nvhost_err(&dev->dev, "failed to init gk20a therm");
 
 	gk20a_channel_resume(g);
+	set_user_nice(current, nice_value);
 
 	return err;
 }

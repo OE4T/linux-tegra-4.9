@@ -31,7 +31,6 @@
 #include "host1x/host1x.h"
 #include "hardware_t124.h"
 #include "syncpt_t124.h"
-#include "msenc/msenc.h"
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "vi/vi.h"
@@ -276,7 +275,7 @@ static struct resource msenc_resources[] = {
 
 struct nvhost_device_data t124_msenc_info = {
 	.num_channels	= 1,
-	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
+	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR} },
@@ -285,13 +284,14 @@ struct nvhost_device_data t124_msenc_info = {
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
 	.can_powergate	= true,
-	.init           = nvhost_msenc_init,
-	.deinit         = nvhost_msenc_deinit,
-	.finalize_poweron = nvhost_msenc_finalize_poweron,
+	.init           = nvhost_flcn_init,
+	.deinit         = nvhost_flcn_deinit,
+	.finalize_poweron = nvhost_flcn_boot,
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
+	.firmware_name	= "nvhost_msenc031.fw",
 };
 
 struct platform_device tegra_msenc03_device = {
@@ -488,7 +488,7 @@ struct nvhost_device_data t132_vib_info = {
 
 struct nvhost_device_data t132_msenc_info = {
 	.num_channels	= 1,
-	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
+	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR} },
@@ -497,9 +497,10 @@ struct nvhost_device_data t132_msenc_info = {
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
 	.can_powergate	= true,
-	.init           = nvhost_msenc_init,
-	.deinit         = nvhost_msenc_deinit,
-	.finalize_poweron = nvhost_msenc_finalize_poweron,
+	.init           = nvhost_flcn_init,
+	.deinit         = nvhost_flcn_deinit,
+	.finalize_poweron = nvhost_flcn_boot,
+	.firmware_name	= "nvhost_msenc031.fw",
 };
 
 struct nvhost_device_data t132_tsec_info = {

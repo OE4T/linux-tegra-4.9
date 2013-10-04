@@ -607,6 +607,8 @@ int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
+	{ .compatible = "nvidia,tegra124-msenc",
+		.data = (struct nvhost_device_data *)&t124_msenc_info },
 	{ },
 };
 
@@ -675,6 +677,7 @@ static int __exit flcn_remove(struct platform_device *dev)
 
 static struct platform_device_id flcn_id_table[] = {
 	{ .name = "vic03" },
+	{ .name = "msenc" },
 	{},
 };
 static struct platform_driver flcn_driver = {

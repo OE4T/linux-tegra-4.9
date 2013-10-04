@@ -305,4 +305,33 @@ struct quadd_module_version {
 
 #pragma pack(pop)
 
+#ifdef CONFIG_TEGRA_PROFILER
+extern void __quadd_task_sched_in(struct task_struct *prev,
+				  struct task_struct *task);
+extern void __quadd_task_sched_out(struct task_struct *prev,
+				   struct task_struct *next);
+
+static inline void quadd_task_sched_in(struct task_struct *prev,
+				       struct task_struct *task)
+{
+	__quadd_task_sched_in(prev, task);
+}
+
+static inline void quadd_task_sched_out(struct task_struct *prev,
+					struct task_struct *next)
+{
+	__quadd_task_sched_out(prev, next);
+}
+#else
+static inline void quadd_task_sched_in(struct task_struct *prev,
+				       struct task_struct *task)
+{
+}
+
+static inline void quadd_task_sched_out(struct task_struct *prev,
+					struct task_struct *next)
+{
+}
+#endif
+
 #endif  /* __TEGRA_PROFILER_H */

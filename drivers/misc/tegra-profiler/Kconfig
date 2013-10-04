@@ -1,6 +1,5 @@
 config TEGRA_PROFILER
 	bool "Enable Tegra profiler"
 	depends on ARCH_TEGRA
-	select KPROBES
 	help
 	  This option enables Tegra profiler

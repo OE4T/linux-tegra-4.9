@@ -47,8 +47,8 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_flcn_vic03_h_
-#define _hw_flcn_vic03_h_
+#ifndef _hw_flcn_h_
+#define _hw_flcn_h_
 
 static inline u32 flcn_slcg_override_high_a_r(void)
 {

@@ -129,6 +129,8 @@ struct nvhost_device_data {
 	bool		waitbasesync;	/* Force sync of wait bases */
 	bool		serialize;	/* Serialize submits in the channel */
 
+	char		*firmware_name;	/* Name of firmware */
+
 	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
 	bool		can_powergate;	/* True if module can be power gated */
 	int		clockgate_delay;/* Delay before clock gated */

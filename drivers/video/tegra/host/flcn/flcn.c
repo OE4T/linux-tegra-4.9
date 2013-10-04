@@ -1,22 +1,20 @@
 /*
- * drivers/video/tegra/host/vic/vic03.c
- *
- * Tegra VIC03 Module Support
- *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+* Tegra flcn common driver
+*
+* Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify it
+* under the terms and conditions of the GNU General Public License,
+* version 2, as published by the Free Software Foundation.
+*
+* This program is distributed in the hope it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+* more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <linux/slab.h>         /* for kzalloc */
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
@@ -40,80 +38,67 @@
 
 #include "host1x/host1x_hwctx.h"
 
-#include "vic03.h"
-#include "hw_flcn_vic03.h"
-#include "hw_tfbif_vic03.h"
+#include "flcn.h"
+#include "hw_flcn.h"
 
 #include "t124/hardware_t124.h" /* for nvhost opcodes*/
 #include "t124/t124.h"
 
 
-#include "../../../../../arch/arm/mach-tegra/iomap.h"
+static inline struct flcn *get_flcn(struct platform_device *dev);
 
-static inline struct vic03 *get_vic03(struct platform_device *dev)
+#define TSEC_KEY_LENGTH			16
+#define FALCON_RESERVE			256
+#define TSEC_KEY_OFFSET			(FALCON_RESERVE - TSEC_KEY_LENGTH)
+
+/* The key value in ascii hex */
+static u8 otf_key[TSEC_KEY_LENGTH];
+
+static inline struct flcn *get_flcn(struct platform_device *dev)
 {
-	return (struct vic03 *)nvhost_get_private_data(dev);
+	return (struct flcn *)nvhost_get_private_data(dev);
 }
-static inline void set_vic03(struct platform_device *dev, struct vic03 *vic03)
+static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 {
-	nvhost_set_private_data(dev, vic03);
-}
-
-/* caller is responsible for freeing */
-static char *vic_get_fw_name(struct platform_device *dev)
-{
-	char *fw_name;
-	u8 maj, min;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	/* note size here is a little over...*/
-	fw_name = kzalloc(32, GFP_KERNEL);
-	if (!fw_name)
-		return NULL;
-
-	decode_vic_ver(pdata->version, &maj, &min);
-	sprintf(fw_name, "vic%02d_ucode.bin", maj);
-	dev_info(&dev->dev, "fw name:%s\n", fw_name);
-
-	return fw_name;
+	nvhost_set_private_data(dev, flcn);
 }
 
-#define VIC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
-#define VIC_IDLE_CHECK_PERIOD	10		/* 10 usec */
-static int vic03_flcn_wait_idle(struct platform_device *pdev,
+#define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
+#define FLCN_IDLE_CHECK_PERIOD		10	/* 10 usec */
+static int flcn_wait_idle(struct platform_device *pdev,
 				u32 *timeout)
 {
 	nvhost_dbg_fn("");
 
 	if (!*timeout)
-		*timeout = VIC_IDLE_TIMEOUT_DEFAULT;
+		*timeout = FLCN_IDLE_TIMEOUT_DEFAULT;
 
 	do {
-		u32 check = min_t(u32, VIC_IDLE_CHECK_PERIOD, *timeout);
+		u32 check = min_t(u32, FLCN_IDLE_CHECK_PERIOD, *timeout);
 		u32 w = host1x_readl(pdev, flcn_idlestate_r());
 
 		if (!w) {
 			nvhost_dbg_fn("done");
 			return 0;
 		}
-		udelay(VIC_IDLE_CHECK_PERIOD);
+		udelay(FLCN_IDLE_CHECK_PERIOD);
 		*timeout -= check;
 	} while (*timeout);
 
-	dev_err(&pdev->dev, "vic03 flcn idle timeout");
+	dev_err(&pdev->dev, "flcn flcn idle timeout");
 
 	return -1;
 }
 
-static int vic03_flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
+static int flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
 {
 	nvhost_dbg_fn("");
 
 	if (!*timeout)
-		*timeout = VIC_IDLE_TIMEOUT_DEFAULT;
+		*timeout = FLCN_IDLE_TIMEOUT_DEFAULT;
 
 	do {
-		u32 check = min_t(u32, VIC_IDLE_CHECK_PERIOD, *timeout);
+		u32 check = min_t(u32, FLCN_IDLE_CHECK_PERIOD, *timeout);
 		u32 dmatrfcmd = host1x_readl(pdev, flcn_dmatrfcmd_r());
 		u32 idle_v = flcn_dmatrfcmd_idle_v(dmatrfcmd);
 
@@ -121,17 +106,17 @@ static int vic03_flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
 			nvhost_dbg_fn("done");
 			return 0;
 		}
-		udelay(VIC_IDLE_CHECK_PERIOD);
+		udelay(FLCN_IDLE_CHECK_PERIOD);
 		*timeout -= check;
 	} while (*timeout);
 
-	dev_err(&pdev->dev, "vic03 dma idle timeout");
+	dev_err(&pdev->dev, "dma idle timeout");
 
 	return -1;
 }
 
 
-static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
+static int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 					      phys_addr_t pa,
 					      u32 internal_offset,
 					      bool imem)
@@ -148,28 +133,32 @@ static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 	host1x_writel(pdev, flcn_dmatrffboffs_r(), pa_offset);
 	host1x_writel(pdev, flcn_dmatrfcmd_r(), cmd);
 
-	return vic03_flcn_dma_wait_idle(pdev, &timeout);
+	return flcn_dma_wait_idle(pdev, &timeout);
 
 }
 
-static int vic03_setup_ucode_image(struct platform_device *dev,
+static int flcn_setup_ucode_image(struct platform_device *dev,
 				   u32 *ucode_ptr,
 				   const struct firmware *ucode_fw)
 {
-	struct vic03 *v = get_vic03(dev);
+	struct flcn *v = get_flcn(dev);
 	/* image data is little endian. */
-	struct ucode_v1_vic03 ucode;
+	struct ucode_v1_flcn ucode;
 	int w;
+	u32 reserved_offset;
+	u32 tsec_key_offset;
+
+	nvhost_dbg_fn("");
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
 		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
 
-	ucode.bin_header = (struct ucode_bin_header_v1_vic03 *)ucode_ptr;
+	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 	/* endian problems would show up right here */
 	if (ucode.bin_header->bin_magic != 0x10de) {
 		dev_err(&dev->dev,
-			   "failed to get vic03 firmware magic");
+			   "failed to get firmware magic");
 		return -EINVAL;
 	}
 	if (ucode.bin_header->bin_ver != 1) {
@@ -184,107 +173,125 @@ static int vic03_setup_ucode_image(struct platform_device *dev,
 		return -EINVAL;
 	}
 
-	nvhost_dbg_info("vic03 ucode bin header: magic:0x%x ver:%d size:%d",
+	nvhost_dbg_info("ucode bin header: magic:0x%x ver:%d size:%d",
 			ucode.bin_header->bin_magic,
 			ucode.bin_header->bin_ver,
 			ucode.bin_header->bin_size);
-	nvhost_dbg_info("vic03 ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
+	nvhost_dbg_info("ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
 			ucode.bin_header->os_bin_header_offset,
 			ucode.bin_header->os_bin_data_offset,
 			ucode.bin_header->os_bin_size);
-	nvhost_dbg_info("vic03 ucode bin header: fce bin (header,data) offset size: 0x%x, 0x%x %d",
+	nvhost_dbg_info("ucode bin header: fce bin (header,data) offset size: 0x%x, 0x%x %d",
 			ucode.bin_header->fce_bin_header_offset,
 			ucode.bin_header->fce_bin_data_offset,
 			ucode.bin_header->fce_bin_size);
 
-	ucode.os_header = (struct ucode_os_header_v1_vic03 *)
+	ucode.os_header = (struct ucode_os_header_v1_flcn *)
 		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
 
-	nvhost_dbg_info("vic03 os ucode header: os code (offset,size): 0x%x, 0x%x",
+	nvhost_dbg_info("os ucode header: os code (offset,size): 0x%x, 0x%x",
 			ucode.os_header->os_code_offset,
 			ucode.os_header->os_code_size);
-	nvhost_dbg_info("vic03 os ucode header: os data (offset,size): 0x%x, 0x%x",
+	nvhost_dbg_info("os ucode header: os data (offset,size): 0x%x, 0x%x",
 			ucode.os_header->os_data_offset,
 			ucode.os_header->os_data_size);
-	nvhost_dbg_info("vic03 os ucode header: num apps: %d", ucode.os_header->num_apps);
+	nvhost_dbg_info("os ucode header: num apps: %d", ucode.os_header->num_apps);
 
-	ucode.fce_header = (struct ucode_fce_header_v1_vic03 *)
-		(((void *)ucode_ptr) + ucode.bin_header->fce_bin_header_offset);
+	if (ucode.bin_header->fce_bin_header_offset != 0xa5a5a5a5) {
+		ucode.fce_header = (struct ucode_fce_header_v1_flcn *)
+			(((void *)ucode_ptr) +
+			 ucode.bin_header->fce_bin_header_offset);
+		nvhost_dbg_info("fce ucode header: offset, buffer_size, size: 0x%x 0x%x 0x%x",
+				ucode.fce_header->fce_ucode_offset,
+				ucode.fce_header->fce_ucode_buffer_size,
+				ucode.fce_header->fce_ucode_size);
+		v->fce.size        = ucode.fce_header->fce_ucode_size;
+		v->fce.data_offset =
+			ucode.bin_header->fce_bin_data_offset;
+	}
 
-	nvhost_dbg_info("vic03 fce ucode header: offset, buffer_size, size: 0x%x 0x%x 0x%x",
-			ucode.fce_header->fce_ucode_offset,
-			ucode.fce_header->fce_ucode_buffer_size,
-			ucode.fce_header->fce_ucode_size);
+	/* make space for reserved area - we need 20 bytes, but we move 256
+	 * bytes because firmware needs to be 256 byte aligned */
+	reserved_offset = ucode.bin_header->os_bin_data_offset;
+	memmove(((void *)ucode_ptr) + reserved_offset + FALCON_RESERVE,
+			((void *)ucode_ptr) + reserved_offset,
+			ucode.bin_header->os_bin_size);
+	ucode.bin_header->os_bin_data_offset += FALCON_RESERVE;
 
-	v->ucode.os.size = ucode.bin_header->os_bin_size;
-	v->ucode.os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
-	v->ucode.os.code_offset = ucode.os_header->os_code_offset;
-	v->ucode.os.data_offset = ucode.os_header->os_data_offset;
-	v->ucode.os.data_size   = ucode.os_header->os_data_size;
+	/*  clear 256 bytes before ucode os code */
+	memset(((void *)ucode_ptr) + reserved_offset, 0, FALCON_RESERVE);
 
-	v->ucode.fce.size        = ucode.fce_header->fce_ucode_size;
-	v->ucode.fce.data_offset = ucode.bin_header->fce_bin_data_offset;
+	/* Copy key to be the 16 bytes before the firmware */
+	tsec_key_offset = reserved_offset + TSEC_KEY_OFFSET;
+	memcpy(((void *)ucode_ptr) + tsec_key_offset, otf_key, TSEC_KEY_LENGTH);
+	v->os.size = ucode.bin_header->os_bin_size;
+	v->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
+	v->os.code_offset = ucode.os_header->os_code_offset;
+	v->os.data_offset = ucode.os_header->os_data_offset;
+	v->os.data_size   = ucode.os_header->os_data_size;
 
 	return 0;
 }
 
-static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
+static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 {
-	struct vic03 *v = get_vic03(dev);
+	struct flcn *v = get_flcn(dev);
 	const struct firmware *ucode_fw;
 	int err;
 	DEFINE_DMA_ATTRS(attrs);
 
-	v->ucode.dma_addr = 0;
-	v->ucode.mapped = NULL;
+	nvhost_dbg_fn("");
+
+	v->dma_addr = 0;
+	v->mapped = NULL;
 
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		nvhost_dbg_fn("request firmware failed");
-		dev_err(&dev->dev, "failed to get vic03 firmware\n");
+		dev_err(&dev->dev, "failed to get firmware\n");
 		err = -ENOENT;
 		return err;
 	}
 
-	v->ucode.size = ucode_fw->size;
+	v->size = ucode_fw->size;
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
-	v->ucode.mapped = dma_alloc_attrs(&dev->dev,
-				v->ucode.size, &v->ucode.dma_addr,
+	v->mapped = dma_alloc_attrs(&dev->dev,
+				v->size, &v->dma_addr,
 				GFP_KERNEL, &attrs);
-	if (!v->ucode.mapped) {
+	if (!v->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = vic03_setup_ucode_image(dev, v->ucode.mapped, ucode_fw);
+	err = flcn_setup_ucode_image(dev, v->mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
 		goto clean_up;
 	}
 
-	v->ucode.valid = true;
+	v->valid = true;
 
 	release_firmware(ucode_fw);
 
 	return 0;
 
  clean_up:
-	if (v->ucode.mapped) {
+	if (v->mapped) {
 		dma_free_attrs(&dev->dev,
-			v->ucode.size, v->ucode.mapped,
-			v->ucode.dma_addr, &attrs);
-		v->ucode.mapped = NULL;
-		v->ucode.dma_addr = 0;
+			v->size, v->mapped,
+			v->dma_addr, &attrs);
+		v->mapped = NULL;
+		v->dma_addr = 0;
 	}
 	release_firmware(ucode_fw);
 	return err;
 }
 
-static int vic03_wait_mem_scrubbing(struct platform_device *dev)
+static int flcn_wait_mem_scrubbing(struct platform_device *dev)
 {
-	int retries = VIC_IDLE_TIMEOUT_DEFAULT / VIC_IDLE_CHECK_PERIOD;
+	int retries = FLCN_IDLE_TIMEOUT_DEFAULT / FLCN_IDLE_CHECK_PERIOD;
 	nvhost_dbg_fn("");
 
 	do {
@@ -296,116 +303,98 @@ static int vic03_wait_mem_scrubbing(struct platform_device *dev)
 			nvhost_dbg_fn("done");
 			return 0;
 		}
-		udelay(VIC_IDLE_CHECK_PERIOD);
+		udelay(FLCN_IDLE_CHECK_PERIOD);
 	} while (--retries || !tegra_platform_is_silicon());
 
 	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
 	return -ETIMEDOUT;
 }
 
-static int vic03_boot(struct platform_device *pdev)
+int nvhost_flcn_boot(struct platform_device *pdev)
 {
-	struct vic03 *v = get_vic03(pdev);
+	struct flcn *v = get_flcn(pdev);
 	u32 timeout;
 	u32 offset;
 	int err = 0;
 
 	/* check if firmware is loaded or not */
-	if (!v || !v->ucode.valid)
+	if (!v || !v->valid)
 		return -ENOMEDIUM;
 
-	if (v->is_booted)
-		return 0;
-
-	err = vic03_wait_mem_scrubbing(pdev);
+	err = flcn_wait_mem_scrubbing(pdev);
 	if (err)
 		return err;
 
 	host1x_writel(pdev, flcn_dmactl_r(), 0);
 
 	host1x_writel(pdev, flcn_dmatrfbase_r(),
-			(v->ucode.dma_addr + v->ucode.os.bin_data_offset) >> 8);
+			(v->dma_addr + v->os.bin_data_offset) >> 8);
 
-	for (offset = 0; offset < v->ucode.os.data_size; offset += 256)
-		vic03_flcn_dma_pa_to_internal_256b(pdev,
-					   v->ucode.os.data_offset + offset,
+	for (offset = 0; offset < v->os.data_size; offset += 256)
+		flcn_dma_pa_to_internal_256b(pdev,
+					   v->os.data_offset + offset,
 					   offset, false);
 
-	vic03_flcn_dma_pa_to_internal_256b(pdev, v->ucode.os.code_offset,
+	flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset,
 					   0, true);
 
 	/* setup falcon interrupts and enable interface */
-	host1x_writel(pdev, flcn_irqmset_r(), (flcn_irqmset_ext_f(0xff)    |
+	host1x_writel(pdev, flcn_irqmset_r(),
+			     (flcn_irqmset_ext_f(0xff)    |
 					   flcn_irqmset_swgen1_set_f() |
 					   flcn_irqmset_swgen0_set_f() |
 					   flcn_irqmset_exterr_set_f() |
 					   flcn_irqmset_halt_set_f()   |
 					   flcn_irqmset_wdtmr_set_f()));
-	host1x_writel(pdev, flcn_irqdest_r(), (flcn_irqdest_host_ext_f(0xff) |
+	host1x_writel(pdev, flcn_irqdest_r(),
+			     (flcn_irqdest_host_ext_f(0xff) |
 					   flcn_irqdest_host_swgen1_host_f() |
 					   flcn_irqdest_host_swgen0_host_f() |
 					   flcn_irqdest_host_exterr_host_f() |
 					   flcn_irqdest_host_halt_host_f()));
-	host1x_writel(pdev, flcn_itfen_r(), (flcn_itfen_mthden_enable_f() |
+	host1x_writel(pdev, flcn_itfen_r(),
+			     (flcn_itfen_mthden_enable_f() |
 					flcn_itfen_ctxen_enable_f()));
 
 	/* boot falcon */
 	host1x_writel(pdev, flcn_bootvec_r(), flcn_bootvec_vec_f(0));
-	host1x_writel(pdev, flcn_cpuctl_r(), flcn_cpuctl_startcpu_true_f());
+	host1x_writel(pdev, flcn_cpuctl_r(),
+			flcn_cpuctl_startcpu_true_f());
 
 	timeout = 0; /* default */
 
-	err = vic03_flcn_wait_idle(pdev, &timeout);
+	err = flcn_wait_idle(pdev, &timeout);
 	if (err != 0) {
 		dev_err(&pdev->dev, "boot failed due to timeout");
 		return err;
 	}
 
-	v->is_booted = true;
-
 	return 0;
 }
 
-int nvhost_vic03_init(struct platform_device *dev)
+int nvhost_flcn_init(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct vic03 *v = get_vic03(dev);
-	char *fw_name;
+	struct flcn *v = get_flcn(dev);
 
 	nvhost_dbg_fn("in dev:%p v:%p", dev, v);
 
-	fw_name = vic_get_fw_name(dev);
-	if (!fw_name) {
-		dev_err(&dev->dev, "couldn't determine firmware name");
-		return -EINVAL;
-	}
-
+	v = kzalloc(sizeof(*v), GFP_KERNEL);
 	if (!v) {
-		nvhost_dbg_fn("allocating vic03 support");
-		v = kzalloc(sizeof(*v), GFP_KERNEL);
-		if (!v) {
-			dev_err(&dev->dev, "couldn't alloc vic03 support");
-			err = -ENOMEM;
-			goto clean_up;
-		}
-		set_vic03(dev, v);
-		v->is_booted = false;
+		dev_err(&dev->dev, "couldn't alloc flcn support");
+		err = -ENOMEM;
+		goto clean_up;
 	}
+	set_flcn(dev, v);
 	nvhost_dbg_fn("primed dev:%p v:%p", dev, v);
 
-	v->host = nvhost_get_host(dev);
-
-	if (!v->ucode.valid)
-		err = vic03_read_ucode(dev, fw_name);
-	if (err)
+	err = flcn_read_ucode(dev, pdata->firmware_name);
+	if (err || !v->valid)
 		goto clean_up;
 
-	kfree(fw_name);
-	fw_name = NULL;
-
 	nvhost_module_busy(dev);
-	err = vic03_boot(dev);
+	err = nvhost_flcn_boot(dev);
 	nvhost_module_idle(dev);
 
 	if (pdata->scaling_init)
@@ -414,15 +403,13 @@ int nvhost_vic03_init(struct platform_device *dev)
 	return 0;
 
  clean_up:
-	kfree(fw_name);
 	nvhost_err(&dev->dev, "failed");
-
 	return err;
 }
 
-void nvhost_vic03_deinit(struct platform_device *dev)
+void nvhost_flcn_deinit(struct platform_device *dev)
 {
-	struct vic03 *v = get_vic03(dev);
+	struct flcn *v = get_flcn(dev);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
 	DEFINE_DMA_ATTRS(attrs);
@@ -434,16 +421,16 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 	if (pdata->scaling_init)
 		nvhost_scale_hw_deinit(dev);
 
-	if (v->ucode.mapped) {
+	if (v->mapped) {
 		dma_free_attrs(&dev->dev,
-			v->ucode.size, v->ucode.mapped,
-			v->ucode.dma_addr, &attrs);
-		v->ucode.mapped = NULL;
-		v->ucode.dma_addr = 0;
+			v->size, v->mapped,
+			v->dma_addr, &attrs);
+		v->mapped = NULL;
+		v->dma_addr = 0;
 	}
 
 	/* zap, free */
-	set_vic03(dev, NULL);
+	set_flcn(dev, NULL);
 	kfree(v);
 }
 
@@ -453,11 +440,11 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
 
-	struct vic03 *v = get_vic03(ch->dev);
+	struct flcn *v = get_flcn(ch->dev);
 	struct host1x_hwctx *ctx;
 	u32 *ptr;
-	u32 syncpt;
-	u32 nvhost_vic03_restore_size = 10; /* number of words written below */
+	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
+	u32 nvhost_flcn_restore_size = 11; /* number of words written below */
 
 	nvhost_dbg_fn("");
 
@@ -472,10 +459,10 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	}
 	h->syncpt = syncpt;
 
-	ctx->restore_size = nvhost_vic03_restore_size;
+	ctx->restore_size = nvhost_flcn_restore_size;
 
 	ctx->cpuva = dma_alloc_writecombine(&ch->dev->dev,
-						ctx->restore_size * 4,
+						nvhost_flcn_restore_size * 4,
 						&ctx->iova,
 						GFP_KERNEL);
 	if (!ctx->cpuva) {
@@ -492,11 +479,11 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
 	ptr[3] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
 	ptr[4] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2;
-	ptr[5] = v->ucode.fce.size;
+	ptr[5] = v->fce.size;
 
 	ptr[6] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
 	ptr[7] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2;
-	ptr[8] = (v->ucode.dma_addr + v->ucode.fce.data_offset) >> 8;
+	ptr[8] = (v->dma_addr + v->fce.data_offset) >> 8;
 
 	/* syncpt increment to track restore gather. */
 	ptr[9] = nvhost_opcode_imm_incr_syncpt(
@@ -535,17 +522,18 @@ static void vic03_free_hwctx(struct kref *ref)
 	kfree(ctx);
 }
 
-static void vic03_get_hwctx (struct nvhost_hwctx *ctx)
+static void vic03_get_hwctx(struct nvhost_hwctx *ctx)
 {
 	nvhost_dbg_fn("");
 	kref_get(&ctx->ref);
 }
-static void vic03_put_hwctx (struct nvhost_hwctx *ctx)
+static void vic03_put_hwctx(struct nvhost_hwctx *ctx)
 {
 	nvhost_dbg_fn("");
 	kref_put(&ctx->ref, vic03_free_hwctx);
 }
-static void vic03_save_push_hwctx ( struct nvhost_hwctx *ctx, struct nvhost_cdma *cdma)
+static void vic03_save_push_hwctx(struct nvhost_hwctx *ctx,
+				  struct nvhost_cdma *cdma)
 {
 	nvhost_dbg_fn("");
 }
@@ -585,21 +573,25 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 	return &p->h;
 }
 
-int nvhost_vic03_finalize_poweron(struct platform_device *pdev)
+int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
+	nvhost_dbg_fn("");
+
 	host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0);
 	host1x_writel(pdev, flcn_cg_r(),
 		     flcn_cg_idle_cg_dly_cnt_f(4) |
 		     flcn_cg_idle_cg_en_f(1) |
 		     flcn_cg_wakeup_dly_cnt_f(4));
-	return vic03_boot(pdev);
+	return nvhost_flcn_boot(pdev);
 }
 
-int nvhost_vic03_prepare_poweroff(struct platform_device *dev)
+int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct vic03 *v;
+	struct flcn *v;
 	struct nvhost_channel *ch = pdata->channels[0];
+
+	nvhost_dbg_fn("");
 
 	if (ch && ch->dev) {
 		mutex_lock(&ch->submitlock);
@@ -607,20 +599,18 @@ int nvhost_vic03_prepare_poweroff(struct platform_device *dev)
 		mutex_unlock(&ch->submitlock);
 	}
 
-	v = get_vic03(pdata->pdev);
-	if (v)
-		v->is_booted = false;
+	v = get_flcn(pdata->pdev);
 
 	return 0;
 }
 
-static struct of_device_id tegra_vic_of_match[] = {
+static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
 	{ },
 };
 
-static int vic03_probe(struct platform_device *dev)
+static int flcn_probe(struct platform_device *dev)
 {
 	int err;
 	struct nvhost_device_data *pdata = NULL;
@@ -628,7 +618,7 @@ static int vic03_probe(struct platform_device *dev)
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
 
-		match = of_match_device(tegra_vic_of_match, &dev->dev);
+		match = of_match_device(tegra_flcn_of_match, &dev->dev);
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
 	} else
@@ -654,7 +644,9 @@ static int vic03_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = "vic03";
+	pdata->pd.name = kstrdup(dev->name, GFP_KERNEL);
+	if (!pdata->pd.name)
+		return -ENOMEM;
 
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
@@ -670,7 +662,7 @@ static int vic03_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __exit vic03_remove(struct platform_device *dev)
+static int __exit flcn_remove(struct platform_device *dev)
 {
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put(&dev->dev);
@@ -681,30 +673,59 @@ static int __exit vic03_remove(struct platform_device *dev)
 	return 0;
 }
 
-static struct platform_driver vic03_driver = {
-	.probe = vic03_probe,
-	.remove = __exit_p(vic03_remove),
+static struct platform_device_id flcn_id_table[] = {
+	{ .name = "vic03" },
+	{},
+};
+static struct platform_driver flcn_driver = {
+	.probe = flcn_probe,
+	.remove = __exit_p(flcn_remove),
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = "vic03",
+		.name = "falcon",
 #ifdef CONFIG_OF
-		.of_match_table = tegra_vic_of_match,
+		.of_match_table = tegra_flcn_of_match,
 #endif
 #ifdef CONFIG_PM
 		.pm = &nvhost_module_pm_ops,
 #endif
-	}
+	},
+	.id_table = flcn_id_table,
 };
 
-static int __init vic03_init(void)
+static int __init flcn_init(void)
 {
-	return platform_driver_register(&vic03_driver);
+	return platform_driver_register(&flcn_driver);
 }
 
-static void __exit vic03_exit(void)
+static void __exit flcn_exit(void)
 {
-	platform_driver_unregister(&vic03_driver);
+	platform_driver_unregister(&flcn_driver);
 }
 
-module_init(vic03_init);
-module_exit(vic03_exit);
+static int __init tsec_key_setup(char *line)
+{
+	int i;
+	u8 tmp[] = { 0, 0, 0 };
+	pr_debug("tsec otf key: %s\n", line);
+
+	if (strlen(line) != TSEC_KEY_LENGTH*2) {
+		pr_warn("invalid tsec key: %s\n", line);
+		return 0;
+	}
+
+	for (i = 0; i < TSEC_KEY_LENGTH; i++) {
+		int err;
+		memcpy(tmp, &line[i*2], 2);
+		err = kstrtou8(tmp, 16, &otf_key[i]);
+		if (err) {
+			pr_warn("cannot read tsec otf key: %d", err);
+			break;
+		}
+	}
+	return 0;
+}
+__setup("otf_key=", tsec_key_setup);
+
+module_init(flcn_init);
+module_exit(flcn_exit);

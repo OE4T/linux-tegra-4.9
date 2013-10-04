@@ -11,6 +11,7 @@ obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
 obj-y += edid.o
 obj-y += nvsd.o
 obj-y += dsi.o
+obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
 obj-y += dc_sysfs.o
 obj-y += dc_config.o
 obj-y += sor.o

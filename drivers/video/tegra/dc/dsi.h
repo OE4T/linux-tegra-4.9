@@ -423,6 +423,18 @@ extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
 #define tegra_dsi2edp_ops (*(struct tegra_dsi_out_ops *)NULL)
 #endif
 
+#ifdef CONFIG_DEBUG_FS
+void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi);
+#endif
+void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi);
+void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi);
+unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
+							u32 reg, int index);
+unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg);
+void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
+						u32 val, u32 reg, int index);
+void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg);
+
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {
 	return dsi->out_data;

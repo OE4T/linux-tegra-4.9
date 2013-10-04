@@ -308,7 +308,7 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 				     struct tegra_dc_dsi_data *dsi,
 				     int no_of_frames);
 
-inline unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
+unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 							u32 reg, int index)
 {
 	unsigned long ret;
@@ -320,7 +320,7 @@ inline unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 }
 EXPORT_SYMBOL(tegra_dsi_controller_readl);
 
-inline void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
+void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 						u32 val, u32 reg, int index)
 {
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
@@ -329,7 +329,7 @@ inline void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 }
 EXPORT_SYMBOL(tegra_dsi_controller_writel);
 
-inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
+unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
 	unsigned long ret;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
@@ -339,7 +339,7 @@ inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
 
-inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
+void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 {
 	int  i = 0;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
@@ -364,150 +364,10 @@ inline void tegra_dsi_reset_assert(struct tegra_dc_dsi_data *dsi)
 		tegra_periph_reset_assert(dsi->dsi_clk[i]);
 }
 
-static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi);
-static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi);
 static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi);
 static inline void tegra_dsi_lp_clk_disable(struct tegra_dc_dsi_data *dsi);
 
-#ifdef CONFIG_DEBUG_FS
-static int dbg_dsi_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc_dsi_data *dsi = s->private;
-	unsigned long i = 0, j = 0;
-	u32 col = 0;
-	u32 base[MAX_DSI_INSTANCE] = {TEGRA_DSI_BASE, TEGRA_DSIB_BASE};
-
-	if (!dsi->enabled) {
-		seq_printf(s, "DSI controller suspended\n");
-		return 0;
-	}
-
-	tegra_dc_io_start(dsi->dc);
-	tegra_dsi_clk_enable(dsi);
-
-	/* mem dd dump */
-	for (i = 0; i < dsi->max_instances; i++) {
-		for (col = 0, j = 0; j < 0x64; j++) {
-			if (col == 0)
-				seq_printf(s, "%08lX:", base[i] + 4*j);
-			seq_printf(s, "%c%08lX", col == 2 ? '-' : ' ',
-				tegra_dsi_controller_readl(dsi, j, i));
-			if (col == 3) {
-				seq_printf(s, "\n");
-				col = 0;
-			} else
-				col++;
-		}
-		seq_printf(s, "\n");
-	}
-
-#define DUMP_REG(a)	seq_printf(s, "%-45s | %#05x | %#010lx |\n", \
-					#a, a, tegra_dsi_readl(dsi, a));
-
-	DUMP_REG(DSI_INCR_SYNCPT_CNTRL);
-	DUMP_REG(DSI_INCR_SYNCPT_ERROR);
-	DUMP_REG(DSI_CTXSW);
-	DUMP_REG(DSI_POWER_CONTROL);
-	DUMP_REG(DSI_INT_ENABLE);
-	DUMP_REG(DSI_HOST_DSI_CONTROL);
-	DUMP_REG(DSI_CONTROL);
-	DUMP_REG(DSI_SOL_DELAY);
-	DUMP_REG(DSI_MAX_THRESHOLD);
-	DUMP_REG(DSI_TRIGGER);
-	DUMP_REG(DSI_TX_CRC);
-	DUMP_REG(DSI_STATUS);
-	DUMP_REG(DSI_INIT_SEQ_CONTROL);
-	DUMP_REG(DSI_INIT_SEQ_DATA_0);
-	DUMP_REG(DSI_INIT_SEQ_DATA_1);
-	DUMP_REG(DSI_INIT_SEQ_DATA_2);
-	DUMP_REG(DSI_INIT_SEQ_DATA_3);
-	DUMP_REG(DSI_INIT_SEQ_DATA_4);
-	DUMP_REG(DSI_INIT_SEQ_DATA_5);
-	DUMP_REG(DSI_INIT_SEQ_DATA_6);
-	DUMP_REG(DSI_INIT_SEQ_DATA_7);
-	DUMP_REG(DSI_PKT_SEQ_0_LO);
-	DUMP_REG(DSI_PKT_SEQ_0_HI);
-	DUMP_REG(DSI_PKT_SEQ_1_LO);
-	DUMP_REG(DSI_PKT_SEQ_1_HI);
-	DUMP_REG(DSI_PKT_SEQ_2_LO);
-	DUMP_REG(DSI_PKT_SEQ_2_HI);
-	DUMP_REG(DSI_PKT_SEQ_3_LO);
-	DUMP_REG(DSI_PKT_SEQ_3_HI);
-	DUMP_REG(DSI_PKT_SEQ_4_LO);
-	DUMP_REG(DSI_PKT_SEQ_4_HI);
-	DUMP_REG(DSI_PKT_SEQ_5_LO);
-	DUMP_REG(DSI_PKT_SEQ_5_HI);
-	DUMP_REG(DSI_DCS_CMDS);
-	DUMP_REG(DSI_PKT_LEN_0_1);
-	DUMP_REG(DSI_PKT_LEN_2_3);
-	DUMP_REG(DSI_PKT_LEN_4_5);
-	DUMP_REG(DSI_PKT_LEN_6_7);
-	DUMP_REG(DSI_PHY_TIMING_0);
-	DUMP_REG(DSI_PHY_TIMING_1);
-	DUMP_REG(DSI_PHY_TIMING_2);
-	DUMP_REG(DSI_BTA_TIMING);
-	DUMP_REG(DSI_TIMEOUT_0);
-	DUMP_REG(DSI_TIMEOUT_1);
-	DUMP_REG(DSI_TO_TALLY);
-	DUMP_REG(DSI_PAD_CONTROL);
-	DUMP_REG(DSI_PAD_CONTROL_CD);
-	DUMP_REG(DSI_PAD_CD_STATUS);
-	DUMP_REG(DSI_VID_MODE_CONTROL);
-	DUMP_REG(DSI_PAD_CONTROL_0_VS1);
-	DUMP_REG(DSI_PAD_CONTROL_CD_VS1);
-	DUMP_REG(DSI_PAD_CD_STATUS_VS1);
-	DUMP_REG(DSI_PAD_CONTROL_1_VS1);
-	DUMP_REG(DSI_PAD_CONTROL_2_VS1);
-	DUMP_REG(DSI_PAD_CONTROL_3_VS1);
-	DUMP_REG(DSI_PAD_CONTROL_4_VS1);
-	DUMP_REG(DSI_GANGED_MODE_CONTROL);
-	DUMP_REG(DSI_GANGED_MODE_START);
-	DUMP_REG(DSI_GANGED_MODE_SIZE);
-#undef DUMP_REG
-
-	tegra_dsi_clk_disable(dsi);
-	tegra_dc_io_end(dsi->dc);
-
-	return 0;
-}
-
-static int dbg_dsi_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, dbg_dsi_show, inode->i_private);
-}
-
-static const struct file_operations dbg_fops = {
-	.open		= dbg_dsi_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static struct dentry *dsidir;
-
-static void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
-{
-	struct dentry *retval;
-
-	dsidir = debugfs_create_dir("tegra_dsi", NULL);
-	if (!dsidir)
-		return;
-	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
-		&dbg_fops);
-	if (!retval)
-		goto free_out;
-	return;
-free_out:
-	debugfs_remove_recursive(dsidir);
-	dsidir = NULL;
-	return;
-}
-#else
-static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
-{ }
-#endif
-
-static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
+void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
@@ -516,7 +376,7 @@ static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
+void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
@@ -3948,7 +3808,9 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
+#ifdef CONFIG_DEBUG_FS
 	tegra_dc_dsi_debug_create(dsi);
+#endif
 
 	if (dsi->info.dsi2lvds_bridge_enable)
 		dsi->out_ops = &tegra_dsi2lvds_ops;

@@ -374,121 +374,75 @@ static int remove_active_thread(struct quadd_cpu_context *cpu_ctx, pid_t pid)
 	return 0;
 }
 
-static int task_sched_in(struct kprobe *kp, struct pt_regs *regs)
+void __quadd_task_sched_in(struct task_struct *prev,
+			   struct task_struct *task)
 {
-	int n, prev_flag, current_flag;
-	struct task_struct *prev, *task;
-	int prev_nr_active, new_nr_active;
+	int current_flag;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	struct event_data events[QUADD_MAX_COUNTERS];
 	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
-	if (hrt.active == 0)
-		return 0;
-
-	prev = (struct task_struct *)regs->ARM_r1;
-	task = current;
+	if (likely(hrt.active == 0))
+		return;
 /*
 	if (__ratelimit(&ratelimit_state))
-		pr_info("cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
+		pr_info("sch_in, cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
 			quadd_get_processor_id(), (unsigned int)prev->pid,
 			(unsigned int)prev->tgid, (unsigned int)task->pid,
 			(unsigned int)task->tgid);
 */
-	if (!prev || !prev->real_parent || !prev->group_leader ||
-		prev->group_leader->tgid != prev->tgid) {
-		pr_err_once("Warning\n");
-		return 0;
-	}
-
-	prev_flag = is_profile_process(prev->tgid);
 	current_flag = is_profile_process(task->tgid);
 
-	if (prev_flag || current_flag) {
-		prev_nr_active = atomic_read(&cpu_ctx->nr_active);
-		qm_debug_task_sched_in(prev->pid, task->pid, prev_nr_active);
+	if (current_flag) {
+		add_active_thread(cpu_ctx, task->pid, task->tgid);
+		atomic_inc(&cpu_ctx->nr_active);
 
-		if (prev_flag) {
-			n = remove_active_thread(cpu_ctx, prev->pid);
-			atomic_sub(n, &cpu_ctx->nr_active);
-		}
-		if (current_flag) {
-			add_active_thread(cpu_ctx, task->pid, task->tgid);
-			atomic_inc(&cpu_ctx->nr_active);
-		}
+		if (atomic_read(&cpu_ctx->nr_active) == 1) {
+			if (ctx->pmu)
+				ctx->pmu->start();
 
-		new_nr_active = atomic_read(&cpu_ctx->nr_active);
-		if (prev_nr_active != new_nr_active) {
-			if (prev_nr_active == 0) {
-				if (ctx->pmu)
-					ctx->pmu->start();
+			if (ctx->pl310)
+				ctx->pl310->read(events);
 
-				if (ctx->pl310)
-					ctx->pl310->read(events);
-
-				start_hrtimer(cpu_ctx);
-				atomic_inc(&hrt.nr_active_all_core);
-			} else if (new_nr_active == 0) {
-				cancel_hrtimer(cpu_ctx);
-				atomic_dec(&hrt.nr_active_all_core);
-
-				if (ctx->pmu)
-					ctx->pmu->stop();
-			}
+			start_hrtimer(cpu_ctx);
+			atomic_inc(&hrt.nr_active_all_core);
 		}
 	}
-
-	return 0;
 }
 
-static int handler_fault(struct kprobe *kp, struct pt_regs *regs, int trapnr)
+void __quadd_task_sched_out(struct task_struct *prev,
+			    struct task_struct *next)
 {
-	pr_err_once("addr: %p, symbol: %s\n", kp->addr, kp->symbol_name);
-	return 0;
-}
+	int n, prev_flag;
+	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
+	struct quadd_ctx *ctx = hrt.quadd_ctx;
+	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
-static int start_instr(void)
-{
-	int err;
+	if (likely(hrt.active == 0))
+		return;
+/*
+	if (__ratelimit(&ratelimit_state))
+		pr_info("sch_out: cpu: %d, prev: %u (%u) \t--> next: %u (%u)\n",
+			quadd_get_processor_id(), (unsigned int)prev->pid,
+			(unsigned int)prev->tgid, (unsigned int)next->pid,
+			(unsigned int)next->tgid);
+*/
 
-	memset(&hrt.kp_in, 0, sizeof(struct kprobe));
+	prev_flag = is_profile_process(prev->tgid);
 
-	hrt.kp_in.pre_handler = task_sched_in;
-	hrt.kp_in.fault_handler = handler_fault;
-	hrt.kp_in.addr = 0;
-	hrt.kp_in.symbol_name = QUADD_HRT_SCHED_IN_FUNC;
+	if (prev_flag) {
+		n = remove_active_thread(cpu_ctx, prev->pid);
+		atomic_sub(n, &cpu_ctx->nr_active);
 
-	err = register_kprobe(&hrt.kp_in);
-	if (err) {
-		pr_err("register_kprobe error, symbol_name: %s\n",
-			hrt.kp_in.symbol_name);
-		return err;
+		if (atomic_read(&cpu_ctx->nr_active) == 0) {
+			cancel_hrtimer(cpu_ctx);
+			atomic_dec(&hrt.nr_active_all_core);
+
+			if (ctx->pmu)
+				ctx->pmu->stop();
+		}
 	}
-	return 0;
-}
-
-static void stop_instr(void)
-{
-	unregister_kprobe(&hrt.kp_in);
-}
-
-static int init_instr(void)
-{
-	int err;
-
-	err = start_instr();
-	if (err) {
-		pr_err("Init instr failed\n");
-		return err;
-	}
-	stop_instr();
-	return 0;
-}
-
-static int deinit_instr(void)
-{
-	return 0;
 }
 
 static void reset_cpu_ctx(void)
@@ -512,7 +466,6 @@ static void reset_cpu_ctx(void)
 
 int quadd_hrt_start(void)
 {
-	int err;
 	u64 period;
 	long freq;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
@@ -530,12 +483,6 @@ int quadd_hrt_start(void)
 	atomic64_set(&hrt.counter_samples, 0);
 
 	reset_cpu_ctx();
-
-	err = start_instr();
-	if (err) {
-		pr_err("error: start_instr is failed\n");
-		return err;
-	}
 
 	put_header();
 
@@ -563,7 +510,6 @@ void quadd_hrt_stop(void)
 	quadd_ma_stop(&hrt);
 
 	hrt.active = 0;
-	stop_instr();
 
 	atomic64_set(&hrt.counter_samples, 0);
 
@@ -575,7 +521,6 @@ void quadd_hrt_deinit(void)
 	if (hrt.active)
 		quadd_hrt_stop();
 
-	deinit_instr();
 	free_percpu(hrt.cpu_ctx);
 }
 
@@ -621,9 +566,6 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 
 		init_hrtimer(cpu_ctx);
 	}
-
-	if (init_instr())
-		return NULL;
 
 	return &hrt;
 }

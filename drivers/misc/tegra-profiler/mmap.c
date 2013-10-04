@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/err.h>
+#include <linux/sched.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -145,6 +146,7 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 			break;
 		}
 	} else {
+#ifdef CONFIG_MODULES
 		struct module *mod;
 
 		preempt_disable();
@@ -159,6 +161,7 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 				sample->pgoff = 0;
 			}
 		}
+#endif
 	}
 
 	if (file_name) {

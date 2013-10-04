@@ -23,7 +23,6 @@
 
 #include <linux/hrtimer.h>
 #include <linux/limits.h>
-#include <linux/kprobes.h>
 
 #include "backtrace.h"
 
@@ -52,9 +51,6 @@ struct quadd_cpu_context {
 struct quadd_hrt_ctx {
 	struct quadd_cpu_context * __percpu cpu_ctx;
 	u64 sample_period;
-
-	struct kprobe kp_in;
-	/* struct kinstr ki_out; */
 
 	struct quadd_ctx *quadd_ctx;
 

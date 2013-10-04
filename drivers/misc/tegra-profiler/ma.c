@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/timer.h>
+#include <linux/sched.h>
 
 #include <linux/tegra_profiler.h>
 

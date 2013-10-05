@@ -31,7 +31,6 @@
 #include "host1x/host1x.h"
 #include "hardware_t124.h"
 #include "syncpt_t124.h"
-#include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
@@ -315,7 +314,7 @@ static struct resource tsec_resources[] = {
 
 struct nvhost_device_data t124_tsec_info = {
 	.num_channels	= 1,
-	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
+	.version       = NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
@@ -326,10 +325,10 @@ struct nvhost_device_data t124_tsec_info = {
 	.powergate_delay = TSEC_POWERGATE_DELAY,
 	.keepalive       = true,
 	.moduleid      = NVHOST_MODULE_TSEC,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
-	.finalize_poweron = nvhost_tsec_finalize_poweron,
-	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
+	.init          = nvhost_flcn_init,
+	.deinit        = nvhost_flcn_deinit,
+	.finalize_poweron = nvhost_flcn_boot,
+	.firmware_name	= "nvhost_tsec.fw",
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -505,7 +504,7 @@ struct nvhost_device_data t132_msenc_info = {
 
 struct nvhost_device_data t132_tsec_info = {
 	.num_channels	= 1,
-	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
+	.version       = NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
@@ -513,9 +512,10 @@ struct nvhost_device_data t132_tsec_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_TSEC,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
-	.finalize_poweron = nvhost_tsec_finalize_poweron,
+	.init          = nvhost_flcn_init,
+	.deinit        = nvhost_flcn_deinit,
+	.finalize_poweron = nvhost_flcn_boot,
+	.firmware_name	= "nvhost_tsec.fw",
 };
 
 #ifdef CONFIG_ARCH_TEGRA_VIC

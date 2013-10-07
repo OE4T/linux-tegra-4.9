@@ -1199,6 +1199,43 @@ fail:
 	return err;
 }
 
+void nvhost_client_user_deinit(struct platform_device *dev)
+{
+	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_channel *ch = pdata->channel;
+
+	BUG_ON(!ch);
+
+	if (ch->node) {
+		device_destroy(nvhost_master->nvhost_class, ch->cdev.dev);
+		cdev_del(&ch->cdev);
+	}
+
+	if (ch->as_node) {
+		device_destroy(nvhost_master->nvhost_class, ch->as_cdev.dev);
+		cdev_del(&ch->as_cdev);
+	}
+
+	if (pdata->ctrl_node) {
+		device_destroy(nvhost_master->nvhost_class,
+			       pdata->ctrl_cdev.dev);
+		cdev_del(&pdata->ctrl_cdev);
+	}
+
+	if (pdata->dbg_node) {
+		device_destroy(nvhost_master->nvhost_class,
+			       pdata->dbg_cdev.dev);
+		cdev_del(&pdata->dbg_cdev);
+	}
+
+	if (pdata->prof_node) {
+		device_destroy(nvhost_master->nvhost_class,
+			       pdata->prof_cdev.dev);
+		cdev_del(&pdata->prof_cdev);
+	}
+}
+
 int nvhost_client_device_init(struct platform_device *dev)
 {
 	int err;
@@ -1261,7 +1298,6 @@ EXPORT_SYMBOL(nvhost_client_device_init);
 
 int nvhost_client_device_release(struct platform_device *dev)
 {
-	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
@@ -1274,8 +1310,7 @@ int nvhost_client_device_release(struct platform_device *dev)
 	nvhost_device_list_remove(dev);
 
 	/* Release chardev and device node for user space */
-	device_destroy(nvhost_master->nvhost_class, ch->cdev.dev);
-	cdev_del(&ch->cdev);
+	nvhost_client_user_deinit(dev);
 
 	/* Free nvhost channel */
 	nvhost_free_channel(ch);

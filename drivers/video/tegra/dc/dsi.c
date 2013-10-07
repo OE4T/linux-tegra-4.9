@@ -372,6 +372,11 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	u32 col = 0;
 	u32 base[MAX_DSI_INSTANCE] = {TEGRA_DSI_BASE, TEGRA_DSIB_BASE};
 
+	if (!dsi->enabled) {
+		seq_printf(s, "DSI controller suspended\n");
+		return 0;
+	}
+
 	tegra_dc_io_start(dsi->dc);
 	tegra_dsi_clk_enable(dsi);
 
@@ -500,22 +505,18 @@ static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
-	if (!tegra_is_clk_enabled(dsi->dsi_clk[0])) {
-		for (i = 0; i < dsi->max_instances; i++) {
-			clk_prepare_enable(dsi->dsi_clk[i]);
-			udelay(800);
-		}
+	for (i = 0; i < dsi->max_instances; i++) {
+		clk_prepare_enable(dsi->dsi_clk[i]);
+		udelay(800);
 	}
 }
 
 static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
-	if (tegra_is_clk_enabled(dsi->dsi_clk[0])) {
-		for (i = 0; i < dsi->max_instances; i++) {
-			clk_disable_unprepare(dsi->dsi_clk[i]);
-			udelay(800);
-		}
+	for (i = 0; i < dsi->max_instances; i++) {
+		clk_disable_unprepare(dsi->dsi_clk[i]);
+		udelay(800);
 	}
 }
 
@@ -1971,9 +1972,7 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 	dc->one_shot_delay_ms = 4 *
 			DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 
-	/* Enable DSI clock */
 	tegra_dsi_setup_clk(dc, dsi);
-	tegra_dsi_clk_enable(dsi);
 	tegra_dsi_reset_deassert(dsi);
 
 	dsi->current_dsi_clk_khz =
@@ -2531,7 +2530,8 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	regulator_enable(dsi->avdd_dsi_csi);
 	/* stablization delay */
 	mdelay(50);
-
+	/* Enable DSI clocks */
+	tegra_dsi_clk_enable(dsi);
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 
 	/* Stop DC stream before configuring DSI registers

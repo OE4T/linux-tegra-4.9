@@ -65,8 +65,7 @@ struct platform_device *tsec;
 
 static u32 *host1x_status_offset(struct tsec *m)
 {
-	return (u32 *)
-		&(m->mapped[m->os.reserved_offset + TSEC_HOST1X_STATUS_OFFSET]);
+	return &(m->mapped[m->os.reserved_offset + TSEC_HOST1X_STATUS_OFFSET]);
 }
 
 static u32 tsec_get_host1x_state(void)
@@ -261,7 +260,7 @@ int tsec_boot(struct platform_device *dev)
 
 	nvhost_device_writel(dev, tsec_dmactl_r(), 0);
 	nvhost_device_writel(dev, tsec_dmatrfbase_r(),
-		(nvhost_memmgr_dma_addr(m->pa) + m->os.bin_data_offset) >> 8);
+		(m->dma_addr + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
 		tsec_dma_pa_to_internal_256b(dev,
@@ -392,6 +391,10 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	struct tsec *m = get_tsec(dev);
 	const struct firmware *ucode_fw;
 	int err;
+	DEFINE_DMA_ATTRS(attrs);
+
+	m->dma_addr = 0;
+	m->mapped = NULL;
 
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
@@ -400,37 +403,22 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		return err;
 	}
 
-	/* allocate pages for ucode */
-	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
-			     roundup(ucode_fw->size+256, PAGE_SIZE),
-			     PAGE_SIZE, mem_mgr_flag_uncacheable, 0);
-	if (IS_ERR(m->mem_r)) {
-		dev_err(&dev->dev, "nvmap alloc failed");
-		err = PTR_ERR(m->mem_r);
-		m->mem_r = NULL;
-		goto clean_up;
-	}
+	m->size = ucode_fw->size;
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
-	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			&dev->dev, mem_flag_read_only);
-	if (IS_ERR(m->pa)) {
-		dev_err(&dev->dev, "nvmap pin failed for ucode");
-		err = PTR_ERR(m->pa);
-		m->pa = 0;
-		goto clean_up;
-	}
-
-	m->mapped = nvhost_memmgr_mmap(m->mem_r);
+	m->mapped = dma_alloc_attrs(&dev->dev,
+				m->size, &m->dma_addr,
+				GFP_KERNEL, &attrs);
 	if (!m->mapped) {
-		dev_err(&dev->dev, "nvmap mmap failed");
+		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = tsec_setup_ucode_image(dev, (u32 *)m->mapped, ucode_fw);
+	err = tsec_setup_ucode_image(dev, m->mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
-		return err;
+		goto clean_up;
 	}
 
 	m->valid = true;
@@ -441,17 +429,11 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 clean_up:
 	if (m->mapped) {
-		nvhost_memmgr_munmap(m->mem_r, m->mapped);
+		dma_free_attrs(&dev->dev,
+			m->size, m->mapped,
+			m->dma_addr, &attrs);
 		m->mapped = NULL;
-	}
-	if (m->pa) {
-		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
-				&dev->dev, m->pa);
-		m->pa = NULL;
-	}
-	if (m->mem_r) {
-		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
-		m->mem_r = NULL;
+		m->dma_addr = 0;
 	}
 	release_firmware(ucode_fw);
 	return err;
@@ -505,20 +487,19 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 {
 	struct tsec *m = get_tsec(dev);
 
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+
 	disable_tsec_irq(dev);
 
-	/* unpin, free ucode memory */
-	if (m->mem_r) {
-		if (m->mapped)
-			nvhost_memmgr_munmap(m->mem_r, m->mapped);
-		if (m->pa)
-			nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
-					m->mem_r, &dev->dev, m->pa);
-		if (m->mem_r)
-			nvhost_memmgr_put(nvhost_get_host(dev)->memmgr,
-					m->mem_r);
-		m->mem_r = 0;
+	if (m->mapped) {
+		dma_free_attrs(&dev->dev,
+			m->size, m->mapped,
+			m->dma_addr, &attrs);
+		m->mapped = NULL;
+		m->dma_addr = 0;
 	}
+
 	kfree(m);
 	set_tsec(dev, NULL);
 }

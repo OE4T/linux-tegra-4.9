@@ -1282,9 +1282,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	dev_info(&dev->dev, "initialized\n");
 
-	if (pdata->slave) {
+	if (pdata->slave && !pdata->slave_initialized) {
 		pdata->slave->dev.parent = dev->dev.parent;
 		platform_device_register(pdata->slave);
+		pdata->slave_initialized = 1;
 	}
 
 	return 0;

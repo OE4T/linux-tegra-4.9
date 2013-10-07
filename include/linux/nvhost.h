@@ -187,6 +187,7 @@ struct nvhost_device_data {
 
 	struct platform_device *master;	/* Master of a slave device */
 	struct platform_device *slave;	/* Slave device to create in probe */
+	int		slave_initialized;
 
 	int		num_clks;	/* Number of clocks opened for dev */
 	struct clk	*clk[NVHOST_MODULE_MAX_CLOCKS];

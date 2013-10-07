@@ -825,6 +825,15 @@ static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)
 
 }
 
+static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
+{
+	u32 intr;
+
+	intr = gk20a_readl(g, fifo_intr_chsw_error_r());
+	nvhost_err(dev_from_gk20a(g), "chsw: %08x\n", intr);
+	gk20a_writel(g, fifo_intr_chsw_error_r(), intr);
+}
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
@@ -1092,6 +1101,11 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
 		reset_channel = gk20a_fifo_handle_sched_error(g);
 		handled |= fifo_intr_0_sched_error_pending_f();
+	}
+
+	if (fifo_intr & fifo_intr_0_chsw_error_pending_f()) {
+		gk20a_fifo_handle_chsw_fault(g);
+		handled |= fifo_intr_0_chsw_error_pending_f();
 	}
 
 	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {

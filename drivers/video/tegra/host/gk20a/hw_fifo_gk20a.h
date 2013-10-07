@@ -250,6 +250,10 @@ static inline u32 fifo_intr_sched_error_code_ctxsw_timeout_v(void)
 {
 	return 0x0000000a;
 }
+static inline u32 fifo_intr_chsw_error_r(void)
+{
+	return 0x0000256c;
+}
 static inline u32 fifo_intr_mmu_fault_id_r(void)
 {
 	return 0x0000259c;

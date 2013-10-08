@@ -404,7 +404,7 @@ struct nvhost_device_data t124_vic_info = {
 	.idle			= nvhost_scale_notify_idle,
 	.suspend_ndev		= nvhost_scale3d_suspend,
 	.scaling_post_cb	= &nvhost_scale3d_callback,
-	.devfreq_governor	= &nvhost_podgov,
+	.devfreq_governor	= "nvhost_podgov",
 	.actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled		= true,
 	.linear_emc		= true,
@@ -462,7 +462,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.scaling_init		= nvhost_gk20a_scale_init,
 	.scaling_deinit		= nvhost_gk20a_scale_deinit,
 	.suspend_ndev		= nvhost_scale3d_suspend,
-	.devfreq_governor	= &nvhost_podgov,
+	.devfreq_governor	= "nvhost_podgov",
 	.scaling_post_cb	= nvhost_gk20a_scale_callback,
 	.gpu_edp_device		= true,
 #endif

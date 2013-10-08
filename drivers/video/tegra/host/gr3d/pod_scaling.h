@@ -25,10 +25,6 @@ struct platform_device;
 struct dentry;
 
 #define GET_TARGET_FREQ_DONTSCALE	1
-
 /* Suspend is called when powering down module */
 void nvhost_scale3d_suspend(struct device *);
-
-extern struct devfreq_governor nvhost_podgov;
-
 #endif

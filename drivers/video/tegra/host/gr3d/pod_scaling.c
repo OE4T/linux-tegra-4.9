@@ -73,6 +73,8 @@ static void podgov_enable(struct device *dev, int enable);
 static int podgov_user_ctl(struct device *dev);
 static void podgov_set_user_ctl(struct device *dev, int enable);
 
+static struct devfreq_governor nvhost_podgov;
+
 /*******************************************************************************
  * podgov_info_rec - gr3d scaling governor specific parameters
  ******************************************************************************/
@@ -1230,7 +1232,7 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 	return ret;
 }
 
-struct devfreq_governor nvhost_podgov = {
+static struct devfreq_governor nvhost_podgov = {
 	.name = "nvhost_podgov",
 	.get_target_freq = nvhost_pod_estimate_freq,
 	.event_handler = nvhost_pod_event_handler,

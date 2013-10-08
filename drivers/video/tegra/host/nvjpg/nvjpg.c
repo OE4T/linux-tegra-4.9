@@ -40,6 +40,7 @@
 #include "nvhost_scale.h"
 #include "chip_support.h"
 #include "nvhost_memmgr.h"
+#include "t210/t210.h"
 
 #define NVJPG_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVJPG_IDLE_CHECK_PERIOD		10	/* 10 usec */

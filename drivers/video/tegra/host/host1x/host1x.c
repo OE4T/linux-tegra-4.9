@@ -52,6 +52,7 @@
 #include "nvhost_scale.h"
 #include "chip_support.h"
 #include "t124/t124.h"
+#include "t210/t210.h"
 
 #define DRIVER_NAME		"host1x"
 

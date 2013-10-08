@@ -32,6 +32,7 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t124/t124.h"
+#include "t210/t210.h"
 
 #include <linux/uaccess.h>
 #include <linux/fs.h>

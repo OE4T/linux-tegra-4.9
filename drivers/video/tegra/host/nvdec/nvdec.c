@@ -43,6 +43,7 @@
 #include "t114/t114.h"
 #include "t148/t148.h"
 #include "t124/t124.h"
+#include "t210/t210.h"
 
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */

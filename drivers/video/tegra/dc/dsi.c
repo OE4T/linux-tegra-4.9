@@ -3059,7 +3059,7 @@ static void tegra_dc_dsi_idle_work(struct work_struct *work)
 
 static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
-			struct tegra_dsi_cmd *cmd)
+			struct tegra_dsi_cmd *cmd, u8 delay_ms)
 {
 	int err = 0;
 	struct dsi_status *init_status;
@@ -3073,6 +3073,7 @@ static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 	}
 
 	err = _tegra_dsi_write_data(dsi, cmd);
+	mdelay(delay_ms);
 fail:
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
@@ -3083,14 +3084,14 @@ fail:
 
 int tegra_dsi_write_data(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
-			struct tegra_dsi_cmd *cmd)
+			struct tegra_dsi_cmd *cmd, u8 delay_ms)
 {
 	int err;
 
 	tegra_dc_io_start(dc);
 	tegra_dc_dsi_hold_host(dc);
 
-	err = tegra_dsi_write_data_nosync(dc, dsi, cmd);
+	err = tegra_dsi_write_data_nosync(dc, dsi, cmd, delay_ms);
 
 	tegra_dc_dsi_release_host(dc);
 	tegra_dc_io_end(dc);
@@ -3107,6 +3108,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 {
 	u32 i;
 	int err;
+	u8 delay_ms;
 
 	err = 0;
 	for (i = 0; i < n_cmd; i++) {
@@ -3126,8 +3128,15 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 						dsi,
 						cur_cmd->sp_len_dly.frame_cnt);
 		} else {
-			err = tegra_dsi_write_data_nosync(dc, dsi, cur_cmd);
-			mdelay(1);
+			/* default delay 1ms after command */
+			delay_ms = 1;
+			if ((i + 1 < n_cmd) &&
+				(cmd[i + 1].cmd_type == TEGRA_DSI_DELAY_MS)) {
+				delay_ms = cmd[i + 1].sp_len_dly.delay_ms;
+				i++;
+			}
+			err = tegra_dsi_write_data_nosync(dc, dsi,
+							cur_cmd, delay_ms);
 			if (err < 0)
 				break;
 		}
@@ -4451,6 +4460,32 @@ static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
 	}
 }
 
+static int tegra_dsi_te_on_off(struct tegra_dc_dsi_data *dsi, bool flag)
+{
+	int ret;
+
+	struct tegra_dsi_cmd te_enable[] = {
+		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
+				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+		DSI_DLY_MS(20),
+	};
+
+	struct tegra_dsi_cmd te_disable[] = {
+		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
+				DSI_DCS_SET_TEARING_EFFECT_OFF, 0x0),
+		DSI_DLY_MS(20),
+	};
+
+	if (flag)
+		ret = tegra_dsi_send_panel_cmd(dsi->dc, dsi, te_enable,
+					ARRAY_SIZE(te_enable));
+	else
+		ret = tegra_dsi_send_panel_cmd(dsi->dc, dsi, te_disable,
+					ARRAY_SIZE(te_disable));
+
+	return ret;
+}
+
 static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
 					u32 suspend_aggr)
@@ -4630,9 +4665,12 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 		cond_resched();
 
 	tegra_dc_io_start(dc);
+
 	dsi->host_suspended = true;
 
 	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
+
+	tegra_dsi_te_on_off(dsi, false);
 
 	err = _tegra_dsi_host_suspend(dc, dsi, dsi->info.suspend_aggr);
 	if (err < 0) {
@@ -4650,6 +4688,16 @@ fail:
 	tegra_dc_io_end(dc);
 	tegra_dsi_host_suspend_unlock(dc, dsi);
 	return err;
+}
+
+static bool tegra_dc_dsi_osidle(struct tegra_dc *dc)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		return dsi->host_suspended;
+	else
+		return false;
 }
 
 static void tegra_dsi_bl_off(struct backlight_device *bd)
@@ -4760,6 +4808,8 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 			"DSI host resume failed\n");
 		goto fail;
 	}
+
+	tegra_dsi_te_on_off(dsi, true);
 
 	tegra_dsi_start_dc_stream(dc, dsi);
 	dsi->host_suspended = false;
@@ -4980,4 +5030,5 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.resume = tegra_dc_dsi_resume,
 #endif
 	.setup_clk = tegra_dc_dsi_setup_clk,
+	.osidle = tegra_dc_dsi_osidle,
 };

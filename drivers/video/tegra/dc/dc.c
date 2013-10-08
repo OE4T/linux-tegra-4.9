@@ -1559,6 +1559,11 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) || !dc->enabled)
 		return ret;
 
+	if (dc->out_ops && dc->out_ops->osidle) {
+		if (dc->out_ops->osidle(dc))
+			return 0;
+	}
+
 	/*
 	 * Logic is as follows
 	 * a) Indicate we need a vblank.

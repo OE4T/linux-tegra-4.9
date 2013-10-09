@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,6 +86,15 @@ const struct gating_desc gk20a_slcg_gr[] = {
 	{.addr = 0x00408aac, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x004089ac, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00408a24, .prod = 0x00000000, .disable = 0x000001ff},
+	{.addr = 0x0017e050, .prod = 0x00000000, .disable = 0x00fffffe},
+	{.addr = 0x001200a8, .prod = 0x00000000, .disable = 0x00000001},
+	{.addr = 0x0010e48c, .prod = 0x00000000, .disable = 0x0000003e},
+	{.addr = 0x00001c04, .prod = 0x00000000, .disable = 0x000000fe},
+	{.addr = 0x00106f28, .prod = 0x00000040, .disable = 0x000007fe},
+	{.addr = 0x000206b8, .prod = 0x00000000, .disable = 0x0000000f},
+	{.addr = 0x0017ea98, .prod = 0x00000000, .disable = 0xfffffffe},
+	{.addr = 0x00106f28, .prod = 0x00000040, .disable = 0x000007fe},
+	{.addr = 0x00120048, .prod = 0x00000000, .disable = 0x00000049},
 };
 
 /* slcg perf */
@@ -159,6 +168,21 @@ const struct gating_desc gk20a_blcg_gr[] = {
 	{.addr = 0x004089a8, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x004089b0, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x004089b8, .prod = 0x00004042, .disable = 0x00000000},
+	{.addr = 0x0017ea60, .prod = 0x00000044, .disable = 0x00000000},
+	{.addr = 0x0017ea68, .prod = 0x00000044, .disable = 0x00000000},
+	{.addr = 0x00100d30, .prod = 0x0000c242, .disable = 0x00000000},
+	{.addr = 0x00100d48, .prod = 0x0000c242, .disable = 0x00000000},
+	{.addr = 0x00100d3c, .prod = 0x00000242, .disable = 0x00000000},
+	{.addr = 0x0017ea78, .prod = 0x00000044, .disable = 0x00000000},
+	{.addr = 0x0017e040, .prod = 0x00000044, .disable = 0x00000000},
+	{.addr = 0x00100d1c, .prod = 0x00000042, .disable = 0x00000000},
+	{.addr = 0x00106f24, .prod = 0x0000c242, .disable = 0x00000000},
+	{.addr = 0x0041be00, .prod = 0x00000004, .disable = 0x00000007},
+	{.addr = 0x00100d10, .prod = 0x0000c242, .disable = 0x00000000},
+	{.addr = 0x0017ea70, .prod = 0x00000044, .disable = 0x00000000},
+	{.addr = 0x00001c00, .prod = 0x00000042, .disable = 0x00000000},
+	{.addr = 0x00100c98, .prod = 0x00000242, .disable = 0x00000000},
+	{.addr = 0x0017e030, .prod = 0x00000044, .disable = 0x00000000},
 };
 
 /* pg gr */

@@ -182,6 +182,7 @@ struct pm_qos_constraints {
 struct pm_qos_flags {
 	struct list_head list;
 	s32 effective_flags;	/* Do not change to 64 bit */
+	struct blocking_notifier_head *notifiers;
 };
 
 struct dev_pm_qos {

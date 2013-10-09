@@ -830,6 +830,12 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 	mutex_unlock(&pm_qos_lock);
 
 	trace_pm_qos_update_flags(action, prev_value, curr_value);
+
+	if (curr_value != prev_value && pqf->notifiers)
+		blocking_notifier_call_chain(pqf->notifiers,
+					     (unsigned long)curr_value,
+					     NULL);
+
 	return prev_value != curr_value;
 }
 

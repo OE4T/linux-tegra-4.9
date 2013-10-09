@@ -2500,3 +2500,11 @@ void gk20a_mm_ltc_isr(struct gk20a *g)
 	nvhost_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
 	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }
+
+bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
+{
+	u32 debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	return fb_mmu_debug_ctrl_debug_v(debug_ctrl) ==
+		fb_mmu_debug_ctrl_debug_enabled_v();
+}
+

@@ -152,4 +152,6 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,
 
 int gk20a_fifo_suspend(struct gk20a *g);
 
+bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
+
 #endif /*__GR_GK20A_H__*/

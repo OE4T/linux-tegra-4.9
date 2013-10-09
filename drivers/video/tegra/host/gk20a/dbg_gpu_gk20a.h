@@ -17,14 +17,19 @@
  */
 #ifndef __DBG_GPU_GK20A_H_
 #define __DBG_GPU_GK20A_H_
+#include <linux/poll.h>
 
 /* module debug driver interface */
 int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp);
 int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp);
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait);
 
 /* used by profiler driver interface */
 int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp);
+
+/* used by the interrupt handler to post events */
+void gk20a_dbg_gpu_post_events(struct channel_gk20a *fault_ch);
 
 struct dbg_gpu_session_ops {
 	int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
@@ -32,6 +37,11 @@ struct dbg_gpu_session_ops {
 			    u64 num_ops);
 };
 
+struct dbg_gpu_session_events {
+	wait_queue_head_t wait_queue;
+	bool events_enabled;
+	int num_pending_events;
+};
 
 struct dbg_session_gk20a {
 	/* dbg session id used for trace/prints */
@@ -60,6 +70,10 @@ struct dbg_session_gk20a {
 
 	/* session operations */
 	struct dbg_gpu_session_ops *ops;
+
+	/* event support */
+	struct dbg_gpu_session_events dbg_events;
+	struct list_head dbg_s_list_node;
 };
 
 extern struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a;

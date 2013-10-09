@@ -96,6 +96,7 @@ const struct file_operations tegra_gk20a_dbg_gpu_ops = {
 	.release        = gk20a_dbg_gpu_dev_release,
 	.open           = gk20a_dbg_gpu_dev_open,
 	.unlocked_ioctl = gk20a_dbg_gpu_dev_ioctl,
+	.poll		= gk20a_dbg_gpu_dev_poll,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif

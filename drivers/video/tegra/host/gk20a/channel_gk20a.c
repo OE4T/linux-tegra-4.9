@@ -31,6 +31,7 @@
 #include "debug.h"
 
 #include "gk20a.h"
+#include "dbg_gpu_gk20a.h"
 
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -475,6 +476,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	struct vm_gk20a *ch_vm = ch->vm;
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
+	struct dbg_session_gk20a *dbg_s;
 
 	nvhost_dbg_fn("");
 
@@ -519,6 +521,16 @@ unbind:
 	channel_gk20a_free_inst(g, ch);
 
 	ch->vpr = false;
+
+	/* unlink all debug sessions */
+	mutex_lock(&ch->dbg_s_lock);
+
+	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+		dbg_s->ch = NULL;
+		list_del_init(&dbg_s->dbg_s_list_node);
+	}
+
+	mutex_unlock(&ch->dbg_s_lock);
 
 	/* ALWAYS last */
 	release_used_channel(f, ch);
@@ -1475,6 +1487,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 #endif
+	INIT_LIST_HEAD(&c->dbg_s_list);
 	mutex_init(&c->dbg_s_lock);
 	return 0;
 }

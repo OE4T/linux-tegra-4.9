@@ -131,7 +131,7 @@ struct channel_gk20a {
 	} cyclestate;
 #endif
 	struct mutex dbg_s_lock;
-	struct dbg_session_gk20a *dbg_s;
+	struct list_head dbg_s_list;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

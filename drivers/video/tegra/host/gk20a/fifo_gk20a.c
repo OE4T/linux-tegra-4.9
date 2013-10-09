@@ -1623,3 +1623,12 @@ int gk20a_fifo_suspend(struct gk20a *g)
 	nvhost_dbg_fn("done");
 	return 0;
 }
+
+bool gk20a_fifo_mmu_fault_pending(struct gk20a *g)
+{
+	if (gk20a_readl(g, fifo_intr_0_r()) &
+			fifo_intr_0_mmu_fault_pending_f())
+		return true;
+	else
+		return false;
+}

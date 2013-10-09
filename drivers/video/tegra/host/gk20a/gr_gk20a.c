@@ -52,6 +52,7 @@
 #include "gk20a_gating_reglist.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
+#include "dbg_gpu_gk20a.h"
 
 
 
@@ -3524,6 +3525,28 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
+static void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
+{
+	/* enable tpc exception forwarding */
+	gk20a_writel(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r(),
+		gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f());
+
+	/* enable gpc exception forwarding */
+	gk20a_writel(g, gr_gpc0_gpccs_gpc_exception_en_r(),
+		gr_gpc0_gpccs_gpc_exception_en_tpc_0_enabled_f());
+}
+
+static void gk20a_gr_disable_gpc_exceptions(struct gk20a *g)
+{
+	/* disable tpc exception forwarding */
+	gk20a_writel(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r(),
+		gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_disabled_f());
+
+	/* disable gpc exception forwarding */
+	gk20a_writel(g, gr_gpc0_gpccs_gpc_exception_en_r(),
+		gr_gpc0_gpccs_gpc_exception_en_tpc_0_disabled_f());
+}
+
 static int gk20a_init_gr_setup_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -3662,8 +3685,43 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     gr_ds_hww_report_mask_sph22_err_report_f() |
 		     gr_ds_hww_report_mask_sph23_err_report_f());
 
+	/* setup sm warp esr report masks */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(),
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_stack_error_report_f()	|
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_api_stack_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_ret_empty_stack_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_wrap_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_pc_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_overflow_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_immc_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_reg_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_encoding_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_sph_instr_combo_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_reg_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_addr_space_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param2_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_ldc_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_geometry_sm_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_divergent_report_f());
+
+	/* setup sm global esr report mask */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r(),
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_sm_to_sm_fault_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_l1_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_multiple_warp_errors_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_physical_stack_overflow_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_int_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_pause_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complete_report_f());
+
+	/* enable per GPC exceptions */
+	gk20a_gr_enable_gpc_exceptions(g);
+
 	/* TBD: ECC for L1/SM */
-	/* TBD: enable per GPC exceptions */
 	/* TBD: enable per BE exceptions */
 
 	/* reset and enable all exceptions */
@@ -4389,10 +4447,176 @@ unlock:
 	return chid;
 }
 
+static int gk20a_gr_lock_down_sm(struct gk20a *g, u32 global_esr_mask)
+{
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	bool mmu_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled(g);
+	u32 dbgr_control0;
+
+	nvhost_dbg(dbg_intr | dbg_gpu_dbg, "locking down SM");
+
+	/* assert stop trigger */
+	dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
+	dbgr_control0 |= gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f();
+	gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r(), dbgr_control0);
+
+	/* wait for the sm to lock down */
+	do {
+		u32 global_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r());
+		u32 warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r());
+		u32 dbgr_status0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_status0_r());
+		bool locked_down =
+			(gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
+			 gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v());
+		bool error_pending =
+			(gr_gpc0_tpc0_sm_hww_warp_esr_error_v(warp_esr) !=
+			 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_v()) ||
+			((global_esr & ~global_esr_mask) != 0);
+
+		if (locked_down || !error_pending) {
+			nvhost_dbg(dbg_intr | dbg_gpu_dbg, "locked down SM");
+
+			/* de-assert stop trigger */
+			dbgr_control0 &= ~gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f();
+			gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r(), dbgr_control0);
+
+			return 0;
+		}
+
+		/* if an mmu fault is pending and mmu debug mode is not
+		 * enabled, the sm will never lock down. */
+		if (!mmu_debug_mode_enabled && gk20a_fifo_mmu_fault_pending(g)) {
+			nvhost_err(dev_from_gk20a(g), "mmu fault pending, sm will"
+				   " never lock down!");
+			return -EFAULT;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+
+	} while (time_before(jiffies, end_jiffies));
+
+	nvhost_err(dev_from_gk20a(g), "timed out while trying to lock down SM");
+
+	return -EAGAIN;
+}
+
+static bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
+{
+	u32 dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
+
+	/* check if an sm debugger is attached */
+	if (gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_v(dbgr_control0) ==
+			gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_v())
+		return true;
+
+	return false;
+}
+
+static void gk20a_gr_clear_sm_hww(struct gk20a *g, u32 global_esr)
+{
+	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r(), global_esr);
+
+	/* clear the warp hww */
+	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r(),
+			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
+}
+
 static struct channel_gk20a *
 channel_from_hw_chid(struct gk20a *g, u32 hw_chid)
 {
 	return g->fifo.channel+hw_chid;
+}
+
+static int gk20a_gr_handle_sm_exception(struct gk20a *g,
+		struct gr_isr_data *isr_data)
+{
+	int ret = 0;
+	bool do_warp_sync = false;
+	/* these three interrupts don't require locking down the SM. They can
+	 * be handled by usermode clients as they aren't fatal. Additionally,
+	 * usermode clients may wish to allow some warps to execute while others
+	 * are at breakpoints, as opposed to fatal errors where all warps should
+	 * halt. */
+	u32 global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
+			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
+			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+	u32 global_esr, warp_esr;
+	bool sm_debugger_attached = gk20a_gr_sm_debugger_attached(g);
+	struct channel_gk20a *fault_ch;
+
+	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
+
+	global_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r());
+	warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r());
+
+	/* if an sm debugger is attached, disable forwarding of tpc exceptions.
+	 * the debugger will reenable exceptions after servicing them. */
+	if (sm_debugger_attached) {
+		u32 tpc_exception_en = gk20a_readl(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r());
+		tpc_exception_en &= ~gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f();
+		gk20a_writel(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r(), tpc_exception_en);
+		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "SM debugger attached");
+	}
+
+	/* if a debugger is present and an error has occurred, do a warp sync */
+	if (sm_debugger_attached && ((warp_esr != 0) || ((global_esr & ~global_mask) != 0))) {
+		nvhost_dbg(dbg_intr, "warp sync needed");
+		do_warp_sync = true;
+	}
+
+	if (do_warp_sync) {
+		ret = gk20a_gr_lock_down_sm(g, global_mask);
+		if (ret) {
+			nvhost_err(dev_from_gk20a(g), "sm did not lock down!\n");
+			return ret;
+		}
+	}
+
+	/* finally, signal any client waiting on an event */
+	fault_ch = channel_from_hw_chid(g, isr_data->chid);
+	if (fault_ch)
+		gk20a_dbg_gpu_post_events(fault_ch);
+
+	return ret;
+}
+
+static int gk20a_gr_handle_tpc_exception(struct gk20a *g,
+		struct gr_isr_data *isr_data)
+{
+	int ret = 0;
+	u32 tpc_exception = gk20a_readl(g, gr_gpcs_tpcs_tpccs_tpc_exception_r());
+
+	nvhost_dbg(dbg_intr | dbg_gpu_dbg, "");
+
+	/* check if an sm exeption is pending  */
+	if (gr_gpcs_tpcs_tpccs_tpc_exception_sm_v(tpc_exception) ==
+			gr_gpcs_tpcs_tpccs_tpc_exception_sm_pending_v()) {
+		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "SM exception pending");
+		ret = gk20a_gr_handle_sm_exception(g, isr_data);
+	}
+
+	return ret;
+}
+
+static int gk20a_gr_handle_gpc_exception(struct gk20a *g,
+		struct gr_isr_data *isr_data)
+{
+	int ret = 0;
+	u32 gpc_exception = gk20a_readl(g, gr_gpcs_gpccs_gpc_exception_r());
+
+	nvhost_dbg(dbg_intr | dbg_gpu_dbg, "");
+
+	/* check if tpc 0 has an exception */
+	if (gr_gpcs_gpccs_gpc_exception_tpc_v(gpc_exception) ==
+			gr_gpcs_gpccs_gpc_exception_tpc_0_pending_v()) {
+		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "TPC exception pending");
+		ret = gk20a_gr_handle_tpc_exception(g, isr_data);
+	}
+
+	return ret;
 }
 
 void gk20a_gr_isr(struct gk20a *g)
@@ -4434,7 +4658,8 @@ void gk20a_gr_isr(struct gk20a *g)
 		goto clean_up;
 	}
 
-	nvhost_dbg(dbg_intr, "channel %d: addr 0x%08x, "
+	nvhost_dbg(dbg_intr | dbg_gpu_dbg,
+	 	"channel %d: addr 0x%08x, "
 		"data 0x%08x 0x%08x,"
 		"ctx 0x%08x, offset 0x%08x, "
 		"subchannel 0x%08x, class 0x%08x",
@@ -4474,20 +4699,43 @@ void gk20a_gr_isr(struct gk20a *g)
 	if (gr_intr & gr_intr_exception_pending_f()) {
 		u32 exception = gk20a_readl(g, gr_exception_r());
 
-		nvhost_dbg(dbg_intr, "exception %08x\n", exception);
+		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "exception %08x\n", exception);
 
 		if (exception & gr_exception_fe_m()) {
 			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
 			nvhost_dbg(dbg_intr, "fe warning %08x\n", fe);
 			gk20a_writel(g, gr_fe_hww_esr_r(), fe);
 		}
-		gk20a_writel(g, gr_intr_r(),
-			gr_intr_exception_reset_f());
+
+		/* check if a gpc exception has occurred */
+		if (exception & gr_exception_gpc_m() && ret == 0) {
+			u32 exception1 = gk20a_readl(g, gr_exception1_r());
+			u32 global_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r());
+
+			nvhost_dbg(dbg_intr | dbg_gpu_dbg, "GPC exception pending");
+
+			/* if no sm debugger is present, clean up the channel */
+			if (!gk20a_gr_sm_debugger_attached(g)) {
+				nvhost_dbg(dbg_intr | dbg_gpu_dbg,
+					   "SM debugger not attached, clearing interrupt");
+				ret = 0;
+			}
+			else {
+				/* check if gpc 0 has an exception */
+				if (exception1 & gr_exception1_gpc_0_pending_f())
+					ret = gk20a_gr_handle_gpc_exception(g, &isr_data);
+			}
+
+			/* clear the hwws, also causes tpc and gpc exceptions to be cleared */
+			gk20a_gr_clear_sm_hww(g, global_esr);
+		}
+
+		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
 		gr_intr &= ~gr_intr_exception_pending_f();
 	}
 
 	if (ret) {
-		struct channel_gk20a *fault_ch =
+		struct channel_gk20a* fault_ch =
 			channel_from_hw_chid(g, isr_data.chid);
 		if (fault_ch && fault_ch->hwctx)
 			gk20a_free_channel(fault_ch->hwctx, false);

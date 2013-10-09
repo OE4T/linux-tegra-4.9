@@ -773,8 +773,8 @@ static struct mapped_buffer_node *find_mapped_buffer_locked(
 	return 0;
 }
 
-static struct mapped_buffer_node *find_mapped_buffer_range(struct rb_root *root,
-							   u64 addr)
+static struct mapped_buffer_node *find_mapped_buffer_range_locked(
+					struct rb_root *root, u64 addr)
 {
 	struct rb_node *node = root->rb_node;
 	while (node) {
@@ -2301,13 +2301,20 @@ static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 	nvhost_dbg_fn("gpu_va=0x%llx", gpu_va);
 
-	mapped_buffer = find_mapped_buffer_range(&vm->mapped_buffers, gpu_va);
-	if (!mapped_buffer)
+	mutex_lock(&vm->update_gmmu_lock);
+
+	mapped_buffer = find_mapped_buffer_range_locked(&vm->mapped_buffers,
+							gpu_va);
+	if (!mapped_buffer) {
+		mutex_unlock(&vm->update_gmmu_lock);
 		return -EINVAL;
+	}
 
 	*mgr = mapped_buffer->memmgr;
 	*r = mapped_buffer->handle_ref;
 	*offset = gpu_va - mapped_buffer->addr;
+
+	mutex_unlock(&vm->update_gmmu_lock);
 
 	return 0;
 }

@@ -100,7 +100,6 @@ enum RM_SLOW_SCAN_LEVELS {
 #define RM_WINTEK_7_CHANNEL_X 30
 
 #define TS_TIMER_PERIOD		HZ
-#define CTRL_BY_POWER_HAL
 
 struct timer_list ts_timer_triggle;
 static void init_ts_timer(void);
@@ -193,6 +192,7 @@ struct input_dev *g_input_dev;
 struct spi_device *g_spi;
 struct rm31080a_ts_para g_stTs;
 unsigned long g_smooth_level = 1;
+bool g_is_flush;
 
 struct rm_tch_queue_info g_stQ;
 
@@ -794,7 +794,8 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			" - %d - %d\n", pCmdTbl[_SUB_CMD], pCmdTbl[_DATA]);*/
 			ret = OK;
 			/* Temporarily solving external clk issue for NV
-			     for different kind of clk source*//*
+				for different kind of clk source*/
+			/*
 			if (ts && ts->clk) {
 				if (pCmdTbl[_SUB_CMD] == KRL_SUB_CMD_SET_CLK) {
 					if (pCmdTbl[_DATA])
@@ -854,6 +855,7 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			/*rm_printk("Raydium - KRL_CMD_FLUSH_QU "
 			"- %d\n", pCmdTbl[_SUB_CMD]);*/
 			ret = OK;
+			g_is_flush = true;
 			if (pCmdTbl[_SUB_CMD] == KRL_SUB_CMD_SENSOR_QU)
 				flush_workqueue(g_stTs.rm_workqueue);
 			else if (pCmdTbl[_SUB_CMD] == KRL_SUB_CMD_TIMER_QU)
@@ -1035,6 +1037,7 @@ static int rm_tch_ts_send_signal(int pid, int iInfo)
 	rcu_read_unlock();
 	if (t == NULL) {
 		dev_err(&g_spi->dev, "Raydium - %s : no such pid\n", __func__);
+		mutex_unlock(&lock);
 		return FAIL;
 	} else
 		/*send the signal*/
@@ -1043,6 +1046,7 @@ static int rm_tch_ts_send_signal(int pid, int iInfo)
 	if (ret < 0) {
 		dev_err(&g_spi->dev, "Raydium - %s : send sig failed err:%d\n",
 			__func__, ret);
+		mutex_unlock(&lock);
 		return FAIL;
 	}
 	mutex_unlock(&lock);
@@ -1204,6 +1208,9 @@ static void rm_work_handler(struct work_struct *work)
 	if (g_stTs.bInitFinish == false || g_stTs.bIsSuspended)
 		return;
 
+	if (g_is_flush == true)
+		return;
+
 	mutex_lock(&g_stTs.mutex_scan_mode);
 
 	iRet = rm_tch_ctrl_clear_int();
@@ -1243,6 +1250,7 @@ static void rm_tch_init_ts_structure_part(void)
 	g_stTs.u8ScanModeState = RM_SCAN_ACTIVE_MODE;
 
 	g_pu8BurstReadBuf = NULL;
+	g_is_flush = false;
 
 	rm_ctrl_watchdog_func(0);
 	rm_tch_ctrl_init();
@@ -1327,6 +1335,9 @@ static void rm_timer_work_handler(struct work_struct *work)
 {
 	static u16 u32TimerCnt; /*= 0; remove by checkpatch*/
 	if (g_stTs.bIsSuspended)
+		return;
+
+	if (g_is_flush == true)
 		return;
 
 	mutex_lock(&g_stTs.mutex_scan_mode);
@@ -1844,6 +1855,7 @@ static void rm_ctrl_stop(struct rm_tch_ts *ts)
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 }
 
+#ifdef CONFIG_PM
 static int rm_tch_suspend(struct device *dev)
 {
 	struct rm_tch_ts *ts = dev_get_drvdata(dev);
@@ -1885,13 +1897,12 @@ static void rm_tch_early_resume(struct early_suspend *es)
 	if (rm_tch_resume(dev) != 0)
 		dev_err(dev, "Raydium - %s : failed\n", __func__);
 }
-#endif			/*CONFIG_HAS_EARLYSUSPEND*/
-
-#ifdef CONFIG_PM
+#else
 static const struct dev_pm_ops rm_tch_pm_ops = {
 	.suspend = rm_tch_suspend,
 	.resume = rm_tch_resume,
 };
+#endif			/*CONFIG_HAS_EARLYSUSPEND*/
 #endif			/*CONFIG_PM*/
 
 /* NVIDIA 20121026 */
@@ -1899,12 +1910,15 @@ static const struct dev_pm_ops rm_tch_pm_ops = {
 static int rm_tch_input_enable(struct input_dev *in_dev)
 {
 	int error = 0;
+
+#ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
 	dev_info(ts->dev, "Raydium - resume\n");
 	error = rm_tch_resume(ts->dev);
 	if (error)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
+#endif
 
 	return error;
 }
@@ -1912,6 +1926,8 @@ static int rm_tch_input_enable(struct input_dev *in_dev)
 static int rm_tch_input_disable(struct input_dev *in_dev)
 {
 	int error = 0;
+
+#ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
 	dev_info(ts->dev, "Raydium - suspend\n");
@@ -1920,6 +1936,7 @@ static int rm_tch_input_disable(struct input_dev *in_dev)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
 	else
 		dev_info(ts->dev, "Raydium - suspend done\n");
+#endif
 
 	return error;
 }
@@ -2448,8 +2465,10 @@ static struct spi_driver rm_tch_spi_driver = {
 		.name = "rm_ts_spidev",
 		.bus = &spi_bus_type,
 		.owner = THIS_MODULE,
-#if defined(CONFIG_PM) && !defined(CTRL_BY_POWER_HAL)
+#if !defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_PM
 		.pm = &rm_tch_pm_ops,
+#endif
 #endif
 	},
 	.probe = rm_tch_spi_probe,

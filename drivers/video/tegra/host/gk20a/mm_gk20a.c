@@ -2312,15 +2312,25 @@ static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	u32 data;
 	s32 retry = 200;
 
+	nvhost_dbg_fn("");
+
 	/* pagetables are considered sw states which are preserved after
 	   prepare_poweroff. When gk20a deinit releases those pagetables,
 	   common code in vm unmap path calls tlb invalidate that touches
 	   hw. Use the power_on flag to skip tlb invalidation when gpu
 	   power is turned off */
+
 	if (!g->power_on)
 		return;
 
-	nvhost_dbg_fn("");
+	/* No need to invalidate if tlb is clean */
+	mutex_lock(&vm->update_gmmu_lock);
+	if (!vm->tlb_dirty) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		return;
+	}
+	vm->tlb_dirty = false;
+	mutex_unlock(&vm->update_gmmu_lock);
 
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());

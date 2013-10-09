@@ -1308,10 +1308,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* We don't know what context is currently running...                */
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
-	if (c->vm->tlb_dirty) {
-		c->vm->tlb_inval(c->vm);
-		c->vm->tlb_dirty = false;
-	}
+	c->vm->tlb_inval(c->vm);
 
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
@@ -1443,10 +1440,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* We don't know what context is currently running...                */
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
-	if (c->vm->tlb_dirty) {
-		c->vm->tlb_inval(c->vm);
-		c->vm->tlb_dirty = false;
-	}
+	c->vm->tlb_inval(c->vm);
 
 	trace_nvhost_channel_submitted_gpfifo(c->ch->dev->name,
 					   c->hw_chid,

@@ -173,6 +173,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	mm->g = g;
+	mutex_init(&mm->tlb_lock);
 	mm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 	mm->pde_stride    = mm->big_page_size << 10;
 	mm->pde_stride_shift = ilog2(mm->pde_stride);
@@ -2307,6 +2308,7 @@ static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
+	struct mm_gk20a *mm = vm->mm;
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->pdes.sgt->sgl) >> 12);
 	u32 data;
@@ -2332,6 +2334,7 @@ static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	vm->tlb_dirty = false;
 	mutex_unlock(&vm->update_gmmu_lock);
 
+	mutex_lock(&mm->tlb_lock);
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
@@ -2366,6 +2369,8 @@ static void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
+
+	mutex_unlock(&mm->tlb_lock);
 }
 
 #if 0 /* VM DEBUG */

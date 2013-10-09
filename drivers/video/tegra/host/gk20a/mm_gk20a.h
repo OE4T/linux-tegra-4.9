@@ -264,6 +264,8 @@ struct mm_gk20a {
 		struct inst_desc inst_block;
 	} pmu;
 
+	struct mutex tlb_lock;
+
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
 #ifdef CONFIG_DEBUG_FS

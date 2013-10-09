@@ -36,6 +36,7 @@
 #include <linux/fb.h>
 #include <linux/suspend.h>
 #include <linux/sched.h>
+#include <linux/input-cfboost.h>
 
 #include <mach/pm_domains.h>
 
@@ -974,6 +975,10 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_pmu_debugfs_init(dev);
 #endif
 
+#ifdef CONFIG_INPUT_CFBOOST
+	cfb_add_device(&dev->dev);
+#endif
+
 	return 0;
 }
 
@@ -981,6 +986,10 @@ static int __exit gk20a_remove(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	nvhost_dbg_fn("");
+
+#ifdef CONFIG_INPUT_CFBOOST
+	cfb_remove_device(&dev->dev);
+#endif
 
 	if (g && g->remove_support)
 		g->remove_support(dev);

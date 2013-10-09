@@ -265,6 +265,7 @@ struct mm_gk20a {
 	} pmu;
 
 	struct mutex tlb_lock;
+	struct mutex l2_op_lock;
 
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;

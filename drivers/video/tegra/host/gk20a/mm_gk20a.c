@@ -175,6 +175,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 	mm->g = g;
 	mutex_init(&mm->tlb_lock);
+	mutex_init(&mm->l2_op_lock);
 	mm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 	mm->pde_stride    = mm->big_page_size << 10;
 	mm->pde_stride_shift = ilog2(mm->pde_stride);
@@ -2164,7 +2165,7 @@ clean_up:
  * Note: the name here is a bit of a misnomer.  ELPG uses this
  * internally... but ELPG doesn't have to be on to do it manually.
  */
-static void gk20a_mm_g_elpg_flush(struct gk20a *g)
+static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 {
 	u32 data;
 	s32 retry = 100;
@@ -2196,12 +2197,15 @@ static void gk20a_mm_g_elpg_flush(struct gk20a *g)
 
 void gk20a_mm_fb_flush(struct gk20a *g)
 {
+	struct mm_gk20a *mm = &g->mm;
 	u32 data;
 	s32 retry = 100;
 
 	nvhost_dbg_fn("");
 
-	gk20a_mm_g_elpg_flush(g);
+	mutex_lock(&mm->l2_op_lock);
+
+	gk20a_mm_g_elpg_flush_locked(g);
 
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
@@ -2226,14 +2230,58 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
 			"fb_flush too many retries");
+
+	mutex_unlock(&mm->l2_op_lock);
 }
 
-void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
+static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 {
 	u32 data;
 	s32 retry = 200;
 
+	/* Invalidate any clean lines from the L2 so subsequent reads go to
+	   DRAM. Dirty lines are not affected by this operation. */
+	gk20a_writel(g, flush_l2_system_invalidate_r(),
+		flush_l2_system_invalidate_pending_busy_f());
+
+	do {
+		data = gk20a_readl(g, flush_l2_system_invalidate_r());
+
+		if (flush_l2_system_invalidate_outstanding_v(data) ==
+			flush_l2_system_invalidate_outstanding_true_v() ||
+		    flush_l2_system_invalidate_pending_v(data) ==
+			flush_l2_system_invalidate_pending_busy_v()) {
+				nvhost_dbg_info("l2_system_invalidate 0x%x",
+						data);
+				retry--;
+				usleep_range(20, 40);
+		} else
+			break;
+	} while (retry >= 0);
+
+	if (retry < 0)
+		nvhost_warn(dev_from_gk20a(g),
+			"l2_system_invalidate too many retries");
+}
+
+void gk20a_mm_l2_invalidate(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+	mutex_lock(&mm->l2_op_lock);
+	gk20a_mm_l2_invalidate_locked(g);
+	mutex_unlock(&mm->l2_op_lock);
+}
+
+void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
+{
+	struct mm_gk20a *mm = &g->mm;
+	u32 data;
+	s32 retry = 200;
+
 	nvhost_dbg_fn("");
+
+	mutex_lock(&mm->l2_op_lock);
+
 	/* Flush all dirty lines from the L2 to DRAM. Lines are left in the L2
 	   as clean, so subsequent reads might hit in the L2. */
 	gk20a_writel(g, flush_l2_flush_dirty_r(),
@@ -2257,42 +2305,12 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 		nvhost_warn(dev_from_gk20a(g),
 			"l2_flush_dirty too many retries");
 
-	if (!invalidate)
-		return;
+	if (invalidate)
+		gk20a_mm_l2_invalidate_locked(g);
 
-	gk20a_mm_l2_invalidate(g);
-
-	return;
+	mutex_unlock(&mm->l2_op_lock);
 }
 
-void gk20a_mm_l2_invalidate(struct gk20a *g)
-{
-	u32 data;
-	s32 retry = 200;
-
-	/* Invalidate any clean lines from the L2 so subsequent reads go to
-	   DRAM. Dirty lines are not affected by this operation. */
-	gk20a_writel(g, flush_l2_system_invalidate_r(),
-		flush_l2_system_invalidate_pending_busy_f());
-
-	do {
-		data = gk20a_readl(g, flush_l2_system_invalidate_r());
-
-		if (flush_l2_system_invalidate_outstanding_v(data) ==
-			flush_l2_system_invalidate_outstanding_true_v() ||
-		    flush_l2_system_invalidate_pending_v(data) ==
-			flush_l2_system_invalidate_pending_busy_v()) {
-				nvhost_dbg_info("l2_system_invalidate 0x%x", data);
-				retry--;
-				usleep_range(20, 40);
-		} else
-			break;
-	} while (retry >= 0);
-
-	if (retry < 0)
-		nvhost_warn(dev_from_gk20a(g),
-			"l2_system_invalidate too many retries");
-}
 
 static int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 		struct mem_mgr **mgr, struct mem_handle **r, u64 *offset)

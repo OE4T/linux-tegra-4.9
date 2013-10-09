@@ -246,8 +246,8 @@ int dma_release_from_coherent(struct device *dev, int order, void *vaddr)
 	else
 		mem_addr =  mem->virt_base;
 
-	if (mem && vaddr >= mem_addr && vaddr <
-		   (mem_addr + (mem->size << PAGE_SHIFT))) {
+	if (mem && vaddr >= mem_addr &&
+	    vaddr - mem_addr < mem->size << PAGE_SHIFT) {
 
 		int page = (vaddr - mem_addr) >> PAGE_SHIFT;
 		unsigned long flags;

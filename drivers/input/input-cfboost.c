@@ -52,6 +52,7 @@ MODULE_LICENSE("GPL v2");
 
 
 static struct pm_qos_request freq_req, core_req;
+static struct dev_pm_qos_request gpu_wakeup_req;
 static unsigned int boost_freq; /* kHz */
 static int boost_freq_set(const char *arg, const struct kernel_param *kp)
 {
@@ -74,6 +75,37 @@ static struct kernel_param_ops boost_freq_ops = {
 module_param_cb(boost_freq, &boost_freq_ops, &boost_freq, 0644);
 static unsigned long boost_time = 500; /* ms */
 module_param(boost_time, ulong, 0644);
+static bool gpu_wakeup = 1; /* 1 = enabled */
+module_param(gpu_wakeup, bool, 0644);
+static struct device *gpu_device;
+static DEFINE_MUTEX(gpu_device_lock);
+
+int cfb_add_device(struct device *dev)
+{
+	mutex_lock(&gpu_device_lock);
+	if (gpu_device)
+		return -EBUSY;
+
+	gpu_device = dev;
+	dev_pm_qos_add_request(dev, &gpu_wakeup_req,
+			DEV_PM_QOS_FLAGS, 0);
+
+	mutex_unlock(&gpu_device_lock);
+
+	return 0;
+}
+
+void cfb_remove_device(struct device *dev)
+{
+	mutex_lock(&gpu_device_lock);
+	if (gpu_device != dev)
+		return;
+
+	dev_pm_qos_remove_request(&gpu_wakeup_req);
+	gpu_device = NULL;
+
+	mutex_unlock(&gpu_device_lock);
+}
 
 static void cfb_boost(struct kthread_work *w)
 {
@@ -83,6 +115,10 @@ static void cfb_boost(struct kthread_work *w)
 	if (boost_freq > 0)
 		pm_qos_update_request_timeout(&freq_req, boost_freq,
 				boost_time * 1000);
+
+	if (gpu_wakeup && gpu_device)
+		dev_pm_qos_update_request_timeout(&gpu_wakeup_req,
+				PM_QOS_FLAG_NO_POWER_OFF, boost_time);
 }
 
 static struct task_struct *boost_kthread;

@@ -5595,7 +5595,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					continue;
 
 				/* if this is a quad access, setup for special access*/
-				if (ctx_ops[i].is_quad)
+				if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD))
 					gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
 								 ctx_ops[i].offset);
 				offset = ctx_ops[i].offset;
@@ -5687,7 +5687,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						max_offsets,
 						offsets, offset_addrs,
 						&num_offsets,
-						ctx_ops[i].is_quad,
+					        ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
 						ctx_ops[i].quad);
 			if (err) {
 				nvhost_dbg(dbg_gpu_dbg,
@@ -5699,7 +5699,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			}
 
 			/* if this is a quad access, setup for special access*/
-			if (ctx_ops[i].is_quad)
+			if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD))
 				gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
 							 ctx_ops[i].offset);
 

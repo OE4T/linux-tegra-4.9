@@ -92,16 +92,13 @@ struct nvhost_dbg_gpu_reg_op {
 	__u8    type;
 	__u8    status;
 	__u8    quad;
-	__u8    is_quad;
-	__u8    _pad0[3];
 	__u32   group_mask;
 	__u32   sub_group_mask;
 	__u32   offset;
-	__u32   value_hi;
 	__u32   value_lo;
-	__u32   and_n_mask_hi;
+	__u32   value_hi;
 	__u32   and_n_mask_lo;
-	__u32 _pad1[1];
+	__u32   and_n_mask_hi;
 };
 
 struct nvhost_dbg_gpu_exec_reg_ops_args {

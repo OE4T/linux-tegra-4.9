@@ -33,7 +33,7 @@
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
-#include <linux/fb.h>
+
 #include <linux/suspend.h>
 #include <linux/sched.h>
 
@@ -893,42 +893,14 @@ static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
 	.set_cur_state = tegra_gpu_set_cur_state,
 };
 
-static void gk20a_set_railgating(struct gk20a *g, int new_status)
-{
-	enum pm_qos_flags_status stat;
-
-	stat = dev_pm_qos_flags(dev_from_gk20a(g), PM_QOS_FLAG_NO_POWER_OFF);
-	if (stat <= PM_QOS_FLAGS_NONE && new_status == FB_BLANK_UNBLANK)
-		dev_pm_qos_add_request(dev_from_gk20a(g), &g->no_poweroff_req,
-				DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
-	else if (stat > PM_QOS_FLAGS_NONE && new_status != FB_BLANK_UNBLANK)
-		dev_pm_qos_remove_request(&g->no_poweroff_req);
-}
-
 static int gk20a_suspend_notifier(struct notifier_block *notifier,
-				  unsigned long pm_event, void *data)
+				  unsigned long pm_event, void *unused)
 {
 	struct gk20a *g = container_of(notifier, struct gk20a,
 				       system_suspend_notifier);
 
 	if (pm_event == PM_USERSPACE_FROZEN)
 		return g->power_on ? NOTIFY_BAD : NOTIFY_OK;
-
-	return NOTIFY_DONE;
-}
-
-static int gk20a_fb_notifier(struct notifier_block *notifier,
-				  unsigned long pm_event, void *data)
-{
-	struct gk20a *g = container_of(notifier, struct gk20a,
-				       fb_notifier);
-	struct fb_event *fb_event = data;
-
-	switch (pm_event) {
-	case FB_EVENT_BLANK:
-		gk20a_set_railgating(g, *((int *)fb_event->data));
-		break;
-	}
 
 	return NOTIFY_DONE;
 }
@@ -982,8 +954,6 @@ static int gk20a_probe(struct platform_device *dev)
 		gk20a->system_suspend_notifier.notifier_call =
 			gk20a_suspend_notifier;
 		register_pm_notifier(&gk20a->system_suspend_notifier);
-		gk20a->fb_notifier.notifier_call = gk20a_fb_notifier;
-		fb_register_client(&gk20a->fb_notifier);
 	}
 
 	err = nvhost_client_device_init(dev);

@@ -1304,10 +1304,11 @@ static int update_gmmu_ptes(struct vm_gk20a *vm,
 					gmmu_pte_comptagline_f(ctag);
 
 				if (rw_flag == mem_flag_read_only) {
-					pte_w[0] |= gmmu_pte_read_only_true_f()
-					     | gmmu_pte_write_disable_true_f();
+					pte_w[0] |= gmmu_pte_read_only_true_f();
+					pte_w[1] |=
+						gmmu_pte_write_disable_true_f();
 				} else if (rw_flag == mem_flag_write_only) {
-					pte_w[0] |=
+					pte_w[1] |=
 						gmmu_pte_read_disable_true_f();
 				}
 

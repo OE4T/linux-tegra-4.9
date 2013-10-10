@@ -167,7 +167,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi, bool power_gate)
 		tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
 		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 	}
-	if (power_gate)
+	if (power_gate && tegra_powergate_is_powered(hdmi->dc->powergate_id))
 		tegra_dc_powergate_locked(hdmi->dc);
 }
 

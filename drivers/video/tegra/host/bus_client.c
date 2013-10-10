@@ -279,6 +279,16 @@ static int nvhost_ioctl_channel_alloc_gpfifo(
 	return ret;
 }
 
+static int nvhost_ioctl_channel_set_error_notifier(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_set_error_notifier *args)
+{
+	int ret;
+	BUG_ON(!channel_op(ctx->ch).set_error_notifier);
+	ret = channel_op(ctx->ch).set_error_notifier(ctx->hwctx, args);
+	return ret;
+}
+
 static int nvhost_ioctl_channel_submit_gpfifo(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_submit_gpfifo_args *args)
@@ -920,6 +930,10 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
 		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
+		err = nvhost_ioctl_channel_set_error_notifier(priv,
+			(void *)buf);
 		break;
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:

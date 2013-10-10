@@ -226,6 +226,13 @@ struct nvhost_zcull_bind_args {
 	__u32 padding;
 };
 
+struct nvhost_set_error_notifier {
+	__u64 offset;
+	__u64 size;
+	__u32 mem;
+	__u32 padding;
+};
+
 struct nvhost_ctrl_module_regrdwr_args {
 	__u32 id;
 	__u32 num_offsets;
@@ -325,10 +332,11 @@ struct nvhost_set_ctxswitch_args {
 	_IOR(NVHOST_IOCTL_MAGIC,  109, struct nvhost_free_obj_ctx_args)
 #define NVHOST_IOCTL_CHANNEL_ZCULL_BIND		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 110, struct nvhost_zcull_bind_args)
+#define NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \
+	_IOWR(NVHOST_IOCTL_MAGIC, 111, struct nvhost_set_error_notifier)
 
-#define NVHOST_IOCTL_CHANNEL_LAST		\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_ZCULL_BIND)
-
+#define NVHOST_IOCTL_CHANNEL_LAST	\
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {

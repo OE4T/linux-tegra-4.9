@@ -552,6 +552,11 @@ static int t124_channel_alloc_gpfifo(struct nvhost_hwctx *hwctx,
 	return gk20a_alloc_channel_gpfifo(hwctx->priv, args);
 }
 
+static int t124_channel_set_error_notifier(struct nvhost_hwctx *hwctx,
+		    struct nvhost_set_error_notifier *args) {
+	return gk20a_init_error_notifier(hwctx, args->mem, args->offset);
+}
+
 static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
 				     struct nvhost_gpfifo *gpfifo, u32 num_entries,
 				     struct nvhost_fence *fence, u32 flags)
@@ -638,6 +643,8 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 			ch->ops.alloc_gpfifo  = t124_channel_alloc_gpfifo;
 			ch->ops.submit_gpfifo = t124_channel_submit_gpfifo;
 			ch->ops.wait          = t124_channel_wait;
+			ch->ops.set_error_notifier =
+					t124_channel_set_error_notifier;
 
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 			ch->ops.cycle_stats   = t124_channel_cycle_stats;

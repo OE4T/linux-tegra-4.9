@@ -37,6 +37,10 @@ struct nvhost_hwctx {
 	bool has_timedout;
 	struct mem_mgr *memmgr;
 
+	struct mem_handle *error_notifier_ref;
+	struct nvhost_notification *error_notifier;
+	void *error_notifier_va;
+
 	u32 save_incrs;
 	u32 save_thresh;
 	u32 save_slots;

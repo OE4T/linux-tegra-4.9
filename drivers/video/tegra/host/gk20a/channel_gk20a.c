@@ -467,6 +467,77 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 }
 #endif
 
+int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
+		u32 memhandle, u64 offset) {
+	struct channel_gk20a *ch = ctx->priv;
+	struct platform_device *dev = ch->ch->dev;
+	void *va;
+
+	struct mem_mgr *memmgr;
+	struct mem_handle *handle_ref;
+
+	if (!memhandle) {
+		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
+		return -EINVAL;
+	}
+
+	memmgr = gk20a_channel_mem_mgr(ch);
+	handle_ref = nvhost_memmgr_get(memmgr, memhandle, dev);
+
+	if (ctx->error_notifier_ref)
+		gk20a_free_error_notifiers(ctx);
+
+	if (IS_ERR(handle_ref)) {
+		pr_err("Invalid handle: %d\n", memhandle);
+		return -EINVAL;
+	}
+	/* map handle */
+	va = nvhost_memmgr_mmap(handle_ref);
+	if (!va) {
+		nvhost_memmgr_put(memmgr, memhandle);
+		pr_err("Cannot map notifier handle\n");
+		return -ENOMEM;
+	}
+
+	/* set hwctx notifiers pointer */
+	ctx->error_notifier_ref = handle_ref;
+	ctx->error_notifier = va + offset;
+	ctx->error_notifier_va = va;
+	return 0;
+}
+
+void gk20a_set_timeout_error(struct nvhost_hwctx *ctx)
+{
+	ctx->has_timedout = true;
+	if (ctx->error_notifier_ref) {
+		struct timespec time_data;
+		u64 nsec;
+		getnstimeofday(&time_data);
+		nsec = ((u64)time_data.tv_sec) * 1000000000u +
+				(u64)time_data.tv_nsec;
+		ctx->error_notifier->time_stamp.nanoseconds[0] =
+				(u32)nsec;
+		ctx->error_notifier->time_stamp.nanoseconds[1] =
+				(u32)(nsec >> 32);
+		ctx->error_notifier->info32 =
+				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT;
+		ctx->error_notifier->status = 0xffff;
+		pr_err("Timeout notifier is set\n");
+	}
+}
+
+void gk20a_free_error_notifiers(struct nvhost_hwctx *ctx)
+{
+	if (ctx->error_notifier_ref) {
+		struct channel_gk20a *ch = ctx->priv;
+		struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
+		nvhost_memmgr_munmap(ctx->error_notifier_ref,
+				ctx->error_notifier_va);
+		nvhost_memmgr_put(memmgr, ctx->error_notifier_ref);
+		ctx->error_notifier_ref = 0;
+	}
+}
+
 void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 {
 	struct channel_gk20a *ch = ctx->priv;
@@ -490,6 +561,8 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 			timeout);
 
 	gk20a_disable_channel(ch, finish, timeout);
+
+	gk20a_free_error_notifiers(ctx);
 
 	/* release channel ctx */
 	gk20a_free_channel_ctx(ch);

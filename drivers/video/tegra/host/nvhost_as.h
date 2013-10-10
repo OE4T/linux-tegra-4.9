@@ -75,10 +75,7 @@ struct nvhost_as {
 
 int nvhost_as_init_device(struct platform_device *dev);
 int nvhost_as_alloc_share(struct nvhost_channel *ch,
-			  struct nvhost_as_share **as,
-			  bool has_fd);
-int nvhost_as_alloc_and_bind_share(struct nvhost_channel *ch,
-				   struct nvhost_hwctx *hwctx);
+			  struct nvhost_as_share **as);
 int nvhost_as_release_share(struct nvhost_as_share *as_share,
 			    struct nvhost_hwctx *hwctx);
 

@@ -921,25 +921,11 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	/* an address space needs to have been bound at this point.   */
 	if (!gk20a_channel_as_bound(c)) {
-		int err;
-		nvhost_warn(d,
+		nvhost_err(d,
 			    "not bound to an address space at time of gpfifo"
 			    " allocation.  Attempting to create and bind to"
 			    " one...");
-		/*
-		 * Eventually this will be a fatal error. For now attempt to
-		 * create and bind a share here.  This helps until we change
-		 * clients to use the new address space API.  However doing this
-		 * can mask errors in programming access to the address space
-		 * through the front door...
-		 */
-		err = nvhost_as_alloc_and_bind_share(c->ch, c->hwctx);
-		if (err || !gk20a_channel_as_bound(c)) {
-			nvhost_err(d,
-				   "not bound to address space at time"
-				   " of gpfifo allocation");
-			return err;
-		}
+		return -EINVAL;
 	}
 	ch_vm = c->vm;
 

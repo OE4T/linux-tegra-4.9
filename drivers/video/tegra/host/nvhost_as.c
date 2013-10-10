@@ -54,7 +54,7 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 	}
 
-	err = nvhost_as_alloc_share(ch, &as_share, true /*fd-attached path*/);
+	err = nvhost_as_alloc_share(ch, &as_share);
 	if (err) {
 		nvhost_dbg_fn("failed to alloc share");
 		goto clean_up;
@@ -217,8 +217,7 @@ static void release_as_share_id(struct nvhost_as *as, int id)
 }
 
 int nvhost_as_alloc_share(struct nvhost_channel *ch,
-			  struct nvhost_as_share **_as_share,
-			  bool has_fd)
+			  struct nvhost_as_share **_as_share)
 {
 	struct nvhost_as *as = ch->as;
 	struct nvhost_as_share *as_share;
@@ -248,8 +247,7 @@ int nvhost_as_alloc_share(struct nvhost_channel *ch,
 	 * handle both that case and when we've created and bound a share
 	 * w/o the attached fd.
 	 */
-	if (has_fd)
-		as_share->ref_cnt.counter = 1;
+	as_share->ref_cnt.counter = 1;
 	/* else set at from kzalloc above 0 */
 
 	/* add the share to the set of all shares on the module */
@@ -324,37 +322,6 @@ static int bind_share(struct nvhost_as_share *as_share,
 	mutex_lock(&as_share->bound_list_lock);
 	list_add_tail(&hwctx->as_share_bound_list_node, &as_share->bound_list);
 	mutex_unlock(&as_share->bound_list_lock);
-
-	return 0;
-}
-
-/* when clients have not set up a share themselves this
- * can be called to set up and bind to a new one.
- * however since they (presumably) have no access to the
- * address space device node for the module they must
- * use the channel map/unmap apis (deprecated) to manipulate
- * the share */
-int nvhost_as_alloc_and_bind_share(struct nvhost_channel *ch,
-				   struct nvhost_hwctx *hwctx)
-{
-	struct nvhost_as *as = ch->as;
-	struct nvhost_as_share *as_share = 0;
-	int err = 0;
-
-	nvhost_dbg_fn("");
-
-	if (!as)
-		return -ENOENT;
-
-	err = nvhost_as_alloc_share(ch, &as_share, false /*no-fd path*/);
-	if (err)
-		return err;
-
-	err = bind_share(as_share, hwctx);
-	if (err) {
-		nvhost_as_release_share(as_share, hwctx);
-		return err;
-	}
 
 	return 0;
 }

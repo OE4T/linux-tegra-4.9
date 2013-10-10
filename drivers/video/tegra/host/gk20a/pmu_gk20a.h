@@ -740,5 +740,6 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
+int gk20a_pmu_debugfs_init(struct platform_device *dev);
 
 #endif /*__PMU_GK20A_H__*/

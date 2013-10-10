@@ -23,6 +23,7 @@
 #include <linux/firmware.h>
 #include <linux/nvmap.h>
 #include <linux/module.h>
+#include <linux/debugfs.h>
 
 #include "../dev.h"
 #include "../bus_client.h"
@@ -40,6 +41,8 @@
 	nvhost_dbg(dbg_pmu, fmt, ##arg)
 
 static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
+static int gk20a_pmu_get_elpg_residency(struct gk20a *g, u32 *ingating_time,
+						u32 *ungating_time);
 
 static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			u32 src, u8* dst, u32 size, u8 port)
@@ -2627,12 +2630,21 @@ int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
 int gk20a_pmu_destroy(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
+	u32 elpg_ingating_time, elpg_ungating_time;
+
 	nvhost_dbg_fn("");
 
 	if (!support_gk20a_pmu())
 		return 0;
 
+	gk20a_pmu_get_elpg_residency(g, &elpg_ingating_time,
+		&elpg_ungating_time);
+
 	gk20a_pmu_disable_elpg_defer_enable(g, false);
+
+	/* update the s/w ELPG residency counters */
+	g->pg_ingating_time_us += (u64)elpg_ingating_time;
+	g->pg_ungating_time_us += (u64)elpg_ungating_time;
 
 	pmu_enable_hw(pmu, false);
 
@@ -2660,3 +2672,87 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 
 	return 0;
 }
+
+static int gk20a_pmu_get_elpg_residency(struct gk20a *g, u32 *ingating_time,
+						u32 *ungating_time)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_pg_stats stats;
+
+	if (!pmu->initialized) {
+		*ingating_time = 0;
+		*ungating_time = 0;
+		return 0;
+	}
+
+	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
+
+	*ingating_time = stats.pg_ingating_time_us;
+	*ungating_time = stats.pg_ungating_time_us;
+
+	return 0;
+}
+
+#if CONFIG_DEBUG_FS
+static int elpg_residency_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 ingating_time, ungating_time;
+	u64 total_ingating, total_ungating, residency, divisor, dividend;
+
+	gk20a_pmu_get_elpg_residency(g, &ingating_time, &ungating_time);
+	total_ingating = g->pg_ingating_time_us + (u64)ingating_time;
+	total_ungating = g->pg_ungating_time_us + (u64)ungating_time;
+
+	divisor = total_ingating + total_ungating;
+
+	/* We compute the residency on a scale of 1000 */
+	dividend = total_ingating * 1000;
+
+	if (divisor)
+		residency = div64_u64(dividend, divisor);
+	else
+		residency = 0;
+
+	seq_printf(s, "Time in ELPG: %llu us\n"
+			"Time out of ELPG: %llu us\n"
+			"ELPG residency ratio: %llu\n", total_ingating,
+							total_ungating,
+							residency);
+	return 0;
+
+}
+
+static int elpg_residency_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, elpg_residency_show, inode->i_private);
+}
+
+static const struct file_operations elpg_residency_fops = {
+	.open		= elpg_residency_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+int gk20a_pmu_debugfs_init(struct platform_device *dev)
+{
+	struct dentry *d;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	d = debugfs_create_file(
+		"elpg_residency", S_IRUGO|S_IWUSR, pdata->debugfs, g,
+						&elpg_residency_fops);
+	if (!d)
+		goto err_out;
+
+	return 0;
+
+err_out:
+	pr_err("%s: Failed to make debugfs node\n", __func__);
+	debugfs_remove_recursive(pdata->debugfs);
+	return -ENOMEM;
+}
+#endif

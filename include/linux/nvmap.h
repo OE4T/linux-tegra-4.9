@@ -25,6 +25,7 @@
 #include <linux/rbtree.h>
 #if defined(__KERNEL__)
 #include <linux/dma-buf.h>
+#include <linux/device.h>
 #endif
 
 #ifndef _LINUX_NVMAP_H
@@ -102,6 +103,7 @@ struct nvmap_platform_carveout {
 	phys_addr_t base;
 	size_t size;
 	size_t buddy_size;
+	struct device *cma_dev;
 };
 
 struct nvmap_platform_data {

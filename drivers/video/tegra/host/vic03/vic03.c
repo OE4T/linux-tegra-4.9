@@ -238,6 +238,10 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 	struct vic03 *v = get_vic03(dev);
 	const struct firmware *ucode_fw;
 	int err;
+	DEFINE_DMA_ATTRS(attrs);
+
+	v->ucode.dma_addr = 0;
+	v->ucode.mapped = NULL;
 
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
@@ -247,40 +251,22 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 		return err;
 	}
 
-	/* allocate pages for ucode */
-	v->ucode.mem_r = nvhost_memmgr_alloc(v->host->memmgr,
-					     roundup(ucode_fw->size, PAGE_SIZE),
-					     PAGE_SIZE,
-					     mem_mgr_flag_uncacheable,
-					     0);
-	if (IS_ERR(v->ucode.mem_r)) {
-		nvhost_dbg_fn("nvmap alloc failed");
-		err = PTR_ERR(v->ucode.mem_r);
-		v->ucode.mem_r = NULL;
-		goto clean_up;
-	}
+	v->ucode.size = ucode_fw->size;
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
-	v->ucode.sgt = nvhost_memmgr_pin(v->host->memmgr, v->ucode.mem_r,
-		&dev->dev, mem_flag_read_only);
-	if (IS_ERR(v->ucode.sgt)) {
-		nvhost_err(&dev->dev, "nvmap pin failed for ucode, %ld",
-			PTR_ERR(v->ucode.sgt));
-		err = PTR_ERR(v->ucode.sgt);
-		goto clean_up;
-	}
-	v->ucode.pa = nvhost_memmgr_dma_addr(v->ucode.sgt);
-
-	v->ucode.va = nvhost_memmgr_mmap(v->ucode.mem_r);
-	if (!v->ucode.va) {
-		nvhost_dbg_fn("nvmap mmap failed");
+	v->ucode.mapped = dma_alloc_attrs(&dev->dev,
+				v->ucode.size, &v->ucode.dma_addr,
+				GFP_KERNEL, &attrs);
+	if (!v->ucode.mapped) {
+		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = vic03_setup_ucode_image(dev, v->ucode.va, ucode_fw);
+	err = vic03_setup_ucode_image(dev, v->ucode.mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
-		return err;
+		goto clean_up;
 	}
 
 	v->ucode.valid = true;
@@ -290,14 +276,12 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 	return 0;
 
  clean_up:
-	if (v->ucode.va)
-		nvhost_memmgr_munmap(v->ucode.mem_r, v->ucode.va);
-	if (v->ucode.pa)
-		nvhost_memmgr_unpin(v->host->memmgr, v->ucode.mem_r,
-			&dev->dev, v->ucode.sgt);
-	if (v->ucode.mem_r) {
-		nvhost_memmgr_put(v->host->memmgr, v->ucode.mem_r);
-		v->ucode.mem_r = NULL;
+	if (v->ucode.mapped) {
+		dma_free_attrs(&dev->dev,
+			v->ucode.size, v->ucode.mapped,
+			v->ucode.dma_addr, &attrs);
+		v->ucode.mapped = NULL;
+		v->ucode.dma_addr = 0;
 	}
 	release_firmware(ucode_fw);
 	return err;
@@ -326,7 +310,8 @@ static int vic03_boot(struct platform_device *dev)
 		tfbif_mccif_fifoctrl_wclk_override_enable_f();
 	vic03_writel(v, tfbif_mccif_fifoctrl_r(), fifoctrl);
 
-	vic03_writel(v, flcn_dmatrfbase_r(), (v->ucode.pa + v->ucode.os.bin_data_offset) >> 8);
+	vic03_writel(v, flcn_dmatrfbase_r(),
+			(v->ucode.dma_addr + v->ucode.os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < v->ucode.os.data_size; offset += 256)
 		vic03_flcn_dma_pa_to_internal_256b(dev,
@@ -428,23 +413,22 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 	struct vic03 *v = get_vic03(dev);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+
 	if (!v)
 		return;
 
 	if (pdata->scaling_init)
 		nvhost_scale_hw_deinit(dev);
 
-	/* unpin, free ucode memory */
-	if (v->ucode.va)
-		nvhost_memmgr_munmap(v->ucode.mem_r, v->ucode.va);
-
-	if (v->ucode.pa)
-		nvhost_memmgr_unpin(v->host->memmgr, v->ucode.mem_r,
-				    &dev->dev, v->ucode.sgt);
-
-	if (v->ucode.mem_r)
-		nvhost_memmgr_put(v->host->memmgr, v->ucode.mem_r);
-	v->ucode.mem_r = NULL;
+	if (v->ucode.mapped) {
+		dma_free_attrs(&dev->dev,
+			v->ucode.size, v->ucode.mapped,
+			v->ucode.dma_addr, &attrs);
+		v->ucode.mapped = NULL;
+		v->ucode.dma_addr = 0;
+	}
 
 	if (v->regs)
 		v->regs = NULL;
@@ -505,7 +489,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 
 	ptr[7] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
 	ptr[8] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2;
-	ptr[9] = (v->ucode.pa + v->ucode.fce.data_offset) >> 8;
+	ptr[9] = (v->ucode.dma_addr + v->ucode.fce.data_offset) >> 8;
 
 	/* syncpt increment to track restore gather. */
 	ptr[10] = nvhost_opcode_imm_incr_syncpt(

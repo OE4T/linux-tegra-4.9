@@ -21,11 +21,12 @@
 #ifndef __NVHOST_VIC03_H__
 #define __NVHOST_VIC03_H__
 
+#include <linux/types.h>
+#include <linux/dma-attrs.h>
 #include <linux/firmware.h>
 
 
 extern struct platform_device tegra_vic03_device;
-struct mem_handle;
 
 struct ucode_bin_header_v1_vic03 {
 	u32 bin_magic;        /* 0x10de */
@@ -77,8 +78,7 @@ struct vic03 {
 
 	struct {
 		bool valid;
-		u32  size;
-		struct mem_handle *mem_r;
+		size_t size;
 
 		struct {
 			u32 bin_data_offset;
@@ -88,9 +88,8 @@ struct vic03 {
 			u32 size;
 		} os, fce;
 
-		struct sg_table *sgt;
-		phys_addr_t pa;
-		void *va;
+		dma_addr_t dma_addr;
+		u32 *mapped;
 	} ucode;
 
 	void (*remove_support)(struct vic03 *);

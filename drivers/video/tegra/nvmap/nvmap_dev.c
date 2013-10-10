@@ -864,6 +864,7 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
+	struct page *page;
 	struct nvmap_vma_priv *priv;
 	unsigned long offs;
 
@@ -884,17 +885,22 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		unsigned long pfn;
 		BUG_ON(priv->handle->carveout->base & ~PAGE_MASK);
 		pfn = ((priv->handle->carveout->base + offs) >> PAGE_SHIFT);
-		vm_insert_pfn(vma, (unsigned long)vmf->virtual_address, pfn);
-		return VM_FAULT_NOPAGE;
+		if (!pfn_valid(pfn)) {
+			vm_insert_pfn(vma,
+				(unsigned long)vmf->virtual_address, pfn);
+			return VM_FAULT_NOPAGE;
+		}
+		/* CMA memory would get here */
+		page = pfn_to_page(pfn);
 	} else {
-		struct page *page;
 		offs >>= PAGE_SHIFT;
 		page = priv->handle->pgalloc.pages[offs];
-		if (page)
-			get_page(page);
-		vmf->page = page;
-		return (page) ? 0 : VM_FAULT_SIGBUS;
 	}
+
+	if (page)
+		get_page(page);
+	vmf->page = page;
+	return (page) ? 0 : VM_FAULT_SIGBUS;
 }
 
 static ssize_t attr_show_usage(struct device *dev,

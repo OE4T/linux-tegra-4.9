@@ -50,6 +50,10 @@
 #ifndef _hw_flcn_vic03_h_
 #define _hw_flcn_vic03_h_
 
+static inline u32 flcn_slcg_override_high_a_r(void)
+{
+	return 0x00000088;
+}
 static inline u32 flcn_irqmset_r(void)
 {
 	return 0x00001010;
@@ -185,5 +189,21 @@ static inline u32 flcn_dmatrffboffs_r(void)
 static inline u32 flcn_dmatrffboffs_offs_f(u32 v)
 {
 	return (v & 0xffffffff) << 0;
+}
+static inline u32 flcn_cg_r(void)
+{
+	return 0x000016d0;
+}
+static inline u32 flcn_cg_idle_cg_dly_cnt_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 flcn_cg_idle_cg_en_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 flcn_cg_wakeup_dly_cnt_f(u32 v)
+{
+	return (v & 0xf) << 16;
 }
 #endif

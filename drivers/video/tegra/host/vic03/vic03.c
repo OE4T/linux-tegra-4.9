@@ -593,9 +593,14 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 	return &p->h;
 }
 
-int nvhost_vic03_finalize_poweron(struct platform_device *dev)
+int nvhost_vic03_finalize_poweron(struct platform_device *pdev)
 {
-	return vic03_boot(dev);
+	nvhost_client_writel(pdev, flcn_slcg_override_high_a_r(), 0);
+	nvhost_client_writel(pdev, flcn_cg_r(),
+			     flcn_cg_idle_cg_dly_cnt_f(4) |
+			     flcn_cg_idle_cg_en_f(1) |
+			     flcn_cg_wakeup_dly_cnt_f(4));
+	return vic03_boot(pdev);
 }
 
 int nvhost_vic03_prepare_poweroff(struct platform_device *dev)

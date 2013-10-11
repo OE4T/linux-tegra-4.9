@@ -274,7 +274,7 @@ int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			&dev->dev);
+			&dev->dev, mem_flag_read_only);
 	if (IS_ERR(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
@@ -406,24 +406,6 @@ static struct of_device_id tegra_nvdec_of_match[] = {
 	{ },
 };
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static int nvdec_unpowergate(struct generic_pm_domain *domain)
-{
-	struct nvhost_device_data *pdata;
-
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-	return nvhost_module_power_on(pdata->pdev);
-}
-
-static int nvdec_powergate(struct generic_pm_domain *domain)
-{
-	struct nvhost_device_data *pdata;
-
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-	return nvhost_module_power_off(pdata->pdev);
-}
-#endif
-
 static int nvdec_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -459,19 +441,10 @@ static int nvdec_probe(struct platform_device *dev)
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	pdata->pd.name = "nvdec";
-	pdata->pd.power_off = nvdec_powergate;
-	pdata->pd.power_on = nvdec_unpowergate;
-	pdata->pd.dev_ops.start = nvhost_module_enable_clk;
-	pdata->pd.dev_ops.stop = nvhost_module_disable_clk;
 
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
-
-	/* overwrite save/restore fptrs set by pm_genpd_init */
-	pdata->pd.domain.ops.suspend = nvhost_client_device_suspend;
-	pdata->pd.domain.ops.resume = nvhost_client_device_resume;
-	pdata->pd.dev_ops.restore_state = nvhost_module_finalize_poweron;
 #endif
 
 	/* enable runtime pm. this is needed now since we need to call

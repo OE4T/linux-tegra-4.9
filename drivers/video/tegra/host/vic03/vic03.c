@@ -290,7 +290,7 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 static int vic03_boot(struct platform_device *dev)
 {
 	struct vic03 *v = get_vic03(dev);
-	u32 fifoctrl, timeout;
+	u32 timeout;
 	u32 offset;
 	int err = 0;
 
@@ -302,13 +302,6 @@ static int vic03_boot(struct platform_device *dev)
 		return 0;
 
 	vic03_writel(v, flcn_dmactl_r(), 0);
-
-	/* FIXME : disable clock gating, remove when clock gating problem is resolved from MCCIF*/
-	fifoctrl = vic03_readl(v, tfbif_mccif_fifoctrl_r());
-
-	fifoctrl |= tfbif_mccif_fifoctrl_rclk_override_enable_f() |
-		tfbif_mccif_fifoctrl_wclk_override_enable_f();
-	vic03_writel(v, tfbif_mccif_fifoctrl_r(), fifoctrl);
 
 	vic03_writel(v, flcn_dmatrfbase_r(),
 			(v->ucode.dma_addr + v->ucode.os.bin_data_offset) >> 8);

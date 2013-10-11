@@ -557,6 +557,7 @@ static void podgov_idle_handler(struct work_struct *work)
 		pdata->idle(dev);
 }
 
+#ifdef CONFIG_TEGRA_THROUGHPUT
 /*******************************************************************************
  * nvhost_scale3d_set_throughput_hint(hint)
  *
@@ -645,6 +646,7 @@ exit_unlock:
 	nvhost_module_idle(pdev);
 	return NOTIFY_OK;
 }
+#endif
 
 /*******************************************************************************
  * debugfs interface for controlling 3d clock scaling on the fly
@@ -1030,10 +1032,12 @@ static int nvhost_pod_init(struct devfreq *df)
 	nvhost_scale3d_debug_init(df);
 
 	/* register the governor to throughput hint notifier chain */
+#ifdef CONFIG_TEGRA_THROUGHPUT
 	podgov->throughput_hint_notifier.notifier_call =
 		&nvhost_scale3d_set_throughput_hint;
 	blocking_notifier_chain_register(&throughput_notifier_list,
 					 &podgov->throughput_hint_notifier);
+#endif
 
 	return 0;
 
@@ -1061,8 +1065,10 @@ static void nvhost_pod_exit(struct devfreq *df)
 	struct podgov_info_rec *podgov = df->data;
 	struct platform_device *d = to_platform_device(df->dev.parent);
 
+#ifdef CONFIG_TEGRA_THROUGHPUT
 	blocking_notifier_chain_unregister(&throughput_notifier_list,
 					   &podgov->throughput_hint_notifier);
+#endif
 	cancel_delayed_work(&podgov->idle_timer);
 
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);

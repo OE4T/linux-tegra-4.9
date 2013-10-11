@@ -1339,6 +1339,14 @@ int gk20a_init_pmu_support(struct gk20a *g)
 
 		/* wait for pmu idle */
 		err = pmu_idle(pmu);
+
+		/*
+		 * We can't guarantee that gr code to enable ELPG will be
+		 * invoked, so we explicitly call disable-enable here
+		 * to enable elpg.
+		 */
+		gk20a_pmu_disable_elpg(g);
+		gk20a_pmu_enable_elpg(g);
 	}
 
 	return err;

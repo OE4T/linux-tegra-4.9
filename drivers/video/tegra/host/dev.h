@@ -140,4 +140,13 @@ static inline void mem_wr32(void *ptr, int w, u32 data)
 	((u32 *)ptr)[w] = data;
 }
 
+static inline u32 bit_mask(u32 nr)
+{
+	return 1UL << (nr % 32);
+}
+
+static inline u32 bit_word(u32 nr)
+{
+	return nr / 32;
+}
 #endif

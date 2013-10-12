@@ -796,7 +796,7 @@ static u32 create_mask(u32 *words, int num)
 {
 	int i;
 	u32 word = 0;
-	for (i = 0; i < num && words[i] && words[i] < BITS_PER_LONG; i++)
+	for (i = 0; i < num && words[i] && words[i] < 32; i++)
 		word |= BIT(words[i]);
 
 	return word;

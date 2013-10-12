@@ -86,8 +86,8 @@ struct nvhost_intr {
 	int general_irq;
 	int syncpt_irq;
 	struct workqueue_struct *wq;
-	void (*generic_isr[BITS_PER_LONG])(void);
-	void (*generic_isr_thread[BITS_PER_LONG])(void);
+	void (*generic_isr[32])(void);
+	void (*generic_isr_thread[32])(void);
 	u32 intstatus;
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)

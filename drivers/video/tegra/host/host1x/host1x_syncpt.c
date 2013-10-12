@@ -91,7 +91,7 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 		nvhost_debug_dump(syncpt_to_dev(sp));
 		return;
 	}
-	writel(BIT_MASK(id), dev->sync_aperture +
+	writel(bit_mask(id), dev->sync_aperture +
 			host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4);
 }
 

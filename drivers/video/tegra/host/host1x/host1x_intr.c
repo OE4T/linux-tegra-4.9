@@ -51,13 +51,14 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 	unsigned long reg;
 	int i, id;
 
-	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, BITS_PER_LONG); i++) {
+	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 32); i++) {
 		reg = readl(sync_regs +
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
-		for_each_set_bit(id, &reg, BITS_PER_LONG) {
+
+		for_each_set_bit(id, &reg, 32) {
 			struct nvhost_intr_syncpt *sp;
-			int sp_id = i * BITS_PER_LONG + id;
+			int sp_id = i * 32 + id;
 
 			if (unlikely(sp_id >= dev->info.nb_pts)) {
 				dev_err(&dev->dev->dev, "%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
@@ -139,9 +140,9 @@ static void t20_intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 	struct nvhost_master *dev = intr_to_dev(intr);
 	void __iomem *sync_regs = dev->sync_aperture;
 
-	writel(BIT_MASK(id), sync_regs +
+	writel(bit_mask(id), sync_regs +
 			host1x_sync_syncpt_thresh_int_enable_cpu0_r() +
-			BIT_WORD(id) * REGISTER_STRIDE);
+			bit_word(id) * REGISTER_STRIDE);
 }
 
 static void t20_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
@@ -149,17 +150,17 @@ static void t20_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 	struct nvhost_master *dev = intr_to_dev(intr);
 	void __iomem *sync_regs = dev->sync_aperture;
 
-	writel(BIT_MASK(id), sync_regs +
+	writel(bit_mask(id), sync_regs +
 			host1x_sync_syncpt_thresh_int_disable_r() +
-			BIT_WORD(id) * REGISTER_STRIDE);
+			bit_word(id) * REGISTER_STRIDE);
 
 	/* clear status for both cpu's */
-	writel(BIT_MASK(id), sync_regs +
+	writel(bit_mask(id), sync_regs +
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() +
-		BIT_WORD(id) * REGISTER_STRIDE);
-	writel(BIT_MASK(id), sync_regs +
+		bit_word(id) * REGISTER_STRIDE);
+	writel(bit_mask(id), sync_regs +
 		host1x_sync_syncpt_thresh_cpu1_int_status_r() +
-		BIT_WORD(id) * REGISTER_STRIDE);
+		bit_word(id) * REGISTER_STRIDE);
 }
 
 static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
@@ -168,7 +169,7 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	void __iomem *sync_regs = dev->sync_aperture;
 	u32 reg;
 
-	for (reg = 0; reg < BIT_WORD(dev->info.nb_pts) * REGISTER_STRIDE;
+	for (reg = 0; reg < bit_word(dev->info.nb_pts) * REGISTER_STRIDE;
 			reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
 		writel(0xffffffffu, sync_regs +
@@ -195,13 +196,13 @@ static void t20_intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
 
 	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
 
-	u32 reg = BIT_WORD(id) * REGISTER_STRIDE;
+	u32 reg = bit_word(id) * REGISTER_STRIDE;
 
 	if (disable_intr)
-		writel(BIT_MASK(id), sync_regs +
+		writel(bit_mask(id), sync_regs +
 		       host1x_sync_syncpt_thresh_int_disable_r() + reg);
 
-	writel(BIT_MASK(id), sync_regs +
+	writel(bit_mask(id), sync_regs +
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg);
 }
 
@@ -239,7 +240,7 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	writel(ext_stat, sync_regs + host1x_sync_hintstatus_ext_r());
 	writel(stat, sync_regs + host1x_sync_hintstatus_r());
 
-	for_each_set_bit(i, &intstat, BITS_PER_LONG) {
+	for_each_set_bit(i, &intstat, 32) {
 		if (intr->generic_isr[i])
 			intr->generic_isr[i]();
 	}

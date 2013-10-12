@@ -837,7 +837,7 @@ static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
-	ulong fault_id;
+	u32 fault_id;
 	u32 engine_mmu_id;
 	int i;
 
@@ -864,7 +864,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		mutex_lock(&g->fifo.runlist_info[i].mutex);
 
 	/* go through all faulted engines */
-	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
+	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
 		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
 		 * engines. Convert engine_mmu_id to engine_id */
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
@@ -949,7 +949,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	}
 
 	/* reset engines */
-	for_each_set_bit(engine_mmu_id, &fault_id, BITS_PER_LONG) {
+	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
 		if (engine_id != ~0)
 			gk20a_fifo_reset_engine(g, engine_id);
@@ -971,7 +971,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	schedule_work(&g->fifo.fault_restore_thread);
 }
 
-void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)
+static void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
@@ -981,12 +981,12 @@ void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)
 
 	/* store faulted engines in advance */
 	g->fifo.mmu_fault_engines = 0;
-	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG)
+	for_each_set_bit(engine_id, &engine_ids, 32)
 		g->fifo.mmu_fault_engines |=
 			BIT(gk20a_engine_id_to_mmu_id(engine_id));
 
 	/* trigger faults for all bad engines */
-	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG) {
+	for_each_set_bit(engine_id, &engine_ids, 32) {
 		if (engine_id > g->fifo.max_engines) {
 			WARN_ON(true);
 			break;
@@ -1016,7 +1016,7 @@ void gk20a_fifo_recover(struct gk20a *g, ulong engine_ids)
 		nvhost_err(dev_from_gk20a(g), "mmu fault timeout");
 
 	/* release mmu fault trigger */
-	for_each_set_bit(engine_id, &engine_ids, BITS_PER_LONG)
+	for_each_set_bit(engine_id, &engine_ids, 32)
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
 }
 

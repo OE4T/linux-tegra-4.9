@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "nvhost_memmgr.h"
 #include "nvhost_cdma.h"
+#include "nvhost_acm.h"
 
 #include "gk20a.h"
 #include "hw_ram_gk20a.h"
@@ -119,6 +120,7 @@ void gk20a_debug_show_channel_cdma(struct nvhost_master *m,
 	u32 chid;
 	int i;
 
+	nvhost_module_busy(ch->dev);
 	for (i = 0; i < fifo_pbdma_status__size_1_v(); i++) {
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
@@ -174,6 +176,7 @@ void gk20a_debug_show_channel_cdma(struct nvhost_master *m,
 			gk20a_debug_show_channel(o, g, gpu_ch);
 		}
 	}
+	nvhost_module_idle(ch->dev);
 }
 
 void gk20a_debug_show_channel_fifo(struct nvhost_master *m,

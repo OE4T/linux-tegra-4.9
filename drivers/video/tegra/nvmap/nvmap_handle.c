@@ -118,6 +118,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	if (page_index == nr_page)
 		goto skip_attr_restore;
 
+#ifndef CONFIG_ARM64
 	/* Restore page attributes. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE ||
 	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
@@ -127,6 +128,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 				nr_page - page_index);
 		BUG_ON(err);
 	}
+#endif
 
 skip_attr_restore:
 	for (i = page_index; i < nr_page; i++)
@@ -242,6 +244,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	if (nr_page == page_index)
 		goto skip_attr_change;
 
+#ifndef CONFIG_ARM64
 	/* Update the pages mapping in kernel page table. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
 		err = nvmap_set_pages_array_wc(&pages[page_index],
@@ -255,6 +258,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	if (err)
 		goto fail;
+#endif
 
 skip_attr_change:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
@@ -267,10 +271,12 @@ skip_attr_change:
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(nvmap_dev, pte);
+#ifndef CONFIG_ARM64
 	if (i) {
 		err = nvmap_set_pages_array_wb(pages, i);
 		BUG_ON(err);
 	}
+#endif
 	while (i--)
 		__free_page(pages[i]);
 	altfree(pages, nr_page * sizeof(*pages));

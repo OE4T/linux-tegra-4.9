@@ -42,6 +42,9 @@
 #include <linux/rcupdate.h>
 #include <linux/profile.h>
 #include <linux/notifier.h>
+#ifdef CONFIG_TEGRA_NVMAP
+#include <linux/nvmap.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
@@ -93,7 +96,11 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
-	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
+	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages
+#ifdef CONFIG_TEGRA_NVMAP
+			 + nvmap_page_pool_get_unused_pages()
+#endif
+			 ;
 	int other_file = global_node_page_state(NR_FILE_PAGES) -
 				global_node_page_state(NR_SHMEM) -
 				global_node_page_state(NR_UNEVICTABLE) -
@@ -301,4 +308,3 @@ module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size, 0644);
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 0644);
 module_param_named(debug_level, lowmem_debug_level, uint, 0644);
-

@@ -279,7 +279,7 @@ int gk20a_free_obj_ctx(struct channel_gk20a *c,
 			struct nvhost_free_obj_ctx_args *args);
 void gk20a_free_channel_ctx(struct channel_gk20a *c);
 
-void gk20a_gr_isr(struct gk20a *g);
+int gk20a_gr_isr(struct gk20a *g);
 
 int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max);
 /* zcull */

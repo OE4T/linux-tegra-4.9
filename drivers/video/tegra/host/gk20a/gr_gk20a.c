@@ -1404,7 +1404,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (err)
 		goto clean_up;
 
-	err = gr_gk20a_commit_global_ctx_buffers(g, c, false);
+	err = gr_gk20a_elpg_protected_call(g,
+			gr_gk20a_commit_global_ctx_buffers(g, c, false));
 	if (err)
 		goto clean_up;
 
@@ -4619,7 +4620,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g,
 	return ret;
 }
 
-void gk20a_gr_isr(struct gk20a *g)
+int gk20a_gr_isr(struct gk20a *g)
 {
 	struct gr_isr_data isr_data;
 	u32 grfifo_ctl;
@@ -4630,7 +4631,7 @@ void gk20a_gr_isr(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	if (!gr_intr)
-		return;
+		return 0;
 
 	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());
 	grfifo_ctl &= ~gr_gpfifo_ctl_semaphore_access_f(1);
@@ -4749,6 +4750,8 @@ clean_up:
 	if (gr_intr)
 		nvhost_err(dev_from_gk20a(g),
 			   "unhandled gr interrupt 0x%08x", gr_intr);
+
+	return 0;
 }
 
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)

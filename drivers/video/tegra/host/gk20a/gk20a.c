@@ -471,7 +471,7 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 
 	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
-		gk20a_gr_isr(g);
+		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
 	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_isr(g);
 	if (mc_intr_0 & mc_intr_0_pmu_pending_f())

@@ -28,6 +28,7 @@
 #include "../dev.h"
 #include "../bus_client.h"
 #include "nvhost_memmgr.h"
+#include "nvhost_acm.h"
 
 #include "gk20a.h"
 #include "hw_mc_gk20a.h"
@@ -2691,8 +2692,10 @@ static int gk20a_pmu_get_elpg_residency(struct gk20a *g, u32 *ingating_time,
 		return 0;
 	}
 
+	nvhost_module_busy(g->dev);
 	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
+	nvhost_module_idle(g->dev);
 
 	*ingating_time = stats.pg_ingating_time_us;
 	*ungating_time = stats.pg_ungating_time_us;

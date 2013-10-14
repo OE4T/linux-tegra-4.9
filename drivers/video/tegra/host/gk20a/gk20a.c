@@ -819,17 +819,15 @@ static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
 static void gk20a_set_railgating(struct gk20a *g, int new_status)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(g->dev);
-	bool can_powergate = new_status == FB_BLANK_UNBLANK ? 0 : 1;
+	enum pm_qos_flags_status stat;
 
 	mutex_lock(&pdata->lock);
-	if (pdata->can_powergate && !can_powergate) {
+	stat = dev_pm_qos_flags(dev_from_gk20a(g), PM_QOS_FLAG_NO_POWER_OFF);
+	if (stat <= PM_QOS_FLAGS_NONE && new_status == FB_BLANK_UNBLANK)
 		dev_pm_qos_add_request(dev_from_gk20a(g), &g->no_poweroff_req,
 				DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
-		pdata->can_powergate = can_powergate;
-	} else if (!pdata->can_powergate && can_powergate) {
+	else if (stat > PM_QOS_FLAGS_NONE && new_status != FB_BLANK_UNBLANK)
 		dev_pm_qos_remove_request(&g->no_poweroff_req);
-		pdata->can_powergate = can_powergate;
-	}
 	mutex_unlock(&pdata->lock);
 }
 

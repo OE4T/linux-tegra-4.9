@@ -4818,12 +4818,8 @@ int gk20a_gr_isr(struct gk20a *g)
 		gr_intr &= ~gr_intr_exception_pending_f();
 	}
 
-	if (ret) {
-		struct channel_gk20a* fault_ch =
-			channel_from_hw_chid(g, isr_data.chid);
-		if (fault_ch && fault_ch->hwctx)
-			gk20a_free_channel(fault_ch->hwctx, false);
-	}
+	if (ret)
+		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A));
 
 clean_up:
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

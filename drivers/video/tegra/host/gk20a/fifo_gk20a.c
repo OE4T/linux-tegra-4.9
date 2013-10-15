@@ -972,7 +972,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	schedule_work(&g->fifo.fault_restore_thread);
 }
 
-static void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids)
+void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));

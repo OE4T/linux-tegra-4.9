@@ -66,6 +66,11 @@ static int t124_num_alloc_channels = 0;
 	BIT64(NVSYNCPT_VBLANK0) | BIT64(NVSYNCPT_VBLANK1) | \
 	BIT64(NVSYNCPT_AVP_0))
 
+/* Host1x driver matches module IDs while setting a
+ * particular clock, This ID is used for EMC module.
+ */
+#define TEGRA_HOST1X_EMC_MODULE_ID 75
+
 static struct resource tegra_host1x04_resources[] = {
 	{
 		.start = TEGRA_HOST1X_BASE,
@@ -163,7 +168,6 @@ static struct resource isp_resources[] = {
 static struct platform_device tegra_isp01b_device;
 struct nvhost_device_data t124_isp_info = {
 	/* FIXME: control clocks from user space instead of hard-coding here */
-	/* FIXME: Add control for sclk/emc */
 	.syncpts         = NV_ISP_0_SYNCPTS,
 	.moduleid        = NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_0},
@@ -173,7 +177,9 @@ struct nvhost_device_data t124_isp_info = {
 	.can_powergate   = false,
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = { {"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP} },
+	.clocks          = {
+		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
+		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 static struct platform_device tegra_isp01_device = {
@@ -197,7 +203,6 @@ static struct resource ispb_resources[] = {
 
 struct nvhost_device_data t124_ispb_info = {
 	/* FIXME: control clocks from user space instead of hard-coding here */
-	/* FIXME: Add control for sclk/emc */
 	.syncpts         = NV_ISP_1_SYNCPTS,
 	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_1},
@@ -207,7 +212,9 @@ struct nvhost_device_data t124_ispb_info = {
 	.can_powergate   = false,
 	.clockgate_delay = ISP_CLOCKGATE_DELAY,
 	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = { {"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB} },
+	.clocks          = {
+		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
+		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 };
 
@@ -234,7 +241,6 @@ static struct platform_device tegra_vi01b_device;
 struct nvhost_device_data t124_vi_info = {
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
-	/* FIXME: Add control for sclk/emc */
 	.syncpts          = NV_VI_0_SYNCPTS,
 	.moduleid         = NVHOST_MODULE_VI,
 	.modulemutexes    = {NVMODMUTEX_VI_0},
@@ -247,7 +253,8 @@ struct nvhost_device_data t124_vi_info = {
 	.clocks           = {
 		{"vi", UINT_MAX, 0},
 		{"csi", 0},
-		{"cilab", 102000000} },
+		{"cilab", 102000000},
+		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.init             = nvhost_vi_init,
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
@@ -270,7 +277,6 @@ static struct platform_device tegra_vi01_device = {
 struct nvhost_device_data t124_vib_info = {
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
-	/* FIXME: Add control for sclk/emc */
 	.syncpts          = NV_VI_1_SYNCPTS,
 	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
 	.modulemutexes    = {NVMODMUTEX_VI_1},
@@ -284,7 +290,8 @@ struct nvhost_device_data t124_vib_info = {
 		{"vi", UINT_MAX},
 		{"csi", 0},
 		{"cilcd", 102000000},
-		{"cile", 102000000} },
+		{"cile", 102000000},
+		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.init             = nvhost_vi_init,
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,

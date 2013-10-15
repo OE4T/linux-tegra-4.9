@@ -119,6 +119,8 @@ static int __exit isp_remove(struct platform_device *dev)
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);
+#else
+	nvhost_module_disable_clk(&dev->dev);
 #endif
 	return 0;
 }

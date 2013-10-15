@@ -126,6 +126,8 @@ void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
 	int pu_pd);
+void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,
+	bool is_lvds);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

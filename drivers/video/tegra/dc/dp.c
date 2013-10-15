@@ -2168,6 +2168,12 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 	tegra_dc_dp_enable(dc);
 }
 
+static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	tegra_dc_sor_modeset_notifier(dp->sor, false);
+}
+
 struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.init	   = tegra_dc_dp_init,
 	.destroy   = tegra_dc_dp_destroy,
@@ -2176,6 +2182,7 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.suspend   = tegra_dc_dp_suspend,
 	.resume	   = tegra_dc_dp_resume,
 	.setup_clk = tegra_dc_dp_setup_clk,
+	.modeset_notifier = tegra_dc_dp_modeset_notifier,
 };
 
 

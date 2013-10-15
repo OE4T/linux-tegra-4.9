@@ -692,7 +692,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	bool is_lvds)
 {
 	const struct tegra_dc_out_pin	*pins	  = sor->dc->out->out_pins;
-	const struct tegra_dc_mode	*dc_mode  = sor->dc->out->modes;
+	const struct tegra_dc_mode	*dc_mode  = &sor->dc->mode;
 
 	const int	head_num = sor->dc->ndev->id;
 	u32		reg_val	 = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
@@ -1217,5 +1217,13 @@ void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	usleep_range(10, 100);
 	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 		0xf0, 0x0);
+}
+
+void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,
+	bool is_lvds)
+{
+	tegra_dc_sor_config_panel(sor, is_lvds);
+	tegra_dc_sor_update(sor);
+	tegra_dc_sor_super_update(sor);
 }
 

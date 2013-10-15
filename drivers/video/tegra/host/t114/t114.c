@@ -27,14 +27,12 @@
 #include <mach/mc.h>
 
 #include "class_ids.h"
-#include "t20/t20.h"
-#include "t30/t30.h"
 #include "t114.h"
 #include "gr2d/gr2d_t114.h"
 #include "gr3d/gr3d_t114.h"
+#include "gr3d/gr3d.h"
 #include "gr3d/scale3d.h"
 #include "nvhost_scale.h"
-#include "gr3d/gr3d_t30.h"
 #include "gr3d/scale3d.h"
 #include "host1x/host1x02_hardware.h"
 #include "msenc/msenc.h"
@@ -143,7 +141,7 @@ struct nvhost_device_data t11_gr3d_info = {
 	.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,
 	.finalize_poweron = nvhost_gr3d_t114_finalize_power_on,
 	.alloc_hwctx_handler = nvhost_gr3d_t114_ctxhandler_init,
-	.read_reg	= nvhost_gr3d_t30_read_reg,
+	.read_reg	= nvhost_gr3d_read_reg,
 };
 
 static struct platform_device tegra_gr3d03_device = {

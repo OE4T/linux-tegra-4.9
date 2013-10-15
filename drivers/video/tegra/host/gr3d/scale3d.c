@@ -106,10 +106,6 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 	long hz;
 	long after;
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3)
-		nvhost_module_set_devfreq_rate(profile->pdev,
-					       gr3d_params->clk_3d2, freq);
-
 	/* Set EMC clockrate */
 	after = (long) clk_get_rate(clk(profile, gr3d_params->clk_3d));
 	hz = nvhost_scale3d_get_emc_rate(emc_params, after);
@@ -244,11 +240,7 @@ void nvhost_scale3d_init(struct platform_device *pdev)
 		goto err_allocate_gr3d_params;
 
 	gr3d_params->clk_3d = 0;
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
-		gr3d_params->clk_3d2 = 1;
-		gr3d_params->clk_3d_emc = 2;
-	} else
-		gr3d_params->clk_3d_emc = 1;
+	gr3d_params->clk_3d_emc = 1;
 
 	profile->private_data = gr3d_params;
 

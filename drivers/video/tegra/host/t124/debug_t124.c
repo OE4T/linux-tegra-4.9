@@ -28,7 +28,6 @@
 #include "hardware_t124.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/debug_gk20a.h"
-#include "t20/t20.h"
 
 #include "chip_support.h"
 

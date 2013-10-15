@@ -34,8 +34,6 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include "t20/t20.h"
-#include "t30/t30.h"
 #include "t114/t114.h"
 #include "t148/t148.h"
 #include "t124/t124.h"
@@ -49,14 +47,6 @@
 #define T12_VI_CSI_SW_RESET_MCCIF_RESET 3
 
 static struct of_device_id tegra_vi_of_match[] = {
-#ifdef TEGRA_2X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra20-vi",
-		.data = (struct nvhost_device_data *)&t20_vi_info },
-#endif
-#ifdef TEGRA_3X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra30-vi",
-		.data = (struct nvhost_device_data *)&t30_vi_info },
-#endif
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-vi",
 		.data = (struct nvhost_device_data *)&t11_vi_info },

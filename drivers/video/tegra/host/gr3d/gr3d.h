@@ -58,5 +58,11 @@ void nvhost_3dctx_get(struct nvhost_hwctx *ctx);
 void nvhost_3dctx_free(struct kref *ref);
 void nvhost_3dctx_put(struct nvhost_hwctx *ctx);
 int nvhost_gr3d_prepare_power_off(struct platform_device *dev);
+int nvhost_gr3d_read_reg(
+	struct platform_device *dev,
+	struct nvhost_channel *channel,
+	struct nvhost_hwctx *hwctx,
+	u32 offset,
+	u32 *value);
 
 #endif

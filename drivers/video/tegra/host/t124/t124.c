@@ -34,7 +34,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gk20a_scale.h"
-#include "t20/t20.h"
 #include "vic03/vic03.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"

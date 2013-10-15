@@ -30,8 +30,6 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include "t20/t20.h"
-#include "t30/t30.h"
 #include "t114/t114.h"
 #include "t148/t148.h"
 #include "t124/t124.h"
@@ -40,14 +38,6 @@
 #define T12_CG_2ND_LEVEL_EN	1
 
 static struct of_device_id tegra_isp_of_match[] = {
-#ifdef TEGRA_2X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra20-isp",
-		.data = (struct nvhost_device_data *)&t20_isp_info },
-#endif
-#ifdef TEGRA_3X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra30-isp",
-		.data = (struct nvhost_device_data *)&t30_isp_info },
-#endif
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-isp",
 		.data = (struct nvhost_device_data *)&t11_isp_info },

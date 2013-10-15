@@ -25,6 +25,7 @@ struct nvhost_device_profile;
 struct platform_device;
 struct device;
 struct dentry;
+struct clk;
 
 struct nvhost_emc_params {
 	long				emc_slope;

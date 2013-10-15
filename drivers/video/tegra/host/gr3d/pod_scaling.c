@@ -1098,15 +1098,6 @@ static int nvhost_pod_init(struct devfreq *df)
 			podgov->p_scaledown_limit = 1300;
 			podgov->p_smooth = 3;
 			break;
-		case TEGRA_CHIPID_TEGRA3:
-			podgov->idle_min = podgov->p_idle_min = 100;
-			podgov->idle_max = podgov->p_idle_max = 150;
-			podgov->p_hint_lo_limit = 800;
-			podgov->p_hint_hi_limit = 1015;
-			podgov->p_scaleup_limit = 1275;
-			podgov->p_scaledown_limit = 1475;
-			podgov->p_smooth = 7;
-			break;
 		default:
 			pr_err("%s: un-supported chip id\n", __func__);
 			goto err_unsupported_chip_id;

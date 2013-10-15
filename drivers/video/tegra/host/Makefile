@@ -40,10 +40,7 @@ nvhost-objs = \
 
 obj-$(all_configs) += nvhost.o
 obj-$(all_configs) += host1x/
-obj-$(all_configs) += t20/
-obj-$(all_configs) += mpe/
 obj-$(all_configs) += gr3d/
-obj-$(t3x_or_higher_config) += t30/
 obj-$(t11x_or_higher_config) += t114/
 obj-$(t14x_or_higher_config) += t148/
 obj-$(t11x_or_higher_config) += msenc/

@@ -660,9 +660,39 @@ static struct platform_device __maybe_unused
 	&dsi_s_wqxga_10_1_bl_device,
 };
 
+static unsigned int dsi_s_shield_edp_states[] = {
+	909, 809, 709, 609, 509, 410, 310, 210, 110, 0
+};
+static unsigned int dsi_s_shield_edp_brightness[] = {
+	255, 227, 199, 171, 143, 115, 87, 59, 31, 0
+};
+static unsigned int dsi_s_tn8_edp_states[] = {
+	909, 809, 709, 609, 509, 410, 310, 210, 110, 0
+};
+static unsigned int dsi_s_tn8_edp_brightness[] = {
+	255, 227, 199, 171, 143, 115, 87, 59, 31, 0
+};
+
 static int __init dsi_s_wqxga_10_1_register_bl_dev(void)
 {
 	int err = 0;
+	struct board_info board_info;
+	tegra_get_board_info(&board_info);
+
+	if (board_info.board_id == BOARD_E1780) {
+		if (board_info.sku == 1000) {
+			dsi_s_wqxga_10_1_bl_data.edp_states =
+				dsi_s_shield_edp_states;
+			dsi_s_wqxga_10_1_bl_data.edp_brightness =
+				dsi_s_shield_edp_brightness;
+		} else if (board_info.sku == 1100) {
+			dsi_s_wqxga_10_1_bl_data.edp_states =
+				dsi_s_tn8_edp_states;
+			dsi_s_wqxga_10_1_bl_data.edp_brightness =
+				dsi_s_tn8_edp_brightness;
+		}
+	}
+
 	err = platform_add_devices(dsi_s_wqxga_10_1_bl_devices,
 				ARRAY_SIZE(dsi_s_wqxga_10_1_bl_devices));
 	if (err) {

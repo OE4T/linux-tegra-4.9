@@ -715,9 +715,6 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	if (g->power_on)
 		return 0;
 
-	/* FIXME: fix this correctly. this is enabling ARCH timer */
-	writel(0x1, IO_TO_VIRT(0x700f0000));
-
 	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),

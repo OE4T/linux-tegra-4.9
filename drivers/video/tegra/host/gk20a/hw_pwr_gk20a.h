@@ -354,6 +354,10 @@ static inline u32 pwr_falcon_exterrstat_valid_v(u32 r)
 {
 	return (r >> 31) & 0x1;
 }
+static inline u32 pwr_falcon_exterrstat_valid_m(void)
+{
+	return 0x1 << 31;
+}
 static inline u32 pwr_falcon_exterrstat_valid_true_v(void)
 {
 	return 0x00000001;

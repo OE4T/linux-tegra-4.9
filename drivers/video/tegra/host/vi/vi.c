@@ -26,6 +26,7 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/clk/tegra.h>
+#include <mach/latency_allowance.h>
 
 #include <mach/pm_domains.h>
 #include <media/tegra_v4l2_camera.h>
@@ -58,12 +59,15 @@ static struct of_device_id tegra_vi_of_match[] = {
 
 static struct i2c_camera_ctrl *i2c_ctrl;
 
+static struct vi_mutex vi_lock = {
+	.mutex_init_flag = 0,
+};
+
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
-
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
 
@@ -99,6 +103,11 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_vi->ndev = dev;
 	pdata->private_data = tegra_vi;
+
+	if (!vi_lock.mutex_init_flag) {
+		mutex_init(&vi_lock.lock);
+		vi_lock.mutex_init_flag = 1;
+	}
 
 	/* Create I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->new_devices)
@@ -137,6 +146,8 @@ camera_i2c_unregister:
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
+	vi_lock.mutex_init_flag = 0;
+	mutex_destroy(&vi_lock.lock);
 	kfree(tegra_vi);
 	return err;
 }
@@ -171,6 +182,8 @@ static int __exit vi_remove(struct platform_device *dev)
 		i2c_ctrl->remove_devices(dev);
 
 	pdata->private_data = i2c_ctrl;
+	vi_lock.mutex_init_flag = 0;
+	mutex_destroy(&vi_lock.lock);
 	kfree(tegra_vi);
 
 	return 0;
@@ -252,6 +265,40 @@ static int __init vi_init(void)
 static void __exit vi_exit(void)
 {
 	platform_driver_unregister(&vi_driver);
+}
+
+int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
+{
+	struct nvhost_device_data *pdata_vi1, *pdata_vi2;
+	struct vi *tegra_vi2;
+	struct clk *clk_vi;
+	int ret;
+	uint total_vi_bw;
+
+	pdata_vi1 =
+		(struct nvhost_device_data *)tegra_vi1->ndev->dev.platform_data;
+
+	/* Copy device data for other vi device */
+	mutex_lock(&vi_lock.lock);
+
+	tegra_vi1->vi_bw = vi_bw / 1000;
+	total_vi_bw = tegra_vi1->vi_bw;
+	if (pdata_vi1->master)
+		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->master;
+	else
+		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->slave;
+
+	tegra_vi2 = (struct vi *)pdata_vi2->private_data;
+
+	clk_vi = clk_get(&tegra_vi2->ndev->dev, "emc");
+	if (tegra_is_clk_enabled(clk_vi))
+		total_vi_bw += tegra_vi2->vi_bw;
+
+	mutex_unlock(&vi_lock.lock);
+
+	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);
+
+	return ret;
 }
 
 late_initcall(vi_init);

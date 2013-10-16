@@ -1,7 +1,7 @@
 /*
- * include/linux/nvhost_vi_ioctl.h
+ * include/linux/nvhost_isp_ioctl.h
  *
- * Tegra VI Driver
+ * Tegra ISP Driver
  *
  * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -19,30 +19,40 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __LINUX_NVHOST_VI_IOCTL_H
-#define __LINUX_NVHOST_VI_IOCTL_H
+#ifndef __LINUX_NVHOST_ISP_IOCTL_H
+#define __LINUX_NVHOST_ISP_IOCTL_H
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
+
+#define ISP_SOFT_ISO_CLIENT 0
+#define ISP_HARD_ISO_CLIENT 1
 
 #if !defined(__KERNEL__)
 #define __user
 #endif
 
-#define NVHOST_VI_IOCTL_MAGIC 'V'
+struct isp_emc {
+	uint isp_bw;
+	uint isp_clk;
+	uint bpp_input;
+	uint bpp_output;
+};
+
+#define NVHOST_ISP_IOCTL_MAGIC 'I'
 
 /*
- * /dev/nvhost-ctrl-vi devices
+ * /dev/nvhost-ctrl-isp devices
  *
- * Opening a '/dev/nvhost-ctrl-vi' device node creates a way to send
- * ctrl ioctl to vi driver.
+ * Opening a '/dev/nvhost-ctrl-isp' device node creates a way to send
+ * ctrl ioctl to isp driver.
  *
- * /dev/nvhost-vi is for channel (context specific) operations. We use
- * /dev/nvhost-ctrl-vi for global (context independent) operations on
- * vi device.
+ * /dev/nvhost-isp is for channel (context specific) operations. We use
+ * /dev/nvhost-ctrl-isp for global (context independent) operations on
+ * isp device.
  */
 
-#define NVHOST_VI_IOCTL_ENABLE_TPG _IOW(NVHOST_VI_IOCTL_MAGIC, 1, uint)
-#define NVHOST_VI_IOCTL_SET_EMC_INFO _IOW(NVHOST_VI_IOCTL_MAGIC, 2, uint)
+#define NVHOST_ISP_IOCTL_SET_EMC _IOW(NVHOST_ISP_IOCTL_MAGIC, 1, struct isp_emc)
 
 #endif
+

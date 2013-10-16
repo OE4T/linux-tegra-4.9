@@ -21,6 +21,7 @@
 #ifndef __NVHOST_ISP_H__
 #define __NVHOST_ISP_H__
 
+extern const struct file_operations tegra_isp_ctrl_ops;
 int nvhost_isp_t124_finalize_poweron(struct platform_device *);
 
 #endif

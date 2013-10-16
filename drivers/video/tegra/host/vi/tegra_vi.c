@@ -104,7 +104,7 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	return ret;
 }
 
-long tegra_vi_ioctl(struct file *file,
+long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	struct vi *tegra_vi;
@@ -137,6 +137,18 @@ long tegra_vi_ioctl(struct file *file,
 
 		return ret;
 	}
+	case NVHOST_VI_IOCTL_SET_EMC_INFO: {
+		uint vi_bw;
+		int ret;
+		if (copy_from_user(&vi_bw,
+			(const void __user *)arg, sizeof(uint))) {
+			dev_err(&tegra_vi->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+		}
+		ret = vi_set_la(tegra_vi, vi_bw);
+		return ret;
+	}
 	default:
 		dev_err(&tegra_vi->ndev->dev,
 			"%s: Unknown vi ioctl.\n", __func__);
@@ -145,7 +157,7 @@ long tegra_vi_ioctl(struct file *file,
 	return 0;
 }
 
-static int tegra_vi_open(struct inode *inode, struct file *file)
+static int vi_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata;
 	struct vi *vi;
@@ -161,16 +173,16 @@ static int tegra_vi_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int tegra_vi_release(struct inode *inode, struct file *file)
+static int vi_release(struct inode *inode, struct file *file)
 {
 	return 0;
 }
 
 const struct file_operations tegra_vi_ctrl_ops = {
 	.owner = THIS_MODULE,
-	.open = tegra_vi_open,
-	.unlocked_ioctl = tegra_vi_ioctl,
-	.release = tegra_vi_release,
+	.open = vi_open,
+	.unlocked_ioctl = vi_ioctl,
+	.release = vi_release,
 };
 #endif
 

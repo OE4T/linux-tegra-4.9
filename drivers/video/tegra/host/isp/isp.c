@@ -34,6 +34,12 @@
 #include "t148/t148.h"
 #include "t124/t124.h"
 
+#include <linux/uaccess.h>
+#include <linux/fs.h>
+#include <linux/nvhost_isp_ioctl.h>
+#include <mach/latency_allowance.h>
+#include "isp.h"
+
 #define T12_ISP_CG_CTRL		0x1d
 #define T12_CG_2ND_LEVEL_EN	1
 
@@ -140,6 +146,88 @@ static struct platform_driver isp_driver = {
 #endif
 	}
 };
+
+static int set_isp_la(struct platform_device *isp_ndev,
+			 struct isp_emc emc_info)
+{
+	int ret;
+	uint la_bw;
+	uint la_client;
+
+	la_bw = (((emc_info.isp_clk/1000)*emc_info.bpp_output)/8);
+
+	if (emc_info.bpp_output && emc_info.bpp_input)
+		la_client = ISP_SOFT_ISO_CLIENT;
+	else
+		la_client = ISP_HARD_ISO_CLIENT;
+
+	if (isp_ndev->id)
+		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WAB,
+				la_bw, la_client);
+	else
+		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WA,
+				la_bw, la_client);
+	return ret;
+}
+
+long isp_ioctl(struct file *file,
+		unsigned int cmd, unsigned long arg)
+{
+	struct platform_device *isp_ndev;
+	struct nvhost_device_data *pdata;
+
+	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
+		return -EFAULT;
+
+	isp_ndev = file->private_data;
+	pdata  = (struct nvhost_device_data *)isp_ndev->dev.platform_data;
+	switch (cmd) {
+	case NVHOST_ISP_IOCTL_SET_EMC: {
+		int ret;
+		struct isp_emc emc_info;
+		if (copy_from_user(&emc_info,
+			(const void __user *)arg, sizeof(struct isp_emc))) {
+			dev_err(&isp_ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+			}
+
+		ret = set_isp_la(isp_ndev, emc_info);
+
+		return ret;
+	}
+	default:
+		dev_err(&isp_ndev->dev,
+			"%s: Unknown ISP ioctl.\n", __func__);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int isp_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata;
+
+	pdata = container_of(inode->i_cdev,
+		struct nvhost_device_data, ctrl_cdev);
+	BUG_ON(pdata == NULL);
+
+	file->private_data = pdata->pdev;
+	return 0;
+}
+
+static int isp_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+const struct file_operations tegra_isp_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.open = isp_open,
+	.unlocked_ioctl = isp_ioctl,
+	.release = isp_release,
+};
+
 
 static int __init isp_init(void)
 {

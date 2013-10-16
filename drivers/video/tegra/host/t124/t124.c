@@ -180,6 +180,7 @@ struct nvhost_device_data t124_isp_info = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
 		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
+	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -215,6 +216,7 @@ struct nvhost_device_data t124_ispb_info = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
 		{"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
+	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
 
 static struct platform_device tegra_isp01b_device = {
@@ -295,6 +297,7 @@ struct nvhost_device_data t124_vib_info = {
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
+	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
 };

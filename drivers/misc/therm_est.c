@@ -265,10 +265,6 @@ static void therm_est_work_func(struct work_struct *work)
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
 		thermal_zone_device_update(est->thz);
-		if (!(est->thz)) {
-			kfree(est);
-			return;
-		}
 		therm_est_update_timer_trips(est);
 		therm_est_update_limits(est);
 	}

@@ -275,6 +275,9 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 
 	nvhost_dbg_fn("");
 
+	if (tegra_platform_is_linsim())
+		return 0;
+
 	/* get old coefficients */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	m = trim_sys_gpcpll_coeff_mdiv_v(coeff);

@@ -224,10 +224,10 @@ static inline void nvmap_ref_unlock(struct nvmap_client *priv)
 static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 {
 	if (unlikely(atomic_inc_return(&h->ref) <= 1)) {
-		pr_err("%s: %s getting a freed handle\n",
+		pr_err("%s: %s attempt to get a freed handle\n",
 			__func__, current->group_leader->comm);
-		if (atomic_read(&h->ref) <= 0)
-			return NULL;
+		atomic_dec(&h->ref);
+		return NULL;
 	}
 	return h;
 }

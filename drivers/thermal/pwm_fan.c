@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2012-2013 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -556,28 +556,26 @@ static ssize_t set_fan_state_cap_sysfs(struct device *dev,
 
 	ret = kstrtol(buf, 10, &val);
 
-	if (ret < 0)
-		return -EINVAL;
+	if (ret < 0 || !fan_data)
+		goto error;
 
-	if (!fan_data)
-		return -EINVAL;
-
+	mutex_lock(&fan_data->fan_state_lock);
 	if (val < 0)
 		val = 0;
 	else if (val >= fan_data->active_steps)
 		val = fan_data->active_steps - 1;
 
-	mutex_lock(&fan_data->fan_state_lock);
 	fan_data->fan_state_cap = val;
 	fan_data->fan_cap_pwm =
 		fan_data->fan_pwm[fan_data->fan_state_cap_lookup[val]];
 	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
 					fan_data->next_target_pwm);
-	dev_info(dev, "pwm_cap=%d target_pwm=%d\n",
-		fan_data->fan_cap_pwm, fan_data->next_target_pwm);
-
 	mutex_unlock(&fan_data->fan_state_lock);
 	return count;
+
+error:
+	dev_err(dev, "%s, fan_data is null or wrong input\n", __func__);
+	return -EINVAL;
 }
 
 
@@ -860,9 +858,6 @@ static int pwm_fan_resume(struct platform_device *pdev)
 	/*Sanity check, want to make sure fan is off when the driver resumes*/
 	mutex_lock(&fan_data->fan_state_lock);
 
-	dev_info(&pdev->dev, "%s, cur_pwm:%d, target_pwm:%d, cap:%d",
-	__func__, fan_data->fan_cur_pwm, fan_data->next_target_pwm,
-	fan_data->fan_cap_pwm);
 	gpio_free(fan_data->pwm_gpio);
 	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
 	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {

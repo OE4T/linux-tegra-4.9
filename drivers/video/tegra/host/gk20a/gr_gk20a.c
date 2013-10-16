@@ -415,11 +415,9 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 
 	} while (time_before(jiffies, end_jiffies));
 
-	if (!time_before(jiffies, end_jiffies)) {
-		nvhost_err(dev_from_gk20a(g),
+	if (!time_before(jiffies, end_jiffies))
+		nvhost_warn(dev_from_gk20a(g),
 			   "failed to set power mode to auto\n");
-		WARN_ON(1);
-	}
 
 	return 0;
 }

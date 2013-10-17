@@ -410,8 +410,8 @@ static void hdmi_state_machine_worker(struct work_struct *work)
 	rt_mutex_lock(&work_lock);
 	pending_hpd_evt = work_state.pending_hpd_evt;
 	work_state.pending_hpd_evt = 0;
-	cur_hpd = tegra_dc_hpd(work_state.hdmi->dc);
 	rt_mutex_unlock(&work_lock);
+	cur_hpd = tegra_dc_hpd(work_state.hdmi->dc);
 
 	pr_info("%s (tid %p): state %d (%s), hpd %d, pending_hpd_evt %d\n",
 		__func__, current, work_state.state,

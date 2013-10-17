@@ -1193,6 +1193,11 @@ static u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
+
+	/* Invalidate kernel mappings immediately */
+	if (vm_aspace_id(vm) == -1)
+		gk20a_mm_tlb_invalidate(vm);
+
 	return map_offset;
 
 clean_up:

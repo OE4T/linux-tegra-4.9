@@ -1610,6 +1610,11 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	nvhost_dbg_fn("waiting for channel to finish syncpt:%d val:%d",
 		      ch->last_submit_fence.syncpt_id,
 		      ch->last_submit_fence.syncpt_value);
+
+	/* Do not wait for a timedout channel. Just check if it's done */
+	if (ch->hwctx && ch->hwctx->has_timedout)
+		timeout = 0;
+
 	err = nvhost_syncpt_wait_timeout(sp,
 					 ch->last_submit_fence.syncpt_id,
 					 ch->last_submit_fence.syncpt_value,

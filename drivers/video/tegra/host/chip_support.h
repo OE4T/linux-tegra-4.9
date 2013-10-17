@@ -122,8 +122,6 @@ struct nvhost_intr_ops {
 	void (*disable_all_syncpt_intrs)(struct nvhost_intr *);
 	int  (*request_host_general_irq)(struct nvhost_intr *);
 	void (*free_host_general_irq)(struct nvhost_intr *);
-	void (*enable_general_irq)(struct nvhost_intr *, int num);
-	void (*disable_general_irq)(struct nvhost_intr *, int num);
 	int (*free_syncpt_irq)(struct nvhost_intr *);
 };
 

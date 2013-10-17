@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -80,8 +80,6 @@ struct nvhost_intr {
 	int general_irq;
 	int syncpt_irq;
 	struct workqueue_struct *wq;
-	void (*generic_isr[32])(void);
-	void (*generic_isr_thread[32])(void);
 	u32 intstatus;
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)
@@ -127,9 +125,5 @@ int nvhost_intr_release_time(void *ref, struct timespec *ts);
 
 irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);
-
-void nvhost_intr_enable_general_irq(struct nvhost_intr *intr, int irq,
-	void (*generic_isr)(void), void (*generic_isr_thread));
-void nvhost_intr_disable_general_irq(struct nvhost_intr *intr, int irq);
 
 #endif

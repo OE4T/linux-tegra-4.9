@@ -50,7 +50,6 @@
 #define TSEC_KEY_LENGTH			16
 #define TSEC_RESERVE			256
 #define TSEC_KEY_OFFSET			(TSEC_RESERVE - TSEC_KEY_LENGTH)
-#define TSEC_HOST1X_STATUS_OFFSET	(TSEC_KEY_OFFSET - 4)
 
 #define TSEC_OS_START_OFFSET    256
 
@@ -59,77 +58,6 @@
 
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
-
-/* Pointer to this device */
-struct platform_device *tsec;
-
-static u32 *host1x_status_offset(struct tsec *m)
-{
-	return &(m->mapped[m->os.reserved_offset + TSEC_HOST1X_STATUS_OFFSET]);
-}
-
-static u32 tsec_get_host1x_state(void)
-{
-	struct tsec *m = get_tsec(tsec);
-	u32 ret;
-
-	/* We have dedicated memory byte  */
-	ret = *host1x_status_offset(m);
-	rmb();
-	return ret;
-}
-
-static void tsec_set_host1x_state(int state)
-{
-	struct tsec *m = get_tsec(tsec);
-
-	*host1x_status_offset(m) = state;
-	wmb();
-}
-
-static int stop_machine_fn(void *priv)
-{
-	int timeout = 10000;
-
-	tsec_set_host1x_state(tsec_host1x_access_granted);
-
-	while (tsec_get_host1x_state() != tsec_host1x_release_access
-			&& timeout)
-		timeout--;
-
-	if (!timeout)
-		pr_err("TSEC didn't release access");
-
-	tsec_set_host1x_state(tsec_host1x_none);
-
-	return 0;
-}
-
-static void disable_tsec_irq(struct platform_device *pdev)
-{
-	nvhost_intr_disable_general_irq(&nvhost_get_host(pdev)->intr, 20);
-}
-
-static void enable_tsec_irq(struct platform_device *pdev)
-{
-	/* Clear interrupt */
-	nvhost_device_writel(pdev, tsec_irqsclr_r(), 0xffffff);
-	nvhost_device_writel(pdev, tsec_thi_int_status_r(), 0x1);
-	nvhost_intr_enable_general_irq(&nvhost_get_host(pdev)->intr, 20,
-			nvhost_tsec_isr, nvhost_tsec_isr_thread);
-}
-
-void nvhost_tsec_isr(void)
-{
-	disable_tsec_irq(tsec);
-}
-
-void nvhost_tsec_isr_thread(void)
-{
-	if (tsec_get_host1x_state() == tsec_host1x_request_access)
-		stop_machine(stop_machine_fn, NULL, NULL);
-	enable_tsec_irq(tsec);
-}
 
 /* caller is responsible for freeing */
 static char *tsec_get_fw_name(struct platform_device *dev)
@@ -474,7 +402,6 @@ int nvhost_tsec_init(struct platform_device *dev)
 	if (err)
 		goto clean_up;
 
-	enable_tsec_irq(dev);
 	nvhost_module_idle(dev);
 	return 0;
 
@@ -489,8 +416,6 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-
-	disable_tsec_irq(dev);
 
 	if (m->mapped) {
 		dma_free_attrs(&dev->dev,
@@ -555,8 +480,6 @@ static int tsec_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
-	tsec = dev;
-
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	tegra_pd_add_device(&dev->dev);
 #endif
@@ -579,11 +502,6 @@ static int tsec_probe(struct platform_device *dev)
 
 static int __exit tsec_remove(struct platform_device *dev)
 {
-	struct nvhost_master *host = nvhost_get_host(dev);
-
-	host->intr.generic_isr[20] = NULL;
-	host->intr.generic_isr_thread[20] = NULL;
-
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);

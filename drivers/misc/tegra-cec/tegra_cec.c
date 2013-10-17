@@ -39,6 +39,14 @@
 
 #include "tegra_cec.h"
 
+static ssize_t cec_logical_addr_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
+static ssize_t cec_logical_addr_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static DEVICE_ATTR(cec_logical_addr_config, S_IWUSR | S_IRUGO,
+		cec_logical_addr_show, cec_logical_addr_store);
 
 int tegra_cec_open(struct inode *inode, struct file *file)
 {
@@ -194,7 +202,8 @@ static void tegra_cec_init(struct tegra_cec *cec)
 
 	writel(0x00, cec->cec_base + TEGRA_CEC_SW_CONTROL);
 
-	writel(((TEGRA_CEC_LOGICAL_ADDR<<TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK)&
+	writel((
+	   (cec->logical_addr << TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK) &
 	   (~TEGRA_CEC_HW_CONTROL_RX_SNOOP) &
 	   (~TEGRA_CEC_HW_CONTROL_RX_NAK_MODE) &
 	   (~TEGRA_CEC_HW_CONTROL_TX_NAK_MODE) &
@@ -257,6 +266,46 @@ static void tegra_cec_init_worker(struct work_struct *work)
 	tegra_cec_init(cec);
 }
 
+static ssize_t cec_logical_addr_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tegra_cec *cec = dev_get_drvdata(dev);
+
+	if (buf)
+		return sprintf(buf, "0x%x\n", (u32)cec->logical_addr);
+	return 1;
+}
+
+static ssize_t cec_logical_addr_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret;
+	u32 state;
+	u16 addr;
+	struct tegra_cec *cec;
+
+	if (!buf || !count)
+		return -EINVAL;
+
+	cec = dev_get_drvdata(dev);
+	if (!atomic_read(&cec->init_done))
+		return -EAGAIN;
+
+	ret = kstrtou16(buf, 0, &addr);
+	if (ret)
+		return ret;
+
+
+	dev_info(dev, "tegra_cec: set logical address: %x\n", (u32)addr);
+	cec->logical_addr = addr;
+	state = readl(cec->cec_base + TEGRA_CEC_HW_CONTROL);
+	state &= ~TEGRA_CEC_HWCTRL_RX_LADDR_MASK;
+	state |= TEGRA_CEC_HWCTRL_RX_LADDR(cec->logical_addr);
+	writel(state, cec->cec_base + TEGRA_CEC_HW_CONTROL);
+
+	return count;
+}
+
 static int tegra_cec_probe(struct platform_device *pdev)
 {
 	struct tegra_cec *cec;
@@ -302,6 +351,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	}
 
 	atomic_set(&cec->init_done, 0);
+	cec->logical_addr = TEGRA_CEC_LOGICAL_ADDR;
 
 	cec->clk = clk_get(&pdev->dev, "cec");
 
@@ -345,6 +395,14 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev,
 			"Unable to request interrupt for device (err=%d).\n", ret);
+		goto cec_error;
+	}
+
+	ret = sysfs_create_file(
+		&pdev->dev.kobj, &dev_attr_cec_logical_addr_config.attr);
+	dev_info(&pdev->dev, "cec_add_sysfs ret=%d\n", ret);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "Failed to add sysfs: %d\n", ret);
 		goto cec_error;
 	}
 

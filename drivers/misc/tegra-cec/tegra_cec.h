@@ -32,7 +32,8 @@ struct tegra_cec {
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
 	unsigned short		rx_buffer;
-	atomic_t		init_done;
+	atomic_t            init_done;
+	u16			logical_addr;
 	struct work_struct	work;
 };
 static int tegra_cec_remove(struct platform_device *pdev);
@@ -55,6 +56,8 @@ static int tegra_cec_remove(struct platform_device *pdev);
 #define TEGRA_CEC_HW_DEBUG_TX	 0X03C
 
 #define TEGRA_CEC_LOGICAL_ADDR	0x10
+#define TEGRA_CEC_HWCTRL_RX_LADDR_MASK      0xFFFF
+#define TEGRA_CEC_HWCTRL_RX_LADDR(x)        (x<<0)
 
 #define TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK	0
 #define TEGRA_CEC_HW_CONTROL_RX_SNOOP 			(1<<15)

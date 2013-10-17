@@ -27,6 +27,8 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/pm.h>
+#include <linux/dma-buf.h>
+#include <linux/syscalls.h>
 
 #include <mach/pm_domains.h>
 #include <mach/gpufuse.h>
@@ -67,6 +69,7 @@ int nvhost_gr3d_read_reg(
 	u32 *cmdbuf_ptr = NULL;
 	struct sg_table *mem_sgt = NULL;
 	struct mem_mgr *memmgr = hwctx->memmgr;
+	ulong user_id;
 	u32 opcodes[] = {
 		/* Switch to 3D - set up output to memory */
 		nvhost_opcode_setclass(NV_GRAPHICS_3D_CLASS_ID, 0, 0),
@@ -136,14 +139,24 @@ int nvhost_gr3d_read_reg(
 	job->serialize = 1;
 	memcpy(cmdbuf_ptr, opcodes, sizeof(opcodes));
 
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	get_dma_buf((struct dma_buf *)mem);
+	user_id = dma_buf_fd((struct dma_buf *)mem, O_CLOEXEC);
+#else
+	user_id = nvhost_memmgr_handle_to_id(mem);
+#endif
+
 	/* Submit job */
-	nvhost_job_add_gather(job, nvhost_memmgr_handle_to_id(mem),
+	nvhost_job_add_gather(job, user_id,
 			ARRAY_SIZE(opcodes), 4, 0);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(dev)->syncpt);
 	if (err)
 		goto done;
 
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	sys_close(user_id);
+#endif
 	err = nvhost_channel_submit(job);
 	if (err)
 		goto done;

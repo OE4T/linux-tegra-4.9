@@ -2407,6 +2407,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 
 		/* flush any pending syncpt waits */
+		dc->syncpt[i].max += 1;
 		while (dc->syncpt[i].min < dc->syncpt[i].max) {
 			trace_display_syncpt_flush(dc, dc->syncpt[i].id,
 				dc->syncpt[i].min, dc->syncpt[i].max);

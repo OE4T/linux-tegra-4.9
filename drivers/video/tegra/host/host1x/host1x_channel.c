@@ -31,11 +31,6 @@
 #include "nvhost_intr.h"
 #include "class_ids.h"
 
-#define NV_FIFO_READ_TIMEOUT 200000
-
-static int host1x_drain_read_fifo(struct nvhost_channel *ch,
-	u32 *ptr, unsigned int count, unsigned int *pending);
-
 static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 {
 	unsigned long waitbase;
@@ -407,49 +402,6 @@ error:
 	return err;
 }
 
-static int host1x_drain_read_fifo(struct nvhost_channel *ch,
-	u32 *ptr, unsigned int count, unsigned int *pending)
-{
-	unsigned int entries = *pending;
-	unsigned long timeout = jiffies + NV_FIFO_READ_TIMEOUT;
-	void __iomem *chan_regs = ch->aperture;
-	while (count) {
-		unsigned int num;
-
-		while (!entries && time_before(jiffies, timeout)) {
-			/* query host for number of entries in fifo */
-			entries = host1x_channel_fifostat_outfentries_v(
-				readl(chan_regs + host1x_channel_fifostat_r()));
-			if (!entries)
-				cpu_relax();
-		}
-
-		/*  timeout -> return error */
-		if (!entries)
-			return -EIO;
-
-		num = min(entries, count);
-		entries -= num;
-		count -= num;
-
-		while (num & ~0x3) {
-			u32 arr[4];
-			arr[0] = readl(chan_regs + host1x_channel_inddata_r());
-			arr[1] = readl(chan_regs + host1x_channel_inddata_r());
-			arr[2] = readl(chan_regs + host1x_channel_inddata_r());
-			arr[3] = readl(chan_regs + host1x_channel_inddata_r());
-			memcpy(ptr, arr, 4*sizeof(u32));
-			ptr += 4;
-			num -= 4;
-		}
-		while (num--)
-			*ptr++ = readl(chan_regs + host1x_channel_inddata_r());
-	}
-	*pending = entries;
-
-	return 0;
-}
-
 static int host1x_save_context(struct nvhost_channel *ch)
 {
 	struct nvhost_hwctx *hwctx_to_save;
@@ -584,5 +536,4 @@ static const struct nvhost_channel_ops host1x_channel_ops = {
 	.init = host1x_channel_init,
 	.submit = host1x_channel_submit,
 	.save_context = host1x_save_context,
-	.drain_read_fifo = host1x_drain_read_fifo,
 };

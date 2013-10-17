@@ -57,8 +57,6 @@ struct nvhost_channel_ops {
 		    int chid);
 	int (*submit)(struct nvhost_job *job);
 	int (*save_context)(struct nvhost_channel *channel);
-	int (*drain_read_fifo)(struct nvhost_channel *ch,
-	u32 *ptr, unsigned int count, unsigned int *pending);
 	int (*alloc_obj)(struct nvhost_hwctx *,
 			struct nvhost_alloc_obj_ctx_args *args);
 	int (*free_obj)(struct nvhost_hwctx *,
@@ -120,9 +118,6 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 		bool force);
 void nvhost_putchannel(struct nvhost_channel *ch);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
-
-int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
-			u32 *ptr, unsigned int count, unsigned int *pending);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,
 	struct nvhost_hwctx *hwctx,

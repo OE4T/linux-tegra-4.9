@@ -189,9 +189,3 @@ int nvhost_channel_read_reg(struct nvhost_channel *ch,
 
 	return pdata->read_reg(ch->dev, ch, hwctx, offset, value);
 }
-
-int nvhost_channel_drain_read_fifo(struct nvhost_channel *ch,
-	u32 *ptr, unsigned int count, unsigned int *pending)
-{
-	return channel_op(ch).drain_read_fifo(ch, ptr, count, pending);
-}

@@ -107,6 +107,9 @@ struct tegra_dc_out_ops {
 	 * during OSidle.
 	 */
 	bool (*osidle)(struct tegra_dc *dc);
+	/* callback after new mode is programmed.
+	 * dc clocks are on at this point */
+	void (*modeset_notifier)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {

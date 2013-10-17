@@ -4802,16 +4802,17 @@ int gk20a_gr_isr(struct gk20a *g)
 			if (!gk20a_gr_sm_debugger_attached(g)) {
 				nvhost_dbg(dbg_intr | dbg_gpu_dbg,
 					   "SM debugger not attached, clearing interrupt");
-				ret = 0;
+				ret = -EFAULT;
 			}
 			else {
 				/* check if gpc 0 has an exception */
 				if (exception1 & gr_exception1_gpc_0_pending_f())
 					ret = gk20a_gr_handle_gpc_exception(g, &isr_data);
+				/* clear the hwws, also causes tpc and gpc
+				 * exceptions to be cleared */
+				gk20a_gr_clear_sm_hww(g, global_esr);
 			}
 
-			/* clear the hwws, also causes tpc and gpc exceptions to be cleared */
-			gk20a_gr_clear_sm_hww(g, global_esr);
 		}
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());

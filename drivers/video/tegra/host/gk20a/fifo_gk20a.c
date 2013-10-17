@@ -1556,7 +1556,15 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 				   "runlist update timeout");
 
 			gk20a_fifo_runlist_reset_engines(g, runlist_id);
+
+			/* engine reset needs the lock. drop it */
+			mutex_unlock(&runlist->mutex);
+			/* wait until the runlist is active again */
 			ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
+			/* get the lock back. at this point everything should
+			 * should be fine */
+			mutex_lock(&runlist->mutex);
+
 			if (ret)
 				nvhost_err(dev_from_gk20a(g),
 					   "runlist update failed: %d", ret);

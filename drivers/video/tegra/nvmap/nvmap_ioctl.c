@@ -92,7 +92,7 @@ __u32 marshal_id(ulong id)
 ulong unmarshal_id(__u32 id)
 {
 #ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	return (ulong)(id | PAGE_OFFSET);
+	return (ulong)id;
 #else
 	return unmarshal_user_id(id);
 #endif
@@ -139,20 +139,12 @@ ulong unmarshal_user_id(ulong id)
 
 ulong marshal_id(ulong id)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	return id;
-#else
-	return (ulong)marshal_kernel_handle(id);
-#endif
 }
 
 ulong unmarshal_id(ulong id)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	return id;
-#else
-	return unmarshal_user_id(id);
-#endif
 }
 #endif
 

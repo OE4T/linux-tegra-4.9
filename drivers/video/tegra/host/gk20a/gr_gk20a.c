@@ -83,6 +83,89 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					  struct channel_gk20a *c);
 
+void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
+{
+	int i;
+
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_os_r : %d",
+		gk20a_readl(g, gr_fecs_os_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_cpuctl_r : 0x%x",
+		gk20a_readl(g, gr_fecs_cpuctl_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_idlestate_r : 0x%x",
+		gk20a_readl(g, gr_fecs_idlestate_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_mailbox0_r : 0x%x",
+		gk20a_readl(g, gr_fecs_mailbox0_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_mailbox1_r : 0x%x",
+		gk20a_readl(g, gr_fecs_mailbox1_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_irqstat_r : 0x%x",
+		gk20a_readl(g, gr_fecs_irqstat_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_irqmode_r : 0x%x",
+		gk20a_readl(g, gr_fecs_irqmode_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_irqmask_r : 0x%x",
+		gk20a_readl(g, gr_fecs_irqmask_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_irqdest_r : 0x%x",
+		gk20a_readl(g, gr_fecs_irqdest_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_debug1_r : 0x%x",
+		gk20a_readl(g, gr_fecs_debug1_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_debuginfo_r : 0x%x",
+		gk20a_readl(g, gr_fecs_debuginfo_r()));
+
+	for (i = 0; i < gr_fecs_ctxsw_mailbox__size_1_v(); i++)
+		nvhost_err(dev_from_gk20a(g), "gr_fecs_ctxsw_mailbox_r(%d) : 0x%x",
+			i, gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(i)));
+
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_engctl_r : 0x%x",
+		gk20a_readl(g, gr_fecs_engctl_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_curctx_r : 0x%x",
+		gk20a_readl(g, gr_fecs_curctx_r()));
+	nvhost_err(dev_from_gk20a(g), "gr_fecs_nxtctx_r : 0x%x",
+		gk20a_readl(g, gr_fecs_nxtctx_r()));
+
+	gk20a_writel(g, gr_fecs_icd_cmd_r(),
+		gr_fecs_icd_cmd_opc_rreg_f() |
+		gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_IMB));
+	nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_IMB : 0x%x",
+		gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+	gk20a_writel(g, gr_fecs_icd_cmd_r(),
+		gr_fecs_icd_cmd_opc_rreg_f() |
+		gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_DMB));
+	nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_DMB : 0x%x",
+		gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+	gk20a_writel(g, gr_fecs_icd_cmd_r(),
+		gr_fecs_icd_cmd_opc_rreg_f() |
+		gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_CSW));
+	nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_CSW : 0x%x",
+		gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+	gk20a_writel(g, gr_fecs_icd_cmd_r(),
+		gr_fecs_icd_cmd_opc_rreg_f() |
+		gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_CTX));
+	nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_CTX : 0x%x",
+		gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+	gk20a_writel(g, gr_fecs_icd_cmd_r(),
+		gr_fecs_icd_cmd_opc_rreg_f() |
+		gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_EXCI));
+	nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_EXCI : 0x%x",
+		gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+	for (i = 0; i < 4; i++) {
+		gk20a_writel(g, gr_fecs_icd_cmd_r(),
+			gr_fecs_icd_cmd_opc_rreg_f() |
+			gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_PC));
+		nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_PC : 0x%x",
+			gk20a_readl(g, gr_fecs_icd_rdata_r()));
+
+		gk20a_writel(g, gr_fecs_icd_cmd_r(),
+			gr_fecs_icd_cmd_opc_rreg_f() |
+			gr_fecs_icd_cmd_idx_f(PMU_FALCON_REG_SP));
+		nvhost_err(dev_from_gk20a(g), "FECS_FALCON_REG_SP : 0x%x",
+			gk20a_readl(g, gr_fecs_icd_rdata_r()));
+	}
+}
+
 static void gr_gk20a_load_falcon_dmem(struct gk20a *g)
 {
 	u32 i, ucode_u32_size;

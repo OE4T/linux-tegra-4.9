@@ -263,6 +263,7 @@ struct gr_gk20a {
 	bool sw_ready;
 };
 
+void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
 int gk20a_init_gr_support(struct gk20a *g);
 void gk20a_gr_reset(struct gk20a *g);
 

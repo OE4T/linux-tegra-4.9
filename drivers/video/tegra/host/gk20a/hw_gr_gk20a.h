@@ -318,6 +318,94 @@ static inline u32 gr_fecs_dmactl_require_ctx_f(u32 v)
 {
 	return (v & 0x1) << 0;
 }
+static inline u32 gr_fecs_os_r(void)
+{
+	return 0x00409080;
+}
+static inline u32 gr_fecs_idlestate_r(void)
+{
+	return 0x0040904c;
+}
+static inline u32 gr_fecs_mailbox0_r(void)
+{
+	return 0x00409040;
+}
+static inline u32 gr_fecs_mailbox1_r(void)
+{
+	return 0x00409044;
+}
+static inline u32 gr_fecs_irqstat_r(void)
+{
+	return 0x00409008;
+}
+static inline u32 gr_fecs_irqmode_r(void)
+{
+	return 0x0040900c;
+}
+static inline u32 gr_fecs_irqmask_r(void)
+{
+	return 0x00409018;
+}
+static inline u32 gr_fecs_irqdest_r(void)
+{
+	return 0x0040901c;
+}
+static inline u32 gr_fecs_curctx_r(void)
+{
+	return 0x00409050;
+}
+static inline u32 gr_fecs_nxtctx_r(void)
+{
+	return 0x00409054;
+}
+static inline u32 gr_fecs_engctl_r(void)
+{
+	return 0x004090a4;
+}
+static inline u32 gr_fecs_debug1_r(void)
+{
+	return 0x00409090;
+}
+static inline u32 gr_fecs_debuginfo_r(void)
+{
+	return 0x00409094;
+}
+static inline u32 gr_fecs_icd_cmd_r(void)
+{
+	return 0x00409200;
+}
+static inline u32 gr_fecs_icd_cmd_opc_s(void)
+{
+	return 4;
+}
+static inline u32 gr_fecs_icd_cmd_opc_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 gr_fecs_icd_cmd_opc_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 gr_fecs_icd_cmd_opc_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 gr_fecs_icd_cmd_opc_rreg_f(void)
+{
+	return 0x8;
+}
+static inline u32 gr_fecs_icd_cmd_opc_rstat_f(void)
+{
+	return 0xe;
+}
+static inline u32 gr_fecs_icd_cmd_idx_f(u32 v)
+{
+	return (v & 0x1f) << 8;
+}
+static inline u32 gr_fecs_icd_rdata_r(void)
+{
+	return 0x0040920c;
+}
 static inline u32 gr_fecs_imemc_r(u32 i)
 {
 	return 0x00409180 + i*16;
@@ -577,6 +665,10 @@ static inline u32 gr_fecs_ctxsw_mailbox_value_pass_v(void)
 static inline u32 gr_fecs_ctxsw_mailbox_value_fail_v(void)
 {
 	return 0x00000002;
+}
+static inline u32 gr_fecs_ctxsw_mailbox__size_1_v(void)
+{
+	return 0x00000008;
 }
 static inline u32 gr_fecs_ctxsw_mailbox_set_r(u32 i)
 {

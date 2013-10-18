@@ -2187,6 +2187,9 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 		nvhost_err(dev_from_gk20a(g), "PMU_FALCON_REG_SP : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
+
+	/* PMU may crash due to FECS crash. Dump FECS status */
+	gk20a_fecs_dump_falcon_stats(g);
 }
 
 void gk20a_pmu_isr(struct gk20a *g)

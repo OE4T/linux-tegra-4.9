@@ -831,6 +831,7 @@ static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 
 	intr = gk20a_readl(g, fifo_intr_chsw_error_r());
 	nvhost_err(dev_from_gk20a(g), "chsw: %08x\n", intr);
+	gk20a_fecs_dump_falcon_stats(g);
 	gk20a_writel(g, fifo_intr_chsw_error_r(), intr);
 }
 

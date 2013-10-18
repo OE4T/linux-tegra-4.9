@@ -103,6 +103,7 @@ struct gk20a {
 	/* also prevents debug sessions from attaching until released */
 	struct mutex dbg_sessions_lock;
 	int dbg_sessions; /* number attached */
+	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
 
 	void (*remove_support)(struct platform_device *);
 

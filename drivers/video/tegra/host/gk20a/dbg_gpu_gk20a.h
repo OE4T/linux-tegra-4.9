@@ -50,6 +50,9 @@ struct dbg_session_gk20a {
 	/* profiler session, if any */
 	bool is_profiler;
 
+	/* power enabled or disabled */
+	bool is_pg_disabled;
+
 	/*
 	 * There can be different versions of the whitelists
 	 * between both global and per-context sets; as well

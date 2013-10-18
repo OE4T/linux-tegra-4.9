@@ -91,6 +91,7 @@ int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_pr
 	dbg_session->dev   = dev;
 	dbg_session->g     = get_gk20a(pdev);
 	dbg_session->is_profiler = is_profiler;
+	dbg_session->is_pg_disabled = false;
 
 	INIT_LIST_HEAD(&dbg_session->dbg_s_list_node);
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
@@ -236,6 +237,10 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 	mutex_unlock(&ch->dbg_s_lock);
 }
 
+
+static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
+				__u32  powermode);
+
 static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 {
 	struct channel_gk20a *ch_gk20a = dbg_s->ch;
@@ -252,25 +257,13 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 	mutex_lock(&g->dbg_sessions_lock);
 	mutex_lock(&ch_gk20a->dbg_s_lock);
 
-	if (--g->dbg_sessions == 0) {
-		/* restore (can) powergate, clk state */
-		/* release pending exceptions to fault/be handled as usual */
-		/*TBD: ordering of these? */
-		g->elcg_enabled = true;
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+	--g->dbg_sessions;
 
-		gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
-		/* ???  gr_gk20a_pg_gr_load_gating_prod(g, true); */
-
-		gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
-		gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
-
-		gk20a_pmu_enable_elpg(g);
-
-		nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module idle");
-		nvhost_module_idle(dbg_s->pdev);
-	}
+	/* Powergate enable is called here as possibility of dbg_session
+	 * which called powergate disable ioctl, to be killed without calling
+	 * powergate enable ioctl
+	 */
+	dbg_set_powergate(dbg_s, NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE);
 
 	dbg_s->ch       = NULL;
 	fput(dbg_s->hwctx_f);
@@ -349,29 +342,8 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	dbg_s->ch       = ch_gk20a;
 	list_add(&dbg_s->dbg_s_list_node, &dbg_s->ch->dbg_s_list);
 
-	if (g->dbg_sessions++ == 0) {
-		/* save off current powergate, clk state.
-		 * set gpu module's can_powergate = 0.
-		 * set gpu module's clk to max.
-		 * while *a* debug session is active there will be no power or
-		 * clocking state changes allowed from mainline code (but they
-		 * should be saved).
-		 */
-		nvhost_module_busy(dbg_s->pdev);
+	g->dbg_sessions++;
 
-		gr_gk20a_slcg_gr_load_gating_prod(g, false);
-		gr_gk20a_slcg_perf_load_gating_prod(g, false);
-
-		gr_gk20a_blcg_gr_load_gating_prod(g, false);
-		/* ???  gr_gk20a_pg_gr_load_gating_prod(g, false); */
-		/* TBD: would rather not change elcg_enabled here */
-		g->elcg_enabled = false;
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
-
-		gk20a_pmu_disable_elpg(g);
-
-	}
 	mutex_unlock(&ch_gk20a->dbg_s_lock);
 	mutex_unlock(&g->dbg_sessions_lock);
 	return 0;
@@ -379,6 +351,9 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 				struct nvhost_dbg_gpu_exec_reg_ops_args *args);
+
+static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
+				struct nvhost_dbg_gpu_powergate_args *args);
 
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
@@ -412,6 +387,12 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVHOST_DBG_GPU_IOCTL_REG_OPS:
 		err = nvhost_ioctl_channel_reg_ops(dbg_s,
 			   (struct nvhost_dbg_gpu_exec_reg_ops_args *)buf);
+		nvhost_dbg(dbg_gpu_dbg, "ret=%d", err);
+		break;
+
+	case NVHOST_DBG_GPU_IOCTL_POWERGATE:
+		err = nvhost_ioctl_powergate_gk20a(dbg_s,
+			   (struct nvhost_dbg_gpu_powergate_args *)buf);
 		nvhost_dbg(dbg_gpu_dbg, "ret=%d", err);
 		break;
 
@@ -514,4 +495,102 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		return -EFAULT;
 	}
 	return 0;
+}
+
+static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
+				__u32  powermode)
+{
+	int err = 0;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+
+	 /* This function must be called with g->dbg_sessions_lock held */
+
+	nvhost_dbg(dbg_fn|dbg_gpu_dbg, "%s powergate mode = %d",
+		   dev_name(dbg_s->dev), powermode);
+
+	switch (powermode) {
+	case NVHOST_DBG_GPU_POWERGATE_MODE_DISABLE:
+		/* save off current powergate, clk state.
+		 * set gpu module's can_powergate = 0.
+		 * set gpu module's clk to max.
+		 * while *a* debug session is active there will be no power or
+		 * clocking state changes allowed from mainline code (but they
+		 * should be saved).
+		 */
+		/* Allow powergate disable if the current dbg_session doesn't
+		 * call a powergate disable ioctl and the global
+		 * powergating_disabled_refcount is zero
+		 */
+
+		if ((dbg_s->is_pg_disabled == false) &&
+		    (g->dbg_powergating_disabled_refcount++ == 0)) {
+
+			nvhost_module_busy(dbg_s->pdev);
+
+			gr_gk20a_slcg_gr_load_gating_prod(g, false);
+			gr_gk20a_slcg_perf_load_gating_prod(g, false);
+			gr_gk20a_blcg_gr_load_gating_prod(g, false);
+
+			g->elcg_enabled = false;
+			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+
+			gk20a_pmu_disable_elpg(g);
+		}
+
+		dbg_s->is_pg_disabled = true;
+		break;
+
+	case NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE:
+		/* restore (can) powergate, clk state */
+		/* release pending exceptions to fault/be handled as usual */
+		/*TBD: ordering of these? */
+
+		/* Re-enabling powergate as no other sessions want
+		 * powergate disabled and the current dbg-sessions had
+		 * requested the powergate disable through ioctl
+		*/
+		if (dbg_s->is_pg_disabled &&
+		    --g->dbg_powergating_disabled_refcount == 0) {
+
+			g->elcg_enabled = true;
+			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
+			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+
+			gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
+			gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
+			gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
+
+			gk20a_pmu_enable_elpg(g);
+
+			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module idle");
+			nvhost_module_idle(dbg_s->pdev);
+		}
+
+		dbg_s->is_pg_disabled = false;
+		break;
+
+	default:
+		nvhost_err(dev_from_gk20a(g),
+			   "unrecognized dbg gpu powergate mode: 0x%x",
+			   powermode);
+		err = -ENOTTY;
+		break;
+	}
+
+	return err;
+}
+
+static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
+				struct nvhost_dbg_gpu_powergate_args *args)
+{
+	int err;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+	nvhost_dbg_fn("%s  powergate mode = %d",
+		      dev_name(dbg_s->dev), args->mode);
+
+	mutex_lock(&g->dbg_sessions_lock);
+	err = dbg_set_powergate(dbg_s, args->mode);
+	mutex_unlock(&g->dbg_sessions_lock);
+	return  err;
 }

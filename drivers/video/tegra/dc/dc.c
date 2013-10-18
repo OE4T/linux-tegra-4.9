@@ -2901,14 +2901,19 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->out && dc->out->hotplug_init)
 		dc->out->hotplug_init(&ndev->dev);
 
-	if (dc->out_ops && dc->out_ops->detect)
-		dc->out_ops->detect(dc);
+	if (dc->out_ops) {
+		if (dc->out_ops->detect)
+			dc->out_ops->detect(dc);
+		else
+			dc->connected = true;
+	}
 	else
-		dc->connected = true;
+		dc->connected = false;
 
 	/* Powergate display module when it's unconnected. */
 	/* detect() function, if presetns, responsible for the powergate */
-	if (!tegra_dc_get_connected(dc) && !dc->out_ops->detect)
+	if (!tegra_dc_get_connected(dc) &&
+			!(dc->out_ops && dc->out_ops->detect))
 		tegra_dc_powergate_locked(dc);
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);

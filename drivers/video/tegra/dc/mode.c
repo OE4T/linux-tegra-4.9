@@ -385,8 +385,11 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 {
 	long mode_pclk;
 
-	if (!fbmode || !mode || !mode->pclk)
+	if (!fbmode || !mode || !mode->pclk) {
+		if (fbmode)
+			memset(fbmode, 0, sizeof(*fbmode));
 		return -EINVAL;
+	}
 	if (mode->rated_pclk >= 1000) /* handle DSI one-shot modes */
 		mode_pclk = mode->rated_pclk;
 	else if (mode->pclk >= 1000) /* normal continous modes */

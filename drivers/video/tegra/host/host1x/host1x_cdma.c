@@ -141,6 +141,20 @@ static void push_buffer_push_to(struct push_buffer *pb,
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
 }
 
+static void _push_buffer_push_to(struct push_buffer *pb,
+				dma_addr_t iova,
+				u32 op1, u32 op2)
+{
+	u32 cur = pb->cur;
+	u32 *p = (u32 *)((uintptr_t)pb->mapped + cur);
+	u32 cur_nvmap = (cur/8) & (NVHOST_GATHER_QUEUE_SIZE - 1);
+	WARN_ON(cur == pb->fence);
+	*(p++) = op1;
+	*(p++) = op2;
+	pb->client_handle[cur_nvmap].iova = iova;
+	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
+}
+
 /**
  * Pop a number of two word slots from the push buffer
  * Caller must ensure push buffer is not empty
@@ -157,6 +171,7 @@ static void push_buffer_pop_from(struct push_buffer *pb,
 		struct mem_mgr_handle *h = &pb->client_handle[cur_fence_nvmap];
 		h->client = NULL;
 		h->handle = NULL;
+		h->iova = 0;
 	}
 	/* Advance the next write position */
 	pb->fence = (pb->fence + slots * 8) & (PUSH_BUFFER_SIZE - 1);
@@ -563,6 +578,7 @@ static const struct nvhost_pushbuffer_ops host1x_pushbuffer_ops = {
 	.init = push_buffer_init,
 	.destroy = push_buffer_destroy,
 	.push_to = push_buffer_push_to,
+	._push_to = _push_buffer_push_to,
 	.pop_from = push_buffer_pop_from,
 	.space = push_buffer_space,
 	.putptr = push_buffer_putptr,

@@ -67,6 +67,9 @@ struct nvhost_pushbuffer_ops {
 	void (*push_to)(struct push_buffer *,
 			struct mem_mgr *, struct mem_handle *,
 			u32 op1, u32 op2);
+	void (*_push_to)(struct push_buffer *,
+			dma_addr_t iova,
+			u32 op1, u32 op2);
 	void (*pop_from)(struct push_buffer *,
 			 unsigned int slots);
 	u32 (*space)(struct push_buffer *);

@@ -124,7 +124,7 @@ static struct pm_qos_bounded_constraint online_cpus_constraint = {
 	.prio_list = PLIST_HEAD_INIT(online_cpus_constraint.prio_list),
 	.max_class = PM_QOS_MAX_ONLINE_CPUS,
 	.min_class = PM_QOS_MIN_ONLINE_CPUS,
-	.min_wins = false,
+	.min_wins = true,
 };
 static struct pm_qos_bounded_object online_cpus_pm_qos = {
 	.bounds = &online_cpus_constraint,

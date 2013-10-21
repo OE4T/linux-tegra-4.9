@@ -658,6 +658,10 @@ static inline u32 pwr_pmu_bar0_timeout_r(void)
 {
 	return 0x0010a7a8;
 }
+static inline u32 pwr_pmu_bar0_fecs_error_r(void)
+{
+	return 0x0010a988;
+}
 static inline u32 pwr_pmu_bar0_error_status_r(void)
 {
 	return 0x0010a7b0;

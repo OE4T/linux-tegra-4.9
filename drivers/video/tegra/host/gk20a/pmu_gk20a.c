@@ -2146,6 +2146,9 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 			gk20a_readl(g, pwr_pmu_bar0_ctl_r()));
 	}
 
+	i = gk20a_readl(g, pwr_pmu_bar0_fecs_error_r());
+	nvhost_err(dev_from_gk20a(g), "pwr_pmu_bar0_fecs_error_r : 0x%x", i);
+
 	i = gk20a_readl(g, pwr_falcon_exterrstat_r());
 	nvhost_err(dev_from_gk20a(g), "pwr_falcon_exterrstat_r : 0x%x", i);
 	if (pwr_falcon_exterrstat_valid_v(i) ==

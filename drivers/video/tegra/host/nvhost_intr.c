@@ -281,7 +281,7 @@ irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id)
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id)
 {
 	struct nvhost_intr *intr = dev_id;
-	u32 intstat = intr->intstatus;
+	unsigned long intstat = intr->intstatus;
 	int i;
 
 	for_each_set_bit(i, &intstat, 32) {

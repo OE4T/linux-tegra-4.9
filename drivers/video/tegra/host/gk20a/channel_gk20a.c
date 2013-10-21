@@ -26,8 +26,8 @@
 #include <linux/scatterlist.h>
 
 
-#include "../dev.h"
-#include "../nvhost_as.h"
+#include "dev.h"
+#include "nvhost_as.h"
 #include "debug.h"
 
 #include "gk20a.h"
@@ -494,7 +494,7 @@ int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
 	/* map handle */
 	va = nvhost_memmgr_mmap(handle_ref);
 	if (!va) {
-		nvhost_memmgr_put(memmgr, memhandle);
+		nvhost_memmgr_put(memmgr, handle_ref);
 		pr_err("Cannot map notifier handle\n");
 		return -ENOMEM;
 	}

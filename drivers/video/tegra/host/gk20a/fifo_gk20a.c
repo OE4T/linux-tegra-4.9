@@ -838,7 +838,7 @@ static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
-	u32 fault_id;
+	unsigned long fault_id;
 	u32 engine_mmu_id;
 	int i;
 
@@ -972,12 +972,13 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	schedule_work(&g->fifo.fault_restore_thread);
 }
 
-void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids)
+void gk20a_fifo_recover(struct gk20a *g, u32 _engine_ids)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
-	u32 engine_id;
+	unsigned long engine_id;
+	unsigned long engine_ids = _engine_ids;
 	int ret;
 
 	/* store faulted engines in advance */

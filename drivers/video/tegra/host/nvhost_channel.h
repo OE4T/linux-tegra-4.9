@@ -42,6 +42,7 @@ struct nvhost_fence;
 struct nvhost_wait_args;
 struct nvhost_cycle_stats_args;
 struct nvhost_zcull_bind_args;
+struct nvhost_set_error_notifier;
 
 struct nvhost_zcull_ops {
 	int (*bind)(struct nvhost_hwctx *,

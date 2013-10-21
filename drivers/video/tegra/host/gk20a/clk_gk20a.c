@@ -458,7 +458,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 static int gk20a_init_clk_setup_hw(struct gk20a *g)
 {
-	struct clk_gk20a *clk = &g->clk;
 	u32 data;
 
 	nvhost_dbg_fn("");

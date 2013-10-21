@@ -28,11 +28,8 @@
 #include <linux/tegra-soc.h>
 #include <asm/cacheflush.h>
 
-#include "../../nvmap/nvmap_priv.h"
-#include "../../nvmap/nvmap_ioctl.h"
-
-#include "../dev.h"
-#include "../nvhost_as.h"
+#include "dev.h"
+#include "nvhost_as.h"
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "hw_gmmu_gk20a.h"

@@ -3620,17 +3620,6 @@ static void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
 		gr_gpc0_gpccs_gpc_exception_en_tpc_0_enabled_f());
 }
 
-static void gk20a_gr_disable_gpc_exceptions(struct gk20a *g)
-{
-	/* disable tpc exception forwarding */
-	gk20a_writel(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r(),
-		gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_disabled_f());
-
-	/* disable gpc exception forwarding */
-	gk20a_writel(g, gr_gpc0_gpccs_gpc_exception_en_r(),
-		gr_gpc0_gpccs_gpc_exception_en_tpc_0_disabled_f());
-}
-
 static int gk20a_init_gr_setup_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;

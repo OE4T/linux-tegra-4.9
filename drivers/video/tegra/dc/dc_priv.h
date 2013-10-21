@@ -391,7 +391,7 @@ void tegra_dc_clk_disable(struct tegra_dc *dc);
 void tegra_dc_get(struct tegra_dc *dc);
 void tegra_dc_put(struct tegra_dc *dc);
 
-/* defined in dc.c, used in window.c */
+/* defined in dc.c, used in tegra_adf.c */
 void tegra_dc_hold_dc_out(struct tegra_dc *dc);
 void tegra_dc_release_dc_out(struct tegra_dc *dc);
 

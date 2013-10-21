@@ -66,6 +66,10 @@
 #include "dp.h"
 #include "nvsr.h"
 
+#ifdef CONFIG_ADF_TEGRA
+#include "tegra_adf.h"
+#endif
+
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -479,6 +483,20 @@ void tegra_dc_put(struct tegra_dc *dc)
 	clk_disable_unprepare(dc->clk);
 
 	tegra_dc_io_end(dc);
+}
+
+void tegra_dc_hold_dc_out(struct tegra_dc *dc)
+{
+	tegra_dc_get(dc);
+	if (dc->out_ops && dc->out_ops->hold)
+		dc->out_ops->hold(dc);
+}
+
+void tegra_dc_release_dc_out(struct tegra_dc *dc)
+{
+	if (dc->out_ops && dc->out_ops->release)
+		dc->out_ops->release(dc);
+	tegra_dc_put(dc);
 }
 
 #define DUMP_REG(a) do {			\
@@ -1834,13 +1852,18 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 }
 #endif
 
-static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
+static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
+		ktime_t timestamp)
 {
 	/* pending user vblank, so wakeup */
-	if ((status & (V_BLANK_INT | MSF_INT)) &&
-	    (dc->out->user_needs_vblank)) {
-		dc->out->user_needs_vblank = false;
-		complete(&dc->out->user_vblank_comp);
+	if (status & (V_BLANK_INT | MSF_INT)) {
+		if (dc->out->user_needs_vblank) {
+			dc->out->user_needs_vblank = false;
+			complete(&dc->out->user_vblank_comp);
+		}
+#ifdef CONFIG_ADF_TEGRA
+		tegra_adf_process_vblank(dc->adf, timestamp);
+#endif
 	}
 
 	if (status & V_BLANK_INT) {
@@ -1869,11 +1892,17 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 #endif
 }
 
-static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
+static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
+		ktime_t timestamp)
 {
 	/* Schedule any additional bottom-half vblank actvities. */
 	if (status & V_BLANK_INT)
 		queue_work(system_freezable_wq, &dc->vblank_work);
+
+#ifdef CONFIG_ADF_TEGRA
+	if (status & (V_BLANK_INT | MSF_INT))
+		tegra_adf_process_vblank(dc->adf, timestamp);
+#endif
 
 	if (status & FRAME_END_INT) {
 		struct timespec tm = CURRENT_TIME;
@@ -1913,6 +1942,7 @@ bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
 
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
+	ktime_t timestamp = ktime_get();
 	struct tegra_dc *dc = ptr;
 	unsigned long status;
 	unsigned long underflow_mask;
@@ -1961,9 +1991,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		tegra_dc_one_shot_irq(dc, status);
+		tegra_dc_one_shot_irq(dc, status, timestamp);
 	else
-		tegra_dc_continuous_irq(dc, status);
+		tegra_dc_continuous_irq(dc, status, timestamp);
 
 	if (dc->nvsr)
 		tegra_dc_nvsr_irq(dc->nvsr, status);
@@ -3071,6 +3101,23 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->pdata->fb->yres = mode->v_active;
 		}
 
+#ifdef CONFIG_ADF_TEGRA
+		tegra_dc_io_start(dc);
+		dc->adf = tegra_adf_init(ndev, dc, dc->pdata->fb);
+		tegra_dc_io_end(dc);
+
+		if (IS_ERR(dc->adf)) {
+			tegra_dc_io_start(dc);
+			dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb,
+					fb_mem);
+			tegra_dc_io_end(dc);
+			if (IS_ERR_OR_NULL(dc->fb)) {
+				dc->fb = NULL;
+				dev_err(&ndev->dev, "failed to register fb\n");
+				goto err_remove_debugfs;
+			}
+		}
+#else
 		tegra_dc_io_start(dc);
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
 		tegra_dc_io_end(dc);
@@ -3079,6 +3126,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dev_err(&ndev->dev, "failed to register fb\n");
 			goto err_remove_debugfs;
 		}
+#endif
 	}
 
 	if (dc->out && dc->out->hotplug_init)
@@ -3159,6 +3207,11 @@ static int tegra_dc_remove(struct platform_device *ndev)
 				kfree(dc->fb_mem);
 		}
 	}
+
+#ifdef CONFIG_ADF_TEGRA
+	if (dc->adf)
+		tegra_adf_unregister(dc->adf);
+#endif
 
 	tegra_dc_ext_disable(dc->ext);
 

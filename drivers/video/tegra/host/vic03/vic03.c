@@ -437,9 +437,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
 
 	struct vic03 *v = get_vic03(ch->dev);
-	struct mem_mgr *nvmap = nvhost_get_host(ch->dev)->memmgr;
 	struct host1x_hwctx *ctx;
-	bool map_restore = true;
 	u32 *ptr;
 	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
 	u32 nvhost_vic03_restore_size = 11; /* number of words written below */
@@ -450,23 +448,18 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	if (!ctx)
 		return NULL;
 
-	ctx->restore = nvhost_memmgr_alloc(nvmap,
-					   nvhost_vic03_restore_size * 4, 32,
-					   map_restore ?
-						mem_mgr_flag_write_combine
-					      : mem_mgr_flag_uncacheable,
-					   0);
-	if (IS_ERR(ctx->restore))
-		goto fail_alloc;
+	ctx->restore_size = nvhost_vic03_restore_size;
 
-	if (map_restore) {
-		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
-		if (!ctx->restore_virt)
-			goto fail_mmap;
-	} else
-		ctx->restore_virt = NULL;
+	ctx->cpuva = dma_alloc_writecombine(&ch->dev->dev,
+						ctx->restore_size * 4,
+						&ctx->iova,
+						GFP_KERNEL);
+	if (!ctx->cpuva) {
+		dev_err(&ch->dev->dev, "memory allocation failed\n");
+		goto fail;
+	}
 
-	ptr = ctx->restore_virt;
+	ptr = ctx->cpuva;
 
 	/* set class to vic */
 	ptr[0] = nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID, 0, 0);
@@ -497,23 +490,11 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.save_thresh = 0;
 	ctx->hwctx.save_slots = 0;
 
-	ctx->restore_sgt = nvhost_memmgr_pin(nvmap,
-			ctx->restore, &ch->dev->dev, mem_flag_none);
-	if (IS_ERR(ctx->restore_sgt))
-		goto fail_pin;
-	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);
-
-	ctx->restore_size = nvhost_vic03_restore_size;
 	ctx->hwctx.restore_incrs = 1;
 
 	return &ctx->hwctx;
 
- fail_pin:
-	if (map_restore)
-		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
- fail_mmap:
-	nvhost_memmgr_put(nvmap, ctx->restore);
- fail_alloc:
+ fail:
 	kfree(ctx);
 	return NULL;
 }
@@ -522,18 +503,15 @@ static void vic03_free_hwctx(struct kref *ref)
 {
 	struct nvhost_hwctx *nctx = container_of(ref, struct nvhost_hwctx, ref);
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	struct mem_mgr *nvmap =
-		nvhost_get_host(nctx->channel->dev)->memmgr;
 
-	if (ctx->restore_virt) {
-		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
-		ctx->restore_virt = NULL;
+	if (ctx->cpuva) {
+		dma_free_writecombine(&nctx->channel->dev->dev,
+					ctx->restore_size * 4,
+					ctx->cpuva,
+					ctx->iova);
+		ctx->cpuva = NULL;
+		ctx->iova = 0;
 	}
-	nvhost_memmgr_unpin(nvmap, ctx->restore, &nctx->channel->dev->dev,
-			ctx->restore_sgt);
-	ctx->restore_phys = 0;
-	nvhost_memmgr_put(nvmap, ctx->restore);
-	ctx->restore = NULL;
 	kfree(ctx);
 }
 
@@ -556,12 +534,12 @@ static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	nvhost_cdma_push_gather(cdma,
-		ctx->hwctx.memmgr,
-		ctx->restore,
+	_nvhost_cdma_push_gather(cdma,
+		ctx->cpuva,
+		ctx->iova,
 		0,
 		nvhost_opcode_gather(ctx->restore_size),
-		ctx->restore_phys);
+		ctx->iova);
 }
 
 struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,

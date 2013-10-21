@@ -23,6 +23,8 @@
 #include <linux/export.h>
 #include <linux/clk/tegra.h>
 
+#include <drm/drm_mode.h>
+
 #include <mach/dc.h>
 #include <mach/mc.h>
 #include <trace/events/display.h>
@@ -173,6 +175,44 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 	refresh *= 1000;
 	refresh /= v_total;
 	return refresh;
+}
+
+static u8 calc_default_avi_m(struct tegra_dc *dc)
+{
+	if (dc->out) { /* if ratio is unspecified, detect a default */
+		unsigned h_size = dc->out->h_size;
+		unsigned v_size = dc->out->v_size;
+
+		/* get aspect ratio */
+		if (h_size * 18 > v_size * 31 && h_size * 18 < v_size * 33)
+			return TEGRA_DC_MODE_AVI_M_16_9;
+		if (h_size * 18 > v_size * 23 && h_size * 18 < v_size * 25)
+			return TEGRA_DC_MODE_AVI_M_4_3;
+	}
+
+	return 0;
+}
+
+static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
+{
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+			/* HDMI controller requires h_ref=1, v_ref=1 */
+		mode->h_ref_to_sync = 1;
+		mode->v_ref_to_sync = 1;
+	} else {
+		calc_ref_to_sync(mode);
+	}
+	if (!check_ref_to_sync(mode)) {
+		dev_err(&dc->ndev->dev,
+				"Display timing doesn't meet restrictions.\n");
+		return false;
+	}
+	dev_dbg(&dc->ndev->dev, "Using mode %dx%d pclk=%d href=%d vref=%d\n",
+		mode->h_active, mode->v_active, mode->pclk,
+		mode->h_ref_to_sync, mode->v_ref_to_sync
+	);
+
+	return true;
 }
 
 #ifdef DEBUG
@@ -462,6 +502,54 @@ int tegra_dc_update_mode(struct tegra_dc *dc)
 	return 0;
 }
 
+int tegra_dc_set_drm_mode(struct tegra_dc *dc,
+		const struct drm_mode_modeinfo *dmode, bool stereo_mode)
+{
+	struct tegra_dc_mode mode;
+
+	if (!dmode->clock)
+		return -EINVAL;
+
+	memset(&mode, 0, sizeof(mode));
+	mode.pclk = dmode->clock * 1000;
+	mode.h_sync_width = dmode->hsync_end - dmode->hsync_start;
+	mode.v_sync_width = dmode->vsync_end - dmode->vsync_start;
+	mode.h_back_porch = dmode->htotal - dmode->hsync_end;
+	mode.v_back_porch = dmode->vtotal - dmode->vsync_end;
+	mode.h_active = dmode->hdisplay;
+	mode.v_active = dmode->vdisplay;
+	mode.h_front_porch = dmode->hsync_start - dmode->hdisplay;
+	mode.v_front_porch = dmode->vsync_start - dmode->vdisplay;
+	mode.stereo_mode = stereo_mode;
+	if (dmode->flags & DRM_MODE_FLAG_INTERLACE)
+		mode.vmode |= FB_VMODE_INTERLACED;
+	mode.avi_m = calc_default_avi_m(dc);
+
+	if (!check_mode_timings(dc, &mode))
+		return -EINVAL;
+
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+	/* Double the pixel clock and update v_active only for
+	 * frame packed mode */
+	if (mode.stereo_mode) {
+		mode.pclk *= 2;
+		/* total v_active = yres*2 + activespace */
+		mode.v_active = dmode->vtotal + dmode->vdisplay;
+	}
+#endif
+
+	mode.flags = 0;
+
+	if (!(dmode->flags & DRM_MODE_FLAG_PHSYNC))
+		mode.flags |= TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
+
+	if (!(dmode->flags & DRM_MODE_FLAG_PVSYNC))
+		mode.flags |= TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
+
+	return tegra_dc_set_mode(dc, &mode);
+}
+EXPORT_SYMBOL(tegra_dc_set_drm_mode);
+
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		const struct fb_videomode *fbmode, bool stereo_mode)
 {
@@ -486,33 +574,11 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
 	else if (fbmode->flag & FB_FLAG_RATIO_4_3)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_4_3;
-	else if (dc->out) { /* if ratio is unspecified, detect a default */
-		unsigned h_size = dc->out->h_size;
-		unsigned v_size = dc->out->v_size;
+	else
+		mode.avi_m = calc_default_avi_m(dc);
 
-		/* get aspect ratio */
-		if (h_size * 18 > v_size * 31 && h_size * 18 < v_size * 33)
-			mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
-		if (h_size * 18 > v_size * 23 && h_size * 18 < v_size * 25)
-			mode.avi_m = TEGRA_DC_MODE_AVI_M_4_3;
-	}
-
-	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-		/* HDMI controller requires h_ref=1, v_ref=1 */
-		mode.h_ref_to_sync = 1;
-		mode.v_ref_to_sync = 1;
-	} else {
-		calc_ref_to_sync(&mode);
-	}
-	if (!check_ref_to_sync(&mode)) {
-		dev_err(&dc->ndev->dev,
-				"Display timing doesn't meet restrictions.\n");
+	if (!check_mode_timings(dc, &mode))
 		return -EINVAL;
-	}
-	dev_dbg(&dc->ndev->dev, "Using mode %dx%d pclk=%d href=%d vref=%d\n",
-		mode.h_active, mode.v_active, mode.pclk,
-		mode.h_ref_to_sync, mode.v_ref_to_sync
-	);
 
 #ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 	/* Double the pixel clock and update v_active only for

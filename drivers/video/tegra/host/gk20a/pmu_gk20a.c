@@ -1223,6 +1223,9 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 
+	if (!support_gk20a_pmu())
+		return 0;
+
 	size = 0;
 	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
 	if (err) {

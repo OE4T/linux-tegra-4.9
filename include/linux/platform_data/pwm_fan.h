@@ -1,7 +1,7 @@
 /*
  * include/linux/platform_data/pwm_fan.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,5 +33,7 @@ struct pwm_fan_platform_data {
 	int step_time;
 	int precision_multiplier;
 	int state_cap;
+	int tach_gpio;
+	int pwm_gpio;
 };
 #endif

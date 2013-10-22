@@ -61,6 +61,8 @@ struct fan_dev_data {
 	int tach_irq;
 	int tach_enabled;
 	int fan_state_cap;
+	int pwm_gpio;
+	int pwm_id;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -703,6 +705,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->pwm_period = data->pwm_period;
 	fan_data->dev = &pdev->dev;
 	fan_data->fan_state_cap = data->state_cap;
+	fan_data->pwm_gpio = data->pwm_gpio;
+	fan_data->pwm_id = data->pwm_id;
 
 	for (i = 0; i < fan_data->active_steps; i++) {
 		fan_data->fan_rpm[i] = data->active_rpm[i];
@@ -731,6 +735,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	gpio_free(fan_data->pwm_gpio);
 	fan_data->pwm_dev = pwm_request(data->pwm_id, dev_name(&pdev->dev));
 	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
 		dev_err(&pdev->dev, "unable to request PWM for fan\n");
@@ -822,13 +827,25 @@ static int pwm_fan_remove(struct platform_device *pdev)
 static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
+	int err;
 
 	mutex_lock(&fan_data->fan_state_lock);
 	cancel_delayed_work(&fan_data->fan_ramp_work);
 	/*Turn the fan off*/
 	fan_data->fan_cur_pwm = 0;
 	fan_data->next_target_pwm = 0;
+
 	set_pwm_duty_cycle(0, fan_data);
+	pwm_disable(fan_data->pwm_dev);
+	pwm_free(fan_data->pwm_dev);
+
+	err = gpio_request(fan_data->pwm_gpio, "pwm-fan");
+	if (err < 0) {
+		dev_err(&pdev->dev, "%s:gpio request failed %d\n",
+			__func__, fan_data->pwm_gpio);
+	}
+
+	gpio_direction_output(fan_data->pwm_gpio, 1);
 
 	/*Stop thermal control*/
 	fan_data->fan_temp_control_flag = 0;
@@ -842,8 +859,22 @@ static int pwm_fan_resume(struct platform_device *pdev)
 
 	/*Sanity check, want to make sure fan is off when the driver resumes*/
 	mutex_lock(&fan_data->fan_state_lock);
-	set_pwm_duty_cycle(0, fan_data);
 
+	dev_info(&pdev->dev, "%s, cur_pwm:%d, target_pwm:%d, cap:%d",
+	__func__, fan_data->fan_cur_pwm, fan_data->next_target_pwm,
+	fan_data->fan_cap_pwm);
+	gpio_free(fan_data->pwm_gpio);
+	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
+	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
+		dev_err(&pdev->dev, " %s: unable to request PWM for fan\n",
+		__func__);
+		mutex_unlock(&fan_data->fan_state_lock);
+		return -ENODEV;
+	} else {
+		dev_info(&pdev->dev, " %s, got pwm for fan\n", __func__);
+	}
+
+	set_pwm_duty_cycle(0, fan_data);
 	/*Start thermal control*/
 	fan_data->fan_temp_control_flag = 1;
 

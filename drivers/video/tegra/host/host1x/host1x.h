@@ -64,6 +64,9 @@ void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_device_debug_init(struct platform_device *dev);
 void nvhost_debug_dump(struct nvhost_master *master);
 
+int nvhost_host1x_finalize_poweron(struct platform_device *dev);
+int nvhost_host1x_prepare_poweroff(struct platform_device *dev);
+
 struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev);
 void nvhost_free_channel(struct nvhost_channel *ch);
 

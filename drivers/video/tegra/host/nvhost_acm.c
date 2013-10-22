@@ -643,9 +643,11 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 };
 #endif
 
-/* common runtime pm and power domain APIs */
-int nvhost_module_add_domain(struct generic_pm_domain *domain,
-	struct platform_device *pdev)
+/*FIXME Use API to get host1x domain */
+struct generic_pm_domain *host1x_domain;
+
+int _nvhost_module_add_domain(struct generic_pm_domain *domain,
+	struct platform_device *pdev, bool client)
 {
 	int ret = 0;
 	struct nvhost_device_data *pdata;
@@ -655,8 +657,8 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	if (!pdata)
 		return -EINVAL;
 
-	if (!pdata->can_powergate)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+	if (!pdata->can_powergate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 
 	if (__pm_genpd_name_add_device(domain->name, &pdev->dev, NULL)) {
@@ -671,15 +673,31 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		domain->dev_ops.suspend = nvhost_module_suspend;
 		domain->dev_ops.resume = nvhost_module_resume;
 
+		device_set_wakeup_capable(&pdev->dev, 0);
 		ret = pm_genpd_add_device(domain, &pdev->dev);
 		if (pdata->powergate_delay)
 			pm_genpd_set_poweroff_delay(domain,
 					pdata->powergate_delay);
-		tegra_pd_add_sd(domain);
+		if (client)
+			pm_genpd_add_subdomain(host1x_domain, domain);
+		else {
+			tegra_pd_add_sd(domain);
+			host1x_domain = domain;
+		}
 	}
 #endif
 
 	return ret;
+}
+
+/* common runtime pm and power domain APIs */
+int nvhost_module_add_domain(struct generic_pm_domain *domain,
+	struct platform_device *pdev)
+{
+	if (!strcmp(domain->name, "tegra-host1x"))
+		return _nvhost_module_add_domain(domain, pdev, 0);
+	else
+		return _nvhost_module_add_domain(domain, pdev, 1);
 }
 EXPORT_SYMBOL(nvhost_module_add_domain);
 

@@ -143,6 +143,8 @@ struct nvhost_device_data t124_host1x_info = {
 	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
+	.finalize_poweron = nvhost_host1x_finalize_poweron,
+	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 };
 
 

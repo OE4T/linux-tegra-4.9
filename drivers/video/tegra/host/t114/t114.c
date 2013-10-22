@@ -98,6 +98,8 @@ struct nvhost_device_data t11_host1x_info = {
 	.clocks		= { {"host1x", 136000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x02_info,
+	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
+	.finalize_poweron = nvhost_host1x_finalize_poweron,
 };
 
 static struct platform_device tegra_host1x02_device = {

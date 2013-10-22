@@ -433,11 +433,12 @@ static const struct file_operations nvhost_ctrlops = {
 };
 
 #ifdef CONFIG_PM
-static void power_on_host(struct platform_device *dev)
+static int power_on_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
 
 	nvhost_syncpt_reset(&host->syncpt);
+	return 0;
 }
 
 static int power_off_host(struct platform_device *dev)
@@ -641,6 +642,15 @@ void nvhost_host1x_update_clk(struct platform_device *pdev)
 		actmon_op().update_sample_period(profile->actmon);
 }
 
+int nvhost_host1x_finalize_poweron(struct platform_device *dev)
+{
+	return power_on_host(dev);
+}
+
+int nvhost_host1x_prepare_poweroff(struct platform_device *dev)
+{
+	return power_off_host(dev);
+}
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -740,7 +750,9 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	tegra_pd_add_device(&dev->dev);
+	pdata->pd.name = "tegra-host1x";
+	err = nvhost_module_add_domain(&pdata->pd, dev);
+
 #endif
 
 	nvhost_module_busy(dev);
@@ -816,10 +828,6 @@ static int nvhost_resume(struct device *dev)
 static const struct dev_pm_ops host1x_pm_ops = {
 	.suspend = nvhost_suspend,
 	.resume = nvhost_resume,
-#ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = nvhost_module_disable_clk,
-	.runtime_resume = nvhost_module_enable_clk,
-#endif
 };
 #endif /* CONFIG_PM */
 

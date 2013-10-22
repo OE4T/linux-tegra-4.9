@@ -450,18 +450,14 @@ static struct tegra_dc_cmu default_limited_cmu = {
 
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
-	if (!tegra_is_clk_enabled(dc->clk)) {
-		clk_prepare_enable(dc->clk);
-		tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
-	}
+	clk_prepare_enable(dc->clk);
+	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
 }
 
 void tegra_dc_clk_disable(struct tegra_dc *dc)
 {
-	if (tegra_is_clk_enabled(dc->clk)) {
-		clk_disable_unprepare(dc->clk);
-		tegra_dvfs_set_rate(dc->clk, 0);
-	}
+	clk_disable_unprepare(dc->clk);
+	tegra_dvfs_set_rate(dc->clk, 0);
 }
 
 void tegra_dc_get(struct tegra_dc *dc)
@@ -478,20 +474,6 @@ void tegra_dc_put(struct tegra_dc *dc)
 	clk_disable_unprepare(dc->clk);
 
 	tegra_dc_io_end(dc);
-}
-
-void tegra_dc_hold_dc_out(struct tegra_dc *dc)
-{
-	tegra_dc_get(dc);
-	if (dc->out_ops && dc->out_ops->hold)
-		dc->out_ops->hold(dc);
-}
-
-void tegra_dc_release_dc_out(struct tegra_dc *dc)
-{
-	if (dc->out_ops && dc->out_ops->release)
-		dc->out_ops->release(dc);
-	tegra_dc_put(dc);
 }
 
 #define DUMP_REG(a) do {			\
@@ -1831,6 +1813,9 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 			complete(&dc->frame_end_complete);
 		if (!completion_done(&dc->crc_complete))
 			complete(&dc->crc_complete);
+
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+			tegra_dc_put(dc);
 	}
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -1893,14 +1878,14 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		return IRQ_NONE;
 
 	mutex_lock(&dc->lock);
-	if (!dc->enabled || !tegra_dc_is_powered(dc)) {
+	if (!tegra_dc_is_powered(dc)) {
 		mutex_unlock(&dc->lock);
 		return IRQ_HANDLED;
 	}
 
 	tegra_dc_get(dc);
 
-	if (!nvhost_module_powered_ext(dc->ndev)) {
+	if (!dc->enabled || !nvhost_module_powered_ext(dc->ndev)) {
 		WARN(1, "IRQ when DC not powered!\n");
 		status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
 		tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
@@ -2187,8 +2172,14 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		dc->out->enable(&dc->ndev->dev);
 
 	tegra_dc_setup_clk(dc, dc->clk);
-	tegra_dc_clk_enable(dc);
-	tegra_dc_io_start(dc);
+
+	/* dc clk always on for continuous mode */
+	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
+		tegra_dc_clk_enable(dc);
+	else
+		tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+
+	tegra_dc_get(dc);
 
 	tegra_dc_power_on(dc);
 
@@ -2202,10 +2193,13 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 		disable_irq_nosync(dc->irq);
 		tegra_dc_clear_bandwidth(dc);
-		tegra_dc_clk_disable(dc);
 		if (dc->out && dc->out->disable)
 			dc->out->disable();
-		tegra_dc_io_end(dc);
+		tegra_dc_put(dc);
+		if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
+			tegra_dc_clk_disable(dc);
+		else
+			tegra_dvfs_set_rate(dc->clk, 0);
 		return false;
 	}
 
@@ -2238,7 +2232,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
+
 	return true;
 }
 
@@ -2425,8 +2420,13 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->postpoweroff)
 		dc->out_ops->postpoweroff(dc);
 
-	tegra_dc_clk_disable(dc);
 	tegra_dc_put(dc);
+
+	/* disable always on dc clk in continuous mode */
+	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
+		tegra_dc_clk_disable(dc);
+	else
+		tegra_dvfs_set_rate(dc->clk, 0);
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)
@@ -2520,10 +2520,13 @@ void tegra_dc_disable(struct tegra_dc *dc)
 #ifdef CONFIG_SWITCH
 	switch_set_state(&dc->modeset_switch, 0);
 #endif
-
 	mutex_unlock(&dc->lock);
 	synchronize_irq(dc->irq);
 	trace_display_mode(dc, &dc->mode);
+
+	/* disable pending clks due to uncompleted frames */
+	while (tegra_is_clk_enabled(dc->clk))
+		tegra_dc_put(dc);
 }
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC

@@ -1075,8 +1075,7 @@ static int tegra_nvhdcp_off(struct tegra_nvhdcp *nvhdcp)
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
 	wake_up_interruptible(&wq_worker);
-	flush_workqueue(nvhdcp->downstream_wq);
-	msleep(1000);
+	cancel_delayed_work_sync(&nvhdcp->work);
 	return 0;
 }
 

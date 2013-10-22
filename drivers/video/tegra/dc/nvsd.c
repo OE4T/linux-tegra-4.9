@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsd.c
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1138,14 +1138,13 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	ssize_t res = 0;
 
-	clk_prepare_enable(dc->clk);
-	tegra_dc_io_start(dc);
-
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
 		mutex_unlock(&dc->lock);
 		return -ENODEV;
 	}
+
+	tegra_dc_get(dc);
 
 	mutex_unlock(&dc->lock);
 	NVSD_PRINT_REG(DC_DISP_SD_CONTROL);
@@ -1167,8 +1166,8 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	NVSD_PRINT_REG(DC_DISP_SD_SMOOTH_K);
 #endif
 
-	tegra_dc_io_end(dc);
-	clk_disable_unprepare(dc->clk);
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
 
 	return res;
 }

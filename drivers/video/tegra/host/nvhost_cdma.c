@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -141,6 +141,8 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 	cdma->timeout.num_syncpts = job->num_syncpts;
 	cdma->timeout.start_ktime = ktime_get();
 	cdma->timeout.timeout_debug_dump = job->timeout_debug_dump;
+	cdma->timeout.timeout = job->timeout;
+	cdma->timeout.allow_dependency = true;
 
 	schedule_delayed_work(&cdma->timeout.wq,
 			msecs_to_jiffies(job->timeout));

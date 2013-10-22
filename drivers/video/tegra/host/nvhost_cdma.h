@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,6 +70,8 @@ struct buffer_timeout {
 	int clientid;
 	bool timeout_debug_dump;
 	int num_syncpts;
+	int timeout;
+	bool allow_dependency;
 };
 
 enum cdma_event {

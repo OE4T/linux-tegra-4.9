@@ -423,6 +423,28 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	cdma_timeout_restart(cdma, getptr);
 }
 
+static bool cdma_check_dependencies(struct nvhost_cdma *cdma)
+{
+	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	struct nvhost_master *dev = cdma_to_dev(cdma);
+	u32 cbstat = readl(dev->sync_aperture +
+		host1x_sync_cbstat_0_r() + 4 * ch->chid);
+	u32 cbread = readl(dev->sync_aperture +
+		host1x_sync_cbread0_r() + 4 * ch->chid);
+	u32 waiting = cbstat & 0x00010008;
+	u32 syncpt_id = cbread >> 24;
+	int i;
+
+	if (!waiting)
+		return false;
+
+	for (i = 0; i < cdma->timeout.num_syncpts; ++i)
+		if (cdma->timeout.sp[i].id == syncpt_id)
+			return false;
+
+	return true;
+}
+
 /**
  * If this timeout fires, it indicates the current sync_queue entry has
  * exceeded its TTL and the userctx should be timed out and remaining
@@ -455,6 +477,17 @@ static void cdma_timeout_handler(struct work_struct *work)
 	ret = mutex_trylock(&cdma->lock);
 	if (!ret) {
 		schedule_delayed_work(&cdma->timeout.wq, msecs_to_jiffies(10));
+		return;
+	}
+
+	/* is this submit dependent with submits on other channels? */
+	if (cdma->timeout.allow_dependency && cdma_check_dependencies(cdma)) {
+		dev_dbg(&dev->dev->dev,
+			"cdma_timeout: timeout handler rescheduled\n");
+		cdma->timeout.allow_dependency = false;
+		schedule_delayed_work(&cdma->timeout.wq,
+				      msecs_to_jiffies(cdma->timeout.timeout));
+		mutex_unlock(&cdma->lock);
 		return;
 	}
 

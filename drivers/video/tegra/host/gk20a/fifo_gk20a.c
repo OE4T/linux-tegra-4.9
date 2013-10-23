@@ -835,6 +835,13 @@ static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 	gk20a_writel(g, fifo_intr_chsw_error_r(), intr);
 }
 
+static void gk20a_fifo_handle_dropped_mmu_fault(struct gk20a *g)
+{
+	struct device *dev = dev_from_gk20a(g);
+	u32 fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
+	nvhost_err(dev, "dropped mmu fault (0x%08x)", fault_id);
+}
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
@@ -1115,6 +1122,11 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 		reset_channel = true;
 		reset_engine  = true;
 		handled |= fifo_intr_0_mmu_fault_pending_f();
+	}
+
+	if (fifo_intr & fifo_intr_0_dropped_mmu_fault_pending_f()) {
+		gk20a_fifo_handle_dropped_mmu_fault(g);
+		handled |= fifo_intr_0_dropped_mmu_fault_pending_f();
 	}
 
 	reset_channel = reset_channel || fifo_intr;

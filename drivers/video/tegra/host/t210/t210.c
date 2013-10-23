@@ -126,6 +126,10 @@ struct nvhost_device_data t21_vi_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
+	.clocks = {
+		{"vi", UINT_MAX},
+		{"csi", 0},
+		{"cilab", 102000000} },
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 };
 

@@ -52,12 +52,11 @@ struct host1x_hwctx_handler {
 
 	u32 restore_size;
 	u32 restore_incrs;
-	struct mem_handle *save_buf;
 	u32 save_incrs;
 	u32 save_slots;
-	struct sg_table *save_sgt;
-	dma_addr_t save_phys;
 	u32 save_size;
+	u32 *cpuva;
+	dma_addr_t iova;
 };
 
 #endif

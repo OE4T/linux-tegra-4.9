@@ -24,13 +24,13 @@
 #include "host1x/host1x02_hardware.h"
 #include "gr3d.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_scale.h"
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
 #include "class_ids.h"
 
 #include <linux/slab.h>
+#include <linux/dma-mapping.h>
 #include <linux/scatterlist.h>
 #include <mach/gpufuse.h>
 
@@ -172,12 +172,12 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
 		ctx->restore_phys);
 	/* gather the save buffer */
-	nvhost_cdma_push_gather(cdma,
-			nvhost_get_host(nctx->channel->dev)->memmgr,
-			p->save_buf,
+	_nvhost_cdma_push_gather(cdma,
+			p->cpuva,
+			p->iova,
 			0,
 			nvhost_opcode_gather(p->save_size),
-			p->save_phys);
+			p->iova);
 }
 
 static void save_begin_v1(struct host1x_hwctx_handler *p, u32 *ptr)
@@ -416,39 +416,27 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 		u32 syncpt, u32 waitbase,
 		struct nvhost_channel *ch)
 {
-	struct mem_mgr *memmgr;
-	u32 *save_ptr;
 	struct host1x_hwctx_handler *p;
 
 	p = kmalloc(sizeof(*p), GFP_KERNEL);
 	if (!p)
 		return NULL;
 
-	memmgr = nvhost_get_host(ch->dev)->memmgr;
-
 	p->h.syncpt = syncpt;
 	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);
 
-	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
-				mem_mgr_flag_write_combine, 0);
-	if (IS_ERR(p->save_buf))
-		goto fail_alloc;
+	p->cpuva = dma_alloc_writecombine(&ch->dev->dev,
+					p->save_size * 4,
+					&p->iova,
+					GFP_KERNEL);
+	if (!p->cpuva) {
+		dev_err(&ch->dev->dev, "memory allocation failed\n");
+		goto fail;
+	}
 
-	save_ptr = nvhost_memmgr_mmap(p->save_buf);
-	if (!save_ptr)
-		goto fail_mmap;
-
-	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf, &ch->dev->dev,
-								mem_flag_none);
-	if (IS_ERR(p->save_sgt))
-		goto fail_pin;
-	p->save_phys = nvhost_memmgr_dma_addr(p->save_sgt);
-
-	setup_save(p, save_ptr);
-
-	nvhost_memmgr_munmap(p->save_buf, save_ptr);
+	setup_save(p, p->cpuva);
 
 	p->save_slots = 5;
 	p->h.alloc = ctx3d_alloc_v1;
@@ -460,11 +448,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 
 	return &p->h;
 
-fail_pin:
-	nvhost_memmgr_munmap(p->save_buf, save_ptr);
-fail_mmap:
-	nvhost_memmgr_put(memmgr, p->save_buf);
-fail_alloc:
+fail:
 	kfree(p);
 	return NULL;
 }

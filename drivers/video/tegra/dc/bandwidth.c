@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/bandwidth.c
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Jon Mayo <jmayo@nvidia.com>
  *
@@ -160,8 +160,9 @@ static void calc_disp_params(struct tegra_dc *dc,
 	bool vertical_scaling_enabled = false;
 	bool pitch = !WIN_IS_BLOCKLINEAR(w) && !WIN_IS_TILED(w);
 	bool planar = tegra_dc_is_yuv_planar(w->fmt);
-	bool packed_yuv422 = ((w->fmt == TEGRA_WIN_FMT_YCbCr422) ||
-				(w->fmt == TEGRA_WIN_FMT_YUV422));
+	bool packed_yuv422 =
+			((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422) ||
+			(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422));
 	/* all of tegra's YUV formats(420 and 422) fetch 2 bytes per pixel,
 	 * but the size reported by tegra_dc_fmt_bpp for the planar version
 	 * is of the luma plane's size only. */
@@ -180,6 +181,10 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int total_screen_area = total_h * total_v;
 	unsigned int total_active_area = mode.h_active * mode.v_active;
 	unsigned int total_blank_area = total_screen_area - total_active_area;
+	unsigned int c1_fp = 0;
+	unsigned int c2 = 0;
+	unsigned int c3 = 0;
+	unsigned int bpp_for_line_buffer_storage_fp = 0;
 	unsigned int reqd_buffering_thresh_disp_bytes_fp = 0;
 	unsigned int latency_buffering_available_in_reqd_buffering_fp = 0;
 	struct clk *emc_clk = clk_get(NULL, "emc");
@@ -217,7 +222,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 					bw_mbps *
 					max(bw_disruption_time_usec_fp,
 						total_latency_usec_fp) +
-					la_params.la_real_to_fp(1);
+					la_params.la_real_to_fp(1)/2;
 	unsigned int reqd_lines = 0;
 	unsigned int lines_of_latency = 0;
 	unsigned int thresh_lwm_bytes = 0;
@@ -280,79 +285,93 @@ static void calc_disp_params(struct tegra_dc *dc,
 		lines_of_latency = 0;
 
 
-	if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0A) ||
-		(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0B) ||
-		(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0C)) {
-		unsigned int c1 =
-			((w->fmt == TEGRA_WIN_FMT_YUV420P &&
-				win_rotated == false) ||
-			(tegra_dc_is_yuv(w->fmt) && win_rotated == true)) ?
-			3 : bytes_per_pixel;
-		unsigned int c2 = (w->fmt == packed_yuv422 &&
-					win_rotated == true) ? 2 : 1;
-
-		reqd_buffering_thresh_disp_bytes_fp =
-					la_params.la_real_to_fp(active *
-							surface_width *
-							reqd_lines *
-							c1 *
-							c2);
-		latency_buffering_available_in_reqd_buffering_fp =
-					la_params.la_real_to_fp(active *
-							surface_width *
-							lines_of_latency *
-							c1 *
-							c2);
-
-		if ((w->fmt == TEGRA_WIN_FMT_YUV422R) &&
-			(win_rotated == false)) {
-			reqd_buffering_thresh_disp_bytes_fp =
-				reqd_buffering_thresh_disp_bytes_fp * 5 / 2;
-			latency_buffering_available_in_reqd_buffering_fp =
-			latency_buffering_available_in_reqd_buffering_fp *
-			5 /
-			2;
-		}
-	} else if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAYD) ||
-			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_T) ||
-			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_HC)) {
-		reqd_buffering_thresh_disp_bytes_fp =
-					la_params.la_real_to_fp(active *
-							bytes_per_pixel *
-							window_width *
-							reqd_lines);
-		latency_buffering_available_in_reqd_buffering_fp =
-					la_params.la_real_to_fp(active *
-							bytes_per_pixel *
-							window_width *
-							lines_of_latency);
-	} else if ((DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0AB) ||
-			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0BB) ||
-			(DISP_CLIENT_LA_ID(la_id) == TEGRA_LA_DISPLAY_0CB)) {
-		unsigned int c = (w->fmt == TEGRA_WIN_FMT_YUV420P) ?
-					3 : bytes_per_pixel;
-		reqd_buffering_thresh_disp_bytes_fp =
-					la_params.la_real_to_fp(c *
-							window_width *
-							reqd_lines *
-							active);
-		latency_buffering_available_in_reqd_buffering_fp =
-					la_params.la_real_to_fp(c *
-							window_width *
-							lines_of_latency *
-							active);
-
-		if (w->fmt == TEGRA_WIN_FMT_YUV422R) {
-			reqd_buffering_thresh_disp_bytes_fp =
-				reqd_buffering_thresh_disp_bytes_fp * 5 / 2;
-			latency_buffering_available_in_reqd_buffering_fp =
-			latency_buffering_available_in_reqd_buffering_fp *
-			5 /
-			2;
-		}
+	if (((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422R) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422R) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422RA) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422RA)) &&
+		!win_rotated) {
+		c1_fp = la_params.la_real_to_fp(5) / 2;
+	} else {
+		c1_fp = la_params.la_real_to_fp(1);
 	}
 
+	if ((((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr420P) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV420P) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCrCb420SP) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr420SP) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YVU420SP) ||
+		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV420SP)) &&
+		!win_rotated) ||
+		(tegra_dc_is_yuv(w->fmt) && win_rotated)) {
+		c2 = 3;
+	} else {
+		c2 = bytes_per_pixel;
+	}
 
+	c3 = (packed_yuv422 && win_rotated) ? 2 : 1;
+	latency_buffering_available_in_reqd_buffering_fp = active *
+							surface_width *
+							lines_of_latency *
+							c1_fp *
+							c2 *
+							c3;
+
+	switch (tegra_dc_fmt(w->fmt)) {
+	/* YUV 420 case*/
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCrCb420SP:
+	case TEGRA_WIN_FMT_YCbCr420SP:
+	case TEGRA_WIN_FMT_YVU420SP:
+	case TEGRA_WIN_FMT_YUV420SP:
+		c1_fp = (win_rotated) ?
+			la_params.la_real_to_fp(2) :
+			la_params.la_real_to_fp(3);
+		break;
+
+	/* YUV 422 case */
+	case TEGRA_WIN_FMT_YCbCr422:
+	case TEGRA_WIN_FMT_YUV422:
+	case TEGRA_WIN_FMT_YCbCr422P:
+	case TEGRA_WIN_FMT_YUV422P:
+	case TEGRA_WIN_FMT_YCrCb422SP:
+	case TEGRA_WIN_FMT_YCbCr422SP:
+	case TEGRA_WIN_FMT_YVU422SP:
+	case TEGRA_WIN_FMT_YUV422SP:
+		c1_fp = (win_rotated) ?
+			la_params.la_real_to_fp(3) :
+			la_params.la_real_to_fp(2);
+		break;
+
+	/* YUV 422R case */
+	case TEGRA_WIN_FMT_YCbCr422R:
+	case TEGRA_WIN_FMT_YUV422R:
+	case TEGRA_WIN_FMT_YCbCr422RA:
+	case TEGRA_WIN_FMT_YUV422RA:
+		c1_fp = (win_rotated) ?
+			la_params.la_real_to_fp(2) :
+			la_params.la_real_to_fp(5);
+		break;
+
+	/* YUV 444 case */
+	case TEGRA_WIN_FMT_YCbCr444P:
+	case TEGRA_WIN_FMT_YUV444P:
+	case TEGRA_WIN_FMT_YVU444SP:
+	case TEGRA_WIN_FMT_YUV444SP:
+		c1_fp = la_params.la_real_to_fp(3);
+		break;
+
+	default:
+		c1_fp = la_params.la_real_to_fp(bytes_per_pixel);
+		break;
+	}
+
+	c2 = (packed_yuv422 && win_rotated) ? 2 : 1;
+	bpp_for_line_buffer_storage_fp = c1_fp * c2;
+	reqd_buffering_thresh_disp_bytes_fp = active *
+						surface_width *
+						reqd_lines *
+						bpp_for_line_buffer_storage_fp;
 	thresh_lwm_bytes =
 		la_params.la_fp_to_real(
 			reqd_buffering_thresh_disp_bytes_fp +

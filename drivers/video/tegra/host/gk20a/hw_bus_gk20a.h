@@ -70,36 +70,4 @@ static inline u32 bus_bar1_block_ptr_shift_v(void)
 {
 	return 0x0000000c;
 }
-static inline u32 bus_intr_0_r(void)
-{
-	return 0x00001100;
-}
-static inline u32 bus_intr_0_pri_squash_m(void)
-{
-	return 0x1 << 1;
-}
-static inline u32 bus_intr_0_pri_fecserr_m(void)
-{
-	return 0x1 << 2;
-}
-static inline u32 bus_intr_0_pri_timeout_m(void)
-{
-	return 0x1 << 3;
-}
-static inline u32 bus_intr_en_0_r(void)
-{
-	return 0x00001140;
-}
-static inline u32 bus_intr_en_0_pri_squash_m(void)
-{
-	return 0x1 << 1;
-}
-static inline u32 bus_intr_en_0_pri_fecserr_m(void)
-{
-	return 0x1 << 2;
-}
-static inline u32 bus_intr_en_0_pri_timeout_m(void)
-{
-	return 0x1 << 3;
-}
 #endif

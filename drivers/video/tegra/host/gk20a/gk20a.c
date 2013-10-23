@@ -462,35 +462,6 @@ static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)
 	return IRQ_WAKE_THREAD;
 }
 
-static void gk20a_pbus_isr(g)
-{
-	u32 val;
-	val = gk20a_readl(g, bus_intr_0_r());
-	if (val & (bus_intr_0_pri_squash_m() |
-			bus_intr_0_pri_fecserr_m() |
-			bus_intr_0_pri_timeout_m()))
-	{
-		nvhost_err(&g->dev->dev,
-			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_save_0_r()));
-		nvhost_err(&g->dev->dev,
-			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_save_1_r()));
-		nvhost_err(&g->dev->dev,
-			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_fecs_errcode_r()));
-		val &= ~(bus_intr_0_pri_squash_m() |
-			bus_intr_0_pri_fecserr_m() |
-			bus_intr_0_pri_timeout_m());
-	}
-
-	if (val)
-		nvhost_err(&g->dev->dev,
-			"Unhandled pending pbus interrupt\n");
-
-	gk20a_writel(g, bus_intr_0_r(), val);
-}
-
 static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -510,8 +481,6 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 		gk20a_priv_ring_isr(g);
 	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
 		gk20a_mm_ltc_isr(g);
-	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
-		gk20a_pbus_isr(g);
 	if (mc_intr_0)
 		nvhost_dbg_info("leaving isr with interrupt pending 0x%08x",
 				mc_intr_0);
@@ -762,11 +731,6 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
-
-	gk20a_writel(g, bus_intr_en_0_r(),
-			bus_intr_en_0_pri_squash_m() |
-			bus_intr_en_0_pri_fecserr_m() |
-			bus_intr_en_0_pri_timeout_m());
 	gk20a_reset_priv_ring(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.

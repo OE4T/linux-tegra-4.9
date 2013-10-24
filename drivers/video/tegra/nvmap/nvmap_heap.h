@@ -25,7 +25,6 @@
 
 struct device;
 struct nvmap_heap;
-struct attribute_group;
 
 struct nvmap_heap_block {
 	phys_addr_t	base;
@@ -48,12 +47,6 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *heap,
 struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b);
 
 void nvmap_heap_free(struct nvmap_heap_block *block);
-
-int nvmap_heap_create_group(struct nvmap_heap *heap,
-			    const struct attribute_group *grp);
-
-void nvmap_heap_remove_group(struct nvmap_heap *heap,
-			     const struct attribute_group *grp);
 
 int __init nvmap_heap_init(void);
 

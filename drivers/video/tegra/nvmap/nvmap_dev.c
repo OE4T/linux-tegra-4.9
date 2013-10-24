@@ -896,26 +896,6 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	return (page) ? 0 : VM_FAULT_SIGBUS;
 }
 
-static ssize_t attr_show_usage(struct device *dev,
-			       struct device_attribute *attr, char *buf)
-{
-	struct nvmap_carveout_node *node = nvmap_heap_device_to_arg(dev);
-
-	return sprintf(buf, "%08x\n", node->heap_bit);
-}
-
-static struct device_attribute heap_attr_show_usage =
-	__ATTR(usage, S_IRUGO, attr_show_usage, NULL);
-
-static struct attribute *heap_extra_attrs[] = {
-	&heap_attr_show_usage.attr,
-	NULL,
-};
-
-static struct attribute_group heap_extra_attr_group = {
-	.attrs = heap_extra_attrs,
-};
-
 #define DEBUGFS_OPEN_FOPS(name) \
 static int nvmap_debug_##name##_open(struct inode *inode, \
 					    struct file *file) \
@@ -1377,10 +1357,6 @@ static int nvmap_probe(struct platform_device *pdev)
 		spin_lock_init(&node->clients_lock);
 		INIT_LIST_HEAD(&node->clients);
 		node->heap_bit = co->usage_mask;
-		if (nvmap_heap_create_group(node->carveout,
-					    &heap_extra_attr_group))
-			dev_warn(&pdev->dev, "couldn't add extra attributes\n");
-
 		dev_info(&pdev->dev, "created carveout %s (%zuKiB)\n",
 			 co->name, co->size / 1024);
 
@@ -1458,7 +1434,6 @@ static int nvmap_probe(struct platform_device *pdev)
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_remove_group(node->carveout, &heap_extra_attr_group);
 		nvmap_heap_destroy(node->carveout);
 	}
 fail:
@@ -1492,7 +1467,6 @@ static int nvmap_remove(struct platform_device *pdev)
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_remove_group(node->carveout, &heap_extra_attr_group);
 		nvmap_heap_destroy(node->carveout);
 	}
 	kfree(dev->heaps);

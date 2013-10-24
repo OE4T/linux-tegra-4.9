@@ -55,19 +55,6 @@ enum block_type {
 	BLOCK_EMPTY,
 };
 
-struct heap_stat {
-	size_t free;		/* total free size */
-	size_t free_largest;	/* largest free block */
-	size_t free_count;	/* number of free blocks */
-	size_t total;		/* total size */
-	size_t largest;		/* largest unique block */
-	size_t count;		/* total number of blocks */
-	/* fast compaction attempt counter */
-	unsigned int compaction_count_fast;
-	/* full compaction attempt counter */
-	unsigned int compaction_count_full;
-};
-
 struct list_block {
 	struct nvmap_heap_block block;
 	struct list_head all_list;
@@ -89,113 +76,6 @@ struct nvmap_heap {
 };
 
 static struct kmem_cache *heap_block_cache;
-
-/* returns the free size of the heap (must be called while holding the parent
- * heap's lock. */
-static phys_addr_t heap_stat(struct nvmap_heap *heap, struct heap_stat *stat)
-{
-	struct list_block *l = NULL;
-	phys_addr_t base = -1ul;
-
-	memset(stat, 0, sizeof(*stat));
-	mutex_lock(&heap->lock);
-	list_for_each_entry(l, &heap->all_list, all_list) {
-		stat->total += l->size;
-		stat->largest = max(l->size, stat->largest);
-		stat->count++;
-		base = min(base, l->orig_addr);
-	}
-
-	list_for_each_entry(l, &heap->free_list, free_list) {
-		stat->free += l->size;
-		stat->free_count++;
-		stat->free_largest = max(l->size, stat->free_largest);
-	}
-	mutex_unlock(&heap->lock);
-
-	return base;
-}
-
-static ssize_t heap_name_show(struct device *dev,
-			      struct device_attribute *attr, char *buf);
-
-static ssize_t heap_stat_show(struct device *dev,
-			      struct device_attribute *attr, char *buf);
-
-static struct device_attribute heap_stat_total_max =
-	__ATTR(total_max, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_total_count =
-	__ATTR(total_count, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_total_size =
-	__ATTR(total_size, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_free_max =
-	__ATTR(free_max, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_free_count =
-	__ATTR(free_count, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_free_size =
-	__ATTR(free_size, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_stat_base =
-	__ATTR(base, S_IRUGO, heap_stat_show, NULL);
-
-static struct device_attribute heap_attr_name =
-	__ATTR(name, S_IRUGO, heap_name_show, NULL);
-
-static struct attribute *heap_stat_attrs[] = {
-	&heap_stat_total_max.attr,
-	&heap_stat_total_count.attr,
-	&heap_stat_total_size.attr,
-	&heap_stat_free_max.attr,
-	&heap_stat_free_count.attr,
-	&heap_stat_free_size.attr,
-	&heap_stat_base.attr,
-	&heap_attr_name.attr,
-	NULL,
-};
-
-static struct attribute_group heap_stat_attr_group = {
-	.attrs	= heap_stat_attrs,
-};
-
-static ssize_t heap_name_show(struct device *dev,
-			      struct device_attribute *attr, char *buf)
-{
-
-	struct nvmap_heap *heap = container_of(dev, struct nvmap_heap, dev);
-	return sprintf(buf, "%s\n", heap->name);
-}
-
-static ssize_t heap_stat_show(struct device *dev,
-			      struct device_attribute *attr, char *buf)
-{
-	struct nvmap_heap *heap = container_of(dev, struct nvmap_heap, dev);
-	struct heap_stat stat;
-	phys_addr_t base;
-
-	base = heap_stat(heap, &stat);
-
-	if (attr == &heap_stat_total_max)
-		return sprintf(buf, "%zu\n", stat.largest);
-	else if (attr == &heap_stat_total_count)
-		return sprintf(buf, "%zu\n", stat.count);
-	else if (attr == &heap_stat_total_size)
-		return sprintf(buf, "%zu\n", stat.total);
-	else if (attr == &heap_stat_free_max)
-		return sprintf(buf, "%zu\n", stat.free_largest);
-	else if (attr == &heap_stat_free_count)
-		return sprintf(buf, "%zu\n", stat.free_count);
-	else if (attr == &heap_stat_free_size)
-		return sprintf(buf, "%zu\n", stat.free);
-	else if (attr == &heap_stat_base)
-		return sprintf(buf, "%08llx\n", (unsigned long long)base);
-	else
-		return -EINVAL;
-}
 
 /*
  * base_max limits position of allocated chunk in memory.
@@ -375,11 +255,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 		goto fail_register;
 	}
 
-	if (sysfs_create_group(&h->dev.kobj, &heap_stat_attr_group)) {
-		dev_err(&h->dev, "%s: failed to create attributes\n", __func__);
-		goto fail_sysfs_create_group;
-	}
-
 	INIT_LIST_HEAD(&h->free_list);
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
@@ -405,8 +280,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent, const char *name,
 	return h;
 
 fail_dma_declare:
-	sysfs_remove_group(&h->dev.kobj, &heap_stat_attr_group);
-fail_sysfs_create_group:
 	device_unregister(&h->dev);
 fail_register:
 	kfree(h);
@@ -428,8 +301,6 @@ void *nvmap_heap_to_arg(struct nvmap_heap *heap)
 /* nvmap_heap_destroy: frees all resources in heap */
 void nvmap_heap_destroy(struct nvmap_heap *heap)
 {
-
-	sysfs_remove_group(&heap->dev.kobj, &heap_stat_attr_group);
 	device_unregister(&heap->dev);
 
 	WARN_ON(!list_is_singular(&heap->all_list));
@@ -442,20 +313,6 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 	}
 
 	kfree(heap);
-}
-
-/* nvmap_heap_create_group: adds the attribute_group grp to the heap kobject */
-int nvmap_heap_create_group(struct nvmap_heap *heap,
-			    const struct attribute_group *grp)
-{
-	return sysfs_create_group(&heap->dev.kobj, grp);
-}
-
-/* nvmap_heap_remove_group: removes the attribute_group grp  */
-void nvmap_heap_remove_group(struct nvmap_heap *heap,
-			     const struct attribute_group *grp)
-{
-	sysfs_remove_group(&heap->dev.kobj, grp);
 }
 
 int nvmap_heap_init(void)

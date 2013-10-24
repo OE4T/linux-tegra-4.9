@@ -25,6 +25,7 @@
 #include <linux/cpu.h>
 #include <linux/ratelimit.h>
 #include <asm/irq_regs.h>
+#include <linux/ptrace.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -241,6 +242,7 @@ static void read_source(struct quadd_event_source_interface *source,
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_callchain *callchain_data = &cpu_ctx->callchain_data;
 	struct quadd_ctx *quadd_ctx = hrt.quadd_ctx;
+	struct pt_regs *user_regs;
 
 	if (!source)
 		return;
@@ -256,8 +258,14 @@ static void read_source(struct quadd_event_source_interface *source,
 	if (atomic_read(&cpu_ctx->nr_active) == 0)
 		return;
 
-	if (user_mode(regs) && hrt.quadd_ctx->param.backtrace) {
-		callchain_nr = quadd_get_user_callchain(regs, callchain_data);
+	if (user_mode(regs))
+		user_regs = regs;
+	else
+		user_regs = current_pt_regs();
+
+	if (hrt.quadd_ctx->param.backtrace) {
+		callchain_nr =
+			quadd_get_user_callchain(user_regs, callchain_data);
 		if (callchain_nr > 0) {
 			extra_data = (char *)cpu_ctx->callchain_data.callchain;
 			extra_length = callchain_nr * sizeof(u32);

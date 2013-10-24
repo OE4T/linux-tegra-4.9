@@ -39,10 +39,10 @@ struct quadd_mmap_ctx {
 	struct quadd_ctx *quadd_ctx;
 };
 
-char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
-		     struct pt_regs *regs, struct quadd_mmap_data *sample,
-		     unsigned int *extra_length);
+void quadd_get_mmap_object(struct quadd_cpu_context *cpu_ctx,
+			   struct pt_regs *regs, pid_t pid);
 
+int quadd_get_current_mmap(struct quadd_cpu_context *cpu_ctx, pid_t pid);
 
 struct quadd_mmap_ctx *quadd_mmap_init(struct quadd_ctx *quadd_ctx);
 void quadd_mmap_deinit(void);

@@ -222,14 +222,6 @@ static int get_sample_data(struct event_data *event,
 	return 0;
 }
 
-static char *get_mmap_data(struct pt_regs *regs,
-			   struct quadd_mmap_data *sample,
-			   unsigned int *extra_length)
-{
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-	return quadd_get_mmap(cpu_ctx, regs, sample, extra_length);
-}
-
 static void read_source(struct quadd_event_source_interface *source,
 			struct pt_regs *regs, pid_t pid)
 {
@@ -306,27 +298,13 @@ static void read_source(struct quadd_event_source_interface *source,
 
 static void read_all_sources(struct pt_regs *regs, pid_t pid)
 {
-	struct quadd_record_data record_data;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
-	unsigned int extra_length;
-	char *extra_data;
+	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 
 	if (!regs)
 		return;
 
-	extra_data = get_mmap_data(regs, &record_data.mmap, &extra_length);
-	if (extra_data && extra_length > 0) {
-		record_data.magic = QUADD_RECORD_MAGIC;
-		record_data.record_type = QUADD_RECORD_TYPE_MMAP;
-		record_data.cpu_mode = QUADD_CPU_MODE_USER;
-
-		record_data.mmap.filename_length = extra_length;
-		record_data.mmap.pid = pid > 0 ? pid : ctx->param.pids[0];
-
-		quadd_put_sample(&record_data, extra_data, extra_length);
-	} else {
-		record_data.mmap.filename_length = 0;
-	}
+	quadd_get_mmap_object(cpu_ctx, regs, pid);
 
 	if (ctx->pmu && ctx->pmu_info.active)
 		read_source(ctx->pmu, regs, pid);
@@ -473,9 +451,13 @@ static void reset_cpu_ctx(void)
 
 int quadd_hrt_start(void)
 {
+	int err;
 	u64 period;
 	long freq;
+	unsigned int extra;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
+	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
+	struct quadd_parameters *param = &ctx->param;
 
 	freq = ctx->param.freq;
 	freq = max_t(long, QUADD_HRT_MIN_FREQ, freq);
@@ -492,6 +474,16 @@ int quadd_hrt_start(void)
 	reset_cpu_ctx();
 
 	put_header();
+
+	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
+
+	if (extra & QUADD_PARAM_IDX_EXTRA_GET_MMAP) {
+		err = quadd_get_current_mmap(cpu_ctx, param->pids[0]);
+		if (err) {
+			pr_err("error: quadd_get_current_mmap\n");
+			return err;
+		}
+	}
 
 	if (ctx->pl310)
 		ctx->pl310->start();

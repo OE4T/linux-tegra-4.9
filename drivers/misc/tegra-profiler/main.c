@@ -146,6 +146,9 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 	ctx.param.power_rate_freq = param->power_rate_freq;
 	ctx.param.debug_samples = param->debug_samples;
 
+	for (i = 0; i < QM_ARRAY_SIZE(param->reserved); i++)
+		ctx.param.reserved[i] = param->reserved[i];
+
 	/* Currently only one process */
 	if (param->nr_pids != 1)
 		return -EINVAL;
@@ -360,6 +363,8 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	cap->blocked_read = 1;
 
 	extra |= QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX;
+	extra |= QUADD_COMM_CAP_EXTRA_GET_MMAP;
+
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 }
 

@@ -20,12 +20,13 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	17
-#define QUADD_IO_VERSION	8
+#define QUADD_IO_VERSION	9
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
 #define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD	7
 #define QUADD_IO_VERSION_BT_KERNEL_CTX		8
+#define QUADD_IO_VERSION_GET_MMAP		9
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 
@@ -236,8 +237,11 @@ struct quadd_record_data {
 #define QUADD_MAX_PACKAGE_NAME	320
 
 enum {
-	QUADD_PARAM_IDX_SIZE_OF_RB = 0,
+	QUADD_PARAM_IDX_SIZE_OF_RB	= 0,
+	QUADD_PARAM_IDX_EXTRA		= 1,
 };
+
+#define QUADD_PARAM_IDX_EXTRA_GET_MMAP	(1 << 0)
 
 struct quadd_parameters {
 	u32 freq;
@@ -281,6 +285,7 @@ enum {
 };
 
 #define QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX	(1 << 0)
+#define QUADD_COMM_CAP_EXTRA_GET_MMAP		(1 << 1)
 
 struct quadd_comm_cap {
 	u32	pmu:1,

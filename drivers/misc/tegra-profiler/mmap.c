@@ -101,25 +101,61 @@ static int check_hash(u32 key)
 	return 1;
 }
 
-char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
-		     struct pt_regs *regs, struct quadd_mmap_data *sample,
-		     unsigned int *extra_length)
+static int find_file(const char *file_name, unsigned long addr,
+		     unsigned long len)
 {
 	u32 crc;
+	size_t length;
+
+	if (!file_name)
+		return 0;
+
+	length = strlen(file_name);
+
+	crc = crc32_le(~0, file_name, length);
+	crc = crc32_le(crc, (unsigned char *)&addr,
+		       sizeof(addr));
+	crc = crc32_le(crc, (unsigned char *)&len,
+		       sizeof(len));
+
+	return check_hash(crc);
+}
+
+static void
+put_mmap_sample(struct quadd_mmap_data *s, char *extra_data,
+		size_t extra_length)
+{
+	struct quadd_record_data r;
+
+	r.magic = QUADD_RECORD_MAGIC;
+	r.record_type = QUADD_RECORD_TYPE_MMAP;
+	r.cpu_mode = QUADD_CPU_MODE_USER;
+
+	memcpy(&r.mmap, s, sizeof(*s));
+	r.mmap.filename_length = extra_length;
+
+	pr_debug("MMAP: pid: %d, file_name: '%s', addr: %#x, length: %u",
+		 s->pid, extra_data, s->addr, extra_length);
+
+	quadd_put_sample(&r, extra_data, extra_length);
+}
+
+void quadd_get_mmap_object(struct quadd_cpu_context *cpu_ctx,
+			   struct pt_regs *regs, pid_t pid)
+{
 	unsigned long ip;
-	int length, length_aligned;
+	size_t length, length_aligned;
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma;
 	struct file *vm_file;
 	struct path *path;
 	char *file_name = NULL;
+	struct quadd_mmap_data sample;
 	struct quadd_mmap_cpu_ctx *mm_cpu_ctx = this_cpu_ptr(mmap_ctx.cpu_ctx);
 	char *tmp_buf = mm_cpu_ctx->tmp_buf;
 
-	if (!mm) {
-		*extra_length = 0;
-		return NULL;
-	}
+	if (!mm)
+		return;
 
 	ip = instruction_pointer(regs);
 
@@ -138,9 +174,9 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 			if (IS_ERR(file_name)) {
 				file_name = NULL;
 			} else {
-				sample->addr = vma->vm_start;
-				sample->len = vma->vm_end - vma->vm_start;
-				sample->pgoff =
+				sample.addr = vma->vm_start;
+				sample.len = vma->vm_end - vma->vm_start;
+				sample.pgoff =
 					(u64)vma->vm_pgoff << PAGE_SHIFT;
 			}
 			break;
@@ -156,38 +192,86 @@ char *quadd_get_mmap(struct quadd_cpu_context *cpu_ctx,
 		if (mod) {
 			file_name = mod->name;
 			if (file_name) {
-				sample->addr = (u32) mod->module_core;
-				sample->len = mod->core_size;
-				sample->pgoff = 0;
+				sample.addr = (u32) mod->module_core;
+				sample.len = mod->core_size;
+				sample.pgoff = 0;
 			}
 		}
 #endif
 	}
 
 	if (file_name) {
-		length = strlen(file_name);
-		if (length >= PATH_MAX) {
-			*extra_length = 0;
-			return NULL;
-		}
+		if (!find_file(file_name, sample.addr, sample.len)) {
+			length = strlen(file_name) + 1;
+			if (length > PATH_MAX)
+				return;
 
-		crc = crc32_le(~0, file_name, length);
-		crc = crc32_le(crc, (unsigned char *)&sample->addr,
-			       sizeof(sample->addr));
-		crc = crc32_le(crc, (unsigned char *)&sample->len,
-			       sizeof(sample->len));
+			sample.pid = pid;
 
-		if (!check_hash(crc)) {
 			strcpy(cpu_ctx->mmap_filename, file_name);
-			length_aligned = (length + 1 + 7) & (~7);
-			*extra_length = length_aligned;
+			length_aligned = ALIGN(length, 8);
 
-			return cpu_ctx->mmap_filename;
+			put_mmap_sample(&sample, cpu_ctx->mmap_filename,
+					length_aligned);
 		}
 	}
+}
 
-	*extra_length = 0;
-	return NULL;
+int quadd_get_current_mmap(struct quadd_cpu_context *cpu_ctx, pid_t pid)
+{
+	struct vm_area_struct *vma;
+	struct file *vm_file;
+	struct path *path;
+	char *file_name;
+	struct task_struct *task;
+	struct mm_struct *mm;
+	struct quadd_mmap_data sample;
+	size_t length, length_aligned;
+	struct quadd_mmap_cpu_ctx *mm_cpu_ctx = this_cpu_ptr(mmap_ctx.cpu_ctx);
+	char *tmp_buf = mm_cpu_ctx->tmp_buf;
+
+	rcu_read_lock();
+	task = pid_task(find_vpid(pid), PIDTYPE_PID);
+	rcu_read_unlock();
+	if (!task) {
+		pr_err("Process not found: %u\n", pid);
+		return -ESRCH;
+	}
+	mm = task->mm;
+
+	pr_info("Get mapped memory objects\n");
+
+	for (vma = mm->mmap; vma; vma = vma->vm_next) {
+		vm_file = vma->vm_file;
+		if (!vm_file)
+			continue;
+
+		path = &vm_file->f_path;
+
+		file_name = d_path(path, tmp_buf, PATH_MAX);
+		if (IS_ERR(file_name))
+			continue;
+
+		if (!(vma->vm_flags & VM_EXEC))
+			continue;
+
+		length = strlen(file_name) + 1;
+		if (length > PATH_MAX)
+			continue;
+
+		sample.pid = pid;
+		sample.addr = vma->vm_start;
+		sample.len = vma->vm_end - vma->vm_start;
+		sample.pgoff = (u64)vma->vm_pgoff << PAGE_SHIFT;
+
+		if (!find_file(file_name, sample.addr, sample.len)) {
+			strcpy(cpu_ctx->mmap_filename, file_name);
+			length_aligned = ALIGN(length, 8);
+
+			put_mmap_sample(&sample, file_name, length_aligned);
+		}
+	}
+	return 0;
 }
 
 struct quadd_mmap_ctx *quadd_mmap_init(struct quadd_ctx *quadd_ctx)

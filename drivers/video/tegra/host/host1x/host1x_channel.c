@@ -88,53 +88,15 @@ static bool ctxsave_needed(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
 		return true;
 }
 
-static void *pre_submit_ctxsave(struct nvhost_job *job,
-		struct nvhost_hwctx *cur_ctx)
-{
-	struct nvhost_channel *ch = job->ch;
-	void *ctxsave_waiter = NULL;
-
-	/* Is a save needed? */
-	if (!ctxsave_needed(job, cur_ctx))
-		return NULL;
-
-	if (cur_ctx->has_timedout) {
-		dev_dbg(&ch->dev->dev,
-			"%s: skip save of timed out context (0x%p)\n",
-			__func__, ch->cur_ctx);
-
-		return NULL;
-	}
-
-	/* Allocate save waiter if needed */
-	if (cur_ctx->h->save_service) {
-		ctxsave_waiter = nvhost_intr_alloc_waiter();
-		if (!ctxsave_waiter)
-			return ERR_PTR(-ENOMEM);
-	}
-
-	return ctxsave_waiter;
-}
-
-static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
-		struct nvhost_hwctx *cur_ctx)
+static void submit_ctxsave(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
 {
 	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
 	struct nvhost_channel *ch = job->ch;
 	u32 syncval;
-	int err;
-	u32 save_thresh = 0;
 
 	/* Is a save needed? */
 	if (!ctxsave_needed(job, cur_ctx))
 		return;
-
-	/* Retrieve save threshold if we have a waiter */
-	if (ctxsave_waiter)
-		save_thresh =
-			nvhost_syncpt_read_max(&host->syncpt,
-			job->sp[job->hwctx_syncpt_idx].id)
-			+ cur_ctx->save_thresh;
 
 	/* Adjust the syncpoint max */
 	job->sp[job->hwctx_syncpt_idx].incrs +=
@@ -147,18 +109,6 @@ static void submit_ctxsave(struct nvhost_job *job, void *ctxsave_waiter,
 	cur_ctx->valid = true;
 	cur_ctx->h->save_push(cur_ctx, &ch->cdma);
 	nvhost_job_get_hwctx(job, cur_ctx);
-
-	/* Notify save service */
-	if (ctxsave_waiter) {
-		err = nvhost_intr_add_action(&host->intr,
-			job->sp[job->hwctx_syncpt_idx].id,
-			save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, cur_ctx,
-			ctxsave_waiter,
-			NULL);
-		ctxsave_waiter = NULL;
-		WARN(err, "Failed to set ctx save interrupt");
-	}
 
 	trace_nvhost_channel_context_save(ch->dev->name, cur_ctx);
 }
@@ -282,7 +232,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	u32 user_syncpt_incrs;
 	u32 prev_max = 0;
 	int err, i;
-	void *completed_waiters[job->num_syncpts], *ctxsave_waiter = NULL;
+	void *completed_waiters[job->num_syncpts];
 	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
@@ -302,15 +252,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	err = mutex_lock_interruptible(&ch->submitlock);
 	if (err) {
 		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
-		goto error;
-	}
-
-	/* Do the needed allocations */
-	ctxsave_waiter = pre_submit_ctxsave(job, ch->cur_ctx);
-	if (IS_ERR(ctxsave_waiter)) {
-		err = PTR_ERR(ctxsave_waiter);
-		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
-		mutex_unlock(&ch->submitlock);
 		goto error;
 	}
 
@@ -342,7 +283,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
 	user_syncpt_incrs = hwctx_sp->incrs;
 
-	submit_ctxsave(job, ctxsave_waiter, ch->cur_ctx);
+	submit_ctxsave(job, ch->cur_ctx);
 	submit_ctxrestore(job);
 	ch->cur_ctx = job->hwctx;
 
@@ -398,7 +339,6 @@ error:
 	for (i = 0; i < job->num_syncpts; ++i)
 		kfree(completed_waiters[i]);
 
-	kfree(ctxsave_waiter);
 	return err;
 }
 
@@ -409,13 +349,12 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	u32 syncpt_incrs, syncpt_val;
 	int err = 0;
 	void *ref;
-	void *ctx_waiter = NULL, *wakeup_waiter = NULL;
+	void *wakeup_waiter = NULL;
 	struct nvhost_job *job;
 	u32 syncpt_id, waitbase;
 
-	ctx_waiter = nvhost_intr_alloc_waiter();
 	wakeup_waiter = nvhost_intr_alloc_waiter();
-	if (!ctx_waiter || !wakeup_waiter) {
+	if (!wakeup_waiter) {
 		err = -ENOMEM;
 		goto done;
 	}
@@ -464,14 +403,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	nvhost_job_put(job);
 	job = NULL;
 
-	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr, syncpt_id,
-			syncpt_val - syncpt_incrs + hwctx_to_save->save_thresh,
-			NVHOST_INTR_ACTION_CTXSAVE, hwctx_to_save,
-			ctx_waiter,
-			NULL);
-	ctx_waiter = NULL;
-	WARN(err, "Failed to set context save interrupt");
-
 	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
 			syncpt_id, syncpt_val,
 			NVHOST_INTR_ACTION_WAKEUP, &wq,
@@ -491,7 +422,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	nvhost_module_idle(nvhost_get_parent(ch->dev));
 
 done:
-	kfree(ctx_waiter);
 	kfree(wakeup_waiter);
 	return err;
 }

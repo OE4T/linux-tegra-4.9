@@ -113,7 +113,6 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->hwctx.channel = ch;
 	ctx->hwctx.valid = false;
 	ctx->hwctx.save_incrs = p->save_incrs;
-	ctx->hwctx.save_thresh = p->h.save_thresh;
 	ctx->hwctx.save_slots = p->save_slots;
 
 	ctx->restore_size = p->restore_size;

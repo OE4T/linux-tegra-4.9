@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3d hardware context
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -80,11 +80,6 @@ void t124_3dctx_save_push(struct nvhost_hwctx *ctx, struct nvhost_cdma *cdma)
 	nvhost_dbg_fn("");
 }
 
-void t124_3dctx_save_service(struct nvhost_hwctx *ctx)
-{
-	nvhost_dbg_fn("");
-}
-
 int __init t124_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 {
 	nvhost_dbg_fn("");
@@ -93,7 +88,6 @@ int __init t124_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h)
 	h->get   = t124_3dctx_get;
 	h->put   = t124_3dctx_put;
 	h->save_push = t124_3dctx_save_push;
-	h->save_service = t124_3dctx_save_service;
 
 	return 0;
 }

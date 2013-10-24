@@ -487,7 +487,6 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	ctx->hwctx.channel = ch;
 	ctx->hwctx.valid = true; /* this is a preconditioning sequence... */
 	ctx->hwctx.save_incrs = 0;
-	ctx->hwctx.save_thresh = 0;
 	ctx->hwctx.save_slots = 0;
 
 	ctx->hwctx.restore_incrs = 1;
@@ -559,7 +558,6 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 	p->h.put   = vic03_put_hwctx;
 	p->h.save_push = vic03_save_push_hwctx;
 	p->h.restore_push = ctxvic03_restore_push;
-	p->h.save_service = NULL;
 
 	return &p->h;
 }

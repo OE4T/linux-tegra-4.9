@@ -394,7 +394,6 @@ static void setup_save(struct host1x_hwctx_handler *p, u32 *ptr)
 	p->save_size = info.save_count + SAVE_END_V1_SIZE;
 	p->restore_size = info.restore_count + RESTORE_END_SIZE;
 	p->save_incrs = info.save_incrs;
-	p->h.save_thresh = p->save_incrs;
 	p->restore_incrs = info.restore_incrs;
 }
 
@@ -442,7 +441,6 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 	p->h.alloc = ctx3d_alloc_v1;
 	p->h.save_push = save_push_v1;
 	p->h.restore_push = nvhost_3dctx_restore_push;
-	p->h.save_service = NULL;
 	p->h.get = nvhost_3dctx_get;
 	p->h.put = nvhost_3dctx_put;
 

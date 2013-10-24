@@ -684,11 +684,6 @@ static void gk20a_save_push_hwctx(struct nvhost_hwctx *ctx, struct nvhost_cdma *
 	nvhost_dbg_fn("");
 }
 
-static void gk20a_save_service_hwctx(struct nvhost_hwctx *ctx)
-{
-	nvhost_dbg_fn("");
-}
-
 struct nvhost_hwctx_handler *
     nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 waitbase,
 				     struct nvhost_channel *ch)
@@ -705,7 +700,6 @@ struct nvhost_hwctx_handler *
 	h->get   = gk20a_get_hwctx;
 	h->put   = gk20a_put_hwctx;
 	h->save_push = gk20a_save_push_hwctx;
-	h->save_service = gk20a_save_service_hwctx;
 
 	return h;
 }

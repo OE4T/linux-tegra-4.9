@@ -42,12 +42,6 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
 
 	/**
-	 * Save a HW context.
-	 * 'data' points to a context
-	 */
-	NVHOST_INTR_ACTION_CTXSAVE,
-
-	/**
 	 * Signal a nvhost_sync_pt.
 	 * 'data' points to a nvhost_sync_pt
 	 */

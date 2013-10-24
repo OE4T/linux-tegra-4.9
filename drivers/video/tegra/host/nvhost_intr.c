@@ -168,14 +168,6 @@ static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
 	/* TODO: add trace function */
 }
 
-static void action_ctxsave(struct nvhost_waitlist *waiter)
-{
-	struct nvhost_hwctx *hwctx = waiter->data;
-
-	if (hwctx->h->save_service)
-		hwctx->h->save_service(hwctx);
-}
-
 static void action_wakeup(struct nvhost_waitlist *waiter)
 {
 	wait_queue_head_t *wq = waiter->data;
@@ -203,7 +195,6 @@ typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_submit_complete,
 	action_gpfifo_submit_complete,
-	action_ctxsave,
 	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,

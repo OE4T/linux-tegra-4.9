@@ -199,13 +199,20 @@ static int laguna_dsi_gpio_get(void)
 		goto fail;
 	}
 
-
-	/* free pwm GPIO */
 	err = gpio_request(LCD_TE, "lcd_te");
 	if (err < 0) {
 		pr_err("panel lcd te request failed\n");
 		goto fail;
 	}
+
+	err = gpio_request(DSI_PANEL_BL_PWM_GPIO, "panel pwm");
+	if (err < 0) {
+		pr_err("panel pwm gpio request failed\n");
+		goto fail;
+	}
+
+	/* Free pwm GPIO */
+	gpio_free(DSI_PANEL_BL_PWM_GPIO);
 
 	err = gpio_request(lvds_en, "edp bridge 1v8 enable");
 	if (err < 0) {

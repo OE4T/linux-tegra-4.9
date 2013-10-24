@@ -20,11 +20,12 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	17
-#define QUADD_IO_VERSION	7
+#define QUADD_IO_VERSION	8
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
 #define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD	7
+#define QUADD_IO_VERSION_BT_KERNEL_CTX		8
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 
@@ -274,6 +275,12 @@ struct quadd_events_cap {
 		l2_dcache_write_misses:1,
 		l2_icache_misses:1;
 };
+
+enum {
+	QUADD_COMM_CAP_IDX_EXTRA = 0,
+};
+
+#define QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX	(1 << 0)
 
 struct quadd_comm_cap {
 	u32	pmu:1,

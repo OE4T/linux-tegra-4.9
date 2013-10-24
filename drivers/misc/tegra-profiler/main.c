@@ -246,6 +246,7 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 static void get_capabilities(struct quadd_comm_cap *cap)
 {
 	int i, event;
+	unsigned int extra = 0;
 	struct quadd_events_cap *events_cap = &cap->events_cap;
 
 	cap->pmu = ctx.pmu ? 1 : 0;
@@ -357,6 +358,9 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	cap->tegra_lp_cluster = quadd_is_cpu_with_lp_cluster();
 	cap->power_rate = 1;
 	cap->blocked_read = 1;
+
+	extra |= QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX;
+	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 }
 
 void quadd_get_state(struct quadd_module_state *state)

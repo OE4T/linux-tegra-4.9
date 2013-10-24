@@ -170,7 +170,7 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 		nvhost_opcode_imm(0x403, 0));
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
-		ctx->restore_phys);
+		ctx->iova);
 	/* gather the save buffer */
 	_nvhost_cdma_push_gather(cdma,
 			p->cpuva,

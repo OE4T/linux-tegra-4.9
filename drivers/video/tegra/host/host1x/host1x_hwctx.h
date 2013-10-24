@@ -38,13 +38,10 @@ struct sg_table;
 struct host1x_hwctx {
 	struct nvhost_hwctx hwctx;
 
-	struct mem_handle *restore;
-	u32 *restore_virt;
-	struct sg_table *restore_sgt;
-	dma_addr_t restore_phys;
 	u32 restore_size;
 	u32 *cpuva;
 	dma_addr_t iova;
+	bool mem_flag;
 };
 
 struct host1x_hwctx_handler {

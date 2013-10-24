@@ -224,32 +224,29 @@ void nvhost_3dctx_restore_end(struct host1x_hwctx_handler *p, u32 *ptr)
 
 /*** ctx3d ***/
 struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
-		struct nvhost_channel *ch, bool map_restore)
+		struct nvhost_channel *ch, bool mem_flag)
 {
-	struct mem_mgr *memmgr = nvhost_get_host(ch->dev)->memmgr;
 	struct host1x_hwctx *ctx;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return NULL;
-	ctx->restore = nvhost_memmgr_alloc(memmgr, p->restore_size * 4, 32,
-		map_restore ? mem_mgr_flag_write_combine
-			    : mem_mgr_flag_uncacheable, 0);
-	if (IS_ERR(ctx->restore))
-		goto fail_alloc;
 
-	if (map_restore) {
-		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
-		if (!ctx->restore_virt)
-			goto fail_mmap;
-	} else
-		ctx->restore_virt = NULL;
+	if (mem_flag)
+		ctx->cpuva = dma_alloc_writecombine(&ch->dev->dev,
+						p->restore_size * 4,
+						&ctx->iova,
+						GFP_KERNEL);
+	else
+		ctx->cpuva = dma_alloc_coherent(&ch->dev->dev,
+						p->restore_size * 4,
+						&ctx->iova,
+						GFP_KERNEL);
 
-	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore,
-			&ch->dev->dev, mem_flag_none);
-	if (IS_ERR(ctx->restore_sgt))
-		goto fail_pin;
-	ctx->restore_phys = nvhost_memmgr_dma_addr(ctx->restore_sgt);
+	if (!ctx->cpuva) {
+		dev_err(&ch->dev->dev, "memory allocation failed\n");
+		goto fail;
+	}
 
 	kref_init(&ctx->hwctx.ref);
 	ctx->hwctx.h = &p->h;
@@ -261,14 +258,10 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 
 	ctx->restore_size = p->restore_size;
 	ctx->hwctx.restore_incrs = p->restore_incrs;
+	ctx->mem_flag = mem_flag;
 	return ctx;
 
-fail_pin:
-	if (map_restore)
-		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
-fail_mmap:
-	nvhost_memmgr_put(memmgr, ctx->restore);
-fail_alloc:
+fail:
 	kfree(ctx);
 	return NULL;
 }
@@ -277,12 +270,12 @@ void nvhost_3dctx_restore_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	nvhost_cdma_push_gather(cdma,
-		ctx->hwctx.memmgr,
-		ctx->restore,
+	_nvhost_cdma_push_gather(cdma,
+		ctx->cpuva,
+		ctx->iova,
 		0,
 		nvhost_opcode_gather(ctx->restore_size),
-		ctx->restore_phys);
+		ctx->iova);
 }
 
 void nvhost_3dctx_get(struct nvhost_hwctx *ctx)
@@ -294,14 +287,23 @@ void nvhost_3dctx_free(struct kref *ref)
 {
 	struct nvhost_hwctx *nctx = container_of(ref, struct nvhost_hwctx, ref);
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	struct mem_mgr *memmgr = nvhost_get_host(nctx->channel->dev)->memmgr;
 
-	if (ctx->restore_virt)
-		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
+	if (ctx->cpuva) {
+		if (ctx->mem_flag)
+			dma_free_writecombine(&nctx->channel->dev->dev,
+					ctx->restore_size * 4,
+					ctx->cpuva,
+					ctx->iova);
+		else
+			dma_free_coherent(&nctx->channel->dev->dev,
+					ctx->restore_size * 4,
+					ctx->cpuva,
+					ctx->iova);
 
-	nvhost_memmgr_unpin(memmgr, ctx->restore, &nctx->channel->dev->dev,
-			ctx->restore_sgt);
-	nvhost_memmgr_put(memmgr, ctx->restore);
+		ctx->cpuva = NULL;
+		ctx->iova = 0;
+	}
+
 	kfree(ctx);
 }
 

@@ -44,6 +44,55 @@ static struct platform_device *disp_device;
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_en;
 
+static struct tegra_dc_sd_settings dsi_lgd_wxga_7_0_sd_settings = {
+	.enable = 1, /* enabled by default. */
+	.use_auto_pwm = false,
+	.hw_update_delay = 0,
+	.bin_width = -1,
+	.aggressiveness = 5,
+	.use_vid_luma = false,
+	.phase_in_adjustments = 0,
+	.k_limit_enable = true,
+	.k_limit = 200,
+	.sd_window_enable = false,
+	.soft_clipping_enable = true,
+	/* Low soft clipping threshold to compensate for aggressive k_limit */
+	.soft_clipping_threshold = 128,
+	.smooth_k_enable = false,
+	.smooth_k_incr = 64,
+	/* Default video coefficients */
+	.coeff = {5, 9, 2},
+	.fc = {0, 0},
+	/* Immediate backlight changes */
+	.blp = {1024, 255},
+	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
+	/* Default BL TF */
+	.bltf = {
+			{
+				{57, 65, 73, 82},
+				{92, 103, 114, 125},
+				{138, 150, 164, 178},
+				{193, 208, 224, 241},
+			},
+		},
+	/* Default LUT */
+	.lut = {
+			{
+				{255, 255, 255},
+				{199, 199, 199},
+				{153, 153, 153},
+				{116, 116, 116},
+				{85, 85, 85},
+				{59, 59, 59},
+				{36, 36, 36},
+				{17, 17, 17},
+				{0, 0, 0},
+			},
+		},
+	.sd_brightness = &sd_brightness,
+	.use_vpulse2 = true,
+};
+
 static struct tegra_dsi_cmd dsi_lgd_wxga_7_0_init_cmd[] = {
 	DSI_CMD_SHORT(0x15, 0x01, 0x0),
 	DSI_DLY_MS(20),
@@ -390,6 +439,7 @@ static void dsi_lgd_wxga_7_0_fb_data_init(struct tegra_fb_data *fb)
 static void
 dsi_lgd_wxga_7_0_sd_settings_init(struct tegra_dc_sd_settings *settings)
 {
+	*settings = dsi_lgd_wxga_7_0_sd_settings;
 	settings->bl_device_name = "pwm-backlight";
 }
 

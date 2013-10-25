@@ -371,54 +371,6 @@ static struct platform_device loki_nvmap_device = {
 	},
 };
 
-static struct tegra_dc_sd_settings loki_sd_settings = {
-	.enable = 0, /* disabled by default. */
-	.use_auto_pwm = false,
-	.hw_update_delay = 0,
-	.bin_width = -1,
-	.aggressiveness = 1,
-	.use_vid_luma = false,
-	.phase_in_adjustments = 0,
-	.k_limit_enable = true,
-	.k_limit = 180,
-	.sd_window_enable = false,
-	.soft_clipping_enable = true,
-	/* Low soft clipping threshold to compensate for aggressive k_limit */
-	.soft_clipping_threshold = 128,
-	.smooth_k_enable = true,
-	.smooth_k_incr = 128,
-	/* Default video coefficients */
-	.coeff = {5, 9, 2},
-	.fc = {0, 0},
-	/* Immediate backlight changes */
-	.blp = {1024, 255},
-	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
-	/* Default BL TF */
-	.bltf = {
-			{
-				{57, 65, 73, 82},
-				{92, 103, 114, 125},
-				{138, 150, 164, 178},
-				{193, 208, 224, 241},
-			},
-		},
-	/* Default LUT */
-	.lut = {
-			{
-				{255, 255, 255},
-				{199, 199, 199},
-				{153, 153, 153},
-				{116, 116, 116},
-				{85, 85, 85},
-				{59, 59, 59},
-				{36, 36, 36},
-				{17, 17, 17},
-				{0, 0, 0},
-			},
-		},
-	.sd_brightness = &sd_brightness,
-};
-
 static void loki_panel_select(void)
 {
 	struct tegra_panel *panel;
@@ -469,8 +421,6 @@ int __init loki_panel_init(int board_id)
 	int err = 0;
 	struct resource __maybe_unused *res;
 	struct platform_device *phost1x = NULL;
-
-	sd_settings = loki_sd_settings;
 
 	loki_panel_select();
 

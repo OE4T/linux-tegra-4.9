@@ -5669,7 +5669,7 @@ void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 	reg = gk20a_readl(g, gpc_tpc_addr);
 	reg = set_field(reg,
 		gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_m(),
-		quad_ctrl);
+		gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_f(quad_ctrl));
 
 	gk20a_writel(g, gpc_tpc_addr, reg);
 
@@ -5677,7 +5677,7 @@ void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 	reg = gk20a_readl(g, gpc_tpc_addr);
 	reg = set_field(reg,
 		gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_m(),
-		half_ctrl);
+		gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_f(half_ctrl));
 	gk20a_writel(g, gpc_tpc_addr, reg);
 }
 

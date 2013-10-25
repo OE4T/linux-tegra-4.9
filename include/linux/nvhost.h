@@ -336,6 +336,8 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id);
 u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id);
 int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id, u32 thresh,
 	u32 timeout, u32 *value, struct timespec *ts);
+int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
+	u32 id, u32 thresh, const char *name, int *fence_fd);
 
 /* Hacky way to get access to struct nvhost_device_data for VI device. */
 extern struct nvhost_device_data t20_vi_info;

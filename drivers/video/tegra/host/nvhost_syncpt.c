@@ -829,6 +829,35 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 }
 EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);
 
+int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
+	u32 id, u32 thresh, const char *name, int *fence_fd)
+{
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+	struct nvhost_ctrl_sync_fence_info pts = {id, thresh};
+
+	if (!nvhost_get_parent(dev)) {
+		dev_err(&dev->dev, "Create Fence called with wrong dev\n");
+		return -EINVAL;
+	}
+
+	if (id == NVSYNCPT_INVALID) {
+		dev_err(&dev->dev, "Create Fence called with invalid id\n");
+		return -EINVAL;
+	}
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
+	return nvhost_sync_create_fence(sp, &pts, 1, name, fence_fd);
+#else
+	return -EINVAL;
+#endif
+}
+EXPORT_SYMBOL(nvhost_syncpt_create_fence_single_ext);
+
 void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 {
 	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));

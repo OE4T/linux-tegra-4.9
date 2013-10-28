@@ -328,62 +328,6 @@ void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
 	}
 }
 
-void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
-	u32 lane, u32 pre_emphasis, u32 drive_current, u32 tx_pu)
-{
-	u32 d_cur;
-	u32 p_emp;
-
-
-	d_cur = tegra_sor_readl(sor, NV_SOR_DC(sor->portnum));
-	p_emp = tegra_sor_readl(sor, NV_SOR_PR(sor->portnum));
-
-	switch (lane) {
-	case 0:
-		p_emp &= ~NV_SOR_PR_LANE2_DP_LANE0_MASK;
-		p_emp |= (pre_emphasis <<
-			NV_SOR_PR_LANE2_DP_LANE0_SHIFT);
-		d_cur &= ~NV_SOR_DC_LANE2_DP_LANE0_MASK;
-		d_cur |= (drive_current <<
-			NV_SOR_DC_LANE2_DP_LANE0_SHIFT);
-		break;
-	case 1:
-		p_emp &= ~NV_SOR_PR_LANE1_DP_LANE1_MASK;
-		p_emp |= (pre_emphasis <<
-			NV_SOR_PR_LANE1_DP_LANE1_SHIFT);
-		d_cur &= ~NV_SOR_DC_LANE1_DP_LANE1_MASK;
-		d_cur |= (drive_current <<
-			NV_SOR_DC_LANE1_DP_LANE1_SHIFT);
-		break;
-	case 2:
-		p_emp &= ~NV_SOR_PR_LANE0_DP_LANE2_MASK;
-		p_emp |= (pre_emphasis <<
-			NV_SOR_PR_LANE0_DP_LANE2_SHIFT);
-		d_cur &= ~NV_SOR_DC_LANE0_DP_LANE2_MASK;
-		d_cur |= (drive_current <<
-			NV_SOR_DC_LANE0_DP_LANE2_SHIFT);
-		break;
-	case 3:
-		p_emp &= ~NV_SOR_PR_LANE3_DP_LANE3_MASK;
-		p_emp |= (pre_emphasis <<
-			NV_SOR_PR_LANE3_DP_LANE3_SHIFT);
-		d_cur &= ~NV_SOR_DC_LANE3_DP_LANE3_MASK;
-		d_cur |= (drive_current <<
-			NV_SOR_DC_LANE3_DP_LANE3_SHIFT);
-		break;
-	default:
-		dev_err(&sor->dc->ndev->dev,
-			"dp: sor lane count %d is invalid\n", lane);
-	}
-
-	tegra_sor_write_field(sor, NV_SOR_DP_LINKCTL(sor->portnum),
-		NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
-		tx_pu << NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT);
-
-	tegra_sor_writel(sor, NV_SOR_DC(sor->portnum), d_cur);
-	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum), p_emp);
-}
-
 static int tegra_dc_sor_enable_lane_sequencer(struct tegra_dc_sor_data *sor,
 	bool pu, bool is_lvds)
 {

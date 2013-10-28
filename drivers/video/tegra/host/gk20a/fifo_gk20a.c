@@ -552,6 +552,10 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	mutex_init(&f->ch_inuse_mutex);
 
 	f->remove_support = gk20a_remove_fifo_support;
+
+	f->deferred_reset_pending = false;
+	mutex_init(&f->deferred_reset_mutex);
+
 	f->sw_ready = true;
 
 	nvhost_dbg_fn("done");
@@ -837,6 +841,54 @@ static void gk20a_fifo_handle_dropped_mmu_fault(struct gk20a *g)
 	nvhost_err(dev, "dropped mmu fault (0x%08x)", fault_id);
 }
 
+static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
+		struct fifo_mmu_fault_info_gk20a *f, bool fake_fault)
+{
+	/* channel recovery is only deferred if an sm debugger
+	   is attached and has MMU debug mode is enabled */
+	if (!gk20a_gr_sm_debugger_attached(g) ||
+	    !gk20a_mm_mmu_debug_mode_enabled(g))
+		return false;
+
+	/* if this fault is fake (due to RC recovery), don't defer recovery */
+	if (fake_fault)
+		return false;
+
+	if (engine_id != ENGINE_GR_GK20A ||
+	    f->engine_subid_v != fifo_intr_mmu_fault_info_engine_subid_gpc_v())
+		return false;
+
+	return true;
+}
+
+void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
+		unsigned long fault_id) {
+	u32 engine_mmu_id;
+	int i;
+
+	/* reset engines */
+	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
+		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
+		if (engine_id != ~0)
+			gk20a_fifo_reset_engine(g, engine_id);
+	}
+
+	/* CLEAR the runlists. Do not wait for runlist to start as
+	 * some engines may not be available right now */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		gk20a_fifo_update_runlist_locked(g, i, ~0, false, false);
+
+	/* clear interrupt */
+	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+
+	/* resume scheduler */
+	gk20a_writel(g, fifo_error_sched_disable_r(),
+		     gk20a_readl(g, fifo_error_sched_disable_r()));
+
+	/* Spawn a work to enable PMU and restore runlists */
+	schedule_work(&g->fifo.fault_restore_thread);
+}
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
@@ -847,6 +899,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	nvhost_dbg_fn("");
 
 	nvhost_debug_dump(g->host);
+
+	g->fifo.deferred_reset_pending = false;
 
 	/* PMU does not survive GR reset. */
 	gk20a_pmu_destroy(g);
@@ -885,7 +939,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 					     f.client_desc,
 					     f.fault_type_desc);
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
-			   "engined subid %d (%s), client %d (%s), "
+			   "engine subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
 			   "inst_ptr 0x%llx\n",
 			   engine_id,
@@ -941,6 +995,14 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 				/* mark channel as faulted */
 				ch->hwctx->has_timedout = true;
 			}
+
+			/* check if engine reset should be deferred */
+			if (gk20a_fifo_should_defer_engine_reset(g, engine_id, &f, fake_fault)) {
+				g->fifo.mmu_fault_engines = fault_id;
+
+				/* handled during channel free */
+				g->fifo.deferred_reset_pending = true;
+			}
 		} else if (f.inst_ptr ==
 				sg_phys(g->mm.bar1.inst_block.mem.sgt->sgl)) {
 			nvhost_err(dev_from_gk20a(g), "mmu fault from bar1");
@@ -951,27 +1013,17 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			nvhost_err(dev_from_gk20a(g), "couldn't locate channel for mmu fault");
 	}
 
-	/* reset engines */
-	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
-		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
-		if (engine_id != ~0)
-			gk20a_fifo_reset_engine(g, engine_id);
+	if (g->fifo.deferred_reset_pending) {
+		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "sm debugger attached,"
+			   " deferring channel recovery to channel free");
+		/* clear interrupt */
+		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+		return;
 	}
 
-	/* CLEAR the runlists. Do not wait for runlist to start as
-	 * some engines may not be available right now */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		gk20a_fifo_update_runlist_locked(g, i, ~0, false, false);
-
-	/* clear interrupt */
-	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-
-	/* resume scheduler */
-	gk20a_writel(g, fifo_error_sched_disable_r(),
-		     gk20a_readl(g, fifo_error_sched_disable_r()));
-
-	/* Spawn a work to enable PMU and restore runlists */
-	schedule_work(&g->fifo.fault_restore_thread);
+	/* resetting the engines and clearing the runlists is done in
+	   a separate function to allow deferred reset. */
+	fifo_gk20a_finish_mmu_fault_handling(g, fault_id);
 }
 
 static void gk20a_fifo_get_faulty_channel(struct gk20a *g, int engine_id,
@@ -1158,7 +1210,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 		handled |= fifo_intr_0_dropped_mmu_fault_pending_f();
 	}
 
-	reset_channel = reset_channel || fifo_intr;
+	reset_channel = !g->fifo.deferred_reset_pending && (reset_channel || fifo_intr);
 
 	if (reset_channel) {
 		int engine_id;

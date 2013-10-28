@@ -334,6 +334,9 @@ int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va);
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
+/* sm */
+bool gk20a_gr_sm_debugger_attached(struct gk20a *g);
+
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \
 		int err; \

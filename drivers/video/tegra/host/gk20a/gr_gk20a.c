@@ -4944,7 +4944,7 @@ static int gk20a_gr_lock_down_sm(struct gk20a *g, u32 global_esr_mask)
 	return -EAGAIN;
 }
 
-static bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
+bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
 {
 	u32 dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
 

@@ -131,6 +131,8 @@ struct fifo_gk20a {
 	} intr;
 
 	u32 mmu_fault_engines;
+	bool deferred_reset_pending;
+	struct mutex deferred_reset_mutex;
 
 	struct work_struct fault_restore_thread;
 };
@@ -156,4 +158,6 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
 void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
 
+void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
+		unsigned long fault_id);
 #endif /*__GR_GK20A_H__*/

@@ -1754,9 +1754,9 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 		/* set non-continuous mode */
 		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
 						DC_CMD_DISPLAY_COMMAND);
-
 		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ | NC_HOST_TRIG,
+						DC_CMD_STATE_CONTROL);
 
 		if (dsi->info.te_gpio)
 			tegra_dc_gpio_to_spio(dsi, dsi->info.te_gpio);
@@ -1790,8 +1790,6 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 			shift_clk_div_register = 0;
 	}
 
-	tegra_dc_get(dc);
-
 	val = PIXEL_CLK_DIVIDER_PCD1 |
 		SHIFT_CLK_DIVIDER(shift_clk_div_register + 2);
 
@@ -1811,8 +1809,6 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 		SHIFT_CLK_DIVIDER(shift_clk_div_register);
 
 	tegra_dc_writel(dc, val, DC_DISP_DISP_CLOCK_CONTROL);
-
-	tegra_dc_put(dc);
 }
 
 static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
@@ -3599,13 +3595,11 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 	 * Send frames in Continuous or One-shot mode.
 	 */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
-		int flag = mutex_is_locked(&dc->lock);
-		if (flag)
-			mutex_unlock(&dc->lock);
-		while (no_of_frames--)
-			tegra_dc_blank(dc);
-		if (flag)
-			mutex_lock(&dc->lock);
+		while (no_of_frames--) {
+			tegra_dc_writel(dc, GENERAL_ACT_REQ | NC_HOST_TRIG,
+					DC_CMD_STATE_CONTROL);
+			mdelay(frame_period);
+		}
 	} else
 		mdelay(no_of_frames * frame_period);
 
@@ -4348,11 +4342,13 @@ static int tegra_dsi_te_on_off(struct tegra_dc_dsi_data *dsi, bool flag)
 	struct tegra_dsi_cmd te_enable[] = {
 		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
 				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+		DSI_DLY_MS(20),
 	};
 
 	struct tegra_dsi_cmd te_disable[] = {
 		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
 				DSI_DCS_SET_TEARING_EFFECT_OFF, 0x0),
+		DSI_DLY_MS(20),
 	};
 
 	if (flag)
@@ -4547,7 +4543,7 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 
 	dsi->host_suspended = true;
 
-	tegra_dsi_stop_dc_stream(dc, dsi);
+	tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
 
 	tegra_dsi_te_on_off(dsi, false);
 
@@ -4560,7 +4556,7 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 
 	/* Shutting down. Drop any reference to dc clk */
 	while (tegra_is_clk_enabled(dc->clk))
-		tegra_dc_put(dc);
+		clk_disable_unprepare(dc->clk);
 
 	pm_runtime_put_sync(&dc->ndev->dev);
 fail:
@@ -4670,7 +4666,6 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 		return -EINVAL;
 
 	cancel_delayed_work(&dsi->idle_work);
-
 	mutex_lock(&dsi->host_lock);
 	if (!dsi->host_suspended) {
 		mutex_unlock(&dsi->host_lock);
@@ -4678,6 +4673,7 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 	}
 
 	tegra_dc_io_start(dc);
+	clk_prepare_enable(dc->clk);
 
 	pm_runtime_get_sync(&dc->ndev->dev);
 

@@ -6,7 +6,6 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/netdevice.h>
-#include "ozconfig.h"
 #include "ozprotocol.h"
 #include "ozeltbuf.h"
 #include "ozpd.h"
@@ -64,7 +63,7 @@ void oz_elt_buf_term(struct oz_elt_buf *buf)
  */
 struct oz_elt_info *oz_elt_info_alloc(struct oz_elt_buf *buf)
 {
-	struct oz_elt_info *ei = NULL;
+	struct oz_elt_info *ei = 0;
 	spin_lock_bh(&buf->lock);
 	if (buf->free_elts && buf->elt_pool) {
 		ei = container_of(buf->elt_pool, struct oz_elt_info, link);
@@ -82,9 +81,9 @@ struct oz_elt_info *oz_elt_info_alloc(struct oz_elt_buf *buf)
 	if (ei) {
 		ei->flags = 0;
 		ei->app_id = 0;
-		ei->callback = NULL;
+		ei->callback = 0;
 		ei->context = 0;
-		ei->stream = NULL;
+		ei->stream = 0;
 		ei->magic = OZ_ELT_INFO_MAGIC_USED;
 		INIT_LIST_HEAD(&ei->link);
 		INIT_LIST_HEAD(&ei->link_order);
@@ -132,10 +131,8 @@ int oz_elt_stream_create(struct oz_elt_buf *buf, u8 id, int max_buf_count)
 {
 	struct oz_elt_stream *st;
 
-	oz_trace("oz_elt_stream_create(0x%x)\n", id);
-
 	st = kzalloc(sizeof(struct oz_elt_stream), GFP_ATOMIC | __GFP_ZERO);
-	if (st == NULL)
+	if (st == 0)
 		return -ENOMEM;
 	atomic_set(&st->ref_count, 1);
 	st->id = id;
@@ -151,8 +148,8 @@ int oz_elt_stream_create(struct oz_elt_buf *buf, u8 id, int max_buf_count)
 int oz_elt_stream_delete(struct oz_elt_buf *buf, u8 id)
 {
 	struct list_head *e;
-	struct oz_elt_stream *st = NULL;
-	oz_trace("oz_elt_stream_delete(0x%x)\n", id);
+	struct oz_elt_stream *st;
+
 	spin_lock_bh(&buf->lock);
 	e = buf->stream_list.next;
 	while (e != &buf->stream_list) {
@@ -161,7 +158,7 @@ int oz_elt_stream_delete(struct oz_elt_buf *buf, u8 id)
 			list_del(e);
 			break;
 		}
-		st = NULL;
+		st = 0;
 	}
 	if (!st) {
 		spin_unlock_bh(&buf->lock);
@@ -175,9 +172,6 @@ int oz_elt_stream_delete(struct oz_elt_buf *buf, u8 id)
 		list_del_init(&ei->link);
 		list_del_init(&ei->link_order);
 		st->buf_count -= ei->length;
-		oz_trace2(OZ_TRACE_STREAM, "Stream down: %d  %d %d\n",
-			st->buf_count,
-			ei->length, atomic_read(&st->ref_count));
 		oz_elt_stream_put(st);
 		oz_elt_info_free(buf, ei);
 	}
@@ -208,7 +202,7 @@ void oz_elt_stream_put(struct oz_elt_stream *st)
 int oz_queue_elt_info(struct oz_elt_buf *buf, u8 isoc, u8 id,
 	struct oz_elt_info *ei)
 {
-	struct oz_elt_stream *st = NULL;
+	struct oz_elt_stream *st = 0;
 	struct list_head *e;
 	if (id) {
 		list_for_each(e, &buf->stream_list) {
@@ -242,8 +236,6 @@ int oz_queue_elt_info(struct oz_elt_buf *buf, u8 isoc, u8 id,
 		st->buf_count += ei->length;
 		/* Add to list in stream. */
 		list_add_tail(&ei->link, &st->elt_list);
-		oz_trace2(OZ_TRACE_STREAM, "Stream up: %d  %d\n",
-			st->buf_count, ei->length);
 		/* Check if we have too much buffered for this stream. If so
 		 * start dropping elements until we are back in bounds.
 		 */
@@ -283,8 +275,12 @@ int oz_select_elts_for_tx(struct oz_elt_buf *buf, u8 isoc, unsigned *len,
 		ei = container_of(e, struct oz_elt_info, link_order);
 		e = e->next;
 		if ((*len + ei->length) <= max_len) {
-			app_hdr = (struct oz_app_hdr *)
-				&ei->data[sizeof(struct oz_elt)];
+			if (ei->flags & OZ_EI_F_EXT_ELM)
+				app_hdr = (struct oz_app_hdr *)
+					&ei->data[sizeof(struct oz_ext_elt)];
+			else
+				app_hdr = (struct oz_app_hdr *)
+					&ei->data[sizeof(struct oz_elt)];
 			app_hdr->elt_seq_num = buf->tx_seq_num[ei->app_id]++;
 			if (buf->tx_seq_num[ei->app_id] == 0)
 				buf->tx_seq_num[ei->app_id] = 1;
@@ -293,11 +289,8 @@ int oz_select_elts_for_tx(struct oz_elt_buf *buf, u8 isoc, unsigned *len,
 			list_del(&ei->link_order);
 			if (ei->stream) {
 				ei->stream->buf_count -= ei->length;
-				oz_trace2(OZ_TRACE_STREAM,
-					"Stream down: %d  %d\n",
-					ei->stream->buf_count, ei->length);
 				oz_elt_stream_put(ei->stream);
-				ei->stream = NULL;
+				ei->stream = 0;
 			}
 			INIT_LIST_HEAD(&ei->link_order);
 			list_add_tail(&ei->link, list);
@@ -319,7 +312,7 @@ int oz_are_elts_available(struct oz_elt_buf *buf)
  */
 void oz_trim_elt_pool(struct oz_elt_buf *buf)
 {
-	struct list_head *free = NULL;
+	struct list_head *free = 0;
 	struct list_head *e;
 	spin_lock_bh(&buf->lock);
 	while (buf->free_elts > buf->max_free_elts) {

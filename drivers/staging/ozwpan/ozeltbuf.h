@@ -23,7 +23,7 @@ struct oz_elt_stream {
 	u8 id;
 };
 
-#define OZ_MAX_ELT_PAYLOAD	255
+#define OZ_MAX_ELT_PAYLOAD	1024
 struct oz_elt_info {
 	struct list_head link;
 	struct list_head link_order;
@@ -32,12 +32,13 @@ struct oz_elt_info {
 	oz_elt_callback_t callback;
 	long context;
 	struct oz_elt_stream *stream;
-	u8 data[sizeof(struct oz_elt) + OZ_MAX_ELT_PAYLOAD];
+	u8 data[sizeof(struct oz_ext_elt) + OZ_MAX_ELT_PAYLOAD];
 	int length;
 	unsigned magic;
 };
 /* Flags values */
 #define OZ_EI_F_MARKED		0x1
+#define OZ_EI_F_EXT_ELM		0x2
 
 struct oz_elt_buf {
 	spinlock_t lock;

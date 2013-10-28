@@ -10,7 +10,6 @@
 #include <linux/netdevice.h>
 #include <linux/errno.h>
 #include <linux/ieee80211.h>
-#include "ozconfig.h"
 #include "ozprotocol.h"
 #include "ozeltbuf.h"
 #include "ozpd.h"
@@ -18,7 +17,6 @@
 #include "ozusbsvc.h"
 #include "oztrace.h"
 #include "ozappif.h"
-#include "ozevent.h"
 #include <asm/unaligned.h>
 #include <linux/uaccess.h>
 #include <net/psnap.h>
@@ -30,48 +28,32 @@
 #define OZ_DO_STOP		1
 #define OZ_DO_SLEEP		2
 
-/* States of the timer.
- */
-#define OZ_TIMER_IDLE		0
-#define OZ_TIMER_SET		1
-#define OZ_TIMER_IN_HANDLER	2
-
 #define OZ_MAX_TIMER_POOL_SIZE	16
+/*------------------------------------------------------------------------------
+ * Number of units of buffering to capture for an isochronous IN endpoint before
+ * allowing data to be indicated up.
+ */
+#define OZ_IN_BUFFERING_UNITS	100
 
 /*------------------------------------------------------------------------------
  */
 struct oz_binding {
 	struct packet_type ptype;
 	char name[OZ_MAX_BINDING_LEN];
-	struct oz_binding *next;
+	struct list_head link;
 };
 
-struct oz_timer {
-	struct list_head link;
-	struct oz_pd *pd;
-	unsigned long due_time;
-	int type;
-};
 /*------------------------------------------------------------------------------
  * Static external variables.
  */
 static DEFINE_SPINLOCK(g_polling_lock);
 static LIST_HEAD(g_pd_list);
-static struct oz_binding *g_binding ;
+static LIST_HEAD(g_binding);
 static DEFINE_SPINLOCK(g_binding_lock);
 static struct sk_buff_head g_rx_queue;
 static u8 g_session_id;
 static u16 g_apps = 0x1;
 static int g_processing_rx;
-static struct timer_list g_timer;
-static struct oz_timer *g_cur_timer;
-static struct list_head *g_timer_pool;
-static int g_timer_pool_count;
-static int g_timer_state = OZ_TIMER_IDLE;
-static LIST_HEAD(g_timer_list);
-/*------------------------------------------------------------------------------
- */
-static void oz_protocol_timer_start(void);
 /*------------------------------------------------------------------------------
  * Context: softirq-serialized
  */
@@ -98,7 +80,7 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 	int sz = sizeof(struct oz_hdr) + sizeof(struct oz_elt) +
 			sizeof(struct oz_elt_connect_rsp);
 	skb = alloc_skb(sz + OZ_ALLOCATED_SPACE(dev), GFP_ATOMIC);
-	if (skb == NULL)
+	if (skb == 0)
 		return;
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	skb_reset_network_header(skb);
@@ -116,7 +98,6 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 	oz_hdr->control = (OZ_PROTOCOL_VERSION<<OZ_VERSION_SHIFT);
 	oz_hdr->last_pkt_num = 0;
 	put_unaligned(0, &oz_hdr->pkt_num);
-	oz_event_log(OZ_EVT_CONNECT_RSP, 0, 0, NULL, 0);
 	elt->type = OZ_ELT_CONNECT_RSP;
 	elt->length = sizeof(struct oz_elt_connect_rsp);
 	memset(body, 0, sizeof(struct oz_elt_connect_rsp));
@@ -126,7 +107,7 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 		body->session_id = pd->session_id;
 		put_unaligned(cpu_to_le16(pd->total_apps), &body->apps);
 	}
-	oz_trace("TX: OZ_ELT_CONNECT_RSP %d", status);
+	oz_trace_skb(skb, 'T');
 	dev_queue_xmit(skb);
 	return;
 }
@@ -139,39 +120,41 @@ static void pd_set_keepalive(struct oz_pd *pd, u8 kalive)
 
 	switch (kalive & OZ_KALIVE_TYPE_MASK) {
 	case OZ_KALIVE_SPECIAL:
-		pd->keep_alive_j =
-			oz_ms_to_jiffies(keep_alive * 1000*60*60*24*20);
+		pd->keep_alive = (keep_alive*1000*60*60*24*20);
 		break;
 	case OZ_KALIVE_SECS:
-		pd->keep_alive_j = oz_ms_to_jiffies(keep_alive*1000);
+		pd->keep_alive = (keep_alive*1000);
 		break;
 	case OZ_KALIVE_MINS:
-		pd->keep_alive_j = oz_ms_to_jiffies(keep_alive*1000*60);
+		pd->keep_alive = (keep_alive*1000*60);
 		break;
 	case OZ_KALIVE_HOURS:
-		pd->keep_alive_j = oz_ms_to_jiffies(keep_alive*1000*60*60);
+		pd->keep_alive = (keep_alive*1000*60*60);
 		break;
 	default:
-		pd->keep_alive_j = 0;
+		pd->keep_alive = 0;
 	}
-	oz_trace("Keepalive = %lu jiffies\n", pd->keep_alive_j);
 }
 /*------------------------------------------------------------------------------
  * Context: softirq-serialized
  */
-static void pd_set_presleep(struct oz_pd *pd, u8 presleep)
+static void pd_set_presleep(struct oz_pd *pd, u8 presleep, u8 start_timer)
 {
 	if (presleep)
-		pd->presleep_j = oz_ms_to_jiffies(presleep*100);
+		pd->presleep = presleep*100;
 	else
-		pd->presleep_j = OZ_PRESLEEP_TOUT_J;
-	oz_trace("Presleep time = %lu jiffies\n", pd->presleep_j);
+		pd->presleep = OZ_PRESLEEP_TOUT;
+	if (start_timer) {
+		spin_unlock(&g_polling_lock);
+		oz_timer_add(pd, OZ_TIMER_TOUT, pd->presleep);
+		spin_lock(&g_polling_lock);
+	}
 }
 /*------------------------------------------------------------------------------
  * Context: softirq-serialized
  */
 static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
-			const u8 *pd_addr, struct net_device *net_dev)
+			u8 *pd_addr, struct net_device *net_dev)
 {
 	struct oz_pd *pd;
 	struct oz_elt_connect_req *body =
@@ -179,18 +162,18 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 	u8 rsp_status = OZ_STATUS_SUCCESS;
 	u8 stop_needed = 0;
 	u16 new_apps = g_apps;
-	struct net_device *old_net_dev = NULL;
-	struct oz_pd *free_pd = NULL;
+	struct net_device *old_net_dev = 0;
+	struct oz_pd *free_pd = 0;
 	if (cur_pd) {
 		pd = cur_pd;
 		spin_lock_bh(&g_polling_lock);
 	} else {
-		struct oz_pd *pd2 = NULL;
+		struct oz_pd *pd2 = 0;
 		struct list_head *e;
 		pd = oz_pd_alloc(pd_addr);
-		if (pd == NULL)
-			return NULL;
-		pd->last_rx_time_j = jiffies;
+		if (pd == 0)
+			return 0;
+		getnstimeofday(&pd->last_rx_timestamp);
 		spin_lock_bh(&g_polling_lock);
 		list_for_each(e, &g_pd_list) {
 			pd2 = container_of(e, struct oz_pd, link);
@@ -203,19 +186,20 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 		if (pd != pd2)
 			list_add_tail(&pd->link, &g_pd_list);
 	}
-	if (pd == NULL) {
+	if (pd == 0) {
 		spin_unlock_bh(&g_polling_lock);
-		return NULL;
+		return 0;
 	}
 	if (pd->net_dev != net_dev) {
 		old_net_dev = pd->net_dev;
 		dev_hold(net_dev);
 		pd->net_dev = net_dev;
 	}
-	oz_trace("Host vendor: %d\n", body->host_vendor);
 	pd->max_tx_size = OZ_MAX_TX_SIZE;
 	pd->mode = body->mode;
 	pd->pd_info = body->pd_info;
+	pd->up_audio_buf = body->up_audio_buf > 0 ? body->up_audio_buf :
+							OZ_IN_BUFFERING_UNITS;
 	if (pd->mode & OZ_F_ISOC_NO_ELTS) {
 		pd->ms_per_isoc = body->ms_per_isoc;
 		if (!pd->ms_per_isoc)
@@ -236,12 +220,10 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 	}
 	if (body->max_len_div16)
 		pd->max_tx_size = ((u16)body->max_len_div16)<<4;
-	oz_trace("Max frame:%u Ms per isoc:%u\n",
-		pd->max_tx_size, pd->ms_per_isoc);
 	pd->max_stream_buffering = 3*1024;
-	pd->timeout_time_j = jiffies + OZ_CONNECTION_TOUT_J;
-	pd->pulse_period_j = OZ_QUANTUM_J;
-	pd_set_presleep(pd, body->presleep);
+	pd->pulse_period = ktime_set(OZ_QUANTUM / MSEC_PER_SEC, (OZ_QUANTUM %
+					MSEC_PER_SEC) * NSEC_PER_MSEC);
+	pd_set_presleep(pd, body->presleep, 0);
 	pd_set_keepalive(pd, body->keep_alive);
 
 	new_apps &= le16_to_cpu(get_unaligned(&body->apps));
@@ -273,9 +255,6 @@ done:
 		u16 resume_apps = new_apps & pd->paused_apps  & ~0x1;
 		spin_unlock_bh(&g_polling_lock);
 		oz_pd_set_state(pd, OZ_PD_S_CONNECTED);
-		oz_timer_delete(pd, OZ_TIMER_STOP);
-		oz_trace("new_apps=0x%x total_apps=0x%x paused_apps=0x%x\n",
-			new_apps, pd->total_apps, pd->paused_apps);
 		if (start_apps) {
 			if (oz_services_start(pd, start_apps, 0))
 				rsp_status = OZ_STATUS_TOO_MANY_PDS;
@@ -294,7 +273,7 @@ done:
 		if (stop_needed)
 			oz_pd_stop(pd);
 		oz_pd_put(pd);
-		pd = NULL;
+		pd = 0;
 	}
 	if (old_net_dev)
 		dev_put(old_net_dev);
@@ -306,7 +285,7 @@ done:
  * Context: softirq-serialized
  */
 static void oz_add_farewell(struct oz_pd *pd, u8 ep_num, u8 index,
-			const u8 *report, u8 len)
+			u8 *report, u8 len)
 {
 	struct oz_farewell *f;
 	struct oz_farewell *f2;
@@ -316,6 +295,7 @@ static void oz_add_farewell(struct oz_pd *pd, u8 ep_num, u8 index,
 		return;
 	f->ep_num = ep_num;
 	f->index = index;
+	f->len = len;
 	memcpy(f->report, report, len);
 	oz_trace("RX: Adding farewell report\n");
 	spin_lock(&g_polling_lock);
@@ -340,17 +320,13 @@ static void oz_rx_frame(struct sk_buff *skb)
 	u8 *src_addr;
 	struct oz_elt *elt;
 	int length;
-	struct oz_pd *pd = NULL;
+	struct oz_pd *pd = 0;
 	struct oz_hdr *oz_hdr = (struct oz_hdr *)skb_network_header(skb);
+	struct timespec current_time;
 	int dup = 0;
 	u32 pkt_num;
 
-	oz_event_log(OZ_EVT_RX_PROCESS, 0,
-		(((u16)oz_hdr->control)<<8)|oz_hdr->last_pkt_num,
-		NULL, oz_hdr->pkt_num);
-	oz_trace2(OZ_TRACE_RX_FRAMES,
-		"RX frame PN=0x%x LPN=0x%x control=0x%x\n",
-		oz_hdr->pkt_num, oz_hdr->last_pkt_num, oz_hdr->control);
+	oz_trace_skb(skb, 'R');
 	mac_hdr = skb_mac_header(skb);
 	src_addr = &mac_hdr[ETH_ALEN] ;
 	length = skb->len;
@@ -362,23 +338,27 @@ static void oz_rx_frame(struct sk_buff *skb)
 		goto done;
 	}
 
+
 	pkt_num = le32_to_cpu(get_unaligned(&oz_hdr->pkt_num));
 
 	pd = oz_pd_find(src_addr);
 	if (pd) {
-		pd->last_rx_time_j = jiffies;
-		oz_timer_add(pd, OZ_TIMER_TOUT,
-			pd->last_rx_time_j + pd->presleep_j, 1);
+		if (!(pd->state & OZ_PD_S_CONNECTED))
+			oz_pd_set_state(pd, OZ_PD_S_CONNECTED);
+		getnstimeofday(&current_time);
+		if ((current_time.tv_sec != pd->last_rx_timestamp.tv_sec) ||
+			(pd->presleep < MSEC_PER_SEC))  {
+			oz_timer_add(pd, OZ_TIMER_TOUT,	pd->presleep);
+			pd->last_rx_timestamp = current_time;
+		}
 		if (pkt_num != pd->last_rx_pkt_num) {
 			pd->last_rx_pkt_num = pkt_num;
 		} else {
 			dup = 1;
-			oz_trace("Duplicate frame\n");
 		}
 	}
 
 	if (pd && !dup && ((pd->mode & OZ_MODE_MASK) == OZ_MODE_TRIGGERED)) {
-		oz_trace2(OZ_TRACE_RX_FRAMES, "Received TRIGGER Frame\n");
 		pd->last_sent_frame = &pd->tx_queue;
 		if (oz_hdr->control & OZ_F_ACK) {
 			/* Retire completed frames */
@@ -396,29 +376,25 @@ static void oz_rx_frame(struct sk_buff *skb)
 	length -= sizeof(struct oz_hdr);
 	elt = (struct oz_elt *)((u8 *)oz_hdr + sizeof(struct oz_hdr));
 
-	while (length >= sizeof(struct oz_elt)) {
-		length -= sizeof(struct oz_elt) + elt->length;
+	while (length >= oz_elt_hdr_len(elt)) {
+		length -= oz_elt_len(elt);
 		if (length < 0)
 			break;
 		switch (elt->type) {
 		case OZ_ELT_CONNECT_REQ:
-			oz_event_log(OZ_EVT_CONNECT_REQ, 0, 0, NULL, 0);
-			oz_trace("RX: OZ_ELT_CONNECT_REQ\n");
 			pd = oz_connect_req(pd, elt, src_addr, skb->dev);
 			break;
 		case OZ_ELT_DISCONNECT:
-			oz_trace("RX: OZ_ELT_DISCONNECT\n");
 			if (pd)
 				oz_pd_sleep(pd);
 			break;
 		case OZ_ELT_UPDATE_PARAM_REQ: {
 				struct oz_elt_update_param *body =
 					(struct oz_elt_update_param *)(elt + 1);
-				oz_trace("RX: OZ_ELT_UPDATE_PARAM_REQ\n");
 				if (pd && (pd->state & OZ_PD_S_CONNECTED)) {
 					spin_lock(&g_polling_lock);
 					pd_set_keepalive(pd, body->keepalive);
-					pd_set_presleep(pd, body->presleep);
+					pd_set_presleep(pd, body->presleep, 1);
 					spin_unlock(&g_polling_lock);
 				}
 			}
@@ -426,16 +402,16 @@ static void oz_rx_frame(struct sk_buff *skb)
 		case OZ_ELT_FAREWELL_REQ: {
 				struct oz_elt_farewell *body =
 					(struct oz_elt_farewell *)(elt + 1);
-				oz_trace("RX: OZ_ELT_FAREWELL_REQ\n");
 				oz_add_farewell(pd, body->ep_num,
 					body->index, body->report,
 					elt->length + 1 - sizeof(*body));
 			}
 			break;
 		case OZ_ELT_APP_DATA:
+		case OZ_ELT_APP_DATA_EX:
 			if (pd && (pd->state & OZ_PD_S_CONNECTED)) {
 				struct oz_app_hdr *app_hdr =
-					(struct oz_app_hdr *)(elt+1);
+					(struct oz_app_hdr *)(oz_elt_data(elt));
 				if (dup)
 					break;
 				oz_handle_app_elt(pd, app_hdr->app_id, elt);
@@ -456,14 +432,13 @@ done:
  */
 void oz_protocol_term(void)
 {
-	struct list_head *chain;
-	del_timer_sync(&g_timer);
+	struct oz_binding *b, *t;
+
 	/* Walk the list of bindings and remove each one.
 	 */
 	spin_lock_bh(&g_binding_lock);
-	while (g_binding) {
-		struct oz_binding *b = g_binding;
-		g_binding = b->next;
+	list_for_each_entry_safe(b, t, &g_binding, link) {
+		list_del(&b->link);
 		spin_unlock_bh(&g_binding_lock);
 		dev_remove_pack(&b->ptype);
 		if (b->ptype.dev)
@@ -486,255 +461,115 @@ void oz_protocol_term(void)
 		oz_pd_put(pd);
 		spin_lock_bh(&g_polling_lock);
 	}
-	chain = g_timer_pool;
-	g_timer_pool = NULL;
 	spin_unlock_bh(&g_polling_lock);
-	while (chain) {
-		struct oz_timer *t = container_of(chain, struct oz_timer, link);
-		chain = chain->next;
-		kfree(t);
-	}
 	oz_trace("Protocol stopped\n");
 }
 /*------------------------------------------------------------------------------
  * Context: softirq
  */
-static void oz_pd_handle_timer(struct oz_pd *pd, int type)
+void oz_pd_heartbeat_handler(unsigned long data)
 {
+	struct oz_pd *pd = (struct oz_pd *)data;
+	u16 apps = 0;
+	spin_lock_bh(&g_polling_lock);
+	if (pd->state & OZ_PD_S_CONNECTED)
+		apps = pd->total_apps;
+	spin_unlock_bh(&g_polling_lock);
+	if (apps)
+		oz_pd_heartbeat(pd, apps);
+
+	oz_pd_put(pd);
+}
+/*------------------------------------------------------------------------------
+ * Context: softirq
+ */
+void oz_pd_timeout_handler(unsigned long data)
+{
+	int type;
+	struct oz_pd *pd = (struct oz_pd *)data;
+
+	spin_lock_bh(&g_polling_lock);
+	type = pd->timeout_type;
+	spin_unlock_bh(&g_polling_lock);
 	switch (type) {
 	case OZ_TIMER_TOUT:
+		oz_trace_msg(M, "OZ_TIMER_TOUT:\n");
 		oz_pd_sleep(pd);
 		break;
 	case OZ_TIMER_STOP:
+		oz_trace_msg(M, "OZ_TIMER_STOP:\n");
 		oz_pd_stop(pd);
 		break;
-	case OZ_TIMER_HEARTBEAT: {
-			u16 apps = 0;
-			spin_lock_bh(&g_polling_lock);
-			pd->heartbeat_requested = 0;
-			if (pd->state & OZ_PD_S_CONNECTED)
-				apps = pd->total_apps;
-			spin_unlock_bh(&g_polling_lock);
-			if (apps)
-				oz_pd_heartbeat(pd, apps);
+	}
+	oz_pd_put(pd);
+}
+/*------------------------------------------------------------------------------
+ * Context: Interrupt
+ */
+enum hrtimer_restart oz_pd_heartbeat_event(struct hrtimer *timer)
+{
+	struct oz_pd *pd;
+
+	pd = container_of(timer, struct oz_pd, heartbeat);
+	hrtimer_forward(timer,
+		hrtimer_get_expires(timer), pd->pulse_period);
+	oz_pd_get(pd);
+	tasklet_schedule(&pd->heartbeat_tasklet);
+	return HRTIMER_RESTART;
+}
+/*------------------------------------------------------------------------------
+ * Context: Interrupt
+ */
+enum hrtimer_restart oz_pd_timeout_event(struct hrtimer *timer)
+{
+	struct oz_pd *pd;
+
+	pd = container_of(timer, struct oz_pd, timeout);
+	oz_pd_get(pd);
+	tasklet_schedule(&pd->timeout_tasklet);
+	return HRTIMER_NORESTART;
+}
+/*------------------------------------------------------------------------------
+ * Context: softirq or process
+ */
+void oz_timer_add(struct oz_pd *pd, int type, unsigned long due_time)
+{
+	spin_lock_bh(&g_polling_lock);
+	switch (type) {
+	case OZ_TIMER_TOUT:
+	case OZ_TIMER_STOP:
+		if (hrtimer_active(&pd->timeout)) {
+			hrtimer_set_expires(&pd->timeout, ktime_set(due_time /
+			MSEC_PER_SEC, (due_time % MSEC_PER_SEC) *
+							NSEC_PER_MSEC));
+			hrtimer_start_expires(&pd->timeout, HRTIMER_MODE_REL);
+		} else {
+			hrtimer_start(&pd->timeout, ktime_set(due_time /
+			MSEC_PER_SEC, (due_time % MSEC_PER_SEC) *
+					NSEC_PER_MSEC), HRTIMER_MODE_REL);
 		}
+		pd->timeout_type = type;
+		break;
+	case OZ_TIMER_HEARTBEAT:
+		if (!hrtimer_active(&pd->heartbeat))
+			hrtimer_start(&pd->heartbeat, ktime_set(due_time /
+			MSEC_PER_SEC, (due_time % MSEC_PER_SEC) *
+					NSEC_PER_MSEC), HRTIMER_MODE_REL);
 		break;
 	}
-}
-/*------------------------------------------------------------------------------
- * Context: softirq
- */
-static void oz_protocol_timer(unsigned long arg)
-{
-	struct oz_timer *t;
-	struct oz_timer *t2;
-	struct oz_pd *pd;
-	spin_lock_bh(&g_polling_lock);
-	if (!g_cur_timer) {
-		/* This happens if we remove the current timer but can't stop
-		 * the timer from firing. In this case just get out.
-		 */
-		oz_event_log(OZ_EVT_TIMER, 0, 0, NULL, 0);
-		spin_unlock_bh(&g_polling_lock);
-		return;
-	}
-	g_timer_state = OZ_TIMER_IN_HANDLER;
-	t = g_cur_timer;
-	g_cur_timer = NULL;
-	list_del(&t->link);
 	spin_unlock_bh(&g_polling_lock);
-	do {
-		pd = t->pd;
-		oz_event_log(OZ_EVT_TIMER, 0, t->type, NULL, 0);
-		oz_pd_handle_timer(pd, t->type);
-		spin_lock_bh(&g_polling_lock);
-		if (g_timer_pool_count < OZ_MAX_TIMER_POOL_SIZE) {
-			t->link.next = g_timer_pool;
-			g_timer_pool = &t->link;
-			g_timer_pool_count++;
-			t = NULL;
-		}
-		if (!list_empty(&g_timer_list)) {
-			t2 =  container_of(g_timer_list.next,
-				struct oz_timer, link);
-			if (time_before_eq(t2->due_time, jiffies))
-				list_del(&t2->link);
-			else
-				t2 = NULL;
-		} else {
-			t2 = NULL;
-		}
-		spin_unlock_bh(&g_polling_lock);
-		oz_pd_put(pd);
-		kfree(t);
-		t = t2;
-	} while (t);
-	g_timer_state = OZ_TIMER_IDLE;
-	oz_protocol_timer_start();
-}
-/*------------------------------------------------------------------------------
- * Context: softirq
- */
-static void oz_protocol_timer_start(void)
-{
-	spin_lock_bh(&g_polling_lock);
-	if (!list_empty(&g_timer_list)) {
-		g_cur_timer =
-			container_of(g_timer_list.next, struct oz_timer, link);
-		if (g_timer_state == OZ_TIMER_SET) {
-			oz_event_log(OZ_EVT_TIMER_CTRL, 3,
-				(u16)g_cur_timer->type, NULL,
-				(unsigned)g_cur_timer->due_time);
-			mod_timer(&g_timer, g_cur_timer->due_time);
-		} else {
-			oz_event_log(OZ_EVT_TIMER_CTRL, 4,
-				(u16)g_cur_timer->type, NULL,
-				(unsigned)g_cur_timer->due_time);
-			g_timer.expires = g_cur_timer->due_time;
-			g_timer.function = oz_protocol_timer;
-			g_timer.data = 0;
-			add_timer(&g_timer);
-		}
-		g_timer_state = OZ_TIMER_SET;
-	} else {
-		oz_trace("No queued timers\n");
-	}
-	spin_unlock_bh(&g_polling_lock);
-}
-/*------------------------------------------------------------------------------
- * Context: softirq or process
- */
-void oz_timer_add(struct oz_pd *pd, int type, unsigned long due_time,
-		int remove)
-{
-	struct list_head *e;
-	struct oz_timer *t = NULL;
-	int restart_needed = 0;
-	oz_event_log(OZ_EVT_TIMER_CTRL, 1, (u16)type, NULL, (unsigned)due_time);
-	spin_lock(&g_polling_lock);
-	if (remove) {
-		list_for_each(e, &g_timer_list) {
-			t = container_of(e, struct oz_timer, link);
-			if ((t->pd == pd) && (t->type == type)) {
-				if (g_cur_timer == t) {
-					restart_needed = 1;
-					g_cur_timer = NULL;
-				}
-				list_del(e);
-				break;
-			}
-			t = NULL;
-		}
-	}
-	if (!t) {
-		if (g_timer_pool) {
-			t = container_of(g_timer_pool, struct oz_timer, link);
-			g_timer_pool = g_timer_pool->next;
-			g_timer_pool_count--;
-		} else {
-			t = kmalloc(sizeof(struct oz_timer), GFP_ATOMIC);
-		}
-		if (t) {
-			t->pd = pd;
-			t->type = type;
-			oz_pd_get(pd);
-		}
-	}
-	if (t) {
-		struct oz_timer *t2;
-		t->due_time = due_time;
-		list_for_each(e, &g_timer_list) {
-			t2 = container_of(e, struct oz_timer, link);
-			if (time_before(due_time, t2->due_time)) {
-				if (t2 == g_cur_timer) {
-					g_cur_timer = NULL;
-					restart_needed = 1;
-				}
-				break;
-			}
-		}
-		list_add_tail(&t->link, e);
-	}
-	if (g_timer_state == OZ_TIMER_IDLE)
-		restart_needed = 1;
-	else if (g_timer_state == OZ_TIMER_IN_HANDLER)
-		restart_needed = 0;
-	spin_unlock(&g_polling_lock);
-	if (restart_needed)
-		oz_protocol_timer_start();
-}
-/*------------------------------------------------------------------------------
- * Context: softirq or process
- */
-void oz_timer_delete(struct oz_pd *pd, int type)
-{
-	struct list_head *chain = NULL;
-	struct oz_timer *t;
-	struct oz_timer *n;
-	int restart_needed = 0;
-	int release = 0;
-	oz_event_log(OZ_EVT_TIMER_CTRL, 2, (u16)type, NULL, 0);
-	spin_lock(&g_polling_lock);
-	list_for_each_entry_safe(t, n, &g_timer_list, link) {
-		if ((t->pd == pd) && ((type == 0) || (t->type == type))) {
-			if (g_cur_timer == t) {
-				restart_needed = 1;
-				g_cur_timer = NULL;
-				del_timer(&g_timer);
-			}
-			list_del(&t->link);
-			release++;
-			if (g_timer_pool_count < OZ_MAX_TIMER_POOL_SIZE) {
-				t->link.next = g_timer_pool;
-				g_timer_pool = &t->link;
-				g_timer_pool_count++;
-			} else {
-				t->link.next = chain;
-				chain = &t->link;
-			}
-			if (type)
-				break;
-		}
-	}
-	if (g_timer_state == OZ_TIMER_IN_HANDLER)
-		restart_needed = 0;
-	else if (restart_needed)
-		g_timer_state = OZ_TIMER_IDLE;
-	spin_unlock(&g_polling_lock);
-	if (restart_needed)
-		oz_protocol_timer_start();
-	while (release--)
-		oz_pd_put(pd);
-	while (chain) {
-		t = container_of(chain, struct oz_timer, link);
-		chain = chain->next;
-		kfree(t);
-	}
 }
 /*------------------------------------------------------------------------------
  * Context: softirq or process
  */
 void oz_pd_request_heartbeat(struct oz_pd *pd)
 {
-	unsigned long now = jiffies;
-	unsigned long t;
-	spin_lock(&g_polling_lock);
-	if (pd->heartbeat_requested) {
-		spin_unlock(&g_polling_lock);
-		return;
-	}
-	if (pd->pulse_period_j)
-		t = ((now / pd->pulse_period_j) + 1) * pd->pulse_period_j;
-	else
-		t = now + 1;
-	pd->heartbeat_requested = 1;
-	spin_unlock(&g_polling_lock);
-	oz_timer_add(pd, OZ_TIMER_HEARTBEAT, t, 0);
+	oz_timer_add(pd, OZ_TIMER_HEARTBEAT, OZ_QUANTUM);
 }
 /*------------------------------------------------------------------------------
  * Context: softirq or process
  */
-struct oz_pd *oz_pd_find(const u8 *mac_addr)
+struct oz_pd *oz_pd_find(u8 *mac_addr)
 {
 	struct oz_pd *pd;
 	struct list_head *e;
@@ -748,7 +583,7 @@ struct oz_pd *oz_pd_find(const u8 *mac_addr)
 		}
 	}
 	spin_unlock_bh(&g_polling_lock);
-	return NULL;
+	return 0;
 }
 /*------------------------------------------------------------------------------
  * Context: process
@@ -770,9 +605,8 @@ void oz_app_enable(int app_id, int enable)
 static int oz_pkt_recv(struct sk_buff *skb, struct net_device *dev,
 		struct packet_type *pt, struct net_device *orig_dev)
 {
-	oz_event_log(OZ_EVT_RX_FRAME, 0, 0, NULL, 0);
 	skb = skb_share_check(skb, GFP_ATOMIC);
-	if (skb == NULL)
+	if (skb == 0)
 		return 0;
 	spin_lock_bh(&g_rx_queue.lock);
 	if (g_processing_rx) {
@@ -802,7 +636,7 @@ static int oz_pkt_recv(struct sk_buff *skb, struct net_device *dev,
 /*------------------------------------------------------------------------------
  * Context: process
  */
-void oz_binding_add(char *net_dev)
+void oz_binding_add(const char *net_dev)
 {
 	struct oz_binding *binding;
 
@@ -815,20 +649,19 @@ void oz_binding_add(char *net_dev)
 			oz_trace("Adding binding: %s\n", net_dev);
 			binding->ptype.dev =
 				dev_get_by_name(&init_net, net_dev);
-			if (binding->ptype.dev == NULL) {
+			if (binding->ptype.dev == 0) {
 				oz_trace("Netdev %s not found\n", net_dev);
 				kfree(binding);
-				binding = NULL;
+				binding = 0;
 			}
 		} else {
 			oz_trace("Binding to all netcards\n");
-			binding->ptype.dev = NULL;
+			binding->ptype.dev = 0;
 		}
 		if (binding) {
 			dev_add_pack(&binding->ptype);
 			spin_lock_bh(&g_binding_lock);
-			binding->next = g_binding;
-			g_binding = binding;
+			list_add_tail(&binding->link, &g_binding);
 			spin_unlock_bh(&g_binding_lock);
 		}
 	}
@@ -836,7 +669,7 @@ void oz_binding_add(char *net_dev)
 /*------------------------------------------------------------------------------
  * Context: process
  */
-static int compare_binding_name(char *s1, char *s2)
+static int compare_binding_name(const char *s1, const char *s2)
 {
 	int i;
 	for (i = 0; i < OZ_MAX_BINDING_LEN; i++) {
@@ -874,33 +707,48 @@ static void pd_stop_all_for_device(struct net_device *net_dev)
 /*------------------------------------------------------------------------------
  * Context: process
  */
-void oz_binding_remove(char *net_dev)
+void oz_binding_remove(const char *net_dev)
 {
-	struct oz_binding *binding;
-	struct oz_binding **link;
+	struct oz_binding *binding = NULL;
+	int found = 0;
+
 	oz_trace("Removing binding: %s\n", net_dev);
 	spin_lock_bh(&g_binding_lock);
-	binding = g_binding;
-	link = &g_binding;
-	while (binding) {
+	list_for_each_entry(binding, &g_binding, link) {
 		if (compare_binding_name(binding->name, net_dev)) {
 			oz_trace("Binding '%s' found\n", net_dev);
-			*link = binding->next;
+			found = 1;
 			break;
-		} else {
-			link = &binding;
-			binding = binding->next;
 		}
 	}
 	spin_unlock_bh(&g_binding_lock);
-	if (binding) {
+	if (found) {
 		dev_remove_pack(&binding->ptype);
 		if (binding->ptype.dev) {
 			dev_put(binding->ptype.dev);
 			pd_stop_all_for_device(binding->ptype.dev);
 		}
+		list_del(&binding->link);
 		kfree(binding);
 	}
+}
+/*------------------------------------------------------------------------------
+ * Context: process
+ */
+int oz_get_binding_list(char *buf, int max_if)
+{
+	struct oz_binding *binding = 0;
+	int count = 0;
+
+	spin_lock_bh(&g_binding_lock);
+	list_for_each_entry(binding, &g_binding, link) {
+		if (count++ > max_if)
+			break;
+		memcpy(buf, binding->name, OZ_MAX_BINDING_LEN);
+		buf += OZ_MAX_BINDING_LEN;
+	}
+	spin_unlock_bh(&g_binding_lock);
+	return count;
 }
 /*------------------------------------------------------------------------------
  * Context: process
@@ -923,7 +771,7 @@ int oz_protocol_init(char *devs)
 {
 	skb_queue_head_init(&g_rx_queue);
 	if (devs && (devs[0] == '*')) {
-		oz_binding_add(NULL);
+		oz_binding_add(0);
 	} else {
 		char d[32];
 		while (*devs) {
@@ -932,7 +780,6 @@ int oz_protocol_init(char *devs)
 				oz_binding_add(d);
 		}
 	}
-	init_timer(&g_timer);
 	return 0;
 }
 /*------------------------------------------------------------------------------
@@ -949,6 +796,32 @@ int oz_get_pd_list(struct oz_mac_addr *addr, int max_count)
 			break;
 		pd = container_of(e, struct oz_pd, link);
 		memcpy(&addr[count++], pd->mac_addr, ETH_ALEN);
+	}
+	spin_unlock_bh(&g_polling_lock);
+	return count;
+}
+/*------------------------------------------------------------------------------
+ * Context: process
+ */
+int oz_get_pd_status_list(u8 *pd_list, int max_count)
+{
+	struct oz_pd *pd;
+	struct list_head *e;
+	int count = 0;
+
+	spin_lock_bh(&g_polling_lock);
+	list_for_each(e, &g_pd_list) {
+		if (count >= max_count)
+			break;
+		pd = container_of(e, struct oz_pd, link);
+		if (pd_list) {
+			memcpy(&pd_list[count * (ETH_ALEN + sizeof(pd->state))],
+						pd->mac_addr, ETH_ALEN);
+			memcpy(&pd_list[(count * (ETH_ALEN + sizeof(pd->state)))
+					+ ETH_ALEN],
+						&pd->state, sizeof(pd->state));
+			count++;
+		}
 	}
 	spin_unlock_bh(&g_polling_lock);
 	return count;

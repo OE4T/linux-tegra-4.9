@@ -27,17 +27,51 @@ struct oz_elt {
 	u8 length;
 } PACKED;
 
-#define oz_next_elt(__elt)	\
-	(struct oz_elt *)((u8 *)((__elt) + 1) + (__elt)->length)
+/* This is an extended element header.
+ */
+struct oz_ext_elt {
+	u8 type;
+	u16 length;
+} PACKED;
+
+
+
+#define oz_is_ext_elt(__elt) \
+	(((struct oz_elt *)(__elt))->type >= OZ_ELT_EXTENDED)
+
+#define oz_elt_hdr_len(__elt) \
+	(int)(oz_is_ext_elt(__elt) ? \
+		(sizeof(struct oz_ext_elt)) \
+	:	(sizeof(struct oz_elt)))
+
+#define oz_elt_data_len(__elt) \
+	(int)(oz_is_ext_elt(__elt) ? \
+		(le16_to_cpu((((struct oz_ext_elt *)(__elt))->length))) \
+	:	(__elt)->length)
+
+#define oz_elt_len(__elt) \
+	(oz_elt_hdr_len(__elt) + oz_elt_data_len(__elt))
+
+#define oz_elt_data(__elt) \
+	((u8 *)(((u8 *)(__elt)) + oz_elt_hdr_len(__elt)))
+
+
+#define oz_next_elt(__elt) \
+	(struct oz_elt *)((u8 *)(__elt) + oz_elt_len(__elt))
+
 
 /* Protocol element IDs.
  */
+#define OZ_ELT_EXTENDED	    0xC0
+#define OZ_ELT_ID_MASK		0x3F
 #define OZ_ELT_CONNECT_REQ	0x06
 #define OZ_ELT_CONNECT_RSP	0x07
 #define OZ_ELT_DISCONNECT	0x08
 #define OZ_ELT_UPDATE_PARAM_REQ	0x11
 #define OZ_ELT_FAREWELL_REQ	0x12
 #define OZ_ELT_APP_DATA		0x31
+#define OZ_ELT_APP_DATA_EX	(OZ_ELT_EXTENDED|OZ_ELT_APP_DATA)
+
 
 /* This is the Ozmo header which is the first Ozmo specific part
  * of a frame and comes after the MAC header.
@@ -83,7 +117,8 @@ struct oz_elt_connect_req {
 	u16	apps;
 	u8	max_len_div16;
 	u8	ms_per_isoc;
-	u8	resv3[2];
+	u8	up_audio_buf;
+	u8	ms_per_elt;
 } PACKED;
 
 /* mode field bits.
@@ -142,7 +177,10 @@ struct oz_app_hdr {
 #define OZ_APPID_UNUSED1			0x2
 #define OZ_APPID_UNUSED2			0x3
 #define OZ_APPID_SERIAL				0x4
-#define OZ_APPID_MAX				OZ_APPID_SERIAL
+#define OZ_APPID_UNUSED3			0x5
+#define OZ_APPID_UNUSED4			0x6
+#define OZ_APPID_TFTP				0x7
+#define OZ_APPID_MAX				OZ_APPID_TFTP
 #define OZ_NB_APPS				(OZ_APPID_MAX+1)
 
 /* USB header common to all elements for the  USB application.

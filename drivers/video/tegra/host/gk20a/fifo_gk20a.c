@@ -347,7 +347,7 @@ clean_up:
 	return -ENOMEM;
 }
 
-static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
+int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 {
 	u32 pmc_enable;
 	u32 intr_stall;
@@ -356,7 +356,6 @@ static int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	int i;
 
 	nvhost_dbg_fn("");
-
 	/* enable pmc pfifo */
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	pmc_enable &= ~mc_enable_pfifo_enabled_f();
@@ -653,10 +652,6 @@ static int gk20a_init_fifo_setup_hw(struct gk20a *g)
 int gk20a_init_fifo_support(struct gk20a *g)
 {
 	u32 err;
-
-	err = gk20a_init_fifo_reset_enable_hw(g);
-	if (err)
-		return err;
 
 	err = gk20a_init_fifo_setup_sw(g);
 	if (err)

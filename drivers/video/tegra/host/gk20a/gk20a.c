@@ -728,11 +728,11 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 
 	ret |= gk20a_channel_suspend(g);
 
-	ret |= gk20a_fifo_suspend(g);
-	/* disable elpg before gr suspend */
+	/* disable elpg before gr or fifo suspend */
 	ret |= gk20a_pmu_destroy(g);
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
+	ret |= gk20a_fifo_suspend(g);
 
 	/* Disable GPCPLL */
 	ret |= gk20a_suspend_clk_support(g);
@@ -778,6 +778,10 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	err = gk20a_init_clk_support(g);
 	if (err)
 		nvhost_err(&dev->dev, "failed to init gk20a clk");
+
+	err = gk20a_init_fifo_reset_enable_hw(g);
+	if (err)
+		nvhost_err(&dev->dev, "failed to reset gk20a fifo");
 
 	err = gk20a_init_mm_support(g);
 	if (err)

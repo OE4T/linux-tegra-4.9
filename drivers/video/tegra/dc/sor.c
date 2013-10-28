@@ -1184,9 +1184,6 @@ void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	if (sor->dc->mode.pclk != clk_get_rate(parent_clk))
 		clk_set_rate(parent_clk, sor->dc->mode.pclk);
 
-	if (!tegra_is_clk_enabled(parent_clk))
-		clk_prepare_enable(parent_clk);
-
 	/* Only enable safe clock initially */
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
 }

@@ -2396,7 +2396,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out && dc->out->disable)
 		dc->out->disable();
 
-	for (i = 0; i < dc->n_windows; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *w = &dc->windows[i];
 
 		/* reset window bandwidth */
@@ -2405,6 +2405,10 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 
 		/* disable windows */
 		w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+
+		/* refuse to operate on invalid syncpts */
+		if (WARN_ON(dc->syncpt[i].id == NVSYNCPT_INVALID))
+			continue;
 
 		/* flush any pending syncpt waits */
 		dc->syncpt[i].max += 1;
@@ -2686,6 +2690,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		ret = -EBUSY;
 		goto err_release_resource_reg;
 	}
+
+	for (i = 0; i < DC_N_WINDOWS; i++)
+		dc->win_syncpt[i] = NVSYNCPT_INVALID;
+
 	if (TEGRA_DISPLAY_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
 		dc->win_syncpt[0] = NVSYNCPT_DISP0_A;

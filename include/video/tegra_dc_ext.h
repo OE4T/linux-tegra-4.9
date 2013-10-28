@@ -118,8 +118,13 @@ struct tegra_dc_ext_flip_windowattr {
 	__u32	z;
 	__u32	swap_interval;
 	struct timespec timestamp;
-	__u32	pre_syncpt_id;
-	__u32	pre_syncpt_val;
+	union {
+		struct {
+			__u32 pre_syncpt_id;
+			__u32 pre_syncpt_val;
+		};
+		int pre_syncpt_fd;
+	};
 	/* These two are optional; if zero, U and V are taken from buff_id */
 	__u32	buff_id_u;
 	__u32	buff_id_v;
@@ -139,8 +144,8 @@ struct tegra_dc_ext_flip_windowattr {
 
 struct tegra_dc_ext_flip {
 	struct tegra_dc_ext_flip_windowattr win[TEGRA_DC_EXT_FLIP_N_WINDOWS];
-	__u32	post_syncpt_id;
-	__u32	post_syncpt_val;
+	__u32 post_syncpt_id;
+	__u32 post_syncpt_val;
 };
 
 struct tegra_dc_ext_flip_2 {
@@ -150,6 +155,15 @@ struct tegra_dc_ext_flip_2 {
 	__u16 reserved2; /* unused - must be 0 */
 	__u32 post_syncpt_id;
 	__u32 post_syncpt_val;
+	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
+};
+
+struct tegra_dc_ext_flip_3 {
+	__u64 win; /* window attributes stored as __u64 for portability. */
+	__u8 win_num;
+	__u8 reserved1; /* unused - must be 0 */
+	__u16 reserved2; /* unused - must be 0 */
+	int post_syncpt_fd;
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
@@ -394,6 +408,9 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_SET_PROPOSED_BW \
 	_IOR('D', 0x13, struct tegra_dc_ext_flip_2)
+
+#define TEGRA_DC_EXT_FLIP3 \
+	_IOWR('D', 0x14, struct tegra_dc_ext_flip_3)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

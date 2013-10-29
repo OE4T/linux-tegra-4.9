@@ -429,6 +429,8 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 	ref = __nvmap_alloc(client, size, align, flags, heap_mask);
 	if (!ref)
 		return ERR_PTR(-ENOMEM);
+	if (IS_ERR(ref))
+		return (struct dma_buf *)ref;
 
 	dmabuf = __nvmap_dmabuf_export_from_ref(ref);
 	__nvmap_free(client, ref);

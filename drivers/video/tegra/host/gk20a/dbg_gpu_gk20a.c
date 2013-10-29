@@ -525,6 +525,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		if ((dbg_s->is_pg_disabled == false) &&
 		    (g->dbg_powergating_disabled_refcount++ == 0)) {
 
+			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module busy");
 			nvhost_module_busy(dbg_s->pdev);
 
 			gr_gk20a_slcg_gr_load_gating_prod(g, false);

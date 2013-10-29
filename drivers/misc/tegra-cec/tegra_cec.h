@@ -17,6 +17,7 @@
  */
 
 #include <linux/pm.h>
+#include <asm/atomic.h>
 
 
 struct tegra_cec {
@@ -31,7 +32,7 @@ struct tegra_cec {
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
 	unsigned short		rx_buffer;
-	unsigned int		init_done;
+	atomic_t		init_done;
 	struct work_struct	work;
 };
 static int tegra_cec_remove(struct platform_device *pdev);

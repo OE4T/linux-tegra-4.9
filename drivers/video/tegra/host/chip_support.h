@@ -133,10 +133,6 @@ struct nvhost_dev_ops {
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
 };
 
-struct nvhost_as_ops {
-	int (*init)(struct nvhost_master *host, struct nvhost_as *as);
-};
-
 struct nvhost_actmon_ops {
 	int (*init)(struct host1x_actmon *actmon);
 	void (*deinit)(struct host1x_actmon *actmon);
@@ -170,7 +166,6 @@ struct nvhost_chip_support {
 	struct nvhost_syncpt_ops syncpt;
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
-	struct nvhost_as_ops as;
 	struct nvhost_actmon_ops actmon;
 	struct nvhost_tickctrl_ops tickctrl;
 	void (*remove_support)(struct nvhost_chip_support *op);

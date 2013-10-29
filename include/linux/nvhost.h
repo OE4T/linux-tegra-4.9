@@ -37,6 +37,7 @@ struct nvhost_hwctx;
 struct nvhost_device_power_attr;
 struct nvhost_device_profile;
 struct mem_mgr;
+struct nvhost_as_moduleops;
 
 #define NVHOST_MODULE_MAX_CLOCKS		7
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
@@ -200,6 +201,9 @@ struct nvhost_device_data {
 	struct device *ctrl_node;
 	struct cdev ctrl_cdev;
 	const struct file_operations *ctrl_ops;    /* ctrl ops for the module */
+
+	/* address space operations */
+	const struct nvhost_as_moduleops *as_ops;
 
 	/* module debugger */
 	struct device *dbg_node;

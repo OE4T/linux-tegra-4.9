@@ -68,7 +68,6 @@ struct nvhost_as {
 	struct mutex share_list_lock;
 	struct list_head share_list; /* list of all shares */
 	struct nvhost_channel *ch;
-	const struct nvhost_as_moduleops *ops;
 	int last_share_id; /* dummy allocator for now */
 };
 

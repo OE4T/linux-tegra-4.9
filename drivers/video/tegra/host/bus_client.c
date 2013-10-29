@@ -1156,11 +1156,13 @@ int nvhost_client_user_init(struct platform_device *dev)
 				"", devno, &nvhost_channelops);
 	if (ch->node == NULL)
 		goto fail;
-	++devno;
-	ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,
-				"as-", devno, &nvhost_asops);
-	if (ch->as_node == NULL)
-		goto fail;
+	if (pdata->as_ops) {
+		++devno;
+		ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,
+					"as-", devno, &nvhost_asops);
+		if (ch->as_node == NULL)
+			goto fail;
+	}
 
 	/* module control (npn-channel based, global) interface */
 	if (pdata->ctrl_ops) {

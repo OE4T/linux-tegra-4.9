@@ -1848,7 +1848,7 @@ static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset)
 }
 
 
-const struct nvhost_as_moduleops gk20a_as_moduleops = {
+const struct nvhost_as_moduleops tegra_gk20a_as_ops = {
 	.alloc_share   = gk20a_as_alloc_share,
 	.release_share = gk20a_as_release_share,
 	.alloc_space   = gk20a_as_alloc_space,

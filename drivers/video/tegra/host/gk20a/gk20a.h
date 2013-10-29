@@ -155,7 +155,7 @@ struct gk20a_cyclestate_buffer_elem {
 	u64 data;
 };
 
-extern const struct nvhost_as_moduleops gk20a_as_moduleops;
+extern const struct nvhost_as_moduleops tegra_gk20a_as_ops;
 
 /* register accessors */
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)

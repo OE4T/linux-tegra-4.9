@@ -462,6 +462,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.ctrl_ops		= &tegra_gk20a_ctrl_ops,
 	.dbg_ops                = &tegra_gk20a_dbg_gpu_ops,
 	.prof_ops                = &tegra_gk20a_prof_gpu_ops,
+	.as_ops			= &tegra_gk20a_as_ops,
 	.moduleid		= NVHOST_MODULE_GPU,
 	.init			= nvhost_gk20a_init,
 	.deinit			= nvhost_gk20a_deinit,
@@ -733,10 +734,6 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->actmon = host1x_actmon_ops;
 
 	err = nvhost_memmgr_init(op);
-	if (err)
-		return err;
-
-	err = nvhost_init_t124_as_support(op);
 	if (err)
 		return err;
 

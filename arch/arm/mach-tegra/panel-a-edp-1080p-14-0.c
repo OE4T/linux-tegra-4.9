@@ -312,7 +312,7 @@ static struct platform_device __maybe_unused
 	&edp_a_1080p_14_0_bl_device,
 };
 
-static int  __init edp_a_1080p_14_0_register_bl_dev(void)
+static int  __init __edp_a_1080p_14_0_register_bl_dev(void)
 {
 	int err = 0;
 	err = platform_add_devices(edp_a_1080p_14_0_bl_devices,
@@ -321,6 +321,14 @@ static int  __init edp_a_1080p_14_0_register_bl_dev(void)
 		pr_err("disp1 bl device registration failed");
 		return err;
 	}
+	return err;
+}
+
+static int  __init edp_a_1080p_14_0_register_bl_dev(void)
+{
+	int err = 0;
+	if (!of_have_populated_dt())
+		err = __edp_a_1080p_14_0_register_bl_dev();
 	return err;
 }
 

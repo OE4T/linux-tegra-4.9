@@ -329,7 +329,7 @@ static struct platform_device __maybe_unused
 	&lvds_c_1366_14_bl_device,
 };
 
-static int  __init lvds_c_1366_14_register_bl_dev(void)
+static int  __init __lvds_c_1366_14_register_bl_dev(void)
 {
 	int err = 0;
 	err = platform_add_devices(lvds_c_1366_14_bl_devices,
@@ -339,6 +339,14 @@ static int  __init lvds_c_1366_14_register_bl_dev(void)
 		return err;
 	}
 	return err;
+}
+
+static int  __init lvds_c_1366_14_register_bl_dev(void)
+{
+	int err = 0;
+	if (!of_have_populated_dt())
+		err = __lvds_c_1366_14_register_bl_dev();
+	return 0;
 }
 
 static void lvds_c_1366_14_set_disp_device(

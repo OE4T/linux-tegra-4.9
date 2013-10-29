@@ -101,41 +101,57 @@ int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_pr
 	return 0;
 }
 
+static void gk20a_dbg_session_mutex_lock(struct dbg_session_gk20a *dbg_s)
+{
+	if (dbg_s->is_profiler)
+		mutex_lock(&dbg_s->g->dbg_sessions_lock);
+	else
+		mutex_lock(&dbg_s->ch->dbg_s_lock);
+}
+
+static void gk20a_dbg_session_mutex_unlock(struct dbg_session_gk20a *dbg_s)
+{
+	if (dbg_s->is_profiler)
+		mutex_unlock(&dbg_s->g->dbg_sessions_lock);
+	else
+		mutex_unlock(&dbg_s->ch->dbg_s_lock);
+}
+
 static void gk20a_dbg_gpu_events_enable(struct dbg_session_gk20a *dbg_s)
 {
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
 
-	mutex_lock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_lock(dbg_s);
 
 	dbg_s->dbg_events.events_enabled = true;
 	dbg_s->dbg_events.num_pending_events = 0;
 
-	mutex_unlock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_unlock(dbg_s);
 }
 
 static void gk20a_dbg_gpu_events_disable(struct dbg_session_gk20a *dbg_s)
 {
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
 
-	mutex_lock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_lock(dbg_s);
 
 	dbg_s->dbg_events.events_enabled = false;
 	dbg_s->dbg_events.num_pending_events = 0;
 
-	mutex_unlock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_unlock(dbg_s);
 }
 
 static void gk20a_dbg_gpu_events_clear(struct dbg_session_gk20a *dbg_s)
 {
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
 
-	mutex_lock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_lock(dbg_s);
 
 	if (dbg_s->dbg_events.events_enabled &&
 			dbg_s->dbg_events.num_pending_events > 0)
 		dbg_s->dbg_events.num_pending_events--;
 
-	mutex_unlock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_unlock(dbg_s);
 }
 
 static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
@@ -184,7 +200,7 @@ unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait)
 
 	poll_wait(filep, &dbg_s->dbg_events.wait_queue, wait);
 
-	mutex_lock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_lock(dbg_s);
 
 	if (dbg_s->dbg_events.events_enabled &&
 			dbg_s->dbg_events.num_pending_events > 0) {
@@ -195,7 +211,7 @@ unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait)
 		mask = (POLLPRI | POLLIN);
 	}
 
-	mutex_unlock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_unlock(dbg_s);
 
 	return mask;
 }
@@ -477,11 +493,11 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	}
 
 	/* mutual exclusion for multiple debug sessions */
-	mutex_lock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_lock(dbg_s);
 
 	err = dbg_s->ops->exec_reg_ops(dbg_s, ops, args->num_ops);
 
-	mutex_unlock(&dbg_s->ch->dbg_s_lock);
+	gk20a_dbg_session_mutex_unlock(dbg_s);
 
 	if (err) {
 		nvhost_err(dev, "dbg regops failed");

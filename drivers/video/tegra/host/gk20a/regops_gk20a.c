@@ -60,7 +60,10 @@ static inline bool linear_search(u32 offset, const u32 *list, int size)
 static const struct regop_offset_range gk20a_global_whitelist_ranges[] = {
 	{ 0x000004f0,   1 },
 	{ 0x00001a00,   3 },
+	{ 0x0000259c,   1 },
 	{ 0x0000280c,   1 },
+	{ 0x00009400,   1 },
+	{ 0x00009410,   1 },
 	{ 0x00020200,   1 },
 	{ 0x00022430,   7 },
 	{ 0x00022548,   1 },

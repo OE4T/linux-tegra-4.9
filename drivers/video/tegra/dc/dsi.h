@@ -436,6 +436,10 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg);
 void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 						u32 val, u32 reg, int index);
 void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg);
+int tegra_dsi_read_data(struct tegra_dc *dc,
+				struct tegra_dc_dsi_data *dsi,
+				u16 max_ret_payload_size,
+				u8 panel_reg_addr, u8 *read_data);
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

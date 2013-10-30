@@ -143,6 +143,124 @@ static const struct file_operations dbg_fops = {
 	.release = single_release,
 };
 
+static u32 max_ret_payload_size;
+static u32 panel_reg_addr;
+
+static ssize_t read_panel_get(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+	int err = 0;
+	u8 buf[300] = {0};
+	int j = 0 , b = 0 , k;
+	u32 payload_size = 0;
+
+	if (!dsi->enabled) {
+		dev_info(&dc->ndev->dev, " controller suspended\n");
+	return -EINVAL;
+}
+
+	seq_printf(s, "max ret payload size:0x%x\npanel reg addr:0x%x\n",
+					max_ret_payload_size, panel_reg_addr);
+	if (max_ret_payload_size == 0) {
+		seq_puts(s, "echo was not successful\n");
+	return err;
+}
+	err = tegra_dsi_read_data(dsi->dc, dsi,
+				max_ret_payload_size,
+				panel_reg_addr, buf);
+
+	seq_printf(s, " Read data[%d] ", b);
+
+	for (b = 1; b < (max_ret_payload_size+1); b++) {
+		j = (b*4)-1;
+		for (k = j; k > (j-4); k--)
+			if ((k%4) == 0 && b != max_ret_payload_size) {
+				seq_printf(s, " %x  ", buf[k]);
+				seq_printf(s, "\n Read data[%d] ", b);
+			}
+			else
+				seq_printf(s, " %x ", buf[k]);
+	}
+	seq_puts(s, "\n");
+
+	switch (buf[0]) {
+	case DSI_ESCAPE_CMD:
+		seq_printf(s, "escape cmd[0x%x]\n", buf[0]);
+		break;
+	case DSI_ACK_NO_ERR:
+		seq_printf(s,
+			"Panel ack, no err[0x%x]\n", buf[0]);
+		goto fail;
+		break;
+	default:
+		seq_puts(s, "Invalid read response\n");
+		break;
+	}
+
+	switch (buf[4] & 0xff) {
+	case GEN_LONG_RD_RES:
+		/* Fall through */
+	case DCS_LONG_RD_RES:
+		payload_size = (buf[5] |
+				(buf[6] << 8)) & 0xFFFF;
+		seq_printf(s, "Long read response Packet\n"
+				"payload_size[0x%x]\n", payload_size);
+		break;
+	case GEN_1_BYTE_SHORT_RD_RES:
+		/* Fall through */
+	case DCS_1_BYTE_SHORT_RD_RES:
+		payload_size = 1;
+		seq_printf(s, "Short read response Packet\n"
+			"payload_size[0x%x]\n", payload_size);
+		break;
+	case GEN_2_BYTE_SHORT_RD_RES:
+		/* Fall through */
+	case DCS_2_BYTE_SHORT_RD_RES:
+		payload_size = 2;
+		seq_printf(s, "Short read response Packet\n"
+			"payload_size[0x%x]\n", payload_size);
+		break;
+	case ACK_ERR_RES:
+		payload_size = 2;
+		seq_printf(s, "Acknowledge error report response\n"
+			"Packet payload_size[0x%x]\n", payload_size);
+		break;
+	default:
+		seq_puts(s, "Invalid response packet\n");
+		break;
+	}
+fail:
+	return err;
+}
+
+static ssize_t read_panel_set(struct file *file, const char  *buf,
+						size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+
+	sscanf(buf, "%x %x", &max_ret_payload_size, &panel_reg_addr);
+		dev_info(&dc->ndev->dev, "max ret payload size:0x%x\npanel reg addr:0x%x\n",
+				max_ret_payload_size, panel_reg_addr);
+
+		return count;
+}
+
+static int read_panel_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, read_panel_get, inode->i_private);
+};
+
+static const struct file_operations read_panel_fops = {
+	.open = read_panel_open,
+	.read = seq_read,
+	.write = read_panel_set,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct dentry *dsidir;
 
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
@@ -154,6 +272,10 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		return;
 	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
 		&dbg_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("read_panel", S_IRUGO|S_IWUSR, dsidir,
+				dsi, &read_panel_fops);
 	if (!retval)
 		goto free_out;
 	return;

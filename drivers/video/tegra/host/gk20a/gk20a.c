@@ -70,11 +70,6 @@ static struct resource gk20a_intr = {
 
 struct resource gk20a_resources_sim[] = {
 	{
-	.start = TEGRA_GK20A_SIM_BASE,
-	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
 	.start = TEGRA_GK20A_BAR0_BASE,
 	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
 	.flags = IORESOURCE_MEM,
@@ -82,6 +77,11 @@ struct resource gk20a_resources_sim[] = {
 	{
 	.start = TEGRA_GK20A_BAR1_BASE,
 	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+	},
+	{
+	.start = TEGRA_GK20A_SIM_BASE,
+	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 	},
 };

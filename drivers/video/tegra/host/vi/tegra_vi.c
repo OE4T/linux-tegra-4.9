@@ -62,8 +62,10 @@ void nvhost_vi_deinit(struct platform_device *dev)
 	struct vi *tegra_vi;
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 
-	if (tegra_vi->reg)
+	if (tegra_vi->reg) {
 		regulator_put(tegra_vi->reg);
+		tegra_vi->reg = NULL;
+	}
 }
 
 int nvhost_vi_finalize_poweron(struct platform_device *dev)

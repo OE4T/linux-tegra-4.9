@@ -403,14 +403,11 @@ static struct platform_device __maybe_unused
 static int  __init dsi_a_1080p_11_6_register_bl_dev(void)
 {
 	int err = 0;
-	if (!of_have_populated_dt()) {
-		err =
-		platform_add_devices(dsi_a_1080p_11_6_bl_devices,
-			ARRAY_SIZE(dsi_a_1080p_11_6_bl_devices));
-		if (err) {
-			pr_err("disp1 bl device registration failed");
-			return err;
-		}
+	err = platform_add_devices(dsi_a_1080p_11_6_bl_devices,
+				ARRAY_SIZE(dsi_a_1080p_11_6_bl_devices));
+	if (err) {
+		pr_err("disp1 bl device registration failed");
+		return err;
 	}
 	return err;
 }

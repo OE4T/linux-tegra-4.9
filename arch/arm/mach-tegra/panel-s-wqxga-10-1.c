@@ -690,7 +690,7 @@ static unsigned int dsi_s_tn8_edp_brightness[] = {
 	255, 227, 199, 171, 143, 115, 87, 59, 31, 0
 };
 
-static int __init __dsi_s_wqxga_10_1_register_bl_dev(void)
+static int __init dsi_s_wqxga_10_1_register_bl_dev(void)
 {
 	int err = 0;
 	struct board_info board_info;
@@ -716,14 +716,6 @@ static int __init __dsi_s_wqxga_10_1_register_bl_dev(void)
 		pr_err("disp1 bl device registration failed");
 		return err;
 	}
-	return err;
-}
-
-static int __init dsi_s_wqxga_10_1_register_bl_dev(void)
-{
-	int err = 0;
-	if (!of_have_populated_dt())
-		err = __dsi_s_wqxga_10_1_register_bl_dev();
 	return err;
 }
 

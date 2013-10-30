@@ -440,6 +440,10 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u16 max_ret_payload_size,
 				u8 panel_reg_addr, u8 *read_data);
+int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
+				struct tegra_dc_dsi_data *dsi);
+bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi);
+bool tegra_dsi_disable_read_debug(struct tegra_dc_dsi_data *dsi);
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

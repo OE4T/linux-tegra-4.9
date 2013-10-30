@@ -251,12 +251,42 @@ static ssize_t read_panel_set(struct file *file, const char  *buf,
 static int read_panel_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, read_panel_get, inode->i_private);
-};
+}
 
 static const struct file_operations read_panel_fops = {
 	.open = read_panel_open,
 	.read = seq_read,
 	.write = read_panel_set,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int panel_sanity_check(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+	int err;
+
+	tegra_dsi_enable_read_debug(dsi);
+	err = tegra_dsi_panel_sanity_check(dc, dsi);
+	tegra_dsi_disable_read_debug(dsi);
+
+	if (err < 0)
+		seq_puts(s, "Sanity check failed\n");
+	else
+		seq_puts(s, "Sanity check successful\n");
+
+	return err;
+}
+
+static int sanity_panel_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, panel_sanity_check, inode->i_private);
+}
+
+static const struct file_operations sanity_panel_fops = {
+	.open = sanity_panel_open,
+	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -276,6 +306,10 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		goto free_out;
 	retval = debugfs_create_file("read_panel", S_IRUGO|S_IWUSR, dsidir,
 				dsi, &read_panel_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("panel_sanity", S_IRUGO, dsidir,
+				dsi, &sanity_panel_fops);
 	if (!retval)
 		goto free_out;
 	return;

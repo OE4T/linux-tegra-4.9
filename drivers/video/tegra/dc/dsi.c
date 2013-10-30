@@ -106,6 +106,18 @@ module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
 		"Enable to print read fifo and return packet type");
 
+bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi)
+{
+	enable_read_debug = true;
+	return enable_read_debug;
+}
+
+bool tegra_dsi_disable_read_debug(struct tegra_dc_dsi_data *dsi)
+{
+	enable_read_debug = false;
+	return enable_read_debug;
+}
+
 /* source of video data */
 enum {
 	TEGRA_DSI_DRIVEN_BY_DC,

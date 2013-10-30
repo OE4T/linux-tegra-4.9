@@ -54,6 +54,8 @@ static int t124_num_alloc_channels = 0;
 #define ISP_CLOCKGATE_DELAY 60
 #define ISP_POWERGATE_DELAY 500
 
+#define GK20A_DEV_NAME_SIZE 5
+
 #define BIT64(nr) (1ULL << (nr))
 #define NVSYNCPTS_CLIENT_MANAGED_T124 ( \
 	BIT64(NVSYNCPT_DISP0_A) | BIT64(NVSYNCPT_DISP1_A) | \
@@ -510,10 +512,6 @@ struct platform_device *tegra12_register_host1x_devices(void)
 
 	nvhost_dbg_fn("");
 
-	for (i = NVSYNCPT_GK20A_BASE; i <= NVSYNCPT_GK20A_LAST; i++) {
-		s_syncpt_names[i] = "gk20a";
-	}
-
 	/* register host1x device first */
 	platform_device_register(&tegra_host1x04_device);
 	tegra_host1x04_device.dev.parent = NULL;
@@ -636,7 +634,7 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 		&t124_num_alloc_channels);
 	if (ch) {
 #if defined(CONFIG_TEGRA_GK20A)
-		if (dev == &tegra_gk20a_device) {
+		if (strncmp(dev->name, "gk20a", GK20A_DEV_NAME_SIZE) == 0) {
 			ch->ops.init          = host1x_channel_ops.init;
 			ch->ops.alloc_obj     = t124_channel_alloc_obj;
 			ch->ops.free_obj      = t124_channel_free_obj;
@@ -710,8 +708,12 @@ static void t124_remove_support(struct nvhost_chip_support *op)
 int nvhost_init_t124_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
+	int i = 0;
 	int err;
 	struct t124 *t124 = 0;
+
+	for (i = NVSYNCPT_GK20A_BASE; i <= NVSYNCPT_GK20A_LAST; i++)
+		s_syncpt_names[i] = "gk20a";
 
 	/* don't worry about cleaning up on failure... "remove" does it. */
 	err = nvhost_init_t124_channel_support(host, op);

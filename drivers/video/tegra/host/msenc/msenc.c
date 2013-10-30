@@ -397,7 +397,7 @@ static struct of_device_id tegra_msenc_of_match[] = {
 #endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-msenc",
-		.data = (struct nvhost_device_data *)&t14_msenc_info },
+		.data = (struct nvhost_device_data *)&t124_msenc_info },
 #endif
 	{ },
 };

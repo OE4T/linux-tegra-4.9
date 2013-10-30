@@ -268,9 +268,9 @@ extern const struct file_operations tegra_gk20a_prof_gpu_ops;
 struct nvhost_hwctx_handler *nvhost_gk20a_alloc_hwctx_handler(u32 syncpt,
 		u32 waitbase, struct nvhost_channel *ch);
 
-#define GK20A_BAR0_IORESOURCE_MEM 0
-#define GK20A_BAR1_IORESOURCE_MEM 1
-#define GK20A_SIM_IORESOURCE_MEM 2
+#define GK20A_SIM_IORESOURCE_MEM 0
+#define GK20A_BAR0_IORESOURCE_MEM 1
+#define GK20A_BAR1_IORESOURCE_MEM 2
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 

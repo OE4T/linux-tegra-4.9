@@ -80,8 +80,8 @@ extern struct system_pmic_dev *system_pmic_register(struct device *dev,
 	struct system_pmic_ops *ops, struct system_pmic_config *config,
 	void *drv_data);
 
-void system_pmic_unregister(struct system_pmic_dev *pmic_dev);
-int system_pmic_set_power_on_event(enum system_pmic_power_on_event event,
+extern void system_pmic_unregister(struct system_pmic_dev *pmic_dev);
+extern int system_pmic_set_power_on_event(enum system_pmic_power_on_event event,
 	void *data);
 
 #endif /* __LINUX_POWER_RESET_SYSTEM_PMIC_H__ */

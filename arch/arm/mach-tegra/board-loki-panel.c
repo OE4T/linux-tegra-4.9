@@ -218,7 +218,7 @@ struct tmds_config loki_tmds_config[] = {
 		.pll0 = 0x01003f10,
 		.pll1 = 0x10300b00,
 		.pe_current = 0x00000000,
-		.drive_current = 0x2e2e2e2e,
+		.drive_current = 0x32323232,
 		.peak_current = 0x05050505,
 	},
 	{ /* 1080p / 148.5MHz modes */
@@ -226,7 +226,7 @@ struct tmds_config loki_tmds_config[] = {
 		.pll0 = 0x01003f10,
 		.pll1 = 0x10300b00,
 		.pe_current = 0x00000000,
-		.drive_current = 0x2e2e2e2e,
+		.drive_current = 0x32323232,
 		.peak_current = 0x05050505,
 	},
 	{ /* 297MHz modes */
@@ -234,7 +234,7 @@ struct tmds_config loki_tmds_config[] = {
 		.pll0 = 0x01003f10,
 		.pll1 = 0x13300b00,
 		.pe_current = 0x00000000,
-		.drive_current = 0x34343434,
+		.drive_current = 0x36363636,
 		.peak_current = 0x07070707,
 	},
 };

@@ -1577,6 +1577,25 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 
 	mutex_unlock(&vm->update_gmmu_lock);
+
+	/* vm is not used anymore. release it. */
+	kfree(vm);
+}
+
+static void gk20a_vm_remove_support_kref(struct kref *ref)
+{
+	struct vm_gk20a *vm = container_of(ref, struct vm_gk20a, ref);
+	vm->remove_support(vm);
+}
+
+static void gk20a_vm_get(struct vm_gk20a *vm)
+{
+	kref_get(&vm->ref);
+}
+
+static void gk20a_vm_put(struct vm_gk20a *vm)
+{
+	kref_put(&vm->ref, gk20a_vm_remove_support_kref);
 }
 
 /* address space interfaces for the gk20a module */
@@ -1676,6 +1695,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
+	kref_init(&vm->ref);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -1687,6 +1707,8 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->find_buffer    = gk20a_vm_find_buffer;
 	vm->remove_support = gk20a_vm_remove_support;
+	vm->put            = gk20a_vm_put;
+	vm->get            = gk20a_vm_get;
 
 	vm->enable_ctag = true;
 
@@ -1700,10 +1722,12 @@ static int gk20a_as_release_share(struct nvhost_as_share *as_share)
 
 	nvhost_dbg_fn("");
 
-	gk20a_vm_remove_support(vm);
+	vm->as_share = NULL;
+
+	/* put as reference to vm */
+	vm->put(vm);
 
 	as_share->priv = NULL;
-	kfree(vm);
 
 	return 0;
 }
@@ -1994,6 +2018,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
+	kref_init(&vm->ref);
 
 	vm->alloc_va       = gk20a_vm_alloc_va;
 	vm->free_va        = gk20a_vm_free_va;
@@ -2004,6 +2029,8 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	vm->get_buffers    = gk20a_vm_get_buffers;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
+	vm->put            = gk20a_vm_put;
+	vm->get            = gk20a_vm_get;
 
 	return 0;
 
@@ -2145,6 +2172,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
+	kref_init(&vm->ref);
 
 	vm->alloc_va	   = gk20a_vm_alloc_va;
 	vm->free_va	   = gk20a_vm_free_va;
@@ -2155,6 +2183,8 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	vm->get_buffers    = gk20a_vm_get_buffers;
 	vm->tlb_inval      = gk20a_mm_tlb_invalidate;
 	vm->remove_support = gk20a_vm_remove_support;
+	vm->put            = gk20a_vm_put;
+	vm->get            = gk20a_vm_get;
 
 	return 0;
 

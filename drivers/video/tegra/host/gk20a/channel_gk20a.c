@@ -1262,13 +1262,19 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	struct mapped_buffer_node **mapped_buffers = NULL;
 	int err = 0, num_mapped_buffers;
 
+	/* job needs reference to this vm */
+	vm->get(vm);
+
 	err = vm->get_buffers(vm, &mapped_buffers, &num_mapped_buffers);
-	if (err)
+	if (err) {
+		vm->put(vm);
 		return err;
+	}
 
 	job = kzalloc(sizeof(*job), GFP_KERNEL);
 	if (!job) {
 		vm->put_buffers(vm, mapped_buffers, num_mapped_buffers);
+		vm->put(vm);
 		return -ENOMEM;
 	}
 
@@ -1299,6 +1305,10 @@ void gk20a_channel_update(struct channel_gk20a *c)
 
 		vm->put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);
+
+		/* job is done. release its reference to vm */
+		vm->put(vm);
+
 		list_del_init(&job->list);
 		kfree(job);
 	}

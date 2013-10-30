@@ -172,6 +172,8 @@ struct vm_gk20a {
 	bool tlb_dirty;
 	bool mapped;
 
+	struct kref ref;
+
 	struct mutex update_gmmu_lock;
 
 	struct page_directory_gk20a pdes;
@@ -221,6 +223,8 @@ struct vm_gk20a {
 			u64 *offset);
 
 	void (*remove_support)(struct vm_gk20a *vm);
+	void (*get)(struct vm_gk20a *vm);
+	void (*put)(struct vm_gk20a *vm);
 };
 
 struct gk20a;

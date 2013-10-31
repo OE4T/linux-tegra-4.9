@@ -888,14 +888,12 @@ static void gk20a_set_railgating(struct gk20a *g, int new_status)
 	struct nvhost_device_data *pdata = platform_get_drvdata(g->dev);
 	enum pm_qos_flags_status stat;
 
-	mutex_lock(&pdata->lock);
 	stat = dev_pm_qos_flags(dev_from_gk20a(g), PM_QOS_FLAG_NO_POWER_OFF);
 	if (stat <= PM_QOS_FLAGS_NONE && new_status == FB_BLANK_UNBLANK)
 		dev_pm_qos_add_request(dev_from_gk20a(g), &g->no_poweroff_req,
 				DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
 	else if (stat > PM_QOS_FLAGS_NONE && new_status != FB_BLANK_UNBLANK)
 		dev_pm_qos_remove_request(&g->no_poweroff_req);
-	mutex_unlock(&pdata->lock);
 }
 
 static int gk20a_suspend_notifier(struct notifier_block *notifier,

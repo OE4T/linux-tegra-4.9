@@ -1311,6 +1311,7 @@ void gk20a_channel_update(struct channel_gk20a *c)
 
 		list_del_init(&job->list);
 		kfree(job);
+		nvhost_module_idle(g->dev);
 	}
 	mutex_unlock(&c->jobs_lock);
 }
@@ -1366,6 +1367,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
+	nvhost_module_busy(g->dev);
 	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
 					   c->hw_chid,
 					   num_entries,
@@ -1549,6 +1551,7 @@ clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
+	nvhost_module_idle(g->dev);
 	return err;
 }
 

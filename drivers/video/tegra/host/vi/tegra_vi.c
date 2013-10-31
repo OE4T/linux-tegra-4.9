@@ -22,10 +22,14 @@
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform_device.h>
 
+#include <mach/latency_allowance.h>
+
 #include "bus_client.h"
 #include "chip_support.h"
 #include "host1x/host1x.h"
 #include "vi.h"
+
+static DEFINE_MUTEX(la_lock);
 
 #define T12_VI_CFG_CG_CTRL	0x2e
 #define T12_CG_2ND_LEVEL_EN	1
@@ -103,6 +107,41 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	}
 	return ret;
 }
+
+static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
+{
+	struct nvhost_device_data *pdata_vi1, *pdata_vi2;
+	struct vi *tegra_vi2;
+	struct clk *clk_vi;
+	int ret;
+	uint total_vi_bw;
+
+	pdata_vi1 =
+		(struct nvhost_device_data *)tegra_vi1->ndev->dev.platform_data;
+
+	/* Copy device data for other vi device */
+	mutex_lock(&la_lock);
+
+	tegra_vi1->vi_bw = vi_bw / 1000;
+	total_vi_bw = tegra_vi1->vi_bw;
+	if (pdata_vi1->master)
+		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->master;
+	else
+		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->slave;
+
+	tegra_vi2 = (struct vi *)pdata_vi2->private_data;
+
+	clk_vi = clk_get(&tegra_vi2->ndev->dev, "emc");
+	if (tegra_is_clk_enabled(clk_vi))
+		total_vi_bw += tegra_vi2->vi_bw;
+
+	mutex_unlock(&la_lock);
+
+	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);
+
+	return ret;
+}
+
 
 long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)

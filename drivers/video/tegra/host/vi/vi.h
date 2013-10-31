@@ -30,17 +30,11 @@ struct vi {
 	uint vi_bw;
 };
 
-struct vi_mutex {
-	struct mutex lock;
-	uint mutex_init_flag;
-};
-
 extern const struct file_operations tegra_vi_ctrl_ops;
 int nvhost_vi_prepare_poweroff(struct platform_device *);
 int nvhost_vi_finalize_poweron(struct platform_device *);
 int nvhost_vi_init(struct platform_device *);
 void nvhost_vi_deinit(struct platform_device *);
 void nvhost_vi_reset(struct platform_device *);
-int vi_set_la(struct vi *, uint);
 
 #endif

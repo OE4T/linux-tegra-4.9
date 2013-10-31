@@ -1281,8 +1281,6 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 		return -EBUSY;
 	}
 
-	pmu->elpg_enable_allow = true;
-
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
 			sg_phys(mm->pmu.inst_block.mem.sgt->sgl));
 	if (err) {
@@ -2480,48 +2478,13 @@ clean_up:
 	return err;
 }
 
-int gk20a_pmu_enable_elpg(struct gk20a *g)
+static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	struct gr_gk20a *gr = &g->gr;
 	struct pmu_cmd cmd;
 	u32 seq;
-	int ret = 0;
 
 	nvhost_dbg_fn("");
-
-	if (!pmu->elpg_ready)
-		return 0;
-
-	mutex_lock(&pmu->elpg_mutex);
-
-	pmu->elpg_refcnt++;
-	if (pmu->elpg_refcnt <= 0) {
-		ret = 0;
-		goto exit_unlock;
-	}
-
-	if (!g->elpg_enabled)
-		goto exit_unlock;
-
-	/* do NOT enable elpg until golden ctx is created,
-	   which is related with the ctx that ELPG save and restore. */
-	if (unlikely(!gr->ctx_vars.golden_image_initialized)) {
-		ret = 0;
-		goto exit_unlock;
-	}
-
-	/* return if ELPG is already on or on_pending or off_on_pending */
-	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
-		ret = 0;
-		goto exit_unlock;
-	}
-
-	if (!pmu->elpg_enable_allow) {
-		pmu->elpg_stat = PMU_ELPG_STAT_OFF_ON_PENDING;
-		ret = 0;
-		goto exit_unlock;
-	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -2537,10 +2500,62 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
-exit_unlock:
-	mutex_unlock(&pmu->elpg_mutex);
 	nvhost_dbg_fn("done");
 	return 0;
+}
+
+int gk20a_pmu_enable_elpg(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct gr_gk20a *gr = &g->gr;
+
+	int ret = 0;
+
+	nvhost_dbg_fn("");
+
+	if (!pmu->elpg_ready)
+		goto exit;
+
+	mutex_lock(&pmu->elpg_mutex);
+
+	pmu->elpg_refcnt++;
+	if (pmu->elpg_refcnt <= 0)
+		goto exit_unlock;
+
+	/* something is not right if we end up in following code path */
+	if (unlikely(pmu->elpg_refcnt > 1)) {
+		nvhost_warn(dev_from_gk20a(g), "%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
+			    __func__, pmu->elpg_refcnt);
+		WARN_ON(1);
+	}
+
+	/* do not act if ELPG is disabled. just sustain the refcount */
+	if (!g->elpg_enabled)
+		goto exit_unlock;
+
+	/* do NOT enable elpg until golden ctx is created,
+	   which is related with the ctx that ELPG save and restore. */
+	if (unlikely(!gr->ctx_vars.golden_image_initialized))
+		goto exit_unlock;
+
+	/* return if ELPG is already on or on_pending or off_on_pending */
+	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF)
+		goto exit_unlock;
+
+	/* if ELPG is not allowed right now, mark that it should be enabled
+	 * immediately after it is allowed */
+	if (!pmu->elpg_enable_allow) {
+		pmu->elpg_stat = PMU_ELPG_STAT_OFF_ON_PENDING;
+		goto exit_unlock;
+	}
+
+	ret = gk20a_pmu_enable_elpg_locked(g);
+
+exit_unlock:
+	mutex_unlock(&pmu->elpg_mutex);
+exit:
+	nvhost_dbg_fn("done");
+	return ret;
 }
 
 static void pmu_elpg_enable_allow(struct work_struct *work)
@@ -2551,13 +2566,17 @@ static void pmu_elpg_enable_allow(struct work_struct *work)
 	nvhost_dbg_fn("");
 
 	mutex_lock(&pmu->elpg_mutex);
+
+	/* It is ok to enabled powergating now */
 	pmu->elpg_enable_allow = true;
+
+	/* do we have pending requests? */
 	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
-		mutex_unlock(&pmu->elpg_mutex);
-		gk20a_pmu_enable_elpg(pmu->g);
-	} else
-		mutex_unlock(&pmu->elpg_mutex);
+		gk20a_pmu_enable_elpg_locked(pmu->g);
+	}
+
+	mutex_unlock(&pmu->elpg_mutex);
 
 	nvhost_dbg_fn("done");
 }
@@ -2574,10 +2593,16 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	if (!pmu->elpg_ready)
 		return 0;
 
+	/* remove the work from queue */
+	cancel_delayed_work_sync(&pmu->elpg_enable);
+
 	mutex_lock(&pmu->elpg_mutex);
 
 	pmu->elpg_refcnt--;
 	if (pmu->elpg_refcnt > 0) {
+		nvhost_warn(dev_from_gk20a(g), "%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
+			    __func__, pmu->elpg_refcnt);
+		WARN_ON(1);
 		ret = 0;
 		goto exit_unlock;
 	}
@@ -2586,7 +2611,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
 		ret = 0;
-		goto exit_unlock;
+		goto exit_reschedule;
 	}
 	/* wait if on_pending */
 	else if (pmu->elpg_stat == PMU_ELPG_STAT_ON_PENDING) {
@@ -2606,7 +2631,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	/* return if ELPG is already off */
 	else if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 		ret = 0;
-		goto exit_unlock;
+		goto exit_reschedule;
 	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -2632,10 +2657,14 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 		goto exit_unlock;
 	}
 
+exit_reschedule:
 	if (enable) {
+		pmu->elpg_enable_allow = false;
 		schedule_delayed_work(&pmu->elpg_enable,
 			msecs_to_jiffies(PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC));
-	}
+	} else
+		pmu->elpg_enable_allow = true;
+
 
 exit_unlock:
 	mutex_unlock(&pmu->elpg_mutex);
@@ -2672,6 +2701,9 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	if (!support_gk20a_pmu())
 		return 0;
+
+	/* make sure the pending operations are finished before we continue */
+	cancel_delayed_work_sync(&pmu->elpg_enable);
 
 	gk20a_pmu_get_elpg_residency(g, &elpg_ingating_time,
 		&elpg_ungating_time);

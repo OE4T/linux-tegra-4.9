@@ -488,6 +488,10 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	int i;
 	char buff[256];
 
+	/* If gated, quietly return. */
+	if (!tegra_powergate_is_powered(dc->powergate_id))
+		return;
+
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,

@@ -607,6 +607,13 @@ static int t124_channel_wait(struct nvhost_hwctx *hwctx,
 	return gk20a_channel_wait(hwctx->priv, args);
 }
 
+static int t124_channel_set_priority(struct nvhost_hwctx *hwctx,
+			    struct nvhost_set_priority_args *args)
+{
+	nvhost_dbg_fn("");
+	return gk20a_channel_set_priority(hwctx->priv, args->priority);
+}
+
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
 static int t124_channel_cycle_stats(struct nvhost_hwctx *hwctx,
 				struct nvhost_cycle_stats_args *args)
@@ -647,6 +654,7 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 			ch->ops.free_obj      = t124_channel_free_obj;
 			ch->ops.alloc_gpfifo  = t124_channel_alloc_gpfifo;
 			ch->ops.submit_gpfifo = t124_channel_submit_gpfifo;
+			ch->ops.set_priority  = t124_channel_set_priority;
 			ch->ops.wait          = t124_channel_wait;
 			ch->ops.set_error_notifier =
 					t124_channel_set_error_notifier;

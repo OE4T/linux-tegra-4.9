@@ -337,6 +337,19 @@ static int nvhost_ioctl_channel_wait(
 	return ret;
 }
 
+static int nvhost_ioctl_channel_set_priority(
+	struct nvhost_channel_userctx *ctx,
+	struct nvhost_set_priority_args *args)
+{
+	int ret = 0;
+	if (channel_op(ctx->ch).set_priority) {
+		nvhost_module_busy(ctx->ch->dev);
+		ret = channel_op(ctx->ch).set_priority(ctx->hwctx, args);
+		nvhost_module_idle(ctx->ch->dev);
+	}
+	return ret;
+}
+
 static int nvhost_ioctl_channel_zcull_bind(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_zcull_bind_args *args)
@@ -973,6 +986,7 @@ static long nvhost_channelctl(struct file *filp,
 				priv->hwctx->has_timedout;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
+		nvhost_ioctl_channel_set_priority(priv, (void *)buf);
 		priv->priority =
 			(u32)((struct nvhost_set_priority_args *)buf)->priority;
 		break;

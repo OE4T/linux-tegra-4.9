@@ -71,6 +71,8 @@ struct nvhost_channel_ops {
 			u32 flags);
 	int (*set_error_notifier)(struct nvhost_hwctx *hwctx,
 			    struct nvhost_set_error_notifier *args);
+	int (*set_priority)(struct nvhost_hwctx *,
+			u32 priority);
 	int (*wait)(struct nvhost_hwctx *,
 		    struct nvhost_wait_args *args);
 #if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)

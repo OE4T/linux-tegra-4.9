@@ -776,40 +776,57 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	   simulation and emulation. We should remove SOB after graphics power
 	   saving features (blcg/slcg) are enabled. For now, do it here. */
 	err = gk20a_init_clk_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a clk");
+		goto done;
+	}
 
 	err = gk20a_init_fifo_reset_enable_hw(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to reset gk20a fifo");
+		goto done;
+	}
 
 	err = gk20a_init_mm_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a mm");
+		goto done;
+	}
 
 	err = gk20a_init_pmu_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a pmu");
+		goto done;
+	}
 
 	err = gk20a_init_fifo_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a fifo");
+		goto done;
+	}
 
 	err = gk20a_init_gr_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a gr");
+		goto done;
+	}
 
 	err = gk20a_init_pmu_setup_hw2(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a pmu_hw2");
+		goto done;
+	}
 
 	err = gk20a_init_therm_support(g);
-	if (err)
+	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a therm");
+		goto done;
+	}
 
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
+done:
 	return err;
 }
 

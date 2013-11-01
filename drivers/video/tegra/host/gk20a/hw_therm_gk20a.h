@@ -154,6 +154,18 @@ static inline u32 therm_gate_ctrl_eng_clk_stop_f(void)
 {
 	return 0x2;
 }
+static inline u32 therm_gate_ctrl_blk_clk_m(void)
+{
+	return 0x3 << 2;
+}
+static inline u32 therm_gate_ctrl_blk_clk_run_f(void)
+{
+	return 0x0;
+}
+static inline u32 therm_gate_ctrl_blk_clk_auto_f(void)
+{
+	return 0x4;
+}
 static inline u32 therm_gate_ctrl_eng_pwr_m(void)
 {
 	return 0x3 << 4;

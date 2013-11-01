@@ -3800,6 +3800,32 @@ int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 		gr_gk20a_add_zbc(g, gr, zbc_val));
 }
 
+void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine)
+{
+	u32 gate_ctrl;
+
+	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
+
+	switch (mode) {
+	case BLCG_RUN:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_blk_clk_m(),
+				therm_gate_ctrl_blk_clk_run_f());
+		break;
+	case BLCG_AUTO:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_blk_clk_m(),
+				therm_gate_ctrl_blk_clk_auto_f());
+		break;
+	default:
+		nvhost_err(dev_from_gk20a(g),
+			"invalid blcg mode %d", mode);
+		return;
+	}
+
+	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
+}
+
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl, idle_filter;

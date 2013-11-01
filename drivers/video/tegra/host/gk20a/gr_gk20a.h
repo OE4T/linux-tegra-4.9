@@ -75,6 +75,11 @@ enum {
 	ELCG_AUTO	/* clk will run when non-idle, standard elcg mode */
 };
 
+enum {
+	BLCG_RUN,	/* clk always run, i.e. disable blcg */
+	BLCG_AUTO	/* clk will run when non-idle, standard blcg mode */
+};
+
 #ifndef GR_GO_IDLE_BUNDLE
 #define GR_GO_IDLE_BUNDLE	0x0000e100 /* --V-B */
 #endif
@@ -333,6 +338,7 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr);
 int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va);
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
+void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 /* sm */
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g);

@@ -6,7 +6,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -237,6 +237,12 @@ struct hdmi_extres_infoframe {
 	u8		hdmi_vic;
 } __packed;
 
+struct tegra_dc_hdmi_i2c_info {
+	struct i2c_client	*client;
+	struct i2c_board_info	board;
+	int			bus;
+};
+
 struct tegra_dc_hdmi_data {
 	struct tegra_dc			*dc;
 	struct tegra_edid		*edid;
@@ -258,6 +264,7 @@ struct tegra_dc_hdmi_data {
 	struct switch_dev		audio_switch;
 #endif
 	struct tegra_hdmi_out		info;
+	struct tegra_dc_hdmi_i2c_info	i2c_info;
 
 	struct rt_mutex			suspend_lock;
 	bool				suspended;

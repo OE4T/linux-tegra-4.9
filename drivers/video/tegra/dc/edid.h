@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -49,7 +49,11 @@ struct tegra_edid_hdmi_eld {
 	u8	sad[ELD_MAX_SAD];
 };
 
-struct tegra_edid *tegra_edid_create(int bus);
+typedef int (*i2c_transfer_func_t)(struct tegra_dc *dc, struct i2c_msg *msgs,
+	int num);
+
+struct tegra_edid *tegra_edid_create(struct tegra_dc *dc,
+	i2c_transfer_func_t func);
 void tegra_edid_destroy(struct tegra_edid *edid);
 
 int tegra_edid_get_monspecs_test(struct tegra_edid *edid,

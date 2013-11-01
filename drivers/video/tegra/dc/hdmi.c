@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -860,6 +860,15 @@ static ssize_t hdmi_audio_show(struct device *dev,
 static DEVICE_ATTR(hdmi_audio, S_IRUGO, hdmi_audio_show, NULL);
 #endif
 
+
+static int tegra_dc_hdmi_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
+	int num)
+{
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	return i2c_transfer(hdmi->i2c_info.client->adapter, msgs, num);
+}
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi;
@@ -872,6 +881,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct clk *disp1_clk = NULL;
 	struct clk *disp2_clk = NULL;
 	struct tegra_hdmi_out *hdmi_out = NULL;
+	struct i2c_adapter *adapter = NULL;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_USE_OF
@@ -965,10 +975,31 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	if (hdmi_out)
 		memcpy(&hdmi->info, hdmi_out, sizeof(hdmi->info));
 
-	hdmi->edid = tegra_edid_create(dc->out->dcc_bus);
+	hdmi->edid = tegra_edid_create(dc, tegra_dc_hdmi_i2c_xfer);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
 		err = PTR_ERR(hdmi->edid);
+		goto err_put_clock;
+	}
+
+	adapter = i2c_get_adapter(dc->out->dcc_bus);
+	if (!adapter) {
+		pr_err("can't get adpater for bus %d\n", dc->out->dcc_bus);
+		err = -EBUSY;
+		goto err_put_clock;
+	}
+
+	hdmi->i2c_info.board.addr = 0x50;
+	hdmi->i2c_info.board.platform_data = hdmi;
+	strlcpy(hdmi->i2c_info.board.type, "tegra_hdmi",
+		sizeof(hdmi->i2c_info.board.type));
+
+	hdmi->i2c_info.client = i2c_new_device(adapter, &hdmi->i2c_info.board);
+	i2c_put_adapter(adapter);
+
+	if (!hdmi->i2c_info.client) {
+		pr_err("can't create new device\n");
+		err = -EBUSY;
 		goto err_put_clock;
 	}
 
@@ -1093,6 +1124,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	hdmi_state_machine_shutdown();
+
+	i2c_release_client(hdmi->i2c_info.client);
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
 	switch_dev_unregister(&hdmi->audio_switch);

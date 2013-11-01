@@ -687,6 +687,13 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 			pr_err("RLIMIT_NOFILE set failed");
 	}
 #endif
+	/* WAR for Bug 1379912, 1400295 */
+	if (ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_cur) < 32768)
+		ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_cur) =
+									32768;
+	if (ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_max) < 32768)
+		ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_max) =
+									32768;
 	return 0;
 }
 

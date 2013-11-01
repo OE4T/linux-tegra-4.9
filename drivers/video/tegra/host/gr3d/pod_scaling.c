@@ -52,6 +52,7 @@
 
 #include <governor.h>
 
+#include "nvhost_acm.h"
 #include "scale3d.h"
 #include "pod_scaling.h"
 #include "dev.h"
@@ -180,18 +181,18 @@ static void podgov_clocks_handler(struct work_struct *work)
 	struct podgov_info_rec *podgov =
 		container_of(work, struct podgov_info_rec, work);
 	struct devfreq *df = podgov->power_manager;
+	struct platform_device *pdev = to_platform_device(df->dev.parent);
 	unsigned long freq;
 
+	/* make sure the device is alive before doing any scaling */
+	nvhost_module_busy(pdev);
 	mutex_lock(&df->lock);
 
-	if (!podgov->enable) {
-		mutex_unlock(&df->lock);
-		return;
-	}
-	if (podgov->scale == 0) {
-		mutex_unlock(&df->lock);
-		return;
-	}
+	if (!podgov->enable)
+		goto exit_unlock;
+
+	if (podgov->scale == 0)
+		goto exit_unlock;
 
 	freq = podgov->scale * (df->previous_freq / 100);
 	scaling_limit(df, &freq);
@@ -203,7 +204,9 @@ static void podgov_clocks_handler(struct work_struct *work)
 		update_devfreq(df);
 	}
 
+exit_unlock:
 	mutex_unlock(&df->lock);
+	nvhost_module_idle(pdev);
 }
 
 /*******************************************************************************
@@ -279,7 +282,10 @@ static void podgov_enable(struct device *dev, int enable)
 	if (!df)
 		return;
 
+	/* make sure the device is alive before doing any scaling */
+	nvhost_module_busy(d);
 	mutex_lock(&df->lock);
+
 	podgov = df->data;
 
 	trace_podgov_enabled(enable);
@@ -294,7 +300,9 @@ static void podgov_enable(struct device *dev, int enable)
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
 	}
+
 	mutex_unlock(&df->lock);
+	nvhost_module_idle(d);
 
 	if (cancel)
 		cancel_work_sync(&podgov->work);
@@ -344,6 +352,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	if (!df)
 		return;
 
+	nvhost_module_busy(d);
 	mutex_lock(&df->lock);
 	podgov = df->data;
 
@@ -361,6 +370,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	podgov->p_user = user;
 
 	mutex_unlock(&df->lock);
+	nvhost_module_idle(d);
 
 	if (cancel)
 		cancel_work_sync(&podgov->work);
@@ -408,7 +418,9 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 	if (!df)
 		return;
 
+	nvhost_module_busy(d);
 	mutex_lock(&df->lock);
+
 	podgov = df->data;
 
 	trace_podgov_set_freq_request(freq_request);
@@ -423,6 +435,7 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 	}
 
 	mutex_unlock(&df->lock);
+	nvhost_module_idle(d);
 }
 
 /*******************************************************************************
@@ -709,7 +722,7 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 		container_of(nb, struct podgov_info_rec,
 			     throughput_hint_notifier);
 	struct devfreq *df;
-
+	struct platform_device *pdev;
 	int hint = tegra_throughput_get_hint();
 	long idle;
 	long curr, target;
@@ -722,16 +735,18 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	if (!df)
 		return NOTIFY_DONE;
 
+	pdev = to_platform_device(df->dev.parent);
+
+	/* make sure the device is alive before doing any scaling */
+	nvhost_module_busy(pdev);
 	mutex_lock(&podgov->power_manager->lock);
 
 	podgov->block--;
 
 	if (!podgov->enable ||
 		!podgov->p_use_throughput_hint ||
-		podgov->block > 0) {
-		mutex_unlock(&podgov->power_manager->lock);
-		return NOTIFY_DONE;
-	}
+		podgov->block > 0)
+		goto exit_unlock;
 
 	trace_podgov_hint(podgov->idle_estimate, hint);
 	podgov->last_throughput_hint = ktime_get();
@@ -772,7 +787,9 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	trace_podgov_print_target(idle, avg_idle, curr / 1000000, target, hint,
 		avg_hint);
 
+exit_unlock:
 	mutex_unlock(&podgov->power_manager->lock);
+	nvhost_module_idle(pdev);
 	return NOTIFY_OK;
 }
 

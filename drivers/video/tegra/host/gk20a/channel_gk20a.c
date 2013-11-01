@@ -383,28 +383,6 @@ void gk20a_disable_channel_no_update(struct channel_gk20a *ch)
 		     ccsr_channel_enable_clr_true_f());
 }
 
-static int gk20a_wait_channel_idle(struct channel_gk20a *ch)
-{
-	bool channel_idle = false;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(ch->g));
-
-	do {
-		mutex_lock(&ch->jobs_lock);
-		channel_idle = list_empty(&ch->jobs);
-		mutex_unlock(&ch->jobs_lock);
-		if (channel_idle)
-			break;
-
-		usleep_range(1000, 3000);
-	} while (time_before(jiffies, end_jiffies));
-
-	if (!channel_idle)
-		nvhost_err(dev_from_gk20a(ch->g), "channel jobs not freed");
-
-	return 0;
-}
-
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool finish,
 			   unsigned long finish_timeout)
@@ -416,8 +394,6 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 
 	/* disable the channel from hw and increment syncpoints */
 	gk20a_disable_channel_no_update(ch);
-
-	gk20a_wait_channel_idle(ch);
 
 	/* preempt the channel */
 	gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);

@@ -193,10 +193,11 @@ found_match:
 	return 0;
 }
 
-static void clk_slide_gpc_pll(struct gk20a *g, u32 n)
+static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 {
 	u32 data, coeff;
 	u32 nold;
+	int ramp_timeout = 500;
 
 	/* get old coefficients */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -204,8 +205,9 @@ static void clk_slide_gpc_pll(struct gk20a *g, u32 n)
 
 	/* do nothing if NDIV is same */
 	if (n == nold)
-		return;
+		return 0;
 
+	/* setup */
 	data = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
 	data = set_field(data, trim_sys_gpcpll_cfg2_pll_stepa_m(),
 			trim_sys_gpcpll_cfg2_pll_stepa_f(1));
@@ -215,16 +217,21 @@ static void clk_slide_gpc_pll(struct gk20a *g, u32 n)
 			trim_sys_gpcpll_cfg3_pll_stepb_f(1));
 	gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
 
+	/* pll slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 	data = set_field(data,
 			trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_m(),
 			trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_yes_f());
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
+	udelay(1);
 
+	/* new ndiv ready for ramp */
 	coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
 			trim_sys_gpcpll_coeff_ndiv_f(n));
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	udelay(1);
 
+	/* dynamic ramp to new ndiv */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 	data = set_field(data,
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
@@ -232,9 +239,15 @@ static void clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
 
 	do {
-		data = gk20a_readl(g, trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r());
-	} while (!trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(data));
+		udelay(1);
+		ramp_timeout--;
+		data = gk20a_readl(
+			g, trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r());
+		if (trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(data))
+			break;
+	} while (ramp_timeout > 0);
 
+	/* exit slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 	data = set_field(data,
 			trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_m(),
@@ -243,6 +256,12 @@ static void clk_slide_gpc_pll(struct gk20a *g, u32 n)
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
+
+	if (ramp_timeout <= 0) {
+		nvhost_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
+		return -ETIMEDOUT;
+	}
+	return 0;
 }
 
 static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
@@ -264,14 +283,16 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	if (allow_slide && clk->gpc_pll.M == m && clk->gpc_pll.PL == pl
 		&& trim_sys_gpcpll_cfg_enable_v(cfg)) {
-		clk_slide_gpc_pll(g, clk->gpc_pll.N);
-		return 0;
+		return clk_slide_gpc_pll(g, clk->gpc_pll.N);
 	}
 
 	/* slide down to NDIV_LO */
 	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
-	if (trim_sys_gpcpll_cfg_enable_v(cfg))
-		clk_slide_gpc_pll(g, nlo);
+	if (allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg)) {
+		int ret = clk_slide_gpc_pll(g, nlo);
+		if (ret)
+			return ret;
+	}
 
 	/* put PLL in bypass before programming it */
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
@@ -299,7 +320,8 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	nlo = DIV_ROUND_UP(clk->gpc_pll.M * gpc_pll_params.min_vco,
 			clk->gpc_pll.clk_in);
 	coeff = trim_sys_gpcpll_coeff_mdiv_f(clk->gpc_pll.M) |
-		trim_sys_gpcpll_coeff_ndiv_f(nlo) |
+		trim_sys_gpcpll_coeff_ndiv_f(allow_slide ?
+					     nlo : clk->gpc_pll.N) |
 		trim_sys_gpcpll_coeff_pldiv_f(clk->gpc_pll.PL);
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
@@ -339,9 +361,7 @@ pll_locked:
 	clk->gpc_pll.enabled = true;
 
 	/* slide up to target NDIV */
-	clk_slide_gpc_pll(g, clk->gpc_pll.N);
-
-	return 0;
+	return clk_slide_gpc_pll(g, clk->gpc_pll.N);
 }
 
 static int clk_disable_gpcpll(struct gk20a *g)
@@ -508,8 +528,11 @@ static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
 		return 0;
 
 	/* change frequency only if power is on */
-	if (g->clk.clk_hw_on)
+	if (g->clk.clk_hw_on) {
 		err = clk_program_gpc_pll(g, clk, 1);
+		if (err)
+			err = clk_program_gpc_pll(g, clk, 0);
+	}
 
 	/* Just report error but not restore PLL since dvfs could already change
 	    voltage even when it returns error. */

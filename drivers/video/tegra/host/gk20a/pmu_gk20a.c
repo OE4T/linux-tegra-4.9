@@ -2753,10 +2753,8 @@ static int gk20a_pmu_get_elpg_residency(struct gk20a *g, u32 *ingating_time,
 		return 0;
 	}
 
-	nvhost_module_busy(g->dev);
 	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
-	nvhost_module_idle(g->dev);
 
 	*ingating_time = stats.pg_ingating_time_us;
 	*ungating_time = stats.pg_ungating_time_us;
@@ -2771,7 +2769,9 @@ static int elpg_residency_show(struct seq_file *s, void *data)
 	u32 ingating_time, ungating_time;
 	u64 total_ingating, total_ungating, residency, divisor, dividend;
 
+	gk20a_busy(g->dev);
 	gk20a_pmu_get_elpg_residency(g, &ingating_time, &ungating_time);
+	gk20a_idle(g->dev);
 	total_ingating = g->pg_ingating_time_us + (u64)ingating_time;
 	total_ungating = g->pg_ungating_time_us + (u64)ungating_time;
 

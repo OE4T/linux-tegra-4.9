@@ -780,6 +780,8 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 			&dpcd_data));
 	cfg->downspread = (dpcd_data & NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT) ?
 		true : false;
+	cfg->support_fast_lt = (dpcd_data &
+		NV_DPCD_MAX_DOWNSPREAD_NO_AUX_HANDSHAKE_LT_T) ? true : false;
 
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_TRAINING_AUX_RD_INTERVAL,
 			&dpcd_data));
@@ -790,23 +792,6 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	cfg->bits_per_pixel = dp->dc->pdata->default_out->depth;
 
-	/* TODO: need to come from the board file */
-	cfg->drive_current = 0x40404040;
-	cfg->preemphasis = 0x0f0f0f0f;
-	cfg->vs_pe_valid = false;
-	cfg->postcursor = 0;
-
-	switch (cfg->max_link_bw) {
-	case SOR_LINK_SPEED_G1_62:
-	case SOR_LINK_SPEED_G2_7:
-	case SOR_LINK_SPEED_G5_4:
-		break;
-	default:
-		dev_err(&dp->dc->ndev->dev, "dp: Error link rate %d\n",
-			cfg->max_link_bw);
-		return -EINVAL;
-	}
-
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));
 	cfg->alt_scramber_reset_cap =
@@ -815,6 +800,8 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	cfg->only_enhanced_framing =
 		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_FRAMING_CHANGE_YES) ?
 		true : false;
+	cfg->edp_cap = (dpcd_data &
+		NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ? true : false;
 
 	cfg->lane_count	      = cfg->max_lane_count;
 	cfg->link_bw	      = cfg->max_link_bw;
@@ -963,7 +950,7 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 			link_bw, lane_count);
 		return -EFAULT;
 	} else
-		dev_dbg(&dp->dc->ndev->dev,
+		dev_info(&dp->dc->ndev->dev,
 			"Fast link trainging succeeded, link bw %d, lane %d\n",
 			cfg->link_bw, cfg->lane_count);
 
@@ -1016,7 +1003,11 @@ static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 	}
 	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_None, cfg);
 
-	if (cfg->vs_pe_valid) {
+	/* Link training rules: always try fast link training for eDP panel
+	   when LT data is provided, or DP panel with valid config values */
+	ret = -1;
+	if ((cfg->edp_cap && dp->pdata->n_lt_settings)
+		|| (cfg->support_fast_lt && cfg->vs_pe_valid)) {
 		ret = tegra_dc_dp_fast_link_training(dp, cfg);
 		if (ret) {
 			dev_WARN(&dp->dc->ndev->dev,
@@ -1024,8 +1015,8 @@ static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 			cfg->vs_pe_valid = false;
 		}
 	}
-
-	if (!cfg->vs_pe_valid) {
+	/* Fall back to full link training otherwise */
+	if (ret) {
 		ret = tegra_dp_lt(dp);
 		if (ret < 0) {
 			dev_err(&dp->dc->ndev->dev, "dp: link training failed\n");
@@ -1058,11 +1049,6 @@ static int tegra_dc_dp_explore_link_cfg(struct tegra_dc_dp_data *dp,
 		dev_err(&dp->dc->ndev->dev,
 			"dp: error link configuration");
 		return -EINVAL;
-	}
-
-	if (!tegra_dc_dp_calc_config(dp, mode, cfg)) {
-		ret = -EFAULT;
-		goto fail;
 	}
 
 	ret = tegra_dp_link_config(dp, cfg);

@@ -409,6 +409,42 @@ void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
 	tegra_sor_writel(sor, NV_SOR_DP_PADCTL(sor->portnum), reg_val);
 }
 
+static void tegra_dc_sor_termination_cali(struct tegra_dc_sor_data *sor)
+{
+	u32 termadj;
+	u32 cur_try;
+	u32 reg_val;
+
+	termadj = cur_try = 0x8;
+
+	tegra_sor_write_field(sor, NV_SOR_PLL1,
+		NV_SOR_PLL1_TMDS_TERMADJ_DEFAULT_MASK |
+		NV_SOR_PLL1_TMDS_TERM_ENABLE,
+		NV_SOR_PLL1_TMDS_TERM_ENABLE |
+		termadj << NV_SOR_PLL1_TMDS_TERMADJ_SHIFT);
+
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, /* PDCAL */
+		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERUP);
+
+	while (cur_try) {
+		/* binary search the right value */
+		usleep_range(100, 200);
+		reg_val = tegra_sor_readl(sor, NV_SOR_PLL1);
+
+		if (reg_val & NV_SOR_PLL1_TERM_COMPOUT_HIGH)
+			termadj -= cur_try;
+		cur_try >>= 1;
+		termadj += cur_try;
+
+		tegra_sor_write_field(sor, NV_SOR_PLL1,
+			NV_SOR_PLL1_TMDS_TERMADJ_DEFAULT_MASK,
+			termadj << NV_SOR_PLL1_TMDS_TERMADJ_SHIFT);
+	}
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, /* PDCAL */
+		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN);
+}
 
 static void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	u32 pwm_dutycycle)
@@ -796,7 +832,6 @@ static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
 	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
-	u32 data = 0;
 
 	tegra_dc_sor_enable_clk(sor);
 
@@ -824,25 +859,9 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
 		NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
 		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-
-	switch (cfg->max_link_bw) {
-	case SOR_LINK_SPEED_G1_62:
-		data = NV_SOR_PLL1_RBR_LOADADJ;
-		break;
-	case SOR_LINK_SPEED_G2_7:
-		data = NV_SOR_PLL1_HBR_LOADADJ;
-		break;
-	case SOR_LINK_SPEED_G5_4:
-		data = NV_SOR_PLL1_HBR2_LOADADJ;
-		break;
-	default:
-		dev_err(&sor->dc->ndev->dev, "Error link rate %d\n",
-			cfg->max_link_bw);
-		return;
-	}
 	tegra_sor_writel(sor, NV_SOR_PLL1,
 		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE |
-		NV_SOR_PLL1_TMDS_TERMADJ_OHM500 | data);
+		0x0 << NV_SOR_PLL1_LVDSCM_SHIFT);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_PLL2,
 			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
@@ -858,6 +877,7 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
 
 	tegra_dc_sor_power_up(sor, false);
+	tegra_dc_sor_termination_cali(sor);
 
 	/* re-enable SOR clock */
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
@@ -1181,29 +1201,47 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg)
 {
-	u32 data;
+	int idx = lt_param_idx(cfg->link_bw);
+	struct tegra_dc_dp_lt_settings *lt_setting = NULL;
+	struct tegra_dp_out *dp_data = sor->dc->pdata->default_out->dp_out;
 
+	if (dp_data && dp_data->lt_settings) {
+		/* If panel only provides one entry, use it anyway */
+		if (idx >= dp_data->n_lt_settings)
+			idx = dp_data->n_lt_settings - 1;
+		lt_setting = &dp_data->lt_settings[idx];
+	}
+
+	BUG_ON(!lt_setting && !cfg->vs_pe_valid);
 	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
-		cfg->drive_current);
+		cfg->vs_pe_valid ? cfg->drive_current :
+		lt_setting->drive_current);
 	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum),
-		cfg->preemphasis);
+		cfg->vs_pe_valid ? cfg->preemphasis :
+		lt_setting->lane_preemphasis);
 	tegra_sor_writel(sor, NV_SOR_POSTCURSOR(sor->portnum),
-		cfg->postcursor);
+		cfg->vs_pe_valid ? cfg->postcursor :
+		lt_setting->post_cursor);
 
 	tegra_sor_writel(sor, NV_SOR_LVDS, 0);
 	tegra_dc_sor_set_link_bandwidth(sor, cfg->link_bw);
 	tegra_dc_sor_set_lane_count(sor, cfg->lane_count);
 
-	if (cfg->max_link_bw == SOR_LINK_SPEED_G5_4)
-		data = NV_SOR_DP_PADCTL_TX_PU_VALUE_HBR2;
-	else
-		data = NV_SOR_DP_PADCTL_TX_PU_VALUE_RBR_HBR;
+	if (cfg->vs_pe_valid) {
+		/* todo: Full link training need to save/restore
+		   tx_pu and load_adj values */
+	} else {
+		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+			NV_SOR_DP_PADCTL_TX_PU_ENABLE |
+			NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
+			NV_SOR_DP_PADCTL_TX_PU_ENABLE |
+			lt_setting->tx_pu
+			<< NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT);
 
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		NV_SOR_DP_PADCTL_TX_PU_ENABLE |
-		NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
-		NV_SOR_DP_PADCTL_TX_PU_ENABLE |
-		data);
+		tegra_sor_write_field(sor, NV_SOR_PLL1,
+			NV_SOR_PLL1_LOADADJ_DEFAULT_MASK,
+			lt_setting->load_adj << NV_SOR_PLL1_LOADADJ_SHIFT);
+	}
 
 	/* Precharge */
 	tegra_sor_precharge_lanes(sor);

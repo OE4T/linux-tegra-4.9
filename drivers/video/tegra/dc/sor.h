@@ -47,6 +47,8 @@ struct tegra_dc_dp_link_config {
 	u32	bits_per_pixel;
 	bool	alt_scramber_reset_cap; /* true for eDP */
 	bool	only_enhanced_framing;	/* enhanced_frame_en ignored */
+	bool	edp_cap;		/* eDP display control capable */
+	bool	support_fast_lt;	/* Support fast link training */
 
 	/* Actual configuration */
 	u8	link_bw;
@@ -63,10 +65,10 @@ struct tegra_dc_dp_link_config {
 	s32	hblank_sym;
 	s32	vblank_sym;
 
-	/* Training data */
+	/* Training data from full LT */
+	bool	vs_pe_valid;
 	u32	drive_current;
 	u32     preemphasis;
-	bool	vs_pe_valid;
 	u32	postcursor;
 
 	bool	tps3_supported;
@@ -152,6 +154,26 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 	reg_val &= ~mask;
 	reg_val |= val;
 	tegra_sor_writel(sor, reg, reg_val);
+}
+
+static inline int lt_param_idx(int link_bw)
+{
+	int idx;
+	switch (link_bw) {
+	case SOR_LINK_SPEED_G1_62:
+		idx = 0;
+		break;
+	case SOR_LINK_SPEED_G2_7:
+		idx = 1;
+		break;
+	case SOR_LINK_SPEED_G5_4:
+		idx = 2;
+		break;
+	default:
+		/* Error BW */
+		BUG_ON(1);
+	}
+	return idx;
 }
 
 #endif

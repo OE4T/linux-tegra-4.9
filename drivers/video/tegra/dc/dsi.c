@@ -2327,8 +2327,6 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 #endif
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
-	u32 val = 0;
-
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
 	else
@@ -2355,6 +2353,9 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 #endif
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+		u32 val = 0;
+
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL);
 		val &= ~(DSI_PAD_CONTROL_PAD_LPUPADJ(0x3) |
 			DSI_PAD_CONTROL_PAD_LPDNADJ(0x3) |
@@ -2384,6 +2385,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 		val = PAD_CIL_PDVREG(0x0);
 		tegra_vi_csi_writel(val, CSI_CIL_PAD_CONFIG);
+#endif
 	}
 }
 

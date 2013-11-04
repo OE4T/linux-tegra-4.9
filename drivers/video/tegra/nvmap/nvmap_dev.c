@@ -717,7 +717,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	atomic_set(&priv->count, 1);
 
 	vma->vm_flags |= (VM_SHARED | VM_IO | VM_DONTEXPAND |
-			  VM_MIXEDMAP | VM_DONTDUMP);
+			  VM_MIXEDMAP | VM_DONTDUMP | VM_DONTCOPY);
 	vma->vm_ops = &nvmap_vma_ops;
 	vma->vm_private_data = priv;
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
@@ -742,8 +742,8 @@ static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 	priv->handle = NULL;
 	atomic_set(&priv->count, 1);
 
-	vma->vm_flags |= VM_SHARED;
-	vma->vm_flags |= (VM_IO | VM_DONTEXPAND | VM_MIXEDMAP | VM_DONTDUMP);
+	vma->vm_flags |= (VM_SHARED | VM_IO | VM_DONTEXPAND |
+			  VM_MIXEDMAP | VM_DONTDUMP | VM_DONTCOPY);
 	vma->vm_ops = &nvmap_vma_ops;
 	vma->vm_private_data = priv;
 

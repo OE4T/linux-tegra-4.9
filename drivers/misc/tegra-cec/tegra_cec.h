@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.h
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,27 +16,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef TEGRA_CEC_H
+#define TEGRA_CEC_H
+
 #include <linux/pm.h>
 #include <asm/atomic.h>
 
+#define TEGRA_CEC_FRAME_MAX_LENGTH  16
 
 struct tegra_cec {
 	struct device		*dev;
 	struct miscdevice 	misc_dev;
 	struct clk		*clk;
+	struct mutex		tx_lock;
 	void __iomem		*cec_base;
 	int			tegra_cec_irq;
 	wait_queue_head_t	rx_waitq;
 	wait_queue_head_t	tx_waitq;
 	wait_queue_head_t	init_waitq;
-	unsigned int		rx_wake;
-	unsigned int		tx_wake;
-	unsigned short		rx_buffer;
-	atomic_t            init_done;
+	atomic_t		init_done;
 	u16			logical_addr;
 	struct work_struct	work;
+	unsigned int		rx_wake;
+	unsigned int		tx_wake;
+	u16			rx_buffer;
+	long			tx_error;
+	u32			tx_buf[TEGRA_CEC_FRAME_MAX_LENGTH];
+	u8			tx_buf_cur;
+	u8			tx_buf_cnt;
 };
 static int tegra_cec_remove(struct platform_device *pdev);
+
+#define TEGRA_CEC_LADDR_BROADCAST   0xF
+#define TEGRA_CEC_LADDR_MASK        0xF
+#define TEGRA_CEC_LADDR_WIDTH       4
+#define TEGRA_CEC_LADDR_MODE(blk) \
+	((blk & TEGRA_CEC_LADDR_MASK) == TEGRA_CEC_LADDR_BROADCAST)
 
 /*CEC Timing registers*/
 #define TEGRA_CEC_SW_CONTROL 	 0X000
@@ -55,25 +70,25 @@ static int tegra_cec_remove(struct platform_device *pdev);
 #define TEGRA_CEC_HW_DEBUG_RX	 0X038
 #define TEGRA_CEC_HW_DEBUG_TX	 0X03C
 
-#define TEGRA_CEC_LOGICAL_ADDR	0x10
-#define TEGRA_CEC_HWCTRL_RX_LADDR_MASK      0xFFFF
-#define TEGRA_CEC_HWCTRL_RX_LADDR(x)        (x<<0)
+#define TEGRA_CEC_MAX_LOGICAL_ADDR	15
+#define TEGRA_CEC_HWCTRL_RX_LADDR_UNREG	0x0
+#define TEGRA_CEC_HWCTRL_RX_LADDR_MASK	0x7FFF
+#define TEGRA_CEC_HWCTRL_RX_LADDR(x)	\
+	((x<<0) & TEGRA_CEC_HWCTRL_RX_LADDR_MASK)
+#define TEGRA_CEC_HWCTRL_RX_SNOOP	(1<<15)
+#define TEGRA_CEC_HWCTRL_RX_NAK_MODE	(1<<16)
+#define TEGRA_CEC_HWCTRL_TX_NAK_MODE	(1<<24)
+#define TEGRA_CEC_HWCTRL_FAST_SIM_MODE	(1<<30)
+#define TEGRA_CEC_HWCTRL_TX_RX_MODE	(1<<31)
 
-#define TEGRA_CEC_HW_CONTROL_RX_LOGICAL_ADDRS_MASK	0
-#define TEGRA_CEC_HW_CONTROL_RX_SNOOP 			(1<<15)
-#define TEGRA_CEC_HW_CONTROL_RX_NAK_MODE 		(1<<16)
-#define TEGRA_CEC_HW_CONTROL_TX_NAK_MODE		(1<<24)
-#define TEGRA_CEC_HW_CONTROL_FAST_SIM_MODE 		(1<<30)
-#define TEGRA_CEC_HW_CONTROL_TX_RX_MODE			(1<<31)
-
-#define TEGRA_CEC_INPUT_FILTER_MODE		(1<<31)
+#define TEGRA_CEC_INPUT_FILTER_MODE	(1<<31)
 #define TEGRA_CEC_INPUT_FILTER_FIFO_LENGTH_MASK	0
 
-#define TEGRA_CEC_TX_REGISTER_DATA_MASK	 		0
-#define TEGRA_CEC_TX_REGISTER_EOM_MASK	 		8
-#define TEGRA_CEC_TX_REGISTER_ADDRESS_MODE_MASK	 	12
-#define TEGRA_CEC_TX_REGISTER_GENERATE_START_BIT_MASK	16
-#define TEGRA_CEC_TX_REGISTER_RETRY_FRAME_MASK	 	17
+#define TEGRA_CEC_TX_REG_DATA_SHIFT		0
+#define TEGRA_CEC_TX_REG_EOM_SHIFT		8
+#define TEGRA_CEC_TX_REG_ADDR_MODE_SHIFT	12
+#define TEGRA_CEC_TX_REG_START_BIT_SHIFT	16
+#define TEGRA_CEC_TX_REG_RETRY_BIT_SHIFT	17
 
 #define TEGRA_CEC_RX_REGISTER_MASK	 0
 #define TEGRA_CEC_RX_REGISTER_EOM	 (1<<8)
@@ -102,8 +117,8 @@ static int tegra_cec_remove(struct platform_device *pdev);
 #define TEGRA_CEC_TX_TIMING_1_TX_ACK_NAK_BIT_SAMPLE_TIME_MASK	24
 
 #define TEGRA_CEC_TX_TIMING_2_BUS_IDLE_TIME_ADDITIONAL_FRAME_MASK	0
-#define TEGRA_CEC_TX_TIMING_2_TX_BUS_IDLE_TIME_NEW_FRAME_MASK		4
-#define TEGRA_CEC_TX_TIMING_2_TX_BUS_IDLE_TIME_RETRY_FRAME_MASK	 	8
+#define TEGRA_CEC_TX_TIMING_2_BUS_IDLE_TIME_NEW_FRAME_MASK		4
+#define TEGRA_CEC_TX_TIMING_2_BUS_IDLE_TIME_RETRY_FRAME_MASK		8
 
 #define TEGRA_CEC_INT_STAT_TX_REGISTER_EMPTY	 		(1<<0)
 #define TEGRA_CEC_INT_STAT_TX_REGISTER_UNDERRUN	 		(1<<1)
@@ -140,3 +155,5 @@ static int tegra_cec_remove(struct platform_device *pdev);
 #define TEGRA_CEC_HW_DEBUG_TX_TXDATABIT_SAMPLE_TIMER	(1<<26)
 
 #define TEGRA_CEC_NAME "tegra_cec"
+
+#endif /* TEGRA_CEC_H */

@@ -474,8 +474,9 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.M = 1;
 		clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
 					clk->gpc_pll.clk_in);
-		clk->gpc_pll.PL = 0;
+		clk->gpc_pll.PL = 1;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
+		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
 	}
 
 	err = tegra_dvfs_get_freqs(clk_get_parent(clk->tegra_clk),

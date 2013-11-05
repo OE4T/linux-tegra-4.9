@@ -2133,8 +2133,12 @@ static int tegra_dc_init(struct tegra_dc *dc)
 			DC_DISP_BLEND_CURSOR_CONTROL);
 #endif
 
-	for (i = 0; i < dc->n_windows; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		u32 syncpt = get_syncpt(dc, i);
+
+		/* refuse to operate on invalid syncpts */
+		if (WARN_ON(syncpt == NVSYNCPT_INVALID))
+			continue;
 
 		dc->syncpt[i].id = syncpt;
 

@@ -40,9 +40,16 @@
 						struct ov5693_otp_bank)
 #define OV5693_IOCTL_SET_CAL_DATA           _IOW('o', 15, \
 						struct ov5693_cal_data)
+#define OV5693_IOCTL_GET_EEPROM_DATA        _IOR('o', 20, __u8 *)
+#define OV5693_IOCTL_SET_EEPROM_DATA        _IOW('o', 21, __u8 *)
 
 #define OV5693_INVALID_COARSE_TIME  -1
 
+#define OV5693_EEPROM_ADDRESS	0x50
+#define OV5693_EEPROM_SIZE	1024
+#define OV5693_EEPROM_BLOCK_SIZE	(1 << 8)
+#define OV5693_EEPROM_NUM_BLOCKS \
+	(OV5693_EEPROM_SIZE / OV5693_EEPROM_BLOCK_SIZE)
 
 struct ov5693_mode {
 	int res_x;
@@ -92,6 +99,13 @@ struct ov5693_cal_data {
 /* See notes in the nvc.h file on the GPIO usage */
 enum ov5693_gpio_type {
 	OV5693_GPIO_TYPE_PWRDN = 0,
+};
+
+struct ov5693_eeprom_data {
+	struct i2c_client *i2c_client;
+	struct i2c_adapter *adap;
+	struct i2c_board_info brd;
+	struct regmap *regmap;
 };
 
 struct ov5693_power_rail {

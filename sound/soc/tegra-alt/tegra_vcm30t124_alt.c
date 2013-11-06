@@ -500,7 +500,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		.params = &tdm_link_params,
 		.dai_fmt = SND_SOC_DAIFMT_DSP_A |
 			   SND_SOC_DAIFMT_NB_NF |
-			   SND_SOC_DAIFMT_CBS_CFS,
+			   SND_SOC_DAIFMT_CBM_CFM,
 	},
 
 	{

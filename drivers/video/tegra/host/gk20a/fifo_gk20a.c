@@ -812,7 +812,11 @@ static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)
 	struct gk20a *g = f->g;
 	int i;
 
-	gk20a_init_pmu_support(g);
+	/* Reinitialise FECS and GR */
+	gk20a_init_pmu_setup_hw2(g);
+
+	/* It is safe to enable ELPG again. */
+	gk20a_pmu_enable_elpg(g);
 
 	/* Restore the runlist */
 	for (i = 0; i < g->fifo.max_runlists; i++)
@@ -902,8 +906,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 	g->fifo.deferred_reset_pending = false;
 
-	/* PMU does not survive GR reset. */
-	gk20a_pmu_destroy(g);
+	/* Disable ELPG */
+	gk20a_pmu_disable_elpg(g);
 
 	/* If we have recovery in progress, MMU fault id is invalid */
 	if (g->fifo.mmu_fault_engines) {

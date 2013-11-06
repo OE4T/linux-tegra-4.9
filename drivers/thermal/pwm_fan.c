@@ -578,14 +578,64 @@ static ssize_t set_fan_state_cap_sysfs(struct device *dev,
 	return count;
 }
 
+
+static ssize_t set_fan_pwm_state_map_sysfs(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
+	int ret, index, pwm_val;
+
+	ret = sscanf(buf, "%d %d", &index, &pwm_val);
+
+	if (ret < 0)
+		return -EINVAL;
+
+	if (!fan_data)
+		return -EINVAL;
+
+	dev_dbg(dev, "index=%d, pwm_val=%d", index, pwm_val);
+
+	if ((index < 0) || (index > fan_data->active_steps))
+		return -EINVAL;
+
+	mutex_lock(&fan_data->fan_state_lock);
+
+	if ((pwm_val < 0) || (pwm_val > fan_data->fan_cap_pwm)) {
+		mutex_unlock(&fan_data->fan_state_lock);
+		return -EINVAL;
+	}
+
+	fan_data->fan_pwm[index] = pwm_val * fan_data->precision_multiplier;
+
+	if (index == fan_data->next_state)
+		if (fan_data->next_target_pwm !=
+			fan_data->fan_pwm[index]) {
+			fan_data->next_target_pwm = fan_data->fan_pwm[index];
+			fan_data->next_target_pwm =
+					min(fan_data->fan_cap_pwm,
+						fan_data->next_target_pwm);
+
+			fan_data->fan_pwm[index] = fan_data->next_target_pwm;
+			queue_delayed_work(fan_data->workqueue,
+					&(fan_data->fan_ramp_work),
+					msecs_to_jiffies(fan_data->step_time));
+		}
+	mutex_unlock(&fan_data->fan_state_lock);
+
+	return count;
+}
+
 static DEVICE_ATTR(pwm_cap, S_IWUSR | S_IRUGO, show_fan_pwm_cap_sysfs,
 							set_fan_pwm_cap_sysfs);
 static DEVICE_ATTR(state_cap, S_IWUSR | S_IRUGO,
 			show_fan_state_cap_sysfs, set_fan_state_cap_sysfs);
+static DEVICE_ATTR(pwm_state_map, S_IWUSR | S_IRUGO,
+					NULL, set_fan_pwm_state_map_sysfs);
 
 static struct attribute *pwm_fan_attributes[] = {
 	&dev_attr_pwm_cap.attr,
 	&dev_attr_state_cap.attr,
+	&dev_attr_pwm_state_map.attr,
 	NULL
 };
 
@@ -726,7 +776,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	/*turn temp control on*/
 	fan_data->fan_temp_control_flag = 1;
-	set_pwm_duty_cycle(0, fan_data);
+	set_pwm_duty_cycle(fan_data->fan_pwm[0], fan_data);
 
 	if (add_sysfs_entry(&pdev->dev) < 0) {
 		dev_err(&pdev->dev, "FAN:Can't create syfs node");

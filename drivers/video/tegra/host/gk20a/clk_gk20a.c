@@ -210,11 +210,11 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	/* setup */
 	data = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
 	data = set_field(data, trim_sys_gpcpll_cfg2_pll_stepa_m(),
-			trim_sys_gpcpll_cfg2_pll_stepa_f(1));
+			trim_sys_gpcpll_cfg2_pll_stepa_f(0x2b));
 	gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), data);
 	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
 	data = set_field(data, trim_sys_gpcpll_cfg3_pll_stepb_m(),
-			trim_sys_gpcpll_cfg3_pll_stepb_f(1));
+			trim_sys_gpcpll_cfg3_pll_stepb_f(0xb));
 	gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
 
 	/* pll slowdown mode */

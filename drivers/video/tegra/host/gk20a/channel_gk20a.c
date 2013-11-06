@@ -1739,6 +1739,50 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	return err;
 }
 
+static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
+					ulong id, u32 offset,
+					u32 payload, long timeout)
+{
+	struct platform_device *pdev = ch->ch->dev;
+	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
+	struct mem_handle *handle_ref;
+	void *data;
+	u32 *semaphore;
+	int ret = 0;
+	long remain;
+
+	handle_ref = nvhost_memmgr_get(memmgr, id, pdev);
+	if (IS_ERR(handle_ref)) {
+		nvhost_err(&pdev->dev, "invalid notifier nvmap handle 0x%lx",
+			   id);
+		return -EINVAL;
+	}
+
+	data = nvhost_memmgr_kmap(handle_ref, offset >> PAGE_SHIFT);
+	if (!data) {
+		nvhost_err(&pdev->dev, "failed to map notifier memory");
+		ret = -EINVAL;
+		goto cleanup_put;
+	}
+
+	semaphore = data + (offset & ~PAGE_MASK);
+
+	remain = wait_event_interruptible_timeout(
+			ch->semaphore_wq,
+			*semaphore == payload,
+			timeout);
+
+	if (remain == 0 && *semaphore != payload)
+		ret = -ETIMEDOUT;
+	else if (remain < 0)
+		ret = remain;
+
+	nvhost_memmgr_kunmap(handle_ref, offset >> PAGE_SHIFT, data);
+cleanup_put:
+	nvhost_memmgr_put(memmgr, handle_ref);
+	return ret;
+}
+
 int gk20a_channel_wait(struct channel_gk20a *ch,
 		       struct nvhost_wait_args *args)
 {
@@ -1807,13 +1851,22 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 notif_clean_up:
 		nvhost_memmgr_munmap(handle_ref, notif);
 		return ret;
+
 	case NVHOST_WAIT_TYPE_SEMAPHORE:
+		ret = gk20a_channel_wait_semaphore(ch,
+				args->condition.semaphore.nvmap_handle,
+				args->condition.semaphore.offset,
+				args->condition.semaphore.payload,
+				timeout);
+
 		break;
+
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		break;
 	}
 
-	return 0;
+	return ret;
 }
 
 int gk20a_channel_set_priority(struct channel_gk20a *ch,

@@ -62,6 +62,14 @@ static inline u32 gr_intr_notify_reset_f(void)
 {
 	return 0x1;
 }
+static inline u32 gr_intr_semaphore_pending_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_intr_semaphore_reset_f(void)
+{
+	return 0x2;
+}
 static inline u32 gr_intr_illegal_method_pending_f(void)
 {
 	return 0x10;

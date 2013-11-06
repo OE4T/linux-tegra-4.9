@@ -4744,6 +4744,17 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 	return -EINVAL;
 }
 
+static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
+					     struct gr_isr_data *isr_data)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+
+	wake_up(&ch->semaphore_wq);
+
+	return 0;
+}
+
 static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -5140,6 +5151,13 @@ int gk20a_gr_isr(struct gk20a *g)
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_notify_reset_f());
 		gr_intr &= ~gr_intr_notify_pending_f();
+	}
+
+	if (gr_intr & gr_intr_semaphore_pending_f()) {
+		gk20a_gr_handle_semaphore_pending(g, &isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_semaphore_reset_f());
+		gr_intr &= ~gr_intr_semaphore_pending_f();
 	}
 
 	if (gr_intr & gr_intr_illegal_method_pending_f()) {

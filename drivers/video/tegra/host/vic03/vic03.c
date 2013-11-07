@@ -566,11 +566,12 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 
 int nvhost_vic03_finalize_poweron(struct platform_device *pdev)
 {
-	nvhost_client_writel(pdev, 0, flcn_slcg_override_high_a_r());
-	nvhost_client_writel(pdev, flcn_cg_idle_cg_dly_cnt_f(4) |
-			     flcn_cg_idle_cg_en_f(1) |
-			     flcn_cg_wakeup_dly_cnt_f(4),
-			     flcn_cg_r());
+	struct vic03 *v = get_vic03(pdev);
+	vic03_writel(v, flcn_slcg_override_high_a_r(), 0);
+	vic03_writel(v, flcn_cg_r(),
+		     flcn_cg_idle_cg_dly_cnt_f(4) |
+		     flcn_cg_idle_cg_en_f(1) |
+		     flcn_cg_wakeup_dly_cnt_f(4));
 	return vic03_boot(pdev);
 }
 

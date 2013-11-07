@@ -1362,9 +1362,6 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	/* Save zbc table after PMU is initialized. */
 	pmu_save_zbc(g, 0xf);
 
-	/* wait for pmu idle */
-	err = pmu_idle(pmu);
-
 	/*
 	 * We can't guarantee that gr code to enable ELPG will be
 	 * invoked, so we explicitly call disable-enable here
@@ -1822,6 +1819,16 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	return 0;
 }
 
+static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+				 u32 *var, u32 val);
+
+static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
+			void *param, u32 handle, u32 status)
+{
+	struct pmu_gk20a *pmu = param;
+	pmu->zbc_save_done = 1;
+}
+
 void pmu_save_zbc(struct gk20a *g, u32 entries)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -1837,8 +1844,14 @@ void pmu_save_zbc(struct gk20a *g, u32 entries)
 	cmd.cmd.zbc.cmd_type = PMU_PG_CMD_ID_ZBC_TABLE_UPDATE;
 	cmd.cmd.zbc.entry_mask = ZBC_MASK(entries);
 
+	pmu->zbc_save_done = 0;
+
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-					NULL, pmu, &seq, ~0);
+			   pmu_handle_zbc_msg, pmu, &seq, ~0);
+	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
+			      &pmu->zbc_save_done, 1);
+	if (!pmu->zbc_save_done)
+		nvhost_err(dev_from_gk20a(g), "ZBC save timeout");
 }
 
 static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)

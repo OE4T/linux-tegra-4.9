@@ -682,6 +682,8 @@ struct pmu_gk20a {
 	u32 *ucode_image;
 	bool pmu_ready;
 
+	u32 zbc_save_done;
+
 	u32 stat_dmem_offset;
 
 	bool elpg_ready;

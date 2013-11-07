@@ -390,22 +390,31 @@ static int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u32	cur_size;
 	int	ret	 = 0;
 
+	if (*size == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: aux read size can't be 0\n");
+		return -EINVAL;
+	}
+
 	do {
 		cur_size = *size - finished;
 		if (cur_size >= DP_AUX_MAX_BYTES)
 			cur_size = DP_AUX_MAX_BYTES - 1;
+		else
+			cur_size -= 1;
 
 		ret = tegra_dc_dpaux_read_chunk(dp, cmd, addr,
 			data, &cur_size, aux_stat);
+
+		if (ret)
+			break;
 
 		/* cur_size should be the real size returned */
 		addr += cur_size;
 		data += cur_size;
 		finished += cur_size;
 
-		if (ret)
-			break;
-	} while (*size >= finished);
+	} while (*size > finished);
 
 	*size = finished;
 	return ret;
@@ -927,7 +936,7 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 			0x24);
 	usleep_range(500, 1000);
 
-	size = 4;
+	size = 2;
 	tegra_dc_dpaux_read(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
 		NV_DPCD_LANE0_1_STATUS, (u8 *)&data, &size, &status);
 	if ((data & mask) != (0x7777 & mask)) {

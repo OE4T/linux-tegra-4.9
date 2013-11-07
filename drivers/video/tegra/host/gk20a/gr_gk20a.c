@@ -27,8 +27,10 @@
 #include <linux/nvhost_dbg_gpu_ioctl.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
+#include <linux/firmware.h>
 
 #include "../dev.h"
+#include "bus_client.h"
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -57,58 +59,6 @@
 #include "dbg_gpu_gk20a.h"
 
 #define BLK_SIZE (256)
-
-struct gk20a_ctxsw_bootloader_desc g_fecs_bootloader_desc = {
-	/* .bootLoaderStartOffset  = */ 0x0,
-	/* .bootLoaderSize         = */ 0x85,
-	/* .bootLoaderImemOffset   = */ 0x4f00,
-	/* .bootLoaderEntryPoint   = */ 0x4f00,
-};
-
-u32 g_fecs_bootloader_image[] = {
-/* 0x0000 */  0x001000d0, 0x0004fe00, 0x107ea4bd, 0x02f8004f, 0x00000089,
-	      0x12f99dbf, 0x98089a98, 0xdf940991,
-/* 0x0020 */  0x08de940c, 0xfd049098, 0x9b9805ef, 0x05edfd06, 0x98059c98,
-	      0x9f98079d, 0x00ebfe03, 0x00000089,
-/* 0x0040 */  0xfe019998, 0x94bd0096, 0x004f543e, 0xb80499fa, 0x00010099,
-	      0x08f49fa6, 0xfe07f8f6, 0xc7fe00d6,
-/* 0x0060 */  0x3ef4bd00, 0x8e004f76, 0xbc060000, 0xf9fa90fe, 0x00ffb805,
-	      0xfba60001, 0xf8ef08f4, 0xf91bb203,
-/* 0x0080 */  0xfba4bd05, 0x00000011, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00a0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00c0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00e0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-};
-
-struct gk20a_ctxsw_bootloader_desc g_gpccs_bootloader_desc = {
-	/* .bootLoaderStartOffset  = */ 0x0,
-	/* .bootLoaderSize         = */ 0x85,
-	/* .bootLoaderImemOffset   = */ 0x2700,
-	/* .bootLoaderEntryPoint   = */ 0x2700,
-};
-
-u32 g_gpccs_bootloader_image[] = {
-/* 0x0000 */  0x000800d0, 0x0004fe00, 0x107ea4bd, 0x02f80027, 0x00000089,
-	      0x12f99dbf, 0x98089a98, 0xdf940991,
-/* 0x0020 */  0x08de940c, 0xfd049098, 0x9b9805ef, 0x05edfd06, 0x98059c98,
-	      0x9f98079d, 0x00ebfe03, 0x00000089,
-/* 0x0040 */  0xfe019998, 0x94bd0096, 0x0027543e, 0xb80499fa, 0x00010099,
-	      0x08f49fa6, 0xfe07f8f6, 0xc7fe00d6,
-/* 0x0060 */  0x3ef4bd00, 0x8e002776, 0xbc060000, 0xf9fa90fe, 0x00ffb805,
-	      0xfba60001, 0xf8ef08f4, 0xf91bb203,
-/* 0x0080 */  0xfba4bd05, 0x00000011, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00a0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00c0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-/* 0x00e0 */  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	      0x00000000, 0x00000000, 0x00000000,
-};
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
@@ -1810,17 +1760,40 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	struct device *d = dev_from_gk20a(g);
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct gk20a_ctxsw_bootloader_desc *p_fecs_boot_desc =
-		&g_fecs_bootloader_desc;
-	struct gk20a_ctxsw_bootloader_desc *p_gpcs_boot_desc =
-		&g_gpccs_bootloader_desc;
-	u32 *p_fecs_boot_image = g_fecs_bootloader_image;
-	u32 *p_gpcs_boot_image = g_gpccs_bootloader_image;
+	struct gk20a_ctxsw_bootloader_desc *p_fecs_boot_desc;
+	struct gk20a_ctxsw_bootloader_desc *p_gpcs_boot_desc;
+	const struct firmware *fecs_fw;
+	const struct firmware *gpccs_fw;
+	u32 *p_fecs_boot_image;
+	u32 *p_gpcs_boot_image;
 	struct gk20a_ctxsw_ucode_info *p_ucode_info = &g->ctxsw_ucode_info;
 	u8 *p_buf;
 	u32 ucode_size;
 	int err = 0;
 	DEFINE_DMA_ATTRS(attrs);
+
+	fecs_fw = nvhost_client_request_firmware(g->dev,
+					GK20A_FECS_UCODE_IMAGE);
+	if (!fecs_fw) {
+		nvhost_err(d, "failed to load fecs ucode!!");
+		return -ENOENT;
+	}
+
+	p_fecs_boot_desc = fecs_fw->data;
+	p_fecs_boot_image = fecs_fw->data +
+				sizeof(struct gk20a_ctxsw_bootloader_desc);
+
+	gpccs_fw = nvhost_client_request_firmware(g->dev,
+					GK20A_GPCCS_UCODE_IMAGE);
+	if (!gpccs_fw) {
+		release_firmware(fecs_fw);
+		nvhost_err(d, "failed to load gpccs ucode!!");
+		return -ENOENT;
+	}
+
+	p_gpcs_boot_desc = gpccs_fw->data;
+	p_gpcs_boot_image = gpccs_fw->data +
+				sizeof(struct gk20a_ctxsw_bootloader_desc);
 
 	ucode_size = 0;
 	gr_gk20a_init_ctxsw_ucode_inst(&p_ucode_info->fecs, &ucode_size,
@@ -1855,6 +1828,12 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	}
 
 	p_buf = (u8 *)p_ucode_info->surface_desc.cpuva;
+	if (!p_buf) {
+		release_firmware(fecs_fw);
+		release_firmware(gpccs_fw);
+		nvhost_err(d, "failed to map surface desc buffer");
+		return -ENOMEM;
+	}
 
 	gr_gk20a_copy_ctxsw_ucode_inst(p_buf, &p_ucode_info->fecs,
 		p_fecs_boot_desc, p_fecs_boot_image,

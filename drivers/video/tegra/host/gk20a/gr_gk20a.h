@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Engine
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,9 @@
 
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
+
+#define GK20A_FECS_UCODE_IMAGE	"fecs.bin"
+#define GK20A_GPCCS_UCODE_IMAGE	"gpccs.bin"
 
 enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,

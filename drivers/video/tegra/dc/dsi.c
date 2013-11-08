@@ -2406,8 +2406,12 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
 	u32 i;
+	int err = 0;
 
-	regulator_enable(dsi->avdd_dsi_csi);
+	if (dsi->avdd_dsi_csi)
+		err = regulator_enable(dsi->avdd_dsi_csi);
+	if (WARN(err, "unable to enable regulator"))
+		return err;
 	/* stablization delay */
 	mdelay(50);
 	/* Enable DSI clocks */
@@ -3632,7 +3636,11 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 
 static void tegra_dsi_setup_initialized_panel(struct tegra_dc_dsi_data *dsi)
 {
-	regulator_enable(dsi->avdd_dsi_csi);
+	int err = 0;
+
+	if (dsi->avdd_dsi_csi)
+		err = regulator_enable(dsi->avdd_dsi_csi);
+	WARN(err, "unable to enable regulator");
 
 	dsi->status.init = DSI_MODULE_INIT;
 	dsi->status.lphs = DSI_LPHS_IN_HS_MODE;

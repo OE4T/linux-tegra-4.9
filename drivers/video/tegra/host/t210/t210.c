@@ -86,6 +86,7 @@ static struct host1x_device_info host1x04_info = {
 };
 
 struct nvhost_device_data t21_host1x_info = {
+	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
 };
@@ -107,6 +108,7 @@ struct nvhost_device_data t21_vi_info = {
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
+	.clocks		= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
@@ -122,6 +124,7 @@ struct nvhost_device_data t21_msenc_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.exclusive     = true,
 	.keepalive     = true,
+	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.moduleid	= NVHOST_MODULE_MSENC,
 };
 
@@ -133,6 +136,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.exclusive     = true,
 	.keepalive     = true,
+	.clocks		= { {"emc", HOST_EMC_FLOOR} },
 	.moduleid	= NVHOST_MODULE_NVDEC,
 };
 
@@ -144,6 +148,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.exclusive     = true,
 	.keepalive     = true,
+	.clocks		= { {"emc", HOST_EMC_FLOOR} },
 	.moduleid	= NVHOST_MODULE_NVJPG,
 };
 
@@ -155,6 +160,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.exclusive     = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks		= {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.moduleid      = NVHOST_MODULE_TSEC,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC

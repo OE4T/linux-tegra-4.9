@@ -885,7 +885,6 @@ static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
 
 static void gk20a_set_railgating(struct gk20a *g, int new_status)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(g->dev);
 	enum pm_qos_flags_status stat;
 
 	stat = dev_pm_qos_flags(dev_from_gk20a(g), PM_QOS_FLAG_NO_POWER_OFF);

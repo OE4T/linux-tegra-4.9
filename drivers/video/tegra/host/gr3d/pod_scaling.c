@@ -1045,7 +1045,10 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 
 		/* Do not do unnecessary scaling */
 		scaling_limit(df, &podgov->adjustment_frequency);
-		if (df->previous_freq == podgov->adjustment_frequency)
+
+		/* Round the frequency and check if we're already there */
+		if (freqlist_up(podgov, podgov->adjustment_frequency, 0) ==
+		    dev_stat.current_frequency)
 			return GET_TARGET_FREQ_DONTSCALE;
 
 		trace_podgov_estimate_freq(df->previous_freq,
@@ -1095,7 +1098,8 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		break;
 	}
 
-	if (!(*freq) || (*freq == df->previous_freq))
+	if (!(*freq) ||
+	    (freqlist_up(podgov, *freq, 0) == dev_stat.current_frequency))
 		return GET_TARGET_FREQ_DONTSCALE;
 
 	trace_podgov_estimate_freq(df->previous_freq, *freq);

@@ -448,9 +448,13 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	u32 mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
+	u32 mc_intr_0;
+
+	if (!g->power_on)
+		return IRQ_NONE;
 
 	/* not from gpu when sharing irq with others */
+	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 	if (unlikely(!mc_intr_0))
 		return IRQ_NONE;
 

@@ -45,7 +45,7 @@ enum {
 
 static const u32 tegra_dp_vs_regs[][4] = {
 	/* pre-emphasis: L0, L1, L2, L3 */
-	{17, 21, 26, 34}, /* voltage swing: L0 */
+	{19, 21, 26, 34}, /* voltage swing: L0 */
 	{26, 32, 39}, /* L1 */
 	{34, 43}, /* L2 */
 	{51}, /* L3 */

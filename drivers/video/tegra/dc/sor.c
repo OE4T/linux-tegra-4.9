@@ -796,6 +796,7 @@ static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
 	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
+	u32 data = 0;
 
 	tegra_dc_sor_enable_clk(sor);
 
@@ -812,7 +813,7 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL3_PLLVDD_MODE_MASK,
 		NV_SOR_PLL3_PLLVDD_MODE_V3_3);
 	tegra_sor_writel(sor, NV_SOR_PLL0,
-		0xf << NV_SOR_PLL0_ICHPMP_SHFIT |
+		0x1 << NV_SOR_PLL0_ICHPMP_SHFIT |
 		0x3 << NV_SOR_PLL0_VCOCAP_SHIFT |
 		NV_SOR_PLL0_PLLREG_LEVEL_V45 |
 		NV_SOR_PLL0_RESISTORSEL_EXT |
@@ -823,9 +824,25 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
 		NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
 		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-	tegra_sor_writel(sor, NV_SOR_PLL1,
-		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE);
 
+	switch (cfg->max_link_bw) {
+	case SOR_LINK_SPEED_G1_62:
+		data = NV_SOR_PLL1_RBR_LOADADJ;
+		break;
+	case SOR_LINK_SPEED_G2_7:
+		data = NV_SOR_PLL1_HBR_LOADADJ;
+		break;
+	case SOR_LINK_SPEED_G5_4:
+		data = NV_SOR_PLL1_HBR2_LOADADJ;
+		break;
+	default:
+		dev_err(&sor->dc->ndev->dev, "Error link rate %d\n",
+			cfg->max_link_bw);
+		return;
+	}
+	tegra_sor_writel(sor, NV_SOR_PLL1,
+		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE |
+		NV_SOR_PLL1_TMDS_TERMADJ_OHM500 | data);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_PLL2,
 			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
@@ -1132,9 +1149,40 @@ void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
 }
 
+void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
+{
+	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
+	u32 val = 0;
+
+	switch (cfg->lane_count) {
+	case 4:
+		val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
+			NV_SOR_DP_PADCTL_PD_TXD_2_NO);
+		/* fall through */
+	case 2:
+		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
+	case 1:
+		val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
+		break;
+	default:
+		dev_dbg(&sor->dc->ndev->dev,
+			"dp: invalid lane number %d\n", cfg->lane_count);
+		return;
+	}
+
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT),
+		(val << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT));
+	usleep_range(15, 100);
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT), 0);
+}
+
 void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg)
 {
+	u32 data;
+
 	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
 		cfg->drive_current);
 	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum),
@@ -1146,18 +1194,19 @@ void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_set_link_bandwidth(sor, cfg->link_bw);
 	tegra_dc_sor_set_lane_count(sor, cfg->lane_count);
 
+	if (cfg->max_link_bw == SOR_LINK_SPEED_G5_4)
+		data = NV_SOR_DP_PADCTL_TX_PU_VALUE_HBR2;
+	else
+		data = NV_SOR_DP_PADCTL_TX_PU_VALUE_RBR_HBR;
+
 	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 		NV_SOR_DP_PADCTL_TX_PU_ENABLE |
 		NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
 		NV_SOR_DP_PADCTL_TX_PU_ENABLE |
-		2 << NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT);
+		data);
 
 	/* Precharge */
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		0xf0, 0xf0);
-	usleep_range(10, 100);
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		0xf0, 0x0);
+	tegra_sor_precharge_lanes(sor);
 }
 
 void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,

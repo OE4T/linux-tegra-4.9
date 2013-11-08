@@ -100,7 +100,7 @@ static inline u32 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 	if ((reg_val & mask) == exp_val)
 		return 0;	/* success */
 	dev_dbg(&dp->dc->ndev->dev,
-		"sor_poll_register 0x%x: timeout\n", reg);
+		"dpaux_poll_register 0x%x: timeout\n", reg);
 	return jiffies - timeout_jf + 1;
 }
 
@@ -600,21 +600,24 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 
 	int	i;
 	bool	neg;
+	unsigned long rate;
 
 	cfg->is_valid = false;
 
-	if (!link_rate || !cfg->lane_count || !mode->pclk ||
+	rate = tegra_dc_pclk_round_rate(dp->sor->dc, dp->sor->dc->mode.pclk);
+
+	if (!link_rate || !cfg->lane_count || !rate ||
 		!cfg->bits_per_pixel)
 		return false;
 
-	if ((u64)mode->pclk * cfg->bits_per_pixel >=
+	if ((u64)rate * cfg->bits_per_pixel >=
 		(u64)link_rate * 8 * cfg->lane_count)
 		return false;
 
 	num_linkclk_line = (u32)tegra_div64(
-		(u64)link_rate * mode->h_active, mode->pclk);
+		(u64)link_rate * mode->h_active, rate);
 
-	ratio_f = (u64)mode->pclk * cfg->bits_per_pixel * f;
+	ratio_f = (u64)rate * cfg->bits_per_pixel * f;
 	ratio_f /= 8;
 	ratio_f = tegra_div64(ratio_f, link_rate * cfg->lane_count);
 
@@ -722,7 +725,7 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	/* where Y = (# lanes == 4) 3 : (# lanes == 2) ? 6 : 12 */
 	cfg->hblank_sym = (int)tegra_div64((u64)(mode->h_back_porch +
 			mode->h_front_porch + mode->h_sync_width - 7)
-		* link_rate, mode->pclk)
+		* link_rate, rate)
 		- 3 * cfg->enhanced_framing - (12 / cfg->lane_count);
 
 	if (cfg->hblank_sym < 0)
@@ -735,7 +738,7 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	/*                      - Y - 1; */
 	/* where Y = (# lanes == 4) 12 : (# lanes == 2) ? 21 : 39 */
 	cfg->vblank_sym = (int)tegra_div64((u64)(mode->h_active - 25)
-		* link_rate, mode->pclk) - (36 / cfg->lane_count) - 4;
+		* link_rate, rate) - (36 / cfg->lane_count) - 4;
 
 	if (cfg->vblank_sym < 0)
 		cfg->vblank_sym = 0;
@@ -776,7 +779,17 @@ static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	cfg->preemphasis = 0x0f0f0f0f;
 	cfg->vs_pe_valid = false;
 	cfg->postcursor = 0;
-	cfg->max_link_bw = SOR_LINK_SPEED_G1_62;
+
+	switch (cfg->max_link_bw) {
+	case SOR_LINK_SPEED_G1_62:
+	case SOR_LINK_SPEED_G2_7:
+	case SOR_LINK_SPEED_G5_4:
+		break;
+	default:
+		dev_err(&dp->dc->ndev->dev, "dp: Error link rate %d\n",
+			cfg->max_link_bw);
+		return -EINVAL;
+	}
 
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));
@@ -1573,44 +1586,6 @@ static int tegra_dp_channel_eq(struct tegra_dc_dp_data *dp,
 	return err;
 }
 
-static void tegra_dp_precharge_lanes(struct tegra_dc_dp_data *dp)
-{
-	struct tegra_dc_sor_data *sor = dp->sor;
-	u32 n_lanes = dp->link_cfg.lane_count;
-	int cnt;
-	u32 val = 0;
-
-	for (cnt = 0; cnt < n_lanes; cnt++) {
-		switch (cnt) {
-		case 0:
-			val = NV_SOR_DP_PADCTL_PD_TXD_0_NO;
-			break;
-		case 1:
-			val = NV_SOR_DP_PADCTL_PD_TXD_1_NO;
-			break;
-		case 2:
-			val = NV_SOR_DP_PADCTL_PD_TXD_2_NO;
-			break;
-		case 3:
-			val = NV_SOR_DP_PADCTL_PD_TXD_3_NO;
-			break;
-		default:
-			dev_err(&dp->dc->ndev->dev,
-				"dp: incorrect lane cnt\n");
-		};
-		tegra_sor_write_field(sor,
-			NV_SOR_DP_PADCTL(sor->portnum), 1, val);
-		tegra_sor_write_field(sor,
-			NV_SOR_DP_PADCTL(sor->portnum), 1,
-			(val << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT));
-	}
-	usleep_range(15, 20);
-
-	/* disable common mode */
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT), 0);
-}
-
 static int tegra_dp_lt(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_sor_data *sor = dp->sor;
@@ -1630,7 +1605,7 @@ static int tegra_dp_lt(struct tegra_dc_dp_data *dp)
 		driveCurrent_Level0
 	};
 
-	tegra_dp_precharge_lanes(dp);
+	tegra_sor_precharge_lanes(sor);
 
 	tegra_dc_dp_dpcd_write(dp, NV_DPCD_LANE_COUNT_SET,
 				n_lanes | (dp->link_cfg.enhanced_framing ?
@@ -1705,6 +1680,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 			"dp: failed to init link configuration\n");
 		goto error_enable;
 	}
+
+	tegra_dc_sor_set_lane_parm(dp->sor, &dp->link_cfg);
 
 	tegra_dc_sor_enable_dp(dp->sor);
 

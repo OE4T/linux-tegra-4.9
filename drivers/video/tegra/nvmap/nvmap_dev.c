@@ -1359,8 +1359,8 @@ static int nvmap_probe(struct platform_device *pdev)
 		if (!co->size)
 			continue;
 
-		dev_info(&pdev->dev, "heap (%s) base (0x%x) size (%d)\n",
-			co->name, node->base, node->size);
+		dev_info(&pdev->dev, "heap (%s) base (%pa) size (%d)\n",
+			co->name, &node->base, node->size);
 
 		node->carveout = nvmap_heap_create(dev->dev_user.this_device,
 				   co->name, node->base, node->size, node);
@@ -1390,7 +1390,7 @@ static int nvmap_probe(struct platform_device *pdev)
 				debugfs_create_file("allocations", S_IRUGO,
 				    heap_root, node, &debug_allocations_fops);
 				debugfs_create_x32("base", S_IRUGO,
-				    heap_root, &node->base);
+				    heap_root, (u32 *)&node->base);
 				debugfs_create_x32("size", S_IRUGO,
 				    heap_root, &node->size);
 			}

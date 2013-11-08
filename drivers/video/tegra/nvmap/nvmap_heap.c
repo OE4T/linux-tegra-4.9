@@ -235,8 +235,8 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 			__func__, dev_name(&heap->dev));
 		goto fail_dma_alloc;
 	}
-	pr_debug("dma_alloc_coherent base (0x%x) size (%d) heap (%s)\n",
-		dev_base, len, heap->name);
+	pr_debug("dma_alloc_coherent base (%pa) size (%d) heap (%s)\n",
+		&dev_base, len, heap->name);
 
 	heap_block->block.base = dev_base;
 	heap_block->orig_addr = dev_base;

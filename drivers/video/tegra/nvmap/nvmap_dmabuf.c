@@ -741,6 +741,7 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 	struct nvmap_handle *handle;
 	struct nvmap_client *client;
 	const char *name;
+	phys_addr_t addr;
 
 	mutex_lock(&nvmap_stashed_maps_lock);
 	list_for_each_entry(nvmap_sgt, &nvmap_stashed_maps, stash_entry) {
@@ -761,8 +762,9 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 
 		seq_printf(s, "  device = %s\n",
 			   dev_name(handle->attachment->dev));
-		seq_printf(s, "  IO addr = 0x%08x + 0x%x\n",
-			   sg_dma_address(nvmap_sgt->sgt->sgl), handle->size);
+		addr = sg_dma_address(nvmap_sgt->sgt->sgl);
+		seq_printf(s, "  IO addr = 0x%pa + 0x%x\n",
+			&addr, handle->size);
 
 		/* Cleanup. */
 		nvmap_client_put(client);

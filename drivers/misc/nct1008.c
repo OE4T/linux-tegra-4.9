@@ -1185,7 +1185,7 @@ static int nct1008_probe(struct i2c_client *client,
 	struct nct1008_data *data;
 	int err;
 	int i;
-	int mask = 0;
+	u64 mask = 0;
 	char nct_int_name[THERMAL_NAME_LENGTH];
 	char nct_ext_name[THERMAL_NAME_LENGTH];
 
@@ -1242,7 +1242,7 @@ static int nct1008_probe(struct i2c_client *client,
 	for (i = 0; i < data->plat_data.num_trips; i++)
 		if (strcmp(data->plat_data.trips[i].cdev_type,
 						"shutdown_warning"))
-			mask |= (1 << i);
+			mask |= (1ULL << i);
 
 	if (data->plat_data.loc_name) {
 		strcpy(nct_int_name, "Tboard_");

@@ -906,12 +906,6 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 		h->owner_ref = NULL;
 	}
 
-	if (ref->fd != -1) {
-		if (ref->group_leader == current->group_leader)
-			sys_close(ref->fd);
-		else
-			BUG();
-	}
 	dma_buf_put(ref->handle->dmabuf);
 	kfree(ref);
 
@@ -1004,24 +998,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 		goto dma_buf_attach_fail;
 	}
 
-	ref->fd = -1;
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	if (client && !client->kernel_client) {
-		ref->fd = dma_buf_fd(h->dmabuf, O_CLOEXEC);
-		if (ref->fd <= 2) {
-			pr_err("fd=%d <=2 ", ref->fd);
-			BUG();
-		}
-		if (ref->fd < 0)
-			goto fd_fail;
-		/* dma_buf_fd() associates fd with dma_buf->file *.
-		 * fd close drops one ref count on dmabuf->file *.
-		 * to balance ref count, ref count dma_buf.
-		 */
-		get_dma_buf(h->dmabuf);
-		ref->group_leader = current->group_leader;
-	}
-#endif
 	nvmap_handle_add(nvmap_dev, h);
 
 	/*
@@ -1035,10 +1011,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	trace_nvmap_create_handle(client, client->name, h, size, ref);
 	return ref;
 
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-fd_fail:
-	pr_err("Out of file descriptors");
-#endif
 dma_buf_attach_fail:
 	dma_buf_put(h->dmabuf);
 make_dmabuf_fail:
@@ -1114,34 +1086,8 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	 */
 	get_dma_buf(h->dmabuf);
 
-	ref->fd = -1;
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	if (client && !client->kernel_client) {
-		ref->fd = dma_buf_fd(h->dmabuf, O_CLOEXEC);
-		if (ref->fd <= 2) {
-			pr_err("fd=%d <=2 ", ref->fd);
-			BUG();
-		}
-		if (ref->fd < 0)
-			goto fd_fail;
-		/* dma_buf_fd() associates fd with dma_buf->file *.
-		 * fd close drops one ref count on dmabuf->file *.
-		 * to balance ref count, ref count dma_buf.
-		 */
-		get_dma_buf(h->dmabuf);
-		ref->group_leader = current->group_leader;
-	}
-#endif
-
 	trace_nvmap_duplicate_handle_id(client, id, ref);
 	return ref;
-
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-fd_fail:
-	pr_err("Out of file descriptors");
-	nvmap_handle_put(h);
-	return ERR_PTR(-ENOMEM);
-#endif
 }
 
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(

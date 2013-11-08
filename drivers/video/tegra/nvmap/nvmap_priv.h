@@ -141,8 +141,6 @@ struct nvmap_handle_ref {
 	struct rb_node	node;
 	atomic_t	dupes;	/* number of times to free on file close */
 	atomic_t	pin;	/* number of times to unpin on free */
-	int		fd;
-	struct task_struct *group_leader;	/* threadgroup leader */
 };
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS

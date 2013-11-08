@@ -148,13 +148,6 @@ ulong unmarshal_id(ulong id)
 }
 #endif
 
-struct nvmap_handle *marshal_kernel_ref(struct nvmap_handle_ref *ref)
-{
-	if (ref->fd == -1)
-		return marshal_kernel_handle(__nvmap_ref_to_id(ref));
-	return (struct nvmap_handle *)ref->fd;
-}
-
 ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
@@ -391,6 +384,24 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 				     op.flags);
 }
 
+int nvmap_create_fd(struct nvmap_handle *h)
+{
+	int fd;
+
+	fd = dma_buf_fd(h->dmabuf, O_CLOEXEC);
+	BUG_ON(fd == 0);
+	if (fd < 0) {
+		pr_err("Out of file descriptors");
+		return fd;
+	}
+	/* dma_buf_fd() associates fd with dma_buf->file *.
+	 * fd close drops one ref count on dmabuf->file *.
+	 * to balance ref count, ref count dma_buf.
+	 */
+	get_dma_buf(h->dmabuf);
+	return fd;
+}
+
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 {
 	struct nvmap_create_handle op;
@@ -419,12 +430,23 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
-	op.handle = marshal_kernel_ref(ref);
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	op.handle = (typeof(op.handle))nvmap_create_fd(ref->handle);
+	if (IS_ERR(op.handle))
+		err = (int)op.handle;
+#else
+	op.handle = marshal_kernel_handle(__nvmap_ref_to_id(ref));
+#endif
+
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
 		nvmap_free_handle_id(client, __nvmap_ref_to_id(ref));
 	}
 
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	if (err && (int)op.handle > 0)
+		sys_close((int)op.handle);
+#endif
 	return err;
 }
 
@@ -678,6 +700,9 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg)
 		return 0;
 
 	nvmap_free_handle_user_id(client, arg);
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return sys_close(arg);
+#endif
 	return 0;
 }
 

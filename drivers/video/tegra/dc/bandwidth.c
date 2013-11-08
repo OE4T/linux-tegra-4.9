@@ -188,10 +188,10 @@ static void calc_disp_params(struct tegra_dc *dc,
 					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
 					emc_freq_mhz;
 	unsigned int effective_row_srt_sz_bytes_fp =
-		min(la_params.la_real_to_fp(min(
-					T12X_LA_ROW_SRT_SZ_BYTES,
+		min((unsigned long)la_params.la_real_to_fp(min(
+					(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES,
 					16 * min(emc_freq_mhz + 50,
-						400))),
+						400ul))),
 			((T12X_LA_MAX_DRAIN_TIME_USEC *
 			emc_freq_mhz -
 			la_params.la_fp_to_real(

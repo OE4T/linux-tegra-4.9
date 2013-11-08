@@ -281,9 +281,10 @@ static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 
 	list_del(&b->all_list);
 
-	pr_debug("dma_free_coherent base (0x%x) size (%d) heap (%s)\n",
-		block->base, b->size, heap->name);
-	dma_free_coherent(&heap->dev, b->size, (void *)block->base,
+	pr_debug("dma_free_coherent base (0x%pa) size (%d) heap (%s)\n",
+		&block->base, b->size, heap->name);
+	/* assumes dev_alloc_coherent() returns same offset for phys_addr_t */
+	dma_free_coherent(&heap->dev, b->size, (void *)(uintptr_t)block->base,
 				block->base);
 
 	kmem_cache_free(heap_block_cache, b);

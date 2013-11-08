@@ -585,16 +585,6 @@ int nvhost_init_gk20a_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	err = request_threaded_irq(gk20a_intr.start,
-			gk20a_intr_isr, gk20a_intr_thread,
-			0, "gk20a", g);
-	if (err) {
-		dev_err(dev_from_gk20a(g), "failed to request stall interrupt irq @ %lld\n",
-			(u64)gk20a_intr.start);
-		goto fail;
-	}
-	g->irq_requested = true;
-
 	if (tegra_cpu_is_asim()) {
 		err = gk20a_init_sim_support(dev);
 		if (err)
@@ -738,6 +728,15 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	ret |= gk20a_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
 
+	/*
+	 * After this point, gk20a interrupts should not get
+	 * serviced.
+	 */
+	if (g->irq_requested) {
+		free_irq(gk20a_intr.start, g);
+		g->irq_requested = false;
+	}
+
 	/* Disable GPCPLL */
 	ret |= gk20a_suspend_clk_support(g);
 	g->power_on = false;
@@ -757,6 +756,19 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);
+
+	if (!g->irq_requested) {
+		err = request_threaded_irq(gk20a_intr.start,
+				gk20a_intr_isr, gk20a_intr_thread,
+				0, "gk20a", g);
+		if (err) {
+			dev_err(dev_from_gk20a(g),
+				"failed to request stall intr irq @ %lld\n",
+					(u64)gk20a_intr.start);
+			goto done;
+		}
+		g->irq_requested = true;
+	}
 
 	g->power_on = true;
 

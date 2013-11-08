@@ -141,7 +141,6 @@ struct nvhost_device_data t14_gr3d_info = {
 	.prepare_poweroff = nvhost_gr3d_t114_prepare_power_off,
 	.finalize_poweron = nvhost_gr3d_t114_finalize_power_on,
 	.alloc_hwctx_handler = nvhost_gr3d_t114_ctxhandler_init,
-	.read_reg	= nvhost_gr3d_read_reg,
 };
 
 static struct platform_device tegra_gr3d03_device = {

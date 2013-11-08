@@ -369,6 +369,12 @@ static int clk_disable_gpcpll(struct gk20a *g)
 	u32 cfg;
 	struct clk_gk20a *clk = &g->clk;
 
+	/* put PLL in bypass before disabling it */
+	cfg = gk20a_readl(g, trim_sys_sel_vco_r());
+	cfg = set_field(cfg, trim_sys_sel_vco_gpc2clk_out_m(),
+			trim_sys_sel_vco_gpc2clk_out_bypass_f());
+	gk20a_writel(g, trim_sys_sel_vco_r(), cfg);
+
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 			trim_sys_gpcpll_cfg_enable_no_f());

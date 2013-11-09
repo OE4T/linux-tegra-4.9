@@ -265,6 +265,9 @@ struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
 struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id)
 {
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return nvmap_handle_get((struct nvmap_handle *)id);
+#else
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h = NULL;
 
@@ -276,6 +279,7 @@ struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 		h = nvmap_handle_get(h);
 	nvmap_ref_unlock(client);
 	return h;
+#endif
 }
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
@@ -491,6 +495,9 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 					unsigned long id, bool skip_val)
 {
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return nvmap_handle_get((struct nvmap_handle *)id);
+#else
 	struct nvmap_handle *h = NULL;
 	struct rb_node *n;
 
@@ -516,6 +523,7 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 	}
 	spin_unlock(&nvmap_dev->handle_lock);
 	return NULL;
+#endif
 }
 
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,

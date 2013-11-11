@@ -2908,9 +2908,11 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 		}
 	}
 
-	err = tegra_dsi_host_trigger(dsi, cmd->link_id);
-	if (err < 0)
-		dev_err(&dsi->dc->ndev->dev, "DSI host trigger failed\n");
+	if (cmd->cmd_type != TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD) {
+		err = tegra_dsi_host_trigger(dsi, cmd->link_id);
+		if (err < 0)
+			dev_err(&dsi->dc->ndev->dev, "DSI host trigger failed\n");
+	}
 
 	return err;
 }
@@ -2991,6 +2993,60 @@ int tegra_dsi_write_data(struct tegra_dc *dc,
 
 EXPORT_SYMBOL(tegra_dsi_write_data);
 
+int tegra_dsi_start_host_cmd_v_blank_video(struct tegra_dc_dsi_data *dsi,
+	struct tegra_dsi_cmd *cmd)
+{
+	struct tegra_dc *dc = dsi->dc;
+	int err = 0;
+	u32 val;
+
+	if (!dsi->enabled) {
+		dev_err(&dsi->dc->ndev->dev, "DSI controller suspended\n");
+		return -EINVAL;
+	}
+
+	tegra_dc_io_start(dc);
+	tegra_dc_dsi_hold_host(dc);
+	val = (DSI_CMD_PKT_VID_ENABLE(1) | DSI_LINE_TYPE(4));
+	tegra_dsi_writel(dsi, val, DSI_VID_MODE_CONTROL);
+	_tegra_dsi_write_data(dsi, cmd);
+	if (dsi->status.lphs != DSI_LPHS_IN_HS_MODE) {
+		err = tegra_dsi_set_to_hs_mode(dc, dsi,
+				TEGRA_DSI_DRIVEN_BY_DC);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"dsi: not able to set to hs mode\n");
+			return err;
+		}
+		tegra_dsi_start_dc_stream(dc, dsi);
+		tegra_dsi_wait_frame_end(dc, dsi, 2);
+		tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
+	}
+	tegra_dc_dsi_release_host(dc);
+	tegra_dc_io_end(dc);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_video);
+
+int tegra_dsi_end_host_cmd_v_blank_video(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi)
+{
+	u32 val;
+
+	if (!dsi->enabled) {
+		dev_err(&dsi->dc->ndev->dev, "DSI controller suspended\n");
+		return -EINVAL;
+	}
+
+	tegra_dc_io_start(dc);
+	tegra_dsi_writel(dsi, 0, DSI_VID_MODE_CONTROL);
+	tegra_dc_io_end(dc);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dsi_end_host_cmd_v_blank_video);
+
 static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
 					struct tegra_dsi_cmd *cmd,
@@ -3017,6 +3073,10 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 				tegra_dsi_send_dc_frames(dc,
 						dsi,
 						cur_cmd->sp_len_dly.frame_cnt);
+		} else if (cur_cmd->cmd_type ==
+					TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD) {
+			tegra_dsi_start_host_cmd_v_blank_video(dsi, cur_cmd);
+			tegra_dsi_end_host_cmd_v_blank_video(dc, dsi);
 		} else {
 			/* default delay 1ms after command */
 			delay_ms = 1;

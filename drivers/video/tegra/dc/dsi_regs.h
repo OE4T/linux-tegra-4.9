@@ -384,6 +384,8 @@ enum {
 #define DSI_PAD_REV_CLK(x)	(((x) & 0x1) << 0)
 
 #define DSI_VID_MODE_CONTROL 0x4e
+#define DSI_LINE_TYPE(x)	(((x) & 0x7) << 1)
+#define DSI_CMD_PKT_VID_ENABLE(x)	(((x) & 0x1) << 0)
 
 #define DSI_GANGED_MODE_CONTROL 0x53
 #define DSI_GANGED_MODE_CONTROL_EN(x)			(((x) & 0x1) << 0)

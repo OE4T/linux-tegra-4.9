@@ -56,6 +56,7 @@ extern struct tegra_panel dsi_lgd_wxga_7_0;
 extern struct tegra_panel dsi_a_1080p_14_0;
 extern struct tegra_panel edp_a_1080p_14_0;
 extern struct tegra_panel edp_s_wqxgap_15_6;
+extern struct tegra_panel edp_s_uhdtv_15_6;
 extern struct tegra_panel lvds_c_1366_14;
 extern struct tegra_panel dsi_l_720p_5_loki;
 extern struct tegra_panel dsi_j_1440_810_5_8;

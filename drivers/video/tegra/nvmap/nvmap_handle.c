@@ -404,15 +404,13 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	struct page *page;
 	int pages_to_fill;
 	int highmem_pages = 0;
-#ifdef CONFIG_NVMAP_CPA
 	typedef int (*set_pages_array) (struct page **pages, int addrinarray);
 	set_pages_array s_cpa[] = {
-		set_pages_array_uc,
-		set_pages_array_wc,
-		set_pages_array_iwb,
-		set_pages_array_wb
+		nvmap_set_pages_array_uc,
+		nvmap_set_pages_array_wc,
+		nvmap_set_pages_array_iwb,
+		nvmap_set_pages_array_wb
 	};
-#endif
 #endif
 
 	BUG_ON(flags >= NVMAP_NUM_POOLS);
@@ -482,11 +480,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
 	if (pool->npages) {
-#ifdef CONFIG_NVMAP_CPA
 		err = (*s_cpa[flags])(pool->page_array, pool->npages);
-#else
-		err = 0;
-#endif
 		BUG_ON(err);
 	}
 	nvmap_page_pool_unlock(pool);

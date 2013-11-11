@@ -163,7 +163,7 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 
 	if (idx) {
 		/* This op should never fail. */
-		err = set_pages_array_wb(pool->shrink_array, idx);
+		err = nvmap_set_pages_array_wb(pool->shrink_array, idx);
 		BUG_ON(err);
 	}
 
@@ -404,6 +404,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	struct page *page;
 	int pages_to_fill;
 	int highmem_pages = 0;
+#ifdef CONFIG_NVMAP_CPA
 	typedef int (*set_pages_array) (struct page **pages, int addrinarray);
 	set_pages_array s_cpa[] = {
 		set_pages_array_uc,
@@ -411,6 +412,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		set_pages_array_iwb,
 		set_pages_array_wb
 	};
+#endif
 #endif
 
 	BUG_ON(flags >= NVMAP_NUM_POOLS);
@@ -480,7 +482,11 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
 	if (pool->npages) {
+#ifdef CONFIG_NVMAP_CPA
 		err = (*s_cpa[flags])(pool->page_array, pool->npages);
+#else
+		err = 0;
+#endif
 		BUG_ON(err);
 	}
 	nvmap_page_pool_unlock(pool);
@@ -561,7 +567,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
 	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE) {
 		/* This op should never fail. */
-		err = set_pages_array_wb(&h->pgalloc.pages[page_index],
+		err = nvmap_set_pages_array_wb(&h->pgalloc.pages[page_index],
 				nr_page - page_index);
 		BUG_ON(err);
 	}
@@ -682,13 +688,13 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	/* Update the pages mapping in kernel page table. */
 	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		err = set_pages_array_wc(&pages[page_index],
+		err = nvmap_set_pages_array_wc(&pages[page_index],
 					nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
-		err = set_pages_array_uc(&pages[page_index],
+		err = nvmap_set_pages_array_uc(&pages[page_index],
 					nr_page - page_index);
 	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		err = set_pages_array_iwb(&pages[page_index],
+		err = nvmap_set_pages_array_iwb(&pages[page_index],
 					nr_page - page_index);
 
 	if (err)
@@ -706,7 +712,7 @@ fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(nvmap_dev, pte);
 	if (i) {
-		err = set_pages_array_wb(pages, i);
+		err = nvmap_set_pages_array_wb(pages, i);
 		BUG_ON(err);
 	}
 	while (i--)

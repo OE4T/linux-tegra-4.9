@@ -535,9 +535,11 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 			 */
 			if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE &&
 				h->heap_pgalloc)
-				set_pages_array_iwb(h->pgalloc.pages, nr_page);
+				nvmap_set_pages_array_iwb(h->pgalloc.pages,
+							  nr_page);
 			else if (h->heap_pgalloc)
-				set_pages_array_wb(h->pgalloc.pages, nr_page);
+				nvmap_set_pages_array_wb(h->pgalloc.pages,
+							 nr_page);
 		}
 	}
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);

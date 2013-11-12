@@ -84,42 +84,27 @@ struct podgov_info_rec {
 
 	int			enable;
 	int			init;
-	int			fast_up_count;
-	int			slow_down_count;
-	int			is_scaled;
-
-	unsigned long		idle_total;
-	unsigned long		idle_short_term_total;
 
 	ktime_t			last_throughput_hint;
 	ktime_t			last_scale;
-	ktime_t			last_adjust;
-	ktime_t			last_estimation_window;
-	ktime_t			estimation_window;
-	ktime_t			last_notification;
 
-	struct work_struct	work;
 	struct delayed_work	idle_timer;
 
-	unsigned int		scale;
-	unsigned int		p_estimation_window;
+	unsigned int		p_block_window;
 	unsigned int		p_use_throughput_hint;
 	unsigned int		p_hint_lo_limit;
 	unsigned int		p_hint_hi_limit;
 	unsigned int		p_scaleup_limit;
 	unsigned int		p_scaledown_limit;
 	unsigned int		p_smooth;
-	unsigned int		p_idle_min;
-	unsigned int		idle_min;
-	unsigned int		p_idle_max;
-	unsigned int		idle_max;
-	unsigned int		p_adjust;
+	int			p_damp;
+	int			p_load_max;
+	int			p_load_target;
+	int			p_bias;
 	unsigned int		p_user;
 	unsigned int		p_freq_request;
 
-	long			last_total_idle;
-	long			total_idle;
-	long			idle_estimate;
+	long			idle;
 
 	int			adjustment_type;
 	unsigned long		adjustment_frequency;
@@ -133,6 +118,7 @@ struct podgov_info_rec {
 	int			freq_count;
 
 	unsigned int		idle_avg;
+	int			freq_avg;
 	unsigned int		hint_avg;
 	int			block;
 
@@ -161,8 +147,6 @@ static void stop_podgov_workers(struct podgov_info_rec *podgov)
 	do {
 		cancel_delayed_work_sync(&podgov->idle_timer);
 	} while (delayed_work_pending(&podgov->idle_timer));
-
-	cancel_work_sync(&podgov->work);
 }
 
 /*******************************************************************************
@@ -177,51 +161,6 @@ static void scaling_limit(struct devfreq *df, unsigned long *freq)
 		*freq = df->min_freq;
 	else if (*freq > df->max_freq)
 		*freq = df->max_freq;
-}
-
-/*******************************************************************************
- * podgov_clocks_handler(work)
- *
- * This handler is called periodically to re-estimate the frequency using the
- * relation between "fast scale ups" and "slow scale downs".
- ******************************************************************************/
-
-static void podgov_clocks_handler(struct work_struct *work)
-{
-	struct podgov_info_rec *podgov =
-		container_of(work, struct podgov_info_rec, work);
-	struct devfreq *df = podgov->power_manager;
-	struct platform_device *pdev = to_platform_device(df->dev.parent);
-	unsigned long freq;
-
-	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy_noresume(pdev);
-	if (!pm_runtime_active(&pdev->dev)) {
-		nvhost_module_idle(pdev);
-		return;
-	}
-
-	mutex_lock(&df->lock);
-
-	if (!podgov->enable)
-		goto exit_unlock;
-
-	if (podgov->scale == 0)
-		goto exit_unlock;
-
-	freq = podgov->scale * (df->previous_freq / 100);
-	scaling_limit(df, &freq);
-
-	if (df->previous_freq != freq) {
-		trace_podgov_clocks_handler(df->previous_freq, freq);
-		podgov->adjustment_frequency = freq;
-		podgov->adjustment_type = ADJUSTMENT_LOCAL;
-		update_devfreq(df);
-	}
-
-exit_unlock:
-	mutex_unlock(&df->lock);
-	nvhost_module_idle(pdev);
 }
 
 /*******************************************************************************
@@ -479,87 +418,6 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 	nvhost_module_idle(d);
 }
 
-/*******************************************************************************
- * scaling_adjust(podgov, time)
- *
- * use scale up / scale down hint counts to adjust scaling parameters.
- *
- * hint_ratio is 100 x the ratio of scale up to scale down hints. Three cases
- * are distinguished:
- *
- * hint_ratio < HINT_RATIO_MIN - set parameters to maximize scaling effect
- * hint_ratio > HINT_RATIO_MAX - set parameters to minimize scaling effect
- * hint_ratio between limits - scale parameters linearly
- *
- * the parameters adjusted are
- *
- *  - fast_response time
- *  - period - time for scaling down estimate
- *  - idle_min percentage
- *  - idle_max percentage
- *
- ******************************************************************************/
-
-#define SCALING_ADJUST_PERIOD	1000000
-#define HINT_RATIO_MAX		400
-#define HINT_RATIO_MIN		100
-#define HINT_RATIO_MID		((HINT_RATIO_MAX + HINT_RATIO_MIN) / 2)
-#define HINT_RATIO_DIFF		(HINT_RATIO_MAX - HINT_RATIO_MIN)
-
-static void scaling_adjust(struct podgov_info_rec *podgov, ktime_t time)
-{
-	long hint_ratio;
-	int idle_min_adjustment;
-	int idle_max_adjustment;
-	unsigned long dt;
-
-	dt = (unsigned long) ktime_us_delta(time, podgov->last_adjust);
-	if (dt < SCALING_ADJUST_PERIOD)
-		return;
-
-	hint_ratio = (100 * (podgov->fast_up_count + 1)) /
-				 (podgov->slow_down_count + 1);
-
-	if (hint_ratio > HINT_RATIO_MAX) {
-		idle_min_adjustment = podgov->p_idle_min;
-		idle_max_adjustment = podgov->p_idle_max;
-	} else if (hint_ratio < HINT_RATIO_MIN) {
-		idle_min_adjustment = -((int) podgov->p_idle_min) / 2;
-		idle_max_adjustment = -((int) podgov->p_idle_max) / 2;
-	} else {
-		int diff;
-		int factor;
-
-		diff = HINT_RATIO_MID - hint_ratio;
-		if (diff < 0)
-			factor = -diff * 2;
-		else {
-			factor = -diff;
-			diff *= 2;
-		}
-
-		idle_min_adjustment =
-			(factor * (int) podgov->p_idle_min) / HINT_RATIO_DIFF;
-		idle_max_adjustment =
-			(factor * (int) podgov->p_idle_max) / HINT_RATIO_DIFF;
-	}
-
-	podgov->idle_min = podgov->p_idle_min + idle_min_adjustment;
-	podgov->idle_max = podgov->p_idle_max + idle_max_adjustment;
-
-	trace_podgov_stats(podgov->fast_up_count, podgov->slow_down_count,
-		podgov->idle_min, podgov->idle_max);
-
-	podgov->fast_up_count = 0;
-	podgov->slow_down_count = 0;
-	podgov->last_adjust = time;
-}
-
-#undef SCALING_ADJUST_PERIOD
-#undef HINT_RATIO_MAX
-#undef HINT_RATIO_MIN
-#undef HINT_RATIO_MID
-#undef HINT_RATIO_DIFF
 
 /*******************************************************************************
  * freq = scaling_state_check(df, time)
@@ -573,103 +431,51 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
 {
 	struct podgov_info_rec *podgov = df->data;
 	unsigned long dt;
-
-	/* adjustment: set scale parameters (idle_min, idle_max) +/- 25%
-	 * based on ratio of scale up to scale down hints
-	 */
-	if (podgov->p_adjust)
-		scaling_adjust(podgov, time);
-	else {
-		podgov->idle_min = podgov->p_idle_min;
-		podgov->idle_max = podgov->p_idle_max;
-	}
+	long max_boost, load, damp, freq, boost, res;
 
 	dt = (unsigned long) ktime_us_delta(time, podgov->last_scale);
-	if (dt < podgov->p_estimation_window)
+	if (dt < podgov->p_block_window || df->previous_freq == 0)
 		return 0;
 
-	podgov->last_scale = time;
+	/* convert to mhz to avoid overflow */
+	freq = df->previous_freq / 1000000;
+	max_boost = (df->max_freq/3) / 1000000;
 
-	/* if too busy, scale up */
-	if (podgov->idle_estimate < podgov->idle_min) {
-		podgov->is_scaled = 0;
-		podgov->fast_up_count++;
+	/* calculate and trace load */
+	load = 1000 - podgov->idle_avg;
+	trace_podgov_busy(load);
+	damp = podgov->p_damp;
 
-		trace_podgov_busy(1000 - podgov->idle_estimate);
-		trace_podgov_scaling_state_check(df->previous_freq,
-			df->max_freq);
+	if (load > podgov->p_load_max) {
+		/* if too busy, scale up max/3, do not damp */
+		boost = max_boost;
+		damp = 10;
 
-		return df->max_freq;
+	} else {
+		/* boost = bias * freq * (load - target)/target */
+		boost = (load - podgov->p_load_target);
+		boost *= (podgov->p_bias * freq);
+		boost /= (100 * podgov->p_load_target);
 
+		/* clamp to max boost */
+		boost = (boost < max_boost) ? boost : max_boost;
 	}
 
-	trace_podgov_idle(podgov->idle_estimate);
+	/* calculate new request */
+	res = freq + boost;
 
-	if (podgov->idle_estimate > podgov->idle_max) {
-		if (!podgov->is_scaled)
-			podgov->is_scaled = 1;
+	/* Maintain average request */
+	podgov->freq_avg = (podgov->freq_avg * podgov->p_smooth) + res;
+	podgov->freq_avg /= (podgov->p_smooth+1);
 
-		podgov->slow_down_count++;
-		/* if idle time is high, clock down */
-		podgov->scale =
-			100 - (podgov->idle_estimate - podgov->idle_min) / 10;
-		schedule_work(&podgov->work);
-	}
+	/* Applying damping to frequencies */
+	res = ((damp * res) + ((10 - damp)*podgov->freq_avg)) / 10;
 
-	return 0;
-}
-
-/*******************************************************************************
- * update_load_estimate(df)
- *
- * The idle estimate is done by keeping 2 time stamps, initially set to the
- * same time. Once the estimation_window time has been exceeded, one time
- * stamp is moved up to the current time. The idle estimate is calculated
- * based on the idle time percentage from the earlier estimate. The next time
- * an estimation_window time is exceeded, the previous idle time and estimates
- * are moved up - this is intended to prevent abrupt changes to the idle
- * estimate.
- ******************************************************************************/
-
-static void update_load_estimate(struct devfreq *df)
-{
-	struct podgov_info_rec *podgov = df->data;
-	unsigned long window;
-	unsigned long t;
-
-	ktime_t now = ktime_get();
-	t = ktime_us_delta(now, podgov->last_notification);
-
-	/* if the last event was over GR3D_TIMEFRAME usec ago (1 sec), the
-	 * current load tracking data is probably stale
-	 */
-	if (t > GR3D_TIMEFRAME) {
-		podgov->last_notification = now;
-		podgov->estimation_window = now;
-		podgov->last_estimation_window = now;
-		podgov->total_idle = 0;
-		podgov->last_total_idle = 0;
-		podgov->idle_estimate =
-			(podgov->last_event_type == DEVICE_IDLE) ? 1000 : 0;
-		return;
-	}
-
-	podgov->last_notification = now;
-
-	window = ktime_us_delta(now, podgov->last_estimation_window);
-	/* prevent division by 0 if events come in less than 1 usec apart */
-	if (window > 0)
-		podgov->idle_estimate =
-			(1000 * podgov->last_total_idle) / window;
-
-	/* move up to the last estimation window */
-	if (ktime_us_delta(now, podgov->estimation_window) >
-		podgov->p_estimation_window) {
-		podgov->last_estimation_window = podgov->estimation_window;
-		podgov->last_total_idle = podgov->total_idle;
-		podgov->total_idle = 0;
-		podgov->estimation_window = now;
-	}
+	/* Convert to hz, limit, and apply */
+	res = res * 1000000;
+	scaling_limit(df, &res);
+	trace_podgov_scaling_state_check(df->previous_freq, res);
+	return res;
 }
 
 /*******************************************************************************
@@ -795,16 +601,15 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 		podgov->block > 0)
 		goto exit_unlock;
 
-	trace_podgov_hint(podgov->idle_estimate, hint);
+	trace_podgov_hint(podgov->idle, hint);
 	podgov->last_throughput_hint = ktime_get();
 
 	curr = podgov->power_manager->previous_freq;
-	idle = podgov->idle_estimate;
+	idle = podgov->idle;
+	avg_idle = podgov->idle_avg;
 	smooth = podgov->p_smooth;
 
 	/* compute averages usings exponential-moving-average */
-	avg_idle = ((smooth*podgov->idle_avg + idle)/(smooth+1));
-	podgov->idle_avg = avg_idle;
 	avg_hint = ((smooth*podgov->hint_avg + hint)/(smooth+1));
 	podgov->hint_avg = avg_hint;
 
@@ -872,10 +677,11 @@ static void nvhost_scale3d_debug_init(struct devfreq *df)
 		} \
 	} while (0)
 
-	CREATE_PODGOV_FILE(estimation_window);
-	CREATE_PODGOV_FILE(idle_min);
-	CREATE_PODGOV_FILE(idle_max);
-	CREATE_PODGOV_FILE(adjust);
+	CREATE_PODGOV_FILE(block_window);
+	CREATE_PODGOV_FILE(load_max);
+	CREATE_PODGOV_FILE(load_target);
+	CREATE_PODGOV_FILE(bias);
+	CREATE_PODGOV_FILE(damp);
 	CREATE_PODGOV_FILE(use_throughput_hint);
 	CREATE_PODGOV_FILE(hint_hi_limit);
 	CREATE_PODGOV_FILE(hint_lo_limit);
@@ -1070,11 +876,11 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 
 	/* Sustain local variables */
 	podgov->last_event_type = current_event;
-	podgov->total_idle += (dev_stat.total_time - dev_stat.busy_time);
-	podgov->last_total_idle += (dev_stat.total_time - dev_stat.busy_time);
-
-	/* update the load estimate based on idle time */
-	update_load_estimate(df);
+	podgov->idle = 1000 * (dev_stat.total_time - dev_stat.busy_time);
+	podgov->idle = podgov->idle / dev_stat.total_time;
+	podgov->idle_avg = (podgov->p_smooth * podgov->idle_avg) +
+		podgov->idle;
+	podgov->idle_avg = podgov->idle_avg / (podgov->p_smooth + 1);
 
 	/* if throughput hint enabled, and last hint is recent enough, return */
 	if (podgov->p_use_throughput_hint &&
@@ -1087,8 +893,7 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		/* delay idle_max % of 2 * fast_response time (given in
 		 * microseconds) */
 		*freq = scaling_state_check(df, now);
-		delay = (podgov->idle_max * podgov->p_estimation_window)
-			/ 500000;
+		delay = podgov->p_block_window / 20000;
 		schedule_delayed_work(&podgov->idle_timer,
 			msecs_to_jiffies(delay));
 		break;
@@ -1101,6 +906,8 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 	if (!(*freq) ||
 	    (freqlist_up(podgov, *freq, 0) == dev_stat.current_frequency))
 		return GET_TARGET_FREQ_DONTSCALE;
+
+	podgov->last_scale = now;
 
 	trace_podgov_estimate_freq(df->previous_freq, *freq);
 
@@ -1132,43 +939,37 @@ static int nvhost_pod_init(struct devfreq *df)
 	df->data = (void *)podgov;
 
 	/* Initialise workers */
-	INIT_WORK(&podgov->work, podgov_clocks_handler);
 	INIT_DELAYED_WORK(&podgov->idle_timer, podgov_idle_handler);
 
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
-	podgov->p_adjust = 0;
 	podgov->block = 0;
 	podgov->p_use_throughput_hint = 1;
 
 	if (!strcmp(d->name, "vic03")) {
-		podgov->idle_min = podgov->p_idle_min = 300;
-		podgov->idle_max = podgov->p_idle_max = 700;
+		podgov->p_load_max = 990;
+		podgov->p_load_target = 800;
+		podgov->p_bias = 80;
 		podgov->p_hint_lo_limit = 500;
 		podgov->p_hint_hi_limit = 997;
 		podgov->p_scaleup_limit = 1100;
 		podgov->p_scaledown_limit = 1300;
-		podgov->p_smooth = 3;
+		podgov->p_smooth = 10;
+		podgov->p_damp = 7;
 	} else {
 		switch (cid) {
 		case TEGRA_CHIPID_TEGRA14:
-			podgov->idle_min = podgov->p_idle_min = 500;
-			podgov->idle_max = podgov->p_idle_max = 700;
-			podgov->p_hint_lo_limit = 500;
-			podgov->p_hint_hi_limit = 997;
-			podgov->p_scaleup_limit = 1500;
-			podgov->p_scaledown_limit = 1700;
-			podgov->p_smooth = 3;
-			break;
 		case TEGRA_CHIPID_TEGRA11:
 		case TEGRA_CHIPID_TEGRA12:
-			podgov->idle_min = podgov->p_idle_min = 400;
-			podgov->idle_max = podgov->p_idle_max = 500;
+			podgov->p_load_max = 990;
+			podgov->p_load_target = 800;
+			podgov->p_bias = 80;
 			podgov->p_hint_lo_limit = 500;
 			podgov->p_hint_hi_limit = 997;
 			podgov->p_scaleup_limit = 1100;
 			podgov->p_scaledown_limit = 1300;
-			podgov->p_smooth = 3;
+			podgov->p_smooth = 10;
+			podgov->p_damp = 7;
 			break;
 		default:
 			pr_err("%s: un-supported chip id\n", __func__);
@@ -1176,17 +977,13 @@ static int nvhost_pod_init(struct devfreq *df)
 			break;
 		}
 	}
-	podgov->p_estimation_window = 10000;
+	podgov->p_block_window = 200000;
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;
 	podgov->p_user = 0;
 
 	/* Reset clock counters */
 	podgov->last_throughput_hint = now;
 	podgov->last_scale = now;
-	podgov->last_adjust = now;
-	podgov->last_estimation_window = now;
-	podgov->estimation_window = now;
-	podgov->last_notification = now;
 
 	podgov->power_manager = df;
 
@@ -1225,6 +1022,7 @@ static int nvhost_pod_init(struct devfreq *df)
 		goto err_get_freqs;
 
 	podgov->idle_avg = 0;
+	podgov->freq_avg = 0;
 	podgov->hint_avg = 0;
 
 	nvhost_scale3d_debug_init(df);
@@ -1263,7 +1061,6 @@ static void nvhost_pod_exit(struct devfreq *df)
 
 	blocking_notifier_chain_unregister(&throughput_notifier_list,
 					   &podgov->throughput_hint_notifier);
-	cancel_work_sync(&podgov->work);
 	cancel_delayed_work(&podgov->idle_timer);
 
 	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);

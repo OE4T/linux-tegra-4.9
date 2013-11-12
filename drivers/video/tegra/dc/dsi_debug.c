@@ -20,6 +20,7 @@
 #include <linux/export.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/delay.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dev.h"
@@ -291,6 +292,89 @@ static const struct file_operations sanity_panel_fops = {
 	.release = single_release,
 };
 
+static u8 command_value;
+static u8 data_id;
+static u8 command_value1;
+
+static int send_host_cmd_v_blank_dcs(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+	int err;
+
+	struct tegra_dsi_cmd user_command[] = {
+	DSI_CMD_SHORT(data_id, command_value, command_value1),
+	DSI_DLY_MS(20),
+	};
+
+	if (!dsi->enabled) {
+		seq_puts(s, "DSI controller suspended\n");
+		return 0;
+	}
+
+	seq_printf(s, "data_id taken :0x%x\n", data_id);
+	seq_printf(s, "command value taken :0x%x\n", command_value);
+	seq_printf(s, "second command value taken :0x%x\n", command_value1);
+
+	err = tegra_dsi_start_host_cmd_v_blank_dcs(dsi, user_command);
+
+	return err;
+}
+
+static ssize_t host_cmd_v_blank_dcs_get_cmd(struct file *file,
+				const char  *buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+
+	if (!dsi->enabled) {
+		dev_info(&dc->ndev->dev, "DSI controller suspended\n");
+		return count;
+	}
+
+	sscanf(buf, "%x %x %x", &data_id, &command_value, &command_value1);
+	dev_info(&dc->ndev->dev, "data id taken :0x%x\n", data_id);
+	dev_info(&dc->ndev->dev, "command value taken :0x%x\n", command_value);
+	dev_info(&dc->ndev->dev, "second command value taken :0x%x\n",
+							 command_value1);
+	return count;
+}
+
+static int host_cmd_v_blank_dcs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, send_host_cmd_v_blank_dcs, inode->i_private);
+}
+
+static const struct file_operations host_cmd_v_blank_dcs_fops = {
+	.open = host_cmd_v_blank_dcs_open,
+	.read = seq_read,
+	.write = host_cmd_v_blank_dcs_get_cmd,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int remove_host_cmd_dcs(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+
+	tegra_dsi_stop_host_cmd_v_blank_dcs(dsi);
+	seq_puts(s, "host_cmd_v_blank_dcs stopped\n");
+
+	return 0;
+}
+
+static int rm_host_cmd_dcs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, remove_host_cmd_dcs, inode->i_private);
+}
+
+static const struct file_operations remove_host_cmd_dcs_fops = {
+	.open = rm_host_cmd_dcs_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct dentry *dsidir;
 
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
@@ -310,6 +394,14 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		goto free_out;
 	retval = debugfs_create_file("panel_sanity", S_IRUGO, dsidir,
 				dsi, &sanity_panel_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("host_cmd_v_blank_dcs", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &host_cmd_v_blank_dcs_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("remove_host_cmd_dcs", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &remove_host_cmd_dcs_fops);
 	if (!retval)
 		goto free_out;
 	return;

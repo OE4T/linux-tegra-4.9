@@ -444,6 +444,9 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi);
 bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi);
 bool tegra_dsi_disable_read_debug(struct tegra_dc_dsi_data *dsi);
+int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
+						struct tegra_dsi_cmd *cmd);
+void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi);
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

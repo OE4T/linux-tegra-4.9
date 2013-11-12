@@ -3203,7 +3203,7 @@ static int tegra_dsi_dcs_pkt_seq_ctrl_init(struct tegra_dc_dsi_data *dsi,
 	return 0;
 }
 
-int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data * dsi,
+int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
 						struct tegra_dsi_cmd *cmd)
 {
 #define PKT_HEADER_LEN_BYTE	4
@@ -3253,7 +3253,7 @@ fail:
 }
 EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_dcs);
 
-void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data * dsi)
+void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi)
 {
 	struct tegra_dc *dc = dsi->dc;
 	u32 cnt;

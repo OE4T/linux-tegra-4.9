@@ -146,6 +146,8 @@ struct nvhost_device_data t21_msenc_info = {
 	.exclusive     = true,
 	.keepalive     = true,
 	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.init		= nvhost_msenc_init,
+	.deinit		= nvhost_msenc_deinit,
 	.moduleid	= NVHOST_MODULE_MSENC,
 };
 
@@ -158,6 +160,8 @@ struct nvhost_device_data t21_nvdec_info = {
 	.exclusive     = true,
 	.keepalive     = true,
 	.clocks		= { {"emc", HOST_EMC_FLOOR} },
+	.init		= nvhost_nvdec_init,
+	.deinit		= nvhost_nvdec_deinit,
 	.moduleid	= NVHOST_MODULE_NVDEC,
 };
 
@@ -170,6 +174,8 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.exclusive     = true,
 	.keepalive     = true,
 	.clocks		= { {"emc", HOST_EMC_FLOOR} },
+	.init		= nvhost_nvjpg_init,
+	.deinit		= nvhost_nvjpg_deinit,
 	.moduleid	= NVHOST_MODULE_NVJPG,
 };
 

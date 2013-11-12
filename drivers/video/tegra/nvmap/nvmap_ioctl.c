@@ -51,17 +51,23 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 unsigned long sys_stride, unsigned long elem_size,
 			 unsigned long count);
 
-#ifdef CONFIG_COMPAT
-ulong unmarshal_user_handle(__u32 handle)
+static ulong __attribute__((unused)) fd_to_handle_id(int handle)
 {
-	__attribute__((unused)) ulong id;
-	ulong h = (handle | PAGE_OFFSET);
+	ulong id;
 
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	id = nvmap_get_id_from_dmabuf_fd(NULL, (int)handle);
 	if (!IS_ERR_VALUE(id))
 		return id;
 	return 0;
+}
+
+#ifdef CONFIG_COMPAT
+ulong unmarshal_user_handle(__u32 handle)
+{
+	ulong h = (handle | PAGE_OFFSET);
+
+#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
+	return fd_to_handle_id((int)handle);
 #endif
 	return h;
 }
@@ -102,18 +108,13 @@ ulong unmarshal_id(__u32 id)
 #define NVMAP_XOR_HASH_MASK 0xFFFFFFFC
 ulong unmarshal_user_handle(struct nvmap_handle *handle)
 {
-	__attribute__((unused)) ulong id;
-
 	if ((ulong)handle == 0)
 		return (ulong)handle;
 
-#ifdef CONFIG_NVMAP_HANDLE_MARSHAL
 #ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	id = nvmap_get_id_from_dmabuf_fd(NULL, (int)handle);
-	if (!IS_ERR_VALUE(id))
-		return id;
-	return 0;
+	return fd_to_handle_id((int)handle);
 #endif
+#ifdef CONFIG_NVMAP_HANDLE_MARSHAL
 	return (ulong)handle ^ NVMAP_XOR_HASH_MASK;
 #else
 	return (ulong)handle;

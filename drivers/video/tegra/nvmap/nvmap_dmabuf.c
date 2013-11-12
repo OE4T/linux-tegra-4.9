@@ -438,8 +438,6 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	}
 	mutex_unlock(&info->maps_lock);
 
-	pr_debug("%s() 0x%p\n", __func__, info->handle);
-
 	dma_buf_detach(info->handle->dmabuf, info->handle->attachment);
 	info->handle->dmabuf = NULL;
 	nvmap_handle_put(info->handle);
@@ -474,7 +472,6 @@ static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_kmap(dmabuf);
-	pr_debug("%s() 0x%p\n", __func__, info->handle);
 	return __nvmap_kmap(info->handle, page_num);
 }
 
@@ -484,7 +481,6 @@ static void nvmap_dmabuf_kunmap(struct dma_buf *dmabuf,
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_kunmap(dmabuf);
-	pr_debug("%s() 0x%p\n", __func__, info->handle);
 	__nvmap_kunmap(info->handle, page_num, addr);
 }
 
@@ -509,7 +505,6 @@ static void *nvmap_dmabuf_vmap(struct dma_buf *dmabuf)
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_vmap(dmabuf);
-	pr_debug("%s() 0x%p\n", __func__, info->handle);
 	return __nvmap_mmap(info->handle);
 }
 
@@ -518,7 +513,6 @@ static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, void *vaddr)
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_vunmap(dmabuf);
-	pr_debug("%s() 0x%p\n", __func__, info->handle);
 	__nvmap_munmap(info->handle, vaddr);
 }
 
@@ -566,7 +560,6 @@ struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
 	nvmap_handle_get(handle);
 
 	trace_nvmap_make_dmabuf(client->name, handle, dmabuf);
-	pr_debug("%s() 0x%p => 0x%p\n", __func__, info->handle, dmabuf);
 	return dmabuf;
 
 err_export:

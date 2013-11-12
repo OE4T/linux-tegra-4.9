@@ -78,6 +78,8 @@ int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys)
 	if (IS_ERR(sgt))
 		goto err;
 	*phys = sg_dma_address(sgt->sgl);
+	trace_nvmap_pin(h->owner, h->owner ? h->owner->name : "unknown", h,
+			atomic_read(&h->pin));
 	return 0;
 
 err:
@@ -94,10 +96,14 @@ void __nvmap_unpin(struct nvmap_handle_ref *ref)
 	 * here: the passed ref has a 0 pin count. This is of course invalid.
 	 */
 	if (!atomic_add_unless(&ref->pin, -1, 0))
-		return;
+		goto done;
 
 	dma_buf_unmap_attachment(h->attachment,
 		h->attachment->priv, DMA_BIDIRECTIONAL);
+
+done:
+	trace_nvmap_unpin(h->owner, h->owner ? h->owner->name : "unknown", h,
+			atomic_read(&h->pin));
 }
 
 int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,

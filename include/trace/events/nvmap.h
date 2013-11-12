@@ -331,7 +331,7 @@ DECLARE_EVENT_CLASS(pin_unpin,
 		__entry->h, __entry->pin_count)
 );
 
-DEFINE_EVENT(pin_unpin, handle_pin,
+DEFINE_EVENT(pin_unpin, nvmap_pin,
 	TP_PROTO(struct nvmap_client *client,
 		 const char *name,
 		 struct nvmap_handle *h,
@@ -340,7 +340,7 @@ DEFINE_EVENT(pin_unpin, handle_pin,
 	TP_ARGS(client, name, h, pin_count)
 );
 
-DEFINE_EVENT(pin_unpin, handle_unpin,
+DEFINE_EVENT(pin_unpin, nvmap_unpin,
 	TP_PROTO(struct nvmap_client *client,
 		 const char *name,
 		 struct nvmap_handle *h,

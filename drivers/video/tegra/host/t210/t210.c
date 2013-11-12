@@ -18,6 +18,8 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 
+#include <mach/mc.h>
+
 #include "dev.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
@@ -113,6 +115,7 @@ struct nvhost_device_data t21_isp_info = {
 	.keepalive = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks        = {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.moduleid      = NVHOST_MODULE_ISP,
 };
 

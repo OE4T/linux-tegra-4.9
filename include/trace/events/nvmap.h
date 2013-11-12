@@ -3,7 +3,7 @@
  *
  * NvMap event logging to ftrace.
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@
 #define _TRACE_NVMAP_H
 
 #include <linux/nvmap.h>
+#include <linux/dma-buf.h>
+#include <linux/types.h>
 #include <linux/tracepoint.h>
 
 DECLARE_EVENT_CLASS(nvmap,
@@ -301,7 +303,6 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 			    sizeof(unsigned long) * __entry->count : 0))
 );
 
-
 DECLARE_EVENT_CLASS(pin_unpin,
 	TP_PROTO(struct nvmap_client *client,
 		 const char *name,
@@ -355,6 +356,181 @@ DEFINE_EVENT(pin_unpin, handle_unpin_error,
 		 u32 pin_count
 	),
 	TP_ARGS(client, name, h, pin_count)
+);
+
+/*
+ * Nvmap dmabuf events
+ */
+DECLARE_EVENT_CLASS(nvmap_dmabuf_2,
+	TP_PROTO(struct dma_buf *dbuf,
+		 struct device *dev
+	),
+
+	TP_ARGS(dbuf, dev),
+
+	TP_STRUCT__entry(
+		__field(struct dma_buf *, dbuf)
+		__field(struct device *, dev)
+	),
+
+	TP_fast_assign(
+		__entry->dbuf = dbuf;
+		__entry->dev = dev;
+	),
+
+	TP_printk("dmabuf=%p, device=%s",
+		__entry->dbuf, dev_name(__entry->dev)
+	)
+);
+
+DECLARE_EVENT_CLASS(nvmap_dmabuf_1,
+	TP_PROTO(struct dma_buf *dbuf),
+
+	TP_ARGS(dbuf),
+
+	TP_STRUCT__entry(
+		__field(struct dma_buf *, dbuf)
+	),
+
+	TP_fast_assign(
+		__entry->dbuf = dbuf;
+	),
+
+	TP_printk("dmabuf=%p",
+		__entry->dbuf
+	)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_2, nvmap_dmabuf_attach,
+	TP_PROTO(struct dma_buf *dbuf,
+		 struct device *dev
+	),
+	TP_ARGS(dbuf, dev)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_2, nvmap_dmabuf_detach,
+	TP_PROTO(struct dma_buf *dbuf,
+		 struct device *dev
+	),
+	TP_ARGS(dbuf, dev)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_2, nvmap_dmabuf_map_dma_buf,
+	TP_PROTO(struct dma_buf *dbuf,
+		 struct device *dev
+	),
+	TP_ARGS(dbuf, dev)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_2, nvmap_dmabuf_unmap_dma_buf,
+	TP_PROTO(struct dma_buf *dbuf,
+		 struct device *dev
+	),
+	TP_ARGS(dbuf, dev)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_1, nvmap_dmabuf_mmap,
+	TP_PROTO(struct dma_buf *dbuf),
+	TP_ARGS(dbuf)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_1, nvmap_dmabuf_vmap,
+	TP_PROTO(struct dma_buf *dbuf),
+	TP_ARGS(dbuf)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_1, nvmap_dmabuf_vunmap,
+	TP_PROTO(struct dma_buf *dbuf),
+	TP_ARGS(dbuf)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_1, nvmap_dmabuf_kmap,
+	TP_PROTO(struct dma_buf *dbuf),
+	TP_ARGS(dbuf)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_1, nvmap_dmabuf_kunmap,
+	TP_PROTO(struct dma_buf *dbuf),
+	TP_ARGS(dbuf)
+);
+
+DECLARE_EVENT_CLASS(nvmap_dmabuf_cpu_access,
+	TP_PROTO(struct dma_buf *dbuf,
+		 size_t start,
+		 size_t len),
+
+	TP_ARGS(dbuf, start, len),
+
+	TP_STRUCT__entry(
+		__field(struct dma_buf *, dbuf)
+		__field(size_t, start)
+		__field(size_t, len)
+	),
+
+	TP_fast_assign(
+		__entry->dbuf = dbuf;
+		__entry->start = start;
+		__entry->len = len;
+	),
+
+	TP_printk("dmabuf=%p, start=%d len=%d",
+		  __entry->dbuf, __entry->start, __entry->len
+	)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_cpu_access, nvmap_dmabuf_begin_cpu_access,
+	TP_PROTO(struct dma_buf *dbuf,
+		 u32 start,
+		 u32 len),
+	TP_ARGS(dbuf, start, len)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_cpu_access, nvmap_dmabuf_end_cpu_access,
+	TP_PROTO(struct dma_buf *dbuf,
+		 u32 start,
+		 u32 len),
+	TP_ARGS(dbuf, start, len)
+);
+
+DECLARE_EVENT_CLASS(nvmap_dmabuf_make_release,
+	TP_PROTO(const char *cli,
+		 struct nvmap_handle *h,
+		 struct dma_buf *dbuf
+	),
+
+	TP_ARGS(cli, h, dbuf),
+
+	TP_STRUCT__entry(
+		__field(const char *, cli)
+		__field(struct nvmap_handle *, h)
+		__field(struct dma_buf *, dbuf)
+	),
+
+	TP_fast_assign(
+		__entry->cli = cli;
+		__entry->h = h;
+		__entry->dbuf = dbuf;
+	),
+
+	TP_printk("cli=%s handle=%p dmabuf=%p",
+		  __entry->cli, __entry->h, __entry->dbuf
+	)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_make_release, nvmap_make_dmabuf,
+	TP_PROTO(const char *cli,
+		 struct nvmap_handle *h,
+		 struct dma_buf *dbuf
+	),
+	TP_ARGS(cli, h, dbuf)
+);
+
+DEFINE_EVENT(nvmap_dmabuf_make_release, nvmap_dmabuf_release,
+	TP_PROTO(const char *cli,
+		 struct nvmap_handle *h,
+		 struct dma_buf *dbuf
+	),
+	TP_ARGS(cli, h, dbuf)
 );
 
 #endif /* _TRACE_NVMAP_H */

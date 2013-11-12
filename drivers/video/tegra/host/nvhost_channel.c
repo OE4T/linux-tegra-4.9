@@ -32,16 +32,16 @@
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
 int nvhost_channel_init(struct nvhost_channel *ch,
-		struct nvhost_master *dev, int index)
+		struct nvhost_master *dev)
 {
 	int err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* Link platform_device to nvhost_channel */
-	err = channel_op(ch).init(ch, dev, index);
+	err = channel_op(ch).init(ch, dev);
 	if (err < 0) {
 		dev_err(&dev->dev->dev, "failed to init channel %d\n",
-				index);
+				ch->chid);
 		return err;
 	}
 	pdata->channel = ch;
@@ -147,6 +147,7 @@ struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 		if (ch == NULL)
 			return NULL;
 		else {
+			ch->chid = *current_channel_count;
 			(*current_channel_count)++;
 			return ch;
 		}

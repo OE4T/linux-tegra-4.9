@@ -629,35 +629,6 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 int nvhost_init_t124_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
-	int i, num_channels;
-
-	/* Set indices dynamically as we can have
-	 * missing/non-static devices above (e.g.: vic, gk20a).
-	 */
-
-	for (num_channels = i = 0; i < ARRAY_SIZE(t124_devices); i++) {
-		struct platform_device *dev = t124_devices[i];
-		struct nvhost_device_data *pdata =
-			(struct nvhost_device_data *)dev->dev.platform_data;
-		pdata->index = num_channels++;
-		nvhost_dbg_fn("assigned channel %d to %s",
-			      pdata->index, dev_name(&dev->dev));
-		if (pdata->slave) {
-			struct nvhost_device_data *slave_pdata =
-				(struct nvhost_device_data *)pdata->slave->dev.platform_data;
-			slave_pdata->index = num_channels++;
-			nvhost_dbg_fn("assigned channel %d to %s",
-				      slave_pdata->index,
-				      dev_name(&pdata->slave->dev));
-		}
-	}
-	nvhost_dbg_fn("max channels=%d num channels=%zd",
-		      NV_HOST1X_CHANNELS, num_channels);
-	if (num_channels > T124_NVHOST_NUMCHANNELS) {
-		WARN(-ENODEV, "too many channel devices");
-		return -ENODEV;
-	}
-
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
 

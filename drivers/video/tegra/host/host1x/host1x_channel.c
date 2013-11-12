@@ -493,13 +493,12 @@ static inline int hwctx_handler_init(struct nvhost_channel *ch)
 }
 
 static int host1x_channel_init(struct nvhost_channel *ch,
-	struct nvhost_master *dev, int index)
+	struct nvhost_master *dev)
 {
-	ch->chid = index;
 	mutex_init(&ch->reflock);
 	mutex_init(&ch->submitlock);
 
-	ch->aperture = host1x_channel_aperture(dev->aperture, index);
+	ch->aperture = host1x_channel_aperture(dev->aperture, ch->chid);
 
 	return hwctx_handler_init(ch);
 }

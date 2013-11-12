@@ -1206,7 +1206,7 @@ static struct device *nvhost_client_device_create(
 	err = cdev_add(cdev, devno, 1);
 	if (err < 0) {
 		dev_err(&pdev->dev,
-			"failed to add chan %i cdev\n", pdata->index);
+			"failed to add cdev\n");
 		return NULL;
 	}
 	use_dev_name = get_device_name_for_dev(pdev);
@@ -1348,7 +1348,7 @@ int nvhost_client_device_init(struct platform_device *dev)
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
 
-	err = nvhost_channel_init(ch, nvhost_master, pdata->index);
+	err = nvhost_channel_init(ch, nvhost_master);
 	if (err)
 		goto fail1;
 

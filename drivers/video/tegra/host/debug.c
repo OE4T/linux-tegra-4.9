@@ -70,9 +70,9 @@ static int show_channels(struct platform_device *pdev, void *data,
 	if (ch->chid != locked_id)
 		mutex_lock(&ch->cdma.lock);
 	nvhost_get_chip_ops()->debug.show_channel_fifo(
-		m, ch, o, pdata->index);
+		m, ch, o, ch->chid);
 	nvhost_get_chip_ops()->debug.show_channel_cdma(
-		m, ch, o, pdata->index);
+		m, ch, o, ch->chid);
 	if (ch->chid != locked_id)
 		mutex_unlock(&ch->cdma.lock);
 	nvhost_putchannel(ch);
@@ -139,7 +139,7 @@ static int show_channels_no_fifo(struct platform_device *pdev, void *data,
 			if (locked_id != ch->chid)
 				mutex_lock(&ch->cdma.lock);
 			nvhost_get_chip_ops()->debug.show_channel_cdma(m,
-					ch, o, pdata->index);
+					ch, o, ch->chid);
 			if (locked_id != ch->chid)
 				mutex_unlock(&ch->cdma.lock);
 		}

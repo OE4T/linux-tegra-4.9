@@ -53,8 +53,7 @@ struct nvhost_zcull_ops {
 struct nvhost_channel_ops {
 	const char *soc_name;
 	int (*init)(struct nvhost_channel *,
-		    struct nvhost_master *,
-		    int chid);
+		    struct nvhost_master *);
 	int (*submit)(struct nvhost_job *job);
 	int (*save_context)(struct nvhost_channel *channel);
 	int (*alloc_obj)(struct nvhost_hwctx *,
@@ -110,7 +109,7 @@ struct nvhost_channel {
 #define channel_zbc_op(ch)	(ch->zbc)
 
 int nvhost_channel_init(struct nvhost_channel *ch,
-	struct nvhost_master *dev, int index);
+	struct nvhost_master *dev);
 
 int nvhost_channel_submit(struct nvhost_job *job);
 

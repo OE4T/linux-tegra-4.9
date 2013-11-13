@@ -410,6 +410,8 @@ void inner_flush_cache_all(void);
 void inner_clean_cache_all(void);
 void nvmap_flush_cache(struct page **pages, int numpages);
 
+int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr);
+
 /* Internal API to support dmabuf */
 struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 				 struct nvmap_handle *handle);
@@ -426,9 +428,9 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);
 int __nvmap_get_handle_param(struct nvmap_client *client,
 			     struct nvmap_handle *h, u32 param, u64 *result);
-int __nvmap_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
-			unsigned long start, unsigned long end,
-			unsigned int op, unsigned int allow_deferred);
+int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
+			   unsigned long start, unsigned long end,
+			   unsigned int op, unsigned int allow_deferred);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);

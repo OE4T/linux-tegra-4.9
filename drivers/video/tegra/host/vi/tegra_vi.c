@@ -38,7 +38,12 @@ static DEFINE_MUTEX(la_lock);
 #define T12_VI_CSI_SW_RESET_MCCIF_RESET 3
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
-int nvhost_vi_init(struct platform_device *dev)
+
+int nvhost_vi_init(struct platform_device *dev) {return 0; }
+
+void nvhost_vi_deinit(struct platform_device *dev) {}
+
+int nvhost_vi_finalize_poweron(struct platform_device *dev)
 {
 	int ret = 0;
 	struct vi *tegra_vi;
@@ -57,38 +62,24 @@ int nvhost_vi_init(struct platform_device *dev)
 				__func__);
 		}
 		tegra_vi->reg = NULL;
+		goto fail;
 	}
-	return ret;
-}
-
-void nvhost_vi_deinit(struct platform_device *dev)
-{
-	struct vi *tegra_vi;
-	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
-
-	if (tegra_vi->reg) {
-		regulator_put(tegra_vi->reg);
-		tegra_vi->reg = NULL;
-	}
-}
-
-int nvhost_vi_finalize_poweron(struct platform_device *dev)
-{
-	int ret = 0;
-	struct vi *tegra_vi;
-	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 
 	if (tegra_vi->reg) {
 		ret = regulator_enable(tegra_vi->reg);
-		if (ret)
+		if (ret) {
 			dev_err(&dev->dev,
 				"%s: enable csi regulator failed.\n",
 				__func__);
+			goto fail;
+		}
 	}
 
 	if (nvhost_client_can_writel(dev))
 		nvhost_client_writel(dev,
 				T12_CG_2ND_LEVEL_EN, T12_VI_CFG_CG_CTRL);
+
+ fail:
 	return ret;
 }
 
@@ -100,11 +91,16 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 
 	if (tegra_vi->reg) {
 		ret = regulator_disable(tegra_vi->reg);
-		if (ret)
+		if (ret) {
 			dev_err(&dev->dev,
 				"%s: disable csi regulator failed.\n",
 				__func__);
+			goto fail;
+		}
+		regulator_put(tegra_vi->reg);
+		tegra_vi->reg = NULL;
 	}
+ fail:
 	return ret;
 }
 

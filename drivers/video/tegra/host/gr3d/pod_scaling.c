@@ -155,6 +155,16 @@ enum podgov_adjustment_type {
 };
 
 
+static void stop_podgov_workers(struct podgov_info_rec *podgov)
+{
+	/* idle_timer can rearm itself */
+	do {
+		cancel_delayed_work_sync(&podgov->idle_timer);
+	} while (delayed_work_pending(&podgov->idle_timer));
+
+	cancel_work_sync(&podgov->work);
+}
+
 /*******************************************************************************
  * scaling_limit(df, freq)
  *
@@ -185,7 +195,12 @@ static void podgov_clocks_handler(struct work_struct *work)
 	unsigned long freq;
 
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy(pdev);
+	nvhost_module_busy_noresume(pdev);
+	if (!pm_runtime_active(&pdev->dev)) {
+		nvhost_module_idle(pdev);
+		return;
+	}
+
 	mutex_lock(&df->lock);
 
 	if (!podgov->enable)
@@ -232,10 +247,9 @@ void nvhost_scale3d_suspend(struct device *dev)
 		mutex_unlock(&df->lock);
 		return;
 	}
-	cancel_delayed_work(&podgov->idle_timer);
 	mutex_unlock(&df->lock);
 
-	cancel_work_sync(&podgov->work);
+	stop_podgov_workers(podgov);
 }
 
 /*******************************************************************************
@@ -277,35 +291,47 @@ static void podgov_enable(struct device *dev, int enable)
 	struct nvhost_device_data *pdata = platform_get_drvdata(d);
 	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
-	bool cancel = false;
 
 	if (!df)
 		return;
 
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy(d);
+	nvhost_module_busy_noresume(d);
+
 	mutex_lock(&df->lock);
 
 	podgov = df->data;
 
 	trace_podgov_enabled(enable);
 
-	if (enable && df->min_freq != df->max_freq) {
-		podgov->enable = 1;
-	} else {
-		cancel = true;
-		cancel_delayed_work(&podgov->idle_timer);
-		podgov->enable = 0;
-		podgov->adjustment_frequency = df->max_freq;
-		podgov->adjustment_type = ADJUSTMENT_LOCAL;
-		update_devfreq(df);
-	}
+	/* bad configuration. quit. */
+	if (df->min_freq == df->max_freq)
+		goto exit_unlock;
+
+	/* store the enable information */
+	podgov->enable = enable;
+
+	/* skip local adjustment if we are enabling or the device is
+	 * suspended */
+	if (enable || !pm_runtime_active(&d->dev))
+		goto exit_unlock;
+
+	/* full speed */
+	podgov->adjustment_frequency = df->max_freq;
+	podgov->adjustment_type = ADJUSTMENT_LOCAL;
+	update_devfreq(df);
 
 	mutex_unlock(&df->lock);
+
 	nvhost_module_idle(d);
 
-	if (cancel)
-		cancel_work_sync(&podgov->work);
+	stop_podgov_workers(podgov);
+
+	return;
+
+exit_unlock:
+	mutex_unlock(&df->lock);
+	nvhost_module_idle(d);
 }
 
 /*******************************************************************************
@@ -347,33 +373,44 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	struct nvhost_device_data *pdata = platform_get_drvdata(d);
 	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
-	int cancel = 0;
+	int old_user;
 
 	if (!df)
 		return;
 
-	nvhost_module_busy(d);
+	/* make sure the device is alive before doing any scaling */
+	nvhost_module_busy_noresume(d);
+
 	mutex_lock(&df->lock);
 	podgov = df->data;
 
 	trace_podgov_set_user_ctl(user);
 
-	if (podgov->enable && user && !podgov->p_user) {
-		cancel = 1;
-		cancel_delayed_work(&podgov->idle_timer);
-
-		podgov->adjustment_frequency = podgov->p_freq_request;
-		podgov->adjustment_type = ADJUSTMENT_LOCAL;
-		update_devfreq(df);
-	}
-
+	/* store the new user value */
+	old_user = podgov->p_user;
 	podgov->p_user = user;
+
+	/* skip scaling, if scaling (or the whole device) is turned off
+	 * - or the scaling already was in user mode */
+	if (!pm_runtime_active(&d->dev) || !podgov->enable ||
+	    !(user && !old_user))
+		goto exit_unlock;
+
+	/* write request */
+	podgov->adjustment_frequency = podgov->p_freq_request;
+	podgov->adjustment_type = ADJUSTMENT_LOCAL;
+	update_devfreq(df);
 
 	mutex_unlock(&df->lock);
 	nvhost_module_idle(d);
 
-	if (cancel)
-		cancel_work_sync(&podgov->work);
+	stop_podgov_workers(podgov);
+
+	return;
+
+exit_unlock:
+	mutex_unlock(&df->lock);
+	nvhost_module_idle(d);
 }
 
 /*******************************************************************************
@@ -418,7 +455,9 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 	if (!df)
 		return;
 
-	nvhost_module_busy(d);
+	/* make sure the device is alive before doing any scaling */
+	nvhost_module_busy_noresume(d);
+
 	mutex_lock(&df->lock);
 
 	podgov = df->data;
@@ -427,8 +466,10 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 
 	podgov->p_freq_request = freq_request;
 
-	if (podgov->enable && podgov->p_user) {
-
+	/* update the request only if podgov is enabled, device is turned on
+	 * and the scaling is in user mode */
+	if (podgov->enable && podgov->p_user &&
+	    pm_runtime_active(&d->dev)) {
 		podgov->adjustment_frequency = freq_request;
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
@@ -699,7 +740,8 @@ static void podgov_idle_handler(struct work_struct *work)
 	}
 
 	if (podgov->last_event_type == DEVICE_IDLE &&
-		df->previous_freq > df->min_freq)
+	    df->previous_freq > df->min_freq &&
+	    podgov->p_user == false)
 		notify_idle = 1;
 
 	mutex_unlock(&df->lock);
@@ -738,7 +780,12 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	pdev = to_platform_device(df->dev.parent);
 
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy(pdev);
+	nvhost_module_busy_noresume(pdev);
+	if (!pm_runtime_active(&pdev->dev)) {
+		nvhost_module_idle(pdev);
+		return 0;
+	}
+
 	mutex_lock(&podgov->power_manager->lock);
 
 	podgov->block--;

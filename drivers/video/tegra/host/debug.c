@@ -199,6 +199,14 @@ void nvhost_device_debug_init(struct platform_device *dev)
 	pdata->debugfs = debugfs_create_dir(dev->name, pdata->debugfs);
 }
 
+void nvhost_device_debug_deinit(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	if (!IS_ERR_OR_NULL(pdata->debugfs))
+		debugfs_remove(pdata->debugfs);
+	pdata->debugfs = NULL;
+}
+
 void nvhost_debug_init(struct nvhost_master *master)
 {
 	struct nvhost_device_data *pdata;

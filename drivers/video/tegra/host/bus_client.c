@@ -1271,7 +1271,7 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	err = nvhost_channel_init(ch, nvhost_master, pdata->index);
 	if (err)
-		goto fail;
+		goto fail1;
 
 	err = nvhost_client_user_init(dev);
 	if (err)
@@ -1311,6 +1311,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 fail:
 	/* Add clean-up */
+	dev_err(&dev->dev, "failed to init client device\n");
+	nvhost_client_user_deinit(dev);
+fail1:
+	nvhost_device_debug_deinit(dev);
 	nvhost_free_channel(ch);
 	return err;
 }
@@ -1331,6 +1335,9 @@ int nvhost_client_device_release(struct platform_device *dev)
 
 	/* Release chardev and device node for user space */
 	nvhost_client_user_deinit(dev);
+
+	/* Remove debugFS */
+	nvhost_device_debug_deinit(dev);
 
 	/* Free nvhost channel */
 	nvhost_free_channel(ch);

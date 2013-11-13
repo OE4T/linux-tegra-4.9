@@ -235,6 +235,15 @@ struct nvmap_cache_op_32 {
 };
 #endif
 
+struct nvmap_cache_op_list {
+#ifdef CONFIG_COMPAT
+	__u32 handles;		/* Uspace ptr to list of handles */
+#else
+	struct nvmap_handle **handles;
+#endif
+	__u32 nr;		/* Number of handles */
+};
+
 #define NVMAP_IOC_MAGIC 'N'
 
 /* Creates a new memory handle. On input, the argument is the size of the new
@@ -301,6 +310,9 @@ struct nvmap_cache_op_32 {
 /* Create a new memory handle from file id passed */
 #define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
 
+/* Perform cache maintenance on a list of handles. */
+#define NVMAP_IOC_CACHE_LIST _IOW(NVMAP_IOC_MAGIC, 17,	\
+				  struct nvmap_cache_op_list)
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */
 #define NVMAP_IOC_ALLOC_KIND _IOW(NVMAP_IOC_MAGIC, 100, struct nvmap_alloc_kind_handle)

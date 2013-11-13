@@ -3,7 +3,7 @@
  *
  * ioctl declarations for nvmap
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,8 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, bool is32);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	bool is32);
+
+int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg);
 

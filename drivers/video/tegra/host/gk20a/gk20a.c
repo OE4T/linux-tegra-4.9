@@ -1019,10 +1019,12 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->timeouts_enabled = true;
 
 	/* Set up initial clock gating settings */
-	gk20a->slcg_enabled = true;
-	gk20a->blcg_enabled = true;
-	gk20a->elcg_enabled = true;
-	gk20a->elpg_enabled = true;
+	if (tegra_platform_is_silicon()) {
+		gk20a->slcg_enabled = true;
+		gk20a->blcg_enabled = true;
+		gk20a->elcg_enabled = true;
+		gk20a->elpg_enabled = true;
+	}
 
 	gk20a_create_sysfs(dev);
 

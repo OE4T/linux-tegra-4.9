@@ -292,9 +292,9 @@ static const struct file_operations sanity_panel_fops = {
 	.release = single_release,
 };
 
-static u8 command_value;
-static u8 data_id;
-static u8 command_value1;
+static u32 command_value;
+static u32 data_id;
+static u32 command_value1;
 
 static int send_host_cmd_v_blank_dcs(struct seq_file *s, void *unused)
 {
@@ -375,6 +375,57 @@ static const struct file_operations remove_host_cmd_dcs_fops = {
 	.release = single_release,
 };
 
+static int send_write_data_cmd(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+	int err;
+	u8 del = 100;
+
+	struct tegra_dsi_cmd user_command[] = {
+	DSI_CMD_SHORT(data_id, command_value, command_value1),
+	DSI_DLY_MS(20),
+	};
+
+	seq_printf(s, "data_id taken :0x%x\n", data_id);
+	seq_printf(s, "command value taken :0x%x\n", command_value);
+	seq_printf(s, "second command value taken :0x%x\n", command_value1);
+
+	err = tegra_dsi_write_data(dc, dsi, user_command, del);
+
+	return err;
+}
+
+static ssize_t write_data_get_cmd(struct file *file,
+				const char  *buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+
+	sscanf(buf, "%x %x %x", &data_id,
+					&command_value, &command_value1);
+	dev_info(&dc->ndev->dev, "data_id taken :0x%x\n", data_id);
+	dev_info(&dc->ndev->dev, "command value taken :0x%x\n", command_value);
+	dev_info(&dc->ndev->dev, "second command value taken :0x%x\n",
+					command_value1);
+
+	return count;
+}
+
+static int write_data_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, send_write_data_cmd, inode->i_private);
+}
+
+static const struct file_operations write_data_fops = {
+	.open = write_data_open,
+	.read = seq_read,
+	.write = write_data_get_cmd,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct dentry *dsidir;
 
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
@@ -402,6 +453,10 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		goto free_out;
 	retval = debugfs_create_file("remove_host_cmd_dcs", S_IRUGO|S_IWUSR,
 				 dsidir, dsi, &remove_host_cmd_dcs_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("write_data", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &write_data_fops);
 	if (!retval)
 		goto free_out;
 	return;

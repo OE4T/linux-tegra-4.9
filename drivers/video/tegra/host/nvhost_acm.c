@@ -130,6 +130,16 @@ void nvhost_module_reset(struct platform_device *dev)
 		__func__, dev_name(&dev->dev));
 }
 
+void nvhost_module_busy_noresume(struct platform_device *dev)
+{
+	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
+		nvhost_module_busy_noresume(nvhost_get_parent(dev));
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_get_noresume(&dev->dev);
+#endif
+}
+
 void nvhost_module_busy(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
@@ -181,7 +191,9 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 #ifdef CONFIG_PM_RUNTIME
-	if (atomic_read(&dev->dev.power.usage_count) == refs) {
+	/* call idle callback only if the device is turned on. */
+	if (atomic_read(&dev->dev.power.usage_count) == refs &&
+	    pm_runtime_active(&dev->dev)) {
 		if (pdata->idle)
 			pdata->idle(dev);
 	}

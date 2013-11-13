@@ -223,19 +223,20 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 			trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_m(),
 			trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_yes_f());
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
-	udelay(1);
 
 	/* new ndiv ready for ramp */
+	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
 			trim_sys_gpcpll_coeff_ndiv_f(n));
-	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 	udelay(1);
+	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
 	/* dynamic ramp to new ndiv */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 	data = set_field(data,
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_yes_f());
+	udelay(1);
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
 
 	do {
@@ -256,6 +257,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
+	gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 
 	if (ramp_timeout <= 0) {
 		nvhost_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
@@ -315,6 +317,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 			trim_sys_gpcpll_cfg_enable_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	/* change coefficients */
 	nlo = DIV_ROUND_UP(clk->gpc_pll.M * gpc_pll_params.min_vco,
@@ -379,6 +382,7 @@ static int clk_disable_gpcpll(struct gk20a *g)
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 			trim_sys_gpcpll_cfg_enable_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	clk->gpc_pll.enabled = false;
 	return 0;

@@ -14,12 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/fs.h>
+#include <linux/file.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/nvhost.h>
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform_device.h>
+#include <linux/regulator/consumer.h>
 
+#include <asm/uaccess.h>
+
+#include <mach/clk.h>
 #include <mach/latency_allowance.h>
 
 #include "bus_client.h"

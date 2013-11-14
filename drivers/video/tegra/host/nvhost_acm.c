@@ -162,15 +162,17 @@ void nvhost_module_disable_poweroff(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	dev_pm_qos_add_request(&dev->dev, &pdata->no_poweroff_req,
-			DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
+	if (!dev_pm_qos_request_active(&pdata->no_poweroff_req))
+		dev_pm_qos_add_request(&dev->dev, &pdata->no_poweroff_req,
+				DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
 }
 
 void nvhost_module_enable_poweroff(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	dev_pm_qos_remove_request(&pdata->no_poweroff_req);
+	if (dev_pm_qos_request_active(&pdata->no_poweroff_req))
+		dev_pm_qos_remove_request(&pdata->no_poweroff_req);
 }
 
 void nvhost_module_idle_mult(struct platform_device *dev, int refs)

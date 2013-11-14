@@ -458,7 +458,6 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	struct nvmap_vma_priv *vpriv;
 	struct vm_area_struct *vma;
 	struct nvmap_handle *h = NULL;
-	unsigned int cache_flags;
 	int err = 0;
 	ulong handle;
 
@@ -528,35 +527,6 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 
 	vpriv->handle = h;
 	vpriv->offs = op.offset;
-
-	cache_flags = op.flags & NVMAP_HANDLE_CACHE_FLAG;
-	if ((cache_flags == NVMAP_HANDLE_INNER_CACHEABLE ||
-	     cache_flags == NVMAP_HANDLE_CACHEABLE) &&
-	    (h->flags == NVMAP_HANDLE_UNCACHEABLE ||
-	     h->flags == NVMAP_HANDLE_WRITE_COMBINE)) {
-		if (h->size & ~PAGE_MASK) {
-			pr_err("\n%s:attempt to convert a buffer from uc/wc to"
-				" wb, whose size is not a multiple of page size."
-				" request ignored.\n", __func__);
-		} else {
-			unsigned int nr_page = h->size >> PAGE_SHIFT;
-			wmb();
-			/* override allocation time cache coherency attributes. */
-			h->flags &= ~NVMAP_HANDLE_CACHE_FLAG;
-			h->flags |= cache_flags;
-
-			/* Update page attributes, if the memory is allocated
-			 *  from system heap pages.
-			 */
-			if (cache_flags == NVMAP_HANDLE_INNER_CACHEABLE &&
-				h->heap_pgalloc)
-				nvmap_set_pages_array_iwb(h->pgalloc.pages,
-							  nr_page);
-			else if (h->heap_pgalloc)
-				nvmap_set_pages_array_wb(h->pgalloc.pages,
-							 nr_page);
-		}
-	}
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
 
 out:

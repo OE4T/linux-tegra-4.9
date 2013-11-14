@@ -103,11 +103,6 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	if (err)
 		BUG();
 
-	/* disable the ip_busy_timeout. this prevents write drops, etc.
-	 * there's no real way to recover from a hung client anyway.
-	 */
-	writel(0, sync_regs + host1x_sync_ip_busy_timeout_r());
-
 	/* increase the auto-ack timout to the maximum value. 2d will hang
 	 * otherwise on ap20.
 	 */
@@ -124,6 +119,8 @@ static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 	void __iomem *sync_regs = dev->sync_aperture;
 	/* write microsecond clock register */
 	writel(cpm, sync_regs + host1x_sync_usec_clk_r());
+	/* set the ip_busy_timeout */
+	writel(cpm * 500000, sync_regs + host1x_sync_ip_busy_timeout_r());
 }
 
 static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr,

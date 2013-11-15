@@ -3044,8 +3044,6 @@ EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_video);
 int tegra_dsi_end_host_cmd_v_blank_video(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
-	u32 val;
-
 	if (!dsi->enabled) {
 		dev_err(&dsi->dc->ndev->dev, "DSI controller suspended\n");
 		return -EINVAL;

@@ -182,11 +182,12 @@ int tegra_init_hdmi(struct platform_device *pdev,
 #endif
 
 	if (enabled) {
+#ifndef CONFIG_TEGRA_HDMI_PRIMARY
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   "fbmem");
 		res->start = tegra_fb2_start;
 		res->end = tegra_fb2_start + tegra_fb2_size - 1;
-
+#endif
 		pdev->dev.parent = &phost1x->dev;
 		err = platform_device_register(pdev);
 		if (err) {

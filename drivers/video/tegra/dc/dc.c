@@ -1889,7 +1889,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	tegra_dc_get(dc);
 
 	if (!dc->enabled || !nvhost_module_powered_ext(dc->ndev)) {
-		WARN(1, "IRQ when DC not powered!\n");
+		dev_dbg(&dc->ndev->dev, "IRQ when DC not powered!\n");
 		status = tegra_dc_readl(dc, DC_CMD_INT_STATUS);
 		tegra_dc_writel(dc, status, DC_CMD_INT_STATUS);
 		tegra_dc_put(dc);

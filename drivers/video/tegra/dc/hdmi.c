@@ -757,8 +757,6 @@ bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 /* used by tegra_dc_probe() to detect hpd/hdmi status at boot */
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
-	int hdmi_state;
-
 	hdmi_state_machine_set_pending_hpd();
 	/* result isn't used by dc */
 

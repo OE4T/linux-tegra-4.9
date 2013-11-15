@@ -978,7 +978,7 @@ EXPORT_SYMBOL(tegra_dc_get_dc);
 
 struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win)
 {
-	if (win >= dc->n_windows)
+	if (win >= DC_N_WINDOWS || !test_bit(win, &dc->valid_windows))
 		return NULL;
 
 	return &dc->windows[win];
@@ -1666,6 +1666,16 @@ static u64 tegra_dc_underflow_count(struct tegra_dc *dc, unsigned reg)
 
 static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 {
+	const u32 masks[] = {
+		WIN_A_UF_INT,
+		WIN_B_UF_INT,
+		WIN_C_UF_INT,
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+		WIN_D_UF_INT,
+		HC_UF_INT,
+		WIN_T_UF_INT,
+#endif
+	};
 	int i;
 
 	dc->stats.underflows++;
@@ -1691,18 +1701,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 #endif
 
 	/* Check for any underflow reset conditions */
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		u32 masks[] = {
-			WIN_A_UF_INT,
-			WIN_B_UF_INT,
-			WIN_C_UF_INT,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			WIN_D_UF_INT,
-			HC_UF_INT,
-			WIN_T_UF_INT,
-#endif
-		};
-
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		if (WARN_ONCE(i >= ARRAY_SIZE(masks),
 			"underflow stats unsupported"))
 			break; /* bail if the table above is missing entries */
@@ -2118,7 +2117,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	}
 #endif
 	tegra_dc_set_color_control(dc);
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *win = &dc->windows[i];
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -2476,8 +2475,10 @@ void tegra_dc_blank(struct tegra_dc *dc)
 	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
 	unsigned i;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		dcwins[i] = tegra_dc_get_window(dc, i);
+		if (!dcwins[i])
+			continue;
 		dcwins[i]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
@@ -2790,9 +2791,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	tegra_dc_init_lut_defaults(&dc->fb_lut);
 
 	dc->n_windows = DC_N_WINDOWS;
-	for (i = 0; i < dc->n_windows; i++) {
+	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *win = &dc->windows[i];
 		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
+		if (!test_bit(i, &dc->valid_windows))
+			win->flags |= TEGRA_WIN_FLAG_INVALID;
 		win->idx = i;
 		win->dc = dc;
 		tmp_win->idx = i;

@@ -827,7 +827,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		if (update_blend_seq)
 			tegra_dc_blend_sequential(dc, &dc->blend);
 
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 			if (!no_vsync)
 				dc->windows[i].dirty = 1;
 			update_mask |= WIN_A_ACT_REQ << i;
@@ -904,7 +904,7 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 #endif
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		if (tegra_platform_is_linsim()) {
 			/* FIXME: this is not needed when
 			   the simulator clears WIN_x_UPDATE

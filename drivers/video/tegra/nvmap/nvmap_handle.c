@@ -736,6 +736,11 @@ static void alloc_handle(struct nvmap_client *client,
 		b = nvmap_carveout_alloc(client, h, type);
 		if (b) {
 			h->heap_pgalloc = false;
+			/* barrier to ensure all handle alloc data
+			 * is visible before alloc is seen by other
+			 * processors.
+			 */
+			mb();
 			h->alloc = true;
 			nvmap_carveout_commit_add(client,
 				nvmap_heap_to_arg(nvmap_block_to_heap(b)),
@@ -751,8 +756,8 @@ static void alloc_handle(struct nvmap_client *client,
 			atomic_sub(reserved, &client->iovm_commit);
 			return;
 		}
-
 		h->heap_pgalloc = true;
+		mb();
 		h->alloc = true;
 	}
 }

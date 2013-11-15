@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1080p-11-6.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,6 +43,7 @@ static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *avdd_lcd;
 static struct regulator *vdd_ds_1v8;
+static struct regulator *avdd_3v3_dp;
 
 static struct tegra_dc_sd_settings edp_a_1080p_14_0_sd_settings = {
 	.enable = 1, /* enabled by default. */
@@ -180,6 +181,51 @@ fail:
 	return err;
 }
 
+static int ardbeg_edp_regulator_get(struct device *dev)
+{
+	int err = 0;
+
+	if (reg_requested)
+		return 0;
+
+	vdd_ds_1v8 = regulator_get(dev, "vdd_lcd_1v8_s");
+	if (IS_ERR_OR_NULL(vdd_ds_1v8)) {
+		pr_err("vdd_ds_1v8 regulator get failed\n");
+		err = PTR_ERR(vdd_ds_1v8);
+		vdd_ds_1v8 = NULL;
+		goto fail;
+	}
+
+	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
+	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
+		pr_err("vdd_lcd_bl_en regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_bl_en);
+		vdd_lcd_bl_en = NULL;
+		goto fail;
+	}
+
+	avdd_lcd = regulator_get(dev, "avdd_lcd");
+	if (IS_ERR_OR_NULL(avdd_lcd)) {
+		pr_err("avdd_lcd regulator get failed\n");
+		err = PTR_ERR(avdd_lcd);
+		avdd_lcd = NULL;
+		goto fail;
+	}
+
+	avdd_3v3_dp = regulator_get(dev, "avdd_3v3_dp");
+	if (IS_ERR_OR_NULL(avdd_3v3_dp)) {
+		pr_err("avdd_3v3_dp regulator get failed\n");
+		err = PTR_ERR(avdd_3v3_dp);
+		avdd_3v3_dp = NULL;
+		goto fail;
+	}
+
+	reg_requested = true;
+	return 0;
+fail:
+	return err;
+}
+
 static int laguna_edp_gpio_get(void)
 {
 	int err = 0;
@@ -204,7 +250,10 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 {
 	int err = 0;
 
-	err = laguna_edp_regulator_get(dev);
+	if (of_machine_is_compatible("nvidia,laguna"))
+		err = laguna_edp_regulator_get(dev);
+	else
+		err = ardbeg_edp_regulator_get(dev);
 	if (err < 0) {
 		pr_err("edp regulator get failed\n");
 		goto fail;
@@ -220,6 +269,14 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 		err = regulator_enable(vdd_lcd_bl);
 		if (err < 0) {
 			pr_err("vdd_lcd_bl regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (avdd_3v3_dp) {
+		err = regulator_enable(avdd_3v3_dp);
+		if (err < 0) {
+			pr_err("avdd_3v3_dp regulator enable failed\n");
 			goto fail;
 		}
 	}
@@ -275,6 +332,9 @@ static int edp_a_1080p_14_0_disable(void)
 
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
+
+	if (avdd_3v3_dp)
+		regulator_disable(avdd_3v3_dp);
 
 	msleep(500);
 

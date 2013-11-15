@@ -19,6 +19,7 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
+#include <linux/fdtable.h>
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -568,6 +569,26 @@ err_nomem:
 	return ERR_PTR(err);
 }
 
+int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags)
+{
+	int fd;
+
+	if (!dmabuf || !dmabuf->file)
+		return -EINVAL;
+	/* Allocate fd from 1024 onwards to overcome
+	 * __FD_SETSIZE limitation issue for select(),
+	 * pselect() syscalls.
+	 */
+	fd = __alloc_fd(current->files, 1024,
+			sysctl_nr_open, flags);
+	if (fd < 0)
+		return fd;
+
+	fd_install(fd, dmabuf->file);
+
+	return fd;
+}
+
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id)
 {
 	int fd;
@@ -576,7 +597,7 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id)
 	dmabuf = __nvmap_dmabuf_export(client, id);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
-	fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+	fd = __nvmap_dmabuf_fd(dmabuf, O_CLOEXEC);
 	if (fd < 0)
 		goto err_out;
 	return fd;

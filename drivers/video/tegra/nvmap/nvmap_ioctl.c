@@ -389,13 +389,13 @@ int nvmap_create_fd(struct nvmap_handle *h)
 {
 	int fd;
 
-	fd = dma_buf_fd(h->dmabuf, O_CLOEXEC);
+	fd = __nvmap_dmabuf_fd(h->dmabuf, O_CLOEXEC);
 	BUG_ON(fd == 0);
 	if (fd < 0) {
 		pr_err("Out of file descriptors");
 		return fd;
 	}
-	/* dma_buf_fd() associates fd with dma_buf->file *.
+	/* __nvmap_dmabuf_fd() associates fd with dma_buf->file *.
 	 * fd close drops one ref count on dmabuf->file *.
 	 * to balance ref count, ref count dma_buf.
 	 */

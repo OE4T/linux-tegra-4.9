@@ -683,25 +683,6 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	filp->f_mapping->backing_dev_info = &nvmap_bdi;
 
 	filp->private_data = priv;
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	/* increase file id limit to max */
-	if (do_prlimit(current, RLIMIT_NOFILE, NULL, &old_rlim)) {
-		pr_err("RLIMIT_NO_FILE get failed");
-	} else {
-		new_rlim.rlim_cur = old_rlim.rlim_max;
-		new_rlim.rlim_max = old_rlim.rlim_max;
-		if (do_prlimit(current->group_leader,
-			       RLIMIT_NOFILE, &new_rlim, &old_rlim))
-			pr_err("RLIMIT_NOFILE set failed");
-	}
-#endif
-	/* WAR for Bug 1379912, 1400295 */
-	if (ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_cur) < 32768)
-		ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_cur) =
-									32768;
-	if (ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_max) < 32768)
-		ACCESS_ONCE(current->signal->rlim[RLIMIT_NOFILE].rlim_max) =
-									32768;
 	return 0;
 }
 

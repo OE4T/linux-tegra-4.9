@@ -392,6 +392,7 @@ struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
 ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref);
 int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys);
 void __nvmap_unpin(struct nvmap_handle_ref *ref);
+int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags);
 
 void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root);
 int nvmap_dmabuf_stash_init(void);

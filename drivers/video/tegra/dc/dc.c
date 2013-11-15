@@ -978,7 +978,7 @@ EXPORT_SYMBOL(tegra_dc_get_dc);
 
 struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win)
 {
-	if (win >= DC_N_WINDOWS || !test_bit(win, &dc->valid_windows))
+	if (win >= dc->n_windows)
 		return NULL;
 
 	return &dc->windows[win];
@@ -2790,11 +2790,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	tegra_dc_init_lut_defaults(&dc->fb_lut);
 
 	dc->n_windows = DC_N_WINDOWS;
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < dc->n_windows; i++) {
 		struct tegra_dc_win *win = &dc->windows[i];
 		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
-		if (!test_bit(win, &dc->valid_windows))
-			win->flags |= TEGRA_WIN_FLAG_INVALID;
 		win->idx = i;
 		win->dc = dc;
 		tmp_win->idx = i;

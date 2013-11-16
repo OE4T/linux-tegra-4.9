@@ -444,6 +444,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF0",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 1 */
@@ -454,6 +455,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF1",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 2 */
@@ -464,6 +466,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF2",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 3 */
@@ -474,6 +477,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF3",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 4 */
@@ -484,6 +488,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF4",
 		.ops = &tegra_vcm30t124_x_ops,
+		.ignore_pmdown_time = 1,
 	},
 
 	{
@@ -495,6 +500,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF5",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 6 */
@@ -505,6 +511,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF6",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 7 */
@@ -515,6 +522,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF7",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 8 */
@@ -525,6 +533,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF8",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 9 */
@@ -535,6 +544,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF9",
 		.ops = &tegra_vcm30t124_y_ops,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		/* 10 */

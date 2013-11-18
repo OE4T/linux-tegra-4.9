@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-lgd-wxga-7-0.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +35,6 @@
 
 
 #define DSI_PANEL_RESET		0
-#define DSI_PANEL_BL_PWM	TEGRA_GPIO_PH1
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
 static bool reg_requested;
@@ -206,12 +205,13 @@ static int tegratab_dsi_gpio_get(void)
 		return 0;
 
 	/* free pwm GPIO */
-	err = gpio_request(DSI_PANEL_BL_PWM, "panel pwm");
+	err = gpio_request(dsi_lgd_wxga_7_0_pdata.dsi_panel_bl_pwm_gpio,
+		"panel pwm");
 	if (err < 0) {
 		pr_err("panel pwm gpio request failed\n");
 		goto fail;
 	}
-	gpio_free(DSI_PANEL_BL_PWM);
+	gpio_free(dsi_lgd_wxga_7_0_pdata.dsi_panel_bl_pwm_gpio);
 	gpio_requested = true;
 	return 0;
 fail:
@@ -229,11 +229,14 @@ static int dsi_lgd_wxga_7_0_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = tegratab_dsi_gpio_get();
-
+	err = tegra_panel_gpio_get_dt("lg,wxga-7", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
+		/* try to request gpios from board file */
+		err = tegratab_dsi_gpio_get();
+		if (err < 0) {
+			pr_err("dsi gpio request failed\n");
+			goto fail;
+		}
 	}
 
 	/*
@@ -469,6 +472,12 @@ static void dsi_lgd_wxga_7_0_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = NULL; /* will write CMU stuff after calibration */
 }
 
+struct tegra_panel_ops dsi_lgd_wxga_7_0_ops = {
+	.enable = dsi_lgd_wxga_7_0_enable,
+	.disable = dsi_lgd_wxga_7_0_disable,
+	.postsuspend = dsi_lgd_wxga_7_0_postsuspend,
+};
+
 struct tegra_panel __initdata dsi_lgd_wxga_7_0 = {
 	.init_sd_settings = dsi_lgd_wxga_7_0_sd_settings_init,
 	.init_dc_out = dsi_lgd_wxga_7_0_dc_out_init,
@@ -478,4 +487,3 @@ struct tegra_panel __initdata dsi_lgd_wxga_7_0 = {
 	.set_disp_device = dsi_lgd_wxga_7_0_set_disp_device,
 };
 EXPORT_SYMBOL(dsi_lgd_wxga_7_0);
-

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-panel.h
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,6 +43,7 @@ enum {
 /* tegra_panel_of will replace tegra_panel once we completely move to DT */
 struct tegra_panel_of {
 	int panel_gpio[TEGRA_N_GPIO_PANEL];
+	bool panel_gpio_populated;
 };
 static struct tegra_panel_of __maybe_unused panel_of = {
 	.panel_gpio = {-1, -1, -1, -1},
@@ -58,6 +59,7 @@ struct tegra_panel_ops {
 	void (*hotplug_report)(bool);
 };
 extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
+extern struct tegra_panel_ops dsi_lgd_wxga_7_0_ops;
 
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
@@ -85,5 +87,5 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
 
 int tegra_init_hdmi(struct platform_device *pdev,
-		     struct platform_device *phost1x);
+			struct platform_device *phost1x);
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

@@ -38,6 +38,7 @@
 #include <mach/pm_domains.h>
 
 #include "nvhost_acm.h"
+#include "nvhost_channel.h"
 #include "dev.h"
 #include "bus_client.h"
 
@@ -584,36 +585,33 @@ int nvhost_module_suspend(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
-	if (pm_runtime_suspended(dev))
-		return 0;
-
-	if (pm_runtime_barrier(dev))
+	/*
+	 * device_prepare takes one ref, so expect usage count to
+	 * be 1 at this point.
+	 */
+	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 
-	if (!pdata->can_powergate && pdata->prepare_poweroff) {
-		nvhost_module_enable_clk(dev);
+	if (!pdata->can_powergate && pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
-		nvhost_module_disable_clk(dev);
-	}
 
 	if (pdata->suspend_ndev)
 		pdata->suspend_ndev(dev);
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_suspend);
 
 int nvhost_module_resume(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
-	if (!pdata->can_powergate && pdata->finalize_poweron) {
-		nvhost_module_enable_clk(dev);
+	if (!pdata->can_powergate && pdata->finalize_poweron)
 		pdata->finalize_poweron(to_platform_device(dev));
-		nvhost_module_disable_clk(dev);
-	}
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_resume);
 
 void nvhost_module_deinit(struct platform_device *dev)
 {
@@ -670,9 +668,8 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		domain->dev_ops.stop = nvhost_module_disable_clk;
 		domain->dev_ops.save_state = nvhost_module_prepare_poweroff;
 		domain->dev_ops.restore_state = nvhost_module_finalize_poweron;
-		/* overwrite save/restore fptrs set by pm_genpd_init */
-		domain->domain.ops.suspend = nvhost_client_device_suspend;
-		domain->domain.ops.resume = nvhost_client_device_resume;
+		domain->dev_ops.suspend = nvhost_module_suspend;
+		domain->dev_ops.resume = nvhost_module_resume;
 
 		ret = pm_genpd_add_device(domain, &pdev->dev);
 		if (pdata->powergate_delay)
@@ -723,6 +720,9 @@ int nvhost_module_disable_clk(struct device *dev)
 
 	for (index = 0; index < pdata->num_clks; index++)
 		clk_disable_unprepare(pdata->clk[index]);
+
+	if (pdata->channel)
+		nvhost_channel_suspend(pdata->channel);
 
 	/* disable parent's clock if required */
 	if (dev->parent && dev->parent != &platform_bus)

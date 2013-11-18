@@ -514,8 +514,8 @@ static int __exit tsec_remove(struct platform_device *dev)
 
 #ifdef CONFIG_PM
 static const struct dev_pm_ops tsec_pm_ops = {
-	.suspend = nvhost_client_device_suspend,
-	.resume = nvhost_client_device_resume,
+	.suspend = nvhost_module_suspend,
+	.resume = nvhost_module_resume,
 #ifdef CONFIG_PM_RUNTIME
 	.runtime_suspend = nvhost_module_disable_clk,
 	.runtime_resume = nvhost_module_enable_clk,

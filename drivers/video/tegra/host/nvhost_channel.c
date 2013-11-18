@@ -45,7 +45,7 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 	}
 	pdata->channel = ch;
 
-	return 0;
+	return nvhost_cdma_init(&ch->cdma);
 }
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
@@ -92,8 +92,6 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 	if (ch->refcount == 0) {
 		if (pdata->init)
 			err = pdata->init(ch->dev);
-		if (!err)
-			err = nvhost_cdma_init(&ch->cdma);
 	} else if (pdata->exclusive && !force)
 		err = -EBUSY;
 
@@ -118,12 +116,9 @@ void nvhost_putchannel(struct nvhost_channel *ch)
 		nvhost_module_enable_poweroff(ch->dev);
 
 	mutex_lock(&ch->reflock);
-	if (ch->refcount == 1) {
-		channel_cdma_op().stop(&ch->cdma);
-		nvhost_cdma_deinit(&ch->cdma);
-		if (pdata->deinit)
-			pdata->deinit(ch->dev);
-	}
+	if (ch->refcount == 1 && pdata->deinit)
+		pdata->deinit(ch->dev);
+
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);
 }
@@ -132,12 +127,8 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 {
 	int ret = 0;
 
-	mutex_lock(&ch->reflock);
-
-	if (ch->refcount) {
+	if (channel_cdma_op().stop)
 		channel_cdma_op().stop(&ch->cdma);
-	}
-	mutex_unlock(&ch->reflock);
 
 	return ret;
 }

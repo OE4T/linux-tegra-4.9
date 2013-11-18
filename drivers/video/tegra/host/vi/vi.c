@@ -197,7 +197,7 @@ static int vi_suspend(struct device *dev)
 	}
 #endif
 
-	return nvhost_client_device_suspend(dev);
+	return 0;
 }
 
 static int vi_resume(struct device *dev)

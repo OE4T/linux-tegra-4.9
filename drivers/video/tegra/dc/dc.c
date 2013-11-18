@@ -2992,7 +2992,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (dc->out_ops) {
 		if (dc->out_ops->detect)
-			dc->out_ops->detect(dc);
+			dc->connected = dc->out_ops->detect(dc);
 		else
 			dc->connected = true;
 	}

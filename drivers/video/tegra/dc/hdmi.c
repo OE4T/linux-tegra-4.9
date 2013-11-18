@@ -847,9 +847,8 @@ bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
 	hdmi_state_machine_set_pending_hpd();
-	/* result isn't used by dc */
 
-	return true;
+	return tegra_dc_hpd(dc);
 }
 
 static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)

@@ -4,7 +4,7 @@
  * HDMI library support functions for Nvidia Tegra processors.
  *
  * Copyright (C) 2013 Google - http://www.google.com/
- * Copyright (C) 2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2013-2014, NVIDIA CORPORATION. All rights reserved.
  * Authors:	John Grossman <johngro@google.com>
  * Authors:	Mike J. Chen <mjchen@google.com>
  *
@@ -83,6 +83,12 @@ enum {
 	 * for more details.
 	 */
 	HDMI_STATE_DONE_RECHECK_EDID,
+
+	/* Initial state at boot that checks if HDMI is already initialized
+	 * by bootloader and not go to HDMI_STATE_RESET which would disable
+	 * HDMI and cause blanking of the bootloader displayed image.
+	 */
+	HDMI_STATE_INIT_FROM_BOOTLOADER,
 
 	/* STATE_COUNT must be the final state in the enum.
 	 * 1) Do not add states after STATE_COUNT.

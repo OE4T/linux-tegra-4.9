@@ -44,6 +44,7 @@
  * this is mostly a preference to work around monitors users
  * reported that occasionally drop HPD.
  */
+#define HPD_STABILIZE_MS 40
 #define HPD_DROP_TIMEOUT_MS 1500
 #define CHECK_PLUG_STATE_DELAY_MS 10
 #define CHECK_EDID_DELAY_MS 60
@@ -84,7 +85,8 @@ static const char * const state_names[] = {
 	"Disabled",
 	"Enabled",
 	"Wait for HPD reassert",
-	"Recheck EDID"
+	"Recheck EDID",
+	"Takeover from bootloader",
 };
 
 static void hdmi_state_machine_set_state_l(int target_state, int resched_time)
@@ -138,6 +140,15 @@ static void hdmi_state_machine_handle_hpd_l(int cur_hpd)
 		 */
 		pr_info("%s: ignoring bouncing hpd\n", __func__);
 		return;
+	} else
+	if (HDMI_STATE_INIT_FROM_BOOTLOADER == work_state.state && cur_hpd) {
+		/* We follow the same protocol as HDMI_STATE_RESET in the
+		 * last branch here, but avoid actually entering that state so
+		 * we do not actively disable HDMI.  Worker will check HPD
+		 * level again when it's woke up after 40ms.
+		 */
+		tgt_state = HDMI_STATE_CHECK_PLUG_STATE;
+		timeout = HPD_STABILIZE_MS;
 	} else {
 		/* Looks like there was HPD activity while we were neither
 		 * waiting for it to go away during steady state output, nor
@@ -146,7 +157,7 @@ static void hdmi_state_machine_handle_hpd_l(int cur_hpd)
 		 * state machine.
 		 */
 		tgt_state = HDMI_STATE_RESET;
-		timeout = 40;
+		timeout = HPD_STABILIZE_MS;
 	}
 
 	hdmi_state_machine_set_state_l(tgt_state, timeout);
@@ -394,6 +405,7 @@ static const dispatch_func_t state_machine_dispatch[] = {
 	NULL,				/* STATE_DONE_ENABLED */
 	handle_wait_for_hpd_reassert_l,	/* STATE_DONE_WAIT_FOR_HPD_REASSERT */
 	handle_recheck_edid_l,		/* STATE_DONE_RECHECK_EDID */
+	NULL,				/* STATE_INIT_FROM_BOOTLOADER */
 };
 
 /************************************************************
@@ -444,7 +456,7 @@ static void hdmi_state_machine_worker(struct work_struct *work)
 void hdmi_state_machine_init(struct tegra_dc_hdmi_data *hdmi)
 {
 	work_state.hdmi = hdmi;
-	work_state.state = HDMI_STATE_RESET;
+	work_state.state = HDMI_STATE_INIT_FROM_BOOTLOADER;
 	work_state.pending_hpd_evt = 1;
 	work_state.edid_reads = 0;
 	work_state.shutdown = 0;

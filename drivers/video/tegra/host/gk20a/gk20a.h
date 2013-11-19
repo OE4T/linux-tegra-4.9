@@ -112,6 +112,7 @@ struct gk20a {
 	struct dev_pm_qos_request no_poweroff_req;
 	u64 pg_ingating_time_us;
 	u64 pg_ungating_time_us;
+	u32 pg_gating_cnt;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

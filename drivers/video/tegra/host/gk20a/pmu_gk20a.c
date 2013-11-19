@@ -1076,7 +1076,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	init_waitqueue_head(&pmu->pg_wq);
 
-	pmu->ucode.pmu_va = vm->map(vm, memmgr, pmu->ucode.mem.ref,
+	pmu->ucode.pmu_va = gk20a_vm_map(vm, memmgr, pmu->ucode.mem.ref,
 			/*offset_align, flags, kind*/
 			0, 0, 0, NULL, false, mem_flag_read_only);
 	if (!pmu->ucode.pmu_va) {
@@ -1084,7 +1084,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		return err;
 	}
 
-	pmu->seq_buf.pmu_va = vm->map(vm, memmgr, pmu->seq_buf.mem.ref,
+	pmu->seq_buf.pmu_va = gk20a_vm_map(vm, memmgr, pmu->seq_buf.mem.ref,
 			/*offset_align, flags, kind*/
 			0, 0, 0, NULL, false, mem_flag_none);
 	if (!pmu->seq_buf.pmu_va) {
@@ -1141,8 +1141,8 @@ clean_up:
 		release_firmware(g->pmu_fw);
 	kfree(pmu->mutex);
 	kfree(pmu->seq);
-	vm->unmap(vm, pmu->ucode.pmu_va);
-	vm->unmap(vm, pmu->seq_buf.pmu_va);
+	gk20a_vm_unmap(vm, pmu->ucode.pmu_va);
+	gk20a_vm_unmap(vm, pmu->seq_buf.pmu_va);
 	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
 	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
 	return err;
@@ -1247,9 +1247,10 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 		}
 		pmu->pg_buf.mem.size = size;
 
-		pmu->pg_buf.pmu_va = vm->map(vm, memmgr, pmu->pg_buf.mem.ref,
-				 /*offset_align, flags, kind*/
-				0, 0, 0, NULL, false, mem_flag_none);
+		pmu->pg_buf.pmu_va =
+			gk20a_vm_map(vm, memmgr, pmu->pg_buf.mem.ref,
+				      /*offset_align, flags, kind*/
+				     0, 0, 0, NULL, false, mem_flag_none);
 		if (!pmu->pg_buf.pmu_va) {
 			nvhost_err(d, "failed to map fecs pg buffer");
 			err = -ENOMEM;
@@ -1373,7 +1374,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	return 0;
 
 clean_up:
-	vm->unmap(vm, pmu->pg_buf.pmu_va);
+	gk20a_vm_unmap(vm, pmu->pg_buf.pmu_va);
 	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
 	return err;
 }

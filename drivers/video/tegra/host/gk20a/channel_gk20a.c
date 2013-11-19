@@ -669,7 +669,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	memset(&ch->ramfc, 0, sizeof(struct mem_desc_sub));
 
 	/* free gpfifo */
-	ch_vm->unmap(ch_vm, ch->gpfifo.gpu_va);
+	gk20a_vm_unmap(ch_vm, ch->gpfifo.gpu_va);
 	nvhost_memmgr_munmap(ch->gpfifo.mem.ref, ch->gpfifo.cpu_va);
 	gk20a_mm_l2_invalidate(ch->g);
 
@@ -861,7 +861,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	memset(q->base_ptr, 0, size);
 
-	q->base_gva = ch_vm->map(ch_vm, memmgr,
+	q->base_gva = gk20a_vm_map(ch_vm, memmgr,
 			q->mem.ref,
 			 /*offset_align, flags, kind*/
 			0, 0, 0, NULL, false, mem_flag_none);
@@ -906,7 +906,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	if (q->size == 0)
 		return;
 
-	ch_vm->unmap(ch_vm, q->base_gva);
+	gk20a_vm_unmap(ch_vm, q->base_gva);
 	nvhost_memmgr_munmap(q->mem.ref, q->base_ptr);
 	nvhost_memmgr_put(memmgr, q->mem.ref);
 
@@ -1148,7 +1148,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	c->gpfifo.get = c->gpfifo.put = 0;
 
-	c->gpfifo.gpu_va = ch_vm->map(ch_vm, memmgr,
+	c->gpfifo.gpu_va = gk20a_vm_map(ch_vm, memmgr,
 				c->gpfifo.mem.ref,
 				/*offset_align, flags, kind*/
 				0, 0, 0, NULL, false, mem_flag_none);
@@ -1183,7 +1183,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
-	ch_vm->unmap(ch_vm, c->gpfifo.gpu_va);
+	gk20a_vm_unmap(ch_vm, c->gpfifo.gpu_va);
 	nvhost_memmgr_munmap(c->gpfifo.mem.ref, c->gpfifo.cpu_va);
 	nvhost_memmgr_put(memmgr, c->gpfifo.mem.ref);
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
@@ -1328,7 +1328,8 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 		int err;
 
 		words = pbdma_gp_entry1_length_v(g->entry1);
-		err = c->vm->find_buffer(c->vm, gpu_va, &memmgr, &r, &offset);
+		err = gk20a_vm_find_buffer(c->vm, gpu_va, &memmgr, &r,
+					   &offset);
 		if (!err)
 			mem = nvhost_memmgr_mmap(r);
 	}
@@ -1360,18 +1361,18 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	int err = 0, num_mapped_buffers;
 
 	/* job needs reference to this vm */
-	vm->get(vm);
+	gk20a_vm_get(vm);
 
-	err = vm->get_buffers(vm, &mapped_buffers, &num_mapped_buffers);
+	err = gk20a_vm_get_buffers(vm, &mapped_buffers, &num_mapped_buffers);
 	if (err) {
-		vm->put(vm);
+		gk20a_vm_put(vm);
 		return err;
 	}
 
 	job = kzalloc(sizeof(*job), GFP_KERNEL);
 	if (!job) {
-		vm->put_buffers(vm, mapped_buffers, num_mapped_buffers);
-		vm->put(vm);
+		gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
+		gk20a_vm_put(vm);
 		return -ENOMEM;
 	}
 
@@ -1400,11 +1401,11 @@ void gk20a_channel_update(struct channel_gk20a *c)
 		if (!completed)
 			break;
 
-		vm->put_buffers(vm, job->mapped_buffers,
+		gk20a_vm_put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);
 
 		/* job is done. release its reference to vm */
-		vm->put(vm);
+		gk20a_vm_put(vm);
 
 		list_del_init(&job->list);
 		kfree(job);
@@ -1488,7 +1489,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* We don't know what context is currently running...                */
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
-	c->vm->tlb_inval(c->vm);
+	gk20a_mm_tlb_invalidate(c->vm);
 
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
@@ -1620,7 +1621,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* We don't know what context is currently running...                */
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
-	c->vm->tlb_inval(c->vm);
+	gk20a_mm_tlb_invalidate(c->vm);
 
 	trace_nvhost_channel_submitted_gpfifo(c->ch->dev->name,
 					   c->hw_chid,

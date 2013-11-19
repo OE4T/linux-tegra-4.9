@@ -172,7 +172,7 @@ void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 		kfree(f->channel);
 	}
 
-	g->mm.bar1.vm.unmap(&g->mm.bar1.vm, f->userd.gpu_va);
+	gk20a_vm_unmap(&g->mm.bar1.vm, f->userd.gpu_va);
 
 	nvhost_memmgr_munmap(f->userd.mem.ref, f->userd.cpu_va);
 	nvhost_memmgr_free_sg_table(memmgr, f->userd.mem.ref, f->userd.mem.sgt);
@@ -504,14 +504,14 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	}
 
 	/* bar1 va */
-	f->userd.gpu_va = g->mm.bar1.vm.map(&g->mm.bar1.vm,
-					    memmgr,
-					    f->userd.mem.ref,
-					    /*offset_align, flags, kind*/
-					    4096, 0, 0,
-					    &f->userd.mem.sgt,
-					    false,
-					    mem_flag_none);
+	f->userd.gpu_va = gk20a_vm_map(&g->mm.bar1.vm,
+				       memmgr,
+				       f->userd.mem.ref,
+				       /*offset_align, flags, kind*/
+				       4096, 0, 0,
+				       &f->userd.mem.sgt,
+				       false,
+				       mem_flag_none);
 	f->userd.cpu_pa = gk20a_mm_iova_addr(f->userd.mem.sgt->sgl);
 	nvhost_dbg(dbg_map, "userd physical address : 0x%08llx - 0x%08llx",
 			f->userd.cpu_pa, f->userd.cpu_pa + f->userd_total_size);
@@ -565,7 +565,7 @@ clean_up:
 	nvhost_dbg_fn("fail");
 	nvhost_memmgr_munmap(f->userd.mem.ref, f->userd.cpu_va);
 	if (f->userd.gpu_va)
-		g->mm.bar1.vm.unmap(&g->mm.bar1.vm, f->userd.gpu_va);
+		gk20a_vm_unmap(&g->mm.bar1.vm, f->userd.gpu_va);
 	nvhost_memmgr_put(memmgr, f->userd.mem.ref);
 	memset(&f->userd, 0, sizeof(struct userd_desc));
 

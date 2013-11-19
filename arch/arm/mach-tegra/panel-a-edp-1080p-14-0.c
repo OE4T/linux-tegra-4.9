@@ -79,6 +79,13 @@ static tegra_dc_bl_output edp_a_1080p_14_0_bl_output_measured = {
 	247, 248, 249, 250, 251, 252, 253, 255
 };
 
+static unsigned int dsi_a_laguna_edp_states[] = {
+	909, 809, 709, 609, 509, 410, 310, 210, 110, 0
+};
+static unsigned int dsi_a_laguna_edp_brightness[] = {
+	255, 227, 199, 171, 143, 115, 87, 59, 31, 0
+};
+
 static int laguna_edp_regulator_get(struct device *dev)
 {
 	int err = 0;
@@ -295,6 +302,8 @@ static struct platform_pwm_backlight_data edp_a_1080p_14_0_bl_data = {
 	.notify		= edp_a_1080p_14_0_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= edp_a_1080p_14_0_check_fb,
+	.edp_states = dsi_a_laguna_edp_states,
+	.edp_brightness = dsi_a_laguna_edp_brightness,
 };
 
 static struct platform_device __maybe_unused

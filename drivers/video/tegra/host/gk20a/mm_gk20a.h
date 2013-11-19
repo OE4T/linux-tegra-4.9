@@ -173,6 +173,7 @@ struct mapped_buffer_node {
 	struct vm_gk20a *vm;
 	struct rb_node node;
 	struct list_head unmap_list;
+	struct list_head va_buffers_list;
 	u64 addr;
 	u64 size;
 	struct mem_mgr *memmgr;
@@ -186,6 +187,13 @@ struct mapped_buffer_node {
 	u32 ctag_lines;
 	u32 flags;
 	bool va_allocated;
+};
+
+struct vm_reserved_va_node {
+	struct list_head reserved_va_list;
+	struct list_head va_buffers_list;
+	u64 vaddr_start;
+	u64 size;
 };
 
 struct vm_gk20a {
@@ -211,6 +219,7 @@ struct vm_gk20a {
 	struct nvhost_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
 
+	struct list_head reserved_va_list;
 };
 
 struct gk20a;

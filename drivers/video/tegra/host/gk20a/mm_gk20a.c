@@ -539,6 +539,18 @@ static int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
 	return 0;
 }
 
+static struct vm_reserved_va_node *addr_to_reservation(struct vm_gk20a *vm,
+						       u64 addr)
+{
+	struct vm_reserved_va_node *va_node;
+	list_for_each_entry(va_node, &vm->reserved_va_list, reserved_va_list)
+		if (addr >= va_node->vaddr_start &&
+		    addr < (u64)va_node->vaddr_start + (u64)va_node->size)
+			return va_node;
+
+	return NULL;
+}
+
 int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 			 struct mapped_buffer_node ***mapped_buffers,
 			 int *num_buffers)
@@ -912,6 +924,45 @@ static int setup_buffer_kind_and_compression(struct device *d,
 	return 0;
 }
 
+static int validate_fixed_buffer(struct vm_gk20a *vm,
+				 struct buffer_attrs *bfr,
+				 u64 map_offset)
+{
+	struct device *dev = dev_from_vm(vm);
+	struct vm_reserved_va_node *va_node;
+	struct mapped_buffer_node *buffer;
+
+	if (map_offset & gmmu_page_offset_masks[bfr->pgsz_idx]) {
+		nvhost_err(dev, "map offset must be buffer page size aligned 0x%llx",
+			   map_offset);
+		return -EINVAL;
+	}
+
+	/* find the space reservation */
+	va_node = addr_to_reservation(vm, map_offset);
+	if (!va_node) {
+		nvhost_warn(dev, "fixed offset mapping without space allocation");
+		return -EINVAL;
+	}
+
+	/* check that this mappings does not collide with existing
+	 * mappings by checking the overlapping area between the current
+	 * buffer and all other mapped buffers */
+
+	list_for_each_entry(buffer,
+		&va_node->va_buffers_list, va_buffers_list) {
+		s64 begin = max(buffer->addr, map_offset);
+		s64 end = min(buffer->addr +
+			buffer->size, map_offset + bfr->size);
+		if (end - begin > 0) {
+			nvhost_warn(dev, "overlapping buffer map requested");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct sg_table *sgt,
@@ -935,10 +986,6 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 			err = -ENOMEM;
 			goto fail;
 		}
-	} else {
-		/* TODO: allocate the offset to keep track? */
-		/* TODO: then we could warn on actual collisions... */
-		nvhost_warn(d, "fixed offset mapping isn't safe yet!");
 	}
 
 	pde_range_from_vaddr_range(vm,
@@ -1134,17 +1181,16 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 	gmmu_page_size = gmmu_page_sizes[bfr.pgsz_idx];
 
-	/* if specified the map offset must be bfr page size aligned */
-	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		map_offset = offset_align;
-		if (map_offset & gmmu_page_offset_masks[bfr.pgsz_idx]) {
-			nvhost_err(d,
-			   "map offset must be buffer page size aligned 0x%llx",
-			   map_offset);
-			err = -EINVAL;
+	/* Check if we should use a fixed offset for mapping this buffer */
+	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
+		err = validate_fixed_buffer(vm, &bfr, offset_align);
+		if (err)
 			goto clean_up;
-		}
-	}
+
+		map_offset = offset_align;
+		va_allocated = false;
+	} else
+		va_allocated = true;
 
 	if (sgt)
 		*sgt = bfr.sgt;
@@ -1194,9 +1240,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					flags, rw_flag);
 	if (!map_offset)
 		goto clean_up;
-
-	if (!(flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET))
-		va_allocated = true;
 
 	nvhost_dbg(dbg_map,
 	   "as=%d pgsz=%d "
@@ -1248,6 +1291,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
+	INIT_LIST_HEAD(&mapped_buffer->va_buffers_list);
 	kref_init(&mapped_buffer->ref);
 
 	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
@@ -1260,6 +1304,15 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		vm->num_user_mapped_buffers++;
 
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
+
+	if (!va_allocated) {
+		struct vm_reserved_va_node *va_node;
+
+		/* find the space reservation */
+		va_node = addr_to_reservation(vm, map_offset);
+		list_add_tail(&mapped_buffer->va_buffers_list,
+			      &va_node->va_buffers_list);
+	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
@@ -1654,6 +1707,8 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 
 	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+	if (!list_empty(&mapped_buffer->va_buffers_list))
+		list_del(&mapped_buffer->va_buffers_list);
 
 	/* keep track of mapped buffers */
 	if (mapped_buffer->user_mapped)
@@ -1664,6 +1719,7 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 				  mapped_buffer->handle_ref);
 		nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
 	}
+
 	kfree(mapped_buffer);
 
 	return;
@@ -1687,6 +1743,7 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct mapped_buffer_node *mapped_buffer;
+	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
 
 	nvhost_dbg_fn("");
@@ -1701,6 +1758,13 @@ static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 			container_of(node, struct mapped_buffer_node, node);
 		gk20a_vm_unmap_locked(mapped_buffer);
 		node = rb_first(&vm->mapped_buffers);
+	}
+
+	/* destroy remaining reserved memory areas */
+	list_for_each_entry_safe(va_node, va_node_tmp, &vm->reserved_va_list,
+		reserved_va_list) {
+		list_del(&va_node->reserved_va_list);
+		kfree(va_node);
 	}
 
 	/* TBD: unmapping all buffers above may not actually free
@@ -1834,6 +1898,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 
 	mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
+	INIT_LIST_HEAD(&vm->reserved_va_list);
 
 	vm->enable_ctag = true;
 
@@ -1866,6 +1931,8 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 	u32 start_page_nr;
 	struct nvhost_allocator *vma;
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_reserved_va_node *va_node;
+	u64 vaddr_start = 0;
 
 	nvhost_dbg_fn("flags=0x%x pgsz=0x%x nr_pages=0x%x o/a=0x%llx",
 			args->flags, args->page_size, args->pages,
@@ -1884,6 +1951,12 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 		goto clean_up;
 	}
 
+	va_node = kzalloc(sizeof(*va_node), GFP_KERNEL);
+	if (!va_node) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
 	start_page_nr = ~(u32)0;
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		start_page_nr = (u32)(args->o_a.offset >>
@@ -1891,7 +1964,23 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 
 	vma = &vm->vma[pgsz_idx];
 	err = vma->alloc(vma, &start_page_nr, args->pages);
-	args->o_a.offset = (u64)start_page_nr << gmmu_page_shifts[pgsz_idx];
+	if (err) {
+		kfree(va_node);
+		goto clean_up;
+	}
+
+	vaddr_start = (u64)start_page_nr << gmmu_page_shifts[pgsz_idx];
+
+	va_node->vaddr_start = vaddr_start;
+	va_node->size = (u64)args->page_size * (u64)args->pages;
+	INIT_LIST_HEAD(&va_node->va_buffers_list);
+	INIT_LIST_HEAD(&va_node->reserved_va_list);
+
+	mutex_lock(&vm->update_gmmu_lock);
+	list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
+	mutex_unlock(&vm->update_gmmu_lock);
+
+	args->o_a.offset = vaddr_start;
 
 clean_up:
 	return err;
@@ -1905,6 +1994,7 @@ static int gk20a_as_free_space(struct nvhost_as_share *as_share,
 	u32 start_page_nr;
 	struct nvhost_allocator *vma;
 	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_reserved_va_node *va_node;
 
 	nvhost_dbg_fn("pgsz=0x%x nr_pages=0x%x o/a=0x%llx", args->page_size,
 			args->pages, args->offset);
@@ -1927,6 +2017,26 @@ static int gk20a_as_free_space(struct nvhost_as_share *as_share,
 
 	vma = &vm->vma[pgsz_idx];
 	err = vma->free(vma, start_page_nr, args->pages);
+
+	if (err)
+		goto clean_up;
+
+	mutex_lock(&vm->update_gmmu_lock);
+	va_node = addr_to_reservation(vm, args->offset);
+	if (va_node) {
+		struct mapped_buffer_node *buffer;
+
+		/* there is no need to unallocate the buffers in va. Just
+		 * convert them into normal buffers */
+
+		list_for_each_entry(buffer,
+			&va_node->va_buffers_list, va_buffers_list)
+			list_del_init(&buffer->va_buffers_list);
+
+		list_del(&va_node->reserved_va_list);
+		kfree(va_node);
+	}
+	mutex_unlock(&vm->update_gmmu_lock);
 
 clean_up:
 	return err;
@@ -2132,6 +2242,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
+	INIT_LIST_HEAD(&vm->reserved_va_list);
 
 	return 0;
 
@@ -2268,6 +2379,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
+	INIT_LIST_HEAD(&vm->reserved_va_list);
 
 	return 0;
 

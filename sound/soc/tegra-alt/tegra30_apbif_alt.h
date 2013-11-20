@@ -1,7 +1,7 @@
 /*
  * tegra30_apbif_alt.h - Tegra30 APBIF registers
  *
- * Copyright (c) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,6 +44,7 @@
 
 #define TEGRA_AHUB_CHANNEL_CTRL_TX_PACK_EN		(1 << 6)
 
+#define PACK_NOP				0
 #define PACK_8_4				2
 #define PACK_16					3
 

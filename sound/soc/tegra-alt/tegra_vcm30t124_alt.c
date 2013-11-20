@@ -1,7 +1,7 @@
 /*
  * tegra_vcm30t124.c - Tegra VCM30 T124 Machine driver
  *
- * Copyright (c) 2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -126,6 +126,8 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 
 	/* update link_param to update hw_param for DAPM */
 	dai_params->rate_min = srate;
+	dai_params->channels_min = params_channels(params);
+	dai_params->formats = (1ULL << (params_format(params)));
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
 					srate, mclk, clk_out_rate);
@@ -433,7 +435,8 @@ static const struct snd_soc_pcm_stream x_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 8000,
 	.rate_max = 48000,
-	.channels_min = 2,
+	.channels_min = 1,
+	/* Codec x(wm8731) supports max 2 channels. */
 	.channels_max = 2,
 };
 
@@ -441,6 +444,10 @@ static const struct snd_soc_pcm_stream y_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 32000,
 	.rate_max = 48000,
+	/*
+	 * Current AMX/ADX mapping table is fixed at 2 channels.
+	 * So, this value is fixed for now.
+	 */
 	.channels_min = 2,
 	.channels_max = 2,
 };

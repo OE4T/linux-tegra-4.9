@@ -44,6 +44,20 @@
 
 #include "nvmap_heap.h"
 
+#ifdef CONFIG_NVMAP_HIGHMEM_ONLY
+#define __GFP_NVMAP     __GFP_HIGHMEM
+#else
+#define __GFP_NVMAP     (GFP_KERNEL | __GFP_HIGHMEM)
+#endif
+
+#ifdef CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES
+#define NVMAP_ZEROED_PAGES     __GFP_ZERO
+#else
+#define NVMAP_ZEROED_PAGES     0
+#endif
+
+#define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN | NVMAP_ZEROED_PAGES)
+
 struct nvmap_device;
 struct nvmap_share;
 struct page;

@@ -26,8 +26,6 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
-#include <linux/miscdevice.h>
-#include <linux/mm.h>
 #include <linux/oom.h>
 #include <linux/platform_device.h>
 #include <linux/seq_file.h>
@@ -51,7 +49,6 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
-#define NVMAP_NUM_PTES		64
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 
 #ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
@@ -69,26 +66,6 @@ struct nvmap_carveout_node {
 	spinlock_t		clients_lock;
 	phys_addr_t			base;
 	size_t			size;
-};
-
-struct nvmap_device {
-	struct vm_struct *vm_rgn;
-	pte_t		*ptes[NVMAP_NUM_PTES];
-	unsigned long	ptebits[NVMAP_NUM_PTES / BITS_PER_LONG];
-	unsigned int	lastpte;
-	spinlock_t	ptelock;
-
-	struct rb_root	handles;
-	spinlock_t	handle_lock;
-	wait_queue_head_t pte_wait;
-	struct miscdevice dev_super;
-	struct miscdevice dev_user;
-	struct nvmap_carveout_node *heaps;
-	int nr_carveouts;
-	struct nvmap_share iovmm_master;
-	struct list_head clients;
-	spinlock_t	clients_lock;
-	struct nvmap_deferred_ops deferred_ops;
 };
 
 struct platform_device *nvmap_pdev;

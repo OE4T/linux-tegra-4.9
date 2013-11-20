@@ -58,7 +58,8 @@
 
 #define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN | NVMAP_ZEROED_PAGES)
 
-struct nvmap_device;
+#define NVMAP_NUM_PTES		64
+
 struct nvmap_share;
 struct page;
 
@@ -218,6 +219,29 @@ struct nvmap_vma_priv {
 	struct nvmap_handle *handle;
 	size_t		offs;
 	atomic_t	count;	/* number of processes cloning the VMA */
+};
+
+#include <linux/mm.h>
+#include <linux/miscdevice.h>
+
+struct nvmap_device {
+	struct vm_struct *vm_rgn;
+	pte_t		*ptes[NVMAP_NUM_PTES];
+	unsigned long	ptebits[NVMAP_NUM_PTES / BITS_PER_LONG];
+	unsigned int	lastpte;
+	spinlock_t	ptelock;
+
+	struct rb_root	handles;
+	spinlock_t	handle_lock;
+	wait_queue_head_t pte_wait;
+	struct miscdevice dev_super;
+	struct miscdevice dev_user;
+	struct nvmap_carveout_node *heaps;
+	int nr_carveouts;
+	struct nvmap_share iovmm_master;
+	struct list_head clients;
+	spinlock_t	clients_lock;
+	struct nvmap_deferred_ops deferred_ops;
 };
 
 static inline void nvmap_ref_lock(struct nvmap_client *priv)

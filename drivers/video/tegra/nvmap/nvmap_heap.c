@@ -209,6 +209,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 	struct list_block *heap_block = NULL;
 	void *dev_addr = NULL;
 	dma_addr_t dev_base;
+	DEFINE_DMA_ATTRS(attrs);
 
 	/* since pages are only mappable with one cache attribute,
 	 * and most allocations from carveout heaps are DMA coherent
@@ -228,8 +229,9 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		goto fail_heap_block_alloc;
 	}
 
-	dev_addr = dma_alloc_coherent(&heap->dev, len, &dev_base,
-					DMA_MEMORY_NOMAP);
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+	dev_addr = dma_alloc_attrs(&heap->dev, len, &dev_base,
+					DMA_MEMORY_NOMAP, &attrs);
 	if (dev_base == DMA_ERROR_CODE) {
 		dev_err(&heap->dev, "%s: failed to alloc DMA coherent mem %s\n",
 			__func__, dev_name(&heap->dev));
@@ -278,14 +280,16 @@ static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 {
 	struct list_block *b = container_of(block, struct list_block, block);
 	struct nvmap_heap *heap = b->heap;
+	DEFINE_DMA_ATTRS(attrs);
 
 	list_del(&b->all_list);
 
 	pr_debug("dma_free_coherent base (0x%pa) size (%d) heap (%s)\n",
 		&block->base, b->size, heap->name);
 	/* assumes dev_alloc_coherent() returns same offset for phys_addr_t */
-	dma_free_coherent(&heap->dev, b->size, (void *)(uintptr_t)block->base,
-				block->base);
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+	dma_free_attrs(&heap->dev, b->size, (void *)(uintptr_t)block->base,
+				block->base, &attrs);
 
 	kmem_cache_free(heap_block_cache, b);
 

@@ -1047,6 +1047,75 @@ static void __locked_gmmu_unmap(struct vm_gk20a *vm,
 	gk20a_mm_l2_flush(g, true);
 }
 
+static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
+					 struct mem_mgr *memmgr,
+					 struct mem_handle *r,
+					 u64 offset_align,
+					 u32 flags,
+					 u32 kind,
+					 struct sg_table **sgt,
+					 bool user_mapped,
+					 int rw_flag)
+{
+	struct mapped_buffer_node *mapped_buffer = 0;
+
+	mapped_buffer = find_mapped_buffer_reverse_locked(
+						&vm->mapped_buffers, r);
+	if (!mapped_buffer)
+		return 0;
+
+	if (mapped_buffer->flags != flags)
+		return 0;
+
+	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET &&
+	    mapped_buffer->addr != offset_align)
+		return 0;
+
+	WARN_ON(mapped_buffer->memmgr != memmgr);
+	BUG_ON(mapped_buffer->vm != vm);
+
+	/* mark the buffer as used */
+	if (user_mapped) {
+		if (mapped_buffer->user_mapped == 0)
+			vm->num_user_mapped_buffers++;
+		mapped_buffer->user_mapped++;
+
+		/* If the mapping comes from user space, we own
+		 * the memmgr and handle refs. Since we reuse an
+		 * existing mapping here, we need to give back those
+		 * refs once in order not to leak.
+		 */
+		if (mapped_buffer->own_mem_ref) {
+			nvhost_memmgr_put(mapped_buffer->memmgr,
+					  mapped_buffer->handle_ref);
+			nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
+		} else
+			mapped_buffer->own_mem_ref = true;
+
+		mapped_buffer->memmgr = memmgr;
+	}
+	kref_get(&mapped_buffer->ref);
+
+	nvhost_dbg(dbg_map,
+		   "reusing as=%d pgsz=%d flags=0x%x ctags=%d "
+		   "start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x "
+		   "own_mem_ref=%d user_mapped=%d",
+		   vm_aspace_id(vm), mapped_buffer->pgsz_idx,
+		   mapped_buffer->flags,
+		   mapped_buffer->ctag_lines,
+		   mapped_buffer->ctag_offset,
+		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
+		   hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+		   lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+		   hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+		   lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+		   mapped_buffer->own_mem_ref, user_mapped);
+
+	if (sgt)
+		*sgt = mapped_buffer->sgt;
+	return mapped_buffer->addr;
+}
+
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct mem_mgr *memmgr,
 			struct mem_handle *r,
@@ -1071,54 +1140,13 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	mutex_lock(&vm->update_gmmu_lock);
 
-	mapped_buffer = find_mapped_buffer_reverse_locked(
-						&vm->mapped_buffers, r);
-	if (mapped_buffer) {
-
-		WARN_ON(mapped_buffer->flags != flags);
-		BUG_ON(mapped_buffer->vm != vm);
-
-		if (sgt)
-			*sgt = mapped_buffer->sgt;
-
-		/* mark the buffer as used */
-		if (user_mapped) {
-			if (mapped_buffer->user_mapped == 0)
-				vm->num_user_mapped_buffers++;
-			mapped_buffer->user_mapped++;
-			/* If the mapping comes from user space, we own
-			 * the memmgr and handle refs. Since we reuse an
-			 * existing mapping here, we need to give back those
-			 * refs once in order not to leak.
-			 */
-			if (mapped_buffer->own_mem_ref) {
-				nvhost_memmgr_put(mapped_buffer->memmgr,
-						  mapped_buffer->handle_ref);
-				nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
-			} else {
-				mapped_buffer->own_mem_ref = true;
-			}
-			mapped_buffer->memmgr = memmgr;
-		}
-		kref_get(&mapped_buffer->ref);
-
+	/* check if this buffer is already mapped */
+	map_offset = gk20a_vm_map_duplicate_locked(vm, memmgr, r, offset_align,
+						   flags, kind, sgt,
+						   user_mapped, rw_flag);
+	if (map_offset) {
 		mutex_unlock(&vm->update_gmmu_lock);
-		nvhost_dbg(dbg_map,
-			   "reusing as=%d pgsz=%d flags=0x%x ctags=%d "
-			   "start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x "
-			   "own_mem_ref=%d user_mapped=%d",
-			   vm_aspace_id(vm), mapped_buffer->pgsz_idx,
-			   mapped_buffer->flags,
-			   mapped_buffer->ctag_lines,
-			   mapped_buffer->ctag_offset,
-			   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
-			   hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-			   lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-			   hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-			   lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-			   mapped_buffer->own_mem_ref, user_mapped);
-
-		return mapped_buffer->addr;
+		return map_offset;
 	}
 
 	/* pin buffer to get phys/iovmm addr */

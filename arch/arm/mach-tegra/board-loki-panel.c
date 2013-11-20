@@ -40,6 +40,7 @@
 #include "tegra12_host1x_devices.h"
 #include "board-panel.h"
 #include "common.h"
+#include "tegra-board-id.h"
 
 struct platform_device * __init loki_host1x_init(void)
 {
@@ -381,6 +382,21 @@ static struct tegra_io_dpd dsid_io = {
 	.io_dpd_reg_index	= 1,
 	.io_dpd_bit		= 9,
 };
+static struct tegra_dc_mode hdmi_panel_modes[] = {
+	{
+		.pclk = 148500000,
+		.h_ref_to_sync = 1,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 44,
+		.v_sync_width = 5,
+		.h_back_porch = 148,
+		.v_back_porch = 36,
+		.h_active = 1920,
+		.v_active = 1080,
+		.h_front_porch = 88,
+		.v_front_porch = 4,
+	},
+};
 
 static void loki_panel_select(void)
 {
@@ -437,8 +453,26 @@ int __init loki_panel_init(int board_id)
 	int err = 0;
 	struct resource __maybe_unused *res;
 	struct platform_device *phost1x = NULL;
+	struct board_info bi;
 
-	loki_panel_select();
+	tegra_get_board_info(&bi);
+	if ((bi.sku == BOARD_SKU_FOSTER) && (bi.board_id == BOARD_P2530)) {
+		res = platform_get_resource_byname(&loki_disp2_device,
+					 IORESOURCE_IRQ, "irq");
+		res->start = INT_DISPLAY_GENERAL;
+		res->end = INT_DISPLAY_GENERAL;
+		res = platform_get_resource_byname(&loki_disp2_device,
+					 IORESOURCE_MEM, "regs");
+		res->start = TEGRA_DISPLAY_BASE;
+		res->end = TEGRA_DISPLAY_BASE + TEGRA_DISPLAY_SIZE - 1;
+		loki_disp2_fb_data.xres = 1920;
+		loki_disp2_fb_data.yres = 1080;
+		loki_disp2_device.id = 0;
+
+		loki_disp2_out.modes = hdmi_panel_modes;
+		loki_disp2_out.n_modes = ARRAY_SIZE(hdmi_panel_modes);
+	} else
+		loki_panel_select();
 
 #ifdef CONFIG_TEGRA_NVMAP
 	loki_carveouts[1].base = tegra_carveout_start;
@@ -482,10 +516,13 @@ int __init loki_panel_init(int board_id)
 	res->end = tegra_fb2_start + tegra_fb2_size - 1;
 
 	loki_disp1_device.dev.parent = &phost1x->dev;
-	err = platform_device_register(&loki_disp1_device);
-	if (err) {
-		pr_err("disp1 device registration failed\n");
-		return err;
+
+	if ((bi.sku != BOARD_SKU_FOSTER) || (bi.board_id != BOARD_P2530)) {
+		err = platform_device_register(&loki_disp1_device);
+		if (err) {
+			pr_err("disp1 device registration failed\n");
+			return err;
+		}
 	}
 
 	loki_disp2_device.dev.parent = &phost1x->dev;

@@ -392,7 +392,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	/*struct gr_gk20a *gr = &g->gr;*/
 	u32 data32_lo = 0, data32_hi = 0;
 	u32 ctx_rd_count = 0, ctx_wr_count = 0;
-	bool skip_read_lo = false, skip_read_hi = false;
+	bool skip_read_lo, skip_read_hi;
 	bool ok;
 
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
@@ -439,6 +439,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 			/* some of this appears wonky/unnecessary but
 			   we've kept it for compat with existing
 			   debugger code.  just in case... */
+			skip_read_lo = skip_read_hi = false;
 			if (ops[i].and_n_mask_lo == ~(u32)0) {
 				data32_lo = ops[i].value_lo;
 				skip_read_lo = true;

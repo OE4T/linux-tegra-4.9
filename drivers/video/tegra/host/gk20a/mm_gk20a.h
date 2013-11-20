@@ -156,6 +156,7 @@ struct mapped_buffer_node {
 	u32 ctag_offset;
 	u32 ctag_lines;
 	u32 flags;
+	bool va_allocated;
 };
 
 struct vm_gk20a {
@@ -284,6 +285,17 @@ u64 gk20a_mm_iova_addr(struct scatterlist *sgl);
 void gk20a_mm_ltc_isr(struct gk20a *g);
 
 bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
+
+u64 gk20a_gmmu_map(struct vm_gk20a *vm,
+		struct sg_table **sgt,
+		u64 size,
+		u32 flags,
+		int rw_flag);
+
+void gk20a_gmmu_unmap(struct vm_gk20a *vm,
+		u64 vaddr,
+		u64 size,
+		int rw_flag);
 
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 		 struct mem_mgr *memmgr,

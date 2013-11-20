@@ -910,6 +910,108 @@ static int setup_buffer_kind_and_compression(struct device *d,
 	return 0;
 }
 
+static u64 __locked_gmmu_map(struct vm_gk20a *vm,
+				u64 map_offset,
+				struct sg_table *sgt,
+				u64 size,
+				int pgsz_idx,
+				u8 kind_v,
+				u32 ctag_offset,
+				u32 flags,
+				int rw_flag)
+{
+	int err = 0, i = 0;
+	u32 pde_lo, pde_hi;
+	struct device *d = dev_from_vm(vm);
+
+	/* Allocate (or validate when map_offset != 0) the virtual address. */
+	if (!map_offset) {
+		map_offset = gk20a_vm_alloc_va(vm, size,
+					  pgsz_idx);
+		if (!map_offset) {
+			nvhost_err(d, "failed to allocate va space");
+			err = -ENOMEM;
+			goto fail;
+		}
+	} else {
+		/* TODO: allocate the offset to keep track? */
+		/* TODO: then we could warn on actual collisions... */
+		nvhost_warn(d, "fixed offset mapping isn't safe yet!");
+	}
+
+	pde_range_from_vaddr_range(vm,
+				   map_offset,
+				   map_offset + size - 1,
+				   &pde_lo, &pde_hi);
+
+	/* mark the addr range valid (but with 0 phys addr, which will fault) */
+	for (i = pde_lo; i <= pde_hi; i++) {
+		err = validate_gmmu_page_table_gk20a_locked(vm, i,
+							    pgsz_idx);
+		if (err) {
+			nvhost_err(d, "failed to validate page table %d: %d",
+							   i, err);
+			goto fail;
+		}
+	}
+
+	err = update_gmmu_ptes_locked(vm, pgsz_idx,
+				      sgt,
+				      map_offset, map_offset + size - 1,
+				      kind_v,
+				      ctag_offset,
+				      flags &
+				      NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				      rw_flag);
+	if (err) {
+		nvhost_err(d, "failed to update ptes on map");
+		goto fail;
+	}
+
+	return map_offset;
+ fail:
+	nvhost_err(d, "%s: failed with err=%d\n", __func__, err);
+	return 0;
+}
+
+static void __locked_gmmu_unmap(struct vm_gk20a *vm,
+				u64 vaddr,
+				u64 size,
+				int pgsz_idx,
+				bool va_allocated,
+				int rw_flag)
+{
+	int err = 0;
+	struct gk20a *g = gk20a_from_vm(vm);
+
+	if (va_allocated)
+		gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
+
+	/* unmap here needs to know the page size we assigned at mapping */
+	err = update_gmmu_ptes_locked(vm,
+				pgsz_idx,
+				0, /* n/a for unmap */
+				vaddr,
+				vaddr + size - 1,
+				0, 0, false /* n/a for unmap */,
+				rw_flag);
+	if (err)
+		dev_err(dev_from_vm(vm),
+			"failed to update gmmu ptes on unmap");
+
+	/* detect which if any pdes/ptes can now be released */
+
+	/* flush l2 so any dirty lines are written out *now*.
+	 *  also as we could potentially be switching this buffer
+	 * from nonvolatile (l2 cacheable) to volatile (l2 non-cacheable) at
+	 * some point in the future we need to invalidate l2.  e.g. switching
+	 * from a render buffer unmap (here) to later using the same memory
+	 * for gmmu ptes.  note the positioning of this relative to any smmu
+	 * unmapping (below). */
+
+	gk20a_mm_l2_flush(g, true);
+}
+
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct mem_mgr *memmgr,
 			struct mem_handle *r,
@@ -930,7 +1032,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	int attr, err = 0;
 	struct buffer_attrs bfr = {0};
 	struct bfr_attr_query query[BFR_ATTRS];
-	u32 i, pde_lo, pde_hi;
 	struct nvhost_comptags comptags;
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -1081,38 +1182,19 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	WARN_ON(bfr.ctag_lines != comptags.lines);
 	bfr.ctag_offset = comptags.offset;
 
-	/* Allocate (or validate when map_offset != 0) the virtual address. */
-	if (!map_offset) {
-		map_offset = gk20a_vm_alloc_va(vm, bfr.size,
-					  bfr.pgsz_idx);
-		if (!map_offset) {
-			nvhost_err(d, "failed to allocate va space");
-			err = -ENOMEM;
-			goto clean_up;
-		}
+	/* update gmmu ptes */
+	map_offset = __locked_gmmu_map(vm, map_offset,
+					bfr.sgt,
+					bfr.size,
+					bfr.pgsz_idx,
+					bfr.kind_v,
+					bfr.ctag_offset,
+					flags, rw_flag);
+	if (!map_offset)
+		goto clean_up;
+
+	if (!(flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET))
 		va_allocated = true;
-	} else {
-		/* TODO: allocate the offset to keep track? */
-		/* TODO: then we could warn on actual collisions... */
-		nvhost_dbg(dbg_map, "fixed offset mapping isn't safe yet!");
-	}
-
-	pde_range_from_vaddr_range(vm,
-				   map_offset,
-				   map_offset + bfr.size - 1,
-				   &pde_lo, &pde_hi);
-
-	/* mark the addr range valid (but with 0 phys addr, which will fault) */
-	for (i = pde_lo; i <= pde_hi; i++) {
-		err = validate_gmmu_page_table_gk20a_locked(vm, i,
-							    bfr.pgsz_idx);
-		if (err) {
-			nvhost_err(dev_from_vm(vm),
-				   "failed to validate page table %d: %d",
-				   i, err);
-			goto clean_up;
-		}
-	}
 
 	nvhost_dbg(dbg_map,
 	   "as=%d pgsz=%d "
@@ -1160,6 +1242,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
+	mapped_buffer->va_allocated = va_allocated;
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
@@ -1175,19 +1258,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		vm->num_user_mapped_buffers++;
 
 	nvhost_dbg_info("allocated va @ 0x%llx", map_offset);
-
-	err = update_gmmu_ptes_locked(vm, bfr.pgsz_idx,
-				      bfr.sgt,
-				      map_offset, map_offset + bfr.size - 1,
-				      bfr.kind_v,
-				      bfr.ctag_offset,
-				      flags &
-				      NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				      rw_flag);
-	if (err) {
-		nvhost_err(d, "failed to update ptes on map");
-		goto clean_up;
-	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
@@ -1212,6 +1282,49 @@ clean_up:
 	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);
 	return 0;
+}
+
+u64 gk20a_gmmu_map(struct vm_gk20a *vm,
+		struct sg_table **sgt,
+		u64 size,
+		u32 flags,
+		int rw_flag)
+{
+	u64 vaddr;
+
+	mutex_lock(&vm->update_gmmu_lock);
+	vaddr = __locked_gmmu_map(vm, 0, /* already mapped? - No */
+				*sgt, /* sg table */
+				size,
+				0, /* page size index = 0 i.e. SZ_4K */
+				0, /* kind */
+				0, /* ctag_offset */
+				flags, rw_flag);
+	mutex_unlock(&vm->update_gmmu_lock);
+	if (!vaddr) {
+		nvhost_err(dev_from_vm(vm), "failed to allocate va space");
+		return 0;
+	}
+
+	/* Invalidate kernel mappings immediately */
+	gk20a_mm_tlb_invalidate(vm);
+
+	return vaddr;
+}
+
+void gk20a_gmmu_unmap(struct vm_gk20a *vm,
+		u64 vaddr,
+		u64 size,
+		int rw_flag)
+{
+	mutex_lock(&vm->update_gmmu_lock);
+	__locked_gmmu_unmap(vm,
+			vaddr,
+			size,
+			0, /* page size 4K */
+			true, /*va_allocated */
+			rw_flag);
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
@@ -1472,41 +1585,18 @@ static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
-	struct gk20a *g = gk20a_from_vm(vm);
-	int err = 0;
 
-	gk20a_vm_free_va(vm, mapped_buffer->addr, mapped_buffer->size,
-		    mapped_buffer->pgsz_idx);
+	__locked_gmmu_unmap(vm,
+			mapped_buffer->addr,
+			mapped_buffer->size,
+			mapped_buffer->pgsz_idx,
+			mapped_buffer->va_allocated,
+			mem_flag_none);
 
 	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
 		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],
 		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
 		   mapped_buffer->own_mem_ref);
-
-	/* unmap here needs to know the page size we assigned at mapping */
-	err = update_gmmu_ptes_locked(vm,
-				      mapped_buffer->pgsz_idx,
-				      0, /* n/a for unmap */
-				      mapped_buffer->addr,
-				      mapped_buffer->addr +
-				      mapped_buffer->size - 1,
-				      0, 0, false /* n/a for unmap */,
-				      mem_flag_none);
-
-	/* detect which if any pdes/ptes can now be released */
-
-	/* flush l2 so any dirty lines are written out *now*.
-	 *  also as we could potentially be switching this buffer
-	 * from nonvolatile (l2 cacheable) to volatile (l2 non-cacheable) at
-	 * some point in the future we need to invalidate l2.  e.g. switching
-	 * from a render buffer unmap (here) to later using the same memory
-	 * for gmmu ptes.  note the positioning of this relative to any smmu
-	 * unmapping (below). */
-	gk20a_mm_l2_flush(g, true);
-
-	if (err)
-		dev_err(dev_from_vm(vm),
-			"failed to update gmmu ptes on unmap");
 
 	nvhost_memmgr_unpin(mapped_buffer->memmgr,
 			    mapped_buffer->handle_ref,

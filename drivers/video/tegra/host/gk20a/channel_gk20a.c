@@ -148,11 +148,11 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	if (!inst_ptr)
 		return -ENOMEM;
 
-	addr_lo = u64_lo32(c->userd_cpu_pa >> ram_userd_base_shift_v());
-	addr_hi = u64_hi32(c->userd_cpu_pa);
+	addr_lo = u64_lo32(c->userd_iova >> ram_userd_base_shift_v());
+	addr_hi = u64_hi32(c->userd_iova);
 
 	nvhost_dbg_info("channel %d : set ramfc userd 0x%16llx",
-		c->hw_chid, (u64)c->userd_cpu_pa);
+		c->hw_chid, c->userd_iova);
 
 	mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
 		 pbdma_userd_target_vid_mem_f() |

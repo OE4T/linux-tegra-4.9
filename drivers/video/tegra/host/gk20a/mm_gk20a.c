@@ -1327,6 +1327,53 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 	mutex_unlock(&vm->update_gmmu_lock);
 }
 
+phys_addr_t gk20a_get_phys_from_iova(struct device *d,
+				u64 dma_addr)
+{
+	phys_addr_t phys;
+	struct dma_iommu_mapping *mapping = d->archdata.mapping;
+	u64 iova = dma_addr & PAGE_MASK;
+	phys = iommu_iova_to_phys(mapping->domain, iova);
+	return phys;
+}
+
+/* get sg_table from already allocated buffer */
+int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
+			void *cpuva, u64 iova,
+			size_t size)
+{
+	int err = 0;
+	*sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	if (!(*sgt)) {
+		dev_err(d, "failed to allocate memory\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+	err = dma_common_get_sgtable(d, *sgt,
+				cpuva, iova,
+				size);
+	if (err) {
+		dev_err(d, "failed to create sg table\n");
+		goto fail;
+	}
+	sg_dma_address((*sgt)->sgl) = iova;
+
+	return 0;
+ fail:
+	if (*sgt) {
+		kfree(*sgt);
+		*sgt = NULL;
+	}
+	return err;
+}
+
+void gk20a_free_sgtable(struct sg_table **sgt)
+{
+	sg_free_table(*sgt);
+	kfree(*sgt);
+	*sgt = NULL;
+}
+
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
 {
 	u64 result = sg_phys(sgl);

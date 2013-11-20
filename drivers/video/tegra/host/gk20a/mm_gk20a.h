@@ -22,6 +22,8 @@
 #define __MM_GK20A_H__
 
 #include <linux/scatterlist.h>
+#include <linux/iommu.h>
+#include <asm/dma-iommu.h>
 #include "../nvhost_allocator.h"
 
 /* This "address bit" in the gmmu ptes (and other gk20a accesses)
@@ -30,6 +32,8 @@
  */
 /* Hack, get this from manuals somehow... */
 #define NV_MC_SMMU_VADDR_TRANSLATION_BIT     34
+#define NV_MC_SMMU_VADDR_TRANSLATE(x) (x | \
+				(1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT))
 
 /* For now keep the size relatively small-ish compared to the full
  * 40b va.  32GB for now. It consists of two 16GB spaces. */
@@ -70,10 +74,17 @@ struct inst_desc {
 };
 
 struct userd_desc {
-	struct mem_desc mem;
-	void *cpu_va;
-	u64 cpu_pa;
+	struct sg_table *sgt;
+	u64 iova;
+	void *cpuva;
+	size_t size;
 	u64 gpu_va;
+};
+
+struct runlist_mem_desc {
+	u64 iova;
+	void *cpuva;
+	size_t size;
 };
 
 struct patch_desc {
@@ -279,6 +290,15 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);
 
 int gk20a_mm_suspend(struct gk20a *g);
+
+phys_addr_t gk20a_get_phys_from_iova(struct device *d,
+				u64 dma_addr);
+
+int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
+			void *cpuva, u64 iova,
+			size_t size);
+
+void gk20a_free_sgtable(struct sg_table **sgt);
 
 u64 gk20a_mm_iova_addr(struct scatterlist *sgl);
 

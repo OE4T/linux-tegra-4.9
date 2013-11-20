@@ -102,7 +102,7 @@ struct channel_gk20a {
 	struct mem_desc_sub ramfc;
 
 	void *userd_cpu_va;
-	u64 userd_cpu_pa;
+	u64 userd_iova;
 	u64 userd_gpu_va;
 
 	s32 num_objects;

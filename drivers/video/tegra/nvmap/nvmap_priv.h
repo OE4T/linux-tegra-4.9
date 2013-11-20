@@ -174,6 +174,8 @@ struct nvmap_page_pool {
 };
 
 int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags);
+struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
+bool nvmap_page_pool_release(struct nvmap_page_pool *pool, struct page *page);
 #endif
 
 struct nvmap_share {

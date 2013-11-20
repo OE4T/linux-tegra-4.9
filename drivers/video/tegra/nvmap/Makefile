@@ -5,3 +5,4 @@ obj-y += nvmap_heap.o
 obj-y += nvmap_ioctl.o
 obj-y += nvmap_dmabuf.o
 obj-y += nvmap_mm.o
+obj-y += nvmap_pp.o

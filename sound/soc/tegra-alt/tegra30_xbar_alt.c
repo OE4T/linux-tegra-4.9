@@ -1,7 +1,7 @@
 /*
  * tegra30_xbar_alt.c - Tegra30 XBAR driver
  *
- * Copyright (c) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -96,17 +96,23 @@ static int tegra30_xbar_codec_probe(struct snd_soc_codec *codec)
 		.name = #sname,					\
 		.playback = {					\
 			.stream_name = #sname " Receive",	\
-			.channels_min = 2,			\
-			.channels_max = 2,			\
+			.channels_min = 1,			\
+			.channels_max = 16,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+			.formats = SNDRV_PCM_FMTBIT_S8 |	\
+				SNDRV_PCM_FMTBIT_S16_LE |	\
+				SNDRV_PCM_FMTBIT_S24_LE |	\
+				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
 		.capture = {					\
 			.stream_name = #sname " Transmit",	\
-			.channels_min = 2,			\
-			.channels_max = 2,			\
+			.channels_min = 1,			\
+			.channels_max = 16,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+			.formats = SNDRV_PCM_FMTBIT_S8 |	\
+				SNDRV_PCM_FMTBIT_S16_LE |	\
+				SNDRV_PCM_FMTBIT_S24_LE |	\
+				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
 	}
 

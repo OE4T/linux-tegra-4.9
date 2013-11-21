@@ -3,7 +3,7 @@
  *
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,7 +25,7 @@
 #include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
 
-void nvhost_tsec_finalize_poweron(struct platform_device *dev);
+int nvhost_tsec_finalize_poweron(struct platform_device *dev);
 int nvhost_tsec_init(struct platform_device *dev);
 void nvhost_tsec_isr(void);
 void nvhost_tsec_isr_thread(void);

@@ -186,6 +186,8 @@ int tsec_boot(struct platform_device *dev)
 	int err = 0;
 	struct tsec *m = get_tsec(dev);
 
+	if (!m || !m->valid)
+		return -ENOMEDIUM;
 	nvhost_device_writel(dev, tsec_dmactl_r(), 0);
 	nvhost_device_writel(dev, tsec_dmatrfbase_r(),
 		(m->dma_addr + m->os.bin_data_offset) >> 8);
@@ -429,9 +431,9 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 	set_tsec(dev, NULL);
 }
 
-void nvhost_tsec_finalize_poweron(struct platform_device *dev)
+int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
-	tsec_boot(dev);
+	return tsec_boot(dev);
 }
 
 static struct of_device_id tegra_tsec_of_match[] = {
@@ -481,7 +483,10 @@ static int tsec_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	tegra_pd_add_device(&dev->dev);
+	pdata->pd.name = "tsec";
+	err = nvhost_module_add_domain(&pdata->pd, dev);
+	if (err)
+		return err;
 #endif
 
 	err = nvhost_client_device_init(dev);
@@ -512,17 +517,6 @@ static int __exit tsec_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static const struct dev_pm_ops tsec_pm_ops = {
-	.suspend = nvhost_module_suspend,
-	.resume = nvhost_module_resume,
-#ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = nvhost_module_disable_clk,
-	.runtime_resume = nvhost_module_enable_clk,
-#endif
-};
-#endif
-
 static struct platform_driver tsec_driver = {
 	.probe = tsec_probe,
 	.remove = __exit_p(tsec_remove),
@@ -530,7 +524,7 @@ static struct platform_driver tsec_driver = {
 		.owner = THIS_MODULE,
 		.name = "tsec",
 #ifdef CONFIG_PM
-		.pm = &tsec_pm_ops,
+		.pm = &nvhost_module_pm_ops,
 #endif
 #ifdef CONFIG_OF
 		.of_match_table = tegra_tsec_of_match,

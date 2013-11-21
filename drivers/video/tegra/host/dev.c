@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,7 +73,8 @@ int nvhost_device_list_add(struct platform_device *pdev)
  * It takes a fptr as an argument and calls that function for each
  * device in the list */
 void nvhost_device_list_for_all(void *data,
-	int (*fptr)(struct platform_device *pdev, void *fdata))
+	int (*fptr)(struct platform_device *pdev, void *fdata, int locked_id),
+	int locked_id)
 {
 	struct list_head *pos;
 	struct nvhost_device_list *nlist;
@@ -82,7 +83,7 @@ void nvhost_device_list_for_all(void *data,
 	list_for_each(pos, &ndev_head.list) {
 		nlist = list_entry(pos, struct nvhost_device_list, list);
 		if (nlist && nlist->pdev && fptr) {
-			ret = fptr(nlist->pdev, data);
+			ret = fptr(nlist->pdev, data, locked_id);
 			if (ret) {
 				pr_info("%s: iterator error\n", __func__);
 				break;

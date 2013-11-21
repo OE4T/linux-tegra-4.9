@@ -485,15 +485,15 @@ static void cdma_timeout_handler(struct work_struct *work)
 	sp = &dev->syncpt;
 	ch = cdma_to_channel(cdma);
 
-	if (nvhost_debug_force_timeout_dump ||
-		cdma->timeout.timeout_debug_dump)
-		nvhost_debug_dump(cdma_to_dev(cdma));
-
 	ret = mutex_trylock(&cdma->lock);
 	if (!ret) {
 		schedule_delayed_work(&cdma->timeout.wq, msecs_to_jiffies(10));
 		return;
 	}
+
+	if (nvhost_debug_force_timeout_dump ||
+		cdma->timeout.timeout_debug_dump)
+		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);
 
 	/* is this submit dependent with submits on other channels? */
 	if (cdma->timeout.allow_dependency && cdma_check_dependencies(cdma)) {

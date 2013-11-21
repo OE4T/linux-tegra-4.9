@@ -26,7 +26,8 @@ struct platform_device;
 void nvhost_device_list_init(void);
 int nvhost_device_list_add(struct platform_device *pdev);
 void nvhost_device_list_for_all(void *data,
-	int (*fptr)(struct platform_device *pdev, void *fdata));
+	int (*fptr)(struct platform_device *pdev, void *fdata, int locked_id),
+	int locked_id);
 struct platform_device *nvhost_device_list_match_by_id(u32 id);
 void nvhost_device_list_remove(struct platform_device *pdev);
 

@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2013 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2013, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -48,7 +48,8 @@ void nvhost_debug_output(struct output *o, const char* fmt, ...)
 	o->fn(o->ctx, o->buf, len);
 }
 
-static int show_channels(struct platform_device *pdev, void *data)
+static int show_channels(struct platform_device *pdev, void *data,
+			 int locked_id)
 {
 	struct nvhost_channel *ch;
 	struct output *o = data;
@@ -61,12 +62,14 @@ static int show_channels(struct platform_device *pdev, void *data)
 	pdata = platform_get_drvdata(pdev);
 	m = nvhost_get_host(pdev);
 	ch = nvhost_getchannel(pdata->channel, true);
-	mutex_lock(&ch->cdma.lock);
+	if (ch->chid != locked_id)
+		mutex_lock(&ch->cdma.lock);
 	nvhost_get_chip_ops()->debug.show_channel_fifo(
 		m, ch, o, pdata->index);
 	nvhost_get_chip_ops()->debug.show_channel_cdma(
 		m, ch, o, pdata->index);
-	mutex_unlock(&ch->cdma.lock);
+	if (ch->chid != locked_id)
+		mutex_unlock(&ch->cdma.lock);
 	nvhost_putchannel(ch);
 
 	return 0;
@@ -97,20 +100,22 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 	nvhost_debug_output(o, "\n");
 }
 
-static void show_all(struct nvhost_master *m, struct output *o)
+static void show_all(struct nvhost_master *m, struct output *o,
+		     int locked_id)
 {
 	nvhost_module_busy(m->dev);
 
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	nvhost_device_list_for_all(o, show_channels);
+	nvhost_device_list_for_all(o, show_channels, locked_id);
 
 	nvhost_module_idle(m->dev);
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int show_channels_no_fifo(struct platform_device *pdev, void *data)
+static int show_channels_no_fifo(struct platform_device *pdev, void *data,
+				 int locked_id)
 {
 	struct nvhost_channel *ch;
 	struct output *o = data;
@@ -126,10 +131,12 @@ static int show_channels_no_fifo(struct platform_device *pdev, void *data)
 	if (ch) {
 		mutex_lock(&ch->reflock);
 		if (ch->refcount) {
-			mutex_lock(&ch->cdma.lock);
+			if (locked_id != ch->chid)
+				mutex_lock(&ch->cdma.lock);
 			nvhost_get_chip_ops()->debug.show_channel_cdma(m,
 					ch, o, pdata->index);
-			mutex_unlock(&ch->cdma.lock);
+			if (locked_id != ch->chid)
+				mutex_unlock(&ch->cdma.lock);
 		}
 		mutex_unlock(&ch->reflock);
 	}
@@ -137,14 +144,15 @@ static int show_channels_no_fifo(struct platform_device *pdev, void *data)
 	return 0;
 }
 
-static void show_all_no_fifo(struct nvhost_master *m, struct output *o)
+static void show_all_no_fifo(struct nvhost_master *m, struct output *o,
+			     int locked_id)
 {
 	nvhost_module_busy(m->dev);
 
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	nvhost_device_list_for_all(o, show_channels_no_fifo);
+	nvhost_device_list_for_all(o, show_channels_no_fifo, locked_id);
 
 	nvhost_module_idle(m->dev);
 }
@@ -155,7 +163,7 @@ static int nvhost_debug_show_all(struct seq_file *s, void *unused)
 		.fn = write_to_seqfile,
 		.ctx = s
 	};
-	show_all(s->private, &o);
+	show_all(s->private, &o, -1);
 	return 0;
 }
 
@@ -165,7 +173,7 @@ static int nvhost_debug_show(struct seq_file *s, void *unused)
 		.fn = write_to_seqfile,
 		.ctx = s
 	};
-	show_all_no_fifo(s->private, &o);
+	show_all_no_fifo(s->private, &o, -1);
 	return 0;
 }
 
@@ -253,11 +261,19 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&pdata->nvhost_timeout_default);
 }
 
+void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id)
+{
+	struct output o = {
+		.fn = write_to_printk
+	};
+	show_all(master, &o, locked_id);
+}
+
 void nvhost_debug_dump(struct nvhost_master *master)
 {
 	struct output o = {
 		.fn = write_to_printk
 	};
-	show_all(master, &o);
+	show_all(master, &o, -1);
 }
 #endif

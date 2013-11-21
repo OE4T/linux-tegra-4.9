@@ -3920,6 +3920,64 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 	tegra_dsi_init_sw(dc, dsi);
 }
 
+static const u32 *tegra_dsi_parse_pkt_seq_dt(
+						struct tegra_dc_dsi_data *dsi,
+						struct device_node *node,
+						struct property *prop)
+{
+	u32 *prop_val_ptr;
+	u32 *pkt_seq;
+	int line, i;
+
+#define LINE_STOP 0xff
+
+	if (!prop)
+		return NULL;
+
+	pkt_seq = devm_kzalloc(&dsi->dc->ndev->dev,
+				sizeof(u32) * NUMOF_PKT_SEQ, GFP_KERNEL);
+	if (!pkt_seq) {
+		dev_err(&dsi->dc->ndev->dev,
+			"dsi: pkt seq memory allocation failed\n");
+		return ERR_PTR(-ENOMEM);
+	}
+	prop_val_ptr = prop->value;
+	for (line = 0; line < NUMOF_PKT_SEQ; line += 2) {
+		/* compute line value from dt line */
+		for (i = 0;; i += 2) {
+			u32 cmd = be32_to_cpu(*prop_val_ptr++);
+			if (cmd == LINE_STOP)
+				break;
+			else if (cmd == PKT_LP)
+				pkt_seq[line] |= PKT_LP;
+			else {
+				u32 len = be32_to_cpu(*prop_val_ptr++);
+				if (i == 0) /* PKT_ID0 */
+					pkt_seq[line] |=
+						PKT_ID0(cmd) | PKT_LEN0(len);
+				if (i == 2) /* PKT_ID1 */
+					pkt_seq[line] |=
+						PKT_ID1(cmd) | PKT_LEN1(len);
+				if (i == 4) /* PKT_ID2 */
+					pkt_seq[line] |=
+						PKT_ID2(cmd) | PKT_LEN2(len);
+				if (i == 6) /* PKT_ID3 */
+					pkt_seq[line + 1] |=
+						PKT_ID3(cmd) | PKT_LEN3(len);
+				if (i == 8) /* PKT_ID4 */
+					pkt_seq[line + 1] |=
+						PKT_ID4(cmd) | PKT_LEN4(len);
+				if (i == 10) /* PKT_ID5 */
+					pkt_seq[line + 1] |=
+						PKT_ID5(cmd) | PKT_LEN5(len);
+			}
+		}
+	}
+
+#undef LINE_STOP
+
+	return pkt_seq;
+}
 struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct tegra_dc_dsi_data *dsi,
 						const struct device_node *node,
 						struct property *prop,
@@ -3977,18 +4035,24 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct tegra_dc_dsi_data *dsi,
 
 struct device_node *tegra_dsi_panel_detect(void)
 {
-	/* TODO: currently only lg 720p panel has dt support */
-	return of_find_compatible_node(NULL, NULL, "lg,720p-5");
+	/* TODO: Runtime panel detection */
+	return of_find_compatible_node(NULL, NULL, "p,wuxga-10-1");
+}
+
+struct device_node *tegra_dsi_platform_detect(void)
+{
+	return of_find_compatible_node(NULL, NULL, "nvidia,tegra124-dsi");
 }
 
 static int tegra_dc_dsi_cp_info_dt(struct tegra_dc_dsi_data *dsi)
 {
-	struct device_node *panel_dt_node = tegra_dsi_panel_detect();
-	struct device_node *dsi_dt_node =
-		of_find_compatible_node(NULL, NULL, "nvidia,tegra114-dsi");
+	struct device_node *panel_dt_node = NULL;
+	struct device_node *dsi_dt_node = NULL;
 	struct tegra_dsi_out *dsi_pdata = &dsi->info;
 	int err = 0;
 
+	dsi_dt_node = tegra_dsi_platform_detect();
+	panel_dt_node = tegra_dsi_panel_detect();
 	if (!panel_dt_node || !dsi_dt_node) {
 		dev_info(&dsi->dc->ndev->dev,
 			"dsi dt support not available\n");
@@ -4049,10 +4113,19 @@ static int tegra_dc_dsi_cp_info_dt(struct tegra_dc_dsi_data *dsi)
 				of_find_property(
 				panel_dt_node, "nvidia,dsi-init-cmd", NULL),
 				dsi_pdata->n_init_cmd);
-	if (IS_ERR_OR_NULL(dsi_pdata->dsi_init_cmd)) {
+	if (IS_ERR(dsi_pdata->dsi_init_cmd)) {
 		dev_err(&dsi->dc->ndev->dev,
 			"dsi: copy init cmd from dt failed\n");
 		err = PTR_ERR(dsi_pdata->dsi_init_cmd);
+		goto fail;
+	}
+	dsi_pdata->pkt_seq = tegra_dsi_parse_pkt_seq_dt(dsi, panel_dt_node,
+				of_find_property(
+				panel_dt_node, "nvidia,dsi-pkt-seq", NULL));
+	if (IS_ERR(dsi_pdata->pkt_seq)) {
+		dev_err(&dsi->dc->ndev->dev,
+			"dsi: copy pkt seq from dt failed\n");
+		err = PTR_ERR(dsi_pdata->pkt_seq);
 		goto fail;
 	}
 

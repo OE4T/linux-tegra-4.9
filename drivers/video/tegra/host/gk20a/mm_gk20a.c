@@ -1204,9 +1204,8 @@ clean_up:
 	kfree(mapped_buffer);
 	if (va_allocated)
 		gk20a_vm_free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
-	if (bfr.sgt) {
+	if (!IS_ERR(bfr.sgt))
 		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
-	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);

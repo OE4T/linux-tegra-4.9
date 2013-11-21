@@ -574,9 +574,8 @@ int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
 	return 0;
 }
 
-void gk20a_set_timeout_error(struct nvhost_hwctx *ctx)
+void gk20a_set_error_notifier(struct nvhost_hwctx *ctx, __u32 error)
 {
-	ctx->has_timedout = true;
 	if (ctx->error_notifier_ref) {
 		struct timespec time_data;
 		u64 nsec;
@@ -587,10 +586,10 @@ void gk20a_set_timeout_error(struct nvhost_hwctx *ctx)
 				(u32)nsec;
 		ctx->error_notifier->time_stamp.nanoseconds[1] =
 				(u32)(nsec >> 32);
-		ctx->error_notifier->info32 =
-				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT;
+		ctx->error_notifier->info32 = error;
 		ctx->error_notifier->status = 0xffff;
-		pr_err("Timeout notifier is set\n");
+		nvhost_dbg(dbg_fn | dbg_err,
+				"error notifier set to %d\n", error);
 	}
 }
 

@@ -919,6 +919,28 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 	schedule_work(&g->fifo.fault_restore_thread);
 }
 
+static void gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
+		struct nvhost_hwctx *hwctx) {
+	if (hwctx) {
+		nvhost_err(dev_from_gk20a(g),
+			"channel with hwctx generated a mmu fault");
+		if (hwctx->error_notifier) {
+			if (hwctx->error_notifier->info32) {
+				/* If error code is already set, this mmu fault
+				 * was triggered as part of recovery from other
+				 * error condition.
+				 * Don't overwrite error flag. */
+			} else {
+				gk20a_set_error_notifier(hwctx,
+					NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
+			}
+		}
+		/* mark channel as faulted */
+		hwctx->has_timedout = true;
+	}
+}
+
+
 static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
@@ -1007,14 +1029,8 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		}
 
 		if (ch) {
-			if (ch->hwctx) {
-				nvhost_err(dev_from_gk20a(g), "channel with hwctx has generated an mmu fault");
-				/* mark channel as faulted */
-				gk20a_set_timeout_error(ch->hwctx);
-			}
-
+			gk20a_fifo_set_ctx_mmu_error(g, ch->hwctx);
 			if (ch->in_use) {
-
 				/* disable the channel from hw and increment
 				 * syncpoints */
 				gk20a_disable_channel_no_update(ch);
@@ -1089,7 +1105,6 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids)
 
 		/* Reset *all* engines that use the
 		 * same channel as faulty engine */
-
 		for (i = 0; i < g->fifo.max_engines; i++) {
 			bool type_ch;
 			u32 chid;
@@ -1187,6 +1202,13 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 
 	if (fifo_intr_sched_error_code_f(sched_error) ==
 	    fifo_intr_sched_error_code_ctxsw_timeout_v()) {
+		if (!non_chid) {
+			struct fifo_gk20a *f = &g->fifo;
+			struct nvhost_hwctx *hwctx = f->channel[id].hwctx;
+			gk20a_set_error_notifier(hwctx,
+				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+			hwctx->has_timedout = true;
+		}
 		gk20a_fifo_recover(g, BIT(engine_id));
 		return false;
 	}
@@ -1421,6 +1443,8 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 	if (ret) {
 		int i;
 		u32 engines = 0;
+		struct fifo_gk20a *f = &g->fifo;
+		struct channel_gk20a *ch = &f->channel[hw_chid];
 
 		nvhost_err(dev_from_gk20a(g), "preempt channel %d timeout\n",
 			    hw_chid);
@@ -1442,6 +1466,8 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 			if (type_ch && busy && id == hw_chid)
 				engines |= BIT(i);
 		}
+		gk20a_set_error_notifier(ch->hwctx,
+				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 		gk20a_fifo_recover(g, engines);
 	}
 

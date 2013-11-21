@@ -4726,11 +4726,41 @@ fail:
 	return -EINVAL;
 }
 
+static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
+		  struct gr_isr_data *isr_data)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	nvhost_dbg_fn("");
+	gk20a_set_error_notifier(ch->hwctx,
+				NVHOST_CHANNEL_GR_SEMAPHORE_TIMEOUT);
+	nvhost_err(dev_from_gk20a(g),
+		   "gr semaphore timeout\n");
+	return -EINVAL;
+}
+
+static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
+		  struct gr_isr_data *isr_data)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	nvhost_dbg_fn("");
+	gk20a_set_error_notifier(ch->hwctx,
+				NVHOST_CHANNEL_GR_ILLEGAL_NOTIFY);
+	/* This is an unrecoverable error, reset is needed */
+	nvhost_err(dev_from_gk20a(g),
+		   "gr semaphore timeout\n");
+	return -EINVAL;
+}
+
 static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
-
+	gk20a_set_error_notifier(ch->hwctx,
+				NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvhost_err(dev_from_gk20a(g),
 		   "invalid class 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -4740,8 +4770,12 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 static int gk20a_gr_handle_class_error(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
 
+	gk20a_set_error_notifier(ch->hwctx,
+			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvhost_err(dev_from_gk20a(g),
 		   "class error 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -5105,7 +5139,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	struct gr_isr_data isr_data;
 	u32 grfifo_ctl;
 	u32 obj_table;
-	int ret = 0;
+	int need_reset = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 
 	nvhost_dbg_fn("");
@@ -5163,22 +5197,38 @@ int gk20a_gr_isr(struct gk20a *g)
 		gr_intr &= ~gr_intr_semaphore_pending_f();
 	}
 
+	if (gr_intr & gr_intr_semaphore_timeout_pending_f()) {
+		need_reset |= gk20a_gr_handle_semaphore_timeout_pending(g,
+			&isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_semaphore_reset_f());
+		gr_intr &= ~gr_intr_semaphore_pending_f();
+	}
+
+	if (gr_intr & gr_intr_illegal_notify_pending_f()) {
+		need_reset |= gk20a_gr_intr_illegal_notify_pending(g,
+			&isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_illegal_notify_reset_f());
+		gr_intr &= ~gr_intr_illegal_notify_pending_f();
+	}
+
 	if (gr_intr & gr_intr_illegal_method_pending_f()) {
-		ret = gk20a_gr_handle_illegal_method(g, &isr_data);
+		need_reset |= gk20a_gr_handle_illegal_method(g, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_method_reset_f());
 		gr_intr &= ~gr_intr_illegal_method_pending_f();
 	}
 
 	if (gr_intr & gr_intr_illegal_class_pending_f()) {
-		ret = gk20a_gr_handle_illegal_class(g, &isr_data);
+		need_reset |= gk20a_gr_handle_illegal_class(g, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_class_reset_f());
 		gr_intr &= ~gr_intr_illegal_class_pending_f();
 	}
 
 	if (gr_intr & gr_intr_class_error_pending_f()) {
-		ret = gk20a_gr_handle_class_error(g, &isr_data);
+		need_reset |= gk20a_gr_handle_class_error(g, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_class_error_reset_f());
 		gr_intr &= ~gr_intr_class_error_pending_f();
@@ -5186,6 +5236,11 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	if (gr_intr & gr_intr_exception_pending_f()) {
 		u32 exception = gk20a_readl(g, gr_exception_r());
+		struct fifo_gk20a *f = &g->fifo;
+		struct channel_gk20a *ch = &f->channel[isr_data.chid];
+
+		gk20a_set_error_notifier(ch->hwctx,
+					NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 
 		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "exception %08x\n", exception);
 
@@ -5196,7 +5251,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		}
 
 		/* check if a gpc exception has occurred */
-		if (exception & gr_exception_gpc_m() && ret == 0) {
+		if (exception & gr_exception_gpc_m() && need_reset == 0) {
 			u32 exception1 = gk20a_readl(g, gr_exception1_r());
 			u32 global_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r());
 
@@ -5206,12 +5261,12 @@ int gk20a_gr_isr(struct gk20a *g)
 			if (!gk20a_gr_sm_debugger_attached(g)) {
 				nvhost_dbg(dbg_intr | dbg_gpu_dbg,
 					   "SM debugger not attached, clearing interrupt");
-				ret = -EFAULT;
+				need_reset |= -EFAULT;
 			}
 			else {
 				/* check if gpc 0 has an exception */
 				if (exception1 & gr_exception1_gpc_0_pending_f())
-					ret = gk20a_gr_handle_gpc_exception(g, &isr_data);
+					need_reset |= gk20a_gr_handle_gpc_exception(g, &isr_data);
 				/* clear the hwws, also causes tpc and gpc
 				 * exceptions to be cleared */
 				gk20a_gr_clear_sm_hww(g, global_esr);
@@ -5223,7 +5278,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		gr_intr &= ~gr_intr_exception_pending_f();
 	}
 
-	if (ret)
+	if (need_reset)
 		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A));
 
 clean_up:

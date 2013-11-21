@@ -147,7 +147,11 @@ struct nvhost_notification {
 		__u32 nanoseconds[2];	/* nanoseconds since Jan. 1, 1970 */
 	} time_stamp;			/* -0007 */
 	__u32 info32;	/* info returned depends on method 0008-000b */
-#define NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT 8
+#define	NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT	8
+#define	NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY	13
+#define	NVHOST_CHANNEL_GR_SEMAPHORE_TIMEOUT	24
+#define	NVHOST_CHANNEL_GR_ILLEGAL_NOTIFY	25
+#define	NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT	31
 	__u16 info16;	/* info returned depends on method 000c-000d */
 	__u16 status;	/* user sets bit 15, NV sets status 000e-000f */
 };

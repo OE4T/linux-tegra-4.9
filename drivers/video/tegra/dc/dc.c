@@ -2379,6 +2379,9 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 
 	pm_runtime_get_sync(&dc->ndev->dev);
 
+	if (dc->out->type == TEGRA_DC_OUT_HDMI && !tegra_dc_hpd(dc))
+		return false;
+
 	if (!_tegra_dc_controller_enable(dc)) {
 		pm_runtime_put_sync(&dc->ndev->dev);
 		return false;

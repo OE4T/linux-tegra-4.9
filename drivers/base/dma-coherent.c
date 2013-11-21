@@ -154,28 +154,32 @@ void *dma_mark_declared_memory_occupied(struct device *dev,
 EXPORT_SYMBOL(dma_mark_declared_memory_occupied);
 
 /**
- * dma_alloc_from_coherent() - try to allocate memory from the per-device coherent area
+ * dma_alloc_from_coherent_attr() - try to allocate memory from the per-device
+ * coherent area
  *
  * @dev:	device from which we allocate memory
  * @size:	size of requested memory area
  * @dma_handle:	This will be filled with the correct dma handle
  * @ret:	This pointer will be filled with the virtual address
  *		to allocated area.
- *
+ * @attrs:	DMA Attribute
  * This function should be only called from per-arch dma_alloc_coherent()
  * to support allocation from per-device coherent memory pools.
  *
- * Returns 0 if dma_alloc_coherent should continue with allocating from
+ * Returns 0 if dma_alloc_coherent_attr should continue with allocating from
  * generic memory areas, or !0 if dma_alloc_coherent should return @ret.
  */
-int dma_alloc_from_coherent(struct device *dev, ssize_t size,
-				       dma_addr_t *dma_handle, void **ret)
+int dma_alloc_from_coherent_attr(struct device *dev, ssize_t size,
+				       dma_addr_t *dma_handle, void **ret,
+				       unsigned long attrs)
 {
 	struct dma_coherent_mem *mem;
 	int order = get_order(size);
 	unsigned long flags;
 	int pageno;
 	int dma_memory_map;
+	unsigned int count;
+	unsigned long align;
 
 	if (!dev)
 		return 0;
@@ -189,9 +193,21 @@ int dma_alloc_from_coherent(struct device *dev, ssize_t size,
 	if (unlikely(size > (mem->size << PAGE_SHIFT)))
 		goto err;
 
-	pageno = bitmap_find_free_region(mem->bitmap, mem->size, order);
-	if (unlikely(pageno < 0))
+	if (attrs & DMA_ATTR_ALLOC_EXACT_SIZE) {
+		align = 0;
+		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	} else  {
+		align = (1 << order) - 1;
+		count = 1 << order;
+	}
+
+	pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size,
+			0, count, align);
+
+	if (pageno >= mem->size)
 		goto err;
+
+	bitmap_set(mem->bitmap, pageno, count);
 
 	/*
 	 * Memory was found in the per-device area.
@@ -218,25 +234,30 @@ err:
 	 */
 	return mem->flags & DMA_MEMORY_EXCLUSIVE;
 }
-EXPORT_SYMBOL(dma_alloc_from_coherent);
+EXPORT_SYMBOL(dma_alloc_from_coherent_attr);
 
 /**
- * dma_release_from_coherent() - try to free the memory allocated from per-device coherent memory pool
+ * dma_release_from_coherent_attr() - try to free the memory allocated from
+ * per-device coherent memory pool
  * @dev:	device from which the memory was allocated
- * @order:	the order of pages allocated
+ * @size:	size of the memory area to free
  * @vaddr:	virtual address of allocated pages
+ * @attrs:	DMA Attribute
  *
  * This checks whether the memory was allocated from the per-device
  * coherent memory pool and if so, releases that memory.
  *
  * Returns 1 if we correctly released the memory, or 0 if
- * dma_release_coherent() should proceed with releasing memory from
+ * dma_release_coherent_attr() should proceed with releasing memory from
  * generic pools.
  */
-int dma_release_from_coherent(struct device *dev, int order, void *vaddr)
+int dma_release_from_coherent_attr(struct device *dev, size_t size, void *vaddr,
+				unsigned long attrs)
 {
 	struct dma_coherent_mem *mem = dev ? dev->dma_mem : NULL;
 	void *mem_addr;
+	unsigned int count;
+	unsigned int pageno;
 
 	if (!mem)
 		return 0;
@@ -246,20 +267,26 @@ int dma_release_from_coherent(struct device *dev, int order, void *vaddr)
 	else
 		mem_addr =  mem->virt_base;
 
+
 	if (mem && vaddr >= mem_addr &&
 	    vaddr - mem_addr < mem->size << PAGE_SHIFT) {
 
-		int page = (vaddr - mem_addr) >> PAGE_SHIFT;
 		unsigned long flags;
 
+		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+			count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+		else
+			count = 1 << get_order(size);
+
 		spin_lock_irqsave(&mem->spinlock, flags);
-		bitmap_release_region(mem->bitmap, page, order);
+		bitmap_clear(mem->bitmap, pageno, count);
 		spin_unlock_irqrestore(&mem->spinlock, flags);
+
 		return 1;
 	}
 	return 0;
 }
-EXPORT_SYMBOL(dma_release_from_coherent);
+EXPORT_SYMBOL(dma_release_from_coherent_attr);
 
 /**
  * dma_mmap_from_coherent() - try to mmap the memory allocated from

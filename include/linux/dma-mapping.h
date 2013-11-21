@@ -61,6 +61,28 @@
  * allocation failure reports (similarly to __GFP_NOWARN).
  */
 #define DMA_ATTR_NO_WARN	(1UL << 8)
+/*
+ * DMA_ATTR_SKIP_IOVA_GAP: This tells the DMA-mapping subsystem to skip gap pages
+ */
+#define DMA_ATTR_SKIP_IOVA_GAP	(1UL << 9)
+/*
+ * DMA_ATTR_ALLOC_EXACT_SIZE: This tells the DMA-mapping subsystem to allocate
+ * the exact number of pages
+ */
+#define DMA_ATTR_ALLOC_EXACT_SIZE	(1UL << 10)
+/*
+ * DMA_ATTR_SKIP_FREE_IOVA: This tells the DMA-mapping subsystem to skip freeing
+ * IOVA allocated at unmap
+ */
+#define DMA_ATTR_SKIP_FREE_IOVA	(1UL << 11)
+/*
+ * DMA_ATTR_READ_ONLY: This tells the DMA-mapping subsystem to map as read-only
+ */
+#define DMA_ATTR_READ_ONLY	(1UL << 12)
+/*
+ * DMA_ATTR_WRITE_ONLY: This tells the DMA-mapping subsystem to map as write-only
+ */
+#define DMA_ATTR_WRITE_ONLY	(1UL << 13)
 
 /*
  * A dma_addr_t can hold any valid DMA or bus address for the platform.

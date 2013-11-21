@@ -1092,7 +1092,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	} else {
 		/* TODO: allocate the offset to keep track? */
 		/* TODO: then we could warn on actual collisions... */
-		nvhost_warn(d, "fixed offset mapping isn't safe yet!");
+		nvhost_dbg(dbg_map, "fixed offset mapping isn't safe yet!");
 	}
 
 	pde_range_from_vaddr_range(vm,

@@ -808,11 +808,8 @@ int nvhost_module_finalize_poweron(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
-	if (pdata->finalize_poweron) {
-		nvhost_module_enable_clk(dev);
+	if (pdata->finalize_poweron)
 		pdata->finalize_poweron(to_platform_device(dev));
-		nvhost_module_disable_clk(dev);
-	}
 
 	return 0;
 }

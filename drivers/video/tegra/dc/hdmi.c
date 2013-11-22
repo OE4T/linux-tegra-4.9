@@ -370,6 +370,10 @@ static int dbg_hdmi_show(struct seq_file *m, void *unused)
 {
 	struct tegra_dc_hdmi_data *hdmi = m->private;
 
+	/* If gated quitely return */
+	if (!tegra_dc_is_powered(hdmi->dc))
+		return 0;
+
 #define DUMP_REG(a) do {						\
 		seq_printf(m, "%-32s\t%03x\t%08lx\n",			\
 		       #a, a, tegra_hdmi_readl(hdmi, a));		\

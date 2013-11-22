@@ -301,8 +301,10 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 			(tegra_fb->win->flags & TEGRA_WIN_FLAG_ENABLED))
 			return 0;
 		tegra_fb->win->flags |= TEGRA_WIN_FLAG_ENABLED;
-		tegra_fb->win->phys_addr = tegra_fb->phys_start;
-		tegra_fb->win->virt_addr = tegra_fb->info->screen_base;
+		if (tegra_fb->win->dc->win_blank_saved_flag > 0) {
+			*(tegra_fb->win) = tegra_fb->win->dc->win_blank_saved;
+			tegra_fb->win->dc->win_blank_saved_flag = 0;
+		}
 		tegra_dc_enable(tegra_fb->win->dc);
 		tegra_dc_update_windows(&tegra_fb->win, 1);
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
@@ -323,6 +325,8 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		/* To pan fb while switching from X */
 		if (!tegra_fb->win->dc->suspended && tegra_fb->win->dc->enabled)
 			tegra_fb->curr_xoffset = -1;
+		tegra_fb->win->dc->win_blank_saved = *(tegra_fb->win);
+		tegra_fb->win->dc->win_blank_saved_flag = 1;
 		tegra_dc_disable(tegra_fb->win->dc);
 		return 0;
 

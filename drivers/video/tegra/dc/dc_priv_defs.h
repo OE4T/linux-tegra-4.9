@@ -222,6 +222,9 @@ struct tegra_dc {
 	u32				reserved_bw;
 	u32				available_bw;
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];
+
+	int				win_blank_saved_flag;
+	struct tegra_dc_win		win_blank_saved;
 };
 
 #endif

@@ -32,6 +32,10 @@ static int dbg_dsi_mipi_show(struct seq_file *s, void *unused)
 	unsigned long i = 0;
 	u32 col = 0;
 
+	/* If gated quitely return */
+	if (!tegra_dc_is_powered(mipi_cal->dc))
+		return 0;
+
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
 	mutex_lock(&mipi_cal->lock);
 	tegra_mipi_cal_clk_enable(mipi_cal);

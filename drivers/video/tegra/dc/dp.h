@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.h
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -243,6 +243,7 @@ struct tegra_dc_dp_data {
 	bool				 enabled;
 	bool				 suspended;
 
+	struct tegra_edid		*dp_edid;
 	struct completion		hpd_plug;
 
 	struct tegra_dp_out		*pdata;

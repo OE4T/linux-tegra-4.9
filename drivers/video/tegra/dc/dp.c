@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,6 +32,7 @@
 #include "sor_regs.h"
 #include "dpaux_regs.h"
 #include "dc_priv.h"
+#include "edid.h"
 
 static int tegra_dp_lt(struct tegra_dc_dp_data *dp);
 
@@ -420,6 +421,48 @@ static int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	return ret;
 }
 
+/* I2C read over DPAUX cannot handle more than 16B per transaction due to
+ * DPAUX transaction limitation.
+ * This requires breaking each read into multiple i2c write/read transaction */
+static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
+	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
+{
+	u32	finished = 0;
+	u32	cur_size;
+	int	ret	 = 0;
+	u32	len;
+	u8	iaddr	 = (u8)addr;
+
+	if (*size == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: i2c read size can't be 0\n");
+		return -EINVAL;
+	}
+
+	do {
+		cur_size = *size - finished;
+		if (cur_size >= DP_AUX_MAX_BYTES)
+			cur_size = DP_AUX_MAX_BYTES - 1;
+		else
+			cur_size -= 1;
+
+		len = 0;
+		CHECK_RET(tegra_dc_dpaux_write_chunk(dp,
+				DPAUX_DP_AUXCTL_CMD_I2CWR,
+				i2c_addr, &iaddr, &len, aux_stat));
+		CHECK_RET(tegra_dc_dpaux_read_chunk(dp,
+				DPAUX_DP_AUXCTL_CMD_I2CRD,
+				i2c_addr, data, &cur_size, aux_stat));
+
+		iaddr += cur_size;
+		data += cur_size;
+		finished += cur_size;
+	} while (*size > finished);
+
+	*size = finished;
+	return ret;
+}
+
 static int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 *data_ptr)
 {
@@ -436,6 +479,47 @@ static int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 
 	return ret;
 }
+
+static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
+	int num)
+{
+	struct i2c_msg *pmsg;
+	int i;
+	u32 aux_stat;
+	int status = 0;
+	u32 len = 0;
+	u32 start_addr;
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	for (i = 0; i < num; ++i) {
+		pmsg = &msgs[i];
+
+		if (!pmsg->flags) { /* write */
+			/* Ignore the write-for-read command now as it is
+			   already handled in the read operations */
+		} else if (pmsg->flags & I2C_M_RD) { /* Read */
+			len = pmsg->len;
+			start_addr = 0;
+			status = tegra_dc_i2c_read(dp, pmsg->addr, start_addr,
+				pmsg->buf, &len, &aux_stat);
+			if (status) {
+				dev_err(&dp->dc->ndev->dev,
+					"dp: Failed for I2C read"
+					" addr:%d, size:%d, stat:0x%x\n",
+					pmsg->addr, len, aux_stat);
+				return status;
+			}
+		} else {
+			/* No other functionalities are supported for now */
+			dev_err(&dp->dc->ndev->dev,
+				"dp: i2x_xfer: Unknown flag 0x%x\n",
+				pmsg->flags);
+			return -EINVAL;
+		}
+	}
+	return i;
+}
+
 
 static int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 data)
@@ -1052,7 +1136,6 @@ static int tegra_dc_dp_explore_link_cfg(struct tegra_dc_dp_data *dp,
 	}
 
 	ret = tegra_dp_link_config(dp, cfg);
-fail:
 	return ret;
 }
 
@@ -1209,6 +1292,13 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_get_clk;
 	}
 
+	dp->dp_edid = tegra_edid_create(dc, tegra_dc_dp_i2c_xfer);
+	if (IS_ERR_OR_NULL(dp->dp_edid)) {
+		dev_err(&dc->ndev->dev, "dp: failed to create edid obj\n");
+		err = PTR_ERR(dp->dp_edid);
+		goto err_edid_destroy;
+	}
+
 	INIT_WORK(&dp->lt_work, tegra_dc_dp_lt_worker);
 	init_completion(&dp->hpd_plug);
 
@@ -1217,6 +1307,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	return 0;
 
+err_edid_destroy:
+	tegra_edid_destroy(dp->dp_edid);
 err_get_clk:
 	clk_put(clk);
 err_iounmap_reg:
@@ -1798,7 +1890,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dp_hpd_config(dp);
 	if (tegra_dp_hpd_plug(dp) < 0) {
 		dev_err(&dc->ndev->dev, "dp: hpd plug failed\n");
-		return;
+		goto error_enable;
 	}
 
 	/* Power on panel */
@@ -1858,6 +1950,8 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 
 	if (dp->sor)
 		tegra_dc_sor_destroy(dp->sor);
+	if (dp->dp_edid)
+		tegra_edid_destroy(dp->dp_edid);
 	clk_put(dp->clk);
 	iounmap(dp->aux_base);
 	release_resource(dp->aux_base_res);
@@ -1907,6 +2001,49 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 }
 
 
+static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	struct fb_monspecs specs;
+	u32    reg_val;
+
+	/* Power on panel */
+	if (dc->out->enable)
+		dc->out->enable(&dc->ndev->dev);
+
+	tegra_dc_get(dp->dc);
+	if (!tegra_is_clk_enabled(dp->clk))
+		clk_prepare_enable(dp->clk);
+	tegra_dc_dpaux_enable(dp);
+	tegra_dp_hpd_config(dp);
+
+	tegra_dc_unpowergate_locked(dc);
+	msleep(80);
+
+	if (tegra_dp_hpd_plug(dp) < 0) {
+		dev_err(&dc->ndev->dev, "dp: hpd plug failed\n");
+		return false;
+	}
+
+	reg_val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
+	if (!(reg_val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
+		dev_err(&dc->ndev->dev, "dp: Failed to detect HPD\n");
+		return false;
+	}
+
+	if (tegra_edid_get_monspecs(dp->dp_edid, &specs)) {
+		dev_err(&dc->ndev->dev, "dp: Failed to get EDID data\n");
+		return false;
+	}
+
+	tegra_dc_set_fb_mode(dc, specs.modedb, false);
+
+	tegra_dc_powergate_locked(dc);
+	msleep(50);
+	tegra_dc_put(dp->dc);
+	return true;
+}
+
 static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -1940,6 +2077,7 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.resume	   = tegra_dc_dp_resume,
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
+	.early_enable     = tegra_dc_dp_early_enable,
 };
 
 

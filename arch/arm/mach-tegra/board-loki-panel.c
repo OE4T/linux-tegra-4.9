@@ -143,7 +143,7 @@ static int loki_hdmi_enable(struct device *dev)
 	int ret;
 	if (!loki_hdmi_reg) {
 		loki_hdmi_reg = regulator_get(dev, "avdd_hdmi");
-		if (IS_ERR_OR_NULL(loki_hdmi_reg)) {
+		if (IS_ERR(loki_hdmi_reg)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
 			loki_hdmi_reg = NULL;
 			return PTR_ERR(loki_hdmi_reg);
@@ -156,7 +156,7 @@ static int loki_hdmi_enable(struct device *dev)
 	}
 	if (!loki_hdmi_pll) {
 		loki_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
-		if (IS_ERR_OR_NULL(loki_hdmi_pll)) {
+		if (IS_ERR(loki_hdmi_pll)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
 			loki_hdmi_pll = NULL;
 			regulator_put(loki_hdmi_reg);

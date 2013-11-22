@@ -367,14 +367,14 @@ static int dsi_l_720p_5_loki_regulator_get(struct device *dev)
 		return 0;
 
 	avdd_lcd_3v0_2v8 = regulator_get(dev, "avdd_lcd");
-	if (IS_ERR_OR_NULL(avdd_lcd_3v0_2v8)) {
+	if (IS_ERR(avdd_lcd_3v0_2v8)) {
 		pr_err("avdd_lcd regulator get failed\n");
 		err = PTR_ERR(avdd_lcd_3v0_2v8);
 		avdd_lcd_3v0_2v8 = NULL;
 		goto fail;
 	}
 	vdd_lcd_s_1v8 = regulator_get(dev, "dvdd_lcd");
-	if (IS_ERR_OR_NULL(vdd_lcd_s_1v8)) {
+	if (IS_ERR(vdd_lcd_s_1v8)) {
 		pr_err("vdd_lcd_1v8_s regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_s_1v8);
 		vdd_lcd_s_1v8 = NULL;
@@ -383,7 +383,7 @@ static int dsi_l_720p_5_loki_regulator_get(struct device *dev)
 
 	if (machine_is_dalmore()) {
 		vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
-		if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
+		if (IS_ERR(vdd_lcd_bl)) {
 			pr_err("vdd_lcd_bl regulator get failed\n");
 			err = PTR_ERR(vdd_lcd_bl);
 			vdd_lcd_bl = NULL;
@@ -392,7 +392,7 @@ static int dsi_l_720p_5_loki_regulator_get(struct device *dev)
 	}
 
 	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
+	if (IS_ERR(vdd_lcd_bl_en)) {
 		pr_err("vdd_lcd_bl_en regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl_en);
 		vdd_lcd_bl_en = NULL;

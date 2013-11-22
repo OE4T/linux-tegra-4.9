@@ -121,7 +121,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 		return 0;
 
 	dvdd_lcd_1v8 = regulator_get(dev, "dvdd_lcd");
-		if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
+		if (IS_ERR(dvdd_lcd_1v8)) {
 			pr_err("dvdd_lcd regulator get failed\n");
 			err = PTR_ERR(dvdd_lcd_1v8);
 			dvdd_lcd_1v8 = NULL;
@@ -129,7 +129,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 	}
 
 	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
-	if (IS_ERR_OR_NULL(vdd_ds_1v8)) {
+	if (IS_ERR(vdd_ds_1v8)) {
 		pr_err("vdd_ds_1v8 regulator get failed\n");
 		err = PTR_ERR(vdd_ds_1v8);
 		vdd_ds_1v8 = NULL;
@@ -137,7 +137,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 	}
 
 	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
-	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
+	if (IS_ERR(avdd_lcd_3v3)) {
 		pr_err("avdd_lcd regulator get failed\n");
 		err = PTR_ERR(avdd_lcd_3v3);
 		avdd_lcd_3v3 = NULL;
@@ -145,7 +145,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 	}
 
 	vdd_1v2_en = regulator_get(dev, "vdd_1v2_en");
-	if (IS_ERR_OR_NULL(vdd_1v2_en)) {
+	if (IS_ERR(vdd_1v2_en)) {
 		pr_err("vdd_1v2_en regulator get failed\n");
 		err = PTR_ERR(vdd_1v2_en);
 		vdd_1v2_en = NULL;
@@ -154,7 +154,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 
 
 	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
+	if (IS_ERR(vdd_lcd_bl_en)) {
 		pr_err("vdd_lcd_bl_en regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl_en);
 		vdd_lcd_bl_en = NULL;
@@ -162,7 +162,7 @@ static int laguna_dsi_regulator_get(struct device *dev)
 	}
 
 	vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
+	if (IS_ERR(vdd_lcd_bl)) {
 		pr_err("vdd_lcd_bl regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl);
 		vdd_lcd_bl = NULL;

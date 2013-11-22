@@ -120,7 +120,7 @@ static int tegratab_dsi_regulator_get(struct device *dev)
 	if (reg_requested)
 		return 0;
 	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
-	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
+	if (IS_ERR(avdd_lcd_3v3)) {
 		pr_err("avdd_lcd regulator get failed\n");
 		err = PTR_ERR(avdd_lcd_3v3);
 		avdd_lcd_3v3 = NULL;
@@ -128,7 +128,7 @@ static int tegratab_dsi_regulator_get(struct device *dev)
 	}
 
 	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
+	if (IS_ERR(vdd_lcd_bl_en)) {
 		pr_err("vdd_lcd_bl_en regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl_en);
 		vdd_lcd_bl_en = NULL;

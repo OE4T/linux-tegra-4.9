@@ -271,10 +271,17 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = dalmore_dsi_gpio_get();
+	err = tegra_panel_gpio_get_dt("p,wuxga-10-1", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
+		/* try to request gpios from board file */
+		if (machine_is_macallan())
+			err = macallan_dsi_gpio_get();
+		else
+			err = dalmore_dsi_gpio_get();
+		if (err < 0) {
+			pr_err("dsi gpio request failed\n");
+			goto fail;
+		}
 	}
 
 	if (vdd_ds_1v8) {
@@ -319,12 +326,17 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 
 	msleep(100);
 #if DSI_PANEL_RESET
-	gpio_direction_output(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-	usleep_range(1000, 5000);
-	gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
-	msleep(150);
-	gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-	msleep(20);
+	err = tegra_panel_reset(&panel_of, 20);
+	if (err < 0) {
+		/* use platform data */
+		gpio_direction_output(
+		dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
+		usleep_range(1000, 5000);
+		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
+		msleep(150);
+		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
+		msleep(20);
+	}
 #endif
 
 	return 0;

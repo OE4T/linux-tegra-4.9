@@ -85,7 +85,7 @@ int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms)
 	if (!gpio_is_valid(gpio))
 		return -ENOENT;
 
-	gpio_set_value(gpio, 1);
+	gpio_direction_output(gpio, 1);
 	usleep_range(1000, 5000);
 	gpio_set_value(gpio, 0);
 	usleep_range(1000, 5000);

@@ -2010,6 +2010,11 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		rate = dc->mode.pclk * 2;
 		while (rate < 400000000)
 			rate *= 2;
+		/* If the rate exceeds the max controller clock, stick with
+		 * rate * 2. Is there a better way to query max clock,
+		 * clk_get_max_rate() is confined to arch/arm/mach-tegra */
+		if (rate > 600000000)
+			rate /= 2;
 	}
 #else
 	rate = dc->mode.pclk * 2;

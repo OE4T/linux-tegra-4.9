@@ -34,7 +34,6 @@
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
 
-#include <linux/suspend.h>
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
 
@@ -982,18 +981,6 @@ static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
 	.set_cur_state = tegra_gpu_set_cur_state,
 };
 
-static int gk20a_suspend_notifier(struct notifier_block *notifier,
-				  unsigned long pm_event, void *unused)
-{
-	struct gk20a *g = container_of(notifier, struct gk20a,
-				       system_suspend_notifier);
-
-	if (pm_event == PM_USERSPACE_FROZEN)
-		return g->power_on ? NOTIFY_BAD : NOTIFY_OK;
-
-	return NOTIFY_DONE;
-}
-
 static int gk20a_create_device(
 	struct platform_device *pdev, int devno, const char *cdev_name,
 	struct cdev *cdev, struct device **out,
@@ -1152,12 +1139,6 @@ static int gk20a_probe(struct platform_device *dev)
 	if (err) {
 		dev_err(&dev->dev, "platform probe failed");
 		return err;
-	}
-
-	if (platform->can_powergate) {
-		gk20a->system_suspend_notifier.notifier_call =
-			gk20a_suspend_notifier;
-		register_pm_notifier(&gk20a->system_suspend_notifier);
 	}
 
 	err = nvhost_as_init_device(dev);

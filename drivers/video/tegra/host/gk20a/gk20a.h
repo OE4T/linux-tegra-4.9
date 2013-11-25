@@ -106,7 +106,6 @@ struct gk20a {
 
 	void (*remove_support)(struct platform_device *);
 
-	struct notifier_block system_suspend_notifier;
 	u64 pg_ingating_time_us;
 	u64 pg_ungating_time_us;
 	u32 pg_gating_cnt;

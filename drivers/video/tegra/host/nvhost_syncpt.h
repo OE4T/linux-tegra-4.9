@@ -48,6 +48,7 @@ struct nvhost_syncpt {
 	struct nvhost_sync_timeline *timeline_invalid;
 	struct nvhost_syncpt_attr invalid_min_attr;
 	struct nvhost_syncpt_attr invalid_max_attr;
+	struct nvhost_syncpt_attr invalid_name_attr;
 #endif
 };
 

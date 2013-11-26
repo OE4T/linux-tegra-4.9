@@ -36,6 +36,7 @@
 #include "nvhost_channel.h"
 
 #define MAX_SYNCPT_LENGTH	5
+#define NUM_SYSFS_ENTRY		3
 
 /* Name of sysfs node for min and max value */
 static const char *min_name = "min";
@@ -531,7 +532,27 @@ struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 }
 #endif
 
+static const char *get_syncpt_name(struct nvhost_syncpt *sp, int id)
+{
+	struct host1x_device_info *info = &syncpt_to_dev(sp)->info;
+	const char *name = NULL;
+	name = info->syncpt_names[id];
+	return name ? name : "";
+}
+
 /* Displays the current value of the sync point via sysfs */
+
+static ssize_t syncpt_name_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_syncpt_attr *syncpt_attr =
+		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	return snprintf(buf, PAGE_SIZE, "%s\n",
+		get_syncpt_name(&syncpt_attr->host->syncpt, syncpt_attr->id));
+}
+
+
 static ssize_t syncpt_min_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -558,6 +579,7 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 				       struct nvhost_syncpt *sp,
 				       struct nvhost_syncpt_attr *min,
 				       struct nvhost_syncpt_attr *max,
+				       struct nvhost_syncpt_attr *sp_name,
 				       int i)
 {
 	char name[MAX_SYNCPT_LENGTH];
@@ -585,6 +607,15 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 	max->attr.show = syncpt_max_show;
 	sysfs_attr_init(&max->attr.attr);
 	if (sysfs_create_file(kobj, &max->attr.attr))
+		return -EIO;
+
+	sp_name->id = i;
+	sp_name->host = host;
+	sp_name->attr.attr.name = "name";
+	sp_name->attr.attr.mode = S_IRUGO;
+	sp_name->attr.show = syncpt_name_show;
+	sysfs_attr_init(&sp_name->attr.attr);
+	if (sysfs_create_file(kobj, &sp_name->attr.attr))
 		return -EIO;
 
 	return 0;
@@ -630,7 +661,8 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 	/* Allocate two attributes for each sync point: min and max */
 	sp->syncpt_attrs = kzalloc(sizeof(*sp->syncpt_attrs)
-			* nvhost_syncpt_nb_pts(sp) * 2, GFP_KERNEL);
+			* nvhost_syncpt_nb_pts(sp) * NUM_SYSFS_ENTRY,
+			GFP_KERNEL);
 	if (!sp->syncpt_attrs) {
 		err = -ENOMEM;
 		goto fail;
@@ -638,10 +670,14 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 	/* Fill in the attributes */
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
-		struct nvhost_syncpt_attr *min = &sp->syncpt_attrs[i*2];
-		struct nvhost_syncpt_attr *max = &sp->syncpt_attrs[i*2+1];
+		struct nvhost_syncpt_attr *min =
+			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY];
+		struct nvhost_syncpt_attr *max =
+			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+1];
+		struct nvhost_syncpt_attr *name =
+			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+2];
 
-		err = nvhost_syncpt_timeline_attr(host, sp, min, max, i);
+		err = nvhost_syncpt_timeline_attr(host, sp, min, max, name, i);
 		if (err)
 			goto fail;
 
@@ -657,6 +693,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	err = nvhost_syncpt_timeline_attr(host, sp, &sp->invalid_min_attr,
 					  &sp->invalid_max_attr,
+					  &sp->invalid_name_attr,
 					  NVSYNCPT_INVALID);
 	if (err)
 		goto fail;

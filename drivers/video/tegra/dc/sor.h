@@ -68,6 +68,9 @@ struct tegra_dc_dp_link_config {
 	u32     preemphasis;
 	bool	vs_pe_valid;
 	u32	postcursor;
+
+	bool	tps3_supported;
+	u8	aux_rd_interval;
 };
 
 

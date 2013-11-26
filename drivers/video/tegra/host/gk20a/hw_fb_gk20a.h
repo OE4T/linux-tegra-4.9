@@ -184,7 +184,7 @@ static inline u32 fb_mmu_debug_rd_addr_alignment_v(void)
 }
 static inline u32 fb_mmu_debug_ctrl_r(void)
 {
-	return 0x00100CC4;
+	return 0x00100cc4;
 }
 static inline u32 fb_mmu_debug_ctrl_debug_v(u32 r)
 {
@@ -192,6 +192,6 @@ static inline u32 fb_mmu_debug_ctrl_debug_v(u32 r)
 }
 static inline u32 fb_mmu_debug_ctrl_debug_enabled_v(void)
 {
-	return 0x1;
+	return 0x00000001;
 }
 #endif

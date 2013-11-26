@@ -38,6 +38,7 @@
 #include <linux/resource.h>
 #include <linux/security.h>
 #include <linux/stat.h>
+#include <linux/kthread.h>
 
 #include <asm/cputype.h>
 
@@ -1248,8 +1249,9 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	mutex_init(&dev->iovmm_master.pin_lock);
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	for (i = 0; i < NVMAP_NUM_POOLS; i++)
-		nvmap_page_pool_init(&dev->iovmm_master.pools[i], i);
+	e = nvmap_page_pool_init(dev);
+	if (e)
+		goto fail;
 #endif
 
 	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, NULL);
@@ -1371,16 +1373,9 @@ static int nvmap_probe(struct platform_device *pdev)
 			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_procrank_fops);
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-			for (i = 0; i < NVMAP_NUM_POOLS; i++) {
-				char name[40];
-				char *memtype_string[] = {"uc", "wc",
-							  "iwb", "wb"};
-				sprintf(name, "%s_page_pool_available_pages",
-					memtype_string[i]);
-				debugfs_create_u32(name, S_IRUGO,
-					iovmm_root,
-					&dev->iovmm_master.pools[i].npages);
-			}
+			debugfs_create_u32("page_pool_available_pages",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.npages);
 #endif
 		}
 #ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS

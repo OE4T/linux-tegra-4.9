@@ -72,7 +72,6 @@ static inline void altfree(void *ptr, size_t len)
 
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
-	int err;
 	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 	unsigned int i, nr_page, page_index = 0;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -101,31 +100,18 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	BUG_ON(!h->pgalloc.pages);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	if (h->flags < NVMAP_NUM_POOLS)
-		pool = &share->pools[h->flags];
+	pool = &share->pool;
 
 	while (page_index < nr_page) {
 		if (!nvmap_page_pool_release(pool,
 		    h->pgalloc.pages[page_index]))
 			break;
+
 		page_index++;
 	}
+
 #endif
 
-	if (page_index == nr_page)
-		goto skip_attr_restore;
-
-	/* Restore page attributes. */
-	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE ||
-	    h->flags == NVMAP_HANDLE_UNCACHEABLE ||
-	    h->flags == NVMAP_HANDLE_INNER_CACHEABLE) {
-		/* This op should never fail. */
-		err = nvmap_set_pages_array_wb(&h->pgalloc.pages[page_index],
-				nr_page - page_index);
-		BUG_ON(err);
-	}
-
-skip_attr_restore:
 	for (i = page_index; i < nr_page; i++)
 		__free_page(h->pgalloc.pages[i]);
 
@@ -198,10 +184,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	} else {
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-		if (h->flags < NVMAP_NUM_POOLS)
-			pool = &share->pools[h->flags];
-		else
-			BUG();
+		pool = &share->pool;
 
 		for (i = 0; i < nr_page; i++) {
 			/* Get pages from pool, if available. */
@@ -236,24 +219,17 @@ static int handle_page_alloc(struct nvmap_client *client,
 		}
 	}
 
-	if (nr_page == page_index)
-		goto skip_attr_change;
-
-	/* Update the pages mapping in kernel page table. */
-	if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		err = nvmap_set_pages_array_wc(&pages[page_index],
-					nr_page - page_index);
-	else if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
-		err = nvmap_set_pages_array_uc(&pages[page_index],
-					nr_page - page_index);
-	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		err = nvmap_set_pages_array_iwb(&pages[page_index],
-					nr_page - page_index);
+	/*
+	 * Make sure any data in the caches is flushed out before
+	 * passing these pages to userspace. otherwise, It can lead to
+	 * corruption in pages that get mapped as something other than WB in
+	 * userspace and leaked kernel data structures.
+	 */
+	nvmap_flush_cache(pages, nr_page);
 
 	if (err)
 		goto fail;
 
-skip_attr_change:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(nvmap_dev, pte);
 	h->size = size;
@@ -264,10 +240,6 @@ skip_attr_change:
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES)
 		nvmap_free_pte(nvmap_dev, pte);
-	if (i) {
-		err = nvmap_set_pages_array_wb(pages, i);
-		BUG_ON(err);
-	}
 	while (i--)
 		__free_page(pages[i]);
 	altfree(pages, nr_page * sizeof(*pages));

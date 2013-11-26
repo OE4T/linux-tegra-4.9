@@ -106,7 +106,7 @@ static struct attribute_group nvsd_attr_group = {
 static struct kobject *nvsd_kobj;
 
 /* shared brightness variable */
-static atomic_t *sd_brightness;
+static atomic_t *_sd_brightness;
 /* shared boolean for manual K workaround */
 static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
@@ -160,7 +160,7 @@ static bool nvsd_phase_in_adjustments(struct tegra_dc *dc,
 	u16 target_k, cur_k;
 	u32 man_k, val;
 
-	cur_sd_brightness = atomic_read(sd_brightness);
+	cur_sd_brightness = atomic_read(_sd_brightness);
 
 	target_k = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
 	target_k = SD_HW_K_R(target_k);
@@ -200,7 +200,7 @@ static bool nvsd_phase_in_adjustments(struct tegra_dc *dc,
 			tegra_dc_writel(dc, man_k, DC_DISP_SD_MAN_K_VALUES);
 			tegra_dc_io_end(dc);
 			/* Set manual brightness value */
-			atomic_set(sd_brightness, cur_sd_brightness);
+			atomic_set(_sd_brightness, cur_sd_brightness);
 		}
 		settings->phase_adj_step = step;
 		return true;
@@ -381,10 +381,10 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	/* If SD's not present or disabled, clear the register and return. */
 	if (!settings || settings->enable == 0) {
 		/* clear the brightness val, too. */
-		if (sd_brightness)
-			atomic_set(sd_brightness, 255);
+		if (_sd_brightness)
+			atomic_set(_sd_brightness, 255);
 
-		sd_brightness = NULL;
+		_sd_brightness = NULL;
 
 		if (settings)
 			settings->phase_settings_step = 0;
@@ -580,7 +580,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	tegra_dc_io_end(dc);
 
 	/* set the brightness pointer */
-	sd_brightness = settings->sd_brightness;
+	_sd_brightness = settings->sd_brightness;
 
 	/* note that we're in manual K until the next flip */
 	atomic_set(&man_k_until_blank, 1);
@@ -707,7 +707,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 	int sw_sd_brightness;
 	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
 
-	if (sd_brightness) {
+	if (_sd_brightness) {
 		if (atomic_read(&man_k_until_blank) &&
 					!settings->phase_in_adjustments) {
 			val = tegra_dc_readl(dc, DC_DISP_SD_CONTROL);
@@ -723,7 +723,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		if (!settings->enable)
 			return true;
 
-		cur_sd_brightness = atomic_read(sd_brightness);
+		cur_sd_brightness = atomic_read(_sd_brightness);
 
 		/* read brightness value */
 		val = tegra_dc_readl(dc, DC_DISP_SD_BL_CONTROL);
@@ -737,12 +737,12 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		} else if (settings->soft_clipping_correction) {
 			sw_sd_brightness = nvsd_set_brightness(dc);
 			if (sw_sd_brightness != cur_sd_brightness) {
-				atomic_set(sd_brightness, sw_sd_brightness);
+				atomic_set(_sd_brightness, sw_sd_brightness);
 				return true;
 			}
 		} else if (val != (u32)cur_sd_brightness) {
 			/* set brightness value and note the update */
-			atomic_set(sd_brightness, (int)val);
+			atomic_set(_sd_brightness, (int)val);
 			return true;
 		}
 

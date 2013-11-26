@@ -48,7 +48,6 @@ static struct tegra_panel_of __maybe_unused panel_of = {
 	.panel_gpio = {-1, -1, -1, -1},
 };
 
-extern atomic_t sd_brightness;
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
 extern struct tegra_panel dsi_s_wqxga_10_1;

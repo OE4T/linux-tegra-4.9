@@ -241,7 +241,10 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	}
 
 	err = nvhost_intr_add_action(&(syncpt_to_dev(sp)->intr), id, thresh,
-				NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE, &wq,
+				interruptible ?
+				  NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE :
+				  NVHOST_INTR_ACTION_WAKEUP,
+				&wq,
 				waiter,
 				&ref);
 	if (err)

@@ -135,7 +135,7 @@ static ssize_t enable_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR, enable_show, enable_store);
+static DEVICE_ATTR(enable, S_IRUSR | S_IWUSR, enable_show, enable_store);
 
 #ifdef CONFIG_TEGRA_DC_WIN_H
 static ssize_t win_h_show(struct device *device,
@@ -144,6 +144,9 @@ static ssize_t win_h_show(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	unsigned long val = 0;
+
+	if (!dc->enabled)
+		return -EIO; /* not powered */
 
 	mutex_lock(&dc->lock);
 	tegra_dc_io_start(dc);
@@ -169,7 +172,7 @@ static ssize_t win_h_store(struct device *dev,
 
 	if (!dc->enabled) {
 		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
-		return -EFAULT;
+		return -EIO; /* not powered */
 	}
 
 	if (kstrtouint(buf, 10, &val) < 0)

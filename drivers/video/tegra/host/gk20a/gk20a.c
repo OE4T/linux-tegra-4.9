@@ -854,10 +854,13 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
-	gk20a_writel(g, bus_intr_en_0_r(),
-			bus_intr_en_0_pri_squash_m() |
-			bus_intr_en_0_pri_fecserr_m() |
-			bus_intr_en_0_pri_timeout_m());
+	if (tegra_platform_is_linsim())
+		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
+	else
+		gk20a_writel(g, bus_intr_en_0_r(),
+			        bus_intr_en_0_pri_squash_m() |
+			        bus_intr_en_0_pri_fecserr_m() |
+			        bus_intr_en_0_pri_timeout_m());
 	gk20a_reset_priv_ring(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.

@@ -163,8 +163,8 @@ static void __init tegra_sclk_init(void __iomem *clk_base,
 	/* HCLK */
 	dt_clk = tegra_lookup_dt_id(tegra_clk_hclk, tegra_clks);
 	if (dt_clk) {
-		clk = clk_register_divider(NULL, "hclk_div", hclk_parent, 0,
-				   clk_base + SYSTEM_CLK_RATE, 4, 2, 0,
+		clk = tegra_clk_register_divider("hclk_div", hclk_parent,
+				   clk_base + SYSTEM_CLK_RATE, 0, 0, 4, 2, 0,
 				   &sysrate_lock);
 		clk = clk_register_gate(NULL, "hclk", "hclk_div",
 				CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
@@ -178,8 +178,8 @@ static void __init tegra_sclk_init(void __iomem *clk_base,
 	if (!dt_clk)
 		return;
 
-	clk = clk_register_divider(NULL, "pclk_div", "hclk", 0,
-				   clk_base + SYSTEM_CLK_RATE, 0, 2, 0,
+	clk = tegra_clk_register_divider("pclk_div", "hclk",
+				   clk_base + SYSTEM_CLK_RATE, 0, 0, 0, 2, 0,
 				   &sysrate_lock);
 	clk = clk_register_gate(NULL, "pclk", "pclk_div", CLK_SET_RATE_PARENT |
 				CLK_IGNORE_UNUSED, clk_base + SYSTEM_CLK_RATE,

@@ -127,14 +127,14 @@ struct clk *tegra_clk_register_skipper(const char *name,
 	/* Data in .init is copied by clk_register(), so stack variable OK */
 	skipper->hw.init = &init;
 
-	clk = clk_register(NULL, &skipper->hw);
-	if (IS_ERR(clk))
-		kfree(skipper);
-
 	val = readl_relaxed(skipper->reg) & (~SKIPPER_ENABLE);
 	val |= (SKIPPER_DIVISOR - 1) << 8;
 	val |= SKIPPER_DIVISOR - 1;
 	writel(val, skipper->reg);
+
+	clk = clk_register(NULL, &skipper->hw);
+	if (IS_ERR(clk))
+		kfree(skipper);
 
 	return clk;
 }

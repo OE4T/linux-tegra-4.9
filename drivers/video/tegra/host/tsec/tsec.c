@@ -188,6 +188,10 @@ int tsec_boot(struct platform_device *dev)
 
 	if (!m || !m->valid)
 		return -ENOMEDIUM;
+
+	if (m->is_booted)
+		return 0;
+
 	nvhost_device_writel(dev, tsec_dmactl_r(), 0);
 	nvhost_device_writel(dev, tsec_dmatrfbase_r(),
 		(m->dma_addr + m->os.bin_data_offset) >> 8);
@@ -229,7 +233,12 @@ int tsec_boot(struct platform_device *dev)
 			(tsec_itfen_mthden_enable_f() |
 				tsec_itfen_ctxen_enable_f()));
 
-	return tsec_load_kfuse(dev);
+	err = tsec_load_kfuse(dev);
+	if (err)
+		return err;
+	m->is_booted = true;
+
+	return err;
 }
 
 static int tsec_setup_ucode_image(struct platform_device *dev,
@@ -388,6 +397,7 @@ int nvhost_tsec_init(struct platform_device *dev)
 		return -ENOMEM;
 	}
 	set_tsec(dev, m);
+	m->is_booted = false;
 
 	err = tsec_read_ucode(dev, fw_name);
 	kfree(fw_name);
@@ -433,8 +443,24 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	tegra_periph_reset_assert(pdata->clk[0]);
+	udelay(10);
+	tegra_periph_reset_deassert(pdata->clk[0]);
+
 	return tsec_boot(dev);
 }
+
+int nvhost_tsec_prepare_poweroff(struct platform_device *dev)
+{
+	struct tsec *m = get_tsec(dev);
+	if (m)
+		m->is_booted = false;
+
+	return 0;
+}
+
 
 static struct of_device_id tegra_tsec_of_match[] = {
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
@@ -490,17 +516,6 @@ static int tsec_probe(struct platform_device *dev)
 #endif
 
 	err = nvhost_client_device_init(dev);
-	if (err)
-		return err;
-
-	nvhost_module_busy(dev);
-	/* Reset TSEC at boot-up. Otherwise it starts sending interrupts. */
-	if (pdata->clocks[0].reset) {
-		tegra_periph_reset_assert(pdata->clk[0]);
-		udelay(10);
-		tegra_periph_reset_deassert(pdata->clk[0]);
-	}
-	nvhost_module_idle(dev);
 
 	return err;
 }

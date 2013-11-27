@@ -53,6 +53,7 @@ static int t124_num_alloc_channels = 0;
 #define VI_POWERGATE_DELAY 500
 #define ISP_CLOCKGATE_DELAY 60
 #define ISP_POWERGATE_DELAY 500
+#define TSEC_POWERGATE_DELAY 500
 
 #define GK20A_DEV_NAME_SIZE 5
 
@@ -373,10 +374,14 @@ struct nvhost_device_data t124_tsec_info = {
 			 {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.can_powergate    = true,
+	.powergate_delay = TSEC_POWERGATE_DELAY,
+	.keepalive       = true,
 	.moduleid      = NVHOST_MODULE_TSEC,
 	.init          = nvhost_tsec_init,
 	.deinit        = nvhost_tsec_deinit,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
+	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
 };
 
 static struct platform_device tegra_tsec01_device = {

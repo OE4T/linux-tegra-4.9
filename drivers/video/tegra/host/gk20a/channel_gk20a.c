@@ -176,17 +176,6 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	unsigned long channel_timeout;
 	int shift = 3;
 	int value = timeslice_timeout;
-	int err;
-
-	if (!tegra_platform_is_silicon())
-		channel_timeout = MAX_SCHEDULE_TIMEOUT;
-	else
-		channel_timeout = CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
-
-	err = gk20a_channel_finish(c, channel_timeout);
-
-	if (err)
-		return err;
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
 	if (!inst_ptr)

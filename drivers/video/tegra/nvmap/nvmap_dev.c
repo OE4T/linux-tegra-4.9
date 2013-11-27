@@ -1355,7 +1355,27 @@ static int nvmap_probe(struct platform_device *pdev)
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 			debugfs_create_u32("page_pool_available_pages",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.npages);
+					   &dev->iovmm_master.pool.count);
+#ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
+			debugfs_create_u32("page_pool_alloc_ind",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.alloc);
+			debugfs_create_u32("page_pool_fill_ind",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.fill);
+			debugfs_create_u64("page_pool_allocs",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.allocs);
+			debugfs_create_u64("page_pool_fills",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.fills);
+			debugfs_create_u64("page_pool_hits",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.hits);
+			debugfs_create_u64("page_pool_misses",
+					   S_IRUGO, iovmm_root,
+					   &dev->iovmm_master.pool.misses);
+#endif
 #endif
 		}
 #ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS

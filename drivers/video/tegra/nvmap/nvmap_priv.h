@@ -175,14 +175,41 @@ struct nvmap_handle_ref {
 
 struct nvmap_page_pool {
 	struct mutex lock;
-	int npages;                       /* Number of zeroed pages. */
-	struct page **page_array;         /* For zeroed pages. */
-	int max_pages;
+	u32 alloc;  /* Alloc index. */
+	u32 fill;   /* Fill index. */
+	u32 count;  /* Number of pages in the table. */
+	u32 length; /* Length of the pages array. */
+	struct page **page_array;
+
+#ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
+	u64 allocs;
+	u64 fills;
+	u64 hits;
+	u64 misses;
+#endif
 };
+
+#define pp_empty(pp)				\
+	((pp)->fill == (pp)->alloc && !(pp)->page_array[(pp)->alloc])
+#define pp_full(pp)				\
+	((pp)->fill == (pp)->alloc && (pp)->page_array[(pp)->alloc])
+
+#define nvmap_pp_alloc_inc(pp) nvmap_pp_inc_index((pp), &(pp)->alloc)
+#define nvmap_pp_fill_inc(pp)  nvmap_pp_inc_index((pp), &(pp)->fill)
+
+/* Handle wrap around. */
+static inline void nvmap_pp_inc_index(struct nvmap_page_pool *pp, u32 *ind)
+{
+	*ind += 1;
+
+	/* Wrap condition. */
+	if (*ind >= pp->length)
+		*ind = 0;
+}
 
 int nvmap_page_pool_init(struct nvmap_device *dev);
 struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
-bool nvmap_page_pool_release(struct nvmap_page_pool *pool, struct page *page);
+bool nvmap_page_pool_fill(struct nvmap_page_pool *pool, struct page *page);
 #endif
 
 struct nvmap_share {

@@ -106,8 +106,8 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	pool = &share->pool;
 
 	while (page_index < nr_page) {
-		if (!nvmap_page_pool_release(pool,
-		    h->pgalloc.pages[page_index]))
+		if (!nvmap_page_pool_fill(pool,
+			h->pgalloc.pages[page_index]))
 			break;
 
 		page_index++;

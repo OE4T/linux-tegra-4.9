@@ -183,7 +183,8 @@ struct nvhost_device_data t124_isp_info = {
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
+		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
@@ -219,7 +220,8 @@ struct nvhost_device_data t124_ispb_info = {
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
+		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
@@ -260,7 +262,8 @@ struct nvhost_device_data t124_vi_info = {
 		{"vi", UINT_MAX, 0},
 		{"csi", 0},
 		{"cilab", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
+		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"sclk", 80000000} },
 	.init             = nvhost_vi_init,
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
@@ -297,7 +300,8 @@ struct nvhost_device_data t124_vib_info = {
 		{"csi", 0},
 		{"cilcd", 102000000},
 		{"cile", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
+		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"sclk", 80000000} },
 	.init             = nvhost_vi_init,
 	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,

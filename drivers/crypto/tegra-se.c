@@ -1923,7 +1923,8 @@ struct tegra_se_rsa_slot {
 struct tegra_se_aes_rsa_context {
 	struct tegra_se_dev *se_dev;	/* Security Engine device */
 	struct tegra_se_rsa_slot *slot;	/* Security Engine rsa key slot */
-	u32 keylen;	/* key length in bits */
+	u32 mod_len;
+	u32 exp_len;
 };
 
 static void tegra_se_rsa_free_key_slot(struct tegra_se_rsa_slot *slot)
@@ -2010,13 +2011,14 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 		return -EINVAL;
 
 	/* Allocate rsa key slot */
-	pslot = tegra_se_alloc_rsa_key_slot();
-	if (!pslot) {
-		dev_err(se_dev->dev, "no free key slot\n");
-		return -ENOMEM;
+	if (!ctx->slot) {
+		pslot = tegra_se_alloc_rsa_key_slot();
+		if (!pslot) {
+			dev_err(se_dev->dev, "no free key slot\n");
+			return -ENOMEM;
+		}
+		ctx->slot = pslot;
 	}
-	ctx->slot = pslot;
-	ctx->keylen = keylen;
 
 	module_key_length = (keylen >> 16);
 	exponent_key_length = (keylen & (0xFFFF));
@@ -2024,6 +2026,9 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	if (!(((module_key_length / 64) >= 1) &&
 			((module_key_length / 64) <= 4)))
 		return -EINVAL;
+
+	ctx->mod_len = module_key_length;
+	ctx->exp_len = exponent_key_length;
 
 	freq = se_dev->chipdata->rsa_freq;
 
@@ -2038,14 +2043,6 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
-
-	/* Write key length */
-	se_writel(se_dev, ((module_key_length / 64) - 1),
-		SE_RSA_KEY_SIZE_REG_OFFSET);
-
-	/* Write exponent size in 32 bytes */
-	se_writel(se_dev, (exponent_key_length / 4),
-		SE_RSA_EXP_SIZE_REG_OFFSET);
 
 	if (exponent_key_length) {
 		key_size_words = (exponent_key_length / key_word_size);
@@ -2078,6 +2075,7 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 			se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
 		}
 	}
+
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 	return 0;
@@ -2158,6 +2156,14 @@ int tegra_se_rsa_digest(struct ahash_request *req)
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
 
+	/* Write key length */
+	se_writel(se_dev, ((rsa_ctx->mod_len / 64) - 1),
+		SE_RSA_KEY_SIZE_REG_OFFSET);
+
+	/* Write exponent size in 32 bytes */
+	se_writel(se_dev, (rsa_ctx->exp_len / 4),
+		SE_RSA_EXP_SIZE_REG_OFFSET);
+
 	val = SE_CONFIG_ENC_ALG(ALG_RSA) |
 		SE_CONFIG_DEC_ALG(ALG_NOP) |
 		SE_CONFIG_DST(DST_RSAREG);
@@ -2195,7 +2201,6 @@ int tegra_se_rsa_cra_init(struct crypto_tfm *tfm)
 void tegra_se_rsa_cra_exit(struct crypto_tfm *tfm)
 {
 	struct tegra_se_aes_rsa_context *ctx = crypto_tfm_ctx(tfm);
-
 	tegra_se_rsa_free_key_slot(ctx->slot);
 	ctx->slot = NULL;
 }

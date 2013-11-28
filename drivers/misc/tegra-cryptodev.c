@@ -47,6 +47,10 @@ struct tegra_crypto_ctx {
 	struct crypto_ablkcipher *ofb_tfm;
 	struct crypto_ablkcipher *ctr_tfm;
 	struct crypto_ablkcipher *cmac_tfm;
+	struct crypto_ahash *rsa512_tfm;
+	struct crypto_ahash *rsa1024_tfm;
+	struct crypto_ahash *rsa1536_tfm;
+	struct crypto_ahash *rsa2048_tfm;
 	struct crypto_rng *rng;
 	struct crypto_rng *rng_drbg;
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
@@ -155,9 +159,54 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 		}
 	}
 
+	ctx->rsa512_tfm = crypto_alloc_ahash("tegra-se-rsa512",
+					CRYPTO_ALG_TYPE_AHASH, 0);
+	if (IS_ERR(ctx->rsa512_tfm)) {
+		pr_err("Failed to load transform for rsa512: %ld\n",
+			PTR_ERR(ctx->rsa512_tfm));
+		goto fail_rsa512;
+	}
+
+	ctx->rsa1024_tfm = crypto_alloc_ahash("tegra-se-rsa1024",
+					CRYPTO_ALG_TYPE_AHASH, 0);
+	if (IS_ERR(ctx->rsa1024_tfm)) {
+		pr_err("Failed to load transform for rsa1024: %ld\n",
+			PTR_ERR(ctx->rsa1024_tfm));
+		goto fail_rsa1024;
+	}
+
+	ctx->rsa1536_tfm = crypto_alloc_ahash("tegra-se-rsa1536",
+					CRYPTO_ALG_TYPE_AHASH, 0);
+	if (IS_ERR(ctx->rsa1536_tfm)) {
+		pr_err("Failed to load transform for rsa1536: %ld\n",
+			PTR_ERR(ctx->rsa1536_tfm));
+		goto fail_rsa1536;
+	}
+
+	ctx->rsa2048_tfm = crypto_alloc_ahash("tegra-se-rsa2048",
+					CRYPTO_ALG_TYPE_AHASH, 0);
+	if (IS_ERR(ctx->rsa2048_tfm)) {
+		pr_err("Failed to load transform for rsa2048: %ld\n",
+			PTR_ERR(ctx->rsa2048_tfm));
+		goto fail_rsa2048;
+	}
+
 	filp->private_data = ctx;
 	return ret;
 
+	crypto_free_ahash(ctx->rsa2048_tfm);
+fail_rsa2048:
+	crypto_free_ahash(ctx->rsa1536_tfm);
+fail_rsa1536:
+	crypto_free_ahash(ctx->rsa1024_tfm);
+fail_rsa1024:
+	crypto_free_ahash(ctx->rsa512_tfm);
+fail_rsa512:
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA2 &&
+			tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
+		crypto_free_rng(ctx->rng_drbg);
+	else
+		crypto_free_rng(ctx->rng);
 fail_rng:
 	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA2)
 		crypto_free_ablkcipher(ctx->ctr_tfm);
@@ -192,6 +241,12 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 		crypto_free_rng(ctx->rng_drbg);
 	else
 		crypto_free_rng(ctx->rng);
+
+	crypto_free_ahash(ctx->rsa2048_tfm);
+	crypto_free_ahash(ctx->rsa1536_tfm);
+	crypto_free_ahash(ctx->rsa1024_tfm);
+	crypto_free_ahash(ctx->rsa512_tfm);
+
 	kfree(ctx);
 	filp->private_data = NULL;
 	return 0;
@@ -351,10 +406,11 @@ static int sha_async_hash_op(struct ahash_request *req,
 	return ret;
 }
 
-static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
+static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
+				struct tegra_rsa_req *rsa_req)
 {
-	struct crypto_ahash *tfm;
-	struct ahash_request *req;
+	struct crypto_ahash *tfm = NULL;
+	struct ahash_request *req = NULL;
 	struct scatterlist sg[1];
 	char *result = NULL;
 	void *hash_buff;
@@ -362,18 +418,41 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 	unsigned long *xbuf[XBUFSIZE];
 	struct tegra_crypto_completion rsa_complete;
 
-	tfm = crypto_alloc_ahash(rsa_req->algo, 0, 0);
-	if (IS_ERR(tfm)) {
-		printk(KERN_ERR "alg: hash: Failed to load transform for %s: %ld\n",
-			rsa_req->algo, PTR_ERR(tfm));
-		goto alloc_fail;
-	}
+	switch (rsa_req->algo) {
+	case 0:
+		req = ahash_request_alloc(ctx->rsa512_tfm, GFP_KERNEL);
+		if (!req) {
+			pr_err("alg: hash: Failed to allocate request for rsa512\n");
+			goto req_fail;
+		}
+		tfm = ctx->rsa512_tfm;
+		break;
+	case 1:
+		req = ahash_request_alloc(ctx->rsa1024_tfm, GFP_KERNEL);
+		if (!req) {
+			pr_err("alg: hash: Failed to allocate request for rsa1024\n");
+			goto req_fail;
+		}
+		tfm = ctx->rsa1024_tfm;
+		break;
 
-	req = ahash_request_alloc(tfm, GFP_KERNEL);
-	if (!req) {
-		printk(KERN_ERR "alg: hash: Failed to allocate request for %s\n",
-			rsa_req->algo);
-		goto req_fail;
+	case 2:
+		req = ahash_request_alloc(ctx->rsa1536_tfm, GFP_KERNEL);
+		if (!req) {
+			pr_err("alg: hash: Failed to allocate request for rsa1536\n");
+			goto req_fail;
+		}
+		tfm = ctx->rsa1536_tfm;
+		break;
+
+	case 3:
+		req = ahash_request_alloc(ctx->rsa2048_tfm, GFP_KERNEL);
+		if (!req) {
+			pr_err("alg: hash: Failed to allocate request for rsa2048\n");
+			goto req_fail;
+		}
+		tfm = ctx->rsa2048_tfm;
+		break;
 	}
 
 	ret = alloc_bufs(xbuf);
@@ -399,12 +478,12 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 	if (!(rsa_req->keylen))
 		goto rsa_fail;
 
-	ret = crypto_ahash_setkey(tfm, rsa_req->key, rsa_req->keylen);
-
-	if (ret) {
-		printk(KERN_ERR "alg: hash: setkey failed on: %s\n",
-			rsa_req->algo);
-		goto rsa_fail;
+	if (!rsa_req->skip_key) {
+		ret = crypto_ahash_setkey(tfm, rsa_req->key, rsa_req->keylen);
+		if (ret) {
+			pr_err("alg: hash: setkey failed\n");
+			goto rsa_fail;
+		}
 	}
 
 	ahash_request_set_crypt(req, sg, result, rsa_req->msg_len);
@@ -419,7 +498,7 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 	}
 
 	if (ret) {
-		pr_err("alg: hash: digest failed for %s\n", rsa_req->algo);
+		pr_err("alg: hash: digest failed\n");
 		goto rsa_fail;
 	}
 
@@ -427,8 +506,7 @@ static int tegra_crypt_rsa(struct tegra_rsa_req *rsa_req)
 		crypto_ahash_digestsize(tfm));
 	if (ret) {
 		ret = -EFAULT;
-		pr_err("alg: hash: copy_to_user failed (%d) for %s\n",
-				ret, rsa_req->algo);
+		pr_err("alg: hash: copy_to_user failed (%d)\n", ret);
 	}
 
 rsa_fail:
@@ -438,8 +516,6 @@ result_fail:
 buf_fail:
 	ahash_request_free(req);
 req_fail:
-	crypto_free_ahash(tfm);
-alloc_fail:
 	return ret;
 }
 
@@ -659,7 +735,7 @@ rng_out:
 			return ret;
 		}
 
-		ret = tegra_crypt_rsa(&rsa_req);
+		ret = tegra_crypt_rsa(ctx, &rsa_req);
 		break;
 
 	default:

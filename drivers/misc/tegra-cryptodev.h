@@ -79,13 +79,14 @@ struct tegra_rng_req {
 struct tegra_rsa_req {
 	char *key;
 	int keylen;
-	char *algo;
+	int algo;
 	char *message;
 	int msg_len;
 	int modlen;
 	int pub_explen;
 	int prv_explen;
 	char *result;
+	int skip_key;
 };
 
 struct tegra_sha_req {

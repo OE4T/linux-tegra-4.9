@@ -122,28 +122,6 @@ static struct tegra_dc_cmu default_cmu = {
 #endif
 #endif
 
-typedef struct device *(*tegra_lcd_devdata_to_dc_cb)(struct device_node *);
-tegra_lcd_devdata_to_dc_cb tegra_lcd_devdata_to_dc;
-
-void lcd_devdata_to_dc_set_callback(struct device*(*func)
-	(struct device_node *))
-{
-	if (func != NULL)
-		tegra_lcd_devdata_to_dc = func;
-}
-EXPORT_SYMBOL(lcd_devdata_to_dc_set_callback);
-
-struct device *lcd_devdata_to_dc_callback_run(struct device_node *dn)
-{
-	struct device *rdev = NULL;
-
-	if (tegra_lcd_devdata_to_dc)
-		rdev = tegra_lcd_devdata_to_dc(dn);
-
-	return rdev;
-}
-EXPORT_SYMBOL(lcd_devdata_to_dc_callback_run);
-
 #ifdef CONFIG_OF
 static int parse_dc_out_type(struct device_node *np,
 		struct tegra_dc_out *default_out)
@@ -867,16 +845,18 @@ static const u32 *tegra_dsi_parse_pkt_seq_dt(struct platform_device *ndev,
 	return pkt_seq;
 }
 
-static int parse_dsi_settings(struct platform_device *ndev,
-	struct device_node *np_dsi, struct tegra_dsi_out *dsi)
+int parse_dsi_settings(struct platform_device *ndev,
+	struct device_node *np_dsi, struct tegra_dc_platform_data *pdata)
 {
 	u32 temp;
 	int err = 0;
 	int dsi_te_gpio = 0;
-	enum of_gpio_flags flags;
+	struct device_node *np_panel;
+	struct tegra_dsi_out *dsi = pdata->default_out->dsi;
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-controller-vs", &temp)) {
+	np_panel = tegra_panel_get_dt_node(pdata);
+
+	if (!of_property_read_u32(np_dsi, "nvidia,dsi-controller-vs", &temp)) {
 		dsi->controller_vs = (u8)temp;
 		if (temp == DSI_VS_0)
 			OF_DC_LOG("dsi controller vs DSI_VS_0\n");
@@ -888,13 +868,13 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		}
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-n-data-lanes", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-n-data-lanes", &temp)) {
 		dsi->n_data_lanes = (u8)temp;
 		OF_DC_LOG("n data lanes %d\n", dsi->n_data_lanes);
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-video-burst-mode", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-video-burst-mode", &temp)) {
 		dsi->video_burst_mode = (u8)temp;
 		if (temp == TEGRA_DSI_VIDEO_NONE_BURST_MODE)
 			OF_DC_LOG("dsi video NON_BURST_MODE\n");
@@ -915,8 +895,8 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-pixel-format", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-pixel-format", &temp)) {
 		dsi->pixel_format = (u8)temp;
 		if (temp == TEGRA_DSI_PIXEL_FORMAT_16BIT_P)
 			OF_DC_LOG("dsi pixel format 16BIT_P\n");
@@ -931,13 +911,13 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-refresh-rate", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-refresh-rate", &temp)) {
 		dsi->refresh_rate = (u8)temp;
 		OF_DC_LOG("dsi refresh rate %d\n", dsi->refresh_rate);
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-virtual-channel", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-virtual-channel", &temp)) {
 		dsi->virtual_channel = (u8)temp;
 		if (temp == TEGRA_DSI_VIRTUAL_CHANNEL_0)
 			OF_DC_LOG("dsi virtual channel 0\n");
@@ -952,7 +932,7 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi, "nvidia,dsi-instance", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-instance", &temp)) {
 		dsi->dsi_instance = (u8)temp;
 		if (temp == DSI_INSTANCE_0)
 			OF_DC_LOG("dsi instance 0\n");
@@ -963,32 +943,29 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-panel-reset", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-panel-reset", &temp)) {
 		dsi->panel_reset = (u8)temp;
 		OF_DC_LOG("dsi panel reset %d\n", dsi->panel_reset);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-ganged-type", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-ganged-type", &temp)) {
 		dsi->ganged_type = (u8)temp;
 		OF_DC_LOG("dsi ganged_type %d\n", dsi->ganged_type);
 	}
 
-	dsi_te_gpio = of_get_named_gpio_flags(np_dsi,
-			"nvidia,dsi-te-gpio", 0, &flags);
-	if (dsi_te_gpio != 0) {
+	dsi_te_gpio = of_get_named_gpio(np_panel, "nvidia,dsi-te-gpio", 0);
+	if (gpio_is_valid(dsi_te_gpio)) {
 		dsi->te_gpio = dsi_te_gpio;
 		OF_DC_LOG("dsi te_gpio %d\n", dsi_te_gpio);
 	}
 
-	if (!of_property_read_u32(np_dsi,
+	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-power-saving-suspend", &temp)) {
 		dsi->power_saving_suspend = (bool)temp;
 		OF_DC_LOG("dsi power saving suspend %d\n",
 			dsi->power_saving_suspend);
 	}
-	if (!of_property_read_u32(np_dsi,
+	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-video-data-type", &temp)) {
 		dsi->video_data_type = (u8)temp;
 		if (temp == TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE)
@@ -1000,7 +977,7 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi,
+	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-video-clock-mode", &temp)) {
 		dsi->video_clock_mode = (u8)temp;
 		if (temp == TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS)
@@ -1012,15 +989,14 @@ static int parse_dsi_settings(struct platform_device *ndev,
 			return -EINVAL;
 		}
 	}
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-n-init-cmd", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-n-init-cmd", &temp)) {
 		dsi->n_init_cmd = (u16)temp;
 		OF_DC_LOG("dsi n_init_cmd %d\n",
 			dsi->n_init_cmd);
 	}
 	dsi->dsi_init_cmd =
-		tegra_dsi_parse_cmd_dt(ndev, np_dsi,
-			of_find_property(np_dsi,
+		tegra_dsi_parse_cmd_dt(ndev, np_panel,
+			of_find_property(np_panel,
 			"nvidia,dsi-init-cmd", NULL),
 			dsi->n_init_cmd);
 	if (dsi->n_init_cmd &&
@@ -1031,15 +1007,15 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		return err;
 	};
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-n-suspend-cmd", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-n-suspend-cmd", &temp)) {
 		dsi->n_suspend_cmd = (u16)temp;
 		OF_DC_LOG("dsi n_suspend_cmd %d\n",
 			dsi->n_suspend_cmd);
 	}
 	dsi->dsi_suspend_cmd =
-		tegra_dsi_parse_cmd_dt(ndev, np_dsi,
-			of_find_property(np_dsi,
+		tegra_dsi_parse_cmd_dt(ndev, np_panel,
+			of_find_property(np_panel,
 			"nvidia,dsi-suspend-cmd", NULL),
 			dsi->n_suspend_cmd);
 	if (dsi->n_suspend_cmd &&
@@ -1050,15 +1026,15 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		return err;
 	};
 
-	if (!of_property_read_u32(np_dsi,
+	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-n-early-suspend-cmd", &temp)) {
 		dsi->n_early_suspend_cmd = (u16)temp;
 		OF_DC_LOG("dsi n_early_suspend_cmd %d\n",
 			dsi->n_early_suspend_cmd);
 	}
 	dsi->dsi_early_suspend_cmd =
-		tegra_dsi_parse_cmd_dt(ndev, np_dsi,
-			of_find_property(np_dsi,
+		tegra_dsi_parse_cmd_dt(ndev, np_panel,
+			of_find_property(np_panel,
 			"nvidia,dsi-early-suspend-cmd", NULL),
 			dsi->n_early_suspend_cmd);
 	if (dsi->n_early_suspend_cmd &&
@@ -1069,15 +1045,15 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		return err;
 	};
 
-	if (!of_property_read_u32(np_dsi,
+	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-n-late-resume-cmd", &temp)) {
 		dsi->n_late_resume_cmd = (u16)temp;
 		OF_DC_LOG("dsi n_late_resume_cmd %d\n",
 			dsi->n_late_resume_cmd);
 	}
 	dsi->dsi_late_resume_cmd =
-		tegra_dsi_parse_cmd_dt(ndev, np_dsi,
-			of_find_property(np_dsi,
+		tegra_dsi_parse_cmd_dt(ndev, np_panel,
+			of_find_property(np_panel,
 			"nvidia,dsi-late-resume-cmd", NULL),
 			dsi->n_late_resume_cmd);
 	if (dsi->n_late_resume_cmd &&
@@ -1089,8 +1065,8 @@ static int parse_dsi_settings(struct platform_device *ndev,
 	};
 
 	dsi->pkt_seq =
-		tegra_dsi_parse_pkt_seq_dt(ndev, np_dsi,
-			of_find_property(np_dsi,
+		tegra_dsi_parse_pkt_seq_dt(ndev, np_panel,
+			of_find_property(np_panel,
 			"nvidia,dsi-pkt-seq", NULL));
 	if (IS_ERR(dsi->pkt_seq)) {
 		dev_err(&ndev->dev,
@@ -1098,99 +1074,88 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		return PTR_ERR(dsi->pkt_seq);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-hsdexit", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-hsdexit", &temp)) {
 		dsi->phy_timing.t_hsdexit_ns = (u16)temp;
 		OF_DC_LOG("phy t_hsdexit_ns %d\n",
 			dsi->phy_timing.t_hsdexit_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-hstrail", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-hstrail", &temp)) {
 		dsi->phy_timing.t_hstrail_ns = (u16)temp;
 		OF_DC_LOG("phy t_hstrail_ns %d\n",
 			dsi->phy_timing.t_hstrail_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-datzero", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-datzero", &temp)) {
 		dsi->phy_timing.t_datzero_ns = (u16)temp;
 		OF_DC_LOG("phy t_datzero_ns %d\n",
 			dsi->phy_timing.t_datzero_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-hsprepare", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-phy-hsprepare", &temp)) {
 		dsi->phy_timing.t_hsprepare_ns = (u16)temp;
 		OF_DC_LOG("phy t_hsprepare_ns %d\n",
 			dsi->phy_timing.t_hsprepare_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-clktrail", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-phy-clktrail", &temp)) {
 		dsi->phy_timing.t_clktrail_ns = (u16)temp;
 		OF_DC_LOG("phy t_clktrail_ns %d\n",
 			dsi->phy_timing.t_clktrail_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-clkpost", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-clkpost", &temp)) {
 		dsi->phy_timing.t_clkpost_ns = (u16)temp;
 		OF_DC_LOG("phy t_clkpost_ns %d\n",
 			dsi->phy_timing.t_clkpost_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-clkzero", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-clkzero", &temp)) {
 		dsi->phy_timing.t_clkzero_ns = (u16)temp;
 		OF_DC_LOG("phy t_clkzero_ns %d\n",
 			dsi->phy_timing.t_clkzero_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-tlpx", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-tlpx", &temp)) {
 		dsi->phy_timing.t_tlpx_ns = (u16)temp;
 		OF_DC_LOG("phy t_tlpx_ns %d\n",
 			dsi->phy_timing.t_tlpx_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-clkprepare", &temp)) {
+	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-phy-clkprepare", &temp)) {
 		dsi->phy_timing.t_clkprepare_ns = (u16)temp;
 		OF_DC_LOG("phy t_clkprepare_ns %d\n",
 			dsi->phy_timing.t_clkprepare_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-clkpre", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-clkpre", &temp)) {
 		dsi->phy_timing.t_clkpre_ns = (u16)temp;
 		OF_DC_LOG("phy t_clkpre_ns %d\n",
 			dsi->phy_timing.t_clkpre_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-wakeup", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-wakeup", &temp)) {
 		dsi->phy_timing.t_wakeup_ns = (u16)temp;
 		OF_DC_LOG("phy t_wakeup_ns %d\n",
 			dsi->phy_timing.t_wakeup_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-taget", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-taget", &temp)) {
 		dsi->phy_timing.t_taget_ns = (u16)temp;
 		OF_DC_LOG("phy t_taget_ns %d\n",
 			dsi->phy_timing.t_taget_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-tasure", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-tasure", &temp)) {
 		dsi->phy_timing.t_tasure_ns = (u16)temp;
 		OF_DC_LOG("phy t_tasure_ns %d\n",
 			dsi->phy_timing.t_tasure_ns);
 	}
 
-	if (!of_property_read_u32(np_dsi,
-		"nvidia,dsi-phy-tago", &temp)) {
+	if (!of_property_read_u32(np_panel, "nvidia,dsi-phy-tago", &temp)) {
 		dsi->phy_timing.t_tago_ns = (u16)temp;
 		OF_DC_LOG("phy t_tago_ns %d\n",
 			dsi->phy_timing.t_tago_ns);
@@ -1330,7 +1295,6 @@ struct tegra_dc_platform_data
 	struct device_node *sd_np = NULL;
 	struct device_node *default_out_np = NULL;
 	struct device_node *entry = NULL;
-	struct device_node *pnode = NULL;
 #ifdef CONFIG_TEGRA_DC_CMU
 	struct device_node *cmu_np = NULL;
 #endif
@@ -1338,7 +1302,6 @@ struct tegra_dc_platform_data
 	int err;
 	u32 temp;
 	struct of_tegra_dc_data *of_pdata = NULL;
-	struct of_tegra_lcd_devdata *lcd_dev_data = NULL;
 
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
@@ -1469,8 +1432,6 @@ struct tegra_dc_platform_data
 	temp_pdata = (struct tegra_dc_platform_data *)ndev->dev.platform_data;
 	of_pdata = &(temp_pdata->of_data);
 	if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
-		struct device *panel_dev = NULL;
-
 		np_dsi = of_find_node_by_path("/host1x/dsi");
 
 		if (!np_dsi) {
@@ -1482,21 +1443,6 @@ struct tegra_dc_platform_data
 				dev_err(&ndev->dev, "not enough memory\n");
 				goto fail_parse;
 			}
-			pnode = of_parse_phandle(np_dsi, "nvidia,panel", 0);
-		}
-
-		if (pnode)
-			panel_dev = lcd_devdata_to_dc_callback_run(pnode);
-
-		if (panel_dev) {
-			lcd_dev_data = (struct of_tegra_lcd_devdata *)
-				dev_get_drvdata(panel_dev);
-			pdata->default_out->enable = lcd_dev_data->enable;
-			pdata->default_out->postpoweron =
-				lcd_dev_data->postpoweron;
-			pdata->default_out->prepoweroff =
-				lcd_dev_data->prepoweroff;
-			pdata->default_out->disable = lcd_dev_data->disable;
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;
@@ -1552,8 +1498,7 @@ struct tegra_dc_platform_data
 
 	if (pdata->default_out->dsi) {
 		/* It happens in case of TEGRA_DC_OUT_DSI only */
-		err = parse_dsi_settings(ndev, np_dsi,
-			pdata->default_out->dsi);
+		err = parse_dsi_settings(ndev, np_dsi, pdata);
 		if (err)
 			goto fail_parse;
 	}

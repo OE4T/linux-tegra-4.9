@@ -969,10 +969,11 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
-	struct mem_mgr *memmgr = mem_mgr_from_mm(mm);
 	int i, err = 0;
 	u8 *ptr;
 	void *ucode_ptr;
+	struct sg_table *sgt_pmu_ucode;
+	struct sg_table *sgt_seq_buf;
 
 	nvhost_dbg_fn("");
 
@@ -996,7 +997,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		sizeof(struct pmu_mutex), GFP_KERNEL);
 	if (!pmu->mutex) {
 		err = -ENOMEM;
-		goto clean_up;
+		goto err;
 	}
 
 	for (i = 0; i < pmu->mutex_cnt; i++) {
@@ -1008,7 +1009,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		sizeof(struct pmu_sequence), GFP_KERNEL);
 	if (!pmu->seq) {
 		err = -ENOMEM;
-		goto clean_up;
+		goto err_free_mutex;
 	}
 
 	pmu_seq_init(pmu);
@@ -1019,7 +1020,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		if (!g->pmu_fw) {
 			nvhost_err(d, "failed to load pmu ucode!!");
 			err = -ENOENT;
-			return err;
+			goto err_free_seq;
 		}
 	}
 
@@ -1034,51 +1035,66 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	gk20a_init_pmu_vm(mm);
 
-	pmu->ucode.mem.ref = nvhost_memmgr_alloc(memmgr,
-					 GK20A_PMU_UCODE_SIZE_MAX,
-					 DEFAULT_ALLOC_ALIGNMENT,
-					 DEFAULT_ALLOC_FLAGS,
-					 0);
-	if (IS_ERR(pmu->ucode.mem.ref)) {
-		err = PTR_ERR(pmu->ucode.mem.ref);
-		goto clean_up;
+	pmu->ucode.cpuva = dma_alloc_coherent(d, GK20A_PMU_UCODE_SIZE_MAX,
+					&pmu->ucode.iova,
+					GFP_KERNEL);
+	if (!pmu->ucode.cpuva) {
+		nvhost_err(d, "failed to allocate memory\n");
+		err = -ENOMEM;
+		goto err_release_fw;
 	}
 
-	pmu->seq_buf.mem.ref = nvhost_memmgr_alloc(memmgr, 4096,
-			DEFAULT_ALLOC_ALIGNMENT,
-			DEFAULT_ALLOC_FLAGS,
-			0);
-	if (IS_ERR(pmu->seq_buf.mem.ref)) {
-		nvhost_err(dev_from_gk20a(g),
-				"fail to allocate zbc buffer");
-		err = PTR_ERR(pmu->seq_buf.mem.ref);
-		goto clean_up;
+	pmu->seq_buf.cpuva = dma_alloc_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
+					&pmu->seq_buf.iova,
+					GFP_KERNEL);
+	if (!pmu->seq_buf.cpuva) {
+		nvhost_err(d, "failed to allocate memory\n");
+		err = -ENOMEM;
+		goto err_free_pmu_ucode;
 	}
-
 
 	init_waitqueue_head(&pmu->pg_wq);
 
-	pmu->ucode.pmu_va = gk20a_vm_map(vm, memmgr, pmu->ucode.mem.ref,
-			/*offset_align, flags, kind*/
-			0, 0, 0, NULL, false, mem_flag_read_only);
+	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
+				pmu->ucode.cpuva,
+				pmu->ucode.iova,
+				GK20A_PMU_UCODE_SIZE_MAX);
+	if (err) {
+		nvhost_err(d, "failed to allocate sg table\n");
+		goto err_free_seq_buf;
+	}
+
+	pmu->ucode.pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
+					GK20A_PMU_UCODE_SIZE_MAX,
+					0, /* flags */
+					mem_flag_none);
 	if (!pmu->ucode.pmu_va) {
 		nvhost_err(d, "failed to map pmu ucode memory!!");
-		return err;
+		goto err_free_ucode_sgt;
 	}
 
-	pmu->seq_buf.pmu_va = gk20a_vm_map(vm, memmgr, pmu->seq_buf.mem.ref,
-			/*offset_align, flags, kind*/
-			0, 0, 0, NULL, false, mem_flag_none);
+	err = gk20a_get_sgtable(d, &sgt_seq_buf,
+				pmu->seq_buf.cpuva,
+				pmu->seq_buf.iova,
+				GK20A_PMU_SEQ_BUF_SIZE);
+	if (err) {
+		nvhost_err(d, "failed to allocate sg table\n");
+		goto err_unmap_ucode;
+	}
+
+	pmu->seq_buf.pmu_va = gk20a_gmmu_map(vm, &sgt_seq_buf,
+					GK20A_PMU_SEQ_BUF_SIZE,
+					0, /* flags */
+					mem_flag_none);
 	if (!pmu->seq_buf.pmu_va) {
-		nvhost_err(d, "failed to map zbc buffer");
-		err = -ENOMEM;
-		goto clean_up;
+		nvhost_err(d, "failed to map pmu ucode memory!!");
+		goto err_free_seq_buf_sgt;
 	}
 
-	ptr = (u8 *)nvhost_memmgr_mmap(pmu->seq_buf.mem.ref);
+	ptr = (u8 *)pmu->seq_buf.cpuva;
 	if (!ptr) {
 		nvhost_err(d, "failed to map cpu ptr for zbc buffer");
-		goto clean_up;
+		goto err_unmap_seq_buf;
 	}
 
 	/* TBD: remove this if ZBC save/restore is handled by PMU
@@ -1087,22 +1103,16 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	ptr[1] = 0; ptr[2] = 1; ptr[3] = 0;
 	ptr[4] = 0; ptr[5] = 0; ptr[6] = 0; ptr[7] = 0;
 
-	pmu->seq_buf.mem.size = 4096;
+	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
-	nvhost_memmgr_munmap(pmu->seq_buf.mem.ref, ptr);
-
-	ucode_ptr = nvhost_memmgr_mmap(pmu->ucode.mem.ref);
-	if (!ucode_ptr) {
-		nvhost_err(dev_from_gk20a(g),
-			"fail to map pmu ucode memory");
-		return -ENOMEM;
-	}
+	ucode_ptr = pmu->ucode.cpuva;
 
 	for (i = 0; i < (pmu->desc->app_start_offset +
 			pmu->desc->app_size) >> 2; i++)
 		mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
 
-	nvhost_memmgr_munmap(pmu->ucode.mem.ref, ucode_ptr);
+	gk20a_free_sgtable(&sgt_pmu_ucode);
+	gk20a_free_sgtable(&sgt_seq_buf);
 
 skip_init:
 	mutex_init(&pmu->elpg_mutex);
@@ -1117,16 +1127,34 @@ skip_init:
 	nvhost_dbg_fn("done");
 	return 0;
 
-clean_up:
-	nvhost_dbg_fn("fail");
-	if (g->pmu_fw)
-		release_firmware(g->pmu_fw);
-	kfree(pmu->mutex);
+ err_unmap_seq_buf:
+	gk20a_gmmu_unmap(vm, pmu->seq_buf.pmu_va,
+		GK20A_PMU_SEQ_BUF_SIZE, mem_flag_none);
+ err_free_seq_buf_sgt:
+	gk20a_free_sgtable(&sgt_seq_buf);
+ err_unmap_ucode:
+	gk20a_gmmu_unmap(vm, pmu->ucode.pmu_va,
+		GK20A_PMU_UCODE_SIZE_MAX, mem_flag_none);
+ err_free_ucode_sgt:
+	gk20a_free_sgtable(&sgt_pmu_ucode);
+ err_free_seq_buf:
+	dma_free_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
+		pmu->seq_buf.cpuva, pmu->seq_buf.iova);
+	pmu->seq_buf.cpuva = NULL;
+	pmu->seq_buf.iova = 0;
+ err_free_pmu_ucode:
+	dma_free_coherent(d, GK20A_PMU_UCODE_SIZE_MAX,
+		pmu->ucode.cpuva, pmu->ucode.iova);
+	pmu->ucode.cpuva = NULL;
+	pmu->ucode.iova = 0;
+ err_release_fw:
+	release_firmware(g->pmu_fw);
+ err_free_seq:
 	kfree(pmu->seq);
-	gk20a_vm_unmap(vm, pmu->ucode.pmu_va);
-	gk20a_vm_unmap(vm, pmu->seq_buf.pmu_va);
-	nvhost_memmgr_put(memmgr, pmu->ucode.mem.ref);
-	nvhost_memmgr_put(memmgr, pmu->seq_buf.mem.ref);
+ err_free_mutex:
+	kfree(pmu->mutex);
+ err:
+	nvhost_dbg_fn("fail");
 	return err;
 }
 
@@ -1195,13 +1223,13 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
-	struct mem_mgr *memmgr = mem_mgr_from_mm(mm);
 	struct pmu_cmd cmd;
 	u32 desc;
 	long remain;
 	int err;
 	bool status;
 	u32 size;
+	struct sg_table *sgt_pg_buf;
 
 	nvhost_dbg_fn("");
 
@@ -1217,27 +1245,38 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	}
 
 	if (!pmu->sw_ready) {
-		pmu->pg_buf.mem.ref = nvhost_memmgr_alloc(memmgr, size,
-						  DEFAULT_ALLOC_ALIGNMENT,
-						  DEFAULT_ALLOC_FLAGS,
-						  0);
-		if (IS_ERR(pmu->pg_buf.mem.ref)) {
-			nvhost_err(dev_from_gk20a(g),
-				"fail to allocate fecs pg buffer");
-			err = PTR_ERR(pmu->pg_buf.mem.ref);
-			goto clean_up;
+		pmu->pg_buf.cpuva = dma_alloc_coherent(d, size,
+						&pmu->pg_buf.iova,
+						GFP_KERNEL);
+		if (!pmu->pg_buf.cpuva) {
+			nvhost_err(d, "failed to allocate memory\n");
+			err = -ENOMEM;
+			goto err;
 		}
-		pmu->pg_buf.mem.size = size;
 
-		pmu->pg_buf.pmu_va =
-			gk20a_vm_map(vm, memmgr, pmu->pg_buf.mem.ref,
-				      /*offset_align, flags, kind*/
-				     0, 0, 0, NULL, false, mem_flag_none);
+		pmu->pg_buf.size = size;
+
+		err = gk20a_get_sgtable(d, &sgt_pg_buf,
+					pmu->pg_buf.cpuva,
+					pmu->pg_buf.iova,
+					size);
+		if (err) {
+			nvhost_err(d, "failed to create sg table\n");
+			goto err_free_pg_buf;
+		}
+
+		pmu->pg_buf.pmu_va = gk20a_gmmu_map(vm,
+					&sgt_pg_buf,
+					size,
+					0, /* flags */
+					mem_flag_none);
 		if (!pmu->pg_buf.pmu_va) {
 			nvhost_err(d, "failed to map fecs pg buffer");
 			err = -ENOMEM;
-			goto clean_up;
+			goto err_free_sgtable;
 		}
+
+		gk20a_free_sgtable(&sgt_pg_buf);
 	}
 
 	/*
@@ -1285,7 +1324,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_ID_ENG_BUF_LOAD;
 	cmd.cmd.pg.eng_buf_load.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.eng_buf_load.buf_idx = PMU_PGENG_GR_BUFFER_IDX_FECS;
-	cmd.cmd.pg.eng_buf_load.buf_size = pmu->pg_buf.mem.size;
+	cmd.cmd.pg.eng_buf_load.buf_size = pmu->pg_buf.size;
 	cmd.cmd.pg.eng_buf_load.dma_base = u64_lo32(pmu->pg_buf.pmu_va >> 8);
 	cmd.cmd.pg.eng_buf_load.dma_offset = (u8)(pmu->pg_buf.pmu_va & 0xFF);
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
@@ -1311,7 +1350,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.cmd_type = PMU_PG_CMD_ID_ENG_BUF_LOAD;
 	cmd.cmd.pg.eng_buf_load.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.eng_buf_load.buf_idx = PMU_PGENG_GR_BUFFER_IDX_ZBC;
-	cmd.cmd.pg.eng_buf_load.buf_size = pmu->seq_buf.mem.size;
+	cmd.cmd.pg.eng_buf_load.buf_size = pmu->seq_buf.size;
 	cmd.cmd.pg.eng_buf_load.dma_base = u64_lo32(pmu->seq_buf.pmu_va >> 8);
 	cmd.cmd.pg.eng_buf_load.dma_offset = (u8)(pmu->seq_buf.pmu_va & 0xFF);
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
@@ -1355,9 +1394,14 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 
 	return 0;
 
-clean_up:
-	gk20a_vm_unmap(vm, pmu->pg_buf.pmu_va);
-	nvhost_memmgr_put(memmgr, pmu->pg_buf.mem.ref);
+ err_free_sgtable:
+	gk20a_free_sgtable(&sgt_pg_buf);
+ err_free_pg_buf:
+	dma_free_coherent(d, size,
+		pmu->pg_buf.cpuva, pmu->pg_buf.iova);
+	pmu->pg_buf.cpuva = NULL;
+	pmu->pg_buf.iova = 0;
+ err:
 	return err;
 }
 

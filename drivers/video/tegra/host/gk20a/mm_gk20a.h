@@ -96,9 +96,10 @@ struct patch_desc {
 };
 
 struct pmu_mem_desc {
-	struct mem_desc mem;
-	phys_addr_t cpu_pa;
+	void *cpuva;
+	u64 iova;
 	u64 pmu_va;
+	size_t size;
 };
 
 struct priv_cmd_queue_mem_desc {

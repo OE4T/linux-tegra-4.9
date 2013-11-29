@@ -26,6 +26,7 @@
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
 #define GK20A_PMU_INST_SIZE		(4 * 1024)
 #define GK20A_PMU_UCODE_SIZE_MAX	(256 * 1024)
+#define GK20A_PMU_SEQ_BUF_SIZE		4096
 
 #define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
 

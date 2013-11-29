@@ -253,6 +253,8 @@ static void pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 	else
 		gk20a_writel(g, mc_enable_r(),
 			pmc_enable & ~mc_enable_pwr_enabled_f());
+
+	udelay(1);
 }
 
 static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
@@ -272,21 +274,6 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 
 			pmu_enable_irq(pmu, false);
 			pmu_enable_hw(pmu, false);
-
-			do {
-				pmc_enable = gk20a_readl(g, mc_enable_r());
-				if (mc_enable_pwr_v(pmc_enable) !=
-				    mc_enable_pwr_disabled_v()) {
-					if (time_after_eq(jiffies,
-								end_jiffies)) {
-						nvhost_err(dev_from_gk20a(g),
-							"timeout waiting pmu to reset");
-						return -EBUSY;
-					}
-					usleep_range(1000, 2000);
-				} else
-					break;
-			} while (1);
 		}
 	} else {
 		pmu_enable_hw(pmu, true);
@@ -296,9 +283,6 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 		err = pmu_idle(pmu);
 		if (err)
 			return err;
-
-		/* just for a delay */
-		gk20a_readl(g, mc_enable_r());
 
 		pmu_enable_irq(pmu, true);
 	}

@@ -46,6 +46,8 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	pmc_en &= ~mc_enable_priv_ring_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_en);
 
+	udelay(1);
+
 	pmc_en = gk20a_readl(g, mc_enable_r());
 	pmc_en |= mc_enable_priv_ring_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_en);

@@ -127,6 +127,8 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	pmc_enable &= ~mc_enable_hub_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_enable);
 
+	udelay(1);
+
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	pmc_enable |= mc_enable_pfb_enabled_f();
 	pmc_enable |= mc_enable_l2_enabled_f();

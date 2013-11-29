@@ -48,6 +48,17 @@ static struct tegra_panel_of __maybe_unused panel_of = {
 	.panel_gpio = {-1, -1, -1, -1},
 };
 
+struct tegra_panel_ops {
+	int (*enable)(struct device *);
+	int (*postpoweron)(struct device *);
+	int (*prepoweroff)(void);
+	int (*disable)(void);
+	int (*hotplug_init)(struct device *);
+	int (*postsuspend)(void);
+	void (*hotplug_report)(bool);
+};
+extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
+
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
 extern struct tegra_panel dsi_s_wqxga_10_1;

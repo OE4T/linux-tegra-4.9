@@ -163,6 +163,45 @@ fail:
 	return err;
 }
 
+static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
+				struct tegra_panel_ops *p_ops)
+{
+	BUG_ON(!dc_out);
+
+	if (!p_ops) {
+		/* TODO: register default ops */
+	}
+
+	dc_out->enable = p_ops->enable;
+	dc_out->postpoweron = p_ops->postpoweron;
+	dc_out->prepoweroff = p_ops->prepoweroff;
+	dc_out->disable = p_ops->disable;
+	dc_out->hotplug_init = p_ops->hotplug_init;
+	dc_out->postsuspend = p_ops->postsuspend;
+	dc_out->hotplug_report = p_ops->hotplug_report;
+}
+
+struct device_node *tegra_panel_get_dt_node(
+			struct tegra_dc_platform_data *pdata)
+{
+	struct tegra_dc_out *dc_out = pdata->default_out;
+	struct device_node *np_panel = NULL;
+	struct board_info display_board;
+
+	tegra_get_display_board_info(&display_board);
+
+	switch (display_board.board_id) {
+	case BOARD_E1627:
+		tegra_panel_register_ops(dc_out, &dsi_p_wuxga_10_1_ops);
+		np_panel = of_find_compatible_node(NULL, NULL, "p,wuxga-10-1");
+		break;
+	default:
+		WARN(1, "Display panel not supported\n");
+	};
+
+	return of_device_is_available(np_panel) ? np_panel : NULL;
+}
+
 #ifdef CONFIG_TEGRA_DC
 /**
  * tegra_init_hdmi - initialize and add HDMI device if not disabled by DT

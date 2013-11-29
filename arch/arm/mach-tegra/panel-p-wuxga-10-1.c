@@ -672,6 +672,12 @@ static void dsi_p_wuxga_10_1_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = &dsi_p_wuxga_10_1_cmu;
 }
 
+struct tegra_panel_ops dsi_p_wuxga_10_1_ops = {
+	.enable = dsi_p_wuxga_10_1_enable,
+	.disable = dsi_p_wuxga_10_1_disable,
+	.postsuspend = dsi_p_wuxga_10_1_postsuspend,
+};
+
 struct tegra_panel __initdata dsi_p_wuxga_10_1 = {
 	.init_sd_settings = dsi_p_wuxga_10_1_sd_settings_init,
 	.init_dc_out = dsi_p_wuxga_10_1_dc_out_init,

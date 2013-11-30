@@ -3524,10 +3524,31 @@ fail:
 }
 EXPORT_SYMBOL(tegra_dsi_read_data);
 
+static const char * const error_sanity[] = {
+		"SoT Error",
+		"SoT Sync Error",
+		"EoT Sync Error",
+		"Escape Mode Entry Comand Error",
+		"Low-Power Transmit Sync Error",
+		"HS Receive Timeout Error",
+		"False Control Error",
+		"Reserved",
+		"ECC Error,Single Bit",
+		"ECC Error, Multi Bit",
+		"Checksum Error",
+		"DSI Data Type Not recognized",
+		"DSI VC ID Invalid",
+		"DSI Protocol Violation",
+		"Reserved",
+		"Reserved",
+};
+
 int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
-				struct tegra_dc_dsi_data *dsi)
+				struct tegra_dc_dsi_data *dsi,
+				struct sanity_status *san)
 {
 	int err = 0;
+	u32 flagset[16];
 	u8 read_fifo[DSI_READ_FIFO_DEPTH];
 	struct dsi_status *init_status;
 	static struct tegra_dsi_cmd dsi_nop_cmd =
@@ -3541,7 +3562,7 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	tegra_dc_io_start(dc);
 	clk_prepare_enable(dsi->dsi_fixed_clk);
 	tegra_dsi_lp_clk_enable(dsi);
-
+	memset(flagset, 0, sizeof(flagset));
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
 	if (IS_ERR_OR_NULL(init_status)) {
@@ -3580,10 +3601,43 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	}
 
 	if (read_fifo[0] != DSI_ACK_NO_ERR) {
+		if (read_fifo[4] == ACK_ERR_RES) {
+			u16 payload = read_fifo[5] | (read_fifo[6] << 8);
+			int i = 0;
+			for (; payload; payload >>= 1, i++) {
+				if (payload & 1) {
+					flagset[i] = 0x01;
+					if (enable_read_debug)
+						dev_info(&dc->ndev->dev,
+							" %s => error flag number %d\n",
+							error_sanity[i], i);
+				}
+			}
+			if (san != NULL) {
+				san->sot_error = flagset[0];
+				san->sot_sync_error = flagset[1];
+				san->eot_sync_error = flagset[2];
+				san->escape_mode_entry_comand_error =
+						flagset[3];
+				san->low_power_transmit_sync_error = flagset[4];
+				san->hs_receive_timeout_error = flagset[5];
+				san->false_control_error = flagset[6];
+				san->reserved1 = flagset[7];
+				san->ecc_error_single_bit = flagset[8];
+				san->ecc_error_multi_bit = flagset[9];
+				san->checksum_error = flagset[10];
+				san->dsi_data_type_not_recognized = flagset[11];
+				san->dsi_vc_id_invalid = flagset[12];
+				san->dsi_protocol_violation = flagset[13];
+				san->reserved2 = flagset[14];
+				san->reserved3 = flagset[15];
+			}
+		}
 		dev_warn(&dc->ndev->dev,
 			"Ack no error trigger message not received\n");
 		err = -EAGAIN;
 	}
+
 fail:
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)

@@ -425,6 +425,25 @@ extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
 #define tegra_dsi2edp_ops (*(struct tegra_dsi_out_ops *)NULL)
 #endif
 
+struct sanity_status {
+	u32 sot_error:1;
+	u32 sot_sync_error:1;
+	u32 eot_sync_error:1;
+	u32 escape_mode_entry_comand_error:1;
+	u32 low_power_transmit_sync_error:1;
+	u32 hs_receive_timeout_error:1;
+	u32 false_control_error:1;
+	u32 reserved1:1;
+	u32 ecc_error_single_bit:1;
+	u32 ecc_error_multi_bit:1;
+	u32 checksum_error:1;
+	u32 dsi_data_type_not_recognized:1;
+	u32 dsi_vc_id_invalid:1;
+	u32 dsi_protocol_violation:1;
+	u32 reserved2:1;
+	u32 reserved3:1;
+};
+
 #ifdef CONFIG_DEBUG_FS
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi);
 #endif
@@ -441,7 +460,8 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 				u16 max_ret_payload_size,
 				u8 panel_reg_addr, u8 *read_data);
 int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
-				struct tegra_dc_dsi_data *dsi);
+				struct tegra_dc_dsi_data *dsi,
+				struct sanity_status *san);
 bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi);
 bool tegra_dsi_disable_read_debug(struct tegra_dc_dsi_data *dsi);
 int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,

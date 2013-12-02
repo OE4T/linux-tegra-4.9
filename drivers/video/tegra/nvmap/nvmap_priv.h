@@ -188,6 +188,16 @@ static inline void nvmap_pp_inc_index(struct nvmap_page_pool *pp, u32 *ind)
 		*ind = 0;
 }
 
+static inline void nvmap_page_pool_lock(struct nvmap_page_pool *pool)
+{
+	mutex_lock(&pool->lock);
+}
+
+static inline void nvmap_page_pool_unlock(struct nvmap_page_pool *pool)
+{
+	mutex_unlock(&pool->lock);
+}
+
 int nvmap_page_pool_init(struct nvmap_device *dev);
 struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
 bool nvmap_page_pool_fill(struct nvmap_page_pool *pool, struct page *page);

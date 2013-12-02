@@ -47,16 +47,6 @@ static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
 #define pp_hit_add(pool, nr)   __pp_dbg_var_add(&(pool)->hits, nr)
 #define pp_miss_add(pool, nr)  __pp_dbg_var_add(&(pool)->misses, nr)
 
-static inline void nvmap_page_pool_lock(struct nvmap_page_pool *pool)
-{
-	mutex_lock(&pool->lock);
-}
-
-static inline void nvmap_page_pool_unlock(struct nvmap_page_pool *pool)
-{
-	mutex_unlock(&pool->lock);
-}
-
 /*
  * This removes a page from the page pool.
  */

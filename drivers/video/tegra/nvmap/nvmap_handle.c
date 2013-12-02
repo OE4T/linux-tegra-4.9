@@ -106,14 +106,10 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	pool = &nvmap_dev->pool;
 
-	while (page_index < nr_page) {
-		if (!nvmap_page_pool_fill(pool,
-			h->pgalloc.pages[page_index]))
-			break;
-
-		page_index++;
-	}
-
+	nvmap_page_pool_lock(pool);
+	page_index = __nvmap_page_pool_fill_lots_locked(pool, h->pgalloc.pages,
+							nr_page);
+	nvmap_page_pool_unlock(pool);
 #endif
 
 	for (i = page_index; i < nr_page; i++)
@@ -152,7 +148,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	size_t size = PAGE_ALIGN(h->size);
 	unsigned int nr_page = size >> PAGE_SHIFT;
 	pgprot_t prot;
-	unsigned int i = 0, page_index = 0;
+	unsigned int i = 0, page_index;
 	struct page **pages;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	struct nvmap_page_pool *pool = NULL;
@@ -189,13 +185,16 @@ static int handle_page_alloc(struct nvmap_client *client,
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 		pool = &nvmap_dev->pool;
 
-		for (i = 0; i < nr_page; i++) {
-			/* Get pages from pool, if available. */
-			pages[i] = nvmap_page_pool_alloc(pool);
-			if (!pages[i])
-				break;
-			if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES ||
-			    zero_memory) {
+		/*
+		 * Get as many pages from the pools as possible.
+		 */
+		nvmap_page_pool_lock(pool);
+		page_index = __nvmap_page_pool_alloc_lots_locked(pool, pages,
+								 nr_page);
+		nvmap_page_pool_unlock(pool);
+
+		if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory) {
+			for (i = 0; i < page_index; i++) {
 				/*
 				 * Just memset low mem pages; they will for
 				 * sure have a virtual address. Otherwise, build
@@ -213,8 +212,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 					memset((char *)kaddr, 0, PAGE_SIZE);
 				}
 			}
-			page_index++;
 		}
+		i = page_index;
 #endif
 		for (; i < nr_page; i++) {
 			pages[i] = nvmap_alloc_pages_exact(gfp,	PAGE_SIZE);

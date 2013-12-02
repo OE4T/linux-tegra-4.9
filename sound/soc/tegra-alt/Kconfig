@@ -66,6 +66,8 @@ config SND_SOC_TEGRA_VCM30T124_ALT
 	select SND_SOC_AD193X
 	select SND_SOC_WM8731
 	select SND_SOC_SPDIF
+	select SND_SOC_AK4618
 	help
 	  Say Y or M here if you want to add support for SoC audio on the
-	  TEGRA VCM30_T124 using wm8731 and ad1937 codecs.
+	  TEGRA VCM30_T124 using wm8731 and ad1937 codecs or using ak4618
+	  and ad1937.

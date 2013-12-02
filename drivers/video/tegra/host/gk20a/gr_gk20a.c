@@ -4667,14 +4667,6 @@ void gk20a_gr_reset(struct gk20a *g)
 	BUG_ON(err);
 }
 
-static void gk20a_gr_nop_method(struct gk20a *g)
-{
-	/* Reset method in PBDMA 0 */
-	gk20a_writel(g, pbdma_method0_r(0),
-			pbdma_udma_nop_r());
-	gk20a_writel(g, pbdma_data0_r(0), 0);
-}
-
 static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -4708,8 +4700,6 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 	return 0;
 
 fail:
-	gk20a_gr_reset(g);
-	gk20a_gr_nop_method(g);
 	nvhost_err(dev_from_gk20a(g), "invalid method class 0x%08x"
 		", offset 0x%08x address 0x%08x\n",
 		isr_data->class_num, isr_data->offset, isr_data->addr);
@@ -4721,9 +4711,6 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 {
 	nvhost_dbg_fn("");
 
-	gk20a_gr_reset(g);
-
-	gk20a_gr_nop_method(g);
 	nvhost_err(dev_from_gk20a(g),
 		   "invalid class 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -4735,9 +4722,6 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 {
 	nvhost_dbg_fn("");
 
-	gk20a_gr_reset(g);
-
-	gk20a_gr_nop_method(g);
 	nvhost_err(dev_from_gk20a(g),
 		   "class error 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);

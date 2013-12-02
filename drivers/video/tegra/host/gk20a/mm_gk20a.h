@@ -52,7 +52,7 @@ struct mem_desc_sub {
 };
 
 struct gpfifo_desc {
-	struct mem_desc mem;
+	size_t size;
 	u32 entry_num;
 
 	u32 get;
@@ -60,6 +60,7 @@ struct gpfifo_desc {
 
 	bool wrap;
 
+	u64 iova;
 	struct gpfifo *cpu_va;
 	u64 gpu_va;
 };
@@ -98,6 +99,12 @@ struct pmu_mem_desc {
 	struct mem_desc mem;
 	phys_addr_t cpu_pa;
 	u64 pmu_va;
+};
+
+struct priv_cmd_queue_mem_desc {
+	u64 base_iova;
+	u32 *base_cpuva;
+	size_t size;
 };
 
 struct zcull_ctx_desc {

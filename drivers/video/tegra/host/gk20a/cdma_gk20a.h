@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,9 +36,8 @@ struct priv_cmd_entry {
 };
 
 struct priv_cmd_queue {
-	struct mem_desc mem;
-	u32 *base_ptr;	/* base address */
-	u64 base_gva;	/* gpu_va base */
+	struct priv_cmd_queue_mem_desc mem;
+	u64 base_gpuva;	/* gpu_va base */
 	u16 size;	/* num of entries in words */
 	u16 put;	/* put for priv cmd queue */
 	u16 get;	/* get for priv cmd queue */

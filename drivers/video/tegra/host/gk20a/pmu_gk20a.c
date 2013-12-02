@@ -261,8 +261,6 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = pmu->g;
 	u32 pmc_enable;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(2000);
 	int err;
 
 	nvhost_dbg_fn("");

@@ -173,7 +173,6 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 				u32 timeslice_timeout)
 {
 	void *inst_ptr;
-	unsigned long channel_timeout;
 	int shift = 3;
 	int value = timeslice_timeout;
 

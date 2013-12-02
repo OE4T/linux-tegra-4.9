@@ -5145,6 +5145,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 
 	nvhost_dbg_fn("");
+	nvhost_dbg(dbg_intr, "pgraph intr %08x", gr_intr);
 
 	if (!gr_intr)
 		return 0;
@@ -5291,6 +5292,23 @@ clean_up:
 	if (gr_intr)
 		nvhost_err(dev_from_gk20a(g),
 			   "unhandled gr interrupt 0x%08x", gr_intr);
+
+	return 0;
+}
+
+int gk20a_gr_nonstall_isr(struct gk20a *g)
+{
+	u32 gr_intr = gk20a_readl(g, gr_intr_nonstall_r());
+	u32 clear_intr = 0;
+
+	nvhost_dbg(dbg_intr, "pgraph nonstall intr %08x", gr_intr);
+
+	if (gr_intr & gr_intr_nonstall_trap_pending_f()) {
+		gk20a_channel_semaphore_wakeup(g);
+		clear_intr |= gr_intr_nonstall_trap_pending_f();
+	}
+
+	gk20a_writel(g, gr_intr_nonstall_r(), clear_intr);
 
 	return 0;
 }

@@ -140,6 +140,7 @@ struct fifo_gk20a {
 int gk20a_init_fifo_support(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
+void gk20a_fifo_nonstall_isr(struct gk20a *g);
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid);
 

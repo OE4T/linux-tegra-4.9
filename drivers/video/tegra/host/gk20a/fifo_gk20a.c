@@ -393,8 +393,8 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	/* enable pfifo interrupt */
 	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
-	gk20a_writel(g, fifo_intr_en_0_r(), 0xFFFFFFFF); /* TBD: alternative intr tree*/
-	gk20a_writel(g, fifo_intr_en_1_r(), 0xFFFFFFFF); /* TBD: alternative intr tree*/
+	gk20a_writel(g, fifo_intr_en_0_r(), 0x7FFFFFFF);
+	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
 
 	/* enable pbdma interrupt */
 	mask = 0;
@@ -465,7 +465,6 @@ static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_pbcrc_pending_f() |
 		pbdma_intr_0_method_pending_f() |
 		pbdma_intr_0_methodcrc_pending_f() |
-		pbdma_intr_0_semaphore_pending_f() |
 		pbdma_intr_0_pbseg_pending_f() |
 		pbdma_intr_0_signature_pending_f();
 
@@ -1297,6 +1296,8 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 
 	nvhost_dbg_fn("");
 
+	nvhost_dbg(dbg_intr, "pbdma id intr pending %d %08x %08x", pbdma_id,
+			pbdma_intr_0, pbdma_intr_1);
 	if (pbdma_intr_0) {
 		if (f->intr.pbdma.device_fatal_0 & pbdma_intr_0) {
 			dev_err(dev, "unrecoverable device error: "
@@ -1331,14 +1332,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 
 static u32 fifo_channel_isr(struct gk20a *g, u32 fifo_intr)
 {
-	struct device *dev = dev_from_gk20a(g);
-	/* Note: we don't have any of these in use (yet) for gk20a.
-	 * These are usually if not always coming from non-stall,
-	 * notification type interrupts.  It isn't necessarily
-	 * anything to do with the channel currently running.
-	 * Clear it and warn...
-	 */
-	dev_warn(dev, "unexpected channel (non-stall?) interrupt");
+	gk20a_channel_semaphore_wakeup(g);
 	return fifo_intr_0_channel_intr_pending_f();
 }
 
@@ -1352,7 +1346,7 @@ static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 
 	for (i = 0; i < fifo_intr_pbdma_id_status__size_1_v(); i++) {
 		if (fifo_intr_pbdma_id_status_f(pbdma_pending, i)) {
-			nvhost_dbg_fn("pbdma id %d intr pending", i);
+			nvhost_dbg(dbg_intr, "pbdma id %d intr pending", i);
 			clear_intr |=
 				gk20a_fifo_handle_pbdma_intr(dev, g, f, i);
 		}
@@ -1379,6 +1373,7 @@ void gk20a_fifo_isr(struct gk20a *g)
 	 * in a threaded interrupt context... */
 	mutex_lock(&g->fifo.intr.isr.mutex);
 
+	nvhost_dbg(dbg_intr, "fifo isr %08x\n", fifo_intr);
 
 	/* handle runlist update */
 	if (fifo_intr & fifo_intr_0_runlist_event_pending_f()) {
@@ -1388,15 +1383,27 @@ void gk20a_fifo_isr(struct gk20a *g)
 	if (fifo_intr & fifo_intr_0_pbdma_intr_pending_f())
 		clear_intr |= fifo_pbdma_isr(g, fifo_intr);
 
-	if (fifo_intr & fifo_intr_0_channel_intr_pending_f())
-		clear_intr |= fifo_channel_isr(g, fifo_intr);
-
 	if (unlikely(fifo_intr & error_intr_mask))
 		clear_intr = fifo_error_isr(g, fifo_intr);
 
 	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
 
 	mutex_unlock(&g->fifo.intr.isr.mutex);
+
+	return;
+}
+
+void gk20a_fifo_nonstall_isr(struct gk20a *g)
+{
+	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
+	u32 clear_intr = 0;
+
+	nvhost_dbg(dbg_intr, "fifo nonstall isr %08x\n", fifo_intr);
+
+	if (fifo_intr & fifo_intr_0_channel_intr_pending_f())
+		clear_intr |= fifo_channel_isr(g, fifo_intr);
+
+	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
 
 	return;
 }

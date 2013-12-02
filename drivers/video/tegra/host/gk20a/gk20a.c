@@ -446,7 +446,7 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 	return err;
 }
 
-static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)
+static irqreturn_t gk20a_intr_isr_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 	u32 mc_intr_0;
@@ -464,6 +464,28 @@ static irqreturn_t gk20a_intr_isr(int irq, void *dev_id)
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
+
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
+{
+	struct gk20a *g = dev_id;
+	u32 mc_intr_1;
+
+	if (!g->power_on)
+		return IRQ_NONE;
+
+	/* not from gpu when sharing irq with others */
+	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
+	if (unlikely(!mc_intr_1))
+		return IRQ_NONE;
+
+	gk20a_writel(g, mc_intr_en_1_r(),
+		mc_intr_en_1_inta_disabled_f());
+
+	/* flush previous write */
+	gk20a_readl(g, mc_intr_en_1_r());
 
 	return IRQ_WAKE_THREAD;
 }
@@ -496,7 +518,7 @@ static void gk20a_pbus_isr(struct gk20a *g)
 	gk20a_writel(g, bus_intr_0_r(), val);
 }
 
-static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
+static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 	u32 mc_intr_0;
@@ -504,6 +526,8 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 	nvhost_dbg(dbg_intr, "interrupt thread launched");
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
+
+	nvhost_dbg(dbg_intr, "stall intr %08x\n", mc_intr_0);
 
 	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
 		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
@@ -517,15 +541,37 @@ static irqreturn_t gk20a_intr_thread(int irq, void *dev_id)
 		gk20a_mm_ltc_isr(g);
 	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
 		gk20a_pbus_isr(g);
-	if (mc_intr_0)
-		nvhost_dbg_info("leaving isr with interrupt pending 0x%08x",
-				mc_intr_0);
 
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
+{
+	struct gk20a *g = dev_id;
+	u32 mc_intr_1;
+
+	nvhost_dbg(dbg_intr, "interrupt thread launched");
+
+	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
+
+	nvhost_dbg(dbg_intr, "non-stall intr %08x\n", mc_intr_1);
+
+	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
+		gk20a_fifo_nonstall_isr(g);
+	if (mc_intr_1 & mc_intr_0_pgraph_pending_f())
+		gk20a_gr_nonstall_isr(g);
+
+	gk20a_writel(g, mc_intr_en_1_r(),
+		mc_intr_en_1_inta_hardware_f());
+
+	/* flush previous write */
+	gk20a_readl(g, mc_intr_en_1_r());
 
 	return IRQ_HANDLED;
 }
@@ -555,6 +601,7 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	if (g->irq_requested) {
 		free_irq(gk20a_intr.start, g);
+		free_irq(gk20a_intr.start+1, g);
 		g->irq_requested = false;
 	}
 
@@ -729,6 +776,7 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	 */
 	if (g->irq_requested) {
 		free_irq(gk20a_intr.start, g);
+		free_irq(gk20a_intr.start+1, g);
 		g->irq_requested = false;
 	}
 
@@ -754,12 +802,23 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 
 	if (!g->irq_requested) {
 		err = request_threaded_irq(gk20a_intr.start,
-				gk20a_intr_isr, gk20a_intr_thread,
-				0, "gk20a", g);
+				gk20a_intr_isr_stall,
+				gk20a_intr_thread_stall,
+				0, "gk20a_stall", g);
 		if (err) {
 			dev_err(dev_from_gk20a(g),
 				"failed to request stall intr irq @ %lld\n",
 					(u64)gk20a_intr.start);
+			goto done;
+		}
+		err = request_threaded_irq(gk20a_intr.start+1,
+				gk20a_intr_isr_nonstall,
+				gk20a_intr_thread_nonstall,
+				0, "gk20a_nonstall", g);
+		if (err) {
+			dev_err(dev_from_gk20a(g),
+				"failed to request non-stall intr irq @ %lld\n",
+					(u64)gk20a_intr.start+1);
 			goto done;
 		}
 		g->irq_requested = true;
@@ -768,11 +827,10 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	g->power_on = true;
 
 	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_disabled_f());
+		mc_intr_en_1_inta_hardware_f());
 
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
-
 
 	gk20a_writel(g, bus_intr_en_0_r(),
 			bus_intr_en_0_pri_squash_m() |

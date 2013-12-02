@@ -78,11 +78,23 @@ static inline u32 mc_intr_0_pbus_pending_f(void)
 {
 	return 0x10000000;
 }
+static inline u32 mc_intr_1_r(void)
+{
+	return 0x00000104;
+}
 static inline u32 mc_intr_mask_0_r(void)
 {
 	return 0x00000640;
 }
 static inline u32 mc_intr_mask_0_pmu_enabled_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 mc_intr_mask_1_r(void)
+{
+	return 0x00000644;
+}
+static inline u32 mc_intr_mask_1_pmu_enabled_f(void)
 {
 	return 0x1000000;
 }
@@ -105,6 +117,10 @@ static inline u32 mc_intr_en_1_r(void)
 static inline u32 mc_intr_en_1_inta_disabled_f(void)
 {
 	return 0x0;
+}
+static inline u32 mc_intr_en_1_inta_hardware_f(void)
+{
+	return 0x1;
 }
 static inline u32 mc_enable_r(void)
 {

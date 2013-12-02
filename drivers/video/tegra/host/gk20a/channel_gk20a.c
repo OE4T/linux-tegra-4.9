@@ -1978,3 +1978,17 @@ int gk20a_channel_resume(struct gk20a *g)
 	nvhost_dbg_fn("done");
 	return 0;
 }
+
+void gk20a_channel_semaphore_wakeup(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
+
+	nvhost_dbg_fn("");
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *c = g->fifo.channel+chid;
+		if (c->in_use)
+			wake_up_interruptible_all(&c->semaphore_wq);
+	}
+}

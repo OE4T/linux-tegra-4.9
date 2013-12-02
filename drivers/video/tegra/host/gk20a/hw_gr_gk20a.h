@@ -122,6 +122,14 @@ static inline u32 gr_intr_exception_reset_f(void)
 {
 	return 0x200000;
 }
+static inline u32 gr_intr_nonstall_r(void)
+{
+	return 0x00400120;
+}
+static inline u32 gr_intr_nonstall_trap_pending_f(void)
+{
+	return 0x2;
+}
 static inline u32 gr_intr_en_r(void)
 {
 	return 0x0040013c;

@@ -71,7 +71,10 @@ struct mmu_desc {
 };
 
 struct inst_desc {
-	struct mem_desc mem;
+	u64 iova;
+	void *cpuva;
+	phys_addr_t cpu_pa;
+	size_t size;
 };
 
 struct userd_desc {

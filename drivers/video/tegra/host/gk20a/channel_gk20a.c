@@ -104,7 +104,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
+	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -129,8 +129,6 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(c->vm->va_limit)));
 
-	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
-
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
@@ -144,7 +142,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
+	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -162,8 +160,6 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 		 pbdma_userd_target_vid_mem_f() |
 		 pbdma_userd_hi_addr_f(addr_hi));
 
-	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
-
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
@@ -176,7 +172,7 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	int shift = 3;
 	int value = timeslice_timeout;
 
-	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
+	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -214,7 +210,6 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
 		ccsr_channel_enable_set_true_f());
 
-	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
@@ -227,7 +222,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	nvhost_dbg_fn("");
 
-	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
+	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -287,8 +282,6 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 	mem_wr32(inst_ptr, ram_fc_hce_ctrl_w(),
 		 pbdma_hce_ctrl_hce_priv_mode_yes_f());
 
-	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
-
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
@@ -323,7 +316,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 	struct fifo_engine_info_gk20a *engine_info =
 		f->engine_info + ENGINE_GR_GK20A;
 
-	u32 inst_ptr = sg_phys(ch_gk20a->inst_block.mem.sgt->sgl)
+	u32 inst_ptr = ch_gk20a->inst_block.cpu_pa
 		>> ram_in_base_shift_v();
 
 	nvhost_dbg_info("bind channel %d inst ptr 0x%08x",
@@ -364,34 +357,32 @@ static void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 static int channel_gk20a_alloc_inst(struct gk20a *g,
 				struct channel_gk20a *ch)
 {
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct device *d = dev_from_gk20a(g);
+	int err = 0;
 
 	nvhost_dbg_fn("");
 
-	ch->inst_block.mem.ref =
-		nvhost_memmgr_alloc(memmgr, ram_in_alloc_size_v(),
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    DEFAULT_ALLOC_FLAGS,
-				    0);
-
-	if (IS_ERR(ch->inst_block.mem.ref)) {
-		ch->inst_block.mem.ref = 0;
+	ch->inst_block.size = ram_in_alloc_size_v();
+	ch->inst_block.cpuva = dma_alloc_coherent(d,
+					ch->inst_block.size,
+					&ch->inst_block.iova,
+					GFP_KERNEL);
+	if (!ch->inst_block.cpuva) {
+		nvhost_err(d, "%s: memory allocation failed\n", __func__);
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	ch->inst_block.mem.sgt =
-		nvhost_memmgr_sg_table(memmgr, ch->inst_block.mem.ref);
-
-	/* IS_ERR throws a warning here (expecting void *) */
-	if (IS_ERR(ch->inst_block.mem.sgt)) {
-		ch->inst_block.mem.sgt = NULL;
+	ch->inst_block.cpu_pa = gk20a_get_phys_from_iova(d,
+							ch->inst_block.iova);
+	if (!ch->inst_block.cpu_pa) {
+		nvhost_err(d, "%s: failed to get physical address\n", __func__);
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
 	nvhost_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, (u64)sg_phys(ch->inst_block.mem.sgt->sgl));
-
-	ch->inst_block.mem.size = ram_in_alloc_size_v();
+		ch->hw_chid, ch->inst_block.cpu_pa);
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -399,17 +390,19 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 clean_up:
 	nvhost_dbg(dbg_fn | dbg_err, "fail");
 	channel_gk20a_free_inst(g, ch);
-	return -ENOMEM;
+	return err;
 }
 
 static void channel_gk20a_free_inst(struct gk20a *g,
 				struct channel_gk20a *ch)
 {
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct device *d = dev_from_gk20a(g);
 
-	nvhost_memmgr_free_sg_table(memmgr, ch->inst_block.mem.ref,
-			ch->inst_block.mem.sgt);
-	nvhost_memmgr_put(memmgr, ch->inst_block.mem.ref);
+	if (ch->inst_block.cpuva)
+		dma_free_coherent(d, ch->inst_block.size,
+				ch->inst_block.cpuva, ch->inst_block.iova);
+	ch->inst_block.cpuva = NULL;
+	ch->inst_block.iova = 0;
 	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
 }
 

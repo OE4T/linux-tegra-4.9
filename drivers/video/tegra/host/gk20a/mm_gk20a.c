@@ -145,15 +145,17 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
+	struct device *d = dev_from_gk20a(g);
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 
 	nvhost_dbg_fn("");
 
-	nvhost_memmgr_free_sg_table(memmgr, inst_block->mem.ref,
-			inst_block->mem.sgt);
-	nvhost_memmgr_put(memmgr, inst_block->mem.ref);
+	if (inst_block->cpuva)
+		dma_free_coherent(d, inst_block->size,
+			inst_block->cpuva, inst_block->iova);
+	inst_block->cpuva = NULL;
+	inst_block->iova = 0;
 
 	gk20a_vm_remove_support(vm);
 }
@@ -230,7 +232,7 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = sg_phys(inst_block->mem.sgt->sgl);
+	phys_addr_t inst_pa = inst_block->cpu_pa;
 
 	nvhost_dbg_fn("");
 
@@ -2008,10 +2010,11 @@ const struct nvhost_as_moduleops tegra_gk20a_as_ops = {
 int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
-	struct mem_mgr *nvmap = mem_mgr_from_mm(mm);
 	phys_addr_t inst_pa;
 	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->bar1.vm;
+	struct gk20a *g = gk20a_from_mm(mm);
+	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
 	u64 pde_addr;
 	u32 pde_addr_lo;
@@ -2076,34 +2079,24 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for bar1 */
-	inst_block->mem.size = ram_in_alloc_size_v();
-	inst_block->mem.ref =
-		nvhost_memmgr_alloc(nvmap, inst_block->mem.size,
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    DEFAULT_ALLOC_FLAGS,
-				    0);
-
-	if (IS_ERR(inst_block->mem.ref)) {
-		inst_block->mem.ref = 0;
+	inst_block->size = ram_in_alloc_size_v();
+	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
+				&inst_block->iova, GFP_KERNEL);
+	if (!inst_block->cpuva) {
+		nvhost_err(d, "%s: memory allocation failed\n", __func__);
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
-			inst_block->mem.ref);
-	/* IS_ERR throws a warning here (expecting void *) */
-	if (IS_ERR(inst_block->mem.sgt)) {
-		inst_pa = 0;
-		err = (int)inst_pa;
-		goto clean_up;
-	}
-	inst_pa = sg_phys(inst_block->mem.sgt->sgl);
-
-	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
-	if (IS_ERR(inst_ptr)) {
+	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
+	if (!inst_block->cpu_pa) {
+		nvhost_err(d, "%s: failed to get phys address\n", __func__);
 		err = -ENOMEM;
 		goto clean_up;
 	}
+
+	inst_pa = inst_block->cpu_pa;
+	inst_ptr = inst_block->cpuva;
 
 	nvhost_dbg_info("bar1 inst block physical phys = 0x%llx, kv = 0x%p",
 		(u64)inst_pa, inst_ptr);
@@ -2124,8 +2117,6 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
-
 	nvhost_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
 	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_bar1",
 			      1,/*start*/
@@ -2137,7 +2128,6 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 			      1, /* length */
 			      1); /* align */
 
-
 	vm->mapped_buffers = RB_ROOT;
 
 	mutex_init(&vm->update_gmmu_lock);
@@ -2147,6 +2137,11 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 clean_up:
 	/* free, etc */
+	if (inst_block->cpuva)
+		dma_free_coherent(d, inst_block->size,
+			inst_block->cpuva, inst_block->iova);
+	inst_block->cpuva = NULL;
+	inst_block->iova = 0;
 	return err;
 }
 
@@ -2154,10 +2149,11 @@ clean_up:
 int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 {
 	int err;
-	struct mem_mgr *nvmap = mem_mgr_from_mm(mm);
 	phys_addr_t inst_pa;
 	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct gk20a *g = gk20a_from_mm(mm);
+	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
 	u64 pde_addr;
 	u32 pde_addr_lo;
@@ -2220,36 +2216,26 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 			(u64)pde_addr, pde_addr_lo, pde_addr_hi);
 
 	/* allocate instance mem for pmu */
-	inst_block->mem.size = GK20A_PMU_INST_SIZE;
-	inst_block->mem.ref =
-		nvhost_memmgr_alloc(nvmap, inst_block->mem.size,
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    DEFAULT_ALLOC_FLAGS,
-				    0);
-
-	if (IS_ERR(inst_block->mem.ref)) {
-		inst_block->mem.ref = 0;
+	inst_block->size = GK20A_PMU_INST_SIZE;
+	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
+				&inst_block->iova, GFP_KERNEL);
+	if (!inst_block->cpuva) {
+		nvhost_err(d, "%s: memory allocation failed\n", __func__);
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	inst_block->mem.sgt = nvhost_memmgr_sg_table(nvmap,
-			inst_block->mem.ref);
-	/* IS_ERR throws a warning here (expecting void *) */
-	if (IS_ERR(inst_block->mem.sgt)) {
-		inst_pa = 0;
-		err = (int)((uintptr_t)inst_block->mem.sgt);
+	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
+	if (!inst_block->cpu_pa) {
+		nvhost_err(d, "%s: failed to get phys address\n", __func__);
+		err = -ENOMEM;
 		goto clean_up;
 	}
-	inst_pa = sg_phys(inst_block->mem.sgt->sgl);
+
+	inst_pa = inst_block->cpu_pa;
+	inst_ptr = inst_block->cpuva;
 
 	nvhost_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
-
-	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
-	if (IS_ERR(inst_ptr)) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
 
 	memset(inst_ptr, 0, GK20A_PMU_INST_SIZE);
 
@@ -2266,8 +2252,6 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
-
-	nvhost_memmgr_munmap(inst_block->mem.ref, inst_ptr);
 
 	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_pmu",
 			      (vm->va_start >> 12), /* start */
@@ -2289,6 +2273,11 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 clean_up:
 	/* free, etc */
+	if (inst_block->cpuva)
+		dma_free_coherent(d, inst_block->size,
+			inst_block->cpuva, inst_block->iova);
+	inst_block->cpuva = NULL;
+	inst_block->iova = 0;
 	return err;
 }
 

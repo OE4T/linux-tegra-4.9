@@ -674,7 +674,7 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	gk20a_mm_fb_flush(c->g);
 	gk20a_mm_l2_flush(c->g, true);
 
-	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
+	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -687,8 +687,6 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 	mem_wr32(inst_ptr, ram_in_gr_wfi_ptr_hi_w(),
 		 ram_in_gr_wfi_ptr_hi_f(addr_hi));
-
-	nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
 
 	gk20a_mm_l2_invalidate(c->g);
 
@@ -787,7 +785,7 @@ static int gr_gk20a_ctx_patch_write(struct gk20a *g,
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	u32 inst_base_ptr = u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+	u32 inst_base_ptr = u64_lo32(c->inst_block.cpu_pa
 				     >> ram_in_base_shift_v());
 	u32 ret;
 
@@ -1478,7 +1476,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	int ret;
 
 	u32 inst_base_ptr =
-		u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+		u64_lo32(c->inst_block.cpu_pa
 		>> ram_in_base_shift_v());
 
 
@@ -1663,7 +1661,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
-			u64_lo32(sg_phys(c->inst_block.mem.sgt->sgl)
+			u64_lo32(c->inst_block.cpu_pa
 			>> ram_in_base_shift_v());
 
 		ret = gr_gk20a_submit_fecs_method_op(g,
@@ -4854,7 +4852,6 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
 	u32 i;
-	struct scatterlist *ctx_sg;
 
 	spin_lock(&gr->ch_tlb_lock);
 
@@ -4869,8 +4866,8 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++)
 		if (f->channel[chid].in_use) {
-			ctx_sg = f->channel[chid].inst_block.mem.sgt->sgl;
-			if ((u32)(sg_phys(ctx_sg) >> ram_in_base_shift_v()) ==
+			if ((u32)(f->channel[chid].inst_block.cpu_pa >>
+				ram_in_base_shift_v()) ==
 				gr_fecs_current_ctx_ptr_v(curr_ctx))
 				break;
 	}

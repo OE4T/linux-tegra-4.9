@@ -329,7 +329,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 		pwr_falcon_itfen_ctxen_enable_f());
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 		pwr_pmu_new_instblk_ptr_f(
-			sg_phys(mm->pmu.inst_block.mem.sgt->sgl) >> 12) |
+			mm->pmu.inst_block.cpu_pa >> 12) |
 		pwr_pmu_new_instblk_valid_f(1) |
 		pwr_pmu_new_instblk_target_sys_coh_f());
 
@@ -1306,8 +1306,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 		return -EBUSY;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			sg_phys(mm->pmu.inst_block.mem.sgt->sgl));
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
 	if (err) {
 		nvhost_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");

@@ -75,8 +75,8 @@ static void gk20a_debug_show_channel(struct output *o,
 	u32 status = ccsr_channel_status_v(channel);
 	void *inst_ptr;
 
-	inst_ptr = nvhost_memmgr_mmap(ch->inst_block.mem.ref);
-	if (IS_ERR(inst_ptr))
+	inst_ptr = ch->inst_block.cpuva;
+	if (!inst_ptr)
 		return;
 
 	nvhost_debug_output(o, "%d-%s, pid %d: ", ch->hw_chid,
@@ -106,8 +106,6 @@ static void gk20a_debug_show_channel(struct output *o,
 		mem_rd32(inst_ptr, ram_fc_semaphoreb_w()),
 		mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
 		mem_rd32(inst_ptr, ram_fc_semaphored_w()));
-
-	nvhost_memmgr_munmap(ch->inst_block.mem.ref, inst_ptr);
 
 	nvhost_debug_output(o, "\n");
 }

@@ -113,6 +113,21 @@ ENTRY(__clean_dcache_all)
 ENDPROC(__clean_dcache_all)
 
 /*
+ *	__flush_dcache_louis()
+ *
+ *	Flush D-cache to the level of unification inner shareable
+ *
+ *	Corrupted registers: x0-x7, x9-x11
+ */
+ENTRY(__flush_dcache_louis)
+	dmb	sy				// ensure ordering with previous memory accesses
+	mrs	x0, clidr_el1			// read clidr
+	and	x3, x0, #0xe00000		// extract louis from clidr
+	lsr	x3, x3, #20			// left align louis bit field
+	v8_op_dcache_all cisw
+ENDPROC(__flush_dcache_louis)
+
+/*
  *	__clean_dcache_louis()
  *
  *	Clean D-cache to the level of unification inner shareable
@@ -144,6 +159,18 @@ ENTRY(flush_cache_all)
 	ic	ialluis				// I+BTB cache invalidate
 	ret	x12
 ENDPROC(flush_cache_all)
+
+/*
+ *	flush_cache_louis()
+ *
+ *	Actually a clean should be sufficient for PG entry
+ */
+ENTRY(flush_dcache_louis)
+	mov	x12, lr
+	bl	__flush_dcache_louis
+	mov	x0, #0
+	ret	x12
+ENDPROC(flush_dcache_louis)
 
 /*
  *	flush_icache_range(start,end)

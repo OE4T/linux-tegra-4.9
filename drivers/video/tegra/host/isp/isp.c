@@ -81,7 +81,8 @@ static int isp_probe(struct platform_device *dev)
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
-		sscanf(dev->name, "isp.%1d", &dev_id);
+		if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
+			return -EINVAL;
 		if (dev_id == T12_ISPB_DEV_ID)
 			pdata = &t124_ispb_info;
 #endif

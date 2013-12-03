@@ -612,6 +612,11 @@ static int vic03_probe(struct platform_device *dev)
 	} else
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
+	if (!pdata) {
+		dev_err(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
+
 	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
 
 	pdata->pdev = dev;

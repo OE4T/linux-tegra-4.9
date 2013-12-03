@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -53,6 +53,30 @@
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x001410c8;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_r(void)
+{
+	return 0x00141104;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_ways_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_v(u32 r)
+{
+	return (r >> 16) & 0x3;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_all_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_half_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v(void)
+{
+	return 0x00000002;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {

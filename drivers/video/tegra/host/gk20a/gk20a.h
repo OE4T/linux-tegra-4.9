@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@ struct sim_gk20a;
 
 #include <linux/tegra-soc.h>
 #include <linux/spinlock.h>
+#include <linux/nvhost_gpu_ioctl.h>
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
@@ -112,6 +113,8 @@ struct gk20a {
 	u32 pg_gating_cnt;
 
 	spinlock_t mc_enable_lock;
+
+	struct nvhost_gpu_characteristics gpu_characteristics;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -279,5 +282,16 @@ void gk20a_idle(struct platform_device *pdev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);
 void gk20a_reset(struct gk20a *g, u32 units);
+
+#define NVHOST_GPU_ARCHITECTURE_SHIFT 4
+
+/* constructs unique and compact GPUID from nvhost_gpu_characteristics
+ * arch/impl fields */
+#define GK20A_GPUID(arch, impl) ((u32) ((arch) | (impl)))
+
+#define GK20A_GPUID_GK20A \
+	GK20A_GPUID(NVHOST_GPU_ARCH_GK100, NVHOST_GPU_IMPL_GK20A)
+
+int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 #endif /* _NVHOST_GK20A_H_ */

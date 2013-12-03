@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,6 +50,26 @@
 #ifndef _hw_mc_gk20a_h_
 #define _hw_mc_gk20a_h_
 
+static inline u32 mc_boot_0_r(void)
+{
+	return 0x00000000;
+}
+static inline u32 mc_boot_0_architecture_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 mc_boot_0_implementation_v(u32 r)
+{
+	return (r >> 20) & 0xf;
+}
+static inline u32 mc_boot_0_major_revision_v(u32 r)
+{
+	return (r >> 4) & 0xf;
+}
+static inline u32 mc_boot_0_minor_revision_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
 static inline u32 mc_intr_0_r(void)
 {
 	return 0x00000100;

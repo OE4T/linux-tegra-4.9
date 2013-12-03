@@ -63,6 +63,31 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static long
+gk20a_ctrl_ioctl_gpu_characteristics(
+	struct gk20a *g,
+	struct nvhost_gpu_get_characteristics *request)
+{
+	struct nvhost_gpu_characteristics *pgpu = &g->gpu_characteristics;
+	long err = 0;
+
+	if (request->gpu_characteristics_buf_size > 0) {
+		size_t write_size = sizeof(*pgpu);
+
+		if (write_size > request->gpu_characteristics_buf_size)
+			write_size = request->gpu_characteristics_buf_size;
+
+		err = copy_to_user((void __user *)(uintptr_t)
+				   request->gpu_characteristics_buf_addr,
+				   pgpu, write_size);
+	}
+
+	if (err == 0)
+		request->gpu_characteristics_buf_size = sizeof(*pgpu);
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct platform_device *dev = filp->private_data;
@@ -201,6 +226,12 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		if (zbc_tbl)
 			kfree(zbc_tbl);
 		break;
+
+	case NVHOST_GPU_IOCTL_GET_CHARACTERISTICS:
+		err = gk20a_ctrl_ioctl_gpu_characteristics(
+			g, (struct nvhost_gpu_get_characteristics *)buf);
+		break;
+
 	default:
 		nvhost_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

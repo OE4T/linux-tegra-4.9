@@ -676,10 +676,13 @@ int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 		domain->dev_ops.stop = nvhost_module_disable_clk;
 		domain->dev_ops.save_state = nvhost_module_prepare_poweroff;
 		domain->dev_ops.restore_state = nvhost_module_finalize_poweron;
-		domain->dev_ops.suspend = nvhost_module_suspend;
-		domain->dev_ops.resume = nvhost_module_resume;
+		if (client) {
+			domain->dev_ops.suspend = nvhost_module_suspend;
+			domain->dev_ops.resume = nvhost_module_resume;
+		}
 
-		device_set_wakeup_capable(&pdev->dev, 0);
+		/* Set only host1x as wakeup capable */
+		device_set_wakeup_capable(&pdev->dev, !client);
 		ret = pm_genpd_add_device(domain, &pdev->dev);
 		if (pdata->powergate_delay)
 			pm_genpd_set_poweroff_delay(domain,

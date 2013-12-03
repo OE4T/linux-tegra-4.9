@@ -54,6 +54,7 @@ static int t124_num_alloc_channels = 0;
 #define ISP_CLOCKGATE_DELAY 60
 #define ISP_POWERGATE_DELAY 500
 #define TSEC_POWERGATE_DELAY 500
+#define HOST1X_POWERGATE_DELAY 50
 
 #define GK20A_DEV_NAME_SIZE 5
 
@@ -143,6 +144,8 @@ static struct host1x_device_info host1x04_info = {
 struct nvhost_device_data t124_host1x_info = {
 	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+	.can_powergate   = true,
+	.powergate_delay = HOST1X_POWERGATE_DELAY,
 	.private_data	= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,

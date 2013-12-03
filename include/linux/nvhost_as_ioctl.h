@@ -3,7 +3,7 @@
  *
  * Tegra Host Address Space Driver
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,6 +64,7 @@ struct nvhost32_as_alloc_space_args {
 	__u32 page_size; /* in, bytes */
 	__u32 flags;     /* in */
 #define NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET 0x1
+#define NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE 0x2
 	union {
 		__u64 offset; /* inout, byte address valid iff _FIXED_OFFSET */
 		__u64 align;  /* in, alignment multiple (0:={1 or n/a}) */

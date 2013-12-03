@@ -1326,6 +1326,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		va_node = addr_to_reservation(vm, map_offset);
 		list_add_tail(&mapped_buffer->va_buffers_list,
 			      &va_node->va_buffers_list);
+		mapped_buffer->va_node = va_node;
 	}
 
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -1700,6 +1701,71 @@ static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 }
 
 
+static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
+			       u32 num_pages, u32 pgsz_idx)
+{
+	struct mm_gk20a *mm = vm->mm;
+	struct gk20a *g = mm->g;
+	u32 pgsz = gmmu_page_sizes[pgsz_idx];
+	u32 i;
+
+	/* allocate the zero page if the va does not already have one */
+	if (!vm->zero_page_cpuva) {
+		int err = 0;
+		vm->zero_page_cpuva = dma_alloc_coherent(&g->dev->dev,
+							 mm->big_page_size,
+							 &vm->zero_page_iova,
+							 GFP_KERNEL);
+		if (!vm->zero_page_cpuva) {
+			dev_err(&g->dev->dev, "failed to allocate zero page\n");
+			return -ENOMEM;
+		}
+
+		err = gk20a_get_sgtable(&g->dev->dev, &vm->zero_page_sgt,
+					vm->zero_page_cpuva, vm->zero_page_iova,
+					mm->big_page_size);
+		if (err) {
+			dma_free_coherent(&g->dev->dev, mm->big_page_size,
+					  vm->zero_page_cpuva,
+					  vm->zero_page_iova);
+			vm->zero_page_iova = 0;
+			vm->zero_page_cpuva = NULL;
+
+			dev_err(&g->dev->dev, "failed to create sg table for zero page\n");
+			return -ENOMEM;
+		}
+	}
+
+	for (i = 0; i < num_pages; i++) {
+		u64 page_vaddr = __locked_gmmu_map(vm, vaddr,
+			vm->zero_page_sgt, pgsz, pgsz_idx, 0, 0,
+			NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
+			mem_flag_none);
+
+		if (!page_vaddr) {
+			nvhost_err(dev_from_vm(vm), "failed to remap clean buffers!");
+			goto err_unmap;
+		}
+		vaddr += pgsz;
+	}
+
+	gk20a_mm_l2_flush(mm->g, true);
+
+	return 0;
+
+err_unmap:
+
+	WARN_ON(1);
+	/* something went wrong. unmap pages */
+	while (i--) {
+		vaddr -= pgsz;
+		__locked_gmmu_unmap(vm, vaddr, pgsz, pgsz_idx, 0,
+				    mem_flag_none);
+	}
+
+	return -EINVAL;
+}
+
 /* return mem_mgr and mem_handle to caller. If the mem_handle is a kernel dup
    from user space (as_ioctl), caller releases the kernel duplicated handle */
 /* NOTE! mapped_buffers lock must be held */
@@ -1707,12 +1773,23 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
 
-	__locked_gmmu_unmap(vm,
-			mapped_buffer->addr,
-			mapped_buffer->size,
-			mapped_buffer->pgsz_idx,
-			mapped_buffer->va_allocated,
-			mem_flag_none);
+	if (mapped_buffer->va_node &&
+	    mapped_buffer->va_node->sparse) {
+		u64 vaddr = mapped_buffer->addr;
+		u32 pgsz_idx = mapped_buffer->pgsz_idx;
+		u32 num_pages = mapped_buffer->size >>
+			gmmu_page_shifts[pgsz_idx];
+
+		/* there is little we can do if this fails... */
+		gk20a_vm_put_empty(vm, vaddr, num_pages, pgsz_idx);
+
+	} else
+		__locked_gmmu_unmap(vm,
+				mapped_buffer->addr,
+				mapped_buffer->size,
+				mapped_buffer->pgsz_idx,
+				mapped_buffer->va_allocated,
+				mem_flag_none);
 
 	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
 		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],
@@ -1762,6 +1839,7 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 
 static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
+	struct gk20a *g = vm->mm->g;
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
@@ -1799,6 +1877,11 @@ static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 
 	mutex_unlock(&vm->update_gmmu_lock);
+
+	/* release zero page if used */
+	if (vm->zero_page_cpuva)
+		dma_free_coherent(&g->dev->dev, vm->mm->big_page_size,
+				  vm->zero_page_cpuva, vm->zero_page_iova);
 
 	/* vm is not used anymore. release it. */
 	kfree(vm);
@@ -1977,6 +2060,12 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 		goto clean_up;
 	}
 
+	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE &&
+	    pgsz_idx != gmmu_page_size_big) {
+		err = -ENOSYS;
+		goto clean_up;
+	}
+
 	start_page_nr = 0;
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		start_page_nr = (u32)(args->o_a.offset >>
@@ -1993,11 +2082,28 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 
 	va_node->vaddr_start = vaddr_start;
 	va_node->size = (u64)args->page_size * (u64)args->pages;
+	va_node->pgsz_idx = args->page_size;
 	INIT_LIST_HEAD(&va_node->va_buffers_list);
 	INIT_LIST_HEAD(&va_node->reserved_va_list);
 
 	mutex_lock(&vm->update_gmmu_lock);
+
+	/* mark that we need to use sparse mappings here */
+	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE) {
+		err = gk20a_vm_put_empty(vm, vaddr_start, args->pages,
+					 pgsz_idx);
+		if (err) {
+			mutex_unlock(&vm->update_gmmu_lock);
+			vma->free(vma, start_page_nr, args->pages);
+			kfree(va_node);
+			goto clean_up;
+		}
+
+		va_node->sparse = true;
+	}
+
 	list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
+
 	mutex_unlock(&vm->update_gmmu_lock);
 
 	args->o_a.offset = vaddr_start;
@@ -2054,6 +2160,15 @@ static int gk20a_as_free_space(struct nvhost_as_share *as_share,
 			list_del_init(&buffer->va_buffers_list);
 
 		list_del(&va_node->reserved_va_list);
+
+		/* if this was a sparse mapping, free the va */
+		if (va_node->sparse)
+			__locked_gmmu_unmap(vm,
+				va_node->vaddr_start,
+				va_node->size,
+				va_node->pgsz_idx,
+				false,
+				mem_flag_none);
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);

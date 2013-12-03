@@ -3,7 +3,7 @@
  *
  * GK20A memory management
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,6 +174,7 @@ struct mapped_buffer_node {
 	struct rb_node node;
 	struct list_head unmap_list;
 	struct list_head va_buffers_list;
+	struct vm_reserved_va_node *va_node;
 	u64 addr;
 	u64 size;
 	struct mem_mgr *memmgr;
@@ -192,8 +193,10 @@ struct mapped_buffer_node {
 struct vm_reserved_va_node {
 	struct list_head reserved_va_list;
 	struct list_head va_buffers_list;
+	u32 pgsz_idx;
 	u64 vaddr_start;
 	u64 size;
+	bool sparse;
 };
 
 struct vm_gk20a {
@@ -220,6 +223,10 @@ struct vm_gk20a {
 	struct rb_root mapped_buffers;
 
 	struct list_head reserved_va_list;
+
+	dma_addr_t zero_page_iova;
+	void *zero_page_cpuva;
+	struct sg_table *zero_page_sgt;
 };
 
 struct gk20a;

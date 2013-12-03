@@ -87,3 +87,5 @@ obj-$(CONFIG_TEGRA_HSP)			+= tegra-hsp.o
 obj-$(CONFIG_TEGRA_HSP)			+= tegra186-hsp.o
 
 obj-y					+= tegra_fd.o
+
+obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o

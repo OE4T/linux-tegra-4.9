@@ -3,7 +3,7 @@
  *
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,11 +54,17 @@
 
 #define TSEC_OS_START_OFFSET    256
 
+#define TSEC_CARVEOUT_ADDR_OFFSET	0
+#define TSEC_CARVEOUT_SIZE_OFFSET	8
+
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
 
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
+
+phys_addr_t tsec_carveout_addr;
+phys_addr_t tsec_carveout_size;
 
 /* caller is responsible for freeing */
 static char *tsec_get_fw_name(struct platform_device *dev)
@@ -280,6 +286,8 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	int w;
 	u32 reserved_offset;
 	u32 tsec_key_offset;
+	u32 tsec_carveout_addr_off;
+	u32 tsec_carveout_size_off;
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size / sizeof(u32); w++)
@@ -343,6 +351,15 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	/* Copy key to be the 16 bytes before the firmware */
 	tsec_key_offset = reserved_offset + TSEC_KEY_OFFSET;
 	memcpy(((void *)ucode_ptr) + tsec_key_offset, otf_key, TSEC_KEY_LENGTH);
+
+	/* Copy tsec carveout address and size before the firmware */
+	tsec_carveout_addr_off = reserved_offset + TSEC_CARVEOUT_ADDR_OFFSET;
+	tsec_carveout_size_off = reserved_offset + TSEC_CARVEOUT_SIZE_OFFSET;
+
+	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_addr_off)) =
+							tsec_carveout_addr;
+	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_size_off)) =
+							tsec_carveout_size;
 
 	m->os.size = ucode.bin_header->os_bin_size;
 	m->os.reserved_offset = reserved_offset;
@@ -510,7 +527,9 @@ static struct of_device_id tegra_tsec_of_match[] = {
 static int tsec_probe(struct platform_device *dev)
 {
 	int err;
+	struct device_node *node;
 	struct nvhost_device_data *pdata = NULL;
+	DEFINE_DMA_ATTRS(attrs);
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -530,6 +549,17 @@ static int tsec_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+
+	node = of_find_node_by_name(dev->dev.of_node, "carveout");
+	if (node) {
+		err = of_property_read_u32(node, "carveout_addr",
+					(u32 *)&tsec_carveout_addr);
+		err = of_property_read_u32(node, "carveout_size",
+					(u32 *)&tsec_carveout_size);
+	}
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	dma_map_linear_attrs(&dev->dev, tsec_carveout_addr,
+			tsec_carveout_size, DMA_TO_DEVICE, &attrs);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

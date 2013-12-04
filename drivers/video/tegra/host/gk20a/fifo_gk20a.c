@@ -375,7 +375,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	pmc_enable &= ~mc_enable_ce2_enabled_f();
 	gk20a_writel(g, mc_enable_r(), pmc_enable);
 
-	udelay(1);
+	udelay(20);
 
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	pmc_enable |= mc_enable_pfifo_enabled_f();
@@ -825,7 +825,7 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
 				pmc_enable, pmc_enable_reset);
 		gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
-		udelay(1);
+		udelay(20);
 		gk20a_writel(g, mc_enable_r(), pmc_enable);
 		gk20a_readl(g, mc_enable_r());
 	}

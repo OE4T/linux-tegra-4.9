@@ -254,7 +254,7 @@ static void pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 		gk20a_writel(g, mc_enable_r(),
 			pmc_enable & ~mc_enable_pwr_enabled_f());
 
-	udelay(1);
+	udelay(20);
 }
 
 static int pmu_enable(struct pmu_gk20a *pmu, bool enable)

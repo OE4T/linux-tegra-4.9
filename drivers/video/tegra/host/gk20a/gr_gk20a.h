@@ -286,9 +286,9 @@ struct gk20a_ctxsw_ucode_inst {
 
 struct gk20a_ctxsw_ucode_info {
 	u64 *p_va;
-	struct mem_desc inst_blk_desc;
-	struct mem_desc surface_desc;
-	u64 ucode_va;
+	struct inst_desc inst_blk_desc;
+	struct surface_mem_desc surface_desc;
+	u64 ucode_gpuva;
 	struct gk20a_ctxsw_ucode_inst fecs;
 	struct gk20a_ctxsw_ucode_inst gpcs;
 };

@@ -77,6 +77,13 @@ struct inst_desc {
 	size_t size;
 };
 
+struct surface_mem_desc {
+	u64 iova;
+	void *cpuva;
+	struct sg_table *sgt;
+	size_t size;
+};
+
 struct userd_desc {
 	struct sg_table *sgt;
 	u64 iova;

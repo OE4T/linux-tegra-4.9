@@ -31,6 +31,7 @@
 #include <mach/irqs.h>
 #include <mach/dc.h>
 #include <mach/pinmux-t12.h>
+#include <mach/io_dpd.h>
 
 #include "board.h"
 #include "devices.h"
@@ -370,6 +371,16 @@ static struct platform_device loki_nvmap_device = {
 		.platform_data = &loki_nvmap_data,
 	},
 };
+static struct tegra_io_dpd dsic_io = {
+	.name			= "DSIC",
+	.io_dpd_reg_index	= 1,
+	.io_dpd_bit		= 8,
+};
+static struct tegra_io_dpd dsid_io = {
+	.name			= "DSID",
+	.io_dpd_reg_index	= 1,
+	.io_dpd_bit		= 9,
+};
 
 static void loki_panel_select(void)
 {
@@ -389,6 +400,8 @@ static void loki_panel_select(void)
 	case 0x0:
 	default:
 		panel = &dsi_l_720p_5_loki;
+		tegra_io_dpd_enable(&dsic_io);
+		tegra_io_dpd_enable(&dsid_io);
 		break;
 	}
 	if (panel) {

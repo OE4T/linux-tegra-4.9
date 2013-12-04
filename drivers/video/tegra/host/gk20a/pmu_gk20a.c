@@ -2813,17 +2813,20 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 static int elpg_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
-	u32 ingating_time, ungating_time, gating_cnt, total_gating_cnt;
+	u32 ingating_time = 0;
+	u32 ungating_time = 0;
+	u32 gating_cnt;
 	u64 total_ingating, total_ungating, residency, divisor, dividend;
 
-	gk20a_busy(g->dev);
-	gk20a_pmu_get_elpg_residency_gating(g, &ingating_time, &ungating_time,
-					&gating_cnt);
-	gk20a_idle(g->dev);
+	/* Don't unnecessarily power on the device */
+	if (g->power_on) {
+		gk20a_busy(g->dev);
+		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
+			&ungating_time, &gating_cnt);
+		gk20a_idle(g->dev);
+	}
 	total_ingating = g->pg_ingating_time_us + (u64)ingating_time;
 	total_ungating = g->pg_ungating_time_us + (u64)ungating_time;
-	total_gating_cnt = g->pg_gating_cnt + gating_cnt;
-
 	divisor = total_ingating + total_ungating;
 
 	/* We compute the residency on a scale of 1000 */
@@ -2836,10 +2839,8 @@ static int elpg_residency_show(struct seq_file *s, void *data)
 
 	seq_printf(s, "Time in ELPG: %llu us\n"
 			"Time out of ELPG: %llu us\n"
-			"ELPG residency ratio: %llu\n"
-			"ELPG transitions: %u\n",
-			total_ingating, total_ungating, residency,
-			total_gating_cnt);
+			"ELPG residency ratio: %llu\n",
+			total_ingating, total_ungating, residency);
 	return 0;
 
 }
@@ -2856,6 +2857,37 @@ static const struct file_operations elpg_residency_fops = {
 	.release	= single_release,
 };
 
+static int elpg_transitions_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 ingating_time, ungating_time, total_gating_cnt;
+	u32 gating_cnt = 0;
+
+	if (g->power_on) {
+		gk20a_busy(g->dev);
+		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
+			&ungating_time, &gating_cnt);
+		gk20a_idle(g->dev);
+	}
+	total_gating_cnt = g->pg_gating_cnt + gating_cnt;
+
+	seq_printf(s, "%u\n", total_gating_cnt);
+	return 0;
+
+}
+
+static int elpg_transitions_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, elpg_transitions_show, inode->i_private);
+}
+
+static const struct file_operations elpg_transitions_fops = {
+	.open		= elpg_transitions_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 int gk20a_pmu_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
@@ -2865,6 +2897,12 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev)
 	d = debugfs_create_file(
 		"elpg_residency", S_IRUGO|S_IWUSR, pdata->debugfs, g,
 						&elpg_residency_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"elpg_transitions", S_IRUGO, pdata->debugfs, g,
+						&elpg_transitions_fops);
 	if (!d)
 		goto err_out;
 

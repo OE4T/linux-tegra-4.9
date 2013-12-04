@@ -1393,7 +1393,9 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	 * to enable elpg.
 	 */
 	gk20a_pmu_disable_elpg(g);
-	gk20a_pmu_enable_elpg(g);
+
+	if (g->elpg_enabled)
+		gk20a_pmu_enable_elpg(g);
 
 	return 0;
 
@@ -2572,10 +2574,6 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 			    __func__, pmu->elpg_refcnt);
 		WARN_ON(1);
 	}
-
-	/* do not act if ELPG is disabled. just sustain the refcount */
-	if (!g->elpg_enabled)
-		goto exit_unlock;
 
 	/* do NOT enable elpg until golden ctx is created,
 	   which is related with the ctx that ELPG save and restore. */

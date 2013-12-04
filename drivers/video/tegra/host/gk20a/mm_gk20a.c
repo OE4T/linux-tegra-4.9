@@ -2101,7 +2101,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
-		return -ENOMEM;
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
@@ -2247,7 +2247,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 
 	inst_ptr = nvhost_memmgr_mmap(inst_block->mem.ref);
 	if (IS_ERR(inst_ptr)) {
-		return -ENOMEM;
+		err = -ENOMEM;
 		goto clean_up;
 	}
 

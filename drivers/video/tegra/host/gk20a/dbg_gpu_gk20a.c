@@ -490,7 +490,8 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	if (copy_from_user(ops, (void *)(uintptr_t)args->ops, ops_size)) {
 		dev_err(dev, "copy_from_user failed!");
-		return -EFAULT;
+		err = -EFAULT;
+		goto clean_up;
 	}
 
 	/* mutual exclusion for multiple debug sessions */
@@ -502,16 +503,20 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	if (err) {
 		nvhost_err(dev, "dbg regops failed");
-		return err;
+		goto clean_up;
 	}
 
 	nvhost_dbg_fn("Copying result to userspace");
 
 	if (copy_to_user((void *)(uintptr_t)args->ops, ops, ops_size)) {
 		dev_err(dev, "copy_to_user failed!");
-		return -EFAULT;
+		err = -EFAULT;
+		goto clean_up;
 	}
 	return 0;
+ clean_up:
+	kfree(ops);
+	return err;
 }
 
 static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,

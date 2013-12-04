@@ -1556,7 +1556,9 @@ clean_up:
 
 	if (err) {
 		nvhost_dbg_fn("failed");
-		gk20a_fifo_enable_engine_activity(g, eng_info);
+		if (gk20a_fifo_enable_engine_activity(g, eng_info))
+			nvhost_err(dev_from_gk20a(g),
+				"failed to enable gr engine activity\n");
 	} else {
 		nvhost_dbg_fn("done");
 	}
@@ -1596,8 +1598,6 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 
 	if (remain == 0 && pending != 0)
 		return -ETIMEDOUT;
-	else if (remain < 0)
-		return -EINTR;
 
 	return 0;
 }

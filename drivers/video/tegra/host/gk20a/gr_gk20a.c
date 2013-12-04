@@ -664,7 +664,6 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	u32 addr_lo;
 	u32 addr_hi;
-	u32 ret = 0;
 	void *inst_ptr = NULL;
 
 	nvhost_dbg_fn("");
@@ -674,10 +673,8 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	gk20a_mm_l2_flush(c->g, true);
 
 	inst_ptr = nvhost_memmgr_mmap(c->inst_block.mem.ref);
-	if (!inst_ptr) {
-		ret = -ENOMEM;
-		goto clean_up;
-	}
+	if (!inst_ptr)
+		return -ENOMEM;
 
 	addr_lo = u64_lo32(gpu_va) >> 12;
 	addr_hi = u64_hi32(gpu_va);
@@ -694,12 +691,6 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
-
-clean_up:
-	if (inst_ptr)
-		nvhost_memmgr_munmap(c->inst_block.mem.ref, inst_ptr);
-
-	return ret;
 }
 
 /*
@@ -3899,7 +3890,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	zcull_bank_counters = kzalloc(proj_scal_max_gpcs_v() *
 			proj_scal_max_tpc_per_gpc_v() * sizeof(u32), GFP_KERNEL);
 
-	if (!zcull_map_tiles && !zcull_bank_counters) {
+	if (!zcull_map_tiles || !zcull_bank_counters) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to allocate zcull temp buffers");
 		return -ENOMEM;

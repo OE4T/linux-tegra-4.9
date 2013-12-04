@@ -922,6 +922,11 @@ static int gk20a_probe(struct platform_device *dev)
 	} else
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
+	if (!pdata) {
+		dev_err(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
+
 	nvhost_dbg_fn("");
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
@@ -1032,7 +1037,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	cfb_remove_device(&dev->dev);
 #endif
 
-	if (g && g->remove_support)
+	if (g->remove_support)
 		g->remove_support(dev);
 
 	set_gk20a(dev, 0);

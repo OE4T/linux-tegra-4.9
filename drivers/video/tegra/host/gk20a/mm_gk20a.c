@@ -3,7 +3,7 @@
  *
  * GK20A memory management
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1949,7 +1949,7 @@ static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
 		goto clean_up;
 	}
 
-	start_page_nr = ~(u32)0;
+	start_page_nr = 0;
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		start_page_nr = (u32)(args->o_a.offset >>
 				      gmmu_page_shifts[pgsz_idx]);

@@ -626,6 +626,21 @@ void tegra_edid_put_data(struct tegra_dc_edid *data)
 	kref_put(&pvt->refcnt, data_release);
 }
 
+struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)
+{
+	if (!dc->edid)
+		return ERR_PTR(-ENODEV);
+
+	return tegra_edid_get_data(dc->edid);
+}
+EXPORT_SYMBOL(tegra_dc_get_edid);
+
+void tegra_dc_put_edid(struct tegra_dc_edid *edid)
+{
+	tegra_edid_put_data(edid);
+}
+EXPORT_SYMBOL(tegra_dc_put_edid);
+
 static const struct i2c_device_id tegra_edid_id[] = {
         { "tegra_edid", 0 },
         { }

@@ -1298,6 +1298,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = PTR_ERR(dp->dp_edid);
 		goto err_edid_destroy;
 	}
+	tegra_dc_set_edid(dc, dp->dp_edid);
 
 	INIT_WORK(&dp->lt_work, tegra_dc_dp_lt_worker);
 	init_completion(&dp->hpd_plug);

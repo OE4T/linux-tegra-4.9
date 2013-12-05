@@ -981,6 +981,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = PTR_ERR(hdmi->edid);
 		goto err_put_clock;
 	}
+	tegra_dc_set_edid(dc, hdmi->edid);
 
 	adapter = i2c_get_adapter(dc->out->dcc_bus);
 	if (!adapter) {
@@ -2035,26 +2036,6 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.mode_filter = tegra_dc_hdmi_mode_filter,
 	.setup_clk = tegra_dc_hdmi_setup_clk,
 };
-
-struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)
-{
-	struct tegra_dc_hdmi_data *hdmi;
-
-	/* TODO: Support EDID on non-HDMI devices */
-	if (dc->out->type != TEGRA_DC_OUT_HDMI)
-		return ERR_PTR(-ENODEV);
-
-	hdmi = tegra_dc_get_outdata(dc);
-
-	return tegra_edid_get_data(hdmi->edid);
-}
-EXPORT_SYMBOL(tegra_dc_get_edid);
-
-void tegra_dc_put_edid(struct tegra_dc_edid *edid)
-{
-	tegra_edid_put_data(edid);
-}
-EXPORT_SYMBOL(tegra_dc_put_edid);
 
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi)
 {

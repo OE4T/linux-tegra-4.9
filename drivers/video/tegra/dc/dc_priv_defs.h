@@ -230,6 +230,7 @@ struct tegra_dc {
 
 	int				win_blank_saved_flag;
 	struct tegra_dc_win		win_blank_saved;
+	struct tegra_edid		*edid;
 };
 
 #endif

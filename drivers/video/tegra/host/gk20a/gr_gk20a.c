@@ -562,11 +562,13 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	if (check == WAIT_UCODE_TIMEOUT) {
 		nvhost_err(dev_from_gk20a(g),
 			   "timeout waiting on ucode response");
+		gk20a_fecs_dump_falcon_stats(g);
 		return -1;
 	} else if (check == WAIT_UCODE_ERROR) {
 		nvhost_err(dev_from_gk20a(g),
 			   "ucode method failed on mailbox=%d value=0x%08x",
 			   mailbox_id, reg);
+		gk20a_fecs_dump_falcon_stats(g);
 		return -1;
 	}
 

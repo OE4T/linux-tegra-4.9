@@ -1822,8 +1822,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		goto error_enable;
 	}
 
-	tegra_dc_sor_set_lane_parm(dp->sor, &dp->link_cfg);
-
 	tegra_dc_sor_enable_dp(dp->sor);
 
 	msleep(DP_LCDVCC_TO_HPD_DELAY_MS);

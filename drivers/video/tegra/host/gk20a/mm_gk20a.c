@@ -1349,9 +1349,9 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 		err = -ENOMEM;
 		goto fail;
 	}
-	err = dma_common_get_sgtable(d, *sgt,
-				cpuva, iova,
-				size);
+	err = dma_get_sgtable(d, *sgt,
+			cpuva, iova,
+			size);
 	if (err) {
 		dev_err(d, "failed to create sg table\n");
 		goto fail;

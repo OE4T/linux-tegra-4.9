@@ -2088,7 +2088,16 @@ static int tegra_dc_init(struct tegra_dc *dc)
 			DC_CMD_CONT_SYNCPT_VSYNC);
 
 	tegra_dc_writel(dc, 0x00004700, DC_CMD_INT_TYPE);
-	tegra_dc_writel(dc, 0x0001c700, DC_CMD_INT_POLARITY);
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	tegra_dc_writel(dc, WIN_A_OF_INT | WIN_B_OF_INT | WIN_C_OF_INT |
+		WIN_T_UF_INT | WIN_D_UF_INT | HC_UF_INT |
+		WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT,
+		DC_CMD_INT_POLARITY);
+#else
+	tegra_dc_writel(dc, WIN_A_OF_INT | WIN_B_OF_INT | WIN_C_OF_INT |
+		WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT,
+		DC_CMD_INT_POLARITY);
+#endif
 	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
 	tegra_dc_writel(dc, 0x00010101, DC_DISP_MEM_HIGH_PRIORITY_TIMER);
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC

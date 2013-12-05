@@ -152,6 +152,7 @@ struct gk20a {
 	bool blcg_enabled;
 	bool elcg_enabled;
 	bool elpg_enabled;
+	bool aelpg_enabled;
 
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;

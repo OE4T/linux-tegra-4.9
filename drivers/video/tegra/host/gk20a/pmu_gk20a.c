@@ -45,6 +45,11 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
 static void gk20a_init_pmu_setup_hw2_workqueue(struct work_struct *work);
 static void pmu_save_zbc(struct gk20a *g, u32 entries);
+static void ap_callback_init_and_enable_ctrl(
+		struct gk20a *g, struct pmu_msg *msg,
+		void *param, u32 seq_desc, u32 status);
+static int gk20a_pmu_ap_send_command(struct gk20a *g,
+			union pmu_ap_cmd *p_ap_cmd, bool b_block);
 
 static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			u32 src, u8* dst, u32 size, u8 port)
@@ -1250,6 +1255,10 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
+static int gk20a_aelpg_init(struct gk20a *g);
+static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
+
+
 static void gk20a_init_pmu_setup_hw2_workqueue(struct work_struct *work)
 {
 	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
@@ -1436,6 +1445,14 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	if (g->elpg_enabled)
 		gk20a_pmu_enable_elpg(g);
 	mutex_unlock(&pmu->pg_init_mutex);
+
+	udelay(50);
+
+	/* Enable AELPG */
+	if (g->aelpg_enabled) {
+		gk20a_aelpg_init(g);
+		gk20a_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
+	}
 
 	return 0;
 
@@ -2913,6 +2930,150 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 	*gating_cnt = stats.pg_gating_cnt;
 
 	return 0;
+}
+
+/* Send an Adaptive Power (AP) related command to PMU */
+static int gk20a_pmu_ap_send_command(struct gk20a *g,
+			union pmu_ap_cmd *p_ap_cmd, bool b_block)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	/* FIXME: where is the PG structure defined?? */
+	u32 status = 0;
+	struct pmu_cmd cmd;
+	u32 seq;
+	pmu_callback p_callback = NULL;
+
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+
+	/* Copy common members */
+	cmd.hdr.unit_id = PMU_UNIT_PG;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(union pmu_ap_cmd);
+
+	cmd.cmd.pg.ap_cmd.cmn.cmd_type = PMU_PG_CMD_ID_AP;
+	cmd.cmd.pg.ap_cmd.cmn.cmd_id = p_ap_cmd->cmn.cmd_id;
+
+	/* Copy other members of command */
+	switch (p_ap_cmd->cmn.cmd_id) {
+	case PMU_AP_CMD_ID_INIT:
+		cmd.cmd.pg.ap_cmd.init.pg_sampling_period_us =
+			p_ap_cmd->init.pg_sampling_period_us;
+		p_callback = ap_callback_init_and_enable_ctrl;
+		break;
+
+	case PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL:
+		cmd.cmd.pg.ap_cmd.init_and_enable_ctrl.ctrl_id =
+		p_ap_cmd->init_and_enable_ctrl.ctrl_id;
+		memcpy(
+		(void *)&(cmd.cmd.pg.ap_cmd.init_and_enable_ctrl.params),
+			(void *)&(p_ap_cmd->init_and_enable_ctrl.params),
+			sizeof(struct pmu_ap_ctrl_init_params));
+
+		p_callback = ap_callback_init_and_enable_ctrl;
+		break;
+
+	case PMU_AP_CMD_ID_ENABLE_CTRL:
+		cmd.cmd.pg.ap_cmd.enable_ctrl.ctrl_id =
+			p_ap_cmd->enable_ctrl.ctrl_id;
+		break;
+
+	case PMU_AP_CMD_ID_DISABLE_CTRL:
+		cmd.cmd.pg.ap_cmd.disable_ctrl.ctrl_id =
+			p_ap_cmd->disable_ctrl.ctrl_id;
+		break;
+
+	case PMU_AP_CMD_ID_KICK_CTRL:
+		cmd.cmd.pg.ap_cmd.kick_ctrl.ctrl_id =
+			p_ap_cmd->kick_ctrl.ctrl_id;
+		cmd.cmd.pg.ap_cmd.kick_ctrl.skip_count =
+			p_ap_cmd->kick_ctrl.skip_count;
+		break;
+
+	default:
+		nvhost_dbg_pmu("%s: Invalid Adaptive Power command %d\n",
+			__func__, p_ap_cmd->cmn.cmd_id);
+		return 0x2f;
+	}
+
+	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+			p_callback, pmu, &seq, ~0);
+
+	if (!status) {
+		nvhost_dbg_pmu(
+			"%s: Unable to submit Adaptive Power Command %d\n",
+			__func__, p_ap_cmd->cmn.cmd_id);
+		goto err_return;
+	}
+
+	/* TODO: Implement blocking calls (b_block) */
+
+err_return:
+	return status;
+}
+
+static void ap_callback_init_and_enable_ctrl(
+		struct gk20a *g, struct pmu_msg *msg,
+		void *param, u32 seq_desc, u32 status)
+{
+	/* Define p_ap (i.e pointer to pmu_ap structure) */
+	WARN_ON(!msg);
+
+	if (!status) {
+		switch (msg->msg.pg.ap_msg.cmn.msg_id) {
+		case PMU_AP_MSG_ID_INIT_ACK:
+			break;
+
+		default:
+			nvhost_dbg_pmu(
+			"%s: Invalid Adaptive Power Message: %x\n",
+			__func__, msg->msg.pg.ap_msg.cmn.msg_id);
+			break;
+		}
+	}
+}
+
+static int gk20a_aelpg_init(struct gk20a *g)
+{
+	int status = 0;
+
+	/* Remove reliance on app_ctrl field. */
+	union pmu_ap_cmd ap_cmd;
+
+	/* TODO: Check for elpg being ready? */
+	ap_cmd.init.cmd_id = PMU_AP_CMD_ID_INIT;
+	ap_cmd.init.pg_sampling_period_us =
+		APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
+
+	status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+	return status;
+}
+
+static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
+{
+	int status = 0;
+	union pmu_ap_cmd ap_cmd;
+
+	/* TODO: Probably check if ELPG is ready? */
+
+	ap_cmd.init_and_enable_ctrl.cmd_id = PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL;
+	ap_cmd.init_and_enable_ctrl.ctrl_id = ctrl_id;
+	ap_cmd.init_and_enable_ctrl.params.min_idle_filter_us =
+		APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
+	ap_cmd.init_and_enable_ctrl.params.min_target_saving_us =
+		APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
+	ap_cmd.init_and_enable_ctrl.params.power_break_even_us =
+		APCTRL_POWER_BREAKEVEN_DEFAULT_US;
+	ap_cmd.init_and_enable_ctrl.params.cycles_per_sample_max =
+		APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+
+	switch (ctrl_id) {
+	case PMU_AP_CTRL_ID_GRAPHICS:
+		break;
+	default:
+		break;
+	}
+
+	status = gk20a_pmu_ap_send_command(g, &ap_cmd, true);
+	return status;
 }
 
 #if CONFIG_DEBUG_FS

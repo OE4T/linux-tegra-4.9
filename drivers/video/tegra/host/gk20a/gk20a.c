@@ -1213,6 +1213,7 @@ static int gk20a_probe(struct platform_device *dev)
 		gk20a->blcg_enabled = true;
 		gk20a->elcg_enabled = true;
 		gk20a->elpg_enabled = true;
+		gk20a->aelpg_enabled = true;
 	}
 
 	gk20a_create_sysfs(dev);

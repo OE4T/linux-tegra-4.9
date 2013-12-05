@@ -581,6 +581,9 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		return -EFAULT;
 
 	handle = unmarshal_user_handle(op.handle);
+	if (!handle)
+		return -EINVAL;
+
 	h = nvmap_get_handle_id(client, handle);
 	if (!h)
 		return -EINVAL;

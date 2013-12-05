@@ -163,6 +163,42 @@ static const u32 tegra_dp_pc_regs[][4][4] = {
 	},
 };
 
+/* TX_PU upper nibble values */
+static const u32 tegra_dp_tx_pu[][4][4] = {
+	/* postcursor2 L0 */
+	{
+		/* pre-emphasis: L0, L1, L2, L3 */
+		{0x2, 0x3, 0x4, 0x6}, /* voltage swing: L0 */
+		{0x3, 0x4, 0x6}, /* L1 */
+		{0x4, 0x6}, /* L2 */
+		{0x6}, /* L3 */
+	},
+
+	/* postcursor2 L1 */
+	{
+		{0x2, 0x2, 0x3, 0x5},
+		{0x3, 0x4, 0x5},
+		{0x4, 0x5},
+		{0x6},
+	},
+
+	/* postcursor2 L2 */
+	{
+		{0x2, 0x2, 0x3, 0x4},
+		{0x3, 0x3, 0x4},
+		{0x4, 0x5},
+		{0x6},
+	},
+
+	/* postcursor2 L3 */
+	{
+		{0x2, 0x2, 0x2, 0x4},
+		{0x3, 0x3, 0x4},
+		{0x4, 0x4},
+		{0x6},
+	},
+};
+
 static inline int tegra_dp_is_max_vs(u32 pe, u32 vs)
 {
 	return (vs < (driveCurrent_Level3 - pe)) ? 0 : 1;
@@ -208,6 +244,8 @@ struct tegra_dc_dp_data {
 	bool				 suspended;
 
 	struct completion		hpd_plug;
+
+	struct tegra_dp_out		*pdata;
 };
 
 static inline u32 tegra_dp_wait_aux_training(struct tegra_dc_dp_data *dp,

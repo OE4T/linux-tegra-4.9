@@ -1215,6 +1215,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->mode = &dc->mode;
 	dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
 	dp->irq = irq;
+	dp->pdata = dc->pdata->default_out->dp_out;
 
 	if (IS_ERR_OR_NULL(dp->sor)) {
 		err = PTR_ERR(dp->sor);
@@ -1323,6 +1324,35 @@ fail:
 	return false;
 }
 
+static void tegra_dp_set_tx_pu(struct tegra_dc_dp_data *dp, u32 pe[4],
+				u32 vs[4], u32 pc[4])
+{
+	u32 n_lanes = dp->link_cfg.lane_count;
+	int cnt = 1;
+	u32 max_tx_pu = tegra_dp_tx_pu[pc[0]][vs[0]][pe[0]];
+
+	if (dp->pdata && dp->pdata->tx_pu_disable) {
+		tegra_sor_write_field(dp->sor,
+				NV_SOR_DP_PADCTL(dp->sor->portnum),
+				NV_SOR_DP_PADCTL_TX_PU_ENABLE,
+				NV_SOR_DP_PADCTL_TX_PU_DISABLE);
+		return;
+	}
+
+	for (; cnt < n_lanes; cnt++) {
+		max_tx_pu = (max_tx_pu <
+			tegra_dp_tx_pu[pc[cnt]][vs[cnt]][pe[cnt]]) ?
+			tegra_dp_tx_pu[pc[cnt]][vs[cnt]][pe[cnt]] :
+			max_tx_pu;
+	}
+
+	tegra_sor_write_field(dp->sor, NV_SOR_DP_PADCTL(dp->sor->portnum),
+				NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
+				(max_tx_pu <<
+				NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT |
+				NV_SOR_DP_PADCTL_TX_PU_ENABLE));
+}
+
 static int _tegra_dp_clk_recovery(struct tegra_dc_dp_data *dp, u32 pe[4],
 					u32 vs[4], u32 pc[4], bool pc_supported,
 					u32 n_lanes)
@@ -1373,6 +1403,7 @@ retry:
 					mask, (pc_reg << shift));
 		}
 	}
+	tegra_dp_set_tx_pu(dp, pe, vs, pc);
 	usleep_range(15, 20);
 
 	for (cnt = 0; cnt < n_lanes; cnt++) {
@@ -1616,6 +1647,7 @@ retry:
 					mask, (pc_reg << shift));
 		}
 	}
+	tegra_dp_set_tx_pu(dp, pe, vs, pc);
 	usleep_range(15, 20);
 
 	for (cnt = 0; cnt < n_lanes; cnt++) {

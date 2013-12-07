@@ -313,8 +313,6 @@ struct tegra30_apbif {
 	struct clk *clk;
 	/* regmap for APBIF */
 	struct regmap *regmap[2];
-	/* regmap for APBIF2 */
-	struct regmap *regmap1;
 	struct tegra_alt_pcm_dma_params *capture_dma_data;
 	struct tegra_alt_pcm_dma_params *playback_dma_data;
 	const struct tegra30_apbif_soc_data *soc_data;

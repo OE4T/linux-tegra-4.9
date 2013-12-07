@@ -619,6 +619,13 @@ void nvhost_module_deinit(struct platform_device *dev)
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	if (!pm_runtime_enabled(&dev->dev))
+		nvhost_module_disable_clk(&dev->dev);
+	else {
+		pm_runtime_put(&dev->dev);
+		pm_runtime_disable(&dev->dev);
+	}
+
 	nvhost_module_suspend(&dev->dev);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_put(pdata->clk[i]);
@@ -631,7 +638,6 @@ void nvhost_module_deinit(struct platform_device *dev)
 
 		kobject_put(pdata->power_kobj);
 	}
-
 }
 
 #ifdef CONFIG_PM

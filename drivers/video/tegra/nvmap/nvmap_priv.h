@@ -388,6 +388,7 @@ int nvmap_set_pages_array_uc(struct page **pages, int addrinarray);
 int nvmap_set_pages_array_wc(struct page **pages, int addrinarray);
 int nvmap_set_pages_array_iwb(struct page **pages, int addrinarray);
 int nvmap_set_pages_array_wb(struct page **pages, int addrinarray);
+void nvmap_flush_cache(struct page **pages, int numpages);
 
 /* Internal API to support dmabuf */
 struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,

@@ -463,6 +463,7 @@ struct of_dev_auxdata tegra30_apbif_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301200, "tegra30-i2s.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301300, "tegra30-i2s.3", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301400, "tegra30-i2s.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-spdif", 0x70306000, "tegra30-spdif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303000, "tegra124-amx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303100, "tegra124-amx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-adx", 0x70303800, "tegra124-adx.0", NULL),
@@ -679,7 +680,7 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 	ret = snd_soc_register_component(&pdev->dev,
 					&tegra30_apbif_dai_driver,
 					tegra30_apbif_dais,
-					ARRAY_SIZE(tegra30_apbif_dais));
+					apbif->soc_data->num_ch);
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
 			i, ret);

@@ -39,9 +39,39 @@ static DEFINE_MUTEX(la_lock);
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 
-int nvhost_vi_init(struct platform_device *dev) {return 0; }
+int nvhost_vi_init(struct platform_device *dev)
+{
+	int ret = 0;
+	struct vi *tegra_vi = nvhost_get_private_data(dev);
 
-void nvhost_vi_deinit(struct platform_device *dev) {}
+	tegra_vi->reg = regulator_get(&dev->dev, "avdd_dsi_csi");
+	if (IS_ERR(tegra_vi->reg)) {
+		if (tegra_vi->reg == ERR_PTR(-ENODEV)) {
+			ret = -ENODEV;
+			dev_info(&dev->dev,
+					"%s: no regulator device\n",
+					__func__);
+		} else {
+			dev_err(&dev->dev,
+					"%s: couldn't get regulator\n",
+					__func__);
+		}
+		tegra_vi->reg = NULL;
+		return ret;
+	}
+
+	return 0;
+}
+
+void nvhost_vi_deinit(struct platform_device *dev)
+{
+	struct vi *tegra_vi = nvhost_get_private_data(dev);
+
+	if (tegra_vi->reg) {
+		regulator_put(tegra_vi->reg);
+		tegra_vi->reg = NULL;
+	}
+}
 
 int nvhost_vi_finalize_poweron(struct platform_device *dev)
 {
@@ -49,28 +79,12 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	struct vi *tegra_vi;
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 
-	tegra_vi->reg = regulator_get(&dev->dev, "avdd_dsi_csi");
-	if (IS_ERR(tegra_vi->reg)) {
-		if (tegra_vi->reg == ERR_PTR(-ENODEV)) {
-			ret = -ENODEV;
-			dev_info(&dev->dev,
-				"%s: no regulator device\n",
-				__func__);
-		} else {
-			dev_err(&dev->dev,
-				"%s: couldn't get regulator\n",
-				__func__);
-		}
-		tegra_vi->reg = NULL;
-		goto fail;
-	}
-
 	if (tegra_vi->reg) {
 		ret = regulator_enable(tegra_vi->reg);
 		if (ret) {
 			dev_err(&dev->dev,
-				"%s: enable csi regulator failed.\n",
-				__func__);
+					"%s: enable csi regulator failed.\n",
+					__func__);
 			goto fail;
 		}
 	}
@@ -95,8 +109,6 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 				__func__);
 			goto fail;
 		}
-		regulator_put(tegra_vi->reg);
-		tegra_vi->reg = NULL;
 	}
  fail:
 	return ret;

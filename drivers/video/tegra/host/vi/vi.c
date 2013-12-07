@@ -152,6 +152,7 @@ static int __exit vi_remove(struct platform_device *dev)
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 
 	nvhost_client_device_release(dev);
+	pdata->aperture[0] = NULL;
 
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
@@ -159,12 +160,10 @@ static int __exit vi_remove(struct platform_device *dev)
 		return err;
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_put(&dev->dev);
-	pm_runtime_disable(&dev->dev);
-#else
-	nvhost_module_disable_clk(&dev->dev);
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+	tegra_pd_remove_device(&dev->dev);
 #endif
+
 	/* Remove I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);

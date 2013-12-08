@@ -3027,16 +3027,22 @@ int tegra_dsi_start_host_cmd_v_blank_video(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
 				"dsi: not able to set to hs mode\n");
-			return err;
+			goto fail;
 		}
 		tegra_dsi_start_dc_stream(dc, dsi);
 		tegra_dsi_wait_frame_end(dc, dsi, 2);
-		tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
+		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"dsi: not able to set to lp mode\n");
+			goto fail;
+		}
 	}
+ fail:
 	tegra_dc_dsi_release_host(dc);
 	tegra_dc_io_end(dc);
 
-	return 0;
+	return err;
 }
 EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_video);
 

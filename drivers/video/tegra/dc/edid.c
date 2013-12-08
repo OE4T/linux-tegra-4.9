@@ -208,11 +208,16 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	int i;
 	bool basic_audio = false;
 
+	if (!edid) {
+		pr_err("%s: invalid argument\n", __func__);
+		return -EINVAL;
+	}
+
 	edid->support_audio = 0;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
-	if (edid && ptr) {
+	if (ptr) {
 		if (*ptr <= 3)
 			edid->eld.eld_ver = 0x02;
 		edid->eld.cea_edid_ver = ptr[1];

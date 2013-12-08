@@ -242,9 +242,10 @@ static ssize_t read_panel_set(struct file *file, const char  *buf,
 	struct tegra_dc_dsi_data *dsi = s->private;
 	struct tegra_dc *dc = dsi->dc;
 
-	sscanf(buf, "%x %x", &max_ret_payload_size, &panel_reg_addr);
-		dev_info(&dc->ndev->dev, "max ret payload size:0x%x\npanel reg addr:0x%x\n",
-				max_ret_payload_size, panel_reg_addr);
+	if (sscanf(buf, "%x %x", &max_ret_payload_size, &panel_reg_addr) != 2)
+		return -EINVAL;
+	dev_info(&dc->ndev->dev, "max ret payload size:0x%x\npanel reg addr:0x%x\n",
+			max_ret_payload_size, panel_reg_addr);
 
 		return count;
 }
@@ -332,7 +333,9 @@ static ssize_t host_cmd_v_blank_dcs_get_cmd(struct file *file,
 		return count;
 	}
 
-	sscanf(buf, "%x %x %x", &data_id, &command_value, &command_value1);
+	if (sscanf(buf, "%x %x %x", &data_id, &command_value, &command_value1)
+			!= 3)
+		return -EINVAL;
 	dev_info(&dc->ndev->dev, "data id taken :0x%x\n", data_id);
 	dev_info(&dc->ndev->dev, "command value taken :0x%x\n", command_value);
 	dev_info(&dc->ndev->dev, "second command value taken :0x%x\n",
@@ -403,8 +406,9 @@ static ssize_t write_data_get_cmd(struct file *file,
 	struct tegra_dc_dsi_data *dsi = s->private;
 	struct tegra_dc *dc = dsi->dc;
 
-	sscanf(buf, "%x %x %x", &data_id,
-					&command_value, &command_value1);
+	if (sscanf(buf, "%x %x %x", &data_id,
+				&command_value, &command_value1) != 3)
+		return -EINVAL;
 	dev_info(&dc->ndev->dev, "data_id taken :0x%x\n", data_id);
 	dev_info(&dc->ndev->dev, "command value taken :0x%x\n", command_value);
 	dev_info(&dc->ndev->dev, "second command value taken :0x%x\n",

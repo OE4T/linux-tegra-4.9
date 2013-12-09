@@ -994,7 +994,8 @@ static int nvhost_pod_init(struct devfreq *df)
 		goto err_get_current_status;
 	}
 	ext_stat = dev_stat.private_data;
-	df->previous_freq = dev_stat.current_frequency;
+
+	/* store the limits */
 	df->min_freq = ext_stat->min_freq;
 	df->max_freq = ext_stat->max_freq;
 

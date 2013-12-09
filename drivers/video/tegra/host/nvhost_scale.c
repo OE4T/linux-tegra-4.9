@@ -297,6 +297,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 		struct devfreq *devfreq;
 		int err;
 
+		profile->devfreq_profile.initial_freq =
+			profile->ext_stat.min_freq;
 		profile->devfreq_profile.target = nvhost_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			nvhost_scale_get_dev_status;

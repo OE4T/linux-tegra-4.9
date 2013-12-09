@@ -283,6 +283,8 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 		struct devfreq *devfreq;
 		int err;
 
+		profile->devfreq_profile.initial_freq =
+			profile->ext_stat.min_freq;
 		profile->devfreq_profile.target = gk20a_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;

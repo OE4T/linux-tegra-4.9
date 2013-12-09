@@ -189,13 +189,17 @@ static inline bool win_use_v_filter(struct tegra_dc *dc,
 	const struct tegra_dc_win *win)
 {
 	return tegra_dc_feature_has_filter(dc, win->idx, HAS_V_FILTER) &&
-		win->h.full != dfixed_const(win->out_h);
+		(win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN ?
+			win->w.full != dfixed_const(win->out_h)
+			: win->h.full != dfixed_const(win->out_h));
 }
 
 static inline bool win_use_h_filter(struct tegra_dc *dc,
 	const struct tegra_dc_win *win)
 {
 	return tegra_dc_feature_has_filter(dc, win->idx, HAS_H_FILTER) &&
-		win->w.full != dfixed_const(win->out_w);
+		(win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN ?
+			win->h.full != dfixed_const(win->out_w)
+			: win->w.full != dfixed_const(win->out_w));
 }
 #endif

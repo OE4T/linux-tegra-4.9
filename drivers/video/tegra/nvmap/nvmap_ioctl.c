@@ -99,20 +99,14 @@ ulong unmarshal_user_id(u32 id)
  */
 __u32 marshal_id(ulong id)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	return (__u32)id;
-#else
-	return marshal_kernel_handle(id);
-#endif
+	return (__u32)(id >> 2);
 }
 
 ulong unmarshal_id(__u32 id)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	return (ulong)id;
-#else
-	return unmarshal_user_id(id);
-#endif
+	ulong h = ((id << 2) | PAGE_OFFSET);
+
+	return h;
 }
 
 ulong *unmarshal_user_pointer(__u32 ptr)

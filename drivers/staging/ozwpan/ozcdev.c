@@ -8,6 +8,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/netdevice.h>
+#include <linux/etherdevice.h>
 #include <linux/poll.h>
 #include <linux/sched.h>
 #include "ozprotocol.h"
@@ -16,6 +17,7 @@
 #include "ozeltbuf.h"
 #include "ozpd.h"
 #include "ozproto.h"
+#include "ozcdev.h"
 #include "ozkobject.h"
 /*------------------------------------------------------------------------------
  */
@@ -122,7 +124,7 @@ ssize_t oz_cdev_read(struct file *filp, char __user *buf, size_t count,
 	int ix;
 	int is_tftp;
 	struct oz_pd *pd;
-	struct oz_serial_ctx *ctx = 0;
+	struct oz_serial_ctx *ctx;
 
 	spin_lock_bh(&g_cdev.lock);
 	pd = g_cdev.active_pd;
@@ -130,10 +132,10 @@ ssize_t oz_cdev_read(struct file *filp, char __user *buf, size_t count,
 		oz_pd_get(pd);
 	is_tftp = (g_cdev.mode & OZ_MODE_TFTP) ? 1 : 0;
 	spin_unlock_bh(&g_cdev.lock);
-	if (pd == 0)
+	if (pd == NULL)
 		return -1;
 	ctx = oz_cdev_claim_ctx(pd);
-	if (ctx == 0)
+	if (ctx == NULL)
 		goto out2;
 
 	spin_lock_bh(&ctx->rd_lock);
@@ -229,7 +231,7 @@ ssize_t oz_cdev_write(struct file *filp, const char __user *buf, size_t count,
 {
 	struct oz_pd *pd;
 	struct oz_elt_buf *eb;
-	struct oz_elt_info *ei = 0;
+	struct oz_elt_info *ei;
 	struct oz_elt *elt;
 	struct oz_ext_elt *ext_elt;
 	struct oz_app_hdr *app_hdr;
@@ -243,13 +245,13 @@ ssize_t oz_cdev_write(struct file *filp, const char __user *buf, size_t count,
 	if (pd)
 		oz_pd_get(pd);
 	spin_unlock_bh(&g_cdev.lock);
-	if (pd == 0)
+	if (pd == NULL)
 		return -1;
 	if (!(pd->state & OZ_PD_S_CONNECTED))
 		return -ENXIO;
 	eb = &pd->elt_buff;
 	ei = oz_elt_info_alloc(eb);
-	if (ei == 0) {
+	if (ei == NULL) {
 		count = 0;
 		goto out;
 	}
@@ -287,7 +289,7 @@ ssize_t oz_cdev_write(struct file *filp, const char __user *buf, size_t count,
 		ei->context = ctx->tx_seq_num;
 		spin_lock(&eb->lock);
 		if (oz_queue_elt_info(eb, 0, 0, ei) == 0)
-			ei = 0;
+			ei = NULL;
 		spin_unlock(&eb->lock);
 	}
 	spin_unlock_bh(&pd->app_lock[OZ_APPID_SERIAL-1]);
@@ -304,7 +306,7 @@ out:
 /*------------------------------------------------------------------------------
  * Context: process
  */
-int oz_set_active_pd(u8 *addr)
+int oz_set_active_pd(const u8 *addr)
 {
 	int rc = 0;
 	struct oz_pd *pd;
@@ -337,10 +339,10 @@ int oz_set_active_pd(u8 *addr)
 		if (old_pd)
 			oz_pd_put(old_pd);
 	} else {
-		if (!memcmp(addr, "\0\0\0\0\0\0", ETH_ALEN)) {
+		if (is_zero_ether_addr(addr)) {
 			spin_lock_bh(&g_cdev.lock);
 			pd = g_cdev.active_pd;
-			g_cdev.active_pd = 0;
+			g_cdev.active_pd = NULL;
 			memset(g_cdev.active_addr, 0,
 				sizeof(g_cdev.active_addr));
 			spin_unlock_bh(&g_cdev.lock);
@@ -419,6 +421,7 @@ long oz_cdev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case OZ_IOCTL_GET_PD_LIST: {
 			struct oz_pd_list list;
+			memset(&list, 0, sizeof(list));
 			list.count = oz_get_pd_list(list.addr, OZ_MAX_PDS);
 			if (copy_to_user((void __user *)arg, &list,
 				sizeof(list)))
@@ -521,12 +524,14 @@ int oz_cdev_register(void)
 	g_oz_class = class_create(THIS_MODULE, "ozmo_wpan");
 	if (IS_ERR(g_oz_class)) {
 		oz_trace("Failed to register ozmo_wpan class\n");
+		err = PTR_ERR(g_oz_class);
 		goto out1;
 	}
 	g_oz_wpan_dev = device_create(g_oz_class, NULL, g_cdev.devnum, NULL,
 								"ozwpan");
 	if (IS_ERR(g_oz_wpan_dev)) {
 		oz_trace("Failed to create sysfs entry for cdev\n");
+		err = PTR_ERR(g_oz_wpan_dev);
 		goto out1;
 	}
 	oz_create_sys_entry();
@@ -573,13 +578,13 @@ void oz_cdev_term(void)
 int oz_cdev_start(struct oz_pd *pd, int resume)
 {
 	struct oz_serial_ctx *ctx;
-	struct oz_serial_ctx *old_ctx = 0;
+	struct oz_serial_ctx *old_ctx;
 	if (resume) {
 		oz_trace("Serial service resumed.\n");
 		return 0;
 	}
 	ctx = kzalloc(sizeof(struct oz_serial_ctx), GFP_ATOMIC);
-	if (ctx == 0)
+	if (ctx == NULL)
 		return -ENOMEM;
 	atomic_set(&ctx->ref_count, 1);
 	ctx->tx_seq_num = 1;
@@ -594,7 +599,7 @@ int oz_cdev_start(struct oz_pd *pd, int resume)
 		spin_unlock_bh(&pd->app_lock[OZ_APPID_SERIAL-1]);
 	}
 	spin_lock(&g_cdev.lock);
-	if ((g_cdev.active_pd == 0) &&
+	if ((g_cdev.active_pd == NULL) &&
 		(memcmp(pd->mac_addr, g_cdev.active_addr, ETH_ALEN) == 0)) {
 		oz_pd_get(pd);
 		g_cdev.active_pd = pd;
@@ -615,15 +620,15 @@ void oz_cdev_stop(struct oz_pd *pd, int pause)
 	}
 	spin_lock_bh(&pd->app_lock[OZ_APPID_SERIAL-1]);
 	ctx = (struct oz_serial_ctx *)pd->app_ctx[OZ_APPID_SERIAL-1];
-	pd->app_ctx[OZ_APPID_SERIAL-1] = 0;
+	pd->app_ctx[OZ_APPID_SERIAL-1] = NULL;
 	spin_unlock_bh(&pd->app_lock[OZ_APPID_SERIAL-1]);
 	if (ctx)
 		oz_cdev_release_ctx(ctx);
 	spin_lock(&g_cdev.lock);
 	if (pd == g_cdev.active_pd)
-		g_cdev.active_pd = 0;
+		g_cdev.active_pd = NULL;
 	else
-		pd = 0;
+		pd = NULL;
 	spin_unlock(&g_cdev.lock);
 	if (pd) {
 		oz_pd_put(pd);
@@ -649,7 +654,7 @@ void oz_cdev_rx(struct oz_pd *pd, struct oz_elt *elt)
 	spin_unlock_bh(&g_cdev.lock);
 
 	ctx = oz_cdev_claim_ctx(pd);
-	if (ctx == 0) {
+	if (ctx == NULL) {
 		oz_trace("Cannot claim serial context.\n");
 		return;
 	}

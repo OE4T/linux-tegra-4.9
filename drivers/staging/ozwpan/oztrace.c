@@ -12,7 +12,8 @@
 
 u32 g_debug =
 #ifdef WANT_TRACE_DATA_FLOW
-	TRC_M|TRC_R|TRC_T|TRC_S|TRC_E|TRC_C;
+	TRC_FLG(M)|TRC_FLG(R)|TRC_FLG(T)|
+	TRC_FLG(S)|TRC_FLG(E)|TRC_FLG(C);
 #else
 	0;
 #endif
@@ -136,14 +137,14 @@ void trace_dbg_msg(int c, char *fmt, ...)
 	va_end(arg);
 }
 
-void trace_debug_log(char *log_type, ...)
+void trace_debug_log(char log_type, ...)
 {
 	va_list arg;
 	char *fmt;
 
 	va_start(arg, log_type);
 	fmt = va_arg(arg, char *);
-	switch (*log_type) {
+	switch (log_type) {
 	case 'H':
 		trace_hcd_msg_evt(fmt, arg);
 		break;

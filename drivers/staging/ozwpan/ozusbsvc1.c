@@ -172,7 +172,7 @@ static int oz_usb_set_clear_feature_req(void *hpd, u8 req_id, u8 type,
  * Context: tasklet
  */
 static int oz_usb_vendor_class_req(void *hpd, u8 req_id, u8 req_type,
-	u8 request, __le16 value, __le16 index, u8 *data, int data_len)
+	u8 request, __le16 value, __le16 index, const u8 *data, int data_len)
 {
 	struct oz_usb_ctx *usb_ctx = (struct oz_usb_ctx *)hpd;
 	struct oz_pd *pd = usb_ctx->pd;
@@ -201,7 +201,7 @@ static int oz_usb_vendor_class_req(void *hpd, u8 req_id, u8 req_type,
  * Context: tasklet
  */
 int oz_usb_control_req(void *hpd, u8 req_id, struct usb_ctrlrequest *setup,
-			u8 *data, int data_len)
+			const u8 *data, int data_len)
 {
 	unsigned wvalue = le16_to_cpu(setup->wValue);
 	unsigned windex = le16_to_cpu(setup->wIndex);
@@ -259,10 +259,14 @@ int oz_usb_send_isoc(void *hpd, u8 ep_num, struct urb *urb)
 	struct usb_iso_packet_descriptor *desc;
 
 	if (pd->mode & OZ_F_ISOC_NO_ELTS) {
+		urb->actual_length = 0;
 		for (i = 0; i < urb->number_of_packets; i++) {
 			u8 *data;
 			desc = &urb->iso_frame_desc[i];
 			data = ((u8 *)urb->transfer_buffer)+desc->offset;
+			desc->status = 0;
+			desc->actual_length = desc->length;
+			urb->actual_length += desc->length;
 			oz_send_isoc_unit(pd, ep_num, data, desc->length);
 		}
 		return 0;
@@ -383,7 +387,9 @@ void oz_usb_rx(struct oz_pd *pd, struct oz_elt *elt)
 	if (usb_hdr->elt_seq_num != 0) {
 		if (((usb_ctx->rx_seq_num - usb_hdr->elt_seq_num) & 0x80) == 0)
 			/* Reject duplicate element. */
-			goto done;
+			oz_trace_msg(M, "USB seq overlap %02X %02X\n",
+					usb_ctx->rx_seq_num,
+					usb_hdr->elt_seq_num);
 	}
 	usb_ctx->rx_seq_num = usb_hdr->elt_seq_num;
 	switch (usb_hdr->type) {

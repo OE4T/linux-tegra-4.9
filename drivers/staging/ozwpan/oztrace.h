@@ -19,48 +19,50 @@ void oz_trace_f_urb_in(struct urb *urb);
 void oz_trace_f_skb(struct sk_buff *skb, char dir);
 void oz_trace_f_dbg(void);
 void trace_dbg_msg(int c, char *fmt, ...);
-void trace_debug_log(char *log_type, ...);
+void trace_debug_log(char log_type, ...);
 
 extern u32 g_debug;
 
-#define TRC_A 0x00000001
-#define TRC_B 0x00000002
-#define TRC_C 0x00000004	/* urb Completion */
-#define TRC_D 0x00000008	/* Debug */
-#define TRC_E 0x00000010	/* urb Error */
-#define TRC_F 0x00000020
-#define TRC_G 0x00000040
-#define TRC_H 0x00000080	/* Hcd message */
-#define TRC_I 0x00000100	/* Isoc buffer depth */
-#define TRC_J 0x00000200
-#define TRC_K 0x00000400
-#define TRC_L 0x00000800
-#define TRC_M 0x00001000	/* Message */
-#define TRC_N 0x00002000
-#define TRC_O 0x00004000
-#define TRC_P 0x00008000
-#define TRC_Q 0x00010000
-#define TRC_R 0x00020000	/* Rx Ozmo frame */
-#define TRC_S 0x00040000	/* urb Submission */
-#define TRC_T 0x00080000	/* Tx ozmo frame */
-#define TRC_U 0x00100000
-#define TRC_V 0x00200000
-#define TRC_W 0x00400000
-#define TRC_X 0x00800000
-#define TRC_Y 0x01000000
-#define TRC_Z 0x02000000
+#define TRC_A 'A'
+#define TRC_B 'B'
+#define TRC_C 'C'	/* urb Completion */
+#define TRC_D 'D'	/* Debug */
+#define TRC_E 'E'	/* urb Error */
+#define TRC_F 'F'
+#define TRC_G 'G'
+#define TRC_H 'H'	/* Hcd message */
+#define TRC_I 'I'	/* Isoc buffer depth */
+#define TRC_J 'J'
+#define TRC_K 'K'
+#define TRC_L 'L'
+#define TRC_M 'M'	/* Message */
+#define TRC_N 'N'
+#define TRC_O 'O'
+#define TRC_P 'P'
+#define TRC_Q 'Q'
+#define TRC_R 'R'	/* Rx Ozmo frame */
+#define TRC_S 'S'	/* urb Submission */
+#define TRC_T 'T'	/* Tx ozmo frame */
+#define TRC_U 'U'
+#define TRC_V 'V'
+#define TRC_W 'W'
+#define TRC_X 'X'
+#define TRC_Y 'Y'
+#define TRC_Z 'Z'
 
+#define TRC_FLG(f) (1<<((TRC_##f)-'A'))
 
 #define oz_trace_urb_out(u, s) \
 	do { if (!g_debug) \
 		trace_urb_out(u, s); \
-	else if ((g_debug & TRC_C) || ((g_debug & TRC_E) && (u->status != 0))) \
+	else if ((g_debug & TRC_FLG(C)) ||\
+			((g_debug & TRC_FLG(E)) && (s != 0))) \
 		oz_trace_f_urb_out(u, s); } while (0)
 
 #define oz_trace_urb_in(u) \
 	do { if (!g_debug) \
 		trace_urb_in(u); \
-	else if (g_debug & TRC_S) \
+	else if (g_debug & TRC_FLG(S)) \
 		oz_trace_f_urb_in(u); } while (0)
 
 #define oz_trace_skb(u, d) \
@@ -68,14 +70,14 @@ extern u32 g_debug;
 		trace_tx_frame(u); \
 	else if ((!g_debug) && ('R' == d)) \
 		trace_rx_frame(u); \
-	else if ((('T' == d) && (g_debug & TRC_T)) || \
-					(('R' == d) && (g_debug & TRC_R))) \
+	else if ((('T' == d) && (g_debug & TRC_FLG(T))) || \
+				(('R' == d) && (g_debug & TRC_FLG(R)))) \
 		oz_trace_f_skb(u, d); } while(0)
 
 #define oz_trace_msg(f, ...) \
 	do { if (!g_debug) \
-		trace_debug_log(#f, __VA_ARGS__); \
-	else if (g_debug & TRC_##f) \
+		trace_debug_log(TRC_##f, __VA_ARGS__); \
+	else if (g_debug & TRC_FLG(f)) \
 		printk("OZ " #f " " __VA_ARGS__); } while(0)
 
 enum {

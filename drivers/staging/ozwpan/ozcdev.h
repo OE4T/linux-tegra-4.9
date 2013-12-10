@@ -15,7 +15,7 @@ int oz_cdev_start(struct oz_pd *pd, int resume);
 void oz_cdev_stop(struct oz_pd *pd, int pause);
 void oz_cdev_rx(struct oz_pd *pd, struct oz_elt *elt);
 void oz_cdev_heartbeat(struct oz_pd *pd);
-int oz_set_active_pd(u8 *addr);
+int oz_set_active_pd(const u8 *addr);
 void oz_get_active_pd(u8 *addr);
 
 #endif /* _OZCDEV_H */

@@ -26,8 +26,9 @@ char *g_net_dev = "";
  */
 static int __init ozwpan_init(void)
 {
+	if (oz_protocol_init(g_net_dev))
+		return -1;
 	oz_cdev_register();
-	oz_protocol_init(g_net_dev);
 	oz_app_enable(OZ_APPID_USB, 1);
 	oz_apps_init();
 	printk(KERN_DEBUG "p->oz_protocol_init = 0x%p\n", oz_protocol_init);
@@ -50,6 +51,6 @@ module_exit(ozwpan_exit);
 
 MODULE_AUTHOR("Chris Kelly");
 MODULE_DESCRIPTION("Ozmo Devices USB over WiFi hcd driver");
-MODULE_VERSION("1.2.3-rc2");
+MODULE_VERSION("1.2.3-rc9");
 MODULE_LICENSE("GPL");
 

@@ -43,6 +43,22 @@ void oz_usb_term(void)
 	oz_hcd_term();
 }
 /*------------------------------------------------------------------------------
+ * This is called when HCD received FEAT_RESET request from hub.
+ * If PD is in sleep, it then removes PD as it is unable to respond any host
+ * action.
+ */
+void oz_usb_reset_device(void *hpd)
+{
+	struct oz_usb_ctx *usb_ctx = (struct oz_usb_ctx *)hpd;
+	struct oz_pd *pd = usb_ctx->pd;
+	oz_pd_get(pd);
+	if (pd && (!(pd->state & OZ_PD_S_CONNECTED))) {
+		oz_trace_msg(M, "Remove device\n");
+		oz_pd_stop(pd);
+	}
+	oz_pd_put(pd);
+}
+/*------------------------------------------------------------------------------
  * This is called when the USB service is started or resumed for a PD.
  * Context: softirq
  */
@@ -50,7 +66,7 @@ int oz_usb_start(struct oz_pd *pd, int resume)
 {
 	int rc = 0;
 	struct oz_usb_ctx *usb_ctx;
-	struct oz_usb_ctx *old_ctx = 0;
+	struct oz_usb_ctx *old_ctx;
 	if (resume) {
 		oz_trace("USB service resumed.\n");
 		return 0;
@@ -60,7 +76,7 @@ int oz_usb_start(struct oz_pd *pd, int resume)
 	 * has a USB context then we will destroy it.
 	 */
 	usb_ctx = kzalloc(sizeof(struct oz_usb_ctx), GFP_ATOMIC);
-	if (usb_ctx == 0)
+	if (usb_ctx == NULL)
 		return -ENOMEM;
 	atomic_set(&usb_ctx->ref_count, 1);
 	usb_ctx->pd = pd;
@@ -71,7 +87,7 @@ int oz_usb_start(struct oz_pd *pd, int resume)
 	 */
 	spin_lock_bh(&pd->app_lock[OZ_APPID_USB-1]);
 	old_ctx = pd->app_ctx[OZ_APPID_USB-1];
-	if (old_ctx == 0)
+	if (old_ctx == NULL)
 		pd->app_ctx[OZ_APPID_USB-1] = usb_ctx;
 	oz_usb_get(pd->app_ctx[OZ_APPID_USB-1]);
 	spin_unlock_bh(&pd->app_lock[OZ_APPID_USB-1]);
@@ -92,9 +108,9 @@ int oz_usb_start(struct oz_pd *pd, int resume)
 		oz_hcd_pd_reset(usb_ctx, usb_ctx->hport);
 	} else {
 		usb_ctx->hport = oz_hcd_pd_arrived(usb_ctx);
-		if (usb_ctx->hport == 0) {
+		if (usb_ctx->hport == NULL) {
 			spin_lock_bh(&pd->app_lock[OZ_APPID_USB-1]);
-			pd->app_ctx[OZ_APPID_USB-1] = 0;
+			pd->app_ctx[OZ_APPID_USB-1] = NULL;
 			spin_unlock_bh(&pd->app_lock[OZ_APPID_USB-1]);
 			oz_usb_put(usb_ctx);
 			rc = -1;
@@ -116,7 +132,7 @@ void oz_usb_stop(struct oz_pd *pd, int pause)
 	}
 	spin_lock_bh(&pd->app_lock[OZ_APPID_USB-1]);
 	usb_ctx = (struct oz_usb_ctx *)pd->app_ctx[OZ_APPID_USB-1];
-	pd->app_ctx[OZ_APPID_USB-1] = 0;
+	pd->app_ctx[OZ_APPID_USB-1] = NULL;
 	spin_unlock_bh(&pd->app_lock[OZ_APPID_USB-1]);
 	if (usb_ctx) {
 		struct timespec ts, now;
@@ -177,7 +193,7 @@ int oz_usb_heartbeat(struct oz_pd *pd)
 	if (usb_ctx)
 		oz_usb_get(usb_ctx);
 	spin_unlock_bh(&pd->app_lock[OZ_APPID_USB-1]);
-	if (usb_ctx == 0)
+	if (usb_ctx == NULL)
 		return rc;
 	if (usb_ctx->stopped)
 		goto done;

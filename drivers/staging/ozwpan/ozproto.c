@@ -80,7 +80,7 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 	int sz = sizeof(struct oz_hdr) + sizeof(struct oz_elt) +
 			sizeof(struct oz_elt_connect_rsp);
 	skb = alloc_skb(sz + OZ_ALLOCATED_SPACE(dev), GFP_ATOMIC);
-	if (skb == 0)
+	if (skb == NULL)
 		return;
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	skb_reset_network_header(skb);
@@ -96,7 +96,7 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 		return;
 	}
 	oz_hdr->control = (OZ_PROTOCOL_VERSION<<OZ_VERSION_SHIFT);
-	oz_hdr->last_pkt_num = 0;
+	oz_hdr->last_pkt_num = pd->trigger_pkt_num & OZ_LAST_PN_MASK;
 	put_unaligned(0, &oz_hdr->pkt_num);
 	elt->type = OZ_ELT_CONNECT_RSP;
 	elt->length = sizeof(struct oz_elt_connect_rsp);
@@ -120,7 +120,7 @@ static void pd_set_keepalive(struct oz_pd *pd, u8 kalive)
 
 	switch (kalive & OZ_KALIVE_TYPE_MASK) {
 	case OZ_KALIVE_SPECIAL:
-		pd->keep_alive = (keep_alive*1000*60*60*24*20);
+		pd->keep_alive = (keep_alive * OZ_KALIVE_INFINITE);
 		break;
 	case OZ_KALIVE_SECS:
 		pd->keep_alive = (keep_alive*1000);
@@ -154,7 +154,7 @@ static void pd_set_presleep(struct oz_pd *pd, u8 presleep, u8 start_timer)
  * Context: softirq-serialized
  */
 static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
-			u8 *pd_addr, struct net_device *net_dev)
+		const u8 *pd_addr, struct net_device *net_dev, u32 pkt_num)
 {
 	struct oz_pd *pd;
 	struct oz_elt_connect_req *body =
@@ -162,17 +162,17 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 	u8 rsp_status = OZ_STATUS_SUCCESS;
 	u8 stop_needed = 0;
 	u16 new_apps = g_apps;
-	struct net_device *old_net_dev = 0;
-	struct oz_pd *free_pd = 0;
+	struct net_device *old_net_dev = NULL;
+	struct oz_pd *free_pd = NULL;
 	if (cur_pd) {
 		pd = cur_pd;
 		spin_lock_bh(&g_polling_lock);
 	} else {
-		struct oz_pd *pd2 = 0;
+		struct oz_pd *pd2 = NULL;
 		struct list_head *e;
 		pd = oz_pd_alloc(pd_addr);
-		if (pd == 0)
-			return 0;
+		if (pd == NULL)
+			return NULL;
 		getnstimeofday(&pd->last_rx_timestamp);
 		spin_lock_bh(&g_polling_lock);
 		list_for_each(e, &g_pd_list) {
@@ -186,9 +186,9 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 		if (pd != pd2)
 			list_add_tail(&pd->link, &g_pd_list);
 	}
-	if (pd == 0) {
+	if (pd == NULL) {
 		spin_unlock_bh(&g_polling_lock);
-		return 0;
+		return NULL;
 	}
 	if (pd->net_dev != net_dev) {
 		old_net_dev = pd->net_dev;
@@ -268,12 +268,17 @@ done:
 	} else {
 		spin_unlock_bh(&g_polling_lock);
 	}
+
+	/* CONNECT_REQ was sent without AR bit,
+	   but firmware does check LPN field to identify correcponding
+	   CONNECT_RSP field. */
+	pd->trigger_pkt_num = pkt_num;
 	oz_send_conn_rsp(pd, rsp_status);
 	if (rsp_status != OZ_STATUS_SUCCESS) {
 		if (stop_needed)
 			oz_pd_stop(pd);
 		oz_pd_put(pd);
-		pd = 0;
+		pd = NULL;
 	}
 	if (old_net_dev)
 		dev_put(old_net_dev);
@@ -285,7 +290,7 @@ done:
  * Context: softirq-serialized
  */
 static void oz_add_farewell(struct oz_pd *pd, u8 ep_num, u8 index,
-			u8 *report, u8 len)
+			const u8 *report, u8 len)
 {
 	struct oz_farewell *f;
 	struct oz_farewell *f2;
@@ -320,7 +325,7 @@ static void oz_rx_frame(struct sk_buff *skb)
 	u8 *src_addr;
 	struct oz_elt *elt;
 	int length;
-	struct oz_pd *pd = 0;
+	struct oz_pd *pd = NULL;
 	struct oz_hdr *oz_hdr = (struct oz_hdr *)skb_network_header(skb);
 	struct timespec current_time;
 	int dup = 0;
@@ -382,7 +387,8 @@ static void oz_rx_frame(struct sk_buff *skb)
 			break;
 		switch (elt->type) {
 		case OZ_ELT_CONNECT_REQ:
-			pd = oz_connect_req(pd, elt, src_addr, skb->dev);
+			pd = oz_connect_req(pd, elt, src_addr, skb->dev,
+						pkt_num);
 			break;
 		case OZ_ELT_DISCONNECT:
 			if (pd)
@@ -569,7 +575,7 @@ void oz_pd_request_heartbeat(struct oz_pd *pd)
 /*------------------------------------------------------------------------------
  * Context: softirq or process
  */
-struct oz_pd *oz_pd_find(u8 *mac_addr)
+struct oz_pd *oz_pd_find(const u8 *mac_addr)
 {
 	struct oz_pd *pd;
 	struct list_head *e;
@@ -606,7 +612,7 @@ static int oz_pkt_recv(struct sk_buff *skb, struct net_device *dev,
 		struct packet_type *pt, struct net_device *orig_dev)
 {
 	skb = skb_share_check(skb, GFP_ATOMIC);
-	if (skb == 0)
+	if (skb == NULL)
 		return 0;
 	spin_lock_bh(&g_rx_queue.lock);
 	if (g_processing_rx) {
@@ -646,17 +652,18 @@ void oz_binding_add(const char *net_dev)
 		binding->ptype.func = oz_pkt_recv;
 		memcpy(binding->name, net_dev, OZ_MAX_BINDING_LEN);
 		if (net_dev && *net_dev) {
-			oz_trace("Adding binding: %s\n", net_dev);
+			oz_trace_msg(M, "Adding binding: '%s'\n", net_dev);
 			binding->ptype.dev =
 				dev_get_by_name(&init_net, net_dev);
-			if (binding->ptype.dev == 0) {
-				oz_trace("Netdev %s not found\n", net_dev);
+			if (binding->ptype.dev == NULL) {
+				oz_trace_msg(M, "Netdev '%s' not found\n",
+						net_dev);
 				kfree(binding);
-				binding = 0;
+				binding = NULL;
 			}
 		} else {
-			oz_trace("Binding to all netcards\n");
-			binding->ptype.dev = 0;
+			oz_trace_msg(M, "Binding to all netcards\n");
+			binding->ptype.dev = NULL;
 		}
 		if (binding) {
 			dev_add_pack(&binding->ptype);
@@ -709,14 +716,14 @@ static void pd_stop_all_for_device(struct net_device *net_dev)
  */
 void oz_binding_remove(const char *net_dev)
 {
-	struct oz_binding *binding = NULL;
+	struct oz_binding *binding;
 	int found = 0;
 
-	oz_trace("Removing binding: %s\n", net_dev);
+	oz_trace_msg(M, "Removing binding: '%s'\n", net_dev);
 	spin_lock_bh(&g_binding_lock);
 	list_for_each_entry(binding, &g_binding, link) {
 		if (compare_binding_name(binding->name, net_dev)) {
-			oz_trace("Binding '%s' found\n", net_dev);
+			oz_trace_msg(M, "Binding '%s' found\n", net_dev);
 			found = 1;
 			break;
 		}
@@ -771,7 +778,7 @@ int oz_protocol_init(char *devs)
 {
 	skb_queue_head_init(&g_rx_queue);
 	if (devs && (devs[0] == '*')) {
-		oz_binding_add(0);
+		return -1;
 	} else {
 		char d[32];
 		while (*devs) {

@@ -139,6 +139,8 @@ struct oz_elt_connect_req {
 #define OZ_KALIVE_MINS		0x80
 #define OZ_KALIVE_HOURS		0xc0
 
+#define OZ_KALIVE_INFINITE	(1000*60*60*24*20)
+
 /* Connect response data structure.
  */
 struct oz_elt_connect_rsp {

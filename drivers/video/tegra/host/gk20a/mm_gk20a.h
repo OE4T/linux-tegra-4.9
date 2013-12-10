@@ -153,6 +153,7 @@ struct page_table_gk20a {
 	/* track mapping cnt on this page table */
 	u32 ref_cnt;
 	struct sg_table *sgt;
+	size_t size;
 };
 
 enum gmmu_pgsz_gk20a {
@@ -169,6 +170,7 @@ struct page_directory_gk20a {
 	/* Either a *page or a *mem_handle */
 	void *ref;
 	struct sg_table *sgt;
+	size_t size;
 	struct page_table_gk20a *ptes[gmmu_nr_page_sizes];
 };
 

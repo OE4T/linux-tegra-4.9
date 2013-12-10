@@ -2694,11 +2694,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (!se_dev->chipdata->drbg_supported)
 		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
 			SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr,
-			GFP_KERNEL);
+			GFP_DMA32);
 	else
 		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
 			SE_CONTEXT_DRBG_BUFER_SIZE,
-			&se_dev->ctx_save_buf_adr, GFP_KERNEL);
+			&se_dev->ctx_save_buf_adr, GFP_DMA32);
 
 	if (!se_dev->ctx_save_buf) {
 		dev_err(se_dev->dev, "Context save buffer alloc filed\n");

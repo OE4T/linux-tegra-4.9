@@ -317,6 +317,7 @@ static int pmu_reset(struct pmu_gk20a *pmu)
 static int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
+	struct nvhost_device_data *pdata = platform_get_drvdata(g->dev);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code, addr_data, addr_load;
@@ -335,7 +336,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 
 	/* TBD: load all other surfaces */
 
-	pmu->args.cpu_freq_HZ = 500*1000*1000; /* TBD: set correct freq */
+	pmu->args.cpu_freq_HZ = clk_get_rate(pdata->clk[1]);
 
 	addr_args = (pwr_falcon_hwcfg_dmem_size_v(
 		gk20a_readl(g, pwr_falcon_hwcfg_r()))
@@ -1618,9 +1619,8 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	cmd.cmd.perfmon.init.to_decrease_count = 15;
 	/* index of base counter, aka. always ticking counter */
 	cmd.cmd.perfmon.init.base_counter_id = 6;
-	/* microseconds interval between pmu polls perf counters
-	   TBD: = 1000 * (1000 * (vblank=)10 + 30) / 60 = 167000 */
-	cmd.cmd.perfmon.init.sample_period_us = 167000;
+	/* microseconds interval between pmu polls perf counters */
+	cmd.cmd.perfmon.init.sample_period_us = 16700;
 	/* number of perfmon counters
 	   counter #3 (GR and CE2) for gk20a */
 	cmd.cmd.perfmon.init.num_counters = 1;

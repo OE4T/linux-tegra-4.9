@@ -862,7 +862,7 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	sp = &(nvhost_get_host(pdev)->syncpt);
 
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts,
-			true);
+			false);
 }
 EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);
 

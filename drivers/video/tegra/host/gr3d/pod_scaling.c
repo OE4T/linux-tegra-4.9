@@ -90,6 +90,7 @@ struct podgov_info_rec {
 
 	struct delayed_work	idle_timer;
 
+	unsigned int		p_slowdown_delay;
 	unsigned int		p_block_window;
 	unsigned int		p_use_throughput_hint;
 	unsigned int		p_hint_lo_limit;
@@ -446,7 +447,7 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
 	trace_podgov_busy(load);
 	damp = podgov->p_damp;
 
-	if (load > podgov->p_load_max) {
+	if ((1000 - podgov->idle) > podgov->p_load_max) {
 		/* if too busy, scale up max/3, do not damp */
 		boost = max_boost;
 		damp = 10;
@@ -688,6 +689,7 @@ static void nvhost_scale3d_debug_init(struct devfreq *df)
 	CREATE_PODGOV_FILE(scaleup_limit);
 	CREATE_PODGOV_FILE(scaledown_limit);
 	CREATE_PODGOV_FILE(smooth);
+	CREATE_PODGOV_FILE(slowdown_delay);
 #undef CREATE_PODGOV_FILE
 }
 
@@ -818,7 +820,6 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 	struct podgov_info_rec *podgov = df->data;
 	struct devfreq_dev_status dev_stat;
 	struct nvhost_devfreq_ext_stat *ext_stat;
-	long delay;
 	int current_event;
 	int stat;
 	ktime_t now;
@@ -890,12 +891,10 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 	switch (current_event) {
 
 	case DEVICE_IDLE:
-		/* delay idle_max % of 2 * fast_response time (given in
-		 * microseconds) */
+		/* Launch a work to slowdown the gpu */
 		*freq = scaling_state_check(df, now);
-		delay = podgov->p_block_window / 20000;
 		schedule_delayed_work(&podgov->idle_timer,
-			msecs_to_jiffies(delay));
+			msecs_to_jiffies(podgov->p_slowdown_delay));
 		break;
 	case DEVICE_BUSY:
 		cancel_delayed_work(&podgov->idle_timer);
@@ -961,8 +960,8 @@ static int nvhost_pod_init(struct devfreq *df)
 		case TEGRA_CHIPID_TEGRA14:
 		case TEGRA_CHIPID_TEGRA11:
 		case TEGRA_CHIPID_TEGRA12:
-			podgov->p_load_max = 990;
-			podgov->p_load_target = 800;
+			podgov->p_load_max = 900;
+			podgov->p_load_target = 700;
 			podgov->p_bias = 80;
 			podgov->p_hint_lo_limit = 500;
 			podgov->p_hint_hi_limit = 997;
@@ -977,7 +976,9 @@ static int nvhost_pod_init(struct devfreq *df)
 			break;
 		}
 	}
-	podgov->p_block_window = 200000;
+
+	podgov->p_slowdown_delay = 10;
+	podgov->p_block_window = 50000;
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;
 	podgov->p_user = 0;
 

@@ -74,10 +74,10 @@ struct nvmap_heap {
 	const char *name;
 	void *arg;
 	/* number of devices pointed by devs */
-	int num_devs;
+	unsigned int num_devs;
 	/* indices for start and end device for resize support */
-	int dev_start;
-	int dev_end;
+	unsigned int dev_start;
+	unsigned int dev_end;
 	/* devs to manage cma/coherent memory allocs, if resize allowed */
 	struct device *devs;
 	struct device dev;
@@ -106,6 +106,16 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 		heap_root, (u32 *)&heap->base);
 	debugfs_create_x32("size", S_IRUGO,
 		heap_root, (u32 *)&heap->len);
+	if (heap->can_resize) {
+		debugfs_create_x32("cma_base", S_IRUGO,
+			heap_root, (u32 *)&heap->cma_base);
+		debugfs_create_x32("cma_size", S_IRUGO,
+			heap_root, (u32 *)&heap->cma_len);
+		debugfs_create_x32("cma_chunk_size", S_IRUGO,
+			heap_root, (u32 *)&heap->cma_chunk_size);
+		debugfs_create_x32("num_cma_chunks", S_IRUGO,
+			heap_root, (u32 *)&heap->num_devs);
+	}
 }
 
 static void nvmap_config_vpr(struct nvmap_heap *h)
@@ -315,8 +325,6 @@ check_next_chunk:
 				(void *)(uintptr_t)dev_base,
 				(dma_addr_t)dev_base, &attrs);
 			nvmap_release_coherent(&h->devs[idx]);
-			nvmap_release_from_contiguous(h,
-				dev_base, h->cma_chunk_size);
 			BUG_ON(h->devs[idx].dma_mem != NULL);
 			h->len -= h->cma_chunk_size;
 
@@ -332,9 +340,11 @@ check_next_chunk:
 					"Release Chunk at top\n");
 				idx--;
 			}
+			nvmap_config_vpr(h);
+			nvmap_release_from_contiguous(h,
+				dev_base, h->cma_chunk_size);
 			goto check_next_chunk;
 		}
-		nvmap_config_vpr(h);
 out_unlock:
 		mutex_unlock(&h->resize_lock);
 	} else if (h->cma_dev) {
@@ -512,8 +522,19 @@ static int nvmap_cma_heap_create(struct nvmap_heap *h,
 	h->cma_len = stats.size;
 
 	if (h->can_resize) {
-		BUG_ON(h->cma_len < co->cma_chunk_size);
-		BUG_ON(h->cma_len % co->cma_chunk_size);
+		if (h->cma_len < co->cma_chunk_size) {
+			dev_err(h->cma_dev, "error cma_len < cma_chunk_size");
+			return -ENOMEM;
+		}
+		if (h->cma_len % co->cma_chunk_size) {
+			dev_err(h->cma_dev,
+				"size is not multiple of cma_chunk_size(%zu)\n"
+				"size truncated from %zu to %zu\n",
+				co->cma_chunk_size, h->cma_len,
+				round_down(h->cma_len, co->cma_chunk_size));
+			h->cma_len = round_down(h->cma_len, co->cma_chunk_size);
+		}
+
 		mutex_init(&h->resize_lock);
 		h->cma_chunk_size = co->cma_chunk_size;
 		h->num_devs = div_u64(h->cma_len, h->cma_chunk_size);

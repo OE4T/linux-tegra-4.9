@@ -489,6 +489,8 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 {
 	int i;
 	char buff[256];
+	const char winname[] = "ABCDHT";
+	/* for above, see also: DC_CMD_DISPLAY_WINDOW_HEADER and DC_N_WINDOWS */
 
 	/* If gated, quietly return. */
 	if (!tegra_powergate_is_powered(dc->powergate_id))
@@ -603,9 +605,9 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_DISP_INTERLACE_FIELD2_FRONT_PORCH);
 	DUMP_REG(DC_DISP_INTERLACE_FIELD2_DISP_ACTIVE);
 #endif
-	for (i = 0; i < 3; i++) {
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		print(data, "\n");
-		snprintf(buff, sizeof(buff), "WINDOW %c:\n", 'A' + i);
+		snprintf(buff, sizeof(buff), "WINDOW %c:\n", winname[i]);
 		print(data, buff);
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,

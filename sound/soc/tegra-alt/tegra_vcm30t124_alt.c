@@ -43,6 +43,7 @@ struct tegra_vcm30t124 {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	int gpio_dap_direction;
 	struct i2c_client *max9485_client;
+	struct platform_device *spdif_codec;
 };
 
 static struct i2c_board_info max9485_info = {
@@ -218,6 +219,69 @@ static int tegra_vcm30t124_y_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int tegra_vcm30t124_z_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	int srate, mclk, clk_out_rate;
+	int err;
+
+	srate = params_rate(params);
+	switch (srate) {
+	case 64000:
+	case 88200:
+	case 96000:
+		clk_out_rate = 128 * srate;
+		mclk = clk_out_rate * 2;
+		break;
+	case 8000:
+	case 16000:
+	case 32000:
+	case 48000:
+	default:
+		clk_out_rate = 12288000;
+		/*
+		 * MCLK is pll_a_out, it is a source clock of ahub.
+		 * So it need to be faster than BCLK in slave mode.
+		 */
+		mclk = 12288000 * 2;
+		break;
+	case 44100:
+		clk_out_rate = 11289600;
+		/*
+		 * MCLK is pll_a_out, it is a source clock of ahub.
+		 * So it need to be faster than BCLK in slave mode.
+		 */
+		mclk = 11289600 * 2;
+		break;
+	}
+
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+					srate, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		err = snd_soc_dai_set_sysclk(card->rtd[24].cpu_dai, 0, srate,
+						SND_SOC_CLOCK_OUT);
+	else
+		err = snd_soc_dai_set_sysclk(card->rtd[24].cpu_dai, 0, srate,
+						SND_SOC_CLOCK_IN);
+
+	if (err < 0) {
+		dev_err(card->dev, "z cpu_dai clock not set\n");
+		return err;
+	}
+
+	return 0;
+}
+
 static int tegra_vcm30t124_x_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
@@ -238,6 +302,16 @@ static void tegra_vcm30t124_y_shutdown(struct snd_pcm_substream *substream)
 	return;
 }
 
+static int tegra_vcm30t124_z_startup(struct snd_pcm_substream *substream)
+{
+	return 0;
+}
+
+static void tegra_vcm30t124_z_shutdown(struct snd_pcm_substream *substream)
+{
+	return;
+}
+
 static struct snd_soc_ops tegra_vcm30t124_x_ops = {
 	.hw_params = tegra_vcm30t124_x_hw_params,
 	.startup = tegra_vcm30t124_x_startup,
@@ -250,11 +324,20 @@ static struct snd_soc_ops tegra_vcm30t124_y_ops = {
 	.shutdown = tegra_vcm30t124_y_shutdown,
 };
 
+static struct snd_soc_ops tegra_vcm30t124_z_ops = {
+	.hw_params = tegra_vcm30t124_z_hw_params,
+	.startup = tegra_vcm30t124_z_startup,
+	.shutdown = tegra_vcm30t124_z_shutdown,
+};
+
 static const struct snd_soc_dapm_widget tegra_vcm30t124_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
+	SND_SOC_DAPM_HP("Headphone-z", NULL),
+	SND_SOC_DAPM_SPK("Spdif-out", NULL),
+	SND_SOC_DAPM_LINE("Spdif-in", NULL),
 };
 
 static const struct snd_soc_dapm_route tegra_vcm30t124_audio_map[] = {
@@ -268,6 +351,8 @@ static const struct snd_soc_dapm_route tegra_vcm30t124_audio_map[] = {
 	{"Headphone-x",	NULL,	"x LOUT"},
 	{"x LLINEIN",	NULL,	"LineIn-x"},
 	{"x RLINEIN",	NULL,	"LineIn-x"},
+	{"Spdif-out",	NULL,	"z OUT"},
+	{"z IN",	NULL,	"Spdif-in"},
 };
 
 static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
@@ -372,6 +457,24 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	unsigned int mclk, srate;
+	int err;
+
+	srate = 48000;
+	mclk = srate * 512;
+
+	err = snd_soc_dai_set_sysclk(card->rtd[24].cpu_dai, 0, srate,
+					SND_SOC_CLOCK_OUT);
+	err = snd_soc_dai_set_sysclk(card->rtd[24].cpu_dai, 0, srate,
+					SND_SOC_CLOCK_IN);
+	return 0;
+}
+
 static int tegra_vcm30t124_amx_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
@@ -452,6 +555,14 @@ static const struct snd_soc_pcm_stream y_link_params = {
 	.channels_max = 2,
 };
 
+static const struct snd_soc_pcm_stream z_link_params = {
+	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	.rate_min = 32000,
+	.rate_max = 96000,
+	.channels_min = 2,
+	.channels_max = 2,
+};
+
 static const struct snd_soc_pcm_stream tdm_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S32_LE,
 	.rate_min = 44100,
@@ -525,7 +636,7 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		.cpu_dai_name = "APBIF5",
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF5",
-		.ops = &tegra_vcm30t124_y_ops,
+		.ops = &tegra_vcm30t124_z_ops,
 		.ignore_pmdown_time = 1,
 	},
 	{
@@ -713,6 +824,23 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		.codec_dai_name = "ADX0-3",
 		.params = &y_link_params,
 	},
+	{
+		/* 24 */
+		.name = "SPDIF CODEC",
+		.stream_name = "playback",
+		.cpu_dai_name = "DAP",
+		.codec_dai_name = "dit-hifi",
+		.init = tegra_vcm30t124_spdif_init,
+		.params = &z_link_params,
+	},
+	{
+		/* 25 */
+		.name = "SPDIF CIF",
+		.stream_name = "SPDIF CIF",
+		.cpu_dai_name = "SPDIF",
+		.codec_dai_name = "CIF",
+		.params = &z_link_params,
+	},
 };
 
 static struct snd_soc_codec_conf ad193x_codec_conf[] = {
@@ -725,12 +853,20 @@ static struct snd_soc_codec_conf ad193x_codec_conf[] = {
 		.name_prefix = "y",
 	},
 	{
+		.dev_name = "spdif-dit.0",
+		.name_prefix = "z",
+	},
+	{
 		.dev_name = "tegra30-i2s.0",
 		.name_prefix = "I2S0",
 	},
 	{
 		.dev_name = "tegra30-i2s.4",
 		.name_prefix = "I2S4",
+	},
+	{
+		.dev_name = "tegra30-spdif",
+		.name_prefix = "SPDIF",
 	},
 };
 
@@ -747,6 +883,10 @@ static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
 	.fully_routed = true,
 };
 
+static struct platform_device_info spdif_codec_info = {
+	.name = "spdif-dit",
+	.id = 0,
+};
 
 static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 {
@@ -781,6 +921,8 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 					"nvidia,dap_direction_gpios", 0);
 
 		if (!gpio_is_valid(machine->gpio_dap_direction)) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,dap_direction_gpios' missing or invalid\n");
 			ret = -EINVAL;
 			goto err;
 		}
@@ -900,8 +1042,20 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 				tegra_vcm30t124_links[19].codec_of_node;
 		}
 
-		machine->gpio_dap_direction = of_get_named_gpio(np,
-					"nvidia,dap_direction-gpios", 0);
+		tegra_vcm30t124_links[24].cpu_of_node = of_parse_phandle(np,
+					"nvidia,spdif", 0);
+		if (!tegra_vcm30t124_links[24].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,spdif' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+
+		tegra_vcm30t124_links[25].cpu_name =
+					tegra_vcm30t124_links[11].cpu_name;
+
+		tegra_vcm30t124_links[25].codec_of_node =
+					tegra_vcm30t124_links[24].cpu_of_node;
 	} else {
 		tegra_vcm30t124_links[0].cpu_name = "tegra30-ahub-apbif";
 		tegra_vcm30t124_links[0].cpu_of_node = NULL;
@@ -963,17 +1117,35 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 				tegra_vcm30t124_links[i].cpu_name;
 		}
 
+		tegra_vcm30t124_links[24].cpu_name = "tegra30-spdif";
+		tegra_vcm30t124_links[24].cpu_of_node = NULL;
+		tegra_vcm30t124_links[24].codec_of_node = NULL;
+
+		tegra_vcm30t124_links[25].codec_name =
+			tegra_vcm30t124_links[24].cpu_name;
+		tegra_vcm30t124_links[25].cpu_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[25].cpu_of_node = NULL;
+		tegra_vcm30t124_links[25].codec_of_node = NULL;
+
 		machine->gpio_dap_direction = GPIO_PR0;
 		card->dapm_routes = tegra_vcm30t124_audio_map;
 		card->num_dapm_routes = ARRAY_SIZE(tegra_vcm30t124_audio_map);
 	}
 
+	spdif_codec_info.parent = &pdev->dev;
+
+	machine->spdif_codec = platform_device_register_full(&spdif_codec_info);
+	if (IS_ERR(machine->spdif_codec)) {
+		dev_err(&pdev->dev, "cannot register spdif codec device\n");
+		goto err;
+	}
+	tegra_vcm30t124_links[24].codec_name = "spdif-dit.0";
+
 	machine->max9485_client = i2c_new_device(i2c_get_adapter(0),
 						&max9485_info);
 	if (!machine->max9485_client) {
 		dev_err(&pdev->dev, "cannot get i2c device for max9485\n");
-		goto err;
-
+		goto err_spdif_unregister;
 	}
 
 	ret = devm_gpio_request(&pdev->dev, machine->gpio_dap_direction,
@@ -1004,6 +1176,8 @@ err_gpio_free:
 	devm_gpio_free(&pdev->dev, machine->gpio_dap_direction);
 err_i2c_unregister:
 	i2c_unregister_device(machine->max9485_client);
+err_spdif_unregister:
+	platform_device_del(machine->spdif_codec);
 err:
 	return ret;
 }
@@ -1018,6 +1192,7 @@ static int tegra_vcm30t124_driver_remove(struct platform_device *pdev)
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 	devm_gpio_free(&pdev->dev, machine->gpio_dap_direction);
 	i2c_unregister_device(machine->max9485_client);
+	platform_device_del(machine->spdif_codec);
 
 	return 0;
 }

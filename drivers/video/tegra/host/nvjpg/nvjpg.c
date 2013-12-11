@@ -445,34 +445,11 @@ static int nvjpg_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
-	/* enable runtime pm. this is needed now since we need to call
-	 * _get_sync/_put during boot-up to ensure MC domain is ON */
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-	pm_runtime_get_sync(&dev->dev);
-#else
-	nvhost_module_enable_clk(&dev->dev);
-#endif
-
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
 
 	err = nvhost_client_device_init(dev);
-
-#ifdef CONFIG_PM_RUNTIME
-	if (pdata->clockgate_delay)
-		pm_runtime_put_sync_autosuspend(&dev->dev);
-	else
-		pm_runtime_put(&dev->dev);
-	if (err)
-		return err;
-#endif
 
 	return 0;
 }

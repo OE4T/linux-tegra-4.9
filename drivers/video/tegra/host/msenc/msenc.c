@@ -83,6 +83,8 @@ static char *msenc_get_fw_name(struct platform_device *dev)
 
 static int msenc_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
+	nvhost_dbg_fn("");
+
 	if (!*timeout)
 		*timeout = MSENC_IDLE_TIMEOUT_DEFAULT;
 
@@ -91,8 +93,10 @@ static int msenc_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 		u32 dmatrfcmd = host1x_readl(dev, msenc_dmatrfcmd_r());
 		u32 idle_v = msenc_dmatrfcmd_idle_v(dmatrfcmd);
 
-		if (msenc_dmatrfcmd_idle_true_v() == idle_v)
+		if (msenc_dmatrfcmd_idle_true_v() == idle_v) {
+			nvhost_dbg_fn("done");
 			return 0;
+		}
 
 		udelay(MSENC_IDLE_CHECK_PERIOD);
 		*timeout -= check;
@@ -124,6 +128,8 @@ static int msenc_dma_pa_to_internal_256b(struct platform_device *dev,
 
 static int msenc_wait_idle(struct platform_device *dev, u32 *timeout)
 {
+	nvhost_dbg_fn("");
+
 	if (!*timeout)
 		*timeout = MSENC_IDLE_TIMEOUT_DEFAULT;
 
@@ -131,8 +137,10 @@ static int msenc_wait_idle(struct platform_device *dev, u32 *timeout)
 		u32 check = min_t(u32, MSENC_IDLE_CHECK_PERIOD, *timeout);
 		u32 w = host1x_readl(dev, msenc_idlestate_r());
 
-		if (!w)
+		if (!w) {
+			nvhost_dbg_fn("done");
 			return 0;
+		}
 		udelay(MSENC_IDLE_CHECK_PERIOD);
 		*timeout -= check;
 	} while (*timeout);
@@ -228,29 +236,24 @@ static int msenc_setup_ucode_image(struct platform_device *dev,
 		return -EINVAL;
 	}
 
-	dev_dbg(&dev->dev,
-		"ucode bin header: magic:0x%x ver:%d size:%d",
+	nvhost_dbg_info("ucode bin header: magic:0x%x ver:%d size:%d",
 		ucode.bin_header->bin_magic,
 		ucode.bin_header->bin_ver,
 		ucode.bin_header->bin_size);
-	dev_dbg(&dev->dev,
-		"ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
+	nvhost_dbg_info("ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
 		ucode.bin_header->os_bin_header_offset,
 		ucode.bin_header->os_bin_data_offset,
 		ucode.bin_header->os_bin_size);
 	ucode.os_header = (struct msenc_ucode_os_header_v1 *)
 		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
 
-	dev_dbg(&dev->dev,
-		"os ucode header: os code (offset,size): 0x%x, 0x%x",
+	nvhost_dbg_info("os ucode header: os code (offset,size): 0x%x, 0x%x",
 		ucode.os_header->os_code_offset,
 		ucode.os_header->os_code_size);
-	dev_dbg(&dev->dev,
-		"os ucode header: os data (offset,size): 0x%x, 0x%x",
+	nvhost_dbg_info("os ucode header: os data (offset,size): 0x%x, 0x%x",
 		ucode.os_header->os_data_offset,
 		ucode.os_header->os_data_size);
-	dev_dbg(&dev->dev,
-		"os ucode header: num apps: %d",
+	nvhost_dbg_info("os ucode header: num apps: %d",
 		ucode.os_header->num_apps);
 
 	m->os.size = ucode.bin_header->os_bin_size;
@@ -321,6 +324,8 @@ int nvhost_msenc_init(struct platform_device *dev)
 	struct msenc *m;
 	char *fw_name;
 
+	nvhost_dbg_fn("in dev:%p", dev);
+
 	fw_name = msenc_get_fw_name(dev);
 	if (!fw_name) {
 		dev_err(&dev->dev, "couldn't determine firmware name");
@@ -334,6 +339,7 @@ int nvhost_msenc_init(struct platform_device *dev)
 		return -ENOMEM;
 	}
 	set_msenc(dev, m);
+	nvhost_dbg_fn("primed dev:%p", dev);
 
 	err = msenc_read_ucode(dev, fw_name);
 	kfree(fw_name);

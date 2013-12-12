@@ -89,6 +89,8 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[10].dai_link->params;
 	int srate, mclk, clk_out_rate;
 	int err;
 
@@ -122,13 +124,15 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
+	/* update link_param to update hw_param for DAPM */
+	dai_params->rate_min = srate;
+
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
 					srate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
-
 
 	err = snd_soc_dai_set_sysclk(card->rtd[10].codec_dai,
 			WM8731_SYSCLK_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
@@ -155,6 +159,8 @@ static int tegra_vcm30t124_y_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[12].dai_link->params;
 	unsigned int fmt = card->rtd[12].dai_link->dai_fmt;
 	int srate, mclk, clk_out_rate, val;
 	int err;
@@ -170,6 +176,9 @@ static int tegra_vcm30t124_y_hw_params(struct snd_pcm_substream *substream,
 		clk_out_rate = 256 * srate;
 		break;
 	}
+
+	/* update link_param to update hw_param for DAPM */
+	dai_params->rate_min = srate;
 
 	mclk = clk_out_rate * 2;
 
@@ -267,12 +276,17 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *wm8731_dai = card->rtd[10].codec_dai;
 	struct snd_soc_dai *i2s_dai = card->rtd[10].cpu_dai;
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[10].dai_link->params;
 	unsigned int clk_out, mclk, srate;
 	int err;
 
 	srate = 48000;
 	clk_out = srate * 256;
 	mclk = clk_out * 2;
+
+	/* update link_param to update hw_param for DAPM */
+	dai_params->rate_min = srate;
 
 	tegra_alt_asoc_utils_set_parent(&machine->audio_clock, true);
 
@@ -308,12 +322,17 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *ad1937_dai = card->rtd[12].codec_dai;
 	struct snd_soc_dai *i2s_dai = card->rtd[12].cpu_dai;
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[12].dai_link->params;
 	unsigned int fmt = card->rtd[12].dai_link->dai_fmt;
 	unsigned int mclk, srate;
 	int err;
 
 	srate = 48000;
 	mclk = srate * 512;
+
+	/* update link_param to update hw_param for DAPM */
+	dai_params->rate_min = srate;
 
 	if ((fmt & SND_SOC_DAIFMT_MASTER_MASK) == SND_SOC_DAIFMT_CBM_CFM) {
 		/* direct MCLK mode in AD1937, mclk needs to be srate * 512 */

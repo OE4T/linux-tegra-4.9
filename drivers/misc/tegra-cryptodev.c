@@ -41,6 +41,11 @@
 #define RNG_DRBG 1
 #define RNG 0
 
+#define TEGRA_RSA512	0
+#define TEGRA_RSA1024	1
+#define TEGRA_RSA1536	2
+#define TEGRA_RSA2048	3
+
 struct tegra_crypto_ctx {
 	struct crypto_ablkcipher *ecb_tfm;
 	struct crypto_ablkcipher *cbc_tfm;
@@ -419,7 +424,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 	struct tegra_crypto_completion rsa_complete;
 
 	switch (rsa_req->algo) {
-	case 0:
+	case TEGRA_RSA512:
 		req = ahash_request_alloc(ctx->rsa512_tfm, GFP_KERNEL);
 		if (!req) {
 			pr_err("alg: hash: Failed to allocate request for rsa512\n");
@@ -427,7 +432,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		}
 		tfm = ctx->rsa512_tfm;
 		break;
-	case 1:
+	case TEGRA_RSA1024:
 		req = ahash_request_alloc(ctx->rsa1024_tfm, GFP_KERNEL);
 		if (!req) {
 			pr_err("alg: hash: Failed to allocate request for rsa1024\n");
@@ -436,7 +441,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		tfm = ctx->rsa1024_tfm;
 		break;
 
-	case 2:
+	case TEGRA_RSA1536:
 		req = ahash_request_alloc(ctx->rsa1536_tfm, GFP_KERNEL);
 		if (!req) {
 			pr_err("alg: hash: Failed to allocate request for rsa1536\n");
@@ -445,7 +450,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		tfm = ctx->rsa1536_tfm;
 		break;
 
-	case 3:
+	case TEGRA_RSA2048:
 		req = ahash_request_alloc(ctx->rsa2048_tfm, GFP_KERNEL);
 		if (!req) {
 			pr_err("alg: hash: Failed to allocate request for rsa2048\n");

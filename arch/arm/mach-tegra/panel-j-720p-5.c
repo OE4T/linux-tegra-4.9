@@ -302,8 +302,7 @@ static struct platform_device __maybe_unused dsi_j_720p_5_bl_device = {
 	},
 };
 
-static struct platform_device __maybe_unused
-		*dsi_j_720p_5_bl_devices[] __initdata = {
+static struct platform_device __maybe_unused *dsi_j_720p_5_bl_devices[] = {
 	&tegra_pwfm_device,
 	&dsi_j_720p_5_bl_device,
 };

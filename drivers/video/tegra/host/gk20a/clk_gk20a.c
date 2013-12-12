@@ -688,7 +688,7 @@ int gk20a_init_clk_support(struct gk20a *g)
 
 	gk20a_writel(g,
 		timer_pri_timeout_r(),
-		timer_pri_timeout_period_f(0x200) ||
+		timer_pri_timeout_period_f(0x200) |
 		timer_pri_timeout_en_m());
 
 	return err;

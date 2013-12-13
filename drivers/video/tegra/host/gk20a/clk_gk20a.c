@@ -119,7 +119,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	nvhost_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
 			low_PL, pl_to_div[low_PL], high_PL, pl_to_div[high_PL]);
 
-	for (pl = high_PL; pl >= (int)low_PL; pl--) {
+	for (pl = low_PL; pl <= high_PL; pl++) {
 		target_vco_f = target_clk_f * pl_to_div[pl];
 
 		for (m = pll_params->min_M; m <= pll_params->max_M; m++) {

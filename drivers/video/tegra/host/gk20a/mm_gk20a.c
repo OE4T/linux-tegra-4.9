@@ -1091,7 +1091,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (mapped_buffer) {
 
 		WARN_ON(mapped_buffer->flags != flags);
-		WARN_ON(mapped_buffer->memmgr != memmgr);
 		BUG_ON(mapped_buffer->vm != vm);
 
 		if (sgt)
@@ -1114,6 +1113,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			} else {
 				mapped_buffer->own_mem_ref = true;
 			}
+			mapped_buffer->memmgr = memmgr;
 		}
 		kref_get(&mapped_buffer->ref);
 

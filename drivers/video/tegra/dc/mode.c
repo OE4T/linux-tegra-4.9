@@ -167,7 +167,7 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	if (!pclk || !h_total || !v_total)
+	if (!pclk || !h_total || !v_total || pclk < h_total)
 		return 0;
 	refresh = pclk / h_total;
 	refresh *= 1000;
@@ -307,7 +307,7 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	rate = tegra_dc_clk_get_rate(dc);
 
 	pclk = tegra_dc_pclk_round_rate(dc, mode->pclk);
-	if (pclk < (mode->pclk / 100 * 99) ||
+	if (!pclk || pclk < (mode->pclk / 100 * 99) ||
 	    pclk > (mode->pclk / 100 * 109)) {
 		dev_err(&dc->ndev->dev,
 			"can't divide %ld clock to %d -1/+9%% %ld %d %d\n",

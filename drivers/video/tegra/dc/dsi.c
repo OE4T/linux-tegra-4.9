@@ -569,6 +569,9 @@ static void tegra_dsi_pix_correction(struct tegra_dc *dc,
 	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
 			dc->mode.h_sync_width + dc->mode.h_active;
 
+	if (WARN(!dsi->info.n_data_lanes, "dsi n_data_lanes is 0\n"))
+		return;
+
 	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD) {
 		temp = dc->mode.h_active % dsi->info.n_data_lanes;
 		if (temp) {
@@ -584,8 +587,11 @@ static void tegra_dsi_pix_correction(struct tegra_dc *dc,
 	}
 
 	while (1) {
-		temp = (h_width_pixels * dsi->pixel_scaler_mul /
-			dsi->pixel_scaler_div) % dsi->info.n_data_lanes;
+		if (WARN(!dsi->pixel_scaler_div, "dsi pixel_scaler_div is 0"))
+			temp = 0;
+		else
+			temp = (h_width_pixels * dsi->pixel_scaler_mul /
+				dsi->pixel_scaler_div) % dsi->info.n_data_lanes;
 		if (temp) {
 			hfp_corr += dsi->info.n_data_lanes;
 			h_width_pixels += dsi->info.n_data_lanes;

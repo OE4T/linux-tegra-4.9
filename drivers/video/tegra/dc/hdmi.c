@@ -714,6 +714,8 @@ static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
 bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
+	long total_clocks;
+
 #ifndef CONFIG_ARCH_TEGRA_12x_SOC
 	if (mode->vmode & FB_VMODE_INTERLACED)
 		return false;
@@ -757,8 +759,10 @@ bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 		return false;
 
 	mode->flag |= FB_MODE_IS_DETAILED;
-	mode->refresh = (PICOS2KHZ(mode->pixclock) * 1000) /
-				tegra_dc_calc_clock_per_frame(mode);
+	total_clocks = tegra_dc_calc_clock_per_frame(mode);
+	mode->refresh = total_clocks ?
+		(PICOS2KHZ(mode->pixclock) * 1000) / total_clocks : 0;
+
 	return true;
 }
 
@@ -1136,7 +1140,10 @@ static void tegra_dc_hdmi_setup_audio_fs_tables(struct tegra_dc *dc)
 		else
 			delta = 9;
 
-		eight_half = (8 * HDMI_AUDIOCLK_FREQ) / (f * 128);
+		if (!f)
+			eight_half = 0;
+		else
+			eight_half = (8 * HDMI_AUDIOCLK_FREQ) / (f * 128);
 		tegra_hdmi_writel(hdmi, AUDIO_FS_LOW(eight_half - delta) |
 				  AUDIO_FS_HIGH(eight_half + delta),
 				  HDMI_NV_PDISP_AUDIO_FS(i));

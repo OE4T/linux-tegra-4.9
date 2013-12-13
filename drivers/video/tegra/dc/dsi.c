@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -4845,7 +4845,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
 	if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
 		dev_err(&dc->ndev->dev, "dsi: avdd_dsi_csi reg get failed\n");
-		err = PTR_ERR(dsi->avdd_dsi_csi);
+		err = -ENODEV;
 		goto err_reg;
 	}
 

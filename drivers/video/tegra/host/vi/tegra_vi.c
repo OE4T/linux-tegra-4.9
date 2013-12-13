@@ -115,6 +115,9 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	pdata_vi1 =
 		(struct nvhost_device_data *)tegra_vi1->ndev->dev.platform_data;
 
+	if (!pdata_vi1)
+	    return -ENODEV;
+
 	/* Copy device data for other vi device */
 	mutex_lock(&la_lock);
 

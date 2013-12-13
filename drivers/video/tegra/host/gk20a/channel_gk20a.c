@@ -1987,14 +1987,40 @@ int gk20a_channel_suspend(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	bool channels_in_use = false;
+	struct nvhost_fence fence;
+	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
+	struct device *d = dev_from_gk20a(g);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
+	int err;
 
 	nvhost_dbg_fn("");
+
+	/* idle the engine by submitting WFI on non-KEPLER_C channel */
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *c = &f->channel[chid];
+		if (c->in_use && c->obj_class != KEPLER_C) {
+			fence.syncpt_id = chid + pdata->syncpt_base;
+			err = gk20a_channel_submit_wfi_fence(g,
+					c, sp, &fence);
+			if (err) {
+				nvhost_err(d, "cannot idle channel %d\n",
+						chid);
+				return err;
+			}
+
+			nvhost_syncpt_wait_timeout(sp,
+					fence.syncpt_id, fence.value,
+					500000,
+					NULL, NULL,
+					false);
+			break;
+		}
+	}
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (f->channel[chid].in_use) {
 
 			nvhost_dbg_info("suspend channel %d", chid);
-
 			/* disable channel */
 			gk20a_writel(g, ccsr_channel_r(chid),
 				gk20a_readl(g, ccsr_channel_r(chid)) |

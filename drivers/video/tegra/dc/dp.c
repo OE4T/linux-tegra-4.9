@@ -293,7 +293,7 @@ static int tegra_dc_dpaux_write_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	return -EFAULT;
 }
 
-static int __maybe_unused
+int __maybe_unused
 tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat)
 {
@@ -435,7 +435,7 @@ static int tegra_dc_dpaux_read_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	return -EFAULT;
 }
 
-static int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
+int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat)
 {
 	u32	finished = 0;

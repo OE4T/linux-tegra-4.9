@@ -263,6 +263,11 @@ static inline u32 tegra_dp_wait_aux_training(struct tegra_dc_dp_data *dp,
 	return dp->link_cfg.aux_rd_interval;
 }
 
+int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
+	u8 *data, u32 *size, u32 *aux_stat);
+int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
+	u8 *data, u32 *size, u32 *aux_stat);
+
 /* DPCD definitions */
 #define NV_DPCD_REV					(0x00000000)
 #define NV_DPCD_REV_MAJOR_SHIFT				(4)

@@ -973,14 +973,14 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 				"dap_dir_control");
 	if (ret) {
 		dev_err(&pdev->dev, "cannot get dap_dir_control gpio\n");
-		goto err;
+		goto err_i2c_unregister;
 	}
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,
 					card);
 	if (ret)
-		goto err;
+		goto err_gpio_free;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
@@ -993,8 +993,11 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 
 err_fini_utils:
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
+err_gpio_free:
+	devm_gpio_free(&pdev->dev, machine->gpio_dap_direction);
+err_i2c_unregister:
+	i2c_unregister_device(machine->max9485_client);
 err:
-	dev_err(&pdev->dev, "Failed at utils_init\n");
 	return ret;
 }
 
@@ -1006,6 +1009,8 @@ static int tegra_vcm30t124_driver_remove(struct platform_device *pdev)
 	snd_soc_unregister_card(card);
 
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
+	devm_gpio_free(&pdev->dev, machine->gpio_dap_direction);
+	i2c_unregister_device(machine->max9485_client);
 
 	return 0;
 }

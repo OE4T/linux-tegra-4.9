@@ -296,10 +296,17 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 			return ret;
 	}
 
+	/* split FO-to-bypass jump in halfs by setting out divider 1:2 */
+	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
+		trim_sys_gpc2clk_out_vcodiv_f(2));
+	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+
 	/* put PLL in bypass before programming it */
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_bypass_f());
+	udelay(2);
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
 	/* get out from IDDQ */
@@ -362,6 +369,13 @@ pll_locked:
 		trim_sys_sel_vco_gpc2clk_out_vco_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 	clk->gpc_pll.enabled = true;
+
+	/* restore out divider 1:1 */
+	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
+		trim_sys_gpc2clk_out_vcodiv_by1_f());
+	udelay(2);
+	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	/* slide up to target NDIV */
 	return clk_slide_gpc_pll(g, clk->gpc_pll.N);

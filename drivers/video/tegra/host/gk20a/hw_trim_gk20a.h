@@ -182,9 +182,21 @@ static inline u32 trim_sys_gpc2clk_out_bypdiv_by31_f(void)
 {
 	return 0x3c;
 }
+static inline u32 trim_sys_gpc2clk_out_vcodiv_s(void)
+{
+	return 6;
+}
+static inline u32 trim_sys_gpc2clk_out_vcodiv_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
 static inline u32 trim_sys_gpc2clk_out_vcodiv_m(void)
 {
 	return 0x3f << 8;
+}
+static inline u32 trim_sys_gpc2clk_out_vcodiv_v(u32 r)
+{
+	return (r >> 8) & 0x3f;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_by1_f(void)
 {

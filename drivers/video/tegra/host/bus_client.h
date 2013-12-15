@@ -32,13 +32,6 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 int nvhost_write_module_regs(struct platform_device *ndev,
 			u32 offset, int count, const u32 *values);
 
-bool nvhost_client_can_writel(struct platform_device *pdev);
-
-void nvhost_client_writel(struct platform_device *pdev,
-		u32 val, u32 reg);
-
-u32 nvhost_client_readl(struct platform_device *pdev, u32 reg);
-
 int nvhost_client_user_init(struct platform_device *dev);
 
 int nvhost_client_device_init(struct platform_device *dev);

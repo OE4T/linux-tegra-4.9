@@ -136,20 +136,6 @@ void nvhost_set_register_sets(unsigned int r)
 	register_sets = r;
 }
 
-void nvhost_device_writel(struct platform_device *dev, u32 r, u32 v)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	writel(v, pdata->aperture[0] + r);
-}
-EXPORT_SYMBOL_GPL(nvhost_device_writel);
-
-u32 nvhost_device_readl(struct platform_device *dev, u32 r)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	return readl(pdata->aperture[0] + r);
-}
-EXPORT_SYMBOL_GPL(nvhost_device_readl);
-
 module_param_call(register_sets, NULL, param_get_uint, &register_sets, 0444);
 MODULE_PARM_DESC(register_sets, "Number of register sets");
 

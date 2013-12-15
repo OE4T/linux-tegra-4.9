@@ -80,11 +80,9 @@ static char *vic_get_fw_name(struct platform_device *dev)
 
 #define VIC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define VIC_IDLE_CHECK_PERIOD	10		/* 10 usec */
-static int vic03_flcn_wait_idle(struct platform_device *dev,
+static int vic03_flcn_wait_idle(struct platform_device *pdev,
 				u32 *timeout)
 {
-	struct vic03 *v = get_vic03(dev);
-
 	nvhost_dbg_fn("");
 
 	if (!*timeout)
@@ -92,7 +90,7 @@ static int vic03_flcn_wait_idle(struct platform_device *dev,
 
 	do {
 		u32 check = min_t(u32, VIC_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = vic03_readl(v, flcn_idlestate_r());
+		u32 w = host1x_readl(pdev, flcn_idlestate_r());
 
 		if (!w) {
 			nvhost_dbg_fn("done");
@@ -102,14 +100,13 @@ static int vic03_flcn_wait_idle(struct platform_device *dev,
 		*timeout -= check;
 	} while (*timeout);
 
-	dev_err(&dev->dev, "vic03 flcn idle timeout");
+	dev_err(&pdev->dev, "vic03 flcn idle timeout");
 
 	return -1;
 }
 
-static int vic03_flcn_dma_wait_idle(struct platform_device *dev, u32 *timeout)
+static int vic03_flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
 {
-	struct vic03 *v = get_vic03(dev);
 	nvhost_dbg_fn("");
 
 	if (!*timeout)
@@ -117,7 +114,7 @@ static int vic03_flcn_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, VIC_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = vic03_readl(v, flcn_dmatrfcmd_r());
+		u32 dmatrfcmd = host1x_readl(pdev, flcn_dmatrfcmd_r());
 		u32 idle_v = flcn_dmatrfcmd_idle_v(dmatrfcmd);
 
 		if (flcn_dmatrfcmd_idle_true_v() == idle_v) {
@@ -128,19 +125,17 @@ static int vic03_flcn_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 		*timeout -= check;
 	} while (*timeout);
 
-	dev_err(&dev->dev, "vic03 dma idle timeout");
+	dev_err(&pdev->dev, "vic03 dma idle timeout");
 
 	return -1;
 }
 
 
-static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *dev,
+static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 					      phys_addr_t pa,
 					      u32 internal_offset,
 					      bool imem)
 {
-	struct vic03 *v = get_vic03(dev);
-
 	u32 cmd = flcn_dmatrfcmd_size_256b_f();
 	u32 pa_offset =  flcn_dmatrffboffs_offs_f(pa);
 	u32 i_offset = flcn_dmatrfmoffs_offs_f(internal_offset);
@@ -149,11 +144,11 @@ static int vic03_flcn_dma_pa_to_internal_256b(struct platform_device *dev,
 	if (imem)
 		cmd |= flcn_dmatrfcmd_imem_true_f();
 
-	vic03_writel(v, flcn_dmatrfmoffs_r(), i_offset);
-	vic03_writel(v, flcn_dmatrffboffs_r(), pa_offset);
-	vic03_writel(v, flcn_dmatrfcmd_r(), cmd);
+	host1x_writel(pdev, flcn_dmatrfmoffs_r(), i_offset);
+	host1x_writel(pdev, flcn_dmatrffboffs_r(), pa_offset);
+	host1x_writel(pdev, flcn_dmatrfcmd_r(), cmd);
 
-	return vic03_flcn_dma_wait_idle(dev, &timeout);
+	return vic03_flcn_dma_wait_idle(pdev, &timeout);
 
 }
 
@@ -287,9 +282,9 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 	return err;
 }
 
-static int vic03_boot(struct platform_device *dev)
+static int vic03_boot(struct platform_device *pdev)
 {
-	struct vic03 *v = get_vic03(dev);
+	struct vic03 *v = get_vic03(pdev);
 	u32 timeout;
 	u32 offset;
 	int err = 0;
@@ -301,43 +296,43 @@ static int vic03_boot(struct platform_device *dev)
 	if (v->is_booted)
 		return 0;
 
-	vic03_writel(v, flcn_dmactl_r(), 0);
+	host1x_writel(pdev, flcn_dmactl_r(), 0);
 
-	vic03_writel(v, flcn_dmatrfbase_r(),
+	host1x_writel(pdev, flcn_dmatrfbase_r(),
 			(v->ucode.dma_addr + v->ucode.os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < v->ucode.os.data_size; offset += 256)
-		vic03_flcn_dma_pa_to_internal_256b(dev,
+		vic03_flcn_dma_pa_to_internal_256b(pdev,
 					   v->ucode.os.data_offset + offset,
 					   offset, false);
 
-	vic03_flcn_dma_pa_to_internal_256b(dev, v->ucode.os.code_offset,
+	vic03_flcn_dma_pa_to_internal_256b(pdev, v->ucode.os.code_offset,
 					   0, true);
 
 	/* setup falcon interrupts and enable interface */
-	vic03_writel(v, flcn_irqmset_r(), (flcn_irqmset_ext_f(0xff)    |
+	host1x_writel(pdev, flcn_irqmset_r(), (flcn_irqmset_ext_f(0xff)    |
 					   flcn_irqmset_swgen1_set_f() |
 					   flcn_irqmset_swgen0_set_f() |
 					   flcn_irqmset_exterr_set_f() |
 					   flcn_irqmset_halt_set_f()   |
 					   flcn_irqmset_wdtmr_set_f()));
-	vic03_writel(v, flcn_irqdest_r(), (flcn_irqdest_host_ext_f(0xff) |
+	host1x_writel(pdev, flcn_irqdest_r(), (flcn_irqdest_host_ext_f(0xff) |
 					   flcn_irqdest_host_swgen1_host_f() |
 					   flcn_irqdest_host_swgen0_host_f() |
 					   flcn_irqdest_host_exterr_host_f() |
 					   flcn_irqdest_host_halt_host_f()));
-	vic03_writel(v, flcn_itfen_r(), (flcn_itfen_mthden_enable_f() |
+	host1x_writel(pdev, flcn_itfen_r(), (flcn_itfen_mthden_enable_f() |
 					flcn_itfen_ctxen_enable_f()));
 
 	/* boot falcon */
-	vic03_writel(v, flcn_bootvec_r(), flcn_bootvec_vec_f(0));
-	vic03_writel(v, flcn_cpuctl_r(), flcn_cpuctl_startcpu_true_f());
+	host1x_writel(pdev, flcn_bootvec_r(), flcn_bootvec_vec_f(0));
+	host1x_writel(pdev, flcn_cpuctl_r(), flcn_cpuctl_startcpu_true_f());
 
 	timeout = 0; /* default */
 
-	err = vic03_flcn_wait_idle(dev, &timeout);
+	err = vic03_flcn_wait_idle(pdev, &timeout);
 	if (err != 0) {
-		dev_err(&dev->dev, "boot failed due to timeout");
+		dev_err(&pdev->dev, "boot failed due to timeout");
 		return err;
 	}
 
@@ -375,7 +370,6 @@ int nvhost_vic03_init(struct platform_device *dev)
 	nvhost_dbg_fn("primed dev:%p v:%p", dev, v);
 
 	v->host = nvhost_get_host(dev);
-	v->regs = pdata->aperture[0];
 
 	if (!v->ucode.valid)
 		err = vic03_read_ucode(dev, fw_name);
@@ -422,9 +416,6 @@ void nvhost_vic03_deinit(struct platform_device *dev)
 		v->ucode.mapped = NULL;
 		v->ucode.dma_addr = 0;
 	}
-
-	if (v->regs)
-		v->regs = NULL;
 
 	/* zap, free */
 	set_vic03(dev, NULL);
@@ -564,9 +555,8 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 
 int nvhost_vic03_finalize_poweron(struct platform_device *pdev)
 {
-	struct vic03 *v = get_vic03(pdev);
-	vic03_writel(v, flcn_slcg_override_high_a_r(), 0);
-	vic03_writel(v, flcn_cg_r(),
+	host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0);
+	host1x_writel(pdev, flcn_cg_r(),
 		     flcn_cg_idle_cg_dly_cnt_f(4) |
 		     flcn_cg_idle_cg_en_f(1) |
 		     flcn_cg_wakeup_dly_cnt_f(4));

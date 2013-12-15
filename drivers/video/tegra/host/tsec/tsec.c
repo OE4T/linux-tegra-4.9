@@ -92,7 +92,7 @@ static int tsec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = nvhost_device_readl(dev, tsec_dmatrfcmd_r());
+		u32 dmatrfcmd = host1x_readl(dev, tsec_dmatrfcmd_r());
 		u32 idle_v = tsec_dmatrfcmd_idle_v(dmatrfcmd);
 
 		if (tsec_dmatrfcmd_idle_true_v() == idle_v)
@@ -118,9 +118,9 @@ static int tsec_dma_pa_to_internal_256b(struct platform_device *dev,
 	if (imem)
 		cmd |= tsec_dmatrfcmd_imem_true_f();
 
-	nvhost_device_writel(dev, tsec_dmatrfmoffs_r(), i_offset);
-	nvhost_device_writel(dev, tsec_dmatrffboffs_r(), pa_offset);
-	nvhost_device_writel(dev, tsec_dmatrfcmd_r(), cmd);
+	host1x_writel(dev, tsec_dmatrfmoffs_r(), i_offset);
+	host1x_writel(dev, tsec_dmatrffboffs_r(), pa_offset);
+	host1x_writel(dev, tsec_dmatrfcmd_r(), cmd);
 
 	return tsec_dma_wait_idle(dev, &timeout);
 
@@ -133,7 +133,7 @@ static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = nvhost_device_readl(dev, tsec_idlestate_r());
+		u32 w = host1x_readl(dev, tsec_idlestate_r());
 
 		if (!w)
 			return 0;
@@ -149,19 +149,19 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 	u32 val;
 	u32 timeout;
 
-	val = nvhost_device_readl(pdev, tsec_tegra_ctl_r());
+	val = host1x_readl(pdev, tsec_tegra_ctl_r());
 	val &= ~tsec_tegra_ctl_tkfi_kfuse_m();
-	nvhost_device_writel(pdev, tsec_tegra_ctl_r(), val);
+	host1x_writel(pdev, tsec_tegra_ctl_r(), val);
 
-	val = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+	val = host1x_readl(pdev, tsec_scp_ctl_pkey_r());
 	val |= tsec_scp_ctl_pkey_request_reload_s();
-	nvhost_device_writel(pdev, tsec_scp_ctl_pkey_r(), val);
+	host1x_writel(pdev, tsec_scp_ctl_pkey_r(), val);
 
 	timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
 
 	do {
 		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, timeout);
-		u32 w = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+		u32 w = host1x_readl(pdev, tsec_scp_ctl_pkey_r());
 
 		if (w & tsec_scp_ctl_pkey_loaded_m())
 			break;
@@ -169,9 +169,9 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 		timeout -= check;
 	} while (timeout);
 
-	val = nvhost_device_readl(pdev, tsec_tegra_ctl_r());
+	val = host1x_readl(pdev, tsec_tegra_ctl_r());
 	val |= tsec_tegra_ctl_tkfi_kfuse_m();
-	nvhost_device_writel(pdev, tsec_tegra_ctl_r(), val);
+	host1x_writel(pdev, tsec_tegra_ctl_r(), val);
 
 	if (timeout)
 		return 0;
@@ -192,8 +192,8 @@ int tsec_boot(struct platform_device *dev)
 	if (m->is_booted)
 		return 0;
 
-	nvhost_device_writel(dev, tsec_dmactl_r(), 0);
-	nvhost_device_writel(dev, tsec_dmatrfbase_r(),
+	host1x_writel(dev, tsec_dmactl_r(), 0);
+	host1x_writel(dev, tsec_dmatrfbase_r(),
 		(m->dma_addr + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
@@ -207,9 +207,9 @@ int tsec_boot(struct platform_device *dev)
 
 
 	/* boot tsec */
-	nvhost_device_writel(dev, tsec_bootvec_r(),
+	host1x_writel(dev, tsec_bootvec_r(),
 			     tsec_bootvec_vec_f(TSEC_OS_START_OFFSET));
-	nvhost_device_writel(dev, tsec_cpuctl_r(),
+	host1x_writel(dev, tsec_cpuctl_r(),
 			tsec_cpuctl_startcpu_true_f());
 
 	timeout = 0; /* default */
@@ -221,7 +221,7 @@ int tsec_boot(struct platform_device *dev)
 	}
 
 	/* setup tsec interrupts and enable interface */
-	nvhost_device_writel(dev, tsec_irqmset_r(),
+	host1x_writel(dev, tsec_irqmset_r(),
 			(tsec_irqmset_ext_f(0xff) |
 				tsec_irqmset_swgen1_set_f() |
 				tsec_irqmset_swgen0_set_f() |
@@ -229,7 +229,7 @@ int tsec_boot(struct platform_device *dev)
 				tsec_irqmset_halt_set_f()   |
 				tsec_irqmset_wdtmr_set_f()));
 
-	nvhost_device_writel(dev, tsec_itfen_r(),
+	host1x_writel(dev, tsec_itfen_r(),
 			(tsec_itfen_mthden_enable_f() |
 				tsec_itfen_ctxen_enable_f()));
 

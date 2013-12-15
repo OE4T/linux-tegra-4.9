@@ -73,7 +73,6 @@ struct vic03 {
 	struct nvhost_master *host;
 
 	struct resource *reg_mem;
-	void __iomem *regs;
 	bool is_booted;
 
 	struct {
@@ -94,20 +93,6 @@ struct vic03 {
 
 	void (*remove_support)(struct vic03 *);
 };
-
-/* register accessors */
-static inline void vic03_writel(struct vic03 *vic, u32 r, u32 v)
-{
-	nvhost_dbg(dbg_reg, " vic03 r=0x%x v=0x%x", r, v);
-	writel(v, vic->regs + r);
-}
-static inline u32 vic03_readl(struct vic03 *vic, u32 r)
-{
-	u32 v;
-	v = readl(vic->regs + r);
-	nvhost_dbg(dbg_reg, " vic03 r=0x%x v=0x%x", r, v);
-	return v;
-}
 
 struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(
 		u32 syncpt, u32 base,

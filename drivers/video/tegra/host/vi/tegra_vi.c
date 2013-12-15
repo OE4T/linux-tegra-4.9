@@ -31,10 +31,10 @@
 
 static DEFINE_MUTEX(la_lock);
 
-#define T12_VI_CFG_CG_CTRL	0x2e
+#define T12_VI_CFG_CG_CTRL	0xb8
 #define T12_CG_2ND_LEVEL_EN	1
-#define T12_VI_CSI_0_SW_RESET	0x40
-#define T12_VI_CSI_1_SW_RESET	0x80
+#define T12_VI_CSI_0_SW_RESET	0x100
+#define T12_VI_CSI_1_SW_RESET	0x200
 #define T12_VI_CSI_SW_RESET_MCCIF_RESET 3
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
@@ -75,9 +75,7 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 		}
 	}
 
-	if (nvhost_client_can_writel(dev))
-		nvhost_client_writel(dev,
-				T12_CG_2ND_LEVEL_EN, T12_VI_CFG_CG_CTRL);
+	host1x_writel(dev, T12_VI_CFG_CG_CTRL, T12_CG_2ND_LEVEL_EN);
 
  fail:
 	return ret;
@@ -233,11 +231,10 @@ void nvhost_vi_reset(struct platform_device *pdev)
 	else
 		reset_reg = T12_VI_CSI_1_SW_RESET;
 
-	nvhost_client_writel(pdev, T12_VI_CSI_SW_RESET_MCCIF_RESET,
-			reset_reg);
+	host1x_writel(pdev, reset_reg, T12_VI_CSI_SW_RESET_MCCIF_RESET);
 
 	udelay(10);
 
-	nvhost_client_writel(pdev, 0, reset_reg);
+	host1x_writel(pdev, reset_reg, 0);
 }
 

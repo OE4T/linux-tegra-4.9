@@ -40,7 +40,7 @@
 #include <mach/latency_allowance.h>
 #include "isp.h"
 
-#define T12_ISP_CG_CTRL		0x1d
+#define T12_ISP_CG_CTRL		0x74
 #define T12_CG_2ND_LEVEL_EN	1
 #define T12_ISPB_DEV_ID		1
 
@@ -62,7 +62,7 @@ static struct of_device_id tegra_isp_of_match[] = {
 
 int nvhost_isp_t124_finalize_poweron(struct platform_device *pdev)
 {
-	nvhost_client_writel(pdev, T12_CG_2ND_LEVEL_EN, T12_ISP_CG_CTRL);
+	host1x_writel(pdev, T12_ISP_CG_CTRL, T12_CG_2ND_LEVEL_EN);
 	return 0;
 }
 

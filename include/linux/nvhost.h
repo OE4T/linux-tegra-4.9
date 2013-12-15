@@ -326,8 +326,8 @@ struct nvhost_device_power_attr {
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];
 };
 
-void nvhost_device_writel(struct platform_device *dev, u32 r, u32 v);
-u32 nvhost_device_readl(struct platform_device *dev, u32 r);
+void host1x_writel(struct platform_device *dev, u32 r, u32 v);
+u32 host1x_readl(struct platform_device *dev, u32 r);
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev);

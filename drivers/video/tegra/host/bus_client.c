@@ -85,6 +85,23 @@ static __iomem void *get_aperture(struct platform_device *pdev)
 	return pdata->aperture[0];
 }
 
+void host1x_writel(struct platform_device *pdev, u32 r, u32 v)
+{
+	void __iomem *addr = get_aperture(pdev) + r;
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+	writel(v, addr);
+}
+EXPORT_SYMBOL_GPL(host1x_writel);
+
+u32 host1x_readl(struct platform_device *pdev, u32 r)
+{
+	void __iomem *addr = get_aperture(pdev) + r;
+	u32 v = readl(addr);
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+	return v;
+}
+EXPORT_SYMBOL_GPL(host1x_readl);
+
 int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values)
 {
@@ -135,23 +152,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	nvhost_module_idle(ndev);
 
 	return 0;
-}
-
-bool nvhost_client_can_writel(struct platform_device *pdev)
-{
-	return !!get_aperture(pdev);
-}
-EXPORT_SYMBOL(nvhost_client_can_writel);
-
-void nvhost_client_writel(struct platform_device *pdev, u32 val, u32 reg)
-{
-	writel(val, get_aperture(pdev) + reg * 4);
-}
-EXPORT_SYMBOL(nvhost_client_writel);
-
-u32 nvhost_client_readl(struct platform_device *pdev, u32 reg)
-{
-	return readl(get_aperture(pdev) + reg * 4);
 }
 
 struct nvhost_channel_userctx {

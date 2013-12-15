@@ -72,6 +72,8 @@ static inline u32 gk20a_mmu_id_to_engine_id(u32 engine_id)
 
 static int init_engine_info(struct fifo_gk20a *f)
 {
+	struct gk20a *g = f->g;
+	struct device *d = dev_from_gk20a(g);
 	struct fifo_engine_info_gk20a *gr_info;
 	const u32 gr_sw_id = ENGINE_GR_GK20A;
 	u32 i;
@@ -135,7 +137,7 @@ static int init_engine_info(struct fifo_gk20a *f)
 			}
 
 			if (pbdma_id == f->num_pbdma) {
-				nvhost_dbg(dbg_err, "busted pbmda map");
+				nvhost_err(d, "busted pbmda map");
 				return -EINVAL;
 			}
 			gr_info->pbdma_id = pbdma_id;
@@ -145,7 +147,7 @@ static int init_engine_info(struct fifo_gk20a *f)
 	}
 
 	if (gr_info->runlist_id == ~0) {
-		nvhost_dbg(dbg_err, "busted device info");
+		nvhost_err(d, "busted device info");
 		return -EINVAL;
 	}
 

@@ -617,6 +617,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 {
+	struct device *d = dev_from_vm(vm);
 	int retries;
 	struct mapped_buffer_node *mapped_buffer;
 
@@ -625,7 +626,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		mutex_unlock(&vm->update_gmmu_lock);
-		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
+		nvhost_err(d, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 
@@ -640,7 +641,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 			udelay(50);
 		}
 		if (!retries)
-			nvhost_dbg(dbg_err, "sync-unmap failed on 0x%llx",
+			nvhost_err(d, "sync-unmap failed on 0x%llx",
 								offset);
 		mutex_lock(&vm->update_gmmu_lock);
 	}
@@ -1732,13 +1733,14 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 {
+	struct device *d = dev_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer;
 
 	mutex_lock(&vm->update_gmmu_lock);
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		mutex_unlock(&vm->update_gmmu_lock);
-		nvhost_dbg(dbg_err, "invalid addr to unmap 0x%llx", offset);
+		nvhost_err(d, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);

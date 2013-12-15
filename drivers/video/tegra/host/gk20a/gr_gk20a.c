@@ -1591,7 +1591,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 clean_up:
 	if (err)
-		nvhost_dbg(dbg_fn | dbg_err, "fail");
+		nvhost_err(dev_from_gk20a(g), "fail");
 	else
 		nvhost_dbg_fn("done");
 
@@ -2267,7 +2267,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	return 0;
 
  clean_up:
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(dev_from_gk20a(g), "fail");
 	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
 		if (gr->global_ctx_buffer[i].ref) {
 			nvhost_memmgr_put(memmgr,
@@ -2464,7 +2464,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	return 0;
 
  clean_up:
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(dev_from_gk20a(g), "fail");
 	if (patch_ctx->mem.ref) {
 		nvhost_memmgr_put(memmgr, patch_ctx->mem.ref);
 		patch_ctx->mem.ref = 0;
@@ -2627,7 +2627,7 @@ out:
 	   can be reused so no need to release them.
 	   2. golden image init and load is a one time thing so if
 	   they pass, no need to undo. */
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(dev_from_gk20a(g), "fail");
 	return err;
 }
 
@@ -3114,7 +3114,7 @@ clean_up:
 	kfree(sorted_to_unsorted_gpc_map);
 
 	if (ret)
-		nvhost_dbg(dbg_fn | dbg_err, "fail");
+		nvhost_err(dev_from_gk20a(g), "fail");
 	else
 		nvhost_dbg_fn("done");
 
@@ -4448,7 +4448,7 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 
 out:
 	if (err)
-		nvhost_dbg(dbg_fn | dbg_err, "fail");
+		nvhost_err(dev_from_gk20a(g), "fail");
 	else
 		nvhost_dbg_fn("done");
 
@@ -4510,7 +4510,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	return 0;
 
 clean_up:
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(dev_from_gk20a(g), "fail");
 	gk20a_remove_gr_support(gr);
 	return err;
 }

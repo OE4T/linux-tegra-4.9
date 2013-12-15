@@ -36,16 +36,15 @@ void nvhost_device_list_remove(struct platform_device *pdev);
     /* debug info, default is compiled-in but effectively disabled (0 mask) */
     #define NVHOST_DEBUG
     /*e.g: echo 1 > /d/tegra_host/dbg_mask */
-    #define NVHOST_DEFAULT_DBG_MASK (dbg_err)
+    #define NVHOST_DEFAULT_DBG_MASK 0
 #else
     /* manually enable and turn it on the mask */
     /*#define NVHOST_DEBUG*/
-    #define NVHOST_DEFAULT_DBG_MASK (dbg_err|dbg_info)
+    #define NVHOST_DEFAULT_DBG_MASK (dbg_info)
 #endif
 
 enum nvhost_dbg_categories {
 	dbg_info    = BIT(0),  /* lightly verbose info */
-	dbg_err     = BIT(1),  /* verbosity around errors*/
 	dbg_fn      = BIT(2),  /* fn name tracing */
 	dbg_reg     = BIT(3),  /* register accesses, very verbose */
 	dbg_pte     = BIT(4),  /* gmmu ptes */
@@ -62,7 +61,7 @@ extern u32 nvhost_dbg_mask;
 extern u32 nvhost_dbg_ftrace;
 #define nvhost_dbg(dbg_mask, format, arg...)				\
 do {									\
-	if ((dbg_mask) & nvhost_dbg_mask) {				\
+	if (unlikely((dbg_mask) & nvhost_dbg_mask)) {			\
 		if (nvhost_dbg_ftrace)					\
 			trace_printk(format "\n", ##arg);		\
 		else							\

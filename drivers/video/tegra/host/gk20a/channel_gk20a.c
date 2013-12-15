@@ -388,7 +388,7 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 	return 0;
 
 clean_up:
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(d, "fail");
 	channel_gk20a_free_inst(g, ch);
 	return err;
 }
@@ -1192,7 +1192,7 @@ clean_up:
 	c->gpfifo.cpu_va = NULL;
 	c->gpfifo.iova = 0;
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(d, "fail");
 	return err;
 }
 
@@ -1652,7 +1652,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	return 0;
 
 clean_up:
-	nvhost_dbg(dbg_fn | dbg_err, "fail");
+	nvhost_err(d, "fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
 	nvhost_module_idle(g->dev);

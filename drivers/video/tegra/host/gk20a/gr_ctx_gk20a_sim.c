@@ -3,7 +3,7 @@
  *
  * GK20A Graphics Context for Simulation
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -250,7 +250,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	nvhost_dbg(dbg_info | dbg_fn, "finished querying grctx info from chiplib");
 	return 0;
 fail:
-	nvhost_dbg(dbg_info | dbg_err | dbg_fn,
+	nvhost_err(dev_from_gk20a(g),
 		   "failed querying grctx info from chiplib");
 	return err;
 

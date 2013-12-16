@@ -3,7 +3,7 @@
  *
  * GK20A graphics fifo (gr host)
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -156,7 +156,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,
 int gk20a_fifo_suspend(struct gk20a *g);
 
 bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
-void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids);
+void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids, bool verbose);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
 
 void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,

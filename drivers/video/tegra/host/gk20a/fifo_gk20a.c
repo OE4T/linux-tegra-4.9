@@ -362,6 +362,8 @@ clean_up:
 	return -ENOMEM;
 }
 
+#define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
+
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 {
 	u32 intr_stall;
@@ -414,6 +416,10 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	timeout = gk20a_readl(g, fifo_pb_timeout_r());
 	timeout &= ~fifo_pb_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_pb_timeout_r(), timeout);
+
+	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US |
+			fifo_eng_timeout_detection_enabled_f();
+	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
 
 	nvhost_dbg_fn("done");
 
@@ -609,6 +615,7 @@ static void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 		runlist = &f->runlist_info[runlist_id];
 		wake_up(&runlist->runlist_wq);
 	}
+
 }
 
 static int gk20a_init_fifo_setup_hw(struct gk20a *g)
@@ -898,35 +905,49 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 	schedule_work(&g->fifo.fault_restore_thread);
 }
 
-static void gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
-		struct nvhost_hwctx *hwctx) {
-	if (hwctx) {
-		nvhost_err(dev_from_gk20a(g),
-			"channel with hwctx generated a mmu fault");
-		if (hwctx->error_notifier) {
-			if (hwctx->error_notifier->info32) {
-				/* If error code is already set, this mmu fault
-				 * was triggered as part of recovery from other
-				 * error condition.
-				 * Don't overwrite error flag. */
-			} else {
-				gk20a_set_error_notifier(hwctx,
-					NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
-			}
+static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
+		struct channel_gk20a *ch) {
+	bool verbose = true;
+	if (!ch || !ch->hwctx)
+		return;
+
+	nvhost_err(dev_from_gk20a(g),
+		"channel %d with hwctx generated a mmu fault",
+		ch->hw_chid);
+	if (ch->hwctx->error_notifier) {
+		u32 err = ch->hwctx->error_notifier->info32;
+		if (err) {
+			/* If error code is already set, this mmu fault
+			 * was triggered as part of recovery from other
+			 * error condition.
+			 * Don't overwrite error flag. */
+
+			/* Fifo timeout debug spew is controlled by user */
+			if (err == NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT)
+				verbose = ch->hwctx->timeout_debug_dump;
+		} else {
+			gk20a_set_error_notifier(ch->hwctx,
+				NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
 		}
-		/* mark channel as faulted */
-		hwctx->has_timedout = true;
 	}
+	/* mark channel as faulted */
+	ch->hwctx->has_timedout = true;
+	wmb();
+	/* unblock pending waits */
+	wake_up(&ch->semaphore_wq);
+	wake_up(&ch->notifier_wq);
+	wake_up(&ch->submit_wq);
+	return verbose;
 }
 
 
-static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
+static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
 	unsigned long fault_id;
 	u32 engine_mmu_id;
 	int i;
-
+	bool verbose = true;
 	nvhost_dbg_fn("");
 
 	g->fifo.deferred_reset_pending = false;
@@ -1007,7 +1028,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		}
 
 		if (ch) {
-			gk20a_fifo_set_ctx_mmu_error(g, ch->hwctx);
+			verbose = gk20a_fifo_set_ctx_mmu_error(g, ch);
 			if (ch->in_use) {
 				/* disable the channel from hw and increment
 				 * syncpoints */
@@ -1063,7 +1084,8 @@ static void gk20a_fifo_get_faulty_channel(struct gk20a *g, int engine_id,
 		fifo_engine_status_id_v(status);
 }
 
-void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids)
+void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
+		bool verbose)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
@@ -1073,7 +1095,8 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids)
 	unsigned long engine_ids = 0;
 	int ret;
 
-	nvhost_debug_dump(g->host);
+	if (verbose)
+		nvhost_debug_dump(g->host);
 
 	/* store faulted engines in advance */
 	g->fifo.mmu_fault_engines = 0;
@@ -1133,6 +1156,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids)
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
 }
 
+
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 {
 	u32 sched_error;
@@ -1173,32 +1197,49 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		}
 	}
 
-	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
-		   sched_error, engine_id, non_chid ? "non-ch" : "ch", id);
-
 	/* could not find the engine - should never happen */
 	if (unlikely(engine_id >= g->fifo.max_engines))
-		return true;
+		goto err;
 
 	if (fifo_intr_sched_error_code_f(sched_error) ==
-	    fifo_intr_sched_error_code_ctxsw_timeout_v()) {
-		if (!non_chid) {
-			struct fifo_gk20a *f = &g->fifo;
-			struct nvhost_hwctx *hwctx = f->channel[id].hwctx;
+			fifo_intr_sched_error_code_ctxsw_timeout_v()) {
+		struct fifo_gk20a *f = &g->fifo;
+		struct channel_gk20a *ch = &f->channel[id];
+		struct nvhost_hwctx *hwctx = ch->hwctx;
+
+		if (non_chid) {
+			gk20a_fifo_recover(g, BIT(engine_id), true);
+			goto err;
+		}
+
+		if (gk20a_channel_update_and_check_timeout(ch,
+			GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000)) {
 			gk20a_set_error_notifier(hwctx,
 				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-			hwctx->has_timedout = true;
+			nvhost_err(dev_from_gk20a(g),
+				"fifo sched ctxsw timeout error:"
+				"engine = %u, ch = %d", engine_id, id);
+			gk20a_fifo_recover(g, BIT(engine_id),
+				hwctx ? hwctx->timeout_debug_dump : true);
+		} else {
+			nvhost_warn(dev_from_gk20a(g),
+				"fifo is waiting for ctx switch for %d ms,"
+				"ch = %d\n",
+				ch->timeout_accumulated_ms,
+				id);
 		}
-		gk20a_fifo_recover(g, BIT(engine_id));
-		return false;
+		return hwctx->timeout_debug_dump;
 	}
+err:
+	nvhost_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
+		   sched_error, engine_id, non_chid ? "non-ch" : "ch", id);
 
 	return true;
 }
 
 static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 {
-	bool reset_channel = false, reset_engine = false;
+	bool print_channel_reset_log = false, reset_engine = false;
 	struct device *dev = dev_from_gk20a(g);
 	u32 handled = 0;
 
@@ -1214,12 +1255,12 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	if (fifo_intr & fifo_intr_0_bind_error_pending_f()) {
 		u32 bind_error = gk20a_readl(g, fifo_intr_bind_error_r());
 		nvhost_err(dev, "fifo bind error: 0x%08x", bind_error);
-		reset_channel = true;
+		print_channel_reset_log = true;
 		handled |= fifo_intr_0_bind_error_pending_f();
 	}
 
 	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
-		reset_channel = gk20a_fifo_handle_sched_error(g);
+		print_channel_reset_log = gk20a_fifo_handle_sched_error(g);
 		handled |= fifo_intr_0_sched_error_pending_f();
 	}
 
@@ -1229,8 +1270,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {
-		gk20a_fifo_handle_mmu_fault(g);
-		reset_channel = true;
+		print_channel_reset_log = gk20a_fifo_handle_mmu_fault(g);
 		reset_engine  = true;
 		handled |= fifo_intr_0_mmu_fault_pending_f();
 	}
@@ -1240,9 +1280,10 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 		handled |= fifo_intr_0_dropped_mmu_fault_pending_f();
 	}
 
-	reset_channel = !g->fifo.deferred_reset_pending && (reset_channel || fifo_intr);
+	print_channel_reset_log = !g->fifo.deferred_reset_pending
+			&& print_channel_reset_log;
 
-	if (reset_channel) {
+	if (print_channel_reset_log) {
 		int engine_id;
 		nvhost_err(dev_from_gk20a(g),
 			   "channel reset initated from %s", __func__);
@@ -1250,7 +1291,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 		     engine_id < g->fifo.max_engines;
 		     engine_id++) {
 			nvhost_dbg_fn("enum:%d -> engine_id:%d", engine_id,
-				      g->fifo.engine_info[engine_id].engine_id);
+				g->fifo.engine_info[engine_id].engine_id);
 			fifo_pbdma_exception_status(g,
 					&g->fifo.engine_info[engine_id]);
 			fifo_engine_exception_status(g,
@@ -1456,7 +1497,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 		}
 		gk20a_set_error_notifier(ch->hwctx,
 				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-		gk20a_fifo_recover(g, engines);
+		gk20a_fifo_recover(g, engines, true);
 	}
 
 	/* re-enable elpg or release pmu mutex */
@@ -1594,7 +1635,7 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 		    (f->engine_info[i].runlist_id == runlist_id))
 			engines |= BIT(i);
 	}
-	gk20a_fifo_recover(g, engines);
+	gk20a_fifo_recover(g, engines, true);
 }
 
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
@@ -1604,7 +1645,6 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 	bool pending;
 
 	runlist = &g->fifo.runlist_info[runlist_id];
-
 	remain = wait_event_timeout(runlist->runlist_wq,
 		((pending = gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
 			fifo_eng_runlist_pending_true_f()) == 0),
@@ -1630,7 +1670,6 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	u32 old_buf, new_buf;
 	u32 chid;
 	u32 count = 0;
-
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.

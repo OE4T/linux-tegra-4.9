@@ -2649,8 +2649,9 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 
 	if (c->num_objects == 0) {
 		c->first_init = false;
-		gk20a_disable_channel(c, true, /*wait for finish*/
-				      timeout);
+		gk20a_disable_channel(c,
+			!c->hwctx->has_timedout,
+			timeout);
 		gr_gk20a_unmap_channel_patch_ctx(c);
 	}
 
@@ -5281,7 +5282,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (need_reset)
-		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A));
+		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A), true);
 
 clean_up:
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

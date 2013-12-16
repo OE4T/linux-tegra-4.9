@@ -114,6 +114,9 @@ struct channel_gk20a {
 	wait_queue_head_t semaphore_wq;
 	wait_queue_head_t submit_wq;
 
+	u32 timeout_accumulated_ms;
+	u32 timeout_gpfifo_get;
+
 	bool cmds_pending;
 	struct {
 		bool valid;
@@ -171,6 +174,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish);
 int gk20a_init_error_notifier(struct nvhost_hwctx *ctx, u32 memhandle,
 			u64 offset);
+bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
+		u32 timeout_delta_ms);
 void gk20a_free_error_notifiers(struct nvhost_hwctx *ctx);
 void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool wait_for_finish,

@@ -637,7 +637,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	nvhost_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
 
-	gk20a_disable_channel(ch, finish, timeout);
+	gk20a_disable_channel(ch, finish && !ch->hwctx->has_timedout, timeout);
 
 	gk20a_free_error_notifiers(ctx);
 
@@ -724,9 +724,14 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 	channel_gk20a_bind(ch_gk20a);
 	ch_gk20a->pid = current->pid;
 
+	/* reset timeout counter and update timestamp */
+	ch_gk20a->timeout_accumulated_ms = 0;
+	ch_gk20a->timeout_gpfifo_get = 0;
+	/* set gr host default timeout */
+	ch_gk20a->hwctx->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
+
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
-
 
 	init_waitqueue_head(&ch_gk20a->notifier_wq);
 	init_waitqueue_head(&ch_gk20a->semaphore_wq);
@@ -1243,6 +1248,26 @@ static inline u32 gp_free_count(struct channel_gk20a *c)
 		c->gpfifo.entry_num;
 }
 
+bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
+		u32 timeout_delta_ms)
+{
+	u32 gpfifo_get = update_gp_get(ch->g, ch);
+	/* Count consequent timeout isr */
+	if (gpfifo_get == ch->timeout_gpfifo_get) {
+		/* we didn't advance since previous channel timeout check */
+		ch->timeout_accumulated_ms += timeout_delta_ms;
+	} else {
+		/* first timeout isr encountered */
+		ch->timeout_accumulated_ms = timeout_delta_ms;
+	}
+
+	ch->timeout_gpfifo_get = gpfifo_get;
+
+	return ch->g->timeouts_enabled &&
+		ch->timeout_accumulated_ms > ch->hwctx->timeout_ms_max;
+}
+
+
 /* Issue a syncpoint increment *preceded* by a wait-for-idle
  * command.  All commands on the channel will have been
  * consumed at the time the fence syncpoint increment occurs.
@@ -1256,6 +1281,9 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 	int cmd_size, j = 0;
 	u32 free_count;
 	int err;
+
+	if (c->hwctx->has_timedout)
+		return -ETIMEDOUT;
 
 	cmd_size =  4 + wfi_cmd_size();
 
@@ -1473,6 +1501,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * wait and one for syncpoint increment */
 	const int extra_entries = 2;
 
+	if (c->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	if ((flags & (NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
 		      NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
 	    !fence)
@@ -1515,7 +1546,13 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * wait for signals from completed submits */
 	if (gp_free_count(c) < num_entries + extra_entries) {
 		err = wait_event_interruptible(c->submit_wq,
-			get_gp_free_count(c) >= num_entries + extra_entries);
+			get_gp_free_count(c) >= num_entries + extra_entries ||
+			c->hwctx->has_timedout);
+	}
+
+	if (c->hwctx->has_timedout) {
+		err = -ETIMEDOUT;
+		goto clean_up;
 	}
 
 	if (err) {
@@ -1779,6 +1816,10 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	if (!ch->cmds_pending)
 		return 0;
 
+	/* Do not wait for a timedout channel */
+	if (ch->hwctx && ch->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	if (!(ch->last_submit_fence.valid && ch->last_submit_fence.wfi)) {
 		nvhost_dbg_fn("issuing wfi, incr to finish the channel");
 		fence.syncpt_id = ch->hw_chid + pdata->syncpt_base;
@@ -1793,10 +1834,6 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	nvhost_dbg_fn("waiting for channel to finish syncpt:%d val:%d",
 		      ch->last_submit_fence.syncpt_id,
 		      ch->last_submit_fence.syncpt_value);
-
-	/* Do not wait for a timedout channel. Just check if it's done */
-	if (ch->hwctx && ch->hwctx->has_timedout)
-		timeout = 0;
 
 	err = nvhost_syncpt_wait_timeout(sp,
 					 ch->last_submit_fence.syncpt_id,
@@ -1823,6 +1860,10 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 	int ret = 0;
 	long remain;
 
+	/* do not wait if channel has timed out */
+	if (ch->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	handle_ref = nvhost_memmgr_get(memmgr, id, pdev);
 	if (IS_ERR(handle_ref)) {
 		nvhost_err(&pdev->dev, "invalid notifier nvmap handle 0x%lx",
@@ -1841,7 +1882,7 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 
 	remain = wait_event_interruptible_timeout(
 			ch->semaphore_wq,
-			*semaphore == payload,
+			*semaphore == payload || ch->hwctx->has_timedout,
 			timeout);
 
 	if (remain == 0 && *semaphore != payload)
@@ -1872,6 +1913,9 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 
 	nvhost_dbg_fn("");
 
+	if (ch->hwctx->has_timedout)
+		return -ETIMEDOUT;
+
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		timeout = MAX_SCHEDULE_TIMEOUT;
 	else
@@ -1901,7 +1945,7 @@ int gk20a_channel_wait(struct channel_gk20a *ch,
 		 * calling this ioctl */
 		remain = wait_event_interruptible_timeout(
 				ch->notifier_wq,
-				notif->status == 0,
+				notif->status == 0 || ch->hwctx->has_timedout,
 				timeout);
 
 		if (remain == 0 && notif->status != 0) {

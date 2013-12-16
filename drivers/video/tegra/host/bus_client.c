@@ -235,7 +235,6 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	priv->timeout_debug_dump = true;
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
-
 	return 0;
 fail:
 	nvhost_channelrelease(inode, filp);
@@ -998,12 +997,18 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:
-		priv->timeout =
+	{
+		u32 timeout =
 			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
+
+		priv->timeout = timeout;
 		dev_dbg(&priv->ch->dev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
+		if (priv->hwctx)
+			priv->hwctx->timeout_ms_max = timeout;
 		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
 		((struct nvhost_get_param_args *)buf)->value =
 				priv->hwctx->has_timedout;
@@ -1061,15 +1066,23 @@ static long nvhost_channelctl(struct file *filp,
 		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
-		priv->timeout = (u32)
-			((struct nvhost_set_timeout_ex_args *)buf)->timeout;
-		priv->timeout_debug_dump = !((u32)
+	{
+		u32 timeout =
+			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
+		bool timeout_debug_dump = !((u32)
 			((struct nvhost_set_timeout_ex_args *)buf)->flags &
 			(1 << NVHOST_TIMEOUT_FLAG_DISABLE_DUMP));
+		priv->timeout = timeout;
+		priv->timeout_debug_dump = timeout_debug_dump;
 		dev_dbg(&priv->ch->dev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
+		if (priv->hwctx) {
+			priv->hwctx->timeout_ms_max = timeout;
+			priv->hwctx->timeout_debug_dump = timeout_debug_dump;
+		}
 		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH:
 		err = nvhost_ioctl_channel_set_ctxswitch(priv, (void *)buf);
 		break;

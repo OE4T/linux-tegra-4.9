@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -345,6 +345,30 @@ static inline u32 fifo_pb_timeout_r(void)
 static inline u32 fifo_pb_timeout_detection_enabled_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 fifo_eng_timeout_r(void)
+{
+	return 0x00002a0c;
+}
+static inline u32 fifo_eng_timeout_period_m(void)
+{
+	return 0x7fffffff << 0;
+}
+static inline u32 fifo_eng_timeout_period_max_f(void)
+{
+	return 0x7fffffff;
+}
+static inline u32 fifo_eng_timeout_detection_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 fifo_eng_timeout_detection_enabled_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fifo_eng_timeout_detection_disabled_f(void)
+{
+	return 0x0;
 }
 static inline u32 fifo_error_sched_disable_r(void)
 {

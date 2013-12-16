@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,9 @@ struct nvhost_hwctx {
 	struct nvhost_channel *channel;
 	bool valid;
 	bool has_timedout;
+	u32 timeout_ms_max;
+	bool timeout_debug_dump;
+
 	struct mem_mgr *memmgr;
 
 	struct mem_handle *error_notifier_ref;

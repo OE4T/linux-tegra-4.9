@@ -3634,6 +3634,9 @@ static int tegra_dsi_exit_ulpm(struct tegra_dc_dsi_data *dsi)
 	u32 val;
 	int ret = 0;
 
+	if (dsi->info.ulpm_not_supported)
+		return 0;
+
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS)
 		if (atomic_read(&dsi_syncpt_rst))
 			tegra_dsi_syncpt_reset(dsi);

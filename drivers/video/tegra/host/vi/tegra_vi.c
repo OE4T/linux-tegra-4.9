@@ -123,6 +123,39 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	return ret;
 }
 
+#if defined(CONFIG_TEGRA_ISOMGR)
+static int vi_set_isomgr_request(struct vi *tegra_vi, uint vi_bw, uint lt)
+{
+	int ret = 0;
+
+	dev_dbg(&tegra_vi->ndev->dev,
+		"%s++ bw=%u, lt=%u\n", __func__, vi_bw, lt);
+
+	/* return value of tegra_isomgr_reserve is dvfs latency in usec */
+	ret = tegra_isomgr_reserve(tegra_vi->isomgr_handle,
+				vi_bw,	/* KB/sec */
+				lt);	/* usec */
+	if (!ret) {
+		dev_err(&tegra_vi->ndev->dev,
+		"%s: failed to reserve %u KBps\n", __func__, vi_bw);
+		return -ENOMEM;
+	}
+
+	/* return value of tegra_isomgr_realize is dvfs latency in usec */
+	ret = tegra_isomgr_realize(tegra_vi->isomgr_handle);
+	if (ret)
+		dev_dbg(&tegra_vi->ndev->dev,
+		"%s: tegra_vi isomgr latency is %d usec",
+		__func__, ret);
+	else {
+		dev_err(&tegra_vi->ndev->dev,
+		"%s: failed to realize %u KBps\n", __func__, vi_bw);
+			return -ENOMEM;
+	}
+	return ret;
+}
+#endif
+
 static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 {
 	struct nvhost_device_data *pdata_vi1, *pdata_vi2;
@@ -203,7 +236,35 @@ long vi_ioctl(struct file *file,
 				"%s: Failed to copy arg from user\n", __func__);
 			return -EFAULT;
 		}
+
 		ret = vi_set_la(tegra_vi, vi_bw);
+		if (ret) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: failed to set la for vi_bw %u MBps\n",
+			__func__, vi_bw/1000);
+			return -ENOMEM;
+		}
+
+#if defined(CONFIG_TEGRA_ISOMGR)
+		/*
+		 * Set VI ISO BW requirements.
+		 * There is no way to figure out what latency
+		 * can be tolerated in VI without reading VI
+		 * registers for now. 3 usec is minimum time
+		 * to switch PLL source. Let's put 4 usec as
+		 * latency for now.
+		 */
+		if (tegra_vi->isomgr_handle) {
+			ret = vi_set_isomgr_request(tegra_vi, vi_bw, 4);
+
+			if (!ret) {
+				dev_err(&tegra_vi->ndev->dev,
+				"%s: failed to reserve %u KBps\n",
+				__func__, vi_bw);
+				return -ENOMEM;
+			}
+		}
+#endif
 		return ret;
 	}
 	default:
@@ -221,10 +282,12 @@ static int vi_open(struct inode *inode, struct file *file)
 
 	pdata = container_of(inode->i_cdev,
 		struct nvhost_device_data, ctrl_cdev);
-	BUG_ON(pdata == NULL);
+	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
+		return -ENODEV;
 
 	vi = (struct vi *)pdata->private_data;
-	BUG_ON(vi == NULL);
+	if (WARN_ONCE(vi == NULL, "vi not found, %s failed\n", __func__))
+		return -ENODEV;
 
 	file->private_data = vi;
 	return 0;

@@ -28,6 +28,9 @@ struct vi {
 	struct platform_device *ndev;
 	struct regulator *reg;
 	uint vi_bw;
+#if defined(CONFIG_TEGRA_ISOMGR)
+	tegra_isomgr_handle isomgr_handle;
+#endif
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

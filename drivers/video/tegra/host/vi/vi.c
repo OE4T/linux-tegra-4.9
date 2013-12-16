@@ -40,6 +40,12 @@
 
 #define MAX_DEVID_LENGTH	16
 
+/*
+ * MAX_BW = max(VI clock) * 2BPP, in KBps.
+ * Here default max VI clock is 420MHz.
+ */
+#define VI_DEFAULT_MAX_BW	840000
+
 static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-vi",
@@ -57,6 +63,40 @@ static struct of_device_id tegra_vi_of_match[] = {
 };
 
 static struct i2c_camera_ctrl *i2c_ctrl;
+
+#if defined(CONFIG_TEGRA_ISOMGR)
+static int vi_isomgr_register(struct vi *tegra_vi)
+{
+	int iso_client_id = TEGRA_ISO_CLIENT_VI_0;
+
+	dev_dbg(&tegra_vi->ndev->dev, "%s++\n", __func__);
+
+	if (tegra_vi->ndev->id)
+		iso_client_id = TEGRA_ISO_CLIENT_VI_1;
+
+	/* Register with max possible BW in VI usecases.*/
+	tegra_vi->isomgr_handle = tegra_isomgr_register(iso_client_id,
+					VI_DEFAULT_MAX_BW,
+					NULL,	/* tegra_isomgr_renegotiate */
+					NULL);	/* *priv */
+
+	if (!tegra_vi->isomgr_handle) {
+		dev_err(&tegra_vi->ndev->dev, "%s: unable to register isomgr\n",
+					__func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static int vi_isomgr_unregister(struct vi *tegra_vi)
+{
+	tegra_isomgr_unregister(tegra_vi->isomgr_handle);
+	tegra_vi->isomgr_handle = NULL;
+
+	return 0;
+}
+#endif
 
 static int vi_probe(struct platform_device *dev)
 {
@@ -82,21 +122,27 @@ static int vi_probe(struct platform_device *dev)
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
 
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
-
-	i2c_ctrl = pdata->private_data;
-
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 
-	tegra_vi = kzalloc(sizeof(struct vi), GFP_KERNEL);
+	tegra_vi = devm_kzalloc(&dev->dev, sizeof(struct vi), GFP_KERNEL);
 	if (!tegra_vi) {
 		dev_err(&dev->dev, "can't allocate memory for vi\n");
 		return -ENOMEM;
 	}
 
+	err = nvhost_client_device_get_resources(dev);
+	if (err)
+		goto vi_probe_fail;
+
 	tegra_vi->ndev = dev;
+
+#if defined(CONFIG_TEGRA_ISOMGR)
+	err = vi_isomgr_register(tegra_vi);
+	if (err)
+		goto vi_probe_fail;
+#endif
+
+	i2c_ctrl = pdata->private_data;
 	pdata->private_data = tegra_vi;
 
 	/* Create I2C Devices according to settings from board file */
@@ -136,7 +182,12 @@ camera_i2c_unregister:
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
-	kfree(tegra_vi);
+#if defined(CONFIG_TEGRA_ISOMGR)
+	if (tegra_vi->isomgr_handle)
+		vi_isomgr_unregister(tegra_vi);
+#endif
+vi_probe_fail:
+	dev_err(&dev->dev, "%s: failed\n", __func__);
 	return err;
 }
 
@@ -145,11 +196,15 @@ static int __exit vi_remove(struct platform_device *dev)
 #ifdef CONFIG_TEGRA_CAMERA
 	int err = 0;
 #endif
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
+
+#if defined(CONFIG_TEGRA_ISOMGR)
+	if (tegra_vi->isomgr_handle)
+		vi_isomgr_unregister(tegra_vi);
+#endif
 
 	nvhost_client_device_release(dev);
 	pdata->aperture[0] = NULL;
@@ -169,7 +224,6 @@ static int __exit vi_remove(struct platform_device *dev)
 		i2c_ctrl->remove_devices(dev);
 
 	pdata->private_data = i2c_ctrl;
-	kfree(tegra_vi);
 
 	return 0;
 }
@@ -179,8 +233,7 @@ static int vi_suspend(struct device *dev)
 {
 #ifdef CONFIG_TEGRA_CAMERA
 	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)platform_get_drvdata(pdev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
 	int ret;
 #endif
@@ -203,8 +256,7 @@ static int vi_resume(struct device *dev)
 {
 #ifdef CONFIG_TEGRA_CAMERA
 	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_device_data *pdata =
-		(struct nvhost_device_data *)platform_get_drvdata(pdev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
 #endif
 

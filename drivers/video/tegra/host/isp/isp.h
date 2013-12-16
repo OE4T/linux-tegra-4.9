@@ -21,6 +21,16 @@
 #ifndef __NVHOST_ISP_H__
 #define __NVHOST_ISP_H__
 
+#include "camera_priv_defs.h"
+
+struct isp {
+	struct platform_device *ndev;
+#if defined(CONFIG_TEGRA_ISOMGR)
+	tegra_isomgr_handle isomgr_handle;
+#endif
+	int dev_id;
+};
+
 extern const struct file_operations tegra_isp_ctrl_ops;
 int nvhost_isp_t124_finalize_poweron(struct platform_device *);
 

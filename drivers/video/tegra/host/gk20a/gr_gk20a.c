@@ -2562,6 +2562,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 				"fail to allocate gr ctx buffer");
 			goto out;
 		}
+		c->obj_class = args->class_num;
 	} else {
 		/*TBD: needs to be more subtle about which is being allocated
 		* as some are allowed to be allocated along same channel */

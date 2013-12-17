@@ -1501,7 +1501,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * sure the fence represents work completion.  In that case
 	 * issue a wait-for-idle before the syncpoint increment.
 	 */
-	wfi_cmd = !!(flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET);
+	wfi_cmd = !!(flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+		&& c->obj_class != KEPLER_C;
 
 	/* Invalidate tlb if it's dirty...                                   */
 	/* TBD: this should be done in the cmd stream, not with PRIs.        */
@@ -1637,16 +1638,26 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->last_submit_fence.wfi          = wfi_cmd;
 
 		trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
-		if (wfi_cmd)
-			add_wfi_cmd(incr_cmd, &j);
-		/* syncpoint_a */
-		incr_cmd->ptr[j++] = 0x2001001C;
-		/* payload, ignored */
-		incr_cmd->ptr[j++] = 0;
-		/* syncpoint_b */
-		incr_cmd->ptr[j++] = 0x2001001D;
-		/* syncpt_id, incr */
-		incr_cmd->ptr[j++] = (fence->syncpt_id << 8) | 0x1;
+		if (c->obj_class == KEPLER_C) {
+			/* setobject KEPLER_C */
+			incr_cmd->ptr[j++] = 0x20010000;
+			incr_cmd->ptr[j++] = KEPLER_C;
+			/* syncpt incr */
+			incr_cmd->ptr[j++] = 0x200100B2;
+			incr_cmd->ptr[j++] = fence->syncpt_id | (0x1 << 20)
+				| (0x1 << 16);
+		} else {
+			if (wfi_cmd)
+				add_wfi_cmd(incr_cmd, &j);
+			/* syncpoint_a */
+			incr_cmd->ptr[j++] = 0x2001001C;
+			/* payload, ignored */
+			incr_cmd->ptr[j++] = 0;
+			/* syncpoint_b */
+			incr_cmd->ptr[j++] = 0x2001001D;
+			/* syncpt_id, incr */
+			incr_cmd->ptr[j++] = (fence->syncpt_id << 8) | 0x1;
+		}
 
 		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
 			u64_lo32(incr_cmd->gva);

@@ -106,6 +106,7 @@ struct channel_gk20a {
 	u64 userd_gpu_va;
 
 	s32 num_objects;
+	u32 obj_class;	/* we support only one obj per channel */
 
 	struct priv_cmd_queue priv_cmd_q;
 

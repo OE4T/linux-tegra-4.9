@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/tegra_dc_ext_priv.h
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -20,12 +20,12 @@
 #define __TEGRA_DC_EXT_PRIV_H
 
 #include <linux/cdev.h>
+#include <linux/dma-buf.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/poll.h>
 
 #include <mach/dc.h>
-#include <linux/nvmap.h>
 
 #include <video/tegra_dc_ext.h>
 
@@ -33,7 +33,6 @@ struct tegra_dc_ext;
 
 struct tegra_dc_ext_user {
 	struct tegra_dc_ext	*ext;
-	struct nvmap_client	*nvmap;
 };
 
 struct tegra_dc_dmabuf {
@@ -58,7 +57,7 @@ struct tegra_dc_ext_win {
 
 	struct mutex		lock;
 
-	/* Current nvmap handle (if any) for Y, U, V planes */
+	/* Current dmabuf (if any) for Y, U, V planes */
 	struct tegra_dc_dmabuf	*cur_handle[TEGRA_DC_NUM_PLANES];
 
 	struct workqueue_struct	*flip_wq;

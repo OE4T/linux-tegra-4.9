@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/util.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -21,11 +21,10 @@
 
 #include <mach/dc.h>
 #include <linux/dma-buf.h>
-#include <linux/nvmap.h>
 
 #include "tegra_dc_ext_priv.h"
 
-int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
+int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 			    struct tegra_dc_dmabuf **dc_buf,
 			    dma_addr_t *phys_addr)
 {
@@ -34,22 +33,14 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 
 	*dc_buf = NULL;
 	*phys_addr = -1;
-	if (!id)
+	if (!fd)
 		return 0;
 
 	dc_dmabuf = kzalloc(sizeof(*dc_dmabuf), GFP_KERNEL);
 	if (!dc_dmabuf)
 		return -ENOMEM;
 
-	/*
-	 * Take a reference to the buffer using the user's nvmap context, to
-	 * make sure they have permissions to access it.
-	 */
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
-	dc_dmabuf->buf = dma_buf_get(id);
-#else
-	dc_dmabuf->buf = nvmap_dmabuf_export(user->nvmap, id);
-#endif
+	dc_dmabuf->buf = dma_buf_get(fd);
 	if (IS_ERR_OR_NULL(dc_dmabuf->buf))
 		goto buf_fail;
 

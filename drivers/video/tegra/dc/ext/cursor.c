@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/cursor.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -232,9 +232,6 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	int need_general_update = 0;
 	u32 format = TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS(args->flags);
 
-	if (!user->nvmap)
-		return -EFAULT;
-
 	size = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
 
 	if (!check_cursor_size(dc, size))
@@ -464,9 +461,6 @@ int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
 	dma_addr_t phys_addr;
 	bool enable = !!(args->vis & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 	int need_general_update = 0;
-
-	if (!user->nvmap)
-		return -EFAULT;
 
 	size = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
 

@@ -28,7 +28,6 @@
 #include <video/tegra_dc_ext.h>
 
 #include <mach/dc.h>
-#include <linux/nvmap.h>
 #include <mach/tegra_dc_ext.h>
 
 /* XXX ew */
@@ -75,25 +74,6 @@ int tegra_dc_ext_get_num_outputs(void)
 {
 	/* TODO: decouple output count from head count */
 	return head_count;
-}
-
-static int tegra_dc_ext_set_nvmap_fd(struct tegra_dc_ext_user *user,
-				     int fd)
-{
-	struct nvmap_client *nvmap = NULL;
-
-	if (fd >= 0) {
-		nvmap = nvmap_client_get_file(fd);
-		if (IS_ERR(nvmap))
-			return PTR_ERR(nvmap);
-	}
-
-	if (user->nvmap)
-		nvmap_client_put(user->nvmap);
-
-	user->nvmap = nvmap;
-
-	return 0;
 }
 
 static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
@@ -724,10 +704,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	int i, ret = 0;
 	bool has_timestamp = false;
 
-
-	if (!user->nvmap)
-		return -EFAULT;
-
 	/* If display has been disconnected return with error. */
 	if (!ext->dc->connected)
 		return -1;
@@ -1106,7 +1082,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 	switch (cmd) {
 	case TEGRA_DC_EXT_SET_NVMAP_FD:
-		return tegra_dc_ext_set_nvmap_fd(user, arg);
+		return 0;
 
 	case TEGRA_DC_EXT_GET_WINDOW:
 		return tegra_dc_ext_get_window(user, arg);
@@ -1439,9 +1415,6 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	}
 	if (ext->cursor.user == user)
 		tegra_dc_ext_put_cursor(user);
-
-	if (user->nvmap)
-		nvmap_client_put(user->nvmap);
 
 	kfree(user);
 

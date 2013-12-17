@@ -45,7 +45,6 @@
 
 #include <linux/timer.h>
 
-
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi/rm31080a_ctrl.h>
 
@@ -64,7 +63,7 @@
 #define TS_PEN_UP_TIMEOUT		msecs_to_jiffies(50)
 
 #define QUEUE_COUNT				128
-#define RM_RAW_DATA_LENGTH			3072
+#define RM_RAW_DATA_LENGTH			6144
 
 #define RM_SCAN_ACTIVE_MODE			0x00
 #define RM_SCAN_PRE_IDLE_MODE		0x01
@@ -80,6 +79,7 @@
 #ifdef ENABLE_SLOW_SCAN
 #define RM_SLOW_SCAN_INTERVAL				20
 #define RM_SLOW_SCAN_CMD_COUNT				0x10
+
 enum RM_SLOW_SCAN_LEVELS {
 	RM_SLOW_SCAN_LEVEL_NORMAL,
 	RM_SLOW_SCAN_LEVEL_20,
@@ -97,16 +97,19 @@ enum RM_SLOW_SCAN_LEVELS {
 #define RM_SMOOTH_LEVEL_MAX			4
 #endif
 
-#define RM_WINTEK_7_CHANNEL_X 30
-
 #define TS_TIMER_PERIOD		HZ
 
-struct timer_list ts_timer_triggle;
-static void init_ts_timer(void);
-static void ts_timer_triggle_function(unsigned long option);
+#define INPUT_DEVICE_MULTIPLE_INSTANCES
+#ifdef INPUT_DEVICE_MULTIPLE_INSTANCES
+#define INPUT_DEVICE_AMOUNT	2
+
+#define INPUT_DEVICE_FOR_FINGER	0
+#define INPUT_DEVICE_FOR_STYLUS	1
+#endif
 
 /* do not use printk in kernel files */
-#define rm_printk(msg...)	do { dev_info(&g_spi->dev, msg); } while (0)
+#define rm_printk(msg...)	dev_info(&g_spi->dev, msg)
+
 /*=============================================================================
 	STRUCTURE DECLARATION
 =============================================================================*/
@@ -125,6 +128,9 @@ struct rm31080a_ts_para {
 	u32 u32WatchDogTime;
 
 	u8 u8ScanModeState;
+	u8 u8ReportMode;
+
+	u8 u8ResumeCnt;
 
 #ifdef ENABLE_SLOW_SCAN
 	bool bEnableSlowScan;
@@ -140,11 +146,19 @@ struct rm31080a_ts_para {
 	u8 u8Version;
 	u8 u8TestVersion;
 	u8 u8Repeat;
-
+	u16 u16ReadPara;
+	u8 u8SPILocked;
+	u8 bSWCPW[3];
+	u8 bDP[3];
+	u8 bSWC[3];
+	u8 bNsMode;
+	u8 bNsSel;
+	u8 bNsRpt;
 	struct wake_lock Wakelock_Initialization;
 
 	struct mutex mutex_scan_mode;
 	struct mutex mutex_spi_rw;
+	struct mutex mutex_ns_mode;
 
 	struct workqueue_struct *rm_workqueue;
 	struct work_struct rm_work;
@@ -157,10 +171,12 @@ struct rm31080a_ts_para {
 struct rm_tch_ts {
 	const struct rm_tch_bus_ops *bops;
 	struct device *dev;
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	struct input_dev *input;
+#else
+	struct input_dev *input[INPUT_DEVICE_AMOUNT];
+#endif
 	unsigned int irq;
-	bool disabled;
-	bool suspended;
 	char phys[32];
 	struct mutex access_mutex;
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -171,6 +187,7 @@ struct rm_tch_ts {
 	struct notifier_block nb_3v3;
 	struct notifier_block nb_1v8;
 	struct clk *clk;
+	unsigned char bRepeatCounter;
 };
 
 struct rm_tch_bus_ops {
@@ -188,10 +205,13 @@ struct rm_tch_queue_info {
 /*=============================================================================
 	GLOBAL VARIABLES DECLARATION
 =============================================================================*/
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 struct input_dev *g_input_dev;
+#else
+struct input_dev *g_input_dev[INPUT_DEVICE_AMOUNT];
+#endif
 struct spi_device *g_spi;
 struct rm31080a_ts_para g_stTs;
-unsigned long g_smooth_level = 1;
 bool g_is_flush;
 
 struct rm_tch_queue_info g_stQ;
@@ -200,15 +220,23 @@ unsigned char *g_pu8BurstReadBuf;
 
 unsigned char g_stCmdSetIdle[KRL_SIZE_SET_IDLE];
 unsigned char g_stCmdPauseAuto[KRL_SIZE_PAUSE_AUTO];
-unsigned char g_stRmStartCmd[KRL_SIZE_RM_START];
-unsigned char g_stRmEndCmd[KRL_SIZE_RM_END];
+unsigned char g_stRmResumeCmd[KRL_SIZE_RM_RESUME];
+unsigned char g_stRmSuspendCmd[KRL_SIZE_RM_SUSPEND];
 unsigned char g_stRmReadImgCmd[KRL_SIZE_RM_READ_IMG];
 unsigned char g_stRmWatchdogCmd[KRL_SIZE_RM_WATCHDOG];
 unsigned char g_stRmTestModeCmd[KRL_SIZE_RM_TESTMODE];
 unsigned char g_stRmSlowScanCmd[KRL_SIZE_RM_SLOWSCAN];
+unsigned char g_stRmClearIntCmd[KRL_SIZE_RM_CLEARINT];
+unsigned char g_stRmScanStartCmd[KRL_SIZE_RM_SCANSTART];
+unsigned char g_stRmWaitScanOKCmd[KRL_SIZE_RM_WAITSCANOK];
+unsigned char g_stRmSetRepTimeCmd[KRL_SIZE_RM_SETREPTIME];
+unsigned char g_stRmNsParaCmd[KRL_SIZE_RM_NS_PARA];
+unsigned char g_stRmSlowScanBCmd[KRL_SIZE_RM_SLOWSCANB];
 
 int g_service_busy_report_count;
-
+struct timer_list ts_timer_triggle;
+static unsigned char spi_buf[4096];
+static unsigned int bufsize; /*= 0; remove by checkpatch*/
 /*=============================================================================
 	FUNCTION DECLARATION
 =============================================================================*/
@@ -221,11 +249,12 @@ static void rm_tch_early_resume(struct early_suspend *es);
 static int rm_tch_ts_send_signal(int pid, int iInfo);
 
 static void rm_tch_enter_test_mode(u8 flag);
-
-static void rm_ctrl_stop(struct rm_tch_ts *ts);
-static void rm_ctrl_start(struct rm_tch_ts *ts);
-
+static void rm_ctrl_suspend(struct rm_tch_ts *ts);
+static void rm_ctrl_resume(struct rm_tch_ts *ts);
 static void rm_ctrl_watchdog_func(unsigned int u32Enable);
+
+static void init_ts_timer(void);
+static void ts_timer_triggle_function(unsigned long option);
 
 /*=============================================================================
 	 Description:
@@ -242,10 +271,18 @@ static int rm_tch_spi_read(u8 u8addr, u8 *rxbuf, size_t len)
 	struct spi_message message;
 	struct spi_transfer x[2];
 
+	if (g_stTs.u8SPILocked) {
+		memset(rxbuf, 0, len);
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER_REGISTER)
+			rm_printk("Raydium - SPI Read Locked!! 0x%x:%d\n",
+				u8addr, len);
+		return OK;
+	}
+
 	mutex_lock(&g_stTs.mutex_spi_rw);
 
 	spi_message_init(&message);
-	memset(x, 0, sizeof x);
+	memset(x, 0, sizeof(x));
 
 	u8addr |= 0x80;
 	x[0].len = 1;
@@ -260,6 +297,11 @@ static int rm_tch_spi_read(u8 u8addr, u8 *rxbuf, size_t len)
 	status = spi_sync(g_spi, &message);
 
 	mutex_unlock(&g_stTs.mutex_spi_rw);
+
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER_REGISTER)
+		if (g_stTs.bInitFinish == 0)
+			rm_printk("Raydium - READ: addr=0x%2x, value=0x%2x",
+				(u8addr&0x7F), rxbuf[0]);
 
 	if (status) {
 		dev_err(&g_spi->dev, "Raydium - %s : spi_async failed - error %d\n",
@@ -283,11 +325,24 @@ static int rm_tch_spi_write(u8 *txbuf, size_t len)
 {
 	int status;
 	/*It returns zero on succcess,else a negative error code.*/
+
+	if (g_stTs.u8SPILocked) {
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER_REGISTER)
+			rm_printk("Raydium - SPI write Locked!! 0x%x:0x%x\n",
+				txbuf[0], txbuf[1]);
+		return OK;
+	}
+
 	mutex_lock(&g_stTs.mutex_spi_rw);
 
 	status = spi_write(g_spi, txbuf, len);
 
 	mutex_unlock(&g_stTs.mutex_spi_rw);
+
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER_REGISTER)
+		if (g_stTs.bInitFinish == 0)
+			rm_printk("Raydium - WRITE: addr=0x%2x, value=0x%2x",
+				txbuf[0], txbuf[1]);
 
 	if (status) {
 		dev_err(&g_spi->dev, "Raydium - %s : spi_write failed - error %d\n",
@@ -339,19 +394,27 @@ int rm_tch_spi_byte_write(unsigned char u8Addr, unsigned char u8Value)
 			0:failed
 =============================================================================*/
 int rm_tch_spi_burst_read(unsigned char u8Addr, unsigned char *pu8Value,
-	u32 u32len)
+	unsigned int u32Len)
 {
 	int ret;
 	u8 *pMyBuf;
+	ssize_t missing;
 
-	pMyBuf = kmalloc(u32len, GFP_KERNEL);
+	pMyBuf = kmalloc(u32Len, GFP_KERNEL);
 	if (pMyBuf == NULL)
-		return FAIL;
+		return -ENOMEM;
 
-	ret = rm_tch_spi_read(u8Addr, pMyBuf, u32len);
+	ret = rm_tch_spi_read(u8Addr, pMyBuf, u32Len);
 
-	if (ret)
-		memcpy(pu8Value, pMyBuf, u32len);
+	if (ret) {
+		missing = copy_to_user(pu8Value, pMyBuf, u32Len);
+		if (missing) {
+			dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+				__func__, u32Len, missing);
+			kfree(pMyBuf);
+			return FAIL;
+		}
+	}
 
 	kfree(pMyBuf);
 
@@ -370,12 +433,20 @@ int rm_tch_spi_burst_write(unsigned char *pBuf, unsigned int u32Len)
 {
 	u8 *pMyBuf;
 	int ret;
+	ssize_t missing;
 
 	pMyBuf = kmalloc(u32Len, GFP_KERNEL);
 	if (pMyBuf == NULL)
-		return FAIL;
+		return -ENOMEM;
 
-	memcpy(pMyBuf, pBuf, u32Len);
+	missing = copy_from_user(pMyBuf, pBuf, u32Len);
+	if (missing) {
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+			__func__, u32Len, missing);
+		kfree(pMyBuf);
+		return FAIL;
+	}
+
 	ret = rm_tch_spi_write(pMyBuf, u32Len);
 	kfree(pMyBuf);
 	return ret;
@@ -398,7 +469,7 @@ void raydium_change_scan_mode(u8 u8TouchCount)
 	if (u32NoTouchCount < u16NTCountThd) {
 		u32NoTouchCount++;
 	} else if (g_stTs.u8ScanModeState == RM_SCAN_ACTIVE_MODE) {
-			g_stTs.u8ScanModeState = RM_SCAN_PRE_IDLE_MODE;
+		g_stTs.u8ScanModeState = RM_SCAN_PRE_IDLE_MODE;
 		u32NoTouchCount = 0;
 	}
 	mutex_unlock(&g_stTs.mutex_scan_mode);
@@ -407,11 +478,25 @@ void raydium_change_scan_mode(u8 u8TouchCount)
 void raydium_report_pointer(void *p)
 {
 	static unsigned char ucLastTouchCount; /*= 0; remove by checkpatch*/
+#ifdef INPUT_DEVICE_MULTIPLE_INSTANCES
+	u8 target_device = INPUT_DEVICE_FOR_FINGER;
+#endif
 	int i;
 	int iCount;
 	int iMaxX, iMaxY;
 	struct rm_touch_event *spTP;
-	spTP = (struct rm_touch_event *) p;
+	ssize_t missing;
+	spTP = kmalloc(sizeof(struct rm_touch_event), GFP_KERNEL);
+	if (spTP == NULL)
+		return;
+
+	missing = copy_from_user(spTP, p, sizeof(struct rm_touch_event));
+	if (missing) {
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+			__func__, sizeof(struct rm_touch_event), missing);
+		kfree(spTP);
+		return;
+	}
 
 	if ((g_stCtrl.u16ResolutionX != 0) && (g_stCtrl.u16ResolutionY != 0)) {
 		iMaxX = g_stCtrl.u16ResolutionX;
@@ -422,24 +507,52 @@ void raydium_report_pointer(void *p)
 	}
 
 	iCount = max(ucLastTouchCount, spTP->ucTouchCount);
-	if (iCount) {
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
+	if (iCount && !spTP->ucTouchCount) {
+		ucLastTouchCount = 0;
+		input_report_key(g_input_dev,
+			BTN_TOOL_RUBBER, 0);
+		input_mt_sync(g_input_dev);
+		input_sync(g_input_dev);
+	} else if (iCount) {
 		for (i = 0; i < iCount; i++) {
-			if (i == 10)
+			if (i == MAX_REPORT_TOUCHED_POINTS)
 				break;
 
+			if ((spTP->ucToolType[i] == POINT_TYPE_ERASER)
+					&& (spTP->ucSlot[i] && INPUT_POINT_RESET)) {
+				input_report_key(g_input_dev,
+					BTN_TOOL_RUBBER, 0);
+				input_mt_sync(g_input_dev);
+				continue;
+			}
+
 			if (i < spTP->ucTouchCount) {
+				switch (spTP->ucToolType[i]) {
+				case POINT_TYPE_FINGER:
+					input_report_abs(g_input_dev,
+						ABS_MT_TOOL_TYPE,
+						MT_TOOL_FINGER);
+					break;
+				case POINT_TYPE_STYLUS:
+					input_report_abs(g_input_dev,
+							ABS_MT_TOOL_TYPE,
+							MT_TOOL_PEN);
+					break;
+				case POINT_TYPE_ERASER:
+					input_report_key(g_input_dev,
+						BTN_TOOL_RUBBER, 1);
+					break;
+				default:
+					dev_err(&g_spi->dev,
+						"Raydium - point %d is invalid input tool type: %d\n",
+						i, spTP->ucToolType[i]);
+					break;
+				}
+
 				input_report_abs(g_input_dev,
 							ABS_MT_TRACKING_ID,
 							spTP->ucID[i]);
-				input_report_abs(g_input_dev,
-							ABS_MT_TOUCH_MAJOR,
-							spTP->usZ[i]);
-				input_report_abs(g_input_dev,
-							ABS_MT_WIDTH_MAJOR,
-							spTP->usZ[i]);
-				input_report_abs(g_input_dev,
-							ABS_MT_PRESSURE,
-							spTP->usZ[i]);
 
 				if (spTP->usX[i] >= (iMaxX - 1))
 					input_report_abs(g_input_dev,
@@ -458,29 +571,109 @@ void raydium_report_pointer(void *p)
 					input_report_abs(g_input_dev,
 							ABS_MT_POSITION_Y,
 							spTP->usY[i]);
+
+				input_report_abs(g_input_dev,
+							ABS_MT_PRESSURE,
+							spTP->usZ[i]);
+
 			}
 			input_mt_sync(g_input_dev);
 		}
-		ucLastTouchCount = spTP->ucTouchCount;
-		input_report_key(g_input_dev, BTN_TOUCH,
-						spTP->ucTouchCount > 0);
 		input_sync(g_input_dev);
+		ucLastTouchCount = spTP->ucTouchCount;
 	}
+#else
+	if (iCount && !spTP->ucTouchCount) {
+		ucLastTouchCount = 0;
+		for (i = 0; i < INPUT_DEVICE_AMOUNT; i++) {
+			if (i == INPUT_DEVICE_FOR_STYLUS)
+				input_report_key(g_input_dev[i],
+					BTN_TOOL_RUBBER, 0);
+			input_mt_sync(g_input_dev[i]);
+			input_sync(g_input_dev[i]);
+		}
+	} else if (iCount) {
+		for (i = 0; i < iCount; i++) {
+			if (i == MAX_REPORT_TOUCHED_POINTS)
+				break;
 
+			if ((spTP->ucToolType[i] == POINT_TYPE_ERASER)
+					&& (spTP->ucSlot[i] && INPUT_POINT_RESET)) {
+				input_report_key(
+					g_input_dev[INPUT_DEVICE_FOR_STYLUS],
+					BTN_TOOL_RUBBER, 0);
+				input_mt_sync(
+					g_input_dev[INPUT_DEVICE_FOR_STYLUS]);
+				continue;
+			}
+
+			if (i < spTP->ucTouchCount) {
+				switch (spTP->ucToolType[i]) {
+				case POINT_TYPE_FINGER:
+					target_device = INPUT_DEVICE_FOR_FINGER;
+					input_report_abs(
+						g_input_dev[target_device],
+						ABS_MT_TOOL_TYPE,
+						MT_TOOL_FINGER);
+					break;
+				case POINT_TYPE_STYLUS:
+					target_device = INPUT_DEVICE_FOR_STYLUS;
+					input_report_abs(
+						g_input_dev[target_device],
+						ABS_MT_TOOL_TYPE,
+						MT_TOOL_PEN);
+					break;
+				case POINT_TYPE_ERASER:
+					target_device = INPUT_DEVICE_FOR_STYLUS;
+					input_report_key(
+						g_input_dev[target_device],
+						BTN_TOOL_RUBBER, 1);
+					break;
+				default:
+					dev_err(&g_spi->dev,
+						"Raydium - point %d is invalid input tool type: %d\n",
+						i, spTP->ucToolType[i]);
+					break;
+				}
+
+				input_report_abs(g_input_dev[target_device],
+							ABS_MT_TRACKING_ID,
+							spTP->ucID[i]);
+
+				if (spTP->usX[i] >= (iMaxX - 1))
+					input_report_abs(g_input_dev[target_device],
+							ABS_MT_POSITION_X,
+							(iMaxX - 1));
+				else
+					input_report_abs(g_input_dev[target_device],
+							ABS_MT_POSITION_X,
+							spTP->usX[i]);
+
+				if (spTP->usY[i] >= (iMaxY - 1))
+					input_report_abs(g_input_dev[target_device],
+							ABS_MT_POSITION_Y,
+							(iMaxY - 1));
+				else
+					input_report_abs(g_input_dev[target_device],
+							ABS_MT_POSITION_Y,
+							spTP->usY[i]);
+
+				input_report_abs(g_input_dev[target_device],
+							ABS_MT_PRESSURE,
+							spTP->usZ[i]);
+
+			}
+			input_mt_sync(g_input_dev[target_device]);
+		}
+		input_sync(g_input_dev[target_device]);
+		ucLastTouchCount = spTP->ucTouchCount;
+	}
+#endif
 	if (g_stCtrl.bfPowerMode)
 		raydium_change_scan_mode(spTP->ucTouchCount);
 
+	kfree(spTP);
 }
-
-/*=============================================================================
-	 Description:
-			RM31080 control functions.
-	 Input:
-			N/A
-	 Output:
-			1:succeed
-			0:failed
-=============================================================================*/
 
 /*=============================================================================
 	 Description: Read Sensor Raw Data
@@ -498,50 +691,116 @@ static int rm_tch_read_image_data(unsigned char *p)
 	return ret;
 }
 
-void rm_ctrl_set_idle(u8 OnOff)
-{
-	rm_tch_cmd_process(OnOff, g_stCmdSetIdle, NULL);
-}
-
 void rm_tch_ctrl_enter_auto_mode(void)
 {
-	/*g_stCtrl.bfIdleModeCheck = 0; */
 	g_stCtrl.bfIdleModeCheck &= ~0x01;
 
-	/*Enable auto scan*/
-	if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 		rm_printk("Raydium - Enter Auto Scan Mode\n");
 
-	if (g_stCtrl.bICVersion < 0xD0)
-		rm_set_repeat_times(g_stCtrl.bIdleRepeatTimes[0]);
-
-	rm_ctrl_set_idle(1);
-
-#if (ENABLE_MANUAL_IDLE_MODE == 1)
-	rm_tch_spi_byte_write(0x09, 0x40);
-#else
-	rm_tch_spi_byte_write(0x09, 0x10 | 0x40);
-#endif
+	rm_set_repeat_times(g_stCtrl.bIdleDigitalRepeatTimes);
+	rm_tch_cmd_process(1, g_stCmdSetIdle, NULL);
 }
 
 void rm_tch_ctrl_leave_auto_mode(void)
 {
 	g_stCtrl.bfIdleModeCheck |= 0x01;
-	/*Disable auto scan*/
 
-	rm_ctrl_set_idle(0);
+	rm_tch_cmd_process(0, g_stCmdSetIdle, NULL);
+	rm_set_repeat_times(g_stCtrl.bActiveDigitalRepeatTimes);
 
-	if (g_stCtrl.bICVersion < 0xD0)
-		rm_set_repeat_times(g_stCtrl.bActiveRepeatTimes[0]);
-
-	rm_tch_spi_byte_write(0x09, 0x00);
-	if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 		rm_printk("Raydium - Leave Auto Scan Mode\n");
 }
 
 void rm_ctrl_pause_auto_mode(void)
 {
 	rm_tch_cmd_process(0, g_stCmdPauseAuto, NULL);
+}
+
+int rm_tch_ctrl_clear_int(void)
+{
+	return rm_tch_cmd_process(0, g_stRmClearIntCmd, NULL);
+}
+
+void rm_set_ns_para(u8 u8Idx, u8 u8Para)
+{
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
+#else
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev[0]);
+#endif
+
+	ts->bRepeatCounter = u8Para;
+
+	rm_tch_cmd_process(u8Idx, g_stRmNsParaCmd, ts);
+}
+
+int rm_tch_ctrl_scan_start(void)
+{
+	static u8 u8NsSel = 0, u8Rpt = 1;
+
+	if (g_stCtrl.bNsFucnEnable) {
+		rm_tch_ctrl_wait_for_scan_finish();
+
+		mutex_lock(&g_stTs.mutex_ns_mode);
+
+		g_stTs.bNsSel = g_stTs.bSWCPW[u8NsSel];
+
+		if (u8NsSel < g_stTs.bNsMode)
+			u8NsSel++;
+		else
+			u8NsSel = 0;
+
+		if (u8Rpt != g_stTs.bNsRpt) {
+			u8Rpt = g_stTs.bNsRpt;
+			rm_set_repeat_times(u8Rpt);
+		}
+		rm_set_ns_para(0, g_stTs.bDP[u8NsSel]);
+		rm_set_ns_para(1, g_stTs.bSWC[u8NsSel]);
+		rm_set_ns_para(2, g_stTs.bSWCPW[u8NsSel]);
+
+		mutex_unlock(&g_stTs.mutex_ns_mode);
+	}
+
+	return rm_tch_cmd_process(0, g_stRmScanStartCmd, NULL);
+}
+
+void rm_tch_ctrl_wait_for_scan_finish(void)
+{
+	int i;
+	/*50ms = 20Hz*/
+
+	for (i = 0; i < 50; i++) {
+		rm_tch_cmd_process(0, g_stRmWaitScanOKCmd, NULL);
+		if (g_stTs.u16ReadPara & 0x01)
+			usleep_range(1000, 2000);  /* msleep(1); */
+		else
+			break;
+	}
+}
+
+void rm_set_repeat_times(u8 u8Times)
+{
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
+#else
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev[0]);
+#endif
+
+	if (u8Times <= 1)
+		u8Times = 0;
+	else
+		u8Times = u8Times - 1;
+
+	if (u8Times > 31)
+		u8Times = 31;
+
+	ts->bRepeatCounter = (u8Times & 0x1F);
+	if (u8Times == 0)
+		rm_tch_cmd_process(0, g_stRmSetRepTimeCmd, ts);
+	else
+		rm_tch_cmd_process(1, g_stRmSetRepTimeCmd, ts);
 }
 
 static u32 rm_tch_ctrl_configure(void)
@@ -563,15 +822,13 @@ static u32 rm_tch_ctrl_configure(void)
 
 	case RM_SCAN_IDLE_MODE:
 		rm_tch_ctrl_leave_auto_mode();
-		rm_tch_ctrl_scan_start();
 		g_stTs.u8ScanModeState = RM_SCAN_ACTIVE_MODE;
-		if (g_stCtrl.bICVersion >= 0xD0)
-			u32Flag = RM_NEED_TO_SEND_SCAN;
-		else
-			u32Flag =
-				RM_NEED_TO_SEND_SCAN |
-				RM_NEED_TO_READ_RAW_DATA |
-				RM_NEED_TO_SEND_SIGNAL;
+		u32Flag = RM_NEED_TO_SEND_SCAN;
+		/*
+		RM_NEED_TO_SEND_SCAN |
+		RM_NEED_TO_READ_RAW_DATA |
+		RM_NEED_TO_SEND_SIGNAL;
+		*/
 		break;
 
 	default:
@@ -587,14 +844,21 @@ int KRL_CMD_CONFIG_1V8_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 	int ret = FAIL;
 	struct rm_spi_ts_platform_data *pdata;
 
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	pdata = g_input_dev->dev.parent->platform_data;
+#else
+	pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
 
 	if (CMD == KRL_SUB_CMD_SET_1V8_REGULATOR) {
 		if (ts) {
 			if (ts->regulator_1v8) {
 				if (OnOff) {
-					ret = regulator_enable(
-							ts->regulator_1v8);
+					if (regulator_is_enabled(ts->regulator_1v8))
+						ret = OK;
+					else
+						ret = regulator_enable(
+								ts->regulator_1v8);
 					if (ret < 0) {
 						dev_err(&g_spi->dev,
 							"Raydium - regulator 1.8V enable failed: %d\n",
@@ -602,9 +866,12 @@ int KRL_CMD_CONFIG_1V8_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 						ret = FAIL;
 					} else
 						ret = OK;
-				} else if (ts->regulator_3v3) {
-					ret = regulator_disable(
-							ts->regulator_1v8);
+				} else {
+					if (!regulator_is_enabled(ts->regulator_1v8))
+						ret = OK;
+					else
+						ret = regulator_disable(
+								ts->regulator_1v8);
 					if (ret < 0) {
 						dev_err(&g_spi->dev,
 							"Raydium - regulator 1.8V disable failed: %d\n",
@@ -621,7 +888,6 @@ int KRL_CMD_CONFIG_1V8_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 			dev_err(&g_spi->dev,
 				"Raydium - regulator 1.8V ts fail: %d\n",
 				ret);
-		/*gpio_set_value(pdata->gpio_1v8, pCmdTbl[_DATA]);*/
 	} else if (CMD == KRL_SUB_CMD_SET_1V8_GPIO) {
 		gpio_direction_output(pdata->gpio_1v8, OnOff);
 		ret = OK;
@@ -634,14 +900,21 @@ int KRL_CMD_CONFIG_3V3_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 	int ret = FAIL;
 	struct rm_spi_ts_platform_data *pdata;
 
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	pdata = g_input_dev->dev.parent->platform_data;
+#else
+	pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
 
 	if (CMD == KRL_SUB_CMD_SET_3V3_REGULATOR) {
 		if (ts) {
 			if (ts->regulator_3v3) {
 				if (OnOff) {
-					ret = regulator_enable(
-							ts->regulator_3v3);
+					if (regulator_is_enabled(ts->regulator_3v3))
+						ret = OK;
+					else
+						ret = regulator_enable(
+								ts->regulator_3v3);
 					if (ret < 0) {
 						dev_err(&g_spi->dev,
 							"Raydium - regulator 3.3V enable failed: %d\n",
@@ -650,8 +923,11 @@ int KRL_CMD_CONFIG_3V3_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 					} else
 						ret = OK;
 				} else {
-					ret = regulator_disable(
-							ts->regulator_3v3);
+					if (!regulator_is_enabled(ts->regulator_3v3))
+						ret = OK;
+					else
+						ret = regulator_disable(
+								ts->regulator_3v3);
 					if (ret < 0) {
 						dev_err(&g_spi->dev,
 							"Raydium - regulator 3.3V disable failed: %d\n",
@@ -668,7 +944,6 @@ int KRL_CMD_CONFIG_3V3_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
 			dev_err(&g_spi->dev,
 				"Raydium - regulator 3.3V ts fail: %d\n",
 				ret);
-		/*gpio_set_value(pdata->gpio_3v3, pCmdTbl[_DATA]);*/
 	} else if (CMD == KRL_SUB_CMD_SET_3V3_GPIO) {
 		gpio_direction_output(pdata->gpio_3v3, OnOff);
 		ret = OK;
@@ -685,19 +960,24 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 
 	static DEFINE_MUTEX(lock);
 	u16 u16j = 0, u16strIdx, u16TblLenth, u16Tmp;
+	u32 u32Tmp;
 	u8 u8i, u8reg = 0;
 	int ret = FAIL;
 	struct rm_spi_ts_platform_data *pdata;
 
 	mutex_lock(&lock);
 
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	pdata = g_input_dev->dev.parent->platform_data;
-
+#else
+	pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
 	u16TblLenth = pCmdTbl[KRL_TBL_FIELD_POS_LEN_H];
 	u16TblLenth <<= 8;
 	u16TblLenth |= pCmdTbl[KRL_TBL_FIELD_POS_LEN_L];
+
 	if (u16TblLenth < 3) {
-		if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 			dev_info(&g_spi->dev, "Raydium - Null CMD %s : [0x%x]\n",
 				__func__, (u32)pCmdTbl);
 		mutex_unlock(&lock);
@@ -717,6 +997,7 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 		switch (pCmdTbl[_CMD]) {
 		case KRL_CMD_READ:
 			ret = rm_tch_spi_read(pCmdTbl[_ADDR], &u8reg, 1);
+			g_stTs.u16ReadPara = u8reg;
 			/*rm_printk("Raydium - KRL_CMD_READ "
 			"- 0x%x:0x%x\n", pCmdTbl[_ADDR], u8reg);*/
 			break;
@@ -731,6 +1012,11 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			"- 0x%x:0x%x\n", pCmdTbl[_ADDR], u8reg);*/
 			ret = rm_tch_spi_byte_write(pCmdTbl[_ADDR], u8reg);
 			break;
+		case KRL_CMD_IF_AND_OR:
+			if (u8reg & pCmdTbl[_ADDR]) 
+				u8reg |= pCmdTbl[_DATA];
+			ret = OK;
+			break;
 		case KRL_CMD_AND:
 			u8reg &= pCmdTbl[_DATA];
 			ret = OK;
@@ -741,6 +1027,7 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			break;
 		case KRL_CMD_NOT:
 			u8reg = ~u8reg;
+			//g_stTs.u16ReadPara = u8reg;
 			ret = OK;
 			break;
 		case KRL_CMD_XOR:
@@ -749,10 +1036,12 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			break;
 		case KRL_CMD_SEND_SIGNAL:
 			u16Tmp = pCmdTbl[_DATA];
-			/*rm_printk("Raydium - KRL_SEND_SIGNAL_CM "
+			/*rm_printk("Raydium - KRL_CMD_SEND_SIGNAL "
 			"- %d\n", u16Tmp);*/
 			ret = rm_tch_ts_send_signal(g_stTs.ulHalPID,
 				(int)u16Tmp);
+			if (u16Tmp == RM_SIGNAL_RESUME)
+				g_stTs.u8ResumeCnt++;
 			break;
 		case KRL_CMD_CONFIG_RST:
 			/*rm_printk("Raydium - KRL_CMD_CONFIG_RST "
@@ -821,6 +1110,15 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			} else
 				ret = FAIL;
 			break;
+		case KRL_CMD_CONFIG_CS:
+			/*rm_printk("Raydium - KRL_CMD_CONFIG_CS "
+			"- %d - %d\n", pCmdTbl[_SUB_CMD], pCmdTbl[_DATA]);*/
+			switch (pCmdTbl[_SUB_CMD]) {
+			case KRL_SUB_CMD_SET_CS_LOW:
+				ret = !spi_cs_low(g_spi, (bool)!!pCmdTbl[_DATA]);
+				break;
+			}
+			break;
 		case KRL_CMD_SET_TIMER:
 			/*rm_printk("Raydium - KRL_CMD_SET_TIMER "
 			"- %d\n", pCmdTbl[_SUB_CMD]);*/
@@ -835,20 +1133,15 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			} else
 				ret = FAIL;
 			break;
-		case KRL_CMD_USLEEP:
-			/*rm_printk("Raydium - KRL_CMD_USLEEP "
-			"- %d ms\n", pCmdTbl[_DATA]);*/
-			u16Tmp = pCmdTbl[_DATA];
-			u16Tmp *= 1000;
-			usleep_range(u16Tmp, u16Tmp+200);
-			ret = OK;
-			break;
 		case KRL_CMD_MSLEEP:
-			u16Tmp = (u16)(pCmdTbl[_DATA] |
-				(pCmdTbl[_SUB_CMD] << 8));
 			/*rm_printk("Raydium - KRL_CMD_MSLEEP "
-			"- %d ms\n", u16Tmp);*/
-			msleep(u16Tmp);
+			"- %d ms\n", pCmdTbl[_DATA] |
+			(pCmdTbl[_SUB_CMD] << 8));*/
+			u32Tmp = (u16)(pCmdTbl[_DATA] |
+					(pCmdTbl[_SUB_CMD] << 8));
+
+			u32Tmp *= 1000;
+			usleep_range(u32Tmp, u32Tmp + 200);
 			ret = OK;
 			break;
 		case KRL_CMD_FLUSH_QU:
@@ -869,16 +1162,40 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 			pCmdTbl[_ADDR],
 			g_pu8BurstReadBuf,
 			g_stCtrl.u16DataLength);*/
-			if (g_pu8BurstReadBuf)
+			if (g_pu8BurstReadBuf != NULL) {
 				ret = rm_tch_spi_read(pCmdTbl[_ADDR],
 						g_pu8BurstReadBuf,
 						g_stCtrl.u16DataLength);
+				if(g_stCtrl.bNsFucnEnable){
+					g_pu8BurstReadBuf[g_stCtrl.u16DataLength] = g_stTs.bNsSel;
+					/*rm_printk("Raydium -Ns mode:%d,%x,%x\n",
+					g_stCtrl.u16DataLength,g_pu8BurstReadBuf[g_stCtrl.u16DataLength],g_stTs.bNsSel);*/
+				}
+			}
 			g_pu8BurstReadBuf = NULL;
+			break;
+		case KRL_CMD_WRITE_W_COUNT:
+			/*rm_printk("Raydium - KRL_CMD_WRITE_W_COUNT "
+			"- 0x%x: 0x%x..0x%x\n", pCmdTbl[_ADDR], u8reg,
+			ts->bRepeatCounter);*/
+			ret = rm_tch_spi_byte_write(pCmdTbl[_ADDR],
+						u8reg | (ts->bRepeatCounter));
+			break;
+		case KRL_CMD_RETURN_RESULT:
+			g_stTs.u16ReadPara = u8reg;
+			ret = OK;
+			break;
+		case KRL_CMD_RETURN_VALUE:
+			g_stTs.u16ReadPara = (pCmdTbl[_ADDR] << 8) + (pCmdTbl[_DATA]);
+			ret = OK;
+			/*rm_printk("Raydium - KRL_CMD_RETURN_VALUE, value=%d", ret);*/
 			break;
 		default:
 			break;
 		}
 
+		//if ( (pCmdTbl[_CMD] == KRL_CMD_RETURN_RESULT) || (pCmdTbl[_CMD] == KRL_CMD_RETURN_VALUE))
+		//	break;
 
 		if (ret == FAIL) {
 			dev_err(&g_spi->dev, "Raydium - %s : [0x%x] cmd failed\n",
@@ -893,13 +1210,15 @@ static int rm_tch_cmd_process(u8 selCase, u8 *pCmdTbl, struct rm_tch_ts *ts)
 	}
 
 	mutex_unlock(&lock);
+
 	return ret;
 }
 
 int rm_set_kernel_tbl(int iFuncIdx, u8 *u8pSrc)
 {
 	ssize_t missing;
-	u16 u16len;
+	u16 u16len = 0;
+	u8 *u8pLen;
 	u8 *u8pDst;
 
 	switch (iFuncIdx) {
@@ -909,11 +1228,11 @@ int rm_set_kernel_tbl(int iFuncIdx, u8 *u8pSrc)
 	case KRL_INDEX_FUNC_PAUSE_AUTO:
 		u8pDst = g_stCmdPauseAuto;
 		break;
-	case KRL_INDEX_RM_START:
-		u8pDst = g_stRmStartCmd;
+	case KRL_INDEX_RM_RESUME:
+		u8pDst = g_stRmResumeCmd;
 		break;
-	case KRL_INDEX_RM_END:
-		u8pDst = g_stRmEndCmd;
+	case KRL_INDEX_RM_SUSPEND:
+		u8pDst = g_stRmSuspendCmd;
 		break;
 	case KRL_INDEX_RM_READ_IMG:
 		u8pDst = g_stRmReadImgCmd;
@@ -927,26 +1246,59 @@ int rm_set_kernel_tbl(int iFuncIdx, u8 *u8pSrc)
 	case KRL_INDEX_RM_SLOWSCAN:
 		u8pDst = g_stRmSlowScanCmd;
 		break;
+	case KRL_INDEX_RM_SLOWSCANB:
+		u8pDst = g_stRmSlowScanBCmd;
+		break;
+	case KRL_INDEX_RM_CLEARINT:
+		u8pDst = g_stRmClearIntCmd;
+		break;
+	case KRL_INDEX_RM_SCANSTART:
+		u8pDst = g_stRmScanStartCmd;
+		break;
+	case KRL_INDEX_RM_WAITSCANOK:
+		u8pDst = g_stRmWaitScanOKCmd;
+		break;
+	case KRL_INDEX_RM_SETREPTIME:
+		u8pDst = g_stRmSetRepTimeCmd;
+		break;
+	case KRL_INDEX_RM_NSPARA:
+		u8pDst = g_stRmNsParaCmd;
+		break;
+
 	default:
 		dev_err(&g_spi->dev, "Raydium - %s : no kernel table - err:%d\n",
 			__func__, iFuncIdx);
 		return FAIL;
 	}
 
-	u16len = u8pSrc[KRL_TBL_FIELD_POS_LEN_H];
+	u8pLen = kmalloc(KRL_TBL_FIELD_POS_CASE_NUM, GFP_KERNEL);
+	if (u8pLen == NULL)
+		return FAIL;
+
+	missing = copy_from_user(u8pLen, u8pSrc, KRL_TBL_FIELD_POS_CASE_NUM);
+	if (missing) {
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+			__func__, KRL_TBL_FIELD_POS_CASE_NUM, missing);
+		kfree(u8pLen);
+		return FAIL;
+	}
+
+	u16len = u8pLen[KRL_TBL_FIELD_POS_LEN_H];
 	u16len <<= 8;
-	u16len |= u8pSrc[KRL_TBL_FIELD_POS_LEN_L];
+	u16len |= u8pLen[KRL_TBL_FIELD_POS_LEN_L];
 
 	missing = copy_from_user(u8pDst, u8pSrc, u16len);
 	if (missing) {
 		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
 			__func__, u16len, missing);
+		kfree(u8pLen);
 		return FAIL;
 	}
 
 	/*dev_info(&g_spi->dev, "Raydium - %s : CMD_TAB_%d[0x%x]\n",
 	__func__, iFuncIdx, (u32)u8pDst);*/
 
+	kfree(u8pLen);
 	return OK;
 }
 /*=============================================================================
@@ -976,11 +1328,15 @@ static void rm_tch_enter_manual_mode(void)
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 }
 
-static u32 rm_tch_get_platform_id(u8 *p)
+static u32 rm_tch_get_platform_id(u32 *p)
 {
 	u32 u32Ret;
 	struct rm_spi_ts_platform_data *pdata;
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	pdata = g_input_dev->dev.parent->platform_data;
+#else
+	pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
 	u32Ret = copy_to_user(p, &pdata->platform_id,
 		sizeof(pdata->platform_id));
 	if (u32Ret != 0)
@@ -991,17 +1347,59 @@ static u32 rm_tch_get_platform_id(u8 *p)
 static u32 rm_tch_get_gpio_sensor_select(u8 *p)
 {
 	u32 u32Ret = 0;
-	/* wait to be implemented...
 		struct rm_spi_ts_platform_data *pdata;
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 		pdata = g_input_dev->dev.parent->platform_data;
+#else
+		pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
+/* Read from GPIO
 		u32Ret = gpio_set_value(pdata->gpio_sensor_select0)
 			| (1 << gpio_set_value(pdata->gpio_sensor_select1));
-	*/
+*/
+/* Read from data struct */
+	if (pdata->gpio_sensor_select0)
+		u32Ret |= 0x01;
+	if (pdata->gpio_sensor_select1)
+		u32Ret |= 0x02;
+
 	u32Ret = copy_to_user(p, &u32Ret, sizeof(u32Ret));
 	if (u32Ret != 0)
 		return FAIL;
 
 	return OK;
+}
+
+static u32 rm_tch_get_spi_lock_status(u8 *p)
+{
+	u32 u32Ret;
+
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+		rm_printk("Raydium - SPI_LOCK = %d\n", g_stTs.u8SPILocked);
+
+	u32Ret = copy_to_user(p, &g_stTs.u8SPILocked,
+					sizeof(g_stTs.u8SPILocked));
+
+	if (g_stTs.u8SPILocked && g_stTs.u8ResumeCnt)
+		g_stTs.u8ResumeCnt--;
+
+	if (u32Ret != 0)
+		return 0;
+	return 1;
+}
+
+static u32 rm_tch_get_report_mode(u8 *p)
+{
+	u32 u32Ret;
+
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+		rm_printk("Raydium - REPORT_MODE = %d\n", g_stTs.u8ReportMode);
+
+	u32Ret = copy_to_user(p, &g_stTs.u8ReportMode,
+					sizeof(g_stTs.u8ReportMode));
+	if (u32Ret != 0)
+		return 0;
+	return 1;
 }
 
 /*===========================================================================*/
@@ -1131,6 +1529,7 @@ static int rm_tch_queue_is_empty(void)
 static int rm_tch_queue_is_full(void)
 {
 	u16 u16Front = g_stQ.u16Front;
+
 	if (g_stQ.u16Rear + 1 == u16Front)
 		return 1;
 
@@ -1217,8 +1616,17 @@ static void rm_work_handler(struct work_struct *work)
 
 	u32Flag = rm_tch_ctrl_configure();
 
-	if (u32Flag & RM_NEED_TO_SEND_SCAN)
+	if (u32Flag & RM_NEED_TO_SEND_SCAN) {
+#ifdef ENABLE_SLOW_SCAN
+		if (g_stTs.bEnableSlowScan == true) {
+			rm_tch_cmd_process((u8)(g_stTs.u32SlowScanLevel - 1),
+				g_stRmSlowScanBCmd, NULL);
+			//rm_printk("##Raydium - ENABLE_SLOW_SCAN, value = %d", g_stTs.u16ReadPara);
+			usleep_range(g_stTs.u16ReadPara, g_stTs.u16ReadPara + 30);
+		}
+#endif
 		rm_tch_ctrl_scan_start();
+	}
 
 	if (u32Flag & RM_NEED_TO_READ_RAW_DATA) {
 		pKernelBuffer = rm_tch_enqueue_start();
@@ -1248,9 +1656,11 @@ static void rm_tch_init_ts_structure_part(void)
 	g_stTs.bEnableSlowScan = false;
 #endif
 	g_stTs.u8ScanModeState = RM_SCAN_ACTIVE_MODE;
+	g_stTs.u8ReportMode = EVENT_REPORT_MODE_STYLUS_ERASER_FINGER;
 
 	g_pu8BurstReadBuf = NULL;
 	g_is_flush = false;
+	g_stTs.u16ReadPara = 0;
 
 	rm_ctrl_watchdog_func(0);
 	rm_tch_ctrl_init();
@@ -1273,7 +1683,7 @@ static void rm_ctrl_watchdog_func(unsigned int u32Enable)
 		g_stTs.u32WatchDogTime = 0xFFFFFFFF;
 	}
 
-	if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 		rm_printk("Raydium - WatchDogEnable=%d, WatchDogTime=%d\n",
 			g_stTs.u8WatchDogEnable, g_stTs.u32WatchDogTime);
 
@@ -1285,8 +1695,8 @@ static void rm_watchdog_work_function(unsigned char scan_mode)
 		return;
 
 	if (g_stTs.u32WatchDogCnt++ >= g_stTs.u32WatchDogTime) {
-		if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
-			rm_printk("##Raydium - watchdog work: Time:%dsec Cnt:%d,Flg:%d(%x)\n",
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+			rm_printk("Raydium - watchdog work: Time:%dsec Cnt:%d,Flg:%d(%x)\n",
 				g_stTs.u32WatchDogTime,
 				g_stTs.u32WatchDogCnt,
 				g_stTs.u8WatchDogFlg,
@@ -1306,7 +1716,7 @@ static void rm_watchdog_work_function(unsigned char scan_mode)
 
 	if (g_stTs.u8WatchDogFlg) {
 		/*WATCH DOG RESET*/
-		rm_printk("##Raydium - WatchDog Resume\n");
+		rm_printk("Raydium - WatchDog Resume\n");
 		rm_tch_init_ts_structure_part();
 		g_stTs.bIsSuspended = true;
 		rm_tch_cmd_process(0, g_stRmWatchdogCmd, NULL);
@@ -1323,7 +1733,7 @@ static u8 rm_timer_trigger_function(void)
 	if (u32TimerCnt++ < g_stCtrl.bTimerTriggerScale) {
 		return 0;
 	} else {
-		/*rm_printk("##Raydium - rm_timer_work_handler:%x,%x\n",
+		/*rm_printk("Raydium - rm_timer_work_handler:%x,%x\n",
 		g_stCtrl.bTimerTriggerScale, u32TimerCnt);*/
 		u32TimerCnt = 0;
 		return 1;
@@ -1342,16 +1752,13 @@ static void rm_timer_work_handler(struct work_struct *work)
 
 	mutex_lock(&g_stTs.mutex_scan_mode);
 	if (rm_timer_trigger_function()) {
-		if (g_stTs.u8ScanModeState != RM_SCAN_ACTIVE_MODE) {
+		if (g_stTs.u8ScanModeState != RM_SCAN_ACTIVE_MODE)
 			rm_watchdog_work_function(RM_SCAN_IDLE_MODE);
-#if (ENABLE_MANUAL_IDLE_MODE == 1)
-			rm_tch_spi_byte_write(RM31080_REG_11, 0x17);
-#endif
-		} else {
+		else
 			rm_watchdog_work_function(RM_SCAN_ACTIVE_MODE);
-		}
 	}
 	mutex_unlock(&g_stTs.mutex_scan_mode);
+
 	if (g_stTs.u8WatchDogCheck == 1) {
 		rm_tch_ts_send_signal(g_stTs.ulHalPID,
 			RM_SIGNAL_WATCH_DOG_CHECK);
@@ -1363,8 +1770,7 @@ static void rm_timer_work_handler(struct work_struct *work)
 		if (u32TimerCnt > g_stTs.u32WatchDogTime &&
 			g_stTs.u32WatchDogTime != g_stCtrl.bWatchDogNormalCnt) {
 			g_stTs.u32WatchDogTime = g_stCtrl.bWatchDogNormalCnt;
-			if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER)
-				== DEBUG_DRIVER)
+			if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 				rm_printk("Raydium - WDT:Normal mode\n");
 			u32TimerCnt = 0;
 		}
@@ -1420,11 +1826,10 @@ static void rm_tch_ctrl_slowscan(u32 level)
 
 	rm_tch_cmd_process((u8)(level - 1), g_stRmSlowScanCmd, NULL);
 
-	rm_printk("##Raydium - rm_tch_ctrl_slowscan:%x,%x,%x\n",
+	rm_printk("Raydium - rm_tch_ctrl_slowscan:%x,%x,%x\n",
 		(level - 1),
 		g_stRmSlowScanCmd[0],
 		g_stRmSlowScanCmd[1]);
-
 
 	if (g_stTs.u8ScanModeState == RM_SCAN_IDLE_MODE) {
 		rm_tch_ctrl_enter_auto_mode();
@@ -1440,6 +1845,9 @@ static u32 rm_tch_slowscan_round(u32 val)
 		if ((i * RM_SLOW_SCAN_INTERVAL) >= val)
 			break;
 	}
+	if(i > RM_SLOW_SCAN_LEVEL_MAX)
+		i = RM_SLOW_SCAN_LEVEL_MAX;
+	
 	return i;
 }
 
@@ -1448,24 +1856,38 @@ static ssize_t rm_tch_slowscan_handler(const char *buf, size_t count)
 	unsigned long val;
 	ssize_t error;
 	ssize_t ret;
+	u8 *pMyBuf;
+	ssize_t missing;
 
 	if (count < 2)
 		return count;
 
 	ret = (ssize_t) count;
+
+	pMyBuf = kmalloc(count, GFP_KERNEL);
+	if (pMyBuf == NULL)
+		return -ENOMEM;
+
+	missing = copy_from_user(pMyBuf, buf, count);
+	if (missing) {
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+			__func__, count, missing);
+		return count;
+	}
+
 	mutex_lock(&g_stTs.mutex_scan_mode);
 
 	if (count == 2) {
-		if (buf[0] == '0') {
+		if (pMyBuf[0] == '0') {
 			g_stTs.bEnableSlowScan = false;
 			rm_tch_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_MAX);
-		} else if (buf[0] == '1') {
+		} else if (pMyBuf[0] == '1') {
 			g_stTs.bEnableSlowScan = true;
 			rm_tch_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_60);
 			g_stTs.u32SlowScanLevel = RM_SLOW_SCAN_LEVEL_60;
 		}
-	} else if ((buf[0] == '2') && (buf[1] == ' ')) {
-		error = kstrtoul(&buf[2], 10, &val);
+	} else if ((pMyBuf[0] == '2') && (pMyBuf[1] == ' ')) {
+		error = kstrtoul(&pMyBuf[2], 10, &val);
 
 		if (error) {
 			ret = error;
@@ -1477,6 +1899,7 @@ static ssize_t rm_tch_slowscan_handler(const char *buf, size_t count)
 	}
 
 	mutex_unlock(&g_stTs.mutex_scan_mode);
+	kfree(pMyBuf);
 	return ret;
 }
 #endif
@@ -1541,6 +1964,20 @@ static ssize_t rm_tch_smooth_level_handler(const char *buf, size_t count)
 	return ret;
 }
 
+static ssize_t rm_tch_smooth_level_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "Smooth level:%d\n", g_stTs.u32SmoothLevel);
+}
+
+static ssize_t rm_tch_smooth_level_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	rm_tch_smooth_level_handler(buf, count);
+	return count;
+}
 
 static ssize_t rm_tch_self_test_handler(struct rm_tch_ts *ts,
 	const char *buf, size_t count)
@@ -1579,19 +2016,20 @@ static ssize_t rm_tch_self_test_handler(struct rm_tch_ts *ts,
 	return ret;
 }
 
-static ssize_t rm_tch_smooth_level_show(struct device *dev,
-	struct device_attribute *attr,
-	char *buf)
-{
-	return sprintf(buf, "Smooth level:%d\n", g_stTs.u32SmoothLevel);
-}
-
-static ssize_t rm_tch_smooth_level_store(struct device *dev,
+static ssize_t selftest_enable_set(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
 {
-	rm_tch_smooth_level_handler(buf, count);
+	//rm_printk("enter test mode buf[0] = %d", buf[0]);
+	rm_tch_enter_test_mode(buf[0]);
 	return count;
+}
+
+static ssize_t selftest_enable_get(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return 1;
 }
 
 static ssize_t rm_tch_self_test_show(struct device *dev,
@@ -1642,6 +2080,128 @@ static ssize_t rm_tch_module_detect_store(struct device *dev,
 	return count;
 }
 
+static void rm_tch_report_mode_change(unsigned long val)
+{
+	int iInfo;
+
+	g_stTs.u8ReportMode = (u8)val;
+
+	iInfo = (RM_SIGNAL_PARA_REPORT_MODE_CHANGE << 24) |
+			(val << 16) |
+			RM_SIGNAL_REPORT_MODE_CHANGE;
+ 
+	rm_tch_ts_send_signal(g_stTs.ulHalPID, iInfo);
+}
+
+static ssize_t rm_tch_report_mode_handler(const char *buf, size_t count)
+{
+	unsigned long val;
+	ssize_t error;
+	ssize_t ret;
+
+	if (count != 2)
+		return count;
+
+	ret = (ssize_t) count;
+	error = kstrtoul(buf, 10, &val);
+
+	if (error)
+		ret = error;
+	else if ((val >= EVENT_REPORT_MODE_STYLUS_ERASER_FINGER) && (val <EVENT_REPORT_MODE_TYPE_NUM))
+		rm_tch_report_mode_change(val);
+	else
+		ret = FAIL;
+
+	return ret;
+}
+
+static ssize_t rm_tch_report_mode_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "Raydium Touch Report Mode : %d\n", g_stTs.u8ReportMode);
+}
+
+static ssize_t rm_tch_report_mode_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	rm_tch_report_mode_handler(buf, count);
+	return count;
+}
+
+static ssize_t selftest_SPI_byte_read_get(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	buf[0] = spi_buf[0];
+	return 2;
+}
+
+static ssize_t selftest_SPI_byte_read_set(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	return rm_tch_spi_byte_read(buf[0], &spi_buf[0]);
+}
+
+static ssize_t selftest_SPI_byte_write_get(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return 1;
+}
+
+static ssize_t selftest_SPI_byte_write_set(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	return rm_tch_spi_byte_write(buf[0], buf[1]);
+}
+
+static ssize_t selftest_SPI_burst_read_get(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	memcpy(buf, spi_buf, bufsize);
+	return bufsize;
+}
+
+
+static ssize_t selftest_SPI_burst_read_set(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	bufsize = count;
+	return rm_tch_spi_burst_read(buf[0], spi_buf, bufsize);
+}
+
+static ssize_t selftest_SPI_burst_write_get(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return 1;
+}
+
+static ssize_t selftest_SPI_burst_write_set(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	memcpy(spi_buf, buf, count);
+	return rm_tch_spi_burst_write(spi_buf, count);
+}
+
+static DEVICE_ATTR(selftest_enable, 0640, selftest_enable_get,
+					selftest_enable_set);
+
+static DEVICE_ATTR(selftest_spi_byte_read, 0640, selftest_SPI_byte_read_get,
+					selftest_SPI_byte_read_set);
+
+static DEVICE_ATTR(selftest_spi_byte_write, 0640, selftest_SPI_byte_write_get,
+					selftest_SPI_byte_write_set);
+
+static DEVICE_ATTR(selftest_spi_burst_read, 0640, selftest_SPI_burst_read_get,
+					selftest_SPI_burst_read_set);
+
+static DEVICE_ATTR(selftest_spi_burst_write, 0640, selftest_SPI_burst_write_get,
+					selftest_SPI_burst_write_set);
+
 static DEVICE_ATTR(slowscan_enable, 0640, rm_tch_slowscan_show,
 					rm_tch_slowscan_store);
 static DEVICE_ATTR(smooth_level, 0640, rm_tch_smooth_level_show,
@@ -1652,13 +2212,21 @@ static DEVICE_ATTR(version, 0640, rm_tch_version_show,
 					rm_tch_version_store);
 static DEVICE_ATTR(module_detect, 0640, rm_tch_module_detect_show,
 					rm_tch_module_detect_store);
+static DEVICE_ATTR(report_mode, 0640, rm_tch_report_mode_show,
+					rm_tch_report_mode_store);
 
 static struct attribute *rm_ts_attributes[] = {
 	&dev_attr_slowscan_enable.attr,
+	&dev_attr_selftest_enable.attr,
+	&dev_attr_selftest_spi_byte_read.attr,
+	&dev_attr_selftest_spi_byte_write.attr,
+	&dev_attr_selftest_spi_burst_read.attr,
+	&dev_attr_selftest_spi_burst_write.attr,
 	&dev_attr_smooth_level.attr,
 	&dev_attr_self_test.attr,
 	&dev_attr_version.attr,
 	&dev_attr_module_detect.attr,
+	&dev_attr_report_mode.attr,
 	NULL
 };
 
@@ -1670,8 +2238,7 @@ static int rm_tch_input_open(struct input_dev *input)
 {
 	struct rm_tch_ts *ts = input_get_drvdata(input);
 
-	if (!ts->disabled && !ts->suspended)
-		rm_tch_enable_irq(ts);
+	rm_tch_enable_irq(ts);
 
 	return 0;
 }
@@ -1680,8 +2247,7 @@ static void rm_tch_input_close(struct input_dev *input)
 {
 	struct rm_tch_ts *ts = input_get_drvdata(input);
 
-	if (!ts->disabled && !ts->suspended)
-		rm_tch_disable_irq(ts);
+	rm_tch_disable_irq(ts);
 }
 
 static irqreturn_t rm_tch_irq(int irq, void *handle)
@@ -1689,10 +2255,16 @@ static irqreturn_t rm_tch_irq(int irq, void *handle)
 	g_stTs.u32WatchDogCnt = 0;
 
 	trace_touchscreen_raydium_irq("Raydium_interrupt");
+
 	mutex_lock(&g_stTs.mutex_scan_mode);
+
 	if (g_stCtrl.bfPowerMode &&
 			(g_stTs.u8ScanModeState == RM_SCAN_IDLE_MODE))
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 		input_event(g_input_dev, EV_MSC, MSC_ACTIVITY, 1);
+#else
+		input_event(g_input_dev[0], EV_MSC, MSC_ACTIVITY, 1);
+#endif
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 
 	if (g_stTs.bInitFinish && g_stTs.bIsSuspended == false)
@@ -1742,16 +2314,56 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 		break;
 	case RM_VARIABLE_IDLEMODECHECK:
 		g_stCtrl.bfIdleModeCheck = (u8) arg;
-		if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER)
-			== DEBUG_DRIVER)
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 			rm_printk("Raydium - bfIdleModeCheck %2x\n",
 				arg);
 		break;
 	case RM_VARIABLE_REPEAT:
 		/*rm_printk("Raydium - Repeat %d\n", arg);*/
 		g_stTs.u8Repeat = (u8) arg;
+		if(g_stCtrl.bNsFucnEnable) {
+			g_stTs.bNsRpt = (u8) arg;
+			if(g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+				rm_printk("g_stCtrl.bNsRpt %d\n",
+					g_stTs.bNsRpt);
+		}
+		break;
 	case RM_VARIABLE_WATCHDOG_FLAG:
 		rm_ctrl_watchdog_func(arg);
+		g_stCtrl.bNsFucnEnable = ((u8)arg >> 7) & 0x01;
+		if(g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+			rm_printk("g_stCtrl.bKernelMsg %d\n",
+				g_stCtrl.bNsFucnEnable);
+		break;
+	case RM_VARIABLE_SET_SPI_UNLOCK:
+		if (g_stTs.u8ResumeCnt > 1)
+			break;
+		g_stTs.u8SPILocked = 0;
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+			rm_printk("Raydium - SET_SPI_UNLOCK\n");
+		break;
+	case RM_VARIABLE_SET_WAKE_UNLOCK:
+		if (wake_lock_active(&g_stTs.Wakelock_Initialization))
+			wake_unlock(&g_stTs.Wakelock_Initialization);
+		break;
+	case RM_VARIABLE_DPW:
+		mutex_lock(&g_stTs.mutex_ns_mode);
+		memcpy(&g_stTs.bDP[0], ((u8 *)arg), 3);
+		memcpy(&g_stTs.bSWCPW[0], (((u8 *)arg) + 3), 3);
+		memcpy(&g_stTs.bSWC[0], (((u8 *)arg) + 6), 3);
+		mutex_unlock(&g_stTs.mutex_ns_mode);
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+			rm_printk("g_stCtrl.DPW 0x%x:0x%x:0x%x # 0x%x:0x%x:0x%x\n",
+				g_stTs.bDP[0], g_stTs.bDP[1],
+				g_stTs.bDP[2], g_stTs.bSWCPW[0],
+				g_stTs.bSWCPW[1], g_stTs.bSWCPW[2]);
+		break;
+	case RM_VARIABLE_NS_MODE:
+		mutex_lock(&g_stTs.mutex_ns_mode);
+		g_stTs.bNsMode = (u8)arg;
+		mutex_unlock(&g_stTs.mutex_ns_mode);
+		if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+			rm_printk("g_stCtrl.bNsMode=%d\n", g_stTs.bNsMode);
 		break;
 	default:
 		break;
@@ -1763,10 +2375,16 @@ static u32 rm_tch_get_variable(unsigned int index, unsigned int arg)
 	u32 ret = 0;
 	switch (index) {
 	case RM_VARIABLE_PLATFORM_ID:
-		ret = rm_tch_get_platform_id((u8 *) arg);
+		ret = rm_tch_get_platform_id((u32 *) arg);
 		break;
 	case RM_VARIABLE_GPIO_SELECT:
 		ret = rm_tch_get_gpio_sensor_select((u8 *) arg);
+		break;
+	case RM_VARIABLE_CHECK_SPI_LOCK:
+		ret = rm_tch_get_spi_lock_status((u8 *) arg);
+		break;
+	case RM_VARIABLE_REPORT_MODE:
+		ret = rm_tch_get_report_mode((u8 *) arg);
 		break;
 	default:
 		break;
@@ -1795,11 +2413,15 @@ static void rm_tch_init_ts_structure(void)
 
 	mutex_init(&g_stTs.mutex_scan_mode);
 	mutex_init(&g_stTs.mutex_spi_rw);
+	mutex_init(&g_stTs.mutex_ns_mode);
+
+	g_stTs.u8ResumeCnt = 0;
 }
+
 static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 	unsigned long event, void *ignored)
 {
-	if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 		rm_printk("Raydium - REGULATOR EVENT 1.8V:0x%x\n",
 			(unsigned int)event);
 
@@ -1809,29 +2431,29 @@ static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
 static int rm31080_voltage_notifier_3v3(struct notifier_block *nb,
 	unsigned long event, void *ignored)
 {
-	if ((g_stCtrl.bDebugMessage & DEBUG_DRIVER) == DEBUG_DRIVER)
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
 		rm_printk("Raydium - REGULATOR EVENT 3.3V:0x%x\n",
 			(unsigned int)event);
 
 	return NOTIFY_OK;
 }
+
 /*===========================================================================*/
-static void rm_ctrl_start(struct rm_tch_ts *ts)
+static void rm_ctrl_resume(struct rm_tch_ts *ts)
 {
-	if (g_stTs.bIsSuspended == false)
+	if (g_stTs.bInitFinish)
 		return;
-	g_stTs.bIsSuspended = false;
 
 	mutex_lock(&g_stTs.mutex_scan_mode);
 
 	rm_tch_init_ts_structure_part();
 
-	rm_tch_cmd_process(0, g_stRmStartCmd, ts);
+	rm_tch_cmd_process(0, g_stRmResumeCmd, ts);
 
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 }
 
-static void rm_ctrl_stop(struct rm_tch_ts *ts)
+static void rm_ctrl_suspend(struct rm_tch_ts *ts)
 {
 	if (g_stTs.bIsSuspended == true)
 		return;
@@ -1846,11 +2468,11 @@ static void rm_ctrl_stop(struct rm_tch_ts *ts)
 
 	mutex_lock(&g_stTs.mutex_scan_mode);
 
-	rm_tch_cmd_process(0, g_stRmEndCmd, ts);
+	rm_tch_cmd_process(0, g_stRmSuspendCmd, ts);
 
 	rm_tch_ctrl_wait_for_scan_finish();
 
-	rm_tch_cmd_process(1, g_stRmEndCmd, ts);
+	rm_tch_cmd_process(1, g_stRmSuspendCmd, ts);
 
 	mutex_unlock(&g_stTs.mutex_scan_mode);
 }
@@ -1859,17 +2481,33 @@ static void rm_ctrl_stop(struct rm_tch_ts *ts)
 static int rm_tch_suspend(struct device *dev)
 {
 	struct rm_tch_ts *ts = dev_get_drvdata(dev);
-	rm_ctrl_stop(ts);
+
+	rm_ctrl_suspend(ts);
+
+	g_stTs.u8SPILocked = 1;
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+		rm_printk("Raydium - SPI_LOCKED by suspend!!\n");
+
 	return 0;
 }
 
 static int rm_tch_resume(struct device *dev)
 {
 	struct rm_tch_ts *ts = dev_get_drvdata(dev);
+
+	if (wake_lock_active(&g_stTs.Wakelock_Initialization))
+		wake_unlock(&g_stTs.Wakelock_Initialization);
+
 	wake_lock_timeout(&g_stTs.Wakelock_Initialization,
 		TCH_WAKE_LOCK_TIMEOUT);
+
+	g_stTs.u8SPILocked = 1;
+	if (g_stCtrl.bKernelMsg & DEBUG_DRIVER)
+		rm_printk("Raydium - SPI_LOCKED by resume!!\n");
+
 	if (wake_lock_active(&g_stTs.Wakelock_Initialization))
-		rm_ctrl_start(ts);
+		rm_ctrl_resume(ts);
+
 	return 0;
 }
 
@@ -1882,6 +2520,7 @@ static void rm_tch_early_suspend(struct early_suspend *es)
 	ts = container_of(es, struct rm_tch_ts, early_suspend);
 	dev = ts->dev;
 
+	dev_info(ts->dev, "Raydium - Suspend input device\n");
 	if (rm_tch_suspend(dev) != 0)
 		dev_err(dev, "Raydium - %s : failed\n", __func__);
 }
@@ -1894,6 +2533,7 @@ static void rm_tch_early_resume(struct early_suspend *es)
 	ts = container_of(es, struct rm_tch_ts, early_suspend);
 	dev = ts->dev;
 
+	dev_info(ts->dev, "Raydium - Resume input device\n");
 	if (rm_tch_resume(dev) != 0)
 		dev_err(dev, "Raydium - %s : failed\n", __func__);
 }
@@ -1914,7 +2554,7 @@ static int rm_tch_input_enable(struct input_dev *in_dev)
 #ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
-	dev_info(ts->dev, "Raydium - resume\n");
+	dev_info(ts->dev, "Raydium - Enable input device\n");
 	error = rm_tch_resume(ts->dev);
 	if (error)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
@@ -1930,12 +2570,12 @@ static int rm_tch_input_disable(struct input_dev *in_dev)
 #ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
-	dev_info(ts->dev, "Raydium - suspend\n");
+	dev_info(ts->dev, "Raydium - Disable input device\n");
 	error = rm_tch_suspend(ts->dev);
 	if (error)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
 	else
-		dev_info(ts->dev, "Raydium - suspend done\n");
+		dev_info(ts->dev, "Raydium - Disable input device done\n");
 #endif
 
 	return error;
@@ -1943,15 +2583,24 @@ static int rm_tch_input_disable(struct input_dev *in_dev)
 
 static void rm_tch_set_input_resolution(unsigned int x, unsigned int y)
 {
-	input_set_abs_params(g_input_dev, ABS_X, 0, x - 1, 0, 0);
-	input_set_abs_params(g_input_dev, ABS_Y, 0, y - 1, 0, 0);
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	input_set_abs_params(g_input_dev, ABS_MT_POSITION_X, 0, x - 1, 0, 0);
 	input_set_abs_params(g_input_dev, ABS_MT_POSITION_Y, 0, y - 1, 0, 0);
+#else
+	u8 i;
+	for (i = 0 ; i < INPUT_DEVICE_AMOUNT ; i++) {
+		input_set_abs_params(g_input_dev[i], ABS_MT_POSITION_X,
+			0, x - 1, 0, 0);
+		input_set_abs_params(g_input_dev[i], ABS_MT_POSITION_Y,
+			0, y - 1, 0, 0);
+	}
+#endif
 }
 
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
-	const struct rm_tch_bus_ops *bops) {
-
+	const struct rm_tch_bus_ops *bops)
+{
 	struct rm_tch_ts *ts;
 	struct input_dev *input_dev;
 	struct rm_spi_ts_platform_data *pdata;
@@ -2011,18 +2660,17 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 	input_set_capability(input_dev, EV_MSC, MSC_ACTIVITY);
 
 	__set_bit(EV_ABS, input_dev->evbit);
-	__set_bit(ABS_X, input_dev->absbit);
-	__set_bit(ABS_Y, input_dev->absbit);
-
-	__set_bit(EV_KEY, input_dev->evbit);
-	__set_bit(BTN_TOUCH, input_dev->keybit);
-
-	rm_tch_set_input_resolution(RM_INPUT_RESOLUTION_X,
-							RM_INPUT_RESOLUTION_Y);
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 0xFF, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, 0, 0xFF, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xFF, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0, 32, 0, 0);
+
+	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
+	input_set_abs_params(input_dev,
+		ABS_MT_TOOL_TYPE, 0,
+		MT_TOOL_MAX, 0, 0);
+
+	rm_tch_set_input_resolution(RM_INPUT_RESOLUTION_X,
+				RM_INPUT_RESOLUTION_Y);
 
 	err = request_threaded_irq(ts->irq, NULL, rm_tch_irq,
 			IRQF_TRIGGER_RISING | IRQF_ONESHOT, dev_name(dev), ts);
@@ -2060,6 +2708,149 @@ err_free_mem:
 err_out:
 	return ERR_PTR(err);
 }
+#else /*#ifdef INPUT_DEVICE_MULTIPLE_INSTANCES*/
+struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
+	const struct rm_tch_bus_ops *bops) {
+
+	struct rm_tch_ts *ts;
+	struct rm_spi_ts_platform_data *pdata;
+	u8 index;
+	int err = -EINVAL;
+
+	if (!irq) {
+		dev_err(dev, "Raydium - no IRQ?\n");
+		err = -EINVAL;
+		goto err_out;
+	}
+
+	ts = kzalloc(sizeof(*ts), GFP_KERNEL);
+	if (!ts) {
+		dev_err(dev, "Raydium - Failed to allocate memory for driver data\n");
+		err = -ENOMEM;
+		goto err_free_ts_mem;
+	}
+
+	ts->bops = bops;
+	ts->dev = dev;
+	ts->irq = irq;
+
+	pdata = dev->platform_data;
+	if (pdata->name_of_clock || pdata->name_of_clock_con) {
+		ts->clk = clk_get_sys(pdata->name_of_clock,
+			pdata->name_of_clock_con);
+		if (IS_ERR(ts->clk)) {
+			dev_err(&g_spi->dev, "Raydium - failed to get touch_clk: (%s, %s)\n",
+				pdata->name_of_clock, pdata->name_of_clock_con);
+			err = -EINVAL;
+			goto err_free_ts_mem;
+		}
+	}
+
+	mutex_init(&ts->access_mutex);
+
+	for (index = 0 ; index < INPUT_DEVICE_AMOUNT ; index++)
+		if (ts->input[index] != NULL)
+			goto err_free_mem;
+
+	for (index = 0 ; index < INPUT_DEVICE_AMOUNT ; index++) {
+		ts->input[index] = input_allocate_device();
+		if (!ts->input[index]) {
+			dev_err(dev,
+				"Raydium - Failed to allocate input device %d\n",
+				index);
+			err = -ENOMEM;
+			goto err_free_mem;
+		}
+
+		g_input_dev[index] = ts->input[index];
+
+		snprintf(ts->phys, sizeof(ts->phys), "%s/input%d",
+			dev_name(dev), index);
+
+		ts->input[index]->name = "raydium_ts";
+		ts->input[index]->phys = ts->phys;
+		ts->input[index]->dev.parent = dev;
+		ts->input[index]->id.bustype = bops->bustype;
+
+		if (index == INPUT_DEVICE_FOR_FINGER) {
+			ts->input[index]->enable = rm_tch_input_enable;
+			ts->input[index]->disable = rm_tch_input_disable;
+			ts->input[index]->enabled = true;
+			ts->input[index]->open = rm_tch_input_open;
+			ts->input[index]->close = rm_tch_input_close;
+			ts->input[index]->hint_events_per_packet = 256U;
+			input_set_drvdata(ts->input[index], ts);
+			input_set_capability(ts->input[index],
+				EV_MSC, MSC_ACTIVITY);
+		}
+
+
+		__set_bit(EV_SYN, ts->input[index]->evbit);
+
+		__set_bit(EV_ABS, ts->input[index]->evbit);
+		input_set_abs_params(ts->input[index], ABS_MT_PRESSURE, 0, 0xFF, 0, 0);
+		input_set_abs_params(ts->input[index], ABS_MT_TRACKING_ID, 0, 32, 0, 0);
+
+		if (index != INPUT_DEVICE_FOR_FINGER) {
+			__set_bit(EV_KEY, ts->input[index]->evbit);
+			__set_bit(BTN_TOOL_RUBBER, ts->input[index]->keybit);
+		}
+
+		if (index == INPUT_DEVICE_FOR_FINGER)
+			input_set_abs_params(ts->input[index],
+				ABS_MT_TOOL_TYPE, 0,
+				MT_TOOL_FINGER, 0, 0);
+		else
+			input_set_abs_params(ts->input[index],
+				ABS_MT_TOOL_TYPE, 0,
+				MT_TOOL_MAX, 0, 0);
+
+		err = input_register_device(ts->input[index]);
+		if (err < 0)
+			goto err_free_mem;
+	}
+
+	rm_tch_set_input_resolution(RM_INPUT_RESOLUTION_X,
+							RM_INPUT_RESOLUTION_Y);
+
+	err = request_threaded_irq(ts->irq, NULL, rm_tch_irq,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT, dev_name(dev), ts);
+	if (err) {
+		dev_err(dev, "Raydium - irq %d busy?\n", ts->irq);
+		goto err_free_mem;
+	}
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	ts->early_suspend.suspend = rm_tch_early_suspend;
+	ts->early_suspend.resume = rm_tch_early_resume;
+	register_early_suspend(&ts->early_suspend);
+#endif
+
+	rm_tch_disable_irq(ts);
+
+	err = sysfs_create_group(&dev->kobj, &rm_ts_attr_group);
+	if (err)
+		goto err_free_irq;
+
+	return ts;
+
+/*
+err_remove_attr:
+	sysfs_remove_group(&dev->kobj, &rm_ts_attr_group);
+*/
+err_free_irq:
+	free_irq(ts->irq, ts);
+err_free_mem:
+	for (index = 0 ; index < INPUT_DEVICE_AMOUNT ; index++) {
+		input_free_device(ts->input[index]);
+		ts->input[index] = NULL;
+	}
+err_free_ts_mem:
+	kfree(ts);
+err_out:
+	return ERR_PTR(err);
+}
+#endif
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
@@ -2069,6 +2860,7 @@ static int dev_open(struct inode *inode, struct file *filp)
 static int dev_release(struct inode *inode, struct file *filp)
 {
 	g_stTs.bInitFinish = 0;
+
 	rm_tch_enter_manual_mode();
 	return 0;
 }
@@ -2163,9 +2955,12 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case RM_IOCTL_INIT_END:
 		g_stTs.bInitFinish = 1;
 		g_stTs.bCalcFinish = 1;
+		g_stTs.bIsSuspended = false;
+		if (g_stTs.u8ResumeCnt)	/* In case issued by boot-up*/
+			g_stTs.u8ResumeCnt--;
 		if (wake_lock_active(&g_stTs.Wakelock_Initialization))
 			wake_unlock(&g_stTs.Wakelock_Initialization);
-		rm_printk("Raydium - resume done\n");
+		rm_printk("Raydium - Enable input device done\n");
 		break;
 	case RM_IOCTL_FINISH_CALC:
 		g_stTs.bCalcFinish = 1;
@@ -2257,6 +3052,9 @@ static int rm_tch_spi_setting(u32 speed)
 static int rm_tch_spi_remove(struct spi_device *spi)
 {
 	struct rm_tch_ts *ts = spi_get_drvdata(spi);
+#ifdef INPUT_DEVICE_MULTIPLE_INSTANCES
+	u8 i;
+#endif
 	del_timer(&ts_timer_triggle);
 	if (g_stTs.rm_timer_workqueue)
 		destroy_workqueue(g_stTs.rm_timer_workqueue);
@@ -2277,7 +3075,12 @@ static int rm_tch_spi_remove(struct spi_device *spi)
 	misc_deregister(&raydium_ts_miscdev);
 	sysfs_remove_group(&ts->dev->kobj, &rm_ts_attr_group);
 	free_irq(ts->irq, ts);
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	input_unregister_device(ts->input);
+#else
+	for (i = 0 ; i < INPUT_DEVICE_AMOUNT ; i++)
+		input_unregister_device(ts->input[i]);
+#endif
 
 	if (ts->regulator_3v3 && ts->regulator_1v8) {
 		regulator_unregister_notifier(ts->regulator_3v3, &ts->nb_3v3);
@@ -2361,6 +3164,9 @@ static int rm_tch_spi_probe(struct spi_device *spi)
 	struct rm_tch_ts *ts;
 	struct rm_spi_ts_platform_data *pdata;
 	int ret;
+#ifdef INPUT_DEVICE_MULTIPLE_INSTANCES
+	u8 i;
+#endif
 
 	g_spi = spi;
 
@@ -2387,8 +3193,11 @@ static int rm_tch_spi_probe(struct spi_device *spi)
 		ret = -EINVAL;
 		goto err_regulator_init;
 	}
-
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	pdata = g_input_dev->dev.parent->platform_data;
+#else
+	pdata = g_input_dev[0]->dev.parent->platform_data;
+#endif
 	usleep_range(5000, 6000);
 	if (ts->clk)
 		clk_enable(ts->clk);
@@ -2437,18 +3246,29 @@ err_misc_reg:
 		regulator_disable(ts->regulator_3v3);
 		regulator_disable(ts->regulator_1v8);
 	}
+
 	if (ts->clk)
 		clk_disable(ts->clk);
 err_regulator_init:
 	spi_set_drvdata(spi, NULL);
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	input_unregister_device(ts->input);
+#else
+	for (i = 0 ; i < INPUT_DEVICE_AMOUNT ; i++)
+		input_unregister_device(ts->input[i]);
+#endif
 	sysfs_remove_group(&ts->dev->kobj, &rm_ts_attr_group);
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ts->early_suspend);
 #endif
 	mutex_destroy(&ts->access_mutex);
 	free_irq(ts->irq, ts);
+#ifndef INPUT_DEVICE_MULTIPLE_INSTANCES
 	input_free_device(g_input_dev);
+#else
+	for (i = 0 ; i < INPUT_DEVICE_AMOUNT ; i++)
+		input_free_device(g_input_dev[i]);
+#endif
 	kfree(ts);
 err_spi_speed:
 	if (g_stTs.rm_timer_workqueue)

@@ -30,65 +30,6 @@ struct rm_tch_ctrl_para g_stCtrl;
 /*=============================================================================
 	FUNCTION DECLARATION
 =============================================================================*/
-
-/*=============================================================================
-	Description:
-			Control functions for Touch IC
-	Input:
-
-	Output:
-
-=============================================================================*/
-int rm_tch_ctrl_clear_int(void)
-{
-	u8 flag;
-	if (g_stCtrl.bICVersion >= 0xD0)
-		return rm_tch_spi_byte_read(0x72, &flag);
-	else
-		return rm_tch_spi_byte_read(0x02, &flag);
-}
-
-int rm_tch_ctrl_scan_start(void)
-{
-	return rm_tch_spi_byte_write(RM31080_REG_11, 0x17);
-}
-
-void rm_tch_ctrl_wait_for_scan_finish(void)
-{
-	u8 u8reg11;
-	int i;
-	/*50ms = 20Hz*/
-	for (i = 0; i < 50; i++) {
-		rm_tch_spi_byte_read(RM31080_REG_11, &u8reg11);
-		if (u8reg11 & 0x01)
-			usleep_range(1000, 2000);/* msleep(1); */
-		else
-			break;
-	}
-}
-
-/*=============================================================================
-	Description:
-
-	Input:
-			N/A
-	Output:
-			N/A
-=============================================================================*/
-void rm_set_repeat_times(u8 u8Times)
-{
-	u8 bReg1_1Fh = 0x00;
-
-	rm_tch_spi_byte_write(0x0E, u8Times&0x1F);
-
-	bReg1_1Fh &= ~FILTER_NONTHRESHOLD_MODE;
-
-	if (u8Times != REPEAT_1)
-		bReg1_1Fh |= 0x44;
-
-	rm_tch_spi_byte_write(RM31080_REG_1F, bReg1_1Fh);
-}
-
 /*=============================================================================
 	Description:
 
@@ -129,7 +70,10 @@ unsigned char rm_tch_ctrl_get_idle_mode(u8 *p)
 =============================================================================*/
 void rm_tch_ctrl_set_parameter(void *arg)
 {
-	memcpy(&g_stCtrl, arg, sizeof(struct rm_tch_ctrl_para));
+	ssize_t missing;
+	missing = copy_from_user(&g_stCtrl, arg, sizeof(struct rm_tch_ctrl_para));
+	if (missing)
+		return;
 }
 
 /*===========================================================================*/

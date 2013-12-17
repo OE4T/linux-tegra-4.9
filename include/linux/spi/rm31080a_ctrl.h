@@ -13,9 +13,6 @@
 #ifndef _RM31080A_CTRL_H_
 #define _RM31080A_CTRL_H_
 
-#define RM31080_REG_11 0x11
-#define RM31080_REG_1F 0x1F
-
 #define FILTER_NONTHRESHOLD_MODE		0x00
 
 #define REPEAT_1						0x00
@@ -26,15 +23,16 @@ struct rm_tch_ctrl_para {
 	unsigned short bICVersion;
 	unsigned short u16ResolutionX;
 	unsigned short u16ResolutionY;
-
-	unsigned char bActiveRepeatTimes[2];
-	unsigned char bIdleRepeatTimes[2];
+	unsigned char bActiveDigitalRepeatTimes;
+	unsigned char bAnalogRepeatTimes;
+	unsigned char bIdleDigitalRepeatTimes;
 	unsigned char bTime2Idle;
 	unsigned char bfPowerMode;
-	unsigned char bDebugMessage;
+	unsigned char bKernelMsg;
 	unsigned char bTimerTriggerScale;
 	unsigned char bfIdleModeCheck;
 	unsigned char bWatchDogNormalCnt;
+	unsigned char bNsFucnEnable;
 };
 
 extern struct rm_tch_ctrl_para g_stCtrl;

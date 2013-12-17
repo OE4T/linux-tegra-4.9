@@ -3916,12 +3916,18 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 
 	zcull_map_tiles = kzalloc(proj_scal_max_gpcs_v() *
 			proj_scal_max_tpc_per_gpc_v() * sizeof(u32), GFP_KERNEL);
+	if (!zcull_map_tiles) {
+		nvhost_err(dev_from_gk20a(g),
+			"failed to allocate zcull temp buffers");
+		return -ENOMEM;
+	}
 	zcull_bank_counters = kzalloc(proj_scal_max_gpcs_v() *
 			proj_scal_max_tpc_per_gpc_v() * sizeof(u32), GFP_KERNEL);
 
-	if (!zcull_map_tiles || !zcull_bank_counters) {
+	if (!zcull_bank_counters) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to allocate zcull temp buffers");
+		kfree(zcull_map_tiles);
 		return -ENOMEM;
 	}
 

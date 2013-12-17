@@ -341,27 +341,6 @@ int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 	return pin_count;
 }
 
-u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle)
-{
-	switch (nvhost_memmgr_type((u32)handle)) {
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	case mem_mgr_type_nvmap:
-		return (u32)nvmap_dmabuf_to_user_id(
-				(struct dma_buf *)handle);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		WARN_ON(1);
-		break;
-#endif
-	default:
-		break;
-	}
-
-	return 0;
-}
-
 struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
 		struct mem_handle *handle)
 {

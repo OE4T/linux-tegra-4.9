@@ -99,7 +99,6 @@ void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct sg_table *sgt);
 static inline int nvhost_memmgr_type(ulong id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(ulong id) { return id & MEMMGR_ID_MASK; }
-u32 nvhost_memmgr_handle_to_id(struct mem_handle *handle);
 
 int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
 		struct platform_device *dev,

@@ -760,17 +760,6 @@ void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf)
 	return priv;
 }
 
-ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf)
-{
-	struct nvmap_handle_info *info;
-
-	if (!virt_addr_valid(dmabuf))
-		return 0;
-
-	info = dmabuf->priv;
-	return (ulong)marshal_kernel_handle((ulong)info->handle);
-}
-
 /*
  * List detailed info for all buffers allocated.
  */

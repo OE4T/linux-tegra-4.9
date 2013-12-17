@@ -67,8 +67,6 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 
 struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client, ulong user_id);
 
-ulong nvmap_dmabuf_to_user_id(struct dma_buf *dmabuf);
-
 struct nvmap_client *nvmap_client_get_file(int fd);
 
 struct nvmap_client *nvmap_client_get(struct nvmap_client *client);

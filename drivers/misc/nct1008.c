@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -172,16 +172,23 @@ static int nct1008_ext_get_temp_common(struct nct1008_data *data,
 	long temp_ext_milli;
 	int i, off = 0;
 	u8 value;
+	int ret;
 
 	/* Read External Temp */
-	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
-	if (value < 0)
+	ret = nct1008_read_reg(client, EXT_TEMP_RD_LO);
+	if (ret < 0)
 		return -1;
+	else
+		value = ret;
+
 	temp_ext_lo = (value >> 6);
 
-	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
-	if (value < 0)
+	ret = nct1008_read_reg(client, EXT_TEMP_RD_HI);
+	if (ret < 0)
 		return -1;
+	else
+		value = ret;
+
 	temp_ext_hi = value_to_temperature(pdata->ext_range, value);
 
 	temp_ext_milli = CELSIUS_TO_MILLICELSIUS(temp_ext_hi) +
@@ -814,11 +821,16 @@ static int nct1008_int_get_temp(struct thermal_zone_device *thz,
 	s16 temp_local;
 	long temp_local_milli;
 	u8 value;
+	int ret;
 
 	/* Read Local Temp */
-	value = nct1008_read_reg(client, LOCAL_TEMP_RD);
-	if (value < 0)
+	ret = nct1008_read_reg(client, LOCAL_TEMP_RD);
+
+	if (ret < 0)
 		return -1;
+	else
+		value = ret;
+
 	temp_local = value_to_temperature(pdata->ext_range, value);
 
 	temp_local_milli = CELSIUS_TO_MILLICELSIUS(temp_local);
@@ -1026,28 +1038,28 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	u8 value;
 	s16 temp;
 	u8 temp2;
-	int err;
+	int ret;
 
 	if (!pdata || !pdata->supported_hwrev)
 		return -ENODEV;
 
 	/* Initially place in Standby */
-	err = nct1008_write_reg(client, CONFIG_WR, STANDBY_BIT);
-	if (err)
+	ret = nct1008_write_reg(client, CONFIG_WR, STANDBY_BIT);
+	if (ret)
 		goto error;
 
 	/* External temperature h/w shutdown limit */
 	value = temperature_to_value(pdata->ext_range,
 					pdata->shutdown_ext_limit);
-	err = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
-	if (err)
+	ret = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
+	if (ret)
 		goto error;
 
 	/* Local temperature h/w shutdown limit */
 	value = temperature_to_value(pdata->ext_range,
 					pdata->shutdown_local_limit);
-	err = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, value);
-	if (err)
+	ret = nct1008_write_reg(client, LOCAL_THERM_LIMIT_WR, value);
+	if (ret)
 		goto error;
 
 	/* set extended range mode if needed */
@@ -1055,56 +1067,59 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		data->config |= EXTENDED_RANGE_BIT;
 	data->config &= ~(THERM2_BIT | ALERT_BIT);
 
-	err = nct1008_write_reg(client, CONFIG_WR, data->config);
-	if (err)
+	ret = nct1008_write_reg(client, CONFIG_WR, data->config);
+	if (ret)
 		goto error;
 
 	/* Temperature conversion rate */
-	err = nct1008_write_reg(client, CONV_RATE_WR, pdata->conv_rate);
-	if (err)
+	ret = nct1008_write_reg(client, CONV_RATE_WR, pdata->conv_rate);
+	if (ret)
 		goto error;
 
 	data->conv_period_ms = conv_period_ms_table[pdata->conv_rate];
 
 	/* Setup local hi and lo limits */
-	err = nct1008_write_reg(client,
+	ret = nct1008_write_reg(client,
 		LOCAL_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
-	if (err)
+	if (ret)
 		goto error;
 
-	err = nct1008_write_reg(client, LOCAL_TEMP_LO_LIMIT_WR, 0);
-	if (err)
+	ret = nct1008_write_reg(client, LOCAL_TEMP_LO_LIMIT_WR, 0);
+	if (ret)
 		goto error;
 
 	/* Setup external hi and lo limits */
-	err = nct1008_write_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
-	if (err)
+	ret = nct1008_write_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
+	if (ret)
 		goto error;
-	err = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
+	ret = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
 			NCT1008_MAX_TEMP);
-	if (err)
+	if (ret)
 		goto error;
 
 	/* read initial temperature */
-	value = nct1008_read_reg(client, LOCAL_TEMP_RD);
-	if (value < 0) {
-		err = value;
+	ret = nct1008_read_reg(client, LOCAL_TEMP_RD);
+	if (ret < 0)
 		goto error;
-	}
+	else
+		value = ret;
+
 	temp = value_to_temperature(pdata->ext_range, value);
 	dev_dbg(&client->dev, "\n initial local temp = %d ", temp);
 
-	value = nct1008_read_reg(client, EXT_TEMP_RD_LO);
-	if (value < 0) {
-		err = value;
+	ret = nct1008_read_reg(client, EXT_TEMP_RD_LO);
+	if (ret < 0)
 		goto error;
-	}
+	else
+		value = ret;
+
 	temp2 = (value >> 6);
-	value = nct1008_read_reg(client, EXT_TEMP_RD_HI);
-	if (value < 0) {
-		err = value;
+	ret = nct1008_read_reg(client, EXT_TEMP_RD_HI);
+	if (ret < 0)
 		goto error;
-	}
+	else
+		value = ret;
+
 	temp = value_to_temperature(pdata->ext_range, value);
 
 	if (temp2 > 0)
@@ -1114,37 +1129,39 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
 
 	/* Remote channel offset */
-	err = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
-	if (err < 0)
+	ret = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
+	if (ret < 0)
 		goto error;
 
 	/* Remote channel offset fraction (quarters) */
-	err = nct1008_write_reg(client, OFFSET_QUARTER_WR,
+	ret = nct1008_write_reg(client, OFFSET_QUARTER_WR,
 					(pdata->offset % 4) << 6);
-	if (err < 0)
+	if (ret < 0)
 		goto error;
 
 	/* Reset current hi/lo limit values with register values */
-	value = nct1008_read_reg(data->client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
-	if (value < 0) {
-		err = value;
+	ret = nct1008_read_reg(data->client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
+	if (ret < 0)
 		goto error;
-	}
+	else
+		value = ret;
+
 	data->current_lo_limit = value_to_temperature(pdata->ext_range, value);
 
-	value = nct1008_read_reg(data->client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
-	if (value < 0) {
-		err = value;
+	ret = nct1008_read_reg(data->client, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
+	if (ret < 0)
 		goto error;
-	}
+	else
+		value = ret;
+
 	data->current_hi_limit = value_to_temperature(pdata->ext_range, value);
 
 	nct1008_setup_shutdown_warning(data);
 
 	return 0;
 error:
-	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
-	return err;
+	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, ret);
+	return ret;
 }
 
 static int nct1008_configure_irq(struct nct1008_data *data)

@@ -588,7 +588,7 @@ void gk20a_set_error_notifier(struct nvhost_hwctx *ctx, __u32 error)
 				(u32)(nsec >> 32);
 		ctx->error_notifier->info32 = error;
 		ctx->error_notifier->status = 0xffff;
-		nvhost_dbg(dbg_fn | dbg_err,
+		nvhost_err(&ctx->channel->dev->dev,
 				"error notifier set to %d\n", error);
 	}
 }

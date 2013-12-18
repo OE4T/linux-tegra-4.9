@@ -199,7 +199,6 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 	filp->private_data = ctx;
 	return ret;
 
-	crypto_free_ahash(ctx->rsa2048_tfm);
 fail_rsa2048:
 	crypto_free_ahash(ctx->rsa1536_tfm);
 fail_rsa1536:
@@ -458,6 +457,9 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		}
 		tfm = ctx->rsa2048_tfm;
 		break;
+
+	default:
+		goto req_fail;
 	}
 
 	ret = alloc_bufs(xbuf);

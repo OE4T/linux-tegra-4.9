@@ -286,4 +286,5 @@ void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi);
 bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 			       struct fb_videomode *mode);
+void tegra_dc_hdmi_setup_audio_and_infoframes(struct tegra_dc *dc);
 #endif

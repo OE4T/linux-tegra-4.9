@@ -846,6 +846,7 @@ bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 /* used by tegra_dc_probe() to detect hpd/hdmi status at boot */
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
+	/* trigger an edid read by the hdmi state machine */
 	hdmi_state_machine_set_pending_hpd();
 
 	return tegra_dc_hpd(dc);
@@ -1100,7 +1101,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->disp1_clk = disp1_clk;
 	hdmi->disp2_clk = disp2_clk;
 	hdmi->suspended = false;
-	hdmi->eld_retrieved= false;
+	hdmi->eld_retrieved = false;
 	hdmi->clk_enabled = false;
 	hdmi->audio_freq = 44100;
 	hdmi->audio_source = AUTO;
@@ -1826,18 +1827,63 @@ static void tegra_dc_hdmi_setup_tmds(struct tegra_dc_hdmi_data *hdmi,
 #endif
 }
 
+void tegra_dc_hdmi_setup_audio_and_infoframes(struct tegra_dc *dc)
+{
+	int rekey;
+	int err;
+	u32 val;
+	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	if (!hdmi->dvi) {
+		err = tegra_dc_hdmi_setup_audio(dc, hdmi->audio_freq,
+			hdmi->audio_source);
+
+		if (err < 0)
+			hdmi->dvi = true;
+	}
+
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	tegra_dc_hdmi_setup_eld_buff(dc);
+#endif
+
+	rekey = HDMI_REKEY_DEFAULT;
+	val = HDMI_CTRL_REKEY(rekey);
+	val |= HDMI_CTRL_MAX_AC_PACKET((dc->mode.h_sync_width +
+					dc->mode.h_back_porch +
+					dc->mode.h_front_porch -
+					rekey - 18) / 32);
+	if (!hdmi->dvi)
+		val |= HDMI_CTRL_ENABLE;
+	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_CTRL);
+
+	if (hdmi->dvi)
+		tegra_hdmi_writel(hdmi, 0x0,
+				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+	else
+		tegra_hdmi_writel(hdmi, GENERIC_CTRL_AUDIO,
+				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
+
+	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
+
+	if (dc->mode.stereo_mode)
+		tegra_dc_hdmi_setup_stereo_infoframe(dc);
+	else if (!tegra_dc_hdmi_setup_hdmi_vic_infoframe(dc, hdmi->dvi))
+		tegra_dc_hdmi_disable_generic_infoframe(dc);
+
+	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
+}
+
 static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	int pulse_start;
 	int dispclk_div_8_2;
 	int retries;
-	int rekey;
-	int err;
 	unsigned long val;
 	unsigned i;
 	const struct tmds_config *tmds_ptr;
 	size_t tmds_len;
+	bool edid_read;
 
 	/* enable power, clocks, resets, etc. */
 
@@ -1927,44 +1973,19 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	hdmi->clk_enabled = true;
 
-	if (!hdmi->dvi) {
-		err = tegra_dc_hdmi_setup_audio(dc, hdmi->audio_freq,
-			hdmi->audio_source);
-
-		if (err < 0)
-			hdmi->dvi = true;
+	edid_read = hdmi->eld_retrieved;
+	/* on first boot, we haven't read EDID yet so
+	 * we don't know what to setup yet.  we'll
+	 * call audio and infoframes setup in hdmi worker
+	 * after EDID has been read.
+	 */
+	if (edid_read) {
+		/* after boot, this is called by hwc via ioctl
+		 * blank/unblank, which is done after EDID has
+		 * been read.
+		 */
+		tegra_dc_hdmi_setup_audio_and_infoframes(dc);
 	}
-
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	if (hdmi->eld_retrieved)
-		tegra_dc_hdmi_setup_eld_buff(dc);
-#endif
-
-	rekey = HDMI_REKEY_DEFAULT;
-	val = HDMI_CTRL_REKEY(rekey);
-	val |= HDMI_CTRL_MAX_AC_PACKET((dc->mode.h_sync_width +
-					dc->mode.h_back_porch +
-					dc->mode.h_front_porch -
-					rekey - 18) / 32);
-	if (!hdmi->dvi)
-		val |= HDMI_CTRL_ENABLE;
-	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_HDMI_CTRL);
-
-	if (hdmi->dvi)
-		tegra_hdmi_writel(hdmi, 0x0,
-				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
-	else
-		tegra_hdmi_writel(hdmi, GENERIC_CTRL_AUDIO,
-				  HDMI_NV_PDISP_HDMI_GENERIC_CTRL);
-
-	tegra_dc_hdmi_setup_avi_infoframe(dc, hdmi->dvi);
-
-	if (dc->mode.stereo_mode)
-		tegra_dc_hdmi_setup_stereo_infoframe(dc);
-	else if (!tegra_dc_hdmi_setup_hdmi_vic_infoframe(dc, hdmi->dvi))
-		tegra_dc_hdmi_disable_generic_infoframe(dc);
-
-	tegra_dc_hdmi_setup_audio_infoframe(dc, hdmi->dvi);
 
 	/* Set tmds config. Set it to custom values provided in board file;
 	 * otherwise, set it to default values. */

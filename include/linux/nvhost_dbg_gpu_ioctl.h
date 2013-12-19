@@ -132,7 +132,7 @@ struct nvhost_dbg_gpu_events_ctrl_args {
 
 struct nvhost_dbg_gpu_powergate_args {
 	__u32 mode;
-};
+} __packed;
 
 #define NVHOST_DBG_GPU_IOCTL_POWERGATE					\
 	_IOWR(NVHOST_DBG_GPU_IOCTL_MAGIC, 4, struct nvhost_dbg_gpu_powergate_args)

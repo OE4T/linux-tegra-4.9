@@ -3,7 +3,7 @@
  *
  * Tegra GPU Driver
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,7 +45,7 @@
 /* return zcull ctx size */
 struct nvhost_gpu_zcull_get_ctx_size_args {
 	__u32 size;
-};
+} __packed;
 
 /* return zcull info */
 struct nvhost_gpu_zcull_get_info_args {
@@ -72,7 +72,7 @@ struct nvhost_gpu_zbc_set_table_args {
 	__u32 depth;
 	__u32 format;
 	__u32 type;	/* color or depth */
-};
+} __packed;
 /* TBD: remove this once mobilerm removed old references */
 #define nvhost_zbc_set_table_args nvhost_gpu_zbc_set_table_args
 
@@ -84,7 +84,7 @@ struct nvhost_gpu_zbc_query_table_args {
 	__u32 format;
 	__u32 type;		/* color or depth */
 	__u32 index_size;	/* [out] size, [in] index */
-};
+} __packed;
 
 #define NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVHOST_GPU_IOCTL_MAGIC, 1, struct nvhost_gpu_zcull_get_ctx_size_args)

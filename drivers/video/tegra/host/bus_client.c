@@ -990,9 +990,49 @@ static long nvhost_channelctl(struct file *filp,
 		priv->priority =
 			(u32)((struct nvhost_set_priority_args *)buf)->priority;
 		break;
+	case NVHOST32_IOCTL_CHANNEL_MODULE_REGRDWR:
+	{
+		struct nvhost32_ctrl_module_regrdwr_args *args32 =
+			(struct nvhost32_ctrl_module_regrdwr_args *)buf;
+		struct nvhost_ctrl_module_regrdwr_args args;
+		args.id = args32->id;
+		args.num_offsets = args32->num_offsets;
+		args.block_size = args32->block_size;
+		args.offsets = args32->offsets;
+		args.values = args32->values;
+		args.write = args32->write;
+		err = nvhost_ioctl_channel_module_regrdwr(priv, &args);
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR:
 		err = nvhost_ioctl_channel_module_regrdwr(priv, (void *)buf);
 		break;
+	case NVHOST32_IOCTL_CHANNEL_SUBMIT:
+	{
+		struct nvhost32_submit_args *args32 = (void *)buf;
+		struct nvhost_submit_args args;
+
+		args.submit_version = args32->submit_version;
+		args.num_syncpt_incrs = args32->num_syncpt_incrs;
+		args.num_cmdbufs = args32->num_cmdbufs;
+		args.num_relocs = args32->num_relocs;
+		args.num_waitchks = args32->num_waitchks;
+		args.timeout = args32->timeout;
+		args.syncpt_incrs = args32->syncpt_incrs;
+		args.fence = args32->fence;
+
+		args.cmdbufs = args32->cmdbufs;
+		args.relocs = args32->relocs;
+		args.reloc_shifts = args32->reloc_shifts;
+		args.waitchks = args32->waitchks;
+		args.waitbases = args32->waitbases;
+		args.class_ids = args32->class_ids;
+		args.fences = args32->fences;
+
+		err = nvhost_ioctl_channel_submit(priv, &args);
+		args32->fence = args.fence;
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_SUBMIT:
 		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
 		break;

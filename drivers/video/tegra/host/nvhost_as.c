@@ -113,6 +113,21 @@ long nvhost_as_dev_ctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			       (struct nvhost_as_bind_channel_args *)buf);
 
 		break;
+	case NVHOST32_AS_IOCTL_ALLOC_SPACE:
+	{
+		struct nvhost32_as_alloc_space_args *args32 =
+			(struct nvhost32_as_alloc_space_args *)buf;
+		struct nvhost_as_alloc_space_args args;
+
+		args.pages = args32->pages;
+		args.page_size = args32->page_size;
+		args.flags = args32->flags;
+		args.o_a.offset = args32->o_a.offset;
+		trace_nvhost_as_ioctl_alloc_space(dev_name(&ch->dev->dev));
+		err = nvhost_as_ioctl_alloc_space(as_share, &args);
+		args32->o_a.offset = args.o_a.offset;
+		break;
+	}
 	case NVHOST_AS_IOCTL_ALLOC_SPACE:
 		trace_nvhost_as_ioctl_alloc_space(dev_name(&ch->dev->dev));
 		err = nvhost_as_ioctl_alloc_space(as_share,

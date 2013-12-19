@@ -3,7 +3,7 @@
  *
  * Tegra Host Address Space Driver
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,11 +59,22 @@
  * given.  Otherwise the address returned is chosen to be a multiple of 'align.'
  *
  */
-struct nvhost_as_alloc_space_args {
+struct nvhost32_as_alloc_space_args {
 	__u32 pages;     /* in, pages */
 	__u32 page_size; /* in, bytes */
 	__u32 flags;     /* in */
 #define NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET 0x1
+	union {
+		__u64 offset; /* inout, byte address valid iff _FIXED_OFFSET */
+		__u64 align;  /* in, alignment multiple (0:={1 or n/a}) */
+	} o_a;
+};
+
+struct nvhost_as_alloc_space_args {
+	__u32 pages;     /* in, pages */
+	__u32 page_size; /* in, bytes */
+	__u32 flags;     /* in */
+	__u32 padding;     /* in */
 	union {
 		__u64 offset; /* inout, byte address valid iff _FIXED_OFFSET */
 		__u64 align;  /* in, alignment multiple (0:={1 or n/a}) */
@@ -92,7 +103,7 @@ struct nvhost_as_free_space_args {
  */
 struct nvhost_as_bind_channel_args {
 	__u32 channel_fd; /* in */
-};
+} __packed;
 
 /*
  * Mapping nvmap buffers into an address space:
@@ -131,17 +142,19 @@ struct nvhost_as_unmap_buffer_args {
 
 #define NVHOST_AS_IOCTL_BIND_CHANNEL \
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 1, struct nvhost_as_bind_channel_args)
-#define NVHOST_AS_IOCTL_ALLOC_SPACE \
-	_IOWR(NVHOST_AS_IOCTL_MAGIC, 2, struct nvhost_as_alloc_space_args)
+#define NVHOST32_AS_IOCTL_ALLOC_SPACE \
+	_IOWR(NVHOST_AS_IOCTL_MAGIC, 2, struct nvhost32_as_alloc_space_args)
 #define NVHOST_AS_IOCTL_FREE_SPACE \
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 3, struct nvhost_as_free_space_args)
 #define NVHOST_AS_IOCTL_MAP_BUFFER \
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 4, struct nvhost_as_map_buffer_args)
 #define NVHOST_AS_IOCTL_UNMAP_BUFFER \
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 5, struct nvhost_as_unmap_buffer_args)
+#define NVHOST_AS_IOCTL_ALLOC_SPACE \
+	_IOWR(NVHOST_AS_IOCTL_MAGIC, 6, struct nvhost_as_alloc_space_args)
 
 #define NVHOST_AS_IOCTL_LAST		\
-	_IOC_NR(NVHOST_AS_IOCTL_UNMAP_BUFFER)
+	_IOC_NR(NVHOST_AS_IOCTL_ALLOC_SPACE)
 #define NVHOST_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_as_map_buffer_args)
 

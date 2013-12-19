@@ -2403,7 +2403,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->disable)
 		dc->out_ops->disable(dc);
 
-	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+	if (tegra_powergate_is_powered(dc->powergate_id))
+		tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
 	disable_irq_nosync(dc->irq);
 

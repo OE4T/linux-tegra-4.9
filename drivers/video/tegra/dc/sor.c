@@ -876,6 +876,16 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_enable_dc(sor);
 	tegra_dc_sor_config_panel(sor, false);
 
+	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
+		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
+		DC_CMD_DISPLAY_POWER_CONTROL);
+
+	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	/* Attach head */
@@ -898,16 +908,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 			"dc timeout waiting for ATTACHED = TRUE\n");
 	}
 
-	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
-		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
-		DC_CMD_DISPLAY_POWER_CONTROL);
-
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
 			NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
 			NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
@@ -924,6 +924,13 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 
 	tegra_dc_sor_enable_dc(sor);
 	tegra_dc_sor_config_panel(sor, true);
+	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
+		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
+		DC_CMD_DISPLAY_POWER_CONTROL);
+
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL3,
@@ -982,13 +989,6 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
 
 	tegra_dc_sor_attach_lvds(sor);
-
-	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
-		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
-		DC_CMD_DISPLAY_POWER_CONTROL);
 
 	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL,
 		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK |

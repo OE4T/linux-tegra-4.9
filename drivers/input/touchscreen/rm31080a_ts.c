@@ -3099,6 +3099,7 @@ static const struct file_operations dev_fops = {
 	.read = dev_read,
 	.write = dev_write,
 	.unlocked_ioctl = dev_ioctl,
+	.compat_ioctl = dev_ioctl,
 };
 
 static struct miscdevice raydium_ts_miscdev = {

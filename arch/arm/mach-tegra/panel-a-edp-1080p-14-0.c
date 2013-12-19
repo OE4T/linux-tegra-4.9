@@ -365,22 +365,6 @@ static struct tegra_dc_out_pin edp_out_pins[] = {
 	},
 };
 
-static struct tegra_dc_mode edp_a_1080p_14_0_modes[] = {
-	{
-		.pclk = 137986200,
-		.h_ref_to_sync = 1,
-		.v_ref_to_sync = 1,
-		.h_sync_width = 16,
-		.v_sync_width = 14,
-		.h_back_porch = 152,
-		.v_back_porch = 19,
-		.h_active = 1920,
-		.v_active = 1080,
-		.h_front_porch = 16,
-		.v_front_porch = 3,
-	},
-};
-
 static int edp_a_1080p_14_0_bl_notify(struct device *unused, int brightness)
 {
 	int cur_sd_brightness = atomic_read(&sd_brightness);
@@ -453,8 +437,6 @@ static void edp_a_1080p_14_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->align = TEGRA_DC_ALIGN_MSB,
 	dc->order = TEGRA_DC_ORDER_RED_BLUE,
 	dc->flags = DC_CTRL_MODE;
-	dc->modes = edp_a_1080p_14_0_modes;
-	dc->n_modes = ARRAY_SIZE(edp_a_1080p_14_0_modes);
 	dc->out_pins = edp_out_pins,
 	dc->n_out_pins = ARRAY_SIZE(edp_out_pins),
 	dc->depth = 18,
@@ -467,12 +449,6 @@ static void edp_a_1080p_14_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->hotplug_gpio = TEGRA_GPIO_PFF0;
 }
 
-static void edp_a_1080p_14_0_fb_data_init(struct tegra_fb_data *fb)
-{
-	fb->xres = edp_a_1080p_14_0_modes[0].h_active;
-	fb->yres = edp_a_1080p_14_0_modes[0].v_active;
-}
-
 static void
 edp_a_1080p_14_0_sd_settings_init(struct tegra_dc_sd_settings *settings)
 {
@@ -483,7 +459,6 @@ edp_a_1080p_14_0_sd_settings_init(struct tegra_dc_sd_settings *settings)
 struct tegra_panel __initdata edp_a_1080p_14_0 = {
 	.init_sd_settings = edp_a_1080p_14_0_sd_settings_init,
 	.init_dc_out = edp_a_1080p_14_0_dc_out_init,
-	.init_fb_data = edp_a_1080p_14_0_fb_data_init,
 	.register_bl_dev = edp_a_1080p_14_0_register_bl_dev,
 	.set_disp_device = edp_a_1080p_14_0_set_disp_device,
 };

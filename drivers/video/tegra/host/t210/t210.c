@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T210 Architecture Chips
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -159,7 +159,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.exclusive     = true,
 	.keepalive     = true,
-	.clocks		= { {"emc", HOST_EMC_FLOOR} },
+	.clocks		= {{"nvdec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_nvdec_init,
 	.deinit		= nvhost_nvdec_deinit,
 	.moduleid	= NVHOST_MODULE_NVDEC,
@@ -173,7 +173,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.exclusive     = true,
 	.keepalive     = true,
-	.clocks		= { {"emc", HOST_EMC_FLOOR} },
+	.clocks		= { {"nvjpg", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_nvjpg_init,
 	.deinit		= nvhost_nvjpg_deinit,
 	.moduleid	= NVHOST_MODULE_NVJPG,

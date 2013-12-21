@@ -506,9 +506,6 @@ static void gk20a_pbus_isr(struct gk20a *g)
 		nvhost_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_fecs_errcode_r()));
-		val &= ~(bus_intr_0_pri_squash_m() |
-			bus_intr_0_pri_fecserr_m() |
-			bus_intr_0_pri_timeout_m());
 	}
 
 	if (val)

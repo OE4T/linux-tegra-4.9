@@ -1607,6 +1607,10 @@ struct tegra_dc_platform_data
 		pdata->cmu_enable = false;
 	}
 #endif
+	if (!of_property_read_u32(np, "nvidia,low-v-win", &temp)) {
+		pdata->low_v_win = (unsigned long)temp;
+		OF_DC_LOG("low_v_win %lu\n", pdata->low_v_win);
+	}
 	return pdata;
 
 fail_parse:

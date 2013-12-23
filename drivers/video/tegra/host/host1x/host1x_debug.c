@@ -100,8 +100,8 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 		}
 
 		nvhost_debug_output(o,
-			"    GATHER at %08x+%04x, %d words\n",
-			g->mem_base, g->offset, g->words);
+			"    GATHER at %08llx+%04x, %u words\n",
+			(u64)g->mem_base, g->offset, g->words);
 
 		do_show_channel_gather(o, g->mem_base + g->offset,
 				g->words, cdma, g->mem_base, mapped);

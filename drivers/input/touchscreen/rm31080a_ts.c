@@ -25,6 +25,9 @@
 #include <linux/slab.h>
 #include <linux/fb.h>
 #include <linux/gpio.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/sched.h>	/* wake_up_process() */
 #include <linux/kthread.h>	/* kthread_create(),kthread_run() */
 #include <linux/uaccess.h>	/* copy_to_user() */
@@ -837,6 +840,74 @@ static u32 rm_tch_ctrl_configure(void)
 	}
 
 	return u32Flag;
+}
+
+static struct rm_spi_ts_platform_data *rm_ts_parse_dt(struct device *dev,
+					int irq)
+{
+	struct rm_spi_ts_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+	const char *str;
+	int ret, val, irq_gpio;
+
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
+
+	pdata->gpio_reset = of_get_named_gpio_flags(np, "reset-gpio", 0, NULL);
+	if (!gpio_is_valid(pdata->gpio_reset)) {
+		dev_err(dev, "Invalid reset-gpio\n");
+		return ERR_PTR(-EINVAL);
+	}
+	ret = gpio_request(pdata->gpio_reset, "reset-gpio");
+	if (ret < 0) {
+		dev_err(dev, "gpio_request fail\n");
+		return ERR_PTR(-EINVAL);
+	}
+	gpio_direction_output(pdata->gpio_reset, 0);
+
+	ret =  of_property_read_u32(np, "interrupts", &irq_gpio);
+	if (!gpio_is_valid(irq_gpio)) {
+		dev_err(dev, "Invalid irq-gpio\n");
+		ret = -EINVAL;
+		goto exit_release_reset_gpio;
+	}
+
+	ret = gpio_request(irq_gpio, "irq-gpio");
+	if (ret < 0) {
+		dev_err(dev, "irq_request fail\n");
+		ret = -EINVAL;
+		goto exit_release_reset_gpio;
+	}
+	gpio_direction_input(irq_gpio);
+
+	ret = of_property_read_u32(np, "config", &val);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->config = val;
+	ret = of_property_read_u32(np, "platform-id", &val);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->platform_id = val;
+	ret = of_property_read_string(np, "name-of-clock", &str);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->name_of_clock = (char *)str;
+
+	ret = of_property_read_string(np, "name-of-clock-con", &str);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->name_of_clock_con = (char *)str;
+
+	return pdata;
+
+exit_release_all_gpio:
+	gpio_free(irq_gpio);
+
+exit_release_reset_gpio:
+	gpio_free(pdata->gpio_reset);
+	return ERR_PTR(ret);
+
 }
 
 int KRL_CMD_CONFIG_1V8_Handler(u8 CMD, u8 OnOff, struct rm_tch_ts *ts)
@@ -2629,6 +2700,17 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 	ts->input = input_dev;
 	ts->irq = irq;
 
+
+	if (dev->of_node) {
+		pr_info("Load platform data from DT.\n");
+		pdata = rm_ts_parse_dt(dev, irq);
+		if (IS_ERR(pdata)) {
+			dev_err(&g_spi->dev, "Raydium - failed to parse dt\n");
+			err = -EINVAL;
+			goto err_free_mem;
+		}
+		dev->platform_data = pdata;
+	}
 	pdata = dev->platform_data;
 
 	if (pdata->name_of_clock || pdata->name_of_clock_con) {
@@ -2733,13 +2815,23 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 	ts->bops = bops;
 	ts->dev = dev;
 	ts->irq = irq;
-
+	if (dev->of_node) {
+		pr_info("Load platform data from DT.\n");
+		pdata = rm_ts_parse_dt(dev, irq);
+		if (IS_ERR(pdata)) {
+			dev_err(&g_spi->dev, "Raydium - failed to parse dt\n");
+			err = -EINVAL;
+			goto err_free_mem;
+		}
+		dev->platform_data = pdata;
+	}
 	pdata = dev->platform_data;
 	if (pdata->name_of_clock || pdata->name_of_clock_con) {
 		ts->clk = clk_get_sys(pdata->name_of_clock,
 			pdata->name_of_clock_con);
 		if (IS_ERR(ts->clk)) {
-			dev_err(&g_spi->dev, "Raydium - failed to get touch_clk: (%s, %s)\n",
+			dev_err(&g_spi->dev,
+				"Raydium - failed to get touch_clk: (%s, %s)\n",
 				pdata->name_of_clock, pdata->name_of_clock_con);
 			err = -EINVAL;
 			goto err_free_ts_mem;
@@ -2788,8 +2880,10 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 		__set_bit(EV_SYN, ts->input[index]->evbit);
 
 		__set_bit(EV_ABS, ts->input[index]->evbit);
-		input_set_abs_params(ts->input[index], ABS_MT_PRESSURE, 0, 0xFF, 0, 0);
-		input_set_abs_params(ts->input[index], ABS_MT_TRACKING_ID, 0, 32, 0, 0);
+		input_set_abs_params(ts->input[index],
+			ABS_MT_PRESSURE, 0, 0xFF, 0, 0);
+		input_set_abs_params(ts->input[index],
+			ABS_MT_TRACKING_ID, 0, 32, 0, 0);
 
 		if (index != INPUT_DEVICE_FOR_FINGER) {
 			__set_bit(EV_KEY, ts->input[index]->evbit);
@@ -3280,11 +3374,20 @@ err_spi_speed:
 	return ret;
 }
 
+static const struct of_device_id rm_ts_dt_match[] = {
+	{ .compatible = "raydium,rm_ts_spidev" },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, rm_ts_dt_match);
+
 static struct spi_driver rm_tch_spi_driver = {
 	.driver = {
 		.name = "rm_ts_spidev",
 		.bus = &spi_bus_type,
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = rm_ts_dt_match,
+#endif
 #if !defined(CONFIG_HAS_EARLYSUSPEND)
 #ifdef CONFIG_PM
 		.pm = &rm_tch_pm_ops,

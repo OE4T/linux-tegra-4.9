@@ -1035,6 +1035,7 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost32_submit_args *args32 = (void *)buf;
 		struct nvhost_submit_args args;
 
+		memset(&args, 0, sizeof(args));
 		args.submit_version = args32->submit_version;
 		args.num_syncpt_incrs = args32->num_syncpt_incrs;
 		args.num_cmdbufs = args32->num_cmdbufs;

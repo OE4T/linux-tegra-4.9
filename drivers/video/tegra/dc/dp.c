@@ -2057,10 +2057,14 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	struct clk *parent_clk;
 
 	tegra_dc_sor_setup_clk(dp->sor, clk, false);
 
 	clk_set_rate(dp->parent_clk, 270000000);
+
+	parent_clk = tegra_get_clock_by_name("pll_d_out0");
+	clk_set_parent(dc->clk, parent_clk);
 
 	return tegra_dc_pclk_round_rate(dc, dp->sor->dc->mode.pclk);
 }

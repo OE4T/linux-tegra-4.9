@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2662,8 +2662,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	struct tegra_dc *dc;
 	struct tegra_dc_mode *mode;
 	struct tegra_dc_platform_data *dt_pdata = NULL;
-	struct tegra_dc_platform_data *temp_pdata;
-	struct of_tegra_dc_data *of_pdata = NULL;
 	struct clk *clk;
 #ifndef CONFIG_TEGRA_ISOMGR
 	struct clk *emc_clk;
@@ -2680,7 +2678,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	int irq;
 	int i;
 
-	if (!ndev->dev.platform_data) {
+	if (!np && !ndev->dev.platform_data) {
 		dev_err(&ndev->dev, "no platform data\n");
 		return -ENOENT;
 	}
@@ -2791,9 +2789,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	if (np) {
-		temp_pdata = (struct tegra_dc_platform_data *)
-			ndev->dev.platform_data;
-		of_pdata = &(temp_pdata->of_data);
+		struct resource of_fb_res;
+		if (ndev->id == 0)
+			tegra_get_fb_resource(&of_fb_res);
+		else /*ndev->id == 1*/
+			tegra_get_fb2_resource(&of_fb_res);
+
 		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
 		if (fb_mem == NULL) {
 			ret = -ENOMEM;
@@ -2801,9 +2802,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 		fb_mem->name = "fbmem";
 		fb_mem->flags = IORESOURCE_MEM;
-		fb_mem->start = (resource_size_t) of_pdata->fb_start;
-		fb_mem->end = fb_mem->start +
-			(resource_size_t)of_pdata->fb_size - 1;
+		fb_mem->start = (resource_size_t)of_fb_res.start;
+		fb_mem->end = (resource_size_t)of_fb_res.end;
 	} else {
 		fb_mem = platform_get_resource_byname(ndev,
 			IORESOURCE_MEM, "fbmem");

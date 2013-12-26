@@ -1334,7 +1334,6 @@ struct tegra_dc_platform_data
 		*of_dc_parse_platform_data(struct platform_device *ndev)
 {
 	struct tegra_dc_platform_data *pdata;
-	struct tegra_dc_platform_data *temp_pdata = NULL;
 	struct device_node *np = ndev->dev.of_node;
 	struct device_node *np_dsi = NULL;
 	struct device_node *timings_np = NULL;
@@ -1348,7 +1347,6 @@ struct tegra_dc_platform_data
 	const char *temp_str0;
 	int err;
 	u32 temp;
-	struct of_tegra_dc_data *of_pdata = NULL;
 
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
@@ -1497,8 +1495,6 @@ struct tegra_dc_platform_data
 	}
 #endif
 
-	temp_pdata = (struct tegra_dc_platform_data *)ndev->dev.platform_data;
-	of_pdata = &(temp_pdata->of_data);
 	if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
 		np_dsi = of_find_node_by_path(DSI_NODE);
 

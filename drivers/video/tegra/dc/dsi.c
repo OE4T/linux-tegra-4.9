@@ -3092,6 +3092,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					struct tegra_dsi_cmd *cmd,
 					u32 n_cmd)
 {
+#define DEFAULT_DELAY_MS 1
 	u32 i;
 	int err;
 	u8 delay_ms;
@@ -3118,8 +3119,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 			tegra_dsi_start_host_cmd_v_blank_video(dsi, cur_cmd);
 			tegra_dsi_end_host_cmd_v_blank_video(dc, dsi);
 		} else {
-			/* default delay 1ms after command */
-			delay_ms = 1;
+			delay_ms = DEFAULT_DELAY_MS;
 			if ((i + 1 < n_cmd) &&
 				(cmd[i + 1].cmd_type == TEGRA_DSI_DELAY_MS)) {
 				delay_ms = cmd[i + 1].sp_len_dly.delay_ms;
@@ -3132,6 +3132,7 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 		}
 	}
 	return err;
+#undef DEFAULT_DELAY_MS
 }
 
 static u8 tegra_dsi_ecc(u32 header)
@@ -4376,11 +4377,13 @@ static int tegra_dsi_te_on_off(struct tegra_dc_dsi_data *dsi, bool flag)
 	struct tegra_dsi_cmd te_enable[] = {
 		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
 				DSI_DCS_SET_TEARING_EFFECT_ON, 0x0),
+		DSI_DLY_MS(0),
 	};
 
 	struct tegra_dsi_cmd te_disable[] = {
 		DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM,
 				DSI_DCS_SET_TEARING_EFFECT_OFF, 0x0),
+		DSI_DLY_MS(0),
 	};
 
 	if (flag)

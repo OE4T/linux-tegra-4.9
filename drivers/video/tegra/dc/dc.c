@@ -1570,10 +1570,9 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) || !dc->enabled)
 		return ret;
 
-	if (dc->out_ops && dc->out_ops->osidle) {
-		if (dc->out_ops->osidle(dc))
-			return 0;
-	}
+	tegra_dc_get(dc);
+	if (dc->out_ops && dc->out_ops->hold)
+		dc->out_ops->hold(dc);
 
 	/*
 	 * Logic is as follows
@@ -1583,15 +1582,17 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	 */
 
 	mutex_lock(&dc->one_shot_lp_lock);
-	tegra_dc_get(dc);
 	dc->out->user_needs_vblank = true;
 	tegra_dc_unmask_interrupt(dc, MSF_INT);
 
 	ret = wait_for_completion_interruptible(&dc->out->user_vblank_comp);
 	init_completion(&dc->out->user_vblank_comp);
 	tegra_dc_mask_interrupt(dc, MSF_INT);
-	tegra_dc_put(dc);
 	mutex_unlock(&dc->one_shot_lp_lock);
+
+	if (dc->out_ops && dc->out_ops->release)
+		dc->out_ops->release(dc);
+	tegra_dc_put(dc);
 
 	return ret;
 }

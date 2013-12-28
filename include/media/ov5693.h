@@ -19,7 +19,6 @@
 
 #include <media/nvc.h>
 #include <media/nvc_image.h>
-#include <linux/edp.h>
 
 #define OV5693_IOCTL_SET_MODE               _IOW('o', 1, struct ov5693_mode)
 #define OV5693_IOCTL_SET_FRAME_LENGTH       _IOW('o', 2, __u32)
@@ -130,7 +129,6 @@ struct ov5693_platform_data {
 	int (*power_on)(struct ov5693_power_rail *);
 	int (*power_off)(struct ov5693_power_rail *);
 	const char *mclk_name;
-	struct edp_client edpc_config;
 };
 
 #endif  /* __OV5693_H__ */

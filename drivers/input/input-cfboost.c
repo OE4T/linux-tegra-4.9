@@ -172,7 +172,14 @@ static void cfb_input_disconnect(struct input_handle *handle)
 
 /* XXX make configurable */
 static const struct input_device_id cfb_ids[] = {
-	{ /* touch screen */
+	{ /* raydium touch screen */
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+				INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.keybit = {[BIT_WORD(BTN_TOOL_RUBBER)] =
+			BIT_MASK(BTN_TOOL_RUBBER) },
+	},
+	{ /* other touch screen */
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
 				INPUT_DEVICE_ID_MATCH_KEYBIT,
 		.evbit = { BIT_MASK(EV_ABS) },

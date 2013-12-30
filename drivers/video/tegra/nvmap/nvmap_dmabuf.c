@@ -357,8 +357,11 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		goto cache_hit;
 
 	sgt = __nvmap_sg_table(NULL, info->handle);
-	if (IS_ERR(sgt))
+	if (IS_ERR(sgt)) {
+		atomic_dec(&info->handle->pin);
+		mutex_unlock(&info->maps_lock);
 		return sgt;
+	}
 
 	if (info->handle->heap_pgalloc && info->handle->alloc) {
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);

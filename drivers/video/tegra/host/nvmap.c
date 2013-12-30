@@ -176,18 +176,22 @@ priv_exist_or_err:
 			if (IS_ERR(as_priv->sgt)) {
 				sgt = as_priv->sgt;
 				as_priv->sgt = NULL;
+				mutex_unlock(&priv->lock);
 				return sgt;
 			}
 		}
 	} else if (as_priv->pin_count == 0) {
 		as_priv->attach = dma_buf_attach(dmabuf, dev);
-		if (IS_ERR(as_priv->attach))
+		if (IS_ERR(as_priv->attach)) {
+			mutex_unlock(&priv->lock);
 			return (struct sg_table *)as_priv->attach;
+		}
 
 		as_priv->sgt = dma_buf_map_attachment(as_priv->attach,
 						      DMA_BIDIRECTIONAL);
 		if (IS_ERR(as_priv->sgt)) {
 			dma_buf_detach(dmabuf, as_priv->attach);
+			mutex_unlock(&priv->lock);
 			return as_priv->sgt;
 		}
 	}

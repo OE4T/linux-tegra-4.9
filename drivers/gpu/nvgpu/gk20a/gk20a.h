@@ -567,6 +567,9 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 #define GK20A_GPUID_GK20A \
 	GK20A_GPUID(NVHOST_GPU_ARCH_GK100, NVHOST_GPU_IMPL_GK20A)
 
+#define GK20A_GPUID_GM20B \
+	GK20A_GPUID(NVHOST_GPU_ARCH_GM200, NVHOST_GPU_IMPL_GM20B)
+
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 #endif /* _NVHOST_GK20A_H_ */

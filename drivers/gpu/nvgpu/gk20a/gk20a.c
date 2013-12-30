@@ -1625,6 +1625,11 @@ static u32 gk20a_determine_L2_size_bytes(struct gk20a *g)
 		bytes_per_line = 128;
 		break;
 
+	case GK20A_GPUID_GM20B:
+		lts_per_ltc = 2;
+		bytes_per_line = 128;
+		break;
+
 	default:
 		dev_err(dev_from_gk20a(g), "Unknown GPU id 0x%02x\n",
 			(unsigned)gpuid);

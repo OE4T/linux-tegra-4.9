@@ -2097,8 +2097,11 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 			flags, 0/*no kind here, to be removed*/, NULL, true,
 			mem_flag_none);
 	*offset_align = ret_va;
-	if (!ret_va)
+	if (!ret_va) {
+		nvhost_memmgr_put(memmgr, r);
+		nvhost_memmgr_put_mgr(memmgr);
 		err = -EINVAL;
+	}
 
 	return err;
 }

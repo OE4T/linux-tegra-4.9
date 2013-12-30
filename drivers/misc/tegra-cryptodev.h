@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2013, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,12 @@
 #include <crypto/aes.h>
 
 #include <asm-generic/ioctl.h>
+
+#ifdef CONFIG_COMPAT
+#define user_ptr(p) ((void __user *)(__u64)(p))
+#else
+#define user_ptr(p) (p)
+#endif
 
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
 #define TEGRA_CRYPTO_IOCTL_NEED_SSK	_IOWR(0x98, 100, int)
@@ -58,9 +64,14 @@ struct tegra_crypt_req {
 	int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
 	int ivlen;
+#ifdef CONFIG_COMPAT
+	u32 plaintext;
+	u32 result;
+#else
 	u8 *plaintext;
-	int plaintext_sz;
 	u8 *result;
+#endif
+	int plaintext_sz;
 	int skip_key;
 	int skip_iv;
 };
@@ -71,31 +82,47 @@ struct tegra_crypt_req {
  */
 struct tegra_rng_req {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
+#ifdef CONFIG_COMPAT
+	u32 rdata; /* random generated data */
+#else
 	u8 *rdata; /* random generated data */
+#endif
 	int nbytes; /* random data length */
 	int type;
 };
 
 struct tegra_rsa_req {
+#ifdef CONFIG_COMPAT
+	u32 key;
+	u32 message;
+	u32 result;
+#else
 	char *key;
-	int keylen;
-	int algo;
 	char *message;
+	char *result;
+#endif
+	int algo;
+	int keylen;
 	int msg_len;
 	int modlen;
 	int pub_explen;
 	int prv_explen;
-	char *result;
 	int skip_key;
 };
 
 struct tegra_sha_req {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	int keylen;
+#ifdef CONFIG_COMPAT
+	u32 algo;
+	u32 plaintext;
+	u32 result;
+#else
 	unsigned char *algo;
 	unsigned char *plaintext;
-	int plaintext_sz;
 	unsigned char *result;
+#endif
+	int plaintext_sz;
 };
 
 #endif

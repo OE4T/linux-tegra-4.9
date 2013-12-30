@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -335,7 +335,7 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 	while (total > 0) {
 		size = min(total, PAGE_SIZE);
 		ret = copy_from_user((void *)xbuf[0],
-			(void __user *)crypt_req->plaintext, size);
+			user_ptr(crypt_req->plaintext), size);
 		if (ret) {
 			ret = -EFAULT;
 			pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
@@ -375,7 +375,7 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 			goto process_req_buf_out;
 		}
 
-		ret = copy_to_user((void __user *)crypt_req->result,
+		ret = copy_to_user(user_ptr(crypt_req->result),
 			(const void *)xbuf[1], size);
 		if (ret) {
 			ret = -EFAULT;
@@ -385,6 +385,8 @@ static int process_crypt_req(struct tegra_crypto_ctx *ctx, struct tegra_crypt_re
 		}
 
 		total -= size;
+		/* no need to used user_ptr, we are incrementing the
+			ptr value in their respective variable*/
 		crypt_req->result += size;
 		crypt_req->plaintext += size;
 	}
@@ -478,7 +480,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 
 	hash_buff = xbuf[0];
 
-	memcpy(hash_buff, rsa_req->message, rsa_req->msg_len);
+	memcpy(hash_buff, (char *)user_ptr(rsa_req->message), rsa_req->msg_len);
 
 	sg_init_one(&sg[0], hash_buff, rsa_req->msg_len);
 
@@ -486,7 +488,8 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		goto rsa_fail;
 
 	if (!rsa_req->skip_key) {
-		ret = crypto_ahash_setkey(tfm, rsa_req->key, rsa_req->keylen);
+		ret = crypto_ahash_setkey(tfm,
+				user_ptr(rsa_req->key), rsa_req->keylen);
 		if (ret) {
 			pr_err("alg: hash: setkey failed\n");
 			goto rsa_fail;
@@ -509,7 +512,7 @@ static int tegra_crypt_rsa(struct tegra_crypto_ctx *ctx,
 		goto rsa_fail;
 	}
 
-	ret = copy_to_user((void __user *)rsa_req->result, (const void *)result,
+	ret = copy_to_user(user_ptr(rsa_req->result), (const void *)result,
 		crypto_ahash_digestsize(tfm));
 	if (ret) {
 		ret = -EFAULT;
@@ -538,17 +541,17 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 	unsigned long *xbuf[XBUFSIZE];
 	int ret = -ENOMEM;
 
-	tfm = crypto_alloc_ahash(sha_req->algo, 0, 0);
+	tfm = crypto_alloc_ahash(user_ptr(sha_req->algo), 0, 0);
 	if (IS_ERR(tfm)) {
-		printk(KERN_ERR "alg: hash: Failed to load transform for %s: "
-		       "%ld\n", sha_req->algo, PTR_ERR(tfm));
+		pr_err("alg:hash:Failed to load transform for %s:%ld\n",
+			(char *)user_ptr(sha_req->algo), PTR_ERR(tfm));
 		goto out_alloc;
 	}
 
 	req = ahash_request_alloc(tfm, GFP_KERNEL);
 	if (!req) {
-		printk(KERN_ERR "alg: hash: Failed to allocate request for "
-		       "%s\n", sha_req->algo);
+		pr_err("alg:hash:Failed to allocate request for %s\n",
+			(char *)user_ptr(sha_req->algo));
 		goto out_noreq;
 	}
 
@@ -564,7 +567,7 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 
 	hash_buff = xbuf[0];
 
-	memcpy(hash_buff, sha_req->plaintext, sha_req->plaintext_sz);
+	memcpy(hash_buff, user_ptr(sha_req->plaintext), sha_req->plaintext_sz);
 	sg_init_one(&sg[0], hash_buff, sha_req->plaintext_sz);
 
 	if (sha_req->keylen) {
@@ -572,9 +575,9 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 		ret = crypto_ahash_setkey(tfm, sha_req->key,
 					  sha_req->keylen);
 		if (ret) {
-			printk(KERN_ERR "alg: hash: setkey failed on "
-			       " %s: ret=%d\n", sha_req->algo,
-			       -ret);
+			pr_err("alg:hash:setkey failed on %s:ret=%d\n",
+				(char *)user_ptr(sha_req->algo), ret);
+
 			goto out;
 		}
 	}
@@ -583,31 +586,31 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 
 	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_init(req));
 	if (ret) {
-		pr_err("alg: hash: init failed on "
-		       "for %s: ret=%d\n", sha_req->algo, -ret);
+		pr_err("alg: hash: init failed for %s: ret=%d\n",
+			(char *)user_ptr(sha_req->algo), ret);
 		goto out;
 	}
 
 	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_update(req));
 	if (ret) {
-		pr_err("alg: hash: update failed on "
-		       "for %s: ret=%d\n", sha_req->algo, -ret);
+		pr_err("alg: hash: update failed for %s: ret=%d\n",
+			(char *)user_ptr(sha_req->algo), ret);
 		goto out;
 	}
 
 	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_final(req));
 	if (ret) {
-		pr_err("alg: hash: final failed on "
-		       "for %s: ret=%d\n", sha_req->algo, -ret);
+		pr_err("alg: hash: final failed for %s: ret=%d\n",
+			(char *)user_ptr(sha_req->algo), ret);
 		goto out;
 	}
 
-	ret = copy_to_user((void __user *)sha_req->result,
+	ret = copy_to_user(user_ptr(sha_req->result),
 		(const void *)result, crypto_ahash_digestsize(tfm));
 	if (ret) {
 		ret = -EFAULT;
 		pr_err("alg: hash: copy_to_user failed (%d) for %s\n",
-				ret, sha_req->algo);
+				ret, (char *)user_ptr(sha_req->algo));
 	}
 
 out:
@@ -705,7 +708,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			goto rng_out;
 		}
 
-		ret = copy_to_user((void __user *)rng_req.rdata,
+		ret = copy_to_user(user_ptr(rng_req.rdata),
 			(const void *)rng, rng_req.nbytes);
 		if (ret) {
 			ret = -EFAULT;
@@ -758,6 +761,7 @@ const struct file_operations tegra_crypto_fops = {
 	.open = tegra_crypto_dev_open,
 	.release = tegra_crypto_dev_release,
 	.unlocked_ioctl = tegra_crypto_dev_ioctl,
+	.compat_ioctl =  tegra_crypto_dev_ioctl,
 };
 
 struct miscdevice tegra_crypto_device = {

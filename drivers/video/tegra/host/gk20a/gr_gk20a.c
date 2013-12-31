@@ -424,7 +424,10 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 			     gr_fecs_ctxsw_reset_ctl_be_context_reset_enabled_f());
 	}
 
-	/* Delay for > 10 nvclks after writing reset. */
+	/* we need to read the reset register *and* wait for a moment to ensure
+	 * reset propagation */
+
+	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	udelay(20);
 
 	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
@@ -437,6 +440,10 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 		     gr_fecs_ctxsw_reset_ctl_sys_context_reset_disabled_f() |
 		     gr_fecs_ctxsw_reset_ctl_gpc_context_reset_disabled_f() |
 		     gr_fecs_ctxsw_reset_ctl_be_context_reset_disabled_f());
+
+	/* we need to readl the reset and then wait a small moment after that */
+	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
+	udelay(20);
 
 	/* Set power mode back to auto */
 	gk20a_writel(g, gr_fe_pwr_mode_r(),

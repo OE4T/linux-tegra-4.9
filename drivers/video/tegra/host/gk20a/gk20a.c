@@ -51,6 +51,7 @@
 #include "hw_timer_gk20a.h"
 #include "hw_bus_gk20a.h"
 #include "hw_sim_gk20a.h"
+#include "hw_top_gk20a.h"
 #include "gk20a_scale.h"
 #include "gr3d/pod_scaling.h"
 #include "dbg_gpu_gk20a.h"
@@ -497,6 +498,10 @@ static void gk20a_pbus_isr(struct gk20a *g)
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
+		nvhost_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
+			gk20a_readl(g, top_fs_status_r()));
+		nvhost_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
+			gk20a_readl(g, mc_enable_r()));
 		nvhost_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_0_r()));

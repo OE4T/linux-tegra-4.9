@@ -592,7 +592,7 @@ int nvhost_module_suspend(struct device *dev)
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 
-	if (!pdata->can_powergate && pdata->prepare_poweroff)
+	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
 
 	if (pdata->suspend_ndev)
@@ -606,7 +606,7 @@ int nvhost_module_resume(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 
-	if (!pdata->can_powergate && pdata->finalize_poweron)
+	if (pdata->finalize_poweron)
 		pdata->finalize_poweron(to_platform_device(dev));
 
 	return 0;

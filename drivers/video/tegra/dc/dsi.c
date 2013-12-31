@@ -2196,6 +2196,8 @@ static void tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
+
+	clk_disable_unprepare(clk72mhz);
 }
 #endif
 

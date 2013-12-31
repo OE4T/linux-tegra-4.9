@@ -186,7 +186,7 @@ static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 		gk20a_readl(g, mc_intr_mask_0_r()) &
 		~mc_intr_mask_0_pmu_enabled_f());
 	gk20a_writel(g, mc_intr_mask_1_r(),
-		gk20a_readl(g, mc_intr_mask_0_r()) &
+		gk20a_readl(g, mc_intr_mask_1_r()) &
 		~mc_intr_mask_1_pmu_enabled_f());
 
 	gk20a_writel(g, pwr_falcon_irqmclr_r(),

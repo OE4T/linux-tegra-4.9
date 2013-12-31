@@ -244,20 +244,13 @@ static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 static void pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = pmu->g;
-	u32 pmc_enable;
 
 	nvhost_dbg_fn("");
 
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-
 	if (enable)
-		gk20a_writel(g, mc_enable_r(),
-			pmc_enable | mc_enable_pwr_enabled_f());
+		gk20a_enable(g, mc_enable_pwr_enabled_f());
 	else
-		gk20a_writel(g, mc_enable_r(),
-			pmc_enable & ~mc_enable_pwr_enabled_f());
-
-	udelay(20);
+		gk20a_disable(g, mc_enable_pwr_enabled_f());
 }
 
 static int pmu_enable(struct pmu_gk20a *pmu, bool enable)

@@ -110,6 +110,8 @@ struct gk20a {
 	u64 pg_ingating_time_us;
 	u64 pg_ungating_time_us;
 	u32 pg_gating_cnt;
+
+	spinlock_t mc_enable_lock;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -274,5 +276,8 @@ struct nvhost_hwctx_handler *nvhost_gk20a_alloc_hwctx_handler(u32 syncpt,
 
 void gk20a_busy(struct platform_device *pdev);
 void gk20a_idle(struct platform_device *pdev);
+void gk20a_disable(struct gk20a *g, u32 units);
+void gk20a_enable(struct gk20a *g, u32 units);
+void gk20a_reset(struct gk20a *g, u32 units);
 
 #endif /* _NVHOST_GK20A_H_ */

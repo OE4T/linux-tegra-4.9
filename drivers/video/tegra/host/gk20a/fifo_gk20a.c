@@ -364,7 +364,6 @@ clean_up:
 
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 {
-	u32 pmc_enable;
 	u32 intr_stall;
 	u32 mask;
 	u32 timeout;
@@ -372,18 +371,8 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 	/* enable pmc pfifo */
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-	pmc_enable &= ~mc_enable_pfifo_enabled_f();
-	pmc_enable &= ~mc_enable_ce2_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-
-	udelay(20);
-
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-	pmc_enable |= mc_enable_pfifo_enabled_f();
-	pmc_enable |= mc_enable_ce2_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-	gk20a_readl(g, mc_enable_r());
+	gk20a_reset(g, mc_enable_pfifo_enabled_f()
+			| mc_enable_ce2_enabled_f());
 
 	/* enable pbdma */
 	mask = 0;
@@ -810,9 +799,6 @@ static inline void get_exception_mmu_fault_info(
 
 static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 {
-	u32 pmc_enable = gk20a_readl(g, mc_enable_r());
-	u32 pmc_enable_reset = pmc_enable;
-
 	nvhost_dbg_fn("");
 
 	if (engine_id == top_device_info_type_enum_graphics_v()) {
@@ -820,16 +806,8 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		 * we do full init sequence */
 		gk20a_gr_reset(g);
 	}
-	if (engine_id == top_device_info_type_enum_copy0_v()) {
-		pmc_enable_reset &= ~mc_enable_ce2_m();
-
-		nvhost_dbg(dbg_intr, "PMC before: %08x reset: %08x\n",
-				pmc_enable, pmc_enable_reset);
-		gk20a_writel(g, mc_enable_r(), pmc_enable_reset);
-		udelay(20);
-		gk20a_writel(g, mc_enable_r(), pmc_enable);
-		gk20a_readl(g, mc_enable_r());
-	}
+	if (engine_id == top_device_info_type_enum_copy0_v())
+		gk20a_reset(g, mc_enable_ce2_m());
 }
 
 static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)

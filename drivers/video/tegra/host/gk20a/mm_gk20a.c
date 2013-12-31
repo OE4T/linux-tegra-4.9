@@ -117,28 +117,13 @@ static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
 
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
-	u32 pmc_enable;
+	nvhost_dbg_fn("");
+	gk20a_reset(g, mc_enable_pfb_enabled_f()
+			| mc_enable_l2_enabled_f()
+			| mc_enable_ce2_enabled_f()
+			| mc_enable_xbar_enabled_f()
+			| mc_enable_hub_enabled_f());
 
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-	pmc_enable &= ~mc_enable_pfb_enabled_f();
-	pmc_enable &= ~mc_enable_l2_enabled_f();
-	pmc_enable &= ~mc_enable_ce2_enabled_f();
-	pmc_enable &= ~mc_enable_xbar_enabled_f();
-	pmc_enable &= ~mc_enable_hub_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-
-	udelay(20);
-
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-	pmc_enable |= mc_enable_pfb_enabled_f();
-	pmc_enable |= mc_enable_l2_enabled_f();
-	pmc_enable |= mc_enable_ce2_enabled_f();
-	pmc_enable |= mc_enable_xbar_enabled_f();
-	pmc_enable |= mc_enable_hub_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_enable);
-	gk20a_readl(g, mc_enable_r());
-
-	nvhost_dbg_fn("done");
 	return 0;
 }
 

@@ -4375,18 +4375,9 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	}
 
 	/* reset gr engine */
-	pmc_en &= ~mc_enable_pgraph_enabled_f();
-	pmc_en &= ~mc_enable_blg_enabled_f();
-	pmc_en &= ~mc_enable_perfmon_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_en);
-
-	udelay(20);
-
-	pmc_en |= mc_enable_pgraph_enabled_f();
-	pmc_en |= mc_enable_blg_enabled_f();
-	pmc_en |= mc_enable_perfmon_enabled_f();
-	gk20a_writel(g, mc_enable_r(), pmc_en);
-	pmc_en = gk20a_readl(g, mc_enable_r());
+	gk20a_reset(g, mc_enable_pgraph_enabled_f()
+			| mc_enable_blg_enabled_f()
+			| mc_enable_perfmon_enabled_f());
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

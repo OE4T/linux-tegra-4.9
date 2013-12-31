@@ -593,6 +593,12 @@ static void vmap_debug_free_range(unsigned long start, unsigned long end)
 
 int sysctl_lazy_vfree_pages = 32UL * 1024 * 1024 / PAGE_SIZE;
 
+/*
+ * lazy_vfree_tlb_flush_all_threshold is the maximum size of TLB flush by
+ * area. Beyond that the whole TLB will be flushed.
+ */
+int sysctl_lazy_vfree_tlb_flush_all_threshold = SZ_512M;
+
 static unsigned long lazy_max_pages(void)
 {
 	unsigned int log;
@@ -661,8 +667,12 @@ static void __purge_vmap_area_lazy(unsigned long *start, unsigned long *end,
 	if (nr)
 		atomic_sub(nr, &vmap_lazy_nr);
 
-	if (nr || force_flush)
-		flush_tlb_kernel_range(*start, *end);
+	if (nr || force_flush) {
+		if (*end - *start > sysctl_lazy_vfree_tlb_flush_all_threshold)
+			flush_tlb_all();
+		else
+			flush_tlb_kernel_range(*start, *end);
+	}
 
 	if (nr) {
 		spin_lock(&vmap_area_lock);

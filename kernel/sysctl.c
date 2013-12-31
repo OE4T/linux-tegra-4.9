@@ -99,6 +99,7 @@
 
 /* External variables not in a header file. */
 extern int sysctl_lazy_vfree_pages;
+extern int sysctl_lazy_vfree_tlb_flush_all_threshold;
 extern int suid_dumpable;
 #ifdef CONFIG_COREDUMP
 extern int core_uses_pid;
@@ -1296,6 +1297,13 @@ static struct ctl_table vm_table[] = {
 		.procname	= "lazy_vfree_pages",
 		.data		= &sysctl_lazy_vfree_pages,
 		.maxlen		= sizeof(sysctl_lazy_vfree_pages),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "lazy_vfree_tlb_flush_all_threshold",
+		.data		= &sysctl_lazy_vfree_tlb_flush_all_threshold,
+		.maxlen		= sizeof(sysctl_lazy_vfree_tlb_flush_all_threshold),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
 	},

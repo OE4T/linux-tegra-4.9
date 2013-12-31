@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/ctrl_gk20a.c
- *
  * GK20A Ctrl
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -93,6 +91,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			return -EFAULT;
 	}
 
+	if (!g->gr.sw_ready) {
+		gk20a_busy(g->dev);
+		gk20a_idle(g->dev);
+	}
 
 	switch (cmd) {
 	case NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE:

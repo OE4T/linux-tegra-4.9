@@ -414,10 +414,12 @@ static void loki_panel_select(void)
 	case 0x0:
 	default:
 		panel = &dsi_l_720p_5_loki;
-		tegra_io_dpd_enable(&dsic_io);
-		tegra_io_dpd_enable(&dsid_io);
 		break;
 	}
+
+	tegra_io_dpd_enable(&dsic_io);
+	tegra_io_dpd_enable(&dsid_io);
+
 	if (panel) {
 		if (panel->init_sd_settings)
 			panel->init_sd_settings(&sd_settings);

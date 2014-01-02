@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,7 @@
 #include "nvhost_channel.h"
 
 #define MAX_SYNCPT_LENGTH	5
-#define NUM_SYSFS_ENTRY		3
+#define NUM_SYSFS_ENTRY		4
 
 /* Name of sysfs node for min and max value */
 static const char *min_name = "min";
@@ -540,8 +540,20 @@ static const char *get_syncpt_name(struct nvhost_syncpt *sp, int id)
 	return name ? name : "";
 }
 
-/* Displays the current value of the sync point via sysfs */
+static ssize_t syncpt_type_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_syncpt_attr *syncpt_attr =
+		container_of(attr, struct nvhost_syncpt_attr, attr);
 
+	if (nvhost_syncpt_client_managed(&syncpt_attr->host->syncpt,
+			syncpt_attr->id))
+		return snprintf(buf, PAGE_SIZE, "%s\n", "client_managed");
+	else
+		return snprintf(buf, PAGE_SIZE, "%s\n", "non_client_managed");
+}
+
+/* Displays the current value of the sync point via sysfs */
 static ssize_t syncpt_name_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -551,7 +563,6 @@ static ssize_t syncpt_name_show(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%s\n",
 		get_syncpt_name(&syncpt_attr->host->syncpt, syncpt_attr->id));
 }
-
 
 static ssize_t syncpt_min_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -580,6 +591,7 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 				       struct nvhost_syncpt_attr *min,
 				       struct nvhost_syncpt_attr *max,
 				       struct nvhost_syncpt_attr *sp_name,
+				       struct nvhost_syncpt_attr *sp_type,
 				       int i)
 {
 	char name[MAX_SYNCPT_LENGTH];
@@ -616,6 +628,15 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 	sp_name->attr.show = syncpt_name_show;
 	sysfs_attr_init(&sp_name->attr.attr);
 	if (sysfs_create_file(kobj, &sp_name->attr.attr))
+		return -EIO;
+
+	sp_type->id = i;
+	sp_type->host = host;
+	sp_type->attr.attr.name = "syncpt_type";
+	sp_type->attr.attr.mode = S_IRUGO;
+	sp_type->attr.show = syncpt_type_show;
+	sysfs_attr_init(&sp_type->attr.attr);
+	if (sysfs_create_file(kobj, &sp_type->attr.attr))
 		return -EIO;
 
 	return 0;
@@ -676,8 +697,11 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+1];
 		struct nvhost_syncpt_attr *name =
 			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+2];
+		struct nvhost_syncpt_attr *syncpt_type =
+			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+3];
 
-		err = nvhost_syncpt_timeline_attr(host, sp, min, max, name, i);
+		err = nvhost_syncpt_timeline_attr(host, sp, min, max, name,
+					syncpt_type, i);
 		if (err)
 			goto fail;
 
@@ -694,6 +718,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	err = nvhost_syncpt_timeline_attr(host, sp, &sp->invalid_min_attr,
 					  &sp->invalid_max_attr,
 					  &sp->invalid_name_attr,
+					  &sp->invalid_syncpt_type_attr,
 					  NVSYNCPT_INVALID);
 	if (err)
 		goto fail;

@@ -1049,6 +1049,8 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v0 args_v0;
 		struct pmu_cmdline_args_v1 args_v1;
 	};
+	unsigned long perfmon_events_cnt;
+	bool perfmon_sampling_enabled;
 };
 
 struct gk20a_pmu_save_state {
@@ -1064,6 +1066,8 @@ struct gk20a_pmu_save_state {
 	wait_queue_head_t pg_wq;
 	bool sw_ready;
 	struct work_struct pg_init;
+	unsigned long perfmon_events_cnt;
+	bool perfmon_sampling_enabled;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

@@ -25,6 +25,7 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
+#include <linux/uaccess.h>
 
 #include "gk20a.h"
 #include "hw_mc_gk20a.h"
@@ -1507,6 +1508,8 @@ static void gk20a_save_pmu_sw_state(struct pmu_gk20a *pmu,
 	save->pg_buf = pmu->pg_buf;
 	save->sw_ready = pmu->sw_ready;
 	save->pg_init = pmu->pg_init;
+	save->perfmon_events_cnt = pmu->perfmon_events_cnt;
+	save->perfmon_sampling_enabled = pmu->perfmon_sampling_enabled;
 }
 
 static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
@@ -1524,6 +1527,8 @@ static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
 	pmu->pg_buf = save->pg_buf;
 	pmu->sw_ready = save->sw_ready;
 	pmu->pg_init = save->pg_init;
+	pmu->perfmon_events_cnt = save->perfmon_events_cnt;
+	pmu->perfmon_sampling_enabled = save->perfmon_sampling_enabled;
 }
 
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
@@ -1588,6 +1593,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	/* no infoRom script from vbios? */
 
 	/* TBD: sysmon subtask */
+
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
+		pmu->perfmon_sampling_enabled = true;
 
 	pmu->mutex_cnt = pwr_pmu_mutex__size_1_v();
 	pmu->mutex = kzalloc(pmu->mutex_cnt *
@@ -2556,7 +2564,6 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
-	u32 current_rate = 0;
 	u32 seq;
 
 	/* PERFMON Start */
@@ -2570,20 +2577,9 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	pv->perfmon_start_set_state_id(&cmd.cmd.perfmon,
 		pmu->perfmon_state_id[PMU_DOMAIN_GROUP_PSTATE]);
 
-	current_rate = rate_gpu_to_gpc2clk(gk20a_clk_get_rate(g));
-	if (current_rate >= gpc_pll_params.max_freq)
-		pv->perfmon_start_set_flags(&cmd.cmd.perfmon,
-		PMU_PERFMON_FLAG_ENABLE_DECREASE);
-	else if (current_rate <= gpc_pll_params.min_freq)
-		pv->perfmon_start_set_flags(&cmd.cmd.perfmon,
-		PMU_PERFMON_FLAG_ENABLE_INCREASE);
-	else
-		pv->perfmon_start_set_flags(&cmd.cmd.perfmon,
-		PMU_PERFMON_FLAG_ENABLE_INCREASE |
-		PMU_PERFMON_FLAG_ENABLE_DECREASE);
-
 	pv->perfmon_start_set_flags(&cmd.cmd.perfmon,
-		pv->perfmon_start_get_flags(&cmd.cmd.perfmon) |
+		PMU_PERFMON_FLAG_ENABLE_INCREASE |
+		PMU_PERFMON_FLAG_ENABLE_DECREASE |
 		PMU_PERFMON_FLAG_CLEAR_PREV);
 
 	memset(&payload, 0, sizeof(struct pmu_payload));
@@ -2625,9 +2621,6 @@ static int pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
 static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 			struct pmu_perfmon_msg *msg)
 {
-	struct gk20a *g = pmu->g;
-	u32 rate;
-
 	gk20a_dbg_fn("");
 
 	switch (msg->msg_type) {
@@ -2635,17 +2628,13 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 		gk20a_dbg_pmu("perfmon increase event: "
 			"state_id %d, ground_id %d, pct %d",
 			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
-		/* increase gk20a clock freq by 20% */
-		rate = gk20a_clk_get_rate(g);
-		gk20a_clk_set_rate(g, rate * 6 / 5);
+		(pmu->perfmon_events_cnt)++;
 		break;
 	case PMU_PERFMON_MSG_ID_DECREASE_EVENT:
 		gk20a_dbg_pmu("perfmon decrease event: "
 			"state_id %d, ground_id %d, pct %d",
 			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
-		/* decrease gk20a clock freq by 10% */
-		rate = gk20a_clk_get_rate(g);
-		gk20a_clk_set_rate(g, (rate / 10) * 7);
+		(pmu->perfmon_events_cnt)++;
 		break;
 	case PMU_PERFMON_MSG_ID_INIT_EVENT:
 		pmu->perfmon_ready = 1;
@@ -2656,7 +2645,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 	}
 
 	/* restart sampling */
-	if (IS_ENABLED(CONFIG_GK20A_PERFMON))
+	if (pmu->perfmon_sampling_enabled)
 		return pmu_perfmon_start_sampling(pmu);
 	return 0;
 }
@@ -3753,6 +3742,85 @@ static const struct file_operations elpg_transitions_fops = {
 	.release	= single_release,
 };
 
+static int perfmon_events_enable_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+
+	seq_printf(s, "%u\n", g->pmu.perfmon_sampling_enabled ? 1 : 0);
+	return 0;
+
+}
+
+static int perfmon_events_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, perfmon_events_enable_show, inode->i_private);
+}
+
+static ssize_t perfmon_events_enable_write(struct file *file,
+	const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	struct seq_file *s = file->private_data;
+	struct gk20a *g = s->private;
+	unsigned long val = 0;
+	char buf[40];
+	int buf_size;
+
+	memset(buf, 0, sizeof(buf));
+	buf_size = min(count, (sizeof(buf)-1));
+
+	if (copy_from_user(buf, userbuf, buf_size))
+		return -EFAULT;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	/* Don't turn on gk20a unnecessarily */
+	if (g->power_on) {
+		gk20a_busy(g->dev);
+		if (val && !g->pmu.perfmon_sampling_enabled) {
+			g->pmu.perfmon_sampling_enabled = true;
+			pmu_perfmon_start_sampling(&(g->pmu));
+		} else if (!val && g->pmu.perfmon_sampling_enabled) {
+			g->pmu.perfmon_sampling_enabled = false;
+			pmu_perfmon_stop_sampling(&(g->pmu));
+		}
+		gk20a_idle(g->dev);
+	} else {
+		g->pmu.perfmon_sampling_enabled = val ? true : false;
+	}
+
+	return count;
+}
+
+static const struct file_operations perfmon_events_enable_fops = {
+	.open		= perfmon_events_enable_open,
+	.read		= seq_read,
+	.write		= perfmon_events_enable_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int perfmon_events_count_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+
+	seq_printf(s, "%lu\n", g->pmu.perfmon_events_cnt);
+	return 0;
+
+}
+
+static int perfmon_events_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, perfmon_events_count_show, inode->i_private);
+}
+
+static const struct file_operations perfmon_events_count_fops = {
+	.open		= perfmon_events_count_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 int gk20a_pmu_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
@@ -3771,6 +3839,17 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev)
 	if (!d)
 		goto err_out;
 
+	d = debugfs_create_file(
+		"perfmon_events_enable", S_IRUGO, platform->debugfs, g,
+						&perfmon_events_enable_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"perfmon_events_count", S_IRUGO, platform->debugfs, g,
+						&perfmon_events_count_fops);
+	if (!d)
+		goto err_out;
 	return 0;
 
 err_out:

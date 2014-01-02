@@ -489,7 +489,7 @@ struct nvhost_device_data tegra_gk20a_info = {
 	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
 	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
 	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
-#ifdef CONFIG_TEGRA_GK20A_DEVFREQ
+#ifdef CONFIG_GK20A_DEVFREQ
 	.busy			= nvhost_gk20a_scale_notify_busy,
 	.idle			= nvhost_gk20a_scale_notify_idle,
 	.scaling_init		= nvhost_gk20a_scale_init,
@@ -628,7 +628,7 @@ static int t124_channel_set_priority(struct nvhost_hwctx *hwctx,
 	return gk20a_channel_set_priority(hwctx->priv, args->priority);
 }
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 static int t124_channel_cycle_stats(struct nvhost_hwctx *hwctx,
 				struct nvhost_cycle_stats_args *args)
 {
@@ -673,7 +673,7 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 			ch->ops.set_error_notifier =
 					t124_channel_set_error_notifier;
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 			ch->ops.cycle_stats   = t124_channel_cycle_stats;
 #endif
 			ch->ops.zcull.bind    = t124_channel_zcull_bind;

@@ -722,7 +722,7 @@ fail:
 	return err;
 }
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 static int nvhost_ioctl_channel_cycle_stats(
 	struct nvhost_channel_userctx *ctx,
 	struct nvhost_cycle_stats_args *args)
@@ -972,7 +972,7 @@ static long nvhost_channelctl(struct file *filp,
 		err = nvhost_ioctl_channel_set_error_notifier(priv,
 			(void *)buf);
 		break;
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:
 		err = nvhost_ioctl_channel_cycle_stats(priv, (void *)buf);
 		break;

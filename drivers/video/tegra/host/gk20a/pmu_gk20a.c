@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1981,7 +1981,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 	}
 
 	/* restart sampling */
-	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
+	if (IS_ENABLED(CONFIG_GK20A_PERFMON))
 		return pmu_perfmon_start_sampling(pmu);
 	return 0;
 }

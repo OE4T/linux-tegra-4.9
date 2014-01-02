@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -163,7 +163,9 @@ static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
 	struct channel_gk20a *ch20a = waiter->data;
 	int nr_completed = waiter->count;
 	wake_up(&ch20a->submit_wq);
+#if defined(CONFIG_TEGRA_GK20A)
 	gk20a_channel_update(ch20a);
+#endif
 	nvhost_module_idle_mult(ch20a->ch->dev, nr_completed);
 	/* TODO: add trace function */
 }

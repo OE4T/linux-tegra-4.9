@@ -668,7 +668,7 @@ int nvhost_gk20a_init(struct platform_device *dev)
 	nvhost_gk20a_finalize_poweron(dev);
 #endif
 
-	if (IS_ENABLED(CONFIG_TEGRA_GK20A_DEVFREQ))
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		nvhost_gk20a_scale_hw_init(dev);
 	return 0;
 }
@@ -1062,7 +1062,7 @@ static int gk20a_probe(struct platform_device *dev)
 					&tegra_gpu_cooling_ops);
 
 	gk20a->gr_idle_timeout_default =
-			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	gk20a->timeouts_enabled = true;
 
 	/* Set up initial clock gating settings */

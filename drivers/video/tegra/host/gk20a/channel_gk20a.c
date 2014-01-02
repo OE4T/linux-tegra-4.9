@@ -3,7 +3,7 @@
  *
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -470,7 +470,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 	channel_gk20a_update_runlist(ch, false);
 }
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 
 static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 {
@@ -662,7 +662,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_free_cycle_stats_buffer(ch);
 #endif
 
@@ -1728,7 +1728,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->remove_support = gk20a_remove_channel_support;
 	mutex_init(&c->jobs_lock);
 	INIT_LIST_HEAD(&c->jobs);
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 #endif
 	INIT_LIST_HEAD(&c->dbg_s_list);

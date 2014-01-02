@@ -74,7 +74,7 @@ struct nvhost_channel_ops {
 			    struct nvhost_set_priority_args *args);
 	int (*wait)(struct nvhost_hwctx *,
 		    struct nvhost_wait_args *args);
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	int (*cycle_stats)(struct nvhost_hwctx *,
 			struct nvhost_cycle_stats_args *args);
 #endif

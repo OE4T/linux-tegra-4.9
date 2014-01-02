@@ -270,7 +270,7 @@ int gk20a_init_mm_support(struct gk20a *g)
 	return err;
 }
 
-#ifdef TEGRA_GRHOST_GK20A_PHYS_PAGE_TABLES
+#ifdef CONFIG_GK20A_PHYS_PAGE_TABLES
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    void **handle,
 			    struct sg_table **sgt)

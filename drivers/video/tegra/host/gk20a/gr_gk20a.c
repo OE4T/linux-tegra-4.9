@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -4799,7 +4799,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	void *virtual_address;
 	u32 buffer_size;
 	u32 offset;

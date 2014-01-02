@@ -242,7 +242,7 @@ enum {
 	KEPLER_DMA_COPY_A         = 0xA0B5, /*not sure about this one*/
 };
 
-#if defined (CONFIG_TEGRA_GK20A_PMU)
+#if defined(CONFIG_GK20A_PMU)
 static inline int support_gk20a_pmu(void)
 {
 	return 1;

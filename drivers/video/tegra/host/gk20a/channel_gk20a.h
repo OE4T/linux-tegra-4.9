@@ -3,7 +3,7 @@
  *
  * GK20A graphics channel
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -122,7 +122,7 @@ struct channel_gk20a {
 	} last_submit_fence;
 
 	void (*remove_support)(struct channel_gk20a *);
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
 	void *cyclestate_buffer;
 	u32 cyclestate_buffer_size;
@@ -152,14 +152,7 @@ struct nvhost_zbc_set_table_args;
 struct nvhost_cycle_stats_args;
 struct nvhost_set_priority_args;
 
-#if defined(CONFIG_TEGRA_GK20A)
 void gk20a_channel_update(struct channel_gk20a *c);
-#else
-static inline void gk20a_channel_update(struct channel_gk20a *c)
-{
-}
-#endif
-
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 int gk20a_channel_init(struct nvhost_channel *ch, struct nvhost_master *host,
 		       int index);
@@ -195,7 +188,7 @@ int gk20a_channel_zbc_query_table(struct channel_gk20a *ch,
 			    struct nvhost_zbc_query_table_args *args);
 int gk20a_channel_set_priority(struct channel_gk20a *ch,
 		       u32 priority);
-#if defined(CONFIG_TEGRA_GPU_CYCLE_STATS)
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 			struct nvhost_cycle_stats_args *args);
 #endif

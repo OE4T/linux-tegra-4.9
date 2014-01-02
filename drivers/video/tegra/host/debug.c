@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2014, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -274,6 +274,6 @@ void nvhost_debug_dump(struct nvhost_master *master)
 	struct output o = {
 		.fn = write_to_printk
 	};
-	show_all(master, &o, -1);
+	show_all_no_fifo(master, &o, -1);
 }
 #endif

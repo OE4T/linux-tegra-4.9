@@ -3,7 +3,7 @@
  *
  * Tegra Graphics ISP
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -370,6 +370,9 @@ const struct file_operations tegra_isp_ctrl_ops = {
 	.owner = THIS_MODULE,
 	.open = isp_open,
 	.unlocked_ioctl = isp_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = isp_ioctl,
+#endif
 	.release = isp_release,
 };
 

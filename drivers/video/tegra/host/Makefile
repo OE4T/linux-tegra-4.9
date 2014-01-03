@@ -49,9 +49,6 @@ obj-$(CONFIG_TEGRA_GRHOST) += gr2d/
 obj-$(CONFIG_TEGRA_GRHOST) += isp/
 obj-$(CONFIG_TEGRA_GRHOST) += vi/
 obj-$(t12x_or_higher_config) += t124/
-ifeq ($(CONFIG_TEGRA_GK20A),y)
-obj-$(t12x_or_higher_config) += gk20a/
-endif
 obj-$(t12x_or_higher_config) += vic03/
 obj-$(t12x_or_higher_config) += nvhost_allocator.o
 obj-$(CONFIG_TEGRA_GRHOST_USE_NVMAP) += nvmap.o

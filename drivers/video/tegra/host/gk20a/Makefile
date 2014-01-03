@@ -4,7 +4,7 @@ ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 
-nvhost-gk20a-objs  = \
+obj-$(CONFIG_GK20A) += \
 	gk20a.o \
 	ctrl_gk20a.o \
 	fifo_gk20a.o \
@@ -25,4 +25,3 @@ nvhost-gk20a-objs  = \
 	gk20a_gating_reglist.o \
 	gk20a_scale.o \
 	gk20a_sysfs.o
-obj-$(CONFIG_TEGRA_GRHOST) += nvhost-gk20a.o

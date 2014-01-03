@@ -38,8 +38,14 @@ static DEFINE_MUTEX(la_lock);
 #define T12_VI_CFG_CG_CTRL	0xb8
 #define T12_CG_2ND_LEVEL_EN	1
 #define T12_VI_CSI_0_SW_RESET	0x100
+#define T12_CSI_CSI_SW_SENSOR_A_RESET 0x858
+#define T12_CSI_CSICIL_SW_SENSOR_A_RESET 0x94c
+#define T12_VI_CSI_0_CSI_IMAGE_DT 0x120
+
 #define T12_VI_CSI_1_SW_RESET	0x200
-#define T12_VI_CSI_SW_RESET_MCCIF_RESET 3
+#define T12_CSI_CSI_SW_SENSOR_B_RESET 0x88c
+#define T12_CSI_CSICIL_SW_SENSOR_B_RESET 0x980
+#define T12_VI_CSI_1_CSI_IMAGE_DT 0x220
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 
@@ -321,17 +327,29 @@ const struct file_operations tegra_vi_ctrl_ops = {
 
 void nvhost_vi_reset(struct platform_device *pdev)
 {
-	u32 reset_reg;
+	u32 reset_reg[4];
 
-	if (pdev->id == 0)
-		reset_reg = T12_VI_CSI_0_SW_RESET;
-	else
-		reset_reg = T12_VI_CSI_1_SW_RESET;
+	if (pdev->id == 0) {
+		reset_reg[0] = T12_VI_CSI_0_SW_RESET;
+		reset_reg[1] = T12_CSI_CSI_SW_SENSOR_A_RESET;
+		reset_reg[2] = T12_CSI_CSICIL_SW_SENSOR_A_RESET;
+		reset_reg[3] = T12_VI_CSI_0_CSI_IMAGE_DT;
+	} else {
+		reset_reg[0] = T12_VI_CSI_1_SW_RESET;
+		reset_reg[1] = T12_CSI_CSI_SW_SENSOR_B_RESET;
+		reset_reg[2] = T12_CSI_CSICIL_SW_SENSOR_B_RESET;
+		reset_reg[3] = T12_VI_CSI_1_CSI_IMAGE_DT;
+	}
 
-	host1x_writel(pdev, reset_reg, T12_VI_CSI_SW_RESET_MCCIF_RESET);
+	host1x_writel(pdev, reset_reg[3], 0);
+	host1x_writel(pdev, reset_reg[2], 0x1);
+	host1x_writel(pdev, reset_reg[1], 0x1);
+	host1x_writel(pdev, reset_reg[0], 0x1f);
 
 	udelay(10);
 
-	host1x_writel(pdev, reset_reg, 0);
+	host1x_writel(pdev, reset_reg[2], 0);
+	host1x_writel(pdev, reset_reg[1], 0);
+	host1x_writel(pdev, reset_reg[0], 0);
 }
 

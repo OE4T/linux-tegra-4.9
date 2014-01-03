@@ -2,7 +2,7 @@
  * tegra_asoc_utils_alt.c - MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2010-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,6 +49,7 @@
 
 #include "tegra_asoc_utils_alt.h"
 
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static atomic_t dap_ref_count[5];
 
 #define TRISTATE_DAP_PORT(n) \
@@ -117,6 +118,7 @@ other pinmux*/
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_tristate_dap);
+#endif
 
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,

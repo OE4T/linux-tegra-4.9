@@ -11,15 +11,36 @@ snd-soc-tegra30-alt-i2s-objs := tegra30_i2s_alt.o
 snd-soc-tegra30-alt-spdif-objs := tegra30_spdif_alt.o
 snd-soc-tegra114-alt-amx-objs := tegra114_amx_alt.o
 snd-soc-tegra114-alt-adx-objs := tegra114_adx_alt.o
+snd-soc-tegra210-alt-admaif-objs := tegra210_admaif_alt.o
+snd-soc-tegra210-alt-xbar-objs := tegra210_xbar_alt.o
+snd-soc-tegra210-alt-i2s-objs := tegra210_i2s_alt.o
+snd-soc-tegra210-alt-amx-objs := tegra210_amx_alt.o
+snd-soc-tegra210-alt-adx-objs := tegra210_adx_alt.o
+snd-soc-tegra210-alt-mixer-objs := tegra210_mixer_alt.o
+snd-soc-tegra210-alt-sfc-objs := tegra210_sfc_alt.o
+snd-soc-tegra210-alt-afc-objs := tegra210_afc_alt.o
+snd-soc-tegra210-alt-mvc-objs := tegra210_mvc_alt.o
+snd-soc-tegra210-alt-spdif-objs := tegra210_spdif_alt.o
+snd-soc-tegra210-alt-fpga-clock-objs := ahub_unit_fpga_clock.o
 
-obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-pcm.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-utils.o
+obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-pcm.o
 obj-$(CONFIG_SND_SOC_TEGRA30_APBIF_ALT) += snd-soc-tegra30-alt-apbif.o
 obj-$(CONFIG_SND_SOC_TEGRA30_XBAR_ALT) += snd-soc-tegra30-alt-xbar.o
 obj-$(CONFIG_SND_SOC_TEGRA30_I2S_ALT) += snd-soc-tegra30-alt-i2s.o
 obj-$(CONFIG_SND_SOC_TEGRA30_SPDIF_ALT) += snd-soc-tegra30-alt-spdif.o
 obj-$(CONFIG_SND_SOC_TEGRA114_AMX_ALT) += snd-soc-tegra114-alt-amx.o
 obj-$(CONFIG_SND_SOC_TEGRA114_ADX_ALT) += snd-soc-tegra114-alt-adx.o
+obj-$(CONFIG_SND_SOC_TEGRA210_ADMAIF_ALT) += snd-soc-tegra210-alt-admaif.o
+obj-$(CONFIG_SND_SOC_TEGRA210_XBAR_ALT) += snd-soc-tegra210-alt-xbar.o
+obj-$(CONFIG_SND_SOC_TEGRA210_I2S_ALT) += snd-soc-tegra210-alt-i2s.o
+obj-$(CONFIG_SND_SOC_TEGRA210_AMX_ALT) += snd-soc-tegra210-alt-amx.o
+obj-$(CONFIG_SND_SOC_TEGRA210_ADX_ALT) += snd-soc-tegra210-alt-adx.o
+obj-$(CONFIG_SND_SOC_TEGRA210_MIXER_ALT) += snd-soc-tegra210-alt-mixer.o
+obj-$(CONFIG_SND_SOC_TEGRA210_SFC_ALT) += snd-soc-tegra210-alt-sfc.o
+obj-$(CONFIG_SND_SOC_TEGRA210_AFC_ALT) += snd-soc-tegra210-alt-afc.o
+obj-$(CONFIG_SND_SOC_TEGRA210_MVC_ALT) += snd-soc-tegra210-alt-mvc.o
+obj-$(CONFIG_SND_SOC_TEGRA210_SPDIF_ALT) += snd-soc-tegra210-alt-spdif.o
 
 # Tegra machine Support
 snd-soc-tegra-alt-vcm30t124-objs := tegra_vcm30t124_alt.o

@@ -198,17 +198,29 @@ static int alloc_and_kmap_iopage(struct device *d,
 	return err;
 
 }
+
+static void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
+					    struct resource **out)
+{
+	struct resource *r = platform_get_resource(dev, IORESOURCE_MEM, i);
+	if (!r)
+		return NULL;
+	if (out)
+		*out = r;
+	return devm_request_and_ioremap(&dev->dev, r);
+}
+
 /* TBD: strip from released */
 static int gk20a_init_sim_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 	struct device *d = &dev->dev;
 	phys_addr_t phys;
 
 	g->sim.g = g;
-	g->sim.regs = pdata->aperture[GK20A_SIM_IORESOURCE_MEM];
+	g->sim.regs = gk20a_ioremap_resource(dev, GK20A_SIM_IORESOURCE_MEM,
+					     &g->sim.reg_mem);
 	if (!g->sim.regs) {
 		dev_err(d, "failed to remap gk20a sim regs\n");
 		err = -ENXIO;
@@ -614,22 +626,27 @@ static void gk20a_remove_support(struct platform_device *dev)
 		iounmap(g->regs);
 		g->regs = 0;
 	}
+	if (g->bar1) {
+		iounmap(g->bar1);
+		g->bar1 = 0;
+	}
 }
 
 int nvhost_init_gk20a_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
-	g->regs = pdata->aperture[GK20A_BAR0_IORESOURCE_MEM];
+	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
+					 &g->reg_mem);
 	if (!g->regs) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a registers\n");
 		err = -ENXIO;
 		goto fail;
 	}
 
-	g->bar1 = pdata->aperture[GK20A_BAR1_IORESOURCE_MEM];
+	g->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
+					 &g->bar1_mem);
 	if (!g->bar1) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
 		err = -ENXIO;
@@ -1008,10 +1025,6 @@ static int gk20a_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
-
-	err = nvhost_client_device_get_resources(dev);
-	if (err)
-		return err;
 
 	nvhost_module_init(dev);
 

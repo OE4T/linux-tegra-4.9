@@ -4847,7 +4847,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 				(struct gk20a_cyclestate_buffer_elem *)
 					sh_hdr;
 			if (op_elem->offset_bar0 <
-				TEGRA_GK20A_BAR0_SIZE) {
+				resource_size(g->reg_mem)) {
 				mask_orig =
 					((1ULL <<
 					(op_elem->last_bit + 1))

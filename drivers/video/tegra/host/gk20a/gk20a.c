@@ -61,7 +61,7 @@
 
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
-	nvhost_set_private_data(dev, gk20a);
+	gk20a_get_platform(dev)->g = gk20a;
 }
 
 /* TBD: should be able to put in the list below. */
@@ -632,7 +632,7 @@ static void gk20a_remove_support(struct platform_device *dev)
 	}
 }
 
-int nvhost_init_gk20a_support(struct platform_device *dev)
+static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
@@ -931,8 +931,12 @@ done:
 }
 
 static struct of_device_id tegra_gk20a_of_match[] = {
+#ifdef CONFIG_TEGRA_GK20A
 	{ .compatible = "nvidia,tegra124-gk20a",
-		.data = (struct nvhost_device_data *)&tegra_gk20a_info },
+		.data = &gk20a_tegra_platform },
+#endif
+	{ .compatible = "nvidia,generic-gk20a",
+		.data = &gk20a_generic_platform },
 	{ },
 };
 
@@ -999,7 +1003,7 @@ static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;
-	struct nvhost_device_data *pdata = NULL;
+	struct gk20a_platform *platform = NULL;
 	struct cooling_device_gk20a *gpu_cdev = NULL;
 
 	if (dev->dev.of_node) {
@@ -1007,21 +1011,18 @@ static int gk20a_probe(struct platform_device *dev)
 
 		match = of_match_device(tegra_gk20a_of_match, &dev->dev);
 		if (match)
-			pdata = (struct nvhost_device_data *)match->data;
+			platform = (struct gk20a_platform *)match->data;
 	} else
-		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+		platform = (struct gk20a_platform *)dev->dev.platform_data;
 
-	if (!pdata) {
+	if (!platform) {
 		dev_err(&dev->dev, "no platform data\n");
 		return -ENODATA;
 	}
 
 	nvhost_dbg_fn("");
-	pdata->pdev = dev;
-	mutex_init(&pdata->lock);
-	platform_set_drvdata(dev, pdata);
 
-	nvhost_module_init(dev);
+	platform_set_drvdata(dev, platform);
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
@@ -1031,28 +1032,23 @@ static int gk20a_probe(struct platform_device *dev)
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
+#ifdef CONFIG_TEGRA_GK20A
 	gk20a->host = nvhost_get_host(dev);
-
-	nvhost_init_gk20a_support(dev);
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = "gk20a";
-
-	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
-	if (pdata->can_powergate) {
+	gk20a_init_support(dev);
+
+	/* Initialize the platform interface. */
+	err = platform->probe(dev);
+	if (err) {
+		dev_err(&dev->dev, "platform probe failed");
+		return err;
+	}
+
+	if (platform->can_powergate) {
 		gk20a->system_suspend_notifier.notifier_call =
 			gk20a_suspend_notifier;
 		register_pm_notifier(&gk20a->system_suspend_notifier);
-	}
-
-	err = nvhost_client_device_init(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client device for %s",
-			      dev->name);
-		pm_runtime_put(&dev->dev);
-		return err;
 	}
 
 	err = nvhost_as_init_device(dev);
@@ -1091,17 +1087,17 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->mm.ltc_enabled_debug = true;
 	gk20a->debugfs_ltc_enabled =
 			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
-				 pdata->debugfs,
+				 platform->debugfs,
 				 &gk20a->mm.ltc_enabled_debug);
 	gk20a->mm.ltc_enabled_debug = true;
 	gk20a->debugfs_gr_idle_timeout_default =
 			debugfs_create_u32("gr_idle_timeout_default_us",
-					S_IRUGO|S_IWUSR, pdata->debugfs,
+					S_IRUGO|S_IWUSR, platform->debugfs,
 					 &gk20a->gr_idle_timeout_default);
 	gk20a->debugfs_timeouts_enabled =
 			debugfs_create_bool("timeouts_enabled",
 					S_IRUGO|S_IWUSR,
-					pdata->debugfs,
+					platform->debugfs,
 					&gk20a->timeouts_enabled);
 	gk20a_pmu_debugfs_init(dev);
 #endif
@@ -1171,6 +1167,11 @@ static int __init gk20a_init(void)
 static void __exit gk20a_exit(void)
 {
 	platform_driver_unregister(&gk20a_driver);
+}
+
+bool is_gk20a_module(struct platform_device *dev)
+{
+	return &gk20a_driver.driver == dev->dev.driver;
 }
 
 void gk20a_busy(struct platform_device *pdev)

@@ -452,65 +452,6 @@ struct platform_device tegra_vic03_device = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_GK20A)
-struct resource gk20a_resources[] = {
-	{
-	.start = TEGRA_GK20A_BAR0_BASE,
-	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
-	.start = TEGRA_GK20A_BAR1_BASE,
-	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-};
-
-struct nvhost_device_data tegra_gk20a_info = {
-	.syncpts		= {NVSYNCPT_GK20A_BASE},
-	.syncpt_base		= NVSYNCPT_GK20A_BASE,
-	.class			= NV_GRAPHICS_GPU_CLASS_ID,
-	.clocks			= {{"PLLG_ref", UINT_MAX},
-				   {"pwr", 204000000},
-				   {"emc", UINT_MAX},
-				   {} },
-	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
-	.can_powergate		= true,
-	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
-	.ctrl_ops		= &tegra_gk20a_ctrl_ops,
-	.dbg_ops                = &tegra_gk20a_dbg_gpu_ops,
-	.prof_ops                = &tegra_gk20a_prof_gpu_ops,
-	.as_ops			= &tegra_gk20a_as_ops,
-	.moduleid		= NVHOST_MODULE_GPU,
-	.init			= nvhost_gk20a_init,
-	.deinit			= nvhost_gk20a_deinit,
-	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
-	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
-	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
-#ifdef CONFIG_GK20A_DEVFREQ
-	.busy			= nvhost_gk20a_scale_notify_busy,
-	.idle			= nvhost_gk20a_scale_notify_idle,
-	.scaling_init		= nvhost_gk20a_scale_init,
-	.scaling_deinit		= nvhost_gk20a_scale_deinit,
-	.suspend_ndev		= nvhost_scale3d_suspend,
-	.devfreq_governor	= "nvhost_podgov",
-	.scaling_post_cb	= nvhost_gk20a_scale_callback,
-	.gpu_edp_device		= true,
-#endif
-};
-
-struct platform_device tegra_gk20a_device = {
-	.name		= "gk20a",
-	.resource	= gk20a_resources,
-	.num_resources	= 2, /* this is num ioresource_mem, not the sum */
-	.dev		= {
-		.platform_data = &tegra_gk20a_info,
-	},
-};
-#endif
-
 static struct platform_device *t124_devices[] = {
 	&tegra_isp01_device,
 	&tegra_isp01b_device,

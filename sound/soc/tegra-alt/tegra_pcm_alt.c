@@ -2,7 +2,7 @@
  * tegra_alt_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -203,7 +203,11 @@ void tegra_alt_pcm_deallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	buf->area = NULL;
 }
 
+#if defined(CONFIG_ARCH_TEGRA_APE)
+static u64 tegra_dma_mask = DMA_BIT_MASK(64);
+#else
 static u64 tegra_dma_mask = DMA_BIT_MASK(32);
+#endif
 
 int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd, size_t size)
 {
@@ -214,7 +218,7 @@ int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd, size_t size)
 	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &tegra_dma_mask;
 	if (!card->dev->coherent_dma_mask)
-		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
+		card->dev->coherent_dma_mask = tegra_dma_mask;
 
 	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
 		ret = tegra_alt_pcm_preallocate_dma_buffer(pcm,

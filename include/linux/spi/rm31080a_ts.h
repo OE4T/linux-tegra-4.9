@@ -44,8 +44,8 @@
 #define RM_VARIABLE_TEST_VERSION				0x08
 #define RM_VARIABLE_SET_SPI_UNLOCK				0x09
 #define RM_VARIABLE_SET_WAKE_UNLOCK				0x0A
-#define RM_VARIABLE_DPW 						0x0B
-#define RM_VARIABLE_NS_MODE 					0x0C
+#define RM_VARIABLE_DPW							0x0B
+#define RM_VARIABLE_NS_MODE						0x0C
 #define RM_IOCTL_GET_VARIABLE				0x1011
 #define RM_VARIABLE_PLATFORM_ID					0x01
 #define RM_VARIABLE_GPIO_SELECT					0x02
@@ -196,8 +196,8 @@
  *	DO NOT MODIFY
  *	NOTE: Need to sync with HAL
  ***************************************************************************/
-#define INPUT_POINT_RESET 0x80
-#define MAX_REPORT_TOUCHED_POINTS 10
+#define INPUT_POINT_RESET	0x80
+#define MAX_REPORT_TOUCHED_POINTS	10
 
 #define POINT_TYPE_NONE			0x00
 #define POINT_TYPE_STYLUS		0x01

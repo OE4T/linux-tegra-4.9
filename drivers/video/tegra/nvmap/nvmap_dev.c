@@ -40,8 +40,6 @@
 #include <linux/stat.h>
 
 #include <asm/cputype.h>
-#include <asm/cacheflush.h>
-#include <asm/tlbflush.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
@@ -309,10 +307,8 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 #ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
 	if (len >= cache_maint_inner_threshold) {
 		inner_flush_cache_all();
-#ifndef CONFIG_ARM64
 		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 			outer_flush_range(block->base, block->base + len);
-#endif
 		goto out;
 	}
 #endif
@@ -335,10 +331,8 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 		phys = next;
 	}
 
-#ifndef CONFIG_ARM64
 	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 		outer_flush_range(block->base, block->base + len);
-#endif
 
 	nvmap_free_pte(nvmap_dev, pte);
 out:

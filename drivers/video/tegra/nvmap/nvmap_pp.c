@@ -123,13 +123,11 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 		i--;
 	}
 
-#ifndef CONFIG_ARM64
 	if (idx) {
 		/* This op should never fail. */
 		err = nvmap_set_pages_array_wb(pool->shrink_array, idx);
 		BUG_ON(err);
 	}
-#endif
 
 	while (idx--)
 		__free_page(pool->shrink_array[idx]);
@@ -368,7 +366,6 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	struct page *page;
 	int pages_to_fill;
 	int highmem_pages = 0;
-#ifndef CONFIG_ARM64
 	typedef int (*set_pages_array) (struct page **pages, int addrinarray);
 	set_pages_array s_cpa[] = {
 		nvmap_set_pages_array_uc,
@@ -376,7 +373,6 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		nvmap_set_pages_array_iwb,
 		nvmap_set_pages_array_wb
 	};
-#endif
 #endif
 
 	BUG_ON(flags >= NVMAP_NUM_POOLS);
@@ -445,12 +441,10 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 		s_memtype_str[flags], highmem_pages, pool->max_pages,
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
-#ifndef CONFIG_ARM64
 	if (pool->npages) {
 		err = (*s_cpa[flags])(pool->page_array, pool->npages);
 		BUG_ON(err);
 	}
-#endif
 	nvmap_page_pool_unlock(pool);
 #endif
 	return 0;

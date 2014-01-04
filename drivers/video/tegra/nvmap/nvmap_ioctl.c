@@ -29,16 +29,11 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/nvmap.h>
+#include <linux/vmalloc.h>
 
-#include <asm/cacheflush.h>
 #include <asm/memory.h>
-#ifndef CONFIG_ARM64
-#include <asm/outercache.h>
-#endif
-#include <asm/tlbflush.h>
 
 #include <trace/events/nvmap.h>
-#include <linux/vmalloc.h>
 
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
@@ -733,14 +728,12 @@ static void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 
 static void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
 {
-#ifndef CONFIG_ARM64
 	if (op == NVMAP_CACHE_OP_WB_INV)
 		outer_flush_range(paddr, paddr + size);
 	else if (op == NVMAP_CACHE_OP_INV)
 		outer_inv_range(paddr, paddr + size);
 	else
 		outer_clean_range(paddr, paddr + size);
-#endif
 }
 
 static void heap_page_cache_maint(

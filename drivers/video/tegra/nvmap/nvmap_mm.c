@@ -59,7 +59,7 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 
 	for (i = 0; i < numpages; i++) {
 #ifdef CONFIG_ARM64 //__flush_dcache_page flushes inner and outer on ARM64
-		 __flush_dcache_page(page_mapping(pages[i]), pages[i]);
+		__flush_dcache_page(pages[i]);
 #else
 		if (flush_inner)
 			__flush_dcache_page(page_mapping(pages[i]), pages[i]);

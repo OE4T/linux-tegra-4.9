@@ -39,9 +39,11 @@
 #include <linux/dma-direction.h>
 #include <linux/platform_device.h>
 
-#include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
-
+#include <asm/tlbflush.h>
+#ifndef CONFIG_ARM64
+#include <asm/outercache.h>
+#endif
 #include "nvmap_heap.h"
 
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
@@ -91,10 +93,15 @@ extern struct platform_device *nvmap_pdev;
 #define PG_PROT_KERNEL PAGE_KERNEL
 #define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_range(addr, PAGE_SIZE)
 #define FLUSH_DCACHE_AREA __flush_dcache_area
+#define outer_flush_range(s, e)
+#define outer_inv_range(s, e)
+#define outer_clean_range(s, e)
+extern void __flush_dcache_page(struct page *);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
 #define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_page(addr)
 #define FLUSH_DCACHE_AREA __cpuc_flush_dcache_area
+extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
 
 /* handles allocated using shared system memory (either IOVMM- or high-order
@@ -391,7 +398,6 @@ extern int inner_cache_maint_threshold;
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);
 extern void __flush_dcache_all(void *arg);
-extern void __flush_dcache_page(struct address_space *, struct page *);
 
 void inner_flush_cache_all(void);
 void inner_clean_cache_all(void);

@@ -59,6 +59,12 @@
 
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 
+#define CLASS_NAME "nvidia-gpu"
+/* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
+#define INTERFACE_NAME "nvhost%s-gpu"
+
+#define GK20A_NUM_CDEVS 3
+
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
 	gk20a_get_platform(dev)->g = gk20a;
@@ -71,14 +77,14 @@ static struct resource gk20a_intr = {
 	.flags = IORESOURCE_IRQ,
 };
 
-const struct file_operations tegra_gk20a_ctrl_ops = {
+static const struct file_operations gk20a_ctrl_ops = {
 	.owner = THIS_MODULE,
 	.release = gk20a_ctrl_dev_release,
 	.open = gk20a_ctrl_dev_open,
 	.unlocked_ioctl = gk20a_ctrl_dev_ioctl,
 };
 
-const struct file_operations tegra_gk20a_dbg_gpu_ops = {
+static const struct file_operations gk20a_dbg_ops = {
 	.owner = THIS_MODULE,
 	.release        = gk20a_dbg_gpu_dev_release,
 	.open           = gk20a_dbg_gpu_dev_open,
@@ -95,7 +101,7 @@ const struct file_operations tegra_gk20a_dbg_gpu_ops = {
  * code does get too tangled trying to handle each in the same path we can
  * separate them cleanly.
  */
-const struct file_operations tegra_gk20a_prof_gpu_ops = {
+static const struct file_operations gk20a_prof_ops = {
 	.owner = THIS_MODULE,
 	.release        = gk20a_dbg_gpu_dev_release,
 	.open           = gk20a_prof_gpu_dev_open,
@@ -981,6 +987,116 @@ static int gk20a_suspend_notifier(struct notifier_block *notifier,
 	return NOTIFY_DONE;
 }
 
+static int gk20a_create_device(
+	struct platform_device *pdev, int devno, const char *cdev_name,
+	struct cdev *cdev, struct device **out,
+	const struct file_operations *ops)
+{
+	struct device *dev;
+	int err;
+	struct gk20a *g = get_gk20a(pdev);
+
+	nvhost_dbg_fn("");
+
+	cdev_init(cdev, ops);
+	cdev->owner = THIS_MODULE;
+
+	err = cdev_add(cdev, devno, 1);
+	if (err) {
+		dev_err(&pdev->dev,
+			"failed to add %s cdev\n", cdev_name);
+		return err;
+	}
+
+	dev = device_create(g->class, NULL, devno, NULL,
+		(pdev->id <= 0) ? INTERFACE_NAME : INTERFACE_NAME ".%d",
+		cdev_name, pdev->id);
+
+	if (IS_ERR(dev)) {
+		err = PTR_ERR(dev);
+		cdev_del(cdev);
+		dev_err(&pdev->dev,
+			"failed to create %s device for %s\n",
+			cdev_name, pdev->name);
+		return err;
+	}
+
+	*out = dev;
+	return 0;
+}
+
+static void gk20a_user_deinit(struct platform_device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	if (g->ctrl.node) {
+		device_destroy(g->class, g->ctrl.cdev.dev);
+		cdev_del(&g->ctrl.cdev);
+	}
+
+	if (g->dbg.node) {
+		device_destroy(g->class, g->dbg.cdev.dev);
+		cdev_del(&g->dbg.cdev);
+	}
+
+	if (g->prof.node) {
+		device_destroy(g->class, g->prof.cdev.dev);
+		cdev_del(&g->prof.cdev);
+	}
+
+	if (g->cdev_region)
+		unregister_chrdev_region(g->cdev_region, GK20A_NUM_CDEVS);
+
+	if (g->class)
+		class_destroy(g->class);
+}
+
+static int gk20a_user_init(struct platform_device *dev)
+{
+	int err;
+	dev_t devno;
+	struct gk20a *g = get_gk20a(dev);
+
+	g->class = class_create(THIS_MODULE, CLASS_NAME);
+	if (IS_ERR(g->class)) {
+		err = PTR_ERR(g->class);
+		g->class = NULL;
+		dev_err(&dev->dev,
+			"failed to create " CLASS_NAME " class\n");
+		goto fail;
+	}
+
+	err = alloc_chrdev_region(&devno, 0, GK20A_NUM_CDEVS, CLASS_NAME);
+	if (err) {
+		dev_err(&dev->dev, "failed to allocate devno\n");
+		goto fail;
+	}
+	g->cdev_region = devno;
+
+	err = gk20a_create_device(dev, devno++, "-ctrl",
+				  &g->ctrl.cdev, &g->ctrl.node,
+				  &gk20a_ctrl_ops);
+	if (err)
+		goto fail;
+
+	err = gk20a_create_device(dev, devno++, "-dbg",
+				  &g->dbg.cdev, &g->dbg.node,
+				  &gk20a_dbg_ops);
+	if (err)
+		goto fail;
+
+	err = gk20a_create_device(dev, devno++, "-prof",
+				  &g->prof.cdev, &g->prof.node,
+				  &gk20a_prof_ops);
+	if (err)
+		goto fail;
+
+	return 0;
+fail:
+	gk20a_user_deinit(dev);
+	return err;
+}
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
@@ -1017,6 +1133,10 @@ static int gk20a_probe(struct platform_device *dev)
 #ifdef CONFIG_TEGRA_GK20A
 	gk20a->host = nvhost_get_host(dev);
 #endif
+
+	err = gk20a_user_init(dev);
+	if (err)
+		return err;
 
 	gk20a_init_support(dev);
 
@@ -1102,6 +1222,8 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	if (g->remove_support)
 		g->remove_support(dev);
+
+	gk20a_user_deinit(dev);
 
 	set_gk20a(dev, 0);
 #ifdef CONFIG_DEBUG_FS

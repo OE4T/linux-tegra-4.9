@@ -50,6 +50,10 @@ struct gk20a_platform {
 	 *     structure can be obtained by calling gk20a_get_platform).
 	 */
 	int (*probe)(struct platform_device *dev);
+
+	/* TODO(lpeltonen): Can we get rid of these? */
+	int (*getchannel)(struct platform_device *dev);
+	void (*putchannel)(struct platform_device *dev);
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(
@@ -58,6 +62,19 @@ static inline struct gk20a_platform *gk20a_get_platform(
 	return (struct gk20a_platform *)platform_get_drvdata(dev);
 }
 
+static inline int gk20a_platform_getchannel(struct platform_device *dev)
+{
+	struct gk20a_platform *p = gk20a_get_platform(dev);
+	if (p->getchannel)
+		return p->getchannel(dev);
+	return 0;
+}
+static inline void gk20a_platform_putchannel(struct platform_device *dev)
+{
+	struct gk20a_platform *p = gk20a_get_platform(dev);
+	if (p->putchannel)
+		p->putchannel(dev);
+}
 extern struct gk20a_platform gk20a_generic_platform;
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gk20a_tegra_platform;

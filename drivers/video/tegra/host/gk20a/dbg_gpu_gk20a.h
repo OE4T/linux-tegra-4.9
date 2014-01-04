@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,7 +64,6 @@ struct dbg_session_gk20a {
 	/* gpu module vagaries */
 	struct device             *dev;
 	struct platform_device    *pdev;
-	struct nvhost_device_data *pdata;
 	struct gk20a              *g;
 
 	/* bound hwctx and channel, if any */

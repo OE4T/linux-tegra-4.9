@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,7 +64,7 @@ static int alloc_session(struct dbg_session_gk20a **_dbg_s)
 int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_profiler)
 {
 	struct dbg_session_gk20a *dbg_session;
-	struct nvhost_device_data *pdata;
+	struct gk20a *g;
 
 	struct platform_device *pdev;
 	struct device *dev;
@@ -72,12 +72,12 @@ int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_pr
 	int err;
 
 	if (!is_profiler)
-		pdata = container_of(inode->i_cdev,
-			     struct nvhost_device_data, dbg_cdev);
+		g = container_of(inode->i_cdev,
+				 struct gk20a, dbg.cdev);
 	else
-		pdata = container_of(inode->i_cdev,
-				     struct nvhost_device_data, prof_cdev);
-	pdev = pdata->pdev;
+		g = container_of(inode->i_cdev,
+				 struct gk20a, prof.cdev);
+	pdev = g->dev;
 	dev  = &pdev->dev;
 
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "dbg session: %s", dev_name(dev));
@@ -87,10 +87,9 @@ int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_pr
 		return err;
 
 	filp->private_data = dbg_session;
-	dbg_session->pdata = pdata;
 	dbg_session->pdev  = pdev;
 	dbg_session->dev   = dev;
-	dbg_session->g     = get_gk20a(pdev);
+	dbg_session->g     = g;
 	dbg_session->is_profiler = is_profiler;
 	dbg_session->is_pg_disabled = false;
 

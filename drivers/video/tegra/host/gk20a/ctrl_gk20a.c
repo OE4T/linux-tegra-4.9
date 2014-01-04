@@ -29,24 +29,20 @@
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
-	struct nvhost_device_data *pdata;
-	struct platform_device *dev;
-	struct nvhost_channel *ch;
+	int err;
+	struct gk20a *g;
 
 	nvhost_dbg_fn("");
 
-	pdata = container_of(inode->i_cdev,
-			     struct nvhost_device_data, ctrl_cdev);
-	dev = pdata->pdev;
+	g = container_of(inode->i_cdev,
+			 struct gk20a, ctrl.cdev);
 
-	BUG_ON(dev == NULL);
+	filp->private_data = g->dev;
 
-	filp->private_data = dev;
-
-	ch = nvhost_getchannel(pdata->channel, false);
-	if (!ch) {
+	err = gk20a_platform_getchannel(g->dev);
+	if (err) {
 		nvhost_dbg_fn("fail to get channel!");
-		return -ENOMEM;
+		return err;
 	}
 
 	return 0;
@@ -55,11 +51,10 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
 	struct platform_device *dev = filp->private_data;
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
 	nvhost_dbg_fn("");
 
-	nvhost_putchannel(pdata->channel);
+	gk20a_platform_putchannel(dev);
 	return 0;
 }
 

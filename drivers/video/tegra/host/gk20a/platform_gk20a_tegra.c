@@ -31,6 +31,18 @@
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
+static int gk20a_tegra_getchannel(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	return nvhost_getchannel(platform->nvhost.channel, false) == NULL
+		? -ENOMEM : 0;
+}
+static void gk20a_tegra_putchannel(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	nvhost_putchannel(platform->nvhost.channel);
+}
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
 	int err;
@@ -103,9 +115,6 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.powergate_delay	= 500,
 		.can_powergate		= true,
 		.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
-		.ctrl_ops		= &tegra_gk20a_ctrl_ops,
-		.dbg_ops		= &tegra_gk20a_dbg_gpu_ops,
-		.prof_ops		= &tegra_gk20a_prof_gpu_ops,
 		.as_ops			= &tegra_gk20a_as_ops,
 		.moduleid		= NVHOST_MODULE_GPU,
 		.init			= nvhost_gk20a_init,
@@ -125,6 +134,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 #endif
 	},
 	.probe = gk20a_tegra_probe,
+	.getchannel = gk20a_tegra_getchannel,
+	.putchannel = gk20a_tegra_putchannel,
 };
 
 struct platform_device tegra_gk20a_device = {

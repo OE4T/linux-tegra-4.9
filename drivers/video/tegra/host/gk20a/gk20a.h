@@ -114,6 +114,24 @@ struct gk20a {
 	spinlock_t mc_enable_lock;
 
 	struct nvhost_gpu_characteristics gpu_characteristics;
+
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} ctrl;
+
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} dbg;
+
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} prof;
+
+	dev_t cdev_region;
+	struct class *class;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -262,10 +280,6 @@ void gk20a_create_sysfs(struct platform_device *dev);
 #ifdef CONFIG_DEBUG_FS
 int clk_gk20a_debugfs_init(struct platform_device *dev);
 #endif
-
-extern const struct file_operations tegra_gk20a_ctrl_ops;
-extern const struct file_operations tegra_gk20a_dbg_gpu_ops;
-extern const struct file_operations tegra_gk20a_prof_gpu_ops;
 
 struct nvhost_hwctx_handler *nvhost_gk20a_alloc_hwctx_handler(u32 syncpt,
 		u32 waitbase, struct nvhost_channel *ch);

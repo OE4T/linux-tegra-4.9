@@ -3900,7 +3900,7 @@ static const struct rm_tch_bus_ops rm_tch_spi_bus_ops = {
 
 static void init_ts_timer(void)
 {
-	init_timer(&ts_timer_triggle);
+	init_timer_deferrable(&ts_timer_triggle);
 	ts_timer_triggle.function = ts_timer_triggle_function;
 	ts_timer_triggle.data = ((unsigned long) 0);
 	ts_timer_triggle.expires = jiffies + TS_TIMER_PERIOD;

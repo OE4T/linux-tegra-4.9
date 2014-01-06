@@ -100,7 +100,9 @@ struct runlist_mem_desc {
 };
 
 struct patch_desc {
-	struct mem_desc mem;
+	struct page **pages;
+	u64 iova;
+	size_t size;
 	void *cpu_va;
 	u64 gpu_va;
 	u32 data_count;

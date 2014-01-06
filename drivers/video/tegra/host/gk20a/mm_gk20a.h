@@ -133,7 +133,9 @@ struct pm_ctx_desc {
 };
 
 struct gr_ctx_desc {
-	struct mem_desc mem;
+	struct page **pages;
+	u64 iova;
+	size_t size;
 	u64 gpu_va;
 };
 
@@ -330,6 +332,10 @@ phys_addr_t gk20a_get_phys_from_iova(struct device *d,
 
 int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 			void *cpuva, u64 iova,
+			size_t size);
+
+int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
+			struct page **pages, u64 iova,
 			size_t size);
 
 void gk20a_free_sgtable(struct sg_table **sgt);

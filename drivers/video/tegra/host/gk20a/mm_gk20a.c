@@ -1442,6 +1442,34 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 	return err;
 }
 
+int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
+			struct page **pages, u64 iova,
+			size_t size)
+{
+	int err = 0;
+	*sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	if (!(*sgt)) {
+		dev_err(d, "failed to allocate memory\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+	err = sg_alloc_table(*sgt, 1, GFP_KERNEL);
+	if (err) {
+		dev_err(d, "failed to allocate sg_table\n");
+		goto fail;
+	}
+	sg_set_page((*sgt)->sgl, *pages, size, 0);
+	sg_dma_address((*sgt)->sgl) = iova;
+
+	return 0;
+ fail:
+	if (*sgt) {
+		kfree(*sgt);
+		*sgt = NULL;
+	}
+	return err;
+}
+
 void gk20a_free_sgtable(struct sg_table **sgt)
 {
 	sg_free_table(*sgt);

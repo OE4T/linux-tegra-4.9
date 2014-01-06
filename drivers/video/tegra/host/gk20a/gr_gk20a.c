@@ -25,6 +25,8 @@
 #include <linux/nvmap.h>
 #include <linux/tegra-soc.h>
 #include <linux/nvhost_dbg_gpu_ioctl.h>
+#include <linux/vmalloc.h>
+#include <linux/dma-mapping.h>
 
 #include "../dev.h"
 
@@ -827,7 +829,9 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 
 	nvhost_dbg_fn("");
 
-	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
 
@@ -872,7 +876,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 	gk20a_mm_l2_invalidate(g);
 
 clean_up:
-	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	vunmap(ctx_ptr);
 
 	return ret;
 }
@@ -1542,7 +1546,9 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (!gold_ptr)
 		goto clean_up;
 
-	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		goto clean_up;
 
@@ -1602,7 +1608,7 @@ clean_up:
 		nvhost_memmgr_munmap(gr->global_ctx_buffer[GOLDEN_CTX].ref,
 				     gold_ptr);
 	if (ctx_ptr)
-		nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+		vunmap(ctx_ptr);
 
 	mutex_unlock(&gr->ctx_mutex);
 	return err;
@@ -1630,7 +1636,9 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	gk20a_mm_fb_flush(g);
 	gk20a_mm_l2_flush(g, true);
 
-	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
 
@@ -1658,7 +1666,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		ch_ctx->pm_ctx.ctx_sw_mode);
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, 0);
 
-	nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+	vunmap(ctx_ptr);
 
 	gk20a_mm_l2_invalidate(g);
 
@@ -2394,8 +2402,11 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct gr_ctx_desc *gr_ctx = &c->ch_ctx.gr_ctx;
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(c);
 	struct vm_gk20a *ch_vm = c->vm;
+	struct device *d = dev_from_gk20a(g);
+	struct sg_table *sgt;
+	DEFINE_DMA_ATTRS(attrs);
+	int err = 0;
 
 	nvhost_dbg_fn("");
 
@@ -2406,38 +2417,56 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	gr_ctx->mem.ref = nvhost_memmgr_alloc(memmgr,
-					      gr->ctx_vars.buffer_total_size,
-					      DEFAULT_ALLOC_ALIGNMENT,
-					      DEFAULT_ALLOC_FLAGS,
-					      0);
-
-	if (IS_ERR(gr_ctx->mem.ref))
+	gr_ctx->size = gr->ctx_vars.buffer_total_size;
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+	gr_ctx->pages = dma_alloc_attrs(d, gr_ctx->size,
+				&gr_ctx->iova, GFP_KERNEL, &attrs);
+	if (!gr_ctx->pages)
 		return -ENOMEM;
 
-	gr_ctx->gpu_va = gk20a_vm_map(ch_vm, memmgr,
-		gr_ctx->mem.ref,
-		/*offset_align, flags, kind*/
-		0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0, NULL, false,
-		mem_flag_none);
-	if (!gr_ctx->gpu_va) {
-		nvhost_memmgr_put(memmgr, gr_ctx->mem.ref);
-		return -ENOMEM;
-	}
+	err = gk20a_get_sgtable_from_pages(d, &sgt, gr_ctx->pages,
+			gr_ctx->iova, gr_ctx->size);
+	if (err)
+		goto err_free;
+
+	gr_ctx->gpu_va = gk20a_gmmu_map(ch_vm, &sgt, gr_ctx->size,
+				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				mem_flag_none);
+	if (!gr_ctx->gpu_va)
+		goto err_free_sgt;
+
+	gk20a_free_sgtable(&sgt);
 
 	return 0;
+
+ err_free_sgt:
+	gk20a_free_sgtable(&sgt);
+ err_free:
+	dma_free_attrs(d, gr_ctx->size,
+		gr_ctx->pages, gr_ctx->iova, &attrs);
+	gr_ctx->pages = NULL;
+	gr_ctx->iova = 0;
+
+	return err;
 }
 
 static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct mem_mgr *ch_nvmap = gk20a_channel_mem_mgr(c);
 	struct vm_gk20a *ch_vm = c->vm;
+	struct gk20a *g = c->g;
+	struct device *d = dev_from_gk20a(g);
+	DEFINE_DMA_ATTRS(attrs);
 
 	nvhost_dbg_fn("");
 
-	gk20a_vm_unmap(ch_vm, ch_ctx->gr_ctx.gpu_va);
-	nvhost_memmgr_put(ch_nvmap, ch_ctx->gr_ctx.mem.ref);
+	gk20a_gmmu_unmap(ch_vm, ch_ctx->gr_ctx.gpu_va,
+			ch_ctx->gr_ctx.size, mem_flag_none);
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+	dma_free_attrs(d, ch_ctx->gr_ctx.size,
+		ch_ctx->gr_ctx.pages, ch_ctx->gr_ctx.iova, &attrs);
+	ch_ctx->gr_ctx.pages = NULL;
+	ch_ctx->gr_ctx.iova = 0;
 }
 
 static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
@@ -2555,7 +2584,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* allocate gr ctx buffer */
-	if (ch_ctx->gr_ctx.mem.ref == NULL) {
+	if (ch_ctx->gr_ctx.pages == NULL) {
 		err = gr_gk20a_alloc_channel_gr_ctx(g, c);
 		if (err) {
 			nvhost_err(dev_from_gk20a(g),
@@ -6465,10 +6494,11 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	/* would have been a variant of gr_gk20a_apply_instmem_overrides */
 	/* recoded in-place instead.*/
-	ctx_ptr = nvhost_memmgr_mmap(ch_ctx->gr_ctx.mem.ref);
+	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr) {
 		err = -ENOMEM;
-		ctx_ptr = NULL;
 		goto cleanup;
 	}
 
@@ -6578,7 +6608,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 		kfree(offsets);
 
 	if (ctx_ptr)
-		nvhost_memmgr_munmap(ch_ctx->gr_ctx.mem.ref, ctx_ptr);
+		vunmap(ctx_ptr);
 
 	if (restart_gr_ctxsw) {
 		int tmp_err = gr_gk20a_enable_ctxsw(g);

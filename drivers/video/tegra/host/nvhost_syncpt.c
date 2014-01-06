@@ -586,6 +586,16 @@ static ssize_t syncpt_max_show(struct kobject *kobj,
 				syncpt_attr->id));
 }
 
+#define SYSFS_SP_TIMELINE_ATTR(var, sysfs_name, func) \
+	var->id = i; \
+	var->host = host; \
+	var->attr.attr.name = sysfs_name; \
+	var->attr.attr.mode = S_IRUGO; \
+	var->attr.show = func; \
+	sysfs_attr_init(&var->attr.attr); \
+	if (sysfs_create_file(kobj, &var->attr.attr)) \
+		return -EIO;
+
 static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 				       struct nvhost_syncpt *sp,
 				       struct nvhost_syncpt_attr *min,
@@ -603,42 +613,10 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 	if (!kobj)
 		return -EIO;
 
-	min->id = i;
-	min->host = host;
-	min->attr.attr.name = min_name;
-	min->attr.attr.mode = S_IRUGO;
-	min->attr.show = syncpt_min_show;
-	sysfs_attr_init(&min->attr.attr);
-	if (sysfs_create_file(kobj, &min->attr.attr))
-		return -EIO;
-
-	max->id = i;
-	max->host = host;
-	max->attr.attr.name = max_name;
-	max->attr.attr.mode = S_IRUGO;
-	max->attr.show = syncpt_max_show;
-	sysfs_attr_init(&max->attr.attr);
-	if (sysfs_create_file(kobj, &max->attr.attr))
-		return -EIO;
-
-	sp_name->id = i;
-	sp_name->host = host;
-	sp_name->attr.attr.name = "name";
-	sp_name->attr.attr.mode = S_IRUGO;
-	sp_name->attr.show = syncpt_name_show;
-	sysfs_attr_init(&sp_name->attr.attr);
-	if (sysfs_create_file(kobj, &sp_name->attr.attr))
-		return -EIO;
-
-	sp_type->id = i;
-	sp_type->host = host;
-	sp_type->attr.attr.name = "syncpt_type";
-	sp_type->attr.attr.mode = S_IRUGO;
-	sp_type->attr.show = syncpt_type_show;
-	sysfs_attr_init(&sp_type->attr.attr);
-	if (sysfs_create_file(kobj, &sp_type->attr.attr))
-		return -EIO;
-
+	SYSFS_SP_TIMELINE_ATTR(min, min_name, syncpt_min_show);
+	SYSFS_SP_TIMELINE_ATTR(max, max_name, syncpt_max_show);
+	SYSFS_SP_TIMELINE_ATTR(sp_name, "name", syncpt_name_show);
+	SYSFS_SP_TIMELINE_ATTR(sp_type, "syncpt_type", syncpt_type_show);
 	return 0;
 }
 

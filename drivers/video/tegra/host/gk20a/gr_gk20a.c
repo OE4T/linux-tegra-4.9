@@ -2691,20 +2691,25 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct device *d = dev_from_gk20a(g);
 
 	nvhost_dbg_fn("");
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	nvhost_memmgr_free_sg_table(memmgr, gr->mmu_wr_mem.mem.ref,
-			gr->mmu_wr_mem.mem.sgt);
-	nvhost_memmgr_unpin(memmgr, gr->mmu_rd_mem.mem.ref,
-			dev_from_gk20a(g), gr->mmu_rd_mem.mem.sgt);
-	nvhost_memmgr_put(memmgr, gr->mmu_wr_mem.mem.ref);
-	nvhost_memmgr_put(memmgr, gr->mmu_rd_mem.mem.ref);
+	dma_free_coherent(d, gr->mmu_wr_mem.size,
+		gr->mmu_wr_mem.cpuva, gr->mmu_wr_mem.iova);
+	gr->mmu_wr_mem.cpuva = NULL;
+	gr->mmu_wr_mem.iova = 0;
+	dma_free_coherent(d, gr->mmu_rd_mem.size,
+		gr->mmu_rd_mem.cpuva, gr->mmu_rd_mem.iova);
+	gr->mmu_rd_mem.cpuva = NULL;
+	gr->mmu_rd_mem.iova = 0;
+
 	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
-	memset(&gr->mmu_wr_mem, 0, sizeof(struct mem_desc));
-	memset(&gr->mmu_rd_mem, 0, sizeof(struct mem_desc));
+
+	memset(&gr->mmu_wr_mem, 0, sizeof(struct mmu_desc));
+	memset(&gr->mmu_rd_mem, 0, sizeof(struct mmu_desc));
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 
 	kfree(gr->gpc_tpc_count);
@@ -2926,53 +2931,29 @@ clean_up:
 
 static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
-	void *mmu_ptr;
+	struct device *d = dev_from_gk20a(g);
 
 	gr->mmu_wr_mem_size = gr->mmu_rd_mem_size = 0x1000;
 
-	gr->mmu_wr_mem.mem.ref = nvhost_memmgr_alloc(memmgr,
-						     gr->mmu_wr_mem_size,
-						     DEFAULT_ALLOC_ALIGNMENT,
-						     DEFAULT_ALLOC_FLAGS,
-						     0);
-	if (IS_ERR(gr->mmu_wr_mem.mem.ref))
-		goto clean_up;
-	gr->mmu_wr_mem.mem.size = gr->mmu_wr_mem_size;
+	gr->mmu_wr_mem.size = gr->mmu_wr_mem_size;
+	gr->mmu_wr_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_wr_mem_size,
+					&gr->mmu_wr_mem.iova, GFP_KERNEL);
+	if (!gr->mmu_wr_mem.cpuva)
+		goto err;
 
-	gr->mmu_rd_mem.mem.ref = nvhost_memmgr_alloc(memmgr,
-						     gr->mmu_rd_mem_size,
-						     DEFAULT_ALLOC_ALIGNMENT,
-						     DEFAULT_ALLOC_FLAGS,
-						     0);
-	if (IS_ERR(gr->mmu_rd_mem.mem.ref))
-		goto clean_up;
-	gr->mmu_rd_mem.mem.size = gr->mmu_rd_mem_size;
-
-	mmu_ptr = nvhost_memmgr_mmap(gr->mmu_wr_mem.mem.ref);
-	if (!mmu_ptr)
-		goto clean_up;
-	memset(mmu_ptr, 0, gr->mmu_wr_mem.mem.size);
-	nvhost_memmgr_munmap(gr->mmu_wr_mem.mem.ref, mmu_ptr);
-
-	mmu_ptr = nvhost_memmgr_mmap(gr->mmu_rd_mem.mem.ref);
-	if (!mmu_ptr)
-		goto clean_up;
-	memset(mmu_ptr, 0, gr->mmu_rd_mem.mem.size);
-	nvhost_memmgr_munmap(gr->mmu_rd_mem.mem.ref, mmu_ptr);
-
-	gr->mmu_wr_mem.mem.sgt =
-		nvhost_memmgr_sg_table(memmgr, gr->mmu_wr_mem.mem.ref);
-	if (IS_ERR(gr->mmu_wr_mem.mem.sgt))
-		goto clean_up;
-
-	gr->mmu_rd_mem.mem.sgt =
-		nvhost_memmgr_sg_table(memmgr, gr->mmu_rd_mem.mem.ref);
-	if (IS_ERR(gr->mmu_rd_mem.mem.sgt))
-		goto clean_up;
+	gr->mmu_rd_mem.size = gr->mmu_rd_mem_size;
+	gr->mmu_rd_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_rd_mem_size,
+					&gr->mmu_rd_mem.iova, GFP_KERNEL);
+	if (!gr->mmu_rd_mem.cpuva)
+		goto err_free_wr_mem;
 	return 0;
 
-clean_up:
+ err_free_wr_mem:
+	dma_free_coherent(d, gr->mmu_wr_mem.size,
+		gr->mmu_wr_mem.cpuva, gr->mmu_wr_mem.iova);
+	gr->mmu_wr_mem.cpuva = NULL;
+	gr->mmu_wr_mem.iova = 0;
+ err:
 	return -ENOMEM;
 }
 
@@ -4080,7 +4061,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 data;
-	u32 addr_lo, addr_hi, addr;
+	u32 addr_lo, addr_hi;
+	u64 addr;
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;
 	unsigned long end_jiffies = jiffies +
@@ -4098,7 +4080,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
 
 	/* init mmu debug buffer */
-	addr = gk20a_mm_iova_addr(gr->mmu_wr_mem.mem.sgt->sgl);
+	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_wr_mem.iova);
 	addr_lo = u64_lo32(addr);
 	addr_hi = u64_hi32(addr);
 	addr = (addr_lo >> fb_mmu_debug_wr_addr_alignment_v()) |
@@ -4109,7 +4091,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_v(addr));
 
-	addr = gk20a_mm_iova_addr(gr->mmu_rd_mem.mem.sgt->sgl);
+	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_rd_mem.iova);
 	addr_lo = u64_lo32(addr);
 	addr_hi = u64_hi32(addr);
 	addr = (addr_lo >> fb_mmu_debug_rd_addr_alignment_v()) |

@@ -66,8 +66,9 @@ struct gpfifo_desc {
 };
 
 struct mmu_desc {
-	struct mem_desc mem;
-	phys_addr_t cpu_pa;
+	void *cpuva;
+	u64 iova;
+	size_t size;
 };
 
 struct inst_desc {

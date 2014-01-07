@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -108,7 +108,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	if (err)
 		return -ENOSYS;
 
-	profile->devfreq_profile.freq_table = (unsigned int *)freqs;
+	profile->devfreq_profile.freq_table = (unsigned long *)freqs;
 	profile->devfreq_profile.max_state = num_freqs;
 
 	return 0;

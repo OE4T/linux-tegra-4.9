@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -84,7 +84,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	if (!num_freqs)
 		dev_warn(&profile->pdev->dev, "dvfs table had no applicable frequencies!\n");
 
-	profile->devfreq_profile.freq_table = (unsigned int *)freqs;
+	profile->devfreq_profile.freq_table = (unsigned long *)freqs;
 	profile->devfreq_profile.max_state = num_freqs;
 
 	return 0;

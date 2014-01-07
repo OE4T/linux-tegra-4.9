@@ -115,7 +115,7 @@ struct podgov_info_rec {
 	struct devfreq		*power_manager;
 	struct dentry		*debugdir;
 
-	int			*freqlist;
+	unsigned long		*freqlist;
 	int			freq_count;
 
 	unsigned int		idle_avg;
@@ -486,7 +486,7 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
  * higher compared to the target frequency.
  ******************************************************************************/
 
-int freqlist_up(struct podgov_info_rec *podgov, long target, int steps)
+int freqlist_up(struct podgov_info_rec *podgov, unsigned long target, int steps)
 {
 	int i, pos;
 
@@ -505,7 +505,7 @@ int freqlist_up(struct podgov_info_rec *podgov, long target, int steps)
  * lower compared to the target frequency.
  ******************************************************************************/
 
-int freqlist_down(struct podgov_info_rec *podgov, long target, int steps)
+int freqlist_down(struct podgov_info_rec *podgov, unsigned long target, int steps)
 {
 	int i, pos;
 
@@ -575,7 +575,7 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	struct platform_device *pdev;
 	int hint = tegra_throughput_get_hint();
 	long idle;
-	long curr, target;
+	unsigned long curr, target;
 	int avg_idle, avg_hint, scale_score;
 	unsigned int smooth;
 

@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -525,6 +525,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 		goto out;
 	}
 
+	vma->vm_flags |= (h->heap_pgalloc ? 0 : VM_PFNMAP);
 	vpriv->handle = h;
 	vpriv->offs = op.offset;
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);

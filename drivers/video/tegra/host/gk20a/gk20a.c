@@ -73,13 +73,6 @@ static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 	gk20a_get_platform(dev)->g = gk20a;
 }
 
-/* TBD: should be able to put in the list below. */
-static struct resource gk20a_intr = {
-	.start = TEGRA_GK20A_INTR,
-	.end   = TEGRA_GK20A_INTR_NONSTALL,
-	.flags = IORESOURCE_IRQ,
-};
-
 static const struct file_operations gk20a_channel_ops = {
 	.owner = THIS_MODULE,
 	.release = gk20a_channel_release,
@@ -618,8 +611,8 @@ static void gk20a_remove_support(struct platform_device *dev)
 	release_firmware(g->pmu_fw);
 
 	if (g->irq_requested) {
-		free_irq(gk20a_intr.start, g);
-		free_irq(gk20a_intr.start+1, g);
+		free_irq(g->irq_stall, g);
+		free_irq(g->irq_nonstall, g);
 		g->irq_requested = false;
 	}
 
@@ -652,6 +645,14 @@ static int gk20a_init_support(struct platform_device *dev)
 					 &g->bar1_mem);
 	if (!g->bar1) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
+		err = -ENXIO;
+		goto fail;
+	}
+
+	/* Get interrupt numbers */
+	g->irq_stall = platform_get_irq(dev, 0);
+	g->irq_nonstall = platform_get_irq(dev, 1);
+	if (g->irq_stall < 0 || g->irq_nonstall < 0) {
 		err = -ENXIO;
 		goto fail;
 	}
@@ -774,8 +775,8 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	 * serviced.
 	 */
 	if (g->irq_requested) {
-		free_irq(gk20a_intr.start, g);
-		free_irq(gk20a_intr.start+1, g);
+		free_irq(g->irq_stall, g);
+		free_irq(g->irq_nonstall, g);
 		g->irq_requested = false;
 	}
 
@@ -826,24 +827,24 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	set_user_nice(current, -20);
 
 	if (!g->irq_requested) {
-		err = request_threaded_irq(gk20a_intr.start,
+		err = request_threaded_irq(g->irq_stall,
 				gk20a_intr_isr_stall,
 				gk20a_intr_thread_stall,
 				0, "gk20a_stall", g);
 		if (err) {
 			dev_err(dev_from_gk20a(g),
 				"failed to request stall intr irq @ %lld\n",
-					(u64)gk20a_intr.start);
+					(u64)g->irq_stall);
 			goto done;
 		}
-		err = request_threaded_irq(gk20a_intr.start+1,
+		err = request_threaded_irq(g->irq_nonstall,
 				gk20a_intr_isr_nonstall,
 				gk20a_intr_thread_nonstall,
 				0, "gk20a_nonstall", g);
 		if (err) {
 			dev_err(dev_from_gk20a(g),
 				"failed to request non-stall intr irq @ %lld\n",
-					(u64)gk20a_intr.start+1);
+					(u64)g->irq_nonstall);
 			goto done;
 		}
 		g->irq_requested = true;

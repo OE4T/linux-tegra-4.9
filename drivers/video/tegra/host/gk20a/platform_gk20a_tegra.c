@@ -25,9 +25,13 @@
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
 #include <linux/nvhost_ioctl.h>
+#include <mach/irqs.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
+
+#define TEGRA_GK20A_INTR		INT_GPU
+#define TEGRA_GK20A_INTR_NONSTALL	INT_GPU_NONSTALL
 
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
@@ -113,6 +117,16 @@ static struct resource gk20a_tegra_resources[] = {
 	.start = TEGRA_GK20A_SIM_BASE,
 	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
 	.flags = IORESOURCE_MEM,
+	},
+	{
+	.start = TEGRA_GK20A_INTR,
+	.end   = TEGRA_GK20A_INTR,
+	.flags = IORESOURCE_IRQ,
+	},
+	{
+	.start = TEGRA_GK20A_INTR_NONSTALL,
+	.end   = TEGRA_GK20A_INTR_NONSTALL,
+	.flags = IORESOURCE_IRQ,
 	},
 };
 

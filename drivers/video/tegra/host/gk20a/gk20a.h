@@ -37,7 +37,6 @@ struct sim_gk20a;
 #include "fifo_gk20a.h"
 #include "gr_gk20a.h"
 #include "sim_gk20a.h"
-#include "intr_gk20a.h"
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
@@ -158,6 +157,9 @@ struct gk20a {
 	struct class *class;
 
 	struct gpu_ops ops;
+
+	int irq_stall;
+	int irq_nonstall;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

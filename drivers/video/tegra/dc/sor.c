@@ -1234,7 +1234,8 @@ void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
 		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 			NV_SOR_DP_PADCTL_TX_PU_ENABLE |
 			NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
-			NV_SOR_DP_PADCTL_TX_PU_ENABLE |
+			(dp_data->tx_pu_disable ? NV_SOR_DP_PADCTL_TX_PU_DISABLE
+				: NV_SOR_DP_PADCTL_TX_PU_ENABLE) |
 			lt_setting->tx_pu
 			<< NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT);
 

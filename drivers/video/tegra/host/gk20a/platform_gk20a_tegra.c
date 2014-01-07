@@ -28,6 +28,9 @@
 
 #include "gk20a.h"
 
+#define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
+#define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
 	int err;
@@ -77,6 +80,11 @@ static struct resource gk20a_tegra_resources[] = {
 	{
 	.start = TEGRA_GK20A_BAR1_BASE,
 	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
+	.flags = IORESOURCE_MEM,
+	},
+	{ /* Used on ASIM only */
+	.start = TEGRA_GK20A_SIM_BASE,
+	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
 	.flags = IORESOURCE_MEM,
 	},
 };

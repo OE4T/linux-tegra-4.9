@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1080p-14-0.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -158,8 +158,6 @@ static struct tegra_dsi_out dsi_a_1080p_14_0_pdata = {
 		.t_datzero_ns = 170,
 		.t_hsprepare_ns = 57,
 	},
-	.chip_id = 0x162,
-	.chip_rev = 1,
 };
 
 static int laguna_dsi_regulator_get(struct device *dev)

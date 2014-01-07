@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -693,6 +693,7 @@ struct pmu_gk20a {
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
 	struct delayed_work elpg_enable; /* deferred elpg enable */
+	struct work_struct pg_init;
 	bool elpg_enable_allow; /* true after init, false after disable, true after delay */
 	struct mutex elpg_mutex; /* protect elpg enable/disable */
 	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
@@ -724,6 +725,7 @@ struct gk20a_pmu_save_state {
 	struct delayed_work elpg_enable;
 	wait_queue_head_t pg_wq;
 	bool sw_ready;
+	struct work_struct pg_init;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

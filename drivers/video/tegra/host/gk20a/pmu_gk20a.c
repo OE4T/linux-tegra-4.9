@@ -44,6 +44,8 @@
 static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
+static void gk20a_init_pmu_setup_hw2_workqueue(struct work_struct *work);
+
 
 static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			u32 src, u8* dst, u32 size, u8 port)
@@ -910,6 +912,7 @@ static void gk20a_save_pmu_sw_state(struct pmu_gk20a *pmu,
 	save->seq_buf = pmu->seq_buf;
 	save->pg_buf = pmu->pg_buf;
 	save->sw_ready = pmu->sw_ready;
+	save->pg_init = pmu->pg_init;
 }
 
 static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
@@ -926,6 +929,7 @@ static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
 	pmu->seq_buf = save->seq_buf;
 	pmu->pg_buf = save->pg_buf;
 	pmu->sw_ready = save->sw_ready;
+	pmu->pg_init = save->pg_init;
 }
 
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
@@ -1030,6 +1034,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 
 	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
+	INIT_WORK(&pmu->pg_init, gk20a_init_pmu_setup_hw2_workqueue);
 
 	gk20a_init_pmu_vm(mm);
 
@@ -1215,6 +1220,13 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 	return 0;
 
+}
+
+static void gk20a_init_pmu_setup_hw2_workqueue(struct work_struct *work)
+{
+	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
+	struct gk20a *g = pmu->g;
+	gk20a_init_pmu_setup_hw2(g);
 }
 
 int gk20a_init_pmu_setup_hw2(struct gk20a *g)
@@ -2742,6 +2754,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	/* make sure the pending operations are finished before we continue */
 	cancel_delayed_work_sync(&pmu->elpg_enable);
+	cancel_work_sync(&pmu->pg_init);
 
 	gk20a_pmu_get_elpg_residency_gating(g, &elpg_ingating_time,
 		&elpg_ungating_time, &gating_cnt);

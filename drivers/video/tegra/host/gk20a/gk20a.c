@@ -910,12 +910,6 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 		goto done;
 	}
 
-	err = gk20a_init_pmu_setup_hw2(g);
-	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a pmu_hw2");
-		goto done;
-	}
-
 	err = gk20a_init_therm_support(g);
 	if (err) {
 		nvhost_err(&dev->dev, "failed to init gk20a therm");
@@ -931,6 +925,7 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
+	schedule_work(&(g->pmu.pg_init));
 done:
 	return err;
 }

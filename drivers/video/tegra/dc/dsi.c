@@ -4118,10 +4118,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	if (!dsi->info.lp_cmd_mode_freq_khz)
 		dsi->info.lp_cmd_mode_freq_khz = DEFAULT_LP_CMD_MODE_CLK_KHZ;
 
-	if (!dsi->info.chip_id || !dsi->info.chip_rev)
-		dev_warn(&dsi->dc->ndev->dev,
-			"DSI: Failed to get chip info\n");
-
 	if (!dsi->info.lp_read_cmd_mode_freq_khz)
 		dsi->info.lp_read_cmd_mode_freq_khz =
 			dsi->info.lp_cmd_mode_freq_khz;

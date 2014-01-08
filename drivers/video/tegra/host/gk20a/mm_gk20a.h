@@ -351,6 +351,8 @@ void gk20a_mm_ltc_isr(struct gk20a *g);
 
 bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
 
+int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g);
+
 u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		struct sg_table **sgt,
 		u64 size,

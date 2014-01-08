@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011 - 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011 - 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,11 +69,11 @@ unsigned int tegra_gpufreq_table_size_get(void);
 
 int gk20a_init_clk_support(struct gk20a *g);
 
-u32 gk20a_clk_get_rate(struct gk20a *g);
-int gk20a_clk_set_rate(struct gk20a *g, u32 rate);
+unsigned long gk20a_clk_get_rate(struct gk20a *g);
+int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate);
 int gk20a_suspend_clk_support(struct gk20a *g);
 struct clk *gk20a_clk_get(struct gk20a *g);
-int gk20a_clk_round_rate(struct gk20a *g, u32 rate);
+long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate);
 
 extern struct pll_parms gpc_pll_params;
 

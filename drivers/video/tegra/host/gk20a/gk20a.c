@@ -1264,6 +1264,11 @@ bool is_gk20a_module(struct platform_device *dev)
 	return &gk20a_driver.driver == dev->dev.driver;
 }
 
+void gk20a_busy_noresume(struct platform_device *pdev)
+{
+	pm_runtime_get_noresume(&pdev->dev);
+}
+
 void gk20a_busy(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -1344,6 +1349,20 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->bus_type = NVHOST_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
 	return 0;
+}
+
+int nvhost_vpr_info_fetch(void)
+{
+	struct gk20a *g = get_gk20a(to_platform_device(
+			bus_find_device_by_name(&platform_bus_type,
+			NULL, "gk20a.0")));
+
+	if (!g) {
+		pr_info("gk20a ins't ready yet\n");
+		return 0;
+	}
+
+	return gk20a_mm_mmu_vpr_info_fetch(g);
 }
 
 module_init(gk20a_init);

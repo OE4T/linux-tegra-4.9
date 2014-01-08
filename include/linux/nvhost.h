@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -342,6 +342,15 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id, u32 thre
 	u32 timeout, u32 *value, struct timespec *ts);
 int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 	u32 id, u32 thresh, const char *name, int *fence_fd);
+
+#ifdef CONFIG_TEGRA_GK20A
+int nvhost_vpr_info_fetch(void);
+#else
+static inline int nvhost_vpr_info_fetch(void)
+{
+	return 0;
+}
+#endif
 
 /* Hacky way to get access to struct nvhost_device_data for VI device. */
 extern struct nvhost_device_data t20_vi_info;

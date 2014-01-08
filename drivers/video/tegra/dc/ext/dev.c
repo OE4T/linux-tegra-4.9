@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dev.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -725,6 +725,10 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 
 	if (!user->nvmap)
 		return -EFAULT;
+
+	/* If display has been disconnected return with error. */
+	if (!ext->dc->connected)
+		return -1;
 
 	ret = sanitize_flip_args(user, win, win_num);
 	if (ret)

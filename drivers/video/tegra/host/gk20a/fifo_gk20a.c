@@ -24,7 +24,7 @@
 #include <trace/events/nvhost.h>
 
 #include "../dev.h"
-#include "../nvhost_as.h"
+#include "nvhost_memmgr.h"
 
 #include "gk20a.h"
 #include "hw_fifo_gk20a.h"

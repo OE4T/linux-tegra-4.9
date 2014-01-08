@@ -26,8 +26,8 @@
 #include <linux/scatterlist.h>
 
 #include "dev.h"
-#include "nvhost_as.h"
 #include "debug.h"
+#include "nvhost_memmgr.h"
 #include "nvhost_sync.h"
 #include "nvhost_syncpt.h"
 
@@ -675,7 +675,7 @@ void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish)
 	channel_gk20a_free_priv_cmdbuf(ch);
 
 	/* release hwctx binding to the as_share */
-	nvhost_as_release_share(ch_vm->as_share, ctx);
+	gk20a_as_release_share(ch_vm->as_share, ctx);
 
 unbind:
 	channel_gk20a_unbind(ch);

@@ -7,6 +7,7 @@ ccflags-y += -Werror
 
 obj-$(CONFIG_GK20A) += \
 	gk20a.o \
+	as_gk20a.o \
 	ctrl_gk20a.o \
 	fifo_gk20a.o \
 	channel_gk20a.o \

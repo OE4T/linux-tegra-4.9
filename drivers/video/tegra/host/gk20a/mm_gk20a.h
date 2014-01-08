@@ -209,7 +209,7 @@ struct vm_reserved_va_node {
 
 struct vm_gk20a {
 	struct mm_gk20a *mm;
-	struct nvhost_as_share *as_share; /* as_share this represents */
+	struct gk20a_as_share *as_share; /* as_share this represents */
 
 	u64 va_start;
 	u64 va_limit;
@@ -398,5 +398,24 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 void gk20a_vm_get(struct vm_gk20a *vm);
 void gk20a_vm_put(struct vm_gk20a *vm);
+
+/* vm-as interface */
+struct nvhost_as_alloc_space_args;
+struct nvhost_as_free_space_args;
+int gk20a_vm_alloc_share(struct gk20a_as_share *as_share);
+int gk20a_vm_release_share(struct gk20a_as_share *as_share);
+int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
+			 struct nvhost_as_alloc_space_args *args);
+int gk20a_vm_free_space(struct gk20a_as_share *as_share,
+			struct nvhost_as_free_space_args *args);
+int gk20a_vm_bind_hwctx(struct gk20a_as_share *as_share,
+			struct nvhost_hwctx *hwctx);
+int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
+			int memmgr_fd,
+			ulong mem_id,
+			u64 *offset_align,
+			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
+			int kind);
+int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 
 #endif /*_MM_GK20A_H_ */

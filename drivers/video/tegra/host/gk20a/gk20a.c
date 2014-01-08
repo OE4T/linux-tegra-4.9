@@ -29,6 +29,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
 #include <linux/thermal.h>
 #include <asm/cacheflush.h>
 #include <linux/debugfs.h>
@@ -43,7 +44,7 @@
 #include "dev.h"
 #include "class_ids.h"
 #include "bus_client.h"
-#include "nvhost_as.h"
+#include "nvhost_acm.h"
 
 #include "gk20a.h"
 #include "ctrl_gk20a.h"
@@ -66,7 +67,7 @@
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
 #define INTERFACE_NAME "nvhost%s-gpu"
 
-#define GK20A_NUM_CDEVS 4
+#define GK20A_NUM_CDEVS 5
 
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
@@ -102,6 +103,16 @@ static const struct file_operations gk20a_dbg_ops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif
+};
+
+static const struct file_operations gk20a_as_ops = {
+	.owner = THIS_MODULE,
+	.release = gk20a_as_dev_release,
+	.open = gk20a_as_dev_open,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_as_dev_ioctl,
+#endif
+	.unlocked_ioctl = gk20a_as_dev_ioctl,
 };
 
 /*
@@ -666,7 +677,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
 
-	/* nvhost_as alloc_share can be called before gk20a is powered on.
+	/* gk20a_as alloc_share can be called before gk20a is powered on.
 	   It requires mm sw states configured so init mm sw early here. */
 	err = gk20a_init_mm_setup_sw(g);
 	if (err)
@@ -1050,6 +1061,11 @@ static void gk20a_user_deinit(struct platform_device *dev)
 		cdev_del(&g->channel.cdev);
 	}
 
+	if (g->as.node) {
+		device_destroy(g->class, g->as.cdev.dev);
+		cdev_del(&g->as.cdev);
+	}
+
 	if (g->ctrl.node) {
 		device_destroy(g->class, g->ctrl.cdev.dev);
 		cdev_del(&g->ctrl.cdev);
@@ -1097,6 +1113,12 @@ static int gk20a_user_init(struct platform_device *dev)
 	err = gk20a_create_device(dev, devno++, "",
 				  &g->channel.cdev, &g->channel.node,
 				  &gk20a_channel_ops);
+	if (err)
+		goto fail;
+
+	err = gk20a_create_device(dev, devno++, "-as",
+				  &g->as.cdev, &g->as.node,
+				  &gk20a_as_ops);
 	if (err)
 		goto fail;
 
@@ -1190,13 +1212,6 @@ static int gk20a_probe(struct platform_device *dev)
 	err = platform->probe(dev);
 	if (err) {
 		dev_err(&dev->dev, "platform probe failed");
-		return err;
-	}
-
-	err = nvhost_as_init_device(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client address space"
-			      " device for %s", dev->name);
 		return err;
 	}
 

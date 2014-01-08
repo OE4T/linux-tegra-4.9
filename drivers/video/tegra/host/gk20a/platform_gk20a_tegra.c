@@ -145,7 +145,6 @@ struct gk20a_platform gk20a_tegra_platform = {
 		NVHOST_DEFAULT_CLOCKGATE_DELAY,
 		.powergate_delay	= 500,
 		.can_powergate		= true,
-		.as_ops			= &tegra_gk20a_as_ops,
 		.moduleid		= NVHOST_MODULE_GPU,
 		.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
 		.finalize_poweron	= nvhost_gk20a_finalize_poweron,

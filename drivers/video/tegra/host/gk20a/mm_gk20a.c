@@ -23,6 +23,7 @@
 #include <linux/highmem.h>
 #include <linux/log2.h>
 #include <linux/nvhost.h>
+#include <linux/pm_runtime.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 #include <linux/tegra-soc.h>
@@ -30,7 +31,7 @@
 #include <asm/cacheflush.h>
 
 #include "dev.h"
-#include "nvhost_as.h"
+#include "nvhost_memmgr.h"
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "hw_gmmu_gk20a.h"
@@ -1929,11 +1930,11 @@ void gk20a_vm_put(struct vm_gk20a *vm)
 }
 
 /* address space interfaces for the gk20a module */
-static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
+int gk20a_vm_alloc_share(struct gk20a_as_share *as_share)
 {
-	struct nvhost_as *as = as_share->as;
-	struct gk20a *gk20a = get_gk20a(as->ch->dev);
-	struct mm_gk20a *mm = &gk20a->mm;
+	struct gk20a_as *as = as_share->as;
+	struct gk20a *g = gk20a_from_as(as);
+	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm;
 	u64 vma_size;
 	u32 num_pages, low_hole_pages;
@@ -1946,7 +1947,7 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 	if (!vm)
 		return -ENOMEM;
 
-	as_share->priv = (void *)vm;
+	as_share->vm = vm;
 
 	vm->mm = mm;
 	vm->as_share = as_share;
@@ -2036,9 +2037,9 @@ static int gk20a_as_alloc_share(struct nvhost_as_share *as_share)
 }
 
 
-static int gk20a_as_release_share(struct nvhost_as_share *as_share)
+int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 {
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 
 	nvhost_dbg_fn("");
 
@@ -2047,20 +2048,20 @@ static int gk20a_as_release_share(struct nvhost_as_share *as_share)
 	/* put as reference to vm */
 	gk20a_vm_put(vm);
 
-	as_share->priv = NULL;
+	as_share->vm = NULL;
 
 	return 0;
 }
 
 
-static int gk20a_as_alloc_space(struct nvhost_as_share *as_share,
-				struct nvhost_as_alloc_space_args *args)
+int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
+			 struct nvhost_as_alloc_space_args *args)
 
 {	int err = -ENOMEM;
 	int pgsz_idx;
 	u32 start_page_nr;
 	struct nvhost_allocator *vma;
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
 	u64 vaddr_start = 0;
 
@@ -2139,14 +2140,14 @@ clean_up:
 	return err;
 }
 
-static int gk20a_as_free_space(struct nvhost_as_share *as_share,
-			       struct nvhost_as_free_space_args *args)
+int gk20a_vm_free_space(struct gk20a_as_share *as_share,
+			struct nvhost_as_free_space_args *args)
 {
 	int err = -ENOMEM;
 	int pgsz_idx;
 	u32 start_page_nr;
 	struct nvhost_allocator *vma;
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
 
 	nvhost_dbg_fn("pgsz=0x%x nr_pages=0x%x o/a=0x%llx", args->page_size,
@@ -2204,11 +2205,11 @@ clean_up:
 	return err;
 }
 
-static int gk20a_as_bind_hwctx(struct nvhost_as_share *as_share,
-			       struct nvhost_hwctx *hwctx)
+int gk20a_vm_bind_hwctx(struct gk20a_as_share *as_share,
+			struct nvhost_hwctx *hwctx)
 {
 	int err = 0;
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 	struct channel_gk20a *c = hwctx->priv;
 
 	nvhost_dbg_fn("");
@@ -2221,15 +2222,15 @@ static int gk20a_as_bind_hwctx(struct nvhost_as_share *as_share,
 	return err;
 }
 
-static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
-			       int memmgr_fd,
-			       ulong mem_id,
-			       u64 *offset_align,
-			       u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
-			       u32 kind)
+int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
+			int memmgr_fd,
+			ulong mem_id,
+			u64 *offset_align,
+			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
+			int kind)
 {
 	int err = 0;
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct mem_mgr *memmgr;
 	struct mem_handle *r;
@@ -2262,26 +2263,15 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 	return err;
 }
 
-static int gk20a_as_unmap_buffer(struct nvhost_as_share *as_share, u64 offset)
+int gk20a_vm_unmap_buffer(struct gk20a_as_share *as_share, u64 offset)
 {
-	struct vm_gk20a *vm = (struct vm_gk20a *)as_share->priv;
+	struct vm_gk20a *vm = as_share->vm;
 
 	nvhost_dbg_fn("");
 
 	gk20a_vm_unmap_user(vm, offset);
 	return 0;
 }
-
-
-const struct nvhost_as_moduleops tegra_gk20a_as_ops = {
-	.alloc_share   = gk20a_as_alloc_share,
-	.release_share = gk20a_as_release_share,
-	.alloc_space   = gk20a_as_alloc_space,
-	.free_space    = gk20a_as_free_space,
-	.bind_hwctx    = gk20a_as_bind_hwctx,
-	.map_buffer    = gk20a_as_map_buffer,
-	.unmap_buffer  = gk20a_as_unmap_buffer,
-};
 
 int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {

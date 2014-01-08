@@ -33,6 +33,10 @@
 #include "nvhost_hwctx.h"
 #include "nvhost_as.h"
 
+#ifdef CONFIG_GK20A
+#include "gk20a/gk20a.h"
+#endif
+
 int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvhost_as_share *as_share;
@@ -338,6 +342,10 @@ int nvhost_as_ioctl_bind_channel(struct nvhost_as_share *as_share,
 	nvhost_dbg_fn("");
 
 	hwctx = nvhost_channel_get_file_hwctx(args->channel_fd);
+#ifdef CONFIG_GK20A
+	if (!hwctx)
+		hwctx = gk20a_get_hwctx_from_file(args->channel_fd);
+#endif
 	if (!hwctx || hwctx->as_share)
 		return -EINVAL;
 

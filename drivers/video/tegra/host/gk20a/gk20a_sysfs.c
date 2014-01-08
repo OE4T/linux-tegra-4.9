@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -190,7 +190,7 @@ static ssize_t elpg_enable_store(struct device *device,
 	 * Since elpg is refcounted, we should not unnecessarily call
 	 * enable/disable if it is already so.
 	 */
-	nvhost_module_busy(g->dev);
+	gk20a_channel_busy(g->dev);
 	if (val && !g->elpg_enabled) {
 		g->elpg_enabled = true;
 		gk20a_pmu_enable_elpg(g);
@@ -198,7 +198,7 @@ static ssize_t elpg_enable_store(struct device *device,
 		g->elpg_enabled = false;
 		gk20a_pmu_disable_elpg(g);
 	}
-	nvhost_module_idle(g->dev);
+	gk20a_channel_idle(g->dev);
 
 	dev_info(device, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
 			"disabled");

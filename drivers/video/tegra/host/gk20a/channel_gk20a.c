@@ -69,6 +69,7 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
+static void gk20a_free_error_notifiers(struct nvhost_hwctx *ctx);
 
 static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f)
 {
@@ -489,7 +490,7 @@ static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 	mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
 }
 
-int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
+static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		       struct nvhost_cycle_stats_args *args)
 {
 	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
@@ -535,8 +536,8 @@ int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 }
 #endif
 
-int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
-		u32 memhandle, u64 offset) {
+static int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
+		struct nvhost_set_error_notifier *args) {
 	struct channel_gk20a *ch = ctx->priv;
 	struct platform_device *dev = ch->ch->dev;
 	void *va;
@@ -544,19 +545,19 @@ int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
 	struct mem_mgr *memmgr;
 	struct mem_handle *handle_ref;
 
-	if (!memhandle) {
+	if (!args->mem) {
 		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
 		return -EINVAL;
 	}
 
 	memmgr = gk20a_channel_mem_mgr(ch);
-	handle_ref = nvhost_memmgr_get(memmgr, memhandle, dev);
+	handle_ref = nvhost_memmgr_get(memmgr, args->mem, dev);
 
 	if (ctx->error_notifier_ref)
 		gk20a_free_error_notifiers(ctx);
 
 	if (IS_ERR(handle_ref)) {
-		pr_err("Invalid handle: %d\n", memhandle);
+		pr_err("Invalid handle: %d\n", args->mem);
 		return -EINVAL;
 	}
 	/* map handle */
@@ -569,7 +570,7 @@ int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
 
 	/* set hwctx notifiers pointer */
 	ctx->error_notifier_ref = handle_ref;
-	ctx->error_notifier = va + offset;
+	ctx->error_notifier = va + args->offset;
 	ctx->error_notifier_va = va;
 	memset(ctx->error_notifier, 0, sizeof(struct nvhost_notification));
 	return 0;
@@ -594,7 +595,7 @@ void gk20a_set_error_notifier(struct nvhost_hwctx *ctx, __u32 error)
 	}
 }
 
-void gk20a_free_error_notifiers(struct nvhost_hwctx *ctx)
+static void gk20a_free_error_notifiers(struct nvhost_hwctx *ctx)
 {
 	if (ctx->error_notifier_ref) {
 		struct channel_gk20a *ch = ctx->priv;
@@ -693,6 +694,23 @@ unbind:
 	release_used_channel(f, ch);
 }
 
+int gk20a_channel_release(struct inode *inode, struct file *filp)
+{
+	struct nvhost_hwctx *hwctx = (struct nvhost_hwctx *)filp->private_data;
+	struct channel_gk20a *ch = hwctx->priv;
+	struct gk20a *g = ch->g;
+	struct mem_mgr *memmgr = hwctx->memmgr;
+
+	trace_nvhost_channel_release(dev_name(&g->dev->dev));
+
+	gk20a_free_hwctx(hwctx);
+	gk20a_platform_putchannel(g->dev);
+	if (memmgr)
+		nvhost_memmgr_put_mgr(memmgr);
+	filp->private_data = NULL;
+	return 0;
+}
+
 struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 					 struct nvhost_hwctx *ctx)
 {
@@ -739,6 +757,41 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 	init_waitqueue_head(&ch_gk20a->submit_wq);
 
 	return ctx;
+}
+
+int gk20a_channel_open(struct inode *inode, struct file *filp)
+{
+	int err;
+	struct gk20a *g =
+		container_of(inode->i_cdev, struct gk20a, channel.cdev);
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct nvhost_hwctx *hwctx = NULL;
+	struct channel_gk20a *ch;
+
+	trace_nvhost_channel_open(dev_name(&g->dev->dev));
+
+	err = gk20a_platform_getchannel(g->dev);
+	if (err) {
+		nvhost_err(dev_from_gk20a(g),
+			"failed to get client ref");
+		return err;
+	}
+
+	gk20a_channel_busy(g->dev);
+#ifdef CONFIG_TEGRA_GK20A
+	hwctx = gk20a_alloc_hwctx(platform->nvhost.channel);
+#endif
+	gk20a_channel_idle(g->dev);
+	if (!hwctx) {
+		gk20a_platform_putchannel(g->dev);
+		nvhost_err(dev_from_gk20a(g),
+			"failed to alloc hwctx");
+		return -ENOMEM;
+	}
+	ch = hwctx->priv;
+
+	filp->private_data = hwctx;
+	return 0;
 }
 
 #if 0
@@ -1085,8 +1138,8 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 }
 
 
-int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-			       struct nvhost_alloc_gpfifo_args *args)
+static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
+				      struct nvhost_alloc_gpfifo_args *args)
 {
 	struct gk20a *g = c->g;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
@@ -1443,7 +1496,7 @@ void gk20a_channel_update(struct channel_gk20a *c)
 
 		list_del_init(&job->list);
 		kfree(job);
-		nvhost_module_idle(g->dev);
+		gk20a_channel_idle(g->dev);
 	}
 	mutex_unlock(&c->jobs_lock);
 }
@@ -1480,7 +1533,7 @@ void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
 	ptr[3] = (id << 8) | 0x10;
 }
 
-int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
+static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
 				struct nvhost_fence *fence,
@@ -1516,7 +1569,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	nvhost_dbg_info("channel %d", c->hw_chid);
 
-	nvhost_module_busy(g->dev);
+	/* gk20a_channel_update releases this ref. */
+	gk20a_channel_busy(g->dev);
+
 	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
 					   c->hw_chid,
 					   num_entries,
@@ -1758,7 +1813,7 @@ clean_up:
 	nvhost_err(d, "fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
-	nvhost_module_idle(g->dev);
+	gk20a_channel_idle(g->dev);
 	return err;
 }
 
@@ -1783,27 +1838,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	INIT_LIST_HEAD(&c->dbg_s_list);
 	mutex_init(&c->dbg_s_lock);
 
-	return 0;
-}
-
-int gk20a_channel_init(struct nvhost_channel *ch,
-		       struct nvhost_master *host, int index)
-{
-	return 0;
-}
-
-int gk20a_channel_alloc_obj(struct nvhost_channel *channel,
-			u32 class_num,
-			u32 *obj_id,
-			u32 vaspace_share)
-{
-	nvhost_dbg_fn("");
-	return 0;
-}
-
-int gk20a_channel_free_obj(struct nvhost_channel *channel, u32 obj_id)
-{
-	nvhost_dbg_fn("");
 	return 0;
 }
 
@@ -1897,8 +1931,8 @@ cleanup_put:
 	return ret;
 }
 
-int gk20a_channel_wait(struct channel_gk20a *ch,
-		       struct nvhost_wait_args *args)
+static int gk20a_channel_wait(struct channel_gk20a *ch,
+			      struct nvhost_wait_args *args)
 {
 	struct device *d = dev_from_gk20a(ch->g);
 	struct platform_device *dev = ch->ch->dev;
@@ -1986,7 +2020,7 @@ notif_clean_up:
 	return ret;
 }
 
-int gk20a_channel_set_priority(struct channel_gk20a *ch,
+static int gk20a_channel_set_priority(struct channel_gk20a *ch,
 		u32 priority)
 {
 	u32 timeslice_timeout;
@@ -2013,7 +2047,7 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch,
 	return 0;
 }
 
-int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
+static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvhost_zcull_bind_args *args)
 {
 	struct gk20a *g = ch->g;
@@ -2127,4 +2161,167 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 		if (c->in_use)
 			wake_up_interruptible_all(&c->semaphore_wq);
 	}
+}
+
+static int gk20a_ioctl_channel_submit_gpfifo(
+	struct nvhost_hwctx *hwctx,
+	struct nvhost_submit_gpfifo_args *args)
+{
+	void *gpfifo;
+	u32 size;
+	int ret = 0, err;
+	void *completed_waiter = NULL;
+	struct channel_gk20a *ch = hwctx->priv;
+
+	nvhost_dbg_fn("");
+
+	if (hwctx->has_timedout || !ch)
+		return -ETIMEDOUT;
+
+	size = args->num_entries * sizeof(struct nvhost_gpfifo);
+
+	gpfifo = kzalloc(size, GFP_KERNEL);
+	if (!gpfifo)
+		return -ENOMEM;
+
+	if (copy_from_user(gpfifo,
+			   (void __user *)(uintptr_t)args->gpfifo, size)) {
+		ret = -EINVAL;
+		goto clean_up;
+	}
+
+	completed_waiter = nvhost_intr_alloc_waiter();
+	if (!completed_waiter) {
+		ret = -ENOMEM;
+		goto clean_up;
+	}
+
+	ret = gk20a_submit_channel_gpfifo(ch, gpfifo, args->num_entries,
+					&args->fence, args->flags);
+	if (!ret) {
+		/* nvhost action_gpfifo_submit_complete releases this ref. */
+		gk20a_channel_busy(ch->g->dev);
+
+		err = nvhost_intr_add_action(
+			&nvhost_get_host(ch->g->dev)->intr,
+			args->fence.syncpt_id, args->fence.value,
+			NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
+			ch,
+			completed_waiter,
+			NULL);
+
+		if (WARN(err, "Failed to set submit complete interrupt"))
+			gk20a_channel_idle(ch->g->dev);
+	} else {
+		pr_err("submit error %d\n", ret);
+		kfree(completed_waiter);
+	}
+
+clean_up:
+	kfree(gpfifo);
+	return ret;
+}
+
+long gk20a_channel_ioctl(struct file *filp,
+	unsigned int cmd, unsigned long arg)
+{
+	struct nvhost_hwctx *hwctx = filp->private_data;
+	struct platform_device *dev = hwctx->channel->dev;
+	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
+	int err = 0;
+
+	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||
+		(_IOC_NR(cmd) == 0) ||
+		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST) ||
+		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE))
+		return -EFAULT;
+
+	if (_IOC_DIR(cmd) & _IOC_WRITE) {
+		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
+			return -EFAULT;
+	}
+
+	switch (cmd) {
+	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
+	{
+		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;
+		struct mem_mgr *new_client = nvhost_memmgr_get_mgr_file(fd);
+
+		if (IS_ERR(new_client)) {
+			err = PTR_ERR(new_client);
+			break;
+		}
+		if (hwctx->memmgr)
+			nvhost_memmgr_put_mgr(hwctx->memmgr);
+		hwctx->memmgr = new_client;
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
+		gk20a_channel_busy(dev);
+		err = gk20a_alloc_obj_ctx(hwctx->priv,
+				(struct nvhost_alloc_obj_ctx_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
+		gk20a_channel_busy(dev);
+		err = gk20a_free_obj_ctx(hwctx->priv,
+				(struct nvhost_free_obj_ctx_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
+		gk20a_channel_busy(dev);
+		err = gk20a_alloc_channel_gpfifo(hwctx->priv,
+				(struct nvhost_alloc_gpfifo_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
+		err = gk20a_ioctl_channel_submit_gpfifo(hwctx,
+				(struct nvhost_submit_gpfifo_args *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_WAIT:
+		gk20a_channel_busy(dev);
+		err = gk20a_channel_wait(hwctx->priv,
+				(struct nvhost_wait_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
+		gk20a_channel_busy(dev);
+		err = gk20a_channel_zcull_bind(hwctx->priv,
+				(struct nvhost_zcull_bind_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
+		gk20a_channel_busy(dev);
+		err = gk20a_init_error_notifier(hwctx,
+				(struct nvhost_set_error_notifier *)buf);
+		gk20a_channel_idle(dev);
+		break;
+#ifdef CONFIG_GK20A_CYCLE_STATS
+	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:
+		gk20a_channel_busy(dev);
+		err = gk20a_channel_cycle_stats(hwctx->priv,
+				(struct nvhost_cycle_stats_args *)buf);
+		gk20a_channel_idle(dev);
+		break;
+#endif
+	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
+		((struct nvhost_get_param_args *)buf)->value =
+			hwctx->has_timedout;
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
+		gk20a_channel_busy(dev);
+		gk20a_channel_set_priority(hwctx->priv,
+			((struct nvhost_set_priority_args *)buf)->priority);
+		gk20a_channel_idle(dev);
+		break;
+	default:
+		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
+		err = -ENOTTY;
+		break;
+	}
+
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+
+	return err;
 }

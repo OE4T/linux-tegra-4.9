@@ -189,13 +189,13 @@ static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 	mutex_unlock(&devfreq->lock);
 }
 
-void nvhost_gk20a_scale_notify_idle(struct platform_device *pdev)
+void gk20a_scale_notify_idle(struct platform_device *pdev)
 {
 	gk20a_scale_notify(pdev, false);
 
 }
 
-void nvhost_gk20a_scale_notify_busy(struct platform_device *pdev)
+void gk20a_scale_notify_busy(struct platform_device *pdev)
 {
 	gk20a_scale_notify(pdev, true);
 }

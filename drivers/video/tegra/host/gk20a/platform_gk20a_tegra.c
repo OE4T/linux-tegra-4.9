@@ -44,6 +44,32 @@ static void gk20a_tegra_putchannel(struct platform_device *dev)
 	nvhost_putchannel(platform->nvhost.channel, true);
 }
 
+static void gk20a_tegra_channel_busy(struct platform_device *dev)
+{
+	/* Explicitly turn on the host1x clocks
+	 * - This is needed as host1x driver sets ignore_children = true
+	 * to cater the use case of display clock ON but host1x clock OFF
+	 * in OS-Idle-Display-ON case
+	 * - This was easily done in ACM as it only checked the ref count
+	 * of host1x (or any device for that matter) to be zero before
+	 * turning off its clock
+	 * - However, runtime PM checks to see if *ANY* child of device is
+	 * in ACTIVE state and if yes, it doesn't suspend the parent. As a
+	 * result of this, display && host1x clocks remains ON during
+	 * OS-Idle-Display-ON case
+	 * - The code below fixes this use-case
+	 */
+	if (nvhost_get_parent(dev))
+		nvhost_module_busy(nvhost_get_parent(dev));
+}
+
+static void gk20a_tegra_channel_idle(struct platform_device *dev)
+{
+	/* Explicitly turn off the host1x clocks */
+	if (nvhost_get_parent(dev))
+		nvhost_module_idle(nvhost_get_parent(dev));
+}
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
 	int err;
@@ -120,17 +146,15 @@ struct gk20a_platform gk20a_tegra_platform = {
 		NVHOST_DEFAULT_CLOCKGATE_DELAY,
 		.powergate_delay	= 500,
 		.can_powergate		= true,
-		.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
 		.as_ops			= &tegra_gk20a_as_ops,
 		.moduleid		= NVHOST_MODULE_GPU,
 		.init			= nvhost_gk20a_init,
 		.deinit			= nvhost_gk20a_deinit,
-		.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
 		.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
 		.finalize_poweron	= nvhost_gk20a_finalize_poweron,
 #ifdef CONFIG_GK20A_DEVFREQ
-		.busy			= nvhost_gk20a_scale_notify_busy,
-		.idle			= nvhost_gk20a_scale_notify_idle,
+		.busy			= gk20a_scale_notify_busy,
+		.idle			= gk20a_scale_notify_idle,
 		.scaling_init		= nvhost_gk20a_scale_init,
 		.scaling_deinit		= nvhost_gk20a_scale_deinit,
 		.suspend_ndev		= nvhost_scale3d_suspend,
@@ -140,6 +164,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 #endif
 	},
 	.probe = gk20a_tegra_probe,
+	.channel_busy = gk20a_tegra_channel_busy,
+	.channel_idle = gk20a_tegra_channel_idle,
 	.getchannel = gk20a_tegra_getchannel,
 	.putchannel = gk20a_tegra_putchannel,
 };

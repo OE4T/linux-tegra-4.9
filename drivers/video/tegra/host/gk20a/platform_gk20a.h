@@ -24,6 +24,7 @@
 #endif
 
 struct gk20a;
+struct channel_gk20a;
 
 struct gk20a_platform {
 #ifdef CONFIG_TEGRA_GK20A
@@ -50,6 +51,17 @@ struct gk20a_platform {
 	 *     structure can be obtained by calling gk20a_get_platform).
 	 */
 	int (*probe)(struct platform_device *dev);
+
+	/* Called before submitting work to the gpu. The platform may use this
+	 * hook to ensure that any other hw modules that the gpu depends on are
+	 * powered. The platform implementation must count refs to this call. */
+	void (*channel_busy)(struct platform_device *dev);
+
+	/* Called after the work on the gpu is completed. The platform may use
+	 * this hook to release power refs to any other hw modules that the gpu
+	 * depends on. The platform implementation must count refs to this
+	 * call. */
+	void (*channel_idle)(struct platform_device *dev);
 
 	/* TODO(lpeltonen): Can we get rid of these? */
 	int (*getchannel)(struct platform_device *dev);
@@ -79,5 +91,19 @@ extern struct gk20a_platform gk20a_generic_platform;
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gk20a_tegra_platform;
 #endif
+
+static inline void gk20a_platform_channel_busy(struct platform_device *dev)
+{
+	struct gk20a_platform *p = gk20a_get_platform(dev);
+	if (p->channel_busy)
+		p->channel_busy(dev);
+}
+
+static inline void gk20a_platform_channel_idle(struct platform_device *dev)
+{
+	struct gk20a_platform *p = gk20a_get_platform(dev);
+	if (p->channel_idle)
+		p->channel_idle(dev);
+}
 
 #endif

@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
+#include <linux/file.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
@@ -64,7 +65,7 @@
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
 #define INTERFACE_NAME "nvhost%s-gpu"
 
-#define GK20A_NUM_CDEVS 3
+#define GK20A_NUM_CDEVS 4
 
 static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
 {
@@ -76,6 +77,16 @@ static struct resource gk20a_intr = {
 	.start = TEGRA_GK20A_INTR,
 	.end   = TEGRA_GK20A_INTR_NONSTALL,
 	.flags = IORESOURCE_IRQ,
+};
+
+static const struct file_operations gk20a_channel_ops = {
+	.owner = THIS_MODULE,
+	.release = gk20a_channel_release,
+	.open = gk20a_channel_open,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_channel_ioctl,
+#endif
+	.unlocked_ioctl = gk20a_channel_ioctl,
 };
 
 static const struct file_operations gk20a_ctrl_ops = {
@@ -689,9 +700,8 @@ void nvhost_gk20a_deinit(struct platform_device *dev)
 #endif
 }
 
-static void gk20a_free_hwctx(struct kref *ref)
+void gk20a_free_hwctx(struct nvhost_hwctx *ctx)
 {
-	struct nvhost_hwctx *ctx = container_of(ref, struct nvhost_hwctx, ref);
 	nvhost_dbg_fn("");
 
 	gk20a_busy(ctx->channel->dev);
@@ -704,8 +714,7 @@ static void gk20a_free_hwctx(struct kref *ref)
 	kfree(ctx);
 }
 
-static struct nvhost_hwctx *gk20a_alloc_hwctx(struct nvhost_hwctx_handler *h,
-					      struct nvhost_channel *ch)
+struct nvhost_hwctx *gk20a_alloc_hwctx(struct nvhost_channel *ch)
 {
 	struct nvhost_hwctx *ctx;
 	nvhost_dbg_fn("");
@@ -720,47 +729,9 @@ static struct nvhost_hwctx *gk20a_alloc_hwctx(struct nvhost_hwctx_handler *h,
 		return NULL;
 
 	kref_init(&ctx->ref);
-	ctx->h = h;
 	ctx->channel = ch;
 
 	return gk20a_open_channel(ch, ctx);
-}
-
-static void gk20a_get_hwctx(struct nvhost_hwctx *hwctx)
-{
-	nvhost_dbg_fn("");
-	kref_get(&hwctx->ref);
-}
-
-static void gk20a_put_hwctx(struct nvhost_hwctx *hwctx)
-{
-	nvhost_dbg_fn("");
-	kref_put(&hwctx->ref, gk20a_free_hwctx);
-}
-
-static void gk20a_save_push_hwctx(struct nvhost_hwctx *ctx, struct nvhost_cdma *cdma)
-{
-	nvhost_dbg_fn("");
-}
-
-struct nvhost_hwctx_handler *
-    nvhost_gk20a_alloc_hwctx_handler(u32 syncpt, u32 waitbase,
-				     struct nvhost_channel *ch)
-{
-
-	struct nvhost_hwctx_handler *h;
-	nvhost_dbg_fn("");
-
-	h = kmalloc(sizeof(*h), GFP_KERNEL);
-	if (!h)
-		return NULL;
-
-	h->alloc = gk20a_alloc_hwctx;
-	h->get   = gk20a_get_hwctx;
-	h->put   = gk20a_put_hwctx;
-	h->save_push = gk20a_save_push_hwctx;
-
-	return h;
 }
 
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
@@ -1043,6 +1014,11 @@ static void gk20a_user_deinit(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
+	if (g->channel.node) {
+		device_destroy(g->class, g->channel.cdev.dev);
+		cdev_del(&g->channel.cdev);
+	}
+
 	if (g->ctrl.node) {
 		device_destroy(g->class, g->ctrl.cdev.dev);
 		cdev_del(&g->ctrl.cdev);
@@ -1087,6 +1063,12 @@ static int gk20a_user_init(struct platform_device *dev)
 	}
 	g->cdev_region = devno;
 
+	err = gk20a_create_device(dev, devno++, "",
+				  &g->channel.cdev, &g->channel.node,
+				  &gk20a_channel_ops);
+	if (err)
+		goto fail;
+
 	err = gk20a_create_device(dev, devno++, "-ctrl",
 				  &g->ctrl.cdev, &g->ctrl.node,
 				  &gk20a_ctrl_ops);
@@ -1109,6 +1091,23 @@ static int gk20a_user_init(struct platform_device *dev)
 fail:
 	gk20a_user_deinit(dev);
 	return err;
+}
+
+struct nvhost_hwctx *gk20a_get_hwctx_from_file(int fd)
+{
+	struct nvhost_hwctx *ch;
+	struct file *f = fget(fd);
+	if (!f)
+		return 0;
+
+	if (f->f_op != &gk20a_channel_ops) {
+		fput(f);
+		return 0;
+	}
+
+	ch = (struct nvhost_hwctx *)f->private_data;
+	fput(f);
+	return ch;
 }
 
 static int gk20a_probe(struct platform_device *dev)
@@ -1289,25 +1288,35 @@ void gk20a_busy_noresume(struct platform_device *pdev)
 	pm_runtime_get_noresume(&pdev->dev);
 }
 
+void gk20a_channel_busy(struct platform_device *pdev)
+{
+	gk20a_platform_channel_busy(pdev);
+	gk20a_busy(pdev);
+}
+
+void gk20a_channel_idle(struct platform_device *pdev)
+{
+	gk20a_idle(pdev);
+	gk20a_platform_channel_idle(pdev);
+}
+
 void gk20a_busy(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_get_sync(&pdev->dev);
-	if (pdata->busy)
-		pdata->busy(pdev);
+#endif
+	gk20a_scale_notify_busy(pdev);
 }
 
 void gk20a_idle(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 #ifdef CONFIG_PM_RUNTIME
-	if (pdata->busy && atomic_read(&pdev->dev.power.usage_count) == 1)
-		pdata->idle(pdev);
+	if (atomic_read(&pdev->dev.power.usage_count) == 1)
+		gk20a_scale_notify_idle(pdev);
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_sync_autosuspend(&pdev->dev);
 #else
-	if (pdata->idle)
-		pdata->idle(dev);
+	gk20a_scale_notify_idle(pdev);
 #endif
 }
 

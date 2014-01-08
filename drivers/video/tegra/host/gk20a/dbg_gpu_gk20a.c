@@ -332,15 +332,9 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	if (!f)
 		return -ENODEV;
 
-	hwctx = nvhost_channel_get_file_hwctx(args->channel_fd);
+	hwctx = gk20a_get_hwctx_from_file(args->channel_fd);
 	if (!hwctx) {
 		nvhost_dbg_fn("no hwctx found for fd");
-		fput(f);
-		return -EINVAL;
-	}
-	/* be sure this is actually the right type of hwctx */
-	if (hwctx->channel->dev != dbg_s->pdev) {
-		nvhost_dbg_fn("hwctx module type mismatch");
 		fput(f);
 		return -EINVAL;
 	}
@@ -552,7 +546,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		    (g->dbg_powergating_disabled_refcount++ == 0)) {
 
 			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module busy");
-			nvhost_module_busy(dbg_s->pdev);
+			gk20a_channel_busy(dbg_s->pdev);
 
 			gr_gk20a_slcg_gr_load_gating_prod(g, false);
 			gr_gk20a_slcg_perf_load_gating_prod(g, false);
@@ -591,7 +585,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			gk20a_pmu_enable_elpg(g);
 
 			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module idle");
-			nvhost_module_idle(dbg_s->pdev);
+			gk20a_channel_idle(dbg_s->pdev);
 		}
 
 		dbg_s->is_pg_disabled = false;

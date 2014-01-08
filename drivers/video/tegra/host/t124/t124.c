@@ -493,102 +493,6 @@ struct platform_device *tegra12_register_host1x_devices(void)
 
 #include "host1x/host1x_channel.c"
 
-#if defined(CONFIG_TEGRA_GK20A)
-static int t124_channel_alloc_obj(struct nvhost_hwctx *hwctx,
-				 struct nvhost_alloc_obj_ctx_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_alloc_obj_ctx(hwctx->priv, args);
-}
-
-static int t124_channel_free_obj(struct nvhost_hwctx *hwctx,
-				struct nvhost_free_obj_ctx_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_free_obj_ctx(hwctx->priv, args);
-}
-
-static int t124_channel_alloc_gpfifo(struct nvhost_hwctx *hwctx,
-				    struct nvhost_alloc_gpfifo_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_alloc_channel_gpfifo(hwctx->priv, args);
-}
-
-static int t124_channel_set_error_notifier(struct nvhost_hwctx *hwctx,
-		    struct nvhost_set_error_notifier *args) {
-	return gk20a_init_error_notifier(hwctx, args->mem, args->offset);
-}
-
-static int t124_channel_submit_gpfifo(struct nvhost_hwctx *hwctx,
-				     struct nvhost_gpfifo *gpfifo, u32 num_entries,
-				     struct nvhost_fence *fence, u32 flags)
-{
-	struct channel_gk20a *ch = hwctx->priv;
-	struct nvhost_channel *nvhost_ch = hwctx->channel;
-	void *completed_waiter = NULL;
-	int err, ret;
-
-	nvhost_dbg_fn("");
-
-	if (hwctx->has_timedout || !ch)
-		return -ETIMEDOUT;
-
-	completed_waiter = nvhost_intr_alloc_waiter();
-	if (!completed_waiter)
-		return -ENOMEM;
-
-	nvhost_module_busy(nvhost_ch->dev);
-
-	ret = gk20a_submit_channel_gpfifo(hwctx->priv, gpfifo, num_entries,
-					fence, flags);
-	if (!ret) {
-		err = nvhost_intr_add_action(
-			&nvhost_get_host(nvhost_ch->dev)->intr,
-			fence->syncpt_id, fence->value,
-			NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
-			ch,
-			completed_waiter,
-			NULL);
-		WARN(err, "Failed to set submit complete interrupt");
-	} else {
-		pr_err("submit error %d\n", ret);
-		kfree(completed_waiter);
-	}
-	return ret;
-}
-
-static int t124_channel_wait(struct nvhost_hwctx *hwctx,
-			    struct nvhost_wait_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_wait(hwctx->priv, args);
-}
-
-static int t124_channel_set_priority(struct nvhost_hwctx *hwctx,
-			    struct nvhost_set_priority_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_set_priority(hwctx->priv, args->priority);
-}
-
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-static int t124_channel_cycle_stats(struct nvhost_hwctx *hwctx,
-				struct nvhost_cycle_stats_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_cycle_stats(hwctx->priv, args);
-}
-#endif
-
-static int t124_channel_zcull_bind(struct nvhost_hwctx *hwctx,
-			    struct nvhost_zcull_bind_args *args)
-{
-	nvhost_dbg_fn("");
-	return gk20a_channel_zcull_bind(hwctx->priv, args);
-}
-#endif /* CONFIG_TEGRA_GK20A */
-
 static void t124_free_nvhost_channel(struct nvhost_channel *ch)
 {
 	nvhost_dbg_fn("");
@@ -608,19 +512,6 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 #if defined(CONFIG_TEGRA_GK20A)
 		if (strncmp(dev->name, "gk20a", GK20A_DEV_NAME_SIZE) == 0) {
 			ch->ops.init          = host1x_channel_ops.init;
-			ch->ops.alloc_obj     = t124_channel_alloc_obj;
-			ch->ops.free_obj      = t124_channel_free_obj;
-			ch->ops.alloc_gpfifo  = t124_channel_alloc_gpfifo;
-			ch->ops.submit_gpfifo = t124_channel_submit_gpfifo;
-			ch->ops.set_priority  = t124_channel_set_priority;
-			ch->ops.wait          = t124_channel_wait;
-			ch->ops.set_error_notifier =
-					t124_channel_set_error_notifier;
-
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-			ch->ops.cycle_stats   = t124_channel_cycle_stats;
-#endif
-			ch->ops.zcull.bind    = t124_channel_zcull_bind;
 		} else
 #endif
 			ch->ops = host1x_channel_ops;

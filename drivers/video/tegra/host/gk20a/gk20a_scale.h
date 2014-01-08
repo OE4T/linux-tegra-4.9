@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,8 +36,8 @@ void nvhost_gk20a_scale_deinit(struct platform_device *);
  * call when performing submit to notify scaling mechanism that the module is
  * in use
  */
-void nvhost_gk20a_scale_notify_busy(struct platform_device *);
-void nvhost_gk20a_scale_notify_idle(struct platform_device *);
+void gk20a_scale_notify_busy(struct platform_device *);
+void gk20a_scale_notify_idle(struct platform_device *);
 
 void nvhost_gk20a_scale_hw_init(struct platform_device *);
 

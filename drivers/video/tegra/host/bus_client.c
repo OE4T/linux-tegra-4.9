@@ -241,128 +241,6 @@ fail:
 	return -ENOMEM;
 }
 
-static int nvhost_ioctl_channel_alloc_obj_ctx(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_alloc_obj_ctx_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_op(ctx->ch).alloc_obj);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op(ctx->ch).alloc_obj(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_free_obj_ctx(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_free_obj_ctx_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_op(ctx->ch).free_obj);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op(ctx->ch).free_obj(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_alloc_gpfifo(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_alloc_gpfifo_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_op(ctx->ch).alloc_gpfifo);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op(ctx->ch).alloc_gpfifo(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_set_error_notifier(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_set_error_notifier *args)
-{
-	int ret;
-	BUG_ON(!channel_op(ctx->ch).set_error_notifier);
-	ret = channel_op(ctx->ch).set_error_notifier(ctx->hwctx, args);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_submit_gpfifo(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_submit_gpfifo_args *args)
-{
-	void *gpfifo;
-	u32 size;
-	int ret = 0;
-
-	if (!ctx->hwctx || ctx->hwctx->has_timedout)
-		return -ETIMEDOUT;
-
-	size = args->num_entries * sizeof(struct nvhost_gpfifo);
-
-	gpfifo = kzalloc(size, GFP_KERNEL);
-	if (!gpfifo)
-		return -ENOMEM;
-
-	if (copy_from_user(gpfifo,
-			   (void __user *)(uintptr_t)args->gpfifo, size)) {
-		ret = -EINVAL;
-		goto clean_up;
-	}
-
-	BUG_ON(!channel_op(ctx->ch).submit_gpfifo);
-
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op(ctx->ch).submit_gpfifo(ctx->hwctx, gpfifo,
-			args->num_entries, &args->fence, args->flags);
-	nvhost_module_idle(ctx->ch->dev);
-clean_up:
-	kfree(gpfifo);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_wait(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_wait_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_op(ctx->ch).wait);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_op(ctx->ch).wait(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
-static int nvhost_ioctl_channel_set_priority(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_set_priority_args *args)
-{
-	int ret = 0;
-	if (channel_op(ctx->ch).set_priority) {
-		nvhost_module_busy(ctx->ch->dev);
-		ret = channel_op(ctx->ch).set_priority(ctx->hwctx, args);
-		nvhost_module_idle(ctx->ch->dev);
-	}
-	return ret;
-}
-
-static int nvhost_ioctl_channel_zcull_bind(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_zcull_bind_args *args)
-{
-	int ret;
-
-	BUG_ON(!channel_zcull_op(ctx->ch).bind);
-	nvhost_module_busy(ctx->ch->dev);
-	ret = channel_zcull_op(ctx->ch).bind(ctx->hwctx, args);
-	nvhost_module_idle(ctx->ch->dev);
-	return ret;
-}
-
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		struct nvhost_submit_args *args)
 {
@@ -723,18 +601,6 @@ fail:
 	return err;
 }
 
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-static int nvhost_ioctl_channel_cycle_stats(
-	struct nvhost_channel_userctx *ctx,
-	struct nvhost_cycle_stats_args *args)
-{
-	int ret;
-	BUG_ON(!channel_op(ctx->ch).cycle_stats);
-	ret = channel_op(ctx->ch).cycle_stats(ctx->hwctx, args);
-	return ret;
-}
-#endif
-
 static int nvhost_ioctl_channel_read_3d_reg(struct nvhost_channel_userctx *ctx,
 	struct nvhost_read_3d_reg_args *args)
 {
@@ -951,33 +817,6 @@ static long nvhost_channelctl(struct file *filp,
 
 		break;
 	}
-	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
-		err = nvhost_ioctl_channel_alloc_obj_ctx(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
-		err = nvhost_ioctl_channel_free_obj_ctx(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
-		err = nvhost_ioctl_channel_alloc_gpfifo(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
-		err = nvhost_ioctl_channel_submit_gpfifo(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_WAIT:
-		err = nvhost_ioctl_channel_wait(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
-		err = nvhost_ioctl_channel_zcull_bind(priv, (void *)buf);
-		break;
-	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
-		err = nvhost_ioctl_channel_set_error_notifier(priv,
-			(void *)buf);
-		break;
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:
-		err = nvhost_ioctl_channel_cycle_stats(priv, (void *)buf);
-		break;
-#endif
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
 		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
 		break;
@@ -1016,7 +855,6 @@ static long nvhost_channelctl(struct file *filp,
 				priv->hwctx->has_timedout;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
-		nvhost_ioctl_channel_set_priority(priv, (void *)buf);
 		priv->priority =
 			(u32)((struct nvhost_set_priority_args *)buf)->priority;
 		break;
@@ -1245,10 +1083,14 @@ int nvhost_client_user_init(struct platform_device *dev)
 		goto fail;
 	}
 
-	ch->node = nvhost_client_device_create(dev, &ch->cdev,
-				"", devno, &nvhost_channelops);
-	if (ch->node == NULL)
-		goto fail;
+	/* gk20a creates the channel node by itself */
+	if (pdata->class != NV_GRAPHICS_GPU_CLASS_ID) {
+		ch->node = nvhost_client_device_create(dev, &ch->cdev,
+					"", devno, &nvhost_channelops);
+		if (ch->node == NULL)
+			goto fail;
+	}
+
 	if (pdata->as_ops) {
 		++devno;
 		ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,

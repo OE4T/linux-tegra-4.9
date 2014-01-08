@@ -34,21 +34,6 @@ struct nvhost_master;
 struct platform_device;
 struct nvhost_channel;
 struct nvhost_hwctx;
-struct nvhost_alloc_obj_ctx_args;
-struct nvhost_free_obj_ctx_args;
-struct nvhost_alloc_gpfifo_args;
-struct nvhost_gpfifo;
-struct nvhost_fence;
-struct nvhost_wait_args;
-struct nvhost_cycle_stats_args;
-struct nvhost_zcull_bind_args;
-struct nvhost_set_error_notifier;
-struct nvhost_set_priority_args;
-
-struct nvhost_zcull_ops {
-	int (*bind)(struct nvhost_hwctx *,
-		    struct nvhost_zcull_bind_args *args);
-};
 
 struct nvhost_channel_ops {
 	const char *soc_name;
@@ -56,28 +41,6 @@ struct nvhost_channel_ops {
 		    struct nvhost_master *);
 	int (*submit)(struct nvhost_job *job);
 	int (*save_context)(struct nvhost_channel *channel);
-	int (*alloc_obj)(struct nvhost_hwctx *,
-			struct nvhost_alloc_obj_ctx_args *args);
-	int (*free_obj)(struct nvhost_hwctx *,
-			struct nvhost_free_obj_ctx_args *args);
-	int (*alloc_gpfifo)(struct nvhost_hwctx *,
-			struct nvhost_alloc_gpfifo_args *args);
-	int (*submit_gpfifo)(struct nvhost_hwctx *,
-			struct nvhost_gpfifo *gpfifo,
-			u32 num_entries,
-			struct nvhost_fence *fence,
-			u32 flags);
-	int (*set_error_notifier)(struct nvhost_hwctx *hwctx,
-			    struct nvhost_set_error_notifier *args);
-	int (*set_priority)(struct nvhost_hwctx *hwctx,
-			    struct nvhost_set_priority_args *args);
-	int (*wait)(struct nvhost_hwctx *,
-		    struct nvhost_wait_args *args);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	int (*cycle_stats)(struct nvhost_hwctx *,
-			struct nvhost_cycle_stats_args *args);
-#endif
-	struct nvhost_zcull_ops zcull;
 	int (*init_gather_filter)(struct nvhost_channel *ch);
 };
 
@@ -105,8 +68,6 @@ struct nvhost_channel {
 };
 
 #define channel_op(ch)		(ch->ops)
-#define channel_zcull_op(ch)	(ch->ops.zcull)
-#define channel_zbc_op(ch)	(ch->zbc)
 
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);

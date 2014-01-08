@@ -140,7 +140,7 @@ struct channel_gk20a {
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
 {
-	return !!ch->hwctx->as_share;
+	return !!ch->vm;
 }
 int channel_gk20a_commit_va(struct channel_gk20a *c);
 

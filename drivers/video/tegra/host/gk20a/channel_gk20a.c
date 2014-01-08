@@ -681,6 +681,7 @@ unbind:
 	channel_gk20a_free_inst(g, ch);
 
 	ch->vpr = false;
+	ch->vm = NULL;
 
 	/* unlink all debug sessions */
 	mutex_lock(&ch->dbg_s_lock);

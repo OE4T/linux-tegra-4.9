@@ -21,8 +21,6 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/delay.h>
-#include <linux/device.h>
-#include <linux/dma-mapping.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dev.h"
@@ -33,19 +31,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 
-/*
- * to use these tests, go to d/tegra_dsi in uart/adb shell by:
- * cd d/tegra_dsi
- *
- */
-
-/*
- * to get the dump of panel register , do:
- * cat regs
- *
- */
-
-static int regdump_show(struct seq_file *s, void *unused)
+static int dbg_dsi_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
 	unsigned long i = 0, j = 0;
@@ -146,132 +132,13 @@ static int regdump_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-/*
- * to use colorbar test case use :
- * cat colorbar
- *
- */
-
-static ssize_t colorbar_show(struct seq_file *s, void *unused)
+static int dbg_dsi_open(struct inode *inode, struct file *file)
 {
-	struct tegra_dc_dsi_data *dsi = s->private;
-	struct tegra_dc *dc = dsi->dc;
-
-#define RED    0xff0000ff
-#define GREEN  0xff00ff00
-#define BLUE   0xffff0000
-
-	int i, j;
-	u32 *ptr;
-	u32 val;
-	int width, height;
-	dma_addr_t phys_addr;
-
-	dev_info(&dc->ndev->dev, "===== display colorbar test is started ====\n");
-
-	if (!dsi->enabled) {
-		dev_info(&dc->ndev->dev, "DSI controller suspended\n");
-		goto fail;
-	}
-
-	width  = dc->mode.h_active;
-	height = dc->mode.v_active;
-
-	ptr = (u32 *)dma_zalloc_coherent(&dc->ndev->dev, width * height * 4,
-						&phys_addr, GFP_KERNEL);
-	if (!ptr) {
-		dev_err(&dc->ndev->dev, "Can't allocate memory for colorbar test\n");
-		goto fail;
-	}
-
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = RED;
-
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = GREEN;
-
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = BLUE;
-
-	for (i = 0; i < height / 4; i++)
-		for (j = 0; j < width; j++)
-			*(ptr++) = RED;
-
-	tegra_dc_get(dc);
-
-	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
-				DC_CMD_STATE_ACCESS);
-
-	tegra_dc_writel(dc, WINDOW_A_SELECT, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = 0;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_A_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_A_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(dc, WINDOW_C_SELECT, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = 0;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_C_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_C_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(dc, WINDOW_B_SELECT, DC_CMD_DISPLAY_WINDOW_HEADER);
-	val = WIN_ENABLE;
-	tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
-	tegra_dc_writel(dc, WIN_B_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_B_ACT_REQ | GENERAL_ACT_REQ,
-				DC_CMD_STATE_CONTROL);
-	/* 13: TEGRA_WIN_FMT_R8G8B8A8 */
-	tegra_dc_writel(dc, 13, DC_WIN_COLOR_DEPTH);
-	tegra_dc_writel(dc, 0, DC_WIN_BYTE_SWAP);
-
-	tegra_dc_writel(dc, V_POSITION(0) | H_POSITION(0), DC_WIN_POSITION);
-	tegra_dc_writel(dc, V_SIZE(height) | H_SIZE(width), DC_WIN_SIZE);
-	tegra_dc_writel(dc, V_PRESCALED_SIZE(height) |
-				H_PRESCALED_SIZE(width * 4),
-				DC_WIN_PRESCALED_SIZE);
-
-	tegra_dc_writel(dc, V_DDA_INC(0x1000) | H_DDA_INC(0x1000),
-				DC_WIN_DDA_INCREMENT);
-	tegra_dc_writel(dc, width*4, DC_WIN_LINE_STRIDE);
-	tegra_dc_writel(dc, (unsigned long)phys_addr, DC_WINBUF_START_ADDR);
-	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_H_OFFSET);
-	tegra_dc_writel(dc, 0, DC_WINBUF_ADDR_V_OFFSET);
-
-	tegra_dc_writel(dc, WIN_B_UPDATE , DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, WIN_B_ACT_REQ | GENERAL_ACT_REQ | NC_HOST_TRIG,
-				DC_CMD_STATE_CONTROL);
-
-	tegra_dc_put(dc);
-
-fail:
-	dev_info(&dc->ndev->dev, "===== display colorbar test is finished ====\n");
-	return 0;
+	return single_open(file, dbg_dsi_show, inode->i_private);
 }
 
-static int regdump_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, regdump_show, inode->i_private);
-}
-
-static const struct file_operations regdump_fops = {
-	.open = regdump_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static int colorbar_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, colorbar_show, inode->i_private);
-}
-
-static const struct file_operations colorbar_fops = {
-	.open = colorbar_open,
+static const struct file_operations dbg_fops = {
+	.open = dbg_dsi_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -279,17 +146,6 @@ static const struct file_operations colorbar_fops = {
 
 static u32 max_ret_payload_size;
 static u32 panel_reg_addr;
-
-/*
- * read panel get is for reading value of a panel register
- * you need to give both register address and return payload size as input
- * the first parameter is register address
- * and second is payload size , test case for jdi panel use :
- * echo 0xA1 0x05 > read_panel
- * and then do :
- * cat read_panel
- *
- */
 
 static ssize_t read_panel_get(struct seq_file *s, void *unused)
 {
@@ -407,13 +263,6 @@ static const struct file_operations read_panel_fops = {
 	.release = single_release,
 };
 
-/*
- * panel sanity check returns whether the last packet was with error or not
- * to use panel sanity check do :
- * cat panel_sanity
- *
- */
-
 static int panel_sanity_check(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
@@ -450,26 +299,6 @@ static const struct file_operations sanity_panel_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
-
-/*
- * to send host dcs cmd
- * you have to give all three parameters as input
- * the test-commands are (to be used as cmd_value )
- * DSI_DCS_SET_DISPLAY_ON			0x29
- * DSI_DCS_SET_DISPLAY_OFF			0x28
- *
- * the data_id are
- * DSI_DCS_WRITE_0_PARAM			 0x05
- * DSI_DCS_WRITE_1_PARAM			 0x15
- *
- * the second comand i.e. command_value1 can be put as 0x0
- *
- * to test ,give:
- * echo 0x05 0x28 0x0 > host_cmd_v_blank_dcs
- * to see the effect, do:
- * cat host_cmd_v_blank_dcs
- *
- */
 
 static u32 command_value;
 static u32 data_id;
@@ -534,13 +363,6 @@ static const struct file_operations host_cmd_v_blank_dcs_fops = {
 	.release = single_release,
 };
 
-/*
- * to remove the functioality of send_host_cmd_v_blank_dcs
- * use:
- * cat remove_host_cmd_dcs
- *
- */
-
 static int remove_host_cmd_dcs(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
@@ -562,26 +384,6 @@ static const struct file_operations remove_host_cmd_dcs_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
-
-/*
- * to write host cmd to check functioanlity of write_data
- * you have to give all three parameters as input
- * the commands are (to be used as cmd_value)
- * DSI_DCS_SET_DISPLAY_ON			0x29
- * DSI_DCS_SET_DISPLAY_OFF			0x28
- *
- * the data_id are
- * DSI_DCS_WRITE_0_PARAM			 0x05
- * DSI_DCS_WRITE_1_PARAM			0x15
- *
- * the second comand i.e. command_value1 can be put as 0x0
- *
- * to test give:
- * echo 0x05 0x28 0x0 > write_data
- * to see the effect do:
- * cat write_data
- *
- */
 
 static int send_write_data_cmd(struct seq_file *s, void *unused)
 {
@@ -645,11 +447,7 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 	if (!dsidir)
 		return;
 	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
-		&regdump_fops);
-	if (!retval)
-		goto free_out;
-	retval = debugfs_create_file("colorbar", S_IRUGO, dsidir, dsi,
-		&colorbar_fops);
+		&dbg_fops);
 	if (!retval)
 		goto free_out;
 	retval = debugfs_create_file("read_panel", S_IRUGO|S_IWUSR, dsidir,

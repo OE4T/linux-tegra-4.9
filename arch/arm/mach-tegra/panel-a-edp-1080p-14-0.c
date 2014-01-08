@@ -250,10 +250,10 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 {
 	int err = 0;
 
-	if (of_machine_is_compatible("nvidia,laguna"))
-		err = laguna_edp_regulator_get(dev);
-	else
+	if (of_machine_is_compatible("nvidia,ardbeg"))
 		err = ardbeg_edp_regulator_get(dev);
+	else
+		err = laguna_edp_regulator_get(dev);
 	if (err < 0) {
 		pr_err("edp regulator get failed\n");
 		goto fail;

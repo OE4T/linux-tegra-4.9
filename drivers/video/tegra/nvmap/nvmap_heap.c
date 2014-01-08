@@ -32,6 +32,7 @@
 #include <linux/bug.h>
 #include <linux/stat.h>
 #include <linux/debugfs.h>
+#include <linux/nvhost.h>
 
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>
@@ -118,10 +119,12 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 static void nvmap_config_vpr(struct nvmap_heap *h)
 {
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	if (h->is_vpr)
+	if (h->is_vpr) {
 		/* Config VPR_BOM/_SIZE in MC */
 		te_set_vpr_params((void *)(uintptr_t)h->base, h->len);
-	/* FIXME: trigger GPU to refetch VPR base and size. */
+		/* trigger GPU to refetch VPR base and size. */
+		nvhost_vpr_info_fetch();
+	}
 #endif
 }
 

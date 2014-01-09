@@ -23,6 +23,7 @@
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-soc.h>
+#include <linux/clk/tegra.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -554,6 +555,7 @@ static int dbg_dp_show(struct seq_file *s, void *unused)
 		#a, a, tegra_dpaux_readl(dp, a))
 
 	tegra_dc_io_start(dp->dc);
+	clk_prepare_enable(dp->parent_clk);
 	clk_prepare_enable(dp->clk);
 
 	DUMP_REG(DPAUX_INTR_EN_AUX);
@@ -568,6 +570,7 @@ static int dbg_dp_show(struct seq_file *s, void *unused)
 	DUMP_REG(DPAUX_HYBRID_SPARE);
 
 	clk_disable_unprepare(dp->clk);
+	clk_disable_unprepare(dp->parent_clk);
 	tegra_dc_io_end(dp->dc);
 
 	return 0;
@@ -1221,6 +1224,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	struct resource		*base_res;
 	void __iomem		*base;
 	struct clk		*clk;
+	struct clk		*parent_clk;
 	int			 err;
 	u32 irq;
 
@@ -1266,6 +1270,13 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_iounmap_reg;
 	}
 
+	parent_clk = tegra_get_clock_by_name("pll_dp");
+	if (IS_ERR_OR_NULL(parent_clk)) {
+		dev_err(&dc->ndev->dev, "dp: clock pll_dp unavailable\n");
+		err = -EFAULT;
+		goto err_iounmap_reg;
+	}
+
 	if (!tegra_platform_is_fpga()) {
 		if (request_threaded_irq(irq, NULL, tegra_dp_irq,
 					IRQF_ONESHOT, "tegra_dp", dp)) {
@@ -1281,6 +1292,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->aux_base = base;
 	dp->aux_base_res = base_res;
 	dp->clk = clk;
+	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
 	dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
 	dp->irq = irq;
@@ -1880,6 +1892,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	u32    retry;
 	int    ret;
 
+	if (!tegra_is_clk_enabled(dp->parent_clk))
+		clk_prepare_enable(dp->parent_clk);
+
 	if (!tegra_is_clk_enabled(dp->clk))
 		clk_prepare_enable(dp->clk);
 
@@ -1954,6 +1969,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	if (dp->dp_edid)
 		tegra_edid_destroy(dp->dp_edid);
 	clk_put(dp->clk);
+	clk_put(dp->parent_clk);
 	iounmap(dp->aux_base);
 	release_resource(dp->aux_base_res);
 
@@ -1978,25 +1994,19 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dc_sor_disable(dp->sor, false);
 
 	clk_disable(dp->clk);
+	clk_disable(dp->parent_clk);
 
 	tegra_dc_io_end(dc);
 	dp->enabled = false;
 }
 
-extern struct clk *tegra_get_clock_by_name(const char *name);
-
 static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	struct clk		*parent_clk;
 
 	tegra_dc_sor_setup_clk(dp->sor, clk, false);
 
-	parent_clk = tegra_get_clock_by_name("pll_dp");
-	clk_set_rate(parent_clk, 270000000);
-
-	if (!tegra_is_clk_enabled(parent_clk))
-		clk_prepare_enable(parent_clk);
+	clk_set_rate(dp->parent_clk, 270000000);
 
 	return tegra_dc_pclk_round_rate(dc, dp->sor->dc->mode.pclk);
 }

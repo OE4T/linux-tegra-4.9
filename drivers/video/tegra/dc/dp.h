@@ -233,6 +233,7 @@ struct tegra_dc_dp_data {
 	struct resource			*aux_base_res;
 	void __iomem			*aux_base;
 	struct clk			*clk;	/* dpaux clock */
+	struct clk			*parent_clk; /* pll_dp clock */
 
 	struct work_struct		 lt_work;
 	u8				 revision;

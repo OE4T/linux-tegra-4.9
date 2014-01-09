@@ -510,7 +510,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 				flip_callback();
 			spin_unlock(&flip_callback_lock);
 		}
+	}
 
+	if (!skip_flip) {
 		for (i = 0; i < win_num; i++) {
 			struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 			int index = flip_win->attr.index;

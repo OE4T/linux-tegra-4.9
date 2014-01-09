@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_est.c
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -44,6 +44,7 @@ struct therm_estimator {
 	struct delayed_work timer_trip_work;
 	struct mutex timer_trip_lock;
 
+	struct thermal_cooling_device *cdev; /* activation device */
 	struct workqueue_struct *workqueue;
 	struct delayed_work therm_est_work;
 	long cur_temp;
@@ -52,11 +53,13 @@ struct therm_estimator {
 	int ntemp;
 	long toffset;
 	long polling_period;
+	int polling_enabled;
 	int tc1;
 	int tc2;
 	int ndevs;
 	struct therm_est_subdevice *devs;
 
+	int use_activator;
 #ifdef CONFIG_PM
 	struct notifier_block pm_nb;
 #endif
@@ -269,8 +272,10 @@ static void therm_est_work_func(struct work_struct *work)
 		therm_est_update_limits(est);
 	}
 
-	queue_delayed_work(est->workqueue, &est->therm_est_work,
-				msecs_to_jiffies(est->polling_period));
+	if (est->polling_enabled > 0 || !est->use_activator) {
+		queue_delayed_work(est->workqueue, &est->therm_est_work,
+			msecs_to_jiffies(est->polling_period));
+	}
 }
 
 static int therm_est_bind(struct thermal_zone_device *thz,
@@ -449,6 +454,53 @@ static int therm_est_get_trend(struct thermal_zone_device *thz,
 		break;
 	default:
 		return -EINVAL;
+	}
+	return 0;
+}
+
+static void therm_est_init_timer_trips(struct therm_estimator *est)
+{
+	int i;
+
+	for (i = 0; i < est->num_timer_trips; i++)
+		est->timer_trips[i].cur = TIMER_TRIP_INACTIVE;
+}
+
+static int therm_est_init_history(struct therm_estimator *est)
+{
+	int i, j;
+	struct therm_est_subdevice *dev;
+	long temp;
+
+	for (i = 0; i < est->ndevs; i++) {
+		dev = &est->devs[i];
+
+		if (therm_est_subdev_get_temp(dev->dev_data, &temp))
+			return -EINVAL;
+
+		for (j = 0; j < HIST_LEN; j++)
+			dev->hist[j] = temp;
+	}
+
+	return 0;
+}
+
+static int therm_est_polling(struct therm_estimator *est,
+				int polling)
+{
+	est->polling_enabled = polling > 0;
+
+	if (est->polling_enabled > 0) {
+		est->low_limit = 0;
+		est->high_limit = 0;
+		therm_est_init_history(est);
+		therm_est_init_timer_trips(est);
+		queue_delayed_work(est->workqueue,
+			&est->therm_est_work,
+			msecs_to_jiffies(est->polling_period));
+	} else {
+		est->cur_temp = 25000;
+		cancel_delayed_work_sync(&est->therm_est_work);
 	}
 	return 0;
 }
@@ -638,33 +690,6 @@ static struct sensor_device_attribute therm_est_nodes[] = {
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
 };
 
-static void therm_est_init_timer_trips(struct therm_estimator *est)
-{
-	int i;
-
-	for (i = 0; i < est->num_timer_trips; i++)
-		est->timer_trips[i].cur = TIMER_TRIP_INACTIVE;
-}
-
-static int therm_est_init_history(struct therm_estimator *est)
-{
-	int i, j;
-	struct therm_est_subdevice *dev;
-	long temp;
-
-	for (i = 0; i < est->ndevs; i++) {
-		dev = &est->devs[i];
-
-		if (therm_est_subdev_get_temp(dev->dev_data, &temp))
-			return -EINVAL;
-
-		for (j = 0; j < HIST_LEN; j++)
-			dev->hist[j] = temp;
-	}
-
-	return 0;
-}
-
 #ifdef CONFIG_PM
 static int therm_est_pm_notify(struct notifier_block *nb,
 				unsigned long event, void *data)
@@ -694,6 +719,59 @@ static int therm_est_pm_notify(struct notifier_block *nb,
 }
 #endif
 
+static int
+thermal_est_activation_get_max_state(struct thermal_cooling_device *cdev,
+					unsigned long *max_state)
+{
+	*max_state = 1;
+	return 0;
+}
+
+static int
+thermal_est_activation_get_cur_state(struct thermal_cooling_device *cdev,
+					unsigned long *cur_state)
+{
+	struct therm_estimator *est = cdev->devdata;
+	*cur_state = est->polling_enabled;
+	return 0;
+}
+
+static int
+thermal_est_activation_set_cur_state(struct thermal_cooling_device *cdev,
+					unsigned long cur_state)
+{
+	struct therm_estimator *est = cdev->devdata;
+	if (est->use_activator)
+		therm_est_polling(est, cur_state > 0);
+
+	return 0;
+}
+
+static struct thermal_cooling_device_ops thermal_est_activation_device_ops = {
+	.get_max_state = thermal_est_activation_get_max_state,
+	.get_cur_state = thermal_est_activation_get_cur_state,
+	.set_cur_state = thermal_est_activation_set_cur_state,
+};
+
+struct thermal_cooling_device *thermal_est_activation_device_register(
+						struct therm_estimator *est,
+						char *type)
+{
+	struct thermal_cooling_device *cdev;
+
+	cdev = thermal_cooling_device_register(
+		type,
+		est,
+		&thermal_est_activation_device_ops);
+
+	if (IS_ERR(cdev))
+		return NULL;
+
+	pr_debug("Therm_est: Cooling-device REGISTERED\n");
+
+	return cdev;
+}
+
 static int therm_est_probe(struct platform_device *pdev)
 {
 	int i;
@@ -712,8 +790,10 @@ static int therm_est_probe(struct platform_device *pdev)
 	est->ndevs = data->ndevs;
 	est->toffset = data->toffset;
 	est->polling_period = data->polling_period;
+	est->polling_enabled = 0; /* By default polling is switched off */
 	est->tc1 = data->tc1;
 	est->tc2 = data->tc2;
+	est->use_activator = data->use_activator;
 
 	/* initialize history */
 	therm_est_init_history(est);
@@ -733,9 +813,8 @@ static int therm_est_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&est->therm_est_work, therm_est_work_func);
 
-	queue_delayed_work(est->workqueue,
-				&est->therm_est_work,
-				msecs_to_jiffies(est->polling_period));
+	est->cdev = thermal_est_activation_device_register(est,
+							"therm_est_activ");
 
 	est->num_trips = data->num_trips;
 	est->trips = data->trips;
@@ -760,9 +839,13 @@ static int therm_est_probe(struct platform_device *pdev)
 	register_pm_notifier(&est->pm_nb);
 #endif
 
+	if (!est->use_activator)
+		queue_delayed_work(est->workqueue, &est->therm_est_work,
+			msecs_to_jiffies(est->polling_period));
+
 	return 0;
+
 err:
-	cancel_delayed_work_sync(&est->therm_est_work);
 	if (est->workqueue)
 		destroy_workqueue(est->workqueue);
 	kfree(est);
@@ -783,6 +866,7 @@ static int therm_est_remove(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
 		device_remove_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
 	thermal_zone_device_unregister(est->thz);
+	thermal_cooling_device_unregister(est->cdev);
 	kfree(est->thz);
 	destroy_workqueue(est->workqueue);
 	kfree(est);

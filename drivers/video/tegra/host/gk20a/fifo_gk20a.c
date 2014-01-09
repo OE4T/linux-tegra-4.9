@@ -3,7 +3,7 @@
  *
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -929,8 +929,6 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 
-	nvhost_debug_dump(g->host);
-
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable ELPG */
@@ -944,6 +942,7 @@ static void gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	} else {
 		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
 		fake_fault = false;
+		nvhost_debug_dump(g->host);
 	}
 
 	/* lock all runlists. Note that locks are are released in
@@ -1073,6 +1072,8 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids)
 	unsigned long _engine_ids = __engine_ids;
 	unsigned long engine_ids = 0;
 	int ret;
+
+	nvhost_debug_dump(g->host);
 
 	/* store faulted engines in advance */
 	g->fifo.mmu_fault_engines = 0;

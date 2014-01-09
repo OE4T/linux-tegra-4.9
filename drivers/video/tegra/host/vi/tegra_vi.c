@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/vi/tegra_vi.c
- *
- * Copyright (c) 2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,6 +42,9 @@ int nvhost_vi_init(struct platform_device *dev)
 	int ret = 0;
 	struct vi *tegra_vi = nvhost_get_private_data(dev);
 
+	if (!tegra_vi)
+		return -ENODEV;
+
 	tegra_vi->reg = regulator_get(&dev->dev, "avdd_dsi_csi");
 	if (IS_ERR(tegra_vi->reg)) {
 		if (tegra_vi->reg == ERR_PTR(-ENODEV)) {
@@ -67,7 +68,7 @@ void nvhost_vi_deinit(struct platform_device *dev)
 {
 	struct vi *tegra_vi = nvhost_get_private_data(dev);
 
-	if (tegra_vi->reg) {
+	if (tegra_vi && tegra_vi->reg) {
 		regulator_put(tegra_vi->reg);
 		tegra_vi->reg = NULL;
 	}
@@ -86,7 +87,7 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	}
 
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
-	if (tegra_vi->reg) {
+	if (tegra_vi && tegra_vi->reg) {
 		ret = regulator_enable(tegra_vi->reg);
 		if (ret) {
 			dev_err(&dev->dev,
@@ -110,7 +111,7 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	struct vi *tegra_vi;
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 
-	if (tegra_vi->reg) {
+	if (tegra_vi && tegra_vi->reg) {
 		ret = regulator_disable(tegra_vi->reg);
 		if (ret) {
 			dev_err(&dev->dev,

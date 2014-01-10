@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-loki-panel.c
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -210,7 +210,7 @@ static int loki_hdmi_hotplug_init(struct device *dev)
 					__func__, PTR_ERR(loki_hdmi_vddio));
 			loki_hdmi_vddio = NULL;
 		} else
-			regulator_enable(loki_hdmi_vddio);
+			return regulator_enable(loki_hdmi_vddio);
 	}
 	return 0;
 }

@@ -62,6 +62,11 @@ static int show_channels(struct platform_device *pdev, void *data,
 	pdata = platform_get_drvdata(pdev);
 	m = nvhost_get_host(pdev);
 	ch = nvhost_getchannel(pdata->channel, true);
+	if (!ch) {
+		nvhost_err(&pdev->dev, "cannot init channel");
+		return 0;
+	}
+
 	if (ch->chid != locked_id)
 		mutex_lock(&ch->cdma.lock);
 	nvhost_get_chip_ops()->debug.show_channel_fifo(

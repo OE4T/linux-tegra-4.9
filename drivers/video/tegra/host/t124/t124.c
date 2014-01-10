@@ -687,6 +687,29 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->priv = t124;
 	op->remove_support = t124_remove_support;
 
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13) {
+		dev_warn(&host->dev->dev, "t132 detected. disabling power features of host1x clients");
+		for (i = 0; i < ARRAY_SIZE(t124_devices); i++) {
+			struct platform_device *pdev = t124_devices[i];
+			struct nvhost_device_data *pdata =
+				pdev->dev.platform_data;
+			if (!pdata) {
+				dev_warn(&host->dev->dev, "platform data for device %s is not available",
+					 pdev->name);
+				continue;
+			}
+			pdata->can_powergate = false;
+			pdata->scaling_init = false;
+			pdata->scaling_deinit = false;
+			pdata->devfreq_governor = NULL;
+			pdata->gpu_edp_device = false;
+			pdata->scaling_post_cb = NULL;
+			pdata->busy = NULL;
+			pdata->idle = NULL;
+			pdata->suspend_ndev = NULL;
+		}
+	}
+
 	return 0;
 
 err:

@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,10 +276,6 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 		return pgprot_noncached(prot);
 	else if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
 		return pgprot_writecombine(prot);
-#ifndef CONFIG_ARM_LPAE /* !!!FIXME!!! BUG 892578 */
-	else if (h->flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		return pgprot_inner_writeback(prot);
-#endif
 	return prot;
 }
 

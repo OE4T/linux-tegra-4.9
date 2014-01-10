@@ -1421,8 +1421,9 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops->early_enable) {
 		if (dc->out_ops->early_enable(dc))
 			dev_info(&dc->ndev->dev,
-				"Detected mode: %dx%d pclk=%d\n",
+				"Detected mode: %dx%d (on %dx%dmm) pclk=%d\n",
 				dc->mode.h_active, dc->mode.v_active,
+				dc->out->h_size, dc->out->v_size,
 				dc->mode.pclk);
 		else {
 			dev_err(&dc->ndev->dev,

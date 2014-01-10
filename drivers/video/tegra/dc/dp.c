@@ -2049,6 +2049,18 @@ static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
 
 	tegra_dc_set_fb_mode(dc, specs.modedb, false);
 
+	dc->out->h_size = specs.max_x * 10; /* in mm */
+	dc->out->v_size = specs.max_y * 10;
+
+	if (!dc->out->width && !dc->out->height) {
+		/* EDID specifies either the acutal screen sizes or
+		   the aspect ratios. The panel file can choose to
+		   trust the value as the actual sizes by leaving
+		   width/height to 0s */
+		dc->out->width = dc->out->h_size;
+		dc->out->height = dc->out->v_size;
+	}
+
 	tegra_dc_powergate_locked(dc);
 	msleep(50);
 	tegra_dc_put(dp->dc);

@@ -288,7 +288,6 @@ static struct tegra_dc_out loki_disp2_out = {
 static struct tegra_fb_data loki_disp1_fb_data = {
 	.win		= 0,
 	.bits_per_pixel = 32,
-	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
 static struct tegra_dc_platform_data loki_disp1_pdata = {
@@ -306,7 +305,6 @@ static struct tegra_fb_data loki_disp2_fb_data = {
 	.xres		= 1024,
 	.yres		= 600,
 	.bits_per_pixel = 32,
-	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
 static struct tegra_dc_platform_data loki_disp2_pdata = {
@@ -509,6 +507,14 @@ int __init loki_panel_init(int board_id)
 	__tegra_move_framebuffer(&loki_nvmap_device,
 		tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
+
+	if (tegra_bootloader_fb2_size)
+		__tegra_move_framebuffer(&loki_nvmap_device,
+			tegra_fb2_start, tegra_bootloader_fb2_start,
+			min(tegra_fb2_size, tegra_bootloader_fb2_size));
+	else
+		__tegra_clear_framebuffer(&loki_nvmap_device,
+				tegra_fb2_start, tegra_fb2_size);
 
 	res = platform_get_resource_byname(&loki_disp2_device,
 					 IORESOURCE_MEM, "fbmem");

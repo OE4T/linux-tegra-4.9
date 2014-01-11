@@ -444,8 +444,6 @@ static void edp_a_1080p_14_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->enable = edp_a_1080p_14_0_enable;
 	dc->disable = edp_a_1080p_14_0_disable;
 	dc->postsuspend	= edp_a_1080p_14_0_postsuspend,
-	dc->width = 320;
-	dc->height = 205;
 	dc->hotplug_gpio = TEGRA_GPIO_PFF0;
 }
 

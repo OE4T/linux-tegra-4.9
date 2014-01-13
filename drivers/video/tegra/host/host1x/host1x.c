@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -827,18 +827,15 @@ static int __exit nvhost_remove(struct platform_device *dev)
 static int nvhost_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_master *host = nvhost_get_private_data(pdev);
-	int ret = 0;
 
 	nvhost_module_enable_clk(dev);
 	power_off_host(pdev);
 	clock_off_host(pdev);
 	nvhost_module_disable_clk(dev);
 
-	ret = nvhost_module_suspend(&host->dev->dev);
-	dev_info(dev, "suspend status: %d\n", ret);
+	dev_info(dev, "suspended\n");
 
-	return ret;
+	return 0;
 }
 
 static int nvhost_resume(struct device *dev)

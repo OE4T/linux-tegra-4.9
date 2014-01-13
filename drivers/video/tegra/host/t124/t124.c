@@ -612,6 +612,17 @@ struct nvhost_device_data t132_gk20a_info = {
 	.moduleid		= NVHOST_MODULE_GPU,
 	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
 	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
+#ifdef CONFIG_GK20A_DEVFREQ
+	.busy			= gk20a_scale_notify_busy,
+	.idle			= gk20a_scale_notify_idle,
+	.scaling_init		= nvhost_gk20a_scale_init,
+	.scaling_deinit		= nvhost_gk20a_scale_deinit,
+	.suspend_ndev		= nvhost_scale3d_suspend,
+	.devfreq_governor	= "nvhost_podgov",
+	.scaling_post_cb	= nvhost_gk20a_scale_callback,
+	.gpu_edp_device		= true,
+	.qos_id			= PM_QOS_GPU_FREQ_MIN,
+#endif
 };
 #endif
 

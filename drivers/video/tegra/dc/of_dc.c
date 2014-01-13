@@ -351,7 +351,7 @@ static int parse_dc_default_out(struct platform_device *ndev,
 		int tmds_set_count =
 			of_get_child_count(tmds_np);
 		if (!tmds_set_count) {
-			pr_warn("warn: tmds node exists but no cfg!\n");
+			pr_info("tmds node exists but no cfg!\n");
 			goto success_dc_default_out;
 		}
 
@@ -1380,8 +1380,9 @@ struct tegra_dc_platform_data
 	 */
 	default_out_np = of_find_node_by_name(np, "dc-default-out");
 	if (!default_out_np) {
-		pr_warn("%s: could not find dc-default-out node\n",
+		pr_err("%s: could not find dc-default-out node\n",
 			__func__);
+		goto fail_parse;
 	} else {
 		err = parse_dc_default_out(ndev, default_out_np,
 			pdata->default_out);
@@ -1398,8 +1399,11 @@ struct tegra_dc_platform_data
 		timings_np = of_find_node_by_path(DC0_DISP_TIMINGS);
 #endif
 	if (!timings_np) {
-		pr_warn("%s: could not find display-timings node\n",
-			__func__);
+		if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
+			pr_err("%s: could not find display-timings node\n",
+				__func__);
+			goto fail_parse;
+		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
 		/* pdata->default_out->type == TEGRA_DC_OUT_DSI */
 		pdata->default_out->n_modes =
@@ -1450,7 +1454,7 @@ struct tegra_dc_platform_data
 		sd_np = of_find_node_by_path(DC0_SMARTDIMMER);
 #endif
 	if (!sd_np) {
-		pr_warn("%s: could not find SD settings node\n",
+		pr_info("%s: could not find SD settings node\n",
 			__func__);
 	} else {
 		if (of_device_is_available(sd_np)) {
@@ -1478,7 +1482,7 @@ struct tegra_dc_platform_data
 		cmu_np = of_find_node_by_path(DC0_CMU);
 #endif
 	if (!cmu_np) {
-		pr_warn("%s: could not find cmu node\n",
+		pr_info("%s: could not find cmu node\n",
 			__func__);
 	} else {
 		if (of_device_is_available(cmu_np)) {
@@ -1499,7 +1503,8 @@ struct tegra_dc_platform_data
 		np_dsi = of_find_node_by_path(DSI_NODE);
 
 		if (!np_dsi) {
-			pr_warn("%s: could not find dsi node\n", __func__);
+			pr_err("%s: could not find dsi node\n", __func__);
+			goto fail_parse;
 		} else if (of_device_is_available(np_dsi)) {
 			pdata->default_out->dsi = devm_kzalloc(&ndev->dev,
 				sizeof(struct tegra_dsi_out), GFP_KERNEL);

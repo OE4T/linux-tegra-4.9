@@ -254,7 +254,6 @@ struct nvmap_cache_op {
  * handle; on return, the argument is the name of the new handle
  */
 #define NVMAP_IOC_CREATE  _IOWR(NVMAP_IOC_MAGIC, 0, struct nvmap_create_handle)
-#define NVMAP_IOC_CLAIM   _IOWR(NVMAP_IOC_MAGIC, 1, struct nvmap_create_handle)
 #define NVMAP_IOC_FROM_ID _IOWR(NVMAP_IOC_MAGIC, 2, struct nvmap_create_handle)
 
 /* Actually allocates memory for the specified handle */

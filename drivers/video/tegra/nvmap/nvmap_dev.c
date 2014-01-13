@@ -736,11 +736,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -EFAULT;
 
 	switch (cmd) {
-	case NVMAP_IOC_CLAIM:
-		nvmap_warn(filp->private_data, "preserved handles not"
-			   "supported\n");
-		err = -ENODEV;
-		break;
 	case NVMAP_IOC_CREATE:
 	case NVMAP_IOC_FROM_ID:
 	case NVMAP_IOC_FROM_FD:

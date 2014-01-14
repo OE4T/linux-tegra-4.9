@@ -29,7 +29,7 @@
  *
  * Support added for bounded constraints by
  * Sai Gurrappadi <sgurrappadi@nvidia.com>
- * Copyright (c) 2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -1524,7 +1524,7 @@ static ssize_t pm_qos_bounded_write(struct file *filp, const char __user *buf,
 	if (!count || count >= MAX_WRITE_BYTES)
 		return -EINVAL;
 
-	input = kzalloc(count, GFP_KERNEL);
+	input = kzalloc(count + 1, GFP_KERNEL);
 	tmp = input;
 	if (!input)
 		return -ENOMEM;
@@ -1533,6 +1533,7 @@ static ssize_t pm_qos_bounded_write(struct file *filp, const char __user *buf,
 		kfree(tmp);
 		return -EFAULT;
 	}
+	input[count] = '\0';
 	memset(&value, 0, sizeof(value));
 	max_constraint = pm_qos_array[req->max_req.pm_qos_class]->constraints;
 	min_constraint = pm_qos_array[req->min_req.pm_qos_class]->constraints;

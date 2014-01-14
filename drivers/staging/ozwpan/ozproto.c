@@ -348,8 +348,17 @@ static void oz_rx_frame(struct sk_buff *skb)
 
 	pd = oz_pd_find(src_addr);
 	if (pd) {
-		if (!(pd->state & OZ_PD_S_CONNECTED))
+		if (!(pd->state & OZ_PD_S_CONNECTED)) {
+			char mac_buf[20];
+			char *envp[2];
+			snprintf(mac_buf, sizeof(mac_buf), "ID_MAC=%pm",
+								pd->mac_addr);
+			envp[0] = mac_buf;
+			envp[1] = NULL;
 			oz_pd_set_state(pd, OZ_PD_S_CONNECTED);
+			kobject_uevent_env(&g_oz_wpan_dev->kobj, KOBJ_CHANGE,
+									envp);
+		}
 		getnstimeofday(&current_time);
 		if ((current_time.tv_sec != pd->last_rx_timestamp.tv_sec) ||
 			(pd->presleep < MSEC_PER_SEC))  {

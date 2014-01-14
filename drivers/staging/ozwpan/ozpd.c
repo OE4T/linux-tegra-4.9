@@ -371,6 +371,12 @@ int oz_pd_sleep(struct oz_pd *pd)
 {
 	int do_stop = 0;
 	u16 stop_apps = 0;
+	char mac_buf[20];
+	char *envp[2];
+
+	snprintf(mac_buf, sizeof(mac_buf), "ID_MAC=%pm", pd->mac_addr);
+	envp[0] = mac_buf;
+	envp[1] = NULL;
 	oz_polling_lock_bh();
 	if (pd->state & (OZ_PD_S_SLEEP | OZ_PD_S_STOPPED)) {
 		oz_polling_unlock_bh();
@@ -380,6 +386,7 @@ int oz_pd_sleep(struct oz_pd *pd)
 		if (pd->keep_alive >= OZ_KALIVE_INFINITE)
 			oz_pd_indicate_farewells(pd);
 		oz_pd_set_state(pd, OZ_PD_S_SLEEP);
+		kobject_uevent_env(&g_oz_wpan_dev->kobj, KOBJ_CHANGE, envp);
 	} else {
 		do_stop = 1;
 	}

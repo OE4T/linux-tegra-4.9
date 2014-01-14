@@ -470,6 +470,11 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
+	if (!dbg_s->is_profiler && !dbg_s->ch) {
+		nvhost_err(dev, "bind a channel before regops for a debugging session");
+		return -EINVAL;
+	}
+
 	/* be sure that ctx info is in place */
 	if (!gr_context_info_available(dbg_s, &g->gr)) {
 		nvhost_err(dev, "gr context data not available\n");

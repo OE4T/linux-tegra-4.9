@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Memory Management Abstraction header
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,13 +62,8 @@ enum mem_mgr_type {
 	mem_mgr_type_dmabuf = 1,
 };
 
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 #define MEMMGR_TYPE_MASK	0x0
-#else
-#define MEMMGR_TYPE_MASK	0x3
-#endif
 #define MEMMGR_ID_MASK		(~MEMMGR_TYPE_MASK)
-
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip);
 struct mem_mgr *nvhost_memmgr_alloc_mgr(void);

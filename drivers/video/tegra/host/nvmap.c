@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Nvmap support
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,20 +55,16 @@ struct mem_mgr *nvhost_nvmap_alloc_mgr(void)
 
 void nvhost_nvmap_put_mgr(struct mem_mgr *mgr)
 {
-	if ((ulong)mgr != 0x1)
-		nvmap_client_put((struct nvmap_client *)mgr);
 }
 
 struct mem_mgr *nvhost_nvmap_get_mgr(struct mem_mgr *mgr)
 {
-	if ((ulong)mgr == 0x1)
-		return (struct mem_mgr *)0x1;
-	return (struct mem_mgr *)nvmap_client_get((struct nvmap_client *)mgr);
+	return (struct mem_mgr *)0x1;
 }
 
 struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd)
 {
-	return (struct mem_mgr *)nvmap_client_get_file(fd);
+	return (struct mem_mgr *)0x1;
 }
 
 struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
@@ -260,12 +256,7 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	return (struct mem_handle *)dma_buf_get(id);
-#else
-	return (struct mem_handle *)
-		nvmap_dmabuf_export((struct nvmap_client *)mgr, id);
-#endif
 }
 
 int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,

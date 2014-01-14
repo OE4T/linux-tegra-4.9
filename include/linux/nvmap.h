@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,14 +64,6 @@ struct nvmap_device;
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
-
-struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client, ulong user_id);
-
-struct nvmap_client *nvmap_client_get_file(int fd);
-
-struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
-
-void nvmap_client_put(struct nvmap_client *c);
 
 struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
 

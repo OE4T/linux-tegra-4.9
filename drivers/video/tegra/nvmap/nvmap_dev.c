@@ -603,22 +603,6 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client)
 	return client;
 }
 
-struct nvmap_client *nvmap_client_get_file(int fd)
-{
-	struct nvmap_client *client = ERR_PTR(-EFAULT);
-	struct file *f = fget(fd);
-	if (!f)
-		return ERR_PTR(-EINVAL);
-
-	if ((f->f_op == &nvmap_user_fops) || (f->f_op == &nvmap_super_fops)) {
-		client = f->private_data;
-		atomic_inc(&client->count);
-	}
-
-	fput(f);
-	return client;
-}
-
 void nvmap_client_put(struct nvmap_client *client)
 {
 	if (!client)
@@ -627,7 +611,6 @@ void nvmap_client_put(struct nvmap_client *client)
 	if (!atomic_dec_return(&client->count))
 		destroy_client(client);
 }
-EXPORT_SYMBOL(nvmap_client_put);
 
 static int nvmap_open(struct inode *inode, struct file *filp)
 {

@@ -369,6 +369,10 @@ ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd);
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 
+struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
+
+void nvmap_client_put(struct nvmap_client *c);
+
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);
 __u32 marshal_kernel_handle(ulong handle);

@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -637,18 +637,7 @@ struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 EXPORT_SYMBOL(__nvmap_dmabuf_export);
 
 /*
- * Increments ref count on the dma_buf. You are reponsbile for calling
- * dma_buf_put() on the returned dma_buf object.
- */
-struct dma_buf *nvmap_dmabuf_export(struct nvmap_client *client,
-				 unsigned long user_id)
-{
-	return __nvmap_dmabuf_export(client, unmarshal_user_id(user_id));
-}
-
-/*
- * Similar to nvmap_dmabuf_export() only use a ref to get the buf instead of a
- * user_id. You must dma_buf_put() the dma_buf object when you are done with
+ * You must dma_buf_put() the dma_buf object when you are done with
  * it.
  */
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)

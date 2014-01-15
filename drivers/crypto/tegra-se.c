@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2609,6 +2609,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 				&pdev->dev);
 		if (!match) {
 			dev_err(&pdev->dev, "Error: No device match found\n");
+			kfree(se_dev);
 			return -ENODEV;
 		}
 		se_dev->chipdata = (struct tegra_se_chipdata *)match->data;

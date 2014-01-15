@@ -909,7 +909,7 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch) {
 	bool verbose = true;
 	if (!ch || !ch->hwctx)
-		return;
+		return verbose;
 
 	nvhost_err(dev_from_gk20a(g),
 		"channel %d with hwctx generated a mmu fault",
@@ -1061,12 +1061,13 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			   " deferring channel recovery to channel free");
 		/* clear interrupt */
 		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-		return;
+		return verbose;
 	}
 
 	/* resetting the engines and clearing the runlists is done in
 	   a separate function to allow deferred reset. */
 	fifo_gk20a_finish_mmu_fault_handling(g, fault_id);
+	return verbose;
 }
 
 static void gk20a_fifo_get_faulty_channel(struct gk20a *g, int engine_id,

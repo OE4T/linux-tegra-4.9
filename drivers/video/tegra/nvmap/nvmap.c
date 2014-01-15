@@ -3,7 +3,7 @@
  *
  * Memory manager for Tegra GPU
  *
- * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -233,15 +233,6 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
 		return;
 
-	if (nvmap_find_cache_maint_op(h->dev, h)) {
-		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
-		/* acquire pin lock to ensure maintenance is done before
-		 * handle is pinned */
-		mutex_lock(&share->pin_lock);
-		nvmap_cache_maint_ops_flush(h->dev, h);
-		mutex_unlock(&share->pin_lock);
-	}
-
 	if (h->heap_pgalloc)
 		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
 	else
@@ -336,15 +327,6 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	    WARN_ON(!virt_addr_valid(h)) ||
 	    WARN_ON(!addr))
 		return;
-
-	if (nvmap_find_cache_maint_op(h->dev, h)) {
-		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
-		/* acquire pin lock to ensure maintenance is done before
-		 * handle is pinned */
-		mutex_lock(&share->pin_lock);
-		nvmap_cache_maint_ops_flush(h->dev, h);
-		mutex_unlock(&share->pin_lock);
-	}
 
 	/* Handle can be locked by cache maintenance in
 	 * separate thread */
@@ -488,14 +470,6 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				npages, 0, h->size, GFP_KERNEL);
 		if (err)
 			goto err;
-	}
-	if (atomic_read(&h->disable_deferred_cache) <= 1) {
-		/* disable deferred cache maint */
-		atomic_set(&h->disable_deferred_cache, 1);
-		if (nvmap_find_cache_maint_op(nvmap_dev, h))
-			nvmap_cache_maint_ops_flush(nvmap_dev, h);
-		/* avoid unnecessary check for deferred cache maint */
-		atomic_set(&h->disable_deferred_cache, 2);
 	}
 	nvmap_handle_put(h);
 	return sgt;

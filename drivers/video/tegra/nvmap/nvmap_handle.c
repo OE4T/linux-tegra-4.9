@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -476,8 +476,6 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 
 out:
 	BUG_ON(!atomic_read(&h->ref));
-	if (nvmap_find_cache_maint_op(h->dev, h))
-		nvmap_cache_maint_ops_flush(h->dev, h);
 	nvmap_handle_put(h);
 }
 EXPORT_SYMBOL(nvmap_free_handle_id);

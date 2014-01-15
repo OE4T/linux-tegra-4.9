@@ -803,80 +803,16 @@ static inline bool fast_cache_maint(struct nvmap_handle *h,
 }
 #endif
 
-static void debug_count_requested_op(struct nvmap_deferred_ops *deferred_ops,
-		unsigned long size, unsigned int flags)
-{
-	unsigned long inner_flush_size = size;
-	unsigned long outer_flush_size = size;
-	(void) outer_flush_size;
-
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	inner_flush_size = min(size, (unsigned long)
-		cache_maint_inner_threshold);
-#endif
-
-#if defined(CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS)
-	outer_flush_size = min(size, (unsigned long)
-		cache_maint_outer_threshold);
-#endif
-
-	if (flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		deferred_ops->deferred_maint_inner_requested +=
-				inner_flush_size;
-
-	if (flags == NVMAP_HANDLE_CACHEABLE) {
-		deferred_ops->deferred_maint_inner_requested +=
-				inner_flush_size;
-#ifdef CONFIG_OUTER_CACHE
-		deferred_ops->deferred_maint_outer_requested +=
-				outer_flush_size;
-#endif /* CONFIG_OUTER_CACHE */
-	}
-}
-
-static void debug_count_flushed_op(struct nvmap_deferred_ops *deferred_ops,
-		unsigned long size, unsigned int flags)
-{
-	unsigned long inner_flush_size = size;
-	unsigned long outer_flush_size = size;
-	(void) outer_flush_size;
-
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	inner_flush_size = min(size, (unsigned long)
-		cache_maint_inner_threshold);
-#endif
-
-#if defined(CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS)
-	outer_flush_size = min(size, (unsigned long)
-		cache_maint_outer_threshold);
-#endif
-
-	if (flags == NVMAP_HANDLE_INNER_CACHEABLE)
-		deferred_ops->deferred_maint_inner_flushed +=
-				inner_flush_size;
-
-	if (flags == NVMAP_HANDLE_CACHEABLE) {
-		deferred_ops->deferred_maint_inner_flushed +=
-				inner_flush_size;
-#ifdef CONFIG_OUTER_CACHE
-		deferred_ops->deferred_maint_outer_flushed +=
-				outer_flush_size;
-#endif /* CONFIG_OUTER_CACHE */
-	}
-}
-
 struct cache_maint_op {
-	struct list_head list_data;
 	phys_addr_t start;
 	phys_addr_t end;
 	unsigned int op;
 	struct nvmap_handle *h;
-	int error;
 	bool inner;
 	bool outer;
 };
 
-static void cache_maint_work_funct(struct cache_maint_op *cache_work)
+static int do_cache_maint(struct cache_maint_op *cache_work)
 {
 	pgprot_t prot;
 	pte_t **pte = NULL;
@@ -889,17 +825,8 @@ static void cache_maint_work_funct(struct cache_maint_op *cache_work)
 	struct nvmap_client *client = h->owner;
 	unsigned int op = cache_work->op;
 
-	BUG_ON(!h);
-
-	h = nvmap_handle_get(h);
-	if (!h) {
-		cache_work->error = -EFAULT;
-		return;
-	}
-	if (!h->alloc) {
-		cache_work->error = -EFAULT;
-		goto out;
-	}
+	if (!h || !h->alloc)
+		return -EFAULT;
 
 	if (client)
 		trace_cache_maint(client, h, pstart, pend, op);
@@ -929,13 +856,12 @@ static void cache_maint_work_funct(struct cache_maint_op *cache_work)
 
 	if (pstart > h->size || pend > h->size) {
 		pr_warn("cache maintenance outside handle\n");
-		cache_work->error = -EINVAL;
+		err = -EINVAL;
 		goto out;
 	}
 
 	pstart += h->carveout->base;
 	pend += h->carveout->base;
-
 	loop = pstart;
 
 	while (loop < pend) {
@@ -957,151 +883,7 @@ static void cache_maint_work_funct(struct cache_maint_op *cache_work)
 out:
 	if (pte)
 		nvmap_free_pte(h->dev, pte);
-	nvmap_handle_put(h);
-	return;
-}
-
-int nvmap_find_cache_maint_op(struct nvmap_device *dev,
-		struct nvmap_handle *h) {
-	struct nvmap_deferred_ops *deferred_ops =
-			nvmap_get_deferred_ops_from_dev(dev);
-	struct cache_maint_op *cache_op = NULL;
-	spin_lock(&deferred_ops->deferred_ops_lock);
-	list_for_each_entry(cache_op, &deferred_ops->ops_list, list_data) {
-		if (cache_op->h == h) {
-			spin_unlock(&deferred_ops->deferred_ops_lock);
-			return true;
-		}
-	}
-	spin_unlock(&deferred_ops->deferred_ops_lock);
-	return false;
-}
-
-void nvmap_cache_maint_ops_flush(struct nvmap_device *dev,
-		struct nvmap_handle *h) {
-
-	struct nvmap_deferred_ops *deferred_ops =
-		nvmap_get_deferred_ops_from_dev(dev);
-
-	struct cache_maint_op *cache_op = NULL;
-	struct cache_maint_op *temp = NULL;
-
-	size_t flush_size_outer_inner = 0;
-	size_t flush_size_inner	= 0;
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	bool allow_outer_flush_by_ways;
-#endif
-	struct list_head flushed_ops;
-
-	(void) flush_size_outer_inner;
-	(void) flush_size_inner;
-	INIT_LIST_HEAD(&flushed_ops);
-
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	/* go through deferred ops, check if we can just do full L1/L2 flush
-	 we only do list operation inside lock, actual maintenance shouldn't
-	 block list operations */
-	spin_lock(&deferred_ops->deferred_ops_lock);
-
-#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-	allow_outer_flush_by_ways =
-			cache_maint_outer_threshold >
-				cache_maint_inner_threshold;
-#else
-	allow_outer_flush_by_ways = false;
-#endif
-
-	if (list_empty(&deferred_ops->ops_list)) {
-		spin_unlock(&deferred_ops->deferred_ops_lock);
-		return;
-	}
-
-	/* count sum of inner and outer flush ranges */
-	list_for_each_entry(cache_op, &deferred_ops->ops_list, list_data) {
-		if (cache_op->op == NVMAP_CACHE_OP_WB_INV) {
-			unsigned long range =
-					cache_op->end - cache_op->start;
-			if (allow_outer_flush_by_ways &&
-				cache_op->outer && cache_op->inner)
-				flush_size_outer_inner += range;
-			else
-			if (cache_op->inner && !cache_op->outer)
-				flush_size_inner += range;
-		}
-	}
-	/* collect all flush operations */
-	if (flush_size_outer_inner > cache_maint_outer_threshold) {
-		list_for_each_entry_safe(cache_op, temp,
-					&deferred_ops->ops_list, list_data) {
-			if (cache_op->op == NVMAP_CACHE_OP_WB_INV &&
-					(cache_op->outer && cache_op->inner))
-				list_move(&cache_op->list_data, &flushed_ops);
-		}
-		debug_count_flushed_op(deferred_ops,
-				cache_maint_outer_threshold,
-				NVMAP_HANDLE_CACHEABLE);
-		debug_count_flushed_op(deferred_ops,
-				cache_maint_inner_threshold,
-				NVMAP_HANDLE_INNER_CACHEABLE);
-	} else if (flush_size_inner > cache_maint_inner_threshold) {
-		list_for_each_entry_safe(cache_op, temp,
-				&deferred_ops->ops_list, list_data) {
-			if (cache_op->op == NVMAP_CACHE_OP_WB_INV &&
-					(cache_op->inner && !cache_op->outer))
-				list_move(&cache_op->list_data, &flushed_ops);
-		}
-		debug_count_flushed_op(deferred_ops,
-				cache_maint_inner_threshold,
-				NVMAP_HANDLE_INNER_CACHEABLE);
-	}
-	spin_unlock(&deferred_ops->deferred_ops_lock);
-
-	/* do actual maintenance outside spinlock */
-	if (flush_size_outer_inner > cache_maint_outer_threshold) {
-		inner_flush_cache_all();
-		outer_flush_all();
-		/* cleanup finished ops */
-		list_for_each_entry_safe(cache_op, temp,
-				&flushed_ops, list_data) {
-			list_del(&cache_op->list_data);
-			nvmap_handle_put(cache_op->h);
-			kfree(cache_op);
-		}
-	} else if (flush_size_inner > cache_maint_inner_threshold) {
-		/* Flush only inner-cached entries */
-		inner_flush_cache_all();
-		/* cleanup finished ops */
-		list_for_each_entry_safe(cache_op, temp,
-				&flushed_ops, list_data) {
-			list_del(&cache_op->list_data);
-			nvmap_handle_put(cache_op->h);
-			kfree(cache_op);
-		}
-	}
-#endif
-	/* Flush other handles (all or only requested) */
-	spin_lock(&deferred_ops->deferred_ops_lock);
-	list_for_each_entry_safe(cache_op, temp,
-			&deferred_ops->ops_list, list_data) {
-		if (!h || cache_op->h == h)
-			list_move(&cache_op->list_data, &flushed_ops);
-	}
-	spin_unlock(&deferred_ops->deferred_ops_lock);
-
-	list_for_each_entry_safe(cache_op, temp,
-			&flushed_ops, list_data) {
-
-		cache_maint_work_funct(cache_op);
-
-		if (cache_op->op == NVMAP_CACHE_OP_WB_INV)
-			debug_count_flushed_op(deferred_ops,
-				cache_op->end - cache_op->start,
-				cache_op->h->flags);
-
-		list_del(&cache_op->list_data);
-		nvmap_handle_put(cache_op->h);
-		kfree(cache_op);
-	}
+	return err;
 }
 
 int __nvmap_cache_maint(struct nvmap_client *client,
@@ -1109,87 +891,24 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 			unsigned long start, unsigned long end,
 			unsigned int op, unsigned int allow_deferred)
 {
-	int err = 0;
-	struct nvmap_deferred_ops *deferred_ops =
-		nvmap_get_deferred_ops_from_dev(nvmap_dev);
-	bool inner_maint = false;
-	bool outer_maint = false;
+	int err;
+	struct cache_maint_op cache_op;
 
 	h = nvmap_handle_get(h);
 	if (!h)
 		return -EFAULT;
 
-	/* count requested flush ops */
-	if (op == NVMAP_CACHE_OP_WB_INV) {
-		spin_lock(&deferred_ops->deferred_ops_lock);
-		debug_count_requested_op(deferred_ops,
-				end - start, h->flags);
-		spin_unlock(&deferred_ops->deferred_ops_lock);
-	}
+	cache_op.h = h;
+	cache_op.start = start;
+	cache_op.end = end;
+	cache_op.op = op;
+	cache_op.inner = h->flags == NVMAP_HANDLE_CACHEABLE ||
+			 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
+	cache_op.outer = h->flags == NVMAP_HANDLE_CACHEABLE;
 
-	inner_maint = h->flags == NVMAP_HANDLE_CACHEABLE ||
-			h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
-
-#ifdef CONFIG_OUTER_CACHE
-	outer_maint = h->flags == NVMAP_HANDLE_CACHEABLE;
-#endif
-
-	/* Finish deferred maintenance for the handle before invalidating */
-	if (op == NVMAP_CACHE_OP_INV &&
-			nvmap_find_cache_maint_op(h->dev, h)) {
-		struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
-		mutex_lock(&share->pin_lock);
-		nvmap_cache_maint_ops_flush(h->dev, h);
-		mutex_unlock(&share->pin_lock);
-	}
-
-	if (op == NVMAP_CACHE_OP_WB_INV &&
-			(inner_maint || outer_maint) &&
-			allow_deferred == CACHE_MAINT_ALLOW_DEFERRED &&
-			atomic_read(&h->pin) == 0 &&
-			atomic_read(&h->disable_deferred_cache) == 0 &&
-			!h->nvhost_priv &&
-			deferred_ops->enable_deferred_cache_maintenance) {
-
-		struct cache_maint_op *cache_op;
-
-		cache_op = (struct cache_maint_op *)
-				kmalloc(sizeof(struct cache_maint_op),
-					GFP_KERNEL);
-		cache_op->h = h;
-		cache_op->start = start;
-		cache_op->end = end;
-		cache_op->op = op;
-		cache_op->inner = inner_maint;
-		cache_op->outer = outer_maint;
-
-		spin_lock(&deferred_ops->deferred_ops_lock);
-			list_add_tail(&cache_op->list_data,
-				&deferred_ops->ops_list);
-		spin_unlock(&deferred_ops->deferred_ops_lock);
-	} else {
-		struct cache_maint_op cache_op;
-
-		cache_op.h = h;
-		cache_op.start = start;
-		cache_op.end = end;
-		cache_op.op = op;
-		cache_op.inner = inner_maint;
-		cache_op.outer = outer_maint;
-
-		cache_maint_work_funct(&cache_op);
-
-		if (op == NVMAP_CACHE_OP_WB_INV) {
-			spin_lock(&deferred_ops->deferred_ops_lock);
-			debug_count_flushed_op(deferred_ops,
-				end - start, h->flags);
-			spin_unlock(&deferred_ops->deferred_ops_lock);
-		}
-
-		err = cache_op.error;
-		nvmap_handle_put(h);
-	}
-	return 0;
+	err = do_cache_maint(&cache_op);
+	nvmap_handle_put(h);
+	return err;
 }
 
 static int rw_handle_page(struct nvmap_handle *h, int is_read,

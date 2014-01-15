@@ -155,7 +155,6 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int bw_mbps_fp = la_params.la_real_to_fp(bw_mbps);
 	bool active = WIN_IS_ENABLED(w);
 	bool win_rotated = false;
-	unsigned int window_width = dfixed_trunc(w->w);
 	unsigned int surface_width = 0;
 	bool vertical_scaling_enabled = false;
 	bool pitch = !WIN_IS_BLOCKLINEAR(w) && !WIN_IS_TILED(w);

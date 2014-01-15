@@ -1842,7 +1842,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	/* enable power, clocks, resets, etc. */
 
 	/* The upstream DC needs to be clocked for accesses to HDMI to not
-	 * hard lock the system.  Because we don't know if HDMI is conencted
+	 * hard lock the system.  Because we don't know if HDMI is connected
 	 * to disp1 or disp2 we need to enable both until we set the DC mux.
 	 */
 	clk_prepare_enable(hdmi->disp1_clk);
@@ -1855,13 +1855,23 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	clk_prepare_enable(hdmi->hda2hdmi_clk);
 #endif
 
-	tegra_dc_setup_clk(dc, hdmi->clk);
-	clk_set_rate(hdmi->clk, dc->mode.pclk);
+	/* Reseting HDMI clock would cause visible display reset during boot
+	 * if bootloader set an image already. Skip such operation if HDMI
+	 * is already running on desired clock rate.
+	 */
+	if (clk_get_rate(hdmi->clk) == dc->mode.pclk) {
+		pr_info("%s: HDMI clock already configured to "
+			"target frequency, skipping clk setup.\n", __func__);
+		clk_prepare_enable(hdmi->clk);
+	} else {
+		tegra_dc_setup_clk(dc, hdmi->clk);
+		clk_set_rate(hdmi->clk, dc->mode.pclk);
 
-	clk_prepare_enable(hdmi->clk);
-	tegra_periph_reset_assert(hdmi->clk);
-	mdelay(1);
-	tegra_periph_reset_deassert(hdmi->clk);
+		clk_prepare_enable(hdmi->clk);
+		tegra_periph_reset_assert(hdmi->clk);
+		mdelay(1);
+		tegra_periph_reset_deassert(hdmi->clk);
+	}
 
 	/* TODO: copy HDCP keys from KFUSE to HDMI */
 
@@ -1977,6 +1987,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 		tegra_dc_hdmi_setup_tmds(hdmi, &tmds_ptr[tmds_len - 1]);
 	}
 
+	/* enable SOR */
 	tegra_hdmi_writel(hdmi,
 			  SOR_SEQ_CTL_PU_PC(0) |
 			  SOR_SEQ_PU_PC_ALT(0) |
@@ -1999,11 +2010,18 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	val |= SOR_CSTM_ROTCLK(2);
 	tegra_hdmi_writel(hdmi, val, HDMI_NV_PDISP_SOR_CSTM);
 
-
-	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
+	/* Putting display into STOP MODE will reset display which is undesired
+	 * if bootloader has already initialized display with image.
+	 */
+	if (!hdmi->dc->initialized) {
+		tegra_dc_writel(dc, DISP_CTRL_MODE_STOP,
+				DC_CMD_DISPLAY_COMMAND);
+		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	} else {
+		pr_info("%s: DC already initialized, skip putting HDMI "
+			"to STOP mode.\n", __func__);
+	}
 
 	/* start SOR */
 	tegra_hdmi_writel(hdmi,
@@ -2059,16 +2077,28 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 			DC_CMD_DISPLAY_POWER_CONTROL);
 
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 1);
+	/* we are called at boot when the actual connection state
+	 * isn't known, and other times (like fb_blank, which
+	 * does a disable followed by an enable) when it is.
+	 * don't just assume a connection but check hpd.
+	 */
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
 }
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	/*
+	 * set DC to STOP mode
+	 */
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 

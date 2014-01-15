@@ -542,19 +542,13 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #endif
 }
 
-static int tegra_dc_windows_is_overlapped(struct tegra_dc_win *a,
-	struct tegra_dc_win *b)
+/* determine if a row is within a window */
+static int tegra_dc_line_in_window(int line, struct tegra_dc_win *win)
 {
-	if (a == b)
-		return 0;
+	int win_first = win->out_y;
+	int win_last = win_first + win->out_h - 1;
 
-	if (!WIN_IS_ENABLED(a) || !WIN_IS_ENABLED(b))
-		return 0;
-
-	/* because memory access to load the fifo can overlap, only care
-	 * if windows overlap vertically */
-	return ((a->out_y + a->out_h > b->out_y) && (a->out_y <= b->out_y)) ||
-		((b->out_y + b->out_h > a->out_y) && (b->out_y <= a->out_y));
+	return (line >= win_first && line <= win_last);
 }
 
 /* check overlapping window combinations to find the max bandwidth. */
@@ -563,14 +557,23 @@ static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
 {
 	unsigned i;
 	unsigned j;
-	unsigned long bw;
-	unsigned long max = 0;
+	long max = 0;
 
 	for (i = 0; i < n; i++) {
-		bw = wins[i]->new_bandwidth;
-		for (j = 0; j < n; j++)
-			if (tegra_dc_windows_is_overlapped(wins[i], wins[j]))
-				bw += wins[j]->new_bandwidth;
+		struct tegra_dc_win *a = wins[i];
+		long bw = 0;
+		int a_first = a->out_y;
+
+		if (!WIN_IS_ENABLED(a))
+			continue;
+		for (j = 0; j < n; j++) {
+			struct tegra_dc_win *b = wins[j];
+
+			if (!WIN_IS_ENABLED(b))
+				continue;
+			if (tegra_dc_line_in_window(a_first, b))
+				bw += b->new_bandwidth;
+		}
 		if (max < bw)
 			max = bw;
 	}

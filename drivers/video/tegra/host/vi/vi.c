@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -230,57 +230,6 @@ static int __exit vi_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int vi_suspend(struct device *dev)
-{
-#ifdef CONFIG_TEGRA_CAMERA
-	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct vi *tegra_vi = (struct vi *)pdata->private_data;
-	int ret;
-#endif
-
-	dev_info(dev, "%s: ++\n", __func__);
-
-#ifdef CONFIG_TEGRA_CAMERA
-	ret = tegra_camera_suspend(tegra_vi->camera);
-	if (ret) {
-		dev_info(dev, "%s: tegra_camera_suspend error=%d\n",
-		__func__, ret);
-		return ret;
-	}
-#endif
-
-	return 0;
-}
-
-static int vi_resume(struct device *dev)
-{
-#ifdef CONFIG_TEGRA_CAMERA
-	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct vi *tegra_vi = (struct vi *)pdata->private_data;
-#endif
-
-	dev_info(dev, "%s: ++\n", __func__);
-
-#ifdef CONFIG_TEGRA_CAMERA
-	tegra_camera_resume(tegra_vi->camera);
-#endif
-
-	return 0;
-}
-
-static const struct dev_pm_ops vi_pm_ops = {
-	.suspend = vi_suspend,
-	.resume = vi_resume,
-#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
-	.runtime_suspend = nvhost_module_disable_clk,
-	.runtime_resume = nvhost_module_enable_clk,
-#endif
-};
-#endif
-
 static struct platform_driver vi_driver = {
 	.probe = vi_probe,
 	.remove = __exit_p(vi_remove),
@@ -288,7 +237,7 @@ static struct platform_driver vi_driver = {
 		.owner = THIS_MODULE,
 		.name = "vi",
 #ifdef CONFIG_PM
-		.pm = &vi_pm_ops,
+		.pm = &nvhost_module_pm_ops,
 #endif
 #ifdef CONFIG_OF
 		.of_match_table = tegra_vi_of_match,

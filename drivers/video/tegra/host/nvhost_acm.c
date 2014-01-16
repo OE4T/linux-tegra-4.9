@@ -667,6 +667,7 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 #endif
 };
 #endif
+EXPORT_SYMBOL(nvhost_module_pm_ops);
 
 /*FIXME Use API to get host1x domain */
 struct generic_pm_domain *host1x_domain;

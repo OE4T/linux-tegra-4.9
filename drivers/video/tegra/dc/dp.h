@@ -246,6 +246,7 @@ struct tegra_dc_dp_data {
 
 	struct tegra_edid		*dp_edid;
 	struct completion		hpd_plug;
+	struct completion		aux_tx;
 
 	struct tegra_dp_out		*pdata;
 };

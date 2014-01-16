@@ -48,6 +48,15 @@ static inline void tegra_dpaux_writel(struct tegra_dc_dp_data *dp,
 	writel(val, dp->aux_base + reg * 4);
 }
 
+static inline void tegra_dpaux_write_field(struct tegra_dc_dp_data *dp,
+					u32 reg, u32 mask, u32 val)
+{
+	u32 reg_val = tegra_dpaux_readl(dp, reg);
+	reg_val &= ~mask;
+	reg_val |= val;
+	tegra_dpaux_writel(dp, reg, reg_val);
+}
+
 static inline void tegra_dp_int_en(struct tegra_dc_dp_data *dp, u32 intr)
 {
 	u32 val;
@@ -66,7 +75,7 @@ static inline void tegra_dp_int_dis(struct tegra_dc_dp_data *dp, u32 intr)
 	u32 val;
 
 	val = tegra_dpaux_readl(dp, DPAUX_INTR_EN_AUX);
-	val &= intr;
+	val &= ~intr;
 
 	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, val);
 }
@@ -109,41 +118,98 @@ static inline u32 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 
 static inline int tegra_dpaux_wait_transaction(struct tegra_dc_dp_data *dp)
 {
-	/* According to DP spec, each aux transaction needs to finish
-	   within 40ms. */
-	if (tegra_dc_dpaux_poll_register(dp, DPAUX_DP_AUXCTL,
-			DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
-			DPAUX_DP_AUXCTL_TRANSACTREQ_DONE,
-			100, DP_AUX_TIMEOUT_MS) != 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: DPAUX transaction timeout\n");
-		return -EFAULT;
+	int err = 0;
+
+	if (unlikely(tegra_platform_is_fpga())) {
+		if (tegra_dc_dpaux_poll_register(dp, DPAUX_DP_AUXCTL,
+				DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
+				DPAUX_DP_AUXCTL_TRANSACTREQ_DONE,
+				100, DP_AUX_TIMEOUT_MS) != 0)
+			err = -EFAULT;
 	}
-	return 0;
+
+	if (likely(tegra_platform_is_silicon())) {
+		reinit_completion(&dp->aux_tx);
+		tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_TX_DONE);
+		if (tegra_dpaux_readl(dp, DPAUX_DP_AUXCTL) &
+				DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING) {
+			if (!wait_for_completion_timeout(&dp->aux_tx,
+				msecs_to_jiffies(DP_AUX_TIMEOUT_MS)))
+				err = -EBUSY;
+		}
+		tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_TX_DONE);
+	}
+
+	if (err)
+		dev_err(&dp->dc->ndev->dev, "dp: aux tx timeout\n");
+	return err;
 }
 
+static int tegra_dp_aux_tx_config(struct tegra_dc_dp_data *dp,
+				u32 cmd, u32 addr, bool addr_only,
+				u32 data[], u32 size)
+{
+	int i;
+
+	if (size > DP_AUX_MAX_BYTES)
+		goto fail;
+
+	switch (cmd) {
+	case DPAUX_DP_AUXCTL_CMD_I2CWR:
+	case DPAUX_DP_AUXCTL_CMD_I2CRD:
+	case DPAUX_DP_AUXCTL_CMD_I2CREQWSTAT:
+	case DPAUX_DP_AUXCTL_CMD_MOTWR:
+	case DPAUX_DP_AUXCTL_CMD_MOTRD:
+	case DPAUX_DP_AUXCTL_CMD_MOTREQWSTAT:
+	case DPAUX_DP_AUXCTL_CMD_AUXWR:
+	case DPAUX_DP_AUXCTL_CMD_AUXRD:
+		tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
+					DPAUX_DP_AUXCTL_CMD_MASK, cmd);
+		break;
+	default:
+		goto fail;
+	};
+
+	tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
+				DPAUX_DP_AUXCTL_CMDLEN_MASK,
+				size);
+
+	tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
+				DPAUX_DP_AUXCTL_ADDRESS_ONLY_MASK,
+				(addr_only ? DPAUX_DP_AUXCTL_ADDRESS_ONLY_TRUE :
+				DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE));
+
+	tegra_dpaux_writel(dp, DPAUX_DP_AUXADDR, addr);
+	for (i = 0; data && i < (DP_AUX_MAX_BYTES / 4); ++i)
+		tegra_dpaux_writel(dp, DPAUX_DP_AUXDATA_WRITE_W(i), data[i]);
+
+	return 0;
+fail:
+	return -EINVAL;
+}
 
 static int tegra_dc_dpaux_write_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
-	int	i;
-	u32	reg_val;
-	u32	timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
-	u32	defer_retries	= DP_AUX_DEFER_MAX_TRIES;
+	int err = 0;
+	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
+	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
 
-	if (*size >= DP_AUX_MAX_BYTES)
-		return -EINVAL;	/* only write one chunk of data */
-
-	/* Make sure the command is write command */
 	switch (cmd) {
 	case DPAUX_DP_AUXCTL_CMD_I2CWR:
 	case DPAUX_DP_AUXCTL_CMD_MOTWR:
 	case DPAUX_DP_AUXCTL_CMD_AUXWR:
 		break;
 	default:
-		dev_err(&dp->dc->ndev->dev, "dp: aux write cmd 0x%x is invalid\n",
-			cmd);
+		dev_err(&dp->dc->ndev->dev,
+			"dp: invalid aux write cmd: 0x%x\n", cmd);
 		return -EINVAL;
+	};
+
+	err = tegra_dp_aux_tx_config(dp, cmd, addr, false, (u32 *)data, *size);
+	if (err < 0) {
+		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
+		return err;
 	}
 
 	if (tegra_platform_is_silicon()) {
@@ -154,27 +220,15 @@ static int tegra_dc_dpaux_write_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 		}
 	}
 
-	tegra_dpaux_writel(dp, DPAUX_DP_AUXADDR, addr);
-	for (i = 0; i < DP_AUX_MAX_BYTES/4; ++i) {
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXDATA_WRITE_W(i),
-			(u32)*data);
-		data += 4;
-	}
-
-	reg_val = tegra_dpaux_readl(dp, DPAUX_DP_AUXCTL);
-	reg_val &= ~DPAUX_DP_AUXCTL_CMD_MASK;
-	reg_val |= cmd;
-	reg_val &= ~DPAUX_DP_AUXCTL_CMDLEN_FIELD;
-	reg_val |= (*size << DPAUX_DP_AUXCTL_CMDLEN_SHIFT);
-
 	while ((timeout_retries > 0) && (defer_retries > 0)) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
 			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
 				DP_DPCP_RETRY_SLEEP_NS << 1);
 
-		reg_val |= DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
+		tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
+					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
+					DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING);
 
 		if (tegra_dpaux_wait_transaction(dp))
 			dev_err(&dp->dc->ndev->dev,
@@ -269,24 +323,27 @@ tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 static int tegra_dc_dpaux_read_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
-	u32	reg_val;
-	u32	timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
-	u32	defer_retries	= DP_AUX_DEFER_MAX_TRIES;
+	int err = 0;
+	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
+	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
 
-	if (*size >= DP_AUX_MAX_BYTES)
-		return -EINVAL;	/* only read one chunk */
-
-	/* Check to make sure the command is read command */
 	switch (cmd) {
 	case DPAUX_DP_AUXCTL_CMD_I2CRD:
 	case DPAUX_DP_AUXCTL_CMD_I2CREQWSTAT:
+	case DPAUX_DP_AUXCTL_CMD_MOTREQWSTAT:
 	case DPAUX_DP_AUXCTL_CMD_MOTRD:
 	case DPAUX_DP_AUXCTL_CMD_AUXRD:
 		break;
 	default:
 		dev_err(&dp->dc->ndev->dev,
-			"dp: aux read cmd 0x%x is invalid\n", cmd);
+			"dp: invalid aux read cmd: 0x%x\n", cmd);
 		return -EINVAL;
+	};
+
+	err = tegra_dp_aux_tx_config(dp, cmd, addr, false, NULL, *size);
+	if (err < 0) {
+		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
+		return err;
 	}
 
 	if (tegra_platform_is_silicon()) {
@@ -297,22 +354,15 @@ static int tegra_dc_dpaux_read_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
 		}
 	}
 
-	tegra_dpaux_writel(dp, DPAUX_DP_AUXADDR, addr);
-
-	reg_val = tegra_dpaux_readl(dp, DPAUX_DP_AUXCTL);
-	reg_val &= ~DPAUX_DP_AUXCTL_CMD_MASK;
-	reg_val |= cmd;
-	reg_val &= ~DPAUX_DP_AUXCTL_CMDLEN_FIELD;
-	reg_val |= (*size << DPAUX_DP_AUXCTL_CMDLEN_SHIFT);
-
 	while ((timeout_retries > 0) && (defer_retries > 0)) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
 			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
 				DP_DPCP_RETRY_SLEEP_NS << 1);
 
-		reg_val |= DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING;
-		tegra_dpaux_writel(dp, DPAUX_DP_AUXCTL, reg_val);
+		tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
+					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
+					DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING);
 
 		if (tegra_dpaux_wait_transaction(dp))
 			dev_err(&dp->dc->ndev->dev,
@@ -1185,6 +1235,9 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 	if (status & DPAUX_INTR_AUX_PLUG_EVENT_PENDING)
 		complete_all(&dp->hpd_plug);
 
+	if (status & DPAUX_INTR_AUX_TX_DONE_PENDING)
+		complete_all(&dp->aux_tx);
+
 	if (status & DPAUX_INTR_AUX_IRQ_EVENT_PENDING) {
 		if (tegra_dc_dp_dpcd_read(dp,
 					NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
@@ -1314,6 +1367,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	INIT_WORK(&dp->lt_work, tegra_dc_dp_lt_worker);
 	init_completion(&dp->hpd_plug);
+	init_completion(&dp->aux_tx);
 
 	tegra_dc_set_outdata(dc, dp);
 	tegra_dc_dp_debug_create(dp);
@@ -1367,14 +1421,14 @@ static int tegra_dp_hpd_plug(struct tegra_dc_dp_data *dp)
 		return 0;
 
 	reinit_completion(&dp->hpd_plug);
-	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT_EN);
+	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT);
 	if (!wait_for_completion_timeout(&dp->hpd_plug,
 		msecs_to_jiffies(TEGRA_DP_HPD_PLUG_TIMEOUT_MS))) {
 		err = -ENODEV;
 		goto fail;
 	}
 fail:
-	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT_DIS);
+	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT);
 	return err;
 
 #undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
@@ -2026,6 +2080,7 @@ static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
 	if (!tegra_is_clk_enabled(dp->clk))
 		clk_prepare_enable(dp->clk);
 	tegra_dc_dpaux_enable(dp);
+	tegra_dp_enable_irq(dp->irq);
 	tegra_dp_hpd_config(dp);
 
 	tegra_dc_unpowergate_locked(dc);
@@ -2063,6 +2118,7 @@ static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
 
 	tegra_dc_powergate_locked(dc);
 	msleep(50);
+	tegra_dp_disable_irq(dp->irq);
 	tegra_dc_put(dp->dc);
 	return true;
 }

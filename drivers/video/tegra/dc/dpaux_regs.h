@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dpaux_regs.h
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,17 +19,22 @@
 
 
 #define DPAUX_INTR_EN_AUX				(0x1)
-#define DPAUX_INTR_EN_AUX_PLUG_EVENT_EN			(0x1 << 0)
-#define DPAUX_INTR_EN_AUX_PLUG_EVENT_DIS		(0)
+#define DPAUX_INTR_EN_AUX_PLUG_EVENT	(0x1 << 0)
+#define DPAUX_INTR_EN_AUX_TX_DONE		(0x1 << 3)
 #define DPAUX_INTR_AUX					(0x5)
 #define DPAUX_INTR_AUX_PLUG_EVENT_PENDING		(0x1 << 0)
 #define DPAUX_INTR_AUX_IRQ_EVENT_PENDING		(0x1 << 2)
+#define DPAUX_INTR_AUX_TX_DONE_PENDING		(0x1 << 3)
 #define DPAUX_DP_AUXDATA_WRITE_W(i)		     (0x9 + 4*(i))
 #define DPAUX_DP_AUXDATA_READ_W(i)		     (0x19 + 4*(i))
 #define DPAUX_DP_AUXADDR				(0x29)
 #define DPAUX_DP_AUXCTL					(0x2d)
 #define DPAUX_DP_AUXCTL_CMDLEN_SHIFT			(0)
-#define DPAUX_DP_AUXCTL_CMDLEN_FIELD			(0xff)
+#define DPAUX_DP_AUXCTL_CMDLEN_MASK		(0xff)
+#define DPAUX_DP_AUXCTL_ADDRESS_ONLY_SHIFT	(8)
+#define DPAUX_DP_AUXCTL_ADDRESS_ONLY_MASK	(1 << 8)
+#define DPAUX_DP_AUXCTL_ADDRESS_ONLY_TRUE	(1 << 8)
+#define DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE	(0 << 8)
 #define DPAUX_DP_AUXCTL_CMD_SHIFT			(12)
 #define DPAUX_DP_AUXCTL_CMD_MASK			(0xf << 12)
 #define DPAUX_DP_AUXCTL_CMD_I2CWR			(0 << 12)

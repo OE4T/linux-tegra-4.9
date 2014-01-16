@@ -133,8 +133,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			return -ENOMEM;
 
 		err = gr_gk20a_get_zcull_info(g, &g->gr, zcull_info);
-		if (err)
+		if (err) {
+			kfree(zcull_info);
 			break;
+		}
 
 		get_info_args->width_align_pixels = zcull_info->width_align_pixels;
 		get_info_args->height_align_pixels = zcull_info->height_align_pixels;
@@ -147,8 +149,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		get_info_args->subregion_height_align_pixels = zcull_info->subregion_height_align_pixels;
 		get_info_args->subregion_count = zcull_info->subregion_count;
 
-		if (zcull_info)
-			kfree(zcull_info);
+		kfree(zcull_info);
 		break;
 	case NVHOST_GPU_IOCTL_ZBC_SET_TABLE:
 		set_table_args = (struct nvhost_gpu_zbc_set_table_args *)buf;

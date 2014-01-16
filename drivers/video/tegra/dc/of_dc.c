@@ -798,7 +798,9 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 
 	for (cnt  = 0; cnt < n_cmd; cnt++, temp++) {
 		temp->cmd_type = be32_to_cpu(*prop_val_ptr++);
-		if (temp->cmd_type == TEGRA_DSI_PACKET_CMD) {
+		if ((temp->cmd_type == TEGRA_DSI_PACKET_CMD) ||
+			(temp->cmd_type ==
+			TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD)) {
 			temp->data_id = be32_to_cpu(*prop_val_ptr++);
 			arg1 = be32_to_cpu(*prop_val_ptr++);
 			arg2 = be32_to_cpu(*prop_val_ptr++);

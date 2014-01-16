@@ -1373,9 +1373,21 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	dc->out = out;
 	mode = tegra_dc_get_override_mode(dc);
 
-	if (mode)
+	if (mode) {
 		tegra_dc_set_mode(dc, mode);
-	else if (out->n_modes > 0)
+
+		/*
+		 * Bootloader should and should only pass disp_params if
+		 * it has initialized display controller.  Whenever we see
+		 * override modes, we should skip things cause display resets.
+		 */
+		dev_info(&dc->ndev->dev, "Bootloader disp_param detected. "
+				"Detected mode: %dx%d (on %dx%dmm) pclk=%d\n",
+				dc->mode.h_active, dc->mode.v_active,
+				dc->out->h_size, dc->out->v_size,
+				dc->mode.pclk);
+		dc->initialized = true;
+	} else if (out->n_modes > 0)
 		tegra_dc_set_mode(dc, &dc->out->modes[0]);
 
 	switch (out->type) {
@@ -2171,9 +2183,14 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	trace_display_mode(dc, &dc->mode);
 
 	if (dc->mode.pclk) {
-		if (tegra_dc_program_mode(dc, &dc->mode)) {
-			tegra_dc_io_end(dc);
-			return -EINVAL;
+		if (!dc->initialized) {
+			if (tegra_dc_program_mode(dc, &dc->mode)) {
+				tegra_dc_io_end(dc);
+				return -EINVAL;
+			}
+		} else {
+			dev_info(&dc->ndev->dev, "DC initialized, "
+					"skipping tegra_dc_program_mode.\n");
 		}
 	}
 
@@ -2336,9 +2353,11 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 	if (dc->mode.pclk == 0) {
 		switch (dc->out->type) {
 		case TEGRA_DC_OUT_HDMI:
-		/* DC enable called but no videomode is loaded.
-		     Check if HDMI is connected, then set fallback mdoe */
-		if (tegra_dc_hpd(dc)) {
+		/* If DC is enable called, and HDMI is connected,
+		 * but DC is not initialized by bootloader and no
+		 * mode is set up, then set a fallback mode.
+		 */
+		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
 			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 		} else
 			return false;

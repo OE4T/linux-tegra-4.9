@@ -142,6 +142,13 @@ struct tegra_dc {
 	bool				enabled;
 	bool				suspended;
 
+	/* Some of the setup code could reset display even if
+	 * DC is already by bootloader.  This one-time mark is
+	 * used to suppress such code blocks during system boot,
+	 * a.k.a the call stack above tegra_dc_probe().
+	 */
+	bool				initialized;
+
 	struct tegra_dc_out		*out;
 	struct tegra_dc_out_ops		*out_ops;
 	void				*out_data;

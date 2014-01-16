@@ -8,6 +8,12 @@
 #include <linux/module.h>
 #include <linux/dma-mapping.h>
 
+#ifdef CONFIG_ARM_DMA_IOMMU_ALIGNMENT
+#define DMA_BUF_ALIGNMENT CONFIG_ARM_DMA_IOMMU_ALIGNMENT
+#else
+#define DMA_BUF_ALIGNMENT 8
+#endif
+
 struct dma_coherent_mem {
 	void		*virt_base;
 	dma_addr_t	device_base;
@@ -197,9 +203,16 @@ int dma_alloc_from_coherent_attr(struct device *dev, ssize_t size,
 		align = 0;
 		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
 	} else  {
-		align = (1 << order) - 1;
-		count = 1 << order;
+		if (order > DMA_BUF_ALIGNMENT)
+			align = (1 << DMA_BUF_ALIGNMENT) - 1;
+		else
+			align = (1 << order) - 1;
 	}
+
+	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	else
+		count = 1 << order;
 
 	pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size,
 			0, count, align);

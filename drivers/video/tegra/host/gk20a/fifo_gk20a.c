@@ -916,12 +916,11 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 		ch->hw_chid);
 	if (ch->hwctx->error_notifier) {
 		u32 err = ch->hwctx->error_notifier->info32;
-		if (err) {
+		if (ch->hwctx->error_notifier->status == 0xffff) {
 			/* If error code is already set, this mmu fault
 			 * was triggered as part of recovery from other
 			 * error condition.
 			 * Don't overwrite error flag. */
-
 			/* Fifo timeout debug spew is controlled by user */
 			if (err == NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT)
 				verbose = ch->hwctx->timeout_debug_dump;

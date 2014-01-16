@@ -571,6 +571,7 @@ int gk20a_init_error_notifier(struct nvhost_hwctx *ctx,
 	ctx->error_notifier_ref = handle_ref;
 	ctx->error_notifier = va + offset;
 	ctx->error_notifier_va = va;
+	memset(ctx->error_notifier, 0, sizeof(struct nvhost_notification));
 	return 0;
 }
 

@@ -1462,6 +1462,45 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	return ret;
 }
 
+static u32 gk20a_init_sw_bundle(struct gk20a *g)
+{
+	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
+	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
+	u32 last_bundle_data = 0;
+	u32 err = 0;
+	int i;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+	/* enable pipe mode override */
+	gk20a_writel(g, gr_pipe_bundle_config_r(),
+		gr_pipe_bundle_config_override_pipe_mode_enabled_f());
+
+	/* load bundle init */
+	for (i = 0; i < sw_bundle_init->count; i++) {
+
+		if (i == 0 || last_bundle_data != sw_bundle_init->l[i].value) {
+			gk20a_writel(g, gr_pipe_bundle_data_r(),
+				sw_bundle_init->l[i].value);
+			last_bundle_data = sw_bundle_init->l[i].value;
+		}
+
+		gk20a_writel(g, gr_pipe_bundle_address_r(),
+			     sw_bundle_init->l[i].addr);
+
+		if (gr_pipe_bundle_address_value_v(sw_bundle_init->l[i].addr) ==
+		    GR_GO_IDLE_BUNDLE)
+			err |= gr_gk20a_wait_idle(g, end_jiffies,
+					GR_IDLE_CHECK_DEFAULT);
+	}
+
+	/* disable pipe mode override */
+	gk20a_writel(g, gr_pipe_bundle_config_r(),
+		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
+
+	return err;
+}
+
 /* init global golden image from a fresh gr_ctx in channel ctx.
    save a copy in local_golden_image in ctx_vars */
 static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
@@ -1488,6 +1527,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		goto clean_up;
 
 	err = gr_gk20a_fecs_ctx_bind_channel(g, c);
+	if (err)
+		goto clean_up;
+
+	err = gk20a_init_sw_bundle(g);
 	if (err)
 		goto clean_up;
 
@@ -4300,49 +4343,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto restore_fe_go_idle;
-
-	/* enable pipe mode override */
-	gk20a_writel(g, gr_pipe_bundle_config_r(),
-		gr_pipe_bundle_config_override_pipe_mode_enabled_f());
-
-	/* load bundle init */
-	err = 0;
-	for (i = 0; i < sw_bundle_init->count; i++) {
-
-		if (i == 0 || last_bundle_data != sw_bundle_init->l[i].value) {
-			gk20a_writel(g, gr_pipe_bundle_data_r(),
-				sw_bundle_init->l[i].value);
-			last_bundle_data = sw_bundle_init->l[i].value;
-		}
-
-		gk20a_writel(g, gr_pipe_bundle_address_r(),
-			     sw_bundle_init->l[i].addr);
-
-		if (gr_pipe_bundle_address_value_v(sw_bundle_init->l[i].addr) ==
-		    GR_GO_IDLE_BUNDLE)
-			err |= gr_gk20a_wait_idle(g, end_jiffies,
-					GR_IDLE_CHECK_DEFAULT);
-		else if (0) { /* IS_SILICON */
-			u32 delay = GR_IDLE_CHECK_DEFAULT;
-			do {
-				u32 gr_status = gk20a_readl(g, gr_status_r());
-
-				if (gr_status_fe_method_lower_v(gr_status) ==
-				    gr_status_fe_method_lower_idle_v())
-					break;
-
-				usleep_range(delay, delay * 2);
-				delay = min_t(u32, delay << 1,
-					GR_IDLE_CHECK_MAX);
-
-			} while (time_before(jiffies, end_jiffies) |
-					!tegra_platform_is_silicon());
-		}
-	}
-
-	/* disable pipe mode override */
-	gk20a_writel(g, gr_pipe_bundle_config_r(),
-		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
 
 restore_fe_go_idle:
 	/* restore fe_go_idle */

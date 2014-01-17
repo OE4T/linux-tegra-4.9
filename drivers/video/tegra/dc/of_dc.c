@@ -823,6 +823,9 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 		} else if (temp->cmd_type == TEGRA_DSI_DELAY_MS) {
 			temp->sp_len_dly.delay_ms =
 				be32_to_cpu(*prop_val_ptr++);
+		} else if (temp->cmd_type == TEGRA_DSI_SEND_FRAME) {
+			temp->sp_len_dly.frame_cnt =
+				be32_to_cpu(*prop_val_ptr++);
 		}
 	}
 
@@ -893,6 +896,7 @@ int parse_dsi_settings(struct platform_device *ndev,
 	u32 temp;
 	int err = 0;
 	int dsi_te_gpio = 0;
+	int bl_name_len = 0;
 	struct device_node *np_panel;
 	struct tegra_dsi_out *dsi = pdata->default_out->dsi;
 
@@ -964,6 +968,12 @@ int parse_dsi_settings(struct platform_device *ndev,
 		OF_DC_LOG("dsi refresh rate %d\n", dsi->refresh_rate);
 	}
 	if (!of_property_read_u32(np_panel,
+			"nvidia,dsi-rated-refresh-rate", &temp)) {
+		dsi->rated_refresh_rate = (u8)temp;
+		OF_DC_LOG("dsi rated refresh rate %d\n",
+				dsi->rated_refresh_rate);
+	}
+	if (!of_property_read_u32(np_panel,
 			"nvidia,dsi-virtual-channel", &temp)) {
 		dsi->virtual_channel = (u8)temp;
 		if (temp == TEGRA_DSI_VIRTUAL_CHANNEL_0)
@@ -993,6 +1003,42 @@ int parse_dsi_settings(struct platform_device *ndev,
 	if (!of_property_read_u32(np_panel, "nvidia,dsi-panel-reset", &temp)) {
 		dsi->panel_reset = (u8)temp;
 		OF_DC_LOG("dsi panel reset %d\n", dsi->panel_reset);
+	}
+	if (!of_property_read_u32(np_panel,
+				"nvidia,dsi-te-polarity-low", &temp)) {
+		dsi->te_polarity_low = (u8)temp;
+		OF_DC_LOG("dsi panel te polarity low %d\n",
+			dsi->te_polarity_low);
+	}
+	if (!of_property_read_u32(np_panel,
+				"nvidia,dsi-power-saving-suspend", &temp)) {
+		dsi->power_saving_suspend = (u8)temp;
+		OF_DC_LOG("dsi panel power saving suspend %d\n",
+				dsi->power_saving_suspend);
+	}
+	if (!of_property_read_u32(np_panel,
+				"nvidia,dsi-lp00-pre-panel-wakeup", &temp)) {
+		dsi->lp00_pre_panel_wakeup = (u8)temp;
+		OF_DC_LOG("dsi panel lp00 pre panel wakeup %d\n",
+				dsi->lp00_pre_panel_wakeup);
+	}
+	if (!of_property_read_u32(np_panel,
+				"nvidia,dsi-ulpm-not-supported", &temp)) {
+		dsi->ulpm_not_supported = (u8)temp;
+		OF_DC_LOG("dsi panel ulpm not supported %d\n",
+				dsi->ulpm_not_supported);
+	}
+	if (of_find_property(np_panel, "nvidia,dsi-bl-name", &bl_name_len)) {
+		dsi->bl_name = devm_kzalloc(&ndev->dev,
+				sizeof(u8) * bl_name_len, GFP_KERNEL);
+		if (!of_property_read_string(np_panel,
+				"nvidia,dsi-bl-name",
+				(const char **)&dsi->bl_name))
+			OF_DC_LOG("dsi panel bl name %s\n", dsi->bl_name);
+		else {
+			pr_err("dsi error parsing bl name\n");
+			kfree(dsi->bl_name);
+		}
 	}
 
 	if (!of_property_read_u32(np_panel, "nvidia,dsi-ganged-type", &temp)) {

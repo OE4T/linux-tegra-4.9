@@ -215,8 +215,8 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 		pr_err("%s: invalid argument\n", __func__);
 		return -EINVAL;
 	}
-
 	edid->support_audio = 0;
+	edid->hdmi_vic_len = 0;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */

@@ -288,6 +288,7 @@ static struct tegra_dc_out loki_disp2_out = {
 static struct tegra_fb_data loki_disp1_fb_data = {
 	.win		= 0,
 	.bits_per_pixel = 32,
+	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
 static struct tegra_dc_platform_data loki_disp1_pdata = {
@@ -305,6 +306,7 @@ static struct tegra_fb_data loki_disp2_fb_data = {
 	.xres		= 1024,
 	.yres		= 600,
 	.bits_per_pixel = 32,
+	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
 static struct tegra_dc_platform_data loki_disp2_pdata = {
@@ -506,10 +508,15 @@ int __init loki_panel_init(int board_id)
 	res->end = tegra_fb_start + tegra_fb_size - 1;
 
 	/* Copy the bootloader fb to the fb. */
-	__tegra_move_framebuffer(&loki_nvmap_device,
-		tegra_fb_start, tegra_bootloader_fb_start,
+	if (tegra_bootloader_fb_size)
+		__tegra_move_framebuffer(&loki_nvmap_device,
+			tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
+	else
+		__tegra_clear_framebuffer(&loki_nvmap_device,
+				tegra_fb_start, tegra_fb_size);
 
+	/* Copy the bootloader fb2 to the fb2. */
 	if (tegra_bootloader_fb2_size)
 		__tegra_move_framebuffer(&loki_nvmap_device,
 			tegra_fb2_start, tegra_bootloader_fb2_start,

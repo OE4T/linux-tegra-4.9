@@ -267,7 +267,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	__dev_pm_qos_hide_flags(dev);
 
 	qos = dev->power.qos;
-	if (!qos)
+	if (IS_ERR_OR_NULL(qos))
 		goto out;
 
 	/* Flush the constraints lists for the device. */

@@ -260,6 +260,10 @@ static int parse_dc_default_out(struct platform_device *ndev,
 		default_out->height = (unsigned) temp;
 		OF_DC_LOG("out_height %d\n", default_out->height);
 	}
+	if (!of_property_read_u32(np, "nvidia,out-rotation", &temp)) {
+		default_out->rotation = (unsigned) temp;
+		OF_DC_LOG("out_rotation %d\n", default_out->rotation);
+	}
 	if (np_hdmi && of_device_is_available(np_hdmi) &&
 		(default_out->type == TEGRA_DC_OUT_HDMI)) {
 		int id;
@@ -1059,6 +1063,12 @@ int parse_dsi_settings(struct platform_device *ndev,
 		dsi->power_saving_suspend = (bool)temp;
 		OF_DC_LOG("dsi power saving suspend %d\n",
 			dsi->power_saving_suspend);
+	}
+	if (!of_property_read_u32(np_panel,
+		"nvidia,dsi-ulpm-not-support", &temp)) {
+		dsi->ulpm_not_supported = (bool)temp;
+		OF_DC_LOG("dsi ulpm_not_supported %d\n",
+			dsi->ulpm_not_supported);
 	}
 	if (!of_property_read_u32(np_panel,
 		"nvidia,dsi-video-data-type", &temp)) {

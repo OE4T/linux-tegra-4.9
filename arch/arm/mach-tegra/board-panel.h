@@ -37,7 +37,6 @@ enum {
 	TEGRA_GPIO_RESET,
 	TEGRA_GPIO_BL_ENABLE,
 	TEGRA_GPIO_PWM,
-	TEGRA_GPIO_TE,
 	TEGRA_N_GPIO_PANEL, /* add new gpio above this entry */
 };
 
@@ -47,7 +46,7 @@ struct tegra_panel_of {
 	bool panel_gpio_populated;
 };
 static struct tegra_panel_of __maybe_unused panel_of = {
-	.panel_gpio = {-1, -1, -1, -1},
+	.panel_gpio = {-1, -1, -1},
 };
 
 struct tegra_panel_ops {
@@ -61,6 +60,7 @@ struct tegra_panel_ops {
 };
 extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
 extern struct tegra_panel_ops dsi_lgd_wxga_7_0_ops;
+extern struct tegra_panel_ops dsi_s_wqxga_10_1_ops;
 
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;

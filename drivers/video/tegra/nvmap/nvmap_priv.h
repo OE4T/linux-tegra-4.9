@@ -70,6 +70,7 @@ void _nvmap_handle_free(struct nvmap_handle *h);
 extern struct nvmap_share *nvmap_share;
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
+extern size_t cache_maint_inner_threshold;
 
 extern struct platform_device *nvmap_pdev;
 
@@ -96,6 +97,7 @@ extern struct platform_device *nvmap_pdev;
 #define outer_flush_range(s, e)
 #define outer_inv_range(s, e)
 #define outer_clean_range(s, e)
+#define outer_flush_all()
 extern void __flush_dcache_page(struct page *);
 #else
 #define PG_PROT_KERNEL pgprot_kernel

@@ -506,7 +506,7 @@ int tegra_dc_get_panel_sync_rate(void)
 }
 EXPORT_SYMBOL(tegra_dc_get_panel_sync_rate);
 
-static int _tegra_dc_set_mode(struct tegra_dc *dc,
+int _tegra_dc_set_mode(struct tegra_dc *dc,
 				const struct tegra_dc_mode *mode)
 {
 	struct tegra_dc_mode new_mode = *mode;

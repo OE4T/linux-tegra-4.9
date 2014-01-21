@@ -29,6 +29,7 @@
 #include "dc_priv.h"
 #include "nvsd.h"
 #include "hdmi.h"
+#include "nvsr.h"
 
 static ssize_t mode_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -711,6 +712,7 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
+	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 
 	device_remove_file(dev, &dev_attr_mode);
 	device_remove_file(dev, &dev_attr_nvdps);
@@ -735,6 +737,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	if (sd_settings)
 		nvsd_remove_sysfs(dev);
 
+	if (nvsr)
+		nvsr_remove_sysfs(dev);
+
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		device_remove_file(dev, &dev_attr_smart_panel);
 
@@ -750,6 +755,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
+	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_mode);
@@ -774,6 +780,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	if (sd_settings)
 		error |= nvsd_create_sysfs(dev);
+
+	if (nvsr)
+		error |= nvsr_create_sysfs(dev);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		error |= device_create_file(dev, &dev_attr_smart_panel);

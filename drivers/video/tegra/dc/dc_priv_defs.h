@@ -38,7 +38,6 @@
 
 #include "dc_reg.h"
 
-
 #define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)
 
 /* 29 bit offset for window clip number */
@@ -120,6 +119,8 @@ struct tegra_dc_shift_clk_div {
 	unsigned long mul; /* numerator */
 	unsigned long div; /* denominator */
 };
+
+struct tegra_dc_nvsr_data;
 
 struct tegra_dc {
 	struct platform_device		*ndev;
@@ -231,6 +232,8 @@ struct tegra_dc {
 	int				win_blank_saved_flag;
 	struct tegra_dc_win		win_blank_saved;
 	struct tegra_edid		*edid;
+
+	struct tegra_dc_nvsr_data *nvsr;
 };
 
 #endif

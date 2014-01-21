@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/control.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -66,6 +66,7 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 		properties->type = TEGRA_DC_EXT_LVDS;
 		break;
 	case TEGRA_DC_OUT_DP:
+	case TEGRA_DC_OUT_NVSR_DP:
 		properties->type = TEGRA_DC_EXT_DP;
 		break;
 	default:

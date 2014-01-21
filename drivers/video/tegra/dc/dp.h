@@ -18,6 +18,7 @@
 #define __DRIVER_VIDEO_TEGRA_DC_DP_H__
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include "sor.h"
 #include "dc_priv.h"
 #include "dpaux_regs.h"

@@ -62,6 +62,7 @@
 #include "dev.h"
 #include "nvsd.h"
 #include "dp.h"
+#include "nvsr.h"
 
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
@@ -1394,13 +1395,17 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_DP:
 		dc->out_ops = &tegra_dc_dp_ops;
 		break;
+#ifdef CONFIG_TEGRA_NVSR
+	case TEGRA_DC_OUT_NVSR_DP:
+		dc->out_ops = &tegra_dc_nvsr_ops;
+		break;
+#endif
 #endif
 #ifdef CONFIG_TEGRA_LVDS
 	case TEGRA_DC_OUT_LVDS:
 		dc->out_ops = &tegra_dc_lvds_ops;
 		break;
 #endif
-
 	default:
 		dc->out_ops = NULL;
 		break;
@@ -1836,7 +1841,7 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 		if (!completion_done(&dc->crc_complete))
 			complete(&dc->crc_complete);
 
-		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE && !dc->nvsr)
 			tegra_dc_put(dc);
 	}
 
@@ -1941,6 +1946,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		tegra_dc_one_shot_irq(dc, status);
 	else
 		tegra_dc_continuous_irq(dc, status);
+
+	if (dc->nvsr)
+		tegra_dc_nvsr_irq(dc->nvsr, status);
 
 	/* update video mode if it has changed since the last frame */
 	if (status & (FRAME_END_INT | V_BLANK_INT))

@@ -663,6 +663,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	}
 
 	mutex_init(&g->dbg_sessions_lock);
+	mutex_init(&g->client_lock);
 
 	/* nvhost_as alloc_share can be called before gk20a is powered on.
 	   It requires mm sw states configured so init mm sw early here. */
@@ -680,7 +681,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	return err;
 }
 
-int nvhost_gk20a_init(struct platform_device *dev)
+static int gk20a_init_client(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
 
@@ -693,12 +694,35 @@ int nvhost_gk20a_init(struct platform_device *dev)
 	return 0;
 }
 
-void nvhost_gk20a_deinit(struct platform_device *dev)
+static void gk20a_deinit_client(struct platform_device *dev)
 {
 	nvhost_dbg_fn("");
 #ifndef CONFIG_PM_RUNTIME
 	nvhost_gk20a_prepare_poweroff(dev);
 #endif
+}
+
+int gk20a_get_client(struct gk20a *g)
+{
+	int err = 0;
+
+	mutex_lock(&g->client_lock);
+	if (g->client_refcount == 0)
+		err = gk20a_init_client(g->dev);
+	if (!err)
+		g->client_refcount++;
+	mutex_unlock(&g->client_lock);
+	return err;
+}
+
+void gk20a_put_client(struct gk20a *g)
+{
+	mutex_lock(&g->client_lock);
+	if (g->client_refcount == 1)
+		gk20a_deinit_client(g->dev);
+	g->client_refcount--;
+	mutex_unlock(&g->client_lock);
+	WARN_ON(g->client_refcount < 0);
 }
 
 void gk20a_free_hwctx(struct nvhost_hwctx *ctx)

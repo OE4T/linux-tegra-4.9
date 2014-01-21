@@ -151,6 +151,9 @@ struct gk20a {
 		struct device *node;
 	} prof;
 
+	struct mutex client_lock;
+	int client_refcount; /* open channels and ctrl nodes */
+
 	dev_t cdev_region;
 	struct class *class;
 
@@ -265,13 +268,6 @@ static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
 	spin_unlock(&gr->ch_tlb_lock);
 }
 
-/* This function can be called from two places, whichever comes first.
- * 1. nvhost calls this for gk20a driver init when client opens first gk20a channel.
- * 2. client opens gk20a ctrl node.
- */
-int nvhost_gk20a_init(struct platform_device *dev);
-void nvhost_gk20a_deinit(struct platform_device *dev);
-
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */
 enum {
@@ -315,6 +311,8 @@ void gk20a_channel_idle(struct platform_device *pdev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);
 void gk20a_reset(struct gk20a *g, u32 units);
+int gk20a_get_client(struct gk20a *g);
+void gk20a_put_client(struct gk20a *g);
 
 const struct firmware *
 gk20a_request_firmware(struct gk20a *g, const char *fw_name);

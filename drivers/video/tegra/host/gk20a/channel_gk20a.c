@@ -704,7 +704,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	trace_nvhost_channel_release(dev_name(&g->dev->dev));
 
 	gk20a_free_hwctx(hwctx);
-	gk20a_platform_putchannel(g->dev);
+	gk20a_put_client(g);
 	if (memmgr)
 		nvhost_memmgr_put_mgr(memmgr);
 	filp->private_data = NULL;
@@ -770,7 +770,7 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 
 	trace_nvhost_channel_open(dev_name(&g->dev->dev));
 
-	err = gk20a_platform_getchannel(g->dev);
+	err = gk20a_get_client(g);
 	if (err) {
 		nvhost_err(dev_from_gk20a(g),
 			"failed to get client ref");
@@ -783,7 +783,7 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 #endif
 	gk20a_channel_idle(g->dev);
 	if (!hwctx) {
-		gk20a_platform_putchannel(g->dev);
+		gk20a_put_client(g);
 		nvhost_err(dev_from_gk20a(g),
 			"failed to alloc hwctx");
 		return -ENOMEM;

@@ -39,7 +39,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = g->dev;
 
-	err = gk20a_platform_getchannel(g->dev);
+	err = gk20a_get_client(g);
 	if (err) {
 		nvhost_dbg_fn("fail to get channel!");
 		return err;
@@ -54,7 +54,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 
 	nvhost_dbg_fn("");
 
-	gk20a_platform_putchannel(dev);
+	gk20a_put_client(get_gk20a(dev));
 	return 0;
 }
 

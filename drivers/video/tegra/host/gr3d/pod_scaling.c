@@ -947,7 +947,7 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->block = 0;
 	podgov->p_use_throughput_hint = 1;
 
-	if (!strcmp(d->name, "vic03")) {
+	if (!strcmp(d->name, "vic03.0")) {
 		podgov->p_load_max = 990;
 		podgov->p_load_target = 800;
 		podgov->p_bias = 80;

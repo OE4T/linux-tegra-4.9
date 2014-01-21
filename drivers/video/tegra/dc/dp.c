@@ -683,7 +683,7 @@ static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 {
 	BUG_ON(!cfg);
 
-	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name               "\
+	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name               "
 		"cfg_value\n");
 	dev_info(&dp->dc->ndev->dev, "           Lane Count             %d\n",
 		cfg->max_lane_count);
@@ -1033,6 +1033,10 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 	BUG_ON(!cfg || !cfg->is_valid);
 
 	tegra_dc_sor_set_lane_parm(sor, cfg);
+	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_None, cfg);
+	tegra_dc_sor_set_dp_mode(dp->sor, cfg);
+	tegra_dp_set_lane_count(dp, cfg);
+	tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
 
 	tegra_dc_dp_dpcd_write(dp, NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET,
 		NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET_ANSI_8B10B);
@@ -1094,6 +1098,42 @@ static int tegra_dc_dp_fast_link_training(struct tegra_dc_dp_data *dp,
 	return 0;
 }
 
+static bool tegra_dc_dp_lower_config(struct tegra_dc_dp_data *dp,
+					struct tegra_dc_dp_link_config *cfg)
+{
+	BUG_ON(!cfg);
+
+	cfg->is_valid = false;
+	if (cfg->link_bw == SOR_LINK_SPEED_G1_62) {
+		if (cfg->max_link_bw > SOR_LINK_SPEED_G1_62)
+			cfg->link_bw = SOR_LINK_SPEED_G2_7;
+		cfg->lane_count /= 2;
+	} else if (cfg->link_bw == SOR_LINK_SPEED_G2_7)
+		cfg->link_bw = SOR_LINK_SPEED_G1_62;
+	else if (cfg->link_bw == SOR_LINK_SPEED_G5_4) {
+		if (cfg->lane_count == 1) {
+			cfg->link_bw = SOR_LINK_SPEED_G2_7;
+			cfg->lane_count = cfg->max_lane_count;
+		} else
+			cfg->lane_count /= 2;
+	} else {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Error link rate %d\n", cfg->link_bw);
+		return false;
+	}
+
+	if (cfg->lane_count <= 0)
+		goto fail;
+
+	if (!tegra_dc_dp_calc_config(dp, dp->mode, cfg))
+		goto fail;
+
+	cfg->is_valid = true;
+	return true;
+fail:
+	return false;
+}
+
 static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
@@ -1102,6 +1142,7 @@ static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 	u8	lane_count;
 	u32	retry;
 	int	ret;
+	struct tegra_dc_dp_link_config cur_cfg;
 
 	if (cfg->lane_count == 0) {
 		/* TODO: shutdown the link */
@@ -1128,32 +1169,43 @@ static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 	if (cfg->alt_scramber_reset_cap)
 		CHECK_RET(tegra_dc_dp_set_assr(dp, true));
 
-	ret = tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
-	if (ret) {
-		dev_err(&dp->dc->ndev->dev, "dp: Failed to set link bandwidth\n");
-		return ret;
-	}
-	ret = tegra_dp_set_lane_count(dp, cfg);
-	if (ret) {
-		dev_err(&dp->dc->ndev->dev, "dp: Failed to set lane count\n");
-		return ret;
-	}
-	tegra_dc_sor_set_dp_linkctl(dp->sor, true, trainingPattern_None, cfg);
-
 	/* Link training rules: always try fast link training for eDP panel
 	   when LT data is provided, or DP panel with valid config values */
 	ret = -1;
 	if ((cfg->edp_cap && dp->pdata->n_lt_settings)
 		|| (cfg->support_fast_lt && cfg->vs_pe_valid)) {
-		ret = tegra_dc_dp_fast_link_training(dp, cfg);
-		if (ret) {
+		cur_cfg.is_valid = false;
+		while (!(ret = tegra_dc_dp_fast_link_training(dp, cfg))) {
+			cur_cfg = *cfg;
+			if (!tegra_dc_dp_lower_config(dp, cfg))
+				break;
+		}
+
+		if (cur_cfg.is_valid) {
+			*cfg = cur_cfg;
+
+			/* redo fast link training if needed */
+			if (unlikely(ret))
+				ret = tegra_dc_dp_fast_link_training(dp, cfg);
+		}
+
+		if (unlikely(ret)) {
 			dev_WARN(&dp->dc->ndev->dev,
 				"dp: fast link training failed\n");
+			/* retstoring the max lane count and bw for Full LT */
+			cfg->lane_count	= cfg->max_lane_count;
+			cfg->link_bw = cfg->max_link_bw;
 			cfg->vs_pe_valid = false;
 		}
 	}
 	/* Fall back to full link training otherwise */
 	if (ret) {
+		tegra_dc_sor_set_dp_linkctl(dp->sor, true,
+			trainingPattern_None, cfg);
+		tegra_dc_sor_set_dp_mode(dp->sor, cfg);
+		tegra_dp_set_lane_count(dp, cfg);
+		tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
+
 		ret = tegra_dp_lt(dp);
 		if (ret < 0) {
 			dev_err(&dp->dc->ndev->dev, "dp: link training failed\n");
@@ -1432,41 +1484,6 @@ fail:
 	return err;
 
 #undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
-}
-
-static bool tegra_dc_dp_lower_config(struct tegra_dc_dp_data *dp,
-					struct tegra_dc_dp_link_config *cfg)
-{
-	if (cfg->link_bw == SOR_LINK_SPEED_G1_62) {
-		if (cfg->max_link_bw > SOR_LINK_SPEED_G1_62)
-			cfg->link_bw = SOR_LINK_SPEED_G2_7;
-		cfg->lane_count /= 2;
-	} else if (cfg->link_bw == SOR_LINK_SPEED_G2_7)
-		cfg->link_bw = SOR_LINK_SPEED_G1_62;
-	else if (cfg->link_bw == SOR_LINK_SPEED_G5_4) {
-		if (cfg->lane_count == 1) {
-			cfg->link_bw = SOR_LINK_SPEED_G2_7;
-			cfg->lane_count = cfg->max_lane_count;
-		} else
-			cfg->lane_count /= 2;
-	} else {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: Error link rate %d\n", cfg->link_bw);
-		return false;
-	}
-
-	if (cfg->lane_count <= 0)
-		goto fail;
-
-	if (!tegra_dc_dp_calc_config(dp, dp->mode, cfg))
-		goto fail;
-
-	tegra_dp_set_lane_count(dp, cfg);
-	tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
-
-	return true;
-fail:
-	return false;
 }
 
 static void tegra_dp_set_tx_pu(struct tegra_dc_dp_data *dp, u32 pe[4],

@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -125,6 +125,8 @@ void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
 	u32 lane, u32 pre_emphasis, u32 drive_current, u32 tx_pu);
 void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
 	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg);
+void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
+	const struct tegra_dc_dp_link_config *cfg);
 void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds);
 void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor);

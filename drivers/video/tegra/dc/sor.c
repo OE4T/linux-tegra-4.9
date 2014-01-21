@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -463,7 +463,7 @@ static void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	}
 }
 
-static void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
+void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg)
 {
 	u32 reg_val;
@@ -885,7 +885,6 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 	/* Power up lanes */
 	BUG_ON(!cfg);
 	tegra_dc_sor_power_dplanes(sor, cfg->lane_count, true);
-	tegra_dc_sor_set_dp_mode(sor, cfg);
 }
 
 

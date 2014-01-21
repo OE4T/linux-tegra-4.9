@@ -25,6 +25,7 @@ snd-soc-tegra210-alt-fpga-clock-objs := ahub_unit_fpga_clock.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-utils.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-pcm.o
+obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra210-alt-fpga-clock.o
 obj-$(CONFIG_SND_SOC_TEGRA30_APBIF_ALT) += snd-soc-tegra30-alt-apbif.o
 obj-$(CONFIG_SND_SOC_TEGRA30_XBAR_ALT) += snd-soc-tegra30-alt-xbar.o
 obj-$(CONFIG_SND_SOC_TEGRA30_I2S_ALT) += snd-soc-tegra30-alt-i2s.o
@@ -45,5 +46,7 @@ obj-$(CONFIG_SND_SOC_TEGRA210_SPDIF_ALT) += snd-soc-tegra210-alt-spdif.o
 # Tegra machine Support
 snd-soc-tegra-alt-vcm30t124-objs := tegra_vcm30t124_alt.o
 snd-soc-tegra-alt-vcm30t124-b00-objs := tegra_vcm30t124_b00_alt.o
+snd-soc-tegra-alt-grenada-objs := tegra_grenada_alt.o
 obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-vcm30t124.o
 obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-vcm30t124-b00.o
+obj-$(CONFIG_SND_SOC_TEGRA_GRENADA_ALT) += snd-soc-tegra-alt-grenada.o

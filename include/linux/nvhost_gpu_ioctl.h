@@ -124,6 +124,19 @@ struct nvhost_gpu_characteristics {
 	*/
 };
 
+
+/* This contains the minimal set by which the userspace can
+   determine all the properties of the GPU */
+
+#define NVHOST_GPU_ARCH_GK100 0x000000E0
+#define NVHOST_GPU_IMPL_GK20A 0x0000000A
+
+#define NVHOST_GPU_ARCH_GM200 0x00000120
+#define NVHOST_GPU_IMPL_GM20B 0x0000000B
+
+#define NVHOST_GPU_BUS_TYPE_NONE         0
+#define NVHOST_GPU_BUS_TYPE_AXI         32
+
 struct nvhost_gpu_get_characteristics {
 	/* [in]  size reserved by the user space. Can be 0.
 	   [out] full buffer size by kernel */

@@ -2930,4 +2930,40 @@ static inline u32 gr_fe_pwr_mode_req_done_v(void)
 {
 	return 0x00000000;
 }
+static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_r(void)
+{
+	return 0x00419f88;
+}
+static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_blkactivity_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_blkactivity_enable_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_r(void)
+{
+	return 0x00419f80;
+}
+static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_blkactivity_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_blkactivity_enable_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_r(void)
+{
+	return 0x00419ccc;
+}
+static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_m(void)
+{
+	return 0x1 << 31;
+}
 #endif

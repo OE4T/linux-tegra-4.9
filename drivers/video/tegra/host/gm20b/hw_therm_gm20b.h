@@ -90,6 +90,26 @@ static inline u32 therm_peakpower_config1_window_en_enabled_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 therm_peakpower_config1_r(u32 i)
+{
+	return 0x000202e8 + i*4;
+}
+static inline u32 therm_peakpower_config1_ba_sum_shift_s(void)
+{
+	return 5;
+}
+static inline u32 therm_peakpower_config1_ba_sum_shift_f(u32 v)
+{
+	return (v & 0x1f) << 8;
+}
+static inline u32 therm_peakpower_config1_ba_sum_shift_m(void)
+{
+	return 0x1f << 8;
+}
+static inline u32 therm_peakpower_config1_ba_sum_shift_v(u32 r)
+{
+	return (r >> 8) & 0x1f;
+}
 static inline u32 therm_peakpower_config2_r(u32 i)
 {
 	return 0x00020170 + i*4;

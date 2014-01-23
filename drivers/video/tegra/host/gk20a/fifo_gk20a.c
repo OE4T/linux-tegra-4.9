@@ -1333,6 +1333,15 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			/* TODO: clear pbdma channel errors */
 			handled |= f->intr.pbdma.channel_fatal_0 & pbdma_intr_0;
 		}
+		if (f->intr.pbdma.restartable_0 & pbdma_intr_0) {
+			dev_warn(dev, "sw method: %08x %08x",
+				gk20a_readl(g, pbdma_method0_r(0)),
+				gk20a_readl(g, pbdma_method0_r(0)+4));
+			gk20a_writel(g, pbdma_method0_r(0), 0);
+			gk20a_writel(g, pbdma_method0_r(0)+4, 0);
+			handled |= f->intr.pbdma.restartable_0 & pbdma_intr_0;
+		}
+
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 

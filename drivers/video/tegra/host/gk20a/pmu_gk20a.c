@@ -1612,6 +1612,29 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
 
+	/*
+	 * We don't want to disturb counters #3 and #6, which are used by
+	 * perfmon, so we add wiring also to counters #1 and #2 for
+	 * exposing raw counter readings.
+	 */
+	gk20a_writel(g, pwr_pmu_idle_mask_r(1),
+		pwr_pmu_idle_mask_gr_enabled_f() |
+		pwr_pmu_idle_mask_ce_2_enabled_f());
+
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(1));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_busy_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(1), data);
+
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(2));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_always_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
+
 	pmu->sample_buffer = 0;
 	err = pmu->dmem.alloc(&pmu->dmem, &pmu->sample_buffer, 2 * sizeof(u16));
 	if (err) {
@@ -2795,6 +2818,41 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 	*load = _load / 10;
 
 	return 0;
+}
+
+void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
+				 u32 *total_cycles)
+{
+	struct pmu_gk20a *pmu = &(g->pmu);
+
+	if (!g->power_on) {
+		*busy_cycles = 0;
+		*total_cycles = 0;
+		return;
+	}
+
+	gk20a_busy(g->dev);
+	*busy_cycles = pwr_pmu_idle_count_value_v(
+		gk20a_readl(g, pwr_pmu_idle_count_r(1)));
+	rmb();
+	*total_cycles = pwr_pmu_idle_count_value_v(
+		gk20a_readl(g, pwr_pmu_idle_count_r(2)));
+	gk20a_idle(g->dev);
+}
+
+void gk20a_pmu_reset_load_counters(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &(g->pmu);
+	u32 reg_val = pwr_pmu_idle_count_reset_f(1);
+
+	if (!g->power_on)
+		return;
+
+	gk20a_busy(g->dev);
+	gk20a_writel(g, pwr_pmu_idle_count_r(2), reg_val);
+	wmb();
+	gk20a_writel(g, pwr_pmu_idle_count_r(1), reg_val);
+	gk20a_idle(g->dev);
 }
 
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,

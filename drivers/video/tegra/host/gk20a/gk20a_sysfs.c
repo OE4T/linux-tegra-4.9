@@ -176,6 +176,36 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
+static ssize_t counters_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
+	u32 busy_cycles, total_cycles;
+	ssize_t res;
+
+	gk20a_pmu_get_load_counters(g, &busy_cycles, &total_cycles);
+
+	res = snprintf(buf, PAGE_SIZE, "%u %u\n", busy_cycles, total_cycles);
+
+	return res;
+}
+
+static DEVICE_ATTR(counters, S_IRUGO, counters_show, NULL);
+static ssize_t counters_show_reset(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	ssize_t res = counters_show(dev, attr, buf);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
+
+	gk20a_pmu_reset_load_counters(g);
+
+	return res;
+}
+
+static DEVICE_ATTR(counters_reset, S_IRUGO, counters_show_reset, NULL);
+
 static ssize_t elpg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -224,6 +254,8 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_slcg_enable);
 	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
 	device_remove_file(dev, &dev_attr_elpg_enable);
+	device_remove_file(dev, &dev_attr_counters);
+	device_remove_file(dev, &dev_attr_counters_reset);
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -235,6 +267,8 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_slcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
 	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
+	error |= device_create_file(&dev->dev, &dev_attr_counters);
+	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");

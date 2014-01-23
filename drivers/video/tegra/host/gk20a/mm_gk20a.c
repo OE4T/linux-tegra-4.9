@@ -103,7 +103,8 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
 static struct mapped_buffer_node *find_mapped_buffer_locked(
 					struct rb_root *root, u64 addr);
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct mem_handle *r);
+				struct rb_root *root, struct mem_handle *r,
+				u32 kind);
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   enum gmmu_pgsz_gk20a pgsz_idx,
 				   struct sg_table *sgt,
@@ -757,13 +758,15 @@ static int insert_mapped_buffer(struct rb_root *root,
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct mem_handle *r)
+				struct rb_root *root, struct mem_handle *r,
+				u32 kind)
 {
 	struct rb_node *node = rb_first(root);
 	while (node) {
 		struct mapped_buffer_node *mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		if (mapped_buffer->handle_ref == r)
+		if (mapped_buffer->handle_ref == r &&
+		    kind == mapped_buffer->kind)
 			return mapped_buffer;
 		node = rb_next(&mapped_buffer->node);
 	}
@@ -1029,8 +1032,16 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 {
 	struct mapped_buffer_node *mapped_buffer = 0;
 
+	/* fall-back to default kind if no kind is provided */
+	if (kind < 0) {
+		u64 nvmap_param;
+		nvhost_memmgr_get_param(memmgr, r, NVMAP_HANDLE_PARAM_KIND,
+					&nvmap_param);
+		kind = nvmap_param;
+	}
+
 	mapped_buffer = find_mapped_buffer_reverse_locked(
-						&vm->mapped_buffers, r);
+						&vm->mapped_buffers, r, kind);
 	if (!mapped_buffer)
 		return 0;
 
@@ -1106,7 +1117,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	int err = 0;
 	struct buffer_attrs bfr = {0};
 	struct nvhost_comptags comptags;
-	u64 value;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -1137,15 +1147,20 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (sgt)
 		*sgt = bfr.sgt;
 
-	err = nvhost_memmgr_get_param(memmgr, r, NVMAP_HANDLE_PARAM_KIND,
-				      &value);
-	if (err) {
-		nvhost_err(d, "failed to get nvmap buffer kind (err=%d)",
-			   err);
-		goto clean_up;
+	if (kind < 0) {
+		u64 value;
+		err = nvhost_memmgr_get_param(memmgr, r,
+					      NVMAP_HANDLE_PARAM_KIND,
+					      &value);
+		if (err) {
+			nvhost_err(d, "failed to get nvmap buffer kind (err=%d)",
+				   err);
+			goto clean_up;
+		}
+		kind = value;
 	}
 
-	bfr.kind_v = value;
+	bfr.kind_v = kind;
 	bfr.size = nvhost_memmgr_size(r);
 	bfr.align = 1 << __ffs((u64)sg_dma_address(bfr.sgt->sgl));
 	bfr.pgsz_idx = -1;
@@ -1219,7 +1234,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* store the comptag info */
-	WARN_ON(bfr.ctag_lines != comptags.lines);
 	bfr.ctag_offset = comptags.offset;
 
 	/* update gmmu ptes */
@@ -1279,6 +1293,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
+	mapped_buffer->kind        = kind;
 	mapped_buffer->va_allocated = va_allocated;
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;

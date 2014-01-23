@@ -194,6 +194,7 @@ struct mapped_buffer_node {
 	u32 ctag_offset;
 	u32 ctag_lines;
 	u32 flags;
+	u32 kind;
 	bool va_allocated;
 };
 

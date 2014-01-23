@@ -49,7 +49,7 @@ void nvhost_debug_output(struct output *o, const char* fmt, ...)
 }
 
 static int show_channels(struct platform_device *pdev, void *data,
-			 int locked_id)
+			 int locked_id, bool fifo)
 {
 	struct nvhost_channel *ch;
 	struct output *o = data;
@@ -61,23 +61,34 @@ static int show_channels(struct platform_device *pdev, void *data,
 
 	pdata = platform_get_drvdata(pdev);
 	m = nvhost_get_host(pdev);
-	ch = nvhost_getchannel(pdata->channel, true);
-	if (!ch) {
-		nvhost_err(&pdev->dev, "cannot init channel");
+	ch = nvhost_getchannel(pdata->channel, true, false);
+	if (!ch)
 		return 0;
-	}
 
 	if (ch->chid != locked_id)
 		mutex_lock(&ch->cdma.lock);
-	nvhost_get_chip_ops()->debug.show_channel_fifo(
-		m, ch, o, ch->chid);
+	if (fifo)
+		nvhost_get_chip_ops()->debug.show_channel_fifo(
+			m, ch, o, pdata->index);
 	nvhost_get_chip_ops()->debug.show_channel_cdma(
 		m, ch, o, ch->chid);
 	if (ch->chid != locked_id)
 		mutex_unlock(&ch->cdma.lock);
-	nvhost_putchannel(ch);
+	nvhost_putchannel(ch, false);
 
 	return 0;
+}
+
+static int show_channels_fifo(struct platform_device *pdev, void *data,
+			 int locked_id)
+{
+	return show_channels(pdev, data, locked_id, true);
+}
+
+static int show_channels_no_fifo(struct platform_device *pdev, void *data,
+			 int locked_id)
+{
+	return show_channels(pdev, data, locked_id, false);
 }
 
 static void show_syncpts(struct nvhost_master *m, struct output *o)
@@ -113,42 +124,12 @@ static void show_all(struct nvhost_master *m, struct output *o,
 	nvhost_get_chip_ops()->debug.show_mlocks(m, o);
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
-	nvhost_device_list_for_all(o, show_channels, locked_id);
+	nvhost_device_list_for_all(o, show_channels_fifo, locked_id);
 
 	nvhost_module_idle(m->dev);
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int show_channels_no_fifo(struct platform_device *pdev, void *data,
-				 int locked_id)
-{
-	struct nvhost_channel *ch;
-	struct output *o = data;
-	struct nvhost_master *m;
-	struct nvhost_device_data *pdata;
-
-	if (pdev == NULL)
-		return 0;
-
-	pdata = platform_get_drvdata(pdev);
-	m = nvhost_get_host(pdev);
-	ch = pdata->channel;
-	if (ch) {
-		mutex_lock(&ch->reflock);
-		if (ch->refcount) {
-			if (locked_id != ch->chid)
-				mutex_lock(&ch->cdma.lock);
-			nvhost_get_chip_ops()->debug.show_channel_cdma(m,
-					ch, o, ch->chid);
-			if (locked_id != ch->chid)
-				mutex_unlock(&ch->cdma.lock);
-		}
-		mutex_unlock(&ch->reflock);
-	}
-
-	return 0;
-}
-
 static void show_all_no_fifo(struct nvhost_master *m, struct output *o,
 			     int locked_id)
 {
@@ -271,7 +252,7 @@ void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id)
 	struct output o = {
 		.fn = write_to_printk
 	};
-	show_all(master, &o, locked_id);
+	show_all_no_fifo(master, &o, locked_id);
 }
 
 void nvhost_debug_dump(struct nvhost_master *master)

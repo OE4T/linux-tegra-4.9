@@ -191,7 +191,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->job)
 		nvhost_job_put(priv->job);
 
-	nvhost_putchannel(priv->ch);
+	nvhost_putchannel(priv->ch, true);
 
 	nvhost_memmgr_put_mgr(priv->memmgr);
 	kfree(priv);
@@ -205,14 +205,14 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	struct nvhost_device_data *pdata;
 
 	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
-	ch = nvhost_getchannel(ch, false);
+	ch = nvhost_getchannel(ch, false, true);
 	if (!ch)
 		return -ENOMEM;
 	trace_nvhost_channel_open(dev_name(&ch->dev->dev));
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		nvhost_putchannel(ch);
+		nvhost_putchannel(ch, true);
 		return -ENOMEM;
 	}
 	filp->private_data = priv;

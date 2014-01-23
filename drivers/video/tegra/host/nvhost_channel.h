@@ -114,8 +114,8 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 int nvhost_channel_submit(struct nvhost_job *job);
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
-		bool force);
-void nvhost_putchannel(struct nvhost_channel *ch);
+		bool force, bool init);
+void nvhost_putchannel(struct nvhost_channel *ch, bool deinit);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,

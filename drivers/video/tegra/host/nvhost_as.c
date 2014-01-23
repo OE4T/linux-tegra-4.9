@@ -3,7 +3,7 @@
  *
  * Tegra Host Address Spaces
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,7 +48,7 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 		return -ENOENT;
 	}
 
-	ch = nvhost_getchannel(ch, false);
+	ch = nvhost_getchannel(ch, false, true);
 	if (!ch) {
 		nvhost_dbg_fn("fail to get channel!");
 		return -ENOMEM;
@@ -78,7 +78,7 @@ int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 
 	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
 
-	nvhost_putchannel(ch);
+	nvhost_putchannel(ch, true);
 
 	return ret;
 }

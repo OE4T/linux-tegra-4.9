@@ -34,13 +34,13 @@
 static int gk20a_tegra_getchannel(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	return nvhost_getchannel(platform->nvhost.channel, false) == NULL
+	return nvhost_getchannel(platform->nvhost.channel, false, true) == NULL
 		? -ENOMEM : 0;
 }
 static void gk20a_tegra_putchannel(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	nvhost_putchannel(platform->nvhost.channel);
+	nvhost_putchannel(platform->nvhost.channel, true);
 }
 
 static int gk20a_tegra_probe(struct platform_device *dev)

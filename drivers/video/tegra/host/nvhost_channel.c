@@ -84,14 +84,16 @@ int nvhost_channel_submit(struct nvhost_job *job)
 }
 
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
-		bool force)
+		bool force, bool init)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	mutex_lock(&ch->reflock);
 	if (ch->refcount == 0) {
-		if (pdata->init)
+		if (!init)
+			err = -EBUSY;
+		else if (pdata->init)
 			err = pdata->init(ch->dev);
 	} else if (pdata->exclusive && !force)
 		err = -EBUSY;
@@ -108,7 +110,7 @@ struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 	return err ? NULL : ch;
 }
 
-void nvhost_putchannel(struct nvhost_channel *ch)
+void nvhost_putchannel(struct nvhost_channel *ch, bool deinit)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
@@ -117,7 +119,7 @@ void nvhost_putchannel(struct nvhost_channel *ch)
 		nvhost_module_enable_poweroff(ch->dev);
 
 	mutex_lock(&ch->reflock);
-	if (ch->refcount == 1 && pdata->deinit)
+	if (ch->refcount == 1 && deinit && pdata->deinit)
 		pdata->deinit(ch->dev);
 
 	ch->refcount--;

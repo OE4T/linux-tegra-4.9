@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T148 Architecture Chips
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -113,7 +113,6 @@ static struct platform_device tegra_host1x03_device = {
 struct nvhost_device_data t14_gr3d_info = {
 	.version	= 3,
 	.index		= 1,
-	.syncpts	= {NVSYNCPT_3D},
 	.waitbases	= {NVWAITBASE_3D},
 	.modulemutexes	= {NVMODMUTEX_3D},
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
@@ -153,7 +152,6 @@ static struct platform_device tegra_gr3d03_device = {
 
 struct nvhost_device_data t14_gr2d_info = {
 	.index		= 2,
-	.syncpts	= {NVSYNCPT_2D_0, NVSYNCPT_2D_1},
 	.waitbases	= {NVWAITBASE_2D_0, NVWAITBASE_2D_1},
 	.modulemutexes	= {NVMODMUTEX_2D_FULL, NVMODMUTEX_2D_SIMPLE,
 			  NVMODMUTEX_2D_SB_A, NVMODMUTEX_2D_SB_B},
@@ -188,8 +186,6 @@ static struct resource isp_resources[] = {
 
 struct nvhost_device_data t14_isp_info = {
 	.index		= 3,
-	.syncpts	= {NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
-			  NVSYNCPT_VI_ISP_4},
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_ISP,
@@ -222,10 +218,6 @@ static struct resource vi_resources[] = {
 
 struct nvhost_device_data t14_vi_info = {
 	.index		= 4,
-	.syncpts	= {NVSYNCPT_CSI_VI_0, NVSYNCPT_CSI_VI_1,
-			  NVSYNCPT_VI_ISP_0, NVSYNCPT_VI_ISP_1,
-			  NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
-			  NVSYNCPT_VI_ISP_4},
 	.modulemutexes	= {NVMODMUTEX_VI_0},
 	.clocks		= { {"host1x", 136000000, 6} },
 	.exclusive	= true,
@@ -258,7 +250,6 @@ static struct resource msenc_resources[] = {
 struct nvhost_device_data t14_msenc_info = {
 	.version	= NVHOST_ENCODE_MSENC_VER(3, 0),
 	.index		= 5,
-	.syncpts	= {NVSYNCPT_MSENC},
 	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= { {"msenc", UINT_MAX, 107, TEGRA_MC_CLIENT_MSENC},
@@ -296,7 +287,6 @@ static struct resource tsec_resources[] = {
 struct nvhost_device_data t14_tsec_info = {
 	.version	= NVHOST_ENCODE_TSEC_VER(1,0),
 	.index		= 7,
-	.syncpts	= {NVSYNCPT_TSEC},
 	.waitbases	= {NVWAITBASE_TSEC},
 	.class		= NV_TSEC_CLASS_ID,
 	.exclusive	= false,

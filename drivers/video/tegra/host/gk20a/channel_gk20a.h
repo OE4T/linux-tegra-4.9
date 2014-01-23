@@ -85,6 +85,8 @@ struct channel_gk20a {
 	bool vpr;
 	pid_t pid;
 
+	u32 syncpt_id;
+
 	struct mem_mgr *memmgr;
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;

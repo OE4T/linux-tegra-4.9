@@ -341,6 +341,7 @@ int nvhost_module_busy_ext(struct platform_device *dev);
 void nvhost_module_idle_ext(struct platform_device *dev);
 
 /* public host1x sync-point management APIs */
+u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs);
 void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id);
 u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id);

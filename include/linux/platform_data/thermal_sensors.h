@@ -1,7 +1,7 @@
 /*
  * include/linux/platform_data/thermal_sensors.h
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ struct thermal_trip_info {
 	unsigned long lower;
 	long hysteresis;
 	bool tripped;
+	u32 mask;
 	bool bound;
 	unsigned int level;
 	char *cdev_type;

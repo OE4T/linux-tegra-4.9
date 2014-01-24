@@ -798,6 +798,24 @@ int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 	return ret;
 }
 
+static void gk20a_detect_chip(struct gk20a *g)
+{
+	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
+
+	u32 mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
+	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
+		NVHOST_GPU_ARCHITECTURE_SHIFT;
+	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
+	gpu->rev =
+		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
+		mc_boot_0_minor_revision_v(mc_boot_0_value);
+
+	nvhost_dbg_info("arch: %x, impl: %x, rev: %x\n",
+			g->gpu_characteristics.arch,
+			g->gpu_characteristics.impl,
+			g->gpu_characteristics.rev);
+}
+
 int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -861,6 +879,8 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 			        bus_intr_en_0_pri_fecserr_m() |
 			        bus_intr_en_0_pri_timeout_m());
 	gk20a_reset_priv_ring(g);
+
+	gk20a_detect_chip(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.
 	   This function removes SlowdownOnBoot which applies 32x divider
@@ -1330,15 +1350,6 @@ void gk20a_reset(struct gk20a *g, u32 units)
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
-
-	u32 mc_boot_0_value;
-	mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
-	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVHOST_GPU_ARCHITECTURE_SHIFT;
-	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
-	gpu->rev =
-		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
-		mc_boot_0_minor_revision_v(mc_boot_0_value);
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */

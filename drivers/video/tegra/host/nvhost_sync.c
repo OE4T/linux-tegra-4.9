@@ -371,7 +371,7 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
 		pt->has_intr = false;
 		kref_put(&pt->refcount, nvhost_sync_pt_free_shared);
 	}
-	sync_timeline_signal(&obj->obj);
+	sync_timeline_signal(&obj->obj, 0);
 }
 
 int nvhost_sync_fence_set_name(int fence_fd, const char *name)

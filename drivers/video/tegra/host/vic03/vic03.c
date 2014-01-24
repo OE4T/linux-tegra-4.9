@@ -3,7 +3,7 @@
  *
  * Tegra VIC03 Module Support
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -631,14 +631,6 @@ static int vic03_probe(struct platform_device *dev)
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",
 			      dev->name);
-		pm_runtime_put(&dev->dev);
-		return err;
-	}
-
-	err = nvhost_as_init_device(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client address space"
-			      " device for %s", dev->name);
 		pm_runtime_put(&dev->dev);
 		return err;
 	}

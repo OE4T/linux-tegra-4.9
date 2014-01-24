@@ -1,7 +1,7 @@
 /*
  * GK20A Sync Framework Integration
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -341,7 +341,7 @@ struct sync_fence *gk20a_sync_fence_fdget(int fd)
 
 void gk20a_sync_timeline_signal(struct sync_timeline *timeline)
 {
-	sync_timeline_signal(timeline);
+	sync_timeline_signal(timeline, 0);
 }
 
 void gk20a_sync_timeline_destroy(struct sync_timeline *timeline)

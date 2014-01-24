@@ -2874,35 +2874,35 @@ static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_status1_r(void)
 {
 	return 0x00504694;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_s0_r(void)
 {
 	return 0x005046f0;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_s1_r(void)
 {
 	return 0x00504700;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_s0_r(void)
 {
 	return 0x005046f4;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_s1_r(void)
 {
 	return 0x00504704;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_s0_r(void)
 {
 	return 0x005046f8;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_s1_r(void)
 {
 	return 0x00504708;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_s0_r(void)
 {
 	return 0x005046fc;
 }
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_r(void)
+static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_s1_r(void)
 {
 	return 0x0050470c;
 }
@@ -2965,5 +2965,25 @@ static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_f(u32 v)
 static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_m(void)
 {
 	return 0x1 << 31;
+}
+static inline u32 gr_gpcs_pri_mmu_ctrl_r(void)
+{
+	return 0x00418880;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_r(void)
+{
+	return 0x004188b0;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_wr_r(void)
+{
+	return 0x004188b4;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_rd_r(void)
+{
+	return 0x004188b8;
+}
+static inline u32 gr_gpcs_mmu_num_active_ltcs_r(void)
+{
+	return 0x004188ac;
 }
 #endif

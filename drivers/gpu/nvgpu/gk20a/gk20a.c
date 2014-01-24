@@ -1648,15 +1648,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
 
-	u32 mc_boot_0_value;
-	mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
-	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVHOST_GPU_ARCHITECTURE_SHIFT;
-	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
-	gpu->rev =
-		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
-		mc_boot_0_minor_revision_v(mc_boot_0_value);
-
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
 

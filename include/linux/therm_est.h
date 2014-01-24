@@ -98,6 +98,7 @@ struct therm_fan_est_data {
 	char *cdev_type;
 	int active_trip_temps[MAX_ACTIVE_STATES];
 	int active_hysteresis[MAX_ACTIVE_STATES];
+	struct thermal_zone_params *tzp;
 	struct therm_fan_est_subdevice devs[];
 };
 #endif /* _LINUX_THERM_EST_H */

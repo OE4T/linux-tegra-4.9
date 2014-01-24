@@ -33,9 +33,12 @@
 #include <linux/hwmon-sysfs.h>
 
 #define DEFERRED_RESUME_TIME 3000
-
+#define DEBUG 0
 struct therm_fan_estimator {
 	long cur_temp;
+#if DEBUG
+	long cur_temp_debug;
+#endif
 	long polling_period;
 	struct workqueue_struct *workqueue;
 	struct delayed_work therm_fan_est_work;
@@ -56,6 +59,8 @@ static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 							unsigned long hyst_temp,
 							unsigned long trip_temp)
 {
+	int i;
+
 	est->active_hysteresis[trip] = hyst_temp;
 	est->active_trip_temps[trip] = trip_temp;
 	est->active_trip_temps_hyst[(trip << 1)] = trip_temp;
@@ -87,17 +92,20 @@ static void therm_fan_est_work_func(struct work_struct *work)
 				est->devs[i].coeffs[j];
 		}
 	}
-
+#if !DEBUG
 	est->cur_temp = sum / 100 + est->toffset;
-
+#else
+	est->cur_temp = est->cur_temp_debug;
+#endif
 	for (trip_index = 0;
 		trip_index < ((MAX_ACTIVE_STATES << 1) + 1); trip_index++) {
 		if (est->cur_temp < est->active_trip_temps_hyst[trip_index])
 			break;
 	}
-
 	if (est->current_trip_index != (trip_index - 1)) {
-		if (!((trip_index - 1) % 2) || (!est->current_trip_index)) {
+		if (!((trip_index - 1) % 2) || (!est->current_trip_index) ||
+			((trip_index - est->current_trip_index) >= 2) ||
+			((trip_index - est->current_trip_index) <= -2)) {
 			pr_info("%s, cur_temp:%ld, cur_trip_index:%d",
 			__func__, est->cur_temp, est->current_trip_index);
 			thermal_zone_device_update(est->thz);
@@ -150,7 +158,14 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
-	*temp = est->active_trip_temps[trip];
+	if (est->current_trip_index == 0)
+		*temp = 0;
+
+	if (trip * 2 <= est->current_trip_index) /* tripped then lower */
+		*temp = est->active_trip_temps_hyst[trip * 2 - 1];
+	else /* not tripped, then upper */
+		*temp = est->active_trip_temps_hyst[trip * 2];
+
 	return 0;
 }
 
@@ -313,10 +328,31 @@ static ssize_t show_temps(struct device *dev,
 	return strlen(buf);
 }
 
+#if DEBUG
+static ssize_t set_temps(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	int temp;
+
+	if (kstrtoint(buf, 0, &temp))
+		return -EINVAL;
+
+	est->cur_temp_debug = temp;
+
+	return count;
+}
+#endif
+
 static struct sensor_device_attribute therm_fan_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
+#if DEBUG
+	SENSOR_ATTR(temps, S_IRUGO | S_IWUSR, show_temps, set_temps, 0),
+#else
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
+#endif
 };
 
 static int therm_fan_est_probe(struct platform_device *pdev)
@@ -377,8 +413,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 				msecs_to_jiffies(est->polling_period));
 	est->cdev_type = data->cdev_type;
 	est->thz = thermal_zone_device_register((char *) dev_name(&pdev->dev),
-						10, 0x3FF, est,
-						&therm_fan_est_ops, NULL, 0, 0);
+					10, 0x3FF, est,
+					&therm_fan_est_ops, data->tzp, 0, 0);
 	if (IS_ERR_OR_NULL(est->thz))
 		return -EINVAL;
 	for (i = 0; i < ARRAY_SIZE(therm_fan_est_nodes); i++)

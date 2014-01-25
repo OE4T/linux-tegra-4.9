@@ -206,8 +206,12 @@ static int __nvhost_channelopen(struct inode *inode,
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_device_data *pdata;
 
-	if (inode)
-		ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
+	if (inode) {
+		pdata = container_of(inode->i_cdev,
+				struct nvhost_device_data, cdev);
+		ch = pdata->channel;
+	}
+
 	ch = nvhost_getchannel(ch, false, true);
 	if (!ch)
 		return -ENOMEM;
@@ -1131,15 +1135,16 @@ int nvhost_client_user_init(struct platform_device *dev)
 
 	/* gk20a creates the channel node by itself */
 	if (pdata->class != NV_GRAPHICS_GPU_CLASS_ID) {
-		ch->node = nvhost_client_device_create(dev, &ch->cdev,
+		pdata->node = nvhost_client_device_create(dev, &pdata->cdev,
 					"", devno, &nvhost_channelops);
-		if (ch->node == NULL)
+		if (pdata->node == NULL)
 			goto fail;
 	}
 
 	if (pdata->as_ops) {
 		++devno;
-		ch->as_node = nvhost_client_device_create(dev, &ch->as_cdev,
+		ch->as_node = nvhost_client_device_create(dev,
+					&ch->as_cdev,
 					"as-", devno, &nvhost_asops);
 		if (ch->as_node == NULL)
 			goto fail;
@@ -1190,9 +1195,9 @@ void nvhost_client_user_deinit(struct platform_device *dev)
 
 	BUG_ON(!ch);
 
-	if (ch->node) {
-		device_destroy(nvhost_master->nvhost_class, ch->cdev.dev);
-		cdev_del(&ch->cdev);
+	if (pdata->node) {
+		device_destroy(nvhost_master->nvhost_class, pdata->cdev.dev);
+		cdev_del(&pdata->cdev);
 	}
 
 	if (ch->as_node) {

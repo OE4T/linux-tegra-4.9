@@ -53,9 +53,7 @@ struct nvhost_channel {
 	struct mutex submitlock;
 	void __iomem *aperture;
 	struct nvhost_hwctx *cur_ctx;
-	struct device *node;
 	struct platform_device *dev;
-	struct cdev cdev;
 	struct nvhost_hwctx_handler *ctxhandler;
 	struct nvhost_cdma cdma;
 

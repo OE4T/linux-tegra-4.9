@@ -130,6 +130,8 @@ bool dma_contiguous_should_replace_page(struct page *page);
 int dma_contiguous_enable_replace_pages(struct device *dev);
 #else
 
+struct dma_contiguous_stats;
+
 static inline struct cma *dev_get_cma_area(struct device *dev)
 {
 	return NULL;

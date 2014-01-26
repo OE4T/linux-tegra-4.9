@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -303,8 +303,9 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 				break;
 
 			default:
-				BUG();
-				break;
+				pr_err_once("%s: error: invalid event\n",
+					    __func__);
+				return;
 			}
 		}
 	}
@@ -352,8 +353,9 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 				break;
 
 			default:
-				BUG();
-				break;
+				pr_err_once("%s: error: invalid event\n",
+					    __func__);
+				return;
 			}
 		}
 	}
@@ -364,6 +366,7 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 
 	extra |= QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX;
 	extra |= QUADD_COMM_CAP_EXTRA_GET_MMAP;
+	extra |= QUADD_COMM_CAP_EXTRA_GROUP_SAMPLES;
 
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 }
@@ -417,7 +420,8 @@ static int __init quadd_module_init(void)
 		return -ENODEV;
 	} else {
 		events = ctx.pmu_info.supported_events;
-		nr_events = ctx.pmu->get_supported_events(events);
+		nr_events = ctx.pmu->get_supported_events(events,
+							  QUADD_MAX_COUNTERS);
 		ctx.pmu_info.nr_supported_events = nr_events;
 
 		pr_info("PMU: amount of events: %d\n", nr_events);
@@ -434,7 +438,8 @@ static int __init quadd_module_init(void)
 #endif
 	if (ctx.pl310) {
 		events = ctx.pl310_info.supported_events;
-		nr_events = ctx.pl310->get_supported_events(events);
+		nr_events = ctx.pl310->get_supported_events(events,
+							    QUADD_MAX_COUNTERS);
 		ctx.pl310_info.nr_supported_events = nr_events;
 
 		pr_info("pl310 success, amount of events: %d\n",

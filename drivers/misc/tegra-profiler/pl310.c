@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/pl310.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -177,14 +177,16 @@ static void __maybe_unused l2x0_events_stop(void)
 	qm_debug_stop_source(QUADD_EVENT_SOURCE_PL310);
 }
 
-static int __maybe_unused l2x0_events_read(struct event_data *events)
+static int __maybe_unused
+l2x0_events_read(struct event_data *events, int max_events)
 {
 	unsigned long flags;
 
-	if (l2x0_ctx.l2x0_event_type < 0) {
-		pr_err_once("pl310 value: %u\n", events[0].val);
+	if (l2x0_ctx.l2x0_event_type < 0)
 		return 0;
-	}
+
+	if (max_events == 0)
+		return 0;
 
 	events[0].event_source = QUADD_EVENT_SOURCE_PL310;
 	events[0].event_id = l2x0_ctx.event_id;
@@ -203,9 +205,13 @@ static int __maybe_unused l2x0_events_read(struct event_data *events)
 	return 1;
 }
 
-static int __maybe_unused l2x0_events_read_emulate(struct event_data *events)
+static int __maybe_unused
+l2x0_events_read_emulate(struct event_data *events, int max_events)
 {
 	static u32 val;
+
+	if (max_events == 0)
+		return 0;
 
 	if (val > 100)
 		val = 0;
@@ -257,12 +263,26 @@ static int __maybe_unused l2x0_set_events(int *events, int size)
 	return 0;
 }
 
-static int __maybe_unused get_supported_events(int *events)
+static int get_supported_events(int *events, int max_events)
 {
+	if (max_events < 3)
+		return 0;
+
 	events[0] = QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES;
 	events[1] = QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES;
 	events[2] = QUADD_EVENT_TYPE_L2_ICACHE_MISSES;
+
 	return 3;
+}
+
+static int get_current_events(int *events, int max_events)
+{
+	if (max_events == 0)
+		return 0;
+
+	*events = l2x0_ctx.event_id;
+
+	return 1;
 }
 
 static struct quadd_event_source_interface l2x0_int = {
@@ -279,6 +299,7 @@ static struct quadd_event_source_interface l2x0_int = {
 #endif
 	.set_events		= l2x0_set_events,
 	.get_supported_events	= get_supported_events,
+	.get_current_events	= get_current_events,
 };
 
 struct quadd_event_source_interface *quadd_l2x0_events_init(void)

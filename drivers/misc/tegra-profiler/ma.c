@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/ma.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,18 +39,13 @@ static void make_sample(struct quadd_hrt_ctx *hrt_ctx,
 
 	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_MA;
-	record.cpu_mode = QUADD_CPU_MODE_NONE;
 
 	ma->pid = pid;
 	ma->time = quadd_get_time();
 
-	ma->vm_size = vm_size << PAGE_SHIFT;
-	ma->rss_size = rss_size << PAGE_SHIFT;
-/*
-	pr_debug("vm: %llu bytes (%llu mb), rss: %llu bytes (%llu mb)\n",
-		ma->vm_size, ma->vm_size / 0x100000,
-		ma->rss_size, ma->rss_size / 0x100000);
-*/
+	ma->vm_size = vm_size << (PAGE_SHIFT-10);
+	ma->rss_size = rss_size << (PAGE_SHIFT-10);
+
 	comm->put_sample(&record, NULL, 0);
 }
 

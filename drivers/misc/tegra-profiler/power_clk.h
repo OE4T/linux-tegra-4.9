@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.h
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,5 @@ int quadd_power_clk_init(struct quadd_ctx *quadd_ctx);
 
 int quadd_power_clk_start(void);
 void quadd_power_clk_stop(void);
-
-int quadd_power_clk_is_enabled(int *period);
 
 #endif /* __QUADD_POWER_CLK_H */

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/mmap.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,7 @@
 #include <linux/tegra_profiler.h>
 
 #include "mmap.h"
+#include "comm.h"
 #include "hrt.h"
 #include "debug.h"
 
@@ -122,22 +123,25 @@ static int find_file(const char *file_name, unsigned long addr,
 }
 
 static void
-put_mmap_sample(struct quadd_mmap_data *s, char *extra_data,
-		size_t extra_length)
+put_mmap_sample(struct quadd_mmap_data *s, char *filename,
+		size_t length)
 {
 	struct quadd_record_data r;
+	struct quadd_iovec vec;
 
 	r.magic = QUADD_RECORD_MAGIC;
 	r.record_type = QUADD_RECORD_TYPE_MMAP;
-	r.cpu_mode = QUADD_CPU_MODE_USER;
 
 	memcpy(&r.mmap, s, sizeof(*s));
-	r.mmap.filename_length = extra_length;
+	r.mmap.filename_length = length;
 
-	pr_debug("MMAP: pid: %d, file_name: '%s', addr: %#x, length: %u",
-		 s->pid, extra_data, s->addr, extra_length);
+	vec.base = filename;
+	vec.len = length;
 
-	quadd_put_sample(&r, extra_data, extra_length);
+	pr_debug("MMAP: pid: %u, file_name: '%s', addr: %#llx, length: %llu",
+		 s->pid, filename, s->addr, s->len);
+
+	quadd_put_sample(&r, &vec, 1);
 }
 
 void quadd_get_mmap_object(struct quadd_cpu_context *cpu_ctx,
@@ -176,8 +180,7 @@ void quadd_get_mmap_object(struct quadd_cpu_context *cpu_ctx,
 			} else {
 				sample.addr = vma->vm_start;
 				sample.len = vma->vm_end - vma->vm_start;
-				sample.pgoff =
-					(u64)vma->vm_pgoff << PAGE_SHIFT;
+				sample.pgoff = vma->vm_pgoff;
 			}
 			break;
 		}
@@ -262,12 +265,11 @@ int quadd_get_current_mmap(struct quadd_cpu_context *cpu_ctx, pid_t pid)
 		sample.pid = pid;
 		sample.addr = vma->vm_start;
 		sample.len = vma->vm_end - vma->vm_start;
-		sample.pgoff = (u64)vma->vm_pgoff << PAGE_SHIFT;
+		sample.pgoff = vma->vm_pgoff;
 
 		if (!find_file(file_name, sample.addr, sample.len)) {
 			strcpy(cpu_ctx->mmap_filename, file_name);
 			length_aligned = ALIGN(length, 8);
-
 			put_mmap_sample(&sample, file_name, length_aligned);
 		}
 	}

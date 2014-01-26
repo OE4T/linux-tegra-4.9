@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/miscdevice.h>
 #include <linux/sched.h>
 #include <linux/poll.h>
+#include <linux/bitops.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -136,10 +137,10 @@ rb_write(struct quadd_ring_buffer *rb, char *data, size_t length)
 	return length;
 }
 
-static size_t rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
+static ssize_t rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
 {
 	if (rb_get_free_space(rb) < length)
-		return 0;
+		return -EIO;
 
 	if (rb->pos_read > length)
 		rb->pos_read -= length;
@@ -174,7 +175,7 @@ static size_t rb_read(struct quadd_ring_buffer *rb, char *data, size_t length)
 	return length;
 }
 
-static size_t
+static ssize_t
 rb_read_user(struct quadd_ring_buffer *rb, char __user *data, size_t length)
 {
 	size_t new_pos_read, chunk1;
@@ -186,23 +187,17 @@ rb_read_user(struct quadd_ring_buffer *rb, char __user *data, size_t length)
 
 	if (new_pos_read < rb->pos_read) {
 		chunk1 = rb->size - rb->pos_read;
-		if (copy_to_user(data, rb->buf + rb->pos_read, chunk1)) {
-			pr_err_once("Error: copy_to_user\n");
-			return 0;
-		}
+		if (copy_to_user(data, rb->buf + rb->pos_read, chunk1))
+			return -EFAULT;
 
 		if (new_pos_read > 0) {
 			if (copy_to_user(data + chunk1, rb->buf,
-					 new_pos_read)) {
-				pr_err_once("Error: copy_to_user\n");
-				return 0;
-			}
+					 new_pos_read))
+				return -EFAULT;
 		}
 	} else {
-		if (copy_to_user(data, rb->buf + rb->pos_read, length)) {
-			pr_err_once("Error: copy_to_user\n");
-			return 0;
-		}
+		if (copy_to_user(data, rb->buf + rb->pos_read, length))
+			return -EFAULT;
 	}
 
 	rb->pos_read = new_pos_read;
@@ -212,17 +207,22 @@ rb_read_user(struct quadd_ring_buffer *rb, char __user *data, size_t length)
 }
 
 static void
-write_sample(struct quadd_record_data *sample, void *extra_data,
-	     size_t extra_length)
+write_sample(struct quadd_record_data *sample,
+	     struct quadd_iovec *vec, int vec_count)
 {
+	int i;
 	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
-	int length_sample = sizeof(struct quadd_record_data) + extra_length;
+	size_t length_sample;
+
+	length_sample = sizeof(struct quadd_record_data);
+	for (i = 0; i < vec_count; i++)
+		length_sample += vec[i].len;
 
 	spin_lock_irqsave(&rb->lock, flags);
 
 	if (length_sample > rb_get_free_space(rb)) {
-		pr_err_once("Error: Buffer overflowed, skip sample\n");
+		pr_err_once("Error: Buffer has been overflowed\n");
 		spin_unlock_irqrestore(&rb->lock, flags);
 		return;
 	}
@@ -232,10 +232,10 @@ write_sample(struct quadd_record_data *sample, void *extra_data,
 		return;
 	}
 
-	if (extra_data && extra_length > 0) {
-		if (!rb_write(rb, extra_data, extra_length)) {
-			pr_err_once("Buffer overflowed, skip sample\n");
+	for (i = 0; i < vec_count; i++) {
+		if (!rb_write(rb, vec[i].base, vec[i].len)) {
 			spin_unlock_irqrestore(&rb->lock, flags);
+			pr_err_once("%s: error: ring buffer\n", __func__);
 			return;
 		}
 	}
@@ -248,55 +248,59 @@ write_sample(struct quadd_record_data *sample, void *extra_data,
 	wake_up_interruptible(&comm_ctx.read_wait);
 }
 
-static int read_sample(char __user *buffer, size_t max_length)
+static ssize_t read_sample(char __user *buffer, size_t max_length)
 {
+	int retval = -EIO;
 	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
 	struct quadd_record_data record;
-	size_t length_extra = 0;
+	size_t length_extra = 0, nr_events;
+	struct quadd_sample_data *sample;
 
 	spin_lock_irqsave(&rb->lock, flags);
 
 	if (rb_is_empty(rb)) {
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
+		retval = 0;
+		goto out;
 	}
 
-	if (rb->fill_count < sizeof(struct quadd_record_data)) {
-		pr_err_once("Error: data\n");
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
-	}
+	if (rb->fill_count < sizeof(struct quadd_record_data))
+		goto out;
 
-	if (!rb_read(rb, (char *)&record, sizeof(struct quadd_record_data))) {
-		pr_err_once("Error: read sample\n");
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
-	}
+	if (!rb_read(rb, (char *)&record, sizeof(struct quadd_record_data)))
+		goto out;
 
 	if (record.magic != QUADD_RECORD_MAGIC) {
-		pr_err_once("Bad magic: %#x\n", record.magic);
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
+		pr_err("Error: bad magic: %#x\n", record.magic);
+		goto out;
 	}
 
 	switch (record.record_type) {
 	case QUADD_RECORD_TYPE_SAMPLE:
-		length_extra = record.sample.callchain_nr *
-					sizeof(record.sample.ip);
+		sample = &record.sample;
+		length_extra = sample->callchain_nr * sizeof(quadd_bt_addr_t);
+
+		nr_events = __sw_hweight32(record.sample.events_flags);
+		length_extra += nr_events * sizeof(u32);
 		break;
 
 	case QUADD_RECORD_TYPE_MMAP:
 		if (record.mmap.filename_length > 0) {
 			length_extra = record.mmap.filename_length;
 		} else {
-			length_extra = 0;
-			pr_err_once("Error: filename\n");
+			pr_err("Error: filename is empty\n");
+			goto out;
 		}
 		break;
 
-	case QUADD_RECORD_TYPE_DEBUG:
 	case QUADD_RECORD_TYPE_HEADER:
+		length_extra = record.hdr.nr_events * sizeof(u32);
+		break;
+
+	case QUADD_RECORD_TYPE_DEBUG:
+		length_extra = record.debug.extra_length;
+		break;
+
 	case QUADD_RECORD_TYPE_MA:
 		length_extra = 0;
 		break;
@@ -310,50 +314,49 @@ static int read_sample(char __user *buffer, size_t max_length)
 		break;
 
 	default:
-		pr_err_once("Error: Unknown sample: %u\n", record.record_type);
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
+		goto out;
 	}
 
 	if (sizeof(struct quadd_record_data) + length_extra > max_length) {
-		if (!rb_read_undo(rb, sizeof(struct quadd_record_data)))
-			pr_err_once("Error: rb_read_undo\n");
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
+		retval = rb_read_undo(rb, sizeof(struct quadd_record_data));
+		if (retval < 0)
+			goto out;
+
+		retval = 0;
+		goto out;
 	}
 
-	if (length_extra > rb_get_free_space(rb)) {
-		pr_err_once("Error: Incompleted sample\n");
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
-	}
+	if (length_extra > rb->fill_count)
+		goto out;
 
-	if (copy_to_user(buffer, &record, sizeof(struct quadd_record_data))) {
-		pr_err_once("Error: copy_to_user\n");
-		spin_unlock_irqrestore(&rb->lock, flags);
-		return 0;
-	}
+	if (copy_to_user(buffer, &record, sizeof(struct quadd_record_data)))
+		goto out_fault_error;
 
 	if (length_extra > 0) {
-		if (!rb_read_user(rb, buffer + sizeof(struct quadd_record_data),
-				  length_extra)) {
-			pr_err_once("Error: copy_to_user\n");
-			spin_unlock_irqrestore(&rb->lock, flags);
-			return 0;
-		}
+		retval = rb_read_user(rb, buffer + sizeof(record),
+				      length_extra);
+		if (retval <= 0)
+			goto out;
 	}
 
 	spin_unlock_irqrestore(&rb->lock, flags);
 	return sizeof(struct quadd_record_data) + length_extra;
+
+out_fault_error:
+	retval = -EFAULT;
+
+out:
+	spin_unlock_irqrestore(&rb->lock, flags);
+	return retval;
 }
 
-static void put_sample(struct quadd_record_data *data, char *extra_data,
-		       unsigned int extra_length)
+static void put_sample(struct quadd_record_data *data,
+		       struct quadd_iovec *vec, int vec_count)
 {
 	if (!atomic_read(&comm_ctx.active))
 		return;
 
-	write_sample(data, extra_data, extra_length);
+	write_sample(data, vec, vec_count);
 }
 
 static void comm_reset(void)
@@ -460,11 +463,17 @@ device_read(struct file *filp,
 
 	if (!atomic_read(&comm_ctx.active)) {
 		mutex_unlock(&comm_ctx.io_mutex);
-		return -1;
+		return -EPIPE;
 	}
 
 	while (was_read + sizeof(struct quadd_record_data) < length) {
 		res = read_sample(buffer + was_read, length - was_read);
+		if (res < 0) {
+			mutex_unlock(&comm_ctx.io_mutex);
+			pr_err("Error: data is corrupted\n");
+			return res;
+		}
+
 		if (res == 0)
 			break;
 

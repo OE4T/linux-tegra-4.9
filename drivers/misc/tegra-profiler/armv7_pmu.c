@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv7_pmu.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -291,9 +291,10 @@ static void pmu_stop(void)
 	qm_debug_stop_source(QUADD_EVENT_SOURCE_PMU);
 }
 
-static int __maybe_unused pmu_read(struct event_data *events)
+static int __maybe_unused
+pmu_read(struct event_data *events, int max_events)
 {
-	int idx, i;
+	int idx, i, nr;
 	u32 val;
 	u32 *prevp = __get_cpu_var(pmu_prev_val);
 
@@ -302,7 +303,9 @@ static int __maybe_unused pmu_read(struct event_data *events)
 		return 0;
 	}
 
-	for (i = 0; i < pmu_ctx.nr_used_counters; i++) {
+	nr = min_t(int, pmu_ctx.nr_used_counters, max_events);
+
+	for (i = 0; i < nr; i++) {
 		struct quadd_pmu_event_info *pmu_event = &pmu_ctx.pmu_events[i];
 
 		idx = pmu_event->counter_idx;
@@ -322,16 +325,19 @@ static int __maybe_unused pmu_read(struct event_data *events)
 				      events[i].val);
 	}
 
-	return pmu_ctx.nr_used_counters;
+	return nr;
 }
 
-static int __maybe_unused pmu_read_emulate(struct event_data *events)
+static int __maybe_unused
+pmu_read_emulate(struct event_data *events, int max_events)
 {
-	int i;
+	int i, nr;
 	static u32 val = 100;
 	u32 *prevp = __get_cpu_var(pmu_prev_val);
 
-	for (i = 0; i < pmu_ctx.nr_used_counters; i++) {
+	nr = min_t(int, pmu_ctx.nr_used_counters, max_events);
+
+	for (i = 0; i < nr; i++) {
 		if (val > 200)
 			val = 100;
 
@@ -341,7 +347,7 @@ static int __maybe_unused pmu_read_emulate(struct event_data *events)
 		val += 5;
 	}
 
-	return pmu_ctx.nr_used_counters;
+	return nr;
 }
 
 static int set_events(int *events, int size)
@@ -404,15 +410,29 @@ static int set_events(int *events, int size)
 	return 0;
 }
 
-static int get_supported_events(int *events)
+static int get_supported_events(int *events, int max_events)
 {
 	int i, nr_events = 0;
 
-	for (i = 0; i < QUADD_EVENT_TYPE_MAX; i++) {
+	max_events = min_t(int, QUADD_EVENT_TYPE_MAX, max_events);
+
+	for (i = 0; i < max_events; i++) {
 		if (pmu_ctx.current_map[i] != QUADD_ARMV7_UNSUPPORTED_EVENT)
 			events[nr_events++] = i;
 	}
 	return nr_events;
+}
+
+static int get_current_events(int *events, int max_events)
+{
+	int i;
+
+	max_events = min_t(int, pmu_ctx.nr_used_counters, max_events);
+
+	for (i = 0; i < max_events; i++)
+		events[i] = pmu_ctx.pmu_events[i].quadd_event_id;
+
+	return max_events;
 }
 
 static struct quadd_event_source_interface pmu_armv7_int = {
@@ -429,6 +449,7 @@ static struct quadd_event_source_interface pmu_armv7_int = {
 #endif
 	.set_events		= set_events,
 	.get_supported_events	= get_supported_events,
+	.get_current_events	= get_current_events,
 };
 
 struct quadd_event_source_interface *quadd_armv7_pmu_init(void)

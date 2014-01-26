@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.h
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@
 
 struct quadd_callchain {
 	int nr;
-	u32 callchain[QUADD_MAX_STACK_DEPTH];
+	quadd_bt_addr_t callchain[QUADD_MAX_STACK_DEPTH];
 };
 
 unsigned int

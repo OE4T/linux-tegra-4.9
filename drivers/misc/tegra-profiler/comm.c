@@ -25,6 +25,7 @@
 #include <linux/poll.h>
 #include <linux/bitops.h>
 #include <linux/interrupt.h>
+#include <linux/err.h>
 
 #include <asm/uaccess.h>
 
@@ -712,8 +713,11 @@ static int comm_init(void)
 struct quadd_comm_data_interface *
 quadd_comm_events_init(struct quadd_comm_control_interface *control)
 {
-	if (comm_init() < 0)
-		return NULL;
+	int err;
+
+	err = comm_init();
+	if (err < 0)
+		return ERR_PTR(err);
 
 	comm_ctx.control = control;
 	return &comm_data;

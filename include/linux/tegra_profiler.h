@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	18
+#define QUADD_SAMPLES_VERSION	19
 #define QUADD_IO_VERSION	9
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -30,6 +30,7 @@
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
+#define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD	19
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -140,7 +141,9 @@ struct quadd_sample_data {
 		user_mode:1,
 		lp_mode:1,
 		thumb_mode:1,
-		reserved:7;
+		state:1,
+		in_interrupt:1,
+		reserved:5;
 
 	u8 callchain_nr;
 	u32 events_flags;

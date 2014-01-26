@@ -54,16 +54,33 @@ static int get_default_properties(void)
 	return 0;
 }
 
+int tegra_profiler_try_lock(void)
+{
+	return atomic_cmpxchg(&ctx.tegra_profiler_lock, 0, 1);
+}
+EXPORT_SYMBOL_GPL(tegra_profiler_try_lock);
+
+void tegra_profiler_unlock(void)
+{
+	atomic_set(&ctx.tegra_profiler_lock, 0);
+}
+EXPORT_SYMBOL_GPL(tegra_profiler_unlock);
+
 static int start(void)
 {
 	int err;
+
+	if (tegra_profiler_try_lock()) {
+		pr_err("Error: tegra_profiler lock\n");
+		return -EBUSY;
+	}
 
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
 		if (ctx.pmu) {
 			err = ctx.pmu->enable();
 			if (err) {
 				pr_err("error: pmu enable\n");
-				return err;
+				goto errout;
 			}
 		}
 
@@ -71,7 +88,7 @@ static int start(void)
 			err = ctx.pl310->enable();
 			if (err) {
 				pr_err("error: pl310 enable\n");
-				return err;
+				goto errout;
 			}
 		}
 
@@ -81,17 +98,22 @@ static int start(void)
 		err = quadd_power_clk_start();
 		if (err < 0) {
 			pr_err("error: power_clk start\n");
-			return err;
+			goto errout;
 		}
 
 		err = quadd_hrt_start();
 		if (err) {
 			pr_err("error: hrt start\n");
-			return err;
+			goto errout;
 		}
 	}
 
 	return 0;
+
+errout:
+	atomic_set(&ctx.started, 0);
+	tegra_profiler_unlock();
+	return err;
 }
 
 static void stop(void)
@@ -109,6 +131,8 @@ static void stop(void)
 
 		if (ctx.pl310)
 			ctx.pl310->disable();
+
+		tegra_profiler_unlock();
 	}
 }
 
@@ -407,7 +431,9 @@ static int __init quadd_module_init(void)
 #ifdef QM_DEBUG_SAMPLES_ENABLE
 	pr_info("############## DEBUG VERSION! ##############\n");
 #endif
+
 	atomic_set(&ctx.started, 0);
+	atomic_set(&ctx.tegra_profiler_lock, 0);
 
 	get_default_properties();
 

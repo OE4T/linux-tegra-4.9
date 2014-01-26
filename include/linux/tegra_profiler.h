@@ -37,6 +37,9 @@
 #define QUADD_DEVICE_NAME	"quadd"
 #define QUADD_AUTH_DEVICE_NAME	"quadd_auth"
 
+#define QUADD_MOD_DEVICE_NAME		"quadd_mod"
+#define QUADD_MOD_AUTH_DEVICE_NAME	"quadd_mod_auth"
+
 #define QUADD_IOCTL	100
 
 /*

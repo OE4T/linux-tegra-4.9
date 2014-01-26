@@ -60,6 +60,7 @@ struct quadd_ctx {
 	struct quadd_mmap_ctx *mmap;
 
 	atomic_t started;
+	atomic_t tegra_profiler_lock;
 
 	int collect_kernel_ips;
 };

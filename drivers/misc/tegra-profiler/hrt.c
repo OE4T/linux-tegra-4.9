@@ -25,6 +25,7 @@
 #include <linux/ratelimit.h>
 #include <linux/ptrace.h>
 #include <linux/interrupt.h>
+#include <linux/err.h>
 
 #include <asm/cputype.h>
 #include <asm/irq_regs.h>
@@ -56,7 +57,7 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 
 	regs = get_irq_regs();
 
-	if (hrt.active == 0)
+	if (!hrt.active)
 		return HRTIMER_NORESTART;
 
 	qm_debug_handler_sample(regs);
@@ -274,8 +275,6 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 			return;
 	}
 
-	quadd_get_mmap_object(cpu_ctx, regs, task->pid);
-
 	if (ctx->pmu && ctx->pmu_info.active)
 		nr_events += read_source(ctx->pmu, regs,
 					 events, QUADD_MAX_COUNTERS);
@@ -339,11 +338,17 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	quadd_put_sample(&record_data, vec, vec_idx);
 }
 
-static inline int is_profile_process(pid_t pid)
+static inline int
+is_profile_process(struct task_struct *task)
 {
 	int i;
-	pid_t profile_pid;
+	pid_t pid, profile_pid;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
+
+	if (!task)
+		return 0;
+
+	pid = task->tgid;
 
 	for (i = 0; i < ctx->param.nr_pids; i++) {
 		profile_pid = ctx->param.pids[i];
@@ -389,13 +394,12 @@ static int remove_active_thread(struct quadd_cpu_context *cpu_ctx, pid_t pid)
 void __quadd_task_sched_in(struct task_struct *prev,
 			   struct task_struct *task)
 {
-	int current_flag;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	struct event_data events[QUADD_MAX_COUNTERS];
 	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
-	if (likely(hrt.active == 0))
+	if (likely(!hrt.active))
 		return;
 /*
 	if (__ratelimit(&ratelimit_state))
@@ -404,9 +408,8 @@ void __quadd_task_sched_in(struct task_struct *prev,
 			(unsigned int)prev->tgid, (unsigned int)task->pid,
 			(unsigned int)task->tgid);
 */
-	current_flag = is_profile_process(task->tgid);
 
-	if (current_flag) {
+	if (is_profile_process(task)) {
 		add_active_thread(cpu_ctx, task->pid, task->tgid);
 		atomic_inc(&cpu_ctx->nr_active);
 
@@ -426,13 +429,13 @@ void __quadd_task_sched_in(struct task_struct *prev,
 void __quadd_task_sched_out(struct task_struct *prev,
 			    struct task_struct *next)
 {
-	int n, prev_flag;
+	int n;
 	struct pt_regs *user_regs;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
-	if (likely(hrt.active == 0))
+	if (likely(!hrt.active))
 		return;
 /*
 	if (__ratelimit(&ratelimit_state))
@@ -441,9 +444,8 @@ void __quadd_task_sched_out(struct task_struct *prev,
 			(unsigned int)prev->tgid, (unsigned int)next->pid,
 			(unsigned int)next->tgid);
 */
-	prev_flag = is_profile_process(prev->tgid);
 
-	if (prev_flag) {
+	if (is_profile_process(prev)) {
 		user_regs = task_pt_regs(prev);
 		if (user_regs)
 			read_all_sources(user_regs, prev);
@@ -460,6 +462,18 @@ void __quadd_task_sched_out(struct task_struct *prev,
 		}
 	}
 }
+
+void __quadd_event_mmap(struct vm_area_struct *vma)
+{
+	if (likely(!hrt.active))
+		return;
+
+	if (!is_profile_process(current))
+		return;
+
+	quadd_process_mmap(vma);
+}
+EXPORT_SYMBOL(__quadd_event_mmap);
 
 static void reset_cpu_ctx(void)
 {
@@ -485,7 +499,6 @@ int quadd_hrt_start(void)
 	long freq;
 	unsigned int extra;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_parameters *param = &ctx->param;
 
 	freq = ctx->param.freq;
@@ -507,7 +520,7 @@ int quadd_hrt_start(void)
 	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
 
 	if (extra & QUADD_PARAM_IDX_EXTRA_GET_MMAP) {
-		err = quadd_get_current_mmap(cpu_ctx, param->pids[0]);
+		err = quadd_get_current_mmap(param->pids[0]);
 		if (err) {
 			pr_err("error: quadd_get_current_mmap\n");
 			return err;
@@ -582,7 +595,7 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 
 	hrt.cpu_ctx = alloc_percpu(struct quadd_cpu_context);
 	if (!hrt.cpu_ctx)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++) {
 		cpu_ctx = per_cpu_ptr(hrt.cpu_ctx, cpu_id);

@@ -10,7 +10,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 #
-# Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
 #
 
 obj-$(CONFIG_TEGRA_PROFILER) += tegra-profiler.o
@@ -18,7 +18,6 @@ obj-$(CONFIG_TEGRA_PROFILER) += tegra-profiler.o
 tegra-profiler-objs := \
 	main.o \
 	armv7_pmu.o \
-	pl310.o \
 	hrt.o \
 	comm.o \
 	mmap.o \
@@ -28,3 +27,7 @@ tegra-profiler-objs := \
 	power_clk.o \
 	auth.o \
 	quadd_proc.o
+
+ifdef CONFIG_CACHE_L2X0
+tegra-profiler-objs += pl310.o
+endif

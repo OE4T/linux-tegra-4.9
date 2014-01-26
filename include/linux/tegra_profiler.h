@@ -351,11 +351,18 @@ struct quadd_module_version {
 
 #pragma pack(pop)
 
+#ifdef __KERNEL__
+
+struct task_struct;
+struct vm_area_struct;
+
 #ifdef CONFIG_TEGRA_PROFILER
 extern void __quadd_task_sched_in(struct task_struct *prev,
 				  struct task_struct *task);
 extern void __quadd_task_sched_out(struct task_struct *prev,
 				   struct task_struct *next);
+
+extern void __quadd_event_mmap(struct vm_area_struct *vma);
 
 static inline void quadd_task_sched_in(struct task_struct *prev,
 				       struct task_struct *task)
@@ -368,7 +375,14 @@ static inline void quadd_task_sched_out(struct task_struct *prev,
 {
 	__quadd_task_sched_out(prev, next);
 }
-#else
+
+static inline void quadd_event_mmap(struct vm_area_struct *vma)
+{
+	__quadd_event_mmap(vma);
+}
+
+#else	/* CONFIG_TEGRA_PROFILER */
+
 static inline void quadd_task_sched_in(struct task_struct *prev,
 				       struct task_struct *task)
 {
@@ -378,6 +392,13 @@ static inline void quadd_task_sched_out(struct task_struct *prev,
 					struct task_struct *next)
 {
 }
-#endif
+
+static inline void quadd_event_mmap(struct vm_area_struct *vma)
+{
+}
+
+#endif	/* CONFIG_TEGRA_PROFILER */
+
+#endif	/* __KERNEL__ */
 
 #endif  /* __TEGRA_PROFILER_H */

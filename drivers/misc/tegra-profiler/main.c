@@ -26,7 +26,6 @@
 #include "quadd.h"
 #include "armv7_pmu.h"
 #include "hrt.h"
-#include "pl310.h"
 #include "comm.h"
 #include "mmap.h"
 #include "debug.h"
@@ -35,6 +34,10 @@
 #include "auth.h"
 #include "version.h"
 #include "quadd_proc.h"
+
+#ifdef CONFIG_CACHE_L2X0
+#include "pl310.h"
+#endif
 
 static struct quadd_ctx ctx;
 
@@ -92,7 +95,6 @@ static int start(void)
 			}
 		}
 
-		quadd_mmap_reset();
 		ctx.comm->reset();
 
 		err = quadd_power_clk_start();
@@ -121,7 +123,6 @@ static void stop(void)
 	if (atomic_cmpxchg(&ctx.started, 1, 0)) {
 		quadd_hrt_stop();
 
-		quadd_mmap_reset();
 		ctx.comm->reset();
 
 		quadd_power_clk_stop();
@@ -479,15 +480,9 @@ static int __init quadd_module_init(void)
 	}
 
 	ctx.hrt = quadd_hrt_init(&ctx);
-	if (!ctx.hrt) {
+	if (IS_ERR(ctx.hrt)) {
 		pr_err("error: HRT init failed\n");
-		return -ENODEV;
-	}
-
-	ctx.mmap = quadd_mmap_init(&ctx);
-	if (IS_ERR(ctx.mmap)) {
-		pr_err("error: MMAP init failed\n");
-		return PTR_ERR(ctx.mmap);
+		return PTR_ERR(ctx.hrt);
 	}
 
 	err = quadd_power_clk_init(&ctx);
@@ -497,9 +492,9 @@ static int __init quadd_module_init(void)
 	}
 
 	ctx.comm = quadd_comm_events_init(&control);
-	if (!ctx.comm) {
+	if (IS_ERR(ctx.comm)) {
 		pr_err("error: COMM init failed\n");
-		return -ENODEV;
+		return PTR_ERR(ctx.comm);
 	}
 
 	err = quadd_auth_init(&ctx);
@@ -519,7 +514,6 @@ static void __exit quadd_module_exit(void)
 	pr_info("QuadD module exit\n");
 
 	quadd_hrt_deinit();
-	quadd_mmap_deinit();
 	quadd_power_clk_deinit();
 	quadd_comm_events_exit();
 	quadd_auth_deinit();

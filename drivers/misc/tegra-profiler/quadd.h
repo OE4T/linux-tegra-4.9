@@ -24,7 +24,6 @@
 struct event_data;
 struct quadd_comm_data_interface;
 struct quadd_hrt_ctx;
-struct quadd_mmap_ctx;
 struct quadd_module_state;
 
 struct quadd_event_source_interface {
@@ -57,7 +56,6 @@ struct quadd_ctx {
 
 	struct quadd_comm_data_interface *comm;
 	struct quadd_hrt_ctx *hrt;
-	struct quadd_mmap_ctx *mmap;
 
 	atomic_t started;
 	atomic_t tegra_profiler_lock;

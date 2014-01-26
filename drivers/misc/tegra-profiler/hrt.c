@@ -19,13 +19,15 @@
 #include <linux/module.h>
 #include <linux/kallsyms.h>
 #include <linux/sched.h>
-#include <asm/cputype.h>
 #include <linux/hrtimer.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
 #include <linux/ratelimit.h>
-#include <asm/irq_regs.h>
 #include <linux/ptrace.h>
+#include <linux/interrupt.h>
+
+#include <asm/cputype.h>
+#include <asm/irq_regs.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -40,7 +42,8 @@
 
 static struct quadd_hrt_ctx hrt;
 
-static void read_all_sources(struct pt_regs *regs, pid_t pid);
+static void
+read_all_sources(struct pt_regs *regs, struct task_struct *task);
 
 struct hrt_event_value {
 	int event_id;
@@ -59,7 +62,7 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 	qm_debug_handler_sample(regs);
 
 	if (regs)
-		read_all_sources(regs, -1);
+		read_all_sources(regs, NULL);
 
 	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
 	qm_debug_timer_forward(regs, hrt.sample_period);
@@ -161,12 +164,11 @@ void quadd_put_sample(struct quadd_record_data *data,
 }
 
 static int get_sample_data(struct quadd_sample_data *sample,
-			   struct pt_regs *regs, pid_t pid)
+			   struct pt_regs *regs,
+			   struct task_struct *task)
 {
 	unsigned int cpu, flags;
-	struct quadd_thread_data *t_data;
 	struct quadd_ctx *quadd_ctx = hrt.quadd_ctx;
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 
 	cpu = quadd_get_processor_id(regs, &flags);
 	sample->cpu = cpu;
@@ -186,20 +188,16 @@ static int get_sample_data(struct quadd_sample_data *sample,
 
 	sample->time = quadd_get_time();
 	sample->reserved = 0;
-
-	if (pid > 0) {
-		sample->pid = pid;
-	} else {
-		t_data = &cpu_ctx->active_thread;
-		sample->pid = t_data->pid;
-	}
+	sample->pid = task->pid;
+	sample->in_interrupt = in_interrupt() ? 1 : 0;
 
 	return 0;
 }
 
 static int read_source(struct quadd_event_source_interface *source,
-		       struct pt_regs *regs, pid_t pid,
-		       struct hrt_event_value *events_vals, int max_events)
+		       struct pt_regs *regs,
+		       struct hrt_event_value *events_vals,
+		       int max_events)
 {
 	int nr_events, i;
 	u32 prev_val, val, res_val;
@@ -235,12 +233,14 @@ static int read_source(struct quadd_event_source_interface *source,
 	return nr_events;
 }
 
-static void read_all_sources(struct pt_regs *regs, pid_t pid)
+static void
+read_all_sources(struct pt_regs *regs, struct task_struct *task)
 {
+	u32 state;
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
-	struct quadd_iovec vec[2];
+	struct quadd_iovec vec[3];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
 
@@ -257,14 +257,31 @@ static void read_all_sources(struct pt_regs *regs, pid_t pid)
 	if (atomic_read(&cpu_ctx->nr_active) == 0)
 		return;
 
-	quadd_get_mmap_object(cpu_ctx, regs, pid);
+	if (!task) {
+		pid_t pid;
+		struct pid *pid_s;
+		struct quadd_thread_data *t_data;
+
+		t_data = &cpu_ctx->active_thread;
+		pid = t_data->pid;
+
+		rcu_read_lock();
+		pid_s = find_vpid(pid);
+		if (pid_s)
+			task = pid_task(pid_s, PIDTYPE_PID);
+		rcu_read_unlock();
+		if (!task)
+			return;
+	}
+
+	quadd_get_mmap_object(cpu_ctx, regs, task->pid);
 
 	if (ctx->pmu && ctx->pmu_info.active)
-		nr_events += read_source(ctx->pmu, regs, pid,
+		nr_events += read_source(ctx->pmu, regs,
 					 events, QUADD_MAX_COUNTERS);
 
 	if (ctx->pl310 && ctx->pl310_info.active)
-		nr_events += read_source(ctx->pl310, regs, pid,
+		nr_events += read_source(ctx->pl310, regs,
 					 events + nr_events,
 					 QUADD_MAX_COUNTERS - nr_events);
 
@@ -276,7 +293,7 @@ static void read_all_sources(struct pt_regs *regs, pid_t pid)
 	else
 		user_regs = current_pt_regs();
 
-	if (get_sample_data(s, regs, pid))
+	if (get_sample_data(s, regs, task))
 		return;
 
 	if (ctx->param.backtrace) {
@@ -308,6 +325,16 @@ static void read_all_sources(struct pt_regs *regs, pid_t pid)
 	vec[vec_idx].base = events_extra;
 	vec[vec_idx].len = nr_positive_events * sizeof(events_extra[0]);
 	vec_idx++;
+
+	state = task->state;
+	if (state) {
+		s->state = 1;
+		vec[vec_idx].base = &state;
+		vec[vec_idx].len = sizeof(state);
+		vec_idx++;
+	} else {
+		s->state = 0;
+	}
 
 	quadd_put_sample(&record_data, vec, vec_idx);
 }
@@ -419,7 +446,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 	if (prev_flag) {
 		user_regs = task_pt_regs(prev);
 		if (user_regs)
-			read_all_sources(user_regs, prev->pid);
+			read_all_sources(user_regs, prev);
 
 		n = remove_active_thread(cpu_ctx, prev->pid);
 		atomic_sub(n, &cpu_ctx->nr_active);

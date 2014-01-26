@@ -18,13 +18,15 @@
 
 #include <linux/module.h>
 #include <linux/fs.h>
-#include <asm/uaccess.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/miscdevice.h>
 #include <linux/sched.h>
 #include <linux/poll.h>
 #include <linux/bitops.h>
+#include <linux/interrupt.h>
+
+#include <asm/uaccess.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -282,6 +284,8 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 
 		nr_events = __sw_hweight32(record.sample.events_flags);
 		length_extra += nr_events * sizeof(u32);
+
+		length_extra += sample->state ? sizeof(u32) : 0;
 		break;
 
 	case QUADD_RECORD_TYPE_MMAP:

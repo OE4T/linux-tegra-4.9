@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/tegra.h
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,19 +25,22 @@
 #include <../../mach-tegra/pm.h>
 #endif
 
-static inline int quadd_get_processor_id(struct pt_regs *regs)
+static inline unsigned int
+quadd_get_processor_id(struct pt_regs *regs, unsigned int *flags)
 {
-	int cpu_id = smp_processor_id();
+	if (flags) {
+		*flags = 0;
 
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
-	if (is_lp_cluster())
-		cpu_id |= QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP;
+		if (is_lp_cluster())
+			*flags |= QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP;
 #endif
 
-	if (thumb_mode(regs))
-		cpu_id |= QUADD_CPUMODE_THUMB;
+		if (regs && thumb_mode(regs))
+			*flags |= QUADD_CPUMODE_THUMB;
+	}
 
-	return cpu_id;
+	return smp_processor_id();
 }
 
 static inline int quadd_is_cpu_with_lp_cluster(void)

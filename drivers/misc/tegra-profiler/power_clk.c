@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,7 +110,8 @@ static void read_source(struct power_clk_source *s)
 		break;
 
 	default:
-		BUG();
+		pr_err_once("%s: error: invalid power_clk type\n", __func__);
+		return;
 	}
 
 	mutex_unlock(&s->lock);
@@ -155,6 +156,7 @@ static void make_sample(void)
 	int i;
 	u32 extra_cpus[NR_CPUS];
 	struct power_clk_source *s;
+	struct quadd_iovec vec;
 
 	struct quadd_record_data record;
 	struct quadd_power_rate_data *power_rate = &record.power_rate;
@@ -162,7 +164,6 @@ static void make_sample(void)
 
 	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_POWER_RATE;
-	record.cpu_mode = QUADD_CPU_MODE_NONE;
 
 	power_rate->time = quadd_get_time();
 
@@ -199,8 +200,10 @@ static void make_sample(void)
 		 extra_cpus[0], extra_cpus[1], extra_cpus[2], extra_cpus[3],
 		 power_rate->gpu, power_rate->emc);
 */
-	comm->put_sample(&record, (char *)extra_cpus,
-			 power_rate->nr_cpus * sizeof(extra_cpus[0]));
+	vec.base = extra_cpus;
+	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
+
+	comm->put_sample(&record, &vec, 1);
 }
 
 static inline int is_data_changed(struct power_clk_source *s)
@@ -306,18 +309,6 @@ static void power_clk_timer(unsigned long data)
 	schedule_work(&power_clk_work);
 	timer->expires = jiffies + msecs_to_jiffies(power_ctx.period);
 	add_timer(timer);
-}
-
-int quadd_power_clk_is_enabled(int *period)
-{
-	struct quadd_parameters *param = &power_ctx.quadd_ctx->param;
-
-	*period = power_ctx.period;
-
-	if (param->power_rate_freq == 0)
-		return 0;
-
-	return 1;
 }
 
 int quadd_power_clk_start(void)

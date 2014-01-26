@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.h
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,11 @@ struct quadd_ring_buffer {
 	size_t max_fill_count;
 };
 
+struct quadd_iovec {
+	void *base;
+	size_t len;
+};
+
 struct quadd_parameters;
 
 struct quadd_comm_control_interface {
@@ -47,8 +52,8 @@ struct quadd_comm_control_interface {
 };
 
 struct quadd_comm_data_interface {
-	void (*put_sample)(struct quadd_record_data *data, char *extra_data,
-			   unsigned int extra_length);
+	void (*put_sample)(struct quadd_record_data *data,
+			   struct quadd_iovec *vec, int vec_count);
 	void (*reset)(void);
 	int (*is_active)(void);
 };

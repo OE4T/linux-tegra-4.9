@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	17
+#define QUADD_SAMPLES_VERSION	18
 #define QUADD_IO_VERSION	9
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -29,6 +29,7 @@
 #define QUADD_IO_VERSION_GET_MMAP		9
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
+#define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -93,8 +94,6 @@ enum quadd_events_id {
 	QUADD_EVENT_TYPE_MAX,
 };
 
-#pragma pack(push, 4)
-
 struct event_data {
 	int event_source;
 	int event_id;
@@ -125,49 +124,56 @@ enum quadd_cpu_mode {
 	QUADD_CPU_MODE_NONE,
 };
 
-struct quadd_sample_data {
-	u32 event_id;
+typedef u32 quadd_bt_addr_t;
 
-	u32 ip;
+#pragma pack(push, 1)
+
+struct quadd_sample_data {
+	u64 ip;
 	u32 pid;
 	u64 time;
-	u32 cpu;
-	u64 period;
 
-	u32 callchain_nr;
+	u16	cpu:6,
+		user_mode:1,
+		lp_mode:1,
+		thumb_mode:1,
+		reserved:7;
+
+	u8 callchain_nr;
+	u32 events_flags;
 };
 
 struct quadd_mmap_data {
 	u32 pid;
-	u32 addr;
+	u64 addr;
 	u64 len;
-	u64 pgoff;
+	u32 pgoff;
 
-	u32 filename_length;
+	u16 filename_length;
 };
 
 struct quadd_ma_data {
 	u32 pid;
 	u64 time;
 
-	u64 vm_size;
-	u64 rss_size;
+	u32 vm_size;
+	u32 rss_size;
 };
 
 struct quadd_power_rate_data {
 	u64 time;
 
-	u32 nr_cpus;
+	u8 nr_cpus;
 
 	u32 gpu;
 	u32 emc;
 };
 
 struct quadd_additional_sample {
-	u32 type;
+	u8 type;
 
-	u32 values[8];
-	u32 extra_length;
+	u32 values[6];
+	u16 extra_length;
 };
 
 enum {
@@ -186,42 +192,48 @@ enum {
 };
 
 struct quadd_debug_data {
-	u32 type;
+	u8 type;
 
-	u32 cpu;
 	u32 pid;
 	u64 time;
 
-	u64 timer_period;
+	u16	cpu:6,
+		user_mode:1,
+		lp_mode:1,
+		thumb_mode:1,
+		reserved:7;
 
-	u32 extra_value1;
-	u32 extra_value2;
-	u32 extra_value3;
+	u32 extra_value[2];
+	u16 extra_length;
 };
 
+#define QUADD_HEADER_MAGIC	0x1122
 
 struct quadd_header_data {
-	u32 version;
+	u16 magic;
+	u16 version;
 
 	u32	backtrace:1,
 		use_freq:1,
 		system_wide:1,
 		power_rate:1,
-		debug_samples:1;
+		debug_samples:1,
+		get_mmap:1,
+		reserved:26;	/* reserved fields for future extensions */
 
-	u64 period;
-	u32 ma_period;
-	u32 power_rate_period;
+	u32 freq;
+	u16 ma_freq;
+	u16 power_rate_freq;
 
-	u32 reserved[4];	/* reserved fields for future extensions */
+	u8 nr_events;
+	u16 extra_length;
 };
 
-#define QUADD_RECORD_MAGIC	0x33557799
+#define QUADD_RECORD_MAGIC	0x335577aa
 
 struct quadd_record_data {
-	u32 magic;	/* for debug */
-	u32 record_type;
-	u32 cpu_mode;
+	u32 magic;	/* temporary, it will be removed later */
+	u8 record_type;
 
 	union {
 		struct quadd_sample_data	sample;
@@ -232,7 +244,9 @@ struct quadd_record_data {
 		struct quadd_power_rate_data	power_rate;
 		struct quadd_additional_sample	additional_sample;
 	};
-};
+} __aligned(4);
+
+#pragma pack(4)
 
 #define QUADD_MAX_PACKAGE_NAME	320
 
@@ -286,6 +300,7 @@ enum {
 
 #define QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX	(1 << 0)
 #define QUADD_COMM_CAP_EXTRA_GET_MMAP		(1 << 1)
+#define QUADD_COMM_CAP_EXTRA_GROUP_SAMPLES	(1 << 2)
 
 struct quadd_comm_cap {
 	u32	pmu:1,

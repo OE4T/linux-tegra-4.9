@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,6 +45,11 @@ static void read_all_sources(struct pt_regs *regs, pid_t pid);
 static void sample_time_prepare(void);
 static void sample_time_finish(void);
 static void sample_time_reset(struct quadd_cpu_context *cpu_ctx);
+
+struct hrt_event_value {
+	int event_id;
+	u32 value;
+};
 
 static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 {
@@ -142,16 +147,21 @@ static void sample_time_reset(struct quadd_cpu_context *cpu_ctx)
 
 static void put_header(void)
 {
-	int power_rate_period;
+	int nr_events = 0, max_events = QUADD_MAX_COUNTERS;
+	unsigned int events[QUADD_MAX_COUNTERS];
 	struct quadd_record_data record;
 	struct quadd_header_data *hdr = &record.hdr;
 	struct quadd_parameters *param = &hrt.quadd_ctx->param;
-	struct quadd_comm_data_interface *comm = hrt.quadd_ctx->comm;
+	unsigned int extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
+	struct quadd_iovec vec;
+	struct quadd_ctx *ctx = hrt.quadd_ctx;
+	struct quadd_event_source_interface *pmu = ctx->pmu;
+	struct quadd_event_source_interface *pl310 = ctx->pl310;
 
 	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_HEADER;
-	record.cpu_mode = QUADD_CPU_MODE_NONE;
 
+	hdr->magic = QUADD_HEADER_MAGIC;
 	hdr->version = QUADD_SAMPLES_VERSION;
 
 	hdr->backtrace = param->backtrace;
@@ -165,89 +175,149 @@ static void put_header(void)
 	hdr->debug_samples = 0;
 #endif
 
-	hdr->period = hrt.sample_period;
-	hdr->ma_period = hrt.ma_period;
+	hdr->freq = param->freq;
+	hdr->ma_freq = param->ma_freq;
+	hdr->power_rate_freq = param->power_rate_freq;
 
-	hdr->power_rate = quadd_power_clk_is_enabled(&power_rate_period);
-	hdr->power_rate_period = power_rate_period;
+	hdr->power_rate = hdr->power_rate_freq > 0 ? 1 : 0;
+	hdr->get_mmap = (extra & QUADD_PARAM_IDX_EXTRA_GET_MMAP) ? 1 : 0;
 
-	comm->put_sample(&record, NULL, 0);
+	hdr->reserved = 0;
+	hdr->extra_length = 0;
+
+	if (pmu)
+		nr_events += pmu->get_current_events(events, max_events);
+
+	if (pl310)
+		nr_events += pl310->get_current_events(events + nr_events,
+						       max_events - nr_events);
+
+	hdr->nr_events = nr_events;
+
+	vec.base = events;
+	vec.len = nr_events * sizeof(events[0]);
+
+	quadd_put_sample(&record, &vec, 1);
 }
 
 void quadd_put_sample(struct quadd_record_data *data,
-		      char *extra_data, unsigned int extra_length)
+		      struct quadd_iovec *vec, int vec_count)
 {
 	struct quadd_comm_data_interface *comm = hrt.quadd_ctx->comm;
 
-	if (data->record_type == QUADD_RECORD_TYPE_SAMPLE &&
-		data->sample.period > 0x7FFFFFFF) {
-		struct quadd_sample_data *sample = &data->sample;
-		pr_err_once("very big period, sample id: %d\n",
-			    sample->event_id);
-		return;
-	}
-
-	comm->put_sample(data, extra_data, extra_length);
+	comm->put_sample(data, vec, vec_count);
 	atomic64_inc(&hrt.counter_samples);
 }
 
-static int get_sample_data(struct event_data *event,
-			   struct pt_regs *regs,
-			   struct quadd_sample_data *sample)
+static int get_sample_data(struct quadd_sample_data *sample,
+			   struct pt_regs *regs, pid_t pid)
 {
-	u32 period;
-	u32 prev_val, val;
+	unsigned int cpu, flags;
+	struct quadd_thread_data *t_data;
+	struct quadd_ctx *quadd_ctx = hrt.quadd_ctx;
+	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 
-	prev_val = event->prev_val;
-	val = event->val;
+	cpu = quadd_get_processor_id(regs, &flags);
+	sample->cpu = cpu;
 
-	sample->event_id = event->event_id;
+	sample->lp_mode =
+		(flags & QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP) ? 1 : 0;
+	sample->thumb_mode = (flags & QUADD_CPUMODE_THUMB) ? 1 : 0;
+	sample->user_mode = user_mode(regs) ? 1 : 0;
 
 	sample->ip = instruction_pointer(regs);
-	sample->cpu = quadd_get_processor_id(regs);
-	sample->time = get_sample_time();
 
-	if (prev_val <= val)
-		period = val - prev_val;
+	/* For security reasons, hide IPs from the kernel space. */
+	if (!sample->user_mode && !quadd_ctx->collect_kernel_ips)
+		sample->ip = 0;
 	else
-		period = QUADD_U32_MAX - prev_val + val;
+		sample->ip = instruction_pointer(regs);
 
-	if (event->event_source == QUADD_EVENT_SOURCE_PL310) {
-		int nr_current_active = atomic_read(&hrt.nr_active_all_core);
-		if (nr_current_active > 1)
-			period = period / nr_current_active;
+	sample->time = get_sample_time();
+	sample->reserved = 0;
+
+	if (pid > 0) {
+		sample->pid = pid;
+	} else {
+		t_data = &cpu_ctx->active_thread;
+		sample->pid = t_data->pid;
 	}
 
-	sample->period = period;
 	return 0;
 }
 
-static void read_source(struct quadd_event_source_interface *source,
-			struct pt_regs *regs, pid_t pid)
+static int read_source(struct quadd_event_source_interface *source,
+		       struct pt_regs *regs, pid_t pid,
+		       struct hrt_event_value *events_vals, int max_events)
 {
 	int nr_events, i;
+	u32 prev_val, val, res_val;
 	struct event_data events[QUADD_MAX_COUNTERS];
-	struct quadd_record_data record_data;
-	struct quadd_thread_data *t_data;
-	char *extra_data = NULL;
-	unsigned int extra_length = 0, callchain_nr = 0;
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-	struct quadd_callchain *callchain_data = &cpu_ctx->callchain_data;
-	struct quadd_ctx *quadd_ctx = hrt.quadd_ctx;
-	struct pt_regs *user_regs;
 
 	if (!source)
-		return;
+		return 0;
 
-	nr_events = source->read(events);
+	max_events = min_t(int, max_events, QUADD_MAX_COUNTERS);
+	nr_events = source->read(events, max_events);
 
-	if (nr_events == 0 || nr_events > QUADD_MAX_COUNTERS) {
-		pr_err_once("Error number of counters: %d, source: %p\n",
-				nr_events, source);
-		return;
+	for (i = 0; i < nr_events; i++) {
+		struct event_data *s = &events[i];
+
+		prev_val = s->prev_val;
+		val = s->val;
+
+		if (prev_val <= val)
+			res_val = val - prev_val;
+		else
+			res_val = QUADD_U32_MAX - prev_val + val;
+
+		if (s->event_source == QUADD_EVENT_SOURCE_PL310) {
+			int nr_active = atomic_read(&hrt.nr_active_all_core);
+			if (nr_active > 1)
+				res_val = res_val / nr_active;
+		}
+
+		events_vals[i].event_id = s->event_id;
+		events_vals[i].value = res_val;
 	}
 
+	return nr_events;
+}
+
+static void read_all_sources(struct pt_regs *regs, pid_t pid)
+{
+	int i, vec_idx = 0, bt_size = 0;
+	int nr_events = 0, nr_positive_events = 0;
+	struct pt_regs *user_regs;
+	struct quadd_iovec vec[2];
+	struct hrt_event_value events[QUADD_MAX_COUNTERS];
+	u32 events_extra[QUADD_MAX_COUNTERS];
+
+	struct quadd_record_data record_data;
+	struct quadd_sample_data *s = &record_data.sample;
+
+	struct quadd_ctx *ctx = hrt.quadd_ctx;
+	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
+	struct quadd_callchain *cc_data = &cpu_ctx->callchain_data;
+
+	if (!regs)
+		return;
+
 	if (atomic_read(&cpu_ctx->nr_active) == 0)
+		return;
+
+	quadd_get_mmap_object(cpu_ctx, regs, pid);
+
+	if (ctx->pmu && ctx->pmu_info.active)
+		nr_events += read_source(ctx->pmu, regs, pid,
+					 events, QUADD_MAX_COUNTERS);
+
+	if (ctx->pl310 && ctx->pl310_info.active)
+		nr_events += read_source(ctx->pl310, regs, pid,
+					 events + nr_events,
+					 QUADD_MAX_COUNTERS - nr_events);
+
+	if (!nr_events)
 		return;
 
 	if (user_mode(regs))
@@ -255,62 +325,40 @@ static void read_source(struct quadd_event_source_interface *source,
 	else
 		user_regs = current_pt_regs();
 
-	if (hrt.quadd_ctx->param.backtrace) {
-		callchain_nr =
-			quadd_get_user_callchain(user_regs, callchain_data);
-		if (callchain_nr > 0) {
-			extra_data = (char *)cpu_ctx->callchain_data.callchain;
-			extra_length = callchain_nr * sizeof(u32);
-		}
-	}
-
-	for (i = 0; i < nr_events; i++) {
-		if (get_sample_data(&events[i], regs, &record_data.sample))
-			return;
-
-		record_data.magic = QUADD_RECORD_MAGIC;
-		record_data.record_type = QUADD_RECORD_TYPE_SAMPLE;
-		record_data.cpu_mode = user_mode(regs) ?
-			QUADD_CPU_MODE_USER : QUADD_CPU_MODE_KERNEL;
-
-		/* For security reasons, hide IPs from the kernel space. */
-		if (record_data.cpu_mode == QUADD_CPU_MODE_KERNEL &&
-		    !quadd_ctx->collect_kernel_ips)
-			record_data.sample.ip = 0;
-
-		if (pid > 0) {
-			record_data.sample.pid = pid;
-		} else {
-			t_data = &cpu_ctx->active_thread;
-			record_data.sample.pid = t_data->pid;
-		}
-
-		if (i == 0) {
-			record_data.sample.callchain_nr = callchain_nr;
-			quadd_put_sample(&record_data, extra_data,
-					 extra_length);
-		} else {
-			record_data.sample.callchain_nr = 0;
-			quadd_put_sample(&record_data, NULL, 0);
-		}
-	}
-}
-
-static void read_all_sources(struct pt_regs *regs, pid_t pid)
-{
-	struct quadd_ctx *ctx = hrt.quadd_ctx;
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-
-	if (!regs)
+	if (get_sample_data(s, regs, pid))
 		return;
 
-	quadd_get_mmap_object(cpu_ctx, regs, pid);
+	if (ctx->param.backtrace) {
+		bt_size = quadd_get_user_callchain(user_regs, cc_data);
+		if (bt_size > 0) {
+			vec[vec_idx].base = cc_data->callchain;
+			vec[vec_idx].len =
+				bt_size * sizeof(cc_data->callchain[0]);
+			vec_idx++;
+		}
+	}
+	s->callchain_nr = bt_size;
 
-	if (ctx->pmu && ctx->pmu_info.active)
-		read_source(ctx->pmu, regs, pid);
+	record_data.magic = QUADD_RECORD_MAGIC;
+	record_data.record_type = QUADD_RECORD_TYPE_SAMPLE;
 
-	if (ctx->pl310 && ctx->pl310_info.active)
-		read_source(ctx->pl310, regs, pid);
+	s->events_flags = 0;
+	for (i = 0; i < nr_events; i++) {
+		u32 value = events[i].value;
+		if (value > 0) {
+			s->events_flags |= 1 << i;
+			events_extra[nr_positive_events++] = value;
+		}
+	}
+
+	if (nr_positive_events == 0)
+		return;
+
+	vec[vec_idx].base = events_extra;
+	vec[vec_idx].len = nr_positive_events * sizeof(events_extra[0]);
+	vec_idx++;
+
+	quadd_put_sample(&record_data, vec, vec_idx);
 }
 
 static inline int is_profile_process(pid_t pid)
@@ -389,7 +437,7 @@ void __quadd_task_sched_in(struct task_struct *prev,
 				ctx->pmu->start();
 
 			if (ctx->pl310)
-				ctx->pl310->read(events);
+				ctx->pl310->read(events, 1);
 
 			start_hrtimer(cpu_ctx);
 			atomic_inc(&hrt.nr_active_all_core);

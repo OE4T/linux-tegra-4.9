@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,13 +28,11 @@
 #define QUADD_USER_SPACE_MIN_ADDR	0x8000
 
 static inline void
-quadd_callchain_store(struct quadd_callchain *callchain_data, u32 ip)
+quadd_callchain_store(struct quadd_callchain *callchain_data,
+		      quadd_bt_addr_t ip)
 {
-	if (callchain_data->nr < QUADD_MAX_STACK_DEPTH) {
-		/* pr_debug("[%d] Add entry: %#llx\n",
-			    callchain_data->nr, ip); */
+	if (callchain_data->nr < QUADD_MAX_STACK_DEPTH)
 		callchain_data->callchain[callchain_data->nr++] = ip;
-	}
 }
 
 static int

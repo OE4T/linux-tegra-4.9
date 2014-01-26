@@ -26,8 +26,6 @@
 
 #include "backtrace.h"
 
-#define QUADD_USE_CORRECT_SAMPLE_TS	1
-
 struct quadd_thread_data {
 	pid_t pid;
 	pid_t tgid;
@@ -41,11 +39,6 @@ struct quadd_cpu_context {
 
 	struct quadd_thread_data active_thread;
 	atomic_t nr_active;
-
-#ifdef QUADD_USE_CORRECT_SAMPLE_TS
-	u64 prev_time;
-	u64 current_time;
-#endif
 };
 
 struct quadd_hrt_ctx {

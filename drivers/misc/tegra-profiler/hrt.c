@@ -42,10 +42,6 @@ static struct quadd_hrt_ctx hrt;
 
 static void read_all_sources(struct pt_regs *regs, pid_t pid);
 
-static void sample_time_prepare(void);
-static void sample_time_finish(void);
-static void sample_time_reset(struct quadd_cpu_context *cpu_ctx);
-
 struct hrt_event_value {
 	int event_id;
 	u32 value;
@@ -62,11 +58,8 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 
 	qm_debug_handler_sample(regs);
 
-	if (regs) {
-		sample_time_prepare();
+	if (regs)
 		read_all_sources(regs, -1);
-		sample_time_finish();
-	}
 
 	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
 	qm_debug_timer_forward(regs, hrt.sample_period);
@@ -77,8 +70,6 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
 {
 	u64 period = hrt.sample_period;
-
-	sample_time_reset(cpu_ctx);
 
 	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
 		      HRTIMER_MODE_REL_PINNED);
@@ -93,8 +84,6 @@ static void cancel_hrtimer(struct quadd_cpu_context *cpu_ctx)
 
 static void init_hrtimer(struct quadd_cpu_context *cpu_ctx)
 {
-	sample_time_reset(cpu_ctx);
-
 	hrtimer_init(&cpu_ctx->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	cpu_ctx->hrtimer.function = hrtimer_handler;
 }
@@ -105,44 +94,6 @@ u64 quadd_get_time(void)
 
 	do_posix_clock_monotonic_gettime(&ts);
 	return timespec_to_ns(&ts);
-}
-
-static u64 get_sample_time(void)
-{
-#ifndef QUADD_USE_CORRECT_SAMPLE_TS
-	return quadd_get_time();
-#else
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-	return cpu_ctx->current_time;
-#endif
-}
-
-static void sample_time_prepare(void)
-{
-#ifdef QUADD_USE_CORRECT_SAMPLE_TS
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-
-	if (cpu_ctx->prev_time == ULLONG_MAX)
-		cpu_ctx->current_time = quadd_get_time();
-	else
-		cpu_ctx->current_time = cpu_ctx->prev_time + hrt.sample_period;
-#endif
-}
-
-static void sample_time_finish(void)
-{
-#ifdef QUADD_USE_CORRECT_SAMPLE_TS
-	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-	cpu_ctx->prev_time = cpu_ctx->current_time;
-#endif
-}
-
-static void sample_time_reset(struct quadd_cpu_context *cpu_ctx)
-{
-#ifdef QUADD_USE_CORRECT_SAMPLE_TS
-	cpu_ctx->prev_time = ULLONG_MAX;
-	cpu_ctx->current_time = ULLONG_MAX;
-#endif
 }
 
 static void put_header(void)
@@ -233,7 +184,7 @@ static int get_sample_data(struct quadd_sample_data *sample,
 	else
 		sample->ip = instruction_pointer(regs);
 
-	sample->time = get_sample_time();
+	sample->time = quadd_get_time();
 	sample->reserved = 0;
 
 	if (pid > 0) {
@@ -449,6 +400,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 			    struct task_struct *next)
 {
 	int n, prev_flag;
+	struct pt_regs *user_regs;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
@@ -465,6 +417,10 @@ void __quadd_task_sched_out(struct task_struct *prev,
 	prev_flag = is_profile_process(prev->tgid);
 
 	if (prev_flag) {
+		user_regs = task_pt_regs(prev);
+		if (user_regs)
+			read_all_sources(user_regs, prev->pid);
+
 		n = remove_active_thread(cpu_ctx, prev->pid);
 		atomic_sub(n, &cpu_ctx->nr_active);
 
@@ -492,8 +448,6 @@ static void reset_cpu_ctx(void)
 
 		t_data->pid = -1;
 		t_data->tgid = -1;
-
-		sample_time_reset(cpu_ctx);
 	}
 }
 

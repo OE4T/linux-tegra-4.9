@@ -62,6 +62,7 @@ struct gpu_ops {
 	} ltc;
 	struct {
 		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
+		void (*bundle_cb_defaults)(struct gk20a *g);
 	} gr;
 };
 

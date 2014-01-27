@@ -2749,6 +2749,18 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	nvhost_allocator_destroy(&gr->comp_tags);
 }
 
+static void gr_gk20a_bundle_cb_defaults(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->bundle_cb_default_size =
+		gr_scc_bundle_cb_size_div_256b__prod_v();
+	gr->min_gpm_fifo_depth =
+		gr_pd_ab_dist_cfg2_state_limit_min_gpm_fifo_depths_v();
+	gr->bundle_cb_token_limit =
+		gr_pd_ab_dist_cfg2_token_limit_init_v();
+}
+
 static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 gpc_index, pes_index;
@@ -2897,9 +2909,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 				   pes_index, gpc_index,
 				   gr->pes_tpc_mask[pes_index][gpc_index]);
 
-	gr->bundle_cb_default_size = gr_scc_bundle_cb_size_div_256b__prod_v();
-	gr->min_gpm_fifo_depth = gr_pd_ab_dist_cfg2_state_limit_min_gpm_fifo_depths_v();
-	gr->bundle_cb_token_limit = gr_pd_ab_dist_cfg2_token_limit_init_v();
+	g->ops.gr.bundle_cb_defaults(g);
 	gr->attrib_cb_default_size = gr_gpc0_ppc0_cbm_cfg_size_default_v();
 	/* gk20a has a fixed beta CB RAM, don't alloc more */
 	gr->attrib_cb_size = gr->attrib_cb_default_size;
@@ -6628,4 +6638,5 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 void gk20a_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
+	gops->gr.bundle_cb_defaults = gr_gk20a_bundle_cb_defaults;
 }

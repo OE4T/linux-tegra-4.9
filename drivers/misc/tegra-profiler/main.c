@@ -518,6 +518,7 @@ static void __exit quadd_module_exit(void)
 	quadd_comm_events_exit();
 	quadd_auth_deinit();
 	quadd_proc_deinit();
+	quadd_armv7_pmu_deinit();
 }
 
 module_init(quadd_module_init);

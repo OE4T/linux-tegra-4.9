@@ -2567,7 +2567,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 
 	nvhost_dbg_fn("");
 
-	if (!pmu->elpg_ready)
+	if (!pmu->elpg_ready || !pmu->initialized)
 		goto exit;
 
 	mutex_lock(&pmu->elpg_mutex);
@@ -2640,7 +2640,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 
 	nvhost_dbg_fn("");
 
-	if (!pmu->elpg_ready)
+	if (!pmu->elpg_ready || !pmu->initialized)
 		return 0;
 
 	/* remove the work from queue */

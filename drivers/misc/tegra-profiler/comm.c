@@ -267,23 +267,18 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		goto out;
 	}
 
-	if (rb->fill_count < sizeof(struct quadd_record_data))
+	if (rb->fill_count < sizeof(record))
 		goto out;
 
-	if (!rb_read(rb, (char *)&record, sizeof(struct quadd_record_data)))
+	if (!rb_read(rb, (char *)&record, sizeof(record)))
 		goto out;
-
-	if (record.magic != QUADD_RECORD_MAGIC) {
-		pr_err("Error: bad magic: %#x\n", record.magic);
-		goto out;
-	}
 
 	switch (record.record_type) {
 	case QUADD_RECORD_TYPE_SAMPLE:
 		sample = &record.sample;
 		length_extra = sample->callchain_nr * sizeof(quadd_bt_addr_t);
 
-		nr_events = __sw_hweight32(record.sample.events_flags);
+		nr_events = __sw_hweight32(sample->events_flags);
 		length_extra += nr_events * sizeof(u32);
 
 		length_extra += sample->state ? sizeof(u32) : 0;
@@ -324,8 +319,8 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		goto out;
 	}
 
-	if (sizeof(struct quadd_record_data) + length_extra > max_length) {
-		retval = rb_read_undo(rb, sizeof(struct quadd_record_data));
+	if (sizeof(record) + length_extra > max_length) {
+		retval = rb_read_undo(rb, sizeof(record));
 		if (retval < 0)
 			goto out;
 
@@ -336,7 +331,7 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	if (length_extra > rb->fill_count)
 		goto out;
 
-	if (copy_to_user(buffer, &record, sizeof(struct quadd_record_data)))
+	if (copy_to_user(buffer, &record, sizeof(record)))
 		goto out_fault_error;
 
 	if (length_extra > 0) {
@@ -347,7 +342,7 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	}
 
 	spin_unlock_irqrestore(&rb->lock, flags);
-	return sizeof(struct quadd_record_data) + length_extra;
+	return sizeof(record) + length_extra;
 
 out_fault_error:
 	retval = -EFAULT;

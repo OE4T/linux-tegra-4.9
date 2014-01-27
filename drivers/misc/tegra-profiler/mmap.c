@@ -36,7 +36,6 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 	struct quadd_iovec vec[2];
 	u64 pgoff_val = pgoff << PAGE_SHIFT;
 
-	r.magic = QUADD_RECORD_MAGIC;
 	r.record_type = QUADD_RECORD_TYPE_MMAP;
 
 	memcpy(&r.mmap, s, sizeof(*s));

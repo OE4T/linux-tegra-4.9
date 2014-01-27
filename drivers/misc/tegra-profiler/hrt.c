@@ -113,7 +113,6 @@ static void put_header(void)
 	struct quadd_event_source_interface *pmu = ctx->pmu;
 	struct quadd_event_source_interface *pl310 = ctx->pl310;
 
-	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_HEADER;
 
 	hdr->magic = QUADD_HEADER_MAGIC;
@@ -306,7 +305,6 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	}
 	s->callchain_nr = bt_size;
 
-	record_data.magic = QUADD_RECORD_MAGIC;
 	record_data.record_type = QUADD_RECORD_TYPE_SAMPLE;
 
 	s->events_flags = 0;

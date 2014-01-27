@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	20
+#define QUADD_SAMPLES_VERSION	21
 #define QUADD_IO_VERSION	9
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -236,12 +236,10 @@ struct quadd_header_data {
 	u16 extra_length;
 };
 
-#define QUADD_RECORD_MAGIC	0x335577aa
-
 struct quadd_record_data {
-	u32 magic;	/* temporary, it will be removed later */
 	u8 record_type;
 
+	/* sample: it should be the biggest size */
 	union {
 		struct quadd_sample_data	sample;
 		struct quadd_mmap_data		mmap;

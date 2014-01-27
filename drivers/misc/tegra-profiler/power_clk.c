@@ -162,7 +162,6 @@ static void make_sample(void)
 	struct quadd_power_rate_data *power_rate = &record.power_rate;
 	struct quadd_comm_data_interface *comm = power_ctx.quadd_ctx->comm;
 
-	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_POWER_RATE;
 
 	power_rate->time = quadd_get_time();

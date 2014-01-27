@@ -37,7 +37,6 @@ static void make_sample(struct quadd_hrt_ctx *hrt_ctx,
 	struct quadd_ma_data *ma = &record.ma;
 	struct quadd_comm_data_interface *comm = hrt_ctx->quadd_ctx->comm;
 
-	record.magic = QUADD_RECORD_MAGIC;
 	record.record_type = QUADD_RECORD_TYPE_MA;
 
 	ma->pid = pid;

@@ -290,8 +290,10 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		break;
 
 	case QUADD_RECORD_TYPE_MMAP:
+		length_extra = sizeof(u64);
+
 		if (record.mmap.filename_length > 0) {
-			length_extra = record.mmap.filename_length;
+			length_extra += record.mmap.filename_length;
 		} else {
 			pr_err("Error: filename is empty\n");
 			goto out;

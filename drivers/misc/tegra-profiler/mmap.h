@@ -19,7 +19,7 @@
 
 #include <linux/types.h>
 
-void quadd_process_mmap(struct vm_area_struct *vma);
+void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid);
 int quadd_get_current_mmap(pid_t pid);
 
 #endif  /* __QUADD_MMAP_H */

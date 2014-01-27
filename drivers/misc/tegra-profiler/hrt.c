@@ -465,13 +465,16 @@ void __quadd_task_sched_out(struct task_struct *prev,
 
 void __quadd_event_mmap(struct vm_area_struct *vma)
 {
+	struct quadd_parameters *param;
+
 	if (likely(!hrt.active))
 		return;
 
 	if (!is_profile_process(current))
 		return;
 
-	quadd_process_mmap(vma);
+	param = &hrt.quadd_ctx->param;
+	quadd_process_mmap(vma, param->pids[0]);
 }
 EXPORT_SYMBOL(__quadd_event_mmap);
 

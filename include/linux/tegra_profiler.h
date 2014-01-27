@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	19
+#define QUADD_SAMPLES_VERSION	20
 #define QUADD_IO_VERSION	9
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -151,10 +151,11 @@ struct quadd_sample_data {
 
 struct quadd_mmap_data {
 	u32 pid;
+
 	u64 addr;
 	u64 len;
-	u32 pgoff;
 
+	u8 user_mode:1;
 	u16 filename_length;
 };
 

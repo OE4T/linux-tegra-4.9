@@ -30,10 +30,11 @@
 
 static void
 put_mmap_sample(struct quadd_mmap_data *s, char *filename,
-		size_t length)
+		size_t length, unsigned long pgoff)
 {
 	struct quadd_record_data r;
-	struct quadd_iovec vec;
+	struct quadd_iovec vec[2];
+	u64 pgoff_val = pgoff << PAGE_SHIFT;
 
 	r.magic = QUADD_RECORD_MAGIC;
 	r.record_type = QUADD_RECORD_TYPE_MMAP;
@@ -41,16 +42,19 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 	memcpy(&r.mmap, s, sizeof(*s));
 	r.mmap.filename_length = length;
 
-	vec.base = filename;
-	vec.len = length;
+	vec[0].base = &pgoff_val;
+	vec[0].len = sizeof(pgoff_val);
 
-	pr_debug("MMAP: pid: %u, file_name: '%s', addr: %#llx - %#llx, len: %llx, pgoff: %#x\n",
-		s->pid, filename, s->addr, s->addr + s->len, s->len, s->pgoff);
+	vec[1].base = filename;
+	vec[1].len = length;
 
-	quadd_put_sample(&r, &vec, 1);
+	pr_debug("MMAP: pid: %u, file_name: '%s', addr: %#llx - %#llx, len: %llx, pgoff: %#lx\n",
+		 s->pid, filename, s->addr, s->addr + s->len, s->len, pgoff);
+
+	quadd_put_sample(&r, vec, ARRAY_SIZE(vec));
 }
 
-void quadd_process_mmap(struct vm_area_struct *vma)
+void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid)
 {
 	struct file *vm_file;
 	struct path *path;
@@ -81,14 +85,16 @@ void quadd_process_mmap(struct vm_area_struct *vma)
 	if (strstr(file_name, " (deleted)"))
 		goto out;
 
+	sample.pid = pid;
+	sample.user_mode = 1;
+
 	sample.addr = vma->vm_start;
 	sample.len = vma->vm_end - vma->vm_start;
-	sample.pgoff = vma->vm_pgoff;
 
 	length = strlen(file_name) + 1;
 	length_aligned = ALIGN(length, sizeof(u64));
 
-	put_mmap_sample(&sample, file_name, length_aligned);
+	put_mmap_sample(&sample, file_name, length_aligned, vma->vm_pgoff);
 
 out:
 	kfree(tmp_buf);
@@ -147,11 +153,13 @@ int quadd_get_current_mmap(pid_t pid)
 		length_aligned = ALIGN(length, sizeof(u64));
 
 		sample.pid = pid;
+		sample.user_mode = 1;
+
 		sample.addr = vma->vm_start;
 		sample.len = vma->vm_end - vma->vm_start;
-		sample.pgoff = vma->vm_pgoff;
 
-		put_mmap_sample(&sample, file_name, length_aligned);
+		put_mmap_sample(&sample, file_name, length_aligned,
+				vma->vm_pgoff);
 	}
 	kfree(tmp_buf);
 

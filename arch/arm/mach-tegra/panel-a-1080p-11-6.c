@@ -445,7 +445,6 @@ static struct platform_device __maybe_unused
 
 static struct platform_device __maybe_unused
 			*dsi_a_1080p_11_6_bl_devices[] __initdata = {
-	&tegra_pwfm_device,
 	&dsi_a_1080p_11_6_bl_device,
 };
 

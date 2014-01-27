@@ -619,19 +619,12 @@ static struct platform_device __maybe_unused
 
 static struct platform_device __maybe_unused
 			*loki_bl_device[] __initdata = {
-	&tegra_pwfm_device,
 	&dsi_l_720p_5_loki_bl_device,
 };
 
 static int dsi_l_720p_5_loki_register_bl_dev(void)
 {
 	int err = 0;
-
-	err = platform_device_register(&tegra_pwfm_device);
-	if (err) {
-		pr_err("disp1 pwm device registration failed");
-		return err;
-	}
 
 	err = platform_device_register(&dsi_l_720p_5_loki_bl_device);
 	if (err) {

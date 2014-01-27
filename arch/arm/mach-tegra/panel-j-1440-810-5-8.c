@@ -303,7 +303,6 @@ static struct platform_device __maybe_unused dsi_j_1440_810_5_8_bl_device = {
 };
 
 static struct platform_device __maybe_unused *loki_bl_device[] __initdata = {
-	&tegra_pwfm_device,
 	&dsi_j_1440_810_5_8_bl_device,
 };
 
@@ -526,12 +525,6 @@ static int dsi_j_1440_810_5_8_postsuspend(void)
 static int dsi_j_1440_810_5_8_register_bl_dev(void)
 {
 	int err = 0;
-
-	err = platform_device_register(&tegra_pwfm_device);
-	if (err) {
-		pr_err("disp1 pwm device registration failed");
-		return err;
-	}
 
 	err = platform_device_register(&dsi_j_1440_810_5_8_bl_device);
 	if (err) {

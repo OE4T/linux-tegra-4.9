@@ -305,7 +305,6 @@ static struct platform_device __maybe_unused
 
 static struct platform_device __maybe_unused
 			*edp_s_wqxgap_15_6_bl_devices[] __initdata = {
-	&tegra_pwfm_device,
 	&edp_s_wqxgap_15_6_bl_device,
 };
 

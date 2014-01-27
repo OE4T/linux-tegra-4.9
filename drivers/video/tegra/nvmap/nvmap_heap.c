@@ -509,6 +509,7 @@ static struct device *nvmap_create_dma_devs(const char *name, int num_devs)
 static int nvmap_cma_heap_create(struct nvmap_heap *h,
 	const struct nvmap_platform_carveout *co)
 {
+#ifdef CONFIG_CMA
 	struct dma_contiguous_stats stats;
 
 	h->can_resize = co->resize;
@@ -548,6 +549,9 @@ static int nvmap_cma_heap_create(struct nvmap_heap *h,
 		dev_set_name(&h->dev, "heap-%s", h->name);
 	}
 	return 0;
+#else
+	return -ENOMEM;
+#endif
 }
 
 /* nvmap_heap_create: create a heap object of len bytes, starting from

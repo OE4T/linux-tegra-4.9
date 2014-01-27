@@ -37,12 +37,15 @@ int nvhost_as_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvhost_as_share *as_share;
 	struct nvhost_channel *ch;
+	struct nvhost_device_data *pdata;
 	int err;
 
 	nvhost_dbg_fn("");
 
 	/* this will come from module, not channel, later */
-	ch = container_of(inode->i_cdev, struct nvhost_channel, as_cdev);
+	pdata = container_of(inode->i_cdev, struct nvhost_device_data, as_cdev);
+
+	ch = pdata->channel;
 	if (!ch->as) {
 		nvhost_dbg_fn("no as for the channel!");
 		return -ENOENT;
@@ -70,11 +73,14 @@ int nvhost_as_dev_release(struct inode *inode, struct file *filp)
 {
 	struct nvhost_as_share *as_share = filp->private_data;
 	struct nvhost_channel *ch;
+	struct nvhost_device_data *pdata;
 	int ret;
 
 	nvhost_dbg_fn("");
 
-	ch = container_of(inode->i_cdev, struct nvhost_channel, as_cdev);
+	pdata = container_of(inode->i_cdev, struct nvhost_device_data, as_cdev);
+
+	ch = pdata->channel;
 
 	ret = nvhost_as_release_share(as_share, 0/* no hwctx to release */);
 
@@ -239,7 +245,7 @@ int nvhost_as_alloc_share(struct nvhost_channel *ch,
 	as_share->ch      = ch;
 	as_share->as      = as;
 	as_share->host    = nvhost_get_host(ch->dev);
-	as_share->as_dev  = ch->as_node;
+	as_share->as_dev  = pdata->as_node;
 	as_share->id      = generate_as_share_id(as_share->as);
 
 	/* call module to allocate hw resources */

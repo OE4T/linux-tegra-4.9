@@ -60,8 +60,6 @@ struct nvhost_channel {
 	/* the address space block here
 	 * belongs to the module. but for
 	 * now just keep it here */
-	struct device *as_node;
-	struct cdev as_cdev;
 	struct nvhost_as *as;
 };
 

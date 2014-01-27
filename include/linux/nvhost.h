@@ -150,6 +150,10 @@ struct nvhost_device_data {
 	struct device *node;
 	struct cdev cdev;
 
+	/* Address space device node */
+	struct device *as_node;
+	struct cdev as_cdev;
+
 	/* device node for ctrl block */
 	struct device *ctrl_node;
 	struct cdev ctrl_cdev;

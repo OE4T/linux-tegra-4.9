@@ -1148,9 +1148,7 @@ int nvhost_client_user_init(struct platform_device *dev)
 {
 	int err, devno;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct nvhost_channel *ch = pdata->channel;
 
-	BUG_ON(!ch);
 	/* reserve 3 minor #s for <dev> and as-<dev>, and ctrl-<dev> */
 
 	err = alloc_chrdev_region(&devno, 0, 5, IFACE_NAME);
@@ -1169,10 +1167,10 @@ int nvhost_client_user_init(struct platform_device *dev)
 
 	if (pdata->as_ops) {
 		++devno;
-		ch->as_node = nvhost_client_device_create(dev,
-					&ch->as_cdev,
-					"as-", devno, &nvhost_asops);
-		if (ch->as_node == NULL)
+		pdata->as_node = nvhost_client_device_create(dev,
+						&pdata->as_cdev, "as-",
+						devno, &nvhost_asops);
+		if (pdata->as_node == NULL)
 			goto fail;
 	}
 
@@ -1195,18 +1193,15 @@ void nvhost_client_user_deinit(struct platform_device *dev)
 {
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct nvhost_channel *ch = pdata->channel;
-
-	BUG_ON(!ch);
 
 	if (pdata->node) {
 		device_destroy(nvhost_master->nvhost_class, pdata->cdev.dev);
 		cdev_del(&pdata->cdev);
 	}
 
-	if (ch->as_node) {
-		device_destroy(nvhost_master->nvhost_class, ch->as_cdev.dev);
-		cdev_del(&ch->as_cdev);
+	if (pdata->as_node) {
+		device_destroy(nvhost_master->nvhost_class, pdata->as_cdev.dev);
+		cdev_del(&pdata->as_cdev);
 	}
 
 	if (pdata->ctrl_node) {

@@ -2910,11 +2910,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 				   gr->pes_tpc_mask[pes_index][gpc_index]);
 
 	g->ops.gr.bundle_cb_defaults(g);
-	gr->attrib_cb_default_size = gr_gpc0_ppc0_cbm_cfg_size_default_v();
-	/* gk20a has a fixed beta CB RAM, don't alloc more */
-	gr->attrib_cb_size = gr->attrib_cb_default_size;
-	gr->alpha_cb_default_size = gr_gpc0_ppc0_cbm_cfg2_size_default_v();
-	gr->alpha_cb_size = gr->alpha_cb_default_size + (gr->alpha_cb_default_size >> 1);
+	g->ops.gr.cb_size_default(g);
+	g->ops.gr.calc_global_ctx_buffer_size(g);
 	gr->timeslice_mode = gr_gpcs_ppcs_cbm_cfg_timeslice_mode_enable_v();
 
 	nvhost_dbg_info("bundle_cb_default_size: %d",
@@ -6635,8 +6632,30 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	return err;
 }
 
+static void gr_gk20a_cb_size_default(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->attrib_cb_default_size =
+		gr_gpc0_ppc0_cbm_cfg_size_default_v();
+	gr->alpha_cb_default_size =
+		gr_gpc0_ppc0_cbm_cfg2_size_default_v();
+}
+
+static void gr_gk20a_calc_global_ctx_buffer_size(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->attrib_cb_size = gr->attrib_cb_default_size;
+	gr->alpha_cb_size = gr->alpha_cb_default_size
+		+ (gr->alpha_cb_default_size >> 1);
+}
+
 void gk20a_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
 	gops->gr.bundle_cb_defaults = gr_gk20a_bundle_cb_defaults;
+	gops->gr.cb_size_default = gr_gk20a_cb_size_default;
+	gops->gr.calc_global_ctx_buffer_size =
+		gr_gk20a_calc_global_ctx_buffer_size;
 }

@@ -32,7 +32,7 @@ struct gk20a_platform {
 	 * gk20a platform info after that though. */
 	struct nvhost_device_data nvhost;
 #endif
-	/* Populated by the gk20a driver after probing the platform. */
+	/* Populated by the gk20a driver before probing the platform. */
 	struct gk20a *g;
 
 	/* Should be populated at probe. */

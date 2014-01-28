@@ -27,6 +27,7 @@
 #include <linux/nvhost_ioctl.h>
 
 #include "gk20a.h"
+#include "hal_gk20a.h"
 
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
@@ -51,6 +52,11 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
+
+	/* Fill in gk20a specific ops here. */
+	err = gk20a_init_hal(&platform->g->ops);
+	if (err)
+		return err;
 
 	/* Initialize clocks and power. */
 	err = nvhost_module_init(dev);

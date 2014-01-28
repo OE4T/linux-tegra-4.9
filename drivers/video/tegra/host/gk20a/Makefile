@@ -24,7 +24,9 @@ obj-$(CONFIG_GK20A) += \
 	gr_ctx_gk20a.o \
 	gk20a_gating_reglist.o \
 	gk20a_scale.o \
-	gk20a_sysfs.o
+	gk20a_sysfs.o \
+	ltc_gk20a.o \
+	hal_gk20a.o
 
 obj-$(CONFIG_GK20A) += platform_gk20a_generic.o
 obj-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o

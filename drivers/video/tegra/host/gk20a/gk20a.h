@@ -56,6 +56,12 @@ struct cooling_device_gk20a {
 	struct gk20a *g;
 };
 
+struct gpu_ops {
+	struct {
+		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
+	} ltc;
+};
+
 struct gk20a {
 	struct nvhost_master *host;
 	struct platform_device *dev;
@@ -131,6 +137,8 @@ struct gk20a {
 
 	dev_t cdev_region;
 	struct class *class;
+
+	struct gpu_ops ops;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

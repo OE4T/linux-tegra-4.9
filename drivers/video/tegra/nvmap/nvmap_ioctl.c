@@ -235,10 +235,18 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 				goto out;
 			}
 			refs[i] = unmarshal_user_handle(handle);
+			if (!refs[i]) {
+				err = -EINVAL;
+				goto out;
+			}
 		}
 	} else {
 		refs = on_stack;
 		on_stack[0] = unmarshal_user_handle_array_single(op.handles);
+		if (!on_stack[0]) {
+			err = -EINVAL;
+			goto out;
+		}
 	}
 
 	trace_nvmap_ioctl_pinop(filp->private_data, is_pin, op.count, refs);

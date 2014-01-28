@@ -68,30 +68,11 @@ static struct resource tegra_host1x02_resources[] = {
 	},
 };
 
-static const char *s_syncpt_names[32] = {
-	"gfx_host",
-	"", "", "", "", "", "", "",
-	"disp0_a", "disp1_a", "avp_0",
-	"csi_vi_0", "csi_vi_1",
-	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
-	"2d_0", "2d_1",
-	"disp0_b", "disp1_b",
-	"3d",
-	"msenc",
-	"disp0_c", "disp1_c",
-	"vblank0", "vblank1",
-	"tsec", "msenc_unused",
-	"2d_tinyblt",
-	"dsi"
-};
-
 static struct host1x_device_info host1x02_info = {
 	.nb_channels	= 9,
 	.nb_pts		= 32,
 	.nb_mlocks	= 16,
 	.nb_bases	= 12,
-	.syncpt_names	= s_syncpt_names,
-	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
 
 struct nvhost_device_data t11_host1x_info = {

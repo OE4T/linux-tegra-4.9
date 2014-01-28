@@ -1657,7 +1657,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
 		mc_boot_0_minor_revision_v(mc_boot_0_value);
 
-	gpu->L2_cache_size = gk20a_determine_L2_size_bytes(g);
+	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
 
 	gpu->num_gpc = g->gr.gpc_count;

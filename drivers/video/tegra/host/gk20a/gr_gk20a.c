@@ -600,7 +600,9 @@ int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
 }
 
-/* Stop processing (stall) context switches at FECS */
+/* Stop processing (stall) context switches at FECS.
+ * The caller must hold the dbg_sessions_lock, else if mutliple stop methods
+ * are sent to the ucode in sequence, it can get into an undefined state. */
 int gr_gk20a_disable_ctxsw(struct gk20a *g)
 {
 	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");

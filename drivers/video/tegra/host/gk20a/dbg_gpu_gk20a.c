@@ -101,6 +101,9 @@ int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_pr
 	return 0;
 }
 
+/* used in scenarios where the debugger session can take just the inter-session
+ * lock for performance, but the profiler session must take the per-gpu lock
+ * since it might not have an associated channel. */
 static void gk20a_dbg_session_mutex_lock(struct dbg_session_gk20a *dbg_s)
 {
 	if (dbg_s->is_profiler)
@@ -493,12 +496,14 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		goto clean_up;
 	}
 
-	/* mutual exclusion for multiple debug sessions */
-	gk20a_dbg_session_mutex_lock(dbg_s);
+	/* since exec_reg_ops sends methods to the ucode, it must take the
+	 * global gpu lock to protect against mixing methods from debug sessions
+	 * on other channels */
+	mutex_lock(&g->dbg_sessions_lock);
 
 	err = dbg_s->ops->exec_reg_ops(dbg_s, ops, args->num_ops);
 
-	gk20a_dbg_session_mutex_unlock(dbg_s);
+	mutex_unlock(&g->dbg_sessions_lock);
 
 	if (err) {
 		nvhost_err(dev, "dbg regops failed");

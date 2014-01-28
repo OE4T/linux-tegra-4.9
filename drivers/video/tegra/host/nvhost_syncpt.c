@@ -66,7 +66,7 @@ int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id)
 	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS && pdata->syncpts[i]; ++i)
 		ret |= (pdata->syncpts[i] == id);
 
-	if (!ret || (id == NVSYNCPT_2D_0))
+	if (!ret)
 		return NVSYNCPT_INVALID;
 
 	return pdata->waitbases[0];

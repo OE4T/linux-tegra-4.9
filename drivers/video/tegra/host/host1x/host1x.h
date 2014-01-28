@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,9 +37,7 @@ struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
 	int		nb_bases;	/* host1x: num syncpoints supported */
-	u64		client_managed; /* host1x: client managed syncpts */
 	int		nb_mlocks;	/* host1x: number of mlocks */
-	const char	**syncpt_names;	/* names of sync points */
 };
 
 struct nvhost_master {

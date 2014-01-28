@@ -382,6 +382,14 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 	}
 
+	if (!g->gr.sw_ready) {
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
+		gk20a_idle(g->dev);
+	}
+
 	switch (cmd) {
 	case NVHOST_DBG_GPU_IOCTL_BIND_CHANNEL:
 		err = dbg_bind_channel_gk20a(dbg_s,

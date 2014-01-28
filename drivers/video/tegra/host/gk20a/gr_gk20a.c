@@ -664,7 +664,7 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
  * Before a sequence of these set up with "_ctx_patch_write_begin"
  * and close with "_ctx_patch_write_end."
  */
-static int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
+int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx)
 {
 	/* being defensive still... */
@@ -683,7 +683,7 @@ static int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 	return 0;
 }
 
-static int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
+int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
 	/* being defensive still... */
@@ -919,7 +919,6 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u64 addr;
 	u32 size;
-	u32 data;
 
 	nvhost_dbg_fn("");
 	if (patch) {
@@ -944,22 +943,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvhost_dbg_info("pagepool buffer addr : 0x%016llx, size : %d",
 		addr, size);
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_base_r(),
-		gr_scc_pagepool_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_r(),
-		gr_scc_pagepool_total_pages_f(size) |
-		gr_scc_pagepool_valid_true_f(), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_base_r(),
-		gr_gpcs_gcc_pagepool_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_r(),
-		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_pagepool_r(),
-		gr_pd_pagepool_total_pages_f(size) |
-		gr_pd_pagepool_valid_true_f(), patch);
+	g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, patch);
 
 	/* global bundle cb */
 	addr = (u64_lo32(ch_ctx->global_ctx_buffer_va[CIRCULAR_VA]) >>
@@ -972,33 +956,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvhost_dbg_info("bundle cb addr : 0x%016llx, size : %d",
 		addr, size);
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_base_r(),
-		gr_scc_bundle_cb_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_size_r(),
-		gr_scc_bundle_cb_size_div_256b_f(size) |
-		gr_scc_bundle_cb_size_valid_true_f(), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_base_r(),
-		gr_gpcs_setup_bundle_cb_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_size_r(),
-		gr_gpcs_setup_bundle_cb_size_div_256b_f(size) |
-		gr_gpcs_setup_bundle_cb_size_valid_true_f(), patch);
-
-	/* data for state_limit */
-	data = (gr->bundle_cb_default_size *
-		gr_scc_bundle_cb_size_div_256b_byte_granularity_v()) /
-		gr_pd_ab_dist_cfg2_state_limit_scc_bundle_granularity_v();
-
-	data = min_t(u32, data, gr->min_gpm_fifo_depth);
-
-	nvhost_dbg_info("bundle cb token limit : %d, state limit : %d",
-		   gr->bundle_cb_token_limit, data);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
-		gr_pd_ab_dist_cfg2_token_limit_f(gr->bundle_cb_token_limit) |
-		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
+	g->ops.gr.commit_global_bundle_cb(g, ch_ctx, addr, size, patch);
 
 	/* global attrib cb */
 	addr = (u64_lo32(ch_ctx->global_ctx_buffer_va[ATTRIBUTE_VA]) >>
@@ -1026,6 +984,42 @@ static void gr_gk20a_commit_global_attrib_cb(struct gk20a *g,
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_pin_cb_global_base_addr_r(),
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_v_f(addr) |
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_valid_true_f(), patch);
+}
+
+static void gr_gk20a_commit_global_bundle_cb(struct gk20a *g,
+					    struct channel_ctx_gk20a *ch_ctx,
+					    u64 addr, u64 size, bool patch)
+{
+	u32 data;
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_base_r(),
+		gr_scc_bundle_cb_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_size_r(),
+		gr_scc_bundle_cb_size_div_256b_f(size) |
+		gr_scc_bundle_cb_size_valid_true_f(), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_base_r(),
+		gr_gpcs_setup_bundle_cb_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_bundle_cb_size_r(),
+		gr_gpcs_setup_bundle_cb_size_div_256b_f(size) |
+		gr_gpcs_setup_bundle_cb_size_valid_true_f(), patch);
+
+	/* data for state_limit */
+	data = (g->gr.bundle_cb_default_size *
+		gr_scc_bundle_cb_size_div_256b_byte_granularity_v()) /
+		gr_pd_ab_dist_cfg2_state_limit_scc_bundle_granularity_v();
+
+	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
+
+	nvhost_dbg_info("bundle cb token limit : %d, state limit : %d",
+		   g->gr.bundle_cb_token_limit, data);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
+		gr_pd_ab_dist_cfg2_token_limit_f(g->gr.bundle_cb_token_limit) |
+		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
+
 }
 
 static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c, bool patch)
@@ -1089,8 +1083,7 @@ static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20
 	return 0;
 }
 
-static int gr_gk20a_setup_rop_mapping(struct gk20a *g,
-				struct gr_gk20a *gr)
+int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 norm_entries, norm_shift;
 	u32 coeff5_mod, coeff6_mod, coeff7_mod, coeff8_mod, coeff9_mod, coeff10_mod, coeff11_mod;
@@ -1354,6 +1347,7 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
 	u32 tpc_per_gpc;
 	u32 max_ways_evict = INVALID_MAX_WAYS;
+	u32 l1c_dbg_reg_val;
 
 	nvhost_dbg_fn("");
 
@@ -1406,7 +1400,8 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 
 	/* gr__setup_pd_mapping stubbed for gk20a */
 	gr_gk20a_setup_rop_mapping(g, gr);
-	gr_gk20a_setup_alpha_beta_tables(g, gr);
+	if (g->ops.gr.setup_alpha_beta_tables)
+		g->ops.gr.setup_alpha_beta_tables(g, gr);
 
 	if (gr->num_fbps == 1)
 		max_ways_evict = 9;
@@ -1436,6 +1431,11 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 		     gr_bes_zrop_settings_num_active_fbps_f(gr->num_fbps));
 	gk20a_writel(g, gr_bes_crop_settings_r(),
 		     gr_bes_crop_settings_num_active_fbps_f(gr->num_fbps));
+
+	/* turn on cya15 bit for a default val that missed the cut */
+	l1c_dbg_reg_val = gk20a_readl(g, gr_gpc0_tpc0_l1c_dbg_r());
+	l1c_dbg_reg_val |= gr_gpc0_tpc0_l1c_dbg_cya15_en_f();
+	gk20a_writel(g, gr_gpc0_tpc0_l1c_dbg_r(), l1c_dbg_reg_val);
 
 	return 0;
 }
@@ -2576,12 +2576,30 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c)
 	c->first_init = false;
 }
 
+static bool gr_gk20a_is_valid_class(struct gk20a *g, u32 class_num)
+{
+	bool valid = false;
+
+	switch (class_num) {
+	case KEPLER_COMPUTE_A:
+	case KEPLER_C:
+	case FERMI_TWOD_A:
+	case KEPLER_DMA_COPY_A:
+		valid = true;
+		break;
+
+	default:
+		break;
+	}
+
+	return valid;
+}
+
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			struct nvhost_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	bool change_to_compute_mode = false;
 	int err = 0;
 
 	nvhost_dbg_fn("");
@@ -2594,18 +2612,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		return -EINVAL;
 	}
 
-	switch (args->class_num) {
-	case KEPLER_COMPUTE_A:
-		/* tbd: NV2080_CTRL_GPU_COMPUTE_MODE_RULES_EXCLUSIVE_COMPUTE */
-		/* tbd: PDB_PROP_GRAPHICS_DISTINCT_3D_AND_COMPUTE_STATE_DEF  */
-		change_to_compute_mode = true;
-		break;
-	case KEPLER_C:
-	case FERMI_TWOD_A:
-	case KEPLER_DMA_COPY_A:
-		break;
-
-	default:
+	if (!g->ops.gr.is_valid_class(g, args->class_num)) {
 		nvhost_err(dev_from_gk20a(g),
 			   "invalid obj class 0x%x", args->class_num);
 		err = -EINVAL;
@@ -4080,6 +4087,92 @@ static void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
 		gr_gpc0_gpccs_gpc_exception_en_tpc_0_enabled_f());
 }
 
+void gr_gk20a_enable_hww_exceptions(struct gk20a *g)
+{
+	/* enable exceptions */
+	gk20a_writel(g, gr_fe_hww_esr_r(),
+		     gr_fe_hww_esr_en_enable_f() |
+		     gr_fe_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_memfmt_hww_esr_r(),
+		     gr_memfmt_hww_esr_en_enable_f() |
+		     gr_memfmt_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_scc_hww_esr_r(),
+		     gr_scc_hww_esr_en_enable_f() |
+		     gr_scc_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_mme_hww_esr_r(),
+		     gr_mme_hww_esr_en_enable_f() |
+		     gr_mme_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_pd_hww_esr_r(),
+		     gr_pd_hww_esr_en_enable_f() |
+		     gr_pd_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_sked_hww_esr_r(), /* enabled by default */
+		     gr_sked_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_ds_hww_esr_r(),
+		     gr_ds_hww_esr_en_enabled_f() |
+		     gr_ds_hww_esr_reset_task_f());
+	gk20a_writel(g, gr_ds_hww_report_mask_r(),
+		     gr_ds_hww_report_mask_sph0_err_report_f() |
+		     gr_ds_hww_report_mask_sph1_err_report_f() |
+		     gr_ds_hww_report_mask_sph2_err_report_f() |
+		     gr_ds_hww_report_mask_sph3_err_report_f() |
+		     gr_ds_hww_report_mask_sph4_err_report_f() |
+		     gr_ds_hww_report_mask_sph5_err_report_f() |
+		     gr_ds_hww_report_mask_sph6_err_report_f() |
+		     gr_ds_hww_report_mask_sph7_err_report_f() |
+		     gr_ds_hww_report_mask_sph8_err_report_f() |
+		     gr_ds_hww_report_mask_sph9_err_report_f() |
+		     gr_ds_hww_report_mask_sph10_err_report_f() |
+		     gr_ds_hww_report_mask_sph11_err_report_f() |
+		     gr_ds_hww_report_mask_sph12_err_report_f() |
+		     gr_ds_hww_report_mask_sph13_err_report_f() |
+		     gr_ds_hww_report_mask_sph14_err_report_f() |
+		     gr_ds_hww_report_mask_sph15_err_report_f() |
+		     gr_ds_hww_report_mask_sph16_err_report_f() |
+		     gr_ds_hww_report_mask_sph17_err_report_f() |
+		     gr_ds_hww_report_mask_sph18_err_report_f() |
+		     gr_ds_hww_report_mask_sph19_err_report_f() |
+		     gr_ds_hww_report_mask_sph20_err_report_f() |
+		     gr_ds_hww_report_mask_sph21_err_report_f() |
+		     gr_ds_hww_report_mask_sph22_err_report_f() |
+		     gr_ds_hww_report_mask_sph23_err_report_f());
+}
+
+static void gr_gk20a_set_hww_esr_report_mask(struct gk20a *g)
+{
+	/* setup sm warp esr report masks */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(),
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_stack_error_report_f()	|
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_api_stack_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_ret_empty_stack_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_wrap_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_pc_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_overflow_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_immc_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_reg_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_encoding_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_sph_instr_combo_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_reg_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_addr_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_addr_space_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param2_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_ldc_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_geometry_sm_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_divergent_report_f());
+
+	/* setup sm global esr report mask */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r(),
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_sm_to_sm_fault_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_l1_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_multiple_warp_errors_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_physical_stack_overflow_error_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_int_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_pause_report_f() |
+		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complete_report_f());
+}
+
 static int gk20a_init_gr_setup_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -4095,7 +4188,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 fe_go_idle_timeout_save;
 	u32 last_method_data = 0;
 	u32 i, err;
-	u32 l1c_dbg_reg_val;
 	u64 compbit_store_base_iova;
 
 	nvhost_dbg_fn("");
@@ -4171,85 +4263,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     gr_fecs_host_int_enable_umimp_illegal_method_enable_f() |
 		     gr_fecs_host_int_enable_watchdog_enable_f());
 
-	/* enable exceptions */
-	gk20a_writel(g, gr_fe_hww_esr_r(),
-		     gr_fe_hww_esr_en_enable_f() |
-		     gr_fe_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_memfmt_hww_esr_r(),
-		     gr_memfmt_hww_esr_en_enable_f() |
-		     gr_memfmt_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_scc_hww_esr_r(),
-		     gr_scc_hww_esr_en_enable_f() |
-		     gr_scc_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_mme_hww_esr_r(),
-		     gr_mme_hww_esr_en_enable_f() |
-		     gr_mme_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_pd_hww_esr_r(),
-		     gr_pd_hww_esr_en_enable_f() |
-		     gr_pd_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_sked_hww_esr_r(), /* enabled by default */
-		     gr_sked_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_ds_hww_esr_r(),
-		     gr_ds_hww_esr_en_enabled_f() |
-		     gr_ds_hww_esr_reset_task_f());
-	gk20a_writel(g, gr_ds_hww_report_mask_r(),
-		     gr_ds_hww_report_mask_sph0_err_report_f() |
-		     gr_ds_hww_report_mask_sph1_err_report_f() |
-		     gr_ds_hww_report_mask_sph2_err_report_f() |
-		     gr_ds_hww_report_mask_sph3_err_report_f() |
-		     gr_ds_hww_report_mask_sph4_err_report_f() |
-		     gr_ds_hww_report_mask_sph5_err_report_f() |
-		     gr_ds_hww_report_mask_sph6_err_report_f() |
-		     gr_ds_hww_report_mask_sph7_err_report_f() |
-		     gr_ds_hww_report_mask_sph8_err_report_f() |
-		     gr_ds_hww_report_mask_sph9_err_report_f() |
-		     gr_ds_hww_report_mask_sph10_err_report_f() |
-		     gr_ds_hww_report_mask_sph11_err_report_f() |
-		     gr_ds_hww_report_mask_sph12_err_report_f() |
-		     gr_ds_hww_report_mask_sph13_err_report_f() |
-		     gr_ds_hww_report_mask_sph14_err_report_f() |
-		     gr_ds_hww_report_mask_sph15_err_report_f() |
-		     gr_ds_hww_report_mask_sph16_err_report_f() |
-		     gr_ds_hww_report_mask_sph17_err_report_f() |
-		     gr_ds_hww_report_mask_sph18_err_report_f() |
-		     gr_ds_hww_report_mask_sph19_err_report_f() |
-		     gr_ds_hww_report_mask_sph20_err_report_f() |
-		     gr_ds_hww_report_mask_sph21_err_report_f() |
-		     gr_ds_hww_report_mask_sph22_err_report_f() |
-		     gr_ds_hww_report_mask_sph23_err_report_f());
-
-	/* setup sm warp esr report masks */
-	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(),
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_stack_error_report_f()	|
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_api_stack_error_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_ret_empty_stack_error_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_wrap_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_pc_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_pc_overflow_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_immc_addr_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_reg_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_encoding_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_sph_instr_combo_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_reg_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_oor_addr_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_misaligned_addr_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_addr_space_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_illegal_instr_param2_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_invalid_const_addr_ldc_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_geometry_sm_error_report_f() |
-		gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_divergent_report_f());
-
-	/* setup sm global esr report mask */
-	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r(),
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_sm_to_sm_fault_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_l1_error_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_multiple_warp_errors_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_physical_stack_overflow_error_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_int_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_pause_report_f() |
-		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complete_report_f());
+	g->ops.gr.enable_hww_exceptions(g);
+	g->ops.gr.set_hww_esr_report_mask(g);
 
 	/* enable per GPC exceptions */
 	gk20a_gr_enable_gpc_exceptions(g);
@@ -4313,11 +4328,11 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	/* override a few ctx state registers */
-	gr_gk20a_commit_global_cb_manager(g, NULL, false);
+	g->ops.gr.commit_global_cb_manager(g, NULL, false);
 	gr_gk20a_commit_global_timeslice(g, NULL, false);
 
 	/* floorsweep anything left */
-	gr_gk20a_ctx_state_floorsweep(g);
+	g->ops.gr.init_fs_state(g);
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
@@ -4351,11 +4366,6 @@ restore_fe_go_idle:
 	}
 
 	gk20a_mm_l2_invalidate(g);
-
-	/* turn on cya15 bit for a default val that missed the cut */
-	l1c_dbg_reg_val = gk20a_readl(g, gr_gpc0_tpc0_l1c_dbg_r());
-	l1c_dbg_reg_val |= gr_gpc0_tpc0_l1c_dbg_cya15_en_f();
-	gk20a_writel(g, gr_gpc0_tpc0_l1c_dbg_r(), l1c_dbg_reg_val);
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
@@ -4586,12 +4596,11 @@ struct gr_isr_data {
 	u32 class_num;
 };
 
-static void gk20a_gr_set_shader_exceptions(struct gk20a *g,
-					   struct gr_isr_data *isr_data)
+void gk20a_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
 	nvhost_dbg_fn("");
 
-	if (isr_data->data_lo == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE) {
+	if (data == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE) {
 		gk20a_writel(g,
 			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(), 0);
 		gk20a_writel(g,
@@ -4632,12 +4641,11 @@ static void gk20a_gr_set_shader_exceptions(struct gk20a *g,
 	}
 }
 
-static void gk20a_gr_set_circular_buffer_size(struct gk20a *g,
-			struct gr_isr_data *isr_data)
+static void gk20a_gr_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val, offset;
-	u32 cb_size = isr_data->data_lo * 4;
+	u32 cb_size = data * 4;
 
 	nvhost_dbg_fn("");
 
@@ -4684,13 +4692,12 @@ static void gk20a_gr_set_circular_buffer_size(struct gk20a *g,
 	}
 }
 
-static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g,
-						struct gr_isr_data *isr_data)
+static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
 	u32 pd_ab_max_output;
-	u32 alpha_cb_size = isr_data->data_lo * 4;
+	u32 alpha_cb_size = data * 4;
 
 	nvhost_dbg_fn("");
 	/* if (NO_ALPHA_BETA_TIMESLICE_SUPPORT_DEF)
@@ -4743,31 +4750,31 @@ void gk20a_gr_reset(struct gk20a *g)
 	BUG_ON(err);
 }
 
-static int gk20a_gr_handle_illegal_method(struct gk20a *g,
-					  struct gr_isr_data *isr_data)
+static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,
+					  u32 class_num, u32 offset, u32 data)
 {
 	nvhost_dbg_fn("");
 
-	if (isr_data->class_num == KEPLER_COMPUTE_A) {
-		switch (isr_data->offset << 2) {
+	if (class_num == KEPLER_COMPUTE_A) {
+		switch (offset << 2) {
 		case NVA0C0_SET_SHADER_EXCEPTIONS:
-			gk20a_gr_set_shader_exceptions(g, isr_data);
+			gk20a_gr_set_shader_exceptions(g, data);
 			break;
 		default:
 			goto fail;
 		}
 	}
 
-	if (isr_data->class_num == KEPLER_C) {
-		switch (isr_data->offset << 2) {
+	if (class_num == KEPLER_C) {
+		switch (offset << 2) {
 		case NVA297_SET_SHADER_EXCEPTIONS:
-			gk20a_gr_set_shader_exceptions(g, isr_data);
+			gk20a_gr_set_shader_exceptions(g, data);
 			break;
 		case NVA297_SET_CIRCULAR_BUFFER_SIZE:
-			gk20a_gr_set_circular_buffer_size(g, isr_data);
+			g->ops.gr.set_circular_buffer_size(g, data);
 			break;
 		case NVA297_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
-			gk20a_gr_set_alpha_circular_buffer_size(g, isr_data);
+			g->ops.gr.set_alpha_circular_buffer_size(g, data);
 			break;
 		default:
 			goto fail;
@@ -4776,9 +4783,6 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 	return 0;
 
 fail:
-	nvhost_err(dev_from_gk20a(g), "invalid method class 0x%08x"
-		", offset 0x%08x address 0x%08x\n",
-		isr_data->class_num, isr_data->offset, isr_data->addr);
 	return -EINVAL;
 }
 
@@ -4807,6 +4811,20 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 	nvhost_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
 	return -EINVAL;
+}
+
+static int gk20a_gr_handle_illegal_method(struct gk20a *g,
+					  struct gr_isr_data *isr_data)
+{
+	int ret = g->ops.gr.handle_sw_method(g, isr_data->addr,
+			isr_data->class_num, isr_data->offset,
+			isr_data->data_lo);
+	if (ret)
+		nvhost_err(dev_from_gk20a(g), "invalid method class 0x%08x"
+			", offset 0x%08x address 0x%08x\n",
+			isr_data->class_num, isr_data->offset, isr_data->addr);
+
+	return ret;
 }
 
 static int gk20a_gr_handle_illegal_class(struct gk20a *g,
@@ -5905,6 +5923,26 @@ static inline int ctxsw_prog_ucode_header_size_in_bytes(void)
 	return 256;
 }
 
+void gr_gk20a_get_sm_dsm_perf_regs(struct gk20a *g,
+					u32 *num_sm_dsm_perf_regs,
+					u32 **sm_dsm_perf_regs,
+					u32 *perf_register_stride)
+{
+	*num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
+	*sm_dsm_perf_regs = _sm_dsm_perf_regs;
+	*perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
+}
+
+void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+					u32 *num_sm_dsm_perf_ctrl_regs,
+					u32 **sm_dsm_perf_ctrl_regs,
+					u32 *ctrl_register_stride)
+{
+	*num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
+	*sm_dsm_perf_ctrl_regs = _sm_dsm_perf_ctrl_regs;
+	*ctrl_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
+}
+
 static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 						   u32 addr,
 						   bool is_quad, u32 quad,
@@ -5996,9 +6034,9 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	 * by computing it from the base gpc/tpc strides.  Then make sure
 	 * it is a real match.
 	 */
-	num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
-	sm_dsm_perf_regs = _sm_dsm_perf_regs;
-	perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
+	g->ops.gr.get_sm_dsm_perf_regs(g, &num_sm_dsm_perf_regs,
+				       &sm_dsm_perf_regs,
+				       &perf_register_stride);
 
 	init_sm_dsm_reg_info();
 
@@ -6027,9 +6065,9 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 	/* Didn't find reg in supported group 1.
 	 *  so try the second group now */
-	num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
-	sm_dsm_perf_ctrl_regs     = _sm_dsm_perf_ctrl_regs;
-	control_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
+	g->ops.gr.get_sm_dsm_perf_ctrl_regs(g, &num_sm_dsm_perf_ctrl_regs,
+				       &sm_dsm_perf_ctrl_regs,
+				       &control_register_stride);
 
 	if (ILLEGAL_ID == sm_dsm_perf_reg_id) {
 		for (i = 0; i < num_sm_dsm_perf_ctrl_regs; i++) {
@@ -6703,6 +6741,28 @@ static int gr_gk20a_calc_global_ctx_buffer_size(struct gk20a *g)
 	return size;
 }
 
+void gr_gk20a_commit_global_pagepool(struct gk20a *g,
+					    struct channel_ctx_gk20a *ch_ctx,
+					    u64 addr, u32 size, bool patch)
+{
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_base_r(),
+		gr_scc_pagepool_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_r(),
+		gr_scc_pagepool_total_pages_f(size) |
+		gr_scc_pagepool_valid_true_f(), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_base_r(),
+		gr_gpcs_gcc_pagepool_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_r(),
+		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_pagepool_r(),
+		gr_pd_pagepool_total_pages_f(size) |
+		gr_pd_pagepool_valid_true_f(), patch);
+}
+
 void gk20a_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -6711,5 +6771,19 @@ void gk20a_init_gr(struct gpu_ops *gops)
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gk20a_calc_global_ctx_buffer_size;
 	gops->gr.commit_global_attrib_cb = gr_gk20a_commit_global_attrib_cb;
-
+	gops->gr.commit_global_bundle_cb = gr_gk20a_commit_global_bundle_cb;
+	gops->gr.commit_global_cb_manager = gr_gk20a_commit_global_cb_manager;
+	gops->gr.commit_global_pagepool = gr_gk20a_commit_global_pagepool;
+	gops->gr.handle_sw_method = gr_gk20a_handle_sw_method;
+	gops->gr.set_alpha_circular_buffer_size =
+		gk20a_gr_set_circular_buffer_size;
+	gops->gr.set_circular_buffer_size =
+		gk20a_gr_set_alpha_circular_buffer_size;
+	gops->gr.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions;
+	gops->gr.is_valid_class = gr_gk20a_is_valid_class;
+	gops->gr.get_sm_dsm_perf_regs = gr_gk20a_get_sm_dsm_perf_regs;
+	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gk20a_get_sm_dsm_perf_ctrl_regs;
+	gops->gr.init_fs_state = gr_gk20a_ctx_state_floorsweep;
+	gops->gr.set_hww_esr_report_mask = gr_gk20a_set_hww_esr_report_mask;
+	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
 }

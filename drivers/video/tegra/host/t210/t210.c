@@ -208,6 +208,7 @@ struct nvhost_device_data t21_vic_info = {
 };
 #endif
 
+#ifdef CONFIG_TEGRA_GK20A
 struct nvhost_device_data tegra_gm20b_info = {
 	.syncpts		= {NVSYNCPT_GK20A_BASE},
 	.syncpt_base		= NVSYNCPT_GK20A_BASE,
@@ -239,3 +240,4 @@ struct nvhost_device_data tegra_gm20b_info = {
 	.gpu_edp_device		= true,
 #endif
 };
+#endif

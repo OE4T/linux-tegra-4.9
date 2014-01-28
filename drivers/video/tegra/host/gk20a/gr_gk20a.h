@@ -371,4 +371,8 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 				    u32 *num_offsets,
 				    bool is_quad, u32 quad);
 
+struct channel_ctx_gk20a;
+int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
+				    u32 addr, u32 data, bool patch);
+
 #endif /*__GR_GK20A_H__*/

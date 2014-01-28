@@ -61,8 +61,6 @@
 #define BLK_SIZE (256)
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
-static int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
-				    u32 addr, u32 data, bool patch);
 
 /* global ctx buffer */
 static int  gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g);
@@ -692,7 +690,7 @@ static int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 	return 0;
 }
 
-static int gr_gk20a_ctx_patch_write(struct gk20a *g,
+int gr_gk20a_ctx_patch_write(struct gk20a *g,
 				    struct channel_ctx_gk20a *ch_ctx,
 				    u32 addr, u32 data, bool patch)
 {
@@ -1000,7 +998,18 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 		 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
 	nvhost_dbg_info("attrib cb addr : 0x%016llx", addr);
+	g->ops.gr.commit_global_attrib_cb(g, ch_ctx, addr, patch);
 
+	if (patch)
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+
+	return 0;
+}
+
+static void gr_gk20a_commit_global_attrib_cb(struct gk20a *g,
+					    struct channel_ctx_gk20a *ch_ctx,
+					    u64 addr, bool patch)
+{
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_attrib_cb_base_r(),
 		gr_gpcs_setup_attrib_cb_base_addr_39_12_f(addr) |
 		gr_gpcs_setup_attrib_cb_base_valid_true_f(), patch);
@@ -1008,11 +1017,6 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_pin_cb_global_base_addr_r(),
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_v_f(addr) |
 		gr_gpcs_tpcs_pe_pin_cb_global_base_addr_valid_true_f(), patch);
-
-	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
-
-	return 0;
 }
 
 static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c, bool patch)
@@ -6658,4 +6662,6 @@ void gk20a_init_gr(struct gpu_ops *gops)
 	gops->gr.cb_size_default = gr_gk20a_cb_size_default;
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gk20a_calc_global_ctx_buffer_size;
+	gops->gr.commit_global_attrib_cb = gr_gk20a_commit_global_attrib_cb;
+
 }

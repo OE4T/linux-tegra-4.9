@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -760,6 +760,7 @@
 #define  SD_ENABLE_ONESHOT		(2 << 0)
 #define  SD_USE_VID_LUMA		(1 << 2)
 #define  SD_BIN_WIDTH(x)		(((x) & 0x3) << 3)
+#define  SD_BIN_WIDTH_VAL(val)		(((val) & (0x3 << 3)) >> 3)
 #define  SD_BIN_WIDTH_ONE		(0 << 3)
 #define  SD_BIN_WIDTH_TWO		(1 << 3)
 #define  SD_BIN_WIDTH_FOUR		(2 << 3)

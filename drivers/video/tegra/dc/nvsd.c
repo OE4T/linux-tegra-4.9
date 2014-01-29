@@ -62,6 +62,7 @@ NVSD_ATTR(sd_window_enable);
 NVSD_ATTR(sd_window);
 NVSD_ATTR(soft_clipping_enable);
 NVSD_ATTR(soft_clipping_threshold);
+NVSD_ATTR(soft_clipping_correction);
 NVSD_ATTR(smooth_k_enable);
 NVSD_ATTR(smooth_k_incr);
 NVSD_ATTR(use_vpulse2);
@@ -92,6 +93,7 @@ static struct attribute *nvsd_attrs[] = {
 	NVSD_ATTRS_ENTRY(sd_window),
 	NVSD_ATTRS_ENTRY(soft_clipping_enable),
 	NVSD_ATTRS_ENTRY(soft_clipping_threshold),
+	NVSD_ATTRS_ENTRY(soft_clipping_correction),
 	NVSD_ATTRS_ENTRY(smooth_k_enable),
 	NVSD_ATTRS_ENTRY(smooth_k_incr),
 	NVSD_ATTRS_ENTRY(use_vpulse2),
@@ -646,7 +648,7 @@ static int nvsd_set_brightness(struct tegra_dc *dc)
 	fixed20_12 nonhisto_gain;	/* gain of pixels not in histogram */
 	fixed20_12 est_achieved_gain;	/* final gain of pixels */
 	fixed20_12 histo_gain = dfixed_init(0);	/* gain of pixels */
-	fixed20_12 k, threshold;
+	fixed20_12 k, threshold;	/* k is the fractional part of HW_K */
 	fixed20_12 den, num, out;
 	fixed20_12 pix_avg, pix_avg_softclip;
 
@@ -658,13 +660,15 @@ static int nvsd_set_brightness(struct tegra_dc *dc)
 	}
 
 	val = tegra_dc_readl(dc, DC_DISP_SD_HW_K_VALUES);
-	k.full = SD_HW_K_R(val) << 2;
+	k.full = dfixed_const(SD_HW_K_R(val));
+	den.full = dfixed_const(1024);
+	k.full = dfixed_div(k, den);
 
 	val = tegra_dc_readl(dc, DC_DISP_SD_SOFT_CLIPPING);
 	threshold.full = dfixed_const(SD_SOFT_CLIPPING_THRESHOLD(val));
 
 	val = tegra_dc_readl(dc, DC_DISP_SD_CONTROL);
-	bin_width = SD_BIN_WIDTH(val)>>3;
+	bin_width = SD_BIN_WIDTH_VAL(val);
 	incr = 1 << bin_width;
 	base = 256 - 32 * incr;
 
@@ -734,7 +738,8 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		 * if hw output is used to update brightness. */
 		if (settings->phase_in_adjustments) {
 			return nvsd_phase_in_adjustments(dc, settings);
-		} else if (settings->soft_clipping_correction) {
+		} else if (settings->soft_clipping_enable &&
+			settings->soft_clipping_correction) {
 			sw_sd_brightness = nvsd_set_brightness(dc);
 			if (sw_sd_brightness != cur_sd_brightness) {
 				atomic_set(_sd_brightness, sw_sd_brightness);
@@ -872,6 +877,9 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 		else if (IS_NVSD_ATTR(soft_clipping_threshold))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->soft_clipping_threshold);
+		else if (IS_NVSD_ATTR(soft_clipping_correction))
+			res = snprintf(buf, PAGE_SIZE, "%d\n",
+				sd_settings->soft_clipping_correction);
 		else if (IS_NVSD_ATTR(smooth_k_enable))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->smooth_k_enable);
@@ -1060,6 +1068,8 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 			nvsd_check_and_update(0, 1, soft_clipping_enable);
 		} else if (IS_NVSD_ATTR(soft_clipping_threshold)) {
 			nvsd_check_and_update(0, 255, soft_clipping_threshold);
+		} else if (IS_NVSD_ATTR(soft_clipping_correction)) {
+			nvsd_check_and_update(0, 1, soft_clipping_correction);
 		} else if (IS_NVSD_ATTR(smooth_k_enable)) {
 			nvsd_check_and_update(0, 1, smooth_k_enable);
 		} else if (IS_NVSD_ATTR(smooth_k_incr)) {

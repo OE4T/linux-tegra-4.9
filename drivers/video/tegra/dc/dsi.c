@@ -30,6 +30,7 @@
 #include <linux/seq_file.h>
 #include <linux/nvhost.h>
 #include <linux/lcm.h>
+#include <linux/gcd.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
@@ -512,9 +513,15 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 {
 	struct tegra_dc_shift_clk_div shift_clk_div;
 	struct tegra_dc_shift_clk_div max_shift_clk_div;
+	struct tegra_dc_shift_clk_div delta_shift_clk_div;
 	u32 temp_lcm;
 	u32 burst_width;
 	u32 burst_width_max;
+	u32 temp_gcd;
+	u32 default_hs_clk_mhz =
+		DIV_ROUND_CLOSEST(dsi->default_hs_clk_khz, 1000);
+	u32 max_panel_freq_mhz =
+		DIV_ROUND_CLOSEST(dsi->info.max_panel_freq_khz, 1000);
 
 	/* Get the real value of default shift_clk_div. default_shift_clk_div
 	 * holds the real value of shift_clk_div.
@@ -524,15 +531,15 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 	/* Calculate shift_clk_div which can match the video_burst_mode. */
 	if (dsi->info.video_burst_mode >=
 			TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED) {
-		if (dsi->info.max_panel_freq_khz >= dsi->default_hs_clk_khz) {
+		if (max_panel_freq_mhz >= default_hs_clk_mhz) {
 			/* formula:
 			 * dsi->info.max_panel_freq_khz * shift_clk_div /
 			 * dsi->default_hs_clk_khz
 			 */
-			max_shift_clk_div.mul = dsi->info.max_panel_freq_khz *
+			max_shift_clk_div.mul = max_panel_freq_mhz *
 						shift_clk_div.mul;
-			max_shift_clk_div.div = dsi->default_hs_clk_khz *
-						dsi->default_shift_clk_div.div;
+			max_shift_clk_div.div = default_hs_clk_mhz *
+						shift_clk_div.div;
 		} else {
 			max_shift_clk_div = shift_clk_div;
 		}
@@ -547,12 +554,27 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 		 * burst_width / burst_width_max
 		 */
 		temp_lcm = lcm(max_shift_clk_div.div, shift_clk_div.div);
-		shift_clk_div.mul = (max_shift_clk_div.mul * temp_lcm /
-					max_shift_clk_div.div -
-					shift_clk_div.mul * temp_lcm /
-					shift_clk_div.div)*
+		delta_shift_clk_div.mul = (temp_lcm / max_shift_clk_div.div *
+					max_shift_clk_div.mul -
+					temp_lcm / shift_clk_div.div *
+					shift_clk_div.mul) *
 					burst_width;
-		shift_clk_div.div = temp_lcm * burst_width_max;
+		delta_shift_clk_div.div = temp_lcm * burst_width_max;
+
+		/* formula:
+		 * shift_clk_div + delta_shift_clk_div
+		 */
+		temp_lcm = lcm(shift_clk_div.div, delta_shift_clk_div.div);
+		shift_clk_div.mul = temp_lcm / shift_clk_div.div *
+				shift_clk_div.mul +
+				temp_lcm / delta_shift_clk_div.div *
+				delta_shift_clk_div.mul;
+		shift_clk_div.div = temp_lcm;
+
+		/* crunch shift clk numerator and denominator */
+		temp_gcd = gcd(shift_clk_div.mul, shift_clk_div.div);
+		shift_clk_div.mul /= temp_gcd;
+		shift_clk_div.div /= temp_gcd;
 	}
 
 	return shift_clk_div;
@@ -1793,9 +1815,10 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	u32 val;
 
 	/* formula: (dsi->shift_clk_div - 1) * 2 */
-	shift_clk_div_register = (dsi->shift_clk_div.mul -
-				dsi->shift_clk_div.div) * 2 /
-				dsi->shift_clk_div.div;
+	shift_clk_div_register = DIV_ROUND_CLOSEST(
+				((dsi->shift_clk_div.mul -
+				dsi->shift_clk_div.div) * 2),
+				dsi->shift_clk_div.div);
 
 	if (tegra_platform_is_fpga()) {
 		shift_clk_div_register = 1;

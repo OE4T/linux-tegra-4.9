@@ -28,6 +28,7 @@
 
 struct therm_est_subdevice {
 	void *dev_data;
+	struct thermal_zone_device *sub_thz;
 	long coeffs[HIST_LEN];
 	long hist[HIST_LEN];
 };

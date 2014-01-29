@@ -70,6 +70,7 @@ struct gpu_ops {
 						u64 addr, bool patch);
 		void (*init_gpc_mmu)(struct gk20a *g);
 	} gr;
+	const char *name;
 };
 
 struct gk20a {
@@ -314,6 +315,9 @@ void gk20a_channel_idle(struct platform_device *pdev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);
 void gk20a_reset(struct gk20a *g, u32 units);
+
+const struct firmware *
+gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 
 #define NVHOST_GPU_ARCHITECTURE_SHIFT 4
 

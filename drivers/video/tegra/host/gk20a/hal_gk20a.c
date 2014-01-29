@@ -23,6 +23,7 @@ int gk20a_init_hal(struct gpu_ops *gops)
 {
 	gk20a_init_ltc(gops);
 	gk20a_init_gr(gops);
+	gops->name = "gk20a";
 
 	return 0;
 }

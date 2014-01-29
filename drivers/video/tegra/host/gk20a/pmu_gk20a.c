@@ -1017,8 +1017,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu_seq_init(pmu);
 
 	if (!g->pmu_fw) {
-		g->pmu_fw = nvhost_client_request_firmware(g->dev,
-					GK20A_PMU_UCODE_IMAGE);
+		g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
 		if (!g->pmu_fw) {
 			nvhost_err(d, "failed to load pmu ucode!!");
 			err = -ENOENT;

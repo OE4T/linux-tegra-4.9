@@ -129,7 +129,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 			continue;
 		}
 
-		netlist_fw = nvhost_client_request_firmware(g->dev, name);
+		netlist_fw = gk20a_request_firmware(g, name);
 		if (!netlist_fw) {
 			nvhost_warn(d, "failed to load netlist %s", name);
 			continue;

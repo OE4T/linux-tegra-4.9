@@ -1818,8 +1818,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	int err = 0;
 	DEFINE_DMA_ATTRS(attrs);
 
-	fecs_fw = nvhost_client_request_firmware(g->dev,
-					GK20A_FECS_UCODE_IMAGE);
+	fecs_fw = gk20a_request_firmware(g, GK20A_FECS_UCODE_IMAGE);
 	if (!fecs_fw) {
 		nvhost_err(d, "failed to load fecs ucode!!");
 		return -ENOENT;
@@ -1829,8 +1828,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	p_fecs_boot_image = (void *)(fecs_fw->data +
 				sizeof(struct gk20a_ctxsw_bootloader_desc));
 
-	gpccs_fw = nvhost_client_request_firmware(g->dev,
-					GK20A_GPCCS_UCODE_IMAGE);
+	gpccs_fw = gk20a_request_firmware(g, GK20A_GPCCS_UCODE_IMAGE);
 	if (!gpccs_fw) {
 		release_firmware(fecs_fw);
 		nvhost_err(d, "failed to load gpccs ucode!!");

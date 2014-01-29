@@ -188,12 +188,14 @@ fail:
 	return -EINVAL;
 }
 
-static int tegra_dc_dpaux_write_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
-	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
+static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
+	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
 	int err = 0;
 	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
 	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
+
+	WARN_ON(!mutex_is_locked(&dp->dpaux_lock));
 
 	switch (cmd) {
 	case DPAUX_DP_AUXCTL_CMD_I2CWR:
@@ -301,11 +303,12 @@ tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u32	finished = 0;
 	int	ret	 = 0;
 
+	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
 		if (cur_size >= DP_AUX_MAX_BYTES)
 			cur_size = DP_AUX_MAX_BYTES - 1;
-		ret = tegra_dc_dpaux_write_chunk(dp, cmd, addr,
+		ret = tegra_dc_dpaux_write_chunk_locked(dp, cmd, addr,
 			data, &cur_size, aux_stat);
 
 		finished += cur_size;
@@ -315,17 +318,20 @@ tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		if (ret)
 			break;
 	} while (*size >= finished);
+	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
 	return ret;
 }
 
-static int tegra_dc_dpaux_read_chunk(struct tegra_dc_dp_data *dp, u32 cmd,
-	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
+static int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
+	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
 	int err = 0;
 	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
 	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
+
+	WARN_ON(!mutex_is_locked(&dp->dpaux_lock));
 
 	switch (cmd) {
 	case DPAUX_DP_AUXCTL_CMD_I2CRD:
@@ -448,6 +454,7 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		return -EINVAL;
 	}
 
+	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
 		if (cur_size >= DP_AUX_MAX_BYTES)
@@ -455,7 +462,7 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		else
 			cur_size -= 1;
 
-		ret = tegra_dc_dpaux_read_chunk(dp, cmd, addr,
+		ret = tegra_dc_dpaux_read_chunk_locked(dp, cmd, addr,
 			data, &cur_size, aux_stat);
 
 		if (ret)
@@ -467,6 +474,7 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		finished += cur_size;
 
 	} while (*size > finished);
+	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
 	return ret;
@@ -490,6 +498,7 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		return -EINVAL;
 	}
 
+	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
 		if (cur_size >= DP_AUX_MAX_BYTES)
@@ -498,10 +507,10 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 			cur_size -= 1;
 
 		len = 0;
-		CHECK_RET(tegra_dc_dpaux_write_chunk(dp,
+		CHECK_RET(tegra_dc_dpaux_write_chunk_locked(dp,
 				DPAUX_DP_AUXCTL_CMD_I2CWR,
 				i2c_addr, &iaddr, &len, aux_stat));
-		CHECK_RET(tegra_dc_dpaux_read_chunk(dp,
+		CHECK_RET(tegra_dc_dpaux_read_chunk_locked(dp,
 				DPAUX_DP_AUXCTL_CMD_I2CRD,
 				i2c_addr, data, &cur_size, aux_stat));
 
@@ -509,6 +518,7 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		data += cur_size;
 		finished += cur_size;
 	} while (*size > finished);
+	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
 	return ret;
@@ -521,8 +531,10 @@ static int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 status = 0;
 	int ret;
 
-	ret = tegra_dc_dpaux_read_chunk(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+	mutex_lock(&dp->dpaux_lock);
+	ret = tegra_dc_dpaux_read_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
 		cmd, data_ptr, &size, &status);
+	mutex_unlock(&dp->dpaux_lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to read DPCD data. CMD 0x%x, Status 0x%x\n",
@@ -579,8 +591,10 @@ static int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 status = 0;
 	int ret;
 
-	ret = tegra_dc_dpaux_write_chunk(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+	mutex_lock(&dp->dpaux_lock);
+	ret = tegra_dc_dpaux_write_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		cmd, &data, &size, &status);
+	mutex_unlock(&dp->dpaux_lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to write DPCD data. CMD 0x%x, Status 0x%x\n",
@@ -1413,6 +1427,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	INIT_WORK(&dp->lt_work, tegra_dc_dp_lt_worker);
 	init_completion(&dp->hpd_plug);
 	init_completion(&dp->aux_tx);
+
+	mutex_init(&dp->dpaux_lock);
 
 	tegra_dc_set_outdata(dc, dp);
 	tegra_dc_dp_debug_create(dp);

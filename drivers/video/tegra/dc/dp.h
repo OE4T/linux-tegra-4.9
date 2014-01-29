@@ -250,6 +250,8 @@ struct tegra_dc_dp_data {
 	struct completion		aux_tx;
 
 	struct tegra_dp_out		*pdata;
+
+	struct mutex			dpaux_lock;
 };
 
 static inline u32 tegra_dp_wait_aux_training(struct tegra_dc_dp_data *dp,

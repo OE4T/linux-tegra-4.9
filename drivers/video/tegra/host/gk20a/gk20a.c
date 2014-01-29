@@ -1134,6 +1134,8 @@ static int gk20a_probe(struct platform_device *dev)
 
 	gk20a_init_support(dev);
 
+	spin_lock_init(&gk20a->mc_enable_lock);
+
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);
 	if (err) {

@@ -1251,6 +1251,11 @@ static void tegra_dc_dp_lt_worker(struct work_struct *work)
 
 	tegra_dc_disable(dp->dc);
 
+	/* This thread runs when auto_test is requested.
+	 * Clear auto_test bit */
+	tegra_dc_dp_dpcd_write(dp, NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
+			NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES);
+
 	if (!dp->link_cfg.is_valid ||
 		tegra_dp_link_config(dp, &dp->link_cfg)) {
 		/* If current config is not valid or cannot be trained,
@@ -1271,9 +1276,7 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 {
 	struct tegra_dc_dp_data *dp = ptr;
 	struct tegra_dc *dc = dp->dc;
-	u32 status;
-	u8 data;
-	u8 clear_data = 0;
+	u32 status, data;
 
 	if (tegra_platform_is_fpga())
 		return IRQ_NONE;
@@ -1291,11 +1294,9 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 		complete_all(&dp->aux_tx);
 
 	if (status & DPAUX_INTR_AUX_IRQ_EVENT_PENDING) {
-		if (tegra_dc_dp_dpcd_read(dp,
-					NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
-					&data))
-			dev_err(&dc->ndev->dev,
-					"dp: failed to read IRQ_VECTOR\n");
+		data = tegra_dpaux_readl(dp, DPAUX_DP_AUX_SINKSTATLO);
+		data = (data & DPAUX_DP_AUX_SINKSTATLO_DSIV_MASK) >>
+			DPAUX_DP_AUX_SINKSTATLO_DSIV_SHIFT;
 
 		dev_dbg(&dc->ndev->dev,
 			"dp irq: Handle HPD with DPCD_IRQ_VECTOR 0x%x\n",
@@ -1307,15 +1308,7 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 			/* Schedule to do the link training */
 			schedule_work(&dp->lt_work);
 
-			/* Now clear auto_test bit */
-			clear_data |=
-			NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES;
 		}
-
-		if (clear_data)
-			tegra_dc_dp_dpcd_write(dp,
-					NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
-					clear_data);
 	}
 
 	tegra_dc_io_end(dc);

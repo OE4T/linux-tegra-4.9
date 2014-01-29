@@ -943,8 +943,8 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 {
 	bool fake_fault;
-	u32 fault_id;
-	u32 engine_mmu_id;
+	unsigned long fault_id;
+	unsigned long engine_mmu_id;
 	int i;
 	bool verbose = true;
 	nvhost_dbg_fn("");

@@ -108,12 +108,9 @@ static int therm_est_subdev_match(struct thermal_zone_device *thz, void *data)
 	return strcmp((char *)data, thz->type) == 0;
 }
 
-static int therm_est_subdev_get_temp(void *data, long *temp)
+static int therm_est_subdev_get_temp(struct thermal_zone_device *thz,
+					long *temp)
 {
-	struct thermal_zone_device *thz;
-
-	thz = thermal_zone_device_find(data, therm_est_subdev_match);
-
 	if (!thz || thz->ops->get_temp(thz, temp))
 		*temp = 25000;
 
@@ -249,7 +246,7 @@ static void therm_est_work_func(struct work_struct *work)
 					therm_est_work);
 
 	for (i = 0; i < est->ndevs; i++) {
-		if (therm_est_subdev_get_temp(est->devs[i].dev_data, &temp))
+		if (therm_est_subdev_get_temp(est->devs[i].sub_thz, &temp))
 			continue;
 		est->devs[i].hist[(est->ntemp % HIST_LEN)] = temp;
 	}
@@ -475,7 +472,7 @@ static int therm_est_init_history(struct therm_estimator *est)
 	for (i = 0; i < est->ndevs; i++) {
 		dev = &est->devs[i];
 
-		if (therm_est_subdev_get_temp(dev->dev_data, &temp))
+		if (therm_est_subdev_get_temp(dev->sub_thz, &temp))
 			return -EINVAL;
 
 		for (j = 0; j < HIST_LEN; j++)
@@ -777,6 +774,7 @@ static int therm_est_probe(struct platform_device *pdev)
 	int i;
 	struct therm_estimator *est;
 	struct therm_est_data *data;
+	struct thermal_zone_device *thz;
 
 	est = kzalloc(sizeof(struct therm_estimator), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(est))
@@ -785,6 +783,14 @@ static int therm_est_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, est);
 
 	data = pdev->dev.platform_data;
+
+	for (i = 0; i < data->ndevs; i++) {
+		thz = thermal_zone_device_find(data->devs[i].dev_data,
+							therm_est_subdev_match);
+		if (!thz)
+			goto err;
+		data->devs[i].sub_thz = thz;
+	}
 
 	est->devs = data->devs;
 	est->ndevs = data->ndevs;

@@ -79,11 +79,6 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 
-	/* Fill in gk20a specific ops here. */
-	err = gk20a_init_hal(&platform->g->ops);
-	if (err)
-		return err;
-
 	/* Initialize clocks and power. */
 	err = nvhost_module_init(dev);
 	if (err)

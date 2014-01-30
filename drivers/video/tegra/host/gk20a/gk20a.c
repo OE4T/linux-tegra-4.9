@@ -56,6 +56,7 @@
 #include "gk20a_scale.h"
 #include "gr3d/pod_scaling.h"
 #include "dbg_gpu_gk20a.h"
+#include "hal.h"
 
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area
@@ -852,6 +853,9 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_reset_priv_ring(g);
 
 	gk20a_detect_chip(g);
+	err = gpu_init_hal(g);
+	if (err)
+		goto done;
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.
 	   This function removes SlowdownOnBoot which applies 32x divider

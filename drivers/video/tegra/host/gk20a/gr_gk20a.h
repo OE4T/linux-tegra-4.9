@@ -303,6 +303,8 @@ struct gk20a_ctxsw_bootloader_desc {
 	u32 bootloader_entry_point;
 };
 
+struct gpu_ops;
+void gk20a_init_gr(struct gpu_ops *gops);
 int gk20a_init_gr_support(struct gk20a *g);
 void gk20a_gr_reset(struct gk20a *g);
 

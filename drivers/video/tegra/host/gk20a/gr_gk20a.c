@@ -5796,8 +5796,7 @@ int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	return 0;
 }
 
-
-void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
+static void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 {
 	u32 reg;
 	u32 quad_ctrl;
@@ -6436,9 +6435,11 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					continue;
 
 				/* if this is a quad access, setup for special access*/
-				if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD))
-					gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
-								 ctx_ops[i].offset);
+				if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD)
+						&& g->ops.gr.access_smpc_reg)
+					g->ops.gr.access_smpc_reg(g,
+							ctx_ops[i].quad,
+							ctx_ops[i].offset);
 				offset = ctx_ops[i].offset;
 
 				if (pass == 0) { /* write pass */
@@ -6541,8 +6542,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			}
 
 			/* if this is a quad access, setup for special access*/
-			if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD))
-				gr_gk20a_access_smpc_reg(g, ctx_ops[i].quad,
+			if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD) &&
+					g->ops.gr.access_smpc_reg)
+				g->ops.gr.access_smpc_reg(g, ctx_ops[i].quad,
 							 ctx_ops[i].offset);
 
 			for (j = 0; j < num_offsets; j++) {
@@ -6621,4 +6623,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	}
 
 	return err;
+}
+
+void gk20a_init_gr(struct gpu_ops *gops)
+{
+	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
 }

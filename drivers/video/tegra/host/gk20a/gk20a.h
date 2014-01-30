@@ -60,6 +60,9 @@ struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
 	} ltc;
+	struct {
+		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
+	} gr;
 };
 
 struct gk20a {

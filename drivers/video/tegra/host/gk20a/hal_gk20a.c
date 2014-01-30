@@ -21,6 +21,7 @@
 int gk20a_init_hal(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
+	gk20a_init_gr(gops);
 
 	return 0;
 }

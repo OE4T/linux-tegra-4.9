@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsd.c
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1011,7 +1011,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 		} else if (IS_NVSD_ATTR(phase_in_adjustments)) {
 			nvsd_check_and_update(0, 1, phase_in_adjustments);
 		} else if (IS_NVSD_ATTR(bin_width)) {
-			nvsd_check_and_update(0, 8, bin_width);
+			nvsd_check_and_update(-1, 8, bin_width);
 		} else if (IS_NVSD_ATTR(hw_update_delay)) {
 			nvsd_check_and_update(0, 2, hw_update_delay);
 		} else if (IS_NVSD_ATTR(use_vid_luma)) {

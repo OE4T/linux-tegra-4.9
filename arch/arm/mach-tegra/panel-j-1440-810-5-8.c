@@ -32,6 +32,7 @@
 
 #include "gpio-names.h"
 #define DSI_PANEL_EN_GPIO	TEGRA_GPIO_PQ2
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
 
 #define DSI_PANEL_RESET		1
 
@@ -434,6 +435,9 @@ fail:
 }
 
 static struct tegra_dsi_cmd dsi_j_1440_810_5_8_init_cmd[] = {
+	DSI_DLY_MS(5),
+	DSI_GPIO_SET(DSI_PANEL_RST_GPIO, 1),
+	DSI_DLY_MS(5),
 	/* panel exit_sleep_mode sequence */
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
 	DSI_SEND_FRAME(5),
@@ -450,7 +454,7 @@ static struct tegra_dsi_cmd dsi_j_1440_810_5_8_suspend_cmd[] = {
 
 	/* panel enter_sleep_mode sequence*/
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_ENTER_SLEEP_MODE, 0x0),
-	DSI_DLY_MS(60),
+	DSI_DLY_MS(80),
 };
 
 static int dsi_j_1440_810_5_8_enable(struct device *dev)
@@ -511,8 +515,6 @@ static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	gpio_set_value(dsi_j_1440_810_5_8_pdata.dsi_panel_rst_gpio, 1);
-	msleep(20);
 	gpio_set_value(DSI_PANEL_EN_GPIO, 1);
 	msleep(20);
 
@@ -541,6 +543,9 @@ static struct tegra_dsi_out dsi_j_1440_810_5_8_pdata = {
 
 static int dsi_j_1440_810_5_8_disable(void)
 {
+	gpio_direction_output(dsi_j_1440_810_5_8_pdata.dsi_panel_rst_gpio, 0);
+	usleep_range(3000, 5000);
+
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
 

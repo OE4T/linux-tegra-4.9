@@ -29,6 +29,7 @@
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
 #include <linux/tegra-soc.h>
+#include <linux/anon_inodes.h>
 
 #include <trace/events/nvhost.h>
 
@@ -198,13 +199,15 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int nvhost_channelopen(struct inode *inode, struct file *filp)
+static int __nvhost_channelopen(struct inode *inode,
+		struct nvhost_channel *ch,
+		struct file *filp)
 {
 	struct nvhost_channel_userctx *priv;
-	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata;
 
-	ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
+	if (inode)
+		ch = container_of(inode->i_cdev, struct nvhost_channel, cdev);
 	ch = nvhost_getchannel(ch, false, true);
 	if (!ch)
 		return -ENOMEM;
@@ -239,6 +242,11 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 fail:
 	nvhost_channelrelease(inode, filp);
 	return -ENOMEM;
+}
+
+static int nvhost_channelopen(struct inode *inode, struct file *filp)
+{
+	return __nvhost_channelopen(inode, NULL, filp);
 }
 
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
@@ -736,6 +744,44 @@ static long nvhost_channelctl(struct file *filp,
 	}
 
 	switch (cmd) {
+	case NVHOST_IOCTL_CHANNEL_OPEN:
+	{
+		int fd;
+		struct file *file;
+		char *name;
+
+		err = get_unused_fd_flags(O_RDWR);
+		if (err < 0)
+			break;
+		fd = err;
+
+		name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
+				dev_name(dev), fd);
+		if (!name) {
+			err = -ENOMEM;
+			put_unused_fd(fd);
+			break;
+		}
+
+		file = anon_inode_getfile(name, filp->f_op, NULL, O_RDWR);
+		kfree(name);
+		if (IS_ERR(file)) {
+			err = PTR_ERR(file);
+			put_unused_fd(fd);
+			break;
+		}
+		fd_install(fd, file);
+
+		err = __nvhost_channelopen(NULL, priv->ch, file);
+		if (err) {
+			put_unused_fd(fd);
+			fput(file);
+			break;
+		}
+
+		((struct nvhost_get_param_args *)buf)->value = fd;
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 	{
 		struct nvhost_device_data *pdata = \

@@ -3385,6 +3385,21 @@ int regulator_get_current_limit(struct regulator *regulator)
 EXPORT_SYMBOL_GPL(regulator_get_current_limit);
 
 /**
+ * regulator_can_set_mode - check if regulator can set mode
+ * @regulator: regulator source
+ *
+ * Returns positive if the regulator driver backing the source/client
+ * can control regulator mode, false otherwise.
+ */
+int regulator_can_set_mode(struct regulator *regulator)
+{
+	struct regulator_dev *rdev = regulator->rdev;
+
+	return rdev->desc->ops->set_mode ? 1 : 0;
+}
+EXPORT_SYMBOL_GPL(regulator_can_set_mode);
+
+/**
  * regulator_set_mode - set regulator operating mode
  * @regulator: regulator source
  * @mode: operating mode - one of the REGULATOR_MODE constants

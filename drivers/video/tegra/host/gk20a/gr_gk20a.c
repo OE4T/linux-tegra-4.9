@@ -2737,8 +2737,8 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct device *d = dev_from_gk20a(g);
+	DEFINE_DMA_ATTRS(attrs);
 
 	nvhost_dbg_fn("");
 
@@ -2753,7 +2753,9 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->mmu_rd_mem.cpuva = NULL;
 	gr->mmu_rd_mem.iova = 0;
 
-	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+	dma_free_attrs(d, gr->compbit_store.size, gr->compbit_store.pages,
+			gr->compbit_store.base_iova, &attrs);
 
 	memset(&gr->mmu_wr_mem, 0, sizeof(struct mmu_desc));
 	memset(&gr->mmu_rd_mem, 0, sizeof(struct mmu_desc));
@@ -3197,7 +3199,9 @@ clean_up:
 
 static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct mem_mgr *memmgr = mem_mgr_from_g(g);
+	struct device *d = dev_from_gk20a(g);
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
 
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
@@ -3217,12 +3221,11 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
 
 	u32 compbit_backing_size;
-	int ret = 0;
 
 	nvhost_dbg_fn("");
 
 	if (max_comptag_lines == 0) {
-		gr->compbit_store.mem.size = 0;
+		gr->compbit_store.size = 0;
 		return 0;
 	}
 
@@ -3253,28 +3256,17 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 	nvhost_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
-	gr->compbit_store.mem.ref =
-		nvhost_memmgr_alloc(memmgr, compbit_backing_size,
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    DEFAULT_ALLOC_FLAGS,
-				    0);
-	if (IS_ERR(gr->compbit_store.mem.ref)) {
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+	gr->compbit_store.size = compbit_backing_size;
+	gr->compbit_store.pages = dma_alloc_attrs(d, gr->compbit_store.size,
+					&iova, GFP_KERNEL, &attrs);
+	if (!gr->compbit_store.pages) {
 		nvhost_err(dev_from_gk20a(g), "failed to allocate"
 			   "backing store for compbit : size %d",
 			   compbit_backing_size);
-		return PTR_ERR(gr->compbit_store.mem.ref);
+		return -ENOMEM;
 	}
-	gr->compbit_store.mem.size = compbit_backing_size;
-
-	gr->compbit_store.mem.sgt =
-		nvhost_memmgr_pin(memmgr, gr->compbit_store.mem.ref,
-				dev_from_gk20a(g), mem_flag_none);
-	if (IS_ERR(gr->compbit_store.mem.sgt)) {
-		ret = PTR_ERR(gr->compbit_store.mem.sgt);
-		goto clean_up;
-	}
-	gr->compbit_store.base_pa =
-		gk20a_mm_iova_addr(gr->compbit_store.mem.sgt->sgl);
+	gr->compbit_store.base_iova = iova;
 
 	nvhost_allocator_init(&gr->comp_tags, "comptag",
 			      1, /* start */
@@ -3282,13 +3274,6 @@ static int gr_gk20a_init_comptag(struct gk20a *g, struct gr_gk20a *gr)
 			      1); /* align */
 
 	return 0;
-
-clean_up:
-	if (gr->compbit_store.mem.sgt)
-		nvhost_memmgr_free_sg_table(memmgr, gr->compbit_store.mem.ref,
-				gr->compbit_store.mem.sgt);
-	nvhost_memmgr_put(memmgr, gr->compbit_store.mem.ref);
-	return ret;
 }
 
 int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
@@ -3304,7 +3289,7 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 
 	nvhost_dbg_fn("");
 
-	if (gr->compbit_store.mem.size == 0)
+	if (gr->compbit_store.size == 0)
 		return 0;
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl2_r(),
@@ -4129,6 +4114,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 last_method_data = 0;
 	u32 i, err;
 	u32 l1c_dbg_reg_val;
+	u64 compbit_store_base_iova;
 
 	nvhost_dbg_fn("");
 
@@ -4303,8 +4289,11 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_init_zbc(g, gr);
 
+	compbit_store_base_iova =
+		NV_MC_SMMU_VADDR_TRANSLATE(gr->compbit_store.base_iova);
+
 	{
-		u64 compbit_base_post_divide64 = (gr->compbit_store.base_pa >>
+		u64 compbit_base_post_divide64 = (compbit_store_base_iova >>
 				ltc_ltcs_ltss_cbc_base_alignment_shift_v());
 		do_div(compbit_base_post_divide64, gr->num_fbps);
 		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
@@ -4313,7 +4302,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
 		gr->num_fbps) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
-	if (compbit_base_post_multiply64 < gr->compbit_store.base_pa)
+	if (compbit_base_post_multiply64 < compbit_store_base_iova)
 		compbit_base_post_divide++;
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
@@ -4321,8 +4310,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	nvhost_dbg(dbg_info | dbg_map | dbg_pte,
 		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
-		   (u32)(gr->compbit_store.base_pa>>32),
-		   (u32)(gr->compbit_store.base_pa & 0xffffffff),
+		   (u32)(compbit_store_base_iova >> 32),
+		   (u32)(compbit_store_base_iova & 0xffffffff),
 		   compbit_base_post_divide);
 
 	/* load ctx init */

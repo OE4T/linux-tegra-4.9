@@ -25,9 +25,4 @@ struct gk20a;
 
 int gk20a_init_hal(struct gpu_ops *gops);
 
-/*
- * HAL functions past this point.
- */
-int gk20a_determine_L2_size_bytes(struct gk20a *g);
-
 #endif /* __HAL_GK20A__ */

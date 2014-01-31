@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/hal_gk20a.c
- *
- * GK20A Tegra HAL interface.
+ * GK20A L2
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -15,14 +13,9 @@
  * more details.
  */
 
-#include "hal_gk20a.h"
-#include "ltc_gk20a.h"
-#include "gk20a.h"
+#ifndef _NVHOST_GK20A_LTC
+#define _NVHOST_GK20A_LTC
+struct gk20a;
 
-int gk20a_init_hal(struct gpu_ops *gops)
-{
-	gk20a_init_ltc(gops);
-	gk20a_init_gr(gops);
-
-	return 0;
-}
+void gk20a_init_ltc(struct gpu_ops *gops);
+#endif

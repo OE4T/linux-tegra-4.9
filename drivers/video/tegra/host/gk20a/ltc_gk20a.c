@@ -23,3 +23,8 @@
 #include "hw_ltc_gk20a.h"
 
 #include "ltc_common.c"
+
+void gk20a_init_ltc(struct gpu_ops *gops)
+{
+	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
+}

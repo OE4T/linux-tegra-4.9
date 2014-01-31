@@ -134,4 +134,12 @@ static inline u32 pri_ringmaster_enum_gpc_count_v(u32 r)
 {
 	return (r >> 0) & 0x1f;
 }
+static inline u32 pri_ringmaster_enum_ltc_r(void)
+{
+	return 0x0012006c;
+}
+static inline u32 pri_ringmaster_enum_ltc_count_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
 #endif

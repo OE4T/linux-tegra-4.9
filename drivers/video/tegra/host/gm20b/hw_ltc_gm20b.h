@@ -54,6 +54,30 @@ static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x0014046c;
 }
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_r(void)
+{
+	return 0x00140494;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_ways_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_v(u32 r)
+{
+	return (r >> 16) & 0x3;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_all_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_half_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v(void)
+{
+	return 0x00000002;
+}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
 	return 0x0017e26c;
@@ -105,6 +129,14 @@ static inline u32 ltc_ltcs_ltss_cbc_base_alignment_shift_v(void)
 static inline u32 ltc_ltcs_ltss_cbc_base_address_v(u32 r)
 {
 	return (r >> 0) & 0x3ffffff;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_r(void)
+{
+	return 0x0017e27c;
+}
+static inline u32 ltc_ltcs_misc_ltc_num_active_ltcs_r(void)
+{
+	return 0x0017e000;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param_r(void)
 {

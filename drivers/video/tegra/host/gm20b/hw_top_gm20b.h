@@ -74,6 +74,10 @@ static inline u32 top_num_fbps_value_v(u32 r)
 {
 	return (r >> 0) & 0x1f;
 }
+static inline u32 top_num_ltcs_r(void)
+{
+	return 0x00022454;
+}
 static inline u32 top_fs_status_r(void)
 {
 	return 0x00022500;

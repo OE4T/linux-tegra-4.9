@@ -50,6 +50,10 @@
 #ifndef _hw_fb_gm20b_h_
 #define _hw_fb_gm20b_h_
 
+static inline u32 fb_fbhub_num_active_ltcs_r(void)
+{
+	return 0x00100800;
+}
 static inline u32 fb_mmu_ctrl_r(void)
 {
 	return 0x00100c80;

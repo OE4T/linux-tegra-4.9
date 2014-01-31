@@ -704,6 +704,24 @@ int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 void dma_release_declared_memory(struct device *dev);
 void *dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size);
+
+struct dma_resize_notifier_ops {
+	void (*resize)(phys_addr_t, size_t);
+};
+
+struct dma_resize_notifier {
+	struct dma_resize_notifier_ops *ops;
+};
+
+struct dma_declare_info {
+	const char *name;
+	bool resize;
+	phys_addr_t base;
+	size_t size;
+	struct device *cma_dev;
+	struct dma_resize_notifier notifier;
+};
+
 #else
 static inline int
 dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,

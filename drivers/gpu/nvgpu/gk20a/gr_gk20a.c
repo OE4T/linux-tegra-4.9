@@ -4211,6 +4211,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	if (g->ops.gr.init_gpc_mmu)
+		g->ops.gr.init_gpc_mmu(g);
+
 	/* slcg prod values */
 	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
 	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);

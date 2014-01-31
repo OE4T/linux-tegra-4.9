@@ -15,6 +15,7 @@
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
+#include "gm20b/hal_gm20b.h"
 
 int gpu_init_hal(struct gk20a *g)
 {
@@ -23,6 +24,9 @@ int gpu_init_hal(struct gk20a *g)
 	case GK20A_GPUID_GK20A:
 		gk20a_dbg_info("gk20a detected");
 		gk20a_init_hal(&g->ops);
+		break;
+	case GK20A_GPUID_GM20B:
+		gm20b_init_hal(&g->ops);
 		break;
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);

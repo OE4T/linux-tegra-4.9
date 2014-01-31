@@ -318,11 +318,20 @@ tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u32	finished = 0;
 	int	ret	 = 0;
 
+	if (*size == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: aux write size can't be 0\n");
+		return -EINVAL;
+	}
+
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
 		if (cur_size >= DP_AUX_MAX_BYTES)
 			cur_size = DP_AUX_MAX_BYTES - 1;
+		else
+			cur_size -= 1;
+
 		ret = tegra_dc_dpaux_write_chunk_locked(dp, cmd, addr,
 			data, &cur_size, aux_stat);
 

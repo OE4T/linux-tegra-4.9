@@ -1298,8 +1298,6 @@ static int nvmap_probe(struct platform_device *pdev)
 				debugfs_create_file("allocations", S_IRUGO,
 					heap_root, node,
 					&debug_allocations_fops);
-				nvmap_heap_debugfs_init(heap_root,
-					node->carveout);
 			}
 		}
 	}

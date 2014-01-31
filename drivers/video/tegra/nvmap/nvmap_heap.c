@@ -31,8 +31,6 @@
 #include <linux/err.h>
 #include <linux/bug.h>
 #include <linux/stat.h>
-#include <linux/debugfs.h>
-#include <linux/nvhost.h>
 
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>
@@ -40,10 +38,6 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
-
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-#include <linux/ote_protocol.h>
-#endif
 
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory
@@ -53,6 +47,9 @@
  *
  * The carveout allocator returns allocations which are physically contiguous.
  */
+
+extern struct device tegra_vpr_dev;
+static struct kmem_cache *heap_block_cache;
 
 struct list_block {
 	struct nvmap_heap_block block;
@@ -67,299 +64,43 @@ struct list_block {
 
 struct nvmap_heap {
 	struct list_head all_list;
-	struct list_head free_list;
 	struct mutex lock;
 	const char *name;
 	void *arg;
-	/* number of devices pointed by devs */
-	unsigned int num_devs;
-	/* indices for start and end device for resize support */
-	unsigned int dev_start;
-	unsigned int dev_end;
-	/* devs to manage cma/coherent memory allocs, if resize allowed */
-	struct device *devs;
-	struct device dev;
-	/* device to allocate memory from cma */
-	struct device *cma_dev;
-	/* flag that indicates whether heap can resize :shrink/grow */
-	bool can_resize;
-	/* lock to synchronise heap resizing */
-	struct mutex resize_lock;
-	/* CMA chunk size if resize supported */
-	size_t cma_chunk_size;
 	/* heap base */
 	phys_addr_t base;
 	/* heap size */
 	size_t len;
-	phys_addr_t cma_base;
-	size_t cma_len;
-	bool is_vpr;
 };
-
-static struct kmem_cache *heap_block_cache;
-
-void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
-{
-	debugfs_create_x32("base", S_IRUGO,
-		heap_root, (u32 *)&heap->base);
-	debugfs_create_x32("size", S_IRUGO,
-		heap_root, (u32 *)&heap->len);
-	if (heap->can_resize) {
-		debugfs_create_x32("cma_base", S_IRUGO,
-			heap_root, (u32 *)&heap->cma_base);
-		debugfs_create_x32("cma_size", S_IRUGO,
-			heap_root, (u32 *)&heap->cma_len);
-		debugfs_create_x32("cma_chunk_size", S_IRUGO,
-			heap_root, (u32 *)&heap->cma_chunk_size);
-		debugfs_create_x32("num_cma_chunks", S_IRUGO,
-			heap_root, (u32 *)&heap->num_devs);
-	}
-}
-
-static void nvmap_config_vpr(struct nvmap_heap *h)
-{
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	if (h->is_vpr) {
-		/* Config VPR_BOM/_SIZE in MC */
-		te_set_vpr_params((void *)(uintptr_t)h->base, h->len);
-		/* trigger GPU to refetch VPR base and size. */
-		nvhost_vpr_info_fetch();
-	}
-#endif
-}
-
-static phys_addr_t nvmap_alloc_from_contiguous(
-				struct nvmap_heap *h,
-				phys_addr_t base, size_t len)
-{
-	size_t count;
-	struct page *page;
-	unsigned long order;
-
-	order = get_order(len);
-	count = PAGE_ALIGN(len) >> PAGE_SHIFT;
-	page = dma_alloc_from_contiguous(h->cma_dev, count, order);
-	if (!page) {
-		dev_err(h->cma_dev, "failed to alloc dma contiguous mem\n");
-		goto dma_alloc_err;
-	}
-	base = page_to_phys(page);
-	dev_dbg(h->cma_dev, "dma contiguous mem base (0x%pa) size (%zu)\n",
-		&base, len);
-	BUG_ON(base < h->cma_base ||
-		base - h->cma_base + len > h->cma_len);
-	return base;
-
-dma_alloc_err:
-	return DMA_ERROR_CODE;
-}
-
-static void nvmap_release_from_contiguous(
-				struct nvmap_heap *h,
-				phys_addr_t base, size_t len)
-{
-	struct page *page = phys_to_page(base);
-	size_t count = PAGE_ALIGN(len) >> PAGE_SHIFT;
-
-	dma_release_from_contiguous(h->cma_dev, page, count);
-}
-
-static int nvmap_declare_coherent(struct device *dev,
-				  phys_addr_t base, size_t len)
-{
-	int err;
-
-	BUG_ON(dev->dma_mem);
-	dma_set_coherent_mask(dev,  DMA_BIT_MASK(64));
-	err = dma_declare_coherent_memory(dev, 0, base, len,
-			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
-	if (err & DMA_MEMORY_NOMAP) {
-		dev_dbg(dev, "dma coherent mem base (0x%pa) size (%zu)\n",
-			&base, len);
-		return 0;
-	}
-	dev_err(dev, "failed to declare dma coherent_mem (0x%pa)\n",
-		&base);
-	return -ENOMEM;
-}
-
-static void nvmap_release_coherent(struct device *dev)
-{
-	dma_release_declared_memory(dev);
-}
-
-/* Call with resize_lock held
- * returns 0 on success.
- * returns 1 on failure.
- */
-static int nvmap_heap_resize_locked(struct nvmap_heap *h)
-{
-	int idx;
-	phys_addr_t base;
-	bool at_bottom = false;
-	DEFINE_DMA_ATTRS(attrs);
-
-	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
-	base = nvmap_alloc_from_contiguous(h, 0, h->cma_chunk_size);
-	if (dma_mapping_error(h->cma_dev, base))
-		return 1;
-
-	idx = div_u64(base - h->cma_base, h->cma_chunk_size);
-	if (!h->len || base == h->base - h->cma_chunk_size)
-		/* new chunk can be added at bottom. */
-		at_bottom = true;
-	else if (base != h->base + h->len)
-		/* new chunk can't be added at top */
-		goto fail_non_contig;
-
-	BUG_ON(h->dev_start - 1 != idx && h->dev_end + 1 != idx && h->len);
-	if (nvmap_declare_coherent(&h->devs[idx], base, h->cma_chunk_size))
-		goto fail_declare;
-	dev_dbg(&h->devs[idx],
-		"Resize VPR base from=0x%pa to=0x%pa, len from=%zu to=%zu\n",
-		&h->base, &base, h->len, h->len + h->cma_chunk_size);
-	if (at_bottom) {
-		h->base = base;
-		h->dev_start = idx;
-		if (!h->len)
-			h->dev_end = h->dev_start;
-	} else {
-		h->dev_end = idx;
-	}
-	h->len += h->cma_chunk_size;
-	nvmap_config_vpr(h);
-	return 0;
-
-fail_non_contig:
-	dev_dbg(&h->devs[idx], "Found Non-Contiguous block(0x%pa)\n", &base);
-fail_declare:
-	nvmap_release_from_contiguous(h, base, h->cma_chunk_size);
-	return 1;
-}
 
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
 {
 	phys_addr_t pa;
 	DEFINE_DMA_ATTRS(attrs);
+	struct device *dev = &tegra_vpr_dev;
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
 
-	if (h->can_resize) {
-		int idx = 0;
-		struct device *dev;
-
-		mutex_lock(&h->resize_lock);
-retry_alloc:
-		/* Try allocation from already existing CMA chunks */
-		for (idx = h->dev_start; idx <= h->dev_end && h->len; idx++) {
-			dev = &h->devs[idx];
-			(void)dma_alloc_attrs(dev, len, &pa,
-				DMA_MEMORY_NOMAP, &attrs);
-			if (!dma_mapping_error(dev, pa)) {
-				dev_dbg(dev,
-					"Allocated addr (0x%pa) len(%zu)\n",
-					&pa, len);
-				mutex_unlock(&h->resize_lock);
-				goto out;
-			}
-		}
-
-		/* Check if a heap can be expanded */
-		if (h->dev_end - h->dev_start + 1 < h->num_devs || !h->len) {
-			if (!nvmap_heap_resize_locked(h))
-				goto retry_alloc;
-		}
-		mutex_unlock(&h->resize_lock);
-	} else if (h->cma_dev) {
-		unsigned long order = get_order(len);
-		int count = PAGE_ALIGN(len) >> PAGE_SHIFT;
-		struct page *page = dma_alloc_from_contiguous(
-					h->cma_dev, count, order);
-
-		if (page) {
-			pa = page_to_phys(page);
-			dev_dbg(h->cma_dev,
-			"dma contig mem addr (0x%pa) size (%zu)\n", &pa, len);
-		} else {
-			pa =  DMA_ERROR_CODE;
-			dev_err(h->cma_dev,
-			"failed to alloc dma contig mem size(%zu)\n", len);
-		}
-	} else {
-		dev_dbg(&h->dev, "non-cma alloc addr (0x%pa) len(%zu)\n",
+	(void)dma_alloc_attrs(dev, len, &pa,
+		DMA_MEMORY_NOMAP, &attrs);
+	if (!dma_mapping_error(dev, pa))
+		dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
 			&pa, len);
-		/* handle non-CMA block allocation */
-		(void)dma_alloc_attrs(&h->dev, len, &pa,
-			DMA_MEMORY_NOMAP, &attrs);
-	}
-out:
+
 	return pa;
 }
 
 static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 				size_t len)
 {
-	int idx = 0;
-	dma_addr_t dev_base;
+	struct device *dev = &tegra_vpr_dev;
 	DEFINE_DMA_ATTRS(attrs);
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
-
-	if (h->can_resize) {
-		idx = div_u64(base - h->cma_base, h->cma_chunk_size);
-		dev_dbg(&h->devs[idx], "dma free base (0x%pa) size (%zu)\n",
-			&base, len);
-		dma_free_attrs(&h->devs[idx], len, (void *)(uintptr_t)base,
-			(dma_addr_t)base, &attrs);
-
-		mutex_lock(&h->resize_lock);
-check_next_chunk:
-		/* Check if heap can be shrinked */
-		if ((idx == h->dev_start || idx == h->dev_end) && h->len) {
-			/* check if entire chunk is free */
-			dma_alloc_attrs(&h->devs[idx], h->cma_chunk_size,
-				&dev_base, DMA_MEMORY_NOMAP, &attrs);
-			if (dma_mapping_error(&h->devs[idx], dev_base))
-				goto out_unlock;
-			dma_free_attrs(&h->devs[idx], h->cma_chunk_size,
-				(void *)(uintptr_t)dev_base,
-				(dma_addr_t)dev_base, &attrs);
-			nvmap_release_coherent(&h->devs[idx]);
-			BUG_ON(h->devs[idx].dma_mem != NULL);
-			h->len -= h->cma_chunk_size;
-
-			if ((idx == h->dev_start)) {
-				h->base += h->cma_chunk_size;
-				h->dev_start++;
-				dev_dbg(&h->devs[idx],
-					"Release Chunk at bottom\n");
-				idx++;
-			} else {
-				h->dev_end--;
-				dev_dbg(&h->devs[idx],
-					"Release Chunk at top\n");
-				idx--;
-			}
-			nvmap_config_vpr(h);
-			nvmap_release_from_contiguous(h,
-				dev_base, h->cma_chunk_size);
-			goto check_next_chunk;
-		}
-out_unlock:
-		mutex_unlock(&h->resize_lock);
-	} else if (h->cma_dev) {
-		dev_dbg(h->cma_dev, "dma free base (0x%pa) size (%zu)\n",
-			&base, len);
-		dma_release_from_contiguous(h->cma_dev, phys_to_page(base),
-			PAGE_ALIGN(len) >> PAGE_SHIFT);
-	} else {
-		/* handle non-CMA block release */
-		dev_dbg(&h->dev,
-			"Non-Cma release base (0x%pa) len(%zu)\n",
-			&base, len);
-		dma_free_attrs(&h->dev, len,
-			(void *)(uintptr_t)base, (dma_addr_t)base, &attrs);
-	}
+	dev_dbg(dev,
+		"Free base (%pa) size (%zu)\n", &base, len);
+	dma_free_attrs(dev, len,
+		(void *)(uintptr_t)base, (dma_addr_t)base, &attrs);
 }
 
 /*
@@ -373,7 +114,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 {
 	struct list_block *heap_block = NULL;
 	dma_addr_t dev_base;
-	struct device *dev = heap->can_resize ? &heap->devs[0] : &heap->dev;
+	struct device *dev = &tegra_vpr_dev;
 
 	/* since pages are only mappable with one cache attribute,
 	 * and most allocations from carveout heaps are DMA coherent
@@ -415,28 +156,6 @@ fail_dma_alloc:
 fail_heap_block_alloc:
 	return NULL;
 }
-
-#ifdef DEBUG_FREE_LIST
-static void freelist_debug(struct nvmap_heap *heap, const char *title,
-			   struct list_block *token)
-{
-	int i;
-	struct list_block *n;
-	struct device *dev = heap->can_resize ? &heap->devs[0] : &heap->dev;
-
-	dev_debug(dev, "%s\n", title);
-	i = 0;
-	list_for_each_entry(n, &heap->free_list, free_list) {
-		dev_debug(dev, "\t%d [%p..%p]%s\n",
-				i, (void *)n->orig_addr,
-			  (void *)(n->orig_addr + n->size),
-			  (n == token) ? "<--" : "");
-		i++;
-	}
-}
-#else
-#define freelist_debug(_heap, _title, _token)	do { } while (0)
-#endif
 
 static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 {
@@ -496,69 +215,6 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 	mutex_unlock(&h->lock);
 }
 
-#ifdef CONFIG_CMA
-static struct device *nvmap_create_dma_devs(const char *name, int num_devs)
-{
-	int idx = 0;
-	struct device *devs;
-
-	devs = kzalloc(num_devs * sizeof(*devs), GFP_KERNEL);
-	if (!devs)
-		return NULL;
-	for (idx = 0; idx < num_devs; idx++)
-		dev_set_name(&devs[idx], "heap-%s-%d", name, idx);
-	return devs;
-}
-#endif
-
-static int nvmap_cma_heap_create(struct nvmap_heap *h,
-	const struct nvmap_platform_carveout *co)
-{
-#ifdef CONFIG_CMA
-	struct dma_contiguous_stats stats;
-
-	h->can_resize = co->resize;
-	h->cma_dev = co->cma_dev;
-	dma_get_contiguous_stats(h->cma_dev, &stats);
-	dev_set_name(h->cma_dev, "cma-heap-%s", h->name);
-	h->cma_base = stats.base;
-	h->cma_len = stats.size;
-
-	if (h->can_resize) {
-		if (h->cma_len < co->cma_chunk_size) {
-			dev_err(h->cma_dev, "error cma_len < cma_chunk_size");
-			return -ENOMEM;
-		}
-		if (h->cma_len % co->cma_chunk_size) {
-			dev_err(h->cma_dev,
-				"size is not multiple of cma_chunk_size(%zu)\n"
-				"size truncated from %zu to %zu\n",
-				co->cma_chunk_size, h->cma_len,
-				round_down(h->cma_len, co->cma_chunk_size));
-			h->cma_len = round_down(h->cma_len, co->cma_chunk_size);
-		}
-
-		mutex_init(&h->resize_lock);
-		h->cma_chunk_size = co->cma_chunk_size;
-		h->num_devs = div_u64(h->cma_len, h->cma_chunk_size);
-
-		h->devs = nvmap_create_dma_devs(h->name, h->num_devs);
-		if (!h->devs) {
-			pr_err("failed to alloc devices\n");
-			return -ENOMEM;
-		}
-		/* FIXME: get this from board. */
-		h->is_vpr = true;
-	} else {
-		/* allocation/free are performed using CMA directly. */
-		dev_set_name(&h->dev, "heap-%s", h->name);
-	}
-	return 0;
-#else
-	return -ENOMEM;
-#endif
-}
-
 /* nvmap_heap_create: create a heap object of len bytes, starting from
  * address base.
  */
@@ -579,19 +235,20 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->arg = arg;
 
 	if (co->cma_dev) {
-		if (nvmap_cma_heap_create(h, co))
-			goto fail_cma_heap_create;
-		base = h->cma_base;
-		len = h->cma_len;
-	} else {
-		/* declare Non-CMA heap */
-		if (nvmap_declare_coherent(&h->dev, base, len))
-			goto fail_dma_declare;
-		h->base = base;
-		h->len = len;
+#ifdef CONFIG_CMA
+		struct dma_contiguous_stats stats;
+
+		dma_get_contiguous_stats(co->cma_dev, &stats);
+		base = stats.base;
+		len = stats.size;
+#else
+		kfree(h);
+		return NULL;
+#endif
 	}
 
-	INIT_LIST_HEAD(&h->free_list);
+	h->base = base;
+	h->len = len;
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	inner_flush_cache_all();
@@ -607,11 +264,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;
-
-fail_cma_heap_create:
-fail_dma_declare:
-	kfree(h);
-	return NULL;
 }
 
 void *nvmap_heap_to_arg(struct nvmap_heap *heap)

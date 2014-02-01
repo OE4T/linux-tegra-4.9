@@ -72,18 +72,11 @@ void nvhost_gk20a_scale_callback(struct nvhost_device_profile *profile,
 				 unsigned long freq)
 {
 	struct gk20a *g = get_gk20a(profile->pdev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(profile->pdev);
 	struct nvhost_emc_params *emc_params = profile->private_data;
 	long after = gk20a_clk_get_rate(g);
 	long emc_target = nvhost_scale3d_get_emc_rate(emc_params, after);
 
 	nvhost_module_set_devfreq_rate(profile->pdev, 2, emc_target);
-
-	if (pdata->gpu_edp_device) {
-		u32 avg = 0;
-		gk20a_pmu_load_norm(g, &avg);
-		tegra_edp_notify_gpu_load(avg);
-	}
 }
 
 /*
@@ -178,6 +171,14 @@ static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 	struct devfreq *devfreq = pdata->power_manager;
+	struct gk20a *g = get_gk20a(pdev);
+
+	/* inform edp about new constraint */
+	if (pdata->gpu_edp_device) {
+		u32 avg = 0;
+		gk20a_pmu_load_norm(g, &avg);
+		tegra_edp_notify_gpu_load(avg);
+	}
 
 	/* Is the device profile initialised? */
 	if (!(profile && devfreq))

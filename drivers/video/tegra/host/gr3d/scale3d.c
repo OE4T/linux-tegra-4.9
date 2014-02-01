@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D clock scaling
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,7 +34,6 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/ftrace.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra-soc.h>
 
 #include "chip_support.h"
@@ -101,7 +100,6 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq)
 {
 	struct nvhost_gr3d_params *gr3d_params = profile->private_data;
-	struct nvhost_device_data *pdata = platform_get_drvdata(profile->pdev);
 	struct nvhost_emc_params *emc_params = &gr3d_params->emc_params;
 	long hz;
 	long after;
@@ -111,12 +109,6 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 	hz = nvhost_scale3d_get_emc_rate(emc_params, after);
 	nvhost_module_set_devfreq_rate(profile->pdev, gr3d_params->clk_3d_emc,
 				       hz);
-
-	if (pdata->gpu_edp_device) {
-		u32 avg = 0;
-		actmon_op().read_avg_norm(profile->actmon, &avg);
-		tegra_edp_notify_gpu_load(avg);
-	}
 }
 
 /*

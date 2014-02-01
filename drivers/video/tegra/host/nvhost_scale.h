@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D Clock Scaling
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,6 +46,7 @@ struct nvhost_device_profile {
 	struct nvhost_devfreq_ext_stat	ext_stat;
 
 	void				*private_data;
+	struct notifier_block		qos_notify_block;
 };
 
 /* Initialization and de-initialization for module */

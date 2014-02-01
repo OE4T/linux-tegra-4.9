@@ -142,6 +142,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.devfreq_governor	= "nvhost_podgov",
 		.scaling_post_cb	= nvhost_gk20a_scale_callback,
 		.gpu_edp_device		= true,
+		.qos_id			= PM_QOS_GPU_FREQ_MIN,
 #endif
 	},
 	.probe = gk20a_tegra_probe,

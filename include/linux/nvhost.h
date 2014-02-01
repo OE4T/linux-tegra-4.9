@@ -229,6 +229,8 @@ struct nvhost_device_data {
 
 	u32 nvhost_timeout_default;
 
+	/* QoS id that denotes minimum frequency */
+	unsigned int			qos_id;
 	/* Data for devfreq usage */
 	struct devfreq			*power_manager;
 	/* Private device profile data */

@@ -1495,7 +1495,8 @@ static int nct1008_probe(struct i2c_client *client,
 	/* Config for the Local sensor. */
 	mask = 0;
 	for (i = 0; i < sensor_data->num_trips; i++)
-		mask |= ((data->plat_data.sensors[LOC].trips[i].mask > 0) << i);
+		mask |=
+		(((u64)(data->plat_data.sensors[LOC].trips[i].mask > 0)) << i);
 
 	data->sensors[LOC].thz = thermal_zone_device_register(
 		nct_loc_name,
@@ -1513,7 +1514,8 @@ static int nct1008_probe(struct i2c_client *client,
 	/* Config for the External sensor. */
 	mask = 0;
 	for (i = 0; i < data->plat_data.sensors[EXT].num_trips; i++)
-		mask |= ((data->plat_data.sensors[EXT].trips[i].mask > 0) << i);
+		mask |=
+		(((u64)(data->plat_data.sensors[EXT].trips[i].mask > 0)) << i);
 
 	data->sensors[EXT].thz = thermal_zone_device_register(nct_ext_name,
 		data->plat_data.sensors[EXT].num_trips,

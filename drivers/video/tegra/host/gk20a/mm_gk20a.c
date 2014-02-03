@@ -1755,19 +1755,21 @@ static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 	struct gk20a *g = mm->g;
 	u32 pgsz = gmmu_page_sizes[pgsz_idx];
 	u32 i;
+	dma_addr_t iova;
 
 	/* allocate the zero page if the va does not already have one */
 	if (!vm->zero_page_cpuva) {
 		int err = 0;
 		vm->zero_page_cpuva = dma_alloc_coherent(&g->dev->dev,
 							 mm->big_page_size,
-							 &vm->zero_page_iova,
+							 &iova,
 							 GFP_KERNEL);
 		if (!vm->zero_page_cpuva) {
 			dev_err(&g->dev->dev, "failed to allocate zero page\n");
 			return -ENOMEM;
 		}
 
+		vm->zero_page_iova = iova;
 		err = gk20a_get_sgtable(&g->dev->dev, &vm->zero_page_sgt,
 					vm->zero_page_cpuva, vm->zero_page_iova,
 					mm->big_page_size);
@@ -2316,6 +2318,7 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
+	dma_addr_t iova;
 
 	vm->mm = mm;
 
@@ -2380,13 +2383,14 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	/* allocate instance mem for bar1 */
 	inst_block->size = ram_in_alloc_size_v();
 	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
-				&inst_block->iova, GFP_KERNEL);
+				&iova, GFP_KERNEL);
 	if (!inst_block->cpuva) {
 		nvhost_err(d, "%s: memory allocation failed\n", __func__);
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
+	inst_block->iova = iova;
 	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
 	if (!inst_block->cpu_pa) {
 		nvhost_err(d, "%s: failed to get phys address\n", __func__);
@@ -2458,6 +2462,7 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
+	dma_addr_t iova;
 
 	vm->mm = mm;
 
@@ -2520,13 +2525,14 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	/* allocate instance mem for pmu */
 	inst_block->size = GK20A_PMU_INST_SIZE;
 	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
-				&inst_block->iova, GFP_KERNEL);
+				&iova, GFP_KERNEL);
 	if (!inst_block->cpuva) {
 		nvhost_err(d, "%s: memory allocation failed\n", __func__);
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
+	inst_block->iova = iova;
 	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
 	if (!inst_block->cpu_pa) {
 		nvhost_err(d, "%s: failed to get phys address\n", __func__);

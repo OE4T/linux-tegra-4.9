@@ -151,7 +151,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	addr_hi = u64_hi32(c->userd_iova);
 
 	nvhost_dbg_info("channel %d : set ramfc userd 0x%16llx",
-		c->hw_chid, c->userd_iova);
+		c->hw_chid, (u64)c->userd_iova);
 
 	mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
 		 pbdma_userd_target_vid_mem_f() |
@@ -360,13 +360,14 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 {
 	struct device *d = dev_from_gk20a(g);
 	int err = 0;
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
 	ch->inst_block.size = ram_in_alloc_size_v();
 	ch->inst_block.cpuva = dma_alloc_coherent(d,
 					ch->inst_block.size,
-					&ch->inst_block.iova,
+					&iova,
 					GFP_KERNEL);
 	if (!ch->inst_block.cpuva) {
 		nvhost_err(d, "%s: memory allocation failed\n", __func__);
@@ -374,6 +375,7 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 		goto clean_up;
 	}
 
+	ch->inst_block.iova = iova;
 	ch->inst_block.cpu_pa = gk20a_get_phys_from_iova(d,
 							ch->inst_block.iova);
 	if (!ch->inst_block.cpu_pa) {
@@ -383,7 +385,7 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 	}
 
 	nvhost_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, ch->inst_block.cpu_pa);
+		ch->hw_chid, (u64)ch->inst_block.cpu_pa);
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -872,6 +874,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	u32 i = 0, size;
 	int err = 0;
 	struct sg_table *sgt;
+	dma_addr_t iova;
 
 	/* Kernel can insert gpfifos before and after user gpfifos.
 	   Before user gpfifos, kernel inserts fence_wait, which takes
@@ -886,7 +889,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 		c->gpfifo.entry_num * 2 * 10 * sizeof(u32) / 3);
 
 	q->mem.base_cpuva = dma_alloc_coherent(d, size,
-					&q->mem.base_iova,
+					&iova,
 					GFP_KERNEL);
 	if (!q->mem.base_cpuva) {
 		nvhost_err(d, "%s: memory allocation failed\n", __func__);
@@ -894,6 +897,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 		goto clean_up;
 	}
 
+	q->mem.base_iova = iova;
 	q->mem.size = size;
 
 	err = gk20a_get_sgtable(d, &sgt,
@@ -1148,6 +1152,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	u32 gpfifo_size;
 	int err = 0;
 	struct sg_table *sgt;
+	dma_addr_t iova;
 
 	/* Kernel can insert one extra gpfifo entry before user submitted gpfifos
 	   and another one after, for internal usage. Triple the requested size. */
@@ -1184,7 +1189,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	c->gpfifo.size = gpfifo_size * sizeof(struct gpfifo);
 	c->gpfifo.cpu_va = (struct gpfifo *)dma_alloc_coherent(d,
 						c->gpfifo.size,
-						&c->gpfifo.iova,
+						&iova,
 						GFP_KERNEL);
 	if (!c->gpfifo.cpu_va) {
 		nvhost_err(d, "%s: memory allocation failed\n", __func__);
@@ -1192,6 +1197,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		goto clean_up;
 	}
 
+	c->gpfifo.iova = iova;
 	c->gpfifo.entry_num = gpfifo_size;
 
 	c->gpfifo.get = c->gpfifo.put = 0;

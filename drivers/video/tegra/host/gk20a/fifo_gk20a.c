@@ -318,15 +318,18 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 
 	runlist_size  = ram_rl_entry_size_v() * f->num_channels;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
+		dma_addr_t iova;
+
 		runlist->mem[i].cpuva =
 			dma_alloc_coherent(d,
 					runlist_size,
-					&runlist->mem[i].iova,
+					&iova,
 					GFP_KERNEL);
 		if (!runlist->mem[i].cpuva) {
 			dev_err(d, "memory allocation failed\n");
 			goto clean_up_runlist;
 		}
+		runlist->mem[i].iova = iova;
 		runlist->mem[i].size = runlist_size;
 	}
 	mutex_init(&runlist->mutex);
@@ -475,6 +478,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
 	int chid, i, err = 0;
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
@@ -499,13 +503,14 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->userd.cpuva = dma_alloc_coherent(d,
 					f->userd_total_size,
-					&f->userd.iova,
+					&iova,
 					GFP_KERNEL);
 	if (!f->userd.cpuva) {
 		dev_err(d, "memory allocation failed\n");
 		goto clean_up;
 	}
 
+	f->userd.iova = iova;
 	err = gk20a_get_sgtable(d, &f->userd.sgt,
 				f->userd.cpuva, f->userd.iova,
 				f->userd_total_size);

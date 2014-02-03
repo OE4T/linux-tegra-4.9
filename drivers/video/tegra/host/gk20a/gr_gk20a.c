@@ -1721,18 +1721,20 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
 	u64 pde_addr;
+	dma_addr_t iova;
 
 	/* Alloc mem of inst block */
 	p_ucode_info->inst_blk_desc.size = ram_in_alloc_size_v();
 	p_ucode_info->inst_blk_desc.cpuva = dma_alloc_coherent(d,
 					p_ucode_info->inst_blk_desc.size,
-					&p_ucode_info->inst_blk_desc.iova,
+					&iova,
 					GFP_KERNEL);
 	if (!p_ucode_info->inst_blk_desc.cpuva) {
 		nvhost_err(d, "failed to allocate memory\n");
 		return -ENOMEM;
 	}
 
+	p_ucode_info->inst_blk_desc.iova = iova;
 	p_ucode_info->inst_blk_desc.cpu_pa = gk20a_get_phys_from_iova(d,
 					p_ucode_info->inst_blk_desc.iova);
 
@@ -1816,6 +1818,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	u8 *p_buf;
 	u32 ucode_size;
 	int err = 0;
+	dma_addr_t iova;
 	DEFINE_DMA_ATTRS(attrs);
 
 	fecs_fw = gk20a_request_firmware(g, GK20A_FECS_UCODE_IMAGE);
@@ -1853,7 +1856,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 	p_ucode_info->surface_desc.cpuva = dma_alloc_attrs(d,
 					p_ucode_info->surface_desc.size,
-					&p_ucode_info->surface_desc.iova,
+					&iova,
 					GFP_KERNEL,
 					&attrs);
 	if (!p_ucode_info->surface_desc.cpuva) {
@@ -1862,6 +1865,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		goto clean_up;
 	}
 
+	p_ucode_info->surface_desc.iova = iova;
 	err = gk20a_get_sgtable(d, &p_ucode_info->surface_desc.sgt,
 				p_ucode_info->surface_desc.cpuva,
 				p_ucode_info->surface_desc.iova,
@@ -2430,6 +2434,7 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	struct sg_table *sgt;
 	DEFINE_DMA_ATTRS(attrs);
 	int err = 0;
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
@@ -2443,10 +2448,11 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr_ctx->size = gr->ctx_vars.buffer_total_size;
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 	gr_ctx->pages = dma_alloc_attrs(d, gr_ctx->size,
-				&gr_ctx->iova, GFP_KERNEL, &attrs);
+				&iova, GFP_KERNEL, &attrs);
 	if (!gr_ctx->pages)
 		return -ENOMEM;
 
+	gr_ctx->iova = iova;
 	err = gk20a_get_sgtable_from_pages(d, &sgt, gr_ctx->pages,
 			gr_ctx->iova, gr_ctx->size);
 	if (err)
@@ -2501,17 +2507,19 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	DEFINE_DMA_ATTRS(attrs);
 	struct sg_table *sgt;
 	int err = 0;
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
 	patch_ctx->size = 128 * sizeof(u32);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 	patch_ctx->pages = dma_alloc_attrs(d, patch_ctx->size,
-				&patch_ctx->iova, GFP_KERNEL,
+				&iova, GFP_KERNEL,
 				&attrs);
 	if (!patch_ctx->pages)
 		return -ENOMEM;
 
+	patch_ctx->iova = iova;
 	err = gk20a_get_sgtable_from_pages(d, &sgt, patch_ctx->pages,
 			patch_ctx->iova, patch_ctx->size);
 	if (err)
@@ -2978,20 +2986,25 @@ clean_up:
 static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct device *d = dev_from_gk20a(g);
+	dma_addr_t iova;
 
 	gr->mmu_wr_mem_size = gr->mmu_rd_mem_size = 0x1000;
 
 	gr->mmu_wr_mem.size = gr->mmu_wr_mem_size;
 	gr->mmu_wr_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_wr_mem_size,
-					&gr->mmu_wr_mem.iova, GFP_KERNEL);
+					&iova, GFP_KERNEL);
 	if (!gr->mmu_wr_mem.cpuva)
 		goto err;
 
+	gr->mmu_wr_mem.iova = iova;
+
 	gr->mmu_rd_mem.size = gr->mmu_rd_mem_size;
 	gr->mmu_rd_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_rd_mem_size,
-					&gr->mmu_rd_mem.iova, GFP_KERNEL);
+					&iova, GFP_KERNEL);
 	if (!gr->mmu_rd_mem.cpuva)
 		goto err_free_wr_mem;
+
+	gr->mmu_rd_mem.iova = iova;
 	return 0;
 
  err_free_wr_mem:

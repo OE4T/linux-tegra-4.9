@@ -976,6 +976,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct sg_table *sgt_pmu_ucode;
 	struct sg_table *sgt_seq_buf;
 	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
@@ -1039,7 +1040,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 	pmu->ucode.cpuva = dma_alloc_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
-					&pmu->ucode.iova,
+					&iova,
 					GFP_KERNEL,
 					&attrs);
 	if (!pmu->ucode.cpuva) {
@@ -1048,8 +1049,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto err_release_fw;
 	}
 
+	pmu->ucode.iova = iova;
 	pmu->seq_buf.cpuva = dma_alloc_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
-					&pmu->seq_buf.iova,
+					&iova,
 					GFP_KERNEL);
 	if (!pmu->seq_buf.cpuva) {
 		nvhost_err(d, "failed to allocate memory\n");
@@ -1057,6 +1059,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto err_free_pmu_ucode;
 	}
 
+	pmu->seq_buf.iova = iova;
 	init_waitqueue_head(&pmu->pg_wq);
 
 	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
@@ -1241,6 +1244,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	bool status;
 	u32 size;
 	struct sg_table *sgt_pg_buf;
+	dma_addr_t iova;
 
 	nvhost_dbg_fn("");
 
@@ -1257,7 +1261,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 
 	if (!pmu->sw_ready) {
 		pmu->pg_buf.cpuva = dma_alloc_coherent(d, size,
-						&pmu->pg_buf.iova,
+						&iova,
 						GFP_KERNEL);
 		if (!pmu->pg_buf.cpuva) {
 			nvhost_err(d, "failed to allocate memory\n");
@@ -1265,6 +1269,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 			goto err;
 		}
 
+		pmu->pg_buf.iova = iova;
 		pmu->pg_buf.size = size;
 
 		err = gk20a_get_sgtable(d, &sgt_pg_buf,

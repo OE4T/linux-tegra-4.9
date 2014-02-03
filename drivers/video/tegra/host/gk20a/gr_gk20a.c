@@ -1465,7 +1465,6 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 static u32 gk20a_init_sw_bundle(struct gk20a *g)
 {
 	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
-	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 last_bundle_data = 0;
 	u32 err = 0;
 	int i;
@@ -1826,9 +1825,9 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		return -ENOENT;
 	}
 
-	p_fecs_boot_desc = fecs_fw->data;
-	p_fecs_boot_image = fecs_fw->data +
-				sizeof(struct gk20a_ctxsw_bootloader_desc);
+	p_fecs_boot_desc = (void *)fecs_fw->data;
+	p_fecs_boot_image = (void *)(fecs_fw->data +
+				sizeof(struct gk20a_ctxsw_bootloader_desc));
 
 	gpccs_fw = nvhost_client_request_firmware(g->dev,
 					GK20A_GPCCS_UCODE_IMAGE);
@@ -1838,9 +1837,9 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		return -ENOENT;
 	}
 
-	p_gpcs_boot_desc = gpccs_fw->data;
-	p_gpcs_boot_image = gpccs_fw->data +
-				sizeof(struct gk20a_ctxsw_bootloader_desc);
+	p_gpcs_boot_desc = (void *)gpccs_fw->data;
+	p_gpcs_boot_image = (void *)(gpccs_fw->data +
+				sizeof(struct gk20a_ctxsw_bootloader_desc));
 
 	ucode_size = 0;
 	gr_gk20a_init_ctxsw_ucode_inst(&p_ucode_info->fecs, &ucode_size,
@@ -4107,7 +4106,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
-	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 data;
 	u32 addr_lo, addr_hi;
@@ -4117,7 +4115,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 fe_go_idle_timeout_save;
-	u32 last_bundle_data = 0;
 	u32 last_method_data = 0;
 	u32 i, err;
 	u32 l1c_dbg_reg_val;

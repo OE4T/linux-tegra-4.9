@@ -167,6 +167,23 @@ static int vi_set_isomgr_request(struct vi *tegra_vi, uint vi_bw, uint lt)
 	}
 	return ret;
 }
+
+static int vi_isomgr_release(struct vi *tegra_vi)
+{
+	int ret = 0;
+	dev_dbg(&tegra_vi->ndev->dev, "%s++\n", __func__);
+
+	/* deallocate isomgr bw */
+	ret = vi_set_isomgr_request(tegra_vi, 0, 0);
+	if (ret) {
+		dev_err(&tegra_vi->ndev->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
 #endif
 
 static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
@@ -210,12 +227,11 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
-	struct vi *tegra_vi;
+	struct vi *tegra_vi = file->private_data;
 
 	if (_IOC_TYPE(cmd) != NVHOST_VI_IOCTL_MAGIC)
 		return -EFAULT;
 
-	tegra_vi = file->private_data;
 	switch (cmd) {
 	case NVHOST_VI_IOCTL_ENABLE_TPG: {
 		uint enable;
@@ -311,6 +327,19 @@ static int vi_open(struct inode *inode, struct file *file)
 
 static int vi_release(struct inode *inode, struct file *file)
 {
+#if defined(CONFIG_TEGRA_ISOMGR)
+	int ret = 0;
+	struct vi *tegra_vi = file->private_data;
+
+	/* nullify isomgr request */
+	ret = vi_isomgr_release(tegra_vi);
+	if (ret) {
+		dev_err(&tegra_vi->ndev->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
+	}
+#endif
 	return 0;
 }
 

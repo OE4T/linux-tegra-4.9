@@ -136,6 +136,23 @@ static int isp_isomgr_request(struct isp *tegra_isp, uint isp_bw, uint lt)
 	}
 	return ret;
 }
+
+static int isp_isomgr_release(struct isp *tegra_isp)
+{
+	int ret = 0;
+	dev_dbg(&tegra_isp->ndev->dev, "%s++\n", __func__);
+
+	/* deallocate isomgr bw */
+	ret = isp_isomgr_request(tegra_isp, 0, 0);
+	if (ret) {
+		dev_err(&tegra_isp->ndev->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
 #endif
 
 static int isp_probe(struct platform_device *dev)
@@ -234,7 +251,7 @@ static int __exit isp_remove(struct platform_device *dev)
 #else
 	nvhost_module_disable_clk(&dev->dev);
 #endif
-
+	nvhost_client_device_release(dev);
 	return 0;
 }
 
@@ -363,6 +380,19 @@ static int isp_open(struct inode *inode, struct file *file)
 
 static int isp_release(struct inode *inode, struct file *file)
 {
+#if defined(CONFIG_TEGRA_ISOMGR)
+	int ret = 0;
+	struct isp *tegra_isp = file->private_data;
+
+	/* nullify isomgr request */
+	ret = isp_isomgr_release(tegra_isp);
+	if (ret) {
+		dev_err(&tegra_isp->ndev->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
+	}
+#endif
 	return 0;
 }
 

@@ -559,6 +559,7 @@ struct i2c_adapter {
 	struct device dev;		/* the adapter device */
 
 	bool atomic_xfer_only;
+	bool cancel_xfer_on_shutdown;
 
 	int nr;
 	char name[48];
@@ -650,6 +651,9 @@ i2c_unlock_adapter(struct i2c_adapter *adapter)
 {
 	i2c_unlock_bus(adapter, I2C_LOCK_ROOT_ADAPTER);
 }
+
+void i2c_shutdown_adapter(struct i2c_adapter *adapter);
+void i2c_shutdown_clear_adapter(struct i2c_adapter *adapter);
 
 /*flags for the client struct: */
 #define I2C_CLIENT_PEC		0x04	/* Use Packet Error Checking */

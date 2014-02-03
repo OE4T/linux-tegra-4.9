@@ -77,7 +77,7 @@ static inline struct sync_fence *nvhost_sync_fdget(int fd)
 	return NULL;
 }
 
-static int nvhost_sync_num_pts(struct sync_fence *fence)
+static inline int nvhost_sync_num_pts(struct sync_fence *fence)
 {
 	return 0;
 }

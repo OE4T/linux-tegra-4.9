@@ -2823,8 +2823,6 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 				 u32 *total_cycles)
 {
-	struct pmu_gk20a *pmu = &(g->pmu);
-
 	if (!g->power_on) {
 		*busy_cycles = 0;
 		*total_cycles = 0;
@@ -2842,7 +2840,6 @@ void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 
 void gk20a_pmu_reset_load_counters(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &(g->pmu);
 	u32 reg_val = pwr_pmu_idle_count_reset_f(1);
 
 	if (!g->power_on)

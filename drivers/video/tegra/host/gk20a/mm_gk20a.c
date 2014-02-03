@@ -352,7 +352,7 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	struct device *d = dev_from_vm(vm);
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
-	u64 iova;
+	dma_addr_t iova;
 	DEFINE_DMA_ATTRS(attrs);
 	struct page **pages;
 	int err = 0;

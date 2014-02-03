@@ -3,6 +3,7 @@ GCOV_PROFILE := y
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
+ccflags-y += -Werror
 
 obj-$(CONFIG_GK20A) += \
 	gk20a.o \

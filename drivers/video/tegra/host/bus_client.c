@@ -1079,7 +1079,6 @@ static struct device *nvhost_client_device_create(
 	const struct file_operations *ops)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	const char *use_dev_name;
 	struct device *dev;
 	int err;

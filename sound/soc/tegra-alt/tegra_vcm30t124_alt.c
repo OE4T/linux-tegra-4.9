@@ -970,7 +970,7 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 
 	machine->max9485_client = i2c_new_device(i2c_get_adapter(0),
 						&max9485_info);
-	if (IS_ERR(machine->max9485_client)) {
+	if (!machine->max9485_client) {
 		dev_err(&pdev->dev, "cannot get i2c device for max9485\n");
 		goto err;
 

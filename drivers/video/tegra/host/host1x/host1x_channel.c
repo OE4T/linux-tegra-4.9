@@ -482,7 +482,7 @@ static inline int hwctx_handler_init(struct nvhost_channel *ch)
 	int err = 0;
 
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	u32 syncpt = pdata->syncpts[0];
+	u32 syncpt = NVSYNCPT_INVALID;
 	u32 waitbase = pdata->waitbases[0];
 
 	if (pdata->alloc_hwctx_handler) {

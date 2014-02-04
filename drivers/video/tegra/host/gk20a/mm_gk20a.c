@@ -1022,7 +1022,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 					 struct mem_handle *r,
 					 u64 offset_align,
 					 u32 flags,
-					 u32 kind,
+					 int kind,
 					 struct sg_table **sgt,
 					 bool user_mapped,
 					 int rw_flag)
@@ -1091,7 +1091,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct mem_handle *r,
 			u64 offset_align,
 			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
-			u32 kind,
+			int kind,
 			struct sg_table **sgt,
 			bool user_mapped,
 			int rw_flag)
@@ -2234,7 +2234,7 @@ static int gk20a_as_map_buffer(struct nvhost_as_share *as_share,
 	}
 
 	ret_va = gk20a_vm_map(vm, memmgr, r, *offset_align,
-			flags, 0/*no kind here, to be removed*/, NULL, true,
+			flags, NV_KIND_DEFAULT, NULL, true,
 			mem_flag_none);
 	*offset_align = ret_va;
 	if (!ret_va) {

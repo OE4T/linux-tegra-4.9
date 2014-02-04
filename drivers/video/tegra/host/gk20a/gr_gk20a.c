@@ -33,12 +33,14 @@
 #include "bus_client.h"
 
 #include "gk20a.h"
+#include "kind_gk20a.h"
 #include "gr_ctx_gk20a.h"
 
 #include "hw_ccsr_gk20a.h"
 #include "hw_ctxsw_prog_gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_gr_gk20a.h"
+#include "hw_gmmu_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_ram_gk20a.h"
 #include "hw_pri_ringmaster_gk20a.h"
@@ -2351,8 +2353,9 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_vm_map(ch_vm, memmgr, handle_ref,
 			      /*offset_align, flags, kind*/
-			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			      NULL, false, mem_flag_none);
+			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			      gmmu_pte_kind_pitch_v(), NULL, false,
+			      mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -2365,8 +2368,9 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_vm_map(ch_vm, memmgr, handle_ref,
 			      /*offset_align, flags, kind*/
-			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			      NULL, false, mem_flag_none);
+			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			      gmmu_pte_kind_pitch_v(), NULL, false,
+			      mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -2379,8 +2383,9 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_vm_map(ch_vm, memmgr, handle_ref,
 			      /*offset_align, flags, kind*/
-			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE, 0,
-			      NULL, false, mem_flag_none);
+			      0, NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			      gmmu_pte_kind_pitch_v(), NULL, false,
+			      mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -2389,7 +2394,8 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = gk20a_vm_map(ch_vm, memmgr,
 			      gr->global_ctx_buffer[GOLDEN_CTX].ref,
 			      /*offset_align, flags, kind*/
-			      0, 0, 0, NULL, false, mem_flag_none);
+			      0, 0, gmmu_pte_kind_pitch_v(), NULL, false,
+			      mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;

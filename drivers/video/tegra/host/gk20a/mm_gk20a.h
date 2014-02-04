@@ -369,7 +369,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		 struct mem_handle *r,
 		 u64 offset_align,
 		 u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
-		 u32 kind,
+		 int kind,
 		 struct sg_table **sgt,
 		 bool user_mapped,
 		 int rw_flag);

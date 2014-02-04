@@ -3,7 +3,7 @@
  *
  * GK20A memory kind management
  *
- * Copyright (c) 2011, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,8 @@ void gk20a_init_uncompressed_kind_map(void);
 void gk20a_init_kind_attr(void);
 
 extern u16 gk20a_kind_attr[];
+#define NV_KIND_DEFAULT		     -1
+
 #define GK20A_KIND_ATTR_SUPPORTED    BIT(0)
 #define GK20A_KIND_ATTR_COMPRESSIBLE BIT(1)
 #define GK20A_KIND_ATTR_Z            BIT(2)

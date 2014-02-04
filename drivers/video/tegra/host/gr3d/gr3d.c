@@ -86,10 +86,19 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 		struct nvhost_channel *ch, bool mem_flag)
 {
 	struct host1x_hwctx *ctx;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
+	u32 syncpt;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return NULL;
+
+	syncpt = pdata->syncpts[0];
+	if (!syncpt) {
+		syncpt = nvhost_get_syncpt_host_managed(ch->dev, 0);
+		pdata->syncpts[0] = syncpt;
+	}
+	p->h.syncpt = syncpt;
 
 	if (mem_flag)
 		ctx->cpuva = dma_alloc_writecombine(&ch->dev->dev,

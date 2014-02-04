@@ -1125,6 +1125,7 @@ skip_init:
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
 	mutex_init(&pmu->pmu_copy_lock);
+	mutex_init(&pmu->pg_init_mutex);
 
 	pmu->perfmon_counter.index = 3; /* GR & CE2 */
 	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
@@ -1393,6 +1394,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	 */
 	gk20a_writel(g, 0x10a164, 0x109ff);
 
+	mutex_lock(&pmu->pg_init_mutex);
 	pmu->initialized = true;
 	pmu->zbc_ready = true;
 
@@ -1408,6 +1410,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 
 	if (g->elpg_enabled)
 		gk20a_pmu_enable_elpg(g);
+	mutex_unlock(&pmu->pg_init_mutex);
 
 	return 0;
 
@@ -2786,7 +2789,10 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	gk20a_pmu_get_elpg_residency_gating(g, &elpg_ingating_time,
 		&elpg_ungating_time, &gating_cnt);
 
+	mutex_lock(&pmu->pg_init_mutex);
 	gk20a_pmu_disable_elpg_defer_enable(g, false);
+	pmu->initialized = false;
+	mutex_unlock(&pmu->pg_init_mutex);
 
 	/* update the s/w ELPG residency counters */
 	g->pg_ingating_time_us += (u64)elpg_ingating_time;

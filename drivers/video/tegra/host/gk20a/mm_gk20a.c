@@ -805,21 +805,6 @@ static struct mapped_buffer_node *find_mapped_buffer_range_locked(
 	return 0;
 }
 
-/* convenience setup for nvmap buffer attr queries */
-struct bfr_attr_query {
-	int err;
-	u64 v;
-};
-static u32 nvmap_bfr_param[] = {
-#define BFR_SIZE   0
-	NVMAP_HANDLE_PARAM_SIZE,
-#define BFR_ALIGN  1
-	NVMAP_HANDLE_PARAM_ALIGNMENT,
-#define BFR_HEAP   2
-	NVMAP_HANDLE_PARAM_HEAP,
-#define BFR_KIND   3
-	NVMAP_HANDLE_PARAM_KIND,
-};
 #define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
 
 struct buffer_attrs {
@@ -846,38 +831,6 @@ static void gmmu_select_page_size(struct buffer_attrs *bfr)
 			break;
 		}
 }
-
-static int setup_buffer_size_and_align(struct device *d,
-				       struct buffer_attrs *bfr,
-				       struct bfr_attr_query *query,
-				       u64 offset, u32 flags)
-{
-	/* buffer allocation size and alignment must be a multiple
-	   of one of the supported page sizes.*/
-	bfr->size = query[BFR_SIZE].v;
-	bfr->align = query[BFR_ALIGN].v;
-	bfr->pgsz_idx = -1;
-
-	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
-	 * page size according to memory alignment */
-	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		bfr->pgsz_idx = NV_GMMU_VA_IS_UPPER(offset) ?
-				gmmu_page_size_big : gmmu_page_size_small;
-	} else {
-		gmmu_select_page_size(bfr);
-	}
-
-	if (unlikely(bfr->pgsz_idx == -1)) {
-		nvhost_warn(d, "unsupported buffer alignment: 0x%llx",
-			   bfr->align);
-		return -EINVAL;
-	}
-
-	bfr->kind_v = query[BFR_KIND].v;
-
-	return 0;
-}
-
 
 static int setup_buffer_kind_and_compression(struct device *d,
 					     u32 flags,
@@ -1150,10 +1103,10 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	bool inserted = false, va_allocated = false;
 	u32 gmmu_page_size = 0;
 	u64 map_offset = 0;
-	int attr, err = 0;
+	int err = 0;
 	struct buffer_attrs bfr = {0};
-	struct bfr_attr_query query[BFR_ATTRS];
 	struct nvhost_comptags comptags;
+	u64 value;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -1184,26 +1137,34 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (sgt)
 		*sgt = bfr.sgt;
 
-	/* query bfr attributes: size, align, heap, kind */
-	for (attr = 0; attr < BFR_ATTRS; attr++) {
-		query[attr].err =
-			nvhost_memmgr_get_param(memmgr, r,
-						nvmap_bfr_param[attr],
-						&query[attr].v);
-		if (unlikely(query[attr].err != 0)) {
-			nvhost_err(d,
-				   "failed to get nvmap buffer param %d: %d\n",
-				   nvmap_bfr_param[attr],
-				   query[attr].err);
-			err = query[attr].err;
-			goto clean_up;
-		}
+	err = nvhost_memmgr_get_param(memmgr, r, NVMAP_HANDLE_PARAM_KIND,
+				      &value);
+	if (err) {
+		nvhost_err(d, "failed to get nvmap buffer kind (err=%d)",
+			   err);
+		goto clean_up;
+	}
+
+	bfr.kind_v = value;
+	bfr.size = nvhost_memmgr_size(r);
+	bfr.align = 1 << __ffs((u64)sg_dma_address(bfr.sgt->sgl));
+	bfr.pgsz_idx = -1;
+
+	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
+	 * page size according to memory alignment */
+	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		bfr.pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
+				gmmu_page_size_big : gmmu_page_size_small;
+	} else {
+		gmmu_select_page_size(&bfr);
 	}
 
 	/* validate/adjust bfr attributes */
-	err = setup_buffer_size_and_align(d, &bfr, query, offset_align, flags);
-	if (unlikely(err))
+	if (unlikely(bfr.pgsz_idx == -1)) {
+		nvhost_err(d, "unsupported page size detected");
 		goto clean_up;
+	}
+
 	if (unlikely(bfr.pgsz_idx < gmmu_page_size_small ||
 		     bfr.pgsz_idx > gmmu_page_size_big)) {
 		BUG_ON(1);

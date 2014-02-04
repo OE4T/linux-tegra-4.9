@@ -285,6 +285,25 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	}
 }
 
+size_t nvhost_memmgr_size(struct mem_handle *handle)
+{
+	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvhost_nvmap_size(handle);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		return nvhost_dmabuf_size(handle);
+		break;
+#endif
+	default:
+		return 0;
+	}
+
+}
+
 struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
 		struct mem_handle *handle)
 {

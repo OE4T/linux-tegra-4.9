@@ -94,6 +94,7 @@ void nvhost_memmgr_get_comptags(struct mem_handle *mem,
 int nvhost_memmgr_alloc_comptags(struct mem_handle *mem,
 				 struct nvhost_allocator *allocator,
 				 int lines);
+size_t nvhost_memmgr_size(struct mem_handle *handle);
 
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,

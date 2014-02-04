@@ -102,6 +102,12 @@ void delete_priv(void *_priv)
 	kfree(priv);
 }
 
+size_t nvhost_nvmap_size(struct mem_handle *handle)
+{
+	struct dma_buf *dmabuf = (struct dma_buf *)handle;
+	return dmabuf->size;
+}
+
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		struct mem_handle *handle,
 		struct device *dev,

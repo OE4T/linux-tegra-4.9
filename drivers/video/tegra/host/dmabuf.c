@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host DMA-BUF support
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -82,6 +82,13 @@ void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr)
 {
 	dma_buf_kunmap(to_dmabuf(handle), pagenum, addr);
+}
+
+size_t nvhost_dmabuf_size(struct mem_handle *handle)
+{
+	struct dma_buf_attachment *attach = to_dmabuf_att(handle);
+	struct dma_buf *dmabuf = attach->dmabuf;
+	return dmabuf->size;
 }
 
 struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev)

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host nvmap memory manager
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,5 +55,6 @@ void nvhost_nvmap_get_comptags(struct mem_handle *mem,
 int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
 				struct nvhost_allocator *allocator,
 				int lines);
+size_t nvhost_nvmap_size(struct mem_handle *handle);
 
 #endif

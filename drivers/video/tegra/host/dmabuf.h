@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host dmabuf memory manager
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,4 +43,5 @@ void nvhost_dmabuf_kunmap(struct mem_handle *handle, unsigned int pagenum,
 struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev);
 int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
 			   u32 param, u64 *result);
+size_t nvhost_dmabuf_size(struct mem_handle *handle);
 #endif

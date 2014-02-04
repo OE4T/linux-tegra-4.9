@@ -130,6 +130,31 @@ struct nvhost_as_map_buffer_args {
 	} o_a;
 };
 
+ /*
+ * Mapping dmabuf fds into an address space:
+ *
+ * The caller requests a mapping to a particular page 'kind'.
+ *
+ * If 'page_size' is set to 0 the dmabuf's alignment/sizing will be used to
+ * determine the page size (largest possible).  The page size chosen will be
+ * returned back to the caller in the 'page_size' parameter in that case.
+ */
+struct nvhost_as_map_buffer_ex_args {
+	__u32 flags;		/* in/out */
+#define NV_KIND_DEFAULT -1
+	__s32 kind;		/* in (-1 represents default) */
+	__u32 dmabuf_fd;	/* in */
+	__u32 page_size;	/* inout, 0:= best fit to buffer */
+
+	__u32 padding[4];	/* reserved for future usage */
+
+	__u64 offset;		/* in/out, we use this address if flag
+				 * FIXED_OFFSET is set. This will fail
+				 * if space is not properly allocated. The
+				 * actual virtual address to which we mapped
+				 * the buffer is returned in this field. */
+};
+
 /*
  * Unmapping a buffer:
  *
@@ -153,11 +178,13 @@ struct nvhost_as_unmap_buffer_args {
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 5, struct nvhost_as_unmap_buffer_args)
 #define NVHOST_AS_IOCTL_ALLOC_SPACE \
 	_IOWR(NVHOST_AS_IOCTL_MAGIC, 6, struct nvhost_as_alloc_space_args)
+#define NVHOST_AS_IOCTL_MAP_BUFFER_EX \
+	_IOWR(NVHOST_AS_IOCTL_MAGIC, 7, struct nvhost_as_map_buffer_ex_args)
 
 #define NVHOST_AS_IOCTL_LAST		\
-	_IOC_NR(NVHOST_AS_IOCTL_ALLOC_SPACE)
+	_IOC_NR(NVHOST_AS_IOCTL_MAP_BUFFER_EX)
 #define NVHOST_AS_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvhost_as_map_buffer_args)
+	sizeof(struct nvhost_as_map_buffer_ex_args)
 
 
 #endif

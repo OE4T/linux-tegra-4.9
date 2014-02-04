@@ -3,7 +3,7 @@
  *
  * Tegra Host Address Space
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,7 +44,8 @@ struct nvhost_as_moduleops {
 			  int memmgr_fd,
 			  ulong mem_id,
 			  u64 *offset_align,
-			  u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/);
+			  u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
+			  u32 kind);
 	int (*unmap_buffer)(struct nvhost_as_share *, u64 offset);
 };
 
@@ -87,6 +88,8 @@ int nvhost_as_ioctl_bind_channel(struct nvhost_as_share *as_share,
 				 struct nvhost_as_bind_channel_args *args);
 int nvhost_as_ioctl_map_buffer(struct nvhost_as_share *as_share,
 			       struct nvhost_as_map_buffer_args *args);
+int nvhost_as_ioctl_map_buffer_ex(struct nvhost_as_share *as_share,
+				  struct nvhost_as_map_buffer_ex_args *args);
 int nvhost_as_ioctl_unmap_buffer(struct nvhost_as_share *as_share,
 				 struct nvhost_as_unmap_buffer_args *args);
 

@@ -546,6 +546,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		    (g->dbg_powergating_disabled_refcount++ == 0)) {
 
 			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module busy");
+			gk20a_busy(g->dev);
 			gk20a_channel_busy(dbg_s->pdev);
 
 			gr_gk20a_slcg_gr_load_gating_prod(g, false);
@@ -586,6 +587,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 
 			nvhost_dbg(dbg_gpu_dbg | dbg_fn, "module idle");
 			gk20a_channel_idle(dbg_s->pdev);
+			gk20a_idle(g->dev);
 		}
 
 		dbg_s->is_pg_disabled = false;

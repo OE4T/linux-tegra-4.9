@@ -939,7 +939,9 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
-	schedule_work(&(g->pmu.pg_init));
+	if (support_gk20a_pmu())
+		schedule_work(&(g->pmu.pg_init));
+
 done:
 	return err;
 }

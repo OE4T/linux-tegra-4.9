@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoint Integration to linux/sync Framework
  *
- * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -89,7 +89,11 @@ static int nvhost_sync_pt_set_intr(struct nvhost_sync_pt *pt)
 	/* Get a ref for the interrupt handler, keep host alive. */
 	kref_get(&pt->refcount);
 	pt->has_intr = true;
-	nvhost_module_busy(syncpt_to_dev(pt->obj->sp)->dev);
+	err = nvhost_module_busy(syncpt_to_dev(pt->obj->sp)->dev);
+	if (err) {
+		kref_put(&pt->refcount, nvhost_sync_pt_free_shared);
+		return err;
+	}
 
 	waiter = nvhost_intr_alloc_waiter();
 	err = nvhost_intr_add_action(&(syncpt_to_dev(pt->obj->sp)->intr),

@@ -112,7 +112,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	}
 
 	if (!g->gr.sw_ready) {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
 		gk20a_idle(g->dev);
 	}
 

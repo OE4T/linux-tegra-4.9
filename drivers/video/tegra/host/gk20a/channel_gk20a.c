@@ -780,7 +780,12 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 		return err;
 	}
 
-	gk20a_channel_busy(g->dev);
+	err = gk20a_channel_busy(g->dev);
+	if (err) {
+		gk20a_put_client(g);
+		nvhost_err(dev_from_gk20a(g), "failed to power on, %d", err);
+		return err;
+	}
 #ifdef CONFIG_TEGRA_GK20A
 	hwctx = gk20a_alloc_hwctx(platform->nvhost.channel);
 #endif

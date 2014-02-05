@@ -55,7 +55,7 @@ struct gk20a_platform {
 	/* Called before submitting work to the gpu. The platform may use this
 	 * hook to ensure that any other hw modules that the gpu depends on are
 	 * powered. The platform implementation must count refs to this call. */
-	void (*channel_busy)(struct platform_device *dev);
+	int (*channel_busy)(struct platform_device *dev);
 
 	/* Called after the work on the gpu is completed. The platform may use
 	 * this hook to release power refs to any other hw modules that the gpu
@@ -75,11 +75,14 @@ extern struct gk20a_platform gk20a_generic_platform;
 extern struct gk20a_platform gk20a_tegra_platform;
 #endif
 
-static inline void gk20a_platform_channel_busy(struct platform_device *dev)
+static inline int gk20a_platform_channel_busy(struct platform_device *dev)
 {
 	struct gk20a_platform *p = gk20a_get_platform(dev);
+	int ret = 0;
 	if (p->channel_busy)
-		p->channel_busy(dev);
+		ret = p->channel_busy(dev);
+
+	return ret;
 }
 
 static inline void gk20a_platform_channel_idle(struct platform_device *dev)

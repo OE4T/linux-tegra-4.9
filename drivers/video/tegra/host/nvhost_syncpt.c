@@ -137,8 +137,13 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
  */
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 {
-	u32 val;
-	nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	u32 val = 0xffffffff;
+	int err;
+
+	err = nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	if (err)
+		return val;
+
 	val = syncpt_op().update_min(sp, id);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	return val;
@@ -149,8 +154,13 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
  */
 u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
 {
-	u32 val;
-	nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	u32 val = 0xffffffff;
+	int err;
+
+	err = nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	if (err)
+		return val;
+
 	syncpt_op().read_wait_base(sp, id);
 	val = sp->base_val[id];
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
@@ -169,13 +179,20 @@ void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 /**
  * Increment syncpoint value from cpu, updating cache
  */
-void nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id)
+int nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id)
 {
+	int err;
+
+	err = nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	if (err)
+		return err;
+
 	if (nvhost_syncpt_client_managed(sp, id))
 		nvhost_syncpt_incr_max(sp, id, 1);
-	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 	nvhost_syncpt_cpu_incr(sp, id);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
+
+	return 0;
 }
 
 /**
@@ -217,7 +234,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	}
 
 	/* keep host alive */
-	nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	err = nvhost_module_busy(syncpt_to_dev(sp)->dev);
+	if (err)
+		return err;
 
 	/* try to read from register */
 	val = syncpt_op().update_min(sp, id);
@@ -496,9 +515,13 @@ void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
 int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
 {
 	struct nvhost_master *host = syncpt_to_dev(sp);
+	int err;
 	u32 reg;
 
-	nvhost_module_busy(host->dev);
+	err = nvhost_module_busy(host->dev);
+	if (err)
+		return err;
+
 	reg = syncpt_op().mutex_try_lock(sp, idx);
 	if (reg) {
 		nvhost_module_idle(host->dev);

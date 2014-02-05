@@ -806,12 +806,16 @@ static int monitor_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
 	struct clk_gk20a *clk = &g->clk;
+	int err;
 
 	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
 	u32 clkin = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
 		     trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f());
 	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),

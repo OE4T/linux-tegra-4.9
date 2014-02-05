@@ -142,9 +142,10 @@ void nvhost_module_busy_noresume(struct platform_device *dev)
 #endif
 }
 
-void nvhost_module_busy(struct platform_device *dev)
+int nvhost_module_busy(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int ret = 0;
 
 	/* Explicitly turn on the host1x clocks
 	 * - This is needed as host1x driver sets ignore_children = true
@@ -160,14 +161,25 @@ void nvhost_module_busy(struct platform_device *dev)
 	 * - The code below fixes this use-case
 	 */
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
-		nvhost_module_busy(nvhost_get_parent(dev));
+		ret = nvhost_module_busy(nvhost_get_parent(dev));
+
+	if (ret)
+		return ret;
 
 #ifdef CONFIG_PM_RUNTIME
-	pm_runtime_get_sync(&dev->dev);
+	ret = pm_runtime_get_sync(&dev->dev);
+	if (ret < 0) {
+		if (dev->dev.parent && (dev->dev.parent != &platform_bus))
+			nvhost_module_idle(nvhost_get_parent(dev));
+		nvhost_err(&dev->dev, "failed to power on, err %d", ret);
+		return ret;
+	}
 #endif
 
 	if (pdata->busy)
 		pdata->busy(dev);
+
+	return 0;
 }
 
 void nvhost_module_disable_poweroff(struct platform_device *dev)
@@ -222,13 +234,17 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 {
 	struct clk *c;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int err = 0;
 
 	c = pdata->clk[index];
 	if (!c)
 		return -EINVAL;
 
 	/* Need to enable client to get correct rate */
-	nvhost_module_busy(dev);
+	err = nvhost_module_busy(dev);
+	if (err)
+		return err;
+
 	*rate = clk_get_rate(c);
 	nvhost_module_idle(dev);
 	return 0;
@@ -815,15 +831,16 @@ int nvhost_module_prepare_poweroff(struct device *dev)
 int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
+	int ret = 0;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
 
 	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(to_platform_device(dev));
+		ret = pdata->finalize_poweron(to_platform_device(dev));
 
-	return 0;
+	return ret;
 }
 #endif
 
@@ -843,19 +860,19 @@ bool nvhost_module_powered_ext(struct platform_device *dev)
 	return nvhost_module_powered(pdev);
 }
 
-void nvhost_module_busy_ext(struct platform_device *dev)
+int nvhost_module_busy_ext(struct platform_device *dev)
 {
 	struct platform_device *pdev;
 
 	if (!nvhost_get_parent(dev)) {
 		dev_err(&dev->dev, "Module busy called with wrong dev\n");
-		return;
+		return -EINVAL;
 	}
 
 	/* get the parent */
 	pdev = to_platform_device(dev->dev.parent);
 
-	nvhost_module_busy(pdev);
+	return nvhost_module_busy(pdev);
 }
 EXPORT_SYMBOL(nvhost_module_busy_ext);
 

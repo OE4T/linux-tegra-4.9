@@ -36,8 +36,10 @@
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
-static void gk20a_tegra_channel_busy(struct platform_device *dev)
+static int gk20a_tegra_channel_busy(struct platform_device *dev)
 {
+	int ret = 0;
+
 	/* Explicitly turn on the host1x clocks
 	 * - This is needed as host1x driver sets ignore_children = true
 	 * to cater the use case of display clock ON but host1x clock OFF
@@ -52,7 +54,9 @@ static void gk20a_tegra_channel_busy(struct platform_device *dev)
 	 * - The code below fixes this use-case
 	 */
 	if (nvhost_get_parent(dev))
-		nvhost_module_busy(nvhost_get_parent(dev));
+		ret = nvhost_module_busy(nvhost_get_parent(dev));
+
+	return ret;
 }
 
 static void gk20a_tegra_channel_idle(struct platform_device *dev)

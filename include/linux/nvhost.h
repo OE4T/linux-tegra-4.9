@@ -337,7 +337,7 @@ u32 host1x_readl(struct platform_device *dev, u32 r);
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev);
-void nvhost_module_busy_ext(struct platform_device *dev);
+int nvhost_module_busy_ext(struct platform_device *dev);
 void nvhost_module_idle_ext(struct platform_device *dev);
 
 /* public host1x sync-point management APIs */

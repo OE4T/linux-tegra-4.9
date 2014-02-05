@@ -108,7 +108,9 @@ long nvhost_as_dev_ctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 	}
 
-	nvhost_module_busy(ch->dev);
+	err = nvhost_module_busy(ch->dev);
+	if (err)
+		return err;
 
 	switch (cmd) {
 	case NVHOST_AS_IOCTL_BIND_CHANNEL:

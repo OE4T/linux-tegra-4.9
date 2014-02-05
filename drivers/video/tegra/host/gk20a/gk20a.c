@@ -1319,10 +1319,19 @@ void gk20a_busy_noresume(struct platform_device *pdev)
 	pm_runtime_get_noresume(&pdev->dev);
 }
 
-void gk20a_channel_busy(struct platform_device *pdev)
+int gk20a_channel_busy(struct platform_device *pdev)
 {
-	gk20a_platform_channel_busy(pdev);
-	gk20a_busy(pdev);
+	int ret = 0;
+
+	ret = gk20a_platform_channel_busy(pdev);
+	if (ret)
+		return ret;
+
+	ret = gk20a_busy(pdev);
+	if (ret)
+		gk20a_platform_channel_idle(pdev);
+
+	return ret;
 }
 
 void gk20a_channel_idle(struct platform_device *pdev)
@@ -1331,12 +1340,16 @@ void gk20a_channel_idle(struct platform_device *pdev)
 	gk20a_platform_channel_idle(pdev);
 }
 
-void gk20a_busy(struct platform_device *pdev)
+int gk20a_busy(struct platform_device *pdev)
 {
+	int ret = 0;
+
 #ifdef CONFIG_PM_RUNTIME
-	pm_runtime_get_sync(&pdev->dev);
+	ret = pm_runtime_get_sync(&pdev->dev);
 #endif
 	gk20a_scale_notify_busy(pdev);
+
+	return ret < 0 ? ret : 0;
 }
 
 void gk20a_idle(struct platform_device *pdev)

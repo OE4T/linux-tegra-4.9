@@ -118,7 +118,10 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 	if (err)
 		return err;
 
-	nvhost_module_busy(ndev);
+	err = nvhost_module_busy(ndev);
+	if (err)
+		return err;
+
 	p += offset;
 	while (count--) {
 		*(values++) = readl(p);
@@ -144,7 +147,10 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	if (err)
 		return err;
 
-	nvhost_module_busy(ndev);
+	err = nvhost_module_busy(ndev);
+	if (err)
+		return err;
+
 	p += offset;
 	while (count--) {
 		writel(*(values++), p);
@@ -205,6 +211,7 @@ static int __nvhost_channelopen(struct inode *inode,
 {
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_device_data *pdata;
+	int ret;
 
 	if (inode) {
 		pdata = container_of(inode->i_cdev,
@@ -220,19 +227,22 @@ static int __nvhost_channelopen(struct inode *inode,
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		nvhost_putchannel(ch, true);
-		return -ENOMEM;
+		goto fail;
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
 	if (nvhost_module_add_client(ch->dev, priv))
-		goto fail;
+		goto fail_add_client;
 
 	if (ch->ctxhandler && ch->ctxhandler->alloc) {
-		nvhost_module_busy(ch->dev);
+		ret = nvhost_module_busy(ch->dev);
+		if (ret)
+			goto fail_priv;
+
 		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);
 		nvhost_module_idle(ch->dev);
 		if (!priv->hwctx)
-			goto fail;
+			goto fail_priv;
 	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->clientid = atomic_add_return(1,
@@ -243,6 +253,10 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
 	return 0;
+fail_priv:
+	nvhost_module_remove_client(ch->dev, priv);
+fail_add_client:
+	kfree(priv);
 fail:
 	nvhost_channelrelease(inode, filp);
 	return -ENOMEM;
@@ -1259,7 +1273,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 		pdata->scaling_init(dev);
 
 	/* reset syncpoint values for this unit */
-	nvhost_module_busy(nvhost_master->dev);
+	err = nvhost_module_busy(nvhost_master->dev);
+	if (err)
+		goto fail_busy;
+
 	nvhost_syncpt_reset_client(dev);
 	nvhost_module_idle(nvhost_master->dev);
 
@@ -1280,6 +1297,9 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	return 0;
 
+fail_busy:
+	/* Remove from nvhost device list */
+	nvhost_device_list_remove(dev);
 fail:
 	/* Add clean-up */
 	dev_err(&dev->dev, "failed to init client device\n");

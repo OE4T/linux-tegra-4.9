@@ -306,9 +306,9 @@ void gk20a_free_hwctx(struct nvhost_hwctx *ctx);
 #define GK20A_SIM_IORESOURCE_MEM 2
 
 void gk20a_busy_noresume(struct platform_device *pdev);
-void gk20a_busy(struct platform_device *pdev);
+int gk20a_busy(struct platform_device *pdev);
 void gk20a_idle(struct platform_device *pdev);
-void gk20a_channel_busy(struct platform_device *pdev);
+int gk20a_channel_busy(struct platform_device *pdev);
 void gk20a_channel_idle(struct platform_device *pdev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);

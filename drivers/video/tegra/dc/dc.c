@@ -2869,16 +2869,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (TEGRA_DISPLAY_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
-		dc->win_syncpt[0] = NVSYNCPT_DISP0_A;
-		dc->win_syncpt[1] = NVSYNCPT_DISP0_B;
-		dc->win_syncpt[2] = NVSYNCPT_DISP0_C;
+		dc->win_syncpt[0] = nvhost_get_syncpt_client_managed("disp0_a");
+		dc->win_syncpt[1] = nvhost_get_syncpt_client_managed("disp0_b");
+		dc->win_syncpt[2] = nvhost_get_syncpt_client_managed("disp0_c");
 		dc->valid_windows = 0x07;
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
-		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
-		dc->win_syncpt[4] = NVSYNCPT_DISP0_H;
+		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
+		dc->win_syncpt[4] = nvhost_get_syncpt_client_managed("disp0_h");
 		dc->valid_windows |= 0x18;
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-		dc->win_syncpt[3] = NVSYNCPT_DISP0_D;
+		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
 		dc->valid_windows |= 0x08;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
@@ -2887,12 +2887,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
-		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
-		dc->win_syncpt[1] = NVSYNCPT_DISP1_B;
-		dc->win_syncpt[2] = NVSYNCPT_DISP1_C;
+		dc->win_syncpt[0] = nvhost_get_syncpt_client_managed("disp1_a");
+		dc->win_syncpt[1] = nvhost_get_syncpt_client_managed("disp1_b");
+		dc->win_syncpt[2] = nvhost_get_syncpt_client_managed("disp1_c");
 		dc->valid_windows = 0x07;
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
-		dc->win_syncpt[4] = NVSYNCPT_DISP1_H;
+		dc->win_syncpt[4] = nvhost_get_syncpt_client_managed("disp1_h");
 		dc->valid_windows |= 0x10;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Hardware Context Interface
  *
- * Copyright (c) 2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,9 +19,9 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/dma-buf.h>
 #include "user_hwctx.h"
 #include "nvhost_cdma.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_channel.h"
 #include "host1x/host1x.h"
 #include "host1x/host1x01_hardware.h"
@@ -30,24 +30,34 @@ static void user_hwctx_save_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct user_hwctx *ctx = to_user_hwctx(nctx);
-	nvhost_cdma_push_gather(cdma,
-			nctx->memmgr,
-			ctx->save_buf,
+	void *cpuva = dma_buf_vmap(ctx->save_buf);
+	dma_addr_t iova = sg_dma_address(ctx->save_sgt->sgl);
+
+	_nvhost_cdma_push_gather(cdma,
+			cpuva,
+			iova,
 			ctx->save_offset,
 			nvhost_opcode_gather(ctx->save_size),
-			nvhost_memmgr_dma_addr(ctx->save_sgt));
+			iova);
+
+	dma_buf_vunmap(ctx->save_buf, cpuva);
 }
 
 static void user_hwctx_restore_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct user_hwctx *ctx = to_user_hwctx(nctx);
-	nvhost_cdma_push_gather(cdma,
-			nctx->memmgr,
-			ctx->restore,
+	void *cpuva = dma_buf_vmap(ctx->restore_buf);
+	dma_addr_t iova = sg_dma_address(ctx->restore_sgt->sgl);
+
+	_nvhost_cdma_push_gather(cdma,
+			cpuva,
+			iova,
 			ctx->restore_offset,
 			nvhost_opcode_gather(ctx->restore_size),
-			nvhost_memmgr_dma_addr(ctx->restore_sgt));
+			iova);
+
+	dma_buf_vunmap(ctx->restore_buf, cpuva);
 }
 
 static void user_hwctx_free(struct kref *ref)
@@ -58,20 +68,20 @@ static void user_hwctx_free(struct kref *ref)
 
 	user_ctxhandler_free(hwctx->h);
 
-	if (uhwctx->save_sgt)
-		nvhost_memmgr_unpin(hwctx->memmgr, uhwctx->save_buf,
-				&hwctx->channel->dev->dev, uhwctx->save_sgt);
-	if (uhwctx->restore_sgt)
-		nvhost_memmgr_unpin(hwctx->memmgr, uhwctx->restore,
-				&hwctx->channel->dev->dev, uhwctx->restore_sgt);
+	if (uhwctx->save_sgt) {
+		dma_buf_unmap_attachment(uhwctx->save_attach, uhwctx->save_sgt,
+							DMA_BIDIRECTIONAL);
+		dma_buf_detach(uhwctx->save_buf, uhwctx->save_attach);
+		dma_buf_put(uhwctx->save_buf);
+	}
 
-	if (uhwctx->save_buf)
-		nvhost_memmgr_put(hwctx->memmgr, uhwctx->save_buf);
+	if (uhwctx->restore_sgt) {
+		dma_buf_unmap_attachment(uhwctx->restore_attach,
+				uhwctx->restore_sgt, DMA_BIDIRECTIONAL);
+		dma_buf_detach(uhwctx->restore_buf, uhwctx->restore_attach);
+		dma_buf_put(uhwctx->restore_buf);
+	}
 
-	if (uhwctx->restore)
-		nvhost_memmgr_put(hwctx->memmgr, uhwctx->restore);
-
-	nvhost_memmgr_put_mgr(hwctx->memmgr);
 	kfree(uhwctx);
 }
 
@@ -107,66 +117,82 @@ static struct nvhost_hwctx *user_hwctx_alloc(struct nvhost_hwctx_handler *h,
 int user_hwctx_set_save(struct user_hwctx *ctx,
 		ulong mem, u32 offset, u32 words, struct nvhost_reloc *reloc)
 {
-	struct mem_handle *buf;
-	struct sg_table *sgt;
 	void *page_addr;
 
 	/* First the restore buffer is set, then the save buffer */
-	if (!ctx->restore || !ctx->restore_sgt)
+	if (!ctx->restore_buf || !ctx->restore_sgt)
 		return -EINVAL;
 
-	buf = nvhost_memmgr_get(ctx->hwctx.memmgr,
-			mem, ctx->hwctx.channel->dev);
-	if (IS_ERR(buf))
-		return PTR_ERR(buf);
+	ctx->save_buf = dma_buf_get(mem);
+	if (IS_ERR_OR_NULL(ctx->save_buf))
+		return -ENOMEM;
 
-	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
-			&ctx->hwctx.channel->dev->dev, mem_flag_none);
-	if (IS_ERR(sgt))
-		return PTR_ERR(sgt);
+	ctx->save_attach = dma_buf_attach(ctx->save_buf,
+					&ctx->hwctx.channel->dev->dev);
+	if (IS_ERR_OR_NULL(ctx->save_attach))
+		goto err_buf_put;
+
+	ctx->save_sgt = dma_buf_map_attachment(ctx->save_attach,
+						DMA_BIDIRECTIONAL);
+	if (IS_ERR_OR_NULL(ctx->save_sgt))
+		goto err_buf_detach;
 
 	ctx->save_offset = offset;
 	ctx->save_size = words;
-	ctx->save_buf = buf;
-	ctx->save_sgt = sgt;
 
 	/* Patch restore buffer address into save buffer */
-	page_addr = nvhost_memmgr_kmap(ctx->save_buf,
+	page_addr = dma_buf_kmap(ctx->save_buf,
 			reloc->cmdbuf_offset >> PAGE_SHIFT);
 	if (!page_addr)
-		return -ENOMEM;
+		goto err_buf_unmap;
 
-	__raw_writel(nvhost_memmgr_dma_addr(ctx->restore_sgt) + offset,
+	__raw_writel(sg_dma_address(ctx->restore_sgt->sgl) + offset,
 			page_addr + (reloc->cmdbuf_offset & ~PAGE_MASK));
-	nvhost_memmgr_kunmap(ctx->save_buf,
+	dma_buf_kunmap(ctx->save_buf,
 			reloc->cmdbuf_offset >> PAGE_SHIFT,
 			page_addr);
 
 	return 0;
+
+ err_buf_unmap:
+	dma_buf_unmap_attachment(ctx->save_attach, ctx->save_sgt,
+						DMA_BIDIRECTIONAL);
+ err_buf_detach:
+	dma_buf_detach(ctx->save_buf, ctx->save_attach);
+ err_buf_put:
+	dma_buf_put(ctx->save_buf);
+
+	return -ENOMEM;
 }
 
 int user_hwctx_set_restore(struct user_hwctx *ctx,
 		ulong mem, u32 offset, u32 words)
 {
-	struct mem_handle *buf;
-	struct sg_table *sgt;
+	ctx->restore_buf = dma_buf_get(mem);
+	if (IS_ERR_OR_NULL(ctx->restore_buf))
+		return -ENOMEM;
 
-	buf = nvhost_memmgr_get(ctx->hwctx.memmgr,
-			mem, ctx->hwctx.channel->dev);
-	if (IS_ERR(buf))
-		return PTR_ERR(buf);
+	ctx->restore_attach = dma_buf_attach(ctx->restore_buf,
+					&ctx->hwctx.channel->dev->dev);
+	if (IS_ERR_OR_NULL(ctx->restore_attach))
+		goto err_buf_put;
 
-	sgt = nvhost_memmgr_pin(ctx->hwctx.memmgr, buf,
-			&ctx->hwctx.channel->dev->dev, mem_flag_none);
-	if (IS_ERR(sgt))
-		return PTR_ERR(sgt);
+	ctx->restore_sgt = dma_buf_map_attachment(ctx->restore_attach,
+						DMA_BIDIRECTIONAL);
+	if (IS_ERR_OR_NULL(ctx->restore_sgt))
+		goto err_buf_detach;
 
 	ctx->restore_offset = offset;
 	ctx->restore_size = words;
-	ctx->restore = buf;
-	ctx->restore_sgt = sgt;
 
 	return 0;
+
+ err_buf_detach:
+	dma_buf_detach(ctx->restore_buf, ctx->restore_attach);
+ err_buf_put:
+	dma_buf_put(ctx->restore_buf);
+
+	return -ENOMEM;
 }
 
 struct nvhost_hwctx_handler *user_ctxhandler_init(u32 syncpt,

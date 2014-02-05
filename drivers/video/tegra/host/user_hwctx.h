@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host HOST1X Hardware Context Interface
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,16 +38,18 @@ struct sg_table;
 struct user_hwctx {
 	struct nvhost_hwctx hwctx;
 
-	struct mem_handle *save_buf;
-	u32 save_slots;
+	struct dma_buf *save_buf;
+	struct dma_buf_attachment *save_attach;
 	struct sg_table *save_sgt;
+	u32 save_slots;
 	u32 save_size;
 	u32 save_offset;
 
-	struct mem_handle *restore;
+	struct dma_buf *restore_buf;
+	struct dma_buf_attachment *restore_attach;
+	struct sg_table *restore_sgt;
 	u32 restore_size;
 	u32 *restore_virt;
-	struct sg_table *restore_sgt;
 	u32 restore_offset;
 };
 

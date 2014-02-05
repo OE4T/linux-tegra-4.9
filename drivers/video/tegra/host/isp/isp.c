@@ -221,10 +221,10 @@ camera_isp_unregister:
 
 static int __exit isp_remove(struct platform_device *dev)
 {
+#if defined(CONFIG_TEGRA_ISOMGR)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct isp *tegra_isp = (struct isp *)pdata->private_data;
 
-#if defined(CONFIG_TEGRA_ISOMGR)
 	if (tegra_isp->isomgr_handle)
 		isp_isomgr_unregister(tegra_isp);
 #endif

@@ -197,7 +197,9 @@ static int __exit vi_remove(struct platform_device *dev)
 	int err = 0;
 #endif
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+#if defined(CONFIG_TEGRA_ISOMGR)
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
+#endif
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 

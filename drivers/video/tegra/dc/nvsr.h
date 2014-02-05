@@ -93,9 +93,9 @@ void tegra_dc_nvsr_irq(struct tegra_dc_nvsr_data *nvsr, unsigned long status);
 int nvsr_create_sysfs(struct device *dev);
 void nvsr_remove_sysfs(struct device *dev);
 #else
-static inline void tegra_dc_nvsr_irq(struct tegra_dc_nvsr_data *nvsr, unsigned long status) {}
+static inline void tegra_dc_nvsr_irq(struct tegra_dc_nvsr_data *nvsr, unsigned long status) { }
 static inline int nvsr_create_sysfs(struct device *dev) { return -ENOSYS; }
-static inline void nvsr_remove_sysfs(struct device *dev) {}
+static inline void nvsr_remove_sysfs(struct device *dev) { }
 #endif
 
 #endif

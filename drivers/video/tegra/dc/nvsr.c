@@ -115,8 +115,7 @@ static int tegra_dc_nvsr_exit_sr(struct tegra_dc_nvsr_data *nvsr)
 		break;
 	case NVSR_RESYNC_CTL_METHOD_SS:
 	case NVSR_RESYNC_CTL_METHOD_BS:
-		NVSR_WARN("Sliding Sync and Blank Stretching resync "
-			"methods not supported; defaulting to Immediate\n");
+		NVSR_WARN("Sliding Sync and Blank Stretching resync methods not supported; defaulting to Immediate\n");
 	case NVSR_RESYNC_CTL_METHOD_IMM:
 	default:
 		val = NVSR_RESYNC_CTL_METHOD_IMM;
@@ -512,7 +511,7 @@ static int tegra_dc_nvsr_update_timings(struct tegra_dc_nvsr_data *nvsr)
 		max_vblank = min_vblank =
 			mode->v_front_porch + mode->v_sync_width +
 			mode->v_back_porch;
-		max_hblank = max_hblank =
+		max_hblank = min_hblank =
 			mode->h_front_porch + mode->h_sync_width +
 			mode->h_back_porch;
 	}
@@ -619,8 +618,7 @@ static int tegra_dc_nvsr_enter_idle(struct tegra_dc_nvsr_data *nvsr)
 			NVSR_ERR("Burst mode unimplemented\n");
 			break;
 		default:
-			NVSR_ERR("SR re-entry not supported for "
-				"current refresh mode.\n");
+			NVSR_ERR("SR re-entry not supported for current refresh mode.\n");
 			ret = -ENOSYS;
 		}
 
@@ -672,8 +670,7 @@ static inline void tegra_dc_nvsr_config_resync_method
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
 	} else if ((nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_BS) ||
 			(nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_SS)) {
-		NVSR_WARN("Sliding Sync and Blank Stretching resync "
-			"methods not supported; defaulting to Immediate\n");
+		NVSR_WARN("Sliding Sync and Blank Stretching resync methods not supported; defaulting to Immediate\n");
 		nvsr->resync_method = NVSR_RESYNC_CTL_METHOD_IMM;
 	} else
 		nvsr->resync_method = NVSR_RESYNC_CTL_METHOD_IMM;
@@ -1034,14 +1031,14 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 	int ret;
 
 	if (!nvsr->is_init) {
-		seq_printf(s, "NVSR has not been initialized.\n");
+		seq_puts(s, "NVSR has not been initialized.\n");
 		return -EINVAL;
 	}
 
 	tegra_dc_nvsr_get(nvsr);
 
-	seq_printf(s, "SRC Info\n");
-	seq_printf(s, "--------\n");
+	seq_puts(s, "SRC Info\n");
+	seq_puts(s, "--------\n");
 	seq_printf(s, "Device ID: \t\t\t\t%d\n", nvsr->src_id.device_id);
 	seq_printf(s, "Vendor ID: \t\t\t\t%d\n", nvsr->src_id.vendor_id);
 	seq_printf(s, "Sparse Refresh mode supported: \t\t%d\n",
@@ -1051,18 +1048,18 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 	seq_printf(s, "\tExit request band capability: \t%d\n",
 		nvsr->cap.sr_exit_req);
 	seq_printf(s, "\tResync capabilities:\n");
-	if (!nvsr->cap.resync)
-		seq_printf(s, "\t\tImmediate\n");
-	else {
+	if (!nvsr->cap.resync) {
+		seq_puts(s, "\t\tImmediate\n");
+	} else {
 		if (nvsr->cap.resync &
 			NVSR_SR_CAPS0_RESYNC_CAP_FL)
-			seq_printf(s, "\t\tFramelock\n");
+			seq_puts(s, "\t\tFramelock\n");
 		if (nvsr->cap.resync &
 			NVSR_SR_CAPS0_RESYNC_CAP_BS)
-			seq_printf(s, "\t\tBlank stretching\n");
+			seq_puts(s, "\t\tBlank stretching\n");
 		if (nvsr->cap.resync &
 			NVSR_SR_CAPS0_RESYNC_CAP_SS)
-			seq_printf(s, "\t\tSliding sync\n");
+			seq_puts(s, "\t\tSliding sync\n");
 	}
 	seq_printf(s, "Buffered mode supported: \t\t%d\n",
 		nvsr->cap.buffered_mode_support);
@@ -1070,9 +1067,9 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 		nvsr->cap.burst_mode_support);
 	seq_printf(s, "\tSRC max input pclk: \t\t%d\n",
 		nvsr->cap.max_pt_pclk);
-	seq_printf(s, "\n");
-	seq_printf(s, "SRC status\n");
-	seq_printf(s, "----------\n");
+	seq_puts(s, "\n");
+	seq_puts(s, "SRC status\n");
+	seq_puts(s, "----------\n");
 	seq_printf(s, "NVSR functionality enabled: \t%d\n", nvsr->enable);
 	seq_printf(s, "In Sparse Refresh: \t\t%d\n", nvsr->sr_active);
 	seq_printf(s, "Resync method: \t\t\t%s\n",
@@ -1092,7 +1089,7 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 	seq_printf(s, "Current SRC status: \t%s\n",
 		tegra_dc_nvsr_state_to_string(val));
 
-	seq_printf(s, "PT Timing:\n");
+	seq_puts(s, "PT Timing:\n");
 
 	ret = nvsr->reg_ops.read(nvsr, NVSR_PTMODE_PIXEL_CLOCK0, 2, &val);
 	seq_printf(s, "\tPixel clock: \t%dHz\n", ret ? -1 : val * 20000);
@@ -1146,7 +1143,7 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 	seq_printf(s, "\tVsync pulse polarity: \t%d\n", ret ? -1 : val);
 	seq_printf(s, "\tFrame time: \t%dus\n", nvsr->pt_timing_frame_time_us);
 
-	seq_printf(s, "SR Timing:\n");
+	seq_puts(s, "SR Timing:\n");
 
 	ret = nvsr->reg_ops.read(nvsr, NVSR_SRMODE_PIXEL_CLOCK0, 2, &val);
 	seq_printf(s, "\tPixel clock: \t%dHz\n", ret ? -1 : val * 20000);

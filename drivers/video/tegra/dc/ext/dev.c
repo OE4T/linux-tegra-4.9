@@ -722,7 +722,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc_ext_flip_data *data;
 	int work_index = -1;
-	__u32 post_sync_val, post_sync_id = NVSYNCPT_INVALID;
+	__u32 post_sync_val = 0, post_sync_id = NVSYNCPT_INVALID;
 	int i, ret = 0;
 	bool has_timestamp = false;
 

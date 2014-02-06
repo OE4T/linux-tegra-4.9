@@ -1377,7 +1377,7 @@ static inline void tegra_dc_nvsr_debug_create(struct tegra_dc_nvsr_data *nvsr)
 
 static int tegra_dc_nvsr_init(struct tegra_dc *dc)
 {
-	int ret;
+	int ret = 0;
 
 	struct tegra_dc_nvsr_data *nvsr = kzalloc(sizeof(*nvsr), GFP_KERNEL);
 	if (!nvsr) {

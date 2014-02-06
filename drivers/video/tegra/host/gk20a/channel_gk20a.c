@@ -765,6 +765,8 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 	ch_gk20a->timeout_gpfifo_get = 0;
 	/* set gr host default timeout */
 	ch_gk20a->hwctx->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
+	ch_gk20a->hwctx->timeout_debug_dump = true;
+	ch_gk20a->has_timedout = false;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
@@ -2326,6 +2328,28 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_channel_idle(dev);
 		break;
 #endif
+	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:
+	{
+		u32 timeout =
+			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
+		nvhost_dbg(dbg_gpu_dbg, "setting timeout (%d ms) for hwctx %p",
+			   timeout, hwctx);
+		hwctx->timeout_ms_max = timeout;
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
+	{
+		u32 timeout =
+			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
+		bool timeout_debug_dump = !((u32)
+			((struct nvhost_set_timeout_ex_args *)buf)->flags &
+			(1 << NVHOST_TIMEOUT_FLAG_DISABLE_DUMP));
+		nvhost_dbg(dbg_gpu_dbg, "setting timeout (%d ms) for hwctx %p",
+			   timeout, hwctx);
+		hwctx->timeout_ms_max = timeout;
+		hwctx->timeout_debug_dump = timeout_debug_dump;
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
 		((struct nvhost_get_param_args *)buf)->value =
 			hwctx->has_timedout;

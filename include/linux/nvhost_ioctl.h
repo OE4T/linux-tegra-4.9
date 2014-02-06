@@ -93,6 +93,10 @@ struct nvhost_get_param_arg {
 	__u32 value;
 };
 
+struct nvhost_channel_open_args {
+	__s32 channel_fd;
+};
+
 struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
@@ -384,7 +388,7 @@ struct nvhost_set_ctxswitch_args {
 #define NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \
 	_IOWR(NVHOST_IOCTL_MAGIC, 111, struct nvhost_set_error_notifier)
 #define NVHOST_IOCTL_CHANNEL_OPEN	\
-	_IOR(NVHOST_IOCTL_MAGIC,  112, struct nvhost_get_param_args)
+	_IOR(NVHOST_IOCTL_MAGIC,  112, struct nvhost_channel_open_args)
 
 #define NVHOST_IOCTL_CHANNEL_LAST	\
 	_IOC_NR(NVHOST_IOCTL_CHANNEL_OPEN)

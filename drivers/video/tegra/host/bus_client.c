@@ -797,7 +797,7 @@ static long nvhost_channelctl(struct file *filp,
 			break;
 		}
 
-		((struct nvhost_get_param_args *)buf)->value = fd;
+		((struct nvhost_channel_open_args *)buf)->channel_fd = fd;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:

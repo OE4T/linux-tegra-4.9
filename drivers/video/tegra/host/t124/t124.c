@@ -609,6 +609,7 @@ struct nvhost_device_data t132_gk20a_info = {
 	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
+	.as_ops			= &tegra_gk20a_as_ops,
 	.moduleid		= NVHOST_MODULE_GPU,
 	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
 	.finalize_poweron	= nvhost_gk20a_finalize_poweron,

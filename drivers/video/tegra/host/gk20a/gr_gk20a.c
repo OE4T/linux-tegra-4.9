@@ -2708,7 +2708,7 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 	if (c->num_objects == 0) {
 		c->first_init = false;
 		gk20a_disable_channel(c,
-			!c->hwctx->has_timedout,
+			!c->has_timedout,
 			timeout);
 		gr_gk20a_unmap_channel_patch_ctx(c);
 	}
@@ -4788,7 +4788,7 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
-	gk20a_set_error_notifier(ch->hwctx,
+	gk20a_set_error_notifier(ch,
 				NVHOST_CHANNEL_GR_SEMAPHORE_TIMEOUT);
 	nvhost_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
@@ -4801,7 +4801,7 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
-	gk20a_set_error_notifier(ch->hwctx,
+	gk20a_set_error_notifier(ch,
 				NVHOST_CHANNEL_GR_ILLEGAL_NOTIFY);
 	/* This is an unrecoverable error, reset is needed */
 	nvhost_err(dev_from_gk20a(g),
@@ -4815,7 +4815,7 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
-	gk20a_set_error_notifier(ch->hwctx,
+	gk20a_set_error_notifier(ch,
 				NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvhost_err(dev_from_gk20a(g),
 		   "invalid class 0x%08x, offset 0x%08x",
@@ -4830,7 +4830,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	nvhost_dbg_fn("");
 
-	gk20a_set_error_notifier(ch->hwctx,
+	gk20a_set_error_notifier(ch,
 			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvhost_err(dev_from_gk20a(g),
 		   "class error 0x%08x, offset 0x%08x",
@@ -5297,7 +5297,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		struct fifo_gk20a *f = &g->fifo;
 		struct channel_gk20a *ch = &f->channel[isr_data.chid];
 
-		gk20a_set_error_notifier(ch->hwctx,
+		gk20a_set_error_notifier(ch,
 					NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 
 		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "exception %08x\n", exception);

@@ -66,8 +66,8 @@ struct dbg_session_gk20a {
 	struct platform_device    *pdev;
 	struct gk20a              *g;
 
-	/* bound hwctx and channel, if any */
-	struct file          *hwctx_f;
+	/* bound channel, if any */
+	struct file          *ch_f;
 	struct channel_gk20a *ch;
 
 	/* session operations */

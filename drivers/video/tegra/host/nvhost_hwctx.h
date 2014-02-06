@@ -40,10 +40,6 @@ struct nvhost_hwctx {
 
 	struct mem_mgr *memmgr;
 
-	struct mem_handle *error_notifier_ref;
-	struct nvhost_notification *error_notifier;
-	void *error_notifier_va;
-
 	u32 save_incrs;
 	u32 save_slots;
 
@@ -52,7 +48,6 @@ struct nvhost_hwctx {
 
 	struct list_head as_share_bound_list_node;
 	struct nvhost_as_share *as_share;
-	struct nvhost_dbg_session *dbg_session;
 };
 
 struct nvhost_hwctx_handler {

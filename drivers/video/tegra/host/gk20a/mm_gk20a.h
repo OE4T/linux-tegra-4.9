@@ -409,8 +409,8 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 			 struct nvhost_as_alloc_space_args *args);
 int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			struct nvhost_as_free_space_args *args);
-int gk20a_vm_bind_hwctx(struct gk20a_as_share *as_share,
-			struct nvhost_hwctx *hwctx);
+int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
+			  struct channel_gk20a *ch);
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int memmgr_fd,
 			ulong mem_id,

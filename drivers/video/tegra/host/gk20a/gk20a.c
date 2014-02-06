@@ -737,40 +737,6 @@ void gk20a_put_client(struct gk20a *g)
 	WARN_ON(g->client_refcount < 0);
 }
 
-void gk20a_free_hwctx(struct nvhost_hwctx *ctx)
-{
-	nvhost_dbg_fn("");
-
-	gk20a_busy(ctx->channel->dev);
-
-	if (ctx->priv)
-		gk20a_free_channel(ctx, true);
-
-	gk20a_idle(ctx->channel->dev);
-
-	kfree(ctx);
-}
-
-struct nvhost_hwctx *gk20a_alloc_hwctx(struct nvhost_channel *ch)
-{
-	struct nvhost_hwctx *ctx;
-	nvhost_dbg_fn("");
-
-	/* it seems odd to be allocating a channel here but the
-	 * t20/t30 notion of a channel is mapped on top of gk20a's
-	 * channel.  this works because there is only one module
-	 * under gk20a's host (gr).
-	 */
-	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return NULL;
-
-	kref_init(&ctx->ref);
-	ctx->channel = ch;
-
-	return gk20a_open_channel(ch, ctx);
-}
-
 int nvhost_gk20a_prepare_poweroff(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -1162,9 +1128,9 @@ fail:
 	return err;
 }
 
-struct nvhost_hwctx *gk20a_get_hwctx_from_file(int fd)
+struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 {
-	struct nvhost_hwctx *ch;
+	struct channel_gk20a *ch;
 	struct file *f = fget(fd);
 	if (!f)
 		return 0;
@@ -1174,7 +1140,7 @@ struct nvhost_hwctx *gk20a_get_hwctx_from_file(int fd)
 		return 0;
 	}
 
-	ch = (struct nvhost_hwctx *)f->private_data;
+	ch = (struct channel_gk20a *)f->private_data;
 	fput(f);
 	return ch;
 }

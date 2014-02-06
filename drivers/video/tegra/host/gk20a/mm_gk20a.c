@@ -2206,19 +2206,18 @@ clean_up:
 	return err;
 }
 
-int gk20a_vm_bind_hwctx(struct gk20a_as_share *as_share,
-			struct nvhost_hwctx *hwctx)
+int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
+			  struct channel_gk20a *ch)
 {
 	int err = 0;
 	struct vm_gk20a *vm = as_share->vm;
-	struct channel_gk20a *c = hwctx->priv;
 
 	nvhost_dbg_fn("");
 
-	c->vm = vm;
-	err = channel_gk20a_commit_va(c);
+	ch->vm = vm;
+	err = channel_gk20a_commit_va(ch);
 	if (err)
-		c->vm = 0;
+		ch->vm = 0;
 
 	return err;
 }

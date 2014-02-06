@@ -39,8 +39,7 @@ struct gk20a_as {
 	struct device *node;
 };
 
-int gk20a_as_release_share(struct gk20a_as_share *as_share,
-			   struct nvhost_hwctx *hwctx);
+int gk20a_as_release_share(struct gk20a_as_share *as_share);
 
 /* struct file_operations driver interface */
 int gk20a_as_dev_open(struct inode *inode, struct file *filp);

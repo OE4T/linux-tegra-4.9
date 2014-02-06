@@ -70,11 +70,8 @@ static int gk20a_as_alloc_share(struct gk20a_as *as,
 /*
  * channels and the device nodes call this to release.
  * once the ref_cnt hits zero the share is deleted.
- * ch == 0 when the device node is being released.
- * otherwise it is a channel unbind.
  */
-int gk20a_as_release_share(struct gk20a_as_share *as_share,
-			   struct nvhost_hwctx *hwctx)
+int gk20a_as_release_share(struct gk20a_as_share *as_share)
 {
 	int err;
 
@@ -94,21 +91,18 @@ static int gk20a_as_ioctl_bind_channel(
 		struct nvhost_as_bind_channel_args *args)
 {
 	int err = 0;
-	struct nvhost_hwctx *hwctx;
 	struct channel_gk20a *ch;
 
 	nvhost_dbg_fn("");
 
-	hwctx = gk20a_get_hwctx_from_file(args->channel_fd);
-	ch = (struct channel_gk20a *)hwctx->priv;
-	if (!hwctx || gk20a_channel_as_bound(ch))
+	ch = gk20a_get_channel_from_file(args->channel_fd);
+	if (!ch || gk20a_channel_as_bound(ch))
 		return -EINVAL;
 
 	atomic_inc(&as_share->ref_cnt);
-	hwctx->as_share = (struct nvhost_as_share *)as_share;
 
 	/* this will set channel_gk20a->vm */
-	err = gk20a_vm_bind_hwctx(as_share, hwctx);
+	err = gk20a_vm_bind_channel(as_share, ch);
 	if (err) {
 		atomic_dec(&as_share->ref_cnt);
 		return err;
@@ -206,7 +200,7 @@ int gk20a_as_dev_release(struct inode *inode, struct file *filp)
 
 	nvhost_dbg_fn("");
 
-	ret = gk20a_as_release_share(as_share, 0/* no channel to release */);
+	ret = gk20a_as_release_share(as_share);
 
 	gk20a_put_client(g);
 

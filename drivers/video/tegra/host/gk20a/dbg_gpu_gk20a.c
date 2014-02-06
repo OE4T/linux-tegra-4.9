@@ -24,7 +24,6 @@
 #include <linux/nvhost_dbg_gpu_ioctl.h>
 
 #include "dev.h"
-#include "nvhost_hwctx.h"
 #include "nvhost_acm.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -284,9 +283,9 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 	 */
 	dbg_set_powergate(dbg_s, NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE);
 
-	dbg_s->ch       = NULL;
-	fput(dbg_s->hwctx_f);
-	dbg_s->hwctx_f   = NULL;
+	dbg_s->ch = NULL;
+	fput(dbg_s->ch_f);
+	dbg_s->ch_f = NULL;
 
 	list_del_init(&dbg_s->dbg_s_list_node);
 
@@ -315,9 +314,8 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 			  struct nvhost_dbg_gpu_bind_channel_args *args)
 {
 	struct file *f;
-	struct nvhost_hwctx *hwctx;
 	struct gk20a *g;
-	struct channel_gk20a *ch_gk20a;
+	struct channel_gk20a *ch;
 
 	nvhost_dbg(dbg_fn|dbg_gpu_dbg, "%s fd=%d",
 		   dev_name(dbg_s->dev), args->channel_fd);
@@ -325,39 +323,33 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	if (args->channel_fd == ~0)
 		return dbg_unbind_channel_gk20a(dbg_s);
 
-	/* even though get_file_hwctx is doing this it releases it as well */
+	/* even though get_file_channel is doing this it releases it as well */
 	/* by holding it here we'll keep it from disappearing while the
 	 * debugger is in session */
 	f = fget(args->channel_fd);
 	if (!f)
 		return -ENODEV;
 
-	hwctx = gk20a_get_hwctx_from_file(args->channel_fd);
-	if (!hwctx) {
-		nvhost_dbg_fn("no hwctx found for fd");
+	ch = gk20a_get_channel_from_file(args->channel_fd);
+	if (!ch) {
+		nvhost_dbg_fn("no channel found for fd");
 		fput(f);
 		return -EINVAL;
 	}
-	if (!hwctx->priv) {
-		nvhost_dbg_fn("no priv");
-		fput(f);
-		return -ENODEV;
-	}
 
-	ch_gk20a = (struct channel_gk20a *)hwctx->priv;
 	g = dbg_s->g;
-	nvhost_dbg_fn("%s hwchid=%d", dev_name(dbg_s->dev), ch_gk20a->hw_chid);
+	nvhost_dbg_fn("%s hwchid=%d", dev_name(dbg_s->dev), ch->hw_chid);
 
 	mutex_lock(&g->dbg_sessions_lock);
-	mutex_lock(&ch_gk20a->dbg_s_lock);
+	mutex_lock(&ch->dbg_s_lock);
 
-	dbg_s->hwctx_f  = f;
-	dbg_s->ch       = ch_gk20a;
+	dbg_s->ch_f = f;
+	dbg_s->ch = ch;
 	list_add(&dbg_s->dbg_s_list_node, &dbg_s->ch->dbg_s_list);
 
 	g->dbg_sessions++;
 
-	mutex_unlock(&ch_gk20a->dbg_s_lock);
+	mutex_unlock(&ch->dbg_s_lock);
 	mutex_unlock(&g->dbg_sessions_lock);
 	return 0;
 }
@@ -435,10 +427,8 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
  * So by the time we perform such an opertation it should always
  * be possible to query for the appropriate context offsets, etc.
  *
- * But note: while the dbg_gpu bind requires the a channel fd with
- * a bound hwctx it doesn't require an allocated gr/compute obj
- * at that point... so just having the bound hwctx doesn't work
- * to guarantee this.
+ * But note: while the dbg_gpu bind requires the a channel fd,
+ * it doesn't require an allocated gr/compute obj at that point...
  */
 static bool gr_context_info_available(struct dbg_session_gk20a *dbg_s,
 				      struct gr_gk20a *gr)

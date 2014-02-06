@@ -33,7 +33,7 @@ struct mem_handle;
 struct dbg_session_gk20a;
 
 #include "nvhost_channel.h"
-#include "nvhost_hwctx.h"
+#include "channel_gk20a.h"
 
 #include "cdma_gk20a.h"
 #include "mm_gk20a.h"
@@ -89,7 +89,6 @@ struct channel_gk20a {
 
 	struct mem_mgr *memmgr;
 	struct nvhost_channel *ch;
-	struct nvhost_hwctx *hwctx;
 
 	struct list_head jobs;
 	struct mutex jobs_lock;
@@ -138,6 +137,14 @@ struct channel_gk20a {
 #endif
 	struct mutex dbg_s_lock;
 	struct list_head dbg_s_list;
+
+	bool has_timedout;
+	u32 timeout_ms_max;
+	bool timeout_debug_dump;
+
+	struct mem_handle *error_notifier_ref;
+	struct nvhost_notification *error_notifier;
+	void *error_notifier_va;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -148,9 +155,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c);
 
 void gk20a_channel_update(struct channel_gk20a *c);
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
-struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
-			struct nvhost_hwctx *ctx);
-void gk20a_free_channel(struct nvhost_hwctx *ctx, bool finish);
+void gk20a_free_channel(struct channel_gk20a *ch, bool finish);
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 					    u32 timeout_delta_ms);
 void gk20a_disable_channel(struct channel_gk20a *ch,
@@ -158,7 +163,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 			   unsigned long finish_timeout);
 void gk20a_disable_channel_no_update(struct channel_gk20a *ch);
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
-void gk20a_set_error_notifier(struct nvhost_hwctx *ctx, __u32 error);
+void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
 void gk20a_channel_semaphore_wakeup(struct gk20a *g);
 
 int gk20a_channel_suspend(struct gk20a *g);
@@ -167,7 +172,7 @@ int gk20a_channel_resume(struct gk20a *g);
 static inline
 struct mem_mgr *gk20a_channel_mem_mgr(struct channel_gk20a *ch)
 {
-	return ch->hwctx->memmgr;
+	return ch->memmgr;
 }
 /* Channel file operations */
 int gk20a_channel_open(struct inode *inode, struct file *filp);
@@ -175,7 +180,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			 unsigned int cmd,
 			 unsigned long arg);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
-struct nvhost_hwctx *gk20a_get_hwctx_from_file(int fd);
+struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 
 static inline
 struct nvhost_master *host_from_gk20a_channel(struct channel_gk20a *ch)

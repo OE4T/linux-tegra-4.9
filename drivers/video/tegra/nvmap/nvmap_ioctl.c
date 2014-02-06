@@ -863,12 +863,13 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	phys_addr_t loop;
 	int err = 0;
 	struct nvmap_handle *h = cache_work->h;
-	struct nvmap_client *client = h->owner;
+	struct nvmap_client *client;
 	unsigned int op = cache_work->op;
 
 	if (!h || !h->alloc)
 		return -EFAULT;
 
+	client = h->owner;
 	if (client)
 		trace_cache_maint(client, h, pstart, pend, op);
 	wmb();

@@ -339,8 +339,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		if (err)
 			goto fail;
 
-		err = copy_from_user(&cmdbuf_ext,
-				cmdbuf_exts + i, sizeof(cmdbuf_ext));
+		cmdbuf_ext.pre_fence = -1;
+		if (cmdbuf_exts)
+			err = copy_from_user(&cmdbuf_ext,
+					cmdbuf_exts + i, sizeof(cmdbuf_ext));
 		if (err)
 			cmdbuf_ext.pre_fence = -1;
 

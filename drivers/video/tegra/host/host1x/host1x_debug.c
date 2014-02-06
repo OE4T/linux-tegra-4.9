@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -93,7 +93,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		u32 *mapped = nvhost_memmgr_mmap(g->ref);
+		u32 *mapped = dma_buf_vmap(g->buf);
 		if (!mapped) {
 			nvhost_debug_output(o, "[could not mmap]\n");
 			continue;
@@ -105,7 +105,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 		do_show_channel_gather(o, g->mem_base + g->offset,
 				g->words, cdma, g->mem_base, mapped);
-		nvhost_memmgr_munmap(g->ref, mapped);
+		dma_buf_vunmap(g->buf, mapped);
 	}
 }
 

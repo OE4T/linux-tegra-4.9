@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 
 #include <linux/nvhost_ioctl.h>
 #include <linux/kref.h>
+#include <linux/dma-buf.h>
 
 struct nvhost_channel;
 struct nvhost_hwctx;
@@ -37,7 +38,7 @@ struct nvhost_job_gather {
 	ulong mem_id;
 	u32 class_id;
 	int offset;
-	struct mem_handle *ref;
+	struct dma_buf *buf;
 	int pre_fence;
 };
 
@@ -46,6 +47,17 @@ struct nvhost_job_syncpt {
 	u32 incrs;
 	u32 fence;
 	u32 waitbase;
+};
+
+struct nvhost_pinid {
+	u32 id;
+	u32 index;
+};
+
+struct nvhost_job_unpin {
+	struct sg_table *sgt;
+	struct dma_buf *buf;
+	struct dma_buf_attachment *attach;
 };
 
 /*
@@ -65,9 +77,6 @@ struct nvhost_job {
 	struct nvhost_hwctx *hwctx;
 	int clientid;
 
-	/* Nvmap to be used for pinning & unpinning memory */
-	struct mem_mgr *memmgr;
-
 	/* Gathers and their memory */
 	struct nvhost_job_gather *gathers;
 	int num_gathers;
@@ -83,7 +92,7 @@ struct nvhost_job {
 	struct nvhost_job_unpin *unpins;
 	int num_unpins;
 
-	struct nvhost_memmgr_pinid *pin_ids;
+	struct nvhost_pinid *pin_ids;
 	dma_addr_t *addr_phys;
 	dma_addr_t *gather_addr_phys;
 	dma_addr_t *reloc_addr_phys;
@@ -125,7 +134,7 @@ struct nvhost_job {
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
-		int num_syncpts, struct mem_mgr *memmgr);
+		int num_syncpts);
 
 /*
  * Add a gather to a job.

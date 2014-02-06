@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -233,6 +233,7 @@ static void submit_gathers(struct nvhost_job *job)
 {
 	u32 class_id = 0;
 	int i;
+	void *cpuva;
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -259,11 +260,14 @@ static void submit_gathers(struct nvhost_job *job)
 		else
 			op1 = nvhost_opcode_gather(g->words);
 		op2 = job->gathers[i].mem_base + g->offset;
-		nvhost_cdma_push_gather(&job->ch->cdma,
-				job->memmgr,
-				g->ref,
+
+		cpuva = dma_buf_vmap(g->buf);
+		_nvhost_cdma_push_gather(&job->ch->cdma,
+				cpuva,
+				job->gathers[i].mem_base,
 				g->offset,
 				op1, op2);
+		dma_buf_vunmap(g->buf, cpuva);
 	}
 }
 
@@ -410,8 +414,7 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
-	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0, 1,
-			nvhost_get_host(ch->dev)->memmgr);
+	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0, 1);
 	if (!job) {
 		err = -ENOMEM;
 		mutex_unlock(&ch->submitlock);

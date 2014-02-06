@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Job
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/kref.h>
 #include <linux/err.h>
 #include <linux/vmalloc.h>
+#include <linux/sort.h>
 #include <linux/scatterlist.h>
 #include <trace/events/nvhost.h>
 #include "nvhost_channel.h"
@@ -29,7 +30,6 @@
 #include "nvhost_hwctx.h"
 #include "nvhost_syncpt.h"
 #include "dev.h"
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 
 /* Magic to use to fill freed handle slots */
@@ -48,7 +48,7 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
 			+ num_unpins * sizeof(dma_addr_t)
-			+ num_unpins * sizeof(struct nvhost_memmgr_pinid)
+			+ num_unpins * sizeof(struct nvhost_pinid)
 			+ num_syncpts * sizeof(struct nvhost_job_syncpt);
 
 	if(total > ULONG_MAX)
@@ -85,7 +85,7 @@ static void init_fields(struct nvhost_job *job,
 	job->addr_phys = num_unpins ? mem : NULL;
 	mem += num_unpins * sizeof(dma_addr_t);
 	job->pin_ids = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(struct nvhost_memmgr_pinid);
+	mem += num_unpins * sizeof(struct nvhost_pinid);
 	job->sp = num_syncpts ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;
@@ -95,7 +95,7 @@ static void init_fields(struct nvhost_job *job,
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
-		int num_syncpts, struct mem_mgr *memmgr)
+		int num_syncpts)
 {
 	struct nvhost_job *job = NULL;
 	size_t size =
@@ -112,7 +112,6 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 	job->hwctx = hwctx;
 	if (hwctx)
 		hwctx->h->get(hwctx);
-	job->memmgr = memmgr ? nvhost_memmgr_get_mgr(memmgr) : NULL;
 
 	init_fields(job, num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
@@ -132,8 +131,6 @@ static void job_free(struct kref *ref)
 		job->hwctxref->h->put(job->hwctxref);
 	if (job->hwctx)
 		job->hwctx->h->put(job->hwctx);
-	if (job->memmgr)
-		nvhost_memmgr_put_mgr(job->memmgr);
 	vfree(job);
 }
 
@@ -174,7 +171,7 @@ void nvhost_job_add_gather(struct nvhost_job *job,
  * avoid a wrap condition in the HW).
  */
 static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
-		u32 patch_mem, struct mem_handle *h)
+		u32 patch_mem, struct dma_buf *buf)
 {
 	int i;
 
@@ -213,13 +210,13 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			    nvhost_syncpt_read_min(sp, wait->syncpt_id));
 
 			/* patch the wait */
-			patch_addr = nvhost_memmgr_kmap(h,
+			patch_addr = dma_buf_kmap(buf,
 					wait->offset >> PAGE_SHIFT);
 			if (patch_addr) {
 				nvhost_syncpt_patch_wait(sp,
 					(patch_addr +
 					 (wait->offset & ~PAGE_MASK)));
-				nvhost_memmgr_kunmap(h,
+				dma_buf_kunmap(buf,
 						wait->offset >> PAGE_SHIFT,
 						patch_addr);
 			} else {
@@ -232,6 +229,65 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 	return 0;
 }
 
+static int id_cmp(const void *_id1, const void *_id2)
+{
+	u32 id1 = ((struct nvhost_pinid *)_id1)->id;
+	u32 id2 = ((struct nvhost_pinid *)_id2)->id;
+
+	if (id1 < id2)
+		return -1;
+	if (id1 > id2)
+		return 1;
+
+	return 0;
+}
+
+static int pin_array_ids(struct platform_device *dev,
+		struct nvhost_pinid *ids,
+		dma_addr_t *phys_addr,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data)
+{
+	int i, pin_count = 0;
+	struct sg_table *sgt;
+	struct dma_buf *buf;
+	struct dma_buf_attachment *attach;
+	u32 prev_id = 0;
+	dma_addr_t prev_addr = 0;
+
+	for (i = 0; i < count; i++)
+		ids[i].index = i;
+
+	sort(ids, count, sizeof(*ids), id_cmp, NULL);
+
+	for (i = 0; i < count; i++) {
+		if (ids[i].id == prev_id) {
+			phys_addr[ids[i].index] = prev_addr;
+			continue;
+		}
+
+		buf = dma_buf_get(ids[i].id);
+		if (IS_ERR(buf))
+			return -EINVAL;
+
+		attach = dma_buf_attach(buf, &dev->dev);
+		if (IS_ERR(attach))
+			return PTR_ERR(attach);
+
+		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+		if (IS_ERR(sgt))
+			return PTR_ERR(sgt);
+
+		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
+		unpin_data[pin_count].buf = buf;
+		unpin_data[pin_count].attach = attach;
+		unpin_data[pin_count++].sgt = sgt;
+
+		prev_id = ids[i].id;
+		prev_addr = phys_addr[ids[i].index];
+	}
+	return pin_count;
+}
 
 static int pin_job_mem(struct nvhost_job *job)
 {
@@ -252,7 +308,7 @@ static int pin_job_mem(struct nvhost_job *job)
 	}
 
 	/* validate array and pin unique ids, get refs for unpinning */
-	result = nvhost_memmgr_pin_array_ids(job->memmgr, job->ch->dev,
+	result = pin_array_ids(job->ch->dev,
 		job->pin_ids, job->addr_phys,
 		count,
 		job->unpins);
@@ -264,7 +320,7 @@ static int pin_job_mem(struct nvhost_job *job)
 }
 
 static int do_relocs(struct nvhost_job *job,
-		u32 cmdbuf_mem, struct mem_handle *h)
+		u32 cmdbuf_mem, struct dma_buf *buf)
 {
 	int i = 0;
 	int last_page = -1;
@@ -283,10 +339,10 @@ static int do_relocs(struct nvhost_job *job,
 
 		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
 			if (cmdbuf_page_addr)
-				nvhost_memmgr_kunmap(h,
-						last_page, cmdbuf_page_addr);
+				dma_buf_kunmap(buf, last_page,
+						cmdbuf_page_addr);
 
-			cmdbuf_page_addr = nvhost_memmgr_kmap(h,
+			cmdbuf_page_addr = dma_buf_kmap(buf,
 					reloc->cmdbuf_offset >> PAGE_SHIFT);
 			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
 
@@ -322,7 +378,7 @@ static int do_relocs(struct nvhost_job *job,
 	}
 
 	if (cmdbuf_page_addr)
-		nvhost_memmgr_kunmap(h, last_page, cmdbuf_page_addr);
+		dma_buf_kunmap(buf, last_page, cmdbuf_page_addr);
 
 	return 0;
 }
@@ -354,12 +410,11 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 		struct nvhost_job_gather *g = &job->gathers[i];
 
 		/* process each gather mem only once */
-		if (!g->ref) {
-			g->ref = nvhost_memmgr_get(job->memmgr,
-				g->mem_id, job->ch->dev);
-			if (IS_ERR(g->ref)) {
-				err = PTR_ERR(g->ref);
-				g->ref = NULL;
+		if (!g->buf) {
+			g->buf = dma_buf_get(g->mem_id);
+			if (IS_ERR(g->buf)) {
+				err = PTR_ERR(g->buf);
+				g->buf = NULL;
 				break;
 			}
 
@@ -368,16 +423,16 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 			for (j = 0; j < job->num_gathers; j++) {
 				struct nvhost_job_gather *tmp =
 					&job->gathers[j];
-				if (!tmp->ref && tmp->mem_id == g->mem_id) {
-					tmp->ref = g->ref;
+				if (!tmp->buf && tmp->mem_id == g->mem_id) {
+					tmp->buf = g->buf;
 					tmp->mem_base = g->mem_base;
 				}
 			}
-			err = do_relocs(job, g->mem_id,  g->ref);
+			err = do_relocs(job, g->mem_id,  g->buf);
 			if (!err)
 				err = do_waitchks(job, sp,
-						g->mem_id, g->ref);
-			nvhost_memmgr_put(job->memmgr, g->ref);
+						g->mem_id, g->buf);
+			dma_buf_put(g->buf);
 			if (err)
 				break;
 		}
@@ -386,18 +441,16 @@ fail:
 	return err;
 }
 
-/*
- * Fast unpin, only for nvmap
- */
 void nvhost_job_unpin(struct nvhost_job *job)
 {
 	int i;
 
 	for (i = 0; i < job->num_unpins; i++) {
 		struct nvhost_job_unpin *unpin = &job->unpins[i];
-		nvhost_memmgr_unpin(job->memmgr, unpin->h,
-				&job->ch->dev->dev, unpin->mem);
-		nvhost_memmgr_put(job->memmgr, unpin->h);
+		dma_buf_unmap_attachment(unpin->attach, unpin->sgt,
+						DMA_BIDIRECTIONAL);
+		dma_buf_detach(unpin->buf, unpin->attach);
+		dma_buf_put(unpin->buf);
 	}
 	job->num_unpins = 0;
 }

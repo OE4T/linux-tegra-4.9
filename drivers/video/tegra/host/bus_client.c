@@ -303,8 +303,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			num_cmdbufs,
 			num_relocs,
 			num_waitchks,
-			num_syncpt_incrs,
-			ctx->memmgr);
+			num_syncpt_incrs);
 	if (!job)
 		return -ENOMEM;
 

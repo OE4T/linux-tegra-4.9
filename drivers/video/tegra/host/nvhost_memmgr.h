@@ -36,16 +36,6 @@ struct nvhost_comptags {
 	u32 lines;
 };
 
-struct nvhost_job_unpin {
-	struct mem_handle *h;
-	struct sg_table *mem;
-};
-
-struct nvhost_memmgr_pinid {
-	u32 id;
-	u32 index;
-};
-
 enum mem_mgr_flag {
 	mem_mgr_flag_uncacheable = 0,
 	mem_mgr_flag_write_combine = 1,
@@ -95,12 +85,6 @@ void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 static inline int nvhost_memmgr_type(ulong id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(ulong id) { return id & MEMMGR_ID_MASK; }
 
-int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
-		struct platform_device *dev,
-		struct nvhost_memmgr_pinid *ids,
-		dma_addr_t *phys_addr,
-		u32 count,
-		struct nvhost_job_unpin *unpin_data);
 int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
 			    u32 param, u64 *result);

@@ -860,14 +860,16 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 /* return the minimum bandwidth in kbps for display to function */
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 {
-	unsigned pclk = tegra_dc_get_out_max_pixclock(dc);
+	unsigned  pclk;
 
 	if (WARN_ONCE(!dc, "dc is NULL") ||
 		WARN_ONCE(!dc->out, "dc->out is NULL!"))
 		return 0;
+
+	pclk = tegra_dc_get_out_max_pixclock(dc);
 	if (!pclk) {
 		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 			pclk = KHZ2PICOS(300000); /* 300MHz max */
 #else
 			pclk = KHZ2PICOS(150000); /* 150MHz max */
@@ -879,7 +881,9 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 			else
 				pclk = KHZ2PICOS(25200); /* vga */
 		} else {
-			pclk = KHZ2PICOS(dc->mode.pclk / 1000);
+			if (!WARN_ONCE(!dc->mode.pclk,
+				"pclk is not set, bandwidth calc cannot work"))
+				pclk = KHZ2PICOS(dc->mode.pclk / 1000);
 		}
 	}
 

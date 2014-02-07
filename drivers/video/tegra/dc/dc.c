@@ -1512,7 +1512,7 @@ EXPORT_SYMBOL(tegra_dc_get_out_width);
 
 unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc)
 {
-	if (dc->out && dc->out->max_pixclock)
+	if (dc && dc->out)
 		return dc->out->max_pixclock;
 	else
 		return 0;

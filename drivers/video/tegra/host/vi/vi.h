@@ -21,6 +21,8 @@
 #ifndef __NVHOST_VI_H__
 #define __NVHOST_VI_H__
 
+#include <mach/isomgr.h>
+
 #include "camera_priv_defs.h"
 
 #define CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0		0x850

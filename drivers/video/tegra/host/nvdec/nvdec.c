@@ -79,7 +79,7 @@ static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, NVDEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = nvhost_device_readl(dev, nvdec_dmatrfcmd_r());
+		u32 dmatrfcmd = host1x_readl(dev, nvdec_dmatrfcmd_r());
 		u32 idle_v = nvdec_dmatrfcmd_idle_v(dmatrfcmd);
 
 		if (nvdec_dmatrfcmd_idle_true_v() == idle_v) {
@@ -107,9 +107,9 @@ static int nvdec_dma_pa_to_internal_256b(struct platform_device *dev,
 	if (imem)
 		cmd |= nvdec_dmatrfcmd_imem_true_f();
 
-	nvhost_device_writel(dev, nvdec_dmatrfmoffs_r(), i_offset);
-	nvhost_device_writel(dev, nvdec_dmatrffboffs_r(), pa_offset);
-	nvhost_device_writel(dev, nvdec_dmatrfcmd_r(), cmd);
+	host1x_writel(dev, nvdec_dmatrfmoffs_r(), i_offset);
+	host1x_writel(dev, nvdec_dmatrffboffs_r(), pa_offset);
+	host1x_writel(dev, nvdec_dmatrfcmd_r(), cmd);
 
 	return nvdec_dma_wait_idle(dev, &timeout);
 
@@ -124,7 +124,7 @@ static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, NVDEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = nvhost_device_readl(dev, nvdec_idlestate_r());
+		u32 w = host1x_readl(dev, nvdec_idlestate_r());
 
 		if (!w) {
 			nvhost_dbg_fn("done");
@@ -148,8 +148,8 @@ int nvdec_boot(struct platform_device *dev)
 	if (!m || !m->valid)
 		return -ENOMEDIUM;
 
-	nvhost_device_writel(dev, nvdec_dmactl_r(), 0);
-	nvhost_device_writel(dev, nvdec_dmatrfbase_r(),
+	host1x_writel(dev, nvdec_dmactl_r(), 0);
+	host1x_writel(dev, nvdec_dmatrfbase_r(),
 		(sg_dma_address(m->pa->sgl) + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
@@ -160,26 +160,26 @@ int nvdec_boot(struct platform_device *dev)
 	nvdec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
 
 	/* setup nvdec interrupts and enable interface */
-	nvhost_device_writel(dev, nvdec_irqmset_r(),
+	host1x_writel(dev, nvdec_irqmset_r(),
 			(nvdec_irqmset_ext_f(0xff) |
 				nvdec_irqmset_swgen1_set_f() |
 				nvdec_irqmset_swgen0_set_f() |
 				nvdec_irqmset_exterr_set_f() |
 				nvdec_irqmset_halt_set_f()   |
 				nvdec_irqmset_wdtmr_set_f()));
-	nvhost_device_writel(dev, nvdec_irqdest_r(),
+	host1x_writel(dev, nvdec_irqdest_r(),
 			(nvdec_irqdest_host_ext_f(0xff) |
 				nvdec_irqdest_host_swgen1_host_f() |
 				nvdec_irqdest_host_swgen0_host_f() |
 				nvdec_irqdest_host_exterr_host_f() |
 				nvdec_irqdest_host_halt_host_f()));
-	nvhost_device_writel(dev, nvdec_itfen_r(),
+	host1x_writel(dev, nvdec_itfen_r(),
 			(nvdec_itfen_mthden_enable_f() |
 				nvdec_itfen_ctxen_enable_f()));
 
 	/* boot nvdec */
-	nvhost_device_writel(dev, nvdec_bootvec_r(), nvdec_bootvec_vec_f(0));
-	nvhost_device_writel(dev, nvdec_cpuctl_r(),
+	host1x_writel(dev, nvdec_bootvec_r(), nvdec_bootvec_vec_f(0));
+	host1x_writel(dev, nvdec_cpuctl_r(),
 			nvdec_cpuctl_startcpu_true_f());
 
 	timeout = 0; /* default */

@@ -416,9 +416,11 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 			fifo_fb_timeout_period_max_f());
 	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
 
-	timeout = gk20a_readl(g, fifo_pb_timeout_r());
-	timeout &= ~fifo_pb_timeout_detection_enabled_f();
-	gk20a_writel(g, fifo_pb_timeout_r(), timeout);
+	if (tegra_platform_is_silicon()) {
+		timeout = gk20a_readl(g, fifo_pb_timeout_r());
+		timeout &= ~fifo_pb_timeout_detection_enabled_f();
+		gk20a_writel(g, fifo_pb_timeout_r(), timeout);
+	}
 
 	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US |
 			fifo_eng_timeout_detection_enabled_f();

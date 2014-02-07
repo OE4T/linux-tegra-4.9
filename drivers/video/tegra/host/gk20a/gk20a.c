@@ -905,6 +905,19 @@ int nvhost_gk20a_finalize_poweron(struct platform_device *dev)
 		goto done;
 	}
 
+	/* enable pri timeout only on silicon */
+	if (tegra_platform_is_silicon()) {
+		gk20a_writel(g,
+			timer_pri_timeout_r(),
+			timer_pri_timeout_period_f(0x186A0) |
+			timer_pri_timeout_en_en_enabled_f());
+	} else {
+		gk20a_writel(g,
+			timer_pri_timeout_r(),
+			timer_pri_timeout_period_f(0x186A0) |
+			timer_pri_timeout_en_en_disabled_f());
+	}
+
 	err = gk20a_init_fifo_reset_enable_hw(g);
 	if (err) {
 		nvhost_err(&dev->dev, "failed to reset gk20a fifo");

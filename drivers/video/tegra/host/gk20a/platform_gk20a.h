@@ -38,13 +38,24 @@ struct gk20a_platform {
 	struct gk20a *g;
 
 	/* Should be populated at probe. */
-	bool can_powergate;
+	bool can_railgate;
 
 	/* Should be populated at probe. */
 	bool has_syncpoints;
 
 	/* Should be populated by probe. */
 	struct dentry *debugfs;
+
+	/* Clock configuration is stored here. Platform probe is responsible
+	 * for filling this data. */
+	struct clk *clk[3];
+	int num_clks;
+
+	/* Delay before rail gated */
+	int railgate_delay;
+
+	/* Delay before clock gated */
+	int clockgate_delay;
 
 	/* Initialize the platform interface of the gk20a driver.
 	 *
@@ -53,8 +64,16 @@ struct gk20a_platform {
 	 *     state, and
 	 *   - populate the gk20a_platform structure (a pointer to the
 	 *     structure can be obtained by calling gk20a_get_platform).
+	 *
+	 * After this function is finished, the driver will initialise
+	 * pm runtime and genpd based on the platform configuration.
 	 */
 	int (*probe)(struct platform_device *dev);
+
+	/* Second stage initialisation - called once all power management
+	 * initialisations are done.
+	 */
+	int (*late_probe)(struct platform_device *dev);
 
 	/* Called before submitting work to the gpu. The platform may use this
 	 * hook to ensure that any other hw modules that the gpu depends on are
@@ -74,6 +93,16 @@ struct gk20a_platform {
 	int (*secure_alloc)(struct platform_device *dev,
 			    struct gr_ctx_buffer_desc *desc,
 			    size_t size);
+
+	/* Device is going to be suspended */
+	int (*suspend)(struct device *);
+
+	/* Called to turn off the device */
+	int (*railgate)(struct platform_device *dev);
+
+	/* Called to turn on the device */
+	int (*unrailgate)(struct platform_device *dev);
+
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

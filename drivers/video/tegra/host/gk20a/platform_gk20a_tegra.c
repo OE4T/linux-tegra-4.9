@@ -24,10 +24,12 @@
 #include "t124/syncpt_t124.h"
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
+#include <linux/platform_data/tegra_edp.h>
 #include <linux/nvhost_ioctl.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <mach/irqs.h>
+#include <mach/pm_domains.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
@@ -110,32 +112,109 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 }
 #endif
 
+/*
+ * gk20a_tegra_railgate()
+ *
+ * Gate (disable) gk20a power rail
+ */
+
+static int gk20a_tegra_railgate(struct platform_device *pdev)
+{
+	if (tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
+		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
+	return 0;
+}
+
+/*
+ * gk20a_tegra_unrailgate()
+ *
+ * Ungate (enable) gk20a power rail
+ */
+
+static int gk20a_tegra_unrailgate(struct platform_device *pdev)
+{
+	tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+	return 0;
+}
+
+struct {
+	char *name;
+	unsigned long default_rate;
+} tegra_gk20a_clocks[] = {
+	{"PLLG_ref", UINT_MAX},
+	{"pwr", 204000000},
+	{"emc", UINT_MAX} };
+
+/*
+ * gk20a_tegra_get_clocks()
+ *
+ * This function finds clocks in tegra platform and populates
+ * the clock information to gk20a platform data.
+ */
+
+static int gk20a_tegra_get_clocks(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	char devname[16];
+	int i;
+	int ret = 0;
+
+	snprintf(devname, sizeof(devname),
+		 (pdev->id <= 0) ? "tegra_%s" : "tegra_%s.%d\n",
+		 pdev->name, pdev->id);
+
+	platform->num_clks = 0;
+	for (i = 0; i < ARRAY_SIZE(tegra_gk20a_clocks); i++) {
+		long rate = tegra_gk20a_clocks[i].default_rate;
+		struct clk *c;
+
+		c = clk_get_sys(devname, tegra_gk20a_clocks[i].name);
+		if (IS_ERR(c)) {
+			ret = PTR_ERR(c);
+			goto err_get_clock;
+		}
+		rate = clk_round_rate(c, rate);
+		clk_set_rate(c, rate);
+		platform->clk[platform->num_clks++] = c;
+		platform->nvhost.clk[platform->nvhost.num_clks++] = c;
+	}
+	platform->num_clks = i;
+	platform->nvhost.num_clks = i;
+
+	return 0;
+
+err_get_clock:
+
+	while (i--)
+		clk_put(platform->clk[i]);
+	return ret;
+}
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
-	int err;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct nvhost_device_data *pdata = &platform->nvhost;
 
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13) {
 		t132_gk20a_tegra_platform.g = platform->g;
 		*platform = t132_gk20a_tegra_platform;
 	}
 
+	gk20a_tegra_get_clocks(dev);
+
+	return 0;
+}
+
+static int gk20a_tegra_late_probe(struct platform_device *dev)
+{
+	int err;
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct nvhost_device_data *pdata = &platform->nvhost;
+
+	/* Make gk20a power domain a subdomain of mc */
+	tegra_pd_add_sd(&platform->g->pd);
+
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
-
-	/* Initialize clocks and power. */
-	err = nvhost_module_init(dev);
-	if (err)
-		return err;
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = "gk20a";
-
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-	if (err)
-		goto fail;
-#endif
 
 	err = nvhost_client_device_init(dev);
 	if (err) {
@@ -144,7 +223,6 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 		goto fail;
 	}
 
-	platform->can_powergate = pdata->can_powergate;
 	platform->debugfs = pdata->debugfs;
 
 	return 0;
@@ -153,6 +231,14 @@ fail:
 	nvhost_module_deinit(dev);
 	pdata->pdev = NULL;
 	return err;
+}
+
+static int gk20a_tegra_suspend(struct device *dev)
+{
+	nvhost_scale3d_suspend(dev);
+	tegra_edp_notify_gpu_load(0);
+
+	return 0;
 }
 
 static struct resource gk20a_tegra_resources[] = {
@@ -188,16 +274,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 		.syncpts		= {NVSYNCPT_GK20A_BASE},
 		.syncpt_base		= NVSYNCPT_GK20A_BASE,
 		.class			= NV_GRAPHICS_GPU_CLASS_ID,
-		.clocks			= {{"PLLG_ref", UINT_MAX},
-					   {"pwr", 204000000},
-					   {"emc", UINT_MAX},
-					   {} },
-		.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
-		NVHOST_DEFAULT_CLOCKGATE_DELAY,
-		.powergate_delay	= 500,
 		.moduleid		= NVHOST_MODULE_GPU,
-		.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
-		.finalize_poweron	= nvhost_gk20a_finalize_poweron,
 #ifdef CONFIG_GK20A_DEVFREQ
 		.busy			= gk20a_scale_notify_busy,
 		.idle			= gk20a_scale_notify_idle,
@@ -210,8 +287,21 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 		.qos_id			= PM_QOS_GPU_FREQ_MIN,
 #endif
 	},
+
 	.has_syncpoints = true,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.clockgate_delay	= 50,
+
 	.probe = gk20a_tegra_probe,
+	.late_probe = gk20a_tegra_late_probe,
+
+	/* power management callbacks */
+	.suspend = gk20a_tegra_suspend,
+	.railgate = gk20a_tegra_railgate,
+	.unrailgate = gk20a_tegra_unrailgate,
+
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
@@ -222,17 +312,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.syncpts		= {NVSYNCPT_GK20A_BASE},
 		.syncpt_base		= NVSYNCPT_GK20A_BASE,
 		.class			= NV_GRAPHICS_GPU_CLASS_ID,
-		.clocks			= {{"PLLG_ref", UINT_MAX},
-					   {"pwr", 204000000},
-					   {"emc", UINT_MAX},
-					   {} },
-		.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
-		NVHOST_DEFAULT_CLOCKGATE_DELAY,
-		.powergate_delay	= 500,
-		.can_powergate		= true,
 		.moduleid		= NVHOST_MODULE_GPU,
-		.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
-		.finalize_poweron	= nvhost_gk20a_finalize_poweron,
 #ifdef CONFIG_GK20A_DEVFREQ
 		.busy			= gk20a_scale_notify_busy,
 		.idle			= gk20a_scale_notify_idle,
@@ -245,8 +325,22 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.qos_id			= PM_QOS_GPU_FREQ_MIN,
 #endif
 	},
+
 	.has_syncpoints = true,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.clockgate_delay	= 50,
+	.can_railgate		= true,
+
 	.probe = gk20a_tegra_probe,
+	.late_probe = gk20a_tegra_late_probe,
+
+	/* power management callbacks */
+	.suspend = gk20a_tegra_suspend,
+	.railgate = gk20a_tegra_railgate,
+	.unrailgate = gk20a_tegra_unrailgate,
+
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,

@@ -176,6 +176,63 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
+static ssize_t railgate_delay_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	int railgate_delay = 0, ret = 0;
+
+	if (!platform->can_railgate) {
+		dev_info(dev, "does not support power-gating\n");
+		return count;
+	}
+
+	ret = sscanf(buf, "%d", &railgate_delay);
+	if (ret == 1 && railgate_delay >= 0) {
+		struct generic_pm_domain *genpd = pd_to_genpd(dev->pm_domain);
+		platform->railgate_delay = railgate_delay;
+		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
+	} else
+		dev_err(dev, "Invalid powergate delay\n");
+
+	return count;
+}
+static ssize_t railgate_delay_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	return snprintf(buf, PAGE_SIZE, "%d\n", platform->railgate_delay);
+}
+static DEVICE_ATTR(railgate_delay, S_IRWXUGO, railgate_delay_show,
+		   railgate_delay_store);
+
+static ssize_t clockgate_delay_store(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	int clockgate_delay = 0, ret = 0;
+
+	ret = sscanf(buf, "%d", &clockgate_delay);
+	if (ret == 1 && clockgate_delay >= 0) {
+		platform->clockgate_delay = clockgate_delay;
+		pm_runtime_set_autosuspend_delay(dev,
+						 platform->clockgate_delay);
+	} else
+		dev_err(dev, "Invalid clockgate delay\n");
+
+	return count;
+}
+static ssize_t clockgate_delay_show(struct device *dev,
+				    struct device_attribute *attr, char *buf)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	return snprintf(buf, PAGE_SIZE, "%d\n", platform->clockgate_delay);
+}
+static DEVICE_ATTR(clockgate_delay, S_IRWXUGO, clockgate_delay_show,
+		   clockgate_delay_store);
+
 static ssize_t counters_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -256,6 +313,8 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_counters);
 	device_remove_file(dev, &dev_attr_counters_reset);
+	device_remove_file(dev, &dev_attr_railgate_delay);
+	device_remove_file(dev, &dev_attr_clockgate_delay);
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -269,6 +328,8 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_counters);
 	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
+	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
+	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");

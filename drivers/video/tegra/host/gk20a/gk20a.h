@@ -210,6 +210,9 @@ struct gk20a {
 
 	int irq_stall;
 	int irq_nonstall;
+
+	/* Power domain representing power partition */
+	struct generic_pm_domain pd;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -335,9 +338,6 @@ static inline int support_gk20a_pmu(void)
 #else
 static inline int support_gk20a_pmu(void){return 0;}
 #endif
-
-int nvhost_gk20a_finalize_poweron(struct platform_device *dev);
-int nvhost_gk20a_prepare_poweroff(struct platform_device *dev);
 
 void gk20a_create_sysfs(struct platform_device *dev);
 

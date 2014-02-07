@@ -144,7 +144,7 @@ static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
 }
 int channel_gk20a_commit_va(struct channel_gk20a *c);
 
-void gk20a_channel_update(struct channel_gk20a *c);
+void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
 void gk20a_free_channel(struct channel_gk20a *ch, bool finish);
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,

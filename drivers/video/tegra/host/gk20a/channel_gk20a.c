@@ -1375,11 +1375,12 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	return 0;
 }
 
-void gk20a_channel_update(struct channel_gk20a *c)
+void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *vm = c->vm;
 	struct channel_gk20a_job *job, *n;
+	int i;
 
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
@@ -1399,6 +1400,9 @@ void gk20a_channel_update(struct channel_gk20a *c)
 		gk20a_channel_idle(g->dev);
 	}
 	mutex_unlock(&c->jobs_lock);
+
+	for (i = 0; i < nr_completed; i++)
+		gk20a_channel_idle(c->g->dev);
 }
 
 static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,

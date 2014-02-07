@@ -161,13 +161,12 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
 {
 	struct channel_gk20a *ch20a = waiter->data;
-	int nr_completed = waiter->count;
+
 	wake_up(&ch20a->submit_wq);
+
 #if defined(CONFIG_TEGRA_GK20A)
-	gk20a_channel_update(ch20a);
+	gk20a_channel_update(ch20a, waiter->count);
 #endif
-	nvhost_module_idle_mult(ch20a->ch->dev, nr_completed);
-	/* TODO: add trace function */
 }
 
 static void action_wakeup(struct nvhost_waitlist *waiter)

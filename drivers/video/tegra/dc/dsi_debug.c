@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_debug.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2014 NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -147,7 +147,7 @@ static const struct file_operations dbg_fops = {
 static u32 max_ret_payload_size;
 static u32 panel_reg_addr;
 
-static ssize_t read_panel_get(struct seq_file *s, void *unused)
+static int read_panel_get(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
 	struct tegra_dc *dc = dsi->dc;

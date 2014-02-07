@@ -4,7 +4,7 @@
  * HDMI library support functions for Nvidia Tegra processors.
  *
  * Copyright (C) 2012-2013 Google - http://www.google.com/
- * Copyright (C) 2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2013-2014 NVIDIA CORPORATION. All rights reserved.
  * Authors:	John Grossman <johngro@google.com>
  * Authors:	Mike J. Chen <mjchen@google.com>
  *
@@ -325,7 +325,7 @@ static int hdmi_recheck_edid(struct tegra_dc_hdmi_data *hdmi, int *match)
 	pr_info("%s: read_edid_into_buffer() returned %d\n", __func__, ret);
 	if (ret > 0) {
 		struct tegra_dc_edid *data = tegra_edid_get_data(hdmi->edid);
-		pr_info("old edid len = %d\n", data->len);
+		pr_info("old edid len = %ld\n", (long int)data->len);
 		*match = ((ret == data->len) &&
 			  !memcmp(tmp, data->buf, data->len));
 		if (*match == 0) {

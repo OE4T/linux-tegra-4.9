@@ -55,9 +55,9 @@ unsigned char rm_tch_ctrl_get_idle_mode(u8 *p)
 {
 	u32 u32Ret;
 	u32Ret = copy_to_user(p, &g_stCtrl.bfIdleModeCheck, 1);
-	if (u32Ret != 0)
-		return 0;
-	return 1;
+	if (u32Ret)
+		return RETURN_FAIL;
+	return RETURN_OK;
 }
 
 /*=============================================================================

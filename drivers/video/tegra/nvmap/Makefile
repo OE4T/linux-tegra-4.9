@@ -1,3 +1,5 @@
+GCOV_PROFILE := y
+
 ifeq ($(CONFIG_ARM64),y)
 ccflags-y += -Iarch/arm/mach-tegra/include
 endif

@@ -1229,9 +1229,9 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			nvhost_memmgr_get_comptags(r, &comptags);
 
 			/* init/clear the ctag buffer */
-			gk20a_gr_clear_comptags(g,
-				comptags.offset,
-				comptags.offset + comptags.lines - 1);
+			g->ops.ltc.clear_comptags(g,
+					  comptags.offset,
+					  comptags.offset + comptags.lines - 1);
 		}
 	}
 

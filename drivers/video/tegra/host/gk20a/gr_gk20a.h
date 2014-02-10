@@ -324,7 +324,6 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c);
 int gk20a_gr_isr(struct gk20a *g);
 int gk20a_gr_nonstall_isr(struct gk20a *g);
 
-int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max);
 /* zcull */
 u32 gr_gk20a_get_ctxsw_zcull_size(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,

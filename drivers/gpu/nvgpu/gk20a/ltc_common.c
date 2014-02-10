@@ -342,3 +342,5 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 			    "g_elpg_flush too many retries");
 
 }
+=======
+>>>>>>> 7294a959b260... video: tegra: host: comptag init and clear

@@ -1150,7 +1150,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) |
+	} while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon());
 
 	if (ret)
@@ -1480,7 +1480,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) |
+	} while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon());
 
 	if (ret) {

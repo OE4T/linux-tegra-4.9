@@ -320,7 +320,8 @@ static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies));
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
 
 	nvhost_err(dev_from_gk20a(g),
 		"timeout, ctxsw busy : %d, gr busy : %d",
@@ -353,7 +354,8 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies));
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
 
 	if (!time_before(jiffies, end_jiffies)) {
 		nvhost_err(dev_from_gk20a(g),
@@ -413,7 +415,8 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies));
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
 
 	if (!time_before(jiffies, end_jiffies))
 		nvhost_warn(dev_from_gk20a(g),
@@ -3325,7 +3328,7 @@ int gk20a_gr_clear_comptags(struct gk20a *g, u32 min, u32 max)
 				delay = min_t(u32, delay << 1,
 					GR_IDLE_CHECK_MAX);
 
-			} while (time_before(jiffies, end_jiffies) |
+			} while (time_before(jiffies, end_jiffies) ||
 					!tegra_platform_is_silicon());
 
 			if (!time_before(jiffies, end_jiffies)) {
@@ -5091,7 +5094,8 @@ static int gk20a_gr_lock_down_sm(struct gk20a *g, u32 global_esr_mask)
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies));
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
 
 	nvhost_err(dev_from_gk20a(g), "timed out while trying to lock down SM");
 

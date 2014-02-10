@@ -444,7 +444,8 @@ static int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 			break;
 
 		usleep_range(1000, 3000);
-	} while (time_before(jiffies, end_jiffies));
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
 
 	if (!channel_idle)
 		nvhost_err(dev_from_gk20a(ch->g), "channel jobs not freed");

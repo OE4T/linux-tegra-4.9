@@ -2117,7 +2117,7 @@ static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) |
+	} while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon());
 
 	return -ETIMEDOUT;

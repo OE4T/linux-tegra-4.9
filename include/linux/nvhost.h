@@ -54,6 +54,8 @@ struct nvhost_as_moduleops;
 #define NVSYNCPT_GRAPHICS_HOST		(0)	/* t20, t30, t114, t148 */
 
 #define NVSYNCPT_AVP_0			(10)	/* t20, t30, t114, t148 */
+#define NVSYNCPT_2D_0			(18)
+#define NVSYNCPT_2D_1			(19)
 #define NVSYNCPT_3D			(22)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VBLANK0		(26)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VBLANK1		(27)	/* t20, t30, t114, t148 */

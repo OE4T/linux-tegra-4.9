@@ -22,15 +22,21 @@
 #include <linux/nvhost.h>
 #include <linux/devfreq.h>
 
-#include "nvhost_scale.h"
-
 struct platform_device;
-struct host1x_actmon;
 struct clk;
 
+struct gk20a_scale_profile {
+	struct platform_device		*pdev;
+	ktime_t				last_event_time;
+	struct devfreq_dev_profile	devfreq_profile;
+	struct devfreq_dev_status	dev_stat;
+	struct notifier_block		qos_notify_block;
+	void				*private_data;
+};
+
 /* Initialization and de-initialization for module */
-void nvhost_gk20a_scale_init(struct platform_device *);
-void nvhost_gk20a_scale_deinit(struct platform_device *);
+void gk20a_scale_init(struct platform_device *);
+void gk20a_scale_hw_init(struct platform_device *pdev);
 
 /*
  * call when performing submit to notify scaling mechanism that the module is
@@ -39,8 +45,7 @@ void nvhost_gk20a_scale_deinit(struct platform_device *);
 void gk20a_scale_notify_busy(struct platform_device *);
 void gk20a_scale_notify_idle(struct platform_device *);
 
-void nvhost_gk20a_scale_hw_init(struct platform_device *);
+void gk20a_scale_suspend(struct platform_device *);
+void gk20a_scale_resume(struct platform_device *);
 
-void nvhost_gk20a_scale_callback(struct nvhost_device_profile *profile,
-				 unsigned long freq);
 #endif

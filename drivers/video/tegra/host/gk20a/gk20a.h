@@ -211,8 +211,12 @@ struct gk20a {
 	int irq_stall;
 	int irq_nonstall;
 
-	/* Power domain representing power partition */
 	struct generic_pm_domain pd;
+
+	struct devfreq *devfreq;
+
+	struct gk20a_scale_profile *scale_profile;
+
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

@@ -707,7 +707,7 @@ static int gk20a_init_client(struct platform_device *dev)
 		return err;
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		nvhost_gk20a_scale_hw_init(dev);
+		gk20a_scale_hw_init(dev);
 	return 0;
 }
 
@@ -1230,12 +1230,26 @@ static int gk20a_pm_suspend(struct device *dev)
 	if (ret)
 		return ret;
 
+	gk20a_scale_suspend(to_platform_device(dev));
+
 	if (platform->suspend)
 		platform->suspend(dev);
 
 	return 0;
 }
 
+static int gk20a_pm_resume(struct device *dev)
+{
+	int ret = 0;
+
+	ret = gk20a_pm_finalize_poweron(dev);
+	if (ret)
+		return ret;
+
+	gk20a_scale_resume(to_platform_device(dev));
+
+	return 0;
+}
 
 static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 {
@@ -1258,7 +1272,7 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	domain->dev_ops.save_state = gk20a_pm_prepare_poweroff;
 	domain->dev_ops.restore_state = gk20a_pm_finalize_poweron;
 	domain->dev_ops.suspend = gk20a_pm_suspend;
-	domain->dev_ops.resume = gk20a_pm_finalize_poweron;
+	domain->dev_ops.resume = gk20a_pm_resume;
 
 	device_set_wakeup_capable(&pdev->dev, 0);
 	ret = pm_genpd_add_device(domain, &pdev->dev);
@@ -1356,6 +1370,10 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "pm init failed");
 		return err;
 	}
+
+	/* Initialise scaling */
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
+		gk20a_scale_init(dev);
 
 	if (platform->late_probe) {
 		err = platform->late_probe(dev);

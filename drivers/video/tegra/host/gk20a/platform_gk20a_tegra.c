@@ -42,6 +42,57 @@
 
 struct gk20a_platform t132_gk20a_tegra_platform;
 
+struct gk20a_emc_params {
+	long				emc_slope;
+	long				emc_offset;
+	long				emc_dip_slope;
+	long				emc_dip_offset;
+	long				emc_xmid;
+	bool				linear;
+};
+
+/*
+ * 20.12 fixed point arithmetic
+ */
+
+static const int FXFRAC = 12;
+static const int FX_HALF = (1 << 12) / 2;
+
+#define INT_TO_FX(x) ((x) << FXFRAC)
+#define FX_TO_INT(x) ((x) >> FXFRAC)
+
+#define MHZ_TO_HZ(x) ((x) * 1000000)
+#define HZ_TO_MHZ(x) ((x) / 1000000)
+
+int FXMUL(int x, int y)
+{
+	return ((long long) x * (long long) y) >> FXFRAC;
+}
+
+int FXDIV(int x, int y)
+{
+	/* long long div operation not supported, must shift manually. This
+	 * would have been
+	 *
+	 *    return (((long long) x) << FXFRAC) / (long long) y;
+	 */
+	int pos, t;
+	if (x == 0)
+		return 0;
+
+	/* find largest allowable right shift to numerator, limit to FXFRAC */
+	t = x < 0 ? -x : x;
+	pos = 31 - fls(t); /* fls can't be 32 if x != 0 */
+	if (pos > FXFRAC)
+		pos = FXFRAC;
+
+	y >>= FXFRAC - pos;
+	if (y == 0)
+		return 0x7FFFFFFF; /* overflow, return MAX_FIXED */
+
+	return (x << pos) / y;
+}
+
 static int gk20a_tegra_channel_busy(struct platform_device *dev)
 {
 	int ret = 0;
@@ -113,6 +164,158 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 #endif
 
 /*
+ * gk20a_tegra_get_emc_rate()
+ *
+ * This function returns the minimum emc clock based on gpu frequency
+ */
+
+long gk20a_tegra_get_emc_rate(struct gk20a_emc_params *emc_params, long freq)
+{
+	long hz;
+
+	freq = INT_TO_FX(HZ_TO_MHZ(freq));
+	hz = FXMUL(freq, emc_params->emc_slope) + emc_params->emc_offset;
+
+	hz -= FXMUL(emc_params->emc_dip_slope,
+		FXMUL(freq - emc_params->emc_xmid,
+			freq - emc_params->emc_xmid)) +
+		emc_params->emc_dip_offset;
+
+	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
+	hz = (hz < 0) ? 0 : hz;
+
+	return hz;
+}
+
+/*
+ * gk20a_tegra_postscale(profile, freq)
+ *
+ * This function sets emc frequency based on current gpu frequency
+ */
+
+static void gk20a_tegra_postscale(struct platform_device *pdev,
+				  unsigned long freq)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct gk20a_emc_params *emc_params = profile->private_data;
+	struct gk20a *g = get_gk20a(pdev);
+
+	long after = gk20a_clk_get_rate(g);
+	long emc_target = gk20a_tegra_get_emc_rate(emc_params, after);
+
+	clk_set_rate(platform->clk[2], emc_target);
+}
+
+/*
+ * gk20a_tegra_prescale(profile, freq)
+ *
+ * This function informs EDP about changed constraints.
+ */
+
+static void gk20a_tegra_prescale(struct platform_device *pdev)
+{
+	struct gk20a *g = get_gk20a(pdev);
+	u32 avg = 0;
+
+	gk20a_pmu_load_norm(g, &avg);
+	tegra_edp_notify_gpu_load(avg);
+}
+
+/*
+ * gk20a_tegra_calibrate_emc()
+ *
+ * Compute emc scaling parameters
+ *
+ * Remc = S * R3d + O - (Sd * (R3d - Rm)^2 + Od)
+ *
+ * Remc - 3d.emc rate
+ * R3d  - 3d.cbus rate
+ * Rm   - 3d.cbus 'middle' rate = (max + min)/2
+ * S    - emc_slope
+ * O    - emc_offset
+ * Sd   - emc_dip_slope
+ * Od   - emc_dip_offset
+ *
+ * this superposes a quadratic dip centered around the middle 3d
+ * frequency over a linear correlation of 3d.emc to 3d clock
+ * rates.
+ *
+ * S, O are chosen so that the maximum 3d rate produces the
+ * maximum 3d.emc rate exactly, and the minimum 3d rate produces
+ * at least the minimum 3d.emc rate.
+ *
+ * Sd and Od are chosen to produce the largest dip that will
+ * keep 3d.emc frequencies monotonously decreasing with 3d
+ * frequencies. To achieve this, the first derivative of Remc
+ * with respect to R3d should be zero for the minimal 3d rate:
+ *
+ *   R'emc = S - 2 * Sd * (R3d - Rm)
+ *   R'emc(R3d-min) = 0
+ *   S = 2 * Sd * (R3d-min - Rm)
+ *     = 2 * Sd * (R3d-min - R3d-max) / 2
+ *
+ *   +------------------------------+
+ *   | Sd = S / (R3d-min - R3d-max) |
+ *   +------------------------------+
+ *
+ *   dip = Sd * (R3d - Rm)^2 + Od
+ *
+ * requiring dip(R3d-min) = 0 and dip(R3d-max) = 0 gives
+ *
+ *   Sd * (R3d-min - Rm)^2 + Od = 0
+ *   Od = -Sd * ((R3d-min - R3d-max) / 2)^2
+ *      = -Sd * ((R3d-min - R3d-max)^2) / 4
+ *
+ *   +------------------------------+
+ *   | Od = (emc-max - emc-min) / 4 |
+ *   +------------------------------+
+ *
+ */
+
+void gk20a_tegra_calibrate_emc(struct gk20a_emc_params *emc_params,
+			       struct clk *clk_3d, struct clk *clk_3d_emc)
+{
+	long correction;
+	unsigned long max_emc;
+	unsigned long min_emc;
+	unsigned long min_rate_3d;
+	unsigned long max_rate_3d;
+
+	max_emc = clk_round_rate(clk_3d_emc, UINT_MAX);
+	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
+
+	min_emc = clk_round_rate(clk_3d_emc, 0);
+	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
+
+	max_rate_3d = clk_round_rate(clk_3d, UINT_MAX);
+	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(max_rate_3d));
+
+	min_rate_3d = clk_round_rate(clk_3d, 0);
+	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(min_rate_3d));
+
+	emc_params->emc_slope =
+		FXDIV((max_emc - min_emc), (max_rate_3d - min_rate_3d));
+	emc_params->emc_offset = max_emc -
+		FXMUL(emc_params->emc_slope, max_rate_3d);
+	/* Guarantee max 3d rate maps to max emc rate */
+	emc_params->emc_offset += max_emc -
+		(FXMUL(emc_params->emc_slope, max_rate_3d) +
+		emc_params->emc_offset);
+
+	emc_params->emc_dip_offset = (max_emc - min_emc) / 4;
+	emc_params->emc_dip_slope =
+		-FXDIV(emc_params->emc_slope, max_rate_3d - min_rate_3d);
+	emc_params->emc_xmid = (max_rate_3d + min_rate_3d) / 2;
+	correction =
+		emc_params->emc_dip_offset +
+			FXMUL(emc_params->emc_dip_slope,
+			FXMUL(max_rate_3d - emc_params->emc_xmid,
+				max_rate_3d - emc_params->emc_xmid));
+	emc_params->emc_dip_offset -= correction;
+}
+
+/*
  * gk20a_tegra_railgate()
  *
  * Gate (disable) gk20a power rail
@@ -175,8 +378,8 @@ static int gk20a_tegra_get_clocks(struct platform_device *pdev)
 		}
 		rate = clk_round_rate(c, rate);
 		clk_set_rate(c, rate);
-		platform->clk[platform->num_clks++] = c;
-		platform->nvhost.clk[platform->nvhost.num_clks++] = c;
+		platform->clk[i] = c;
+		platform->nvhost.clk[i] = c;
 	}
 	platform->num_clks = i;
 	platform->nvhost.num_clks = i;
@@ -188,6 +391,25 @@ err_get_clock:
 	while (i--)
 		clk_put(platform->clk[i]);
 	return ret;
+}
+
+static void gk20a_tegra_scale_init(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+		struct gk20a_emc_params *emc_params;
+
+	if (!profile)
+		return;
+
+	emc_params = kzalloc(sizeof(*emc_params), GFP_KERNEL);
+	if (!emc_params)
+		return;
+
+	gk20a_tegra_calibrate_emc(emc_params, gk20a_clk_get(platform->g),
+				  platform->clk[2]);
+
+	profile->private_data = emc_params;
 }
 
 static int gk20a_tegra_probe(struct platform_device *dev)
@@ -216,6 +438,9 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 
+	/* Initialise tegra specific scaling quirks */
+	gk20a_tegra_scale_init(dev);
+
 	err = nvhost_client_device_init(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",
@@ -235,9 +460,7 @@ fail:
 
 static int gk20a_tegra_suspend(struct device *dev)
 {
-	nvhost_scale3d_suspend(dev);
 	tegra_edp_notify_gpu_load(0);
-
 	return 0;
 }
 
@@ -275,17 +498,6 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 		.syncpt_base		= NVSYNCPT_GK20A_BASE,
 		.class			= NV_GRAPHICS_GPU_CLASS_ID,
 		.moduleid		= NVHOST_MODULE_GPU,
-#ifdef CONFIG_GK20A_DEVFREQ
-		.busy			= gk20a_scale_notify_busy,
-		.idle			= gk20a_scale_notify_idle,
-		.scaling_init		= nvhost_gk20a_scale_init,
-		.scaling_deinit		= nvhost_gk20a_scale_deinit,
-		.suspend_ndev		= nvhost_scale3d_suspend,
-		.devfreq_governor	= "nvhost_podgov",
-		.scaling_post_cb	= nvhost_gk20a_scale_callback,
-		.gpu_edp_device		= true,
-		.qos_id			= PM_QOS_GPU_FREQ_MIN,
-#endif
 	},
 
 	.has_syncpoints = true,
@@ -302,6 +514,12 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.railgate = gk20a_tegra_railgate,
 	.unrailgate = gk20a_tegra_unrailgate,
 
+	/* frequency scaling configuration */
+	.prescale = gk20a_tegra_prescale,
+	.postscale = gk20a_tegra_postscale,
+	.devfreq_governor = "nvhost_podgov",
+	.qos_id = PM_QOS_GPU_FREQ_MIN,
+
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
@@ -313,17 +531,6 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.syncpt_base		= NVSYNCPT_GK20A_BASE,
 		.class			= NV_GRAPHICS_GPU_CLASS_ID,
 		.moduleid		= NVHOST_MODULE_GPU,
-#ifdef CONFIG_GK20A_DEVFREQ
-		.busy			= gk20a_scale_notify_busy,
-		.idle			= gk20a_scale_notify_idle,
-		.scaling_init		= nvhost_gk20a_scale_init,
-		.scaling_deinit		= nvhost_gk20a_scale_deinit,
-		.suspend_ndev		= nvhost_scale3d_suspend,
-		.devfreq_governor	= "nvhost_podgov",
-		.scaling_post_cb	= nvhost_gk20a_scale_callback,
-		.gpu_edp_device		= true,
-		.qos_id			= PM_QOS_GPU_FREQ_MIN,
-#endif
 	},
 
 	.has_syncpoints = true,
@@ -340,6 +547,12 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.suspend = gk20a_tegra_suspend,
 	.railgate = gk20a_tegra_railgate,
 	.unrailgate = gk20a_tegra_unrailgate,
+
+	/* frequency scaling configuration */
+	.prescale = gk20a_tegra_prescale,
+	.postscale = gk20a_tegra_postscale,
+	.devfreq_governor = "nvhost_podgov",
+	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,

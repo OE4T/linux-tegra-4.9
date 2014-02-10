@@ -26,6 +26,7 @@
 struct gk20a;
 struct channel_gk20a;
 struct gr_ctx_buffer_desc;
+struct gk20a_scale_profile;
 
 struct gk20a_platform {
 #ifdef CONFIG_TEGRA_GK20A
@@ -103,6 +104,21 @@ struct gk20a_platform {
 	/* Called to turn on the device */
 	int (*unrailgate)(struct platform_device *dev);
 
+	/* Postscale callback is called after frequency change */
+	void (*postscale)(struct platform_device *pdev,
+			  unsigned long freq);
+
+	/* Pre callback is called before frequency change */
+	void (*prescale)(struct platform_device *pdev);
+
+	/* Devfreq governor name. If scaling is enabled, we request
+	 * this governor to be used in scaling */
+	const char *devfreq_governor;
+
+	/* Quality of service id. If this is set, the scaling routines
+	 * will register a callback to id. Each time we receive a new value,
+	 * the postscale callback gets called.  */
+	int qos_id;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

@@ -341,7 +341,7 @@ static int pmu_reset(struct pmu_gk20a *pmu)
 static int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
-	struct nvhost_device_data *pdata = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code, addr_data, addr_load;
@@ -360,7 +360,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 
 	/* TBD: load all other surfaces */
 
-	pmu->args.cpu_freq_HZ = clk_get_rate(pdata->clk[1]);
+	pmu->args.cpu_freq_HZ = clk_get_rate(platform->clk[1]);
 
 	addr_args = (pwr_falcon_hwcfg_dmem_size_v(
 		gk20a_readl(g, pwr_falcon_hwcfg_r()))

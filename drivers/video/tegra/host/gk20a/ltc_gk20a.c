@@ -27,4 +27,5 @@
 void gk20a_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
+	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
 }

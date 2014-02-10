@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/gr_gk20a.c
- *
  * GK20A Graphics
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -1407,10 +1405,7 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 		max_ways_evict = 9;
 
 	if (max_ways_evict != INVALID_MAX_WAYS)
-		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_r(),
-			     ((gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_r()) &
-			       ~(ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(~0))) |
-			      ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(max_ways_evict)));
+		g->ops.ltc.set_max_ways_evict_last(g, max_ways_evict);
 
 	for (gpc_index = 0;
 	     gpc_index < gr_pd_dist_skip_table__size_1_v() * 4;

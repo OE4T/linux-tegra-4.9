@@ -59,6 +59,7 @@ struct cooling_device_gk20a {
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
+		void (*set_max_ways_evict_last)(struct gk20a *g, u32 max_ways);
 	} ltc;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);

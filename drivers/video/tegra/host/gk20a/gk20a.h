@@ -62,6 +62,12 @@ struct gpu_ops {
 		void (*set_max_ways_evict_last)(struct gk20a *g, u32 max_ways);
 		int (*init_comptags)(struct gk20a *g, struct gr_gk20a *gr);
 		int (*clear_comptags)(struct gk20a *g, u32 min, u32 max);
+		void (*set_zbc_color_entry)(struct gk20a *g,
+					    struct zbc_entry *color_val,
+					    u32 index);
+		void (*set_zbc_depth_entry)(struct gk20a *g,
+					    struct zbc_entry *depth_val,
+					    u32 index);
 	} ltc;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);

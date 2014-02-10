@@ -3255,7 +3255,7 @@ int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 }
 
 static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
-				struct zbc_entry *color_val, u32 index)
+				  struct zbc_entry *color_val, u32 index)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
@@ -3279,15 +3279,7 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	}
 
 	/* update l2 table */
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(index +
-					GK20A_STARTOF_ZBC_TABLE));
-
-	for (i = 0; i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++)
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
-			color_val->color_l2[i]);
+	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
 
 	/* update ds table */
 	gk20a_writel(g, gr_ds_zbc_color_r_r(),
@@ -3312,7 +3304,7 @@ static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 		gr_ds_zbc_tbl_ld_trigger_active_f());
 
 	/* update local copy */
-	for (i = 0; i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++) {
+	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
 		gr->zbc_col_tbl[index].color_l2[i] = color_val->color_l2[i];
 		gr->zbc_col_tbl[index].color_ds[i] = color_val->color_ds[i];
 	}

@@ -35,8 +35,6 @@
 #define TEGRA_DSI_GANGED_MODE	1
 
 #define DSI_PANEL_RESET		1
-#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
-#define DSI_PANEL_BL_PWM	TEGRA_GPIO_PH1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
@@ -114,8 +112,6 @@ static struct tegra_dsi_out dsi_s_wqxga_10_1_pdata = {
 	.refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
-	.dsi_instance = DSI_INSTANCE_0,
-
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
@@ -173,19 +169,21 @@ static int dalmore_dsi_gpio_get(void)
 	if (gpio_requested)
 		return 0;
 
-	err = gpio_request(DSI_PANEL_RST_GPIO, "panel rst");
+	err = gpio_request(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio,
+		"panel rst");
 	if (err < 0) {
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
 	}
 
 	/* free pwm GPIO */
-	err = gpio_request(DSI_PANEL_BL_PWM, "panel pwm");
+	err = gpio_request(dsi_s_wqxga_10_1_pdata.dsi_panel_bl_pwm_gpio,
+		"panel pwm");
 	if (err < 0) {
 		pr_err("panel pwm gpio request failed\n");
 		goto fail;
 	}
-	gpio_free(DSI_PANEL_BL_PWM);
+	gpio_free(dsi_s_wqxga_10_1_pdata.dsi_panel_bl_pwm_gpio);
 	gpio_requested = true;
 	return 0;
 fail:
@@ -249,11 +247,11 @@ static int dsi_s_wqxga_10_1_enable(struct device *dev)
 
 	msleep(100);
 #if DSI_PANEL_RESET
-	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	gpio_direction_output(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 1);
 	usleep_range(1000, 5000);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
+	gpio_set_value(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 0);
 	msleep(150);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
+	gpio_set_value(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 1);
 	msleep(1500);
 #endif
 
@@ -535,25 +533,6 @@ static void dsi_s_wqxga_10_1_set_disp_device(
 {
 	disp_device = dalmore_display_device;
 }
-/* Sharp is configured in Ganged mode */
-static void dsi_s_wqxga_10_1_resources_init(struct resource *
-resources, int n_resources)
-{
-	int i;
-	for (i = 0; i < n_resources; i++) {
-		struct resource *r = &resources[i];
-		if (resource_type(r) == IORESOURCE_MEM &&
-			!strcmp(r->name, "ganged_dsia_regs")) {
-			r->start = TEGRA_DSI_BASE;
-			r->end = TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1;
-		}
-		if (resource_type(r) == IORESOURCE_MEM &&
-			!strcmp(r->name, "ganged_dsib_regs")) {
-			r->start = TEGRA_DSIB_BASE;
-			r->end = TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1;
-		}
-	}
-}
 
 static void dsi_s_wqxga_10_1_dc_out_init(struct tegra_dc_out *dc)
 {
@@ -590,7 +569,6 @@ struct tegra_panel __initdata dsi_s_wqxga_10_1 = {
 	.init_sd_settings = dsi_s_wqxga_10_1_sd_settings_init,
 	.init_dc_out = dsi_s_wqxga_10_1_dc_out_init,
 	.init_fb_data = dsi_s_wqxga_10_1_fb_data_init,
-	.init_resources = dsi_s_wqxga_10_1_resources_init,
 	.register_bl_dev = dsi_s_wqxga_10_1_register_bl_dev,
 	.init_cmu_data = dsi_s_wqxga_10_1_cmu_init,
 	.set_disp_device = dsi_s_wqxga_10_1_set_disp_device,

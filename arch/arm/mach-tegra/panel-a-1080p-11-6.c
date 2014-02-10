@@ -35,8 +35,6 @@
 #define TEGRA_DSI_GANGED_MODE	0
 
 #define DSI_PANEL_RESET		1
-#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
-#define DSI_PANEL_BL_PWM	TEGRA_GPIO_PH1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
@@ -186,19 +184,21 @@ static int dalmore_dsi_gpio_get(void)
 	if (gpio_requested)
 		return 0;
 
-	err = gpio_request(DSI_PANEL_RST_GPIO, "panel rst");
+	err = gpio_request(dsi_a_1080p_11_6_pdata.dsi_panel_rst_gpio,
+		"panel rst");
 	if (err < 0) {
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
 	}
 
 	/* free pwm GPIO */
-	err = gpio_request(DSI_PANEL_BL_PWM, "panel pwm");
+	err = gpio_request(dsi_a_1080p_11_6_pdata.dsi_panel_bl_pwm_gpio,
+		"panel pwm");
 	if (err < 0) {
 		pr_err("panel pwm gpio request failed\n");
 		goto fail;
 	}
-	gpio_free(DSI_PANEL_BL_PWM);
+	gpio_free(dsi_a_1080p_11_6_pdata.dsi_panel_bl_pwm_gpio);
 
 	err = gpio_request(en_vdd_bl, "edp bridge 1v2 enable");
 	if (err < 0) {
@@ -294,14 +294,14 @@ static int dsi_a_1080p_11_6_enable(struct device *dev)
 	}
 
 #if DSI_PANEL_RESET
-	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	gpio_direction_output(dsi_a_1080p_11_6_pdata.dsi_panel_rst_gpio, 1);
 	usleep_range(1000, 5000);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
+	gpio_set_value(dsi_a_1080p_11_6_pdata.dsi_panel_rst_gpio, 0);
 	msleep(150);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
+	gpio_set_value(dsi_a_1080p_11_6_pdata.dsi_panel_rst_gpio, 1);
 	msleep(1500);
 #endif
-	gpio_direction_output(DSI_PANEL_BL_PWM, 1);
+	gpio_direction_output(dsi_a_1080p_11_6_pdata.dsi_panel_bl_pwm_gpio, 1);
 
 	return 0;
 fail:
@@ -416,20 +416,6 @@ static void dsi_a_1080p_11_6_set_disp_device(
 	disp_device = dalmore_display_device;
 }
 
-static void dsi_a_1080p_11_6_resources_init(struct resource *
-resources, int n_resources)
-{
-	int i;
-	for (i = 0; i < n_resources; i++) {
-		struct resource *r = &resources[i];
-		if (resource_type(r) == IORESOURCE_MEM &&
-			!strcmp(r->name, "dsi_regs")) {
-			r->start = TEGRA_DSI_BASE;
-			r->end = TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1;
-		}
-	}
-}
-
 static void dsi_a_1080p_11_6_dc_out_init(struct tegra_dc_out *dc)
 {
 	dc->dsi = &dsi_a_1080p_11_6_pdata;
@@ -471,7 +457,6 @@ struct tegra_panel __initdata dsi_a_1080p_11_6 = {
 	.init_sd_settings = dsi_a_1080p_11_6_sd_settings_init,
 	.init_dc_out = dsi_a_1080p_11_6_dc_out_init,
 	.init_fb_data = dsi_a_1080p_11_6_fb_data_init,
-	.init_resources = dsi_a_1080p_11_6_resources_init,
 	.register_bl_dev = dsi_a_1080p_11_6_register_bl_dev,
 	.register_i2c_bridge = dsi_a_1080p_11_6_i2c_bridge_register,
 	.set_disp_device = dsi_a_1080p_11_6_set_disp_device,

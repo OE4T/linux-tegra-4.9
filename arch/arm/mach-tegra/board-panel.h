@@ -27,7 +27,6 @@ struct tegra_panel {
 	void (*init_fb_data)(struct tegra_fb_data *);
 	void (*init_cmu_data)(struct tegra_dc_platform_data *);
 	void (*set_disp_device)(struct platform_device *);
-	void (*init_resources)(struct resource *, int n_resources);
 	int (*register_bl_dev)(void);
 	int (*register_i2c_bridge)(void);
 
@@ -37,4 +36,9 @@ extern atomic_t sd_brightness;
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
 extern struct tegra_panel dsi_s_wqxga_10_1;
+
+void tegra_dsi_resources_init(u8 dsi_instance,
+			struct resource *resources, int n_resources);
+
+void tegra_dsi_update_init_cmd_gpio_rst(struct tegra_dc_out *dsi_disp1_out);
 

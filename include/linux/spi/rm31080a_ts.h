@@ -20,10 +20,12 @@
  *	DO NOT MODIFY
  *	NOTE: Need to sync with HAL
  ***************************************************************************/
-#define OK						1
-#define FAIL					0
-#define DEBUG_DRIVER			0x01
-#define DEBUG_DRIVER_REGISTER	0x02
+#define RETURN_OK								0
+#define RETURN_FAIL								1
+#define TRUE									1
+#define FALSE									0
+#define DEBUG_DRIVER							0x01
+#define DEBUG_DRIVER_REGISTER					0x02
 
 #define RM_IOCTL_REPORT_POINT				0x1001
 #define RM_IOCTL_SET_HAL_PID				0x1002
@@ -34,6 +36,7 @@
 #define RM_IOCTL_READ_RAW_DATA				0x1007
 #define RM_IOCTL_SET_PARAMETER				0x100A
 #define RM_IOCTL_SET_VARIABLE				0x1010
+
 #define RM_VARIABLE_SELF_TEST_RESULT			0x01
 #define RM_VARIABLE_SCRIBER_FLAG				0x02
 #define RM_VARIABLE_AUTOSCAN_FLAG				0x03
@@ -54,6 +57,7 @@
 #define RM_IOCTL_GET_SACN_MODE				0x1012
 #define RM_IOCTL_SET_KRL_TBL				0x1013
 #define RM_IOCTL_WATCH_DOG					0x1014
+#define RM_IOCTL_SET_BASELINE				0x1015
 
 #define RM_INPUT_RESOLUTION_X				4096
 #define RM_INPUT_RESOLUTION_Y				4096
@@ -120,6 +124,7 @@
 #define KRL_INDEX_RM_SETREPTIME			11
 #define KRL_INDEX_RM_NSPARA				12
 #define KRL_INDEX_RM_SLOWSCANB			13
+#define KRL_INDEX_RM_WRITE_IMG			14
 
 #define KRL_SIZE_SET_IDLE				128
 #define KRL_SIZE_PAUSE_AUTO				64
@@ -135,6 +140,7 @@
 #define KRL_SIZE_RM_WAITSCANOK			32
 #define KRL_SIZE_RM_SETREPTIME			32
 #define KRL_SIZE_RM_NS_PARA				64
+#define KRL_SIZE_RM_WRITE_IMAGE			64
 
 #define KRL_TBL_FIELD_POS_LEN_H				0
 #define KRL_TBL_FIELD_POS_LEN_L				1
@@ -184,6 +190,10 @@
 #define KRL_SUB_CMD_TIMER_QU					0x01
 
 #define KRL_CMD_READ_IMG					0x60
+#define KRL_CMD_WRITE_IMG					0x61
+
+#define KRL_CMD_DUMMY						0xFF
+
 
 /***************************************************************************
  *	DO NOT MODIFY - Kernel Command Set

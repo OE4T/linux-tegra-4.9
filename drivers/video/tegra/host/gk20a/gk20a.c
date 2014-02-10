@@ -852,7 +852,6 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	gk20a_writel(g, mc_intr_mask_0_r(),
 			mc_intr_0_pgraph_pending_f()
 			| mc_intr_0_pfifo_pending_f()
-			| mc_intr_0_pmu_pending_f()
 			| mc_intr_0_priv_ring_pending_f()
 			| mc_intr_0_ltc_pending_f()
 			| mc_intr_0_pbus_pending_f());

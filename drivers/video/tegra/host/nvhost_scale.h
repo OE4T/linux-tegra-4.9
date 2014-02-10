@@ -39,11 +39,9 @@ struct nvhost_device_profile {
 
 	bool				busy;
 	ktime_t				last_event_time;
-	enum nvhost_devfreq_busy	last_event_type;
 
 	struct devfreq_dev_profile	devfreq_profile;
 	struct devfreq_dev_status	dev_stat;
-	struct nvhost_devfreq_ext_stat	ext_stat;
 
 	void				*private_data;
 	struct notifier_block		qos_notify_block;

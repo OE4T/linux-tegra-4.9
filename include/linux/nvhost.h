@@ -251,17 +251,6 @@ struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
 	return (struct nvhost_device_data *)platform_get_drvdata(pdev);
 }
 
-enum nvhost_devfreq_busy {
-	DEVICE_IDLE = 0,
-	DEVICE_BUSY = 1
-};
-
-struct nvhost_devfreq_ext_stat {
-	enum nvhost_devfreq_busy	busy;
-	unsigned long			max_freq;
-	unsigned long			min_freq;
-};
-
 struct nvhost_device_power_attr {
 	struct platform_device *ndev;
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];

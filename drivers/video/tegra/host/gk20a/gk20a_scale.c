@@ -217,7 +217,7 @@ static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 		return;
 
 	mutex_lock(&devfreq->lock);
-	profile->last_event_type = busy ? DEVICE_BUSY : DEVICE_IDLE;
+	profile->dev_stat.busy = busy;
 	update_devfreq(devfreq);
 	mutex_unlock(&devfreq->lock);
 }
@@ -253,7 +253,6 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 	update_load_estimate_gpmu(to_platform_device(dev));
 
 	/* Copy the contents of the current device status */
-	profile->ext_stat.busy = profile->last_event_type;
 	*stat = profile->dev_stat;
 
 	/* Finally, clear out the local values */
@@ -273,6 +272,7 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
 	struct nvhost_emc_params *emc_params;
+	int err;
 
 	if (pdata->power_profile)
 		return;
@@ -286,20 +286,13 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 	}
 
 	profile->pdev = pdev;
-	profile->last_event_type = DEVICE_IDLE;
+	profile->dev_stat.busy = false;
 	profile->private_data = emc_params;
 
-	/* Initialize devfreq related structures */
-	profile->dev_stat.private_data = &profile->ext_stat;
-	profile->ext_stat.min_freq = gk20a_clk_round_rate(g, 0);
-	profile->ext_stat.max_freq = gk20a_clk_round_rate(g, UINT_MAX);
-	profile->ext_stat.busy = DEVICE_IDLE;
-
-	if (profile->ext_stat.min_freq == profile->ext_stat.max_freq) {
-		dev_warn(&pdev->dev, "max rate = min rate (%lu), disabling scaling\n",
-			 profile->ext_stat.min_freq);
-		goto err_fetch_clocks;
-	}
+	/* Create frequency table */
+	err = nvhost_scale_make_freq_table(profile);
+	if (err || !profile->devfreq_profile.max_state)
+		goto err_get_freqs;
 
 	nvhost_scale3d_calibrate_emc(emc_params,
 				     gk20a_clk_get(g), pdata->clk[2],
@@ -314,16 +307,12 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 
 	if (pdata->devfreq_governor) {
 		struct devfreq *devfreq;
-		int err;
 
 		profile->devfreq_profile.initial_freq =
-			profile->ext_stat.min_freq;
+			profile->devfreq_profile.freq_table[0];
 		profile->devfreq_profile.target = gk20a_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;
-		err = nvhost_scale_make_freq_table(profile);
-		if (err)
-			goto err_get_freqs;
 
 		devfreq = devfreq_add_device(&pdev->dev,
 					&profile->devfreq_profile,
@@ -349,7 +338,6 @@ void nvhost_gk20a_scale_init(struct platform_device *pdev)
 err_get_freqs:
 	device_remove_file(&pdev->dev, &dev_attr_load);
 err_create_sysfs_entry:
-err_fetch_clocks:
 	kfree(pdata->power_profile);
 	pdata->power_profile = NULL;
 }

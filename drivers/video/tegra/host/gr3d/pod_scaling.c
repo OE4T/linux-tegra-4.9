@@ -546,7 +546,7 @@ static void podgov_idle_handler(struct work_struct *work)
 		return;
 	}
 
-	if (podgov->last_event_type == DEVICE_IDLE &&
+	if (!podgov->last_event_type &&
 	    df->previous_freq > df->min_freq &&
 	    podgov->p_user == false)
 		notify_idle = 1;
@@ -821,8 +821,6 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 {
 	struct podgov_info_rec *podgov = df->data;
 	struct devfreq_dev_status dev_stat;
-	struct nvhost_devfreq_ext_stat *ext_stat;
-	int current_event;
 	int stat;
 	ktime_t now;
 
@@ -841,7 +839,6 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		return 0;
 	}
 
-	current_event = DEVICE_IDLE;
 	stat = 0;
 	now = ktime_get();
 
@@ -867,18 +864,10 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		return 0;
 	}
 
-	/* Retrieve extended data */
-	ext_stat = dev_stat.private_data;
-	if (!ext_stat)
-		return -EINVAL;
-
-	current_event = ext_stat->busy;
 	*freq = dev_stat.current_frequency;
-	df->min_freq = ext_stat->min_freq;
-	df->max_freq = ext_stat->max_freq;
 
 	/* Sustain local variables */
-	podgov->last_event_type = current_event;
+	podgov->last_event_type = dev_stat.busy;
 	podgov->idle = 1000 * (dev_stat.total_time - dev_stat.busy_time);
 	podgov->idle = podgov->idle / dev_stat.total_time;
 	podgov->idle_avg = (podgov->p_smooth * podgov->idle_avg) +
@@ -890,18 +879,14 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		ktime_us_delta(now, podgov->last_throughput_hint) < 1000000)
 		return GET_TARGET_FREQ_DONTSCALE;
 
-	switch (current_event) {
-
-	case DEVICE_IDLE:
+	if (dev_stat.busy) {
+		cancel_delayed_work(&podgov->idle_timer);
+		*freq = scaling_state_check(df, now);
+	} else {
 		/* Launch a work to slowdown the gpu */
 		*freq = scaling_state_check(df, now);
 		schedule_delayed_work(&podgov->idle_timer,
 			msecs_to_jiffies(podgov->p_slowdown_delay));
-		break;
-	case DEVICE_BUSY:
-		cancel_delayed_work(&podgov->idle_timer);
-		*freq = scaling_state_check(df, now);
-		break;
 	}
 
 	if (!(*freq) ||
@@ -930,7 +915,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	enum tegra_chipid cid = tegra_get_chipid();
 	int error = 0;
 
-	struct nvhost_devfreq_ext_stat *ext_stat;
 	struct devfreq_dev_status dev_stat;
 	int stat = 0;
 
@@ -993,17 +977,6 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	/* Get the current status of the device */
 	stat = df->profile->get_dev_status(df->dev.parent, &dev_stat);
-	if (!dev_stat.private_data) {
-		pr_err("podgov: device does not support ext_stat.\n");
-		goto err_get_current_status;
-	}
-	ext_stat = dev_stat.private_data;
-
-	/* store the limits */
-	df->min_freq = ext_stat->min_freq;
-	df->max_freq = ext_stat->max_freq;
-
-	podgov->p_freq_request = ext_stat->max_freq;
 
 	/* Create sysfs entries for controlling this governor */
 	error = device_create_file(&d->dev,
@@ -1025,6 +998,11 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->freqlist = df->profile->freq_table;
 	if (!podgov->freq_count || !podgov->freqlist)
 		goto err_get_freqs;
+
+	/* store the limits */
+	df->min_freq = podgov->freqlist[0];
+	df->max_freq = podgov->freqlist[podgov->freq_count - 1];
+	podgov->p_freq_request = df->max_freq;
 
 	podgov->idle_avg = 0;
 	podgov->freq_avg = 0;
@@ -1048,7 +1026,6 @@ err_get_freqs:
 	device_remove_file(&d->dev, &dev_attr_freq_request);
 err_create_sysfs_entry:
 	dev_err(&d->dev, "failed to create sysfs attributes");
-err_get_current_status:
 err_unsupported_chip_id:
 	kfree(podgov);
 err_alloc_podgov:

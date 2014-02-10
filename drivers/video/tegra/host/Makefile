@@ -1,3 +1,4 @@
+GCOV_PROFILE := y
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar

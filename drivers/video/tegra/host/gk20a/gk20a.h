@@ -68,6 +68,8 @@ struct gpu_ops {
 		void (*set_zbc_depth_entry)(struct gk20a *g,
 					    struct zbc_entry *depth_val,
 					    u32 index);
+		void (*clear_zbc_color_entry)(struct gk20a *g, u32 index);
+		void (*clear_zbc_depth_entry)(struct gk20a *g, u32 index);
 	} ltc;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);

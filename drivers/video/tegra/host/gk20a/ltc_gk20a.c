@@ -33,4 +33,6 @@ void gk20a_init_ltc(struct gpu_ops *gops)
 	gops->ltc.clear_comptags = gk20a_ltc_clear_comptags;
 	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
 	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
+	gops->ltc.clear_zbc_color_entry = gk20a_ltc_clear_zbc_color_entry;
+	gops->ltc.clear_zbc_depth_entry = gk20a_ltc_clear_zbc_depth_entry;
 }

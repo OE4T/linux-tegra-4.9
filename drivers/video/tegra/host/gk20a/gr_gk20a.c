@@ -3512,14 +3512,9 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 			gr_ds_zbc_tbl_ld_trigger_active_f());
 
 		/* clear l2 table */
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(i +
-					GK20A_STARTOF_ZBC_TABLE));
+		g->ops.ltc.clear_zbc_color_entry(g, j);
 
-		for (j = 0; j < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); j++) {
-			gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(j), 0);
+		for (j = 0; j < GK20A_ZBC_COLOR_VALUE_SIZE; j++) {
 			gr->zbc_col_tbl[i].color_l2[j] = 0;
 			gr->zbc_col_tbl[i].color_ds[j] = 0;
 		}
@@ -3544,13 +3539,7 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 			gr_ds_zbc_tbl_ld_trigger_active_f());
 
 		/* clear l2 table */
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(i +
-					GK20A_STARTOF_ZBC_TABLE));
-
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(), 0);
+		g->ops.ltc.clear_zbc_depth_entry(g, i);
 	}
 	gr->max_used_depth_index = 0;
 	gr->max_default_depth_index = 0;

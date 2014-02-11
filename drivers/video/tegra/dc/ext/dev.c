@@ -1209,7 +1209,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
-		if (copy_from_user(win, args.win, sizeof(*win) * win_num)) {
+		if (copy_from_user(win, (void *)(uintptr_t)args.win, 
+				sizeof(*win) * win_num)) {
 			kfree(win);
 			return -EFAULT;
 		}

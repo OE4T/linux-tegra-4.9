@@ -1518,6 +1518,10 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 		goto crc_error;
 	}
 
+	/* If gated quitely return */
+	if (!tegra_dc_is_powered(dc))
+		return 0;
+
 	reinit_completion(&dc->crc_complete);
 	if (dc->crc_pending &&
 	    wait_for_completion_interruptible(&dc->crc_complete)) {

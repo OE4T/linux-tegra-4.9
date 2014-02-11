@@ -64,7 +64,7 @@ struct gpu_ops {
 		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
 		void (*bundle_cb_defaults)(struct gk20a *g);
 		void (*cb_size_default)(struct gk20a *g);
-		void (*calc_global_ctx_buffer_size)(struct gk20a *g);
+		int (*calc_global_ctx_buffer_size)(struct gk20a *g);
 		void (*commit_global_attrib_cb)(struct gk20a *g,
 						struct channel_ctx_gk20a *ch_ctx,
 						u64 addr, bool patch);

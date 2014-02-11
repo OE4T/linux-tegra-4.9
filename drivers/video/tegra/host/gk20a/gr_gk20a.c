@@ -2186,48 +2186,17 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 	struct mem_mgr *memmgr = mem_mgr_from_g(g);
 	struct mem_handle *mem;
-	u32 i, attr_buffer_size;
+	int i, attr_buffer_size;
 
-	u32 cb_buffer_size = gr_scc_bundle_cb_size_div_256b__prod_v() *
+	u32 cb_buffer_size = gr->bundle_cb_default_size *
 		gr_scc_bundle_cb_size_div_256b_byte_granularity_v();
 
 	u32 pagepool_buffer_size = gr_scc_pagepool_total_pages_hwmax_value_v() *
 		gr_scc_pagepool_total_pages_byte_granularity_v();
 
-	u32 attr_cb_default_size = gr_gpc0_ppc0_cbm_cfg_size_default_v();
-	u32 alpha_cb_default_size = gr_gpc0_ppc0_cbm_cfg2_size_default_v();
-
-	u32 attr_cb_size =
-		attr_cb_default_size + (attr_cb_default_size >> 1);
-	u32 alpha_cb_size =
-		alpha_cb_default_size + (alpha_cb_default_size >> 1);
-
-	u32 num_tpcs_per_pes = proj_scal_litter_num_tpcs_per_pes_v();
-	u32 attr_max_size_per_tpc =
-		gr_gpc0_ppc0_cbm_cfg_size_v(~0) / num_tpcs_per_pes;
-	u32 alpha_max_size_per_tpc =
-		gr_gpc0_ppc0_cbm_cfg2_size_v(~0) / num_tpcs_per_pes;
-
-
 	nvhost_dbg_fn("");
 
-	attr_cb_size =
-		(attr_cb_size > attr_max_size_per_tpc) ?
-			attr_max_size_per_tpc : attr_cb_size;
-	attr_cb_default_size =
-		(attr_cb_default_size > attr_cb_size) ?
-			attr_cb_size : attr_cb_default_size;
-	alpha_cb_size =
-		(alpha_cb_size > alpha_max_size_per_tpc) ?
-			alpha_max_size_per_tpc : alpha_cb_size;
-	alpha_cb_default_size =
-		(alpha_cb_default_size > alpha_cb_size) ?
-			alpha_cb_size : alpha_cb_default_size;
-
-	attr_buffer_size =
-		(gr_gpc0_ppc0_cbm_cfg_size_granularity_v() * alpha_cb_size +
-		 gr_gpc0_ppc0_cbm_cfg2_size_granularity_v() * alpha_cb_size) *
-		 gr->gpc_count;
+	attr_buffer_size = g->ops.gr.calc_global_ctx_buffer_size(g);
 
 	nvhost_dbg_info("cb_buffer_size : %d", cb_buffer_size);
 
@@ -6686,13 +6655,24 @@ static void gr_gk20a_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_cfg2_size_default_v();
 }
 
-static void gr_gk20a_calc_global_ctx_buffer_size(struct gk20a *g)
+static int gr_gk20a_calc_global_ctx_buffer_size(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
+	int size;
 
 	gr->attrib_cb_size = gr->attrib_cb_default_size;
 	gr->alpha_cb_size = gr->alpha_cb_default_size
 		+ (gr->alpha_cb_default_size >> 1);
+
+	size = gr->attrib_cb_size *
+		gr_gpc0_ppc0_cbm_cfg_size_granularity_v() *
+		gr->max_tpc_count;
+
+	size += gr->alpha_cb_size *
+		gr_gpc0_ppc0_cbm_cfg2_size_granularity_v() *
+		gr->max_tpc_count;
+
+	return size;
 }
 
 void gk20a_init_gr(struct gpu_ops *gops)

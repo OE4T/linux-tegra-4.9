@@ -248,3 +248,19 @@ static void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,
 		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
 			     color_val->color_l2[i]);
 }
+
+/*
+ * Sets the ZBC depth for the passed index.
+ */
+static void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
+					  struct zbc_entry *depth_val,
+					  u32 index)
+{
+	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
+		     depth_val->depth);
+}

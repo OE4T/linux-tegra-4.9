@@ -3345,14 +3345,7 @@ static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 	}
 
 	/* update l2 table */
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(index +
-					GK20A_STARTOF_ZBC_TABLE));
-
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
-			depth_val->depth);
+	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
 
 	/* update ds table */
 	gk20a_writel(g, gr_ds_zbc_z_r(),

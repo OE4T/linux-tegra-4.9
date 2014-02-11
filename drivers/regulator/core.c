@@ -3501,6 +3501,35 @@ int regulator_set_load(struct regulator *regulator, int uA_load)
 EXPORT_SYMBOL_GPL(regulator_set_load);
 
 /**
+ * regulator_set_vsel_volatile - set voltage selector access mode
+ *
+ * @regulator: regulator source.
+ * @is_volatile: voltage selector volatile attribute to set.
+ *
+ * Set regulator voltage selector access attribute as volatile or cached.
+ *
+ * Returns 0 on success, an errno on failure.
+ */
+int regulator_set_vsel_volatile(struct regulator *regulator, bool is_volatile)
+{
+	int ret = -ENOSYS;
+	struct regulator_dev *rdev = regulator->rdev;
+
+	mutex_lock(&rdev->mutex);
+	if (rdev->desc->ops->set_vsel_volatile)
+		/* Use driver callback if provided */
+		ret = rdev->desc->ops->set_vsel_volatile(rdev, is_volatile);
+	else if (rdev->regmap) {
+		/* No callback, but regmap user - set regmap cache directly */
+		ret = regcache_volatile_set(rdev->regmap, rdev->desc->vsel_reg,
+					    is_volatile);
+	}
+	mutex_unlock(&rdev->mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(regulator_set_vsel_volatile);
+
+/**
  * regulator_allow_bypass - allow the regulator to go into bypass mode
  *
  * @regulator: Regulator to configure

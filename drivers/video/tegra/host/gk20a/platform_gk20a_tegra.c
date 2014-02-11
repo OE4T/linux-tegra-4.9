@@ -36,6 +36,8 @@
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
+struct gk20a_platform t132_gk20a_tegra_platform;
+
 static int gk20a_tegra_channel_busy(struct platform_device *dev)
 {
 	int ret = 0;
@@ -71,6 +73,11 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 	int err;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct nvhost_device_data *pdata = &platform->nvhost;
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13) {
+		t132_gk20a_tegra_platform.g = platform->g;
+		*platform = t132_gk20a_tegra_platform;
+	}
 
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
@@ -132,6 +139,36 @@ static struct resource gk20a_tegra_resources[] = {
 	.end   = TEGRA_GK20A_INTR_NONSTALL,
 	.flags = IORESOURCE_IRQ,
 	},
+};
+
+struct gk20a_platform t132_gk20a_tegra_platform = {
+	.nvhost = {
+		.class			= NV_GRAPHICS_GPU_CLASS_ID,
+		.clocks			= {{"PLLG_ref", UINT_MAX},
+					   {"pwr", 204000000},
+					   {"emc", UINT_MAX},
+					   {} },
+		.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
+		NVHOST_DEFAULT_CLOCKGATE_DELAY,
+		.powergate_delay	= 500,
+		.moduleid		= NVHOST_MODULE_GPU,
+		.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
+		.finalize_poweron	= nvhost_gk20a_finalize_poweron,
+#ifdef CONFIG_GK20A_DEVFREQ
+		.busy			= gk20a_scale_notify_busy,
+		.idle			= gk20a_scale_notify_idle,
+		.scaling_init		= nvhost_gk20a_scale_init,
+		.scaling_deinit		= nvhost_gk20a_scale_deinit,
+		.suspend_ndev		= nvhost_scale3d_suspend,
+		.devfreq_governor	= "nvhost_podgov",
+		.scaling_post_cb	= nvhost_gk20a_scale_callback,
+		.gpu_edp_device		= true,
+		.qos_id			= PM_QOS_GPU_FREQ_MIN,
+#endif
+	},
+	.probe = gk20a_tegra_probe,
+	.channel_busy = gk20a_tegra_channel_busy,
+	.channel_idle = gk20a_tegra_channel_idle,
 };
 
 struct gk20a_platform gk20a_tegra_platform = {

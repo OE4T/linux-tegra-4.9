@@ -535,33 +535,6 @@ struct nvhost_device_data t132_vic_info = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_GK20A)
-struct nvhost_device_data t132_gk20a_info = {
-	.class			= NV_GRAPHICS_GPU_CLASS_ID,
-	.clocks			= {{"PLLG_ref", UINT_MAX},
-				   {"pwr", 204000000},
-				   {"emc", UINT_MAX},
-				   {} },
-	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
-	.moduleid		= NVHOST_MODULE_GPU,
-	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
-	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
-#ifdef CONFIG_GK20A_DEVFREQ
-	.busy			= gk20a_scale_notify_busy,
-	.idle			= gk20a_scale_notify_idle,
-	.scaling_init		= nvhost_gk20a_scale_init,
-	.scaling_deinit		= nvhost_gk20a_scale_deinit,
-	.suspend_ndev		= nvhost_scale3d_suspend,
-	.devfreq_governor	= "nvhost_podgov",
-	.scaling_post_cb	= nvhost_gk20a_scale_callback,
-	.gpu_edp_device		= true,
-	.qos_id			= PM_QOS_GPU_FREQ_MIN,
-#endif
-};
-#endif
-
 static struct {
 	struct nvhost_device_data *from;
 	struct nvhost_device_data *to;
@@ -571,9 +544,6 @@ static struct {
 	{&t124_vi_info, &t132_vi_info},
 	{&t124_msenc_info, &t132_msenc_info},
 	{&t124_tsec_info, &t132_tsec_info},
-#if defined(CONFIG_TEGRA_GK20A)
-	{(void *)&gk20a_tegra_platform, &t132_gk20a_info},
-#endif
 #if defined(CONFIG_ARCH_TEGRA_VIC)
 	{&t124_vic_info, &t132_vic_info},
 #endif

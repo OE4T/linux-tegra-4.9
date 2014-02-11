@@ -30,6 +30,10 @@
 #include <video/tegrafb.h>
 #include "dc_priv.h"
 
+#ifdef CONFIG_ADF_TEGRA
+#include "tegra_adf.h"
+#endif
+
 #include "hdmi_state_machine.h"
 
 /************************************************************
@@ -181,7 +185,11 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi, bool power_gate)
 		pr_info("HDMI from connected to disconnected\n");
 		hdmi->dc->connected = false;
 		tegra_dc_disable(hdmi->dc);
+#ifdef CONFIG_ADF_TEGRA
+		tegra_adf_process_hotplug_disconnected(hdmi->dc->adf);
+#else
 		tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
+#endif
 		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 	}
 	if (power_gate && tegra_powergate_is_powered(hdmi->dc->powergate_id))
@@ -270,9 +278,12 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 
 	hdmi->dvi = !(specs.misc & FB_MISC_HDMI);
 
+#ifdef CONFIG_ADF_TEGRA
+	tegra_adf_process_hotplug_connected(hdmi->dc->adf, &specs);
+#else
 	tegra_fb_update_monspecs(hdmi->dc->fb, &specs,
 		tegra_dc_hdmi_mode_filter);
-
+#endif
 #ifdef CONFIG_SWITCH
 	state = tegra_edid_audio_supported(hdmi->edid) ? 1 : 0;
 	switch_set_state(&hdmi->audio_switch, state);
@@ -281,6 +292,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 	pr_info("Display connected, hpd_switch 1\n");
 #endif
 	hdmi->dc->connected = true;
+
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 
 	if (unlikely(tegra_is_clk_enabled(hdmi->clk))) {

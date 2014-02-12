@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,7 +68,6 @@ static int push_buffer_init(struct push_buffer *pb)
 	int err = 0;
 	pb->mapped = NULL;
 	pb->dma_addr = 0;
-	pb->client_handle = NULL;
 
 	cdma_pb_op().reset(pb);
 
@@ -80,15 +79,6 @@ static int push_buffer_init(struct push_buffer *pb)
 	if (!pb->mapped) {
 		err = -ENOMEM;
 		pb->mapped = NULL;
-		goto fail;
-	}
-
-	/* memory for storing nvmap client and handles for each opcode pair */
-	pb->client_handle = kzalloc(NVHOST_GATHER_QUEUE_SIZE *
-				sizeof(struct mem_mgr_handle),
-			GFP_KERNEL);
-	if (!pb->client_handle) {
-		err = -ENOMEM;
 		goto fail;
 	}
 
@@ -115,11 +105,8 @@ static void push_buffer_destroy(struct push_buffer *pb)
 					pb->mapped,
 					pb->dma_addr);
 
-	kfree(pb->client_handle);
-
 	pb->mapped = NULL;
 	pb->dma_addr = 0;
-	pb->client_handle = 0;
 }
 
 /**
@@ -127,31 +114,13 @@ static void push_buffer_destroy(struct push_buffer *pb)
  * Caller must ensure push buffer is not full
  */
 static void push_buffer_push_to(struct push_buffer *pb,
-		struct mem_mgr *client, struct mem_handle *handle,
-		u32 op1, u32 op2)
-{
-	u32 cur = pb->cur;
-	u32 *p = (u32 *)((uintptr_t)pb->mapped + cur);
-	u32 cur_nvmap = (cur/8) & (NVHOST_GATHER_QUEUE_SIZE - 1);
-	WARN_ON(cur == pb->fence);
-	*(p++) = op1;
-	*(p++) = op2;
-	pb->client_handle[cur_nvmap].client = client;
-	pb->client_handle[cur_nvmap].handle = handle;
-	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
-}
-
-static void _push_buffer_push_to(struct push_buffer *pb,
-				dma_addr_t iova,
 				u32 op1, u32 op2)
 {
 	u32 cur = pb->cur;
 	u32 *p = (u32 *)((uintptr_t)pb->mapped + cur);
-	u32 cur_nvmap = (cur/8) & (NVHOST_GATHER_QUEUE_SIZE - 1);
 	WARN_ON(cur == pb->fence);
 	*(p++) = op1;
 	*(p++) = op2;
-	pb->client_handle[cur_nvmap].iova = iova;
 	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
 }
 
@@ -162,17 +131,6 @@ static void _push_buffer_push_to(struct push_buffer *pb,
 static void push_buffer_pop_from(struct push_buffer *pb,
 		unsigned int slots)
 {
-	/* Clear the nvmap references for old items from pb */
-	unsigned int i;
-	u32 fence_nvmap = pb->fence/8;
-	for (i = 0; i < slots; i++) {
-		int cur_fence_nvmap = (fence_nvmap+i)
-				& (NVHOST_GATHER_QUEUE_SIZE - 1);
-		struct mem_mgr_handle *h = &pb->client_handle[cur_fence_nvmap];
-		h->client = NULL;
-		h->handle = NULL;
-		h->iova = 0;
-	}
 	/* Advance the next write position */
 	pb->fence = (pb->fence + slots * 8) & (PUSH_BUFFER_SIZE - 1);
 }
@@ -578,7 +536,6 @@ static const struct nvhost_pushbuffer_ops host1x_pushbuffer_ops = {
 	.init = push_buffer_init,
 	.destroy = push_buffer_destroy,
 	.push_to = push_buffer_push_to,
-	._push_to = _push_buffer_push_to,
 	.pop_from = push_buffer_pop_from,
 	.space = push_buffer_space,
 	.putptr = push_buffer_putptr,

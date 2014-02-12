@@ -262,7 +262,7 @@ static void submit_gathers(struct nvhost_job *job)
 		op2 = job->gathers[i].mem_base + g->offset;
 
 		cpuva = dma_buf_vmap(g->buf);
-		_nvhost_cdma_push_gather(&job->ch->cdma,
+		nvhost_cdma_push_gather(&job->ch->cdma,
 				cpuva,
 				job->gathers[i].mem_base,
 				g->offset,

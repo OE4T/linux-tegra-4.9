@@ -557,7 +557,7 @@ static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID, 0, 0),
 		NVHOST_OPCODE_NOOP);
-	_nvhost_cdma_push_gather(cdma,
+	nvhost_cdma_push_gather(cdma,
 		ctx->cpuva,
 		ctx->iova,
 		0,

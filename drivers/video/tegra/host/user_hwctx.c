@@ -33,7 +33,7 @@ static void user_hwctx_save_push(struct nvhost_hwctx *nctx,
 	void *cpuva = dma_buf_vmap(ctx->save_buf);
 	dma_addr_t iova = sg_dma_address(ctx->save_sgt->sgl);
 
-	_nvhost_cdma_push_gather(cdma,
+	nvhost_cdma_push_gather(cdma,
 			cpuva,
 			iova,
 			ctx->save_offset,
@@ -50,7 +50,7 @@ static void user_hwctx_restore_push(struct nvhost_hwctx *nctx,
 	void *cpuva = dma_buf_vmap(ctx->restore_buf);
 	dma_addr_t iova = sg_dma_address(ctx->restore_sgt->sgl);
 
-	_nvhost_cdma_push_gather(cdma,
+	nvhost_cdma_push_gather(cdma,
 			cpuva,
 			iova,
 			ctx->restore_offset,

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,10 +65,6 @@ struct nvhost_pushbuffer_ops {
 	int (*init)(struct push_buffer *);
 	void (*destroy)(struct push_buffer *);
 	void (*push_to)(struct push_buffer *,
-			struct mem_mgr *, struct mem_handle *,
-			u32 op1, u32 op2);
-	void (*_push_to)(struct push_buffer *,
-			dma_addr_t iova,
 			u32 op1, u32 op2);
 	void (*pop_from)(struct push_buffer *,
 			 unsigned int slots);

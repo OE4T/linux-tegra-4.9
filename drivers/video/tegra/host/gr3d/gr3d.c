@@ -138,7 +138,7 @@ void nvhost_3dctx_restore_push(struct nvhost_hwctx *nctx,
 		struct nvhost_cdma *cdma)
 {
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	_nvhost_cdma_push_gather(cdma,
+	nvhost_cdma_push_gather(cdma,
 		ctx->cpuva,
 		ctx->iova,
 		0,

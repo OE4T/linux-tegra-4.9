@@ -4849,6 +4849,23 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 	return 0;
 }
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
+							 u32 offset)
+{
+	/* support only 24-bit 4-byte aligned offsets */
+	bool valid = !(offset & 0xFF000003);
+	/* whitelist check */
+	valid = valid &&
+		is_bar0_global_offset_whitelisted_gk20a(offset);
+	/* resource size check in case there was a problem
+	 * with allocating the assumed size of bar0 */
+	valid = valid &&
+		offset < resource_size(g->reg_mem);
+	return valid;
+}
+#endif
+
 static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -4899,56 +4916,64 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 		case BAR0_READ32:
 		case BAR0_WRITE32:
 		{
+			bool valid;
 			op_elem =
 				(struct gk20a_cyclestate_buffer_elem *)
 					sh_hdr;
-			if (op_elem->offset_bar0 <
-				resource_size(g->reg_mem)) {
-				mask_orig =
-					((1ULL <<
-					(op_elem->last_bit + 1))
-					-1)&~((1ULL <<
+			valid = is_valid_cyclestats_bar0_offset_gk20a(g,
+							op_elem->offset_bar0);
+			if (!valid) {
+				nvhost_err(dev_from_gk20a(g),
+					   "invalid cycletstats op offset: 0x%x\n",
+					   op_elem->offset_bar0);
+
+				sh_hdr->failed = exit = true;
+				break;
+			}
+
+
+			mask_orig =
+				((1ULL <<
+				  (op_elem->last_bit + 1))
+				 -1)&~((1ULL <<
 					op_elem->first_bit)-1);
 
-				raw_reg =
-					gk20a_readl(g,
-						op_elem->offset_bar0);
+			raw_reg =
+				gk20a_readl(g,
+					    op_elem->offset_bar0);
 
-				switch (sh_hdr->operation) {
-				case BAR0_READ32:
-					op_elem->data =
+			switch (sh_hdr->operation) {
+			case BAR0_READ32:
+				op_elem->data =
 					(raw_reg & mask_orig)
-						>> op_elem->first_bit;
-					break;
+					>> op_elem->first_bit;
+				break;
 
-				case BAR0_WRITE32:
-					v = 0;
-					if ((unsigned int)mask_orig !=
-					(unsigned int)~0) {
-						v = (unsigned int)
-							(raw_reg & ~mask_orig);
-					}
-
-					v |= ((op_elem->data
-						<< op_elem->first_bit)
-						& mask_orig);
-
-					gk20a_writel(g,
-						op_elem->offset_bar0,
-						(unsigned int)v);
-						break;
-
-				default:
-						break;
+			case BAR0_WRITE32:
+				v = 0;
+				if ((unsigned int)mask_orig !=
+				    (unsigned int)~0) {
+					v = (unsigned int)
+						(raw_reg & ~mask_orig);
 				}
-			} else {
-				sh_hdr->failed = true;
-				WARN_ON(1);
+
+				v |= ((op_elem->data
+				       << op_elem->first_bit)
+				      & mask_orig);
+
+				gk20a_writel(g,
+					     op_elem->offset_bar0,
+					     (unsigned int)v);
+				break;
+			default:
+				/* nop ok?*/
+				break;
 			}
 		}
 		break;
+
 		default:
-		/* no operation content case */
+			/* no operation content case */
 			exit = true;
 			break;
 		}
@@ -5232,7 +5257,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	nvhost_dbg(dbg_intr | dbg_gpu_dbg,
-	 	"channel %d: addr 0x%08x, "
+		"channel %d: addr 0x%08x, "
 		"data 0x%08x 0x%08x,"
 		"ctx 0x%08x, offset 0x%08x, "
 		"subchannel 0x%08x, class 0x%08x",
@@ -5320,8 +5345,7 @@ int gk20a_gr_isr(struct gk20a *g)
 				nvhost_dbg(dbg_intr | dbg_gpu_dbg,
 					   "SM debugger not attached, clearing interrupt");
 				need_reset |= -EFAULT;
-			}
-			else {
+			} else {
 				/* check if gpc 0 has an exception */
 				if (exception1 & gr_exception1_gpc_0_pending_f())
 					need_reset |= gk20a_gr_handle_gpc_exception(g, &isr_data);
@@ -6554,7 +6578,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						max_offsets,
 						offsets, offset_addrs,
 						&num_offsets,
-					        ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
+						ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
 						ctx_ops[i].quad);
 			if (err) {
 				nvhost_dbg(dbg_gpu_dbg,

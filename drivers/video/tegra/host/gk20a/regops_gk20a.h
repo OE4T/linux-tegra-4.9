@@ -2,7 +2,7 @@
  *
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,5 +42,6 @@ static inline bool reg_op_is_read(u8 op)
 		op == REGOP(READ_64) ;
 }
 
+bool is_bar0_global_offset_whitelisted_gk20a(u32 offset);
 
 #endif /* __REGOPS_GK20A_H_ */

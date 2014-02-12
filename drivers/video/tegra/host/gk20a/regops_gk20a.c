@@ -2,7 +2,7 @@
  *
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -576,15 +576,15 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 				  sizeof(*gk20a_global_whitelist_ranges),
 				  regop_bsearch_range_cmp);
 
-        /* if debug session and channel is bound search context list */
-        if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
-            /* binary search context list */
-            valid = !!bsearch(&offset,
-                              gk20a_context_whitelist_ranges,
-                              gk20a_context_whitelist_ranges_count,
-                              sizeof(*gk20a_context_whitelist_ranges),
-                              regop_bsearch_range_cmp);
-        }
+		/* if debug session and channel is bound search context list */
+		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
+			/* binary search context list */
+			valid = !!bsearch(&offset,
+					  gk20a_context_whitelist_ranges,
+					  gk20a_context_whitelist_ranges_count,
+					  sizeof(*gk20a_context_whitelist_ranges),
+					  regop_bsearch_range_cmp);
+		}
 
 		/* if debug session and channel is bound search runcontrol list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
@@ -679,4 +679,16 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 		   *ctx_wr_count, *ctx_rd_count);
 
 	return ok;
+}
+
+/* exported for tools like cyclestats, etc */
+bool is_bar0_global_offset_whitelisted_gk20a(u32 offset)
+{
+
+	bool valid = !!bsearch(&offset,
+			       gk20a_global_whitelist_ranges,
+			       gk20a_global_whitelist_ranges_count,
+			       sizeof(*gk20a_global_whitelist_ranges),
+			       regop_bsearch_range_cmp);
+	return valid;
 }

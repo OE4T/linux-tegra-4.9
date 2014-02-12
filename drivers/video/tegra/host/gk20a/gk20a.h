@@ -72,6 +72,7 @@ struct gpu_ops {
 		void (*clear_zbc_depth_entry)(struct gk20a *g, u32 index);
 		int  (*init_zbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
+		void (*sync_debugfs)(struct gk20a *g);
 	} ltc;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);

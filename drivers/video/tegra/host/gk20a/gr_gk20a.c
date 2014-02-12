@@ -339,30 +339,31 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 
 	nvhost_dbg_fn("");
 
-	/* Force clocks on */
-	gk20a_writel(g, gr_fe_pwr_mode_r(),
-		     gr_fe_pwr_mode_req_send_f() |
-		     gr_fe_pwr_mode_mode_force_on_f());
+	if (!tegra_platform_is_linsim()) {
+		/* Force clocks on */
+		gk20a_writel(g, gr_fe_pwr_mode_r(),
+			     gr_fe_pwr_mode_req_send_f() |
+			     gr_fe_pwr_mode_mode_force_on_f());
 
-	/* Wait for the clocks to indicate that they are on */
-	do {
-		reg = gk20a_readl(g, gr_fe_pwr_mode_r());
+		/* Wait for the clocks to indicate that they are on */
+		do {
+			reg = gk20a_readl(g, gr_fe_pwr_mode_r());
 
-		if (gr_fe_pwr_mode_req_v(reg) == gr_fe_pwr_mode_req_done_v())
-			break;
+			if (gr_fe_pwr_mode_req_v(reg) ==
+					gr_fe_pwr_mode_req_done_v())
+				break;
 
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+			usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+		} while (time_before(jiffies, end_jiffies));
 
-	if (!time_before(jiffies, end_jiffies)) {
-		nvhost_err(dev_from_gk20a(g),
-			   "failed to force the clocks on\n");
-		WARN_ON(1);
+		if (!time_before(jiffies, end_jiffies)) {
+			nvhost_err(dev_from_gk20a(g),
+				   "failed to force the clocks on\n");
+			WARN_ON(1);
+		}
 	}
-
 	if (rst_mask) {
 		gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(), rst_mask);
 	} else {
@@ -399,28 +400,31 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	udelay(20);
 
-	/* Set power mode back to auto */
-	gk20a_writel(g, gr_fe_pwr_mode_r(),
-		     gr_fe_pwr_mode_req_send_f() |
-		     gr_fe_pwr_mode_mode_auto_f());
+	if (!tegra_platform_is_linsim()) {
+		/* Set power mode back to auto */
+		gk20a_writel(g, gr_fe_pwr_mode_r(),
+			     gr_fe_pwr_mode_req_send_f() |
+			     gr_fe_pwr_mode_mode_auto_f());
 
-	/* Wait for the request to complete */
-	end_jiffies = jiffies + msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	do {
-		reg = gk20a_readl(g, gr_fe_pwr_mode_r());
+		/* Wait for the request to complete */
+		end_jiffies = jiffies +
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+		do {
+			reg = gk20a_readl(g, gr_fe_pwr_mode_r());
 
-		if (gr_fe_pwr_mode_req_v(reg) == gr_fe_pwr_mode_req_done_v())
-			break;
+			if (gr_fe_pwr_mode_req_v(reg) ==
+					gr_fe_pwr_mode_req_done_v())
+				break;
 
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+			usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+		} while (time_before(jiffies, end_jiffies));
 
-	if (!time_before(jiffies, end_jiffies))
-		nvhost_warn(dev_from_gk20a(g),
-			   "failed to set power mode to auto\n");
+		if (!time_before(jiffies, end_jiffies))
+			nvhost_warn(dev_from_gk20a(g),
+				   "failed to set power mode to auto\n");
+	}
 
 	return 0;
 }

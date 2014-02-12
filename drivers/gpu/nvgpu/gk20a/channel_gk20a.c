@@ -1416,6 +1416,18 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		gk20a_idle(c->g->dev);
 }
 
+void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
+{
+	/* syncpoint_a */
+	ptr[0] = 0x2001001C;
+	/* payload */
+	ptr[1] = thresh;
+	/* syncpoint_b */
+	ptr[2] = 0x2001001D;
+	/* syncpt_id, switch_en, wait */
+	ptr[3] = (id << 8) | 0x10;
+}
+
 static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,

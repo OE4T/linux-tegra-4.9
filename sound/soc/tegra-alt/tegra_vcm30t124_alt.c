@@ -169,6 +169,13 @@ static int tegra_vcm30t124_y_hw_params(struct snd_pcm_substream *substream,
 	int err;
 
 	srate = params_rate(params);
+
+	if ((srate < dai_params->rate_min) || (srate > dai_params->rate_max)) {
+		dev_err(card->dev, "Supported range is [%d, %d]\n",
+			dai_params->rate_min, dai_params->rate_max);
+		return -EINVAL;
+	}
+
 	switch (srate) {
 	case 64000:
 	case 88200:
@@ -545,7 +552,7 @@ static const struct snd_soc_pcm_stream x_link_params = {
 
 static const struct snd_soc_pcm_stream y_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	.rate_min = 32000,
+	.rate_min = 48000,
 	.rate_max = 48000,
 	/*
 	 * Current AMX/ADX mapping table is fixed at 2 channels.
@@ -565,7 +572,7 @@ static const struct snd_soc_pcm_stream z_link_params = {
 
 static const struct snd_soc_pcm_stream tdm_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S32_LE,
-	.rate_min = 44100,
+	.rate_min = 48000,
 	.rate_max = 48000,
 	.channels_min = 8,
 	.channels_max = 8,

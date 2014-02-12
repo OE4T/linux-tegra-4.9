@@ -1207,7 +1207,7 @@ static int nvsr_dbg_status_open(struct inode *inode, struct file *file)
 	return single_open(file, nvsr_dbg_status_show, inode->i_private);
 }
 
-static int nvsr_dbg_read_write(struct file *file,
+static ssize_t nvsr_dbg_read_write(struct file *file,
 	const char __user *userbuf, size_t count, loff_t *ppos)
 {
 	struct seq_file *m = file->private_data;
@@ -1260,7 +1260,7 @@ static int nvsr_dbg_read_write(struct file *file,
 	return count;
 }
 
-static int nvsr_dbg_write_write(struct file *file,
+static ssize_t nvsr_dbg_write_write(struct file *file,
 	const char __user *userbuf, size_t count, loff_t *ppos)
 {
 	struct seq_file *m = file->private_data;

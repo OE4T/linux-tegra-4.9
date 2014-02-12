@@ -3602,7 +3602,7 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct zbc_entry zbc_val;
 	u32 i, err;
@@ -3664,30 +3664,6 @@ static int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 			   "fail to load default zbc depth table\n");
 		return err;
 	}
-
-	return 0;
-}
-
-static int gr_gk20a_init_zbc(struct gk20a *g, struct gr_gk20a *gr)
-{
-	u32 i, j;
-
-	/* reset zbc clear */
-	for (i = 0; i < GK20A_SIZEOF_ZBC_TABLE -
-	    GK20A_STARTOF_ZBC_TABLE; i++) {
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(
-					i + GK20A_STARTOF_ZBC_TABLE));
-		for (j = 0; j < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); j++)
-			gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(j), 0);
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(), 0);
-	}
-
-	gr_gk20a_clear_zbc_table(g, gr);
-
-	gr_gk20a_load_zbc_default_table(g, gr);
 
 	return 0;
 }
@@ -4014,14 +3990,11 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u32 data;
 	u32 addr_lo, addr_hi;
 	u64 addr;
-	u32 compbit_base_post_divide;
-	u64 compbit_base_post_multiply64;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 fe_go_idle_timeout_save;
 	u32 last_method_data = 0;
 	u32 i, err;
-	u64 compbit_store_base_iova;
 
 	nvhost_dbg_fn("");
 
@@ -4117,32 +4090,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	data = gk20a_readl(g, gr_status_mask_r());
 	gk20a_writel(g, gr_status_mask_r(), data & gr->status_disable_mask);
 
-	gr_gk20a_init_zbc(g, gr);
-
-	compbit_store_base_iova =
-		NV_MC_SMMU_VADDR_TRANSLATE(gr->compbit_store.base_iova);
-
-	{
-		u64 compbit_base_post_divide64 = (compbit_store_base_iova >>
-				ltc_ltcs_ltss_cbc_base_alignment_shift_v());
-		do_div(compbit_base_post_divide64, gr->num_fbps);
-		compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
-	}
-
-	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
-		gr->num_fbps) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
-
-	if (compbit_base_post_multiply64 < compbit_store_base_iova)
-		compbit_base_post_divide++;
-
-	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
-		compbit_base_post_divide);
-
-	nvhost_dbg(dbg_info | dbg_map | dbg_pte,
-		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
-		   (u32)(compbit_store_base_iova >> 32),
-		   (u32)(compbit_store_base_iova & 0xffffffff),
-		   compbit_base_post_divide);
+	g->ops.ltc.init_zbc(g, gr);
+	g->ops.ltc.init_cbc(g, gr);
 
 	/* load ctx init */
 	for (i = 0; i < sw_ctx_load->count; i++)

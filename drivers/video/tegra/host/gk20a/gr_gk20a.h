@@ -337,6 +337,9 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_query_params *query_params);
 int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val);
+int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr);
+int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr);
+
 /* pmu */
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size);
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr);

@@ -210,7 +210,17 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	else
 		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->slave;
 
+	if (!pdata_vi2) {
+		mutex_unlock(&la_lock);
+		return -ENODEV;
+	}
+
 	tegra_vi2 = (struct vi *)pdata_vi2->private_data;
+
+	if (!tegra_vi2) {
+		mutex_unlock(&la_lock);
+		return -ENODATA;
+	}
 
 	clk_vi = clk_get(&tegra_vi2->ndev->dev, "emc");
 	if (tegra_is_clk_enabled(clk_vi))

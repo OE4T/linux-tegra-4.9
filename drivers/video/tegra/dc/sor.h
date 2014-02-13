@@ -117,8 +117,7 @@ void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor,
 void tegra_dc_sor_set_link_bandwidth(struct tegra_dc_sor_data *sor,
 	u8 link_bw);
 void tegra_dc_sor_set_lane_count(struct tegra_dc_sor_data *sor, u8 lane_count);
-void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
-	bool power_up);
+void tegra_sor_pad_cal_power(struct tegra_dc_sor_data *sor, bool power_up);
 void tegra_dc_sor_set_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	u32 pwm_dutycycle, u32 pwm_clksrc);
 void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,

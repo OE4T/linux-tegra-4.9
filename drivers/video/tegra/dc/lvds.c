@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lvds.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -68,7 +68,7 @@ static void tegra_dc_lvds_enable(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 
 	/* Power on panel */
-	tegra_dc_sor_set_panel_power(lvds->sor, true);
+	tegra_sor_pad_cal_power(lvds->sor, true);
 	tegra_dc_sor_set_internal_panel(lvds->sor, true);
 	tegra_dc_sor_set_power_state(lvds->sor, 1);
 	tegra_dc_sor_enable_lvds(lvds->sor, false, false);

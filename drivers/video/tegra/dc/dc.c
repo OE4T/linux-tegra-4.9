@@ -2251,7 +2251,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-	tegra_dp_aux_pad_on_off(dc, false);
+	tegra_dpaux_pad_power(dc, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);

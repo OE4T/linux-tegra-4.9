@@ -675,12 +675,13 @@ static inline void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 { }
 #endif
 
-static void tegra_dc_dpaux_enable(struct tegra_dc_dp_data *dp)
+static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 {
+	/* do not enable interrupt for now. */
+	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, 0x0);
+
 	/* clear interrupt */
 	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, 0xffffffff);
-	/* do not enable interrupt for now. Enable them when Isr in place */
-	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, 0x0);
 
 	tegra_dpaux_writel(dp, DPAUX_HYBRID_PADCTL,
 		DPAUX_HYBRID_PADCTL_AUX_DRVZ_OHM_50 |
@@ -688,8 +689,19 @@ static void tegra_dc_dpaux_enable(struct tegra_dc_dp_data *dp)
 		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 
-	tegra_dpaux_writel(dp, DPAUX_HYBRID_SPARE,
-			DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP);
+	tegra_dpaux_pad_power(dp->dc, true);
+}
+
+static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
+{
+	u32 retry = 0;
+	int ret;
+
+	do {
+		ret = tegra_dc_dp_dpcd_write(dp, NV_DPCD_SET_POWER, state);
+	} while ((retry++ < DP_POWER_ON_MAX_TRIES) && ret);
+
+	return ret;
 }
 
 static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
@@ -909,8 +921,8 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	return true;
 }
 
-static int tegra_dc_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
-	struct tegra_dc_dp_link_config *cfg)
+static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
+					struct tegra_dc_dp_link_config *cfg)
 {
 	u8     dpcd_data;
 	int    ret;
@@ -1151,32 +1163,14 @@ fail:
 static int tegra_dp_link_config(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
-	u8	dpcd_data;
-	u8	link_bw;
-	u8	lane_count;
-	u32	retry;
-	int	ret;
+	u8 link_bw;
+	u8 lane_count;
+	int ret;
 	struct tegra_dc_dp_link_config cur_cfg;
 
 	if (cfg->lane_count == 0) {
 		/* TODO: shutdown the link */
 		return 0;
-	}
-
-	/* Set power state if it is not in normal level */
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_SET_POWER, &dpcd_data));
-	if (dpcd_data == NV_DPCD_SET_POWER_VAL_D3_PWRDWN) {
-		dpcd_data = NV_DPCD_SET_POWER_VAL_D0_NORMAL;
-		retry = 3;	/* DP spec requires 3 retries */
-		do {
-			ret = tegra_dc_dp_dpcd_write(dp,
-				NV_DPCD_SET_POWER, dpcd_data);
-		} while ((--retry > 0) && ret);
-		if (ret) {
-			dev_err(&dp->dc->ndev->dev,
-				"dp: Failed to set DP panel power\n");
-			return ret;
-		}
 	}
 
 	/* Enable ASSR if possible */
@@ -1274,7 +1268,7 @@ static void tegra_dc_dp_lt_worker(struct work_struct *work)
 		tegra_dp_link_config(dp, &dp->link_cfg)) {
 		/* If current config is not valid or cannot be trained,
 		   needs to re-explore the possilbe config */
-		if (tegra_dc_dp_init_max_link_cfg(dp, &dp->link_cfg))
+		if (tegra_dp_init_max_link_cfg(dp, &dp->link_cfg))
 			dev_err(&dp->dc->ndev->dev,
 				"dp: failed to init link configuration\n");
 		else if (tegra_dc_dp_explore_link_cfg(dp, &dp->link_cfg,
@@ -1477,19 +1471,18 @@ static int tegra_dp_hpd_plug(struct tegra_dc_dp_data *dp)
 
 	might_sleep();
 
-	val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
-	if (likely(val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED))
-		return 0;
-
 	reinit_completion(&dp->hpd_plug);
 	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT);
-	if (!wait_for_completion_timeout(&dp->hpd_plug,
-		msecs_to_jiffies(TEGRA_DP_HPD_PLUG_TIMEOUT_MS))) {
+
+	val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
+	if (likely(val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED))
+		err = 0;
+	else if (!wait_for_completion_timeout(&dp->hpd_plug,
+		msecs_to_jiffies(TEGRA_DP_HPD_PLUG_TIMEOUT_MS)))
 		err = -ENODEV;
-		goto fail;
-	}
-fail:
+
 	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT);
+
 	return err;
 
 #undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
@@ -1965,12 +1958,22 @@ fail:
 	return err;
 }
 
+static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
+{
+	/* Check DP version */
+	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_REV, &dp->revision))
+		dev_err(&dp->dc->ndev->dev,
+			"dp: failed to read the revision number from sink\n");
+
+	if (tegra_dp_init_max_link_cfg(dp, &dp->link_cfg))
+		dev_err(&dp->dc->ndev->dev,
+			"dp: failed to init link configuration\n");
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	u8     data;
-	u32    retry;
-	int    ret;
+	int ret;
 
 	if (!tegra_is_clk_enabled(dp->parent_clk))
 		clk_prepare_enable(dp->parent_clk);
@@ -1979,7 +1982,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		clk_prepare_enable(dp->clk);
 
 	tegra_dc_io_start(dc);
-	tegra_dc_dpaux_enable(dp);
+	tegra_dpaux_enable(dp);
 
 	tegra_dp_enable_irq(dp->irq);
 
@@ -1989,45 +1992,16 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		goto error_enable;
 	}
 
-	/* Power on panel */
-	if (tegra_dc_dp_init_max_link_cfg(dp, &dp->link_cfg)) {
-		dev_err(&dc->ndev->dev,
-			"dp: failed to init link configuration\n");
-		goto error_enable;
-	}
-
-	tegra_dc_sor_enable_dp(dp->sor);
-
-	msleep(DP_LCDVCC_TO_HPD_DELAY_MS);
-
-	tegra_dc_sor_set_panel_power(dp->sor, true);
-
-	/* Write power on to DPCD */
-	data = NV_DPCD_SET_POWER_VAL_D0_NORMAL;
-	retry = 0;
-	do {
-		ret = tegra_dc_dp_dpcd_write(dp,
-			NV_DPCD_SET_POWER, data);
-	} while ((retry++ < DP_POWER_ON_MAX_TRIES) && ret);
-
-	if (ret) {
+	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
+	if (ret < 0) {
 		dev_err(&dp->dc->ndev->dev,
 			"dp: failed to power on panel (0x%x)\n", ret);
 		goto error_enable;
 	}
 
-	/* Confirm DP is plugging status */
-	if (tegra_platform_is_silicon() &&
-		!(tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT) &
-			DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-		dev_err(&dp->dc->ndev->dev, "dp: could not detect HPD\n");
-		goto error_enable;
-	}
+	tegra_dp_dpcd_init(dp);
 
-	/* Check DP version */
-	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_REV, &dp->revision))
-		dev_err(&dp->dc->ndev->dev,
-			"dp: failed to read the revision number from sink\n");
+	tegra_dc_sor_enable_dp(dp->sor);
 
 	tegra_dc_dp_explore_link_cfg(dp, &dp->link_cfg, dp->mode);
 
@@ -2067,8 +2041,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dp_disable_irq(dp->irq);
 
-	tegra_dpaux_writel(dp, DPAUX_HYBRID_SPARE,
-			DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN);
+	tegra_dpaux_pad_power(dp->dc, true);
 
 	/* Power down SOR */
 	tegra_dc_sor_disable(dp->sor, false);
@@ -2107,9 +2080,10 @@ static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
 		dc->out->enable(&dc->ndev->dev);
 
 	tegra_dc_get(dp->dc);
+
 	if (!tegra_is_clk_enabled(dp->clk))
 		clk_prepare_enable(dp->clk);
-	tegra_dc_dpaux_enable(dp);
+	tegra_dpaux_enable(dp);
 	tegra_dp_enable_irq(dp->irq);
 	tegra_dp_hpd_config(dp);
 

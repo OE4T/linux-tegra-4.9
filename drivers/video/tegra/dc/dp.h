@@ -33,7 +33,6 @@
 
 #define DP_AUX_MAX_BYTES		16
 
-#define DP_LCDVCC_TO_HPD_DELAY_MS	200
 #define DP_AUX_TIMEOUT_MS		40
 #define DP_DPCP_RETRY_SLEEP_NS		400
 
@@ -403,7 +402,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 #define NV_DPCD_HDCP_AINFO_OFFSET			(0x0006803B)
 
 static __maybe_unused
-void tegra_dp_aux_pad_on_off(struct tegra_dc *dc, bool on)
+void tegra_dpaux_pad_power(struct tegra_dc *dc, bool on)
 {
 	struct clk *clk;
 

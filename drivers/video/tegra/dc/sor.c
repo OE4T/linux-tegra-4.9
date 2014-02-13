@@ -391,25 +391,20 @@ static int tegra_dc_sor_power_dplanes(struct tegra_dc_sor_data *sor,
 	return tegra_dc_sor_enable_lane_sequencer(sor, pu, false);
 }
 
-void tegra_dc_sor_set_panel_power(struct tegra_dc_sor_data *sor,
-	bool power_up)
+void tegra_sor_pad_cal_power(struct tegra_dc_sor_data *sor,
+					bool power_up)
 {
-	u32 reg_val;
+	u32 val = power_up ? NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERUP :
+			NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN;
 
 	/* !!TODO: need to enable panel power through GPIO operations */
 	/* Check bug 790854 for HW progress */
 
-	reg_val = tegra_sor_readl(sor, NV_SOR_DP_PADCTL(sor->portnum));
-
-	if (power_up)
-		reg_val |= NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERUP;
-	else
-		reg_val &= ~NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERUP;
-
-	tegra_sor_writel(sor, NV_SOR_DP_PADCTL(sor->portnum), reg_val);
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+				NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, val);
 }
 
-static void tegra_dc_sor_termination_cali(struct tegra_dc_sor_data *sor)
+static void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor)
 {
 	u32 termadj;
 	u32 cur_try;
@@ -422,10 +417,6 @@ static void tegra_dc_sor_termination_cali(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL1_TMDS_TERM_ENABLE,
 		NV_SOR_PLL1_TMDS_TERM_ENABLE |
 		termadj << NV_SOR_PLL1_TMDS_TERMADJ_SHIFT);
-
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, /* PDCAL */
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERUP);
 
 	while (cur_try) {
 		/* binary search the right value */
@@ -441,9 +432,6 @@ static void tegra_dc_sor_termination_cali(struct tegra_dc_sor_data *sor)
 			NV_SOR_PLL1_TMDS_TERMADJ_DEFAULT_MASK,
 			termadj << NV_SOR_PLL1_TMDS_TERMADJ_SHIFT);
 	}
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, /* PDCAL */
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN);
 }
 
 static void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
@@ -565,8 +553,8 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 /* 3	1	1	0	1	1	0	1 */
 /* 4	1	0	0	0	0	0	1 */
 /* 5	0	0	0	0	0	0	1 */
-static void tegra_dc_sor_power_up(struct tegra_dc_sor_data *sor,
-				  bool is_lvds)
+static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
+					bool is_lvds)
 {
 	if (sor->power_is_up)
 		return;
@@ -772,8 +760,12 @@ static void tegra_dc_sor_disable_clk(struct tegra_dc_sor_data *sor)
 
 static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 {
-	struct tegra_dc		*dc   = sor->dc;
-	u32	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	struct tegra_dc *dc = sor->dc;
+	u32 reg_val;
+
+	tegra_dc_get(dc);
+
+	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
 
@@ -787,6 +779,8 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	/* Enable DC */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
+
+	tegra_dc_put(dc);
 }
 
 static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
@@ -829,15 +823,9 @@ static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
 
 }
 
-void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
+void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 {
-	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
-
-	tegra_dc_sor_enable_clk(sor);
-
-	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+	tegra_sor_pad_cal_power(sor, true);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
@@ -876,8 +864,24 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN |
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
 
-	tegra_dc_sor_power_up(sor, false);
-	tegra_dc_sor_termination_cali(sor);
+	tegra_dc_sor_termination_cal(sor);
+
+	tegra_sor_pad_cal_power(sor, false);
+}
+
+void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
+{
+	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
+
+	tegra_dc_sor_enable_clk(sor);
+
+	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+
+	tegra_sor_dp_cal(sor);
+
+	tegra_sor_pad_power_up(sor, false);
 
 	/* re-enable SOR clock */
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
@@ -891,21 +895,24 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 {
 	u32 reg_val;
+	struct tegra_dc *dc = sor->dc;
+
+	tegra_dc_get(dc);
 
 	tegra_dc_sor_enable_dc(sor);
 	tegra_dc_sor_config_panel(sor, false);
 
-	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, 0x9f00, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, 0x9f, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
+	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
 		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 		DC_CMD_DISPLAY_POWER_CONTROL);
 
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
+	tegra_dc_writel(dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	/* Attach head */
 	tegra_dc_sor_update(sor);
@@ -934,6 +941,8 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		dev_err(&sor->dc->ndev->dev,
 			"dc timeout waiting for OPMOD = AWAKE\n");
 	}
+
+	tegra_dc_put(dc);
 }
 
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
@@ -994,7 +1003,7 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		0 << NV_SOR_LVDS_ROTDAT_SHIFT);
 #endif
 
-	tegra_dc_sor_power_up(sor, true);
+	tegra_sor_pad_power_up(sor, true);
 
 	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
 		NV_SOR_SEQ_INST_LANE_SEQ_RUN |

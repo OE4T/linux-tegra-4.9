@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -353,6 +353,14 @@ static inline u32 gr_fecs_dmactl_r(void)
 static inline u32 gr_fecs_dmactl_require_ctx_f(u32 v)
 {
 	return (v & 0x1) << 0;
+}
+static inline u32 gr_fecs_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_fecs_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 gr_fecs_os_r(void)
 {
@@ -1985,6 +1993,14 @@ static inline u32 gr_gpccs_dmactl_r(void)
 static inline u32 gr_gpccs_dmactl_require_ctx_f(u32 v)
 {
 	return (v & 0x1) << 0;
+}
+static inline u32 gr_gpccs_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_gpccs_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 gr_gpccs_imemc_r(u32 i)
 {

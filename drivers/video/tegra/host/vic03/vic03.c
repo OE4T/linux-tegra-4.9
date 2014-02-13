@@ -282,6 +282,27 @@ static int vic03_read_ucode(struct platform_device *dev, const char *fw_name)
 	return err;
 }
 
+static int vic03_wait_mem_scrubbing(struct platform_device *dev)
+{
+	int retries = VIC_IDLE_TIMEOUT_DEFAULT / VIC_IDLE_CHECK_PERIOD;
+	nvhost_dbg_fn("");
+
+	do {
+		u32 w = host1x_readl(dev, flcn_dmactl_r()) &
+			(flcn_dmactl_dmem_scrubbing_m() |
+			 flcn_dmactl_imem_scrubbing_m());
+
+		if (!w) {
+			nvhost_dbg_fn("done");
+			return 0;
+		}
+		udelay(VIC_IDLE_CHECK_PERIOD);
+	} while (--retries || !tegra_platform_is_silicon());
+
+	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
+	return -ETIMEDOUT;
+}
+
 static int vic03_boot(struct platform_device *pdev)
 {
 	struct vic03 *v = get_vic03(pdev);
@@ -295,6 +316,10 @@ static int vic03_boot(struct platform_device *pdev)
 
 	if (v->is_booted)
 		return 0;
+
+	err = vic03_wait_mem_scrubbing(pdev);
+	if (err)
+		return err;
 
 	host1x_writel(pdev, flcn_dmactl_r(), 0);
 

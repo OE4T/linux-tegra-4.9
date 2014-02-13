@@ -4422,6 +4422,35 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	return err;
 }
 
+static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
+{
+	int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
+	bool fecs_scrubbing;
+	bool gpccs_scrubbing;
+
+	nvhost_dbg_fn("");
+
+	do {
+		fecs_scrubbing = gk20a_readl(g, gr_fecs_dmactl_r()) &
+			(gr_fecs_dmactl_imem_scrubbing_m() |
+			 gr_fecs_dmactl_dmem_scrubbing_m());
+
+		gpccs_scrubbing = gk20a_readl(g, gr_gpccs_dmactl_r()) &
+			(gr_gpccs_dmactl_imem_scrubbing_m() |
+			 gr_gpccs_dmactl_imem_scrubbing_m());
+
+		if (!fecs_scrubbing && !gpccs_scrubbing) {
+			nvhost_dbg_fn("done");
+			return 0;
+		}
+
+		udelay(GR_IDLE_CHECK_DEFAULT);
+	} while (--retries || !tegra_platform_is_silicon());
+
+	nvhost_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
+	return -ETIMEDOUT;
+}
+
 static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -4447,6 +4476,10 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 	for (i = 0; i < sw_non_ctx_load->count; i++)
 		gk20a_writel(g, sw_non_ctx_load->l[i].addr,
 			sw_non_ctx_load->l[i].value);
+
+	err = gr_gk20a_wait_mem_scrubbing(g);
+	if (err)
+		goto out;
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)

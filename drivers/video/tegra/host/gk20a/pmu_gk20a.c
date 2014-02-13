@@ -243,16 +243,36 @@ static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 	nvhost_dbg_fn("done");
 }
 
-static void pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
+static int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = pmu->g;
 
 	nvhost_dbg_fn("");
 
-	if (enable)
+	if (enable) {
+		int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
 		gk20a_enable(g, mc_enable_pwr_enabled_f());
-	else
+
+		do {
+			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
+				(pwr_falcon_dmactl_dmem_scrubbing_m() |
+				 pwr_falcon_dmactl_imem_scrubbing_m());
+
+			if (!w) {
+				nvhost_dbg_fn("done");
+				return 0;
+			}
+			udelay(GR_IDLE_CHECK_DEFAULT);
+		} while (--retries || !tegra_platform_is_silicon());
+
 		gk20a_disable(g, mc_enable_pwr_enabled_f());
+		nvhost_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
+
+		return -ETIMEDOUT;
+	} else {
+		gk20a_disable(g, mc_enable_pwr_enabled_f());
+		return 0;
+	}
 }
 
 static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
@@ -272,7 +292,9 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 			pmu_enable_hw(pmu, false);
 		}
 	} else {
-		pmu_enable_hw(pmu, true);
+		err = pmu_enable_hw(pmu, true);
+		if (err)
+			return err;
 
 		/* TBD: post reset */
 

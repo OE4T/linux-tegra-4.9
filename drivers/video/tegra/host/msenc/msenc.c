@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-soc.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
 #include <linux/scatterlist.h>
@@ -148,6 +149,27 @@ static int msenc_wait_idle(struct platform_device *dev, u32 *timeout)
 	return -1;
 }
 
+static int msenc_wait_mem_scrubbing(struct platform_device *dev)
+{
+	int retries = MSENC_IDLE_TIMEOUT_DEFAULT / MSENC_IDLE_CHECK_PERIOD;
+	nvhost_dbg_fn("");
+
+	do {
+		u32 w = host1x_readl(dev, msenc_dmactl_r()) &
+			(msenc_dmactl_dmem_scrubbing_m() |
+			 msenc_dmactl_imem_scrubbing_m());
+
+		if (!w) {
+			nvhost_dbg_fn("done");
+			return 0;
+		}
+		udelay(MSENC_IDLE_CHECK_PERIOD);
+	} while (--retries || !tegra_platform_is_silicon());
+
+	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
+	return -ETIMEDOUT;
+}
+
 int msenc_boot(struct platform_device *dev)
 {
 	u32 timeout;
@@ -158,6 +180,10 @@ int msenc_boot(struct platform_device *dev)
 	/* check if firmware is loaded or not */
 	if (!m || !m->valid)
 		return -ENOMEDIUM;
+
+	err = msenc_wait_mem_scrubbing(dev);
+	if (err)
+		return err;
 
 	host1x_writel(dev, msenc_dmactl_r(), 0);
 	host1x_writel(dev, msenc_dmatrfbase_r(),

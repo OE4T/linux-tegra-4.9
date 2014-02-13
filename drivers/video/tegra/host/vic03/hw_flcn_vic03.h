@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -141,6 +141,14 @@ static inline u32 flcn_bootvec_vec_f(u32 v)
 static inline u32 flcn_dmactl_r(void)
 {
 	return 0x0000110c;
+}
+static inline u32 flcn_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 flcn_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 flcn_dmatrfbase_r(void)
 {

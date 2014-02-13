@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.h
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,6 +16,8 @@
 
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_DSI_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_DSI_H__
+
+#define BOARD_P1761   0x06E1
 
 /* Defines the DSI phy timing parameters */
 struct dsi_phy_timing_inclk {

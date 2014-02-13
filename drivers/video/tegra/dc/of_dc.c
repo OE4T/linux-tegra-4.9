@@ -1280,6 +1280,30 @@ int parse_dsi_settings(struct platform_device *ndev,
 			dsi->phy_timing.t_tago_ns);
 	}
 
+	if (!of_find_property(np_panel, "nvidia,dsi-boardinfo", NULL)) {
+		of_property_read_u32_index(np_panel,
+			"nvidia,dsi-boardinfo", 0,
+			&dsi->boardinfo.platform_boardid);
+		of_property_read_u32_index(np_panel,
+			"nvidia,dsi-boardinfo", 1,
+			&dsi->boardinfo.platform_boardversion);
+		of_property_read_u32_index(np_panel,
+			"nvidia,dsi-boardinfo", 2,
+			&dsi->boardinfo.display_boardid);
+		of_property_read_u32_index(np_panel,
+			"nvidia,dsi-boardinfo", 3,
+			&dsi->boardinfo.display_boardversion);
+
+		OF_DC_LOG("boardinfo platform_boardid = %d \
+					 platform_boardversion = %d \
+					 display_boardid = %d \
+					 display_boardversion = %d\n",
+					 dsi->boardinfo.platform_boardid,
+					 dsi->boardinfo.platform_boardversion,
+					 dsi->boardinfo.display_boardid,
+					 dsi->boardinfo.display_boardversion);
+	}
+
 	return 0;
 }
 

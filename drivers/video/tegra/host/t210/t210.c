@@ -187,6 +187,8 @@ struct nvhost_device_data t21_tsec_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks		= {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.init		= nvhost_tsec_init,
+	.deinit		= nvhost_tsec_deinit,
 	.moduleid      = NVHOST_MODULE_TSEC,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC

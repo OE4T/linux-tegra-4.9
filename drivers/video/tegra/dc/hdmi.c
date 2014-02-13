@@ -137,7 +137,7 @@ const struct tmds_config tmds_config[] = {
 	.drive_current = 0x0f0f0f0f,
 	},
 };
-#elif defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
 const struct tmds_config tmds_config[] = {
 	{ /* 480p/576p / 25.2MHz/27MHz modes */
 	.pclk = 27000000,
@@ -180,6 +180,58 @@ const struct tmds_config tmds_config[] = {
 	.pll1 = SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(6)
 		| SOR_PLL_TMDS_TERM_ENABLE,
 	*/
+	},
+};
+#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
+const struct tmds_config tmds_config[] = {
+	{ /* 480p/576p / 25.2MHz/27MHz modes */
+	.version = MKDEV(1, 0),
+	.pclk = 27000000,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(0) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x00000000,
+	.drive_current = 0x1a1a1a1a,
+	.peak_current = 0x00000000,
+	.pad_ctls0_mask    = 0xfffff0ff,
+	.pad_ctls0_setting = 0x00000400, /* BG_VREF_LEVEL */
+	},
+	{ /* 720p / 74.25MHz modes */
+	.version = MKDEV(1, 0),
+	.pclk = 74250000,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(1) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_PE_EN | SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x0f0f0f0f,
+	.drive_current = 0x1a1a1a1a,
+	.peak_current = 0x00000000,
+	.pad_ctls0_mask    = 0xfffff0ff,
+	.pad_ctls0_setting = 0x00000400, /* BG_VREF_LEVEL */
+	},
+	{ /* 1080p / 148.5MHz modes */
+	.version = MKDEV(1, 0),
+	.pclk = 148500000,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(3) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_PE_EN | SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x0a0a0a0a,
+	.drive_current = 0x1f1f1f1f,
+	.peak_current = 0x00000000,
+	.pad_ctls0_mask    = 0xfffff0ff,
+	.pad_ctls0_setting = 0x00000400, /* BG_VREF_LEVEL */
+	},
+	{ /* 225/297MHz modes */
+	.version = MKDEV(1, 0),
+	.pclk = INT_MAX,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(0xf) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(7)
+		| SOR_PLL_TMDS_TERM_ENABLE,
+	.pe_current = 0x00000000,
+	.drive_current = 0x303f3f3f, /* lane3 needs a slightly lower current */
+	.peak_current = 0x040f0f0f,
+	.pad_ctls0_mask    = 0xfffff0ff,
+	.pad_ctls0_setting = 0x00000600, /* BG_VREF_LEVEL */
 	},
 };
 #elif defined(CONFIG_ARCH_TEGRA_14x_SOC)

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1200-800-8-0.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -112,6 +112,7 @@ static struct tegra_dsi_out dsi_a_1200_800_8_0_pdata = {
 	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS,
 	.dsi_init_cmd = dsi_a_1200_800_8_0_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_a_1200_800_8_0_init_cmd),
+	.boardinfo = {BOARD_P1761, 0, 0, 0},
 };
 
 static int dsi_a_1200_800_8_0_regulator_get(struct device *dev)

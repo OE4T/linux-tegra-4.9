@@ -302,7 +302,7 @@ int gk20a_channel_syncpt_incr_user_fd(struct gk20a_channel_sync *s,
 						    &pt.id, &pt.thresh);
 	if (err)
 		return err;
-	return nvhost_sync_create_fence(sp->sp, &pt, 1, "fence", fd);
+	return nvhost_sync_create_fence_fd(sp->sp, &pt, 1, "fence", fd);
 #else
 	return -ENODEV;
 #endif

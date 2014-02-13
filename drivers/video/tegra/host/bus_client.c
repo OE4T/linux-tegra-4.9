@@ -479,7 +479,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			pts[i].thresh = job->sp[i].fence;
 		}
 
-		err = nvhost_sync_create_fence(
+		err = nvhost_sync_create_fence_fd(
 				&nvhost_get_host(ctx->ch->dev)->syncpt,
 				pts, num_syncpt_incrs, "fence", &args->fence);
 		if (err)

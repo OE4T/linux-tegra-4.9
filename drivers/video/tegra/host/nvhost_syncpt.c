@@ -929,7 +929,7 @@ int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 	pdev = to_platform_device(dev->dev.parent);
 	sp = &(nvhost_get_host(pdev)->syncpt);
 
-	return nvhost_sync_create_fence(sp, &pts, 1, name, fence_fd);
+	return nvhost_sync_create_fence_fd(sp, &pts, 1, name, fence_fd);
 #else
 	return -EINVAL;
 #endif

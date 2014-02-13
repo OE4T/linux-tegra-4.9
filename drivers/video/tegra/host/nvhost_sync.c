@@ -343,11 +343,42 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
 	sync_timeline_signal(&obj->obj);
 }
 
-int nvhost_sync_create_fence(struct nvhost_syncpt *sp,
+int nvhost_sync_create_fence_fd(struct nvhost_syncpt *sp,
 		struct nvhost_ctrl_sync_fence_info *pts,
 		u32 num_pts, const char *name, int *fence_fd)
 {
 	int fd;
+	int err;
+	struct sync_fence *fence = NULL;
+
+	fence = nvhost_sync_create_fence(sp, pts, num_pts, name);
+
+	if (fence == NULL) {
+		err = -EINVAL;
+		goto err;
+	}
+
+	fd = get_unused_fd();
+	if (fd < 0) {
+		err = fd;
+		goto err;
+	}
+
+	*fence_fd = fd;
+	sync_fence_install(fence, fd);
+	return 0;
+
+err:
+	if (fence)
+		sync_fence_put(fence);
+
+	return err;
+}
+
+struct sync_fence *nvhost_sync_create_fence(struct nvhost_syncpt *sp,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts, const char *name)
+{
 	int err;
 	u32 i;
 	struct sync_fence *fence = NULL;
@@ -394,19 +425,11 @@ int nvhost_sync_create_fence(struct nvhost_syncpt *sp,
 		goto err;
 	}
 
-	fd = get_unused_fd();
-	if (fd < 0) {
-		err = fd;
-		goto err;
-	}
-
-	*fence_fd = fd;
-	sync_fence_install(fence, fd);
-	return 0;
+	return fence;
 
 err:
 	if (fence)
 		sync_fence_put(fence);
 
-	return err;
+	return ERR_PTR(err);
 }

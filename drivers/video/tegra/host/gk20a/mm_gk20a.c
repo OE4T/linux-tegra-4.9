@@ -2593,7 +2593,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 			usleep_range(20, 40);
 		} else
 			break;
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2631,7 +2631,7 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 				usleep_range(20, 40);
 		} else
 			break;
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2663,7 +2663,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 				usleep_range(20, 40);
 		} else
 			break;
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2705,7 +2705,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 				usleep_range(20, 40);
 		} else
 			break;
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2779,7 +2779,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 			break;
 		usleep_range(20, 40);
 		retry--;
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2802,7 +2802,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 			break;
 		retry--;
 		usleep_range(20, 40);
-	} while (retry >= 0);
+	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		nvhost_warn(dev_from_gk20a(g),
@@ -2929,7 +2929,8 @@ static int gk20a_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
 		    fb_mmu_vpr_info_fetch_false_v())
 			break;
 
-		if (WARN_ON(time_after(jiffies, timeout)))
+		if (tegra_platform_is_silicon() &&
+				WARN_ON(time_after(jiffies, timeout)))
 			return -ETIME;
 	}
 

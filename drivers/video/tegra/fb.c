@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -306,8 +306,10 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 			tegra_fb->win->dc->win_blank_saved_flag = 0;
 		}
 		tegra_dc_enable(tegra_fb->win->dc);
-		tegra_dc_update_windows(&tegra_fb->win, 1);
-		tegra_dc_sync_windows(&tegra_fb->win, 1);
+		if (!tegra_fb->win->dc->suspended) {
+			tegra_dc_update_windows(&tegra_fb->win, 1);
+			tegra_dc_sync_windows(&tegra_fb->win, 1);
+		}
 		return 0;
 
 	case FB_BLANK_NORMAL:
@@ -375,8 +377,10 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 		tegra_fb->win->flags |= TEGRA_WIN_FLAG_FB;
 		tegra_fb->win->virt_addr = info->screen_base;
 
-		tegra_dc_update_windows(&tegra_fb->win, 1);
-		tegra_dc_sync_windows(&tegra_fb->win, 1);
+		if (!tegra_fb->win->dc->suspended) {
+			tegra_dc_update_windows(&tegra_fb->win, 1);
+			tegra_dc_sync_windows(&tegra_fb->win, 1);
+		}
 	}
 
 	return 0;

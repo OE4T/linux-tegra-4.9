@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-j-720p-5.c
  *
- * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 
 #include "gpio-names.h"
 #define DSI_PANEL_EN_GPIO	TEGRA_GPIO_PQ2
+#define DSI_PANEL_RST_GPIO      TEGRA_GPIO_PH3
 
 #define DSI_PANEL_RESET		1
 
@@ -394,6 +395,10 @@ fail:
 }
 
 static struct tegra_dsi_cmd dsi_j_720p_5_init_cmd[] = {
+	/* reset panel before exit_sleep_mode sequence */
+	DSI_DLY_MS(20),
+	DSI_GPIO_SET(DSI_PANEL_RST_GPIO, 1),
+	DSI_DLY_MS(150),
 	/* panel exit_sleep_mode sequence */
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
 	DSI_SEND_FRAME(5),
@@ -450,7 +455,7 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 			pr_err("avdd_lcd_3v0_2v8 regulator enable failed\n");
 			goto fail;
 		}
-		regulator_set_voltage(avdd_lcd_3v0_2v8, 3000000, 3000000);
+		regulator_set_voltage(avdd_lcd_3v0_2v8, 3100000, 3100000);
 	}
 	usleep_range(3000, 5000);
 
@@ -471,10 +476,8 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	gpio_set_value(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 1);
-	msleep(20);
 	gpio_set_value(DSI_PANEL_EN_GPIO, 1);
-	msleep(20);
+	msleep(40);
 
 	return 0;
 fail:
@@ -501,6 +504,10 @@ static struct tegra_dsi_out dsi_j_720p_5_pdata = {
 
 static int dsi_j_720p_5_disable(void)
 {
+	gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
+	gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
+	usleep_range(5000, 8000);
+
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
 

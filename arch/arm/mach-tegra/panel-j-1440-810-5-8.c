@@ -494,7 +494,7 @@ static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
 			pr_err("avdd_lcd_3v0_2v8 regulator enable failed\n");
 			goto fail;
 		}
-		regulator_set_voltage(avdd_lcd_3v0_2v8, 3000000, 3000000);
+		regulator_set_voltage(avdd_lcd_3v0_2v8, 3100000, 3100000);
 	}
 	usleep_range(3000, 5000);
 

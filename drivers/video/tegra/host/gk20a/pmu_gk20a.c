@@ -45,7 +45,7 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
 static void gk20a_init_pmu_setup_hw2_workqueue(struct work_struct *work);
-
+static void pmu_save_zbc(struct gk20a *g, u32 entries);
 
 static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			u32 src, u8* dst, u32 size, u8 port)
@@ -1920,7 +1920,7 @@ static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 	pmu->zbc_save_done = 1;
 }
 
-void pmu_save_zbc(struct gk20a *g, u32 entries)
+static void pmu_save_zbc(struct gk20a *g, u32 entries)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -1943,6 +1943,12 @@ void pmu_save_zbc(struct gk20a *g, u32 entries)
 			      &pmu->zbc_save_done, 1);
 	if (!pmu->zbc_save_done)
 		nvhost_err(dev_from_gk20a(g), "ZBC save timeout");
+}
+
+void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
+{
+	if (g->pmu.zbc_ready)
+		pmu_save_zbc(g, entries);
 }
 
 static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)

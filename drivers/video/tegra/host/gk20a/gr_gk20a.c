@@ -3616,7 +3616,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 		/* update zbc for elpg only when new entry is added */
 		entries = max(gr->max_used_color_index,
 					gr->max_used_depth_index);
-		pmu_save_zbc(g, entries);
+		gk20a_pmu_save_zbc(g, entries);
 	}
 
 	return ret;

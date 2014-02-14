@@ -1236,9 +1236,6 @@ int nvhost_client_device_init(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	if (tickctrl_op().init_channel)
-		tickctrl_op().init_channel(dev);
-
 	err = nvhost_device_list_add(dev);
 	if (err)
 		goto fail;

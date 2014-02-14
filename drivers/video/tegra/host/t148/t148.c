@@ -324,7 +324,6 @@ struct platform_device *tegra14_register_host1x_devices(void)
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
 #include "host1x/host1x_actmon_t114.c"
-#include "host1x/host1x_tickctrl.c"
 
 static void t148_free_nvhost_channel(struct nvhost_channel *ch)
 {
@@ -360,7 +359,6 @@ int nvhost_init_t148_support(struct nvhost_master *host,
 	op->nvhost_dev.alloc_nvhost_channel = t148_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t148_free_nvhost_channel;
 	op->actmon = host1x_actmon_ops;
-	op->tickctrl = host1x_tickctrl_ops;
 
 	return 0;
 }

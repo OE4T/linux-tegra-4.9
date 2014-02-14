@@ -144,14 +144,6 @@ struct nvhost_actmon_ops {
 	void (*debug_init)(struct host1x_actmon *actmon, struct dentry *de);
 };
 
-struct nvhost_tickctrl_ops {
-	int (*init_channel)(struct platform_device *dev);
-	void (*deinit_channel)(struct platform_device *dev);
-	int (*tickcount)(struct platform_device *dev, u64 *val);
-	int (*stallcount)(struct platform_device *dev, u64 *val);
-	int (*xfercount)(struct platform_device *dev, u64 *val);
-};
-
 struct nvhost_chip_support {
 	const char * soc_name;
 	struct nvhost_cdma_ops cdma;
@@ -161,7 +153,6 @@ struct nvhost_chip_support {
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
 	struct nvhost_actmon_ops actmon;
-	struct nvhost_tickctrl_ops tickctrl;
 	void (*remove_support)(struct nvhost_chip_support *op);
 	void *priv;
 };

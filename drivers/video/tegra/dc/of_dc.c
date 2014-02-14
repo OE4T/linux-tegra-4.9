@@ -167,20 +167,21 @@ static struct tegra_dc_cmu default_cmu = {
 static int parse_dc_out_type(struct device_node *np,
 		struct tegra_dc_out *default_out)
 {
-	const char *temp_str0;
-	if (!of_property_read_string(np, "nvidia,out-type", &temp_str0)) {
-		if (!strncmp(temp_str0, "dsi", strlen(temp_str0))) {
-			default_out->type = TEGRA_DC_OUT_DSI;
-			OF_DC_LOG("dsi out\n");
-		} else if (!strncmp(temp_str0, "hdmi", strlen(temp_str0))) {
-			default_out->type = TEGRA_DC_OUT_HDMI;
-			OF_DC_LOG("hdmi out\n");
-		} else {
-			pr_err("no dc out support except dsi / hdmi\n");
+	u32 temp;
+	if (!of_property_read_u32(np, "nvidia,out-type", &temp)) {
+		if (temp == TEGRA_DC_OUT_DSI)
+			OF_DC_LOG("dsi out type\n");
+		else if (temp == TEGRA_DC_OUT_HDMI)
+			OF_DC_LOG("hdmi out type\n");
+		else {
+			pr_err("Not support except dsi / hdmi type\n");
 			return -EINVAL;
 		}
+		default_out->type = (int)temp;
+		return 0;
 	}
-	return 0;
+	/* out type should be parsed properly */
+	return -EINVAL;
 }
 
 static int parse_tmds(struct device_node *np,
@@ -232,12 +233,28 @@ parse_tmds_fail:
 	return -EINVAL;
 }
 
+static bool is_dc_default_out_flag(u32 flag)
+{
+	if ((flag == TEGRA_DC_OUT_HOTPLUG_HIGH) |
+		(flag == TEGRA_DC_OUT_HOTPLUG_LOW) |
+		(flag == TEGRA_DC_OUT_NVHDCP_POLICY_ALWAYS_ON) |
+		(flag == TEGRA_DC_OUT_NVHDCP_POLICY_ON_DEMAND) |
+		(flag == TEGRA_DC_OUT_CONTINUOUS_MODE) |
+		(flag == TEGRA_DC_OUT_ONE_SHOT_MODE) |
+		(flag == TEGRA_DC_OUT_N_SHOT_MODE) |
+		(flag == TEGRA_DC_OUT_ONE_SHOT_LP_MODE) |
+		(flag == TEGRA_DC_OUT_INITIALIZED_MODE) |
+		(flag == TEGRA_DC_OUT_HOTPLUG_WAKE_LP0))
+		return true;
+	else
+		return false;
+}
+
 static int parse_dc_default_out(struct platform_device *ndev,
 		struct device_node *np, struct tegra_dc_out *default_out)
 {
 	int err;
 	u32 temp;
-	const char *temp_str0;
 	int hotplug_gpio = 0;
 	enum of_gpio_flags flags;
 	struct device_node *ddc;
@@ -246,6 +263,10 @@ static int parse_dc_default_out(struct platform_device *ndev,
 	struct device_node *tmds_np = NULL;
 	struct device_node *entry = NULL;
 	u8 *addr;
+	struct property *prop;
+	const __be32 *p;
+	u32 u;
+	const char *temp_str0;
 
 	err = parse_dc_out_type(np, default_out);
 	if (err) {
@@ -293,49 +314,39 @@ static int parse_dc_default_out(struct platform_device *ndev,
 		OF_DC_LOG("khz %d => out_dcc %d in picos unit\n",
 			temp, default_out->max_pixclock);
 	}
-	if (!of_property_read_string(np, "nvidia,out-flags", &temp_str0)) {
-		if (!strncmp(temp_str0, "continuous", strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_CONTINUOUS_MODE;
-		} else if (!strncmp(temp_str0, "oneshot", strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_ONE_SHOT_MODE;
-		} else if (!strncmp(temp_str0, "continuous_initialized",
-			strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_CONTINUOUS_MODE |
-				TEGRA_DC_OUT_INITIALIZED_MODE;
-		} else if (!strncmp(temp_str0, "oneshot_initialized",
-			strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_ONE_SHOT_MODE |
-				TEGRA_DC_OUT_INITIALIZED_MODE;
-		} else if (!strncmp(temp_str0,
-			"hotplug_high", strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_HOTPLUG_HIGH;
-		} else if (!strncmp(temp_str0,
-			"hotplug_low", strlen(temp_str0))) {
-			default_out->flags = TEGRA_DC_OUT_HOTPLUG_LOW;
-		} else {
+
+	of_property_for_each_u32(np, "nvidia,out-flags", prop, p, u) {
+		if (!is_dc_default_out_flag(u)) {
 			pr_err("invalid out flags\n");
 			return -EINVAL;
 		}
+		default_out->flags |= (unsigned) u;
 	}
-	if (!of_property_read_string(np, "nvidia,out-align", &temp_str0)) {
-		if (!strncmp(temp_str0, "msb", strlen(temp_str0))) {
-			default_out->align = TEGRA_DC_ALIGN_MSB;
-		} else if (!strncmp(temp_str0, "lsb", strlen(temp_str0))) {
-			default_out->align = TEGRA_DC_ALIGN_LSB;
-		} else {
+	OF_DC_LOG("default_out flag %u\n", default_out->flags);
+
+
+	if (!of_property_read_u32(np, "nvidia,out-align", &temp)) {
+		if (temp == TEGRA_DC_ALIGN_MSB)
+			OF_DC_LOG("tegra dc align msb\n");
+		else if (temp == TEGRA_DC_ALIGN_LSB)
+			OF_DC_LOG("tegra dc align lsb\n");
+		else {
 			pr_err("invalid out align\n");
 			return -EINVAL;
 		}
+		default_out->align = (unsigned)temp;
 	}
-	if (!of_property_read_string(np, "nvidia,out-order", &temp_str0)) {
-		if (!strncmp(temp_str0, "rtob", strlen(temp_str0))) {
-			default_out->order = TEGRA_DC_ORDER_RED_BLUE;
-		} else if (!strncmp(temp_str0, "btor", strlen(temp_str0))) {
-			default_out->order = TEGRA_DC_ORDER_BLUE_RED;
-		} else {
+
+	if (!of_property_read_u32(np, "nvidia,out-order", &temp)) {
+		if (temp == TEGRA_DC_ORDER_RED_BLUE)
+			OF_DC_LOG("tegra order red to blue\n");
+		else if (temp == TEGRA_DC_ORDER_BLUE_RED)
+			OF_DC_LOG("tegra order blue to red\n");
+		else {
 			pr_err("invalid out order\n");
 			return -EINVAL;
 		}
+		default_out->order = (unsigned)temp;
 	}
 
 	if (!of_property_read_string(np, "nvidia,out-parent-clk", &temp_str0)) {
@@ -734,7 +745,6 @@ static int parse_cmu_data(struct device_node *np,
 static int parse_fb_info(struct device_node *np, struct tegra_fb_data *fb)
 {
 	u32 temp;
-	const char *temp_str0;
 
 	/*
 	 * set fb->win to 0 in default
@@ -747,15 +757,19 @@ static int parse_fb_info(struct device_node *np, struct tegra_fb_data *fb)
 	} else {
 		goto fail_fb_info;
 	}
-	if (!of_property_read_string(np, "nvidia,fb-flags", &temp_str0)) {
-		if (!strncmp(temp_str0, "flip_on_probe", strlen(temp_str0))) {
-			fb->flags = TEGRA_FB_FLIP_ON_PROBE;
+
+	if (!of_property_read_u32(np, "nvidia,fb-flags", &temp)) {
+		if (temp == TEGRA_FB_FLIP_ON_PROBE)
 			OF_DC_LOG("fb flip on probe\n");
-		} else {
+		else if (temp == 0)
+			OF_DC_LOG("do not flip fb on probe time\n");
+		else {
 			pr_err("invalid fb_flags\n");
 			return -EINVAL;
 		}
+		fb->flags = (unsigned long)temp;
 	}
+
 	if (!of_property_read_u32(np, "nvidia,fb-xres", &temp)) {
 		fb->xres = (int)temp;
 		OF_DC_LOG("fb xres %d\n", fb->xres);
@@ -1402,7 +1416,6 @@ struct tegra_dc_platform_data
 #ifdef CONFIG_TEGRA_DC_CMU
 	struct device_node *cmu_np = NULL;
 #endif
-	const char *temp_str0;
 	int err;
 	u32 temp;
 
@@ -1648,12 +1661,17 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
-	if (!of_property_read_string(np, "nvidia,dc-flags", &temp_str0)) {
-		if (!strncmp(temp_str0, "dc_flag_en", strlen(temp_str0))) {
-			pdata->flags = TEGRA_DC_FLAG_ENABLED;
-			OF_DC_LOG("dc flag en\n");
+	if (!of_property_read_u32(np, "nvidia,dc-flags", &temp)) {
+		if ((temp != TEGRA_DC_FLAG_ENABLED) &&
+			(temp != 0)) {
+			pr_err("%s: invalid dc platform data flag\n",
+				__func__);
+			goto fail_parse;
 		}
+		pdata->flags = (unsigned long)temp;
+		OF_DC_LOG("dc flag %lu\n", pdata->flags);
 	}
+
 	if (!of_property_read_u32(np, "nvidia,emc-clk-rate", &temp)) {
 		pdata->emc_clk_rate = (unsigned long)temp;
 		OF_DC_LOG("emc clk rate %lu\n", pdata->emc_clk_rate);

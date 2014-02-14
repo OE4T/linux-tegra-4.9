@@ -375,29 +375,39 @@ const struct file_operations tegra_vi_ctrl_ops = {
 
 void nvhost_vi_reset(struct platform_device *pdev)
 {
-	u32 reset_reg[4];
+	void __iomem *reset_reg[4];
+	int i;
+	struct nvhost_device_data *pdata = pdev->dev.platform_data;
 
 	if (pdev->id == 0) {
-		reset_reg[0] = T12_VI_CSI_0_SW_RESET;
-		reset_reg[1] = T12_CSI_CSI_SW_SENSOR_A_RESET;
-		reset_reg[2] = T12_CSI_CSICIL_SW_SENSOR_A_RESET;
-		reset_reg[3] = T12_VI_CSI_0_CSI_IMAGE_DT;
+		reset_reg[0] = pdata->aperture[0] +
+			       T12_VI_CSI_0_SW_RESET;
+		reset_reg[1] = pdata->aperture[0] +
+			       T12_CSI_CSI_SW_SENSOR_A_RESET;
+		reset_reg[2] = pdata->aperture[0] +
+			       T12_CSI_CSICIL_SW_SENSOR_A_RESET;
+		reset_reg[3] = pdata->aperture[0] +
+			       T12_VI_CSI_0_CSI_IMAGE_DT;
 	} else {
-		reset_reg[0] = T12_VI_CSI_1_SW_RESET;
-		reset_reg[1] = T12_CSI_CSI_SW_SENSOR_B_RESET;
-		reset_reg[2] = T12_CSI_CSICIL_SW_SENSOR_B_RESET;
-		reset_reg[3] = T12_VI_CSI_1_CSI_IMAGE_DT;
+		pdata = pdata->master->dev.platform_data;
+		reset_reg[0] = pdata->aperture[0] +
+			       T12_VI_CSI_1_SW_RESET;
+		reset_reg[1] = pdata->aperture[0] +
+			       T12_CSI_CSI_SW_SENSOR_B_RESET;
+		reset_reg[2] = pdata->aperture[0] +
+			       T12_CSI_CSICIL_SW_SENSOR_B_RESET;
+		reset_reg[3] = pdata->aperture[0] +
+			       T12_VI_CSI_1_CSI_IMAGE_DT;
 	}
 
-	host1x_writel(pdev, reset_reg[3], 0);
-	host1x_writel(pdev, reset_reg[2], 0x1);
-	host1x_writel(pdev, reset_reg[1], 0x1);
-	host1x_writel(pdev, reset_reg[0], 0x1f);
+	writel(0, reset_reg[3]);
+	writel(0x1, reset_reg[2]);
+	writel(0x1, reset_reg[1]);
+	writel(0x1f, reset_reg[0]);
 
 	udelay(10);
 
-	host1x_writel(pdev, reset_reg[2], 0);
-	host1x_writel(pdev, reset_reg[1], 0);
-	host1x_writel(pdev, reset_reg[0], 0);
+	for (i = 2; i > 0; i--)
+		writel(0, reset_reg[i]);
 }
 

@@ -807,6 +807,10 @@ static void nvhost_reserve_vblank_syncpts(struct nvhost_syncpt *sp)
 	sp->client_managed[NVSYNCPT_VBLANK1] = true;
 	sp->syncpt_names[NVSYNCPT_VBLANK1] = "vblank1";
 
+	sp->assigned[NVSYNCPT_AVP_0] = true;
+	sp->client_managed[NVSYNCPT_AVP_0] = true;
+	sp->syncpt_names[NVSYNCPT_AVP_0] = "avp";
+
 	mutex_unlock(&sp->syncpt_mutex);
 }
 

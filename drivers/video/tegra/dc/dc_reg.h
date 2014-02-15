@@ -864,4 +864,12 @@
 
 #define DC_DISP_BLEND_BACKGROUND_COLOR		0x4e4
 
+#define DC_DISP_DISPLAY_DBG_TIMING		0x4f6
+#define  DBG_H_BLANK			(1 << 31)
+#define  DBG_H_COUNT_SHIFT		(16)
+#define  DBG_H_COUNT_MASK		(0x7fff << DBG_H_COUNT_SHIFT)
+#define  DBG_V_BLANK			(1 << 15)
+#define  DBG_V_COUNT_SHIFT		(0)
+#define  DBG_V_COUNT_MASK		(0x7fff << DBG_V_COUNT_SHIFT)
+
 #endif

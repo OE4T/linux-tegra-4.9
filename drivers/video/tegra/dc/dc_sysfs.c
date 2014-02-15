@@ -243,6 +243,35 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 static DEVICE_ATTR(crc_checksum_latched, S_IRUGO|S_IWUSR,
 		crc_checksum_latched_show, crc_checksum_latched_store);
 
+static ssize_t scanline_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	u32 val;
+	unsigned v_blank;
+	unsigned v_count;
+	unsigned h_blank;
+	unsigned h_count;
+
+	if (WARN_ON(!dc) || !dc->enabled ||
+		WARN_ON(!tegra_powergate_is_powered(dc->powergate_id))) {
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
+		return -ENXIO;
+	}
+
+	val = tegra_dc_readl(dc, DC_DISP_DISPLAY_DBG_TIMING);
+
+	v_count = (val & DBG_V_COUNT_MASK) >> DBG_V_COUNT_SHIFT;
+	v_blank = !!(val & DBG_V_BLANK);
+	h_count = (val & DBG_H_COUNT_MASK) >> DBG_H_COUNT_SHIFT;
+	h_blank = !!(val & DBG_H_BLANK);
+
+	return scnprintf(buf, PAGE_SIZE, "%u %u %u %u\n",
+		v_count, v_blank, h_count, h_blank);
+}
+static DEVICE_ATTR(scanline, S_IRUGO, scanline_show, NULL);
+
 #define ORIENTATION_PORTRAIT	"portrait"
 #define ORIENTATION_LANDSCAPE	"landscape"
 
@@ -772,6 +801,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_ISOMGR
 	error |= device_create_file(dev, &dev_attr_reserved_bw);
 #endif
+	error |= device_create_file(dev, &dev_attr_scanline);
 
 	if (dc->out->stereo) {
 		error |= device_create_file(dev, &dev_attr_stereo_orientation);

@@ -22,6 +22,13 @@
 #define OZ_TIMER_HEARTBEAT	2
 #define OZ_TIMER_STOP		3
 
+
+/* Tasklet Scheduled flag.
+ */
+#define OZ_TASKLET_SCHED_TIMEOUT	0
+#define OZ_TASKLET_SCHED_HEARTBEAT	1
+
+
 #define ETH_STRING_LEN		17
 /* Data structure that hold information on a frame for transmisson. This is
  * built when the frame is first transmitted and is used to rebuild the frame
@@ -100,6 +107,7 @@ struct oz_pd {
 	u8	timeout_type;
 	struct tasklet_struct	heartbeat_tasklet;
 	struct tasklet_struct	timeout_tasklet;
+	unsigned long tasklet_sched;
 	struct work_struct workitem;
 	u8	up_audio_buf;
 };

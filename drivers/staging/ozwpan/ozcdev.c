@@ -99,11 +99,16 @@ int oz_cdev_open(struct inode *inode, struct file *filp)
 {
 	struct oz_cdev *dev;
 
-	if (!atomic_add_unless(&g_cdev.ref_count, 1, 1))
+	if (!atomic_add_unless(&g_cdev.ref_count, 1, 1)) {
+		oz_trace_msg(O, "OPEN %08X EBUSY\n",
+			(unsigned int)((uintptr_t)filp));
 		return -EBUSY;
+	}
 
 	dev = container_of(inode->i_cdev, struct oz_cdev, cdev);
 	filp->private_data = dev;
+
+	oz_trace_msg(O, "OPEN %08X OK\n", (unsigned int)((uintptr_t)filp));
 	return 0;
 }
 /*------------------------------------------------------------------------------
@@ -112,6 +117,7 @@ int oz_cdev_open(struct inode *inode, struct file *filp)
 int oz_cdev_release(struct inode *inode, struct file *filp)
 {
 	atomic_dec(&g_cdev.ref_count);
+	oz_trace_msg(O, "CLOSE %08X\n", (unsigned int)((uintptr_t)filp));
 	return 0;
 }
 /*------------------------------------------------------------------------------
@@ -126,14 +132,20 @@ ssize_t oz_cdev_read(struct file *filp, char __user *buf, size_t count,
 	struct oz_pd *pd;
 	struct oz_serial_ctx *ctx;
 
+	oz_trace_msg(O, "READ I %X %04X\n",
+		(unsigned int)((uintptr_t)filp), (int)count);
+
 	spin_lock_bh(&g_cdev.lock);
 	pd = g_cdev.active_pd;
 	if (pd)
 		oz_pd_get(pd);
 	is_tftp = (g_cdev.mode & OZ_MODE_TFTP) ? 1 : 0;
 	spin_unlock_bh(&g_cdev.lock);
-	if (pd == NULL)
+	if (pd == NULL) {
+		oz_trace_msg(O, "READ O %X %04X\n",
+			(unsigned int)((uintptr_t)filp), (unsigned int)(-1));
 		return -1;
+	}
 	ctx = oz_cdev_claim_ctx(pd);
 	if (ctx == NULL)
 		goto out2;
@@ -221,6 +233,8 @@ out1:
 	oz_cdev_release_ctx(ctx);
 out2:
 	oz_pd_put(pd);
+	oz_trace_msg(O, "READ O %08X %04X\n",
+		(unsigned int)((uintptr_t)filp), (unsigned int)(count));
 	return count;
 }
 /*------------------------------------------------------------------------------
@@ -237,16 +251,19 @@ ssize_t oz_cdev_write(struct file *filp, const char __user *buf, size_t count,
 	struct oz_app_hdr *app_hdr;
 	struct oz_serial_ctx *ctx;
 
-	if (count > sizeof(ei->data) - sizeof(*elt) - sizeof(*app_hdr))
-		return -EINVAL;
+	oz_trace_msg(O, "WRITE I %08X %04X\n",
+		(unsigned int)((uintptr_t)filp), (int)count);
 
 	spin_lock_bh(&g_cdev.lock);
 	pd = g_cdev.active_pd;
 	if (pd)
 		oz_pd_get(pd);
 	spin_unlock_bh(&g_cdev.lock);
-	if (pd == NULL)
+	if (pd == NULL) {
+		oz_trace_msg(O, "WRITE O %08X %04X\n",
+			(unsigned int)((uintptr_t)filp), (unsigned int)count);
 		return -1;
+	}
 	if (!(pd->state & OZ_PD_S_CONNECTED))
 		return -ENXIO;
 	eb = &pd->elt_buff;
@@ -301,6 +318,8 @@ out:
 		spin_unlock_bh(&eb->lock);
 	}
 	oz_pd_put(pd);
+	oz_trace_msg(O, "WRITE O %08X %04X\n",
+		(unsigned int)((uintptr_t)filp), (unsigned int)count);
 	return count;
 }
 /*------------------------------------------------------------------------------
@@ -317,11 +336,14 @@ int oz_set_active_pd(const u8 *addr)
 		spin_lock_bh(&g_cdev.lock);
 		if (memcmp(g_cdev.active_addr, addr, ETH_ALEN) == 0) {
 			spin_unlock_bh(&g_cdev.lock);
+			oz_pd_put(pd);
 			return rc;
 		}
 		memcpy(g_cdev.active_addr, addr, ETH_ALEN);
 		old_pd = g_cdev.active_pd;
 		g_cdev.active_pd = pd;
+		oz_trace_msg(O, "Active PD:%08x\n",
+				 (unsigned int)((uintptr_t)pd));
 		spin_unlock_bh(&g_cdev.lock);
 
 		/*Reset buffer pointers if new device is selected*/
@@ -345,6 +367,7 @@ int oz_set_active_pd(const u8 *addr)
 			g_cdev.active_pd = NULL;
 			memset(g_cdev.active_addr, 0,
 				sizeof(g_cdev.active_addr));
+			oz_trace_msg(O, "Active PD:00000000\n");
 			spin_unlock_bh(&g_cdev.lock);
 			if (pd)
 				oz_pd_put(pd);
@@ -469,6 +492,9 @@ unsigned int oz_cdev_poll(struct file *filp, poll_table *wait)
 {
 	unsigned int ret = 0;
 	struct oz_cdev *dev = filp->private_data;
+
+	oz_trace_msg(O, "POLL I %08X\n", (unsigned int)((uintptr_t)filp));
+
 	spin_lock_bh(&dev->lock);
 	if (dev->active_pd) {
 		struct oz_serial_ctx *ctx = oz_cdev_claim_ctx(dev->active_pd);
@@ -488,6 +514,9 @@ unsigned int oz_cdev_poll(struct file *filp, poll_table *wait)
 
 	if (wait)
 		poll_wait(filp, &dev->rdq, wait);
+
+	oz_trace_msg(O, "POLL O %08X %08X\n",
+			(unsigned int)((uintptr_t)filp), ret);
 	return ret;
 }
 /*------------------------------------------------------------------------------

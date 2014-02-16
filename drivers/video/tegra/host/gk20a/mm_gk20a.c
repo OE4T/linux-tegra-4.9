@@ -1214,11 +1214,11 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
 
-	nvhost_memmgr_get_comptags(r, &comptags);
+	nvhost_memmgr_get_comptags(d, r, &comptags);
 
 	if (bfr.ctag_lines && !comptags.lines) {
 		/* allocate compression resources if needed */
-		err = nvhost_memmgr_alloc_comptags(r,
+		err = nvhost_memmgr_alloc_comptags(d, r,
 				ctag_allocator, bfr.ctag_lines);
 		if (err) {
 			/* ok to fall back here if we ran out */
@@ -1226,7 +1226,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			bfr.ctag_lines = bfr.ctag_offset = 0;
 			bfr.kind_v = bfr.uc_kind_v;
 		} else {
-			nvhost_memmgr_get_comptags(r, &comptags);
+			nvhost_memmgr_get_comptags(d, r, &comptags);
 
 			/* init/clear the ctag buffer */
 			g->ops.ltc.clear_comptags(g,

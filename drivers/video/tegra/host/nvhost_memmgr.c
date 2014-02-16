@@ -347,23 +347,25 @@ void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
 	return;
 }
 
-void nvhost_memmgr_get_comptags(struct mem_handle *mem,
+void nvhost_memmgr_get_comptags(struct device *dev,
+				struct mem_handle *mem,
 				struct nvhost_comptags *comptags)
 {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	return nvhost_nvmap_get_comptags(mem, comptags);
+	return nvhost_nvmap_get_comptags(dev, mem, comptags);
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 	WARN_ON(1);
 #endif
 }
 
-int nvhost_memmgr_alloc_comptags(struct mem_handle *mem,
+int nvhost_memmgr_alloc_comptags(struct device *dev,
+				 struct mem_handle *mem,
 				 struct nvhost_allocator *allocator,
 				 int lines)
 {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	return nvhost_nvmap_alloc_comptags(mem, allocator, lines);
+	return nvhost_nvmap_alloc_comptags(dev, mem, allocator, lines);
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 	WARN_ON(1);

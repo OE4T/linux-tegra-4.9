@@ -89,9 +89,11 @@ int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 			    struct mem_handle *mem_handle,
 			    u32 param, u64 *result);
 
-void nvhost_memmgr_get_comptags(struct mem_handle *mem,
+void nvhost_memmgr_get_comptags(struct device *dev,
+				struct mem_handle *mem,
 				struct nvhost_comptags *comptags);
-int nvhost_memmgr_alloc_comptags(struct mem_handle *mem,
+int nvhost_memmgr_alloc_comptags(struct device *dev,
+				 struct mem_handle *mem,
 				 struct nvhost_allocator *allocator,
 				 int lines);
 size_t nvhost_memmgr_size(struct mem_handle *handle);

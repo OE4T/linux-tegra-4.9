@@ -50,9 +50,9 @@ int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 phys_addr_t nvhost_nvmap_get_addr_from_id(ulong id);
 
 void nvhost_nvmap_unpin_id(struct mem_mgr *mgr, ulong id);
-void nvhost_nvmap_get_comptags(struct mem_handle *mem,
+void nvhost_nvmap_get_comptags(struct device *dev, struct mem_handle *mem,
 			       struct nvhost_comptags *comptags);
-int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
+int nvhost_nvmap_alloc_comptags(struct device *dev, struct mem_handle *mem,
 				struct nvhost_allocator *allocator,
 				int lines);
 size_t nvhost_nvmap_size(struct mem_handle *handle);

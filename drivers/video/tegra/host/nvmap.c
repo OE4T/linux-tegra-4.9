@@ -121,10 +121,10 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 	static DEFINE_MUTEX(priv_lock);
 
 	/* create the nvhost priv if needed */
-	priv = nvmap_get_dmabuf_private(dmabuf);
+	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (!priv) {
 		mutex_lock(&priv_lock);
-		priv = nvmap_get_dmabuf_private(dmabuf);
+		priv = dma_buf_get_drvdata(dmabuf, dev);
 		if (priv)
 			goto priv_exist_or_err;
 		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
@@ -133,7 +133,7 @@ struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 			goto priv_exist_or_err;
 		}
 		mutex_init(&priv->lock);
-		nvmap_set_dmabuf_private(dmabuf, priv, delete_priv);
+		dma_buf_set_drvdata(dmabuf, dev, priv, delete_priv);
 priv_exist_or_err:
 		mutex_unlock(&priv_lock);
 	}
@@ -210,7 +210,8 @@ void nvhost_nvmap_unpin(struct mem_mgr *mgr, struct mem_handle *handle,
 		struct device *dev, struct sg_table *sgt)
 {
 	struct dma_buf *dmabuf = (struct dma_buf *)handle;
-	struct nvhost_nvmap_data *priv = nvmap_get_dmabuf_private(dmabuf);
+	struct nvhost_nvmap_data *priv =
+		dma_buf_get_drvdata(dmabuf, dev);
 	struct nvhost_nvmap_as_data *as_priv;
 	dma_addr_t dma_addr;
 
@@ -273,19 +274,27 @@ int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
 			param, result);
 }
 
-void nvhost_nvmap_get_comptags(struct mem_handle *mem,
+void nvhost_nvmap_get_comptags(struct device *dev,
+			       struct mem_handle *mem,
 			       struct nvhost_comptags *comptags)
 {
 	struct nvhost_nvmap_data *priv;
 
-	priv = nvmap_get_dmabuf_private((struct dma_buf *)mem);
+	priv = dma_buf_get_drvdata((struct dma_buf *)mem, dev);
 
-	BUG_ON(!priv || !comptags);
+	BUG_ON(!comptags);
+
+	if (!priv) {
+		comptags->lines = 0;
+		comptags->offset = 0;
+		return;
+	}
 
 	*comptags = priv->comptags;
 }
 
-int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
+int nvhost_nvmap_alloc_comptags(struct device *dev,
+				struct mem_handle *mem,
 				struct nvhost_allocator *allocator,
 				int lines)
 {
@@ -293,9 +302,11 @@ int nvhost_nvmap_alloc_comptags(struct mem_handle *mem,
 	u32 offset = 0;
 	struct nvhost_nvmap_data *priv;
 
-	priv = nvmap_get_dmabuf_private((struct dma_buf *)mem);
+	priv = dma_buf_get_drvdata((struct dma_buf *)mem, dev);
 
-	BUG_ON(!priv);
+	if (!priv)
+		return -ENOSYS;
+
 	BUG_ON(!lines);
 
 	/* store the allocator so we can use it when we free the ctags */

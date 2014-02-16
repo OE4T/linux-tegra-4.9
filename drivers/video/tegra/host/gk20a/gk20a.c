@@ -1440,6 +1440,9 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->bus_type = NVHOST_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
+	gpu->big_page_size = g->mm.big_page_size;
+	gpu->compression_page_size = g->mm.compression_page_size;
+
 	return 0;
 }
 

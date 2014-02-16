@@ -169,6 +169,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	mutex_init(&mm->tlb_lock);
 	mutex_init(&mm->l2_op_lock);
 	mm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
+	mm->compression_page_size = gmmu_page_sizes[gmmu_page_size_big];
 	mm->pde_stride    = mm->big_page_size << 10;
 	mm->pde_stride_shift = ilog2(mm->pde_stride);
 	BUG_ON(mm->pde_stride_shift > 31); /* we have assumptions about this */

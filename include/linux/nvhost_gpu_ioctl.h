@@ -109,6 +109,9 @@ struct nvhost_gpu_characteristics {
 	__u32 num_tpc_per_gpc;
 	__u32 bus_type;
 
+	__u32 big_page_size;
+	__u32 compression_page_size;
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

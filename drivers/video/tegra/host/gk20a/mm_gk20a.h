@@ -252,6 +252,7 @@ void gk20a_mm_l2_invalidate(struct gk20a *g);
 struct mm_gk20a {
 	struct gk20a *g;
 
+	u32 compression_page_size;
 	u32 big_page_size;
 	u32 pde_stride;
 	u32 pde_stride_shift;

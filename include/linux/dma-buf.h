@@ -104,6 +104,10 @@ struct dma_buf_ops {
 
 	void *(*vmap)(struct dma_buf *);
 	void (*vunmap)(struct dma_buf *, void *vaddr);
+
+	void *(*get_drvdata)(struct dma_buf *, struct device *);
+	int (*set_drvdata)(struct dma_buf *, struct device *, void *priv,
+			   void (*)(void *));
 };
 
 /**
@@ -224,6 +228,10 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info);
 int dma_buf_fd(struct dma_buf *dmabuf, int flags);
 struct dma_buf *dma_buf_get(int fd);
 void dma_buf_put(struct dma_buf *dmabuf);
+
+int dma_buf_set_drvdata(struct dma_buf *, struct device *,
+			void *, void (*destroy)(void *));
+void *dma_buf_get_drvdata(struct dma_buf *, struct device *);
 
 struct sg_table *dma_buf_map_attachment(struct dma_buf_attachment *,
 					enum dma_data_direction);

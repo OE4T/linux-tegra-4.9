@@ -46,6 +46,56 @@ struct dma_buf_list {
 
 static struct dma_buf_list db_list;
 
+/**
+ * dma_buf_set_drvdata - Set driver specific data to dmabuf. The data
+ * will remain even if the device is detached from the device. This is useful
+ * if the device requires some buffer specific parameters that should be
+ * available when the buffer is accessed next time.
+ *
+ * The exporter calls the destroy callback:
+ *  - the buffer is freed
+ *  - the device/driver is removed
+ *  - new device private data is set
+ *
+ * @dmabuf	[in]	Buffer object
+ * @device	[in]	Device to which the data is related to.
+ * @priv	[in]	Private data
+ * @destroy	[in]	Function callback to destroy function. Called when the
+ *			data is not needed anymore (device or dmabuf is
+ *			removed)
+ *
+ * The function returns 0 on success. Otherwise the function returns a negative
+ * errorcode
+ */
+int dma_buf_set_drvdata(struct dma_buf * dmabuf, struct device *device,
+			void *priv, void (*destroy)(void *))
+{
+	if (!(dmabuf && dmabuf->ops && dmabuf->ops->set_drvdata))
+		return -ENOSYS;
+
+	return dmabuf->ops->set_drvdata(dmabuf, device, priv, destroy);
+}
+EXPORT_SYMBOL(dma_buf_set_drvdata);
+
+/**
+ * dma_buf_get_drvdata - Get driver specific data to dmabuf.
+ *
+ * @dmabuf	[in]	Buffer object
+ * @device	[in]	Device to which the data is related to.
+ *
+ * The function returns the user data structure on success. Otherwise NULL
+ * is returned.
+ */
+void *dma_buf_get_drvdata(struct dma_buf *dmabuf, struct device *device)
+{
+	if (!(dmabuf && dmabuf->ops && dmabuf->ops->get_drvdata))
+		return ERR_PTR(-ENOSYS);
+
+	return dmabuf->ops->get_drvdata(dmabuf, device);
+}
+EXPORT_SYMBOL(dma_buf_get_drvdata);
+
+
 static int dma_buf_release(struct inode *inode, struct file *file)
 {
 	struct dma_buf *dmabuf;

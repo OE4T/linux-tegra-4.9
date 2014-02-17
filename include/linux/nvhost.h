@@ -118,7 +118,6 @@ struct nvhost_device_data {
 	struct device_dma_parameters dma_parms;
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
-	u32		syncpt_base;	/* Device sync point base */
 	u32		waitbases[NVHOST_MODULE_MAX_WAITBASES];
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */

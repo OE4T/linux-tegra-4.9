@@ -87,15 +87,15 @@ struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd)
 	return mgr;
 }
 
-struct mem_handle *nvhost_memmgr_alloc(struct mem_mgr *mgr,
-       size_t size, size_t align, int flags, unsigned int heap_mask)
+struct mem_handle *nvhost_memmgr_alloc(size_t size, size_t align,
+				       int flags, unsigned int heap_mask)
 {
 	struct mem_handle *h = NULL;
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	h = nvhost_nvmap_alloc(mgr, size, align, flags, heap_mask);
+	h = nvhost_nvmap_alloc(size, align, flags, heap_mask);
 #else
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	h = nvhost_dmabuf_alloc(mgr, size, align, flags);
+	h = nvhost_dmabuf_alloc(size, align, flags);
 #endif
 #endif
 
@@ -220,8 +220,7 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 	}
 }
 
-int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
-			    struct mem_handle *mem_handle,
+int nvhost_memmgr_get_param(struct mem_handle *mem_handle,
 			    u32 param, u64 *result)
 {
 #ifndef CONFIG_ARM64
@@ -231,13 +230,13 @@ int nvhost_memmgr_get_param(struct mem_mgr *mem_mgr,
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
-		return nvhost_nvmap_get_param(mem_mgr, mem_handle,
+		return nvhost_nvmap_get_param(mem_handle,
 					      param, result);
 		break;
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
 	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_get_param(mem_mgr, mem_handle,
+		return nvhost_dmabuf_get_param(mem_handle,
 					       param, result);
 		break;
 #endif

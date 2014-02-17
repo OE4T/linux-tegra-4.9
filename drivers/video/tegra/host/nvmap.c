@@ -67,8 +67,8 @@ struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd)
 	return (struct mem_mgr *)0x1;
 }
 
-struct mem_handle *nvhost_nvmap_alloc(struct mem_mgr *mgr,
-		size_t size, size_t align, int flags, unsigned int heap_mask)
+struct mem_handle *nvhost_nvmap_alloc(size_t size, size_t align,
+				      int flags, unsigned int heap_mask)
 {
 	return (struct mem_handle *)nvmap_alloc_dmabuf(
 			size, align, flags, heap_mask);
@@ -266,8 +266,8 @@ struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 	return (struct mem_handle *)dma_buf_get(id);
 }
 
-int nvhost_nvmap_get_param(struct mem_mgr *mgr, struct mem_handle *handle,
-		u32 param, u64 *result)
+int nvhost_nvmap_get_param(struct mem_handle *handle,
+			   u32 param, u64 *result)
 {
 	return nvmap_get_dmabuf_param(
 			(struct dma_buf *)handle,

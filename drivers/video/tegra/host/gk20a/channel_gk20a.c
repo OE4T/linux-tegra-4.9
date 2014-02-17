@@ -26,15 +26,16 @@
 #include <linux/scatterlist.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
+#include <linux/dma-buf.h>
 
 #include "dev.h"
 #include "debug.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_sync.h"
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
 
+#include "nvhost_memmgr.h"
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
@@ -480,14 +481,12 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 
 static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 {
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 	/* disable existing cyclestats buffer */
 	mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
 	if (ch->cyclestate.cyclestate_buffer_handler) {
-		nvhost_memmgr_munmap(ch->cyclestate.cyclestate_buffer_handler,
+		dma_buf_vunmap(ch->cyclestate.cyclestate_buffer_handler,
 				ch->cyclestate.cyclestate_buffer);
-		nvhost_memmgr_put(memmgr,
-				ch->cyclestate.cyclestate_buffer_handler);
+		dma_buf_put(ch->cyclestate.cyclestate_buffer_handler);
 		ch->cyclestate.cyclestate_buffer_handler = NULL;
 		ch->cyclestate.cyclestate_buffer = NULL;
 		ch->cyclestate.cyclestate_buffer_size = 0;
@@ -498,30 +497,22 @@ static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		       struct nvhost_cycle_stats_args *args)
 {
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
-	struct mem_handle *handle_ref;
+	struct dma_buf *dmabuf;
 	void *virtual_address;
-	u64 cyclestate_buffer_size;
-	struct platform_device *dev = ch->ch->dev;
 
 	if (args->nvmap_handle && !ch->cyclestate.cyclestate_buffer_handler) {
 
 		/* set up new cyclestats buffer */
-		handle_ref = nvhost_memmgr_get(memmgr,
-				args->nvmap_handle, dev);
-		if (IS_ERR(handle_ref))
-			return PTR_ERR(handle_ref);
-		virtual_address = nvhost_memmgr_mmap(handle_ref);
+		dmabuf = dma_buf_get(args->nvmap_handle);
+		if (IS_ERR(dmabuf))
+			return PTR_ERR(dmabuf);
+		virtual_address = dma_buf_vmap(dmabuf);
 		if (!virtual_address)
 			return -ENOMEM;
 
-		nvhost_memmgr_get_param(memmgr, handle_ref,
-					NVMAP_HANDLE_PARAM_SIZE,
-					&cyclestate_buffer_size);
-
-		ch->cyclestate.cyclestate_buffer_handler = handle_ref;
+		ch->cyclestate.cyclestate_buffer_handler = dmabuf;
 		ch->cyclestate.cyclestate_buffer = virtual_address;
-		ch->cyclestate.cyclestate_buffer_size = cyclestate_buffer_size;
+		ch->cyclestate.cyclestate_buffer_size = dmabuf->size;
 		return 0;
 
 	} else if (!args->nvmap_handle &&
@@ -543,37 +534,34 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		struct nvhost_set_error_notifier *args) {
-	struct platform_device *dev = ch->g->dev;
 	void *va;
 
-	struct mem_mgr *memmgr;
-	struct mem_handle *handle_ref;
+	struct dma_buf *dmabuf;
 
 	if (!args->mem) {
 		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
 		return -EINVAL;
 	}
 
-	memmgr = gk20a_channel_mem_mgr(ch);
-	handle_ref = nvhost_memmgr_get(memmgr, args->mem, dev);
+	dmabuf = dma_buf_get(args->mem);
 
 	if (ch->error_notifier_ref)
 		gk20a_free_error_notifiers(ch);
 
-	if (IS_ERR(handle_ref)) {
+	if (IS_ERR(dmabuf)) {
 		pr_err("Invalid handle: %d\n", args->mem);
 		return -EINVAL;
 	}
 	/* map handle */
-	va = nvhost_memmgr_mmap(handle_ref);
+	va = dma_buf_vmap(dmabuf);
 	if (!va) {
-		nvhost_memmgr_put(memmgr, handle_ref);
+		dma_buf_put(dmabuf);
 		pr_err("Cannot map notifier handle\n");
 		return -ENOMEM;
 	}
 
 	/* set channel notifiers pointer */
-	ch->error_notifier_ref = handle_ref;
+	ch->error_notifier_ref = dmabuf;
 	ch->error_notifier = va + args->offset;
 	ch->error_notifier_va = va;
 	memset(ch->error_notifier, 0, sizeof(struct nvhost_notification));
@@ -602,10 +590,8 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 {
 	if (ch->error_notifier_ref) {
-		struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
-		nvhost_memmgr_munmap(ch->error_notifier_ref,
-				ch->error_notifier_va);
-		nvhost_memmgr_put(memmgr, ch->error_notifier_ref);
+		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
+		dma_buf_put(ch->error_notifier_ref);
 		ch->error_notifier_ref = 0;
 		ch->error_notifier = 0;
 		ch->error_notifier_va = 0;
@@ -702,7 +688,6 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
 	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
 	struct gk20a *g = ch->g;
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
 
 	trace_nvhost_channel_release(dev_name(&g->dev->dev));
 
@@ -711,8 +696,6 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	gk20a_channel_idle(ch->g->dev);
 
 	gk20a_put_client(g);
-	if (memmgr)
-		nvhost_memmgr_put_mgr(memmgr);
 	filp->private_data = NULL;
 	return 0;
 }
@@ -1418,19 +1401,17 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 	void *mem = NULL;
 	unsigned int words;
 	u64 offset;
-	struct mem_handle *r = NULL;
+	struct dma_buf *dmabuf = NULL;
 
 	if (nvhost_debug_trace_cmdbuf) {
 		u64 gpu_va = (u64)g->entry0 |
 			(u64)((u64)pbdma_gp_entry1_get_hi_v(g->entry1) << 32);
-		struct mem_mgr *memmgr = NULL;
 		int err;
 
 		words = pbdma_gp_entry1_length_v(g->entry1);
-		err = gk20a_vm_find_buffer(c->vm, gpu_va, &memmgr, &r,
-					   &offset);
+		err = gk20a_vm_find_buffer(c->vm, gpu_va, &dmabuf, &offset);
 		if (!err)
-			mem = nvhost_memmgr_mmap(r);
+			mem = dma_buf_vmap(dmabuf);
 	}
 
 	if (mem) {
@@ -1447,7 +1428,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 				offset + i * sizeof(u32),
 				mem);
 		}
-		nvhost_memmgr_munmap(r, mem);
+		dma_buf_vunmap(dmabuf, mem);
 	}
 }
 
@@ -1881,8 +1862,7 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					u32 payload, long timeout)
 {
 	struct platform_device *pdev = ch->ch->dev;
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
-	struct mem_handle *handle_ref;
+	struct dma_buf *dmabuf;
 	void *data;
 	u32 *semaphore;
 	int ret = 0;
@@ -1892,14 +1872,14 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
-	handle_ref = nvhost_memmgr_get(memmgr, id, pdev);
-	if (IS_ERR(handle_ref)) {
+	dmabuf = dma_buf_get(id);
+	if (IS_ERR(dmabuf)) {
 		nvhost_err(&pdev->dev, "invalid notifier nvmap handle 0x%lx",
 			   id);
 		return -EINVAL;
 	}
 
-	data = nvhost_memmgr_kmap(handle_ref, offset >> PAGE_SHIFT);
+	data = dma_buf_kmap(dmabuf, offset >> PAGE_SHIFT);
 	if (!data) {
 		nvhost_err(&pdev->dev, "failed to map notifier memory");
 		ret = -EINVAL;
@@ -1918,9 +1898,9 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 	else if (remain < 0)
 		ret = remain;
 
-	nvhost_memmgr_kunmap(handle_ref, offset >> PAGE_SHIFT, data);
+	dma_buf_kunmap(dmabuf, offset >> PAGE_SHIFT, data);
 cleanup_put:
-	nvhost_memmgr_put(memmgr, handle_ref);
+	dma_buf_put(dmabuf);
 	return ret;
 }
 
@@ -1928,9 +1908,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 			      struct nvhost_wait_args *args)
 {
 	struct device *d = dev_from_gk20a(ch->g);
-	struct platform_device *dev = ch->ch->dev;
-	struct mem_mgr *memmgr = gk20a_channel_mem_mgr(ch);
-	struct mem_handle *handle_ref;
+	struct dma_buf *dmabuf;
 	struct notification *notif;
 	struct timespec tv;
 	u64 jiffies;
@@ -1954,14 +1932,14 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 		id = args->condition.notifier.nvmap_handle;
 		offset = args->condition.notifier.offset;
 
-		handle_ref = nvhost_memmgr_get(memmgr, id, dev);
-		if (IS_ERR(handle_ref)) {
+		dmabuf = dma_buf_get(id);
+		if (IS_ERR(dmabuf)) {
 			nvhost_err(d, "invalid notifier nvmap handle 0x%lx",
 				   id);
 			return -EINVAL;
 		}
 
-		notif = nvhost_memmgr_mmap(handle_ref);
+		notif = dma_buf_vmap(dmabuf);
 		if (!notif) {
 			nvhost_err(d, "failed to map notifier memory");
 			return -ENOMEM;
@@ -1993,7 +1971,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 		notif->info16 = ch->hw_chid; /* should be method offset */
 
 notif_clean_up:
-		nvhost_memmgr_munmap(handle_ref, notif);
+		dma_buf_vunmap(dmabuf, notif);
 		return ret;
 
 	case NVHOST_WAIT_TYPE_SEMAPHORE:
@@ -2273,19 +2251,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
-	{
-		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;
-		struct mem_mgr *new_client = nvhost_memmgr_get_mgr_file(fd);
-
-		if (IS_ERR(new_client)) {
-			err = PTR_ERR(new_client);
-			break;
-		}
-		if (ch->memmgr)
-			nvhost_memmgr_put_mgr(ch->memmgr);
-		ch->memmgr = new_client;
 		break;
-	}
 	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
 		gk20a_channel_busy(dev);
 		err = gk20a_alloc_obj_ctx(ch,

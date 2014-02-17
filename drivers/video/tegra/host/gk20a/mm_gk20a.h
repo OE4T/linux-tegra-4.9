@@ -41,7 +41,7 @@
 #define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)0x1 << (NV_GMMU_VA_RANGE-1)))
 
 struct mem_desc {
-	struct mem_handle *ref;
+	struct dma_buf *ref;
 	struct sg_table *sgt;
 	u32 size;
 };
@@ -184,8 +184,7 @@ struct mapped_buffer_node {
 	struct vm_reserved_va_node *va_node;
 	u64 addr;
 	u64 size;
-	struct mem_mgr *memmgr;
-	struct mem_handle *handle_ref;
+	struct dma_buf *dmabuf;
 	struct sg_table *sgt;
 	struct kref ref;
 	u32 user_mapped;
@@ -295,8 +294,6 @@ int gk20a_mm_init(struct mm_gk20a *mm);
 #define gk20a_from_mm(mm) ((mm)->g)
 #define gk20a_from_vm(vm) ((vm)->mm->g)
 
-#define mem_mgr_from_mm(mm) (gk20a_from_mm(mm)->host->memmgr)
-#define mem_mgr_from_vm(vm) (gk20a_from_vm(vm)->host->memmgr)
 #define dev_from_vm(vm) dev_from_gk20a(vm->mm->g)
 
 #define DEFAULT_ALLOC_FLAGS (mem_mgr_flag_uncacheable)
@@ -367,14 +364,13 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		int rw_flag);
 
 u64 gk20a_vm_map(struct vm_gk20a *vm,
-		 struct mem_mgr *memmgr,
-		 struct mem_handle *r,
-		 u64 offset_align,
-		 u32 flags /*NVHOST_MAP_BUFFER_FLAGS_*/,
-		 int kind,
-		 struct sg_table **sgt,
-		 bool user_mapped,
-		 int rw_flag);
+		struct dma_buf *dmabuf,
+		u64 offset_align,
+		u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
+		int kind,
+		struct sg_table **sgt,
+		bool user_mapped,
+		int rw_flag);
 
 /* unmap handle from kernel */
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset);
@@ -394,7 +390,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
 
 /* find buffer corresponding to va */
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
-			 struct mem_mgr **memmgr, struct mem_handle **r,
+			 struct dma_buf **dmabuf,
 			 u64 *offset);
 
 void gk20a_vm_get(struct vm_gk20a *vm);
@@ -412,10 +408,9 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
-			int memmgr_fd,
-			ulong mem_id,
+			int dmabuf_fd,
 			u64 *offset_align,
-			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
+			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
 			int kind);
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 

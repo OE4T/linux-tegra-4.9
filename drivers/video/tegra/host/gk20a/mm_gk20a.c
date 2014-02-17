@@ -104,7 +104,7 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
 static struct mapped_buffer_node *find_mapped_buffer_locked(
 					struct rb_root *root, u64 addr);
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct mem_handle *r,
+				struct rb_root *root, struct dma_buf *dmabuf,
 				u32 kind);
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   enum gmmu_pgsz_gk20a pgsz_idx,
@@ -122,6 +122,157 @@ static const u32 gmmu_page_shifts[gmmu_nr_page_sizes] = { 12, 17 };
 static const u64 gmmu_page_offset_masks[gmmu_nr_page_sizes] = { 0xfffLL,
 								0x1ffffLL };
 static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
+
+struct gk20a_comptags {
+	u32 offset;
+	u32 lines;
+};
+
+struct gk20a_dmabuf_priv {
+	struct mutex lock;
+
+	struct nvhost_allocator *comptag_allocator;
+	struct gk20a_comptags comptags;
+
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+
+	int pin_count;
+};
+
+static void gk20a_mm_delete_priv(void *_priv)
+{
+	struct gk20a_dmabuf_priv *priv = _priv;
+	if (!priv)
+		return;
+
+	if (priv->comptags.lines) {
+		BUG_ON(!priv->comptag_allocator);
+		priv->comptag_allocator->free(priv->comptag_allocator,
+					      priv->comptags.offset,
+					      priv->comptags.lines);
+	}
+
+	kfree(priv);
+}
+
+static struct sg_table *gk20a_mm_pin(struct device *dev,
+				     struct dma_buf *dmabuf)
+{
+	struct gk20a_dmabuf_priv *priv;
+	static DEFINE_MUTEX(priv_lock);
+
+	/* create the nvhost priv if needed */
+	priv = dma_buf_get_drvdata(dmabuf, dev);
+	if (!priv) {
+		mutex_lock(&priv_lock);
+		priv = dma_buf_get_drvdata(dmabuf, dev);
+		if (priv)
+			goto priv_exist_or_err;
+		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+		if (!priv) {
+			priv = ERR_PTR(-ENOMEM);
+			goto priv_exist_or_err;
+		}
+		mutex_init(&priv->lock);
+		dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
+priv_exist_or_err:
+		mutex_unlock(&priv_lock);
+	}
+	if (IS_ERR(priv))
+		return (struct sg_table *)priv;
+
+	mutex_lock(&priv->lock);
+
+	if (priv->pin_count == 0) {
+		priv->attach = dma_buf_attach(dmabuf, dev);
+		if (IS_ERR(priv->attach)) {
+			mutex_unlock(&priv->lock);
+			return (struct sg_table *)priv->attach;
+		}
+
+		priv->sgt = dma_buf_map_attachment(priv->attach,
+						   DMA_BIDIRECTIONAL);
+		if (IS_ERR(priv->sgt)) {
+			dma_buf_detach(dmabuf, priv->attach);
+			mutex_unlock(&priv->lock);
+			return priv->sgt;
+		}
+	}
+
+	priv->pin_count++;
+	mutex_unlock(&priv->lock);
+	return priv->sgt;
+}
+
+static void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
+			   struct sg_table *sgt)
+{
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+	dma_addr_t dma_addr;
+
+	if (IS_ERR(priv) || !priv)
+		return;
+
+	mutex_lock(&priv->lock);
+	WARN_ON(priv->sgt != sgt);
+	priv->pin_count--;
+	WARN_ON(priv->pin_count < 0);
+	dma_addr = sg_dma_address(priv->sgt->sgl);
+	if (priv->pin_count == 0) {
+		dma_buf_unmap_attachment(priv->attach, priv->sgt,
+					 DMA_BIDIRECTIONAL);
+		dma_buf_detach(dmabuf, priv->attach);
+	}
+	mutex_unlock(&priv->lock);
+}
+
+
+static void gk20a_get_comptags(struct device *dev,
+			       struct dma_buf *dmabuf,
+			       struct gk20a_comptags *comptags)
+{
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+
+	if (!comptags)
+		return;
+
+	if (!priv) {
+		comptags->lines = 0;
+		comptags->offset = 0;
+		return;
+	}
+
+	*comptags = priv->comptags;
+}
+
+static int gk20a_alloc_comptags(struct device *dev,
+				struct dma_buf *dmabuf,
+				struct nvhost_allocator *allocator,
+				int lines)
+{
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+	u32 offset = 0;
+	int err;
+
+	if (!priv)
+		return -ENOSYS;
+
+	if (!lines)
+		return -EINVAL;
+
+	/* store the allocator so we can use it when we free the ctags */
+	priv->comptag_allocator = allocator;
+	err = allocator->alloc(allocator, &offset, lines);
+	if (!err) {
+		priv->comptags.lines = lines;
+		priv->comptags.offset = offset;
+	}
+	return err;
+}
+
+
+
 
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
@@ -760,14 +911,14 @@ static int insert_mapped_buffer(struct rb_root *root,
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct mem_handle *r,
+				struct rb_root *root, struct dma_buf *dmabuf,
 				u32 kind)
 {
 	struct rb_node *node = rb_first(root);
 	while (node) {
 		struct mapped_buffer_node *mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		if (mapped_buffer->handle_ref == r &&
+		if (mapped_buffer->dmabuf == dmabuf &&
 		    kind == mapped_buffer->kind)
 			return mapped_buffer;
 		node = rb_next(&mapped_buffer->node);
@@ -1023,8 +1174,7 @@ static void __locked_gmmu_unmap(struct vm_gk20a *vm,
 }
 
 static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
-					 struct mem_mgr *memmgr,
-					 struct mem_handle *r,
+					 struct dma_buf *dmabuf,
 					 u64 offset_align,
 					 u32 flags,
 					 int kind,
@@ -1037,13 +1187,15 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	/* fall-back to default kind if no kind is provided */
 	if (kind < 0) {
 		u64 nvmap_param;
-		nvhost_memmgr_get_param(memmgr, r, NVMAP_HANDLE_PARAM_KIND,
+		nvhost_memmgr_get_param((struct mem_handle *)dmabuf,
+					NVMAP_HANDLE_PARAM_KIND,
 					&nvmap_param);
 		kind = nvmap_param;
 	}
 
-	mapped_buffer = find_mapped_buffer_reverse_locked(
-						&vm->mapped_buffers, r, kind);
+	mapped_buffer =
+		find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
+						  dmabuf, kind);
 	if (!mapped_buffer)
 		return 0;
 
@@ -1054,7 +1206,6 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	    mapped_buffer->addr != offset_align)
 		return 0;
 
-	WARN_ON(mapped_buffer->memmgr != memmgr);
 	BUG_ON(mapped_buffer->vm != vm);
 
 	/* mark the buffer as used */
@@ -1068,14 +1219,10 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 		 * existing mapping here, we need to give back those
 		 * refs once in order not to leak.
 		 */
-		if (mapped_buffer->own_mem_ref) {
-			nvhost_memmgr_put(mapped_buffer->memmgr,
-					  mapped_buffer->handle_ref);
-			nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
-		} else
+		if (mapped_buffer->own_mem_ref)
+			dma_buf_put(mapped_buffer->dmabuf);
+		else
 			mapped_buffer->own_mem_ref = true;
-
-		mapped_buffer->memmgr = memmgr;
 	}
 	kref_get(&mapped_buffer->ref);
 
@@ -1100,8 +1247,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 }
 
 u64 gk20a_vm_map(struct vm_gk20a *vm,
-			struct mem_mgr *memmgr,
-			struct mem_handle *r,
+			struct dma_buf *dmabuf,
 			u64 offset_align,
 			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
 			int kind,
@@ -1118,12 +1264,12 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u64 map_offset = 0;
 	int err = 0;
 	struct buffer_attrs bfr = {0};
-	struct nvhost_comptags comptags;
+	struct gk20a_comptags comptags;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
 	/* check if this buffer is already mapped */
-	map_offset = gk20a_vm_map_duplicate_locked(vm, memmgr, r, offset_align,
+	map_offset = gk20a_vm_map_duplicate_locked(vm, dmabuf, offset_align,
 						   flags, kind, sgt,
 						   user_mapped, rw_flag);
 	if (map_offset) {
@@ -1132,7 +1278,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = nvhost_memmgr_pin(memmgr, r, d, rw_flag);
+	bfr.sgt = gk20a_mm_pin(d, dmabuf);
 	if (IS_ERR(bfr.sgt)) {
 		/* Falling back to physical is actually possible
 		 * here in many cases if we use 4K phys pages in the
@@ -1151,7 +1297,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	if (kind < 0) {
 		u64 value;
-		err = nvhost_memmgr_get_param(memmgr, r,
+		err = nvhost_memmgr_get_param((struct mem_handle *)dmabuf,
 					      NVMAP_HANDLE_PARAM_KIND,
 					      &value);
 		if (err) {
@@ -1163,7 +1309,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	}
 
 	bfr.kind_v = kind;
-	bfr.size = nvhost_memmgr_size(r);
+	bfr.size = dmabuf->size;
 	bfr.align = 1 << __ffs((u64)sg_dma_address(bfr.sgt->sgl));
 	bfr.pgsz_idx = -1;
 
@@ -1214,19 +1360,19 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
 
-	nvhost_memmgr_get_comptags(d, r, &comptags);
+	gk20a_get_comptags(d, dmabuf, &comptags);
 
 	if (bfr.ctag_lines && !comptags.lines) {
 		/* allocate compression resources if needed */
-		err = nvhost_memmgr_alloc_comptags(d, r,
-				ctag_allocator, bfr.ctag_lines);
+		err = gk20a_alloc_comptags(d, dmabuf, ctag_allocator,
+					   bfr.ctag_lines);
 		if (err) {
 			/* ok to fall back here if we ran out */
 			/* TBD: we can partially alloc ctags as well... */
 			bfr.ctag_lines = bfr.ctag_offset = 0;
 			bfr.kind_v = bfr.uc_kind_v;
 		} else {
-			nvhost_memmgr_get_comptags(d, r, &comptags);
+			gk20a_get_comptags(d, dmabuf, &comptags);
 
 			/* init/clear the ctag buffer */
 			g->ops.ltc.clear_comptags(g,
@@ -1285,8 +1431,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		nvhost_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
 	}
-	mapped_buffer->memmgr      = memmgr;
-	mapped_buffer->handle_ref  = r;
+	mapped_buffer->dmabuf      = dmabuf;
 	mapped_buffer->sgt         = bfr.sgt;
 	mapped_buffer->addr        = map_offset;
 	mapped_buffer->size        = bfr.size;
@@ -1342,7 +1487,7 @@ clean_up:
 	if (va_allocated)
 		gk20a_vm_free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
 	if (!IS_ERR(bfr.sgt))
-		nvhost_memmgr_unpin(memmgr, r, d, bfr.sgt);
+		gk20a_mm_unpin(d, dmabuf, bfr.sgt);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 	nvhost_dbg_info("err=%d\n", err);
@@ -1823,10 +1968,8 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
 		   mapped_buffer->own_mem_ref);
 
-	nvhost_memmgr_unpin(mapped_buffer->memmgr,
-			    mapped_buffer->handle_ref,
-			    dev_from_vm(vm),
-			    mapped_buffer->sgt);
+	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
+		       mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
@@ -1837,11 +1980,8 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 	if (mapped_buffer->user_mapped)
 		vm->num_user_mapped_buffers--;
 
-	if (mapped_buffer->own_mem_ref) {
-		nvhost_memmgr_put(mapped_buffer->memmgr,
-				  mapped_buffer->handle_ref);
-		nvhost_memmgr_put_mgr(mapped_buffer->memmgr);
-	}
+	if (mapped_buffer->own_mem_ref)
+		dma_buf_put(mapped_buffer->dmabuf);
 
 	kfree(mapped_buffer);
 
@@ -2223,40 +2363,29 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 }
 
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
-			int memmgr_fd,
-			ulong mem_id,
+			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
 			int kind)
 {
 	int err = 0;
 	struct vm_gk20a *vm = as_share->vm;
-	struct gk20a *g = gk20a_from_vm(vm);
-	struct mem_mgr *memmgr;
-	struct mem_handle *r;
+	struct dma_buf *dmabuf;
 	u64 ret_va;
 
 	nvhost_dbg_fn("");
 
-	/* get ref to the memmgr (released on unmap_locked) */
-	memmgr = nvhost_memmgr_get_mgr_file(memmgr_fd);
-	if (IS_ERR(memmgr))
-		return 0;
-
 	/* get ref to the mem handle (released on unmap_locked) */
-	r = nvhost_memmgr_get(memmgr, mem_id, g->dev);
-	if (!r) {
-		nvhost_memmgr_put_mgr(memmgr);
+	dmabuf = dma_buf_get(dmabuf_fd);
+	if (!dmabuf)
 		return 0;
-	}
 
-	ret_va = gk20a_vm_map(vm, memmgr, r, *offset_align,
+	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,
 			mem_flag_none);
 	*offset_align = ret_va;
 	if (!ret_va) {
-		nvhost_memmgr_put(memmgr, r);
-		nvhost_memmgr_put_mgr(memmgr);
+		dma_buf_put(dmabuf);
 		err = -EINVAL;
 	}
 
@@ -2709,7 +2838,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
-			 struct mem_mgr **mgr, struct mem_handle **r,
+			 struct dma_buf **dmabuf,
 			 u64 *offset)
 {
 	struct mapped_buffer_node *mapped_buffer;
@@ -2725,8 +2854,7 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 		return -EINVAL;
 	}
 
-	*mgr = mapped_buffer->memmgr;
-	*r = mapped_buffer->handle_ref;
+	*dmabuf = mapped_buffer->dmabuf;
 	*offset = gpu_va - mapped_buffer->addr;
 
 	mutex_unlock(&vm->update_gmmu_lock);

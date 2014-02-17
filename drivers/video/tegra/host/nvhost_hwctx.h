@@ -27,6 +27,7 @@
 struct nvhost_channel;
 struct nvhost_cdma;
 struct mem_mgr;
+struct dma_buf;
 struct nvhost_dbg_session;
 
 struct nvhost_hwctx {

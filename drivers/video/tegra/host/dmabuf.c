@@ -110,7 +110,7 @@ struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev)
 	return (struct mem_handle *) ((uintptr_t)h | mem_mgr_type_dmabuf);
 }
 
-int nvhost_dmabuf_get_param(struct mem_mgr *memmgr, struct mem_handle *handle,
+int nvhost_dmabuf_get_param(struct mem_handle *handle,
 			    u32 param, u64 *result)
 {
 	/* TBD: find a way to associate size, kind, etc */

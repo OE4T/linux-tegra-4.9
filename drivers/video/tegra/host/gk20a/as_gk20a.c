@@ -141,7 +141,7 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		if (args->padding[i])
 			return -EINVAL;
 
-	return gk20a_vm_map_buffer(as_share, 0, args->dmabuf_fd,
+	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
 				   &args->offset, args->flags,
 				   args->kind);
 }
@@ -151,8 +151,8 @@ static int gk20a_as_ioctl_map_buffer(
 		struct nvhost_as_map_buffer_args *args)
 {
 	nvhost_dbg_fn("");
-	return gk20a_vm_map_buffer(as_share, args->nvmap_fd,
-				   args->nvmap_handle, &args->o_a.align,
+	return gk20a_vm_map_buffer(as_share, args->nvmap_handle,
+				   &args->o_a.align,
 				   args->flags, NV_KIND_DEFAULT);
 	/* args->o_a.offset will be set if !err */
 }

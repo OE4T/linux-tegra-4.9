@@ -2388,9 +2388,17 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
 
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+#else
+		tegra_mipi_cal_write(dsi->mipi_cal,
+			MIPI_BIAS_PAD_E_VCLAMP_REF(0x0),
+			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+#endif
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			PAD_PDVREG(0x0) | PAD_VCLAMP_LEVEL(0x0),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);

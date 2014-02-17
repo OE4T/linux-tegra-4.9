@@ -169,6 +169,7 @@ int nvhost_module_busy(struct platform_device *dev)
 #ifdef CONFIG_PM_RUNTIME
 	ret = pm_runtime_get_sync(&dev->dev);
 	if (ret < 0) {
+		pm_runtime_put_noidle(&dev->dev);
 		if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 			nvhost_module_idle(nvhost_get_parent(dev));
 		nvhost_err(&dev->dev, "failed to power on, err %d", ret);

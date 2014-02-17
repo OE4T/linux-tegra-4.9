@@ -494,6 +494,7 @@ struct nvhost_device_data t132_msenc_info = {
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
+	.can_powergate	= true,
 	.init           = nvhost_msenc_init,
 	.deinit         = nvhost_msenc_deinit,
 	.finalize_poweron = nvhost_msenc_finalize_poweron,

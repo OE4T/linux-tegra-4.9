@@ -32,6 +32,7 @@
 #include "chip_support.h"
 #include "host1x/host1x.h"
 #include "vi.h"
+#include "vi_irq.h"
 
 static DEFINE_MUTEX(la_lock);
 
@@ -321,6 +322,7 @@ static int vi_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata;
 	struct vi *vi;
+	int err = 0;
 
 	pdata = container_of(inode->i_cdev,
 		struct nvhost_device_data, ctrl_cdev);
@@ -332,15 +334,28 @@ static int vi_open(struct inode *inode, struct file *file)
 		return -ENODEV;
 
 	file->private_data = vi;
-	return 0;
+
+	err = vi_enable_irq(vi);
+	if (err)
+		dev_err(&vi->ndev->dev, "%s: vi_enable_irq failed\n", __func__);
+
+	return err;
 }
 
 static int vi_release(struct inode *inode, struct file *file)
 {
-#if defined(CONFIG_TEGRA_ISOMGR)
 	int ret = 0;
 	struct vi *tegra_vi = file->private_data;
 
+	ret = vi_disable_irq(tegra_vi);
+	if (ret) {
+		dev_err(&tegra_vi->ndev->dev,
+			"%s: vi_disable_irq failed\n",
+			__func__);
+		return ret;
+	}
+
+#if defined(CONFIG_TEGRA_ISOMGR)
 	/* nullify isomgr request */
 	ret = vi_isomgr_release(tegra_vi);
 	if (ret) {
@@ -350,6 +365,7 @@ static int vi_release(struct inode *inode, struct file *file)
 		return -ENOMEM;
 	}
 #endif
+
 	return 0;
 }
 

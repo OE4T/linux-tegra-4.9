@@ -24,6 +24,8 @@
 #include <linux/highmem.h> /* need for nvmap.h*/
 #include <trace/events/nvhost.h>
 #include <linux/scatterlist.h>
+#include <linux/file.h>
+#include <linux/anon_inodes.h>
 
 #include "dev.h"
 #include "debug.h"
@@ -773,11 +775,9 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	return ch;
 }
 
-int gk20a_channel_open(struct inode *inode, struct file *filp)
+static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 {
 	int err;
-	struct gk20a *g =
-		container_of(inode->i_cdev, struct gk20a, channel.cdev);
 	struct channel_gk20a *ch;
 
 	trace_nvhost_channel_open(dev_name(&g->dev->dev));
@@ -806,6 +806,13 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = ch;
 	return 0;
+}
+
+int gk20a_channel_open(struct inode *inode, struct file *filp)
+{
+	struct gk20a *g = container_of(inode->i_cdev,
+			struct gk20a, channel.cdev);
+	return __gk20a_channel_open(g, filp);
 }
 
 #if 0
@@ -2255,6 +2262,44 @@ long gk20a_channel_ioctl(struct file *filp,
 	}
 
 	switch (cmd) {
+	case NVHOST_IOCTL_CHANNEL_OPEN:
+	{
+		int fd;
+		struct file *file;
+		char *name;
+
+		err = get_unused_fd_flags(O_RDWR);
+		if (err < 0)
+			break;
+		fd = err;
+
+		name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
+				dev_name(&dev->dev), fd);
+		if (!name) {
+			err = -ENOMEM;
+			put_unused_fd(fd);
+			break;
+		}
+
+		file = anon_inode_getfile(name, filp->f_op, NULL, O_RDWR);
+		kfree(name);
+		if (IS_ERR(file)) {
+			err = PTR_ERR(file);
+			put_unused_fd(fd);
+			break;
+		}
+		fd_install(fd, file);
+
+		err = __gk20a_channel_open(ch->g, file);
+		if (err) {
+			put_unused_fd(fd);
+			fput(file);
+			break;
+		}
+
+		((struct nvhost_channel_open_args *)buf)->channel_fd = fd;
+		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 	{
 		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;

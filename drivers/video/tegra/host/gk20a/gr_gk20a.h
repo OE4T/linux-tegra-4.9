@@ -352,11 +352,15 @@ bool gk20a_gr_sm_debugger_attached(struct gk20a *g);
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \
 		int err; \
-		mutex_lock(&g->pmu.pg_init_mutex); \
-		gk20a_pmu_disable_elpg(g); \
+		if (support_gk20a_pmu()) { \
+			mutex_lock(&g->pmu.pg_init_mutex); \
+			gk20a_pmu_disable_elpg(g); \
+		} \
 		err = func; \
-		gk20a_pmu_enable_elpg(g); \
-		mutex_unlock(&g->pmu.pg_init_mutex); \
+		if (support_gk20a_pmu()) { \
+			gk20a_pmu_enable_elpg(g); \
+			mutex_unlock(&g->pmu.pg_init_mutex); \
+		} \
 		err; \
 	})
 

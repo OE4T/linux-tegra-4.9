@@ -439,14 +439,17 @@ static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 	struct pmu_sequence *seq;
 	u32 index;
 
+	mutex_lock(&pmu->pmu_seq_lock);
 	index = find_first_zero_bit(pmu->pmu_seq_tbl,
 				sizeof(pmu->pmu_seq_tbl));
 	if (index >= sizeof(pmu->pmu_seq_tbl)) {
 		nvhost_err(dev_from_gk20a(g),
 			"no free sequence available");
+		mutex_unlock(&pmu->pmu_seq_lock);
 		return -EAGAIN;
 	}
 	set_bit(index, pmu->pmu_seq_tbl);
+	mutex_unlock(&pmu->pmu_seq_lock);
 
 	seq = &pmu->seq[index];
 	seq->state = PMU_SEQ_STATE_PENDING;
@@ -1147,6 +1150,7 @@ skip_init:
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
 	mutex_init(&pmu->pmu_copy_lock);
+	mutex_init(&pmu->pmu_seq_lock);
 	mutex_init(&pmu->pg_init_mutex);
 
 	pmu->perfmon_counter.index = 3; /* GR & CE2 */
@@ -2594,7 +2598,7 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
-	u32 seq;
+	u32 seq, status;
 
 	nvhost_dbg_fn("");
 
@@ -2609,8 +2613,10 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 	   with follow up ELPG disable */
 	pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
 
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+
+	BUG_ON(status != 0);
 
 	nvhost_dbg_fn("done");
 	return 0;
@@ -2729,7 +2735,8 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvhost_err(dev_from_gk20a(g),
-				"ELPG_ALLOW_ACK failed");
+				"ELPG_ALLOW_ACK failed, elpg_stat=%d",
+				pmu->elpg_stat);
 			pmu_dump_elpg_stats(pmu);
 			pmu_dump_falcon_stats(pmu);
 			ret = -EBUSY;

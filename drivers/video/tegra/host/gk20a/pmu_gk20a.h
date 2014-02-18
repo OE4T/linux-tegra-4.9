@@ -929,6 +929,7 @@ struct pmu_gk20a {
 	u32 mutex_cnt;
 
 	struct mutex pmu_copy_lock;
+	struct mutex pmu_seq_lock;
 
 	struct nvhost_allocator dmem;
 

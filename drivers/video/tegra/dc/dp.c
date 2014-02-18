@@ -2125,24 +2125,6 @@ static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
 	return true;
 }
 
-static void tegra_dc_dp_suspend(struct tegra_dc *dc)
-{
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-
-	tegra_dc_dp_disable(dc);
-	dp->suspended = true;
-}
-
-
-static void tegra_dc_dp_resume(struct tegra_dc *dc)
-{
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-
-	if (!dp->suspended)
-		return;
-	tegra_dc_dp_enable(dc);
-}
-
 static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2154,8 +2136,6 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.destroy   = tegra_dc_dp_destroy,
 	.enable	   = tegra_dc_dp_enable,
 	.disable   = tegra_dc_dp_disable,
-	.suspend   = tegra_dc_dp_suspend,
-	.resume	   = tegra_dc_dp_resume,
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
 	.early_enable     = tegra_dc_dp_early_enable,

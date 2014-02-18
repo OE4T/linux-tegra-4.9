@@ -549,24 +549,10 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
-
-/* note: the op here has already been through validate_reg_op_info */
-static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
-				  struct nvhost_dbg_gpu_reg_op *op)
+static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
+			  struct nvhost_dbg_gpu_reg_op *op, u32 offset)
 {
-	int err;
-	u32 buf_offset_lo, buf_offset_addr, num_offsets, offset;
 	bool valid = false;
-
-	op->status = 0;
-	offset = op->offset;
-
-	/* support only 24-bit 4-byte aligned offsets */
-	if (offset & 0xFF000003) {
-		nvhost_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
-		op->status |= REGOP(STATUS_INVALID_OFFSET);
-		return -EINVAL;
-	}
 
 	if (op->type == REGOP(TYPE_GLOBAL)) {
 		/* search global list */
@@ -619,6 +605,31 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 				      gk20a_qctl_whitelist,
 				      gk20a_qctl_whitelist_count);
 	}
+
+	return valid;
+}
+
+/* note: the op here has already been through validate_reg_op_info */
+static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
+				  struct nvhost_dbg_gpu_reg_op *op)
+{
+	int err;
+	u32 buf_offset_lo, buf_offset_addr, num_offsets, offset;
+	bool valid = false;
+
+	op->status = 0;
+	offset = op->offset;
+
+	/* support only 24-bit 4-byte aligned offsets */
+	if (offset & 0xFF000003) {
+		nvhost_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
+		op->status |= REGOP(STATUS_INVALID_OFFSET);
+		return -EINVAL;
+	}
+
+	valid = check_whitelists(dbg_s, op, offset);
+	if ((op->op == REGOP(READ_64) || op->op == REGOP(WRITE_64)) && valid)
+		valid = check_whitelists(dbg_s, op, offset + 4);
 
 	if (valid && (op->type != REGOP(TYPE_GLOBAL))) {
 			err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->g,

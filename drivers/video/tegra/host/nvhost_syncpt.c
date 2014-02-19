@@ -561,7 +561,7 @@ struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 }
 #endif
 
-static const char *get_syncpt_name(struct nvhost_syncpt *sp, int id)
+const char *get_syncpt_name(struct nvhost_syncpt *sp, int id)
 {
 	const char *name = NULL;
 	name = sp->syncpt_names[id];

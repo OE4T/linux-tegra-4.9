@@ -21,6 +21,7 @@
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
+#include "nvhost_syncpt.h"
 
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -102,11 +103,16 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 {
 	u32 channel = gk20a_readl(g, ccsr_channel_r(ch->hw_chid));
 	u32 status = ccsr_channel_status_v(channel);
+	u32 syncpointa, syncpointb;
 	void *inst_ptr;
+	struct nvhost_master *host = nvhost_get_host(g->dev);
 
 	inst_ptr = ch->inst_block.cpuva;
 	if (!inst_ptr)
 		return;
+
+	syncpointa = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w());
+	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
 
 	gk20a_debug_output(o, "%d-%s, pid %d: ", ch->hw_chid,
 			ch->g->dev->name,
@@ -129,12 +135,21 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_fetch_hi_w()) << 32ULL),
 		gk20a_mem_rd32(inst_ptr, ram_fc_pb_header_w()),
 		gk20a_mem_rd32(inst_ptr, ram_fc_pb_count_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w()),
+		syncpointa,
+		syncpointb,
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorea_w()),
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphoreb_w()),
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphored_w()));
+
+	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
+		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
+			pbdma_syncpointb_wait_switch_en_v()))
+		gk20a_debug_output(o, "Waiting on syncpt %u (%s) val %u\n",
+			pbdma_syncpointb_syncpt_index_v(syncpointb),
+			get_syncpt_name(&host->syncpt,
+				pbdma_syncpointb_syncpt_index_v(syncpointb)),
+			pbdma_syncpointa_payload_v(syncpointa));
 
 	gk20a_debug_output(o, "\n");
 }

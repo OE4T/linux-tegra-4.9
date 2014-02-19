@@ -731,6 +731,9 @@ void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
 {
 	struct nvmap_handle_info *info;
 
+	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
+		return;
+
 	if (WARN_ON(!virt_addr_valid(dmabuf)))
 		return;
 
@@ -743,6 +746,9 @@ void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf)
 {
 	void *priv;
 	struct nvmap_handle_info *info;
+
+	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
+		return NULL;
 
 	if (WARN_ON(!virt_addr_valid(dmabuf)))
 		return ERR_PTR(-EINVAL);

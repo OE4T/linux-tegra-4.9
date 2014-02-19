@@ -109,6 +109,7 @@ int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
+const char *get_syncpt_name(struct nvhost_syncpt *sp, int id);
 
 /**
  * Returns true if syncpoint min == max

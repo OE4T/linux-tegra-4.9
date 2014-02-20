@@ -23,6 +23,8 @@ struct quadd_record_data;
 struct quadd_comm_cap;
 struct quadd_module_state;
 struct miscdevice;
+struct quadd_parameters;
+struct quadd_extables;
 
 struct quadd_ring_buffer {
 	char *buf;
@@ -40,8 +42,6 @@ struct quadd_iovec {
 	size_t len;
 };
 
-struct quadd_parameters;
-
 struct quadd_comm_control_interface {
 	int (*start)(void);
 	void (*stop)(void);
@@ -49,6 +49,7 @@ struct quadd_comm_control_interface {
 			      uid_t *debug_app_uid);
 	void (*get_capabilities)(struct quadd_comm_cap *cap);
 	void (*get_state)(struct quadd_module_state *state);
+	int (*set_extab)(struct quadd_extables *extabs);
 };
 
 struct quadd_comm_data_interface {

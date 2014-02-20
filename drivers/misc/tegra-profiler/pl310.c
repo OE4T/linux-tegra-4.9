@@ -336,6 +336,5 @@ struct quadd_event_source_interface *quadd_l2x0_events_init(void)
 
 	pr_debug("pl310 init success, l2x0_base: %p\n", base);
 	return &l2x0_int;
-	return NULL;
 }
 #endif /* CONFIG_CACHE_L2X0 */

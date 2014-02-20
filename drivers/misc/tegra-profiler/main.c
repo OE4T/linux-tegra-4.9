@@ -34,6 +34,7 @@
 #include "auth.h"
 #include "version.h"
 #include "quadd_proc.h"
+#include "eh_unwind.h"
 
 #ifdef CONFIG_CACHE_L2X0
 #include "pl310.h"
@@ -126,6 +127,7 @@ static void stop(void)
 		ctx.comm->reset();
 
 		quadd_power_clk_stop();
+		quadd_unwind_stop();
 
 		if (ctx.pmu)
 			ctx.pmu->disable();
@@ -158,6 +160,7 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 	int nr_pmu = 0, nr_pl310 = 0;
 	int uid = 0;
 	struct task_struct *task;
+	unsigned int extra;
 
 	if (ctx.param.freq != 100 && ctx.param.freq != 1000 &&
 	    ctx.param.freq != 10000)
@@ -171,7 +174,7 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 	ctx.param.power_rate_freq = param->power_rate_freq;
 	ctx.param.debug_samples = param->debug_samples;
 
-	for (i = 0; i < QM_ARRAY_SIZE(param->reserved); i++)
+	for (i = 0; i < ARRAY_SIZE(param->reserved); i++)
 		ctx.param.reserved[i] = param->reserved[i];
 
 	/* Currently only one process */
@@ -266,6 +269,17 @@ static int set_parameters(struct quadd_parameters *param, uid_t *debug_app_uid)
 			ctx.pl310->set_events(NULL, 0);
 		}
 	}
+
+	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
+
+	if (extra & QUADD_PARAM_EXTRA_BT_UNWIND_TABLES)
+		pr_info("unwinding: exception-handling tables\n");
+
+	if (extra & QUADD_PARAM_EXTRA_BT_FP)
+		pr_info("unwinding: frame pointers\n");
+
+	quadd_unwind_start(task);
+
 	pr_info("New parameters have been applied\n");
 
 	return 0;
@@ -411,12 +425,19 @@ void quadd_get_state(struct quadd_module_state *state)
 	state->reserved[QUADD_MOD_STATE_IDX_STATUS] = status;
 }
 
+static int
+set_extab(struct quadd_extables *extabs)
+{
+	return quadd_unwind_set_extab(extabs);
+}
+
 static struct quadd_comm_control_interface control = {
 	.start			= start,
 	.stop			= stop,
 	.set_parameters		= set_parameters,
 	.get_capabilities	= get_capabilities,
 	.get_state		= quadd_get_state,
+	.set_extab		= set_extab,
 };
 
 static int __init quadd_module_init(void)
@@ -503,6 +524,12 @@ static int __init quadd_module_init(void)
 		return err;
 	}
 
+	err = quadd_unwind_init();
+	if (err < 0) {
+		pr_err("error: EH unwinding init failed\n");
+		return err;
+	}
+
 	get_capabilities(&ctx.cap);
 	quadd_proc_init(&ctx);
 
@@ -519,6 +546,7 @@ static void __exit quadd_module_exit(void)
 	quadd_auth_deinit();
 	quadd_proc_deinit();
 	quadd_armv7_pmu_deinit();
+	quadd_unwind_deinit();
 }
 
 module_init(quadd_module_init);

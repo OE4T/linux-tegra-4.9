@@ -24,7 +24,6 @@
 #include <linux/sched.h>
 #include <linux/poll.h>
 #include <linux/bitops.h>
-#include <linux/interrupt.h>
 #include <linux/err.h>
 
 #include <asm/uaccess.h>
@@ -495,11 +494,12 @@ device_ioctl(struct file *file,
 	     unsigned int ioctl_num,
 	     unsigned long ioctl_param)
 {
-	int err;
+	int err = 0;
 	struct quadd_parameters *user_params;
 	struct quadd_comm_cap cap;
 	struct quadd_module_state state;
 	struct quadd_module_version versions;
+	struct quadd_extables extabs;
 	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
 
@@ -518,20 +518,22 @@ device_ioctl(struct file *file,
 	case IOCTL_SETUP:
 		if (atomic_read(&comm_ctx.active)) {
 			pr_err("error: tegra profiler is active\n");
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EBUSY;
+			err = -EBUSY;
+			goto error_out;
 		}
 
 		user_params = vmalloc(sizeof(*user_params));
-		if (!user_params)
-			return -ENOMEM;
+		if (!user_params) {
+			err = -ENOMEM;
+			goto error_out;
+		}
 
 		if (copy_from_user(user_params, (void __user *)ioctl_param,
 				   sizeof(struct quadd_parameters))) {
 			pr_err("setup failed\n");
 			vfree(user_params);
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EFAULT;
+			err = -EFAULT;
+			goto error_out;
 		}
 
 		err = comm_ctx.control->set_parameters(user_params,
@@ -539,8 +541,7 @@ device_ioctl(struct file *file,
 		if (err) {
 			pr_err("error: setup failed\n");
 			vfree(user_params);
-			mutex_unlock(&comm_ctx.io_mutex);
-			return err;
+			goto error_out;
 		}
 		comm_ctx.params_ok = 1;
 		comm_ctx.process_pid = user_params->pids[0];
@@ -548,8 +549,8 @@ device_ioctl(struct file *file,
 		if (user_params->reserved[QUADD_PARAM_IDX_SIZE_OF_RB] == 0) {
 			pr_err("error: too old version of daemon\n");
 			vfree(user_params);
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EINVAL;
+			err = -EINVAL;
+			goto error_out;
 		}
 		comm_ctx.rb_size = user_params->reserved[0];
 
@@ -567,8 +568,8 @@ device_ioctl(struct file *file,
 		if (copy_to_user((void __user *)ioctl_param, &cap,
 				 sizeof(struct quadd_comm_cap))) {
 			pr_err("error: get_capabilities failed\n");
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EFAULT;
+			err = -EFAULT;
+			goto error_out;
 		}
 		break;
 
@@ -582,8 +583,8 @@ device_ioctl(struct file *file,
 		if (copy_to_user((void __user *)ioctl_param, &versions,
 				 sizeof(struct quadd_module_version))) {
 			pr_err("error: get version failed\n");
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EFAULT;
+			err = -EFAULT;
+			goto error_out;
 		}
 		break;
 
@@ -602,8 +603,8 @@ device_ioctl(struct file *file,
 		if (copy_to_user((void __user *)ioctl_param, &state,
 				 sizeof(struct quadd_module_state))) {
 			pr_err("error: get_state failed\n");
-			mutex_unlock(&comm_ctx.io_mutex);
-			return -EFAULT;
+			err = -EFAULT;
+			goto error_out;
 		}
 		break;
 
@@ -612,23 +613,22 @@ device_ioctl(struct file *file,
 			if (!comm_ctx.params_ok) {
 				pr_err("error: params failed\n");
 				atomic_set(&comm_ctx.active, 0);
-				mutex_unlock(&comm_ctx.io_mutex);
-				return -EFAULT;
+				err = -EFAULT;
+				goto error_out;
 			}
 
 			err = rb_init(rb, comm_ctx.rb_size);
 			if (err) {
 				pr_err("error: rb_init failed\n");
 				atomic_set(&comm_ctx.active, 0);
-				mutex_unlock(&comm_ctx.io_mutex);
-				return err;
+				goto error_out;
 			}
 
-			if (comm_ctx.control->start()) {
+			err = comm_ctx.control->start();
+			if (err) {
 				pr_err("error: start failed\n");
 				atomic_set(&comm_ctx.active, 0);
-				mutex_unlock(&comm_ctx.io_mutex);
-				return -EFAULT;
+				goto error_out;
 			}
 			pr_info("Start profiling success\n");
 		}
@@ -643,15 +643,30 @@ device_ioctl(struct file *file,
 		}
 		break;
 
+	case IOCTL_SET_EXTAB:
+		if (copy_from_user(&extabs, (void __user *)ioctl_param,
+				   sizeof(extabs))) {
+			pr_err("error: set_extab failed\n");
+			err = -EFAULT;
+			goto error_out;
+		}
+
+		err = comm_ctx.control->set_extab(&extabs);
+		if (err) {
+			pr_err("error: set_extab\n");
+			goto error_out;
+		}
+		break;
+
 	default:
 		pr_err("error: ioctl %u is unsupported in this version of module\n",
 		       ioctl_num);
-		mutex_unlock(&comm_ctx.io_mutex);
-		return -EFAULT;
+		err = -EFAULT;
 	}
-	mutex_unlock(&comm_ctx.io_mutex);
 
-	return 0;
+error_out:
+	mutex_unlock(&comm_ctx.io_mutex);
+	return err;
 }
 
 static void unregister(void)
@@ -690,7 +705,7 @@ static int comm_init(void)
 
 	res = misc_register(misc_dev);
 	if (res < 0) {
-		pr_err("Error: misc_register %d\n", res);
+		pr_err("Error: misc_register: %d\n", res);
 		return res;
 	}
 	comm_ctx.misc_dev = misc_dev;

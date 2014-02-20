@@ -134,7 +134,7 @@ static void put_header(void)
 	hdr->power_rate_freq = param->power_rate_freq;
 
 	hdr->power_rate = hdr->power_rate_freq > 0 ? 1 : 0;
-	hdr->get_mmap = (extra & QUADD_PARAM_IDX_EXTRA_GET_MMAP) ? 1 : 0;
+	hdr->get_mmap = (extra & QUADD_PARAM_EXTRA_GET_MMAP) ? 1 : 0;
 
 	hdr->reserved = 0;
 	hdr->extra_length = 0;
@@ -223,7 +223,7 @@ static int read_source(struct quadd_event_source_interface *source,
 		if (s->event_source == QUADD_EVENT_SOURCE_PL310) {
 			int nr_active = atomic_read(&hrt.nr_active_all_core);
 			if (nr_active > 1)
-				res_val = res_val / nr_active;
+				res_val /= nr_active;
 		}
 
 		events_vals[i].event_id = s->event_id;
@@ -249,7 +249,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
-	struct quadd_callchain *cc_data = &cpu_ctx->callchain_data;
+	struct quadd_callchain *cc = &cpu_ctx->cc;
 
 	if (!regs)
 		return;
@@ -294,14 +294,21 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	if (get_sample_data(s, regs, task))
 		return;
 
+	s->reserved = 0;
+
 	if (ctx->param.backtrace) {
-		bt_size = quadd_get_user_callchain(user_regs, cc_data);
+		bt_size = quadd_get_user_callchain(user_regs, cc, ctx);
 		if (bt_size > 0) {
-			vec[vec_idx].base = cc_data->callchain;
+			vec[vec_idx].base = cc->ip;
 			vec[vec_idx].len =
-				bt_size * sizeof(cc_data->callchain[0]);
+				bt_size * sizeof(cc->ip[0]);
 			vec_idx++;
 		}
+
+		s->reserved |= cc->unw_method << QUADD_SAMPLE_UNW_METHOD_SHIFT;
+
+		if (cc->unw_method == QUADD_UNW_METHOD_EHT)
+			s->reserved |= cc->unw_rc << QUADD_SAMPLE_URC_SHIFT;
 	}
 	s->callchain_nr = bt_size;
 
@@ -474,7 +481,6 @@ void __quadd_event_mmap(struct vm_area_struct *vma)
 	param = &hrt.quadd_ctx->param;
 	quadd_process_mmap(vma, param->pids[0]);
 }
-EXPORT_SYMBOL(__quadd_event_mmap);
 
 static void reset_cpu_ctx(void)
 {
@@ -520,7 +526,7 @@ int quadd_hrt_start(void)
 
 	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
 
-	if (extra & QUADD_PARAM_IDX_EXTRA_GET_MMAP) {
+	if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
 		err = quadd_get_current_mmap(param->pids[0]);
 		if (err) {
 			pr_err("error: quadd_get_current_mmap\n");

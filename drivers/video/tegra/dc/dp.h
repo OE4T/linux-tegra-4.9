@@ -36,13 +36,6 @@
 #define DP_AUX_TIMEOUT_MS		40
 #define DP_DPCP_RETRY_SLEEP_NS		400
 
-enum {
-	driveCurrent_Level0 = 0,
-	driveCurrent_Level1 = 1,
-	driveCurrent_Level2 = 2,
-	driveCurrent_Level3 = 3,
-};
-
 static const u32 tegra_dp_vs_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -78,13 +71,6 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 	},
 };
 
-enum {
-	preEmphasis_Disabled = 0,
-	preEmphasis_Level1   = 1,
-	preEmphasis_Level2   = 2,
-	preEmphasis_Level3   = 3,
-};
-
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -118,14 +104,6 @@ static const u32 tegra_dp_pe_regs[][4][4] = {
 		{0x00, 0x14},
 		{0x00},
 	},
-};
-
-enum {
-	postCursor2_Level0 = 0,
-	postCursor2_Level1 = 1,
-	postCursor2_Level2 = 2,
-	postCursor2_Level3 = 3,
-	postCursor2_Supported
 };
 
 static const u32 tegra_dp_pc_regs[][4][4] = {
@@ -201,17 +179,17 @@ static const u32 tegra_dp_tx_pu[][4][4] = {
 
 static inline int tegra_dp_is_max_vs(u32 pe, u32 vs)
 {
-	return (vs < (driveCurrent_Level3 - pe)) ? 0 : 1;
+	return (vs < (DRIVE_CURRENT_L3 - pe)) ? 0 : 1;
 }
 
 static inline int tegra_dp_is_max_pe(u32 pe, u32 vs)
 {
-	return (pe < (preEmphasis_Level3 - vs)) ? 0 : 1;
+	return (pe < (PRE_EMPHASIS_L3 - vs)) ? 0 : 1;
 }
 
 static inline int tegra_dp_is_max_pc(u32 pc)
 {
-	return (pc < postCursor2_Level3) ? 0 : 1;
+	return (pc < POST_CURSOR2_L3) ? 0 : 1;
 }
 
 /* the +10ms is the time for power rail going up from 10-90% or
@@ -240,6 +218,7 @@ struct tegra_dc_dp_data {
 
 	struct tegra_dc_mode		*mode;
 	struct tegra_dc_dp_link_config	 link_cfg;
+	struct tegra_dc_dp_link_config	max_link_cfg;
 
 	bool				 enabled;
 	bool				 suspended;
@@ -302,6 +281,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 #define NV_DPCD_TRAINING_AUX_RD_INTERVAL		(0x0000000E)
 #define NV_DPCD_LINK_BANDWIDTH_SET			(0x00000100)
 #define NV_DPCD_LANE_COUNT_SET				(0x00000101)
+#define NV_DPCD_LANE_COUNT_SET_MASK			(0x1f)
 #define NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_F	(0x00000000 << 7)
 #define NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T	(0x00000001 << 7)
 #define NV_DPCD_TRAINING_PATTERN_SET			(0x00000102)

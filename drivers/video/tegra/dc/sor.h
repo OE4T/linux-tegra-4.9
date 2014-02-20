@@ -19,11 +19,10 @@
 #define __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 
 enum {
-	trainingPattern_Disabled	= 0,
-	trainingPattern_1		= 1,
-	trainingPattern_2		= 2,
-	trainingPattern_3		= 3,
-	trainingPattern_None		= 0xff
+	TRAINING_PATTERN_DISABLE = 0,
+	TRAINING_PATTERN_1 = 1,
+	TRAINING_PATTERN_2 = 2,
+	TRAINING_PATTERN_3 = 3,
 };
 
 enum tegra_dc_sor_protocol {
@@ -37,7 +36,10 @@ enum tegra_dc_sor_protocol {
 #define SOR_LINK_SPEED_LVDS	7
 
 struct tegra_dc_dp_link_config {
-	bool	is_valid;
+	bool	is_valid;	/*
+				 * True if link config adheres to dp spec.
+				 * Does not guarantee link training success.
+				 */
 
 	/* Supported configuration */
 	u8	max_link_bw;
@@ -65,11 +67,13 @@ struct tegra_dc_dp_link_config {
 	s32	hblank_sym;
 	s32	vblank_sym;
 
-	/* Training data from full LT */
-	bool	vs_pe_valid;
-	u32	drive_current;
-	u32     preemphasis;
-	u32	postcursor;
+	bool	lt_data_valid;	/*
+				 * True only if link training passed with this
+				 * drive_current, preemphasis and postcursor.
+				 */
+	u32	drive_current[4];
+	u32	preemphasis[4];
+	u32	postcursor[4];
 
 	bool	tps3_supported;
 	u8	aux_rd_interval;
@@ -91,6 +95,7 @@ struct tegra_dc_sor_data {
 
 #define TEGRA_SOR_TIMEOUT_MS		1000
 #define TEGRA_SOR_ATTACH_TIMEOUT_MS	100000
+#define TEGRA_SOR_SEQ_BUSY_TIMEOUT_MS	10000
 
 #define CHECK_RET(x)			\
 	do {				\
@@ -129,12 +134,14 @@ void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds);
 void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor);
-void tegra_dc_sor_set_lane_parm(struct tegra_dc_sor_data *sor,
-	const struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
 	int pu_pd);
 void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,
 	bool is_lvds);
+void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes);
+void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb);
+int tegra_sor_power_dp_lanes(struct tegra_dc_sor_data *sor,
+					u32 lane_count, bool pu);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

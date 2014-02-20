@@ -766,7 +766,7 @@ struct nvhost_hwctx *gk20a_open_channel(struct nvhost_channel *ch,
 	/* set gr host default timeout */
 	ch_gk20a->hwctx->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch_gk20a->hwctx->timeout_debug_dump = true;
-	ch_gk20a->has_timedout = false;
+	ch_gk20a->hwctx->has_timedout = false;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */

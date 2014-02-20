@@ -17,8 +17,6 @@
 #ifndef __QUADD_HRT_H
 #define __QUADD_HRT_H
 
-#define QUADD_MAX_STACK_DEPTH		64
-
 #ifdef __KERNEL__
 
 #include <linux/hrtimer.h>
@@ -34,7 +32,7 @@ struct quadd_thread_data {
 struct quadd_cpu_context {
 	struct hrtimer hrtimer;
 
-	struct quadd_callchain callchain_data;
+	struct quadd_callchain cc;
 	char mmap_filename[PATH_MAX];
 
 	struct quadd_thread_data active_thread;

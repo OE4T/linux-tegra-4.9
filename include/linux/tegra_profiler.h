@@ -19,18 +19,20 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	21
-#define QUADD_IO_VERSION	9
+#define QUADD_SAMPLES_VERSION	22
+#define QUADD_IO_VERSION	10
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
 #define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD	7
 #define QUADD_IO_VERSION_BT_KERNEL_CTX		8
 #define QUADD_IO_VERSION_GET_MMAP		9
+#define QUADD_IO_VERSION_BT_UNWIND_TABLES	10
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
 #define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD	19
+#define QUADD_SAMPLE_VERSION_BT_UNWIND_TABLES	22
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -73,8 +75,10 @@
  */
 #define IOCTL_GET_VERSION _IOR(QUADD_IOCTL, 5, struct quadd_module_version)
 
-
-#define QUADD_HRT_SCHED_IN_FUNC		"finish_task_switch"
+/*
+ * Send exception-handling tables info
+ */
+#define IOCTL_SET_EXTAB _IOW(QUADD_IOCTL, 6, struct quadd_extables)
 
 #define QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP	(1 << 29)	/* LP CPU */
 #define QUADD_CPUMODE_THUMB			(1 << 30)	/* thumb mode */
@@ -131,6 +135,32 @@ enum quadd_cpu_mode {
 typedef u32 quadd_bt_addr_t;
 
 #pragma pack(push, 1)
+
+#define QUADD_SAMPLE_UNW_METHOD_SHIFT	0
+#define QUADD_SAMPLE_UNW_METHOD_MASK	(1 << QUADD_SAMPLE_UNW_METHOD_SHIFT)
+
+enum {
+	QUADD_UNW_METHOD_FP = 0,
+	QUADD_UNW_METHOD_EHT,
+};
+
+#define QUADD_SAMPLE_URC_SHIFT		1
+#define QUADD_SAMPLE_URC_MASK		(0x0f << QUADD_SAMPLE_URC_SHIFT)
+
+enum {
+	QUADD_URC_SUCCESS = 0,
+	QUADD_URC_FAILURE,
+	QUADD_URC_IDX_NOT_FOUND,
+	QUADD_URC_TBL_NOT_EXIST,
+	QUADD_URC_EACCESS,
+	QUADD_URC_TBL_IS_CORRUPT,
+	QUADD_URC_CANTUNWIND,
+	QUADD_URC_UNHANDLED_INSTRUCTION,
+	QUADD_URC_REFUSE_TO_UNWIND,
+	QUADD_URC_SP_INCORRECT,
+	QUADD_URC_SPARE_ENCODING,
+	QUADD_URC_UNSUPPORTED_PR,
+};
 
 struct quadd_sample_data {
 	u64 ip;
@@ -260,7 +290,9 @@ enum {
 	QUADD_PARAM_IDX_EXTRA		= 1,
 };
 
-#define QUADD_PARAM_IDX_EXTRA_GET_MMAP	(1 << 0)
+#define QUADD_PARAM_EXTRA_GET_MMAP		(1 << 0)
+#define QUADD_PARAM_EXTRA_BT_FP			(1 << 1)
+#define QUADD_PARAM_EXTRA_BT_UNWIND_TABLES	(1 << 2)
 
 struct quadd_parameters {
 	u32 freq;
@@ -306,6 +338,7 @@ enum {
 #define QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX	(1 << 0)
 #define QUADD_COMM_CAP_EXTRA_GET_MMAP		(1 << 1)
 #define QUADD_COMM_CAP_EXTRA_GROUP_SAMPLES	(1 << 2)
+#define QUADD_COMM_CAP_EXTRA_BT_UNWIND_TABLES	(1 << 3)
 
 struct quadd_comm_cap {
 	u32	pmu:1,
@@ -344,6 +377,21 @@ struct quadd_module_version {
 
 	u32 samples_version;
 	u32 io_version;
+
+	u32 reserved[4];	/* reserved fields for future extensions */
+};
+
+struct quadd_sec_info {
+	u64 addr;
+	u64 length;
+};
+
+struct quadd_extables {
+	u64 vm_start;
+	u64 vm_end;
+
+	struct quadd_sec_info extab;
+	struct quadd_sec_info exidx;
 
 	u32 reserved[4];	/* reserved fields for future extensions */
 };

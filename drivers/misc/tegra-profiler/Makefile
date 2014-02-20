@@ -26,7 +26,8 @@ tegra-profiler-objs := \
 	ma.o \
 	power_clk.o \
 	auth.o \
-	quadd_proc.o
+	quadd_proc.o \
+	eh_unwind.o
 
 ifdef CONFIG_CACHE_L2X0
 tegra-profiler-objs += pl310.o

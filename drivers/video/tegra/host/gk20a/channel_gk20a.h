@@ -33,7 +33,6 @@ struct dbg_session_gk20a;
 #include "nvhost_channel.h"
 #include "channel_gk20a.h"
 
-#include "cdma_gk20a.h"
 #include "mm_gk20a.h"
 #include "gr_gk20a.h"
 

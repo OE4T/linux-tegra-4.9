@@ -89,15 +89,8 @@ void nvhost_vi_deinit(struct platform_device *dev)
 
 int nvhost_vi_finalize_poweron(struct platform_device *dev)
 {
-	int ret = 0, dev_id;
+	int ret = 0;
 	struct vi *tegra_vi;
-	const char *devname = dev_name(&dev->dev);
-
-	ret = sscanf(devname, "vi.%1d", &dev_id);
-	if (ret != 1) {
-		dev_err(&dev->dev, "Read dev_id failed!\n");
-		return -ENODEV;
-	}
 
 	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
 	if (tegra_vi && tegra_vi->reg) {
@@ -111,7 +104,7 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	}
 
 	/* Only do this for vi.0 not for slave device vi.1 */
-	if (dev_id == 0)
+	if (dev->id == 0)
 		host1x_writel(dev, T12_VI_CFG_CG_CTRL, T12_CG_2ND_LEVEL_EN);
 
  fail:

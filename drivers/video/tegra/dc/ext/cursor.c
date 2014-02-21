@@ -83,17 +83,15 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 	clip_win = CURSOR_CLIP_GET_WINDOW(tegra_dc_readl(dc,
 					  DC_DISP_CURSOR_START_ADDR));
 	val |= clip_win;
-#if defined(CONFIG_TEGRA_DC_64BIT_SUPPORT)
-	/* TO DO: check calculation with HW */
-	tegra_dc_writel(dc,
-		(u32)(CURSOR_START_ADDR_HI(phys_addr)),
-		DC_DISP_CURSOR_START_ADDR_HI);
-	tegra_dc_writel(dc, (u32)(val |
-			CURSOR_START_ADDR_LOW(phys_addr)),
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_dc_writel(dc, val | CURSOR_START_ADDR(((unsigned long)phys_addr)),
 		DC_DISP_CURSOR_START_ADDR);
 #else
-	tegra_dc_writel(dc,
-		val | CURSOR_START_ADDR(((unsigned long) phys_addr)),
+	/* TO DO: check calculation with HW */
+	tegra_dc_writel(dc, (u32)(CURSOR_START_ADDR_HI(phys_addr)),
+		DC_DISP_CURSOR_START_ADDR_HI);
+	tegra_dc_writel(dc, (u32)(val | CURSOR_START_ADDR_LOW(phys_addr)),
 		DC_DISP_CURSOR_START_ADDR);
 #endif
 

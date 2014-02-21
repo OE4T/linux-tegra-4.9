@@ -331,14 +331,24 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-static inline u32 tegra_dc_reg_l32(dma_addr_t reg)
+static inline u32 tegra_dc_reg_l32(dma_addr_t v)
 {
-	return reg & 0xffffffff;
+	return v & 0xffffffff;
 }
 
-static inline u32 tegra_dc_reg_h32(dma_addr_t reg)
+static inline u32 tegra_dc_reg_h32(dma_addr_t v)
 {
-	return reg >> 32;
+	return v >> 32;
+}
+#else
+static inline u32 tegra_dc_reg_l32(dma_addr_t v)
+{
+	return v;
+}
+
+static inline u32 tegra_dc_reg_h32(dma_addr_t v)
+{
+	return 0;
 }
 #endif
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;

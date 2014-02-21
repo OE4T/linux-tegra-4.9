@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -576,57 +576,48 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
 #endif
 
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
-		tegra_dc_writel(dc,
-			tegra_dc_reg_l32(win->phys_addr),
-			DC_WINBUF_START_ADDR);
-		tegra_dc_writel(dc,
-			tegra_dc_reg_h32(win->phys_addr),
-			DC_WINBUF_START_ADDR_HI);
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		tegra_dc_writel(dc, win->phys_addr, DC_WINBUF_START_ADDR);
 #else
-		tegra_dc_writel(dc, win->phys_addr,
+		tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr),
 			DC_WINBUF_START_ADDR);
+		tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr),
+			DC_WINBUF_START_ADDR_HI);
 #endif
 		if (!yuvp && !yuvsp) {
 			tegra_dc_writel(dc, win->stride, DC_WIN_LINE_STRIDE);
 		} else if (yuvp) {
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
-			tegra_dc_writel(dc,
-				tegra_dc_reg_l32(win->phys_addr_u),
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			tegra_dc_writel(dc, win->phys_addr_u,
 				DC_WINBUF_START_ADDR_U);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_h32(win->phys_addr_u),
-				DC_WINBUF_START_ADDR_HI_U);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_l32(win->phys_addr_v),
+			tegra_dc_writel(dc, win->phys_addr_v,
 				DC_WINBUF_START_ADDR_V);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_h32(win->phys_addr_v),
-				DC_WINBUF_START_ADDR_HI_V);
 #else
-			tegra_dc_writel(dc,
-				win->phys_addr_u,
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u),
 				DC_WINBUF_START_ADDR_U);
-			tegra_dc_writel(dc,
-				win->phys_addr_v,
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u),
+				DC_WINBUF_START_ADDR_HI_U);
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_v),
 				DC_WINBUF_START_ADDR_V);
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_v),
+				DC_WINBUF_START_ADDR_HI_V);
 #endif
 			tegra_dc_writel(dc,
 				LINE_STRIDE(win->stride) |
 				UV_LINE_STRIDE(win->stride_uv),
 				DC_WIN_LINE_STRIDE);
 		} else {
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
-			tegra_dc_writel(dc,
-				tegra_dc_reg_l32(win->phys_addr_u),
-				DC_WINBUF_START_ADDR_U);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_h32(win->phys_addr_u),
-				DC_WINBUF_START_ADDR_HI_U);
-#else
-			tegra_dc_writel(dc,
-					win->phys_addr_u,
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			tegra_dc_writel(dc, win->phys_addr_u,
 					DC_WINBUF_START_ADDR_U);
+#else
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u),
+				DC_WINBUF_START_ADDR_U);
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u),
+				DC_WINBUF_START_ADDR_HI_U);
 #endif
 			tegra_dc_writel(dc,
 					LINE_STRIDE(win->stride) |
@@ -660,7 +651,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
 		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
 
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 			tegra_dc_writel(dc, tegra_dc_reg_l32
 				(win->phys_addr2),
 				DC_WINBUF_START_ADDR_FIELD2);
@@ -673,43 +664,35 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n)
 				DC_WINBUF_START_ADDR_FIELD2);
 #endif
 		if (yuvp) {
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
-			tegra_dc_writel(dc,
-				tegra_dc_reg_l32(win->phys_addr_u2),
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			tegra_dc_writel(dc, win->phys_addr_u2,
 				DC_WINBUF_START_ADDR_FIELD2_U);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_h32(win->phys_addr_u2),
+
+			tegra_dc_writel(dc, win->phys_addr_v2,
+				DC_WINBUF_START_ADDR_FIELD2_V);
+#else
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u2),
+				DC_WINBUF_START_ADDR_FIELD2_U);
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u2),
 				DC_WINBUF_START_ADDR_FIELD2_HI_U);
 
-			tegra_dc_writel(dc,
-				tegra_dc_reg_l32(win->phys_addr_v2),
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_v2),
 				DC_WINBUF_START_ADDR_FIELD2_V);
-			tegra_dc_writel(dc,
-				tegra_dc_reg_h32(win->phys_addr_v2),
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_v2),
 				DC_WINBUF_START_ADDR_FIELD2_HI_V);
-#else
-			tegra_dc_writel(dc,
-				win->phys_addr_u2,
-				DC_WINBUF_START_ADDR_FIELD2_U);
-
-			tegra_dc_writel(dc,
-				win->phys_addr_v2,
-				DC_WINBUF_START_ADDR_FIELD2_V);
 #endif
 		} else if (yuvsp) {
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
-			tegra_dc_writel(dc, tegra_dc_reg_l32
-				(win->phys_addr_u2),
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+			tegra_dc_writel(dc, win->phys_addr_u2,
 				DC_WINBUF_START_ADDR_FIELD2_U);
-			tegra_dc_writel(dc, tegra_dc_reg_h32
-				(win->phys_addr_u2),
-				DC_WINBUF_START_ADDR_FIELD2_HI_U);
 #else
-			tegra_dc_writel(dc,
-				win->phys_addr_u2,
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u2),
 				DC_WINBUF_START_ADDR_FIELD2_U);
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u2),
+				DC_WINBUF_START_ADDR_FIELD2_HI_U);
 #endif
-		} else {
 		}
 		tegra_dc_writel(dc, dfixed_trunc(h_offset),
 			DC_WINBUF_ADDR_H_OFFSET_FIELD2);

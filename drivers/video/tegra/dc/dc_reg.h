@@ -408,8 +408,13 @@
 #define DC_DISP_CURSOR_START_ADDR_NS		0x43f
 #define CURSOR_START_ADDR_MASK	(((1 << 22) - 1) << 10)
 #define CURSOR_START_ADDR(_addr)	((_addr) >> 10)
+#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 #define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
 #define	CURSOR_START_ADDR_HI(_addr) ((_addr >> 32) & 0x3)
+#else
+#define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
+#define	CURSOR_START_ADDR_HI(_addr) (0)
+#endif
 #define   CURSOR_SIZE_64		(0x1 << 24)
 #define   CURSOR_SIZE_128		(0x2 << 24)
 #define   CURSOR_SIZE_256		(0x3 << 24)

@@ -404,61 +404,99 @@ static void tegra_fb_imageblit(struct fb_info *info,
 	cfb_imageblit(info, image);
 }
 
-static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
+static int tegra_get_modedb(struct tegra_dc *dc, struct tegra_fb_modedb *modedb,
+	struct fb_info *info)
 {
+	unsigned i;
+	struct fb_var_screeninfo *modedb_ptr;
+	struct fb_modelist *modelist;
+
+	i = 0;
+	modedb_ptr = user_ptr(modedb->modedb);
+	list_for_each_entry(modelist, &info->modelist, list) {
+		struct fb_var_screeninfo var;
+
+		/* fb_videomode_to_var doesn't fill out all the members
+		   of fb_var_screeninfo */
+		memset(&var, 0x0, sizeof(var));
+
+		fb_videomode_to_var(&var, &modelist->mode);
+		var.width = tegra_dc_get_out_width(dc);
+		var.height = tegra_dc_get_out_height(dc);
+
+		if (i < modedb->modedb_len) {
+			void __user *ptr = &modedb_ptr[i];
+
+			if (copy_to_user(ptr, &var, sizeof(var)))
+				return -EFAULT;
+		}
+		i++;
+
+		if (var.vmode & FB_VMODE_STEREO_MASK) {
+			if (i < modedb->modedb_len) {
+				void __user *ptr = &modedb_ptr[i];
+
+				var.vmode &= ~FB_VMODE_STEREO_MASK;
+				if (copy_to_user(ptr,
+					&var, sizeof(var)))
+					return -EFAULT;
+			}
+			i++;
+		}
+	}
+
+	/*
+	 * If modedb_len == 0, return how many modes are
+	 * available; otherwise, return how many modes were written.
+	 */
+	if (modedb->modedb_len == 0)
+		modedb->modedb_len = i;
+	else
+		modedb->modedb_len = min(modedb->modedb_len, i);
+
+	return 0;
+}
+
+static int tegra_fb_ioctl(struct fb_info *info,
+	unsigned int cmd, unsigned long arg)
+{
+	int res;
 	struct tegra_fb_info *tegra_fb = (struct tegra_fb_info *)info->par;
 	struct tegra_dc *dc = tegra_fb->win->dc;
 	struct tegra_fb_modedb modedb;
-	struct fb_modelist *modelist;
 	struct fb_vblank vblank = {};
-	struct fb_var_screeninfo *modedb_ptr;
-	unsigned i;
 
 	switch (cmd) {
+#ifdef CONFIG_COMPAT
+	case FBIO_TEGRA_GET_MODEDB_COMPAT: {
+		struct tegra_fb_modedb_compat modedb_compat;
+
+		if (copy_from_user(&modedb_compat, (void __user *)arg,
+			sizeof(modedb_compat)))
+			return -EFAULT;
+		/* convert compat version to full version */
+		modedb.modedb = (void __user *)modedb_compat.modedb;
+		modedb.modedb_len = modedb_compat.modedb_len;
+
+		res = tegra_get_modedb(dc, &modedb, info);
+		if (res)
+			return res;
+
+		/* convert full version back to compat version */
+		modedb_compat.modedb_len = modedb.modedb_len;
+		if (copy_to_user((void __user *)arg, &modedb_compat,
+			sizeof(modedb_compat)))
+			return -EFAULT;
+		break;
+	}
+#endif
 	case FBIO_TEGRA_GET_MODEDB:
 		if (copy_from_user(&modedb, (void __user *)arg, sizeof(modedb)))
 			return -EFAULT;
 
-		i = 0;
-		modedb_ptr = user_ptr(modedb.modedb);
-		list_for_each_entry(modelist, &info->modelist, list) {
-			struct fb_var_screeninfo var;
-
-			/* fb_videomode_to_var doesn't fill out all the members
-			   of fb_var_screeninfo */
-			memset(&var, 0x0, sizeof(var));
-
-			fb_videomode_to_var(&var, &modelist->mode);
-			var.width = tegra_dc_get_out_width(dc);
-			var.height = tegra_dc_get_out_height(dc);
-
-			if (i < modedb.modedb_len) {
-				void __user *ptr = &modedb_ptr[i];
-				if (copy_to_user(ptr, &var, sizeof(var)))
-					return -EFAULT;
-			}
-			i++;
-
-			if (var.vmode & FB_VMODE_STEREO_MASK) {
-				if (i < modedb.modedb_len) {
-					void __user *ptr = &modedb_ptr[i];
-					var.vmode &= ~FB_VMODE_STEREO_MASK;
-					if (copy_to_user(ptr,
-						&var, sizeof(var)))
-						return -EFAULT;
-				}
-				i++;
-			}
-		}
-
-		/*
-		 * If modedb_len == 0, return how many modes are
-		 * available; otherwise, return how many modes were written.
-		 */
-		if (modedb.modedb_len == 0)
-			modedb.modedb_len = i;
-		else
-			modedb.modedb_len = min(modedb.modedb_len, i);
+		res = tegra_get_modedb(dc, &modedb, info);
+		if (res)
+			return res;
 
 		if (copy_to_user((void __user *)arg, &modedb, sizeof(modedb)))
 			return -EFAULT;

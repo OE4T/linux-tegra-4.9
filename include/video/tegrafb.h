@@ -4,6 +4,8 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
+ * Copyright (c) 2014 NVIDIA CORPORATION. All rights reserved.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -26,13 +28,19 @@
 #endif
 
 struct tegra_fb_modedb {
-#ifdef CONFIG_COMPAT
-	__u32 modedb;
-#else
 	struct fb_var_screeninfo *modedb;
-#endif
 	__u32 modedb_len;
 };
+
+#ifdef CONFIG_COMPAT
+struct tegra_fb_modedb_compat {
+	__u32 modedb;
+	__u32 modedb_len;
+};
+
+#define FBIO_TEGRA_GET_MODEDB_COMPAT \
+		_IOWR('F', 0x42, struct tegra_fb_modedb_compat)
+#endif
 
 #define FBIO_TEGRA_GET_MODEDB	_IOWR('F', 0x42, struct tegra_fb_modedb)
 

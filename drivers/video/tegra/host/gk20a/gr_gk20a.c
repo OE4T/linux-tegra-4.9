@@ -52,7 +52,6 @@
 #include "hw_therm_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 #include "gk20a_gating_reglist.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
@@ -1766,7 +1765,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 					&ucode_info->surface_desc.sgt,
 					ucode_info->surface_desc.size,
 					0, /* flags */
-					mem_flag_read_only);
+					gk20a_mem_flag_read_only);
 	if (!ucode_info->ucode_gpuva) {
 		nvhost_err(d, "failed to update gmmu ptes\n");
 		return -ENOMEM;
@@ -1909,7 +1908,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
  clean_up:
 	if (ucode_info->ucode_gpuva)
 		gk20a_gmmu_unmap(vm, ucode_info->ucode_gpuva,
-			ucode_info->surface_desc.size, mem_flag_none);
+			ucode_info->surface_desc.size, gk20a_mem_flag_none);
 	if (ucode_info->surface_desc.sgt)
 		gk20a_free_sgtable(&ucode_info->surface_desc.sgt);
 	if (ucode_info->surface_desc.cpuva)
@@ -2337,7 +2336,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -2353,7 +2352,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -2369,7 +2368,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -2378,7 +2377,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	sgt = gr->global_ctx_buffer[GOLDEN_CTX].sgt;
 	size = gr->global_ctx_buffer[GOLDEN_CTX].size;
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size, 0,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
@@ -2391,7 +2390,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		if (g_bfr_va[i]) {
 			gk20a_gmmu_unmap(ch_vm, g_bfr_va[i],
 					 gr->global_ctx_buffer[i].size,
-					 mem_flag_none);
+					 gk20a_mem_flag_none);
 			g_bfr_va[i] = 0;
 		}
 	}
@@ -2411,7 +2410,7 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 		if (g_bfr_va[i]) {
 			gk20a_gmmu_unmap(ch_vm, g_bfr_va[i],
 					 gr->global_ctx_buffer[i].size,
-					 mem_flag_none);
+					 gk20a_mem_flag_none);
 			g_bfr_va[i] = 0;
 		}
 	}
@@ -2454,7 +2453,7 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 
 	gr_ctx->gpu_va = gk20a_gmmu_map(ch_vm, &sgt, gr_ctx->size,
 				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 	if (!gr_ctx->gpu_va)
 		goto err_free_sgt;
 
@@ -2484,7 +2483,7 @@ static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 	nvhost_dbg_fn("");
 
 	gk20a_gmmu_unmap(ch_vm, ch_ctx->gr_ctx.gpu_va,
-			ch_ctx->gr_ctx.size, mem_flag_none);
+			ch_ctx->gr_ctx.size, gk20a_mem_flag_none);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 	dma_free_attrs(d, ch_ctx->gr_ctx.size,
 		ch_ctx->gr_ctx.pages, ch_ctx->gr_ctx.iova, &attrs);
@@ -2520,7 +2519,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 		goto err_free;
 
 	patch_ctx->gpu_va = gk20a_gmmu_map(ch_vm, &sgt, patch_ctx->size,
-					0, mem_flag_none);
+					0, gk20a_mem_flag_none);
 	if (!patch_ctx->gpu_va)
 		goto err_free_sgtable;
 
@@ -2549,7 +2548,7 @@ static void gr_gk20a_unmap_channel_patch_ctx(struct channel_gk20a *c)
 
 	if (patch_ctx->gpu_va)
 		gk20a_gmmu_unmap(ch_vm, patch_ctx->gpu_va,
-			patch_ctx->size, mem_flag_none);
+			patch_ctx->size, gk20a_mem_flag_none);
 	patch_ctx->gpu_va = 0;
 	patch_ctx->data_count = 0;
 }

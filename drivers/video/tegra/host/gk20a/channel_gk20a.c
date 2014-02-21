@@ -35,7 +35,6 @@
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
 
-#include "nvhost_memmgr.h"
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
@@ -643,7 +642,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	/* free gpfifo */
 	if (ch->gpfifo.gpu_va)
 		gk20a_gmmu_unmap(ch_vm, ch->gpfifo.gpu_va,
-			ch->gpfifo.size, mem_flag_none);
+			ch->gpfifo.size, gk20a_mem_flag_none);
 	if (ch->gpfifo.cpu_va)
 		dma_free_coherent(d, ch->gpfifo.size,
 			ch->gpfifo.cpu_va, ch->gpfifo.iova);
@@ -834,7 +833,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	q->base_gpuva = gk20a_gmmu_map(ch_vm, &sgt,
 					size,
 					0, /* flags */
-					mem_flag_none);
+					gk20a_mem_flag_none);
 	if (!q->base_gpuva) {
 		nvhost_err(d, "ch %d : failed to map gpu va"
 			   "for priv cmd buffer", c->hw_chid);
@@ -884,7 +883,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 
 	if (q->base_gpuva)
 		gk20a_gmmu_unmap(ch_vm, q->base_gpuva,
-				q->mem.size, mem_flag_none);
+				q->mem.size, gk20a_mem_flag_none);
 	if (q->mem.base_cpuva)
 		dma_free_coherent(d, q->mem.size,
 			q->mem.base_cpuva, q->mem.base_iova);
@@ -1135,7 +1134,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 					&sgt,
 					c->gpfifo.size,
 					0, /* flags */
-					mem_flag_none);
+					gk20a_mem_flag_none);
 	if (!c->gpfifo.gpu_va) {
 		nvhost_err(d, "channel %d : failed to map"
 			   " gpu_va for gpfifo", c->hw_chid);
@@ -1170,7 +1169,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 clean_up_unmap:
 	gk20a_gmmu_unmap(ch_vm, c->gpfifo.gpu_va,
-		c->gpfifo.size, mem_flag_none);
+		c->gpfifo.size, gk20a_mem_flag_none);
 clean_up_sgt:
 	gk20a_free_sgtable(&sgt);
 clean_up:

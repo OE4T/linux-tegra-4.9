@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/t20/debug_gk20a.c
  *
- * Copyright (C) 2011-2013 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2014 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,7 +21,6 @@
 
 #include "dev.h"
 #include "debug.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_cdma.h"
 #include "nvhost_acm.h"
 

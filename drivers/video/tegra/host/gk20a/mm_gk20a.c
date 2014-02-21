@@ -30,8 +30,11 @@
 #include <linux/vmalloc.h>
 #include <asm/cacheflush.h>
 
+#ifdef CONFIG_TEGRA_NVMAP
+#include <linux/nvmap.h>
+#endif
+
 #include "dev.h"
-#include "nvhost_memmgr.h"
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "hw_gmmu_gk20a.h"
@@ -61,8 +64,8 @@
  *  - Mappings to the same allocations are reused and refcounted.
  *  - This path does not support deferred unmapping (i.e. kernel must wait for
  *    all hw operations on the buffer to complete before unmapping).
- *  - References to memmgr and mem_handle are owned and managed by the (kernel)
- *    clients of the gk20a_vm layer.
+ *  - References to dmabuf are owned and managed by the (kernel) clients of
+ *    the gk20a_vm layer.
  *
  *
  * User space mappings
@@ -73,7 +76,7 @@
  *  - Mappings to the same allocations are reused and refcounted.
  *  - This path supports deferred unmapping (i.e. we delay the actual unmapping
  *    until all hw operations have completed).
- *  - References to memmgr and mem_handle are owned and managed by the vm_gk20a
+ *  - References to dmabuf are owned and managed by the vm_gk20a
  *    layer itself. vm.map acquires these refs, and sets
  *    mapped_buffer->own_mem_ref to record that we must release the refs when we
  *    actually unmap.
@@ -1183,14 +1186,21 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 {
 	struct mapped_buffer_node *mapped_buffer = 0;
 
+#ifdef CONFIG_TEGRA_NVMAP
 	/* fall-back to default kind if no kind is provided */
 	if (kind < 0) {
 		u64 nvmap_param;
-		nvhost_memmgr_get_param((struct mem_handle *)dmabuf,
-					NVMAP_HANDLE_PARAM_KIND,
-					&nvmap_param);
+		int err;
+		err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
+					      &nvmap_param);
+		if (err)
+			return 0;
 		kind = nvmap_param;
 	}
+#endif
+
+	if (kind < 0)
+		return 0;
 
 	mapped_buffer =
 		find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
@@ -1214,7 +1224,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 		mapped_buffer->user_mapped++;
 
 		/* If the mapping comes from user space, we own
-		 * the memmgr and handle refs. Since we reuse an
+		 * the handle ref. Since we reuse an
 		 * existing mapping here, we need to give back those
 		 * refs once in order not to leak.
 		 */
@@ -1294,17 +1304,23 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (sgt)
 		*sgt = bfr.sgt;
 
+#ifdef CONFIG_TEGRA_NVMAP
 	if (kind < 0) {
 		u64 value;
-		err = nvhost_memmgr_get_param((struct mem_handle *)dmabuf,
-					      NVMAP_HANDLE_PARAM_KIND,
-					      &value);
+		err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
+					     &value);
 		if (err) {
 			nvhost_err(d, "failed to get nvmap buffer kind (err=%d)",
 				   err);
 			goto clean_up;
 		}
 		kind = value;
+	}
+#endif
+
+	if (kind < 0) {
+		err = -EINVAL;
+		goto clean_up;
 	}
 
 	bfr.kind_v = kind;
@@ -1712,11 +1728,12 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 					gmmu_pte_kind_f(kind_v) |
 					gmmu_pte_comptagline_f(ctag);
 
-				if (rw_flag == mem_flag_read_only) {
+				if (rw_flag == gk20a_mem_flag_read_only) {
 					pte_w[0] |= gmmu_pte_read_only_true_f();
 					pte_w[1] |=
 						gmmu_pte_write_disable_true_f();
-				} else if (rw_flag == mem_flag_write_only) {
+				} else if (rw_flag ==
+					   gk20a_mem_flag_write_only) {
 					pte_w[1] |=
 						gmmu_pte_read_disable_true_f();
 				}
@@ -1911,7 +1928,7 @@ static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 		u64 page_vaddr = __locked_gmmu_map(vm, vaddr,
 			vm->zero_page_sgt, pgsz, pgsz_idx, 0, 0,
 			NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
-			mem_flag_none);
+			gk20a_mem_flag_none);
 
 		if (!page_vaddr) {
 			nvhost_err(dev_from_vm(vm), "failed to remap clean buffers!");
@@ -1931,14 +1948,12 @@ err_unmap:
 	while (i--) {
 		vaddr -= pgsz;
 		__locked_gmmu_unmap(vm, vaddr, pgsz, pgsz_idx, 0,
-				    mem_flag_none);
+				    gk20a_mem_flag_none);
 	}
 
 	return -EINVAL;
 }
 
-/* return mem_mgr and mem_handle to caller. If the mem_handle is a kernel dup
-   from user space (as_ioctl), caller releases the kernel duplicated handle */
 /* NOTE! mapped_buffers lock must be held */
 static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
@@ -1960,7 +1975,7 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 				mapped_buffer->size,
 				mapped_buffer->pgsz_idx,
 				mapped_buffer->va_allocated,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 
 	nvhost_dbg(dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
 		   vm_aspace_id(vm), gmmu_page_sizes[mapped_buffer->pgsz_idx],
@@ -2336,7 +2351,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 				va_node->size,
 				va_node->pgsz_idx,
 				false,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -2381,7 +2396,7 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 
 	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,
-			mem_flag_none);
+			gk20a_mem_flag_none);
 	*offset_align = ret_va;
 	if (!ret_va) {
 		dma_buf_put(dmabuf);

@@ -283,10 +283,6 @@ static inline struct nvhost_syncpt *syncpt_from_gk20a(struct gk20a* g)
 {
 	return &(nvhost_get_host(g->dev)->syncpt);
 }
-static inline struct mem_mgr *mem_mgr_from_g(struct gk20a* g)
-{
-	return nvhost_get_host(g->dev)->memmgr;
-}
 static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
 {
 	return container_of(as, struct gk20a, as);

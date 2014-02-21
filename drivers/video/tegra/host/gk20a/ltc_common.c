@@ -18,13 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/dma-mapping.h>
 #include <linux/delay.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
 
 #include "dev.h"
-#include "nvhost_memmgr.h"
 
 static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 {

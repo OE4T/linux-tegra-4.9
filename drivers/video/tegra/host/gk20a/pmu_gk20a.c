@@ -27,7 +27,6 @@
 
 #include "../dev.h"
 #include "../bus_client.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_acm.h"
 
 #include "gk20a.h"
@@ -1099,7 +1098,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->ucode.pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
 					GK20A_PMU_UCODE_SIZE_MAX,
 					0, /* flags */
-					mem_flag_read_only);
+					gk20a_mem_flag_read_only);
 	if (!pmu->ucode.pmu_va) {
 		nvhost_err(d, "failed to map pmu ucode memory!!");
 		goto err_free_ucode_sgt;
@@ -1117,7 +1116,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->seq_buf.pmu_va = gk20a_gmmu_map(vm, &sgt_seq_buf,
 					GK20A_PMU_SEQ_BUF_SIZE,
 					0, /* flags */
-					mem_flag_none);
+					gk20a_mem_flag_none);
 	if (!pmu->seq_buf.pmu_va) {
 		nvhost_err(d, "failed to map pmu ucode memory!!");
 		goto err_free_seq_buf_sgt;
@@ -1163,12 +1162,12 @@ skip_init:
 
  err_unmap_seq_buf:
 	gk20a_gmmu_unmap(vm, pmu->seq_buf.pmu_va,
-		GK20A_PMU_SEQ_BUF_SIZE, mem_flag_none);
+		GK20A_PMU_SEQ_BUF_SIZE, gk20a_mem_flag_none);
  err_free_seq_buf_sgt:
 	gk20a_free_sgtable(&sgt_seq_buf);
  err_unmap_ucode:
 	gk20a_gmmu_unmap(vm, pmu->ucode.pmu_va,
-		GK20A_PMU_UCODE_SIZE_MAX, mem_flag_none);
+		GK20A_PMU_UCODE_SIZE_MAX, gk20a_mem_flag_none);
  err_free_ucode_sgt:
 	gk20a_free_sgtable(&sgt_pmu_ucode);
  err_free_seq_buf:
@@ -1312,7 +1311,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 					&sgt_pg_buf,
 					size,
 					0, /* flags */
-					mem_flag_none);
+					gk20a_mem_flag_none);
 		if (!pmu->pg_buf.pmu_va) {
 			nvhost_err(d, "failed to map fecs pg buffer");
 			err = -ENOMEM;

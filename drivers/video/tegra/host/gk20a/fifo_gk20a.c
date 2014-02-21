@@ -22,9 +22,9 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <trace/events/nvhost.h>
+#include <linux/dma-mapping.h>
 
 #include "../dev.h"
-#include "nvhost_memmgr.h"
 
 #include "gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -177,7 +177,7 @@ void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 		gk20a_gmmu_unmap(&g->mm.bar1.vm,
 				f->userd.gpu_va,
 				f->userd.size,
-				mem_flag_none);
+				gk20a_mem_flag_none);
 
 	if (f->userd.sgt)
 		gk20a_free_sgtable(&f->userd.sgt);
@@ -526,7 +526,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					&f->userd.sgt,
 					f->userd_total_size,
 					0, /* flags */
-					mem_flag_none);
+					gk20a_mem_flag_none);
 	if (!f->userd.gpu_va) {
 		dev_err(d, "gmmu mapping failed\n");
 		goto clean_up;
@@ -585,7 +585,7 @@ clean_up:
 		gk20a_gmmu_unmap(&g->mm.bar1.vm,
 					f->userd.gpu_va,
 					f->userd.size,
-					mem_flag_none);
+					gk20a_mem_flag_none);
 	if (f->userd.sgt)
 		gk20a_free_sgtable(&f->userd.sgt);
 	if (f->userd.cpuva)

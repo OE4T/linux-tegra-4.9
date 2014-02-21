@@ -170,6 +170,14 @@ struct page_table_gk20a {
 	size_t size;
 };
 
+#ifndef _NVHOST_MEM_MGR_H
+enum gk20a_mem_rw_flag {
+	gk20a_mem_flag_none = 0,
+	gk20a_mem_flag_read_only = 1,
+	gk20a_mem_flag_write_only = 2,
+};
+#endif
+
 enum gmmu_pgsz_gk20a {
 	gmmu_page_size_small = 0,
 	gmmu_page_size_big   = 1,
@@ -330,7 +338,6 @@ int gk20a_mm_init(struct mm_gk20a *mm);
 
 #define dev_from_vm(vm) dev_from_gk20a(vm->mm->g)
 
-#define DEFAULT_ALLOC_FLAGS (mem_mgr_flag_uncacheable)
 #define DEFAULT_ALLOC_ALIGNMENT (4*1024)
 
 static inline int bar1_aperture_size_mb_gk20a(void)

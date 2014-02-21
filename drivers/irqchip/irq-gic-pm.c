@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (C) 2016-2017 NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -22,11 +22,59 @@
 #include <linux/pm_clock.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/irqchip/tegra-agic.h>
 
 struct gic_clk_data {
 	unsigned int num_clocks;
 	const char *const *clocks;
 };
+
+static struct gic_chip_data *tegra_agic;
+
+bool tegra_agic_irq_is_pending(int irq)
+{
+	if (WARN_ON(!tegra_agic))
+		return false;
+
+	return gic_irq_is_pending(tegra_agic, irq);
+}
+EXPORT_SYMBOL_GPL(tegra_agic_irq_is_pending);
+
+void tegra_agic_clear_pending(int irq)
+{
+	if (WARN_ON(!tegra_agic))
+		return;
+
+	return gic_clear_pending(tegra_agic, irq);
+}
+EXPORT_SYMBOL_GPL(tegra_agic_clear_pending);
+
+bool tegra_agic_irq_is_active(int irq)
+{
+	if (WARN_ON(!tegra_agic))
+		return false;
+
+	return gic_irq_is_active(tegra_agic, irq);
+}
+EXPORT_SYMBOL_GPL(tegra_agic_irq_is_active);
+
+void tegra_agic_clear_active(int irq)
+{
+	if (WARN_ON(!tegra_agic))
+		return;
+
+	return gic_clear_active(tegra_agic, irq);
+}
+EXPORT_SYMBOL_GPL(tegra_agic_clear_active);
+
+int tegra_agic_route_interrupt(int irq, enum tegra_agic_cpu cpu)
+{
+	if (WARN_ON(!tegra_agic))
+		return -EINVAL;
+
+	return gic_route_interrupt(tegra_agic, irq, cpu);
+}
+EXPORT_SYMBOL_GPL(tegra_agic_route_interrupt);
 
 static int gic_runtime_resume(struct device *dev)
 {
@@ -123,6 +171,10 @@ static int gic_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, gic);
 
 	pm_runtime_put(dev);
+
+	if (!of_find_compatible_node(dev->of_node, NULL,
+		"nvidia,tegra210-agic"))
+		tegra_agic = gic;
 
 	dev_info(dev, "GIC IRQ controller registered\n");
 

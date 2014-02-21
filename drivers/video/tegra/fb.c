@@ -307,7 +307,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		}
 		tegra_dc_enable(tegra_fb->win->dc);
 		if (!tegra_fb->win->dc->suspended) {
-			tegra_dc_update_windows(&tegra_fb->win, 1);
+			tegra_dc_update_windows(&tegra_fb->win, 1, NULL);
 			tegra_dc_sync_windows(&tegra_fb->win, 1);
 			tegra_dc_program_bandwidth(tegra_fb->win->dc, true);
 		}
@@ -379,7 +379,7 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 		tegra_fb->win->virt_addr = info->screen_base;
 
 		if (!tegra_fb->win->dc->suspended) {
-			tegra_dc_update_windows(&tegra_fb->win, 1);
+			tegra_dc_update_windows(&tegra_fb->win, 1, NULL);
 			tegra_dc_sync_windows(&tegra_fb->win, 1);
 			tegra_dc_program_bandwidth(tegra_fb->win->dc, true);
 		}
@@ -763,7 +763,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->info = info;
 
 	if (fb_data->flags & TEGRA_FB_FLIP_ON_PROBE) {
-		tegra_dc_update_windows(&tegra_fb->win, 1);
+		tegra_dc_update_windows(&tegra_fb->win, 1, NULL);
 		tegra_dc_sync_windows(&tegra_fb->win, 1);
 		tegra_dc_program_bandwidth(tegra_fb->win->dc, true);
 	}

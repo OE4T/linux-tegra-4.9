@@ -109,6 +109,10 @@ struct tegra_dc_out_ops {
 	/* callback after new mode is programmed.
 	 * dc clocks are on at this point */
 	void (*modeset_notifier)(struct tegra_dc *dc);
+	/* Set up interface and sink for partial frame update.
+	 */
+	int (*partial_update) (struct tegra_dc *dc, unsigned int *xoff,
+		unsigned int *yoff, unsigned int *width, unsigned int *height);
 };
 
 struct tegra_dc_shift_clk_div {
@@ -237,6 +241,8 @@ struct tegra_dc {
 	struct tegra_edid		*edid;
 
 	struct tegra_dc_nvsr_data *nvsr;
+
+	bool	disp_active_dirty;
 };
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lut.c
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -113,7 +113,7 @@ static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
 
 	mutex_unlock(&dc->lock);
 
-	tegra_dc_update_windows(&win, 1);
+	tegra_dc_update_windows(&win, 1, NULL);
 	tegra_dc_sync_windows(&win, 1);
 
 	tegra_dc_put(dc);

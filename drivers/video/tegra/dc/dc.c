@@ -1943,6 +1943,16 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		if (tegra_dc_update_mode(dc))
 			need_disable = 1; /* force display off on error */
 
+	if (status & FRAME_END_INT)
+		if (dc->disp_active_dirty) {
+			tegra_dc_writel(dc, dc->mode.h_active |
+				(dc->mode.v_active << 16), DC_DISP_DISP_ACTIVE);
+			tegra_dc_writel(dc,
+				GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+			dc->disp_active_dirty = false;
+		}
+
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
@@ -2519,7 +2529,7 @@ void tegra_dc_blank(struct tegra_dc *dc)
 		dcwins[i]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-	tegra_dc_update_windows(dcwins, DC_N_WINDOWS);
+	tegra_dc_update_windows(dcwins, DC_N_WINDOWS, NULL);
 	tegra_dc_sync_windows(dcwins, DC_N_WINDOWS);
 	tegra_dc_program_bandwidth(dc, true);
 }

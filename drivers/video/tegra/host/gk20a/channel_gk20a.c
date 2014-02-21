@@ -703,6 +703,7 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
+	struct gk20a_platform *platform;
 
 	ch = acquire_unused_channel(f);
 	if (ch == NULL) {
@@ -713,7 +714,9 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 	ch->g = g;
 #ifdef CONFIG_TEGRA_GK20A
-	ch->ch = gk20a_get_platform(g->dev)->nvhost.channel;
+	platform = gk20a_get_platform(g->dev);
+	platform->nvhost.channel = nvhost_channel_map(&platform->nvhost);
+	ch->ch = platform->nvhost.channel;
 #endif
 
 	if (channel_gk20a_alloc_inst(g, ch)) {

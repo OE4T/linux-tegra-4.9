@@ -212,8 +212,10 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (inode) {
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
-		ch = pdata->channel;
+		ch = nvhost_channel_map(pdata);
 	}
+	if (!ch)
+		return -ENOMEM;
 
 	ch = nvhost_getchannel(ch, false, true);
 	if (!ch)
@@ -1182,22 +1184,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 {
 	int err;
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
-	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	ch = nvhost_alloc_channel(dev);
-	if (ch == NULL)
-		return -ENODEV;
-
-	/* store the pointer to this device for channel */
-	ch->dev = dev;
 
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
-
-	err = nvhost_channel_init(ch, nvhost_master);
-	if (err)
-		goto fail1;
 
 	err = nvhost_client_user_init(dev);
 	if (err)
@@ -1242,19 +1232,15 @@ fail:
 	/* Add clean-up */
 	dev_err(&dev->dev, "failed to init client device\n");
 	nvhost_client_user_deinit(dev);
-fail1:
 	nvhost_device_debug_deinit(dev);
-	nvhost_free_channel(ch);
 	return err;
 }
 EXPORT_SYMBOL(nvhost_client_device_init);
 
 int nvhost_client_device_release(struct platform_device *dev)
 {
-	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	ch = pdata->channel;
+	struct nvhost_channel *ch = pdata->channel;
 
 	/* Release nvhost module resources */
 	nvhost_module_deinit(dev);
@@ -1268,8 +1254,9 @@ int nvhost_client_device_release(struct platform_device *dev)
 	/* Remove debugFS */
 	nvhost_device_debug_deinit(dev);
 
-	/* Free nvhost channel */
-	nvhost_free_channel(ch);
+	/* Unmap nvhost channel */
+	if (ch)
+		nvhost_channel_unmap(ch);
 
 	return 0;
 }

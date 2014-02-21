@@ -657,16 +657,24 @@ static void t124_free_nvhost_channel(struct nvhost_channel *ch)
 	nvhost_dbg_fn("");
 	nvhost_free_channel_internal(ch, &t124_num_alloc_channels);
 }
-
+static void t124_set_nvhost_chanops(struct nvhost_channel *ch)
+{
+	if (ch) {
+#if defined(CONFIG_TEGRA_GK20A)
+		if (strncmp(ch->dev->name, "gk20a",
+		    GK20A_DEV_NAME_SIZE) == 0)
+			ch->ops.init          = host1x_channel_ops.init;
+		else
+#endif
+			ch->ops = host1x_channel_ops;
+	}
+}
 static struct nvhost_channel *t124_alloc_nvhost_channel(
 		struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct nvhost_channel *ch;
+	struct nvhost_channel *ch = pdata->channel;
 	nvhost_dbg_fn("");
-	ch = nvhost_alloc_channel_internal(pdata->index,
-		nvhost_get_host(dev)->info.nb_channels,
-		&t124_num_alloc_channels);
 	if (ch) {
 #if defined(CONFIG_TEGRA_GK20A)
 		if (strncmp(dev->name, "gk20a", GK20A_DEV_NAME_SIZE) == 0) {
@@ -684,6 +692,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 {
 	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
+	op->nvhost_dev.set_nvhost_chanops = t124_set_nvhost_chanops;
 
 	return 0;
 }

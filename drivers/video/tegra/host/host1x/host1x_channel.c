@@ -405,6 +405,12 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
+	if (!ch)
+		return -EINVAL;
+
+	if (!ch->dev)
+		return -EINVAL;
+
 	nvhost_module_busy(nvhost_get_parent(ch->dev));
 
 	mutex_lock(&ch->submitlock);

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/t124/debug_t124.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,6 +51,10 @@ void t124_debug_show_channel_fifo(struct nvhost_master *m,
 {
 	nvhost_dbg_fn("");
 
+	if (!ch || !ch->dev) {
+		pr_warn("%s: Channel un-mapped\n", __func__);
+		return;
+	}
 #if defined(CONFIG_TEGRA_GK20A)
 	if (is_gk20a_module(ch->dev))
 		gk20a_debug_show_channel_fifo(m, ch, o, chid);

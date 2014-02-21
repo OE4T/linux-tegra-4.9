@@ -59,8 +59,14 @@ static int show_channels(struct platform_device *pdev, void *data,
 	if (pdev == NULL)
 		return 0;
 
-	pdata = platform_get_drvdata(pdev);
 	m = nvhost_get_host(pdev);
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata->channel) {
+		nvhost_debug_output(o, "channel already un-mapped for %s\n",
+				pdev->name);
+		return 0;
+	}
+
 	ch = nvhost_getchannel(pdata->channel, true, false);
 	if (!ch)
 		return 0;

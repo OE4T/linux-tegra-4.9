@@ -304,7 +304,15 @@ static void cdma_kick(struct nvhost_cdma *cdma)
 
 static void cdma_stop(struct nvhost_cdma *cdma)
 {
-	void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
+	void __iomem *chan_regs;
+	struct nvhost_channel *ch = cdma_to_channel(cdma);
+
+	if (!ch || !ch->dev) {
+		pr_warn("%s: un-mapped channel\n", __func__);
+		return;
+	}
+
+	chan_regs = ch->aperture;
 
 	mutex_lock(&cdma->lock);
 	if (cdma->running) {
@@ -322,10 +330,16 @@ static void cdma_stop(struct nvhost_cdma *cdma)
  */
 static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
-	struct nvhost_master *dev = cdma_to_dev(cdma);
+	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
 
+	if (ch->chid == NVHOST_INVALID_CHANNEL) {
+		pr_warn("%s: un-mapped channel\n", __func__);
+		return;
+	}
+
+	dev = cdma_to_dev(cdma);
 	if (cdma->torndown && !cdma->running) {
 		dev_warn(&dev->dev->dev, "Already torn down\n");
 		return;
@@ -378,10 +392,16 @@ static void cdma_timeout_release_mlocks(struct nvhost_cdma *cdma)
 
 static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 {
-	struct nvhost_master *dev = cdma_to_dev(cdma);
+	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
 
+	if (ch->chid == NVHOST_INVALID_CHANNEL) {
+		pr_warn("%s: Channel un-mapped\n", __func__);
+		return;
+	}
+
+	dev = cdma_to_dev(cdma);
 	dev_dbg(&dev->dev->dev,
 		"end channel teardown (id %d, DMAGET restart = 0x%x)\n",
 		ch->chid, getptr);
@@ -439,9 +459,14 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	cdma = container_of(to_delayed_work(work), struct nvhost_cdma,
 			    timeout.wq);
+	ch = cdma_to_channel(cdma);
+	if (!ch || !ch->dev) {
+		pr_warn("%s: Channel un-mapped\n", __func__);
+		return;
+	}
+
 	dev = cdma_to_dev(cdma);
 	sp = &dev->syncpt;
-	ch = cdma_to_channel(cdma);
 
 	ret = mutex_trylock(&cdma->lock);
 	if (!ret) {

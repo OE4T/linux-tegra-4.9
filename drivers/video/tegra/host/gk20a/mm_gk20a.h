@@ -22,6 +22,7 @@
 #define __MM_GK20A_H__
 
 #include <linux/scatterlist.h>
+#include <linux/dma-attrs.h>
 #include <linux/iommu.h>
 #include <asm/dma-iommu.h>
 #include "../nvhost_allocator.h"
@@ -133,6 +134,17 @@ struct pm_ctx_desc {
 	u64 gpu_va;
 	u32 ctx_attr;
 	u32 ctx_sw_mode;
+};
+
+struct gr_ctx_buffer_desc;
+struct gr_ctx_buffer_desc {
+	void (*destroy)(struct platform_device *, struct gr_ctx_buffer_desc *);
+	struct sg_table *sgt;
+	struct page **pages;
+	size_t size;
+	u64 iova;
+	struct dma_attrs attrs;
+	void *priv;
 };
 
 struct gr_ctx_desc {
@@ -362,6 +374,10 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,
 		u64 size,
 		int rw_flag);
+
+struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
+void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
+		    struct sg_table *sgt);
 
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 		struct dma_buf *dmabuf,

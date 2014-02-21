@@ -156,8 +156,7 @@ static void gk20a_mm_delete_priv(void *_priv)
 	kfree(priv);
 }
 
-static struct sg_table *gk20a_mm_pin(struct device *dev,
-				     struct dma_buf *dmabuf)
+struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
 {
 	struct gk20a_dmabuf_priv *priv;
 	static DEFINE_MUTEX(priv_lock);
@@ -205,8 +204,8 @@ priv_exist_or_err:
 	return priv->sgt;
 }
 
-static void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
-			   struct sg_table *sgt)
+void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
+		    struct sg_table *sgt)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
 	dma_addr_t dma_addr;

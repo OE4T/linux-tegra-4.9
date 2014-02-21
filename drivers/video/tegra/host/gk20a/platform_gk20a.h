@@ -25,6 +25,7 @@
 
 struct gk20a;
 struct channel_gk20a;
+struct gr_ctx_buffer_desc;
 
 struct gk20a_platform {
 #ifdef CONFIG_TEGRA_GK20A
@@ -62,6 +63,14 @@ struct gk20a_platform {
 	 * depends on. The platform implementation must count refs to this
 	 * call. */
 	void (*channel_idle)(struct platform_device *dev);
+
+	/* This function is called to allocate secure memory (memory that the
+	 * CPU cannot see). The function should fill the context buffer
+	 * descriptor (especially fields destroy, sgt, size).
+	 */
+	int (*secure_alloc)(struct platform_device *dev,
+			    struct gr_ctx_buffer_desc *desc,
+			    size_t size);
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

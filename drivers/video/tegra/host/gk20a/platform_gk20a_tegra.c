@@ -25,6 +25,8 @@
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/dma-buf.h>
+#include <linux/nvmap.h>
 #include <mach/irqs.h>
 
 #include "gk20a.h"
@@ -66,6 +68,37 @@ static void gk20a_tegra_channel_idle(struct platform_device *dev)
 	/* Explicitly turn off the host1x clocks */
 	if (nvhost_get_parent(dev))
 		nvhost_module_idle(nvhost_get_parent(dev));
+}
+
+static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
+				       struct gr_ctx_buffer_desc *desc)
+{
+	struct dma_buf *dmabuf = desc->priv;
+
+	gk20a_mm_unpin(&pdev->dev, dmabuf, desc->sgt);
+	dma_buf_put(dmabuf);
+}
+
+static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
+				    struct gr_ctx_buffer_desc *desc,
+				    size_t size)
+{
+#ifdef CONFIG_TEGRA_NVMAP
+	struct dma_buf *dmabuf;
+
+	dmabuf = nvmap_alloc_dmabuf(size,
+				    DEFAULT_ALLOC_ALIGNMENT,
+				    NVMAP_HANDLE_UNCACHEABLE,
+				    NVMAP_HEAP_CARVEOUT_VPR);
+	desc->sgt = gk20a_mm_pin(&pdev->dev, dmabuf);
+	desc->size = size;
+	desc->destroy = gk20a_tegra_secure_destroy;
+	desc->priv = dmabuf;
+
+	return 0;
+#else
+	return -ENOSYS;
+#endif
 }
 
 static int gk20a_tegra_probe(struct platform_device *dev)
@@ -169,6 +202,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.probe = gk20a_tegra_probe,
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
+	.secure_alloc = gk20a_tegra_secure_alloc,
 };
 
 struct gk20a_platform gk20a_tegra_platform = {
@@ -202,6 +236,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.probe = gk20a_tegra_probe,
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
+	.secure_alloc = gk20a_tegra_secure_alloc,
 };
 
 struct platform_device tegra_gk20a_device = {

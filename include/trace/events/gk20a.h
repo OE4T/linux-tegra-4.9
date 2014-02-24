@@ -76,11 +76,9 @@ TRACE_EVENT(gk20a_push_cmdbuf,
 
 TRACE_EVENT(gk20a_channel_submit_gpfifo,
 		TP_PROTO(const char *name, u32 hw_chid, u32 num_entries,
-		u32 flags, u32 wait_id, u32 wait_value,
-		u32 incr_id),
+		u32 flags, u32 wait_id, u32 wait_value),
 
-		TP_ARGS(name, hw_chid, num_entries, flags, wait_id, wait_value,
-			incr_id),
+		TP_ARGS(name, hw_chid, num_entries, flags, wait_id, wait_value),
 
 	TP_STRUCT__entry(
 		__field(const char *, name)
@@ -89,7 +87,6 @@ TRACE_EVENT(gk20a_channel_submit_gpfifo,
 		__field(u32, flags)
 		__field(u32, wait_id)
 		__field(u32, wait_value)
-		__field(u32, incr_id)
 	),
 
 	TP_fast_assign(
@@ -99,22 +96,19 @@ TRACE_EVENT(gk20a_channel_submit_gpfifo,
 		__entry->flags = flags;
 		__entry->wait_id = wait_id;
 		__entry->wait_value = wait_value;
-		__entry->incr_id = incr_id;
 	),
 
 	TP_printk("name=%s, hw_chid=%d, num_entries=%u, flags=%u, wait_id=%d,"
-		" wait_value=%u, incr_id=%u",
+		" wait_value=%u",
 		__entry->name, __entry->hw_chid, __entry->num_entries,
-		__entry->flags, __entry->wait_id, __entry->wait_value,
-		__entry->incr_id)
+		__entry->flags, __entry->wait_id, __entry->wait_value)
 );
 
 TRACE_EVENT(gk20a_channel_submitted_gpfifo,
 		TP_PROTO(const char *name, u32 hw_chid, u32 num_entries,
-		u32 flags, u32 wait_id, u32 wait_value,
-		u32 incr_id, u32 incr_value),
+		u32 flags, u32 incr_id, u32 incr_value),
 
-		TP_ARGS(name, hw_chid, num_entries, flags, wait_id, wait_value,
+		TP_ARGS(name, hw_chid, num_entries, flags,
 			incr_id, incr_value),
 
 	TP_STRUCT__entry(
@@ -122,8 +116,6 @@ TRACE_EVENT(gk20a_channel_submitted_gpfifo,
 		__field(u32, hw_chid)
 		__field(u32, num_entries)
 		__field(u32, flags)
-		__field(u32, wait_id)
-		__field(u32, wait_value)
 		__field(u32, incr_id)
 		__field(u32, incr_value)
 	),
@@ -133,17 +125,14 @@ TRACE_EVENT(gk20a_channel_submitted_gpfifo,
 		__entry->hw_chid = hw_chid;
 		__entry->num_entries = num_entries;
 		__entry->flags = flags;
-		__entry->wait_id = wait_id;
-		__entry->wait_value = wait_value;
 		__entry->incr_id = incr_id;
 		__entry->incr_value = incr_value;
 	),
 
-	TP_printk("name=%s, hw_chid=%d, num_entries=%u, flags=%u, wait_id=%d,"
-		" wait_value=%u, incr_id=%u, incr_value=%u",
+	TP_printk("name=%s, hw_chid=%d, num_entries=%u, flags=%u,"
+		" incr_id=%u, incr_value=%u",
 		__entry->name, __entry->hw_chid, __entry->num_entries,
-		__entry->flags, __entry->wait_id, __entry->wait_value,
-		__entry->incr_id, __entry->incr_value)
+		__entry->flags, __entry->incr_id, __entry->incr_value)
 );
 
 

@@ -270,7 +270,7 @@ struct sync_fence *nvhost_sync_fdget(int fd)
 
 		if (timeline->ops != &nvhost_sync_timeline_ops) {
 			sync_fence_put(fence);
-			return ERR_PTR(-EINVAL);
+			return NULL;
 		}
 	}
 
@@ -283,16 +283,7 @@ int nvhost_sync_num_pts(struct sync_fence *fence)
 	struct list_head *pos;
 
 	list_for_each(pos, &fence->pt_list_head) {
-		struct sync_pt *_pt =
-			container_of(pos, struct sync_pt, pt_list);
-		struct nvhost_sync_pt *pt = to_nvhost_sync_pt(_pt);
-		struct nvhost_sync_timeline *obj = pt->obj;
-
-		u32 id = nvhost_sync_pt_id(pt);
-		u32 thresh = nvhost_sync_pt_thresh(pt);
-
-		if (!nvhost_syncpt_is_expired(obj->sp, id, thresh))
-			num++;
+		num++;
 	}
 
 	return num;

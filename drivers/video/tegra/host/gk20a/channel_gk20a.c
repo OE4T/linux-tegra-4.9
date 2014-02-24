@@ -1585,11 +1585,20 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				wait_id = nvhost_sync_pt_id(pt);
 				wait_value = nvhost_sync_pt_thresh(pt);
 
-				add_wait_cmd(&wait_cmd->ptr[i * 4],
-						wait_id, wait_value);
+				if (nvhost_syncpt_is_expired(sp, wait_id,
+							     wait_value)) {
+					wait_cmd->ptr[i * 4 + 0] = 0;
+					wait_cmd->ptr[i * 4 + 1] = 0;
+					wait_cmd->ptr[i * 4 + 2] = 0;
+					wait_cmd->ptr[i * 4 + 3] = 0;
+				} else {
+					add_wait_cmd(&wait_cmd->ptr[i * 4],
+							wait_id, wait_value);
+				}
 
 				i++;
 			}
+			WARN_ON(i != num_wait_cmds);
 			sync_fence_put(sync_fence);
 			sync_fence = NULL;
 		} else {

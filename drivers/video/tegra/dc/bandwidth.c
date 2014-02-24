@@ -579,6 +579,21 @@ static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
 	return max;
 }
 
+static inline int tegra_dc_is_yuv420(int fmt)
+{
+	switch (fmt) {
+	case TEGRA_WIN_FMT_YCbCr420P:
+	case TEGRA_WIN_FMT_YUV420P:
+	case TEGRA_WIN_FMT_YCrCb420SP:
+	case TEGRA_WIN_FMT_YCbCr420SP:
+	case TEGRA_WIN_FMT_YVU420SP:
+	case TEGRA_WIN_FMT_YUV420SP:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 /*
  * Calculate peak EMC bandwidth for each enabled window =
  * pixel_clock * win_bpp * (use_v_filter ? 2 : 1)) * H_scale_factor *
@@ -619,6 +634,11 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * is of the luma plane's size only. */
 	bpp = tegra_dc_is_yuv_planar(w->fmt) ?
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	if (tegra_dc_is_yuv420(w->fmt))
+		bpp = 16;
+#endif
+
 	ret = dc->mode.pclk / 1000UL * bpp / 8 *
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		(win_use_v_filter(dc, w) ? 2 : 1) *

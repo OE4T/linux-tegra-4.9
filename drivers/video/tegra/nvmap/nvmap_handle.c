@@ -334,8 +334,10 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 		return -EEXIST;
 	}
 
-	trace_nvmap_alloc_handle_id(client, id, heap_mask, align, flags);
 	nvmap_stats_inc(NS_TOTAL, PAGE_ALIGN(h->orig_size));
+	trace_nvmap_alloc_handle_id(client, id,
+		h->size, heap_mask, align, flags,
+		nvmap_stats_read(NS_TOTAL));
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);

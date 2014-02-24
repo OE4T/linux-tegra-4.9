@@ -883,8 +883,12 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
 	else
 		nvmap_stats_inc(NS_CFLUSH_DONE, pend - pstart);
-	if (client)
-		trace_cache_maint(client, h, pstart, pend, op);
+	trace_nvmap_cache_maint(client, h, pstart, pend, op, pend - pstart);
+	trace_nvmap_cache_flush(pend - pstart,
+		nvmap_stats_read(NS_ALLOC),
+		nvmap_stats_read(NS_CFLUSH_RQ),
+		nvmap_stats_read(NS_CFLUSH_DONE));
+
 	wmb();
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE ||
 	    h->flags == NVMAP_HANDLE_WRITE_COMBINE || pstart == pend)

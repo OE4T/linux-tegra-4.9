@@ -87,21 +87,6 @@ struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd)
 	return mgr;
 }
 
-struct mem_handle *nvhost_memmgr_alloc(size_t size, size_t align,
-				       int flags, unsigned int heap_mask)
-{
-	struct mem_handle *h = NULL;
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	h = nvhost_nvmap_alloc(size, align, flags, heap_mask);
-#else
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	h = nvhost_dmabuf_alloc(size, align, flags);
-#endif
-#endif
-
-	return h;
-}
-
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev)
 {
@@ -220,32 +205,6 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 	}
 }
 
-int nvhost_memmgr_get_param(struct mem_handle *mem_handle,
-			    u32 param, u64 *result)
-{
-#ifndef CONFIG_ARM64
-	switch (nvhost_memmgr_type((u32)mem_handle)) {
-#else
-	switch (nvhost_memmgr_type((u32)((uintptr_t)mem_handle))) {
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	case mem_mgr_type_nvmap:
-		return nvhost_nvmap_get_param(mem_handle,
-					      param, result);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_get_param(mem_handle,
-					       param, result);
-		break;
-#endif
-	default:
-		break;
-	}
-	return -EINVAL;
-}
-
 void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
 {
 	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
@@ -282,93 +241,6 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 	default:
 		break;
 	}
-}
-
-size_t nvhost_memmgr_size(struct mem_handle *handle)
-{
-	switch (nvhost_memmgr_type((u32)((uintptr_t)handle))) {
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	case mem_mgr_type_nvmap:
-		return nvhost_nvmap_size(handle);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_size(handle);
-		break;
-#endif
-	default:
-		return 0;
-	}
-
-}
-
-struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
-		struct mem_handle *handle)
-{
-	switch (nvhost_memmgr_type((ulong)handle)) {
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	case mem_mgr_type_nvmap:
-		return nvmap_dmabuf_sg_table((struct dma_buf *)handle);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		WARN_ON(1);
-		break;
-#endif
-	default:
-		break;
-	}
-
-	return NULL;
-
-}
-
-void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct sg_table *sgt)
-{
-	switch (nvhost_memmgr_type((ulong)handle)) {
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	case mem_mgr_type_nvmap:
-		return nvmap_dmabuf_free_sg_table(
-					(struct dma_buf *)handle, sgt);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		WARN_ON(1);
-		break;
-#endif
-	default:
-		break;
-	}
-	return;
-}
-
-void nvhost_memmgr_get_comptags(struct device *dev,
-				struct mem_handle *mem,
-				struct nvhost_comptags *comptags)
-{
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	return nvhost_nvmap_get_comptags(dev, mem, comptags);
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	WARN_ON(1);
-#endif
-}
-
-int nvhost_memmgr_alloc_comptags(struct device *dev,
-				 struct mem_handle *mem,
-				 struct nvhost_allocator *allocator,
-				 int lines)
-{
-#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
-	return nvhost_nvmap_alloc_comptags(dev, mem, allocator, lines);
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	WARN_ON(1);
-#endif
 }
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)

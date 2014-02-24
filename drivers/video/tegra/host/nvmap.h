@@ -31,8 +31,6 @@ struct mem_mgr *nvhost_nvmap_alloc_mgr(void);
 void nvhost_nvmap_put_mgr(struct mem_mgr *mgr);
 struct mem_mgr *nvhost_nvmap_get_mgr(struct mem_mgr *mgr);
 struct mem_mgr *nvhost_nvmap_get_mgr_file(int fd);
-struct mem_handle *nvhost_nvmap_alloc(size_t size, size_t align,
-				      int flags, unsigned int heap_flags);
 void nvhost_nvmap_put(struct mem_mgr *mgr, struct mem_handle *handle);
 struct sg_table *nvhost_nvmap_pin(struct mem_mgr *mgr,
 		struct mem_handle *handle, struct device *dev, int rw_flag);
@@ -45,16 +43,8 @@ void nvhost_nvmap_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
 struct mem_handle *nvhost_nvmap_get(struct mem_mgr *mgr,
 		ulong id, struct platform_device *dev);
-int nvhost_nvmap_get_param(struct mem_handle *handle,
-			   u32 param, u64 *result);
 phys_addr_t nvhost_nvmap_get_addr_from_id(ulong id);
 
 void nvhost_nvmap_unpin_id(struct mem_mgr *mgr, ulong id);
-void nvhost_nvmap_get_comptags(struct device *dev, struct mem_handle *mem,
-			       struct nvhost_comptags *comptags);
-int nvhost_nvmap_alloc_comptags(struct device *dev, struct mem_handle *mem,
-				struct nvhost_allocator *allocator,
-				int lines);
-size_t nvhost_nvmap_size(struct mem_handle *handle);
 
 #endif

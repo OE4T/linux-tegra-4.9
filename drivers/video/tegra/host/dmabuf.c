@@ -37,12 +37,6 @@ static inline int to_dmabuf_fd(ulong id)
 {
 	return nvhost_memmgr_id(id) >> 2;
 }
-struct mem_handle *nvhost_dmabuf_alloc(size_t size, size_t align, int flags)
-{
-	/* TODO: Add allocation via DMA Mapping API */
-	return NULL;
-}
-
 void nvhost_dmabuf_put(struct mem_handle *handle)
 {
 	struct dma_buf_attachment *attach = to_dmabuf_att(handle);
@@ -108,11 +102,4 @@ struct mem_handle *nvhost_dmabuf_get(ulong id, struct platform_device *dev)
 	}
 
 	return (struct mem_handle *) ((uintptr_t)h | mem_mgr_type_dmabuf);
-}
-
-int nvhost_dmabuf_get_param(struct mem_handle *handle,
-			    u32 param, u64 *result)
-{
-	/* TBD: find a way to associate size, kind, etc */
-	return -EINVAL;
 }

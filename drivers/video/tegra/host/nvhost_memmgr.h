@@ -31,11 +31,6 @@ struct platform_device;
 struct device;
 struct nvhost_allocator;
 
-struct nvhost_comptags {
-	u32 offset;
-	u32 lines;
-};
-
 enum mem_mgr_flag {
 	mem_mgr_flag_uncacheable = 0,
 	mem_mgr_flag_write_combine = 1,
@@ -60,8 +55,6 @@ struct mem_mgr *nvhost_memmgr_alloc_mgr(void);
 void nvhost_memmgr_put_mgr(struct mem_mgr *);
 struct mem_mgr *nvhost_memmgr_get_mgr(struct mem_mgr *);
 struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd);
-struct mem_handle *nvhost_memmgr_alloc(size_t size, size_t align,
-				       int flags, unsigned int heap_mask);
 struct mem_handle *nvhost_memmgr_get(struct mem_mgr *,
 		ulong id, struct platform_device *dev);
 void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle);
@@ -77,24 +70,8 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr);
 void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum);
 void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 		void *addr);
-struct sg_table *nvhost_memmgr_sg_table(struct mem_mgr *mgr,
-		struct mem_handle *handle);
-void nvhost_memmgr_free_sg_table(struct mem_mgr *mgr,
-		struct mem_handle *handle, struct sg_table *sgt);
 static inline int nvhost_memmgr_type(ulong id) { return id & MEMMGR_TYPE_MASK; }
 static inline int nvhost_memmgr_id(ulong id) { return id & MEMMGR_ID_MASK; }
-
-int nvhost_memmgr_get_param(struct mem_handle *mem_handle,
-			    u32 param, u64 *result);
-
-void nvhost_memmgr_get_comptags(struct device *dev,
-				struct mem_handle *mem,
-				struct nvhost_comptags *comptags);
-int nvhost_memmgr_alloc_comptags(struct device *dev,
-				 struct mem_handle *mem,
-				 struct nvhost_allocator *allocator,
-				 int lines);
-size_t nvhost_memmgr_size(struct mem_handle *handle);
 
 #ifdef CONFIG_TEGRA_IOMMU_SMMU
 int nvhost_memmgr_smmu_map(struct sg_table *sgt, size_t size,

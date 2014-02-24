@@ -31,7 +31,7 @@ struct gr_gk20a;
 struct dbg_session_gk20a;
 
 #include "nvhost_channel.h"
-#include "channel_gk20a.h"
+#include "channel_sync_gk20a.h"
 
 #include "mm_gk20a.h"
 #include "gr_gk20a.h"
@@ -68,7 +68,7 @@ struct channel_ctx_gk20a {
 struct channel_gk20a_job {
 	struct mapped_buffer_node **mapped_buffers;
 	int num_mapped_buffers;
-	struct nvhost_fence fence;
+	struct gk20a_channel_fence fence;
 	struct list_head list;
 };
 
@@ -113,12 +113,7 @@ struct channel_gk20a {
 	u32 timeout_gpfifo_get;
 
 	bool cmds_pending;
-	struct {
-		bool valid;
-		bool wfi; /* was issued with preceding wfi */
-		u32 syncpt_value;
-		u32 syncpt_id;
-	} last_submit_fence;
+	struct gk20a_channel_fence last_submit_fence;
 
 	void (*remove_support)(struct channel_gk20a *);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
@@ -139,6 +134,8 @@ struct channel_gk20a {
 	struct dma_buf *error_notifier_ref;
 	struct nvhost_notification *error_notifier;
 	void *error_notifier_va;
+
+	struct gk20a_channel_sync *sync;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -159,6 +156,8 @@ void gk20a_disable_channel_no_update(struct channel_gk20a *ch);
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
 void gk20a_channel_semaphore_wakeup(struct gk20a *g);
+int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,
+			     struct priv_cmd_entry **entry);
 
 int gk20a_channel_suspend(struct gk20a *g);
 int gk20a_channel_resume(struct gk20a *g);

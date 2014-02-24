@@ -210,6 +210,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 		.qos_id			= PM_QOS_GPU_FREQ_MIN,
 #endif
 	},
+	.has_syncpoints = true,
 	.probe = gk20a_tegra_probe,
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
@@ -244,6 +245,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 		.qos_id			= PM_QOS_GPU_FREQ_MIN,
 #endif
 	},
+	.has_syncpoints = true,
 	.probe = gk20a_tegra_probe,
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,

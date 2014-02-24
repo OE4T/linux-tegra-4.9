@@ -11,6 +11,7 @@ obj-$(CONFIG_GK20A) += \
 	ctrl_gk20a.o \
 	fifo_gk20a.o \
 	channel_gk20a.o \
+	channel_sync_gk20a.o \
 	debug_gk20a.o \
 	dbg_gpu_gk20a.o \
 	regops_gk20a.o \

@@ -40,6 +40,9 @@ struct gk20a_platform {
 	/* Should be populated at probe. */
 	bool can_powergate;
 
+	/* Should be populated at probe. */
+	bool has_syncpoints;
+
 	/* Should be populated by probe. */
 	struct dentry *debugfs;
 
@@ -99,6 +102,12 @@ static inline void gk20a_platform_channel_idle(struct platform_device *dev)
 	struct gk20a_platform *p = gk20a_get_platform(dev);
 	if (p->channel_idle)
 		p->channel_idle(dev);
+}
+
+static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)
+{
+	struct gk20a_platform *p = gk20a_get_platform(dev);
+	return p->has_syncpoints;
 }
 
 #endif

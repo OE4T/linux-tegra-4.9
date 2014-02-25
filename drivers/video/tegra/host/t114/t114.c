@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for Tegra11 Architecture Chips
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,11 +70,30 @@ static struct resource tegra_host1x02_resources[] = {
 	},
 };
 
+static const char *s_syncpt_names[32] = {
+	"gfx_host",
+	"", "", "", "", "", "", "",
+	"disp0_a", "disp1_a", "avp_0",
+	"csi_vi_0", "csi_vi_1",
+	"vi_isp_0", "vi_isp_1", "vi_isp_2", "vi_isp_3", "vi_isp_4",
+	"2d_0", "2d_1",
+	"disp0_b", "disp1_b",
+	"3d",
+	"msenc",
+	"disp0_c", "disp1_c",
+	"vblank0", "vblank1",
+	"tsec", "msenc_unused",
+	"2d_tinyblt",
+	"dsi"
+};
+
 static struct host1x_device_info host1x02_info = {
 	.nb_channels	= 9,
 	.nb_pts		= 32,
 	.nb_mlocks	= 16,
 	.nb_bases	= 12,
+	.syncpt_names	= s_syncpt_names,
+	.client_managed	= NVSYNCPTS_CLIENT_MANAGED,
 };
 
 struct nvhost_device_data t11_host1x_info = {
@@ -174,6 +193,8 @@ static struct resource isp_resources[] = {
 
 struct nvhost_device_data t11_isp_info = {
 	.index		= 3,
+	.syncpts	= {NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
+			  NVSYNCPT_VI_ISP_4},
 	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -207,6 +228,10 @@ static struct resource vi_resources[] = {
 
 struct nvhost_device_data t11_vi_info = {
 	.index		= 4,
+	.syncpts	= {NVSYNCPT_CSI_VI_0, NVSYNCPT_CSI_VI_1,
+			  NVSYNCPT_VI_ISP_0, NVSYNCPT_VI_ISP_1,
+			  NVSYNCPT_VI_ISP_2, NVSYNCPT_VI_ISP_3,
+			  NVSYNCPT_VI_ISP_4},
 	.modulemutexes	= {NVMODMUTEX_VI},
 	.clocks		= { {"host1x", 136000000, 6} },
 	.exclusive	= true,
@@ -239,6 +264,7 @@ static struct resource msenc_resources[] = {
 struct nvhost_device_data t11_msenc_info = {
 	.version	= NVHOST_ENCODE_MSENC_VER(2, 0),
 	.index		= 5,
+	.syncpts	= {NVSYNCPT_MSENC},
 	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks	       = { {"msenc", UINT_MAX, 107, TEGRA_MC_CLIENT_MSENC},
@@ -275,6 +301,7 @@ static struct resource tsec_resources[] = {
 struct nvhost_device_data t11_tsec_info = {
 	.version	= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.index		= 7,
+	.syncpts	= {NVSYNCPT_TSEC},
 	.waitbases	= {NVWAITBASE_TSEC},
 	.class		= NV_TSEC_CLASS_ID,
 	.exclusive	= false,

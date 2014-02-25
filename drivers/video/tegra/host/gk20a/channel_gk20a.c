@@ -31,7 +31,6 @@
 #include "debug.h"
 #include "nvhost_memmgr.h"
 #include "nvhost_sync.h"
-#include "nvhost_syncpt.h"
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -419,11 +418,12 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 
 void gk20a_disable_channel_no_update(struct channel_gk20a *ch)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
 	struct nvhost_master *host = host_from_gk20a_channel(ch);
 
 	/* ensure no fences are pending */
 	nvhost_syncpt_set_min_eq_max(&host->syncpt,
-				     ch->syncpt_id);
+				     ch->hw_chid + pdata->syncpt_base);
 
 	/* disable channel */
 	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
@@ -694,10 +694,6 @@ unbind:
 
 	mutex_unlock(&ch->dbg_s_lock);
 
-	/* free the syncpt used for this channel */
-	nvhost_free_syncpt(ch->syncpt_id);
-	ch->syncpt_id = 0;
-
 	/* ALWAYS last */
 	release_used_channel(f, ch);
 }
@@ -725,20 +721,11 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
-	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 
 	ch = acquire_unused_channel(f);
 	if (ch == NULL) {
 		/* TBD: we want to make this virtualizable */
 		nvhost_err(dev_from_gk20a(g), "out of hw chids");
-		return 0;
-	}
-
-	/* get a free syncpt id */
-	ch->syncpt_id = nvhost_get_syncpt_host_managed(pdata->pdev,
-						       ch->hw_chid);
-	if (!ch->syncpt_id) {
-		nvhost_err(dev_from_gk20a(g), "could not get free syncpt");
 		return 0;
 	}
 
@@ -1165,6 +1152,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 				      struct nvhost_alloc_gpfifo_args *args)
 {
 	struct gk20a *g = c->g;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	struct device *d = dev_from_gk20a(g);
 	struct vm_gk20a *ch_vm;
 	u32 gpfifo_size;
@@ -1193,7 +1181,7 @@ static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	c->last_submit_fence.valid        = false;
 	c->last_submit_fence.syncpt_value = 0;
-	c->last_submit_fence.syncpt_id    = c->syncpt_id;
+	c->last_submit_fence.syncpt_id    = c->hw_chid + pdata->syncpt_base;
 
 	c->ramfc.offset = 0;
 	c->ramfc.size = ram_in_ramfc_s() / 8;
@@ -1544,6 +1532,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags)
 {
 	struct gk20a *g = c->g;
+	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	struct device *d = dev_from_gk20a(g);
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
 	u32 i, incr_id = ~0, wait_id = ~0, wait_value = 0;
@@ -1581,7 +1570,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					   num_entries,
 					   flags,
 					   fence->syncpt_id, fence->value,
-					   c->syncpt_id);
+					   c->hw_chid + pdata->syncpt_base);
 	check_gp_put(g, c);
 	update_gp_get(g, c);
 
@@ -1725,7 +1714,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	if (incr_cmd) {
 		int j = 0;
-		incr_id = c->syncpt_id;
+		incr_id = c->hw_chid + pdata->syncpt_base;
 		fence->syncpt_id = incr_id;
 		fence->value     = nvhost_syncpt_incr_max(sp, incr_id, 1);
 
@@ -1848,6 +1837,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 {
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(ch->g);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->g->dev);
 	struct nvhost_fence fence;
 	int err = 0;
 
@@ -1860,7 +1850,7 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 
 	if (!(ch->last_submit_fence.valid && ch->last_submit_fence.wfi)) {
 		nvhost_dbg_fn("issuing wfi, incr to finish the channel");
-		fence.syncpt_id = ch->syncpt_id;
+		fence.syncpt_id = ch->hw_chid + pdata->syncpt_base;
 		err = gk20a_channel_submit_wfi_fence(ch->g, ch,
 						     sp, &fence);
 	}
@@ -2072,6 +2062,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	struct nvhost_fence fence;
 	struct nvhost_syncpt *sp = syncpt_from_gk20a(g);
 	struct device *d = dev_from_gk20a(g);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(g->dev);
 	int err;
 
 	nvhost_dbg_fn("");
@@ -2080,7 +2071,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = &f->channel[chid];
 		if (c->in_use && c->obj_class != KEPLER_C) {
-			fence.syncpt_id = c->syncpt_id;
+			fence.syncpt_id = chid + pdata->syncpt_base;
 			err = gk20a_channel_submit_wfi_fence(g,
 					c, sp, &fence);
 			if (err) {

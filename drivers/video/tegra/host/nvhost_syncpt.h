@@ -26,9 +26,6 @@
 #include <linux/nvhost.h>
 #include <linux/atomic.h>
 
-/* when searching for free syncpt id, start from this base */
-#define NVHOST_FREE_SYNCPT_BASE 1
-
 struct nvhost_syncpt;
 
 /* Attribute struct for sysfs min and max attributes */
@@ -39,10 +36,7 @@ struct nvhost_syncpt_attr {
 };
 
 struct nvhost_syncpt {
-	bool *assigned;
-	bool *client_managed;
 	struct kobject *kobj;
-	struct mutex syncpt_mutex;
 	atomic_t *min_val;
 	atomic_t *max_val;
 	u32 *base_val;
@@ -61,10 +55,6 @@ struct nvhost_syncpt {
 
 int nvhost_syncpt_init(struct platform_device *, struct nvhost_syncpt *);
 void nvhost_syncpt_deinit(struct nvhost_syncpt *);
-
-u32 nvhost_get_syncpt_host_managed(struct platform_device *pdata,
-				   u32 param);
-void nvhost_free_syncpt(u32 id);
 
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define SYNCPT_CHECK_PERIOD (2 * HZ)
@@ -109,7 +99,6 @@ int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
-const char *get_syncpt_name(struct nvhost_syncpt *sp, int id);
 
 /**
  * Returns true if syncpoint min == max

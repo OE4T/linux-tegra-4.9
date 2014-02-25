@@ -173,6 +173,8 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 
 struct gk20a_platform gk20a_tegra_platform = {
 	.nvhost = {
+		.syncpts		= {NVSYNCPT_GK20A_BASE},
+		.syncpt_base		= NVSYNCPT_GK20A_BASE,
 		.class			= NV_GRAPHICS_GPU_CLASS_ID,
 		.clocks			= {{"PLLG_ref", UINT_MAX},
 					   {"pwr", 204000000},

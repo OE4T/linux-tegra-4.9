@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3d hardware context
  *
- * Copyright (c) 2011-2014 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -421,6 +421,7 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 	if (!p)
 		return NULL;
 
+	p->h.syncpt = syncpt;
 	p->h.waitbase = waitbase;
 
 	setup_save(p, NULL);

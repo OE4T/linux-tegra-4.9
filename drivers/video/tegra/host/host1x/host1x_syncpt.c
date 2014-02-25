@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints for HOST1X
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -108,7 +108,12 @@ static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
 
 static const char *t20_syncpt_name(struct nvhost_syncpt *sp, u32 id)
 {
-	const char *name = sp->syncpt_names[id];
+	struct host1x_device_info *info = &syncpt_to_dev(sp)->info;
+	const char *name = NULL;
+
+	if (id < info->nb_pts)
+		name = info->syncpt_names[id];
+
 	return name ? name : "";
 }
 

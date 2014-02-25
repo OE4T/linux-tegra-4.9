@@ -859,7 +859,7 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
 	else
 		gk20a_writel(g, bus_intr_en_0_r(),

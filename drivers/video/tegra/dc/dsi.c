@@ -728,7 +728,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 					dsi->target_hs_clk_khz);
 
 #if DSI_USE_SYNC_POINTS
-	dsi->syncpt_id = nvhost_get_syncpt_client_managed("dsi");
+	dsi->syncpt_id = NVSYNCPT_DSI;
 #endif
 
 	/*

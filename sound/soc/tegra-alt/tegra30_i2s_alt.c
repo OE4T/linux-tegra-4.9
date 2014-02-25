@@ -279,12 +279,36 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &val);
 	if ((val & TEGRA30_I2S_CTRL_FRAME_FORMAT_MASK) ==
 		TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC) {
+
 		i2sclock = srate * channels * sample_size;
 		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
 				(1 << channels) - 1,
 				(1 << channels) - 1);
-	} else
-		i2sclock = srate * channels * sample_size * 2;
+
+		cif_conf.threshold = 0;
+		cif_conf.audio_channels = channels;
+		cif_conf.client_channels = channels;
+		cif_conf.expand = 0;
+		cif_conf.stereo_conv = 0;
+		cif_conf.replicate = 0;
+		cif_conf.truncate = 0;
+		cif_conf.mono_conv = 0;
+	} else {
+		if (channels == 1)
+			i2sclock = srate * 2 * sample_size * 2;
+		else
+			i2sclock = srate * channels * sample_size * 2;
+		/* In LRCK mode, hw doesn't support mono.
+		   We should convert mono to steroe through acif */
+		cif_conf.threshold = 0;
+		cif_conf.audio_channels = channels;
+		cif_conf.client_channels = (channels == 1) ? 2 : channels;
+		cif_conf.expand = 0;
+		cif_conf.stereo_conv = 0;
+		cif_conf.replicate = 0;
+		cif_conf.truncate = 0;
+		cif_conf.mono_conv = 0;
+	}
 
 	bitcnt = (i2sclock / srate) - 1;
 	if ((bitcnt < 0) ||
@@ -299,7 +323,7 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if (channels != 2)
+	if (channels > 2)
 		val = bitcnt << TEGRA30_I2S_TIMING_CHANNEL_BIT_COUNT_SHIFT;
 	else
 		val = (bitcnt >> 1) <<
@@ -309,15 +333,6 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		val |= TEGRA30_I2S_TIMING_NON_SYM_ENABLE;
 
 	regmap_write(i2s->regmap, TEGRA30_I2S_TIMING, val);
-
-	cif_conf.threshold = 0;
-	cif_conf.audio_channels = channels;
-	cif_conf.client_channels = (channels == 1) ? 2 : channels;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	/* As a COCEC DAI, CAPTURE is transmit */
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {

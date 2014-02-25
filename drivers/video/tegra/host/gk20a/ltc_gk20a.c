@@ -62,4 +62,5 @@ void gk20a_init_ltc(struct gpu_ops *gops)
 #ifdef CONFIG_DEBUG_FS
 	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
 #endif
+	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
 }

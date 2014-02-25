@@ -2700,40 +2700,6 @@ clean_up:
 	return err;
 }
 
-/* Flushes the compression bit cache as well as "data".
- * Note: the name here is a bit of a misnomer.  ELPG uses this
- * internally... but ELPG doesn't have to be on to do it manually.
- */
-static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
-{
-	u32 data;
-	s32 retry = 100;
-
-	nvhost_dbg_fn("");
-
-	/* Make sure all previous writes are committed to the L2. There's no
-	   guarantee that writes are to DRAM. This will be a sysmembar internal
-	   to the L2. */
-	gk20a_writel(g, ltc_ltss_g_elpg_r(),
-		     ltc_ltss_g_elpg_flush_pending_f());
-	do {
-		data = gk20a_readl(g, ltc_ltss_g_elpg_r());
-
-		if (ltc_ltss_g_elpg_flush_v(data) ==
-		    ltc_ltss_g_elpg_flush_pending_v()) {
-			nvhost_dbg_info("g_elpg_flush 0x%x", data);
-			retry--;
-			usleep_range(20, 40);
-		} else
-			break;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
-
-	if (retry < 0)
-		nvhost_warn(dev_from_gk20a(g),
-			    "g_elpg_flush too many retries");
-
-}
-
 void gk20a_mm_fb_flush(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -2744,7 +2710,7 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 
 	mutex_lock(&mm->l2_op_lock);
 
-	gk20a_mm_g_elpg_flush_locked(g);
+	g->ops.ltc.elpg_flush(g);
 
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal

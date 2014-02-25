@@ -36,6 +36,7 @@
 #include "tsec/tsec.h"
 #include "vic03/vic03.h"
 #include "vi/vi.h"
+#include "isp/isp.h"
 #include "gk20a/gk20a.h"
 
 #include "nvhost_memmgr.h"
@@ -68,6 +69,7 @@ struct nvhost_device_data t21_isp_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks        = {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.moduleid      = NVHOST_MODULE_ISP,
+	.ctrl_ops      = &tegra_isp_ctrl_ops,
 };
 
 struct nvhost_device_data t21_vi_info = {

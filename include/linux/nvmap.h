@@ -69,11 +69,6 @@ struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
 
 void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);
 
-void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
-			      void (*delete)(void *priv));
-
-void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf);
-
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS

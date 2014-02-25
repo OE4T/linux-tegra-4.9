@@ -766,38 +766,6 @@ void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt)
 	__nvmap_free_sg_table(NULL, NULL, sgt);
 }
 
-void nvmap_set_dmabuf_private(struct dma_buf *dmabuf, void *priv,
-		void (*delete)(void *priv))
-{
-	struct nvmap_handle_info *info;
-
-	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
-		return;
-
-	if (WARN_ON(!virt_addr_valid(dmabuf)))
-		return;
-
-	info = dmabuf->priv;
-	info->handle->nvhost_priv = priv;
-	info->handle->nvhost_priv_delete = delete;
-}
-
-void *nvmap_get_dmabuf_private(struct dma_buf *dmabuf)
-{
-	void *priv;
-	struct nvmap_handle_info *info;
-
-	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
-		return NULL;
-
-	if (WARN_ON(!virt_addr_valid(dmabuf)))
-		return ERR_PTR(-EINVAL);
-
-	info = dmabuf->priv;
-	priv = info->handle->nvhost_priv;
-	return priv;
-}
-
 /*
  * List detailed info for all buffers allocated.
  */

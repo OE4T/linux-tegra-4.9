@@ -3512,7 +3512,7 @@ int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 			gr_ds_zbc_tbl_ld_trigger_active_f());
 
 		/* clear l2 table */
-		g->ops.ltc.clear_zbc_color_entry(g, j);
+		g->ops.ltc.clear_zbc_color_entry(g, i);
 
 		for (j = 0; j < GK20A_ZBC_COLOR_VALUE_SIZE; j++) {
 			gr->zbc_col_tbl[i].color_l2[j] = 0;

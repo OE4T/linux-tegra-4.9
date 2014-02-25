@@ -18,6 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/gk20a.h>
+
 #include <linux/highmem.h>
 #include <linux/cdev.h>
 #include <linux/delay.h>

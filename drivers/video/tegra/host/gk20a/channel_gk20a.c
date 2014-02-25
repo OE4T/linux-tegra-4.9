@@ -22,7 +22,7 @@
 #include <linux/list.h>
 #include <linux/delay.h>
 #include <linux/highmem.h> /* need for nvmap.h*/
-#include <trace/events/nvhost.h>
+#include <trace/events/gk20a.h>
 #include <linux/scatterlist.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
@@ -688,7 +688,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
 	struct gk20a *g = ch->g;
 
-	trace_nvhost_channel_release(dev_name(&g->dev->dev));
+	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 
 	gk20a_channel_busy(ch->g->dev);
 	gk20a_free_channel(ch, true);
@@ -749,7 +749,7 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 	int err;
 	struct channel_gk20a *ch;
 
-	trace_nvhost_channel_open(dev_name(&g->dev->dev));
+	trace_gk20a_channel_open(dev_name(&g->dev->dev));
 
 	err = gk20a_get_client(g);
 	if (err) {
@@ -1290,8 +1290,6 @@ int gk20a_channel_submit_wfi_fence(struct gk20a *g,
 	c->last_submit_fence.syncpt_id    = fence->syncpt_id;
 	c->last_submit_fence.wfi          = true;
 
-	trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
-
 	add_wfi_cmd(cmd, &j);
 
 	/* syncpoint_a */
@@ -1353,7 +1351,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 		 * of how much you can output to ftrace at once.
 		 */
 		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
-			trace_nvhost_cdma_push_gather(
+			trace_gk20a_push_cmdbuf(
 				c->ch->dev->name,
 				0,
 				min(words - i, TRACE_MAX_LENGTH),
@@ -1478,11 +1476,11 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* gk20a_channel_update releases this ref. */
 	gk20a_channel_busy(g->dev);
 
-	trace_nvhost_channel_submit_gpfifo(c->ch->dev->name,
-					   c->hw_chid,
-					   num_entries,
-					   flags,
-					   fence->syncpt_id, fence->value,
+	trace_gk20a_channel_submit_gpfifo(c->ch->dev->name,
+					  c->hw_chid,
+					  num_entries,
+					  flags,
+					  fence->syncpt_id, fence->value,
 					   c->hw_chid + pdata->syncpt_base);
 	check_gp_put(g, c);
 	update_gp_get(g, c);
@@ -1636,7 +1634,6 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->last_submit_fence.syncpt_id    = fence->syncpt_id;
 		c->last_submit_fence.wfi          = wfi_cmd;
 
-		trace_nvhost_ioctl_ctrl_syncpt_incr(fence->syncpt_id);
 		if (c->obj_class == KEPLER_C) {
 			/* setobject KEPLER_C */
 			incr_cmd->ptr[j++] = 0x20010000;
@@ -1691,12 +1688,12 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* address space (vm).   */
 	gk20a_mm_tlb_invalidate(c->vm);
 
-	trace_nvhost_channel_submitted_gpfifo(c->ch->dev->name,
-					   c->hw_chid,
-					   num_entries,
-					   flags,
-					   wait_id, wait_value,
-					   fence->syncpt_id, fence->value);
+	trace_gk20a_channel_submitted_gpfifo(c->ch->dev->name,
+					     c->hw_chid,
+					     num_entries,
+					     flags,
+					     wait_id, wait_value,
+					     fence->syncpt_id, fence->value);
 
 
 	/* TODO! Check for errors... */

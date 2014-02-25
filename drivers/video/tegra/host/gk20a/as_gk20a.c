@@ -20,7 +20,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 
-#include <trace/events/nvhost.h>
+#include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 
@@ -233,7 +233,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case NVHOST_AS_IOCTL_BIND_CHANNEL:
-		trace_nvhost_as_ioctl_bind_channel(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_bind_channel(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_bind_channel(as_share,
 			       (struct nvhost_as_bind_channel_args *)buf);
 
@@ -248,33 +248,33 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		args.page_size = args32->page_size;
 		args.flags = args32->flags;
 		args.o_a.offset = args32->o_a.offset;
-		trace_nvhost_as_ioctl_alloc_space(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_alloc_space(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_alloc_space(as_share, &args);
 		args32->o_a.offset = args.o_a.offset;
 		break;
 	}
 	case NVHOST_AS_IOCTL_ALLOC_SPACE:
-		trace_nvhost_as_ioctl_alloc_space(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_alloc_space(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_alloc_space(as_share,
 				(struct nvhost_as_alloc_space_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_FREE_SPACE:
-		trace_nvhost_as_ioctl_free_space(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_free_space(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_free_space(as_share,
 				(struct nvhost_as_free_space_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_MAP_BUFFER:
-		trace_nvhost_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_map_buffer(as_share,
 				(struct nvhost_as_map_buffer_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_MAP_BUFFER_EX:
-		trace_nvhost_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_map_buffer_ex(as_share,
 				(struct nvhost_as_map_buffer_ex_args *)buf);
 		break;
 	case NVHOST_AS_IOCTL_UNMAP_BUFFER:
-		trace_nvhost_as_ioctl_unmap_buffer(dev_name(dev_from_gk20a(g)));
+		trace_gk20a_as_ioctl_unmap_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_unmap_buffer(as_share,
 				(struct nvhost_as_unmap_buffer_args *)buf);
 		break;

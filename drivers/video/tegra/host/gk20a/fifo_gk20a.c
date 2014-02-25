@@ -21,7 +21,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
-#include <trace/events/nvhost.h>
+#include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>
 
 #include "../dev.h"
@@ -987,14 +987,14 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		struct channel_gk20a *ch = NULL;
 
 		get_exception_mmu_fault_info(g, engine_mmu_id, &f);
-		trace_nvhost_gk20a_mmu_fault(f.fault_hi_v,
-					     f.fault_lo_v,
-					     f.fault_info_v,
-					     f.inst_ptr,
-					     engine_id,
-					     f.engine_subid_desc,
-					     f.client_desc,
-					     f.fault_type_desc);
+		trace_gk20a_mmu_fault(f.fault_hi_v,
+				      f.fault_lo_v,
+				      f.fault_info_v,
+				      f.inst_ptr,
+				      engine_id,
+				      f.engine_subid_desc,
+				      f.client_desc,
+				      f.fault_type_desc);
 		nvhost_err(dev_from_gk20a(g), "mmu fault on engine %d, "
 			   "engine subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"

@@ -804,22 +804,12 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 	int i;
 	bool bind = false;
-	int err;
-	long temp;
 	struct nct1008_sensor_platform_data *sensor;
-
-	err = nct1008_get_temp_common(EXT, data, &temp);
-	if (!err && (temp == NCT1008_MAX_TEMP_MILLI))
-		err = -ENXIO; /* potential faulty skin-tdiode connection  */
 
 	sensor = &data->plat_data.sensors[EXT];
 
 	for (i = 0; i < sensor->num_trips; i++) {
-		if (err && !strcmp(sensor->trips[i].cdev_type, "skin-balanced"))
-			dev_info(&data->client->dev,
-				 "No skin-tdiode flex connector found.\n");
-		else if (!strcmp(sensor->trips[i].cdev_type,
-				cdev->type) &&
+		if (!strcmp(sensor->trips[i].cdev_type, cdev->type) &&
 			 !thermal_zone_bind_cooling_device(thz, i, cdev,
 					sensor->trips[i].upper,
 					sensor->trips[i].lower))
@@ -1242,19 +1232,20 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	s16 temp;
 	u8 temp2;
 	int ret;
+	bool ext_err = false;
 
 	if (!pdata || !pdata->supported_hwrev)
 		return -ENODEV;
 
+	ret = nct1008_read_reg(data->client, STATUS_RD);
+	if (ret & BIT(2)) {
+		pr_info("NCT%s: ERR: remote sensor circuit is open (0x%02x)\n",
+			(data->chip == NCT72) ? "72" : "1008", ret);
+		ext_err = true; /* flag the error */
+	}
+
 	/* Initially place in Standby */
 	ret = nct1008_write_reg(client, CONFIG_WR, STANDBY_BIT);
-	if (ret)
-		goto error;
-
-	/* External temperature h/w shutdown limit. */
-	value = temperature_to_value(pdata->extended_range,
-					pdata->sensors[EXT].shutdown_limit);
-	ret = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
 	if (ret)
 		goto error;
 
@@ -1290,15 +1281,6 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	if (ret)
 		goto error;
 
-	/* Setup external hi and lo limits */
-	ret = nct1008_write_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
-	if (ret)
-		goto error;
-	ret = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
-			NCT1008_MAX_TEMP);
-	if (ret)
-		goto error;
-
 	/* read initial temperature */
 	ret = nct1008_read_reg(client, LOC_TEMP_RD);
 	if (ret < 0)
@@ -1308,6 +1290,25 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 
 	temp = value_to_temperature(pdata->extended_range, value);
 	dev_dbg(&client->dev, "\n initial local temp = %d ", temp);
+
+	if (ext_err)
+		return ext_err; /* skip configuration of EXT sensor */
+
+	/* External temperature h/w shutdown limit. */
+	value = temperature_to_value(pdata->extended_range,
+					pdata->sensors[EXT].shutdown_limit);
+	ret = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
+	if (ret)
+		goto error;
+
+	/* Setup external hi and lo limits */
+	ret = nct1008_write_reg(client, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
+	if (ret)
+		goto error;
+	ret = nct1008_write_reg(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
+			NCT1008_MAX_TEMP);
+	if (ret)
+		goto error;
 
 	ret = nct1008_read_reg(client, EXT_TEMP_LO_RD);
 	if (ret < 0)
@@ -1426,6 +1427,7 @@ static int nct1008_probe(struct i2c_client *client,
 	u64 mask = 0;
 	char nct_loc_name[THERMAL_NAME_LENGTH];
 	char nct_ext_name[THERMAL_NAME_LENGTH];
+	bool ext_err;
 	struct nct1008_sensor_platform_data *sensor_data;
 
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
@@ -1448,6 +1450,7 @@ static int nct1008_probe(struct i2c_client *client,
 	/* extended range recommended steps 1 through 4 taken care
 	 * in nct1008_configure_sensor function */
 	err = nct1008_configure_sensor(data);	/* sensor is in standby */
+	ext_err = err;
 	if (err < 0) {
 		dev_err(&client->dev, "\n error file: %s : %s(), line=%d ",
 			__FILE__, __func__, __LINE__);
@@ -1510,6 +1513,10 @@ static int nct1008_probe(struct i2c_client *client,
 
 	if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
 		goto error;
+
+	/* check ext sensor connection before registering zone */
+	if (ext_err)
+		return 0; /* skip registering unconneted sensor as zone */
 
 	/* Config for the External sensor. */
 	mask = 0;

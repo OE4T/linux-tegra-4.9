@@ -79,6 +79,7 @@ struct nvmap_handle_sgt {
 static DEFINE_MUTEX(nvmap_stashed_maps_lock);
 static LIST_HEAD(nvmap_stashed_maps);
 static struct kmem_cache *handle_sgt_cache;
+static struct dma_buf_ops nvmap_dma_buf_ops;
 
 /*
  * Initialize a kmem cache for allocating nvmap_handle_sgt's.
@@ -522,6 +523,41 @@ static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, void *vaddr)
 	__nvmap_munmap(info->handle, vaddr);
 }
 
+static int nvmap_dmabuf_set_private(struct dma_buf *dmabuf,
+		struct device *dev, void *priv, void (*delete)(void *priv))
+{
+	struct nvmap_handle_info *info;
+
+	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
+		return -EINVAL;
+
+	if (WARN_ON(!virt_addr_valid(dmabuf)))
+		return -EINVAL;
+
+	info = dmabuf->priv;
+	info->handle->nvhost_priv = priv;
+	info->handle->nvhost_priv_delete = delete;
+
+	return 0;
+}
+
+static void *nvmap_dmabuf_get_private(struct dma_buf *dmabuf,
+		struct device *dev)
+{
+	void *priv;
+	struct nvmap_handle_info *info;
+
+	if (WARN_ON(dmabuf->ops != &nvmap_dma_buf_ops))
+		return ERR_PTR(-EINVAL);
+
+	if (WARN_ON(!virt_addr_valid(dmabuf)))
+		return ERR_PTR(-EINVAL);
+
+	info = dmabuf->priv;
+	priv = info->handle->nvhost_priv;
+	return priv;
+}
+
 static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.attach		= nvmap_dmabuf_attach,
 	.detach		= nvmap_dmabuf_detach,
@@ -536,6 +572,8 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.mmap		= nvmap_dmabuf_mmap,
 	.vmap		= nvmap_dmabuf_vmap,
 	.vunmap		= nvmap_dmabuf_vunmap,
+	.set_drvdata	= nvmap_dmabuf_set_private,
+	.get_drvdata	= nvmap_dmabuf_get_private,
 };
 
 /*

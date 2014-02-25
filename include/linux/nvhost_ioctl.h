@@ -436,6 +436,10 @@ struct nvhost_ctrl_syncpt_waitmex_args {
 	__u32 reserved_2;
 };
 
+struct gk20a_sync_pt_info {
+	__u64 hw_op_ns;
+};
+
 struct nvhost_ctrl_sync_fence_info {
 	__u32 id;
 	__u32 thresh;

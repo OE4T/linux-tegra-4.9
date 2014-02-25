@@ -203,4 +203,5 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_fs_state = gm20b_ltc_init_fs_state;
 	gops->ltc.init_comptags = gm20b_ltc_init_comptags;
 	gops->ltc.clear_comptags = gm20b_ltc_clear_comptags;
+	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
 }

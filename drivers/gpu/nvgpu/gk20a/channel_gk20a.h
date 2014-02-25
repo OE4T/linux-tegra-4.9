@@ -68,7 +68,8 @@ struct channel_ctx_gk20a {
 struct channel_gk20a_job {
 	struct mapped_buffer_node **mapped_buffers;
 	int num_mapped_buffers;
-	struct gk20a_channel_fence fence;
+	struct gk20a_channel_fence pre_fence;
+	struct gk20a_channel_fence post_fence;
 	struct list_head list;
 };
 
@@ -112,7 +113,10 @@ struct channel_gk20a {
 	u32 timeout_gpfifo_get;
 
 	bool cmds_pending;
-	struct gk20a_channel_fence last_submit_fence;
+	struct {
+		struct gk20a_channel_fence pre_fence;
+		struct gk20a_channel_fence post_fence;
+	} last_submit;
 
 	void (*remove_support)(struct channel_gk20a *);
 #if defined(CONFIG_GK20A_CYCLE_STATS)

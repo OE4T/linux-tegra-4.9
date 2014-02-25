@@ -23,11 +23,13 @@
 struct gk20a_channel_sync;
 struct priv_cmd_entry;
 struct channel_gk20a;
+struct gk20a_semaphore;
 
 struct gk20a_channel_fence {
 	bool valid;
 	bool wfi; /* was issued with preceding wfi */
-	u32 thresh; /* either semaphore or syncpoint value */
+	u32 thresh; /* syncpoint fences only */
+	struct gk20a_semaphore *semaphore; /* semaphore fences only */
 };
 
 struct gk20a_channel_sync {
@@ -43,11 +45,13 @@ struct gk20a_channel_sync {
 
 	/* Generate a gpu wait cmdbuf from syncpoint. */
 	int (*wait_syncpt)(struct gk20a_channel_sync *s, u32 id, u32 thresh,
-			   struct priv_cmd_entry **entry);
+			   struct priv_cmd_entry **entry,
+			   struct gk20a_channel_fence *fence);
 
 	/* Generate a gpu wait cmdbuf from sync fd. */
 	int (*wait_fd)(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry **entry);
+		       struct priv_cmd_entry **entry,
+		       struct gk20a_channel_fence *fence);
 
 	/* Increment syncpoint/semaphore.
 	 * Returns
@@ -88,6 +92,7 @@ struct gk20a_channel_sync {
 	 *  - a sync fd that can be returned to user space.
 	 */
 	int (*incr_user_fd)(struct gk20a_channel_sync *s,
+			    int wait_fence_fd,
 			    struct priv_cmd_entry **entry,
 			    struct gk20a_channel_fence *fence,
 			    bool wfi,
@@ -96,12 +101,16 @@ struct gk20a_channel_sync {
 	/* Reset the channel syncpoint/semaphore. */
 	void (*set_min_eq_max)(struct gk20a_channel_sync *s);
 
-	/* flag to set syncpt destroy aggressiveness */
-	bool syncpt_aggressive_destroy;
+	/* flag to set sync destroy aggressiveness */
+	bool aggressive_destroy;
 
 	/* Free the resources allocated by gk20a_channel_sync_create. */
 	void (*destroy)(struct gk20a_channel_sync *s);
 };
 
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c);
+
+void gk20a_channel_fence_close(struct gk20a_channel_fence *f);
+void gk20a_channel_fence_dup(struct gk20a_channel_fence *from,
+			     struct gk20a_channel_fence *to);
 #endif

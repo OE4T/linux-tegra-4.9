@@ -19,6 +19,7 @@ nvgpu-y := \
 	mm_gk20a.o \
 	pmu_gk20a.o \
 	priv_ring_gk20a.o \
+	semaphore_gk20a.o \
 	clk_gk20a.o \
 	therm_gk20a.o \
 	gr_ctx_gk20a_sim.o \

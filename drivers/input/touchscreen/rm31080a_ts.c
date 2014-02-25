@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2012-2013, Raydium Semiconductor Corporation.
  * All Rights Reserved.
- * Copyright (C) 2012-2013, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2014, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -2545,11 +2545,6 @@ static void rm_tch_early_resume(struct early_suspend *es)
 	if (rm_tch_resume(dev))
 		dev_err(dev, "Raydium - %s : failed\n", __func__);
 }
-#else
-static const struct dev_pm_ops rm_tch_pm_ops = {
-	.suspend = rm_tch_suspend,
-	.resume = rm_tch_resume,
-};
 #endif			/*CONFIG_HAS_EARLYSUSPEND*/
 #endif			/*CONFIG_PM*/
 
@@ -3313,11 +3308,6 @@ static struct spi_driver rm_tch_spi_driver = {
 		.name = "rm_ts_spidev",
 		.bus = &spi_bus_type,
 		.owner = THIS_MODULE,
-#if !defined(CONFIG_HAS_EARLYSUSPEND)
-#ifdef CONFIG_PM
-		.pm = &rm_tch_pm_ops,
-#endif
-#endif
 	},
 	.probe = rm_tch_spi_probe,
 	.remove = rm_tch_spi_remove,

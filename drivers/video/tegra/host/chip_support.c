@@ -24,6 +24,7 @@
 
 #include "chip_support.h"
 #include "t124/t124.h"
+#include "t210/t210.h"
 
 struct nvhost_chip_support *nvhost_chip_ops;
 
@@ -58,7 +59,7 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 
 	case TEGRA_CHIPID_TEGRA21:
 		nvhost_chip_ops->soc_name = "tegra21x";
-		err = nvhost_init_t124_support(host, nvhost_chip_ops);
+		err = nvhost_init_t210_support(host, nvhost_chip_ops);
 		break;
 
 	default:

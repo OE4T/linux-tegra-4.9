@@ -26,13 +26,13 @@
 #include "chip_support.h"
 #include "host1x/host1x_actmon.h"
 
-void actmon_writel(struct host1x_actmon *actmon, u32 val, u32 reg)
+void static actmon_writel(struct host1x_actmon *actmon, u32 val, u32 reg)
 {
 	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);
 	writel(val, actmon->regs + reg);
 }
 
-u32 actmon_readl(struct host1x_actmon *actmon, u32 reg)
+u32 static actmon_readl(struct host1x_actmon *actmon, u32 reg)
 {
 	u32 val = readl(actmon->regs + reg);
 	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);

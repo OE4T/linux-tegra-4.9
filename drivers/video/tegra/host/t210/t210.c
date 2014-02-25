@@ -26,6 +26,7 @@
 #include "class_ids.h"
 
 #include "t210.h"
+#include "t124/t124.h"
 #include "host1x/host1x.h"
 #include "hardware_t124.h"
 #include "syncpt_t124.h"
@@ -42,6 +43,8 @@
 #include "nvhost_scale.h"
 
 #define HOST_EMC_FLOOR 300000000
+
+static int t210_num_alloc_channels = 0;
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T124_NVHOST_NUMCHANNELS,
@@ -150,36 +153,98 @@ struct nvhost_device_data t21_vic_info = {
 };
 #endif
 
-#ifdef CONFIG_TEGRA_GK20A
-struct nvhost_device_data tegra_gm20b_info = {
-	.syncpts		= {NVSYNCPT_GK20A_BASE},
-	.syncpt_base		= NVSYNCPT_GK20A_BASE,
-	.class			= NV_GRAPHICS_GPU_CLASS_ID,
-	.clocks			= { {} },
-	.powergate_ids		= { TEGRA_POWERGATE_GPU, -1 },
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
-	.can_powergate		= false,
-	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
-	.ctrl_ops		= &tegra_gk20a_ctrl_ops,
-	.dbg_ops                = &tegra_gk20a_dbg_gpu_ops,
-	.prof_ops                = &tegra_gk20a_prof_gpu_ops,
-	.as_ops			= &tegra_gk20a_as_ops,
-	.moduleid		= NVHOST_MODULE_GPU,
-	.init			= nvhost_gk20a_init,
-	.deinit			= nvhost_gk20a_deinit,
-	.alloc_hwctx_handler	= nvhost_gk20a_alloc_hwctx_handler,
-	.prepare_poweroff	= nvhost_gk20a_prepare_poweroff,
-	.finalize_poweron	= nvhost_gk20a_finalize_poweron,
-#ifdef CONFIG_TEGRA_GK20A_DEVFREQ
-	.busy			= nvhost_gk20a_scale_notify_busy,
-	.idle			= nvhost_gk20a_scale_notify_idle,
-	.scaling_init		= nvhost_gk20a_scale_init,
-	.scaling_deinit		= nvhost_gk20a_scale_deinit,
-	.suspend_ndev		= nvhost_scale3d_suspend,
-	.devfreq_governor	= "nvhost_podgov",
-	.scaling_post_cb	= nvhost_gk20a_scale_callback,
-	.gpu_edp_device		= true,
+#include "host1x/host1x_channel.c"
+
+static void t210_free_nvhost_channel(struct nvhost_channel *ch)
+{
+	nvhost_dbg_fn("");
+	nvhost_free_channel_internal(ch, &t210_num_alloc_channels);
+}
+
+static struct nvhost_channel *t210_alloc_nvhost_channel(
+		struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	struct nvhost_channel *ch;
+	nvhost_dbg_fn("");
+	ch = nvhost_alloc_channel_internal(pdata->index,
+		nvhost_get_host(dev)->info.nb_channels,
+		&t210_num_alloc_channels);
+	if (ch) {
+#if defined(CONFIG_TEGRA_GK20A)
+		if (!strcmp(dev->name, "57000000.gm20b")) {
+			ch->ops.init          = host1x_channel_ops.init;
+		} else
 #endif
-};
-#endif
+			ch->ops = host1x_channel_ops;
+
+	}
+	return ch;
+}
+
+int nvhost_init_t210_channel_support(struct nvhost_master *host,
+       struct nvhost_chip_support *op)
+{
+	op->nvhost_dev.alloc_nvhost_channel = t210_alloc_nvhost_channel;
+	op->nvhost_dev.free_nvhost_channel = t210_free_nvhost_channel;
+
+	return 0;
+}
+
+static void t210_remove_support(struct nvhost_chip_support *op)
+{
+	kfree(op->priv);
+	op->priv = 0;
+}
+
+#include "host1x/host1x_cdma.c"
+#include "host1x/host1x_syncpt.c"
+#include "host1x/host1x_intr.c"
+#include "host1x/host1x_actmon_t124.c"
+
+int nvhost_init_t210_support(struct nvhost_master *host,
+       struct nvhost_chip_support *op)
+{
+	int err;
+	struct t124 *t210 = 0;
+
+	/* don't worry about cleaning up on failure... "remove" does it. */
+	err = nvhost_init_t210_channel_support(host, op);
+	if (err)
+		return err;
+
+	op->cdma = host1x_cdma_ops;
+	op->push_buffer = host1x_pushbuffer_ops;
+
+	err = nvhost_init_t124_debug_support(op);
+	if (err)
+		return err;
+
+	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
+	op->syncpt = host1x_syncpt_ops;
+	op->intr = host1x_intr_ops;
+	op->actmon = host1x_actmon_ops;
+
+	err = nvhost_memmgr_init(op);
+	if (err)
+		return err;
+
+	t210 = kzalloc(sizeof(struct t124), GFP_KERNEL);
+	if (!t210) {
+		err = -ENOMEM;
+		goto err;
+	}
+
+	t210->host = host;
+	op->priv = t210;
+	op->remove_support = t210_remove_support;
+
+	return 0;
+
+err:
+	kfree(t210);
+
+	op->priv = 0;
+	op->remove_support = 0;
+	return err;
+}

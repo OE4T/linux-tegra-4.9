@@ -217,7 +217,6 @@ struct gk20a {
 	void __iomem *bar1;
 
 	bool power_on;
-	bool irq_requested;
 
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;

@@ -627,11 +627,8 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	release_firmware(g->pmu_fw);
 
-	if (g->irq_requested) {
-		free_irq(g->irq_stall, g);
-		free_irq(g->irq_nonstall, g);
-		g->irq_requested = false;
-	}
+	free_irq(g->irq_stall, g);
+	free_irq(g->irq_nonstall, g);
 
 	/* free mappings to registers, etc*/
 
@@ -667,7 +664,6 @@ static int gk20a_init_support(struct platform_device *dev)
 	}
 
 	/* Get interrupt numbers */
-	g->irq_stall = platform_get_irq(dev, 0);
 	g->irq_nonstall = platform_get_irq(dev, 1);
 	if (g->irq_stall < 0 || g->irq_nonstall < 0) {
 		err = -ENXIO;
@@ -759,11 +755,8 @@ static int gk20a_pm_prepare_poweroff(struct device *_dev)
 	 * After this point, gk20a interrupts should not get
 	 * serviced.
 	 */
-	if (g->irq_requested) {
-		free_irq(g->irq_stall, g);
-		free_irq(g->irq_nonstall, g);
-		g->irq_requested = false;
-	}
+	disable_irq(g->irq_stall);
+	disable_irq(g->irq_nonstall);
 
 	/* disable elpg before gr or fifo suspend */
 	ret |= gk20a_pmu_destroy(g);
@@ -810,29 +803,8 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);
 
-	if (!g->irq_requested) {
-		err = request_threaded_irq(g->irq_stall,
-				gk20a_intr_isr_stall,
-				gk20a_intr_thread_stall,
-				0, "gk20a_stall", g);
-		if (err) {
-			dev_err(dev_from_gk20a(g),
-				"failed to request stall intr irq @ %lld\n",
-					(u64)g->irq_stall);
-			goto done;
-		}
-		err = request_threaded_irq(g->irq_nonstall,
-				gk20a_intr_isr_nonstall,
-				gk20a_intr_thread_nonstall,
-				0, "gk20a_nonstall", g);
-		if (err) {
-			dev_err(dev_from_gk20a(g),
-				"failed to request non-stall intr irq @ %lld\n",
-					(u64)g->irq_nonstall);
-			goto done;
-		}
-		g->irq_requested = true;
-	}
+	enable_irq(g->irq_stall);
+	enable_irq(g->irq_nonstall);
 
 	g->power_on = true;
 
@@ -1345,6 +1317,35 @@ static int gk20a_probe(struct platform_device *dev)
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
+
+	gk20a->irq_stall = platform_get_irq(dev, 0);
+	gk20a->irq_nonstall = platform_get_irq(dev, 1);
+	if (gk20a->irq_stall < 0 || gk20a->irq_nonstall < 0)
+		return -ENXIO;
+	err = devm_request_threaded_irq(&dev->dev,
+			gk20a->irq_stall,
+			gk20a_intr_isr_stall,
+			gk20a_intr_thread_stall,
+			0, "gk20a_stall", gk20a);
+	if (err) {
+		dev_err(&dev->dev,
+			"failed to request stall intr irq @ %d\n",
+				gk20a->irq_stall);
+		return err;
+	}
+	err = devm_request_threaded_irq(&dev->dev,
+			gk20a->irq_nonstall,
+			gk20a_intr_isr_nonstall,
+			gk20a_intr_thread_nonstall,
+			0, "gk20a_nonstall", gk20a);
+	if (err) {
+		dev_err(&dev->dev,
+			"failed to request non-stall intr irq @ %d\n",
+				gk20a->irq_nonstall);
+		return err;
+	}
+	disable_irq(gk20a->irq_stall);
+	disable_irq(gk20a->irq_nonstall);
 
 	err = gk20a_user_init(dev);
 	if (err)

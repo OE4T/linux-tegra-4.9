@@ -88,6 +88,8 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	if (!h->alloc)
 		goto out;
 
+	nvmap_stats_inc(NS_RELEASE, h->size);
+	nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
 	if (!h->heap_pgalloc) {
 		nvmap_heap_free(h->carveout);
 		goto out;
@@ -361,6 +363,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	}
 
 	trace_nvmap_alloc_handle_id(client, id, heap_mask, align, flags);
+	nvmap_stats_inc(NS_TOTAL, PAGE_ALIGN(h->orig_size));
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
@@ -410,6 +413,16 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	}
 
 out:
+	if (h->alloc) {
+		nvmap_stats_inc(NS_ALLOC, h->size);
+		if (client->kernel_client)
+			nvmap_stats_inc(NS_KALLOC, h->size);
+		else
+			nvmap_stats_inc(NS_UALLOC, h->size);
+	} else {
+		nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
+	}
+
 	err = (h->alloc) ? 0 : err;
 	nvmap_handle_put(h);
 	return err;

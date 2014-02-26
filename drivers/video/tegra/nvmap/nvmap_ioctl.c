@@ -805,12 +805,29 @@ static inline bool fast_cache_maint_outer(unsigned long start,
 #endif
 
 #if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
-static bool fast_cache_maint(struct nvmap_handle *h,
+static inline bool can_fast_cache_maint(struct nvmap_handle *h,
 	unsigned long start,
 	unsigned long end, unsigned int op)
 {
 	if ((op == NVMAP_CACHE_OP_INV) ||
 		((end - start) < cache_maint_inner_threshold))
+		return false;
+	return true;
+}
+#else
+static inline bool can_fast_cache_maint(struct nvmap_handle *h,
+	unsigned long start,
+	unsigned long end, unsigned int op)
+{
+	return false;
+}
+#endif
+
+static bool fast_cache_maint(struct nvmap_handle *h,
+	unsigned long start,
+	unsigned long end, unsigned int op)
+{
+	if (!can_fast_cache_maint(h, start, end, op))
 		return false;
 
 	if (op == NVMAP_CACHE_OP_WB_INV)
@@ -835,14 +852,6 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 	}
 	return true;
 }
-#else
-static inline bool fast_cache_maint(struct nvmap_handle *h,
-				    unsigned long start, unsigned long end,
-				    unsigned int op)
-{
-	return false;
-}
-#endif
 
 struct cache_maint_op {
 	phys_addr_t start;
@@ -870,6 +879,10 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		return -EFAULT;
 
 	client = h->owner;
+	if (can_fast_cache_maint(h, pstart, pend, op))
+		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
+	else
+		nvmap_stats_inc(NS_CFLUSH_DONE, pend - pstart);
 	if (client)
 		trace_cache_maint(client, h, pstart, pend, op);
 	wmb();
@@ -948,6 +961,7 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 			 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
 	cache_op.outer = h->flags == NVMAP_HANDLE_CACHEABLE;
 
+	nvmap_stats_inc(NS_CFLUSH_RQ, end - start);
 	err = do_cache_maint(&cache_op);
 	nvmap_handle_put(h);
 	return err;

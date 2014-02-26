@@ -24,6 +24,9 @@
 #include <linux/tegra-soc.h>
 #include <linux/clk/tegra.h>
 #include <linux/moduleparam.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -1395,32 +1398,52 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	struct tegra_dc_dp_data *dp;
 	struct resource *res;
 	struct resource *base_res;
+	struct resource of_dp_res;
 	void __iomem *base;
-	struct clk	 *clk;
-	struct clk	 *parent_clk;
+	struct clk *clk;
+	struct clk *parent_clk;
 	int err;
 	u32 irq;
+	struct device_node *np = dc->ndev->dev.of_node;
 
+	struct device_node *np_dp =
+		of_find_node_by_path("host1x/dpaux");
 
-	dp = kzalloc(sizeof(*dp), GFP_KERNEL);
+	dp = devm_kzalloc(&dc->ndev->dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp)
 		return -ENOMEM;
 
-	irq = platform_get_irq_byname(dc->ndev, "irq_dp");
-	if (irq <= 0) {
-		dev_err(&dc->ndev->dev, "dp: no irq\n");
-		err = -ENOENT;
-		goto err_free_dp;
+	if (np) {
+		if (np_dp && of_device_is_available(np_dp)) {
+			irq = of_irq_to_resource(np_dp, 0, NULL);
+			if (!irq) {
+				err = -ENOENT;
+				goto err_free_dp;
+			}
+			of_address_to_resource(np_dp, 0, &of_dp_res);
+			res = &of_dp_res;
+		} else {
+			err = -EINVAL;
+			goto err_free_dp;
+		}
+	} else {
+		irq = platform_get_irq_byname(dc->ndev, "irq_dp");
+		if (irq <= 0) {
+			dev_err(&dc->ndev->dev, "dp: no irq\n");
+			err = -ENOENT;
+			goto err_free_dp;
+		}
+		res = platform_get_resource_byname(dc->ndev,
+			IORESOURCE_MEM, "dpaux");
 	}
-
-	res = platform_get_resource_byname(dc->ndev, IORESOURCE_MEM, "dpaux");
 	if (!res) {
 		dev_err(&dc->ndev->dev, "dp: no mem resources for dpaux\n");
 		err = -EFAULT;
 		goto err_free_dp;
 	}
 
-	base_res = request_mem_region(res->start, resource_size(res),
+	base_res = devm_request_mem_region(&dc->ndev->dev,
+		res->start, resource_size(res),
 		dc->ndev->name);
 	if (!base_res) {
 		dev_err(&dc->ndev->dev, "dp: request_mem_region failed\n");
@@ -1428,7 +1451,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_free_dp;
 	}
 
-	base = ioremap(res->start, resource_size(res));
+	base = devm_ioremap(&dc->ndev->dev, res->start, resource_size(res));
 	if (!base) {
 		dev_err(&dc->ndev->dev, "dp: registers can't be mapped\n");
 		err = -EFAULT;
@@ -1463,6 +1486,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	dp->dc = dc;
 	dp->aux_base = base;
+	dp->res = res;
 	dp->aux_base_res = base_res;
 	dp->dpaux_clk = clk;
 	dp->parent_clk = parent_clk;
@@ -1502,11 +1526,16 @@ err_edid_destroy:
 err_get_clk:
 	clk_put(clk);
 err_iounmap_reg:
-	iounmap(base);
+	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
-	release_resource(base_res);
+	devm_release_mem_region(&dc->ndev->dev,
+		res->start,
+		resource_size(res));
+
+	if (!np_dp || !of_device_is_available(np_dp))
+		release_resource(res);
 err_free_dp:
-	kfree(dp);
+	devm_kfree(&dc->ndev->dev, dp);
 
 	return err;
 }
@@ -2144,6 +2173,8 @@ error_enable:
 
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
+	struct device_node *np_dp =
+		of_find_node_by_path("host1x/dpaux");
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	if (dp->sor)
@@ -2152,10 +2183,13 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		tegra_edid_destroy(dp->dp_edid);
 	clk_put(dp->dpaux_clk);
 	clk_put(dp->parent_clk);
-	iounmap(dp->aux_base);
-	release_resource(dp->aux_base_res);
-
-	kfree(dp);
+	devm_iounmap(&dc->ndev->dev, dp->aux_base);
+	devm_release_mem_region(&dc->ndev->dev,
+		dp->res->start,
+		resource_size(dp->res));
+	if (!np_dp || !of_device_is_available(np_dp))
+		release_resource(dp->res);
+	devm_kfree(&dc->ndev->dev, dp);
 }
 
 static void tegra_dc_dp_disable(struct tegra_dc *dc)

@@ -1074,7 +1074,7 @@ struct device_node *parse_dsi_settings(struct platform_device *ndev,
 			OF_DC_LOG("dsi panel bl name %s\n", dsi->bl_name);
 		else {
 			pr_err("dsi error parsing bl name\n");
-			kfree(dsi->bl_name);
+			devm_kfree(&ndev->dev, dsi->bl_name);
 		}
 	}
 

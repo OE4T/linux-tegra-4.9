@@ -245,6 +245,7 @@ struct tegra_dc_dp_data {
 
 	u32				irq;
 
+	struct resource			*res;
 	struct resource			*aux_base_res;
 	void __iomem			*aux_base;
 	struct clk			*dpaux_clk;

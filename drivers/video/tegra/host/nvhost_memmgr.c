@@ -29,9 +29,6 @@
 #include "nvmap.h"
 #include <linux/nvmap.h>
 #endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-#include "dmabuf.h"
-#endif
 #include "chip_support.h"
 
 struct mem_mgr *nvhost_memmgr_alloc_mgr(void)
@@ -39,10 +36,6 @@ struct mem_mgr *nvhost_memmgr_alloc_mgr(void)
 	struct mem_mgr *mgr = NULL;
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	mgr = nvhost_nvmap_alloc_mgr();
-#else
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	mgr = (struct mem_mgr)1;
-#endif
 #endif
 
 	return mgr;
@@ -52,10 +45,6 @@ void nvhost_memmgr_put_mgr(struct mem_mgr *mgr)
 {
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	nvhost_nvmap_put_mgr(mgr);
-#else
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	mgr = (struct mem_mgr)1;
-#endif
 #endif
 }
 
@@ -64,10 +53,6 @@ struct mem_mgr *nvhost_memmgr_get_mgr(struct mem_mgr *_mgr)
 	struct mem_mgr *mgr = NULL;
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	mgr = nvhost_nvmap_get_mgr(_mgr);
-#else
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	mgr = (struct mem_mgr)1;
-#endif
 #endif
 
 	return mgr;
@@ -78,10 +63,6 @@ struct mem_mgr *nvhost_memmgr_get_mgr_file(int fd)
 	struct mem_mgr *mgr = NULL;
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	mgr = nvhost_nvmap_get_mgr_file(fd);
-#else
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	mgr = (struct mem_mgr)1;
-#endif
 #endif
 
 	return mgr;
@@ -96,11 +77,6 @@ struct mem_handle *nvhost_memmgr_get(struct mem_mgr *mgr,
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		h = (struct mem_handle *) nvhost_nvmap_get(mgr, id, dev);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		h = (struct mem_handle *) nvhost_dmabuf_get(id, dev);
 		break;
 #endif
 	default:
@@ -118,11 +94,6 @@ void nvhost_memmgr_put(struct mem_mgr *mgr, struct mem_handle *handle)
 		nvhost_nvmap_put(mgr, handle);
 		break;
 #endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		nvhost_dmabuf_put(handle);
-		break;
-#endif
 	default:
 		break;
 	}
@@ -135,11 +106,6 @@ struct sg_table *nvhost_memmgr_pin(struct mem_mgr *mgr,
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_pin(mgr, handle, dev, rw_flag);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_pin(handle);
 		break;
 #endif
 	default:
@@ -158,11 +124,6 @@ void nvhost_memmgr_unpin(struct mem_mgr *mgr,
 		nvhost_nvmap_unpin(mgr, handle, dev, sgt);
 		break;
 #endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		nvhost_dmabuf_unpin(handle, sgt);
-		break;
-#endif
 	default:
 		break;
 	}
@@ -174,11 +135,6 @@ void *nvhost_memmgr_mmap(struct mem_handle *handle)
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_mmap(handle);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_mmap(handle);
 		break;
 #endif
 	default:
@@ -195,11 +151,6 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 		nvhost_nvmap_munmap(handle, addr);
 		break;
 #endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		nvhost_dmabuf_munmap(handle, addr);
-		break;
-#endif
 	default:
 		break;
 	}
@@ -211,11 +162,6 @@ void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		return nvhost_nvmap_kmap(handle, pagenum);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		return nvhost_dmabuf_kmap(handle, pagenum);
 		break;
 #endif
 	default:
@@ -231,11 +177,6 @@ void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
 #ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
 	case mem_mgr_type_nvmap:
 		nvhost_nvmap_kunmap(handle, pagenum, addr);
-		break;
-#endif
-#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
-	case mem_mgr_type_dmabuf:
-		nvhost_dmabuf_kunmap(handle, pagenum, addr);
 		break;
 #endif
 	default:

@@ -298,7 +298,7 @@ static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 
 		if ((*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_MASK) ==
 			DPAUX_DP_AUXSTAT_REPLYTYPE_ACK) {
-			*size = ((*aux_stat) & DPAUX_DP_AUXSTAT_REPLY_M_MASK);
+			(*size)++;
 			return 0;
 		} else {
 			dev_err(&dp->dc->ndev->dev,
@@ -341,7 +341,7 @@ tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 
 		if (ret)
 			break;
-	} while (*size >= finished);
+	} while (*size > finished);
 	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;

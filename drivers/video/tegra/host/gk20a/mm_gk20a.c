@@ -262,11 +262,8 @@ static int gk20a_alloc_comptags(struct device *dev,
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
 	nvhost_dbg_fn("");
-	gk20a_reset(g, mc_enable_pfb_enabled_f()
-			| mc_enable_l2_enabled_f()
-			| mc_enable_ce2_enabled_f()
-			| mc_enable_xbar_enabled_f()
-			| mc_enable_hub_enabled_f());
+	if (g->ops.fb.reset)
+		g->ops.fb.reset(g);
 
 	return 0;
 }

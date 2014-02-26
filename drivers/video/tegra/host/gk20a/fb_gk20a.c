@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/hal_gk20a.c
- *
- * GK20A Tegra HAL interface.
+ * GK20A memory interface
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -15,17 +13,22 @@
  * more details.
  */
 
-#include "hal_gk20a.h"
-#include "ltc_gk20a.h"
-#include "fb_gk20a.h"
-#include "gk20a.h"
+#include <linux/types.h>
+#include <dev.h>
+#include "gk20a/gk20a.h"
+#include "hw_mc_gk20a.h"
 
-int gk20a_init_hal(struct gpu_ops *gops)
+static void fb_gk20a_reset(struct gk20a *g)
 {
-	gk20a_init_ltc(gops);
-	gk20a_init_gr(gops);
-	gk20a_init_fb(gops);
-	gops->name = "gk20a";
+	nvhost_dbg_info("reset gk20a fb");
 
-	return 0;
+	gk20a_reset(g, mc_enable_pfb_enabled_f()
+			| mc_enable_l2_enabled_f()
+			| mc_enable_xbar_enabled_f()
+			| mc_enable_hub_enabled_f());
+}
+
+void gk20a_init_fb(struct gpu_ops *gops)
+{
+	gops->fb.reset = fb_gk20a_reset;
 }

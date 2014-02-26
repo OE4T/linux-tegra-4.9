@@ -27,6 +27,7 @@ obj-$(CONFIG_GK20A) += \
 	gk20a_scale.o \
 	gk20a_sysfs.o \
 	ltc_gk20a.o \
+	fb_gk20a.o \
 	hal.o \
 	hal_gk20a.o
 

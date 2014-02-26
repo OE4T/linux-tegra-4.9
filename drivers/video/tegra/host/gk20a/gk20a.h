@@ -114,6 +114,9 @@ struct gpu_ops {
 					      struct gr_gk20a *gr);
 	} gr;
 	const char *name;
+	struct {
+		void (*reset)(struct gk20a *g);
+	} fb;
 };
 
 struct gk20a {

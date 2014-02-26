@@ -114,6 +114,13 @@ struct gk20a_platform {
 	 * will register a callback to id. Each time we receive a new value,
 	 * the postscale callback gets called.  */
 	int qos_id;
+
+	/* Called as part of debug dump. If the gpu gets hung, this function
+	 * is responsible for delivering all necessary debug data of other
+	 * hw units which may interact with the gpu without direct supervision
+	 * of the CPU.
+	 */
+	void (*dump_platform_dependencies)(struct platform_device *dev);
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

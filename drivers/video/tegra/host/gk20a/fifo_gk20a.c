@@ -26,6 +26,7 @@
 
 #include "../dev.h"
 
+#include "debug_gk20a.h"
 #include "gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
@@ -969,7 +970,7 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	} else {
 		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
 		fake_fault = false;
-		nvhost_debug_dump(g->host);
+		gk20a_debug_dump(g->dev);
 	}
 
 	/* lock all runlists. Note that locks are are released in
@@ -1104,7 +1105,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	int ret;
 
 	if (verbose)
-		nvhost_debug_dump(g->host);
+		gk20a_debug_dump(g->dev);
 
 	/* store faulted engines in advance */
 	g->fifo.mmu_fault_engines = 0;

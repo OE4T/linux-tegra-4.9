@@ -343,6 +343,12 @@ static inline int nvhost_vpr_info_fetch(void)
 }
 #endif
 
+#ifdef CONFIG_TEGRA_GRHOST
+void nvhost_debug_dump_device(struct platform_device *pdev);
+#else
+static inline void nvhost_debug_dump_device(struct platform_device *pdev) {}
+#endif
+
 /* Hacky way to get access to struct nvhost_device_data for VI device. */
 extern struct nvhost_device_data t20_vi_info;
 extern struct nvhost_device_data t30_vi_info;

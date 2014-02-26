@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/debug_gk20a.h
+ * GK20A Debug functionality
  *
- * Copyright (C) 2011 NVIDIA Corporation
+ * Copyright (C) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,9 +14,10 @@
  *
  */
 
-void gk20a_debug_show_channel_cdma(struct nvhost_master *m,
-				struct nvhost_channel *ch,
-				struct output *o, int chid);
-void gk20a_debug_show_channel_fifo(struct nvhost_master *m,
-				struct nvhost_channel *ch,
-				struct output *o, int chid);
+#ifndef _DEBUG_GK20A_H_
+#define _DEBUG_GK20A_H_
+
+void gk20a_debug_dump(struct platform_device *pdev);
+void gk20a_debug_init(struct platform_device *pdev);
+
+#endif

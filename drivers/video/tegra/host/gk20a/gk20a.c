@@ -52,6 +52,7 @@
 #include "nvhost_acm.h"
 
 #include "gk20a.h"
+#include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_timer_gk20a.h"
@@ -72,6 +73,11 @@
 #define INTERFACE_NAME "nvhost%s-gpu"
 
 #define GK20A_NUM_CDEVS 5
+
+#if defined(GK20A_DEBUG)
+u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
+u32 gk20a_dbg_ftrace;
+#endif
 
 static int gk20a_pm_finalize_poweron(struct device *dev);
 static int gk20a_pm_prepare_poweroff(struct device *dev);
@@ -1383,6 +1389,8 @@ static int gk20a_probe(struct platform_device *dev)
 			return err;
 		}
 	}
+
+	gk20a_debug_init(dev);
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;

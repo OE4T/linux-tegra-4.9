@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Chip support for T124
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,7 +41,6 @@ static inline int nvhost_init_t124_support(struct nvhost_master *host,
 int nvhost_init_t124_channel_support(struct nvhost_master *,
 		struct nvhost_chip_support *);
 int nvhost_init_t124_cdma_support(struct nvhost_chip_support *);
-int nvhost_init_t124_debug_support(struct nvhost_chip_support *);
 int nvhost_init_t124_syncpt_support(struct nvhost_master *,
 		struct nvhost_chip_support *);
 int nvhost_init_t124_intr_support(struct nvhost_chip_support *);

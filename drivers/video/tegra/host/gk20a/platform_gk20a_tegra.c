@@ -411,6 +411,13 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	profile->private_data = emc_params;
 }
 
+static void gk20a_tegra_debug_dump(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a *g = platform->g;
+	nvhost_debug_dump_device(g->dev);
+}
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -432,11 +439,8 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 	/* Make gk20a power domain a subdomain of mc */
 	tegra_pd_add_sd(&platform->g->pd);
 
-
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
-
-	platform->debugfs = debugfs_create_dir(dev->name, NULL);
 
 	return 0;
 }
@@ -500,6 +504,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
+	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 
 struct gk20a_platform gk20a_tegra_platform = {
@@ -528,6 +533,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.channel_busy = gk20a_tegra_channel_busy,
 	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
+	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 
 struct platform_device tegra_gk20a_device = {

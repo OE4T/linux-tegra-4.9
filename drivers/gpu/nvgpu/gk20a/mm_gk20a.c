@@ -107,7 +107,7 @@ static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
 				u32 kind);
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   enum gmmu_pgsz_gk20a pgsz_idx,
-				   struct sg_table *sgt,
+				   struct sg_table *sgt, u64 buffer_offset,
 				   u64 first_vaddr, u64 last_vaddr,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
 				   int rw_flag);
@@ -1057,7 +1057,7 @@ static int setup_buffer_kind_and_compression(struct device *d,
 
 static int validate_fixed_buffer(struct vm_gk20a *vm,
 				 struct buffer_attrs *bfr,
-				 u64 map_offset)
+				 u64 map_offset, u64 map_size)
 {
 	struct device *dev = dev_from_vm(vm);
 	struct vm_reserved_va_node *va_node;
@@ -1084,7 +1084,7 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 		&va_node->va_buffers_list, va_buffers_list) {
 		s64 begin = max(buffer->addr, map_offset);
 		s64 end = min(buffer->addr +
-			buffer->size, map_offset + bfr->size);
+			buffer->size, map_offset + map_size);
 		if (end - begin > 0) {
 			gk20a_warn(dev, "overlapping buffer map requested");
 			return -EINVAL;
@@ -1097,6 +1097,7 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct sg_table *sgt,
+				u64 buffer_offset,
 				u64 size,
 				int pgsz_idx,
 				u8 kind_v,
@@ -1139,6 +1140,7 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,
+				      buffer_offset,
 				      map_offset, map_offset + size - 1,
 				      kind_v,
 				      ctag_offset,
@@ -1182,6 +1184,7 @@ static void __locked_gmmu_unmap(struct vm_gk20a *vm,
 	err = update_gmmu_ptes_locked(vm,
 				pgsz_idx,
 				0, /* n/a for unmap */
+				0,
 				vaddr,
 				vaddr + size - 1,
 				0, 0, false /* n/a for unmap */,
@@ -1274,7 +1277,9 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			int kind,
 			struct sg_table **sgt,
 			bool user_mapped,
-			int rw_flag)
+			int rw_flag,
+			u64 buffer_offset,
+			u64 mapping_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_allocator *ctag_allocator = &g->gr.comp_tags;
@@ -1324,6 +1329,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		buf_addr = (u64)sg_phys(bfr.sgt->sgl);
 	bfr.align = 1 << __ffs(buf_addr);
 	bfr.pgsz_idx = -1;
+	mapping_size = mapping_size ? mapping_size : bfr.size;
 
 	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
 	 * page size according to memory alignment */
@@ -1352,8 +1358,10 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gmmu_page_size = gmmu_page_sizes[bfr.pgsz_idx];
 
 	/* Check if we should use a fixed offset for mapping this buffer */
+
 	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
-		err = validate_fixed_buffer(vm, &bfr, offset_align);
+		err = validate_fixed_buffer(vm, &bfr,
+			offset_align, mapping_size);
 		if (err)
 			goto clean_up;
 
@@ -1402,11 +1410,13 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	/* update gmmu ptes */
 	map_offset = __locked_gmmu_map(vm, map_offset,
 					bfr.sgt,
-					bfr.size,
+					buffer_offset, /* sg offset */
+					mapping_size,
 					bfr.pgsz_idx,
 					bfr.kind_v,
 					bfr.ctag_offset,
 					flags, rw_flag);
+
 	if (!map_offset)
 		goto clean_up;
 
@@ -1449,7 +1459,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->dmabuf      = dmabuf;
 	mapped_buffer->sgt         = bfr.sgt;
 	mapped_buffer->addr        = map_offset;
-	mapped_buffer->size        = bfr.size;
+	mapped_buffer->size        = mapping_size;
 	mapped_buffer->pgsz_idx    = bfr.pgsz_idx;
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
@@ -1520,6 +1530,7 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	mutex_lock(&vm->update_gmmu_lock);
 	vaddr = __locked_gmmu_map(vm, 0, /* already mapped? - No */
 				*sgt, /* sg table */
+				0, /* sg offset */
 				size,
 				0, /* page size index = 0 i.e. SZ_4K */
 				0, /* kind */
@@ -1649,6 +1660,7 @@ u64 gk20a_mm_iova_addr(struct scatterlist *sgl)
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   enum gmmu_pgsz_gk20a pgsz_idx,
 				   struct sg_table *sgt,
+				   u64 buffer_offset,
 				   u64 first_vaddr, u64 last_vaddr,
 				   u8 kind_v, u32 ctag_offset,
 				   bool cacheable,
@@ -1663,6 +1675,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	u32 ctag_incr;
 	u32 page_size  = gmmu_page_sizes[pgsz_idx];
 	u64 addr = 0;
+	u64 space_to_skip = buffer_offset;
 
 	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
 				   &pde_lo, &pde_hi);
@@ -1675,12 +1688,30 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	 * comptags are active) is 128KB. We have checks elsewhere for that. */
 	ctag_incr = !!ctag_offset;
 
-	if (sgt)
+	cur_offset = 0;
+	if (sgt) {
 		cur_chunk = sgt->sgl;
+		/* space_to_skip must be page aligned */
+		BUG_ON(space_to_skip & (page_size - 1));
+
+		while (space_to_skip > 0 && cur_chunk) {
+			u64 new_addr = gk20a_mm_iova_addr(cur_chunk);
+			if (new_addr) {
+				addr = new_addr;
+				addr += cur_offset;
+			}
+			cur_offset += page_size;
+			addr += page_size;
+			while (cur_chunk &&
+				cur_offset >= cur_chunk->length) {
+				cur_offset -= cur_chunk->length;
+				cur_chunk = sg_next(cur_chunk);
+			}
+			space_to_skip -= page_size;
+		}
+	}
 	else
 		cur_chunk = NULL;
-
-	cur_offset = 0;
 
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
 		u32 pte_lo, pte_hi;
@@ -1713,14 +1744,12 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 		gk20a_dbg(gpu_dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
-
 			if (likely(sgt)) {
 				u64 new_addr = gk20a_mm_iova_addr(cur_chunk);
 				if (new_addr) {
 					addr = new_addr;
 					addr += cur_offset;
 				}
-
 				pte_w[0] = gmmu_pte_valid_true_f() |
 					gmmu_pte_address_sys_f(addr
 						>> gmmu_pte_address_shift_v());
@@ -1737,20 +1766,16 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 					pte_w[1] |=
 						gmmu_pte_read_disable_true_f();
 				}
-
 				if (!cacheable)
 					pte_w[1] |= gmmu_pte_vol_true_f();
 
 				pte->ref_cnt++;
-
-				gk20a_dbg(gpu_dbg_pte,
-					   "pte_cur=%d addr=0x%x,%08x kind=%d"
+				gk20a_dbg(gpu_dbg_pte, "pte_cur=%d addr=0x%x,%08x kind=%d"
 					   " ctag=%d vol=%d refs=%d"
 					   " [0x%08x,0x%08x]",
 					   pte_cur, hi32(addr), lo32(addr),
 					   kind_v, ctag, !cacheable,
 					   pte->ref_cnt, pte_w[1], pte_w[0]);
-
 				ctag += ctag_incr;
 				cur_offset += page_size;
 				addr += page_size;
@@ -1926,7 +1951,7 @@ static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 
 	for (i = 0; i < num_pages; i++) {
 		u64 page_vaddr = __locked_gmmu_map(vm, vaddr,
-			vm->zero_page_sgt, pgsz, pgsz_idx, 0, 0,
+			vm->zero_page_sgt, 0, pgsz, pgsz_idx, 0, 0,
 			NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
 			gk20a_mem_flag_none);
 
@@ -2012,6 +2037,7 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
+
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
 	mutex_unlock(&vm->update_gmmu_lock);
 }
@@ -2301,7 +2327,6 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 		va_node->sparse = true;
 	}
-
 	list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
 
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -2441,7 +2466,9 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
-			int kind)
+			int kind,
+			u64 buffer_offset,
+			u64 mapping_size)
 {
 	int err = 0;
 	struct vm_gk20a *vm = as_share->vm;
@@ -2466,7 +2493,10 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 
 	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,
-			gk20a_mem_flag_none);
+			gk20a_mem_flag_none,
+			buffer_offset,
+			mapping_size);
+
 	*offset_align = ret_va;
 	if (!ret_va) {
 		dma_buf_put(dmabuf);

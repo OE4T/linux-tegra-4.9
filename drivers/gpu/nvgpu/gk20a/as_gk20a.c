@@ -135,19 +135,14 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		struct gk20a_as_share *as_share,
 		struct nvhost_as_map_buffer_ex_args *args)
 {
-	int i;
-
 	gk20a_dbg_fn("");
 
-	/* ensure that padding is not set. this is required for ensuring that
-	 * we can safely use these fields later */
-	for (i = 0; i < ARRAY_SIZE(args->padding); i++)
-		if (args->padding[i])
-			return -EINVAL;
-
 	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
-				   &args->offset, args->flags,
-				   args->kind);
+				   &args->as_offset, args->flags,
+				   args->kind,
+				   args->buffer_offset,
+				   args->mapping_size
+				   );
 }
 
 static int gk20a_as_ioctl_map_buffer(
@@ -156,8 +151,9 @@ static int gk20a_as_ioctl_map_buffer(
 {
 	gk20a_dbg_fn("");
 	return gk20a_vm_map_buffer(as_share, args->nvmap_handle,
-				   &args->o_a.align,
-				   args->flags, NV_KIND_DEFAULT);
+				   &args->o_a.offset,
+				   args->flags, NV_KIND_DEFAULT,
+				   0, 0);
 	/* args->o_a.offset will be set if !err */
 }
 

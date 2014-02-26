@@ -414,7 +414,9 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		int kind,
 		struct sg_table **sgt,
 		bool user_mapped,
-		int rw_flag);
+		int rw_flag,
+		 u64 buffer_offset,
+		 u64 mapping_size);
 
 /* unmap handle from kernel */
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset);
@@ -455,7 +457,9 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
-			int kind);
+			int kind,
+			u64 buffer_offset,
+			u64 mapping_size);
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);

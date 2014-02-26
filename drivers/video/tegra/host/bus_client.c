@@ -992,7 +992,7 @@ static long nvhost_channelctl(struct file *filp,
 		err = nvhost_ioctl_channel_set_ctxswitch(priv, (void *)buf);
 		break;
 	default:
-		nvhost_err(dev, "unrecognized ioctl cmd: 0x%x", cmd);
+		nvhost_dbg_info("unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

@@ -23,6 +23,8 @@
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <linux/clk/tegra.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 
 #include <mach/dc.h>
 
@@ -246,27 +248,47 @@ static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor)
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg)
 {
-	struct tegra_dc_sor_data	*sor;
-	struct resource			*res;
-	struct resource			*base_res;
-	void __iomem			*base;
-	struct clk			*clk;
-	int				 err;
+	struct tegra_dc_sor_data *sor;
+	struct resource *res;
+	struct resource *base_res;
+	struct resource of_sor_res;
+	void __iomem *base;
+	struct clk *clk;
+	int err;
 
-	sor = kzalloc(sizeof(*sor), GFP_KERNEL);
+	struct device_node *np = dc->ndev->dev.of_node;
+
+	struct device_node *np_sor =
+		of_find_node_by_path("host1x/sor");
+
+	sor = devm_kzalloc(&dc->ndev->dev, sizeof(*sor), GFP_KERNEL);
 	if (!sor) {
 		err = -ENOMEM;
 		goto err_allocate;
 	}
 
-	res = platform_get_resource_byname(dc->ndev, IORESOURCE_MEM, "sor");
-	if (!res) {
-		dev_err(&dc->ndev->dev, "sor: no mem resource\n");
-		err = -ENOENT;
-		goto err_free_sor;
+	if (np) {
+		if (np_sor && of_device_is_available(np_sor)) {
+			of_address_to_resource(np_sor, 0,
+				&of_sor_res);
+			res = &of_sor_res;
+		} else {
+			err = -EINVAL;
+			goto err_free_sor;
+		}
+	} else {
+		res = platform_get_resource_byname(dc->ndev,
+			IORESOURCE_MEM, "sor");
+		if (!res) {
+			dev_err(&dc->ndev->dev,
+				"sor: no mem resource\n");
+			err = -ENOENT;
+			goto err_free_sor;
+		}
 	}
 
-	base_res = request_mem_region(res->start, resource_size(res),
+	base_res = devm_request_mem_region(&dc->ndev->dev,
+		res->start, resource_size(res),
 		dc->ndev->name);
 	if (!base_res) {
 		dev_err(&dc->ndev->dev, "sor: request_mem_region failed\n");
@@ -274,7 +296,8 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_free_sor;
 	}
 
-	base = ioremap(res->start, resource_size(res));
+	base = devm_ioremap(&dc->ndev->dev,
+			res->start, resource_size(res));
 	if (!base) {
 		dev_err(&dc->ndev->dev, "sor: registers can't be mapped\n");
 		err = -ENOENT;
@@ -288,12 +311,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_iounmap_reg;
 	}
 
-	sor->dc	      = dc;
-	sor->base     = base;
+	sor->dc = dc;
+	sor->base = base;
+	sor->res = res;
 	sor->base_res = base_res;
-	sor->sor_clk  = clk;
+	sor->sor_clk = clk;
 	sor->link_cfg = cfg;
-	sor->portnum  = 0;
+	sor->portnum = 0;
 
 	tegra_dc_sor_debug_create(sor);
 
@@ -301,11 +325,14 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 
 err_iounmap_reg:
-	iounmap(base);
+	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
-	release_resource(base_res);
+	devm_release_mem_region(&dc->ndev->dev,
+		res->start, resource_size(res));
+	if (!np_sor || !of_device_is_available(np_sor))
+		release_resource(res);
 err_free_sor:
-	kfree(sor);
+	devm_kfree(&dc->ndev->dev, sor);
 err_allocate:
 	return ERR_PTR(err);
 }
@@ -341,10 +368,16 @@ int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor, int pu_pd)
 
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 {
+	struct device_node *np_sor =
+		of_find_node_by_path("host1x/sor");
 	clk_put(sor->sor_clk);
-	iounmap(sor->base);
-	release_resource(sor->base_res);
-	kfree(sor);
+	devm_iounmap(&sor->dc->ndev->dev, sor->base);
+	devm_release_mem_region(&sor->dc->ndev->dev,
+		sor->res->start, resource_size(sor->res));
+
+	if (!np_sor || !of_device_is_available(np_sor))
+		release_resource(sor->res);
+	devm_kfree(&sor->dc->ndev->dev, sor);
 }
 
 void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes)

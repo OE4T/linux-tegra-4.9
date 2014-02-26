@@ -83,6 +83,7 @@ struct tegra_dc_sor_data {
 	struct tegra_dc	*dc;
 
 	void __iomem	*base;
+	struct resource	*res;
 	struct resource	*base_res;
 	struct clk	*sor_clk;
 

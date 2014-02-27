@@ -215,7 +215,7 @@ EXPORT_SYMBOL(tegra_isp_unregister_mfi_cb);
 static void isp_isr_work(struct work_struct *isp_work)
 {
 	if (mfi_callback == NULL) {
-		pr_err("NULL callback\n");
+		pr_debug("NULL callback\n");
 		return;
 	}
 

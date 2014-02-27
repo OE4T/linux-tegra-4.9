@@ -70,6 +70,12 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch);
 
+static inline
+struct nvhost_master *host_from_gk20a_channel(struct channel_gk20a *ch)
+{
+	return nvhost_get_host(ch->g->dev);
+}
+
 static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f)
 {
 	struct channel_gk20a *ch = NULL;
@@ -311,7 +317,7 @@ static int channel_gk20a_setup_userd(struct channel_gk20a *c)
 
 static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 {
-	struct gk20a *g = get_gk20a(ch_gk20a->ch->dev);
+	struct gk20a *g = ch_gk20a->g;
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *engine_info =
 		f->engine_info + ENGINE_GR_GK20A;
@@ -342,7 +348,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 
 static void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 {
-	struct gk20a *g = get_gk20a(ch_gk20a->ch->dev);
+	struct gk20a *g = ch_gk20a->g;
 
 	nvhost_dbg_fn("");
 
@@ -703,7 +709,6 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
-	struct gk20a_platform *platform;
 
 	ch = acquire_unused_channel(f);
 	if (ch == NULL) {
@@ -713,11 +718,6 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	}
 
 	ch->g = g;
-#ifdef CONFIG_TEGRA_GK20A
-	platform = gk20a_get_platform(g->dev);
-	platform->nvhost.channel = nvhost_channel_map(&platform->nvhost);
-	ch->ch = platform->nvhost.channel;
-#endif
 
 	if (channel_gk20a_alloc_inst(g, ch)) {
 		ch->in_use = false;
@@ -1333,7 +1333,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 		 */
 		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
 			trace_gk20a_push_cmdbuf(
-				c->ch->dev->name,
+				c->g->dev->name,
 				0,
 				min(words - i, TRACE_MAX_LENGTH),
 				offset + i * sizeof(u32),
@@ -1449,7 +1449,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* gk20a_channel_update releases this ref. */
 	gk20a_channel_busy(g->dev);
 
-	trace_gk20a_channel_submit_gpfifo(c->ch->dev->name,
+	trace_gk20a_channel_submit_gpfifo(c->g->dev->name,
 					  c->hw_chid,
 					  num_entries,
 					  flags,
@@ -1570,7 +1570,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* address space (vm).   */
 	gk20a_mm_tlb_invalidate(c->vm);
 
-	trace_gk20a_channel_submitted_gpfifo(c->ch->dev->name,
+	trace_gk20a_channel_submitted_gpfifo(c->g->dev->name,
 					     c->hw_chid,
 					     num_entries,
 					     flags,
@@ -1659,7 +1659,7 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					ulong id, u32 offset,
 					u32 payload, long timeout)
 {
-	struct platform_device *pdev = ch->ch->dev;
+	struct platform_device *pdev = ch->g->dev;
 	struct dma_buf *dmabuf;
 	void *data;
 	u32 *semaphore;

@@ -79,7 +79,7 @@ static void gk20a_debug_show_channel(struct output *o,
 		return;
 
 	nvhost_debug_output(o, "%d-%s, pid %d: ", ch->hw_chid,
-			ch->ch->dev->name,
+			ch->g->dev->name,
 			ch->pid);
 	nvhost_debug_output(o, "%s in use %s %s\n",
 			ccsr_channel_enable_v(channel) ? "" : "not",

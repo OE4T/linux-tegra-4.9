@@ -82,8 +82,6 @@ struct channel_gk20a {
 	bool vpr;
 	pid_t pid;
 
-	struct nvhost_channel *ch;
-
 	struct list_head jobs;
 	struct mutex jobs_lock;
 
@@ -169,11 +167,5 @@ long gk20a_channel_ioctl(struct file *filp,
 			 unsigned long arg);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
-
-static inline
-struct nvhost_master *host_from_gk20a_channel(struct channel_gk20a *ch)
-{
-	return nvhost_get_host(ch->ch->dev);
-}
 
 #endif /*__CHANNEL_GK20A_H__*/

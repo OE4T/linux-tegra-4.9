@@ -132,6 +132,21 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 	return val;
 }
 
+
+/**
+ * Return current syncpoint value on success
+ */
+int nvhost_syncpt_read_check(struct nvhost_syncpt *sp, u32 id, u32 *val)
+{
+	if (nvhost_module_busy(syncpt_to_dev(sp)->dev))
+		return -EINVAL;
+
+	*val = syncpt_op().update_min(sp, id);
+	nvhost_module_idle(syncpt_to_dev(sp)->dev);
+
+	return 0;
+}
+
 /**
  * Get the current syncpoint value
  */
@@ -871,6 +886,24 @@ u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
 	return nvhost_syncpt_read(sp, id);
 }
 EXPORT_SYMBOL(nvhost_syncpt_read_ext);
+
+int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val)
+{
+	struct platform_device *pdev;
+	struct nvhost_syncpt *sp;
+
+	if (!nvhost_get_parent(dev)) {
+		dev_err(&dev->dev, "Read called with wrong dev\n");
+		return -EINVAL;
+	}
+
+	/* get the parent */
+	pdev = to_platform_device(dev->dev.parent);
+	sp = &(nvhost_get_host(pdev)->syncpt);
+
+	return nvhost_syncpt_read_check(sp, id, val);
+}
+EXPORT_SYMBOL(nvhost_syncpt_read_ext_check);
 
 int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	u32 thresh, u32 timeout, u32 *value, struct timespec *ts)

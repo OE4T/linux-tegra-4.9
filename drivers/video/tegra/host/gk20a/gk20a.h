@@ -217,6 +217,7 @@ struct gk20a {
 
 	struct gk20a_scale_profile *scale_profile;
 
+	struct device_dma_parameters dma_parms;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

@@ -21,6 +21,7 @@
 #include "nvhost_acm.h"
 #include "bus_client.h"
 #include "class_ids.h"
+#include <linux/debugfs.h>
 #include "t124/syncpt_t124.h"
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
@@ -426,7 +427,6 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 static int gk20a_tegra_late_probe(struct platform_device *dev)
 {
-	int err;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct nvhost_device_data *pdata = &platform->nvhost;
 
@@ -439,21 +439,10 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
 
-	err = nvhost_client_device_init(dev);
-	if (err) {
-		nvhost_dbg_fn("failed to init client device for %s",
-			      dev->name);
-		goto fail;
-	}
-
+	pdata->debugfs = debugfs_create_dir(dev->name, NULL);
 	platform->debugfs = pdata->debugfs;
 
 	return 0;
-
-fail:
-	nvhost_module_deinit(dev);
-	pdata->pdev = NULL;
-	return err;
 }
 
 static int gk20a_tegra_suspend(struct device *dev)

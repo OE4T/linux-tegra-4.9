@@ -21,6 +21,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
+#include <linux/dma-mapping.h>
 #include <linux/highmem.h>
 #include <linux/string.h>
 #include <linux/cdev.h>
@@ -1382,6 +1383,10 @@ static int gk20a_probe(struct platform_device *dev)
 			return err;
 		}
 	}
+
+	/* Set DMA parameters to allow larger sgt lists */
+	dev->dev.dma_parms = &gk20a->dma_parms;
+	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
 	gpu_cdev = &gk20a->gk20a_cdev;
 	gpu_cdev->gk20a_freq_table_size = tegra_gpufreq_table_size_get();

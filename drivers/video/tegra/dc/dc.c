@@ -2063,6 +2063,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 {
 	int i;
 	int int_enable;
+	u32 val;
 
 	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
@@ -2165,8 +2166,8 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 		dc->syncpt[i].id = syncpt;
 
-		dc->syncpt[i].min = dc->syncpt[i].max =
-			nvhost_syncpt_read_ext(dc->ndev, syncpt);
+		if (!nvhost_syncpt_read_ext_check(dc->ndev, syncpt, &val))
+			dc->syncpt[i].min = dc->syncpt[i].max = val;
 	}
 
 	dc->crc_pending = false;

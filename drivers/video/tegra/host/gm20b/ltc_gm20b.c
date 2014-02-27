@@ -43,19 +43,12 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(cbc_param);
 	u32 cacheline_size =
 		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
-	u32 slices_per_fbp;
+	u32 slices_per_ltc =
+		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
 
 	u32 compbit_backing_size;
 
 	nvhost_dbg_fn("");
-
-	/* Hack: for gm20x there are 2 LTCs per FBP. However for emulation
-	 * there is only 1. This should instead be determined by the correct
-	 * register (which right now doesn't exist in the GPU HW headers).
-	 */
-	slices_per_fbp = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
-	if (tegra_platform_is_silicon())
-		slices_per_fbp <<= 1;
 
 	if (max_comptag_lines == 0) {
 		gr->compbit_store.size = 0;
@@ -68,7 +61,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	/* no hybird fb */
 	compbit_backing_size =
 		DIV_ROUND_UP(max_comptag_lines, comptags_per_cacheline) *
-		cacheline_size * slices_per_fbp * gr->num_fbps;
+		cacheline_size * slices_per_ltc * gr->num_fbps;
 
 	/* aligned to 2KB * num_fbps */
 	compbit_backing_size +=
@@ -79,7 +72,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	max_comptag_lines =
 		(compbit_backing_size * comptags_per_cacheline) /
-		cacheline_size * slices_per_fbp * gr->num_fbps;
+		cacheline_size * slices_per_ltc * gr->num_fbps;
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
@@ -116,16 +109,8 @@ static int gm20b_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	u32 slices_per_fbp;
-
-	/* Hack: for gm20x there are 2 LTCs per FBP. However for emulation
-	 * there is only 1. This should instead be determined by the correct
-	 * register (which right now doesn't exist in the GPU HW headers).
-	 */
-	slices_per_fbp = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
-				  gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
-	if (tegra_platform_is_silicon())
-		slices_per_fbp <<= 1;
+	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
+				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 
 	nvhost_dbg_fn("");
 
@@ -141,7 +126,7 @@ static int gm20b_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 		     ltc_ltcs_ltss_cbc_ctrl1_clear_active_f());
 
 	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
-		for (slice = 0; slice < slices_per_fbp; slice++) {
+		for (slice = 0; slice < slices_per_ltc; slice++) {
 
 			delay = GR_IDLE_CHECK_DEFAULT;
 

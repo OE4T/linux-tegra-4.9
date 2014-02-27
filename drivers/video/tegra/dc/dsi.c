@@ -313,6 +313,17 @@ const u32 init_reg_vs1_ext[] = {
 	DSI_GANGED_MODE_SIZE,
 };
 
+static int tegra_dsi_start_host_cmd_v_blank_video(
+	struct tegra_dc_dsi_data *dsi,
+	struct tegra_dsi_cmd *cmd);
+static void tegra_dsi_stop_host_cmd_v_blank_video(
+	struct tegra_dc_dsi_data *dsi);
+static int tegra_dsi_start_host_cmd_v_blank_dcs(
+	struct tegra_dc_dsi_data *dsi,
+	struct tegra_dsi_cmd *cmd);
+static void tegra_dsi_stop_host_cmd_v_blank_dcs(
+	struct tegra_dc_dsi_data *dsi);
+
 static int tegra_dsi_host_suspend(struct tegra_dc *dc);
 static int tegra_dsi_host_resume(struct tegra_dc *dc);
 static void tegra_dc_dsi_idle_work(struct work_struct *work);
@@ -2957,7 +2968,7 @@ static int _tegra_dsi_write_data(struct tegra_dc_dsi_data *dsi,
 		}
 	}
 
-	if (cmd->cmd_type != TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD) {
+	if (cmd->cmd_type != TEGRA_DSI_PACKET_VBLANK_CMD) {
 		err = tegra_dsi_host_trigger(dsi, cmd->link_id);
 		if (err < 0)
 			dev_err(&dsi->dc->ndev->dev, "DSI host trigger failed\n");
@@ -3042,57 +3053,97 @@ int tegra_dsi_write_data(struct tegra_dc *dc,
 
 EXPORT_SYMBOL(tegra_dsi_write_data);
 
-int tegra_dsi_start_host_cmd_v_blank_video(struct tegra_dc_dsi_data *dsi,
+int tegra_dsi_start_host_cmd_v_blank(struct tegra_dc_dsi_data *dsi,
 	struct tegra_dsi_cmd *cmd)
 {
 	struct tegra_dc *dc = dsi->dc;
 	int err = 0;
-	u32 val;
 
 	if (!dsi->enabled) {
 		dev_err(&dsi->dc->ndev->dev, "DSI controller suspended\n");
 		return -EINVAL;
 	}
 
+	if (cmd->cmd_type != TEGRA_DSI_PACKET_VBLANK_CMD) {
+		dev_err(&dc->ndev->dev, "Invalid VBLANK command\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 	tegra_dc_dsi_hold_host(dc);
-	val = (DSI_CMD_PKT_VID_ENABLE(1) | DSI_LINE_TYPE(4));
-	tegra_dsi_writel(dsi, val, DSI_VID_MODE_CONTROL);
-	_tegra_dsi_write_data(dsi, cmd);
+
+	if (dsi->info.video_data_type ==
+		TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE)
+		tegra_dsi_start_host_cmd_v_blank_video(dsi, cmd);
+	else
+		tegra_dsi_start_host_cmd_v_blank_dcs(dsi, cmd);
+
 	if (dsi->status.lphs != DSI_LPHS_IN_HS_MODE) {
 		err = tegra_dsi_set_to_hs_mode(dc, dsi,
 				TEGRA_DSI_DRIVEN_BY_DC);
 		if (err < 0) {
 			dev_err(&dc->ndev->dev,
-				"dsi: not able to set to hs mode\n");
+				"dsi: not able to set to hs mode: %d\n", err);
 			goto fail;
 		}
 	}
-	tegra_dsi_start_dc_stream(dc, dsi);
+
+	if (dsi->status.dc_stream == DSI_DC_STREAM_DISABLE)
+		tegra_dsi_start_dc_stream(dc, dsi);
 	tegra_dsi_wait_frame_end(dc, dsi, 2);
- fail:
+
+fail:
 	tegra_dc_dsi_release_host(dc);
 	tegra_dc_io_end(dc);
-
+	mutex_unlock(&dsi->lock);
 	return err;
 }
-EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_video);
+EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank);
 
-int tegra_dsi_end_host_cmd_v_blank_video(struct tegra_dc *dc,
-					struct tegra_dc_dsi_data *dsi)
+int tegra_dsi_stop_host_cmd_v_blank(struct tegra_dc_dsi_data *dsi)
 {
+	struct tegra_dc *dc = dsi->dc;
+
 	if (!dsi->enabled) {
 		dev_err(&dsi->dc->ndev->dev, "DSI controller suspended\n");
 		return -EINVAL;
 	}
 
+	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
-	tegra_dsi_writel(dsi, 0, DSI_VID_MODE_CONTROL);
-	tegra_dc_io_end(dc);
+	tegra_dc_dsi_hold_host(dc);
 
+	if (dsi->info.video_data_type ==
+		TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE)
+		tegra_dsi_stop_host_cmd_v_blank_video(dsi);
+	else
+		tegra_dsi_stop_host_cmd_v_blank_dcs(dsi);
+
+	tegra_dc_dsi_release_host(dc);
+	tegra_dc_io_end(dc);
+	mutex_unlock(&dsi->lock);
 	return 0;
 }
-EXPORT_SYMBOL(tegra_dsi_end_host_cmd_v_blank_video);
+EXPORT_SYMBOL(tegra_dsi_stop_host_cmd_v_blank);
+
+static int tegra_dsi_start_host_cmd_v_blank_video(
+	struct tegra_dc_dsi_data *dsi,
+	struct tegra_dsi_cmd *cmd)
+{
+	u32 val;
+
+	val = (DSI_CMD_PKT_VID_ENABLE(1) | DSI_LINE_TYPE(4));
+	tegra_dsi_writel(dsi, val, DSI_VID_MODE_CONTROL);
+	_tegra_dsi_write_data(dsi, cmd);
+	return 0;
+}
+
+static void tegra_dsi_stop_host_cmd_v_blank_video(
+	struct tegra_dc_dsi_data *dsi)
+{
+	tegra_dsi_writel(dsi, 0, DSI_VID_MODE_CONTROL);
+}
 
 static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
@@ -3122,9 +3173,9 @@ static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 						dsi,
 						cur_cmd->sp_len_dly.frame_cnt);
 		} else if (cur_cmd->cmd_type ==
-					TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD) {
-			tegra_dsi_start_host_cmd_v_blank_video(dsi, cur_cmd);
-			tegra_dsi_end_host_cmd_v_blank_video(dc, dsi);
+					TEGRA_DSI_PACKET_VBLANK_CMD) {
+			tegra_dsi_start_host_cmd_v_blank(dsi, cur_cmd);
+			tegra_dsi_stop_host_cmd_v_blank(dsi);
 		} else {
 			delay_ms = DEFAULT_DELAY_MS;
 			if ((i + 1 < n_cmd) &&
@@ -3241,8 +3292,9 @@ static int tegra_dsi_dcs_pkt_seq_ctrl_init(struct tegra_dc_dsi_data *dsi,
 	return 0;
 }
 
-int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
-						struct tegra_dsi_cmd *cmd)
+static int tegra_dsi_start_host_cmd_v_blank_dcs(
+	struct tegra_dc_dsi_data *dsi,
+	struct tegra_dsi_cmd *cmd)
 {
 #define PKT_HEADER_LEN_BYTE	4
 #define CHECKSUM_LEN_BYTE	2
@@ -3250,14 +3302,6 @@ int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
 	int err = 0;
 	u32 val;
 	u16 tot_pkt_len = PKT_HEADER_LEN_BYTE;
-	struct tegra_dc *dc = dsi->dc;
-
-	if (cmd->cmd_type != TEGRA_DSI_PACKET_CMD)
-		return -EINVAL;
-
-	mutex_lock(&dsi->lock);
-	tegra_dc_io_start(dc);
-	tegra_dc_dsi_hold_host(dc);
 
 #if DSI_USE_SYNC_POINTS
 	atomic_set(&dsi_syncpt_rst, 1);
@@ -3266,7 +3310,7 @@ int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
 	err = tegra_dsi_dcs_pkt_seq_ctrl_init(dsi, cmd);
 	if (err < 0) {
 		dev_err(&dsi->dc->ndev->dev,
-			"dsi: dcs pkt seq ctrl init failed\n");
+			"dsi: dcs pkt seq ctrl init failed: %d\n", err);
 		goto fail;
 	}
 
@@ -3281,28 +3325,20 @@ int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
 	tegra_dsi_writel(dsi, val, DSI_INIT_SEQ_CONTROL);
 
 fail:
-	tegra_dc_dsi_release_host(dc);
-	tegra_dc_io_end(dc);
-	mutex_unlock(&dsi->lock);
 	return err;
 
 #undef PKT_HEADER_LEN_BYTE
 #undef CHECKSUM_LEN_BYTE
 }
-EXPORT_SYMBOL(tegra_dsi_start_host_cmd_v_blank_dcs);
 
-void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi)
+static void tegra_dsi_stop_host_cmd_v_blank_dcs(
+	struct tegra_dc_dsi_data *dsi)
 {
-	struct tegra_dc *dc = dsi->dc;
 	u32 cnt;
-
-	mutex_lock(&dsi->lock);
-	tegra_dc_io_start(dc);
-	tegra_dc_dsi_hold_host(dc);
 
 	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS)
 		if (atomic_read(&dsi_syncpt_rst)) {
-			tegra_dsi_wait_frame_end(dc, dsi, 2);
+			tegra_dsi_wait_frame_end(dsi->dc, dsi, 2);
 			tegra_dsi_syncpt_reset(dsi);
 			atomic_set(&dsi_syncpt_rst, 0);
 		}
@@ -3313,12 +3349,7 @@ void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi)
 	for (cnt = 0; cnt < 8; cnt++)
 		tegra_dsi_writel(dsi, 0, DSI_INIT_SEQ_DATA_0 + cnt);
 
-	tegra_dc_dsi_release_host(dc);
-	tegra_dc_io_end(dc);
-
-	mutex_unlock(&dsi->lock);
 }
-EXPORT_SYMBOL(tegra_dsi_stop_host_cmd_v_blank_dcs);
 
 static int tegra_dsi_bta(struct tegra_dc_dsi_data *dsi)
 {

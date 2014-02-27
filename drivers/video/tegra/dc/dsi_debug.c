@@ -304,7 +304,7 @@ static u32 command_value;
 static u32 data_id;
 static u32 command_value1;
 
-static int send_host_cmd_v_blank_dcs(struct seq_file *s, void *unused)
+static int start_host_cmd_v_blank(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
 	int err;
@@ -323,12 +323,12 @@ static int send_host_cmd_v_blank_dcs(struct seq_file *s, void *unused)
 	seq_printf(s, "command value taken :0x%x\n", command_value);
 	seq_printf(s, "second command value taken :0x%x\n", command_value1);
 
-	err = tegra_dsi_start_host_cmd_v_blank_dcs(dsi, user_command);
+	err = tegra_dsi_start_host_cmd_v_blank(dsi, user_command);
 
 	return err;
 }
 
-static ssize_t host_cmd_v_blank_dcs_get_cmd(struct file *file,
+static ssize_t host_cmd_v_blank_set_cmd(struct file *file,
 				const char  *buf, size_t count, loff_t *off)
 {
 	struct seq_file *s = file->private_data;
@@ -350,36 +350,36 @@ static ssize_t host_cmd_v_blank_dcs_get_cmd(struct file *file,
 	return count;
 }
 
-static int host_cmd_v_blank_dcs_open(struct inode *inode, struct file *file)
+static int start_host_cmd_v_blank_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, send_host_cmd_v_blank_dcs, inode->i_private);
+	return single_open(file, start_host_cmd_v_blank, inode->i_private);
 }
 
-static const struct file_operations host_cmd_v_blank_dcs_fops = {
-	.open = host_cmd_v_blank_dcs_open,
+static const struct file_operations host_cmd_v_blank_fops = {
+	.open = start_host_cmd_v_blank_open,
 	.read = seq_read,
-	.write = host_cmd_v_blank_dcs_get_cmd,
+	.write = host_cmd_v_blank_set_cmd,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
 
-static int remove_host_cmd_dcs(struct seq_file *s, void *unused)
+static int stop_host_cmd_v_blank(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi = s->private;
 
-	tegra_dsi_stop_host_cmd_v_blank_dcs(dsi);
-	seq_puts(s, "host_cmd_v_blank_dcs stopped\n");
+	tegra_dsi_stop_host_cmd_v_blank(dsi);
+	seq_puts(s, "host_cmd_v_blank stopped\n");
 
 	return 0;
 }
 
-static int rm_host_cmd_dcs_open(struct inode *inode, struct file *file)
+static int stop_host_cmd_v_blank_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, remove_host_cmd_dcs, inode->i_private);
+	return single_open(file, stop_host_cmd_v_blank, inode->i_private);
 }
 
-static const struct file_operations remove_host_cmd_dcs_fops = {
-	.open = rm_host_cmd_dcs_open,
+static const struct file_operations stop_host_cmd_v_blank_fops = {
+	.open = stop_host_cmd_v_blank_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -406,7 +406,7 @@ static int send_write_data_cmd(struct seq_file *s, void *unused)
 	return err;
 }
 
-static ssize_t write_data_get_cmd(struct file *file,
+static ssize_t write_data_set_cmd(struct file *file,
 				const char  *buf, size_t count, loff_t *off)
 {
 	struct seq_file *s = file->private_data;
@@ -432,7 +432,7 @@ static int write_data_open(struct inode *inode, struct file *file)
 static const struct file_operations write_data_fops = {
 	.open = write_data_open,
 	.read = seq_read,
-	.write = write_data_get_cmd,
+	.write = write_data_set_cmd,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -458,12 +458,12 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 				dsi, &sanity_panel_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("host_cmd_v_blank_dcs", S_IRUGO|S_IWUSR,
-				 dsidir, dsi, &host_cmd_v_blank_dcs_fops);
+	retval = debugfs_create_file("host_cmd_v_blank", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &host_cmd_v_blank_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("remove_host_cmd_dcs", S_IRUGO|S_IWUSR,
-				 dsidir, dsi, &remove_host_cmd_dcs_fops);
+	retval = debugfs_create_file("stop_host_cmd_v_blank", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &stop_host_cmd_v_blank_fops);
 	if (!retval)
 		goto free_out;
 	retval = debugfs_create_file("write_data", S_IRUGO|S_IWUSR,

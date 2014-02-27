@@ -3137,6 +3137,7 @@ static int tegra_dc_remove(struct platform_device *ndev)
 static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	int ret = 0;
 
 	trace_display_suspend(dc);
 	dev_info(&ndev->dev, "suspend\n");
@@ -3144,7 +3145,7 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	tegra_dc_ext_disable(dc->ext);
 
 	mutex_lock(&dc->lock);
-	tegra_dc_io_start(dc);
+	ret = tegra_dc_io_start(dc);
 
 	if (dc->out_ops && dc->out_ops->suspend)
 		dc->out_ops->suspend(dc);
@@ -3164,7 +3165,9 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 			msleep(100);
 	}
 
-	tegra_dc_io_end(dc);
+	if (!ret)
+		tegra_dc_io_end(dc);
+
 	mutex_unlock(&dc->lock);
 	synchronize_irq(dc->irq); /* wait for IRQ handlers to finish */
 

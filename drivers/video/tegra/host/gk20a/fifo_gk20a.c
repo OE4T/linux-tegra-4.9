@@ -1034,7 +1034,6 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		}
 
 		if (ch) {
-			verbose = gk20a_fifo_set_ctx_mmu_error(g, ch);
 			if (ch->in_use) {
 				/* disable the channel from hw and increment
 				 * syncpoints */
@@ -1051,7 +1050,9 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 				/* handled during channel free */
 				g->fifo.deferred_reset_pending = true;
-			}
+			} else
+				verbose = gk20a_fifo_set_ctx_mmu_error(g, ch);
+
 		} else if (f.inst_ptr ==
 				g->mm.bar1.inst_block.cpu_pa) {
 			nvhost_err(dev_from_gk20a(g), "mmu fault from bar1");

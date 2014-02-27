@@ -5138,9 +5138,6 @@ int gk20a_gr_isr(struct gk20a *g)
 		struct fifo_gk20a *f = &g->fifo;
 		struct channel_gk20a *ch = &f->channel[isr_data.chid];
 
-		gk20a_set_error_notifier(ch,
-					NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
-
 		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "exception %08x\n", exception);
 
 		if (exception & gr_exception_fe_m()) {
@@ -5170,6 +5167,9 @@ int gk20a_gr_isr(struct gk20a *g)
 				gk20a_gr_clear_sm_hww(g, global_esr);
 			}
 
+			if (need_reset)
+				gk20a_set_error_notifier(ch,
+					NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 		}
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());

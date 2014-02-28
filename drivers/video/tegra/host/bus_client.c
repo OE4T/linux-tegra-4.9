@@ -618,13 +618,6 @@ fail:
 	return err;
 }
 
-static int nvhost_ioctl_channel_read_3d_reg(struct nvhost_channel_userctx *ctx,
-	struct nvhost_read_3d_reg_args *args)
-{
-	return nvhost_channel_read_reg(ctx->ch, ctx->hwctx,
-			args->offset, &args->value);
-}
-
 static int moduleid_to_index(struct platform_device *dev, u32 moduleid)
 {
 	int i;
@@ -867,9 +860,6 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
-		break;
-	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
-		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_CLK_RATE:
 	{

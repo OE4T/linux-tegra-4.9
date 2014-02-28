@@ -195,8 +195,6 @@ struct nvhost_device_data {
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	struct generic_pm_domain pd;	/* power domain representing power partition */
 #endif
-	/* forces the context restore gather for each submit */
-	bool		force_context_restore;
 
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
@@ -238,13 +236,6 @@ struct nvhost_device_data {
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			u32 waitbase, struct nvhost_channel *ch);
-
-	/* Read module register into memory */
-	int (*read_reg)(struct platform_device *dev,
-			struct nvhost_channel *ch,
-			struct nvhost_hwctx *hwctx,
-			u32 offset,
-			u32 *value);
 
 	/* Callback when a clock is changed */
 	void (*update_clk)(struct platform_device *dev);

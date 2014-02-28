@@ -190,11 +190,6 @@ struct nvhost_cycle_stats_args {
 	__u32 nvmap_handle;
 } __packed;
 
-struct nvhost_read_3d_reg_args {
-	__u32 offset;
-	__u32 value;
-};
-
 enum nvhost_clk_attr {
 	NVHOST_CLOCK = 0,
 	NVHOST_BW,
@@ -336,8 +331,6 @@ struct nvhost_set_ctxswitch_args {
 	_IOW(NVHOST_IOCTL_MAGIC, 5, struct nvhost_set_nvmap_fd_args)
 #define NVHOST_IOCTL_CHANNEL_NULL_KICKOFF	\
 	_IOR(NVHOST_IOCTL_MAGIC, 6, struct nvhost_get_param_args)
-#define NVHOST_IOCTL_CHANNEL_READ_3D_REG \
-	_IOWR(NVHOST_IOCTL_MAGIC, 8, struct nvhost_read_3d_reg_args)
 #define NVHOST_IOCTL_CHANNEL_GET_CLK_RATE		\
 	_IOR(NVHOST_IOCTL_MAGIC, 9, struct nvhost_clk_rate_args)
 #define NVHOST_IOCTL_CHANNEL_SET_CLK_RATE		\

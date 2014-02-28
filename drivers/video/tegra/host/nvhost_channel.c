@@ -174,17 +174,6 @@ int nvhost_channel_save_context(struct nvhost_channel *ch)
 
 }
 
-int nvhost_channel_read_reg(struct nvhost_channel *ch,
-	struct nvhost_hwctx *hwctx,
-	u32 offset, u32 *value)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	if (!pdata->read_reg)
-		return -EINVAL;
-
-	return pdata->read_reg(ch->dev, ch, hwctx, offset, value);
-}
-
 static struct nvhost_hwctx *alloc_hwctx(struct nvhost_hwctx_handler *h,
 		struct nvhost_channel *ch)
 {

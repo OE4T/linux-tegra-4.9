@@ -213,7 +213,7 @@ DEFINE_EVENT(debug_msg, info_msg_evt,
 #endif /*_OZEVENTTRACE_H*/
 
 #undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH .
+#define TRACE_INCLUDE_PATH ../../drivers/staging/ozwpan
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE ozeventtrace
 #include <trace/define_trace.h>

@@ -241,21 +241,7 @@ struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
 struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
 					 unsigned long id)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	return nvmap_handle_get((struct nvmap_handle *)id);
-#else
-	struct nvmap_handle_ref *ref;
-	struct nvmap_handle *h = NULL;
-
-	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, id);
-	if (ref)
-		h = ref->handle;
-	if (h)
-		h = nvmap_handle_get(h);
-	nvmap_ref_unlock(client);
-	return h;
-#endif
 }
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
@@ -465,35 +451,7 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
 					unsigned long id, bool skip_val)
 {
-#ifdef CONFIG_NVMAP_USE_FD_FOR_HANDLE
 	return nvmap_handle_get((struct nvmap_handle *)id);
-#else
-	struct nvmap_handle *h = NULL;
-	struct rb_node *n;
-
-	spin_lock(&nvmap_dev->handle_lock);
-
-	n = nvmap_dev->handles.rb_node;
-
-	while (n) {
-		h = rb_entry(n, struct nvmap_handle, node);
-		if ((unsigned long)h == id) {
-			if (client->super || h->global ||
-			    (h->owner == client) || skip_val)
-				h = nvmap_handle_get(h);
-			else
-				h = nvmap_get_handle_id(client, id);
-			spin_unlock(&nvmap_dev->handle_lock);
-			return h;
-		}
-		if (id > (unsigned long)h)
-			n = n->rb_right;
-		else
-			n = n->rb_left;
-	}
-	spin_unlock(&nvmap_dev->handle_lock);
-	return NULL;
-#endif
 }
 
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,

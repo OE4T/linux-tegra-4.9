@@ -496,6 +496,7 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 	mutex_unlock(&h->lock);
 }
 
+#ifdef CONFIG_CMA
 static struct device *nvmap_create_dma_devs(const char *name, int num_devs)
 {
 	int idx = 0;
@@ -508,6 +509,7 @@ static struct device *nvmap_create_dma_devs(const char *name, int num_devs)
 		dev_set_name(&devs[idx], "heap-%s-%d", name, idx);
 	return devs;
 }
+#endif
 
 static int nvmap_cma_heap_create(struct nvmap_heap *h,
 	const struct nvmap_platform_carveout *co)

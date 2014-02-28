@@ -46,7 +46,6 @@
 #include "dev.h"
 #include "class_ids.h"
 #include "nvhost_as.h"
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_acm.h"
 
@@ -166,7 +165,6 @@ struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
 	struct nvhost_hwctx *hwctx;
 	struct nvhost_job *job;
-	struct mem_mgr *memmgr;
 	u32 timeout;
 	u32 priority;
 	int clientid;
@@ -199,8 +197,6 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 		nvhost_job_put(priv->job);
 
 	nvhost_putchannel(priv->ch, true);
-
-	nvhost_memmgr_put_mgr(priv->memmgr);
 	kfree(priv);
 	return 0;
 }
@@ -596,10 +592,6 @@ static int nvhost_ioctl_channel_set_ctxswitch(
 			pdata->syncpts[0], pdata->waitbases[0],
 			save_incr.syncpt_incrs, restore_incr.syncpt_incrs);
 
-	nhwctx->memmgr = nvhost_memmgr_get_mgr(ctx->memmgr);
-	if (!nhwctx->memmgr)
-		goto fail_set_restore;
-
 	err = user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
 			cmdbuf_restore.offset, cmdbuf_restore.words);
 	if (err)
@@ -865,21 +857,9 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 	{
-		int fd = (int)((struct nvhost_set_nvmap_fd_args *)buf)->fd;
-		struct mem_mgr *new_client = nvhost_memmgr_get_mgr_file(fd);
-
-		if (IS_ERR(new_client)) {
-			err = PTR_ERR(new_client);
-			break;
-		}
-		if (priv->memmgr)
-			nvhost_memmgr_put_mgr(priv->memmgr);
-
-		priv->memmgr = new_client;
-
-		if (priv->hwctx)
-			priv->hwctx->memmgr = new_client;
-
+		dev_info(dev,
+			 "%s doesn't need NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD\n",
+			 current->comm);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:

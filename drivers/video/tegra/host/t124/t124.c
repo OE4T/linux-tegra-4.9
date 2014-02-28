@@ -42,7 +42,6 @@
 #include "gr3d/pod_scaling.h"
 #include "gr3d/scale3d.h"
 
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
 
@@ -727,10 +726,6 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->actmon = host1x_actmon_ops;
-
-	err = nvhost_memmgr_init(op);
-	if (err)
-		return err;
 
 	t124 = kzalloc(sizeof(struct t124), GFP_KERNEL);
 	if (!t124) {

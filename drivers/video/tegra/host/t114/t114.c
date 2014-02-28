@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for Tegra11 Architecture Chips
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,7 +40,6 @@
 #include "host1x/host1x.h"
 #include "chip_support.h"
 #include "nvhost_channel.h"
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "gr3d/pod_scaling.h"
 #include "class_ids.h"
@@ -384,17 +383,12 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(
 int nvhost_init_t114_support(struct nvhost_master *host,
 	struct nvhost_chip_support *op)
 {
-	int err;
-
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
-	err = nvhost_memmgr_init(op);
-	if (err)
-		return err;
 	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
 	op->actmon = host1x_actmon_ops;

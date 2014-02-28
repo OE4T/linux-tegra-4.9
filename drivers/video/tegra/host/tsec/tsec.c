@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/dma-mapping.h>
 
 #include <mach/pm_domains.h>
 #include <mach/hardware.h>
@@ -40,7 +41,6 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 #include "nvhost_intr.h"
 #include "t114/t114.h"
 #include "t148/t148.h"

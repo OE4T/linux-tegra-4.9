@@ -45,7 +45,6 @@
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
-#include "nvhost_memmgr.h"
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "nvhost_sync.h"
@@ -752,13 +751,6 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 	}
 
-	host->memmgr = nvhost_memmgr_alloc_mgr();
-	if (!host->memmgr) {
-		dev_err(&dev->dev, "unable to create nvmap client\n");
-		err = -EIO;
-		goto fail;
-	}
-
 	err = nvhost_syncpt_init(dev, &host->syncpt);
 	if (err)
 		goto fail;
@@ -802,8 +794,6 @@ static int nvhost_probe(struct platform_device *dev)
 
 fail:
 	nvhost_free_resources(host);
-	if (host->memmgr)
-		nvhost_memmgr_put_mgr(host->memmgr);
 	kfree(host);
 	return err;
 }

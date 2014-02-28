@@ -3,7 +3,7 @@
  *
  * Tegra MSENC Module Support
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/dma-mapping.h>
 
 #include <mach/pm_domains.h>
 
@@ -40,7 +41,6 @@
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 #include "t114/t114.h"
 #include "t148/t148.h"
 #include "t124/t124.h"

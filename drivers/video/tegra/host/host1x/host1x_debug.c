@@ -30,7 +30,6 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 
 #define NVHOST_DEBUG_MAX_PAGE_OFFSET 102400
 

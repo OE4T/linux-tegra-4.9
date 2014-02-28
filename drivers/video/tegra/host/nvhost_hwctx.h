@@ -39,8 +39,6 @@ struct nvhost_hwctx {
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
 
-	struct mem_mgr *memmgr;
-
 	u32 save_incrs;
 	u32 save_slots;
 

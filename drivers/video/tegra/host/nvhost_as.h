@@ -26,7 +26,6 @@
 
 #include "nvhost_channel.h"
 #include "nvhost_acm.h"
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 
 struct nvhost_as_share;

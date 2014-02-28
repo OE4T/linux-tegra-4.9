@@ -53,7 +53,6 @@
 #include "nvhost_scale.h"
 #include "chip_support.h"
 #include "t114/t114.h"
-#include "t148/t148.h"
 #include "t124/t124.h"
 
 #define DRIVER_NAME		"host1x"
@@ -633,10 +632,6 @@ static struct of_device_id tegra_host1x_of_match[] = {
 	{ .compatible = "nvidia,tegra114-host1x",
 		.data = (struct nvhost_device_data *)&t11_host1x_info },
 #endif
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra148-host1x",
-		.data = (struct nvhost_device_data *)&t14_host1x_info },
-#endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-host1x",
 		.data = (struct nvhost_device_data *)&t124_host1x_info },
@@ -653,10 +648,6 @@ void nvhost_host1x_update_clk(struct platform_device *pdev)
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
 		pdata = &t11_gr3d_info;
-#endif
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA14)
-		pdata = &t14_gr3d_info;
 #endif
 	if (!pdata)
 		return;

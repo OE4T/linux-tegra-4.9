@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/chip_support.c
- *
  * Tegra Graphics Host Chip support module
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,7 +25,6 @@
 #include "chip_support.h"
 #include "t114/t114.h"
 #include "t124/t124.h"
-#include "t148/t148.h"
 
 struct nvhost_chip_support *nvhost_chip_ops;
 
@@ -63,11 +60,6 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 	case TEGRA_CHIPID_TEGRA13:
 		nvhost_chip_ops->soc_name = "tegra13x";
 		err = nvhost_init_t124_support(host, nvhost_chip_ops);
-		break;
-
-	case TEGRA_CHIPID_TEGRA14:
-		nvhost_chip_ops->soc_name = "tegra14x";
-		err = nvhost_init_t148_support(host, nvhost_chip_ops);
 		break;
 
 	default:

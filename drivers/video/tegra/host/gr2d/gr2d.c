@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gr2d/gr2d.c
- *
  * Tegra Graphics 2D
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,16 +30,11 @@
 #include "nvhost_acm.h"
 #include "gr2d_t114.h"
 #include "t114/t114.h"
-#include "t148/t148.h"
 
 static struct of_device_id tegra_gr2d_of_match[] = {
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-gr2d",
 		.data = (struct nvhost_device_data *)&t11_gr2d_info },
-#endif
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra148-gr2d",
-		.data = (struct nvhost_device_data *)&t14_gr2d_info },
 #endif
 	{ },
 };

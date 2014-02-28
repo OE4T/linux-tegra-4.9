@@ -1,8 +1,0 @@
-GCOV_PROFILE := y
-ccflags-y += -Idrivers/video/tegra/host
-ccflags-y += -Werror
-
-nvhost-t148-objs  = \
-        t148.o
-
-obj-$(CONFIG_TEGRA_GRHOST) += nvhost-t148.o

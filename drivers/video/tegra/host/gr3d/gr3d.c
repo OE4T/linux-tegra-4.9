@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gr3d/gr3d.c
- *
  * Tegra Graphics Host 3D
  *
  * Copyright (c) 2012-2014 NVIDIA Corporation.  All rights reserved.
@@ -34,7 +32,6 @@
 #include <mach/gpufuse.h>
 
 #include "t114/t114.h"
-#include "t148/t148.h"
 #include "host1x/host1x01_hardware.h"
 #include "nvhost_hwctx.h"
 #include "nvhost_acm.h"
@@ -189,10 +186,6 @@ static struct of_device_id tegra_gr3d_of_match[] = {
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-gr3d",
 		.data = (struct nvhost_device_data *)&t11_gr3d_info },
-#endif
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra148-gr3d",
-		.data = (struct nvhost_device_data *)&t14_gr3d_info },
 #endif
 	{ },
 };

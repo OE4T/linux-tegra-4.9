@@ -33,7 +33,6 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t114/t114.h"
-#include "t148/t148.h"
 #include "t124/t124.h"
 
 #include <linux/uaccess.h>
@@ -57,10 +56,6 @@ static struct of_device_id tegra_isp_of_match[] = {
 #ifdef TEGRA_11X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra114-isp",
 		.data = (struct nvhost_device_data *)&t11_isp_info },
-#endif
-#ifdef TEGRA_14X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra148-isp",
-		.data = (struct nvhost_device_data *)&t14_isp_info },
 #endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-isp",

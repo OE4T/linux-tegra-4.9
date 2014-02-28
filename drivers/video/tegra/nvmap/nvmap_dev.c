@@ -1387,7 +1387,7 @@ static int nvmap_probe(struct platform_device *pdev)
 		/* cortex-a9 */
 		if ((read_cpuid_id() >> 4 & 0xfff) == 0xc09)
 			cache_maint_inner_threshold = SZ_32K;
-		pr_info("nvmap:inner cache maint threshold=%d",
+		pr_info("nvmap:inner cache maint threshold=%zd",
 			cache_maint_inner_threshold);
 #endif
 #ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
@@ -1395,7 +1395,7 @@ static int nvmap_probe(struct platform_device *pdev)
 				      S_IRUSR | S_IWUSR,
 				      nvmap_debug_root,
 				      &cache_maint_outer_threshold);
-		pr_info("nvmap:outer cache maint threshold=%d",
+		pr_info("nvmap:outer cache maint threshold=%zd",
 			cache_maint_outer_threshold);
 #endif
 	}

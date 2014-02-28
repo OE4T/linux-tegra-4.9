@@ -513,22 +513,22 @@ DECLARE_EVENT_CLASS(nvmap_dmabuf_cpu_access,
 		__entry->len = len;
 	),
 
-	TP_printk("dmabuf=%p, start=%d len=%d",
+	TP_printk("dmabuf=%p, start=%zd len=%zd",
 		  __entry->dbuf, __entry->start, __entry->len
 	)
 );
 
 DEFINE_EVENT(nvmap_dmabuf_cpu_access, nvmap_dmabuf_begin_cpu_access,
 	TP_PROTO(struct dma_buf *dbuf,
-		 u32 start,
-		 u32 len),
+		 size_t start,
+		 size_t len),
 	TP_ARGS(dbuf, start, len)
 );
 
 DEFINE_EVENT(nvmap_dmabuf_cpu_access, nvmap_dmabuf_end_cpu_access,
 	TP_PROTO(struct dma_buf *dbuf,
-		 u32 start,
-		 u32 len),
+		 size_t start,
+		 size_t len),
 	TP_ARGS(dbuf, start, len)
 );
 

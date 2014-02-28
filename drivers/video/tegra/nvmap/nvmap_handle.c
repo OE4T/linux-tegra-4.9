@@ -282,7 +282,8 @@ static void alloc_handle(struct nvmap_client *client,
 		size_t reserved = PAGE_ALIGN(h->size);
 
 		atomic_add(reserved, &client->iovm_commit);
-		ret = handle_page_alloc(client, h, false);
+		ret = handle_page_alloc(client, h,
+			h->userflags & NVMAP_HANDLE_PHYSICALLY_CONTIGUOUS);
 		if (ret) {
 			atomic_sub(reserved, &client->iovm_commit);
 			return;

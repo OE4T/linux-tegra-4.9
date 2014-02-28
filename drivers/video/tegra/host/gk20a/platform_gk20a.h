@@ -19,9 +19,7 @@
 #define _GK20A_PLATFORM_H_
 
 #include <linux/platform_device.h>
-#ifdef CONFIG_TEGRA_GK20A
-#include <linux/nvhost.h>
-#endif
+#include <linux/pm_domain.h>
 
 struct gk20a;
 struct channel_gk20a;
@@ -30,10 +28,7 @@ struct gk20a_scale_profile;
 
 struct gk20a_platform {
 #ifdef CONFIG_TEGRA_GK20A
-	/* We need to have nvhost_device_data at the beginning, because
-	 * nvhost assumes that it owns the platform_data. We can store
-	 * gk20a platform info after that though. */
-	struct nvhost_device_data nvhost;
+	u32 syncpt_base;
 #endif
 	/* Populated by the gk20a driver before probing the platform. */
 	struct gk20a *g;

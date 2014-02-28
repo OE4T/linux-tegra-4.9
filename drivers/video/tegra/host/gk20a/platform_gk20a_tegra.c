@@ -428,19 +428,15 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 static int gk20a_tegra_late_probe(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct nvhost_device_data *pdata = &platform->nvhost;
 
 	/* Make gk20a power domain a subdomain of mc */
 	tegra_pd_add_sd(&platform->g->pd);
 
-	pdata->pdev = dev;
-	mutex_init(&pdata->lock);
 
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
 
-	pdata->debugfs = debugfs_create_dir(dev->name, NULL);
-	platform->debugfs = pdata->debugfs;
+	platform->debugfs = debugfs_create_dir(dev->name, NULL);
 
 	return 0;
 }
@@ -480,14 +476,8 @@ static struct resource gk20a_tegra_resources[] = {
 };
 
 struct gk20a_platform t132_gk20a_tegra_platform = {
-	.nvhost = {
-		.syncpts		= {NVSYNCPT_GK20A_BASE},
-		.syncpt_base		= NVSYNCPT_GK20A_BASE,
-		.class			= NV_GRAPHICS_GPU_CLASS_ID,
-		.moduleid		= NVHOST_MODULE_GPU,
-	},
-
 	.has_syncpoints = true,
+	.syncpt_base = NVSYNCPT_GK20A_BASE,
 
 	/* power management configuration */
 	.railgate_delay		= 500,
@@ -513,14 +503,8 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 };
 
 struct gk20a_platform gk20a_tegra_platform = {
-	.nvhost = {
-		.syncpts		= {NVSYNCPT_GK20A_BASE},
-		.syncpt_base		= NVSYNCPT_GK20A_BASE,
-		.class			= NV_GRAPHICS_GPU_CLASS_ID,
-		.moduleid		= NVHOST_MODULE_GPU,
-	},
-
 	.has_syncpoints = true,
+	.syncpt_base = NVSYNCPT_GK20A_BASE,
 
 	/* power management configuration */
 	.railgate_delay		= 500,

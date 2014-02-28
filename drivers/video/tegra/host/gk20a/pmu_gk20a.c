@@ -21,19 +21,15 @@
 
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
-
-#include "../dev.h"
-#include "../bus_client.h"
-#include "nvhost_acm.h"
 
 #include "gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_pwr_gk20a.h"
 #include "hw_top_gk20a.h"
-#include "chip_support.h"
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
@@ -3158,17 +3154,17 @@ static const struct file_operations elpg_transitions_fops = {
 int gk20a_pmu_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct gk20a_platform *platform = platform_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
 	d = debugfs_create_file(
-		"elpg_residency", S_IRUGO|S_IWUSR, pdata->debugfs, g,
+		"elpg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,
 						&elpg_residency_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"elpg_transitions", S_IRUGO, pdata->debugfs, g,
+		"elpg_transitions", S_IRUGO, platform->debugfs, g,
 						&elpg_transitions_fops);
 	if (!d)
 		goto err_out;
@@ -3177,7 +3173,7 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev)
 
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(pdata->debugfs);
+	debugfs_remove_recursive(platform->debugfs);
 	return -ENOMEM;
 }
 #endif

@@ -838,21 +838,21 @@ DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 int clk_gk20a_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct gk20a_platform *platform = platform_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
 	d = debugfs_create_file(
-		"rate", S_IRUGO|S_IWUSR, pdata->debugfs, g, &rate_fops);
+		"rate", S_IRUGO|S_IWUSR, platform->debugfs, g, &rate_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"pll_reg", S_IRUGO, pdata->debugfs, g, &pll_reg_fops);
+		"pll_reg", S_IRUGO, platform->debugfs, g, &pll_reg_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"monitor", S_IRUGO, pdata->debugfs, g, &monitor_fops);
+		"monitor", S_IRUGO, platform->debugfs, g, &monitor_fops);
 	if (!d)
 		goto err_out;
 
@@ -860,7 +860,7 @@ int clk_gk20a_debugfs_init(struct platform_device *dev)
 
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(pdata->debugfs);
+	debugfs_remove_recursive(platform->debugfs);
 	return -ENOMEM;
 }
 

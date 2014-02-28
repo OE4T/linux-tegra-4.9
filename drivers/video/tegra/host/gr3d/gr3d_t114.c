@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/t20/3dctx_t114.c
- *
  * Tegra Graphics Host 3d hardware context
  *
  * Copyright (c) 2011-2014 NVIDIA Corporation. All rights reserved.
@@ -458,6 +456,7 @@ int nvhost_gr3d_t114_prepare_power_off(struct platform_device *dev)
 
 int nvhost_gr3d_t114_finalize_power_on(struct platform_device *dev)
 {
+	nvhost_module_reset(dev, false);
 	/* actmon needs to be reinitialized when we come back from
 	 * power gated state */
 	return nvhost_scale_hw_init(dev);

@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/t114/t114.c
- *
  * Tegra Graphics Init for Tegra11 Architecture Chips
  *
  * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
@@ -105,7 +103,6 @@ struct nvhost_device_data t11_gr3d_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate	= true,
 	.powergate_delay = 250,
-	.powerup_reset	= true,
 	.moduleid	= NVHOST_MODULE_NONE,
 
 	.busy		= nvhost_scale_notify_busy,

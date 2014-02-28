@@ -112,7 +112,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 	}
 }
 
-void nvhost_module_reset(struct platform_device *dev)
+void nvhost_module_reset(struct platform_device *dev, bool reboot)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
@@ -125,7 +125,7 @@ void nvhost_module_reset(struct platform_device *dev)
 	do_module_reset_locked(dev);
 	mutex_unlock(&pdata->lock);
 
-	if (pdata->finalize_poweron)
+	if (reboot && pdata->finalize_poweron)
 		pdata->finalize_poweron(dev);
 
 	dev_dbg(&dev->dev, "%s: module %s out of reset\n",
@@ -792,8 +792,6 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 		do_unpowergate_locked(pdata->powergate_ids[1]);
 	}
 
-	if (pdata->powerup_reset)
-		do_module_reset_locked(pdata->pdev);
 	mutex_unlock(&pdata->lock);
 
 	return 0;

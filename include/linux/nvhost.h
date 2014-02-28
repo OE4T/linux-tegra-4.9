@@ -128,7 +128,6 @@ struct nvhost_device_data {
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */
 	bool		waitbasesync;	/* Force sync of wait bases */
-	bool		powerup_reset;	/* Do a reset after power un-gating */
 	bool		serialize;	/* Serialize submits in the channel */
 
 	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];

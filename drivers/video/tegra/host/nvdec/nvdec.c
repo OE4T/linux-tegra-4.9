@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/nvdec/nvdec.c
- *
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/tegra-soc.h>
 
 #include <mach/pm_domains.h>
 
@@ -137,6 +136,27 @@ static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
 	return -1;
 }
 
+static int nvdec_wait_mem_scrubbing(struct platform_device *dev)
+{
+	int retries = NVDEC_IDLE_TIMEOUT_DEFAULT / NVDEC_IDLE_CHECK_PERIOD;
+	nvhost_dbg_fn("");
+
+	do {
+		u32 w = host1x_readl(dev, nvdec_dmactl_r()) &
+			(nvdec_dmactl_dmem_scrubbing_m() |
+			 nvdec_dmactl_imem_scrubbing_m());
+
+		if (!w) {
+			nvhost_dbg_fn("done");
+			return 0;
+		}
+		udelay(NVDEC_IDLE_CHECK_PERIOD);
+	} while (--retries || !tegra_platform_is_silicon());
+
+	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
+	return -ETIMEDOUT;
+}
+
 int nvdec_boot(struct platform_device *dev)
 {
 	u32 timeout;
@@ -147,6 +167,10 @@ int nvdec_boot(struct platform_device *dev)
 	/* check if firmware is loaded or not */
 	if (!m || !m->valid)
 		return -ENOMEDIUM;
+
+	err = nvdec_wait_mem_scrubbing(dev);
+	if (err)
+		return err;
 
 	host1x_writel(dev, nvdec_dmactl_r(), 0);
 	host1x_writel(dev, nvdec_dmatrfbase_r(),

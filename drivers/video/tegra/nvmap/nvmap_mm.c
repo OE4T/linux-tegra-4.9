@@ -54,7 +54,7 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 {
 	unsigned int i;
 	bool flush_inner = true;
-	unsigned long base;
+	__attribute__((unused)) unsigned long base;
 
 	nvmap_stats_inc(NS_CFLUSH_RQ, numpages << PAGE_SHIFT);
 #if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)

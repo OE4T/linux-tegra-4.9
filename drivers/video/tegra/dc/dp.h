@@ -364,6 +364,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 #define NV_DPCD_ADJUST_REQ_POST_CURSOR2_LANE_SHIFT(i)	(i*2)
 #define NV_DPCD_TEST_REQUEST				(0x00000218)
 #define NV_DPCD_SOURCE_IEEE_OUI				(0x00000300)
+#define NV_IEEE_OUI					(0x00044b)
 #define NV_DPCD_SINK_IEEE_OUI				(0x00000400)
 #define NV_DPCD_BRANCH_IEEE_OUI				(0x00000500)
 #define NV_DPCD_SET_POWER				(0x00000600)

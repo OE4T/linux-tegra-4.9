@@ -310,8 +310,7 @@ static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 	return -EFAULT;
 }
 
-int __maybe_unused
-tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
+int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat)
 {
 	u32	cur_size = 0;
@@ -1868,6 +1867,10 @@ fail:
 static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+	u32 size_ieee_oui = 3, auxstat;
+	u8 data_ieee_oui_be[3] = {(NV_IEEE_OUI >> 16) & 0xff,
+		(NV_IEEE_OUI >> 8) & 0xff,
+		NV_IEEE_OUI & 0xff};
 
 	if (cfg->is_valid)
 		return;
@@ -1880,6 +1883,10 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 	if (tegra_dp_init_max_link_cfg(dp, cfg))
 		dev_err(&dp->dc->ndev->dev,
 			"dp: failed to init link configuration\n");
+
+	tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+		NV_DPCD_SOURCE_IEEE_OUI, data_ieee_oui_be, &size_ieee_oui,
+		&auxstat);
 }
 
 static void tegra_dp_tpg(struct tegra_dc_dp_data *dp, u32 tp, u32 n_lanes)

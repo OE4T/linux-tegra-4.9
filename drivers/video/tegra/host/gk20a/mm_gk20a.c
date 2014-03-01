@@ -1163,22 +1163,6 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 {
 	struct mapped_buffer_node *mapped_buffer = 0;
 
-#ifdef CONFIG_TEGRA_NVMAP
-	/* fall-back to default kind if no kind is provided */
-	if (kind < 0) {
-		u64 nvmap_param;
-		int err;
-		err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
-					      &nvmap_param);
-		if (err)
-			return 0;
-		kind = nvmap_param;
-	}
-#endif
-
-	if (kind < 0)
-		return 0;
-
 	mapped_buffer =
 		find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
 						  dmabuf, kind);
@@ -1280,25 +1264,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	if (sgt)
 		*sgt = bfr.sgt;
-
-#ifdef CONFIG_TEGRA_NVMAP
-	if (kind < 0) {
-		u64 value;
-		err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
-					     &value);
-		if (err) {
-			nvhost_err(d, "failed to get nvmap buffer kind (err=%d)",
-				   err);
-			goto clean_up;
-		}
-		kind = value;
-	}
-#endif
-
-	if (kind < 0) {
-		err = -EINVAL;
-		goto clean_up;
-	}
 
 	bfr.kind_v = kind;
 	bfr.size = dmabuf->size;
@@ -2381,6 +2346,21 @@ priv_exist_or_err:
 	return 0;
 }
 
+
+static int gk20a_dmabuf_get_kind(struct dma_buf *dmabuf)
+{
+	int kind = 0;
+#ifdef CONFIG_TEGRA_NVMAP
+	int err;
+	u64 nvmap_param;
+
+	err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
+				     &nvmap_param);
+	kind = err ? kind : nvmap_param;
+#endif
+	return kind;
+}
+
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
@@ -2404,6 +2384,9 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 		dma_buf_put(dmabuf);
 		return err;
 	}
+
+	if (kind == -1)
+		kind = gk20a_dmabuf_get_kind(dmabuf);
 
 	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,

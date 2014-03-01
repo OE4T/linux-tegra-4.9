@@ -459,4 +459,5 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int kind);
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 
+int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 #endif /*_MM_GK20A_H_ */

@@ -162,27 +162,10 @@ static void gk20a_mm_delete_priv(void *_priv)
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
 {
 	struct gk20a_dmabuf_priv *priv;
-	static DEFINE_MUTEX(priv_lock);
 
-	/* create the nvhost priv if needed */
 	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (!priv) {
-		mutex_lock(&priv_lock);
-		priv = dma_buf_get_drvdata(dmabuf, dev);
-		if (priv)
-			goto priv_exist_or_err;
-		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-		if (!priv) {
-			priv = ERR_PTR(-ENOMEM);
-			goto priv_exist_or_err;
-		}
-		mutex_init(&priv->lock);
-		dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
-priv_exist_or_err:
-		mutex_unlock(&priv_lock);
-	}
-	if (IS_ERR(priv))
-		return (struct sg_table *)priv;
+	if (WARN_ON(!priv))
+		return ERR_PTR(-EINVAL);
 
 	mutex_lock(&priv->lock);
 
@@ -2376,6 +2359,34 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 	return err;
 }
 
+int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
+{
+	struct gk20a_dmabuf_priv *priv;
+	static DEFINE_MUTEX(priv_lock);
+
+	priv = dma_buf_get_drvdata(dmabuf, dev);
+	if (likely(priv))
+		return 0;
+
+	mutex_lock(&priv_lock);
+	priv = dma_buf_get_drvdata(dmabuf, dev);
+	if (priv)
+		goto priv_exist_or_err;
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		priv = ERR_PTR(-ENOMEM);
+		goto priv_exist_or_err;
+	}
+	mutex_init(&priv->lock);
+	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
+priv_exist_or_err:
+	mutex_unlock(&priv_lock);
+	if (IS_ERR(priv))
+		return -ENOMEM;
+
+	return 0;
+}
+
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
@@ -2393,6 +2404,12 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 	dmabuf = dma_buf_get(dmabuf_fd);
 	if (!dmabuf)
 		return 0;
+
+	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev_from_vm(vm));
+	if (err) {
+		dma_buf_put(dmabuf);
+		return err;
+	}
 
 	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,

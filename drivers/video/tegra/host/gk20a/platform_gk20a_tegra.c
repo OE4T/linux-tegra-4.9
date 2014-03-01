@@ -90,6 +90,10 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 				    DEFAULT_ALLOC_ALIGNMENT,
 				    NVMAP_HANDLE_UNCACHEABLE,
 				    NVMAP_HEAP_CARVEOUT_VPR);
+	if (!dmabuf)
+		return -ENOMEM;
+	if (gk20a_dmabuf_alloc_drvdata(dmabuf, &pdev->dev))
+		return -ENOMEM;
 	desc->sgt = gk20a_mm_pin(&pdev->dev, dmabuf);
 	desc->size = size;
 	desc->destroy = gk20a_tegra_secure_destroy;

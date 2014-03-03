@@ -70,10 +70,8 @@
  * instability.
  */
 
-static int podgov_is_enabled(struct device *dev);
-static void podgov_enable(struct device *dev, int enable);
-static int podgov_user_ctl(struct device *dev);
-static void podgov_set_user_ctl(struct device *dev, int enable);
+static void podgov_enable(struct devfreq *df, int enable);
+static void podgov_set_user_ctl(struct devfreq *df, int enable);
 
 static struct devfreq_governor nvhost_podgov;
 
@@ -123,6 +121,9 @@ struct podgov_info_rec {
 	int			freq_avg;
 	unsigned int		hint_avg;
 	int			block;
+	struct kobj_attribute	enable_3d_scaling_attr;
+	struct kobj_attribute	user_attr;
+	struct kobj_attribute	freq_request_attr;
 
 	struct notifier_block	throughput_hint_notifier;
 };
@@ -189,31 +190,6 @@ static void nvhost_pod_suspend(struct devfreq *df)
 }
 
 /*******************************************************************************
- * podgov_is_enabled(dev)
- *
- * Check whether the device is enabled or not.
- ******************************************************************************/
-
-static int podgov_is_enabled(struct device *dev)
-{
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
-	struct podgov_info_rec *podgov;
-	int enable;
-
-	if (!df)
-		return 0;
-
-	mutex_lock(&df->lock);
-	podgov = df->data;
-	enable = podgov->enable;
-	mutex_unlock(&df->lock);
-
-	return enable;
-}
-
-/*******************************************************************************
  * podgov_enable(dev, enable)
  *
  * This function enables (enable=1) or disables (enable=0) the automatic scaling
@@ -221,18 +197,13 @@ static int podgov_is_enabled(struct device *dev)
  * maximum.
  ******************************************************************************/
 
-static void podgov_enable(struct device *dev, int enable)
+static void podgov_enable(struct devfreq *df, int enable)
 {
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
+	struct device *dev = df->dev.parent;
 	struct podgov_info_rec *podgov;
 
-	if (!df)
-		return;
-
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy_noresume(d);
+	pm_runtime_get_noresume(dev);
 
 	mutex_lock(&df->lock);
 
@@ -249,7 +220,7 @@ static void podgov_enable(struct device *dev, int enable)
 
 	/* skip local adjustment if we are enabling or the device is
 	 * suspended */
-	if (enable || !pm_runtime_active(&d->dev))
+	if (enable || !pm_runtime_active(dev))
 		goto exit_unlock;
 
 	/* full speed */
@@ -259,7 +230,7 @@ static void podgov_enable(struct device *dev, int enable)
 
 	mutex_unlock(&df->lock);
 
-	nvhost_module_idle(d);
+	pm_runtime_put(dev);
 
 	stop_podgov_workers(podgov);
 
@@ -267,32 +238,7 @@ static void podgov_enable(struct device *dev, int enable)
 
 exit_unlock:
 	mutex_unlock(&df->lock);
-	nvhost_module_idle(d);
-}
-
-/*******************************************************************************
- * podgov_user_ctl(dev)
- *
- * Check whether the gpu scaling is set to user space control.
- ******************************************************************************/
-
-static int podgov_user_ctl(struct device *dev)
-{
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
-	struct podgov_info_rec *podgov;
-	int user;
-
-	if (!df)
-		return 0;
-
-	mutex_lock(&df->lock);
-	podgov = df->data;
-	user = podgov->p_user;
-	mutex_unlock(&df->lock);
-
-	return user;
+	pm_runtime_put(dev);
 }
 
 /*****************************************************************************
@@ -303,19 +249,14 @@ static int podgov_user_ctl(struct device *dev)
  * gpu scaling mechanisms are disabled.
  ******************************************************************************/
 
-static void podgov_set_user_ctl(struct device *dev, int user)
+static void podgov_set_user_ctl(struct devfreq *df, int user)
 {
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
+	struct device *dev = df->dev.parent;
 	struct podgov_info_rec *podgov;
 	int old_user;
 
-	if (!df)
-		return;
-
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy_noresume(d);
+	pm_runtime_get_noresume(dev);
 
 	mutex_lock(&df->lock);
 	podgov = df->data;
@@ -328,7 +269,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 
 	/* skip scaling, if scaling (or the whole device) is turned off
 	 * - or the scaling already was in user mode */
-	if (!pm_runtime_active(&d->dev) || !podgov->enable ||
+	if (!pm_runtime_active(dev) || !podgov->enable ||
 	    !(user && !old_user))
 		goto exit_unlock;
 
@@ -338,7 +279,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 	update_devfreq(df);
 
 	mutex_unlock(&df->lock);
-	nvhost_module_idle(d);
+	pm_runtime_put(dev);
 
 	stop_podgov_workers(podgov);
 
@@ -346,32 +287,7 @@ static void podgov_set_user_ctl(struct device *dev, int user)
 
 exit_unlock:
 	mutex_unlock(&df->lock);
-	nvhost_module_idle(d);
-}
-
-/*******************************************************************************
- * podgov_get_freq_request(dev)
- *
- * return the latest freq request if anybody asks
- ******************************************************************************/
-
-static int podgov_get_freq_request(struct device *dev)
-{
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
-	struct podgov_info_rec *podgov;
-	int freq_request;
-
-	if (!df)
-		return 0;
-
-	mutex_lock(&df->lock);
-	podgov = df->data;
-	freq_request = podgov->p_freq_request;
-	mutex_unlock(&df->lock);
-
-	return freq_request;
+	pm_runtime_put(dev);
 }
 
 /*****************************************************************************
@@ -381,18 +297,13 @@ static int podgov_get_freq_request(struct device *dev)
  * control is enabled, this will set the gpu frequency.
  ******************************************************************************/
 
-static void podgov_set_freq_request(struct device *dev, int freq_request)
+static void podgov_set_freq_request(struct devfreq *df, int freq_request)
 {
-	struct platform_device *d = to_platform_device(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(d);
-	struct devfreq *df = pdata->power_manager;
+	struct device *dev = df->dev.parent;
 	struct podgov_info_rec *podgov;
 
-	if (!df)
-		return;
-
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy_noresume(d);
+	pm_runtime_get_noresume(dev);
 
 	mutex_lock(&df->lock);
 
@@ -405,14 +316,14 @@ static void podgov_set_freq_request(struct device *dev, int freq_request)
 	/* update the request only if podgov is enabled, device is turned on
 	 * and the scaling is in user mode */
 	if (podgov->enable && podgov->p_user &&
-	    pm_runtime_active(&d->dev)) {
+	    pm_runtime_active(dev)) {
 		podgov->adjustment_frequency = freq_request;
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
 	}
 
 	mutex_unlock(&df->lock);
-	nvhost_module_idle(d);
+	pm_runtime_put(dev);
 }
 
 
@@ -528,13 +439,6 @@ static void podgov_idle_handler(struct work_struct *work)
 		container_of(idle_timer, struct podgov_info_rec, idle_timer);
 	struct devfreq *df = podgov->power_manager;
 
-	/* Retrieve device driver ops and the device struct */
-	struct device *d = df->dev.parent;
-	struct platform_device *dev = to_platform_device(d);
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	int notify_idle = 0;
-
 	mutex_lock(&df->lock);
 
 	if (!podgov->enable) {
@@ -545,12 +449,9 @@ static void podgov_idle_handler(struct work_struct *work)
 	if (!podgov->last_event_type &&
 	    df->previous_freq > df->min_freq &&
 	    podgov->p_user == false)
-		notify_idle = 1;
+		update_devfreq(df);
 
 	mutex_unlock(&df->lock);
-
-	if (pdata->idle && notify_idle)
-		pdata->idle(dev);
 }
 
 #ifdef CONFIG_TEGRA_THROUGHPUT
@@ -567,30 +468,22 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	struct podgov_info_rec *podgov =
 		container_of(nb, struct podgov_info_rec,
 			     throughput_hint_notifier);
-	struct devfreq *df;
-	struct platform_device *pdev;
+	struct devfreq *df = podgov->power_manager;
+	struct device *dev = df->dev.parent;
 	int hint = tegra_throughput_get_hint();
 	long idle;
 	unsigned long curr, target;
 	int avg_idle, avg_hint, scale_score;
 	unsigned int smooth;
 
-	if (!podgov)
-		return NOTIFY_DONE;
-	df = podgov->power_manager;
-	if (!df)
-		return NOTIFY_DONE;
-
-	pdev = to_platform_device(df->dev.parent);
-
 	/* make sure the device is alive before doing any scaling */
-	nvhost_module_busy_noresume(pdev);
-	if (!pm_runtime_active(&pdev->dev)) {
-		nvhost_module_idle(pdev);
+	pm_runtime_get_noresume(dev);
+	if (!pm_runtime_active(dev)) {
+		pm_runtime_put(dev);
 		return 0;
 	}
 
-	mutex_lock(&podgov->power_manager->lock);
+	mutex_lock(&df->lock);
 
 	podgov->block--;
 
@@ -602,7 +495,7 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	trace_podgov_hint(podgov->idle, hint);
 	podgov->last_throughput_hint = ktime_get();
 
-	curr = podgov->power_manager->previous_freq;
+	curr = df->previous_freq;
 	idle = podgov->idle;
 	avg_idle = podgov->idle_avg;
 	smooth = podgov->p_smooth;
@@ -638,8 +531,8 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 		avg_hint);
 
 exit_unlock:
-	mutex_unlock(&podgov->power_manager->lock);
-	nvhost_module_idle(pdev);
+	mutex_unlock(&df->lock);
+	pm_runtime_put(dev);
 	return NOTIFY_OK;
 }
 #endif
@@ -653,14 +546,16 @@ exit_unlock:
 static void nvhost_scale3d_debug_init(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
-	struct platform_device *dev = to_platform_device(df->dev.parent);
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct dentry *f;
+	char dirname[128];
+
+	snprintf(dirname, sizeof(dirname), "%s_scaling",
+		to_platform_device(df->dev.parent)->name);
 
 	if (!podgov)
 		return;
 
-	podgov->debugdir = debugfs_create_dir("scaling", pdata->debugfs);
+	podgov->debugdir = debugfs_create_dir(dirname, NULL);
 	if (!podgov->debugdir) {
 		pr_err("podgov: can\'t create debugfs directory\n");
 		return;
@@ -714,31 +609,36 @@ static void nvhost_scale3d_debug_deinit(struct devfreq *df)
  * sysfs interface for enabling/disabling 3d scaling
  ******************************************************************************/
 
-static ssize_t enable_3d_scaling_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
+static ssize_t enable_3d_scaling_show(struct kobject *kobj,
+				      struct kobj_attribute *attr,
+				      char *buf)
 {
+	struct podgov_info_rec *podgov = container_of(attr,
+						      struct podgov_info_rec,
+						      enable_3d_scaling_attr);
 	ssize_t res;
 
-	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov_is_enabled(dev));
+	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov->enable);
 
 	return res;
 }
 
-static ssize_t enable_3d_scaling_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t enable_3d_scaling_store(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       const char *buf, size_t count)
 {
+	struct podgov_info_rec *podgov = container_of(attr,
+						      struct podgov_info_rec,
+						      enable_3d_scaling_attr);
 	unsigned long val = 0;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	podgov_enable(dev, val);
+	podgov_enable(podgov->power_manager, val);
 
 	return count;
 }
-
-static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUSR,
-	enable_3d_scaling_show, enable_3d_scaling_store);
 
 /*******************************************************************************
  * sysfs interface for user space control
@@ -746,57 +646,63 @@ static DEVICE_ATTR(enable_3d_scaling, S_IRUGO | S_IWUSR,
  * freq_request is the sysfs node user space writes frequency requests to
  ******************************************************************************/
 
-static ssize_t user_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
+static ssize_t user_show(struct kobject *kobj,
+			 struct kobj_attribute *attr,
+			 char *buf)
 {
+	struct podgov_info_rec *podgov =
+		container_of(attr, struct podgov_info_rec, user_attr);
 	ssize_t res;
 
-	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov_user_ctl(dev));
+	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov->p_user);
 
 	return res;
 }
 
-static ssize_t user_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t user_store(struct kobject *kobj,
+			  struct kobj_attribute *attr,
+			  const char *buf, size_t count)
 {
+	struct podgov_info_rec *podgov =
+		container_of(attr, struct podgov_info_rec, user_attr);
 	unsigned long val = 0;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	podgov_set_user_ctl(dev, val);
+	podgov_set_user_ctl(podgov->power_manager, val);
 
 	return count;
 }
 
-static DEVICE_ATTR(user, S_IRUGO | S_IWUSR,
-	user_show, user_store);
-
-static ssize_t freq_request_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
+static ssize_t freq_request_show(struct kobject *kobj,
+				 struct kobj_attribute *attr,
+				 char *buf)
 {
+	struct podgov_info_rec *podgov =
+		container_of(attr, struct podgov_info_rec, freq_request_attr);
 	ssize_t res;
 
-	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov_get_freq_request(dev));
+	res = snprintf(buf, PAGE_SIZE, "%d\n", podgov->p_freq_request);
 
 	return res;
 }
 
-static ssize_t freq_request_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t freq_request_store(struct kobject *kobj,
+				  struct kobj_attribute *attr,
+				  const char *buf, size_t count)
 {
+	struct podgov_info_rec *podgov =
+		container_of(attr, struct podgov_info_rec, freq_request_attr);
 	unsigned long val = 0;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	podgov_set_freq_request(dev, val);
+	podgov_set_freq_request(podgov->power_manager, val);
 
 	return count;
 }
-
-static DEVICE_ATTR(freq_request, S_IRUGO | S_IWUSR,
-	freq_request_show, freq_request_store);
 
 /*******************************************************************************
  * nvhost_pod_estimate_freq(df, freq)
@@ -909,10 +815,11 @@ static int nvhost_pod_init(struct devfreq *df)
 	struct platform_device *d = to_platform_device(df->dev.parent);
 	ktime_t now = ktime_get();
 	enum tegra_chipid cid = tegra_get_chipid();
-	int error = 0;
 
 	struct devfreq_dev_status dev_stat;
 	int stat = 0;
+
+	struct kobj_attribute *attr = NULL;
 
 	podgov = kzalloc(sizeof(struct podgov_info_rec), GFP_KERNEL);
 	if (!podgov)
@@ -974,21 +881,32 @@ static int nvhost_pod_init(struct devfreq *df)
 	/* Get the current status of the device */
 	stat = df->profile->get_dev_status(df->dev.parent, &dev_stat);
 
-	/* Create sysfs entries for controlling this governor */
-	error = device_create_file(&d->dev,
-			&dev_attr_enable_3d_scaling);
-	if (error)
-		goto err_create_sysfs_entry;
+	attr = &podgov->enable_3d_scaling_attr;
+	attr->attr.name = "enable_3d_scaling";
+	attr->attr.mode = S_IWUSR | S_IRUGO;
+	attr->show = enable_3d_scaling_show;
+	attr->store = enable_3d_scaling_store;
+	sysfs_attr_init(&attr->attr);
+	if (sysfs_create_file(&df->dev.parent->kobj, &attr->attr))
+		goto err_create_enable_sysfs_entry;
 
-	error = device_create_file(&d->dev,
-			&dev_attr_user);
-	if (error)
-		goto err_create_sysfs_entry;
+	attr = &podgov->freq_request_attr;
+	attr->attr.name = "freq_request";
+	attr->attr.mode = S_IWUSR | S_IRUGO;
+	attr->show = freq_request_show;
+	attr->store = freq_request_store;
+	sysfs_attr_init(&attr->attr);
+	if (sysfs_create_file(&df->dev.parent->kobj, &attr->attr))
+		goto err_create_request_sysfs_entry;
 
-	error = device_create_file(&d->dev,
-			&dev_attr_freq_request);
-	if (error)
-		goto err_create_sysfs_entry;
+	attr = &podgov->user_attr;
+	attr->attr.name = "user";
+	attr->attr.mode = S_IWUSR | S_IRUGO;
+	attr->show = user_show;
+	attr->store = user_store;
+	sysfs_attr_init(&attr->attr);
+	if (sysfs_create_file(&df->dev.parent->kobj, &attr->attr))
+		goto err_create_user_sysfs_entry;
 
 	podgov->freq_count = df->profile->max_state;
 	podgov->freqlist = df->profile->freq_table;
@@ -1017,10 +935,14 @@ static int nvhost_pod_init(struct devfreq *df)
 	return 0;
 
 err_get_freqs:
-	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
-	device_remove_file(&d->dev, &dev_attr_user);
-	device_remove_file(&d->dev, &dev_attr_freq_request);
-err_create_sysfs_entry:
+	sysfs_remove_file(&df->dev.parent->kobj, &podgov->user_attr.attr);
+err_create_user_sysfs_entry:
+	sysfs_remove_file(&df->dev.parent->kobj,
+			  &podgov->freq_request_attr.attr);
+err_create_request_sysfs_entry:
+	sysfs_remove_file(&df->dev.parent->kobj,
+			  &podgov->enable_3d_scaling_attr.attr);
+err_create_enable_sysfs_entry:
 	dev_err(&d->dev, "failed to create sysfs attributes");
 err_unsupported_chip_id:
 	kfree(podgov);
@@ -1037,7 +959,6 @@ err_alloc_podgov:
 static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
-	struct platform_device *d = to_platform_device(df->dev.parent);
 
 #ifdef CONFIG_TEGRA_THROUGHPUT
 	blocking_notifier_chain_unregister(&throughput_notifier_list,
@@ -1045,9 +966,11 @@ static void nvhost_pod_exit(struct devfreq *df)
 #endif
 	cancel_delayed_work(&podgov->idle_timer);
 
-	device_remove_file(&d->dev, &dev_attr_enable_3d_scaling);
-	device_remove_file(&d->dev, &dev_attr_user);
-	device_remove_file(&d->dev, &dev_attr_freq_request);
+	sysfs_remove_file(&df->dev.parent->kobj, &podgov->user_attr.attr);
+	sysfs_remove_file(&df->dev.parent->kobj,
+			  &podgov->freq_request_attr.attr);
+	sysfs_remove_file(&df->dev.parent->kobj,
+			  &podgov->enable_3d_scaling_attr.attr);
 
 	nvhost_scale3d_debug_deinit(df);
 

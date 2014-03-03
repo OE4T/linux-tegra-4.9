@@ -1385,6 +1385,8 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	struct channel_gk20a_job *job, *n;
 	int i;
 
+	wake_up(&c->submit_wq);
+
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
 		bool completed = WARN_ON(!c->sync) ||
@@ -1407,6 +1409,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	for (i = 0; i < nr_completed; i++)
 		gk20a_channel_idle(c->g->dev);
 }
+EXPORT_SYMBOL(gk20a_channel_update);
 
 static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,

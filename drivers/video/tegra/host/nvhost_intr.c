@@ -30,10 +30,11 @@
 #include <linux/slab.h>
 #include <linux/irq.h>
 #include <trace/events/nvhost.h>
+#include <linux/gk20a.h>
+
 #include "nvhost_channel.h"
 #include "nvhost_hwctx.h"
 #include "chip_support.h"
-#include "gk20a/channel_gk20a.h"
 
 /*** Wait list management ***/
 
@@ -176,12 +177,7 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
 {
 	struct channel_gk20a *ch20a = waiter->data;
-
-	wake_up(&ch20a->submit_wq);
-
-#if defined(CONFIG_TEGRA_GK20A)
 	gk20a_channel_update(ch20a, waiter->count);
-#endif
 }
 
 static void action_wakeup(struct nvhost_waitlist *waiter)

@@ -70,6 +70,7 @@ static void gk20a_tegra_channel_idle(struct platform_device *dev)
 		nvhost_module_idle(nvhost_get_parent(dev));
 }
 
+#ifdef CONFIG_TEGRA_NVMAP
 static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
 				       struct gr_ctx_buffer_desc *desc)
 {
@@ -83,7 +84,6 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 				    struct gr_ctx_buffer_desc *desc,
 				    size_t size)
 {
-#ifdef CONFIG_TEGRA_NVMAP
 	struct dma_buf *dmabuf;
 
 	dmabuf = nvmap_alloc_dmabuf(size,
@@ -96,10 +96,15 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 	desc->priv = dmabuf;
 
 	return 0;
-#else
-	return -ENOSYS;
-#endif
 }
+#else
+static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
+				    struct gr_ctx_buffer_desc *desc,
+				    size_t size)
+{
+	return -ENOSYS;
+}
+#endif
 
 static int gk20a_tegra_probe(struct platform_device *dev)
 {

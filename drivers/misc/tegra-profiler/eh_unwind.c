@@ -831,6 +831,7 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	struct ex_region_info *ri;
 	struct extables tabs;
 
+	cc->unw_method = QUADD_UNW_METHOD_EHT;
 	cc->unw_rc = QUADD_URC_FAILURE;
 
 	if (!regs || !mm)

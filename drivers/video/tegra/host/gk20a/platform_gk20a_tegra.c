@@ -37,6 +37,7 @@
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
+extern struct device tegra_vpr_dev;
 struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
@@ -121,45 +122,64 @@ static void gk20a_tegra_channel_idle(struct platform_device *dev)
 		nvhost_module_idle_ext(to_platform_device(dev->dev.parent));
 }
 
-#ifdef CONFIG_TEGRA_NVMAP
 static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
 				       struct gr_ctx_buffer_desc *desc)
 {
-	struct dma_buf *dmabuf = desc->priv;
-
-	gk20a_mm_unpin(&pdev->dev, dmabuf, desc->sgt);
-	dma_buf_put(dmabuf);
+	gk20a_free_sgtable(&desc->sgt);
+	dma_free_attrs(&tegra_vpr_dev, desc->size,
+			(void *)(uintptr_t)&desc->iova,
+			desc->iova, &desc->attrs);
 }
 
 static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 				    struct gr_ctx_buffer_desc *desc,
 				    size_t size)
 {
-	struct dma_buf *dmabuf;
+	struct device *dev = &pdev->dev;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
+	struct sg_table *sgt;
+	struct page *page;
+	int err = 0;
 
-	dmabuf = nvmap_alloc_dmabuf(size,
-				    DEFAULT_ALLOC_ALIGNMENT,
-				    NVMAP_HANDLE_UNCACHEABLE,
-				    NVMAP_HEAP_CARVEOUT_VPR);
-	if (!dmabuf)
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+
+	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
+				      GFP_KERNEL, &attrs);
+	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
-	if (gk20a_dmabuf_alloc_drvdata(dmabuf, &pdev->dev))
-		return -ENOMEM;
-	desc->sgt = gk20a_mm_pin(&pdev->dev, dmabuf);
+
+	desc->iova = iova;
 	desc->size = size;
+	desc->attrs = attrs;
 	desc->destroy = gk20a_tegra_secure_destroy;
-	desc->priv = dmabuf;
 
-	return 0;
+	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt) {
+		gk20a_err(dev, "failed to allocate memory\n");
+		goto fail;
+	}
+	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
+	if (err) {
+		gk20a_err(dev, "failed to allocate sg_table\n");
+		goto fail_sgt;
+	}
+	page = phys_to_page(iova);
+	sg_set_page(sgt->sgl, page, size, 0);
+	sg_dma_address(sgt->sgl) = iova;
+
+	desc->sgt = sgt;
+
+	return err;
+
+fail_sgt:
+	kfree(sgt);
+fail:
+	dma_free_attrs(&tegra_vpr_dev, desc->size,
+			(void *)(uintptr_t)&desc->iova,
+			desc->iova, &desc->attrs);
+	return err;
 }
-#else
-static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
-				    struct gr_ctx_buffer_desc *desc,
-				    size_t size)
-{
-	return -ENOSYS;
-}
-#endif
 
 /*
  * gk20a_tegra_get_emc_rate()

@@ -726,6 +726,9 @@ int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
 {
 	struct nvmap_handle_info *info;
 
+	if (dmabuf->ops != &nvmap_dma_buf_ops)
+		return -EINVAL;
+
 	if (WARN_ON(!virt_addr_valid(dmabuf)))
 		return -EINVAL;
 

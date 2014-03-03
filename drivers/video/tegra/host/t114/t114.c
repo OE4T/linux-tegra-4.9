@@ -41,7 +41,6 @@
 #include "chip_support.h"
 #include "nvhost_channel.h"
 #include "chip_support.h"
-#include "gr3d/pod_scaling.h"
 #include "class_ids.h"
 
 /* HACK! This needs to come from DT */

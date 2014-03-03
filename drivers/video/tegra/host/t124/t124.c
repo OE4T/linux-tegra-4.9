@@ -39,7 +39,6 @@
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
-#include "gr3d/pod_scaling.h"
 #include "gr3d/scale3d.h"
 
 #include "chip_support.h"

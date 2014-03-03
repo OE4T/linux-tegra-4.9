@@ -36,7 +36,6 @@
 #include "gr3d/gr3d_t114.h"
 #include "gr3d/scale3d.h"
 #include "nvhost_scale.h"
-#include "gr3d/pod_scaling.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
 #include "linux/nvhost_ioctl.h"

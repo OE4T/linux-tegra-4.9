@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D Clock Scaling
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,9 @@ struct nvhost_emc_params {
 	long				emc_xmid;
 	bool				linear;
 };
+
+/* Suspend is called when powering down module */
+void nvhost_scale3d_suspend(struct device *);
 
 /* Initialization and de-initialization for module */
 void nvhost_scale3d_init(struct platform_device *pdev);

@@ -54,8 +54,9 @@
 
 #include "nvhost_acm.h"
 #include "scale3d.h"
-#include "pod_scaling.h"
 #include "dev.h"
+
+#define GET_TARGET_FREQ_DONTSCALE	1
 
 /* time frame for load and hint tracking - when events come in at a larger
  * interval, this probably indicates the current estimates are stale
@@ -165,19 +166,14 @@ static void scaling_limit(struct devfreq *df, unsigned long *freq)
 }
 
 /*******************************************************************************
- * nvhost_scale3d_suspend(dev)
+ * nvhost_pod_suspend(dev)
  *
  * Prepare the device for suspend
  ******************************************************************************/
 
-void nvhost_scale3d_suspend(struct device *dev)
+static void nvhost_pod_suspend(struct devfreq *df)
 {
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-	struct devfreq *df = pdata->power_manager;
 	struct podgov_info_rec *podgov;
-
-	if (!df)
-		return;
 
 	mutex_lock(&df->lock);
 
@@ -1067,9 +1063,11 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 	case DEVFREQ_GOV_START:
 		ret = nvhost_pod_init(df);
 		break;
-
 	case DEVFREQ_GOV_STOP:
 		nvhost_pod_exit(df);
+		break;
+	case DEVFREQ_GOV_SUSPEND:
+		nvhost_pod_suspend(df);
 		break;
 	default:
 		break;

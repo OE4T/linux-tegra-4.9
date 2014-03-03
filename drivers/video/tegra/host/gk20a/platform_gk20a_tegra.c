@@ -16,12 +16,12 @@
  */
 
 #include "platform_gk20a.h"
+#include "gr3d/scale3d.h"
 #include "gk20a_scale.h"
 #include "nvhost_acm.h"
 #include "bus_client.h"
 #include "class_ids.h"
 #include "t124/syncpt_t124.h"
-#include "gr3d/pod_scaling.h"
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
 #include <linux/nvhost_ioctl.h>

@@ -554,12 +554,15 @@ static int tsec_probe(struct platform_device *dev)
 	if (node) {
 		err = of_property_read_u32(node, "carveout_addr",
 					(u32 *)&tsec_carveout_addr);
-		err = of_property_read_u32(node, "carveout_size",
-					(u32 *)&tsec_carveout_size);
+		if (!err)
+			err = of_property_read_u32(node, "carveout_size",
+				(u32 *)&tsec_carveout_size);
+		if (!err) {
+			dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+			dma_map_linear_attrs(&dev->dev, tsec_carveout_addr,
+				tsec_carveout_size, DMA_TO_DEVICE, &attrs);
+		}
 	}
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	dma_map_linear_attrs(&dev->dev, tsec_carveout_addr,
-			tsec_carveout_size, DMA_TO_DEVICE, &attrs);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

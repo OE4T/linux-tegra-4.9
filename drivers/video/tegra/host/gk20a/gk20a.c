@@ -677,14 +677,6 @@ static int gk20a_init_support(struct platform_device *dev)
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
 
-	/* gk20a_as alloc_share can be called before gk20a is powered on.
-	   It requires mm sw states configured so init mm sw early here. */
-	err = gk20a_init_mm_setup_sw(g);
-	if (err)
-		goto fail;
-
-	/* other inits are deferred until gpu is powered up. */
-
 	g->remove_support = gk20a_remove_support;
 	return 0;
 
@@ -695,11 +687,18 @@ static int gk20a_init_support(struct platform_device *dev)
 
 static int gk20a_init_client(struct platform_device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
+	int err;
+
 	nvhost_dbg_fn("");
 
 #ifndef CONFIG_PM_RUNTIME
 	nvhost_gk20a_finalize_poweron(dev);
 #endif
+
+	err = gk20a_init_mm_setup_sw(g);
+	if (err)
+		return err;
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		nvhost_gk20a_scale_hw_init(dev);

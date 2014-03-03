@@ -95,6 +95,7 @@ get_user_callchain_fp(struct pt_regs *regs,
 	struct mm_struct *mm = current->mm;
 
 	cc->nr = 0;
+	cc->unw_method = QUADD_UNW_METHOD_FP;
 
 	if (!regs || !mm)
 		return 0;
@@ -168,7 +169,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 			 struct quadd_callchain *cc,
 			 struct quadd_ctx *ctx)
 {
-	int unw_fp, unw_eht;
+	int unw_fp, unw_eht, nr = 0;
 	unsigned int extra;
 	struct quadd_parameters *param = &ctx->param;
 
@@ -184,13 +185,11 @@ quadd_get_user_callchain(struct pt_regs *regs,
 
 	cc->unw_rc = 0;
 
-	if (unw_fp) {
-		cc->unw_method = QUADD_UNW_METHOD_FP;
-		get_user_callchain_fp(regs, cc);
-	} else if (unw_eht) {
-		cc->unw_method = QUADD_UNW_METHOD_EHT;
-		quadd_get_user_callchain_ut(regs, cc);
-	}
+	if (unw_eht)
+		nr = quadd_get_user_callchain_ut(regs, cc);
 
-	return cc->nr;
+	if (!nr && unw_fp)
+		nr = get_user_callchain_fp(regs, cc);
+
+	return nr;
 }

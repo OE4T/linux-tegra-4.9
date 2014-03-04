@@ -125,19 +125,11 @@ enum {
 };
 
 struct nvmap_create_handle {
-#ifdef CONFIG_COMPAT
 	union {
 		__u32 id;	/* FromId */
 		__u32 size;	/* CreateHandle */
 		__s32 fd;	/* DmaBufFd or FromFd */
 	};
-#else
-	union {
-		unsigned long id;	/* FromId */
-		__u32 size;	/* CreateHandle */
-		__s32 fd;	/* DmaBufFd or FromFd */
-	};
-#endif
 	__u32 handle;		/* returns nvmap handle */
 };
 

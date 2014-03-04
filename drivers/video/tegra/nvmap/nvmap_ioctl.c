@@ -72,22 +72,6 @@ static struct nvmap_handle *unmarshal_user_handle_array_single(__u32 handles)
 	return unmarshal_user_handle(handles);
 }
 
-/*
- * marshal_id/unmarshal_id are for get_id/handle_from_id.
- * These are added to support using Fd's for handle.
- */
-static __u32 marshal_id(struct nvmap_handle *handle)
-{
-	return (__u32)((uintptr_t)handle >> 2);
-}
-
-static struct nvmap_handle *unmarshal_id(__u32 id)
-{
-	uintptr_t h = ((id << 2) | PAGE_OFFSET);
-
-	return (struct nvmap_handle *)h;
-}
-
 __u32 marshal_kernel_vaddr(ulong address)
 {
 	return (__u32)address;
@@ -100,19 +84,37 @@ static struct nvmap_handle *unmarshal_user_handle_array_single(
 	return unmarshal_user_handle(handles);
 }
 
-static ulong marshal_id(struct nvmap_handle *handle)
+ulong marshal_kernel_vaddr(ulong address)
+{
+	return address;
+}
+#endif
+
+/*
+ * marshal_id/unmarshal_id are for get_id/handle_from_id.
+ * These are added to support using Fd's for handle.
+ */
+#ifdef CONFIG_ARM64
+static __u32 marshal_id(struct nvmap_handle *handle)
+{
+	return (__u32)((uintptr_t)handle >> 2);
+}
+
+static struct nvmap_handle *unmarshal_id(__u32 id)
+{
+	uintptr_t h = ((id << 2) | PAGE_OFFSET);
+
+	return (struct nvmap_handle *)h;
+}
+#else
+static __u32 marshal_id(struct nvmap_handle *handle)
 {
 	return (uintptr_t)handle;
 }
 
-static struct nvmap_handle *unmarshal_id(ulong id)
+static struct nvmap_handle *unmarshal_id(__u32 id)
 {
 	return (struct nvmap_handle *)id;
-}
-
-ulong marshal_kernel_vaddr(ulong address)
-{
-	return address;
 }
 #endif
 

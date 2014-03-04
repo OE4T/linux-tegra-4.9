@@ -388,10 +388,10 @@ void nvmap_client_put(struct nvmap_client *c);
 
 #ifdef CONFIG_COMPAT
 ulong unmarshal_user_handle(__u32 handle);
-ulong unmarshal_user_id(u32 id);
+struct nvmap_handle *unmarshal_user_id(u32 id);
 #else
 ulong unmarshal_user_handle(struct nvmap_handle *handle);
-ulong unmarshal_user_id(ulong id);
+struct nvmap_handle *unmarshal_user_id(ulong id);
 #endif
 
 static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)

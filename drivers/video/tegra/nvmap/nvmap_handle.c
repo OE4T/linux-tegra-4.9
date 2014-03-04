@@ -467,8 +467,7 @@ EXPORT_SYMBOL(nvmap_free_handle);
 void nvmap_free_handle_user_id(struct nvmap_client *client,
 			       unsigned long user_id)
 {
-	nvmap_free_handle(client,
-		(struct nvmap_handle *)unmarshal_user_id(user_id));
+	nvmap_free_handle(client, unmarshal_user_id(user_id));
 }
 
 static void add_handle_ref(struct nvmap_client *client,

@@ -73,9 +73,9 @@ ulong unmarshal_user_handle_array_single(__u32 handles)
 	return unmarshal_user_handle((ulong)handles);
 }
 
-ulong unmarshal_user_id(u32 id)
+struct nvmap_handle *unmarshal_user_id(u32 id)
 {
-	return unmarshal_user_handle(id);
+	return (struct nvmap_handle *)unmarshal_user_handle(id);
 }
 
 /*
@@ -123,9 +123,10 @@ ulong unmarshal_user_handle_array_single(struct nvmap_handle **handles)
 	return unmarshal_user_handle((struct nvmap_handle *)handles);
 }
 
-ulong unmarshal_user_id(ulong id)
+struct nvmap_handle *unmarshal_user_id(ulong id)
 {
-	return unmarshal_user_handle((struct nvmap_handle *)id);
+	return (struct nvmap_handle *)unmarshal_user_handle(
+					(struct nvmap_handle *)id);
 }
 
 ulong marshal_id(ulong id)

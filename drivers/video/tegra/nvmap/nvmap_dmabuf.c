@@ -699,7 +699,7 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 {
 	struct nvmap_create_handle op;
 	struct nvmap_client *client = filp->private_data;
-	ulong handle;
+	struct nvmap_handle *handle;
 
 	BUG_ON(!client);
 
@@ -710,7 +710,7 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	op.fd = nvmap_get_dmabuf_fd(client, (struct nvmap_handle *)handle);
+	op.fd = nvmap_get_dmabuf_fd(client, handle);
 	if (op.fd < 0)
 		return op.fd;
 

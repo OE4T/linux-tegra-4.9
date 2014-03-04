@@ -56,20 +56,20 @@ static struct nvmap_handle *fd_to_handle_id(int handle)
 	return 0;
 }
 
-#ifdef CONFIG_COMPAT
 static struct nvmap_handle *unmarshal_user_handle(__u32 handle)
 {
 	return fd_to_handle_id((int)handle);
 }
 
-static struct nvmap_handle *unmarshal_user_handle_array_single(__u32 handles)
-{
-	return unmarshal_user_handle((ulong)handles);
-}
-
 struct nvmap_handle *unmarshal_user_id(u32 id)
 {
 	return unmarshal_user_handle(id);
+}
+
+#ifdef CONFIG_COMPAT
+static struct nvmap_handle *unmarshal_user_handle_array_single(__u32 handles)
+{
+	return unmarshal_user_handle(handles);
 }
 
 /*
@@ -94,23 +94,10 @@ __u32 marshal_kernel_vaddr(ulong address)
 }
 
 #else
-static struct nvmap_handle *unmarshal_user_handle(struct nvmap_handle *handle)
-{
-	if ((ulong)handle == 0)
-		return handle;
-
-	return fd_to_handle_id((int)handle);
-}
-
 static struct nvmap_handle *unmarshal_user_handle_array_single(
-						struct nvmap_handle **handles)
+						__u32 *handles)
 {
-	return unmarshal_user_handle((struct nvmap_handle *)handles);
-}
-
-struct nvmap_handle *unmarshal_user_id(ulong id)
-{
-	return unmarshal_user_handle((struct nvmap_handle *)id);
+	return unmarshal_user_handle(handles);
 }
 
 static ulong marshal_id(struct nvmap_handle *handle)
@@ -173,13 +160,8 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 		}
 
 		for (i = 0; i < op.count; i++) {
-#ifdef CONFIG_COMPAT
 			u32 handle;
 			u32 *handles = (u32 *)op.handles;
-#else
-			struct nvmap_handle *handle;
-			struct nvmap_handle **handles = op.handles;
-#endif
 			if (__get_user(handle, &handles[i])) {
 				err = -EFAULT;
 				goto out;

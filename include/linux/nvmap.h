@@ -53,10 +53,10 @@
 #define NVMAP_HANDLE_COMPR_SPECIFIED (0x1ul << 4)
 #define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 5)
 
+#if defined(__KERNEL__)
+
 struct nvmap_handle;
 struct nvmap_handle_ref;
-
-#if defined(__KERNEL__)
 
 struct nvmap_client;
 struct nvmap_device;
@@ -131,23 +131,18 @@ struct nvmap_create_handle {
 		__u32 size;	/* CreateHandle */
 		__s32 fd;	/* DmaBufFd or FromFd */
 	};
-	__u32 handle;		/* returns nvmap handle */
 #else
 	union {
 		unsigned long id;	/* FromId */
 		__u32 size;	/* CreateHandle */
 		__s32 fd;	/* DmaBufFd or FromFd */
 	};
-	struct nvmap_handle *handle; /* returns nvmap handle */
 #endif
+	__u32 handle;		/* returns nvmap handle */
 };
 
 struct nvmap_alloc_handle {
-#ifdef CONFIG_COMPAT
 	__u32 handle;		/* nvmap handle */
-#else
-	struct nvmap_handle *handle; /* nvmap handle */
-#endif
 	__u32 heap_mask;	/* heaps to allocate from */
 	__u32 flags;		/* wb/wc/uc/iwb etc. */
 	__u32 align;		/* min alignment necessary */
@@ -155,11 +150,7 @@ struct nvmap_alloc_handle {
 
 
 struct nvmap_alloc_kind_handle {
-#ifdef CONFIG_COMPAT
 	__u32 handle;		/* nvmap handle */
-#else
-	struct nvmap_handle *handle; /* nvmap handle */
-#endif
 	__u32 heap_mask;
 	__u32 flags;
 	__u32 align;
@@ -168,11 +159,7 @@ struct nvmap_alloc_kind_handle {
 };
 
 struct nvmap_map_caller {
-#ifdef CONFIG_COMPAT
 	__u32 handle;		/* nvmap handle */
-#else
-	struct nvmap_handle *handle; /* nvmap handle */
-#endif
 	__u32 offset;		/* offset into hmem; should be page-aligned */
 	__u32 length;		/* number of bytes to map */
 	__u32 flags;		/* maps as wb/iwb etc. */
@@ -186,11 +173,10 @@ struct nvmap_map_caller {
 struct nvmap_rw_handle {
 #ifdef CONFIG_COMPAT
 	__u32 addr;		/* user pointer */
-	__u32 handle;		/* nvmap handle */
 #else
 	unsigned long addr;	/* user pointer*/
-	struct nvmap_handle *handle; /* nvmap handle */
 #endif
+	__u32 handle;		/* nvmap handle */
 	__u32 offset;		/* offset into hmem */
 	__u32 elem_size;	/* individual atom size */
 	__u32 hmem_stride;	/* delta in bytes between atoms in hmem */
@@ -203,18 +189,14 @@ struct nvmap_pin_handle {
 	__u32 handles;		/* array of handles to pin/unpin */
 	__u32 addr;		/*  array of addresses to return */
 #else
-	struct nvmap_handle **handles;	/* array of handles to pin/unpin */
+	__u32 *handles;		/* array of handles to pin/unpin */
 	unsigned long *addr;	/* array of addresses to return */
 #endif
 	__u32 count;		/* number of entries in handles */
 };
 
 struct nvmap_handle_param {
-#ifdef CONFIG_COMPAT
 	__u32 handle;		/* nvmap handle */
-#else
-	struct nvmap_handle *handle;	/* nvmap handle */
-#endif
 	__u32 param;		/* size/align/base/heap etc. */
 #ifdef CONFIG_COMPAT
 	__u32 result;		/* returnes requested info*/
@@ -226,11 +208,10 @@ struct nvmap_handle_param {
 struct nvmap_cache_op {
 #ifdef CONFIG_COMPAT
 	__u32 addr;		/* user pointer*/
-	__u32 handle;		/* nvmap handle */
 #else
 	unsigned long addr;	/* user pointer*/
-	struct nvmap_handle *handle;	/* nvmap handle */
 #endif
+	__u32 handle;		/* nvmap handle */
 	__u32 len;		/* bytes to flush */
 	__s32 op;		/* wb/wb_inv/inv */
 };

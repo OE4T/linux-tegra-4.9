@@ -341,9 +341,6 @@ struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev);
 int nvmap_find_cache_maint_op(struct nvmap_device *dev,
 		struct nvmap_handle *h);
 
-struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
-					unsigned long handle, bool skip_val);
-
 void nvmap_handle_put(struct nvmap_handle *h);
 
 struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *priv,

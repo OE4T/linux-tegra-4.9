@@ -440,14 +440,6 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 	spin_unlock(&dev->handle_lock);
 }
 
-/* validates that a handle is in the device master tree, and that the
- * client has permission to access it */
-struct nvmap_handle *nvmap_validate_get(struct nvmap_client *client,
-					unsigned long id, bool skip_val)
-{
-	return nvmap_handle_get((struct nvmap_handle *)id);
-}
-
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name)
 {

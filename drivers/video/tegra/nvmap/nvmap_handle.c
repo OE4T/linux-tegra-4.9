@@ -576,7 +576,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	BUG_ON(!client);
 	/* on success, the reference count for the handle should be
 	 * incremented, so the success paths will not call nvmap_handle_put */
-	h = nvmap_validate_get(client, id, skip_val);
+	h = nvmap_handle_get((struct nvmap_handle *)id);
 
 	if (!h) {
 		nvmap_debug(client, "%s duplicate handle failed\n",
@@ -677,7 +677,7 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 	*flags = 0;
 	*nr_page = 0;
 
-	h = nvmap_validate_get(client, id, 0);
+	h = nvmap_handle_get((struct nvmap_handle *)id);
 
 	if (!h) {
 		nvmap_err(client, "%s query invalid handle %p\n",
@@ -712,7 +712,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 
 	BUG_ON(!client);
 
-	h = nvmap_validate_get(client, id, 0);
+	h = nvmap_handle_get((struct nvmap_handle *)id);
 
 	if (!h) {
 		nvmap_err(client, "%s query invalid handle %p\n",

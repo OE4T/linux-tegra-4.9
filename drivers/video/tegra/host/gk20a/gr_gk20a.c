@@ -2559,6 +2559,9 @@ static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
+	if (!ch_ctx->gr_ctx.gpu_va)
+		return;
+
 	gk20a_gmmu_unmap(ch_vm, ch_ctx->gr_ctx.gpu_va,
 			ch_ctx->gr_ctx.size, gk20a_mem_flag_none);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);

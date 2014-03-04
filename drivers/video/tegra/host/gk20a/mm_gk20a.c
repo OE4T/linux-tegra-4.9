@@ -837,7 +837,7 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	return offset;
 }
 
-static void gk20a_vm_free_va(struct vm_gk20a *vm,
+static int gk20a_vm_free_va(struct vm_gk20a *vm,
 			     u64 offset, u64 size,
 			     enum gmmu_pgsz_gk20a pgsz_idx)
 {
@@ -859,6 +859,8 @@ static void gk20a_vm_free_va(struct vm_gk20a *vm,
 			   "not found: offset=0x%llx, sz=0x%llx",
 			   offset, size);
 	}
+
+	return err;
 }
 
 static int insert_mapped_buffer(struct rb_root *root,
@@ -1124,8 +1126,14 @@ static void __locked_gmmu_unmap(struct vm_gk20a *vm,
 	int err = 0;
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	if (va_allocated)
-		gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
+	if (va_allocated) {
+		err = gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
+		if (err) {
+			dev_err(dev_from_vm(vm),
+				"failed to free va");
+			return;
+		}
+	}
 
 	/* unmap here needs to know the page size we assigned at mapping */
 	err = update_gmmu_ptes_locked(vm,

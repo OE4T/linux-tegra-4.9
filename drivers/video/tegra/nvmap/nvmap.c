@@ -376,11 +376,12 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 	if (IS_ERR(r))
 		return r;
 
-	err = nvmap_alloc_handle_id(client, __nvmap_ref_to_id(r),
-				    heap_mask, align,
-				    0, /* kind n/a */
-				    flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
-					      NVMAP_HANDLE_COMPR_SPECIFIED));
+	err = nvmap_alloc_handle(client,
+				 (struct nvmap_handle *)__nvmap_ref_to_id(r),
+				 heap_mask, align,
+				 0, /* kind n/a */
+				 flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
+					   NVMAP_HANDLE_COMPR_SPECIFIED));
 
 	if (err) {
 		nvmap_free_handle_id(client, __nvmap_ref_to_id(r));

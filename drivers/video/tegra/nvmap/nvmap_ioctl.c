@@ -329,7 +329,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	op.fd = nvmap_get_dmabuf_fd(client, handle);
+	op.fd = nvmap_get_dmabuf_fd(client, (struct nvmap_handle *)handle);
 	if (op.fd < 0)
 		return op.fd;
 
@@ -363,10 +363,10 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
 #endif
 
-	return nvmap_alloc_handle_id(client, handle, op.heap_mask,
-				     op.align,
-				     0, /* no kind */
-				     op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED));
+	return nvmap_alloc_handle(client, (struct nvmap_handle *)handle,
+				  op.heap_mask, op.align,
+				  0, /* no kind */
+				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED));
 }
 
 int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
@@ -392,10 +392,11 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
 #endif
 
-	return nvmap_alloc_handle_id(client, handle, op.heap_mask,
-				     op.align,
-				     op.kind,
-				     op.flags);
+	return nvmap_alloc_handle(client, (struct nvmap_handle *)handle,
+				  op.heap_mask,
+				  op.align,
+				  op.kind,
+				  op.flags);
 }
 
 int nvmap_create_fd(struct nvmap_handle *h)
@@ -434,7 +435,8 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		if (!IS_ERR(ref))
 			ref->handle->orig_size = op.size;
 	} else if (cmd == NVMAP_IOC_FROM_ID) {
-		ref = nvmap_duplicate_handle_id(client, unmarshal_id(op.id), 0);
+		ref = nvmap_duplicate_handle(client,
+			(struct nvmap_handle *)unmarshal_id(op.id), 0);
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
 		ref = nvmap_create_handle_from_fd(client, op.fd);
 	} else {

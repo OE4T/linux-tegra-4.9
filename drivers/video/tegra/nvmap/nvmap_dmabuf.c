@@ -618,12 +618,12 @@ int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags)
 	return fd;
 }
 
-int nvmap_get_dmabuf_fd(struct nvmap_client *client, ulong id)
+int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
 {
 	int fd;
 	struct dma_buf *dmabuf;
 
-	dmabuf = __nvmap_dmabuf_export(client, id);
+	dmabuf = __nvmap_dmabuf_export(client, h);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
 	fd = __nvmap_dmabuf_fd(dmabuf, O_CLOEXEC);
@@ -637,12 +637,11 @@ err_out:
 }
 
 struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
-				 unsigned long id)
+				 struct nvmap_handle *handle)
 {
-	struct nvmap_handle *handle;
 	struct dma_buf *buf;
 
-	handle = nvmap_handle_get((struct nvmap_handle *)id);
+	handle = nvmap_handle_get(handle);
 	if (!handle)
 		return ERR_PTR(-EINVAL);
 	buf = handle->dmabuf;
@@ -711,7 +710,7 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	op.fd = nvmap_get_dmabuf_fd(client, handle);
+	op.fd = nvmap_get_dmabuf_fd(client, (struct nvmap_handle *)handle);
 	if (op.fd < 0)
 		return op.fd;
 

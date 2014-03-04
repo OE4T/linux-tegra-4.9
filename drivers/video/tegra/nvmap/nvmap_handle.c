@@ -313,18 +313,17 @@ static const unsigned int heap_policy_large[] = {
 	0,
 };
 
-int nvmap_alloc_handle_id(struct nvmap_client *client,
-			  unsigned long id, unsigned int heap_mask,
-			  size_t align,
-			  u8 kind,
-			  unsigned int flags)
+int nvmap_alloc_handle(struct nvmap_client *client,
+		       struct nvmap_handle *h, unsigned int heap_mask,
+		       size_t align,
+		       u8 kind,
+		       unsigned int flags)
 {
-	struct nvmap_handle *h = NULL;
 	const unsigned int *alloc_policy;
 	int nr_page;
 	int err = -ENOMEM;
 
-	h = nvmap_handle_get((struct nvmap_handle *)id);
+	h = nvmap_handle_get(h);
 
 	if (!h)
 		return -EINVAL;
@@ -335,7 +334,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	}
 
 	nvmap_stats_inc(NS_TOTAL, PAGE_ALIGN(h->orig_size));
-	trace_nvmap_alloc_handle_id(client, id,
+	trace_nvmap_alloc_handle(client, h,
 		h->size, heap_mask, align, flags,
 		nvmap_stats_read(NS_TOTAL));
 	h->userflags = flags;
@@ -567,16 +566,15 @@ ref_alloc_fail:
 	return err;
 }
 
-struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
-					unsigned long id, bool skip_val)
+struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
+					struct nvmap_handle *h, bool skip_val)
 {
 	struct nvmap_handle_ref *ref = NULL;
-	struct nvmap_handle *h = NULL;
 
 	BUG_ON(!client);
 	/* on success, the reference count for the handle should be
 	 * incremented, so the success paths will not call nvmap_handle_put */
-	h = nvmap_handle_get((struct nvmap_handle *)id);
+	h = nvmap_handle_get(h);
 
 	if (!h) {
 		nvmap_debug(client, "%s duplicate handle failed\n",
@@ -633,7 +631,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	 */
 	get_dma_buf(h->dmabuf);
 
-	trace_nvmap_duplicate_handle_id(client, id, ref);
+	trace_nvmap_duplicate_handle(client, h, ref);
 	return ref;
 }
 
@@ -648,14 +646,14 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	id = nvmap_get_id_from_dmabuf_fd(client, fd);
 	if (IS_ERR_VALUE(id))
 		return ERR_PTR(id);
-	ref = nvmap_duplicate_handle_id(client, id, 1);
+	ref = nvmap_duplicate_handle(client, (struct nvmap_handle *)id, 1);
 	return ref;
 }
 
 unsigned long nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
-						unsigned long id)
+						struct nvmap_handle *h)
 {
-	struct nvmap_handle_ref *ref = nvmap_duplicate_handle_id(client, id, 0);
+	struct nvmap_handle_ref *ref = nvmap_duplicate_handle(client, h, 0);
 
 	if (IS_ERR(ref))
 		return 0;
@@ -665,8 +663,8 @@ unsigned long nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
 EXPORT_SYMBOL(nvmap_duplicate_handle_id_ex);
 
 int nvmap_get_page_list_info(struct nvmap_client *client,
-				unsigned long id, u32 *size, u32 *flags,
-				u32 *nr_page, bool *contig)
+				struct nvmap_handle *handle, u32 *size,
+				u32 *flags, u32 *nr_page, bool *contig)
 {
 	struct nvmap_handle *h;
 
@@ -677,17 +675,17 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 	*flags = 0;
 	*nr_page = 0;
 
-	h = nvmap_handle_get((struct nvmap_handle *)id);
+	h = nvmap_handle_get(handle);
 
 	if (!h) {
 		nvmap_err(client, "%s query invalid handle %p\n",
-			  current->group_leader->comm, (void *)id);
+			  current->group_leader->comm, handle);
 		return -EINVAL;
 	}
 
 	if (!h->alloc || !h->heap_pgalloc) {
 		nvmap_err(client, "%s query unallocated handle %p\n",
-			  current->group_leader->comm, (void *)id);
+			  current->group_leader->comm, handle);
 		nvmap_handle_put(h);
 		return -EINVAL;
 	}
@@ -703,7 +701,8 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 EXPORT_SYMBOL(nvmap_get_page_list_info);
 
 int nvmap_acquire_page_list(struct nvmap_client *client,
-			unsigned long id, struct page **pages, u32 nr_page)
+			struct nvmap_handle *handle, struct page **pages,
+			u32 nr_page)
 {
 	struct nvmap_handle *h;
 	struct nvmap_handle_ref *ref;
@@ -712,17 +711,17 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 
 	BUG_ON(!client);
 
-	h = nvmap_handle_get((struct nvmap_handle *)id);
+	h = nvmap_handle_get(handle);
 
 	if (!h) {
 		nvmap_err(client, "%s query invalid handle %p\n",
-			  current->group_leader->comm, (void *)id);
+			  current->group_leader->comm, handle);
 		return -EINVAL;
 	}
 
 	if (!h->alloc || !h->heap_pgalloc) {
 		nvmap_err(client, "%s query unallocated handle %p\n",
-			  current->group_leader->comm, (void *)id);
+			  current->group_leader->comm, handle);
 		nvmap_handle_put(h);
 		return -EINVAL;
 	}
@@ -733,7 +732,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 		pages[idx] = h->pgalloc.pages[idx];
 
 	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, id);
+	ref = __nvmap_validate_id_locked(client, (unsigned long)h);
 	if (ref)
 		__nvmap_pin(ref, &dummy);
 	nvmap_ref_unlock(client);

@@ -87,9 +87,9 @@ TRACE_EVENT(nvmap_create_handle,
 		__entry->h, __entry->size, __entry->ref)
 );
 
-TRACE_EVENT(nvmap_alloc_handle_id,
+TRACE_EVENT(nvmap_alloc_handle,
 	TP_PROTO(struct nvmap_client *client,
-		 unsigned long handle_id,
+		 struct nvmap_handle *handle,
 		 size_t size,
 		 u32 heap_mask,
 		 u32 align,
@@ -97,11 +97,11 @@ TRACE_EVENT(nvmap_alloc_handle_id,
 		 u64 total
 	),
 
-	TP_ARGS(client, handle_id, size, heap_mask, align, flags, total),
+	TP_ARGS(client, handle, size, heap_mask, align, flags, total),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
-		__field(unsigned long, handle_id)
+		__field(struct nvmap_handle *, handle)
 		__field(size_t, size)
 		__field(u32, heap_mask)
 		__field(u32, align)
@@ -111,7 +111,7 @@ TRACE_EVENT(nvmap_alloc_handle_id,
 
 	TP_fast_assign(
 		__entry->client = client;
-		__entry->handle_id = handle_id;
+		__entry->handle = handle;
 		__entry->size = size;
 		__entry->heap_mask = heap_mask;
 		__entry->align = align;
@@ -119,8 +119,8 @@ TRACE_EVENT(nvmap_alloc_handle_id,
 		__entry->total = total;
 	),
 
-	TP_printk("client=%p, id=0x%lx, size=%zu, heap_mask=0x%x, align=%d, flags=0x%x, total=%llu",
-		__entry->client, __entry->handle_id, __entry->size,
+	TP_printk("client=%p, id=0x%p, size=%zu, heap_mask=0x%x, align=%d, flags=0x%x, total=%llu",
+		__entry->client, __entry->handle, __entry->size,
 		__entry->heap_mask, __entry->align, __entry->flags,
 		(unsigned long long)__entry->total)
 );
@@ -146,28 +146,28 @@ TRACE_EVENT(nvmap_free_handle_id,
 		__entry->client, __entry->handle_id)
 );
 
-TRACE_EVENT(nvmap_duplicate_handle_id,
+TRACE_EVENT(nvmap_duplicate_handle,
 	TP_PROTO(struct nvmap_client *client,
-		 unsigned long handle_id,
+		 struct nvmap_handle *handle,
 		 struct nvmap_handle_ref *ref
 	),
 
-	TP_ARGS(client, handle_id, ref),
+	TP_ARGS(client, handle, ref),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
-		__field(unsigned long, handle_id)
+		__field(struct nvmap_handle *, handle)
 		__field(struct nvmap_handle_ref *, ref)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
-		__entry->handle_id = handle_id;
+		__entry->handle = handle;
 		__entry->ref = ref;
 	),
 
-	TP_printk("client=%p, id=0x%lx, ref=%p",
-		__entry->client, __entry->handle_id, __entry->ref)
+	TP_printk("client=%p, id=%p, ref=%p",
+		__entry->client, __entry->handle, __entry->ref)
 );
 
 TRACE_EVENT(nvmap_cache_maint,

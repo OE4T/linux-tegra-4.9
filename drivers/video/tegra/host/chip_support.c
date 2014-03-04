@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Chip support module
  *
- * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,10 +57,12 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 		err = nvhost_init_t124_support(host, nvhost_chip_ops);
 		break;
 
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	case TEGRA_CHIPID_TEGRA21:
 		nvhost_chip_ops->soc_name = "tegra21x";
 		err = nvhost_init_t210_support(host, nvhost_chip_ops);
 		break;
+#endif
 
 	default:
 		err = -ENODEV;

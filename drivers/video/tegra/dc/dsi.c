@@ -4638,17 +4638,17 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 
 	tegra_dsi_bl_off(get_backlight_device_by_name(dsi->info.bl_name));
 
+	/* Suspend DSI panel */
+	err = tegra_dsi_send_panel_cmd(dc, dsi,
+			dsi->info.dsi_suspend_cmd,
+			dsi->info.n_suspend_cmd);
+
 	err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 		"DSI failed to go to LP mode\n");
 		goto fail;
 	}
-
-	/* Suspend DSI panel */
-	err = tegra_dsi_send_panel_cmd(dc, dsi,
-			dsi->info.dsi_suspend_cmd,
-			dsi->info.n_suspend_cmd);
 
 	/*
 	 * Certain panels need dc frames be sent after

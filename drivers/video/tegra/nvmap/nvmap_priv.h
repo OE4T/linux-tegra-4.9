@@ -387,10 +387,8 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 void nvmap_client_put(struct nvmap_client *c);
 
 #ifdef CONFIG_COMPAT
-ulong unmarshal_user_handle(__u32 handle);
 struct nvmap_handle *unmarshal_user_id(u32 id);
 #else
-ulong unmarshal_user_handle(struct nvmap_handle *handle);
 struct nvmap_handle *unmarshal_user_id(ulong id);
 #endif
 

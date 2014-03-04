@@ -436,7 +436,7 @@ int __nvmap_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
-ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref);
+struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref);
 int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys);
 void __nvmap_unpin(struct nvmap_handle_ref *ref);
 int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags);

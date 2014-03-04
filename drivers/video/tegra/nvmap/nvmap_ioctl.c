@@ -129,11 +129,11 @@ ulong marshal_kernel_vaddr(ulong address)
 }
 #endif
 
-ulong __nvmap_ref_to_id(struct nvmap_handle_ref *ref)
+struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
 		return 0;
-	return (unsigned long)ref->handle;
+	return ref->handle;
 }
 
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
@@ -429,8 +429,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
-		nvmap_free_handle(client,
-			(struct nvmap_handle *)__nvmap_ref_to_id(ref));
+		nvmap_free_handle(client, __nvmap_ref_to_id(ref));
 	}
 
 	if (err && (int)op.handle > 0)

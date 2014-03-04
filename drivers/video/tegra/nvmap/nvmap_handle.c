@@ -651,8 +651,8 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	return ref;
 }
 
-unsigned long nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
-						struct nvmap_handle *h)
+struct nvmap_handle *nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
+							struct nvmap_handle *h)
 {
 	struct nvmap_handle_ref *ref = nvmap_duplicate_handle(client, h, 0);
 

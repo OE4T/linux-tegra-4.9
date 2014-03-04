@@ -376,16 +376,14 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 	if (IS_ERR(r))
 		return r;
 
-	err = nvmap_alloc_handle(client,
-				 (struct nvmap_handle *)__nvmap_ref_to_id(r),
+	err = nvmap_alloc_handle(client, __nvmap_ref_to_id(r),
 				 heap_mask, align,
 				 0, /* kind n/a */
 				 flags & ~(NVMAP_HANDLE_KIND_SPECIFIED |
 					   NVMAP_HANDLE_COMPR_SPECIFIED));
 
 	if (err) {
-		nvmap_free_handle(client,
-			(struct nvmap_handle *)__nvmap_ref_to_id(r));
+		nvmap_free_handle(client, __nvmap_ref_to_id(r));
 		return ERR_PTR(err);
 	}
 
@@ -395,15 +393,15 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 static void __nvmap_free(struct nvmap_client *client,
 			 struct nvmap_handle_ref *r)
 {
-	unsigned long ref_id = __nvmap_ref_to_id(r);
+	struct nvmap_handle *handle = __nvmap_ref_to_id(r);
 
 	if (!r ||
 	    WARN_ON(!virt_addr_valid(client)) ||
 	    WARN_ON(!virt_addr_valid(r)) ||
-	    WARN_ON(!virt_addr_valid(ref_id)))
+	    WARN_ON(!virt_addr_valid(handle)))
 		return;
 
-	nvmap_free_handle(client, (struct nvmap_handle *)ref_id);
+	nvmap_free_handle(client, handle);
 }
 
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,

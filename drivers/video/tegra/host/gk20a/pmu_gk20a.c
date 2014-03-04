@@ -21,9 +21,9 @@
 
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/nvmap.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <linux/dma-mapping.h>
 
 #include "../dev.h"
 #include "../bus_client.h"

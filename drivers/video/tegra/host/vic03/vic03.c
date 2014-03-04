@@ -23,10 +23,10 @@
 #include <linux/delay.h>	/* for udelay */
 #include <linux/export.h>
 #include <linux/scatterlist.h>
-#include <linux/nvmap.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/dma-mapping.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
 

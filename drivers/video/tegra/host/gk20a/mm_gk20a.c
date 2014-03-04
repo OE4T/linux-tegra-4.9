@@ -28,11 +28,8 @@
 #include <linux/nvmap.h>
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
+#include <linux/dma-buf.h>
 #include <asm/cacheflush.h>
-
-#ifdef CONFIG_TEGRA_NVMAP
-#include <linux/nvmap.h>
-#endif
 
 #include "dev.h"
 #include "gk20a.h"

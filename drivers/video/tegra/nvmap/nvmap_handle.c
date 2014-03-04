@@ -639,15 +639,15 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd)
 {
-	unsigned long id;
+	struct nvmap_handle *handle;
 	struct nvmap_handle_ref *ref;
 
 	BUG_ON(!client);
 
-	id = nvmap_get_id_from_dmabuf_fd(client, fd);
-	if (IS_ERR_VALUE(id))
-		return ERR_PTR(id);
-	ref = nvmap_duplicate_handle(client, (struct nvmap_handle *)id, 1);
+	handle = nvmap_get_id_from_dmabuf_fd(client, fd);
+	if (IS_ERR(handle))
+		return ERR_CAST(handle);
+	ref = nvmap_duplicate_handle(client, handle, 1);
 	return ref;
 }
 

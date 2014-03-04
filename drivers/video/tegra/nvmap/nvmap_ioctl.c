@@ -50,7 +50,7 @@ static struct nvmap_handle *fd_to_handle_id(int handle)
 {
 	struct nvmap_handle *h;
 
-	h = (struct nvmap_handle *)nvmap_get_id_from_dmabuf_fd(NULL, handle);
+	h = nvmap_get_id_from_dmabuf_fd(NULL, handle);
 	if (!IS_ERR(h))
 		return h;
 	return 0;

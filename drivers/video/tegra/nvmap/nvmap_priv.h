@@ -377,7 +377,8 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 int is_nvmap_vma(struct vm_area_struct *vma);
 
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h);
-ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd);
+struct nvmap_handle *nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client,
+						 int fd);
 
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);

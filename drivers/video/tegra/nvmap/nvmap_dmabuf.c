@@ -678,21 +678,22 @@ struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
  * Returns the nvmap handle ID associated with the passed dma_buf's fd. This
  * does not affect the ref count of the dma_buf.
  */
-ulong nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client, int fd)
+struct nvmap_handle *nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client,
+						 int fd)
 {
-	ulong id = -EINVAL;
+	struct nvmap_handle *handle = ERR_PTR(-EINVAL);
 	struct dma_buf *dmabuf;
 	struct nvmap_handle_info *info;
 
 	dmabuf = dma_buf_get(fd);
 	if (IS_ERR(dmabuf))
-		return PTR_ERR(dmabuf);
+		return ERR_CAST(dmabuf);
 	if (dmabuf->ops == &nvmap_dma_buf_ops) {
 		info = dmabuf->priv;
-		id = (ulong) info->handle;
+		handle = info->handle;
 	}
 	dma_buf_put(dmabuf);
-	return id;
+	return handle;
 }
 
 int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)

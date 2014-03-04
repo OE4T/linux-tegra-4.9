@@ -401,7 +401,8 @@ out:
 	return err;
 }
 
-void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
+void nvmap_free_handle(struct nvmap_client *client,
+		       struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h;
@@ -409,13 +410,13 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 
 	nvmap_ref_lock(client);
 
-	ref = __nvmap_validate_id_locked(client, id);
+	ref = __nvmap_validate_locked(client, handle);
 	if (!ref) {
 		nvmap_ref_unlock(client);
 		return;
 	}
 
-	trace_nvmap_free_handle_id(client, id);
+	trace_nvmap_free_handle(client, handle);
 	BUG_ON(!ref->handle);
 	h = ref->handle;
 
@@ -461,12 +462,13 @@ out:
 	BUG_ON(!atomic_read(&h->ref));
 	nvmap_handle_put(h);
 }
-EXPORT_SYMBOL(nvmap_free_handle_id);
+EXPORT_SYMBOL(nvmap_free_handle);
 
 void nvmap_free_handle_user_id(struct nvmap_client *client,
 			       unsigned long user_id)
 {
-	nvmap_free_handle_id(client, unmarshal_user_id(user_id));
+	nvmap_free_handle(client,
+		(struct nvmap_handle *)unmarshal_user_id(user_id));
 }
 
 static void add_handle_ref(struct nvmap_client *client,
@@ -590,7 +592,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	}
 
 	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, (unsigned long)h);
+	ref = __nvmap_validate_locked(client, h);
 
 	if (ref) {
 		/* handle already duplicated in client; just increment
@@ -732,7 +734,7 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 		pages[idx] = h->pgalloc.pages[idx];
 
 	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, (unsigned long)h);
+	ref = __nvmap_validate_locked(client, h);
 	if (ref)
 		__nvmap_pin(ref, &dummy);
 	nvmap_ref_unlock(client);
@@ -741,7 +743,8 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 }
 EXPORT_SYMBOL(nvmap_acquire_page_list);
 
-int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
+int nvmap_release_page_list(struct nvmap_client *client,
+				struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h = NULL;
@@ -750,7 +753,7 @@ int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
 
 	nvmap_ref_lock(client);
 
-	ref = __nvmap_validate_id_locked(client, id);
+	ref = __nvmap_validate_locked(client, handle);
 	if (ref)
 		__nvmap_unpin(ref);
 

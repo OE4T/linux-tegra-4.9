@@ -219,17 +219,17 @@ pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr)
  *
  * Note: to call this function make sure you own the client ref lock.
  */
-struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
-						    unsigned long id)
+struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
+						 struct nvmap_handle *h)
 {
 	struct rb_node *n = c->handle_refs.rb_node;
 
 	while (n) {
 		struct nvmap_handle_ref *ref;
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
-		if ((unsigned long)ref->handle == id)
+		if (ref->handle == h)
 			return ref;
-		else if (id > (unsigned long)ref->handle)
+		else if ((uintptr_t)h > (uintptr_t)ref->handle)
 			n = n->rb_right;
 		else
 			n = n->rb_left;

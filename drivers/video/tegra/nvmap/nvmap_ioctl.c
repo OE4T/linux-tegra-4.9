@@ -452,7 +452,8 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
-		nvmap_free_handle_id(client, __nvmap_ref_to_id(ref));
+		nvmap_free_handle(client,
+			(struct nvmap_handle *)__nvmap_ref_to_id(ref));
 	}
 
 	if (err && (int)op.handle > 0)
@@ -569,7 +570,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 		return -EINVAL;
 
 	nvmap_ref_lock(client);
-	ref = __nvmap_validate_id_locked(client, handle);
+	ref = __nvmap_validate_locked(client, (struct nvmap_handle *)handle);
 	if (IS_ERR_OR_NULL(ref)) {
 		err = ref ? PTR_ERR(ref) : -EINVAL;
 		goto ref_fail;

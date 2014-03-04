@@ -125,25 +125,25 @@ TRACE_EVENT(nvmap_alloc_handle,
 		(unsigned long long)__entry->total)
 );
 
-TRACE_EVENT(nvmap_free_handle_id,
+TRACE_EVENT(nvmap_free_handle,
 	TP_PROTO(struct nvmap_client *client,
-		 unsigned long handle_id
+		 struct nvmap_handle *handle
 	),
 
-	TP_ARGS(client, handle_id),
+	TP_ARGS(client, handle),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
-		__field(unsigned long, handle_id)
+		__field(struct nvmap_handle *, handle)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
-		__entry->handle_id = handle_id;
+		__entry->handle = handle;
 	),
 
-	TP_printk("client=%p, id=0x%lx",
-		__entry->client, __entry->handle_id)
+	TP_printk("client=%p, handle=%p",
+		__entry->client, __entry->handle)
 );
 
 TRACE_EVENT(nvmap_duplicate_handle,

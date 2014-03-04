@@ -121,7 +121,8 @@ int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
 		if (!ids[i] || !virt_addr_valid(ids[i]))
 			continue;
 
-		ref = __nvmap_validate_id_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client,
+				(struct nvmap_handle *)ids[i]);
 		if (!ref) {
 			err = -EPERM;
 			goto err_cleanup;
@@ -147,7 +148,8 @@ err_cleanup:
 		 * We will get the ref again - the ref lock has yet to be given
 		 * up so if this worked the first time it will work again.
 		 */
-		ref = __nvmap_validate_id_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client,
+				(struct nvmap_handle *)ids[i]);
 		__nvmap_unpin(ref);
 	}
 	nvmap_ref_unlock(client);
@@ -169,7 +171,8 @@ void nvmap_unpin_ids(struct nvmap_client *client, unsigned int nr,
 		if (!ids[i] || !virt_addr_valid(ids[i]))
 			continue;
 
-		ref = __nvmap_validate_id_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client,
+				(struct nvmap_handle *)ids[i]);
 		if (!ref) {
 			pr_info("ref is null during unpin.\n");
 			continue;
@@ -384,7 +387,8 @@ static struct nvmap_handle_ref *__nvmap_alloc(struct nvmap_client *client,
 					   NVMAP_HANDLE_COMPR_SPECIFIED));
 
 	if (err) {
-		nvmap_free_handle_id(client, __nvmap_ref_to_id(r));
+		nvmap_free_handle(client,
+			(struct nvmap_handle *)__nvmap_ref_to_id(r));
 		return ERR_PTR(err);
 	}
 
@@ -402,7 +406,7 @@ static void __nvmap_free(struct nvmap_client *client,
 	    WARN_ON(!virt_addr_valid(ref_id)))
 		return;
 
-	nvmap_free_handle_id(client, ref_id);
+	nvmap_free_handle(client, (struct nvmap_handle *)ref_id);
 }
 
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,

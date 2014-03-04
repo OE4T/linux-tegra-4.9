@@ -343,8 +343,8 @@ int nvmap_find_cache_maint_op(struct nvmap_device *dev,
 
 void nvmap_handle_put(struct nvmap_handle *h);
 
-struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *priv,
-						   unsigned long id);
+struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *priv,
+						 struct nvmap_handle *h);
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
@@ -360,7 +360,7 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		       size_t align, u8 kind,
 		       unsigned int flags);
 
-void nvmap_free_handle_id(struct nvmap_client *c, unsigned long id);
+void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 
 void nvmap_free_handle_user_id(struct nvmap_client *c, unsigned long user_id);
 

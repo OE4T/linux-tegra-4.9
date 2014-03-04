@@ -73,11 +73,6 @@ ulong unmarshal_user_handle_array_single(__u32 handles)
 	return unmarshal_user_handle((ulong)handles);
 }
 
-__u32 marshal_kernel_handle(ulong handle)
-{
-	return (__u32)handle;
-}
-
 ulong unmarshal_user_id(u32 id)
 {
 	return unmarshal_user_handle(id);
@@ -110,7 +105,6 @@ __u32 marshal_kernel_vaddr(ulong address)
 }
 
 #else
-#define NVMAP_XOR_HASH_MASK 0xFFFFFFFC
 ulong unmarshal_user_handle(struct nvmap_handle *handle)
 {
 	if ((ulong)handle == 0)
@@ -127,18 +121,6 @@ ulong unmarshal_user_handle_array(struct nvmap_handle **handles, __u32 idx)
 ulong unmarshal_user_handle_array_single(struct nvmap_handle **handles)
 {
 	return unmarshal_user_handle((struct nvmap_handle *)handles);
-}
-
-struct nvmap_handle *marshal_kernel_handle(ulong handle)
-{
-	if (handle == 0)
-		return (struct nvmap_handle *)handle;
-
-#ifdef CONFIG_NVMAP_HANDLE_MARSHAL
-	return (struct nvmap_handle *)(handle ^ NVMAP_XOR_HASH_MASK);
-#else
-	return (struct nvmap_handle *)handle;
-#endif
 }
 
 ulong unmarshal_user_id(ulong id)

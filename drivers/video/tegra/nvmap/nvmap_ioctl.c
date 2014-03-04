@@ -62,15 +62,9 @@ ulong unmarshal_user_handle(__u32 handle)
 	return fd_to_handle_id((int)handle);
 }
 
-ulong unmarshal_user_handle_array(__u32 handles, __u32 idx)
+static struct nvmap_handle *unmarshal_user_handle_array_single(__u32 handles)
 {
-	__u32 *ptr = (__u32 *)((uintptr_t)handles);
-	return unmarshal_user_handle(ptr[idx]);
-}
-
-ulong unmarshal_user_handle_array_single(__u32 handles)
-{
-	return unmarshal_user_handle((ulong)handles);
+	return (struct nvmap_handle *)unmarshal_user_handle((ulong)handles);
 }
 
 struct nvmap_handle *unmarshal_user_id(u32 id)
@@ -108,14 +102,11 @@ ulong unmarshal_user_handle(struct nvmap_handle *handle)
 	return fd_to_handle_id((int)handle);
 }
 
-ulong unmarshal_user_handle_array(struct nvmap_handle **handles, __u32 idx)
+static struct nvmap_handle *unmarshal_user_handle_array_single(
+						struct nvmap_handle **handles)
 {
-	return unmarshal_user_handle(handles[idx]);
-}
-
-ulong unmarshal_user_handle_array_single(struct nvmap_handle **handles)
-{
-	return unmarshal_user_handle((struct nvmap_handle *)handles);
+	return (struct nvmap_handle *)unmarshal_user_handle(
+					(struct nvmap_handle *)handles);
 }
 
 struct nvmap_handle *unmarshal_user_id(ulong id)
@@ -151,8 +142,8 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 {
 	struct nvmap_pin_handle op;
 	struct nvmap_handle *h;
-	unsigned long on_stack[16];
-	unsigned long *refs;
+	struct nvmap_handle *on_stack[16];
+	struct nvmap_handle **refs;
 #ifdef CONFIG_COMPAT
 	u32 __user *output;
 #else
@@ -195,7 +186,8 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 				err = -EFAULT;
 				goto out;
 			}
-			refs[i] = unmarshal_user_handle(handle);
+			refs[i] = (struct nvmap_handle *)unmarshal_user_handle(
+									handle);
 			if (!refs[i]) {
 				err = -EINVAL;
 				goto out;
@@ -236,7 +228,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg)
 	for (i = 0; i < op.count && !err; i++) {
 		unsigned long addr;
 
-		h = (struct nvmap_handle *)refs[i];
+		h = refs[i];
 		if (h->heap_pgalloc && h->pgalloc.contig)
 			addr = page_to_phys(h->pgalloc.pages[0]);
 		else if (h->heap_pgalloc)

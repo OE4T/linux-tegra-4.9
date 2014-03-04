@@ -365,10 +365,10 @@ void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 void nvmap_free_handle_user_id(struct nvmap_client *c, unsigned long user_id);
 
 int nvmap_pin_ids(struct nvmap_client *client,
-		  unsigned int nr, const unsigned long *ids);
+		  unsigned int nr, struct nvmap_handle * const *ids);
 
 void nvmap_unpin_ids(struct nvmap_client *priv,
-		     unsigned int nr, const unsigned long *ids);
+		     unsigned int nr, struct nvmap_handle * const *ids);
 
 int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 

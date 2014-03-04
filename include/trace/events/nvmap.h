@@ -315,7 +315,7 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 	TP_PROTO(struct nvmap_client *client,
 		 u32 is_pin,
 		 u32 count,
-		 unsigned long *ids
+		 struct nvmap_handle **ids
 	),
 
 	TP_ARGS(client, is_pin, count, ids),
@@ -324,8 +324,8 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 		__field(struct nvmap_client *, client)
 		__field(u32, is_pin)
 		__field(u32, count)
-		__field(unsigned long *, ids)
-		__dynamic_array(unsigned long, ids, count)
+		__field(struct nvmap_handle **, ids)
+		__dynamic_array(struct nvmap_handle *, ids, count)
 	),
 
 	TP_fast_assign(
@@ -334,13 +334,13 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 		__entry->count = count;
 		__entry->ids = ids;
 		memcpy(__get_dynamic_array(ids), ids,
-		    sizeof(unsigned long) * count);
+		    sizeof(struct nvmap_handle *) * count);
 	),
 
 	TP_printk("client=%p, is_pin=%d, count=%d, ids=[%s]",
 		__entry->client, __entry->is_pin, __entry->count,
 		__print_hex(__get_dynamic_array(ids), __entry->ids ?
-			    sizeof(unsigned long) * __entry->count : 0))
+			    sizeof(struct nvmap_handle *) * __entry->count : 0))
 );
 
 DECLARE_EVENT_CLASS(pin_unpin,

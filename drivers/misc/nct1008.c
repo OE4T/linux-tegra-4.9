@@ -1160,6 +1160,7 @@ static irqreturn_t nct1008_irq(int irq, void *dev_id)
 static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 {
 	int ret;
+
 	mutex_lock(&data->mutex);
 	if (!data->nct_reg) {
 		data->nct_reg = regulator_get(&data->client->dev, "vdd");
@@ -1566,12 +1567,15 @@ static int nct1008_remove(struct i2c_client *client)
 	mutex_lock(&data->mutex);
 	data->stop_workqueue = 1;
 	mutex_unlock(&data->mutex);
+
 	cancel_work_sync(&data->work);
 	free_irq(data->client->irq, data);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);
 	nct1008_power_control(data, false);
+
 	if (data->nct_reg)
 		regulator_put(data->nct_reg);
+
 	mutex_destroy(&data->mutex);
 	kfree(data);
 
@@ -1585,7 +1589,18 @@ static void nct1008_shutdown(struct i2c_client *client)
 	mutex_lock(&data->mutex);
 	data->stop_workqueue = 1;
 	mutex_unlock(&data->mutex);
+
+	if (data->sensors[LOC].thz) {
+		thermal_zone_device_unregister(data->sensors[LOC].thz);
+		data->sensors[LOC].thz = NULL;
+	}
+	if (data->sensors[EXT].thz) {
+		thermal_zone_device_unregister(data->sensors[EXT].thz);
+		data->sensors[EXT].thz = NULL;
+	}
+
 	cancel_work_sync(&data->work);
+
 	if (client->irq)
 		disable_irq(client->irq);
 

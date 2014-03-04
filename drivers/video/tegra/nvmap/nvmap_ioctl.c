@@ -383,6 +383,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	struct nvmap_handle_ref *ref = NULL;
 	struct nvmap_client *client = filp->private_data;
 	int err = 0;
+	int fd = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -405,17 +406,19 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
-	op.handle = (typeof(op.handle))nvmap_create_fd(ref->handle);
-	if (IS_ERR(op.handle))
-		err = (int)op.handle;
+	fd = nvmap_create_fd(ref->handle);
+	if (fd < 0)
+		err = fd;
+
+	op.handle = fd;
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
 		nvmap_free_handle(client, __nvmap_ref_to_id(ref));
 	}
 
-	if (err && (int)op.handle > 0)
-		sys_close((int)op.handle);
+	if (err && fd > 0)
+		sys_close(fd);
 	return err;
 }
 

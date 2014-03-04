@@ -94,11 +94,6 @@ static struct nvmap_handle *unmarshal_id(__u32 id)
 	return (struct nvmap_handle *)h;
 }
 
-ulong *unmarshal_user_pointer(__u32 ptr)
-{
-	return (ulong *)((uintptr_t)ptr);
-}
-
 __u32 marshal_kernel_vaddr(ulong address)
 {
 	return (__u32)address;
@@ -137,11 +132,6 @@ static ulong marshal_id(struct nvmap_handle *handle)
 static struct nvmap_handle *unmarshal_id(ulong id)
 {
 	return (struct nvmap_handle *)id;
-}
-
-ulong *unmarshal_user_pointer(unsigned long __user *ptr)
-{
-	return ptr;
 }
 
 ulong marshal_kernel_vaddr(ulong address)

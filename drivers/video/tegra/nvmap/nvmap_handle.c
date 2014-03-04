@@ -324,7 +324,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	int nr_page;
 	int err = -ENOMEM;
 
-	h = nvmap_get_handle_id(client, id);
+	h = nvmap_handle_get((struct nvmap_handle *)id);
 
 	if (!h)
 		return -EINVAL;

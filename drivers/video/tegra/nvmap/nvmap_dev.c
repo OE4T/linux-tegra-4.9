@@ -238,12 +238,6 @@ struct nvmap_handle_ref *__nvmap_validate_id_locked(struct nvmap_client *c,
 	return NULL;
 }
 
-struct nvmap_handle *nvmap_get_handle_id(struct nvmap_client *client,
-					 unsigned long id)
-{
-	return nvmap_handle_get((struct nvmap_handle *)id);
-}
-
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 				   struct nvmap_heap_block *b)
 {

@@ -281,7 +281,7 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, handle);
+	h = nvmap_handle_get((struct nvmap_handle *)handle);
 
 	if (!h)
 		return -EPERM;
@@ -476,7 +476,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, handle);
+	h = nvmap_handle_get((struct nvmap_handle *)handle);
 
 	if (!h)
 		return -EPERM;
@@ -562,7 +562,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user* arg)
 	if (!handle)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, handle);
+	h = nvmap_handle_get((struct nvmap_handle *)handle);
 	if (!h)
 		return -EINVAL;
 
@@ -602,7 +602,7 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg)
 	if (!handle || !op.addr || !op.count || !op.elem_size)
 		return -EINVAL;
 
-	h = nvmap_get_handle_id(client, handle);
+	h = nvmap_handle_get((struct nvmap_handle *)handle);
 	if (!h)
 		return -EPERM;
 

@@ -55,9 +55,10 @@ struct nvmap_create_handle {
 #endif
 
 #ifdef  __KERNEL__
-int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg);
+int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
+	bool is32);
 
-int nvmap_ioctl_get_param(struct file *filp, void __user* arg);
+int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32);
 
 int nvmap_ioctl_getid(struct file *filp, void __user *arg);
 
@@ -71,11 +72,12 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg);
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg);
 
-int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg);
+int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32);
 
-int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg);
+int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, bool is32);
 
-int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user* arg);
+int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
+	bool is32);
 
 int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg);
 

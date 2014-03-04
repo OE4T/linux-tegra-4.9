@@ -678,13 +678,28 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_getfd(filp, uarg);
 		break;
 
-	case NVMAP_IOC_PARAM:
-		err = nvmap_ioctl_get_param(filp, uarg);
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_PARAM_32:
+		err = nvmap_ioctl_get_param(filp, uarg, true);
 		break;
+#endif
+
+	case NVMAP_IOC_PARAM:
+		err = nvmap_ioctl_get_param(filp, uarg, false);
+		break;
+
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_UNPIN_MULT_32:
+	case NVMAP_IOC_PIN_MULT_32:
+		err = nvmap_ioctl_pinop(filp, cmd == NVMAP_IOC_PIN_MULT_32,
+			uarg, true);
+		break;
+#endif
 
 	case NVMAP_IOC_UNPIN_MULT:
 	case NVMAP_IOC_PIN_MULT:
-		err = nvmap_ioctl_pinop(filp, cmd == NVMAP_IOC_PIN_MULT, uarg);
+		err = nvmap_ioctl_pinop(filp, cmd == NVMAP_IOC_PIN_MULT,
+			uarg, false);
 		break;
 
 	case NVMAP_IOC_ALLOC:
@@ -699,17 +714,38 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_free(filp, arg);
 		break;
 
-	case NVMAP_IOC_MMAP:
-		err = nvmap_map_into_caller_ptr(filp, uarg);
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_MMAP_32:
+		err = nvmap_map_into_caller_ptr(filp, uarg, true);
 		break;
+#endif
+
+	case NVMAP_IOC_MMAP:
+		err = nvmap_map_into_caller_ptr(filp, uarg, false);
+		break;
+
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_WRITE_32:
+	case NVMAP_IOC_READ_32:
+		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
+			uarg, true);
+		break;
+#endif
 
 	case NVMAP_IOC_WRITE:
 	case NVMAP_IOC_READ:
-		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ, uarg);
+		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ, uarg,
+			false);
 		break;
 
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_CACHE_32:
+		err = nvmap_ioctl_cache_maint(filp, uarg, true);
+		break;
+#endif
+
 	case NVMAP_IOC_CACHE:
-		err = nvmap_ioctl_cache_maint(filp, uarg);
+		err = nvmap_ioctl_cache_maint(filp, uarg, false);
 		break;
 
 	case NVMAP_IOC_SHARE:

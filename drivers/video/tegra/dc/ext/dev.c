@@ -536,6 +536,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		tegra_dc_update_windows(wins, nr_win);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
+		tegra_dc_program_bandwidth(ext->dc, true);
 		if (!tegra_dc_has_multiple_dc()) {
 			spin_lock(&flip_callback_lock);
 			if (flip_callback)

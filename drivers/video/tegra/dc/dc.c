@@ -1631,10 +1631,6 @@ static void tegra_dc_vblank(struct work_struct *work)
 	}
 
 	tegra_dc_get(dc);
-	/* use the new frame's bandwidth setting instead of max(current, new),
-	 * skip this if we're using tegra_dc_one_shot_worker() */
-	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
-		tegra_dc_program_bandwidth(dc, true);
 
 	/* Clear the V_BLANK_FLIP bit of vblank ref-count if update is clean. */
 	if (!tegra_dc_windows_are_dirty(dc))
@@ -2526,6 +2522,7 @@ void tegra_dc_blank(struct tegra_dc *dc)
 
 	tegra_dc_update_windows(dcwins, DC_N_WINDOWS);
 	tegra_dc_sync_windows(dcwins, DC_N_WINDOWS);
+	tegra_dc_program_bandwidth(dc, true);
 }
 
 static void _tegra_dc_disable(struct tegra_dc *dc)

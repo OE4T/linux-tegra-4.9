@@ -414,7 +414,7 @@ int tegra_dc_get_feature(struct tegra_dc_feature *feature, int win_idx,
 	return -EINVAL;
 }
 
-u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
+long *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 {
 	int idx;
 	struct tegra_dc_feature_entry *entry;
@@ -464,7 +464,7 @@ u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx)
 {
 	int i;
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, HAS_SCALE);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_SCALE);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
@@ -477,7 +477,7 @@ int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx)
 
 int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx)
 {
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, HAS_TILED);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_TILED);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
@@ -487,7 +487,7 @@ int tegra_dc_feature_has_tiling(struct tegra_dc *dc, int win_idx)
 
 int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx)
 {
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, HAS_BLOCKLINEAR);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_BLOCKLINEAR);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
@@ -497,7 +497,7 @@ int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx)
 
 int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx)
 {
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, HAS_INTERLACE);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_INTERLACE);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
@@ -507,7 +507,7 @@ int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx)
 
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
 {
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, operation);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, operation);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
@@ -520,7 +520,7 @@ int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation)
 
 int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx)
 {
-	u32 *addr = tegra_dc_parse_feature(dc, win_idx, HAS_GEN2_BLEND);
+	long *addr = tegra_dc_parse_feature(dc, win_idx, HAS_GEN2_BLEND);
 
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;

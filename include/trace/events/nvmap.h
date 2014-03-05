@@ -94,10 +94,11 @@ TRACE_EVENT(nvmap_alloc_handle,
 		 u32 heap_mask,
 		 u32 align,
 		 u32 flags,
-		 u64 total
+		 u64 total,
+		 u64 alloc
 	),
 
-	TP_ARGS(client, handle, size, heap_mask, align, flags, total),
+	TP_ARGS(client, handle, size, heap_mask, align, flags, total, alloc),
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
@@ -107,6 +108,7 @@ TRACE_EVENT(nvmap_alloc_handle,
 		__field(u32, align)
 		__field(u32, flags)
 		__field(u64, total)
+		__field(u64, alloc)
 	),
 
 	TP_fast_assign(
@@ -117,12 +119,14 @@ TRACE_EVENT(nvmap_alloc_handle,
 		__entry->align = align;
 		__entry->flags = flags;
 		__entry->total = total;
+		__entry->alloc = alloc;
 	),
 
-	TP_printk("client=%p, id=0x%p, size=%zu, heap_mask=0x%x, align=%d, flags=0x%x, total=%llu",
+	TP_printk("client=%p, id=0x%p, size=%zu, heap_mask=0x%x, align=%d, flags=0x%x, total=%llu, alloc=%llu",
 		__entry->client, __entry->handle, __entry->size,
 		__entry->heap_mask, __entry->align, __entry->flags,
-		(unsigned long long)__entry->total)
+		(unsigned long long)__entry->total,
+		(unsigned long long)__entry->alloc)
 );
 
 TRACE_EVENT(nvmap_free_handle,

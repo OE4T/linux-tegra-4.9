@@ -339,9 +339,11 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	}
 
 	nvmap_stats_inc(NS_TOTAL, PAGE_ALIGN(h->orig_size));
+	nvmap_stats_inc(NS_ALLOC, PAGE_ALIGN(h->size));
 	trace_nvmap_alloc_handle(client, h,
 		h->size, heap_mask, align, flags,
-		nvmap_stats_read(NS_TOTAL));
+		nvmap_stats_read(NS_TOTAL),
+		nvmap_stats_read(NS_ALLOC));
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
@@ -392,13 +394,13 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 
 out:
 	if (h->alloc) {
-		nvmap_stats_inc(NS_ALLOC, h->size);
 		if (client->kernel_client)
 			nvmap_stats_inc(NS_KALLOC, h->size);
 		else
 			nvmap_stats_inc(NS_UALLOC, h->size);
 	} else {
 		nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
+		nvmap_stats_dec(NS_ALLOC, PAGE_ALIGN(h->orig_size));
 	}
 
 	err = (h->alloc) ? 0 : err;

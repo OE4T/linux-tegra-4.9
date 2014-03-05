@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,6 +58,13 @@ enum nvhost_intr_action {
 	 * 'data' points to a wait_queue_head_t
 	 */
 	NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE,
+
+	/**
+	 * Notify some external function about completion
+	 * 'data' holds pointer to an internal structure that holds a
+	 * function pointer and the stored private data
+	 */
+	NVHOST_INTR_ACTION_NOTIFY,
 
 	NVHOST_INTR_ACTION_COUNT
 };

@@ -278,6 +278,12 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id, u32 thre
 int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 	u32 id, u32 thresh, const char *name, int *fence_fd);
 
+/* public host1x interrupt management APIs */
+int nvhost_intr_register_notifier(struct platform_device *pdev,
+				  u32 id, u32 thresh,
+				  void (*callback)(void *, int),
+				  void *private_data);
+
 #ifdef CONFIG_TEGRA_GK20A
 int nvhost_vpr_info_fetch(void);
 #else

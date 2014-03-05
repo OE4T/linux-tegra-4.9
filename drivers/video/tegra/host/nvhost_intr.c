@@ -49,6 +49,12 @@ struct nvhost_waitlist {
 	int count;
 };
 
+struct nvhost_waitlist_external_notifier {
+	struct nvhost_master *master;
+	void (*callback)(void *, int);
+	void *private_data;
+};
+
 enum waitlist_state {
 	WLS_PENDING,
 	WLS_REMOVED,
@@ -172,6 +178,18 @@ static void action_wakeup(struct nvhost_waitlist *waiter)
 	wake_up(wq);
 }
 
+static void action_notify(struct nvhost_waitlist *waiter)
+{
+	struct nvhost_waitlist_external_notifier *notifier = waiter->data;
+	struct nvhost_master *master = notifier->master;
+
+	notifier->callback(notifier->private_data, waiter->count);
+
+	nvhost_module_idle_mult(master->dev, waiter->count);
+	kfree(notifier);
+	waiter->data = NULL;
+}
+
 static void action_wakeup_interruptible(struct nvhost_waitlist *waiter)
 {
 	wait_queue_head_t *wq = waiter->data;
@@ -195,6 +213,7 @@ static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,
+	action_notify,
 };
 
 static void run_handlers(struct list_head completed[NVHOST_INTR_ACTION_COUNT])
@@ -346,6 +365,53 @@ void *nvhost_intr_alloc_waiter()
 	return kzalloc(sizeof(struct nvhost_waitlist),
 			GFP_KERNEL|__GFP_REPEAT);
 }
+
+int nvhost_intr_register_notifier(struct platform_device *pdev,
+				  u32 id, u32 thresh,
+				  void (*callback)(void *, int),
+				  void *private_data)
+{
+	struct nvhost_waitlist *waiter;
+	struct nvhost_waitlist_external_notifier *notifier;
+	struct nvhost_master *master = nvhost_get_host(pdev);
+	int err = 0;
+
+	if (!callback)
+		return -EINVAL;
+
+	waiter = kzalloc(sizeof(*waiter), GFP_KERNEL | __GFP_REPEAT);
+	if (!waiter) {
+		err = -ENOMEM;
+		goto err_alloc_waiter;
+	}
+	notifier = kzalloc(sizeof(*notifier), GFP_KERNEL | __GFP_REPEAT);
+	if (!notifier) {
+		err = -ENOMEM;
+		goto err_alloc_notifier;
+	}
+
+	notifier->master = master;
+	notifier->callback = callback;
+	notifier->private_data = private_data;
+
+	/* make sure host1x stays on */
+	nvhost_module_busy(master->dev);
+
+	err = nvhost_intr_add_action(&master->intr,
+				     id, thresh,
+				     NVHOST_INTR_ACTION_NOTIFY,
+				     notifier,
+				     waiter,
+				     NULL);
+
+	return err;
+
+err_alloc_notifier:
+	kfree(waiter);
+err_alloc_waiter:
+	return err;
+}
+EXPORT_SYMBOL(nvhost_intr_register_notifier);
 
 void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref)
 {

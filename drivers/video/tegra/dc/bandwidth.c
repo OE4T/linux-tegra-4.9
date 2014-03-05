@@ -885,12 +885,19 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 		return -1;
 	}
 
-	dc->reserved_bw = bw;
-	latency = tegra_isomgr_realize(dc->isomgr_handle);
-	if (!latency) {
-		WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
-		mutex_unlock(&dc->lock);
-		return -1;
+	/*
+	 * Only realize if bw required > reserved bw
+	 * If realized, update dc->bw_kbps
+	 */
+	if (dc->reserved_bw < bw) {
+		dc->reserved_bw = bw;
+		latency = tegra_isomgr_realize(dc->isomgr_handle);
+		if (!latency) {
+			WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
+			mutex_unlock(&dc->lock);
+			return -1;
+		}
+		dc->bw_kbps = bw;
 	}
 
 	mutex_unlock(&dc->lock);

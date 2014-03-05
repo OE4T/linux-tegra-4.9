@@ -931,7 +931,7 @@ struct pmu_gk20a {
 	struct mutex pmu_copy_lock;
 	struct mutex pmu_seq_lock;
 
-	struct nvhost_allocator dmem;
+	struct gk20a_allocator dmem;
 
 	u32 *ucode_image;
 	bool pmu_ready;

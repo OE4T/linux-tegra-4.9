@@ -30,7 +30,8 @@ obj-$(CONFIG_GK20A) += \
 	ltc_gk20a.o \
 	fb_gk20a.o \
 	hal.o \
-	hal_gk20a.o
+	hal_gk20a.o \
+	gk20a_allocator.o
 
 obj-$(CONFIG_GK20A) += platform_gk20a_generic.o
 obj-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o

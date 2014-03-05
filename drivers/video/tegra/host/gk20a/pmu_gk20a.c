@@ -967,7 +967,7 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 	nvhost_dbg_fn("");
 
-	nvhost_allocator_destroy(&pmu->dmem);
+	gk20a_allocator_destroy(&pmu->dmem);
 
 	/* Save the stuff you don't want to lose */
 	gk20a_save_pmu_sw_state(pmu, &save);
@@ -1779,7 +1779,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	for (i = 0; i < PMU_QUEUE_COUNT; i++)
 		pmu_queue_init(&pmu->queue[i], i, init);
 
-	nvhost_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
+	gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
 			msg->msg.init.pmu_init.sw_managed_area_offset,
 			msg->msg.init.pmu_init.sw_managed_area_size,
 			PMU_DMEM_ALLOC_ALIGNMENT);

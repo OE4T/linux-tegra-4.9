@@ -131,7 +131,7 @@ struct gk20a_comptags {
 struct gk20a_dmabuf_priv {
 	struct mutex lock;
 
-	struct nvhost_allocator *comptag_allocator;
+	struct gk20a_allocator *comptag_allocator;
 	struct gk20a_comptags comptags;
 
 	struct dma_buf_attachment *attach;
@@ -230,7 +230,7 @@ static void gk20a_get_comptags(struct device *dev,
 
 static int gk20a_alloc_comptags(struct device *dev,
 				struct dma_buf *dmabuf,
-				struct nvhost_allocator *allocator,
+				struct gk20a_allocator *allocator,
 				int lines)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
@@ -794,7 +794,7 @@ static u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 			     enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 
 {
-	struct nvhost_allocator *vma = &vm->vma[gmmu_pgsz_idx];
+	struct gk20a_allocator *vma = &vm->vma[gmmu_pgsz_idx];
 	int err;
 	u64 offset;
 	u32 start_page_nr = 0, num_pages;
@@ -841,7 +841,7 @@ static void gk20a_vm_free_va(struct vm_gk20a *vm,
 			     u64 offset, u64 size,
 			     enum gmmu_pgsz_gk20a pgsz_idx)
 {
-	struct nvhost_allocator *vma = &vm->vma[pgsz_idx];
+	struct gk20a_allocator *vma = &vm->vma[pgsz_idx];
 	u32 page_size = gmmu_page_sizes[pgsz_idx];
 	u32 page_shift = gmmu_page_shifts[pgsz_idx];
 	u32 start_page_nr, num_pages;
@@ -1226,7 +1226,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			int rw_flag)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct nvhost_allocator *ctag_allocator = &g->gr.comp_tags;
+	struct gk20a_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct device *d = dev_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer = 0;
 	bool inserted = false, va_allocated = false;
@@ -1996,8 +1996,8 @@ static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 
 	kfree(vm->pdes.ptes[gmmu_page_size_small]);
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);
-	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_small]);
-	nvhost_allocator_destroy(&vm->vma[gmmu_page_size_big]);
+	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
+	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
@@ -2108,7 +2108,7 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share)
 	low_hole_pages = (vm->va_start >>
 			  gmmu_page_shifts[gmmu_page_size_small]);
 
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], name,
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_small], name,
 	      low_hole_pages,             /* start */
 	      num_pages - low_hole_pages, /* length */
 	      1);                         /* align */
@@ -2117,7 +2117,7 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share)
 		 gmmu_page_sizes[gmmu_page_size_big]>>10);
 
 	num_pages = (u32)(vma_size >> gmmu_page_shifts[gmmu_page_size_big]);
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], name,
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_big], name,
 			      num_pages, /* start */
 			      num_pages, /* length */
 			      1); /* align */
@@ -2157,7 +2157,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 {	int err = -ENOMEM;
 	int pgsz_idx;
 	u32 start_page_nr;
-	struct nvhost_allocator *vma;
+	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
 	u64 vaddr_start = 0;
@@ -2243,7 +2243,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	int err = -ENOMEM;
 	int pgsz_idx;
 	u32 start_page_nr;
-	struct nvhost_allocator *vma;
+	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
 
@@ -2525,12 +2525,12 @@ int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
 	nvhost_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_bar1",
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_bar1",
 			      1,/*start*/
 			      (vm->va_limit >> 12) - 1 /* length*/,
 			      1); /* align */
 	/* initialize just in case we try to use it anyway */
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_bar1-unused",
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_bar1-unused",
 			      0x0badc0de, /* start */
 			      1, /* length */
 			      1); /* align */
@@ -2665,12 +2665,12 @@ int gk20a_init_pmu_vm(struct mm_gk20a *mm)
 	mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_pmu",
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_small], "gk20a_pmu",
 			      (vm->va_start >> 12), /* start */
 			      (vm->va_limit - vm->va_start) >> 12, /*length*/
 			      1); /* align */
 	/* initialize just in case we try to use it anyway */
-	nvhost_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_pmu-unused",
+	gk20a_allocator_init(&vm->vma[gmmu_page_size_big], "gk20a_pmu-unused",
 			      0x0badc0de, /* start */
 			      1, /* length */
 			      1); /* align */

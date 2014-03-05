@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/nvhost_allocator.c
+ * gk20a allocator
  *
- * nvhost allocator
- *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,82 +12,81 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "nvhost_allocator.h"
+#include "gk20a_allocator.h"
 
-static inline void link_block_list(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev,
+static inline void link_block_list(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev,
 		struct rb_node *rb_parent);
-static inline void link_block_rb(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
+static inline void link_block_rb(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
 		struct rb_node **rb_link,
 		struct rb_node *rb_parent);
-static void link_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev, struct rb_node **rb_link,
+static void link_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev, struct rb_node **rb_link,
 		struct rb_node *rb_parent);
-static void insert_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block);
+static void insert_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block);
 
-static void unlink_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev);
-static struct nvhost_alloc_block *unlink_blocks(
-		struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev, u32 end);
+static void unlink_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev);
+static struct gk20a_alloc_block *unlink_blocks(
+		struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev, u32 end);
 
-static struct nvhost_alloc_block *find_block(
-		struct nvhost_allocator *allocator, u32 addr);
-static struct nvhost_alloc_block *find_block_prev(
-		struct nvhost_allocator *allocator, u32 addr,
-		struct nvhost_alloc_block **pprev);
-static struct nvhost_alloc_block *find_block_prepare(
-		struct nvhost_allocator *allocator, u32 addr,
-		struct nvhost_alloc_block **pprev, struct rb_node ***rb_link,
+static struct gk20a_alloc_block *find_block(
+		struct gk20a_allocator *allocator, u32 addr);
+static struct gk20a_alloc_block *find_block_prev(
+		struct gk20a_allocator *allocator, u32 addr,
+		struct gk20a_alloc_block **pprev);
+static struct gk20a_alloc_block *find_block_prepare(
+		struct gk20a_allocator *allocator, u32 addr,
+		struct gk20a_alloc_block **pprev, struct rb_node ***rb_link,
 		struct rb_node **rb_parent);
 
 static u32 check_free_space(u32 addr, u32 limit, u32 len, u32 align);
-static void update_free_addr_cache(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
+static void update_free_addr_cache(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
 		u32 addr, u32 len, bool free);
-static int find_free_area(struct nvhost_allocator *allocator,
+static int find_free_area(struct gk20a_allocator *allocator,
 		u32 *addr, u32 len);
-static int find_free_area_nc(struct nvhost_allocator *allocator,
+static int find_free_area_nc(struct gk20a_allocator *allocator,
 		u32 *addr, u32 *len);
 
-static void adjust_block(struct nvhost_alloc_block *block,
+static void adjust_block(struct gk20a_alloc_block *block,
 		u32 start, u32 end,
-		struct nvhost_alloc_block *insert);
-static struct nvhost_alloc_block *merge_block(
-		struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block, u32 addr, u32 end);
-static int split_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
+		struct gk20a_alloc_block *insert);
+static struct gk20a_alloc_block *merge_block(
+		struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block, u32 addr, u32 end);
+static int split_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
 		u32 addr, int new_below);
 
-static int block_alloc_single_locked(struct nvhost_allocator *allocator,
+static int block_alloc_single_locked(struct gk20a_allocator *allocator,
 		u32 *addr, u32 len);
-static int block_alloc_list_locked(struct nvhost_allocator *allocator,
+static int block_alloc_list_locked(struct gk20a_allocator *allocator,
 		u32 *addr, u32 len,
-		struct nvhost_alloc_block **pblock);
-static int block_free_locked(struct nvhost_allocator *allocator,
+		struct gk20a_alloc_block **pblock);
+static int block_free_locked(struct gk20a_allocator *allocator,
 		u32 addr, u32 len);
-static void block_free_list_locked(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *list);
+static void block_free_list_locked(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *list);
 
 /* link a block into allocator block list */
-static inline void link_block_list(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev,
+static inline void link_block_list(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev,
 		struct rb_node *rb_parent)
 {
-	struct nvhost_alloc_block *next;
+	struct gk20a_alloc_block *next;
 
 	block->prev = prev;
 	if (prev) {
@@ -99,7 +96,7 @@ static inline void link_block_list(struct nvhost_allocator *allocator,
 		allocator->block_first = block;
 		if (rb_parent)
 			next = rb_entry(rb_parent,
-					struct nvhost_alloc_block, rb);
+					struct gk20a_alloc_block, rb);
 		else
 			next = NULL;
 	}
@@ -109,8 +106,8 @@ static inline void link_block_list(struct nvhost_allocator *allocator,
 }
 
 /* link a block into allocator rb tree */
-static inline void link_block_rb(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block, struct rb_node **rb_link,
+static inline void link_block_rb(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block, struct rb_node **rb_link,
 		struct rb_node *rb_parent)
 {
 	rb_link_node(&block->rb, rb_parent, rb_link);
@@ -118,30 +115,29 @@ static inline void link_block_rb(struct nvhost_allocator *allocator,
 }
 
 /* add a block to allocator with known location */
-static void link_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev, struct rb_node **rb_link,
+static void link_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev, struct rb_node **rb_link,
 		struct rb_node *rb_parent)
 {
-	struct nvhost_alloc_block *next;
+	struct gk20a_alloc_block *next;
 
 	link_block_list(allocator, block, prev, rb_parent);
 	link_block_rb(allocator, block, rb_link, rb_parent);
 	allocator->block_count++;
 
 	next = block->next;
-	allocator_dbg(allocator, "link new block %d:%d between block %d:%d "
-		"and block %d:%d",
+	allocator_dbg(allocator, "link new block %d:%d between block %d:%d and block %d:%d",
 		block->start, block->end,
 		prev ? prev->start : -1, prev ? prev->end : -1,
 		next ? next->start : -1, next ? next->end : -1);
 }
 
 /* add a block to allocator */
-static void insert_block(struct nvhost_allocator *allocator,
-			struct nvhost_alloc_block *block)
+static void insert_block(struct gk20a_allocator *allocator,
+			struct gk20a_alloc_block *block)
 {
-	struct nvhost_alloc_block *prev;
+	struct gk20a_alloc_block *prev;
 	struct rb_node **rb_link, *rb_parent;
 
 	find_block_prepare(allocator, block->start,
@@ -150,14 +146,13 @@ static void insert_block(struct nvhost_allocator *allocator,
 }
 
 /* remove a block from allocator */
-static void unlink_block(struct nvhost_allocator *allocator,
-			struct nvhost_alloc_block *block,
-			struct nvhost_alloc_block *prev)
+static void unlink_block(struct gk20a_allocator *allocator,
+			struct gk20a_alloc_block *block,
+			struct gk20a_alloc_block *prev)
 {
-	struct nvhost_alloc_block *next = block->next;
+	struct gk20a_alloc_block *next = block->next;
 
-	allocator_dbg(allocator, "unlink block %d:%d between block %d:%d "
-		"and block %d:%d",
+	allocator_dbg(allocator, "unlink block %d:%d between block %d:%d and block %d:%d",
 		block->start, block->end,
 		prev ? prev->start : -1, prev ? prev->end : -1,
 		next ? next->start : -1, next ? next->end : -1);
@@ -182,16 +177,16 @@ static void unlink_block(struct nvhost_allocator *allocator,
 /* remove a list of blocks from allocator. the list can contain both
    regular blocks and non-contiguous blocks. skip all non-contiguous
    blocks, remove regular blocks into a separate list, return list head */
-static struct nvhost_alloc_block *
-unlink_blocks(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block,
-		struct nvhost_alloc_block *prev,
+static struct gk20a_alloc_block *
+unlink_blocks(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block,
+		struct gk20a_alloc_block *prev,
 		u32 end)
 {
-	struct nvhost_alloc_block **insertion_point;
-	struct nvhost_alloc_block *last_unfreed_block = prev;
-	struct nvhost_alloc_block *last_freed_block = NULL;
-	struct nvhost_alloc_block *first_freed_block = NULL;
+	struct gk20a_alloc_block **insertion_point;
+	struct gk20a_alloc_block *last_unfreed_block = prev;
+	struct gk20a_alloc_block *last_freed_block = NULL;
+	struct gk20a_alloc_block *first_freed_block = NULL;
 
 	insertion_point = (prev ? &prev->next : &allocator->block_first);
 	*insertion_point = NULL;
@@ -238,10 +233,10 @@ unlink_blocks(struct nvhost_allocator *allocator,
 
 /* Look up the first block which satisfies addr < block->end,
    NULL if none */
-static struct nvhost_alloc_block *
-find_block(struct nvhost_allocator *allocator, u32 addr)
+static struct gk20a_alloc_block *
+find_block(struct gk20a_allocator *allocator, u32 addr)
 {
-	struct nvhost_alloc_block *block = allocator->block_recent;
+	struct gk20a_alloc_block *block = allocator->block_recent;
 
 	if (!(block && block->end > addr && block->start <= addr)) {
 		struct rb_node *rb_node;
@@ -250,10 +245,10 @@ find_block(struct nvhost_allocator *allocator, u32 addr)
 		block = NULL;
 
 		while (rb_node) {
-			struct nvhost_alloc_block *block_tmp;
+			struct gk20a_alloc_block *block_tmp;
 
 			block_tmp = rb_entry(rb_node,
-					struct nvhost_alloc_block, rb);
+					struct gk20a_alloc_block, rb);
 
 			if (block_tmp->end > addr) {
 				block = block_tmp;
@@ -270,11 +265,11 @@ find_block(struct nvhost_allocator *allocator, u32 addr)
 }
 
 /* Same as find_block, but also return a pointer to the previous block */
-static struct nvhost_alloc_block *
-find_block_prev(struct nvhost_allocator *allocator, u32 addr,
-		struct nvhost_alloc_block **pprev)
+static struct gk20a_alloc_block *
+find_block_prev(struct gk20a_allocator *allocator, u32 addr,
+		struct gk20a_alloc_block **pprev)
 {
-	struct nvhost_alloc_block *block = NULL, *prev = NULL;
+	struct gk20a_alloc_block *block = NULL, *prev = NULL;
 	struct rb_node *rb_node;
 	if (!allocator)
 		goto out;
@@ -284,8 +279,8 @@ find_block_prev(struct nvhost_allocator *allocator, u32 addr,
 	rb_node = allocator->rb_root.rb_node;
 
 	while (rb_node) {
-		struct nvhost_alloc_block *block_tmp;
-		block_tmp = rb_entry(rb_node, struct nvhost_alloc_block, rb);
+		struct gk20a_alloc_block *block_tmp;
+		block_tmp = rb_entry(rb_node, struct gk20a_alloc_block, rb);
 
 		if (addr < block_tmp->end)
 			rb_node = rb_node->rb_left;
@@ -304,12 +299,12 @@ out:
 
 /* Same as find_block, but also return a pointer to the previous block
    and return rb_node to prepare for rbtree insertion */
-static struct nvhost_alloc_block *
-find_block_prepare(struct nvhost_allocator *allocator, u32 addr,
-		struct nvhost_alloc_block **pprev, struct rb_node ***rb_link,
+static struct gk20a_alloc_block *
+find_block_prepare(struct gk20a_allocator *allocator, u32 addr,
+		struct gk20a_alloc_block **pprev, struct rb_node ***rb_link,
 		struct rb_node **rb_parent)
 {
-	struct nvhost_alloc_block *block;
+	struct gk20a_alloc_block *block;
 	struct rb_node **__rb_link, *__rb_parent, *rb_prev;
 
 	__rb_link = &allocator->rb_root.rb_node;
@@ -317,11 +312,11 @@ find_block_prepare(struct nvhost_allocator *allocator, u32 addr,
 	block = NULL;
 
 	while (*__rb_link) {
-		struct nvhost_alloc_block *block_tmp;
+		struct gk20a_alloc_block *block_tmp;
 
 		__rb_parent = *__rb_link;
 		block_tmp = rb_entry(__rb_parent,
-				struct nvhost_alloc_block, rb);
+				struct gk20a_alloc_block, rb);
 
 		if (block_tmp->end > addr) {
 			block = block_tmp;
@@ -336,7 +331,7 @@ find_block_prepare(struct nvhost_allocator *allocator, u32 addr,
 
 	*pprev = NULL;
 	if (rb_prev)
-		*pprev = rb_entry(rb_prev, struct nvhost_alloc_block, rb);
+		*pprev = rb_entry(rb_prev, struct gk20a_alloc_block, rb);
 	*rb_link = __rb_link;
 	*rb_parent = __rb_parent;
 	return block;
@@ -354,8 +349,8 @@ static u32 check_free_space(u32 addr, u32 limit, u32 len, u32 align)
 
 /* update first_free_addr/last_free_addr based on new free addr
    called when free block(s) and allocate block(s) */
-static void update_free_addr_cache(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *next,
+static void update_free_addr_cache(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *next,
 		u32 addr, u32 len, bool free)
 {
 	/* update from block free */
@@ -378,10 +373,10 @@ static void update_free_addr_cache(struct nvhost_allocator *allocator,
 }
 
 /* find a free address range for a fixed len */
-static int find_free_area(struct nvhost_allocator *allocator,
+static int find_free_area(struct gk20a_allocator *allocator,
 			u32 *addr, u32 len)
 {
-	struct nvhost_alloc_block *block;
+	struct gk20a_alloc_block *block;
 	u32 start_addr, search_base, search_limit;
 
 	/* fixed addr allocation */
@@ -417,7 +412,7 @@ static int find_free_area(struct nvhost_allocator *allocator,
 	allocator_dbg(allocator, "start search addr : %d", start_addr);
 
 full_search:
-	for (block = find_block(allocator, *addr); ; block = block->next) {
+	for (block = find_block(allocator, *addr);; block = block->next) {
 		if (search_limit - len < *addr) {
 			/* start a new search in case we missed any hole */
 			if (start_addr != search_base) {
@@ -444,10 +439,10 @@ full_search:
 }
 
 /* find a free address range for as long as it meets alignment or meet len */
-static int find_free_area_nc(struct nvhost_allocator *allocator,
+static int find_free_area_nc(struct gk20a_allocator *allocator,
 			u32 *addr, u32 *len)
 {
-	struct nvhost_alloc_block *block;
+	struct gk20a_alloc_block *block;
 	u32 start_addr;
 	u32 avail_len;
 
@@ -480,7 +475,7 @@ static int find_free_area_nc(struct nvhost_allocator *allocator,
 
 	allocator_dbg(allocator, "start search addr : %d", start_addr);
 
-	for (block = find_block(allocator, *addr); ; block = block->next) {
+	for (block = find_block(allocator, *addr);; block = block->next) {
 		if (allocator->limit - *len < *addr)
 			return -ENOMEM;
 		if (!block) {
@@ -513,10 +508,10 @@ static int find_free_area_nc(struct nvhost_allocator *allocator,
 
 /* expand/shrink a block with new start and new end
    split_block function provides insert block for shrink */
-static void adjust_block(struct nvhost_alloc_block *block,
-		u32 start, u32 end, struct nvhost_alloc_block *insert)
+static void adjust_block(struct gk20a_alloc_block *block,
+		u32 start, u32 end, struct gk20a_alloc_block *insert)
 {
-	struct nvhost_allocator *allocator = block->allocator;
+	struct gk20a_allocator *allocator = block->allocator;
 
 	allocator_dbg(allocator, "curr block %d:%d, new start %d, new end %d",
 		block->start, block->end, start, end);
@@ -524,7 +519,7 @@ static void adjust_block(struct nvhost_alloc_block *block,
 	/* expand */
 	if (!insert) {
 		if (start == block->end) {
-			struct nvhost_alloc_block *next = block->next;
+			struct gk20a_alloc_block *next = block->next;
 
 			if (next && end == next->start) {
 				/* ....AAAA.... */
@@ -557,11 +552,11 @@ static void adjust_block(struct nvhost_alloc_block *block,
 
 /* given a range [addr, end], merge it with blocks before or after or both
    if they can be combined into a contiguous block */
-static struct nvhost_alloc_block *
-merge_block(struct nvhost_allocator *allocator,
-	struct nvhost_alloc_block *prev, u32 addr, u32 end)
+static struct gk20a_alloc_block *
+merge_block(struct gk20a_allocator *allocator,
+	struct gk20a_alloc_block *prev, u32 addr, u32 end)
 {
-	struct nvhost_alloc_block *next;
+	struct gk20a_alloc_block *next;
 
 	if (prev)
 		next = prev->next;
@@ -570,9 +565,11 @@ merge_block(struct nvhost_allocator *allocator,
 
 	allocator_dbg(allocator, "curr block %d:%d", addr, end);
 	if (prev)
-		allocator_dbg(allocator, "prev block %d:%d", prev->start, prev->end);
+		allocator_dbg(allocator, "prev block %d:%d",
+			prev->start, prev->end);
 	if (next)
-		allocator_dbg(allocator, "next block %d:%d", next->start, next->end);
+		allocator_dbg(allocator, "next block %d:%d",
+			next->start, next->end);
 
 	/* don't merge with non-contiguous allocation block */
 	if (prev && prev->end == addr && !prev->nc_block) {
@@ -591,10 +588,10 @@ merge_block(struct nvhost_allocator *allocator,
 
 /* split a block based on addr. addr must be within (start, end).
    if new_below == 1, link new block before adjusted current block */
-static int split_block(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block, u32 addr, int new_below)
+static int split_block(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block, u32 addr, int new_below)
 {
-	struct nvhost_alloc_block *new_block;
+	struct gk20a_alloc_block *new_block;
 
 	allocator_dbg(allocator, "start %d, split %d, end %d, new_below %d",
 		block->start, addr, block->end, new_below);
@@ -621,10 +618,10 @@ static int split_block(struct nvhost_allocator *allocator,
 }
 
 /* free a list of blocks */
-static void free_blocks(struct nvhost_allocator *allocator,
-			struct nvhost_alloc_block *block)
+static void free_blocks(struct gk20a_allocator *allocator,
+			struct gk20a_alloc_block *block)
 {
-	struct nvhost_alloc_block *curr_block;
+	struct gk20a_alloc_block *curr_block;
 	while (block) {
 		curr_block = block;
 		block = block->next;
@@ -633,10 +630,10 @@ static void free_blocks(struct nvhost_allocator *allocator,
 }
 
 /* called with rw_sema acquired */
-static int block_alloc_single_locked(struct nvhost_allocator *allocator,
+static int block_alloc_single_locked(struct gk20a_allocator *allocator,
 				u32 *addr_req, u32 len)
 {
-	struct nvhost_alloc_block *block, *prev;
+	struct gk20a_alloc_block *block, *prev;
 	struct rb_node **rb_link, *rb_parent;
 	u32 addr = *addr_req;
 	int err;
@@ -673,11 +670,11 @@ static int block_alloc_single_locked(struct nvhost_allocator *allocator,
 	return 0;
 }
 
-static int block_alloc_list_locked(struct nvhost_allocator *allocator,
-	u32 *addr_req, u32 nc_len, struct nvhost_alloc_block **pblock)
+static int block_alloc_list_locked(struct gk20a_allocator *allocator,
+	u32 *addr_req, u32 nc_len, struct gk20a_alloc_block **pblock)
 {
-	struct nvhost_alloc_block *block;
-	struct nvhost_alloc_block *nc_head = NULL, *nc_prev = NULL;
+	struct gk20a_alloc_block *block;
+	struct gk20a_alloc_block *nc_head = NULL, *nc_prev = NULL;
 	u32 addr = *addr_req, len = nc_len;
 	int err = 0;
 
@@ -741,10 +738,10 @@ clean_up:
 }
 
 /* called with rw_sema acquired */
-static int block_free_locked(struct nvhost_allocator *allocator,
+static int block_free_locked(struct gk20a_allocator *allocator,
 			u32 addr, u32 len)
 {
-	struct nvhost_alloc_block *block, *prev, *last;
+	struct gk20a_alloc_block *block, *prev, *last;
 	u32 end;
 	int err;
 
@@ -796,10 +793,10 @@ static int block_free_locked(struct nvhost_allocator *allocator,
 }
 
 /* called with rw_sema acquired */
-static void block_free_list_locked(struct nvhost_allocator *allocator,
-			struct nvhost_alloc_block *list)
+static void block_free_list_locked(struct gk20a_allocator *allocator,
+			struct gk20a_alloc_block *list)
 {
-	struct nvhost_alloc_block *block;
+	struct gk20a_alloc_block *block;
 	u32 len;
 
 	update_free_addr_cache(allocator, NULL,
@@ -819,7 +816,7 @@ static void block_free_list_locked(struct nvhost_allocator *allocator,
 }
 
 static int
-nvhost_allocator_constrain(struct nvhost_allocator *a,
+gk20a_allocator_constrain(struct gk20a_allocator *a,
 			   bool enable, u32 base, u32 limit)
 {
 	if (enable) {
@@ -842,16 +839,16 @@ nvhost_allocator_constrain(struct nvhost_allocator *a,
 }
 
 /* init allocator struct */
-int nvhost_allocator_init(struct nvhost_allocator *allocator,
+int gk20a_allocator_init(struct gk20a_allocator *allocator,
 		const char *name, u32 start, u32 len, u32 align)
 {
-	memset(allocator, 0, sizeof(struct nvhost_allocator));
+	memset(allocator, 0, sizeof(struct gk20a_allocator));
 
 	strncpy(allocator->name, name, 32);
 
 	allocator->block_cache =
 		kmem_cache_create(allocator->name,
-			sizeof(struct nvhost_alloc_block), 0,
+			sizeof(struct gk20a_alloc_block), 0,
 			SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD, NULL);
 	if (!allocator->block_cache)
 		return -ENOMEM;
@@ -871,19 +868,19 @@ int nvhost_allocator_init(struct nvhost_allocator *allocator,
 
 	init_rwsem(&allocator->rw_sema);
 
-	allocator->alloc = nvhost_block_alloc;
-	allocator->alloc_nc = nvhost_block_alloc_nc;
-	allocator->free = nvhost_block_free;
-	allocator->free_nc = nvhost_block_free_nc;
-	allocator->constrain = nvhost_allocator_constrain;
+	allocator->alloc = gk20a_allocator_block_alloc;
+	allocator->alloc_nc = gk20a_allocator_block_alloc_nc;
+	allocator->free = gk20a_allocator_block_free;
+	allocator->free_nc = gk20a_allocator_block_free_nc;
+	allocator->constrain = gk20a_allocator_constrain;
 
 	return 0;
 }
 
 /* destroy allocator, free all remaining blocks if any */
-void nvhost_allocator_destroy(struct nvhost_allocator *allocator)
+void gk20a_allocator_destroy(struct gk20a_allocator *allocator)
 {
-	struct nvhost_alloc_block *block, *next;
+	struct gk20a_alloc_block *block, *next;
 	u32 free_count = 0;
 
 	down_write(&allocator->rw_sema);
@@ -904,7 +901,7 @@ void nvhost_allocator_destroy(struct nvhost_allocator *allocator)
 
 	kmem_cache_destroy(allocator->block_cache);
 
-	memset(allocator, 0, sizeof(struct nvhost_allocator));
+	memset(allocator, 0, sizeof(struct gk20a_allocator));
 }
 
 /*
@@ -914,11 +911,12 @@ void nvhost_allocator_destroy(struct nvhost_allocator *allocator)
  * contiguous allocation, which allocates one block of
  * contiguous address.
 */
-int nvhost_block_alloc(struct nvhost_allocator *allocator, u32 *addr, u32 len)
+int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
+		u32 *addr, u32 len)
 {
 	int ret;
 #if defined(ALLOCATOR_DEBUG)
-	struct nvhost_alloc_block *block;
+	struct gk20a_alloc_block *block;
 	bool should_fail = false;
 #endif
 
@@ -987,8 +985,8 @@ int nvhost_block_alloc(struct nvhost_allocator *allocator, u32 *addr, u32 len)
  * non-contiguous allocation, which returns a list of blocks with aggregated
  * size == len. Individual block size must meet alignment requirement.
  */
-int nvhost_block_alloc_nc(struct nvhost_allocator *allocator, u32 *addr,
-			u32 len, struct nvhost_alloc_block **pblock)
+int gk20a_allocator_block_alloc_nc(struct gk20a_allocator *allocator,
+		u32 *addr, u32 len, struct gk20a_alloc_block **pblock)
 {
 	int ret;
 
@@ -1012,7 +1010,7 @@ int nvhost_block_alloc_nc(struct nvhost_allocator *allocator, u32 *addr,
 
 #if defined(ALLOCATOR_DEBUG)
 	if (!ret) {
-		struct nvhost_alloc_block *block = *pblock;
+		struct gk20a_alloc_block *block = *pblock;
 		BUG_ON(!block);
 		BUG_ON(block->start < allocator->base);
 		while (block->nc_next) {
@@ -1031,7 +1029,8 @@ int nvhost_block_alloc_nc(struct nvhost_allocator *allocator, u32 *addr,
 }
 
 /* free all blocks between start and end */
-int nvhost_block_free(struct nvhost_allocator *allocator, u32 addr, u32 len)
+int gk20a_allocator_block_free(struct gk20a_allocator *allocator,
+		u32 addr, u32 len)
 {
 	int ret;
 
@@ -1052,7 +1051,7 @@ int nvhost_block_free(struct nvhost_allocator *allocator, u32 addr, u32 len)
 
 #if defined(ALLOCATOR_DEBUG)
 	if (!ret) {
-		struct nvhost_alloc_block *block;
+		struct gk20a_alloc_block *block;
 		for (block = allocator->block_first;
 		     block; block = block->next) {
 			if (!block->nc_block)
@@ -1069,8 +1068,8 @@ int nvhost_block_free(struct nvhost_allocator *allocator, u32 addr, u32 len)
 }
 
 /* free non-contiguous allocation block list */
-void nvhost_block_free_nc(struct nvhost_allocator *allocator,
-		struct nvhost_alloc_block *block)
+void gk20a_allocator_block_free_nc(struct gk20a_allocator *allocator,
+		struct gk20a_alloc_block *block)
 {
 	/* nothing to free */
 	if (!block)
@@ -1086,161 +1085,162 @@ void nvhost_block_free_nc(struct nvhost_allocator *allocator,
 #include <linux/random.h>
 
 /* test suite */
-void nvhost_allocator_test(void)
+void gk20a_allocator_test(void)
 {
-	struct nvhost_allocator allocator;
-	struct nvhost_alloc_block *list[5];
+	struct gk20a_allocator allocator;
+	struct gk20a_alloc_block *list[5];
 	u32 addr, len;
 	u32 count;
 	int n;
 
-	nvhost_allocator_init(&allocator, "test", 0, 10, 1);
+	gk20a_allocator_init(&allocator, "test", 0, 10, 1);
 
 	/* alloc/free a single block in the beginning */
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
-	nvhost_block_free(&allocator, addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, addr, 2);
+	gk20a_allocator_dump(&allocator);
 	/* alloc/free a single block in the middle */
 	addr = 4;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
-	nvhost_block_free(&allocator, addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, addr, 2);
+	gk20a_allocator_dump(&allocator);
 	/* alloc/free a single block in the end */
 	addr = 8;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
-	nvhost_block_free(&allocator, addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, addr, 2);
+	gk20a_allocator_dump(&allocator);
 
 	/* allocate contiguous blocks */
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 4);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 4);
+	gk20a_allocator_dump(&allocator);
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 4);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 4);
+	gk20a_allocator_dump(&allocator);
 
 	/* no free space */
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 
 	/* free in the end */
-	nvhost_block_free(&allocator, 8, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 8, 2);
+	gk20a_allocator_dump(&allocator);
 	/* free in the beginning */
-	nvhost_block_free(&allocator, 0, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 0, 2);
+	gk20a_allocator_dump(&allocator);
 	/* free in the middle */
-	nvhost_block_free(&allocator, 4, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 4, 2);
+	gk20a_allocator_dump(&allocator);
 
 	/* merge case PPPPAAAANNNN */
 	addr = 4;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 	/* merge case ....AAAANNNN */
 	addr = 0;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 	/* merge case PPPPAAAA.... */
 	addr = 8;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 
 	/* test free across multiple blocks and split */
-	nvhost_block_free(&allocator, 2, 2);
-	nvhost_allocator_dump(&allocator);
-	nvhost_block_free(&allocator, 6, 2);
-	nvhost_allocator_dump(&allocator);
-	nvhost_block_free(&allocator, 1, 8);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 2, 2);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 6, 2);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 1, 8);
+	gk20a_allocator_dump(&allocator);
 
 	/* test non-contiguous allocation */
 	addr = 4;
-	nvhost_block_alloc(&allocator, &addr, 2);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_alloc(&allocator, &addr, 2);
+	gk20a_allocator_dump(&allocator);
 	addr = 0;
-	nvhost_block_alloc_nc(&allocator, &addr, 5, &list[0]);
-	nvhost_allocator_dump(&allocator);
-	nvhost_allocator_dump_nc_list(&allocator, list[0]);
+	gk20a_allocator_block_alloc_nc(&allocator, &addr, 5, &list[0]);
+	gk20a_allocator_dump(&allocator);
+	gk20a_allocator_dump_nc_list(&allocator, list[0]);
 
 	/* test free a range overlaping non-contiguous blocks */
-	nvhost_block_free(&allocator, 2, 6);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free(&allocator, 2, 6);
+	gk20a_allocator_dump(&allocator);
 
 	/* test non-contiguous free */
-	nvhost_block_free_nc(&allocator, list[0]);
-	nvhost_allocator_dump(&allocator);
+	gk20a_allocator_block_free_nc(&allocator, list[0]);
+	gk20a_allocator_dump(&allocator);
 
-	nvhost_allocator_destroy(&allocator);
+	gk20a_allocator_destroy(&allocator);
 
 	/* random stress test */
-	nvhost_allocator_init(&allocator, "test", 4096, 4096 * 1024, 4096);
+	gk20a_allocator_init(&allocator, "test", 4096, 4096 * 1024, 4096);
 	for (;;) {
-		printk(KERN_DEBUG "alloc tests...\n");
+		pr_debug("alloc tests...\n");
 		for (count = 0; count < 50; count++) {
 			addr = 0;
 			len = random32() % (4096 * 1024 / 16);
-			nvhost_block_alloc(&allocator, &addr, len);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_block_alloc(&allocator, &addr, len);
+			gk20a_allocator_dump(&allocator);
 		}
 
-		printk(KERN_DEBUG "free tests...\n");
+		pr_debug("free tests...\n");
 		for (count = 0; count < 30; count++) {
 			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
 			len = random32() % (4096 * 1024 / 16);
-			nvhost_block_free(&allocator, addr, len);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_block_free(&allocator, addr, len);
+			gk20a_allocator_dump(&allocator);
 		}
 
-		printk(KERN_DEBUG "non-contiguous alloc tests...\n");
+		pr_debug("non-contiguous alloc tests...\n");
 		for (n = 0; n < 5; n++) {
 			addr = 0;
 			len = random32() % (4096 * 1024 / 8);
-			nvhost_block_alloc_nc(&allocator, &addr, len, &list[n]);
-			nvhost_allocator_dump(&allocator);
-			nvhost_allocator_dump_nc_list(&allocator, list[n]);
+			gk20a_allocator_block_alloc_nc(&allocator, &addr,
+				len, &list[n]);
+			gk20a_allocator_dump(&allocator);
+			gk20a_allocator_dump_nc_list(&allocator, list[n]);
 		}
 
-		printk(KERN_DEBUG "free tests...\n");
+		pr_debug("free tests...\n");
 		for (count = 0; count < 10; count++) {
 			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
 			len = random32() % (4096 * 1024 / 16);
-			nvhost_block_free(&allocator, addr, len);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_block_free(&allocator, addr, len);
+			gk20a_allocator_dump(&allocator);
 		}
 
-		printk(KERN_DEBUG "non-contiguous free tests...\n");
+		pr_debug("non-contiguous free tests...\n");
 		for (n = 4; n >= 0; n--) {
-			nvhost_allocator_dump_nc_list(&allocator, list[n]);
-			nvhost_block_free_nc(&allocator, list[n]);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_dump_nc_list(&allocator, list[n]);
+			gk20a_allocator_block_free_nc(&allocator, list[n]);
+			gk20a_allocator_dump(&allocator);
 		}
 
-		printk(KERN_DEBUG "fixed addr alloc tests...\n");
+		pr_debug("fixed addr alloc tests...\n");
 		for (count = 0; count < 10; count++) {
 			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
 			len = random32() % (4096 * 1024 / 32);
-			nvhost_block_alloc(&allocator, &addr, len);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_block_alloc(&allocator, &addr, len);
+			gk20a_allocator_dump(&allocator);
 		}
 
-		printk(KERN_DEBUG "free tests...\n");
+		pr_debug("free tests...\n");
 		for (count = 0; count < 10; count++) {
 			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
 			len = random32() % (4096 * 1024 / 16);
-			nvhost_block_free(&allocator, addr, len);
-			nvhost_allocator_dump(&allocator);
+			gk20a_allocator_block_free(&allocator, addr, len);
+			gk20a_allocator_dump(&allocator);
 		}
 	}
-	nvhost_allocator_destroy(&allocator);
+	gk20a_allocator_destroy(&allocator);
 }
 
 #endif /* ALLOCATOR_DEBUG */

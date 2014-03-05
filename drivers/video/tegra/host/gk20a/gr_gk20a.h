@@ -247,7 +247,7 @@ struct gr_gk20a {
 
 	u32 max_comptag_mem; /* max memory size (MB) for comptag */
 	struct compbit_store_desc compbit_store;
-	struct nvhost_allocator comp_tags;
+	struct gk20a_allocator comp_tags;
 
 	struct gr_zcull_gk20a zcull;
 

@@ -2799,7 +2799,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
 
-	nvhost_allocator_destroy(&gr->comp_tags);
+	gk20a_allocator_destroy(&gr->comp_tags);
 }
 
 static void gr_gk20a_bundle_cb_defaults(struct gk20a *g)

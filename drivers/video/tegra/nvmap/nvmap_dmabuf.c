@@ -207,6 +207,7 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 	list_del(&nvmap_sgt->maps_entry);
 
 	if (info->handle->heap_pgalloc) {
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 		dma_unmap_sg_attrs(nvmap_sgt->dev,
 				   nvmap_sgt->sgt->sgl, nvmap_sgt->sgt->nents,
@@ -365,6 +366,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	}
 
 	if (info->handle->heap_pgalloc && info->handle->alloc) {
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 		ents = dma_map_sg_attrs(attach->dev, sgt->sgl,
 					sgt->nents, dir, &attrs);

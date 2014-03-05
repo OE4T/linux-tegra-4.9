@@ -207,6 +207,10 @@ struct gr_gk20a {
 	int initialized;
 	u32 num_fbps;
 
+	u32 comptags_per_cacheline;
+	u32 slices_per_fbp;
+	u32 cacheline_size;
+
 	u32 max_gpc_count;
 	u32 max_fbps_count;
 	u32 max_tpc_per_gpc_count;

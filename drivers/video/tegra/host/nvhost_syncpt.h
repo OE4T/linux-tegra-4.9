@@ -62,10 +62,6 @@ struct nvhost_syncpt {
 int nvhost_syncpt_init(struct platform_device *, struct nvhost_syncpt *);
 void nvhost_syncpt_deinit(struct nvhost_syncpt *);
 
-u32 nvhost_get_syncpt_host_managed(struct platform_device *pdata,
-				   u32 param);
-void nvhost_free_syncpt(u32 id);
-
 #define syncpt_to_dev(sp) container_of(sp, struct nvhost_master, syncpt)
 #define SYNCPT_CHECK_PERIOD (2 * HZ)
 #define MAX_STUCK_CHECK_COUNT 15
@@ -109,7 +105,6 @@ int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
-const char *get_syncpt_name(struct nvhost_syncpt *sp, int id);
 
 /**
  * Returns true if syncpoint min == max

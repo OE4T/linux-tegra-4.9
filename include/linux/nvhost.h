@@ -270,6 +270,10 @@ void nvhost_module_idle_ext(struct platform_device *dev);
 
 /* public host1x sync-point management APIs */
 u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
+u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
+				   u32 param);
+void nvhost_free_syncpt(u32 id);
+const char *nvhost_syncpt_get_name(struct platform_device *dev, int id);
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs);
 void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id);
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val);
@@ -277,6 +281,10 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id, u32 thre
 	u32 timeout, u32 *value, struct timespec *ts);
 int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 	u32 id, u32 thresh, const char *name, int *fence_fd);
+int nvhost_syncpt_is_expired_ext(struct platform_device *dev,
+	u32 id, u32 thresh);
+void nvhost_syncpt_set_min_eq_max_ext(struct platform_device *dev, u32 id);
+int nvhost_syncpt_nb_pts_ext(struct platform_device *dev);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

@@ -14,6 +14,7 @@
  *
  */
 
+#include <linux/nvhost.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
@@ -21,7 +22,6 @@
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
-#include "nvhost_syncpt.h"
 
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -105,7 +105,6 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	u32 status = ccsr_channel_status_v(channel);
 	u32 syncpointa, syncpointb;
 	void *inst_ptr;
-	struct nvhost_master *host = nvhost_get_host(g->dev);
 
 	inst_ptr = ch->inst_block.cpuva;
 	if (!inst_ptr)
@@ -147,7 +146,8 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 			pbdma_syncpointb_wait_switch_en_v()))
 		gk20a_debug_output(o, "Waiting on syncpt %u (%s) val %u\n",
 			pbdma_syncpointb_syncpt_index_v(syncpointb),
-			get_syncpt_name(&host->syncpt,
+			nvhost_syncpt_get_name(
+				to_platform_device(g->dev->dev.parent),
 				pbdma_syncpointb_syncpt_index_v(syncpointb)),
 			pbdma_syncpointa_payload_v(syncpointa));
 

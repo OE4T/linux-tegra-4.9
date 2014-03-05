@@ -576,12 +576,17 @@ struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 }
 #endif
 
-const char *get_syncpt_name(struct nvhost_syncpt *sp, int id)
+const char *nvhost_syncpt_get_name(struct platform_device *pdev, int id)
 {
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_syncpt *sp = &host->syncpt;
 	const char *name = NULL;
+
 	name = sp->syncpt_names[id];
+
 	return name ? name : "";
 }
+EXPORT_SYMBOL_GPL(nvhost_syncpt_get_name);
 
 static ssize_t syncpt_type_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -604,7 +609,8 @@ static ssize_t syncpt_name_show(struct kobject *kobj,
 		container_of(attr, struct nvhost_syncpt_attr, attr);
 
 	return snprintf(buf, PAGE_SIZE, "%s\n",
-		get_syncpt_name(&syncpt_attr->host->syncpt, syncpt_attr->id));
+		nvhost_syncpt_get_name(syncpt_attr->host->dev,
+				       syncpt_attr->id));
 }
 
 static ssize_t syncpt_min_show(struct kobject *kobj,
@@ -767,6 +773,7 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 
 	return id;
 }
+EXPORT_SYMBOL_GPL(nvhost_get_syncpt_host_managed);
 
 /**
  * Interface to get a new free (client managed) syncpt dynamically
@@ -809,6 +816,7 @@ void nvhost_free_syncpt(u32 id)
 
 	mutex_unlock(&sp->syncpt_mutex);
 }
+EXPORT_SYMBOL_GPL(nvhost_free_syncpt);
 
 static void nvhost_reserve_vblank_syncpts(struct nvhost_syncpt *sp)
 {
@@ -1058,36 +1066,16 @@ void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client)
 /* public sync point API */
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 {
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Incr max called with wrong dev\n");
-		return 0;
-	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
-
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 	return nvhost_syncpt_incr_max(sp, id, incrs);
 }
 EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
 
 void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 {
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Incr called with wrong dev\n");
-		return;
-	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
-
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 	nvhost_syncpt_cpu_incr(sp, id);
 }
 EXPORT_SYMBOL(nvhost_syncpt_cpu_incr_ext);
@@ -1104,37 +1092,26 @@ void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
 
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val)
 {
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Read called with wrong dev\n");
-		return -EINVAL;
-	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
-
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 	return nvhost_syncpt_read_check(sp, id, val);
 }
 EXPORT_SYMBOL(nvhost_syncpt_read_ext_check);
 
+int nvhost_syncpt_is_expired_ext(struct platform_device *dev,
+				 u32 id, u32 thresh)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+	return nvhost_syncpt_is_expired(sp, id, thresh);
+}
+EXPORT_SYMBOL(nvhost_syncpt_is_expired_ext);
+
 int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	u32 thresh, u32 timeout, u32 *value, struct timespec *ts)
 {
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Wait called with wrong dev\n");
-		return -EINVAL;
-	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
-
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts,
 			false);
 }
@@ -1144,23 +1121,14 @@ int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 	u32 id, u32 thresh, const char *name, int *fence_fd)
 {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
 	struct nvhost_ctrl_sync_fence_info pts = {id, thresh};
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Create Fence called with wrong dev\n");
-		return -EINVAL;
-	}
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 
 	if (id == NVSYNCPT_INVALID) {
 		dev_err(&dev->dev, "Create Fence called with invalid id\n");
 		return -EINVAL;
 	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
 
 	return nvhost_sync_create_fence_fd(sp, &pts, 1, name, fence_fd);
 #else
@@ -1168,6 +1136,24 @@ int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 #endif
 }
 EXPORT_SYMBOL(nvhost_syncpt_create_fence_single_ext);
+
+void nvhost_syncpt_set_min_eq_max_ext(struct platform_device *dev, u32 id)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));
+	syncpt_op().reset(sp, id);
+}
+EXPORT_SYMBOL(nvhost_syncpt_set_min_eq_max_ext);
+
+int nvhost_syncpt_nb_pts_ext(struct platform_device *dev)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+
+	return syncpt_to_dev(sp)->info.nb_pts;
+}
+EXPORT_SYMBOL(nvhost_syncpt_nb_pts_ext);
 
 void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 {

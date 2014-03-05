@@ -23,8 +23,22 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
+#ifdef CONFIG_COMPAT
+#include <linux/compat.h>
+#endif
 
 #include "tegra_dc_ext_priv.h"
+
+#ifdef CONFIG_COMPAT
+struct tegra_dc_ext_control_output_edid32 {
+	__u32 handle;
+	__u32 size;
+	__u32 data;	/* void *data; */
+};
+
+#define TEGRA_DC_EXT_CONTROL_GET_OUTPUT_EDID32 \
+	_IOWR('C', 0x02, struct tegra_dc_ext_control_output_edid32)
+#endif
 
 static struct tegra_dc_ext_control g_control;
 
@@ -185,6 +199,33 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 
 		return ret;
 	}
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_CONTROL_GET_OUTPUT_EDID32:
+	{
+		struct tegra_dc_ext_control_output_edid32 args;
+		struct tegra_dc_ext_control_output_edid tmp;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		/* translate 32-bit version to 64-bit */
+		tmp.handle = args.handle;
+		tmp.size = args.size;
+		tmp.data = compat_ptr(args.data);
+
+		ret = get_output_edid(&tmp);
+
+		/* convert it back to 32-bit version, tmp.data not modified */
+		args.handle = tmp.handle;
+		args.size = tmp.size;
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
+	}
+#endif
 	case TEGRA_DC_EXT_CONTROL_GET_OUTPUT_EDID:
 	{
 		struct tegra_dc_ext_control_output_edid args;

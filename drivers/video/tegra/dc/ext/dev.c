@@ -42,6 +42,48 @@
 #include "../../../staging/android/sync.h"
 #endif
 
+#ifdef CONFIG_COMPAT
+/* compat versions that happen to be the same size as the uapi version. */
+
+struct tegra_dc_ext_lut32 {
+	__u32 win_index;	/* window index to set lut for */
+	__u32 flags;		/* Flag bitmask, see TEGRA_DC_EXT_LUT_FLAGS_* */
+	__u32 start;		/* start index to update lut from */
+	__u32 len;		/* number of valid lut entries */
+	__u32 r;		/* array of 16-bit red values, 0 to reset */
+	__u32 g;		/* array of 16-bit green values, 0 to reset */
+	__u32 b;		/* array of 16-bit blue values, 0 to reset */
+};
+
+#define TEGRA_DC_EXT_SET_LUT32 \
+		_IOW('D', 0x0A, struct tegra_dc_ext_lut32)
+
+struct tegra_dc_ext_feature32 {
+	__u32 length;
+	__u32 entries;		/* pointer to array of 32-bit entries */
+};
+
+#define TEGRA_DC_EXT_GET_FEATURES32 \
+		_IOW('D', 0x0B, struct tegra_dc_ext_feature32)
+
+struct tegra_dc_ext_flip_2_32 {
+	__u32 win;		/* struct tegra_dc_ext_flip_windowattr* */
+	__u8 win_num;
+	__u8 reserved1;		/* unused - must be 0 */
+	__u16 reserved2;	/* unused - must be 0 */
+	__u32 post_syncpt_id;
+	__u32 post_syncpt_val;
+	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
+};
+
+#define TEGRA_DC_EXT_FLIP2_32 \
+		_IOWR('D', 0x0E, struct tegra_dc_ext_flip_2_32)
+
+#define TEGRA_DC_EXT_SET_PROPOSED_BW32 \
+		_IOR('D', 0x13, struct tegra_dc_ext_flip_2_32)
+
+#endif
+
 int tegra_dc_ext_devno;
 struct class *tegra_dc_ext_class;
 static int head_count;
@@ -69,6 +111,16 @@ struct tegra_dc_ext_flip_data {
 	struct list_head		timestamp_node;
 	int act_window_num;
 };
+
+static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
+{
+	return ((s64) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
+}
+
+static inline int test_bit_u32(int nr, const u32 *addr)
+{
+	return 1UL & (addr[BIT_WORD(nr)] >> (nr & (BITS_PER_LONG-1)));
+}
 
 int tegra_dc_ext_get_num_outputs(void)
 {
@@ -169,7 +221,7 @@ void tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 						struct tegra_dc_win *win)
 {
-	long *addr;
+	u32 *addr;
 	struct tegra_dc *dc = ext->dc;
 
 	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_FORMATS);
@@ -180,7 +232,7 @@ int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 		goto fail;
 	}
 	/* Check the window format */
-	if (!test_bit(win->fmt, addr)) {
+	if (!test_bit_u32(win->fmt, addr)) {
 		dev_err(&dc->ndev->dev,
 			"Color format of window %d is invalid.\n", win->idx);
 		goto fail;
@@ -342,7 +394,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		return err;
 
 	if (tegra_platform_is_silicon()) {
-		timestamp_ns = timespec_to_ns(&flip_win->attr.timestamp);
+		timestamp_ns = tegra_timespec_to_ns(&flip_win->attr.timestamp);
 
 		if (timestamp_ns) {
 			/* XXX: Should timestamping be overridden by "no_vsync"
@@ -437,11 +489,11 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 					dev_err(&win->dc->ndev->dev,
 							"work queue did NOT dequeue head!!!");
 				else
-					head_timestamp =
-						timespec_to_ns(&flip_win->attr.timestamp);
+					head_timestamp = tegra_timespec_to_ns(
+						&flip_win->attr.timestamp);
 			} else {
-				s64 timestamp =
-					timespec_to_ns(&temp->win[i].attr.timestamp);
+				s64 timestamp = tegra_timespec_to_ns(
+					&temp->win[i].attr.timestamp);
 
 				skip_flip = !tegra_dc_does_vsync_separate(ext->dc,
 						timestamp, head_timestamp);
@@ -637,7 +689,8 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 		int index = wins[i].index;
 
 		memcpy(&flip_win->attr, &wins[i], sizeof(flip_win->attr));
-		if (has_timestamp && timespec_to_ns(&flip_win->attr.timestamp))
+		if (has_timestamp && tegra_timespec_to_ns(
+			&flip_win->attr.timestamp))
 			*has_timestamp = true;
 
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
@@ -1107,6 +1160,41 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_FLIP2_32:
+	{
+		int ret;
+		int win_num;
+		struct tegra_dc_ext_flip_2_32 args;
+		struct tegra_dc_ext_flip_windowattr *win;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		win_num = args.win_num;
+		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
+
+		if (copy_from_user(win, compat_ptr(args.win),
+			sizeof(*win) * win_num)) {
+			kfree(win);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_flip(user, win, win_num,
+			&args.post_syncpt_id, &args.post_syncpt_val, NULL);
+
+		if (copy_to_user(compat_ptr(args.win), win,
+			sizeof(*win) * win_num) ||
+			copy_to_user(user_arg, &args, sizeof(args))) {
+			kfree(win);
+			return -EFAULT;
+		}
+
+		kfree(win);
+		return ret;
+	}
+
+#endif
 	case TEGRA_DC_EXT_FLIP2:
 	{
 		int ret;
@@ -1171,6 +1259,33 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 #ifdef CONFIG_TEGRA_ISOMGR
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_SET_PROPOSED_BW32:
+	{
+		int ret;
+		int win_num;
+		struct tegra_dc_ext_flip_2_32 args;
+		struct tegra_dc_ext_flip_windowattr *win;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		win_num = args.win_num;
+		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
+
+		if (copy_from_user(win, compat_ptr(args.win),
+				sizeof(*win) * win_num)) {
+			kfree(win);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+
+		kfree(win);
+
+		return ret;
+	}
+#endif
 	case TEGRA_DC_EXT_SET_PROPOSED_BW:
 	{
 		int ret;
@@ -1184,8 +1299,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
-		if (copy_from_user(win, (void *)(uintptr_t)args.win, 
-				sizeof(*win) * win_num)) {
+		if (copy_from_user(win, args.win, sizeof(*win) * win_num)) {
 			kfree(win);
 			return -EFAULT;
 		}
@@ -1273,6 +1387,27 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_SET_LUT32:
+	{
+		struct tegra_dc_ext_lut32 args;
+		struct tegra_dc_ext_lut tmp;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		/* translate 32-bit version to 64-bit */
+		tmp.win_index = args.win_index;
+		tmp.flags = args.flags;
+		tmp.start = args.start;
+		tmp.len = args.len;
+		tmp.r = compat_ptr(args.r);
+		tmp.g = compat_ptr(args.g);
+		tmp.b = compat_ptr(args.b);
+
+		return tegra_dc_ext_set_lut(user, &tmp);
+	}
+#endif
 	case TEGRA_DC_EXT_SET_LUT:
 	{
 		struct tegra_dc_ext_lut args;
@@ -1283,6 +1418,31 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return tegra_dc_ext_set_lut(user, &args);
 	}
 
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_GET_FEATURES32:
+	{
+		struct tegra_dc_ext_feature32 args;
+		struct tegra_dc_ext_feature tmp;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		/* convert 32-bit to 64-bit version */
+		tmp.length = args.length;
+		tmp.entries = compat_ptr(args.entries);
+
+		ret = tegra_dc_ext_get_feature(user, &tmp);
+
+		/* convert back to 32-bit version, tmp.entries not modified */
+		args.length = tmp.length;
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
+	}
+#endif
 	case TEGRA_DC_EXT_GET_FEATURES:
 	{
 		struct tegra_dc_ext_feature args;
@@ -1463,7 +1623,7 @@ static const struct file_operations tegra_dc_devops = {
 	.release =		tegra_dc_release,
 	.unlocked_ioctl =	tegra_dc_ioctl,
 #ifdef CONFIG_COMPAT
-	.compat_ioctl =	tegra_dc_ioctl,
+	.compat_ioctl =		tegra_dc_ioctl,
 #endif
 };
 

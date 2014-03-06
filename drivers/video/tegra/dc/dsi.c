@@ -2120,9 +2120,9 @@ static void tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 	val |= PAD_DRIV_UP_REF(0x3);
 	tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_MIPI_BIAS_PAD_CFG1_0);
-	/*Bug 1445912: override tap delay for panel-a-1200-800-8-0 */
+	/*Bug 1445912: override tap delay for panel-a-1200-1920-7-0 */
 	if (dsi->info.boardinfo.platform_boardid == BOARD_P1761 &&
-		dsi->info.boardinfo.display_boardversion == 0) {
+		dsi->info.boardinfo.display_boardversion == 1) {
 		val = (DSI_PAD_OUTADJ3(0x3) | DSI_PAD_OUTADJ2(0x3) |
 		   DSI_PAD_OUTADJ1(0x3) | DSI_PAD_OUTADJ0(0x3));
 		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_1_VS1);

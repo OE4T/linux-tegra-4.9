@@ -16,6 +16,7 @@
 #include <linux/types.h>
 #include <dev.h>
 #include "gk20a/gk20a.h"
+#include "kind_gk20a.h"
 #include "hw_mc_gk20a.h"
 
 static void fb_gk20a_reset(struct gk20a *g)
@@ -31,4 +32,6 @@ static void fb_gk20a_reset(struct gk20a *g)
 void gk20a_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.reset = fb_gk20a_reset;
+	gk20a_init_uncompressed_kind_map();
+	gk20a_init_kind_attr();
 }

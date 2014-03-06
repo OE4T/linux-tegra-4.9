@@ -262,6 +262,9 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	if (g->ops.fb.reset)
 		g->ops.fb.reset(g);
 
+	if (g->ops.fb.init_fs_state)
+		g->ops.fb.init_fs_state(g);
+
 	return 0;
 }
 
@@ -340,9 +343,6 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 
 	gk20a_init_bar1_vm(mm);
-
-	gk20a_init_uncompressed_kind_map();
-	gk20a_init_kind_attr();
 
 	mm->remove_support = gk20a_remove_mm_support;
 	mm->sw_ready = true;

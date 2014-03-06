@@ -115,7 +115,10 @@ struct gpu_ops {
 	} gr;
 	const char *name;
 	struct {
+		void (*init_fs_state)(struct gk20a *g);
 		void (*reset)(struct gk20a *g);
+		void (*init_uncompressed_kind_map)(struct gk20a *g);
+		void (*init_kind_attr)(struct gk20a *g);
 	} fb;
 };
 

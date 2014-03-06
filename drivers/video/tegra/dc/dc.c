@@ -1256,13 +1256,13 @@ void tegra_dc_incr_syncpt_min(struct tegra_dc *dc, int i, u32 val)
 struct sync_fence *tegra_dc_create_fence(struct tegra_dc *dc, int i, u32 val)
 {
 	struct nvhost_ctrl_sync_fence_info syncpt;
-	struct nvhost_master *host = nvhost_get_host(dc->ndev);
 	u32 id = tegra_dc_get_syncpt_id(dc, i);
 
 	syncpt.id = id;
 	syncpt.thresh = val;
-	return nvhost_sync_create_fence(&host->syncpt, &syncpt, 1,
-			dev_name(&dc->ndev->dev));
+	return nvhost_sync_create_fence(
+			to_platform_device(dc->ndev->dev.parent),
+			&syncpt, 1, dev_name(&dc->ndev->dev));
 }
 
 void

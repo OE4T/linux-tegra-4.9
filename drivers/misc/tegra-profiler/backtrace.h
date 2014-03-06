@@ -18,13 +18,18 @@
 #define __QUADD_BACKTRACE_H
 
 #include <linux/mm.h>
-#include <linux/tegra_profiler.h>
 
 #define QUADD_MAX_STACK_DEPTH		64
 
 struct quadd_callchain {
 	int nr;
-	quadd_bt_addr_t ip[QUADD_MAX_STACK_DEPTH];
+
+	union {
+		u32 ip_32[QUADD_MAX_STACK_DEPTH];
+		u64 ip_64[QUADD_MAX_STACK_DEPTH];
+	};
+
+	int cs_64;
 
 	unsigned int unw_method;
 	unsigned int unw_rc;
@@ -39,7 +44,13 @@ quadd_get_user_callchain(struct pt_regs *regs,
 			 struct quadd_ctx *ctx);
 
 void quadd_callchain_store(struct quadd_callchain *cc,
-			   quadd_bt_addr_t ip);
+			   unsigned long ip);
+
+unsigned long
+quadd_user_stack_pointer(struct pt_regs *regs);
+
+unsigned long
+quadd_user_link_register(struct pt_regs *regs);
 
 static inline int
 is_vma_addr(unsigned long addr, struct vm_area_struct *vma)

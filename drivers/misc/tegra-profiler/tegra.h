@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/tegra.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,16 @@
 #include <../../mach-tegra/pm.h>
 #endif
 
+static inline int
+is_thumb_mode(struct pt_regs *regs)
+{
+#ifdef CONFIG_ARM64
+	return compat_thumb_mode(regs);
+#else
+	return thumb_mode(regs);
+#endif
+}
+
 static inline unsigned int
 quadd_get_processor_id(struct pt_regs *regs, unsigned int *flags)
 {
@@ -36,7 +46,7 @@ quadd_get_processor_id(struct pt_regs *regs, unsigned int *flags)
 			*flags |= QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP;
 #endif
 
-		if (regs && thumb_mode(regs))
+		if (regs && is_thumb_mode(regs))
 			*flags |= QUADD_CPUMODE_THUMB;
 	}
 

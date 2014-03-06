@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	22
+#define QUADD_SAMPLES_VERSION	23
 #define QUADD_IO_VERSION	10
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -33,6 +33,7 @@
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
 #define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD	19
 #define QUADD_SAMPLE_VERSION_BT_UNWIND_TABLES	22
+#define QUADD_SAMPLE_VERSION_SUPPORT_IP64	23
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -132,8 +133,6 @@ enum quadd_cpu_mode {
 	QUADD_CPU_MODE_NONE,
 };
 
-typedef u32 quadd_bt_addr_t;
-
 #pragma pack(push, 1)
 
 #define QUADD_SAMPLE_UNW_METHOD_SHIFT	0
@@ -161,6 +160,8 @@ enum {
 	QUADD_URC_SPARE_ENCODING,
 	QUADD_URC_UNSUPPORTED_PR,
 };
+
+#define QUADD_SAMPLE_ED_IP64	(1 << 0)
 
 struct quadd_sample_data {
 	u64 ip;

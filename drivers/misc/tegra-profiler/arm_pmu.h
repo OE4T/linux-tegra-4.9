@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/armv7_pmu.h
+ * drivers/misc/tegra-profiler/arm_pmu.h
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,14 +14,30 @@
  *
  */
 
-#ifndef __ARMV7_PMU_H
-#define __ARMV7_PMU_H
+#ifndef __ARM_PMU_H
+#define __ARM_PMU_H
 
-struct quadd_event_source_interface;
+#include <linux/list.h>
 
-extern struct quadd_event_source_interface *quadd_armv7_pmu_init(void);
-extern void quadd_armv7_pmu_deinit(void);
+#define QUADD_MAX_PMU_COUNTERS	32
 
-void quadd_pmu_test(void);
+struct quadd_pmu_event_info {
+	int quadd_event_id;
+	int hw_value;
 
-#endif	/* __ARMV7_PMU_H */
+	struct list_head list;
+};
+
+struct quadd_pmu_ctx {
+	int arch;
+	char arch_name[64];
+
+	u32 counters_mask;
+
+	struct list_head used_events;
+
+	int l1_cache_rw;
+	int *current_map;
+};
+
+#endif	/* __ARM_PMU_H */

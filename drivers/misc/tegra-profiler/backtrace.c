@@ -28,12 +28,65 @@
 
 #define QUADD_USER_SPACE_MIN_ADDR	0x8000
 
+static inline int
+is_thumb_mode(struct pt_regs *regs)
+{
+#ifdef CONFIG_ARM64
+	return compat_thumb_mode(regs);
+#else
+	return thumb_mode(regs);
+#endif
+}
+
+unsigned long
+quadd_user_stack_pointer(struct pt_regs *regs)
+{
+#ifdef CONFIG_ARM64
+	if (compat_user_mode(regs))
+		return regs->compat_sp;
+#endif
+
+	return user_stack_pointer(regs);
+}
+
+static inline unsigned long
+get_user_frame_pointer(struct pt_regs *regs)
+{
+	unsigned long fp;
+
+#ifdef CONFIG_ARM64
+	if (compat_user_mode(regs))
+		fp = is_thumb_mode(regs) ?
+			regs->compat_usr(7) : regs->compat_usr(11);
+	else
+		fp = regs->regs[29];
+#else
+	fp = is_thumb_mode(regs) ? regs->ARM_r7 : regs->ARM_fp;
+#endif
+	return fp;
+}
+
+unsigned long
+quadd_user_link_register(struct pt_regs *regs)
+{
+#ifdef CONFIG_ARM64
+	return compat_user_mode(regs) ?
+		regs->compat_lr : regs->regs[30];
+#else
+	return regs->ARM_lr;
+#endif
+}
+
 void
 quadd_callchain_store(struct quadd_callchain *cc,
-		      quadd_bt_addr_t ip)
+		      unsigned long ip)
 {
-	if (ip && cc->nr < QUADD_MAX_STACK_DEPTH)
-		cc->ip[cc->nr++] = ip;
+	if (ip && cc->nr < QUADD_MAX_STACK_DEPTH) {
+		if (cc->cs_64)
+			cc->ip_64[cc->nr++] = ip;
+		else
+			cc->ip_32[cc->nr++] = ip;
+	}
 }
 
 static unsigned long __user *
@@ -100,13 +153,9 @@ get_user_callchain_fp(struct pt_regs *regs,
 	if (!regs || !mm)
 		return 0;
 
-	if (thumb_mode(regs))
-		fp = regs->ARM_r7;
-	else
-		fp = regs->ARM_fp;
-
-	sp = user_stack_pointer(regs);
+	sp = quadd_user_stack_pointer(regs);
 	pc = instruction_pointer(regs);
+	fp = get_user_frame_pointer(regs);
 
 	if (fp == 0 || fp < sp || fp & 0x3)
 		return 0;
@@ -120,12 +169,12 @@ get_user_callchain_fp(struct pt_regs *regs,
 
 	if (probe_kernel_address(fp, reg)) {
 		pr_warn_once("frame error: sp/fp: %#lx/%#lx, pc/lr: %#lx/%#lx, vma: %#lx-%#lx\n",
-			     sp, fp, pc, regs->ARM_lr,
+			     sp, fp, pc, quadd_user_link_register(regs),
 			     vma->vm_start, vma->vm_end);
 		return 0;
 	}
 
-	if (thumb_mode(regs)) {
+	if (is_thumb_mode(regs)) {
 		if (reg <= fp || !is_vma_addr(reg, vma))
 			return 0;
 	} else if (reg > fp && is_vma_addr(reg, vma)) {
@@ -146,11 +195,12 @@ get_user_callchain_fp(struct pt_regs *regs,
 
 		if (!read_lr || !is_vma_addr(value, vma_pc)) {
 			/* gcc: fp --> short frame tail (fp) */
+			unsigned long lr = quadd_user_link_register(regs);
 
-			if (regs->ARM_lr < QUADD_USER_SPACE_MIN_ADDR)
+			if (lr < QUADD_USER_SPACE_MIN_ADDR)
 				return 0;
 
-			quadd_callchain_store(cc, regs->ARM_lr);
+			quadd_callchain_store(cc, lr);
 			tail = (unsigned long __user *)reg;
 		}
 	}
@@ -162,6 +212,145 @@ get_user_callchain_fp(struct pt_regs *regs,
 		tail = user_backtrace(tail, cc, vma);
 
 	return cc->nr;
+}
+
+#ifdef CONFIG_ARM64
+static u32 __user *
+user_backtrace_compat(u32 __user *tail,
+	       struct quadd_callchain *cc,
+	       struct vm_area_struct *stack_vma)
+{
+	u32 value, value_lr = 0, value_fp = 0;
+	u32 __user *fp_prev = NULL;
+
+	if (!is_vma_addr((unsigned long)tail, stack_vma))
+		return NULL;
+
+	if (__copy_from_user_inatomic(&value, tail, sizeof(value)))
+		return NULL;
+
+	if (is_vma_addr(value, stack_vma)) {
+		/* gcc thumb/clang frame */
+		value_fp = value;
+
+		if (!is_vma_addr((unsigned long)(tail + 1), stack_vma))
+			return NULL;
+
+		if (__copy_from_user_inatomic(&value_lr, tail + 1,
+					      sizeof(value_lr)))
+			return NULL;
+	} else {
+		/* gcc arm frame */
+		if (__copy_from_user_inatomic(&value_fp, tail - 1,
+					      sizeof(value_fp)))
+			return NULL;
+
+		if (!is_vma_addr(value_fp, stack_vma))
+			return NULL;
+
+		value_lr = value;
+	}
+
+	fp_prev = (u32 __user *)(unsigned long)value_fp;
+
+	if (value_lr < QUADD_USER_SPACE_MIN_ADDR)
+		return NULL;
+
+	quadd_callchain_store(cc, value_lr);
+
+	if (fp_prev <= tail)
+		return NULL;
+
+	return fp_prev;
+}
+
+static unsigned int
+get_user_callchain_fp_compat(struct pt_regs *regs,
+			     struct quadd_callchain *cc)
+{
+	u32 fp, sp, pc, reg;
+	struct vm_area_struct *vma, *vma_pc;
+	u32 __user *tail = NULL;
+	struct mm_struct *mm = current->mm;
+
+	cc->nr = 0;
+
+	if (!regs || !mm)
+		return 0;
+
+	sp = quadd_user_stack_pointer(regs);
+	pc = instruction_pointer(regs);
+	fp = get_user_frame_pointer(regs);
+
+	if (fp == 0 || fp < sp || fp & 0x3)
+		return 0;
+
+	vma = find_vma(mm, sp);
+	if (!vma)
+		return 0;
+
+	if (!is_vma_addr(fp, vma))
+		return 0;
+
+	if (probe_kernel_address((unsigned long)fp, reg)) {
+		pr_warn_once("frame error: sp/fp: %#x/%#x, pc/lr: %#x/%#x, vma: %#lx-%#lx\n",
+			     sp, fp, pc, (u32)quadd_user_link_register(regs),
+			     vma->vm_start, vma->vm_end);
+		return 0;
+	}
+
+	if (is_thumb_mode(regs)) {
+		if (reg <= fp || !is_vma_addr(reg, vma))
+			return 0;
+	} else if (reg > fp && is_vma_addr(reg, vma)) {
+		/* fp --> fp prev */
+		u32 value;
+		int read_lr = 0;
+
+		if (is_vma_addr(fp + sizeof(u32), vma)) {
+			if (__copy_from_user_inatomic(
+					&value,
+					(u32 __user *)(fp + sizeof(u32)),
+					sizeof(value)))
+				return 0;
+
+			vma_pc = find_vma(mm, pc);
+			read_lr = 1;
+		}
+
+		if (!read_lr || !is_vma_addr(value, vma_pc)) {
+			/* gcc: fp --> short frame tail (fp) */
+			u32 lr = quadd_user_link_register(regs);
+
+			if (lr < QUADD_USER_SPACE_MIN_ADDR)
+				return 0;
+
+			quadd_callchain_store(cc, lr);
+			tail = (u32 __user *)(unsigned long)reg;
+		}
+	}
+
+	if (!tail)
+		tail = (u32 __user *)(unsigned long)fp;
+
+	while (tail && !((unsigned long)tail & 0x3))
+		tail = user_backtrace_compat(tail, cc, vma);
+
+	return cc->nr;
+}
+#endif	/* CONFIG_ARM64 */
+
+static unsigned int
+__get_user_callchain_fp(struct pt_regs *regs,
+		      struct quadd_callchain *cc)
+{
+	cc->unw_method = QUADD_UNW_METHOD_FP;
+
+#ifdef CONFIG_ARM64
+	if (compat_user_mode(regs))
+		return get_user_callchain_fp_compat(regs, cc);
+#endif
+	return get_user_callchain_fp(regs, cc);
 }
 
 unsigned int
@@ -178,6 +367,12 @@ quadd_get_user_callchain(struct pt_regs *regs,
 	if (!regs)
 		return 0;
 
+#ifdef CONFIG_ARM64
+	cc->cs_64 = compat_user_mode(regs) ? 0 : 1;
+#else
+	cc->cs_64 = 0;
+#endif
+
 	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
 
 	unw_fp = extra & QUADD_PARAM_EXTRA_BT_FP;
@@ -189,7 +384,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 		nr = quadd_get_user_callchain_ut(regs, cc);
 
 	if (!nr && unw_fp)
-		nr = get_user_callchain_fp(regs, cc);
+		nr = __get_user_callchain_fp(regs, cc);
 
 	return nr;
 }

@@ -16,7 +16,6 @@
 
 #ifdef CONFIG_PROC_FS
 
-#include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
@@ -29,6 +28,8 @@
 #define YES_NO(x) ((x) ? "yes" : "no")
 
 static struct quadd_ctx *ctx;
+
+#define QUADD_PROC_DEV QUADD_DEVICE_NAME
 
 static int show_version(struct seq_file *f, void *offset)
 {
@@ -157,18 +158,20 @@ void quadd_proc_init(struct quadd_ctx *context)
 {
 	ctx = context;
 
-	proc_mkdir("quadd", NULL);
-	proc_create("quadd/version", 0, NULL, &version_proc_fops);
-	proc_create("quadd/capabilities", 0, NULL, &capabilities_proc_fops);
-	proc_create("quadd/status", 0, NULL, &status_proc_fops);
+	proc_mkdir(QUADD_PROC_DEV, NULL);
+
+	proc_create(QUADD_PROC_DEV "/version", 0, NULL, &version_proc_fops);
+	proc_create(QUADD_PROC_DEV "/capabilities", 0, NULL,
+		    &capabilities_proc_fops);
+	proc_create(QUADD_PROC_DEV "/status", 0, NULL, &status_proc_fops);
 }
 
 void quadd_proc_deinit(void)
 {
-	remove_proc_entry("quadd/version", NULL);
-	remove_proc_entry("quadd/capabilities", NULL);
-	remove_proc_entry("quadd/status", NULL);
-	remove_proc_entry("quadd", NULL);
+	remove_proc_entry(QUADD_PROC_DEV "/version", NULL);
+	remove_proc_entry(QUADD_PROC_DEV "/capabilities", NULL);
+	remove_proc_entry(QUADD_PROC_DEV "/status", NULL);
+	remove_proc_entry(QUADD_PROC_DEV, NULL);
 }
 
 #endif	/* CONFIG_PROC_FS */

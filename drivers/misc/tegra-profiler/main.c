@@ -24,7 +24,7 @@
 #include <linux/tegra_profiler.h>
 
 #include "quadd.h"
-#include "armv7_pmu.h"
+#include "arm_pmu.h"
 #include "hrt.h"
 #include "comm.h"
 #include "mmap.h"
@@ -35,6 +35,12 @@
 #include "version.h"
 #include "quadd_proc.h"
 #include "eh_unwind.h"
+
+#ifdef CONFIG_ARM64
+#include "armv8_pmu.h"
+#else
+#include "armv7_pmu.h"
+#endif
 
 #ifdef CONFIG_CACHE_L2X0
 #include "pl310.h"
@@ -462,7 +468,11 @@ static int __init quadd_module_init(void)
 	ctx.pmu_info.active = 0;
 	ctx.pl310_info.active = 0;
 
+#ifdef CONFIG_ARM64
+	ctx.pmu = quadd_armv8_pmu_init();
+#else
 	ctx.pmu = quadd_armv7_pmu_init();
+#endif
 	if (!ctx.pmu) {
 		pr_err("PMU init failed\n");
 		return -ENODEV;
@@ -545,8 +555,13 @@ static void __exit quadd_module_exit(void)
 	quadd_comm_events_exit();
 	quadd_auth_deinit();
 	quadd_proc_deinit();
-	quadd_armv7_pmu_deinit();
 	quadd_unwind_deinit();
+
+#ifdef CONFIG_ARM64
+	quadd_armv8_pmu_deinit();
+#else
+	quadd_armv7_pmu_deinit();
+#endif
 }
 
 module_init(quadd_module_init);

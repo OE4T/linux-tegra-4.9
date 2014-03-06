@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/armv7_pmu.h
+ * drivers/misc/tegra-profiler/armv8_pmu.h
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,14 +14,12 @@
  *
  */
 
-#ifndef __ARMV7_PMU_H
-#define __ARMV7_PMU_H
+#ifndef __ARMV8_PMU_H
+#define __ARMV8_PMU_H
 
 struct quadd_event_source_interface;
 
-extern struct quadd_event_source_interface *quadd_armv7_pmu_init(void);
-extern void quadd_armv7_pmu_deinit(void);
+extern struct quadd_event_source_interface *quadd_armv8_pmu_init(void);
+extern void quadd_armv8_pmu_deinit(void);
 
-void quadd_pmu_test(void);
-
-#endif	/* __ARMV7_PMU_H */
+#endif	/* __ARMV8_PMU_H */

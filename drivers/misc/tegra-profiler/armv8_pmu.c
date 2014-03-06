@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/armv7_pmu.c
+ * drivers/misc/tegra-profiler/armv8_pmu.c
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -16,29 +16,22 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/printk.h>
+#include <linux/types.h>
+#include <linux/string.h>
+
+#include <linux/version.h>
 #include <linux/err.h>
 #include <linux/bitmap.h>
 #include <linux/slab.h>
-#include <asm/cputype.h>
-#include <asm/pmu.h>
 
-#include <linux/tegra_profiler.h>
+#include <asm/cputype.h>
 
 #include "arm_pmu.h"
-#include "armv7_pmu.h"
-#include "armv7_events.h"
+#include "armv8_pmu.h"
+#include "armv8_events.h"
 #include "quadd.h"
 #include "debug.h"
-
-static struct quadd_pmu_ctx pmu_ctx;
-
-enum {
-	QUADD_ARM_CPU_TYPE_UNKNOWN,
-	QUADD_ARM_CPU_TYPE_CORTEX_A5,
-	QUADD_ARM_CPU_TYPE_CORTEX_A8,
-	QUADD_ARM_CPU_TYPE_CORTEX_A9,
-	QUADD_ARM_CPU_TYPE_CORTEX_A15,
-};
 
 struct quadd_pmu_info {
 	DECLARE_BITMAP(used_cntrs, QUADD_MAX_PMU_COUNTERS);
@@ -55,194 +48,204 @@ struct quadd_cntrs_info {
 
 static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
 
-static unsigned quadd_armv7_a9_events_map[QUADD_EVENT_TYPE_MAX] = {
+static struct quadd_pmu_ctx pmu_ctx;
+
+static unsigned quadd_armv8_pmuv3_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
-		QUADD_ARMV7_A9_HW_EVENT_INST_OUT_OF_RENAME_STAGE,
+		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
 	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
-		QUADD_ARMV7_HW_EVENT_PC_WRITE,
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
 	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
-		QUADD_ARMV7_HW_EVENT_PC_BRANCH_MIS_PRED,
+		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
 	[QUADD_EVENT_TYPE_BUS_CYCLES] =
-		QUADD_ARMV7_HW_EVENT_CLOCK_CYCLES,
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
 
 	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
-		QUADD_ARMV7_HW_EVENT_DCACHE_REFILL,
+		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
 	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
-		QUADD_ARMV7_HW_EVENT_DCACHE_REFILL,
+		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
 	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
-		QUADD_ARMV7_HW_EVENT_IFETCH_MISS,
+		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
 
 	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
-		QUADD_ARMV7_UNSUPPORTED_EVENT,
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
 	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
-		QUADD_ARMV7_UNSUPPORTED_EVENT,
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
 	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
-		QUADD_ARMV7_UNSUPPORTED_EVENT,
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
 };
 
-static unsigned quadd_armv7_a15_events_map[QUADD_EVENT_TYPE_MAX] = {
-	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
-				QUADD_ARMV7_HW_EVENT_INSTR_EXECUTED,
-	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
-				QUADD_ARMV7_A15_HW_EVENT_SPEC_PC_WRITE,
-	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
-				QUADD_ARMV7_HW_EVENT_PC_BRANCH_MIS_PRED,
-	[QUADD_EVENT_TYPE_BUS_CYCLES] = QUADD_ARMV7_HW_EVENT_BUS_CYCLES,
-
-	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
-				QUADD_ARMV7_A15_HW_EVENT_L1_DCACHE_READ_REFILL,
-	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
-				QUADD_ARMV7_A15_HW_EVENT_L1_DCACHE_WRITE_REFILL,
-	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
-				QUADD_ARMV7_HW_EVENT_IFETCH_MISS,
-
-	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
-				QUADD_ARMV7_A15_HW_EVENT_L2_DCACHE_READ_REFILL,
-	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
-				QUADD_ARMV7_A15_HW_EVENT_L2_DCACHE_WRITE_REFILL,
-	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
-				QUADD_ARMV7_UNSUPPORTED_EVENT,
-};
+/*********************************************************************/
 
 static inline u32
-armv7_pmu_pmnc_read(void)
+armv8_pmu_pmcr_read(void)
 {
 	u32 val;
 
-	/* Read Performance MoNitor Control (PMNC) register */
-	asm volatile("mrc p15, 0, %0, c9, c12, 0" : "=r"(val));
+	/* Read Performance Monitors Control Register */
+	asm volatile("mrs %0, pmcr_el0" : "=r" (val));
 	return val;
 }
 
 static inline void
-armv7_pmu_pmnc_write(u32 val)
+armv8_pmu_pmcr_write(u32 val)
 {
-	/* Write Performance MoNitor Control (PMNC) register */
-	asm volatile("mcr p15, 0, %0, c9, c12, 0" : :
-		     "r"(val & QUADD_ARMV7_PMNC_MASK));
+	asm volatile("msr pmcr_el0, %0" : :
+		     "r" (val & QUADD_ARMV8_PMCR_WR_MASK));
 }
 
 static inline u32
-armv7_pmu_cntens_read(void)
+armv8_pmu_pmceid_read(void)
 {
 	u32 val;
 
-	/* Read CouNT ENable Set (CNTENS) register */
-	asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(val));
+	/* Read Performance Monitors Common Event Identification Register */
+	asm volatile("mrs %0, pmceid0_el0" : "=r" (val));
+	return val;
+}
+
+static inline u32
+armv8_pmu_pmcntenset_read(void)
+{
+	u32 val;
+
+	/* Read Performance Monitors Count Enable Set Register */
+	asm volatile("mrs %0, pmcntenset_el0" : "=r" (val));
 	return val;
 }
 
 static inline void
-armv7_pmu_cntens_write(u32 val)
+armv8_pmu_pmcntenset_write(u32 val)
 {
-	/* Write CouNT ENable Set (CNTENS) register */
-	asm volatile("mcr p15, 0, %0, c9, c12, 1" : : "r" (val));
+	/* Write Performance Monitors Count Enable Set Register */
+	asm volatile("msr pmcntenset_el0, %0" : : "r" (val));
 }
 
 static inline void
-armv7_pmu_cntenc_write(u32 val)
+armv8_pmu_pmcntenclr_write(u32 val)
 {
-	/* Write CouNT ENable Clear (CNTENC) register */
-	asm volatile("mcr p15, 0, %0, c9, c12, 2" : : "r" (val));
+	/* Write Performance Monitors Count Enable Clear Register */
+	asm volatile("msr pmcntenclr_el0, %0" : : "r" (val));
 }
 
 static inline void
-armv7_pmu_pmnxsel_write(u32 val)
+armv8_pmu_pmselr_write(u32 val)
 {
-	/* Read Performance Counter SELection (PMNXSEL) register */
-	asm volatile("mcr p15, 0, %0, c9, c12, 5" : :
-		     "r" (val & QUADD_ARMV7_SELECT_MASK));
+	/* Write Performance Monitors Event Counter Selection Register */
+	asm volatile("msr pmselr_el0, %0" : :
+		     "r" (val & QUADD_ARMV8_SELECT_MASK));
 }
 
-static inline u32
-armv7_pmu_ccnt_read(void)
+static inline u64
+armv8_pmu_pmccntr_read(void)
 {
-	u32 val;
+	u64 val;
 
-	/* Read Cycle CouNT (CCNT) register */
-	asm volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r"(val));
+	/* Read Performance Monitors Cycle Count Register */
+	asm volatile("mrs %0, pmccntr_el0" : "=r" (val));
 	return val;
 }
 
 static inline void
-armv7_pmu_ccnt_write(u32 val)
+armv8_pmu_pmccntr_write(u64 val)
 {
-	/* Write Cycle CouNT (CCNT) register */
-	asm volatile ("mcr p15, 0, %0, c9, c13, 0" : : "r"(val));
+	/* Write Performance Monitors Selected Event Count Register */
+	asm volatile("msr pmccntr_el0, %0" : : "r" (val));
 }
 
 static inline u32
-armv7_pmu_pmcnt_read(void)
+armv8_pmu_pmxevcntr_read(void)
 {
 	u32 val;
 
-	/* Read Performance Monitor CouNT (PMCNTx) registers */
-	asm volatile ("mrc p15, 0, %0, c9, c13, 2" : "=r"(val));
+	/* Read Performance Monitors Selected Event Count Register */
+	asm volatile("mrs %0, pmxevcntr_el0" : "=r" (val));
 	return val;
 }
 
 static inline void
-armv7_pmu_pmcnt_write(u32 val)
+armv8_pmu_pmxevcntr_write(u32 val)
 {
-	/* Write Performance Monitor CouNT (PMCNTx) registers */
-	asm volatile ("mcr p15, 0, %0, c9, c13, 2" : : "r"(val));
+	/* Write Performance Monitors Selected Event Count Register */
+	asm volatile("msr pmxevcntr_el0, %0" : : "r" (val));
 }
 
 static inline void
-armv7_pmu_evtsel_write(u32 event)
+armv8_pmu_pmxevtyper_write(u32 event)
 {
-	/* Write Event SELection (EVTSEL) register */
-	asm volatile("mcr p15, 0, %0, c9, c13, 1" : :
-		     "r" (event & QUADD_ARMV7_EVTSEL_MASK));
+	/* Write Performance Monitors Selected Event Type Register */
+	asm volatile("msr pmxevtyper_el0, %0" : :
+		     "r" (event & QUADD_ARMV8_EVTSEL_MASK));
 }
 
 static inline u32
-armv7_pmu_intens_read(void)
+armv8_pmu_pmintenset_read(void)
 {
 	u32 val;
 
-	/* Read INTerrupt ENable Set (INTENS) register */
-	asm volatile ("mrc p15, 0, %0, c9, c14, 1" : "=r"(val));
+	/* Read Performance Monitors Interrupt Enable Set Register */
+	asm volatile("mrs %0, pmintenset_el1" : "=r" (val));
 	return val;
 }
 
 static inline void
-armv7_pmu_intens_write(u32 val)
+armv8_pmu_pmintenset_write(u32 val)
 {
-	/* Write INTerrupt ENable Set (INTENS) register */
-	asm volatile ("mcr p15, 0, %0, c9, c14, 1" : : "r"(val));
+	/* Write Performance Monitors Interrupt Enable Set Register */
+	asm volatile("msr pmintenset_el1, %0" : : "r" (val));
 }
 
 static inline void
-armv7_pmu_intenc_write(u32 val)
+armv8_pmu_pmintenclr_write(u32 val)
 {
-	/* Write INTerrupt ENable Clear (INTENC) register */
-	asm volatile ("mcr p15, 0, %0, c9, c14, 2" : : "r"(val));
+	/* Write Performance Monitors Interrupt Enable Clear Register */
+	asm volatile("msr pmintenclr_el1, %0" : : "r" (val));
 }
+
+static inline u32
+armv8_pmu_pmovsclr_read(void)
+{
+	u32 val;
+
+	/* Read Performance Monitors Overflow Flag Status Register */
+	asm volatile("mrs %0, pmovsclr_el0" : "=r" (val));
+	return val;
+}
+
+static inline void
+armv8_pmu_pmovsclr_write(int idx)
+{
+	/* Write Performance Monitors Overflow Flag Status Register */
+	asm volatile("msr pmovsclr_el0, %0" : : "r" (BIT(idx)));
+}
+
+/*********************************************************************/
+
+
 
 static void enable_counter(int idx)
 {
-	armv7_pmu_cntens_write(1UL << idx);
+	armv8_pmu_pmcntenset_write(BIT(idx));
 }
 
 static void disable_counter(int idx)
 {
-	armv7_pmu_cntenc_write(1UL << idx);
+	armv8_pmu_pmcntenclr_write(BIT(idx));
 }
 
 static void select_counter(unsigned int counter)
 {
-	armv7_pmu_pmnxsel_write(counter);
+	armv8_pmu_pmselr_write(counter);
 }
 
 static int is_pmu_enabled(void)
 {
-	u32 pmnc = armv7_pmu_pmnc_read();
+	u32 pmcr = armv8_pmu_pmcr_read();
 
-	if (pmnc & QUADD_ARMV7_PMNC_E) {
-		u32 cnten = armv7_pmu_cntens_read();
-		cnten &= pmu_ctx.counters_mask | QUADD_ARMV7_CCNT;
-		return cnten ? 1 : 0;
+	if (pmcr & QUADD_ARMV8_PMCR_E) {
+		u32 pmcnten = armv8_pmu_pmcntenset_read();
+		pmcnten &= pmu_ctx.counters_mask | QUADD_ARMV8_CCNT;
+		return pmcnten ? 1 : 0;
 	}
 
 	return 0;
@@ -252,11 +255,11 @@ static u32 read_counter(int idx)
 {
 	u32 val;
 
-	if (idx == QUADD_ARMV7_CCNT_BIT) {
-		val = armv7_pmu_ccnt_read();
+	if (idx == QUADD_ARMV8_CCNT_BIT) {
+		val = armv8_pmu_pmccntr_read();
 	} else {
 		select_counter(idx);
-		val = armv7_pmu_pmcnt_read();
+		val = armv8_pmu_pmxevcntr_read();
 	}
 
 	return val;
@@ -264,11 +267,11 @@ static u32 read_counter(int idx)
 
 static void write_counter(int idx, u32 value)
 {
-	if (idx == QUADD_ARMV7_CCNT_BIT) {
-		armv7_pmu_ccnt_write(value);
+	if (idx == QUADD_ARMV8_CCNT_BIT) {
+		armv8_pmu_pmccntr_write(value);
 	} else {
 		select_counter(idx);
-		armv7_pmu_pmcnt_write(value);
+		armv8_pmu_pmxevcntr_write(value);
 	}
 }
 
@@ -278,14 +281,14 @@ get_free_counters(unsigned long *bitmap, int nbits, int *ccntr)
 	int cc;
 	u32 cntens;
 
-	cntens = armv7_pmu_cntens_read();
-	cntens = ~cntens & (pmu_ctx.counters_mask | QUADD_ARMV7_CCNT);
+	cntens = armv8_pmu_pmcntenset_read();
+	cntens = ~cntens & (pmu_ctx.counters_mask | QUADD_ARMV8_CCNT);
 
 	bitmap_zero(bitmap, nbits);
 	bitmap_copy(bitmap, (unsigned long *)&cntens,
 		    BITS_PER_BYTE * sizeof(u32));
 
-	cc = (cntens & QUADD_ARMV7_CCNT) ? 1 : 0;
+	cc = (cntens & QUADD_ARMV8_CCNT) ? 1 : 0;
 
 	if (ccntr)
 		*ccntr = cc;
@@ -293,48 +296,31 @@ get_free_counters(unsigned long *bitmap, int nbits, int *ccntr)
 	return bitmap_weight(bitmap, BITS_PER_BYTE * sizeof(u32)) - cc;
 }
 
-static u32 armv7_pmu_adjust_value(u32 value, int event_id)
-{
-	/*
-	* Cortex A8/A9: l1 cache performance counters
-	* don't differentiate between read and write data accesses/misses,
-	* so currently we are devided by two
-	*/
-	if (pmu_ctx.l1_cache_rw &&
-	    (pmu_ctx.arch == QUADD_ARM_CPU_TYPE_CORTEX_A8 ||
-	    pmu_ctx.arch == QUADD_ARM_CPU_TYPE_CORTEX_A9) &&
-	    (event_id == QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES ||
-	    event_id == QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES)) {
-		return value / 2;
-	}
-	return value;
-}
-
 static void __maybe_unused
 disable_interrupt(int idx)
 {
-	armv7_pmu_intenc_write(1UL << idx);
+	armv8_pmu_pmintenclr_write(BIT(idx));
 }
 
 static void
 disable_all_interrupts(void)
 {
-	u32 val = QUADD_ARMV7_CCNT | pmu_ctx.counters_mask;
-	armv7_pmu_intenc_write(val);
+	u32 val = QUADD_ARMV8_CCNT | pmu_ctx.counters_mask;
+	armv8_pmu_pmintenclr_write(val);
 }
 
 static void
-armv7_pmnc_reset_overflow_flags(void)
+reset_overflow_flags(void)
 {
-	u32 val = QUADD_ARMV7_CCNT | pmu_ctx.counters_mask;
-	asm volatile("mcr p15, 0, %0, c9, c12, 3" : : "r" (val));
+	u32 val = QUADD_ARMV8_CCNT | pmu_ctx.counters_mask;
+	armv8_pmu_pmovsclr_write(val);
 }
 
 static void
 select_event(unsigned int idx, unsigned int event)
 {
 	select_counter(idx);
-	armv7_pmu_evtsel_write(event);
+	armv8_pmu_pmxevtyper_write(event);
 }
 
 static void disable_all_counters(void)
@@ -342,11 +328,11 @@ static void disable_all_counters(void)
 	u32 val;
 
 	/* Disable all counters */
-	val = armv7_pmu_pmnc_read();
-	if (val & QUADD_ARMV7_PMNC_E)
-		armv7_pmu_pmnc_write(val & ~QUADD_ARMV7_PMNC_E);
+	val = armv8_pmu_pmcr_read();
+	if (val & QUADD_ARMV8_PMCR_E)
+		armv8_pmu_pmcr_write(val & ~QUADD_ARMV8_PMCR_E);
 
-	armv7_pmu_cntenc_write(QUADD_ARMV7_CCNT | pmu_ctx.counters_mask);
+	armv8_pmu_pmcntenclr_write(QUADD_ARMV8_CCNT | pmu_ctx.counters_mask);
 }
 
 static void enable_all_counters(void)
@@ -354,23 +340,23 @@ static void enable_all_counters(void)
 	u32 val;
 
 	/* Enable all counters */
-	val = armv7_pmu_pmnc_read();
-	val |= QUADD_ARMV7_PMNC_E | QUADD_ARMV7_PMNC_X;
-	armv7_pmu_pmnc_write(val);
+	val = armv8_pmu_pmcr_read();
+	val |= QUADD_ARMV8_PMCR_E | QUADD_ARMV8_PMCR_X;
+	armv8_pmu_pmcr_write(val);
 }
 
 static void reset_all_counters(void)
 {
 	u32 val;
 
-	val = armv7_pmu_pmnc_read();
-	val |= QUADD_ARMV7_PMNC_P | QUADD_ARMV7_PMNC_C;
-	armv7_pmu_pmnc_write(val);
+	val = armv8_pmu_pmcr_read();
+	val |= QUADD_ARMV8_PMCR_P | QUADD_ARMV8_PMCR_C;
+	armv8_pmu_pmcr_write(val);
 }
 
 static void quadd_init_pmu(void)
 {
-	armv7_pmnc_reset_overflow_flags();
+	reset_overflow_flags();
 	disable_all_interrupts();
 }
 
@@ -443,7 +429,7 @@ static void pmu_start(void)
 				pr_err_once("Error: cpu cycles counter is already occupied\n");
 				return;
 			}
-			index = QUADD_ARMV7_CCNT_BIT;
+			index = QUADD_ARMV8_CCNT_BIT;
 		} else {
 			if (!pcntrs--) {
 				pr_err_once("Error: too many performance events\n");
@@ -509,11 +495,11 @@ pmu_read(struct event_data *events, int max_events)
 		int index;
 
 		if (ei->quadd_event_id == QUADD_EVENT_TYPE_CPU_CYCLES) {
-			if (!test_bit(QUADD_ARMV7_CCNT_BIT, pi->used_cntrs)) {
+			if (!test_bit(QUADD_ARMV8_CCNT_BIT, pi->used_cntrs)) {
 				pr_err_once("Error: ccntr is not used\n");
 				return 0;
 			}
-			index = QUADD_ARMV7_CCNT_BIT;
+			index = QUADD_ARMV8_CCNT_BIT;
 		} else {
 			index = find_next_bit(pi->used_cntrs,
 					      QUADD_MAX_PMU_COUNTERS, idx);
@@ -526,7 +512,6 @@ pmu_read(struct event_data *events, int max_events)
 		}
 
 		val = read_counter(index);
-		val = armv7_pmu_adjust_value(val, ei->quadd_event_id);
 
 		events->event_source = QUADD_EVENT_SOURCE_PMU;
 		events->event_id = ei->quadd_event_id;
@@ -637,11 +622,14 @@ static int set_events(int *events, int size)
 	pr_info("free counters: pcntrs/ccntr: %d/%d\n",
 		free_pcntrs, free_ci.ccntr);
 
+	pr_info("event identification register: %#x\n",
+		armv8_pmu_pmceid_read());
+
 	for (i = 0; i < size; i++) {
 		struct quadd_pmu_event_info *ei;
 
 		if (events[i] > QUADD_EVENT_TYPE_MAX) {
-			pr_err("Error event: %d\n", events[i]);
+			pr_err("error event: %d\n", events[i]);
 			err = -EINVAL;
 			goto out_free;
 		}
@@ -656,15 +644,15 @@ static int set_events(int *events, int size)
 		list_add_tail(&ei->list, &pmu_ctx.used_events);
 
 		if (events[i] == QUADD_EVENT_TYPE_CPU_CYCLES) {
-			ei->hw_value = QUADD_ARMV7_CPU_CYCLE_EVENT;
+			ei->hw_value = QUADD_ARMV8_CPU_CYCLE_EVENT;
 			if (!free_ci.ccntr) {
-				pr_err("Error: cpu cycles counter is already occupied\n");
+				pr_err("error: cpu cycles counter is already occupied\n");
 				err = -EBUSY;
 				goto out_free;
 			}
 		} else {
 			if (!free_pcntrs--) {
-				pr_err("Error: too many performance events\n");
+				pr_err("error: too many performance events\n");
 				err = -ENOSPC;
 				goto out_free;
 			}
@@ -701,7 +689,7 @@ static int get_supported_events(int *events, int max_events)
 	max_events = min_t(int, QUADD_EVENT_TYPE_MAX, max_events);
 
 	for (i = 0; i < max_events; i++) {
-		if (pmu_ctx.current_map[i] != QUADD_ARMV7_UNSUPPORTED_EVENT)
+		if (pmu_ctx.current_map[i] != QUADD_ARMV8_UNSUPPORTED_EVENT)
 			events[nr_events++] = i;
 	}
 	return nr_events;
@@ -722,7 +710,9 @@ static int get_current_events(int *events, int max_events)
 	return i;
 }
 
-static struct quadd_event_source_interface pmu_armv7_int = {
+/*********************************************************************/
+
+static struct quadd_event_source_interface pmu_armv8_int = {
 	.enable			= pmu_enable,
 	.disable		= pmu_disable,
 
@@ -739,41 +729,53 @@ static struct quadd_event_source_interface pmu_armv7_int = {
 	.get_current_events	= get_current_events,
 };
 
-struct quadd_event_source_interface *quadd_armv7_pmu_init(void)
+struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 {
+	u32 pmcr, imp, idcode;
 	struct quadd_event_source_interface *pmu = NULL;
-	unsigned long cpu_id, cpu_implementer, part_number;
 
-	cpu_id = read_cpuid_id();
-	cpu_implementer = cpu_id >> 24;
-	part_number = cpu_id & 0xFFF0;
+	u64 aa64_dfr = read_cpuid(ID_AA64DFR0_EL1);
+	aa64_dfr = (aa64_dfr >> 8) & 0x0f;
 
-	if (cpu_implementer == ARM_CPU_IMP_ARM) {
-		switch (part_number) {
-		case ARM_CPU_PART_CORTEX_A9:
-			pmu_ctx.arch = QUADD_ARM_CPU_TYPE_CORTEX_A9;
-			strcpy(pmu_ctx.arch_name, "Cortex A9");
-			pmu_ctx.counters_mask =
-				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A9;
-			pmu_ctx.current_map = quadd_armv7_a9_events_map;
-			pmu = &pmu_armv7_int;
-			break;
+	pmu_ctx.arch = QUADD_AA64_CPU_TYPE_UNKNOWN;
 
-		case ARM_CPU_PART_CORTEX_A15:
-			pmu_ctx.arch = QUADD_ARM_CPU_TYPE_CORTEX_A15;
-			strcpy(pmu_ctx.arch_name, "Cortex A15");
-			pmu_ctx.counters_mask =
-				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A15;
-			pmu_ctx.current_map = quadd_armv7_a15_events_map;
-			pmu = &pmu_armv7_int;
-			break;
+	switch (aa64_dfr) {
+	case QUADD_AA64_PMUVER_PMUV3:
+		strcpy(pmu_ctx.arch_name, "AA64 PmuV3");
+		pmu_ctx.counters_mask =
+			QUADD_ARMV8_COUNTERS_MASK_PMUV3;
+		pmu_ctx.current_map = quadd_armv8_pmuv3_events_map;
 
-		default:
-			pmu_ctx.arch = QUADD_ARM_CPU_TYPE_UNKNOWN;
-			strcpy(pmu_ctx.arch_name, "Unknown");
-			pmu_ctx.current_map = NULL;
-			break;
+		pmcr = armv8_pmu_pmcr_read();
+
+		idcode = (pmcr >> QUADD_ARMV8_PMCR_IDCODE_SHIFT) &
+			QUADD_ARMV8_PMCR_IDCODE_MASK;
+		imp = pmcr >> QUADD_ARMV8_PMCR_IMP_SHIFT;
+
+		pr_info("imp: %#x, idcode: %#x\n", imp, idcode);
+
+		if (imp == ARM_CPU_IMP_ARM) {
+			strcat(pmu_ctx.arch_name, " ARM");
+			if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A57) {
+				pmu_ctx.arch = QUADD_AA64_CPU_TYPE_CORTEX_A57;
+				strcat(pmu_ctx.arch_name, " CORTEX_A57");
+			} else {
+				pmu_ctx.arch = QUADD_AA64_CPU_TYPE_ARM;
+			}
+		} else if (imp == QUADD_AA64_CPU_IMP_NVIDIA) {
+			strcat(pmu_ctx.arch_name, " Nvidia");
+			pmu_ctx.arch = QUADD_AA64_CPU_TYPE_DENVER;
+		} else {
+			strcat(pmu_ctx.arch_name, " Unknown");
+			pmu_ctx.arch = QUADD_AA64_CPU_TYPE_UNKNOWN_IMP;
 		}
+
+		pmu = &pmu_armv8_int;
+		break;
+
+	default:
+		pr_err("error: incorrect PMUVer\n");
+		break;
 	}
 
 	INIT_LIST_HEAD(&pmu_ctx.used_events);
@@ -783,7 +785,7 @@ struct quadd_event_source_interface *quadd_armv7_pmu_init(void)
 	return pmu;
 }
 
-void quadd_armv7_pmu_deinit(void)
+void quadd_armv8_pmu_deinit(void)
 {
 	free_events(&pmu_ctx.used_events);
 }

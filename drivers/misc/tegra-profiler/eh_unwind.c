@@ -22,6 +22,8 @@
 #include <linux/uaccess.h>
 #include <linux/err.h>
 
+#include <linux/tegra_profiler.h>
+
 #include "eh_unwind.h"
 #include "backtrace.h"
 
@@ -70,8 +72,8 @@ struct quadd_unwind_ctx {
 };
 
 struct unwind_idx {
-	unsigned long addr_offset;
-	unsigned long insn;
+	u32 addr_offset;
+	u32 insn;
 };
 
 struct stackframe {
@@ -84,10 +86,10 @@ struct stackframe {
 };
 
 struct unwind_ctrl_block {
-	unsigned long vrs[16];		/* virtual register set */
-	const unsigned long *insn;	/* pointer to the current instr word */
-	int entries;			/* number of entries left */
-	int byte;			/* current byte in the instr word */
+	u32 vrs[16];		/* virtual register set */
+	const u32 *insn;	/* pointer to the current instr word */
+	int entries;		/* number of entries left */
+	int byte;		/* current byte in the instr word */
 };
 
 struct pin_pages_work {
@@ -323,18 +325,18 @@ error_out:
 	return err;
 }
 
-static unsigned long
-prel31_to_addr(const unsigned long *ptr)
+static u32
+prel31_to_addr(const u32 *ptr)
 {
-	unsigned long value;
-	long offset;
+	u32 value;
+	s32 offset;
 
 	if (read_user_data(ptr, value))
 		return 0;
 
 	/* sign-extend to 32 bits */
-	offset = (((long)value) << 1) >> 1;
-	return (unsigned long)ptr + offset;
+	offset = (((s32)value) << 1) >> 1;
+	return (u32)(unsigned long)ptr + offset;
 }
 
 static const struct unwind_idx *
@@ -342,7 +344,7 @@ unwind_find_origin(const struct unwind_idx *start,
 		   const struct unwind_idx *stop)
 {
 	while (start < stop) {
-		unsigned long addr_offset;
+		u32 addr_offset;
 		const struct unwind_idx *mid = start + ((stop - start) >> 1);
 
 		if (read_user_data(&mid->addr_offset, addr_offset))
@@ -368,20 +370,20 @@ unwind_find_origin(const struct unwind_idx *start,
  * stop - 1 = last entry
  */
 static const struct unwind_idx *
-search_index(unsigned long addr,
+search_index(u32 addr,
 	     const struct unwind_idx *start,
 	     const struct unwind_idx *origin,
 	     const struct unwind_idx *stop)
 {
-	unsigned long addr_prel31;
+	u32 addr_prel31;
 
-	pr_debug("%08lx, %p, %p, %p\n", addr, start, origin, stop);
+	pr_debug("%#x, %p, %p, %p\n", addr, start, origin, stop);
 
 	/*
 	 * only search in the section with the matching sign. This way the
 	 * prel31 numbers can be compared as unsigned longs.
 	 */
-	if (addr < (unsigned long)start)
+	if (addr < (u32)(unsigned long)start)
 		/* negative offsets: [start; origin) */
 		stop = origin;
 	else
@@ -389,10 +391,10 @@ search_index(unsigned long addr,
 		start = origin;
 
 	/* prel31 for address relavive to start */
-	addr_prel31 = (addr - (unsigned long)start) & 0x7fffffff;
+	addr_prel31 = (addr - (u32)(unsigned long)start) & 0x7fffffff;
 
 	while (start < stop - 1) {
-		unsigned long addr_offset;
+		u32 addr_offset, d;
 
 		const struct unwind_idx *mid = start + ((stop - start) >> 1);
 
@@ -403,13 +405,14 @@ search_index(unsigned long addr,
 		if (read_user_data(&mid->addr_offset, addr_offset))
 			return ERR_PTR(-EFAULT);
 
-		if (addr_prel31 - ((unsigned long)mid - (unsigned long)start) <
-				addr_offset) {
+		d = (u32)(unsigned long)mid - (u32)(unsigned long)start;
+
+		if (addr_prel31 - d < addr_offset) {
 			stop = mid;
 		} else {
 			/* keep addr_prel31 relative to start */
-			addr_prel31 -= ((unsigned long)mid -
-					(unsigned long)start);
+			addr_prel31 -= ((u32)(unsigned long)mid -
+					(u32)(unsigned long)start);
 			start = mid;
 		}
 	}
@@ -417,12 +420,12 @@ search_index(unsigned long addr,
 	if (likely(start->addr_offset <= addr_prel31))
 		return start;
 
-	pr_debug("Unknown address %08lx\n", addr);
+	pr_debug("Unknown address %#x\n", addr);
 	return NULL;
 }
 
 static const struct unwind_idx *
-unwind_find_idx(struct extab_info *exidx, unsigned long addr)
+unwind_find_idx(struct extab_info *exidx, u32 addr)
 {
 	const struct unwind_idx *start;
 	const struct unwind_idx *origin;
@@ -438,7 +441,7 @@ unwind_find_idx(struct extab_info *exidx, unsigned long addr)
 
 	idx = search_index(addr, start, origin, stop);
 
-	pr_debug("addr: %#lx, start: %p, origin: %p, stop: %p, idx: %p\n",
+	pr_debug("addr: %#x, start: %p, origin: %p, stop: %p, idx: %p\n",
 		addr, start, origin, stop, idx);
 
 	return idx;
@@ -489,16 +492,16 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 	if ((insn & 0xc0) == 0x00) {
 		ctrl->vrs[SP] += ((insn & 0x3f) << 2) + 4;
 
-		pr_debug("CMD_DATA_POP: vsp = vsp + %lu (new: %#lx)\n",
+		pr_debug("CMD_DATA_POP: vsp = vsp + %lu (new: %#x)\n",
 			((insn & 0x3f) << 2) + 4, ctrl->vrs[SP]);
 	} else if ((insn & 0xc0) == 0x40) {
 		ctrl->vrs[SP] -= ((insn & 0x3f) << 2) + 4;
 
-		pr_debug("CMD_DATA_PUSH: vsp = vsp – %lu (new: %#lx)\n",
+		pr_debug("CMD_DATA_PUSH: vsp = vsp – %lu (new: %#x)\n",
 			((insn & 0x3f) << 2) + 4, ctrl->vrs[SP]);
 	} else if ((insn & 0xf0) == 0x80) {
 		unsigned long mask;
-		unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
+		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 		int load_sp, reg = 4;
 
 		insn = (insn << 8) | unwind_get_byte(ctrl, &err);
@@ -528,13 +531,13 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		if (!load_sp)
 			ctrl->vrs[SP] = (unsigned long)vsp;
 
-		pr_debug("new vsp: %#lx\n", ctrl->vrs[SP]);
+		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if ((insn & 0xf0) == 0x90 &&
 		   (insn & 0x0d) != 0x0d) {
 		ctrl->vrs[SP] = ctrl->vrs[insn & 0x0f];
 		pr_debug("CMD_REG_TO_SP: vsp = {r%lu}\n", insn & 0x0f);
 	} else if ((insn & 0xf0) == 0xa0) {
-		unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
+		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 		int reg;
 
 		/* pop R4-R[4+bbb] */
@@ -553,8 +556,9 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 
 			pr_debug("CMD_REG_POP: pop {r14}\n");
 		}
-		ctrl->vrs[SP] = (unsigned long)vsp;
-		pr_debug("new vsp: %#lx\n", ctrl->vrs[SP]);
+
+		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
+		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if (insn == 0xb0) {
 		if (ctrl->vrs[PC] == 0)
 			ctrl->vrs[PC] = ctrl->vrs[LR];
@@ -564,7 +568,7 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		pr_debug("CMD_FINISH\n");
 	} else if (insn == 0xb1) {
 		unsigned long mask = unwind_get_byte(ctrl, &err);
-		unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
+		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 		int reg = 0;
 
 		if (err < 0)
@@ -588,8 +592,9 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 			mask >>= 1;
 			reg++;
 		}
-		ctrl->vrs[SP] = (unsigned long)vsp;
-		pr_debug("new vsp: %#lx\n", ctrl->vrs[SP]);
+
+		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
+		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if (insn == 0xb2) {
 		unsigned long uleb128 = unwind_get_byte(ctrl, &err);
 		if (err < 0)
@@ -597,11 +602,11 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 
 		ctrl->vrs[SP] += 0x204 + (uleb128 << 2);
 
-		pr_debug("CMD_DATA_POP: vsp = vsp + %lu, new vsp: %#lx\n",
+		pr_debug("CMD_DATA_POP: vsp = vsp + %lu, new vsp: %#x\n",
 			 0x204 + (uleb128 << 2), ctrl->vrs[SP]);
 	} else if (insn == 0xb3 || insn == 0xc8 || insn == 0xc9) {
 		unsigned long data, reg_from, reg_to;
-		unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
+		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 
 		data = unwind_get_byte(ctrl, &err);
 		if (err < 0)
@@ -622,14 +627,15 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 			vsp++;
 
 		ctrl->vrs[SP] = (unsigned long)vsp;
+		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
 
 		pr_debug("CMD_VFP_POP (%#lx %#lx): pop {D%lu-D%lu}\n",
 			 insn, data, reg_from, reg_to);
-		pr_debug("new vsp: %#lx\n", ctrl->vrs[SP]);
+		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if ((insn & 0xf8) == 0xb8 || (insn & 0xf8) == 0xd0) {
 		unsigned long reg_to;
 		unsigned long data = insn & 0x07;
-		unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
+		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 
 		reg_to = 8 + data;
 
@@ -639,17 +645,17 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		if ((insn & 0xf8) == 0xb8)
 			vsp++;
 
-		ctrl->vrs[SP] = (unsigned long)vsp;
+		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
 
 		pr_debug("CMD_VFP_POP (%#lx): pop {D8-D%lu}\n",
 			 insn, reg_to);
-		pr_debug("new vsp: %#lx\n", ctrl->vrs[SP]);
+		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else {
 		pr_debug("error: unhandled instruction %02lx\n", insn);
 		return -QUADD_URC_UNHANDLED_INSTRUCTION;
 	}
 
-	pr_debug("%s: fp_arm: %#lx, fp_thumb: %#lx, sp: %#lx, lr = %#lx, pc: %#lx\n",
+	pr_debug("%s: fp_arm: %#x, fp_thumb: %#x, sp: %#x, lr = %#x, pc: %#x\n",
 		 __func__,
 		 ctrl->vrs[FP_ARM], ctrl->vrs[FP_THUMB], ctrl->vrs[SP],
 		 ctrl->vrs[LR], ctrl->vrs[PC]);
@@ -669,7 +675,8 @@ unwind_frame(struct extab_info *exidx,
 	unsigned long high, low;
 	const struct unwind_idx *idx;
 	struct unwind_ctrl_block ctrl;
-	unsigned long val, err;
+	unsigned long err;
+	u32 val;
 
 	/* only go to a higher address on the stack */
 	low = frame->sp;
@@ -700,14 +707,14 @@ unwind_frame(struct extab_info *exidx,
 		return -QUADD_URC_CANTUNWIND;
 	} else if ((val & 0x80000000) == 0) {
 		/* prel31 to the unwind table */
-		ctrl.insn = (unsigned long *)prel31_to_addr(&idx->insn);
+		ctrl.insn = (u32 *)(unsigned long)prel31_to_addr(&idx->insn);
 		if (!ctrl.insn)
 			return -QUADD_URC_EACCESS;
 	} else if ((val & 0xff000000) == 0x80000000) {
 		/* only personality routine 0 supported in the index */
 		ctrl.insn = &idx->insn;
 	} else {
-		pr_debug("unsupported personality routine %08lx in the index at %p\n",
+		pr_debug("unsupported personality routine %#x in the index at %p\n",
 			 val, idx);
 		return -QUADD_URC_UNSUPPORTED_PR;
 	}
@@ -724,7 +731,7 @@ unwind_frame(struct extab_info *exidx,
 		ctrl.byte = 1;
 		ctrl.entries = 1 + ((val & 0x00ff0000) >> 16);
 	} else {
-		pr_debug("unsupported personality routine %08lx at %p\n",
+		pr_debug("unsupported personality routine %#x at %p\n",
 			 val, ctrl.insn);
 		return -QUADD_URC_UNSUPPORTED_PR;
 	}
@@ -764,13 +771,17 @@ unwind_backtrace(struct quadd_callchain *cc,
 	struct extables tabs;
 	struct stackframe frame;
 
+#ifdef CONFIG_ARM64
+	frame.fp_thumb = regs->compat_usr(7);
+	frame.fp_arm = regs->compat_usr(11);
+#else
 	frame.fp_thumb = regs->ARM_r7;
 	frame.fp_arm = regs->ARM_fp;
+#endif
 
 	frame.pc = instruction_pointer(regs);
-	frame.sp = user_stack_pointer(regs);
-
-	frame.lr = regs->ARM_lr;
+	frame.sp = quadd_user_stack_pointer(regs);
+	frame.lr = quadd_user_link_register(regs);
 
 	cc->unw_rc = QUADD_URC_FAILURE;
 
@@ -834,16 +845,22 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	cc->unw_method = QUADD_UNW_METHOD_EHT;
 	cc->unw_rc = QUADD_URC_FAILURE;
 
+#ifdef CONFIG_ARM64
+	if (!compat_user_mode(regs)) {
+		pr_warn_once("user_mode 64: unsupported\n");
+		return 0;
+	}
+#endif
+
 	if (!regs || !mm)
 		return 0;
 
 	ip = instruction_pointer(regs);
+	sp = quadd_user_stack_pointer(regs);
 
 	vma = find_vma(mm, ip);
 	if (!vma)
 		return 0;
-
-	sp = user_stack_pointer(regs);
 
 	vma_sp = find_vma(mm, sp);
 	if (!vma_sp)

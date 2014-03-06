@@ -16,7 +16,6 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
@@ -149,7 +148,7 @@ static ssize_t rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
 	else
 		rb->pos_read += rb->size - length;
 
-	rb->fill_count += sizeof(struct quadd_record_data);
+	rb->fill_count += length;
 	return length;
 }
 
@@ -252,7 +251,10 @@ write_sample(struct quadd_record_data *sample,
 
 static ssize_t read_sample(char __user *buffer, size_t max_length)
 {
-	int retval = -EIO;
+	u32 sed;
+	unsigned int type;
+	int retval = -EIO, ip_size;
+	int was_read = 0, write_offset = 0;
 	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
 	struct quadd_record_data record;
@@ -272,10 +274,26 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	if (!rb_read(rb, (char *)&record, sizeof(record)))
 		goto out;
 
-	switch (record.record_type) {
+	was_read += sizeof(record);
+
+	type = record.record_type;
+
+	switch (type) {
 	case QUADD_RECORD_TYPE_SAMPLE:
 		sample = &record.sample;
-		length_extra = sample->callchain_nr * sizeof(quadd_bt_addr_t);
+
+		if (rb->fill_count < sizeof(sed))
+			goto out;
+
+		if (!rb_read(rb, (char *)&sed, sizeof(sed)))
+			goto out;
+
+		was_read += sizeof(sed);
+
+		ip_size = (sed & QUADD_SAMPLE_ED_IP64) ?
+			sizeof(u64) : sizeof(u32);
+
+		length_extra = sample->callchain_nr * ip_size;
 
 		nr_events = __sw_hweight32(sample->events_flags);
 		length_extra += nr_events * sizeof(u32);
@@ -318,8 +336,8 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		goto out;
 	}
 
-	if (sizeof(record) + length_extra > max_length) {
-		retval = rb_read_undo(rb, sizeof(record));
+	if (was_read + length_extra > max_length) {
+		retval = rb_read_undo(rb, was_read);
 		if (retval < 0)
 			goto out;
 
@@ -333,15 +351,26 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	if (copy_to_user(buffer, &record, sizeof(record)))
 		goto out_fault_error;
 
+	write_offset += sizeof(record);
+
+	if (type == QUADD_RECORD_TYPE_SAMPLE) {
+		if (copy_to_user(buffer + write_offset, &sed, sizeof(sed)))
+			goto out_fault_error;
+
+		write_offset += sizeof(sed);
+	}
+
 	if (length_extra > 0) {
-		retval = rb_read_user(rb, buffer + sizeof(record),
+		retval = rb_read_user(rb, buffer + write_offset,
 				      length_extra);
 		if (retval <= 0)
 			goto out;
+
+		write_offset += length_extra;
 	}
 
 	spin_unlock_irqrestore(&rb->lock, flags);
-	return sizeof(record) + length_extra;
+	return write_offset;
 
 out_fault_error:
 	retval = -EFAULT;
@@ -454,7 +483,8 @@ device_read(struct file *filp,
 	    loff_t *offset)
 {
 	int err;
-	size_t was_read = 0, res, samples_counter = 0;
+	size_t res, samples_counter = 0;
+	size_t was_read = 0, min_size;
 
 	err = check_access_permission();
 	if (err)
@@ -467,7 +497,9 @@ device_read(struct file *filp,
 		return -EPIPE;
 	}
 
-	while (was_read + sizeof(struct quadd_record_data) < length) {
+	min_size = sizeof(struct quadd_record_data) + sizeof(u32);
+
+	while (was_read + min_size < length) {
 		res = read_sample(buffer + was_read, length - was_read);
 		if (res < 0) {
 			mutex_unlock(&comm_ctx.io_mutex);
@@ -685,7 +717,8 @@ static const struct file_operations qm_fops = {
 	.poll		= device_poll,
 	.open		= device_open,
 	.release	= device_release,
-	.unlocked_ioctl	= device_ioctl
+	.unlocked_ioctl	= device_ioctl,
+	.compat_ioctl	= device_ioctl,
 };
 
 static int comm_init(void)

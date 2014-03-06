@@ -16,13 +16,10 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/module.h>
-#include <linux/kallsyms.h>
 #include <linux/sched.h>
 #include <linux/hrtimer.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
-#include <linux/ratelimit.h>
 #include <linux/ptrace.h>
 #include <linux/interrupt.h>
 #include <linux/err.h>
@@ -178,8 +175,6 @@ static int get_sample_data(struct quadd_sample_data *sample,
 	sample->thumb_mode = (flags & QUADD_CPUMODE_THUMB) ? 1 : 0;
 	sample->user_mode = user_mode(regs) ? 1 : 0;
 
-	sample->ip = instruction_pointer(regs);
-
 	/* For security reasons, hide IPs from the kernel space. */
 	if (!sample->user_mode && !quadd_ctx->collect_kernel_ips)
 		sample->ip = 0;
@@ -236,11 +231,11 @@ static int read_source(struct quadd_event_source_interface *source,
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task)
 {
-	u32 state;
+	u32 state, extra_data = 0;
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
-	struct quadd_iovec vec[3];
+	struct quadd_iovec vec[4];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
 
@@ -294,14 +289,23 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	if (get_sample_data(s, regs, task))
 		return;
 
+	if (cc->cs_64)
+		extra_data |= QUADD_SAMPLE_ED_IP64;
+
+	vec[vec_idx].base = &extra_data;
+	vec[vec_idx].len = sizeof(extra_data);
+	vec_idx++;
+
 	s->reserved = 0;
 
 	if (ctx->param.backtrace) {
 		bt_size = quadd_get_user_callchain(user_regs, cc, ctx);
 		if (bt_size > 0) {
-			vec[vec_idx].base = cc->ip;
-			vec[vec_idx].len =
-				bt_size * sizeof(cc->ip[0]);
+			int ip_size = cc->cs_64 ? sizeof(u64) : sizeof(u32);
+
+			vec[vec_idx].base = cc->cs_64 ?
+				(void *)cc->ip_64 : (void *)cc->ip_32;
+			vec[vec_idx].len = bt_size * ip_size;
 			vec_idx++;
 		}
 

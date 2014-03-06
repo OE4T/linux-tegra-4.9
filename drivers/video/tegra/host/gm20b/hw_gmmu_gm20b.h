@@ -1138,4 +1138,12 @@ static inline u32 gmmu_pte_kind_smhost_message_v(void)
 {
 	return 0x000000cb;
 }
+static inline u32 gmmu_pte_kind_s8_v(void)
+{
+	return 0x0000002a;
+}
+static inline u32 gmmu_pte_kind_s8_2s_v(void)
+{
+	return 0x0000002b;
+}
 #endif

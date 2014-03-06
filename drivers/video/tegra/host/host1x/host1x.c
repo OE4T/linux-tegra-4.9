@@ -227,8 +227,8 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 		}
 	}
 
-	err = nvhost_sync_create_fence_fd(&ctx->dev->syncpt, pts, args->num_pts,
-				       name, &args->fence_fd);
+	err = nvhost_sync_create_fence_fd(ctx->dev->dev, pts, args->num_pts,
+					  name, &args->fence_fd);
 out:
 	kfree(pts);
 	return err;

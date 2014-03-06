@@ -38,6 +38,10 @@ struct nvhost_device_power_attr;
 struct nvhost_device_profile;
 struct mem_mgr;
 struct nvhost_as_moduleops;
+struct nvhost_ctrl_sync_fence_info;
+struct nvhost_sync_timeline;
+struct nvhost_sync_pt;
+struct sync_pt;
 
 #define NVHOST_MODULE_MAX_CLOCKS		7
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
@@ -305,6 +309,65 @@ static inline int nvhost_vpr_info_fetch(void)
 void nvhost_debug_dump_device(struct platform_device *pdev);
 #else
 static inline void nvhost_debug_dump_device(struct platform_device *pdev) {}
+#endif
+
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
+struct sync_fence *nvhost_sync_create_fence(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name);
+int nvhost_sync_create_fence_fd(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name,
+		s32 *fence_fd);
+struct sync_fence *nvhost_sync_fdget(int fd);
+int nvhost_sync_num_pts(struct sync_fence *fence);
+u32 nvhost_sync_pt_id(struct sync_pt *pt);
+u32 nvhost_sync_pt_thresh(struct sync_pt *pt);
+
+#else
+static inline struct sync_fence *nvhost_sync_create_fence(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name)
+{
+	return ERR_PTR(-EINVAL);
+}
+
+static inline int nvhost_sync_create_fence_fd(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name,
+		s32 *fence_fd)
+{
+	return -EINVAL;
+}
+
+static inline struct sync_fence *nvhost_sync_fdget(int fd)
+{
+	return NULL;
+}
+
+static inline int nvhost_sync_num_pts(struct sync_fence *fence)
+{
+	return 0;
+}
+
+static inline u32 nvhost_sync_pt_id(struct sync_pt *pt)
+{
+	return NVSYNCPT_INVALID;
+}
+
+static inline u32 nvhost_sync_pt_thresh(struct sync_pt *pt)
+{
+	return 0;
+}
+
 #endif
 
 /* Hacky way to get access to struct nvhost_device_data for VI device. */

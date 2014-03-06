@@ -276,6 +276,7 @@ struct sync_fence *nvhost_sync_fdget(int fd)
 
 	return fence;
 }
+EXPORT_SYMBOL(nvhost_sync_fdget);
 
 int nvhost_sync_num_pts(struct sync_fence *fence)
 {
@@ -288,18 +289,21 @@ int nvhost_sync_num_pts(struct sync_fence *fence)
 
 	return num;
 }
+EXPORT_SYMBOL(nvhost_sync_num_pts);
 
 u32 nvhost_sync_pt_id(struct sync_pt *__pt)
 {
 	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(__pt);
 	return pt->obj->id;
 }
+EXPORT_SYMBOL(nvhost_sync_pt_id);
 
 u32 nvhost_sync_pt_thresh(struct sync_pt *__pt)
 {
 	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(__pt);
 	return pt->thresh;
 }
+EXPORT_SYMBOL(nvhost_sync_pt_thresh);
 
 /* Public API */
 
@@ -345,7 +349,7 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
 	sync_timeline_signal(&obj->obj);
 }
 
-int nvhost_sync_create_fence_fd(struct nvhost_syncpt *sp,
+int nvhost_sync_create_fence_fd(struct platform_device *pdev,
 		struct nvhost_ctrl_sync_fence_info *pts,
 		u32 num_pts, const char *name, int *fence_fd)
 {
@@ -353,7 +357,7 @@ int nvhost_sync_create_fence_fd(struct nvhost_syncpt *sp,
 	int err;
 	struct sync_fence *fence = NULL;
 
-	fence = nvhost_sync_create_fence(sp, pts, num_pts, name);
+	fence = nvhost_sync_create_fence(pdev, pts, num_pts, name);
 
 	if (fence == NULL) {
 		err = -EINVAL;
@@ -376,11 +380,14 @@ err:
 
 	return err;
 }
+EXPORT_SYMBOL(nvhost_sync_create_fence_fd);
 
-struct sync_fence *nvhost_sync_create_fence(struct nvhost_syncpt *sp,
+struct sync_fence *nvhost_sync_create_fence(struct platform_device *pdev,
 		struct nvhost_ctrl_sync_fence_info *pts,
 		u32 num_pts, const char *name)
 {
+	struct nvhost_master *master = nvhost_get_host(pdev);
+	struct nvhost_syncpt *sp = &master->syncpt;
 	int err;
 	u32 i;
 	struct sync_fence *fence = NULL;
@@ -435,3 +442,5 @@ err:
 
 	return ERR_PTR(err);
 }
+EXPORT_SYMBOL(nvhost_sync_create_fence);
+

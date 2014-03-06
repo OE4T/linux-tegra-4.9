@@ -1122,15 +1122,13 @@ int nvhost_syncpt_create_fence_single_ext(struct platform_device *dev,
 {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_ctrl_sync_fence_info pts = {id, thresh};
-	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
 
 	if (id == NVSYNCPT_INVALID) {
 		dev_err(&dev->dev, "Create Fence called with invalid id\n");
 		return -EINVAL;
 	}
 
-	return nvhost_sync_create_fence_fd(sp, &pts, 1, name, fence_fd);
+	return nvhost_sync_create_fence_fd(dev, &pts, 1, name, fence_fd);
 #else
 	return -EINVAL;
 #endif

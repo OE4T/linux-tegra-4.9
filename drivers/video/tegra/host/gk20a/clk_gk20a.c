@@ -275,7 +275,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 
 	nvhost_dbg_fn("");
 
-	if (tegra_platform_is_linsim())
+	if (!tegra_platform_is_silicon())
 		return 0;
 
 	/* get old coefficients */

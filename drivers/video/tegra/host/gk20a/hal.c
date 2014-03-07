@@ -21,11 +21,11 @@ int gpu_init_hal(struct gk20a *g)
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	switch (ver) {
 	case GK20A_GPUID_GK20A:
-		nvhost_dbg_info("gk20a detected");
+		gk20a_dbg_info("gk20a detected");
 		gk20a_init_hal(&g->ops);
 		break;
 	default:
-		nvhost_err(&g->dev->dev, "no support for %x", ver);
+		gk20a_err(&g->dev->dev, "no support for %x", ver);
 		return -ENODEV;
 	}
 

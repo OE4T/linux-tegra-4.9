@@ -118,23 +118,23 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	gk20a_debug_output(o, "TOP: %016llx PUT: %016llx GET: %016llx "
 			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
 			"SYNCPOINT %08x %08x SEMAPHORE %08x %08x %08x %08x\n",
-		(u64)mem_rd32(inst_ptr, ram_fc_pb_top_level_get_w()) +
-		((u64)mem_rd32(inst_ptr,
+		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_top_level_get_w()) +
+		((u64)gk20a_mem_rd32(inst_ptr,
 			ram_fc_pb_top_level_get_hi_w()) << 32ULL),
-		(u64)mem_rd32(inst_ptr, ram_fc_pb_put_w()) +
-		((u64)mem_rd32(inst_ptr, ram_fc_pb_put_hi_w()) << 32ULL),
-		(u64)mem_rd32(inst_ptr, ram_fc_pb_get_w()) +
-		((u64)mem_rd32(inst_ptr, ram_fc_pb_get_hi_w()) << 32ULL),
-		(u64)mem_rd32(inst_ptr, ram_fc_pb_fetch_w()) +
-		((u64)mem_rd32(inst_ptr, ram_fc_pb_fetch_hi_w()) << 32ULL),
-		mem_rd32(inst_ptr, ram_fc_pb_header_w()),
-		mem_rd32(inst_ptr, ram_fc_pb_count_w()),
-		mem_rd32(inst_ptr, ram_fc_syncpointa_w()),
-		mem_rd32(inst_ptr, ram_fc_syncpointb_w()),
-		mem_rd32(inst_ptr, ram_fc_semaphorea_w()),
-		mem_rd32(inst_ptr, ram_fc_semaphoreb_w()),
-		mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
-		mem_rd32(inst_ptr, ram_fc_semaphored_w()));
+		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_put_w()) +
+		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_put_hi_w()) << 32ULL),
+		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_get_w()) +
+		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_get_hi_w()) << 32ULL),
+		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_fetch_w()) +
+		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_fetch_hi_w()) << 32ULL),
+		gk20a_mem_rd32(inst_ptr, ram_fc_pb_header_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_pb_count_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorea_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_semaphoreb_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
+		gk20a_mem_rd32(inst_ptr, ram_fc_semaphored_w()));
 
 	gk20a_debug_output(o, "\n");
 }

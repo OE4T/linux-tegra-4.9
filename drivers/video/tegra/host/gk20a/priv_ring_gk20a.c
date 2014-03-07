@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/priv_ring_gk20a.c
- *
  * GK20A priv ring
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,9 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/delay.h>	/* for mdelay */
@@ -65,7 +62,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
-	nvhost_dbg_info("ringmaster intr status0: 0x%08x,"
+	gk20a_dbg_info("ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
 	if (status0 & (0x1 | 0x2 | 0x4)) {
@@ -84,13 +81,13 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	} while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
 
 	if (retry <= 0)
-		nvhost_warn(dev_from_gk20a(g),
+		gk20a_warn(dev_from_gk20a(g),
 			"priv ringmaster cmd ack too many retries");
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
-	nvhost_dbg_info("ringmaster intr status0: 0x%08x,"
+	gk20a_dbg_info("ringmaster intr status0: 0x%08x,"
 		" status1: 0x%08x", status0, status1);
 }
 

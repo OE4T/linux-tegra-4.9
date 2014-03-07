@@ -395,7 +395,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	bool skip_read_lo, skip_read_hi;
 	bool ok;
 
-	nvhost_dbg(dbg_fn | dbg_gpu_dbg, "");
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
 	ch = dbg_s->ch;
 
@@ -419,7 +419,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		case REGOP(READ_32):
 			ops[i].value_hi = 0;
 			ops[i].value_lo = gk20a_readl(g, ops[i].offset);
-			nvhost_dbg(dbg_gpu_dbg, "read_32 0x%08x from 0x%08x",
+			gk20a_dbg(gpu_dbg_gpu_dbg, "read_32 0x%08x from 0x%08x",
 				   ops[i].value_lo, ops[i].offset);
 
 			break;
@@ -429,7 +429,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 			ops[i].value_hi =
 				gk20a_readl(g, ops[i].offset + 4);
 
-			nvhost_dbg(dbg_gpu_dbg, "read_64 0x%08x:%08x from 0x%08x",
+			gk20a_dbg(gpu_dbg_gpu_dbg, "read_64 0x%08x:%08x from 0x%08x",
 				   ops[i].value_hi, ops[i].value_lo,
 				   ops[i].offset);
 		break;
@@ -468,12 +468,12 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 			/* now update first 32bits */
 			gk20a_writel(g, ops[i].offset, data32_lo);
-			nvhost_dbg(dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
+			gk20a_dbg(gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
 				   data32_lo, ops[i].offset);
 			/* if desired, update second 32bits */
 			if (ops[i].op == REGOP(WRITE_64)) {
 				gk20a_writel(g, ops[i].offset + 4, data32_hi);
-				nvhost_dbg(dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
+				gk20a_dbg(gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
 					   data32_hi, ops[i].offset + 4);
 
 			}
@@ -501,7 +501,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	}
 
  clean_up:
-	nvhost_dbg(dbg_gpu_dbg, "ret=%d", err);
+	gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 	return err;
 
 }
@@ -522,7 +522,7 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 		break;
 	default:
 		op->status |= REGOP(STATUS_UNSUPPORTED_OP);
-		/*nvhost_err(dbg_s->dev, "Invalid regops op %d!", op->op);*/
+		/*gk20a_err(dbg_s->dev, "Invalid regops op %d!", op->op);*/
 		err = -EINVAL;
 		break;
 	}
@@ -541,7 +541,7 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 	*/
 	default:
 		op->status |= REGOP(STATUS_INVALID_TYPE);
-		/*nvhost_err(dbg_s->dev, "Invalid regops type %d!", op->type);*/
+		/*gk20a_err(dbg_s->dev, "Invalid regops type %d!", op->type);*/
 		err = -EINVAL;
 		break;
 	}
@@ -581,7 +581,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 	} else if (op->type == REGOP(TYPE_GR_CTX)) {
 		/* it's a context-relative op */
 		if (!dbg_s->ch) {
-			nvhost_err(dbg_s->dev, "can't perform ctx regop unless bound");
+			gk20a_err(dbg_s->dev, "can't perform ctx regop unless bound");
 			op->status = REGOP(STATUS_UNSUPPORTED_OP);
 			return -ENODEV;
 		}
@@ -622,7 +622,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 
 	/* support only 24-bit 4-byte aligned offsets */
 	if (offset & 0xFF000003) {
-		nvhost_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
+		gk20a_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
 		op->status |= REGOP(STATUS_INVALID_OFFSET);
 		return -EINVAL;
 	}
@@ -651,7 +651,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 	}
 
 	if (!valid) {
-		nvhost_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
+		gk20a_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
 		op->status |= REGOP(STATUS_INVALID_OFFSET);
 		return -EINVAL;
 	}
@@ -686,7 +686,7 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 		ok &= !err;
 	}
 
-	nvhost_dbg(dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d\n",
+	gk20a_dbg(gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d\n",
 		   *ctx_wr_count, *ctx_rd_count);
 
 	return ok;

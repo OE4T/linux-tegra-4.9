@@ -32,7 +32,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	int err;
 	struct gk20a *g;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	g = container_of(inode->i_cdev,
 			 struct gk20a, ctrl.cdev);
@@ -41,7 +41,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	err = gk20a_get_client(g);
 	if (err) {
-		nvhost_dbg_fn("fail to get channel!");
+		gk20a_dbg_fn("fail to get channel!");
 		return err;
 	}
 
@@ -52,7 +52,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
 	struct platform_device *dev = filp->private_data;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	gk20a_put_client(get_gk20a(dev));
 	return 0;
@@ -97,7 +97,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct zbc_query_params *zbc_tbl;
 	int i, err = 0;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if ((_IOC_TYPE(cmd) != NVHOST_GPU_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
@@ -232,7 +232,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	default:
-		nvhost_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
+		gk20a_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

@@ -3,7 +3,7 @@
  *
  * GK20A Therm
  *
- * Copyright (c) 2011 - 2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,8 +14,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include "../dev.h"
@@ -127,7 +128,7 @@ int gk20a_init_therm_support(struct gk20a *g)
 {
 	u32 err;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	err = gk20a_init_therm_reset_enable_hw(g);
 	if (err)

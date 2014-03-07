@@ -531,23 +531,23 @@ static void gk20a_pbus_isr(struct gk20a *g)
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
-		nvhost_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
+		gk20a_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
 			gk20a_readl(g, top_fs_status_r()));
-		nvhost_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
+		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
-		nvhost_err(&g->dev->dev,
+		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_0_r()));
-		nvhost_err(&g->dev->dev,
+		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_1_r()));
-		nvhost_err(&g->dev->dev,
+		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_fecs_errcode_r()));
 	}
 
 	if (val)
-		nvhost_err(&g->dev->dev,
+		gk20a_err(&g->dev->dev,
 			"Unhandled pending pbus interrupt\n");
 
 	gk20a_writel(g, bus_intr_0_r(), val);
@@ -558,11 +558,11 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 	struct gk20a *g = dev_id;
 	u32 mc_intr_0;
 
-	nvhost_dbg(dbg_intr, "interrupt thread launched");
+	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 
-	nvhost_dbg(dbg_intr, "stall intr %08x\n", mc_intr_0);
+	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
 	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
 		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
@@ -591,11 +591,11 @@ static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
 	struct gk20a *g = dev_id;
 	u32 mc_intr_1;
 
-	nvhost_dbg(dbg_intr, "interrupt thread launched");
+	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
 
-	nvhost_dbg(dbg_intr, "non-stall intr %08x\n", mc_intr_1);
+	gk20a_dbg(gpu_dbg_intr, "non-stall intr %08x\n", mc_intr_1);
 
 	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_nonstall_isr(g);
@@ -703,7 +703,7 @@ static int gk20a_init_client(struct platform_device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	int err;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 #ifndef CONFIG_PM_RUNTIME
 	gk20a_pm_finalize_poweron(&dev->dev);
@@ -720,7 +720,7 @@ static int gk20a_init_client(struct platform_device *dev)
 
 static void gk20a_deinit_client(struct platform_device *dev)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 #ifndef CONFIG_PM_RUNTIME
 	gk20a_pm_prepare_poweroff(&dev->dev);
 #endif
@@ -755,7 +755,7 @@ static int gk20a_pm_prepare_poweroff(struct device *_dev)
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (!g->power_on)
 		return 0;
@@ -797,7 +797,7 @@ static void gk20a_detect_chip(struct gk20a *g)
 		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
 		mc_boot_0_minor_revision_v(mc_boot_0_value);
 
-	nvhost_dbg_info("arch: %x, impl: %x, rev: %x\n",
+	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
 			g->gpu_characteristics.arch,
 			g->gpu_characteristics.impl,
 			g->gpu_characteristics.rev);
@@ -809,7 +809,7 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	struct gk20a *g = get_gk20a(dev);
 	int err, nice_value;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (g->power_on)
 		return 0;
@@ -880,7 +880,7 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	   saving features (blcg/slcg) are enabled. For now, do it here. */
 	err = gk20a_init_clk_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a clk");
+		gk20a_err(&dev->dev, "failed to init gk20a clk");
 		goto done;
 	}
 
@@ -899,49 +899,49 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 
 	err = gk20a_init_fifo_reset_enable_hw(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to reset gk20a fifo");
+		gk20a_err(&dev->dev, "failed to reset gk20a fifo");
 		goto done;
 	}
 
 	err = gk20a_init_mm_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a mm");
+		gk20a_err(&dev->dev, "failed to init gk20a mm");
 		goto done;
 	}
 
 	err = gk20a_init_pmu_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a pmu");
+		gk20a_err(&dev->dev, "failed to init gk20a pmu");
 		goto done;
 	}
 
 	err = gk20a_init_fifo_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a fifo");
+		gk20a_err(&dev->dev, "failed to init gk20a fifo");
 		goto done;
 	}
 
 	err = gk20a_init_gr_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a gr");
+		gk20a_err(&dev->dev, "failed to init gk20a gr");
 		goto done;
 	}
 
 	err = gk20a_init_pmu_setup_hw2(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a pmu_hw2");
+		gk20a_err(&dev->dev, "failed to init gk20a pmu_hw2");
 		goto done;
 	}
 
 	err = gk20a_init_therm_support(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a therm");
+		gk20a_err(&dev->dev, "failed to init gk20a therm");
 		goto done;
 	}
 
 	err = gk20a_init_gpu_characteristics(g);
 	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a gpu characteristics");
+		gk20a_err(&dev->dev, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
 
@@ -1018,7 +1018,7 @@ static int gk20a_create_device(
 	int err;
 	struct gk20a *g = get_gk20a(pdev);
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	cdev_init(cdev, ops);
 	cdev->owner = THIS_MODULE;
@@ -1340,7 +1340,7 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	platform_set_drvdata(dev, platform);
 
@@ -1450,7 +1450,7 @@ static int gk20a_probe(struct platform_device *dev)
 static int __exit gk20a_remove(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 #ifdef CONFIG_INPUT_CFBOOST
 	cfb_remove_device(&dev->dev);
@@ -1564,7 +1564,7 @@ void gk20a_disable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
-	nvhost_dbg(dbg_info, "pmc disable: %08x\n", units);
+	gk20a_dbg(gpu_dbg_info, "pmc disable: %08x\n", units);
 
 	spin_lock(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());
@@ -1577,7 +1577,7 @@ void gk20a_enable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
-	nvhost_dbg(dbg_info, "pmc enable: %08x\n", units);
+	gk20a_dbg(gpu_dbg_info, "pmc enable: %08x\n", units);
 
 	spin_lock(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());

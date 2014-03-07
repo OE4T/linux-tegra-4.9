@@ -32,7 +32,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	char *reg_path   = NULL;
 	char *value_path = NULL;
 
-	nvhost_dbg(dbg_fn | dbg_info,
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info,
 		   "querying grctx info from chiplib");
 
 	g->gr.ctx_vars.dynamic = true;
@@ -247,10 +247,10 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_sim_esc_readl(g, "GRCTX_GEN_CTX_REGS_BASE_INDEX", 0,
 			    &g->gr.ctx_vars.regs_base_index);
 
-	nvhost_dbg(dbg_info | dbg_fn, "finished querying grctx info from chiplib");
+	gk20a_dbg(gpu_dbg_info | gpu_dbg_fn, "finished querying grctx info from chiplib");
 	return 0;
 fail:
-	nvhost_err(dev_from_gk20a(g),
+	gk20a_err(dev_from_gk20a(g),
 		   "failed querying grctx info from chiplib");
 	return err;
 

@@ -119,7 +119,7 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	u32 compbit_backing_size;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (max_comptag_lines == 0) {
 		gr->compbit_store.size = 0;
@@ -148,9 +148,9 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
 
-	nvhost_dbg_info("compbit backing store size : %d",
+	gk20a_dbg_info("compbit backing store size : %d",
 		compbit_backing_size);
-	nvhost_dbg_info("max comptag lines : %d",
+	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
@@ -158,7 +158,7 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gr->compbit_store.pages = dma_alloc_attrs(d, gr->compbit_store.size,
 					&iova, GFP_KERNEL, &attrs);
 	if (!gr->compbit_store.pages) {
-		nvhost_err(dev_from_gk20a(g), "failed to allocate"
+		gk20a_err(dev_from_gk20a(g), "failed to allocate"
 			   "backing store for compbit : size %d",
 			   compbit_backing_size);
 		return -ENOMEM;
@@ -184,7 +184,7 @@ static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (gr->compbit_store.size == 0)
 		return 0;
@@ -220,7 +220,7 @@ static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 					!tegra_platform_is_silicon());
 
 			if (!time_before(jiffies, end_jiffies)) {
-				nvhost_err(dev_from_gk20a(g),
+				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				return -EBUSY;
 			}
@@ -339,7 +339,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
 
-	nvhost_dbg(dbg_info | dbg_map | dbg_pte,
+	gk20a_dbg(gpu_dbg_info | gpu_dbg_map | gpu_dbg_pte,
 		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
 		   (u32)(compbit_store_base_iova >> 32),
 		   (u32)(compbit_store_base_iova & 0xffffffff),
@@ -355,7 +355,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 	u32 data;
 	s32 retry = 100;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
@@ -367,7 +367,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 
 		if (ltc_ltss_g_elpg_flush_v(data) ==
 		    ltc_ltss_g_elpg_flush_pending_v()) {
-			nvhost_dbg_info("g_elpg_flush 0x%x", data);
+			gk20a_dbg_info("g_elpg_flush 0x%x", data);
 			retry--;
 			usleep_range(20, 40);
 		} else
@@ -375,7 +375,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
-		nvhost_warn(dev_from_gk20a(g),
+		gk20a_warn(dev_from_gk20a(g),
 			    "g_elpg_flush too many retries");
 
 }

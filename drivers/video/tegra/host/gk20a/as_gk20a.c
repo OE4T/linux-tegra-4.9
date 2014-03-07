@@ -27,13 +27,13 @@
 /* dumb allocator... */
 static int generate_as_share_id(struct gk20a_as *as)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return ++as->last_share_id;
 }
 /* still dumb */
 static void release_as_share_id(struct gk20a_as *as, int id)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return;
 }
 
@@ -43,7 +43,7 @@ static int gk20a_as_alloc_share(struct gk20a_as *as,
 	struct gk20a_as_share *as_share;
 	int err = 0;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	*out = 0;
 	as_share = kzalloc(sizeof(*as_share), GFP_KERNEL);
@@ -75,7 +75,7 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 {
 	int err;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (atomic_dec_return(&as_share->ref_cnt) > 0)
 		return 0;
@@ -93,7 +93,7 @@ static int gk20a_as_ioctl_bind_channel(
 	int err = 0;
 	struct channel_gk20a *ch;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
 	if (!ch || gk20a_channel_as_bound(ch))
@@ -115,7 +115,7 @@ static int gk20a_as_ioctl_alloc_space(
 		struct gk20a_as_share *as_share,
 		struct nvhost_as_alloc_space_args *args)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return gk20a_vm_alloc_space(as_share, args);
 }
 
@@ -123,7 +123,7 @@ static int gk20a_as_ioctl_free_space(
 		struct gk20a_as_share *as_share,
 		struct nvhost_as_free_space_args *args)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return gk20a_vm_free_space(as_share, args);
 }
 
@@ -133,7 +133,7 @@ static int gk20a_as_ioctl_map_buffer_ex(
 {
 	int i;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	/* ensure that padding is not set. this is required for ensuring that
 	 * we can safely use these fields later */
@@ -150,7 +150,7 @@ static int gk20a_as_ioctl_map_buffer(
 		struct gk20a_as_share *as_share,
 		struct nvhost_as_map_buffer_args *args)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return gk20a_vm_map_buffer(as_share, args->nvmap_handle,
 				   &args->o_a.align,
 				   args->flags, NV_KIND_DEFAULT);
@@ -161,7 +161,7 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct gk20a_as_share *as_share,
 		struct nvhost_as_unmap_buffer_args *args)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return gk20a_vm_unmap_buffer(as_share, args->offset);
 }
 
@@ -171,19 +171,19 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 	struct gk20a *g;
 	int err;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	g = container_of(inode->i_cdev, struct gk20a, as.cdev);
 
 	err = gk20a_get_client(g);
 	if (err) {
-		nvhost_dbg_fn("fail to get channel!");
+		gk20a_dbg_fn("fail to get channel!");
 		return err;
 	}
 
 	err = gk20a_as_alloc_share(&g->as, &as_share);
 	if (err) {
-		nvhost_dbg_fn("failed to alloc share");
+		gk20a_dbg_fn("failed to alloc share");
 		gk20a_put_client(g);
 		return err;
 	}
@@ -198,7 +198,7 @@ int gk20a_as_dev_release(struct inode *inode, struct file *filp)
 	int ret;
 	struct gk20a *g = gk20a_from_as(as_share->as);
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	ret = gk20a_as_release_share(as_share);
 

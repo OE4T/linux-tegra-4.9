@@ -21,7 +21,7 @@
 
 static void fb_gk20a_reset(struct gk20a *g)
 {
-	nvhost_dbg_info("reset gk20a fb");
+	gk20a_dbg_info("reset gk20a fb");
 
 	gk20a_reset(g, mc_enable_pfb_enabled_f()
 			| mc_enable_l2_enabled_f()

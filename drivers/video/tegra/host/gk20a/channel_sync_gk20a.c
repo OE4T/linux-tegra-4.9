@@ -89,7 +89,7 @@ int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
 
 	gk20a_channel_alloc_priv_cmdbuf(sp->c, 4, &wait_cmd);
 	if (wait_cmd == NULL) {
-		nvhost_err(dev_from_gk20a(sp->c->g),
+		gk20a_err(dev_from_gk20a(sp->c->g),
 				"not enough priv cmd buffer space");
 		return -EAGAIN;
 	}
@@ -120,7 +120,7 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	num_wait_cmds = nvhost_sync_num_pts(sync_fence);
 	gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, &wait_cmd);
 	if (wait_cmd == NULL) {
-		nvhost_err(dev_from_gk20a(c->g),
+		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
 		sync_fence_put(sync_fence);
 		return -EAGAIN;
@@ -186,7 +186,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	if (incr_cmd == NULL) {
 		gk20a_channel_idle(c->g->dev);
 		kfree(completed_waiter);
-		nvhost_err(dev_from_gk20a(c->g),
+		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
 		return -EAGAIN;
 	}

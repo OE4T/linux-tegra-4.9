@@ -31,8 +31,8 @@
 #include "hw_trim_gk20a.h"
 #include "hw_timer_gk20a.h"
 
-#define nvhost_dbg_clk(fmt, arg...) \
-	nvhost_dbg(dbg_clk, fmt, ##arg)
+#define gk20a_dbg_clk(fmt, arg...) \
+	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
 
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
@@ -81,7 +81,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 
 	BUG_ON(target_freq == NULL);
 
-	nvhost_dbg_fn("request target freq %d MHz", *target_freq);
+	gk20a_dbg_fn("request target freq %d MHz", *target_freq);
 
 	ref_clk_f = pll->clk_in;
 	target_clk_f = *target_freq;
@@ -116,7 +116,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 			break;
 		}
 	}
-	nvhost_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
+	gk20a_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
 			low_PL, pl_to_div[low_PL], high_PL, pl_to_div[high_PL]);
 
 	for (pl = low_PL; pl <= high_PL; pl++) {
@@ -161,7 +161,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 							goto found_match;
 						}
 
-						nvhost_dbg_info("delta %d @ M %d, N %d, PL %d",
+						gk20a_dbg_info("delta %d @ M %d, N %d, PL %d",
 							delta, m, n, pl);
 					}
 				}
@@ -173,7 +173,7 @@ found_match:
 	BUG_ON(best_delta == ~0);
 
 	if (best_fit && best_delta != 0)
-		nvhost_dbg_clk("no best match for target @ %dMHz on gpc_pll",
+		gk20a_dbg_clk("no best match for target @ %dMHz on gpc_pll",
 			target_clk_f);
 
 	pll->M = best_M;
@@ -185,10 +185,10 @@ found_match:
 
 	*target_freq = pll->freq;
 
-	nvhost_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d(div%d)",
+	gk20a_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d(div%d)",
 		*target_freq, pll->M, pll->N, pll->PL, pl_to_div[pll->PL]);
 
-	nvhost_dbg_fn("done");
+	gk20a_dbg_fn("done");
 
 	return 0;
 }
@@ -260,7 +260,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 
 	if (ramp_timeout <= 0) {
-		nvhost_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
+		gk20a_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
 		return -ETIMEDOUT;
 	}
 	return 0;
@@ -273,7 +273,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	u32 m, n, pl;
 	u32 nlo;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (!tegra_platform_is_silicon())
 		return 0;
@@ -418,7 +418,7 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 
 static int gk20a_init_clk_reset_enable_hw(struct gk20a *g)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	return 0;
 }
 
@@ -429,7 +429,7 @@ struct clk *gk20a_clk_get(struct gk20a *g)
 
 		clk = clk_get_sys("tegra_gk20a", "gpu");
 		if (IS_ERR(clk)) {
-			nvhost_err(dev_from_gk20a(g),
+			gk20a_err(dev_from_gk20a(g),
 				"fail to get tegra gpu clk tegra_gk20a/gpu");
 			return NULL;
 		}
@@ -448,10 +448,10 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	struct clk *ref;
 	unsigned long ref_rate;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (clk->sw_ready) {
-		nvhost_dbg_fn("skip init");
+		gk20a_dbg_fn("skip init");
 		return 0;
 	}
 
@@ -460,7 +460,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
 	if (IS_ERR(ref)) {
-		nvhost_err(dev_from_gk20a(g),
+		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
 		return -EINVAL;
 	}
@@ -512,7 +512,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 	clk->sw_ready = true;
 
-	nvhost_dbg_fn("done");
+	gk20a_dbg_fn("done");
 	return 0;
 }
 
@@ -520,7 +520,7 @@ static int gk20a_init_clk_setup_hw(struct gk20a *g)
 {
 	u32 data;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	data = set_field(data,
@@ -548,7 +548,7 @@ static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
 		/* gpc_pll.freq is changed to new value here */
 		if (clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
 				   &freq, true)) {
-			nvhost_err(dev_from_gk20a(g),
+			gk20a_err(dev_from_gk20a(g),
 				   "failed to set pll target for %d", freq);
 			return -EINVAL;
 		}
@@ -561,7 +561,7 @@ static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
 	struct clk_gk20a *clk = &g->clk;
 	int err = 0;
 
-	nvhost_dbg_fn("curr freq: %dMHz, target freq %dMHz", old_freq, freq);
+	gk20a_dbg_fn("curr freq: %dMHz, target freq %dMHz", old_freq, freq);
 
 	if ((freq == old_freq) && clk->gpc_pll.enabled)
 		return 0;
@@ -576,7 +576,7 @@ static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
 	/* Just report error but not restore PLL since dvfs could already change
 	    voltage even when it returns error. */
 	if (err)
-		nvhost_err(dev_from_gk20a(g),
+		gk20a_err(dev_from_gk20a(g),
 			"failed to set pll to %d", freq);
 	return err;
 }
@@ -668,7 +668,7 @@ int gk20a_init_clk_support(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	clk->g = g;
 

@@ -1454,7 +1454,7 @@ static void rx_bottom(struct r8152 *tp)
 			skb = netdev_alloc_skb_ip_align(netdev, pkt_len);
 			if (!skb) {
 				stats->rx_dropped++;
-				break;
+				goto find_next_rx;
 			}
 			memcpy(skb->data, rx_data, pkt_len);
 			skb_put(skb, pkt_len);
@@ -1463,6 +1463,7 @@ static void rx_bottom(struct r8152 *tp)
 			stats->rx_packets++;
 			stats->rx_bytes += pkt_len;
 
+find_next_rx:
 			rx_data = rx_agg_align(rx_data + pkt_len + CRC_SIZE);
 			rx_desc = (struct rx_desc *)rx_data;
 			len_used = (int)(rx_data - (u8 *)agg->head);

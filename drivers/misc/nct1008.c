@@ -1224,7 +1224,7 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 		}
 	}
 
-	pr_info("NCT%s: Register overheat warning at %ld.%02ldC\n",
+	pr_debug("NCT%s: Enabled overheat logging at %ld.%02ldC\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			warn_temp / 1000, (warn_temp % 1000) / 10);
 }

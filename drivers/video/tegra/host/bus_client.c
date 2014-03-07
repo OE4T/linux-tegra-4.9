@@ -858,12 +858,7 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
-	{
-		dev_info(dev,
-			 "%s doesn't need NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD\n",
-			 current->comm);
 		break;
-	}
 	case NVHOST_IOCTL_CHANNEL_READ_3D_REG:
 		err = nvhost_ioctl_channel_read_3d_reg(priv, (void *)buf);
 		break;

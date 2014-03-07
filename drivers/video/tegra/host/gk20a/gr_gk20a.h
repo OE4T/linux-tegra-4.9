@@ -39,7 +39,8 @@ enum /* global_ctx_buffer */ {
 	PAGEPOOL_VPR		= 4,
 	ATTRIBUTE_VPR		= 5,
 	GOLDEN_CTX		= 6,
-	NR_GLOBAL_CTX_BUF	= 7
+	PRIV_ACCESS_MAP		= 7,
+	NR_GLOBAL_CTX_BUF	= 8
 };
 
 /* either ATTRIBUTE or ATTRIBUTE_VPR maps to ATTRIBUTE_VA */
@@ -48,7 +49,8 @@ enum  /*global_ctx_buffer_va */ {
 	PAGEPOOL_VA		= 1,
 	ATTRIBUTE_VA		= 2,
 	GOLDEN_CTX_VA		= 3,
-	NR_GLOBAL_CTX_BUF_VA	= 4
+	PRIV_ACCESS_MAP_VA	= 4,
+	NR_GLOBAL_CTX_BUF_VA	= 5
 };
 
 enum {
@@ -172,6 +174,8 @@ struct gr_gk20a {
 		u32 zcull_ctxsw_image_size;
 
 		u32 buffer_header_size;
+
+		u32 priv_access_map_size;
 
 		struct gr_ucode_gk20a ucode;
 

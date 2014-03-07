@@ -122,6 +122,14 @@ static inline u32 gr_intr_exception_reset_f(void)
 {
 	return 0x200000;
 }
+static inline u32 gr_intr_firmware_method_pending_f(void)
+{
+	return 0x100;
+}
+static inline u32 gr_intr_firmware_method_reset_f(void)
+{
+	return 0x100;
+}
 static inline u32 gr_intr_nonstall_r(void)
 {
 	return 0x00400120;

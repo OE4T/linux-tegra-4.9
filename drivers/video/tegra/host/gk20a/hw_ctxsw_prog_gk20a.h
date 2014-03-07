@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -117,6 +117,46 @@ static inline u32 ctxsw_prog_main_image_magic_value_o(void)
 static inline u32 ctxsw_prog_main_image_magic_value_v_value_v(void)
 {
 	return 0x600dc0de;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_o(void)
+{
+	return 0x000000a0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f(void)
+{
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_allow_none_f(void)
+{
+	return 0x1;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f(void)
+{
+	return 0x2;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_addr_lo_o(void)
+{
+	return 0x000000a4;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_addr_hi_o(void)
+{
+	return 0x000000a8;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_o(void)
+{
+	return 0x0000003c;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_verif_features_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_verif_features_enabled_f(void)
+{
+	return 0x8;
 }
 static inline u32 ctxsw_prog_local_priv_register_ctl_o(void)
 {

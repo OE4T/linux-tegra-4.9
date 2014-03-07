@@ -188,8 +188,37 @@ static int parse_tmds(struct device_node *np,
 	u8 *addr)
 {
 	u32 temp;
+	int i = 0;
+	u32 major = 0;
+	u32 minor = 0;
+	struct property *prop;
+	const __be32 *p;
+	u32 u;
 	struct tmds_config *tmds_cfg_addr;
 	tmds_cfg_addr = (struct tmds_config *)addr;
+
+	of_property_for_each_u32(np, "version", prop, p, u)
+		i++;
+
+	if (i == 2) { /* major version, minor version */
+		i = 0;
+		of_property_for_each_u32(np,
+			"version", prop, p, u) {
+			i++;
+			if (i == 1)
+				major = u;
+			else
+				minor = u;
+		}
+		tmds_cfg_addr->version = MKDEV(major, minor);
+		OF_DC_LOG("tmds version 0x%x\n",
+			tmds_cfg_addr->version);
+	} else if (i == 0) {
+		OF_DC_LOG("there's no tmds conf version.\n");
+	} else {
+		OF_DC_LOG("need to have major, minor version\n");
+		goto parse_tmds_fail;
+	}
 
 	if (!of_property_read_u32(np, "pclk", &temp)) {
 		tmds_cfg_addr->pclk = (int)temp;
@@ -199,31 +228,43 @@ static int parse_tmds(struct device_node *np,
 	}
 	if (!of_property_read_u32(np, "pll0", &temp)) {
 		tmds_cfg_addr->pll0 = (u32)temp;
-		OF_DC_LOG("tmds pll0 %d\n", temp);
+		OF_DC_LOG("tmds pll0 0x%x\n", temp);
 	} else {
 		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pll1", &temp)) {
 		tmds_cfg_addr->pll1 = (u32)temp;
-		OF_DC_LOG("tmds pll1 %d\n", temp);
+		OF_DC_LOG("tmds pll1 0x%x\n", temp);
 	} else {
 		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pe-current", &temp)) {
 		tmds_cfg_addr->pe_current = (u32)temp;
-		OF_DC_LOG("tmds pe-current %d\n", temp);
+		OF_DC_LOG("tmds pe-current 0x%x\n", temp);
 	} else {
 		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "drive-current", &temp)) {
 		tmds_cfg_addr->drive_current = (u32)temp;
-		OF_DC_LOG("tmds drive-current %d\n", temp);
+		OF_DC_LOG("tmds drive-current 0x%x\n", temp);
 	} else {
 		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "peak-current", &temp)) {
 		tmds_cfg_addr->peak_current = (u32)temp;
-		OF_DC_LOG("tmds peak-current %d\n", temp);
+		OF_DC_LOG("tmds peak-current 0x%x\n", temp);
+	} else {
+		goto parse_tmds_fail;
+	}
+	if (!of_property_read_u32(np, "pad-ctls0-mask", &temp)) {
+		tmds_cfg_addr->pad_ctls0_mask = (u32)temp;
+		OF_DC_LOG("tmds pad_ctls0_mask 0x%x\n", temp);
+	} else {
+		goto parse_tmds_fail;
+	}
+	if (!of_property_read_u32(np, "pad-ctls0-setting", &temp)) {
+		tmds_cfg_addr->pad_ctls0_setting = (u32)temp;
+		OF_DC_LOG("tmds pad_ctls0_setting 0x%x\n", temp);
 	} else {
 		goto parse_tmds_fail;
 	}
@@ -310,9 +351,9 @@ static int parse_dc_default_out(struct platform_device *ndev,
 			default_out->hotplug_gpio = hotplug_gpio;
 	}
 	if (!of_property_read_u32(np, "nvidia,out-max-pixclk", &temp)) {
-		default_out->max_pixclock = (unsigned) KHZ2PICOS(temp);
-		OF_DC_LOG("khz %d => out_dcc %d in picos unit\n",
-			temp, default_out->max_pixclock);
+		default_out->max_pixclock = (unsigned)temp;
+		OF_DC_LOG("%u max_pixclock in pico second unit\n",
+			default_out->max_pixclock);
 	}
 
 	of_property_for_each_u32(np, "nvidia,out-flags", prop, p, u) {

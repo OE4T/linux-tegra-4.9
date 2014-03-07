@@ -72,6 +72,26 @@ struct nvhost_device_data t21_isp_info = {
 	.ctrl_ops      = &tegra_isp_ctrl_ops,
 };
 
+struct nvhost_device_data t21_vib_info = {
+	.modulemutexes = {NVMODMUTEX_VI_1},
+	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
+	.clocks		= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
+	.ctrl_ops         = &tegra_vi_ctrl_ops,
+};
+
+static struct platform_device tegra_vi01b_device = {
+	.name		= "vi",
+	.id		= 1, /* .1 on the dev node */
+	.dev		= {
+		.platform_data = &t21_vib_info,
+	},
+};
+
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes = {NVMODMUTEX_VI_0},
 	.exclusive     = true,
@@ -86,6 +106,7 @@ struct nvhost_device_data t21_vi_info = {
 		{"csi", 0},
 		{"cilab", 102000000} },
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
+	.slave         = &tegra_vi01b_device,
 };
 
 struct nvhost_device_data t21_msenc_info = {

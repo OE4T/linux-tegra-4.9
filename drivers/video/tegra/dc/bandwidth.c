@@ -732,6 +732,9 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
 
+	if (!dc->enabled)
+		return;
+
 	if (!tegra_platform_is_silicon())
 		return;
 

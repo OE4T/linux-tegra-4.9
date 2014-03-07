@@ -90,13 +90,33 @@ static inline u32 ctxsw_prog_main_image_pm_o(void)
 {
 	return 0x00000028;
 }
+static inline u32 ctxsw_prog_main_image_pm_mode_m(void)
+{
+	return 0x7 << 0;
+}
 static inline u32 ctxsw_prog_main_image_pm_mode_v(u32 r)
 {
 	return (r >> 0) & 0x7;
 }
-static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_v(void)
+static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_f(void)
 {
-	return 0x00000000;
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_m(void)
+{
+	return 0x7 << 3;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_v(u32 r)
+{
+	return (r >> 3) & 0x7;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f(void)
+{
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f(void)
+{
+	return 0x8;
 }
 static inline u32 ctxsw_prog_main_image_pm_ptr_o(void)
 {

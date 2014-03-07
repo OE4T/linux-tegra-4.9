@@ -360,6 +360,9 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 				struct nvhost_dbg_gpu_powergate_args *args);
 
+static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			      struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *args);
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -412,6 +415,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVHOST_DBG_GPU_IOCTL_EVENTS_CTRL:
 		err = gk20a_dbg_gpu_events_ctrl(dbg_s,
 			   (struct nvhost_dbg_gpu_events_ctrl_args *)buf);
+		break;
+
+	case NVHOST_DBG_GPU_IOCTL_SMPC_CTXSW_MODE:
+		err = nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(dbg_s,
+			   (struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *)buf);
 		break;
 
 	default:
@@ -617,6 +625,74 @@ static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	mutex_lock(&g->dbg_sessions_lock);
 	err = dbg_set_powergate(dbg_s, args->mode);
+	mutex_unlock(&g->dbg_sessions_lock);
+	return  err;
+}
+
+static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			       struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *args)
+{
+	int err;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+	struct channel_gk20a *ch_gk20a;
+
+	nvhost_dbg_fn("%s smpc ctxsw mode = %d",
+		      dev_name(dbg_s->dev), args->mode);
+
+	/* Take the global lock, since we'll be doing global regops */
+	mutex_lock(&g->dbg_sessions_lock);
+
+	ch_gk20a = dbg_s->ch;
+
+	if (!ch_gk20a) {
+		nvhost_err(dev_from_gk20a(dbg_s->g),
+		   "no bound channel for smpc ctxsw mode update\n");
+		err = -EINVAL;
+		goto clean_up;
+	}
+
+	err = gr_gk20a_update_smpc_ctxsw_mode(g, ch_gk20a,
+		      args->mode == NVHOST_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
+	if (err) {
+		nvhost_err(dev_from_gk20a(dbg_s->g),
+			   "error (%d) during smpc ctxsw mode update\n", err);
+		goto clean_up;
+	}
+	/* The following regops are a hack/war to make up for the fact that we
+	 * just scribbled into the ctxsw image w/o really knowing whether
+	 * it was already swapped out in/out once or not, etc.
+	 */
+	{
+		struct nvhost_dbg_gpu_reg_op ops[4];
+		int i;
+		for (i = 0; i < ARRAY_SIZE(ops); i++) {
+			ops[i].op     = NVHOST_DBG_GPU_REG_OP_WRITE_32;
+			ops[i].type   = NVHOST_DBG_GPU_REG_OP_TYPE_GR_CTX;
+			ops[i].status = NVHOST_DBG_GPU_REG_OP_STATUS_SUCCESS;
+			ops[i].value_hi      = 0;
+			ops[i].and_n_mask_lo = 0;
+			ops[i].and_n_mask_hi = 0;
+		}
+		/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control_sel1_r();*/
+		ops[0].offset   = 0x00419e08;
+		ops[0].value_lo = 0x1d;
+
+		/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control5_r(); */
+		ops[1].offset   = 0x00419e58;
+		ops[1].value_lo = 0x1;
+
+		/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control3_r(); */
+		ops[2].offset   = 0x00419e68;
+		ops[2].value_lo = 0xaaaa;
+
+		/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter4_control_r(); */
+		ops[3].offset   = 0x00419f40;
+		ops[3].value_lo = 0x18;
+
+		err = dbg_s->ops->exec_reg_ops(dbg_s, ops, ARRAY_SIZE(ops));
+	}
+
+ clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
 	return  err;
 }

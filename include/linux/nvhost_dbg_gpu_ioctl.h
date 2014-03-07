@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -137,8 +137,21 @@ struct nvhost_dbg_gpu_powergate_args {
 #define NVHOST_DBG_GPU_IOCTL_POWERGATE					\
 	_IOWR(NVHOST_DBG_GPU_IOCTL_MAGIC, 4, struct nvhost_dbg_gpu_powergate_args)
 
+
+/* SMPC Context Switch Mode */
+#define NVHOST_DBG_GPU_SMPC_CTXSW_MODE_NO_CTXSW               (0x00000000)
+#define NVHOST_DBG_GPU_SMPC_CTXSW_MODE_CTXSW                  (0x00000001)
+
+struct nvhost_dbg_gpu_smpc_ctxsw_mode_args {
+	__u32 mode;
+} __packed;
+
+#define NVHOST_DBG_GPU_IOCTL_SMPC_CTXSW_MODE \
+	_IOWR(NVHOST_DBG_GPU_IOCTL_MAGIC, 5, struct nvhost_dbg_gpu_smpc_ctxsw_mode_args)
+
+
 #define NVHOST_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVHOST_DBG_GPU_IOCTL_POWERGATE)
+	_IOC_NR(NVHOST_DBG_GPU_IOCTL_SMPC_CTXSW_MODE)
 #define NVHOST_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvhost_dbg_gpu_exec_reg_ops_args)
 

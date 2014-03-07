@@ -1613,6 +1613,42 @@ clean_up:
 	return err;
 }
 
+int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
+				    struct channel_gk20a *c,
+				    bool enable_smpc_ctxsw)
+{
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	void *ctx_ptr = NULL;
+	u32 data;
+
+	/*XXX caller responsible for making sure the channel is quiesced? */
+
+	/* Channel gr_ctx buffer is gpu cacheable.
+	   Flush and invalidate before cpu update. */
+	gk20a_mm_fb_flush(g);
+	gk20a_mm_l2_flush(g, true);
+
+	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+			0, pgprot_dmacoherent(PAGE_KERNEL));
+	if (!ctx_ptr)
+		return -ENOMEM;
+
+	data = mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = data & ~ctxsw_prog_main_image_pm_smpc_mode_m();
+	data |= enable_smpc_ctxsw ?
+		ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f() :
+		ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f();
+	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
+		 data);
+
+	vunmap(ctx_ptr);
+
+	gk20a_mm_l2_invalidate(g);
+
+	return 0;
+}
+
 /* load saved fresh copy of gloden image into channel gr_ctx */
 static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					struct channel_gk20a *c)
@@ -1621,7 +1657,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
-	u32 i, v;
+	u32 i, v, data;
 	int ret = 0;
 	void *ctx_ptr = NULL;
 
@@ -1659,10 +1695,13 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	/* no user for client managed performance counter ctx */
 	ch_ctx->pm_ctx.ctx_sw_mode =
-		ctxsw_prog_main_image_pm_mode_no_ctxsw_v();
-
+		ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
+	data = mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = data & ~ctxsw_prog_main_image_pm_mode_m();
+	data |= ch_ctx->pm_ctx.ctx_sw_mode;
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
-		ch_ctx->pm_ctx.ctx_sw_mode);
+		 data);
+
 	mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, 0);
 
 	/* set priv access map */

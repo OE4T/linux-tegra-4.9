@@ -20,6 +20,7 @@ struct gk20a;
 enum {
 	MAXWELL_B                 = 0xB197,
 	MAXWELL_COMPUTE_B         = 0xB1C0,
+	MAXWELL_DMA_COPY_A         = 0xB0B5,
 };
 
 #define NVB197_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc

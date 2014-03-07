@@ -438,6 +438,7 @@ static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 	case MAXWELL_B:
 	case FERMI_TWOD_A:
 	case KEPLER_DMA_COPY_A:
+	case MAXWELL_DMA_COPY_A:
 		valid = true;
 		break;
 

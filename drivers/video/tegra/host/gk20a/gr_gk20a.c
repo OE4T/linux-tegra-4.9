@@ -51,7 +51,6 @@
 #include "hw_therm_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "chip_support.h"
-#include "gk20a_gating_reglist.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -4094,8 +4093,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* slcg prod values */
-	gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
-	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
+	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
 
 	/* init mmu debug buffer */
 	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_wr_mem.iova);
@@ -4128,8 +4127,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
-	gr_gk20a_pg_gr_load_gating_prod(g, true);
+	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	g->ops.clock_gating.pg_gr_load_gating_prod(g, true);
 
 	if (g->elcg_enabled) {
 		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);

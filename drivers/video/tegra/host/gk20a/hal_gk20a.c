@@ -19,9 +19,26 @@
 #include "ltc_gk20a.h"
 #include "fb_gk20a.h"
 #include "gk20a.h"
+#include "gk20a_gating_reglist.h"
+
+struct gpu_ops gk20a_ops = {
+	.clock_gating = {
+		.slcg_gr_load_gating_prod =
+			gr_gk20a_slcg_gr_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gr_gk20a_slcg_perf_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gr_gk20a_blcg_gr_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gk20a_pg_gr_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gr_gk20a_slcg_therm_load_gating_prod,
+	}
+};
 
 int gk20a_init_hal(struct gpu_ops *gops)
 {
+	*gops = gk20a_ops;
 	gk20a_init_ltc(gops);
 	gk20a_init_gr(gops);
 	gk20a_init_fb(gops);

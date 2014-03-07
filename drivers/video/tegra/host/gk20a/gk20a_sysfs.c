@@ -26,7 +26,6 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
-#include "gk20a_gating_reglist.h"
 #include "nvhost_acm.h"
 #include <mach/clk.h>
 
@@ -92,7 +91,7 @@ static ssize_t blcg_enable_store(struct device *device,
 		g->blcg_enabled = false;
 
 	gk20a_busy(g->dev);
-	gr_gk20a_blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
 	gk20a_idle(g->dev);
 
 	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
@@ -133,8 +132,8 @@ static ssize_t slcg_enable_store(struct device *device,
 	 * it is added to init, we should add it here too.
 	 */
 	gk20a_busy(g->dev);
-	gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
-	gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
+	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
 	gk20a_idle(g->dev);
 
 	dev_info(device, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :

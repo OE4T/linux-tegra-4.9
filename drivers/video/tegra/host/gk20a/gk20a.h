@@ -120,6 +120,13 @@ struct gpu_ops {
 		void (*init_uncompressed_kind_map)(struct gk20a *g);
 		void (*init_kind_attr)(struct gk20a *g);
 	} fb;
+	struct {
+		void (*slcg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_perf_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_therm_load_gating_prod)(struct gk20a *g, bool prod);
+	} clock_gating;
 };
 
 struct gk20a {

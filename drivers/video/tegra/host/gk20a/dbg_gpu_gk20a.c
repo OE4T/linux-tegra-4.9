@@ -27,7 +27,6 @@
 #include "nvhost_acm.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "gk20a_gating_reglist.h"
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"
 #include "hw_therm_gk20a.h"
@@ -560,8 +559,10 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			gk20a_busy(g->dev);
 			gk20a_channel_busy(dbg_s->pdev);
 
-			gr_gk20a_slcg_gr_load_gating_prod(g, false);
-			gr_gk20a_slcg_perf_load_gating_prod(g, false);
+			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+					false);
+			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+					false);
 			gr_gk20a_init_blcg_mode(g, BLCG_RUN, ENGINE_GR_GK20A);
 
 			g->elcg_enabled = false;
@@ -591,8 +592,10 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
 			gr_gk20a_init_blcg_mode(g, BLCG_AUTO, ENGINE_GR_GK20A);
 
-			gr_gk20a_slcg_gr_load_gating_prod(g, g->slcg_enabled);
-			gr_gk20a_slcg_perf_load_gating_prod(g, g->slcg_enabled);
+			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+					g->slcg_enabled);
+			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+					g->slcg_enabled);
 
 			gk20a_pmu_enable_elpg(g);
 

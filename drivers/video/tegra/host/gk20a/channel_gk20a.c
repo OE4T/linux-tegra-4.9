@@ -615,6 +615,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 		nvhost_dbg(dbg_intr | dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
 		fifo_gk20a_finish_mmu_fault_handling(g, g->fifo.mmu_fault_engines);
+		g->fifo.mmu_fault_engines = 0;
 		g->fifo.deferred_reset_pending = false;
 	}
 	mutex_unlock(&f->deferred_reset_mutex);

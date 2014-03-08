@@ -1,4 +1,5 @@
-/* Copyright (C) 2012 NVIDIA Corporation.
+/*
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -205,7 +206,7 @@ struct nvc_imager_cap {
 	__u32 cap_version;
 	__u8 flash_control_enabled;
 	__u8 adjustable_flash_timing;
-	__u8 align4;
+	__u8 is_hdr;
 	__u8 align5;
 } __packed;
 

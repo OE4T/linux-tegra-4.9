@@ -62,6 +62,10 @@
 
 #define NVMAP_NUM_PTES		64
 
+#ifdef CONFIG_64BIT
+#define NVMAP_LAZY_VFREE
+#endif
+
 struct nvmap_share;
 struct page;
 
@@ -150,6 +154,7 @@ struct nvmap_handle {
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
 	unsigned int userflags;	/* flags passed from userspace */
+	void *vaddr;		/* mapping used inside kernel */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
 	void (*nvhost_priv_delete)(void *priv);

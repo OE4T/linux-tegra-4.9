@@ -102,6 +102,11 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	BUG_ON(h->size & ~PAGE_MASK);
 	BUG_ON(!h->pgalloc.pages);
 
+#ifdef NVMAP_LAZY_VFREE
+	if (h->vaddr)
+		vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
+#endif
+
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	pool = &share->pool;
 

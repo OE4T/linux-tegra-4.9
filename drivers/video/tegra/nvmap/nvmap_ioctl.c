@@ -756,6 +756,21 @@ static void heap_page_cache_maint(
 	unsigned long off;
 	size_t size;
 
+#ifdef NVMAP_LAZY_VFREE
+	if (inner) {
+		if (!h->vaddr)
+			h->vaddr = vm_map_ram(h->pgalloc.pages,
+					h->size >> PAGE_SHIFT, -1, prot);
+		if (h->vaddr) {
+			/* Fast inner cache maintenance using single mapping */
+			inner_cache_maint(op, h->vaddr + start, end - start);
+			if (!outer)
+				return;
+			/* Skip per-page inner maintenance in loop below */
+			inner = false;
+		}
+	}
+#endif
 	while (start < end) {
 		page = h->pgalloc.pages[start >> PAGE_SHIFT];
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);

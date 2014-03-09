@@ -266,10 +266,19 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
+#ifdef NVMAP_LAZY_VFREE
+	if (h->heap_pgalloc) {
+		if (!h->vaddr)
+			h->vaddr = vm_map_ram(h->pgalloc.pages,
+				h->size >> PAGE_SHIFT, -1, prot);
+		return h->vaddr;
+	}
+#else
 	if (h->heap_pgalloc)
-		return vm_map_ram(h->pgalloc.pages, h->size >> PAGE_SHIFT,
-				  -1, prot);
+		return vm_map_ram(h->pgalloc.pages,
+				h->size >> PAGE_SHIFT, -1, prot);
 
+#endif
 	/* carveout - explicitly map the pfns into a vmalloc area */
 
 	adj_size = h->carveout->base & ~PAGE_MASK;
@@ -329,7 +338,11 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	/* Handle can be locked by cache maintenance in
 	 * separate thread */
 	if (h->heap_pgalloc) {
+#ifdef NVMAP_LAZY_VFREE
+		BUG_ON(!h->vaddr);
+#else
 		vm_unmap_ram(addr, h->size >> PAGE_SHIFT);
+#endif
 	} else {
 		struct vm_struct *vm;
 		addr -= (h->carveout->base & ~PAGE_MASK);

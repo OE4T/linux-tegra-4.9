@@ -116,6 +116,8 @@ static void submit_ctxsave(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
 
 static void add_sync_waits(struct nvhost_channel *ch, int fd)
 {
+	struct nvhost_master *host = nvhost_get_host(ch->dev);
+	struct nvhost_syncpt *sp = &host->syncpt;
 	struct sync_fence *fence;
 	struct sync_pt *_pt;
 	struct nvhost_sync_pt *pt;
@@ -145,6 +147,9 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 		pt = to_nvhost_sync_pt(_pt);
 		id = nvhost_sync_pt_id(pt);
 		thresh = nvhost_sync_pt_thresh(pt);
+
+		if (nvhost_syncpt_is_expired(sp, id, thresh))
+			continue;
 
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,

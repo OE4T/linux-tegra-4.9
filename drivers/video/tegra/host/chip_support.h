@@ -125,7 +125,6 @@ struct nvhost_dev_ops {
 	struct nvhost_channel *(*alloc_nvhost_channel)(
 			struct platform_device *dev);
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
-	void (*set_nvhost_chanops)(struct nvhost_channel *ch);
 };
 
 struct nvhost_actmon_ops {

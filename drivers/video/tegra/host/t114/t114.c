@@ -362,12 +362,6 @@ struct platform_device *tegra11_register_host1x_devices(void)
 #include "host1x/host1x_intr.c"
 #include "host1x/host1x_actmon_t114.c"
 
-static void t114_set_nvhost_chanops(struct nvhost_channel *ch)
-{
-	if (ch)
-		ch->ops = host1x_channel_ops;
-}
-
 static void t114_free_nvhost_channel(struct nvhost_channel *ch)
 {
 	nvhost_free_channel_internal(ch, &t114_num_alloc_channels);
@@ -377,8 +371,9 @@ static struct nvhost_channel *t114_alloc_nvhost_channel(
 	struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct nvhost_channel *ch = pdata->channel;
-
+	struct nvhost_channel *ch = nvhost_alloc_channel_internal(pdata->index,
+		nvhost_get_host(dev)->info.nb_channels,
+		&t114_num_alloc_channels);
 	if (ch)
 		ch->ops = host1x_channel_ops;
 	return ch;
@@ -395,7 +390,6 @@ int nvhost_init_t114_support(struct nvhost_master *host,
 	op->intr = host1x_intr_ops;
 	op->nvhost_dev.alloc_nvhost_channel = t114_alloc_nvhost_channel;
 	op->nvhost_dev.free_nvhost_channel = t114_free_nvhost_channel;
-	op->nvhost_dev.set_nvhost_chanops = t114_set_nvhost_chanops;
 	op->actmon = host1x_actmon_ops;
 
 	return 0;

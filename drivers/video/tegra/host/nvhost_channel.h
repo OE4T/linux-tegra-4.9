@@ -29,7 +29,6 @@
 #define NVHOST_MAX_GATHERS		512
 #define NVHOST_MAX_HANDLES		1280
 #define NVHOST_MAX_POWERGATE_IDS	2
-#define NVHOST_INVALID_CHANNEL		-1
 
 struct nvhost_master;
 struct platform_device;
@@ -62,16 +61,10 @@ struct nvhost_channel {
 	 * belongs to the module. but for
 	 * now just keep it here */
 	struct nvhost_as *as;
-
-	struct list_head list;
 };
 
 #define channel_op(ch)		(ch->ops)
 
-int nvhost_alloc_channels(struct nvhost_master *host);
-struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata);
-int nvhost_channel_unmap(struct nvhost_channel *ch);
-int nvhost_channel_list_free(struct nvhost_master *host);
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);
 
@@ -80,8 +73,6 @@ int nvhost_channel_submit(struct nvhost_job *job);
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 		bool force, bool init);
 void nvhost_putchannel(struct nvhost_channel *ch, bool deinit);
-void nvhost_add_refcnt(struct nvhost_channel *ch, int cnt);
-void nvhost_sub_refcnt(struct nvhost_channel *ch, int cnt);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,

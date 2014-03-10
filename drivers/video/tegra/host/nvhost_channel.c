@@ -31,121 +31,6 @@
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
-/* Constructor for the host1x device list */
-int nvhost_channel_list_init(struct nvhost_master *host)
-{
-	INIT_LIST_HEAD(&host->chlist.list);
-	mutex_init(&host->chlist_mutex);
-
-	if (host->info.nb_channels > BITS_PER_LONG) {
-		WARN(1, "host1x hardware has more channels than supported\n");
-		return -ENOSYS;
-	}
-
-	return 0;
-}
-
-int nvhost_alloc_channels(struct nvhost_master *host)
-{
-	int max_channels = host->info.nb_channels;
-	int i;
-	struct nvhost_channel *ch;
-
-	nvhost_channel_list_init(host);
-	mutex_lock(&host->chlist_mutex);
-
-	for (i = 0; i < max_channels; i++) {
-		ch = nvhost_alloc_channel_internal(i, max_channels,
-					&host->cnt_alloc_channels);
-		if (!ch) {
-			mutex_unlock(&host->chlist_mutex);
-			return -ENOMEM;
-		}
-		ch->dev = NULL;
-		ch->chid = NVHOST_INVALID_CHANNEL;
-
-		list_add_tail(&ch->list, &host->chlist.list);
-	}
-	mutex_unlock(&host->chlist_mutex);
-
-	return 0;
-}
-
-int nvhost_channel_unmap(struct nvhost_channel *ch)
-{
-	struct nvhost_device_data *pdata;
-	struct nvhost_master *host;
-
-	if (!ch->dev) {
-		pr_warn("%s channel already unmapped\n", __func__);
-		return 0;
-	}
-
-	pdata = platform_get_drvdata(ch->dev);
-	host = nvhost_get_host(ch->dev);
-
-	host->allocated_channels &= ~BIT(ch->chid);
-	ch->chid = NVHOST_INVALID_CHANNEL;
-	ch->dev = NULL;
-	ch->ctxhandler = NULL;
-	ch->cur_ctx = NULL;
-	ch->aperture = NULL;
-	pdata->channel = NULL;
-
-	return 0;
-}
-
-struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
-{
-	struct nvhost_master *host = NULL;
-	struct nvhost_channel *ch = NULL;
-	int max_channels = 0;
-	int index = 0;
-	int err;
-
-	if (!pdata)
-		return NULL;
-
-	host = nvhost_get_host(pdata->pdev);
-	max_channels = host->info.nb_channels;
-
-	/* Check if already channel assigned for device */
-	if (pdata->channel) {
-		ch = pdata->channel;
-		return ch;
-	}
-	mutex_lock(&host->chlist_mutex);
-	list_for_each_entry(ch, &host->chlist.list, list) {
-		index++;
-		if (ch->chid == NVHOST_INVALID_CHANNEL) {
-			ch->dev = pdata->pdev;
-			ch->chid = index;
-			pdata->channel = ch;
-			nvhost_set_chanops(ch);
-			break;
-		}
-	}
-	mutex_unlock(&host->chlist_mutex);
-
-	if (index > max_channels) {
-		pr_warn("%s: All channels are in use!\n", __func__);
-		return NULL;
-	}
-
-	err = nvhost_channel_init(ch, host);
-	if (err) {
-		nvhost_channel_unmap(ch);
-		return NULL;
-	}
-	host->allocated_channels |= BIT(index);
-
-	return ch;
-}
-
-int nvhost_channel_list_free(struct nvhost_master *host)
-{
-	return 0;
-}
 int nvhost_channel_init(struct nvhost_channel *ch,
 		struct nvhost_master *dev)
 {
@@ -198,20 +83,6 @@ int nvhost_channel_submit(struct nvhost_job *job)
 	return channel_op(job->ch).submit(job);
 }
 
-void nvhost_add_refcnt(struct nvhost_channel *ch, int cnt)
-{
-	mutex_lock(&ch->reflock);
-	ch->refcount += cnt;
-	mutex_unlock(&ch->reflock);
-}
-
-void nvhost_sub_refcnt(struct nvhost_channel *ch, int cnt)
-{
-	mutex_lock(&ch->reflock);
-	ch->refcount -= cnt;
-	mutex_unlock(&ch->reflock);
-}
-
 struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
 		bool force, bool init)
 {
@@ -248,10 +119,8 @@ void nvhost_putchannel(struct nvhost_channel *ch, bool deinit)
 		nvhost_module_enable_poweroff(ch->dev);
 
 	mutex_lock(&ch->reflock);
-	if (ch->refcount <= 1 && deinit && pdata->deinit) {
+	if (ch->refcount == 1 && deinit && pdata->deinit)
 		pdata->deinit(ch->dev);
-		nvhost_channel_unmap(ch);
-	}
 
 	ch->refcount--;
 	mutex_unlock(&ch->reflock);
@@ -261,7 +130,7 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 {
 	int ret = 0;
 
-	if (channel_cdma_op().stop && ch->dev)
+	if (channel_cdma_op().stop)
 		channel_cdma_op().stop(&ch->cdma);
 
 	return ret;
@@ -296,9 +165,9 @@ void nvhost_free_channel_internal(struct nvhost_channel *ch,
 
 int nvhost_channel_save_context(struct nvhost_channel *ch)
 {
+	struct nvhost_hwctx *cur_ctx = ch->cur_ctx;
 	int err = 0;
-
-	if (ch && ch->cur_ctx)
+	if (cur_ctx)
 		err = channel_op(ch).save_context(ch);
 
 	return err;

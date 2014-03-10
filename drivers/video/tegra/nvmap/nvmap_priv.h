@@ -288,7 +288,7 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE)
 		return pgprot_noncached(prot);
 	else if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
-		return pgprot_writecombine(prot);
+		return pgprot_dmacoherent(prot);
 	return prot;
 }
 

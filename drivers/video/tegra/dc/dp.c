@@ -111,8 +111,10 @@ static inline void tegra_dp_disable_irq(u32 irq)
 	disable_irq(irq);
 }
 
-static inline u32 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
-	u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
+static inline unsigned long
+tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
+				u32 reg, u32 mask, u32 exp_val,
+				u32 poll_interval_us, u32 timeout_ms)
 {
 	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32		reg_val	   = 0;

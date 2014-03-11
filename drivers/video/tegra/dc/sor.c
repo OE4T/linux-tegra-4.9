@@ -51,8 +51,10 @@
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_OFF		(0 << 25)
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON		(1 << 25)
 
-static u32 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
-	u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
+static unsigned long
+tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
+				u32 reg, u32 mask, u32 exp_val,
+				u32 poll_interval_us, u32 timeout_ms)
 {
 	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32 reg_val = 0;

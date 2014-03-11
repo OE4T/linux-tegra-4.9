@@ -747,14 +747,15 @@ static void pd_stop_all_for_device(struct net_device *net_dev)
  */
 void oz_binding_remove(const char *net_dev)
 {
-	struct oz_binding *binding;
+	struct oz_binding *binding, *tmp;
 	int found = 0;
 
 	oz_trace_msg(M, "Removing binding: '%s'\n", net_dev);
 	spin_lock_bh(&g_binding_lock);
-	list_for_each_entry(binding, &g_binding, link) {
+	list_for_each_entry_safe(binding, tmp, &g_binding, link) {
 		if (compare_binding_name(binding->name, net_dev)) {
 			oz_trace_msg(M, "Binding '%s' found\n", net_dev);
+			list_del(&binding->link);
 			found = 1;
 			break;
 		}
@@ -767,7 +768,6 @@ void oz_binding_remove(const char *net_dev)
 			dev_put(binding->ptype.dev);
 			pd_stop_all_for_device(binding->ptype.dev);
 		}
-		list_del(&binding->link);
 		kfree(binding);
 	}
 }

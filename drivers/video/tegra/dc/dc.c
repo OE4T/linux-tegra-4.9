@@ -72,7 +72,7 @@
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
 #define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
 
-static struct fb_videomode tegra_dc_hdmi_fallback_mode = {
+static struct fb_videomode tegra_dc_vga_mode = {
 	.refresh = 60,
 	.xres = 640,
 	.yres = 480,
@@ -1419,22 +1419,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 			return err;
 		}
 	}
-	/* If there is no predefined mode, try early_enable()
-	   to check mode from panel directly */
-	if (!mode && !out->n_modes && dc->out_ops &&
-		dc->out_ops->early_enable) {
-		if (dc->out_ops->early_enable(dc))
-			dev_info(&dc->ndev->dev,
-				"Detected mode: %dx%d (on %dx%dmm) pclk=%d\n",
-				dc->mode.h_active, dc->mode.v_active,
-				dc->out->h_size, dc->out->v_size,
-				dc->mode.pclk);
-		else {
-			dev_err(&dc->ndev->dev,
-				"Error: failed to check panel mode\n");
-			err = -EINVAL;
-		}
-	}
 
 	return err;
 }
@@ -2355,12 +2339,14 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 		/* DC enable called but no videomode is loaded.
 		     Check if HDMI is connected, then set fallback mdoe */
 		if (tegra_dc_hpd(dc)) {
-			return tegra_dc_set_fb_mode(dc,
-					&tegra_dc_hdmi_fallback_mode, 0);
+			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 		} else
 			return false;
 
 		break;
+
+		case TEGRA_DC_OUT_DP:
+			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 
 		/* Do nothing for other outputs for now */
 		case TEGRA_DC_OUT_RGB:
@@ -2925,39 +2911,18 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
 
-#ifdef CONFIG_TEGRA_ISOMGR
-	if (isomgr_client_id == -1) {
-		dc->isomgr_handle = NULL;
-	} else {
-		dc->isomgr_handle = tegra_isomgr_register(isomgr_client_id,
-			tegra_dc_calc_min_bandwidth(dc),
-			tegra_dc_bandwidth_renegotiate, dc);
-		if (IS_ERR(dc->isomgr_handle)) {
-			dev_err(&dc->ndev->dev,
-				"could not register isomgr. err=%ld\n",
-				PTR_ERR(dc->isomgr_handle));
+#ifndef CONFIG_TEGRA_ISOMGR
+		/*
+		 * The emc is a shared clock, it will be set based on
+		 * the requirements for each user on the bus.
+		 */
+		emc_clk = clk_get(&ndev->dev, "emc");
+		if (IS_ERR_OR_NULL(emc_clk)) {
+			dev_err(&ndev->dev, "can't get emc clock\n");
 			ret = -ENOENT;
 			goto err_put_clk;
 		}
-		dc->reserved_bw = tegra_dc_calc_min_bandwidth(dc);
-		/*
-		 * Use maximum value so we can try to reserve as much as
-		 * needed until we are told by isomgr to backoff.
-		 */
-		dc->available_bw = UINT_MAX;
-	}
-#else
-	/*
-	 * The emc is a shared clock, it will be set based on
-	 * the requirements for each user on the bus.
-	 */
-	emc_clk = clk_get(&ndev->dev, "emc");
-	if (IS_ERR_OR_NULL(emc_clk)) {
-		dev_err(&ndev->dev, "can't get emc clock\n");
-		ret = -ENOENT;
-		goto err_put_clk;
-	}
-	dc->emc_clk = emc_clk;
+		dc->emc_clk = emc_clk;
 #endif
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
@@ -2984,6 +2949,29 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 	}
+
+#ifdef CONFIG_TEGRA_ISOMGR
+	if (isomgr_client_id == -1) {
+		dc->isomgr_handle = NULL;
+	} else {
+		dc->isomgr_handle = tegra_isomgr_register(isomgr_client_id,
+			tegra_dc_calc_min_bandwidth(dc),
+			tegra_dc_bandwidth_renegotiate, dc);
+		if (IS_ERR(dc->isomgr_handle)) {
+			dev_err(&dc->ndev->dev,
+				"could not register isomgr. err=%ld\n",
+				PTR_ERR(dc->isomgr_handle));
+			ret = -ENOENT;
+			goto err_put_clk;
+		}
+		dc->reserved_bw = tegra_dc_calc_min_bandwidth(dc);
+		/*
+		 * Use maximum value so we can try to reserve as much as
+		 * needed until we are told by isomgr to backoff.
+		 */
+		dc->available_bw = UINT_MAX;
+	}
+#endif
 
 	tegra_dc_create_debugfs(dc);
 

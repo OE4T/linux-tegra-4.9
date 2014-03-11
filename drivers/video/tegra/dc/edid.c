@@ -40,18 +40,6 @@ struct tegra_edid_pvt {
 	struct tegra_dc_edid		dc_edid;
 };
 
-struct tegra_dc_i2c_ops {
-	i2c_transfer_func_t i2c_transfer;
-};
-
-struct tegra_edid {
-	struct tegra_edid_pvt	*data;
-
-	struct mutex		lock;
-	struct tegra_dc_i2c_ops	i2c_ops;
-	struct tegra_dc		*dc;
-};
-
 #if defined(DEBUG) || defined(CONFIG_DEBUG_FS)
 static int tegra_edid_show(struct seq_file *s, void *unused)
 {

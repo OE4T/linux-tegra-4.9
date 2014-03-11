@@ -745,6 +745,9 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 #ifdef CONFIG_TEGRA_ISOMGR
 		int latency;
 
+		if (!dc->isomgr_handle)
+			return;
+
 		/* reserve atleast the minimum bandwidth. */
 		bw = max(bw, tegra_dc_calc_min_bandwidth(dc));
 		latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
@@ -850,6 +853,11 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 #else
 			pclk = KHZ2PICOS(150000); /* 150MHz max */
 #endif
+		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
+			if (dc->mode.pclk)
+				pclk = KHZ2PICOS(dc->mode.pclk / 1000);
+			else
+				pclk = KHZ2PICOS(25200); /* vga */
 		} else {
 			pclk = KHZ2PICOS(dc->mode.pclk / 1000);
 		}

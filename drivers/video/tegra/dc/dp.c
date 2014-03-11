@@ -1968,6 +1968,42 @@ static void tegra_dp_link_config(struct tegra_dc_dp_data *dp)
 	tegra_sor_port_enable(sor, true);
 }
 
+static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc *dc = dp->dc;
+	struct fb_monspecs specs;
+	int err;
+
+	err = tegra_edid_get_monspecs(dp->dp_edid, &specs);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev, "dp: Failed to get EDID data\n");
+		goto fail;
+	}
+
+	dc->out->h_size = specs.max_x * 10; /* in mm */
+	dc->out->v_size = specs.max_y * 10;
+
+	tegra_dc_set_fb_mode(dc, specs.modedb, false);
+
+	if (!dc->out->width && !dc->out->height) {
+		/*
+		 * EDID specifies either the acutal screen sizes or
+		 * the aspect ratios. The panel file can choose to
+		 * trust the value as the actual sizes by leaving
+		 * width/height to 0s
+		 */
+		dc->out->width = dc->out->h_size;
+		dc->out->height = dc->out->v_size;
+	}
+
+	/* adjust clk for new mode */
+	tegra_dc_setup_clk(dc, dc->clk);
+
+	return 0;
+fail:
+	return err;
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -1996,6 +2032,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 			"dp: failed to power on panel (0x%x)\n", ret);
 		goto error_enable;
 	}
+
+	if (dp->dp_edid && !dp->dp_edid->data)
+		tegra_dp_edid(dp);
 
 	tegra_dp_dpcd_init(dp);
 
@@ -2068,65 +2107,6 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return tegra_dc_pclk_round_rate(dc, dp->sor->dc->mode.pclk);
 }
 
-
-static bool tegra_dc_dp_early_enable(struct tegra_dc *dc)
-{
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	struct fb_monspecs specs;
-	u32    reg_val;
-
-	/* Power on panel */
-	if (dc->out->enable)
-		dc->out->enable(&dc->ndev->dev);
-
-	tegra_dc_get(dp->dc);
-
-	if (!tegra_is_clk_enabled(dp->clk))
-		clk_prepare_enable(dp->clk);
-	tegra_dpaux_enable(dp);
-	tegra_dp_enable_irq(dp->irq);
-	tegra_dp_hpd_config(dp);
-
-	tegra_dc_unpowergate_locked(dc);
-	msleep(80);
-
-	if (tegra_dp_hpd_plug(dp) < 0) {
-		dev_err(&dc->ndev->dev, "dp: hpd plug failed\n");
-		return false;
-	}
-
-	reg_val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
-	if (!(reg_val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-		dev_err(&dc->ndev->dev, "dp: Failed to detect HPD\n");
-		return false;
-	}
-
-	if (tegra_edid_get_monspecs(dp->dp_edid, &specs)) {
-		dev_err(&dc->ndev->dev, "dp: Failed to get EDID data\n");
-		return false;
-	}
-
-	tegra_dc_set_fb_mode(dc, specs.modedb, false);
-
-	dc->out->h_size = specs.max_x * 10; /* in mm */
-	dc->out->v_size = specs.max_y * 10;
-
-	if (!dc->out->width && !dc->out->height) {
-		/* EDID specifies either the acutal screen sizes or
-		   the aspect ratios. The panel file can choose to
-		   trust the value as the actual sizes by leaving
-		   width/height to 0s */
-		dc->out->width = dc->out->h_size;
-		dc->out->height = dc->out->v_size;
-	}
-
-	tegra_dc_powergate_locked(dc);
-	msleep(50);
-	tegra_dp_disable_irq(dp->irq);
-	tegra_dc_put(dp->dc);
-	return true;
-}
-
 static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2140,7 +2120,6 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.disable   = tegra_dc_dp_disable,
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
-	.early_enable     = tegra_dc_dp_early_enable,
 };
 
 

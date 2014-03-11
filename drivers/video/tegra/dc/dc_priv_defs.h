@@ -109,10 +109,6 @@ struct tegra_dc_out_ops {
 	/* callback after new mode is programmed.
 	 * dc clocks are on at this point */
 	void (*modeset_notifier)(struct tegra_dc *dc);
-	/* enable output before dc is fully enabled in order to get
-	 * info such as panel mode for dc enablement.
-	 */
-	bool (*early_enable)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {

@@ -845,15 +845,6 @@ static void tegra_dc_nvsr_enable(struct tegra_dc *dc)
 	tegra_dc_nvsr_init_src(nvsr);
 }
 
-static bool tegra_dc_nvsr_early_enable(struct tegra_dc *dc)
-{
-	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
-	if (nvsr->out_ops.early_enable)
-		return nvsr->out_ops.early_enable(dc);
-
-	return true;
-}
-
 static void tegra_dc_nvsr_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
@@ -937,11 +928,6 @@ static void tegra_dc_nvsr_init_out_ops(struct tegra_dc_nvsr_data *nvsr,
 	if (out_ops->enable) {
 		tegra_dc_nvsr_ops.enable = tegra_dc_nvsr_enable;
 		nvsr->out_ops.enable = out_ops->enable;
-	}
-
-	if (out_ops->early_enable) {
-		tegra_dc_nvsr_ops.early_enable = tegra_dc_nvsr_early_enable;
-		nvsr->out_ops.early_enable = out_ops->early_enable;
 	}
 
 	if (out_ops->disable) {

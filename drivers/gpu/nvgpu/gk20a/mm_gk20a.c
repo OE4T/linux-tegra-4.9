@@ -1321,7 +1321,10 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		bfr.pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
 				gmmu_page_size_big : gmmu_page_size_small;
 	} else {
-		gmmu_select_page_size(&bfr);
+		if (vm->big_pages)
+			gmmu_select_page_size(&bfr);
+		else
+			bfr.pgsz_idx = gmmu_page_size_small;
 	}
 
 	/* validate/adjust bfr attributes */

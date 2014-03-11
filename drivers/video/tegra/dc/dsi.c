@@ -3102,7 +3102,7 @@ int tegra_dsi_end_host_cmd_v_blank_video(struct tegra_dc *dc,
 }
 EXPORT_SYMBOL(tegra_dsi_end_host_cmd_v_blank_video);
 
-static int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
+int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
 					struct tegra_dsi_cmd *cmd,
 					u32 n_cmd)

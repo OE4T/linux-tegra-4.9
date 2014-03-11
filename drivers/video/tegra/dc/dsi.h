@@ -18,6 +18,7 @@
 #define __DRIVERS_VIDEO_TEGRA_DC_DSI_H__
 
 #define BOARD_P1761   0x06E1
+#include "dc_priv_defs.h"
 
 /* Defines the DSI phy timing parameters */
 struct dsi_phy_timing_inclk {
@@ -472,6 +473,11 @@ void tegra_dsi_stop_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi);
 int tegra_dsi_write_data(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
 			struct tegra_dsi_cmd *cmd, u8 delay_ms);
+int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi,
+					struct tegra_dsi_cmd *cmd,
+					u32 n_cmd);
+
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

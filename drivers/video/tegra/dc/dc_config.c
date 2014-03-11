@@ -192,7 +192,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
-	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
@@ -201,7 +201,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
@@ -210,7 +210,7 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1,} },
-	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
+	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
@@ -230,7 +230,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 0, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
-	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 0, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
 	{ 0, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 1, TEGRA_DC_FEATURE_FORMATS,
@@ -240,7 +240,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 1, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 1, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
-	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 1, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
 	{ 1, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS,
@@ -250,7 +250,7 @@ static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2,} },
 	{ 2, TEGRA_DC_FEATURE_FILTER_TYPE, {1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_LAYOUT_TYPE, {1, 1, 1,} },
-	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 0,} },
+	{ 2, TEGRA_DC_FEATURE_INVERT_TYPE, {1, 1, 1,} },
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 
 	{ 3, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_SIMPLE,} },
@@ -529,6 +529,24 @@ int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx)
 		return 1;
 
 	return 0;
+}
+
+/* supports 90 and 270 rotation? */
+int tegra_dc_feature_has_scan_column(struct tegra_dc *dc, int win_idx)
+{
+	int idx;
+	struct tegra_dc_feature_entry *entry;
+
+	if (WARN_ONCE(!dc, "display is NULL"))
+		return 0;
+
+	idx = tegra_dc_get_feature(dc->feature, win_idx,
+		TEGRA_DC_FEATURE_INVERT_TYPE);
+	if (IS_ERR_VALUE(idx))
+		return 0;
+
+	entry = &dc->feature->entries[idx];
+	return entry->arg[2]; /* 1=SCAN_COLUMN supported, 0=not supported */
 }
 
 void tegra_dc_feature_register(struct tegra_dc *dc)

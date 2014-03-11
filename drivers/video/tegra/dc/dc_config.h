@@ -181,6 +181,7 @@ int tegra_dc_feature_has_blocklinear(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_interlace(struct tegra_dc *dc, int win_idx);
 int tegra_dc_feature_has_filter(struct tegra_dc *dc, int win_idx, int operation);
 int tegra_dc_feature_is_gen2_blender(struct tegra_dc *dc, int win_idx);
+int tegra_dc_feature_has_scan_column(struct tegra_dc *dc, int win_idx);
 
 u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation);
 void tegra_dc_feature_register(struct tegra_dc *dc);

@@ -428,6 +428,9 @@ u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 	case GET_WIN_SIZE:
 		option = TEGRA_DC_FEATURE_MAXIMUM_SIZE;
 		break;
+	case GET_INVERT:
+		option = TEGRA_DC_FEATURE_INVERT_TYPE;
+		break;
 	case HAS_SCALE:
 		option = TEGRA_DC_FEATURE_MAXIMUM_SCALE;
 		break;

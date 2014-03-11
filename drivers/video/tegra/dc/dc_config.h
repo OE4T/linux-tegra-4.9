@@ -150,6 +150,7 @@ enum {
 	GET_WIN_SIZE,
 	HAS_BLOCKLINEAR,
 	HAS_INTERLACE,
+	GET_INVERT,
 };
 
 enum tegra_dc_feature_option {

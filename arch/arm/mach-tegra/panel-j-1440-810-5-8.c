@@ -435,9 +435,6 @@ fail:
 }
 
 static struct tegra_dsi_cmd dsi_j_1440_810_5_8_init_cmd[] = {
-	DSI_DLY_MS(5),
-	DSI_GPIO_SET(DSI_PANEL_RST_GPIO, 1),
-	DSI_DLY_MS(5),
 	/* panel exit_sleep_mode sequence */
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
 	DSI_SEND_FRAME(5),
@@ -515,6 +512,8 @@ static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
+	gpio_direction_output(dsi_j_1440_810_5_8_pdata.dsi_panel_rst_gpio, 1);
+	msleep(20);
 	gpio_set_value(DSI_PANEL_EN_GPIO, 1);
 	msleep(20);
 

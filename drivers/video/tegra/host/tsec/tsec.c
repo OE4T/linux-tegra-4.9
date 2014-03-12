@@ -87,7 +87,7 @@ static char *tsec_get_fw_name(struct platform_device *dev)
 		return NULL;
 	}
 
-	dev_info(&dev->dev, "fw name:%s\n", fw_name);
+	dev_dbg(&dev->dev, "fw name:%s\n", fw_name);
 
 	return fw_name;
 }

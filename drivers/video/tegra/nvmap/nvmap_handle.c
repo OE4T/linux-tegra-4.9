@@ -75,7 +75,6 @@ static inline void altfree(void *ptr, size_t len)
 
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
-	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 	unsigned int i, nr_page, page_index = 0;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	struct nvmap_page_pool *pool = NULL;
@@ -108,7 +107,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 #endif
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	pool = &share->pool;
+	pool = &nvmap_dev->pool;
 
 	while (page_index < nr_page) {
 		if (!nvmap_page_pool_fill(pool,
@@ -160,7 +159,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct page **pages;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	struct nvmap_page_pool *pool = NULL;
-	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 	phys_addr_t paddr;
 #endif
 	gfp_t gfp = GFP_NVMAP;
@@ -192,7 +190,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	} else {
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-		pool = &share->pool;
+		pool = &nvmap_dev->pool;
 
 		for (i = 0; i < nr_page; i++) {
 			/* Get pages from pool, if available. */

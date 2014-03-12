@@ -240,16 +240,11 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 ulong nvmap_page_pool_get_unused_pages(void)
 {
 	int total = 0;
-	struct nvmap_share *share;
 
 	if (!nvmap_dev)
 		return 0;
 
-	share = nvmap_get_share_from_dev(nvmap_dev);
-	if (!share)
-		return 0;
-
-	total = nvmap_page_pool_get_available_count(&share->pool);
+	total = nvmap_page_pool_get_available_count(&nvmap_dev->pool);
 
 	return total;
 }
@@ -308,14 +303,13 @@ static int nvmap_page_pool_shrink(struct shrinker *shrinker,
 				  struct shrink_control *sc)
 {
 	int shrink_pages = sc->nr_to_scan;
-	struct nvmap_share *share = nvmap_get_share_from_dev(nvmap_dev);
 
 	if (!shrink_pages)
 		goto out;
 
 	pr_debug("sh_pages=%d", shrink_pages);
 
-	shrink_pages = nvmap_page_pool_free(&share->pool, shrink_pages);
+	shrink_pages = nvmap_page_pool_free(&nvmap_dev->pool, shrink_pages);
 out:
 	return nvmap_page_pool_get_unused_pages();
 }
@@ -405,9 +399,8 @@ module_param_cb(enable_page_pools, &enable_pp_ops, &enable_pp, 0644);
 
 static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
-	struct nvmap_share *share = nvmap_get_share_from_dev(nvmap_dev);
 	param_set_int(arg, kp);
-	nvmap_page_pool_resize(&share->pool, pool_size);
+	nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
 	return 0;
 }
 
@@ -427,7 +420,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 {
 	static int reg = 1;
 	struct sysinfo info;
-	struct nvmap_page_pool *pool = &dev->iovmm_master.pool;
+	struct nvmap_page_pool *pool = &dev->pool;
 #ifdef CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP
 	int i;
 	struct page *page;

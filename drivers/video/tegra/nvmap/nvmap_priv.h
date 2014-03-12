@@ -66,12 +66,10 @@
 #define NVMAP_LAZY_VFREE
 #endif
 
-struct nvmap_share;
 struct page;
 
 extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
-extern struct nvmap_share *nvmap_share;
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
 extern size_t cache_maint_inner_threshold;
@@ -217,15 +215,6 @@ struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
 bool nvmap_page_pool_fill(struct nvmap_page_pool *pool, struct page *page);
 #endif
 
-struct nvmap_share {
-	struct tegra_iovmm_client *iovmm;
-	wait_queue_head_t pin_wait;
-	struct mutex pin_lock;
-#ifdef CONFIG_NVMAP_PAGE_POOLS
-	struct nvmap_page_pool pool;
-#endif
-};
-
 struct nvmap_carveout_commit {
 	size_t commit;
 	struct list_head list;
@@ -268,7 +257,9 @@ struct nvmap_device {
 	struct miscdevice dev_user;
 	struct nvmap_carveout_node *heaps;
 	int nr_carveouts;
-	struct nvmap_share iovmm_master;
+#ifdef CONFIG_NVMAP_PAGE_POOLS
+	struct nvmap_page_pool pool;
+#endif
 	struct list_head clients;
 	spinlock_t	clients_lock;
 };
@@ -367,8 +358,6 @@ void nvmap_carveout_commit_add(struct nvmap_client *client,
 void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 				    struct nvmap_carveout_node *node,
 				    size_t len);
-
-struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev);
 
 int nvmap_find_cache_maint_op(struct nvmap_device *dev,
 		struct nvmap_handle *h);

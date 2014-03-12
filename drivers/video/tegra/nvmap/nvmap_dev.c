@@ -71,8 +71,6 @@ struct platform_device *nvmap_pdev;
 EXPORT_SYMBOL(nvmap_pdev);
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
-struct nvmap_share *nvmap_share;
-EXPORT_SYMBOL(nvmap_share);
 struct nvmap_stats nvmap_stats;
 EXPORT_SYMBOL(nvmap_stats);
 
@@ -135,11 +133,6 @@ struct device *nvmap_client_to_device(struct nvmap_client *client)
 		return nvmap_dev->dev_super.this_device;
 	else
 		return nvmap_dev->dev_user.this_device;
-}
-
-struct nvmap_share *nvmap_get_share_from_dev(struct nvmap_device *dev)
-{
-	return &dev->iovmm_master;
 }
 
 /* allocates a PTE for the caller's use; returns the PTE pointer or
@@ -1225,9 +1218,6 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&dev->pte_wait);
 
-	init_waitqueue_head(&dev->iovmm_master.pin_wait);
-
-	mutex_init(&dev->iovmm_master.pin_lock);
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	e = nvmap_page_pool_init(dev);
 	if (e)
@@ -1355,26 +1345,26 @@ static int nvmap_probe(struct platform_device *pdev)
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 			debugfs_create_u32("page_pool_available_pages",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.count);
+					   &dev->pool.count);
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 			debugfs_create_u32("page_pool_alloc_ind",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.alloc);
+					   &dev->pool.alloc);
 			debugfs_create_u32("page_pool_fill_ind",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.fill);
+					   &dev->pool.fill);
 			debugfs_create_u64("page_pool_allocs",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.allocs);
+					   &dev->pool.allocs);
 			debugfs_create_u64("page_pool_fills",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.fills);
+					   &dev->pool.fills);
 			debugfs_create_u64("page_pool_hits",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.hits);
+					   &dev->pool.hits);
 			debugfs_create_u64("page_pool_misses",
 					   S_IRUGO, iovmm_root,
-					   &dev->iovmm_master.pool.misses);
+					   &dev->pool.misses);
 #endif
 #endif
 		}
@@ -1404,7 +1394,6 @@ static int nvmap_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	nvmap_pdev = pdev;
 	nvmap_dev = dev;
-	nvmap_share = &dev->iovmm_master;
 
 	nvmap_dmabuf_debugfs_init(nvmap_debug_root);
 	e = nvmap_dmabuf_stash_init();

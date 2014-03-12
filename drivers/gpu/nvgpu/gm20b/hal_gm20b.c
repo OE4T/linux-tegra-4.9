@@ -22,6 +22,7 @@
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
 #include "gm20b_gating_reglist.h"
+#include "fifo_gm20b.h"
 
 struct gpu_ops gm20b_ops = {
 	.clock_gating = {
@@ -45,6 +46,7 @@ int gm20b_init_hal(struct gpu_ops *gops)
 	gm20b_init_gr(gops);
 	gm20b_init_ltc(gops);
 	gm20b_init_fb(gops);
+	gm20b_init_fifo(gops);
 	gops->name = "gm20b";
 
 	return 0;

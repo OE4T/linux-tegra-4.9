@@ -20,6 +20,9 @@
 #include <linux/regulator/consumer.h>
 #include <mach/pinmux.h>
 
+#define MAKE_CONSTUSER_PTR(p)	(const void __user *)((unsigned long)(p))
+#define MAKE_USER_PTR(p)	(void __user *)((unsigned long)(p))
+
 #define NVC_INT2FLOAT_DIVISOR_1K	1000
 #define NVC_INT2FLOAT_DIVISOR_1M	1000000
 #define NVC_INT2FLOAT_DIVISOR		1000

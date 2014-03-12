@@ -4,7 +4,7 @@ ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 
-obj-$(CONFIG_GK20A) += \
+nvgpu-y := \
 	gk20a.o \
 	as_gk20a.o \
 	ctrl_gk20a.o \
@@ -30,7 +30,8 @@ obj-$(CONFIG_GK20A) += \
 	fb_gk20a.o \
 	hal.o \
 	hal_gk20a.o \
-	gk20a_allocator.o
+	gk20a_allocator.o \
+	platform_gk20a_generic.o
+nvgpu-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o
 
-obj-$(CONFIG_GK20A) += platform_gk20a_generic.o
-obj-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o
+obj-$(CONFIG_GK20A) := nvgpu.o

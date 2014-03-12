@@ -1,5 +1,6 @@
 config GK20A
-	bool "Nvidia GK20A GPU support"
+	tristate "Nvidia GK20A GPU support"
+	default y
 	help
 	  Choose this option if you have an SoC with integrated
 	  Nvidia GPU IP.
@@ -54,7 +55,18 @@ config GK20A_CYCLE_STATS
 
 config GK20A_PHYS_PAGE_TABLES
 	bool "Use physical addressing for gk20a page tables"
+	depends on GK20A
 	default y if TEGRA_SIMULATION_PLATFORM
 	help
 	  Use physical addressing for gk20a page tables. If this is off, we
 	  use SMMU translation.
+
+config TEGRA_GK20A
+	bool "Enable the GK20A GPU on Tegra"
+	depends on TEGRA_GRHOST
+	depends on GK20A
+	default y
+	help
+	  Enable support for the GK20A graphics engine on Tegra
+	  by adding a Tegra platfrom interface to the GK20A driver.
+	  The Tegra platform interface requires TEGRA_GRHOST (host1x).

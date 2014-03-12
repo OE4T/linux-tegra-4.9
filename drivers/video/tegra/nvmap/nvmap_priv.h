@@ -225,7 +225,6 @@ struct nvmap_client {
 	struct rb_root			handle_refs;
 	atomic_t			iovm_commit;
 	struct mutex			ref_lock;
-	bool				super;
 	bool				kernel_client;
 	atomic_t			count;
 	struct task_struct		*task;
@@ -253,7 +252,6 @@ struct nvmap_device {
 	struct rb_root	handles;
 	spinlock_t	handle_lock;
 	wait_queue_head_t pte_wait;
-	struct miscdevice dev_super;
 	struct miscdevice dev_user;
 	struct nvmap_carveout_node *heaps;
 	int nr_carveouts;

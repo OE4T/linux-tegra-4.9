@@ -103,17 +103,6 @@ static const struct file_operations nvmap_user_fops = {
 	.mmap		= nvmap_map,
 };
 
-static const struct file_operations nvmap_super_fops = {
-	.owner		= THIS_MODULE,
-	.open		= nvmap_open,
-	.release	= nvmap_release,
-	.unlocked_ioctl	= nvmap_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = nvmap_ioctl,
-#endif
-	.mmap		= nvmap_map,
-};
-
 static struct vm_operations_struct nvmap_vma_ops = {
 	.open		= nvmap_vma_open,
 	.close		= nvmap_vma_close,
@@ -129,10 +118,7 @@ struct device *nvmap_client_to_device(struct nvmap_client *client)
 {
 	if (!client)
 		return 0;
-	if (client->super)
-		return nvmap_dev->dev_super.this_device;
-	else
-		return nvmap_dev->dev_user.this_device;
+	return nvmap_dev->dev_user.this_device;
 }
 
 /* allocates a PTE for the caller's use; returns the PTE pointer or
@@ -449,7 +435,6 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 		return NULL;
 
 	client->name = name;
-	client->super = true;
 	client->kernel_client = true;
 	client->handle_refs = RB_ROOT;
 
@@ -569,7 +554,6 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	trace_nvmap_open(priv, priv->name);
 
 	priv->kernel_client = false;
-	priv->super = (filp->f_op == &nvmap_super_fops);
 
 	filp->f_mapping->backing_dev_info = &nvmap_bdi;
 
@@ -1209,11 +1193,6 @@ static int nvmap_probe(struct platform_device *pdev)
 	dev->dev_user.fops = &nvmap_user_fops;
 	dev->dev_user.parent = &pdev->dev;
 
-	dev->dev_super.minor = MISC_DYNAMIC_MINOR;
-	dev->dev_super.name = "knvmap";
-	dev->dev_super.fops = &nvmap_super_fops;
-	dev->dev_super.parent = &pdev->dev;
-
 	dev->handles = RB_ROOT;
 
 	init_waitqueue_head(&dev->pte_wait);
@@ -1268,13 +1247,6 @@ static int nvmap_probe(struct platform_device *pdev)
 	if (e) {
 		dev_err(&pdev->dev, "unable to register miscdevice %s\n",
 			dev->dev_user.name);
-		goto fail;
-	}
-
-	e = misc_register(&dev->dev_super);
-	if (e) {
-		dev_err(&pdev->dev, "unable to register miscdevice %s\n",
-			dev->dev_super.name);
 		goto fail;
 	}
 
@@ -1408,8 +1380,6 @@ fail_heaps:
 	}
 fail:
 	kfree(dev->heaps);
-	if (dev->dev_super.minor != MISC_DYNAMIC_MINOR)
-		misc_deregister(&dev->dev_super);
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
 	if (dev->vm_rgn)
@@ -1426,7 +1396,6 @@ static int nvmap_remove(struct platform_device *pdev)
 	struct nvmap_handle *h;
 	int i;
 
-	misc_deregister(&dev->dev_super);
 	misc_deregister(&dev->dev_user);
 
 	while ((n = rb_first(&dev->handles))) {

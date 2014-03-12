@@ -20,6 +20,7 @@
 #include "fb_gk20a.h"
 #include "gk20a.h"
 #include "gk20a_gating_reglist.h"
+#include "channel_gk20a.h"
 
 struct gpu_ops gk20a_ops = {
 	.clock_gating = {
@@ -42,6 +43,7 @@ int gk20a_init_hal(struct gpu_ops *gops)
 	gk20a_init_ltc(gops);
 	gk20a_init_gr(gops);
 	gk20a_init_fb(gops);
+	gk20a_init_fifo(gops);
 	gops->name = "gk20a";
 
 	return 0;

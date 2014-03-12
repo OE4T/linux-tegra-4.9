@@ -127,6 +127,9 @@ struct gpu_ops {
 		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*slcg_therm_load_gating_prod)(struct gk20a *g, bool prod);
 	} clock_gating;
+	struct {
+		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
+	} fifo;
 };
 
 struct gk20a {

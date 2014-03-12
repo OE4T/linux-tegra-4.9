@@ -727,7 +727,7 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 		return 0;
 	}
-	channel_gk20a_bind(ch);
+	g->ops.fifo.bind_channel(ch);
 	ch->pid = current->pid;
 
 	/* reset timeout counter and update timestamp */
@@ -1901,8 +1901,8 @@ int gk20a_channel_resume(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (f->channel[chid].in_use) {
-			gk20a_dbg_info("resume channel %d", chid);
-			channel_gk20a_bind(&f->channel[chid]);
+			nvhost_dbg_info("resume channel %d", chid);
+			g->ops.fifo.bind_channel(&f->channel[chid]);
 			channels_in_use = true;
 		}
 	}
@@ -1959,6 +1959,11 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 clean_up:
 	kfree(gpfifo);
 	return ret;
+}
+
+void gk20a_init_fifo(struct gpu_ops *gops)
+{
+	gops->fifo.bind_channel = channel_gk20a_bind;
 }
 
 long gk20a_channel_ioctl(struct file *filp,

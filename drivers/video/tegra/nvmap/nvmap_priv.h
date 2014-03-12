@@ -77,18 +77,6 @@ extern size_t cache_maint_inner_threshold;
 extern struct platform_device *nvmap_pdev;
 
 #if defined(CONFIG_TEGRA_NVMAP)
-#define nvmap_err(_client, _fmt, ...)				\
-	dev_err(nvmap_client_to_device(_client),		\
-		"%s: "_fmt, __func__, ##__VA_ARGS__)
-
-#define nvmap_warn(_client, _fmt, ...)				\
-	dev_warn(nvmap_client_to_device(_client),		\
-		 "%s: "_fmt, __func__, ##__VA_ARGS__)
-
-#define nvmap_debug(_client, _fmt, ...)				\
-	dev_dbg(nvmap_client_to_device(_client),		\
-		"%s: "_fmt, __func__, ##__VA_ARGS__)
-
 #define CACHE_MAINT_IMMEDIATE		0
 #define CACHE_MAINT_ALLOW_DEFERRED	1
 

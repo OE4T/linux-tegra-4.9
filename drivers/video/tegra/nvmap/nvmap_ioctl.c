@@ -1066,7 +1066,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 
 	while (count--) {
 		if (h_offs + elem_size > h->size) {
-			nvmap_warn(client, "read/write outside of handle\n");
+			pr_warn("read/write outside of handle\n");
 			ret = -EFAULT;
 			break;
 		}

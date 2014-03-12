@@ -454,7 +454,7 @@ void nvmap_free_handle(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 
 	if (pins)
-		nvmap_debug(client, "%s freeing pinned handle %p\n",
+		pr_debug("%s freeing pinned handle %p\n",
 			    current->group_leader->comm, h);
 
 	while (atomic_read(&ref->pin))
@@ -588,14 +588,14 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	h = nvmap_handle_get(h);
 
 	if (!h) {
-		nvmap_debug(client, "%s duplicate handle failed\n",
+		pr_debug("%s duplicate handle failed\n",
 			    current->group_leader->comm);
 		return ERR_PTR(-EPERM);
 	}
 
 	if (!h->alloc) {
-		nvmap_err(client, "%s duplicating unallocated handle\n",
-			  current->group_leader->comm);
+		pr_err("%s duplicating unallocated handle\n",
+			current->group_leader->comm);
 		nvmap_handle_put(h);
 		return ERR_PTR(-EINVAL);
 	}
@@ -689,14 +689,14 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 	h = nvmap_handle_get(handle);
 
 	if (!h) {
-		nvmap_err(client, "%s query invalid handle %p\n",
-			  current->group_leader->comm, handle);
+		pr_err("%s query invalid handle %p\n",
+			current->group_leader->comm, handle);
 		return -EINVAL;
 	}
 
 	if (!h->alloc || !h->heap_pgalloc) {
-		nvmap_err(client, "%s query unallocated handle %p\n",
-			  current->group_leader->comm, handle);
+		pr_err("%s query unallocated handle %p\n",
+			current->group_leader->comm, handle);
 		nvmap_handle_put(h);
 		return -EINVAL;
 	}
@@ -725,13 +725,13 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 	h = nvmap_handle_get(handle);
 
 	if (!h) {
-		nvmap_err(client, "%s query invalid handle %p\n",
+		pr_err("%s query invalid handle %p\n",
 			  current->group_leader->comm, handle);
 		return -EINVAL;
 	}
 
 	if (!h->alloc || !h->heap_pgalloc) {
-		nvmap_err(client, "%s query unallocated handle %p\n",
+		pr_err("%s query unallocated handle %p\n",
 			  current->group_leader->comm, handle);
 		nvmap_handle_put(h);
 		return -EINVAL;

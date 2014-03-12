@@ -29,7 +29,7 @@
 #include <linux/dma-buf.h>
 
 #include "dev.h"
-#include "debug.h"
+#include "debug_gk20a.h"
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -1315,7 +1315,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 	u64 offset;
 	struct dma_buf *dmabuf = NULL;
 
-	if (nvhost_debug_trace_cmdbuf) {
+	if (gk20a_debug_trace_cmdbuf) {
 		u64 gpu_va = (u64)g->entry0 |
 			(u64)((u64)pbdma_gp_entry1_get_hi_v(g->entry1) << 32);
 		int err;

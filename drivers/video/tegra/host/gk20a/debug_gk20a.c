@@ -266,9 +266,12 @@ void gk20a_debug_init(struct platform_device *pdev)
 
 	platform->debugfs = debugfs_create_dir(pdev->name, NULL);
 
-#if defined(NVHOST_DEBUG)
 	debugfs_create_file("status", S_IRUGO, platform->debugfs,
 			pdev, &gk20a_debug_fops);
+	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR, platform->debugfs,
+			&gk20a_debug_trace_cmdbuf);
+
+#if defined(GK20A_DEBUG)
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR, platform->debugfs,
 			&gk20a_dbg_mask);
 	debugfs_create_u32("dbg_ftrace", S_IRUGO|S_IWUSR, platform->debugfs,

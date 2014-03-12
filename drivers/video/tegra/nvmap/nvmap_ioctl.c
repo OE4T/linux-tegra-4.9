@@ -914,7 +914,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		goto out;
 
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-	pte = nvmap_alloc_pte(h->dev, (void **)&kaddr);
+	pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
 	if (IS_ERR(pte)) {
 		err = PTR_ERR(pte);
 		pte = NULL;
@@ -957,7 +957,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 
 out:
 	if (pte)
-		nvmap_free_pte(h->dev, pte);
+		nvmap_free_pte(nvmap_dev, pte);
 	return err;
 }
 

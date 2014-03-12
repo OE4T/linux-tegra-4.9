@@ -45,9 +45,6 @@ static bool zero_memory;
 module_param(zero_memory, bool, 0644);
 u32 nvmap_max_handle_count;
 
-#define NVMAP_SECURE_HEAPS	(NVMAP_HEAP_CARVEOUT_IRAM | NVMAP_HEAP_IOVMM | \
-				 NVMAP_HEAP_CARVEOUT_VPR)
-
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to
  * preserve kmalloc space, if the array of pages exceeds PAGELIST_VMALLOC_MIN,
@@ -83,7 +80,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	if (h->nvhost_priv)
 		h->nvhost_priv_delete(h->nvhost_priv);
 
-	if (nvmap_handle_remove(h->dev, h) != 0)
+	if (nvmap_handle_remove(nvmap_dev, h) != 0)
 		return;
 
 	if (!h->alloc)
@@ -349,11 +346,9 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		nvmap_stats_read(NS_ALLOC));
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
-	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 	h->kind = kind;
-	h->map_resources = 0;
 
 #ifndef CONFIG_TEGRA_IOVMM
 	/* convert iovmm requests to generic carveout. */
@@ -362,9 +357,6 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 			    NVMAP_HEAP_CARVEOUT_GENERIC;
 	}
 #endif
-	/* secure allocations can only be served from secure heaps */
-	if (h->secure)
-		heap_mask &= NVMAP_SECURE_HEAPS;
 
 	if (!heap_mask) {
 		err = -EINVAL;
@@ -460,10 +452,8 @@ void nvmap_free_handle(struct nvmap_client *client,
 	while (atomic_read(&ref->pin))
 		__nvmap_unpin(ref);
 
-	if (h->owner == client) {
+	if (h->owner == client)
 		h->owner = NULL;
-		h->owner_ref = NULL;
-	}
 
 	dma_buf_put(ref->handle->dmabuf);
 	kfree(ref);
@@ -528,8 +518,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	atomic_set(&h->ref, 1);
 	atomic_set(&h->pin, 0);
 	h->owner = client;
-	h->owner_ref = ref;
-	h->dev = nvmap_dev;
 	BUG_ON(!h->owner);
 	h->size = h->orig_size = size;
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;

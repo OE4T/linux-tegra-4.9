@@ -491,10 +491,8 @@ static void destroy_client(struct nvmap_client *client)
 		while (pins--)
 			__nvmap_unpin(ref);
 
-		if (ref->handle->owner == client) {
+		if (ref->handle->owner == client)
 			ref->handle->owner = NULL;
-			ref->handle->owner_ref = NULL;
-		}
 
 		dma_buf_put(ref->handle->dmabuf);
 		rb_erase(&ref->node, &client->handle_refs);

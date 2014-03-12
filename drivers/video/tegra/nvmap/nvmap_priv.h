@@ -113,15 +113,7 @@ struct nvmap_handle {
 	size_t orig_size;	/* original (as-requested) size */
 	size_t align;
 	u8 kind;                /* memory kind (0=pitch, !0 -> blocklinear) */
-	void *map_resources;    /* mapping resources associated with the
-				   buffer */
 	struct nvmap_client *owner;
-	struct nvmap_handle_ref *owner_ref; /* use this ref to avoid spending
-			time on validation in some cases.
-			if handle was duplicated by other client and
-			original client destroy ref, this field
-			has to be set to zero. In this case ref should be
-			obtained through validation */
 
 	/*
 	 * dma_buf necessities. An attachment is made on dma_buf allocation to
@@ -130,13 +122,11 @@ struct nvmap_handle {
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attachment;
 
-	struct nvmap_device *dev;
 	union {
 		struct nvmap_pgalloc pgalloc;
 		struct nvmap_heap_block *carveout;
 	};
 	bool global;		/* handle may be duplicated by other clients */
-	bool secure;		/* zap IOVMM area on unpin */
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
 	unsigned int userflags;	/* flags passed from userspace */

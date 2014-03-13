@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	23
+#define QUADD_SAMPLES_VERSION	24
 #define QUADD_IO_VERSION	10
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -34,6 +34,7 @@
 #define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD	19
 #define QUADD_SAMPLE_VERSION_BT_UNWIND_TABLES	22
 #define QUADD_SAMPLE_VERSION_SUPPORT_IP64	23
+#define QUADD_SAMPLE_VERSION_SPECIAL_MMAP	24
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -179,6 +180,8 @@ struct quadd_sample_data {
 	u8 callchain_nr;
 	u32 events_flags;
 };
+
+#define QUADD_MMAP_ED_IS_FILE_EXISTS	(1 << 0)
 
 struct quadd_mmap_data {
 	u32 pid;
@@ -340,6 +343,8 @@ enum {
 #define QUADD_COMM_CAP_EXTRA_GET_MMAP		(1 << 1)
 #define QUADD_COMM_CAP_EXTRA_GROUP_SAMPLES	(1 << 2)
 #define QUADD_COMM_CAP_EXTRA_BT_UNWIND_TABLES	(1 << 3)
+#define QUADD_COMM_CAP_EXTRA_SUPPORT_AARCH64	(1 << 4)
+#define QUADD_COMM_CAP_EXTRA_SPECIAL_ARCH_MMAP	(1 << 5)
 
 struct quadd_comm_cap {
 	u32	pmu:1,

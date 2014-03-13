@@ -601,7 +601,7 @@ int nvhost_vic03_prepare_poweroff(struct platform_device *dev)
 	struct vic03 *v;
 	struct nvhost_channel *ch = pdata->channel;
 
-	if (ch) {
+	if (ch && ch->dev) {
 		mutex_lock(&ch->submitlock);
 		ch->cur_ctx = NULL;
 		mutex_unlock(&ch->submitlock);

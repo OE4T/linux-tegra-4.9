@@ -150,8 +150,20 @@ void reset_threshold_interrupt(struct nvhost_intr *intr,
 
 static void action_submit_complete(struct nvhost_waitlist *waiter)
 {
-	struct nvhost_channel *channel = waiter->data;
-	int nr_completed = waiter->count;
+	struct nvhost_channel *channel;
+	int nr_completed;
+
+	if (!waiter) {
+		pr_warn("%s: Empty Waiter\n", __func__);
+		return;
+	}
+
+	nr_completed = waiter->count;
+	channel = waiter->data;
+	if (!channel || !channel->dev) {
+		pr_warn("%s: Channel un-mapped\n", __func__);
+		return;
+	}
 
 	nvhost_module_idle_mult(channel->dev, nr_completed);
 	nvhost_cdma_update(&channel->cdma);
@@ -162,6 +174,8 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 			channel->cdma.high_prio_count,
 			channel->cdma.med_prio_count,
 			channel->cdma.low_prio_count);
+
+	nvhost_putchannel_mult(channel, nr_completed);
 
 }
 

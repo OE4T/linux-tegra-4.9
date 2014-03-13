@@ -115,7 +115,6 @@ struct nvhost_clock {
 struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
-	int		index;		/* Hardware channel number */
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	struct device_dma_parameters dma_parms;
 

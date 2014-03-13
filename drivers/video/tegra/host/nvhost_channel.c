@@ -31,6 +31,224 @@
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
+/* Constructor for the host1x device list */
+int nvhost_channel_list_init(struct nvhost_master *host)
+{
+	INIT_LIST_HEAD(&host->chlist.list);
+	mutex_init(&host->chlist_mutex);
+
+	if (host->info.nb_channels > BITS_PER_LONG) {
+		WARN(1, "host1x hardware has more channels than supported\n");
+		return -ENOSYS;
+	}
+
+	return 0;
+}
+
+/* Memory allocation for all supported channels */
+int nvhost_alloc_channels(struct nvhost_master *host)
+{
+	int max_channels = host->info.nb_channels;
+	int i;
+	struct nvhost_channel *ch;
+
+	nvhost_channel_list_init(host);
+	mutex_lock(&host->chlist_mutex);
+
+	for (i = 0; i < max_channels; i++) {
+		ch = nvhost_alloc_channel_internal(i, max_channels,
+					&host->cnt_alloc_channels);
+		if (!ch) {
+			mutex_unlock(&host->chlist_mutex);
+			return -ENOMEM;
+		}
+		ch->dev = NULL;
+		ch->chid = NVHOST_INVALID_CHANNEL;
+
+		list_add_tail(&ch->list, &host->chlist.list);
+	}
+	mutex_unlock(&host->chlist_mutex);
+
+	return 0;
+}
+
+/* Return N'th channel from list */
+struct nvhost_channel *nvhost_return_node(struct nvhost_master *host,
+			int index)
+{
+	int i = 0;
+	struct nvhost_channel *ch = NULL;
+
+	list_for_each_entry(ch, &host->chlist.list, list) {
+		if (i == index)
+			return ch;
+		i++;
+	}
+	return NULL;
+}
+
+/* Unmap channel from device and free all resources, deinit device */
+int nvhost_channel_unmap(struct nvhost_channel *ch)
+{
+	struct nvhost_device_data *pdata;
+	struct nvhost_master *host;
+	int max_channels;
+
+	if (!ch->dev) {
+		pr_err("%s: freeing unmapped channel\n", __func__);
+		return 0;
+	}
+
+	pdata = platform_get_drvdata(ch->dev);
+	host = nvhost_get_host(pdata->pdev);
+
+	mutex_lock(&host->chlist_mutex);
+	max_channels = host->info.nb_channels;
+
+	if (ch->chid == NVHOST_INVALID_CHANNEL) {
+		dev_err(&host->dev->dev, "Freeing un-mapped channel\n");
+		mutex_unlock(&host->chlist_mutex);
+		return 0;
+	}
+
+	dev_info(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
+
+	/* Allow keep-alive'd module to be turned off
+	 * make sure that all channels are unmapped before calling
+	 * nvhost_module_enable_poweroff
+	 */
+	if (pdata->keepalive)
+		nvhost_module_enable_poweroff(ch->dev);
+
+	if (pdata->deinit)
+		pdata->deinit(ch->dev);
+
+	clear_bit(ch->chid, &host->allocated_channels);
+
+	ch->chid = NVHOST_INVALID_CHANNEL;
+	ch->dev = NULL;
+	ch->ctxhandler = NULL;
+	ch->cur_ctx = NULL;
+	ch->aperture = NULL;
+	pdata->channel = NULL;
+
+	mutex_unlock(&host->chlist_mutex);
+
+	return 0;
+}
+
+/* Maps free channel with device */
+struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
+{
+	struct nvhost_master *host = NULL;
+	struct nvhost_channel *ch = NULL;
+	int max_channels = 0;
+	int index = 0;
+	int err = 0;
+
+	if (!pdata) {
+		pr_err("%s: NULL device data\n", __func__);
+		return NULL;
+	}
+
+	host = nvhost_get_host(pdata->pdev);
+
+	mutex_lock(&host->chlist_mutex);
+	max_channels = host->info.nb_channels;
+
+	/* Check if already channel assigned for device */
+	if (pdata->channel) {
+		ch = pdata->channel;
+		nvhost_getchannel(ch);
+		mutex_unlock(&host->chlist_mutex);
+		return ch;
+	}
+
+	index = find_next_zero_bit(&host->allocated_channels,
+					max_channels, host->next_free_ch);
+
+	if (index >= max_channels) {
+		/* Reset next pointer and try */
+		host->next_free_ch = 0;
+		index = find_next_zero_bit(&host->allocated_channels,
+					max_channels, host->next_free_ch);
+		if (index >= max_channels) {
+			pr_err("All host1x channels are mapped, BITMAP: %lu\n",
+					host->allocated_channels);
+			mutex_unlock(&host->chlist_mutex);
+			return NULL;
+		}
+	}
+
+	/* Get channel from list and map to device */
+	ch = nvhost_return_node(host, index);
+	if (!ch) {
+		dev_err(&host->dev->dev, "%s: No channel is free\n", __func__);
+		mutex_unlock(&host->chlist_mutex);
+		return NULL;
+	}
+	if (ch->chid == NVHOST_INVALID_CHANNEL) {
+		ch->dev = pdata->pdev;
+		ch->chid = index;
+		pdata->channel = ch;
+		nvhost_set_chanops(ch);
+	} else {
+		dev_err(&host->dev->dev, "%s: wrong channel map\n", __func__);
+		mutex_unlock(&host->chlist_mutex);
+		return NULL;
+	}
+
+	/* Initialize channel */
+	err = nvhost_channel_init(ch, host);
+	if (err) {
+		dev_err(&ch->dev->dev, "%s: channel init failed\n", __func__);
+		mutex_unlock(&host->chlist_mutex);
+		nvhost_channel_unmap(ch);
+		return NULL;
+	}
+	nvhost_getchannel(ch);
+	set_bit(ch->chid, &host->allocated_channels);
+
+	/* set next free channel */
+	if (index >= (max_channels - 1))
+		host->next_free_ch = 0;
+	else
+		host->next_free_ch = index + 1;
+
+	if (pdata->init)
+		err = pdata->init(ch->dev);
+
+	if (err) {
+		dev_err(&ch->dev->dev, "%s: device init failed\n", __func__);
+		mutex_unlock(&host->chlist_mutex);
+		nvhost_channel_unmap(ch);
+		return NULL;
+	}
+
+	/* Keep alive modules that needs to be when a channel is open */
+	if (pdata->keepalive)
+		nvhost_module_disable_poweroff(ch->dev);
+
+	dev_info(&ch->dev->dev, "channel %d mapped\n", ch->chid);
+	mutex_unlock(&host->chlist_mutex);
+
+	return ch;
+}
+
+/* Free channel memory and list */
+int nvhost_channel_list_free(struct nvhost_master *host)
+{
+	struct nvhost_channel *ch = NULL;
+
+	list_for_each_entry(ch, &host->chlist.list, list) {
+		list_del(&ch->list);
+		kfree(ch);
+	}
+
+	dev_info(&host->dev->dev, "channel list free'd\n");
+	return 0;
+}
+
 int nvhost_channel_init(struct nvhost_channel *ch,
 		struct nvhost_master *dev)
 {
@@ -83,54 +301,32 @@ int nvhost_channel_submit(struct nvhost_job *job)
 	return channel_op(job->ch).submit(job);
 }
 
-struct nvhost_channel *nvhost_getchannel(struct nvhost_channel *ch,
-		bool force, bool init)
+
+void nvhost_getchannel(struct nvhost_channel *ch)
 {
-	int err = 0;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-
-	mutex_lock(&ch->reflock);
-	if (ch->refcount == 0) {
-		if (!init)
-			err = -EBUSY;
-		else if (pdata->init)
-			err = pdata->init(ch->dev);
-	} else if (pdata->exclusive && !force)
-		err = -EBUSY;
-
-	if (!err)
-		ch->refcount++;
-
-	mutex_unlock(&ch->reflock);
-
-	/* Keep alive modules that needs to be when a channel is open */
-	if (!err && pdata->keepalive)
-		nvhost_module_disable_poweroff(ch->dev);
-
-	return err ? NULL : ch;
+	atomic_inc(&ch->refcount);
 }
 
-void nvhost_putchannel(struct nvhost_channel *ch, bool deinit)
+void nvhost_putchannel(struct nvhost_channel *ch)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	if (!atomic_dec_if_positive(&ch->refcount))
+		nvhost_channel_unmap(ch);
+}
 
-	/* Allow keep-alive'd module to be turned off */
-	if (pdata->keepalive)
-		nvhost_module_enable_poweroff(ch->dev);
 
-	mutex_lock(&ch->reflock);
-	if (ch->refcount == 1 && deinit && pdata->deinit)
-		pdata->deinit(ch->dev);
+void nvhost_putchannel_mult(struct nvhost_channel *ch, int cnt)
+{
+	int i;
 
-	ch->refcount--;
-	mutex_unlock(&ch->reflock);
+	for (i = 0; i < cnt; i++)
+		nvhost_putchannel(ch);
 }
 
 int nvhost_channel_suspend(struct nvhost_channel *ch)
 {
 	int ret = 0;
 
-	if (channel_cdma_op().stop)
+	if (channel_cdma_op().stop && ch->dev)
 		channel_cdma_op().stop(&ch->cdma);
 
 	return ret;
@@ -165,9 +361,9 @@ void nvhost_free_channel_internal(struct nvhost_channel *ch,
 
 int nvhost_channel_save_context(struct nvhost_channel *ch)
 {
-	struct nvhost_hwctx *cur_ctx = ch->cur_ctx;
 	int err = 0;
-	if (cur_ctx)
+
+	if (ch && ch->cur_ctx)
 		err = channel_op(ch).save_context(ch);
 
 	return err;

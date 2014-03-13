@@ -60,23 +60,27 @@ static int show_channels(struct platform_device *pdev, void *data,
 	if (pdev == NULL)
 		return 0;
 
-	pdata = platform_get_drvdata(pdev);
 	m = nvhost_get_host(pdev);
-	ch = nvhost_getchannel(pdata->channel, true, false);
-	if (!ch)
+	pdata = platform_get_drvdata(pdev);
+	ch = pdata->channel;
+	if (!ch) {
+		nvhost_debug_output(o, "channel already un-mapped for %s\n",
+				pdev->name);
 		return 0;
+	}
 
+	nvhost_getchannel(ch);
 	if (ch->chid != locked_id)
 		mutex_lock(&ch->cdma.lock);
 	if (fifo)
 		nvhost_get_chip_ops()->debug.show_channel_fifo(
-			m, ch, o, pdata->index);
+			m, ch, o, ch->chid);
 	nvhost_get_chip_ops()->debug.show_channel_cdma(
 		m, ch, o, ch->chid);
 	if (ch->chid != locked_id)
 		mutex_unlock(&ch->cdma.lock);
-	nvhost_putchannel(ch, false);
 
+	nvhost_putchannel(ch);
 	return 0;
 }
 

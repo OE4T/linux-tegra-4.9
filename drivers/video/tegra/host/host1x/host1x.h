@@ -25,6 +25,7 @@
 #include <linux/nvhost.h>
 
 #include "nvhost_syncpt.h"
+#include "nvhost_channel.h"
 #include "nvhost_intr.h"
 
 #define TRACE_MAX_LENGTH	128U
@@ -53,6 +54,12 @@ struct nvhost_master {
 	struct host1x_device_info info;
 	struct kobject *caps_kobj;
 	struct nvhost_capability_node *caps_nodes;
+
+	struct nvhost_channel chlist;	/* channel list */
+	struct mutex chlist_mutex;	/* mutex for channel list */
+	unsigned long allocated_channels;
+	unsigned long next_free_ch;
+	int cnt_alloc_channels;
 };
 
 extern struct nvhost_master *nvhost;
@@ -65,8 +72,7 @@ void nvhost_debug_dump(struct nvhost_master *master);
 int nvhost_host1x_finalize_poweron(struct platform_device *dev);
 int nvhost_host1x_prepare_poweroff(struct platform_device *dev);
 
-struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev);
-void nvhost_free_channel(struct nvhost_channel *ch);
+void nvhost_set_chanops(struct nvhost_channel *ch);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
 

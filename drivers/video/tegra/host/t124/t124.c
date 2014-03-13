@@ -42,8 +42,6 @@
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-static int t124_num_alloc_channels = 0;
-
 #define HOST_EMC_FLOOR 300000000
 #define VI_CLOCKGATE_DELAY 60
 #define VI_POWERGATE_DELAY 500
@@ -588,31 +586,16 @@ struct platform_device *tegra12_register_host1x_devices(void)
 
 #include "host1x/host1x_channel.c"
 
-static void t124_free_nvhost_channel(struct nvhost_channel *ch)
+static void t124_set_nvhost_chanops(struct nvhost_channel *ch)
 {
-	nvhost_dbg_fn("");
-	nvhost_free_channel_internal(ch, &t124_num_alloc_channels);
-}
-
-static struct nvhost_channel *t124_alloc_nvhost_channel(
-		struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct nvhost_channel *ch;
-	nvhost_dbg_fn("");
-	ch = nvhost_alloc_channel_internal(pdata->index,
-		nvhost_get_host(dev)->info.nb_channels,
-		&t124_num_alloc_channels);
 	if (ch)
 		ch->ops = host1x_channel_ops;
-	return ch;
 }
 
 int nvhost_init_t124_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
-	op->nvhost_dev.alloc_nvhost_channel = t124_alloc_nvhost_channel;
-	op->nvhost_dev.free_nvhost_channel = t124_free_nvhost_channel;
+	op->nvhost_dev.set_nvhost_chanops = t124_set_nvhost_chanops;
 
 	return 0;
 }

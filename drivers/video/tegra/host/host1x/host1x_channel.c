@@ -303,8 +303,10 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		return -ETIMEDOUT;
 
 	/* Turn on the client module and host1x */
-	for (i = 0; i < job->num_syncpts; ++i)
+	for (i = 0; i < job->num_syncpts; ++i) {
 		nvhost_module_busy(ch->dev);
+		nvhost_getchannel(ch);
+	}
 
 	/* before error checks, return current max */
 	prev_max = hwctx_sp->fence = nvhost_syncpt_read_max(sp, hwctx_sp->id);
@@ -313,6 +315,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	err = mutex_lock_interruptible(&ch->submitlock);
 	if (err) {
 		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
+		nvhost_putchannel_mult(ch, job->num_syncpts);
 		goto error;
 	}
 
@@ -320,6 +323,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		completed_waiters[i] = nvhost_intr_alloc_waiter();
 		if (!completed_waiters[i]) {
 			nvhost_module_idle_mult(ch->dev, job->num_syncpts);
+			nvhost_putchannel_mult(ch, job->num_syncpts);
 			mutex_unlock(&ch->submitlock);
 			err = -ENOMEM;
 			goto error;
@@ -334,8 +338,9 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	/* begin a CDMA submit */
 	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {
-		mutex_unlock(&ch->submitlock);
 		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
+		nvhost_putchannel_mult(ch, job->num_syncpts);
+		mutex_unlock(&ch->submitlock);
 		goto error;
 	}
 
@@ -417,6 +422,11 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	wakeup_waiter = nvhost_intr_alloc_waiter();
 	if (!wakeup_waiter) {
 		err = -ENOMEM;
+		goto done;
+	}
+
+	if (!ch || !ch->dev) {
+		err = -EINVAL;
 		goto done;
 	}
 

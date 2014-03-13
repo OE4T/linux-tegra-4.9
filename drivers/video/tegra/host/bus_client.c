@@ -194,7 +194,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->job)
 		nvhost_job_put(priv->job);
 
-	nvhost_putchannel(priv->ch, true);
+	nvhost_putchannel(priv->ch);
 	kfree(priv);
 	return 0;
 }
@@ -210,17 +210,24 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (inode) {
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
-		ch = pdata->channel;
+		ch = nvhost_channel_map(pdata);
+		if (!ch) {
+			pr_err("%s: failed to map channel\n", __func__);
+			return -ENOMEM;
+		}
+	} else {
+		if (!ch || !ch->dev) {
+			pr_err("%s: NULL channel request to get\n", __func__);
+			return -EINVAL;
+		}
+		nvhost_getchannel(ch);
 	}
 
-	ch = nvhost_getchannel(ch, false, true);
-	if (!ch)
-		return -ENOMEM;
 	trace_nvhost_channel_open(dev_name(&ch->dev->dev));
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		nvhost_putchannel(ch, true);
+		nvhost_putchannel(ch);
 		goto fail;
 	}
 	filp->private_data = priv;
@@ -618,7 +625,7 @@ static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
-	struct device *dev = &priv->ch->dev->dev;
+	struct device *dev;
 	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
 	int err = 0;
 
@@ -633,6 +640,12 @@ static long nvhost_channelctl(struct file *filp,
 			return -EFAULT;
 	}
 
+	if (!priv->ch->dev) {
+		pr_warn("Channel already unmapped\n");
+		return -EFAULT;
+	}
+
+	dev = &priv->ch->dev->dev;
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_OPEN:
 	{
@@ -1042,22 +1055,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 {
 	int err;
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
-	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	ch = nvhost_alloc_channel(dev);
-	if (ch == NULL)
-		return -ENODEV;
-
-	/* store the pointer to this device for channel */
-	ch->dev = dev;
 
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
-
-	err = nvhost_channel_init(ch, nvhost_master);
-	if (err)
-		goto fail1;
 
 	err = nvhost_client_user_init(dev);
 	if (err)
@@ -1102,19 +1103,15 @@ fail:
 	/* Add clean-up */
 	dev_err(&dev->dev, "failed to init client device\n");
 	nvhost_client_user_deinit(dev);
-fail1:
 	nvhost_device_debug_deinit(dev);
-	nvhost_free_channel(ch);
 	return err;
 }
 EXPORT_SYMBOL(nvhost_client_device_init);
 
 int nvhost_client_device_release(struct platform_device *dev)
 {
-	struct nvhost_channel *ch;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	ch = pdata->channel;
+	struct nvhost_channel *ch = pdata->channel;
 
 	/* Release nvhost module resources */
 	nvhost_module_deinit(dev);
@@ -1128,8 +1125,9 @@ int nvhost_client_device_release(struct platform_device *dev)
 	/* Remove debugFS */
 	nvhost_device_debug_deinit(dev);
 
-	/* Free nvhost channel */
-	nvhost_free_channel(ch);
+	/* Unmap nvhost channel */
+	if (ch)
+		nvhost_putchannel(ch);
 
 	return 0;
 }

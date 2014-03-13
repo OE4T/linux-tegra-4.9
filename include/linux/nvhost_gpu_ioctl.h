@@ -112,6 +112,9 @@ struct nvhost_gpu_characteristics {
 	__u32 big_page_size;
 	__u32 compression_page_size;
 
+	__u32 pde_coverage_bit_count;
+	__u32 reserved;
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

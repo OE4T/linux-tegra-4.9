@@ -550,16 +550,6 @@ int __init loki_panel_init(int board_id)
 		return err;
 	}
 
-#ifndef CONFIG_ARCH_TEGRA_13x_SOC
-#ifdef CONFIG_TEGRA_NVAVP
-	nvavp_device.dev.parent = &phost1x->dev;
-	err = platform_device_register(&nvavp_device);
-	if (err) {
-		pr_err("nvavp device registration failed\n");
-		return err;
-	}
-#endif
-#endif
 	return err;
 }
 #else

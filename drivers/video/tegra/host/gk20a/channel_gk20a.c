@@ -1403,7 +1403,6 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	for (i = 0; i < nr_completed; i++)
 		gk20a_channel_idle(c->g->dev);
 }
-EXPORT_SYMBOL(gk20a_channel_update);
 
 static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,

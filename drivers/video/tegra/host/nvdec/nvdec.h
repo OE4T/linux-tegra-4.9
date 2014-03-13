@@ -21,10 +21,9 @@
 #ifndef __NVHOST_NVDEC_H__
 #define __NVHOST_NVDEC_H__
 
+#include <linux/types.h>
+#include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
-
-struct mem_handle;
-struct sg_table;
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_init(struct platform_device *dev);
@@ -44,8 +43,7 @@ static inline void decode_nvdec_ver(int version, u8 *maj, u8 *min)
 
 struct nvdec {
 	bool valid;
-	u32  size;
-	struct mem_handle *mem_r;
+	size_t size;
 
 	struct {
 		u32 bin_data_offset;
@@ -56,7 +54,9 @@ struct nvdec {
 	} os;
 
 	struct sg_table *pa;
-	u8 *mapped;
+	struct dma_attrs attrs;
+	dma_addr_t phys;
+	u32 *mapped;
 };
 
 struct nvdec_ucode_bin_header_v1 {
@@ -88,8 +88,6 @@ struct nvdec_ucode_os_header_v1 {
 struct nvdec_ucode_v1 {
 	struct nvdec_ucode_bin_header_v1 *bin_header;
 	struct nvdec_ucode_os_header_v1  *os_header;
-	struct mem_handle *mem;
-	struct sg_table *pa;
 	bool valid;
 };
 

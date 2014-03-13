@@ -27,6 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/dma-mapping.h>
 #include <linux/tegra-soc.h>
 
 #include <mach/pm_domains.h>
@@ -38,7 +39,6 @@
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
 #include "chip_support.h"
-#include "nvhost_memmgr.h"
 #include "t210/t210.h"
 
 #define NVJPG_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
@@ -171,7 +171,7 @@ int nvjpg_boot(struct platform_device *dev)
 
 	host1x_writel(dev, nvjpg_dmactl_r(), 0);
 	host1x_writel(dev, nvjpg_dmatrfbase_r(),
-		(sg_dma_address(m->pa->sgl) + m->os.bin_data_offset) >> 8);
+		(m->phys + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
 		nvjpg_dma_pa_to_internal_256b(dev,
@@ -281,6 +281,10 @@ int nvjpg_read_ucode(struct platform_device *dev, const char *fw_name)
 	const struct firmware *ucode_fw;
 	int err;
 
+	m->phys = 0;
+	m->mapped = NULL;
+	init_dma_attrs(&m->attrs);
+
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get nvjpg firmware\n");
@@ -288,36 +292,22 @@ int nvjpg_read_ucode(struct platform_device *dev, const char *fw_name)
 		return err;
 	}
 
-	/* allocate pages for ucode */
-	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
-				     roundup(ucode_fw->size, PAGE_SIZE),
-				     PAGE_SIZE, mem_mgr_flag_uncacheable, 0);
-	if (IS_ERR(m->mem_r)) {
-		dev_err(&dev->dev, "nvmap alloc failed");
-		err = PTR_ERR(m->mem_r);
-		goto clean_up;
-	}
+	m->size = ucode_fw->size;
+	dma_set_attr(DMA_ATTR_READ_ONLY, &m->attrs);
 
-	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			&dev->dev, mem_flag_read_only);
-	if (IS_ERR(m->pa)) {
-		dev_err(&dev->dev, "nvmap pin failed for ucode");
-		err = PTR_ERR(m->pa);
-		m->pa = NULL;
-		goto clean_up;
-	}
-
-	m->mapped = nvhost_memmgr_mmap(m->mem_r);
-	if (IS_ERR_OR_NULL(m->mapped)) {
-		dev_err(&dev->dev, "nvmap mmap failed");
+	m->mapped = dma_alloc_attrs(&dev->dev,
+			m->size, &m->phys,
+			GFP_KERNEL, &m->attrs);
+	if (!m->mapped) {
+		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = nvjpg_setup_ucode_image(dev, (u32 *)m->mapped, ucode_fw);
+	err = nvjpg_setup_ucode_image(dev, m->mapped, ucode_fw);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
-		return err;
+		goto clean_up;
 	}
 
 	m->valid = true;
@@ -328,17 +318,10 @@ int nvjpg_read_ucode(struct platform_device *dev, const char *fw_name)
 
 clean_up:
 	if (m->mapped) {
-		nvhost_memmgr_munmap(m->mem_r, (u32 *)m->mapped);
+		dma_free_attrs(&dev->dev,
+				m->size, m->mapped,
+				m->phys, &m->attrs);
 		m->mapped = NULL;
-	}
-	if (m->pa) {
-		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
-				&dev->dev, m->pa);
-		m->pa = NULL;
-	}
-	if (m->mem_r) {
-		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
-		m->mem_r = NULL;
 	}
 	release_firmware(ucode_fw);
 	return err;
@@ -404,17 +387,10 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mapped) {
-		nvhost_memmgr_munmap(m->mem_r, m->mapped);
+		dma_free_attrs(&dev->dev,
+				m->size, m->mapped,
+				m->phys, &m->attrs);
 		m->mapped = NULL;
-	}
-	if (m->pa) {
-		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r,
-			&dev->dev, m->pa);
-		m->pa = NULL;
-	}
-	if (m->mem_r) {
-		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
-		m->mem_r = NULL;
 	}
 	kfree(m);
 	set_nvjpg(dev, NULL);

@@ -342,12 +342,14 @@ static int isp_probe(struct platform_device *dev)
 
 	/* creating workqueue */
 	if (dev_id == 0)
-		tegra_isp->isp_workqueue = create_workqueue("ispa_workqueue");
+		tegra_isp->isp_workqueue = alloc_workqueue("ispa_workqueue",
+						 WQ_HIGHPRI | WQ_UNBOUND, 1);
 	else
-		tegra_isp->isp_workqueue = create_workqueue("ispb_workqueue");
+		tegra_isp->isp_workqueue = alloc_workqueue("ispb_workqueue",
+						 WQ_HIGHPRI | WQ_UNBOUND, 1);
 
 	if (!tegra_isp->isp_workqueue) {
-		pr_err("failed to create isp_workqueue\n");
+		pr_err("failed to allocate isp_workqueue\n");
 		goto camera_isp_unregister;
 	}
 

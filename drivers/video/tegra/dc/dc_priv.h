@@ -398,6 +398,11 @@ void tegra_dc_release_dc_out(struct tegra_dc *dc);
 /* defined in dc.c, used in ext/dev.c */
 void tegra_dc_call_flip_callback(void);
 
+/* defined in dc.c, used in sor.c */
+unsigned long tegra_dc_poll_register(struct tegra_dc *dc,
+u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us,
+u32 timeout_ms);
+
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);

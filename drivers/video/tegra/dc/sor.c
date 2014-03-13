@@ -844,6 +844,17 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_config_pwm(sor, 1024, 1024);
 }
 
+static void tegra_dc_sor_general_act(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+		GENERAL_ACT_REQ, 0, 100,
+		TEGRA_DC_POLL_TIMEOUT_MS))
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
+}
+
 static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -975,15 +986,24 @@ void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 	tegra_sor_pad_power_up(sor, false);
 }
 
+static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
+{
+	struct tegra_dc *dc = sor->dc;
+	u32 reg_val = tegra_dc_readl(sor->dc, DC_DISP_DISP_WIN_OPTIONS);
+	reg_val = enable ? reg_val | SOR_ENABLE : reg_val & ~SOR_ENABLE;
+	tegra_dc_writel(dc, reg_val, DC_DISP_DISP_WIN_OPTIONS);
+}
 
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 {
-	u32 reg_val;
 	struct tegra_dc *dc = sor->dc;
+	u32 reg_val;
 
 	tegra_dc_get(dc);
 
-	tegra_dc_sor_enable_dc(sor);
+	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
+
 	tegra_dc_sor_config_panel(sor, false);
 
 	tegra_dc_writel(dc, 0x9f00, DC_CMD_STATE_CONTROL);
@@ -996,36 +1016,164 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_writel(dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
-
-	/* Attach head */
 	tegra_dc_sor_update(sor);
-	reg_val = NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+
+	/* WAR for bug 1428181 */
+	tegra_dc_sor_enable_sor(sor, true);
+	tegra_dc_sor_enable_sor(sor, false);
+
+	/* Awake request */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
-		NV_SOR_SUPER_STATE1_ATTACHED_NO;
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1, reg_val);
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
 
-	reg_val |= NV_SOR_SUPER_STATE1_ATTACHED_YES;
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1, reg_val);
-	tegra_dc_sor_super_update(sor);
+	tegra_dc_sor_enable_dc(sor);
+
+	tegra_dc_sor_enable_sor(sor, true);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-			NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
-			NV_SOR_TEST_ATTACHED_TRUE,
-			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&sor->dc->ndev->dev,
-			"dc timeout waiting for ATTACHED = TRUE\n");
-	}
-
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-			NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
-			NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
-			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&sor->dc->ndev->dev,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for OPMOD = AWAKE\n");
 	}
 
+	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
+	tegra_dc_put(dc);
+}
+
+static struct tegra_dc_mode min_mode = {
+	.h_ref_to_sync = 0,
+	.v_ref_to_sync = 1,
+	.h_sync_width = 1,
+	.v_sync_width = 1,
+	.h_back_porch = 20,
+	.v_back_porch = 0,
+	.h_active = 16,
+	.v_active = 16,
+	.h_front_porch = 1,
+	.v_front_porch = 2,
+};
+
+/* Disable windows and set minimum raster timings */
+static void
+tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
+{
+	int selected_windows, i;
+
+	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	/* Store and clear window options */
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+			DC_CMD_DISPLAY_WINDOW_HEADER);
+		dc_reg_ctx[i] = tegra_dc_readl(dc, DC_WIN_WIN_OPTIONS);
+		tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
+		tegra_dc_writel(dc, WIN_A_ACT_REQ << i, DC_CMD_STATE_CONTROL);
+	}
+
+	tegra_dc_writel(dc, selected_windows, DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	/* Store current raster timings and set minimum timings */
+	dc_reg_ctx[i++] = tegra_dc_readl(dc, DC_DISP_REF_TO_SYNC);
+	tegra_dc_writel(dc, min_mode.h_ref_to_sync |
+		(min_mode.v_ref_to_sync << 16), DC_DISP_REF_TO_SYNC);
+
+	dc_reg_ctx[i++] = tegra_dc_readl(dc, DC_DISP_SYNC_WIDTH);
+	tegra_dc_writel(dc, min_mode.h_sync_width |
+		(min_mode.v_sync_width << 16), DC_DISP_SYNC_WIDTH);
+
+	dc_reg_ctx[i++] = tegra_dc_readl(dc, DC_DISP_BACK_PORCH);
+	tegra_dc_writel(dc, min_mode.h_back_porch |
+		((min_mode.v_back_porch - min_mode.v_ref_to_sync) << 16),
+		DC_DISP_BACK_PORCH);
+
+	dc_reg_ctx[i++] = tegra_dc_readl(dc, DC_DISP_FRONT_PORCH);
+	tegra_dc_writel(dc, min_mode.h_front_porch |
+		((min_mode.v_front_porch + min_mode.v_ref_to_sync) << 16),
+		DC_DISP_FRONT_PORCH);
+
+	dc_reg_ctx[i++] = tegra_dc_readl(dc, DC_DISP_DISP_ACTIVE);
+	tegra_dc_writel(dc, min_mode.h_active | (min_mode.v_active << 16),
+			DC_DISP_DISP_ACTIVE);
+
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+}
+
+/* Restore previous windows status and raster timings */
+static void
+tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
+{
+	int selected_windows, i;
+
+	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+			DC_CMD_DISPLAY_WINDOW_HEADER);
+		tegra_dc_writel(dc, dc_reg_ctx[i], DC_WIN_WIN_OPTIONS);
+		tegra_dc_writel(dc, WIN_A_ACT_REQ << i, DC_CMD_STATE_CONTROL);
+	}
+
+	tegra_dc_writel(dc, selected_windows, DC_CMD_DISPLAY_WINDOW_HEADER);
+
+	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_REF_TO_SYNC);
+	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_SYNC_WIDTH);
+	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_BACK_PORCH);
+	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_FRONT_PORCH);
+	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_DISP_ACTIVE);
+
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+}
+
+void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+	int dc_reg_ctx[DC_N_WINDOWS + 5];
+	unsigned long dc_int_mask;
+
+	tegra_dc_get(dc);
+
+	/* Sleep mode */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	tegra_dc_sor_disable_win_short_raster(dc, dc_reg_ctx);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for OPMOD = SLEEP\n");
+	}
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+
+	/* Mask DC interrupts during the 2 dummy frames required for detach */
+	dc_int_mask = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+
+	/* Stop DC->SOR path */
+	tegra_dc_sor_enable_sor(sor, false);
+	tegra_dc_sor_general_act(dc);
+
+	/* Stop DC */
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_sor_general_act(dc);
+
+	tegra_dc_sor_restore_win_and_raster(dc, dc_reg_ctx);
+
+	tegra_dc_writel(dc, dc_int_mask, DC_CMD_INT_MASK);
 	tegra_dc_put(dc);
 }
 
@@ -1149,10 +1297,6 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 			"Failed to power down dp lanes\n");
 		return;
 	}
-
-	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_sor_clk_disable(sor);
 	/* Reset SOR clk */

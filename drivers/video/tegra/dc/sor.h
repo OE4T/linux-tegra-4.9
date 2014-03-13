@@ -102,6 +102,7 @@ struct tegra_dc_sor_data {
 #define TEGRA_SOR_TIMEOUT_MS		1000
 #define TEGRA_SOR_ATTACH_TIMEOUT_MS	100000
 #define TEGRA_SOR_SEQ_BUSY_TIMEOUT_MS	10000
+#define TEGRA_DC_POLL_TIMEOUT_MS       50
 
 #define CHECK_RET(x)			\
 	do {				\
@@ -117,6 +118,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	bool balanced, bool conforming);
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);

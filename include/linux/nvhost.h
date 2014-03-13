@@ -296,14 +296,6 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 				  void (*callback)(void *, int),
 				  void *private_data);
 
-#ifdef CONFIG_TEGRA_GK20A
-int nvhost_vpr_info_fetch(void);
-#else
-static inline int nvhost_vpr_info_fetch(void)
-{
-	return 0;
-}
-#endif
 
 #ifdef CONFIG_TEGRA_GRHOST
 void nvhost_debug_dump_device(struct platform_device *pdev);

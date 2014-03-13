@@ -303,7 +303,7 @@ extern u32 gk20a_dbg_ftrace;
 #define gk20a_dbg(dbg_mask, format, arg...)				\
 do {									\
 	if (unlikely((dbg_mask) & gk20a_dbg_mask)) {		\
-		if (nvhost_dbg_ftrace)					\
+		if (gk20a_dbg_ftrace)					\
 			trace_printk(format "\n", ##arg);		\
 		else							\
 			pr_info("gk20a %s: " format "\n",		\

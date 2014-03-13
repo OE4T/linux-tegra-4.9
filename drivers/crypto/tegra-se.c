@@ -94,6 +94,9 @@ struct tegra_se_chipdata {
 	unsigned long sha384_freq;
 	unsigned long sha512_freq;
 	unsigned long rsa_freq;
+	bool mccif_supported;
+	bool rsa_key_rw_op;
+	u32 aes_keydata_reg_sz;
 };
 
 struct tegra_se_dev {
@@ -472,7 +475,7 @@ static void tegra_se_write_key_table(u8 *pdata, u32 data_len,
 	u8 slot_num, enum tegra_se_key_table_type type)
 {
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
-	u32 data_size = SE_KEYTABLE_REG_MAX_DATA;
+	u32 data_size;
 	u32 *pdata_buf = (u32 *)pdata;
 	u8 pkt = 0, quad = 0;
 	u32 val = 0, i;
@@ -491,22 +494,42 @@ static void tegra_se_write_key_table(u8 *pdata, u32 data_len,
 		quad = QUAD_KEYS_128;
 
 	/* write data to the key table */
-	do {
-		for (i = 0; i < data_size; i += 4, data_len -= 4)
-			se_writel(se_dev, *pdata_buf++,
-				SE_KEYTABLE_DATA0_REG_OFFSET + i);
 
-		pkt = SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad);
-		val = SE_KEYTABLE_OP_TYPE(OP_WRITE) |
-			SE_KEYTABLE_TABLE_SEL(TABLE_KEYIV) |
+	if (se_dev->chipdata->aes_keydata_reg_sz == 128) {
+		data_size = SE_KEYTABLE_REG_MAX_DATA;
+		do {
+			for (i = 0; i < data_size; i += 4, data_len -= 4)
+				se_writel(se_dev, *pdata_buf++,
+					SE_KEYTABLE_DATA0_REG_OFFSET + i);
+
+			pkt = SE_KEYTABLE_SLOT(slot_num) |
+					SE_KEYTABLE_QUAD(quad);
+			val = SE_KEYTABLE_OP_TYPE(OP_WRITE) |
+				SE_KEYTABLE_TABLE_SEL(TABLE_KEYIV) |
 				SE_KEYTABLE_PKT(pkt);
 
-		se_writel(se_dev, val, SE_KEYTABLE_REG_OFFSET);
+			se_writel(se_dev, val, SE_KEYTABLE_REG_OFFSET);
 
-		data_size = data_len;
-		quad = QUAD_KEYS_256;
+			data_size = data_len;
+			quad = QUAD_KEYS_256;
+		} while (data_len);
+	} else {
+		data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
+		do {
+			pkt = SE_KEYTABLE_SLOT(slot_num) |
+					SE_KEYTABLE_QUAD(quad);
+			val = SE_KEYTABLE_PKT(pkt);
 
-	} while (data_len);
+			se_writel(se_dev, val, SE_KEYTABLE_REG_OFFSET);
+
+			for (i = 0; i < data_size; i += 4, data_len -= 4)
+				se_writel(se_dev, *pdata_buf++,
+						SE_KEYTABLE_DATA_REG_OFFSET);
+
+			data_size = data_len;
+			quad = QUAD_KEYS_256;
+		} while (data_len);
+	}
 }
 
 static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
@@ -600,6 +623,11 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 	if (mode == SE_AES_OP_MODE_CMAC)
 		val |= SE_CRYPTO_HASH(HASH_ENABLE);
 
+	if (se_dev->chipdata->mccif_supported)
+		val |= SE_CRYPTO_MEMIF(MEMIF_MCCIF);
+	else
+		val |= SE_CRYPTO_MEMIF(MEMIF_AHB);
+
 	se_writel(se_dev, val, SE_CRYPTO_REG_OFFSET);
 
 	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
@@ -649,7 +677,6 @@ static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count,
 			return;
 		}
 	}
-
 	se_writel(se_dev, SHA_ENABLE, SE_SHA_CONFIG_REG_OFFSET);
 }
 
@@ -668,6 +695,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 				nbytes, DMA_TO_DEVICE);
 	dma_sync_single_for_device(se_dev->dev, se_dev->dst_ll_buf_adr,
 				nbytes, DMA_TO_DEVICE);
+
 	/* clear any pending interrupts */
 	val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
 	se_writel(se_dev, val, SE_INT_STATUS_REG_OFFSET);
@@ -2007,6 +2035,7 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	s32 i = 0;
 	struct tegra_se_rsa_slot *pslot;
 	unsigned long freq = 0;
+
 	int err = 0;
 
 	if (!ctx || !key)
@@ -2048,33 +2077,60 @@ int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	if (exponent_key_length) {
 		key_size_words = (exponent_key_length / key_word_size);
-		/* Write exponent */
-		for (i = (key_size_words - 1); i >= 0; i--) {
-			se_writel(se_dev, *pkeydata++, SE_RSA_KEYTABLE_DATA);
-			pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
-				RSA_KEY_NUM(ctx->slot->slot_num) |
-				RSA_KEY_TYPE(RSA_KEY_TYPE_EXP) |
-				RSA_KEY_PKT_WORD_ADDR(i);
-			val = SE_RSA_KEY_OP(RSA_KEY_WRITE) |
-					SE_RSA_KEYTABLE_PKT(pkt);
 
-			se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+		/* Write exponent */
+		if (se_dev->chipdata->rsa_key_rw_op) {
+			for (i = (key_size_words - 1); i >= 0; i--) {
+				se_writel(se_dev, *pkeydata++,
+						SE_RSA_KEYTABLE_DATA);
+				pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
+					RSA_KEY_NUM(ctx->slot->slot_num) |
+					RSA_KEY_TYPE(RSA_KEY_TYPE_EXP) |
+					RSA_KEY_PKT_WORD_ADDR(i);
+				val = SE_RSA_KEY_OP(RSA_KEY_WRITE) |
+					SE_RSA_KEYTABLE_PKT(pkt);
+				se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+			}
+		} else {
+			for (i = (key_size_words - 1); i >= 0; i--) {
+				pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
+					RSA_KEY_NUM(ctx->slot->slot_num) |
+					RSA_KEY_TYPE(RSA_KEY_TYPE_EXP) |
+					RSA_KEY_PKT_WORD_ADDR(i);
+				val = SE_RSA_KEYTABLE_PKT(pkt);
+				se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+				se_writel(se_dev, *pkeydata++,
+						SE_RSA_KEYTABLE_DATA);
+			}
 		}
 	}
 
 	if (module_key_length) {
 		key_size_words = (module_key_length / key_word_size);
-		/* Write moduleus */
-		for (i = (key_size_words - 1); i >= 0; i--) {
-			se_writel(se_dev, *pkeydata++, SE_RSA_KEYTABLE_DATA);
-			pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
-				RSA_KEY_NUM(ctx->slot->slot_num) |
-				RSA_KEY_TYPE(RSA_KEY_TYPE_MOD) |
-				RSA_KEY_PKT_WORD_ADDR(i);
-			val = SE_RSA_KEY_OP(RSA_KEY_WRITE) |
+		/* Write modulus */
+		if (se_dev->chipdata->rsa_key_rw_op) {
+			for (i = (key_size_words - 1); i >= 0; i--) {
+				se_writel(se_dev, *pkeydata++,
+						SE_RSA_KEYTABLE_DATA);
+				pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
+					RSA_KEY_NUM(ctx->slot->slot_num) |
+					RSA_KEY_TYPE(RSA_KEY_TYPE_MOD) |
+					RSA_KEY_PKT_WORD_ADDR(i);
+				val = SE_RSA_KEY_OP(RSA_KEY_WRITE) |
 					SE_RSA_KEYTABLE_PKT(pkt);
-
-			se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+				se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+			}
+		} else {
+			for (i = (key_size_words - 1); i >= 0; i--) {
+				pkt = RSA_KEY_INPUT_MODE(RSA_KEY_INPUT_MODE_REG) |
+					RSA_KEY_NUM(ctx->slot->slot_num) |
+					RSA_KEY_TYPE(RSA_KEY_TYPE_MOD) |
+					RSA_KEY_PKT_WORD_ADDR(i);
+				val = SE_RSA_KEYTABLE_PKT(pkt);
+				se_writel(se_dev, val, SE_RSA_KEYTABLE_ADDR);
+				se_writel(se_dev, *pkeydata++,
+						SE_RSA_KEYTABLE_DATA);
+			}
 		}
 	}
 
@@ -2182,6 +2238,11 @@ int tegra_se_rsa_digest(struct ahash_request *req)
 	}
 
 	tegra_se_read_rsa_result(se_dev, req->result, req->nbytes);
+
+	src_sg = req->src;
+	total = req->nbytes;
+	if (total)
+		tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE, total);
 
 	pm_runtime_put_sync(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -2568,6 +2629,9 @@ static struct tegra_se_chipdata tegra_se_chipdata = {
 	.sha256_freq = 300000000,
 	.sha384_freq = 300000000,
 	.sha512_freq = 300000000,
+	.mccif_supported = false,
+	.rsa_key_rw_op = true,
+	.aes_keydata_reg_sz = 128,
 };
 
 static struct tegra_se_chipdata tegra11_se_chipdata = {
@@ -2582,12 +2646,36 @@ static struct tegra_se_chipdata tegra11_se_chipdata = {
 	.sha384_freq = 150000000,
 	.sha512_freq = 150000000,
 	.rsa_freq = 350000000,
+	.mccif_supported = false,
+	.rsa_key_rw_op = true,
+	.aes_keydata_reg_sz = 128,
+};
+
+static struct tegra_se_chipdata tegra21_se_chipdata = {
+	.rsa_supported = true,
+	.cprng_supported = false,
+	.drbg_supported = true,
+	.aes_freq = 150000000,
+	.rng_freq = 150000000,
+	.sha1_freq = 200000000,
+	.sha224_freq = 250000000,
+	.sha256_freq = 250000000,
+	.sha384_freq = 150000000,
+	.sha512_freq = 150000000,
+	.rsa_freq = 350000000,
+	.mccif_supported = true,
+	.rsa_key_rw_op = false,
+	.aes_keydata_reg_sz = 32,
 };
 
 static struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra124-se",
 		.data = &tegra11_se_chipdata,
+	},
+	{
+		.compatible = "nvidia,tegra210-se",
+		.data = &tegra21_se_chipdata,
 	},
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
@@ -2604,6 +2692,20 @@ static int tegra_se_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "memory allocation failed\n");
 		return -ENOMEM;
 	}
+	if (pdev->dev.of_node) {
+		match = of_match_device(of_match_ptr(tegra_se_of_match),
+				&pdev->dev);
+		if (!match) {
+			dev_err(&pdev->dev, "Error: No device match found\n");
+			kfree(se_dev);
+			return -ENODEV;
+		}
+		se_dev->chipdata = (struct tegra_se_chipdata *)match->data;
+	} else {
+		se_dev->chipdata =
+			(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
+	}
+
 	if (pdev->dev.of_node) {
 		match = of_match_device(of_match_ptr(tegra_se_of_match),
 				&pdev->dev);
@@ -2707,6 +2809,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
+	se_dev->dev->coherent_dma_mask = DMA_BIT_MASK(64);
+
 	err = tegra_se_alloc_ll_buf(se_dev, SE_MAX_SRC_SG_COUNT,
 		SE_MAX_DST_SG_COUNT);
 	if (err) {
@@ -2802,7 +2906,6 @@ clean:
 
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
-
 	free_irq(se_dev->irq, &pdev->dev);
 
 err_irq:
@@ -2842,6 +2945,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
+
 	tegra_se_free_ll_buf(se_dev);
 	if (se_dev->ctx_save_buf) {
 		if (!se_dev->chipdata->drbg_supported)
@@ -3510,6 +3614,10 @@ static struct platform_device_id tegra_dev_se_devtype[] = {
 	{
 		.name = "tegra12-se",
 		.driver_data = (unsigned long)&tegra11_se_chipdata,
+	},
+	{
+		.name = "tegra21-se",
+		.driver_data = (unsigned long)&tegra21_se_chipdata,
 	}
 };
 

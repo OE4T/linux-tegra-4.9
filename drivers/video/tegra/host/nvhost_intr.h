@@ -36,12 +36,6 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_SUBMIT_COMPLETE = 0,
 
 	/**
-	 * Wake up a interruptible task.
-	 * 'data' points to a wait_queue_head_t
-	 */
-	NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
-
-	/**
 	 * Signal a nvhost_sync_pt.
 	 * 'data' points to a nvhost_sync_pt
 	 */

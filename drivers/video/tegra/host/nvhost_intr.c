@@ -165,12 +165,6 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 
 }
 
-static void action_gpfifo_submit_complete(struct nvhost_waitlist *waiter)
-{
-	struct channel_gk20a *ch20a = waiter->data;
-	gk20a_channel_update(ch20a, waiter->count);
-}
-
 static void action_wakeup(struct nvhost_waitlist *waiter)
 {
 	wait_queue_head_t *wq = waiter->data;
@@ -209,7 +203,6 @@ typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_submit_complete,
-	action_gpfifo_submit_complete,
 	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,

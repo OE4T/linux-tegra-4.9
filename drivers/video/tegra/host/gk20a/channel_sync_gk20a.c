@@ -15,6 +15,8 @@
  * more details.
  */
 
+#include <linux/gk20a.h>
+
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
 
@@ -23,16 +25,15 @@
 #endif
 
 #ifdef CONFIG_TEGRA_GK20A
-#include "nvhost_sync.h"
-#include "nvhost_syncpt.h"
+#include <linux/nvhost.h>
 #endif
 
 #ifdef CONFIG_TEGRA_GK20A
 
 struct gk20a_channel_syncpt {
 	struct gk20a_channel_sync ops;
-	struct nvhost_syncpt *sp;
 	struct channel_gk20a *c;
+	struct platform_device *host1x_pdev;
 	u32 id;
 };
 
@@ -56,9 +57,9 @@ int gk20a_channel_syncpt_wait_cpu(struct gk20a_channel_sync *s,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	if (!fence->valid)
 		return 0;
-	return nvhost_syncpt_wait_timeout(
-			sp->sp, sp->id, fence->thresh,
-			timeout, NULL, NULL, false);
+	return nvhost_syncpt_wait_timeout_ext(
+			sp->host1x_pdev, sp->id, fence->thresh,
+			timeout, NULL, NULL);
 }
 
 bool gk20a_channel_syncpt_is_expired(struct gk20a_channel_sync *s,
@@ -68,7 +69,8 @@ bool gk20a_channel_syncpt_is_expired(struct gk20a_channel_sync *s,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	if (!fence->valid)
 		return true;
-	return nvhost_syncpt_is_expired(sp->sp, sp->id, fence->thresh);
+	return nvhost_syncpt_is_expired_ext(sp->host1x_pdev, sp->id,
+			fence->thresh);
 }
 
 int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
@@ -78,13 +80,13 @@ int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct priv_cmd_entry *wait_cmd = NULL;
 
-	if (id >= nvhost_syncpt_nb_pts(sp->sp)) {
+	if (id >= nvhost_syncpt_nb_pts_ext(sp->host1x_pdev)) {
 		dev_warn(dev_from_gk20a(sp->c->g),
 				"invalid wait id in gpfifo submit, elided");
 		return 0;
 	}
 
-	if (nvhost_syncpt_is_expired(sp->sp, id, thresh))
+	if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev, id, thresh))
 		return 0;
 
 	gk20a_channel_alloc_priv_cmdbuf(sp->c, 4, &wait_cmd);
@@ -131,7 +133,8 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		u32 wait_id = nvhost_sync_pt_id(pt);
 		u32 wait_value = nvhost_sync_pt_thresh(pt);
 
-		if (nvhost_syncpt_is_expired(sp->sp, wait_id, wait_value)) {
+		if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev,
+				wait_id, wait_value)) {
 			wait_cmd->ptr[i * 4 + 0] = 0;
 			wait_cmd->ptr[i * 4 + 1] = 0;
 			wait_cmd->ptr[i * 4 + 2] = 0;
@@ -151,6 +154,12 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 #endif
 }
 
+static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
+{
+	struct channel_gk20a *ch20a = priv;
+	gk20a_channel_update(ch20a, nr_completed);
+}
+
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool gfx_class, bool wfi_cmd,
 				       struct priv_cmd_entry **entry,
@@ -160,22 +169,15 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	int incr_cmd_size;
 	int j = 0;
 	int err;
-	void *completed_waiter;
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 
-	completed_waiter = nvhost_intr_alloc_waiter();
-	if (!completed_waiter)
-		return -ENOMEM;
-
 	/* nvhost action_gpfifo_submit_complete releases this ref. */
 	err = gk20a_channel_busy(c->g->dev);
-	if (err) {
-		kfree(completed_waiter);
+	if (err)
 		return err;
-	}
 
 	incr_cmd_size = 4;
 	if (wfi_cmd)
@@ -184,7 +186,6 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
 	if (incr_cmd == NULL) {
 		gk20a_channel_idle(c->g->dev);
-		kfree(completed_waiter);
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
 		return -EAGAIN;
@@ -217,22 +218,16 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	}
 	WARN_ON(j != incr_cmd_size);
 
-	thresh = nvhost_syncpt_incr_max(sp->sp, sp->id, 1);
+	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 1);
 
-	err = nvhost_intr_add_action(
-		&nvhost_get_host(c->g->dev)->intr,
-		sp->id, thresh,
-		NVHOST_INTR_ACTION_GPFIFO_SUBMIT_COMPLETE,
-		c,
-		completed_waiter,
-		NULL);
+	err = nvhost_intr_register_notifier(sp->host1x_pdev, sp->id, thresh,
+			gk20a_channel_syncpt_update, c);
 
 	/* Adding interrupt action should never fail. A proper error handling
 	 * here would require us to decrement the syncpt max back to its
 	 * original value. */
 	if (WARN(err, "failed to set submit complete interrupt")) {
 		gk20a_channel_idle(c->g->dev);
-		kfree(completed_waiter);
 		err = 0; /* Ignore this error. */
 	}
 
@@ -301,7 +296,8 @@ int gk20a_channel_syncpt_incr_user_fd(struct gk20a_channel_sync *s,
 						    &pt.id, &pt.thresh);
 	if (err)
 		return err;
-	return nvhost_sync_create_fence_fd(sp->c->g->dev, &pt, 1, "fence", fd);
+	return nvhost_sync_create_fence_fd(sp->host1x_pdev, &pt, 1,
+					   "fence", fd);
 #else
 	return -ENODEV;
 #endif
@@ -311,7 +307,7 @@ void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
-	nvhost_syncpt_set_min_eq_max(sp->sp, sp->id);
+	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 }
 
 static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
@@ -331,9 +327,9 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	if (!sp)
 		return NULL;
 
-	sp->sp = &nvhost_get_host(c->g->dev)->syncpt;
 	sp->c = c;
-	sp->id = nvhost_get_syncpt_host_managed(c->g->dev, c->hw_chid);
+	sp->host1x_pdev = to_platform_device(c->g->dev->dev.parent);
+	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev, c->hw_chid);
 
 	sp->ops.wait_cpu		= gk20a_channel_syncpt_wait_cpu;
 	sp->ops.is_expired		= gk20a_channel_syncpt_is_expired;

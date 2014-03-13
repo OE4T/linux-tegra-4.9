@@ -111,8 +111,9 @@ static int gk20a_tegra_channel_busy(struct platform_device *dev)
 	 * OS-Idle-Display-ON case
 	 * - The code below fixes this use-case
 	 */
-	if (nvhost_get_parent(dev))
-		ret = nvhost_module_busy(nvhost_get_parent(dev));
+	if (to_platform_device(dev->dev.parent))
+		ret = nvhost_module_busy_ext(
+			to_platform_device(dev->dev.parent));
 
 	return ret;
 }
@@ -120,8 +121,8 @@ static int gk20a_tegra_channel_busy(struct platform_device *dev)
 static void gk20a_tegra_channel_idle(struct platform_device *dev)
 {
 	/* Explicitly turn off the host1x clocks */
-	if (nvhost_get_parent(dev))
-		nvhost_module_idle(nvhost_get_parent(dev));
+	if (to_platform_device(dev->dev.parent))
+		nvhost_module_idle_ext(to_platform_device(dev->dev.parent));
 }
 
 #ifdef CONFIG_TEGRA_NVMAP

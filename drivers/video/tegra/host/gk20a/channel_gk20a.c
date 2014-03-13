@@ -19,6 +19,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/nvhost.h>
 #include <linux/list.h>
 #include <linux/delay.h>
 #include <linux/highmem.h> /* need for nvmap.h*/
@@ -28,7 +29,6 @@
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
 
-#include "dev.h"
 #include "debug_gk20a.h"
 
 #include "gk20a.h"
@@ -39,7 +39,6 @@
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
 #include "hw_ltc_gk20a.h"
-#include "chip_support.h"
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 
@@ -69,12 +68,6 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch);
-
-static inline
-struct nvhost_master *host_from_gk20a_channel(struct channel_gk20a *ch)
-{
-	return nvhost_get_host(ch->g->dev);
-}
 
 static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f)
 {

@@ -470,6 +470,7 @@ int __init loki_panel_init(int board_id)
 		loki_disp2_fb_data.xres = 1920;
 		loki_disp2_fb_data.yres = 1080;
 		loki_disp2_device.id = 0;
+		loki_disp2_out.parent_clk = "pll_d";
 
 		loki_disp2_out.modes = hdmi_panel_modes;
 		loki_disp2_out.n_modes = ARRAY_SIZE(hdmi_panel_modes);

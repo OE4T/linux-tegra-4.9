@@ -319,6 +319,7 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
+	nvhost_free_syncpt(sp->id);
 	kfree(sp);
 }
 
@@ -326,7 +327,6 @@ static struct gk20a_channel_sync *
 gk20a_channel_syncpt_create(struct channel_gk20a *c)
 {
 	struct gk20a_channel_syncpt *sp;
-	struct gk20a_platform *platform = platform_get_drvdata(c->g->dev);
 
 	sp = kzalloc(sizeof(*sp), GFP_KERNEL);
 	if (!sp)
@@ -334,7 +334,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 
 	sp->sp = &nvhost_get_host(c->g->dev)->syncpt;
 	sp->c = c;
-	sp->id = c->hw_chid + platform->syncpt_base;
+	sp->id = nvhost_get_syncpt_host_managed(c->g->dev, c->hw_chid);
 
 	sp->ops.wait_cpu		= gk20a_channel_syncpt_wait_cpu;
 	sp->ops.is_expired		= gk20a_channel_syncpt_is_expired;

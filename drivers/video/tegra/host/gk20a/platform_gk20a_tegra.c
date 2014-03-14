@@ -481,7 +481,6 @@ static struct resource gk20a_tegra_resources[] = {
 
 struct gk20a_platform t132_gk20a_tegra_platform = {
 	.has_syncpoints = true,
-	.syncpt_base = NVSYNCPT_GK20A_BASE,
 
 	/* power management configuration */
 	.railgate_delay		= 500,
@@ -510,7 +509,6 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 
 struct gk20a_platform gk20a_tegra_platform = {
 	.has_syncpoints = true,
-	.syncpt_base = NVSYNCPT_GK20A_BASE,
 
 	/* power management configuration */
 	.railgate_delay		= 500,

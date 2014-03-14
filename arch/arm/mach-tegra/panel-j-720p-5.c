@@ -39,6 +39,7 @@
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
 static struct tegra_dsi_out dsi_j_720p_5_pdata;
+static struct tegra_dc_out *j_720p_5_dc_out;
 
 static bool reg_requested;
 static bool gpio_requested;
@@ -437,8 +438,11 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 		pr_err("dsi gpio request failed\n");
 		goto fail;
 	}
-	gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
-	gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
+
+	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+		gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
+		gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
+	}
 
 	if (vdd_lcd_s_1v8) {
 		err = regulator_enable(vdd_lcd_s_1v8);
@@ -476,8 +480,10 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	gpio_set_value(DSI_PANEL_EN_GPIO, 1);
-	msleep(40);
+	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+		gpio_set_value(DSI_PANEL_EN_GPIO, 1);
+		msleep(40);
+	}
 
 	return 0;
 fail:
@@ -568,7 +574,8 @@ static void dsi_j_720p_5_dc_out_init(struct tegra_dc_out *dc)
 	dc->postpoweron = dsi_j_720p_5_postpoweron;
 	dc->width = 130;
 	dc->height = 74;
-	dc->flags = DC_CTRL_MODE;
+	dc->flags = DC_CTRL_MODE | TEGRA_DC_OUT_INITIALIZED_MODE;
+	j_720p_5_dc_out = dc;
 	dc->rotation = 270;
 }
 

@@ -33,7 +33,6 @@
 #include <linux/dma-buf.h>
 #include <linux/syscalls.h>
 #include <linux/nvmap.h>
-
 #include <linux/workqueue.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-direction.h>
@@ -59,8 +58,6 @@
 #endif
 
 #define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN | NVMAP_ZEROED_PAGES)
-
-#define NVMAP_NUM_PTES		64
 
 #ifdef CONFIG_64BIT
 #define NVMAP_LAZY_VFREE
@@ -230,15 +227,8 @@ struct nvmap_vma_priv {
 #include <linux/miscdevice.h>
 
 struct nvmap_device {
-	struct vm_struct *vm_rgn;
-	pte_t		*ptes[NVMAP_NUM_PTES];
-	unsigned long	ptebits[NVMAP_NUM_PTES / BITS_PER_LONG];
-	unsigned int	lastpte;
-	spinlock_t	ptelock;
-
 	struct rb_root	handles;
 	spinlock_t	handle_lock;
-	wait_queue_head_t pte_wait;
 	struct miscdevice dev_user;
 	struct nvmap_carveout_node *heaps;
 	int nr_carveouts;
@@ -320,14 +310,6 @@ pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot);
 #endif /* !CONFIG_TEGRA_NVMAP */
 
 struct device *nvmap_client_to_device(struct nvmap_client *client);
-
-pte_t **nvmap_alloc_pte(struct nvmap_device *dev, void **vaddr);
-
-pte_t **nvmap_alloc_pte_irq(struct nvmap_device *dev, void **vaddr);
-
-void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte);
-
-pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

@@ -122,77 +122,6 @@ struct device *nvmap_client_to_device(struct nvmap_client *client)
 	return nvmap_dev->dev_user.this_device;
 }
 
-/* allocates a PTE for the caller's use; returns the PTE pointer or
- * a negative errno. not safe from IRQs */
-pte_t **nvmap_alloc_pte_irq(struct nvmap_device *dev, void **vaddr)
-{
-	unsigned long bit;
-
-	spin_lock(&dev->ptelock);
-	bit = find_next_zero_bit(dev->ptebits, NVMAP_NUM_PTES, dev->lastpte);
-	if (bit == NVMAP_NUM_PTES) {
-		bit = find_first_zero_bit(dev->ptebits, dev->lastpte);
-		if (bit == dev->lastpte)
-			bit = NVMAP_NUM_PTES;
-	}
-
-	if (bit == NVMAP_NUM_PTES) {
-		spin_unlock(&dev->ptelock);
-		return ERR_PTR(-ENOMEM);
-	}
-
-	dev->lastpte = bit;
-	set_bit(bit, dev->ptebits);
-	spin_unlock(&dev->ptelock);
-
-	*vaddr = dev->vm_rgn->addr + bit * PAGE_SIZE;
-	return &(dev->ptes[bit]);
-}
-
-/* allocates a PTE for the caller's use; returns the PTE pointer or
- * a negative errno. must be called from sleepable contexts */
-pte_t **nvmap_alloc_pte(struct nvmap_device *dev, void **vaddr)
-{
-	int ret;
-	pte_t **pte;
-	ret = wait_event_interruptible(dev->pte_wait,
-			!IS_ERR(pte = nvmap_alloc_pte_irq(dev, vaddr)));
-
-	if (ret == -ERESTARTSYS)
-		return ERR_PTR(-EINTR);
-
-	return pte;
-}
-
-/* frees a PTE */
-void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte)
-{
-	unsigned long addr;
-	unsigned int bit = pte - dev->ptes;
-
-	if (WARN_ON(bit >= NVMAP_NUM_PTES))
-		return;
-
-	addr = (unsigned long)dev->vm_rgn->addr + bit * PAGE_SIZE;
-	set_pte_at(&init_mm, addr, *pte, 0);
-
-	spin_lock(&dev->ptelock);
-	clear_bit(bit, dev->ptebits);
-	spin_unlock(&dev->ptelock);
-	wake_up(&dev->pte_wait);
-}
-
-/* get pte for the virtual address */
-pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr)
-{
-	unsigned int bit;
-
-	BUG_ON(vaddr < (unsigned long)dev->vm_rgn->addr);
-	bit = (vaddr - (unsigned long)dev->vm_rgn->addr) >> PAGE_SHIFT;
-	BUG_ON(bit >= NVMAP_NUM_PTES);
-	return &(dev->ptes[bit]);
-}
-
 /*
  * Verifies that the passed ID is a valid handle ID. Then the passed client's
  * reference to the handle is returned.
@@ -1195,53 +1124,15 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	dev->handles = RB_ROOT;
 
-	init_waitqueue_head(&dev->pte_wait);
-
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	e = nvmap_page_pool_init(dev);
 	if (e)
 		goto fail;
 #endif
 
-	dev->vm_rgn = alloc_vm_area(NVMAP_NUM_PTES * PAGE_SIZE, NULL);
-	if (!dev->vm_rgn) {
-		e = -ENOMEM;
-		dev_err(&pdev->dev, "couldn't allocate remapping region\n");
-		goto fail;
-	}
-
-	spin_lock_init(&dev->ptelock);
 	spin_lock_init(&dev->handle_lock);
 	INIT_LIST_HEAD(&dev->clients);
 	spin_lock_init(&dev->clients_lock);
-
-	for (i = 0; i < NVMAP_NUM_PTES; i++) {
-		unsigned long addr;
-		pgd_t *pgd;
-		pud_t *pud;
-		pmd_t *pmd;
-
-		addr = (unsigned long)dev->vm_rgn->addr + (i * PAGE_SIZE);
-		pgd = pgd_offset_k(addr);
-		pud = pud_alloc(&init_mm, pgd, addr);
-		if (!pud) {
-			e = -ENOMEM;
-			dev_err(&pdev->dev, "couldn't allocate page tables\n");
-			goto fail;
-		}
-		pmd = pmd_alloc(&init_mm, pud, addr);
-		if (!pmd) {
-			e = -ENOMEM;
-			dev_err(&pdev->dev, "couldn't allocate page tables\n");
-			goto fail;
-		}
-		dev->ptes[i] = pte_alloc_kernel(pmd, addr);
-		if (!dev->ptes[i]) {
-			e = -ENOMEM;
-			dev_err(&pdev->dev, "couldn't allocate page tables\n");
-			goto fail;
-		}
-	}
 
 	e = misc_register(&dev->dev_user);
 	if (e) {
@@ -1380,8 +1271,6 @@ fail:
 	kfree(dev->heaps);
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
-	if (dev->vm_rgn)
-		free_vm_area(dev->vm_rgn);
 	kfree(dev);
 	nvmap_dev = NULL;
 	return e;
@@ -1408,7 +1297,6 @@ static int nvmap_remove(struct platform_device *pdev)
 	}
 	kfree(dev->heaps);
 
-	free_vm_area(dev->vm_rgn);
 	kfree(dev);
 	nvmap_dev = NULL;
 	return 0;

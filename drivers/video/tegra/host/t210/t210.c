@@ -39,7 +39,6 @@
 #include "isp/isp.h"
 #include "gk20a/gk20a.h"
 
-#include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
 
@@ -239,18 +238,10 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 
-	err = nvhost_init_t124_debug_support(op);
-	if (err)
-		return err;
-
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->actmon = host1x_actmon_ops;
-
-	err = nvhost_memmgr_init(op);
-	if (err)
-		return err;
 
 	t210 = kzalloc(sizeof(struct t124), GFP_KERNEL);
 	if (!t210) {

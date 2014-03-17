@@ -22,6 +22,7 @@
 
 #include "gk20a/ltc_common.c"
 #include "gk20a/gk20a.h"
+#include "gk20a/gk20a_allocator.h"
 
 static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
@@ -94,7 +95,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	gr->compbit_store.base_iova = iova;
 
-	nvhost_allocator_init(&gr->comp_tags, "comptag",
+	gk20a_allocator_init(&gr->comp_tags, "comptag",
 			      1, /* start */
 			      max_comptag_lines - 1, /* length*/
 			      1); /* align */

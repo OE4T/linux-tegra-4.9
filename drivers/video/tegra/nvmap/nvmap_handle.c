@@ -23,6 +23,7 @@
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <linux/err.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/mm.h>
@@ -155,15 +156,16 @@ static int handle_page_alloc(struct nvmap_client *client,
 	phys_addr_t paddr;
 #endif
 	gfp_t gfp = GFP_NVMAP;
-	unsigned long kaddr;
-	pte_t **pte = NULL;
+	unsigned long kaddr = 0;
+	struct vm_struct *area = NULL;
 
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory) {
 		gfp |= __GFP_ZERO;
 		prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-		pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
-		if (IS_ERR(pte))
+		area = alloc_vm_area(PAGE_SIZE, NULL);
+		if (!area)
 			return -ENOMEM;
+		kaddr = (ulong)area->addr;
 	}
 
 	pages = altalloc(nr_page * sizeof(*pages));
@@ -205,11 +207,12 @@ static int handle_page_alloc(struct nvmap_client *client,
 					       PAGE_SIZE);
 				} else {
 					paddr = page_to_phys(pages[i]);
-					set_pte_at(&init_mm, kaddr, *pte,
-						   pfn_pte(__phys_to_pfn(paddr),
-							   prot));
+					ioremap_page_range(kaddr,
+						kaddr + PAGE_SIZE,
+						paddr, prot);
 					nvmap_flush_tlb_kernel_page(kaddr);
 					memset((char *)kaddr, 0, PAGE_SIZE);
+					unmap_kernel_range(kaddr, PAGE_SIZE);
 				}
 			}
 		}
@@ -234,7 +237,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 		goto fail;
 
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory)
-		nvmap_free_pte(nvmap_dev, pte);
+		free_vm_area(area);
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
@@ -242,7 +245,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 fail:
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory)
-		nvmap_free_pte(nvmap_dev, pte);
+		free_vm_area(area);
 	while (i--)
 		__free_page(pages[i]);
 	altfree(pages, nr_page * sizeof(*pages));

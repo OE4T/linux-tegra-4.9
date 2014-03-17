@@ -25,6 +25,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/fs.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -747,7 +748,7 @@ static void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
 
 static void heap_page_cache_maint(
 	struct nvmap_handle *h, unsigned long start, unsigned long end,
-	unsigned int op, bool inner, bool outer, pte_t **pte,
+	unsigned int op, bool inner, bool outer,
 	unsigned long kaddr, pgprot_t prot)
 {
 	struct page *page;
@@ -780,12 +781,12 @@ static void heap_page_cache_maint(
 
 		if (inner) {
 			void *vaddr = (void *)kaddr + off;
-			BUG_ON(!pte);
 			BUG_ON(!kaddr);
-			set_pte_at(&init_mm, kaddr, *pte,
-				pfn_pte(__phys_to_pfn(paddr), prot));
+			ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
+				paddr, prot);
 			nvmap_flush_tlb_kernel_page(kaddr);
 			inner_cache_maint(op, vaddr, size);
+			unmap_kernel_range(kaddr, PAGE_SIZE);
 		}
 
 		if (outer)
@@ -857,7 +858,7 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 		{
 			if (h->heap_pgalloc) {
 				heap_page_cache_maint(h, start,
-					end, op, false, true, NULL, 0, 0);
+					end, op, false, true, 0, 0);
 			} else  {
 				phys_addr_t pstart;
 
@@ -881,7 +882,6 @@ struct cache_maint_op {
 static int do_cache_maint(struct cache_maint_op *cache_work)
 {
 	pgprot_t prot;
-	pte_t **pte = NULL;
 	unsigned long kaddr;
 	phys_addr_t pstart = cache_work->start;
 	phys_addr_t pend = cache_work->end;
@@ -890,6 +890,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	struct nvmap_handle *h = cache_work->h;
 	struct nvmap_client *client;
 	unsigned int op = cache_work->op;
+	struct vm_struct *area = NULL;
 
 	if (!h || !h->alloc)
 		return -EFAULT;
@@ -914,18 +915,17 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		goto out;
 
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-	pte = nvmap_alloc_pte(nvmap_dev, (void **)&kaddr);
-	if (IS_ERR(pte)) {
-		err = PTR_ERR(pte);
-		pte = NULL;
+	area = alloc_vm_area(PAGE_SIZE, NULL);
+	if (!area) {
+		err = -ENOMEM;
 		goto out;
 	}
+	kaddr = (ulong)area->addr;
 
 	if (h->heap_pgalloc) {
 		heap_page_cache_maint(h, pstart, pend, op, true,
 			(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ?
-					false : true,
-			pte, kaddr, prot);
+			false : true, kaddr, prot);
 		goto out;
 	}
 
@@ -944,20 +944,21 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		void *base = (void *)kaddr + (loop & ~PAGE_MASK);
 		next = min(next, pend);
 
-		set_pte_at(&init_mm, kaddr, *pte,
-			   pfn_pte(__phys_to_pfn(loop), prot));
+		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
+			loop, prot);
 		nvmap_flush_tlb_kernel_page(kaddr);
 
 		inner_cache_maint(op, base, next - loop);
 		loop = next;
+		unmap_kernel_range(kaddr, PAGE_SIZE);
 	}
 
 	if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE)
 		outer_cache_maint(op, pstart, pend - pstart);
 
 out:
-	if (pte)
-		nvmap_free_pte(nvmap_dev, pte);
+	if (area)
+		free_vm_area(area);
 	return err;
 }
 
@@ -989,7 +990,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 
 static int rw_handle_page(struct nvmap_handle *h, int is_read,
 			  unsigned long start, unsigned long rw_addr,
-			  unsigned long bytes, unsigned long kaddr, pte_t *pte)
+			  unsigned long bytes, unsigned long kaddr)
 {
 	pgprot_t prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 	unsigned long end = start + bytes;
@@ -1010,9 +1011,7 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 			phys = page_to_phys(page) + (start & ~PAGE_MASK);
 		}
 
-		set_pte_at(&init_mm, kaddr, pte,
-			   pfn_pte(__phys_to_pfn(phys), prot));
-		nvmap_flush_tlb_kernel_page(kaddr);
+		ioremap_page_range(kaddr, kaddr + PAGE_SIZE, phys, prot);
 
 		src = (void *)kaddr + (phys & ~PAGE_MASK);
 		phys = PAGE_SIZE - (phys & ~PAGE_MASK);
@@ -1031,6 +1030,7 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 
 		if (page)
 			put_page(page);
+		unmap_kernel_range(kaddr, PAGE_SIZE);
 	}
 
 	return err;
@@ -1043,9 +1043,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 unsigned long count)
 {
 	ssize_t copied = 0;
-	pte_t **pte;
 	void *addr;
 	int ret = 0;
+	struct vm_struct *area;
 
 	if (!elem_size)
 		return -EINVAL;
@@ -1060,9 +1060,10 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		count = 1;
 	}
 
-	pte = nvmap_alloc_pte(nvmap_dev, &addr);
-	if (IS_ERR(pte))
-		return PTR_ERR(pte);
+	area = alloc_vm_area(PAGE_SIZE, NULL);
+	if (!area)
+		return -ENOMEM;
+	addr = area->addr;
 
 	while (count--) {
 		if (h_offs + elem_size > h->size) {
@@ -1076,7 +1077,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 				CACHE_MAINT_IMMEDIATE);
 
 		ret = rw_handle_page(h, is_read, h_offs, sys_addr,
-				     elem_size, (unsigned long)addr, *pte);
+				     elem_size, (unsigned long)addr);
 
 		if (ret)
 			break;
@@ -1091,6 +1092,6 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		h_offs += h_stride;
 	}
 
-	nvmap_free_pte(nvmap_dev, pte);
+	free_vm_area(area);
 	return ret ?: copied;
 }

@@ -24,6 +24,7 @@
 #include <linux/bitmap.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/oom.h>
@@ -257,11 +258,10 @@ unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 int nvmap_flush_heap_block(struct nvmap_client *client,
 	struct nvmap_heap_block *block, size_t len, unsigned int prot)
 {
-	pte_t **pte;
-	void *addr;
-	uintptr_t kaddr;
+	ulong kaddr;
 	phys_addr_t phys = block->base;
 	phys_addr_t end = block->base + len;
+	struct vm_struct *area = NULL;
 
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
@@ -275,28 +275,29 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	}
 #endif
 
-	pte = nvmap_alloc_pte(nvmap_dev, &addr);
-	if (IS_ERR(pte))
-		return PTR_ERR(pte);
+	area = alloc_vm_area(PAGE_SIZE, NULL);
+	if (!area)
+		return -ENOMEM;
 
-	kaddr = (uintptr_t)addr;
+	kaddr = (ulong)area->addr;
 
 	while (phys < end) {
 		phys_addr_t next = (phys + PAGE_SIZE) & PAGE_MASK;
-		unsigned long pfn = __phys_to_pfn(phys);
 		void *base = (void *)kaddr + (phys & ~PAGE_MASK);
 
 		next = min(next, end);
-		set_pte_at(&init_mm, kaddr, *pte, pfn_pte(pfn, PG_PROT_KERNEL));
+		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
+			phys, PG_PROT_KERNEL);
 		nvmap_flush_tlb_kernel_page(kaddr);
 		FLUSH_DCACHE_AREA(base, next - phys);
 		phys = next;
+		unmap_kernel_range(kaddr, PAGE_SIZE);
 	}
 
 	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
 		outer_flush_range(block->base, block->base + len);
 
-	nvmap_free_pte(nvmap_dev, pte);
+	free_vm_area(area);
 out:
 	wmb();
 	return 0;

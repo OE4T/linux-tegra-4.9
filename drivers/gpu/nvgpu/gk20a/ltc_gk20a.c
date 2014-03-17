@@ -184,6 +184,13 @@ static void gk20a_ltc_sync_debugfs(struct gk20a *g)
 }
 #endif
 
+static void gk20a_ltc_init_fs_state(struct gk20a *g)
+{
+	gk20a_dbg_info("initialize gk20a L2");
+
+	g->max_ltc_count = g->ltc_count = 1;
+}
+
 void gk20a_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
@@ -200,4 +207,5 @@ void gk20a_init_ltc(struct gpu_ops *gops)
 	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
 #endif
 	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
+	gops->ltc.init_fs_state = gk20a_ltc_init_fs_state;
 }

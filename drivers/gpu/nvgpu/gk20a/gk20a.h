@@ -73,6 +73,7 @@ struct gpu_ops {
 		int  (*init_zbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*sync_debugfs)(struct gk20a *g);
+		void (*init_fs_state)(struct gk20a *g);
 		void (*elpg_flush)(struct gk20a *g);
 	} ltc;
 	struct {
@@ -287,6 +288,8 @@ struct gk20a {
 
 	int irq_stall;
 	int irq_nonstall;
+	u32 max_ltc_count;
+	u32 ltc_count;
 
 	struct generic_pm_domain pd;
 

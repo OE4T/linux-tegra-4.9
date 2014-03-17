@@ -222,13 +222,13 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */
-	gk20a_writel(g, ltc_ltss_g_elpg_r(),
-		     ltc_ltss_g_elpg_flush_pending_f());
+	gk20a_writel(g, ltc_ltcs_ltss_g_elpg_r(),
+		     ltc_ltcs_ltss_g_elpg_flush_pending_f());
 	do {
-		data = gk20a_readl(g, ltc_ltss_g_elpg_r());
+		data = gk20a_readl(g, ltc_ltc0_ltss_g_elpg_r());
 
-		if (ltc_ltss_g_elpg_flush_v(data) ==
-		    ltc_ltss_g_elpg_flush_pending_v()) {
+		if (ltc_ltc0_ltss_g_elpg_flush_v(data) ==
+		    ltc_ltc0_ltss_g_elpg_flush_pending_v()) {
 			gk20a_dbg_info("g_elpg_flush 0x%x", data);
 			retry--;
 			usleep_range(20, 40);

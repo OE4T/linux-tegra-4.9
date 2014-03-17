@@ -847,14 +847,14 @@ static void allocations_stringify(struct nvmap_client *client,
 			phys_addr_t base = iovmm ? 0 :
 					   (handle->carveout->base);
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %8llx\n",
+				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %8p\n",
 				"", "",
 				(unsigned long long)base, K(handle->size),
 				handle->userflags,
 				atomic_read(&handle->ref),
 				atomic_read(&ref->dupes),
 				atomic_read(&ref->pin),
-				(unsigned long long)handle);
+				handle);
 		}
 	}
 	nvmap_ref_unlock(client);

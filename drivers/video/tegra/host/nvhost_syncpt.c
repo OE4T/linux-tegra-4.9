@@ -869,24 +869,6 @@ void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
 	wmb();
 }
 
-u32 nvhost_syncpt_read_ext(struct platform_device *dev, u32 id)
-{
-	struct platform_device *pdev;
-	struct nvhost_syncpt *sp;
-
-	if (!nvhost_get_parent(dev)) {
-		dev_err(&dev->dev, "Read called with wrong dev\n");
-		return 0;
-	}
-
-	/* get the parent */
-	pdev = to_platform_device(dev->dev.parent);
-	sp = &(nvhost_get_host(pdev)->syncpt);
-
-	return nvhost_syncpt_read(sp, id);
-}
-EXPORT_SYMBOL(nvhost_syncpt_read_ext);
-
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val)
 {
 	struct platform_device *pdev;

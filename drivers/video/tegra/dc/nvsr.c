@@ -602,7 +602,6 @@ static int tegra_dc_nvsr_enter_idle(struct tegra_dc_nvsr_data *nvsr)
 		/* set non-continuous mode */
 		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
 				DC_CMD_DISPLAY_COMMAND);
-		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 		dc->out->flags |= TEGRA_DC_OUT_ONE_SHOT_MODE;

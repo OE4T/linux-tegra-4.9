@@ -1088,7 +1088,6 @@ void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 	val &= ~CMU_ENABLE;
 	tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	/*TODO: Sync up with frame end */
@@ -1140,8 +1139,6 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 		if (val & CMU_ENABLE) {
 			val &= ~CMU_ENABLE;
 			tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
-			val = GENERAL_UPDATE;
-			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
 			val = GENERAL_ACT_REQ;
 			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
 			/*TODO: Sync up with vsync */
@@ -1481,7 +1478,6 @@ void tegra_dc_enable_crc(struct tegra_dc *dc)
 	val = CRC_ALWAYS_ENABLE | CRC_INPUT_DATA_ACTIVE_DATA |
 		CRC_ENABLE_ENABLE;
 	tegra_dc_writel(dc, val, DC_COM_CRC_CONTROL);
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
@@ -1498,7 +1494,6 @@ void tegra_dc_disable_crc(struct tegra_dc *dc)
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 	tegra_dc_writel(dc, 0x0, DC_COM_CRC_CONTROL);
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_dc_put(dc);
@@ -1745,15 +1740,11 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 				trace_display_reset(dc);
 				tegra_dc_writel(dc, UF_LINE_FLUSH,
 						DC_DISP_DISP_MISC_CONTROL);
-				tegra_dc_writel(dc, GENERAL_UPDATE,
-						DC_CMD_STATE_CONTROL);
 				tegra_dc_writel(dc, GENERAL_ACT_REQ,
 						DC_CMD_STATE_CONTROL);
 
 				tegra_dc_writel(dc, 0,
 						DC_DISP_DISP_MISC_CONTROL);
-				tegra_dc_writel(dc, GENERAL_UPDATE,
-						DC_CMD_STATE_CONTROL);
 				tegra_dc_writel(dc, GENERAL_ACT_REQ,
 						DC_CMD_STATE_CONTROL);
 			}
@@ -2261,7 +2252,6 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	trace_display_enable(dc);
 
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	if (dc->out->postpoweron)

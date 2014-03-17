@@ -254,6 +254,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 void *__nvmap_mmap(struct nvmap_handle *h)
 {
 	pgprot_t prot;
+	void *vaddr = NULL;
 	unsigned long adj_size;
 	struct vm_struct *v;
 	void *p;
@@ -267,19 +268,19 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
-#ifdef NVMAP_LAZY_VFREE
 	if (h->heap_pgalloc) {
-		if (!h->vaddr)
-			h->vaddr = vm_map_ram(h->pgalloc.pages,
+		if (!h->vaddr) {
+			vaddr = vm_map_ram(h->pgalloc.pages,
 				h->size >> PAGE_SHIFT, -1, prot);
+		}
+#ifdef NVMAP_LAZY_VFREE
+		if (vaddr && atomic_long_cmpxchg(&h->vaddr, NULL, vaddr))
+			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		return h->vaddr;
-	}
-#else
-	if (h->heap_pgalloc)
-		return vm_map_ram(h->pgalloc.pages,
-				h->size >> PAGE_SHIFT, -1, prot);
-
 #endif
+		return vaddr;
+	}
+
 	/* carveout - explicitly map the pfns into a vmalloc area */
 	adj_size = h->carveout->base & ~PAGE_MASK;
 	adj_size += h->size;
@@ -311,9 +312,8 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	/* Handle can be locked by cache maintenance in
 	 * separate thread */
 	if (h->heap_pgalloc) {
-#ifdef NVMAP_LAZY_VFREE
-		BUG_ON(!h->vaddr);
-#else
+#ifndef NVMAP_LAZY_VFREE
+		BUG_ON(h->vaddr);
 		vm_unmap_ram(addr, h->size >> PAGE_SHIFT);
 #endif
 	} else {

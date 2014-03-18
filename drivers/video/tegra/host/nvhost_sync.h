@@ -50,9 +50,8 @@ struct sync_fence *nvhost_sync_create_fence(
 		const char *name);
 struct sync_fence *nvhost_sync_fdget(int fd);
 int nvhost_sync_num_pts(struct sync_fence *fence);
-struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt);
-u32 nvhost_sync_pt_id(struct nvhost_sync_pt *pt);
-u32 nvhost_sync_pt_thresh(struct nvhost_sync_pt *pt);
+u32 nvhost_sync_pt_id(struct sync_pt *pt);
+u32 nvhost_sync_pt_thresh(struct sync_pt *pt);
 
 #else
 static inline struct nvhost_sync_timeline *nvhost_sync_timeline_create(
@@ -96,17 +95,12 @@ static inline int nvhost_sync_num_pts(struct sync_fence *fence)
 	return 0;
 }
 
-static inline struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt)
-{
-	return NULL;
-}
-
-static inline u32 nvhost_sync_pt_id(struct nvhost_sync_pt *pt)
+static inline u32 nvhost_sync_pt_id(struct sync_pt *pt)
 {
 	return NVSYNCPT_INVALID;
 }
 
-static inline u32 nvhost_sync_pt_thresh(struct nvhost_sync_pt *pt)
+static inline u32 nvhost_sync_pt_thresh(struct sync_pt *pt)
 {
 	return 0;
 }

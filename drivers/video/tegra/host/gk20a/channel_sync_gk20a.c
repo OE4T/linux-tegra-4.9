@@ -106,7 +106,7 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 #ifdef CONFIG_SYNC
 	int i;
 	int num_wait_cmds;
-	struct sync_pt *pos;
+	struct sync_pt *pt;
 	struct sync_fence *sync_fence;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
@@ -127,8 +127,7 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 
 	i = 0;
-	list_for_each_entry(pos, &sync_fence->pt_list_head, pt_list) {
-		struct nvhost_sync_pt *pt = to_nvhost_sync_pt(pos);
+	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
 		u32 wait_id = nvhost_sync_pt_id(pt);
 		u32 wait_value = nvhost_sync_pt_thresh(pt);
 

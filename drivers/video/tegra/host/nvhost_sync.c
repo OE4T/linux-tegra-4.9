@@ -55,7 +55,7 @@ struct nvhost_sync_pt_inst {
 	struct nvhost_sync_pt		*shared;
 };
 
-struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt)
+static struct nvhost_sync_pt *to_nvhost_sync_pt(struct sync_pt *pt)
 {
 	struct nvhost_sync_pt_inst *pti =
 			container_of(pt, struct nvhost_sync_pt_inst, pt);
@@ -289,13 +289,15 @@ int nvhost_sync_num_pts(struct sync_fence *fence)
 	return num;
 }
 
-u32 nvhost_sync_pt_id(struct nvhost_sync_pt *pt)
+u32 nvhost_sync_pt_id(struct sync_pt *__pt)
 {
+	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(__pt);
 	return pt->obj->id;
 }
 
-u32 nvhost_sync_pt_thresh(struct nvhost_sync_pt *pt)
+u32 nvhost_sync_pt_thresh(struct sync_pt *__pt)
 {
+	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(__pt);
 	return pt->thresh;
 }
 

@@ -119,8 +119,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
 	struct nvhost_syncpt *sp = &host->syncpt;
 	struct sync_fence *fence;
-	struct sync_pt *_pt;
-	struct nvhost_sync_pt *pt;
+	struct sync_pt *pt;
 	struct list_head *pos;
 
 	if (fd < 0)
@@ -143,8 +142,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 		u32 id;
 		u32 thresh;
 
-		_pt = container_of(pos, struct sync_pt, pt_list);
-		pt = to_nvhost_sync_pt(_pt);
+		pt = container_of(pos, struct sync_pt, pt_list);
 		id = nvhost_sync_pt_id(pt);
 		thresh = nvhost_sync_pt_thresh(pt);
 

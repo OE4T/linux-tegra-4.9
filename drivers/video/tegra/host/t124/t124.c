@@ -54,8 +54,6 @@ static int t124_num_alloc_channels = 0;
 #define TSEC_POWERGATE_DELAY 500
 #define HOST1X_POWERGATE_DELAY 50
 
-#define GK20A_DEV_NAME_SIZE 5
-
 #define BIT64(nr) (1ULL << (nr))
 #define NVSYNCPTS_CLIENT_MANAGED_T124 ( \
 	BIT64(NVSYNCPT_DISP0_A) | BIT64(NVSYNCPT_DISP1_A) | \
@@ -667,15 +665,8 @@ static struct nvhost_channel *t124_alloc_nvhost_channel(
 	ch = nvhost_alloc_channel_internal(pdata->index,
 		nvhost_get_host(dev)->info.nb_channels,
 		&t124_num_alloc_channels);
-	if (ch) {
-#if defined(CONFIG_TEGRA_GK20A)
-		if (strncmp(dev->name, "gk20a", GK20A_DEV_NAME_SIZE) == 0) {
-			ch->ops.init          = host1x_channel_ops.init;
-		} else
-#endif
-			ch->ops = host1x_channel_ops;
-
-	}
+	if (ch)
+		ch->ops = host1x_channel_ops;
 	return ch;
 }
 

@@ -283,6 +283,7 @@ static void t210_remove_support(struct nvhost_chip_support *op)
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
 #include "host1x/host1x_actmon_t124.c"
+#include "host1x/host1x_debug.c"
 
 int nvhost_init_t210_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
@@ -297,6 +298,7 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
+	op->debug = host1x_debug_ops;
 
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;

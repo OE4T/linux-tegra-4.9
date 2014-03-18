@@ -23,19 +23,8 @@
 
 #include <asm-generic/ioctl.h>
 
-#ifdef CONFIG_COMPAT
-#define user_ptr(p) ((void __user *)(__u64)(p))
-#else
-#define user_ptr(p) (p)
-#endif
-
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
-#define TEGRA_CRYPTO_IOCTL_NEED_SSK	_IOWR(0x98, 100, int)
-#define TEGRA_CRYPTO_IOCTL_PROCESS_REQ	_IOWR(0x98, 101, int*)
-#define TEGRA_CRYPTO_IOCTL_SET_SEED	_IOWR(0x98, 102, int*)
-#define TEGRA_CRYPTO_IOCTL_GET_RANDOM	_IOWR(0x98, 103, int*)
-#define TEGRA_CRYPTO_IOCTL_GET_SHA	_IOWR(0x98, 104, int*)
-#define TEGRA_CRYPTO_IOCTL_RSA_REQ	_IOWR(0x98, 105, int*)
+#define TEGRA_CRYPTO_IOCTL_NEED_SSK		_IOWR(0x98, 100, int)
 
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
 #define RSA_KEY_SIZE		512
@@ -64,17 +53,32 @@ struct tegra_crypt_req {
 	int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
 	int ivlen;
-#ifdef CONFIG_COMPAT
-	u32 plaintext;
-	u32 result;
-#else
 	u8 *plaintext;
 	u8 *result;
-#endif
 	int plaintext_sz;
 	int skip_key;
 	int skip_iv;
 };
+#define TEGRA_CRYPTO_IOCTL_PROCESS_REQ	\
+		_IOWR(0x98, 101, struct tegra_crypt_req)
+
+#ifdef CONFIG_COMPAT
+struct tegra_crypt_req_32 {
+	int op; /* e.g. TEGRA_CRYPTO_ECB */
+	bool encrypt;
+	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
+	int keylen;
+	char iv[TEGRA_CRYPTO_IV_SIZE];
+	int ivlen;
+	__u32 plaintext;
+	__u32 result;
+	int plaintext_sz;
+	int skip_key;
+	int skip_iv;
+};
+#define TEGRA_CRYPTO_IOCTL_PROCESS_REQ_32	\
+		_IOWR(0x98, 101, struct tegra_crypt_req_32)
+#endif
 
 /* pointer to this struct should be passed to:
  * TEGRA_CRYPTO_IOCTL_SET_SEED
@@ -82,25 +86,32 @@ struct tegra_crypt_req {
  */
 struct tegra_rng_req {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
-#ifdef CONFIG_COMPAT
-	u32 rdata; /* random generated data */
-#else
 	u8 *rdata; /* random generated data */
-#endif
 	int nbytes; /* random data length */
 	int type;
 };
+#define TEGRA_CRYPTO_IOCTL_SET_SEED	\
+		_IOWR(0x98, 102, struct tegra_rng_req)
+#define TEGRA_CRYPTO_IOCTL_GET_RANDOM	\
+		_IOWR(0x98, 103, struct tegra_rng_req)
+
+#ifdef CONFIG_COMPAT
+struct tegra_rng_req_32 {
+	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
+	__u32 rdata; /* random generated data */
+	int nbytes; /* random data length */
+	int type;
+};
+#define TEGRA_CRYPTO_IOCTL_SET_SEED_32	\
+		_IOWR(0x98, 102, struct tegra_rng_req_32)
+#define TEGRA_CRYPTO_IOCTL_GET_RANDOM_32	\
+		_IOWR(0x98, 103, struct tegra_rng_req_32)
+#endif
 
 struct tegra_rsa_req {
-#ifdef CONFIG_COMPAT
-	u32 key;
-	u32 message;
-	u32 result;
-#else
 	char *key;
 	char *message;
 	char *result;
-#endif
 	int algo;
 	int keylen;
 	int msg_len;
@@ -109,20 +120,48 @@ struct tegra_rsa_req {
 	int prv_explen;
 	int skip_key;
 };
+#define TEGRA_CRYPTO_IOCTL_RSA_REQ	\
+		_IOWR(0x98, 105, struct tegra_rsa_req)
+
+#ifdef CONFIG_COMPAT
+struct tegra_rsa_req_32 {
+	__u32 key;
+	__u32 message;
+	__u32 result;
+	int algo;
+	int keylen;
+	int msg_len;
+	int modlen;
+	int pub_explen;
+	int prv_explen;
+	int skip_key;
+};
+#define TEGRA_CRYPTO_IOCTL_RSA_REQ_32	\
+		_IOWR(0x98, 105, struct tegra_rsa_req_32)
+#endif
 
 struct tegra_sha_req {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	int keylen;
-#ifdef CONFIG_COMPAT
-	u32 algo;
-	u32 plaintext;
-	u32 result;
-#else
 	unsigned char *algo;
 	unsigned char *plaintext;
 	unsigned char *result;
-#endif
 	int plaintext_sz;
 };
+#define TEGRA_CRYPTO_IOCTL_GET_SHA	\
+		_IOWR(0x98, 104, struct tegra_sha_req)
+
+#ifdef CONFIG_COMPAT
+struct tegra_sha_req_32 {
+	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
+	int keylen;
+	__u32 algo;
+	__u32 plaintext;
+	__u32 result;
+	int plaintext_sz;
+};
+#define TEGRA_CRYPTO_IOCTL_GET_SHA_32	\
+		_IOWR(0x98, 104, struct tegra_sha_req_32)
+#endif
 
 #endif

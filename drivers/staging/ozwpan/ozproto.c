@@ -445,6 +445,26 @@ done:
 		oz_pd_put(pd);
 	consume_skb(skb);
 }
+
+static int oz_net_notifier(struct notifier_block *nb, unsigned long event,
+				void *ndev)
+{
+	struct net_device *dev = ndev;
+	switch (event) {
+	case NETDEV_UNREGISTER:
+	case NETDEV_DOWN:
+		oz_trace_msg(M, "%s: event %s\n", __func__,
+			(event == NETDEV_UNREGISTER) ?
+			"NETDEV_UNREGISTER" : "NETDEV_DOWN");
+		oz_binding_remove(dev->name);
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block nb_oz_net_notifier = {
+	.notifier_call = oz_net_notifier
+};
 /*------------------------------------------------------------------------------
  * Context: process
  */
@@ -482,6 +502,7 @@ void oz_protocol_term(void)
 		spin_lock_bh(&g_polling_lock);
 	}
 	spin_unlock_bh(&g_polling_lock);
+	unregister_netdevice_notifier(&nb_oz_net_notifier);
 	oz_trace("Protocol stopped\n");
 }
 /*------------------------------------------------------------------------------
@@ -813,6 +834,12 @@ int oz_protocol_init(char *devs)
 		return -1;
 	} else {
 		char d[32];
+		int err = 0;
+		err = register_netdevice_notifier(&nb_oz_net_notifier);
+		if (err) {
+			oz_trace("notifier registration failed. err %d\n", err);
+			return -1;
+		}
 		while (*devs) {
 			devs = oz_get_next_device_name(devs, d, sizeof(d));
 			if (d[0])

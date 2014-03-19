@@ -107,7 +107,7 @@ static long tegra_dc_lvds_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
 	struct clk	*parent_clk;
 
-	tegra_dc_sor_setup_clk(lvds->sor, clk, true);
+	tegra_sor_setup_clk(lvds->sor, clk, true);
 
 	parent_clk = clk_get_parent(clk);
 	if (clk_get_parent(lvds->sor->sor_clk) != parent_clk)

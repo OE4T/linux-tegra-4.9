@@ -79,6 +79,10 @@ struct tegra_dc_dp_link_config {
 	u8	aux_rd_interval;
 };
 
+enum {
+	TEGRA_SOR_SAFE_CLK = 1,
+	TEGRA_SOR_LINK_CLK = 2,
+};
 
 struct tegra_dc_sor_data {
 	struct tegra_dc	*dc;
@@ -91,6 +95,8 @@ struct tegra_dc_sor_data {
 	const struct tegra_dc_dp_link_config	*link_cfg;
 
 	bool   power_is_up;
+
+	u8	clk_type;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000
@@ -131,7 +137,7 @@ void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
 	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg);
 void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
 	const struct tegra_dc_dp_link_config *cfg);
-void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
+void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds);
 void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor);
 int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor,
@@ -142,6 +148,8 @@ void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes);
 void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb);
 int tegra_sor_power_dp_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu);
+void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor);
+
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

@@ -29,6 +29,7 @@
 #include "sor.h"
 #include "sor_regs.h"
 #include "dc_priv.h"
+#include "dp.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -51,6 +52,16 @@
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_OFF		(0 << 25)
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON		(1 << 25)
 
+static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
+{
+	clk_prepare_enable(sor->sor_clk);
+}
+
+static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
+{
+	clk_disable_unprepare(sor->sor_clk);
+}
+
 static unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 				u32 reg, u32 mask, u32 exp_val,
@@ -72,6 +83,58 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	return jiffies - timeout_jf + 1;
 }
 
+static void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
+{
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+
+	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
+		return;
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_SAFE_CLK;
+}
+
+void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
+{
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
+
+	if (sor->clk_type == TEGRA_SOR_LINK_CLK)
+		return;
+
+	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
+			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_LINK_CLK;
+}
 
 #ifdef CONFIG_DEBUG_FS
 static int dbg_sor_show(struct seq_file *s, void *unused)
@@ -82,7 +145,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 		#a, a, tegra_sor_readl(sor, a));
 
 	tegra_dc_io_start(sor->dc);
-	clk_prepare_enable(sor->sor_clk);
+	tegra_sor_clk_enable(sor);
 
 	DUMP_REG(NV_SOR_SUPER_STATE0);
 	DUMP_REG(NV_SOR_SUPER_STATE1);
@@ -148,7 +211,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
 
-	clk_disable_unprepare(sor->sor_clk);
+	tegra_sor_clk_disable(sor);
 	tegra_dc_io_end(sor->dc);
 
 	return 0;
@@ -603,12 +666,6 @@ static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 	if (sor->power_is_up)
 		return;
 
-	/* Enable safe clock */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
-	tegra_dc_sor_set_link_bandwidth(sor,
-		is_lvds ? NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS :
-		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
-
 	/* step 1 */
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK | /* PDPORT */
@@ -665,9 +722,6 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 {
 	if (!sor->power_is_up)
 		return;
-
-	/* use safe clock */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
 
 	/* step 1 -- not necessary */
 
@@ -790,18 +844,6 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_config_pwm(sor, 1024, 1024);
 }
 
-static void tegra_dc_sor_enable_clk(struct tegra_dc_sor_data *sor)
-{
-	if (!tegra_is_clk_enabled(sor->sor_clk))
-		clk_prepare_enable(sor->sor_clk);
-}
-
-static void tegra_dc_sor_disable_clk(struct tegra_dc_sor_data *sor)
-{
-	if (tegra_is_clk_enabled(sor->sor_clk))
-		clk_disable_unprepare(sor->sor_clk);
-}
-
 static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -915,18 +957,12 @@ void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
-	tegra_dc_sor_enable_clk(sor);
-
-	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+	tegra_sor_config_safe_clk(sor);
+	tegra_sor_clk_enable(sor);
 
 	tegra_sor_dp_cal(sor);
 
 	tegra_sor_pad_power_up(sor, false);
-
-	/* re-enable SOR clock */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 }
 
 
@@ -1086,6 +1122,8 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
 	struct tegra_dc *dc = sor->dc;
 
+	tegra_sor_config_safe_clk(sor);
+
 	tegra_dc_sor_power_down(sor);
 
 	/* Power down the SOR sequencer */
@@ -1106,7 +1144,7 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	tegra_dc_sor_disable_clk(sor);
+	tegra_sor_clk_disable(sor);
 	/* Reset SOR clk */
 	tegra_periph_reset_assert(sor->sor_clk);
 }
@@ -1200,21 +1238,19 @@ void tegra_dc_sor_set_lane_count(struct tegra_dc_sor_data *sor, u8 lane_count)
 				reg_lane_cnt);
 }
 
-void tegra_dc_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
+void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds)
 {
-	struct clk	*parent_clk;
+	struct clk *dc_parent_clk;
+	struct tegra_dc *dc = sor->dc;
 
-	tegra_dc_sor_enable_clk(sor);
+	if (clk == dc->clk) {
+		dc_parent_clk = clk_get_parent(clk);
+		BUG_ON(!dc_parent_clk);
 
-	parent_clk = clk_get_parent(clk);
-	BUG_ON(!parent_clk);
-
-	if (sor->dc->mode.pclk != clk_get_rate(parent_clk))
-		clk_set_rate(parent_clk, sor->dc->mode.pclk);
-
-	/* Only enable safe clock initially */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+		if (dc->mode.pclk != clk_get_rate(dc_parent_clk))
+			clk_set_rate(dc_parent_clk, dc->mode.pclk);
+	}
 }
 
 void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
@@ -1246,11 +1282,17 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT), 0);
 }
 
-void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,
-	bool is_lvds)
+void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
+	if (!sor->clk_type)
+		tegra_sor_config_safe_clk(sor);
+
+	tegra_sor_clk_enable(sor);
+
 	tegra_dc_sor_config_panel(sor, is_lvds);
 	tegra_dc_sor_update(sor);
 	tegra_dc_sor_super_update(sor);
+
+	tegra_sor_clk_disable(sor);
 }
 

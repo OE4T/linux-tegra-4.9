@@ -1381,7 +1381,7 @@ static int tegra_dc_nvsr_init(struct tegra_dc *dc)
 			NVSR_RETV(ret, "Out ops init failed.\n");
 		}
 		nvsr->out_data.dp = tegra_dc_get_outdata(dc);
-		nvsr->out_clk = nvsr->out_data.dp->clk;
+		nvsr->out_clk = nvsr->out_data.dp->dpaux_clk;
 		nvsr->reg_ops.read = tegra_nvsr_read_dpaux;
 		nvsr->reg_ops.write = tegra_nvsr_write_dpaux;
 		break;

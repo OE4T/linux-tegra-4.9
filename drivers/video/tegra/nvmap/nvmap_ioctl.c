@@ -788,7 +788,6 @@ static void heap_page_cache_maint(
 			BUG_ON(!kaddr);
 			ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
 				paddr, prot);
-			nvmap_flush_tlb_kernel_page(kaddr);
 			inner_cache_maint(op, vaddr, size);
 			unmap_kernel_range(kaddr, PAGE_SIZE);
 		}
@@ -950,8 +949,6 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 
 		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
 			loop, prot);
-		nvmap_flush_tlb_kernel_page(kaddr);
-
 		inner_cache_maint(op, base, next - loop);
 		loop = next;
 		unmap_kernel_range(kaddr, PAGE_SIZE);

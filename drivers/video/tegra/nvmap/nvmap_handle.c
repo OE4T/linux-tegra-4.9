@@ -210,7 +210,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 					ioremap_page_range(kaddr,
 						kaddr + PAGE_SIZE,
 						paddr, prot);
-					nvmap_flush_tlb_kernel_page(kaddr);
 					memset((char *)kaddr, 0, PAGE_SIZE);
 					unmap_kernel_range(kaddr, PAGE_SIZE);
 				}

@@ -215,7 +215,6 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 		next = min(next, end);
 		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
 			phys, PG_PROT_KERNEL);
-		nvmap_flush_tlb_kernel_page(kaddr);
 		FLUSH_DCACHE_AREA(base, next - phys);
 		phys = next;
 		unmap_kernel_range(kaddr, PAGE_SIZE);

@@ -39,7 +39,6 @@
 #include <linux/platform_device.h>
 
 #include <asm/cacheflush.h>
-#include <asm/tlbflush.h>
 #ifndef CONFIG_ARM64
 #include <asm/outercache.h>
 #endif
@@ -75,7 +74,6 @@ extern u32 nvmap_max_handle_count;
 
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL
-#define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_range(addr, PAGE_SIZE)
 #define FLUSH_DCACHE_AREA __flush_dcache_area
 #define outer_flush_range(s, e)
 #define outer_inv_range(s, e)
@@ -84,7 +82,6 @@ extern u32 nvmap_max_handle_count;
 extern void __flush_dcache_page(struct page *);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
-#define FLUSH_TLB_PAGE(addr) flush_tlb_kernel_page(addr)
 #define FLUSH_DCACHE_AREA __cpuc_flush_dcache_area
 extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
@@ -371,15 +368,6 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 void nvmap_client_put(struct nvmap_client *c);
 
 struct nvmap_handle *unmarshal_user_id(u32 id);
-
-static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
-{
-#ifdef CONFIG_ARM_ERRATA_798181
-	flush_tlb_kernel_page_skip_errata_798181(kaddr);
-#else
-	FLUSH_TLB_PAGE(kaddr);
-#endif
-}
 
 /* MM definitions. */
 extern size_t cache_maint_inner_threshold;

@@ -65,11 +65,9 @@
 
 struct page;
 
-extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
-extern size_t cache_maint_inner_threshold;
 
 #if defined(CONFIG_TEGRA_NVMAP)
 #define CACHE_MAINT_IMMEDIATE		0
@@ -96,7 +94,6 @@ extern void __flush_dcache_page(struct address_space *, struct page *);
 struct nvmap_pgalloc {
 	struct page **pages;
 	bool contig;			/* contiguous system memory */
-	u32 iovm_addr;	/* is non-zero, if client need specific iova mapping */
 };
 
 struct nvmap_handle {
@@ -385,8 +382,8 @@ static inline void nvmap_flush_tlb_kernel_page(unsigned long kaddr)
 }
 
 /* MM definitions. */
+extern size_t cache_maint_inner_threshold;
 extern size_t cache_maint_outer_threshold;
-extern int inner_cache_maint_threshold;
 
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);

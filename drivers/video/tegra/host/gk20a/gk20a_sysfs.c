@@ -19,15 +19,15 @@
  */
 
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
 
-#include "../dev.h"
+#include <mach/clk.h>
+
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
-#include "nvhost_acm.h"
-#include <mach/clk.h>
 
 
 #define PTIMER_FP_FACTOR			1000000

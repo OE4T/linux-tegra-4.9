@@ -23,6 +23,7 @@
 #include <mach/mc.h>
 
 #include "dev.h"
+#include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
 

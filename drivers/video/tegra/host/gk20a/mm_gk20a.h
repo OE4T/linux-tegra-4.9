@@ -137,6 +137,7 @@ struct pm_ctx_desc {
 };
 
 struct gr_ctx_buffer_desc;
+struct platform_device;
 struct gr_ctx_buffer_desc {
 	void (*destroy)(struct platform_device *, struct gr_ctx_buffer_desc *);
 	struct sg_table *sgt;

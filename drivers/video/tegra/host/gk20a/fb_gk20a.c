@@ -14,8 +14,8 @@
  */
 
 #include <linux/types.h>
-#include <dev.h>
-#include "gk20a/gk20a.h"
+
+#include "gk20a.h"
 #include "kind_gk20a.h"
 #include "hw_mc_gk20a.h"
 

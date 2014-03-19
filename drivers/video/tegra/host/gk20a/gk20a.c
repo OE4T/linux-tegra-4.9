@@ -46,11 +46,6 @@
 
 #include <mach/pm_domains.h>
 
-#include "dev.h"
-#include "class_ids.h"
-#include "bus_client.h"
-#include "nvhost_acm.h"
-
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
@@ -1352,9 +1347,6 @@ static int gk20a_probe(struct platform_device *dev)
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
-#ifdef CONFIG_TEGRA_GK20A
-	gk20a->host = nvhost_get_host(dev);
-#endif
 
 	err = gk20a_user_init(dev);
 	if (err)
@@ -1676,6 +1668,7 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 	if (!fw)
 		fw = nvhost_client_request_firmware(g->dev, fw_name);
 #endif
+
 	if (!fw) {
 		dev_err(dev, "failed to get firmware\n");
 		return NULL;

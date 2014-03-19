@@ -1357,3 +1357,4 @@ nvhost_client_request_firmware(struct platform_device *dev, const char *fw_name)
 	/* note: caller must release_firmware */
 	return fw;
 }
+EXPORT_SYMBOL(nvhost_client_request_firmware);

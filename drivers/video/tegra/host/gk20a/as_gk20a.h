@@ -18,6 +18,7 @@
 #define __GK20A_AS_H
 
 #include <linux/atomic.h>
+#include <linux/cdev.h>
 #include <linux/fs.h>
 
 #include <linux/nvhost_as_ioctl.h>

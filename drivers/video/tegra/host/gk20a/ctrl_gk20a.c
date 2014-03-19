@@ -20,11 +20,6 @@
 #include <linux/cdev.h>
 #include <linux/nvhost_gpu_ioctl.h>
 
-#include "dev.h"
-#include "class_ids.h"
-#include "bus_client.h"
-#include "nvhost_acm.h"
-
 #include "gk20a.h"
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)

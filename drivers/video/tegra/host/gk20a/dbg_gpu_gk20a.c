@@ -23,8 +23,6 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_dbg_gpu_ioctl.h>
 
-#include "dev.h"
-#include "nvhost_acm.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"

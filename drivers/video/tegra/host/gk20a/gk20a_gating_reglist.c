@@ -21,7 +21,6 @@
 #define __gk20a_gating_reglist_h__
 
 #include <linux/types.h>
-#include "dev.h"
 #include "gk20a_gating_reglist.h"
 
 struct gating_desc {

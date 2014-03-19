@@ -1325,11 +1325,11 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 		 * Write in batches of 128 as there seems to be a limit
 		 * of how much you can output to ftrace at once.
 		 */
-		for (i = 0; i < words; i += TRACE_MAX_LENGTH) {
+		for (i = 0; i < words; i += 128U) {
 			trace_gk20a_push_cmdbuf(
 				c->g->dev->name,
 				0,
-				min(words - i, TRACE_MAX_LENGTH),
+				min(words - i, 128U),
 				offset + i * sizeof(u32),
 				mem);
 		}
@@ -1893,7 +1893,7 @@ int gk20a_channel_resume(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (f->channel[chid].in_use) {
-			nvhost_dbg_info("resume channel %d", chid);
+			gk20a_dbg_info("resume channel %d", chid);
 			g->ops.fifo.bind_channel(&f->channel[chid]);
 			channels_in_use = true;
 		}

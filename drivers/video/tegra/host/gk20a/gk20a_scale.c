@@ -29,14 +29,10 @@
 
 #include <governor.h>
 
-#include "dev.h"
-#include "chip_support.h"
-#include "nvhost_acm.h"
 #include "gk20a.h"
 #include "pmu_gk20a.h"
 #include "clk_gk20a.h"
 #include "gk20a_scale.h"
-#include "gr3d/scale3d.h"
 
 static ssize_t gk20a_scale_load_show(struct device *dev,
 				     struct device_attribute *attr,

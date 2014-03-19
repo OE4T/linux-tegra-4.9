@@ -23,11 +23,10 @@
 #include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>
+#include <linux/nvhost.h>
 
-#include "../dev.h"
-
-#include "debug_gk20a.h"
 #include "gk20a.h"
+#include "debug_gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"

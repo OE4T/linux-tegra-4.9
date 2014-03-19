@@ -31,7 +31,6 @@
 #include <linux/dma-buf.h>
 #include <asm/cacheflush.h>
 
-#include "dev.h"
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "hw_gmmu_gk20a.h"

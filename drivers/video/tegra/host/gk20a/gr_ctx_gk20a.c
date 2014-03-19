@@ -21,9 +21,6 @@
 
 #include <linux/firmware.h>
 
-#include "dev.h"
-#include "bus_client.h"
-
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "hw_gr_gk20a.h"

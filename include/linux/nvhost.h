@@ -299,8 +299,18 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 
 #ifdef CONFIG_TEGRA_GRHOST
 void nvhost_debug_dump_device(struct platform_device *pdev);
+const struct firmware *
+nvhost_client_request_firmware(struct platform_device *dev,
+	const char *fw_name);
 #else
 static inline void nvhost_debug_dump_device(struct platform_device *pdev) {}
+
+static inline const struct firmware *
+nvhost_client_request_firmware(struct platform_device *dev,
+	const char *fw_name)
+{
+	return NULL;
+}
 #endif
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC

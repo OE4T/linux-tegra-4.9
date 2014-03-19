@@ -30,7 +30,6 @@ struct gk20a;
 struct gr_gk20a;
 struct dbg_session_gk20a;
 
-#include "nvhost_channel.h"
 #include "channel_sync_gk20a.h"
 
 #include "mm_gk20a.h"

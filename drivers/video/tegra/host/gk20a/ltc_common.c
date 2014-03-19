@@ -24,8 +24,6 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 
-#include "dev.h"
-
 static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 {
 	const u32 gpuid = GK20A_GPUID(g->gpu_characteristics.arch,

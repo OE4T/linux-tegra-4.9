@@ -15,15 +15,7 @@
  * more details.
  */
 
-#include "platform_gk20a.h"
-#include "gr3d/scale3d.h"
-#include "gk20a_scale.h"
-#include "nvhost_acm.h"
-#include "bus_client.h"
-#include "class_ids.h"
 #include <linux/debugfs.h>
-#include "t124/syncpt_t124.h"
-#include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/tegra-powergate.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/nvhost_ioctl.h>
@@ -32,8 +24,12 @@
 #include <mach/irqs.h>
 #include <mach/pm_domains.h>
 
+#include "../../../../../arch/arm/mach-tegra/iomap.h"
+
 #include "gk20a.h"
 #include "hal_gk20a.h"
+#include "platform_gk20a.h"
+#include "gk20a_scale.h"
 
 #define TEGRA_GK20A_INTR		INT_GPU
 #define TEGRA_GK20A_INTR_NONSTALL	INT_GPU_NONSTALL

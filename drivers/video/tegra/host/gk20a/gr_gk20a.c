@@ -25,9 +25,7 @@
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
-
-#include "../dev.h"
-#include "bus_client.h"
+#include <linux/nvhost.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -50,7 +48,6 @@
 #include "hw_fb_gk20a.h"
 #include "hw_therm_gk20a.h"
 #include "hw_pbdma_gk20a.h"
-#include "chip_support.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"

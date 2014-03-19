@@ -38,10 +38,6 @@ int nvhost_client_device_init(struct platform_device *dev);
 
 int nvhost_client_device_release(struct platform_device *dev);
 
-const struct firmware *
-nvhost_client_request_firmware(struct platform_device *dev,
-	const char *fw_name);
-
 int nvhost_client_device_get_resources(struct platform_device *dev);
 
 #endif

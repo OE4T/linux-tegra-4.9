@@ -934,11 +934,13 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 #ifdef CONFIG_TEGRA_GK20A
 	{ .compatible = "nvidia,tegra124-gk20a",
 		.data = &gk20a_tegra_platform },
+	{ .compatible = "nvidia,tegra210-gm20b",
+		.data = &gk20a_tegra_platform },
 #endif
 	{ .compatible = "nvidia,generic-gk20a",
 		.data = &gk20a_generic_platform },
-	{ .compatible = "nvidia,tegra210-gm20b",
-		.data = &gm20b_tegra_platform },
+	{ .compatible = "nvidia,generic-gm20b",
+		.data = &gk20a_generic_platform },
 	{ },
 };
 

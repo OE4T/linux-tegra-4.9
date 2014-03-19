@@ -917,12 +917,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	err = gk20a_init_gpu_characteristics(g);
-	if (err) {
-		nvhost_err(&dev->dev, "failed to init gk20a gpu characteristics");
-		goto done;
-	}
-
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 

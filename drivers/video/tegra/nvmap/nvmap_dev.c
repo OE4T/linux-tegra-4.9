@@ -68,8 +68,6 @@ struct nvmap_carveout_node {
 	size_t			size;
 };
 
-struct platform_device *nvmap_pdev;
-EXPORT_SYMBOL(nvmap_pdev);
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
 struct nvmap_stats nvmap_stats;
@@ -1253,7 +1251,6 @@ static int nvmap_probe(struct platform_device *pdev)
 
 	nvmap_stats_init(nvmap_debug_root);
 	platform_set_drvdata(pdev, dev);
-	nvmap_pdev = pdev;
 	nvmap_dev = dev;
 
 	nvmap_dmabuf_debugfs_init(nvmap_debug_root);

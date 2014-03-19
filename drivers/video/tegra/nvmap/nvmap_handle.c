@@ -539,7 +539,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	 * Pre-attach nvmap to this new dmabuf. This gets unattached during the
 	 * dma_buf_release() operation.
 	 */
-	h->attachment = dma_buf_attach(h->dmabuf, &nvmap_pdev->dev);
+	h->attachment = dma_buf_attach(h->dmabuf, nvmap_dev->dev_user.parent);
 	if (IS_ERR(h->attachment)) {
 		err = h->attachment;
 		goto dma_buf_attach_fail;

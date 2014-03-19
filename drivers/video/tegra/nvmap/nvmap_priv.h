@@ -71,8 +71,6 @@ void _nvmap_handle_free(struct nvmap_handle *h);
 extern u32 nvmap_max_handle_count;
 extern size_t cache_maint_inner_threshold;
 
-extern struct platform_device *nvmap_pdev;
-
 #if defined(CONFIG_TEGRA_NVMAP)
 #define CACHE_MAINT_IMMEDIATE		0
 #define CACHE_MAINT_ALLOW_DEFERRED	1

@@ -21,8 +21,25 @@
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
 
+#include "gm20b_gating_reglist.h"
+struct gpu_ops gm20b_ops = {
+	.clock_gating = {
+		.slcg_gr_load_gating_prod =
+			gr_gm20b_slcg_gr_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gr_gm20b_slcg_perf_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gr_gm20b_blcg_gr_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gm20b_pg_gr_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gr_gm20b_slcg_therm_load_gating_prod,
+	}
+};
+
 int gm20b_init_hal(struct gpu_ops *gops)
 {
+	*gops = gm20b_ops;
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_ltc(gops);

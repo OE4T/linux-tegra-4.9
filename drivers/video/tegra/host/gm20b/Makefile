@@ -7,6 +7,7 @@ nvhost-gm20b-objs  = \
 	ltc_gm20b.o \
 	gr_gm20b.o \
 	gr_gm20b.o \
-	fb_gm20b.o
+	fb_gm20b.o \
+	gm20b_gating_reglist.o
 
 obj-$(CONFIG_TEGRA_GK20A) += nvhost-gm20b.o

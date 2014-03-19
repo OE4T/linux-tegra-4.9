@@ -62,6 +62,7 @@ struct channel_ctx_gk20a {
 	struct patch_desc	patch_ctx;
 	struct zcull_ctx_desc	zcull_ctx;
 	u64	global_ctx_buffer_va[NR_GLOBAL_CTX_BUF_VA];
+	u64	global_ctx_buffer_size[NR_GLOBAL_CTX_BUF_VA];
 	bool	global_ctx_buffer_mapped;
 };
 

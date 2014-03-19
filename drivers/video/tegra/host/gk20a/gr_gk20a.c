@@ -2386,6 +2386,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 {
 	struct vm_gk20a *ch_vm = c->vm;
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
+	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
 	struct gr_gk20a *gr = &g->gr;
 	struct sg_table *sgt;
 	u64 size;
@@ -2408,6 +2409,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
+	g_bfr_size[CIRCULAR_VA] = size;
 
 	/* Attribute Buffer */
 	if (!c->vpr || (gr->global_ctx_buffer[ATTRIBUTE_VPR].sgt == NULL)) {
@@ -2424,6 +2426,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
+	g_bfr_size[ATTRIBUTE_VA] = size;
 
 	/* Page Pool */
 	if (!c->vpr || (gr->global_ctx_buffer[PAGEPOOL_VPR].sgt == NULL)) {
@@ -2440,6 +2443,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
+	g_bfr_size[PAGEPOOL_VA] = size;
 
 	/* Golden Image */
 	sgt = gr->global_ctx_buffer[GOLDEN_CTX].sgt;
@@ -2449,6 +2453,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
+	g_bfr_size[GOLDEN_CTX_VA] = size;
 
 	/* Priv register Access Map */
 	sgt = gr->global_ctx_buffer[PRIV_ACCESS_MAP].sgt;
@@ -2458,6 +2463,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PRIV_ACCESS_MAP_VA] = gpu_va;
+	g_bfr_size[PRIV_ACCESS_MAP_VA] = size;
 
 	c->ch_ctx.global_ctx_buffer_mapped = true;
 	return 0;
@@ -2477,8 +2483,8 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 {
 	struct vm_gk20a *ch_vm = c->vm;
-	struct gr_gk20a *gr = &c->g->gr;
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
+	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
 	u32 i;
 
 	gk20a_dbg_fn("");
@@ -2486,9 +2492,10 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
 		if (g_bfr_va[i]) {
 			gk20a_gmmu_unmap(ch_vm, g_bfr_va[i],
-					 gr->global_ctx_buffer[i].size,
+					 g_bfr_size[i],
 					 gk20a_mem_flag_none);
 			g_bfr_va[i] = 0;
+			g_bfr_size[i] = 0;
 		}
 	}
 	c->ch_ctx.global_ctx_buffer_mapped = false;

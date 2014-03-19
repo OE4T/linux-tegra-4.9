@@ -4572,11 +4572,13 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	if (!dsi->enabled)
 		return -EINVAL;
 
-	if (dsi->host_suspended)
-		return 0;
-
 	while (!tegra_dsi_host_suspend_trylock(dc, dsi))
 		cond_resched();
+
+	if (dsi->host_suspended) {
+		tegra_dsi_host_suspend_unlock(dc, dsi);
+		return 0;
+	}
 
 	tegra_dc_io_start(dc);
 
@@ -4631,6 +4633,8 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 
 	if (!dsi->enabled)
 		return 0;
+
+	cancel_delayed_work(&dsi->idle_work);
 
 	tegra_dsi_bl_off(get_backlight_device_by_name(dsi->info.bl_name));
 

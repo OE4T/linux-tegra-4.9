@@ -54,6 +54,4 @@ void nvmap_heap_deinit(void);
 int nvmap_flush_heap_block(struct nvmap_client *client,
 	struct nvmap_heap_block *block, size_t len, unsigned int prot);
 
-void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap);
-
 #endif

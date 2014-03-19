@@ -1072,8 +1072,6 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 	int ret;
 	struct tegra_dc_win *dc_wins[DC_N_WINDOWS];
 	struct tegra_dc *dc = user->ext->dc;
-	struct tegra_dc_dmabuf *handle;
-	dma_addr_t phys_addr;
 
 	/* If display has been disconnected return with error. */
 	if (!dc->connected)
@@ -1082,16 +1080,7 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 	for (i = 0; i < win_num; i++) {
 		int idx = wins[i].index;
 
-		ret = tegra_dc_ext_pin_window(user, wins[i].buff_id,
-					      &handle, &phys_addr);
-		if (ret)
-			return ret;
-
-		if (handle) {
-			dma_buf_unmap_attachment(handle->attach,
-				handle->sgt, DMA_TO_DEVICE);
-			dma_buf_put(handle->buf);
-			kfree(handle);
+		if (wins[i].buff_id > 0) {
 			tegra_dc_ext_set_windowattr_basic(&dc->tmp_wins[idx],
 							  &wins[i]);
 		}

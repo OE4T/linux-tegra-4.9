@@ -19,6 +19,7 @@
  */
 #include <linux/slab.h>
 #include <linux/tegra-powergate.h>
+#include <linux/tegra-fuse.h>
 
 #include <mach/mc.h>
 
@@ -26,24 +27,20 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
-
 #include "t124.h"
+#include "vic03/vic03.h"
 #include "host1x/host1x.h"
-
 #include "hardware_t124.h"
 #include "syncpt_t124.h"
-
-#include "gk20a/gk20a.h"
-#include "gk20a/gk20a_scale.h"
-#include "vic03/vic03.h"
 #include "msenc/msenc.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
 #include "gr3d/scale3d.h"
-
 #include "chip_support.h"
 #include "nvhost_scale.h"
+
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 static int t124_num_alloc_channels = 0;
 
@@ -562,9 +559,6 @@ static struct platform_device *t124_devices[] = {
 	&tegra_vi01_device,
 	&tegra_msenc03_device,
 	&tegra_tsec01_device,
-#if defined(CONFIG_TEGRA_GK20A)
-	&tegra_gk20a_device,
-#endif
 #if defined(CONFIG_ARCH_TEGRA_VIC)
 	&tegra_vic03_device,
 #endif

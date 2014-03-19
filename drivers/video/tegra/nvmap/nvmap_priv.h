@@ -71,9 +71,6 @@ void _nvmap_handle_free(struct nvmap_handle *h);
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
 
-#define CACHE_MAINT_IMMEDIATE		0
-#define CACHE_MAINT_ALLOW_DEFERRED	1
-
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL
 #define FLUSH_DCACHE_AREA __flush_dcache_area
@@ -389,7 +386,7 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 			     struct nvmap_handle *h, u32 param, u64 *result);
 int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			   unsigned long start, unsigned long end,
-			   unsigned int op, unsigned int allow_deferred);
+			   unsigned int op);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);

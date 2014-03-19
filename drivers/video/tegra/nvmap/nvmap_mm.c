@@ -113,7 +113,7 @@ int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr)
 			err = __nvmap_do_cache_maint(handles[i]->owner,
 						     handles[i], 0,
 						     handles[i]->size,
-						     NVMAP_CACHE_OP_WB_INV, 0);
+						     NVMAP_CACHE_OP_WB_INV);
 			if (err)
 				break;
 		}

@@ -680,8 +680,7 @@ static int __nvmap_cache_maint(struct nvmap_client *client,
 		(vma->vm_pgoff << PAGE_SHIFT);
 	end = start + op->len;
 
-	err = __nvmap_do_cache_maint(client, vpriv->handle, start, end, op->op,
-				     CACHE_MAINT_ALLOW_DEFERRED);
+	err = __nvmap_do_cache_maint(client, vpriv->handle, start, end, op->op);
 out:
 	up_read(&current->mm->mmap_sem);
 	return err;
@@ -962,7 +961,7 @@ out:
 int __nvmap_do_cache_maint(struct nvmap_client *client,
 			struct nvmap_handle *h,
 			unsigned long start, unsigned long end,
-			unsigned int op, unsigned int allow_deferred)
+			unsigned int op)
 {
 	int err;
 	struct cache_maint_op cache_op;
@@ -1070,8 +1069,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		}
 		if (is_read)
 			__nvmap_do_cache_maint(client, h, h_offs,
-				h_offs + elem_size, NVMAP_CACHE_OP_INV,
-				CACHE_MAINT_IMMEDIATE);
+				h_offs + elem_size, NVMAP_CACHE_OP_INV);
 
 		ret = rw_handle_page(h, is_read, h_offs, sys_addr,
 				     elem_size, (unsigned long)addr);
@@ -1081,8 +1079,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 
 		if (!is_read)
 			__nvmap_do_cache_maint(client, h, h_offs,
-				h_offs + elem_size, NVMAP_CACHE_OP_WB_INV,
-				CACHE_MAINT_IMMEDIATE);
+				h_offs + elem_size, NVMAP_CACHE_OP_WB_INV);
 
 		copied += elem_size;
 		sys_addr += sys_stride;

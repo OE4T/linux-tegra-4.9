@@ -96,7 +96,6 @@ static struct platform_device tegra_host1x02_device = {
 struct nvhost_device_data t11_gr3d_info = {
 	.version	= 3,
 	.index		= 1,
-	.syncpts	= {NVSYNCPT_3D},
 	.waitbases	= {NVWAITBASE_3D},
 	.modulemutexes	= {NVMODMUTEX_3D},
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
@@ -137,7 +136,6 @@ static struct platform_device tegra_gr3d03_device = {
 struct nvhost_device_data t11_gr2d_info = {
 	.version	= 2,
 	.index		= 2,
-	.syncpts	= {NVSYNCPT_2D_0, NVSYNCPT_2D_1},
 	.waitbases	= {NVWAITBASE_2D_0, NVWAITBASE_2D_1},
 	.modulemutexes	= {NVMODMUTEX_2D_FULL, NVMODMUTEX_2D_SIMPLE,
 			  NVMODMUTEX_2D_SB_A, NVMODMUTEX_2D_SB_B},

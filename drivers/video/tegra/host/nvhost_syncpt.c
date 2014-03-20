@@ -66,11 +66,7 @@ int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id)
 	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS && pdata->syncpts[i]; ++i)
 		ret |= (pdata->syncpts[i] == id);
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	if (!ret || (id == NVSYNCPT_2D_0))
-#else
 	if (!ret)
-#endif
 		return NVSYNCPT_INVALID;
 
 	return pdata->waitbases[0];
@@ -884,29 +880,6 @@ static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 	mutex_unlock(&sp->syncpt_mutex);
 }
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static void nvhost_reserve_gr_syncpt(struct nvhost_syncpt *sp)
-{
-	mutex_lock(&sp->syncpt_mutex);
-
-	sp->assigned[NVSYNCPT_2D_0] = true;
-	sp->syncpt_names[NVSYNCPT_2D_0] = "2d_0";
-
-	sp->assigned[NVSYNCPT_2D_1] = true;
-	sp->client_managed[NVSYNCPT_2D_1] = true;
-	sp->syncpt_names[NVSYNCPT_2D_1] = "2d_1";
-
-	/* HACK: some tests for t114 require syncpt 17
-	 * to be reserved as client managed
-	 */
-	sp->assigned[17] = true;
-	sp->client_managed[17] = true;
-	sp->syncpt_names[17] = "3d_1";
-
-	mutex_unlock(&sp->syncpt_mutex);
-}
-#endif
-
 int nvhost_syncpt_init(struct platform_device *dev,
 		struct nvhost_syncpt *sp)
 {
@@ -1015,9 +988,6 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	 * external dependencies / constraints
 	 */
 	nvhost_reserve_syncpts(sp);
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	nvhost_reserve_gr_syncpt(sp);
-#endif
 
 	return err;
 

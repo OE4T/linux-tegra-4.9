@@ -81,7 +81,6 @@ struct nvmap_platform_carveout {
 	phys_addr_t base;
 	size_t size;
 	struct device *cma_dev;
-	size_t cma_chunk_size;
 	bool resize;
 };
 

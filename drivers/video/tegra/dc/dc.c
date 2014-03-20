@@ -2970,6 +2970,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->base = base;
 	dc->irq = irq;
 	dc->ndev = ndev;
+	dc->fb_mem = fb_mem;
 
 	if (!np)
 		dc->pdata = ndev->dev.platform_data;

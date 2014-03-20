@@ -485,8 +485,11 @@ int __init loki_panel_init(int board_id)
 #ifdef CONFIG_TEGRA_NVMAP
 	loki_carveouts[1].base = tegra_carveout_start;
 	loki_carveouts[1].size = tegra_carveout_size;
+	loki_carveouts[1].dma_dev = &tegra_generic_dev;
+
 	loki_carveouts[2].base = tegra_vpr_start;
 	loki_carveouts[2].size = tegra_vpr_size;
+	loki_carveouts[2].dma_dev = &tegra_vpr_dev;
 
 	generic_dma_info.name = "generic";
 	generic_dma_info.base = tegra_carveout_start;

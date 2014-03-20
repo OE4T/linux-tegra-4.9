@@ -27,6 +27,7 @@
 #include <mach/mc.h>
 #include <linux/nvhost.h>
 #include <mach/latency_allowance.h>
+#include <mach/tegra_emc.h>
 #include <trace/events/display.h>
 
 #include "dc_reg.h"
@@ -191,7 +192,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int reqd_buffering_thresh_disp_bytes_fp = 0;
 	unsigned int latency_buffering_available_in_reqd_buffering_fp = 0;
 	struct clk *emc_clk = clk_get(NULL, "emc");
-	unsigned long emc_freq_mhz = clk_get_rate(emc_clk)/1000000;
+	unsigned long emc_freq_khz = clk_get_rate(emc_clk) / 1000;
+	unsigned long emc_freq_mhz = emc_freq_khz / 1000;
 	unsigned int bw_disruption_time_usec_fp =
 					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
 					emc_freq_mhz;
@@ -241,7 +243,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int bw_display_fp = 0;
 	unsigned int bw_delta_fp = 0;
 	unsigned int fill_rate_other_wins_fp = 0;
-	unsigned int dvfs_time_nsec = tegra_get_dvfs_time_nsec(emc_freq_mhz);
+	unsigned int dvfs_time_nsec =
+			tegra_get_dvfs_clk_change_latency_nsec(emc_freq_khz);
 	unsigned int data_shortfall_other_wins_fp = 0;
 	unsigned int duration_usec_fp = 0;
 	unsigned int spool_up_buffering_adj_bytes = 0;

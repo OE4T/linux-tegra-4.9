@@ -480,7 +480,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 		prev_cmdproc, cmdproc_stop);
 
 	completed = true;
-	for (i = 0; completed && i < cdma->timeout.num_syncpts; ++i) {
+	for (i = 0; i < cdma->timeout.num_syncpts; ++i) {
 		syncpt_val = nvhost_syncpt_update_min(&dev->syncpt,
 				cdma->timeout.sp[i].id);
 

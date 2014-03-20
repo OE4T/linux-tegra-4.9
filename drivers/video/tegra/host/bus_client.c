@@ -241,6 +241,10 @@ static int __nvhost_channelopen(struct inode *inode,
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(ch->dev)->clientid);
+	/* If we wrapped around to 0, increment again */
+	if (!priv->clientid)
+		priv->clientid = atomic_add_return(1,
+				&nvhost_get_host(ch->dev)->clientid);
 	pdata = dev_get_drvdata(ch->dev->dev.parent);
 	priv->timeout = pdata->nvhost_timeout_default;
 	priv->timeout_debug_dump = true;
@@ -401,7 +405,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			goto fail;
 
 		/* Validate */
-		if (sp.syncpt_id > host->info.nb_pts) {
+		if (sp.syncpt_id >= host->info.nb_pts) {
 			err = -EINVAL;
 			goto fail;
 		}

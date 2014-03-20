@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -400,6 +400,8 @@
 #define HDMI_NV_PDISP_KEY_HDCP_KEY_TRIG				0xa2
 #define HDMI_NV_PDISP_KEY_SKEY_INDEX				0xa3
 
+/* registers for ARCH_TEGRA_11x_SOC and later */
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT			0xd1
 /* 31:24 - PEAK_CURRENT_LANE3
  * 23:16 - PEAK_CURRENT_LANE2
@@ -409,5 +411,22 @@
 
 #define HDMI_NV_PDISP_SOR_PAD_CTLS0				0xd2
 #define  DRIVE_CURRENT_FUSE_OVERRIDE_T11x	(1 << 31)
+#define HDMI_NV_PDISP_SOR_PAD_CTLS1				0xd3
+#endif
+
+/* registers for ARCH_TEGRA_12x_SOC and later */
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC) && !defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_CTRL			0xd6
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_STATUS			0xd7
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_HEADER			0xd8
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK0_LOW	0xd9
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK0_HIGH	0xda
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK1_LOW	0xdb
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK1_HIGH	0xdc
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK2_LOW	0xdd
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK2_HIGH	0xde
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK3_LOW	0xdf
+#define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK3_HIGH	0xe0
+#endif
 
 #endif

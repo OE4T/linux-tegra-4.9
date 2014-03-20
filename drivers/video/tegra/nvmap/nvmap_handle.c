@@ -236,6 +236,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
+	INIT_LIST_HEAD(&h->pgalloc.vmas);
 	return 0;
 
 fail:

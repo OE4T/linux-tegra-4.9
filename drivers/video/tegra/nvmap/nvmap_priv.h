@@ -85,11 +85,17 @@ extern void __flush_dcache_page(struct page *);
 extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
 
+struct nvmap_vma_list {
+	struct list_head list;
+	struct vm_area_struct *vma;
+};
+
 /* handles allocated using shared system memory (either IOVMM- or high-order
  * page allocations */
 struct nvmap_pgalloc {
 	struct page **pages;
 	bool contig;			/* contiguous system memory */
+	struct list_head vmas;
 };
 
 struct nvmap_handle {

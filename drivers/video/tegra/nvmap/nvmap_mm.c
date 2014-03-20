@@ -122,3 +122,42 @@ int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr)
 
 	return err;
 }
+
+void nvmap_zap_handle(struct nvmap_handle *handle,
+		      u64 offset,
+		      u64 size)
+{
+	struct list_head *vmas;
+	struct nvmap_vma_list *vma_list;
+	struct vm_area_struct *vma;
+
+	if (!handle->heap_pgalloc)
+		return;
+
+	if (!size) {
+		offset = 0;
+		size = handle->size;
+	}
+
+	vmas = &handle->pgalloc.vmas;
+	mutex_lock(&handle->lock);
+	list_for_each_entry(vma_list, vmas, list) {
+		vma = vma_list->vma;
+		zap_page_range(vma, vma->vm_start + offset,
+				offset + size - vma->vm_start,
+				NULL);
+	}
+	mutex_unlock(&handle->lock);
+}
+
+void nvmap_zap_handles(struct nvmap_handle **handles,
+		       u64 *offsets,
+		       u64 *sizes,
+		       u32 nr)
+{
+	int i;
+
+	for (i = 0; i < nr; i++)
+		nvmap_zap_handle(handles[i], offsets[i], sizes[i]);
+}
+

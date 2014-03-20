@@ -82,6 +82,7 @@ struct nvmap_platform_carveout {
 	size_t size;
 	struct device *cma_dev;
 	bool resize;
+	struct device *dma_dev;
 };
 
 struct nvmap_platform_data {

@@ -48,7 +48,6 @@
  * The carveout allocator returns allocations which are physically contiguous.
  */
 
-extern struct device tegra_vpr_dev;
 static struct kmem_cache *heap_block_cache;
 
 struct list_block {
@@ -71,13 +70,15 @@ struct nvmap_heap {
 	phys_addr_t base;
 	/* heap size */
 	size_t len;
+	struct device *cma_dev;
+	struct device *dma_dev;
 };
 
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
 {
 	phys_addr_t pa;
 	DEFINE_DMA_ATTRS(attrs);
-	struct device *dev = &tegra_vpr_dev;
+	struct device *dev = h->dma_dev;
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
 
@@ -93,7 +94,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
 static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 				size_t len)
 {
-	struct device *dev = &tegra_vpr_dev;
+	struct device *dev = h->dma_dev;
 	DEFINE_DMA_ATTRS(attrs);
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
@@ -114,7 +115,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 {
 	struct list_block *heap_block = NULL;
 	dma_addr_t dev_base;
-	struct device *dev = &tegra_vpr_dev;
+	struct device *dev = heap->dma_dev;
 
 	/* since pages are only mappable with one cache attribute,
 	 * and most allocations from carveout heaps are DMA coherent
@@ -231,9 +232,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		return NULL;
 	}
 
-	h->name = co->name;
-	h->arg = arg;
-
 	if (co->cma_dev) {
 #ifdef CONFIG_CMA
 		struct dma_contiguous_stats stats;
@@ -247,6 +245,10 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 #endif
 	}
 
+	h->name = co->name;
+	h->arg = arg;
+	h->cma_dev = co->cma_dev;
+	h->dma_dev = co->dma_dev;
 	h->base = base;
 	h->len = len;
 	INIT_LIST_HEAD(&h->all_list);

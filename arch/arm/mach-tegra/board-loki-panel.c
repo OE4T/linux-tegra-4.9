@@ -509,7 +509,6 @@ int __init loki_panel_init(int board_id)
 	carveout_linear_set(&tegra_vpr_cma_dev);
 	loki_carveouts[2].cma_dev = &tegra_vpr_cma_dev;
 	loki_carveouts[2].resize = true;
-	loki_carveouts[2].cma_chunk_size = SZ_32M;
 
 	vpr_dma_info.size = SZ_32M;
 	vpr_dma_info.resize = true;

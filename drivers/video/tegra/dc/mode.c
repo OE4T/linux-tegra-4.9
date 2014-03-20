@@ -276,6 +276,7 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	tegra_dc_writel(dc, mode->h_sync_width | (v_sync_width << 16),
 			DC_DISP_SYNC_WIDTH);
 	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
 		tegra_dc_writel(dc, mode->h_back_porch |
 			((v_back_porch - mode->v_ref_to_sync) << 16),

@@ -2426,6 +2426,7 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 		break;
 
 		case TEGRA_DC_OUT_DP:
+		case TEGRA_DC_OUT_NVSR_DP:
 			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 
 		/* Do nothing for other outputs for now */

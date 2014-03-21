@@ -130,6 +130,67 @@ struct gpu_ops {
 	struct {
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 	} fifo;
+	struct pmu_v {
+		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
+		u32 cmd_id_zbc_table_update;
+		u32 (*get_pmu_cmdline_args_size)(struct pmu_gk20a *pmu);
+		void (*set_pmu_cmdline_args_cpu_freq)(struct pmu_gk20a *pmu,
+			u32 freq);
+		void * (*get_pmu_cmdline_args_ptr)(struct pmu_gk20a *pmu);
+		u32 (*get_pmu_allocation_struct_size)(struct pmu_gk20a *pmu);
+		void (*set_pmu_allocation_ptr)(struct pmu_gk20a *pmu,
+				void **pmu_alloc_ptr, void *assign_ptr);
+		void (*pmu_allocation_set_dmem_size)(struct pmu_gk20a *pmu,
+				void *pmu_alloc_ptr, u16 size);
+		u16 (*pmu_allocation_get_dmem_size)(struct pmu_gk20a *pmu,
+				void *pmu_alloc_ptr);
+		u32 (*pmu_allocation_get_dmem_offset)(struct pmu_gk20a *pmu,
+				void *pmu_alloc_ptr);
+		u32 * (*pmu_allocation_get_dmem_offset_addr)(
+				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
+		void (*pmu_allocation_set_dmem_offset)(struct pmu_gk20a *pmu,
+				void *pmu_alloc_ptr, u32 offset);
+		void (*get_pmu_init_msg_pmu_queue_params)(
+				struct pmu_queue *queue, u32 id,
+				void *pmu_init_msg);
+		void *(*get_pmu_msg_pmu_init_msg_ptr)(
+				struct pmu_init_msg *init);
+		u16 (*get_pmu_init_msg_pmu_sw_mg_off)(
+			union pmu_init_msg_pmu *init_msg);
+		u16 (*get_pmu_init_msg_pmu_sw_mg_size)(
+			union pmu_init_msg_pmu *init_msg);
+		u32 (*get_pmu_perfmon_cmd_start_size)(void);
+		int (*get_perfmon_cmd_start_offsetofvar)(
+				enum pmu_perfmon_cmd_start_fields field);
+		void (*perfmon_start_set_cmd_type)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		void (*perfmon_start_set_group_id)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		void (*perfmon_start_set_state_id)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		void (*perfmon_start_set_flags)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		u8 (*perfmon_start_get_flags)(struct pmu_perfmon_cmd *pc);
+		u32 (*get_pmu_perfmon_cmd_init_size)(void);
+		int (*get_perfmon_cmd_init_offsetofvar)(
+				enum pmu_perfmon_cmd_start_fields field);
+		void (*perfmon_cmd_init_set_sample_buffer)(
+				struct pmu_perfmon_cmd *pc, u16 value);
+		void (*perfmon_cmd_init_set_dec_cnt)(
+				struct pmu_perfmon_cmd *pc, u8 value);
+		void (*perfmon_cmd_init_set_base_cnt_id)(
+				struct pmu_perfmon_cmd *pc, u8 value);
+		void (*perfmon_cmd_init_set_samp_period_us)(
+				struct pmu_perfmon_cmd *pc, u32 value);
+		void (*perfmon_cmd_init_set_num_cnt)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		void (*perfmon_cmd_init_set_mov_avg)(struct pmu_perfmon_cmd *pc,
+				u8 value);
+		void *(*get_pmu_seq_in_a_ptr)(
+				struct pmu_sequence *seq);
+		void *(*get_pmu_seq_out_a_ptr)(
+				struct pmu_sequence *seq);
+	} pmu_ver;
 };
 
 struct gk20a {

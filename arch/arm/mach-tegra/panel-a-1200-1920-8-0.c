@@ -46,6 +46,7 @@ static struct platform_device *disp_device;
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
+static u16 en_panel_rst;
 
 static struct tegra_dc_sd_settings dsi_a_1200_1920_8_0_sd_settings = {
 	.enable = 1, /* enabled by default. */
@@ -198,8 +199,7 @@ static int dsi_a_1200_1920_8_0_gpio_get(void)
 	if (gpio_requested)
 		return 0;
 
-	err = gpio_request(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio,
-		"panel rst");
+	err = gpio_request(en_panel_rst, "panel rst");
 	if (err < 0) {
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
@@ -223,6 +223,15 @@ fail:
 static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 {
 	int err = 0;
+	struct board_info mainboard;
+	struct board_info board;
+
+	tegra_get_board_info(&mainboard);
+	tegra_get_display_board_info(&board);
+	en_panel_rst = TEGRA_GPIO_PN4;
+	if (mainboard.board_id == BOARD_E1922)
+		if (board.board_id == BOARD_E1937)
+			en_panel_rst = TEGRA_GPIO_PH3;
 
 	err = dsi_a_1200_1920_8_0_regulator_get(dev);
 	if (err < 0) {
@@ -262,11 +271,11 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 
 	msleep(100);
 #if DSI_PANEL_RESET
-	gpio_direction_output(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio, 1);
+	gpio_direction_output(en_panel_rst, 1);
 	usleep_range(1000, 5000);
-	gpio_set_value(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio, 0);
+	gpio_set_value(en_panel_rst, 0);
 	msleep(150);
-	gpio_set_value(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio, 1);
+	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
 #endif
 
@@ -277,8 +286,8 @@ fail:
 
 static int dsi_a_1200_1920_8_0_disable(void)
 {
-	if (gpio_is_valid(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio))
-		gpio_set_value(dsi_a_1200_1920_8_0_pdata.dsi_panel_rst_gpio, 0);
+	if (gpio_is_valid(en_panel_rst))
+		gpio_set_value(en_panel_rst, 0);
 	msleep(120);
 
 	if (vdd_lcd_bl_en)

@@ -126,6 +126,7 @@ struct nvhost_device_data t21_isp_info = {
 };
 
 struct nvhost_device_data t21_vib_info = {
+	.syncpts       = NV_VI_1_SYNCPTS,
 	.modulemutexes = {NVMODMUTEX_VI_1},
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */

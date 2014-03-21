@@ -2692,19 +2692,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "memory allocation failed\n");
 		return -ENOMEM;
 	}
-	if (pdev->dev.of_node) {
-		match = of_match_device(of_match_ptr(tegra_se_of_match),
-				&pdev->dev);
-		if (!match) {
-			dev_err(&pdev->dev, "Error: No device match found\n");
-			kfree(se_dev);
-			return -ENODEV;
-		}
-		se_dev->chipdata = (struct tegra_se_chipdata *)match->data;
-	} else {
-		se_dev->chipdata =
-			(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
-	}
 
 	if (pdev->dev.of_node) {
 		match = of_match_device(of_match_ptr(tegra_se_of_match),

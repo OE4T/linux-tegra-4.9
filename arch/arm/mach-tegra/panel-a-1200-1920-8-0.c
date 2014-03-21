@@ -315,11 +315,11 @@ static struct tegra_dc_mode dsi_a_1200_1920_8_0_modes[] = {
 		.h_sync_width = 10,
 		.v_sync_width = 2,
 		.h_back_porch = 54,
-		.v_back_porch = 3,
+		.v_back_porch = 15,
 		.h_active = 1200,
 		.v_active = 1920,
 		.h_front_porch = 64,
-		.v_front_porch = 15,
+		.v_front_porch = 3,
 	},
 };
 

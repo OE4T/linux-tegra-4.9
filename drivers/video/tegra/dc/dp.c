@@ -2027,11 +2027,20 @@ fail:
 	return err;
 }
 
+static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
+{
+	tegra_periph_reset_assert(dp->dpaux_clk);
+	mdelay(2);
+	tegra_periph_reset_deassert(dp->dpaux_clk);
+	mdelay(1);
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	int ret;
 
+	tegra_dp_reset(dp);
 	tegra_dpaux_clk_enable(dp);
 
 	tegra_dc_io_start(dc);

@@ -955,8 +955,18 @@ void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 	tegra_sor_pad_cal_power(sor, false);
 }
 
+static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
+{
+	tegra_periph_reset_assert(sor->sor_clk);
+	mdelay(2);
+	tegra_periph_reset_deassert(sor->sor_clk);
+	mdelay(1);
+}
+
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
+	tegra_sor_reset(sor);
+
 	tegra_sor_config_safe_clk(sor);
 	tegra_sor_clk_enable(sor);
 

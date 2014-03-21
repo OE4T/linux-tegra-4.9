@@ -675,7 +675,7 @@ unwind_frame(struct extab_info *exidx,
 	unsigned long high, low;
 	const struct unwind_idx *idx;
 	struct unwind_ctrl_block ctrl;
-	unsigned long err;
+	long err = 0;
 	u32 val;
 
 	/* only go to a higher address on the stack */

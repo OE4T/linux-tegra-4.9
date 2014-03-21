@@ -2605,6 +2605,11 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	tegra_dc_program_bandwidth(dc, true);
 }
 
+int tegra_dc_restore(struct tegra_dc *dc)
+{
+	return tegra_dc_ext_restore(dc->ext);
+}
+
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {

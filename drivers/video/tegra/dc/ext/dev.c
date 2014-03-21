@@ -180,6 +180,17 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	return ret;
 }
 
+int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
+{
+	int i;
+
+	for_each_set_bit(i, &ext->dc->valid_windows, DC_N_WINDOWS)
+		if (ext->win[i].user)
+			return 1;
+
+	return 0;
+}
+
 static void set_enable(struct tegra_dc_ext *ext, bool en)
 {
 	int i;

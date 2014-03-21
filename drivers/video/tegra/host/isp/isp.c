@@ -231,14 +231,14 @@ static irqreturn_t isp_isr(int irq, void *dev_id)
 
 	reg = tegra_isp_read(dev, 0xf8);
 
-	if (reg | (1<<5)) {
+	if (reg & (1 << 5)) {
 		/* Disable */
 		enable_reg = tegra_isp_read(dev, 0x14c);
 		enable_reg &= ~1;
 		tegra_isp_write(dev, 0x14c, enable_reg);
 
 		/* Clear */
-		reg = reg & (1<<5);
+		reg &= (1 << 5);
 		tegra_isp_write(dev, 0xf8, reg);
 
 		/* put work into queue */

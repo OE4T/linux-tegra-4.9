@@ -145,7 +145,6 @@ static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 static int handle_page_alloc(struct nvmap_client *client,
 			     struct nvmap_handle *h, bool contiguous)
 {
-	int err = 0;
 	size_t size = PAGE_ALIGN(h->size);
 	unsigned int nr_page = size >> PAGE_SHIFT;
 	pgprot_t prot;
@@ -231,9 +230,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	 * userspace and leaked kernel data structures.
 	 */
 	nvmap_flush_cache(pages, nr_page);
-
-	if (err)
-		goto fail;
 
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory)
 		free_vm_area(area);

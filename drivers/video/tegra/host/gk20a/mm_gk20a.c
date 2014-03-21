@@ -2196,6 +2196,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE &&
 	    pgsz_idx != gmmu_page_size_big) {
 		err = -ENOSYS;
+		kfree(va_node);
 		goto clean_up;
 	}
 

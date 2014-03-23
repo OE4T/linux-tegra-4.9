@@ -2687,6 +2687,9 @@ static int tegra_se_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int err = 0, i = 0, j = 0, k = 0;
 
+	if (tegra_bonded_out_dev(BOND_OUT_SE))
+		return -ENODEV;
+
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {
 		dev_err(&pdev->dev, "memory allocation failed\n");

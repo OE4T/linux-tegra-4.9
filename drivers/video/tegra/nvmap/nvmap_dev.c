@@ -113,13 +113,6 @@ int is_nvmap_vma(struct vm_area_struct *vma)
 	return vma->vm_ops == &nvmap_vma_ops;
 }
 
-struct device *nvmap_client_to_device(struct nvmap_client *client)
-{
-	if (!client)
-		return 0;
-	return nvmap_dev->dev_user.this_device;
-}
-
 /*
  * Verifies that the passed ID is a valid handle ID. Then the passed client's
  * reference to the handle is returned.

@@ -299,8 +299,6 @@ pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot);
 
 #endif /* !CONFIG_TEGRA_NVMAP */
 
-struct device *nvmap_client_to_device(struct nvmap_client *client);
-
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,
 					      unsigned long type);

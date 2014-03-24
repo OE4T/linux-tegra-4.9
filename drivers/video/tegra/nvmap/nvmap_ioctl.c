@@ -239,7 +239,6 @@ out:
 
 int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 {
-	struct nvmap_client *client = filp->private_data;
 	struct nvmap_create_handle op;
 	struct nvmap_handle *h = NULL;
 
@@ -256,9 +255,6 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 		return -EPERM;
 
 	op.id = marshal_id(h);
-	if (client == h->owner)
-		h->global = true;
-
 	nvmap_handle_put(h);
 
 	return copy_to_user(arg, &op, sizeof(op)) ? -EFAULT : 0;

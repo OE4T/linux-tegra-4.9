@@ -32,6 +32,8 @@
 #include <linux/atomic.h>
 #include <linux/dma-buf.h>
 #include <linux/syscalls.h>
+#include <linux/mm.h>
+#include <linux/miscdevice.h>
 #include <linux/nvmap.h>
 #include <linux/workqueue.h>
 #include <linux/dma-mapping.h>
@@ -97,7 +99,7 @@ struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	atomic_t pin;		/* pin count */
-	unsigned long flags;    /* caching flags */
+	u32 flags;		/* caching flags */
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
 	size_t align;
@@ -115,10 +117,9 @@ struct nvmap_handle {
 		struct nvmap_pgalloc pgalloc;
 		struct nvmap_heap_block *carveout;
 	};
-	bool global;		/* handle may be duplicated by other clients */
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
-	unsigned int userflags;	/* flags passed from userspace */
+	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
@@ -214,9 +215,6 @@ struct nvmap_vma_priv {
 	size_t		offs;
 	atomic_t	count;	/* number of processes cloning the VMA */
 };
-
-#include <linux/mm.h>
-#include <linux/miscdevice.h>
 
 struct nvmap_device {
 	struct rb_root	handles;

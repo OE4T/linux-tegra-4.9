@@ -782,7 +782,7 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 		}
 
 		seq_printf(s, "%s: ", name);
-		seq_printf(s, " flags = 0x%08lx, refs = %d\n",
+		seq_printf(s, " flags = 0x%08x, refs = %d\n",
 			   handle->flags, atomic_read(&handle->ref));
 
 		seq_printf(s, "  device = %s\n",

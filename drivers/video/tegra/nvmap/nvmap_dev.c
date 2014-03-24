@@ -69,9 +69,7 @@ struct nvmap_carveout_node {
 };
 
 struct nvmap_device *nvmap_dev;
-EXPORT_SYMBOL(nvmap_dev);
 struct nvmap_stats nvmap_stats;
-EXPORT_SYMBOL(nvmap_stats);
 
 static struct backing_dev_info nvmap_bdi = {
 	.ra_pages	= 0,

@@ -31,6 +31,10 @@
 #include <linux/types.h>
 #include <linux/tracepoint.h>
 
+struct nvmap_handle;
+struct nvmap_handle_ref;
+struct nvmap_client;
+
 DECLARE_EVENT_CLASS(nvmap,
 	TP_PROTO(struct nvmap_client *client, const char *name),
 	TP_ARGS(client, name),

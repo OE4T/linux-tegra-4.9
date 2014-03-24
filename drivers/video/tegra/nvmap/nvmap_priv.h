@@ -65,12 +65,12 @@
 #endif
 
 struct page;
+struct nvmap_device;
 
 void _nvmap_handle_free(struct nvmap_handle *h);
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
 
-#if defined(CONFIG_TEGRA_NVMAP)
 #define CACHE_MAINT_IMMEDIATE		0
 #define CACHE_MAINT_ALLOW_DEFERRED	1
 
@@ -252,6 +252,7 @@ struct nvmap_stats {
 };
 
 extern struct nvmap_stats nvmap_stats;
+extern struct nvmap_device *nvmap_dev;
 
 void nvmap_stats_inc(enum nvmap_stats_t, size_t size);
 void nvmap_stats_dec(enum nvmap_stats_t, size_t size);
@@ -292,13 +293,6 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 	return prot;
 }
 
-#else /* CONFIG_TEGRA_NVMAP */
-struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h);
-void nvmap_handle_put(struct nvmap_handle *h);
-pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot);
-
-#endif /* !CONFIG_TEGRA_NVMAP */
-
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,
 					      unsigned long type);
@@ -313,9 +307,6 @@ void nvmap_carveout_commit_add(struct nvmap_client *client,
 void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 				    struct nvmap_carveout_node *node,
 				    size_t len);
-
-int nvmap_find_cache_maint_op(struct nvmap_device *dev,
-		struct nvmap_handle *h);
 
 void nvmap_handle_put(struct nvmap_handle *h);
 

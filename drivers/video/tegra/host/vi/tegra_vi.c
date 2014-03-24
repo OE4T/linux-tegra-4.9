@@ -48,6 +48,12 @@ static DEFINE_MUTEX(la_lock);
 #define T12_CSI_CSICIL_SW_SENSOR_B_RESET 0x980
 #define T12_VI_CSI_1_CSI_IMAGE_DT 0x220
 
+/*
+ * MAX_BW = max(VI clock) * 2BPP, in KBps.
+ * Here default max VI clock is 420MHz.
+ */
+#define VI_DEFAULT_MAX_BW	840000
+
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 
 int nvhost_vi_init(struct platform_device *dev)
@@ -131,6 +137,30 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 }
 
 #if defined(CONFIG_TEGRA_ISOMGR)
+static int vi_isomgr_register(struct vi *tegra_vi)
+{
+	int iso_client_id = TEGRA_ISO_CLIENT_VI_0;
+
+	dev_dbg(&tegra_vi->ndev->dev, "%s++\n", __func__);
+
+	if (tegra_vi->ndev->id)
+		iso_client_id = TEGRA_ISO_CLIENT_VI_1;
+
+	/* Register with max possible BW in VI usecases.*/
+	tegra_vi->isomgr_handle = tegra_isomgr_register(iso_client_id,
+					VI_DEFAULT_MAX_BW,
+					NULL,	/* tegra_isomgr_renegotiate */
+					NULL);	/* *priv */
+
+	if (!tegra_vi->isomgr_handle) {
+		dev_err(&tegra_vi->ndev->dev, "%s: unable to register isomgr\n",
+					__func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 static int vi_set_isomgr_request(struct vi *tegra_vi, uint vi_bw, uint lt)
 {
 	int ret = 0;
@@ -285,6 +315,19 @@ long vi_ioctl(struct file *file,
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 		/*
+		 * Register VI as isomgr client.
+		 */
+		if (!tegra_vi->isomgr_handle) {
+			ret = vi_isomgr_register(tegra_vi);
+			if (ret) {
+				dev_err(&tegra_vi->ndev->dev,
+				"%s: failed to register VI as isomgr client\n",
+				__func__);
+				return -ENOMEM;
+			}
+		}
+
+		/*
 		 * Set VI ISO BW requirements.
 		 * There is no way to figure out what latency
 		 * can be tolerated in VI without reading VI
@@ -292,15 +335,13 @@ long vi_ioctl(struct file *file,
 		 * to switch PLL source. Let's put 4 usec as
 		 * latency for now.
 		 */
-		if (tegra_vi->isomgr_handle) {
-			ret = vi_set_isomgr_request(tegra_vi, vi_bw, 4);
+		ret = vi_set_isomgr_request(tegra_vi, vi_bw, 4);
 
-			if (!ret) {
-				dev_err(&tegra_vi->ndev->dev,
-				"%s: failed to reserve %u KBps\n",
-				__func__, vi_bw);
-				return -ENOMEM;
-			}
+		if (!ret) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: failed to reserve %u KBps\n",
+			__func__, vi_bw);
+			return -ENOMEM;
 		}
 #endif
 		return ret;

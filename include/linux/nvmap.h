@@ -56,8 +56,6 @@
 
 #if defined(__KERNEL__)
 
-struct nvmap_handle;
-
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
@@ -226,11 +224,7 @@ struct nvmap_cache_op_32 {
 #endif
 
 struct nvmap_cache_op_list {
-#ifdef CONFIG_COMPAT
 	__u32 handles;		/* Uspace ptr to list of handles */
-#else
-	struct nvmap_handle **handles;
-#endif
 	__u32 nr;		/* Number of handles */
 };
 

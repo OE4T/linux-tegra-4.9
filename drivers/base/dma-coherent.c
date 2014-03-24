@@ -33,6 +33,7 @@ struct heap_info {
 	size_t len;
 	phys_addr_t cma_base;
 	size_t cma_len;
+	size_t rem_chunk_size;
 	struct dentry *dma_debug_root;
 	void (*update_resize_cfg)(phys_addr_t , size_t);
 };
@@ -258,21 +259,16 @@ int dma_declare_coherent_resizable_cma_memory(struct device *dev,
 			err = -EINVAL;
 			goto fail;
 		}
-		if (heap_info->cma_len % heap_info->cma_chunk_size) {
-			dev_err(dev,
-				"size is not multiple of cma_chunk_size(%zu)\n"
-				"size truncated from %zu to %zu\n",
-				heap_info->cma_chunk_size, heap_info->cma_len,
-				round_down(heap_info->cma_len,
-					heap_info->cma_chunk_size));
-				heap_info->cma_len = round_down(
-						heap_info->cma_len,
-						heap_info->cma_chunk_size);
-		}
 
 		mutex_init(&heap_info->resize_lock);
-		heap_info->num_devs = div_u64(heap_info->cma_len,
-					heap_info->cma_chunk_size);
+		heap_info->num_devs = div64_u64_rem(heap_info->cma_len,
+			heap_info->cma_chunk_size, (u64 *)&heap_info->rem_chunk_size);
+		if (heap_info->rem_chunk_size) {
+			heap_info->num_devs++;
+			dev_dbg(dev, "size is not multiple of cma_chunk_size\n"
+				"heap_info->num_devs (%d) rem_chunk_size(%zu)\n",
+				heap_info->num_devs, heap_info->rem_chunk_size);
+		}
 		heap_info->devs = dma_create_dma_devs(dma_info->name,
 					heap_info->num_devs);
 		if (!heap_info->devs) {
@@ -340,6 +336,13 @@ static phys_addr_t alloc_from_contiguous_heap(
 	struct page *page;
 	unsigned long order;
 
+	/* check for if last chunk is residual chunk */
+	if (h->len &&  (h->dev_end + 1 == (h->num_devs - 1))
+		&& h->rem_chunk_size) {
+		len = h->rem_chunk_size;
+		dev_dbg(h->cma_dev, "rem_chunk_size (%zu)\n", len);
+	}
+
 	order = get_order(len);
 	count = PAGE_ALIGN(len) >> PAGE_SHIFT;
 	page = dma_alloc_from_contiguous(h->cma_dev, count, order);
@@ -373,6 +376,7 @@ static int heap_resize_locked(struct heap_info *h)
 	int idx;
 	phys_addr_t base;
 	bool at_bottom = false;
+	size_t cma_chunk_size = h->cma_chunk_size;
 
 	base = alloc_from_contiguous_heap(h, 0, h->cma_chunk_size);
 	if (dma_mapping_error(h->cma_dev, base))
@@ -387,24 +391,32 @@ static int heap_resize_locked(struct heap_info *h)
 		goto fail_non_contig;
 
 	BUG_ON(h->dev_start - 1 != idx && h->dev_end + 1 != idx && h->len);
-	dev_dbg(&h->devs[idx],
-		"Resize VPR base from=0x%pa to=0x%pa, len from=%zu to=%zu\n",
-		&h->base, &base, h->len, h->len + h->cma_chunk_size);
+	if (h->len &&  (h->dev_end + 1 == (h->num_devs - 1))
+			&& h->rem_chunk_size) {
+		cma_chunk_size = h->rem_chunk_size;
+		dev_dbg(h->cma_dev, "rem_chunk_size (%zu)\n", cma_chunk_size);
+	}
 
-	if (declare_coherent_heap(&h->devs[idx], base, h->cma_chunk_size))
+	if (declare_coherent_heap(&h->devs[idx], base, cma_chunk_size))
 		goto fail_declare;
-	dev_dbg(&h->devs[idx],
-		"Resize VPR base from=0x%pa to=0x%pa, len from=%zu to=%zu\n",
-		&h->base, &base, h->len, h->len + h->cma_chunk_size);
+
 	if (at_bottom) {
 		h->base = base;
 		h->dev_start = idx;
 		if (!h->len)
 			h->dev_end = h->dev_start;
+		dev_dbg(&h->devs[idx],
+			"Resize VPR base from=0x%pa to=0x%pa,"
+			" len from=%zu to=%zu\n",
+			&h->base, &base, h->len, h->len + cma_chunk_size);
 	} else {
 		h->dev_end = idx;
+		dev_dbg(&h->devs[idx],
+			"Resize VPR base 0x%pa len from=%zu to=%zu\n",
+			&h->base, h->len, h->len + cma_chunk_size);
 	}
-	h->len += h->cma_chunk_size;
+
+	h->len += cma_chunk_size;
 	/* Handle VPR configuration updates*/
 	if (h->update_resize_cfg)
 		h->update_resize_cfg(h->base, h->len);
@@ -413,7 +425,7 @@ static int heap_resize_locked(struct heap_info *h)
 fail_non_contig:
 	dev_dbg(&h->devs[idx], "Found Non-Contiguous block(0x%pa)\n", &base);
 fail_declare:
-	release_from_contiguous_heap(h, base, h->cma_chunk_size);
+	release_from_contiguous_heap(h, base, cma_chunk_size);
 	return 1;
 }
 
@@ -599,6 +611,7 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 	void *ret = NULL;
 	dma_addr_t dev_base;
 	struct heap_info *h = NULL;
+	size_t cma_chunk_size = h->cma_chunk_size;
 
 	if (!dma_is_coherent_dev(dev))
 		return 0;
@@ -625,16 +638,24 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 check_next_chunk:
 	/* Check if heap can be shrinked */
 	if ((idx == h->dev_start || idx == h->dev_end) && h->len) {
-		/* check if entire chunk is free */
+		/* check if entire chunk is free
+		 * check if last chunk is residual chunk
+		 */
+		if ((idx == h->num_devs - 1) && h->rem_chunk_size) {
+			cma_chunk_size = h->rem_chunk_size;
+			dev_dbg(&h->devs[idx], "rem chunk size (%zu)\n",
+				h->rem_chunk_size);
+		} else
+			cma_chunk_size =  h->cma_chunk_size;
+
 		resize_err = dma_alloc_from_coherent_dev(&h->devs[idx],
-					h->cma_chunk_size,
+					cma_chunk_size,
 					&dev_base, &ret, attrs);
 		if (!resize_err)
 			goto out_unlock;
 		else {
 			resize_err = dma_release_from_coherent_dev(
-				&h->devs[idx],
-				h->cma_chunk_size,
+				&h->devs[idx], cma_chunk_size,
 				(void *)dev_base, attrs);
 			if (!resize_err)
 				goto out_unlock;
@@ -642,18 +663,28 @@ check_next_chunk:
 			dma_release_declared_memory(
 					&h->devs[idx]);
 			BUG_ON(h->devs[idx].dma_mem != NULL);
-			h->len -= h->cma_chunk_size;
+			h->len -= cma_chunk_size;
 
 			if ((idx == h->dev_start)) {
-				h->base += h->cma_chunk_size;
+				h->base += cma_chunk_size;
 				h->dev_start++;
 				dev_dbg(&h->devs[idx],
 					"Release Chunk at bottom\n");
+				dev_dbg(&h->devs[idx],
+					"Resize VPR base from=0x%pa to=0x%pa,"
+					" len from=%zu to=%zu\n",
+					&h->base - cma_chunk_size, &h->base,
+					h->len + cma_chunk_size, h->len);
 				idx++;
 			} else {
 				h->dev_end--;
 				dev_dbg(&h->devs[idx],
 					"Release Chunk at top\n");
+				dev_dbg(&h->devs[idx],
+					"Resize VPR base %pa,"
+					" len from=%zu to=%zu\n",
+					&h->base,
+					h->len + cma_chunk_size, h->len);
 				idx--;
 			}
 
@@ -661,7 +692,7 @@ check_next_chunk:
 			if (h->update_resize_cfg)
 				h->update_resize_cfg(h->base, h->len);
 			release_from_contiguous_heap(h,
-				dev_base, h->cma_chunk_size);
+				dev_base, cma_chunk_size);
 		}
 		goto check_next_chunk;
 	}

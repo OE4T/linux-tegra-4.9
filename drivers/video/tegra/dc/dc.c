@@ -1453,6 +1453,9 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		if (err < 0) {
 			dc->out = NULL;
 			dc->out_ops = NULL;
+			dev_err(&dc->ndev->dev,
+				"Error: out->type:%d out_ops->init() failed\n",
+				out->type);
 			return err;
 		}
 	}
@@ -2261,6 +2264,9 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		if (!dc->initialized) {
 			if (tegra_dc_program_mode(dc, &dc->mode)) {
 				tegra_dc_io_end(dc);
+				dev_warn(&dc->ndev->dev,
+					"%s: tegra_dc_program_mode failed\n",
+					__func__);
 				return -EINVAL;
 			}
 		} else {
@@ -2320,6 +2326,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 			tegra_dc_clk_disable(dc);
 		else
 			tegra_dvfs_set_rate(dc->clk, 0);
+		dev_warn(&dc->ndev->dev,
+			"%s: tegra_dc_init failed\n", __func__);
 		return false;
 	}
 

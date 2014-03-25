@@ -778,6 +778,8 @@ static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 		cfg->max_lane_count);
 	dev_info(&dp->dc->ndev->dev, "           SupportEnhancedFraming %s\n",
 		cfg->support_enhanced_framing ? "Y" : "N");
+	dev_info(&dp->dc->ndev->dev, "           SupportAltScrmbRstFffe %s\n",
+		cfg->alt_scramber_reset_cap ? "Y" : "N");
 	dev_info(&dp->dc->ndev->dev, "           Bandwidth              %d\n",
 		cfg->max_link_bw);
 	dev_info(&dp->dc->ndev->dev, "           bpp                    %d\n",
@@ -1528,7 +1530,7 @@ static void tegra_dp_hpd_config(struct tegra_dc_dp_data *dp)
 
 static int tegra_dp_hpd_plug(struct tegra_dc_dp_data *dp)
 {
-#define TEGRA_DP_HPD_PLUG_TIMEOUT_MS	10000
+#define TEGRA_DP_HPD_PLUG_TIMEOUT_MS	500
 	u32 val;
 	int err = 0;
 
@@ -2002,6 +2004,8 @@ static void tegra_dp_link_config(struct tegra_dc_dp_data *dp)
 
 	if (cfg->alt_scramber_reset_cap)
 		tegra_dc_dp_set_assr(dp, true);
+	else
+		tegra_dc_sor_set_internal_panel(dp->sor, false);
 
 	tegra_dc_dp_dpcd_write(dp, NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET,
 			NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET_ANSI_8B10B);
@@ -2085,7 +2089,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dp_hpd_config(dp);
 	if (tegra_dp_hpd_plug(dp) < 0) {
-		dev_err(&dc->ndev->dev, "dp: hpd plug failed\n");
+		dev_info(&dc->ndev->dev, "dp: no panel/monitor plugged\n");
 		goto error_enable;
 	}
 
@@ -2109,9 +2113,14 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_sor_attach(dp->sor);
 	dp->enabled = true;
+	tegra_dp_default_int(dp, false);
+	tegra_dc_io_end(dc);
+	return;
 
 error_enable:
 	tegra_dp_default_int(dp, false);
+	tegra_dpaux_pad_power(dp->dc, false);
+	tegra_dpaux_clk_disable(dp);
 	tegra_dc_io_end(dc);
 	return;
 }
@@ -2178,6 +2187,24 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
+/* used by tegra_dc_probe() to detect connection(HPD) status at boot */
+static bool tegra_dc_dp_detect(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	u32 rd;
+
+	tegra_dc_io_start(dc);
+	tegra_dpaux_clk_enable(dp);
+	rd = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
+	tegra_dpaux_clk_disable(dp);
+	tegra_dc_io_end(dc);
+	dev_info(&dc->ndev->dev,
+		"dp: DPAUX_DP_AUXSTAT:0x%08x HPD:%splugged\n",
+		rd, (DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED & rd) ? "" : "un");
+	return (DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED & rd) ? true : false;
+}
+
+
 static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2196,6 +2223,7 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.destroy   = tegra_dc_dp_destroy,
 	.enable	   = tegra_dc_dp_enable,
 	.disable   = tegra_dc_dp_disable,
+	.detect    = tegra_dc_dp_detect,
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
 };

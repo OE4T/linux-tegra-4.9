@@ -803,8 +803,21 @@ void nvhost_free_syncpt(u32 id)
 {
 	struct nvhost_master *host = nvhost;
 	struct nvhost_syncpt *sp = &host->syncpt;
+	struct device *d = &host->dev->dev;
 
-	WARN_ON(!sp->assigned[id]);
+	/* first check if we are freeing a valid syncpt */
+	if (!sp->assigned[id]) {
+		nvhost_warn(d, "trying to free unused syncpt %u\n", id);
+		return;
+	}
+	if (nvhost_syncpt_client_managed(sp, id)) {
+		nvhost_err(d, "trying to free client managed syncpt %u\n", id);
+		return;
+	}
+	if (!nvhost_syncpt_min_eq_max(sp, id)) {
+		nvhost_err(d, "trying to free syncpt still in use %u\n", id);
+		return;
+	}
 
 	mutex_lock(&sp->syncpt_mutex);
 

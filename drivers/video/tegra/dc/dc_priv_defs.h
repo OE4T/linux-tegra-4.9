@@ -40,9 +40,9 @@
 
 #define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)
 
-/* 29 bit offset for window clip number */
-#define CURSOR_CLIP_SHIFT_BITS(win)	(win << 29)
-#define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 29) & 3)
+/* 28 bit offset for window clip number */
+#define CURSOR_CLIP_SHIFT_BITS(win)	(win << 28)
+#define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 28) & 3)
 
 static inline u32 ALL_UF_INT(void)
 {

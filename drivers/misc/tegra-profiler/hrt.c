@@ -300,6 +300,19 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 
 	if (ctx->param.backtrace) {
 		bt_size = quadd_get_user_callchain(user_regs, cc, ctx);
+
+		if (!bt_size && !user_mode(regs)) {
+			unsigned long pc = instruction_pointer(user_regs);
+
+			cc->nr = 0;
+#ifdef CONFIG_ARM64
+			cc->cs_64 = compat_user_mode(user_regs) ? 0 : 1;
+#else
+			cc->cs_64 = 0;
+#endif
+			bt_size += quadd_callchain_store(cc, pc);
+		}
+
 		if (bt_size > 0) {
 			int ip_size = cc->cs_64 ? sizeof(u64) : sizeof(u32);
 

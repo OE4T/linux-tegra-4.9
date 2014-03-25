@@ -77,7 +77,7 @@ quadd_user_link_register(struct pt_regs *regs)
 #endif
 }
 
-void
+int
 quadd_callchain_store(struct quadd_callchain *cc,
 		      unsigned long ip)
 {
@@ -86,7 +86,10 @@ quadd_callchain_store(struct quadd_callchain *cc,
 			cc->ip_64[cc->nr++] = ip;
 		else
 			cc->ip_32[cc->nr++] = ip;
+
+		return 1;
 	}
+	return 0;
 }
 
 static unsigned long __user *

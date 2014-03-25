@@ -46,8 +46,9 @@ quadd_get_user_callchain(struct pt_regs *regs,
 			 struct quadd_callchain *cc_data,
 			 struct quadd_ctx *ctx);
 
-void quadd_callchain_store(struct quadd_callchain *cc,
-			   unsigned long ip);
+int
+quadd_callchain_store(struct quadd_callchain *cc,
+		      unsigned long ip);
 
 unsigned long
 quadd_user_stack_pointer(struct pt_regs *regs);

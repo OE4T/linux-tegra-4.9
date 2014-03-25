@@ -33,6 +33,9 @@ struct quadd_callchain {
 
 	unsigned int unw_method;
 	unsigned int unw_rc;
+
+	unsigned long curr_sp;
+	unsigned long curr_fp;
 };
 
 struct quadd_ctx;

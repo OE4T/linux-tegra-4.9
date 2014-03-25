@@ -235,7 +235,7 @@ static const struct file_operations auth_fops = {
 	.release	= auth_release,
 };
 
-int quadd_auth_check_debug_flag(const char *package_name)
+int quadd_auth_is_debuggable(const char *package_name)
 {
 	int uid, response_value;
 	struct quadd_auth_data *data = &auth_ctx.data;

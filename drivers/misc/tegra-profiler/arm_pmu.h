@@ -37,7 +37,7 @@ struct quadd_pmu_ctx {
 	struct list_head used_events;
 
 	int l1_cache_rw;
-	int *current_map;
+	unsigned int *current_map;
 };
 
 #endif	/* __ARM_PMU_H */

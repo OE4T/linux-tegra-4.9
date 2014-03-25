@@ -448,7 +448,7 @@ unwind_find_idx(struct extab_info *exidx, u32 addr)
 }
 
 static unsigned long
-unwind_get_byte(struct unwind_ctrl_block *ctrl, int *err)
+unwind_get_byte(struct unwind_ctrl_block *ctrl, long *err)
 {
 	unsigned long ret, insn_word;
 
@@ -479,9 +479,10 @@ unwind_get_byte(struct unwind_ctrl_block *ctrl, int *err)
 /*
  * Execute the current unwind instruction.
  */
-static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
+static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 {
-	int i, err;
+	long err;
+	unsigned int i;
 	unsigned long insn = unwind_get_byte(ctrl, &err);
 
 	if (err < 0)
@@ -538,7 +539,7 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		pr_debug("CMD_REG_TO_SP: vsp = {r%lu}\n", insn & 0x0f);
 	} else if ((insn & 0xf0) == 0xa0) {
 		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
-		int reg;
+		unsigned int reg;
 
 		/* pop R4-R[4+bbb] */
 		for (reg = 4; reg <= 4 + (insn & 7); reg++) {
@@ -546,7 +547,7 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 			if (err < 0)
 				return err;
 
-			pr_debug("CMD_REG_POP: pop {r%d}\n", reg);
+			pr_debug("CMD_REG_POP: pop {r%u}\n", reg);
 		}
 
 		if (insn & 0x08) {
@@ -667,7 +668,7 @@ static int unwind_exec_insn(struct unwind_ctrl_block *ctrl)
  * Unwind a single frame starting with *sp for the symbol at *pc. It
  * updates the *pc and *sp with the new values.
  */
-static int
+static long
 unwind_frame(struct extab_info *exidx,
 	     struct stackframe *frame,
 	     struct vm_area_struct *vma_sp)
@@ -737,7 +738,7 @@ unwind_frame(struct extab_info *exidx,
 	}
 
 	while (ctrl.entries > 0) {
-		int err = unwind_exec_insn(&ctrl);
+		err = unwind_exec_insn(&ctrl);
 		if (err < 0)
 			return err;
 
@@ -792,7 +793,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 vma_sp->vm_start - vma_sp->vm_end);
 
 	while (1) {
-		int err;
+		long err;
 		unsigned long where = frame.pc;
 		struct vm_area_struct *vma_pc;
 		struct mm_struct *mm = current->mm;
@@ -820,7 +821,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 		err = unwind_frame(exidx, &frame, vma_sp);
 		if (err < 0) {
-			pr_debug("end unwind, urc: %d\n", err);
+			pr_debug("end unwind, urc: %ld\n", err);
 			cc->unw_rc = -err;
 			break;
 		}
@@ -829,6 +830,9 @@ unwind_backtrace(struct quadd_callchain *cc,
 			 where, frame.pc);
 
 		quadd_callchain_store(cc, frame.pc);
+
+		cc->curr_sp = frame.sp;
+		cc->curr_fp = frame.fp_arm;
 	}
 }
 

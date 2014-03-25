@@ -669,6 +669,17 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 	return 0;
 }
 
+bool nvhost_is_syncpt_assigned(struct nvhost_syncpt *sp, u32 id)
+{
+	bool assigned;
+
+	mutex_lock(&sp->syncpt_mutex);
+	assigned = sp->assigned[id];
+	mutex_unlock(&sp->syncpt_mutex);
+
+	return assigned;
+}
+
 /**
  * performs a sequential search and returns first free syncpt id
  */

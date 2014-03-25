@@ -87,6 +87,8 @@ static int show_capabilities(struct seq_file *f, void *offset)
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_SUPPORT_AARCH64));
 	seq_printf(f, "support special architecture mappings: %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_SPECIAL_ARCH_MMAP));
+	seq_printf(f, "support mixed unwinding mode:          %s\n",
+		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNWIND_MIXED));
 
 	seq_puts(f, "\n");
 	seq_puts(f, "Supported events:\n");

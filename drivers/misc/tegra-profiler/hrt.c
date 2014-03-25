@@ -100,7 +100,7 @@ u64 quadd_get_time(void)
 static void put_header(void)
 {
 	int nr_events = 0, max_events = QUADD_MAX_COUNTERS;
-	unsigned int events[QUADD_MAX_COUNTERS];
+	int events[QUADD_MAX_COUNTERS];
 	struct quadd_record_data record;
 	struct quadd_header_data *hdr = &record.hdr;
 	struct quadd_parameters *param = &hrt.quadd_ctx->param;
@@ -290,7 +290,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 		return;
 
 	if (cc->cs_64)
-		extra_data |= QUADD_SAMPLE_ED_IP64;
+		extra_data |= QUADD_SED_IP64;
 
 	vec[vec_idx].base = &extra_data;
 	vec[vec_idx].len = sizeof(extra_data);
@@ -309,9 +309,10 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 			vec_idx++;
 		}
 
-		s->reserved |= cc->unw_method << QUADD_SAMPLE_UNW_METHOD_SHIFT;
+		extra_data |= cc->unw_method << QUADD_SED_UNW_METHOD_SHIFT;
 
-		if (cc->unw_method == QUADD_UNW_METHOD_EHT)
+		if (cc->unw_method == QUADD_UNW_METHOD_EHT ||
+		    cc->unw_method == QUADD_UNW_METHOD_MIXED)
 			s->reserved |= cc->unw_rc << QUADD_SAMPLE_URC_SHIFT;
 	}
 	s->callchain_nr = bt_size;

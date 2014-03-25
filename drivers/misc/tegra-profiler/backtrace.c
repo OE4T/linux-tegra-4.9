@@ -214,6 +214,29 @@ get_user_callchain_fp(struct pt_regs *regs,
 	return cc->nr;
 }
 
+static unsigned int
+__user_backtrace(struct quadd_callchain *cc)
+{
+	struct mm_struct *mm = current->mm;
+	struct vm_area_struct *vma;
+	unsigned long __user *tail;
+
+	if (!mm)
+		goto out;
+
+	vma = find_vma(mm, cc->curr_sp);
+	if (!vma)
+		goto out;
+
+	tail = (unsigned long __user *)cc->curr_fp;
+
+	while (tail && !((unsigned long)tail & 0x3))
+		tail = user_backtrace(tail, cc, vma);
+
+out:
+	return cc->nr;
+}
+
 #ifdef CONFIG_ARM64
 static u32 __user *
 user_backtrace_compat(u32 __user *tail,
@@ -338,12 +361,52 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 
 	return cc->nr;
 }
+
+static unsigned int
+__user_backtrace_compat(struct quadd_callchain *cc)
+{
+	struct mm_struct *mm = current->mm;
+	struct vm_area_struct *vma;
+	u32 __user *tail;
+
+	if (!mm)
+		goto out;
+
+	vma = find_vma(mm, cc->curr_sp);
+	if (!vma)
+		goto out;
+
+	tail = (u32 __user *)cc->curr_fp;
+
+	while (tail && !((unsigned long)tail & 0x3))
+		tail = user_backtrace_compat(tail, cc, vma);
+
+out:
+	return cc->nr;
+}
+
 #endif	/* CONFIG_ARM64 */
 
 static unsigned int
 __get_user_callchain_fp(struct pt_regs *regs,
 		      struct quadd_callchain *cc)
 {
+	if (cc->nr > 0) {
+		int nr, nr_prev = cc->nr;
+#ifdef CONFIG_ARM64
+		if (compat_user_mode(regs))
+			nr = __user_backtrace_compat(cc);
+		else
+			nr = __user_backtrace(cc);
+#else
+		nr = __user_backtrace(cc);
+#endif
+		if (nr != nr_prev)
+			cc->unw_method = QUADD_UNW_METHOD_MIXED;
+
+		return nr;
+	}
+
 	cc->unw_method = QUADD_UNW_METHOD_FP;
 
 #ifdef CONFIG_ARM64
@@ -358,7 +421,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 			 struct quadd_callchain *cc,
 			 struct quadd_ctx *ctx)
 {
-	int unw_fp, unw_eht, nr = 0;
+	int unw_fp, unw_eht, unw_mix, nr = 0;
 	unsigned int extra;
 	struct quadd_parameters *param = &ctx->param;
 
@@ -366,6 +429,9 @@ quadd_get_user_callchain(struct pt_regs *regs,
 
 	if (!regs)
 		return 0;
+
+	cc->curr_sp = 0;
+	cc->curr_fp = 0;
 
 #ifdef CONFIG_ARM64
 	cc->cs_64 = compat_user_mode(regs) ? 0 : 1;
@@ -377,14 +443,17 @@ quadd_get_user_callchain(struct pt_regs *regs,
 
 	unw_fp = extra & QUADD_PARAM_EXTRA_BT_FP;
 	unw_eht = extra & QUADD_PARAM_EXTRA_BT_UNWIND_TABLES;
+	unw_mix = extra & QUADD_PARAM_EXTRA_BT_MIXED;
 
 	cc->unw_rc = 0;
 
 	if (unw_eht)
 		nr = quadd_get_user_callchain_ut(regs, cc);
 
-	if (!nr && unw_fp)
-		nr = __get_user_callchain_fp(regs, cc);
+	if (unw_fp) {
+		if (!nr || unw_mix)
+			nr = __get_user_callchain_fp(regs, cc);
+	}
 
 	return nr;
 }

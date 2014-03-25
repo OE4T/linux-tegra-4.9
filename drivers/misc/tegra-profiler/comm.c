@@ -290,7 +290,7 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 
 		was_read += sizeof(sed);
 
-		ip_size = (sed & QUADD_SAMPLE_ED_IP64) ?
+		ip_size = (sed & QUADD_SED_IP64) ?
 			sizeof(u64) : sizeof(u32);
 
 		length_extra = sample->callchain_nr * ip_size;
@@ -483,7 +483,8 @@ device_read(struct file *filp,
 	    loff_t *offset)
 {
 	int err;
-	size_t res, samples_counter = 0;
+	ssize_t res;
+	size_t samples_counter = 0;
 	size_t was_read = 0, min_size;
 
 	err = check_access_permission();
@@ -606,8 +607,8 @@ device_ioctl(struct file *file,
 		break;
 
 	case IOCTL_GET_VERSION:
-		strcpy(versions.branch, QUADD_MODULE_BRANCH);
-		strcpy(versions.version, QUADD_MODULE_VERSION);
+		strcpy((char *)versions.branch, QUADD_MODULE_BRANCH);
+		strcpy((char *)versions.version, QUADD_MODULE_VERSION);
 
 		versions.samples_version = QUADD_SAMPLES_VERSION;
 		versions.io_version = QUADD_IO_VERSION;

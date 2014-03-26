@@ -222,16 +222,16 @@ static int loki_hdmi_hotplug_init(struct device *dev)
 struct tmds_config loki_tmds_config[] = {
 	{ /* 720p / 74.25MHz modes */
 		.pclk = 74250000,
-		.pll0 = 0x01003f10,
-		.pll1 = 0x10300b00,
+		.pll0 = 0x01003110,
+		.pll1 = 0x00301500,
 		.pe_current = 0x00000000,
 		.drive_current = 0x32323232,
 		.peak_current = 0x05050505,
 	},
 	{ /* 1080p / 148.5MHz modes */
 		.pclk = 148500000,
-		.pll0 = 0x01003f10,
-		.pll1 = 0x10300b00,
+		.pll0 = 0x01003310,
+		.pll1 = 0x00301500,
 		.pe_current = 0x00000000,
 		.drive_current = 0x32323232,
 		.peak_current = 0x05050505,
@@ -239,7 +239,7 @@ struct tmds_config loki_tmds_config[] = {
 	{ /* 297MHz modes */
 		.pclk = INT_MAX,
 		.pll0 = 0x01003f10,
-		.pll1 = 0x13300b00,
+		.pll1 = 0x00300f00,
 		.pe_current = 0x00000000,
 		.drive_current = 0x36363636,
 		.peak_current = 0x07070707,

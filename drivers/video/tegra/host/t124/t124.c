@@ -113,6 +113,7 @@ static struct resource isp_resources[] = {
 
 static struct platform_device tegra_isp01b_device;
 struct nvhost_device_data t124_isp_info = {
+	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_0},
@@ -150,6 +151,7 @@ static struct resource ispb_resources[] = {
 
 
 struct nvhost_device_data t124_ispb_info = {
+	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_1},
@@ -189,6 +191,7 @@ static struct resource vi_resources[] = {
 
 static struct platform_device tegra_vi01b_device;
 struct nvhost_device_data t124_vi_info = {
+	.num_channels	= 1,
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = NVHOST_MODULE_VI,
@@ -226,6 +229,7 @@ static struct platform_device tegra_vi01_device = {
 };
 
 struct nvhost_device_data t124_vib_info = {
+	.num_channels	= 1,
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
@@ -271,6 +275,7 @@ static struct resource msenc_resources[] = {
 };
 
 struct nvhost_device_data t124_msenc_info = {
+	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
@@ -309,6 +314,7 @@ static struct resource tsec_resources[] = {
 };
 
 struct nvhost_device_data t124_tsec_info = {
+	.num_channels	= 1,
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
@@ -347,6 +353,7 @@ static struct resource vic03_resources[] = {
 };
 
 struct nvhost_device_data t124_vic_info = {
+	.num_channels	= 1,
 	.modulemutexes		= {NVMODMUTEX_VIC},
 	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
 				  {"emc", UINT_MAX} },
@@ -390,6 +397,7 @@ struct platform_device tegra_vic03_device = {
  */
 
 struct nvhost_device_data t132_isp_info = {
+	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_0},
@@ -407,6 +415,7 @@ struct nvhost_device_data t132_isp_info = {
 };
 
 struct nvhost_device_data t132_ispb_info = {
+	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
 	.modulemutexes   = {NVMODMUTEX_ISP_1},
@@ -424,6 +433,7 @@ struct nvhost_device_data t132_ispb_info = {
 };
 
 struct nvhost_device_data t132_vi_info = {
+	.num_channels	= 1,
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = NVHOST_MODULE_VI,
@@ -449,6 +459,7 @@ struct nvhost_device_data t132_vi_info = {
 };
 
 struct nvhost_device_data t132_vib_info = {
+	.num_channels	= 1,
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
@@ -475,6 +486,7 @@ struct nvhost_device_data t132_vib_info = {
 };
 
 struct nvhost_device_data t132_msenc_info = {
+	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
@@ -490,6 +502,7 @@ struct nvhost_device_data t132_msenc_info = {
 };
 
 struct nvhost_device_data t132_tsec_info = {
+	.num_channels	= 1,
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
@@ -505,6 +518,7 @@ struct nvhost_device_data t132_tsec_info = {
 
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t132_vic_info = {
+	.num_channels	= 1,
 	.modulemutexes		= {NVMODMUTEX_VIC},
 	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
 				  {"emc", UINT_MAX} },

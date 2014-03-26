@@ -87,6 +87,55 @@ struct nvhost_channel *nvhost_return_node(struct nvhost_master *host,
 	return NULL;
 }
 
+/* return any one of assigned channel from device
+ * This API can be used to check if any channel assigned to device
+ */
+struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata)
+{
+	int i;
+	struct nvhost_channel *ch = NULL;
+
+	for (i = 0; i < pdata->num_channels; i++) {
+		ch = pdata->channels[i];
+		if (ch && ch->dev)
+			return ch;
+	}
+
+	return ch;
+}
+
+/* Check if more than channel needed for device and assign */
+int nvhost_channel_assign(struct nvhost_device_data *pdata,
+			  struct nvhost_channel *ch)
+{
+	int i;
+
+	for (i = 0; i < pdata->num_channels; i++) {
+		if (!pdata->channels[i]) {
+			pdata->channels[i] = ch;
+			pdata->num_mapped_chs++;
+			ch->dev_chid = i;
+			return 0;
+		}
+	}
+	dev_err(&pdata->pdev->dev, "%s: All channels assigned\n", __func__);
+
+	return -EINVAL;
+}
+
+/* Releases all channels assigned with device */
+int nvhost_channel_release(struct nvhost_device_data *pdata)
+{
+	struct nvhost_channel *ch;
+	int i;
+
+	for (i = 0; i < pdata->num_channels; i++) {
+		ch = pdata->channels[i];
+		if (ch && ch->dev)
+			nvhost_putchannel(ch);
+	}
+	return 0;
+}
 /* Unmap channel from device and free all resources, deinit device */
 int nvhost_channel_unmap(struct nvhost_channel *ch)
 {
@@ -130,7 +179,8 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 	ch->ctxhandler = NULL;
 	ch->cur_ctx = NULL;
 	ch->aperture = NULL;
-	pdata->channel = NULL;
+	pdata->channels[ch->dev_chid] = NULL;
+	pdata->num_mapped_chs--;
 
 	mutex_unlock(&host->chlist_mutex);
 
@@ -156,10 +206,11 @@ struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
 	mutex_lock(&host->chlist_mutex);
 	max_channels = host->info.nb_channels;
 
-	/* Check if already channel assigned for device */
-	if (pdata->channel) {
-		ch = pdata->channel;
-		nvhost_getchannel(ch);
+	/* Check if already channel(s) assigned for device */
+	if (pdata->num_channels == pdata->num_mapped_chs) {
+		ch = nvhost_check_channel(pdata);
+		if (ch)
+			nvhost_getchannel(ch);
 		mutex_unlock(&host->chlist_mutex);
 		return ch;
 	}
@@ -190,7 +241,7 @@ struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
 	if (ch->chid == NVHOST_INVALID_CHANNEL) {
 		ch->dev = pdata->pdev;
 		ch->chid = index;
-		pdata->channel = ch;
+		nvhost_channel_assign(pdata, ch);
 		nvhost_set_chanops(ch);
 	} else {
 		dev_err(&host->dev->dev, "%s: wrong channel map\n", __func__);
@@ -253,7 +304,6 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 		struct nvhost_master *dev)
 {
 	int err;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* Link platform_device to nvhost_channel */
 	err = channel_op(ch).init(ch, dev);
@@ -262,7 +312,6 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 				ch->chid);
 		return err;
 	}
-	pdata->channel = ch;
 
 	return nvhost_cdma_init(&ch->cdma);
 }

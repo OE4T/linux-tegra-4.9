@@ -211,7 +211,7 @@ static int __nvhost_channelopen(struct inode *inode,
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
 		ch = nvhost_channel_map(pdata);
-		if (!ch) {
+		if (!ch || !ch->dev) {
 			pr_err("%s: failed to map channel\n", __func__);
 			return -ENOMEM;
 		}
@@ -1057,6 +1057,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	pdata->channels = kzalloc(pdata->num_channels *
+					sizeof(struct nvhost_channel *),
+					GFP_KERNEL);
+
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
 
@@ -1111,7 +1115,6 @@ EXPORT_SYMBOL(nvhost_client_device_init);
 int nvhost_client_device_release(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct nvhost_channel *ch = pdata->channel;
 
 	/* Release nvhost module resources */
 	nvhost_module_deinit(dev);
@@ -1125,9 +1128,8 @@ int nvhost_client_device_release(struct platform_device *dev)
 	/* Remove debugFS */
 	nvhost_device_debug_deinit(dev);
 
-	/* Unmap nvhost channel */
-	if (ch)
-		nvhost_putchannel(ch);
+	/* Release all nvhost channel of dev*/
+	nvhost_channel_release(pdata);
 
 	return 0;
 }

@@ -49,6 +49,7 @@ struct nvhost_channel {
 	struct nvhost_channel_ops ops;
 	atomic_t refcount;
 	int chid;
+	int dev_chid;
 	u32 syncpt_id;
 	struct mutex reflock;
 	struct mutex submitlock;
@@ -71,7 +72,9 @@ struct nvhost_channel {
 int nvhost_alloc_channels(struct nvhost_master *host);
 struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata);
 int nvhost_channel_unmap(struct nvhost_channel *ch);
+int nvhost_channel_release(struct nvhost_device_data *pdata);
 int nvhost_channel_list_free(struct nvhost_master *host);
+struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata);
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);
 

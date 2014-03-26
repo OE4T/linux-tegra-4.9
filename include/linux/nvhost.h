@@ -144,7 +144,11 @@ struct nvhost_device_data {
 	struct mutex	lock;		/* Power management lock */
 	struct list_head client_list;	/* List of clients and rate requests */
 
-	struct nvhost_channel *channel;	/* Channel assigned for the module */
+	int		num_channels;	/* Max num of channel supported */
+	int		num_mapped_chs;	/* Num of channel mapped to device */
+
+	/* Channel(s) assigned for the module */
+	struct nvhost_channel **channels;
 
 	/* device node for channel operations */
 	dev_t cdev_region;

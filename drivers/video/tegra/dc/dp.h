@@ -71,6 +71,8 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 	},
 };
 
+/* Both 12x and 13x config enabled for 13x */
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) && !defined(CONFIG_ARCH_TEGRA_13x_SOC)
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -105,6 +107,42 @@ static const u32 tegra_dp_pe_regs[][4][4] = {
 		{0x00},
 	},
 };
+#else
+static const u32 tegra_dp_pe_regs[][4][4] = {
+	/* postcursor2 L0 */
+	{
+		/* pre-emphasis: L0, L1, L2, L3 */
+		{0x00, 0x08, 0x12, 0x24}, /* voltage swing: L0 */
+		{0x01, 0x0e, 0x1d}, /* L1 */
+		{0x01, 0x13}, /* L2 */
+		{0x00}, /* L3 */
+	},
+
+	/* postcursor2 L1 */
+	{
+		{0x00, 0x08, 0x12, 0x24},
+		{0x00, 0x0e, 0x1d},
+		{0x00, 0x13},
+		{0x00},
+	},
+
+	/* postcursor2 L2 */
+	{
+		{0x00, 0x08, 0x12, 0x24},
+		{0x00, 0x0e, 0x1d},
+		{0x00, 0x13},
+		{0x00},
+	},
+
+	/* postcursor2 L3 */
+	{
+		{0x00, 0x08, 0x12, 0x24},
+		{0x00, 0x0e, 0x1d},
+		{0x00, 0x13},
+		{0x00},
+	},
+};
+#endif
 
 static const u32 tegra_dp_pc_regs[][4][4] = {
 	/* postcursor2 L0 */
@@ -141,7 +179,6 @@ static const u32 tegra_dp_pc_regs[][4][4] = {
 	},
 };
 
-/* TX_PU upper nibble values */
 static const u32 tegra_dp_tx_pu[][4][4] = {
 	/* postcursor2 L0 */
 	{

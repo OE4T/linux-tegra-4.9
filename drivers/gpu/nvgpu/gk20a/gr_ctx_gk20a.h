@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Context
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,10 +18,10 @@
 #ifndef __GR_CTX_GK20A_H__
 #define __GR_CTX_GK20A_H__
 
-
 /* production netlist, one and only one from below */
 /*#undef GK20A_NETLIST_IMAGE_FW_NAME*/
 #define GK20A_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_B
+
 /* emulation netlists, match majorV with HW */
 #define GK20A_NETLIST_IMAGE_A	"NETA_img.bin"
 #define GK20A_NETLIST_IMAGE_B	"NETB_img.bin"
@@ -145,5 +145,8 @@ struct gr_ucode_gk20a {
 /* main entry for grctx loading */
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr);
+
+struct gpu_ops;
+void gk20a_init_gr_ctx(struct gpu_ops *gops);
 
 #endif /*__GR_CTX_GK20A_H__*/

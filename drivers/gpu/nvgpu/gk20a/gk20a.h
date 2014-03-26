@@ -191,6 +191,10 @@ struct gpu_ops {
 		void *(*get_pmu_seq_out_a_ptr)(
 				struct pmu_sequence *seq);
 	} pmu_ver;
+	struct {
+		int (*get_netlist_name)(int index, char *name);
+		bool (*is_fw_defined)(void);
+	} gr_ctx;
 };
 
 struct gk20a {

@@ -96,6 +96,15 @@ static int gr_gk20a_get_netlist_name(int index, char *name)
 	return -1;
 }
 
+bool gr_gk20a_is_firmware_defined(void)
+{
+#ifdef GK20A_NETLIST_IMAGE_FW_NAME
+	return true;
+#else
+	return false;
+#endif
+}
+
 static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct device *d = dev_from_gk20a(g);
@@ -107,21 +116,21 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
-#ifdef GK20A_NETLIST_IMAGE_FW_NAME
-	net = NETLIST_FINAL;
-	max = 0;
-	major_v_hw = ~0;
-	g->gr.ctx_vars.dynamic = false;
-#else
-	net = NETLIST_SLOT_A;
-	max = MAX_NETLIST;
-	major_v_hw = gk20a_readl(g, gr_fecs_ctx_state_store_major_rev_id_r());
-	g->gr.ctx_vars.dynamic = true;
-#endif
+	if (g->ops.gr_ctx.is_fw_defined()) {
+		net = NETLIST_FINAL;
+		max = 0;
+		major_v_hw = ~0;
+		g->gr.ctx_vars.dynamic = false;
+	} else {
+		net = NETLIST_SLOT_A;
+		max = MAX_NETLIST;
+		major_v_hw = gk20a_readl(g,
+				gr_fecs_ctx_state_store_major_rev_id_r());
+		g->gr.ctx_vars.dynamic = true;
+	}
 
 	for (; net < max; net++) {
-
-		if (gr_gk20a_get_netlist_name(net, name) != 0) {
+		if (g->ops.gr_ctx.get_netlist_name(net, name) != 0) {
 			gk20a_warn(d, "invalid netlist index %d", net);
 			continue;
 		}
@@ -330,4 +339,10 @@ int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
 		return gr_gk20a_init_ctx_vars_sim(g, gr);
 	else
 		return gr_gk20a_init_ctx_vars_fw(g, gr);
+}
+
+void gk20a_init_gr_ctx(struct gpu_ops *gops)
+{
+	gops->gr_ctx.get_netlist_name = gr_gk20a_get_netlist_name;
+	gops->gr_ctx.is_fw_defined = gr_gk20a_is_firmware_defined;
 }

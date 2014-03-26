@@ -832,7 +832,7 @@ static int nvhost_pod_init(struct devfreq *df)
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
 	podgov->block = 0;
-	podgov->p_use_throughput_hint = 0;
+	podgov->p_use_throughput_hint = 1;
 
 	if (!strcmp(d->name, "vic03.0")) {
 		podgov->p_load_max = 990;
@@ -859,7 +859,6 @@ static int nvhost_pod_init(struct devfreq *df)
 			podgov->p_scaledown_limit = 1300;
 			podgov->p_smooth = 10;
 			podgov->p_damp = 7;
-			podgov->p_use_throughput_hint = 1;
 			break;
 		default:
 			pr_err("%s: un-supported chip id\n", __func__);

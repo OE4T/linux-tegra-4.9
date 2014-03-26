@@ -1934,10 +1934,9 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 
 	buf = (u8 *)ucode_info->surface_desc.cpuva;
 	if (!buf) {
-		release_firmware(fecs_fw);
-		release_firmware(gpccs_fw);
 		gk20a_err(d, "failed to map surface desc buffer");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto clean_up;
 	}
 
 	gr_gk20a_copy_ctxsw_ucode_segments(buf, &ucode_info->fecs,
@@ -1945,10 +1944,16 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.fecs.inst.l,
 		g->gr.ctx_vars.ucode.fecs.data.l);
 
+	release_firmware(fecs_fw);
+	fecs_fw = NULL;
+
 	gr_gk20a_copy_ctxsw_ucode_segments(buf, &ucode_info->gpccs,
 		gpccs_boot_image,
 		g->gr.ctx_vars.ucode.gpccs.inst.l,
 		g->gr.ctx_vars.ucode.gpccs.data.l);
+
+	release_firmware(gpccs_fw);
+	gpccs_fw = NULL;
 
 	err = gr_gk20a_init_ctxsw_ucode_vaspace(g);
 	if (err)
@@ -1971,6 +1976,11 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 				&attrs);
 	ucode_info->surface_desc.cpuva = NULL;
 	ucode_info->surface_desc.iova = 0;
+
+	release_firmware(gpccs_fw);
+	gpccs_fw = NULL;
+	release_firmware(fecs_fw);
+	fecs_fw = NULL;
 
 	return err;
 }

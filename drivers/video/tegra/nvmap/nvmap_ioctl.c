@@ -445,7 +445,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32)
 		op.handle = op32.handle;
 		op.offset = op32.offset;
 		op.length = op32.length;
-		op.flags = op32.length;
+		op.flags = op32.flags;
 		op.addr = op32.addr;
 	} else
 #endif

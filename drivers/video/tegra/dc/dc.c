@@ -3195,6 +3195,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	tegra_dc_create_sysfs(&dc->ndev->dev);
 
+	/*
+	 * Overriding the display mode only applies for modes set up during
+	 * boot. It should not apply for e.g. HDMI hotplug.
+	 */
+	dc->initialized = false;
+
 	return 0;
 
 err_remove_debugfs:

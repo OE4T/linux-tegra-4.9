@@ -205,6 +205,7 @@ struct nvmap_client {
 	struct task_struct		*task;
 	struct list_head		list;
 	u32				handle_count;
+	u32				next_fd;
 	struct nvmap_carveout_commit	carveout_commit[0];
 };
 
@@ -393,7 +394,8 @@ struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
 struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref);
 int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys);
 void __nvmap_unpin(struct nvmap_handle_ref *ref);
-int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags);
+int __nvmap_dmabuf_fd(struct nvmap_client *client,
+		      struct dma_buf *dmabuf, int flags);
 
 void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root);
 int nvmap_dmabuf_stash_init(void);

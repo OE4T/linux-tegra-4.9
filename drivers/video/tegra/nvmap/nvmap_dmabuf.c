@@ -600,17 +600,26 @@ err_nomem:
 	return ERR_PTR(err);
 }
 
-int __nvmap_dmabuf_fd(struct dma_buf *dmabuf, int flags)
+int __nvmap_dmabuf_fd(struct nvmap_client *client,
+		      struct dma_buf *dmabuf, int flags)
 {
 	int fd;
+	int start_fd = CONFIG_NVMAP_FD_START;
 
+#ifdef CONFIG_NVMAP_DEFER_FD_RECYCLE
+	if (client->next_fd < CONFIG_NVMAP_FD_START)
+		client->next_fd = CONFIG_NVMAP_FD_START;
+	start_fd = client->next_fd++;
+	if (client->next_fd >= CONFIG_NVMAP_DEFER_FD_RECYCLE_MAX_FD)
+		client->next_fd = CONFIG_NVMAP_FD_START;
+#endif
 	if (!dmabuf || !dmabuf->file)
 		return -EINVAL;
-	/* Allocate fd from 1024 onwards to overcome
+	/* Allocate fd from start_fd(>=1024) onwards to overcome
 	 * __FD_SETSIZE limitation issue for select(),
 	 * pselect() syscalls.
 	 */
-	fd = __alloc_fd(current->files, 1024,
+	fd = __alloc_fd(current->files, start_fd,
 			sysctl_nr_open, flags);
 	if (fd < 0)
 		return fd;
@@ -628,7 +637,7 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
 	dmabuf = __nvmap_dmabuf_export(client, h);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
-	fd = __nvmap_dmabuf_fd(dmabuf, O_CLOEXEC);
+	fd = __nvmap_dmabuf_fd(client, dmabuf, O_CLOEXEC);
 	if (fd < 0)
 		goto err_out;
 	return fd;

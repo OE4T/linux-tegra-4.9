@@ -363,11 +363,11 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 				  op.flags);
 }
 
-int nvmap_create_fd(struct nvmap_handle *h)
+int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
 {
 	int fd;
 
-	fd = __nvmap_dmabuf_fd(h->dmabuf, O_CLOEXEC);
+	fd = __nvmap_dmabuf_fd(client, h->dmabuf, O_CLOEXEC);
 	BUG_ON(fd == 0);
 	if (fd < 0) {
 		pr_err("Out of file descriptors");
@@ -410,7 +410,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
-	fd = nvmap_create_fd(ref->handle);
+	fd = nvmap_create_fd(client, ref->handle);
 	if (fd < 0)
 		err = fd;
 

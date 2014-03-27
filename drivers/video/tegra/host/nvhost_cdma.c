@@ -472,7 +472,7 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 	u32 slots_free = cdma->slots_free;
 	struct push_buffer *pb = &cdma->push_buffer;
 
-	if (iova)
+	if (cpuva)
 		trace_write_gather(cdma, cpuva, iova, offset, op1 & 0x1fff);
 
 	if (slots_free == 0) {

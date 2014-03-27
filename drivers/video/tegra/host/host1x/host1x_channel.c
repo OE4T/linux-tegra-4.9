@@ -270,7 +270,8 @@ static void submit_gathers(struct nvhost_job *job)
 				job->gathers[i].mem_base,
 				g->offset,
 				op1, op2);
-		dma_buf_vunmap(g->buf, cpuva);
+		if (cpuva)
+			dma_buf_vunmap(g->buf, cpuva);
 	}
 }
 

@@ -664,12 +664,13 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 		bpp = 16;
 #endif
 
-	ret = (dc->mode.pclk / 1000UL * bpp / 8);
+	ret = (dc->mode.pclk / 1000UL) * (bpp / 8);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	ret *= (win_use_v_filter(dc, w) ? 2 : 1);
 #endif
-	ret *=	div_u64(in_w, w->out_w * (WIN_IS_TILED(w) ?
-			tiled_windows_bw_multiplier : 1));
+	ret *= in_w;
+	ret = div_u64(ret, w->out_w * (WIN_IS_TILED(w) ?
+		      tiled_windows_bw_multiplier : 1));
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	/*
 	 * Assuming 60% efficiency: i.e. if we calculate we need 70MBps, we

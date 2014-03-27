@@ -1628,11 +1628,18 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 
 	mutex_lock(&dc->one_shot_lp_lock);
 	dc->out->user_needs_vblank = true;
+
+	mutex_lock(&dc->lock);
 	tegra_dc_unmask_interrupt(dc, MSF_INT);
+	mutex_unlock(&dc->lock);
 
 	ret = wait_for_completion_interruptible(&dc->out->user_vblank_comp);
 	init_completion(&dc->out->user_vblank_comp);
+
+	mutex_lock(&dc->lock);
 	tegra_dc_mask_interrupt(dc, MSF_INT);
+	mutex_unlock(&dc->lock);
+
 	mutex_unlock(&dc->one_shot_lp_lock);
 
 	if (dc->out_ops && dc->out_ops->release)

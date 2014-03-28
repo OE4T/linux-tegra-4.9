@@ -274,6 +274,11 @@ static inline void nvmap_ref_unlock(struct nvmap_client *priv)
  */
 static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 {
+	if (WARN_ON(!virt_addr_valid(h))) {
+		pr_err("%s: invalid handle\n", current->group_leader->comm);
+		return NULL;
+	}
+
 	if (unlikely(atomic_inc_return(&h->ref) <= 1)) {
 		pr_err("%s: %s attempt to get a freed handle\n",
 			__func__, current->group_leader->comm);

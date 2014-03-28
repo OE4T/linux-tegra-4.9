@@ -84,7 +84,7 @@ struct tegra_dc_ext_flip_2_32 {
 
 #endif
 
-int tegra_dc_ext_devno;
+dev_t tegra_dc_ext_devno;
 struct class *tegra_dc_ext_class;
 static int head_count;
 
@@ -1639,7 +1639,7 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 {
 	int ret;
 	struct tegra_dc_ext *ext;
-	int devno;
+	dev_t devno;
 
 	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
 	if (!ext)

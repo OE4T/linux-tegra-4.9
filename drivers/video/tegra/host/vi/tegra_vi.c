@@ -200,9 +200,11 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	tegra_vi1->vi_bw = vi_bw / 1000;
 	total_vi_bw = tegra_vi1->vi_bw;
 	if (pdata_vi1->master)
-		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->master;
+		pdata_vi2 = (struct nvhost_device_data *)
+			pdata_vi1->master->dev.platform_data;
 	else
-		pdata_vi2 = (struct nvhost_device_data *)pdata_vi1->slave;
+		pdata_vi2 = (struct nvhost_device_data *)
+			pdata_vi1->slave->dev.platform_data;
 
 	if (!pdata_vi2) {
 		mutex_unlock(&la_lock);

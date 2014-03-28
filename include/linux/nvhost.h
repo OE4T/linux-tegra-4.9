@@ -148,6 +148,7 @@ struct nvhost_device_data {
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 
 	/* device node for channel operations */
+	dev_t cdev_region;
 	struct device *node;
 	struct cdev cdev;
 

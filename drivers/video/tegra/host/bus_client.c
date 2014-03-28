@@ -974,6 +974,7 @@ static struct device *nvhost_client_device_create(
 	return dev;
 }
 
+#define NVHOST_NUM_CDEV 4
 int nvhost_client_user_init(struct platform_device *dev)
 {
 	dev_t devno;
@@ -982,11 +983,12 @@ int nvhost_client_user_init(struct platform_device *dev)
 
 	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */
 
-	err = alloc_chrdev_region(&devno, 0, 4, IFACE_NAME);
+	err = alloc_chrdev_region(&devno, 0, NVHOST_NUM_CDEV, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
 	}
+	pdata->cdev_region = devno;
 
 	pdata->node = nvhost_client_device_create(dev, &pdata->cdev,
 				"", devno, &nvhost_channelops);
@@ -1028,6 +1030,8 @@ void nvhost_client_user_deinit(struct platform_device *dev)
 			       pdata->ctrl_cdev.dev);
 		cdev_del(&pdata->ctrl_cdev);
 	}
+
+	unregister_chrdev_region(pdata->cdev_region, NVHOST_NUM_CDEV);
 }
 
 int nvhost_client_device_init(struct platform_device *dev)

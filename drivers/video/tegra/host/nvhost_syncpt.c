@@ -805,6 +805,8 @@ u32 nvhost_get_syncpt_client_managed(const char *syncpt_name)
 
 	if (!syncpt_name)
 		syncpt_name = kasprintf(GFP_KERNEL, "client_managed");
+	else
+		syncpt_name = kasprintf(GFP_KERNEL, "%s", syncpt_name);
 
 	id = nvhost_get_syncpt(&host->syncpt, true, syncpt_name);
 	if (!id) {
@@ -830,12 +832,10 @@ void nvhost_free_syncpt(u32 id)
 		nvhost_warn(d, "trying to free unused syncpt %u\n", id);
 		return;
 	}
-	if (nvhost_syncpt_client_managed(sp, id)) {
-		nvhost_err(d, "trying to free client managed syncpt %u\n", id);
-		return;
-	}
-	if (!nvhost_syncpt_min_eq_max(sp, id)) {
-		nvhost_err(d, "trying to free syncpt still in use %u\n", id);
+	if (!nvhost_syncpt_client_managed(sp, id) &&
+			!nvhost_syncpt_min_eq_max(sp, id)) {
+		nvhost_err(d,
+		    "trying to free host managed syncpt still in use %u\n", id);
 		return;
 	}
 

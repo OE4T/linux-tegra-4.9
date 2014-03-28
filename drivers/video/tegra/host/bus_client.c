@@ -933,7 +933,7 @@ static const char *get_device_name_for_dev(struct platform_device *dev)
 
 static struct device *nvhost_client_device_create(
 	struct platform_device *pdev, struct cdev *cdev,
-	const char *cdev_name, int devno,
+	const char *cdev_name, dev_t devno,
 	const struct file_operations *ops)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
@@ -976,7 +976,8 @@ static struct device *nvhost_client_device_create(
 
 int nvhost_client_user_init(struct platform_device *dev)
 {
-	int err, devno;
+	dev_t devno;
+	int err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */

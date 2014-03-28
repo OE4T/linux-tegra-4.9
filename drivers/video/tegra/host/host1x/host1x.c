@@ -518,7 +518,8 @@ static inline int nvhost_set_sysfs_capability_node(
 
 static int nvhost_user_init(struct nvhost_master *host)
 {
-	int err, devno;
+	dev_t devno;
+	int err;
 
 	host->nvhost_class = class_create(THIS_MODULE, IFACE_NAME);
 	if (IS_ERR(host->nvhost_class)) {

@@ -209,7 +209,7 @@ static void podgov_enable(struct devfreq *df, int enable)
 
 	podgov = df->data;
 
-	trace_podgov_enabled(enable);
+	trace_podgov_enabled(df->dev.parent, enable);
 
 	/* bad configuration. quit. */
 	if (df->min_freq == df->max_freq)
@@ -261,7 +261,7 @@ static void podgov_set_user_ctl(struct devfreq *df, int user)
 	mutex_lock(&df->lock);
 	podgov = df->data;
 
-	trace_podgov_set_user_ctl(user);
+	trace_podgov_set_user_ctl(df->dev.parent, user);
 
 	/* store the new user value */
 	old_user = podgov->p_user;
@@ -309,7 +309,7 @@ static void podgov_set_freq_request(struct devfreq *df, int freq_request)
 
 	podgov = df->data;
 
-	trace_podgov_set_freq_request(freq_request);
+	trace_podgov_set_freq_request(df->dev.parent, freq_request);
 
 	podgov->p_freq_request = freq_request;
 
@@ -351,7 +351,7 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
 
 	/* calculate and trace load */
 	load = 1000 - podgov->idle_avg;
-	trace_podgov_busy(load);
+	trace_podgov_busy(df->dev.parent, load);
 	damp = podgov->p_damp;
 
 	if ((1000 - podgov->idle) > podgov->p_load_max) {
@@ -382,7 +382,8 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
 	/* Convert to hz, limit, and apply */
 	res = res * 1000000;
 	scaling_limit(df, &res);
-	trace_podgov_scaling_state_check(df->previous_freq, res);
+	trace_podgov_scaling_state_check(df->dev.parent,
+					 df->previous_freq, res);
 	return res;
 }
 
@@ -493,7 +494,7 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 		podgov->block > 0)
 		goto exit_unlock;
 
-	trace_podgov_hint(podgov->idle, hint);
+	trace_podgov_hint(df->dev.parent, podgov->idle, hint);
 	podgov->last_throughput_hint = ktime_get();
 
 	curr = df->previous_freq;
@@ -522,14 +523,15 @@ static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
 	scaling_limit(df, &target);
 	if (target != curr) {
 		podgov->block = podgov->p_smooth;
-		trace_podgov_do_scale(df->previous_freq, target);
+		trace_podgov_do_scale(df->dev.parent,
+				      df->previous_freq, target);
 		podgov->adjustment_frequency = target;
 		podgov->adjustment_type = ADJUSTMENT_LOCAL;
 		update_devfreq(df);
 	}
 
-	trace_podgov_print_target(idle, avg_idle, curr / 1000000, target, hint,
-		avg_hint);
+	trace_podgov_print_target(df->dev.parent, idle, avg_idle,
+				  curr / 1000000, target, hint, avg_hint);
 
 exit_unlock:
 	mutex_unlock(&df->lock);
@@ -760,8 +762,9 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		    dev_stat.current_frequency)
 			return GET_TARGET_FREQ_DONTSCALE;
 
-		trace_podgov_estimate_freq(df->previous_freq,
-			podgov->adjustment_frequency);
+		trace_podgov_estimate_freq(df->dev.parent,
+					   df->previous_freq,
+					   podgov->adjustment_frequency);
 
 		*freq = podgov->adjustment_frequency;
 		return 0;
@@ -798,7 +801,7 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 
 	podgov->last_scale = now;
 
-	trace_podgov_estimate_freq(df->previous_freq, *freq);
+	trace_podgov_estimate_freq(df->dev.parent, df->previous_freq, *freq);
 
 
 	return 0;

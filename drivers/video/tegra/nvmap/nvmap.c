@@ -274,7 +274,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 				h->size >> PAGE_SHIFT, -1, prot);
 		}
 #ifdef NVMAP_LAZY_VFREE
-		if (vaddr && atomic_long_cmpxchg(&h->vaddr, NULL, vaddr))
+		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		return h->vaddr;
 #endif

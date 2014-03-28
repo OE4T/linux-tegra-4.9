@@ -759,7 +759,7 @@ static void heap_page_cache_maint(
 		if (!h->vaddr)
 			vaddr = vm_map_ram(h->pgalloc.pages,
 					h->size >> PAGE_SHIFT, -1, prot);
-		if (vaddr && atomic_long_cmpxchg(&h->vaddr, NULL, vaddr))
+		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		if (h->vaddr) {
 			/* Fast inner cache maintenance using single mapping */

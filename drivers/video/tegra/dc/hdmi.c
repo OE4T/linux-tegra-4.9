@@ -2137,59 +2137,6 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_dvfs_set_rate(hdmi->clk, 0);
 }
 
-
-/* To determine the best parent clock rate for a nominal HDMI pixel clock
- * rate for T124 host1x display controller
- * o inputs:
- *  - dc: pointer to the display controller
- *  - parent_clk: pointer to the parent clock
- *  - pclk: rate of nominal HDMI pixel clock in Hz
- * o outputs:
- *  - return: best parent clock rate in Hz
- */
-static unsigned long  tegra12x_hdmi_determine_parent(
-	struct tegra_dc *dc, struct clk *parent_clk, int pclk)
-{
-	/* T124 hdmi pclk:
-	 *   parentClk = pclk * m  (m=1,1.5,2,2.5,...,128.5)
-	 *   (refclk * n) = pclk * m  (n=1,1.5,2,2.5,...,128.5)
-	 *     (no half resolutions for m due to uneven out duty cycle)
-	 *   (refclk * N / 2) = pclk * m  (N=2,3,4,...,257)
-	 *   m = (refclk / 2 * N) / pclk  (m=1,2,3,...,128)
-	 *     looking for N to make m whole number
-	 */
-	int  n, m;
-	int  b, fr, f;
-
-	/* following parameters should come from parent clock */
-	const int  ref  = 12000000;   /* reference clock to parent */
-	const int  pmax = 600000000;  /* max freq of parent clock */
-	const int  pmin = 200000000;  /* min freq of parent clock */
-
-	b = 0;
-	fr = 1000;
-	for (n = 4; (ref / 2 * n) <= pmax; n++) {
-		if ((ref / 2 * n) < pmin)  /* too low */
-			continue;
-		m = (ref / 2 * n) / (pclk / 1000);
-		if (m <= 1700)  /* for 2 <= m */
-			continue;
-		f = m % 1000;  /* fractional parts */
-		f = (0 == f) ? f : (1000 - f);  /* round-up */
-		if (0 == f) {  /* exact match */
-			b = n;
-			fr = f;
-			break;
-		} else if (f < fr) {
-			b = n;
-			fr = f;
-		}
-	}
-
-	return (unsigned long)(ref / 2 * b);
-}
-
-
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
@@ -2221,7 +2168,18 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	 * as out0 is 1/2 of the actual PLL output.
 	 */
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	rate = tegra12x_hdmi_determine_parent(dc, parent_clk, dc->mode.pclk);
+	if (dc->mode.pclk == 25200000)
+		rate = dc->mode.pclk  * 10;
+	else {
+		rate = dc->mode.pclk * 2;
+		while (rate < 400000000)
+			rate *= 2;
+		/* If the rate exceeds the max controller clock, stick with
+		 * rate * 2. Is there a better way to query max clock,
+		 * clk_get_max_rate() is confined to arch/arm/mach-tegra */
+		if (rate > 600000000)
+			rate /= 2;
+	}
 #else
 	rate = dc->mode.pclk * 2;
 	while (rate < 500000000)

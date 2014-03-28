@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -33,7 +33,7 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 
 	rate = tegra_dc_clk_get_rate(dc);
 
-	div = DIV_ROUND_UP(rate * 2, pclk);
+	div = DIV_ROUND_CLOSEST(rate * 2, pclk);
 
 	if (div < 2)
 		return 0;
@@ -48,7 +48,7 @@ unsigned long tegra_dc_pclk_predict_rate(struct clk *parent, int pclk)
 
 	rate = clk_get_rate(parent);
 
-	div = DIV_ROUND_UP(rate * 2, pclk);
+	div = DIV_ROUND_CLOSEST(rate * 2, pclk);
 
 	if (div < 2)
 		return 0;

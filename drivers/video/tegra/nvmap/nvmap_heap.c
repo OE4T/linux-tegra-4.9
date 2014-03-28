@@ -70,6 +70,7 @@ struct nvmap_heap {
 	phys_addr_t base;
 	/* heap size */
 	size_t len;
+	struct device dev;
 	struct device *cma_dev;
 	struct device *dma_dev;
 };
@@ -239,16 +240,32 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		dma_get_contiguous_stats(co->cma_dev, &stats);
 		base = stats.base;
 		len = stats.size;
+		h->cma_dev = co->cma_dev;
+		h->dma_dev = co->dma_dev;
 #else
-		kfree(h);
-		return NULL;
+		goto fail;
 #endif
+	} else {
+		int err;
+
+		dev_set_name(&h->dev, "%s", co->name);
+		dma_set_coherent_mask(&h->dev, DMA_BIT_MASK(64));
+		/* declare Non-CMA heap */
+		err = dma_declare_coherent_memory(&h->dev, 0, base, len,
+				DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+		if (err & DMA_MEMORY_NOMAP) {
+			dev_info(&h->dev, "dma coherent mem declare %pa,%zu\n",
+				&base, len);
+		} else {
+			dev_dbg(&h->dev, "dma coherent declare fail %pa,%zu\n",
+				&base, len);
+			goto fail;
+		}
+		h->dma_dev = &h->dev;
 	}
 
 	h->name = co->name;
 	h->arg = arg;
-	h->cma_dev = co->cma_dev;
-	h->dma_dev = co->dma_dev;
 	h->base = base;
 	h->len = len;
 	INIT_LIST_HEAD(&h->all_list);
@@ -266,6 +283,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;
+fail:
+	kfree(h);
+	return NULL;
 }
 
 void *nvmap_heap_to_arg(struct nvmap_heap *heap)

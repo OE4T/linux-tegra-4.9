@@ -26,7 +26,6 @@ t12x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_12x_SOC))
 
 nvhost-objs = \
 	nvhost_acm.o \
-	nvhost_as.o \
 	nvhost_syncpt.o \
 	nvhost_cdma.o \
 	nvhost_intr.o \

@@ -33,9 +33,9 @@
 #include "dev.h"
 #include "class_ids.h"
 #include "bus_client.h"
-#include "nvhost_as.h"
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
+#include "nvhost_channel.h"
 
 #include "host1x/host1x_hwctx.h"
 

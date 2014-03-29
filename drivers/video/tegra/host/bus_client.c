@@ -45,7 +45,6 @@
 #include "bus_client.h"
 #include "dev.h"
 #include "class_ids.h"
-#include "nvhost_as.h"
 #include "chip_support.h"
 #include "nvhost_acm.h"
 
@@ -1017,17 +1016,6 @@ struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd)
 	return userctx->hwctx;
 }
 
-
-static const struct file_operations nvhost_asops = {
-	.owner = THIS_MODULE,
-	.release = nvhost_as_dev_release,
-	.open = nvhost_as_dev_open,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = nvhost_as_dev_ctl,
-#endif
-	.unlocked_ioctl = nvhost_as_dev_ctl,
-};
-
 static struct {
 	int class_id;
 	const char *dev_name;
@@ -1123,9 +1111,9 @@ int nvhost_client_user_init(struct platform_device *dev)
 	int err, devno;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	/* reserve 3 minor #s for <dev> and as-<dev>, and ctrl-<dev> */
+	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */
 
-	err = alloc_chrdev_region(&devno, 0, 5, IFACE_NAME);
+	err = alloc_chrdev_region(&devno, 0, 4, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
 		goto fail;
@@ -1135,15 +1123,6 @@ int nvhost_client_user_init(struct platform_device *dev)
 				"", devno, &nvhost_channelops);
 	if (pdata->node == NULL)
 		goto fail;
-
-	if (pdata->as_ops) {
-		++devno;
-		pdata->as_node = nvhost_client_device_create(dev,
-						&pdata->as_cdev, "as-",
-						devno, &nvhost_asops);
-		if (pdata->as_node == NULL)
-			goto fail;
-	}
 
 	/* module control (npn-channel based, global) interface */
 	if (pdata->ctrl_ops) {

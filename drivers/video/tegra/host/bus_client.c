@@ -1131,13 +1131,10 @@ int nvhost_client_user_init(struct platform_device *dev)
 		goto fail;
 	}
 
-	/* gk20a creates the channel node by itself */
-	if (pdata->class != NV_GRAPHICS_GPU_CLASS_ID) {
-		pdata->node = nvhost_client_device_create(dev, &pdata->cdev,
-					"", devno, &nvhost_channelops);
-		if (pdata->node == NULL)
-			goto fail;
-	}
+	pdata->node = nvhost_client_device_create(dev, &pdata->cdev,
+				"", devno, &nvhost_channelops);
+	if (pdata->node == NULL)
+		goto fail;
 
 	if (pdata->as_ops) {
 		++devno;

@@ -377,13 +377,12 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 	inst_pa = (u32)(inst_pa >> bar1_instance_block_shift_gk20a());
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
 
-	/* this is very early in init... can we defer this? */
-	{
-		gk20a_writel(g, bus_bar1_block_r(),
-			     bus_bar1_block_target_vid_mem_f() |
-			     bus_bar1_block_mode_virtual_f() |
-			     bus_bar1_block_ptr_f(inst_pa));
-	}
+	gk20a_writel(g, bus_bar1_block_r(),
+		     bus_bar1_block_target_vid_mem_f() |
+		     bus_bar1_block_mode_virtual_f() |
+		     bus_bar1_block_ptr_f(inst_pa));
+	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
+		return -EBUSY;
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -2702,11 +2701,12 @@ clean_up:
 	return err;
 }
 
-void gk20a_mm_fb_flush(struct gk20a *g)
+int gk20a_mm_fb_flush(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 data;
 	s32 retry = 100;
+	int ret = 0;
 
 	gk20a_dbg_fn("");
 
@@ -2734,11 +2734,15 @@ void gk20a_mm_fb_flush(struct gk20a *g)
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (retry < 0) {
 		gk20a_warn(dev_from_gk20a(g),
 			"fb_flush too many retries");
+		ret = -EBUSY;
+	}
 
 	mutex_unlock(&mm->l2_op_lock);
+
+	return ret;
 }
 
 static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)

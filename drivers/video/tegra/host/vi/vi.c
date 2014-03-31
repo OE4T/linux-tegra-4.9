@@ -33,7 +33,6 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include "t114/t114.h"
 #include "t124/t124.h"
 #include "vi.h"
 #include "vi_irq.h"
@@ -48,10 +47,6 @@
 #define VI_DEFAULT_MAX_BW	840000
 
 static struct of_device_id tegra_vi_of_match[] = {
-#ifdef TEGRA_11X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra114-vi",
-		.data = (struct nvhost_device_data *)&t11_vi_info },
-#endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-vi",
 		.data = (struct nvhost_device_data *)&t124_vi_info },

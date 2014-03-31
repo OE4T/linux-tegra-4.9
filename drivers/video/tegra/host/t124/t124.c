@@ -36,7 +36,7 @@
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
-#include "gr3d/scale3d.h"
+#include "scale3d.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
 

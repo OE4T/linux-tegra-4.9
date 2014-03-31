@@ -106,6 +106,4 @@ static inline struct platform_device *nvhost_get_parent(
 		? to_platform_device(_dev->dev.parent) : NULL;
 }
 
-void nvhost_host1x_update_clk(struct platform_device *pdev);
-
 #endif

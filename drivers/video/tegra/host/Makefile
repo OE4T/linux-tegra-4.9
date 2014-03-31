@@ -4,23 +4,6 @@ ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 
-#
-# Arrange for code sharing among configurations.
-#
-config_present = $(if $(findstring y,$(1)),y,)
-
-all_configs = $(call config_present,$(CONFIG_ARCH_TEGRA_2x_SOC) \
- $(CONFIG_ARCH_TEGRA_3x_SOC) $(CONFIG_ARCH_TEGRA_11x_SOC) \
- $(CONFIG_ARCH_TEGRA_12x_SOC))
-
-t3x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_3x_SOC)\
-  $(t11x_or_higher_config))
-
-t11x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_11x_SOC)\
-  $(t12x_or_higher_config))
-
-t12x_or_higher_config = $(call config_present,$(CONFIG_ARCH_TEGRA_12x_SOC))
-
 nvhost-objs = \
 	nvhost_acm.o \
 	nvhost_syncpt.o \
@@ -33,18 +16,16 @@ nvhost-objs = \
 	bus_client.o \
 	chip_support.o \
 	nvhost_scale.o \
-	user_hwctx.o
+	pod_scaling.o \
+	scale3d.o
 
-obj-$(all_configs) += nvhost.o
-obj-$(all_configs) += host1x/
-obj-$(all_configs) += gr3d/
-obj-$(t11x_or_higher_config) += t114/
-obj-$(t11x_or_higher_config) += msenc/
-obj-$(t11x_or_higher_config) += tsec/
-obj-$(CONFIG_TEGRA_GRHOST) += gr2d/
+obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
+obj-$(CONFIG_TEGRA_GRHOST) += host1x/
+obj-$(CONFIG_TEGRA_GRHOST) += msenc/
+obj-$(CONFIG_TEGRA_GRHOST) += tsec/
 obj-$(CONFIG_TEGRA_GRHOST) += isp/
 obj-$(CONFIG_TEGRA_GRHOST) += vi/
-obj-$(t12x_or_higher_config) += t124/
-obj-$(t12x_or_higher_config) += vic03/
+obj-$(CONFIG_TEGRA_GRHOST) += t124/
+obj-$(CONFIG_TEGRA_GRHOST) += vic03/
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o

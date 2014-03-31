@@ -52,7 +52,6 @@
 
 #include "nvhost_scale.h"
 #include "chip_support.h"
-#include "t114/t114.h"
 #include "t124/t124.h"
 
 #define DRIVER_NAME		"host1x"
@@ -628,35 +627,12 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 }
 
 static struct of_device_id tegra_host1x_of_match[] = {
-#ifdef TEGRA_11X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra114-host1x",
-		.data = (struct nvhost_device_data *)&t11_host1x_info },
-#endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-host1x",
 		.data = (struct nvhost_device_data *)&t124_host1x_info },
 #endif
 	{ },
 };
-
-void nvhost_host1x_update_clk(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = NULL;
-	struct nvhost_device_profile *profile;
-
-	/* There are only two chips which need this workaround, so hardcode */
-#ifdef TEGRA_11X_OR_HIGHER_CONFIG
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
-		pdata = &t11_gr3d_info;
-#endif
-	if (!pdata)
-		return;
-
-	profile = pdata->power_profile;
-
-	if (profile && profile->actmon)
-		actmon_op().update_sample_period(profile->actmon);
-}
 
 int nvhost_host1x_finalize_poweron(struct platform_device *dev)
 {

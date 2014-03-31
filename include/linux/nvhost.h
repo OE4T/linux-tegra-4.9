@@ -235,9 +235,6 @@ struct nvhost_device_data {
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			u32 waitbase, struct nvhost_channel *ch);
-
-	/* Callback when a clock is changed */
-	void (*update_clk)(struct platform_device *dev);
 };
 
 

@@ -40,7 +40,6 @@
 #include "nvhost_acm.h"
 #include "chip_support.h"
 #include "nvhost_intr.h"
-#include "t114/t114.h"
 #include "t124/t124.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
@@ -506,10 +505,6 @@ int nvhost_tsec_prepare_poweroff(struct platform_device *dev)
 
 
 static struct of_device_id tegra_tsec_of_match[] = {
-#ifdef TEGRA_11X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra114-tsec",
-		.data = (struct nvhost_device_data *)&t11_tsec_info },
-#endif
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra124-tsec",
 		.data = (struct nvhost_device_data *)&t124_tsec_info },

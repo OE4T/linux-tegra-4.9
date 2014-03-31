@@ -412,7 +412,8 @@ int freqlist_up(struct podgov_info_rec *podgov, unsigned long target, int steps)
  * lower compared to the target frequency.
  ******************************************************************************/
 
-int freqlist_down(struct podgov_info_rec *podgov, unsigned long target, int steps)
+int freqlist_down(struct podgov_info_rec *podgov, unsigned long target,
+		  int steps)
 {
 	int i, pos;
 

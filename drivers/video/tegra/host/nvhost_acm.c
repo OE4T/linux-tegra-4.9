@@ -281,9 +281,6 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 
 	ret = clk_set_rate(pdata->clk[index], rate);
 
-	if (pdata->update_clk)
-		pdata->update_clk(dev);
-
 	return ret;
 
 }

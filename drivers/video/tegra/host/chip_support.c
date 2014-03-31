@@ -23,7 +23,6 @@
 #include <linux/tegra-soc.h>
 
 #include "chip_support.h"
-#include "t114/t114.h"
 #include "t124/t124.h"
 
 struct nvhost_chip_support *nvhost_chip_ops;
@@ -47,11 +46,6 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 	}
 
 	switch (tegra_get_chipid()) {
-	case TEGRA_CHIPID_TEGRA11:
-		nvhost_chip_ops->soc_name = "tegra11x";
-		err = nvhost_init_t114_support(host, nvhost_chip_ops);
-		break;
-
 	case TEGRA_CHIPID_TEGRA12:
 		nvhost_chip_ops->soc_name = "tegra12x";
 		err = nvhost_init_t124_support(host, nvhost_chip_ops);

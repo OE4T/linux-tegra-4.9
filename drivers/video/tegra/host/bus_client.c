@@ -52,7 +52,6 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_hwctx.h"
-#include "user_hwctx.h"
 #include "nvhost_sync.h"
 
 static int validate_reg(struct platform_device *ndev, u32 offset, int count)
@@ -500,124 +499,6 @@ fail:
 	return err;
 }
 
-static int nvhost_ioctl_channel_set_ctxswitch(
-		struct nvhost_channel_userctx *ctx,
-		struct nvhost_set_ctxswitch_args *args)
-{
-	struct nvhost_cmdbuf cmdbuf_save;
-	struct nvhost_cmdbuf cmdbuf_restore;
-	struct nvhost_syncpt_incr save_incr, restore_incr;
-	u32 save_waitbase, restore_waitbase;
-	struct nvhost_reloc reloc;
-	struct nvhost_hwctx_handler *ctxhandler = NULL;
-	struct nvhost_hwctx *nhwctx = NULL;
-	struct user_hwctx *hwctx;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->ch->dev);
-	int err;
-
-	/* Only channels with context support */
-	if (!ctx->hwctx)
-		return -EFAULT;
-
-	/* We don't yet support other than one nvhost_syncpt_incrs per submit */
-	if (args->num_cmdbufs_save != 1
-			|| args->num_cmdbufs_restore != 1
-			|| args->num_save_incrs != 1
-			|| args->num_restore_incrs != 1
-			|| args->num_relocs != 1)
-		return -EINVAL;
-
-	err = copy_from_user(&cmdbuf_save,
-			(void *)(uintptr_t)args->cmdbuf_save,
-			sizeof(cmdbuf_save));
-	if (err)
-		goto fail;
-
-	err = copy_from_user(&cmdbuf_restore,
-			(void *)(uintptr_t)args->cmdbuf_restore,
-			sizeof(cmdbuf_restore));
-	if (err)
-		goto fail;
-
-	err = copy_from_user(&reloc, (void *)(uintptr_t)args->relocs,
-			sizeof(reloc));
-	if (err)
-		goto fail;
-
-	err = copy_from_user(&save_incr,
-			(void *)(uintptr_t)args->save_incrs,
-			sizeof(save_incr));
-	if (err)
-		goto fail;
-	err = copy_from_user(&save_waitbase,
-			(void *)(uintptr_t)args->save_waitbases,
-			sizeof(save_waitbase));
-
-	err = copy_from_user(&restore_incr,
-			(void *)(uintptr_t)args->restore_incrs,
-			sizeof(restore_incr));
-	if (err)
-		goto fail;
-	err = copy_from_user(&restore_waitbase,
-			(void *)(uintptr_t)args->restore_waitbases,
-			sizeof(restore_waitbase));
-
-	if (save_incr.syncpt_id != pdata->syncpts[0]
-			|| restore_incr.syncpt_id != pdata->syncpts[0]
-			|| save_waitbase != pdata->waitbases[0]
-			|| restore_waitbase != pdata->waitbases[0]) {
-		err = -EINVAL;
-		goto fail;
-	}
-	ctxhandler = user_ctxhandler_init(save_incr.syncpt_id,
-			save_waitbase, ctx->ch);
-	if (!ctxhandler) {
-		err = -ENOMEM;
-		goto fail;
-	}
-
-	nhwctx = ctxhandler->alloc(ctxhandler, ctx->ch);
-	if (!nhwctx) {
-		err = -ENOMEM;
-		goto fail_hwctx;
-	}
-	hwctx = to_user_hwctx(nhwctx);
-
-	trace_nvhost_ioctl_channel_set_ctxswitch(ctx->ch->dev->name, nhwctx,
-			cmdbuf_save.mem, cmdbuf_save.offset, cmdbuf_save.words,
-			cmdbuf_restore.mem, cmdbuf_restore.offset,
-			cmdbuf_restore.words,
-			pdata->syncpts[0], pdata->waitbases[0],
-			save_incr.syncpt_incrs, restore_incr.syncpt_incrs);
-
-	err = user_hwctx_set_restore(hwctx, cmdbuf_restore.mem,
-			cmdbuf_restore.offset, cmdbuf_restore.words);
-	if (err)
-		goto fail_set_restore;
-
-	err = user_hwctx_set_save(hwctx, cmdbuf_save.mem,
-			cmdbuf_save.offset, cmdbuf_save.words, &reloc);
-	if (err)
-		goto fail_set_save;
-
-	hwctx->hwctx.save_incrs = save_incr.syncpt_incrs;
-	hwctx->hwctx.restore_incrs = restore_incr.syncpt_incrs;
-
-	/* Free old context */
-	ctx->hwctx->h->put(ctx->hwctx);
-	ctx->hwctx = nhwctx;
-
-	return 0;
-
-fail_set_save:
-fail_set_restore:
-	ctxhandler->put(&hwctx->hwctx);
-fail_hwctx:
-	user_ctxhandler_free(ctxhandler);
-fail:
-	return err;
-}
-
 static int moduleid_to_index(struct platform_device *dev, u32 moduleid)
 {
 	int i;
@@ -964,9 +845,6 @@ static long nvhost_channelctl(struct file *filp,
 		}
 		break;
 	}
-	case NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH:
-		err = nvhost_ioctl_channel_set_ctxswitch(priv, (void *)buf);
-		break;
 	default:
 		nvhost_dbg_info("unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

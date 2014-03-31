@@ -149,6 +149,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.clocks		= { {"nvjpg", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_nvjpg_init,
 	.deinit		= nvhost_nvjpg_deinit,
+	.finalize_poweron = nvhost_nvjpg_t210_finalize_poweron,
 	.moduleid	= NVHOST_MODULE_NVJPG,
 	.num_channels  = 1,
 };

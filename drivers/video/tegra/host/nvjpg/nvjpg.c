@@ -397,6 +397,12 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 	m->valid = false;
 }
 
+int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev)
+{
+	host1x_writel(dev, 0x117c, 0x18004);
+	return nvhost_nvjpg_finalize_poweron(dev);
+}
+
 int nvhost_nvjpg_finalize_poweron(struct platform_device *dev)
 {
 	return nvjpg_boot(dev);

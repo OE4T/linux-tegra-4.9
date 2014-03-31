@@ -22,6 +22,7 @@
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
+#include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
@@ -74,6 +75,22 @@ struct nvmap_heap {
 	struct device *cma_dev;
 	struct device *dma_dev;
 };
+
+void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
+{
+	if (sizeof(heap->base) == sizeof(u64))
+		debugfs_create_x64("base", S_IRUGO,
+			heap_root, (u64 *)&heap->base);
+	else
+		debugfs_create_x32("base", S_IRUGO,
+			heap_root, (u32 *)&heap->base);
+	if (sizeof(heap->len) == sizeof(u64))
+		debugfs_create_x64("size", S_IRUGO,
+			heap_root, (u64 *)&heap->len);
+	else
+		debugfs_create_x32("size", S_IRUGO,
+			heap_root, (u32 *)&heap->len);
+}
 
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
 {

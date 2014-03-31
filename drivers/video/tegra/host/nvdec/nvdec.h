@@ -3,7 +3,7 @@
  *
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/nvhost.h>
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
+int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_init(struct platform_device *dev);
 void nvhost_nvdec_deinit(struct platform_device *dev);
 

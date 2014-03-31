@@ -398,6 +398,17 @@ void nvhost_nvdec_deinit(struct platform_device *dev)
 	m->valid = false;
 }
 
+int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev)
+{
+	host1x_writel(dev, 0x117c, 0x18004);
+	host1x_writel(dev, 0x2314, 0x10940000);
+	host1x_writel(dev, 0x2318, 0xff00a725);
+	host1x_writel(dev, 0x2328, 0x0);
+	host1x_writel(dev, 0x232c, 0x80000);
+	host1x_writel(dev, 0x2330, 0xfffffff8);
+	return nvhost_nvdec_finalize_poweron(dev);
+}
+
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
 	return nvdec_boot(dev);

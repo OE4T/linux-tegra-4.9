@@ -349,6 +349,17 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
 	sync_timeline_signal(&obj->obj);
 }
 
+int nvhost_sync_fence_set_name(int fence_fd, const char *name)
+{
+	struct sync_fence *fence = nvhost_sync_fdget(fence_fd);
+	if (!fence)
+		return -EINVAL;
+	strlcpy(fence->name, name, sizeof(fence->name));
+	sync_fence_put(fence);
+	return 0;
+}
+EXPORT_SYMBOL(nvhost_sync_fence_set_name);
+
 int nvhost_sync_create_fence_fd(struct platform_device *pdev,
 		struct nvhost_ctrl_sync_fence_info *pts,
 		u32 num_pts, const char *name, int *fence_fd)

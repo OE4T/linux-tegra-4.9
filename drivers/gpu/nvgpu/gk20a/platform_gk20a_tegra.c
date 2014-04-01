@@ -354,8 +354,9 @@ static int gk20a_tegra_railgate(struct platform_device *pdev)
 
 static int gk20a_tegra_unrailgate(struct platform_device *pdev)
 {
-	tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
-	return 0;
+	int ret;
+	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+	return ret;
 }
 
 struct {

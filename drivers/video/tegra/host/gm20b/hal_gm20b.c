@@ -14,14 +14,15 @@
  */
 
 #include <linux/types.h>
-#include "dev.h"
+
 #include "gk20a/gk20a.h"
+
 #include "ltc_gm20b.h"
 #include "gr_gm20b.h"
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
-
 #include "gm20b_gating_reglist.h"
+
 struct gpu_ops gm20b_ops = {
 	.clock_gating = {
 		.slcg_gr_load_gating_prod =

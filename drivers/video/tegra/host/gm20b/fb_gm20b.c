@@ -14,16 +14,17 @@
  */
 
 #include <linux/types.h>
-#include <dev.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/kind_gk20a.h"
+
 #include "hw_fb_gm20b.h"
 #include "hw_top_gm20b.h"
 #include "hw_gmmu_gm20b.h"
 
 static void fb_gm20b_init_fs_state(struct gk20a *g)
 {
-	nvhost_dbg_info("initialize gm20b fb");
+	gk20a_dbg_info("initialize gm20b fb");
 
 	gk20a_writel(g, fb_fbhub_num_active_ltcs_r(),
 			g->ltc_count);

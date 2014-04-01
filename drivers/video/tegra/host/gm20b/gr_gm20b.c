@@ -14,9 +14,10 @@
  */
 
 #include <linux/types.h>
-#include <dev.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
+
 #include "gr_gm20b.h"
 #include "hw_gr_gm20b.h"
 #include "hw_fb_gm20b.h"
@@ -27,7 +28,7 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
 	u32 temp;
 
-	nvhost_dbg_info("initialize gpc mmu");
+	gk20a_dbg_info("initialize gpc mmu");
 
 	temp = gk20a_readl(g, fb_mmu_ctrl_r());
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
@@ -141,7 +142,7 @@ static void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 
 	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
 
-	nvhost_dbg_info("bundle cb token limit : %d, state limit : %d",
+	gk20a_dbg_info("bundle cb token limit : %d, state limit : %d",
 		   g->gr.bundle_cb_token_limit, data);
 
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
@@ -162,7 +163,7 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	u32 temp;
 	u32 cbm_cfg_size1, cbm_cfg_size2;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (patch) {
 		int err;
@@ -252,7 +253,7 @@ static void gr_gm20b_commit_global_pagepool(struct gk20a *g,
 static int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
 					  u32 class_num, u32 offset, u32 data)
 {
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (class_num == MAXWELL_COMPUTE_B) {
 		switch (offset << 2) {
@@ -292,7 +293,7 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 pd_ab_max_output;
 	u32 alpha_cb_size = data * 4;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 	/* if (NO_ALPHA_BETA_TIMESLICE_SUPPORT_DEF)
 		return; */
 
@@ -338,7 +339,7 @@ void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_index, ppc_index, stride, val;
 	u32 cb_size = data * 4;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (cb_size > gr->attrib_cb_size)
 		cb_size = gr->attrib_cb_size;
@@ -480,7 +481,7 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
 	u32 tpc_per_gpc;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	for (tpc_index = 0; tpc_index < gr->max_tpc_per_gpc_count; tpc_index++) {
 		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {

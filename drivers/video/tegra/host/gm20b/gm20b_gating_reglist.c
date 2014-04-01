@@ -23,7 +23,7 @@
 #define __gm20b_gating_reglist_h__
 
 #include <linux/types.h>
-#include "dev.h"
+
 #include "gm20b_gating_reglist.h"
 
 struct gating_desc {

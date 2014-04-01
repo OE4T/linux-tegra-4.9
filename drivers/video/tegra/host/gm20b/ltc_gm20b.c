@@ -49,7 +49,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	u32 compbit_backing_size;
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (max_comptag_lines == 0) {
 		gr->compbit_store.size = 0;
@@ -78,9 +78,9 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
 
-	nvhost_dbg_info("compbit backing store size : %d",
+	gk20a_dbg_info("compbit backing store size : %d",
 		compbit_backing_size);
-	nvhost_dbg_info("max comptag lines : %d",
+	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
@@ -88,7 +88,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gr->compbit_store.pages = dma_alloc_attrs(d, gr->compbit_store.size,
 						  &iova, GFP_KERNEL, &attrs);
 	if (!gr->compbit_store.pages) {
-		nvhost_err(dev_from_gk20a(g), "failed to allocate"
+		gk20a_err(dev_from_gk20a(g), "failed to allocate"
 			   "backing store for compbit : size %d",
 			   compbit_backing_size);
 		return -ENOMEM;
@@ -113,7 +113,7 @@ static int gm20b_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
 				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 
-	nvhost_dbg_fn("");
+	gk20a_dbg_fn("");
 
 	if (gr->compbit_store.size == 0)
 		return 0;
@@ -149,7 +149,7 @@ static int gm20b_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 					!tegra_platform_is_silicon());
 
 			if (!time_before(jiffies, end_jiffies)) {
-				nvhost_err(dev_from_gk20a(g),
+				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				return -EBUSY;
 			}
@@ -161,11 +161,11 @@ static int gm20b_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 
 static void gm20b_ltc_init_fs_state(struct gk20a *g)
 {
-	nvhost_dbg_info("initialize gm20b l2");
+	gk20a_dbg_info("initialize gm20b l2");
 
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());
-	nvhost_dbg_info("%d ltcs out of %d", g->ltc_count, g->max_ltc_count);
+	gk20a_dbg_info("%d ltcs out of %d", g->ltc_count, g->max_ltc_count);
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r(),
 	g->ltc_count);

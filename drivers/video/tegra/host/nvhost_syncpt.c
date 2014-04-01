@@ -38,7 +38,7 @@
 #include "host1x/host1x.h"
 
 #define MAX_SYNCPT_LENGTH	5
-#define NUM_SYSFS_ENTRY		4
+#define NUM_SYSFS_ENTRY		5
 
 /* Name of sysfs node for min and max value */
 static const char *min_name = "min";
@@ -610,6 +610,19 @@ static ssize_t syncpt_type_show(struct kobject *kobj,
 		return snprintf(buf, PAGE_SIZE, "%s\n", "non_client_managed");
 }
 
+static ssize_t syncpt_is_assigned(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_syncpt_attr *syncpt_attr =
+		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	if (nvhost_is_syncpt_assigned(&syncpt_attr->host->syncpt,
+			syncpt_attr->id))
+		return snprintf(buf, PAGE_SIZE, "%s\n", "assigned");
+	else
+		return snprintf(buf, PAGE_SIZE, "%s\n", "not_assigned");
+}
+
 /* Displays the current value of the sync point via sysfs */
 static ssize_t syncpt_name_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -660,6 +673,7 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 				       struct nvhost_syncpt_attr *max,
 				       struct nvhost_syncpt_attr *sp_name,
 				       struct nvhost_syncpt_attr *sp_type,
+				       struct nvhost_syncpt_attr *sp_assigned,
 				       int i)
 {
 	char name[MAX_SYNCPT_LENGTH];
@@ -675,6 +689,8 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 	SYSFS_SP_TIMELINE_ATTR(max, max_name, syncpt_max_show);
 	SYSFS_SP_TIMELINE_ATTR(sp_name, "name", syncpt_name_show);
 	SYSFS_SP_TIMELINE_ATTR(sp_type, "syncpt_type", syncpt_type_show);
+	SYSFS_SP_TIMELINE_ATTR(sp_assigned, "syncpt_assigned",
+							syncpt_is_assigned);
 	return 0;
 }
 
@@ -946,9 +962,11 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+2];
 		struct nvhost_syncpt_attr *syncpt_type =
 			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+3];
+		struct nvhost_syncpt_attr *syncpt_assigned =
+			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY+4];
 
 		err = nvhost_syncpt_timeline_attr(host, sp, min, max, name,
-					syncpt_type, i);
+					syncpt_type, syncpt_assigned, i);
 		if (err)
 			goto fail;
 
@@ -970,6 +988,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 					  &sp->invalid_max_attr,
 					  &sp->invalid_name_attr,
 					  &sp->invalid_syncpt_type_attr,
+					  &sp->invalid_assigned_attr,
 					  NVSYNCPT_INVALID);
 	if (err)
 		goto fail;

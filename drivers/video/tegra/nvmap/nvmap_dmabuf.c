@@ -747,25 +747,6 @@ int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
 	return __nvmap_get_handle_param(NULL, info->handle, param, result);
 }
 
-struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf)
-{
-	struct nvmap_handle_info *info;
-
-	if (WARN_ON(!virt_addr_valid(dmabuf)))
-		return ERR_PTR(-EINVAL);
-
-	info = dmabuf->priv;
-	return __nvmap_sg_table(NULL, info->handle);
-}
-
-void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt)
-{
-	if (WARN_ON(!virt_addr_valid(sgt)))
-		return;
-
-	__nvmap_free_sg_table(NULL, NULL, sgt);
-}
-
 /*
  * List detailed info for all buffers allocated.
  */

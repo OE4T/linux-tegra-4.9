@@ -62,10 +62,6 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
 
-struct sg_table *nvmap_dmabuf_sg_table(struct dma_buf *dmabuf);
-
-void nvmap_dmabuf_free_sg_table(struct dma_buf *dmabuf, struct sg_table *sgt);
-
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS

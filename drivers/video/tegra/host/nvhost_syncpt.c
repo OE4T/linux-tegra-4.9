@@ -238,6 +238,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
 
+	if (!id || id >= nvhost_syncpt_nb_pts(sp))
+		return -EINVAL;
+
 	if (value)
 		*value = 0;
 

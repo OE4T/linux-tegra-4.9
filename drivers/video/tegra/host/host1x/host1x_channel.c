@@ -129,6 +129,17 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	if (!fence)
 		return;
 
+	/* validate syncpt ids */
+	list_for_each(pos, &fence->pt_list_head) {
+		u32 id;
+		pt = container_of(pos, struct sync_pt, pt_list);
+		id = nvhost_sync_pt_id(pt);
+		if (!id || id >= nvhost_syncpt_nb_pts(sp)) {
+			sync_fence_put(fence);
+			return;
+		}
+	}
+
 	/*
 	 * Force serialization by inserting a host wait for the
 	 * previous job to finish before this one can commence.

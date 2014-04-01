@@ -122,6 +122,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_msenc_init,
 	.deinit		= nvhost_msenc_deinit,
+	.finalize_poweron = nvhost_msenc_t210_finalize_poweron,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.num_channels  = 1,
 };

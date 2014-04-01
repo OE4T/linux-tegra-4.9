@@ -143,6 +143,8 @@ struct nvhost_fence {
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
 /* create a sync fence fd instead of raw fence */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	BIT(3)
+/* suppress WFI before fence trigger */
+#define NVHOST_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	BIT(4)
 
 struct nvhost_submit_gpfifo_args {
 	__u64 gpfifo;

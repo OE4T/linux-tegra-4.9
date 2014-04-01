@@ -77,6 +77,7 @@ struct gk20a_channel_sync {
 	int (*incr_user_syncpt)(struct gk20a_channel_sync *s,
 				struct priv_cmd_entry **entry,
 				struct gk20a_channel_fence *fence,
+				bool wfi,
 				u32 *id, u32 *thresh);
 
 	/* Increment syncpoint/semaphore, so that the returned fence represents
@@ -89,6 +90,7 @@ struct gk20a_channel_sync {
 	int (*incr_user_fd)(struct gk20a_channel_sync *s,
 			    struct priv_cmd_entry **entry,
 			    struct gk20a_channel_fence *fence,
+			    bool wfi,
 			    int *fd);
 
 	/* Reset the channel syncpoint/semaphore. */

@@ -171,6 +171,10 @@ static void gm20b_ltc_init_fs_state(struct gk20a *g)
 	g->ltc_count);
 	gk20a_writel(g, ltc_ltcs_misc_ltc_num_active_ltcs_r(),
 	g->ltc_count);
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_cfg0_r(),
+		     gk20a_readl(g, ltc_ltc0_lts0_dstg_cfg0_r()) |
+		     ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m());
 }
 
 void gm20b_init_ltc(struct gpu_ops *gops)

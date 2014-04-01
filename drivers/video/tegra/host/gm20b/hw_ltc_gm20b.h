@@ -54,6 +54,18 @@ static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x0014046c;
 }
+static inline u32 ltc_ltc0_lts0_dstg_cfg0_r(void)
+{
+	return 0x00140518;
+}
+static inline u32 ltc_ltcs_ltss_dstg_cfg0_r(void)
+{
+	return 0x0017e318;
+}
+static inline u32 ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m(void)
+{
+	return 0x1 << 15;
+}
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_r(void)
 {
 	return 0x00140494;

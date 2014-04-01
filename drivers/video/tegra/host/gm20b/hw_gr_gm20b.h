@@ -2950,6 +2950,18 @@ static inline u32 gr_bes_zrop_settings_num_active_ltcs_f(u32 v)
 {
 	return (v & 0xf) << 0;
 }
+static inline u32 gr_be0_crop_debug3_r(void)
+{
+	return 0x00410108;
+}
+static inline u32 gr_bes_crop_debug3_r(void)
+{
+	return 0x00408908;
+}
+static inline u32 gr_bes_crop_debug3_comp_vdc_4to2_disable_m(void)
+{
+	return 0x1 << 31;
+}
 static inline u32 gr_bes_crop_settings_r(void)
 {
 	return 0x00408958;

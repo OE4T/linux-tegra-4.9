@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -545,6 +545,10 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	gk20a_writel(g, gr_bes_crop_settings_r(),
 		     gr_bes_crop_settings_num_active_ltcs_f(gr->num_fbps));
 
+	gk20a_writel(g, gr_bes_crop_debug3_r(),
+		     gk20a_readl(g, gr_be0_crop_debug3_r()) |
+		     gr_bes_crop_debug3_comp_vdc_4to2_disable_m());
+
 	if (tegra_platform_is_silicon()) {
 		gk20a_writel(g, gr_fe_tpc_fs_r(), gr->pes_tpc_mask[0][0]);
 
@@ -561,6 +565,7 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 		gk20a_writel(g, gr_cwd_sm_id_r(0), gr_cwd_sm_id_tpc0_f(0));
 
 	}
+
 	return 0;
 }
 

@@ -119,6 +119,16 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	if (!sync_fence)
 		return -EINVAL;
 
+	/* validate syncpt ids */
+	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
+		u32 wait_id = nvhost_sync_pt_id(pt);
+		if (!wait_id ||
+			 wait_id >= nvhost_syncpt_nb_pts_ext(sp->host1x_pdev)) {
+			sync_fence_put(sync_fence);
+			return -EINVAL;
+		}
+	}
+
 	num_wait_cmds = nvhost_sync_num_pts(sync_fence);
 	gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, &wait_cmd);
 	if (wait_cmd == NULL) {

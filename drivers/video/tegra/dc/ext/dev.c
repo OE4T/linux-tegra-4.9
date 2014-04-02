@@ -121,7 +121,7 @@ static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
 
 static inline int test_bit_u32(int nr, const u32 *addr)
 {
-	return 1UL & (addr[BIT_WORD(nr)] >> (nr & (BITS_PER_LONG-1)));
+	return 1UL & (addr[nr / 32] >> (nr & 31));
 }
 
 int tegra_dc_ext_get_num_outputs(void)

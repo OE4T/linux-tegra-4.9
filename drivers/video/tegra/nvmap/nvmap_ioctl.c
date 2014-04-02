@@ -970,6 +970,9 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 	if (!h)
 		return -EFAULT;
 
+	if (op == NVMAP_CACHE_OP_INV)
+		op = NVMAP_CACHE_OP_WB_INV;
+
 	cache_op.h = h;
 	cache_op.start = start;
 	cache_op.end = end;

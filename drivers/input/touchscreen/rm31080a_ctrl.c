@@ -1,9 +1,9 @@
 /*
  * Raydium RM31080 touchscreen driver
  *
- * Copyright (C) 2012-2013, Raydium Semiconductor Corporation.
+ * Copyright (C) 2012-2014, Raydium Semiconductor Corporation.
  * All Rights Reserved.
- * Copyright (C) 2012-2013, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2014, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -25,7 +25,7 @@
 /*=============================================================================
 	GLOBAL VARIABLES DECLARATION
 =============================================================================*/
-struct rm_tch_ctrl_para g_stCtrl;
+struct rm_tch_ctrl_para g_st_ctrl;
 
 /*=============================================================================
 	FUNCTION DECLARATION
@@ -40,7 +40,7 @@ struct rm_tch_ctrl_para g_stCtrl;
 =============================================================================*/
 void rm_tch_ctrl_init(void)
 {
-	memset(&g_stCtrl, 0, sizeof(struct rm_tch_ctrl_para));
+	memset(&g_st_ctrl, 0, sizeof(struct rm_tch_ctrl_para));
 }
 
 /*=============================================================================
@@ -54,7 +54,8 @@ void rm_tch_ctrl_init(void)
 unsigned char rm_tch_ctrl_get_idle_mode(u8 *p)
 {
 	u32 u32Ret;
-	u32Ret = copy_to_user(p, &g_stCtrl.bfIdleModeCheck, 1);
+	u32Ret = copy_to_user(p,
+		&g_st_ctrl.u8_idle_mode_check, 1);
 	if (u32Ret)
 		return RETURN_FAIL;
 	return RETURN_OK;
@@ -71,7 +72,8 @@ unsigned char rm_tch_ctrl_get_idle_mode(u8 *p)
 void rm_tch_ctrl_set_parameter(void *arg)
 {
 	ssize_t missing;
-	missing = copy_from_user(&g_stCtrl, arg, sizeof(struct rm_tch_ctrl_para));
+	missing = copy_from_user(&g_st_ctrl,
+		arg, sizeof(struct rm_tch_ctrl_para));
 	if (missing)
 		return;
 }

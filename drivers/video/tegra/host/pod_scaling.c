@@ -863,6 +863,7 @@ static int nvhost_pod_init(struct devfreq *df)
 			podgov->p_scaledown_limit = 1300;
 			podgov->p_smooth = 10;
 			podgov->p_damp = 7;
+			podgov->p_use_throughput_hint = 0;
 			break;
 		default:
 			pr_err("%s: un-supported chip id\n", __func__);

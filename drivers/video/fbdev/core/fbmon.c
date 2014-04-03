@@ -795,6 +795,14 @@ static void get_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 	if (c) {
 		specs->input |= FB_DISP_DDI;
 		DPRINTK("      Digital Display Input");
+		/*
+		 * EDID v1.4
+		 * byte0x14 bit6-4: Bit depth per primary color
+		 *    0:undefined / 1:6bits / 2:8bits / 3:10bits / ...
+		 */
+		specs->bpc = ((block[0] >> 4) & 0x07) ?
+			((block[0] >> 4) & 0x07) * 2 + 4 : 0;
+		DPRINTK("\n      Bits Per Primary Color - %d", specs->bpc);
 	} else {
 		DPRINTK("      Analog Display Input: Input Voltage - ");
 		switch ((block[0] & 0x60) >> 5) {

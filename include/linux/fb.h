@@ -87,6 +87,7 @@ struct fb_monspecs {
 	__u8  revision;			/* ...and revision */
 	__u8  max_x;			/* Maximum horizontal size (cm) */
 	__u8  max_y;			/* Maximum vertical size (cm) */
+	__u8  bpc;			/* bits per prim-color - 0:unknown */
 };
 
 struct fb_cmap_user {

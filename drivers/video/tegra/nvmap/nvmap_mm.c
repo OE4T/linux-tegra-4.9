@@ -86,11 +86,12 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 }
 
 /*
- * Flush the list of passed handles. This will optimze the flush if it can.
+ * Perform cache op on the list of passed handles.
+ * This will optimze the op if it can.
  * In the case that all the handles together are larger than the inner cache
  * maint threshold it is possible to just do an entire inner cache flush.
  */
-int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr)
+int nvmap_do_cache_maint_list(struct nvmap_handle **handles, int op, int nr)
 {
 	int i, err = 0;
 	u64 total = 0;
@@ -101,8 +102,13 @@ int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr)
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */
 	if (total >= cache_maint_inner_threshold) {
-		inner_flush_cache_all();
-		outer_flush_all();
+		if (op == NVMAP_CACHE_OP_WB) {
+			inner_clean_cache_all();
+			outer_clean_all();
+		} else {
+			inner_flush_cache_all();
+			outer_flush_all();
+		}
 		nvmap_stats_inc(NS_CFLUSH_RQ, total);
 		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
 		trace_nvmap_cache_flush(total,
@@ -114,7 +120,7 @@ int nvmap_flush_cache_list(struct nvmap_handle **handles, int nr)
 			err = __nvmap_do_cache_maint(handles[i]->owner,
 						     handles[i], 0,
 						     handles[i]->size,
-						     NVMAP_CACHE_OP_WB_INV);
+						     op);
 			if (err)
 				break;
 		}

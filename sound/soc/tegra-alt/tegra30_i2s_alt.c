@@ -25,6 +25,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -43,6 +44,7 @@
 
 #include "tegra30_xbar_alt.h"
 #include "tegra30_i2s_alt.h"
+#include "tegra30_apbif_alt.h"
 
 #define DRV_NAME "tegra30-i2s"
 
@@ -355,6 +357,83 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int tegra30_i2s_soft_reset(struct tegra30_i2s *i2s)
+{
+	int dcnt = 10;
+	unsigned int val, ctrl_val;
+
+	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &ctrl_val);
+
+	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
+		TEGRA30_I2S_CTRL_SOFT_RESET, TEGRA30_I2S_CTRL_SOFT_RESET);
+
+	do {
+		udelay(100);
+		regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &val);
+	} while ((val & TEGRA30_I2S_CTRL_SOFT_RESET) && dcnt--);
+
+	/* Restore reg_ctrl to ensure if a concurrent playback/capture
+	   session was active it continues after SOFT_RESET */
+	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
+		TEGRA30_I2S_CTRL_SOFT_RESET, 0);
+
+	regmap_write(i2s->regmap, TEGRA30_I2S_CTRL, ctrl_val);
+
+	return (dcnt < 0) ? -ETIMEDOUT : 0;
+}
+
+static int tegra30_i2s_rx_stop(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+	int dcnt = 10;
+
+	/* wait until rx fifo is disabled */
+	while (tegra30_apbif_i2s_rx_fifo_is_enabled(dev->id) && dcnt--)
+		udelay(100);
+
+	dcnt = 10;
+	while (!tegra30_apbif_i2s_rx_fifo_is_empty(dev->id) && dcnt--)
+		udelay(100);
+
+	if (dcnt < 0) {
+		dcnt = 10;
+		tegra30_i2s_soft_reset(i2s);
+		while (!tegra30_apbif_i2s_rx_fifo_is_empty(dev->id) &&
+		       dcnt--)
+			udelay(100);
+	}
+	return 0;
+}
+
+static int tegra30_i2s_tx_stop(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+	int dcnt = 10;
+
+	/* wait until tx fifo is disabled */
+	while (tegra30_apbif_i2s_tx_fifo_is_enabled(dev->id) && dcnt--)
+		udelay(100);
+
+	dcnt = 10;
+	while (!tegra30_apbif_i2s_tx_fifo_is_empty(dev->id) && dcnt--)
+		udelay(100);
+
+	if (dcnt < 0) {
+		dcnt = 10;
+		tegra30_i2s_soft_reset(i2s);
+		while (!tegra30_apbif_i2s_tx_fifo_is_empty(dev->id) &&
+		       dcnt--)
+			udelay(100);
+	}
+	return 0;
+}
+
 static int tegra30_i2s_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra30_i2s *i2s = snd_soc_codec_get_drvdata(codec);
@@ -432,10 +511,12 @@ static const struct snd_soc_dapm_widget tegra30_i2s_widgets[] = {
 				0, 0),
 	SND_SOC_DAPM_AIF_OUT("CIF TX", NULL, 0, SND_SOC_NOPM,
 				0, 0),
-	SND_SOC_DAPM_AIF_IN("DAP RX", NULL, 0, TEGRA30_I2S_CTRL,
-				TEGRA30_I2S_CTRL_XFER_EN_RX_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("DAP TX", NULL, 0, TEGRA30_I2S_CTRL,
-				TEGRA30_I2S_CTRL_XFER_EN_TX_SHIFT, 0),
+	SND_SOC_DAPM_AIF_IN_E("DAP RX", NULL, 0, TEGRA30_I2S_CTRL,
+				TEGRA30_I2S_CTRL_XFER_EN_RX_SHIFT, 0,
+				tegra30_i2s_rx_stop, SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_OUT_E("DAP TX", NULL, 0, TEGRA30_I2S_CTRL,
+				TEGRA30_I2S_CTRL_XFER_EN_TX_SHIFT, 0,
+				tegra30_i2s_tx_stop, SND_SOC_DAPM_POST_PMD),
 };
 
 static const struct snd_soc_dapm_route tegra30_i2s_routes[] = {
@@ -491,6 +572,7 @@ static bool tegra30_i2s_wr_rd_reg(struct device *dev, unsigned int reg)
 static bool tegra30_i2s_volatile_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
+	case TEGRA30_I2S_CTRL:
 	case TEGRA30_I2S_FLOW_STATUS:
 	case TEGRA30_I2S_FLOW_TOTAL:
 	case TEGRA30_I2S_FLOW_OVER:
@@ -622,6 +704,13 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 		goto err_pll_a_out0_clk_put;
 	}
 	regcache_cache_only(i2s->regmap, true);
+
+	if (of_property_read_u32(pdev->dev.of_node,
+		"nvidia,ahub-i2s-id", &pdev->dev.id) < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-i2s-id\n");
+		ret = -ENODEV;
+		goto err;
+	}
 
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {

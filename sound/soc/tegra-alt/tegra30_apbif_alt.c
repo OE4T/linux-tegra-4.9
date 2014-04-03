@@ -34,6 +34,8 @@
 
 #define DRV_NAME "tegra30-ahub-apbif"
 
+struct tegra30_apbif *apbif;
+
 #define FIFOS_IN_FIRST_REG_BLOCK 4
 
 #define LAST_REG(name) \
@@ -178,6 +180,54 @@ static int tegra30_apbif_runtime_resume(struct device *dev)
 	return 0;
 }
 
+int tegra30_apbif_i2s_rx_fifo_is_enabled(int i2s_id)
+{
+	int val;
+
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_LIVE_STATUS, &val);
+	val &= (TEGRA_AHUB_I2S_LIVE_STATUS_I2S0_RX_FIFO_ENABLED <<
+			(i2s_id * 2));
+
+	return val;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_rx_fifo_is_enabled);
+
+int tegra30_apbif_i2s_tx_fifo_is_enabled(int i2s_id)
+{
+	int val;
+
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_LIVE_STATUS, &val);
+	val &= (TEGRA_AHUB_I2S_LIVE_STATUS_I2S0_TX_FIFO_ENABLED <<
+			(i2s_id * 2));
+
+	return val;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_tx_fifo_is_enabled);
+
+int tegra30_apbif_i2s_rx_fifo_is_empty(int i2s_id)
+{
+	int val;
+
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_LIVE_STATUS, &val);
+	val &= (TEGRA_AHUB_I2S_LIVE_STATUS_I2S0_RX_FIFO_EMPTY <<
+			(i2s_id * 2));
+
+	return val;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_rx_fifo_is_empty);
+
+int tegra30_apbif_i2s_tx_fifo_is_empty(int i2s_id)
+{
+	int val;
+
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_LIVE_STATUS, &val);
+	val &= (TEGRA_AHUB_I2S_LIVE_STATUS_I2S0_TX_FIFO_EMPTY <<
+			(i2s_id * 2));
+
+	return val;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_tx_fifo_is_empty);
+
 static int tegra30_apbif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -308,6 +358,12 @@ static void tegra30_apbif_stop_playback(struct snd_soc_dai *dai)
 	reg = TEGRA_AHUB_CHANNEL_CTRL +
 		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);
 	regmap_update_bits(regmap, reg, TEGRA_AHUB_CHANNEL_CTRL_TX_EN, 0);
+
+	/* soft reset APBIF TX */
+	reg = TEGRA_AHUB_CHANNEL_CLEAR +
+		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);
+	regmap_update_bits(regmap, reg,
+		TEGRA_AHUB_CHANNEL_CLEAR_TX_SOFT_RESET, 1);
 }
 
 static void tegra30_apbif_start_capture(struct snd_soc_dai *dai)
@@ -347,6 +403,12 @@ static void tegra30_apbif_stop_capture(struct snd_soc_dai *dai)
 	reg = TEGRA_AHUB_CHANNEL_CTRL +
 		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);
 	regmap_update_bits(regmap, reg, TEGRA_AHUB_CHANNEL_CTRL_RX_EN, 0);
+
+	/* soft reset APBIF RX */
+	reg = TEGRA_AHUB_CHANNEL_CLEAR +
+		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);
+	regmap_update_bits(regmap, reg,
+		TEGRA_AHUB_CHANNEL_CLEAR_RX_SOFT_RESET, 1);
 }
 
 static int tegra30_apbif_trigger(struct snd_pcm_substream *substream, int cmd,
@@ -527,7 +589,6 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 	int i;
 	struct clk *clk;
 	int ret;
-	struct tegra30_apbif *apbif;
 	void __iomem *regs;
 	struct resource *res[2];
 	u32 of_dma[10][2];

@@ -302,6 +302,11 @@
 /* TEGRA_AHUB_CIF_RX9_CTRL */
 #define TEGRA_AHUB_CIF_RX9_CTRL				0xb8
 
+int tegra30_apbif_i2s_rx_fifo_is_enabled(int i2s_id);
+int tegra30_apbif_i2s_tx_fifo_is_enabled(int i2s_id);
+int tegra30_apbif_i2s_rx_fifo_is_empty(int i2s_id);
+int tegra30_apbif_i2s_tx_fifo_is_empty(int i2s_id);
+
 struct tegra30_apbif_soc_data {
 	unsigned int num_ch;
 	unsigned int clk_list_mask;

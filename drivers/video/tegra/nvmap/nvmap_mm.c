@@ -101,14 +101,11 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 			      u32 *sizes, int op, int nr)
 {
-	int i, err = 0;
+	int i;
 	u64 total = 0;
 
-	for (i = 0; i < nr; i++) {
-		offsets[i] = sizes[i] ? offsets[i] : 0;
-		sizes[i] = sizes[i] ? sizes[i] : handles[i]->size;
-		total += sizes[i];
-	}
+	for (i = 0; i < nr; i++)
+		total += sizes[i] ? sizes[i] : handles[i]->size;
 
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */
@@ -128,16 +125,18 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 					nvmap_stats_read(NS_CFLUSH_DONE));
 	} else {
 		for (i = 0; i < nr; i++) {
-			err = __nvmap_do_cache_maint(handles[i]->owner,
-						     handles[i], offsets[i],
-						     offsets[i] + sizes[i],
-						     op, false);
+			u32 size = sizes[i] ? sizes[i] : handles[i]->size;
+			u32 offset = sizes[i] ? offsets[i] : 0;
+			int err = __nvmap_do_cache_maint(handles[i]->owner,
+							 handles[i], offset,
+							 offset + size,
+							 op, false);
 			if (err)
-				break;
+				return err;
 		}
 	}
 
-	return err;
+	return 0;
 }
 
 void nvmap_zap_handle(struct nvmap_handle *handle,

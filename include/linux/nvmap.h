@@ -224,8 +224,13 @@ struct nvmap_cache_op_32 {
 #endif
 
 struct nvmap_cache_op_list {
-	__u32 handles;		/* Uspace ptr to list of handles */
+	__u64 handles;		/* Ptr to u32 type array, holding handles */
+	__u64 offsets;		/* Ptr to u32 type array, holding offsets
+				 * into handle mem */
+	__u64 sizes;		/* Ptr to u32 type array, holindg sizes of memory
+				 * regions within each handle */
 	__u32 nr;		/* Number of handles */
+	__s32 op;		/* wb/wb_inv/inv */
 };
 
 #define NVMAP_IOC_MAGIC 'N'

@@ -1114,3 +1114,61 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	free_vm_area(area);
 	return ret ?: copied;
 }
+
+int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg)
+{
+	struct nvmap_cache_op_list op;
+	u32 *handle_ptr;
+	u32 *offset_ptr;
+	u32 *size_ptr;
+	struct nvmap_handle **refs;
+	int i, err = 0;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (!op.nr)
+		return -EINVAL;
+
+	if (!access_ok(VERIFY_READ, op.handles, op.nr * sizeof(u32)))
+		return -EFAULT;
+
+	if (!access_ok(VERIFY_READ, op.offsets, op.nr * sizeof(u32)))
+		return -EFAULT;
+
+	if (!access_ok(VERIFY_READ, op.sizes, op.nr * sizeof(u32)))
+		return -EFAULT;
+
+	if (!op.offsets || !op.sizes)
+		return -EINVAL;
+
+	refs = kcalloc(op.nr, sizeof(*refs), GFP_KERNEL);
+
+	if (!refs)
+		return -ENOMEM;
+
+	handle_ptr = (u32 *)(uintptr_t)op.handles;
+	offset_ptr = (u32 *)(uintptr_t)op.offsets;
+	size_ptr = (u32 *)(uintptr_t)op.sizes;
+
+	for (i = 0; i < op.nr; i++) {
+		u32 handle;
+
+		if (copy_from_user(&handle, &handle_ptr[i], sizeof(handle))) {
+			err = -EFAULT;
+			goto free_mem;
+		}
+
+		refs[i] = unmarshal_user_handle(handle);
+		if (!refs[i]) {
+			err = -EINVAL;
+			goto free_mem;
+		}
+	}
+
+	err = nvmap_do_cache_maint_list(refs, offset_ptr, size_ptr, op.op, op.nr);
+
+free_mem:
+	kfree(refs);
+	return err;
+}

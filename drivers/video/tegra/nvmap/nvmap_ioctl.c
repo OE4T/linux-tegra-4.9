@@ -324,9 +324,6 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
 	op.align = max_t(size_t, op.align, PAGE_SIZE);
-#if defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
-	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
-#endif
 
 	return nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
 				  0, /* no kind */
@@ -352,9 +349,6 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
 	op.align = max_t(size_t, op.align, PAGE_SIZE);
-#if defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
-	op.flags |= NVMAP_HANDLE_ZEROED_PAGES;
-#endif
 
 	return nvmap_alloc_handle(client, handle,
 				  op.heap_mask,

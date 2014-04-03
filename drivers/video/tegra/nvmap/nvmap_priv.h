@@ -60,6 +60,8 @@
 
 #define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN | NVMAP_ZEROED_PAGES)
 
+extern bool zero_memory;
+
 #ifdef CONFIG_64BIT
 #define NVMAP_LAZY_VFREE
 #endif

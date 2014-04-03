@@ -43,7 +43,21 @@
 #include "nvmap_ioctl.h"
 
 bool zero_memory;
-module_param(zero_memory, bool, 0644);
+
+static int zero_memory_set(const char *arg, const struct kernel_param *kp)
+{
+	param_set_bool(arg, kp);
+	nvmap_page_pool_clear();
+	return 0;
+}
+
+static struct kernel_param_ops zero_memory_ops = {
+	.get = param_get_bool,
+	.set = zero_memory_set,
+};
+
+module_param_cb(zero_memory, &zero_memory_ops, &zero_memory, 0644);
+
 u32 nvmap_max_handle_count;
 
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
@@ -105,12 +119,14 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 #endif
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	pool = &nvmap_dev->pool;
+	if (!zero_memory) {
+		pool = &nvmap_dev->pool;
 
-	nvmap_page_pool_lock(pool);
-	page_index = __nvmap_page_pool_fill_lots_locked(pool, h->pgalloc.pages,
-							nr_page);
-	nvmap_page_pool_unlock(pool);
+		nvmap_page_pool_lock(pool);
+		page_index = __nvmap_page_pool_fill_lots_locked(pool,
+						h->pgalloc.pages, nr_page);
+		nvmap_page_pool_unlock(pool);
+	}
 #endif
 
 	for (i = page_index; i < nr_page; i++)
@@ -148,24 +164,15 @@ static int handle_page_alloc(struct nvmap_client *client,
 	size_t size = PAGE_ALIGN(h->size);
 	unsigned int nr_page = size >> PAGE_SHIFT;
 	pgprot_t prot;
-	unsigned int i = 0, page_index;
+	unsigned int i = 0, page_index = 0;
 	struct page **pages;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	struct nvmap_page_pool *pool = NULL;
-	phys_addr_t paddr;
 #endif
 	gfp_t gfp = GFP_NVMAP;
-	unsigned long kaddr = 0;
-	struct vm_struct *area = NULL;
 
-	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory) {
+	if (zero_memory)
 		gfp |= __GFP_ZERO;
-		prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-		area = alloc_vm_area(PAGE_SIZE, NULL);
-		if (!area)
-			return -ENOMEM;
-		kaddr = (ulong)area->addr;
-	}
 
 	pages = altalloc(nr_page * sizeof(*pages));
 	if (!pages)
@@ -193,30 +200,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 		page_index = __nvmap_page_pool_alloc_lots_locked(pool, pages,
 								 nr_page);
 		nvmap_page_pool_unlock(pool);
-
-		if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory) {
-			for (i = 0; i < page_index; i++) {
-				/*
-				 * Just memset low mem pages; they will for
-				 * sure have a virtual address. Otherwise, build
-				 * a mapping for the page in the kernel.
-				 */
-				if (!PageHighMem(pages[i])) {
-					memset(page_address(pages[i]), 0,
-					       PAGE_SIZE);
-				} else {
-					paddr = page_to_phys(pages[i]);
-					ioremap_page_range(kaddr,
-						kaddr + PAGE_SIZE,
-						paddr, prot);
-					memset((char *)kaddr, 0, PAGE_SIZE);
-					unmap_kernel_range(kaddr, PAGE_SIZE);
-				}
-			}
-		}
-		i = page_index;
 #endif
-		for (; i < nr_page; i++) {
+		for (i = page_index; i < nr_page; i++) {
 			pages[i] = nvmap_alloc_pages_exact(gfp,	PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
@@ -231,8 +216,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	 */
 	nvmap_flush_cache(pages, nr_page);
 
-	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory)
-		free_vm_area(area);
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
@@ -240,8 +223,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	return 0;
 
 fail:
-	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES || zero_memory)
-		free_vm_area(area);
 	while (i--)
 		__free_page(pages[i]);
 	altfree(pages, nr_page * sizeof(*pages));

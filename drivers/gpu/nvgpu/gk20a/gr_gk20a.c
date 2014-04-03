@@ -322,6 +322,34 @@ static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 	return -EAGAIN;
 }
 
+static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
+		u32 expect_delay)
+{
+	u32 val;
+	u32 delay = expect_delay;
+
+	gk20a_dbg_fn("");
+
+	do {
+		val = gk20a_readl(g, gr_status_r());
+
+		if (!gr_status_fe_method_upper_v(val) &&
+			!gr_status_fe_method_lower_v(val) &&
+			!gr_status_fe_method_fe_gi_v(val)) {
+			gk20a_dbg_fn("done");
+			return 0;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
+
+	gk20a_err(dev_from_gk20a(g),
+		"timeout, fe busy : %x", val);
+
+	return -EAGAIN;
+}
 static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 {
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -1475,7 +1503,8 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 
 	/* load bundle init */
 	for (i = 0; i < sw_bundle_init->count; i++) {
-
+		err |= gr_gk20a_wait_fe_idle(g, end_jiffies,
+					GR_IDLE_CHECK_DEFAULT);
 		if (i == 0 || last_bundle_data != sw_bundle_init->l[i].value) {
 			gk20a_writel(g, gr_pipe_bundle_data_r(),
 				sw_bundle_init->l[i].value);

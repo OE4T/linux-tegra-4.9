@@ -234,6 +234,10 @@ static inline u32 gr_status_r(void)
 {
 	return 0x00400700;
 }
+static inline u32 gr_status_fe_method_upper_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
 static inline u32 gr_status_fe_method_lower_v(u32 r)
 {
 	return (r >> 2) & 0x1;
@@ -241,6 +245,10 @@ static inline u32 gr_status_fe_method_lower_v(u32 r)
 static inline u32 gr_status_fe_method_lower_idle_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 gr_status_fe_method_fe_gi_v(u32 r)
+{
+	return (r >> 21) & 0x1;
 }
 static inline u32 gr_status_mask_r(void)
 {

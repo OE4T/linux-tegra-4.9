@@ -23,38 +23,8 @@
 #ifndef __VIDEO_TEGRA_NVMAP_IOCTL_H
 #define __VIDEO_TEGRA_NVMAP_IOCTL_H
 
-#include <linux/ioctl.h>
-
-#ifdef  __KERNEL__
-#include <linux/file.h>
 #include <linux/nvmap.h>
-#endif
 
-/* Hack for L4T builds.
- * gstreamer is directly including this header and
- * looking for ioctls param struct definitions. This hack
- * is necessary till user space gstreamer is fixed to use
- * linux/nvmap.h file.
- *
- */
-#ifndef __KERNEL__
-struct nvmap_create_handle {
-	union {
-		__u32 key;	/* ClaimPreservedHandle */
-		__u32 id;	/* FromId */
-		__u32 size;	/* CreateHandle */
-		__s32 fd;	/* DmaBufFd or FromFd */
-	};
-	__u32 handle;
-};
-
-#define NVMAP_IOC_MAGIC 'N'
-/* Returns a global ID usable to allow a remote process to create a handle
- * reference to the same handle */
-#define NVMAP_IOC_GET_ID  _IOWR(NVMAP_IOC_MAGIC, 13, struct nvmap_create_handle)
-#endif
-
-#ifdef  __KERNEL__
 int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 	bool is32);
 
@@ -82,7 +52,5 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg);
-
-#endif	/* __KERNEL__ */
 
 #endif	/*  __VIDEO_TEGRA_NVMAP_IOCTL_H */

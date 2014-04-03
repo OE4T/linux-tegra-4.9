@@ -42,7 +42,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
-static bool zero_memory;
+bool zero_memory;
 module_param(zero_memory, bool, 0644);
 u32 nvmap_max_handle_count;
 
@@ -75,7 +75,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 {
 	unsigned int i, nr_page, page_index = 0;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	struct nvmap_page_pool *pool = NULL;
+	struct nvmap_page_pool *pool;
 #endif
 
 	if (h->nvhost_priv)

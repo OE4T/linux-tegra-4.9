@@ -1022,7 +1022,8 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
 			&cfg->max_link_bw));
 
-	cfg->bits_per_pixel = dp->dc->pdata->default_out->depth;
+	/* DP SOR supports either 18bpp or 24bpp out stream only */
+	cfg->bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
 
 	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));
@@ -2078,6 +2079,11 @@ static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
 		dev_err(&dc->ndev->dev, "dp: Failed to get EDID data\n");
 		goto fail;
 	}
+
+	/* set bpp if EDID provides primary color depth */
+	dc->out->depth = dc->out->depth ? : specs.bpc ? specs.bpc * 3 : 18;
+	dev_info(&dc->ndev->dev, "dp: EDID: %d bpc panel, set to %d bpp\n",
+		 specs.bpc, dc->out->depth);
 
 	/* in mm */
 	dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;

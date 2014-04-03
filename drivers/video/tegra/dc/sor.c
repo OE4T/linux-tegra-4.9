@@ -818,7 +818,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		}
 	}
 
-	reg_val |= (sor->dc->pdata->default_out->depth > 18) ?
+	reg_val |= (sor->dc->out->depth > 18) ?
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
 

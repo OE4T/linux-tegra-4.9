@@ -222,6 +222,7 @@ int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
 int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr);
 int nvmap_page_pool_clear(void);
+int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);
 #endif
 
 struct nvmap_carveout_commit {

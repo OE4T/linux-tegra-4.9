@@ -27,6 +27,7 @@
 #include <linux/moduleparam.h>
 #include <linux/shrinker.h>
 #include <linux/kthread.h>
+#include <linux/debugfs.h>
 
 #include "nvmap_priv.h"
 
@@ -587,6 +588,44 @@ static struct kernel_param_ops pool_size_ops = {
 };
 
 module_param_cb(pool_size, &pool_size_ops, &pool_size, 0644);
+
+int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
+{
+	struct dentry *pp_root;
+
+	if (!nvmap_root)
+		return -ENODEV;
+
+	pp_root = debugfs_create_dir("pagepool", nvmap_root);
+	if (!pp_root)
+		return -ENODEV;
+
+	debugfs_create_u32("page_pool_available_pages",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.count);
+#ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
+	debugfs_create_u32("page_pool_alloc_ind",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.alloc);
+	debugfs_create_u32("page_pool_fill_ind",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.fill);
+	debugfs_create_u64("page_pool_allocs",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.allocs);
+	debugfs_create_u64("page_pool_fills",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.fills);
+	debugfs_create_u64("page_pool_hits",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.hits);
+	debugfs_create_u64("page_pool_misses",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.misses);
+#endif
+
+	return 0;
+}
 
 int nvmap_page_pool_init(struct nvmap_device *dev)
 {

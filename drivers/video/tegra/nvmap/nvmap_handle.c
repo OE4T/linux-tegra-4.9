@@ -550,7 +550,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	BUG_ON(!client);
 	/* on success, the reference count for the handle should be
 	 * incremented, so the success paths will not call nvmap_handle_put */
-	h = nvmap_handle_get(h);
+	h = nvmap_validate_get(h);
 
 	if (!h) {
 		pr_debug("%s duplicate handle failed\n",

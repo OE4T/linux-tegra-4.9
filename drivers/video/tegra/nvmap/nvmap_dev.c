@@ -337,6 +337,33 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 	spin_unlock(&dev->handle_lock);
 }
 
+/* Validates that a handle is in the device master tree and that the
+ * client has permission to access it. */
+struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
+{
+	struct nvmap_handle *h = NULL;
+	struct rb_node *n;
+
+	spin_lock(&nvmap_dev->handle_lock);
+
+	n = nvmap_dev->handles.rb_node;
+
+	while (n) {
+		h = rb_entry(n, struct nvmap_handle, node);
+		if (h == id) {
+			h = nvmap_handle_get(h);
+			spin_unlock(&nvmap_dev->handle_lock);
+			return h;
+		}
+		if (id > h)
+			n = n->rb_right;
+		else
+			n = n->rb_left;
+	}
+	spin_unlock(&nvmap_dev->handle_lock);
+	return NULL;
+}
+
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name)
 {

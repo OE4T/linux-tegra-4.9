@@ -21,9 +21,9 @@
  */
 
 #include <linux/ioctl.h>
-#include <linux/file.h>
 #include <linux/rbtree.h>
 #if defined(__KERNEL__)
+#include <linux/file.h>
 #include <linux/dma-buf.h>
 #include <linux/device.h>
 #endif

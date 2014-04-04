@@ -39,8 +39,6 @@
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
 #include "chip_support.h"
-#include "t114/t114.h"
-#include "t148/t148.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
 

@@ -4575,7 +4575,7 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	while (!tegra_dsi_host_suspend_trylock(dc, dsi))
 		cond_resched();
 
-	if (dsi->host_suspended) {
+	if (dsi->host_suspended || atomic_read(&dsi->host_ref)) {
 		tegra_dsi_host_suspend_unlock(dc, dsi);
 		return 0;
 	}
@@ -4708,7 +4708,7 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 	if (!dsi->enabled)
 		return -EINVAL;
 
-	cancel_delayed_work_sync(&dsi->idle_work);
+	cancel_delayed_work(&dsi->idle_work);
 
 	mutex_lock(&dsi->host_lock);
 	if (!dsi->host_suspended) {

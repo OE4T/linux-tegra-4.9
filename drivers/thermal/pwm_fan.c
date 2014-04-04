@@ -56,6 +56,7 @@ struct fan_dev_data {
 	int precision_multiplier;
 	struct mutex fan_state_lock;
 	int pwm_period;
+	int fan_pwm_max;
 	struct device *dev;
 	int tach_gpio;
 	int tach_irq;
@@ -68,6 +69,19 @@ struct fan_dev_data {
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *fan_debugfs_root;
 
+static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
+{
+	if (!fan_data)
+		return -EINVAL;
+
+	fan_data->next_target_pwm = min(val, fan_data->fan_cap_pwm);
+
+	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
+		queue_delayed_work(fan_data->workqueue,
+					&fan_data->fan_ramp_work,
+					msecs_to_jiffies(fan_data->step_time));
+}
+
 static int fan_target_pwm_show(void *data, u64 *val)
 {
 	struct fan_dev_data *fan_data = (struct fan_dev_data *)data;
@@ -75,8 +89,7 @@ static int fan_target_pwm_show(void *data, u64 *val)
 	if (!fan_data)
 		return -EINVAL;
 	mutex_lock(&fan_data->fan_state_lock);
-	*val = ((struct fan_dev_data *)data)->next_target_pwm /
-					fan_data->precision_multiplier;
+	*val = ((struct fan_dev_data *)data)->next_target_pwm;
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }
@@ -84,23 +97,19 @@ static int fan_target_pwm_show(void *data, u64 *val)
 static int fan_target_pwm_set(void *data, u64 val)
 {
 	struct fan_dev_data *fan_data = (struct fan_dev_data *)data;
+	int target_pwm;
 
 	if (!fan_data)
 		return -EINVAL;
 
-	if (val > fan_data->pwm_period)
-		val = fan_data->pwm_period;
+	if (val >= fan_data->fan_pwm_max)
+		val = fan_data->fan_pwm_max - 1;
 
 	mutex_lock(&fan_data->fan_state_lock);
-	fan_data->next_target_pwm =
-		min((int)(val * fan_data->precision_multiplier),
-		fan_data->fan_cap_pwm);
-
-	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
-		queue_delayed_work(fan_data->workqueue,
-					&fan_data->fan_ramp_work,
-					msecs_to_jiffies(fan_data->step_time));
+	target_pwm = (int)val;
+	fan_update_target_pwm(fan_data, target_pwm);
 	mutex_unlock(&fan_data->fan_state_lock);
+
 	return 0;
 }
 
@@ -165,16 +174,17 @@ static int fan_tach_enabled_set(void *data, u64 val)
 static int fan_cap_pwm_set(void *data, u64 val)
 {
 	struct fan_dev_data *fan_data = (struct fan_dev_data *)data;
+	int target_pwm;
 
 	if (!fan_data)
 		return -EINVAL;
 
-	if (val > fan_data->pwm_period)
-		val = fan_data->pwm_period;
+	if (val >= fan_data->fan_pwm_max)
+		val = fan_data->fan_pwm_max - 1;
 	mutex_lock(&fan_data->fan_state_lock);
-	fan_data->fan_cap_pwm = val * fan_data->precision_multiplier;
-	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
-					fan_data->next_target_pwm);
+	fan_data->fan_cap_pwm = (int)val;
+	target_pwm = min(fan_data->fan_cap_pwm, fan_data->next_target_pwm);
+	fan_update_target_pwm(fan_data, target_pwm);
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }
@@ -186,7 +196,7 @@ static int fan_cap_pwm_show(void *data, u64 *val)
 	if (!fan_data)
 		return -EINVAL;
 	mutex_lock(&fan_data->fan_state_lock);
-	*val = fan_data->fan_cap_pwm / fan_data->precision_multiplier;
+	*val = fan_data->fan_cap_pwm;
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }
@@ -210,7 +220,7 @@ static int fan_cur_pwm_show(void *data, u64 *val)
 	if (!fan_data)
 		return -EINVAL;
 	mutex_lock(&fan_data->fan_state_lock);
-	*val = (fan_data->fan_cur_pwm / fan_data->precision_multiplier);
+	*val = fan_data->fan_cur_pwm;
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }
@@ -234,10 +244,10 @@ static int fan_debugfs_show(struct seq_file *s, void *data)
 
 	if (!fan_data)
 		return -EINVAL;
-	seq_printf(s, "(Index, RPM, PWM, RRU*1024, RRD*1024)\n");
+	seq_puts(s, "(Index, RPM, PWM, RRU, RRD)\n");
 	for (i = 0; i < fan_data->active_steps; i++) {
 		seq_printf(s, "(%d, %d, %d, %d, %d)\n", i, fan_data->fan_rpm[i],
-			fan_data->fan_pwm[i]/fan_data->precision_multiplier,
+			fan_data->fan_pwm[i],
 			fan_data->fan_rru[i],
 			fan_data->fan_rrd[i]);
 	}
@@ -347,6 +357,7 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 						unsigned long cur_state)
 {
 	struct fan_dev_data *fan_data = cdev->devdata;
+	int target_pwm;
 
 	if (!fan_data)
 		return -EINVAL;
@@ -356,17 +367,12 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 	fan_data->next_state = cur_state;
 
 	if (fan_data->next_state <= 0)
-		fan_data->next_target_pwm = 0;
+		target_pwm = 0;
 	else
-		fan_data->next_target_pwm = fan_data->fan_pwm[cur_state];
+		target_pwm = fan_data->fan_pwm[cur_state];
 
-	fan_data->next_target_pwm =
-		min(fan_data->fan_cap_pwm, fan_data->next_target_pwm);
-	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm &&
-		(fan_data->fan_temp_control_flag))
-		queue_delayed_work(fan_data->workqueue,
-					&(fan_data->fan_ramp_work),
-					msecs_to_jiffies(fan_data->step_time));
+	target_pwm = min(fan_data->fan_cap_pwm, target_pwm);
+	fan_update_target_pwm(fan_data, target_pwm);
 
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
@@ -415,9 +421,13 @@ static int fan_get_rrd(int pwm, struct fan_dev_data *fan_data)
 
 static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
 {
+	int duty;
+
 	if (fan_data != NULL && fan_data->pwm_dev != NULL) {
-		pwm_config(fan_data->pwm_dev, fan_data->pwm_period - pwm,
-							fan_data->pwm_period);
+		duty = (fan_data->fan_pwm_max - pwm)
+				* fan_data->precision_multiplier;
+		pwm_config(fan_data->pwm_dev,
+			duty, fan_data->pwm_period);
 		pwm_enable(fan_data->pwm_dev);
 	} else {
 		dev_err(fan_data->dev,
@@ -444,7 +454,7 @@ static int get_next_lower_pwm(int pwm, struct fan_dev_data *fan_data)
 		if (pwm > fan_data->fan_pwm[i])
 			return fan_data->fan_pwm[i];
 
-	return fan_data->fan_pwm[fan_data->active_steps - 1];
+	return fan_data->fan_pwm[0];
 }
 
 static void fan_ramping_work_func(struct work_struct *work)
@@ -480,7 +490,7 @@ static void fan_ramping_work_func(struct work_struct *work)
 		next_pwm = max(next_pwm, fan_data->next_target_pwm);
 		next_pwm = max(0, next_pwm);
 	}
-	set_pwm_duty_cycle(next_pwm/fan_data->precision_multiplier, fan_data);
+	set_pwm_duty_cycle(next_pwm, fan_data);
 	fan_data->fan_cur_pwm = next_pwm;
 	if (fan_data->next_target_pwm != next_pwm)
 		queue_delayed_work(fan_data->workqueue,
@@ -499,8 +509,7 @@ static ssize_t show_fan_pwm_cap_sysfs(struct device *dev,
 	if (!fan_data)
 		return -EINVAL;
 	mutex_lock(&fan_data->fan_state_lock);
-	ret = sprintf(buf, "%d\n",
-		(fan_data->fan_cap_pwm / fan_data->precision_multiplier));
+	ret = sprintf(buf, "%d\n", fan_data->fan_cap_pwm);
 	mutex_unlock(&fan_data->fan_state_lock);
 	return ret;
 }
@@ -511,6 +520,7 @@ static ssize_t set_fan_pwm_cap_sysfs(struct device *dev,
 	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
 	long val;
 	int ret;
+	int target_pwm;
 
 	ret = kstrtol(buf, 10, &val);
 
@@ -520,14 +530,16 @@ static ssize_t set_fan_pwm_cap_sysfs(struct device *dev,
 	if (!fan_data)
 		return -EINVAL;
 
+	mutex_lock(&fan_data->fan_state_lock);
+
 	if (val < 0)
 		val = 0;
-	else if (val > fan_data->pwm_period)
-		val = fan_data->pwm_period;
-	mutex_lock(&fan_data->fan_state_lock);
-	fan_data->fan_cap_pwm = val * fan_data->precision_multiplier;
-	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
-					fan_data->next_target_pwm);
+	else if (val >= fan_data->fan_pwm_max)
+		val = fan_data->fan_pwm_max - 1;
+
+	fan_data->fan_cap_pwm = val;
+	target_pwm = min(fan_data->fan_cap_pwm, fan_data->next_target_pwm);
+	fan_update_target_pwm(fan_data, target_pwm);
 	mutex_unlock(&fan_data->fan_state_lock);
 	return count;
 }
@@ -553,6 +565,7 @@ static ssize_t set_fan_state_cap_sysfs(struct device *dev,
 	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
 	long val;
 	int ret;
+	int target_pwm;
 
 	ret = kstrtol(buf, 10, &val);
 
@@ -568,8 +581,8 @@ static ssize_t set_fan_state_cap_sysfs(struct device *dev,
 	fan_data->fan_state_cap = val;
 	fan_data->fan_cap_pwm =
 		fan_data->fan_pwm[fan_data->fan_state_cap_lookup[val]];
-	fan_data->next_target_pwm = min(fan_data->fan_cap_pwm,
-					fan_data->next_target_pwm);
+	target_pwm = min(fan_data->fan_cap_pwm, fan_data->next_target_pwm);
+	fan_update_target_pwm(fan_data, target_pwm);
 	mutex_unlock(&fan_data->fan_state_lock);
 	return count;
 
@@ -584,6 +597,7 @@ static ssize_t set_fan_pwm_state_map_sysfs(struct device *dev,
 {
 	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
 	int ret, index, pwm_val;
+	int target_pwm;
 
 	ret = sscanf(buf, "%d %d", &index, &pwm_val);
 
@@ -600,25 +614,21 @@ static ssize_t set_fan_pwm_state_map_sysfs(struct device *dev,
 
 	mutex_lock(&fan_data->fan_state_lock);
 
-	if ((pwm_val < 0) || (pwm_val > fan_data->fan_cap_pwm)) {
+	if ((pwm_val < 0) || (pwm_val >= fan_data->fan_pwm_max)) {
 		mutex_unlock(&fan_data->fan_state_lock);
 		return -EINVAL;
 	}
 
-	fan_data->fan_pwm[index] = pwm_val * fan_data->precision_multiplier;
+	fan_data->fan_pwm[index] = pwm_val;
 
 	if (index == fan_data->next_state)
 		if (fan_data->next_target_pwm !=
 			fan_data->fan_pwm[index]) {
-			fan_data->next_target_pwm = fan_data->fan_pwm[index];
-			fan_data->next_target_pwm =
-					min(fan_data->fan_cap_pwm,
-						fan_data->next_target_pwm);
+			target_pwm = fan_data->fan_pwm[index];
+			target_pwm = min(fan_data->fan_cap_pwm,
+						target_pwm);
 
-			fan_data->fan_pwm[index] = fan_data->next_target_pwm;
-			queue_delayed_work(fan_data->workqueue,
-					&(fan_data->fan_ramp_work),
-					msecs_to_jiffies(fan_data->step_time));
+			fan_update_target_pwm(fan_data, target_pwm);
 		}
 	mutex_unlock(&fan_data->fan_state_lock);
 
@@ -697,10 +707,10 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 
-	fan_data->precision_multiplier = data->precision_multiplier;
 	fan_data->step_time = data->step_time;
 	fan_data->active_steps = data->active_steps;
 	fan_data->pwm_period = data->pwm_period;
+	fan_data->fan_pwm_max = data->active_pwm_max;
 	fan_data->dev = &pdev->dev;
 	fan_data->fan_state_cap = data->state_cap;
 	fan_data->pwm_gpio = data->pwm_gpio;
@@ -721,6 +731,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_state_cap_lookup[i]);
 	}
 	fan_data->fan_cap_pwm = data->active_pwm[data->state_cap];
+	fan_data->precision_multiplier =
+			data->pwm_period / data->active_pwm_max;
 	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",
 			fan_data->fan_state_cap, fan_data->fan_cap_pwm);
 

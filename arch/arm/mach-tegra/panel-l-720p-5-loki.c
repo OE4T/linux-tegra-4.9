@@ -60,7 +60,7 @@ static struct tegra_dc_sd_settings dsi_l_720p_5_loki_sd_settings = {
 	/* Low soft clipping threshold to compensate for aggressive k_limit */
 	.soft_clipping_threshold = 128,
 	.smooth_k_enable = true,
-	.smooth_k_incr = 128,
+	.smooth_k_incr = 16,
 	/* Default video coefficients */
 	.coeff = {5, 9, 2},
 	.fc = {0, 0},

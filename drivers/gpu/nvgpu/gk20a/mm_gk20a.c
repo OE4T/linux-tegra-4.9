@@ -475,17 +475,6 @@ static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
 }
 #else
-/* APIs for 64 bit arch */
-static int __alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
-			    void **handle,
-			    struct sg_table **sgt,
-			    size_t *size);
-static void __free_gmmu_pages(struct vm_gk20a *vm, void *handle,
-			    struct sg_table *sgt, u32 order,
-			    size_t size);
-static int __map_gmmu_pages(void *handle, struct sg_table *sgt,
-			  void **kva, size_t size);
-static void __unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va);
 
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    void **handle,
@@ -498,35 +487,55 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	dma_addr_t iova;
 	DEFINE_DMA_ATTRS(attrs);
 	struct page **pages;
+	void *cpuva;
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
-	if (IS_ENABLED(CONFIG_ARM64))
-		return __alloc_gmmu_pages(vm, order, handle, sgt, size);
-
 	*size = len;
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	pages = dma_alloc_attrs(d, len, &iova, GFP_KERNEL, &attrs);
-	if (!pages) {
-		gk20a_err(d, "memory allocation failed\n");
-		goto err_out;
-	}
 
-	err = gk20a_get_sgtable_from_pages(d, sgt, pages,
-				iova, len);
-	if (err) {
-		gk20a_err(d, "sgt allocation failed\n");
-		goto err_free;
-	}
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		cpuva = dma_zalloc_coherent(d, len, &iova, GFP_KERNEL);
+		if (!cpuva) {
+			gk20a_err(d, "memory allocation failed\n");
+			goto err_out;
+		}
 
-	*handle = (void *)pages;
+		err = gk20a_get_sgtable(d, sgt, cpuva, iova, len);
+		if (err) {
+			gk20a_err(d, "sgt allocation failed\n");
+			goto err_free;
+		}
+
+		*handle = cpuva;
+	} else {
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+		pages = dma_alloc_attrs(d, len, &iova, GFP_KERNEL, &attrs);
+		if (!pages) {
+			gk20a_err(d, "memory allocation failed\n");
+			goto err_out;
+		}
+
+		err = gk20a_get_sgtable_from_pages(d, sgt, pages,
+					iova, len);
+		if (err) {
+			gk20a_err(d, "sgt allocation failed\n");
+			goto err_free;
+		}
+
+		*handle = (void *)pages;
+	}
 
 	return 0;
 
 err_free:
-	dma_free_attrs(d, len, pages, iova, &attrs);
-	pages = NULL;
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		dma_free_coherent(d, len, handle, iova);
+		cpuva = NULL;
+	} else {
+		dma_free_attrs(d, len, pages, iova, &attrs);
+		pages = NULL;
+	}
 	iova = 0;
 err_out:
 	return -ENOMEM;
@@ -539,23 +548,25 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	struct device *d = dev_from_vm(vm);
 	u64 iova;
 	DEFINE_DMA_ATTRS(attrs);
-	struct page **pages = (struct page **)handle;
+	struct page **pages;
 
 	gk20a_dbg_fn("");
 	BUG_ON(sgt == NULL);
-
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		__free_gmmu_pages(vm, handle, sgt, order, size);
-		return;
-	}
 
 	iova = sg_dma_address(sgt->sgl);
 
 	gk20a_free_sgtable(&sgt);
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	dma_free_attrs(d, size, pages, iova, &attrs);
-	pages = NULL;
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		dma_free_coherent(d, size, handle, iova);
+	} else {
+		pages = (struct page **)handle;
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+		dma_free_attrs(d, size, pages, iova, &attrs);
+		pages = NULL;
+	}
+
+	handle = NULL;
 	iova = 0;
 }
 
@@ -563,15 +574,17 @@ static int map_gmmu_pages(void *handle, struct sg_table *sgt,
 			  void **kva, size_t size)
 {
 	int count = PAGE_ALIGN(size) >> PAGE_SHIFT;
-	struct page **pages = (struct page **)handle;
+	struct page **pages;
 	gk20a_dbg_fn("");
 
-	if (IS_ENABLED(CONFIG_ARM64))
-		return __map_gmmu_pages(handle, sgt, kva, size);
-
-	*kva = vmap(pages, count, 0, pgprot_dmacoherent(PAGE_KERNEL));
-	if (!(*kva))
-		return -ENOMEM;
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		*kva = handle;
+	} else {
+		pages = (struct page **)handle;
+		*kva = vmap(pages, count, 0, pgprot_dmacoherent(PAGE_KERNEL));
+		if (!(*kva))
+			return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -580,77 +593,9 @@ static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	gk20a_dbg_fn("");
 
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		__unmap_gmmu_pages(handle, sgt, va);
-		return;
-	}
-
-	vunmap(va);
-}
-
-static int __alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
-			    void **handle,
-			    struct sg_table **sgt,
-			    size_t *size)
-{
-	struct device *d = dev_from_vm(vm);
-	u32 num_pages = 1 << order;
-	u32 len = num_pages * PAGE_SIZE;
-	dma_addr_t iova;
-	void *cpuva;
-	int err = 0;
-
-	*size = len;
-	cpuva = dma_zalloc_coherent(d, len, &iova, GFP_KERNEL);
-	if (!cpuva) {
-		gk20a_err(d, "memory allocation failed\n");
-		goto err_out;
-	}
-
-	err = gk20a_get_sgtable(d, sgt, cpuva, iova, len);
-	if (err) {
-		gk20a_err(d, "sgt allocation failed\n");
-		goto err_free;
-	}
-
-	*handle = cpuva;
-
-	return 0;
-
-err_free:
-	dma_free_coherent(d, len, cpuva, iova);
-	cpuva = NULL;
-	iova = 0;
-err_out:
-	return -ENOMEM;
-}
-
-static void __free_gmmu_pages(struct vm_gk20a *vm, void *handle,
-			    struct sg_table *sgt, u32 order,
-			    size_t size)
-{
-	struct device *d = dev_from_vm(vm);
-	u64 iova;
-
-	iova = sg_dma_address(sgt->sgl);
-
-	gk20a_free_sgtable(&sgt);
-
-	dma_free_coherent(d, size, handle, iova);
-	handle = NULL;
-	iova = 0;
-}
-
-static int __map_gmmu_pages(void *handle, struct sg_table *sgt,
-			  void **kva, size_t size)
-{
-	*kva = handle;
-	return 0;
-}
-
-static void __unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
-{
-	gk20a_dbg_fn("");
+	if (!IS_ENABLED(CONFIG_ARM64))
+		vunmap(va);
+	va = NULL;
 }
 #endif
 

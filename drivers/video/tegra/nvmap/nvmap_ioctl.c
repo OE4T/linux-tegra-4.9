@@ -1130,7 +1130,8 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	return ret ?: copied;
 }
 
-int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg)
+int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
+				 bool is_reserve_ioctl)
 {
 	struct nvmap_cache_op_list op;
 	u32 *handle_ptr;
@@ -1181,9 +1182,15 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg)
 		}
 	}
 
-	err = nvmap_do_cache_maint_list(refs, offset_ptr, size_ptr, op.op, op.nr);
+	if (is_reserve_ioctl)
+		err = nvmap_reserve_pages(refs, offset_ptr, size_ptr,
+					  op.nr, op.op);
+	else
+		err = nvmap_do_cache_maint_list(refs, offset_ptr, size_ptr,
+						op.op, op.nr);
 
 free_mem:
 	kfree(refs);
 	return err;
 }
+

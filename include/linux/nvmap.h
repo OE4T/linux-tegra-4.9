@@ -308,6 +308,9 @@ struct nvmap_cache_op_list {
 /* Perform cache maintenance on a list of handles. */
 #define NVMAP_IOC_CACHE_LIST _IOW(NVMAP_IOC_MAGIC, 17,	\
 				  struct nvmap_cache_op_list)
+/* Perform reserve operation on a list of handles. */
+#define NVMAP_IOC_RESERVE _IOW(NVMAP_IOC_MAGIC, 18,	\
+				  struct nvmap_cache_op_list)
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */
 #define NVMAP_IOC_ALLOC_KIND _IOW(NVMAP_IOC_MAGIC, 100, struct nvmap_alloc_kind_handle)

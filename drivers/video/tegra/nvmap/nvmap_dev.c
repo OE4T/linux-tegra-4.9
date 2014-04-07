@@ -661,7 +661,9 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case NVMAP_IOC_CACHE_LIST:
-		err = nvmap_ioctl_cache_maint_list(filp, uarg);
+	case NVMAP_IOC_RESERVE:
+		err = nvmap_ioctl_cache_maint_list(filp, uarg,
+						   cmd == NVMAP_IOC_RESERVE);
 		break;
 
 	case NVMAP_IOC_SHARE:

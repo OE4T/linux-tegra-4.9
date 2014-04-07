@@ -539,4 +539,8 @@ void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
 		       u32 *sizes, u32 nr);
 
 void nvmap_vma_open(struct vm_area_struct *vma);
+
+int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets,
+			u32 *sizes, u32 nr, u32 op);
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

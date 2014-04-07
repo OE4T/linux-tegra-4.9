@@ -1127,7 +1127,7 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	}
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	if (cmu != &dc->cmu) {
+	if (memcmp(cmu, &dc->cmu, sizeof(struct tegra_dc_cmu))) {
 		tegra_dc_cache_cmu(&dc->cmu, cmu);
 
 		/* Disable CMU */
@@ -3299,6 +3299,21 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 
 	if (!ret)
 		tegra_dc_io_end(dc);
+
+#ifdef CONFIG_TEGRA_DC_CMU
+	/*
+	 * CMU settings are lost when the DC goes to sleep. User-space will
+	 * perform a blank ioctl upon resume which will call tegra_dc_init()
+	 * and apply CMU settings again, but only if the cached values are
+	 * different from those specified. Clearing the cache here ensures
+	 * that this will happen.
+	 *
+	 * It would be better to reapply the CMU settings in tegra_dc_resume(),
+	 * but color corruption sometimes happens if we do so and
+	 * tegra_dc_init() seems to be the only safe place for this.
+	 */
+	memset(&dc->cmu, 0, sizeof(dc->cmu));
+#endif
 
 	mutex_unlock(&dc->lock);
 	synchronize_irq(dc->irq); /* wait for IRQ handlers to finish */

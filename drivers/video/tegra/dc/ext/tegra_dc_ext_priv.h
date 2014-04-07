@@ -67,6 +67,8 @@ struct tegra_dc_ext_win {
 	struct mutex		queue_lock;
 
 	struct list_head	timestamp_queue;
+
+	bool			enabled;
 };
 
 struct tegra_dc_ext {

@@ -147,6 +147,7 @@ struct tegra_dc {
 	bool				connected;
 	bool				enabled;
 	bool				suspended;
+	bool				blanked;
 
 	/* Some of the setup code could reset display even if
 	 * DC is already by bootloader.  This one-time mark is

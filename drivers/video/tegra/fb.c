@@ -293,26 +293,30 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 static int tegra_fb_blank(int blank, struct fb_info *info)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
+	struct tegra_dc *dc = tegra_fb->win.dc;
 
 	switch (blank) {
 	case FB_BLANK_UNBLANK:
 		dev_dbg(&tegra_fb->ndev->dev, "unblank\n");
-		tegra_dc_enable(tegra_fb->win.dc);
-		if (!tegra_fb->win.dc->suspended &&
-		    !tegra_dc_restore(tegra_fb->win.dc)) {
+		tegra_dc_enable(dc);
+		if (!dc->suspended && dc->blanked &&
+		    !tegra_dc_restore(dc)) {
 			struct tegra_dc_win *win = &tegra_fb->win;
 			tegra_dc_update_windows(&win, 1, NULL);
 			tegra_dc_sync_windows(&win, 1);
-			tegra_dc_program_bandwidth(win->dc, true);
+			tegra_dc_program_bandwidth(dc, true);
 		}
+
+		dc->blanked = false;
 		return 0;
 
 	case FB_BLANK_NORMAL:
 		dev_dbg(&tegra_fb->ndev->dev, "blank - normal\n");
 		/* To pan fb at the unblank */
-		if (tegra_fb->win.dc->enabled)
+		if (dc->enabled)
 			tegra_fb->curr_xoffset = -1;
-		tegra_dc_blank(tegra_fb->win.dc, BLANK_ALL);
+		dc->blanked = true;
+		tegra_dc_blank(dc, BLANK_ALL);
 		return 0;
 
 	case FB_BLANK_VSYNC_SUSPEND:
@@ -320,9 +324,9 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_POWERDOWN:
 		dev_dbg(&tegra_fb->ndev->dev, "blank - powerdown\n");
 		/* To pan fb while switching from X */
-		if (!tegra_fb->win.dc->suspended && tegra_fb->win.dc->enabled)
+		if (!dc->suspended && dc->enabled)
 			tegra_fb->curr_xoffset = -1;
-		tegra_dc_disable(tegra_fb->win.dc);
+		tegra_dc_disable(dc);
 		return 0;
 
 	default:
@@ -498,7 +502,7 @@ static int tegra_fb_ioctl(struct fb_info *info,
 		break;
 
 	case FBIOGET_VBLANK:
-		if (tegra_dc_has_vsync(tegra_fb->win.dc))
+		if (tegra_dc_has_vsync(dc))
 			vblank.flags = FB_VBLANK_HAVE_VSYNC;
 
 		if (copy_to_user(

@@ -144,8 +144,10 @@ static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
 
 	mutex_lock(&win->lock);
 
-	if (!win->user)
+	if (!win->user) {
 		win->user = user;
+		win->enabled = false;
+	}
 	else if (win->user != user)
 		ret = -EBUSY;
 
@@ -171,6 +173,7 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	if (win->user == user) {
 		flush_workqueue(win->flip_wq);
 		win->user = 0;
+		win->enabled = false;
 	} else {
 		ret = -EACCES;
 	}
@@ -182,13 +185,22 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 
 int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
 {
-	int i;
+	struct tegra_dc_win *wins[DC_N_WINDOWS];
+	int i, nr_win = 0;
 
 	for_each_set_bit(i, &ext->dc->valid_windows, DC_N_WINDOWS)
-		if (ext->win[i].user)
-			return 1;
+		if (ext->win[i].enabled) {
+			wins[nr_win] = tegra_dc_get_window(ext->dc, i);
+			wins[nr_win++]->flags |= TEGRA_WIN_FLAG_ENABLED;
+		}
 
-	return 0;
+	if (nr_win) {
+		tegra_dc_update_windows(&wins[0], nr_win, NULL);
+		tegra_dc_sync_windows(&wins[0], nr_win);
+		tegra_dc_program_bandwidth(ext->dc, true);
+	}
+
+	return nr_win;
 }
 
 static void set_enable(struct tegra_dc_ext *ext, bool en)
@@ -529,10 +541,12 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		if (!skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
 
+		ext_win->enabled = !!(win->flags & TEGRA_WIN_FLAG_ENABLED);
 		wins[nr_win++] = win;
 	}
 
 	if (ext->dc->enabled && !skip_flip) {
+		ext->dc->blanked = false;
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL);
 		/* TODO: implement swapinterval here */

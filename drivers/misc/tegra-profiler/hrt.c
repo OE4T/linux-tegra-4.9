@@ -72,8 +72,9 @@ static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
 {
 	u64 period = hrt.sample_period;
 
-	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
-		      HRTIMER_MODE_REL_PINNED);
+	__hrtimer_start_range_ns(&cpu_ctx->hrtimer,
+				 ns_to_ktime(period), 0,
+				 HRTIMER_MODE_REL_PINNED, 0);
 	qm_debug_timer_start(NULL, period);
 }
 
@@ -476,7 +477,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 		n = remove_active_thread(cpu_ctx, prev->pid);
 		atomic_sub(n, &cpu_ctx->nr_active);
 
-		if (atomic_read(&cpu_ctx->nr_active) == 0) {
+		if (n && atomic_read(&cpu_ctx->nr_active) == 0) {
 			cancel_hrtimer(cpu_ctx);
 			atomic_dec(&hrt.nr_active_all_core);
 

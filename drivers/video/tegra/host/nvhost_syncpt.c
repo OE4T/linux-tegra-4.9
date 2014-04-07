@@ -870,7 +870,7 @@ void nvhost_free_syncpt(u32 id)
 }
 EXPORT_SYMBOL_GPL(nvhost_free_syncpt);
 
-static void nvhost_reserve_vblank_syncpts(struct nvhost_syncpt *sp)
+static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 {
 	mutex_lock(&sp->syncpt_mutex);
 
@@ -882,19 +882,9 @@ static void nvhost_reserve_vblank_syncpts(struct nvhost_syncpt *sp)
 	sp->client_managed[NVSYNCPT_VBLANK1] = true;
 	sp->syncpt_names[NVSYNCPT_VBLANK1] = "vblank1";
 
-	mutex_unlock(&sp->syncpt_mutex);
-}
-
-static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
-{
-	mutex_lock(&sp->syncpt_mutex);
-
 	sp->assigned[NVSYNCPT_AVP_0] = true;
 	sp->client_managed[NVSYNCPT_AVP_0] = true;
 	sp->syncpt_names[NVSYNCPT_AVP_0] = "avp";
-
-	sp->assigned[NVSYNCPT_3D] = true;
-	sp->syncpt_names[NVSYNCPT_3D] = "3d";
 
 	mutex_unlock(&sp->syncpt_mutex);
 }
@@ -1004,7 +994,6 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	}
 #endif
 
-	nvhost_reserve_vblank_syncpts(sp);
 	/*
 	 * some syncpts need to be reserved (hard-coded) because of
 	 * external dependencies / constraints

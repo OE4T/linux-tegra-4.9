@@ -172,6 +172,7 @@ static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool gfx_class, bool wfi_cmd,
+				       bool register_irq,
 				       struct priv_cmd_entry **entry,
 				       struct gk20a_channel_fence *fence)
 {
@@ -184,18 +185,12 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 
-	/* nvhost action_gpfifo_submit_complete releases this ref. */
-	err = gk20a_channel_busy(c->g->dev);
-	if (err)
-		return err;
-
 	incr_cmd_size = 4;
 	if (wfi_cmd)
 		incr_cmd_size += 2;
 
 	gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
 	if (incr_cmd == NULL) {
-		gk20a_channel_idle(c->g->dev);
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
 		return -EAGAIN;
@@ -230,15 +225,22 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 1);
 
-	err = nvhost_intr_register_notifier(sp->host1x_pdev, sp->id, thresh,
-			gk20a_channel_syncpt_update, c);
+	if (register_irq) {
+		/* nvhost action_gpfifo_submit_complete releases this ref. */
+		err = gk20a_channel_busy(c->g->dev);
 
-	/* Adding interrupt action should never fail. A proper error handling
-	 * here would require us to decrement the syncpt max back to its
-	 * original value. */
-	if (WARN(err, "failed to set submit complete interrupt")) {
-		gk20a_channel_idle(c->g->dev);
-		err = 0; /* Ignore this error. */
+		if (!err) {
+			err = nvhost_intr_register_notifier(sp->host1x_pdev,
+					sp->id, thresh,
+					gk20a_channel_syncpt_update, c);
+			if (err)
+				gk20a_channel_idle(c->g->dev);
+		}
+
+		/* Adding interrupt action should never fail. A proper error
+		 * handling here would require us to decrement the syncpt max
+		 * back to its original value. */
+		WARN(err, "failed to set submit complete interrupt");
 	}
 
 	fence->thresh = thresh;
@@ -255,6 +257,7 @@ int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 	return __gk20a_channel_syncpt_incr(s,
 			false /* use host class */,
 			true /* wfi */,
+			false /* no irq handler */,
 			entry, fence);
 }
 
@@ -269,6 +272,7 @@ int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	return __gk20a_channel_syncpt_incr(s,
 			sp->c->obj_class == KEPLER_C /* may use gfx class */,
 			false /* no wfi */,
+			true /* register irq */,
 			entry, fence);
 }
 
@@ -284,6 +288,7 @@ int gk20a_channel_syncpt_incr_user_syncpt(struct gk20a_channel_sync *s,
 	int err = __gk20a_channel_syncpt_incr(s,
 			sp->c->obj_class == KEPLER_C /* use gfx class? */,
 			sp->c->obj_class != KEPLER_C /* wfi if host class */,
+			true /* register irq */,
 			entry, fence);
 	if (err)
 		return err;

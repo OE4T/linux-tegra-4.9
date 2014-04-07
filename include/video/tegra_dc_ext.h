@@ -92,6 +92,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR	(1 << 5)
 #define TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN	(1 << 6)
 #define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
+#define TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED	(1 << 8)
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
@@ -138,11 +139,22 @@ struct tegra_dc_ext_flip_windowattr {
 	/* log2(blockheight) for blocklinear format */
 	__u8	block_height_log2;
 	__u8	pad1[2];
-	__u32	offset2;
-	__u32	offset_u2;
-	__u32	offset_v2;
-	/* Leave some wiggle room for future expansion */
-	__u32   pad2[1];
+	union {
+		struct { /* used if TEGRA_DC_EXT_FLIP_FLAG_INTERLACE set */
+			__u32	offset2;
+			__u32	offset_u2;
+			__u32	offset_v2;
+			/* Leave some wiggle room for future expansion */
+			__u32   pad2[1];
+		};
+		struct { /* used if TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED set */
+			__u32	buff_id; /* take from buff_id if zero */
+			__u32	offset; /* added to base */
+			__u16	offset_x;
+			__u16	offset_y;
+			__u32	zbc_color;
+		} cde;
+	};
 };
 
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3

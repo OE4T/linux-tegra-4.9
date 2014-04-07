@@ -94,6 +94,7 @@ struct tegra_dc_ext_flip_win {
 	dma_addr_t				phys_addr;
 	dma_addr_t				phys_addr_u;
 	dma_addr_t				phys_addr_v;
+	dma_addr_t				phys_addr_cde;
 	/* field 2 */
 	dma_addr_t				phys_addr2;
 	dma_addr_t				phys_addr_u2;
@@ -291,6 +292,15 @@ int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 		goto fail;
 	}
 
+	/* our interface doesn't support both compression and interlace,
+	 * even if the HW can do it. */
+	if ((win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) &&
+		(win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)) {
+		dev_err(&dc->ndev->dev, "compression and interlace not supported for window %d.\n",
+			win->idx);
+		goto fail;
+	}
+
 	return 0;
 fail:
 	return -EINVAL;
@@ -327,6 +337,15 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
 		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
+#endif
+
+#if defined(CONFIG_TEGRA_DC_CDE)
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
+		win->cde.zbc_color = flip_win->cde.zbc_color;
+		win->cde.offset_y = flip_win->cde.offset_x;
+		win->cde.offset_y = flip_win->cde.offset_y;
+		win->cde.ctb_entry = 0x02;
+	}
 #endif
 
 	win->fmt = flip_win->pixformat;
@@ -377,7 +396,6 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		flip_win->phys_addr_v : flip_win->phys_addr;
 	win->phys_addr_v += flip_win->attr.offset_v;
 
-
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (ext->dc->mode.vmode == FB_VMODE_INTERLACED) {
 		if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE) {
@@ -402,6 +420,12 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 				flip_win->phys_addr_v : flip_win->phys_addr;
 		}
 	}
+#endif
+
+#if defined(CONFIG_TEGRA_DC_CDE)
+	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)
+		win->cde.cde_addr =
+			flip_win->phys_addr_cde + flip_win->attr.cde.offset;
 #endif
 
 	err = tegra_dc_ext_check_windowattr(ext, win);
@@ -774,6 +798,26 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 		} else {
 			flip_win->handle[TEGRA_DC_V] = NULL;
 			flip_win->phys_addr_v = 0;
+		}
+
+		if ((flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)) {
+#if defined(CONFIG_TEGRA_DC_CDE)
+			/* use buff_id of the main surface when cde is 0 */
+			__u32 cde_buff_id = flip_win->attr.cde.buff_id;
+			if (!cde_buff_id)
+				cde_buff_id = flip_win->attr.buff_id;
+			ret = tegra_dc_ext_pin_window(user,
+					      cde_buff_id,
+					      &flip_win->handle[TEGRA_DC_CDE],
+					      &flip_win->phys_addr_cde);
+			if (ret)
+				return ret;
+#else
+			return -EINVAL; /* not supported */
+#endif
+		} else {
+			flip_win->handle[TEGRA_DC_CDE] = NULL;
+			flip_win->phys_addr_cde = 0;
 		}
 
 		if (syncpt_fd) {

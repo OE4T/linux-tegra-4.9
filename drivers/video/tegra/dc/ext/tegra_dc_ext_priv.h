@@ -45,6 +45,7 @@ enum {
 	TEGRA_DC_Y,
 	TEGRA_DC_U,
 	TEGRA_DC_V,
+	TEGRA_DC_CDE,
 	TEGRA_DC_NUM_PLANES,
 };
 

@@ -615,10 +615,36 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			continue;
 		}
 
+#if defined(CONFIG_TEGRA_DC_CDE)
+		if (win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
+			tegra_dc_writel(dc, ENABLESURFACE0,
+				DC_WINBUF_CDE_CONTROL);
+
+			if (WARN_ONCE(!win->cde.cde_addr,
+				"CDE address is NULL!"))
+				return -EINVAL;
+			tegra_dc_writel(dc, tegra_dc_reg_l32(win->cde.cde_addr),
+				DC_WINBUF_CDE_COMPTAG_BASE_0);
+			tegra_dc_writel(dc, tegra_dc_reg_h32(win->cde.cde_addr),
+				DC_WINBUF_CDE_COMPTAG_BASEHI_0);
+
+			tegra_dc_writel(dc, win->cde.zbc_color,
+				DC_WINBUF_CDE_ZBC_COLOR_0);
+
+			tegra_dc_writel(dc, win->cde.offset_x |
+				((u32)win->cde.offset_y << 16),
+				DC_WINBUF_CDE_SURFACE_OFFSET_0);
+			tegra_dc_writel(dc, win->cde.ctb_entry,
+				DC_WINBUF_CDE_CTB_ENTRY_0);
+			tegra_dc_writel(dc, 0x00000000,
+				DC_WINBUF_CDE_CG_SW_OVR);
+		}
+#endif
 		tegra_dc_writel(dc, tegra_dc_fmt(win->fmt),
 			DC_WIN_COLOR_DEPTH);
 		tegra_dc_writel(dc, tegra_dc_fmt_byteorder(win->fmt),
 			DC_WIN_BYTE_SWAP);
+
 
 		if (do_partial_update) {
 			if (!win->out_w || !win->out_h ||

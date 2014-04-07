@@ -300,7 +300,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	s->reserved = 0;
 
 	if (ctx->param.backtrace) {
-		bt_size = quadd_get_user_callchain(user_regs, cc, ctx);
+		bt_size = quadd_get_user_callchain(user_regs, cc, ctx, task);
 
 		if (!bt_size && !user_mode(regs)) {
 			unsigned long pc = instruction_pointer(user_regs);

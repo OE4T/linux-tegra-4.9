@@ -63,7 +63,7 @@ struct quadd_unwind_ctx {
 	unsigned long ri_nr;
 	unsigned long ri_size;
 
-	struct task_struct *task;
+	pid_t pid;
 
 	unsigned long pinned_pages;
 	unsigned long pinned_size;
@@ -98,6 +98,23 @@ struct pin_pages_work {
 };
 
 struct quadd_unwind_ctx ctx;
+
+static inline int
+validate_stack_addr(unsigned long addr,
+		    struct vm_area_struct *vma,
+		    unsigned long nbytes)
+{
+	if (addr & 0x03)
+		return 0;
+
+	return is_vma_addr(addr, vma, nbytes);
+}
+
+static inline int
+validate_pc_addr(unsigned long addr, unsigned long nbytes)
+{
+	return addr && addr < TASK_SIZE - nbytes;
+}
 
 #define read_user_data(addr, retval)			\
 ({							\
@@ -193,8 +210,22 @@ static void pin_user_pages(struct extables *tabs)
 	long ret;
 	struct extab_info *ti;
 	unsigned long nr_pages, addr;
-	struct mm_struct *mm = ctx.task->mm;
+	struct pid *pid_s;
+	struct task_struct *task = NULL;
+	struct mm_struct *mm;
 
+	rcu_read_lock();
+
+	pid_s = find_vpid(ctx.pid);
+	if (pid_s)
+		task = pid_task(pid_s, PIDTYPE_PID);
+
+	rcu_read_unlock();
+
+	if (!task)
+		return;
+
+	mm = task->mm;
 	if (!mm)
 		return;
 
@@ -204,7 +235,7 @@ static void pin_user_pages(struct extables *tabs)
 	addr = ti->addr & PAGE_MASK;
 	nr_pages = GET_NR_PAGES(ti->addr, ti->length);
 
-	ret = get_user_pages(ctx.task, mm, addr, nr_pages, 0, 0,
+	ret = get_user_pages(task, mm, addr, nr_pages, 0, 0,
 			     NULL, NULL);
 	if (ret < 0) {
 		pr_debug("%s: warning: addr/nr_pages: %#lx/%lu\n",
@@ -222,7 +253,7 @@ static void pin_user_pages(struct extables *tabs)
 	addr = ti->addr & PAGE_MASK;
 	nr_pages = GET_NR_PAGES(ti->addr, ti->length);
 
-	ret = get_user_pages(ctx.task, mm, addr, nr_pages, 0, 0,
+	ret = get_user_pages(task, mm, addr, nr_pages, 0, 0,
 			     NULL, NULL);
 	if (ret < 0) {
 		pr_debug("%s: warning: addr/nr_pages: %#lx/%lu\n",
@@ -450,7 +481,8 @@ unwind_find_idx(struct extab_info *exidx, u32 addr)
 static unsigned long
 unwind_get_byte(struct unwind_ctrl_block *ctrl, long *err)
 {
-	unsigned long ret, insn_word;
+	unsigned long ret;
+	u32 insn_word;
 
 	*err = 0;
 
@@ -679,6 +711,9 @@ unwind_frame(struct extab_info *exidx,
 	long err = 0;
 	u32 val;
 
+	if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32)))
+		return -QUADD_URC_SP_INCORRECT;
+
 	/* only go to a higher address on the stack */
 	low = frame->sp;
 	high = vma_sp->vm_end;
@@ -742,7 +777,8 @@ unwind_frame(struct extab_info *exidx,
 		if (err < 0)
 			return err;
 
-		if (ctrl.vrs[SP] < low || ctrl.vrs[SP] >= high)
+		if (ctrl.vrs[SP] & 0x03 ||
+		    ctrl.vrs[SP] < low || ctrl.vrs[SP] >= high)
 			return -QUADD_URC_SP_INCORRECT;
 	}
 
@@ -752,6 +788,9 @@ unwind_frame(struct extab_info *exidx,
 	/* check for infinite loop */
 	if (frame->pc == ctrl.vrs[PC])
 		return -QUADD_URC_FAILURE;
+
+	if (!validate_pc_addr(ctrl.vrs[PC], sizeof(u32)))
+		return -QUADD_URC_PC_INCORRECT;
 
 	frame->fp_thumb = ctrl.vrs[FP_THUMB];
 	frame->fp_arm = ctrl.vrs[FP_ARM];
@@ -767,7 +806,8 @@ static void
 unwind_backtrace(struct quadd_callchain *cc,
 		 struct extab_info *exidx,
 		 struct pt_regs *regs,
-		 struct vm_area_struct *vma_sp)
+		 struct vm_area_struct *vma_sp,
+		 struct task_struct *task)
 {
 	struct extables tabs;
 	struct stackframe frame;
@@ -790,22 +830,27 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 frame.fp_arm, frame.fp_thumb, frame.sp, frame.lr, frame.pc);
 	pr_debug("vma_sp: %#lx - %#lx, length: %#lx\n",
 		 vma_sp->vm_start, vma_sp->vm_end,
-		 vma_sp->vm_start - vma_sp->vm_end);
+		 vma_sp->vm_end - vma_sp->vm_start);
 
 	while (1) {
 		long err;
 		unsigned long where = frame.pc;
 		struct vm_area_struct *vma_pc;
-		struct mm_struct *mm = current->mm;
+		struct mm_struct *mm = task->mm;
 
 		if (!mm)
 			break;
+
+		if (!validate_stack_addr(frame.sp, vma_sp, sizeof(u32))) {
+			cc->unw_rc = -QUADD_URC_SP_INCORRECT;
+			break;
+		}
 
 		vma_pc = find_vma(mm, frame.pc);
 		if (!vma_pc)
 			break;
 
-		if (!is_vma_addr(exidx->addr, vma_pc)) {
+		if (!is_vma_addr(exidx->addr, vma_pc, sizeof(u32))) {
 			struct ex_region_info *ri;
 
 			spin_lock(&ctx.lock);
@@ -838,11 +883,12 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 unsigned int
 quadd_get_user_callchain_ut(struct pt_regs *regs,
-			    struct quadd_callchain *cc)
+			    struct quadd_callchain *cc,
+			    struct task_struct *task)
 {
 	unsigned long ip, sp;
 	struct vm_area_struct *vma, *vma_sp;
-	struct mm_struct *mm = current->mm;
+	struct mm_struct *mm = task->mm;
 	struct ex_region_info *ri;
 	struct extables tabs;
 
@@ -878,7 +924,7 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 		return 0;
 	}
 
-	unwind_backtrace(cc, &tabs.exidx, regs, vma_sp);
+	unwind_backtrace(cc, &tabs.exidx, regs, vma_sp, task);
 
 	return cc->nr;
 }
@@ -903,7 +949,7 @@ int quadd_unwind_start(struct task_struct *task)
 	}
 	ctx.ri_size = QUADD_EXTABS_SIZE;
 
-	ctx.task = task;
+	ctx.pid = task->tgid;
 
 	spin_unlock(&ctx.lock);
 
@@ -920,7 +966,7 @@ void quadd_unwind_stop(void)
 	ctx.ri_size = 0;
 	ctx.ri_nr = 0;
 
-	ctx.task = NULL;
+	ctx.pid = 0;
 
 	spin_unlock(&ctx.lock);
 
@@ -934,6 +980,7 @@ int quadd_unwind_init(void)
 	ctx.regions = NULL;
 	ctx.ri_size = 0;
 	ctx.ri_nr = 0;
+	ctx.pid = 0;
 
 	spin_lock_init(&ctx.lock);
 

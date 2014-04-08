@@ -1244,18 +1244,19 @@ int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 		return -EINVAL;
 	}
 
-	if (--mutex->ref_cnt == 0) {
-		gk20a_writel(g, pwr_pmu_mutex_r(mutex->index),
-			pwr_pmu_mutex_value_initial_lock_f());
+	if (--mutex->ref_cnt > 0)
+		return -EBUSY;
 
-		data = gk20a_readl(g, pwr_pmu_mutex_id_release_r());
-		data = set_field(data, pwr_pmu_mutex_id_release_value_m(),
-			pwr_pmu_mutex_id_release_value_f(owner));
-		gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
+	gk20a_writel(g, pwr_pmu_mutex_r(mutex->index),
+		pwr_pmu_mutex_value_initial_lock_f());
 
-		gk20a_dbg_pmu("mutex released: id=%d, token=0x%x",
-			mutex->index, *token);
-	}
+	data = gk20a_readl(g, pwr_pmu_mutex_id_release_r());
+	data = set_field(data, pwr_pmu_mutex_id_release_value_m(),
+		pwr_pmu_mutex_id_release_value_f(owner));
+	gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
+
+	gk20a_dbg_pmu("mutex released: id=%d, token=0x%x",
+		mutex->index, *token);
 
 	return 0;
 }

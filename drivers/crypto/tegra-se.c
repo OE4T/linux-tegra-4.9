@@ -2758,25 +2758,25 @@ static int tegra_se_probe(struct platform_device *pdev)
 		dev_err(se_dev->dev, "clock intialization failed (%ld)\n",
 			PTR_ERR(se_dev->pclk));
 		err = PTR_ERR(se_dev->pclk);
-		goto clean;
+		goto free_res;
 	}
 
 	err = clk_set_rate(se_dev->pclk, ULONG_MAX);
 	if (err) {
 		dev_err(se_dev->dev, "clock set_rate failed.\n");
-		goto clean;
+		goto free_res;
 	}
 
 	err = tegra_init_key_slot(se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "init_key_slot failed\n");
-		goto clean;
+		goto free_res;
 	}
 
 	err = tegra_init_rsa_key_slot(se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "init_rsa_key_slot failed\n");
-		goto clean;
+		goto free_res;
 	}
 
 	init_completion(&se_dev->complete);
@@ -2785,7 +2785,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 				WQ_HIGHPRI | WQ_UNBOUND, 16);
 	if (!se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
-		goto clean;
+		goto free_res;
 	}
 
 	sg_tegra_se_dev = se_dev;
@@ -2798,7 +2798,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (err) {
 		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
 			se_dev->irq, err);
-		goto err_irq;
+		goto free_res;
 	}
 
 	se_dev->dev->coherent_dma_mask = DMA_BIT_MASK(64);
@@ -2881,6 +2881,9 @@ static int tegra_se_probe(struct platform_device *pdev)
 	return 0;
 
 clean:
+	free_irq(se_dev->irq, &pdev->dev);
+
+free_res:
 	pm_runtime_disable(se_dev->dev);
 	for (k = 0; k < i; k++)
 		crypto_unregister_alg(&aes_algs[k]);
@@ -2898,7 +2901,6 @@ clean:
 
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
-	free_irq(se_dev->irq, &pdev->dev);
 
 err_irq:
 	iounmap(se_dev->pmc_io_reg);

@@ -862,7 +862,6 @@ struct pmu_queue {
 	/* open-flag */
 	u32 oflag;
 	bool opened; /* opened implies locked */
-	bool locked; /* check free space after setting locked but before setting opened */
 };
 
 

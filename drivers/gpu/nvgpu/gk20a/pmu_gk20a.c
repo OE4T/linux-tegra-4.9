@@ -1270,15 +1270,10 @@ static int pmu_queue_lock(struct pmu_gk20a *pmu,
 
 	if (PMU_IS_SW_COMMAND_QUEUE(queue->id)) {
 		mutex_lock(&queue->mutex);
-		queue->locked = true;
 		return 0;
 	}
 
-	err = pmu_mutex_acquire(pmu, queue->mutex_id,
-			&queue->mutex_lock);
-	if (err == 0)
-		queue->locked = true;
-
+	err = pmu_mutex_acquire(pmu, queue->mutex_id, &queue->mutex_lock);
 	return err;
 }
 
@@ -1292,18 +1287,11 @@ static int pmu_queue_unlock(struct pmu_gk20a *pmu,
 
 	if (PMU_IS_SW_COMMAND_QUEUE(queue->id)) {
 		mutex_unlock(&queue->mutex);
-		queue->locked = false;
 		return 0;
 	}
 
-	if (queue->locked) {
-		err = pmu_mutex_release(pmu, queue->mutex_id,
-				&queue->mutex_lock);
-		if (err == 0)
-			queue->locked = false;
-	}
-
-	return 0;
+	err = pmu_mutex_release(pmu, queue->mutex_id, &queue->mutex_lock);
+	return err;
 }
 
 /* called by pmu_read_message, no lock */
@@ -1326,8 +1314,6 @@ static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 {
 	u32 head, tail, free;
 	bool rewind = false;
-
-	BUG_ON(!queue->locked);
 
 	size = ALIGN(size, QUEUE_ALIGNMENT);
 

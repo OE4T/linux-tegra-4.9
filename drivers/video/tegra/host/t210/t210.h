@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Chip support for T210
  *
- * Copyright (c) 2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,7 @@ extern struct nvhost_device_data t21_msenc_info;
 extern struct nvhost_device_data t21_nvdec_info;
 extern struct nvhost_device_data t21_nvjpg_info;
 extern struct nvhost_device_data t21_tsec_info;
+extern struct nvhost_device_data t21_tsecb_info;
 extern struct nvhost_device_data t21_vic_info;
 
 int nvhost_init_t210_support(struct nvhost_master *host,

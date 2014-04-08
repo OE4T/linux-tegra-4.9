@@ -1049,6 +1049,7 @@ static struct {
 	{ NV_GRAPHICS_GPU_CLASS_ID, "gpu"},
 	{ NV_GRAPHICS_VIC_CLASS_ID, "vic"},
 	{ NV_TSEC_CLASS_ID, "tsec" },
+	{ NV_TSECB_CLASS_ID, "tsecb" },
 };
 
 static struct {

@@ -168,6 +168,18 @@ struct nvhost_device_data t21_tsec_info = {
 	.moduleid      = NVHOST_MODULE_TSEC,
 	.num_channels  = 1,
 };
+
+struct nvhost_device_data t21_tsecb_info = {
+	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
+	.class         = NV_TSECB_CLASS_ID,
+	.exclusive     = true,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks		= {{"tsecb", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
+	.init		= nvhost_tsec_init,
+	.deinit		= nvhost_tsec_deinit,
+	.moduleid      = NVHOST_MODULE_TSEC,
+};
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
 	.modulemutexes	= {NVMODMUTEX_VIC},

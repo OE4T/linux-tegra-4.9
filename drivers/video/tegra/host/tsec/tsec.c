@@ -511,8 +511,12 @@ static struct of_device_id tegra_tsec_of_match[] = {
 		.data = (struct nvhost_device_data *)&t124_tsec_info },
 #endif
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra210-tsec",
+	{ .name = "tsec",
+		.compatible = "nvidia,tegra210-tsec",
 		.data = (struct nvhost_device_data *)&t21_tsec_info },
+	{ .name = "tsecb",
+		.compatible = "nvidia,tegra210-tsec",
+		.data = (struct nvhost_device_data *)&t21_tsecb_info },
 #endif
 	{ },
 };

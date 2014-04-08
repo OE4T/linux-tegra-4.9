@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/class_ids.h
- *
  * Tegra Host Module Class IDs
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,6 +29,7 @@ enum {
 	NV_GRAPHICS_GPU_CLASS_ID	= 0x61,
 	NV_GRAPHICS_VIC_CLASS_ID	= 0x5D,
 	NV_TSEC_CLASS_ID		= 0xE0,
+	NV_TSECB_CLASS_ID		= 0xE1,
 	NV_NVJPG_CLASS_ID		= 0xC0,
 	NV_NVDEC_CLASS_ID		= 0xF0,
 };

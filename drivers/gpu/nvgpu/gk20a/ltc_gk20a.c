@@ -27,10 +27,6 @@
 
 static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct device *d = dev_from_gk20a(g);
-	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t iova;
-
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
 	/* one tag line covers 128KB */
@@ -49,6 +45,8 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
 
 	u32 compbit_backing_size;
+
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -84,17 +82,13 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	gr->compbit_store.size = compbit_backing_size;
-	gr->compbit_store.pages = dma_alloc_attrs(d, gr->compbit_store.size,
-					&iova, GFP_KERNEL, &attrs);
-	if (!gr->compbit_store.pages) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate"
-			   "backing store for compbit : size %d",
-			   compbit_backing_size);
-		return -ENOMEM;
-	}
-	gr->compbit_store.base_iova = iova;
+	if (IS_ENABLED(CONFIG_GK20A_PHYS_PAGE_TABLES))
+		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
+	else
+		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);
+
+	if (err)
+		return err;
 
 	gk20a_allocator_init(&gr->comp_tags, "comptag",
 			      1, /* start */

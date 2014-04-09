@@ -180,6 +180,85 @@ static int gk20a_ltc_init_zbc(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
+static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
+				    size_t compbit_backing_size)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int order = ffs(compbit_backing_size >> PAGE_SHIFT);
+	struct page *pages;
+	struct sg_table *sgt;
+	int err = 0;
+
+	/* allocate few pages */
+	pages = alloc_pages(GFP_KERNEL, order);
+	if (!pages) {
+		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed\n");
+		err = -ENOMEM;
+		goto err_alloc_pages;
+	}
+
+	/* clean up the pages */
+	memset(page_address(pages), 0, compbit_backing_size);
+
+	/* allocate room for placing the pages pointer.. */
+	gr->compbit_store.pages =
+		kzalloc(sizeof(*gr->compbit_store.pages), GFP_KERNEL);
+	if (!gr->compbit_store.pages) {
+		gk20a_dbg(gpu_dbg_pte, "failed to allocate pages struct");
+		err = -ENOMEM;
+		goto err_alloc_compbit_store;
+	}
+
+	err = gk20a_get_sgtable_from_pages(&g->dev->dev, &sgt, &pages, 0,
+					   compbit_backing_size);
+	if (err) {
+		gk20a_dbg(gpu_dbg_pte, "could not get sg table for pages\n");
+		goto err_alloc_sg_table;
+	}
+
+	/* store the parameters to gr structure */
+	*gr->compbit_store.pages = pages;
+	gr->compbit_store.base_iova = sg_phys(sgt->sgl);
+	gr->compbit_store.size = compbit_backing_size;
+
+	kfree(sgt);
+
+	return 0;
+
+err_alloc_sg_table:
+	kfree(gr->compbit_store.pages);
+	gr->compbit_store.pages = NULL;
+err_alloc_compbit_store:
+	__free_pages(pages, order);
+err_alloc_pages:
+	return err;
+}
+
+static int gk20a_ltc_alloc_virt_cbc(struct gk20a *g,
+				    size_t compbit_backing_size)
+{
+	struct device *d = dev_from_gk20a(g);
+	struct gr_gk20a *gr = &g->gr;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
+
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+
+	gr->compbit_store.pages =
+		dma_alloc_attrs(d, compbit_backing_size, &iova,
+				GFP_KERNEL, &attrs);
+	if (!gr->compbit_store.pages) {
+		gk20a_err(dev_from_gk20a(g), "failed to allocate backing store for compbit : size %zu",
+				  compbit_backing_size);
+		return -ENOMEM;
+	}
+
+	gr->compbit_store.base_iova = iova;
+	gr->compbit_store.size = compbit_backing_size;
+
+	return 0;
+}
+
 static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 max_size = gr->max_comptag_mem;
@@ -187,10 +266,17 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;
-	u64 compbit_store_base_iova =
-		NV_MC_SMMU_VADDR_TRANSLATE(gr->compbit_store.base_iova);
-	u64 compbit_base_post_divide64 = (compbit_store_base_iova >>
-		ltc_ltcs_ltss_cbc_base_alignment_shift_v());
+	u64 compbit_store_base_iova;
+	u64 compbit_base_post_divide64;
+
+	if (IS_ENABLED(CONFIG_GK20A_PHYS_PAGE_TABLES))
+		compbit_store_base_iova = gr->compbit_store.base_iova;
+	else
+		compbit_store_base_iova = NV_MC_SMMU_VADDR_TRANSLATE(
+			gr->compbit_store.base_iova);
+
+	compbit_base_post_divide64 = compbit_store_base_iova >>
+		ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	do_div(compbit_base_post_divide64, gr->num_fbps);
 	compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);

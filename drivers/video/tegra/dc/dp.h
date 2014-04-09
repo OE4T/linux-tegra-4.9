@@ -250,7 +250,9 @@ struct tegra_dc_dp_data {
 	struct clk			*dpaux_clk;
 	struct clk			*parent_clk; /* pll_dp clock */
 
-	struct work_struct		 lt_work;
+	struct work_struct		lt_work;
+	struct mutex		lt_lock;
+
 	u8				 revision;
 
 	struct tegra_dc_mode		*mode;

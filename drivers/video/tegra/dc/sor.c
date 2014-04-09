@@ -52,16 +52,6 @@
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_OFF		(0 << 25)
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON		(1 << 25)
 
-static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
-{
-	clk_prepare_enable(sor->sor_clk);
-}
-
-static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
-{
-	clk_disable_unprepare(sor->sor_clk);
-}
-
 static unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 				u32 reg, u32 mask, u32 exp_val,
@@ -842,6 +832,8 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		NV_SOR_CSTM_LVDS_EN_DISABLE);
 
 	tegra_dc_sor_config_pwm(sor, 1024, 1024);
+
+	tegra_dc_sor_update(sor);
 }
 
 static void tegra_dc_sor_general_act(struct tegra_dc *dc)
@@ -994,6 +986,22 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 	tegra_dc_writel(dc, reg_val, DC_DISP_DISP_WIN_OPTIONS);
 }
 
+void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+	u32 reg_val;
+
+	tegra_dc_get(dc);
+	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
+
+	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_sor_enable_sor(sor, true);
+
+	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
+	tegra_dc_put(dc);
+}
+
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -1005,18 +1013,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
 
 	tegra_dc_sor_config_panel(sor, false);
-
-	tegra_dc_writel(dc, 0x9f00, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, 0x9f, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
-		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
-		DC_CMD_DISPLAY_POWER_CONTROL);
-
-	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_sor_update(sor);
 
 	/* WAR for bug 1428181 */
 	tegra_dc_sor_enable_sor(sor, true);
@@ -1129,6 +1125,23 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 }
 
+void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+
+	tegra_dc_get(dc);
+
+	/* Stop DC->SOR path */
+	tegra_dc_sor_enable_sor(sor, false);
+	tegra_dc_sor_general_act(dc);
+
+	/* Stop DC */
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_sor_general_act(dc);
+
+	tegra_dc_put(dc);
+}
+
 void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -1163,13 +1176,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	dc_int_mask = tegra_dc_readl(dc, DC_CMD_INT_MASK);
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
-	/* Stop DC->SOR path */
-	tegra_dc_sor_enable_sor(sor, false);
-	tegra_dc_sor_general_act(dc);
-
-	/* Stop DC */
-	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
-	tegra_dc_sor_general_act(dc);
+	tegra_sor_stop_dc(sor);
 
 	tegra_dc_sor_restore_win_and_raster(dc, dc_reg_ctx);
 
@@ -1283,13 +1290,6 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	tegra_sor_config_safe_clk(sor);
 
 	tegra_dc_sor_power_down(sor);
-
-	/* Power down the SOR sequencer */
-	if (tegra_dc_sor_set_power_state(sor, 0)) {
-		dev_err(&dc->ndev->dev,
-			"Failed to power down SOR sequencer\n");
-		return;
-	}
 
 	/* Power down DP lanes */
 	if (!is_lvds && tegra_sor_power_dp_lanes(sor, 4, false)) {

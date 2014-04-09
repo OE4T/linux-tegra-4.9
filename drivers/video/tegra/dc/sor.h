@@ -151,7 +151,8 @@ void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb);
 int tegra_sor_power_dp_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu);
 void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor);
-
+void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor);
+void tegra_sor_start_dc(struct tegra_dc_sor_data *sor);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {
@@ -172,6 +173,16 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 	reg_val &= ~mask;
 	reg_val |= val;
 	tegra_sor_writel(sor, reg, reg_val);
+}
+
+static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
+{
+	clk_prepare_enable(sor->sor_clk);
+}
+
+static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
+{
+	clk_disable_unprepare(sor->sor_clk);
 }
 
 static inline int lt_param_idx(int link_bw)

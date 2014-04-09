@@ -212,7 +212,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 
 		h = refs[i];
 		if (h->heap_pgalloc && h->pgalloc.contig)
-			addr = page_to_phys(h->pgalloc.pages[0]);
+			addr = page_to_phys(nvmap_to_page(h->pgalloc.pages[0]));
 		else if (h->heap_pgalloc)
 			addr = sg_dma_address(
 				((struct sg_table *)h->attachment->priv)->sgl);
@@ -740,7 +740,7 @@ static void heap_page_cache_maint(
 	unsigned int op, bool inner, bool outer,
 	unsigned long kaddr, pgprot_t prot)
 {
-	struct page *page;
+	struct page *page, **pages;
 	phys_addr_t paddr;
 	unsigned long next;
 	unsigned long off;
@@ -750,9 +750,16 @@ static void heap_page_cache_maint(
 	if (inner) {
 		void *vaddr = NULL;
 
-		if (!h->vaddr)
-			vaddr = vm_map_ram(h->pgalloc.pages,
+		if (!h->vaddr) {
+			pages = nvmap_pages(h->pgalloc.pages,
+					    h->size >> PAGE_SHIFT);
+			if (!pages)
+				goto per_page_cache_maint;
+			vaddr = vm_map_ram(pages,
 					h->size >> PAGE_SHIFT, -1, prot);
+			nvmap_altfree(pages,
+				(h->size >> PAGE_SHIFT) * sizeof(*page));
+		}
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		if (h->vaddr) {
@@ -764,9 +771,11 @@ static void heap_page_cache_maint(
 			inner = false;
 		}
 	}
+per_page_cache_maint:
 #endif
+
 	while (start < end) {
-		page = h->pgalloc.pages[start >> PAGE_SHIFT];
+		page = nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;
 		size = next - start;
@@ -998,7 +1007,8 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 		if (!h->heap_pgalloc) {
 			phys = h->carveout->base + start;
 		} else {
-			page = h->pgalloc.pages[start >> PAGE_SHIFT];
+			page =
+			   nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 			BUG_ON(!page);
 			get_page(page);
 			phys = page_to_phys(page) + (start & ~PAGE_MASK);

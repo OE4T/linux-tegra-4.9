@@ -272,7 +272,6 @@ static struct resource msenc_resources[] = {
 
 struct nvhost_device_data t124_msenc_info = {
 	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
-	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR} },
@@ -311,7 +310,6 @@ static struct resource tsec_resources[] = {
 
 struct nvhost_device_data t124_tsec_info = {
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.waitbases     = {NVWAITBASE_TSEC},
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
@@ -478,7 +476,6 @@ struct nvhost_device_data t132_vib_info = {
 
 struct nvhost_device_data t132_msenc_info = {
 	.version	= NVHOST_ENCODE_MSENC_VER(3, 1),
-	.waitbases	= {NVWAITBASE_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR} },
@@ -494,7 +491,6 @@ struct nvhost_device_data t132_msenc_info = {
 
 struct nvhost_device_data t132_tsec_info = {
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.waitbases     = {NVWAITBASE_TSEC},
 	.class         = NV_TSEC_CLASS_ID,
 	.exclusive     = true,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},

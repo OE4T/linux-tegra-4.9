@@ -111,7 +111,7 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 		return 0;
 	}
 
-	dev_info(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
+	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 
 	/* Allow keep-alive'd module to be turned off
 	 * make sure that all channels are unmapped before calling
@@ -229,7 +229,7 @@ struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
 	if (pdata->keepalive)
 		nvhost_module_disable_poweroff(ch->dev);
 
-	dev_info(&ch->dev->dev, "channel %d mapped\n", ch->chid);
+	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
 	mutex_unlock(&host->chlist_mutex);
 
 	return ch;

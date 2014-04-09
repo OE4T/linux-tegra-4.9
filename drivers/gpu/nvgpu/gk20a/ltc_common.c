@@ -182,6 +182,9 @@ static int gk20a_ltc_init_zbc(struct gk20a *g, struct gr_gk20a *gr)
 
 static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 {
+	u32 max_size = gr->max_comptag_mem;
+	u32 max_comptag_lines = max_size << 3;
+
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;
 	u64 compbit_store_base_iova =
@@ -206,6 +209,10 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 		   (u32)(compbit_store_base_iova >> 32),
 		   (u32)(compbit_store_base_iova & 0xffffffff),
 		   compbit_base_post_divide);
+
+	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
+			    0, max_comptag_lines - 1);
+
 }
 
 /* Flushes the compression bit cache as well as "data".

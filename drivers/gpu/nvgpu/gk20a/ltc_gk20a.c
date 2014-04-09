@@ -108,10 +108,12 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
+static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+			      u32 min, u32 max)
 {
+	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	u32 fbp, slice, ctrl1, val;
+	u32 fbp, slice, ctrl1, val, hw_op = 0;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -124,13 +126,24 @@ static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 	if (gr->compbit_store.size == 0)
 		return 0;
 
-	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl2_r(),
-		     ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(min));
-	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl3_r(),
-		     ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(max));
+	mutex_lock(&g->mm.l2_op_lock);
+
+	if (op == gk20a_cbc_op_clear) {
+		gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl2_r(),
+			     ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(min));
+		gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl3_r(),
+			     ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(max));
+		hw_op = ltc_ltcs_ltss_cbc_ctrl1_clear_active_f();
+	} else if (op == gk20a_cbc_op_clean) {
+		hw_op = ltc_ltcs_ltss_cbc_ctrl1_clean_active_f();
+	} else if (op == gk20a_cbc_op_invalidate) {
+		hw_op = ltc_ltcs_ltss_cbc_ctrl1_invalidate_active_f();
+	} else {
+		BUG_ON(1);
+	}
+
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl1_r(),
-		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) |
-		     ltc_ltcs_ltss_cbc_ctrl1_clear_active_f());
+		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) | hw_op);
 
 	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
 		for (slice = 0; slice < slices_per_fbp; slice++) {
@@ -143,8 +156,7 @@ static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 
 			do {
 				val = gk20a_readl(g, ctrl1);
-				if (ltc_ltcs_ltss_cbc_ctrl1_clear_v(val) !=
-				    ltc_ltcs_ltss_cbc_ctrl1_clear_active_v())
+				if (!(val & hw_op))
 					break;
 
 				usleep_range(delay, delay * 2);
@@ -157,11 +169,13 @@ static int gk20a_ltc_clear_comptags(struct gk20a *g, u32 min, u32 max)
 			if (!time_before(jiffies, end_jiffies)) {
 				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
-				return -EBUSY;
+				err = -EBUSY;
+				goto out;
 			}
 		}
 	}
-
+out:
+	mutex_unlock(&g->mm.l2_op_lock);
 	return 0;
 }
 
@@ -200,7 +214,7 @@ void gk20a_init_ltc(struct gpu_ops *gops)
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
 	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
 	gops->ltc.init_comptags = gk20a_ltc_init_comptags;
-	gops->ltc.clear_comptags = gk20a_ltc_clear_comptags;
+	gops->ltc.cbc_ctrl = gk20a_ltc_cbc_ctrl;
 	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
 	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
 	gops->ltc.clear_zbc_color_entry = gk20a_ltc_clear_zbc_color_entry;

@@ -1380,7 +1380,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			gk20a_get_comptags(d, dmabuf, &comptags);
 
 			/* init/clear the ctag buffer */
-			g->ops.ltc.clear_comptags(g,
+			g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
 					  comptags.offset,
 					  comptags.offset + comptags.lines - 1);
 		}

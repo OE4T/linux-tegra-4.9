@@ -1227,11 +1227,11 @@ static int gk20a_pm_suspend(struct device *dev)
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 
+	gk20a_scale_suspend(to_platform_device(dev));
+
 	ret = gk20a_pm_prepare_poweroff(dev);
 	if (ret)
 		return ret;
-
-	gk20a_scale_suspend(to_platform_device(dev));
 
 	if (platform->suspend)
 		platform->suspend(dev);

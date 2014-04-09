@@ -93,6 +93,17 @@ struct nvhost_get_param_arg {
 	__u32 value;
 };
 
+struct nvhost_get_client_managed_syncpt_arg {
+	__u64 name;
+	__u32 param;
+	__u32 value;
+};
+
+struct nvhost_free_client_managed_syncpt_arg {
+	__u32 param;
+	__u32 value;
+};
+
 struct nvhost_channel_open_args {
 	__s32 channel_fd;
 };
@@ -351,6 +362,10 @@ struct nvhost_set_ctxswitch_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 17, struct nvhost_get_param_arg)
 #define NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 18, struct nvhost_set_timeout_ex_args)
+#define NVHOST_IOCTL_CHANNEL_GET_CLIENT_MANAGED_SYNCPOINT	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 19, struct nvhost_get_client_managed_syncpt_arg)
+#define NVHOST_IOCTL_CHANNEL_FREE_CLIENT_MANAGED_SYNCPOINT	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 20, struct nvhost_free_client_managed_syncpt_arg)
 #define NVHOST_IOCTL_CHANNEL_GET_MODMUTEX	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 23, struct nvhost_get_param_arg)
 #define NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH	\

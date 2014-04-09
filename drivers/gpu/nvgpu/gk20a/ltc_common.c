@@ -220,8 +220,7 @@ static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
 	*gr->compbit_store.pages = pages;
 	gr->compbit_store.base_iova = sg_phys(sgt->sgl);
 	gr->compbit_store.size = compbit_backing_size;
-
-	kfree(sgt);
+	gr->compbit_store.sgt = sgt;
 
 	return 0;
 
@@ -241,6 +240,7 @@ static int gk20a_ltc_alloc_virt_cbc(struct gk20a *g,
 	struct gr_gk20a *gr = &g->gr;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
+	int err;
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 
@@ -255,6 +255,14 @@ static int gk20a_ltc_alloc_virt_cbc(struct gk20a *g,
 
 	gr->compbit_store.base_iova = iova;
 	gr->compbit_store.size = compbit_backing_size;
+	err = gk20a_get_sgtable_from_pages(d,
+				   &gr->compbit_store.sgt,
+				   gr->compbit_store.pages, iova,
+				   compbit_backing_size);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to allocate sgt for backing store");
+		return err;
+	}
 
 	return 0;
 }

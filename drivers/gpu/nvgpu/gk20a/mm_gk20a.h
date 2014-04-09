@@ -157,6 +157,7 @@ struct gr_ctx_desc {
 
 struct compbit_store_desc {
 	struct page **pages;
+	struct sg_table *sgt;
 	size_t size;
 	u64 base_iova;
 };

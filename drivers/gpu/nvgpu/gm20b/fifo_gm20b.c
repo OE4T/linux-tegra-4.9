@@ -13,10 +13,12 @@
  * more details.
  */
 
+#include <linux/delay.h>
 #include "gk20a/gk20a.h"
 #include "fifo_gm20b.h"
 #include "hw_ccsr_gm20b.h"
 #include "hw_ram_gm20b.h"
+#include "hw_fifo_gm20b.h"
 
 static void channel_gm20b_bind(struct channel_gk20a *ch_gk20a)
 {
@@ -41,7 +43,64 @@ static void channel_gm20b_bind(struct channel_gk20a *ch_gk20a)
 		 ccsr_channel_enable_set_true_f());
 }
 
+static inline u32 gm20b_engine_id_to_mmu_id(u32 engine_id)
+{
+	switch (engine_id) {
+	case ENGINE_GR_GK20A:
+		return 0;
+	case ENGINE_CE2_GK20A:
+		return 1;
+	default:
+		return ~0;
+	}
+}
+
+static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
+		unsigned long engine_ids)
+{
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	unsigned long engine_id;
+	int ret = -EBUSY;
+
+	/* trigger faults for all bad engines */
+	for_each_set_bit(engine_id, &engine_ids, 32) {
+		u32 engine_mmu_id;
+
+		if (engine_id > g->fifo.max_engines) {
+			gk20a_err(dev_from_gk20a(g),
+				  "faulting unknown engine %ld", engine_id);
+		} else {
+			engine_mmu_id = gm20b_engine_id_to_mmu_id(engine_id);
+			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_mmu_id),
+				     fifo_trigger_mmu_fault_enable_f(1));
+		}
+	}
+
+	/* Wait for MMU fault to trigger */
+	do {
+		if (gk20a_readl(g, fifo_intr_0_r()) &
+				fifo_intr_0_mmu_fault_pending_f()) {
+			ret = 0;
+			break;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (time_before(jiffies, end_jiffies) ||
+			!tegra_platform_is_silicon());
+
+	if (ret)
+		gk20a_err(dev_from_gk20a(g), "mmu fault timeout");
+
+	/* release mmu fault trigger */
+	for_each_set_bit(engine_id, &engine_ids, 32)
+		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
+}
+
 void gm20b_init_fifo(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = channel_gm20b_bind;
+	gops->fifo.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault;
 }

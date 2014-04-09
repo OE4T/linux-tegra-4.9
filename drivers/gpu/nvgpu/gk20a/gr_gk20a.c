@@ -1347,6 +1347,12 @@ static int gr_gk20a_setup_alpha_beta_tables(struct gk20a *g,
 	return 0;
 }
 
+static u32 gr_gk20a_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+	/* One TPC for gk20a */
+	return 0x1;
+}
+
 static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -3071,6 +3077,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	gr->gpc_tpc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->gpc_zcb_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->gpc_ppc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->pes_tpc_count[0] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
@@ -3100,6 +3107,11 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 
 		gr->gpc_ppc_count[gpc_index] = gr->pe_count_per_gpc;
 		gr->ppc_count += gr->gpc_ppc_count[gpc_index];
+
+		if (g->ops.gr.get_gpc_tpc_mask)
+			gr->gpc_tpc_mask[gpc_index] =
+				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
+
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
 
 			tmp = gk20a_readl(g,
@@ -6995,4 +7007,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
 	gops->gr.falcon_load_ucode = gr_gk20a_load_ctxsw_ucode_segments;
 	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
+	gops->gr.get_gpc_tpc_mask = gr_gk20a_get_gpc_tpc_mask;
 }

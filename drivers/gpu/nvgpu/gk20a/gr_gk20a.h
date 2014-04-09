@@ -227,6 +227,7 @@ struct gr_gk20a {
 	u32 *gpc_ppc_count;
 	u32 tpc_count;
 	u32 *gpc_tpc_count;
+	u32 *gpc_tpc_mask;
 	u32 zcb_count;
 	u32 *gpc_zcb_count;
 	u32 *pes_tpc_count[2];

@@ -130,6 +130,7 @@ struct gpu_ops {
 				struct gk20a_ctxsw_ucode_segments *segments,
 				u32 reg_offset);
 		int (*load_ctxsw_ucode)(struct gk20a *g);
+		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 	} gr;
 	const char *name;
 	struct {

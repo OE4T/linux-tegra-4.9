@@ -328,6 +328,9 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 	u32 val;
 	u32 delay = expect_delay;
 
+	if (tegra_platform_is_linsim())
+		return 0;
+
 	gk20a_dbg_fn("");
 
 	do {

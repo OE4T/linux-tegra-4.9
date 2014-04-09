@@ -1953,7 +1953,7 @@ clean_up:
 	return ret;
 }
 
-void gk20a_init_fifo(struct gpu_ops *gops)
+void gk20a_init_channel(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = channel_gk20a_bind;
 }

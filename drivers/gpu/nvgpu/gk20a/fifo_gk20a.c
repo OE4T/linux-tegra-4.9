@@ -1092,42 +1092,14 @@ static void gk20a_fifo_get_faulty_channel(struct gk20a *g, int engine_id,
 		fifo_engine_status_id_v(status);
 }
 
-void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
-		bool verbose)
+static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
+		unsigned long engine_ids)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
-	unsigned long engine_id, i;
-	unsigned long _engine_ids = __engine_ids;
-	unsigned long engine_ids = 0;
+	unsigned long engine_id;
 	int ret;
-
-	if (verbose)
-		gk20a_debug_dump(g->dev);
-
-	/* store faulted engines in advance */
-	g->fifo.mmu_fault_engines = 0;
-	for_each_set_bit(engine_id, &_engine_ids, 32) {
-		bool ref_type_ch;
-		int ref_chid;
-		gk20a_fifo_get_faulty_channel(g, engine_id, &ref_chid,
-					      &ref_type_ch);
-
-		/* Reset *all* engines that use the
-		 * same channel as faulty engine */
-		for (i = 0; i < g->fifo.max_engines; i++) {
-			bool type_ch;
-			u32 chid;
-			gk20a_fifo_get_faulty_channel(g, i, &chid, &type_ch);
-			if (ref_type_ch == type_ch && ref_chid == chid) {
-				engine_ids |= BIT(i);
-				g->fifo.mmu_fault_engines |=
-					BIT(gk20a_engine_id_to_mmu_id(i));
-			}
-		}
-
-	}
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
@@ -1162,6 +1134,42 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32)
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
+}
+
+void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
+		bool verbose)
+{
+	unsigned long engine_id, i;
+	unsigned long _engine_ids = __engine_ids;
+	unsigned long engine_ids = 0;
+
+	if (verbose)
+		gk20a_debug_dump(g->dev);
+
+	/* store faulted engines in advance */
+	g->fifo.mmu_fault_engines = 0;
+	for_each_set_bit(engine_id, &_engine_ids, 32) {
+		bool ref_type_ch;
+		int ref_chid;
+		gk20a_fifo_get_faulty_channel(g, engine_id, &ref_chid,
+					      &ref_type_ch);
+
+		/* Reset *all* engines that use the
+		 * same channel as faulty engine */
+		for (i = 0; i < g->fifo.max_engines; i++) {
+			bool type_ch;
+			u32 chid;
+			gk20a_fifo_get_faulty_channel(g, i, &chid, &type_ch);
+			if (ref_type_ch == type_ch && ref_chid == chid) {
+				engine_ids |= BIT(i);
+				g->fifo.mmu_fault_engines |=
+					BIT(gk20a_engine_id_to_mmu_id(i));
+			}
+		}
+
+	}
+
+	g->ops.fifo.trigger_mmu_fault(g, engine_ids);
 }
 
 
@@ -1833,4 +1841,10 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g)
 		return true;
 	else
 		return false;
+}
+
+void gk20a_init_fifo(struct gpu_ops *gops)
+{
+	gk20a_init_channel(gops);
+	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
 }

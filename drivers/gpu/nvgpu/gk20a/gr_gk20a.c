@@ -5333,6 +5333,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
 			gk20a_dbg(gpu_dbg_intr, "fe warning %08x\n", fe);
 			gk20a_writel(g, gr_fe_hww_esr_r(), fe);
+			need_reset |= -EFAULT;
 		}
 
 		/* check if a gpc exception has occurred */

@@ -167,6 +167,6 @@ int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
 
-void gk20a_init_fifo(struct gpu_ops *gops);
+void gk20a_init_channel(struct gpu_ops *gops);
 
 #endif /*__CHANNEL_GK20A_H__*/

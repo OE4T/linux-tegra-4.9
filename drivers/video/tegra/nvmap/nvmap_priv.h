@@ -441,4 +441,7 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root);
 int nvmap_dmabuf_stash_init(void);
 
+void *nvmap_altalloc(size_t len);
+void nvmap_altfree(void *ptr, size_t len);
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

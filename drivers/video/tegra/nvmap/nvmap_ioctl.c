@@ -745,12 +745,20 @@ static void heap_page_cache_maint(
 	size_t size;
 
 #ifdef NVMAP_LAZY_VFREE
+	struct page **pages;
 	if (inner) {
 		void *vaddr = NULL;
 
-		if (!h->vaddr)
-			vaddr = vm_map_ram(h->pgalloc.pages,
+		if (!h->vaddr) {
+			pages = nvmap_pages(h->pgalloc.pages,
+					    h->size >> PAGE_SHIFT);
+			if (!pages)
+				goto per_page_cache_maint;
+			vaddr = vm_map_ram(pages,
 					h->size >> PAGE_SHIFT, -1, prot);
+			nvmap_altfree(pages,
+				(h->size >> PAGE_SHIFT) * sizeof(*page));
+		}
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		if (h->vaddr) {
@@ -762,9 +770,11 @@ static void heap_page_cache_maint(
 			inner = false;
 		}
 	}
+per_page_cache_maint:
 #endif
+
 	while (start < end) {
-		page = h->pgalloc.pages[start >> PAGE_SHIFT];
+		page = nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;
 		size = next - start;
@@ -996,7 +1006,8 @@ static int rw_handle_page(struct nvmap_handle *h, int is_read,
 		if (!h->heap_pgalloc) {
 			phys = h->carveout->base + start;
 		} else {
-			page = h->pgalloc.pages[start >> PAGE_SHIFT];
+			page =
+			   nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 			BUG_ON(!page);
 			get_page(page);
 			phys = page_to_phys(page) + (start & ~PAGE_MASK);

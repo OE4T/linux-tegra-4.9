@@ -776,7 +776,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		page = pfn_to_page(pfn);
 	} else {
 		offs >>= PAGE_SHIFT;
-		page = priv->handle->pgalloc.pages[offs];
+		page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
 	}
 
 	if (page)
@@ -920,7 +920,8 @@ static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
 		}
 
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
-			int mapcount = page_mapcount(h->pgalloc.pages[i]);
+			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
+			int mapcount = page_mapcount(page);
 			if (!mapcount)
 				*non_pss += PAGE_SIZE;
 			*total += PAGE_SIZE;
@@ -1008,7 +1009,8 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 			continue;
 
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
-			int mapcount = page_mapcount(h->pgalloc.pages[i]);
+			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
+			int mapcount = page_mapcount(page);
 			if (!mapcount)
 				*non_pss += PAGE_SIZE;
 			*total += PAGE_SIZE;

@@ -205,7 +205,7 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	kaddr = (ulong)area->addr;
 
 	if (h->heap_pgalloc)
-		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
+		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
 	else
 		paddr = h->carveout->base + pagenum * PAGE_SIZE;
 
@@ -231,7 +231,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 		return;
 
 	if (h->heap_pgalloc)
-		paddr = page_to_phys(h->pgalloc.pages[pagenum]);
+		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
 	else
 		paddr = h->carveout->base + pagenum * PAGE_SIZE;
 
@@ -256,6 +256,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	unsigned long adj_size;
 	struct vm_struct *v;
 	void *p;
+	struct page **pages;
 
 	if (!virt_addr_valid(h))
 		return NULL;
@@ -267,9 +268,16 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
 	if (h->heap_pgalloc) {
+
 		if (!h->vaddr) {
-			vaddr = vm_map_ram(h->pgalloc.pages,
+			pages = nvmap_pages(h->pgalloc.pages,
+					    h->size >> PAGE_SHIFT);
+			if (!pages)
+				return NULL;
+			vaddr = vm_map_ram(pages,
 				h->size >> PAGE_SHIFT, -1, prot);
+			nvmap_altfree(pages,
+				(h->size >> PAGE_SHIFT) * sizeof(*pages));
 		}
 #ifdef NVMAP_LAZY_VFREE
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
@@ -427,6 +435,7 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 {
 	struct sg_table *sgt = NULL;
 	int err, npages;
+	struct page **pages;
 
 	if (!virt_addr_valid(h))
 		return ERR_PTR(-EINVAL);
@@ -448,8 +457,10 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 			goto err;
 		sg_set_buf(sgt->sgl, phys_to_virt(handle_phys(h)), h->size);
 	} else {
-		err = sg_alloc_table_from_pages(sgt, h->pgalloc.pages,
+		pages = nvmap_pages(h->pgalloc.pages, npages);
+		err = sg_alloc_table_from_pages(sgt, pages,
 				npages, 0, h->size, GFP_KERNEL);
+		nvmap_altfree(pages, npages * sizeof(*pages));
 		if (err)
 			goto err;
 	}

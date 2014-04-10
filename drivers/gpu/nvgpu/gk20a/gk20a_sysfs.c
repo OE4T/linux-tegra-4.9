@@ -520,6 +520,43 @@ static ssize_t force_idle_read(struct device *device,
 static DEVICE_ATTR(force_idle, ROOTRW, force_idle_read, force_idle_store);
 #endif
 
+static ssize_t tpc_fs_mask_store(struct device *device,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long val = 0;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val)
+		g->gr.gpc_tpc_mask[0] = val;
+
+	return count;
+}
+
+static ssize_t tpc_fs_mask_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc_index;
+	u32 tpc_fs_mask = 0;
+
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		if (g->ops.gr.get_gpc_tpc_mask)
+			tpc_fs_mask |=
+				g->ops.gr.get_gpc_tpc_mask(g, gpc_index) <<
+				(gr->max_tpc_per_gpc_count * gpc_index);
+	}
+
+	return sprintf(buf, "0x%x\n", tpc_fs_mask);
+}
+
+static DEVICE_ATTR(tpc_fs_mask, S_IRWXUGO, tpc_fs_mask_read, tpc_fs_mask_store);
+
 void gk20a_remove_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(to_platform_device(dev));
@@ -540,6 +577,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_aelpg_param);
 	device_remove_file(dev, &dev_attr_aelpg_enable);
 	device_remove_file(dev, &dev_attr_allow_all);
+	device_remove_file(dev, &dev_attr_tpc_fs_mask);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
 		sysfs_remove_link(&dev->kobj, dev_name(dev));
@@ -566,6 +604,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_allow_all);
+	error |= device_create_file(&dev->dev, &dev_attr_tpc_fs_mask);
 
 	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,

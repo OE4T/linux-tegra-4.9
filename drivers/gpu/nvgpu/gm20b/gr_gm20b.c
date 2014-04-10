@@ -23,6 +23,7 @@
 #include "hw_fb_gm20b.h"
 #include "hw_proj_gm20b.h"
 #include "hw_ctxsw_prog_gm20b.h"
+#include "hw_fuse_gm20b.h"
 
 static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
@@ -478,6 +479,17 @@ static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 	*ctrl_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
+static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+	u32 val;
+	struct gr_gk20a *gr = &g->gr;
+
+	/* Toggle the bits of NV_FUSE_STATUS_OPT_TPC_GPC */
+	val = gk20a_readl(g, fuse_status_opt_tpc_gpc_r(gpc_index));
+
+	return (~val) & ((0x1 << gr->max_tpc_per_gpc_count) - 1);
+}
+
 static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -486,6 +498,7 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	u32 sm_id = 0, gpc_id = 0;
 	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
 	u32 tpc_per_gpc;
+	u32 tpc_fs_mask = 0, tpc_sm_id, gpc_tpc_id;
 
 	gk20a_dbg_fn("");
 
@@ -556,22 +569,26 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 		     gk20a_readl(g, gr_be0_crop_debug3_r()) |
 		     gr_bes_crop_debug3_comp_vdc_4to2_disable_m());
 
-	if (tegra_platform_is_silicon()) {
-		gk20a_writel(g, gr_fe_tpc_fs_r(), gr->pes_tpc_mask[0][0]);
-
-		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(0), gr_cwd_gpc_tpc_id_tpc0_f(0) |
-				gr_cwd_gpc_tpc_id_tpc1_f(1));
-
-		gk20a_writel(g, gr_cwd_sm_id_r(0), gr_cwd_sm_id_tpc0_f(0) |
-				gr_cwd_sm_id_tpc1_f(1));
-	} else {
-		gk20a_writel(g, gr_fe_tpc_fs_r(), 1);
-
-		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(0), gr_cwd_gpc_tpc_id_tpc0_f(0));
-
-		gk20a_writel(g, gr_cwd_sm_id_r(0), gr_cwd_sm_id_tpc0_f(0));
-
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		tpc_fs_mask |= gr->gpc_tpc_mask[gpc_index] <<
+				(gr->max_tpc_per_gpc_count * gpc_index);
 	}
+	gk20a_writel(g, gr_fe_tpc_fs_r(), tpc_fs_mask);
+
+	if (tpc_fs_mask & (0x1 << 0)) {
+		tpc_sm_id |= gr_cwd_sm_id_tpc0_f(0);
+		gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc0_f(0);
+	}
+	if (tpc_fs_mask & (0x1 << 1)) {
+		gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc1_f(1);
+		tpc_sm_id |= gr_cwd_sm_id_tpc1_f(1);
+	}
+	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.
+	 * Since we know TPC number is less than 5. We select
+	 * index 0 directly. */
+	gk20a_writel(g, gr_cwd_gpc_tpc_id_r(0), gpc_tpc_id);
+
+	gk20a_writel(g, gr_cwd_sm_id_r(0), tpc_sm_id);
 
 	return 0;
 }
@@ -733,4 +750,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 #else
 	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 #endif
+	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
 }

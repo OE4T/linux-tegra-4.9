@@ -1170,17 +1170,20 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
 
+static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
+{
+	if (dc->pdata->cmu)
+		return dc->pdata->cmu;
+	else if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		return &default_limited_cmu;
+	else
+		return &default_cmu;
+}
+
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
 	dc->pdata->cmu_enable = cmu_enable;
-	if (dc->pdata->cmu) {
-		tegra_dc_update_cmu(dc, dc->pdata->cmu);
-	} else {
-		if (dc->out->type == TEGRA_DC_OUT_HDMI)
-			tegra_dc_update_cmu(dc, &default_limited_cmu);
-		else
-			tegra_dc_update_cmu(dc, &default_cmu);
-	}
+	tegra_dc_update_cmu(dc, tegra_dc_get_cmu(dc));
 }
 #else
 #define tegra_dc_cache_cmu(dst_cmu, src_cmu)
@@ -2199,14 +2202,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	if (dc->pdata->cmu) {
-		_tegra_dc_update_cmu(dc, dc->pdata->cmu);
-	} else {
-		if (dc->out->type == TEGRA_DC_OUT_HDMI)
-			_tegra_dc_update_cmu(dc, &default_limited_cmu);
-		else
-			_tegra_dc_update_cmu(dc, &default_cmu);
-	}
+	_tegra_dc_update_cmu(dc, tegra_dc_get_cmu(dc));
 #endif
 	tegra_dc_set_color_control(dc);
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {

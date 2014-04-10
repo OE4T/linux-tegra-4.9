@@ -3076,6 +3076,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
+
+#if !defined(CONFIG_ARCH_TEGRA_11x_SOC) && !defined(CONFIG_ARCH_TEGRA_14x_SOC)
+		/* BL or PG init will keep DISA unpowergated after booting.
+		 * Adding an extra powergate to balance the refcount
+		 * since _tegra_dc_enable() increases the refcount.
+		 */
+		if (dc->powergate_id == TEGRA_POWERGATE_DISA)
+			tegra_dc_powergate_locked(dc);
+#endif
 	}
 
 #ifdef CONFIG_TEGRA_ISOMGR

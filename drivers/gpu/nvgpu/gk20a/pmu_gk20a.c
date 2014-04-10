@@ -2663,7 +2663,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 
 static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 {
-	int err;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 

@@ -113,7 +113,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 	struct nvmap_handle *h;
 	struct nvmap_handle *on_stack[16];
 	struct nvmap_handle **refs;
-	unsigned long __user *output;
+	unsigned long __user *output = NULL;
 	unsigned int i;
 	int err = 0;
 

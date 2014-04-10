@@ -1115,49 +1115,6 @@ static void tegra_dc_set_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	}
 }
 
-void tegra_dc_get_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
-{
-	u32 val;
-	u32 i;
-	bool flags;
-
-	val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
-	if (val & CMU_ENABLE)
-		flags = true;
-
-	val &= ~CMU_ENABLE;
-	tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
-	/*TODO: Sync up with frame end */
-	mdelay(20);
-
-	for (i = 0; i < 256; i++) {
-		val = LUT1_READ_EN | LUT1_READ_ADDR(i);
-		tegra_dc_writel(dc, val, DC_COM_CMU_LUT1_READ);
-		val = tegra_dc_readl(dc, DC_COM_CMU_LUT1);
-		cmu->lut1[i] = LUT1_READ_DATA(val);
-	}
-
-	cmu->csc.krr = tegra_dc_readl(dc, DC_COM_CMU_CSC_KRR);
-	cmu->csc.kgr = tegra_dc_readl(dc, DC_COM_CMU_CSC_KGR);
-	cmu->csc.kbr = tegra_dc_readl(dc, DC_COM_CMU_CSC_KBR);
-	cmu->csc.krg = tegra_dc_readl(dc, DC_COM_CMU_CSC_KRG);
-	cmu->csc.kgg = tegra_dc_readl(dc, DC_COM_CMU_CSC_KGG);
-	cmu->csc.kbg = tegra_dc_readl(dc, DC_COM_CMU_CSC_KBG);
-	cmu->csc.krb = tegra_dc_readl(dc, DC_COM_CMU_CSC_KRB);
-	cmu->csc.kgb = tegra_dc_readl(dc, DC_COM_CMU_CSC_KGB);
-	cmu->csc.kbb = tegra_dc_readl(dc, DC_COM_CMU_CSC_KBB);
-
-	for (i = 0; i < 960; i++) {
-		val = LUT2_READ_EN | LUT2_READ_ADDR(i);
-		tegra_dc_writel(dc, val, DC_COM_CMU_LUT2_READ);
-		val = tegra_dc_readl(dc, DC_COM_CMU_LUT2);
-		cmu->lut2[i] = LUT2_READ_DATA(val);
-	}
-}
-EXPORT_SYMBOL(tegra_dc_get_cmu);
-
 int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
 	u32 val;

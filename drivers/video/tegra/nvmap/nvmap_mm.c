@@ -73,14 +73,13 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 		nvmap_stats_read(NS_CFLUSH_DONE));
 
 	for (i = 0; i < numpages; i++) {
-		struct page *page = nvmap_to_page(pages[i]);
 #ifdef CONFIG_ARM64 //__flush_dcache_page flushes inner and outer on ARM64
 		if (flush_inner)
-			__flush_dcache_page(page);
+			__flush_dcache_page(pages[i]);
 #else
 		if (flush_inner)
-			__flush_dcache_page(page_mapping(page), page);
-		base = page_to_phys(page);
+			__flush_dcache_page(page_mapping(pages[i]), pages[i]);
+		base = page_to_phys(pages[i]);
 		outer_flush_range(base, base + PAGE_SIZE);
 #endif
 	}

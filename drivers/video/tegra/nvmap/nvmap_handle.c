@@ -28,6 +28,8 @@
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/rbtree.h>
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
 #include <linux/moduleparam.h>
 #include <linux/nvmap.h>
@@ -115,9 +117,6 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	if (h->vaddr)
 		vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
 #endif
-
-	for (i = 0; i < nr_page; i++)
-		h->pgalloc.pages[i] = nvmap_to_page(h->pgalloc.pages[i]);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	if (!zero_memory) {
@@ -766,8 +765,7 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 			*result = h->carveout->base;
 			mutex_unlock(&h->lock);
 		} else if (h->pgalloc.contig)
-			*result = page_to_phys(
-					nvmap_to_page(h->pgalloc.pages[0]));
+			*result = page_to_phys(h->pgalloc.pages[0]);
 		else if (h->attachment->priv)
 			*result = sg_dma_address(
 				((struct sg_table *)h->attachment->priv)->sgl);

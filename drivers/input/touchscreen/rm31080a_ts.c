@@ -117,7 +117,6 @@ enum RM_SLOW_SCAN_LEVELS {
 #endif
 
 /*#define CS_SUPPORT*/
-/*#define CONFIG_TRUSTED_LITTLE_KERNEL*/
 #define MASK_USER_SPACE_POINTER 0x00000000FFFFFFFF	/* 64-bit support */
 
 /* do not use printk in kernel files */
@@ -3207,10 +3206,13 @@ static long dev_ioctl(struct file *file,
 		g_st_ts.b_calc_finish = 1;
 		break;
 	case RM_IOCTL_READ_RAW_DATA:
-		ret = rm_tch_queue_read_raw_data((u8 *)(arg & MASK_USER_SPACE_POINTER), index);
+		ret = rm_tch_queue_read_raw_data(
+			(u8 *)(arg & MASK_USER_SPACE_POINTER),
+			index);
 		break;
 	case RM_IOCTL_GET_SACN_MODE:
-		ret = rm_tch_ctrl_get_idle_mode((u8 *)(arg & MASK_USER_SPACE_POINTER));
+		ret = rm_tch_ctrl_get_idle_mode(
+			(u8 *)(arg & MASK_USER_SPACE_POINTER));
 		break;
 	case RM_IOCTL_SET_HAL_PID:
 		g_st_ts.u32_hal_pid = (u32)arg;
@@ -3220,7 +3222,8 @@ static long dev_ioctl(struct file *file,
 		g_st_ts.b_watch_dog_check = 0;
 		break;
 	case RM_IOCTL_GET_VARIABLE:
-		ret = rm_tch_get_variable(index, ((u8 *)(arg & MASK_USER_SPACE_POINTER)));
+		ret = rm_tch_get_variable(index,
+			((u8 *)(arg & MASK_USER_SPACE_POINTER)));
 		break;
 	case RM_IOCTL_INIT_START:
 		g_st_ts.b_init_finish = 0;
@@ -3240,19 +3243,22 @@ static long dev_ioctl(struct file *file,
 		g_st_ts.b_enable_scriber = (bool) arg;
 		break;
 	case RM_IOCTL_SET_PARAMETER:
-		rm_tch_ctrl_set_parameter((void *)(arg & MASK_USER_SPACE_POINTER));
+		rm_tch_ctrl_set_parameter(
+			(void *)(arg & MASK_USER_SPACE_POINTER));
 		rm_tch_set_input_resolution(g_st_ctrl.u16_resolution_x,
 			g_st_ctrl.u16_resolution_y);
 		break;
 	case RM_IOCTL_SET_BASELINE:
-		rm_tch_ctrl_set_baseline((u8 *)(arg & MASK_USER_SPACE_POINTER),
-				g_st_ctrl.u16_data_length);
+		rm_tch_ctrl_set_baseline(
+			(u8 *)(arg & MASK_USER_SPACE_POINTER),
+			g_st_ctrl.u16_data_length);
 		break;
 	case RM_IOCTL_SET_VARIABLE:
 		rm_tch_set_variable(index, arg);
 		break;
 	case RM_IOCTL_SET_KRL_TBL:
-		ret = rm_set_kernel_tbl(index, ((u8 *)(arg & MASK_USER_SPACE_POINTER)));
+		ret = rm_set_kernel_tbl(index,
+			((u8 *)(arg & MASK_USER_SPACE_POINTER)));
 		break;
 	default:
 		return -EINVAL;

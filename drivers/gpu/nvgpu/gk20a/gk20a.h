@@ -209,6 +209,7 @@ struct gpu_ops {
 
 struct gk20a {
 	struct platform_device *dev;
+	struct platform_device *host1x_dev;
 
 	struct resource *reg_mem;
 	void __iomem *regs;

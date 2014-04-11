@@ -147,8 +147,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 		gk20a_debug_output(o, "%s on syncpt %u (%s) val %u\n",
 			(status == 3 || status == 8) ? "Waiting" : "Waited",
 			pbdma_syncpointb_syncpt_index_v(syncpointb),
-			nvhost_syncpt_get_name(
-				to_platform_device(g->dev->dev.parent),
+			nvhost_syncpt_get_name(g->host1x_dev,
 				pbdma_syncpointb_syncpt_index_v(syncpointb)),
 			pbdma_syncpointa_payload_v(syncpointa));
 

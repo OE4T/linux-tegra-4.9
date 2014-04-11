@@ -94,6 +94,9 @@ struct gk20a_channel_sync {
 	/* Reset the channel syncpoint/semaphore. */
 	void (*set_min_eq_max)(struct gk20a_channel_sync *s);
 
+	/* flag to set syncpt destroy aggressiveness */
+	bool syncpt_aggressive_destroy;
+
 	/* Free the resources allocated by gk20a_channel_sync_create. */
 	void (*destroy)(struct gk20a_channel_sync *s);
 };

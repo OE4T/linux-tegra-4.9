@@ -351,6 +351,16 @@ static void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 			ccsr_channel_inst_bind_false_f());
 
 	ch_gk20a->bound = false;
+
+	/*
+	 * if we are agrressive then we can destroy the syncpt
+	 * resource at this point
+	 * if not, then it will be destroyed at channel_free()
+	 */
+	if (ch_gk20a->sync && ch_gk20a->sync->syncpt_aggressive_destroy) {
+		ch_gk20a->sync->destroy(ch_gk20a->sync);
+		ch_gk20a->sync = NULL;
+	}
 }
 
 static int channel_gk20a_alloc_inst(struct gk20a *g,

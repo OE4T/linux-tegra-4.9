@@ -93,15 +93,15 @@ struct nvhost_channel *nvhost_return_node(struct nvhost_master *host,
 struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata)
 {
 	int i;
-	struct nvhost_channel *ch = NULL;
+	struct nvhost_channel *ch;
 
 	for (i = 0; i < pdata->num_channels; i++) {
 		ch = pdata->channels[i];
-		if (ch && ch->dev)
+		if (ch && ch->chid != NVHOST_INVALID_CHANNEL)
 			return ch;
 	}
 
-	return ch;
+	return NULL;
 }
 
 /* Check if more than channel needed for device and assign */
@@ -162,15 +162,19 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 
+	pdata->num_mapped_chs--;
+
 	/* Allow keep-alive'd module to be turned off
 	 * make sure that all channels are unmapped before calling
 	 * nvhost_module_enable_poweroff
 	 */
-	if (pdata->keepalive)
-		nvhost_module_enable_poweroff(ch->dev);
+	if (!pdata->num_mapped_chs) {
+		if (pdata->keepalive)
+			nvhost_module_enable_poweroff(pdata->pdev);
 
-	if (pdata->deinit)
-		pdata->deinit(ch->dev);
+		if (pdata->deinit)
+			pdata->deinit(ch->dev);
+	}
 
 	clear_bit(ch->chid, &host->allocated_channels);
 
@@ -180,7 +184,6 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 	ch->cur_ctx = NULL;
 	ch->aperture = NULL;
 	pdata->channels[ch->dev_chid] = NULL;
-	pdata->num_mapped_chs--;
 
 	mutex_unlock(&host->chlist_mutex);
 
@@ -277,8 +280,8 @@ struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
 	}
 
 	/* Keep alive modules that needs to be when a channel is open */
-	if (pdata->keepalive)
-		nvhost_module_disable_poweroff(ch->dev);
+	if (pdata->keepalive && pdata->num_mapped_chs)
+		nvhost_module_disable_poweroff(pdata->pdev);
 
 	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
 	mutex_unlock(&host->chlist_mutex);

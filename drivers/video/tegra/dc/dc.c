@@ -45,6 +45,7 @@
 #endif
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
+#include <linux/tegra_pm_domains.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
@@ -55,7 +56,6 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/latency_allowance.h>
-#include <mach/pm_domains.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"

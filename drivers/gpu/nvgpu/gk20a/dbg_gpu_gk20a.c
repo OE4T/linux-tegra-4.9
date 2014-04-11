@@ -555,7 +555,9 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module busy");
 			gk20a_busy(g->dev);
-			gk20a_channel_busy(dbg_s->pdev);
+			err = gk20a_channel_busy(dbg_s->pdev);
+			if (err)
+				return -EPERM;
 
 			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 					false);

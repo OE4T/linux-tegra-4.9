@@ -268,6 +268,7 @@ static ssize_t elpg_enable_store(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct gk20a *g = get_gk20a(ndev);
 	unsigned long val = 0;
+	int err;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
@@ -276,7 +277,10 @@ static ssize_t elpg_enable_store(struct device *device,
 	 * Since elpg is refcounted, we should not unnecessarily call
 	 * enable/disable if it is already so.
 	 */
-	gk20a_channel_busy(g->dev);
+	err = gk20a_channel_busy(g->dev);
+	if (err)
+		return -EAGAIN;
+
 	if (val && !g->elpg_enabled) {
 		g->elpg_enabled = true;
 		gk20a_pmu_enable_elpg(g);

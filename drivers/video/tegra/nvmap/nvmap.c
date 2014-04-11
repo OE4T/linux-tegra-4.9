@@ -46,9 +46,7 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
 	phys_addr_t addr;
 
-	if (h->heap_pgalloc && h->pgalloc.contig) {
-		addr = page_to_phys(h->pgalloc.pages[0]);
-	} else if (h->heap_pgalloc) {
+	if (h->heap_pgalloc) {
 		BUG_ON(!h->attachment->priv);
 		addr = sg_dma_address(
 				((struct sg_table *)h->attachment->priv)->sgl);

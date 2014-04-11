@@ -409,8 +409,8 @@ void nvmap_free_handle(struct nvmap_client *client,
 	rb_erase(&ref->node, &client->handle_refs);
 	client->handle_count--;
 
-	if (h->alloc && h->heap_pgalloc && !h->pgalloc.contig)
-		atomic_sub_return(h->size, &client->iovm_commit);
+	if (h->alloc && h->heap_pgalloc)
+		atomic_sub(h->size, &client->iovm_commit);
 
 	if (h->alloc && !h->heap_pgalloc) {
 		mutex_lock(&h->lock);
@@ -590,7 +590,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
 			h->size);
 		mutex_unlock(&h->lock);
-	} else if (!h->pgalloc.contig) {
+	} else {
 		atomic_add(h->size, &client->iovm_commit);
 	}
 
@@ -764,9 +764,7 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 			mutex_lock(&h->lock);
 			*result = h->carveout->base;
 			mutex_unlock(&h->lock);
-		} else if (h->pgalloc.contig)
-			*result = page_to_phys(h->pgalloc.pages[0]);
-		else if (h->attachment->priv)
+		} else if (h->attachment->priv)
 			*result = sg_dma_address(
 				((struct sg_table *)h->attachment->priv)->sgl);
 		else

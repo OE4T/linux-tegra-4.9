@@ -211,9 +211,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 		unsigned long addr;
 
 		h = refs[i];
-		if (h->heap_pgalloc && h->pgalloc.contig)
-			addr = page_to_phys(h->pgalloc.pages[0]);
-		else if (h->heap_pgalloc)
+		if (h->heap_pgalloc)
 			addr = sg_dma_address(
 				((struct sg_table *)h->attachment->priv)->sgl);
 		else

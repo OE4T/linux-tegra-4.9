@@ -34,9 +34,9 @@
 #include <linux/tegra-soc.h>
 #include <trace/events/nvhost.h>
 #include <linux/platform_data/tegra_edp.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <mach/mc.h>
-#include <mach/pm_domains.h>
 
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"

@@ -26,8 +26,8 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra_pm_domains.h>
 
-#include <mach/pm_domains.h>
 #include <media/tegra_v4l2_camera.h>
 
 #include "dev.h"

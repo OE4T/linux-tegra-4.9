@@ -31,14 +31,13 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/tegra-soc.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
 
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
-
-#include <mach/pm_domains.h>
 
 #include "debug.h"
 #include "bus_client.h"

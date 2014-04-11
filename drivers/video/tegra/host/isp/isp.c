@@ -26,8 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/irq.h>
 #include <linux/workqueue.h>
-
-#include <mach/pm_domains.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "dev.h"
 #include "bus_client.h"

@@ -738,18 +738,12 @@ static void heap_page_cache_maint(
 	unsigned int op, bool inner, bool outer,
 	unsigned long kaddr, pgprot_t prot)
 {
-	struct page *page;
-	phys_addr_t paddr;
-	unsigned long next;
-	unsigned long off;
-	size_t size;
-
 #ifdef NVMAP_LAZY_VFREE
-	struct page **pages;
 	if (inner) {
 		void *vaddr = NULL;
 
 		if (!h->vaddr) {
+			struct page **pages;
 			pages = nvmap_pages(h->pgalloc.pages,
 					    h->size >> PAGE_SHIFT);
 			if (!pages)
@@ -757,7 +751,7 @@ static void heap_page_cache_maint(
 			vaddr = vm_map_ram(pages,
 					h->size >> PAGE_SHIFT, -1, prot);
 			nvmap_altfree(pages,
-				(h->size >> PAGE_SHIFT) * sizeof(*page));
+				(h->size >> PAGE_SHIFT) * sizeof(*pages));
 		}
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
@@ -774,6 +768,12 @@ per_page_cache_maint:
 #endif
 
 	while (start < end) {
+		struct page *page;
+		phys_addr_t paddr;
+		unsigned long next;
+		unsigned long off;
+		size_t size;
+
 		page = nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;

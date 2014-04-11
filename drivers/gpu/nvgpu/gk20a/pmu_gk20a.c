@@ -2867,8 +2867,6 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 			pwr_falcon_exterrstat_valid_true_v()) {
 		gk20a_err(dev_from_gk20a(g), "pwr_falcon_exterraddr_r : 0x%x",
 			gk20a_readl(g, pwr_falcon_exterraddr_r()));
-		gk20a_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
-			gk20a_readl(g, top_fs_status_r()));
 		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
 	}

@@ -526,8 +526,6 @@ static void gk20a_pbus_isr(struct gk20a *g)
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
-		gk20a_err(dev_from_gk20a(g), "top_fs_status_r : 0x%x",
-			gk20a_readl(g, top_fs_status_r()));
 		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
 		gk20a_err(&g->dev->dev,

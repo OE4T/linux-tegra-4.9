@@ -159,6 +159,8 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 		mutex_unlock(&host->chlist_mutex);
 		return 0;
 	}
+	if (ch->error_notifier_ref)
+		nvhost_free_error_notifiers(ch);
 
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 

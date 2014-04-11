@@ -272,6 +272,72 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	return __nvhost_channelopen(inode, NULL, filp);
 }
 
+void nvhost_set_notifier(struct nvhost_channel *ch, __u32 error)
+{
+	if (ch->error_notifier_ref) {
+		struct timespec time_data;
+		u64 nsec;
+		getnstimeofday(&time_data);
+		nsec = ((u64)time_data.tv_sec) * 1000000000u +
+				(u64)time_data.tv_nsec;
+		ch->error_notifier->time_stamp.nanoseconds[0] =
+				(u32)nsec;
+		ch->error_notifier->time_stamp.nanoseconds[1] =
+				(u32)(nsec >> 32);
+		ch->error_notifier->info32 = error;
+		ch->error_notifier->status = 0xffff;
+		dev_err(&ch->dev->dev, "error notifier set to %d\n", error);
+	}
+}
+
+void nvhost_free_error_notifiers(struct nvhost_channel *ch)
+{
+	if (ch->error_notifier_ref) {
+		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
+		dma_buf_put(ch->error_notifier_ref);
+		ch->error_notifier_ref = 0;
+		ch->error_notifier = 0;
+		ch->error_notifier_va = 0;
+	}
+}
+
+static int nvhost_init_error_notifier(struct nvhost_channel *ch,
+		struct nvhost_set_error_notifier *args) {
+	void *va;
+
+	struct dma_buf *dmabuf;
+	if (!args->mem) {
+		dev_err(&ch->dev->dev, "invalid memory handle\n");
+		return -EINVAL;
+	}
+
+	dmabuf = dma_buf_get(args->mem);
+
+	if (ch->error_notifier_ref)
+		nvhost_free_error_notifiers(ch);
+
+	if (IS_ERR(dmabuf)) {
+		dev_err(&ch->dev->dev, "Invalid handle: %d\n", args->mem);
+		return -EINVAL;
+	}
+
+	/* map handle */
+	va = dma_buf_vmap(dmabuf);
+	if (!va) {
+		dma_buf_put(dmabuf);
+		dev_err(&ch->dev->dev, "Cannot map notifier handle\n");
+		return -ENOMEM;
+	}
+
+	/* set channel notifiers pointer */
+	ch->error_notifier_ref = dmabuf;
+	ch->error_notifier = va + args->offset;
+	ch->error_notifier_va = va;
+	memset(ch->error_notifier, 0, sizeof(struct nvhost_notification));
+	return 0;
+
+}
+
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		struct nvhost_submit_args *args)
 {
@@ -843,6 +909,10 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_SUBMIT:
 		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
+		err = nvhost_init_error_notifier(priv->ch,
+			(struct nvhost_set_error_notifier *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
 	{

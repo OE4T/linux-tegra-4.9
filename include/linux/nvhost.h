@@ -102,6 +102,7 @@ struct nvhost_notification {
 #define	NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT	31
 	__u16 info16;	/* info returned depends on method 000c-000d */
 	__u16 status;	/* user sets bit 15, NV sets status 000e-000f */
+#define	NVHOST_CHANNEL_SUBMIT_TIMEOUT		1
 };
 
 struct nvhost_clock {

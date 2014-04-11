@@ -121,7 +121,7 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, int op, int nr)
 			err = __nvmap_do_cache_maint(handles[i]->owner,
 						     handles[i], 0,
 						     handles[i]->size,
-						     op);
+						     op, false);
 			if (err)
 				break;
 		}

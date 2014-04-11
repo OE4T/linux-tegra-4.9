@@ -459,7 +459,7 @@ static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 
 	trace_nvmap_dmabuf_begin_cpu_access(dmabuf, start, len);
 	return __nvmap_do_cache_maint(NULL, info->handle, start, start + len,
-				      NVMAP_CACHE_OP_WB_INV);
+				      NVMAP_CACHE_OP_WB_INV, false);
 }
 
 static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
@@ -470,7 +470,7 @@ static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
 
 	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
 	__nvmap_do_cache_maint(NULL, info->handle, start, start + len,
-				   NVMAP_CACHE_OP_WB);
+				   NVMAP_CACHE_OP_WB, false);
 
 }
 

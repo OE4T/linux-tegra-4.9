@@ -433,7 +433,7 @@ int __nvmap_get_handle_param(struct nvmap_client *client,
 			     struct nvmap_handle *h, u32 param, u64 *result);
 int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			   unsigned long start, unsigned long end,
-			   unsigned int op);
+			   unsigned int op, bool clean_only_dirty);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);

@@ -44,7 +44,7 @@
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
 #include <linux/pm_runtime.h>
-#include <mach/pm_domains.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "tegra-se.h"
 

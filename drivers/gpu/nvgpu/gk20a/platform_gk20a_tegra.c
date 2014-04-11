@@ -21,8 +21,9 @@
 #include <linux/nvhost_ioctl.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
+#include <linux/tegra_pm_domains.h>
+
 #include <mach/irqs.h>
-#include <mach/pm_domains.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 

@@ -40,11 +40,11 @@
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
 
-#include <mach/pm_domains.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

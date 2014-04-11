@@ -460,7 +460,9 @@ static bool gr_context_info_available(struct dbg_session_gk20a *dbg_s,
 static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 				struct nvhost_dbg_gpu_exec_reg_ops_args *args)
 {
-	int err;
+	int err = 0, powergate_err = 0;
+	bool is_pg_disabled = false;
+
 	struct device *dev = dbg_s->dev;
 	struct gk20a *g = get_gk20a(dbg_s->pdev);
 	struct nvhost_dbg_gpu_reg_op *ops;
@@ -503,9 +505,25 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	 * on other channels */
 	mutex_lock(&g->dbg_sessions_lock);
 
-	err = dbg_s->ops->exec_reg_ops(dbg_s, ops, args->num_ops);
+	if (!dbg_s->is_pg_disabled) {
+		powergate_err = dbg_set_powergate(dbg_s,
+					NVHOST_DBG_GPU_POWERGATE_MODE_DISABLE);
+		is_pg_disabled = true;
+	}
+
+	if (!powergate_err) {
+		err = dbg_s->ops->exec_reg_ops(dbg_s, ops, args->num_ops);
+		/* enable powergate, if previously disabled */
+		if (is_pg_disabled) {
+			powergate_err = dbg_set_powergate(dbg_s,
+					NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE);
+		}
+	}
 
 	mutex_unlock(&g->dbg_sessions_lock);
+
+	if (!err && powergate_err)
+		err = powergate_err;
 
 	if (err) {
 		gk20a_err(dev, "dbg regops failed");

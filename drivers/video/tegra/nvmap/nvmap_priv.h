@@ -105,6 +105,7 @@ struct nvmap_pgalloc {
 	struct page **pages;
 	bool contig;			/* contiguous system memory */
 	struct list_head vmas;
+	atomic_t ndirty;	/* count number of dirty pages */
 };
 
 struct nvmap_handle {

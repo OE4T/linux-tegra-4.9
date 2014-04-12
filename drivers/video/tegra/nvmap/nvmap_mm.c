@@ -87,18 +87,28 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 }
 
 /*
- * Perform cache op on the list of passed handles.
+ * Perform cache op on the list of memory regions within passed handles.
+ * A memory region within handle[i] is identified by offsets[i], sizes[i]
+ *
+ * sizes[i] == 0  is a special case which causes handle wide operation,
+ * this is done by replacing offsets[i] = 0, sizes[i] = handles[i]->size.
+ * So, the input arrays sizes, offsets  are not guaranteed to be read-only
+ *
  * This will optimze the op if it can.
  * In the case that all the handles together are larger than the inner cache
  * maint threshold it is possible to just do an entire inner cache flush.
  */
-int nvmap_do_cache_maint_list(struct nvmap_handle **handles, int op, int nr)
+int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
+			      u32 *sizes, int op, int nr)
 {
 	int i, err = 0;
 	u64 total = 0;
 
-	for (i = 0; i < nr; i++)
-		total += handles[i]->size;
+	for (i = 0; i < nr; i++) {
+		offsets[i] = sizes[i] ? offsets[i] : 0;
+		sizes[i] = sizes[i] ? sizes[i] : handles[i]->size;
+		total += sizes[i];
+	}
 
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */
@@ -119,8 +129,8 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, int op, int nr)
 	} else {
 		for (i = 0; i < nr; i++) {
 			err = __nvmap_do_cache_maint(handles[i]->owner,
-						     handles[i], 0,
-						     handles[i]->size,
+						     handles[i], offsets[i],
+						     offsets[i] + sizes[i],
 						     op, false);
 			if (err)
 				break;

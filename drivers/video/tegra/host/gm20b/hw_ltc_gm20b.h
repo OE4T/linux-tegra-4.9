@@ -206,19 +206,35 @@ static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f(void)
 {
 	return 0x10000000;
 }
-static inline u32 ltc_ltss_g_elpg_r(void)
+static inline u32 ltc_ltcs_ltss_g_elpg_r(void)
 {
 	return 0x0017e214;
 }
-static inline u32 ltc_ltss_g_elpg_flush_v(u32 r)
+static inline u32 ltc_ltcs_ltss_g_elpg_flush_v(u32 r)
 {
 	return (r >> 0) & 0x1;
 }
-static inline u32 ltc_ltss_g_elpg_flush_pending_v(void)
+static inline u32 ltc_ltcs_ltss_g_elpg_flush_pending_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 ltc_ltss_g_elpg_flush_pending_f(void)
+static inline u32 ltc_ltcs_ltss_g_elpg_flush_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltc0_ltss_g_elpg_r(void)
+{
+	return 0x00140214;
+}
+static inline u32 ltc_ltc0_ltss_g_elpg_flush_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_f(void)
 {
 	return 0x1;
 }

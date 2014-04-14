@@ -330,6 +330,14 @@ static inline u32 gr_fecs_dmactl_require_ctx_f(u32 v)
 {
 	return (v & 0x1) << 0;
 }
+static inline u32 gr_fecs_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_fecs_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
+}
 static inline u32 gr_fecs_os_r(void)
 {
 	return 0x00409080;
@@ -1840,7 +1848,7 @@ static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_size_v_m(void)
 }
 static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v(void)
 {
-	return 0x00001000;
+	return 0x00000800;
 }
 static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v(void)
 {
@@ -1933,6 +1941,14 @@ static inline u32 gr_gpccs_dmactl_r(void)
 static inline u32 gr_gpccs_dmactl_require_ctx_f(u32 v)
 {
 	return (v & 0x1) << 0;
+}
+static inline u32 gr_gpccs_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_gpccs_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 gr_gpccs_imemc_r(u32 i)
 {

@@ -78,10 +78,6 @@ static inline u32 top_num_ltcs_r(void)
 {
 	return 0x00022454;
 }
-static inline u32 top_fs_status_r(void)
-{
-	return 0x00022500;
-}
 static inline u32 top_device_info_r(u32 i)
 {
 	return 0x00022700 + i*4;

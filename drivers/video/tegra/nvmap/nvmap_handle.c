@@ -86,7 +86,8 @@ void nvmap_altfree(void *ptr, size_t len)
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
 	unsigned int i, nr_page, page_index = 0;
-#ifdef CONFIG_NVMAP_PAGE_POOLS
+#if defined(CONFIG_NVMAP_PAGE_POOLS) && \
+	!defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
 	struct nvmap_page_pool *pool;
 #endif
 
@@ -119,7 +120,8 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	for (i = 0; i < nr_page; i++)
 		h->pgalloc.pages[i] = nvmap_to_page(h->pgalloc.pages[i]);
 
-#ifdef CONFIG_NVMAP_PAGE_POOLS
+#if defined(CONFIG_NVMAP_PAGE_POOLS) && \
+	!defined(CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES)
 	if (!zero_memory) {
 		pool = &nvmap_dev->pool;
 

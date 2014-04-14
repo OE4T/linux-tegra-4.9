@@ -39,6 +39,15 @@ struct pwm_bl_data {
 	void			(*exit)(struct device *);
 };
 
+struct pwm_bl_data_dt_ops {
+	int (*init)(struct device *dev);
+	int (*notify)(struct device *, int brightness);
+	void (*notify_after)(struct device *, int brightness);
+	int (*check_fb)(struct device *, struct fb_info *);
+	void (*exit)(struct device *);
+	const char *blnode_compatible;
+};
+
 struct platform_pwm_backlight_data {
 	int pwm_id;
 	unsigned int max_brightness;

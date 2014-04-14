@@ -18,6 +18,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/system-wakeup.h>
 
 #include "internal.h"
 
@@ -35,6 +36,7 @@ struct regmap_irq_chip_data {
 	int shutdown;
 	int irq;
 	int wake_count;
+	bool wakeup_print_enable;
 
 	void *status_reg_buf;
 	unsigned int *status_buf;
@@ -261,6 +263,17 @@ static const struct irq_chip regmap_irq_chip = {
 	.irq_set_wake		= regmap_irq_set_wake,
 };
 
+static void print_wakeup_irq(struct device *dev, int irq)
+{
+	struct irq_desc *desc;
+
+	desc = irq_to_desc(irq);
+	if (!desc || !desc->action || !desc->action->name)
+		dev_info(dev, "Device WAKEUP sub-irq %d\n", irq);
+	else
+		dev_info(dev, "Device WAKEUP sub-irq %s\n", desc->action->name);
+}
+
 static irqreturn_t regmap_irq_thread(int irq, void *d)
 {
 	struct regmap_irq_chip_data *data = d;
@@ -268,7 +281,12 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	struct regmap *map = data->map;
 	int ret, i;
 	bool handled = false;
+	bool print_wakeup = false;
+	int sub_irq;
 	u32 reg;
+
+	if (data->wakeup_print_enable && (irq == get_wakeup_reason_irq()))
+		print_wakeup = true;
 
 	mutex_lock(&data->shutdown_lock);
 	if (data->shutdown) {
@@ -368,11 +386,16 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	for (i = 0; i < chip->num_irqs; i++) {
 		if (data->status_buf[chip->irqs[i].reg_offset /
 				     map->reg_stride] & chip->irqs[i].mask) {
-			handle_nested_irq(irq_find_mapping(data->domain, i));
+			sub_irq = irq_find_mapping(data->domain, i);
+			if (print_wakeup)
+				print_wakeup_irq(map->dev, sub_irq);
+
+			handle_nested_irq(sub_irq);
 			handled = true;
 		}
 	}
 
+	data->wakeup_print_enable = false;
 	if (chip->runtime_pm)
 		pm_runtime_put(map->dev);
 
@@ -833,6 +856,20 @@ void regmap_shutdown_irq_chip(struct regmap_irq_chip_data *d)
 	mutex_unlock(&d->shutdown_lock);
 }
 EXPORT_SYMBOL_GPL(regmap_shutdown_irq_chip);
+
+int regmap_irq_suspend_noirq(struct regmap_irq_chip_data *d)
+{
+	d->wakeup_print_enable = true;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(regmap_irq_suspend_noirq);
+
+int regmap_irq_resume(struct regmap_irq_chip_data *d)
+{
+	d->wakeup_print_enable = false;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(regmap_irq_resume);
 
 /**
  * regmap_irq_chip_get_base(): Retrieve interrupt base for a regmap IRQ chip

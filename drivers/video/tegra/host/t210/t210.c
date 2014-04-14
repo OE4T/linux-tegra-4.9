@@ -45,8 +45,6 @@
 
 #define HOST_EMC_FLOOR 300000000
 
-static int t210_num_alloc_channels = 0;
-
 #define BIT64(nr) (1ULL << (nr))
 
 static struct host1x_device_info host1x04_info = {
@@ -180,38 +178,16 @@ struct nvhost_device_data t21_vic_info = {
 
 #include "host1x/host1x_channel.c"
 
-static void t210_free_nvhost_channel(struct nvhost_channel *ch)
+static void t210_set_nvhost_chanops(struct nvhost_channel *ch)
 {
-	nvhost_dbg_fn("");
-	nvhost_free_channel_internal(ch, &t210_num_alloc_channels);
-}
-
-static struct nvhost_channel *t210_alloc_nvhost_channel(
-		struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct nvhost_channel *ch;
-	nvhost_dbg_fn("");
-	ch = nvhost_alloc_channel_internal(pdata->index,
-		nvhost_get_host(dev)->info.nb_channels,
-		&t210_num_alloc_channels);
-	if (ch) {
-#if defined(CONFIG_TEGRA_GK20A)
-		if (!strcmp(dev->name, "57000000.gm20b")) {
-			ch->ops.init          = host1x_channel_ops.init;
-		} else
-#endif
-			ch->ops = host1x_channel_ops;
-
-	}
-	return ch;
+	if (ch)
+		ch->ops = host1x_channel_ops;
 }
 
 int nvhost_init_t210_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
-	op->nvhost_dev.alloc_nvhost_channel = t210_alloc_nvhost_channel;
-	op->nvhost_dev.free_nvhost_channel = t210_free_nvhost_channel;
+	op->nvhost_dev.set_nvhost_chanops = t210_set_nvhost_chanops;
 
 	return 0;
 }

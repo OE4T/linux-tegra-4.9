@@ -25,6 +25,7 @@
 #include <linux/dma-attrs.h>
 #include <linux/iommu.h>
 #include <asm/dma-iommu.h>
+#include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
 
 /* This "address bit" in the gmmu ptes (and other gk20a accesses)
@@ -40,6 +41,17 @@
  * 40b va.  32GB for now. It consists of two 16GB spaces. */
 #define NV_GMMU_VA_RANGE	35ULL
 #define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)0x1 << (NV_GMMU_VA_RANGE-1)))
+
+#ifdef CONFIG_ARM64
+#define outer_flush_range(a, b)
+#define __cpuc_flush_dcache_area __flush_dcache_area
+#endif
+
+#define FLUSH_CPU_DCACHE(va, pa, size)	\
+	do {	\
+		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
+		outer_flush_range(pa, pa + (size_t)(size));		\
+	} while (0)
 
 struct mem_desc {
 	struct dma_buf *ref;
@@ -463,4 +475,21 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
+
+int map_gmmu_pages(void *handle, struct sg_table *sgt,
+			  void **va, size_t size);
+void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va);
+void pde_range_from_vaddr_range(struct vm_gk20a *vm,
+					      u64 addr_lo, u64 addr_hi,
+					      u32 *pde_lo, u32 *pde_hi);
+u32 *pde_from_index(struct vm_gk20a *vm, u32 i);
+u32 pte_index_from_vaddr(struct vm_gk20a *vm,
+			       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx);
+int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
+				u32 i, enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
+int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
+					enum gmmu_pgsz_gk20a gmmu_pgsz_idx,
+					struct page_table_gk20a *pte);
+struct gpu_ops;
+void gk20a_init_mm(struct gpu_ops *gops);
 #endif /*_MM_GK20A_H_ */

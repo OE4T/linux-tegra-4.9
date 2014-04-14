@@ -29,7 +29,6 @@
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
-#include <asm/cacheflush.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -42,11 +41,6 @@
 #include "hw_ltc_gk20a.h"
 
 #include "kind_gk20a.h"
-
-#ifdef CONFIG_ARM64
-#define outer_flush_range(a, b)
-#define __cpuc_flush_dcache_area __flush_dcache_area
-#endif
 
 /*
  * GPU mapping life cycle
@@ -92,12 +86,6 @@ static inline u32 lo32(u64 f)
 {
 	return (u32)(f & 0xffffffff);
 }
-
-#define FLUSH_CPU_DCACHE(va, pa, size)	\
-	do {	\
-		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
-		outer_flush_range(pa, pa + (size_t)(size));		\
-	} while (0)
 
 static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
 static struct mapped_buffer_node *find_mapped_buffer_locked(
@@ -463,7 +451,7 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	kfree(sgt);
 }
 
-static int map_gmmu_pages(void *handle, struct sg_table *sgt,
+int map_gmmu_pages(void *handle, struct sg_table *sgt,
 			  void **va, size_t size)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
@@ -471,7 +459,7 @@ static int map_gmmu_pages(void *handle, struct sg_table *sgt,
 	return 0;
 }
 
-static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
+void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
 }
@@ -571,7 +559,7 @@ static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	iova = 0;
 }
 
-static int map_gmmu_pages(void *handle, struct sg_table *sgt,
+int map_gmmu_pages(void *handle, struct sg_table *sgt,
 			  void **kva, size_t size)
 {
 	int count = PAGE_ALIGN(size) >> PAGE_SHIFT;
@@ -590,7 +578,7 @@ static int map_gmmu_pages(void *handle, struct sg_table *sgt,
 	return 0;
 }
 
-static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
+void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	gk20a_dbg_fn("");
 
@@ -605,7 +593,7 @@ static void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
  * the whole range is zeroed so it's "invalid"/will fault
  */
 
-static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
+int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 					enum gmmu_pgsz_gk20a gmmu_pgsz_idx,
 					struct page_table_gk20a *pte)
 {
@@ -635,7 +623,7 @@ static int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 }
 
 /* given address range (inclusive) determine the pdes crossed */
-static inline void pde_range_from_vaddr_range(struct vm_gk20a *vm,
+void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi)
 {
@@ -647,12 +635,12 @@ static inline void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 		   *pde_lo, *pde_hi);
 }
 
-static inline u32 *pde_from_index(struct vm_gk20a *vm, u32 i)
+u32 *pde_from_index(struct vm_gk20a *vm, u32 i)
 {
 	return (u32 *) (((u8 *)vm->pdes.kv) + i*gmmu_pde__size_v());
 }
 
-static inline u32 pte_index_from_vaddr(struct vm_gk20a *vm,
+u32 pte_index_from_vaddr(struct vm_gk20a *vm,
 				       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx)
 {
 	u32 ret;
@@ -686,7 +674,7 @@ static inline void pte_space_page_offset_from_index(u32 i, u32 *pte_page,
  * backing store and if not go ahead allocate it and
  * record it in the appropriate pde
  */
-static int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
+int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
 				u32 i, enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 {
 	int err;
@@ -1981,6 +1969,7 @@ err_unmap:
 static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
+	struct gk20a *g = vm->mm->g;
 
 	if (mapped_buffer->va_node &&
 	    mapped_buffer->va_node->sparse) {
@@ -1990,7 +1979,7 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 			gmmu_page_shifts[pgsz_idx];
 
 		/* there is little we can do if this fails... */
-		gk20a_vm_put_empty(vm, vaddr, num_pages, pgsz_idx);
+		g->ops.mm.set_sparse(vm, vaddr, num_pages, pgsz_idx);
 
 	} else
 		__locked_gmmu_unmap(vm,
@@ -2259,6 +2248,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	u32 start_page_nr;
 	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
+	struct gk20a *g = vm->mm->g;
 	struct vm_reserved_va_node *va_node;
 	u64 vaddr_start = 0;
 
@@ -2316,7 +2306,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 	/* mark that we need to use sparse mappings here */
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE) {
-		err = gk20a_vm_put_empty(vm, vaddr_start, args->pages,
+		err = g->ops.mm.set_sparse(vm, vaddr_start, args->pages,
 					 pgsz_idx);
 		if (err) {
 			mutex_unlock(&vm->update_gmmu_lock);
@@ -3076,3 +3066,9 @@ int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g)
 	gk20a_idle(g->dev);
 	return ret;
 }
+
+void gk20a_init_mm(struct gpu_ops *gops)
+{
+	gops->mm.set_sparse = gk20a_vm_put_empty;
+}
+

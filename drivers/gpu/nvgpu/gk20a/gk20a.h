@@ -211,6 +211,10 @@ struct gpu_ops {
 		int (*get_netlist_name)(int index, char *name);
 		bool (*is_fw_defined)(void);
 	} gr_ctx;
+	struct {
+		int (*set_sparse)(struct vm_gk20a *vm, u64 vaddr,
+			       u32 num_pages, u32 pgsz_idx);
+	} mm;
 };
 
 struct gk20a {

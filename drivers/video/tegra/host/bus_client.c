@@ -210,17 +210,21 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (inode) {
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
-		ch = nvhost_channel_map(pdata);
-		if (!ch || !ch->dev) {
+		ret = nvhost_channel_map(pdata, &ch);
+		if (ret) {
 			pr_err("%s: failed to map channel\n", __func__);
-			return -ENOMEM;
+			return ret;
 		}
 	} else {
 		if (!ch || !ch->dev) {
 			pr_err("%s: NULL channel request to get\n", __func__);
 			return -EINVAL;
 		}
-		nvhost_getchannel(ch);
+		pdata = platform_get_drvdata(ch->dev);
+		if (!pdata->exclusive)
+			nvhost_getchannel(ch);
+		else
+			return -EBUSY;
 	}
 
 	trace_nvhost_channel_open(dev_name(&ch->dev->dev));

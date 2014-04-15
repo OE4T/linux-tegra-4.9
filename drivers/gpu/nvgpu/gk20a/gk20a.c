@@ -1182,15 +1182,29 @@ const struct dev_pm_ops gk20a_pm_ops = {
 };
 #endif
 
+static int _gk20a_pm_railgate(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	int ret = 0;
+	if (platform->railgate)
+		ret = platform->railgate(pdev);
+	return ret;
+}
+
 static int gk20a_pm_railgate(struct generic_pm_domain *domain)
 {
 	struct gk20a *g = container_of(domain, struct gk20a, pd);
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+
+	return _gk20a_pm_railgate(platform->g->dev);
+}
+
+static int _gk20a_pm_unrailgate(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	int ret = 0;
-
-	if (platform->railgate)
-		ret = platform->railgate(platform->g->dev);
-
+	if (platform->unrailgate)
+		ret = platform->unrailgate(pdev);
 	return ret;
 }
 
@@ -1198,12 +1212,8 @@ static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 {
 	struct gk20a *g = container_of(domain, struct gk20a, pd);
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
-	int ret = 0;
 
-	if (platform->unrailgate)
-		ret = platform->unrailgate(platform->g->dev);
-
-	return ret;
+	return _gk20a_pm_unrailgate(platform->g->dev);
 }
 
 static int gk20a_pm_suspend(struct device *dev)
@@ -1274,6 +1284,8 @@ static int gk20a_pm_init(struct platform_device *dev)
 	struct gk20a_platform *platform = platform_get_drvdata(dev);
 	int err = 0;
 
+	gk20a_dbg_fn("");
+
 	/* Initialise pm runtime */
 	if (platform->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
@@ -1288,9 +1300,9 @@ static int gk20a_pm_init(struct platform_device *dev)
 	/* Enable runtime railgating if possible. If not,
 	 * turn on the rail now. */
 	if (platform->can_railgate && IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-		platform->railgate(dev);
+		_gk20a_pm_railgate(dev);
 	else
-		platform->unrailgate(dev);
+		_gk20a_pm_unrailgate(dev);
 
 	/* genpd will take care of runtime power management if it is enabled */
 	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))

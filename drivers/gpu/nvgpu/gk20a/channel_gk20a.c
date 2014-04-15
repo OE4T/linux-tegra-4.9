@@ -1840,6 +1840,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = &f->channel[chid];
 		if (c->in_use && c->obj_class != KEPLER_C) {
+			gk20a_platform_channel_busy(g->dev);
 			err = gk20a_channel_submit_wfi(c);
 			if (err) {
 				gk20a_err(d, "cannot idle channel %d\n",
@@ -1849,6 +1850,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 			c->sync->wait_cpu(c->sync, &c->last_submit_fence,
 					  500000);
+			gk20a_platform_channel_idle(g->dev);
 			break;
 		}
 	}

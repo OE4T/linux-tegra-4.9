@@ -519,6 +519,31 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 
+struct gk20a_platform gm20b_tegra_platform = {
+	.has_syncpoints = true,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.clockgate_delay	= 50,
+
+	.probe = gk20a_tegra_probe,
+	.late_probe = gk20a_tegra_late_probe,
+
+	/* power management callbacks */
+	.suspend = gk20a_tegra_suspend,
+
+	/* frequency scaling configuration */
+	.prescale = gk20a_tegra_prescale,
+	.postscale = gk20a_tegra_postscale,
+	.devfreq_governor = "nvhost_podgov",
+	.qos_id = PM_QOS_GPU_FREQ_MIN,
+
+	.channel_busy = gk20a_tegra_channel_busy,
+	.channel_idle = gk20a_tegra_channel_idle,
+	.secure_alloc = gk20a_tegra_secure_alloc,
+	.dump_platform_dependencies = gk20a_tegra_debug_dump,
+};
+
 struct platform_device tegra_gk20a_device = {
 	.name		= "gk20a",
 	.resource	= gk20a_tegra_resources,

@@ -121,6 +121,7 @@ static inline struct gk20a_platform *gk20a_get_platform(
 extern struct gk20a_platform gk20a_generic_platform;
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gk20a_tegra_platform;
+extern struct gk20a_platform gm20b_tegra_platform;
 #endif
 
 static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)

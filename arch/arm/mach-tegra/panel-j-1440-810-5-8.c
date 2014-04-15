@@ -329,7 +329,7 @@ static struct platform_pwm_backlight_data dsi_j_1440_810_5_8_bl_data = {
 	.pwm_id		= 1,
 	.max_brightness	= 255,
 	.dft_brightness	= 77,
-	.pwm_period_ns	= 40000,
+	.pwm_period_ns	= 29334,
 	.notify		= dsi_j_1440_810_5_8_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= dsi_j_1440_810_5_8_check_fb,

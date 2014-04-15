@@ -379,10 +379,13 @@ static void calc_disp_params(struct tegra_dc *dc,
 						reqd_lines *
 						bpp_for_line_buffer_storage_fp;
 	thresh_lwm_bytes =
+		la_params.la_fp_to_real(reqd_buffering_thresh_disp_bytes_fp);
+	thresh_lwm_bytes +=
 		la_params.la_fp_to_real(
-			reqd_buffering_thresh_disp_bytes_fp +
-			bw_disruption_buffering_bytes_fp -
-			latency_buffering_available_in_reqd_buffering_fp);
+			(bw_disruption_buffering_bytes_fp >=
+			latency_buffering_available_in_reqd_buffering_fp) ?
+			(bw_disruption_buffering_bytes_fp -
+			latency_buffering_available_in_reqd_buffering_fp) : 0);
 	disp_params->thresh_lwm_bytes = thresh_lwm_bytes;
 
 

@@ -1130,15 +1130,22 @@ int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	if (memcmp(cmu, &dc->cmu, sizeof(struct tegra_dc_cmu))) {
 		tegra_dc_cache_cmu(&dc->cmu, cmu);
 
-		/* Disable CMU */
-		val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
-		if (val & CMU_ENABLE) {
-			val &= ~CMU_ENABLE;
-			tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
-			val = GENERAL_ACT_REQ;
-			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
-			/*TODO: Sync up with vsync */
-			mdelay(20);
+		/*
+		 * Don't mess up bootloader CMU settings during boot.
+		 * Disabling CMU causes flickering artifact.
+		 */
+		if (dc->enabled) {
+			/* Disable CMU */
+			val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
+			if (val & CMU_ENABLE) {
+				val &= ~CMU_ENABLE;
+				tegra_dc_writel(dc, val,
+						DC_DISP_DISP_COLOR_CONTROL);
+				val = GENERAL_ACT_REQ;
+				tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
+				/*TODO: Sync up with vsync */
+				mdelay(20);
+			}
 		}
 
 		tegra_dc_set_cmu(dc, &dc->cmu);

@@ -126,23 +126,60 @@ static struct tegra_dc_cmu default_cmu = {
 #endif
 
 #ifdef CONFIG_OF
+
+static int out_type_from_pn(struct device_node *panel_node)
+{
+	struct device_node *default_out_np = NULL;
+	u32 temp;
+
+	if (panel_node && of_device_is_available(panel_node))
+		default_out_np = of_get_child_by_name(panel_node,
+			"disp-default-out");
+	if (default_out_np && !of_property_read_u32(default_out_np,
+		"nvidia,out-type", &temp)) {
+		return (int)temp;
+	} else
+		return -EINVAL;
+}
+
 static int parse_dc_out_type(struct device_node *np,
 		struct tegra_dc_out *default_out)
 {
-	u32 temp;
-	if (!of_property_read_u32(np, "nvidia,out-type", &temp)) {
-		if (temp == TEGRA_DC_OUT_DSI)
-			OF_DC_LOG("dsi out type\n");
-		else if (temp == TEGRA_DC_OUT_HDMI)
-			OF_DC_LOG("hdmi out type\n");
-		else {
-			pr_err("Not support except dsi / hdmi type\n");
-			return -EINVAL;
-		}
-		default_out->type = (int)temp;
-		return 0;
+	const char *temp_str0;
+	struct device_node *np_target_disps[2] = {NULL,};
+	struct device_node *np_hdmi =
+		of_find_node_by_path(HDMI_NODE);
+	int out_type;
+
+	np_target_disps[0] = tegra_panel_get_dt_node(NULL);
+	np_target_disps[1] = of_get_child_by_name(np_hdmi, "hdmi-display");
+
+	if (of_property_read_string(np, "nvidia,dc-connection",
+		&temp_str0)) {
+		pr_err("no nvidia,dc-connection\n");
+		return -EINVAL;
 	}
-	/* out type should be parsed properly */
+
+	if (!strncmp(temp_str0, "internal-lcd",
+		strlen(temp_str0))) {
+		out_type = out_type_from_pn(np_target_disps[0]);
+		if (out_type >= 0) {
+			default_out->type = out_type;
+			return 0;
+		}
+	} else if (!strncmp(temp_str0, "external-display",
+		strlen(temp_str0))) {
+		out_type = out_type_from_pn(np_target_disps[1]);
+		if (out_type >= 0) {
+			default_out->type = out_type;
+			return 0;
+		}
+		/* TODO: If hdmi/hdmi-display node is not valid,
+		 * future SoC may need to search DP node
+		 * for external display
+		 */
+	}
+	pr_err("invalid nvidia,dc-connection or nvidia,out-type\n");
 	return -EINVAL;
 }
 

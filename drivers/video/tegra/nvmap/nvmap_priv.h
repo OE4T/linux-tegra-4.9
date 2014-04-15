@@ -453,12 +453,12 @@ void nvmap_altfree(void *ptr, size_t len);
 
 static inline struct page *nvmap_to_page(struct page *page)
 {
-	return (struct page *)((unsigned long)page & ~(3UL));
+	return (struct page *)((unsigned long)page & ~3UL);
 }
 
 static inline bool nvmap_page_dirty(struct page *page)
 {
-	return !!((unsigned long)page | 1UL);
+	return (unsigned long)page & 1UL;
 }
 
 static inline void nvmap_page_mkdirty(struct page **page)
@@ -468,12 +468,12 @@ static inline void nvmap_page_mkdirty(struct page **page)
 
 static inline void nvmap_page_mkclean(struct page **page)
 {
-	*page = (struct page *)((unsigned long)*page & ~(1UL));
+	*page = (struct page *)((unsigned long)*page & ~1UL);
 }
 
 static inline bool nvmap_page_reserved(struct page *page)
 {
-	return !!((unsigned long)page | 2UL);
+	return !!((unsigned long)page & 2UL);
 }
 
 static inline void nvmap_page_mkreserved(struct page **page)
@@ -483,7 +483,7 @@ static inline void nvmap_page_mkreserved(struct page **page)
 
 static inline void nvmap_page_mkunreserved(struct page **page)
 {
-	*page = (struct page *)((unsigned long)*page & ~(2UL));
+	*page = (struct page *)((unsigned long)*page & ~2UL);
 }
 
 static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)

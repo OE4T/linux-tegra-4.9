@@ -140,8 +140,8 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 }
 
 void nvmap_zap_handle(struct nvmap_handle *handle,
-		      u64 offset,
-		      u64 size)
+		      u32 offset,
+		      u32 size)
 {
 	struct list_head *vmas;
 	struct nvmap_vma_list *vma_list;
@@ -167,8 +167,8 @@ void nvmap_zap_handle(struct nvmap_handle *handle,
 }
 
 void nvmap_zap_handles(struct nvmap_handle **handles,
-		       u64 *offsets,
-		       u64 *sizes,
+		       u32 *offsets,
+		       u32 *sizes,
 		       u32 nr)
 {
 	int i;

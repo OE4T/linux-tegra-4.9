@@ -113,6 +113,11 @@ enum {
 	NVMAP_CACHE_OP_WB_INV,
 };
 
+enum {
+	NVMAP_PAGES_UNRESERVE = 0,
+	NVMAP_PAGES_RESERVE
+};
+
 struct nvmap_create_handle {
 	union {
 		__u32 id;	/* FromId */

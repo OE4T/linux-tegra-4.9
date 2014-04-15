@@ -183,3 +183,20 @@ void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
 		nvmap_zap_handle(handles[i], offsets[i], sizes[i]);
 }
 
+int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
+			u32 nr, u32 op)
+{
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		u32 size = sizes[i] ? sizes[i] : handles[i]->size;
+		u32 offset = sizes[i] ? offsets[i] : 0;
+
+		if (op == NVMAP_PAGES_RESERVE)
+			nvmap_handle_mkreserved(handles[i], offset, size);
+		else
+			nvmap_handle_mkunreserved(handles[i],offset, size);
+	}
+	return 0;
+}
+

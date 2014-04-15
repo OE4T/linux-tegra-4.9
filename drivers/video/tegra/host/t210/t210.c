@@ -70,6 +70,7 @@ struct nvhost_device_data t21_isp_info = {
 	.clocks        = {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.moduleid      = NVHOST_MODULE_ISP,
 	.ctrl_ops      = &tegra_isp_ctrl_ops,
+	.num_channels  = 1,
 };
 
 struct nvhost_device_data t21_vib_info = {
@@ -82,6 +83,7 @@ struct nvhost_device_data t21_vib_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
+	.num_channels  = 1,
 };
 
 static struct platform_device tegra_vi01b_device = {
@@ -107,6 +109,7 @@ struct nvhost_device_data t21_vi_info = {
 		{"cilab", 102000000} },
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.slave         = &tegra_vi01b_device,
+	.num_channels  = 1,
 };
 
 struct nvhost_device_data t21_msenc_info = {
@@ -120,6 +123,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.init		= nvhost_msenc_init,
 	.deinit		= nvhost_msenc_deinit,
 	.moduleid	= NVHOST_MODULE_MSENC,
+	.num_channels  = 1,
 };
 
 struct nvhost_device_data t21_nvdec_info = {
@@ -132,6 +136,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.init		= nvhost_nvdec_init,
 	.deinit		= nvhost_nvdec_deinit,
 	.moduleid	= NVHOST_MODULE_NVDEC,
+	.num_channels  = 1,
 };
 
 struct nvhost_device_data t21_nvjpg_info = {
@@ -144,6 +149,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.init		= nvhost_nvjpg_init,
 	.deinit		= nvhost_nvjpg_deinit,
 	.moduleid	= NVHOST_MODULE_NVJPG,
+	.num_channels  = 1,
 };
 
 struct nvhost_device_data t21_tsec_info = {
@@ -157,6 +163,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.init		= nvhost_tsec_init,
 	.deinit		= nvhost_tsec_deinit,
 	.moduleid      = NVHOST_MODULE_TSEC,
+	.num_channels  = 1,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
@@ -173,6 +180,7 @@ struct nvhost_device_data t21_vic_info = {
 	.deinit			= nvhost_vic03_deinit,
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic03_finalize_poweron,
+	.num_channels  = 1,
 };
 #endif
 

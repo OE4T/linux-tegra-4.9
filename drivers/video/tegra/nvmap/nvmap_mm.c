@@ -110,6 +110,15 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */
 	if (total >= cache_maint_inner_threshold) {
+		for (i = 0; i < nr; i++) {
+			if (handles[i]->auto_cache_sync) {
+				nvmap_handle_mkclean(handles[i], 0,
+						     handles[i]->size);
+				nvmap_zap_handle(handles[i], 0,
+						 handles[i]->size);
+			}
+		}
+
 		if (op == NVMAP_CACHE_OP_WB) {
 			inner_clean_cache_all();
 			outer_clean_all();

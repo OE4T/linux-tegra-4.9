@@ -775,6 +775,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		if (nvmap_page_reserved(priv->handle->pgalloc.pages[offs]))
 			return VM_FAULT_SIGBUS;
 		page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
+		nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
 	}
 
 	if (page)

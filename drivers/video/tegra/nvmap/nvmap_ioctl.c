@@ -740,6 +740,15 @@ static void heap_page_cache_maint(
 	unsigned int op, bool inner, bool outer,
 	unsigned long kaddr, pgprot_t prot, bool clean_only_dirty)
 {
+	if (h->auto_cache_sync) {
+		/*
+		 * zap user VA->PA mappings so that any access to the pages
+		 * will result in a fault and can be marked dirty
+		 */
+		nvmap_handle_mkclean(h, start, end-start);
+		nvmap_zap_handle(h, start, end - start);
+	}
+
 #ifdef NVMAP_LAZY_VFREE
 	if (inner) {
 		void *vaddr = NULL;
@@ -849,6 +858,11 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 {
 	if (!can_fast_cache_maint(h, start, end, op))
 		return false;
+
+	if (h->auto_cache_sync) {
+		nvmap_handle_mkclean(h, 0, h->size);
+		nvmap_zap_handle(h, 0, h->size);
+	}
 
 	if (op == NVMAP_CACHE_OP_WB_INV)
 		inner_flush_cache_all();

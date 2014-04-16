@@ -333,6 +333,8 @@ static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(to_platform_device(dev));
+
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
@@ -343,10 +345,14 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_load);
 	device_remove_file(dev, &dev_attr_railgate_delay);
 	device_remove_file(dev, &dev_attr_clockgate_delay);
+
+	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
+		sysfs_remove_link(&dev->kobj, dev_name(dev));
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	int error = 0;
 
 	error |= device_create_file(&dev->dev, &dev_attr_elcg_enable);
@@ -360,6 +366,12 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
 
+	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
+		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,
+					   &dev->dev.kobj,
+					   dev_name(&dev->dev));
+
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
+
 }

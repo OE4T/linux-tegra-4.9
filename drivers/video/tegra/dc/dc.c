@@ -3300,10 +3300,13 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 
 	if (dc->out && dc->out->postsuspend) {
 		dc->out->postsuspend();
-		if (dc->out->type && dc->out->type == TEGRA_DC_OUT_HDMI)
-			/*
-			 * avoid resume event due to voltage falling
-			 */
+		/* avoid resume event due to voltage falling on interfaces that
+		 * support hotplug wake. And only do this if a panel is
+		 * connected, if we are already disconnected, then no phantom
+		 * hotplug can occur by disabling the voltage.
+		 */
+		if ((dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0)
+			&& tegra_dc_get_connected(dc))
 			msleep(100);
 	}
 

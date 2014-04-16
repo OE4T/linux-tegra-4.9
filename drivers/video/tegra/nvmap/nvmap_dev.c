@@ -85,7 +85,6 @@ static int nvmap_open(struct inode *inode, struct file *filp);
 static int nvmap_release(struct inode *inode, struct file *filp);
 static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 static int nvmap_map(struct file *filp, struct vm_area_struct *vma);
-static void nvmap_vma_open(struct vm_area_struct *vma);
 static void nvmap_vma_close(struct vm_area_struct *vma);
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
 
@@ -524,10 +523,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
-
-	priv->offs = 0;
 	priv->handle = h;
-	atomic_set(&priv->count, 1);
 
 	vma->vm_flags |= VM_SHARED | VM_DONTEXPAND |
 			  VM_DONTDUMP | VM_DONTCOPY |
@@ -536,6 +532,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	BUG_ON(vma->vm_private_data != NULL);
 	vma->vm_private_data = priv;
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
+	nvmap_vma_open(vma);
 	return 0;
 }
 
@@ -552,15 +549,10 @@ static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->offs = 0;
-	priv->handle = NULL;
-	atomic_set(&priv->count, 1);
-
 	vma->vm_flags |= (VM_SHARED | VM_DONTEXPAND |
 			  VM_DONTDUMP | VM_DONTCOPY);
 	vma->vm_ops = &nvmap_vma_ops;
 	vma->vm_private_data = priv;
-
 	return 0;
 }
 
@@ -687,7 +679,7 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
  * the handle, and nvmap_vma_close decrements it. alternatively, we could
  * disallow copying of the vma, or behave like pmem and zap the pages. FIXME.
 */
-static void nvmap_vma_open(struct vm_area_struct *vma)
+void nvmap_vma_open(struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv;
 	struct nvmap_handle *h;

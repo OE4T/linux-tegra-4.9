@@ -509,6 +509,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32)
 	vpriv->handle = h;
 	vpriv->offs = op.offset;
 	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
+	nvmap_vma_open(vma);
 
 out:
 	up_read(&current->mm->mmap_sem);

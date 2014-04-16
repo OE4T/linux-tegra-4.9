@@ -501,4 +501,5 @@ static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
 	return pages;
 }
 
+void nvmap_vma_open(struct vm_area_struct *vma);
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

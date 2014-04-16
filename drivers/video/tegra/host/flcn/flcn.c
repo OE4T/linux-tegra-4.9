@@ -444,7 +444,7 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	struct host1x_hwctx *ctx;
 	u32 *ptr;
 	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
-	u32 nvhost_flcn_restore_size = 11; /* number of words written below */
+	u32 nvhost_flcn_restore_size = 10; /* number of words written below */
 
 	nvhost_dbg_fn("");
 

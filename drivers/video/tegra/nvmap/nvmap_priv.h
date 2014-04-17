@@ -486,6 +486,38 @@ static inline void nvmap_page_mkunreserved(struct page **page)
 	*page = (struct page *)((unsigned long)*page & ~2UL);
 }
 
+static inline void nvmap_handle_mk(struct nvmap_handle *h,
+				   u32 offset, u32 size,
+				   void (*fn)(struct page **))
+{
+	int i;
+	int start_page = PAGE_ALIGN(offset) >> PAGE_SHIFT;
+	int end_page = (offset + size) >> PAGE_SHIFT;
+
+	if (h->heap_pgalloc) {
+		for (i = start_page; i < end_page; i++);
+			fn(&h->pgalloc.pages[i + start_page]);
+	}
+}
+
+static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
+					u32 offset, u32 size)
+{
+	nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
+}
+
+static inline void nvmap_handle_mkunreserved(struct nvmap_handle *h,
+					     u32 offset, u32 size)
+{
+	nvmap_handle_mk(h, offset, size, nvmap_page_mkunreserved);
+}
+
+static inline void nvmap_handle_mkreserved(struct nvmap_handle *h,
+					   u32 offset, u32 size)
+{
+	nvmap_handle_mk(h, offset, size, nvmap_page_mkreserved);
+}
+
 static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
 {
 	struct page **pages;

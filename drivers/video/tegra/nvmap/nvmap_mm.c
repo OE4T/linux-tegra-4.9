@@ -139,9 +139,7 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	return 0;
 }
 
-void nvmap_zap_handle(struct nvmap_handle *handle,
-		      u32 offset,
-		      u32 size)
+void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 {
 	struct list_head *vmas;
 	struct nvmap_vma_list *vma_list;
@@ -155,21 +153,29 @@ void nvmap_zap_handle(struct nvmap_handle *handle,
 		size = handle->size;
 	}
 
-	vmas = &handle->pgalloc.vmas;
 	mutex_lock(&handle->lock);
+	vmas = &handle->pgalloc.vmas;
 	list_for_each_entry(vma_list, vmas, list) {
+		struct nvmap_vma_priv *priv;
+
 		vma = vma_list->vma;
-		zap_page_range(vma, vma->vm_start + offset,
-				offset + size - vma->vm_start,
-				NULL);
+		priv = vma->vm_private_data;
+		if (priv->offs || vma->vm_pgoff)
+			/* vma mapping starts in the middle of handle memory.
+			 * zapping needs special care. zap entire range for now.
+			 * FIXME: optimze zapping.
+			 */
+			zap_page_range(vma, vma->vm_start,
+				vma->vm_end - vma->vm_start, NULL);
+		else
+			zap_page_range(vma, vma->vm_start + offset,
+				size, NULL);
 	}
 	mutex_unlock(&handle->lock);
 }
 
-void nvmap_zap_handles(struct nvmap_handle **handles,
-		       u32 *offsets,
-		       u32 *sizes,
-		       u32 nr)
+void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
+		       u32 *sizes, u32 nr)
 {
 	int i;
 

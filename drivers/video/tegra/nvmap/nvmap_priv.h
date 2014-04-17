@@ -501,5 +501,10 @@ static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
 	return pages;
 }
 
+void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size);
+
+void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
+		       u32 *sizes, u32 nr);
+
 void nvmap_vma_open(struct vm_area_struct *vma);
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

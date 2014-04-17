@@ -24,20 +24,23 @@
 #include <linux/tracepoint.h>
 
 TRACE_EVENT(input_cfboost_params,
-	TP_PROTO(const char *name, unsigned int freq, unsigned long time),
-	TP_ARGS(name, freq, time),
+	TP_PROTO(const char *name, unsigned int freq, unsigned int emc,
+		unsigned long time),
+	TP_ARGS(name, freq, emc, time),
 	TP_STRUCT__entry(
 		__field(const char *, name)
 		__field(unsigned int, freq)
+		__field(unsigned int, emc)
 		__field(unsigned long, time)
 	),
 	TP_fast_assign(
 		__entry->name = name;
 		__entry->freq = freq;
+		__entry->emc = emc;
 		__entry->time = time;
 	),
-	TP_printk("name=%s freq=%u time=%lu",
-	  __entry->name, __entry->freq, __entry->time)
+	TP_printk("name=%s freq=%u emc=%u time=%lu",
+	  __entry->name, __entry->freq, __entry->emc, __entry->time)
 );
 
 TRACE_EVENT(input_cfboost_event,

@@ -23,6 +23,7 @@
 #include <linux/ptrace.h>
 #include <linux/interrupt.h>
 #include <linux/err.h>
+#include <linux/nsproxy.h>
 
 #include <asm/cputype.h>
 #include <asm/irq_regs.h>
@@ -253,22 +254,15 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	if (atomic_read(&cpu_ctx->nr_active) == 0)
 		return;
 
-	if (!task) {
-		pid_t pid;
-		struct pid *pid_s;
-		struct quadd_thread_data *t_data;
+	if (!task)
+		task = current;
 
-		t_data = &cpu_ctx->active_thread;
-		pid = t_data->pid;
-
-		rcu_read_lock();
-		pid_s = find_vpid(pid);
-		if (pid_s)
-			task = pid_task(pid_s, PIDTYPE_PID);
+	rcu_read_lock();
+	if (!task_nsproxy(task)) {
 		rcu_read_unlock();
-		if (!task)
-			return;
+		return;
 	}
+	rcu_read_unlock();
 
 	if (ctx->pmu && ctx->pmu_info.active)
 		nr_events += read_source(ctx->pmu, regs,

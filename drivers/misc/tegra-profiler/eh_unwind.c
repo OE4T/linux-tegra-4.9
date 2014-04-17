@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
+#include <linux/rcupdate.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -58,10 +59,17 @@ struct ex_region_info {
 	struct extables tabs;
 };
 
+struct regions_data {
+	struct ex_region_info *entries;
+
+	unsigned long curr_nr;
+	unsigned long size;
+
+	struct rcu_head rcu;
+};
+
 struct quadd_unwind_ctx {
-	struct ex_region_info *regions;
-	unsigned long ri_nr;
-	unsigned long ri_size;
+	struct regions_data *rd;
 
 	pid_t pid;
 
@@ -126,11 +134,12 @@ validate_pc_addr(unsigned long addr, unsigned long nbytes)
 })
 
 static int
-add_ex_region(struct ex_region_info *new_entry)
+add_ex_region(struct regions_data *rd,
+	      struct ex_region_info *new_entry)
 {
 	unsigned int i_min, i_max, mid;
-	struct ex_region_info *array = ctx.regions;
-	unsigned long size = ctx.ri_nr;
+	struct ex_region_info *array = rd->entries;
+	unsigned long size = rd->curr_nr;
 
 	if (!array)
 		return 0;
@@ -176,11 +185,12 @@ add_ex_region(struct ex_region_info *new_entry)
 }
 
 static struct ex_region_info *
-search_ex_region(unsigned long key, struct extables *tabs)
+search_ex_region(struct ex_region_info *array,
+		 unsigned long size,
+		 unsigned long key,
+		 struct extables *tabs)
 {
 	unsigned int i_min, i_max, mid;
-	struct ex_region_info *array = ctx.regions;
-	unsigned long size = ctx.ri_nr;
 
 	if (size == 0)
 		return NULL;
@@ -203,6 +213,25 @@ search_ex_region(unsigned long key, struct extables *tabs)
 	}
 
 	return NULL;
+}
+
+static long
+__search_ex_region(unsigned long key, struct extables *tabs)
+{
+	struct regions_data *rd;
+	struct ex_region_info *ri = NULL;
+
+	rcu_read_lock();
+
+	rd = rcu_dereference(ctx.rd);
+	if (!rd)
+		goto out;
+
+	ri = search_ex_region(rd->entries, rd->curr_nr, key, tabs);
+
+out:
+	rcu_read_unlock();
+	return ri ? 0 : -ENOENT;
 }
 
 static void pin_user_pages(struct extables *tabs)
@@ -274,16 +303,14 @@ error_out:
 static void
 pin_user_pages_work(struct work_struct *w)
 {
+	long err;
 	struct extables tabs;
-	struct ex_region_info *ri;
 	struct pin_pages_work *work;
 
 	work = container_of(w, struct pin_pages_work, work);
 
-	spin_lock(&ctx.lock);
-	ri = search_ex_region(work->vm_start, &tabs);
-	spin_unlock(&ctx.lock);
-	if (ri)
+	err = __search_ex_region(work->vm_start, &tabs);
+	if (!err)
 		pin_user_pages(&tabs);
 
 	kfree(w);
@@ -306,31 +333,75 @@ __pin_user_pages(unsigned long vm_start)
 	return 0;
 }
 
+static struct regions_data *rd_alloc(unsigned long size)
+{
+	struct regions_data *rd;
+
+	rd = kzalloc(sizeof(*rd), GFP_KERNEL);
+	if (!rd)
+		return NULL;
+
+	rd->entries = kzalloc(size * sizeof(*rd->entries), GFP_KERNEL);
+	if (!rd->entries) {
+		kfree(rd);
+		return NULL;
+	}
+
+	rd->size = size;
+	rd->curr_nr = 0;
+
+	return rd;
+}
+
+static void rd_free(struct regions_data *rd)
+{
+	if (rd)
+		kfree(rd->entries);
+
+	kfree(rd);
+}
+
+static void rd_free_rcu(struct rcu_head *rh)
+{
+	struct regions_data *rd = container_of(rh, struct regions_data, rcu);
+	rd_free(rd);
+}
+
 int quadd_unwind_set_extab(struct quadd_extables *extabs)
 {
 	int err = 0;
+	unsigned long nr_entries, nr_added, new_size;
 	struct ex_region_info ri_entry;
 	struct extab_info *ti;
+	struct regions_data *rd, *rd_new;
 
 	spin_lock(&ctx.lock);
 
-	if (!ctx.regions) {
+	rd = rcu_dereference(ctx.rd);
+	if (!rd) {
+		pr_warn("%s: warning: rd\n", __func__);
+		new_size = QUADD_EXTABS_SIZE;
+		nr_entries = 0;
+	} else {
+		new_size = rd->size;
+		nr_entries = rd->curr_nr;
+	}
+
+	if (nr_entries >= new_size)
+		new_size += new_size >> 1;
+
+	rd_new = rd_alloc(new_size);
+	if (IS_ERR_OR_NULL(rd_new)) {
+		pr_err("%s: error: rd_alloc\n", __func__);
 		err = -ENOMEM;
 		goto error_out;
 	}
 
-	if (ctx.ri_nr >= ctx.ri_size) {
-		struct ex_region_info *new_regions;
-		unsigned long newlen = ctx.ri_size + (ctx.ri_size >> 1);
+	if (rd && nr_entries)
+		memcpy(rd_new->entries, rd->entries,
+		       nr_entries * sizeof(*rd->entries));
 
-		new_regions = krealloc(ctx.regions, newlen, GFP_KERNEL);
-		if (!new_regions) {
-			err = -ENOMEM;
-			goto error_out;
-		}
-		ctx.regions = new_regions;
-		ctx.ri_size = newlen;
-	}
+	rd_new->curr_nr = nr_entries;
 
 	ri_entry.vm_start = extabs->vm_start;
 	ri_entry.vm_end = extabs->vm_end;
@@ -343,7 +414,17 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs)
 	ti->addr = extabs->extab.addr;
 	ti->length = extabs->extab.length;
 
-	ctx.ri_nr += add_ex_region(&ri_entry);
+	nr_added = add_ex_region(rd_new, &ri_entry);
+	if (nr_added == 0) {
+		rd_free(rd_new);
+		goto error_out;
+	}
+	rd_new->curr_nr += nr_added;
+
+	rcu_assign_pointer(ctx.rd, rd_new);
+
+	if (rd)
+		call_rcu(&rd->rcu, rd_free_rcu);
 
 	spin_unlock(&ctx.lock);
 
@@ -851,12 +932,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 			break;
 
 		if (!is_vma_addr(exidx->addr, vma_pc, sizeof(u32))) {
-			struct ex_region_info *ri;
-
-			spin_lock(&ctx.lock);
-			ri = search_ex_region(vma_pc->vm_start, &tabs);
-			spin_unlock(&ctx.lock);
-			if (!ri) {
+			err = __search_ex_region(vma_pc->vm_start, &tabs);
+			if (err) {
 				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
@@ -886,10 +963,10 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 			    struct quadd_callchain *cc,
 			    struct task_struct *task)
 {
+	long err;
 	unsigned long ip, sp;
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
-	struct ex_region_info *ri;
 	struct extables tabs;
 
 	cc->unw_method = QUADD_UNW_METHOD_EHT;
@@ -916,10 +993,8 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	if (!vma_sp)
 		return 0;
 
-	spin_lock(&ctx.lock);
-	ri = search_ex_region(vma->vm_start, &tabs);
-	spin_unlock(&ctx.lock);
-	if (!ri) {
+	err = __search_ex_region(vma->vm_start, &tabs);
+	if (err) {
 		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
 	}
@@ -931,25 +1006,30 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 
 int quadd_unwind_start(struct task_struct *task)
 {
+	struct regions_data *rd, *rd_old;
+
 	spin_lock(&ctx.lock);
 
-	kfree(ctx.regions);
+	rd_old = rcu_dereference(ctx.rd);
+	if (rd_old)
+		pr_warn("%s: warning: rd_old\n", __func__);
 
-	ctx.ri_nr = 0;
-	ctx.ri_size = 0;
-
-	ctx.pinned_pages = 0;
-	ctx.pinned_size = 0;
-
-	ctx.regions = kzalloc(QUADD_EXTABS_SIZE * sizeof(*ctx.regions),
-			      GFP_KERNEL);
-	if (!ctx.regions) {
+	rd = rd_alloc(QUADD_EXTABS_SIZE);
+	if (IS_ERR_OR_NULL(rd)) {
+		pr_err("%s: error: rd_alloc\n", __func__);
 		spin_unlock(&ctx.lock);
 		return -ENOMEM;
 	}
-	ctx.ri_size = QUADD_EXTABS_SIZE;
+
+	rcu_assign_pointer(ctx.rd, rd);
+
+	if (rd_old)
+		call_rcu(&rd_old->rcu, rd_free_rcu);
 
 	ctx.pid = task->tgid;
+
+	ctx.pinned_pages = 0;
+	ctx.pinned_size = 0;
 
 	spin_unlock(&ctx.lock);
 
@@ -958,15 +1038,17 @@ int quadd_unwind_start(struct task_struct *task)
 
 void quadd_unwind_stop(void)
 {
+	struct regions_data *rd;
+
 	spin_lock(&ctx.lock);
 
-	kfree(ctx.regions);
-	ctx.regions = NULL;
-
-	ctx.ri_size = 0;
-	ctx.ri_nr = 0;
-
 	ctx.pid = 0;
+
+	rd = rcu_dereference(ctx.rd);
+	if (rd) {
+		rcu_assign_pointer(ctx.rd, NULL);
+		call_rcu(&rd->rcu, rd_free_rcu);
+	}
 
 	spin_unlock(&ctx.lock);
 
@@ -977,12 +1059,9 @@ void quadd_unwind_stop(void)
 
 int quadd_unwind_init(void)
 {
-	ctx.regions = NULL;
-	ctx.ri_size = 0;
-	ctx.ri_nr = 0;
-	ctx.pid = 0;
-
 	spin_lock_init(&ctx.lock);
+	rcu_assign_pointer(ctx.rd, NULL);
+	ctx.pid = 0;
 
 	return 0;
 }
@@ -990,4 +1069,5 @@ int quadd_unwind_init(void)
 void quadd_unwind_deinit(void)
 {
 	quadd_unwind_stop();
+	rcu_barrier();
 }

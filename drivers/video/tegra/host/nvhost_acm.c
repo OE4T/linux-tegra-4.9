@@ -762,12 +762,12 @@ int nvhost_module_disable_clk(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
-	for (index = 0; index < pdata->num_clks; index++)
-		clk_disable_unprepare(pdata->clk[index]);
-
 	for (index = 0; index < pdata->num_channels; index++)
 		if (pdata->channels[index])
 			nvhost_channel_suspend(pdata->channels[index]);
+
+	for (index = 0; index < pdata->num_clks; index++)
+		clk_disable_unprepare(pdata->clk[index]);
 
 	/* disable parent's clock if required */
 	if (dev->parent && dev->parent != &platform_bus)

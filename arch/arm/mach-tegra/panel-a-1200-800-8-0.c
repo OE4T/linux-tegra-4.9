@@ -193,10 +193,13 @@ static int dsi_a_1200_800_8_0_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = dsi_a_1200_800_8_0_gpio_get();
+	err = tegra_panel_gpio_get_dt("a,wxga-8-0", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
+		err = dsi_a_1200_800_8_0_gpio_get();
+		if (err < 0) {
+			pr_err("dsi gpio request failed\n");
+			goto fail;
+		}
 	}
 
 	if (avdd_lcd_3v3) {
@@ -542,6 +545,12 @@ static void dsi_a_1200_800_8_0_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = &dsi_a_1200_800_8_0_cmu;
 }
 #endif
+
+struct tegra_panel_ops dsi_a_1200_800_8_0_ops = {
+	.enable = dsi_a_1200_800_8_0_enable,
+	.disable = dsi_a_1200_800_8_0_disable,
+	.postsuspend = dsi_a_1200_800_8_0_postsuspend,
+};
 
 struct tegra_panel __initdata dsi_a_1200_800_8_0 = {
 	.init_sd_settings = dsi_a_1200_800_8_0_sd_settings_init,

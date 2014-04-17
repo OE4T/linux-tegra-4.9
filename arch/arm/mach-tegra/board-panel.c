@@ -185,6 +185,9 @@ struct device_node *tegra_panel_get_dt_node(
 	struct device_node *np_panel = NULL;
 	struct board_info display_board;
 
+	bool is_dsi_a_1200_1920_8_0 = false;
+	bool is_dsi_a_1200_800_8_0 = false;
+
 	tegra_get_display_board_info(&display_board);
 
 	if (pdata)
@@ -211,9 +214,39 @@ struct device_node *tegra_panel_get_dt_node(
 				&dsi_s_wqxga_10_1_ops);
 		np_panel = of_find_compatible_node(NULL, NULL, "s,wqxga-10-1");
 		break;
+	case BOARD_E1937:
+		if (display_board.sku == 1100)
+			is_dsi_a_1200_800_8_0 = true;
+		else
+			is_dsi_a_1200_1920_8_0 = true;
+		break;
+	case BOARD_E1807:
+		is_dsi_a_1200_800_8_0 = true;
+		break;
+	case BOARD_P1761:
+		if (tegra_get_board_panel_id())
+			is_dsi_a_1200_1920_8_0 = true;
+		else
+			is_dsi_a_1200_800_8_0 = true;
+		break;
 	default:
 		WARN(1, "Display panel not supported\n");
 	};
+
+	if (is_dsi_a_1200_1920_8_0) {
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_a_1200_1920_8_0_ops);
+		np_panel = of_find_compatible_node(NULL, NULL,
+				"a,wuxga-8-0");
+	}
+	if (is_dsi_a_1200_800_8_0) {
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_a_1200_800_8_0_ops);
+		np_panel = of_find_compatible_node(NULL, NULL,
+				"a,wxga-8-0");
+	}
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }

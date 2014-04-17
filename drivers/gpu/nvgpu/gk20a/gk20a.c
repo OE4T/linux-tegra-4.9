@@ -21,6 +21,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
+#include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <linux/highmem.h>
 #include <linux/string.h>
@@ -1678,5 +1679,6 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 	return fw;
 }
 
+MODULE_LICENSE("GPL v2");
 module_init(gk20a_init);
 module_exit(gk20a_exit);

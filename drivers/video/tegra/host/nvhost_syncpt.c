@@ -60,9 +60,11 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 
 void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp)
 {
-	/* reset syncpoint value back to 0 */
-	atomic_set(&sp->min_val[0], 0);
-	syncpt_op().reset(sp, 0);
+	int graphics_host_sp = nvhost_syncpt_graphics_host_sp(sp);
+
+	/* reset graphics host syncpoint value back to 0 */
+	atomic_set(&sp->min_val[graphics_host_sp], 0);
+	syncpt_op().reset(sp, graphics_host_sp);
 }
 
 /**
@@ -695,7 +697,8 @@ static u32 nvhost_find_free_syncpt(struct nvhost_syncpt *sp)
 {
 	u32 i;
 
-	for (i = NVHOST_FREE_SYNCPT_BASE; i < nvhost_syncpt_nb_pts(sp); ++i)
+	for (i = NVHOST_FREE_SYNCPT_BASE(sp);
+		i < nvhost_syncpt_pts_limit(sp); ++i)
 		if (!sp->assigned[i])
 			return i;
 
@@ -709,7 +712,7 @@ static int nvhost_reserve_syncpt(struct nvhost_syncpt *sp, u32 id,
 					bool client_managed)
 {
 	/* is it already reserved ? */
-	if (id < NVHOST_FREE_SYNCPT_BASE || sp->assigned[id])
+	if (id < NVHOST_FREE_SYNCPT_BASE(sp) || sp->assigned[id])
 		return -EINVAL;
 
 	sp->assigned[id] = true;
@@ -724,7 +727,7 @@ static int nvhost_reserve_syncpt(struct nvhost_syncpt *sp, u32 id,
 static int nvhost_syncpt_assign_name(struct nvhost_syncpt *sp, u32 id,
 					const char *syncpt_name)
 {
-	if (id < NVHOST_FREE_SYNCPT_BASE || !sp->assigned[id])
+	if (id < NVHOST_FREE_SYNCPT_BASE(sp) || !sp->assigned[id])
 		return -EINVAL;
 
 	sp->syncpt_names[id] = syncpt_name;
@@ -1096,6 +1099,16 @@ int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp)
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client)
 {
 	sp->client_managed[id] = client;
+}
+
+int nvhost_syncpt_graphics_host_sp(struct nvhost_syncpt *sp)
+{
+	return syncpt_to_dev(sp)->info.pts_base;
+}
+
+int nvhost_syncpt_pts_limit(struct nvhost_syncpt *sp)
+{
+	return syncpt_to_dev(sp)->info.pts_limit;
 }
 
 /* public sync point API */

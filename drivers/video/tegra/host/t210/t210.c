@@ -54,6 +54,8 @@ static struct host1x_device_info host1x04_info = {
 	.nb_pts		= NV_HOST1X_SYNCPT_NB_PTS,
 	.nb_mlocks	= NV_HOST1X_NB_MLOCKS,
 	.initialize_chip_support = nvhost_init_t210_support,
+	.pts_base	= 0,
+	.pts_limit	= NV_HOST1X_SYNCPT_NB_PTS,
 };
 
 struct nvhost_device_data t21_host1x_info = {
@@ -357,7 +359,6 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
-
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;

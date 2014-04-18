@@ -41,6 +41,8 @@ struct host1x_device_info {
 	int		nb_mlocks;	/* host1x: number of mlocks */
 	int		(*initialize_chip_support)(struct nvhost_master *,
 						struct nvhost_chip_support *);
+	int		pts_base;	/* host1x: syncpoint base */
+	int		pts_limit;	/* host1x: syncpoint limit */
 };
 
 struct nvhost_master {

@@ -59,6 +59,8 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 		for_each_set_bit(id, &reg, 32) {
 			struct nvhost_intr_syncpt *sp;
 			int sp_id = i * 32 + id;
+			int graphics_host_sp =
+				nvhost_syncpt_graphics_host_sp(&dev->syncpt);
 
 			if (unlikely(sp_id >= dev->info.nb_pts)) {
 				dev_err(&dev->dev->dev, "%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
@@ -69,10 +71,12 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 			sp = intr->syncpt + sp_id;
 			ktime_get_ts(&sp->isr_recv);
 
-			/* handle syncpoint 0 increments immediately */
-			if (sp_id == 0) {
-				dev_warn(&dev->dev->dev, "%s(): syncpoint id 0 incremented\n",
-					 __func__);
+			/* handle graphics host syncpoint increments
+			 * immediately
+			 */
+			if (sp_id == graphics_host_sp) {
+				dev_warn(&dev->dev->dev, "%s(): syncpoint id %d incremented\n",
+					 __func__, graphics_host_sp);
 				nvhost_syncpt_patch_check(&dev->syncpt);
 				t20_intr_syncpt_intr_ack(sp, false);
 			} else {
@@ -108,9 +112,12 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	 */
 	writel(0xff, sync_regs + host1x_sync_ctxsw_timeout_cfg_r());
 
-	/* enable syncpoint 0 interrupt */
-	t20_intr_set_syncpt_threshold(intr, 0, 1);
-	t20_intr_enable_syncpt_intr(intr, 0);
+	/* enable graphics host syncpoint interrupt */
+	t20_intr_set_syncpt_threshold(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt),
+			1);
+	t20_intr_enable_syncpt_intr(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
 }
 
 static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
@@ -286,8 +293,9 @@ static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 
-	/* disable syncpoint 0 interrupt */
-	t20_intr_disable_syncpt_intr(intr, 0);
+	/* disable graphics host syncpoint interrupt */
+	t20_intr_disable_syncpt_intr(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
 
 	free_irq(intr->syncpt_irq, dev);
 	flush_workqueue(intr->wq);

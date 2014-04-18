@@ -80,7 +80,7 @@ static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
 		void *patch_addr)
 {
 	u32 override = nvhost_class_host_wait_syncpt(
-			NVSYNCPT_GRAPHICS_HOST, 0);
+				nvhost_syncpt_graphics_host_sp(sp), 0);
 	__raw_writel(override, patch_addr);
 	return 0;
 }

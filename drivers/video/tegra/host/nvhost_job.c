@@ -205,9 +205,9 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			 * NULL an already satisfied WAIT_SYNCPT host method,
 			 * by patching its args in the command stream. The
 			 * method data is changed to reference a reserved
-			 * (never given out or incr) NVSYNCPT_GRAPHICS_HOST
-			 * syncpt with a matching threshold value of 0, so
-			 * is guaranteed to be popped by the host HW.
+			 * (never given out or incr) graphics host syncpt
+			 * with a matching threshold value of 0, so is
+			 * guaranteed to be popped by the host HW.
 			 */
 			dev_dbg(&syncpt_to_dev(sp)->dev->dev,
 			    "drop WAIT id %d (%s) thresh 0x%x, min 0x%x\n",

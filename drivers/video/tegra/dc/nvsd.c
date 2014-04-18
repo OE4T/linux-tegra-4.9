@@ -112,6 +112,9 @@ static atomic_t *_sd_brightness;
 /* shared boolean for manual K workaround */
 static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
+static u16 smooth_k_frames_left;
+static u16 smooth_k_duration_frames;
+
 static u8 nvsd_get_bw_idx(struct tegra_dc_sd_settings *settings)
 {
 	u8 bw;
@@ -541,10 +544,26 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	}
 
 	if (settings->smooth_k_enable) {
+		fixed20_12 smooth_k_incr;
+		fixed20_12 num;
+
 		/* Write K incr value */
 		val = SD_SMOOTH_K_INCR(settings->smooth_k_incr);
 		tegra_dc_writel(dc, val, DC_DISP_SD_SMOOTH_K);
 		dev_dbg(&dc->ndev->dev, "  SMOOTH_K: 0x%08x\n", val);
+
+		/* Convert 8.6 fixed-point to 20.12 fixed-point */
+		smooth_k_incr.full = val << 6;
+
+		/* In the BL_TF LUT, raw K is specified in steps of 8 */
+		num.full = dfixed_const(8);
+
+		num.full = dfixed_div(num, smooth_k_incr);
+		num.full = dfixed_ceil(num);
+		smooth_k_frames_left = dfixed_trunc(num);
+		smooth_k_duration_frames = smooth_k_frames_left;
+		dev_dbg(&dc->ndev->dev, "  Smooth K duration (frames): %d\n",
+			smooth_k_frames_left);
 	}
 #endif
 
@@ -710,6 +729,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 	int cur_sd_brightness;
 	int sw_sd_brightness;
 	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
+	bool nvsd_updated = false;
 
 	if (_sd_brightness) {
 		if (atomic_read(&man_k_until_blank) &&
@@ -737,20 +757,31 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		 * compensated according to histogram for soft-clipping
 		 * if hw output is used to update brightness. */
 		if (settings->phase_in_adjustments) {
-			return nvsd_phase_in_adjustments(dc, settings);
+			nvsd_updated = nvsd_phase_in_adjustments(dc, settings);
 		} else if (settings->soft_clipping_enable &&
 			settings->soft_clipping_correction) {
 			sw_sd_brightness = nvsd_set_brightness(dc);
 			if (sw_sd_brightness != cur_sd_brightness) {
 				atomic_set(_sd_brightness, sw_sd_brightness);
-				return true;
+				nvsd_updated = true;
 			}
 		} else if (val != (u32)cur_sd_brightness) {
 			/* set brightness value and note the update */
 			atomic_set(_sd_brightness, (int)val);
+			nvsd_updated = true;
+		}
+
+		if (nvsd_updated) {
+			smooth_k_frames_left = smooth_k_duration_frames;
 			return true;
 		}
 
+		if (settings->smooth_k_enable) {
+			if (smooth_k_frames_left--)
+				return true;
+			else
+				smooth_k_frames_left = smooth_k_duration_frames;
+		}
 	}
 
 	/* No update needed. */

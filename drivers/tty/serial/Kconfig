@@ -1663,6 +1663,15 @@ config SERIAL_MVEBU_CONSOLE
 	  and warnings and which allows logins in single user mode)
 	  Otherwise, say 'N'.
 
+config TEGRA_HV_COMM
+	tristate "Tegra Hypervisor Communication"
+	depends on TEGRA_HV_MANAGER
+	help
+	  Add support for emulating a TTY device over the Tegra Hypervisor interface.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called tegra_hv_comm.
+
 endmenu
 
 config SERIAL_MCTRL_GPIO

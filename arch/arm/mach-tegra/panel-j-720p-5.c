@@ -500,6 +500,7 @@ static struct tegra_dsi_out dsi_j_720p_5_pdata = {
 	.n_init_cmd = ARRAY_SIZE(dsi_j_720p_5_init_cmd),
 	.dsi_suspend_cmd = dsi_j_720p_5_suspend_cmd,
 	.n_suspend_cmd = ARRAY_SIZE(dsi_j_720p_5_suspend_cmd),
+	.ulpm_not_supported = true,
 };
 
 static int dsi_j_720p_5_disable(void)

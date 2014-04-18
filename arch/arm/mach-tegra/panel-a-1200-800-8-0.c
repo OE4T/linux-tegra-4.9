@@ -522,8 +522,8 @@ static void dsi_a_1200_800_8_0_dc_out_init(struct tegra_dc_out *dc)
 	dc->enable = dsi_a_1200_800_8_0_enable;
 	dc->disable = dsi_a_1200_800_8_0_disable;
 	dc->postsuspend	= dsi_a_1200_800_8_0_postsuspend,
-	dc->width = 100;
-	dc->height = 100;
+	dc->width = 107;
+	dc->height = 172;
 	dc->flags = DC_CTRL_MODE;
 }
 

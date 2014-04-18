@@ -132,7 +132,6 @@ struct nvmap_handle {
 	};
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
-	bool auto_cache_sync;	/* perform auto cache sync */
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
 	struct mutex lock;

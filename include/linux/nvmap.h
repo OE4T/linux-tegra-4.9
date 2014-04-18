@@ -52,7 +52,8 @@
 #define NVMAP_HANDLE_KIND_SPECIFIED  (0x1ul << 3)
 #define NVMAP_HANDLE_COMPR_SPECIFIED (0x1ul << 4)
 #define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 5)
-#define NVMAP_HANDLE_PHYSICALLY_CONTIGUOUS (0x1ul << 6)
+#define NVMAP_HANDLE_PHYS_CONTIG     (0x1ul << 6)
+#define NVMAP_HANDLE_CACHE_SYNC      (0x1ul << 7)
 
 #if defined(__KERNEL__)
 

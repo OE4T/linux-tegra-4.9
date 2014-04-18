@@ -111,7 +111,8 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	 * threshold. */
 	if (total >= cache_maint_inner_threshold) {
 		for (i = 0; i < nr; i++) {
-			if (handles[i]->auto_cache_sync) {
+			if (handles[i]->userflags &
+			    NVMAP_HANDLE_CACHE_SYNC) {
 				nvmap_handle_mkclean(handles[i], 0,
 						     handles[i]->size);
 				nvmap_zap_handle(handles[i], 0,

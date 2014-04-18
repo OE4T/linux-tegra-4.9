@@ -1,0 +1,20 @@
+config	TEGRA_VIRTUALIZATION
+	bool "Tegra Virtualization support"
+	depends on ARCH_TEGRA_12x_SOC || ARCH_ARM64
+	select VIRTUALIZATION
+	default n
+	help
+	  Enable Tegra Virtualization support; turning this option on
+	  enables features like the tegra virtualization manager and
+	  all others than depend on it.
+
+	  Select y to enable virtualization features on the tegra platforms
+	  that support it.
+
+config TEGRA_HV_MANAGER
+	tristate "Nvidia Tegra hypervisor management & IVC"
+	depends on TEGRA_VIRTUALIZATION
+	help
+	  The NVIDIA hypervisor management driver provides IVC services (for now)
+
+	  Select Y to enable

@@ -13,3 +13,12 @@ config TEGRA_COMBINED_UART
 	  server multiplexes the UART controller amongst the various clients.
 	  This allows all the clients to send output and receive input through a
 	  single UART controller.
+
+config TEGRA_HV_COMM
+	tristate "Tegra Hypervisor Communication"
+	depends on TEGRA_HV_MANAGER
+	help
+	  Add support for emulating a TTY device over the Tegra Hypervisor interface.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called tegra_hv_comm.

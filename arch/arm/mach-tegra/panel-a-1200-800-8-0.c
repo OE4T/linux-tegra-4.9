@@ -450,11 +450,6 @@ static struct tegra_dc_cmu dsi_a_1200_800_8_0_cmu = {
 
 static int dsi_a_1200_800_8_0_bl_notify(struct device *unused, int brightness)
 {
-	int cur_sd_brightness = atomic_read(&sd_brightness);
-
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
-
 	/* Apply any backlight response curve */
 	if (brightness > 255)
 		pr_info("Error: Brightness > 255!\n");
@@ -533,12 +528,6 @@ static void dsi_a_1200_800_8_0_fb_data_init(struct tegra_fb_data *fb)
 	fb->yres = dsi_a_1200_800_8_0_modes[0].v_active;
 }
 
-static void
-dsi_a_1200_800_8_0_sd_settings_init(struct tegra_dc_sd_settings *settings)
-{
-	settings->bl_device_name = "pwm-backlight";
-}
-
 #ifdef CONFIG_TEGRA_DC_CMU
 static void dsi_a_1200_800_8_0_cmu_init(struct tegra_dc_platform_data *pdata)
 {
@@ -553,7 +542,6 @@ struct tegra_panel_ops dsi_a_1200_800_8_0_ops = {
 };
 
 struct tegra_panel __initdata dsi_a_1200_800_8_0 = {
-	.init_sd_settings = dsi_a_1200_800_8_0_sd_settings_init,
 	.init_dc_out = dsi_a_1200_800_8_0_dc_out_init,
 	.init_fb_data = dsi_a_1200_800_8_0_fb_data_init,
 	.register_bl_dev = dsi_a_1200_800_8_0_register_bl_dev,

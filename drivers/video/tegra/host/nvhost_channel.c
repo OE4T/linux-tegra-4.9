@@ -27,6 +27,7 @@
 
 #include <trace/events/nvhost.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/nvhost.h>
 #include <linux/slab.h>
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
@@ -142,6 +143,7 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 	struct nvhost_device_data *pdata;
 	struct nvhost_master *host;
 	int max_channels;
+	int i = 0;
 
 	if (!ch->dev) {
 		pr_err("%s: freeing unmapped channel\n", __func__);
@@ -179,6 +181,18 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 
 		if (pdata->deinit)
 			pdata->deinit(ch->dev);
+
+		/*
+		 * when ALL of the channels are unmapped from device,
+		 * we can free all the host managed syncpts assigned
+		 * to that device
+		 */
+		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
+			if (pdata->syncpts[i]) {
+				nvhost_free_syncpt(pdata->syncpts[i]);
+				pdata->syncpts[i] = 0;
+			}
+		}
 	}
 
 	clear_bit(ch->chid, &host->allocated_channels);

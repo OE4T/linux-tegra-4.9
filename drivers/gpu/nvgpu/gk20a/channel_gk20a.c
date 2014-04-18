@@ -277,10 +277,6 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
-	/* TBD: alwasy priv mode? */
-	gk20a_mem_wr32(inst_ptr, ram_fc_hce_ctrl_w(),
-		 pbdma_hce_ctrl_hce_priv_mode_yes_f());
-
 	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;

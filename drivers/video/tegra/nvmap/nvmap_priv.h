@@ -495,7 +495,7 @@ static inline void nvmap_handle_mk(struct nvmap_handle *h,
 	int end_page = (offset + size) >> PAGE_SHIFT;
 
 	if (h->heap_pgalloc) {
-		for (i = start_page; i < end_page; i++);
+		for (i = start_page; i < end_page; i++)
 			fn(&h->pgalloc.pages[i + start_page]);
 	}
 }

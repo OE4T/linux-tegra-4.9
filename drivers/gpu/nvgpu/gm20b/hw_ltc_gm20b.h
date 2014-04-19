@@ -94,6 +94,14 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
 	return 0x0017e26c;
 }
+static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clean_active_f(void)
+{
+        return 0x1;
+}
+static inline u32 ltc_ltcs_ltss_cbc_ctrl1_invalidate_active_f(void)
+{
+        return 0x2;
+}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_v(u32 r)
 {
 	return (r >> 2) & 0x1;

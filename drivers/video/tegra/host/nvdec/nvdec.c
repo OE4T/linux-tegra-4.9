@@ -30,7 +30,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/tegra-soc.h>
 
-#include <mach/pm_domains.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "dev.h"
 #include "nvdec.h"

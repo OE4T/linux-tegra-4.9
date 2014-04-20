@@ -1268,12 +1268,6 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 	if (c->has_timedout)
 		return -ETIMEDOUT;
 
-	if (!c->sync) {
-		c->sync = gk20a_channel_sync_create(c);
-		if (!c->sync)
-			return -ENOMEM;
-	}
-
 	update_gp_get(g, c);
 	free_count = gp_free_count(c);
 	if (unlikely(!free_count)) {
@@ -1282,9 +1276,21 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 		return -EAGAIN;
 	}
 
+	mutex_lock(&c->submit_lock);
+
+	if (!c->sync) {
+		c->sync = gk20a_channel_sync_create(c);
+		if (!c->sync) {
+			mutex_unlock(&c->submit_lock);
+			return -ENOMEM;
+		}
+	}
+
 	err = c->sync->incr_wfi(c->sync, &cmd, &c->last_submit_fence);
-	if (unlikely(err))
+	if (unlikely(err)) {
+		mutex_unlock(&c->submit_lock);
 		return err;
+	}
 
 	WARN_ON(!c->last_submit_fence.wfi);
 
@@ -1300,6 +1306,8 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 	gk20a_bar1_writel(g,
 		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
 		c->gpfifo.put);
+
+	mutex_unlock(&c->submit_lock);
 
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
@@ -1393,6 +1401,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 
 	wake_up(&c->submit_wq);
 
+	mutex_lock(&c->submit_lock);
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
 		bool completed = WARN_ON(!c->sync) ||
@@ -1411,6 +1420,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		gk20a_idle(g->dev);
 	}
 	mutex_unlock(&c->jobs_lock);
+	mutex_unlock(&c->submit_lock);
 
 	for (i = 0; i < nr_completed; i++)
 		gk20a_idle(c->g->dev);
@@ -1451,12 +1461,6 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		      NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
 	    !fence)
 		return -EINVAL;
-
-	if (!c->sync) {
-		c->sync = gk20a_channel_sync_create(c);
-		if (!c->sync)
-			return -ENOMEM;
-	}
 
 #ifdef CONFIG_DEBUG_FS
 	/* update debug settings */
@@ -1510,6 +1514,17 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		goto clean_up;
 	}
 
+	mutex_lock(&c->submit_lock);
+
+	if (!c->sync) {
+		c->sync = gk20a_channel_sync_create(c);
+		if (!c->sync) {
+			err = -ENOMEM;
+			mutex_unlock(&c->submit_lock);
+			goto clean_up;
+		}
+	}
+
 	/*
 	 * optionally insert syncpt wait in the beginning of gpfifo submission
 	 * when user requested and the wait hasn't expired.
@@ -1525,8 +1540,10 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			err = c->sync->wait_syncpt(c->sync, fence->syncpt_id,
 					fence->value, &wait_cmd);
 	}
-	if (err)
+	if (err) {
+		mutex_unlock(&c->submit_lock);
 		goto clean_up;
+	}
 
 
 	/* always insert syncpt increment at end of gpfifo submission
@@ -1544,8 +1561,10 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	else
 		err = c->sync->incr(c->sync, &incr_cmd,
 				    &c->last_submit_fence);
-	if (err)
+	if (err) {
+		mutex_unlock(&c->submit_lock);
 		goto clean_up;
+	}
 
 	if (wait_cmd) {
 		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
@@ -1587,12 +1606,6 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		incr_cmd->gp_put = c->gpfifo.put;
 	}
 
-	trace_gk20a_channel_submitted_gpfifo(c->g->dev->name,
-					     c->hw_chid,
-					     num_entries,
-					     flags,
-					     fence->syncpt_id, fence->value);
-
 	/* TODO! Check for errors... */
 	gk20a_channel_add_job(c, &c->last_submit_fence);
 
@@ -1600,6 +1613,14 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_bar1_writel(g,
 		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
 		c->gpfifo.put);
+
+	mutex_unlock(&c->submit_lock);
+
+	trace_gk20a_channel_submitted_gpfifo(c->g->dev->name,
+					     c->hw_chid,
+					     num_entries,
+					     flags,
+					     fence->syncpt_id, fence->value);
 
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
@@ -1629,6 +1650,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->bound = false;
 	c->remove_support = gk20a_remove_channel_support;
 	mutex_init(&c->jobs_lock);
+	mutex_init(&c->submit_lock);
 	INIT_LIST_HEAD(&c->jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);

@@ -153,6 +153,7 @@ static struct tegra_dsi_out dsi_a_1200_1920_8_0_pdata = {
 	.dsi_init_cmd = dsi_a_1200_1920_8_0_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_a_1200_1920_8_0_init_cmd),
 	.boardinfo = {BOARD_P1761, 0, 0, 1},
+	.ulpm_not_supported = true,
 };
 
 static int dsi_a_1200_1920_8_0_regulator_get(struct device *dev)

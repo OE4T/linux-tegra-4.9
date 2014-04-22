@@ -357,7 +357,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
-	sp->ops.syncpt_aggressive_destroy = true;
+	sp->ops.syncpt_aggressive_destroy = false;
 
 	return &sp->ops;
 }

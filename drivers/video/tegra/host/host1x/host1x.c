@@ -44,6 +44,7 @@
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
+#include "vhost/vhost.h"
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "nvhost_sync.h"
@@ -695,6 +696,112 @@ int nvhost_host1x_prepare_poweroff(struct platform_device *dev)
 {
 	return power_off_host(dev);
 }
+
+static void of_nvhost_parse_platform_data(struct platform_device *dev,
+					struct nvhost_device_data *pdata)
+{
+	struct device_node *np = dev->dev.of_node;
+	u32 value;
+
+	if (!of_property_read_u32(np, "virtual-dev", &value)) {
+		if (value)
+			pdata->virtual_dev = true;
+	}
+}
+
+static inline int vhost_comm_init(struct platform_device *pdev)
+{
+	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
+
+	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, 3,
+				queue_sizes, TEGRA_VHOST_QUEUE_CMD,
+				ARRAY_SIZE(queue_sizes));
+}
+
+static inline void vhost_comm_deinit(void)
+{
+	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
+
+	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT, TEGRA_VHOST_QUEUE_CMD,
+			ARRAY_SIZE(queue_sizes));
+}
+
+static u64 vhost_virt_connect(void)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct tegra_vhost_connect_params *p = &msg.params.connect;
+	int err;
+
+	msg.cmd = TEGRA_VHOST_CMD_CONNECT;
+	p->module = TEGRA_VHOST_MODULE_HOST;
+	err = vhost_sendrecv(&msg);
+
+	return (err || msg.ret) ? 0 : p->handle;
+}
+
+int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg)
+{
+	void *handle;
+	size_t size = sizeof(*msg);
+	size_t size_out = size;
+	void *data = msg;
+	int err;
+
+	err = tegra_gr_comm_sendrecv(TEGRA_GR_COMM_CTX_CLIENT,
+				tegra_gr_comm_get_server_vmid(),
+				TEGRA_VHOST_QUEUE_CMD, &handle, &data, &size);
+	if (!err) {
+		WARN_ON(size < size_out);
+		memcpy(msg, data, size_out);
+		tegra_gr_comm_release(handle);
+	}
+
+	return err;
+}
+
+static int nvhost_virt_init(struct platform_device *dev)
+{
+	struct nvhost_virt_ctx *virt_ctx =
+				kzalloc(sizeof(*virt_ctx), GFP_KERNEL);
+	int err;
+
+	if (!virt_ctx)
+		return -ENOMEM;
+
+	err = vhost_comm_init(dev);
+	if (err) {
+		dev_err(&dev->dev, "failed to init comm interface\n");
+		goto fail;
+	}
+
+	virt_ctx->handle = vhost_virt_connect();
+	if (!virt_ctx->handle) {
+		dev_err(&dev->dev,
+			"failed to connect to server node\n");
+		vhost_comm_deinit();
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	nvhost_set_virt_data(dev, virt_ctx);
+	return 0;
+
+fail:
+	kfree(virt_ctx);
+	return err;
+}
+
+static void nvhost_virt_deinit(struct platform_device *dev)
+{
+	struct nvhost_virt_ctx *virt_ctx = nvhost_get_virt_data(dev);
+
+	if (virt_ctx) {
+		/* FIXME: add virt disconnect */
+		vhost_comm_deinit();
+		kfree(virt_ctx);
+	}
+}
+
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -770,6 +877,15 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 	}
 
+	of_nvhost_parse_platform_data(dev, pdata);
+	if (pdata->virtual_dev) {
+		err = nvhost_virt_init(dev);
+		if (err) {
+			dev_err(&dev->dev, "failed to init virt support\n");
+			goto fail;
+		}
+	}
+
 	err = nvhost_alloc_resources(host);
 	if (err) {
 		dev_err(&dev->dev, "failed to init chip support\n");
@@ -808,8 +924,8 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 
 	nvhost_syncpt_reset(&host->syncpt);
-	if (tegra_cpu_is_asim())
-		/* for simulation, use a fake clock rate */
+	if (tegra_cpu_is_asim() || pdata->virtual_dev)
+		/* for simulation & virtualization, use a fake clock rate */
 		nvhost_intr_start(&host->intr, 12000000);
 	else
 		nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
@@ -825,6 +941,7 @@ static int nvhost_probe(struct platform_device *dev)
 	return 0;
 
 fail:
+	nvhost_virt_deinit(dev);
 	nvhost_free_resources(host);
 	kfree(host);
 	return err;
@@ -835,6 +952,7 @@ static int __exit nvhost_remove(struct platform_device *dev)
 	struct nvhost_master *host = nvhost_get_private_data(dev);
 	nvhost_intr_deinit(&host->intr);
 	nvhost_syncpt_deinit(&host->syncpt);
+	nvhost_virt_deinit(dev);
 	nvhost_free_resources(host);
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put(&dev->dev);

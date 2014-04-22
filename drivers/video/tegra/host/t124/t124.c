@@ -38,6 +38,7 @@
 #include "scale3d.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
+#include "vhost/vhost.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -562,6 +563,7 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	int i = 0;
 	int err;
 	struct t124 *t124 = 0;
+	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
 	/* Select the soc name */
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA12)
@@ -581,6 +583,13 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->actmon = host1x_actmon_ops;
+
+
+	if (data->virtual_dev) {
+		data->can_powergate = false;
+		vhost_init_host1x_syncpt_ops(&op->syncpt);
+		vhost_init_host1x_intr_ops(&op->intr);
+	}
 
 	t124 = kzalloc(sizeof(struct t124), GFP_KERNEL);
 	if (!t124) {

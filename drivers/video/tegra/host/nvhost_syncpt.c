@@ -36,6 +36,7 @@
 #include "dev.h"
 #include "chip_support.h"
 #include "nvhost_channel.h"
+#include "vhost/vhost.h"
 
 #include "host1x/host1x.h"
 
@@ -101,6 +102,18 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 	return val;
 }
 
+/**
+ * Tries to set last value read from hardware based on cached value.
+ * Otherwise, retrieves and stores actual value from hardware.
+ */
+u32 nvhost_syncpt_set_min_cached(struct nvhost_syncpt *sp, u32 id, u32 val)
+{
+	u32 old = nvhost_syncpt_read_min(sp, id);
+	if ((u32)atomic_cmpxchg(&sp->min_val[id], old, val) != old)
+		return nvhost_syncpt_update_min(sp, id);
+
+	return val;
+}
 
 /**
  * Return current syncpoint value on success
@@ -895,6 +908,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 {
 	int i;
 	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct nvhost_device_data *data = platform_get_drvdata(dev);
 	int err = 0;
 
 	/* Allocate structs for min, max and base values */
@@ -921,6 +935,17 @@ int nvhost_syncpt_init(struct platform_device *dev,
 		goto fail;
 	}
 #endif
+
+	if (data->virtual_dev) {
+		struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev);
+		u32 size;
+
+		err = vhost_syncpt_get_range(ctx->handle,
+					&host->info.pts_base, &size);
+		if (err)
+			goto fail;
+		host->info.pts_limit = host->info.pts_base + size;
+	}
 
 	if (!(sp->assigned && sp->client_managed && sp->min_val && sp->max_val
 		     && sp->lock_counts)) {

@@ -62,6 +62,31 @@ enum waitlist_state {
 	WLS_HANDLED
 };
 
+static inline bool nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
+{
+	struct nvhost_intr *intr = intr_syncpt_to_intr(sp);
+	struct nvhost_master *host = intr_to_dev(intr);
+	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
+
+	return data->virtual_dev;
+}
+
+static inline void nvhost_intr_syncpt_lock(struct nvhost_intr_syncpt *sp)
+{
+	if (nvhost_intr_is_virtual_dev(sp))
+		mutex_lock(&sp->lock.m);
+	else
+		spin_lock(&sp->lock.s);
+}
+
+static inline void nvhost_intr_syncpt_unlock(struct nvhost_intr_syncpt *sp)
+{
+	if (nvhost_intr_is_virtual_dev(sp))
+		mutex_unlock(&sp->lock.m);
+	else
+		spin_unlock(&sp->lock.s);
+}
+
 static void waiter_release(struct kref *kref)
 {
 	kfree(container_of(kref, struct nvhost_waitlist, refcount));
@@ -255,7 +280,7 @@ static int process_wait_list(struct nvhost_intr *intr,
 	for (i = 0; i < NVHOST_INTR_ACTION_COUNT; ++i)
 		INIT_LIST_HEAD(completed + i);
 
-	spin_lock(&syncpt->lock);
+	nvhost_intr_syncpt_lock(syncpt);
 
 	remove_completed_waiters(&syncpt->wait_head, threshold,
 		syncpt->isr_recv, completed);
@@ -267,7 +292,7 @@ static int process_wait_list(struct nvhost_intr *intr,
 		reset_threshold_interrupt(intr, &syncpt->wait_head,
 					  syncpt->id);
 
-	spin_unlock(&syncpt->lock);
+	nvhost_intr_syncpt_unlock(syncpt);
 
 	run_handlers(completed);
 
@@ -285,8 +310,13 @@ irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id)
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
 	struct nvhost_master *dev = intr_to_dev(intr);
+	struct nvhost_device_data *data = platform_get_drvdata(dev->dev);
 
-	(void)process_wait_list(intr, syncpt,
+	if (data->virtual_dev)
+		(void)process_wait_list(intr, syncpt,
+				nvhost_syncpt_read_min(&dev->syncpt, id));
+	else
+		(void)process_wait_list(intr, syncpt,
 				nvhost_syncpt_update_min(&dev->syncpt, id));
 
 	return IRQ_HANDLED;
@@ -306,7 +336,7 @@ bool nvhost_intr_has_pending_jobs(struct nvhost_intr *intr, u32 id,
 	bool res = false;
 
 	syncpt = intr->syncpt + id;
-	spin_lock(&syncpt->lock);
+	nvhost_intr_syncpt_lock(syncpt);
 	list_for_each_entry(waiter, &syncpt->wait_head, list)
 		if (((waiter->action ==
 			NVHOST_INTR_ACTION_SUBMIT_COMPLETE) &&
@@ -315,7 +345,7 @@ bool nvhost_intr_has_pending_jobs(struct nvhost_intr *intr, u32 id,
 			break;
 		}
 
-	spin_unlock(&syncpt->lock);
+	nvhost_intr_syncpt_unlock(syncpt);
 
 	return res;
 }
@@ -347,7 +377,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 
 	syncpt = intr->syncpt + id;
 
-	spin_lock(&syncpt->lock);
+	nvhost_intr_syncpt_lock(syncpt);
 
 	queue_was_empty = list_empty(&syncpt->wait_head);
 
@@ -360,7 +390,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 			intr_op().enable_syncpt_intr(intr, id);
 	}
 
-	spin_unlock(&syncpt->lock);
+	nvhost_intr_syncpt_unlock(syncpt);
 
 	if (ref)
 		*ref = waiter;
@@ -461,7 +491,8 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	     ++id, ++syncpt) {
 		syncpt->intr = &host->intr;
 		syncpt->id = id;
-		spin_lock_init(&syncpt->lock);
+		mutex_init(&syncpt->lock.m);
+		spin_lock_init(&syncpt->lock.s);
 		INIT_LIST_HEAD(&syncpt->wait_head);
 		snprintf(syncpt->thresh_irq_name,
 			sizeof(syncpt->thresh_irq_name),

@@ -544,6 +544,12 @@ int nvhost_module_init(struct platform_device *dev)
 	/* initialize clocks to known state (=enabled) */
 	pdata->num_clks = 0;
 	INIT_LIST_HEAD(&pdata->client_list);
+
+	if (pdata->virtual_dev) {
+		pm_runtime_enable(&dev->dev);
+		return err;
+	}
+
 	while (i < NVHOST_MODULE_MAX_CLOCKS && pdata->clocks[i].name) {
 		char devname[MAX_DEVID_LENGTH];
 		long rate = pdata->clocks[i].default_rate;

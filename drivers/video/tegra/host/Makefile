@@ -36,3 +36,5 @@ obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../kernel-t18x/drivers/video/tegra/hos
 endif
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o
+
+obj-$(CONFIG_TEGRA_GRHOST) += vhost/

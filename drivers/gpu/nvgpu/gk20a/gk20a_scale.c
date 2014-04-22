@@ -34,30 +34,6 @@
 #include "clk_gk20a.h"
 #include "gk20a_scale.h"
 
-static ssize_t gk20a_scale_load_show(struct device *dev,
-				     struct device_attribute *attr,
-				     char *buf)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
-	u32 busy_time;
-	ssize_t res;
-
-	if (!g->power_on) {
-		busy_time = 0;
-	} else {
-		gk20a_busy(g->dev);
-		gk20a_pmu_load_norm(g, &busy_time);
-		gk20a_idle(g->dev);
-	}
-
-	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
-
-	return res;
-}
-
-static DEVICE_ATTR(load, S_IRUGO, gk20a_scale_load_show, NULL);
-
 /*
  * gk20a_scale_qos_notify()
  *
@@ -293,9 +269,6 @@ void gk20a_scale_init(struct platform_device *pdev)
 	if (err || !profile->devfreq_profile.max_state)
 		goto err_get_freqs;
 
-	if (device_create_file(&pdev->dev, &dev_attr_load))
-		goto err_create_sysfs_entry;
-
 	/* Store device profile so we can access it if devfreq governor
 	 * init needs that */
 	g->scale_profile = profile;
@@ -332,8 +305,6 @@ void gk20a_scale_init(struct platform_device *pdev)
 	return;
 
 err_get_freqs:
-	device_remove_file(&pdev->dev, &dev_attr_load);
-err_create_sysfs_entry:
 	kfree(g->scale_profile);
 	g->scale_profile = NULL;
 }

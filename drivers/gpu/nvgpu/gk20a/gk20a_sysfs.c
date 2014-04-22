@@ -248,8 +248,8 @@ static ssize_t counters_show(struct device *dev,
 
 	return res;
 }
-
 static DEVICE_ATTR(counters, S_IRUGO, counters_show, NULL);
+
 static ssize_t counters_show_reset(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
@@ -261,8 +261,30 @@ static ssize_t counters_show_reset(struct device *dev,
 
 	return res;
 }
-
 static DEVICE_ATTR(counters_reset, S_IRUGO, counters_show_reset, NULL);
+
+static ssize_t gk20a_load_show(struct device *dev,
+				     struct device_attribute *attr,
+				     char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
+	u32 busy_time;
+	ssize_t res;
+
+	if (!g->power_on) {
+		busy_time = 0;
+	} else {
+		gk20a_busy(g->dev);
+		gk20a_pmu_load_norm(g, &busy_time);
+		gk20a_idle(g->dev);
+	}
+
+	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
+
+	return res;
+}
+static DEVICE_ATTR(load, S_IRUGO, gk20a_load_show, NULL);
 
 static ssize_t elpg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -318,6 +340,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_counters);
 	device_remove_file(dev, &dev_attr_counters_reset);
+	device_remove_file(dev, &dev_attr_load);
 	device_remove_file(dev, &dev_attr_railgate_delay);
 	device_remove_file(dev, &dev_attr_clockgate_delay);
 }
@@ -333,6 +356,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_counters);
 	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
+	error |= device_create_file(&dev->dev, &dev_attr_load);
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
 

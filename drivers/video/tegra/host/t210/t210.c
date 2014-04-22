@@ -30,11 +30,10 @@
 #include "host1x/host1x.h"
 #include "hardware_t124.h"
 #include "syncpt_t124.h"
-#include "msenc/msenc.h"
+#include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "nvjpg/nvjpg.h"
 #include "tsec/tsec.h"
-#include "vic03/vic03.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
 
@@ -113,16 +112,16 @@ struct nvhost_device_data t21_vi_info = {
 };
 
 struct nvhost_device_data t21_msenc_info = {
-	.version       = NVHOST_ENCODE_MSENC_VER(5, 0),
+	.version       = NVHOST_ENCODE_FLCN_VER(5, 0),
 	.waitbases     = {NVWAITBASE_MSENC},
 	.class	       = NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive     = true,
 	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_msenc_init,
-	.deinit		= nvhost_msenc_deinit,
-	.finalize_poweron = nvhost_msenc_t210_finalize_poweron,
+	.init		= nvhost_flcn_init,
+	.deinit		= nvhost_flcn_deinit,
+	.finalize_poweron = nvhost_flcn_boot,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.num_channels  = 1,
 };
@@ -183,18 +182,18 @@ struct nvhost_device_data t21_tsecb_info = {
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
 	.modulemutexes	= {NVMODMUTEX_VIC},
-	.version = NVHOST_ENCODE_VIC_VER(4, 0),
+	.version = NVHOST_ENCODE_FLCN_VER(4, 0),
 	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
-	.prepare_poweroff	= nvhost_vic03_prepare_poweroff,
+	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 
-	.init			= nvhost_vic03_init,
-	.deinit			= nvhost_vic03_deinit,
+	.init			= nvhost_flcn_init,
+	.deinit			= nvhost_flcn_deinit,
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
-	.finalize_poweron	= nvhost_vic03_finalize_poweron,
+	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.num_channels  = 1,
 };
 #endif

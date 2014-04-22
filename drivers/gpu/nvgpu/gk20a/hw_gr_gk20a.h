@@ -98,6 +98,18 @@ static inline u32 gr_intr_illegal_notify_reset_f(void)
 {
 	return 0x40;
 }
+static inline u32 gr_intr_firmware_method_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 gr_intr_firmware_method_pending_f(void)
+{
+	return 0x100;
+}
+static inline u32 gr_intr_firmware_method_reset_f(void)
+{
+	return 0x100;
+}
 static inline u32 gr_intr_illegal_class_pending_f(void)
 {
 	return 0x20;
@@ -129,14 +141,6 @@ static inline u32 gr_intr_exception_pending_f(void)
 static inline u32 gr_intr_exception_reset_f(void)
 {
 	return 0x200000;
-}
-static inline u32 gr_intr_firmware_method_pending_f(void)
-{
-	return 0x100;
-}
-static inline u32 gr_intr_firmware_method_reset_f(void)
-{
-	return 0x100;
 }
 static inline u32 gr_fecs_intr_r(void)
 {
@@ -258,7 +262,7 @@ static inline u32 gr_status_fe_method_lower_idle_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 gr_status_fe_method_fe_gi_v(u32 r)
+static inline u32 gr_status_fe_gi_v(u32 r)
 {
 	return (r >> 21) & 0x1;
 }

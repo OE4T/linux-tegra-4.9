@@ -110,14 +110,6 @@ static inline u32 mc_intr_mask_0_pmu_enabled_f(void)
 {
 	return 0x1000000;
 }
-static inline u32 mc_intr_mask_1_r(void)
-{
-	return 0x00000644;
-}
-static inline u32 mc_intr_mask_1_pmu_enabled_f(void)
-{
-	return 0x1000000;
-}
 static inline u32 mc_intr_en_0_r(void)
 {
 	return 0x00000140;
@@ -129,6 +121,30 @@ static inline u32 mc_intr_en_0_inta_disabled_f(void)
 static inline u32 mc_intr_en_0_inta_hardware_f(void)
 {
 	return 0x1;
+}
+static inline u32 mc_intr_mask_1_r(void)
+{
+	return 0x00000644;
+}
+static inline u32 mc_intr_mask_1_pmu_s(void)
+{
+	return 1;
+}
+static inline u32 mc_intr_mask_1_pmu_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 mc_intr_mask_1_pmu_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 mc_intr_mask_1_pmu_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 mc_intr_mask_1_pmu_enabled_f(void)
+{
+	return 0x1000000;
 }
 static inline u32 mc_intr_en_1_r(void)
 {

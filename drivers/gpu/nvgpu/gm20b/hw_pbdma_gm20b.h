@@ -434,4 +434,36 @@ static inline u32 pbdma_udma_nop_r(void)
 {
 	return 0x00000008;
 }
+static inline u32 pbdma_syncpointa_r(u32 i)
+{
+	return 0x000400a4 + i*8192;
+}
+static inline u32 pbdma_syncpointa_payload_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 pbdma_syncpointb_r(u32 i)
+{
+	return 0x000400a8 + i*8192;
+}
+static inline u32 pbdma_syncpointb_op_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 pbdma_syncpointb_op_wait_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 pbdma_syncpointb_wait_switch_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pbdma_syncpointb_wait_switch_en_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 pbdma_syncpointb_syncpt_index_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
 #endif

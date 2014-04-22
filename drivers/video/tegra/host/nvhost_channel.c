@@ -274,14 +274,14 @@ struct nvhost_channel *nvhost_channel_map(struct nvhost_device_data *pdata)
 	else
 		host->next_free_ch = index + 1;
 
-	if (pdata->init)
+	if (pdata->init && pdata->num_mapped_chs == 1) {
 		err = pdata->init(ch->dev);
-
-	if (err) {
-		dev_err(&ch->dev->dev, "%s: device init failed\n", __func__);
-		mutex_unlock(&host->chlist_mutex);
-		nvhost_channel_unmap(ch);
-		return NULL;
+		if (err) {
+			dev_err(&ch->dev->dev, "device init failed\n");
+			mutex_unlock(&host->chlist_mutex);
+			nvhost_channel_unmap(ch);
+			return NULL;
+		}
 	}
 
 	/* Keep alive modules that needs to be when a channel is open */

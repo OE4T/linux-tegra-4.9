@@ -2507,6 +2507,9 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;
 	dsi->status.lp_op = DSI_LP_OP_NOT_INIT;
 
+	if (!tegra_cpu_is_asim() && DSI_USE_SYNC_POINTS)
+		tegra_dsi_syncpt_reset(dsi);
+
 	return 0;
 }
 

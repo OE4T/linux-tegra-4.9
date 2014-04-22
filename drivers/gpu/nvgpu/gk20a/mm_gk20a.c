@@ -1103,6 +1103,7 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 				int rw_flag)
 {
 	int err = 0, i = 0;
+	bool allocated = false;
 	u32 pde_lo, pde_hi;
 	struct device *d = dev_from_vm(vm);
 
@@ -1113,8 +1114,9 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 		if (!map_offset) {
 			gk20a_err(d, "failed to allocate va space");
 			err = -ENOMEM;
-			goto fail;
+			goto fail_alloc;
 		}
+		allocated = true;
 	}
 
 	pde_range_from_vaddr_range(vm,
@@ -1129,7 +1131,7 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 		if (err) {
 			gk20a_err(d, "failed to validate page table %d: %d",
 							   i, err);
-			goto fail;
+			goto fail_validate;
 		}
 	}
 
@@ -1143,11 +1145,14 @@ static u64 __locked_gmmu_map(struct vm_gk20a *vm,
 				      rw_flag);
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
-		goto fail;
+		goto fail_validate;
 	}
 
 	return map_offset;
- fail:
+fail_validate:
+	if (allocated)
+		gk20a_vm_free_va(vm, map_offset, size, pgsz_idx);
+fail_alloc:
 	gk20a_err(d, "%s: failed with err=%d\n", __func__, err);
 	return 0;
 }

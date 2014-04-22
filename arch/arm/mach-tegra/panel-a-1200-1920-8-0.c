@@ -290,8 +290,12 @@ fail:
 
 static int dsi_a_1200_1920_8_0_disable(void)
 {
-	if (gpio_is_valid(en_panel_rst))
+	if (gpio_is_valid(en_panel_rst)) {
+		/* Wait for 50ms before triggering panel reset */
+		msleep(50);
 		gpio_set_value(en_panel_rst, 0);
+	}
+
 	msleep(120);
 
 	if (vdd_lcd_bl_en)

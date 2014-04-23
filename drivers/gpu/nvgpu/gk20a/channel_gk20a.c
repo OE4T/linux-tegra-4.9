@@ -659,11 +659,6 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 
 	channel_gk20a_free_priv_cmdbuf(ch);
 
-	if (ch->sync) {
-		ch->sync->destroy(ch->sync);
-		ch->sync = NULL;
-	}
-
 	/* release channel binding to the as_share */
 	gk20a_as_release_share(ch_vm->as_share);
 
@@ -673,6 +668,11 @@ unbind:
 
 	ch->vpr = false;
 	ch->vm = NULL;
+
+	if (ch->sync) {
+		ch->sync->destroy(ch->sync);
+		ch->sync = NULL;
+	}
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
@@ -1697,12 +1697,15 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	gk20a_dbg_fn("waiting for channel to finish thresh:%d",
 		      ch->last_submit_fence.thresh);
 
-	err = ch->sync->wait_cpu(ch->sync, &ch->last_submit_fence, timeout);
-	if (WARN_ON(err))
-		dev_warn(dev_from_gk20a(ch->g),
-			 "timed out waiting for gk20a channel to finish");
-	else
-		ch->cmds_pending = false;
+	if (ch->sync) {
+		err = ch->sync->wait_cpu(ch->sync, &ch->last_submit_fence,
+								timeout);
+		if (WARN_ON(err))
+			dev_warn(dev_from_gk20a(ch->g),
+			       "timed out waiting for gk20a channel to finish");
+		else
+			ch->cmds_pending = false;
+	}
 
 	return err;
 }
@@ -1903,8 +1906,9 @@ int gk20a_channel_suspend(struct gk20a *g)
 				return err;
 			}
 
-			c->sync->wait_cpu(c->sync, &c->last_submit_fence,
-					  500000);
+			if (c->sync)
+				c->sync->wait_cpu(c->sync,
+						&c->last_submit_fence, 500000);
 			break;
 		}
 	}

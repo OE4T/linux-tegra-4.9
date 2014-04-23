@@ -46,10 +46,6 @@ struct tegra_vcm30t124 {
 	struct platform_device *spdif_codec;
 };
 
-static struct i2c_board_info max9485_info = {
-	I2C_BOARD_INFO("max9485", 0x60),
-};
-
 #define MAX9485_MCLK_FREQ_163840 0x31
 #define MAX9485_MCLK_FREQ_112896 0x22
 #define MAX9485_MCLK_FREQ_122880 0x23
@@ -1149,7 +1145,7 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 	tegra_vcm30t124_links[24].codec_name = "spdif-dit.0";
 
 	machine->max9485_client = i2c_new_device(i2c_get_adapter(0),
-						&max9485_info);
+						pdev->dev.platform_data);
 	if (!machine->max9485_client) {
 		dev_err(&pdev->dev, "cannot get i2c device for max9485\n");
 		goto err_spdif_unregister;

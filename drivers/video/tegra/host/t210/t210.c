@@ -195,6 +195,7 @@ struct nvhost_device_data t21_vic_info = {
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.num_channels  = 1,
+	.firmware_name	= "vic04_ucode.bin"
 };
 #endif
 

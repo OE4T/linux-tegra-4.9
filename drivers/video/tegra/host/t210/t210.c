@@ -33,6 +33,7 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "nvjpg/nvjpg.h"
+#include "nvenc/nvenc.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
@@ -121,9 +122,10 @@ struct nvhost_device_data t21_msenc_info = {
 	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_flcn_init,
 	.deinit		= nvhost_flcn_deinit,
-	.finalize_poweron = nvhost_flcn_boot,
+	.finalize_poweron = nvhost_nvenc_t210_finalize_poweron,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.num_channels  = 1,
+	.firmware_name	= "nvhost_nvenc050.fw"
 };
 
 struct nvhost_device_data t21_nvdec_info = {

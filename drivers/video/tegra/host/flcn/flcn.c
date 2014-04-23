@@ -612,6 +612,10 @@ static struct of_device_id tegra_flcn_of_match[] = {
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
 	{ .compatible = "nvidia,tegra210-vic",
 		.data = (struct nvhost_device_data *)&t21_vic_info },
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-nvenc",
+		.data = (struct nvhost_device_data *)&t21_msenc_info },
+#endif
 	{ },
 };
 
@@ -680,6 +684,7 @@ static int __exit flcn_remove(struct platform_device *dev)
 
 static struct platform_device_id flcn_id_table[] = {
 	{ .name = "vic03" },
+	{ .name = "msenc" },
 	{ .name = "msenc" },
 	{},
 };

@@ -44,6 +44,8 @@
 #define CURSOR_CLIP_SHIFT_BITS(win)	(win << 28)
 #define CURSOR_CLIP_GET_WINDOW(reg)	((reg >> 28) & 3)
 
+#define BLANK_ALL	(~0)
+
 static inline u32 ALL_UF_INT(void)
 {
 	if (tegra_platform_is_fpga())

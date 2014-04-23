@@ -2580,21 +2580,28 @@ bool tegra_dc_stats_get(struct tegra_dc *dc)
 	return true;
 }
 
-/* make the screen blank by disabling all windows */
-void tegra_dc_blank(struct tegra_dc *dc)
+/* blank selected windows by disabling them */
+void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 {
 	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
 	unsigned i;
+	unsigned long int blank_windows;
+	int nr_win = 0;
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		dcwins[i] = tegra_dc_get_window(dc, i);
-		if (!dcwins[i])
+	blank_windows = windows & dc->valid_windows;
+
+	if (!blank_windows)
+		return;
+
+	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
+		dcwins[nr_win] = tegra_dc_get_window(dc, i);
+		if (!dcwins[nr_win])
 			continue;
-		dcwins[i]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-	tegra_dc_update_windows(dcwins, DC_N_WINDOWS, NULL);
-	tegra_dc_sync_windows(dcwins, DC_N_WINDOWS);
+	tegra_dc_update_windows(dcwins, nr_win, NULL);
+	tegra_dc_sync_windows(dcwins, nr_win);
 	tegra_dc_program_bandwidth(dc, true);
 }
 

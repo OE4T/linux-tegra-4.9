@@ -318,7 +318,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		/* To pan fb at the unblank */
 		if (tegra_fb->win->dc->enabled)
 			tegra_fb->curr_xoffset = -1;
-		tegra_dc_blank(tegra_fb->win->dc);
+		tegra_dc_blank(tegra_fb->win->dc, BLANK_ALL);
 		return 0;
 
 	case FB_BLANK_VSYNC_SUSPEND:

@@ -127,13 +127,18 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 {
 	int i;
 	u64 total = 0;
+	u64 thresh = ~0;
+
+#if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
+	thresh = cache_maint_inner_threshold;
+#endif
 
 	for (i = 0; i < nr; i++)
 		total += sizes[i] ? sizes[i] : handles[i]->size;
 
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */
-	if (total >= cache_maint_inner_threshold) {
+	if (total >= thresh) {
 		for (i = 0; i < nr; i++) {
 			if (handles[i]->userflags &
 			    NVMAP_HANDLE_CACHE_SYNC) {
@@ -152,7 +157,7 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 			outer_flush_all();
 		}
 		nvmap_stats_inc(NS_CFLUSH_RQ, total);
-		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
+		nvmap_stats_inc(NS_CFLUSH_DONE, thresh);
 		trace_nvmap_cache_flush(total,
 					nvmap_stats_read(NS_ALLOC),
 					nvmap_stats_read(NS_CFLUSH_RQ),

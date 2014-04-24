@@ -28,10 +28,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pwm_backlight.h>
 #include <linux/dma-mapping.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 
 #include <mach/irqs.h>
 #include <mach/dc.h>
-#include <mach/pinmux-t12.h>
 #include <mach/io_dpd.h>
 
 #include "board.h"
@@ -40,6 +40,7 @@
 #include "iomap.h"
 #include "tegra12_host1x_devices.h"
 #include "board-panel.h"
+#include "board-common.h"
 #include "common.h"
 #include "tegra-board-id.h"
 
@@ -253,17 +254,25 @@ struct tegra_hdmi_out loki_hdmi_out = {
 
 static void loki_hdmi_hotplug_report(bool state)
 {
-	if (state) {
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SDA,
-						TEGRA_PUPD_PULL_DOWN);
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SCL,
-						TEGRA_PUPD_PULL_DOWN);
-	} else {
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SDA,
-						TEGRA_PUPD_NORMAL);
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SCL,
-						TEGRA_PUPD_NORMAL);
-	}
+	struct pinctrl_dev *pctl_dev;
+	unsigned long conf;
+	int val = (state) ? TEGRA_PIN_PULL_DOWN : TEGRA_PIN_PULL_NONE;
+	int ret;
+
+	pctl_dev = tegra_get_pinctrl_device_handle();
+	if (!pctl_dev)
+		return;
+
+	conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_PULL, val);
+	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_sda_pv5", conf);
+	if (ret < 0)
+		pr_err("%s(): ERROR: ddc_sda_pv5 config failed: %d\n",
+			__func__, ret);
+
+	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_scl_pv4", conf);
+	if (ret < 0)
+		pr_err("%s(): ERROR: ddc_scl_pv4 config failed: %d\n",
+			__func__, ret);
 }
 
 static struct tegra_dc_out loki_disp2_out = {

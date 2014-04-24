@@ -202,14 +202,14 @@ static void calc_disp_params(struct tegra_dc *dc,
 					(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES,
 					16 * min(emc_freq_mhz + 50,
 						400ul))),
-			((T12X_LA_MAX_DRAIN_TIME_USEC *
+			(T12X_LA_MAX_DRAIN_TIME_USEC *
 			emc_freq_mhz -
 			la_params.la_fp_to_real(
-			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP) *
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP)) *
 			2 *
 			la_params.dram_width_bits /
 			8 *
-			T12X_LA_CONS_MEM_EFFICIENCY_FP)));
+			T12X_LA_CONS_MEM_EFFICIENCY_FP);
 	unsigned int drain_time_usec_fp =
 			effective_row_srt_sz_bytes_fp *
 			la_params.fp_factor /

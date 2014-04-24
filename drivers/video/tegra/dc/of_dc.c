@@ -40,6 +40,9 @@
 #include <linux/of_i2c.h>
 #include <linux/nvhost.h>
 #include <linux/timer.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -47,11 +50,6 @@
 #include <mach/mc.h>
 #include <mach/latency_allowance.h>
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-#include <mach/pinmux-t11.h>
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-#include <mach/pinmux-t12.h>
-#endif
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
@@ -1439,17 +1437,30 @@ static int dc_hdmi_postsuspend(void)
 	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 static void dc_hdmi_hotplug_report(bool state)
 {
-	if (state) {
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SDA,
-						TEGRA_PUPD_PULL_DOWN);
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SCL,
-						TEGRA_PUPD_PULL_DOWN);
-	} else {
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SDA,
-						TEGRA_PUPD_NORMAL);
-		tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DDC_SCL,
-						TEGRA_PUPD_NORMAL);
+	static struct pinctrl_dev *pctl_dev = NULL;
+	unsigned val = (state) ? TEGRA_PIN_PULL_DOWN : TEGRA_PIN_PULL_NONE;
+	unsigned long conf;
+	int ret;
+
+	if (!pctl_dev)
+		pctl_dev = pinctrl_get_dev_from_of_compatible(
+				"nvidia,tegra124-pinmux");
+	if (!pctl_dev) {
+		pr_err("%s(): tegra pincontrol does not found\n", __func__);
+		return;
 	}
+
+	conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_PULL, val);
+
+	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_sda_pv5", conf);
+	if (ret < 0)
+		pr_err("%s(): ddc_sda_pv5 pinconfig failed: %d\n",
+			__func__, ret);
+
+	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_scl_pv4", conf);
+	if (ret < 0)
+		pr_err("%s(): ddc_scl_pv4 pinconfig failed: %d\n",
+			__func__, ret);
 }
 #endif
 

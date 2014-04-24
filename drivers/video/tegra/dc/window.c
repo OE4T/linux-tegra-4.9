@@ -454,6 +454,15 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	dc = windows[0]->dc;
 	trace_update_windows(dc);
 
+	/* check that window arguments are valid */
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *win = windows[i];
+		struct tegra_dc_win *dc_win =
+			win ? tegra_dc_get_window(dc, win->idx) : NULL;
+		if (WARN_ONCE(!dc_win, "ignoring invalid windows in request"))
+			return -EINVAL;
+	}
+
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		/* Acquire one_shot_lock to avoid race condition between
 		 * cancellation of old delayed work and schedule of new
@@ -501,7 +510,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	}
 
 
-	for_each_set_bit(i, &dc->valid_windows, n) {
+	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win = tegra_dc_get_window(dc, win->idx);
 		bool scan_column = 0;

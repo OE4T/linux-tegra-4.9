@@ -46,15 +46,6 @@
 #include "t210/t210.h"
 
 
-static inline struct flcn *get_flcn(struct platform_device *dev);
-
-#define TSEC_KEY_LENGTH			16
-#define FALCON_RESERVE			256
-#define TSEC_KEY_OFFSET			(FALCON_RESERVE - TSEC_KEY_LENGTH)
-
-/* The key value in ascii hex */
-static u8 otf_key[TSEC_KEY_LENGTH];
-
 static inline struct flcn *get_flcn(struct platform_device *dev)
 {
 	return (struct flcn *)nvhost_get_private_data(dev);
@@ -211,20 +202,6 @@ static int flcn_setup_ucode_image(struct platform_device *dev,
 			ucode.bin_header->fce_bin_data_offset;
 	}
 
-	/* make space for reserved area - we need 20 bytes, but we move 256
-	 * bytes because firmware needs to be 256 byte aligned */
-	reserved_offset = ucode.bin_header->os_bin_data_offset;
-	memmove(((void *)ucode_ptr) + reserved_offset + FALCON_RESERVE,
-			((void *)ucode_ptr) + reserved_offset,
-			ucode.bin_header->os_bin_size);
-	ucode.bin_header->os_bin_data_offset += FALCON_RESERVE;
-
-	/*  clear 256 bytes before ucode os code */
-	memset(((void *)ucode_ptr) + reserved_offset, 0, FALCON_RESERVE);
-
-	/* Copy key to be the 16 bytes before the firmware */
-	tsec_key_offset = reserved_offset + TSEC_KEY_OFFSET;
-	memcpy(((void *)ucode_ptr) + tsec_key_offset, otf_key, TSEC_KEY_LENGTH);
 	v->os.size = ucode.bin_header->os_bin_size;
 	v->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
 	v->os.code_offset = ucode.os_header->os_code_offset;
@@ -710,30 +687,6 @@ static void __exit flcn_exit(void)
 {
 	platform_driver_unregister(&flcn_driver);
 }
-
-static int __init tsec_key_setup(char *line)
-{
-	int i;
-	u8 tmp[] = { 0, 0, 0 };
-	pr_debug("tsec otf key: %s\n", line);
-
-	if (strlen(line) != TSEC_KEY_LENGTH*2) {
-		pr_warn("invalid tsec key: %s\n", line);
-		return 0;
-	}
-
-	for (i = 0; i < TSEC_KEY_LENGTH; i++) {
-		int err;
-		memcpy(tmp, &line[i*2], 2);
-		err = kstrtou8(tmp, 16, &otf_key[i]);
-		if (err) {
-			pr_warn("cannot read tsec otf key: %d", err);
-			break;
-		}
-	}
-	return 0;
-}
-__setup("otf_key=", tsec_key_setup);
 
 module_init(flcn_init);
 module_exit(flcn_exit);

@@ -180,6 +180,7 @@ struct nvhost_device_data t21_tsecb_info = {
 	.init		= nvhost_tsec_init,
 	.deinit		= nvhost_tsec_deinit,
 	.moduleid      = NVHOST_MODULE_TSEC,
+	.num_channels  = 1,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {

@@ -2168,13 +2168,13 @@ static unsigned long  tegra12x_hdmi_determine_parent(
 {
 	/* T124 hdmi pclk:
 	 *   parentClk = pclk * m  (m=1,1.5,2,2.5,...,128.5)
-	 *   (refclk * n) = pclk * m  (n=1,1.5,2,2.5,...,128.5)
-	 *     (no half resolutions for m due to uneven out duty cycle)
-	 *   (refclk * N / 2) = pclk * m  (N=2,3,4,...,257)
-	 *   m = (refclk / 2 * N) / pclk  (m=1,2,3,...,128)
-	 *     looking for N to make m whole number
+	 *   refclk * n = pclk * m  (n=1,1.5,2,2.5,...,128.5)
+	 *   (prevent m==1.5 due to too much uneven out clock duty cycle)
+	 *   refclk * (N / 2) = pclk * (M / 2)  (M&N=2,3,4,...,257)
+	 *   M = (refclk * N) / pclk  (prevent the use of M==3)
+	 *   (look for N to make M whole number)
 	 */
-	int  n, m;
+	int  n, m;  /* N & M */
 	int  b, fr, f;
 
 	/* following parameters should come from parent clock */
@@ -2187,8 +2187,8 @@ static unsigned long  tegra12x_hdmi_determine_parent(
 	for (n = 4; (ref / 2 * n) <= pmax; n++) {
 		if ((ref / 2 * n) < pmin)  /* too low */
 			continue;
-		m = (ref / 2 * n) / (pclk / 1000);
-		if (m <= 1700)  /* for 2 <= m */
+		m = (ref * n) / (pclk / 1000);
+		if (3 == (((m - 1) / 1000) + 1))  /* omit M==3 aft rnd-up */
 			continue;
 		f = m % 1000;  /* fractional parts */
 		f = (0 == f) ? f : (1000 - f);  /* round-up */
@@ -2202,6 +2202,10 @@ static unsigned long  tegra12x_hdmi_determine_parent(
 		}
 	}
 
+	/* parent clk: ref * b / 2
+	 * divider value: (m + 2000 - 1) / 2000 (if m saved; round-up)
+	 * expected pclk: ref * b / 2 / divider
+	 */
 	return (unsigned long)(ref / 2 * b);
 }
 

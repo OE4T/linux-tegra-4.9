@@ -2,7 +2,7 @@
  * tegra_pcm_alt.h - Definitions for Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -38,6 +38,7 @@ struct tegra_alt_pcm_dma_params {
 	unsigned long wrap;
 	unsigned long width;
 	unsigned long req_sel;
+	const char *chan_name;
 };
 
 struct tegra_alt_pcm_runtime_data {

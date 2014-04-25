@@ -66,7 +66,10 @@ static int tegra_alt_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct device *dev = rtd->platform->dev;
 	struct tegra_alt_pcm_runtime_data *prtd;
+	struct tegra_alt_pcm_dma_params *dmap;
 	int ret;
+
+	dmap = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
 	prtd = kzalloc(sizeof(struct tegra_alt_pcm_runtime_data), GFP_KERNEL);
 	if (prtd == NULL)
@@ -84,7 +87,8 @@ static int tegra_alt_pcm_open(struct snd_pcm_substream *substream)
 		return ret;
 	}
 
-	ret = snd_dmaengine_pcm_open_request_chan(substream, NULL, NULL);
+	ret = snd_dmaengine_pcm_open_request_chan_with_name(substream,
+		dmap->chan_name);
 	if (ret) {
 		dev_err(dev, "dmaengine pcm open failed with err %d\n", ret);
 		kfree(prtd);

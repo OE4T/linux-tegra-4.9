@@ -602,7 +602,7 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 	int ret;
 	void __iomem *regs;
 	struct resource *res[2];
-	u32 of_dma[10][2];
+	u32 of_dma[20][2];
 	const struct of_device_id *match;
 	struct tegra30_apbif_soc_data *soc_data;
 
@@ -722,7 +722,7 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 	}
 
 	if (of_property_read_u32_array(pdev->dev.of_node,
-				"nvidia,dma-request-selector",
+				"dmas",
 				&of_dma[0][0],
 				apbif->soc_data->num_ch * 2) < 0) {
 		dev_err(&pdev->dev,
@@ -762,13 +762,30 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 
 		apbif->playback_dma_data[i].wrap = 4;
 		apbif->playback_dma_data[i].width = 32;
-		apbif->playback_dma_data[i].req_sel = of_dma[i][1];
+		apbif->playback_dma_data[i].req_sel = of_dma[(i * 2) + 1][1];
+		if (of_property_read_string_index(pdev->dev.of_node,
+				"dma-names",
+				(i * 2) + 1,
+				&apbif->playback_dma_data[i].chan_name) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,dma-names\n");
+			ret = -ENODEV;
+			goto err_suspend;
+		}
 
 		apbif->capture_dma_data[i].wrap = 4;
 		apbif->capture_dma_data[i].width = 32;
-		apbif->capture_dma_data[i].req_sel = of_dma[i][1];
+		apbif->capture_dma_data[i].req_sel = of_dma[(i * 2)][1];
+		if (of_property_read_string_index(pdev->dev.of_node,
+				"dma-names",
+				(i * 2),
+				&apbif->capture_dma_data[i].chan_name) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,dma-names\n");
+			ret = -ENODEV;
+			goto err_suspend;
+		}
 	}
-
 
 	ret = snd_soc_register_component(&pdev->dev,
 					&tegra30_apbif_dai_driver,

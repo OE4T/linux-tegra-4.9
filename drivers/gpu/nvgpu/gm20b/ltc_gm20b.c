@@ -193,6 +193,50 @@ void gm20b_ltc_isr(struct gk20a *g)
 	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }
 
+static void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
+{
+	u32 data;
+	bool done[g->ltc_count];
+	s32 retry = 100;
+	int i;
+	int num_done = 0;
+	u32 ltc_d = ltc_ltc1_ltss_g_elpg_r() - ltc_ltc0_ltss_g_elpg_r();
+
+	gk20a_dbg_fn("");
+
+	for (i = 0; i < g->ltc_count; i++)
+		done[i] = 0;
+
+	gk20a_writel(g, ltc_ltcs_ltss_g_elpg_r(),
+		     ltc_ltcs_ltss_g_elpg_flush_pending_f());
+	do {
+		for (i = 0; i < g->ltc_count; i++) {
+			if (done[i])
+				continue;
+
+			data = gk20a_readl(g,
+					ltc_ltc0_ltss_g_elpg_r() + ltc_d * i);
+
+			if (ltc_ltc0_ltss_g_elpg_flush_v(data)) {
+				gk20a_dbg_info("g_elpg_flush 0x%x", data);
+			} else {
+				done[i] = 1;
+				num_done++;
+			}
+		}
+
+		if (num_done < g->ltc_count) {
+			retry--;
+			usleep_range(20, 40);
+		} else
+			break;
+	} while (retry >= 0 || !tegra_platform_is_silicon());
+
+	if (retry < 0)
+		gk20a_warn(dev_from_gk20a(g),
+			    "g_elpg_flush too many retries");
+}
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
@@ -209,6 +253,6 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_fs_state = gm20b_ltc_init_fs_state;
 	gops->ltc.init_comptags = gm20b_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
-	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
+	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;
 	gops->ltc.isr = gm20b_ltc_isr;
 }

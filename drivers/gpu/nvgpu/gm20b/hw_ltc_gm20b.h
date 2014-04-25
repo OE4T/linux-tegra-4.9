@@ -96,11 +96,11 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clean_active_f(void)
 {
-        return 0x1;
+	return 0x1;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_invalidate_active_f(void)
 {
-        return 0x2;
+	return 0x2;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_v(u32 r)
 {
@@ -255,6 +255,22 @@ static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_v(void)
 	return 0x00000001;
 }
 static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltc1_ltss_g_elpg_r(void)
+{
+	return 0x00142214;
+}
+static inline u32 ltc_ltc1_ltss_g_elpg_flush_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltc1_ltss_g_elpg_flush_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc1_ltss_g_elpg_flush_pending_f(void)
 {
 	return 0x1;
 }

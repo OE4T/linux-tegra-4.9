@@ -526,10 +526,28 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 		admaif->playback_dma_data[i].wrap = 4;
 		admaif->playback_dma_data[i].width = 32;
 		admaif->playback_dma_data[i].req_sel = i + 1;
+		if (of_property_read_string_index(pdev->dev.of_node,
+				"dma-names",
+				(i * 2) + 1,
+				&admaif->playback_dma_data[i].chan_name) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,dma-names\n");
+			ret = -ENODEV;
+			goto err_suspend;
+		}
 
 		admaif->capture_dma_data[i].wrap = 4;
 		admaif->capture_dma_data[i].width = 32;
 		admaif->capture_dma_data[i].req_sel = i + 1;
+		if (of_property_read_string_index(pdev->dev.of_node,
+				"dma-names",
+				(i * 2),
+				&admaif->capture_dma_data[i].chan_name) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,dma-names\n");
+			ret = -ENODEV;
+			goto err_suspend;
+		}
 	}
 
 	ret = snd_soc_register_component(&pdev->dev,

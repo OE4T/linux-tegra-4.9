@@ -152,6 +152,7 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
 static void calc_disp_params(struct tegra_dc *dc,
 				struct tegra_dc_win *w,
 				enum tegra_la_id la_id,
+				unsigned long emc_freq_hz,
 				unsigned int bw_mbps,
 				struct dc_to_la_params *disp_params) {
 	const struct disp_client *disp_clients_info =
@@ -191,8 +192,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int bpp_for_line_buffer_storage_fp = 0;
 	unsigned int reqd_buffering_thresh_disp_bytes_fp = 0;
 	unsigned int latency_buffering_available_in_reqd_buffering_fp = 0;
-	struct clk *emc_clk = clk_get(NULL, "emc");
-	unsigned long emc_freq_khz = clk_get_rate(emc_clk) / 1000;
+	unsigned long emc_freq_khz = emc_freq_hz / 1000;
 	unsigned long emc_freq_mhz = emc_freq_khz / 1000;
 	unsigned int bw_disruption_time_usec_fp =
 					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
@@ -249,6 +249,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned int duration_usec_fp = 0;
 	unsigned int spool_up_buffering_adj_bytes = 0;
 	unsigned int curr_dc_head_bw = 0;
+
+	disp_params->drain_time_usec_fp = drain_time_usec_fp;
 
 	if (w->flags & TEGRA_WIN_FLAG_SCAN_COLUMN) {
 		win_rotated = true;
@@ -528,6 +530,11 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
 	};
 #endif
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+	struct clk *emc_clk = NULL;
+	unsigned long emc_freq_hz = 0;
+#endif
+
 
 	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -550,13 +557,17 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 		bw = bw / 1000 + 1;
 
 #ifdef CONFIG_ARCH_TEGRA_12x_SOC
+	emc_clk = clk_get(NULL, "emc");
+	emc_freq_hz = clk_get_rate(emc_clk);
 	calc_disp_params(dc,
 			w,
 			la_id_tab[dc->ndev->id][w->idx],
+			emc_freq_hz,
 			bw,
 			&disp_params);
 #endif
 	tegra_set_disp_latency_allowance(la_id_tab[dc->ndev->id][w->idx],
+						emc_freq_hz,
 						bw,
 						disp_params);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)

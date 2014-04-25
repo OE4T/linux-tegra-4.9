@@ -26,6 +26,16 @@
 #include <linux/nvhost.h>
 
 extern const struct file_operations tegra_nvdec_ctrl_ops;
+
+/* When using USE_NVDEC_BOOTLOADER=0, remember to build the ucode
+ * too with NVDEC_BL disabled */
+#define USE_NVDEC_BOOTLOADER   1
+
+/* TBD: Addr and Size of WPR needs to be conveyed to host driver
+ * from bootloader in some other manner */
+#define WPR_PHYSICAL_ADDR      0xbff00000
+#define WPR_SIZE               (1024*1024) /* 1MB */
+
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_init(struct platform_device *dev);
@@ -96,6 +106,13 @@ struct nvdec_ucode_v1 {
 	struct nvdec_ucode_bin_header_v1 *bin_header;
 	struct nvdec_ucode_os_header_v1  *os_header;
 	bool valid;
+};
+
+struct nvdec_bl_shared_data {
+	uint ls_fw_start_addr;
+	uint ls_fw_size;
+	uint wpr_addr;
+	uint wpr_size;
 };
 
 #endif

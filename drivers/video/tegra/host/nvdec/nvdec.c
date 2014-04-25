@@ -48,10 +48,45 @@
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 
+#if USE_NVDEC_BOOTLOADER
+#define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)
+#else
 #define get_nvdec(ndev) ((struct nvdec *)(ndev)->dev.platform_data)
+#endif
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
 /* caller is responsible for freeing */
+#if USE_NVDEC_BOOTLOADER
+enum {
+	host_nvdec_fw_bl = 0,
+	host_nvdec_fw_ls
+} host_nvdec_fw;
+
+static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
+{
+	char *fw_name;
+	u8 maj, min;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	/* note size here is a little over...*/
+	fw_name = kzalloc(32, GFP_KERNEL);
+	if (!fw_name)
+		return NULL;
+
+	decode_nvdec_ver(pdata->version, &maj, &min);
+	if (fw == host_nvdec_fw_bl)
+		if (tegra_platform_is_qt() || tegra_platform_is_linsim())
+			sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
+				maj, min);
+		else
+			sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw", maj, min);
+	else
+		sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
+	dev_info(&dev->dev, "fw name:%s\n", fw_name);
+
+	return fw_name;
+}
+#else
 static char *nvdec_get_fw_name(struct platform_device *dev)
 {
 	char *fw_name;
@@ -69,6 +104,7 @@ static char *nvdec_get_fw_name(struct platform_device *dev)
 
 	return fw_name;
 }
+#endif
 
 static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
@@ -163,6 +199,48 @@ int nvdec_boot(struct platform_device *dev)
 	u32 timeout;
 	u32 offset;
 	int err = 0;
+#if USE_NVDEC_BOOTLOADER
+	struct nvdec **m = get_nvdec(dev);
+	u32 fb_data_offset = 0;
+	u32 initial_dmem_offset = 0;
+	struct nvdec_bl_shared_data shared_data;
+
+	/* check if firmware is loaded or not */
+	if (!m || !m[0] || !m[0]->valid || !m[1] || !m[1]->valid) {
+		dev_err(&dev->dev, "firmware not loaded");
+		return -ENOMEDIUM;
+	}
+
+	err = nvdec_wait_mem_scrubbing(dev);
+	if (err)
+		return err;
+
+	fb_data_offset = (m[0]->os.bin_data_offset +
+				m[0]->os.data_offset)/(sizeof(u32));
+	shared_data.ls_fw_start_addr = m[1]->phys;
+	shared_data.ls_fw_size       = m[1]->size;
+	shared_data.wpr_addr         = WPR_PHYSICAL_ADDR;
+	shared_data.wpr_size         = WPR_SIZE;
+
+	memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
+		&shared_data, sizeof(shared_data));
+
+	host1x_writel(dev, nvdec_dmactl_r(), 0);
+	host1x_writel(dev, nvdec_dmatrfbase_r(),
+		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
+
+	/* Write BL data to dmem */
+	for (offset = 0; offset < m[0]->os.data_size; offset += 256) {
+		nvdec_dma_pa_to_internal_256b(dev,
+					   m[0]->os.data_offset + offset,
+					   offset, false);
+	}
+
+	/* Write BL code to imem */
+	host1x_writel(dev, nvdec_dmatrfbase_r(),
+		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
+	nvdec_dma_pa_to_internal_256b(dev, m[0]->os.code_offset, 0, true);
+#else /* USE_NVDEC_BOOTLOADER */
 	struct nvdec *m = get_nvdec(dev);
 
 	/* check if firmware is loaded or not */
@@ -183,7 +261,7 @@ int nvdec_boot(struct platform_device *dev)
 					   offset, false);
 
 	nvdec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
-
+#endif /* USE_NVDEC_BOOTLOADER */
 	/* setup nvdec interrupts and enable interface */
 	host1x_writel(dev, nvdec_irqmset_r(),
 			(nvdec_irqmset_ext_f(0xff) |
@@ -218,11 +296,19 @@ int nvdec_boot(struct platform_device *dev)
 	return 0;
 }
 
+#if USE_NVDEC_BOOTLOADER
+static int nvdec_setup_ucode_image(struct platform_device *dev,
+		u32 *ucode_ptr,
+		const struct firmware *ucode_fw,
+		struct nvdec *m)
+{
+#else
 static int nvdec_setup_ucode_image(struct platform_device *dev,
 		u32 *ucode_ptr,
 		const struct firmware *ucode_fw)
 {
 	struct nvdec *m = get_nvdec(dev);
+#endif
 	/* image data is little endian. */
 	struct nvdec_ucode_v1 ucode;
 	int w;
@@ -279,9 +365,15 @@ static int nvdec_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
+#if USE_NVDEC_BOOTLOADER
+int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
+			struct nvdec *m)
+{
+#else
 int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct nvdec *m = get_nvdec(dev);
+#endif
 	const struct firmware *ucode_fw;
 	int err;
 
@@ -291,7 +383,8 @@ int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
-		dev_err(&dev->dev, "failed to get nvdec firmware\n");
+		dev_err(&dev->dev, "failed to get nvdec firmware %s\n",
+				fw_name);
 		err = -ENOENT;
 		return err;
 	}
@@ -308,9 +401,14 @@ int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
+#if USE_NVDEC_BOOTLOADER
+	err = nvdec_setup_ucode_image(dev, m->mapped, ucode_fw, m);
+#else
 	err = nvdec_setup_ucode_image(dev, m->mapped, ucode_fw);
+#endif
 	if (err) {
-		dev_err(&dev->dev, "failed to parse firmware image\n");
+		dev_err(&dev->dev, "failed to parse firmware image %s\n",
+				fw_name);
 		goto clean_up;
 	}
 
@@ -331,6 +429,76 @@ clean_up:
 	return err;
 }
 
+#if USE_NVDEC_BOOTLOADER
+int nvhost_nvdec_init(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int err = 0;
+	struct nvdec **m = get_nvdec(dev);
+	char **fw_name;
+	int i;
+
+	nvhost_dbg_fn("in dev:%p", dev);
+
+	/* check if firmware resources already allocated */
+	if (m)
+		return 0;
+
+	m = kzalloc(2*sizeof(struct nvdec *), GFP_KERNEL);
+	if (!m) {
+		dev_err(&dev->dev, "couldn't allocate ucode ptr");
+		return -ENOMEM;
+	}
+	set_nvdec(dev, m);
+	nvhost_dbg_fn("primed dev:%p", dev);
+
+	fw_name = kzalloc(2*sizeof(char *), GFP_KERNEL);
+	if (!fw_name) {
+		dev_err(&dev->dev, "couldn't allocate firmware ptr");
+		kfree(m);
+		return -ENOMEM;
+	}
+
+	fw_name[0] = nvdec_get_fw_name(dev, host_nvdec_fw_bl);
+	if (!fw_name[0]) {
+		dev_err(&dev->dev, "couldn't determine BL firmware name");
+		return -EINVAL;
+	}
+	fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
+	if (!fw_name[1]) {
+		dev_err(&dev->dev, "couldn't determine LS firmware name");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < 2; i++) {
+		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
+		if (!m[i]) {
+			dev_err(&dev->dev, "couldn't alloc ucode");
+			kfree(fw_name[i]);
+			return -ENOMEM;
+		}
+
+		err = nvdec_read_ucode(dev, fw_name[i], m[i]);
+		kfree(fw_name[i]);
+		fw_name[i] = 0;
+		if (err || !m[i]->valid) {
+			dev_err(&dev->dev, "ucode not valid");
+			goto clean_up;
+		}
+	}
+	kfree(fw_name);
+	fw_name = NULL;
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(dev);
+
+	return 0;
+
+clean_up:
+	dev_err(&dev->dev, "failed");
+	return err;
+}
+#else
 int nvhost_nvdec_init(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
@@ -368,12 +536,8 @@ int nvhost_nvdec_init(struct platform_device *dev)
 		goto clean_up;
 	}
 
-	nvhost_module_busy(dev);
-
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);
-
-	nvhost_module_idle(dev);
 
 	return 0;
 
@@ -381,7 +545,39 @@ clean_up:
 	dev_err(&dev->dev, "failed");
 	return err;
 }
+#endif
 
+#if USE_NVDEC_BOOTLOADER
+void nvhost_nvdec_deinit(struct platform_device *dev)
+{
+	struct nvdec **m = get_nvdec(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int i;
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_deinit(dev);
+
+	if (!m)
+		return;
+
+	for (i = 0; i < 2; i++) {
+		if (!m[i])
+			continue;
+		/* unpin, free ucode memory */
+		if (m[i]->mapped) {
+			dma_free_attrs(&dev->dev,
+					m[i]->size, m[i]->mapped,
+					m[i]->phys, &m[i]->attrs);
+			m[i]->mapped = NULL;
+		}
+		kfree(m[i]);
+		m[i]->valid = false;
+	}
+	kfree(m);
+	m = NULL;
+	set_nvdec(dev, NULL);
+}
+#else
 void nvhost_nvdec_deinit(struct platform_device *dev)
 {
 	struct nvdec *m = get_nvdec(dev);
@@ -404,6 +600,7 @@ void nvhost_nvdec_deinit(struct platform_device *dev)
 	m->valid = false;
 	kfree(m);
 }
+#endif
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {

@@ -500,14 +500,14 @@ static int power_off_host(struct platform_device *dev)
 	return 0;
 }
 
-static void clock_on_host(struct platform_device *dev)
+static void enable_irq_host(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct nvhost_master *host = nvhost_get_private_data(dev);
 	nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
 }
 
-static int clock_off_host(struct platform_device *dev)
+static int disable_irq_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
 	nvhost_intr_stop(&host->intr);
@@ -844,8 +844,8 @@ static int nvhost_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 
 	nvhost_module_enable_clk(dev);
+	disable_irq_host(pdev);
 	power_off_host(pdev);
-	clock_off_host(pdev);
 	nvhost_module_disable_clk(dev);
 
 	dev_info(dev, "suspended\n");
@@ -858,8 +858,8 @@ static int nvhost_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 
 	nvhost_module_enable_clk(dev);
-	clock_on_host(pdev);
 	power_on_host(pdev);
+	enable_irq_host(pdev);
 	nvhost_module_disable_clk(dev);
 
 	dev_info(dev, "resuming\n");

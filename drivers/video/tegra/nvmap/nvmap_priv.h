@@ -170,7 +170,7 @@ struct nvmap_handle_ref {
 /*
  * For when memory does not require zeroing this is the minimum number of pages
  * remaining in the page pools before the background allocer is woken up. This
- * essentially disables the page pools (unless its extremely small).
+ * essentially disables the background allocator (unless its extremely small).
  */
 #define NVMAP_PP_ZERO_MEM_FILL_MIN (2048)
 

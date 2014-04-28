@@ -55,13 +55,7 @@
 #define __GFP_NVMAP     (GFP_KERNEL | __GFP_HIGHMEM)
 #endif
 
-#ifdef CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES
-#define NVMAP_ZEROED_PAGES     __GFP_ZERO
-#else
-#define NVMAP_ZEROED_PAGES     0
-#endif
-
-#define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN | NVMAP_ZEROED_PAGES)
+#define GFP_NVMAP       (__GFP_NVMAP | __GFP_NOWARN)
 
 extern bool zero_memory;
 

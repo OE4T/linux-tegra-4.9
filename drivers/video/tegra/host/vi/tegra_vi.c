@@ -189,7 +189,7 @@ static int vi_set_isomgr_request(struct vi *tegra_vi, uint vi_bw, uint lt)
 		"%s: failed to realize %u KBps\n", __func__, vi_bw);
 			return -ENOMEM;
 	}
-	return ret;
+	return 0;
 }
 
 static int vi_isomgr_release(struct vi *tegra_vi)
@@ -336,8 +336,7 @@ long vi_ioctl(struct file *file,
 		 * latency for now.
 		 */
 		ret = vi_set_isomgr_request(tegra_vi, vi_bw, 4);
-
-		if (!ret) {
+		if (ret) {
 			dev_err(&tegra_vi->ndev->dev,
 			"%s: failed to reserve %u KBps\n",
 			__func__, vi_bw);
@@ -393,12 +392,14 @@ static int vi_release(struct inode *inode, struct file *file)
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 	/* nullify isomgr request */
-	ret = vi_isomgr_release(tegra_vi);
-	if (ret) {
-		dev_err(&tegra_vi->ndev->dev,
-		"%s: failed to deallocate memory in isomgr\n",
-		__func__);
-		return -ENOMEM;
+	if (tegra_vi->isomgr_handle) {
+		ret = vi_isomgr_release(tegra_vi);
+		if (ret) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: failed to deallocate memory in isomgr\n",
+			__func__);
+			return -ENOMEM;
+		}
 	}
 #endif
 

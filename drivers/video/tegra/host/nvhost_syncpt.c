@@ -861,6 +861,8 @@ void nvhost_free_syncpt(u32 id)
 	mutex_lock(&sp->syncpt_mutex);
 
 	/* set to default state */
+	if (nvhost_syncpt_client_managed(sp, id))
+		nvhost_syncpt_set_min_eq_max(sp, id);
 	sp->assigned[id] = false;
 	sp->client_managed[id] = false;
 	kfree(sp->syncpt_names[id]);

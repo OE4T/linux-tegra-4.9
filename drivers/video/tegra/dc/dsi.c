@@ -4687,12 +4687,6 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 	if (dsi->info.panel_send_dc_frames)
 		tegra_dsi_send_dc_frames(dc, dsi, 2);
 
-	if (err < 0) {
-		dev_err(&dc->ndev->dev,
-			"dsi: Error sending suspend cmd\n");
-		goto fail;
-	}
-
 	if (!dsi->ulpm) {
 		err = tegra_dsi_enter_ulpm(dsi);
 		if (err < 0) {

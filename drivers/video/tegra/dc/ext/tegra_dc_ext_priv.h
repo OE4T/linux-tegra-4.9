@@ -143,13 +143,6 @@ extern int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 extern int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
 					int *args);
 
-extern int tegra_dc_ext_set_cursor_image_low_latency(
-		struct tegra_dc_ext_user *user,
-		struct tegra_dc_ext_cursor_image *);
-
-extern int tegra_dc_ext_set_cursor_low_latency(struct tegra_dc_ext_user *user,
-					struct tegra_dc_ext_cursor_image *);
-
 extern int tegra_dc_ext_control_init(void);
 
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,

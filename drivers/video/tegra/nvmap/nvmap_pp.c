@@ -33,10 +33,16 @@
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                128
-#define MIN_AVAILABLE_MB                  128
 
 static bool enable_pp = 1;
 static int pool_size;
+static u32 fill_thresh = NVMAP_PP_DEF_FILL_THRESH;
+static u32 zero_mem_fill_min = NVMAP_PP_DEF_ZERO_MEM_FILL_MIN;
+static u32 min_available_mb = NVMAP_PP_DEF_MIN_AVAILABLE_MB;
+
+module_param(fill_thresh, uint, 0644);
+module_param(zero_mem_fill_min, uint, 0644);
+module_param(min_available_mb, uint, 0644);
 
 static struct task_struct *background_allocator;
 static struct page *pending_pages[PENDING_PAGES_SIZE];
@@ -172,16 +178,16 @@ static inline void nvmap_pp_wake_up_allocator(void)
 	 * Therefor don't fill the pool unless we really need to as we may get
 	 * more memory without needing to alloc pages.
 	 */
-	if (!zero_memory && pool->count > NVMAP_PP_ZERO_MEM_FILL_MIN)
+	if (!zero_memory && pool->count > zero_mem_fill_min)
 		return;
 
-	if (pool->length - pool->count < NVMAP_PP_DEF_FILL_THRESH)
+	if (pool->length - pool->count < fill_thresh)
 		return;
 
 	si_meminfo(&info);
 	free_pages = (int)info.freeram;
 
-	tmp = free_pages - (MIN_AVAILABLE_MB << (20 - PAGE_SHIFT));
+	tmp = free_pages - (min_available_mb << (20 - PAGE_SHIFT));
 	if (tmp <= 0)
 		return;
 

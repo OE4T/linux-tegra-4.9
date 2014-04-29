@@ -159,20 +159,26 @@ struct nvmap_handle_ref {
  * be is 1024 (all physical memory - not a very good idea) or 0 (no page pool
  * at all).
  */
-#define NVMAP_PP_POOL_SIZE (128)
+#define NVMAP_PP_POOL_SIZE               (128)
 
 /*
  * The wakeup threshold is how many empty page slots there need to be in order
  * for the background allocater to be woken up.
  */
-#define NVMAP_PP_DEF_FILL_THRESH (4096)
+#define NVMAP_PP_DEF_FILL_THRESH         (4096)
 
 /*
  * For when memory does not require zeroing this is the minimum number of pages
  * remaining in the page pools before the background allocer is woken up. This
  * essentially disables the background allocator (unless its extremely small).
  */
-#define NVMAP_PP_ZERO_MEM_FILL_MIN (2048)
+#define NVMAP_PP_DEF_ZERO_MEM_FILL_MIN   (2048)
+
+/*
+ * Minimum amount of memory we try to keep available. That is if memory sinks
+ * below this amount the page pools will stop filling.
+ */
+#define NVMAP_PP_DEF_MIN_AVAILABLE_MB    (128)
 
 struct nvmap_page_pool {
 	struct mutex lock;

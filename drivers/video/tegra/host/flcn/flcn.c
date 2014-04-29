@@ -589,7 +589,6 @@ int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct flcn *v;
 	struct nvhost_channel *ch = pdata->channels[0];
 
 	nvhost_dbg_fn("");
@@ -599,8 +598,6 @@ int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 		ch->cur_ctx = NULL;
 		mutex_unlock(&ch->submitlock);
 	}
-
-	v = get_flcn(pdata->pdev);
 
 	return 0;
 }

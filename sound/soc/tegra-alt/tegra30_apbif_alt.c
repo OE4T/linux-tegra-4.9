@@ -532,13 +532,15 @@ static const struct {
 	{ "afc5", CLK_LIST_MASK_TEGRA124 },
 };
 
-
 struct of_dev_auxdata tegra30_apbif_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra30-i2s", 0x70080300, "tegra30-i2s.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra30-i2s", 0x70080400, "tegra30-i2s.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra30-i2s", 0x70080500, "tegra30-i2s.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra30-i2s", 0x70080600, "tegra30-i2s.3", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra30-i2s", 0x70080700, "tegra30-i2s.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-dam", 0x70080800, "tegra30-dam.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-dam", 0x70080900, "tegra30-dam.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-dam", 0x70080a00, "tegra30-dam.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra114-amx", 0x70080c00, "tegra114-amx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra114-adx", 0x70080e00, "tegra114-adx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301000, "tegra30-i2s.0", NULL),
@@ -546,11 +548,20 @@ struct of_dev_auxdata tegra30_apbif_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301200, "tegra30-i2s.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301300, "tegra30-i2s.3", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-i2s", 0x70301400, "tegra30-i2s.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-dam", 0x70302000, "tegra30-dam.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-dam", 0x70302200, "tegra30-dam.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-dam", 0x70302400, "tegra30-dam.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-spdif", 0x70306000, "tegra30-spdif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303000, "tegra124-amx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303100, "tegra124-amx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-adx", 0x70303800, "tegra124-adx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-adx", 0x70303900, "tegra124-adx.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307000, "tegra124-afc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307100, "tegra124-afc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307200, "tegra124-afc.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307300, "tegra124-afc.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307400, "tegra124-afc.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307500, "tegra124-afc.5", NULL),
 	{}
 };
 

@@ -1,7 +1,7 @@
 /*
  * tegra30_xbar_alt.h - TEGRA XBAR registers
  *
- * Copyright (c) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -151,6 +151,7 @@ void tegra30_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 			  struct tegra30_xbar_cif_conf *conf);
 void tegra124_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 			   struct tegra30_xbar_cif_conf *conf);
+int tegra30_xbar_read_reg(unsigned int reg, unsigned int *val);
 
 struct tegra30_xbar_soc_data {
 	const struct regmap_config *regmap_config;

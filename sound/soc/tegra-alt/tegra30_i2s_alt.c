@@ -286,8 +286,8 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
 				(1 << channels) - 1,
 				(1 << channels) - 1);
-
-		cif_conf.threshold = 0;
+		/* I2S fifo threshold set to 7 when AFC is connected */
+		cif_conf.threshold = 7;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
 		cif_conf.expand = 0;
@@ -302,7 +302,7 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 			i2sclock = srate * channels * sample_size * 2;
 		/* In LRCK mode, hw doesn't support mono.
 		   We should convert mono to steroe through acif */
-		cif_conf.threshold = 0;
+		cif_conf.threshold = 7;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = (channels == 1) ? 2 : channels;
 		cif_conf.expand = 0;

@@ -42,6 +42,7 @@
 struct tegra_vcm30t124 {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	int gpio_dap_direction;
+	int rate_via_kcontrol;
 	struct i2c_client *max9485_client;
 	struct platform_device *spdif_codec;
 };
@@ -88,15 +89,21 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[10].dai_link->params;
-	int srate, mclk, clk_out_rate;
+	int mclk, clk_out_rate;
 	int err;
 
-	srate = params_rate(params);
-	switch (srate) {
+	/* rate is either supplied by pcm params or via kcontrol */
+	if (!machine->rate_via_kcontrol)
+		dai_params->rate_min = params_rate(params);
+
+	dai_params->channels_min = params_channels(params);
+	dai_params->formats = (1ULL << (params_format(params)));
+
+	switch (dai_params->rate_min) {
 	case 64000:
 	case 88200:
 	case 96000:
-		clk_out_rate = 128 * srate;
+		clk_out_rate = 128 * dai_params->rate_min;
 		mclk = clk_out_rate * 2;
 		break;
 	case 8000:
@@ -121,13 +128,8 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = srate;
-	dai_params->channels_min = params_channels(params);
-	dai_params->formats = (1ULL << (params_format(params)));
-
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					srate, mclk, clk_out_rate);
+			dai_params->rate_min, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
@@ -140,8 +142,8 @@ static int tegra_vcm30t124_x_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[10].cpu_dai, 0, srate,
-					SND_SOC_CLOCK_IN);
+	err = snd_soc_dai_set_sysclk(card->rtd[10].cpu_dai, 0,
+			dai_params->rate_min, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "x cpu_dai clock not set\n");
 		return err;
@@ -532,6 +534,23 @@ static int tegra_vcm30t124_adx_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int tegra_vcm30t124_dam_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	unsigned int in_srate, out_srate;
+	int err;
+
+	in_srate = 8000;
+	out_srate = 48000;
+
+	err = snd_soc_dai_set_sysclk(codec_dai, 0, out_srate,
+					SND_SOC_CLOCK_OUT);
+	err = snd_soc_dai_set_sysclk(codec_dai, 0, in_srate,
+					SND_SOC_CLOCK_IN);
+
+	return 0;
+}
+
 static int tegra_vcm30t124_remove(struct snd_soc_card *card)
 {
 	return 0;
@@ -541,7 +560,8 @@ static const struct snd_soc_pcm_stream x_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 8000,
 	.rate_max = 48000,
-	.channels_min = 1,
+	/* channels_min is used for all AHUB internal routes */
+	.channels_min = 2,
 	/* Codec x(wm8731) supports max 2 channels. */
 	.channels_max = 2,
 };
@@ -630,7 +650,6 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		.ops = &tegra_vcm30t124_x_ops,
 		.ignore_pmdown_time = 1,
 	},
-
 	{
 		/* 5 */
 		.name = "APBIF5 CIF",
@@ -724,7 +743,6 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 			   SND_SOC_DAIFMT_NB_NF |
 			   SND_SOC_DAIFMT_CBM_CFM,
 	},
-
 	{
 		/* 13 */
 		.name = "I2S4 CIF",
@@ -844,6 +862,189 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 		.codec_dai_name = "CIF",
 		.params = &z_link_params,
 	},
+	{
+		/* 26 */
+		.name = "DAM0 IN0",
+		.stream_name = "DAM0 IN0",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DAM0-0",
+		/* .codec_of_node = DAM0 */
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &x_link_params,
+	},
+	{
+		/* 27 */
+		.name = "DAM0 OUT",
+		.stream_name = "DAM0 OUT",
+		/* .cpu_of_node = DAM0 OUT */
+		.cpu_dai_name = "OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "DAM0",
+		.params = &x_link_params,
+	},
+	{
+		/* 28 */
+		.name = "DAM1 IN0",
+		.stream_name = "DAM1 IN0",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DAM1-0",
+		/* .codec_of_node = DAM0 */
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &x_link_params,
+	},
+	{
+		/* 29 */
+		.name = "DAM1 OUT",
+		.stream_name = "DAM1 OUT",
+		/* .cpu_of_node = DAM1 OUT */
+		.cpu_dai_name = "OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "DAM1",
+		.params = &x_link_params,
+	},
+	{
+		/* 30 */
+		.name = "DAM2 IN0",
+		.stream_name = "DAM2 IN0",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DAM2-0",
+		/* .codec_of_node = DAM0 */
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &x_link_params,
+	},
+	{
+		/* 31 */
+		.name = "DAM2 OUT",
+		.stream_name = "DAM2 OUT",
+		/* .cpu_of_node = DAM2 OUT */
+		.cpu_dai_name = "OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "DAM2",
+		.params = &x_link_params,
+	},
+	{
+		/* 32 */
+		.name = "AFC0 RX",
+		.stream_name = "AFC0 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC0",
+		/* .codec_of_node = AFC0 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 33 */
+		.name = "AFC0 TX",
+		.stream_name = "AFC0 TX",
+		/* .cpu_of_node = AFC0 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC0",
+		.params = &y_link_params,
+	},
+	{
+		/* 34 */
+		.name = "AFC1 RX",
+		.stream_name = "AFC1 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC1",
+		/* .codec_of_node = AFC1 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 35 */
+		.name = "AFC1 TX",
+		.stream_name = "AFC1 TX",
+		/* .cpu_of_node = AFC1 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC1",
+		.params = &y_link_params,
+	},
+	{
+		/* 36 */
+		.name = "AFC2 RX",
+		.stream_name = "AFC2 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC2",
+		/* .codec_of_node = AFC2 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 37 */
+		.name = "AFC2 TX",
+		.stream_name = "AFC2 TX",
+		/* .cpu_of_node = AFC2 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC2",
+		.params = &y_link_params,
+	},
+	{
+		/* 38 */
+		.name = "AFC3 RX",
+		.stream_name = "AFC3 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC3",
+		/* .codec_of_node = AFC3 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 39 */
+		.name = "AFC3 TX",
+		.stream_name = "AFC3 TX",
+		/* .cpu_of_node = AFC3 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC3",
+		.params = &y_link_params,
+	},
+	{
+		/* 40 */
+		.name = "AFC4 RX",
+		.stream_name = "AFC4 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC4",
+		/* .codec_of_node = AFC4 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 41 */
+		.name = "AFC4 TX",
+		.stream_name = "AFC4 TX",
+		/* .cpu_of_node = AFC4 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC4",
+		.params = &y_link_params,
+	},
+	{
+		/* 42 */
+		.name = "AFC5 RX",
+		.stream_name = "AFC5 RX",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "AFC5",
+		/* .codec_of_node = AFC5 IN */
+		.codec_dai_name = "AFC IN",
+		.params = &y_link_params,
+	},
+	{
+		/* 43 */
+		.name = "AFC5 TX",
+		.stream_name = "AFC5 TX",
+		/* .cpu_of_node = AFC5 OUT */
+		.cpu_dai_name = "AFC OUT",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "AFC5",
+		.params = &y_link_params,
+	},
 };
 
 static struct snd_soc_codec_conf ad193x_codec_conf[] = {
@@ -868,9 +1069,114 @@ static struct snd_soc_codec_conf ad193x_codec_conf[] = {
 		.name_prefix = "I2S4",
 	},
 	{
+		.dev_name = "tegra30-dam.0",
+		.name_prefix = "DAM0",
+	},
+	{
+		.dev_name = "tegra30-dam.1",
+		.name_prefix = "DAM1",
+	},
+	{
+		.dev_name = "tegra30-dam.2",
+		.name_prefix = "DAM2",
+	},
+	{
+		.dev_name = "tegra124-afc.0",
+		.name_prefix = "AFC0",
+	},
+	{
+		.dev_name = "tegra124-afc.1",
+		.name_prefix = "AFC1",
+	},
+	{
+		.dev_name = "tegra124-afc.2",
+		.name_prefix = "AFC2",
+	},
+	{
+		.dev_name = "tegra124-afc.3",
+		.name_prefix = "AFC3",
+	},
+	{
+		.dev_name = "tegra124-afc.4",
+		.name_prefix = "AFC4",
+	},
+	{
+		.dev_name = "tegra124-afc.5",
+		.name_prefix = "AFC5",
+	},
+	{
 		.dev_name = "tegra30-spdif",
 		.name_prefix = "SPDIF",
 	},
+};
+
+static const int tegra_vcm30t124_srate_values[] = {
+	0,
+	8000,
+	16000,
+	44100,
+	48000,
+	11025,
+	22050,
+	24000,
+	32000,
+	88200,
+	96000,
+	176000,
+	192000,
+};
+
+static const char * const tegra_vcm30t124_srate_text[] = {
+	"None",
+	"8kHz",
+	"16kHz",
+	"44kHz",
+	"48kHz",
+	"11kHz",
+	"22kHz",
+	"24kHz",
+	"32kHz",
+	"88kHz",
+	"96kHz",
+	"176kHz",
+	"192kHz",
+};
+
+static int tegra_vcm30t124_codec_get_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->rate_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_vcm30t124_codec_put_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->dai_link[10].params;
+
+	/* set the rate control flag */
+	machine->rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->rate_via_kcontrol];
+
+	return 0;
+}
+
+static const struct soc_enum tegra_vcm30t124_codec_rate =
+	SOC_ENUM_SINGLE_EXT(13, tegra_vcm30t124_srate_text);
+
+static const struct snd_kcontrol_new tegra_vcm30t124_controls[] = {
+	SOC_ENUM_EXT("codec-x rate", tegra_vcm30t124_codec_rate,
+		tegra_vcm30t124_codec_get_rate, tegra_vcm30t124_codec_put_rate),
 };
 
 static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
@@ -881,6 +1187,8 @@ static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
 	.remove = tegra_vcm30t124_remove,
 	.dapm_widgets = tegra_vcm30t124_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_vcm30t124_dapm_widgets),
+	.controls = tegra_vcm30t124_controls,
+	.num_controls = ARRAY_SIZE(tegra_vcm30t124_controls),
 	.codec_conf = ad193x_codec_conf,
 	.num_configs = ARRAY_SIZE(ad193x_codec_conf),
 	.fully_routed = true,
@@ -1130,7 +1438,45 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		tegra_vcm30t124_links[25].cpu_of_node = NULL;
 		tegra_vcm30t124_links[25].codec_of_node = NULL;
 
+		/* DAM related dai-links */
+		tegra_vcm30t124_links[26].codec_name = "tegra30-dam.0";
+		tegra_vcm30t124_links[28].codec_name = "tegra30-dam.1";
+		tegra_vcm30t124_links[30].codec_name = "tegra30-dam.2";
+
+		for (i = 26; i < 31; i = i + 2) {
+			tegra_vcm30t124_links[i].cpu_of_node = NULL;
+			tegra_vcm30t124_links[i].codec_of_node = NULL;
+			tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+			tegra_vcm30t124_links[i+1].cpu_of_node = NULL;
+			tegra_vcm30t124_links[i+1].codec_of_node = NULL;
+			tegra_vcm30t124_links[i+1].codec_name =
+				tegra_vcm30t124_links[i].cpu_name;
+			tegra_vcm30t124_links[i+1].cpu_name =
+				tegra_vcm30t124_links[i].codec_name;
+		}
+
+		/* AFC related dai-links */
+		tegra_vcm30t124_links[32].codec_name = "tegra124-afc.0";
+		tegra_vcm30t124_links[34].codec_name = "tegra124-afc.1";
+		tegra_vcm30t124_links[36].codec_name = "tegra124-afc.2";
+		tegra_vcm30t124_links[38].codec_name = "tegra124-afc.3";
+		tegra_vcm30t124_links[40].codec_name = "tegra124-afc.4";
+		tegra_vcm30t124_links[42].codec_name = "tegra124-afc.5";
+
+		for (i = 32; i < 43; i = i + 2) {
+			tegra_vcm30t124_links[i].cpu_of_node = NULL;
+			tegra_vcm30t124_links[i].codec_of_node = NULL;
+			tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+			tegra_vcm30t124_links[i+1].cpu_of_node = NULL;
+			tegra_vcm30t124_links[i+1].codec_of_node = NULL;
+			tegra_vcm30t124_links[i+1].codec_name =
+				tegra_vcm30t124_links[i].cpu_name;
+			tegra_vcm30t124_links[i+1].cpu_name =
+				tegra_vcm30t124_links[i].codec_name;
+		}
+
 		machine->gpio_dap_direction = GPIO_PR0;
+		machine->rate_via_kcontrol = 0;
 		card->dapm_routes = tegra_vcm30t124_audio_map;
 		card->num_dapm_routes = ARRAY_SIZE(tegra_vcm30t124_audio_map);
 	}

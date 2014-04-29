@@ -203,6 +203,15 @@ static void gk20a_ltc_init_fs_state(struct gk20a *g)
 	g->max_ltc_count = g->ltc_count = 1;
 }
 
+void gk20a_ltc_isr(struct gk20a *g)
+{
+	u32 intr;
+
+	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
+	gk20a_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
+	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
+}
+
 void gk20a_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
@@ -220,4 +229,5 @@ void gk20a_init_ltc(struct gpu_ops *gops)
 #endif
 	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
 	gops->ltc.init_fs_state = gk20a_ltc_init_fs_state;
+	gops->ltc.isr = gk20a_ltc_isr;
 }

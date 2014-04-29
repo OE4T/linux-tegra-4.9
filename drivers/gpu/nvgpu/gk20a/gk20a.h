@@ -82,6 +82,7 @@ struct gpu_ops {
 		void (*sync_debugfs)(struct gk20a *g);
 		void (*init_fs_state)(struct gk20a *g);
 		void (*elpg_flush)(struct gk20a *g);
+		void (*isr)(struct gk20a *g);
 	} ltc;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);

@@ -567,7 +567,7 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
 		gk20a_priv_ring_isr(g);
 	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
-		gk20a_mm_ltc_isr(g);
+		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
 		gk20a_pbus_isr(g);
 

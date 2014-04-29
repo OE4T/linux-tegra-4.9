@@ -393,9 +393,9 @@ void nvhost_nvdec_deinit(struct platform_device *dev)
 				m->phys, &m->attrs);
 		m->mapped = NULL;
 	}
-	kfree(m);
 	set_nvdec(dev, NULL);
 	m->valid = false;
+	kfree(m);
 }
 
 int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev)

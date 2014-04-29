@@ -184,6 +184,15 @@ static void gm20b_ltc_init_fs_state(struct gk20a *g)
 		     ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m());
 }
 
+void gm20b_ltc_isr(struct gk20a *g)
+{
+	u32 intr;
+
+	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
+	gk20a_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
+	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
+}
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
@@ -201,4 +210,5 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_comptags = gm20b_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
 	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
+	gops->ltc.isr = gm20b_ltc_isr;
 }

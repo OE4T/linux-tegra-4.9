@@ -3705,7 +3705,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 #ifdef CONFIG_ADF_TEGRA
 		tegra_dc_io_start(dc);
-		dc->adf = tegra_adf_init(ndev, dc, dc->pdata->fb);
+		dc->adf = tegra_adf_init(ndev, dc, dc->pdata->fb, fb_mem);
 		tegra_dc_io_end(dc);
 
 		if (IS_ERR(dc->adf)) {

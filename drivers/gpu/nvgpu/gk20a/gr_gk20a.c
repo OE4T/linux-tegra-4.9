@@ -4854,6 +4854,22 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 	return -EINVAL;
 }
 
+static int gk20a_gr_handle_fecs_error(struct gk20a *g,
+					  struct gr_isr_data *isr_data)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_intr_r());
+	gk20a_dbg_fn("");
+
+	gk20a_err(dev_from_gk20a(g),
+		   "unhandled fecs error interrupt 0x%08x for channel %u",
+		   gr_fecs_intr, ch->hw_chid);
+
+	gk20a_writel(g, gr_fecs_intr_r(), gr_fecs_intr);
+	return -EINVAL;
+}
+
 static int gk20a_gr_handle_class_error(struct gk20a *g,
 					  struct gr_isr_data *isr_data)
 {
@@ -5339,6 +5355,13 @@ int gk20a_gr_isr(struct gk20a *g)
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_class_reset_f());
 		gr_intr &= ~gr_intr_illegal_class_pending_f();
+	}
+
+	if (gr_intr & gr_intr_fecs_error_pending_f()) {
+		need_reset |= gk20a_gr_handle_fecs_error(g, &isr_data);
+		gk20a_writel(g, gr_intr_r(),
+			gr_intr_fecs_error_reset_f());
+		gr_intr &= ~gr_intr_fecs_error_pending_f();
 	}
 
 	if (gr_intr & gr_intr_class_error_pending_f()) {

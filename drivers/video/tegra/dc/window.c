@@ -647,16 +647,12 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 				DC_WIN_SIZE);
 		}
 
-		/* Check scan_column flag to set window size and scaling. */
 		win_options = WIN_ENABLE;
-		if (scan_column) {
+		if (scan_column)
 			win_options |= WIN_SCAN_COLUMN;
-			win_options |= H_FILTER_ENABLE(filter_v);
-			win_options |= V_FILTER_ENABLE(filter_h);
-		} else {
-			win_options |= H_FILTER_ENABLE(filter_h);
-			win_options |= V_FILTER_ENABLE(filter_v);
-		}
+
+		win_options |= H_FILTER_ENABLE(filter_h);
+		win_options |= V_FILTER_ENABLE(filter_v);
 
 		/* Update scaling registers if window supports scaling. */
 		if (likely(tegra_dc_feature_has_scaling(dc, win->idx)))

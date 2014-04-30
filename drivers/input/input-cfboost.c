@@ -18,6 +18,7 @@
 #include <linux/input.h>
 #include <linux/module.h>
 #include <linux/pm_qos.h>
+#include <linux/pm_runtime.h>
 #include <linux/sched/rt.h>
 
 #define CREATE_TRACE_POINTS
@@ -112,9 +113,12 @@ static void cfb_boost(struct kthread_work *w)
 		pm_qos_update_request_timeout(&freq_req, boost_freq,
 				boost_time * 1000);
 
-	if (gpu_wakeup && gpu_device)
+	if (gpu_wakeup && gpu_device) {
 		dev_pm_qos_update_request_timeout(&gpu_wakeup_req,
 				PM_QOS_FLAG_NO_POWER_OFF, boost_time);
+		pm_runtime_get(gpu_device);
+		pm_runtime_put_autosuspend(gpu_device);
+	}
 }
 
 static struct task_struct *boost_kthread;

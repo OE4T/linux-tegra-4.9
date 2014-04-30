@@ -160,6 +160,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.deinit		= nvhost_nvdec_deinit,
 	.finalize_poweron = nvhost_nvdec_finalize_poweron,
 	.moduleid	= NVHOST_MODULE_NVDEC,
+	.ctrl_ops      = &tegra_nvdec_ctrl_ops,
 	.num_channels  = 1,
 };
 

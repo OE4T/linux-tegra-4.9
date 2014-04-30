@@ -19,6 +19,8 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/nvhost.h>
 #include <linux/pm_runtime.h>
 #include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
@@ -31,6 +33,7 @@
 #include <linux/tegra-soc.h>
 
 #include <linux/tegra_pm_domains.h>
+#include <linux/nvhost_nvdec_ioctl.h>
 
 #include "dev.h"
 #include "nvdec.h"
@@ -332,10 +335,14 @@ int nvhost_nvdec_init(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
-	struct nvdec *m;
+	struct nvdec *m = get_nvdec(dev);
 	char *fw_name;
 
 	nvhost_dbg_fn("in dev:%p", dev);
+
+	/* check if firmware resources already allocated */
+	if (m)
+		return 0;
 
 	fw_name = nvdec_get_fw_name(dev);
 	if (!fw_name) {
@@ -424,6 +431,77 @@ static struct of_device_id tegra_nvdec_of_match[] = {
 	{ },
 };
 
+static int nvdec_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata;
+	struct nvdec_private *priv;
+
+	pdata = container_of(inode->i_cdev,
+		struct nvhost_device_data, ctrl_cdev);
+
+	if (WARN_ONCE(pdata == NULL,
+			"pdata not found, %s failed\n", __func__))
+		return -ENODEV;
+
+	if (WARN_ONCE(pdata->pdev == NULL,
+			"device not found, %s failed\n", __func__))
+		return -ENODEV;
+
+	priv = kzalloc(sizeof(struct nvdec_private), GFP_KERNEL);
+	if (!priv) {
+		dev_err(&pdata->pdev->dev,
+			"couldn't allocate nvdec private");
+		return -ENOMEM;
+	}
+	priv->pdev = pdata->pdev;
+	atomic_set(&priv->refcnt, 0);
+
+	file->private_data = priv;
+
+	return 0;
+}
+
+long nvdec_ioctl(struct file *file,
+	unsigned int cmd, unsigned long arg)
+{
+	struct nvdec_private *priv = file->private_data;
+	struct platform_device *pdev = priv->pdev;
+
+	if (WARN_ONCE(pdev == NULL, "pdata not found, %s failed\n", __func__))
+		return -ENODEV;
+
+	if (_IOC_TYPE(cmd) != NVHOST_NVDEC_IOCTL_MAGIC)
+		return -EFAULT;
+
+	switch (cmd) {
+	case NVHOST_NVDEC_IOCTL_POWERON:
+		nvhost_nvdec_init(pdev);
+		nvhost_module_busy(pdev);
+		atomic_inc(&priv->refcnt);
+	break;
+	case NVHOST_NVDEC_IOCTL_POWEROFF:
+		if (atomic_dec_if_positive(&priv->refcnt)) {
+			nvhost_module_idle(pdev);
+			nvhost_nvdec_deinit(pdev);
+		}
+	break;
+	default:
+		dev_err(&pdev->dev,
+			"%s: Unknown nvdec ioctl.\n", __func__);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int nvdec_release(struct inode *inode, struct file *file)
+{
+	struct nvdec_private *priv = file->private_data;
+
+	nvhost_module_idle_mult(priv->pdev, atomic_read(&priv->refcnt));
+	kfree(priv);
+
+	return 0;
+}
 static int nvdec_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -495,6 +573,16 @@ static struct platform_driver nvdec_driver = {
 		.pm = &nvhost_module_pm_ops,
 #endif
 	}
+};
+
+const struct file_operations tegra_nvdec_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.open = nvdec_open,
+	.unlocked_ioctl = nvdec_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvdec_ioctl,
+#endif
+	.release = nvdec_release,
 };
 
 static int __init nvdec_init(void)

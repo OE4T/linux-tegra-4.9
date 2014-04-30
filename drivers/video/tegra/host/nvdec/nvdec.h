@@ -25,6 +25,7 @@
 #include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
 
+extern const struct file_operations tegra_nvdec_ctrl_ops;
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_init(struct platform_device *dev);
@@ -41,6 +42,11 @@ static inline void decode_nvdec_ver(int version, u8 *maj, u8 *min)
 	*maj = (u8)((uv32 >> 8) & 0xff);
 	*min = (u8)(uv32 & 0xff);
 }
+
+struct nvdec_private {
+	struct platform_device *pdev;
+	atomic_t refcnt;
+};
 
 struct nvdec {
 	bool valid;

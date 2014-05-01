@@ -774,10 +774,12 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		page = pfn_to_page(pfn);
 	} else {
 		offs >>= PAGE_SHIFT;
-		if (nvmap_page_reserved(priv->handle->pgalloc.pages[offs]))
-			return VM_FAULT_SIGBUS;
+		if (vmf->flags & (FAULT_FLAG_WRITE | FAULT_FLAG_MKWRITE)) {
+			if (nvmap_page_reserved(priv->handle->pgalloc.pages[offs]))
+				return VM_FAULT_SIGBUS;
+			nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
+		}
 		page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
-		nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
 	}
 
 	if (page)

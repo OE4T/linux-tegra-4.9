@@ -188,6 +188,47 @@ static struct resource vi_resources[] = {
 	},
 };
 
+#ifdef CONFIG_VI_ONE_DEVICE
+struct nvhost_device_data t124_vi_info = {
+	.num_channels	= 2,
+	/* FIXME: resolve powergating dependency with DIS */
+	/* FIXME: control clocks from user space instead of hard-coding here */
+	.moduleid         = NVHOST_MODULE_VI,
+	.modulemutexes    = {NVMODMUTEX_VI_0},
+	.exclusive        = true,
+	.keepalive       = true,
+	.powergate_ids    = {TEGRA_POWERGATE_VENC, -1},
+	.can_powergate    = true,
+	.clockgate_delay  = VI_CLOCKGATE_DELAY,
+	.powergate_delay  = VI_POWERGATE_DELAY,
+	.clocks           = {
+		{"vi", UINT_MAX, 0},
+		{"csi", 0},
+		{"cilab", 102000000},
+		{"cilcd", 102000000},
+		{"cile", 102000000},
+		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"sclk", 80000000} },
+	.init             = nvhost_vi_init,
+	.deinit           = nvhost_vi_deinit,
+	.prepare_poweroff = nvhost_vi_prepare_poweroff,
+	.finalize_poweron = nvhost_vi_finalize_poweron,
+	.ctrl_ops         = &tegra_vi_ctrl_ops,
+	.reset            = nvhost_vi_reset,
+	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
+};
+EXPORT_SYMBOL(t124_vi_info);
+
+static struct platform_device tegra_vi01_device = {
+	.name		= "vi",
+	.id		= -1,
+	.resource	= vi_resources,
+	.num_resources	= ARRAY_SIZE(vi_resources),
+	.dev		= {
+		.platform_data = &t124_vi_info,
+	},
+};
+#else
 static struct platform_device tegra_vi01b_device;
 struct nvhost_device_data t124_vi_info = {
 	.num_channels	= 1,
@@ -224,6 +265,7 @@ static struct platform_device tegra_vi01_device = {
 		.platform_data = &t124_vi_info,
 	},
 };
+#endif
 
 struct nvhost_device_data t124_vib_info = {
 	.num_channels	= 1,

@@ -486,6 +486,10 @@ static inline void nvmap_page_mkunreserved(struct page **page)
 	*page = (struct page *)((unsigned long)*page & ~2UL);
 }
 
+/*
+ * FIXME: assume user space requests for reserve operations
+ * are page aligned
+ */
 static inline void nvmap_handle_mk(struct nvmap_handle *h,
 				   u32 offset, u32 size,
 				   void (*fn)(struct page **))
@@ -496,7 +500,7 @@ static inline void nvmap_handle_mk(struct nvmap_handle *h,
 
 	if (h->heap_pgalloc) {
 		for (i = start_page; i < end_page; i++)
-			fn(&h->pgalloc.pages[i + start_page]);
+			fn(&h->pgalloc.pages[i]);
 	}
 }
 

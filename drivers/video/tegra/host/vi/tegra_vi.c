@@ -29,6 +29,7 @@
 #include <mach/latency_allowance.h>
 
 #include "bus_client.h"
+#include "nvhost_acm.h"
 #include "chip_support.h"
 #include "host1x/host1x.h"
 #include "vi.h"
@@ -381,6 +382,67 @@ const struct file_operations tegra_vi_ctrl_ops = {
 };
 #endif
 
+/* Reset sensor data if respective clk is ON */
+void nvhost_vi_reset_all(struct platform_device *pdev)
+{
+	void __iomem *reset_reg[4];
+	int err;
+	bool enabled = false;
+	struct nvhost_device_data *pdata = pdev->dev.platform_data;
+	struct clk *clk;
+
+	err = nvhost_clk_get(pdev, "cilab", &clk);
+	if (!err && tegra_is_clk_enabled(clk)) {
+		reset_reg[0] = pdata->aperture[0] +
+			T12_VI_CSI_0_SW_RESET;
+		reset_reg[1] = pdata->aperture[0] +
+			T12_CSI_CSI_SW_SENSOR_A_RESET;
+		reset_reg[2] = pdata->aperture[0] +
+			T12_CSI_CSICIL_SW_SENSOR_A_RESET;
+		reset_reg[3] = pdata->aperture[0] +
+			T12_VI_CSI_0_CSI_IMAGE_DT;
+
+		writel(0, reset_reg[3]);
+		writel(0x1, reset_reg[2]);
+		writel(0x1, reset_reg[1]);
+		writel(0x1f, reset_reg[0]);
+
+		udelay(10);
+
+		writel(0, reset_reg[2]);
+		writel(0, reset_reg[1]);
+	}
+
+	err = nvhost_clk_get(pdev, "cilcd", &clk);
+	if (!err && tegra_is_clk_enabled(clk))
+		enabled = true;
+
+	err = nvhost_clk_get(pdev, "cile", &clk);
+	if (!err && tegra_is_clk_enabled(clk))
+		enabled = true;
+
+	if (enabled) {
+		reset_reg[0] = pdata->aperture[0] +
+			T12_VI_CSI_1_SW_RESET;
+		reset_reg[1] = pdata->aperture[0] +
+			T12_CSI_CSI_SW_SENSOR_B_RESET;
+		reset_reg[2] = pdata->aperture[0] +
+			T12_CSI_CSICIL_SW_SENSOR_B_RESET;
+		reset_reg[3] = pdata->aperture[0] +
+			T12_VI_CSI_1_CSI_IMAGE_DT;
+
+		writel(0, reset_reg[3]);
+		writel(0x1, reset_reg[2]);
+		writel(0x1, reset_reg[1]);
+		writel(0x1f, reset_reg[0]);
+
+		udelay(10);
+
+		writel(0, reset_reg[2]);
+		writel(0, reset_reg[1]);
+	}
+}
+
 void nvhost_vi_reset(struct platform_device *pdev)
 {
 	void __iomem *reset_reg[4];
@@ -418,4 +480,3 @@ void nvhost_vi_reset(struct platform_device *pdev)
 	for (i = 2; i > 0; i--)
 		writel(0, reset_reg[i]);
 }
-

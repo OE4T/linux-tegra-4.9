@@ -54,6 +54,8 @@ struct vi {
 extern const struct file_operations tegra_vi_ctrl_ops;
 int nvhost_vi_prepare_poweroff(struct platform_device *);
 int nvhost_vi_finalize_poweron(struct platform_device *);
+
+void nvhost_vi_reset_all(struct platform_device *);
 void nvhost_vi_reset(struct platform_device *);
 
 #endif

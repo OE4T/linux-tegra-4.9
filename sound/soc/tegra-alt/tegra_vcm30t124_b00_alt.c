@@ -51,6 +51,62 @@ struct tegra_vcm30t124 {
 #define MAX9485_MCLK_FREQ_225792 0x32
 #define MAX9485_MCLK_FREQ_245760 0x33
 
+enum {
+	DAI_LINK_APBIF0,
+	DAI_LINK_APBIF1,
+	DAI_LINK_APBIF2,
+	DAI_LINK_APBIF3,
+	DAI_LINK_APBIF4,
+	DAI_LINK_APBIF5,
+	DAI_LINK_APBIF6,
+	DAI_LINK_APBIF7,
+	DAI_LINK_APBIF8,
+	DAI_LINK_APBIF9,
+	DAI_LINK_AMX0_0,
+	DAI_LINK_AMX0_1,
+	DAI_LINK_AMX0_2,
+	DAI_LINK_AMX0_3,
+	DAI_LINK_AMX0,
+	DAI_LINK_AMX1_0,
+	DAI_LINK_AMX1_1,
+	DAI_LINK_AMX1_2,
+	DAI_LINK_AMX1_3,
+	DAI_LINK_AMX1,
+	DAI_LINK_ADX0,
+	DAI_LINK_ADX0_0,
+	DAI_LINK_ADX0_1,
+	DAI_LINK_ADX0_2,
+	DAI_LINK_ADX0_3,
+	DAI_LINK_ADX1,
+	DAI_LINK_ADX1_0,
+	DAI_LINK_ADX1_1,
+	DAI_LINK_ADX1_2,
+	DAI_LINK_ADX1_3,
+	DAI_LINK_DAM0_0,
+	DAI_LINK_DAM0,
+	DAI_LINK_DAM1_0,
+	DAI_LINK_DAM1,
+	DAI_LINK_DAM2_0,
+	DAI_LINK_DAM2,
+	DAI_LINK_AFC0_RX,
+	DAI_LINK_AFC0_TX,
+	DAI_LINK_AFC1_RX,
+	DAI_LINK_AFC1_TX,
+	DAI_LINK_AFC2_RX,
+	DAI_LINK_AFC2_TX,
+	DAI_LINK_AFC3_RX,
+	DAI_LINK_AFC3_TX,
+	DAI_LINK_AFC4_RX,
+	DAI_LINK_AFC4_TX,
+	DAI_LINK_AFC5_RX,
+	DAI_LINK_AFC5_TX,
+	DAI_LINK_I2S0_CIF,
+	DAI_LINK_I2S0_DAP, /* ak4618 link */
+	DAI_LINK_I2S4_CIF,
+	DAI_LINK_I2S4_DAP, /* ad1937 link */
+	NUM_DAI_LINKS,
+};
+
 static void set_max9485_clk(struct i2c_client *i2s, int mclk)
 {
 	char clk;
@@ -85,9 +141,10 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx = DAI_LINK_I2S0_DAP;
 	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[10].dai_link->params;
-	unsigned int fmt = card->rtd[10].dai_link->dai_fmt;
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
 	int srate, mclk, clk_out_rate;
 	int err;
 
@@ -146,14 +203,14 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[10].codec_dai,
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
 			0, clk_out_rate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "x codec_dai clock not set\n");
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[10].cpu_dai, 0, srate,
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
 					SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "x cpu_dai clock not set\n");
@@ -161,7 +218,7 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
-		snd_soc_dai_set_tdm_slot(card->rtd[10].codec_dai,
+		snd_soc_dai_set_tdm_slot(card->rtd[idx].codec_dai,
 					0, 0, dai_params->channels_min, 32);
 	} else {
 		dai_params->channels_min = params_channels(params);
@@ -180,9 +237,10 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int fmt = card->rtd[12].dai_link->dai_fmt;
+	unsigned int idx = DAI_LINK_I2S4_DAP;
+	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
 	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[12].dai_link->params;
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	int srate, mclk, clk_out_rate, val;
 	int err;
 
@@ -212,7 +270,7 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 
 	set_max9485_clk(machine->max9485_client, mclk);
 
-	err = snd_soc_dai_set_sysclk(card->rtd[12].codec_dai,
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
 			0, mclk,
 			SND_SOC_CLOCK_IN);
 	if (err < 0) {
@@ -220,7 +278,7 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[12].cpu_dai, 0, srate,
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
 					SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "y cpu_dai clock not set\n");
@@ -233,11 +291,11 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 	 * noise. To solve this, we need to disable one of them.
 	 */
 	if ((fmt & SND_SOC_DAIFMT_MASTER_MASK) == SND_SOC_DAIFMT_CBM_CFM) {
-		val = snd_soc_read(card->rtd[12].codec_dai->codec,
+		val = snd_soc_read(card->rtd[idx].codec_dai->codec,
 				AD193X_DAC_CTRL1);
 		val &= ~AD193X_DAC_LCR_MASTER;
 		val &= ~AD193X_DAC_BCLK_MASTER;
-		snd_soc_write(card->rtd[12].codec_dai->codec,
+		snd_soc_write(card->rtd[idx].codec_dai->codec,
 				AD193X_DAC_CTRL1, val);
 	}
 
@@ -405,7 +463,7 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int tegra_vcm30t124_amx0_dai_init(struct snd_soc_pcm_runtime *rtd)
+static int tegra_vcm30t124_amx_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	unsigned int tx_slot[32], i, j;
@@ -429,55 +487,7 @@ static int tegra_vcm30t124_amx0_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int tegra_vcm30t124_adx0_dai_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_dai *adx_dai = rtd->codec_dai;
-	unsigned int rx_slot[32], i, j;
-
-	for (i = 0, j = 0; i < 32; i += 8) {
-		rx_slot[i] = 0;
-		rx_slot[i + 1] = 0;
-		rx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
-		rx_slot[i + 3] = (j << 16) | (1 << 8) | 1;
-		rx_slot[i + 4] = 0;
-		rx_slot[i + 5] = 0;
-		rx_slot[i + 6] = (j << 16) | (2 << 8) | 0;
-		rx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
-		j++;
-	}
-
-	if (adx_dai->driver->ops->set_channel_map)
-		adx_dai->driver->ops->set_channel_map(adx_dai,
-							0, 0, 32, rx_slot);
-
-	return 0;
-}
-
-static int tegra_vcm30t124_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
-	unsigned int tx_slot[32], i, j;
-
-	for (i = 0, j = 0; i < 32; i += 8) {
-		tx_slot[i] = 0;
-		tx_slot[i + 1] = 0;
-		tx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
-		tx_slot[i + 3] = (j << 16) | (1 << 8) | 1;
-		tx_slot[i + 4] = 0;
-		tx_slot[i + 5] = 0;
-		tx_slot[i + 6] = (j << 16) | (2 << 8) | 0;
-		tx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
-		j++;
-	}
-
-	if (amx_dai->driver->ops->set_channel_map)
-		amx_dai->driver->ops->set_channel_map(amx_dai,
-							32, tx_slot, 0, 0);
-
-	return 0;
-}
-
-static int tegra_vcm30t124_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
+static int tegra_vcm30t124_adx_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	unsigned int rx_slot[32], i, j;
@@ -539,125 +549,371 @@ static const struct snd_soc_pcm_stream tdm_link_params = {
 	.channels_max = 8,
 };
 
-static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
-	{
-		/* 0 */
+static struct snd_soc_dai_link tegra_vcm30t124_links[NUM_DAI_LINKS] = {
+	[DAI_LINK_APBIF0] = {
 		.name = "APBIF0 CIF",
 		.stream_name = "APBIF0 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF0",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF0",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 1 */
+	[DAI_LINK_APBIF1] = {
 		.name = "APBIF1 CIF",
 		.stream_name = "APBIF1 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF1",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF1",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 2 */
+	[DAI_LINK_APBIF2] = {
 		.name = "APBIF2 CIF",
 		.stream_name = "APBIF2 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF2",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF2",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 3 */
+	[DAI_LINK_APBIF3] = {
 		.name = "APBIF3 CIF",
 		.stream_name = "APBIF3 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF3",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF3",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 4 */
+	[DAI_LINK_APBIF4] = {
 		.name = "APBIF4 CIF",
 		.stream_name = "APBIF4 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF4",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF4",
 		.ops = &tegra_vcm30t124_ak4618_ops,
 		.ignore_pmdown_time = 1,
 	},
-
-	{
-		/* 5 */
+	[DAI_LINK_APBIF5] = {
 		.name = "APBIF5 CIF",
 		.stream_name = "APBIF5 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF5",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF5",
 		.ops = &tegra_vcm30t124_ak4618_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 6 */
+	[DAI_LINK_APBIF6] = {
 		.name = "APBIF6 CIF",
 		.stream_name = "APBIF6 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF6",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF6",
 		.ops = &tegra_vcm30t124_ak4618_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 7 */
+	[DAI_LINK_APBIF7] = {
 		.name = "APBIF7 CIF",
 		.stream_name = "APBIF7 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF7",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF7",
 		.ops = &tegra_vcm30t124_ak4618_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 8 */
+	[DAI_LINK_APBIF8] = {
 		.name = "APBIF8 CIF",
 		.stream_name = "APBIF8 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF8",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF8",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 9 */
+	[DAI_LINK_APBIF9] = {
 		.name = "APBIF9 CIF",
 		.stream_name = "APBIF9 CIF",
-		/* .cpu_of_node = AHUB APBIF */
 		.cpu_dai_name = "APBIF9",
-		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "APBIF9",
 		.ops = &tegra_vcm30t124_ad1937_ops,
 		.ignore_pmdown_time = 1,
 	},
-	{
-		/* 10 */
+	[DAI_LINK_AMX0_0] = {
+		.name = "AMX0 IN0",
+		.stream_name = "AMX0 IN",
+		.cpu_dai_name = "AMX0-0",
+		.codec_dai_name = "IN0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX0_1] = {
+		.name = "AMX0 IN1",
+		.stream_name = "AMX0 IN",
+		.cpu_dai_name = "AMX0-1",
+		.codec_dai_name = "IN1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX0_2] = {
+		.name = "AMX0 IN2",
+		.stream_name = "AMX0 IN",
+		.cpu_dai_name = "AMX0-2",
+		.codec_dai_name = "IN2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX0_3] = {
+		.name = "AMX0 IN3",
+		.stream_name = "AMX0 IN",
+		.cpu_dai_name = "AMX0-3",
+		.codec_dai_name = "IN3",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX0] = {
+		.name = "AMX0 OUT",
+		.stream_name = "AMX0 OUT",
+		.cpu_dai_name = "OUT",
+		.codec_dai_name = "AMX0",
+		.init = tegra_vcm30t124_amx_dai_init,
+		.params = &tdm_link_params,
+	},
+	[DAI_LINK_AMX1_0] = {
+		.name = "AMX1 IN0",
+		.stream_name = "AMX1 IN",
+		.cpu_dai_name = "AMX1-0",
+		.codec_dai_name = "IN0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX1_1] = {
+		.name = "AMX1 IN1",
+		.stream_name = "AMX1 IN",
+		.cpu_dai_name = "AMX1-1",
+		.codec_dai_name = "IN1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX1_2] = {
+		.name = "AMX1 IN2",
+		.stream_name = "AMX1 IN",
+		.cpu_dai_name = "AMX1-2",
+		.codec_dai_name = "IN2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX1_3] = {
+		.name = "AMX1 IN3",
+		.stream_name = "AMX1 IN",
+		.cpu_dai_name = "AMX1-3",
+		.codec_dai_name = "IN3",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AMX1] = {
+		.name = "AMX1 OUT",
+		.stream_name = "AMX1 OUT",
+		.cpu_dai_name = "OUT",
+		.codec_dai_name = "AMX1",
+		.init = tegra_vcm30t124_amx_dai_init,
+		.params = &tdm_link_params,
+	},
+	[DAI_LINK_ADX0] = {
+		.name = "ADX0 CIF",
+		.stream_name = "ADX0 IN",
+		.cpu_dai_name = "ADX0",
+		.codec_dai_name = "IN",
+		.init = tegra_vcm30t124_adx_dai_init,
+		.params = &tdm_link_params,
+	},
+	[DAI_LINK_ADX0_0] = {
+		.name = "ADX0 OUT0",
+		.stream_name = "ADX0 OUT",
+		.cpu_dai_name = "OUT0",
+		.codec_dai_name = "ADX0-0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX0_1] = {
+		.name = "ADX0 OUT1",
+		.stream_name = "ADX0 OUT",
+		.cpu_dai_name = "OUT1",
+		.codec_dai_name = "ADX0-1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX0_2] = {
+		.name = "ADX0 OUT2",
+		.stream_name = "ADX0 OUT",
+		.cpu_dai_name = "OUT2",
+		.codec_dai_name = "ADX0-2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX0_3] = {
+		.name = "ADX0 OUT3",
+		.stream_name = "ADX0 OUT",
+		.cpu_dai_name = "OUT3",
+		.codec_dai_name = "ADX0-3",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX1] = {
+		.name = "ADX1 CIF",
+		.stream_name = "ADX1 IN",
+		.cpu_dai_name = "ADX1",
+		.codec_dai_name = "IN",
+		.init = tegra_vcm30t124_adx_dai_init,
+		.params = &tdm_link_params,
+	},
+	[DAI_LINK_ADX1_0] = {
+		.name = "ADX1 OUT0",
+		.stream_name = "ADX1 OUT",
+		.cpu_dai_name = "OUT0",
+		.codec_dai_name = "ADX1-0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX1_1] = {
+		.name = "ADX1 OUT1",
+		.stream_name = "ADX1 OUT",
+		.cpu_dai_name = "OUT1",
+		.codec_dai_name = "ADX1-1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX1_2] = {
+		.name = "ADX1 OUT2",
+		.stream_name = "ADX1 OUT",
+		.cpu_dai_name = "OUT2",
+		.codec_dai_name = "ADX1-2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_ADX1_3] = {
+		.name = "ADX1 OUT3",
+		.stream_name = "ADX1 OUT",
+		.cpu_dai_name = "OUT3",
+		.codec_dai_name = "ADX1-3",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM0_0] = {
+		.name = "DAM0 IN0",
+		.stream_name = "DAM0 IN0",
+		.cpu_dai_name = "DAM0-0",
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM0] = {
+		.name = "DAM0 OUT",
+		.stream_name = "DAM0 OUT",
+		.cpu_dai_name = "OUT",
+		.codec_dai_name = "DAM0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM1_0] = {
+		.name = "DAM1 IN0",
+		.stream_name = "DAM1 IN0",
+		.cpu_dai_name = "DAM1-0",
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM1] = {
+		.name = "DAM1 OUT",
+		.stream_name = "DAM1 OUT",
+		.cpu_dai_name = "OUT",
+		.codec_dai_name = "DAM1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM2_0] = {
+		.name = "DAM2 IN0",
+		.stream_name = "DAM2 IN0",
+		.cpu_dai_name = "DAM2-0",
+		.codec_dai_name = "IN0",
+		.init = tegra_vcm30t124_dam_init,
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_DAM2] = {
+		.name = "DAM2 OUT",
+		.stream_name = "DAM2 OUT",
+		.cpu_dai_name = "OUT",
+		.codec_dai_name = "DAM2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC0_RX] = {
+		.name = "AFC0 RX",
+		.stream_name = "AFC0 RX",
+		.cpu_dai_name = "AFC0",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC0_TX] = {
+		.name = "AFC0 TX",
+		.stream_name = "AFC0 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC0",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC1_RX] = {
+		.name = "AFC1 RX",
+		.stream_name = "AFC1 RX",
+		.cpu_dai_name = "AFC1",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC1_TX] = {
+		.name = "AFC1 TX",
+		.stream_name = "AFC1 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC1",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC2_RX] = {
+		.name = "AFC2 RX",
+		.stream_name = "AFC2 RX",
+		.cpu_dai_name = "AFC2",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC2_TX] = {
+		.name = "AFC2 TX",
+		.stream_name = "AFC2 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC2",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC3_RX] = {
+		.name = "AFC3 RX",
+		.stream_name = "AFC3 RX",
+		.cpu_dai_name = "AFC3",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC3_TX] = {
+		.name = "AFC3 TX",
+		.stream_name = "AFC3 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC3",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC4_RX] = {
+		.name = "AFC4 RX",
+		.stream_name = "AFC4 RX",
+		.cpu_dai_name = "AFC4",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC4_TX] = {
+		.name = "AFC4 TX",
+		.stream_name = "AFC4 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC4",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC5_RX] = {
+		.name = "AFC5 RX",
+		.stream_name = "AFC5 RX",
+		.cpu_dai_name = "AFC5",
+		.codec_dai_name = "AFC IN",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_AFC5_TX] = {
+		.name = "AFC5 TX",
+		.stream_name = "AFC5 TX",
+		.cpu_dai_name = "AFC OUT",
+		.codec_dai_name = "AFC5",
+		.params = &amx_adx_link_params,
+	},
+	[DAI_LINK_I2S0_CIF] = {
+		.name = "I2S0 RX",
+		.stream_name = "I2S0 RX",
+		.cpu_dai_name = "I2S0",
+		.codec_dai_name = "CIF",
+		.params = &tdm_link_params,
+	},
+	[DAI_LINK_I2S0_DAP] = {
 		.name = "ak4618",
 		.stream_name = "Playback",
-		/* .cpu_of_node = I2S0 */
 		.cpu_dai_name = "DAP",
-		/* .codec_of_node = WM8731 */
 		.codec_dai_name = "ak4618-hifi",
 		.init = tegra_vcm30t124_ak4618_init,
 		.params = &tdm_link_params,
@@ -665,23 +921,17 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 			   SND_SOC_DAIFMT_NB_NF |
 			   SND_SOC_DAIFMT_CBS_CFS,
 	},
-	{
-		/* 11 */
-		.name = "I2S0 CIF",
-		.stream_name = "I2S0 CIF",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "I2S0",
-		/* .codec_of_node = I2S0 */
+	[DAI_LINK_I2S4_CIF] = {
+		.name = "I2S4 RX",
+		.stream_name = "I2S4 RX",
+		.cpu_dai_name = "I2S4",
 		.codec_dai_name = "CIF",
 		.params = &tdm_link_params,
 	},
-	{
-		/* 12 */
+	[DAI_LINK_I2S4_DAP] = {
 		.name = "ad1937",
 		.stream_name = "Playback",
-		/* .cpu_of_node = I2S4 */
 		.cpu_dai_name = "DAP",
-		/* .codec_of_node = AD1937 */
 		.codec_dai_name = "ad193x-hifi",
 		.init = tegra_vcm30t124_ad1937_init,
 		.params = &tdm_link_params,
@@ -689,413 +939,20 @@ static struct snd_soc_dai_link tegra_vcm30t124_links[] = {
 			   SND_SOC_DAIFMT_NB_NF |
 			   SND_SOC_DAIFMT_CBM_CFM,
 	},
-	{
-		/* 13 */
-		.name = "I2S4 CIF",
-		.stream_name = "I2S4 CIF",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "I2S4",
-		/* .codec_of_node = I2S4 */
-		.codec_dai_name = "CIF",
-		.params = &tdm_link_params,
-	},
-	{
-		/* 14 */
-		.name = "AMX0 IN0",
-		.stream_name = "AMX0 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX0-0",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 15 */
-		.name = "AMX0 IN1",
-		.stream_name = "AMX0 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX0-1",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 16 */
-		.name = "AMX0 IN2",
-		.stream_name = "AMX0 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX0-2",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 17 */
-		.name = "AMX0 IN3",
-		.stream_name = "AMX0 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX0-3",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN3",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 18 */
-		.name = "AMX0 CIF",
-		.stream_name = "AMX0 CIF",
-		/* .cpu_of_node = AMX0 OUT */
-		.cpu_dai_name = "OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AMX0",
-		.init = tegra_vcm30t124_amx0_dai_init,
-		.params = &tdm_link_params,
-	},
-	{
-		/* 19 */
-		.name = "ADX0 CIF",
-		.stream_name = "ADX0 IN",
-		.cpu_dai_name = "ADX0",
-		.codec_dai_name = "IN",
-		.init = tegra_vcm30t124_adx0_dai_init,
-		.params = &tdm_link_params,
-	},
-	{
-		/* 20 */
-		.name = "ADX0 OUT0",
-		.stream_name = "ADX0 OUT",
-		.cpu_dai_name = "OUT0",
-		.codec_dai_name = "ADX0-0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 21 */
-		.name = "ADX0 OUT1",
-		.stream_name = "ADX0 OUT",
-		.cpu_dai_name = "OUT1",
-		.codec_dai_name = "ADX0-1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 22 */
-		.name = "ADX0 OUT2",
-		.stream_name = "ADX0 OUT",
-		.cpu_dai_name = "OUT2",
-		.codec_dai_name = "ADX0-2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 23 */
-		.name = "ADX0 OUT3",
-		.stream_name = "ADX0 OUT",
-		.cpu_dai_name = "OUT3",
-		.codec_dai_name = "ADX0-3",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 24 */
-		.name = "AMX1 IN0",
-		.stream_name = "AMX1 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX1-0",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 25 */
-		.name = "AMX1 IN1",
-		.stream_name = "AMX1 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX1-1",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 26 */
-		.name = "AMX1 IN2",
-		.stream_name = "AMX1 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX1-2",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 27 */
-		.name = "AMX1 IN3",
-		.stream_name = "AMX1 IN",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AMX1-3",
-		/* .codec_of_node = AMX0 */
-		.codec_dai_name = "IN3",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 28 */
-		.name = "AMX1 CIF",
-		.stream_name = "AMX1 CIF",
-		/* .cpu_of_node = AMX0 OUT */
-		.cpu_dai_name = "OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AMX1",
-		.init = tegra_vcm30t124_amx1_dai_init,
-		.params = &tdm_link_params,
-	},
-	{
-		/* 29 */
-		.name = "ADX1 CIF",
-		.stream_name = "ADX1 IN",
-		.cpu_dai_name = "ADX1",
-		.codec_dai_name = "IN",
-		.init = tegra_vcm30t124_adx1_dai_init,
-		.params = &tdm_link_params,
-	},
-	{
-		/* 30 */
-		.name = "ADX1 OUT0",
-		.stream_name = "ADX1 OUT",
-		.cpu_dai_name = "OUT0",
-		.codec_dai_name = "ADX1-0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 31 */
-		.name = "ADX1 OUT1",
-		.stream_name = "ADX1 OUT",
-		.cpu_dai_name = "OUT1",
-		.codec_dai_name = "ADX1-1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 32 */
-		.name = "ADX1 OUT2",
-		.stream_name = "ADX1 OUT",
-		.cpu_dai_name = "OUT2",
-		.codec_dai_name = "ADX1-2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 33 */
-		.name = "ADX1 OUT3",
-		.stream_name = "ADX1 OUT",
-		.cpu_dai_name = "OUT3",
-		.codec_dai_name = "ADX1-3",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 34 */
-		.name = "DAM0 IN0",
-		.stream_name = "DAM0 IN0",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "DAM0-0",
-		/* .codec_of_node = DAM0 */
-		.codec_dai_name = "IN0",
-		.init = tegra_vcm30t124_dam_init,
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 35 */
-		.name = "DAM0 OUT",
-		.stream_name = "DAM0 OUT",
-		/* .cpu_of_node = DAM0 OUT */
-		.cpu_dai_name = "OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "DAM0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 36 */
-		.name = "DAM1 IN0",
-		.stream_name = "DAM1 IN0",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "DAM1-0",
-		/* .codec_of_node = DAM0 */
-		.codec_dai_name = "IN0",
-		.init = tegra_vcm30t124_dam_init,
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 37 */
-		.name = "DAM1 OUT",
-		.stream_name = "DAM1 OUT",
-		/* .cpu_of_node = DAM1 OUT */
-		.cpu_dai_name = "OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "DAM1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 38 */
-		.name = "DAM2 IN0",
-		.stream_name = "DAM2 IN0",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "DAM2-0",
-		/* .codec_of_node = DAM0 */
-		.codec_dai_name = "IN0",
-		.init = tegra_vcm30t124_dam_init,
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 39 */
-		.name = "DAM2 OUT",
-		.stream_name = "DAM2 OUT",
-		/* .cpu_of_node = DAM2 OUT */
-		.cpu_dai_name = "OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "DAM2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 40 */
-		.name = "AFC0 RX",
-		.stream_name = "AFC0 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC0",
-		/* .codec_of_node = AFC0 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 41 */
-		.name = "AFC0 TX",
-		.stream_name = "AFC0 TX",
-		/* .cpu_of_node = AFC0 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC0",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 42 */
-		.name = "AFC1 RX",
-		.stream_name = "AFC1 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC1",
-		/* .codec_of_node = AFC1 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 43 */
-		.name = "AFC1 TX",
-		.stream_name = "AFC1 TX",
-		/* .cpu_of_node = AFC1 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC1",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 44 */
-		.name = "AFC2 RX",
-		.stream_name = "AFC2 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC2",
-		/* .codec_of_node = AFC2 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 45 */
-		.name = "AFC2 TX",
-		.stream_name = "AFC2 TX",
-		/* .cpu_of_node = AFC2 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC2",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 46 */
-		.name = "AFC3 RX",
-		.stream_name = "AFC3 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC3",
-		/* .codec_of_node = AFC3 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 47 */
-		.name = "AFC3 TX",
-		.stream_name = "AFC3 TX",
-		/* .cpu_of_node = AFC3 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC3",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 48 */
-		.name = "AFC4 RX",
-		.stream_name = "AFC4 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC4",
-		/* .codec_of_node = AFC4 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 49 */
-		.name = "AFC4 TX",
-		.stream_name = "AFC4 TX",
-		/* .cpu_of_node = AFC4 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC4",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 50 */
-		.name = "AFC5 RX",
-		.stream_name = "AFC5 RX",
-		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "AFC5",
-		/* .codec_of_node = AFC5 IN */
-		.codec_dai_name = "AFC IN",
-		.params = &amx_adx_link_params,
-	},
-	{
-		/* 51 */
-		.name = "AFC5 TX",
-		.stream_name = "AFC5 TX",
-		/* .cpu_of_node = AFC5 OUT */
-		.cpu_dai_name = "AFC OUT",
-		/* .codec_of_node = AHUB XBAR */
-		.codec_dai_name = "AFC5",
-		.params = &amx_adx_link_params,
-	},
 };
 
 static struct snd_soc_codec_conf ad193x_codec_conf[] = {
-	{
-		.dev_name = "ak4618.0-0010",
-		.name_prefix = "x",
-	},
-	{
-		.dev_name = "ad193x.0-0007",
-		.name_prefix = "y",
-	},
-	{
-		.dev_name = "tegra30-i2s.0",
-		.name_prefix = "I2S0",
-	},
-	{
-		.dev_name = "tegra30-i2s.4",
-		.name_prefix = "I2S4",
-	},
 	{
 		.dev_name = "tegra124-amx.0",
 		.name_prefix = "AMX0",
 	},
 	{
-		.dev_name = "tegra124-adx.0",
-		.name_prefix = "ADX0",
-	},
-	{
 		.dev_name = "tegra124-amx.1",
 		.name_prefix = "AMX1",
+	},
+	{
+		.dev_name = "tegra124-adx.0",
+		.name_prefix = "ADX0",
 	},
 	{
 		.dev_name = "tegra124-adx.1",
@@ -1137,6 +994,22 @@ static struct snd_soc_codec_conf ad193x_codec_conf[] = {
 		.dev_name = "tegra124-afc.5",
 		.name_prefix = "AFC5",
 	},
+	{
+		.dev_name = "tegra30-i2s.0",
+		.name_prefix = "I2S0",
+	},
+	{
+		.dev_name = "ak4618.0-0010",
+		.name_prefix = "x",
+	},
+	{
+		.dev_name = "tegra30-i2s.4",
+		.name_prefix = "I2S4",
+	},
+	{
+		.dev_name = "ad193x.0-0007",
+		.name_prefix = "y",
+	},
 };
 
 static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
@@ -1154,10 +1027,9 @@ static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
 
 static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
 	struct snd_soc_card *card = &snd_soc_tegra_vcm30t124;
 	struct tegra_vcm30t124 *machine;
-	int ret, i;
+	int ret = 0, i;
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_vcm30t124),
 			       GFP_KERNEL);
@@ -1171,312 +1043,89 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
 
-	if (np) {
-		ret = snd_soc_of_parse_card_name(card, "nvidia,model");
-		if (ret)
-			goto err;
-
-		ret = snd_soc_of_parse_audio_routing(card,
-					"nvidia,audio-routing");
-		if (ret)
-			goto err;
-
-		machine->gpio_dap_direction = of_get_named_gpio(np,
-					"nvidia,dap_direction_gpios", 0);
-		if (!gpio_is_valid(machine->gpio_dap_direction)) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,dap_direction_gpios' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		ret = of_property_read_u32(np, "nvidia,dap_d_en_gpios",
-					&machine->gpio_dap_d_en);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,dap_d_en_gpios' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[10].codec_of_node = of_parse_phandle(np,
-					"nvidia,audio-codec-x", 0);
-		if (!tegra_vcm30t124_links[10].codec_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,audio-codec-x' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[10].cpu_of_node = of_parse_phandle(np,
-					"nvidia,i2s-controller-1", 0);
-		if (!tegra_vcm30t124_links[10].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,i2s-controller-1' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		of_property_read_string(np, "nvidia,xbar",
-					&tegra_vcm30t124_links[11].cpu_name);
-		if (!tegra_vcm30t124_links[11].cpu_name) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,xbar' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[11].codec_of_node =
-					tegra_vcm30t124_links[10].cpu_of_node;
-
-		tegra_vcm30t124_links[12].codec_of_node = of_parse_phandle(np,
-					"nvidia,audio-codec-y", 0);
-		if (!tegra_vcm30t124_links[12].codec_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,audio-codec-y' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[12].cpu_of_node = of_parse_phandle(np,
-					"nvidia,i2s-controller-2", 0);
-		if (!tegra_vcm30t124_links[12].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,i2s-controller-2' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[13].cpu_name =
-					tegra_vcm30t124_links[11].cpu_name;
-
-		tegra_vcm30t124_links[13].codec_of_node =
-					tegra_vcm30t124_links[12].cpu_of_node;
-
-		tegra_vcm30t124_links[18].cpu_of_node = of_parse_phandle(np,
-					"nvidia,amx0", 0);
-		if (!tegra_vcm30t124_links[18].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,amx0' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[28].cpu_of_node = of_parse_phandle(np,
-					"nvidia,amx1", 0);
-		if (!tegra_vcm30t124_links[28].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,amx1' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[18].codec_name =
-					tegra_vcm30t124_links[13].cpu_name;
-		tegra_vcm30t124_links[28].codec_name =
-					tegra_vcm30t124_links[13].cpu_name;
-
-
-		tegra_vcm30t124_links[19].codec_of_node = of_parse_phandle(np,
-					"nvidia,adx0", 0);
-		if (!tegra_vcm30t124_links[19].codec_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,adx0' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[29].codec_of_node = of_parse_phandle(np,
-					"nvidia,adx1", 0);
-		if (!tegra_vcm30t124_links[29].codec_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,adx1' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[19].cpu_name =
-					tegra_vcm30t124_links[13].cpu_name;
-		tegra_vcm30t124_links[29].cpu_name =
-					tegra_vcm30t124_links[13].cpu_name;
-
-		tegra_vcm30t124_links[0].cpu_of_node = of_parse_phandle(np,
-					"nvidia,apbif", 0);
-		if (!tegra_vcm30t124_links[0].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,apbif' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
-		tegra_vcm30t124_links[0].codec_name =
-				tegra_vcm30t124_links[11].cpu_name;
-		tegra_vcm30t124_links[0].platform_of_node =
-				tegra_vcm30t124_links[0].cpu_of_node;
-
-		for (i = 1; i < 10; i++) {
-			tegra_vcm30t124_links[i].cpu_of_node =
-				tegra_vcm30t124_links[0].cpu_of_node;
-			tegra_vcm30t124_links[i].codec_name =
-					tegra_vcm30t124_links[11].cpu_name;
-			tegra_vcm30t124_links[i].platform_of_node =
-					tegra_vcm30t124_links[0].cpu_of_node;
-		}
-
-		for (i = 14; i < 18; i++) {
-			tegra_vcm30t124_links[i].codec_of_node =
-				tegra_vcm30t124_links[18].cpu_of_node;
-			tegra_vcm30t124_links[i].cpu_name =
-				tegra_vcm30t124_links[18].codec_name;
-		}
-
-		for (i = 20; i < 24; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-				tegra_vcm30t124_links[19].cpu_name;
-			tegra_vcm30t124_links[i].cpu_of_node =
-				tegra_vcm30t124_links[19].codec_of_node;
-		}
-
-		for (i = 24; i < 28; i++) {
-			tegra_vcm30t124_links[i].codec_of_node =
-				tegra_vcm30t124_links[28].cpu_of_node;
-			tegra_vcm30t124_links[i].cpu_name =
-				tegra_vcm30t124_links[28].codec_name;
-		}
-
-		for (i = 30; i < 34; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-				tegra_vcm30t124_links[29].cpu_name;
-			tegra_vcm30t124_links[i].cpu_of_node =
-				tegra_vcm30t124_links[29].codec_of_node;
-		}
-	} else {
-		tegra_vcm30t124_links[0].cpu_name = "tegra30-ahub-apbif";
-		tegra_vcm30t124_links[0].cpu_of_node = NULL;
-
-		tegra_vcm30t124_links[10].codec_name = "ak4618.0-0010";
-		tegra_vcm30t124_links[10].cpu_name = "tegra30-i2s.0";
-		tegra_vcm30t124_links[10].cpu_of_node = NULL;
-		tegra_vcm30t124_links[10].codec_of_node = NULL;
-
-		tegra_vcm30t124_links[11].codec_name =
-			tegra_vcm30t124_links[10].cpu_name;
-		tegra_vcm30t124_links[11].cpu_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[11].cpu_of_node = NULL;
-		tegra_vcm30t124_links[11].codec_of_node = NULL;
-
-		tegra_vcm30t124_links[12].codec_name = "ad193x.0-0007";
-		tegra_vcm30t124_links[12].cpu_name = "tegra30-i2s.4";
-		tegra_vcm30t124_links[12].cpu_of_node = NULL;
-		tegra_vcm30t124_links[12].codec_of_node = NULL;
-
-		tegra_vcm30t124_links[13].codec_name =
-			tegra_vcm30t124_links[12].cpu_name;
-		tegra_vcm30t124_links[13].cpu_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[13].cpu_of_node = NULL;
-		tegra_vcm30t124_links[13].codec_of_node = NULL;
-
-		for (i = 14; i < 18; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-						"tegra124-amx.0";
-			tegra_vcm30t124_links[i].cpu_name =
-						"tegra30-ahub-xbar";
-		}
-
-		tegra_vcm30t124_links[18].codec_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[18].cpu_name = "tegra124-amx.0";
-		tegra_vcm30t124_links[18].cpu_of_node = NULL;
-		tegra_vcm30t124_links[18].codec_of_node = NULL;
-
-		tegra_vcm30t124_links[19].codec_name = "tegra124-adx.0";
-		tegra_vcm30t124_links[19].cpu_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[19].cpu_of_node = NULL;
-		tegra_vcm30t124_links[19].codec_of_node = NULL;
-
-		for (i = 20; i < 24; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-						"tegra30-ahub-xbar";
-			tegra_vcm30t124_links[i].cpu_name = "tegra124-adx.0";
-			tegra_vcm30t124_links[i].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i].codec_of_node = NULL;
-		}
-
-		for (i = 24; i < 28; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-						"tegra124-amx.1";
-			tegra_vcm30t124_links[i].cpu_name =
-						"tegra30-ahub-xbar";
-		}
-
-		tegra_vcm30t124_links[28].codec_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[28].cpu_name = "tegra124-amx.1";
-		tegra_vcm30t124_links[28].cpu_of_node = NULL;
-		tegra_vcm30t124_links[28].codec_of_node = NULL;
-
-		tegra_vcm30t124_links[29].codec_name = "tegra124-adx.1";
-		tegra_vcm30t124_links[29].cpu_name = "tegra30-ahub-xbar";
-		tegra_vcm30t124_links[29].cpu_of_node = NULL;
-		tegra_vcm30t124_links[29].codec_of_node = NULL;
-
-		for (i = 30; i < 34; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-						"tegra30-ahub-xbar";
-			tegra_vcm30t124_links[i].cpu_name = "tegra124-adx.1";
-			tegra_vcm30t124_links[i].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i].codec_of_node = NULL;
-		}
-
-		for (i = 1; i < 10; i++)
-			tegra_vcm30t124_links[i].cpu_name =
-				tegra_vcm30t124_links[0].cpu_name;
-		for (i = 0; i < 10; i++) {
-			tegra_vcm30t124_links[i].codec_name =
-				tegra_vcm30t124_links[11].cpu_name;
-			tegra_vcm30t124_links[i].platform_name =
-				tegra_vcm30t124_links[i].cpu_name;
-		}
-
-		/* DAM related dai-links */
-		tegra_vcm30t124_links[34].codec_name = "tegra30-dam.0";
-		tegra_vcm30t124_links[36].codec_name = "tegra30-dam.1";
-		tegra_vcm30t124_links[38].codec_name = "tegra30-dam.2";
-
-		for (i = 34; i < 39; i = i + 2) {
-			tegra_vcm30t124_links[i].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i].codec_of_node = NULL;
-			tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
-			tegra_vcm30t124_links[i+1].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i+1].codec_of_node = NULL;
-			tegra_vcm30t124_links[i+1].codec_name =
-				tegra_vcm30t124_links[i].cpu_name;
-			tegra_vcm30t124_links[i+1].cpu_name =
-				tegra_vcm30t124_links[i].codec_name;
-		}
-
-		/* AFC related dai-links */
-		tegra_vcm30t124_links[40].codec_name = "tegra124-afc.0";
-		tegra_vcm30t124_links[42].codec_name = "tegra124-afc.1";
-		tegra_vcm30t124_links[44].codec_name = "tegra124-afc.2";
-		tegra_vcm30t124_links[46].codec_name = "tegra124-afc.3";
-		tegra_vcm30t124_links[48].codec_name = "tegra124-afc.4";
-		tegra_vcm30t124_links[50].codec_name = "tegra124-afc.5";
-
-		for (i = 40; i < 51; i = i + 2) {
-			tegra_vcm30t124_links[i].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i].codec_of_node = NULL;
-			tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
-			tegra_vcm30t124_links[i+1].cpu_of_node = NULL;
-			tegra_vcm30t124_links[i+1].codec_of_node = NULL;
-			tegra_vcm30t124_links[i+1].codec_name =
-				tegra_vcm30t124_links[i].cpu_name;
-			tegra_vcm30t124_links[i+1].cpu_name =
-				tegra_vcm30t124_links[i].codec_name;
-		}
-
-		machine->gpio_dap_direction = GPIO_PR0;
-		card->dapm_routes = tegra_vcm30t124_audio_map;
-		card->num_dapm_routes = ARRAY_SIZE(tegra_vcm30t124_audio_map);
+	/* APBIF connections */
+	for (i = DAI_LINK_APBIF0; i <= DAI_LINK_APBIF9; i++) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-apbif";
+		tegra_vcm30t124_links[i].codec_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[i].platform_name = "tegra30-ahub-apbif";
 	}
+
+	/* AMX0 connections */
+	for (i = DAI_LINK_AMX0_0; i <= DAI_LINK_AMX0_3; i++) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[i].codec_name = "tegra124-amx.0";
+	}
+	tegra_vcm30t124_links[DAI_LINK_AMX0].cpu_name = "tegra124-amx.0";
+	tegra_vcm30t124_links[DAI_LINK_AMX0].codec_name = "tegra30-ahub-xbar";
+
+	/* AMX1 connections */
+	for (i = DAI_LINK_AMX1_0; i <= DAI_LINK_AMX1_3; i++) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[i].codec_name = "tegra124-amx.1";
+	}
+	tegra_vcm30t124_links[DAI_LINK_AMX1].cpu_name = "tegra124-amx.1";
+	tegra_vcm30t124_links[DAI_LINK_AMX1].codec_name = "tegra30-ahub-xbar";
+
+	/* ADX0 connections */
+	tegra_vcm30t124_links[DAI_LINK_ADX0].cpu_name = "tegra30-ahub-xbar";
+	tegra_vcm30t124_links[DAI_LINK_ADX0].codec_name = "tegra124-adx.0";
+	for (i = DAI_LINK_ADX0_0; i <= DAI_LINK_ADX0_3; i++) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra124-adx.0";
+		tegra_vcm30t124_links[i].codec_name = "tegra30-ahub-xbar";
+	}
+
+	/* ADX1 connections */
+	tegra_vcm30t124_links[DAI_LINK_ADX1].cpu_name = "tegra30-ahub-xbar";
+	tegra_vcm30t124_links[DAI_LINK_ADX1].codec_name = "tegra124-adx.1";
+	for (i = DAI_LINK_ADX1_0; i <= DAI_LINK_ADX1_3; i++) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra124-adx.1";
+		tegra_vcm30t124_links[i].codec_name = "tegra30-ahub-xbar";
+	}
+
+	/* DAM connections */
+	tegra_vcm30t124_links[DAI_LINK_DAM0_0].codec_name = "tegra30-dam.0";
+	tegra_vcm30t124_links[DAI_LINK_DAM1_0].codec_name = "tegra30-dam.1";
+	tegra_vcm30t124_links[DAI_LINK_DAM2_0].codec_name = "tegra30-dam.2";
+	for (i = DAI_LINK_DAM0_0; i < DAI_LINK_DAM2; i = i + 2) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[i+1].codec_name =
+			tegra_vcm30t124_links[i].cpu_name;
+		tegra_vcm30t124_links[i+1].cpu_name =
+			tegra_vcm30t124_links[i].codec_name;
+	}
+
+	/* AFC connections */
+	tegra_vcm30t124_links[DAI_LINK_AFC0_RX].codec_name = "tegra124-afc.0";
+	tegra_vcm30t124_links[DAI_LINK_AFC1_RX].codec_name = "tegra124-afc.1";
+	tegra_vcm30t124_links[DAI_LINK_AFC2_RX].codec_name = "tegra124-afc.2";
+	tegra_vcm30t124_links[DAI_LINK_AFC3_RX].codec_name = "tegra124-afc.3";
+	tegra_vcm30t124_links[DAI_LINK_AFC4_RX].codec_name = "tegra124-afc.4";
+	tegra_vcm30t124_links[DAI_LINK_AFC5_RX].codec_name = "tegra124-afc.5";
+	for (i = DAI_LINK_AFC0_RX; i < DAI_LINK_AFC5_TX; i = i + 2) {
+		tegra_vcm30t124_links[i].cpu_name = "tegra30-ahub-xbar";
+		tegra_vcm30t124_links[i+1].codec_name =
+			tegra_vcm30t124_links[i].cpu_name;
+		tegra_vcm30t124_links[i+1].cpu_name =
+			tegra_vcm30t124_links[i].codec_name;
+	}
+
+	/* I2S0 connections */
+	tegra_vcm30t124_links[DAI_LINK_I2S0_CIF].cpu_name =
+		"tegra30-ahub-xbar";
+	tegra_vcm30t124_links[DAI_LINK_I2S0_CIF].codec_name = "tegra30-i2s.0";
+	tegra_vcm30t124_links[DAI_LINK_I2S0_DAP].cpu_name = "tegra30-i2s.0";
+	tegra_vcm30t124_links[DAI_LINK_I2S0_DAP].codec_name = "ak4618.0-0010";
+
+	/* I2S4 connections */
+	tegra_vcm30t124_links[DAI_LINK_I2S4_CIF].cpu_name =
+		"tegra30-ahub-xbar";
+	tegra_vcm30t124_links[DAI_LINK_I2S4_CIF].codec_name = "tegra30-i2s.4";
+	tegra_vcm30t124_links[DAI_LINK_I2S4_DAP].cpu_name = "tegra30-i2s.4";
+	tegra_vcm30t124_links[DAI_LINK_I2S4_DAP].codec_name = "ad193x.0-0007";
+
+	machine->gpio_dap_direction = GPIO_PR0;
+	card->dapm_routes = tegra_vcm30t124_audio_map;
+	card->num_dapm_routes = ARRAY_SIZE(tegra_vcm30t124_audio_map);
 
 	machine->max9485_client = i2c_new_device(i2c_get_adapter(0),
 						pdev->dev.platform_data);

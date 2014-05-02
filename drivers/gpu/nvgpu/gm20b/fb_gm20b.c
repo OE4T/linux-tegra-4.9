@@ -41,8 +41,9 @@ static void gm20b_init_uncompressed_kind_map(void)
 
 static bool gm20b_kind_supported(u8 k)
 {
-	return (k >= gmmu_pte_kind_s8_v() &&
-		 k <= gmmu_pte_kind_s8_2s_v());
+	return k == gmmu_pte_kind_smsked_message_v()
+		|| (k >= gmmu_pte_kind_s8_v() &&
+		    k <= gmmu_pte_kind_s8_2s_v());
 }
 
 static bool gm20b_kind_z(u8 k)

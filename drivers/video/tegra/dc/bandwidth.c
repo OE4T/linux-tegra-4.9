@@ -574,19 +574,46 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	/* use clk_round_rate on root emc clock instead to get correct rate */
 	emc_clk = clk_get(NULL, "emc");
-	emc_freq_hz = clk_get_rate(emc_clk);
-	calc_disp_params(dc,
-			w,
-			la_id_tab[dc->ndev->id][w->idx],
-			emc_freq_hz,
-			bw,
-			&disp_params);
-#endif
+	emc_freq_hz = tegra_emc_bw_to_freq_req(bw);
+	emc_freq_hz = clk_round_rate(emc_clk, emc_freq_hz);
+
+	while (1) {
+		int err;
+		unsigned long next_freq = 0;
+
+		calc_disp_params(dc,
+				w,
+				la_id_tab[dc->ndev->id][w->idx],
+				emc_freq_hz,
+				bw,
+				&disp_params);
+
+		err = tegra_set_disp_latency_allowance(
+				la_id_tab[dc->ndev->id][w->idx],
+				emc_freq_hz,
+				bw,
+				disp_params);
+		if (!err) {
+			struct clk *emc_la_clk = clk_get(&dc->ndev->dev, "emc.la");
+			clk_set_rate(emc_la_clk, emc_freq_hz);
+			break;
+		}
+
+		next_freq = clk_round_rate(emc_clk, emc_freq_hz + 1);
+
+		if (emc_freq_hz != next_freq)
+			emc_freq_hz = next_freq;
+		else
+			break;
+	}
+#else
 	tegra_set_disp_latency_allowance(la_id_tab[dc->ndev->id][w->idx],
 						emc_freq_hz,
 						bw,
 						disp_params);
+#endif
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)

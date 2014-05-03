@@ -72,6 +72,8 @@ static unsigned int boost_emc = 924000; /* kHz */
 module_param(boost_emc, uint, 0644);
 static unsigned long boost_time = 500; /* ms */
 module_param(boost_time, ulong, 0644);
+static unsigned long boost_cpus = 1;
+module_param(boost_cpus, ulong, 0644);
 static bool gpu_wakeup = 1; /* 1 = enabled */
 module_param(gpu_wakeup, bool, 0644);
 static struct device *gpu_device;
@@ -110,7 +112,7 @@ static void cfb_boost(struct kthread_work *w)
 {
 	trace_input_cfboost_params("boost_params", boost_freq, boost_emc,
 			boost_time);
-	pm_qos_update_request_timeout(&core_req, 1, boost_time * 1000);
+	pm_qos_update_request_timeout(&core_req, boost_cpus, boost_time * 1000);
 
 	if (boost_freq > 0)
 		pm_qos_update_request_timeout(&freq_req, boost_freq,

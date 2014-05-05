@@ -3190,4 +3190,56 @@ static inline u32 gr_gpc0_tpc0_l1c_dbg_cya15_en_f(void)
 {
 	return 0x8000000;
 }
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_r(void)
+{
+	return 0x00419ec8;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_phase_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_phase_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tex_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tex_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_m(void)
+{
+	return 0xff << 4;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_disable_f(void)
+{
+	return 0x0;
+}
 #endif

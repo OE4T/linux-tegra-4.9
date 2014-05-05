@@ -170,7 +170,7 @@ static long tegra_dc_rgb_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	if (dc->out->parent_clk_backup &&
 	    (parent_clk == clk_get_sys(NULL, "pll_p"))) {
 		rate = tegra_dc_pclk_predict_rate(
-			parent_clk, dc->mode.pclk);
+			dc->out->type, parent_clk, dc->mode.pclk);
 		/* use pll_d as last resort */
 		if (rate < (dc->mode.pclk / 100 * 99) ||
 		    rate > (dc->mode.pclk / 100 * 109))

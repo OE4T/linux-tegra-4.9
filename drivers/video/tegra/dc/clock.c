@@ -33,7 +33,10 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 
 	rate = tegra_dc_clk_get_rate(dc);
 
-	div = DIV_ROUND_UP(rate * 2, pclk);
+	if (TEGRA_DC_OUT_DSI == dc->out->type)
+		div = DIV_ROUND_CLOSEST(rate * 2, pclk);
+	else  /* round-up for divider for other display types */
+		div = DIV_ROUND_UP(rate * 2, pclk);
 
 	if (div < 2)
 		return 0;
@@ -41,14 +44,18 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 	return rate * 2 / div;
 }
 
-unsigned long tegra_dc_pclk_predict_rate(struct clk *parent, int pclk)
+unsigned long tegra_dc_pclk_predict_rate(
+	int out_type, struct clk *parent, int pclk)
 {
 	unsigned long rate;
 	unsigned long div;
 
 	rate = clk_get_rate(parent);
 
-	div = DIV_ROUND_UP(rate * 2, pclk);
+	if (TEGRA_DC_OUT_DSI == out_type)
+		div = DIV_ROUND_CLOSEST(rate * 2, pclk);
+	else  /* round-up for divider for other display types */
+		div = DIV_ROUND_UP(rate * 2, pclk);
 
 	if (div < 2)
 		return 0;

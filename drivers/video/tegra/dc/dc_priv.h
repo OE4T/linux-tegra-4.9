@@ -424,7 +424,8 @@ int tegra_dc_update_mode(struct tegra_dc *dc);
 /* defined in clock.c, used in dc.c, rgb.c, dsi.c and hdmi.c */
 void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk);
 unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk);
-unsigned long tegra_dc_pclk_predict_rate(struct clk *parent, int pclk);
+unsigned long tegra_dc_pclk_predict_rate(
+	int out_type, struct clk *parent, int pclk);
 
 /* defined in lut.c, used in dc.c */
 void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut);

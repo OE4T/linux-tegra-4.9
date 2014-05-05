@@ -274,10 +274,7 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 	err = tegra_panel_gpio_get_dt("p,wuxga-10-1", &panel_of);
 	if (err < 0) {
 		/* try to request gpios from board file */
-		if (machine_is_macallan())
-			err = macallan_dsi_gpio_get();
-		else
-			err = dalmore_dsi_gpio_get();
+		err = dalmore_dsi_gpio_get();
 		if (err < 0) {
 			pr_err("dsi gpio request failed\n");
 			goto fail;

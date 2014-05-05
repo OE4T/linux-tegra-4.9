@@ -35,6 +35,7 @@
    the resolution of ptimer. */
 #define PTIMER_REF_FREQ_HZ			31250000
 
+#define ROOTRW (S_IRWXU|S_IRGRP|S_IROTH)
 
 static ssize_t elcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -73,7 +74,7 @@ static ssize_t elcg_enable_read(struct device *device,
 	return sprintf(buf, "%d\n", g->elcg_enabled ? 1 : 0);
 }
 
-static DEVICE_ATTR(elcg_enable, S_IRWXUGO, elcg_enable_read, elcg_enable_store);
+static DEVICE_ATTR(elcg_enable, ROOTRW, elcg_enable_read, elcg_enable_store);
 
 static ssize_t blcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -109,7 +110,8 @@ static ssize_t blcg_enable_read(struct device *device,
 	return sprintf(buf, "%d\n", g->blcg_enabled ? 1 : 0);
 }
 
-static DEVICE_ATTR(blcg_enable, S_IRWXUGO, blcg_enable_read, blcg_enable_store);
+
+static DEVICE_ATTR(blcg_enable, ROOTRW, blcg_enable_read, blcg_enable_store);
 
 static ssize_t slcg_enable_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -151,7 +153,7 @@ static ssize_t slcg_enable_read(struct device *device,
 	return sprintf(buf, "%d\n", g->slcg_enabled ? 1 : 0);
 }
 
-static DEVICE_ATTR(slcg_enable, S_IRWXUGO, slcg_enable_read, slcg_enable_store);
+static DEVICE_ATTR(slcg_enable, ROOTRW, slcg_enable_read, slcg_enable_store);
 
 static ssize_t ptimer_scale_factor_show(struct device *dev,
 						struct device_attribute *attr,
@@ -203,7 +205,7 @@ static ssize_t railgate_delay_show(struct device *dev,
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	return snprintf(buf, PAGE_SIZE, "%d\n", platform->railgate_delay);
 }
-static DEVICE_ATTR(railgate_delay, S_IRWXUGO, railgate_delay_show,
+static DEVICE_ATTR(railgate_delay, ROOTRW, railgate_delay_show,
 		   railgate_delay_store);
 
 static ssize_t clockgate_delay_store(struct device *dev,
@@ -229,7 +231,7 @@ static ssize_t clockgate_delay_show(struct device *dev,
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	return snprintf(buf, PAGE_SIZE, "%d\n", platform->clockgate_delay);
 }
-static DEVICE_ATTR(clockgate_delay, S_IRWXUGO, clockgate_delay_show,
+static DEVICE_ATTR(clockgate_delay, ROOTRW, clockgate_delay_show,
 		   clockgate_delay_store);
 
 static ssize_t counters_show(struct device *dev,
@@ -305,7 +307,7 @@ static ssize_t elpg_enable_read(struct device *device,
 	return sprintf(buf, "%d\n", g->elpg_enabled ? 1 : 0);
 }
 
-static DEVICE_ATTR(elpg_enable, S_IRWXUGO, elpg_enable_read, elpg_enable_store);
+static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {

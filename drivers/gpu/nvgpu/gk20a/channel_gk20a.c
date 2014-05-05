@@ -1423,11 +1423,12 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	/*
 	 * If job list is empty then channel is idle and we can free
 	 * the syncpt here (given aggressive_destroy flag is set)
-	 * Note: if WFI is already scheduled on some other path
-	 * then syncpt is still required to check for idle
+	 * Note: check if last submit is complete before destroying
+	 * the sync resource
 	 */
-	if (list_empty(&c->jobs) && !c->last_submit_fence.wfi) {
-		if (c->sync && c->sync->syncpt_aggressive_destroy) {
+	if (list_empty(&c->jobs)) {
+		if (c->sync && c->sync->syncpt_aggressive_destroy &&
+			  c->sync->is_expired(c->sync, &c->last_submit_fence)) {
 			c->sync->destroy(c->sync);
 			c->sync = NULL;
 		}

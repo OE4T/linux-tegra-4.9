@@ -3121,7 +3121,8 @@ int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 			gpio_set_value(cur_cmd->sp_len_dly.gpio,
 				       cur_cmd->data_id);
 		} else if (cur_cmd->cmd_type == TEGRA_DSI_DELAY_MS) {
-			mdelay(cur_cmd->sp_len_dly.delay_ms);
+			usleep_range(cur_cmd->sp_len_dly.delay_ms * 1000,
+				(cur_cmd->sp_len_dly.delay_ms * 1000) + 500);
 		} else if (cur_cmd->cmd_type == TEGRA_DSI_SEND_FRAME) {
 				tegra_dsi_send_dc_frames(dc,
 						dsi,

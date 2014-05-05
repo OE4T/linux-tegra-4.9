@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/export.h>
+#include <linux/delay.h>
 #include <trace/events/nvhost.h>
 #include "nvhost_syncpt.h"
 
@@ -774,14 +775,24 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
 	int err = 0;
 	struct nvhost_master *host = syncpt_to_dev(sp);
 	struct device *d = &host->dev->dev;
+	unsigned long timeout = jiffies + NVHOST_SYNCPT_FREE_WAIT_TIMEOUT;
 
 	mutex_lock(&sp->syncpt_mutex);
 
 	/* find a syncpt which is free */
-	id = nvhost_find_free_syncpt(sp);
-	if (!id) {
-		nvhost_err(d, "failed to get new free syncpt\n");
+	do {
+		id = nvhost_find_free_syncpt(sp);
+		if (id)
+			break;
 		mutex_unlock(&sp->syncpt_mutex);
+		schedule();
+		mdelay(1);
+		mutex_lock(&sp->syncpt_mutex);
+	} while (!time_after(jiffies, timeout));
+
+	if (!id) {
+		mutex_unlock(&sp->syncpt_mutex);
+		nvhost_err(d, "failed to find free syncpt\n");
 		return 0;
 	}
 

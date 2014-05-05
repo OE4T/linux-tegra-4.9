@@ -29,6 +29,9 @@
 /* when searching for free syncpt id, start from this base */
 #define NVHOST_FREE_SYNCPT_BASE 1
 
+/* timeout to wait for a syncpt to become free */
+#define NVHOST_SYNCPT_FREE_WAIT_TIMEOUT (1 * HZ)
+
 struct nvhost_syncpt;
 
 /* Attribute struct for sysfs min and max attributes */

@@ -1101,6 +1101,15 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 	unsigned long engine_id;
 	int ret;
 
+	/*
+	 * sched error prevents recovery, and ctxsw error will retrigger
+	 * every 100ms. Disable the sched error to allow recovery.
+	 */
+	gk20a_writel(g, fifo_intr_en_0_r(),
+		     0x7FFFFFFF & ~fifo_intr_en_0_sched_error_m());
+	gk20a_writel(g, fifo_intr_0_r(),
+			fifo_intr_0_sched_error_reset_f());
+
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
 		if (engine_id > g->fifo.max_engines) {
@@ -1134,6 +1143,9 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32)
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
+
+	/* Re-enable sched error */
+	gk20a_writel(g, fifo_intr_en_0_r(), 0x7FFFFFFF);
 }
 
 void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,

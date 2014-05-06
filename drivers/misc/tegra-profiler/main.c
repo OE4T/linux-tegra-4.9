@@ -436,9 +436,16 @@ void quadd_get_state(struct quadd_module_state *state)
 }
 
 static int
-set_extab(struct quadd_extables *extabs)
+set_extab(struct quadd_extables *extabs,
+	  struct quadd_extabs_mmap *mmap)
 {
-	return quadd_unwind_set_extab(extabs);
+	return quadd_unwind_set_extab(extabs, mmap);
+}
+
+static void
+delete_mmap(struct quadd_extabs_mmap *mmap)
+{
+	quadd_unwind_delete_mmap(mmap);
 }
 
 static struct quadd_comm_control_interface control = {
@@ -448,6 +455,7 @@ static struct quadd_comm_control_interface control = {
 	.get_capabilities	= get_capabilities,
 	.get_state		= quadd_get_state,
 	.set_extab		= set_extab,
+	.delete_mmap		= delete_mmap,
 };
 
 static int __init quadd_module_init(void)

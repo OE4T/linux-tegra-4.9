@@ -2350,14 +2350,15 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	mutex_lock(&vm->update_gmmu_lock);
 	va_node = addr_to_reservation(vm, args->offset);
 	if (va_node) {
-		struct mapped_buffer_node *buffer;
+		struct mapped_buffer_node *buffer, *n;
 
 		/* there is no need to unallocate the buffers in va. Just
 		 * convert them into normal buffers */
 
-		list_for_each_entry(buffer,
-			&va_node->va_buffers_list, va_buffers_list)
+		list_for_each_entry_safe(buffer, n,
+			&va_node->va_buffers_list, va_buffers_list) {
 			list_del_init(&buffer->va_buffers_list);
+		}
 
 		list_del(&va_node->reserved_va_list);
 

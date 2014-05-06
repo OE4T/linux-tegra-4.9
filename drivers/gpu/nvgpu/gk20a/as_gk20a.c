@@ -73,6 +73,7 @@ static int gk20a_as_alloc_share(struct gk20a_as *as,
  */
 int gk20a_as_release_share(struct gk20a_as_share *as_share)
 {
+	struct gk20a *g = as_share->vm->mm->g;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -80,7 +81,10 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 	if (atomic_dec_return(&as_share->ref_cnt) > 0)
 		return 0;
 
+	gk20a_busy(g->dev);
 	err = gk20a_vm_release_share(as_share);
+	gk20a_idle(g->dev);
+
 	release_as_share_id(as_share->as, as_share->id);
 	kfree(as_share);
 	return err;

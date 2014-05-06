@@ -171,6 +171,9 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 	 * nvhost_module_enable_poweroff
 	 */
 	if (!pdata->num_mapped_chs) {
+		channel_cdma_op().stop(&ch->cdma);
+		nvhost_cdma_deinit(&ch->cdma);
+
 		if (pdata->keepalive)
 			nvhost_module_enable_poweroff(pdata->pdev);
 

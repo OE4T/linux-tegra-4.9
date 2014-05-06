@@ -668,10 +668,11 @@ static void __purge_vmap_area_lazy(unsigned long *start, unsigned long *end,
 		atomic_sub(nr, &vmap_lazy_nr);
 
 	if (nr || force_flush) {
-		if (*end - *start > sysctl_lazy_vfree_tlb_flush_all_threshold)
+		if (nr > (sysctl_lazy_vfree_tlb_flush_all_threshold >> PAGE_SHIFT))
 			flush_tlb_all();
 		else
-			flush_tlb_kernel_range(*start, *end);
+			llist_for_each_entry(va, valist, purge_list)
+				flush_tlb_kernel_range(va->va_start, va->va_end);
 	}
 
 	if (nr) {

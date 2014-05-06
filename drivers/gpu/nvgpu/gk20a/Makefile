@@ -39,5 +39,6 @@ nvgpu-y := \
 	tsg_gk20a.o
 nvgpu-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += sync_gk20a.o
+nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += platform_vgpu_tegra.o
 
 obj-$(CONFIG_GK20A) := nvgpu.o

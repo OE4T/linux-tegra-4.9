@@ -1173,7 +1173,7 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose)
 
 		gk20a_channel_abort(ch);
 		for (i = 0; i < g->fifo.max_runlists; i++)
-			gk20a_fifo_update_runlist(g, i,
+			g->ops.fifo.update_runlist(g, i,
 					hw_chid, false, false);
 
 		if (gk20a_fifo_set_ctx_mmu_error(g, ch))
@@ -1620,7 +1620,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 		pbdma_chid = fifo_pbdma_status_next_id_v(pbdma_stat);
 
 	if (pbdma_chid != ~0) {
-		err = gk20a_fifo_preempt_channel(g, pbdma_chid);
+		err = g->ops.fifo.preempt_channel(g, pbdma_chid);
 		if (err)
 			goto clean_up;
 	}
@@ -1636,7 +1636,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 		engine_chid = fifo_engine_status_next_id_v(eng_stat);
 
 	if (engine_chid != ~0 && engine_chid != pbdma_chid) {
-		err = gk20a_fifo_preempt_channel(g, engine_chid);
+		err = g->ops.fifo.preempt_channel(g, engine_chid);
 		if (err)
 			goto clean_up;
 	}
@@ -1960,6 +1960,9 @@ static void gk20a_fifo_apply_pb_timeout(struct gk20a *g)
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
+	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
+	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
 	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
 	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
+	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 }

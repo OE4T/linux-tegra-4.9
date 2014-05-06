@@ -40,6 +40,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/clk/tegra.h>
+#include <linux/kthread.h>
 
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
@@ -57,6 +58,9 @@
 #include "dbg_gpu_gk20a.h"
 #include "hal.h"
 #include "nvhost_acm.h"
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+#include "vgpu/vgpu.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
@@ -737,6 +741,17 @@ static int gk20a_init_client(struct platform_device *dev)
 
 	gk20a_dbg_fn("");
 
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	{
+		struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+		if (platform->virtual_dev) {
+			err = vgpu_pm_finalize_poweron(&dev->dev);
+			if (err)
+				return err;
+		}
+	}
+#endif
 #ifndef CONFIG_PM_RUNTIME
 	gk20a_pm_finalize_poweron(&dev->dev);
 #endif
@@ -753,6 +768,16 @@ static int gk20a_init_client(struct platform_device *dev)
 static void gk20a_deinit_client(struct platform_device *dev)
 {
 	gk20a_dbg_fn("");
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	{
+		struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+		if (platform->virtual_dev) {
+			vgpu_pm_prepare_poweroff(&dev->dev);
+			return;
+		}
+	}
+#endif
 #ifndef CONFIG_PM_RUNTIME
 	gk20a_pm_prepare_poweroff(&dev->dev);
 #endif
@@ -1006,6 +1031,10 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 		.data = &gk20a_tegra_platform },
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gm20b_tegra_platform },
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	{ .compatible = "nvidia,tegra124-gk20a-vgpu",
+		.data = &vgpu_tegra_platform },
+#endif
 #else
 	{ .compatible = "nvidia,tegra124-gk20a",
 		.data = &gk20a_generic_platform },
@@ -1057,7 +1086,7 @@ static int gk20a_create_device(
 	return 0;
 }
 
-static void gk20a_user_deinit(struct platform_device *dev)
+void gk20a_user_deinit(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
@@ -1098,7 +1127,7 @@ static void gk20a_user_deinit(struct platform_device *dev)
 		class_destroy(g->class);
 }
 
-static int gk20a_user_init(struct platform_device *dev)
+int gk20a_user_init(struct platform_device *dev)
 {
 	int err;
 	dev_t devno;
@@ -1403,6 +1432,11 @@ static int gk20a_probe(struct platform_device *dev)
 
 	platform_set_drvdata(dev, platform);
 
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	if (platform->virtual_dev)
+		return vgpu_probe(dev);
+#endif
+
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
 		dev_err(&dev->dev, "couldn't allocate gk20a support");
@@ -1546,7 +1580,15 @@ static int gk20a_probe(struct platform_device *dev)
 static int __exit gk20a_remove(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+#endif
 	gk20a_dbg_fn("");
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	if (platform->virtual_dev)
+		return vgpu_remove(dev);
+#endif
 
 #ifdef CONFIG_INPUT_CFBOOST
 	if (g->boost_added)

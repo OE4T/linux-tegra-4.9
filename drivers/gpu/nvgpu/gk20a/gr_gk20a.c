@@ -825,7 +825,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 		}
 	}
 
-	gk20a_mm_fb_flush(g);
+	g->ops.mm.fb_flush(g);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_o(), 0,
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
@@ -7077,4 +7077,9 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.falcon_load_ucode = gr_gk20a_load_ctxsw_ucode_segments;
 	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 	gops->gr.get_gpc_tpc_mask = gr_gk20a_get_gpc_tpc_mask;
+	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
+	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;
+	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
+	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
+	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
 }

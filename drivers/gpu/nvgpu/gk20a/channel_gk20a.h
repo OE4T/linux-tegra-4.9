@@ -144,6 +144,10 @@ struct channel_gk20a {
 	void *error_notifier_va;
 
 	struct gk20a_channel_sync *sync;
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	u64 virt_ctx;
+#endif
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -192,5 +196,12 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvhost_alloc_gpfifo_args *args);
+
+void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
+void channel_gk20a_disable(struct channel_gk20a *ch);
+int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
+void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch);
+int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
+			u64 gpfifo_base, u32 gpfifo_entries);
 
 #endif /*__CHANNEL_GK20A_H__*/

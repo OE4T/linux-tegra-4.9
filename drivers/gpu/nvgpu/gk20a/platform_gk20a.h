@@ -151,6 +151,12 @@ struct gk20a_platform {
 	 * of the CPU.
 	 */
 	void (*dump_platform_dependencies)(struct platform_device *dev);
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	bool virtual_dev;
+	u64 virt_handle;
+	struct task_struct *intr_handler;
+#endif
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(
@@ -163,6 +169,9 @@ extern struct gk20a_platform gk20a_generic_platform;
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gk20a_tegra_platform;
 extern struct gk20a_platform gm20b_tegra_platform;
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+extern struct gk20a_platform vgpu_tegra_platform;
+#endif
 #endif
 
 static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)

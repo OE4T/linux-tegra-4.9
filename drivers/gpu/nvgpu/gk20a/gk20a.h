@@ -131,6 +131,16 @@ struct gpu_ops {
 				u32 reg_offset);
 		int (*load_ctxsw_ucode)(struct gk20a *g);
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
+		void (*free_channel_ctx)(struct channel_gk20a *c);
+		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
+				struct nvhost_alloc_obj_ctx_args *args);
+		int (*free_obj_ctx)(struct channel_gk20a  *c,
+				struct nvhost_free_obj_ctx_args *args);
+		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
+				struct channel_gk20a *c, u64 zcull_va,
+				u32 mode);
+		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
+				struct gr_zcull_info *zcull_params);
 	} gr;
 	const char *name;
 	struct {
@@ -148,9 +158,20 @@ struct gpu_ops {
 	} clock_gating;
 	struct {
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
+		void (*unbind_channel)(struct channel_gk20a *ch_gk20a);
+		void (*disable_channel)(struct channel_gk20a *ch);
+		int (*alloc_inst)(struct gk20a *g, struct channel_gk20a *ch);
+		void (*free_inst)(struct gk20a *g, struct channel_gk20a *ch);
+		int (*setup_ramfc)(struct channel_gk20a *c, u64 gpfifo_base,
+				u32 gpfifo_entries);
+		int (*preempt_channel)(struct gk20a *g, u32 hw_chid);
+		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
+				u32 hw_chid, bool add,
+				bool wait_for_finish);
 		void (*trigger_mmu_fault)(struct gk20a *g,
 				unsigned long engine_ids);
 		void (*apply_pb_timeout)(struct gk20a *g);
+		int (*wait_engine_idle)(struct gk20a *g);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
@@ -241,6 +262,31 @@ struct gpu_ops {
 		void (*clear_sparse)(struct vm_gk20a *vm, u64 vaddr,
 			       u64 size, u32 pgsz_idx);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
+		u64 (*gmmu_map)(struct vm_gk20a *vm,
+				u64 map_offset,
+				struct sg_table *sgt,
+				u64 buffer_offset,
+				u64 size,
+				int pgsz_idx,
+				u8 kind_v,
+				u32 ctag_offset,
+				u32 flags,
+				int rw_flag,
+				bool clear_ctags);
+		void (*gmmu_unmap)(struct vm_gk20a *vm,
+				u64 vaddr,
+				u64 size,
+				int pgsz_idx,
+				bool va_allocated,
+				int rw_flag);
+		void (*vm_remove)(struct vm_gk20a *vm);
+		int (*vm_alloc_share)(struct gk20a_as_share *as_share);
+		int (*vm_bind_channel)(struct gk20a_as_share *as_share,
+				struct channel_gk20a *ch);
+		int (*fb_flush)(struct gk20a *g);
+		void (*l2_invalidate)(struct gk20a *g);
+		void (*l2_flush)(struct gk20a *g, bool invalidate);
+		void (*tlb_invalidate)(struct vm_gk20a *vm);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);
@@ -647,5 +693,8 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 	GK20A_GPUID(NVHOST_GPU_ARCH_GM200, NVHOST_GPU_IMPL_GM20B)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
+
+int gk20a_user_init(struct platform_device *dev);
+void gk20a_user_deinit(struct platform_device *dev);
 
 #endif /* _NVHOST_GK20A_H_ */

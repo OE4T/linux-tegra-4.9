@@ -56,15 +56,8 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c);
 
 static int channel_gk20a_commit_userd(struct channel_gk20a *c);
 static int channel_gk20a_setup_userd(struct channel_gk20a *c);
-static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries);
 
 static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a);
-
-static int channel_gk20a_alloc_inst(struct gk20a *g,
-				struct channel_gk20a *ch);
-static void channel_gk20a_free_inst(struct gk20a *g,
-				struct channel_gk20a *ch);
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
@@ -173,12 +166,10 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 		return -ENOMEM;
 
 	/* disable channel */
-	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
-		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
-		ccsr_channel_enable_clr_true_f());
+	c->g->ops.fifo.disable_channel(c);
 
 	/* preempt the channel */
-	WARN_ON(gk20a_fifo_preempt_channel(c->g, c->hw_chid));
+	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
 
 	/* value field is 8 bits long */
 	while (value >= 1 << 8) {
@@ -206,8 +197,8 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	return 0;
 }
 
-static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-				u64 gpfifo_base, u32 gpfifo_entries)
+int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
+			u64 gpfifo_base, u32 gpfifo_entries)
 {
 	void *inst_ptr;
 
@@ -269,7 +260,7 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
-	return 0;
+	return channel_gk20a_commit_userd(c);
 }
 
 static int channel_gk20a_setup_userd(struct channel_gk20a *c)
@@ -347,8 +338,7 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 	}
 }
 
-static int channel_gk20a_alloc_inst(struct gk20a *g,
-				struct channel_gk20a *ch)
+int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct device *d = dev_from_gk20a(g);
 	int err = 0;
@@ -384,12 +374,11 @@ static int channel_gk20a_alloc_inst(struct gk20a *g,
 
 clean_up:
 	gk20a_err(d, "fail");
-	channel_gk20a_free_inst(g, ch);
+	g->ops.fifo.free_inst(g, ch);
 	return err;
 }
 
-static void channel_gk20a_free_inst(struct gk20a *g,
-				struct channel_gk20a *ch)
+void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct device *d = dev_from_gk20a(g);
 
@@ -403,7 +392,16 @@ static void channel_gk20a_free_inst(struct gk20a *g,
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
-	return gk20a_fifo_update_runlist(c->g, 0, c->hw_chid, add, true);
+	return c->g->ops.fifo.update_runlist(c->g, 0, c->hw_chid, add, true);
+}
+
+void channel_gk20a_disable(struct channel_gk20a *ch)
+{
+	/* disable channel */
+	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+		gk20a_readl(ch->g,
+			ccsr_channel_r(ch->hw_chid)) |
+			ccsr_channel_enable_clr_true_f());
 }
 
 void gk20a_channel_abort(struct channel_gk20a *ch)
@@ -426,11 +424,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	}
 	mutex_unlock(&ch->jobs_lock);
 
-	/* disable channel */
-	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-		     gk20a_readl(ch->g,
-		     ccsr_channel_r(ch->hw_chid)) |
-		     ccsr_channel_enable_clr_true_f());
+	ch->g->ops.fifo.disable_channel(ch);
 
 	if (released_job_semaphore) {
 		wake_up_interruptible_all(&ch->semaphore_wq);
@@ -479,7 +473,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 	gk20a_wait_channel_idle(ch);
 
 	/* preempt the channel */
-	gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
+	ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
 
 	/* remove channel from runlist */
 	channel_gk20a_update_runlist(ch, false);
@@ -643,7 +637,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	gk20a_free_error_notifiers(ch);
 
 	/* release channel ctx */
-	gk20a_free_channel_ctx(ch);
+	g->ops.gr.free_channel_ctx(ch);
 
 	gk20a_gr_flush_channel_tlb(gr);
 
@@ -683,8 +677,8 @@ unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		gk20a_tsg_unbind_channel(ch);
 
-	channel_gk20a_unbind(ch);
-	channel_gk20a_free_inst(g, ch);
+	g->ops.fifo.unbind_channel(ch);
+	g->ops.fifo.free_inst(g, ch);
 
 	ch->vpr = false;
 	ch->vm = NULL;
@@ -747,7 +741,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 	ch->g = g;
 
-	if (channel_gk20a_alloc_inst(g, ch)) {
+	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->in_use = false;
 		gk20a_err(dev_from_gk20a(g),
 			   "failed to open gk20a channel, out of inst mem");
@@ -1097,7 +1091,6 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 	gk20a_dbg_fn("done");
 }
 
-
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvhost_alloc_gpfifo_args *args)
 {
@@ -1181,10 +1174,11 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("channel %d : gpfifo_base 0x%016llx, size %d",
 		c->hw_chid, c->gpfifo.gpu_va, c->gpfifo.entry_num);
 
-	channel_gk20a_setup_ramfc(c, c->gpfifo.gpu_va, c->gpfifo.entry_num);
-
 	channel_gk20a_setup_userd(c);
-	channel_gk20a_commit_userd(c);
+
+	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.gpu_va, c->gpfifo.entry_num);
+	if (err)
+		goto clean_up_unmap;
 
 	/* TBD: setup engine contexts */
 
@@ -1550,7 +1544,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* We don't know what context is currently running...                */
 	/* Note also: there can be more than one context associated with the */
 	/* address space (vm).   */
-	gk20a_mm_tlb_invalidate(c->vm);
+	g->ops.mm.tlb_invalidate(c->vm);
 
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
@@ -1929,7 +1923,7 @@ static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 
 	gk20a_dbg_fn("");
 
-	return gr_gk20a_bind_ctxsw_zcull(g, gr, ch,
+	return g->ops.gr.bind_ctxsw_zcull(g, gr, ch,
 				args->gpu_va, args->mode);
 }
 
@@ -1945,7 +1939,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* wait for engine idle */
-	err = gk20a_fifo_wait_engine_idle(g);
+	err = g->ops.fifo.wait_engine_idle(g);
 	if (err)
 		return err;
 
@@ -1954,22 +1948,20 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 			gk20a_dbg_info("suspend channel %d", chid);
 			/* disable channel */
-			gk20a_writel(g, ccsr_channel_r(chid),
-				gk20a_readl(g, ccsr_channel_r(chid)) |
-				ccsr_channel_enable_clr_true_f());
+			g->ops.fifo.disable_channel(&f->channel[chid]);
 			/* preempt the channel */
-			gk20a_fifo_preempt_channel(g, chid);
+			g->ops.fifo.preempt_channel(g, chid);
 
 			channels_in_use = true;
 		}
 	}
 
 	if (channels_in_use) {
-		gk20a_fifo_update_runlist(g, 0, ~0, false, true);
+		g->ops.fifo.update_runlist(g, 0, ~0, false, true);
 
 		for (chid = 0; chid < f->num_channels; chid++) {
 			if (f->channel[chid].in_use)
-				channel_gk20a_unbind(&f->channel[chid]);
+				g->ops.fifo.unbind_channel(&f->channel[chid]);
 		}
 	}
 
@@ -1996,7 +1988,7 @@ int gk20a_channel_resume(struct gk20a *g)
 	}
 
 	if (channels_in_use)
-		gk20a_fifo_update_runlist(g, 0, ~0, true, true);
+		g->ops.fifo.update_runlist(g, 0, ~0, true, true);
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -2074,6 +2066,11 @@ clean_up:
 void gk20a_init_channel(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = channel_gk20a_bind;
+	gops->fifo.unbind_channel = channel_gk20a_unbind;
+	gops->fifo.disable_channel = channel_gk20a_disable;
+	gops->fifo.alloc_inst = channel_gk20a_alloc_inst;
+	gops->fifo.free_inst = channel_gk20a_free_inst;
+	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
 }
 
 long gk20a_channel_ioctl(struct file *filp,
@@ -2144,7 +2141,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		err = gk20a_alloc_obj_ctx(ch,
+		err = ch->g->ops.gr.alloc_obj_ctx(ch,
 				(struct nvhost_alloc_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
@@ -2156,7 +2153,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		err = gk20a_free_obj_ctx(ch,
+		err = ch->g->ops.gr.free_obj_ctx(ch,
 				(struct nvhost_free_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;

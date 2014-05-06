@@ -318,6 +318,10 @@ struct vm_gk20a {
 	dma_addr_t zero_page_iova;
 	void *zero_page_cpuva;
 	struct sg_table *zero_page_sgt;
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	u64 handle;
+#endif
 };
 
 struct gk20a;
@@ -438,10 +442,29 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		u32 flags,
 		int rw_flag);
 
+u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
+			u64 map_offset,
+			struct sg_table *sgt,
+			u64 buffer_offset,
+			u64 size,
+			int pgsz_idx,
+			u8 kind_v,
+			u32 ctag_offset,
+			u32 flags,
+			int rw_flag,
+			bool clear_ctags);
+
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,
 		u64 size,
 		int rw_flag);
+
+void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
+			u64 vaddr,
+			u64 size,
+			int pgsz_idx,
+			bool va_allocated,
+			int rw_flag);
 
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
@@ -460,6 +483,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 /* unmap handle from kernel */
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset);
+
+void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
 
 /* get reference to all currently mapped buffers */
 int gk20a_vm_get_buffers(struct vm_gk20a *vm,
@@ -481,6 +506,16 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 void gk20a_vm_get(struct vm_gk20a *vm);
 void gk20a_vm_put(struct vm_gk20a *vm);
+
+void gk20a_vm_remove_support(struct vm_gk20a *vm);
+
+u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
+		     u64 size,
+		     enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
+
+int gk20a_vm_free_va(struct vm_gk20a *vm,
+		     u64 offset, u64 size,
+		     enum gmmu_pgsz_gk20a pgsz_idx);
 
 /* vm-as interface */
 struct nvhost_as_alloc_space_args;

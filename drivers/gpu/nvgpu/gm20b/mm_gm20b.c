@@ -327,4 +327,13 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
 	gops->mm.clear_sparse = gm20b_vm_clear_sparse;
 	gops->mm.is_debug_mode_enabled = gm20b_mm_mmu_debug_mode_enabled;
+	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
+	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
+	gops->mm.vm_remove = gk20a_vm_remove_support;
+	gops->mm.vm_alloc_share = gk20a_vm_alloc_share;
+	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
+	gops->mm.fb_flush = gk20a_mm_fb_flush;
+	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
+	gops->mm.l2_flush = gk20a_mm_l2_flush;
+	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 }

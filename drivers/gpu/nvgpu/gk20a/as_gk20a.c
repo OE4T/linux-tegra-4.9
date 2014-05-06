@@ -40,6 +40,7 @@ static void release_as_share_id(struct gk20a_as *as, int id)
 static int gk20a_as_alloc_share(struct gk20a_as *as,
 				struct gk20a_as_share **out)
 {
+	struct gk20a *g = gk20a_from_as(as);
 	struct gk20a_as_share *as_share;
 	int err = 0;
 
@@ -55,7 +56,7 @@ static int gk20a_as_alloc_share(struct gk20a_as *as,
 	as_share->ref_cnt.counter = 1;
 
 	/* this will set as_share->vm. */
-	err = gk20a_vm_alloc_share(as_share);
+	err = g->ops.mm.vm_alloc_share(as_share);
 	if (err)
 		goto failed;
 
@@ -106,7 +107,7 @@ static int gk20a_as_ioctl_bind_channel(
 	atomic_inc(&as_share->ref_cnt);
 
 	/* this will set channel_gk20a->vm */
-	err = gk20a_vm_bind_channel(as_share, ch);
+	err = ch->g->ops.mm.vm_bind_channel(as_share, ch);
 	if (err) {
 		atomic_dec(&as_share->ref_cnt);
 		return err;

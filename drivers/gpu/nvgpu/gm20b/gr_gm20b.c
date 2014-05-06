@@ -751,4 +751,9 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 #endif
 	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
+	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
+	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;
+	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
+	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
+	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
 }

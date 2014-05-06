@@ -25,6 +25,7 @@ struct quadd_module_state;
 struct miscdevice;
 struct quadd_parameters;
 struct quadd_extables;
+struct quadd_unwind_ctx;
 
 struct quadd_ring_buffer {
 	char *buf;
@@ -42,6 +43,14 @@ struct quadd_iovec {
 	size_t len;
 };
 
+struct quadd_extabs_mmap {
+	struct vm_area_struct *mmap_vma;
+	void *data;
+
+	struct list_head list;
+	struct list_head ex_entries;
+};
+
 struct quadd_comm_control_interface {
 	int (*start)(void);
 	void (*stop)(void);
@@ -49,7 +58,9 @@ struct quadd_comm_control_interface {
 			      uid_t *debug_app_uid);
 	void (*get_capabilities)(struct quadd_comm_cap *cap);
 	void (*get_state)(struct quadd_module_state *state);
-	int (*set_extab)(struct quadd_extables *extabs);
+	int (*set_extab)(struct quadd_extables *extabs,
+			 struct quadd_extabs_mmap *mmap);
+	void (*delete_mmap)(struct quadd_extabs_mmap *mmap);
 };
 
 struct quadd_comm_data_interface {
@@ -77,6 +88,9 @@ struct quadd_comm_ctx {
 	wait_queue_head_t read_wait;
 
 	struct miscdevice *misc_dev;
+
+	struct list_head ext_mmaps;
+	spinlock_t mmaps_lock;
 };
 
 struct quadd_comm_data_interface *

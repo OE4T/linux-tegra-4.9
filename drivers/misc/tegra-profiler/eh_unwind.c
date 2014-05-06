@@ -27,6 +27,7 @@
 
 #include "eh_unwind.h"
 #include "backtrace.h"
+#include "comm.h"
 
 #define QUADD_EXTABS_SIZE	0x100
 
@@ -45,11 +46,13 @@ enum regs {
 struct extab_info {
 	unsigned long addr;
 	unsigned long length;
+
+	unsigned long mmap_offset;
 };
 
 struct extables {
-	struct extab_info exidx;
 	struct extab_info extab;
+	struct extab_info exidx;
 };
 
 struct ex_region_info {
@@ -57,6 +60,9 @@ struct ex_region_info {
 	unsigned long vm_end;
 
 	struct extables tabs;
+	struct quadd_extabs_mmap *mmap;
+
+	struct list_head list;
 };
 
 struct regions_data {
@@ -72,10 +78,7 @@ struct quadd_unwind_ctx {
 	struct regions_data *rd;
 
 	pid_t pid;
-
-	unsigned long pinned_pages;
-	unsigned long pinned_size;
-
+	unsigned long ex_tables_size;
 	spinlock_t lock;
 };
 
@@ -124,6 +127,31 @@ validate_pc_addr(unsigned long addr, unsigned long nbytes)
 	return addr && addr < TASK_SIZE - nbytes;
 }
 
+static inline int
+validate_mmap_addr(struct quadd_extabs_mmap *mmap,
+		   unsigned long addr, unsigned long nbytes)
+{
+	struct vm_area_struct *vma = mmap->mmap_vma;
+	unsigned long size = vma->vm_end - vma->vm_start;
+	unsigned long data = (unsigned long)mmap->data;
+
+	if (addr & 0x03) {
+		pr_err_once("%s: error: unaligned address: %#lx, data: %#lx-%#lx, vma: %#lx-%#lx\n",
+			    __func__, addr, data, data + size,
+		       vma->vm_start, vma->vm_end);
+		return 0;
+	}
+
+	if (addr < data || addr >= data + (size - nbytes)) {
+		pr_err_once("%s: error: addr: %#lx, data: %#lx-%#lx, vma: %#lx-%#lx\n",
+			    __func__, addr, data, data + size,
+		       vma->vm_start, vma->vm_end);
+		return 0;
+	}
+
+	return 1;
+}
+
 #define read_user_data(addr, retval)			\
 ({							\
 	long ret;					\
@@ -132,6 +160,83 @@ validate_pc_addr(unsigned long addr, unsigned long nbytes)
 		ret = -QUADD_URC_EACCESS;		\
 	ret;						\
 })
+
+static inline long
+read_mmap_data(struct quadd_extabs_mmap *mmap, const u32 *addr, u32 *retval)
+{
+	if (!validate_mmap_addr(mmap, (unsigned long)addr, sizeof(u32)))
+		return -QUADD_URC_EACCESS;
+
+	*retval = *addr;
+	return 0;
+}
+
+static inline unsigned long
+ex_addr_to_mmap_addr(unsigned long addr,
+		     struct ex_region_info *ri,
+		     int exidx)
+{
+	unsigned long offset;
+	struct extab_info *ei;
+
+	ei = exidx ? &ri->tabs.exidx : &ri->tabs.extab;
+	offset = addr - ei->addr;
+
+	return ei->mmap_offset + offset + (unsigned long)ri->mmap->data;
+}
+
+static inline unsigned long
+mmap_addr_to_ex_addr(unsigned long addr,
+		     struct ex_region_info *ri,
+		     int exidx)
+{
+	unsigned long offset;
+	struct extab_info *ei;
+
+	ei = exidx ? &ri->tabs.exidx : &ri->tabs.extab;
+	offset = addr - ei->mmap_offset - (unsigned long)ri->mmap->data;
+
+	return ei->addr + offset;
+}
+
+static inline u32
+prel31_to_addr(const u32 *ptr)
+{
+	u32 value;
+	s32 offset;
+
+	if (read_user_data(ptr, value))
+		return 0;
+
+	/* sign-extend to 32 bits */
+	offset = (((s32)value) << 1) >> 1;
+	return (u32)(unsigned long)ptr + offset;
+}
+
+static unsigned long
+mmap_prel31_to_addr(const u32 *ptr, struct ex_region_info *ri,
+		    int is_src_exidx, int is_dst_exidx, int to_mmap)
+{
+	u32 value, addr;
+	unsigned long addr_res;
+	s32 offset;
+	struct extab_info *ei_src, *ei_dst;
+
+	ei_src = is_src_exidx ? &ri->tabs.exidx : &ri->tabs.extab;
+	ei_dst = is_dst_exidx ? &ri->tabs.exidx : &ri->tabs.extab;
+
+	value = *ptr;
+	offset = (((s32)value) << 1) >> 1;
+
+	addr = mmap_addr_to_ex_addr((unsigned long)ptr, ri, is_src_exidx);
+	addr += offset;
+	addr_res = addr;
+
+	if (to_mmap)
+		addr_res = ex_addr_to_mmap_addr(addr_res, ri, is_dst_exidx);
+
+	return addr_res;
+}
 
 static int
 add_ex_region(struct regions_data *rd,
@@ -184,11 +289,59 @@ add_ex_region(struct regions_data *rd,
 	}
 }
 
+static int
+remove_ex_region(struct regions_data *rd,
+		 struct ex_region_info *entry)
+{
+	unsigned int i_min, i_max, mid;
+	struct ex_region_info *array = rd->entries;
+	unsigned long size = rd->curr_nr;
+
+	if (!array)
+		return 0;
+
+	if (size == 0)
+		return 0;
+
+	if (size == 1) {
+		if (array[0].vm_start == entry->vm_start)
+			return 1;
+		else
+			return 0;
+	}
+
+	if (array[0].vm_start > entry->vm_start)
+		return 0;
+	else if (array[size - 1].vm_start < entry->vm_start)
+		return 0;
+
+	i_min = 0;
+	i_max = size;
+
+	while (i_min < i_max) {
+		mid = i_min + (i_max - i_min) / 2;
+
+		if (entry->vm_start <= array[mid].vm_start)
+			i_max = mid;
+		else
+			i_min = mid + 1;
+	}
+
+	if (array[i_max].vm_start == entry->vm_start) {
+		memmove(array + i_max,
+			array + i_max + 1,
+			(size - i_max) * sizeof(*array));
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 static struct ex_region_info *
 search_ex_region(struct ex_region_info *array,
 		 unsigned long size,
 		 unsigned long key,
-		 struct extables *tabs)
+		 struct ex_region_info *ri)
 {
 	unsigned int i_min, i_max, mid;
 
@@ -208,7 +361,7 @@ search_ex_region(struct ex_region_info *array,
 	}
 
 	if (array[i_max].vm_start == key) {
-		memcpy(tabs, &array[i_max].tabs, sizeof(*tabs));
+		memcpy(ri, &array[i_max], sizeof(*ri));
 		return &array[i_max];
 	}
 
@@ -216,10 +369,10 @@ search_ex_region(struct ex_region_info *array,
 }
 
 static long
-__search_ex_region(unsigned long key, struct extables *tabs)
+__search_ex_region(unsigned long key, struct ex_region_info *ri)
 {
 	struct regions_data *rd;
-	struct ex_region_info *ri = NULL;
+	struct ex_region_info *ri_p = NULL;
 
 	rcu_read_lock();
 
@@ -227,110 +380,11 @@ __search_ex_region(unsigned long key, struct extables *tabs)
 	if (!rd)
 		goto out;
 
-	ri = search_ex_region(rd->entries, rd->curr_nr, key, tabs);
+	ri_p = search_ex_region(rd->entries, rd->curr_nr, key, ri);
 
 out:
 	rcu_read_unlock();
-	return ri ? 0 : -ENOENT;
-}
-
-static void pin_user_pages(struct extables *tabs)
-{
-	long ret;
-	struct extab_info *ti;
-	unsigned long nr_pages, addr;
-	struct pid *pid_s;
-	struct task_struct *task = NULL;
-	struct mm_struct *mm;
-
-	rcu_read_lock();
-
-	pid_s = find_vpid(ctx.pid);
-	if (pid_s)
-		task = pid_task(pid_s, PIDTYPE_PID);
-
-	rcu_read_unlock();
-
-	if (!task)
-		return;
-
-	mm = task->mm;
-	if (!mm)
-		return;
-
-	down_write(&mm->mmap_sem);
-
-	ti = &tabs->exidx;
-	addr = ti->addr & PAGE_MASK;
-	nr_pages = GET_NR_PAGES(ti->addr, ti->length);
-
-	ret = get_user_pages(task, mm, addr, nr_pages, 0, 0,
-			     NULL, NULL);
-	if (ret < 0) {
-		pr_debug("%s: warning: addr/nr_pages: %#lx/%lu\n",
-			 __func__, ti->addr, nr_pages);
-		goto error_out;
-	}
-
-	ctx.pinned_pages += ret;
-	ctx.pinned_size += ti->length;
-
-	pr_debug("%s: pin exidx: addr/nr_pages: %#lx/%lu\n",
-		 __func__, ti->addr, nr_pages);
-
-	ti = &tabs->extab;
-	addr = ti->addr & PAGE_MASK;
-	nr_pages = GET_NR_PAGES(ti->addr, ti->length);
-
-	ret = get_user_pages(task, mm, addr, nr_pages, 0, 0,
-			     NULL, NULL);
-	if (ret < 0) {
-		pr_debug("%s: warning: addr/nr_pages: %#lx/%lu\n",
-			 __func__, ti->addr, nr_pages);
-		goto error_out;
-	}
-
-	ctx.pinned_pages += ret;
-	ctx.pinned_size += ti->length;
-
-	pr_debug("%s: pin extab: addr/nr_pages: %#lx/%lu\n",
-		 __func__, ti->addr, nr_pages);
-
-error_out:
-	up_write(&mm->mmap_sem);
-}
-
-static void
-pin_user_pages_work(struct work_struct *w)
-{
-	long err;
-	struct extables tabs;
-	struct pin_pages_work *work;
-
-	work = container_of(w, struct pin_pages_work, work);
-
-	err = __search_ex_region(work->vm_start, &tabs);
-	if (!err)
-		pin_user_pages(&tabs);
-
-	kfree(w);
-}
-
-static int
-__pin_user_pages(unsigned long vm_start)
-{
-	struct pin_pages_work *work;
-
-	work = kmalloc(sizeof(*work), GFP_ATOMIC);
-	if (!work)
-		return -ENOMEM;
-
-	INIT_WORK(&work->work, pin_user_pages_work);
-	work->vm_start = vm_start;
-
-	schedule_work(&work->work);
-
-	return 0;
+	return ri_p ? 0 : -ENOENT;
 }
 
 static struct regions_data *rd_alloc(unsigned long size)
@@ -367,13 +421,15 @@ static void rd_free_rcu(struct rcu_head *rh)
 	rd_free(rd);
 }
 
-int quadd_unwind_set_extab(struct quadd_extables *extabs)
+int quadd_unwind_set_extab(struct quadd_extables *extabs,
+			   struct quadd_extabs_mmap *mmap)
 {
 	int err = 0;
 	unsigned long nr_entries, nr_added, new_size;
 	struct ex_region_info ri_entry;
 	struct extab_info *ti;
 	struct regions_data *rd, *rd_new;
+	struct ex_region_info *ex_entry;
 
 	spin_lock(&ctx.lock);
 
@@ -406,13 +462,19 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs)
 	ri_entry.vm_start = extabs->vm_start;
 	ri_entry.vm_end = extabs->vm_end;
 
+	ri_entry.mmap = mmap;
+
 	ti = &ri_entry.tabs.exidx;
 	ti->addr = extabs->exidx.addr;
 	ti->length = extabs->exidx.length;
+	ti->mmap_offset = extabs->reserved[QUADD_EXT_IDX_EXIDX_OFFSET];
+	ctx.ex_tables_size += ti->length;
 
 	ti = &ri_entry.tabs.extab;
 	ti->addr = extabs->extab.addr;
 	ti->length = extabs->extab.length;
+	ti->mmap_offset = extabs->reserved[QUADD_EXT_IDX_EXTAB_OFFSET];
+	ctx.ex_tables_size += ti->length;
 
 	nr_added = add_ex_region(rd_new, &ri_entry);
 	if (nr_added == 0) {
@@ -421,14 +483,22 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs)
 	}
 	rd_new->curr_nr += nr_added;
 
+	ex_entry = kzalloc(sizeof(*ex_entry), GFP_KERNEL);
+	if (!ex_entry) {
+		err = -ENOMEM;
+		goto error_out;
+	}
+	memcpy(ex_entry, &ri_entry, sizeof(*ex_entry));
+
+	INIT_LIST_HEAD(&ex_entry->list);
+	list_add_tail(&ex_entry->list, &mmap->ex_entries);
+
 	rcu_assign_pointer(ctx.rd, rd_new);
 
 	if (rd)
 		call_rcu(&rd->rcu, rd_free_rcu);
 
 	spin_unlock(&ctx.lock);
-
-	__pin_user_pages(ri_entry.vm_start);
 
 	return 0;
 
@@ -437,130 +507,107 @@ error_out:
 	return err;
 }
 
-static u32
-prel31_to_addr(const u32 *ptr)
+static int
+clean_mmap(struct regions_data *rd, struct quadd_extabs_mmap *mmap, int rm_ext)
 {
-	u32 value;
-	s32 offset;
+	int nr_removed = 0;
+	struct ex_region_info *entry, *next;
 
-	if (read_user_data(ptr, value))
+	if (!rd || !mmap)
 		return 0;
 
-	/* sign-extend to 32 bits */
-	offset = (((s32)value) << 1) >> 1;
-	return (u32)(unsigned long)ptr + offset;
-}
+	list_for_each_entry_safe(entry, next, &mmap->ex_entries, list) {
+		if (rm_ext)
+			nr_removed += remove_ex_region(rd, entry);
 
-static const struct unwind_idx *
-unwind_find_origin(const struct unwind_idx *start,
-		   const struct unwind_idx *stop)
-{
-	while (start < stop) {
-		u32 addr_offset;
-		const struct unwind_idx *mid = start + ((stop - start) >> 1);
-
-		if (read_user_data(&mid->addr_offset, addr_offset))
-			return ERR_PTR(-EFAULT);
-
-		if (addr_offset >= 0x40000000)
-			/* negative offset */
-			start = mid + 1;
-		else
-			/* positive offset */
-			stop = mid;
+		list_del(&entry->list);
+		kfree(entry);
 	}
 
-	return stop;
+	return nr_removed;
 }
 
-/*
- * Binary search in the unwind index. The entries are
- * guaranteed to be sorted in ascending order by the linker.
- *
- * start = first entry
- * origin = first entry with positive offset (or stop if there is no such entry)
- * stop - 1 = last entry
- */
-static const struct unwind_idx *
-search_index(u32 addr,
-	     const struct unwind_idx *start,
-	     const struct unwind_idx *origin,
-	     const struct unwind_idx *stop)
+void quadd_unwind_delete_mmap(struct quadd_extabs_mmap *mmap)
 {
-	u32 addr_prel31;
+	unsigned long nr_entries, nr_removed, new_size;
+	struct regions_data *rd, *rd_new;
 
-	pr_debug("%#x, %p, %p, %p\n", addr, start, origin, stop);
+	if (!mmap)
+		return;
 
-	/*
-	 * only search in the section with the matching sign. This way the
-	 * prel31 numbers can be compared as unsigned longs.
-	 */
-	if (addr < (u32)(unsigned long)start)
-		/* negative offsets: [start; origin) */
-		stop = origin;
-	else
-		/* positive offsets: [origin; stop) */
-		start = origin;
+	spin_lock(&ctx.lock);
 
-	/* prel31 for address relavive to start */
-	addr_prel31 = (addr - (u32)(unsigned long)start) & 0x7fffffff;
+	rd = rcu_dereference(ctx.rd);
+	if (!rd || !rd->curr_nr)
+		goto error_out;
+
+	nr_entries = rd->curr_nr;
+	new_size = min_t(unsigned long, rd->size, nr_entries);
+
+	rd_new = rd_alloc(new_size);
+	if (IS_ERR_OR_NULL(rd_new)) {
+		pr_err("%s: error: rd_alloc\n", __func__);
+		goto error_out;
+	}
+	rd_new->size = new_size;
+	rd_new->curr_nr = nr_entries;
+
+	memcpy(rd_new->entries, rd->entries,
+		nr_entries * sizeof(*rd->entries));
+
+	nr_removed = clean_mmap(rd_new, mmap, 1);
+	rd_new->curr_nr -= nr_removed;
+
+	rcu_assign_pointer(ctx.rd, rd_new);
+	call_rcu(&rd->rcu, rd_free_rcu);
+
+error_out:
+	spin_unlock(&ctx.lock);
+}
+
+static const struct unwind_idx *
+unwind_find_idx(struct ex_region_info *ri, u32 addr)
+{
+	unsigned long length;
+	u32 value;
+	struct unwind_idx *start;
+	struct unwind_idx *stop;
+	struct unwind_idx *mid = NULL;
+	length = ri->tabs.exidx.length / sizeof(*start);
+
+	if (unlikely(!length))
+		return NULL;
+
+	start = (struct unwind_idx *)((char *)ri->mmap->data +
+		ri->tabs.exidx.mmap_offset);
+	stop = start + length - 1;
+
+	value = (u32)mmap_prel31_to_addr(&start->addr_offset, ri, 1, 0, 0);
+	if (addr < value)
+		return NULL;
+
+	value = (u32)mmap_prel31_to_addr(&stop->addr_offset, ri, 1, 0, 0);
+	if (addr >= value)
+		return NULL;
 
 	while (start < stop - 1) {
-		u32 addr_offset, d;
+		mid = start + ((stop - start) >> 1);
 
-		const struct unwind_idx *mid = start + ((stop - start) >> 1);
+		value = (u32)mmap_prel31_to_addr(&mid->addr_offset,
+						 ri, 1, 0, 0);
 
-		/*
-		 * As addr_prel31 is relative to start an offset is needed to
-		 * make it relative to mid.
-		 */
-		if (read_user_data(&mid->addr_offset, addr_offset))
-			return ERR_PTR(-EFAULT);
-
-		d = (u32)(unsigned long)mid - (u32)(unsigned long)start;
-
-		if (addr_prel31 - d < addr_offset) {
+		if (addr < value)
 			stop = mid;
-		} else {
-			/* keep addr_prel31 relative to start */
-			addr_prel31 -= ((u32)(unsigned long)mid -
-					(u32)(unsigned long)start);
+		else
 			start = mid;
-		}
 	}
 
-	if (likely(start->addr_offset <= addr_prel31))
-		return start;
-
-	pr_debug("Unknown address %#x\n", addr);
-	return NULL;
-}
-
-static const struct unwind_idx *
-unwind_find_idx(struct extab_info *exidx, u32 addr)
-{
-	const struct unwind_idx *start;
-	const struct unwind_idx *origin;
-	const struct unwind_idx *stop;
-	const struct unwind_idx *idx = NULL;
-
-	start = (const struct unwind_idx *)exidx->addr;
-	stop = start + exidx->length / sizeof(*start);
-
-	origin = unwind_find_origin(start, stop);
-	if (IS_ERR(origin))
-		return origin;
-
-	idx = search_index(addr, start, origin, stop);
-
-	pr_debug("addr: %#x, start: %p, origin: %p, stop: %p, idx: %p\n",
-		addr, start, origin, stop, idx);
-
-	return idx;
+	return start;
 }
 
 static unsigned long
-unwind_get_byte(struct unwind_ctrl_block *ctrl, long *err)
+unwind_get_byte(struct quadd_extabs_mmap *mmap,
+		struct unwind_ctrl_block *ctrl, long *err)
 {
 	unsigned long ret;
 	u32 insn_word;
@@ -568,12 +615,12 @@ unwind_get_byte(struct unwind_ctrl_block *ctrl, long *err)
 	*err = 0;
 
 	if (ctrl->entries <= 0) {
-		pr_debug("error: corrupt unwind table\n");
+		pr_err_once("%s: error: corrupt unwind table\n", __func__);
 		*err = -QUADD_URC_TBL_IS_CORRUPT;
 		return 0;
 	}
 
-	*err = read_user_data(ctrl->insn, insn_word);
+	*err = read_mmap_data(mmap, ctrl->insn, &insn_word);
 	if (*err < 0)
 		return 0;
 
@@ -592,11 +639,13 @@ unwind_get_byte(struct unwind_ctrl_block *ctrl, long *err)
 /*
  * Execute the current unwind instruction.
  */
-static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
+static long
+unwind_exec_insn(struct quadd_extabs_mmap *mmap,
+		 struct unwind_ctrl_block *ctrl)
 {
 	long err;
 	unsigned int i;
-	unsigned long insn = unwind_get_byte(ctrl, &err);
+	unsigned long insn = unwind_get_byte(mmap, ctrl, &err);
 
 	if (err < 0)
 		return err;
@@ -618,7 +667,7 @@ static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 		int load_sp, reg = 4;
 
-		insn = (insn << 8) | unwind_get_byte(ctrl, &err);
+		insn = (insn << 8) | unwind_get_byte(mmap, ctrl, &err);
 		if (err < 0)
 			return err;
 
@@ -681,7 +730,7 @@ static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 
 		pr_debug("CMD_FINISH\n");
 	} else if (insn == 0xb1) {
-		unsigned long mask = unwind_get_byte(ctrl, &err);
+		unsigned long mask = unwind_get_byte(mmap, ctrl, &err);
 		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 		int reg = 0;
 
@@ -710,7 +759,7 @@ static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
 		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if (insn == 0xb2) {
-		unsigned long uleb128 = unwind_get_byte(ctrl, &err);
+		unsigned long uleb128 = unwind_get_byte(mmap, ctrl, &err);
 		if (err < 0)
 			return err;
 
@@ -722,7 +771,7 @@ static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
 		unsigned long data, reg_from, reg_to;
 		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
 
-		data = unwind_get_byte(ctrl, &err);
+		data = unwind_get_byte(mmap, ctrl, &err);
 		if (err < 0)
 			return err;
 
@@ -782,7 +831,7 @@ static long unwind_exec_insn(struct unwind_ctrl_block *ctrl)
  * updates the *pc and *sp with the new values.
  */
 static long
-unwind_frame(struct extab_info *exidx,
+unwind_frame(struct ex_region_info *ri,
 	     struct stackframe *frame,
 	     struct vm_area_struct *vma_sp)
 {
@@ -802,7 +851,7 @@ unwind_frame(struct extab_info *exidx,
 	pr_debug("pc: %#lx, lr: %#lx, sp:%#lx, low/high: %#lx/%#lx\n",
 		frame->pc, frame->lr, frame->sp, low, high);
 
-	idx = unwind_find_idx(exidx, frame->pc);
+	idx = unwind_find_idx(ri, frame->pc);
 	if (IS_ERR_OR_NULL(idx))
 		return -QUADD_URC_IDX_NOT_FOUND;
 
@@ -815,7 +864,7 @@ unwind_frame(struct extab_info *exidx,
 	ctrl.vrs[LR] = frame->lr;
 	ctrl.vrs[PC] = 0;
 
-	err = read_user_data(&idx->insn, val);
+	err = read_mmap_data(ri->mmap, &idx->insn, &val);
 	if (err < 0)
 		return err;
 
@@ -824,7 +873,8 @@ unwind_frame(struct extab_info *exidx,
 		return -QUADD_URC_CANTUNWIND;
 	} else if ((val & 0x80000000) == 0) {
 		/* prel31 to the unwind table */
-		ctrl.insn = (u32 *)(unsigned long)prel31_to_addr(&idx->insn);
+		ctrl.insn = (u32 *)(unsigned long)
+				mmap_prel31_to_addr(&idx->insn, ri, 1, 0, 1);
 		if (!ctrl.insn)
 			return -QUADD_URC_EACCESS;
 	} else if ((val & 0xff000000) == 0x80000000) {
@@ -836,7 +886,7 @@ unwind_frame(struct extab_info *exidx,
 		return -QUADD_URC_UNSUPPORTED_PR;
 	}
 
-	err = read_user_data(ctrl.insn, val);
+	err = read_mmap_data(ri->mmap, ctrl.insn, &val);
 	if (err < 0)
 		return err;
 
@@ -854,7 +904,7 @@ unwind_frame(struct extab_info *exidx,
 	}
 
 	while (ctrl.entries > 0) {
-		err = unwind_exec_insn(&ctrl);
+		err = unwind_exec_insn(ri->mmap, &ctrl);
 		if (err < 0)
 			return err;
 
@@ -885,12 +935,12 @@ unwind_frame(struct extab_info *exidx,
 
 static void
 unwind_backtrace(struct quadd_callchain *cc,
-		 struct extab_info *exidx,
+		 struct ex_region_info *ri,
 		 struct pt_regs *regs,
 		 struct vm_area_struct *vma_sp,
 		 struct task_struct *task)
 {
-	struct extables tabs;
+	struct ex_region_info ri_new;
 	struct stackframe frame;
 
 #ifdef CONFIG_ARM64
@@ -931,17 +981,17 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!vma_pc)
 			break;
 
-		if (!is_vma_addr(exidx->addr, vma_pc, sizeof(u32))) {
-			err = __search_ex_region(vma_pc->vm_start, &tabs);
+		if (!is_vma_addr(ri->tabs.exidx.addr, vma_pc, sizeof(u32))) {
+			err = __search_ex_region(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
-			exidx = &tabs.exidx;
+			ri = &ri_new;
 		}
 
-		err = unwind_frame(exidx, &frame, vma_sp);
+		err = unwind_frame(ri, &frame, vma_sp);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
 			cc->unw_rc = -err;
@@ -967,7 +1017,7 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	unsigned long ip, sp;
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
-	struct extables tabs;
+	struct ex_region_info ri;
 
 	cc->unw_method = QUADD_UNW_METHOD_EHT;
 	cc->unw_rc = QUADD_URC_FAILURE;
@@ -993,13 +1043,13 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	if (!vma_sp)
 		return 0;
 
-	err = __search_ex_region(vma->vm_start, &tabs);
+	err = __search_ex_region(vma->vm_start, &ri);
 	if (err) {
 		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
 	}
 
-	unwind_backtrace(cc, &tabs.exidx, regs, vma_sp, task);
+	unwind_backtrace(cc, &ri, regs, vma_sp, task);
 
 	return cc->nr;
 }
@@ -1028,8 +1078,7 @@ int quadd_unwind_start(struct task_struct *task)
 
 	ctx.pid = task->tgid;
 
-	ctx.pinned_pages = 0;
-	ctx.pinned_size = 0;
+	ctx.ex_tables_size = 0;
 
 	spin_unlock(&ctx.lock);
 
@@ -1038,23 +1087,33 @@ int quadd_unwind_start(struct task_struct *task)
 
 void quadd_unwind_stop(void)
 {
+	int i;
+	unsigned long nr_entries, size;
 	struct regions_data *rd;
+	struct ex_region_info *ri;
 
 	spin_lock(&ctx.lock);
 
 	ctx.pid = 0;
 
 	rd = rcu_dereference(ctx.rd);
-	if (rd) {
-		rcu_assign_pointer(ctx.rd, NULL);
-		call_rcu(&rd->rcu, rd_free_rcu);
+	if (!rd)
+		goto out;
+
+	nr_entries = rd->curr_nr;
+	size = rd->size;
+
+	for (i = 0; i < nr_entries; i++) {
+		ri = &rd->entries[i];
+		clean_mmap(rd, ri->mmap, 0);
 	}
 
-	spin_unlock(&ctx.lock);
+	rcu_assign_pointer(ctx.rd, NULL);
+	call_rcu(&rd->rcu, rd_free_rcu);
 
-	pr_info("exception tables size: %lu bytes\n", ctx.pinned_size);
-	pr_info("pinned pages: %lu (%lu bytes)\n", ctx.pinned_pages,
-		ctx.pinned_pages * PAGE_SIZE);
+out:
+	spin_unlock(&ctx.lock);
+	pr_info("exception tables size: %lu bytes\n", ctx.ex_tables_size);
 }
 
 int quadd_unwind_init(void)

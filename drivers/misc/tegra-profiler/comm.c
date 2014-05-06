@@ -24,6 +24,7 @@
 #include <linux/poll.h>
 #include <linux/bitops.h>
 #include <linux/err.h>
+#include <linux/mm.h>
 
 #include <asm/uaccess.h>
 
@@ -435,6 +436,20 @@ static int check_access_permission(void)
 	return 0;
 }
 
+static struct quadd_extabs_mmap *
+find_mmap(unsigned long vm_start)
+{
+	struct quadd_extabs_mmap *entry;
+
+	list_for_each_entry(entry, &comm_ctx.ext_mmaps, list) {
+		struct vm_area_struct *mmap_vma = entry->mmap_vma;
+		if (vm_start == mmap_vma->vm_start)
+			return entry;
+	}
+
+	return NULL;
+}
+
 static int device_open(struct inode *inode, struct file *file)
 {
 	mutex_lock(&comm_ctx.io_mutex);
@@ -528,12 +543,14 @@ device_ioctl(struct file *file,
 	     unsigned long ioctl_param)
 {
 	int err = 0;
+	unsigned long flags;
+	u64 *mmap_vm_start;
+	struct quadd_extabs_mmap *mmap;
 	struct quadd_parameters *user_params;
 	struct quadd_comm_cap cap;
 	struct quadd_module_state state;
 	struct quadd_module_version versions;
 	struct quadd_extables extabs;
-	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
 
 	if (ioctl_num != IOCTL_SETUP &&
@@ -684,7 +701,20 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		err = comm_ctx.control->set_extab(&extabs);
+		mmap_vm_start = (u64 *)
+			&extabs.reserved[QUADD_EXT_IDX_MMAP_VM_START];
+
+		spin_lock(&comm_ctx.mmaps_lock);
+		mmap = find_mmap((unsigned long)*mmap_vm_start);
+		if (!mmap) {
+			pr_err("%s: error: mmap is not found\n", __func__);
+			err = -ENXIO;
+			spin_unlock(&comm_ctx.mmaps_lock);
+			goto error_out;
+		}
+
+		err = comm_ctx.control->set_extab(&extabs, mmap);
+		spin_unlock(&comm_ctx.mmaps_lock);
 		if (err) {
 			pr_err("error: set_extab\n");
 			goto error_out;
@@ -695,11 +725,129 @@ device_ioctl(struct file *file,
 		pr_err("error: ioctl %u is unsupported in this version of module\n",
 		       ioctl_num);
 		err = -EFAULT;
+		goto error_out;
 	}
 
 error_out:
 	mutex_unlock(&comm_ctx.io_mutex);
 	return err;
+}
+
+static void
+delete_mmap(struct quadd_extabs_mmap *mmap)
+{
+	struct quadd_extabs_mmap *entry, *next;
+
+	list_for_each_entry_safe(entry, next, &comm_ctx.ext_mmaps, list) {
+		if (entry == mmap) {
+			list_del(&entry->list);
+			vfree(entry->data);
+			kfree(entry);
+			break;
+		}
+	}
+}
+
+static void mmap_open(struct vm_area_struct *vma)
+{
+}
+
+static void mmap_close(struct vm_area_struct *vma)
+{
+	struct quadd_extabs_mmap *mmap;
+
+	pr_debug("mmap_close: vma: %#lx - %#lx\n",
+		 vma->vm_start, vma->vm_end);
+
+	spin_lock(&comm_ctx.mmaps_lock);
+
+	mmap = find_mmap(vma->vm_start);
+	if (!mmap) {
+		pr_err("%s: error: mmap is not found\n", __func__);
+		goto out;
+	}
+
+	comm_ctx.control->delete_mmap(mmap);
+	delete_mmap(mmap);
+
+out:
+	spin_unlock(&comm_ctx.mmaps_lock);
+}
+
+static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+	void *data;
+	struct quadd_extabs_mmap *mmap;
+	unsigned long offset = vmf->pgoff << PAGE_SHIFT;
+
+	pr_debug("mmap_fault: vma: %#lx - %#lx, pgoff: %#lx, vaddr: %p\n",
+		 vma->vm_start, vma->vm_end, vmf->pgoff, vmf->virtual_address);
+
+	spin_lock(&comm_ctx.mmaps_lock);
+
+	mmap = find_mmap(vma->vm_start);
+	if (!mmap) {
+		spin_unlock(&comm_ctx.mmaps_lock);
+		return VM_FAULT_SIGBUS;
+	}
+
+	data = mmap->data;
+
+	vmf->page = vmalloc_to_page(data + offset);
+	get_page(vmf->page);
+
+	spin_unlock(&comm_ctx.mmaps_lock);
+	return 0;
+}
+
+static struct vm_operations_struct mmap_vm_ops = {
+	.open	= mmap_open,
+	.close	= mmap_close,
+	.fault	= mmap_fault,
+};
+
+static int
+device_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	unsigned long vma_size, nr_pages;
+	struct quadd_extabs_mmap *entry;
+
+	pr_debug("mmap: vma: %#lx - %#lx, pgoff: %#lx\n",
+		 vma->vm_start, vma->vm_end, vma->vm_pgoff);
+
+	if (vma->vm_pgoff != 0)
+		return -EINVAL;
+
+	vma->vm_private_data = filp->private_data;
+
+	vma_size = vma->vm_end - vma->vm_start;
+	nr_pages = vma_size / PAGE_SIZE;
+
+	entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+
+	entry->mmap_vma = vma;
+
+	INIT_LIST_HEAD(&entry->list);
+	INIT_LIST_HEAD(&entry->ex_entries);
+
+	entry->data = vmalloc_user(nr_pages * PAGE_SIZE);
+	if (!entry->data) {
+		pr_err("%s: error: vmalloc_user", __func__);
+		return -ENOMEM;
+	}
+
+	spin_lock(&comm_ctx.mmaps_lock);
+	list_add_tail(&entry->list, &comm_ctx.ext_mmaps);
+	spin_unlock(&comm_ctx.mmaps_lock);
+
+	vma->vm_ops = &mmap_vm_ops;
+	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP;
+
+	vma->vm_ops->open(vma);
+
+	return 0;
 }
 
 static void unregister(void)
@@ -720,6 +868,7 @@ static const struct file_operations qm_fops = {
 	.release	= device_release,
 	.unlocked_ioctl	= device_ioctl,
 	.compat_ioctl	= device_ioctl,
+	.mmap		= device_mmap,
 };
 
 static int comm_init(void)
@@ -752,6 +901,9 @@ static int comm_init(void)
 	comm_ctx.nr_users = 0;
 
 	init_waitqueue_head(&comm_ctx.read_wait);
+
+	INIT_LIST_HEAD(&comm_ctx.ext_mmaps);
+	spin_lock_init(&comm_ctx.mmaps_lock);
 
 	return 0;
 }

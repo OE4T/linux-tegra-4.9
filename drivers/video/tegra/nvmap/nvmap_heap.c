@@ -71,9 +71,9 @@ struct nvmap_heap {
 	phys_addr_t base;
 	/* heap size */
 	size_t len;
-	struct device dev;
 	struct device *cma_dev;
 	struct device *dma_dev;
+	struct device dev;
 };
 
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
@@ -265,20 +265,26 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	} else {
 		int err;
 
-		dev_set_name(&h->dev, "%s", co->name);
-		dma_set_coherent_mask(&h->dev, DMA_BIT_MASK(64));
+		if (co->dma_dev)
+			h->dma_dev = co->dma_dev;
+		else
+			/* To continue working with bsp that doesn't
+			 * pass dma_dev ptr.
+			 */
+			h->dma_dev = &h->dev;
+		dev_set_name(h->dma_dev, "%s", co->name);
+		dma_set_coherent_mask(h->dma_dev, DMA_BIT_MASK(64));
 		/* declare Non-CMA heap */
-		err = dma_declare_coherent_memory(&h->dev, 0, base, len,
+		err = dma_declare_coherent_memory(h->dma_dev, 0, base, len,
 				DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
 		if (err & DMA_MEMORY_NOMAP) {
-			dev_info(&h->dev, "dma coherent mem declare %pa,%zu\n",
+			dev_info(h->dma_dev, "dma coherent mem declare %pa,%zu\n",
 				&base, len);
 		} else {
-			dev_dbg(&h->dev, "dma coherent declare fail %pa,%zu\n",
+			dev_dbg(h->dma_dev, "dma coherent declare fail %pa,%zu\n",
 				&base, len);
 			goto fail;
 		}
-		h->dma_dev = &h->dev;
 	}
 
 	h->name = co->name;

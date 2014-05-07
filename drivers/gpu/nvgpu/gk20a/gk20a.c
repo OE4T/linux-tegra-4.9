@@ -770,6 +770,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	/* Disable GPCPLL */
 	ret |= gk20a_suspend_clk_support(g);
 
+	gk20a_platform_channel_idle(pdev);
 	g->power_on = false;
 
 	return ret;
@@ -800,6 +801,10 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	int err, nice_value;
 
 	gk20a_dbg_fn("");
+
+	err = gk20a_platform_channel_busy(pdev);
+	if (err)
+		return err;
 
 	if (g->power_on)
 		return 0;

@@ -462,11 +462,6 @@ static struct tegra_dsi_cmd dsi_j_1440_810_5_8_suspend_cmd[] = {
 
 static int dsi_j_1440_810_5_8_enable(struct device *dev)
 {
-	return 0;
-}
-
-static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
-{
 	int err = 0;
 
 	err = dsi_j_1440_810_5_8_reg_get(dev);
@@ -526,6 +521,12 @@ static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
 	return 0;
 fail:
 	return err;
+}
+
+static int dsi_j_1440_810_5_8_postpoweron(struct device *dev)
+{
+	msleep(80);
+	return 0;
 }
 
 static struct tegra_dsi_out dsi_j_1440_810_5_8_pdata = {

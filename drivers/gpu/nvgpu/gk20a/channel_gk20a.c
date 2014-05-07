@@ -697,14 +697,14 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 
-	err = gk20a_channel_busy(ch->g->dev);
+	err = gk20a_busy(ch->g->dev);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to release channel %d",
 			ch->hw_chid);
 		return err;
 	}
 	gk20a_free_channel(ch, true);
-	gk20a_channel_idle(ch->g->dev);
+	gk20a_idle(ch->g->dev);
 
 	gk20a_put_client(g);
 	filp->private_data = NULL;
@@ -767,14 +767,14 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 		return err;
 	}
 
-	err = gk20a_channel_busy(g->dev);
+	err = gk20a_busy(g->dev);
 	if (err) {
 		gk20a_put_client(g);
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
 		return err;
 	}
 	ch = gk20a_open_new_channel(g);
-	gk20a_channel_idle(g->dev);
+	gk20a_idle(g->dev);
 	if (!ch) {
 		gk20a_put_client(g);
 		gk20a_err(dev_from_gk20a(g),
@@ -1417,7 +1417,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 
 		list_del_init(&job->list);
 		kfree(job);
-		gk20a_channel_idle(g->dev);
+		gk20a_idle(g->dev);
 	}
 
 	/*
@@ -1436,7 +1436,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	mutex_unlock(&c->submit_lock);
 
 	for (i = 0; i < nr_completed; i++)
-		gk20a_channel_idle(c->g->dev);
+		gk20a_idle(c->g->dev);
 }
 
 void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
@@ -1484,7 +1484,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("channel %d", c->hw_chid);
 
 	/* gk20a_channel_update releases this ref. */
-	err = gk20a_channel_busy(g->dev);
+	err = gk20a_busy(g->dev);
 	if (err) {
 		gk20a_err(d, "failed to host gk20a to submit gpfifo");
 		return err;
@@ -1645,7 +1645,7 @@ clean_up:
 	gk20a_err(d, "fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
-	gk20a_channel_idle(g->dev);
+	gk20a_idle(g->dev);
 	return err;
 }
 
@@ -2079,7 +2079,7 @@ long gk20a_channel_ioctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 		break;
 	case NVHOST_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2088,10 +2088,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_alloc_obj_ctx(ch,
 				(struct nvhost_alloc_obj_ctx_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2100,10 +2100,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_free_obj_ctx(ch,
 				(struct nvhost_free_obj_ctx_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2112,14 +2112,14 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_alloc_channel_gpfifo(ch,
 				(struct nvhost_alloc_gpfifo_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SUBMIT_GPFIFO:
 		err = gk20a_ioctl_channel_submit_gpfifo(ch,
 				(struct nvhost_submit_gpfifo_args *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_WAIT:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2128,10 +2128,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_wait(ch,
 				(struct nvhost_wait_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ZCULL_BIND:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2140,10 +2140,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_zcull_bind(ch,
 				(struct nvhost_zcull_bind_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2152,11 +2152,11 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_init_error_notifier(ch,
 				(struct nvhost_set_error_notifier *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 #ifdef CONFIG_GK20A_CYCLE_STATS
 	case NVHOST_IOCTL_CHANNEL_CYCLE_STATS:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2165,7 +2165,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_cycle_stats(ch,
 				(struct nvhost_cycle_stats_args *)buf);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 #endif
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:
@@ -2195,7 +2195,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			ch->has_timedout;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
-		err = gk20a_channel_busy(dev);
+		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -2204,7 +2204,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		gk20a_channel_set_priority(ch,
 			((struct nvhost_set_priority_args *)buf)->priority);
-		gk20a_channel_idle(dev);
+		gk20a_idle(dev);
 		break;
 	default:
 		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);

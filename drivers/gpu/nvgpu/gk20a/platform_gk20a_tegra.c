@@ -560,8 +560,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
-	.channel_busy = gk20a_tegra_channel_busy,
-	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };

@@ -740,10 +740,10 @@ void gk20a_put_client(struct gk20a *g)
 	WARN_ON(g->client_refcount < 0);
 }
 
-static int gk20a_pm_prepare_poweroff(struct device *_dev)
+static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
-	struct platform_device *dev = to_platform_device(_dev);
-	struct gk20a *g = get_gk20a(dev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -770,6 +770,7 @@ static int gk20a_pm_prepare_poweroff(struct device *_dev)
 
 	/* Disable GPCPLL */
 	ret |= gk20a_suspend_clk_support(g);
+
 	g->power_on = false;
 
 	return ret;
@@ -793,10 +794,10 @@ static void gk20a_detect_chip(struct gk20a *g)
 			g->gpu_characteristics.rev);
 }
 
-static int gk20a_pm_finalize_poweron(struct device *_dev)
+static int gk20a_pm_finalize_poweron(struct device *dev)
 {
-	struct platform_device *dev = to_platform_device(_dev);
-	struct gk20a *g = get_gk20a(dev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(pdev);
 	int err, nice_value;
 
 	gk20a_dbg_fn("");
@@ -849,7 +850,7 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 	   saving features (blcg/slcg) are enabled. For now, do it here. */
 	err = gk20a_init_clk_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a clk");
+		gk20a_err(dev, "failed to init gk20a clk");
 		goto done;
 	}
 
@@ -868,7 +869,7 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 
 	err = gk20a_init_fifo_reset_enable_hw(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to reset gk20a fifo");
+		gk20a_err(dev, "failed to reset gk20a fifo");
 		goto done;
 	}
 
@@ -877,43 +878,43 @@ static int gk20a_pm_finalize_poweron(struct device *_dev)
 
 	err = gk20a_init_mm_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a mm");
+		gk20a_err(dev, "failed to init gk20a mm");
 		goto done;
 	}
 
 	err = gk20a_init_pmu_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a pmu");
+		gk20a_err(dev, "failed to init gk20a pmu");
 		goto done;
 	}
 
 	err = gk20a_init_fifo_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a fifo");
+		gk20a_err(dev, "failed to init gk20a fifo");
 		goto done;
 	}
 
 	err = gk20a_init_gr_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a gr");
+		gk20a_err(dev, "failed to init gk20a gr");
 		goto done;
 	}
 
 	err = gk20a_init_pmu_setup_hw2(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a pmu_hw2");
+		gk20a_err(dev, "failed to init gk20a pmu_hw2");
 		goto done;
 	}
 
 	err = gk20a_init_therm_support(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a therm");
+		gk20a_err(dev, "failed to init gk20a therm");
 		goto done;
 	}
 
 	err = gk20a_init_gpu_characteristics(g);
 	if (err) {
-		gk20a_err(&dev->dev, "failed to init gk20a gpu characteristics");
+		gk20a_err(dev, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
 
@@ -1538,27 +1539,6 @@ bool is_gk20a_module(struct platform_device *dev)
 void gk20a_busy_noresume(struct platform_device *pdev)
 {
 	pm_runtime_get_noresume(&pdev->dev);
-}
-
-int gk20a_channel_busy(struct platform_device *pdev)
-{
-	int ret = 0;
-
-	ret = gk20a_platform_channel_busy(pdev);
-	if (ret)
-		return ret;
-
-	ret = gk20a_busy(pdev);
-	if (ret)
-		gk20a_platform_channel_idle(pdev);
-
-	return ret;
-}
-
-void gk20a_channel_idle(struct platform_device *pdev)
-{
-	gk20a_idle(pdev);
-	gk20a_platform_channel_idle(pdev);
 }
 
 int gk20a_busy(struct platform_device *pdev)

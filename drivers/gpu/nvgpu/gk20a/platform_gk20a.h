@@ -71,17 +71,6 @@ struct gk20a_platform {
 	 */
 	int (*late_probe)(struct platform_device *dev);
 
-	/* Called before submitting work to the gpu. The platform may use this
-	 * hook to ensure that any other hw modules that the gpu depends on are
-	 * powered. The platform implementation must count refs to this call. */
-	int (*channel_busy)(struct platform_device *dev);
-
-	/* Called after the work on the gpu is completed. The platform may use
-	 * this hook to release power refs to any other hw modules that the gpu
-	 * depends on. The platform implementation must count refs to this
-	 * call. */
-	void (*channel_idle)(struct platform_device *dev);
-
 	/* This function is called to allocate secure memory (memory that the
 	 * CPU cannot see). The function should fill the context buffer
 	 * descriptor (especially fields destroy, sgt, size).
@@ -133,23 +122,6 @@ extern struct gk20a_platform gk20a_generic_platform;
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gk20a_tegra_platform;
 #endif
-
-static inline int gk20a_platform_channel_busy(struct platform_device *dev)
-{
-	struct gk20a_platform *p = gk20a_get_platform(dev);
-	int ret = 0;
-	if (p->channel_busy)
-		ret = p->channel_busy(dev);
-
-	return ret;
-}
-
-static inline void gk20a_platform_channel_idle(struct platform_device *dev)
-{
-	struct gk20a_platform *p = gk20a_get_platform(dev);
-	if (p->channel_idle)
-		p->channel_idle(dev);
-}
 
 static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)
 {

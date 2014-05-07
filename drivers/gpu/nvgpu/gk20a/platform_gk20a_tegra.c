@@ -92,37 +92,6 @@ int FXDIV(int x, int y)
 	return (x << pos) / y;
 }
 
-static int gk20a_tegra_channel_busy(struct platform_device *dev)
-{
-	int ret = 0;
-
-	/* Explicitly turn on the host1x clocks
-	 * - This is needed as host1x driver sets ignore_children = true
-	 * to cater the use case of display clock ON but host1x clock OFF
-	 * in OS-Idle-Display-ON case
-	 * - This was easily done in ACM as it only checked the ref count
-	 * of host1x (or any device for that matter) to be zero before
-	 * turning off its clock
-	 * - However, runtime PM checks to see if *ANY* child of device is
-	 * in ACTIVE state and if yes, it doesn't suspend the parent. As a
-	 * result of this, display && host1x clocks remains ON during
-	 * OS-Idle-Display-ON case
-	 * - The code below fixes this use-case
-	 */
-	if (to_platform_device(dev->dev.parent))
-		ret = nvhost_module_busy_ext(
-			to_platform_device(dev->dev.parent));
-
-	return ret;
-}
-
-static void gk20a_tegra_channel_idle(struct platform_device *dev)
-{
-	/* Explicitly turn off the host1x clocks */
-	if (to_platform_device(dev->dev.parent))
-		nvhost_module_idle_ext(to_platform_device(dev->dev.parent));
-}
-
 static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
 				       struct gr_ctx_buffer_desc *desc)
 {
@@ -455,8 +424,8 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
-	/* Make gk20a power domain a subdomain of mc */
-	tegra_pd_add_sd(&platform->g->pd);
+	/* Make gk20a power domain a subdomain of host1x */
+	nvhost_register_client_domain(&platform->g->pd);
 
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
@@ -520,8 +489,6 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
-	.channel_busy = gk20a_tegra_channel_busy,
-	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
@@ -548,8 +515,6 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
-	.channel_busy = gk20a_tegra_channel_busy,
-	.channel_idle = gk20a_tegra_channel_idle,
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };

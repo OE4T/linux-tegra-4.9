@@ -555,7 +555,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module busy");
 			gk20a_busy(g->dev);
-			err = gk20a_channel_busy(dbg_s->pdev);
+			err = gk20a_busy(dbg_s->pdev);
 			if (err)
 				return -EPERM;
 
@@ -600,7 +600,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			gk20a_pmu_enable_elpg(g);
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module idle");
-			gk20a_channel_idle(dbg_s->pdev);
+			gk20a_idle(dbg_s->pdev);
 			gk20a_idle(g->dev);
 		}
 

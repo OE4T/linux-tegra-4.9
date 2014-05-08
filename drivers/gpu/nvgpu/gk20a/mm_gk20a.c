@@ -113,7 +113,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   int rw_flag);
 static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
 static void gk20a_vm_remove_support(struct vm_gk20a *vm);
-
+static int gk20a_init_system_vm(struct mm_gk20a *mm);
+static int gk20a_init_bar1_vm(struct mm_gk20a *mm);
 
 /* note: keep the page sizes sorted lowest to highest here */
 static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
@@ -341,6 +342,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 
 	gk20a_init_bar1_vm(mm);
+	gk20a_init_system_vm(mm);
 
 	mm->remove_support = gk20a_remove_mm_support;
 	mm->sw_ready = true;
@@ -2486,7 +2488,7 @@ int gk20a_vm_unmap_buffer(struct gk20a_as_share *as_share, u64 offset)
 	return 0;
 }
 
-int gk20a_init_bar1_vm(struct mm_gk20a *mm)
+static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
 	phys_addr_t inst_pa;
@@ -2630,7 +2632,7 @@ clean_up:
 }
 
 /* pmu vm, share channel_vm interfaces */
-int gk20a_init_pmu_vm(struct mm_gk20a *mm)
+static int gk20a_init_system_vm(struct mm_gk20a *mm)
 {
 	int err;
 	phys_addr_t inst_pa;

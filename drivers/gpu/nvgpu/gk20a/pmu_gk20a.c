@@ -1588,8 +1588,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
 	INIT_WORK(&pmu->pg_init, gk20a_init_pmu_setup_hw2_workqueue);
 
-	gk20a_init_pmu_vm(mm);
-
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 	pmu->ucode.cpuva = dma_alloc_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
 					&iova,

@@ -538,9 +538,7 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 	gk20a_dbg_fn("");
 
-	/* flush gpu_va before commit */
 	gk20a_mm_fb_flush(c->g);
-	gk20a_mm_l2_flush(c->g, true);
 
 	inst_ptr = c->inst_block.cpuva;
 	if (!inst_ptr)
@@ -555,8 +553,6 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 	gk20a_mem_wr32(inst_ptr, ram_in_gr_wfi_ptr_hi_w(),
 		 ram_in_gr_wfi_ptr_hi_f(addr_hi));
-
-	gk20a_mm_l2_invalidate(c->g);
 
 	return 0;
 }
@@ -600,8 +596,6 @@ int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 
 	vunmap(ch_ctx->patch_ctx.cpu_va);
 	ch_ctx->patch_ctx.cpu_va = NULL;
-
-	gk20a_mm_l2_invalidate(g);
 	return 0;
 }
 
@@ -718,10 +712,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 		}
 	}
 
-	/* Channel gr_ctx buffer is gpu cacheable.
-	   Flush and invalidate before cpu update. */
 	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_o(), 0,
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
@@ -736,7 +727,6 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 			goto clean_up;
 		}
 	}
-	gk20a_mm_l2_invalidate(g);
 
 clean_up:
 	vunmap(ctx_ptr);
@@ -1466,10 +1456,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	ctx_header_words =  roundup(ctx_header_bytes, sizeof(u32));
 	ctx_header_words >>= 2;
 
-	/* Channel gr_ctx buffer is gpu cacheable.
-	   Flush before cpu read. */
 	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, false);
 
 	for (i = 0; i < ctx_header_words; i++) {
 		data = gk20a_mem_rd32(ctx_ptr, i);
@@ -1504,8 +1491,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	gr->ctx_vars.golden_image_initialized = true;
 
-	gk20a_mm_l2_invalidate(g);
-
 	gk20a_writel(g, gr_fecs_current_ctx_r(),
 		gr_fecs_current_ctx_valid_false_f());
 
@@ -1537,7 +1522,6 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
@@ -1554,8 +1538,6 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 		 data);
 
 	vunmap(ctx_ptr);
-
-	gk20a_mm_l2_invalidate(g);
 
 	return 0;
 }
@@ -1580,7 +1562,6 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
@@ -1635,8 +1616,6 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 
 	vunmap(ctx_ptr);
-
-	gk20a_mm_l2_invalidate(g);
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
@@ -2716,7 +2695,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		}
 		c->first_init = true;
 	}
-	gk20a_mm_l2_invalidate(g);
 
 	c->num_objects++;
 
@@ -4222,8 +4200,6 @@ restore_fe_go_idle:
 			gr_pri_mme_shadow_raw_index_write_trigger_f() |
 			sw_method_init->l[i].addr);
 	}
-
-	gk20a_mm_l2_invalidate(g);
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
@@ -5797,10 +5773,6 @@ int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 
 				/* we're not caching these on cpu side,
 				   but later watch for it */
-
-				/* the l2 invalidate in the patch_write
-				 * would be too early for this? */
-				gk20a_mm_l2_invalidate(g);
 				return 0;
 			}
 		}
@@ -6538,10 +6510,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 		goto cleanup;
 	}
 
-	/* Channel gr_ctx buffer is gpu cacheable; so flush and invalidate.
-	 * There should be no on-going/in-flight references by the gpu now. */
 	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
 
 	/* write to appropriate place in context image,
 	 * first have to figure out where that really is */

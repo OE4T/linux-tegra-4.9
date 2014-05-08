@@ -1937,8 +1937,6 @@ static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 		vaddr += pgsz;
 	}
 
-	gk20a_mm_l2_flush(mm->g, true);
-
 	return 0;
 
 err_unmap:

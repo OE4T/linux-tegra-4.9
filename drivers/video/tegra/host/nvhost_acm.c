@@ -716,6 +716,12 @@ int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 	return ret;
 }
 
+void nvhost_register_client_domain(struct generic_pm_domain *domain)
+{
+	pm_genpd_add_subdomain(host1x_domain, domain);
+}
+EXPORT_SYMBOL(nvhost_register_client_domain);
+
 /* common runtime pm and power domain APIs */
 int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev)

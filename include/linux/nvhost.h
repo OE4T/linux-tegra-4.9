@@ -265,6 +265,9 @@ bool nvhost_module_powered_ext(struct platform_device *dev);
 int nvhost_module_busy_ext(struct platform_device *dev);
 void nvhost_module_idle_ext(struct platform_device *dev);
 
+/* public api to register a subdomain */
+void nvhost_register_client_domain(struct generic_pm_domain *domain);
+
 /* public host1x sync-point management APIs */
 u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,

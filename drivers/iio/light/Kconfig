@@ -366,4 +366,38 @@ config VEML6070
 	 To compile this driver as a module, choose M here: the
 	 module will be called veml6070.
 
+config NVS_CM3217
+	tristate "Capella CM3217 ALS"
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	 Say Y here for Capella Microsystems, Inc. CM3217
+	 Ambient Light Sensor (ALS) support.
+	 This driver can also be built as a module.  If so, the module
+	 will be called nvs-cm3217.
+
+config NVS_CM3218
+	tristate "Capella CM3218 ALS"
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	 Say Y here for Capella Microsystems, Inc. CM3218 and CM32181
+	 Ambient Light Sensor (ALS) support.
+	 This driver can also be built as a module.  If so, the module
+	 will be called nvs-cm3218.
+
+config NVS_MAX4400X
+	tristate "Maxim MAX4400X ALS/Proximity"
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	 Say Y here for Maxim MAX44005 and MAX44006/MAX44008
+	 Ambient Light Sensor (ALS) support.
+	 Proximity is supported on the MAX44005.
+	 This driver can also be built as a module.  If so, the module
+	 will be called nvs-max4400x.
+
 endmenu

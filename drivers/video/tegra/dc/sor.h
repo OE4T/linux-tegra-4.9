@@ -30,11 +30,6 @@ enum tegra_dc_sor_protocol {
 	SOR_LVDS,
 };
 
-#define SOR_LINK_SPEED_G1_62	6
-#define SOR_LINK_SPEED_G2_7	10
-#define SOR_LINK_SPEED_G5_4	20
-#define SOR_LINK_SPEED_LVDS	7
-
 struct tegra_dc_dp_link_config {
 	bool	is_valid;	/*
 				 * True if link config adheres to dp spec.

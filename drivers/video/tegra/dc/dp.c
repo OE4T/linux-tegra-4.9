@@ -1033,7 +1033,10 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ? true : false;
 
 	cfg->lane_count = cfg->max_lane_count;
-	cfg->link_bw = cfg->max_link_bw;
+
+	cfg->link_bw = (dp->pdata && dp->pdata->link_bw) ?
+			dp->pdata->link_bw : cfg->max_link_bw;
+
 	cfg->enhanced_framing = cfg->support_enhanced_framing;
 
 	tegra_dc_dp_calc_config(dp, dp->mode, cfg);
@@ -1536,6 +1539,11 @@ static int tegra_dp_hpd_plug(struct tegra_dc_dp_data *dp)
 
 	might_sleep();
 
+	if (tegra_platform_is_fpga()) {
+		msleep(TEGRA_DP_HPD_PLUG_TIMEOUT_MS);
+		return 0;
+	}
+
 	reinit_completion(&dp->hpd_plug);
 	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT);
 
@@ -1675,11 +1683,13 @@ static bool tegra_dp_clock_recovery_status(struct tegra_dc_dp_data *dp)
 	for (cnt = 0; cnt < n_lanes / 2; cnt++) {
 		tegra_dc_dp_dpcd_read(dp,
 			(NV_DPCD_LANE0_1_STATUS + cnt), &data_ptr);
-		if (!(data_ptr & 0x1) ||
+
+		if (n_lanes == 1)
+			return (data_ptr & 0x1) ? true : false;
+		else if (!(data_ptr & 0x1) ||
 			!(data_ptr &
-			(0x1 << NV_DPCD_STATUS_LANEXPLUS1_CR_DONE_SHIFT))) {
+			(0x1 << NV_DPCD_STATUS_LANEXPLUS1_CR_DONE_SHIFT)))
 			return false;
-		}
 	}
 
 	return true;
@@ -1772,7 +1782,14 @@ static bool tegra_dp_channel_eq_status(struct tegra_dc_dp_data *dp)
 	for (cnt = 0; cnt < n_lanes / 2; cnt++) {
 		tegra_dc_dp_dpcd_read(dp,
 			(NV_DPCD_LANE0_1_STATUS + cnt), &data_ptr);
-		if (!(data_ptr &
+
+		if (n_lanes == 1) {
+			ce_done = (data_ptr &
+			(0x1 << NV_DPCD_STATUS_LANEX_CHN_EQ_DONE_SHIFT)) &&
+			(data_ptr &
+			(0x1 << NV_DPCD_STATUS_LANEX_SYMBOL_LOCKED_SHFIT));
+			break;
+		} else if (!(data_ptr &
 		(0x1 << NV_DPCD_STATUS_LANEX_CHN_EQ_DONE_SHIFT)) ||
 		!(data_ptr &
 		(0x1 << NV_DPCD_STATUS_LANEX_SYMBOL_LOCKED_SHFIT)) ||
@@ -1784,6 +1801,7 @@ static bool tegra_dp_channel_eq_status(struct tegra_dc_dp_data *dp)
 			break;
 		}
 	}
+
 	if (ce_done) {
 		tegra_dc_dp_dpcd_read(dp,
 			NV_DPCD_LANE_ALIGN_STATUS_UPDATED, &data_ptr);
@@ -2032,23 +2050,22 @@ static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
 		goto fail;
 	}
 
-	dc->out->h_size = specs.max_x * 10; /* in mm */
-	dc->out->v_size = specs.max_y * 10;
+	/* in mm */
+	dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;
+	dc->out->v_size = dc->out->v_size ? : specs.max_y * 10;
 
-	tegra_dc_set_fb_mode(dc, specs.modedb, false);
+	/*
+	 * EDID specifies either the acutal screen sizes or
+	 * the aspect ratios. The panel file can choose to
+	 * trust the value as the actual sizes by leaving
+	 * width/height to 0s
+	 */
+	dc->out->width = dc->out->width ? : dc->out->h_size;
+	dc->out->height = dc->out->height ? : dc->out->v_size;
 
-	if (!dc->out->width && !dc->out->height) {
-		/*
-		 * EDID specifies either the acutal screen sizes or
-		 * the aspect ratios. The panel file can choose to
-		 * trust the value as the actual sizes by leaving
-		 * width/height to 0s
-		 */
-		dc->out->width = dc->out->h_size;
-		dc->out->height = dc->out->v_size;
-	}
+	if (!dc->out->modes)
+		tegra_dc_set_fb_mode(dc, specs.modedb, false);
 
-	/* adjust clk for new mode */
 	tegra_dc_setup_clk(dc, dc->clk);
 
 	return 0;

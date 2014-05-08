@@ -609,8 +609,9 @@ static void gk20a_remove_support(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	/* pmu support should already be removed when driver turns off
-	   gpu power rail in prepapre_poweroff */
+	if (g->pmu.remove_support)
+		g->pmu.remove_support(&g->pmu);
+
 	if (g->gk20a_cdev.gk20a_cooling_dev)
 		thermal_cooling_device_unregister(g->gk20a_cdev.gk20a_cooling_dev);
 

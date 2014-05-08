@@ -1053,23 +1053,6 @@ struct pmu_gk20a {
 	bool perfmon_sampling_enabled;
 };
 
-struct gk20a_pmu_save_state {
-	struct pmu_sequence *seq;
-	u32 next_seq_desc;
-	struct pmu_mutex *mutex;
-	u32 mutex_cnt;
-	struct pmu_ucode_desc *desc;
-	struct pmu_mem_desc ucode;
-	struct pmu_mem_desc seq_buf;
-	struct pmu_mem_desc pg_buf;
-	struct delayed_work elpg_enable;
-	wait_queue_head_t pg_wq;
-	bool sw_ready;
-	struct work_struct pg_init;
-	unsigned long perfmon_events_cnt;
-	bool perfmon_sampling_enabled;
-};
-
 int gk20a_init_pmu_support(struct gk20a *g);
 int gk20a_init_pmu_setup_hw2(struct gk20a *g);
 

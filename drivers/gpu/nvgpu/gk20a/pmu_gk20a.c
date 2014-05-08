@@ -1493,61 +1493,11 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static void gk20a_save_pmu_sw_state(struct pmu_gk20a *pmu,
-			struct gk20a_pmu_save_state *save)
-{
-	save->seq = pmu->seq;
-	save->next_seq_desc = pmu->next_seq_desc;
-	save->mutex = pmu->mutex;
-	save->mutex_cnt = pmu->mutex_cnt;
-	save->desc = pmu->desc;
-	save->ucode = pmu->ucode;
-	save->elpg_enable = pmu->elpg_enable;
-	save->pg_wq = pmu->pg_wq;
-	save->seq_buf = pmu->seq_buf;
-	save->pg_buf = pmu->pg_buf;
-	save->sw_ready = pmu->sw_ready;
-	save->pg_init = pmu->pg_init;
-	save->perfmon_events_cnt = pmu->perfmon_events_cnt;
-	save->perfmon_sampling_enabled = pmu->perfmon_sampling_enabled;
-}
-
-static void gk20a_restore_pmu_sw_state(struct pmu_gk20a *pmu,
-			struct gk20a_pmu_save_state *save)
-{
-	pmu->seq = save->seq;
-	pmu->next_seq_desc = save->next_seq_desc;
-	pmu->mutex = save->mutex;
-	pmu->mutex_cnt = save->mutex_cnt;
-	pmu->desc = save->desc;
-	pmu->ucode = save->ucode;
-	pmu->elpg_enable = save->elpg_enable;
-	pmu->pg_wq = save->pg_wq;
-	pmu->seq_buf = save->seq_buf;
-	pmu->pg_buf = save->pg_buf;
-	pmu->sw_ready = save->sw_ready;
-	pmu->pg_init = save->pg_init;
-	pmu->perfmon_events_cnt = save->perfmon_events_cnt;
-	pmu->perfmon_sampling_enabled = save->perfmon_sampling_enabled;
-}
-
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
-	struct gk20a_pmu_save_state save;
-
 	gk20a_dbg_fn("");
 
 	gk20a_allocator_destroy(&pmu->dmem);
-
-	/* Save the stuff you don't want to lose */
-	gk20a_save_pmu_sw_state(pmu, &save);
-
-	/* this function is also called by pmu_destory outside gk20a deinit that
-	   releases gk20a struct so fill up with zeros here. */
-	memset(pmu, 0, sizeof(struct pmu_gk20a));
-
-	/* Restore stuff you want to keep */
-	gk20a_restore_pmu_sw_state(pmu, &save);
 }
 
 int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
@@ -2356,10 +2306,11 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	for (i = 0; i < PMU_QUEUE_COUNT; i++)
 		pmu_queue_init(pmu, i, init);
 
-	gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
-			pv->get_pmu_init_msg_pmu_sw_mg_off(init),
-			pv->get_pmu_init_msg_pmu_sw_mg_size(init),
-			PMU_DMEM_ALLOC_ALIGNMENT);
+	if (!pmu->dmem.alloc)
+		gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
+				pv->get_pmu_init_msg_pmu_sw_mg_off(init),
+				pv->get_pmu_init_msg_pmu_sw_mg_size(init),
+				PMU_DMEM_ALLOC_ALIGNMENT);
 
 	pmu->pmu_ready = true;
 
@@ -3438,11 +3389,10 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	g->pg_gating_cnt += gating_cnt;
 
 	pmu_enable(pmu, false);
-
-	if (pmu->remove_support) {
-		pmu->remove_support(pmu);
-		pmu->remove_support = NULL;
-	}
+	pmu->pmu_ready = false;
+	pmu->perfmon_ready = false;
+	pmu->zbc_ready = false;
+	pmu->elpg_ready = false;
 
 	gk20a_dbg_fn("done");
 	return 0;

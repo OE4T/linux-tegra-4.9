@@ -298,7 +298,6 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	mm->g = g;
-	mutex_init(&mm->tlb_lock);
 	mutex_init(&mm->l2_op_lock);
 	mm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 	mm->compression_page_size = gmmu_page_sizes[gmmu_page_size_big];
@@ -2892,11 +2891,11 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
-	struct mm_gk20a *mm = vm->mm;
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->pdes.sgt->sgl) >> 12);
 	u32 data;
 	s32 retry = 200;
+	static DEFINE_MUTEX(tlb_lock);
 
 	gk20a_dbg_fn("");
 
@@ -2915,10 +2914,8 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		mutex_unlock(&vm->update_gmmu_lock);
 		return;
 	}
-	vm->tlb_dirty = false;
-	mutex_unlock(&vm->update_gmmu_lock);
 
-	mutex_lock(&mm->tlb_lock);
+	mutex_lock(&tlb_lock);
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
@@ -2927,17 +2924,17 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		retry--;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (retry < 0) {
 		gk20a_warn(dev_from_gk20a(g),
 			"wait mmu fifo space too many retries");
+		goto out;
+	}
 
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
 		fb_mmu_invalidate_pdb_aperture_vid_mem_f());
 
-	/* this is a sledgehammer, it would seem */
 	gk20a_writel(g, fb_mmu_invalidate_r(),
-		fb_mmu_invalidate_all_pdb_true_f() |
 		fb_mmu_invalidate_all_va_true_f() |
 		fb_mmu_invalidate_trigger_true_f());
 
@@ -2954,7 +2951,10 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		gk20a_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
 
-	mutex_unlock(&mm->tlb_lock);
+out:
+	mutex_unlock(&tlb_lock);
+	vm->tlb_dirty = false;
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 int gk20a_mm_suspend(struct gk20a *g)

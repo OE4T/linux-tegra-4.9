@@ -322,7 +322,6 @@ struct mm_gk20a {
 		struct inst_desc inst_block;
 	} pmu;
 
-	struct mutex tlb_lock;
 	struct mutex l2_op_lock;
 
 	void (*remove_support)(struct mm_gk20a *mm);

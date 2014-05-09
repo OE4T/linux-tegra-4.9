@@ -465,7 +465,8 @@
 #endif
 
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-#define DC_DISP_CURSOR_START_ADDR_HI	0x4ec
+#define DC_DISP_CURSOR_START_ADDR_HI		0x4ec
+#define DC_DISP_CURSOR_START_ADDR_HI_NS		0x4ed
 #endif
 
 #define DC_WIN_PALETTE_COLOR_EXT		0x600

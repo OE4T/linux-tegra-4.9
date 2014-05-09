@@ -5080,7 +5080,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 
 	/* whitelist check */
 	valid = valid &&
-		is_bar0_global_offset_whitelisted_gk20a(offset);
+		is_bar0_global_offset_whitelisted_gk20a(g, offset);
 	/* resource size check in case there was a problem
 	 * with allocating the assumed size of bar0 */
 	valid = valid &&

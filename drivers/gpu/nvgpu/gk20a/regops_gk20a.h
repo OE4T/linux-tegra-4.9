@@ -19,13 +19,19 @@
 #ifndef __REGOPS_GK20A_H_
 #define __REGOPS_GK20A_H_
 
+#include <linux/nvhost_dbg_gpu_ioctl.h>
+
+struct regop_offset_range {
+	u32 base:24;
+	u32 count:8;
+};
+
 int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		      struct nvhost_dbg_gpu_reg_op *ops,
 		      u64 num_ops);
 
 /* turn seriously unwieldy names -> something shorter */
 #define REGOP(x) NVHOST_DBG_GPU_REG_OP_##x
-
 
 static inline bool reg_op_is_gr_ctx(u8 type)
 {
@@ -42,6 +48,7 @@ static inline bool reg_op_is_read(u8 op)
 		op == REGOP(READ_64) ;
 }
 
-bool is_bar0_global_offset_whitelisted_gk20a(u32 offset);
+bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset);
 
+void gk20a_init_regops(struct gpu_ops *gops);
 #endif /* __REGOPS_GK20A_H_ */

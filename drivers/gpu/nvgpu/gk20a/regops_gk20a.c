@@ -29,11 +29,6 @@
 
 
 
-struct regop_offset_range {
-	u32 base:24;
-	u32 count:8;
-};
-
 static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 {
 	u32 key = *(u32 *)pkey;
@@ -551,31 +546,32 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 			  struct nvhost_dbg_gpu_reg_op *op, u32 offset)
 {
+	struct gk20a *g = dbg_s->g;
 	bool valid = false;
 
 	if (op->type == REGOP(TYPE_GLOBAL)) {
 		/* search global list */
 		valid = !!bsearch(&offset,
-				  gk20a_global_whitelist_ranges,
-				  gk20a_global_whitelist_ranges_count,
-				  sizeof(*gk20a_global_whitelist_ranges),
-				  regop_bsearch_range_cmp);
+			g->ops.regops.get_global_whitelist_ranges(),
+			g->ops.regops.get_global_whitelist_ranges_count(),
+			sizeof(*g->ops.regops.get_global_whitelist_ranges()),
+			regop_bsearch_range_cmp);
 
 		/* if debug session and channel is bound search context list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
 			/* binary search context list */
 			valid = !!bsearch(&offset,
-					  gk20a_context_whitelist_ranges,
-					  gk20a_context_whitelist_ranges_count,
-					  sizeof(*gk20a_context_whitelist_ranges),
-					  regop_bsearch_range_cmp);
+			g->ops.regops.get_context_whitelist_ranges(),
+			g->ops.regops.get_context_whitelist_ranges_count(),
+			sizeof(*g->ops.regops.get_context_whitelist_ranges()),
+			regop_bsearch_range_cmp);
 		}
 
 		/* if debug session and channel is bound search runcontrol list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
 			valid = linear_search(offset,
-					      gk20a_runcontrol_whitelist,
-					      gk20a_runcontrol_whitelist_count);
+				g->ops.regops.get_runcontrol_whitelist(),
+				g->ops.regops.get_runcontrol_whitelist_count());
 		}
 	} else if (op->type == REGOP(TYPE_GR_CTX)) {
 		/* it's a context-relative op */
@@ -587,22 +583,22 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 
 		/* binary search context list */
 		valid = !!bsearch(&offset,
-				  gk20a_context_whitelist_ranges,
-				  gk20a_context_whitelist_ranges_count,
-				  sizeof(*gk20a_context_whitelist_ranges),
-				  regop_bsearch_range_cmp);
+			g->ops.regops.get_context_whitelist_ranges(),
+			g->ops.regops.get_context_whitelist_ranges_count(),
+			sizeof(*g->ops.regops.get_context_whitelist_ranges()),
+			regop_bsearch_range_cmp);
 
 		/* if debug session and channel is bound search runcontrol list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
 			valid = linear_search(offset,
-					      gk20a_runcontrol_whitelist,
-					      gk20a_runcontrol_whitelist_count);
+				g->ops.regops.get_runcontrol_whitelist(),
+				g->ops.regops.get_runcontrol_whitelist_count());
 		}
 
 	} else if (op->type == REGOP(TYPE_GR_CTX_QUAD)) {
 		valid = linear_search(offset,
-				      gk20a_qctl_whitelist,
-				      gk20a_qctl_whitelist_count);
+				g->ops.regops.get_qctl_whitelist(),
+				g->ops.regops.get_qctl_whitelist_count());
 	}
 
 	return valid;
@@ -692,13 +688,105 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 }
 
 /* exported for tools like cyclestats, etc */
-bool is_bar0_global_offset_whitelisted_gk20a(u32 offset)
+bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset)
 {
-
 	bool valid = !!bsearch(&offset,
-			       gk20a_global_whitelist_ranges,
-			       gk20a_global_whitelist_ranges_count,
-			       sizeof(*gk20a_global_whitelist_ranges),
-			       regop_bsearch_range_cmp);
+			g->ops.regops.get_global_whitelist_ranges(),
+			g->ops.regops.get_global_whitelist_ranges_count(),
+			sizeof(*g->ops.regops.get_global_whitelist_ranges()),
+			regop_bsearch_range_cmp);
 	return valid;
+}
+
+const struct regop_offset_range *gk20a_get_global_whitelist_ranges(void)
+{
+	return gk20a_global_whitelist_ranges;
+}
+
+int gk20a_get_global_whitelist_ranges_count(void)
+{
+	return gk20a_global_whitelist_ranges_count;
+}
+
+const struct regop_offset_range *gk20a_get_context_whitelist_ranges(void)
+{
+	return gk20a_context_whitelist_ranges;
+}
+
+int gk20a_get_context_whitelist_ranges_count(void)
+{
+	return gk20a_context_whitelist_ranges_count;
+}
+
+const u32 *gk20a_get_runcontrol_whitelist(void)
+{
+	return gk20a_runcontrol_whitelist;
+}
+
+int gk20a_get_runcontrol_whitelist_count(void)
+{
+	return gk20a_runcontrol_whitelist_count;
+}
+
+const struct regop_offset_range *gk20a_get_runcontrol_whitelist_ranges(void)
+{
+	return gk20a_runcontrol_whitelist_ranges;
+}
+
+int gk20a_get_runcontrol_whitelist_ranges_count(void)
+{
+	return gk20a_runcontrol_whitelist_ranges_count;
+}
+
+const u32 *gk20a_get_qctl_whitelist(void)
+{
+	return gk20a_qctl_whitelist;
+}
+
+int gk20a_get_qctl_whitelist_count(void)
+{
+	return gk20a_qctl_whitelist_count;
+}
+
+const struct regop_offset_range *gk20a_get_qctl_whitelist_ranges(void)
+{
+	return gk20a_qctl_whitelist_ranges;
+}
+
+int gk20a_get_qctl_whitelist_ranges_count(void)
+{
+	return gk20a_qctl_whitelist_ranges_count;
+}
+
+void gk20a_init_regops(struct gpu_ops *gops)
+{
+	gops->regops.get_global_whitelist_ranges =
+		gk20a_get_global_whitelist_ranges;
+	gops->regops.get_global_whitelist_ranges_count =
+		gk20a_get_global_whitelist_ranges_count;
+
+	gops->regops.get_context_whitelist_ranges =
+		gk20a_get_context_whitelist_ranges;
+	gops->regops.get_context_whitelist_ranges_count =
+		gk20a_get_context_whitelist_ranges_count;
+
+	gops->regops.get_runcontrol_whitelist =
+		gk20a_get_runcontrol_whitelist;
+	gops->regops.get_runcontrol_whitelist_count =
+		gk20a_get_runcontrol_whitelist_count;
+
+	gops->regops.get_runcontrol_whitelist_ranges =
+		gk20a_get_runcontrol_whitelist_ranges;
+	gops->regops.get_runcontrol_whitelist_ranges_count =
+		gk20a_get_runcontrol_whitelist_ranges_count;
+
+	gops->regops.get_qctl_whitelist =
+		gk20a_get_qctl_whitelist;
+	gops->regops.get_qctl_whitelist_count =
+		gk20a_get_qctl_whitelist_count;
+
+	gops->regops.get_qctl_whitelist_ranges =
+		gk20a_get_qctl_whitelist_ranges;
+	gops->regops.get_qctl_whitelist_ranges_count =
+		gk20a_get_qctl_whitelist_ranges_count;
 }

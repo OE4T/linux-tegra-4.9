@@ -1284,6 +1284,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	int err = 0;
 	struct buffer_attrs bfr = {0};
 	struct gk20a_comptags comptags;
+	u64 buf_addr;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -1316,7 +1317,10 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	bfr.kind_v = kind;
 	bfr.size = dmabuf->size;
-	bfr.align = 1 << __ffs((u64)sg_dma_address(bfr.sgt->sgl));
+	buf_addr = (u64)sg_dma_address(bfr.sgt->sgl);
+	if (unlikely(!buf_addr))
+		buf_addr = (u64)sg_phys(bfr.sgt->sgl);
+	bfr.align = 1 << __ffs(buf_addr);
 	bfr.pgsz_idx = -1;
 
 	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select

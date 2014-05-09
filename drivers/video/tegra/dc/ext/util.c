@@ -30,6 +30,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc_dmabuf *dc_dmabuf;
+	dma_addr_t dma_addr;
 
 	*dc_buf = NULL;
 	*phys_addr = -1;
@@ -53,7 +54,12 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 	if (IS_ERR_OR_NULL(dc_dmabuf->sgt))
 		goto sgt_fail;
 
-	*phys_addr = sg_dma_address(dc_dmabuf->sgt->sgl);
+	dma_addr = sg_dma_address(dc_dmabuf->sgt->sgl);
+	if (dma_addr)
+		*phys_addr = dma_addr;
+	else
+		*phys_addr = sg_phys(dc_dmabuf->sgt->sgl);
+
 	*dc_buf = dc_dmabuf;
 
 	return 0;

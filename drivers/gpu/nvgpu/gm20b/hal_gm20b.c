@@ -28,6 +28,7 @@
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
 #include <linux/tegra-fuse.h>
+#include "regops_gm20b.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -87,6 +88,7 @@ int gm20b_init_hal(struct gpu_ops *gops)
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
+	gm20b_init_regops(gops);
 	gops->name = "gm20b";
 
 	return 0;

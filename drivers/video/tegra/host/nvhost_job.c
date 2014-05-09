@@ -278,6 +278,9 @@ static int pin_array_ids(struct platform_device *dev,
 		if (IS_ERR(sgt))
 			return PTR_ERR(sgt);
 
+		if (!sg_dma_address(sgt->sgl))
+			sg_dma_address(sgt->sgl) = sg_phys(sgt->sgl);
+
 		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
 		unpin_data[pin_count].buf = buf;
 		unpin_data[pin_count].attach = attach;

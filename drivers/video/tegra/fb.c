@@ -717,7 +717,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	if (fb_mem) {
 		fb_size = resource_size(fb_mem);
 		tegra_fb->phys_start = fb_mem->start;
-		fb_base = ioremap_nocache(tegra_fb->phys_start, fb_size);
+		fb_base = ioremap_wc(tegra_fb->phys_start, fb_size);
 		if (!fb_base) {
 			dev_err(&ndev->dev, "fb can't be mapped\n");
 			ret = -EBUSY;

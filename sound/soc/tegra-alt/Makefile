@@ -48,9 +48,11 @@ obj-$(CONFIG_SND_SOC_TEGRA210_MVC_ALT) += snd-soc-tegra210-alt-mvc.o
 obj-$(CONFIG_SND_SOC_TEGRA210_SPDIF_ALT) += snd-soc-tegra210-alt-spdif.o
 
 # Tegra machine Support
+snd-soc-tegra-alt-machine-objs := tegra_asoc_machine_alt.o
 snd-soc-tegra-alt-vcm30t124-objs := tegra_vcm30t124_alt.o
 snd-soc-tegra-alt-vcm30t124-b00-objs := tegra_vcm30t124_b00_alt.o
 snd-soc-tegra-alt-grenada-objs := tegra_grenada_alt.o
+obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-vcm30t124.o
 obj-$(CONFIG_SND_SOC_TEGRA_VCM30T124_ALT) += snd-soc-tegra-alt-vcm30t124-b00.o
 obj-$(CONFIG_SND_SOC_TEGRA_GRENADA_ALT) += snd-soc-tegra-alt-grenada.o

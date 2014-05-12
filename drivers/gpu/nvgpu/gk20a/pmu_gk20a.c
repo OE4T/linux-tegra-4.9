@@ -2156,7 +2156,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	struct pmu_payload payload;
 	u32 seq;
 	u32 data;
-	int err;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 
@@ -2206,8 +2206,9 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 			pwr_pmu_idle_ctrl_filter_disabled_f());
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
 
-	pmu->sample_buffer = 0;
-	err = pmu->dmem.alloc(&pmu->dmem, &pmu->sample_buffer, 2 * sizeof(u16));
+	if (!pmu->sample_buffer)
+		err = pmu->dmem.alloc(&pmu->dmem,
+				      &pmu->sample_buffer, 2 * sizeof(u16));
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to allocate perfmon sample buffer");

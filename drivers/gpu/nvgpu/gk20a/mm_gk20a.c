@@ -2801,8 +2801,6 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	mutex_lock(&mm->l2_op_lock);
 
-	g->ops.ltc.elpg_flush(g);
-
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */

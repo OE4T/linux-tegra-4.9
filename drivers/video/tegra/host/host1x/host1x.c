@@ -71,7 +71,8 @@ struct nvhost_ctrl_userctx {
 struct nvhost_capability_node {
 	struct kobj_attribute attr;
 	struct nvhost_master *host;
-	int (*func)(struct nvhost_syncpt *sp);
+	int (*read_func)(struct nvhost_syncpt *sp);
+	int (*store_func)(struct nvhost_syncpt *sp, const char *buf);
 };
 
 static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
@@ -527,18 +528,35 @@ static ssize_t nvhost_syncpt_capability_show(struct kobject *kobj,
 		container_of(attr, struct nvhost_capability_node, attr);
 
 	return snprintf(buf, PAGE_SIZE, "%u\n",
-			node->func(&node->host->syncpt));
+			node->read_func(&node->host->syncpt));
+}
+
+static ssize_t nvhost_syncpt_capability_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	struct nvhost_capability_node *node =
+		container_of(attr, struct nvhost_capability_node, attr);
+
+	node->store_func(&node->host->syncpt, buf);
+	return count;
 }
 
 static inline int nvhost_set_sysfs_capability_node(
 				struct nvhost_master *host, const char *name,
 				struct nvhost_capability_node *node,
-				int (*func)(struct nvhost_syncpt *sp))
+				int (*read_func)(struct nvhost_syncpt *sp),
+				int (*store_func)(struct nvhost_syncpt *sp,
+					const char *buf))
 {
 	node->attr.attr.name = name;
 	node->attr.attr.mode = S_IRUGO;
 	node->attr.show = nvhost_syncpt_capability_show;
-	node->func = func;
+	node->read_func = read_func;
+	if (store_func) {
+		node->attr.store = nvhost_syncpt_capability_store;
+		node->store_func = store_func;
+		node->attr.attr.mode = (S_IRWXU|S_IRGRP|S_IROTH);
+	}
 	node->host = host;
 
 	return sysfs_create_file(host->caps_kobj, &node->attr.attr);
@@ -590,26 +608,27 @@ static int nvhost_user_init(struct nvhost_master *host)
 	}
 
 	if (nvhost_set_sysfs_capability_node(host, num_syncpts_name,
-		host->caps_nodes, &nvhost_syncpt_nb_pts)) {
+		host->caps_nodes, &nvhost_syncpt_nb_pts,
+		&nvhost_nb_syncpts_store)) {
 		err = -EIO;
 		goto fail;
 	}
 
 	if (nvhost_set_sysfs_capability_node(host, num_waitbases_name,
-		host->caps_nodes + 1, &nvhost_syncpt_nb_bases)) {
+		host->caps_nodes + 1, &nvhost_syncpt_nb_bases, NULL)) {
 		err = -EIO;
 		goto fail;
 	}
 
 	if (nvhost_set_sysfs_capability_node(host, num_mutexes_name,
-		host->caps_nodes + 2, &nvhost_syncpt_nb_mlocks)) {
+		host->caps_nodes + 2, &nvhost_syncpt_nb_mlocks, NULL)) {
 		err = -EIO;
 		goto fail;
 	}
 
 	if (nvhost_set_sysfs_capability_node(host,
 		gather_filter_enabled_name, host->caps_nodes + 3,
-		nvhost_gather_filter_enabled)) {
+		nvhost_gather_filter_enabled, NULL)) {
 		err = -EIO;
 		goto fail;
 	}

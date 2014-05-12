@@ -1083,6 +1083,23 @@ int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp)
 	return syncpt_to_dev(sp)->info.nb_pts;
 }
 
+int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf)
+{
+	struct nvhost_master *master = syncpt_to_dev(sp);
+	struct device *d = &master->dev->dev;
+	int ret = 0, nb_syncpts;
+
+	ret = sscanf(buf, "%d", &nb_syncpts);
+	if (ret == 1 && nb_syncpts > 0) {
+		nvhost_warn(d, "number of syncpts modified from %d to %d\n",
+			master->info.nb_pts, nb_syncpts);
+		master->info.nb_pts = nb_syncpts;
+	} else
+		ret = -EIO;
+
+	return ret;
+}
+
 int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp)
 {
 	return syncpt_to_dev(sp)->info.nb_bases;

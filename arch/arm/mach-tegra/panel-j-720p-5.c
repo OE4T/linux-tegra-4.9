@@ -403,10 +403,9 @@ fail:
 }
 
 static struct tegra_dsi_cmd dsi_j_720p_5_init_cmd[] = {
-	/* reset panel before exit_sleep_mode sequence */
-	DSI_DLY_MS(20),
-	DSI_GPIO_SET(DSI_PANEL_RST_GPIO, 1),
-	DSI_DLY_MS(150),
+	/* sleep atleast 160 ms before sending any commands */
+	DSI_DLY_MS(160),
+
 	/* panel exit_sleep_mode sequence */
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
 	DSI_SEND_FRAME(5),
@@ -428,11 +427,6 @@ static struct tegra_dsi_cmd dsi_j_720p_5_suspend_cmd[] = {
 
 static int dsi_j_720p_5_enable(struct device *dev)
 {
-	return 0;
-}
-
-static int dsi_j_720p_5_postpoweron(struct device *dev)
-{
 	int err = 0;
 
 	err = dsi_j_720p_5_reg_get(dev);
@@ -447,7 +441,8 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 	}
 
 	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
-		gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
+		gpio_direction_output(
+			dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
 		gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
 	}
 
@@ -489,9 +484,29 @@ static int dsi_j_720p_5_postpoweron(struct device *dev)
 
 	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
 		gpio_set_value(DSI_PANEL_EN_GPIO, 1);
-		msleep(40);
+		msleep(20);
 	}
 
+	return 0;
+fail:
+	return err;
+}
+
+static int dsi_j_720p_5_postpoweron(struct device *dev)
+{
+	int err = 0;
+	err = dsi_j_720p_5_gpio_get();
+
+	msleep(80);
+
+	if (err < 0) {
+		pr_err("dsi gpio request failed\n");
+		goto fail;
+	}
+	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+		gpio_set_value(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 1);
+		msleep(20);
+	}
 	return 0;
 fail:
 	return err;

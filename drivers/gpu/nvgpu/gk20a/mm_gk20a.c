@@ -2989,8 +2989,7 @@ int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_mm_fb_flush(g);
-	gk20a_mm_l2_flush(g, true);
+	g->ops.ltc.elpg_flush(g);
 
 	gk20a_dbg_fn("done");
 	return 0;

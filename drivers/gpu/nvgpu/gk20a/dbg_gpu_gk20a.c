@@ -519,7 +519,7 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		err = -EFAULT;
 		goto clean_up;
 	}
-	return 0;
+
  clean_up:
 	kfree(ops);
 	return err;

@@ -128,6 +128,11 @@ struct nvhost_device_data t21_vi_info = {
 };
 #endif
 
+struct nvhost_device_data t21_vi_i2c_info = {
+	.exclusive     = true,
+	.keepalive = true,
+};
+
 struct nvhost_device_data t21_msenc_info = {
 	.version       = NVHOST_ENCODE_FLCN_VER(5, 0),
 	.waitbases     = {NVWAITBASE_MSENC},

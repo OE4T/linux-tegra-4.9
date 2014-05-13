@@ -25,6 +25,7 @@
 extern struct nvhost_device_data t21_host1x_info;
 extern struct nvhost_device_data t21_isp_info;
 extern struct nvhost_device_data t21_vi_info;
+extern struct nvhost_device_data t21_vi_i2c_info;
 extern struct nvhost_device_data t21_msenc_info;
 extern struct nvhost_device_data t21_nvdec_info;
 extern struct nvhost_device_data t21_nvjpg_info;

@@ -445,7 +445,6 @@ static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_memflush_pending_f() |
 		pbdma_intr_0_memop_pending_f() |
 		pbdma_intr_0_lbconnect_pending_f() |
-		pbdma_intr_0_lbreq_pending_f() |
 		pbdma_intr_0_lback_timeout_pending_f() |
 		pbdma_intr_0_lback_extra_pending_f() |
 		pbdma_intr_0_lbdat_timeout_pending_f() |

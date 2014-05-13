@@ -127,6 +127,7 @@ static void hdmi_state_machine_handle_hpd_l(int cur_hpd)
 		/* Did HPD drop while we were in DONE_ENABLED?  If so, hold
 		 * steady and wait to see if it comes back.
 		 */
+		tegra_nvhdcp_set_plug(work_state.hdmi->nvhdcp, 0);
 		tgt_state = HDMI_STATE_DONE_WAIT_FOR_HPD_REASSERT;
 		timeout = HPD_DROP_TIMEOUT_MS;
 	} else

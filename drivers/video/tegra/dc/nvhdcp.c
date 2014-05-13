@@ -1092,7 +1092,9 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);
 
 	if (hpd) {
+		mutex_lock(&nvhdcp->lock);
 		nvhdcp_set_plugged(nvhdcp, true);
+		mutex_unlock(&nvhdcp->lock);
 		tegra_nvhdcp_on(nvhdcp);
 	} else {
 		tegra_nvhdcp_off(nvhdcp);

@@ -816,7 +816,8 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 	struct tegra_dsi_cmd *dsi_cmd, *temp;
 	u32 *prop_val_ptr;
 	u32 cnt = 0, i = 0;
-	u8 arg1, arg2;
+	u8 arg1, arg2, arg3;
+	bool long_pkt = false;
 
 	if (!n_cmd)
 		return NULL;
@@ -842,11 +843,15 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 			arg1 = be32_to_cpu(*prop_val_ptr++);
 			arg2 = be32_to_cpu(*prop_val_ptr++);
 			prop_val_ptr++; /* skip ecc */
-			if (temp->data_id == DSI_GENERIC_LONG_WRITE ||
+			long_pkt = (temp->data_id == DSI_GENERIC_LONG_WRITE ||
 				temp->data_id == DSI_DCS_LONG_WRITE ||
 				temp->data_id == DSI_NULL_PKT_NO_DATA ||
-				temp->data_id == DSI_BLANKING_PKT_NO_DATA) {
-				/* long pkt */
+				temp->data_id == DSI_BLANKING_PKT_NO_DATA) ?
+				true : false;
+			if (!long_pkt && (temp->cmd_type ==
+				TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD))
+				arg3 = be32_to_cpu(*prop_val_ptr++);
+			if (long_pkt) {
 				temp->sp_len_dly.data_len =
 					(arg2 << NUMOF_BIT_PER_BYTE) | arg1;
 				temp->pdata = devm_kzalloc(&ndev->dev,
@@ -858,6 +863,9 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 			} else {
 				temp->sp_len_dly.sp.data0 = arg1;
 				temp->sp_len_dly.sp.data1 = arg2;
+				if (temp->cmd_type ==
+					TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD)
+					temp->club_cmd = (bool)arg3;
 			}
 		} else if (temp->cmd_type == TEGRA_DSI_DELAY_MS) {
 			temp->sp_len_dly.delay_ms =

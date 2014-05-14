@@ -665,8 +665,6 @@ static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		data = gk20a_readl(g, pwr_falcon_dmemd_r(port));
 		for (i = 0; i < bytes; i++) {
 			dst[(words << 2) + i] = ((u8 *)&data)[i];
-			gk20a_dbg_pmu("read: dst_u8[%d]=0x%08x",
-					i, dst[(words << 2) + i]);
 		}
 	}
 	mutex_unlock(&pmu->pmu_copy_lock);
@@ -1732,6 +1730,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	gk20a_dbg_fn("");
 
+	gk20a_dbg_pmu("reply PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
 	if (status != 0) {
 		gk20a_err(dev_from_gk20a(g), "PGENG cmd aborted");
 		/* TBD: disable ELPG */
@@ -1905,6 +1904,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
 
 	pmu->buf_loaded = false;
+	gk20a_dbg_pmu("cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
@@ -1931,6 +1931,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 	cmd.cmd.pg.eng_buf_load.dma_idx = PMU_DMAIDX_VIRT;
 
 	pmu->buf_loaded = false;
+	gk20a_dbg_pmu("cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_ZBC");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 
@@ -2111,6 +2112,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
+	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_INIT");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
@@ -2124,6 +2126,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	cmd.cmd.pg.stat.sub_cmd_id = PMU_PG_STAT_CMD_ALLOC_DMEM;
 	cmd.cmd.pg.stat.data = 0;
 
+	gk20a_dbg_pmu("cmd post PMU_PG_STAT_CMD_ALLOC_DMEM");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_stat_msg, pmu, &seq, ~0);
 
@@ -2137,6 +2140,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
+	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
@@ -2241,6 +2245,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	payload.in.size = sizeof(struct pmu_perfmon_counter);
 	payload.in.offset = pv->get_perfmon_cmd_init_offsetofvar(COUNTER_ALLOC);
 
+	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_INIT");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
 			NULL, NULL, &seq, ~0);
 
@@ -2474,6 +2479,7 @@ static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 	struct pmu_gk20a *pmu = param;
+	gk20a_dbg_pmu("reply ZBC_TABLE_UPDATE");
 	pmu->zbc_save_done = 1;
 }
 
@@ -2494,6 +2500,7 @@ static void pmu_save_zbc(struct gk20a *g, u32 entries)
 
 	pmu->zbc_save_done = 0;
 
+	gk20a_dbg_pmu("cmd post ZBC_TABLE_UPDATE");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			   pmu_handle_zbc_msg, pmu, &seq, ~0);
 	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
@@ -2545,6 +2552,7 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	payload.in.offset =
 		pv->get_perfmon_cmd_start_offsetofvar(COUNTER_ALLOC);
 
+	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_START");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
 			NULL, NULL, &seq, ~0);
 
@@ -2563,6 +2571,7 @@ static int pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_stop);
 	cmd.cmd.perfmon.stop.cmd_type = PMU_PERFMON_CMD_ID_STOP;
 
+	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_STOP");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			NULL, NULL, &seq, ~0);
 	return 0;
@@ -2861,6 +2870,8 @@ static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 		gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_SP : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
+	gk20a_err(dev_from_gk20a(g), "elpg stat: %d\n",
+			pmu->elpg_stat);
 
 	/* PMU may crash due to FECS crash. Dump FECS status */
 	gk20a_fecs_dump_falcon_stats(g);
@@ -3166,6 +3177,7 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 	   with follow up ELPG disable */
 	pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
 
+	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
@@ -3313,6 +3325,7 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 
 	pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
 
+	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
@@ -3491,12 +3504,14 @@ static int gk20a_pmu_ap_send_command(struct gk20a *g,
 	/* Copy other members of command */
 	switch (p_ap_cmd->cmn.cmd_id) {
 	case PMU_AP_CMD_ID_INIT:
+		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_INIT");
 		cmd.cmd.pg.ap_cmd.init.pg_sampling_period_us =
 			p_ap_cmd->init.pg_sampling_period_us;
 		p_callback = ap_callback_init_and_enable_ctrl;
 		break;
 
 	case PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL:
+		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL");
 		cmd.cmd.pg.ap_cmd.init_and_enable_ctrl.ctrl_id =
 		p_ap_cmd->init_and_enable_ctrl.ctrl_id;
 		memcpy(
@@ -3508,16 +3523,19 @@ static int gk20a_pmu_ap_send_command(struct gk20a *g,
 		break;
 
 	case PMU_AP_CMD_ID_ENABLE_CTRL:
+		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_ENABLE_CTRL");
 		cmd.cmd.pg.ap_cmd.enable_ctrl.ctrl_id =
 			p_ap_cmd->enable_ctrl.ctrl_id;
 		break;
 
 	case PMU_AP_CMD_ID_DISABLE_CTRL:
+		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_DISABLE_CTRL");
 		cmd.cmd.pg.ap_cmd.disable_ctrl.ctrl_id =
 			p_ap_cmd->disable_ctrl.ctrl_id;
 		break;
 
 	case PMU_AP_CMD_ID_KICK_CTRL:
+		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_KICK_CTRL");
 		cmd.cmd.pg.ap_cmd.kick_ctrl.ctrl_id =
 			p_ap_cmd->kick_ctrl.ctrl_id;
 		cmd.cmd.pg.ap_cmd.kick_ctrl.skip_count =
@@ -3556,6 +3574,7 @@ static void ap_callback_init_and_enable_ctrl(
 	if (!status) {
 		switch (msg->msg.pg.ap_msg.cmn.msg_id) {
 		case PMU_AP_MSG_ID_INIT_ACK:
+			gk20a_dbg_pmu("reply PMU_AP_CMD_ID_INIT");
 			break;
 
 		default:

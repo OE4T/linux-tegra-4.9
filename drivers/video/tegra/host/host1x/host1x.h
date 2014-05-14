@@ -54,6 +54,7 @@ struct nvhost_master {
 	struct host1x_device_info info;
 	struct kobject *caps_kobj;
 	struct nvhost_capability_node *caps_nodes;
+	struct mutex timeout_mutex;
 
 	struct nvhost_channel chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */

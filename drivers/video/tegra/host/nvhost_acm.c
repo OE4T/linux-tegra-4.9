@@ -477,6 +477,20 @@ int nvhost_module_set_devfreq_rate(struct platform_device *dev, int index,
 	return ret;
 }
 
+int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
+{
+	int i;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	for (i = 0; i < pdata->num_clks; i++) {
+		if (strcmp(pdata->clocks[i].name, name) == 0) {
+			*clk = pdata->clk[i];
+			return 0;
+		}
+	}
+	return -EINVAL;
+}
+
 int nvhost_module_init(struct platform_device *dev)
 {
 	int i = 0, err = 0;

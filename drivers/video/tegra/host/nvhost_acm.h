@@ -32,6 +32,7 @@
 extern const struct dev_pm_ops nvhost_module_pm_ops;
 
 /* Sets clocks and powergating state for a module */
+int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
 int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
 int nvhost_module_suspend(struct device *dev);

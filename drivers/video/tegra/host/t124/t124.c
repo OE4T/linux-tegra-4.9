@@ -441,95 +441,6 @@ struct platform_device tegra_vic03_device = {
  * T132 overrides for platform data.
  */
 
-struct nvhost_device_data t132_isp_info = {
-	.num_channels	= 1,
-	/* FIXME: control clocks from user space instead of hard-coding here */
-	.moduleid        = NVHOST_MODULE_ISP,
-	.modulemutexes   = {NVMODMUTEX_ISP_0},
-	.exclusive       = true,
-	.keepalive       = true,
-	.powergate_ids   = {TEGRA_POWERGATE_VENC, -1},
-	.can_powergate   = true,
-	.clockgate_delay = ISP_CLOCKGATE_DELAY,
-	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = {
-		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
-	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
-	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = false,
-};
-
-struct nvhost_device_data t132_ispb_info = {
-	.num_channels	= 1,
-	/* FIXME: control clocks from user space instead of hard-coding here */
-	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
-	.modulemutexes   = {NVMODMUTEX_ISP_1},
-	.exclusive       = true,
-	.keepalive       = true,
-	.powergate_ids   = {TEGRA_POWERGATE_VENC, -1},
-	.can_powergate   = true,
-	.clockgate_delay = ISP_CLOCKGATE_DELAY,
-	.powergate_delay = ISP_POWERGATE_DELAY,
-	.clocks          = {
-		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
-	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
-	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = false,
-};
-
-struct nvhost_device_data t132_vi_info = {
-	.num_channels	= 1,
-	/* FIXME: resolve powergating dependency with DIS */
-	/* FIXME: control clocks from user space instead of hard-coding here */
-	.moduleid         = NVHOST_MODULE_VI,
-	.modulemutexes    = {NVMODMUTEX_VI_0},
-	.exclusive        = true,
-	.keepalive       = true,
-	.powergate_ids    = {TEGRA_POWERGATE_VENC, -1},
-	.can_powergate    = true,
-	.clockgate_delay  = VI_CLOCKGATE_DELAY,
-	.powergate_delay  = VI_POWERGATE_DELAY,
-	.clocks           = {
-		{"vi", UINT_MAX, 0},
-		{"csi", 0},
-		{"cilab", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
-	.prepare_poweroff = nvhost_vi_prepare_poweroff,
-	.finalize_poweron = nvhost_vi_finalize_poweron,
-	.ctrl_ops         = &tegra_vi_ctrl_ops,
-	.reset            = nvhost_vi_reset,
-	.slave         = &tegra_vi01b_device,
-	.gather_filter_enabled = false,
-};
-
-struct nvhost_device_data t132_vib_info = {
-	.num_channels	= 1,
-	/* FIXME: resolve powergating dependency with DIS */
-	/* FIXME: control clocks from user space instead of hard-coding here */
-	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
-	.modulemutexes    = {NVMODMUTEX_VI_1},
-	.exclusive        = true,
-	.keepalive       = true,
-	.powergate_ids    = {TEGRA_POWERGATE_VENC, -1},
-	.can_powergate    = true,
-	.clockgate_delay  = VI_CLOCKGATE_DELAY,
-	.powergate_delay  = VI_POWERGATE_DELAY,
-	.clocks           = {
-		{"vi", UINT_MAX},
-		{"csi", 0},
-		{"cilcd", 102000000},
-		{"cile", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
-	.prepare_poweroff = nvhost_vi_prepare_poweroff,
-	.finalize_poweron = nvhost_vi_finalize_poweron,
-	.ctrl_ops         = &tegra_vi_ctrl_ops,
-	.master           = &tegra_vi01_device,
-	.reset            = nvhost_vi_reset,
-	.gather_filter_enabled = false,
-};
-
 struct nvhost_device_data t132_msenc_info = {
 	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
@@ -552,9 +463,6 @@ static struct {
 	struct nvhost_device_data *from;
 	struct nvhost_device_data *to;
 } t132_override[] = {
-	{&t124_isp_info, &t132_isp_info},
-	{&t124_ispb_info, &t132_ispb_info},
-	{&t124_vi_info, &t132_vi_info},
 	{&t124_msenc_info, &t132_msenc_info},
 };
 

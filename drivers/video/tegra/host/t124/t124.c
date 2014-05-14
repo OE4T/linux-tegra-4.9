@@ -495,21 +495,6 @@ struct nvhost_device_data t132_msenc_info = {
 	.firmware_name	= "nvhost_msenc031.fw",
 };
 
-struct nvhost_device_data t132_tsec_info = {
-	.num_channels	= 1,
-	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.class         = NV_TSEC_CLASS_ID,
-	.exclusive     = true,
-	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
-			 {"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_TSEC,
-	.init          = nvhost_tsec_init,
-	.deinit        = nvhost_tsec_deinit,
-	.finalize_poweron = nvhost_tsec_finalize_poweron,
-};
-
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t132_vic_info = {
 	.num_channels	= 1,
@@ -550,7 +535,6 @@ static struct {
 	{&t124_ispb_info, &t132_ispb_info},
 	{&t124_vi_info, &t132_vi_info},
 	{&t124_msenc_info, &t132_msenc_info},
-	{&t124_tsec_info, &t132_tsec_info},
 #if defined(CONFIG_ARCH_TEGRA_VIC)
 	{&t124_vic_info, &t132_vic_info},
 #endif

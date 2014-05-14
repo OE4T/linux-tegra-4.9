@@ -900,12 +900,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	err = gk20a_init_pmu_setup_hw2(g);
-	if (err) {
-		gk20a_err(dev, "failed to init gk20a pmu_hw2");
-		goto done;
-	}
-
 	err = gk20a_init_therm_support(g);
 	if (err) {
 		gk20a_err(dev, "failed to init gk20a therm");
@@ -1470,6 +1464,8 @@ static int gk20a_probe(struct platform_device *dev)
 #ifdef CONFIG_INPUT_CFBOOST
 	cfb_add_device(&dev->dev);
 #endif
+
+	gk20a_init_gr(gk20a);
 
 	return 0;
 }

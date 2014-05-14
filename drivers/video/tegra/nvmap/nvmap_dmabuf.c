@@ -375,7 +375,12 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 			goto err_map;
 		}
 		BUG_ON(ents != 1);
-	} else if (!info->handle->alloc) {
+	} else if (info->handle->alloc) {
+		/* carveout has linear map setup. */
+		mutex_lock(&info->handle->lock);
+		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
+		mutex_unlock(&info->handle->lock);
+	} else {
 		goto err_map;
 	}
 

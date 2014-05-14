@@ -474,7 +474,7 @@ static int tegra_fb_ioctl(struct fb_info *info,
 			sizeof(modedb_compat)))
 			return -EFAULT;
 		/* convert compat version to full version */
-		modedb.modedb = (void __user *)modedb_compat.modedb;
+		modedb.modedb = (void __user *)(uintptr_t)modedb_compat.modedb;
 		modedb.modedb_len = modedb_compat.modedb_len;
 
 		res = tegra_get_modedb(dc, &modedb, info);

@@ -161,7 +161,7 @@ static inline void nvmap_pp_wake_up_allocator(void)
 {
 	struct nvmap_page_pool *pool = &nvmap_dev->pool;
 	struct sysinfo info;
-	u32 free_pages, tmp;
+	int free_pages, tmp;
 
 	if (!enable_pp)
 		return;
@@ -178,14 +178,15 @@ static inline void nvmap_pp_wake_up_allocator(void)
 		return;
 
 	si_meminfo(&info);
-	free_pages = (info.freeram * info.mem_unit) >> PAGE_SHIFT;
+	free_pages = (int)info.freeram;
 
 	tmp = free_pages - (MIN_AVAILABLE_MB << (20 - PAGE_SHIFT));
 	if (tmp <= 0)
 		return;
 
 	/* Let the background thread know how much memory to fill. */
-	atomic_set(&bg_pages_to_fill, min(tmp, pool->length - pool->count));
+	atomic_set(&bg_pages_to_fill,
+		   min(tmp, (int)(pool->length - pool->count)));
 	wake_up_process(background_allocator);
 }
 

@@ -294,7 +294,7 @@ const struct fb_videomode cea_modes[] = {
 	/* 1: 640x480p @ 59.94Hz/60Hz */
 	{.refresh = 59, .xres = 640, .yres = 480, .pixclock = 39721,
 	 .left_margin = 48, .right_margin = 16,
-	 .upper_margin = 33, .lower_margin = 1,
+	 .upper_margin = 33, .lower_margin = 10,
 	 .hsync_len = 96, .vsync_len = 2,
 	 .sync = 0,
 	 .flag = FB_FLAG_RATIO_4_3,

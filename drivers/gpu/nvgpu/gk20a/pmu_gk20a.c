@@ -1509,8 +1509,6 @@ int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void pmu_elpg_enable_allow(struct work_struct *work);
-
 int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -1583,7 +1581,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 			pmu->desc->descriptor_size);
 
 
-	INIT_DELAYED_WORK(&pmu->elpg_enable, pmu_elpg_enable_allow);
 	INIT_WORK(&pmu->pg_init, gk20a_init_pmu_setup_hw2_workqueue);
 
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
@@ -3222,13 +3219,6 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF)
 		goto exit_unlock;
 
-	/* if ELPG is not allowed right now, mark that it should be enabled
-	 * immediately after it is allowed */
-	if (!pmu->elpg_enable_allow) {
-		pmu->elpg_stat = PMU_ELPG_STAT_OFF_ON_PENDING;
-		goto exit_unlock;
-	}
-
 	ret = gk20a_pmu_enable_elpg_locked(g);
 
 exit_unlock:
@@ -3238,30 +3228,7 @@ exit:
 	return ret;
 }
 
-static void pmu_elpg_enable_allow(struct work_struct *work)
-{
-	struct pmu_gk20a *pmu = container_of(to_delayed_work(work),
-					struct pmu_gk20a, elpg_enable);
-
-	gk20a_dbg_fn("");
-
-	mutex_lock(&pmu->elpg_mutex);
-
-	/* It is ok to enabled powergating now */
-	pmu->elpg_enable_allow = true;
-
-	/* do we have pending requests? */
-	if (pmu->elpg_stat == PMU_ELPG_STAT_OFF_ON_PENDING) {
-		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
-		gk20a_pmu_enable_elpg_locked(pmu->g);
-	}
-
-	mutex_unlock(&pmu->elpg_mutex);
-
-	gk20a_dbg_fn("done");
-}
-
-static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
+int gk20a_pmu_disable_elpg(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -3272,9 +3239,6 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 
 	if (!pmu->elpg_ready || !pmu->initialized)
 		return 0;
-
-	/* remove the work from queue */
-	cancel_delayed_work_sync(&pmu->elpg_enable);
 
 	mutex_lock(&pmu->elpg_mutex);
 
@@ -3341,23 +3305,10 @@ static int gk20a_pmu_disable_elpg_defer_enable(struct gk20a *g, bool enable)
 	}
 
 exit_reschedule:
-	if (enable) {
-		pmu->elpg_enable_allow = false;
-		schedule_delayed_work(&pmu->elpg_enable,
-			msecs_to_jiffies(PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC));
-	} else
-		pmu->elpg_enable_allow = true;
-
-
 exit_unlock:
 	mutex_unlock(&pmu->elpg_mutex);
 	gk20a_dbg_fn("done");
 	return ret;
-}
-
-int gk20a_pmu_disable_elpg(struct gk20a *g)
-{
-	return gk20a_pmu_disable_elpg_defer_enable(g, true);
 }
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
@@ -3386,13 +3337,12 @@ int gk20a_pmu_destroy(struct gk20a *g)
 		return 0;
 
 	/* make sure the pending operations are finished before we continue */
-	cancel_delayed_work_sync(&pmu->elpg_enable);
 	cancel_work_sync(&pmu->pg_init);
 
 	gk20a_pmu_get_elpg_residency_gating(g, &elpg_ingating_time,
 		&elpg_ungating_time, &gating_cnt);
 
-	gk20a_pmu_disable_elpg_defer_enable(g, false);
+	gk20a_pmu_disable_elpg(g);
 	pmu->initialized = false;
 
 	/* update the s/w ELPG residency counters */

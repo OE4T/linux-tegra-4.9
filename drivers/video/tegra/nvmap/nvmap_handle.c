@@ -45,7 +45,9 @@ bool zero_memory;
 static int zero_memory_set(const char *arg, const struct kernel_param *kp)
 {
 	param_set_bool(arg, kp);
+#ifdef CONFIG_NVMAP_PAGE_POOLS
 	nvmap_page_pool_clear();
+#endif
 	return 0;
 }
 

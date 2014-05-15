@@ -362,11 +362,11 @@ int nvhost_nvdec_init(struct platform_device *dev)
 	}
 
 	nvhost_module_busy(dev);
-	nvdec_boot(dev);
-	nvhost_module_idle(dev);
 
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);
+
+	nvhost_module_idle(dev);
 
 	return 0;
 
@@ -398,19 +398,21 @@ void nvhost_nvdec_deinit(struct platform_device *dev)
 	kfree(m);
 }
 
-int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev)
+int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	tegra_periph_reset_assert(pdata->clk[0]);
+	udelay(10);
+	tegra_periph_reset_deassert(pdata->clk[0]);
+
 	host1x_writel(dev, 0x117c, 0x18004);
 	host1x_writel(dev, 0x2314, 0x10940000);
 	host1x_writel(dev, 0x2318, 0xff00a725);
 	host1x_writel(dev, 0x2328, 0x0);
 	host1x_writel(dev, 0x232c, 0x80000);
 	host1x_writel(dev, 0x2330, 0xfffffff8);
-	return nvhost_nvdec_finalize_poweron(dev);
-}
 
-int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
-{
 	return nvdec_boot(dev);
 }
 
@@ -443,9 +445,6 @@ static int nvdec_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
-	pdata->init = nvhost_nvdec_init;
-	pdata->deinit = nvhost_nvdec_deinit;
-	pdata->finalize_poweron = nvhost_nvdec_finalize_poweron;
 
 	mutex_init(&pdata->lock);
 

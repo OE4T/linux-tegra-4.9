@@ -137,7 +137,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.clocks		= {{"nvdec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
 	.init		= nvhost_nvdec_init,
 	.deinit		= nvhost_nvdec_deinit,
-	.finalize_poweron = nvhost_nvdec_t210_finalize_poweron,
+	.finalize_poweron = nvhost_nvdec_finalize_poweron,
 	.moduleid	= NVHOST_MODULE_NVDEC,
 	.num_channels  = 1,
 };

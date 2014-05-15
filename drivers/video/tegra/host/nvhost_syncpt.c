@@ -825,7 +825,7 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 {
 	u32 id;
 	char *syncpt_name;
-	struct nvhost_master *nvhost_master = nvhost_get_host(pdev);
+	struct nvhost_master *nvhost_master = nvhost;
 
 	syncpt_name = kasprintf(GFP_KERNEL, "%s_%d",
 				dev_name(&pdev->dev), param);

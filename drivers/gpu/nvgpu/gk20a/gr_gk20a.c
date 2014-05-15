@@ -4771,15 +4771,47 @@ static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-void gk20a_gr_reset(struct gk20a *g)
+int gk20a_gr_reset(struct gk20a *g)
 {
 	int err;
+	u32 size;
+
 	err = gk20a_init_gr_prepare(g);
-	BUG_ON(err);
+	if (err)
+		return err;
+
 	err = gk20a_init_gr_reset_enable_hw(g);
-	BUG_ON(err);
+	if (err)
+		return err;
+
 	err = gk20a_init_gr_setup_hw(g);
-	BUG_ON(err);
+	if (err)
+		return err;
+
+	size = 0;
+	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to query fecs pg buffer size");
+		return err;
+	}
+
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
+			g->mm.pmu.inst_block.cpu_pa);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to bind pmu inst to gr");
+		return err;
+	}
+
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, g->pmu.pg_buf.pmu_va);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to set pg buffer pmu va");
+		return err;
+	}
+
+	return 0;
 }
 
 static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,
@@ -5511,7 +5543,7 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 			   .mailbox.fail = 0});
 }
 
-int gr_gk20a_fecs_set_reglist_virual_addr(struct gk20a *g, u64 pmu_va)
+int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va)
 {
 	return gr_gk20a_submit_fecs_method_op(g,
 		   (struct fecs_method_op_gk20a) {

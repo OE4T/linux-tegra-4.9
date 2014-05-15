@@ -1882,7 +1882,7 @@ int gk20a_init_pmu_setup_hw2(struct gk20a *g)
 		return err;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_virual_addr(g, pmu->pg_buf.pmu_va);
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to set pg buffer pmu va");

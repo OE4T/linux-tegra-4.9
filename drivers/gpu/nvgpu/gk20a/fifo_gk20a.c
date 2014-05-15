@@ -831,9 +831,6 @@ static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)
 	struct gk20a *g = f->g;
 	int i;
 
-	/* Reinitialise FECS and GR */
-	gk20a_init_pmu_setup_hw2(g);
-
 	/* It is safe to enable ELPG again. */
 	gk20a_pmu_enable_elpg(g);
 

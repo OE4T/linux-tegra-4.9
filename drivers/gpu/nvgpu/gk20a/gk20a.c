@@ -747,6 +747,8 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	gk20a_dbg_fn("");
 
+	gk20a_scale_suspend(to_platform_device(dev));
+
 	if (!g->power_on)
 		return 0;
 
@@ -1204,8 +1206,6 @@ static int gk20a_pm_suspend(struct device *dev)
 
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
-
-	gk20a_scale_suspend(to_platform_device(dev));
 
 	ret = gk20a_pm_prepare_poweroff(dev);
 	if (ret)

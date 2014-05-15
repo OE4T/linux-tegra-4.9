@@ -137,8 +137,6 @@ static int flcn_setup_ucode_image(struct platform_device *dev,
 	/* image data is little endian. */
 	struct ucode_v1_flcn ucode;
 	int w;
-	u32 reserved_offset;
-	u32 tsec_key_offset;
 
 	nvhost_dbg_fn("");
 

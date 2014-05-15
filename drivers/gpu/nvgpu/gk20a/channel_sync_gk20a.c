@@ -344,7 +344,12 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 
 	sp->c = c;
 	sp->host1x_pdev = c->g->host1x_dev;
-	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev, c->hw_chid);
+	sp->id = nvhost_get_syncpt_host_managed(c->g->dev, c->hw_chid);
+	if (!sp->id) {
+		kfree(sp);
+		gk20a_err(&c->g->dev->dev, "failed to get free syncpt");
+		return NULL;
+	}
 
 	sp->ops.wait_cpu		= gk20a_channel_syncpt_wait_cpu;
 	sp->ops.is_expired		= gk20a_channel_syncpt_is_expired;

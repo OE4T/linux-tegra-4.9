@@ -158,7 +158,17 @@ static inline int is_event_supported(struct source_info *si, int event)
 	return 0;
 }
 
-static int set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
+static int
+validate_freq(unsigned int freq)
+{
+	if (capable(CAP_SYS_ADMIN))
+		return freq >= 100 && freq <= 100000;
+	else
+		return freq == 100 || freq == 1000 || freq == 10000;
+}
+
+static int
+set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 {
 	int i, err;
 	int pmu_events_id[QUADD_MAX_COUNTERS];
@@ -168,9 +178,10 @@ static int set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	struct task_struct *task;
 	unsigned int extra;
 
-	if (ctx.param.freq != 100 && ctx.param.freq != 1000 &&
-	    ctx.param.freq != 10000)
+	if (!validate_freq(p->freq)) {
+		pr_err("%s: incorrect frequency: %u", __func__, p->freq);
 		return -EINVAL;
+	}
 
 	ctx.param.freq = p->freq;
 	ctx.param.ma_freq = p->ma_freq;
@@ -285,6 +296,9 @@ static int set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 
 	if (extra & QUADD_PARAM_EXTRA_BT_FP)
 		pr_info("unwinding: frame pointers\n");
+
+	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
+		pr_info("unwinding: mixed mode\n");
 
 	quadd_unwind_start(task);
 

@@ -56,7 +56,7 @@ struct quadd_hrt_ctx {
 	unsigned long rss_size_prev;
 };
 
-#define QUADD_HRT_MIN_FREQ	110
+#define QUADD_HRT_MIN_FREQ	100
 
 #define QUADD_U32_MAX (~(__u32)0)
 

@@ -547,6 +547,7 @@ static int tsec_probe(struct platform_device *dev)
 				(u32 *)&tsec_carveout_size);
 		if (!err) {
 			dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+			dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 			dma_map_linear_attrs(&dev->dev, tsec_carveout_addr,
 				tsec_carveout_size, DMA_TO_DEVICE, &attrs);
 		}

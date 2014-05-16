@@ -1424,10 +1424,10 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 
 	case TEGRA_DC_OUT_HDMI:
-#ifdef CONFIG_TEGRA_HDMI
-		dc->out_ops = &tegra_dc_hdmi_ops;
+#ifdef CONFIG_TEGRA_HDMI2_0
+		dc->out_ops = &tegra_dc_hdmi2_0_ops;
 #else
-		dc->out_ops = NULL; /* TODO: use the hdmisor driver */
+		dc->out_ops = &tegra_dc_hdmi_ops;
 #endif
 		break;
 

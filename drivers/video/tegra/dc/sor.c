@@ -75,7 +75,7 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	return jiffies - timeout_jf + 1;
 }
 
-static void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
+void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_is_clk_enabled(sor->sor_clk);
 
@@ -244,9 +244,8 @@ static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor)
 { }
 #endif
 
-
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
-	const struct tegra_dc_dp_link_config *cfg)
+				const struct tegra_dc_dp_link_config *cfg)
 {
 	struct tegra_dc_sor_data *sor;
 	struct resource *res;
@@ -255,11 +254,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	void __iomem *base;
 	struct clk *clk;
 	int err;
-
+	__maybe_unused struct clk *safe_clk = NULL;
 	struct device_node *np = dc->ndev->dev.of_node;
-
 	struct device_node *np_sor =
 		of_find_node_by_path("/host1x/sor");
+	const char *res_name = dc->ndev->id ? "sor1" : "sor0";
 
 	sor = devm_kzalloc(&dc->ndev->dev, sizeof(*sor), GFP_KERNEL);
 	if (!sor) {
@@ -278,7 +277,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		}
 	} else {
 		res = platform_get_resource_byname(dc->ndev,
-			IORESOURCE_MEM, "sor");
+			IORESOURCE_MEM, res_name);
 		if (!res) {
 			dev_err(&dc->ndev->dev,
 				"sor: no mem resource\n");
@@ -304,26 +303,34 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
-	clk = clk_get_sys("sor0", NULL);
+	clk = clk_get_sys(res_name, NULL);
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
 		err = -ENOENT;
 		goto err_iounmap_reg;
 	}
 
+#ifndef	CONFIG_ARCH_TEGRA_12x_SOC
+	safe_clk = clk_get_sys("sor_safe", NULL);
+	if (IS_ERR_OR_NULL(clk)) {
+		dev_err(&dc->ndev->dev, "sor: can't get safe clock\n");
+		err = -ENOENT;
+		goto err_iounmap_reg;
+	}
+#endif
+
 	sor->dc = dc;
 	sor->base = base;
 	sor->res = res;
 	sor->base_res = base_res;
 	sor->sor_clk = clk;
+	sor->safe_clk = safe_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
 
 	tegra_dc_sor_debug_create(sor);
 
 	return sor;
-
-
 err_iounmap_reg:
 	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
@@ -371,6 +378,8 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	struct device_node *np_sor =
 		of_find_node_by_path("/host1x/sor");
 	clk_put(sor->sor_clk);
+	if (sor->safe_clk)
+		clk_put(sor->safe_clk);
 	devm_iounmap(&sor->dc->ndev->dev, sor->base);
 	devm_release_mem_region(&sor->dc->ndev->dev,
 		sor->res->start, resource_size(sor->res));
@@ -490,7 +499,7 @@ static int tegra_dc_sor_enable_lane_sequencer(struct tegra_dc_sor_data *sor,
 	return 0;
 }
 
-int tegra_sor_power_dp_lanes(struct tegra_dc_sor_data *sor,
+int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu)
 {
 	u32 reg_val;
@@ -673,6 +682,113 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 			pmc_base + APBDEV_PMC_DPD_SAMPLE);
 }
 
+/* hdmi uses sor sequencer for pad power up */
+void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
+{
+	u32 mask;
+	u32 val;
+
+	tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+				NV_SOR_DP_SPARE_SEQ_ENABLE_YES,
+				NV_SOR_DP_SPARE_SEQ_ENABLE_YES);
+
+	/* TODO: deassert dpd */
+	usleep_range(10, 15);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+			NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+			NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	usleep_range(25, 30);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL3,
+			NV_SOR_PLL3_PLLVDD_MODE_MASK,
+			NV_SOR_PLL3_PLLVDD_MODE_V3_3);
+	tegra_sor_write_field(sor, NV_SOR_PLL0,
+			NV_SOR_PLL0_PWR_MASK | NV_SOR_PLL0_VCOPD_MASK,
+			NV_SOR_PLL0_PWR_ON | NV_SOR_PLL0_VCOPD_RESCIND);
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
+			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
+	usleep_range(230, 300);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+			NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK |
+			NV_SOR_PLL2_AUX2_MASK,
+			NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE |
+			NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN);
+	usleep_range(25, 30);
+
+	mask = NV_SOR_SEQ_INST_WAIT_TIME_DEFAULT_MASK |
+		NV_SOR_SEQ_INST_WAIT_UNITS_DEFAULT_MASK |
+		NV_SOR_SEQ_INST_HALT_TRUE |
+		NV_SOR_SEQ_INST_PIN_A_HIGH |
+		NV_SOR_SEQ_INST_PIN_B_HIGH |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_TRISTATE |
+		NV_SOR_SEQ_INST_BLACK_DATA_BLACK |
+		NV_SOR_SEQ_INST_BLANK_DE_INACTIVE |
+		NV_SOR_SEQ_INST_BLANK_H_INACTIVE |
+		NV_SOR_SEQ_INST_BLANK_V_INACTIVE |
+		NV_SOR_SEQ_INST_ASSERT_PLL_RESET_RST |
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_POWERDOWN;
+	val = 1 << NV_SOR_SEQ_INST_WAIT_TIME_SHIFT |
+		NV_SOR_SEQ_INST_WAIT_UNITS_VSYNC |
+		NV_SOR_SEQ_INST_HALT_TRUE |
+		NV_SOR_SEQ_INST_PIN_A_LOW |
+		NV_SOR_SEQ_INST_PIN_B_LOW |
+		NV_SOR_SEQ_INST_DRIVE_PWM_OUT_LO_TRUE |
+		NV_SOR_SEQ_INST_TRISTATE_IOS_ENABLE_PINS |
+		NV_SOR_SEQ_INST_BLACK_DATA_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_DE_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_H_NORMAL |
+		NV_SOR_SEQ_INST_BLANK_V_NORMAL |
+		NV_SOR_SEQ_INST_ASSERT_PLL_RESET_NORMAL |
+		NV_SOR_SEQ_INST_POWERDOWN_MACRO_NORMAL;
+	tegra_sor_write_field(sor, NV_SOR_SEQ_INST(0), mask, val);
+	tegra_sor_write_field(sor, NV_SOR_SEQ_INST(8), mask, val);
+
+	tegra_sor_write_field(sor, NV_SOR_SEQ_CTL,
+				NV_SOR_SEQ_CTL_PU_PC_MASK |
+				NV_SOR_SEQ_CTL_PU_PC_ALT_MASK |
+				NV_SOR_SEQ_CTL_PD_PC_MASK |
+				NV_SOR_SEQ_CTL_PD_PC_ALT_MASK |
+				NV_SOR_SEQ_CTL_SWITCH_MASK,
+				0 << NV_SOR_SEQ_CTL_PU_PC_SHIFT |
+				0 << NV_SOR_SEQ_CTL_PU_PC_ALT_SHIFT |
+				8 << NV_SOR_SEQ_CTL_PD_PC_SHIFT |
+				8 << NV_SOR_SEQ_CTL_PD_PC_ALT_SHIFT |
+				NV_SOR_SEQ_CTL_SWITCH_WAIT);
+
+	tegra_dc_sor_set_power_state(sor, 1);
+}
+
+void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
+{
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+
+	if (sor->clk_type == TEGRA_SOR_LINK_CLK)
+		return;
+
+	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK);
+	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_G2_7);
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_LINK_CLK;
+}
 
 /* The SOR power sequencer does not work for t124 so SW has to
    go through the power sequence manually */
@@ -780,19 +896,22 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	bool is_lvds)
 {
-	const struct tegra_dc_out_pin	*pins	  = sor->dc->out->out_pins;
-	const struct tegra_dc_mode	*dc_mode  = &sor->dc->mode;
+	const struct tegra_dc_out_pin *pins = sor->dc->out->out_pins;
+	const struct tegra_dc_mode	*dc_mode = &sor->dc->mode;
+	int head_num = sor->dc->ndev->id;
+	u32 reg_val = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
+	u32 vtotal, htotal;
+	u32 vsync_end, hsync_end;
+	u32 vblank_end, hblank_end;
+	u32 vblank_start, hblank_start;
+	int i;
 
-	const int	head_num = sor->dc->ndev->id;
-	u32		reg_val	 = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
-	u32		vtotal, htotal;
-	u32		vsync_end, hsync_end;
-	u32		vblank_end, hblank_end;
-	u32		vblank_start, hblank_start;
-	int		i;
+	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
+	else
+		reg_val |= is_lvds ? NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM :
+				NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
 
-	reg_val |= is_lvds ? NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM :
-		NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
 	reg_val |= NV_SOR_STATE1_ASY_SUBOWNER_NONE |
 		NV_SOR_STATE1_ASY_CRCMODE_COMPLETE_RASTER;
 
@@ -832,30 +951,30 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		dc_mode->v_active + dc_mode->v_front_porch;
 	htotal = dc_mode->h_sync_width + dc_mode->h_back_porch +
 		dc_mode->h_active + dc_mode->h_front_porch;
-	tegra_sor_writel(sor, NV_HEAD_STATE1(head_num),
+	tegra_sor_writel(sor, NV_HEAD_STATE1(sor->portnum),
 		vtotal << NV_HEAD_STATE1_VTOTAL_SHIFT |
 		htotal << NV_HEAD_STATE1_HTOTAL_SHIFT);
 
 	vsync_end = dc_mode->v_sync_width - 1;
 	hsync_end = dc_mode->h_sync_width - 1;
-	tegra_sor_writel(sor, NV_HEAD_STATE2(head_num),
+	tegra_sor_writel(sor, NV_HEAD_STATE2(sor->portnum),
 		vsync_end << NV_HEAD_STATE2_VSYNC_END_SHIFT |
 		hsync_end << NV_HEAD_STATE2_HSYNC_END_SHIFT);
 
 	vblank_end = vsync_end + dc_mode->v_back_porch;
 	hblank_end = hsync_end + dc_mode->h_back_porch;
-	tegra_sor_writel(sor, NV_HEAD_STATE3(head_num),
+	tegra_sor_writel(sor, NV_HEAD_STATE3(sor->portnum),
 		vblank_end << NV_HEAD_STATE3_VBLANK_END_SHIFT |
 		hblank_end << NV_HEAD_STATE3_HBLANK_END_SHIFT);
 
 	vblank_start = vblank_end + dc_mode->v_active;
 	hblank_start = hblank_end + dc_mode->h_active;
-	tegra_sor_writel(sor, NV_HEAD_STATE4(head_num),
+	tegra_sor_writel(sor, NV_HEAD_STATE4(sor->portnum),
 		vblank_start << NV_HEAD_STATE4_VBLANK_START_SHIFT |
 		hblank_start << NV_HEAD_STATE4_HBLANK_START_SHIFT);
 
 	/* TODO: adding interlace mode support */
-	tegra_sor_writel(sor, NV_HEAD_STATE5(head_num), 0x1);
+	tegra_sor_writel(sor, NV_HEAD_STATE5(sor->portnum), 0x1);
 
 	tegra_sor_write_field(sor, NV_SOR_CSTM,
 		NV_SOR_CSTM_ROTCLK_DEFAULT_MASK |
@@ -1014,7 +1133,13 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 {
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val = tegra_dc_readl(sor->dc, DC_DISP_DISP_WIN_OPTIONS);
-	reg_val = enable ? reg_val | SOR_ENABLE : reg_val & ~SOR_ENABLE;
+	u32 enb = dc->ndev->id ? SOR1_ENABLE : SOR_ENABLE;
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		enb |= SOR1_TIMING_CYA;
+
+	reg_val = enable ? reg_val | enb : reg_val & ~enb;
+
 	tegra_dc_writel(dc, reg_val, DC_DISP_DISP_WIN_OPTIONS);
 }
 
@@ -1324,7 +1449,7 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	tegra_dc_sor_power_down(sor);
 
 	/* Power down DP lanes */
-	if (!is_lvds && tegra_sor_power_dp_lanes(sor, 4, false)) {
+	if (!is_lvds && tegra_sor_power_lanes(sor, 4, false)) {
 		dev_err(&dc->ndev->dev,
 			"Failed to power down dp lanes\n");
 		return;
@@ -1357,6 +1482,11 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	reg_val |= NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK |
 		NV_SOR_DP_SPARE_SEQ_ENABLE_YES;
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
+
+	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE,
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE);
 }
 
 void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor, u8 *link_bw,

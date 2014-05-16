@@ -1097,7 +1097,7 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp, u8 lane_cnt)
 {
 	int ret;
 
-	tegra_sor_power_dp_lanes(dp->sor, lane_cnt, true);
+	tegra_sor_power_lanes(dp->sor, lane_cnt, true);
 
 	CHECK_RET(tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
 				NV_DPCD_LANE_COUNT_SET_MASK,

@@ -248,6 +248,8 @@
 #define DC_DISP_DISP_WIN_OPTIONS		0x402
 #define  CURSOR_ENABLE			(1 << 16)
 #define  SOR_ENABLE                     (1 << 25)
+#define  SOR1_ENABLE			(1 << 26)
+#define  SOR1_TIMING_CYA		(1 << 27)
 #define  TVO_ENABLE			(1 << 28)
 #define  DSI_ENABLE			(1 << 29)
 #define  HDMI_ENABLE			(1 << 30)

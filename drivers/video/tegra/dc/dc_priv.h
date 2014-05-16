@@ -356,8 +356,14 @@ static inline u32 tegra_dc_reg_h32(dma_addr_t v)
 }
 #endif
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
-extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
+
+#ifdef CONFIG_TEGRA_HDMI2_0
+extern struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops;
+#else
+extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
+#endif
+
 #ifdef CONFIG_TEGRA_DP
 extern struct tegra_dc_out_ops tegra_dc_dp_ops;
 #endif

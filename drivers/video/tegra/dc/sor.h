@@ -86,6 +86,7 @@ struct tegra_dc_sor_data {
 	struct resource	*res;
 	struct resource	*base_res;
 	struct clk	*sor_clk;
+	struct clk *safe_clk;
 
 	u8					 portnum;	/* 0 or 1 */
 	const struct tegra_dc_dp_link_config	*link_cfg;
@@ -110,7 +111,6 @@ struct tegra_dc_sor_data {
 
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);
-
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
@@ -144,11 +144,14 @@ void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor,
 	bool is_lvds);
 void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes);
 void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb);
-int tegra_sor_power_dp_lanes(struct tegra_dc_sor_data *sor,
+int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu);
 void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor);
 void tegra_sor_start_dc(struct tegra_dc_sor_data *sor);
+void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
+void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
+void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

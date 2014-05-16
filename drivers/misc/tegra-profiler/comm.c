@@ -891,6 +891,7 @@ static int comm_init(void)
 	res = misc_register(misc_dev);
 	if (res < 0) {
 		pr_err("Error: misc_register: %d\n", res);
+		kfree(misc_dev);
 		return res;
 	}
 	comm_ctx.misc_dev = misc_dev;

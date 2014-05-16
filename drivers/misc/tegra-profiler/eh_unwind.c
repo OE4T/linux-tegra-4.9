@@ -965,6 +965,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 	while (1) {
 		long err;
+		int nr_added;
 		unsigned long where = frame.pc;
 		struct vm_area_struct *vma_pc;
 		struct mm_struct *mm = task->mm;
@@ -1001,10 +1002,12 @@ unwind_backtrace(struct quadd_callchain *cc,
 		pr_debug("function at [<%08lx>] from [<%08lx>]\n",
 			 where, frame.pc);
 
-		quadd_callchain_store(cc, frame.pc);
-
 		cc->curr_sp = frame.sp;
 		cc->curr_fp = frame.fp_arm;
+
+		nr_added = quadd_callchain_store(cc, frame.pc);
+		if (nr_added == 0)
+			break;
 	}
 }
 

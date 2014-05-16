@@ -179,7 +179,7 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	unsigned int extra;
 
 	if (!validate_freq(p->freq)) {
-		pr_err("%s: incorrect frequency: %u", __func__, p->freq);
+		pr_err("%s: incorrect frequency: %u\n", __func__, p->freq);
 		return -EINVAL;
 	}
 

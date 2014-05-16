@@ -634,12 +634,6 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	unsigned long totalram_mb;
 	struct sysinfo info;
 	struct nvmap_page_pool *pool = &dev->pool;
-#ifdef CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP
-	int i;
-	struct page *page;
-	int pages_to_fill;
-	int highmem_pages = 0;
-#endif
 
 	memset(pool, 0x0, sizeof(*pool));
 	mutex_init(&pool->lock);
@@ -675,32 +669,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	if (IS_ERR_OR_NULL(background_allocator))
 		goto fail;
 
-#ifdef CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP
-	pages_to_fill = CONFIG_NVMAP_PAGE_POOLS_INIT_FILLUP_SIZE * SZ_1M /
-			PAGE_SIZE;
-	pages_to_fill = pages_to_fill ? : pool->length;
-
-	nvmap_page_pool_lock(pool);
-	for (i = 0; i < pages_to_fill; i++) {
-		page = alloc_page(GFP_NVMAP);
-		if (!page)
-			goto done;
-		if (!nvmap_page_pool_fill_locked(pool, page)) {
-			__free_page(page);
-			goto done;
-		}
-		if (PageHighMem(page))
-			highmem_pages++;
-	}
-
-	si_meminfo(&info);
-	pr_info("highmem=%d, pool_size=%d,"
-		"totalram=%lu, freeram=%lu, totalhigh=%lu, freehigh=%lu\n",
-		highmem_pages, pool->length,
-		info.totalram, info.freeram, info.totalhigh, info.freehigh);
-done:
-	nvmap_page_pool_unlock(pool);
-#endif
+	nvmap_pp_wake_up_allocator();
 	return 0;
 fail:
 	nvmap_page_pool_fini(dev);

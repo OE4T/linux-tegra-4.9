@@ -237,7 +237,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
-	struct quadd_iovec vec[4];
+	struct quadd_iovec vec[5];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
 
@@ -306,15 +306,21 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 #else
 			cc->cs_64 = 0;
 #endif
-			bt_size += quadd_callchain_store(cc, pc);
+			bt_size += quadd_callchain_store(cc, pc,
+							 QUADD_UNW_TYPE_KCTX);
 		}
 
 		if (bt_size > 0) {
 			int ip_size = cc->cs_64 ? sizeof(u64) : sizeof(u32);
+			int nr_types = DIV_ROUND_UP(bt_size, 8);
 
 			vec[vec_idx].base = cc->cs_64 ?
 				(void *)cc->ip_64 : (void *)cc->ip_32;
 			vec[vec_idx].len = bt_size * ip_size;
+			vec_idx++;
+
+			vec[vec_idx].base = cc->types;
+			vec[vec_idx].len = nr_types * sizeof(cc->types[0]);
 			vec_idx++;
 		}
 

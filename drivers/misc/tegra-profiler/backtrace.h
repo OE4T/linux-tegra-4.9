@@ -18,8 +18,12 @@
 #define __QUADD_BACKTRACE_H
 
 #include <linux/mm.h>
+#include <linux/bitops.h>
 
 #define QUADD_MAX_STACK_DEPTH		64
+
+#define QUADD_UNW_TYPES_SIZE \
+	DIV_ROUND_UP(QUADD_MAX_STACK_DEPTH * 4, sizeof(u32) * BITS_PER_BYTE)
 
 struct quadd_callchain {
 	int nr;
@@ -28,6 +32,8 @@ struct quadd_callchain {
 		u32 ip_32[QUADD_MAX_STACK_DEPTH];
 		u64 ip_64[QUADD_MAX_STACK_DEPTH];
 	};
+
+	u32 types[QUADD_UNW_TYPES_SIZE];
 
 	int cs_64;
 
@@ -49,7 +55,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 
 int
 quadd_callchain_store(struct quadd_callchain *cc,
-		      unsigned long ip);
+		      unsigned long ip, unsigned int type);
 
 unsigned long
 quadd_user_stack_pointer(struct pt_regs *regs);

@@ -254,7 +254,7 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 {
 	u32 sed;
 	unsigned int type;
-	int retval = -EIO, ip_size;
+	int retval = -EIO, ip_size, bt_size;
 	int was_read = 0, write_offset = 0;
 	unsigned long flags;
 	struct quadd_ring_buffer *rb = &comm_ctx.rb;
@@ -294,7 +294,12 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		ip_size = (sed & QUADD_SED_IP64) ?
 			sizeof(u64) : sizeof(u32);
 
-		length_extra = sample->callchain_nr * ip_size;
+		bt_size = sample->callchain_nr;
+
+		length_extra = bt_size * ip_size;
+
+		if (bt_size > 0)
+			length_extra += DIV_ROUND_UP(bt_size, 8) * sizeof(u32);
 
 		nr_events = __sw_hweight32(sample->events_flags);
 		length_extra += nr_events * sizeof(u32);

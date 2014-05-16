@@ -77,9 +77,21 @@ quadd_user_link_register(struct pt_regs *regs)
 #endif
 }
 
+static inline void
+put_unw_type(u32 *p, int bt_idx, unsigned int type)
+{
+	int word_idx, shift;
+
+	word_idx = bt_idx / 8;
+	shift = (bt_idx % 8) * 4;
+
+	*(p + word_idx) &= ~(0x0f << shift);
+	*(p + word_idx) |= (type & 0x0f) << shift;
+}
+
 int
 quadd_callchain_store(struct quadd_callchain *cc,
-		      unsigned long ip)
+		      unsigned long ip, unsigned int type)
 {
 	if (!ip) {
 		cc->unw_rc = QUADD_URC_PC_INCORRECT;
@@ -90,6 +102,8 @@ quadd_callchain_store(struct quadd_callchain *cc,
 		cc->unw_rc = QUADD_URC_LEVEL_TOO_DEEP;
 		return 0;
 	}
+
+	put_unw_type(cc->types, cc->nr, type);
 
 	if (cc->cs_64)
 		cc->ip_64[cc->nr++] = ip;
@@ -150,7 +164,7 @@ user_backtrace(unsigned long __user *tail,
 		return NULL;
 	}
 
-	nr_added = quadd_callchain_store(cc, value_lr);
+	nr_added = quadd_callchain_store(cc, value_lr, QUADD_UNW_TYPE_FP);
 	if (nr_added == 0)
 		return NULL;
 
@@ -233,7 +247,8 @@ get_user_callchain_fp(struct pt_regs *regs,
 				return 0;
 			}
 
-			nr_added = quadd_callchain_store(cc, lr);
+			nr_added = quadd_callchain_store(cc, lr,
+							 QUADD_UNW_TYPE_LR_FP);
 			if (nr_added == 0)
 				return cc->nr;
 
@@ -330,7 +345,7 @@ user_backtrace_compat(u32 __user *tail,
 		return NULL;
 	}
 
-	nr_added = quadd_callchain_store(cc, value_lr);
+	nr_added = quadd_callchain_store(cc, value_lr, QUADD_UNW_TYPE_FP);
 	if (nr_added == 0)
 		return NULL;
 
@@ -413,7 +428,8 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 				return 0;
 			}
 
-			nr_added = quadd_callchain_store(cc, lr);
+			nr_added = quadd_callchain_store(cc, lr,
+							 QUADD_UNW_TYPE_LR_FP);
 			if (nr_added == 0)
 				return cc->nr;
 

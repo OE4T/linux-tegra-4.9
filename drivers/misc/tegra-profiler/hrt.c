@@ -292,6 +292,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	vec_idx++;
 
 	s->reserved = 0;
+	cc->unw_method = QUADD_URC_SUCCESS;
 
 	if (ctx->param.backtrace) {
 		bt_size = quadd_get_user_callchain(user_regs, cc, ctx, task);
@@ -318,10 +319,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 		}
 
 		extra_data |= cc->unw_method << QUADD_SED_UNW_METHOD_SHIFT;
-
-		if (cc->unw_method == QUADD_UNW_METHOD_EHT ||
-		    cc->unw_method == QUADD_UNW_METHOD_MIXED)
-			s->reserved |= cc->unw_rc << QUADD_SAMPLE_URC_SHIFT;
+		s->reserved |= cc->unw_rc << QUADD_SAMPLE_URC_SHIFT;
 	}
 	s->callchain_nr = bt_size;
 

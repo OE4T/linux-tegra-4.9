@@ -81,15 +81,22 @@ int
 quadd_callchain_store(struct quadd_callchain *cc,
 		      unsigned long ip)
 {
-	if (ip && cc->nr < QUADD_MAX_STACK_DEPTH) {
-		if (cc->cs_64)
-			cc->ip_64[cc->nr++] = ip;
-		else
-			cc->ip_32[cc->nr++] = ip;
-
-		return 1;
+	if (!ip) {
+		cc->unw_rc = QUADD_URC_PC_INCORRECT;
+		return 0;
 	}
-	return 0;
+
+	if (cc->nr >= QUADD_MAX_STACK_DEPTH) {
+		cc->unw_rc = QUADD_URC_LEVEL_TOO_DEEP;
+		return 0;
+	}
+
+	if (cc->cs_64)
+		cc->ip_64[cc->nr++] = ip;
+	else
+		cc->ip_32[cc->nr++] = ip;
+
+	return 1;
 }
 
 static unsigned long __user *
@@ -97,14 +104,17 @@ user_backtrace(unsigned long __user *tail,
 	       struct quadd_callchain *cc,
 	       struct vm_area_struct *stack_vma)
 {
+	int nr_added;
 	unsigned long value, value_lr = 0, value_fp = 0;
 	unsigned long __user *fp_prev = NULL;
 
 	if (!is_vma_addr((unsigned long)tail, stack_vma, sizeof(*tail)))
 		return NULL;
 
-	if (__copy_from_user_inatomic(&value, tail, sizeof(unsigned long)))
+	if (__copy_from_user_inatomic(&value, tail, sizeof(unsigned long))) {
+		cc->unw_rc = QUADD_URC_EACCESS;
 		return NULL;
+	}
 
 	if (is_vma_addr(value, stack_vma, sizeof(value))) {
 		/* gcc thumb/clang frame */
@@ -115,13 +125,17 @@ user_backtrace(unsigned long __user *tail,
 			return NULL;
 
 		if (__copy_from_user_inatomic(&value_lr, tail + 1,
-					      sizeof(value_lr)))
+					      sizeof(value_lr))) {
+			cc->unw_rc = QUADD_URC_EACCESS;
 			return NULL;
+		}
 	} else {
 		/* gcc arm frame */
 		if (__copy_from_user_inatomic(&value_fp, tail - 1,
-					      sizeof(value_fp)))
+					      sizeof(value_fp))) {
+			cc->unw_rc = QUADD_URC_EACCESS;
 			return NULL;
+		}
 
 		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
 			return NULL;
@@ -131,10 +145,14 @@ user_backtrace(unsigned long __user *tail,
 
 	fp_prev = (unsigned long __user *)value_fp;
 
-	if (value_lr < QUADD_USER_SPACE_MIN_ADDR)
+	if (value_lr < QUADD_USER_SPACE_MIN_ADDR) {
+		cc->unw_rc = QUADD_URC_PC_INCORRECT;
 		return NULL;
+	}
 
-	quadd_callchain_store(cc, value_lr);
+	nr_added = quadd_callchain_store(cc, value_lr);
+	if (nr_added == 0)
+		return NULL;
 
 	if (fp_prev <= tail)
 		return NULL;
@@ -153,10 +171,12 @@ get_user_callchain_fp(struct pt_regs *regs,
 	struct mm_struct *mm = task->mm;
 
 	cc->nr = 0;
-	cc->unw_method = QUADD_UNW_METHOD_FP;
+	cc->unw_rc = QUADD_URC_FP_INCORRECT;
 
-	if (!regs || !mm)
+	if (!regs || !mm) {
+		cc->unw_rc = QUADD_URC_FAILURE;
 		return 0;
+	}
 
 	sp = quadd_user_stack_pointer(regs);
 	pc = instruction_pointer(regs);
@@ -166,8 +186,10 @@ get_user_callchain_fp(struct pt_regs *regs,
 		return 0;
 
 	vma = find_vma(mm, sp);
-	if (!vma)
+	if (!vma) {
+		cc->unw_rc = QUADD_URC_SP_INCORRECT;
 		return 0;
+	}
 
 	if (!is_vma_addr(fp, vma, sizeof(fp)))
 		return 0;
@@ -176,6 +198,7 @@ get_user_callchain_fp(struct pt_regs *regs,
 		pr_warn_once("frame error: sp/fp: %#lx/%#lx, pc/lr: %#lx/%#lx, vma: %#lx-%#lx\n",
 			     sp, fp, pc, quadd_user_link_register(regs),
 			     vma->vm_start, vma->vm_end);
+		cc->unw_rc = QUADD_URC_EACCESS;
 		return 0;
 	}
 
@@ -191,8 +214,10 @@ get_user_callchain_fp(struct pt_regs *regs,
 			if (__copy_from_user_inatomic(
 					&value,
 					(unsigned long __user *)fp + 1,
-					sizeof(unsigned long)))
+					sizeof(unsigned long))) {
+				cc->unw_rc = QUADD_URC_EACCESS;
 				return 0;
+			}
 
 			vma_pc = find_vma(mm, pc);
 			read_lr = 1;
@@ -200,12 +225,18 @@ get_user_callchain_fp(struct pt_regs *regs,
 
 		if (!read_lr || !is_vma_addr(value, vma_pc, sizeof(value))) {
 			/* gcc: fp --> short frame tail (fp) */
+			int nr_added;
 			unsigned long lr = quadd_user_link_register(regs);
 
-			if (lr < QUADD_USER_SPACE_MIN_ADDR)
+			if (lr < QUADD_USER_SPACE_MIN_ADDR) {
+				cc->unw_rc = QUADD_URC_PC_INCORRECT;
 				return 0;
+			}
 
-			quadd_callchain_store(cc, lr);
+			nr_added = quadd_callchain_store(cc, lr);
+			if (nr_added == 0)
+				return cc->nr;
+
 			tail = (unsigned long __user *)reg;
 		}
 	}
@@ -226,19 +257,24 @@ __user_backtrace(struct quadd_callchain *cc, struct task_struct *task)
 	struct vm_area_struct *vma;
 	unsigned long __user *tail;
 
-	if (!mm)
-		goto out;
+	cc->unw_rc = QUADD_URC_FP_INCORRECT;
+
+	if (!mm) {
+		cc->unw_rc = QUADD_URC_FAILURE;
+		return cc->nr;
+	}
 
 	vma = find_vma(mm, cc->curr_sp);
-	if (!vma)
-		goto out;
+	if (!vma) {
+		cc->unw_rc = QUADD_URC_SP_INCORRECT;
+		return cc->nr;
+	}
 
 	tail = (unsigned long __user *)cc->curr_fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
 		tail = user_backtrace(tail, cc, vma);
 
-out:
 	return cc->nr;
 }
 
@@ -248,14 +284,17 @@ user_backtrace_compat(u32 __user *tail,
 	       struct quadd_callchain *cc,
 	       struct vm_area_struct *stack_vma)
 {
+	int nr_added;
 	u32 value, value_lr = 0, value_fp = 0;
 	u32 __user *fp_prev = NULL;
 
 	if (!is_vma_addr((unsigned long)tail, stack_vma, sizeof(*tail)))
 		return NULL;
 
-	if (__copy_from_user_inatomic(&value, tail, sizeof(value)))
+	if (__copy_from_user_inatomic(&value, tail, sizeof(value))) {
+		cc->unw_rc = QUADD_URC_EACCESS;
 		return NULL;
+	}
 
 	if (is_vma_addr(value, stack_vma, sizeof(value))) {
 		/* gcc thumb/clang frame */
@@ -266,13 +305,17 @@ user_backtrace_compat(u32 __user *tail,
 			return NULL;
 
 		if (__copy_from_user_inatomic(&value_lr, tail + 1,
-					      sizeof(value_lr)))
+					      sizeof(value_lr))) {
+			cc->unw_rc = QUADD_URC_EACCESS;
 			return NULL;
+		}
 	} else {
 		/* gcc arm frame */
 		if (__copy_from_user_inatomic(&value_fp, tail - 1,
-					      sizeof(value_fp)))
+					      sizeof(value_fp))) {
+			cc->unw_rc = QUADD_URC_EACCESS;
 			return NULL;
+		}
 
 		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
 			return NULL;
@@ -282,10 +325,14 @@ user_backtrace_compat(u32 __user *tail,
 
 	fp_prev = (u32 __user *)(unsigned long)value_fp;
 
-	if (value_lr < QUADD_USER_SPACE_MIN_ADDR)
+	if (value_lr < QUADD_USER_SPACE_MIN_ADDR) {
+		cc->unw_rc = QUADD_URC_PC_INCORRECT;
 		return NULL;
+	}
 
-	quadd_callchain_store(cc, value_lr);
+	nr_added = quadd_callchain_store(cc, value_lr);
+	if (nr_added == 0)
+		return NULL;
 
 	if (fp_prev <= tail)
 		return NULL;
@@ -304,9 +351,12 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 	struct mm_struct *mm = task->mm;
 
 	cc->nr = 0;
+	cc->unw_rc = QUADD_URC_FP_INCORRECT;
 
-	if (!regs || !mm)
+	if (!regs || !mm) {
+		cc->unw_rc = QUADD_URC_FAILURE;
 		return 0;
+	}
 
 	sp = quadd_user_stack_pointer(regs);
 	pc = instruction_pointer(regs);
@@ -316,8 +366,10 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 		return 0;
 
 	vma = find_vma(mm, sp);
-	if (!vma)
+	if (!vma) {
+		cc->unw_rc = QUADD_URC_SP_INCORRECT;
 		return 0;
+	}
 
 	if (!is_vma_addr(fp, vma, sizeof(fp)))
 		return 0;
@@ -326,6 +378,7 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 		pr_warn_once("frame error: sp/fp: %#x/%#x, pc/lr: %#x/%#x, vma: %#lx-%#lx\n",
 			     sp, fp, pc, (u32)quadd_user_link_register(regs),
 			     vma->vm_start, vma->vm_end);
+		cc->unw_rc = QUADD_URC_EACCESS;
 		return 0;
 	}
 
@@ -341,8 +394,10 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 			if (__copy_from_user_inatomic(
 					&value,
 					(u32 __user *)(fp + sizeof(u32)),
-					sizeof(value)))
+					sizeof(value))) {
+				cc->unw_rc = QUADD_URC_EACCESS;
 				return 0;
+			}
 
 			vma_pc = find_vma(mm, pc);
 			read_lr = 1;
@@ -350,12 +405,18 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 
 		if (!read_lr || !is_vma_addr(value, vma_pc, sizeof(value))) {
 			/* gcc: fp --> short frame tail (fp) */
+			int nr_added;
 			u32 lr = quadd_user_link_register(regs);
 
-			if (lr < QUADD_USER_SPACE_MIN_ADDR)
+			if (lr < QUADD_USER_SPACE_MIN_ADDR) {
+				cc->unw_rc = QUADD_URC_PC_INCORRECT;
 				return 0;
+			}
 
-			quadd_callchain_store(cc, lr);
+			nr_added = quadd_callchain_store(cc, lr);
+			if (nr_added == 0)
+				return cc->nr;
+
 			tail = (u32 __user *)(unsigned long)reg;
 		}
 	}
@@ -376,19 +437,24 @@ __user_backtrace_compat(struct quadd_callchain *cc, struct task_struct *task)
 	struct vm_area_struct *vma;
 	u32 __user *tail;
 
-	if (!mm)
-		goto out;
+	cc->unw_rc = QUADD_URC_FP_INCORRECT;
+
+	if (!mm) {
+		cc->unw_rc = QUADD_URC_FAILURE;
+		return cc->nr;
+	}
 
 	vma = find_vma(mm, cc->curr_sp);
-	if (!vma)
-		goto out;
+	if (!vma) {
+		cc->unw_rc = QUADD_URC_SP_INCORRECT;
+		return cc->nr;
+	}
 
 	tail = (u32 __user *)cc->curr_fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
 		tail = user_backtrace_compat(tail, cc, vma);
 
-out:
 	return cc->nr;
 }
 
@@ -401,6 +467,10 @@ __get_user_callchain_fp(struct pt_regs *regs,
 {
 	if (cc->nr > 0) {
 		int nr, nr_prev = cc->nr;
+
+		if (cc->unw_rc == QUADD_URC_LEVEL_TOO_DEEP)
+			return nr_prev;
+
 #ifdef CONFIG_ARM64
 		if (compat_user_mode(regs))
 			nr = __user_backtrace_compat(cc, task);
@@ -435,6 +505,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 	struct quadd_parameters *param = &ctx->param;
 
 	cc->nr = 0;
+	cc->unw_method = QUADD_URC_FAILURE;
 
 	if (!regs)
 		return 0;

@@ -432,6 +432,7 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	extra |= QUADD_COMM_CAP_EXTRA_SUPPORT_AARCH64;
 	extra |= QUADD_COMM_CAP_EXTRA_SPECIAL_ARCH_MMAP;
 	extra |= QUADD_COMM_CAP_EXTRA_UNWIND_MIXED;
+	extra |= QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE;
 
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 }

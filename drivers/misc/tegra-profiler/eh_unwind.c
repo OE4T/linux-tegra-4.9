@@ -916,10 +916,6 @@ unwind_frame(struct ex_region_info *ri,
 	if (ctrl.vrs[PC] == 0)
 		ctrl.vrs[PC] = ctrl.vrs[LR];
 
-	/* check for infinite loop */
-	if (frame->pc == ctrl.vrs[PC])
-		return -QUADD_URC_FAILURE;
-
 	if (!validate_pc_addr(ctrl.vrs[PC], sizeof(u32)))
 		return -QUADD_URC_PC_INCORRECT;
 

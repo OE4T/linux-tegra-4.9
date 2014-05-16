@@ -2013,6 +2013,7 @@ static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
+	int i;
 
 	gk20a_dbg_fn("");
 	mutex_lock(&vm->update_gmmu_lock);
@@ -2035,8 +2036,25 @@ static void gk20a_vm_remove_support(struct vm_gk20a *vm)
 		kfree(va_node);
 	}
 
-	/* TBD: unmapping all buffers above may not actually free
+	/* unmapping all buffers above may not actually free
 	 * all vm ptes.  jettison them here for certain... */
+	for (i = 0; i < vm->pdes.num_pdes; i++) {
+		struct page_table_gk20a *pte =
+			&vm->pdes.ptes[gmmu_page_size_small][i];
+		if (pte->ref) {
+			free_gmmu_pages(vm, pte->ref, pte->sgt,
+				vm->mm->page_table_sizing[gmmu_page_size_small].order,
+				pte->size);
+			pte->ref = NULL;
+		}
+		pte = &vm->pdes.ptes[gmmu_page_size_big][i];
+		if (pte->ref) {
+			free_gmmu_pages(vm, pte->ref, pte->sgt,
+				vm->mm->page_table_sizing[gmmu_page_size_big].order,
+				pte->size);
+			pte->ref = NULL;
+		}
+	}
 
 	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
 	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0, vm->pdes.size);

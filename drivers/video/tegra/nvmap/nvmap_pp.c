@@ -97,7 +97,8 @@ static void nvmap_pp_do_background_fill(struct nvmap_page_pool *pool)
 {
 	int err;
 	u32 pages = 0, nr, i;
-	gfp_t gfp = GFP_NVMAP;
+	gfp_t gfp = GFP_NVMAP | __GFP_NOMEMALLOC |
+		    __GFP_NORETRY | __GFP_NO_KSWAPD;
 
 	pages = (u32)atomic_xchg(&bg_pages_to_fill, pages);
 

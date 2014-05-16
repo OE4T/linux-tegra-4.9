@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <linux/device.h>
 #include <linux/input.h>
 #include <linux/hid.h>
@@ -43,7 +42,7 @@
 #define MAX_SPEED 10
 #define DEFAULT_SPEED 7
 
-#define SCALE_LEN 12
+#define SCALE_LEN 6
 
 #define MOUSE_MODE_STR "mouse"
 #define GESTURE_MODE_STR "gesture"
@@ -56,6 +55,8 @@
 
 #define MAX_DPAD_MOVE 4
 
+#define XSCALE 1
+#define YSCALE 0
 
 struct nvidia_tp_loc {
 	u8 x;
@@ -64,6 +65,8 @@ struct nvidia_tp_loc {
 	u8 speed;		/* Not used for now but keep as an parameter */
 	u8 mode;		/* Trackpad mode */
 	u8 release;
+	u8 tp_size;
+	struct hid_report *ff_report;
 };
 
 enum {
@@ -76,10 +79,13 @@ enum {
 /*
  * Scale mapping is a table based on quadratic function
  */
-static s8 blake_touch_scale_table[SCALE_LEN] = {
-	0, 1, 10, 20, 35, 45, 61, 70, 75, 79, 100, 125};
+static const s8 blake_touch_scale_table_x[SCALE_LEN] = {
+	0, 1, 4, 8, 13, 15};
 
-static u8 scale_rel(u8 rel, u8 coeff)
+static const s8 blake_touch_scale_table_y[SCALE_LEN] = {
+	0, 3, 10, 17, 22, 25};
+
+static signed short scale_rel(u8 rel, u8 coeff, u8 xy)
 {
 	s8 s_rel = (s8)rel;
 	s8 sign = (s_rel >= 0) ? 1 : -1;
@@ -88,7 +94,14 @@ static u8 scale_rel(u8 rel, u8 coeff)
 	if (abs_rel >= SCALE_LEN)
 		abs_rel = SCALE_LEN - 1;
 
-	return (u8)(sign * blake_touch_scale_table[abs_rel]);
+	/* If Direction is X or Y */
+	if (xy) {
+		return (signed short)((s_rel +
+			sign*blake_touch_scale_table_x[abs_rel]));
+	} else {
+		return (signed short)((s_rel +
+			sign*blake_touch_scale_table_y[abs_rel]));
+	}
 }
 
 static __s32 scale_rel_to_abs(__s32 rel)
@@ -111,11 +124,11 @@ static int nvidia_raw_event(struct hid_device *hdev,
 	struct nvidia_tp_loc *loc =
 		(struct nvidia_tp_loc *)hid_get_drvdata(hdev);
 	u8 action;
-	u8 x, y;
+	u16 x, y;
 	int press = 0;
 	int release = 0;
-	u8 relx, rely;
-	u8 relx_raw, rely_raw;
+	signed short relx, rely;
+	signed short relx_raw, rely_raw;
 
 	if (!report)
 		return -EINVAL;
@@ -141,6 +154,8 @@ static int nvidia_raw_event(struct hid_device *hdev,
 	x = data[2];
 	y = data[4];
 
+
+
 	if (!loc->action && action)
 		press = 1;
 	else if (loc->action && !action)
@@ -151,8 +166,8 @@ static int nvidia_raw_event(struct hid_device *hdev,
 	relx_raw = x - loc->x;
 	rely_raw = y - loc->y;
 
-	relx = scale_rel(relx_raw, loc->speed);
-	rely = scale_rel(rely_raw, loc->speed);
+	relx = scale_rel(relx_raw, loc->speed, XSCALE);
+	rely = scale_rel(rely_raw, (loc->speed), YSCALE);
 
 	loc->action = action;
 
@@ -172,20 +187,37 @@ static int nvidia_raw_event(struct hid_device *hdev,
 		 * raw relative data to generic driver
 		 */
 		if (loc->mode == ABSOLUTE_MODE) {
-			data[2] = x;
-			data[3] = y;
+			if (loc->tp_size == 8) {
+				data[2] = x & 0xff;
+				data[3] = y & 0xff;
+			}
+			/* otherwise we don't need to do anything */
 			return 0;
 		} else if (loc->mode == GESTURE_MODE) {
-			data[2] = relx_raw;
-			data[3] = rely_raw;
+			if (loc->tp_size == 8) {
+				data[2] = relx_raw & 0xff;
+				data[3] = rely_raw & 0xff;
+			} else {
+				data[2] = relx_raw & 0xff;
+				data[3] = relx_raw >> 8;
+				data[4] = rely_raw & 0xff;
+				data[5] = rely_raw >> 8;
+			}
 			if (release)
 				loc->release = 1;
 			else
 				loc->release = 0;
 			return 0;
 		} else {
-			data[2] = relx;
-			data[3] = rely;
+			if (loc->tp_size == 8) {
+				data[2] = relx & 0xff;
+				data[3] = rely & 0xff;
+			} else {
+				data[2] = relx & 0xff;
+				data[3] = relx >> 8;
+				data[4] = rely & 0xff;
+				data[5] = rely >> 8;
+			}
 			return 0;
 		}
 	} else {
@@ -203,6 +235,9 @@ static int nvidia_event(struct hid_device *hdev, struct hid_field *field,
 	struct nvidia_tp_loc *loc =
 		(struct nvidia_tp_loc *)hid_get_drvdata(hdev);
 	__u16 keycode = ABS_HAT0X;
+
+	if (!loc)
+		return 0;
 
 	/* If not in absolute mode or gesture mode, we pass as it is */
 	if (loc->mode != ABSOLUTE_MODE && loc->mode != GESTURE_MODE)
@@ -335,6 +370,122 @@ static ssize_t blake_store_speed(struct device *dev,
 	return count;
 }
 
+
+static int nvidia_ff_play(struct input_dev *dev, void *data,
+			 struct ff_effect *effect)
+{
+	struct hid_device *hid = input_get_drvdata(dev);
+	struct nvidia_tp_loc *loc = data;
+	int left, right, length;
+
+	left = effect->u.rumble.strong_magnitude;
+	right = effect->u.rumble.weak_magnitude;
+	length = effect->replay.length;
+
+	dbg_hid("called with 0x%04x 0x%04x 0x%04x", left, right, length);
+
+	length = length > 10000 ? 10000 : length;
+
+	loc->ff_report->field[0]->value[0] = left;
+	loc->ff_report->field[0]->value[1] = right;
+	loc->ff_report->field[0]->value[2] = length;
+
+	hid_hw_request(hid, loc->ff_report, HID_REQ_SET_REPORT);
+
+	return 0;
+}
+
+
+static int nvidia_find_tp_len(struct hid_device *hdev,
+	struct nvidia_tp_loc *loc)
+{
+	struct hid_report *report;
+	struct list_head *report_list =
+			&hdev->report_enum[HID_INPUT_REPORT].report_list;
+	u8 i;
+
+	if (list_empty(report_list)) {
+		hid_err(hdev, "no output reports found\n");
+		return -ENODEV;
+	}
+
+	/* set default */
+	loc->tp_size = 8;
+	list_for_each_entry(report, report_list, list) {
+		if (report->id == TOUCH_REPORT_ID) {
+			/* check if we are reporting u8 or u16
+			for x/y size need to handle FW change */
+			for (i = 0; i < report->maxfield; i++) {
+				if (report->field[i]->application
+						== HID_GD_MOUSE) {
+					if (report->field[i]->report_size
+						== 16) {
+						loc->tp_size = 16;
+						break;
+					}
+				}
+			}
+		}
+
+	}
+	return 0;
+}
+
+static int nvidia_init_ff(struct hid_device *hdev, struct nvidia_tp_loc *loc)
+{
+	struct hid_report *report;
+	struct hid_input *hidinput = list_entry(hdev->inputs.next,
+						struct hid_input, list);
+	struct list_head *report_list =
+			&hdev->report_enum[HID_OUTPUT_REPORT].report_list;
+	struct input_dev *dev = hidinput->input;
+	int error;
+
+	if (list_empty(report_list)) {
+		hid_err(hdev, "no output reports found\n");
+		return -ENODEV;
+	}
+
+	list_for_each_entry(report, report_list, list) {
+		if (report->maxfield < 1) {
+			hid_warn(hdev, "no fields in the report\n");
+			continue;
+		}
+
+		if (report->field[0]->application != (HID_UP_CUSTOM | 0x02)) {
+			hid_warn(hdev, "application usage doesn't match expected\n");
+			continue;
+		}
+
+		if (report->field[0]->report_count < 3) {
+			hid_warn(hdev, "not enough values in the field\n");
+			continue;
+		}
+
+		goto found_report;
+	}
+	hid_warn(hdev, "FF report not found\n");
+	loc->ff_report = NULL;
+	return -ENODEV;
+
+found_report:
+	loc->ff_report = report;
+
+	set_bit(FF_RUMBLE, dev->ffbit);
+	error = input_ff_create_memless(dev, loc, nvidia_ff_play);
+
+	if (error) {
+		loc->ff_report = NULL;
+		clear_bit(FF_RUMBLE, dev->ffbit);
+		hid_warn(hdev, "Couldn't create FF device");
+		return error;
+	}
+
+	hid_info(hdev, "Force feedback enabled\n");
+
+	return 0;
+}
+
 static DEVICE_ATTR(speed, S_IRUGO | S_IWUSR,
 	blake_show_speed, blake_store_speed);
 static DEVICE_ATTR(mode, S_IRUGO | S_IWUSR,
@@ -402,8 +553,8 @@ static void nvidia_remove(struct hid_device *hdev)
 }
 
 static int nvidia_input_mapped(struct hid_device *hdev, struct hid_input *hi,
-			      struct hid_field *field, struct hid_usage *usage,
-			      unsigned long **bit, int *max)
+			struct hid_field *field, struct hid_usage *usage,
+			unsigned long **bit, int *max)
 {
 	int a = field->logical_minimum;
 	int b = field->logical_maximum;

@@ -1092,10 +1092,12 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 }
 
 #ifdef CONFIG_TEGRA_DC_CMU
-static void tegra_dc_cache_cmu(struct tegra_dc_cmu *dst_cmu,
+static void tegra_dc_cache_cmu(struct tegra_dc *dc,
 					struct tegra_dc_cmu *src_cmu)
 {
-	memcpy(dst_cmu, src_cmu, sizeof(struct tegra_dc_cmu));
+	if (&dc->cmu != src_cmu) /* ignore if it would require memmove() */
+		memcpy(&dc->cmu, src_cmu, sizeof(*src_cmu));
+	dc->cmu_dirty = true;
 }
 
 static void tegra_dc_set_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
@@ -1122,45 +1124,40 @@ static void tegra_dc_set_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 		val = LUT2_ADDR(i) | LUT1_DATA(cmu->lut2[i]);
 		tegra_dc_writel(dc, val, DC_COM_CMU_LUT2);
 	}
+
+	dc->cmu_dirty = false;
 }
 
-int _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+static void _tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
 	u32 val;
 
-	if (dc->pdata->cmu_enable) {
-		dc->pdata->flags |= TEGRA_DC_FLAG_CMU_ENABLE;
-	} else {
-		dc->pdata->flags &= ~TEGRA_DC_FLAG_CMU_ENABLE;
-		return 0;
-	}
+	if (!dc->cmu_enabled)
+		return;
 
-#ifdef CONFIG_TEGRA_DC_CMU
-	if (cmu != &dc->cmu) {
-		tegra_dc_cache_cmu(&dc->cmu, cmu);
+	tegra_dc_cache_cmu(dc, cmu);
 
-		/* Disable CMU */
+	if (dc->cmu_dirty) {
+		/* Disable CMU to avoid programming it while it is in use */
 		val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
 		if (val & CMU_ENABLE) {
 			val &= ~CMU_ENABLE;
-			tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
+			tegra_dc_writel(dc, val,
+					DC_DISP_DISP_COLOR_CONTROL);
 			val = GENERAL_ACT_REQ;
 			tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
 			/*TODO: Sync up with vsync */
 			mdelay(20);
 		}
+		dev_dbg(&dc->ndev->dev, "updating CMU cmu_dirty=%d\n",
+			dc->cmu_dirty);
 
 		tegra_dc_set_cmu(dc, &dc->cmu);
 	}
-#endif
-
-	return 0;
 }
 
 int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 {
-	int ret;
-
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
 		mutex_unlock(&dc->lock);
@@ -1169,13 +1166,13 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 	tegra_dc_get(dc);
 
-	ret = _tegra_dc_update_cmu(dc, cmu);
+	_tegra_dc_update_cmu(dc, cmu);
 	tegra_dc_set_color_control(dc);
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
 
@@ -1191,11 +1188,11 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
-	dc->pdata->cmu_enable = cmu_enable;
+	dc->cmu_enabled = cmu_enable;
 	tegra_dc_update_cmu(dc, tegra_dc_get_cmu(dc));
 }
 #else
-#define tegra_dc_cache_cmu(dst_cmu, src_cmu)
+#define tegra_dc_cache_cmu(dc, src_cmu)
 #define tegra_dc_set_cmu(dc, cmu)
 #define tegra_dc_update_cmu(dc, cmu)
 #endif
@@ -1412,7 +1409,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		 * read them, but unfortunately there is no reliable and
 		 * flicker-free way to do this!
 		 */
-		tegra_dc_cache_cmu(&dc->cmu, tegra_dc_get_cmu(dc));
+		tegra_dc_cache_cmu(dc, tegra_dc_get_cmu(dc));
 #endif
 	} else if (out->n_modes > 0)
 		tegra_dc_set_mode(dc, &dc->out->modes[0]);
@@ -2121,7 +2118,7 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	}
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	if (dc->pdata->flags & TEGRA_DC_FLAG_CMU_ENABLE)
+	if (dc->cmu_enabled)
 		color_control |= CMU_ENABLE;
 #endif
 
@@ -2655,6 +2652,12 @@ int tegra_dc_restore(struct tegra_dc *dc)
 
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
+#ifdef CONFIG_TEGRA_DC_CMU
+	/* power down resets the registers, setting to true
+	 * causes CMU to be restored in tegra_dc_init(). */
+	dc->cmu_dirty = true;
+#endif
+
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->one_shot_lock);
 		cancel_delayed_work_sync(&dc->one_shot_work);
@@ -3118,6 +3121,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	pm_runtime_set_autosuspend_delay(&ndev->dev, 100);
 	pm_runtime_enable(&ndev->dev);
 
+#ifdef CONFIG_TEGRA_DC_CMU
+	/* if bootloader leaves this head enabled, then skip CMU programming. */
+	dc->cmu_dirty = (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) == 0;
+	dc->cmu_enabled = dc->pdata->cmu_enable;
+#endif
+
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
@@ -3397,6 +3406,7 @@ static int tegra_dc_resume(struct platform_device *ndev)
 
 	if (dc->out_ops && dc->out_ops->resume)
 		dc->out_ops->resume(dc);
+
 	mutex_unlock(&dc->lock);
 
 	return 0;

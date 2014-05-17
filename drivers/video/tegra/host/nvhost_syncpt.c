@@ -110,12 +110,18 @@ void nvhost_syncpt_reset_client(struct platform_device *pdev)
 void nvhost_syncpt_save(struct nvhost_syncpt *sp)
 {
 	u32 i;
+	struct nvhost_master *master = syncpt_to_dev(sp);
 
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
 		if (nvhost_syncpt_client_managed(sp, i))
 			syncpt_op().update_min(sp, i);
 		else
-			WARN_ON(!nvhost_syncpt_min_eq_max(sp, i));
+			if (!nvhost_syncpt_min_eq_max(sp, i)) {
+				nvhost_warn(&master->dev->dev,
+				 "invalid save state for syncpt %u (%s)\n",
+				 i, nvhost_syncpt_get_name(master->dev, i));
+				nvhost_syncpt_debug(sp);
+			}
 	}
 
 	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++)
@@ -880,7 +886,9 @@ void nvhost_free_syncpt(u32 id)
 	if (!nvhost_syncpt_client_managed(sp, id) &&
 			!nvhost_syncpt_min_eq_max(sp, id)) {
 		nvhost_err(d,
-		    "trying to free host managed syncpt still in use %u\n", id);
+		    "trying to free host managed syncpt still in use %u (%s)\n",
+			id, nvhost_syncpt_get_name(host->dev, id));
+		nvhost_syncpt_debug(sp);
 		return;
 	}
 

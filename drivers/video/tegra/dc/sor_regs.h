@@ -1,18 +1,18 @@
 /*
- * drivers/video/tegra/dc/sor_regs.h
- *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- */
+* drivers/video/tegra/dc/sor_regs.h
+*
+* Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+*
+* This software is licensed under the terms of the GNU General Public
+* License version 2, as published by the Free Software Foundation, and
+* may be copied, distributed, and modified under those terms.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+*/
 
 #ifndef __DRIVER_VIDEO_TEGRA_DC_SOR_REGS_H__
 #define __DRIVER_VIDEO_TEGRA_DC_SOR_REGS_H__
@@ -924,4 +924,69 @@
 #define NV_SOR_HDMI_AUDIO_N_GENERATE_NORMAL	(0 << 24)
 #define NV_SOR_HDMI_AUDIO_N_GENERATE_ALTERNALTE	(1 << 24)
 #define NV_SOR_HDMI_AUDIO_N_LOOKUP_ENABLE		(1 << 28)
+
+#define NV_SOR_DP_HDCP_AN_MSB				(0x75)
+#define NV_SOR_DP_HDCP_AN_LSB				(0x76)
+#define NV_SOR_DP_HDCP_AKSV_MSB				(0x77)
+#define NV_SOR_DP_HDCP_AKSV_LSB				(0x78)
+#define NV_SOR_DP_HDCP_BKSV_MSB				(0x79)
+#define NV_SOR_DP_HDCP_BKSV_LSB				(0x7a)
+#define NV_SOR_DP_HDCP_CTRL				(0x7b)
+#define NV_SOR_DP_HDCP_RI				(0x7c)
+#define NV_SOR_DP_HDCP_CYA				(0x7f)
+
+#define NV_SOR_TMDS_HDCP_AN_MSB				(0x80)
+#define NV_SOR_TMDS_HDCP_AN_LSB				(0x81)
+#define NV_SOR_TMDS_HDCP_CN_MSB				(0x82)
+#define NV_SOR_TMDS_HDCP_CN_LSB				(0x83)
+#define NV_SOR_TMDS_HDCP_AKSV_MSB			(0x84)
+#define NV_SOR_TMDS_HDCP_AKSV_LSB			(0x85)
+#define NV_SOR_TMDS_HDCP_BKSV_MSB			(0x86)
+#define REPEATER                                        (1 << 31)
+#define NV_SOR_TMDS_HDCP_BKSV_LSB			(0x87)
+#define NV_SOR_TMDS_HDCP_CKSV_MSB			(0x88)
+#define NV_SOR_TMDS_HDCP_CKSV_LSB			(0x89)
+#define NV_SOR_TMDS_HDCP_DKSV_MSB			(0x8a)
+#define NV_SOR_TMDS_HDCP_DKSV_LSB			(0x8b)
+#define NV_SOR_TMDS_HDCP_CTRL				(0x8c)
+#define HDCP_RUN_YES					(1 << 0)
+#define CRYPT_ENABLED					(1 << 1)
+#define ONEONE_ENABLED					(1 << 3)
+#define AN_VALID					(1 << 8)
+#define R0_VALID					(1 << 9)
+#define SPRIME_VALID					(1 << 10)
+#define MPRIME_VALID					(1 << 11)
+#define SROM_ERR					(1 << 13)
+#define NV_SOR_TMDS_HDCP_CMODE				(0x8d)
+#define TMDS0_LINK0					(1 << 4)
+#define READ_S						(1 << 0)
+#define READ_M						(2 << 0)
+#define NV_SOR_TMDS_HDCP_MPRIME_MSB			(0x8e)
+#define NV_SOR_TMDS_HDCP_MPRIME_LSB			(0x8f)
+#define NV_SOR_TMDS_HDCP_SPRIME_MSB			(0x90)
+#define STATUS_CS					(1 << 6)
+#define NV_SOR_TMDS_HDCP_SPRIME_LSB2			(0x91)
+#define NV_SOR_TMDS_HDCP_SPRIME_LSB1			(0x92)
+#define NV_SOR_TMDS_HDCP_RI				(0x93)
+#define NV_SOR_TMDS_HDCP_CS_MSB				(0x94)
+#define NV_SOR_TMDS_HDCP_CS_LSB				(0x95)
+
+#define NV_SOR_KEY_CTRL					(0xea)
+#define LOCAL_KEYS					(1 << 0)
+#define AUTOINC						(1 << 1)
+#define WRITE16						(1 << 4)
+#define PKEY_RELOAD_TRIGGER				(1 << 5)
+#define PKEY_LOADED					(1 << 6)
+
+#define NV_SOR_KEY_DEBUG0				0xeb
+#define NV_SOR_KEY_DEBUG1				0xec
+#define NV_SOR_KEY_DEBUG2				0xed
+#define NV_SOR_KEY_HDCP_KEY_0				0xee
+#define NV_SOR_KEY_HDCP_KEY_1				0xef
+#define NV_SOR_KEY_HDCP_KEY_2				0xf0
+#define NV_SOR_KEY_HDCP_KEY_3				0xf1
+#define NV_SOR_KEY_HDCP_KEY_TRIG			0xf2
+#define LOAD_HDCP_KEY					(1 << 8)
+#define NV_SOR_KEY_SKEY_INDEX				0xf3
+
 #endif

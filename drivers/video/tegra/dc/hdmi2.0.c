@@ -30,6 +30,7 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "hdmi2.0.h"
+#include "hdmihdcp.h"
 #include "sor.h"
 #include "sor_regs.h"
 #include "edid.h"
@@ -103,6 +104,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	hdmi->enabled = false;
 	dc_hdmi = hdmi;
+	hdmi->nvhdcp = NULL;
+
+#ifdef CONFIG_TEGRA_HDMIHDCP
+	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
+			dc->out->ddc_bus);
+	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
+		err = PTR_ERR(hdmi->nvhdcp);
+		goto fail;
+	}
+#endif
 
 	tegra_hdmi_ddc(hdmi);
 
@@ -121,6 +132,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 
 	tegra_dc_sor_destroy(hdmi->sor);
 	tegra_edid_destroy(hdmi->edid);
+	tegra_nvhdcp_destroy(hdmi->nvhdcp);
 	devm_kfree(&dc->ndev->dev, hdmi);
 }
 
@@ -367,6 +379,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_hdmi_audio(hdmi, AUDIO_FREQ_32K, HDA);
 
 	tegra_dc_sor_attach(sor);
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
 }
 
@@ -380,6 +393,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	clk_disable_unprepare(sor->safe_clk);
 	clk_disable_unprepare(sor->sor_clk);
 }

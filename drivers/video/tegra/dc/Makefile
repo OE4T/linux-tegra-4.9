@@ -13,6 +13,7 @@ obj-$(CONFIG_TEGRA_DSI2EDP_TC358767) += tc358767_dsi2edp.o
 obj-$(CONFIG_TEGRA_DSI2EDP_SN65DSI86) += sn65dsi86_dsi2edp.o
 obj-$(CONFIG_TEGRA_MIPI_CAL) += mipi_cal.o
 obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
+obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-y += edid.o
 obj-y += nvsd.o
 obj-y += dsi.o

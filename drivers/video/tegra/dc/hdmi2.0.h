@@ -156,6 +156,8 @@ struct tegra_hdmi {
 	struct hdmi_audio_infoframe audio;
 	bool null_sample_inject;
 	u32 audio_freq;
+
+	struct tegra_nvhdcp *nvhdcp;
 };
 
 #endif

@@ -595,6 +595,17 @@ struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 }
 #endif
 
+const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id)
+{
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_syncpt *sp = &host->syncpt;
+	const char *name = NULL;
+
+	name = sp->last_used_by[id];
+
+	return name ? name : "";
+}
+
 const char *nvhost_syncpt_get_name(struct platform_device *pdev, int id)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
@@ -894,6 +905,10 @@ void nvhost_free_syncpt(u32 id)
 
 	mutex_lock(&sp->syncpt_mutex);
 
+	kfree(sp->last_used_by[id]);
+	sp->last_used_by[id] = kasprintf(GFP_KERNEL, "%s",
+					sp->syncpt_names[id]);
+
 	/* set to default state */
 	if (nvhost_syncpt_client_managed(sp, id))
 		nvhost_syncpt_set_min_eq_max(sp, id);
@@ -938,6 +953,8 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	sp->client_managed = kzalloc(sizeof(bool) * nvhost_syncpt_nb_pts(sp),
 			GFP_KERNEL);
 	sp->syncpt_names = kzalloc(sizeof(char *) * nvhost_syncpt_nb_pts(sp),
+			GFP_KERNEL);
+	sp->last_used_by = kzalloc(sizeof(char *) * nvhost_syncpt_nb_pts(sp),
 			GFP_KERNEL);
 	sp->min_val = kzalloc(sizeof(atomic_t) * nvhost_syncpt_nb_pts(sp),
 			GFP_KERNEL);
@@ -1002,6 +1019,8 @@ int nvhost_syncpt_init(struct platform_device *dev,
 		/* initialize syncpt status */
 		sp->assigned[i] = false;
 		sp->client_managed[i] = false;
+		sp->syncpt_names[i] = NULL;
+		sp->last_used_by[i] = NULL;
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 		sp->timeline[i] = nvhost_sync_timeline_create(sp, i);
@@ -1079,6 +1098,9 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 
 	kfree(sp->syncpt_attrs);
 	sp->syncpt_attrs = NULL;
+
+	kfree(sp->last_used_by);
+	sp->last_used_by = NULL;
 
 	kfree(sp->syncpt_names);
 	sp->syncpt_names = NULL;

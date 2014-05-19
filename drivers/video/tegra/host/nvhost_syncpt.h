@@ -51,6 +51,7 @@ struct nvhost_syncpt {
 	u32 *base_val;
 	atomic_t *lock_counts;
 	const char **syncpt_names;
+	const char **last_used_by;
 	struct nvhost_syncpt_attr *syncpt_attrs;
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_timeline **timeline;
@@ -134,6 +135,8 @@ int nvhost_syncpt_compare(struct nvhost_syncpt *sp, u32 id,
 				u32 thresh_a, u32 thresh_b);
 
 void nvhost_syncpt_save(struct nvhost_syncpt *sp);
+
+const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id);
 
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp);
 void nvhost_syncpt_reset_client(struct platform_device *pdev);

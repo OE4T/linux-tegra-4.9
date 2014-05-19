@@ -76,6 +76,10 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "hdmi.h"
 #endif /* CONFIG_FRAMEBUFFER_CONSOLE */
 
+#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+#include "fake_panel.h"
+#endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
+
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -102,6 +106,10 @@ static struct fb_videomode tegra_dc_vga_mode = {
 static struct tegra_dc_mode override_disp_mode[3];
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
+
+static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
+static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state);
+static int tegra_dc_resume(struct platform_device *ndev);
 
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 
@@ -900,6 +908,189 @@ static ssize_t dbg_dc_event_inject_write(struct file *file,
 	return len;
 }
 
+/* Update the strings as dc.h get updated for new output types*/
+static const char * const dc_outtype_strings[] = {
+	"TEGRA_DC_OUT_RGB",
+	"TEGRA_DC_OUT_HDMI",
+	"TEGRA_DC_OUT_DSI",
+	"TEGRA_DC_OUT_DP",
+	"TEGRA_DC_OUT_LVDS",
+	"TEGRA_DC_OUT_NVSR_DP",
+	"TEGRA_DC_OUT_FAKE_DP",
+	"TEGRA_DC_OUT_FAKE_DSIA",
+	"TEGRA_DC_OUT_FAKE_DSIB",
+	"TEGRA_DC_OUT_FAKE_DSI_GANGED",
+	"TEGRA_DC_OUT_NULL",
+	"TEGRA_DC_OUT_UNKNOWN"
+};
+
+static int dbg_dc_outtype_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc *dc = s->private;
+
+	mutex_lock(&dc->lock);
+	seq_puts(s, "\n");
+	seq_printf(s,
+		"\tDC OUTPUT: \t%s (%d)\n",
+		dc_outtype_strings[dc->out->type], dc->out->type);
+	seq_puts(s, "\n");
+	mutex_unlock(&dc->lock);
+	return 0;
+}
+
+/* Add specific variable related to each output type.
+ * Save and reuse on changing the output type
+ */
+#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+struct tegra_dc_out_info {
+	struct tegra_dc_out_ops *out_ops;
+	void *out_data;
+	struct tegra_dc_out out;
+	struct tegra_dc_mode mode;
+};
+
+static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
+static int  boot_out_type = -1;
+
+static ssize_t dbg_dc_out_type_set(struct file *file,
+	const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data; /* single_open() initialized */
+	struct tegra_dc *dc = m ? m->private : NULL;
+	int cur_dc_out;
+	long out_type;
+	int ret;
+	bool  allocate = false;
+
+	if (!dc)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &out_type);
+	if (ret < 0)
+		return ret;
+
+	if (!dc->pdata->default_out)
+		return -EINVAL;
+
+	/* check out type is out of range then skip */
+	if (out_type < TEGRA_DC_OUT_RGB ||
+		out_type > TEGRA_DC_OUT_FAKE_DSI_GANGED) {
+		dev_err(&dc->ndev->dev, "Unknown out_type 0x%lx\n", out_type);
+		return -EINVAL;
+	}
+
+	if (boot_out_type == -1)
+		boot_out_type = dc->pdata->default_out->type;
+
+	cur_dc_out = dc->pdata->default_out->type;
+
+	/* Nothing to do if new outtype is same as old */
+	if (cur_dc_out == out_type)
+		return -EINVAL;
+
+	/* Currently allowing only to switch between booted
+		out type and fake dp out */
+	if ((out_type != boot_out_type) &&
+		(out_type != TEGRA_DC_OUT_FAKE_DP) &&
+		(out_type != TEGRA_DC_OUT_FAKE_DSIA)) {
+		dev_err(&dc->ndev->dev,
+			"Request 0x%lx is neither fakedp or booted output\n",
+			 out_type);
+		return -EINVAL;
+	}
+
+	/* disable the dc and output controllers */
+	if (dc->enabled)
+		tegra_dc_disable(dc);
+
+	/* If output is already created - save it */
+	if (dc->out_data) {
+		dbg_dc_out_info[cur_dc_out].out_data = dc->out_data;
+		dbg_dc_out_info[cur_dc_out].out_ops  = dc->out_ops;
+		memcpy(&dbg_dc_out_info[cur_dc_out].out, dc->out,
+					sizeof(struct tegra_dc_out));
+		dbg_dc_out_info[cur_dc_out].mode = dc->mode;
+	}
+
+
+	/* If output already created - reuse it */
+	if (dbg_dc_out_info[out_type].out_data) {
+		mutex_lock(&dc->one_shot_lp_lock);
+		mutex_lock(&dc->lock);
+		/* Change the out type */
+		dc->pdata->default_out->type = out_type;
+		dc->out_ops = dbg_dc_out_info[out_type].out_ops;
+		dc->out_data = dbg_dc_out_info[out_type].out_data;
+		memcpy(dc->out, &dbg_dc_out_info[out_type].out,
+						sizeof(struct tegra_dc_out));
+		dc->mode = dbg_dc_out_info[out_type].mode;
+		mutex_unlock(&dc->lock);
+		mutex_unlock(&dc->one_shot_lp_lock);
+	} else {
+		/* Change the out type */
+		dc->pdata->default_out->type = out_type;
+		/* create new - now restricted to fake_dp only */
+		if (out_type == TEGRA_DC_OUT_FAKE_DP) {
+
+			/* set to default bpp */
+			if (!dc->pdata->default_out->depth)
+				dc->pdata->default_out->depth = 24;
+
+			/* DP and Fake_Dp use same data
+			*  Reuse if already created */
+			if (!dbg_dc_out_info[TEGRA_DC_OUT_DP].out_data) {
+				allocate = true;
+				tegra_dc_init_fakedp_panel(dc);
+			}
+		} else if (out_type == TEGRA_DC_OUT_FAKE_DSIA) {
+			/* DSI and fake DSI use same data
+			 * create new if not created yet
+			 */
+			if (!dc->pdata->default_out->depth)
+				dc->pdata->default_out->depth = 18;
+
+			if (!dbg_dc_out_info[TEGRA_DC_OUT_DSI].out_data) {
+				allocate = true;
+				tegra_dc_init_fakedsi_panel(dc);
+			}
+		} else {
+			/* set  back to existing one */
+			dc->pdata->default_out->type = cur_dc_out;
+			dev_err(&dc->ndev->dev, "Unknown type is asked\n");
+			goto by_pass;
+		}
+
+		if (allocate) {
+			ret = tegra_dc_set_out(dc, dc->pdata->default_out);
+				if (ret < 0) {
+					dev_err(&dc->ndev->dev,
+					"Failed to initialize DC out ops\n");
+					return -EINVAL;
+				}
+		}
+
+		dbg_dc_out_info[out_type].out_ops = dc->out_ops;
+		dbg_dc_out_info[out_type].out_data = dc->out_data;
+		memcpy(&dbg_dc_out_info[out_type].out, dc->out,
+						sizeof(struct tegra_dc_out));
+
+	}
+
+by_pass:
+	/*enable the dc and output controllers */
+	if (!dc->enabled)
+		tegra_dc_enable(dc);
+
+	return len;
+}
+#else
+static ssize_t dbg_dc_out_type_set(struct file *file,
+	const char __user *addr, size_t len, loff_t *pos)
+{
+	return -EINVAL;
+}
+#endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
+
 static const struct file_operations stats_fops = {
 	.open		= dbg_dc_stats_open,
 	.read		= seq_read,
@@ -916,6 +1107,19 @@ static const struct file_operations event_inject_fops = {
 	.open		= dbg_dc_event_inject_open,
 	.read		= seq_read,
 	.write		= dbg_dc_event_inject_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int dbg_dc_outtype_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_outtype_show, inode->i_private);
+}
+
+static const struct file_operations outtype_fops = {
+	.open		= dbg_dc_outtype_open,
+	.read		= seq_read,
+	.write		= dbg_dc_out_type_set,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -952,6 +1156,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("event_inject", S_IRUGO, dc->debugdir, dc,
 		&event_inject_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("out_type", S_IRUGO, dc->debugdir, dc,
+		&outtype_fops);
 	if (!retval)
 		goto remove_out;
 
@@ -1454,6 +1663,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 
 #ifdef CONFIG_TEGRA_DP
+	case TEGRA_DC_OUT_FAKE_DP:
 	case TEGRA_DC_OUT_DP:
 		dc->out_ops = &tegra_dc_dp_ops;
 		break;
@@ -2493,6 +2703,7 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 
 		case TEGRA_DC_OUT_DP:
 		case TEGRA_DC_OUT_NVSR_DP:
+		case TEGRA_DC_OUT_FAKE_DP:
 			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 
 		/* Do nothing for other outputs for now */

@@ -75,6 +75,7 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 		break;
 	case TEGRA_DC_OUT_DP:
 	case TEGRA_DC_OUT_NVSR_DP:
+	case TEGRA_DC_OUT_FAKE_DP:
 		properties->type = TEGRA_DC_EXT_DP;
 		break;
 	default:

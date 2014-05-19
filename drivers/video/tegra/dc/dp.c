@@ -38,6 +38,10 @@
 #include "dc_priv.h"
 #include "edid.h"
 
+#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+#include "fake_panel.h"
+#endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
+
 static bool tegra_dp_debug;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
@@ -350,6 +354,9 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		return -EINVAL;
 	}
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return ret;
+
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
@@ -504,6 +511,9 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		return -EINVAL;
 	}
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return  ret;
+
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
@@ -548,6 +558,9 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		return -EINVAL;
 	}
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return ret;
+
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
@@ -579,7 +592,10 @@ static int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 {
 	u32 size = 0;
 	u32 status = 0;
-	int ret;
+	int ret = 0;
+
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
 	ret = tegra_dc_dpaux_read_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
@@ -641,6 +657,9 @@ static int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 status = 0;
 	int ret;
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return 0;
+
 	mutex_lock(&dp->dpaux_lock);
 	ret = tegra_dc_dpaux_write_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		cmd, &data, &size, &status);
@@ -657,6 +676,9 @@ static inline int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp,
 {
 	u8 dpcd_data;
 	int ret;
+
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return 0;
 
 	might_sleep();
 
@@ -993,48 +1015,60 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
-	u8 dpcd_data;
-	int ret;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
+#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		tegra_dc_init_fake_panel_link_cfg(cfg);
+	else
+#endif
+	 {
+		u8 dpcd_data;
+		int ret;
+
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
 			&dpcd_data));
 
-	cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
-	cfg->tps3_supported =
+		cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
+		cfg->tps3_supported =
 		(dpcd_data & NV_DPCD_MAX_LANE_COUNT_TPS3_SUPPORTED_YES) ?
 		true : false;
 
-	cfg->support_enhanced_framing =
+		cfg->support_enhanced_framing =
 		(dpcd_data & NV_DPCD_MAX_LANE_COUNT_ENHANCED_FRAMING_YES) ?
 		true : false;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_DOWNSPREAD,
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_DOWNSPREAD,
 			&dpcd_data));
-	cfg->downspread = (dpcd_data & NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT) ?
+		cfg->downspread =
+		(dpcd_data & NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT) ?
 		true : false;
-	cfg->support_fast_lt = (dpcd_data &
+
+		cfg->support_fast_lt = (dpcd_data &
 		NV_DPCD_MAX_DOWNSPREAD_NO_AUX_HANDSHAKE_LT_T) ? true : false;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_TRAINING_AUX_RD_INTERVAL,
-			&dpcd_data));
-	cfg->aux_rd_interval = dpcd_data;
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp,
+			NV_DPCD_TRAINING_AUX_RD_INTERVAL, &dpcd_data));
+		cfg->aux_rd_interval = dpcd_data;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
 			&cfg->max_link_bw));
+
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
+			&dpcd_data));
+		cfg->alt_scramber_reset_cap =
+		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_ASC_RESET_YES) ?
+		true : false;
+
+		cfg->only_enhanced_framing =
+		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_FRAMING_CHANGE_YES) ?
+		true : false;
+
+		cfg->edp_cap = (dpcd_data &
+		NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ? true : false;
+	}
 
 	/* DP SOR supports either 18bpp or 24bpp out stream only */
 	cfg->bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
-
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
-			&dpcd_data));
-	cfg->alt_scramber_reset_cap =
-		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_ASC_RESET_YES) ?
-		true : false;
-	cfg->only_enhanced_framing =
-		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_FRAMING_CHANGE_YES) ?
-		true : false;
-	cfg->edp_cap = (dpcd_data &
-		NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ? true : false;
 
 	cfg->lane_count = cfg->max_lane_count;
 
@@ -1282,6 +1316,9 @@ static int tegra_dp_lt(struct tegra_dc_dp_data *dp)
 	tegra_dp_clk_enable(dp);
 	tegra_sor_config_dp_clk(dp->sor);
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return 0;
+
 	mutex_lock(&dp->lt_lock);
 
 	if (cfg->support_fast_lt && cfg->lt_data_valid) {
@@ -1502,13 +1539,16 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_get_clk;
 	}
 
-	dp->dp_edid = tegra_edid_create(dc, tegra_dc_dp_i2c_xfer);
-	if (IS_ERR_OR_NULL(dp->dp_edid)) {
-		dev_err(&dc->ndev->dev, "dp: failed to create edid obj\n");
-		err = PTR_ERR(dp->dp_edid);
-		goto err_edid_destroy;
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		dp->dp_edid = tegra_edid_create(dc, tegra_dc_dp_i2c_xfer);
+		if (IS_ERR_OR_NULL(dp->dp_edid)) {
+			dev_err(&dc->ndev->dev,
+				"dp: failed to create edid obj\n");
+			err = PTR_ERR(dp->dp_edid);
+			goto err_edid_destroy;
+		}
+		tegra_dc_set_edid(dc, dp->dp_edid);
 	}
-	tegra_dc_set_edid(dc, dp->dp_edid);
 
 	INIT_WORK(&dp->lt_work, tegra_dp_lt_worker);
 	init_completion(&dp->hpd_plug);
@@ -2074,20 +2114,27 @@ static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
 	struct fb_monspecs specs;
 	int err;
 
-	err = tegra_edid_get_monspecs(dp->dp_edid, &specs);
-	if (err < 0) {
-		dev_err(&dc->ndev->dev, "dp: Failed to get EDID data\n");
-		goto fail;
+	memset(&specs, 0 , sizeof(specs));
+
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		err = tegra_edid_get_monspecs(dp->dp_edid, &specs);
+		if (err < 0) {
+			dev_err(&dc->ndev->dev,
+				"dp: Failed to get EDID data\n");
+			goto fail;
+		}
+
+		/* set bpp if EDID provides primary color depth */
+		dc->out->depth =
+			dc->out->depth ? : specs.bpc ? specs.bpc * 3 : 18;
+		dev_info(&dc->ndev->dev,
+			"dp: EDID: %d bpc panel, set to %d bpp\n",
+			 specs.bpc, dc->out->depth);
+
+		/* in mm */
+		dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;
+		dc->out->v_size = dc->out->v_size ? : specs.max_y * 10;
 	}
-
-	/* set bpp if EDID provides primary color depth */
-	dc->out->depth = dc->out->depth ? : specs.bpc ? specs.bpc * 3 : 18;
-	dev_info(&dc->ndev->dev, "dp: EDID: %d bpc panel, set to %d bpp\n",
-		 specs.bpc, dc->out->depth);
-
-	/* in mm */
-	dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;
-	dc->out->v_size = dc->out->v_size ? : specs.max_y * 10;
 
 	/*
 	 * EDID specifies either the acutal screen sizes or
@@ -2136,13 +2183,16 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 	tegra_dpaux_enable(dp);
 
-	tegra_dp_enable_irq(dp->irq);
-	tegra_dp_default_int(dp, true);
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		tegra_dp_enable_irq(dp->irq);
+		tegra_dp_default_int(dp, true);
 
-	tegra_dp_hpd_config(dp);
-	if (tegra_dp_hpd_plug(dp) < 0) {
-		dev_info(&dc->ndev->dev, "dp: no panel/monitor plugged\n");
-		goto error_enable;
+		tegra_dp_hpd_config(dp);
+		if (tegra_dp_hpd_plug(dp) < 0) {
+			dev_info(&dc->ndev->dev,
+				"dp: no panel/monitor plugged\n");
+			goto error_enable;
+		}
 	}
 
 	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
@@ -2209,8 +2259,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 
-	tegra_dp_default_int(dp, false);
-	tegra_dp_disable_irq(dp->irq);
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		tegra_dp_default_int(dp, false);
+		tegra_dp_disable_irq(dp->irq);
+	}
 
 	tegra_dpaux_pad_power(dp->dc, false);
 
@@ -2252,6 +2304,9 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	u32 rd;
+
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return  false;
 
 	tegra_dc_io_start(dc);
 	tegra_dpaux_clk_enable(dp);

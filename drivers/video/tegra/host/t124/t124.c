@@ -130,7 +130,7 @@ struct nvhost_device_data t124_isp_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -169,7 +169,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_isp01b_device = {

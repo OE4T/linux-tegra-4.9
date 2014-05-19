@@ -1,7 +1,7 @@
 /*
  * include/video/nvhdcp.h
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -90,5 +90,6 @@ struct tegra_nvhdcp_packet {
 #define TEGRAIO_NVHDCP_READ_S		_IOWR('F', 0x74, struct tegra_nvhdcp_packet)
 #define TEGRAIO_NVHDCP_RENEGOTIATE	_IO('F', 0x75)
 #define TEGRAIO_NVHDCP_HDCP_STATE	_IOR('F', 0x76, struct tegra_nvhdcp_packet)
+#define TEGRAIO_NVHDCP_RECV_CAPABLE	_IOR('F', 0x77, __u32)
 
 #endif

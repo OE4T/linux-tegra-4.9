@@ -333,7 +333,7 @@ struct nvhost_device_data t124_msenc_info = {
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 struct platform_device tegra_msenc03_device = {
@@ -456,7 +456,7 @@ struct nvhost_device_data t132_msenc_info = {
 	.deinit         = nvhost_flcn_deinit,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 static struct {

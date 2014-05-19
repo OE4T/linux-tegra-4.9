@@ -152,13 +152,25 @@ validate_mmap_addr(struct quadd_extabs_mmap *mmap,
 	return 1;
 }
 
-#define read_user_data(addr, retval)			\
-({							\
-	long ret;					\
-	ret = probe_kernel_address(addr, retval);	\
-	if (ret)					\
-		ret = -QUADD_URC_EACCESS;		\
-	ret;						\
+/*
+ * TBD: why probe_kernel_address() can lead to random crashes
+ * on 64-bit kernel, and replacing it to __get_user() fixed the issue.
+ */
+#define read_user_data(addr, retval)				\
+({								\
+	int ret;						\
+								\
+	pagefault_disable();					\
+	ret = __get_user(retval, addr);				\
+	pagefault_enable();					\
+								\
+	if (ret) {						\
+		pr_debug("%s: failed for address: %p\n",	\
+			 __func__, addr);			\
+		ret = -QUADD_URC_EACCESS;			\
+	}							\
+								\
+	ret;							\
 })
 
 static inline long

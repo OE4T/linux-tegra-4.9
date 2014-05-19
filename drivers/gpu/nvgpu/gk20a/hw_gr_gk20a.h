@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2790,6 +2790,14 @@ static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complet
 {
 	return 0x40;
 }
+static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_r(void)
+{
+	return 0x00419d0c;
+}
+static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f(void)
+{
+	return 0x2;
+}
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_r(void)
 {
 	return 0x0050450c;
@@ -2798,43 +2806,35 @@ static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f(void)
 {
 	return 0x2;
 }
-static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_disabled_f(void)
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_r(void)
 {
-	return 0x0;
+	return 0x0041ac94;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_r(void)
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_tpc_f(u32 v)
 {
-	return 0x00502c94;
+	return (v & 0xff) << 16;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_tpc_0_enabled_f(void)
+static inline u32 gr_gpc0_gpccs_gpc_exception_r(void)
 {
-	return 0x10000;
+	return 0x00502c90;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_tpc_0_disabled_f(void)
-{
-	return 0x0;
-}
-static inline u32 gr_gpcs_gpccs_gpc_exception_r(void)
-{
-	return 0x0041ac90;
-}
-static inline u32 gr_gpcs_gpccs_gpc_exception_tpc_v(u32 r)
+static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 {
 	return (r >> 16) & 0xff;
 }
-static inline u32 gr_gpcs_gpccs_gpc_exception_tpc_0_pending_v(void)
+static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_0_pending_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_r(void)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_r(void)
 {
-	return 0x00419d08;
+	return 0x00504508;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_sm_v(u32 r)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_v(u32 r)
 {
 	return (r >> 1) & 0x1;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_sm_pending_v(void)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v(void)
 {
 	return 0x00000001;
 }

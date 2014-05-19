@@ -1266,7 +1266,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		data->config |= EXTENDED_RANGE_BIT;
 	data->config &= ~(THERM2_BIT | ALERT_BIT);
 
-	ret = nct1008_write_reg(client, CONFIG_WR, data->config);
+	ret = nct1008_write_reg(client, CONFIG_WR, data->config | STANDBY_BIT);
 	if (ret)
 		goto error;
 

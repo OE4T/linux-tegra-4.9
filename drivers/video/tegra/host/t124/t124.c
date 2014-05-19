@@ -424,7 +424,7 @@ struct nvhost_device_data t124_vic_info = {
 	.actmon_enabled		= true,
 	.linear_emc		= true,
 	.firmware_name		= "vic03_ucode.bin",
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 struct platform_device tegra_vic03_device = {

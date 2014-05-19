@@ -133,6 +133,9 @@
 #define TEGRA30_AUDIOCIF_CTRL_MONO_CONV_ZERO		(TEGRA30_AUDIOCIF_MONO_CONV_ZERO << TEGRA30_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 #define TEGRA30_AUDIOCIF_CTRL_MONO_CONV_COPY		(TEGRA30_AUDIOCIF_MONO_CONV_COPY << TEGRA30_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 
+/* maximum mux count in T124 */
+#define TEGRA_AHUB_AUDIO_UPDATE_MAX_REG		2
+
 struct tegra30_xbar_cif_conf {
 	unsigned int threshold;
 	unsigned int audio_channels;
@@ -160,6 +163,8 @@ struct tegra30_xbar_soc_data {
 	unsigned int num_mux0_input;
 	unsigned int num_mux1_input;
 	unsigned int mask[2];
+	unsigned int reg_count;
+	unsigned int reg_offset;
 };
 
 struct tegra30_xbar {

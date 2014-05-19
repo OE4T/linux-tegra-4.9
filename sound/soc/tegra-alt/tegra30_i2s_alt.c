@@ -506,6 +506,10 @@ static struct snd_soc_dai_driver tegra30_i2s_dais[] = {
 	}
 };
 
+static const struct snd_kcontrol_new tegra30_i2s_controls[] = {
+	SOC_SINGLE("Loopback", TEGRA30_I2S_CTRL, 8, 1, 0),
+};
+
 static const struct snd_soc_dapm_widget tegra30_i2s_widgets[] = {
 	SND_SOC_DAPM_AIF_IN("CIF RX", NULL, 0, SND_SOC_NOPM,
 				0, 0),
@@ -535,6 +539,8 @@ static struct snd_soc_codec_driver tegra30_i2s_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra30_i2s_widgets),
 	.dapm_routes = tegra30_i2s_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra30_i2s_routes),
+	.controls = tegra30_i2s_controls,
+	.num_controls = ARRAY_SIZE(tegra30_i2s_controls),
 };
 
 static bool tegra30_i2s_wr_rd_reg(struct device *dev, unsigned int reg)

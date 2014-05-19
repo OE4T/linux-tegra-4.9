@@ -835,6 +835,7 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 	entry->data = vmalloc_user(nr_pages * PAGE_SIZE);
 	if (!entry->data) {
 		pr_err("%s: error: vmalloc_user", __func__);
+		kfree(entry);
 		return -ENOMEM;
 	}
 

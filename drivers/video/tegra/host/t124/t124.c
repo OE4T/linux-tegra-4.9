@@ -372,7 +372,7 @@ struct nvhost_device_data t124_tsec_info = {
 	.deinit        = nvhost_tsec_deinit,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
 	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_tsec01_device = {

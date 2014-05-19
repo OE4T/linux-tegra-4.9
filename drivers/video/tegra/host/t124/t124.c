@@ -217,6 +217,7 @@ struct nvhost_device_data t124_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset_all,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
+	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -255,7 +256,7 @@ struct nvhost_device_data t124_vi_info = {
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -293,7 +294,7 @@ struct nvhost_device_data t124_vib_info = {
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_vi01b_device = {

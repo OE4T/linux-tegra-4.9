@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp.c
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1136,6 +1136,22 @@ void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp)
 	tegra_nvhdcp_renegotiate(nvhdcp);
 }
 
+static int tegra_nvhdcp_recv_capable(struct tegra_nvhdcp *nvhdcp)
+{
+	if (!nvhdcp)
+		return 0;
+
+	if (nvhdcp->state == STATE_LINK_VERIFY)
+		return 1;
+	else {
+		__u64 b_ksv;
+		/* get Bksv from receiver */
+		if (!nvhdcp_i2c_read40(nvhdcp, 0x00, &b_ksv))
+			return !verify_ksv(b_ksv);
+	}
+	return 0;
+}
+
 static long nvhdcp_dev_ioctl(struct file *filp,
                 unsigned int cmd, unsigned long arg)
 {
@@ -1200,6 +1216,15 @@ static long nvhdcp_dev_ioctl(struct file *filp,
 		}
 		kfree(pkt);
 		return e;
+
+	case TEGRAIO_NVHDCP_RECV_CAPABLE:
+		{
+			__u32 recv_capable = tegra_nvhdcp_recv_capable(nvhdcp);
+			if (copy_to_user((void __user *)arg, &recv_capable,
+				sizeof(recv_capable)))
+				return -EFAULT;
+			return 0;
+		}
 	}
 
 	return e;

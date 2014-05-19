@@ -477,16 +477,14 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 	ctx.ex_tables_size += ti->length;
 
 	nr_added = add_ex_region(rd_new, &ri_entry);
-	if (nr_added == 0) {
-		rd_free(rd_new);
-		goto error_out;
-	}
+	if (nr_added == 0)
+		goto error_free;
 	rd_new->curr_nr += nr_added;
 
 	ex_entry = kzalloc(sizeof(*ex_entry), GFP_KERNEL);
 	if (!ex_entry) {
 		err = -ENOMEM;
-		goto error_out;
+		goto error_free;
 	}
 	memcpy(ex_entry, &ri_entry, sizeof(*ex_entry));
 
@@ -502,6 +500,8 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 
 	return 0;
 
+error_free:
+	rd_free(rd_new);
 error_out:
 	spin_unlock(&ctx.lock);
 	return err;

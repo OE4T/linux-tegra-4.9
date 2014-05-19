@@ -1514,6 +1514,8 @@ int gk20a_busy(struct platform_device *pdev)
 
 #ifdef CONFIG_PM_RUNTIME
 	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		pm_runtime_put_noidle(&pdev->dev);
 #endif
 	gk20a_scale_notify_busy(pdev);
 

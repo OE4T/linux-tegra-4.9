@@ -22,6 +22,7 @@
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include "nvhost_syncpt.h"
 
 struct output {
 	void (*fn)(void *ctx, const char* str, size_t len);
@@ -41,6 +42,8 @@ static inline void write_to_printk(void *ctx, const char* str, size_t len)
 
 void nvhost_debug_output(struct output *o, const char* fmt, ...);
 void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id);
+
+void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
 extern pid_t nvhost_debug_force_timeout_pid;

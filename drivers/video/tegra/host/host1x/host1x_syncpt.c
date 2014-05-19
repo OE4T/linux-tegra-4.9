@@ -112,33 +112,6 @@ static const char *t20_syncpt_name(struct nvhost_syncpt *sp, u32 id)
 	return name ? name : "";
 }
 
-static void t20_syncpt_debug(struct nvhost_syncpt *sp)
-{
-	u32 i;
-	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++) {
-		u32 max = nvhost_syncpt_read_max(sp, i);
-		u32 min = nvhost_syncpt_update_min(sp, i);
-		if (!max && !min)
-			continue;
-		dev_info(&syncpt_to_dev(sp)->dev->dev,
-			"id %d (%s) min %d max %d\n",
-			i, syncpt_op().name(sp, i),
-			min, max);
-
-	}
-
-	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++) {
-		u32 base_val;
-		t20_syncpt_read_wait_base(sp, i);
-		base_val = sp->base_val[i];
-		if (base_val)
-			dev_info(&syncpt_to_dev(sp)->dev->dev,
-					"waitbase id %d val %d\n",
-					i, base_val);
-
-	}
-}
-
 static int syncpt_mutex_try_lock(struct nvhost_syncpt *sp,
 		unsigned int idx)
 {
@@ -178,7 +151,6 @@ static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
 	.update_min = t20_syncpt_update_min,
 	.cpu_incr = t20_syncpt_cpu_incr,
 	.patch_wait = host1x_syncpt_patch_wait,
-	.debug = t20_syncpt_debug,
 	.name = t20_syncpt_name,
 	.mutex_try_lock = syncpt_mutex_try_lock,
 	.mutex_unlock = syncpt_mutex_unlock,

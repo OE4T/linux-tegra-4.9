@@ -162,8 +162,6 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
 
 int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr);
 
-void nvhost_syncpt_debug(struct nvhost_syncpt *sp);
-
 static inline int nvhost_syncpt_is_valid(struct nvhost_syncpt *sp, u32 id)
 {
 	return id != NVSYNCPT_INVALID && id < nvhost_syncpt_nb_pts(sp);

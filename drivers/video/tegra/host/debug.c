@@ -128,6 +128,14 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 	nvhost_debug_output(o, "\n");
 }
 
+void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
+{
+	struct output o = {
+	.fn = write_to_printk,
+	};
+	show_syncpts(syncpt_to_dev(sp), &o);
+}
+
 static void show_all(struct nvhost_master *m, struct output *o,
 		     int locked_id)
 {

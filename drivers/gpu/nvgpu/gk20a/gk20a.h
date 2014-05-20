@@ -220,6 +220,8 @@ struct gk20a {
 
 	bool power_on;
 
+	struct rw_semaphore busy_lock;
+
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;
 	struct gr_gk20a gr;

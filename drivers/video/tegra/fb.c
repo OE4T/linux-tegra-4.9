@@ -47,7 +47,7 @@
 #define TEGRA_LINEAR_PITCH_ALIGNMENT 256
 
 #ifdef CONFIG_COMPAT
-#define user_ptr(p) ((void __user *)(__u64)(p))
+#define user_ptr(p) ((void __user *)(uintptr_t)(p))
 #else
 #define user_ptr(p) (p)
 #endif
@@ -474,7 +474,7 @@ static int tegra_fb_ioctl(struct fb_info *info,
 			sizeof(modedb_compat)))
 			return -EFAULT;
 		/* convert compat version to full version */
-		modedb.modedb = (void __user *)(uintptr_t)modedb_compat.modedb;
+		modedb.modedb = user_ptr(modedb_compat.modedb);
 		modedb.modedb_len = modedb_compat.modedb_len;
 
 		res = tegra_get_modedb(dc, &modedb, info);

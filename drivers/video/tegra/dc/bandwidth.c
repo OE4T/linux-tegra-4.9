@@ -41,7 +41,10 @@ static int use_dynamic_emc = 1;
 
 module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 static unsigned int tegra_dcs_total_bw[TEGRA_MAX_DC] = {0};
 DEFINE_MUTEX(tegra_dcs_total_bw_lock);
 #endif
@@ -53,13 +56,18 @@ static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 		TEGRA_LA_DISPLAY_0A,
 		TEGRA_LA_DISPLAY_0B,
 		TEGRA_LA_DISPLAY_0C,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		TEGRA_LA_DISPLAYD,
 #endif
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		TEGRA_LA_DISPLAY_HC,
 #endif
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		TEGRA_LA_DISPLAY_T,
 #endif
 	},
@@ -75,7 +83,10 @@ static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 	},
 };
 
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 static bool is_internal_win(enum tegra_la_id id)
 {
 	return ((id == TEGRA_LA_DISPLAY_0A) || (id == TEGRA_LA_DISPLAY_0B) ||
@@ -530,7 +541,10 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
 	};
 #endif
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	struct clk *emc_clk = NULL;
 	unsigned long emc_freq_hz = 0;
 #endif
@@ -556,7 +570,10 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	if (bw != ULONG_MAX)
 		bw = bw / 1000 + 1;
 
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	emc_clk = clk_get(NULL, "emc");
 	emc_freq_hz = clk_get_rate(emc_clk);
 	calc_disp_params(dc,
@@ -680,13 +697,19 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * is of the luma plane's size only. */
 	bpp = tegra_dc_is_yuv_planar(w->fmt) ?
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	if (tegra_dc_is_yuv420(w->fmt))
 		bpp = 16;
 #endif
 
 	ret = (dc->mode.pclk / 1000UL) * (bpp / 8);
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	ret *= (win_use_v_filter(dc, w) ? 2 : 1);
 #endif
 	ret *= in_w;
@@ -901,6 +924,8 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 			pclk = KHZ2PICOS(300000); /* 300MHz max */
+#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+			pclk = KHZ2PICOS(600000); /* 600MHz max */
 #else
 			pclk = KHZ2PICOS(150000); /* 150MHz max */
 #endif

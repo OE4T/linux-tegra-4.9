@@ -55,8 +55,10 @@
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
 
-/* Only enabling for T124 for now; causes issues for other chips */
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define DSI_USE_SYNC_POINTS 1
 #else
 #define DSI_USE_SYNC_POINTS 0
@@ -2515,7 +2517,6 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_13x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),

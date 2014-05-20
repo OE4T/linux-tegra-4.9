@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal_regs.h
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,10 +21,12 @@
 
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_DSIB_MIPI_CAL_CONFIG_2_0
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0
-#else
+#elif defined(CONFIG_ARCH_TEGRA_2x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_MIPI_BIAS_PAD_CFG2_0
+#else
+	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0
 #endif
 
 #define MIPI_CAL_MIPI_CAL_CTRL_0	0x0
@@ -136,7 +138,10 @@
 #define MIPI_CAL_HSCLKPUOSDSIB(x)		(((x) & 0x1f) << 0)
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_12x_SOC
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define MIPI_CAL_DSIA_MIPI_CAL_CONFIG_2_0	0x64
 #define MIPI_CAL_CLKOVERIDEDSIA(x)		(((x) & 0x1) << 30)
 #define MIPI_CAL_CLKSELDSIA(x)		(((x) & 0x1) << 21)

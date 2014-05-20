@@ -77,14 +77,9 @@
 #define  WIN_A_UF_INT		(1 << 8)
 #define  WIN_B_UF_INT		(1 << 9)
 #define  WIN_C_UF_INT		(1 << 10)
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC) ||\
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
-#endif
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_UF_INT		(1 << 24)
 #define  WIN_T_UF_INT		(1 << 25)
-#endif
 #define  MSF_INT		(1 << 12)
 #define  SSF_INT		(1 << 13)
 #define  WIN_A_OF_INT		(1 << 14)
@@ -108,19 +103,15 @@
 #define  WIN_A_ACT_REQ		(1 << 1)
 #define  WIN_B_ACT_REQ		(1 << 2)
 #define  WIN_C_ACT_REQ		(1 << 3)
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_ACT_REQ		(1 << 4)
 #define  WIN_H_ACT_REQ		(1 << 5)
-#endif
 #define  CURSOR_ACT_REQ		(1 << 7)
 #define  GENERAL_UPDATE		(1 << 8)
 #define  WIN_A_UPDATE		(1 << 9)
 #define  WIN_B_UPDATE		(1 << 10)
 #define  WIN_C_UPDATE		(1 << 11)
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define  WIN_D_UPDATE		(1 << 12)
 #define  WIN_H_UPDATE		(1 << 13)
-#endif
 #define  CURSOR_UPDATE		(1 << 15)
 #define  NC_HOST_TRIG		(1 << 24)
 
@@ -464,10 +455,8 @@
 #define DC_DISP_INTERLACE_FIELD2_DISP_ACTIVE	0x4ea
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define DC_DISP_CURSOR_START_ADDR_HI		0x4ec
 #define DC_DISP_CURSOR_START_ADDR_HI_NS		0x4ed
-#endif
 
 #define DC_WIN_PALETTE_COLOR_EXT		0x600
 #define DC_WIN_H_FILTER_P(x)			(0x601 + (x))
@@ -626,21 +615,17 @@
 #define DC_WINBUF_ADDR_V_OFFSET_NS		0x809
 #define DC_WINBUF_UFLOW_STATUS			0x80a
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define DC_WINBUF_START_ADDR_HI	0x80d
 #define DC_WINBUF_START_ADDR_HI_U	0x80f
 #define DC_WINBUF_START_ADDR_HI_V	0x811
-#endif
 
 #define DC_WINBUF_START_ADDR_FIELD2		0x813
 #define DC_WINBUF_START_ADDR_FIELD2_U	0x815
 #define DC_WINBUF_START_ADDR_FIELD2_V	0x817
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define DC_WINBUF_START_ADDR_FIELD2_HI	0x819
 #define DC_WINBUF_START_ADDR_FIELD2_HI_U	0x81b
 #define DC_WINBUF_START_ADDR_FIELD2_HI_V	0x81d
-#endif
 
 #define DC_WINBUF_ADDR_H_OFFSET_FIELD2	0x81f
 #define DC_WINBUF_ADDR_V_OFFSET_FIELD2	0x821
@@ -649,11 +634,9 @@
 #define DC_WINBUF_AD_UFLOW_STATUS		0xbca
 #define DC_WINBUF_BD_UFLOW_STATUS		0xdca
 #define DC_WINBUF_CD_UFLOW_STATUS		0xfca
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define DC_WINBUF_DD_UFLOW_STATUS		0x0ca
 #define DC_WINBUF_HD_UFLOW_STATUS		0x1ca
 #define DC_WINBUF_TD_UFLOW_STATUS		0x14a
-#endif
 
 #define DC_WINBUF_BLEND_LAYER_CONTROL		0x716
 #define  WIN_DEPTH(x)			(((x) & 0xff) << 0)

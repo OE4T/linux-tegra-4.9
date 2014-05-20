@@ -622,7 +622,7 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 #endif
 	DUMP_REG(DC_DISP_DAC_CRT_CTRL);
 	DUMP_REG(DC_DISP_DISP_MISC_CONTROL);
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) && defined(CONFIG_TEGRA_DC_INTERLACE)
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	DUMP_REG(DC_DISP_INTERLACE_CONTROL);
 	DUMP_REG(DC_DISP_INTERLACE_FIELD2_REF_TO_SYNC);
 	DUMP_REG(DC_DISP_INTERLACE_FIELD2_SYNC_WIDTH);
@@ -663,7 +663,10 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 		DUMP_REG(DC_WINBUF_START_ADDR_V);
 		DUMP_REG(DC_WINBUF_ADDR_H_OFFSET);
 		DUMP_REG(DC_WINBUF_ADDR_V_OFFSET);
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		DUMP_REG(DC_WINBUF_START_ADDR_HI);
 		DUMP_REG(DC_WINBUF_START_ADDR_HI_U);
 		DUMP_REG(DC_WINBUF_START_ADDR_HI_V);
@@ -822,7 +825,9 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 		dc->stats.underflows_a,
 		dc->stats.underflows_b,
 		dc->stats.underflows_c);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	seq_printf(s,
 		"underflows_d: %llu\n"
 		"underflows_h: %llu\n"
@@ -1418,7 +1423,11 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 
 	case TEGRA_DC_OUT_HDMI:
+#ifdef CONFIG_TEGRA_HDMI
 		dc->out_ops = &tegra_dc_hdmi_ops;
+#else
+		dc->out_ops = NULL; /* TODO: use the hdmisor driver */
+#endif
 		break;
 
 	case TEGRA_DC_OUT_DSI:
@@ -1751,7 +1760,9 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 		WIN_A_UF_INT,
 		WIN_B_UF_INT,
 		WIN_C_UF_INT,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		WIN_D_UF_INT,
 		HC_UF_INT,
 		WIN_T_UF_INT,
@@ -1769,7 +1780,9 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 	if (dc->underflow_mask & WIN_C_UF_INT)
 		dc->stats.underflows_c += tegra_dc_underflow_count(dc,
 			DC_WINBUF_CD_UFLOW_STATUS);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	if (dc->underflow_mask & HC_UF_INT)
 		dc->stats.underflows_h += tegra_dc_underflow_count(dc,
 			DC_WINBUF_HD_UFLOW_STATUS);
@@ -2187,7 +2200,9 @@ static int tegra_dc_init(struct tegra_dc *dc)
 			DC_CMD_CONT_SYNCPT_VSYNC);
 
 	tegra_dc_writel(dc, 0x00004700, DC_CMD_INT_TYPE);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	tegra_dc_writel(dc, WIN_A_OF_INT | WIN_B_OF_INT | WIN_C_OF_INT |
 		WIN_T_UF_INT | WIN_D_UF_INT | HC_UF_INT |
 		WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT,
@@ -2922,11 +2937,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[1] = nvhost_get_syncpt_client_managed("disp0_b");
 		dc->win_syncpt[2] = nvhost_get_syncpt_client_managed("disp0_c");
 		dc->valid_windows = 0x07;
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
 		dc->win_syncpt[4] = nvhost_get_syncpt_client_managed("disp0_h");
 		dc->valid_windows |= 0x18;
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#elif !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
 		dc->valid_windows |= 0x08;
 #endif

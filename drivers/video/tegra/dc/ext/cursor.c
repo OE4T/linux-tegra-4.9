@@ -95,7 +95,10 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 		DC_DISP_CURSOR_START_ADDR);
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 	return 0;
@@ -108,7 +111,10 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 {
 	tegra_dc_writel(dc, CURSOR_POSITION(x, y), DC_DISP_CURSOR_POSITION);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 	return 0;
@@ -119,7 +125,10 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 
 static int set_cursor_activation_control(struct tegra_dc *dc)
 {
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	u32 reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
 
 	if ((reg & (1 << CURSOR_ACT_CNTR_SEL)) ==
@@ -159,7 +168,9 @@ static int set_cursor_blend(struct tegra_dc *dc, u32 format)
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
 		newval |= CURSOR_MODE_SELECT(1);
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		newval |= CURSOR_ALPHA | CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		if (format == TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA)
 			newval |= CURSOR_SRC_BLEND_FACTOR_SELECT(0);
@@ -238,13 +249,14 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	switch (format) {
 	case TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY:
 		break;
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
 		break;
 #endif
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
 		break;
 #endif
@@ -390,7 +402,10 @@ int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
 	tegra_dc_writel(dc, reg_val | CURSOR_CLIP_SHIFT_BITS(*args),
 			DC_DISP_CURSOR_START_ADDR);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 #else

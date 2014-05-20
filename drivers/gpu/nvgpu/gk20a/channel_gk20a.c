@@ -418,7 +418,7 @@ void gk20a_disable_channel_no_update(struct channel_gk20a *ch)
 		     ccsr_channel_enable_clr_true_f());
 }
 
-static int gk20a_wait_channel_idle(struct channel_gk20a *ch)
+int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 {
 	bool channel_idle = false;
 	unsigned long end_jiffies = jiffies +
@@ -435,8 +435,11 @@ static int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 	} while (time_before(jiffies, end_jiffies)
 			|| !tegra_platform_is_silicon());
 
-	if (!channel_idle)
-		gk20a_err(dev_from_gk20a(ch->g), "channel jobs not freed");
+	if (!channel_idle) {
+		gk20a_err(dev_from_gk20a(ch->g), "jobs not freed for channel %d\n",
+				ch->hw_chid);
+		return -EBUSY;
+	}
 
 	return 0;
 }

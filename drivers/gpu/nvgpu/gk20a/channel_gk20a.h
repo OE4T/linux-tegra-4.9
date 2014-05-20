@@ -170,4 +170,6 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
 
 void gk20a_init_channel(struct gpu_ops *gops);
 
+int gk20a_wait_channel_idle(struct channel_gk20a *ch);
+
 #endif /*__CHANNEL_GK20A_H__*/

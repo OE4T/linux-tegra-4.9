@@ -297,22 +297,131 @@ static const int tegra210_xbar_mux_values[] = {
 	/* index 35..53 above are inputs of PART2 Mux */
 };
 
-#define MUX0_REG(id) (TEGRA210_XBAR_PART0_RX + \
-			(TEGRA210_XBAR_RX_STRIDE * (id)))
+int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
+	struct snd_soc_codec *codec = widget->codec;
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int reg_count, reg_val, val, bit_pos = 0, i;
+	unsigned int reg[TEGRA210_XBAR_UPDATE_MAX_REG];
 
-#define MUX1_REG(id) (TEGRA210_XBAR_PART1_RX + \
-			(TEGRA210_XBAR_RX_STRIDE * (id)))
+	reg_count = xbar->soc_data->reg_count;
 
-#define MUX2_REG(id) (TEGRA210_XBAR_PART2_RX + \
-			(TEGRA210_XBAR_RX_STRIDE * (id)))
+	if (reg_count > TEGRA210_XBAR_UPDATE_MAX_REG)
+		return -EINVAL;
+
+	for (i = 0; i < reg_count; i++) {
+		reg[i] = (e->reg +
+			xbar->soc_data->reg_offset * i);
+		reg_val = snd_soc_read(codec, reg[i]);
+		val = reg_val & xbar->soc_data->mask[i];
+		if (val != 0) {
+			bit_pos = ffs(val) + (8 * codec->val_bytes * i);
+			break;
+		}
+	}
+
+	for (i = 0; i < e->max; i++) {
+		if (bit_pos == e->values[i]) {
+			ucontrol->value.enumerated.item[0] = i;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
+	struct snd_soc_codec *codec = widget->codec;
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+	unsigned int change = 0, reg_idx = 0, value, *mask, bit_pos = 0;
+	unsigned int i, wi, reg_count, reg_val = 0, update_idx = 0;
+	unsigned int reg[TEGRA210_XBAR_UPDATE_MAX_REG];
+	struct snd_soc_dapm_update update[TEGRA210_XBAR_UPDATE_MAX_REG];
+
+	/* initialize the reg_count and mask from soc_data */
+	reg_count = xbar->soc_data->reg_count;
+	mask = (unsigned int *)xbar->soc_data->mask;
+
+	if (item[0] >= e->max || reg_count > TEGRA210_XBAR_UPDATE_MAX_REG)
+		return -EINVAL;
+
+	value = e->values[item[0]];
+
+	if (value) {
+		/* get the register index and value to set */
+		reg_idx = (value - 1) / (8 * codec->val_bytes);
+		bit_pos = (value - 1) % (8 * codec->val_bytes);
+		reg_val = BIT(bit_pos);
+	}
+
+	for (i = 0; i < reg_count; i++) {
+		reg[i] = e->reg + xbar->soc_data->reg_offset * i;
+		if (i == reg_idx) {
+			change |= snd_soc_test_bits(codec, reg[i],
+							mask[i], reg_val);
+			/* set the selected register */
+			update[reg_count - 1].reg = reg[reg_idx];
+			update[reg_count - 1].mask = mask[reg_idx];
+			update[reg_count - 1].val = reg_val;
+		} else {
+			/* accumulate the change to update the DAPM path
+			    when none is selected */
+			change |= snd_soc_test_bits(codec, reg[i],
+							mask[i], 0);
+
+			/* clear the register when not selected */
+			update[update_idx].reg = reg[i];
+			update[update_idx].mask = mask[i];
+			update[update_idx++].val = 0;
+		}
+	}
+
+	/* power the widgets */
+	if (change) {
+		for (wi = 0; wi < wlist->num_widgets; wi++) {
+			widget = wlist->widgets[wi];
+			widget->value = reg_val;
+			for (i = 0; i < reg_count; i++) {
+				update[i].kcontrol = kcontrol;
+				update[i].widget = widget;
+				widget->dapm->update = &update[i];
+				snd_soc_dapm_mux_update_power(widget,
+					kcontrol, item[0], e);
+				widget->dapm->update = NULL;
+			}
+		}
+	}
+
+	return change;
+}
+
+#define MUX_REG(id) (TEGRA210_XBAR_RX_STRIDE * (id))
+
+#define SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
+{	.reg = xreg, .shift_l = shift, .shift_r = shift, \
+	.max = xmax, .texts = xtexts, .values = xvalues, \
+	.mask = xmax ? roundup_pow_of_two(xmax) - 1 : 0}
+
+#define SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
+		xtexts, xvalues) \
+	struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
+					ARRAY_SIZE(xtexts), xtexts, xvalues)
 
 #define MUX_ENUM_CTRL_DECL(ename, id) \
-	int ename##_regs[3] = { MUX0_REG(id), MUX1_REG(id), MUX2_REG(id) };	\
-	unsigned int ename##_masks[3] = { 0xf1f03ff, 0x3f30031f, 0xff1cf313 };	\
-	SOC_VALUE_ENUM_ONEHOT_DECL(ename##_enum, ename##_regs, ename##_masks, 3,	\
+	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, MUX_REG(id), 0,	\
 			tegra210_xbar_mux_texts, tegra210_xbar_mux_values); \
 	static const struct snd_kcontrol_new ename##_control = \
-		SOC_DAPM_ENUM_ONEHOT("Route", ename##_enum)
+		SOC_DAPM_ENUM_EXT("Route", ename##_enum,\
+				tegra210_xbar_get_value_enum,\
+				tegra210_xbar_put_value_enum)
 
 MUX_ENUM_CTRL_DECL(admaif1_tx, 0x00);
 MUX_ENUM_CTRL_DECL(admaif2_tx, 0x01);
@@ -600,6 +709,11 @@ static struct snd_soc_codec_driver tegra210_xbar_codec = {
 
 static const struct tegra210_xbar_soc_data soc_data_tegra210 = {
 	.regmap_config = &tegra210_xbar_regmap_config,
+	.mask[0] = 0xf1f03ff,
+	.mask[1] = 0x3f30031f,
+	.mask[2] = 0xff1cf313,
+	.reg_count = 3,
+	.reg_offset = TEGRA210_XBAR_PART1_RX,
 };
 
 static const struct of_device_id tegra210_xbar_of_match[] = {

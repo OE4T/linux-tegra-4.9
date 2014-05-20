@@ -111,6 +111,9 @@
 #define TEGRA210_AUDIOCIF_CTRL_MONO_CONV_ZERO		(TEGRA210_AUDIOCIF_MONO_CONV_ZERO << TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 #define TEGRA210_AUDIOCIF_CTRL_MONO_CONV_COPY		(TEGRA210_AUDIOCIF_MONO_CONV_COPY << TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 
+/* maximum mux count in T210 */
+#define TEGRA210_XBAR_UPDATE_MAX_REG	3
+
 struct tegra210_xbar_cif_conf {
 	unsigned int threshold;
 	unsigned int audio_channels;
@@ -131,6 +134,9 @@ int tegra210_xbar_read_reg (unsigned int reg, unsigned int *val);
 
 struct tegra210_xbar_soc_data {
 	const struct regmap_config *regmap_config;
+	unsigned int mask[3];
+	unsigned int reg_count;
+	unsigned int reg_offset;
 };
 
 struct tegra210_xbar {

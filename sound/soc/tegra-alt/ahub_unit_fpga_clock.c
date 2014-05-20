@@ -33,9 +33,10 @@
 
 static void __iomem *ahub_fpga_misc_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE);
 static void __iomem *ahub_i2c_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_I2C_BASE);
+static void __iomem *pinmux_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
 
-static void __iomem *i2c_misc_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
 static void __iomem *rst_clk_base = IO_ADDRESS(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE);
+static void __iomem *i2s5_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_I2S5_BASE);
 
 static unsigned int ahub_fpga_misc_i2s_offset[5] = {
 	APE_FPGA_MISC_CLK_SOURCE_I2S1_0,
@@ -82,12 +83,16 @@ unsigned char cdce906_setting[27] = {
 	0x0,
 	0x0,
 };
-void i2s_clk_divider(u32 i2s_id, u32 divider)
+void i2s_clk_divider(u32 i2s, u32 divider)
 {
 	u32 write_data, read_data;
 	write_data = ((divider << 1) | (1 << 28));
-	writel(write_data, ahub_fpga_misc_base + ahub_fpga_misc_i2s_offset[i2s_id]);
-	read_data = readl(ahub_fpga_misc_base + ahub_fpga_misc_i2s_offset[i2s_id]);
+	writel(write_data, ahub_fpga_misc_base +
+				ahub_fpga_misc_i2s_offset[i2s]);
+	read_data = readl(ahub_fpga_misc_base +
+				ahub_fpga_misc_i2s_offset[i2s]);
+	if (i2s == I2S5)
+		writel(1, i2s5_base + I2S5_CYA_0);
 #if DEBUG_FPGA
 	if (read_data == write_data)
 		pr_err("\n DATA MATCH I2S1 0x%x\n", read_data);
@@ -102,16 +107,45 @@ void i2s_clk_setup(u32 i2s, u32 source, u32 divider)
 {
 	u32 write_data;
 
-	write_data = (source << 29) | (divider << 1);
-
+	write_data = (source << 29) | (divider);
 	writel(write_data, rst_clk_base + i2s_source_clock[i2s]);
 }
 
 void i2c_pinmux_setup(void)
 {
 	/* Pin mux */
-	writel(0x40, i2c_misc_base + PINMUX_AUX_GEN1_I2C_SDA_0);
-	writel(0x40, i2c_misc_base + PINMUX_AUX_GEN1_I2C_SCL_0);
+	writel(0x40, pinmux_base + PINMUX_AUX_GEN1_I2C_SDA_0);
+	writel(0x40, pinmux_base + PINMUX_AUX_GEN1_I2C_SCL_0);
+}
+
+void i2s_pinmux_setup(u32 i2s, u32 i2s_b)
+{
+	switch (i2s) {
+	case I2S1:
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP1_SCLK_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP1_FS_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP1_DOUT_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP1_DIN_0);
+		break;
+	case I2S2:
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP2_SCLK_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP2_FS_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP2_DOUT_0);
+		writel(0x40, pinmux_base + PINMUX_AUX_DAP2_DIN_0);
+		break;
+	case I2S3:
+	case I2S4:
+	default:
+		break;
+	case I2S5:
+		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK0_0);
+		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK1_0);
+		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK2_0);
+		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK3_0);
+		if (i2s_b)
+			writel(1, i2s5_base + I2S5_CYA_0);
+		break;
+	}
 }
 
 void i2c_clk_setup(u32 divider)
@@ -345,89 +379,106 @@ void program_cdc_pll(u32 pll_no, u32 freq)
 	}
 }
 
-void program_clk_mux(void)
+void program_io_expander(void)
 {
-	/* set output value */
-	i2c_write(0x20, 0x2, 0x0a00, 3);  /* PLL3 out --> Max Codec */
-	/* enable output */
-	i2c_write(0x20, 0x6, 0x0, 3);
+	i2c_write(0x20, 0x2, 0x99, 2);
+	i2c_write(0x20, 0x6, 0x00, 2);
+	i2c_write(0x20, 0x3, 0x99, 2);
+	i2c_write(0x20, 0x7, 0x00, 2);
+	i2c_write(0x21, 0x2, 0x09, 2);
+	i2c_write(0x21, 0x6, 0x00, 2);
 }
+
 void program_max_codec(void)
 {
-	u32 i;
-	u32 read_data;
-	u32 codec_slv_add;
-
-	codec_slv_add = 0x10;
+	unsigned int i;
+	unsigned char read_data;
+	unsigned char mclk_freq = 0x10;
+	unsigned char frame_rate = 1;
+	unsigned char codec_data_format = 1;
+	unsigned char codec_slv_add = 0x10;
 
 #if DEBUG_FPGA
-	pr_err("I2C1: Audio maxim 98090/98091 (E1581/E1709) codec programming \n");
+	pr_err("Audio maxim 98090/98091 codec programming\n");
 #endif
-
-	i2c_write(codec_slv_add, 0x00, 0x00, 2); /*wri2c 0x20 0x00 0x00 */
-	i2c_write(codec_slv_add, 0x03, 0x04, 2); /*wri2c 0x20 0x03 0x04 */
-	i2c_write(codec_slv_add, 0x04, 0x10, 2); /* wri2c 0x20 0x04 0x04 */
-	/* 8 khz , for 48 khz = 8 */
-	i2c_write(codec_slv_add, 0x05, 0x01, 2); /*wri2c 0x20 0x05 0x04 */
-
-	i2c_write(codec_slv_add, 0x06, 0x01, 2); /*wri2c 0x20 0x06 0x01 */
-	i2c_write(codec_slv_add, 0x07, 0x00, 2); /*wri2c 0x20 0x07 0x00 */
-	i2c_write(codec_slv_add, 0x1b, 0x10, 2); /*wri2c 0x20 0x1b 0x10 */
-	i2c_write(codec_slv_add, 0x1c, 0x10, 2); /*wri2c 0x20 0x1c 0x00 */
-	i2c_write(codec_slv_add, 0x1d, 0x00, 2); /*wri2c 0x20 0x1d 0x00 */
-	i2c_write(codec_slv_add, 0x1e, 0x00, 2); /*wri2c 0x20 0x1e 0x00 */
-	i2c_write(codec_slv_add, 0x1f, 0x00, 2); /*wri2c 0x20 0x1f 0x00 */
-	i2c_write(codec_slv_add, 0x20, 0x00, 2); /*wri2c 0x20 0x20 0x00 */
-	i2c_write(codec_slv_add, 0x21, 0x00, 2); /*wri2c 0x20 0x21 0x00 */
-	i2c_write(codec_slv_add, 0x22, 0x04, 2); /*wri2c 0x20 0x22 0x04 */
-	i2c_write(codec_slv_add, 0x23, 0x00, 2); /*wri2c 0x20 0x23 0x00 */
-	i2c_write(codec_slv_add, 0x24, 0x00, 2); /*wri2c 0x20 0x24 0x00 */
-	i2c_write(codec_slv_add, 0x25, 0x01, 2); /*wri2c 0x20 0x25 0x01 */
-	i2c_write(codec_slv_add, 0x26, 0x00, 2); /*wri2c 0x20 0x26 0x00 */
-	i2c_write(codec_slv_add, 0x27, 0x00, 2); /*wri2c 0x20 0x27 0x00 */
-	i2c_write(codec_slv_add, 0x28, 0x00, 2); /*wri2c 0x20 0x28 0x00 */
-
-	i2c_write(codec_slv_add, 0x29, 0x20, 2); /*wri2c 0x20 0x29 0x20 */
-	i2c_write(codec_slv_add, 0x2a, 0x10, 2); /*wri2c 0x20 0x2a 0x10 */
-	i2c_write(codec_slv_add, 0x2b, 0x00, 2); /*wri2c 0x20 0x2b 0x00 */
-	i2c_write(codec_slv_add, 0x2c, 0x1a, 2); /*wri2c 0x20 0x2c 0x1a */
-	i2c_write(codec_slv_add, 0x2d, 0x1a, 2); /*wri2c 0x20 0x2d 0x1a */
+	i2c_write(codec_slv_add, 0x03, 0x04, 2);
+	i2c_write(codec_slv_add, 0x04, mclk_freq, 2);
+	i2c_write(codec_slv_add, 0x05, frame_rate, 2);
+	i2c_write(codec_slv_add, 0x06, codec_data_format, 2);
+	i2c_write(codec_slv_add, 0x07, 0x80, 2);
+	i2c_write(codec_slv_add, 0x08, 0x80, 2);
+	i2c_write(codec_slv_add, 0x09, 0x80, 2);
+	i2c_write(codec_slv_add, 0x07, 0x80, 2);
+	i2c_write(codec_slv_add, 0x08, 0x00, 2);
+	i2c_write(codec_slv_add, 0x09, 0x20, 2);
+	i2c_write(codec_slv_add, 0x0a, 0x00, 2);
+	i2c_write(codec_slv_add, 0x0b, 0x00, 2);
+	i2c_write(codec_slv_add, 0x0d, 0x03, 2);
+	i2c_write(codec_slv_add, 0x0e, 0x1b, 2);
+	i2c_write(codec_slv_add, 0x0f, 0x00, 2);
+	i2c_write(codec_slv_add, 0x10, 0x00, 2);
+	i2c_write(codec_slv_add, 0x11, 0x00, 2);
+	i2c_write(codec_slv_add, 0x12, 0x00, 2);
+	i2c_write(codec_slv_add, 0x13, 0x00, 2);
+	i2c_write(codec_slv_add, 0x14, 0x00, 2);
+	i2c_write(codec_slv_add, 0x15, 0x08, 2);
+	i2c_write(codec_slv_add, 0x16, 0x10, 2);
+	i2c_write(codec_slv_add, 0x17, 0x03, 2);
+	i2c_write(codec_slv_add, 0x18, 0x03, 2);
+	i2c_write(codec_slv_add, 0x19, 0x00, 2);
+	i2c_write(codec_slv_add, 0x1a, 0x00, 2);
+	i2c_write(codec_slv_add, 0x1b, 0x10, 2);
+	i2c_write(codec_slv_add, 0x1c, 0x00, 2);
+	i2c_write(codec_slv_add, 0x1d, 0x00, 2);
+	i2c_write(codec_slv_add, 0x1e, 0x00, 2);
+	i2c_write(codec_slv_add, 0x1f, 0x00, 2);
+	i2c_write(codec_slv_add, 0x20, 0x00, 2);
+	i2c_write(codec_slv_add, 0x21, 0x03, 2);
+	i2c_write(codec_slv_add, 0x22, 0x04, 2);
+	i2c_write(codec_slv_add, 0x23, 0x00, 2);
+	i2c_write(codec_slv_add, 0x24, 0x00, 2);
+	i2c_write(codec_slv_add, 0x25, 0x03, 2);
+	i2c_write(codec_slv_add, 0x26, 0x00, 2);
+	i2c_write(codec_slv_add, 0x27, 0x00, 2);
+	i2c_write(codec_slv_add, 0x28, 0x00, 2);
+	i2c_write(codec_slv_add, 0x29, 0x01, 2);
+	i2c_write(codec_slv_add, 0x2a, 0x02, 2);
+	i2c_write(codec_slv_add, 0x2b, 0x00, 2);
+	i2c_write(codec_slv_add, 0x2c, 0x1a, 2);
+	i2c_write(codec_slv_add, 0x2d, 0x1a, 2);
 	/* speaker settings */
-	i2c_write(codec_slv_add, 0x2e, 0x01, 2); /*Addr=0x10 REG=0x2e VALUE=0x01 */
-	i2c_write(codec_slv_add, 0x2f, 0x42, 2); /*Addr=0x10 REG=0x2f VALUE=0x42 */
-	i2c_write(codec_slv_add, 0x30, 0x00, 2); /*Addr=0x10 REG=0x30 VALUE=0x00 */
+	i2c_write(codec_slv_add, 0x2e, 0x01, 2);
+	i2c_write(codec_slv_add, 0x2f, 0x02, 2);
+	i2c_write(codec_slv_add, 0x30, 0x00, 2);
+	i2c_write(codec_slv_add, 0x31, 0x2c, 2);
+	i2c_write(codec_slv_add, 0x32, 0x2c, 2);
 
-	/* i2c_write(codec_slv_add, 0x31, 0x2c, 2); */
-	/*Addr=0x10 REG=0x31 VALUE=0x2c */
-	/*i2c_write(codec_slv_add, 0x32, 0x2c, 2); */
-	/*Addr=0x10 REG=0x32 VALUE=0x2c */
-	i2c_write(codec_slv_add, 0x31, 0xac, 2); /*Left Speaker Muted  */
-	i2c_write(codec_slv_add, 0x32, 0xac, 2); /*Right Speaker Muted */
+	/* head phone settings */
+	/* i2c_write(codec_slv_add, 0x2e, 0x20,2, 2); */
+	/* i2c_write(codec_slv_add, 0x2f, 0x50,2, 2); */
+	/* i2c_write(codec_slv_add, 0x30, 0x00,2, 2); */
+	/* i2c_write(codec_slv_add, 0x31, 0x2c,2, 2); */
+	/* i2c_write(codec_slv_add, 0x32, 0x2c,2, 2); */
 
-	i2c_write(codec_slv_add, 0x33, 0x00, 2); /*wri2c 0x20 0x33 0x00 */
-	i2c_write(codec_slv_add, 0x34, 0x00, 2); /*wri2c 0x20 0x34 0x00 */
-	i2c_write(codec_slv_add, 0x35, 0x00, 2); /*wri2c 0x20 0x35 0x00 */
-	i2c_write(codec_slv_add, 0x36, 0x00, 2); /*wri2c 0x20 0x36 0x00 */
-	i2c_write(codec_slv_add, 0x37, 0x20, 2); /*wri2c 0x20 0x37 0x20 */
-	i2c_write(codec_slv_add, 0x38, 0x00, 2); /*wri2c 0x20 0x38 0x00 */
-	i2c_write(codec_slv_add, 0x39, 0x15, 2); /*wri2c 0x20 0x39 0x15 */
-	i2c_write(codec_slv_add, 0x3a, 0x90, 2); /*wri2c 0x20 0x3a 0x90 */
-	i2c_write(codec_slv_add, 0x3b, 0x00, 2); /*wri2c 0x20 0x3b 0x00 */
-	i2c_write(codec_slv_add, 0x3c, 0x15, 2); /*wri2c 0x20 0x3c 0x15 */
-	i2c_write(codec_slv_add, 0x3d, 0x80, 2); /*wri2c 0x20 0x3d 0x80 */
-	i2c_write(codec_slv_add, 0x3e, 0x00, 2); /*wri2c 0x20 0x3e 0x00 */
-	i2c_write(codec_slv_add, 0x3f, 0xff, 2); /*wri2c 0x20 0x3f 0xff */
-	i2c_write(codec_slv_add, 0x40, 0x00, 2); /*wri2c 0x20 0x40 0x00 */
-	i2c_write(codec_slv_add, 0x41, 0x00, 2); /*wri2c 0x20 0x41 0x00 */
-	i2c_write(codec_slv_add, 0x42, 0x00, 2); /*wri2c 0x20 0x42 0x00 */
-	i2c_write(codec_slv_add, 0x43, 0x01, 2); /*wri2c 0x20 0x43 0x01 */
-	i2c_write(codec_slv_add, 0x44, 0x00, 2); /*wri2c 0x20 0x44 0x00 */
-	i2c_write(codec_slv_add, 0x45, 0x80, 2); /*wri2c 0x20 0x45 0x80 */
-	i2c_write(codec_slv_add, 0x38, 0x00, 2); /*wri2c 0x20 0x38 0x00 */
-	i2c_write(codec_slv_add, 0x39, 0x15, 2); /*wri2c 0x20 0x39 0x15 */
-	i2c_write(codec_slv_add, 0x3a, 0x80, 2); /*wri2c 0x20 0x3a 0x80 */
-	i2c_write(codec_slv_add, 0x3f, 0xff, 2); /*wri2c 0x20 0x3f 0xff */
-	i2c_write(codec_slv_add, 0x37, 0x01, 2); /*wri2c 0x20 0x37 0x01 */
+	i2c_write(codec_slv_add, 0x33, 0x00, 2);
+	i2c_write(codec_slv_add, 0x34, 0x00, 2);
+	i2c_write(codec_slv_add, 0x35, 0x00, 2);
+	i2c_write(codec_slv_add, 0x36, 0x00, 2);
+	i2c_write(codec_slv_add, 0x37, 0x00, 2);
+	i2c_write(codec_slv_add, 0x38, 0x00, 2);
+	i2c_write(codec_slv_add, 0x39, 0x95, 2);
+	i2c_write(codec_slv_add, 0x3a, 0x00, 2);
+	i2c_write(codec_slv_add, 0x3b, 0x00, 2);
+	i2c_write(codec_slv_add, 0x3c, 0x15, 2);
+	i2c_write(codec_slv_add, 0x3d, 0x00, 2);
+	i2c_write(codec_slv_add, 0x3e, 0x0f, 2);
+	i2c_write(codec_slv_add, 0x3f, 0xff, 2);
+	i2c_write(codec_slv_add, 0x40, 0x00, 2);
+	i2c_write(codec_slv_add, 0x41, 0x00, 2);
+	i2c_write(codec_slv_add, 0x42, 0x00, 2);
+	i2c_write(codec_slv_add, 0x43, 0x01, 2);
+	i2c_write(codec_slv_add, 0x44, 0x01, 2);
+	i2c_write(codec_slv_add, 0x45, 0x80, 2);
 
 	for (i = 1; i < 0x50; i++) {
 		read_data = i2c_read(codec_slv_add, i);

@@ -42,6 +42,7 @@
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/clk/tegra.h>
 
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
@@ -1608,6 +1609,79 @@ void gk20a_reset(struct gk20a *g, u32 units)
 	gk20a_disable(g, units);
 	udelay(20);
 	gk20a_enable(g, units);
+}
+
+/**
+ * gk20a_do_idle() - force the GPU to idle and railgate
+ *
+ * In success, this call MUST be balanced by caller with gk20a_do_unidle()
+ */
+int gk20a_do_idle(void)
+{
+	struct platform_device *pdev = to_platform_device(
+		bus_find_device_by_name(&platform_bus_type,
+		NULL, "gk20a.0"));
+	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
+	struct fifo_gk20a *f = &g->fifo;
+	unsigned long timeout = jiffies + msecs_to_jiffies(200);
+	int chid, ref_cnt;
+
+	if (!platform->can_railgate)
+		return -ENOSYS;
+
+	/* acquire busy lock to block other busy() calls */
+	down_write(&g->busy_lock);
+
+	/* prevent suspend by incrementing usage counter */
+	pm_runtime_get_noresume(&pdev->dev);
+
+	/* check and wait until GPU is idle (with a timeout) */
+	pm_runtime_barrier(&pdev->dev);
+
+	for (chid = 0; chid < f->num_channels; chid++)
+		if (gk20a_wait_channel_idle(&f->channel[chid]))
+			goto fail;
+
+	do {
+		mdelay(1);
+		ref_cnt = atomic_read(&pdev->dev.power.usage_count);
+	} while (ref_cnt != 1 && time_before(jiffies, timeout));
+
+	if (ref_cnt != 1)
+		goto fail;
+
+	/*
+	 * if GPU is now idle, we will have only one ref count
+	 * drop this ref which will rail gate the GPU
+	 */
+	pm_runtime_put_sync(&pdev->dev);
+
+	/* add sufficient delay to allow GPU to rail gate */
+	mdelay(platform->railgate_delay + 100);
+
+	return 0;
+
+fail:
+	pm_runtime_put_noidle(&pdev->dev);
+	up_write(&g->busy_lock);
+	return -EBUSY;
+}
+
+/**
+ * gk20a_do_unidle() - unblock all the tasks blocked by gk20a_do_idle()
+ */
+int gk20a_do_unidle(void)
+{
+	struct platform_device *pdev = to_platform_device(
+		bus_find_device_by_name(&platform_bus_type,
+		NULL, "gk20a.0"));
+	struct gk20a *g = get_gk20a(pdev);
+
+	/* release the lock and open up all other busy() calls */
+	up_write(&g->busy_lock);
+
+	return 0;
 }
 
 int gk20a_init_gpu_characteristics(struct gk20a *g)

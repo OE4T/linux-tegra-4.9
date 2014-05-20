@@ -1158,6 +1158,12 @@ static int gk20a_pm_disable_clk(struct device *dev)
 	return 0;
 }
 
+static void gk20a_pm_shutdown(struct platform_device *pdev)
+{
+	dev_info(&pdev->dev, "shutting down");
+	__pm_runtime_disable(&pdev->dev, false);
+}
+
 #ifdef CONFIG_PM
 const struct dev_pm_ops gk20a_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
@@ -1476,6 +1482,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 static struct platform_driver gk20a_driver = {
 	.probe = gk20a_probe,
 	.remove = __exit_p(gk20a_remove),
+	.shutdown = gk20a_pm_shutdown,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gk20a",

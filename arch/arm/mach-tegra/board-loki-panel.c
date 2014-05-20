@@ -346,18 +346,21 @@ static struct nvmap_platform_carveout loki_carveouts[] = {
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IRAM,
 		.base		= TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE,
 		.size		= TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE,
+		.dma_dev	= &tegra_iram_dev,
 	},
 	[1] = {
 		.name		= "generic-0",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_GENERIC,
 		.base		= 0, /* Filled in by loki_panel_init() */
 		.size		= 0, /* Filled in by loki_panel_init() */
+		.dma_dev	= &tegra_generic_dev,
 	},
 	[2] = {
 		.name		= "vpr",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_VPR,
 		.base		= 0, /* Filled in by loki_panel_init() */
 		.size		= 0, /* Filled in by loki_panel_init() */
+		.dma_dev	= &tegra_vpr_dev,
 	},
 };
 
@@ -485,11 +488,9 @@ int __init loki_panel_init(int board_id)
 #ifdef CONFIG_TEGRA_NVMAP
 	loki_carveouts[1].base = tegra_carveout_start;
 	loki_carveouts[1].size = tegra_carveout_size;
-	loki_carveouts[1].dma_dev = &tegra_generic_dev;
 
 	loki_carveouts[2].base = tegra_vpr_start;
 	loki_carveouts[2].size = tegra_vpr_size;
-	loki_carveouts[2].dma_dev = &tegra_vpr_dev;
 
 	generic_dma_info.name = "generic";
 	generic_dma_info.base = tegra_carveout_start;

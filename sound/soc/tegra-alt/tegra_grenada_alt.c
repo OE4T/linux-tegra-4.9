@@ -77,45 +77,48 @@ static int tegra_grenada_init(struct snd_soc_pcm_runtime *rtd)
 
 #if SYSTEM_FPGA
 	i2c_pinmux_setup();
-	i2c_clk_setup(0);
-	i2s_clk_setup(I2S1, 0, 23);
-	i2s_clk_setup(I2S2, 0, 3);
-	i2s_clk_setup(I2S3, 0, 0);
-
-	/* PLL, I2S and Codec programming */
+	i2c_clk_setup(10 - 1);
 	program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-	program_clk_mux();
+	program_io_expander();
+	i2s_clk_setup(I2S1, 0, 23);
+	i2s_clk_setup(I2S2, 0, 0);
+	i2s_clk_setup(I2S5, 0, 3);
+
+	i2s_pinmux_setup(I2S1, 0);
+	i2s_pinmux_setup(I2S2, 0);
+	i2s_pinmux_setup(I2S5, 1);
+
 #else
 	/* PLL, I2S and Codec programming */
 	program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-	program_clk_mux();
-
+	program_io_expander();
 	i2c_clk_divider(10 - 1);
 
 	/* I2S1: 23 for 8Khz, 3 for 48Khz */
 	i2s_clk_divider(I2S1, 23);
-	i2s_clk_divider(I2S2, 3);
-	i2s_clk_divider(I2S3, 0);
+	i2s_clk_divider(I2S2, 0);
+	i2s_clk_divider(I2S5, 3);
 #endif
 	program_max_codec();
-	ad1937_info.codecId = AD1937_Y_ADDRESS;
+	ad1937_info.codecId = AD1937_X_ADDRESS;
 	ad1937_info.clkgenId = CLK_OUT_FROM_TEGRA;
+	ad1937_info.dacMasterEn = AUDIO_DAC_SLAVE_MODE;
 	ad1937_info.daisyEn = 0;
 	OnAD1937CaptureAndPlayback(AUDIO_CODEC_SLAVE_MODE,
 				AUDIO_INTERFACE_TDM_FORMAT,
 				I2S_DATAWIDTH_16,
-				256, 0, 0,
+				64, 0, 0,
 				AUDIO_SAMPLE_RATE_48_00,
 				&ad1937_info);
 
-	ad1937_info.codecId = AD1937_Z_ADDRESS;
+	ad1937_info.codecId = AD1937_Y_ADDRESS;
 	ad1937_info.clkgenId = CLK_OUT_FROM_TEGRA;
 	ad1937_info.dacMasterEn = AUDIO_DAC_SLAVE_MODE;
 	ad1937_info.daisyEn = 0;
 	OnAD1937CaptureAndPlayback(AUDIO_CODEC_SLAVE_MODE,
 				AUDIO_INTERFACE_I2S_FORMAT,
 				I2S_DATAWIDTH_16,
-				64, 0, 0,
+				256, 0, 0,
 				AUDIO_SAMPLE_RATE_48_00,
 				&ad1937_info);
 	return 0;
@@ -236,7 +239,7 @@ static int tegra_grenada_remove(struct snd_soc_card *card)
 
 static const struct snd_soc_pcm_stream tdm_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S32_LE,
-	.rate_min = 44100,
+	.rate_min = 48000,
 	.rate_max = 48000,
 	.channels_min = 8,
 	.channels_max = 8,
@@ -244,7 +247,7 @@ static const struct snd_soc_pcm_stream tdm_link_params = {
 
 static const struct snd_soc_pcm_stream amx_adx_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	.rate_min = 44100,
+	.rate_min = 48000,
 	.rate_max = 48000,
 	.channels_min = 2,
 	.channels_max = 2,
@@ -252,7 +255,7 @@ static const struct snd_soc_pcm_stream amx_adx_link_params = {
 
 static const struct snd_soc_pcm_stream i2s_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	.rate_min = 44100,
+	.rate_min = 48000,
 	.rate_max = 48000,
 	.channels_min = 2,
 	.channels_max = 2,
@@ -392,8 +395,8 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.cpu_dai_name = "DAP",
 		/* .codec_of_node = SPDIF dummy */
 		.codec_dai_name = "dit-hifi",
-		.params = &i2s_link_params,
-		.dai_fmt = SND_SOC_DAIFMT_I2S |
+		.params = &tdm_link_params,
+		.dai_fmt = SND_SOC_DAIFMT_DSP_A |
 			   SND_SOC_DAIFMT_NB_NF |
 			   SND_SOC_DAIFMT_CBS_CFS,
 	},
@@ -405,30 +408,30 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.cpu_dai_name = "I2S2",
 		/* .codec_of_node = I2S2 */
 		.codec_dai_name = "CIF",
-		.params = &i2s_link_params,
+		.params = &tdm_link_params,
 	},
 	{
 		/* 14 */
 		.name = "z spdif-dit",
 		.stream_name = "Playback",
-		/* .cpu_of_node = I2S3 */
+		/* .cpu_of_node = I2S5 */
 		.cpu_dai_name = "DAP",
 		/* .codec_of_node = SPDIF dummy */
 		.codec_dai_name = "dit-hifi",
-		.params = &tdm_link_params,
-		.dai_fmt = SND_SOC_DAIFMT_DSP_A |
+		.params = &i2s_link_params,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
 			   SND_SOC_DAIFMT_NB_NF |
 			   SND_SOC_DAIFMT_CBS_CFS,
 	},
 	{
 		/* 15 */
-		.name = "I2S3 CIF",
-		.stream_name = "I2S3 CIF",
+		.name = "I2S5 CIF",
+		.stream_name = "I2S5 CIF",
 		/* .cpu_of_node = AHUB XBAR */
-		.cpu_dai_name = "I2S3",
-		/* .codec_of_node = I2S3 */
+		.cpu_dai_name = "I2S5",
+		/* .codec_of_node = I2S5 */
 		.codec_dai_name = "CIF",
-		.params = &tdm_link_params,
+		.params = &i2s_link_params,
 	},
 	{
 		/* 16 */
@@ -958,8 +961,8 @@ static struct snd_soc_codec_conf ad193x_codec_conf[] = {
 		.name_prefix = "I2S2",
 	},
 	{
-		.dev_name = "tegra210-i2s.2",
-		.name_prefix = "I2S3",
+		.dev_name = "tegra210-i2s.4",
+		.name_prefix = "I2S5",
 	},
 	{
 		.dev_name = "tegra210-sfc.0",

@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define SYSTEM_FPGA 0
+#define SYSTEM_FPGA	0
 #define DEBUG_FPGA	1
 
 #define APE_FPGA_MISC_CLK_SOURCE_I2C1_0  0x68
@@ -49,7 +49,26 @@
 #define CLK_RST_CONTROLLER_CLK_SOURCE_I2C1_0	0x124
 
 #define PINMUX_AUX_GEN1_I2C_SDA_0		0x30c0
-#define PINMUX_AUX_GEN1_I2C_SCL_0		0x30c4
+#define PINMUX_AUX_GEN1_I2C_SCL_0		0x30bc
+
+#define PINMUX_AUX_DAP1_SCLK_0 0x3130
+#define PINMUX_AUX_DAP1_FS_0   0x3124
+#define PINMUX_AUX_DAP1_DIN_0  0x3128
+#define PINMUX_AUX_DAP1_DOUT_0 0x312c
+#define PINMUX_AUX_DAP2_SCLK_0 0x3140
+#define PINMUX_AUX_DAP2_FS_0   0x3134
+#define PINMUX_AUX_DAP2_DIN_0  0x3138
+#define PINMUX_AUX_DAP2_DOUT_0 0x313c
+
+#define PINMUX_AUX_DMIC1_CLK_0 0x30a4  /* DAP3_SCLK_0 */
+#define PINMUX_AUX_DMIC1_DAT_0 0x30a8  /* DAP3_FS_0 */
+#define PINMUX_AUX_DMIC2_CLK_0 0x30ac  /* DAP3_DIN_0 */
+#define PINMUX_AUX_DMIC2_DAT_0 0x30b0  /* DAP3_DOUT_0 */
+
+#define PINMUX_AUX_GPIO_PK0_0  0x3254  /* DAP5 */
+#define PINMUX_AUX_GPIO_PK1_0  0x3258  /* DAP5 */
+#define PINMUX_AUX_GPIO_PK2_0  0x325c  /* DAP5 */
+#define PINMUX_AUX_GPIO_PK3_0  0x3260  /* DAP5 */
 
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_BASE		1882050560
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_LIMIT		1882054655
@@ -70,9 +89,12 @@
 #define NV_ADDRESS_MAP_APB_PP_BASE				1879048192
 #define NV_ADDRESS_MAP_PPSB_CLK_RST_BASE			1610637312
 
+#define NV_ADDRESS_MAP_APE_I2S5_BASE                           0x702d1400
+#define I2S5_CYA_0                                             0xb0
+
 #define CDCE906_04_0960_MHz   0
 #define CDCE906_06_1440_MHz   1
-#define CDCE906_08_1920_MHz   2
+ #define CDCE906_08_1920_MHz   2
 #define CDCE906_11_2896_MHz   3
 #define CDCE906_12_2880_MHz   4
 #define CDCE906_16_3840_MHz   5
@@ -396,11 +418,12 @@ u32 i2c_read(u32 addr, u32 regAddrr);
 void i2s_clk_divider(u32 i2s, u32 Divider);
 void i2c_clk_divider(u32 Divider);
 void program_max_codec(void);
-void program_clk_mux(void);
 void program_cdc_pll(u32 PLLno, u32 Freq);
 void i2s_clk_setup(u32 i2s, u32 source, u32 divider);
 void i2c_pinmux_setup(void);
 void i2c_clk_setup(u32 divider);
+void i2s_pinmux_setup(u32 i2s, u32 i2s_b);
+void program_io_expander(void);
 
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,
@@ -409,4 +432,4 @@ void OnAD1937CaptureAndPlayback(int mode,
 	int polarity,
 	int bitclkInv,
 	int frameRate,
-	AD1937_EXTRA_INFO *pExtraInfo);
+	AD1937_EXTRA_INFO * extra_info);

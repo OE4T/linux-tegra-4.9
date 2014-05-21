@@ -1,0 +1,184 @@
+#include <dt-bindings/gpio/tegra-gpio.h>
+
+/ {
+	regulators {
+		compatible = "simple-bus";
+		device_type = "fixed-regulators";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		battery_reg: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "vdd-ac-bat";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		usb0_vbus: regulator@1 {
+			compatible = "regulator-fixed-sync";
+			reg = <1>;
+			regulator-name = "usb0-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			vin-supply = <&vdd_3v3>;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-ehci.0";
+				};
+				c2 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-otg";
+				};
+				c3 {
+					regulator-consumer-supply = "usb_vbus0";
+					regulator-consumer-device = "tegra-xhci";
+				};
+			};
+		};
+
+		usb1_vbus: regulator@2 {
+			compatible = "regulator-fixed-sync";
+			reg = <2>;
+			regulator-name = "usb1-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			vin-supply = <&vdd_3v3>;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-ehci.1";
+				};
+				c2 {
+					regulator-consumer-supply = "usb_vbus1";
+					regulator-consumer-device = "tegra-xhci";
+				};
+			};
+		};
+
+		usb2_vbus: regulator@3 {
+			compatible = "regulator-fixed-sync";
+			reg = <3>;
+			regulator-name = "usb2-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			vin-supply = <&vdd_3v3>;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-ehci.2";
+				};
+				c2 {
+					regulator-consumer-supply = "usb_vbus2";
+					regulator-consumer-device = "tegra-xhci";
+				};
+			};
+		};
+
+		vdd_3v3: regulator@4 {
+			compatible = "regulator-fixed-sync";
+			reg = <4>;
+			regulator-name = "vdd-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+			gpio = <&max77620 3 0>;
+			enable-active-high;
+			c0 {
+				regulator-consumer-supply = "avdd_usb";
+				regulator-consumer-device = "tegra-udc.0";
+			};
+			c1 {
+				regulator-consumer-supply = "avdd_usb";
+				regulator-consumer-device = "tegra-ehci.0";
+			};
+			c2 {
+				regulator-consumer-supply = "avdd_usb";
+				regulator-consumer-device = "tegra-ehci.1";
+			};
+			c3 {
+				regulator-consumer-supply = "avdd_usb";
+				regulator-consumer-device = "tegra-ehci.2";
+			};
+			c4 {
+				regulator-consumer-supply = "avdd_lcd";
+			};
+		};
+
+		edp_lcd: regulator@5 {
+			compatible = "regulator-fixed-sync";
+			reg = <5>;
+			regulator-name = "edp-lcd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+			gpio = <&max77620 7 0>;
+			enable-active-high;
+		};
+
+		lcd_bl_en: regulator@6 {
+			compatible = "regulator-fixed-sync";
+			reg = <6>;
+			regulator-name = "lcd-bl-en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio TEGRA_GPIO(V, 1) 0>;
+			enable-active-high;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "vdd_lcd_bl_en";
+				};
+			};
+		};
+
+		en_vdd_sd: regulator@7 {
+			compatible = "regulator-fixed-sync";
+			reg = <7>;
+			regulator-name = "en-vdd-sd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio TEGRA_GPIO(Z, 4) 0>;
+			enable-active-high;
+		};
+
+		en_vdd_cam: regulator@8 {
+			compatible = "regulator-fixed-sync";
+			reg = <8>;
+			regulator-name = "en-vdd-cam";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio TEGRA_GPIO(S, 4) 0>;
+			enable-active-high;
+		};
+
+		vdd_hdmi: regulator@9 {
+			compatible = "regulator-fixed-sync";
+			reg = <9>;
+			regulator-name = "vdd-hdmi";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio TEGRA_GPIO(CC, 7) 0>;
+			enable-active-high;
+			vin-supply = <&vdd_sys_boost>;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "vdd_hdmi_5v0";
+					regulator-consumer-device = "tegradc.1";
+				};
+			};
+		};
+
+		vdd_sys_boost: regulator@10 {
+			compatible = "regulator-fixed-sync";
+			reg = <10>;
+			regulator-name = "vdd-sys-boost";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+			gpio = <&max77620 1 0>;
+			enable-active-high;
+		};
+	};
+};

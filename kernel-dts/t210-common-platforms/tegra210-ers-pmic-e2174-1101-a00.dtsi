@@ -1,0 +1,264 @@
+#include <dt-bindings/mfd/max77620.h>
+
+/ {
+	i2c@7000d000 {
+		nvidia,bit-banging-xfer-after-shutdown;
+
+		max77620: max77620@3c {
+			compatible = "maxim,max77620";
+			reg = <0x3c>;
+			interrupts = <0 86 IRQ_TYPE_NONE>;
+
+			#interrupt-cells = <2>;
+                        interrupt-controller;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+
+			maxim,enable-clock32k-out;
+
+			system-pmic-power-off;
+			system-pmic-power-reset;
+
+			pinctrl-names = "default";
+			pinctrl-0 = <&max77620_default>;
+
+			max77620_default: pinmux@0 {
+				pin_gpio0 {
+					pins = "gpio0";
+					function = "gpio";
+				};
+
+				pin_gpio4 {
+					pins = "gpio4";
+					function = "32k-out1";
+				};
+
+				pin_gpio1_2_3_5_6_7 {
+					pins = "gpio1", "gpio2", "gpio3", "gpio5", "gpio6", "gpio7";
+					function = "gpio";
+				};
+			};
+
+			regulators {
+				max77620-ldo0-supply = <&max77620_sd2>;
+				max77620-ldo1-supply = <&max77620_sd2>;
+				max77620-ldo7-supply = <&max77620_sd2>;
+				max77620-ldo8-supply = <&max77620_sd2>;
+
+				max77620_sd0: sd0 {
+					regulator-name = "vdd-core";
+					regulator-min-microvolt = <600000>;
+					regulator-max-microvolt = <1400000>;
+					regulator-boot-on;
+					regulator-always-on;
+					consumers {
+						c1 {
+							regulator-consumer-supply = "vdd_core";
+						};
+					};
+				};
+
+				max77620_sd1: sd1 {
+					regulator-name = "vddio-ddr";
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
+					regulator-always-on;
+					regulator-boot-on;
+				};
+
+				max77620_sd2: sd2 {
+					regulator-name = "vdd-pre-reg";
+					regulator-min-microvolt = <1320000>;
+					regulator-max-microvolt = <1320000>;
+					regulator-always-on;
+					regulator-boot-on;
+				};
+
+				max77620_sd3: sd3 {
+					regulator-name = "vdd-1v8";
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <1800000>;
+					regulator-always-on;
+					regulator-boot-on;
+					consumers {
+						c1 {
+							regulator-consumer-supply = "avdd_hdmi_pll";
+							regulator-consumer-device = "tegradc.1";
+						};
+						c2 {
+							regulator-consumer-supply = "vddio_cam";
+							regulator-consumer-device = "tegra_camera";
+						};
+						c3 {
+							regulator-consumer-supply = "vddio_cam";
+							regulator-consumer-device = "vi";
+						};
+						c4 {
+							regulator-consumer-supply = "vddio_sdmmc";
+							regulator-consumer-device = "sdhci-tegra.0";
+						};
+						c5 {
+							regulator-consumer-supply = "pwrdet_sdmmc1";
+						};
+						c6 {
+							regulator-consumer-supply = "vddio_sdmmc";
+							regulator-consumer-device = "sdhci-tegra.3";
+						};
+						c7 {
+							regulator-consumer-supply = "pwrdet_sdmmc4";
+						};
+						c8 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-udc.0";
+						};
+						c9 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-ehci.0";
+						};
+						c10 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-ehci.1";
+						};
+						c11 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-ehci.2";
+						};
+						c12 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-xhci";
+						};
+						c13 {
+							regulator-consumer-supply = "vddio_audio";
+						};
+						c14 {
+							regulator-consumer-supply = "pwrdet_audio";
+						};
+						c15 {
+							regulator-consumer-supply = "vddio_uart";
+						};
+						c16 {
+							regulator-consumer-supply = "pwrdet_uart";
+						};
+					};
+				};
+
+				max77620_ldo0: ldo0 {
+					regulator-name = "avdd-sys";
+					regulator-min-microvolt = <1200000>;
+					regulator-max-microvolt = <1200000>;
+					consumers {
+						c0 {
+							regulator-consumer-supply = "vddio_hsic";
+							regulator-consumer-device = "tegra-ehci.1";
+						};
+						c1 {
+							regulator-consumer-supply = "vddio_hsic";
+							regulator-consumer-device = "tegra-ehci.2";
+						};
+						c2 {
+							regulator-consumer-supply = "vddio_hsic";
+							regulator-consumer-device = "tegra-xhci";
+						};
+						c3 {
+							regulator-consumer-supply = "avdd_dsi_csi";
+							regulator-consumer-device = "tegradc.0";
+						};
+						c4 {
+							regulator-consumer-supply = "avdd_dsi_csi";
+							regulator-consumer-device = "tegradc.1";
+						};
+						c5 {
+							regulator-consumer-supply = "avdd_dsi_csi";
+							regulator-consumer-device = "vi.0";
+						};
+						c6 {
+							regulator-consumer-supply = "avdd_dsi_csi";
+							regulator-consumer-device = "vi.1";
+						};
+						c7 {
+							regulator-consumer-supply = "avdd_hsic_com";
+						};
+						c8 {
+							regulator-consumer-supply = "avdd_hsic_mdm";
+						};
+					};
+				};
+
+				max77620_ldo1: ldo1 {
+					regulator-name = "vdd-pex";
+					regulator-min-microvolt = <1050000>;
+					regulator-max-microvolt = <1050000>;
+				};
+
+				max77620_ldo2: ldo2 {
+					regulator-name = "vddio-sdmmc3";
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <3300000>;
+					consumers {
+						c0 {
+							regulator-consumer-supply = "vddio_sdmmc";
+							regulator-consumer-device = "sdhci-tegra.2";
+						};
+						c1 {
+							regulator-consumer-supply = "pwrdet_sdmmc3";
+						};
+					};
+				};
+
+				max77620_ldo3: ldo3 {
+					regulator-name = "vdd-cam-hv";
+					regulator-min-microvolt = <2800000>;
+					regulator-max-microvolt = <2800000>;
+				};
+
+				max77620_ldo4: ldo4 {
+					regulator-name = "vdd-rtc";
+					regulator-min-microvolt = <1250000>;
+					regulator-max-microvolt = <1250000>;
+					regulator-always-on;
+					regulator-boot-on;
+					consumers {
+						c0 {
+							regulator-consumer-supply = "vdd_rtc";
+						};
+					};
+				};
+
+				max77620_ldo5: ldo5 {
+					regulator-name = "avdd-ts-hv";
+					regulator-min-microvolt = <3200000>;
+					regulator-max-microvolt = <3200000>;
+				};
+
+				max77620_ldo6: ldo6 {
+					regulator-name = "vdd-ts";
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <1800000>;
+				};
+
+				max77620_ldo7: ldo7 {
+					regulator-name = "vdd-gen-pll-edp";
+					regulator-min-microvolt = <1050000>;
+					regulator-max-microvolt = <1050000>;
+					regulator-always-on;
+					regulator-boot-on;
+				};
+
+				max77620_ldo8: ldo8 {
+					regulator-name = "vdd-hdmi-dp";
+					regulator-min-microvolt = <1050000>;
+					regulator-max-microvolt = <1050000>;
+					c0 {
+						regulator-consumer-supply = "avdd_hdmi";
+						regulator-consumer-device = "tegradc.1";
+					};
+				};
+			};
+		};
+	};
+	/* Populate fuse supply */
+	efuse@7000f800 {
+		vpp_fuse-supply = <&max77620_sd3>;
+	};
+};

@@ -805,6 +805,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->power_on)
 		return 0;
 
+	trace_gk20a_finalize_poweron(dev_name(dev));
+
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);
 
@@ -914,6 +916,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
+
+	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
 done:
 	return err;
@@ -1212,6 +1216,8 @@ static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 {
 	struct gk20a *g = container_of(domain, struct gk20a, pd);
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+
+	trace_gk20a_pm_unrailgate(dev_name(&g->dev->dev));
 
 	return _gk20a_pm_unrailgate(platform->g->dev);
 }

@@ -40,6 +40,21 @@ DEFINE_EVENT(gk20a, gk20a_channel_release,
 	TP_ARGS(name)
 );
 
+DEFINE_EVENT(gk20a, gk20a_pm_unrailgate,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_finalize_poweron,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_finalize_poweron_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
 TRACE_EVENT(gk20a_push_cmdbuf,
 	TP_PROTO(const char *name, u32 mem_id,
 			u32 words, u32 offset, void *cmdbuf),

@@ -40,6 +40,8 @@
 #include <linux/security.h>
 #include <linux/stat.h>
 #include <linux/kthread.h>
+#include <linux/highmem.h>
+#include <linux/lzo.h>
 
 #include <asm/cputype.h>
 
@@ -1121,6 +1123,141 @@ static int nvmap_stats_set(void *data, u64 val)
 	return 0;
 }
 
+static int page_zero_filled(void *ptr)
+{
+	unsigned int pos;
+	unsigned long *page;
+
+	page = (unsigned long *)ptr;
+
+	for (pos = 0; pos != PAGE_SIZE / sizeof(*page); pos++) {
+		if (page[pos])
+			return 0;
+	}
+
+	return 1;
+}
+
+static size_t compress_bytes(struct page *page)
+{
+	void *addr;
+	size_t clen = 0;
+	static void *compress_workmem;
+	static void *compress_buffer;
+
+	if (!compress_workmem) {
+		void *tmp = kzalloc(LZO1X_MEM_COMPRESS, GFP_KERNEL);
+		if (cmpxchg(&compress_workmem, NULL, tmp))
+			kfree(tmp);
+	}
+
+	if (!compress_buffer) {
+		ulong tmp;
+		tmp = __get_free_pages(GFP_KERNEL | __GFP_ZERO, 1);
+		if (cmpxchg(&compress_buffer, NULL, tmp))
+			free_pages(tmp, 1);
+	}
+
+	if (compress_workmem && compress_buffer) {
+		addr = kmap(page);
+		lzo1x_1_compress(addr, PAGE_SIZE, compress_buffer, &clen,
+					compress_workmem);
+		kunmap(page);
+	}
+
+	return clen;
+}
+
+static int nvmap_debug_compress_show(struct seq_file *s, void *unused)
+{
+	int i;
+	void *addr;
+	size_t clen;
+	struct rb_node *n;
+	size_t min_clen = PAGE_SIZE;
+	size_t max_clen = 0;
+	bool is_zero_page;
+	u32 all_clen = 0;
+	u32 num_pages = 0;
+	u32 num_non_zero_pages = 0;
+	u32 zero_filled_pages = 0;
+	u64 total_compressed_mem = 0;
+	u64 total_uncompressed_mem = 0;
+	u64 total_compressed_non_zero_mem = 0;
+	u64 total_uncompressed_non_zero_mem = 0;
+	struct nvmap_handle *h_put = NULL;
+	struct nvmap_device *dev = nvmap_dev;
+
+	if (!dev)
+		return 0;
+
+	spin_lock(&dev->handle_lock);
+	n = rb_first(&dev->handles);
+	while (n != NULL) {
+		struct nvmap_handle *h =
+			rb_entry(n, struct nvmap_handle, node);
+
+		if (!h || !h->alloc || !h->heap_pgalloc)
+			continue;
+
+		nvmap_handle_get(h);
+		spin_unlock(&dev->handle_lock);
+		if (h_put)
+			nvmap_handle_put(h_put);
+		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
+			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
+
+			addr = kmap(page);
+			is_zero_page = page_zero_filled(addr);
+			kunmap(page);
+			clen = compress_bytes(page);
+			all_clen += clen;
+			if (!is_zero_page && clen < min_clen)
+				min_clen = clen;
+			if (!is_zero_page && clen > max_clen)
+				max_clen = clen;
+			total_uncompressed_mem += PAGE_SIZE;
+			total_compressed_mem += clen;
+			if (!is_zero_page) {
+				total_uncompressed_non_zero_mem += PAGE_SIZE;
+				total_compressed_non_zero_mem += clen;
+				num_non_zero_pages++;
+			}
+			zero_filled_pages += is_zero_page ? 1 : 0;
+			num_pages++;
+		}
+		spin_lock(&dev->handle_lock);
+		n = rb_next(n);
+		h_put = h;
+		if (!n)
+			nvmap_handle_put(h_put);
+	}
+	seq_puts(s, "compression algo: \tlzo\n");
+	seq_printf(s, "uncompressed bytes: \t%lld\n", total_uncompressed_mem);
+	seq_printf(s, "compressed bytes: \t%lld\n", total_compressed_mem);
+	seq_printf(s, "compression %%: \t%d\n",
+		(u32)((total_uncompressed_mem - total_compressed_mem) >>
+		      PAGE_SHIFT) * 100 / num_pages);
+	seq_printf(s, "uncompressed non-zero bytes: \t%lld\n",
+		total_uncompressed_non_zero_mem);
+	seq_printf(s, "compressed non-zero bytes: \t%lld\n",
+		total_compressed_non_zero_mem);
+	seq_printf(s, "compression non-zero bytes %%: \t%d\n",
+		(u32)((total_uncompressed_non_zero_mem -
+		       total_compressed_non_zero_mem) >>
+		      PAGE_SHIFT) * 100 / num_non_zero_pages);
+	seq_printf(s, "zero filled page bytes: \t%d\n",
+		zero_filled_pages << PAGE_SHIFT);
+	seq_printf(s, "zero filled bytes %%: \t%d\n",
+		zero_filled_pages * 100 / num_pages);
+	seq_printf(s, "min compress bytes: \t%zu\n", min_clen);
+	seq_printf(s, "max compress bytes: \t%zu\n", max_clen);
+	seq_printf(s, "average compress bytes: \t%d\n", all_clen / num_pages);
+	spin_unlock(&dev->handle_lock);
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(compress);
 DEFINE_SIMPLE_ATTRIBUTE(reset_stats_fops, NULL, nvmap_stats_reset, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(stats_fops, nvmap_stats_get, nvmap_stats_set, "%llu\n");
 
@@ -1154,6 +1291,8 @@ static void nvmap_stats_init(struct dentry *nvmap_debug_root)
 	}
 
 #undef CREATE_DF
+	debugfs_create_file("compression", S_IRUGO, stats_root,
+		NULL, &debug_compress_fops);
 }
 
 void nvmap_stats_inc(enum nvmap_stats_t stat, size_t size)

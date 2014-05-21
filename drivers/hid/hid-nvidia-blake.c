@@ -234,7 +234,6 @@ static void nvidia_remove(struct hid_device *hdev)
 	device_remove_file(&hdev->dev, &dev_attr_mode);
 
 	hid_hw_stop(hdev);
-	kfree(loc);
 }
 
 static int nvidia_input_mapped(struct hid_device *hdev, struct hid_input *hi,

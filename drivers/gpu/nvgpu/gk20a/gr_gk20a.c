@@ -162,6 +162,123 @@ void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 	}
 }
 
+static void gr_gk20a_load_falcon_dmem(struct gk20a *g)
+{
+	u32 i, ucode_u32_size;
+	const u32 *ucode_u32_data;
+	u32 checksum;
+
+	gk20a_dbg_fn("");
+
+	gk20a_writel(g, gr_gpccs_dmemc_r(0), (gr_gpccs_dmemc_offs_f(0) |
+					      gr_gpccs_dmemc_blk_f(0)  |
+					      gr_gpccs_dmemc_aincw_f(1)));
+
+	ucode_u32_size = g->gr.ctx_vars.ucode.gpccs.data.count;
+	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.gpccs.data.l;
+
+	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
+		gk20a_writel(g, gr_gpccs_dmemd_r(0), ucode_u32_data[i]);
+		checksum += ucode_u32_data[i];
+	}
+
+	gk20a_writel(g, gr_fecs_dmemc_r(0), (gr_fecs_dmemc_offs_f(0) |
+					     gr_fecs_dmemc_blk_f(0)  |
+					     gr_fecs_dmemc_aincw_f(1)));
+
+	ucode_u32_size = g->gr.ctx_vars.ucode.fecs.data.count;
+	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.fecs.data.l;
+
+	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
+		gk20a_writel(g, gr_fecs_dmemd_r(0), ucode_u32_data[i]);
+		checksum += ucode_u32_data[i];
+	}
+	gk20a_dbg_fn("done");
+}
+
+static void gr_gk20a_load_falcon_imem(struct gk20a *g)
+{
+	u32 cfg, fecs_imem_size, gpccs_imem_size, ucode_u32_size;
+	const u32 *ucode_u32_data;
+	u32 tag, i, pad_start, pad_end;
+	u32 checksum;
+
+	gk20a_dbg_fn("");
+
+	cfg = gk20a_readl(g, gr_fecs_cfg_r());
+	fecs_imem_size = gr_fecs_cfg_imem_sz_v(cfg);
+
+	cfg = gk20a_readl(g, gr_gpc0_cfg_r());
+	gpccs_imem_size = gr_gpc0_cfg_imem_sz_v(cfg);
+
+	/* Use the broadcast address to access all of the GPCCS units. */
+	gk20a_writel(g, gr_gpccs_imemc_r(0), (gr_gpccs_imemc_offs_f(0) |
+					      gr_gpccs_imemc_blk_f(0) |
+					      gr_gpccs_imemc_aincw_f(1)));
+
+	/* Setup the tags for the instruction memory. */
+	tag = 0;
+	gk20a_writel(g, gr_gpccs_imemt_r(0), gr_gpccs_imemt_tag_f(tag));
+
+	ucode_u32_size = g->gr.ctx_vars.ucode.gpccs.inst.count;
+	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.gpccs.inst.l;
+
+	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
+		if (i && ((i % (256/sizeof(u32))) == 0)) {
+			tag++;
+			gk20a_writel(g, gr_gpccs_imemt_r(0),
+				      gr_gpccs_imemt_tag_f(tag));
+		}
+		gk20a_writel(g, gr_gpccs_imemd_r(0), ucode_u32_data[i]);
+		checksum += ucode_u32_data[i];
+	}
+
+	pad_start = i*4;
+	pad_end = pad_start+(256-pad_start%256)+256;
+	for (i = pad_start;
+	     (i < gpccs_imem_size * 256) && (i < pad_end);
+	     i += 4) {
+		if (i && ((i % 256) == 0)) {
+			tag++;
+			gk20a_writel(g, gr_gpccs_imemt_r(0),
+				      gr_gpccs_imemt_tag_f(tag));
+		}
+		gk20a_writel(g, gr_gpccs_imemd_r(0), 0);
+	}
+
+	gk20a_writel(g, gr_fecs_imemc_r(0), (gr_fecs_imemc_offs_f(0) |
+					     gr_fecs_imemc_blk_f(0) |
+					     gr_fecs_imemc_aincw_f(1)));
+
+	/* Setup the tags for the instruction memory. */
+	tag = 0;
+	gk20a_writel(g, gr_fecs_imemt_r(0), gr_fecs_imemt_tag_f(tag));
+
+	ucode_u32_size = g->gr.ctx_vars.ucode.fecs.inst.count;
+	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.fecs.inst.l;
+
+	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
+		if (i && ((i % (256/sizeof(u32))) == 0)) {
+			tag++;
+			gk20a_writel(g, gr_fecs_imemt_r(0),
+				      gr_fecs_imemt_tag_f(tag));
+		}
+		gk20a_writel(g, gr_fecs_imemd_r(0), ucode_u32_data[i]);
+		checksum += ucode_u32_data[i];
+	}
+
+	pad_start = i*4;
+	pad_end = pad_start+(256-pad_start%256)+256;
+	for (i = pad_start; (i < fecs_imem_size * 256) && i < pad_end; i += 4) {
+		if (i && ((i % 256) == 0)) {
+			tag++;
+			gk20a_writel(g, gr_fecs_imemt_r(0),
+				      gr_fecs_imemt_tag_f(tag));
+		}
+		gk20a_writel(g, gr_fecs_imemd_r(0), 0);
+	}
+}
+
 static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		u32 expect_delay)
 {
@@ -1646,6 +1763,22 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	return ret;
 }
 
+static void gr_gk20a_start_falcon_ucode(struct gk20a *g)
+{
+	gk20a_dbg_fn("");
+
+	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0),
+		     gr_fecs_ctxsw_mailbox_clear_value_f(~0));
+
+	gk20a_writel(g, gr_gpccs_dmactl_r(), gr_gpccs_dmactl_require_ctx_f(0));
+	gk20a_writel(g, gr_fecs_dmactl_r(), gr_fecs_dmactl_require_ctx_f(0));
+
+	gk20a_writel(g, gr_gpccs_cpuctl_r(), gr_gpccs_cpuctl_startcpu_f(1));
+	gk20a_writel(g, gr_fecs_cpuctl_r(), gr_fecs_cpuctl_startcpu_f(1));
+
+	gk20a_dbg_fn("done");
+}
+
 static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -2030,10 +2163,20 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
 	}
 
-	if (!gr->skip_ucode_init)
-		gr_gk20a_init_ctxsw_ucode(g);
-	gr_gk20a_load_falcon_with_bootloader(g);
-	gr->skip_ucode_init = true;
+	/*
+	 * In case bootloader is not supported, revert to the old way of
+	 * loading gr ucode, without the faster bootstrap routine.
+	 */
+	if (g->gpu_characteristics.arch == NVHOST_GPU_ARCH_GM200) {
+		gr_gk20a_load_falcon_dmem(g);
+		gr_gk20a_load_falcon_imem(g);
+		gr_gk20a_start_falcon_ucode(g);
+	} else {
+		if (!gr->skip_ucode_init)
+			gr_gk20a_init_ctxsw_ucode(g);
+		gr_gk20a_load_falcon_with_bootloader(g);
+		gr->skip_ucode_init = true;
+	}
 
 	ret = gr_gk20a_ctx_wait_ucode(g, 0, 0,
 				      GR_IS_UCODE_OP_EQUAL,

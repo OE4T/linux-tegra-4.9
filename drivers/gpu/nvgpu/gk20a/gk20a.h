@@ -27,6 +27,7 @@ struct fifo_gk20a;
 struct channel_gk20a;
 struct gr_gk20a;
 struct sim_gk20a;
+struct gk20a_ctxsw_ucode_segments;
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -121,6 +122,10 @@ struct gpu_ops {
 		void (*set_hww_esr_report_mask)(struct gk20a *g);
 		int (*setup_alpha_beta_tables)(struct gk20a *g,
 					      struct gr_gk20a *gr);
+		int (*falcon_load_ucode)(struct gk20a *g,
+				u64 addr_base,
+				struct gk20a_ctxsw_ucode_segments *segments,
+				u32 reg_offset);
 	} gr;
 	const char *name;
 	struct {

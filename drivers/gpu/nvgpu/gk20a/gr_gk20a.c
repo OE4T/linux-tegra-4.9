@@ -2141,10 +2141,10 @@ static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 
 	gr_gk20a_load_falcon_bind_instblk(g);
 
-	gr_gk20a_load_ctxsw_ucode_segments(g, addr_base,
+	g->ops.gr.falcon_load_ucode(g, addr_base,
 		&g->ctxsw_ucode_info.fecs, 0);
 
-	gr_gk20a_load_ctxsw_ucode_segments(g, addr_base,
+	g->ops.gr.falcon_load_ucode(g, addr_base,
 		&g->ctxsw_ucode_info.gpccs,
 		gr_gpcs_gpccs_falcon_hwcfg_r() -
 		gr_fecs_falcon_hwcfg_r());
@@ -6845,4 +6845,5 @@ void gk20a_init_gr(struct gpu_ops *gops)
 	gops->gr.init_fs_state = gr_gk20a_ctx_state_floorsweep;
 	gops->gr.set_hww_esr_report_mask = gr_gk20a_set_hww_esr_report_mask;
 	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
+	gops->gr.falcon_load_ucode = gr_gk20a_load_ctxsw_ucode_segments;
 }

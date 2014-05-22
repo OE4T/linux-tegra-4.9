@@ -1274,7 +1274,6 @@ EXPORT_SYMBOL_GPL(pm_qos_read_max_bound);
 static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 {
 	bool old;
-	s32 prev[PM_QOS_NUM_CLASSES], curr[PM_QOS_NUM_CLASSES];
 	int ret, i;
 	struct pm_qos_constraints *c;
 	struct pm_qos_bounded_constraint *parent;
@@ -1286,33 +1285,31 @@ static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 			__FUNCTION__, arg);
 		return ret;
 	}
+
 	mutex_lock(&pm_qos_lock);
+
 	for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
 		c = pm_qos_array[i]->constraints;
-		prev[i] = pm_qos_read_value(c);
-
 		if (c->parent_class) {
 			int class = c->parent_class;
 			parent = pm_qos_bounded_obj_array[class]->bounds;
 			pm_qos_set_bounded_targets(parent);
-			curr[i] = pm_qos_read_value(c);
 		} else if (old && !pm_qos_enabled) {
 			/* got disabled */
-			curr[i] = c->default_value;
-			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
+			pm_qos_set_value(c, c->default_value);
 		} else if (!old && pm_qos_enabled) {
 			/* got enabled */
-			curr[i] = pm_qos_get_value(c);
-			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
+			pm_qos_set_value(c, pm_qos_get_value(c));
 		}
+
+		if (old != pm_qos_enabled)
+			blocking_notifier_call_chain(c->notifiers,
+					(unsigned long)pm_qos_read_value(c),
+					NULL);
 	}
-	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
-		if (prev[i] != curr[i])
-			blocking_notifier_call_chain(
-				pm_qos_array[i]->constraints->notifiers,
-				(unsigned long)curr[i],
-				NULL);
+
 	mutex_unlock(&pm_qos_lock);
+
 	return ret;
 }
 

@@ -431,7 +431,7 @@ static bool cdma_check_dependencies(struct nvhost_cdma *cdma)
 		host1x_sync_cbstat_0_r() + 4 * ch->chid);
 	u32 cbread = readl(dev->sync_aperture +
 		host1x_sync_cbread0_r() + 4 * ch->chid);
-	u32 waiting = cbstat & 0x00010008;
+	u32 waiting = cbstat == 0x00010008;
 	u32 syncpt_id = cbread >> 24;
 	int i;
 

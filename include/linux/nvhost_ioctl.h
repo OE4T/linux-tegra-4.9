@@ -130,18 +130,18 @@ struct nvhost_alloc_gpfifo_args {
 };
 
 struct nvhost_fence {
-	__u32 syncpt_id; /* syncpoint id */
-	__u32 value;     /* syncpoint value to wait or value for other to wait */
+	__u32 syncpt_id; /* syncpoint id or sync fence fd */
+	__u32 value;     /* syncpoint value (discarded when using sync fence) */
 };
 
-/* insert a wait on the fance before submitting gpfifo */
+/* insert a wait on the fence before submitting gpfifo */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT	BIT(0)
- /* insert an fence update after submitting gpfifo and
-    return the new fence for other to wait on */
+/* insert a fence update after submitting gpfifo and
+   return the new fence for others to wait on */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
-/* choose between different gpfifo entry format */
+/* choose between different gpfifo entry formats */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
-/* create a sync fence fd instead of raw fence */
+/* interpret fence as a sync fence fd instead of raw syncpoint fence */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	BIT(3)
 /* suppress WFI before fence trigger */
 #define NVHOST_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	BIT(4)

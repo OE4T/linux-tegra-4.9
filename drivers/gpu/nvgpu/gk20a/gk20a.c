@@ -164,6 +164,32 @@ static inline u32 sim_readl(struct gk20a *g, u32 r)
 	return readl(g->sim.regs+r);
 }
 
+/*
+ * Locks out the driver from accessing GPU registers. This prevents access to
+ * thse registers after the GPU has been clock or power gated. This should help
+ * find annoying bugs where register reads and writes are silently dropped
+ * after the GPU has been turned off. On older chips these reads and writes can
+ * also lock the entire CPU up.
+ */
+int gk20a_lockout_registers(struct gk20a *g)
+{
+	g->regs = NULL;
+	g->bar1 = NULL;
+
+	return 0;
+}
+
+/*
+ * Undoes gk20a_lockout_registers().
+ */
+int gk20a_restore_registers(struct gk20a *g)
+{
+	g->regs = g->regs_saved;
+	g->bar1 = g->bar1_saved;
+
+	return 0;
+}
+
 static void kunmap_and_free_iopage(void **kvaddr, struct page **page)
 {
 	if (*kvaddr) {
@@ -676,6 +702,9 @@ static int gk20a_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
+	g->regs_saved = g->regs;
+	g->bar1_saved = g->bar1;
+
 	/* Get interrupt numbers */
 	g->irq_nonstall = platform_get_irq(dev, 1);
 	if (g->irq_stall < 0 || g->irq_nonstall < 0) {
@@ -786,6 +815,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	g->power_on = false;
 
+	/* Stop CPU from accessing the GPU registers. */
+	gk20a_lockout_registers(g);
+
 	return ret;
 }
 
@@ -819,6 +851,10 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		return 0;
 
 	trace_gk20a_finalize_poweron(dev_name(dev));
+
+	err = gk20a_restore_registers(g);
+	if (err)
+		return err;
 
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);

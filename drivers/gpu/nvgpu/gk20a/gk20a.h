@@ -232,9 +232,11 @@ struct gk20a {
 
 	struct resource *reg_mem;
 	void __iomem *regs;
+	void __iomem *regs_saved;
 
 	struct resource *bar1_mem;
 	void __iomem *bar1;
+	void __iomem *bar1_saved;
 
 	bool power_on;
 
@@ -487,6 +489,9 @@ static inline void gk20a_mem_wr32(void *ptr, int w, u32 data)
 }
 
 /* register accessors */
+int gk20a_lockout_registers(struct gk20a *g);
+int gk20a_restore_registers(struct gk20a *g);
+
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 {
 	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);

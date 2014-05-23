@@ -291,7 +291,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	compbit_base_post_divide64 = compbit_store_base_iova >>
 		ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
-	do_div(compbit_base_post_divide64, gr->num_fbps);
+	do_div(compbit_base_post_divide64, g->ltc_count);
 	compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
 
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
@@ -299,6 +299,11 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 	if (compbit_base_post_multiply64 < compbit_store_base_iova)
 		compbit_base_post_divide++;
+
+	/* Bug 1477079 indicates sw adjustment on the posted divided base. */
+	if (g->ops.ltc.cbc_fix_config)
+		compbit_base_post_divide =
+			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);

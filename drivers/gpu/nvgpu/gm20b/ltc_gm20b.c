@@ -237,6 +237,19 @@ static void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 			    "g_elpg_flush too many retries");
 }
 
+u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
+{
+	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
+	if (val == 2) {
+		return base * 2;
+	} else if (val != 1) {
+		gk20a_err(dev_from_gk20a(g),
+			"Invalid number of active ltcs: %08x\n", val);
+	}
+
+	return base;
+}
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
@@ -255,4 +268,5 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
 	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;
 	gops->ltc.isr = gm20b_ltc_isr;
+	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 }

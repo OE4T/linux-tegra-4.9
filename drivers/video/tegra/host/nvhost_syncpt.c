@@ -93,12 +93,12 @@ void nvhost_syncpt_reset_client(struct platform_device *pdev)
 
 	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
 
-	for (id = 0; pdata->syncpts[id] &&
-		(id < NVHOST_MODULE_MAX_SYNCPTS); ++id)
+	for (id = 0; (id < NVHOST_MODULE_MAX_SYNCPTS) &&
+			(pdata->syncpts[id]); ++id)
 		syncpt_op().reset(&nvhost_master->syncpt, pdata->syncpts[id]);
 
-	for (id = 0; pdata->waitbases[id] &&
-		(id < NVHOST_MODULE_MAX_WAITBASES); ++id)
+	for (id = 0; (id < NVHOST_MODULE_MAX_WAITBASES) &&
+			(pdata->waitbases[id]); ++id)
 		syncpt_op().reset_wait_base(&nvhost_master->syncpt,
 			pdata->waitbases[id]);
 	wmb();
@@ -990,6 +990,11 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			* nvhost_syncpt_nb_pts(sp) * NUM_SYSFS_ENTRY,
 			GFP_KERNEL);
 	if (!sp->syncpt_attrs) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	if (!sp->syncpt_names || !sp->last_used_by) {
 		err = -ENOMEM;
 		goto fail;
 	}

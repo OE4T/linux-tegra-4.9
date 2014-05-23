@@ -343,6 +343,12 @@ static int isp_probe(struct platform_device *dev)
 
 	tegra_isp->my_isr_work =
 		kmalloc(sizeof(struct tegra_isp_mfi), GFP_KERNEL);
+
+	if (!tegra_isp->my_isr_work) {
+		err = -ENOMEM;
+		goto camera_isp_unregister;
+	}
+
 	INIT_WORK((struct work_struct *)tegra_isp->my_isr_work, isp_isr_work);
 	disable_irq(tegra_isp->irq);
 	enable_irq(tegra_isp->irq);
@@ -357,15 +363,16 @@ static int isp_probe(struct platform_device *dev)
 	 * as sub-domain of MC domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 	if (err)
-		goto camera_isp_unregister;
+		goto free_isr;
 #endif
 
 	err = nvhost_client_device_init(dev);
 	if (err)
-		goto camera_isp_unregister;
+		goto free_isr;
 
 	return 0;
-
+free_isr:
+	kfree(tegra_isp->my_isr_work);
 camera_isp_unregister:
 	dev_err(&dev->dev, "%s: failed\n", __func__);
 

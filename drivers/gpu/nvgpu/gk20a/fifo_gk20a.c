@@ -1335,35 +1335,25 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	u32 pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
 	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
 	u32 handled = 0;
-	bool reset_device = false;
-	bool reset_channel = false;
+	bool reset = false;
 
 	gk20a_dbg_fn("");
 
 	gk20a_dbg(gpu_dbg_intr, "pbdma id intr pending %d %08x %08x", pbdma_id,
 			pbdma_intr_0, pbdma_intr_1);
 	if (pbdma_intr_0) {
-		if (f->intr.pbdma.device_fatal_0 & pbdma_intr_0) {
-			dev_err(dev, "unrecoverable device error: "
-				"pbdma_intr_0(%d):0x%08x", pbdma_id, pbdma_intr_0);
-			reset_device = true;
-			/* TODO: disable pbdma intrs */
-			handled |= f->intr.pbdma.device_fatal_0 & pbdma_intr_0;
-		}
-		if (f->intr.pbdma.channel_fatal_0 & pbdma_intr_0) {
-			dev_warn(dev, "channel error: "
-				 "pbdma_intr_0(%d):0x%08x", pbdma_id, pbdma_intr_0);
-			reset_channel = true;
-			/* TODO: clear pbdma channel errors */
-			handled |= f->intr.pbdma.channel_fatal_0 & pbdma_intr_0;
-		}
-		if (f->intr.pbdma.restartable_0 & pbdma_intr_0) {
-			dev_warn(dev, "sw method: %08x %08x",
-				gk20a_readl(g, pbdma_method0_r(0)),
-				gk20a_readl(g, pbdma_method0_r(0)+4));
-			gk20a_writel(g, pbdma_method0_r(0), 0);
-			gk20a_writel(g, pbdma_method0_r(0)+4, 0);
-			handled |= f->intr.pbdma.restartable_0 & pbdma_intr_0;
+		if ((f->intr.pbdma.device_fatal_0 |
+		     f->intr.pbdma.channel_fatal_0 |
+		     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
+			dev_err(dev, "pbdma_intr_0(%d):0x%08x PBH: %08x M0: %08x",
+				pbdma_id, pbdma_intr_0,
+				gk20a_readl(g, pbdma_pb_header_r(pbdma_id)),
+				gk20a_readl(g, pbdma_method0_r(pbdma_id)));
+			reset = true;
+			handled |= ((f->intr.pbdma.device_fatal_0 |
+				     f->intr.pbdma.channel_fatal_0 |
+				     f->intr.pbdma.restartable_0) &
+				    pbdma_intr_0);
 		}
 
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
@@ -1374,11 +1364,41 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	if (pbdma_intr_1) {
 		dev_err(dev, "channel hce error: pbdma_intr_1(%d): 0x%08x",
 			pbdma_id, pbdma_intr_1);
-		reset_channel = true;
+		reset = true;
 		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
+	if (reset) {
+		/* Remove the channel from runlist */
+		u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
+		if (fifo_pbdma_status_id_type_v(status)
+				== fifo_pbdma_status_id_type_chid_v()) {
+			struct channel_gk20a *ch = g->fifo.channel +
+				fifo_pbdma_status_id_v(status);
+			struct fifo_runlist_info_gk20a *runlist =
+				g->fifo.runlist_info;
+			int i;
+			bool verbose;
 
+			/* disable the channel from hw and increment
+			 * syncpoints */
+			gk20a_disable_channel_no_update(ch);
+
+			/* remove the channel from runlist */
+			clear_bit(ch->hw_chid,
+				  runlist->active_channels);
+			ch->has_timedout = true;
+
+			/* Recreate the runlist */
+			for (i = 0; i < g->fifo.max_runlists; i++)
+				gk20a_fifo_update_runlist(g,
+							  0, ~0, false, false);
+
+			verbose = gk20a_fifo_set_ctx_mmu_error(g, ch);
+			if (verbose)
+				gk20a_debug_dump(g->dev);
+		}
+	}
 
 	return handled;
 }

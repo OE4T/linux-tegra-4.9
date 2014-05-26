@@ -88,19 +88,57 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	tegra_dc_writel(dc, 0x1000, DC_DISP_DISP_SIGNAL_OPTIONS0);
 }
 
+static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
+						u32 header_reg, u8 pkt_type,
+						u8 pkt_vs, u8 pkt_len,
+						void *reg_payload,
+						u32 reg_payload_len)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	u32 val;
+	u32 *data = reg_payload;
+	u32 data_reg = header_reg + 1;
+
+	val = NV_SOR_HDMI_INFOFRAME_HEADER_TYPE(pkt_type) |
+		NV_SOR_HDMI_INFOFRAME_HEADER_VERSION(pkt_vs) |
+		NV_SOR_HDMI_INFOFRAME_HEADER_LEN(pkt_len);
+	tegra_sor_writel(sor, header_reg, val);
+
+	for (val = 0; val < reg_payload_len; val += 4, data_reg++, data++)
+		tegra_sor_writel(sor, data_reg, *data);
+}
+
+static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
+{
+	struct hdmi_avi_infoframe *avi = &hdmi->avi;
+
+	avi->act_fmt_valid = 1;
+	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
+
+	/* TODO: read from edid */
+	avi->video_format = 0x3;
+}
+
 static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
-	/* TODO: fix hardcoding */
-	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_HEADER, 0xd0282);
-	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW,
-			0x280000);
-	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_HIGH,
-			(0 << 8) | (3 & 0xff));
+	/* disable avi infoframe before configuring */
+	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL, 0);
 
+	tegra_hdmi_avi_infoframe_update(hdmi);
+
+	tegra_hdmi_infoframe_pkt_write(hdmi, NV_SOR_HDMI_AVI_INFOFRAME_HEADER,
+					HDMI_INFOFRAME_TYPE_AVI,
+					HDMI_INFOFRAME_VS_AVI,
+					HDMI_INFOFRAME_LEN_AVI,
+					&hdmi->avi, sizeof(hdmi->avi));
+
+	/* Send infoframe every frame, checksum hw generated */
 	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL,
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_ENABLE_YES |
+		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_OTHER_DISABLE |
+		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_SINGLE_DISABLE |
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_CHECKSUM_ENABLE);
 }
 

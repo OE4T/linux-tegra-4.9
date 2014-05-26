@@ -199,6 +199,7 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 
 	ch->chid = NVHOST_INVALID_CHANNEL;
 	ch->dev = NULL;
+	kfree(ch->ctxhandler);
 	ch->ctxhandler = NULL;
 	ch->cur_ctx = NULL;
 	ch->aperture = NULL;

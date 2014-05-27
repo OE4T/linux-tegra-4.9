@@ -248,6 +248,7 @@ struct gk20a {
 	bool elcg_enabled;
 	bool elpg_enabled;
 	bool aelpg_enabled;
+	bool forced_idle;
 
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;

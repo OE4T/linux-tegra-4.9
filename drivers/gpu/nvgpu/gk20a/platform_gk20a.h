@@ -88,6 +88,9 @@ struct gk20a_platform {
 	/* Called to turn on the device */
 	int (*unrailgate)(struct platform_device *dev);
 
+	/* Called to check state of device */
+	bool (*is_railgated)(struct platform_device *dev);
+
 	/* Postscale callback is called after frequency change */
 	void (*postscale)(struct platform_device *pdev,
 			  unsigned long freq);

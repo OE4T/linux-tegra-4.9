@@ -305,6 +305,17 @@ void gk20a_tegra_calibrate_emc(struct gk20a_emc_params *emc_params,
 }
 
 /*
+ * gk20a_tegra_is_railgated()
+ *
+ * Check status of gk20a power rail
+ */
+
+static bool gk20a_tegra_is_railgated(struct platform_device *pdev)
+{
+	return !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+}
+
+/*
  * gk20a_tegra_railgate()
  *
  * Gate (disable) gk20a power rail
@@ -504,6 +515,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.suspend = gk20a_tegra_suspend,
 	.railgate = gk20a_tegra_railgate,
 	.unrailgate = gk20a_tegra_unrailgate,
+	.is_railgated = gk20a_tegra_is_railgated,
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
@@ -530,6 +542,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.suspend = gk20a_tegra_suspend,
 	.railgate = gk20a_tegra_railgate,
 	.unrailgate = gk20a_tegra_unrailgate,
+	.is_railgated = gk20a_tegra_is_railgated,
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,

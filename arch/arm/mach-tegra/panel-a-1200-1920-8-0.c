@@ -230,7 +230,8 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 	tegra_get_board_info(&mainboard);
 	tegra_get_display_board_info(&board);
 	en_panel_rst = TEGRA_GPIO_PN4;
-	if (mainboard.board_id == BOARD_E1922)
+	if (mainboard.board_id == BOARD_E1922 ||
+		mainboard.board_id == BOARD_E2141)
 		if (board.board_id == BOARD_E1937)
 			en_panel_rst = TEGRA_GPIO_PH3;
 

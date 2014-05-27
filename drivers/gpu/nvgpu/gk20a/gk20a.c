@@ -1658,9 +1658,20 @@ int gk20a_do_idle(void)
 	pm_runtime_put_sync(&pdev->dev);
 
 	/* add sufficient delay to allow GPU to rail gate */
-	mdelay(platform->railgate_delay + 100);
+	mdelay(platform->railgate_delay);
 
-	return 0;
+	if (platform->is_railgated(pdev))
+		return 0;
+	else {
+		/* wait for some more time */
+		mdelay(100);
+		if (platform->is_railgated(pdev))
+			return 0;
+	}
+
+	/* GPU is not rail gated by now, return error */
+	up_write(&g->busy_lock);
+	return -EBUSY;
 
 fail:
 	pm_runtime_put_noidle(&pdev->dev);

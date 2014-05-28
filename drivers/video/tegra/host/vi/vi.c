@@ -185,12 +185,25 @@ static int vi_probe(struct platform_device *dev)
 	if (i2c_ctrl && i2c_ctrl->new_devices)
 		i2c_ctrl->new_devices(dev);
 
+	tegra_vi->reg = regulator_get(&tegra_vi->ndev->dev, "avdd_dsi_csi");
+	if (IS_ERR(tegra_vi->reg)) {
+		err = PTR_ERR(tegra_vi->reg);
+		if (err == -ENODEV)
+			dev_info(&tegra_vi->ndev->dev,
+				"%s: no regulator device\n", __func__);
+		else
+			dev_err(&tegra_vi->ndev->dev,
+				"%s: couldn't get regulator\n", __func__);
+		tegra_vi->reg = NULL;
+		goto camera_i2c_unregister;
+	}
+
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
 	if (!tegra_vi->camera) {
 		dev_err(&dev->dev, "%s: can't register tegra_camera\n",
 				__func__);
-		goto camera_i2c_unregister;
+		goto vi_regulator_put;
 	}
 #endif
 
@@ -213,8 +226,12 @@ static int vi_probe(struct platform_device *dev)
 camera_unregister:
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_camera_unregister(tegra_vi->camera);
-camera_i2c_unregister:
+vi_regulator_put:
 #endif
+	regulator_put(tegra_vi->reg);
+	tegra_vi->reg = NULL;
+
+camera_i2c_unregister:
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
@@ -254,6 +271,9 @@ static int __exit vi_remove(struct platform_device *dev)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	tegra_pd_remove_device(&dev->dev);
 #endif
+
+	regulator_put(tegra_vi->reg);
+	tegra_vi->reg = NULL;
 
 	/* Remove I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->remove_devices)

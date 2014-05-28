@@ -245,6 +245,31 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 	}
 }
 
+/*
+ * nvhost_cdma_update_timeout(cdma, clientid, timeout) - Update timeout of
+ * the given client. The caller must not hold cdma lock
+ */
+void nvhost_cdma_update_client_timeout(struct nvhost_cdma *cdma, int clientid,
+				       int timeout)
+{
+	struct nvhost_job *job;
+
+	mutex_lock(&cdma->lock);
+
+	list_for_each_entry(job, &cdma->sync_queue, list)
+		if (job->clientid == cdma->timeout.clientid)
+			job->timeout = timeout;
+
+	/* if the first job in the queue is from this client, restart
+	 * the timer */
+	job = list_first_entry(&cdma->sync_queue, struct nvhost_job, list);
+	if (job->clientid == clientid) {
+		stop_cdma_timer_locked(cdma);
+		cdma_start_timer_locked(cdma, job);
+	}
+
+	mutex_unlock(&cdma->lock);
+}
 
 static void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
 					struct nvhost_job_syncpt *sp)

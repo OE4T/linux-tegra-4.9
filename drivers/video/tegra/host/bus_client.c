@@ -174,6 +174,7 @@ struct nvhost_channel_userctx {
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	struct nvhost_cdma *cdma = &priv->ch->cdma;
 
 	mutex_lock(&channel_lock);
 	if (!priv->ch || !priv->ch->dev) {
@@ -181,6 +182,9 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 		return 0;
 	}
 	trace_nvhost_channel_release(dev_name(&priv->ch->dev->dev));
+
+	/* reduce timeout of the remaining jobs */
+	nvhost_cdma_update_client_timeout(cdma, priv->clientid, 500);
 
 	filp->private_data = NULL;
 
@@ -204,6 +208,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	mutex_unlock(&channel_lock);
 	nvhost_putchannel(priv->ch);
 	kfree(priv);
+
 	return 0;
 }
 

@@ -650,6 +650,8 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	unsigned long bpp;
 	unsigned in_w;
 	unsigned out_w;
+	unsigned in_h;
+	unsigned out_h;
 
 	if (!WIN_IS_ENABLED(w))
 		return 0;
@@ -661,9 +663,13 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 		/* rotated: PRESCALE_SIZE swapped, but WIN_SIZE is unchanged */
 		in_w = dfixed_trunc(w->h);
 		out_w = w->out_h;
+		in_h = dfixed_trunc(w->w);
+		out_h = w->out_w;
 	} else {
 		in_w = dfixed_trunc(w->w); /* normal output, not rotated */
 		out_w = w->out_w;
+		in_h = dfixed_trunc(w->h);
+		out_h = w->out_h;
 	}
 
 	tiled_windows_bw_multiplier =
@@ -686,6 +692,11 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	ret *= in_w;
 	ret = div_u64(ret, out_w * (WIN_IS_TILED(w) ?
 		      tiled_windows_bw_multiplier : 1));
+	if (in_h > out_h) {
+		/* vertical downscaling enabled  */
+		ret *= in_h;
+		ret = div_u64(ret, out_h);
+	}
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	/*
 	 * Assuming 60% efficiency: i.e. if we calculate we need 70MBps, we

@@ -885,6 +885,8 @@ static void therm_est_shutdown(struct platform_device *pdev)
 
 	cancel_delayed_work_sync(&est->therm_est_work);
 	cancel_delayed_work_sync(&est->timer_trip_work);
+	thermal_zone_device_unregister(est->thz);
+	thermal_cooling_device_unregister(est->cdev);
 }
 
 static struct platform_driver therm_est_driver = {

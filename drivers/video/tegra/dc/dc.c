@@ -2532,6 +2532,31 @@ void tegra_dc_enable(struct tegra_dc *dc)
 	trace_display_mode(dc, &dc->mode);
 }
 
+void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
+{
+	struct tegra_dc_win *w = &dc->windows[win];
+
+	/* reset window bandwidth */
+	w->bandwidth = 0;
+	w->new_bandwidth = 0;
+
+	/* disable windows */
+	w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+
+	/* refuse to operate on invalid syncpts */
+	if (WARN_ON(dc->syncpt[win].id == NVSYNCPT_INVALID))
+		return;
+
+	/* flush any pending syncpt waits */
+	dc->syncpt[win].max += 1;
+	while (dc->syncpt[win].min < dc->syncpt[win].max) {
+		trace_display_syncpt_flush(dc, dc->syncpt[win].id,
+			dc->syncpt[win].min, dc->syncpt[win].max);
+		dc->syncpt[win].min++;
+		nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[win].id);
+	}
+}
+
 static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	unsigned i;
@@ -2555,27 +2580,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		dc->out->disable();
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		struct tegra_dc_win *w = &dc->windows[i];
-
-		/* reset window bandwidth */
-		w->bandwidth = 0;
-		w->new_bandwidth = 0;
-
-		/* disable windows */
-		w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
-
-		/* refuse to operate on invalid syncpts */
-		if (WARN_ON(dc->syncpt[i].id == NVSYNCPT_INVALID))
-			continue;
-
-		/* flush any pending syncpt waits */
-		dc->syncpt[i].max += 1;
-		while (dc->syncpt[i].min < dc->syncpt[i].max) {
-			trace_display_syncpt_flush(dc, dc->syncpt[i].id,
-				dc->syncpt[i].min, dc->syncpt[i].max);
-			dc->syncpt[i].min++;
-			nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[i].id);
-		}
+		tegra_dc_disable_window(dc, i);
 	}
 	trace_display_disable(dc);
 

@@ -1629,8 +1629,10 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	}
 
 	tegra_dc_blank(ext->dc, windows);
-	for_each_set_bit(i, &windows, DC_N_WINDOWS)
+	for_each_set_bit(i, &windows, DC_N_WINDOWS) {
 		tegra_dc_ext_unpin_window(&ext->win[i]);
+		tegra_dc_disable_window(ext->dc, i);
+	}
 
 	if (ext->cursor.user == user)
 		tegra_dc_ext_put_cursor(user);

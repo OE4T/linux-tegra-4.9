@@ -713,7 +713,7 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, (void __user *)arg, sizeof(op)))
 		return -EFAULT;
 
-	handle = unmarshal_user_id(op.id);
+	handle = nvmap_fd_to_handle(op.id);
 	if (!handle)
 		return -EINVAL;
 

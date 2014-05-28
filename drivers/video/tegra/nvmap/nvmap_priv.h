@@ -400,7 +400,7 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 
 void nvmap_client_put(struct nvmap_client *c);
 
-struct nvmap_handle *unmarshal_user_id(u32 id);
+struct nvmap_handle *nvmap_fd_to_handle(int handle);
 
 /* MM definitions. */
 extern size_t cache_maint_inner_threshold;

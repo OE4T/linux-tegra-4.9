@@ -212,8 +212,6 @@ struct nvhost_device_data t124_vi_info = {
 		{"cile", 102000000},
 		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
 		{"sclk", 80000000} },
-	.init             = nvhost_vi_init,
-	.deinit           = nvhost_vi_deinit,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.ctrl_ops         = &tegra_vi_ctrl_ops,

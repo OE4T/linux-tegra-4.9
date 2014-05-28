@@ -56,13 +56,20 @@ static int show_channels(struct platform_device *pdev, void *data,
 	struct output *o = data;
 	struct nvhost_master *m;
 	struct nvhost_device_data *pdata;
-	int index;
+	int index, locked;
 
 	if (pdev == NULL)
 		return 0;
 
 	m = nvhost_get_host(pdev);
 	pdata = platform_get_drvdata(pdev);
+
+	/* acquire lock to prevent channel modifications */
+	locked = mutex_trylock(&m->chlist_mutex);
+	if (!locked) {
+		nvhost_debug_output(o, "unable to lock channel list\n");
+		return 0;
+	}
 
 	for (index = 0; index < pdata->num_channels; index++) {
 		ch = pdata->channels[index];
@@ -71,18 +78,26 @@ static int show_channels(struct platform_device *pdev, void *data,
 					index + 1, pdev->name);
 			continue;
 		}
-		nvhost_getchannel(ch);
-		if (ch->chid != locked_id)
-			mutex_lock(&ch->cdma.lock);
+
+		/* ensure that we get a lock */
+		locked = mutex_trylock(&ch->cdma.lock);
+		if (!(locked || ch->chid == locked_id)) {
+			nvhost_debug_output(o, "failed to lock channel %d cdma\n",
+					    ch->chid);
+			continue;
+		}
+
 		if (fifo)
 			nvhost_get_chip_ops()->debug.show_channel_fifo(
 				m, ch, o, ch->chid);
 		nvhost_get_chip_ops()->debug.show_channel_cdma(
 			m, ch, o, ch->chid);
+
 		if (ch->chid != locked_id)
 			mutex_unlock(&ch->cdma.lock);
-		nvhost_putchannel(ch);
 	}
+
+	mutex_unlock(&m->chlist_mutex);
 
 	return 0;
 }

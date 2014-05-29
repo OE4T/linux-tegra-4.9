@@ -87,7 +87,6 @@ struct nvhost_device_data t124_host1x_info = {
 	.private_data	= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
-	.gather_filter_enabled = false,
 };
 
 
@@ -130,7 +129,6 @@ struct nvhost_device_data t124_isp_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -169,7 +167,6 @@ struct nvhost_device_data t124_ispb_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
 };
 
 static struct platform_device tegra_isp01b_device = {
@@ -255,7 +252,6 @@ struct nvhost_device_data t124_vi_info = {
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -294,7 +290,6 @@ struct nvhost_device_data t124_vib_info = {
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
 	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
-	.gather_filter_enabled = false,
 };
 
 static struct platform_device tegra_vi01b_device = {
@@ -333,7 +328,6 @@ struct nvhost_device_data t124_msenc_info = {
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = false,
 };
 
 struct platform_device tegra_msenc03_device = {
@@ -372,7 +366,6 @@ struct nvhost_device_data t124_tsec_info = {
 	.deinit        = nvhost_tsec_deinit,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
 	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
-	.gather_filter_enabled = false,
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -424,7 +417,6 @@ struct nvhost_device_data t124_vic_info = {
 	.actmon_enabled		= true,
 	.linear_emc		= true,
 	.firmware_name		= "vic03_ucode.bin",
-	.gather_filter_enabled = false,
 };
 
 struct platform_device tegra_vic03_device = {
@@ -457,7 +449,6 @@ struct nvhost_device_data t132_isp_info = {
 		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = false,
 };
 
 struct nvhost_device_data t132_ispb_info = {
@@ -476,7 +467,6 @@ struct nvhost_device_data t132_ispb_info = {
 		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = false,
 };
 
 struct nvhost_device_data t132_vi_info = {
@@ -501,7 +491,6 @@ struct nvhost_device_data t132_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
-	.gather_filter_enabled = false,
 };
 
 struct nvhost_device_data t132_vib_info = {
@@ -527,7 +516,6 @@ struct nvhost_device_data t132_vib_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
-	.gather_filter_enabled = false,
 };
 
 struct nvhost_device_data t132_msenc_info = {
@@ -545,7 +533,6 @@ struct nvhost_device_data t132_msenc_info = {
 	.deinit         = nvhost_flcn_deinit,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = false,
 };
 
 #ifdef CONFIG_ARCH_TEGRA_VIC
@@ -577,7 +564,6 @@ struct nvhost_device_data t132_vic_info = {
 	.actmon_enabled		= true,
 	.linear_emc		= true,
 	.firmware_name		= "vic03_ucode.bin",
-	.gather_filter_enabled = false,
 };
 #endif
 

@@ -197,9 +197,6 @@ struct nvhost_device_data {
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
 
-	/* flag to enable gather filter for device */
-	bool gather_filter_enabled;
-
 	struct dev_pm_qos_request no_poweroff_req;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS

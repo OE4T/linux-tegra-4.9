@@ -584,6 +584,19 @@ int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 	return 0;
 }
 
+int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
+{
+	nvhost_dbg_fn("");
+
+	nvhost_module_reset(pdev, false);
+
+	host1x_writel(pdev, 0x117c, 0x18004);
+	host1x_writel(pdev, 0x2200, 0x800040);
+	host1x_writel(pdev, 0x2204, 0x10000000);
+	host1x_writel(pdev, 0x2208, 0x0);
+
+	return nvhost_flcn_boot(pdev);
+}
 static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },

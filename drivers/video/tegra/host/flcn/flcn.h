@@ -22,7 +22,7 @@
 #include <linux/types.h>
 #include <linux/dma-attrs.h>
 #include <linux/firmware.h>
-
+#include <linux/platform_device.h>
 
 struct ucode_bin_header_v1_flcn {
 	u32 bin_magic;        /* 0x10de */
@@ -95,7 +95,7 @@ void nvhost_flcn_suspend(struct platform_device *);
 int nvhost_flcn_init(struct platform_device *);
 void nvhost_flcn_deinit(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
-
+int nvhost_nvenc_t210_finalize_poweron(struct platform_device *dev);
 
 
 /* hack, get these from elsewhere */

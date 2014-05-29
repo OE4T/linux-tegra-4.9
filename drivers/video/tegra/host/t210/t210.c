@@ -33,7 +33,6 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "nvjpg/nvjpg.h"
-#include "nvenc/nvenc.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"

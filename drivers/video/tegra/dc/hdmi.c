@@ -421,6 +421,12 @@ unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 					     unsigned long reg)
 {
 	unsigned long ret;
+
+	if (WARN(!tegra_is_clk_enabled(hdmi->dc->clk), "DC is clock-gated.\n") ||
+		WARN(!tegra_powergate_is_powered(hdmi->dc->powergate_id),
+			"DC is power-gated.\n"))
+		return 0;
+
 	ret = readl(hdmi->base + reg * 4);
 	trace_display_readl(hdmi->dc, ret, hdmi->base + reg * 4);
 	return ret;
@@ -429,6 +435,11 @@ unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 				     unsigned long val, unsigned long reg)
 {
+	if (WARN(!tegra_is_clk_enabled(hdmi->dc->clk), "DC is clock-gated.\n") ||
+		WARN(!tegra_powergate_is_powered(hdmi->dc->powergate_id),
+			"DC is power-gated.\n"))
+		return;
+
 	trace_display_writel(hdmi->dc, val, hdmi->base + reg * 4);
 	writel(val, hdmi->base + reg * 4);
 }

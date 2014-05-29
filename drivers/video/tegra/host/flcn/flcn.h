@@ -94,6 +94,7 @@ void nvhost_flcn_idle(struct platform_device *);
 void nvhost_flcn_suspend(struct platform_device *);
 int nvhost_flcn_init(struct platform_device *);
 void nvhost_flcn_deinit(struct platform_device *);
+int nvhost_flcn_finalize_poweron(struct platform_device *);
 
 
 

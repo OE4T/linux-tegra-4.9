@@ -369,10 +369,6 @@ int nvhost_flcn_init(struct platform_device *dev)
 	if (err || !v->valid)
 		goto clean_up;
 
-	nvhost_module_busy(dev);
-	err = nvhost_flcn_boot(dev);
-	nvhost_module_idle(dev);
-
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);
 
@@ -408,6 +404,15 @@ void nvhost_flcn_deinit(struct platform_device *dev)
 	/* zap, free */
 	set_flcn(dev, NULL);
 	kfree(v);
+}
+
+int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
+{
+	nvhost_dbg_fn("");
+
+	nvhost_module_reset(pdev, false);
+
+	return nvhost_flcn_boot(pdev);
 }
 
 static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
@@ -552,6 +557,8 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
 	nvhost_dbg_fn("");
+
+	nvhost_module_reset(pdev, false);
 
 	host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0);
 	host1x_writel(pdev, flcn_cg_r(),

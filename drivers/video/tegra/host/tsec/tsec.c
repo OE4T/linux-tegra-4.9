@@ -451,13 +451,6 @@ int nvhost_tsec_init(struct platform_device *dev)
 		goto clean_up;
 	}
 
-	nvhost_module_busy(dev);
-
-	err = tsec_boot(dev);
-	if (err)
-		goto clean_up;
-
-	nvhost_module_idle(dev);
 	return 0;
 
 clean_up:

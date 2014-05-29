@@ -329,7 +329,7 @@ struct nvhost_device_data t124_msenc_info = {
 	.can_powergate	= true,
 	.init           = nvhost_flcn_init,
 	.deinit         = nvhost_flcn_deinit,
-	.finalize_poweron = nvhost_flcn_boot,
+	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
@@ -545,7 +545,7 @@ struct nvhost_device_data t132_msenc_info = {
 	.can_powergate	= true,
 	.init           = nvhost_flcn_init,
 	.deinit         = nvhost_flcn_deinit,
-	.finalize_poweron = nvhost_flcn_boot,
+	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
 	.gather_filter_enabled = false,
 };

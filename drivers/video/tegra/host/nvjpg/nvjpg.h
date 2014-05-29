@@ -1,13 +1,7 @@
 /*
  * Tegra NVJPG Module Support
  *
-<<<<<<< HEAD:drivers/video/tegra/host/nvjpg/nvjpg.h
  * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
-=======
- * Tegra MSENC Module Support
- *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
->>>>>>> video: tegra: host: nvenc: Initialize PROD values:drivers/video/tegra/host/msenc/msenc.h
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,

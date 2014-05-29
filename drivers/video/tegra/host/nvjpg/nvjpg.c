@@ -359,10 +359,6 @@ int nvhost_nvjpg_init(struct platform_device *dev)
 		goto clean_up;
 	}
 
-	nvhost_module_busy(dev);
-	nvjpg_boot(dev);
-	nvhost_module_idle(dev);
-
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);
 
@@ -398,6 +394,13 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 
 int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	/* reset device before boot */
+	tegra_periph_reset_assert(pdata->clk[0]);
+	udelay(10);
+	tegra_periph_reset_deassert(pdata->clk[0]);
+
 	host1x_writel(dev, 0x117c, 0x18004);
 	return nvhost_nvjpg_finalize_poweron(dev);
 }
@@ -436,9 +439,6 @@ static int nvjpg_probe(struct platform_device *dev)
 	}
 
 	pdata->pdev = dev;
-	pdata->init = nvhost_nvjpg_init;
-	pdata->deinit = nvhost_nvjpg_deinit;
-	pdata->finalize_poweron = nvhost_nvjpg_finalize_poweron;
 
 	mutex_init(&pdata->lock);
 

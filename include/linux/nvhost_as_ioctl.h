@@ -146,9 +146,10 @@ struct nvhost_as_map_buffer_ex_args {
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */
 
-	__u32 padding[4];	/* reserved for future usage */
+	__u64 buffer_offset;	/* in, offset of mapped buffer region */
+	__u64 mapping_size;	/* in, size of mapped buffer region */
 
-	__u64 offset;		/* in/out, we use this address if flag
+	__u64 as_offset;	/* in/out, we use this address if flag
 				 * FIXED_OFFSET is set. This will fail
 				 * if space is not properly allocated. The
 				 * actual virtual address to which we mapped

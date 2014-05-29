@@ -212,12 +212,19 @@ static int handle_page_alloc(struct nvmap_client *client,
 	}
 
 	/*
-	 * Make sure any data in the caches is flushed out before
+	 * Make sure any data in the caches is cleaned out before
 	 * passing these pages to userspace. otherwise, It can lead to
 	 * corruption in pages that get mapped as something other than WB in
 	 * userspace and leaked kernel data structures.
+	 *
+	 * FIXME: For ARMv7 we don't have __clean_dcache_page() so we continue
+	 * to use the flush cache version.
 	 */
+#ifdef ARM64
+	nvmap_clean_cache(pages, nr_page);
+#else
 	nvmap_flush_cache(pages, nr_page);
+#endif
 
 	h->size = size;
 	h->pgalloc.pages = pages;

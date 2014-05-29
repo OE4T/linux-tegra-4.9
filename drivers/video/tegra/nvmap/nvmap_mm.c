@@ -51,6 +51,29 @@ void inner_clean_cache_all(void)
 #endif
 }
 
+/*
+ * FIXME:
+ *
+ *   __clean_dcache_page() is only available on ARM64 (well, we haven't
+ *   implemented it on ARMv7).
+ */
+#ifdef ARM64
+void nvmap_clean_cache(struct page **pages, int numpages)
+{
+	int i;
+
+	/* Not technically a flush but that's what nvmap knows about. */
+	nvmap_stats_inc(NS_CFLUSH_DONE, numpages << PAGE_SHIFT);
+	trace_nvmap_cache_flush(numpages << PAGE_SHIFT,
+		nvmap_stats_read(NS_ALLOC),
+		nvmap_stats_read(NS_CFLUSH_RQ),
+		nvmap_stats_read(NS_CFLUSH_DONE));
+
+	for (i = 0; i < numpages; i++)
+		__clean_dcache_page(pages[i]);
+}
+#endif
+
 void nvmap_flush_cache(struct page **pages, int numpages)
 {
 	unsigned int i;
@@ -80,6 +103,7 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 #else
 		if (flush_inner)
 			__flush_dcache_page(page_mapping(page), page);
+
 		base = page_to_phys(page);
 		outer_flush_range(base, base + PAGE_SIZE);
 #endif

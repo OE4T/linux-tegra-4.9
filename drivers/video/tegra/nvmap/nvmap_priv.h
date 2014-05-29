@@ -87,6 +87,7 @@ extern bool zero_memory;
 #define outer_clean_range(s, e)
 #define outer_flush_all()
 #define outer_clean_all()
+extern void __clean_dcache_page(struct page *);
 extern void __flush_dcache_page(struct page *);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
@@ -412,6 +413,7 @@ extern void __clean_dcache_all(void *arg);
 
 void inner_flush_cache_all(void);
 void inner_clean_cache_all(void);
+void nvmap_clean_cache(struct page **pages, int numpages);
 void nvmap_flush_cache(struct page **pages, int numpages);
 
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,

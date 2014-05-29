@@ -649,6 +649,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	int tiled_windows_bw_multiplier;
 	unsigned long bpp;
 	unsigned in_w;
+	unsigned out_w;
 
 	if (!WIN_IS_ENABLED(w))
 		return 0;
@@ -656,11 +657,14 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	if (dfixed_trunc(w->w) == 0 || dfixed_trunc(w->h) == 0 ||
 	    w->out_w == 0 || w->out_h == 0)
 		return 0;
-	if (w->flags & TEGRA_WIN_FLAG_SCAN_COLUMN)
+	if (w->flags & TEGRA_WIN_FLAG_SCAN_COLUMN) {
 		/* rotated: PRESCALE_SIZE swapped, but WIN_SIZE is unchanged */
 		in_w = dfixed_trunc(w->h);
-	else
+		out_w = w->out_h;
+	} else {
 		in_w = dfixed_trunc(w->w); /* normal output, not rotated */
+		out_w = w->out_w;
+	}
 
 	tiled_windows_bw_multiplier =
 		tegra_mc_get_tiled_memory_bandwidth_multiplier();
@@ -680,7 +684,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	ret *= (win_use_v_filter(dc, w) ? 2 : 1);
 #endif
 	ret *= in_w;
-	ret = div_u64(ret, w->out_w * (WIN_IS_TILED(w) ?
+	ret = div_u64(ret, out_w * (WIN_IS_TILED(w) ?
 		      tiled_windows_bw_multiplier : 1));
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 	/*

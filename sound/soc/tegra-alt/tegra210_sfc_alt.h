@@ -92,8 +92,8 @@ struct tegra210_sfc_soc_data {
 
 struct tegra210_sfc {
 	struct clk *clk_sfc;
-	unsigned int srate_in;
-	unsigned int srate_out;
+	int srate_in;
+	int srate_out;
 	struct regmap *regmap;
 	const struct tegra210_sfc_soc_data *soc_data;
 };

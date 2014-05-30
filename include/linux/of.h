@@ -92,6 +92,8 @@ struct of_phandle_iterator {
 	struct device_node *node;
 };
 
+#define of_phandle_iter of_phandle_iterator
+
 struct of_reconfig_data {
 	struct device_node	*dn;
 	struct property		*prop;
@@ -520,6 +522,12 @@ const __be32 *of_prop_next_u32(struct property *prop, const __be32 *cur,
 const char *of_prop_next_string(struct property *prop, const char *cur);
 
 bool of_console_check(struct device_node *dn, char *name, int index);
+
+#define of_property_for_each_phandle_with_args(iter, np, list_name,	\
+					       cells_name, cell_count)	\
+	for (of_phandle_iterator_init(&iter, np, list_name,		\
+				   cells_name, cell_count);		\
+	     iter.cur; of_phandle_iterator_next(&iter))
 
 #else /* CONFIG_OF */
 

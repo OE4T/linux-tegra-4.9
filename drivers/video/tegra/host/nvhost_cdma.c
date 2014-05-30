@@ -251,7 +251,7 @@ static void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
 {
 	u32 id = sp->id;
 	u32 fence = sp->fence;
-	u32 syncpt_val = nvhost_syncpt_read_min(syncpt, id);
+	u32 syncpt_val = nvhost_syncpt_update_min(syncpt, id);
 	u32 syncpt_incrs = fence - syncpt_val;
 
 	/* do CPU increments */

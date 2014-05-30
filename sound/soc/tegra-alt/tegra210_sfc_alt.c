@@ -72,11 +72,57 @@ static int tegra210_sfc_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
 	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
+	unsigned int value;
+
+	switch (freq) {
+	case 8000:
+		value = TEGRA210_SFC_FS8;
+		break;
+	case 11025:
+		value = TEGRA210_SFC_FS11_025;
+		break;
+	case 16000:
+		value = TEGRA210_SFC_FS16;
+		break;
+	case 22050:
+		value = TEGRA210_SFC_FS22_05;
+		break;
+	case 24000:
+		value = TEGRA210_SFC_FS24;
+		break;
+	case 32000:
+		value = TEGRA210_SFC_FS32;
+		break;
+	case 44100:
+		value = TEGRA210_SFC_FS44_1;
+		break;
+	case 48000:
+		value = TEGRA210_SFC_FS48;
+		break;
+	case 64000:
+		value = TEGRA210_SFC_FS64;
+		break;
+	case 88200:
+		value = TEGRA210_SFC_FS88_2;
+		break;
+	case 96000:
+		value = TEGRA210_SFC_FS96;
+		break;
+	case 176400:
+		value = TEGRA210_SFC_FS176_4;
+		break;
+	case 192000:
+		value = TEGRA210_SFC_FS192;
+		break;
+	default:
+		value = TEGRA210_SFC_FS8;
+		break;
+	}
 
 	if (dir == SND_SOC_CLOCK_OUT)
-		sfc->srate_out = freq;
+		sfc->srate_out = value;
 	else if (dir == SND_SOC_CLOCK_IN)
-		sfc->srate_in = freq;
+		sfc->srate_in = value;
 
 	return 0;
 }
@@ -125,7 +171,6 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
-	unsigned int value;
 	int ret;
 
 	ret = tegra210_sfc_set_audio_cif(sfc, params,
@@ -135,52 +180,7 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	switch (sfc->srate_in) {
-	case 8000:
-		value = TEGRA210_SFC_FS8;
-		break;
-	case 11025:
-		value = TEGRA210_SFC_FS11_025;
-		break;
-	case 16000:
-		value = TEGRA210_SFC_FS16;
-		break;
-	case 22050:
-		value = TEGRA210_SFC_FS22_05;
-		break;
-	case 24000:
-		value = TEGRA210_SFC_FS24;
-		break;
-	case 32000:
-		value = TEGRA210_SFC_FS32;
-		break;
-	case 44100:
-		value = TEGRA210_SFC_FS44_1;
-		break;
-	case 48000:
-		value = TEGRA210_SFC_FS48;
-		break;
-	case 64000:
-		value = TEGRA210_SFC_FS64;
-		break;
-	case 88200:
-		value = TEGRA210_SFC_FS88_2;
-		break;
-	case 96000:
-		value = TEGRA210_SFC_FS96;
-		break;
-	case 176400:
-		value = TEGRA210_SFC_FS176_4;
-		break;
-	case 192000:
-		value = TEGRA210_SFC_FS192;
-		break;
-	default:
-		value = TEGRA210_SFC_FS8;
-		break;
-	}
-
-	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_RX_FREQ, value);
+	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_RX_FREQ, sfc->srate_in);
 	return ret;
 }
 
@@ -190,7 +190,6 @@ static int tegra210_sfc_out_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
-	unsigned int value;
 	int ret;
 
 	ret = tegra210_sfc_set_audio_cif(sfc, params,
@@ -199,53 +198,39 @@ static int tegra210_sfc_out_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "Can't set SFC TX CIF: %d\n", ret);
 		return ret;
 	}
-	switch (sfc->srate_out) {
-	case 8000:
-		value = TEGRA210_SFC_FS8;
-		break;
-	case 11025:
-		value = TEGRA210_SFC_FS11_025;
-		break;
-	case 16000:
-		value = TEGRA210_SFC_FS16;
-		break;
-	case 22050:
-		value = TEGRA210_SFC_FS22_05;
-		break;
-	case 24000:
-		value = TEGRA210_SFC_FS24;
-		break;
-	case 32000:
-		value = TEGRA210_SFC_FS32;
-		break;
-	case 44100:
-		value = TEGRA210_SFC_FS44_1;
-		break;
-	case 48000:
-		value = TEGRA210_SFC_FS48;
-		break;
-	case 64000:
-		value = TEGRA210_SFC_FS64;
-		break;
-	case 88200:
-		value = TEGRA210_SFC_FS88_2;
-		break;
-	case 96000:
-		value = TEGRA210_SFC_FS96;
-		break;
-	case 176400:
-		value = TEGRA210_SFC_FS176_4;
-		break;
-	case 192000:
-		value = TEGRA210_SFC_FS192;
-		break;
-	default:
-		value = TEGRA210_SFC_FS8;
-		break;
+
+	if (sfc->srate_out < 0) {
+		dev_err(dev, "SFC%d output rate not set: %d\n",
+			dev->id, -EINVAL);
+		return -EINVAL;
 	}
 
-	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_TX_FREQ, value);
+	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_TX_FREQ, sfc->srate_out);
 	return ret;
+}
+
+static int tegra210_sfc_get_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+
+	/* get the sfc output rate */
+	ucontrol->value.integer.value[0] = sfc->srate_out + 1;
+
+	return 0;
+}
+
+static int tegra210_sfc_put_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+
+	/* update the sfc output rate */
+	sfc->srate_out = ucontrol->value.integer.value[0] - 1;
+
+	return 0;
 }
 
 static int tegra210_sfc_codec_probe(struct snd_soc_codec *codec)
@@ -310,12 +295,39 @@ static const struct snd_soc_dapm_route tegra210_sfc_routes[] = {
 	{ "SFC Transmit", NULL, "SFC TX" },
 };
 
+static const char * const tegra210_sfc_srate_text[] = {
+	"None",
+	"8kHz",
+	"11kHz",
+	"16kHz",
+	"22kHz",
+	"24kHz",
+	"32kHz",
+	"44kHz",
+	"48kHz",
+	"64kHz",
+	"88kHz",
+	"96kHz",
+	"176kHz",
+	"192kHz",
+};
+
+static const struct soc_enum tegra210_sfc_srate =
+	SOC_ENUM_SINGLE_EXT(14, tegra210_sfc_srate_text);
+
+static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
+	SOC_ENUM_EXT("output rate", tegra210_sfc_srate,
+		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
+};
+
 static struct snd_soc_codec_driver tegra210_sfc_codec = {
 	.probe = tegra210_sfc_codec_probe,
 	.dapm_widgets = tegra210_sfc_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_sfc_widgets),
 	.dapm_routes = tegra210_sfc_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_sfc_routes),
+	.controls = tegra210_sfc_controls,
+	.num_controls = ARRAY_SIZE(tegra210_sfc_controls),
 };
 
 static bool tegra210_sfc_wr_reg(struct device *dev, unsigned int reg)
@@ -459,7 +471,7 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	sfc->soc_data = soc_data;
 
 	/* initialize default output srate */
-	sfc->srate_out = 48000;
+	sfc->srate_out = TEGRA210_SFC_FS48;
 
 #ifndef CONFIG_MACH_GRENADA
 	sfc->clk_sfc = devm_clk_get(&pdev->dev, NULL);

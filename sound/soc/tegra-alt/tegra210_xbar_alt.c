@@ -810,9 +810,9 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 
 	xbar->soc_data = soc_data;
 
-	xbar->clk = devm_clk_get(&pdev->dev, "d_audio");
+	xbar->clk = devm_clk_get(&pdev->dev, "ahub");
 	if (IS_ERR(xbar->clk)) {
-		dev_err(&pdev->dev, "Can't retrieve clock\n");
+		dev_err(&pdev->dev, "Can't retrieve ahub clock\n");
 		ret = PTR_ERR(xbar->clk);
 		goto err;
 	}
@@ -826,7 +826,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 
 	parent_clk = clk_get_parent(xbar->clk);
 	if (IS_ERR(parent_clk)) {
-		dev_err(&pdev->dev, "Can't get parent clock fo xbar\n");
+		dev_err(&pdev->dev, "Can't get parent clock for xbar\n");
 		ret = PTR_ERR(parent_clk);
 		goto err_clk_put;
 	}

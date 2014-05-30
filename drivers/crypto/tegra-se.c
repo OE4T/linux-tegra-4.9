@@ -50,7 +50,9 @@
 
 #define DRIVER_NAME	"tegra-se"
 
+#if defined(CONFIG_PM)
 static struct device *save_se_device;
+#endif
 
 /* Security Engine operation modes */
 enum tegra_se_aes_op_mode {

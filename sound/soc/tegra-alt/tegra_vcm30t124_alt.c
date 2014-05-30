@@ -428,7 +428,7 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
-	unsigned int mclk;
+	unsigned int mclk, val;
 	int err;
 
 	mclk = dai_params->rate_min * 512;
@@ -448,6 +448,16 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 		/* set SCLK, FS direction from codec to dap */
 		gpio_direction_output(machine->gpio_dap_direction,
 					CODEC_TO_DAP);
+
+		/*
+		 * AD193X driver enables both DAC and ADC as MASTER
+		 * so both ADC and DAC drive LRCLK and BCLK and it causes
+		 * noise. To solve this, we need to disable one of them.
+		 */
+		val = snd_soc_read(ad1937_dai->codec, AD193X_DAC_CTRL1);
+		val &= ~AD193X_DAC_LCR_MASTER;
+		val &= ~AD193X_DAC_BCLK_MASTER;
+		snd_soc_write(ad1937_dai->codec, AD193X_DAC_CTRL1, val);
 	} else {
 		/* set PLL_SRC with LRCLK for AD1937 slave mode */
 		snd_soc_write(ad1937_dai->codec, AD193X_PLL_CLK_CTRL0, 0xb9);

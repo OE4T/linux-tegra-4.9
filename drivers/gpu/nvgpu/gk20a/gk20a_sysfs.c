@@ -332,6 +332,7 @@ static ssize_t elpg_enable_read(struct device *device,
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
 
+#ifdef CONFIG_PM_RUNTIME
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -380,6 +381,7 @@ static ssize_t force_idle_read(struct device *device,
 }
 
 static DEVICE_ATTR(force_idle, ROOTRW, force_idle_read, force_idle_store);
+#endif
 
 void gk20a_remove_sysfs(struct device *dev)
 {
@@ -395,7 +397,9 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_load);
 	device_remove_file(dev, &dev_attr_railgate_delay);
 	device_remove_file(dev, &dev_attr_clockgate_delay);
+#ifdef CONFIG_PM_RUNTIME
 	device_remove_file(dev, &dev_attr_force_idle);
+#endif
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
 		sysfs_remove_link(&dev->kobj, dev_name(dev));
@@ -416,7 +420,9 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_load);
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
+#ifdef CONFIG_PM_RUNTIME
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
+#endif
 
 	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,

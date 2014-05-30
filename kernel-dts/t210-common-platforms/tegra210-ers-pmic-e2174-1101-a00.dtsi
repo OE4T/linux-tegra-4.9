@@ -46,12 +46,17 @@
 				max77620-ldo7-supply = <&max77620_sd2>;
 				max77620-ldo8-supply = <&max77620_sd2>;
 
+				maxim,fps-enable-source = <FPS_SRC_0 FPS_SRC_1 FPS_SRC_2>;
+				maxim,fps-sw-enable = <FPS_EN_SRC_EN0 FPS_EN_SRC_EN1 FPS_EN_SRC_EN0>;
+				maxim,fps-source-timeperiod = <FPS_TIME_PERIOD_DEF FPS_TIME_PERIOD_DEF FPS_TIME_PERIOD_DEF>;
+
 				max77620_sd0: sd0 {
 					regulator-name = "vdd-core";
 					regulator-min-microvolt = <600000>;
 					regulator-max-microvolt = <1400000>;
 					regulator-boot-on;
 					regulator-always-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {
 						c1 {
 							regulator-consumer-supply = "vdd_core";
@@ -65,6 +70,7 @@
 					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_sd2: sd2 {
@@ -73,6 +79,7 @@
 					regulator-max-microvolt = <1320000>;
 					regulator-always-on;
 					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_sd3: sd3 {
@@ -81,6 +88,7 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {
 						c1 {
 							regulator-consumer-supply = "avdd_hdmi_pll";
@@ -147,6 +155,7 @@
 					regulator-name = "avdd-sys";
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {
 						c0 {
 							regulator-consumer-supply = "vddio_hsic";
@@ -189,12 +198,14 @@
 					regulator-name = "vdd-pex";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_ldo2: ldo2 {
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {
 						c0 {
 							regulator-consumer-supply = "vddio_sdmmc";
@@ -210,6 +221,7 @@
 					regulator-name = "vdd-cam-hv";
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_ldo4: ldo4 {
@@ -218,6 +230,7 @@
 					regulator-max-microvolt = <1250000>;
 					regulator-always-on;
 					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_0>;
 					consumers {
 						c0 {
 							regulator-consumer-supply = "vdd_rtc";
@@ -229,12 +242,14 @@
 					regulator-name = "avdd-ts-hv";
 					regulator-min-microvolt = <3200000>;
 					regulator-max-microvolt = <3200000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_ldo6: ldo6 {
 					regulator-name = "vdd-ts";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <1800000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_ldo7: ldo7 {
@@ -243,12 +258,14 @@
 					regulator-max-microvolt = <1050000>;
 					regulator-always-on;
 					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_ldo8: ldo8 {
 					regulator-name = "vdd-hdmi-dp";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 					c0 {
 						regulator-consumer-supply = "avdd_hdmi";
 						regulator-consumer-device = "tegradc.1";

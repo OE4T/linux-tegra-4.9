@@ -71,7 +71,24 @@ struct nvhost_device_data t21_isp_info = {
 	.ctrl_ops      = &tegra_isp_ctrl_ops,
 	.num_channels  = 1,
 };
-
+#ifdef CONFIG_VI_ONE_DEVICE
+struct nvhost_device_data t21_vi_info = {
+	.exclusive     = true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive = true,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid      = NVHOST_MODULE_VI,
+	.clocks = {
+		{"vi", UINT_MAX},
+		{"csi", 0},
+		{"cilab", 102000000} },
+		{"cilcd", 102000000} },
+		{"cile", 102000000} },
+	.ctrl_ops         = &tegra_vi_ctrl_ops,
+	.num_channels  = 4,
+};
+#else
 struct nvhost_device_data t21_vib_info = {
 	.modulemutexes = {NVMODMUTEX_VI_1},
 	.exclusive     = true,
@@ -98,7 +115,6 @@ struct nvhost_device_data t21_vi_info = {
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
-	.clocks		= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VI,
@@ -110,6 +126,7 @@ struct nvhost_device_data t21_vi_info = {
 	.slave         = &tegra_vi01b_device,
 	.num_channels  = 1,
 };
+#endif
 
 struct nvhost_device_data t21_msenc_info = {
 	.version       = NVHOST_ENCODE_FLCN_VER(5, 0),

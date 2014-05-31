@@ -2102,7 +2102,7 @@ static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
 		tegra_dc_set_fb_mode(dc, specs.modedb, false);
 
 	tegra_dc_setup_clk(dc, dc->clk);
-
+	kfree(specs.modedb);
 	return 0;
 fail:
 	return err;

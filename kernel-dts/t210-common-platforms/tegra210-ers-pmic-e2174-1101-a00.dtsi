@@ -1,4 +1,5 @@
 #include <dt-bindings/mfd/max77620.h>
+#include <dt-bindings/regulator/regulator.h>
 
 / {
 	i2c@7000d000 {
@@ -89,6 +90,7 @@
 					regulator-always-on;
 					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_NONE>;
+					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
 						c1 {
 							regulator-consumer-supply = "avdd_hdmi_pll";
@@ -110,43 +112,43 @@
 							regulator-consumer-supply = "pwrdet_sdmmc1";
 						};
 						c6 {
-							regulator-consumer-supply = "vddio_sdmmc";
-							regulator-consumer-device = "sdhci-tegra.3";
-						};
-						c7 {
-							regulator-consumer-supply = "pwrdet_sdmmc4";
-						};
-						c8 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-udc.0";
 						};
-						c9 {
+						c7 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.0";
 						};
-						c10 {
+						c8 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.1";
 						};
-						c11 {
+						c9 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.2";
 						};
-						c12 {
+						c10 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-xhci";
 						};
-						c13 {
+						c11 {
 							regulator-consumer-supply = "vddio_audio";
 						};
-						c14 {
+						c12 {
 							regulator-consumer-supply = "pwrdet_audio";
 						};
-						c15 {
+						c13 {
 							regulator-consumer-supply = "vddio_uart";
 						};
-						c16 {
+						c14 {
 							regulator-consumer-supply = "pwrdet_uart";
+						};
+						c15 {
+							regulator-consumer-supply = "vddio_sdmmc";
+							regulator-consumer-device = "sdhci-tegra.3";
+						};
+						c16 {
+							regulator-consumer-supply = "pwrdet_sdmmc4";
 						};
 					};
 				};

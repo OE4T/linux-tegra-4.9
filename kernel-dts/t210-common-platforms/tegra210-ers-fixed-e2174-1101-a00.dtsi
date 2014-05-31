@@ -86,24 +86,30 @@
 			regulator-always-on;
 			gpio = <&max77620 3 0>;
 			enable-active-high;
-			c0 {
-				regulator-consumer-supply = "avdd_usb";
-				regulator-consumer-device = "tegra-udc.0";
-			};
-			c1 {
-				regulator-consumer-supply = "avdd_usb";
-				regulator-consumer-device = "tegra-ehci.0";
-			};
-			c2 {
-				regulator-consumer-supply = "avdd_usb";
-				regulator-consumer-device = "tegra-ehci.1";
-			};
-			c3 {
-				regulator-consumer-supply = "avdd_usb";
-				regulator-consumer-device = "tegra-ehci.2";
-			};
-			c4 {
-				regulator-consumer-supply = "avdd_lcd";
+			consumers {
+				c0 {
+					regulator-consumer-supply = "avdd_usb";
+					regulator-consumer-device = "tegra-udc.0";
+				};
+				c1 {
+					regulator-consumer-supply = "avdd_usb";
+					regulator-consumer-device = "tegra-ehci.0";
+				};
+				c2 {
+					regulator-consumer-supply = "avdd_usb";
+					regulator-consumer-device = "tegra-ehci.1";
+				};
+				c3 {
+					regulator-consumer-supply = "avdd_usb";
+					regulator-consumer-device = "tegra-ehci.2";
+				};
+				c4 {
+					regulator-consumer-supply = "avdd_lcd";
+				};
+				c5 {
+					regulator-consumer-supply = "vddio_sd_slot";
+					regulator-consumer-device = "sdhci-tegra.3";
+				};
 			};
 		};
 

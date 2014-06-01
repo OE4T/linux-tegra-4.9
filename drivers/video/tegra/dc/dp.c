@@ -2230,6 +2230,9 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	struct clk *dc_parent_clk;
 
+	if (tegra_platform_is_fpga())
+		return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
+
 	if (clk == dc->clk) {
 		dc_parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d_out0");

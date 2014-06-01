@@ -58,6 +58,7 @@
 					regulator-boot-on;
 					regulator-always-on;
 					maxim,fps-source = <FPS_SRC_NONE>;
+					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
 						c1 {
 							regulator-consumer-supply = "vdd_core";
@@ -71,6 +72,7 @@
 					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
+					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 

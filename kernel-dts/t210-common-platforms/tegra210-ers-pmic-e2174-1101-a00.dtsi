@@ -268,9 +268,11 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
-					c0 {
-						regulator-consumer-supply = "avdd_hdmi";
-						regulator-consumer-device = "tegradc.1";
+					consumers {
+						c0 {
+							regulator-consumer-supply = "avdd_hdmi";
+							regulator-consumer-device = "tegradc.1";
+						};
 					};
 				};
 			};

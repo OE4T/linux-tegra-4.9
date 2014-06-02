@@ -2004,8 +2004,11 @@ static void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 		udelay(2);
 		retries--;
 	}
-	if (!retries)
-		gk20a_err(dev_from_gk20a(g), "arbiter idle timeout");
+	if (!retries) {
+		gk20a_err(dev_from_gk20a(g),
+			  "arbiter idle timeout, status: %08x",
+			  gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
+	}
 
 	gk20a_writel(g, gr_fecs_arb_ctx_adr_r(), 0x0);
 

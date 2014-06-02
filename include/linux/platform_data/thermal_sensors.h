@@ -29,7 +29,6 @@ struct thermal_trip_info {
 	bool tripped;
 	u32 mask;
 	bool bound;
-	unsigned int level;
 	char *cdev_type;
 };
 

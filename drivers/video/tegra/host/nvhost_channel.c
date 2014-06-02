@@ -348,7 +348,8 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
 {
-	if (channel_op(ch).init_gather_filter)
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	if (channel_op(ch).init_gather_filter && pdata->gather_filter_enabled)
 		channel_op(ch).init_gather_filter(ch);
 }
 

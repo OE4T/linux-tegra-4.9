@@ -174,6 +174,10 @@ static inline u32 pbdma_pb_header_type_inc_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 pbdma_hdr_shadow_r(u32 i)
+{
+	return 0x00040118 + i*8192;
+}
 static inline u32 pbdma_subdevice_r(u32 i)
 {
 	return 0x00040094 + i*8192;

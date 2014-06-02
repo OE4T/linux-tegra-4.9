@@ -149,6 +149,7 @@ int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 			struct fifo_engine_info_gk20a *eng_info,
 			bool wait_for_idle);
+u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 hw_chid);
 
 int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,
 			      bool add, bool wait_for_finish);
@@ -157,6 +158,7 @@ int gk20a_fifo_suspend(struct gk20a *g);
 
 bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
 void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids, bool verbose);
+void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
 void gk20a_init_fifo(struct gpu_ops *gops);
 

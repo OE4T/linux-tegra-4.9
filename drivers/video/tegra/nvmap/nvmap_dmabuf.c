@@ -559,6 +559,12 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.get_drvdata	= nvmap_dmabuf_get_private,
 };
 
+bool dmabuf_is_nvmap(struct dma_buf *dmabuf)
+{
+	return dmabuf->ops == &nvmap_dma_buf_ops;
+}
+EXPORT_SYMBOL(dmabuf_is_nvmap);
+
 /*
  * Make a dmabuf object for an nvmap handle.
  */
@@ -694,7 +700,7 @@ struct nvmap_handle *nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client,
 	dmabuf = dma_buf_get(fd);
 	if (IS_ERR(dmabuf))
 		return ERR_CAST(dmabuf);
-	if (dmabuf->ops == &nvmap_dma_buf_ops) {
+	if (dmabuf_is_nvmap(dmabuf)) {
 		info = dmabuf->priv;
 		handle = info->handle;
 	}
@@ -732,7 +738,7 @@ int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
 {
 	struct nvmap_handle_info *info;
 
-	if (dmabuf->ops != &nvmap_dma_buf_ops)
+	if (!dmabuf_is_nvmap(dmabuf))
 		return -EINVAL;
 
 	if (WARN_ON(!virt_addr_valid(dmabuf)))

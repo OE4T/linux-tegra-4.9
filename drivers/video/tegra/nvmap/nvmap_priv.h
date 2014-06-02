@@ -128,6 +128,8 @@ struct nvmap_handle {
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
 	struct list_head vmas;	/* list of all user vma's */
+	atomic_t umap_count;	/* number of mapping from user space */
+	atomic_t kmap_count;	/* number of mappings from kernel space */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
 	void (*nvhost_priv_delete)(void *priv);
@@ -547,5 +549,34 @@ void nvmap_vma_open(struct vm_area_struct *vma);
 
 int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets,
 			u32 *sizes, u32 nr, u32 op);
+
+static inline void nvmap_kmaps_inc(struct nvmap_handle *h)
+{
+	mutex_lock(&h->lock);
+	atomic_inc(&h->kmap_count);
+	mutex_unlock(&h->lock);
+}
+
+static inline void nvmap_kmaps_inc_no_lock(struct nvmap_handle *h)
+{
+	atomic_inc(&h->kmap_count);
+}
+
+static inline void nvmap_kmaps_dec(struct nvmap_handle *h)
+{
+	atomic_dec(&h->kmap_count);
+}
+
+static inline void nvmap_umaps_inc(struct nvmap_handle *h)
+{
+	mutex_lock(&h->lock);
+	atomic_inc(&h->umap_count);
+	mutex_unlock(&h->lock);
+}
+
+static inline void nvmap_umaps_dec(struct nvmap_handle *h)
+{
+	atomic_dec(&h->umap_count);
+}
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

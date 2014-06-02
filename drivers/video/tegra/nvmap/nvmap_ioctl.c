@@ -600,12 +600,14 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	if (!h)
 		return -EPERM;
 
+	nvmap_kmaps_inc(h);
 	trace_nvmap_ioctl_rw_handle(client, h, is_read, op.offset,
 				    op.addr, op.hmem_stride,
 				    op.user_stride, op.elem_size, op.count);
 	copied = rw_handle(client, h, is_read, op.offset,
 			   (unsigned long)op.addr, op.hmem_stride,
 			   op.user_stride, op.elem_size, op.count);
+	nvmap_kmaps_dec(h);
 
 	if (copied < 0) {
 		err = copied;
@@ -744,6 +746,11 @@ static void heap_page_cache_maint(
 
 		if (!h->vaddr) {
 			struct page **pages;
+			/* mutex lock protection is not necessary as it is
+			 * already increased in __nvmap_do_cache_maint to
+			 * protect from migrations.
+			 */
+			nvmap_kmaps_inc_no_lock(h);
 			pages = nvmap_pages(h->pgalloc.pages,
 					    h->size >> PAGE_SHIFT);
 			if (!pages)
@@ -753,8 +760,10 @@ static void heap_page_cache_maint(
 			nvmap_altfree(pages,
 				(h->size >> PAGE_SHIFT) * sizeof(*pages));
 		}
-		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr))
+		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
+			nvmap_kmaps_dec(h);
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
+		}
 		if (h->vaddr) {
 			/* Fast inner cache maintenance using single mapping */
 			inner_cache_maint(op, h->vaddr + start, end - start);
@@ -765,6 +774,8 @@ static void heap_page_cache_maint(
 		}
 	}
 per_page_cache_maint:
+	if (!h->vaddr)
+		nvmap_kmaps_dec(h);
 #endif
 
 	while (start < end) {
@@ -981,6 +992,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 	if (!h)
 		return -EFAULT;
 
+	nvmap_kmaps_inc(h);
 	if (op == NVMAP_CACHE_OP_INV)
 		op = NVMAP_CACHE_OP_WB_INV;
 
@@ -999,6 +1011,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 
 	nvmap_stats_inc(NS_CFLUSH_RQ, end - start);
 	err = do_cache_maint(&cache_op);
+	nvmap_kmaps_dec(h);
 	nvmap_handle_put(h);
 	return err;
 }

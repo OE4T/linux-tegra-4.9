@@ -311,6 +311,7 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h)
 	BUG_ON(atomic_read(&h->ref) < 0);
 	BUG_ON(atomic_read(&h->pin) != 0);
 
+	nvmap_lru_del(h);
 	rb_erase(&h->node, &dev->handles);
 
 	spin_unlock(&dev->handle_lock);
@@ -337,6 +338,7 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 	}
 	rb_link_node(&h->node, parent, p);
 	rb_insert_color(&h->node, &dev->handles);
+	nvmap_lru_add(h);
 	spin_unlock(&dev->handle_lock);
 }
 
@@ -988,6 +990,41 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 
 DEBUGFS_OPEN_FOPS(iovmm_allocations);
 
+static int nvmap_debug_lru_allocations_show(struct seq_file *s, void *unused)
+{
+	struct nvmap_handle *h;
+	int total_handles = 0, migratable_handles = 0;
+	size_t total_size = 0, migratable_size = 0;
+
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %8s\n",
+			"", "", "", "", "", "",
+			"", "PINS", "KMAPS", "UMAPS", "UID");
+	spin_lock(&nvmap_dev->lru_lock);
+	list_for_each_entry(h, &nvmap_dev->lru_handles, lru) {
+		total_handles++;
+		total_size += h->size;
+		if (!atomic_read(&h->pin) && !atomic_read(&h->kmap_count)) {
+			migratable_handles++;
+			migratable_size += h->size;
+		}
+		seq_printf(s, "%-18s %18s %8s %10zuK %8s %6s %6s %6u %6u "
+			"%6u %8p\n", "", "", "", K(h->size), "", "",
+			"", atomic_read(&h->pin),
+			    atomic_read(&h->kmap_count),
+			    atomic_read(&h->umap_count),
+			    h);
+	}
+	seq_printf(s, "total_handles = %d, migratable_handles = %d,"
+		"total_size=%zuK, migratable_size=%zuK\n",
+		total_handles, migratable_handles,
+		K(total_size), K(migratable_size));
+	spin_unlock(&nvmap_dev->lru_lock);
+	PRINT_MEM_STATS_NOTE(SIZE);
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(lru_allocations);
+
 static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 				   u64 *non_pss, u64 *total)
 {
@@ -1186,6 +1223,8 @@ static int nvmap_probe(struct platform_device *pdev)
 	spin_lock_init(&dev->handle_lock);
 	INIT_LIST_HEAD(&dev->clients);
 	spin_lock_init(&dev->clients_lock);
+	INIT_LIST_HEAD(&dev->lru_handles);
+	spin_lock_init(&dev->lru_lock);
 
 	e = misc_register(&dev->dev_user);
 	if (e) {

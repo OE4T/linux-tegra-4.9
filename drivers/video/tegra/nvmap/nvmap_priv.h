@@ -130,6 +130,7 @@ struct nvmap_handle {
 	struct list_head vmas;	/* list of all user vma's */
 	atomic_t umap_count;	/* number of mapping from user space */
 	atomic_t kmap_count;	/* number of mappings from kernel space */
+	struct list_head lru;	/* list head to track the lru */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
 	void (*nvhost_priv_delete)(void *priv);
@@ -267,6 +268,8 @@ struct nvmap_device {
 #endif
 	struct list_head clients;
 	spinlock_t	clients_lock;
+	struct list_head lru_handles;
+	spinlock_t	lru_lock;
 };
 
 enum nvmap_stats_t {
@@ -577,6 +580,31 @@ static inline void nvmap_umaps_inc(struct nvmap_handle *h)
 static inline void nvmap_umaps_dec(struct nvmap_handle *h)
 {
 	atomic_dec(&h->umap_count);
+}
+
+static inline void nvmap_lru_add(struct nvmap_handle *h)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	BUG_ON(!list_empty(&h->lru));
+	list_add_tail(&h->lru, &nvmap_dev->lru_handles);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline void nvmap_lru_del(struct nvmap_handle *h)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	list_del(&h->lru);
+	INIT_LIST_HEAD(&h->lru);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline void nvmap_lru_reset(struct nvmap_handle *h)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	BUG_ON(list_empty(&h->lru));
+	list_del(&h->lru);
+	list_add_tail(&h->lru, &nvmap_dev->lru_handles);
+	spin_unlock(&nvmap_dev->lru_lock);
 }
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

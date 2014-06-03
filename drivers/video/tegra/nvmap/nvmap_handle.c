@@ -516,6 +516,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;
 	mutex_init(&h->lock);
 	INIT_LIST_HEAD(&h->vmas);
+	INIT_LIST_HEAD(&h->lru);
 
 	/*
 	 * This takes out 1 ref on the dambuf. This corresponds to the

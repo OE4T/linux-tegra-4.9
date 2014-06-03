@@ -352,6 +352,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 
 	trace_nvmap_dmabuf_map_dma_buf(attach->dmabuf, attach->dev);
 
+	nvmap_lru_reset(info->handle);
 	mutex_lock(&info->maps_lock);
 
 	mutex_lock(&info->handle->lock);

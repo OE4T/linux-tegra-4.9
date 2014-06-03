@@ -51,6 +51,7 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
+#define APP_VERSION_2 18542378
 #define APP_VERSION_1 17997577
 #define APP_VERSION_0 16856675
 

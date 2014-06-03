@@ -487,6 +487,7 @@ static int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	struct gk20a *g = pmu->g;
 	switch (pmu->desc->app_version) {
 	case APP_VERSION_1:
+	case APP_VERSION_2:
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v1;
@@ -618,7 +619,8 @@ static int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		break;
 	default:
 		gk20a_err(dev_from_gk20a(pmu->g),
-		"PMU code version not supported\n");
+		"PMU code version not supported version: %d\n",
+			pmu->desc->app_version);
 		return -EINVAL;
 		break;
 	}

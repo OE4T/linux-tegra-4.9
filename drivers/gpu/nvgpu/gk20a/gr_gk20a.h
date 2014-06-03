@@ -259,6 +259,7 @@ struct gr_gk20a {
 
 	struct gr_zcull_gk20a zcull;
 
+	struct mutex zbc_lock;
 	struct zbc_color_table zbc_col_tbl[GK20A_ZBC_TABLE_SIZE];
 	struct zbc_depth_table zbc_dep_tbl[GK20A_ZBC_TABLE_SIZE];
 
@@ -345,7 +346,6 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_query_params *query_params);
 int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val);
-int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr);
 
 /* pmu */

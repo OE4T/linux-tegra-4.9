@@ -132,59 +132,6 @@ static void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
 		     depth_val->depth);
 }
 
-/*
- * Clear the L2 ZBC color table for the passed index.
- */
-static void gk20a_ltc_clear_zbc_color_entry(struct gk20a *g, u32 index)
-{
-	u32 i;
-	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
-
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
-
-	for (i = 0;
-	     i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++)
-		gk20a_writel(g,
-			     ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i), 0);
-}
-
-/*
- * Clear the L2 ZBC depth entry for the passed index.
- */
-static void gk20a_ltc_clear_zbc_depth_entry(struct gk20a *g, u32 index)
-{
-	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
-
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
-
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(), 0);
-}
-
-static int gk20a_ltc_init_zbc(struct gk20a *g, struct gr_gk20a *gr)
-{
-	u32 i, j;
-
-	/* reset zbc clear */
-	for (i = 0; i < GK20A_SIZEOF_ZBC_TABLE -
-	    GK20A_STARTOF_ZBC_TABLE; i++) {
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
-			(gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r()) &
-			 ~ltc_ltcs_ltss_dstg_zbc_index_address_f(~0)) |
-				ltc_ltcs_ltss_dstg_zbc_index_address_f(
-					i + GK20A_STARTOF_ZBC_TABLE));
-		for (j = 0; j < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); j++)
-			gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(j), 0);
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(), 0);
-	}
-
-	gr_gk20a_clear_zbc_table(g, gr);
-	gr_gk20a_load_zbc_default_table(g, gr);
-
-	return 0;
-}
-
 static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
 				    size_t compbit_backing_size)
 {

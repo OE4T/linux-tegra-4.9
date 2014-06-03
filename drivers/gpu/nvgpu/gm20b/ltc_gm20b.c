@@ -257,9 +257,6 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
 	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
 	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
-	gops->ltc.clear_zbc_color_entry = gk20a_ltc_clear_zbc_color_entry;
-	gops->ltc.clear_zbc_depth_entry = gk20a_ltc_clear_zbc_depth_entry;
-	gops->ltc.init_zbc = gk20a_ltc_init_zbc;
 	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
 
 	/* GM20b specific ops. */

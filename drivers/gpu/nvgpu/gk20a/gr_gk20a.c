@@ -3581,6 +3581,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 	/* no endian swap ? */
 
+	mutex_lock(&gr->zbc_lock);
 	switch (zbc_val->type) {
 	case GK20A_ZBC_TYPE_COLOR:
 		/* search existing tables */
@@ -3596,7 +3597,8 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 				    sizeof(zbc_val->color_l2))) {
 					gk20a_err(dev_from_gk20a(g),
 						"zbc l2 and ds color don't match with existing entries");
-					return -EINVAL;
+					ret = -EINVAL;
+					goto err_mutex;
 				}
 				added = true;
 				c_tbl->ref_cnt++;
@@ -3652,7 +3654,8 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	default:
 		gk20a_err(dev_from_gk20a(g),
 			"invalid zbc table type %d", zbc_val->type);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_mutex;
 	}
 
 	if (!added && ret == 0) {
@@ -3662,89 +3665,8 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 		gr_gk20a_pmu_save_zbc(g, entries);
 	}
 
-	return ret;
-}
-
-int gr_gk20a_clear_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
-{
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
-	u32 i, j;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 ret;
-
-	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
-		return ret;
-	}
-
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to idle graphics\n");
-		goto clean_up;
-	}
-
-	for (i = 0; i < GK20A_ZBC_TABLE_SIZE; i++) {
-		gr->zbc_col_tbl[i].format = 0;
-		gr->zbc_col_tbl[i].ref_cnt = 0;
-
-		gk20a_writel(g, gr_ds_zbc_color_fmt_r(),
-			gr_ds_zbc_color_fmt_val_invalid_f());
-		gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-			gr_ds_zbc_tbl_index_val_f(i + GK20A_STARTOF_ZBC_TABLE));
-
-		/* trigger the write */
-		gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-			gr_ds_zbc_tbl_ld_select_c_f() |
-			gr_ds_zbc_tbl_ld_action_write_f() |
-			gr_ds_zbc_tbl_ld_trigger_active_f());
-
-		/* clear l2 table */
-		g->ops.ltc.clear_zbc_color_entry(g, i);
-
-		for (j = 0; j < GK20A_ZBC_COLOR_VALUE_SIZE; j++) {
-			gr->zbc_col_tbl[i].color_l2[j] = 0;
-			gr->zbc_col_tbl[i].color_ds[j] = 0;
-		}
-	}
-	gr->max_used_color_index = 0;
-	gr->max_default_color_index = 0;
-
-	for (i = 0; i < GK20A_ZBC_TABLE_SIZE; i++) {
-		gr->zbc_dep_tbl[i].depth = 0;
-		gr->zbc_dep_tbl[i].format = 0;
-		gr->zbc_dep_tbl[i].ref_cnt = 0;
-
-		gk20a_writel(g, gr_ds_zbc_z_fmt_r(),
-			gr_ds_zbc_z_fmt_val_invalid_f());
-		gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-			gr_ds_zbc_tbl_index_val_f(i + GK20A_STARTOF_ZBC_TABLE));
-
-		/* trigger the write */
-		gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-			gr_ds_zbc_tbl_ld_select_z_f() |
-			gr_ds_zbc_tbl_ld_action_write_f() |
-			gr_ds_zbc_tbl_ld_trigger_active_f());
-
-		/* clear l2 table */
-		g->ops.ltc.clear_zbc_depth_entry(g, i);
-	}
-	gr->max_used_depth_index = 0;
-	gr->max_default_depth_index = 0;
-
-clean_up:
-	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to enable gr engine activity\n");
-	}
-
-	/* elpg stuff */
-
+err_mutex:
+	mutex_unlock(&gr->zbc_lock);
 	return ret;
 }
 
@@ -3791,6 +3713,42 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 		return -EINVAL;
 	}
 
+	return 0;
+}
+
+int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
+{
+	int i, ret;
+
+	mutex_init(&gr->zbc_lock);
+	for (i = 0; i < gr->max_used_color_index; i++) {
+		struct zbc_color_table *c_tbl = &gr->zbc_col_tbl[i];
+		struct zbc_entry zbc_val;
+
+		zbc_val.type = GK20A_ZBC_TYPE_COLOR;
+		memcpy(zbc_val.color_ds,
+		       c_tbl->color_ds, sizeof(zbc_val.color_ds));
+		memcpy(zbc_val.color_l2,
+		       c_tbl->color_l2, sizeof(zbc_val.color_l2));
+		zbc_val.format = c_tbl->format;
+
+		ret = gr_gk20a_add_zbc_color(g, gr, &zbc_val, i);
+
+		if (ret)
+			return ret;
+	}
+	for (i = 0; i < gr->max_used_depth_index; i++) {
+		struct zbc_depth_table *d_tbl = &gr->zbc_dep_tbl[i];
+		struct zbc_entry zbc_val;
+
+		zbc_val.type = GK20A_ZBC_TYPE_DEPTH;
+		zbc_val.depth = d_tbl->depth;
+		zbc_val.format = d_tbl->format;
+
+		ret = gr_gk20a_add_zbc_depth(g, gr, &zbc_val, i);
+		if (ret)
+			return ret;
+	}
 	return 0;
 }
 
@@ -4286,7 +4244,11 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	data = gk20a_readl(g, gr_status_mask_r());
 	gk20a_writel(g, gr_status_mask_r(), data & gr->status_disable_mask);
 
-	g->ops.ltc.init_zbc(g, gr);
+	if (gr->sw_ready)
+		gr_gk20a_load_zbc_table(g, gr);
+	else
+		gr_gk20a_load_zbc_default_table(g, gr);
+
 	g->ops.ltc.init_cbc(g, gr);
 
 	/* load ctx init */

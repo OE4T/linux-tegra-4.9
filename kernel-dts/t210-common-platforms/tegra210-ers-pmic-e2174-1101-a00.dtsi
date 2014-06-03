@@ -282,4 +282,67 @@
 	efuse@7000f800 {
 		vpp_fuse-supply = <&max77620_sd3>;
 	};
+
+	i2c@7000c500 {
+		hpa2163@6b {
+			compatible = "ti,bq2419x";
+			reg = <0x6b>;
+
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(Z, 0) 0x0>;
+			extcon-name = "bq2419x-extcon";
+
+			charger {
+				status = "disabled";
+				regulator-name = "batt_regulator";
+				regulator-max-microamp = <3000000>;
+				ti,watchdog-timeout = <40>;
+				ti,rtc-alarm-time = <3600>;
+				ti,auto-recharge-time = <1800>;
+				ti,disbale-suspend-during-charging;
+				ti,charge-voltage-limit-millivolt = <4200>;
+				ti,charge-term-current-limit-milliamp = <260>;
+				ti,temp-range = <10 15 60>;
+				ti,charge-current-limit = <1024 2048 5200>;
+				ti,thermal-zone = "battery";
+				ti,temp-polling-time-sec = <5>;
+				ti,ir-comp-voltage-millivolt = <1>;
+				ti,ir-comp-resister-ohm = <70>;
+				consumers {
+					c1 {
+						regulator-consumer-supply = "usb_bat_chg";
+						regulator-consumer-device = "tegra-udc.0";
+					};
+				};
+			};
+
+			vbus {
+				regulator-name = "vbus_regulator";
+				ti,otg-iusb-gpio = <&gpio TEGRA_GPIO(CC, 5) 0>;
+				consumers {
+					c1 {
+						regulator-consumer-supply = "usb_vbus";
+						regulator-consumer-device = "tegra-ehci.0";
+					};
+
+					c2 {
+						regulator-consumer-supply = "usb_vbus";
+						regulator-consumer-device = "tegra-otg";
+					};
+				};
+			};
+		};
+
+		bq27441@55 {
+			status = "disabled";
+			compatible = "ti,bq27441";
+			reg = <0x55>;
+			ti,design-capacity = <7800>;
+			ti,design-energy = <28314>;
+			ti,taper-rate = <167>;
+			ti,terminate-voltage = <3150>;
+			ti,v-at-chg-term = <4200>;
+			ti,tz-name = "battery-temp";
+		};
+	};
 };

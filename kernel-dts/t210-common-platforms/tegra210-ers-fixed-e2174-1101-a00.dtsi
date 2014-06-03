@@ -60,20 +60,6 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			vin-supply = <&vdd_3v3>;
-			consumers {
-				c1 {
-					regulator-consumer-supply = "usb_vbus";
-					regulator-consumer-device = "tegra-ehci.0";
-				};
-				c2 {
-					regulator-consumer-supply = "usb_vbus";
-					regulator-consumer-device = "tegra-otg";
-				};
-				c3 {
-					regulator-consumer-supply = "usb_vbus0";
-					regulator-consumer-device = "tegra-xhci";
-				};
-			};
 		};
 
 		usb1_vbus: regulator@3 {

@@ -97,8 +97,7 @@ static inline void tegra_dpaux_write_field(struct tegra_dc_dp_data *dp,
 					u32 reg, u32 mask, u32 val)
 {
 	u32 reg_val = tegra_dpaux_readl(dp, reg);
-	reg_val &= ~mask;
-	reg_val |= val;
+	reg_val = (reg_val & ~mask) | (val & mask);
 	tegra_dpaux_writel(dp, reg, reg_val);
 }
 
@@ -191,13 +190,26 @@ static inline int tegra_dpaux_wait_transaction(struct tegra_dc_dp_data *dp)
 	return err;
 }
 
+
+/*
+ * To config DPAUX Transaction Control
+ * o Inputs
+ *  - dp    : pointer to DP information
+ *  - cmd   : transaction command DPAUX_DP_AUXCTL_CMD_xxx
+ *  - addr  : transaction address (20 bit sink device AUX reg addr space)
+ *  - p_wrdt: pointer to the write data buffer / NULL:no write data
+ *  - size  : 1-16: number of byte to read/write
+ *            0   : address only transaction
+ * o Outputs
+ *  - return: error status; 0:no error / !0:error
+ */
 static int tegra_dp_aux_tx_config(struct tegra_dc_dp_data *dp,
-				u32 cmd, u32 addr, bool addr_only,
-				u32 data[], u32 size)
+				u32 cmd, u32 addr, u8 *p_wrdt, u32 size)
 {
 	int i;
+	u32  *data = (u32 *)p_wrdt;
 
-	if (size > DP_AUX_MAX_BYTES)
+	if (DP_AUX_MAX_BYTES < size)
 		goto fail;
 
 	switch (cmd) {
@@ -215,18 +227,16 @@ static int tegra_dp_aux_tx_config(struct tegra_dc_dp_data *dp,
 	default:
 		goto fail;
 	};
-
 	tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
 				DPAUX_DP_AUXCTL_CMDLEN_MASK,
-				size);
-
+				size ? size - 1 : 0);
 	tegra_dpaux_write_field(dp, DPAUX_DP_AUXCTL,
-				DPAUX_DP_AUXCTL_ADDRESS_ONLY_MASK,
-				(addr_only ? DPAUX_DP_AUXCTL_ADDRESS_ONLY_TRUE :
-				DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE));
+			DPAUX_DP_AUXCTL_ADDRESS_ONLY_MASK,
+			(0 == size) ? DPAUX_DP_AUXCTL_ADDRESS_ONLY_TRUE :
+				DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE);
 
 	tegra_dpaux_writel(dp, DPAUX_DP_AUXADDR, addr);
-	for (i = 0; data && i < (DP_AUX_MAX_BYTES / 4); ++i)
+	for (i = 0; size && data && i < (DP_AUX_MAX_BYTES / 4); ++i)
 		tegra_dpaux_writel(dp, DPAUX_DP_AUXDATA_WRITE_W(i), data[i]);
 
 	return 0;
@@ -254,7 +264,7 @@ static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 		return -EINVAL;
 	};
 
-	err = tegra_dp_aux_tx_config(dp, cmd, addr, false, (u32 *)data, *size);
+	err = tegra_dp_aux_tx_config(dp, cmd, addr, data, *size);
 	if (err < 0) {
 		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
 		return err;
@@ -291,7 +301,9 @@ static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 		if ((*aux_stat & DPAUX_DP_AUXSTAT_TIMEOUT_ERROR_PENDING) ||
 			(*aux_stat & DPAUX_DP_AUXSTAT_RX_ERROR_PENDING) ||
 			(*aux_stat & DPAUX_DP_AUXSTAT_SINKSTAT_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_NO_STOP_ERROR_PENDING)) {
+			(*aux_stat & DPAUX_DP_AUXSTAT_NO_STOP_ERROR_PENDING) ||
+			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_NACK) ||
+			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_I2CNACK)) {
 			if (timeout_retries-- > 0) {
 				dev_dbg(&dp->dc->ndev->dev,
 					"dp: aux write retry (0x%x) -- %d\n",
@@ -360,10 +372,8 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
-		if (cur_size >= DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES - 1;
-		else
-			cur_size -= 1;
+		if (cur_size > DP_AUX_MAX_BYTES)
+			cur_size = DP_AUX_MAX_BYTES;
 
 		ret = tegra_dc_dpaux_write_chunk_locked(dp, cmd, addr,
 			data, &cur_size, aux_stat);
@@ -403,7 +413,7 @@ static int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
 		return -EINVAL;
 	};
 
-	err = tegra_dp_aux_tx_config(dp, cmd, addr, false, NULL, *size);
+	err = tegra_dp_aux_tx_config(dp, cmd, addr, NULL, *size);
 	if (err < 0) {
 		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
 		return err;
@@ -517,10 +527,8 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
-		if (cur_size >= DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES - 1;
-		else
-			cur_size -= 1;
+		if (cur_size > DP_AUX_MAX_BYTES)
+			cur_size = DP_AUX_MAX_BYTES;
 
 		ret = tegra_dc_dpaux_read_chunk_locked(dp, cmd, addr,
 			data, &cur_size, aux_stat);
@@ -564,18 +572,20 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 	mutex_lock(&dp->dpaux_lock);
 	do {
 		cur_size = *size - finished;
-		if (cur_size >= DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES - 1;
-		else
-			cur_size -= 1;
+		if (cur_size > DP_AUX_MAX_BYTES)
+			cur_size = DP_AUX_MAX_BYTES;
 
-		len = 0;
-		CHECK_RET(tegra_dc_dpaux_write_chunk_locked(dp,
-				DPAUX_DP_AUXCTL_CMD_I2CWR,
-				i2c_addr, &iaddr, &len, aux_stat));
-		CHECK_RET(tegra_dc_dpaux_read_chunk_locked(dp,
+		len = 1;
+		ret = tegra_dc_dpaux_write_chunk_locked(dp,
+			DPAUX_DP_AUXCTL_CMD_I2CWR,
+			i2c_addr, &iaddr, &len, aux_stat);
+		if (!ret) {
+			ret = tegra_dc_dpaux_read_chunk_locked(dp,
 				DPAUX_DP_AUXCTL_CMD_I2CRD,
-				i2c_addr, data, &cur_size, aux_stat));
+				i2c_addr, data, &cur_size, aux_stat);
+		}
+		if (ret)
+			break;
 
 		iaddr += cur_size;
 		data += cur_size;
@@ -590,7 +600,7 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 static int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 *data_ptr)
 {
-	u32 size = 0;
+	u32 size = 1;
 	u32 status = 0;
 	int ret = 0;
 
@@ -653,7 +663,7 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 static int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 data)
 {
-	u32 size = 0;
+	u32 size = 1;
 	u32 status = 0;
 	int ret;
 

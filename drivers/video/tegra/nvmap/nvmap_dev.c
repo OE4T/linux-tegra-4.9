@@ -542,21 +542,10 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 
 static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 {
-	struct nvmap_vma_priv *priv;
-
-	/* after NVMAP_IOC_MMAP, the handle that is mapped by this VMA
-	 * will be stored in vm_private_data and faulted in. until the
-	 * ioctl is made, the VMA is mapped no-access */
-	vma->vm_private_data = NULL;
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
+	BUG_ON(vma->vm_private_data != NULL);
 	vma->vm_flags |= (VM_SHARED | VM_DONTEXPAND |
 			  VM_DONTDUMP | VM_DONTCOPY);
 	vma->vm_ops = &nvmap_vma_ops;
-	vma->vm_private_data = priv;
 	return 0;
 }
 
@@ -689,61 +678,60 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv;
 	struct nvmap_handle *h;
-	struct nvmap_vma_list *vma_list;
+	struct nvmap_vma_list *vma_list, *tmp;
 
 	priv = vma->vm_private_data;
 	BUG_ON(!priv);
 	BUG_ON(!priv->handle);
 
-	h = priv->handle;
-	if (h->heap_pgalloc) {
-		vma_list = kmalloc(sizeof(*vma_list), GFP_KERNEL);
-		if (!vma_list) {
-			WARN(1, "vma not tracked");
-			goto finish;
-		}
-		vma_list->vma = vma;
-		INIT_LIST_HEAD(&vma_list->list);
-		mutex_lock(&h->lock);
-		list_add(&vma_list->list, &h->pgalloc.vmas);
-		mutex_unlock(&h->lock);
-	}
-
-finish:
 	atomic_inc(&priv->count);
+	h = priv->handle;
+
+	vma_list = kmalloc(sizeof(*vma_list), GFP_KERNEL);
+	if (vma_list) {
+		mutex_lock(&h->lock);
+		list_for_each_entry(tmp, &h->vmas, list)
+			BUG_ON(tmp->vma == vma);
+
+		vma_list->vma = vma;
+		list_add(&vma_list->list, &h->vmas);
+		mutex_unlock(&h->lock);
+	} else {
+		WARN(1, "vma not tracked");
+	}
 }
 
 static void nvmap_vma_close(struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv = vma->vm_private_data;
-	struct nvmap_vma_list *vma_list, *tmp;
+	struct nvmap_vma_list *vma_list;
 	struct nvmap_handle *h;
+	bool vma_found = false;
 
 	if (!priv)
-		goto finish;
+		return;
 
-	if (!priv->handle || !priv->handle->heap_pgalloc)
-		goto try_to_free_priv;
+	BUG_ON(!priv->handle);
 
 	h = priv->handle;
 	mutex_lock(&h->lock);
-	list_for_each_entry_safe(vma_list, tmp, &h->pgalloc.vmas, list) {
+	list_for_each_entry(vma_list, &h->vmas, list) {
 		if (vma_list->vma != vma)
 			continue;
 		list_del(&vma_list->list);
 		kfree(vma_list);
+		vma_found = true;
 		break;
 	}
+	BUG_ON(!vma_found);
 	mutex_unlock(&h->lock);
 
-try_to_free_priv:
-	if (!atomic_dec_return(&priv->count)) {
+	if (__atomic_add_unless(&priv->count, -1, 0) == 1) {
 		if (priv->handle)
 			nvmap_handle_put(priv->handle);
+		vma->vm_private_data = NULL;
 		kfree(priv);
 	}
-finish:
-	vma->vm_private_data = NULL;
 }
 
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)

@@ -195,7 +195,7 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	size = PAGE_ALIGN((offset & ~PAGE_MASK) + size);
 
 	mutex_lock(&handle->lock);
-	vmas = &handle->pgalloc.vmas;
+	vmas = &handle->vmas;
 	list_for_each_entry(vma_list, vmas, list) {
 		struct nvmap_vma_priv *priv;
 		u32 vm_size = size;

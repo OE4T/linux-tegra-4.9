@@ -98,7 +98,6 @@ struct nvmap_vma_list {
 struct nvmap_pgalloc {
 	struct page **pages;
 	bool contig;			/* contiguous system memory */
-	struct list_head vmas;
 	atomic_t ndirty;	/* count number of dirty pages */
 };
 
@@ -128,6 +127,7 @@ struct nvmap_handle {
 	bool alloc;		/* handle has memory allocated */
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
+	struct list_head vmas;	/* list of all user vma's */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
 	void (*nvhost_priv_delete)(void *priv);

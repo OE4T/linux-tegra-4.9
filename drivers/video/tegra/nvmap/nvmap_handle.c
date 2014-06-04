@@ -233,7 +233,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
-	INIT_LIST_HEAD(&h->pgalloc.vmas);
 	atomic_set(&h->pgalloc.ndirty, 0);
 	return 0;
 
@@ -514,6 +513,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	h->size = h->orig_size = size;
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;
 	mutex_init(&h->lock);
+	INIT_LIST_HEAD(&h->vmas);
 
 	/*
 	 * This takes out 1 ref on the dambuf. This corresponds to the

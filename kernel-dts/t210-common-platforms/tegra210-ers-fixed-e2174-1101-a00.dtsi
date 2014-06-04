@@ -43,9 +43,6 @@
 					regulator-consumer-device = "tegra-ehci.2";
 				};
 				c4 {
-					regulator-consumer-supply = "avdd_lcd";
-				};
-				c5 {
 					regulator-consumer-supply = "vddio_sd_slot";
 					regulator-consumer-device = "sdhci-tegra.3";
 				};
@@ -100,12 +97,12 @@
 			};
 		};
 
-		edp_lcd: regulator@5 {
+		max77620_gpio7: regulator@5 {
 			compatible = "regulator-fixed-sync";
 			reg = <5>;
-			regulator-name = "edp-lcd";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
+			regulator-name = "max77620-gpio7";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
 			regulator-always-on;
 			gpio = <&max77620 7 0>;
 			enable-active-high;
@@ -177,6 +174,57 @@
 				c0 {
 					regulator-consumer-supply = "vdd_hdmi_5v0";
 					regulator-consumer-device = "tegradc.1";
+				};
+			};
+		};
+
+		edp_1v05: regulator@11 {
+			compatible = "regulator-fixed-sync";
+			reg = <12>;
+			regulator-name = "edp-1v05";
+			regulator-min-microvolt = <1050000>;
+			regulator-max-microvolt = <1050000>;
+			vin-supply = <&max77620_gpio7>;
+		};
+
+		avdd_lcd: regulator@12 {
+			compatible = "regulator-fixed-sync";
+			reg = <13>;
+			regulator-name = "avdd-lcd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			vin-supply = <&max77620_gpio7>;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "avdd_lcd";
+					regulator-consumer-device = "tegradc.0";
+				};
+			};
+		};
+
+		dsi_csi: regulator@13 {
+			compatible = "regulator-fixed-sync";
+			reg = <14>;
+			regulator-name = "dsi-csi";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			vin-supply = <&max77620_gpio7>;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "avdd_dsi_csi";
+					regulator-consumer-device = "tegradc.0";
+				};
+				c1 {
+					regulator-consumer-supply = "avdd_dsi_csi";
+					regulator-consumer-device = "tegradc.1";
+				};
+				c2 {
+					regulator-consumer-supply = "avdd_dsi_csi";
+					regulator-consumer-device = "vi.0";
+				};
+				c3 {
+					regulator-consumer-supply = "avdd_dsi_csi";
+					regulator-consumer-device = "vi.1";
 				};
 			};
 		};

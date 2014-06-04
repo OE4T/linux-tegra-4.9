@@ -259,7 +259,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	struct device_node *np = dc->ndev->dev.of_node;
 
 	struct device_node *np_sor =
-		of_find_node_by_path("host1x/sor");
+		of_find_node_by_path("/host1x/sor");
 
 	sor = devm_kzalloc(&dc->ndev->dev, sizeof(*sor), GFP_KERNEL);
 	if (!sor) {
@@ -369,7 +369,7 @@ int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor, int pu_pd)
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 {
 	struct device_node *np_sor =
-		of_find_node_by_path("host1x/sor");
+		of_find_node_by_path("/host1x/sor");
 	clk_put(sor->sor_clk);
 	devm_iounmap(&sor->dc->ndev->dev, sor->base);
 	devm_release_mem_region(&sor->dc->ndev->dev,

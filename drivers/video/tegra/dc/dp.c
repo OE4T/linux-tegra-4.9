@@ -1408,7 +1408,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	struct device_node *np = dc->ndev->dev.of_node;
 
 	struct device_node *np_dp =
-		of_find_node_by_path("host1x/dpaux");
+		of_find_node_by_path("/host1x/dpaux");
 
 	dp = devm_kzalloc(&dc->ndev->dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp)
@@ -2180,7 +2180,7 @@ error_enable:
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
 	struct device_node *np_dp =
-		of_find_node_by_path("host1x/dpaux");
+		of_find_node_by_path("/host1x/dpaux");
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	if (dp->sor)

@@ -234,6 +234,25 @@ static void nvhost_sync_pt_value_str(struct sync_pt *sync_pt, char *str,
 		snprintf(str, size, "0");
 }
 
+static void nvhost_sync_get_pt_name(struct sync_pt *sync_pt, char *str,
+		int size)
+{
+	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(sync_pt);
+	struct nvhost_sync_timeline *obj;
+
+	/* shared data may not be available yet */
+	if (!pt)
+		return;
+
+	obj = pt->obj;
+
+	if (obj->id != NVSYNCPT_INVALID)
+		snprintf(str, size, "%s",
+			nvhost_syncpt_get_name_from_id(obj->id));
+	else
+		snprintf(str, size, "0");
+}
+
 static int nvhost_sync_fill_driver_data(struct sync_pt *sync_pt,
 		void *data, int size)
 {
@@ -259,6 +278,7 @@ static const struct sync_timeline_ops nvhost_sync_timeline_ops = {
 	.fill_driver_data = nvhost_sync_fill_driver_data,
 	.timeline_value_str = nvhost_sync_timeline_value_str,
 	.pt_value_str = nvhost_sync_pt_value_str,
+	.get_pt_name = nvhost_sync_get_pt_name,
 };
 
 struct sync_fence *nvhost_sync_fdget(int fd)

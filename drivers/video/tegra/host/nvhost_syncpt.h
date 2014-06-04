@@ -141,6 +141,7 @@ const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id);
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp);
 void nvhost_syncpt_reset_client(struct platform_device *pdev);
 
+const char *nvhost_syncpt_get_name_from_id(int id);
 int nvhost_syncpt_read_check(struct nvhost_syncpt *sp, u32 id, u32 *val);
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id);
 u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id);

@@ -42,6 +42,7 @@ struct quadd_callchain {
 
 	unsigned long curr_sp;
 	unsigned long curr_fp;
+	unsigned long curr_pc;
 };
 
 struct quadd_ctx;
@@ -72,5 +73,10 @@ is_vma_addr(unsigned long addr, struct vm_area_struct *vma,
 		addr < vma->vm_end - nbytes;
 }
 
+static inline int
+validate_pc_addr(unsigned long addr, unsigned long nbytes)
+{
+	return addr && addr < TASK_SIZE - nbytes;
+}
 
 #endif  /* __QUADD_BACKTRACE_H */

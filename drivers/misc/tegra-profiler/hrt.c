@@ -24,9 +24,11 @@
 #include <linux/interrupt.h>
 #include <linux/err.h>
 #include <linux/nsproxy.h>
+#include <clocksource/arm_arch_timer.h>
 
 #include <asm/cputype.h>
 #include <asm/irq_regs.h>
+#include <asm/arch_timer.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -91,12 +93,31 @@ static void init_hrtimer(struct quadd_cpu_context *cpu_ctx)
 	cpu_ctx->hrtimer.function = hrtimer_handler;
 }
 
-u64 quadd_get_time(void)
+static inline u64 get_posix_clock_monotonic_time(void)
 {
 	struct timespec ts;
 
 	do_posix_clock_monotonic_gettime(&ts);
 	return timespec_to_ns(&ts);
+}
+
+static inline u64 get_arch_time(struct timecounter *tc)
+{
+	cycle_t value;
+	const struct cyclecounter *cc = tc->cc;
+
+	value = cc->read(cc);
+	return cyclecounter_cyc2ns(cc, value);
+}
+
+u64 quadd_get_time(void)
+{
+	struct timecounter *tc = hrt.tc;
+
+	if (tc)
+		return get_arch_time(tc);
+	else
+		return get_posix_clock_monotonic_time();
 }
 
 static void put_header(void)
@@ -616,6 +637,7 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 		hrt.ma_period = 0;
 
 	atomic64_set(&hrt.counter_samples, 0);
+	hrt.tc = arch_timer_get_timecounter();
 
 	hrt.cpu_ctx = alloc_percpu(struct quadd_cpu_context);
 	if (!hrt.cpu_ctx)

@@ -434,6 +434,9 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	extra |= QUADD_COMM_CAP_EXTRA_UNWIND_MIXED;
 	extra |= QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE;
 
+	if (ctx.hrt->tc)
+		extra |= QUADD_COMM_CAP_EXTRA_USE_ARCH_TIMER;
+
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 }
 

@@ -111,7 +111,7 @@ static int therm_est_subdev_match(struct thermal_zone_device *thz, void *data)
 static int therm_est_subdev_get_temp(struct thermal_zone_device *thz,
 					long *temp)
 {
-	if (!thz || thz->ops->get_temp(thz, temp))
+	if (!thz || !thz->ops->get_temp || thz->ops->get_temp(thz, temp))
 		*temp = 25000;
 
 	return 0;

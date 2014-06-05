@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	27
+#define QUADD_SAMPLES_VERSION	28
 #define QUADD_IO_VERSION	12
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -40,6 +40,7 @@
 #define QUADD_SAMPLE_VERSION_UNWIND_MIXED	25
 #define QUADD_SAMPLE_VERSION_UNW_ENTRY_TYPE	26
 #define QUADD_SAMPLE_VERSION_USE_ARCH_TIMER	27
+#define QUADD_SAMPLE_VERSION_SCHED_SAMPLES	28
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -126,6 +127,7 @@ enum quadd_record_type {
 	QUADD_RECORD_TYPE_HEADER,
 	QUADD_RECORD_TYPE_POWER_RATE,
 	QUADD_RECORD_TYPE_ADDITIONAL_SAMPLE,
+	QUADD_RECORD_TYPE_SCHED,
 };
 
 enum quadd_event_source {
@@ -238,6 +240,18 @@ struct quadd_additional_sample {
 	u16 extra_length;
 };
 
+struct quadd_sched_data {
+	u32 pid;
+	u64 time;
+
+	u32	cpu:6,
+		lp_mode:1,
+		sched_in:1,
+		reserved:24;
+
+	u32 data[2];
+};
+
 enum {
 	QM_DEBUG_SAMPLE_TYPE_SCHED_IN = 1,
 	QM_DEBUG_SAMPLE_TYPE_SCHED_OUT,
@@ -302,6 +316,7 @@ struct quadd_record_data {
 		struct quadd_debug_data		debug;
 		struct quadd_header_data	hdr;
 		struct quadd_power_rate_data	power_rate;
+		struct quadd_sched_data		sched;
 		struct quadd_additional_sample	additional_sample;
 	};
 } __aligned(4);

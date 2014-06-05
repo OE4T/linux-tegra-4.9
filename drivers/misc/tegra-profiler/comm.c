@@ -338,6 +338,10 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		length_extra = record.additional_sample.extra_length;
 		break;
 
+	case QUADD_RECORD_TYPE_SCHED:
+		length_extra = 0;
+		break;
+
 	default:
 		goto out;
 	}

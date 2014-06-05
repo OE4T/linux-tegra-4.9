@@ -183,6 +183,31 @@ void quadd_put_sample(struct quadd_record_data *data,
 	atomic64_inc(&hrt.counter_samples);
 }
 
+static void
+put_sched_sample(struct task_struct *task, int is_sched_in)
+{
+	unsigned int cpu, flags;
+	struct quadd_record_data record;
+	struct quadd_sched_data *s = &record.sched;
+
+	record.record_type = QUADD_RECORD_TYPE_SCHED;
+
+	cpu = quadd_get_processor_id(NULL, &flags);
+	s->cpu = cpu;
+	s->lp_mode = (flags & QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP) ? 1 : 0;
+
+	s->sched_in = is_sched_in ? 1 : 0;
+	s->time = quadd_get_time();
+	s->pid = task->pid;
+
+	s->reserved = 0;
+
+	s->data[0] = 0;
+	s->data[1] = 0;
+
+	quadd_put_sample(&record, NULL, 0);
+}
+
 static int get_sample_data(struct quadd_sample_data *sample,
 			   struct pt_regs *regs,
 			   struct task_struct *task)
@@ -453,6 +478,8 @@ void __quadd_task_sched_in(struct task_struct *prev,
 */
 
 	if (is_profile_process(task)) {
+		put_sched_sample(task, 1);
+
 		add_active_thread(cpu_ctx, task->pid, task->tgid);
 		atomic_inc(&cpu_ctx->nr_active);
 
@@ -503,6 +530,8 @@ void __quadd_task_sched_out(struct task_struct *prev,
 			if (ctx->pmu)
 				ctx->pmu->stop();
 		}
+
+		put_sched_sample(prev, 0);
 	}
 }
 

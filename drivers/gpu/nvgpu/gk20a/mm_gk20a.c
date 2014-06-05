@@ -3020,51 +3020,6 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
 		fb_mmu_debug_ctrl_debug_enabled_v();
 }
 
-static int gk20a_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
-					    const unsigned int msec)
-{
-	unsigned long timeout;
-
-	timeout = jiffies + msecs_to_jiffies(msec);
-	while (1) {
-		u32 val;
-
-		val = gk20a_readl(g, fb_mmu_vpr_info_r());
-		if (fb_mmu_vpr_info_fetch_v(val) ==
-		    fb_mmu_vpr_info_fetch_false_v())
-			break;
-
-		if (tegra_platform_is_silicon() &&
-				WARN_ON(time_after(jiffies, timeout)))
-			return -ETIME;
-	}
-
-	return 0;
-}
-
-int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g)
-{
-	int ret = 0;
-
-	gk20a_busy_noresume(g->dev);
-	if (!pm_runtime_active(&g->dev->dev))
-		goto fail;
-
-	if (gk20a_mm_mmu_vpr_info_fetch_wait(g, 5)) {
-		ret = -ETIME;
-		goto fail;
-	}
-
-	gk20a_writel(g, fb_mmu_vpr_info_r(),
-		     fb_mmu_vpr_info_fetch_true_v());
-
-	ret = gk20a_mm_mmu_vpr_info_fetch_wait(g, 5);
-
- fail:
-	gk20a_idle(g->dev);
-	return ret;
-}
-
 void gk20a_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gk20a_vm_put_empty;

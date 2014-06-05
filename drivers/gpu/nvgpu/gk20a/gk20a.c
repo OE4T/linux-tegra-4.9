@@ -1738,20 +1738,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	return 0;
 }
 
-int nvhost_vpr_info_fetch(void)
-{
-	struct gk20a *g = get_gk20a(to_platform_device(
-			bus_find_device_by_name(&platform_bus_type,
-			NULL, "gk20a.0")));
-
-	if (!g) {
-		pr_info("gk20a ins't ready yet\n");
-		return 0;
-	}
-
-	return gk20a_mm_mmu_vpr_info_fetch(g);
-}
-
 static const struct firmware *
 do_request_firmware(struct device *dev, const char *prefix, const char *fw_name)
 {

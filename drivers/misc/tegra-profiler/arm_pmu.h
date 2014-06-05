@@ -28,9 +28,17 @@ struct quadd_pmu_event_info {
 	struct list_head list;
 };
 
+#define QUADD_ARCH_NAME_MAX	64
+
+struct quadd_arch_info {
+	int type;
+	int ver;
+
+	char name[QUADD_ARCH_NAME_MAX];
+};
+
 struct quadd_pmu_ctx {
-	int arch;
-	char arch_name[64];
+	struct quadd_arch_info arch;
 
 	u32 counters_mask;
 

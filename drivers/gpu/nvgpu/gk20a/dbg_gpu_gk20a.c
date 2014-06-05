@@ -299,9 +299,8 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "%s", dev_name(dbg_s->dev));
 
 	/* unbind if it was bound */
-	if (!dbg_s->ch)
-		return 0;
-	dbg_unbind_channel_gk20a(dbg_s);
+	if (dbg_s->ch)
+		dbg_unbind_channel_gk20a(dbg_s);
 
 	kfree(dbg_s);
 	return 0;

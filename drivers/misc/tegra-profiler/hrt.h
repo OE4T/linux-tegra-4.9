@@ -58,6 +58,7 @@ struct quadd_hrt_ctx {
 	unsigned long rss_size_prev;
 
 	struct timecounter *tc;
+	unsigned int unw_method;
 };
 
 #define QUADD_HRT_MIN_FREQ	100

@@ -159,6 +159,8 @@ static void put_header(void)
 	hdr->reserved = 0;
 	hdr->extra_length = 0;
 
+	hdr->reserved |= hrt.unw_method << QUADD_HDR_UNW_METHOD_SHIFT;
+
 	if (pmu)
 		nr_events += pmu->get_current_events(events, max_events);
 
@@ -338,9 +340,9 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	vec_idx++;
 
 	s->reserved = 0;
-	cc->unw_method = QUADD_URC_SUCCESS;
 
 	if (ctx->param.backtrace) {
+		cc->unw_method = hrt.unw_method;
 		bt_size = quadd_get_user_callchain(user_regs, cc, ctx, task);
 
 		if (!bt_size && !user_mode(regs)) {
@@ -600,6 +602,15 @@ int quadd_hrt_start(void)
 			return err;
 		}
 	}
+
+	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
+		hrt.unw_method = QUADD_UNW_METHOD_MIXED;
+	else if (extra & QUADD_PARAM_EXTRA_BT_UNWIND_TABLES)
+		hrt.unw_method = QUADD_UNW_METHOD_EHT;
+	else if (extra & QUADD_PARAM_EXTRA_BT_FP)
+		hrt.unw_method = QUADD_UNW_METHOD_FP;
+	else
+		hrt.unw_method = QUADD_UNW_METHOD_NONE;
 
 	if (ctx->pl310)
 		ctx->pl310->start();

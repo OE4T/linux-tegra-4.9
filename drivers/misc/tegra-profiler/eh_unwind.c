@@ -122,12 +122,6 @@ validate_stack_addr(unsigned long addr,
 }
 
 static inline int
-validate_pc_addr(unsigned long addr, unsigned long nbytes)
-{
-	return addr && addr < TASK_SIZE - nbytes;
-}
-
-static inline int
 validate_mmap_addr(struct quadd_extabs_mmap *mmap,
 		   unsigned long addr, unsigned long nbytes)
 {
@@ -949,30 +943,18 @@ unwind_frame(struct ex_region_info *ri,
 static void
 unwind_backtrace(struct quadd_callchain *cc,
 		 struct ex_region_info *ri,
-		 struct pt_regs *regs,
+		 struct stackframe *frame,
 		 struct vm_area_struct *vma_sp,
 		 struct task_struct *task)
 {
 	unsigned int unw_type;
 	struct ex_region_info ri_new;
-	struct stackframe frame;
-
-#ifdef CONFIG_ARM64
-	frame.fp_thumb = regs->compat_usr(7);
-	frame.fp_arm = regs->compat_usr(11);
-#else
-	frame.fp_thumb = regs->ARM_r7;
-	frame.fp_arm = regs->ARM_fp;
-#endif
-
-	frame.pc = instruction_pointer(regs);
-	frame.sp = quadd_user_stack_pointer(regs);
-	frame.lr = quadd_user_link_register(regs);
 
 	cc->unw_rc = QUADD_URC_FAILURE;
 
 	pr_debug("fp_arm: %#lx, fp_thumb: %#lx, sp: %#lx, lr: %#lx, pc: %#lx\n",
-		 frame.fp_arm, frame.fp_thumb, frame.sp, frame.lr, frame.pc);
+		 frame->fp_arm, frame->fp_thumb,
+		 frame->sp, frame->lr, frame->pc);
 	pr_debug("vma_sp: %#lx - %#lx, length: %#lx\n",
 		 vma_sp->vm_start, vma_sp->vm_end,
 		 vma_sp->vm_end - vma_sp->vm_start);
@@ -980,19 +962,19 @@ unwind_backtrace(struct quadd_callchain *cc,
 	while (1) {
 		long err;
 		int nr_added;
-		unsigned long where = frame.pc;
+		unsigned long where = frame->pc;
 		struct vm_area_struct *vma_pc;
 		struct mm_struct *mm = task->mm;
 
 		if (!mm)
 			break;
 
-		if (!validate_stack_addr(frame.sp, vma_sp, sizeof(u32))) {
+		if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32))) {
 			cc->unw_rc = -QUADD_URC_SP_INCORRECT;
 			break;
 		}
 
-		vma_pc = find_vma(mm, frame.pc);
+		vma_pc = find_vma(mm, frame->pc);
 		if (!vma_pc)
 			break;
 
@@ -1006,7 +988,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			ri = &ri_new;
 		}
 
-		err = unwind_frame(ri, &frame, vma_sp, &unw_type);
+		err = unwind_frame(ri, frame, vma_sp, &unw_type);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
 			cc->unw_rc = -err;
@@ -1014,12 +996,13 @@ unwind_backtrace(struct quadd_callchain *cc,
 		}
 
 		pr_debug("function at [<%08lx>] from [<%08lx>]\n",
-			 where, frame.pc);
+			 where, frame->pc);
 
-		cc->curr_sp = frame.sp;
-		cc->curr_fp = frame.fp_arm;
+		cc->curr_sp = frame->sp;
+		cc->curr_fp = frame->fp_arm;
+		cc->curr_pc = frame->pc;
 
-		nr_added = quadd_callchain_store(cc, frame.pc, unw_type);
+		nr_added = quadd_callchain_store(cc, frame->pc, unw_type);
 		if (nr_added == 0)
 			break;
 	}
@@ -1031,13 +1014,12 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 			    struct task_struct *task)
 {
 	long err;
-	unsigned long ip, sp;
+	int nr_prev = cc->nr;
+	unsigned long ip, sp, lr;
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
 	struct ex_region_info ri;
-
-	cc->unw_method = QUADD_UNW_METHOD_EHT;
-	cc->unw_rc = QUADD_URC_FAILURE;
+	struct stackframe frame;
 
 #ifdef CONFIG_ARM64
 	if (!compat_user_mode(regs)) {
@@ -1046,11 +1028,38 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	}
 #endif
 
+	if (cc->unw_rc == QUADD_URC_LEVEL_TOO_DEEP)
+		return nr_prev;
+
+	cc->unw_rc = QUADD_URC_FAILURE;
+
 	if (!regs || !mm)
 		return 0;
 
-	ip = instruction_pointer(regs);
-	sp = quadd_user_stack_pointer(regs);
+	if (nr_prev > 0) {
+		ip = cc->curr_pc;
+		sp = cc->curr_sp;
+		lr = 0;
+
+		frame.fp_thumb = 0;
+		frame.fp_arm = cc->curr_fp;
+	} else {
+		ip = instruction_pointer(regs);
+		sp = quadd_user_stack_pointer(regs);
+		lr = quadd_user_link_register(regs);
+
+#ifdef CONFIG_ARM64
+		frame.fp_thumb = regs->compat_usr(7);
+		frame.fp_arm = regs->compat_usr(11);
+#else
+		frame.fp_thumb = regs->ARM_r7;
+		frame.fp_arm = regs->ARM_fp;
+#endif
+	}
+
+	frame.pc = ip;
+	frame.sp = sp;
+	frame.lr = lr;
 
 	vma = find_vma(mm, ip);
 	if (!vma)
@@ -1066,9 +1075,51 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 		return 0;
 	}
 
-	unwind_backtrace(cc, &ri, regs, vma_sp, task);
+	unwind_backtrace(cc, &ri, &frame, vma_sp, task);
 
 	return cc->nr;
+}
+
+int
+quadd_is_ex_entry_exist(struct pt_regs *regs,
+			unsigned long addr,
+			struct task_struct *task)
+{
+	long err;
+	u32 value;
+	const struct unwind_idx *idx;
+	struct ex_region_info ri;
+	struct vm_area_struct *vma;
+	struct mm_struct *mm = task->mm;
+
+	if (!regs || !mm)
+		return 0;
+
+#ifdef CONFIG_ARM64
+	if (!compat_user_mode(regs))
+		return 0;
+#endif
+
+	vma = find_vma(mm, addr);
+	if (!vma)
+		return 0;
+
+	err = __search_ex_region(vma->vm_start, &ri);
+	if (err)
+		return 0;
+
+	idx = unwind_find_idx(&ri, addr);
+	if (IS_ERR_OR_NULL(idx))
+		return 0;
+
+	err = read_mmap_data(ri.mmap, &idx->insn, &value);
+	if (err < 0)
+		return 0;
+
+	if (value == 1)
+		return 0;
+
+	return 1;
 }
 
 int quadd_unwind_start(struct task_struct *task)

@@ -39,4 +39,9 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 			   struct quadd_extabs_mmap *mmap);
 void quadd_unwind_delete_mmap(struct quadd_extabs_mmap *mmap);
 
+int
+quadd_is_ex_entry_exist(struct pt_regs *regs,
+			unsigned long addr,
+			struct task_struct *task);
+
 #endif	/* __QUADD_EH_UNWIND_H__ */

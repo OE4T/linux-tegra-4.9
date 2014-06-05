@@ -2348,6 +2348,9 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
 
+	if (platform->secure_buffer.destroy)
+		platform->secure_buffer.destroy(pdev, &platform->secure_buffer);
+
 	gk20a_dbg_info("golden_image_size : %d",
 		   gr->ctx_vars.golden_image_size);
 

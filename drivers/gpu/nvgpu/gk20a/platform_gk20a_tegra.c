@@ -93,12 +93,41 @@ int FXDIV(int x, int y)
 	return (x << pos) / y;
 }
 
+static void gk20a_tegra_secure_page_destroy(struct platform_device *pdev,
+				       struct secure_page_buffer *secure_buffer)
+{
+	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
+			(void *)(uintptr_t)secure_buffer->iova,
+			secure_buffer->iova, &secure_buffer->attrs);
+}
+
+static int gk20a_tegra_secure_page_alloc(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
+	size_t size = PAGE_SIZE;
+
+	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
+				      DMA_MEMORY_NOMAP, &attrs);
+	if (dma_mapping_error(&tegra_vpr_dev, iova))
+		return -ENOMEM;
+
+	secure_buffer->size = size;
+	secure_buffer->iova = iova;
+	secure_buffer->attrs = attrs;
+	secure_buffer->destroy = gk20a_tegra_secure_page_destroy;
+
+	return 0;
+}
+
 static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
 				       struct gr_ctx_buffer_desc *desc)
 {
 	gk20a_free_sgtable(&desc->sgt);
 	dma_free_attrs(&tegra_vpr_dev, desc->size,
-			(void *)(uintptr_t)&desc->iova,
+			(void *)(uintptr_t)desc->iova,
 			desc->iova, &desc->attrs);
 }
 
@@ -113,10 +142,8 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 	struct page *page;
 	int err = 0;
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      GFP_KERNEL, &attrs);
+				      DMA_MEMORY_NOMAP, &attrs);
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
@@ -524,6 +551,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
+	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 
@@ -551,6 +579,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
+	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 
@@ -574,6 +603,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
+	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 };
 

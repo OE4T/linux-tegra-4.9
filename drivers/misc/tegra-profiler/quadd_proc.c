@@ -24,6 +24,7 @@
 #include "quadd.h"
 #include "version.h"
 #include "quadd_proc.h"
+#include "arm_pmu.h"
 
 #define YES_NO(x) ((x) ? "yes" : "no")
 
@@ -58,6 +59,10 @@ static int show_capabilities(struct seq_file *f, void *offset)
 	struct quadd_comm_cap *cap = &ctx->cap;
 	struct quadd_events_cap *event = &cap->events_cap;
 	unsigned int extra = cap->reserved[QUADD_COMM_CAP_IDX_EXTRA];
+	struct quadd_arch_info *arch = NULL;
+
+	if (ctx->pmu)
+		arch = ctx->pmu->get_arch();
 
 	seq_printf(f, "pmu:                                   %s\n",
 		   YES_NO(cap->pmu));
@@ -69,7 +74,7 @@ static int show_capabilities(struct seq_file *f, void *offset)
 	seq_printf(f, "l2 cache:                              %s\n",
 		   YES_NO(cap->l2_cache));
 	if (cap->l2_cache) {
-		seq_printf(f, "multiple l2 events:             %s\n",
+		seq_printf(f, "multiple l2 events:                    %s\n",
 			   YES_NO(cap->l2_multiple_events));
 	}
 
@@ -91,6 +96,15 @@ static int show_capabilities(struct seq_file *f, void *offset)
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNWIND_MIXED));
 	seq_printf(f, "information about unwind entry:        %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE));
+
+	seq_puts(f, "\n");
+
+	if (arch) {
+		seq_printf(f, "pmu arch:                              %s\n",
+			arch->name);
+		seq_printf(f, "pmu arch version:                      %d\n",
+			arch->ver);
+	}
 
 	seq_puts(f, "\n");
 	seq_puts(f, "Supported events:\n");

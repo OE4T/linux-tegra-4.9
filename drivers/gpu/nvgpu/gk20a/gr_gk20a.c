@@ -4898,13 +4898,16 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	u32 gr_class_error =
+		gr_class_error_code_v(gk20a_readl(g, gr_class_error_r()));
 	gk20a_dbg_fn("");
 
 	gk20a_set_error_notifier(ch,
 			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
-		   "class error 0x%08x, offset 0x%08x",
-		   isr_data->class_num, isr_data->offset);
+		   "class error 0x%08x, offset 0x%08x, unhandled intr 0x%08x for channel %u\n",
+		   isr_data->class_num, isr_data->offset,
+		   gr_class_error, ch->hw_chid);
 	return -EINVAL;
 }
 

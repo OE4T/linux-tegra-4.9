@@ -952,6 +952,20 @@ static inline void of_thermal_free_zone(struct __thermal_zone *tz)
 	kfree(tz);
 }
 
+static int of_parse_thermal_zone_params(struct device_node *np,
+		struct thermal_zone_params *tzp)
+{
+	const char *pstr;
+
+	pstr =  of_get_property(np, "governer-name", NULL);
+	if (pstr) {
+		int len = strlen(pstr);
+		len = min(len, THERMAL_NAME_LENGTH);
+		strncpy(tzp->governor_name, pstr, len);
+	}
+	return 0;
+}
+
 /**
  * of_parse_thermal_zones - parse device tree thermal data
  *
@@ -981,6 +995,7 @@ int __init of_parse_thermal_zones(void)
 		struct thermal_zone_params *tzp;
 		int i, mask = 0;
 		u32 prop;
+		struct device_node *param_child;
 
 		tz = thermal_of_build_thermal_zone(child);
 		if (IS_ERR(tz)) {
@@ -1000,8 +1015,13 @@ int __init of_parse_thermal_zones(void)
 			goto exit_free;
 		}
 
-		/* No hwmon because there might be hwmon drivers registering */
-		tzp->no_hwmon = true;
+		/* Thermal zone params */
+		param_child = of_get_child_by_name(child, "thermal-zone-params");
+		if(!param_child)
+			/* No hwmon because there might be hwmon drivers registering */
+			tzp->no_hwmon = true;
+		else
+			of_parse_thermal_zone_params(param_child, tzp);
 
 		if (!of_property_read_u32(child, "sustainable-power", &prop))
 			tzp->sustainable_power = prop;

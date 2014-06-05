@@ -2027,12 +2027,14 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	if ((dc->mode.h_active == 720) && ((dc->mode.v_active == 480) || (dc->mode.v_active == 576)))
 		tegra_hdmi_writel(hdmi,
-				  (dc->ndev->id ? HDMI_SRC_DISPLAYB : HDMI_SRC_DISPLAYA) |
+				  (dc->ctrl_num ? HDMI_SRC_DISPLAYB :
+				   HDMI_SRC_DISPLAYA) |
 				  ARM_VIDEO_RANGE_FULL,
 				  HDMI_NV_PDISP_INPUT_CONTROL);
 	else
 		tegra_hdmi_writel(hdmi,
-				  (dc->ndev->id ? HDMI_SRC_DISPLAYB : HDMI_SRC_DISPLAYA) |
+				  (dc->ctrl_num ? HDMI_SRC_DISPLAYB :
+				   HDMI_SRC_DISPLAYA) |
 				  ARM_VIDEO_RANGE_LIMITED,
 				  HDMI_NV_PDISP_INPUT_CONTROL);
 

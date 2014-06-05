@@ -693,27 +693,27 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 	int i;
 	struct tegra_dc_feature_entry *entry;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	if (!dc->ndev->id)
+	if (!dc->ctrl_num)
 		dc->feature = &t20_feature_table_a;
 	else
 		dc->feature = &t20_feature_table_b;
 #elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	if (!dc->ndev->id)
+	if (!dc->ctrl_num)
 		dc->feature = &t30_feature_table_a;
 	else
 		dc->feature = &t30_feature_table_b;
 #elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	if (!dc->ndev->id)
+	if (!dc->ctrl_num)
 		dc->feature = &t114_feature_table_a;
 	else
 		dc->feature = &t114_feature_table_b;
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	if (!dc->ndev->id)
+	if (!dc->ctrl_num)
 		dc->feature = &t124_feature_table_a;
 	else
 		dc->feature = &t124_feature_table_b;
 #elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	if (!dc->ndev->id)
+	if (!dc->ctrl_num)
 		dc->feature = &t148_feature_table_a;
 	else
 		dc->feature = &t148_feature_table_b;

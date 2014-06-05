@@ -1231,7 +1231,27 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 	return jiffies - timeout_jf + 1;
 }
 
-static int tegra_dc_set(struct tegra_dc *dc, int index)
+static int tegra_dc_set_next(struct tegra_dc *dc)
+{
+	int i;
+	int ret = -EBUSY;
+
+	mutex_lock(&tegra_dc_lock);
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		if (tegra_dcs[i] == NULL) {
+			tegra_dcs[i] = dc;
+			ret = i;
+			break;
+		}
+	}
+
+	mutex_unlock(&tegra_dc_lock);
+
+	return ret;
+}
+
+static int tegra_dc_set_idx(struct tegra_dc *dc, int index)
 {
 	int ret = 0;
 
@@ -1252,6 +1272,19 @@ out:
 	mutex_unlock(&tegra_dc_lock);
 
 	return ret;
+}
+
+/*
+ * If index == -1, set dc at next available index. This is to be called only
+ * when registering dc in DT case. For non DT case & when removing the device
+ * (dc == NULL), index should be accordingly.
+ */
+static int tegra_dc_set(struct tegra_dc *dc, int index)
+{
+	if ((index == -1) && (dc != NULL)) /* DT register case */
+		return tegra_dc_set_next(dc);
+	else /* non DT, unregister case */
+		return tegra_dc_set_idx(dc, index);
 }
 
 unsigned int tegra_dc_has_multiple_dc(void)
@@ -2437,7 +2470,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
-	if (dc->ndev->id == 0) {
+	if (dc->ctrl_num == 0) {
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0A,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0B,
@@ -2451,7 +2484,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHC,
 				      TEGRA_MC_PRIO_HIGH);
-	} else if (dc->ndev->id == 1) {
+	} else if (dc->ctrl_num == 1) {
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0AB,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0BB,
@@ -3166,10 +3199,19 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (ret)
 			goto err_free;
 
+		ndev->id = tegra_dc_set(dc, -1);
+		if (ndev->id < 0) {
+			dev_err(&ndev->dev, "can't add dc\n");
+			goto err_free;
+		}
+
+		dev_info(&ndev->dev, "Display dc.%08x registered with id=%d\n",
+				(unsigned int)dt_res.start, ndev->id);
+
 		if (dt_res.start == TEGRA_DISPLAY_BASE)
-			ndev->id = 0;
+			dc->ctrl_num = 0;
 		else if (dt_res.start == TEGRA_DISPLAY2_BASE)
-			ndev->id = 1;
+			dc->ctrl_num = 1;
 		else
 			goto err_free;
 
@@ -3179,6 +3221,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (dt_pdata == NULL)
 			goto err_free;
 	} else {
+
+		dc->ctrl_num = ndev->id;
+
 		irq = platform_get_irq_byname(ndev, "irq");
 		if (irq <= 0) {
 			dev_err(&ndev->dev, "no irq\n");
@@ -3193,6 +3238,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			ret = -ENOENT;
 			goto err_free;
 		}
+
+		if (tegra_dc_set(dc, ndev->id) < 0) {
+			dev_err(&ndev->dev, "can't add dc\n");
+			goto err_free;
+		}
+
 	}
 
 	base_res = request_mem_region(res->start, resource_size(res),
@@ -3255,9 +3306,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (np) {
 		struct resource of_fb_res;
-		if (ndev->id == 0)
+		if (dc->ctrl_num == 0)
 			tegra_get_fb_resource(&of_fb_res);
-		else /*ndev->id == 1*/
+		else /* dc->ctrl_num == 1*/
 			tegra_get_fb2_resource(&of_fb_res);
 
 		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
@@ -3333,12 +3384,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tmp_win->dc = dc;
 		tegra_dc_init_csc_defaults(&win->csc);
 		tegra_dc_init_lut_defaults(&win->lut);
-	}
-
-	ret = tegra_dc_set(dc, ndev->id);
-	if (ret < 0) {
-		dev_err(&ndev->dev, "can't add dc\n");
-		goto err_put_clk;
 	}
 
 	platform_set_drvdata(ndev, dc);

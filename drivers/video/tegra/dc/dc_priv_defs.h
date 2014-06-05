@@ -277,5 +277,7 @@ struct tegra_dc {
 		enum tegra_dc_cursor_size size;
 		enum tegra_dc_cursor_format format;
 	} cursor;
+
+	int	ctrl_num;
 };
 #endif

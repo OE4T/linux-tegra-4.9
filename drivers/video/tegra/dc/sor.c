@@ -898,7 +898,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 {
 	const struct tegra_dc_out_pin *pins = sor->dc->out->out_pins;
 	const struct tegra_dc_mode	*dc_mode = &sor->dc->mode;
-	int head_num = sor->dc->ndev->id;
+	int	head_num = sor->dc->ctrl_num;
 	u32 reg_val = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
 	u32 vtotal, htotal;
 	u32 vsync_end, hsync_end;

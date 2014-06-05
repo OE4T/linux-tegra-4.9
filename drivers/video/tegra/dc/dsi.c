@@ -672,7 +672,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
 			DSI_CONTROL_NUM_DATA_LANES(n_data_lanes - 1) |
-			DSI_CONTROL_VID_SOURCE(dc->ndev->id) |
+			DSI_CONTROL_VID_SOURCE(dc->ctrl_num) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
 	if (dsi->info.ganged_type)

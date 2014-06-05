@@ -102,7 +102,7 @@ static unsigned int num_active_internal_wins(struct tegra_dc *dc)
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *curr_win = &dc->windows[i];
 		enum tegra_la_id curr_win_la_id =
-				la_id_tab[dc->ndev->id][curr_win->idx];
+				la_id_tab[dc->ctrl_num][curr_win->idx];
 
 		if (!is_internal_win(curr_win_la_id))
 			continue;
@@ -122,7 +122,7 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *curr_win = &dc->windows[i];
 		enum tegra_la_id curr_win_la_id =
-				la_id_tab[dc->ndev->id][curr_win->idx];
+				la_id_tab[dc->ctrl_num][curr_win->idx];
 
 		if (is_internal_win(curr_win_la_id))
 			continue;
@@ -408,7 +408,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 			struct tegra_dc_win *curr_win = &dc->windows[i];
 			enum tegra_la_id curr_win_la_id =
-					la_id_tab[dc->ndev->id][curr_win->idx];
+					la_id_tab[dc->ctrl_num][curr_win->idx];
 			unsigned int curr_win_bw = 0;
 
 			if (!is_internal_win(curr_win_la_id))
@@ -429,7 +429,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 			struct tegra_dc_win *curr_win = &dc->windows[i];
 			enum tegra_la_id curr_win_la_id =
-					la_id_tab[dc->ndev->id][curr_win->idx];
+					la_id_tab[dc->ctrl_num][curr_win->idx];
 			unsigned int curr_win_bw = 0;
 
 			if (is_internal_win(curr_win_la_id))
@@ -506,7 +506,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 	 * round up bandwidth to next 1MBps */
 	if (curr_dc_head_bw != ULONG_MAX)
 		curr_dc_head_bw = curr_dc_head_bw / 1000 + 1;
-	tegra_dcs_total_bw[dc->ndev->id] = curr_dc_head_bw;
+	tegra_dcs_total_bw[dc->ctrl_num] = curr_dc_head_bw;
 	disp_params->total_dc0_bw = tegra_dcs_total_bw[0];
 	disp_params->total_dc1_bw = tegra_dcs_total_bw[1];
 	mutex_unlock(&tegra_dcs_total_bw_lock);
@@ -525,7 +525,7 @@ static void tegra_dc_process_bandwidth_renegotiate(struct tegra_dc *dc,
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_bandwidth_renegotiate(dc->adf, bw);
 #endif
-	tegra_dc_ext_process_bandwidth_renegotiate(dc->ndev->id, bw);
+	tegra_dc_ext_process_bandwidth_renegotiate(dc->ctrl_num, bw);
 }
 #endif
 
@@ -550,9 +550,9 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #endif
 
 
-	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
+	BUG_ON(dc->ctrl_num >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));
+	BUG_ON(dc->ctrl_num >= ARRAY_SIZE(vfilter_tab));
 #endif
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
 
@@ -585,7 +585,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 
 		calc_disp_params(dc,
 				w,
-				la_id_tab[dc->ndev->id][w->idx],
+			la_id_tab[dc->ctrl_num][w->idx],
 				emc_freq_hz,
 				bw,
 				&disp_params);
@@ -609,7 +609,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 			break;
 	}
 #else
-	tegra_set_disp_latency_allowance(la_id_tab[dc->ndev->id][w->idx],
+	tegra_set_disp_latency_allowance(la_id_tab[dc->ctrl_num][w->idx],
 						emc_freq_hz,
 						bw,
 						disp_params);
@@ -617,7 +617,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)
-		tegra_set_latency_allowance(vfilter_tab[dc->ndev->id], bw);
+		tegra_set_latency_allowance(vfilter_tab[dc->ctrl_num], bw);
 #endif
 }
 

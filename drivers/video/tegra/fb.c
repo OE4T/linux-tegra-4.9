@@ -820,6 +820,14 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		goto err_iounmap_fb;
 	}
 
+	if (ndev->id != info->node) {
+		dev_err(&ndev->dev, "FB device numbering does not\n"
+			  "match device numbering of extended\n"
+			  "display interfaces\n");
+		ret = -EINVAL;
+		goto err_iounmap_fb;
+	}
+
 	tegra_fb->info = info;
 
 	if (fb_data->flags & TEGRA_FB_FLIP_ON_PROBE) {

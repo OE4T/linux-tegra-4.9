@@ -146,6 +146,14 @@ static inline u32 gr_fecs_intr_r(void)
 {
 	return 0x00400144;
 }
+static inline u32 gr_class_error_r(void)
+{
+	return 0x00400110;
+}
+static inline u32 gr_class_error_code_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 gr_intr_nonstall_r(void)
 {
 	return 0x00400120;

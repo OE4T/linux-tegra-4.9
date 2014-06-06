@@ -606,6 +606,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	/* note that we're in manual K until the next flip */
 	atomic_set(&man_k_until_blank, 1);
 }
+EXPORT_SYMBOL(nvsd_init);
 
 static int bl_tf[17] = {
 				57,  65,  73,  82,  92,
@@ -1232,6 +1233,7 @@ int nvsd_create_sysfs(struct device *dev)
 
 	return retval;
 }
+EXPORT_SYMBOL(nvsd_create_sysfs);
 
 /* Sysfs destructor */
 void nvsd_remove_sysfs(struct device *dev)
@@ -1241,3 +1243,4 @@ void nvsd_remove_sysfs(struct device *dev)
 		kobject_put(nvsd_kobj);
 	}
 }
+EXPORT_SYMBOL(nvsd_remove_sysfs);

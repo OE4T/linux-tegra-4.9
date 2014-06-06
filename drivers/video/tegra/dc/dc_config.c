@@ -598,6 +598,7 @@ u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 
 	return entry->arg;
 }
+EXPORT_SYMBOL(tegra_dc_parse_feature);
 
 int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx)
 {

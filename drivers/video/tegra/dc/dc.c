@@ -49,6 +49,8 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
+EXPORT_TRACEPOINT_SYMBOL(display_writel);
+EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -480,6 +482,7 @@ void tegra_dc_get(struct tegra_dc *dc)
 	/* extra reference to dc clk */
 	clk_prepare_enable(dc->clk);
 }
+EXPORT_SYMBOL(tegra_dc_get);
 
 void tegra_dc_put(struct tegra_dc *dc)
 {
@@ -488,6 +491,7 @@ void tegra_dc_put(struct tegra_dc *dc)
 
 	tegra_dc_io_end(dc);
 }
+EXPORT_SYMBOL(tegra_dc_put);
 
 void tegra_dc_hold_dc_out(struct tegra_dc *dc)
 {
@@ -1566,6 +1570,7 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 crc_error:
 	return crc;
 }
+EXPORT_SYMBOL(tegra_dc_read_checksum_latched);
 
 bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask)
 {

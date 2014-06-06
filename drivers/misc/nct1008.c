@@ -807,21 +807,16 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 {
 	struct nct1008_data *data = thz->devdata;
 	int i;
-	bool bind = false;
 	struct nct1008_sensor_platform_data *sensor;
 
 	sensor = &data->plat_data.sensors[EXT];
 
 	for (i = 0; i < sensor->num_trips; i++) {
-		if (!strcmp(sensor->trips[i].cdev_type, cdev->type) &&
-			 !thermal_zone_bind_cooling_device(thz, i, cdev,
+		if (!strcmp(sensor->trips[i].cdev_type, cdev->type))
+			thermal_zone_bind_cooling_device(thz, i, cdev,
 					sensor->trips[i].upper,
-					sensor->trips[i].lower))
-			bind = true;
+					sensor->trips[i].lower);
 	}
-
-	if (bind)
-		nct1008_update(EXT, data);
 
 	return 0;
 }
@@ -1026,28 +1021,20 @@ static int nct1008_loc_bind(struct thermal_zone_device *thz,
 {
 	struct nct1008_data *data = thz->devdata;
 	int i;
-	bool bind = false;
 	struct nct1008_sensor_platform_data *sensor_data;
 
 	pr_debug("NCT1008: LOC-sensor bind %s, %s attempt\n",
-		thz->type, cdev->type);
+		 thz->type, cdev->type);
 
 	sensor_data = &data->plat_data.sensors[LOC];
 
 	for (i = 0; i < sensor_data->num_trips; i++) {
-		if (!strcmp(sensor_data->trips[i].cdev_type, cdev->type) &&
-			!thermal_zone_bind_cooling_device(thz, i, cdev,
+		if (!strcmp(sensor_data->trips[i].cdev_type, cdev->type)) {
+			thermal_zone_bind_cooling_device(thz, i, cdev,
 				sensor_data->trips[i].upper,
-				sensor_data->trips[i].lower)){
-			bind = true;
+				sensor_data->trips[i].lower);
 			break;
 		}
-	}
-
-	if (bind) {
-		nct1008_update(LOC, data);
-		pr_debug("NCT1008: LOC-sensor bind %s, %s done\n",
-			thz->type, cdev->type);
 	}
 
 	return 0;

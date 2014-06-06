@@ -2207,9 +2207,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 
 static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 {
-	u32 golden_ctx_image_size = 0;
-	u32 zcull_ctx_image_size = 0;
-	u32 pm_ctx_image_size = 0;
+	u32 pm_ctx_image_size;
 	u32 ret;
 	struct fecs_method_op_gk20a op = {
 		.mailbox = { .id = 0, .data = 0,
@@ -2220,42 +2218,36 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 		};
 
 	gk20a_dbg_fn("");
-	op.method.addr = gr_fecs_method_push_adr_discover_image_size_v();
-	op.mailbox.ret = &golden_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			   "query golden image size failed");
-		return ret;
+	if (!g->gr.ctx_vars.golden_image_size) {
+		op.method.addr =
+			gr_fecs_method_push_adr_discover_image_size_v();
+		op.mailbox.ret = &g->gr.ctx_vars.golden_image_size;
+		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g),
+				   "query golden image size failed");
+			return ret;
+		}
+		op.method.addr =
+			gr_fecs_method_push_adr_discover_zcull_image_size_v();
+		op.mailbox.ret = &g->gr.ctx_vars.zcull_ctxsw_image_size;
+		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g),
+				   "query zcull ctx image size failed");
+			return ret;
+		}
+		op.method.addr =
+			gr_fecs_method_push_adr_discover_pm_image_size_v();
+		op.mailbox.ret = &pm_ctx_image_size;
+		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g),
+				   "query pm ctx image size failed");
+			return ret;
+		}
+		g->gr.ctx_vars.priv_access_map_size = 512 * 1024;
 	}
-	op.method.addr = gr_fecs_method_push_adr_discover_zcull_image_size_v();
-	op.mailbox.ret = &zcull_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			   "query zcull ctx image size failed");
-		return ret;
-	}
-	op.method.addr = gr_fecs_method_push_adr_discover_pm_image_size_v();
-	op.mailbox.ret = &pm_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			   "query pm ctx image size failed");
-		return ret;
-	}
-
-	if (!g->gr.ctx_vars.golden_image_size &&
-	    !g->gr.ctx_vars.zcull_ctxsw_image_size) {
-		g->gr.ctx_vars.golden_image_size = golden_ctx_image_size;
-		g->gr.ctx_vars.zcull_ctxsw_image_size = zcull_ctx_image_size;
-	} else {
-		/* hw is different after railgating? */
-		BUG_ON(g->gr.ctx_vars.golden_image_size != golden_ctx_image_size);
-		BUG_ON(g->gr.ctx_vars.zcull_ctxsw_image_size != zcull_ctx_image_size);
-	}
-
-	g->gr.ctx_vars.priv_access_map_size = 512 * 1024;
 
 	gk20a_dbg_fn("done");
 	return 0;

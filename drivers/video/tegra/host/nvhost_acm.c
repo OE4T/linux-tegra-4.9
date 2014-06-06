@@ -869,6 +869,7 @@ bool nvhost_module_powered_ext(struct platform_device *dev)
 		dev = to_platform_device(dev->dev.parent);
 	return nvhost_module_powered(dev);
 }
+EXPORT_SYMBOL(nvhost_module_powered_ext);
 
 int nvhost_module_busy_ext(struct platform_device *dev)
 {

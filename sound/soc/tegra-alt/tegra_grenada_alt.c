@@ -933,6 +933,106 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.codec_dai_name = "MVC2",
 		.params = &i2s_link_params,
 	},
+	{
+		/* 70 */
+		.name = "ADMAIF1 CODEC",
+		.stream_name = "ADMAIF1 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF1 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF1",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 71 */
+		.name = "ADMAIF2 CODEC",
+		.stream_name = "ADMAIF2 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF2 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF2",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 72 */
+		.name = "ADMAIF3 CODEC",
+		.stream_name = "ADMAIF3 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF3 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF3",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 73 */
+		.name = "ADMAIF4 CODEC",
+		.stream_name = "ADMAIF4 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF4 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF4",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 74 */
+		.name = "ADMAIF5 CODEC",
+		.stream_name = "ADMAIF5 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF5 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF5",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 75 */
+		.name = "ADMAIF6 CODEC",
+		.stream_name = "ADMAIF6 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF6 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF6",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 76 */
+		.name = "ADMAIF7 CODEC",
+		.stream_name = "ADMAIF7 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF7 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF7",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 77 */
+		.name = "ADMAIF8 CODEC",
+		.stream_name = "ADMAIF8 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF8 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF8",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 78 */
+		.name = "ADMAIF9 CODEC",
+		.stream_name = "ADMAIF9 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF9 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF9",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 79 */
+		.name = "ADMAIF10 CODEC",
+		.stream_name = "ADMAIF10 CODEC",
+		/* .cpu_of_node = AHUB ADMAIF */
+		.cpu_dai_name = "ADMAIF10 CIF",
+		/* .codec_of_node = AHUB XBAR */
+		.codec_dai_name = "ADMAIF10",
+		.params = &i2s_link_params,
+	},
 };
 
 static struct snd_soc_codec_conf ad193x_codec_conf[] = {
@@ -1385,6 +1485,14 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		for (i = 63; i < 66; i = i+2) {
 			tegra_grenada_links[i].codec_of_node = tegra_grenada_links[i+1].cpu_of_node;
 			tegra_grenada_links[i].cpu_of_node = tegra_grenada_links[i+1].codec_of_node;
+		}
+
+		/* ADMAIF Codec dai links */
+		for (i = 67; i < 77; i++) {
+			tegra_grenada_links[i].cpu_of_node =
+				tegra_grenada_links[0].cpu_of_node;
+			tegra_grenada_links[i].codec_of_node =
+				tegra_grenada_links[0].codec_of_node;
 		}
 	}
 

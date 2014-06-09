@@ -3090,7 +3090,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;
 
-	tegra_dc_ext_disable(dc->ext);
+	if (!tegra_dc_ext_disable(dc->ext))
+		tegra_dc_blank(dc, BLANK_ALL);
 
 	/* it's important that new underflow work isn't scheduled before the
 	 * lock is acquired. */

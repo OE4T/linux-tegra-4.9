@@ -279,6 +279,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	struct device_node *ddc;
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
+	struct device_node *np_dpaux =
+		of_find_node_by_path(DPAUX_NODE);
 	struct property *prop;
 	const __be32 *p;
 	u32 u;
@@ -317,6 +319,14 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		}
 
 		hotplug_gpio = of_get_named_gpio_flags(np_hdmi,
+				"nvidia,hpd-gpio", 0, &flags);
+		if (hotplug_gpio != 0)
+			default_out->hotplug_gpio = hotplug_gpio;
+	}
+	if (np_dpaux && of_device_is_available(np_dpaux) &&
+		((default_out->type == TEGRA_DC_OUT_DP) ||
+		(default_out->type == TEGRA_DC_OUT_NVSR_DP))) {
+		hotplug_gpio = of_get_named_gpio_flags(np_dpaux,
 				"nvidia,hpd-gpio", 0, &flags);
 		if (hotplug_gpio != 0)
 			default_out->hotplug_gpio = hotplug_gpio;
@@ -427,14 +437,10 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	if (!of_property_read_u32(np, "nvidia,out-xres", &temp)) {
 		fb->xres = (int)temp;
 		OF_DC_LOG("framebuffer xres %d\n", fb->xres);
-	} else {
-		goto fail_disp_default_out;
 	}
 	if (!of_property_read_u32(np, "nvidia,out-yres", &temp)) {
 		fb->yres = (int)temp;
 		OF_DC_LOG("framebuffer yres %d\n", fb->yres);
-	} else {
-		goto fail_disp_default_out;
 	}
 
 	return 0;

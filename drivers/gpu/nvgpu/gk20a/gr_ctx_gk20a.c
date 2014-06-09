@@ -284,7 +284,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMPPC skipped");
 				break;
 			default:
-				gk20a_warn(d, "unrecognized region %d skipped", i);
+				gk20a_dbg_info("unrecognized region %d skipped", i);
 				break;
 			}
 		}

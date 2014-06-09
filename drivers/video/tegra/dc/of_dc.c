@@ -37,7 +37,6 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
-#include <linux/of_i2c.h>
 #include <linux/nvhost.h>
 #include <linux/timer.h>
 #include <linux/pinctrl/pinctrl.h>

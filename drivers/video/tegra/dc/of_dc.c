@@ -141,43 +141,23 @@ static int out_type_from_pn(struct device_node *panel_node)
 }
 
 static int parse_dc_out_type(struct device_node *np,
+		struct platform_device *ndev,
 		struct tegra_dc_out *default_out)
 {
-	const char *temp_str0;
-	struct device_node *np_target_disps[2] = {NULL,};
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
+	struct device_node *np_target_disp = NULL;
 	int out_type;
 
-	np_target_disps[0] = tegra_panel_get_dt_node(NULL);
-	np_target_disps[1] = of_get_child_by_name(np_hdmi, "hdmi-display");
+	if (ndev->id == 0)
+		np_target_disp = tegra_primary_panel_get_dt_node(NULL);
+	else
+		np_target_disp = tegra_secondary_panel_get_dt_node(NULL);
 
-	if (of_property_read_string(np, "nvidia,dc-connection",
-		&temp_str0)) {
-		pr_err("no nvidia,dc-connection\n");
-		return -EINVAL;
+	out_type = out_type_from_pn(np_target_disp);
+	if (out_type >= 0) {
+		default_out->type = out_type;
+		return 0;
 	}
-
-	if (!strncmp(temp_str0, "internal-lcd",
-		strlen(temp_str0))) {
-		out_type = out_type_from_pn(np_target_disps[0]);
-		if (out_type >= 0) {
-			default_out->type = out_type;
-			return 0;
-		}
-	} else if (!strncmp(temp_str0, "external-display",
-		strlen(temp_str0))) {
-		out_type = out_type_from_pn(np_target_disps[1]);
-		if (out_type >= 0) {
-			default_out->type = out_type;
-			return 0;
-		}
-		/* TODO: If hdmi/hdmi-display node is not valid,
-		 * future SoC may need to search DP node
-		 * for external display
-		 */
-	}
-	pr_err("invalid nvidia,dc-connection or nvidia,out-type\n");
+	pr_err("can not determine display type\n");
 	return -EINVAL;
 }
 
@@ -980,7 +960,10 @@ struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	struct tegra_dsi_out *dsi = pdata->default_out->dsi;
 	struct device_node *np_dsi_panel = NULL;
 
-	np_dsi_panel = tegra_panel_get_dt_node(pdata);
+	if (ndev->id == 0)
+		np_dsi_panel = tegra_primary_panel_get_dt_node(pdata);
+	else
+		np_dsi_panel = tegra_secondary_panel_get_dt_node(pdata);
 
 	if (!np_dsi_panel) {
 		pr_err("There is no valid panel node\n");
@@ -1438,7 +1421,10 @@ struct device_node *parse_dpaux_settings(struct platform_device *ndev,
 	struct device_node *entry = NULL;
 	int err;
 
-	np_dpaux_panel = tegra_panel_get_dt_node(pdata);
+	if (ndev->id == 0)
+		np_dpaux_panel = tegra_primary_panel_get_dt_node(pdata);
+	else
+		np_dpaux_panel = tegra_secondary_panel_get_dt_node(pdata);
 
 	if (!np_dpaux_panel) {
 		pr_err("There is no valid panel node\n");
@@ -1678,7 +1664,7 @@ struct tegra_dc_platform_data
 	 * current dc id.
 	 */
 
-	err = parse_dc_out_type(np, pdata->default_out);
+	err = parse_dc_out_type(np, ndev, pdata->default_out);
 	if (err) {
 		pr_err("parse_dc_out_type err\n");
 		goto fail_parse;

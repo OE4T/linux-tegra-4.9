@@ -2905,10 +2905,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	if (np) {
-		dt_pdata = of_dc_parse_platform_data(ndev);
-		if (dt_pdata == NULL)
-			goto err_free;
-
 #ifdef CONFIG_OF
 		irq = of_irq_to_resource(np, 0, NULL);
 		if (!irq)
@@ -2927,6 +2923,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			goto err_free;
 
 		res = &dt_res;
+
+		dt_pdata = of_dc_parse_platform_data(ndev);
+		if (dt_pdata == NULL)
+			goto err_free;
 	} else {
 		irq = platform_get_irq_byname(ndev, "irq");
 		if (irq <= 0) {

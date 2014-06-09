@@ -746,6 +746,9 @@
 #define  WIN_ALPHA_1BIT_WEIGHT0(x)	(((x) & 0xff) << 0)
 #define  WIN_ALPHA_1BIT_WEIGHT1(x)	(((x) & 0xff) << 8)
 
+#define DC_WINBUF_MEMFETCH_CONTROL		0x82b
+#define  MEMFETCH_CLK_GATE_OVERRIDE	(1U << 1)
+#define  MEMFETCH_RESET			(1U << 0)
 
 #define DC_DISP_SD_CONTROL			0x4c2
 #define  SD_ENABLE_NORMAL		(1 << 0)

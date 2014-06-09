@@ -959,6 +959,13 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 
 	tegra_dc_set_dynamic_emc(dc);
 
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC) \
+	|| defined(CONFIG_ARCH_TEGRA_14x_SOC) \
+	|| defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	/* prevent FIFO from taking in stale data after a reset */
+	tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
+#endif
+
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 
 	if (tegra_cpu_is_asim())

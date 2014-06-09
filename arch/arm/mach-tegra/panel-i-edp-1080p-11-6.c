@@ -250,10 +250,15 @@ static int edp_i_1080p_11_6_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = laguna_edp_gpio_get();
+	err = tegra_panel_gpio_get_dt("i-edp,1080p-11-6",
+		&panel_of);
 	if (err < 0) {
-		pr_err("edp gpio request failed\n");
-		goto fail;
+		/* try to request gpios from board file */
+		err = laguna_edp_gpio_get();
+		if (err < 0) {
+			pr_err("edp gpio request failed\n");
+			goto fail;
+		}
 	}
 
 	if (vdd_lcd_bl) {
@@ -431,7 +436,7 @@ static void edp_i_1080p_11_6_dc_out_init(struct tegra_dc_out *dc)
 	dc->parent_clk = "pll_d_out0";
 	dc->enable = edp_i_1080p_11_6_enable;
 	dc->disable = edp_i_1080p_11_6_disable;
-	dc->postsuspend	= edp_i_1080p_11_6_postsuspend,
+	dc->postsuspend	= edp_i_1080p_11_6_postsuspend;
 	dc->hotplug_gpio = TEGRA_GPIO_PFF0;
 }
 
@@ -441,6 +446,12 @@ edp_i_1080p_11_6_sd_settings_init(struct tegra_dc_sd_settings *settings)
 	*settings = edp_i_1080p_11_6_sd_settings;
 	settings->bl_device_name = "pwm-backlight";
 }
+
+struct tegra_panel_ops edp_i_1080p_11_6_ops = {
+	.enable = edp_i_1080p_11_6_enable,
+	.disable = edp_i_1080p_11_6_disable,
+	.postsuspend = edp_i_1080p_11_6_postsuspend,
+};
 
 struct tegra_panel __initdata edp_i_1080p_11_6 = {
 	.init_sd_settings = edp_i_1080p_11_6_sd_settings_init,

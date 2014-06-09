@@ -31,6 +31,8 @@
 #include "board.h"
 #include "iomap.h"
 
+#define HDMI_NODE	"/host1x/hdmi"
+
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
@@ -178,15 +180,18 @@ static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 	dc_out->hotplug_report = p_ops->hotplug_report;
 }
 
-struct device_node *tegra_panel_get_dt_node(
+struct device_node *tegra_primary_panel_get_dt_node(
 			struct tegra_dc_platform_data *pdata)
 {
-	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_panel = NULL;
+#ifndef CONFIG_TEGRA_HDMI_PRIMARY
+	struct tegra_dc_out *dc_out = NULL;
 	struct board_info display_board;
 
 	bool is_dsi_a_1200_1920_8_0 = false;
 	bool is_dsi_a_1200_800_8_0 = false;
+	bool is_edp_i_1080p_11_6 = false;
+	bool is_edp_a_1080p_14_0 = false;
 
 	tegra_get_display_board_info(&display_board);
 
@@ -229,6 +234,13 @@ struct device_node *tegra_panel_get_dt_node(
 		else
 			is_dsi_a_1200_800_8_0 = true;
 		break;
+	case BOARD_PM363:
+	case BOARD_E1824:
+		if (display_board.sku == 1200)
+			is_edp_i_1080p_11_6 = true;
+		else
+			is_edp_a_1080p_14_0 = true;
+		break;
 	default:
 		WARN(1, "Display panel not supported\n");
 	};
@@ -247,6 +259,38 @@ struct device_node *tegra_panel_get_dt_node(
 		np_panel = of_find_compatible_node(NULL, NULL,
 				"a,wxga-8-0");
 	}
+
+	if (is_edp_i_1080p_11_6) {
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&edp_i_1080p_11_6_ops);
+		np_panel = of_find_compatible_node(NULL, NULL,
+				"i-edp,1080p-11-6");
+	}
+	if (is_edp_a_1080p_14_0) {
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&edp_a_1080p_14_0_ops);
+		np_panel = of_find_compatible_node(NULL, NULL,
+				"a-edp,1080p-14-0");
+	}
+#else
+	struct device_node *np_hdmi =
+		of_find_node_by_path(HDMI_NODE);
+
+	np_panel = of_get_child_by_name(np_hdmi, "hdmi-display");
+#endif
+	return of_device_is_available(np_panel) ? np_panel : NULL;
+}
+
+struct device_node *tegra_secondary_panel_get_dt_node(
+			struct tegra_dc_platform_data *pdata)
+{
+	struct device_node *np_panel = NULL;
+	struct device_node *np_hdmi =
+		of_find_node_by_path(HDMI_NODE);
+
+	np_panel = of_get_child_by_name(np_hdmi, "hdmi-display");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }

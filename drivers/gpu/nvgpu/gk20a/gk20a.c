@@ -748,7 +748,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	gk20a_dbg_fn("");
 
-	gk20a_scale_suspend(to_platform_device(dev));
+	gk20a_scale_suspend(pdev);
 
 	if (!g->power_on)
 		return 0;
@@ -916,6 +916,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
+
+	gk20a_scale_resume(pdev);
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
@@ -1242,15 +1244,7 @@ static int gk20a_pm_suspend(struct device *dev)
 
 static int gk20a_pm_resume(struct device *dev)
 {
-	int ret = 0;
-
-	ret = gk20a_pm_finalize_poweron(dev);
-	if (ret)
-		return ret;
-
-	gk20a_scale_resume(to_platform_device(dev));
-
-	return 0;
+	return gk20a_pm_finalize_poweron(dev);
 }
 
 static int gk20a_pm_initialise_domain(struct platform_device *pdev)

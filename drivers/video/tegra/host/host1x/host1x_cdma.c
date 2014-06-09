@@ -239,7 +239,8 @@ static void cdma_start(struct nvhost_cdma *cdma)
 	nvhost_channel_init_gather_filter(cdma_to_channel(cdma));
 
 	/* start the command DMA */
-	writel(host1x_channel_dmactrl(false, false, false),
+	wmb();
+	writel_relaxed(host1x_channel_dmactrl(false, false, false),
 		chan_regs + host1x_channel_dmactrl_r());
 
 	cdma->running = true;
@@ -288,7 +289,8 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 	nvhost_channel_init_gather_filter(cdma_to_channel(cdma));
 
 	/* start the command DMA */
-	writel(host1x_channel_dmactrl(false, false, false),
+	wmb();
+	writel_relaxed(host1x_channel_dmactrl(false, false, false),
 		chan_regs + host1x_channel_dmactrl_r());
 
 	cdma->running = true;
@@ -305,7 +307,8 @@ static void cdma_kick(struct nvhost_cdma *cdma)
 
 	if (put != cdma->last_put) {
 		void __iomem *chan_regs = cdma_to_channel(cdma)->aperture;
-		writel(put, chan_regs + host1x_channel_dmaput_r());
+		wmb();
+		writel_relaxed(put, chan_regs + host1x_channel_dmaput_r());
 		cdma->last_put = put;
 	}
 }

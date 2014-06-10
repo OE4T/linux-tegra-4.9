@@ -1200,6 +1200,9 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	if (verbose)
 		gk20a_debug_dump(g->dev);
 
+	if (g->ops.ltc.flush)
+		g->ops.ltc.flush(g);
+
 	/* store faulted engines in advance */
 	g->fifo.mmu_fault_engines = 0;
 	for_each_set_bit(engine_id, &_engine_ids, 32) {

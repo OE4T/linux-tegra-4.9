@@ -250,6 +250,53 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 	return base;
 }
 
+/*
+ * Performs a full flush of the L2 cache.
+ */
+void gm20b_flush_ltc(struct gk20a *g)
+{
+	u32 op_pending;
+
+	/* Clean... */
+	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt1_r(),
+		ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_f() |
+		ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_f() |
+		ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_f() |
+		ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_true_f() |
+		ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_true_f() |
+		ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_f());
+
+	/* Wait on each LTC individually. */
+	do {
+		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt1_r());
+	} while (op_pending &
+		 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f());
+
+	do {
+		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt1_r());
+	} while (op_pending &
+		 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_f());
+
+	/* And invalidate. */
+	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt0_r(),
+	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_f() |
+	     ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_f() |
+	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_f() |
+	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_true_f() |
+	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_f());
+
+	/* Wait on each LTC individually. */
+	do {
+		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt0_r());
+	} while (op_pending &
+		 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f());
+
+	do {
+		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt0_r());
+	} while (op_pending &
+		 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_f());
+}
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
@@ -266,4 +313,5 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;
 	gops->ltc.isr = gm20b_ltc_isr;
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
+	gops->ltc.flush = gm20b_flush_ltc;
 }

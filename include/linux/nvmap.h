@@ -58,11 +58,25 @@
 
 #if defined(__KERNEL__)
 
+struct platform_device;
+
+struct platform_device *nvmap_get_platform_dev(void);
+
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);
 
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
+
+#ifdef CONFIG_TEGRA_NVMAP
+int __init nvmap_init(void);
+#else
+/* MODS does not enable nvmap. */
+__attribute__((unused)) static int nvmap_init(void)
+{
+	return 0;
+}
+#endif
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);

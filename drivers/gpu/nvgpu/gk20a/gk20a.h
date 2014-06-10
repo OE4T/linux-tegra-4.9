@@ -483,7 +483,8 @@ static inline void gk20a_mem_wr32(void *ptr, int w, u32 data)
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 {
 	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
-	writel(v, g->regs + r);
+	wmb();
+	writel_relaxed(v, g->regs + r);
 }
 static inline u32 gk20a_readl(struct gk20a *g, u32 r)
 {
@@ -495,7 +496,8 @@ static inline u32 gk20a_readl(struct gk20a *g, u32 r)
 static inline void gk20a_bar1_writel(struct gk20a *g, u32 b, u32 v)
 {
 	gk20a_dbg(gpu_dbg_reg, " b=0x%x v=0x%x", b, v);
-	writel(v, g->bar1 + b);
+	wmb();
+	writel_relaxed(v, g->bar1 + b);
 }
 
 static inline u32 gk20a_bar1_readl(struct gk20a *g, u32 b)

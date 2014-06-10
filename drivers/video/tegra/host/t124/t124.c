@@ -267,7 +267,6 @@ static struct platform_device tegra_vi01_device = {
 		.platform_data = &t124_vi_info,
 	},
 };
-#endif
 
 struct nvhost_device_data t124_vib_info = {
 	.num_channels	= 1,
@@ -304,6 +303,7 @@ static struct platform_device tegra_vi01b_device = {
 		.platform_data = &t124_vib_info,
 	},
 };
+#endif
 
 static struct resource msenc_resources[] = {
 	{

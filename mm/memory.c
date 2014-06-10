@@ -2140,7 +2140,7 @@ static inline int wp_page_reuse(struct fault_env *fe, pte_t orig_pte,
  * - In any case, unlock the PTL and drop the reference we took to the old page.
  */
 static int wp_page_copy(struct fault_env *fe, pte_t orig_pte,
-		struct page *old_page)
+		struct page *old_page, unsigned int flags)
 {
 	struct vm_area_struct *vma = fe->vma;
 	struct mm_struct *mm = vma->vm_mm;
@@ -2150,16 +2150,20 @@ static int wp_page_copy(struct fault_env *fe, pte_t orig_pte,
 	const unsigned long mmun_start = fe->address & PAGE_MASK;
 	const unsigned long mmun_end = mmun_start + PAGE_SIZE;
 	struct mem_cgroup *memcg;
+	gfp_t gfp = GFP_HIGHUSER_MOVABLE;
+
+	if (IS_ENABLED(CONFIG_CMA) && (flags & FAULT_FLAG_NO_CMA))
+		gfp &= ~__GFP_MOVABLE;
 
 	if (unlikely(anon_vma_prepare(vma)))
 		goto oom;
 
 	if (is_zero_pfn(pte_pfn(orig_pte))) {
-		new_page = alloc_zeroed_user_highpage_movable(vma, fe->address);
+		new_page = alloc_zeroed_user_highpage(gfp, vma, fe->address);
 		if (!new_page)
 			goto oom;
 	} else {
-		new_page = alloc_page_vma(GFP_HIGHUSER_MOVABLE, vma,
+		new_page = alloc_page_vma(gfp, vma,
 				fe->address);
 		if (!new_page)
 			goto oom;
@@ -2360,7 +2364,7 @@ static int wp_page_shared(struct fault_env *fe, pte_t orig_pte,
  * but allow concurrent faults), with pte both mapped and locked.
  * We return with mmap_sem still held, but pte unmapped and unlocked.
  */
-static int do_wp_page(struct fault_env *fe, pte_t orig_pte)
+static int do_wp_page(struct fault_env *fe, pte_t orig_pte, unsigned int flags)
 	__releases(fe->ptl)
 {
 	struct vm_area_struct *vma = fe->vma;
@@ -2380,7 +2384,7 @@ static int do_wp_page(struct fault_env *fe, pte_t orig_pte)
 			return wp_pfn_shared(fe, orig_pte);
 
 		pte_unmap_unlock(fe->pte, fe->ptl);
-		return wp_page_copy(fe, orig_pte, old_page);
+		return wp_page_copy(fe, orig_pte, old_page, flags);
 	}
 
 	/*
@@ -2429,7 +2433,7 @@ static int do_wp_page(struct fault_env *fe, pte_t orig_pte)
 	get_page(old_page);
 
 	pte_unmap_unlock(fe->pte, fe->ptl);
-	return wp_page_copy(fe, orig_pte, old_page);
+	return wp_page_copy(fe, orig_pte, old_page, flags);
 }
 
 static void unmap_mapping_range_vma(struct vm_area_struct *vma,
@@ -2672,7 +2676,7 @@ int do_swap_page(struct fault_env *fe, pte_t orig_pte)
 	}
 
 	if (fe->flags & FAULT_FLAG_WRITE) {
-		ret |= do_wp_page(fe, pte);
+		ret |= do_wp_page(fe, pte, fe->flags);
 		if (ret & VM_FAULT_ERROR)
 			ret &= VM_FAULT_ERROR;
 		goto out;
@@ -3557,7 +3561,7 @@ static int handle_pte_fault(struct fault_env *fe)
 	}
 	if (fe->flags & FAULT_FLAG_WRITE) {
 		if (!pte_write(entry))
-			return do_wp_page(fe, entry);
+			return do_wp_page(fe, entry, fe->flags);
 		entry = pte_mkdirty(entry);
 	}
 	entry = pte_mkyoung(entry);

@@ -77,7 +77,7 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
-	#ifndef CONFIG_MACH_GRENADA
+#ifndef CONFIG_MACH_GRENADA
 	struct device *dev = dai->dev;
 	struct tegra210_spdif *spdif = snd_soc_dai_get_drvdata(dai);
 	int spdif_out_clock_rate, spdif_in_clock_rate;
@@ -131,7 +131,7 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 			return ret;
 		}
 	}
-	#endif
+#endif
 
 	return 0;
 }
@@ -140,7 +140,6 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
-#ifndef CONFIG_MACH_GRENADA
 	struct device *dev = dai->dev;
 	struct tegra210_spdif *spdif = snd_soc_dai_get_drvdata(dai);
 	int channels, audio_bits, bit_mode;
@@ -186,7 +185,7 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 					TEGRA210_SPDIF_CIF_RXD_CTRL,
 					&cif_conf);
 	}
-#endif
+
 	return 0;
 }
 

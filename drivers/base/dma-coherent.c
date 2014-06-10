@@ -35,7 +35,7 @@ struct heap_info {
 	size_t cma_len;
 	size_t rem_chunk_size;
 	struct dentry *dma_debug_root;
-	void (*update_resize_cfg)(phys_addr_t , size_t);
+	int (*update_resize_cfg)(phys_addr_t , size_t);
 };
 
 #define DMA_RESERVED_COUNT 8
@@ -377,19 +377,26 @@ static int heap_resize_locked(struct heap_info *h)
 	phys_addr_t base;
 	bool at_bottom = false;
 	size_t cma_chunk_size = h->cma_chunk_size;
+	int err = 0;
 
 	base = alloc_from_contiguous_heap(h, 0, h->cma_chunk_size);
-	if (dma_mapping_error(h->cma_dev, base))
+	if (dma_mapping_error(h->cma_dev, base)) {
+		dev_err(&h->devs[idx],
+			"Failed to allocate contiguous memory on resize\n");
 		return 1;
-
+	}
 	idx = div_u64(base - h->cma_base, h->cma_chunk_size);
-	if (!h->len || base == h->base - h->cma_chunk_size)
+	if (!h->len || base == h->base - h->cma_chunk_size) {
 		/* new chunk can be added at bottom. */
+		h->base = base;
 		at_bottom = true;
-	else if (base != h->base + h->len)
+	} else if (base != h->base + h->len) {
 		/* new chunk can't be added at top */
+		dev_err(&h->devs[idx],
+			"Failed to get contiguous block(0x%pa) on resize\n",
+			&base);
 		goto fail_non_contig;
-
+	}
 	BUG_ON(h->dev_start - 1 != idx && h->dev_end + 1 != idx && h->len);
 	if (h->len &&  (h->dev_end + 1 == (h->num_devs - 1))
 			&& h->rem_chunk_size) {
@@ -397,11 +404,21 @@ static int heap_resize_locked(struct heap_info *h)
 		dev_dbg(h->cma_dev, "rem_chunk_size (%zu)\n", cma_chunk_size);
 	}
 
-	if (declare_coherent_heap(&h->devs[idx], base, cma_chunk_size))
-		goto fail_declare;
+	if (declare_coherent_heap(&h->devs[idx], base, cma_chunk_size)) {
+		dev_err(&h->devs[idx],
+			"Failed to declare coherent memory on resize\n");
+		goto fail_non_contig;
+	}
 
+	/* Handle VPR configuration updates*/
+	if (h->update_resize_cfg) {
+		err = h->update_resize_cfg(h->base, h->len + cma_chunk_size);
+		if (err) {
+			dev_err(&h->devs[idx], "Failed to update VPR resize\n");
+			goto fail_update;
+		}
+	}
 	if (at_bottom) {
-		h->base = base;
 		h->dev_start = idx;
 		if (!h->len)
 			h->dev_end = h->dev_start;
@@ -417,14 +434,11 @@ static int heap_resize_locked(struct heap_info *h)
 	}
 
 	h->len += cma_chunk_size;
-	/* Handle VPR configuration updates*/
-	if (h->update_resize_cfg)
-		h->update_resize_cfg(h->base, h->len);
 	return 0;
 
+fail_update:
+	dma_release_declared_memory(&h->devs[idx]);
 fail_non_contig:
-	dev_dbg(&h->devs[idx], "Found Non-Contiguous block(0x%pa)\n", &base);
-fail_declare:
 	release_from_contiguous_heap(h, base, cma_chunk_size);
 	return 1;
 }
@@ -609,7 +623,7 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 	int err = 0;
 	int resize_err = 0;
 	void *ret = NULL;
-	dma_addr_t dev_base;
+	dma_addr_t dev_base, update_base;
 	struct heap_info *h = NULL;
 	size_t cma_chunk_size = h->cma_chunk_size;
 
@@ -664,10 +678,43 @@ check_next_chunk:
 					&h->devs[idx]);
 			BUG_ON(h->devs[idx].dma_mem != NULL);
 			h->len -= cma_chunk_size;
+			update_base = h->base;
 
-			if ((idx == h->dev_start)) {
-				h->base += cma_chunk_size;
+			if ((idx == h->dev_start))
+				update_base += cma_chunk_size;
+
+			/* Handle VPR configuration updates */
+			if (h->update_resize_cfg) {
+				resize_err =
+					h->update_resize_cfg(update_base,
+								h->len);
+				if (resize_err) {
+					/* On update failure re-declare heap */
+					err = declare_coherent_heap(
+						&h->devs[idx], dev_base,
+						cma_chunk_size);
+					if (!err)
+						h->len += cma_chunk_size;
+					else {
+					/* on declare coherent failure release
+					 * heap chunk
+					 */
+						release_from_contiguous_heap(
+								h, dev_base,
+								cma_chunk_size);
+
+						dev_err(&h->devs[idx],
+							"Failed to update VPR "
+							"resize\n");
+					}
+
+					goto out_unlock;
+				}
+			}
+
+			if (idx == h->dev_start) {
 				h->dev_start++;
+				h->base = update_base;
 				dev_dbg(&h->devs[idx],
 					"Release Chunk at bottom\n");
 				dev_dbg(&h->devs[idx],
@@ -688,11 +735,8 @@ check_next_chunk:
 				idx--;
 			}
 
-			/* Handle VPR configuration updates*/
-			if (h->update_resize_cfg)
-				h->update_resize_cfg(h->base, h->len);
-			release_from_contiguous_heap(h,
-				dev_base, cma_chunk_size);
+			release_from_contiguous_heap(h, dev_base,
+							cma_chunk_size);
 		}
 		goto check_next_chunk;
 	}

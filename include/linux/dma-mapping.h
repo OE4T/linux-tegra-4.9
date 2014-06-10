@@ -706,7 +706,7 @@ void *dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size);
 
 struct dma_resize_notifier_ops {
-	void (*resize)(phys_addr_t, size_t);
+	int (*resize)(phys_addr_t, size_t);
 };
 
 struct dma_resize_notifier {

@@ -406,17 +406,36 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 	return gk20a_fifo_update_runlist(c->g, 0, c->hw_chid, add, true);
 }
 
-void gk20a_disable_channel_no_update(struct channel_gk20a *ch)
+void gk20a_channel_abort(struct channel_gk20a *ch)
 {
+	struct channel_gk20a_job *job, *n;
+	bool released_job_semaphore = false;
+
 	/* ensure no fences are pending */
 	if (ch->sync)
 		ch->sync->set_min_eq_max(ch->sync);
+
+	/* release all job semaphores (applies only to jobs that use
+	   semaphore synchronization) */
+	mutex_lock(&ch->jobs_lock);
+	list_for_each_entry_safe(job, n, &ch->jobs, list) {
+		if (job->post_fence.semaphore) {
+			gk20a_semaphore_release(job->post_fence.semaphore);
+			released_job_semaphore = true;
+		}
+	}
+	mutex_unlock(&ch->jobs_lock);
 
 	/* disable channel */
 	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
 		     gk20a_readl(ch->g,
 		     ccsr_channel_r(ch->hw_chid)) |
 		     ccsr_channel_enable_clr_true_f());
+
+	if (released_job_semaphore) {
+		wake_up_interruptible_all(&ch->semaphore_wq);
+		gk20a_channel_update(ch, 0);
+	}
 }
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch)
@@ -455,7 +474,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 	}
 
 	/* disable the channel from hw and increment syncpoints */
-	gk20a_disable_channel_no_update(ch);
+	gk20a_channel_abort(ch);
 
 	gk20a_wait_channel_idle(ch);
 

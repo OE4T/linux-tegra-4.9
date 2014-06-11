@@ -1043,7 +1043,7 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			if (ch->in_use) {
 				/* disable the channel from hw and increment
 				 * syncpoints */
-				gk20a_disable_channel_no_update(ch);
+				gk20a_channel_abort(ch);
 
 				/* remove the channel from runlist */
 				clear_bit(ch->hw_chid,
@@ -1180,7 +1180,7 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose)
 		struct channel_gk20a *ch =
 			g->fifo.channel + hw_chid;
 
-		gk20a_disable_channel_no_update(ch);
+		gk20a_channel_abort(ch);
 		for (i = 0; i < g->fifo.max_runlists; i++)
 			gk20a_fifo_update_runlist(g, i,
 					hw_chid, false, false);

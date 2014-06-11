@@ -1180,13 +1180,15 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose)
 		struct channel_gk20a *ch =
 			g->fifo.channel + hw_chid;
 
+		if (verbose)
+			gk20a_debug_dump(g->dev);
+
 		gk20a_channel_abort(ch);
 		for (i = 0; i < g->fifo.max_runlists; i++)
 			gk20a_fifo_update_runlist(g, i,
 					hw_chid, false, false);
 
-		if (gk20a_fifo_set_ctx_mmu_error(g, ch))
-			gk20a_debug_dump(g->dev);
+		gk20a_fifo_set_ctx_mmu_error(g, ch);
 	}
 }
 

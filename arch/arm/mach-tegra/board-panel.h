@@ -66,6 +66,11 @@ extern struct tegra_panel_ops dsi_a_1200_800_8_0_ops;
 extern struct tegra_panel_ops edp_a_1080p_14_0_ops;
 extern struct tegra_panel_ops edp_i_1080p_11_6_ops;
 
+extern struct tegra_panel_ops *fixed_primary_panel_ops;
+extern struct tegra_panel_ops *fixed_secondary_panel_ops;
+extern const char *fixed_primary_panel_node;
+extern const char *fixed_secondary_panel_node;
+
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
 extern struct tegra_panel dsi_s_wqxga_10_1;
@@ -95,4 +100,8 @@ int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
 
 int tegra_init_hdmi(struct platform_device *pdev,
 			struct platform_device *phost1x);
+
+void tegra_set_fixed_panel_ops(bool is_primary,
+			struct tegra_panel_ops *p_ops, char *panel_node);
+
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

@@ -36,6 +36,11 @@
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
+struct tegra_panel_ops *fixed_primary_panel_ops;
+struct tegra_panel_ops *fixed_secondary_panel_ops;
+const char *fixed_primary_panel_node;
+const char *fixed_secondary_panel_node;
+
 void tegra_dsi_resources_init(u8 dsi_instance,
 			struct resource *resources, int n_resources)
 {
@@ -162,6 +167,18 @@ fail:
 	return err;
 }
 
+void tegra_set_fixed_panel_ops(bool is_primary,
+	struct tegra_panel_ops *p_ops, char *panel_node)
+{
+	if (is_primary) {
+		fixed_primary_panel_ops = p_ops;
+		fixed_primary_panel_node = (const char *)panel_node;
+	} else {
+		fixed_secondary_panel_ops = p_ops;
+		fixed_secondary_panel_node = (const char *)panel_node;
+	}
+}
+
 static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)
 {
@@ -242,7 +259,17 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			is_edp_a_1080p_14_0 = true;
 		break;
 	default:
-		WARN(1, "Display panel not supported\n");
+		/* If display panel is not searched by display board id,
+		 * check if there's fixed primary panel.
+		 */
+		if (fixed_primary_panel_ops && fixed_primary_panel_node) {
+			if (pdata && dc_out)
+				tegra_panel_register_ops(dc_out,
+					fixed_primary_panel_ops);
+			np_panel = of_find_compatible_node(NULL, NULL,
+				fixed_primary_panel_node);
+		} else
+			WARN(1, "Display panel not supported\n");
 	};
 
 	if (is_dsi_a_1200_1920_8_0) {
@@ -289,8 +316,20 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	struct device_node *np_panel = NULL;
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
+	struct tegra_dc_out *dc_out = NULL;
 
-	np_panel = of_get_child_by_name(np_hdmi, "hdmi-display");
+	if (pdata)
+		dc_out = pdata->default_out;
+
+	if (fixed_secondary_panel_ops && fixed_secondary_panel_node) {
+			if (pdata && dc_out)
+				tegra_panel_register_ops(dc_out,
+					fixed_secondary_panel_ops);
+			np_panel = of_find_compatible_node(NULL, NULL,
+				fixed_secondary_panel_node);
+	} else
+		np_panel =
+			of_get_child_by_name(np_hdmi, "hdmi-display");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }

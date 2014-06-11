@@ -84,18 +84,16 @@ void gk20a_semaphore_pool_put(struct gk20a_semaphore_pool *p)
 }
 
 static struct gk20a_semaphore_pool_map *
-gk20a_semaphore_pool_find_map(struct gk20a_semaphore_pool *p,
-			      struct vm_gk20a *vm)
+gk20a_semaphore_pool_find_map_locked(struct gk20a_semaphore_pool *p,
+				     struct vm_gk20a *vm)
 {
 	struct gk20a_semaphore_pool_map *map, *found = NULL;
-	mutex_lock(&p->maps_mutex);
 	list_for_each_entry(map, &p->maps, list) {
 		if (map->vm == vm) {
 			found = map;
 			break;
 		}
 	}
-	mutex_unlock(&p->maps_mutex);
 	return found;
 }
 
@@ -105,7 +103,6 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 {
 	struct gk20a_semaphore_pool_map *map;
 
-	WARN_ON(gk20a_semaphore_pool_find_map(p, vm));
 	map = kzalloc(sizeof(*map), GFP_KERNEL);
 	if (!map)
 		return -ENOMEM;
@@ -117,7 +114,10 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 		kfree(map);
 		return -ENOMEM;
 	}
+	gk20a_vm_get(vm);
+
 	mutex_lock(&p->maps_mutex);
+	WARN_ON(gk20a_semaphore_pool_find_map_locked(p, vm));
 	list_add(&map->list, &p->maps);
 	mutex_unlock(&p->maps_mutex);
 	return 0;
@@ -126,23 +126,33 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
 		struct vm_gk20a *vm)
 {
-	struct gk20a_semaphore_pool_map *map =
-		gk20a_semaphore_pool_find_map(p, vm);
-	if (!map)
-		return;
-	gk20a_gmmu_unmap(vm, map->gpu_va, p->size, map->rw_flag);
-	list_del(&map->list);
-	kfree(map);
+	struct gk20a_semaphore_pool_map *map;
+	WARN_ON(!vm);
+
+	mutex_lock(&p->maps_mutex);
+	map = gk20a_semaphore_pool_find_map_locked(p, vm);
+	if (map) {
+		gk20a_gmmu_unmap(vm, map->gpu_va, p->size, map->rw_flag);
+		gk20a_vm_put(vm);
+		list_del(&map->list);
+		kfree(map);
+	}
+	mutex_unlock(&p->maps_mutex);
 }
 
 u64 gk20a_semaphore_pool_gpu_va(struct gk20a_semaphore_pool *p,
 		struct vm_gk20a *vm)
 {
-	struct gk20a_semaphore_pool_map *map =
-		gk20a_semaphore_pool_find_map(p, vm);
-	if (!map)
-		return 0;
-	return map->gpu_va;
+	struct gk20a_semaphore_pool_map *map;
+	u64 gpu_va = 0;
+
+	mutex_lock(&p->maps_mutex);
+	map = gk20a_semaphore_pool_find_map_locked(p, vm);
+	if (map)
+		gpu_va = map->gpu_va;
+	mutex_unlock(&p->maps_mutex);
+
+	return gpu_va;
 }
 
 struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)

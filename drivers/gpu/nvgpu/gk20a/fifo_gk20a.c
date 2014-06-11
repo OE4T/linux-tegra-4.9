@@ -538,6 +538,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),
 				GFP_KERNEL);
+	f->tsg = kzalloc(f->num_channels * sizeof(*f->tsg),
+				GFP_KERNEL);
 	f->pbdma_map = kzalloc(f->num_pbdma * sizeof(*f->pbdma_map),
 				GFP_KERNEL);
 	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
@@ -566,8 +568,10 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 			f->userd.gpu_va + chid * f->userd_entry_size;
 
 		gk20a_init_channel_support(g, chid);
+		gk20a_init_tsg_support(g, chid);
 	}
 	mutex_init(&f->ch_inuse_mutex);
+	mutex_init(&f->tsg_inuse_mutex);
 
 	f->remove_support = gk20a_remove_fifo_support;
 

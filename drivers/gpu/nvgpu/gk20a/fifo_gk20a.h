@@ -22,6 +22,7 @@
 #define __FIFO_GK20A_H__
 
 #include "channel_gk20a.h"
+#include "tsg_gk20a.h"
 
 #define MAX_RUNLIST_BUFFERS	2
 
@@ -110,6 +111,9 @@ struct fifo_gk20a {
 
 	struct channel_gk20a *channel;
 	struct mutex ch_inuse_mutex; /* protect unused chid look up */
+
+	struct tsg_gk20a *tsg;
+	struct mutex tsg_inuse_mutex;
 
 	void (*remove_support)(struct fifo_gk20a *);
 	bool sw_ready;

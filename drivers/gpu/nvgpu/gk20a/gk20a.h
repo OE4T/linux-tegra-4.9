@@ -40,6 +40,7 @@ struct acr_gm20b;
 #include "as_gk20a.h"
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
+#include "tsg_gk20a.h"
 #include "gr_gk20a.h"
 #include "sim_gk20a.h"
 #include "pmu_gk20a.h"
@@ -307,6 +308,11 @@ struct gk20a {
 		struct cdev cdev;
 		struct device *node;
 	} prof;
+
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} tsg;
 
 	struct mutex client_lock;
 	int client_refcount; /* open channels and ctrl nodes */

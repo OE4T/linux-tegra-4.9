@@ -83,6 +83,9 @@ struct channel_gk20a {
 	bool vpr;
 	pid_t pid;
 
+	int tsgid;
+	struct list_head ch_entry; /* channel's entry in TSG */
+
 	struct list_head jobs;
 	struct mutex jobs_lock;
 	struct mutex submit_lock;

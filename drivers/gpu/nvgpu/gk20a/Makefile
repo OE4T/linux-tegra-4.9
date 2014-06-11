@@ -33,7 +33,8 @@ nvgpu-y := \
 	hal.o \
 	hal_gk20a.o \
 	gk20a_allocator.o \
-	platform_gk20a_generic.o
+	platform_gk20a_generic.o \
+	tsg_gk20a.o
 nvgpu-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += sync_gk20a.o
 

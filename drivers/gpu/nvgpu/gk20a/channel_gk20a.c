@@ -747,6 +747,9 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	g->ops.fifo.bind_channel(ch);
 	ch->pid = current->pid;
 
+	/* By default, channel is regular (non-TSG) channel */
+	ch->tsgid = NVGPU_INVALID_TSG_ID;
+
 	/* reset timeout counter and update timestamp */
 	ch->timeout_accumulated_ms = 0;
 	ch->timeout_gpfifo_get = 0;

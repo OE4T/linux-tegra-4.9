@@ -648,6 +648,12 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 
 	channel_gk20a_free_priv_cmdbuf(ch);
 
+	/* sync must be destroyed before releasing channel vm */
+	if (ch->sync) {
+		ch->sync->destroy(ch->sync);
+		ch->sync = NULL;
+	}
+
 	/* release channel binding to the as_share */
 	gk20a_as_release_share(ch_vm->as_share);
 
@@ -660,10 +666,6 @@ unbind:
 
 	gk20a_channel_fence_close(&ch->last_submit.pre_fence);
 	gk20a_channel_fence_close(&ch->last_submit.post_fence);
-	if (ch->sync) {
-		ch->sync->destroy(ch->sync);
-		ch->sync = NULL;
-	}
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */

@@ -1,0 +1,153 @@
+/*
+ * arch/arm64/boot/dts/tegra186.dtsi
+ *
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/include/ "denver.dtsi"
+
+/ {
+	compatible = "nvidia,tegra186";
+	interrupt-parent = <&intc>;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "nvidia,denver", "arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x8000fff8>;
+			power-states = <&power_states>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "nvidia,denver", "arm,armv8";
+			reg = <0x0 0x1>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x8000fff8>;
+			power-states = <&power_states>;
+		};
+
+		cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a57-64bit", "arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+		};
+
+		cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a57-64bit", "arm,armv8";
+			reg = <0x0 0x1>;
+			enable-method = "psci";
+		};
+
+		cpu@4 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a57-64bit", "arm,armv8";
+			reg = <0x0 0x2>;
+			enable-method = "psci";
+		};
+
+		cpu@5 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a57-64bit", "arm,armv8";
+			reg = <0x0 0x3>;
+			enable-method = "psci";
+		};
+	};
+
+	psci {
+		compatible = "arm,psci";
+		method = "smc";
+		cpu_off = <0x84000002>;
+		cpu_on = <0xC4000003>;
+		cpu_suspend = <0xC4000001>;
+	};
+
+	intc: interrupt-controller {
+		compatible = "arm,cortex-a15-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg = <0x0 0x50041000 0x0 0x1000
+		       0x0 0x50042000 0x0 0x0100>;
+	};
+
+	lic: interrupt-controller@60004000 {
+		compatible = "nvidia,tegra-gic";
+		interrupt-controller;
+		reg = <0x0 0x60004000 0x0 0x40>,
+		      <0x0 0x60004100 0x0 0x40>,
+		      <0x0 0x60004200 0x0 0x40>,
+		      <0x0 0x60004300 0x0 0x40>,
+		      <0x0 0x60004400 0x0 0x40>,
+		      <0x0 0x60004500 0x0 0x40>;
+	};
+
+	timer@60005000 {
+		compatible = "nvidia,tegra210-timer";
+		reg = <0x0 0x60005000 0x0 0x400>;
+		interrupts = <0 176 4>,
+			     <0 177 4>,
+			     <0 178 4>,
+			     <0 179 4>;
+		clock-frequency = <38400000>;
+	};
+
+	uarta: serial@70006000 {
+		compatible = "nvidia,tegra210-uart";
+		reg = <0x0 0x70006000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 36 0x04>;
+		clock-frequency = <408000000>;
+		nvidia,memory-clients = <14>;
+	};
+
+	sdhci@700b0600 {
+		compatible = "nvidia,tegra210-sdhci";
+		reg = <0x0 0x700b0600 0x0 0x200>;
+		interrupts = < 0 31 0x04 >;
+		status = "disabled";
+	};
+
+	sdhci@700b0400 {
+		compatible = "nvidia,tegra210-sdhci";
+		reg = <0x0 0x700b0400 0x0 0x200>;
+		interrupts = < 0 19 0x04 >;
+		status = "disabled";
+	};
+
+	sdhci@700b0200 {
+		compatible = "nvidia,tegra210-sdhci";
+		reg = <0x0 0x700b0200 0x0 0x200>;
+		interrupts = < 0 15 0x04 >;
+		status = "disabled";
+	};
+
+	sdhci@700b0000 {
+		compatible = "nvidia,tegra210-sdhci";
+		reg = <0x0 0x700b0000 0x0 0x200>;
+		interrupts = < 0 14 0x04 >;
+		status = "disabled";
+	};
+};

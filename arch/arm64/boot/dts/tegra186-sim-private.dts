@@ -1,0 +1,77 @@
+/*
+ * arch/arm64/boot/dts/tegra186-sim-private.dts
+ *
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/dts-v1/;
+
+/memreserve/ 0x80000000 0x00010000;
+
+#include "tegra186.dtsi"
+
+/ {
+	model = "t186ref";
+	compatible = "nvidia,tegra186";
+
+	chosen {
+		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x70006000";
+	};
+
+	/* chosen */
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = < 0x0 0x80000000 0x0 0x40000000 >;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 13 0xf01
+			      1 14 0xf01
+			      1 11 0xf01
+			      1 10 0xf01>;
+		clock-frequency = <38400000>;
+	};
+
+	serial@70006200 {
+		compatible = "nvidia,tegra114-hsuart";
+		status = "okay";
+	};
+
+	sdhci@700b0600 {
+		tap-delay = <4>;
+		trim-delay = <3>;
+		mmc-ocr-mask = <0>;
+		max-clk-limit = <200000000>;
+		uhs_mask = <0x0>;
+		bus-width = <8>;
+		id = <3>;
+		built-in;
+		calib_3v3_offsets = <0x0202>;
+		calib_1v8_offsets = <0x0202>;
+		status = "okay";
+	};
+	ethernet@0x4e000000 {
+		compatible = "smsc,lan9115";
+		reg = < 0x0 0x4e000000 0x0 0x00010000 >;
+		interrupts = <0 48 0x4>;
+		reg-io-width = <4>;
+		smsc,irq-active-high;
+		smsc,irq-push-pull;
+	};
+};

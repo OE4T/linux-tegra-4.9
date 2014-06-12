@@ -934,7 +934,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 70 */
+		/* 67 */
 		.name = "ADMAIF1 CODEC",
 		.stream_name = "ADMAIF1 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -944,7 +944,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 71 */
+		/* 68 */
 		.name = "ADMAIF2 CODEC",
 		.stream_name = "ADMAIF2 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -954,7 +954,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 72 */
+		/* 69 */
 		.name = "ADMAIF3 CODEC",
 		.stream_name = "ADMAIF3 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -964,7 +964,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 73 */
+		/* 70 */
 		.name = "ADMAIF4 CODEC",
 		.stream_name = "ADMAIF4 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -974,7 +974,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 74 */
+		/* 71 */
 		.name = "ADMAIF5 CODEC",
 		.stream_name = "ADMAIF5 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -984,7 +984,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 75 */
+		/* 72 */
 		.name = "ADMAIF6 CODEC",
 		.stream_name = "ADMAIF6 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -994,7 +994,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 76 */
+		/* 73 */
 		.name = "ADMAIF7 CODEC",
 		.stream_name = "ADMAIF7 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -1004,7 +1004,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 77 */
+		/* 74 */
 		.name = "ADMAIF8 CODEC",
 		.stream_name = "ADMAIF8 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -1014,7 +1014,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 78 */
+		/* 75 */
 		.name = "ADMAIF9 CODEC",
 		.stream_name = "ADMAIF9 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -1024,7 +1024,7 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.params = &i2s_link_params,
 	},
 	{
-		/* 79 */
+		/* 76 */
 		.name = "ADMAIF10 CODEC",
 		.stream_name = "ADMAIF10 CODEC",
 		/* .cpu_of_node = AHUB ADMAIF */
@@ -1032,6 +1032,136 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		/* .codec_of_node = AHUB XBAR */
 		.codec_dai_name = "ADMAIF10",
 		.params = &i2s_link_params,
+	},
+	{
+		/* 77 */
+		.name = "ADSP ADMAIF1",
+		.stream_name = "ADSP ADMAIF1",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF1",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF1 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 78 */
+		.name = "ADSP ADMAIF2",
+		.stream_name = "ADSP ADMAIF2",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF2",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF2 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 79 */
+		.name = "ADSP ADMAIF3",
+		.stream_name = "ADSP ADMAIF3",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF3",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF3 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 80 */
+		.name = "ADSP ADMAIF4",
+		.stream_name = "ADSP ADMAIF4",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF4",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF4 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 81 */
+		.name = "ADSP ADMAIF5",
+		.stream_name = "ADSP ADMAIF5",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF5",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF5 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 82 */
+		.name = "ADSP ADMAIF6",
+		.stream_name = "ADSP ADMAIF6",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF6",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF6 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 83 */
+		.name = "ADSP ADMAIF7",
+		.stream_name = "ADSP ADMAIF7",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF7",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF7 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 84 */
+		.name = "ADSP ADMAIF8",
+		.stream_name = "ADSP ADMAIF8",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF8",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF8 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 85 */
+		.name = "ADSP ADMAIF9",
+		.stream_name = "ADSP ADMAIF9",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF9",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF9 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 86 */
+		.name = "ADSP ADMAIF10",
+		.stream_name = "ADSP ADMAIF10",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP-ADMAIF10",
+		/* .codec_of_node = AHUB ADMAIF */
+		.codec_dai_name = "ADMAIF10 FIFO",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 87 */
+		.name = "ADSP PCM",
+		.stream_name = "ADSP PCM",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP PCM",
+		/* .codec_of_node = ADSP */
+		.codec_dai_name = "ADSP-FE1",
+		.ops = &tegra_grenada_ops,
+	},
+	{
+		/* 88 */
+		.name = "ADSP COMPR1",
+		.stream_name = "ADSP COMPR1",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP COMPR1",
+		/* .codec_of_node = ADSP */
+		.codec_dai_name = "ADSP-FE2",
+		.ops = &tegra_grenada_ops,
+	},
+	{
+		/* 89 */
+		.name = "ADSP COMPR2",
+		.stream_name = "ADSP COMPR2",
+		/* .cpu_of_node = ADSP */
+		.cpu_dai_name = "ADSP COMPR2",
+		/* .codec_of_node = ADSP */
+		.codec_dai_name = "ADSP-FE3",
+		.ops = &tegra_grenada_ops,
 	},
 };
 
@@ -1493,6 +1623,35 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 				tegra_grenada_links[0].cpu_of_node;
 			tegra_grenada_links[i].codec_of_node =
 				tegra_grenada_links[0].codec_of_node;
+		}
+
+		/* ADSP-ADMAIF dai links */
+		tegra_grenada_links[77].cpu_of_node = of_parse_phandle(np,
+					"nvidia,adsp", 0);
+		if (!tegra_grenada_links[77].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,adsp' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		tegra_grenada_links[77].codec_of_node =
+			tegra_grenada_links[67].cpu_of_node;
+
+		for (i = 78; i < 87; i++) {
+			tegra_grenada_links[i].cpu_of_node =
+				tegra_grenada_links[77].cpu_of_node;
+			tegra_grenada_links[i].codec_of_node =
+				tegra_grenada_links[77].codec_of_node;
+		}
+
+		/* ADSP CPU Dai links*/
+		for (i = 87; i < 90; i++) {
+			tegra_grenada_links[i].cpu_of_node =
+				tegra_grenada_links[77].cpu_of_node;
+			tegra_grenada_links[i].codec_of_node =
+				tegra_grenada_links[i].cpu_of_node;
+			tegra_grenada_links[i].platform_of_node =
+				tegra_grenada_links[i].cpu_of_node;
 		}
 	}
 

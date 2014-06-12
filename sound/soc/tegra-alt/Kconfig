@@ -136,6 +136,12 @@ config SND_SOC_TEGRA210_SPDIF_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 SPDIF module.
 
+config SND_SOC_TEGRA210_ADSP_ALT
+        tristate "Tegra210 ADSP driver"
+        depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210 && TEGRA_NVADSP
+        help
+          Say Y or M if you want to add support for Tegra210 ADSP module.
+
 config SND_SOC_TEGRA_VCM30T124_ALT
 	tristate "SoC Audio support for VCM30_T124"
 	depends on SND_SOC_TEGRA_ALT
@@ -173,6 +179,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 	select SND_SOC_TEGRA210_AFC_ALT
 	select SND_SOC_TEGRA210_MVC_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
+	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_SPDIF
 	help
 	  Say Y or M here.

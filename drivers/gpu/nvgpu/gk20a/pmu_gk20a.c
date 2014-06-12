@@ -43,8 +43,6 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
-static int gk20a_pmu_ap_send_command(struct gk20a *g,
-			union pmu_ap_cmd *p_ap_cmd, bool b_block);
 
 static u32 pmu_cmdline_size_v0(struct pmu_gk20a *pmu)
 {
@@ -1803,9 +1801,6 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
-static int gk20a_aelpg_init(struct gk20a *g);
-static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
-
 static void pmu_setup_hw_load_zbc(struct gk20a *g);
 static void pmu_setup_hw_enable_elpg(struct gk20a *g);
 
@@ -3441,7 +3436,7 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 }
 
 /* Send an Adaptive Power (AP) related command to PMU */
-static int gk20a_pmu_ap_send_command(struct gk20a *g,
+int gk20a_pmu_ap_send_command(struct gk20a *g,
 			union pmu_ap_cmd *p_ap_cmd, bool b_block)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -3545,7 +3540,7 @@ static void ap_callback_init_and_enable_ctrl(
 	}
 }
 
-static int gk20a_aelpg_init(struct gk20a *g)
+int gk20a_aelpg_init(struct gk20a *g)
 {
 	int status = 0;
 
@@ -3554,30 +3549,28 @@ static int gk20a_aelpg_init(struct gk20a *g)
 
 	/* TODO: Check for elpg being ready? */
 	ap_cmd.init.cmd_id = PMU_AP_CMD_ID_INIT;
-	ap_cmd.init.pg_sampling_period_us =
-		APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
+	ap_cmd.init.pg_sampling_period_us = g->pmu.aelpg_param[0];
 
 	status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 	return status;
 }
 
-static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
+int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
 {
 	int status = 0;
 	union pmu_ap_cmd ap_cmd;
 
 	/* TODO: Probably check if ELPG is ready? */
-
 	ap_cmd.init_and_enable_ctrl.cmd_id = PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL;
 	ap_cmd.init_and_enable_ctrl.ctrl_id = ctrl_id;
 	ap_cmd.init_and_enable_ctrl.params.min_idle_filter_us =
-		APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
+			g->pmu.aelpg_param[1];
 	ap_cmd.init_and_enable_ctrl.params.min_target_saving_us =
-		APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
+			g->pmu.aelpg_param[2];
 	ap_cmd.init_and_enable_ctrl.params.power_break_even_us =
-		APCTRL_POWER_BREAKEVEN_DEFAULT_US;
+			g->pmu.aelpg_param[3];
 	ap_cmd.init_and_enable_ctrl.params.cycles_per_sample_max =
-		APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+			g->pmu.aelpg_param[4];
 
 	switch (ctrl_id) {
 	case PMU_AP_CTRL_ID_GRAPHICS:

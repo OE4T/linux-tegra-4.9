@@ -29,6 +29,7 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
+#include "pmu_gk20a.h"
 
 
 #define PTIMER_FP_FACTOR			1000000
@@ -332,6 +333,62 @@ static ssize_t elpg_enable_read(struct device *device,
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
 
+static ssize_t aelpg_param_store(struct device *device,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	int status = 0;
+	union pmu_ap_cmd ap_cmd;
+	int *paramlist = (int *)g->pmu.aelpg_param;
+	u32 defaultparam[5] = {
+			APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US,
+			APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US,
+			APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US,
+			APCTRL_POWER_BREAKEVEN_DEFAULT_US,
+			APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT
+	};
+
+	/* Get each parameter value from input string*/
+	sscanf(buf, "%d %d %d %d %d", &paramlist[0], &paramlist[1],
+				&paramlist[2], &paramlist[3], &paramlist[4]);
+
+	/* If parameter value is 0 then reset to SW default values*/
+	if ((paramlist[0] | paramlist[1] | paramlist[2]
+		| paramlist[3] | paramlist[4]) == 0x00) {
+		memcpy(paramlist, defaultparam, sizeof(defaultparam));
+	}
+
+	/* If aelpg is enabled & pmu is ready then post values to
+	 * PMU else store then post later
+	 */
+	if (g->aelpg_enabled && g->pmu.pmu_ready) {
+		/* Disable AELPG */
+		ap_cmd.init.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+		status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+
+		/* Enable AELPG */
+		gk20a_aelpg_init(g);
+		gk20a_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
+	}
+
+	return count;
+}
+
+static ssize_t aelpg_param_read(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d %d %d %d %d\n", g->pmu.aelpg_param[0],
+		g->pmu.aelpg_param[1], g->pmu.aelpg_param[2],
+		g->pmu.aelpg_param[3], g->pmu.aelpg_param[4]);
+}
+
+static DEVICE_ATTR(aelpg_param, S_IRWXUGO,
+		aelpg_param_read, aelpg_param_store);
+
 #ifdef CONFIG_PM_RUNTIME
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -400,6 +457,7 @@ void gk20a_remove_sysfs(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 	device_remove_file(dev, &dev_attr_force_idle);
 #endif
+	device_remove_file(dev, &dev_attr_aelpg_param);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
 		sysfs_remove_link(&dev->kobj, dev_name(dev));
@@ -423,6 +481,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 #ifdef CONFIG_PM_RUNTIME
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
 #endif
+	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
 
 	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,

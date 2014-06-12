@@ -1539,6 +1539,13 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->aelpg_enabled =
 		tegra_platform_is_silicon() ? platform->enable_aelpg : false;
 
+	/* set default values to aelpg parameters */
+	gk20a->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
+	gk20a->pmu.aelpg_param[1] = APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
+	gk20a->pmu.aelpg_param[2] = APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
+	gk20a->pmu.aelpg_param[3] = APCTRL_POWER_BREAKEVEN_DEFAULT_US;
+	gk20a->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+
 	gk20a_create_sysfs(dev);
 
 #ifdef CONFIG_DEBUG_FS

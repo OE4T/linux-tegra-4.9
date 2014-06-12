@@ -1066,6 +1066,7 @@ struct pmu_gk20a {
 	bool perfmon_sampling_enabled;
 	u8 pmu_mode; /*Added for GM20b, and ACR*/
 	u32 falcon_id;
+	u32 aelpg_param[5];
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
@@ -1108,5 +1109,10 @@ void pmu_setup_hw(struct work_struct *work);
 void pmu_seq_init(struct pmu_gk20a *pmu);
 
 int gk20a_init_pmu(struct pmu_gk20a *pmu);
+
+int gk20a_pmu_ap_send_command(struct gk20a *g,
+		union pmu_ap_cmd *p_ap_cmd, bool b_block);
+int gk20a_aelpg_init(struct gk20a *g);
+int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 
 #endif /*__PMU_GK20A_H__*/

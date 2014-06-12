@@ -22,6 +22,7 @@
 #include "tegra_asoc_machine_alt.h"
 
 static struct snd_soc_dai_link *tegra_asoc_machine_links;
+static struct snd_soc_codec_conf *tegra_asoc_codec_conf;
 
 static const struct snd_soc_pcm_stream default_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
@@ -484,20 +485,96 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 	},
 };
 
+static struct snd_soc_codec_conf tegra_xbar_codec_conf[NUM_XBAR_CODEC_CONF] = {
+	[CODEC_AMX0_CONF] = {
+		.dev_name = "tegra124-amx.0",
+		.name_prefix = "AMX0",
+	},
+	[CODEC_AMX1_CONF] = {
+		.dev_name = "tegra124-amx.1",
+		.name_prefix = "AMX1",
+	},
+	[CODEC_ADX0_CONF] = {
+		.dev_name = "tegra124-adx.0",
+		.name_prefix = "ADX0",
+	},
+	[CODEC_ADX1_CONF] = {
+		.dev_name = "tegra124-adx.1",
+		.name_prefix = "ADX1",
+	},
+	[CODEC_DAM0_CONF] = {
+		.dev_name = "tegra30-dam.0",
+		.name_prefix = "DAM0",
+	},
+	[CODEC_DAM1_CONF] = {
+		.dev_name = "tegra30-dam.1",
+		.name_prefix = "DAM1",
+	},
+	[CODEC_DAM2_CONF] = {
+		.dev_name = "tegra30-dam.2",
+		.name_prefix = "DAM2",
+	},
+	[CODEC_AFC0_CONF] = {
+		.dev_name = "tegra124-afc.0",
+		.name_prefix = "AFC0",
+	},
+	[CODEC_AFC1_CONF] = {
+		.dev_name = "tegra124-afc.1",
+		.name_prefix = "AFC1",
+	},
+	[CODEC_AFC2_CONF] = {
+		.dev_name = "tegra124-afc.2",
+		.name_prefix = "AFC2",
+	},
+	[CODEC_AFC3_CONF] = {
+		.dev_name = "tegra124-afc.3",
+		.name_prefix = "AFC3",
+	},
+	[CODEC_AFC4_CONF] = {
+		.dev_name = "tegra124-afc.4",
+		.name_prefix = "AFC4",
+	},
+	[CODEC_AFC5_CONF] = {
+		.dev_name = "tegra124-afc.5",
+		.name_prefix = "AFC5",
+	},
+	[CODEC_I2S0_CONF] = {
+		.dev_name = "tegra30-i2s.0",
+		.name_prefix = "I2S0",
+	},
+	[CODEC_I2S1_CONF] = {
+		.dev_name = "tegra30-i2s.1",
+		.name_prefix = "I2S1",
+	},
+	[CODEC_I2S2_CONF] = {
+		.dev_name = "tegra30-i2s.2",
+		.name_prefix = "I2S2",
+	},
+	[CODEC_I2S3_CONF] = {
+		.dev_name = "tegra30-i2s.3",
+		.name_prefix = "I2S3",
+	},
+	[CODEC_I2S4_CONF] = {
+		.dev_name = "tegra30-i2s.4",
+		.name_prefix = "I2S4",
+	},
+	[CODEC_SPDIF_CONF] = {
+		.dev_name = "tegra30-spdif",
+		.name_prefix = "SPDIF",
+	},
+};
+
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {
 	if (tegra_asoc_machine_links)
 		return tegra_asoc_machine_links;
 
-	if (of_machine_is_compatible("nvidia,tegra210")) {
-		/* TODO copy dai_links for T210 */
-	} else {
-		tegra_asoc_machine_links = kmalloc(NUM_XBAR_DAI_LINKS *
-			sizeof(struct snd_soc_dai_link), GFP_KERNEL);
+	tegra_asoc_machine_links = kzalloc(NUM_XBAR_DAI_LINKS *
+		sizeof(struct snd_soc_dai_link), GFP_KERNEL);
 
-		memcpy(tegra_asoc_machine_links, tegra_xbar_dai_links,
-			NUM_XBAR_DAI_LINKS * sizeof(struct snd_soc_dai_link));
-	}
+	memcpy(tegra_asoc_machine_links, tegra_xbar_dai_links,
+		NUM_XBAR_DAI_LINKS * sizeof(struct snd_soc_dai_link));
+
 	return tegra_asoc_machine_links;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_dai_link);
@@ -569,3 +646,58 @@ void tegra_machine_set_dai_fmt(int link, unsigned int fmt)
 		tegra_asoc_machine_links[link].dai_fmt = fmt;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_set_dai_fmt);
+
+struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void)
+{
+	if (tegra_asoc_codec_conf)
+		return tegra_asoc_codec_conf;
+
+	tegra_asoc_codec_conf = kzalloc(NUM_XBAR_CODEC_CONF *
+		sizeof(struct snd_soc_codec_conf), GFP_KERNEL);
+
+	memcpy(tegra_asoc_codec_conf, tegra_xbar_codec_conf,
+		NUM_XBAR_CODEC_CONF *
+		sizeof(struct snd_soc_codec_conf));
+
+	return tegra_asoc_codec_conf;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_codec_conf);
+
+void tegra_machine_remove_codec_conf(void)
+{
+	kfree(tegra_asoc_codec_conf);
+}
+EXPORT_SYMBOL_GPL(tegra_machine_remove_codec_conf);
+
+/* @link: input structure to append
+ * @link_size: size of the input structure
+ * Returns the total size after appending
+ */
+int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
+		unsigned int conf_size)
+{
+	unsigned int size1 = NUM_XBAR_CODEC_CONF;
+	unsigned int size2 = conf_size;
+
+	if (!tegra_asoc_codec_conf) {
+		if (conf) {
+			tegra_asoc_codec_conf = conf;
+			return size2;
+		} else {
+			return 0;
+		}
+	} else {
+		if (conf) {
+			tegra_asoc_codec_conf =
+				(struct snd_soc_codec_conf *) krealloc(
+				tegra_asoc_codec_conf, (size1 + size2) *
+				sizeof(struct snd_soc_codec_conf), GFP_KERNEL);
+			memcpy(&tegra_asoc_codec_conf[size1], conf,
+				size2 * sizeof(struct snd_soc_codec_conf));
+			return size1+size2;
+		} else {
+			return size1;
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(tegra_machine_append_codec_conf);

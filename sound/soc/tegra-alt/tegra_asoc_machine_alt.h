@@ -71,6 +71,29 @@ enum {
 	NUM_XBAR_DAI_LINKS, /* Total number of xbar dai links */
 };
 
+enum {
+	CODEC_AMX0_CONF,
+	CODEC_AMX1_CONF,
+	CODEC_ADX0_CONF,
+	CODEC_ADX1_CONF,
+	CODEC_DAM0_CONF,
+	CODEC_DAM1_CONF,
+	CODEC_DAM2_CONF,
+	CODEC_AFC0_CONF,
+	CODEC_AFC1_CONF,
+	CODEC_AFC2_CONF,
+	CODEC_AFC3_CONF,
+	CODEC_AFC4_CONF,
+	CODEC_AFC5_CONF,
+	CODEC_I2S0_CONF,
+	CODEC_I2S1_CONF,
+	CODEC_I2S2_CONF,
+	CODEC_I2S3_CONF,
+	CODEC_I2S4_CONF,
+	CODEC_SPDIF_CONF,
+	NUM_XBAR_CODEC_CONF, /* Total number of xbar codec conf */
+};
+
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void);
 
 void tegra_machine_remove_dai_link(void);
@@ -86,5 +109,12 @@ void tegra_machine_set_dai_params(int link,
 		struct snd_soc_pcm_stream *params);
 
 void tegra_machine_set_dai_fmt(int link, unsigned int fmt);
+
+struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void);
+
+void tegra_machine_remove_codec_conf(void);
+
+int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
+		unsigned int conf_size);
 
 #endif

@@ -1937,7 +1937,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	/* idle the engine by submitting WFI on non-KEPLER_C channel */
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = &f->channel[chid];
-		if (c->in_use && c->obj_class != KEPLER_C) {
+		if (c->in_use && c->obj_class != KEPLER_C && !c->has_timedout) {
 			err = gk20a_channel_submit_wfi(c);
 			if (err) {
 				gk20a_err(d, "cannot idle channel %d\n",

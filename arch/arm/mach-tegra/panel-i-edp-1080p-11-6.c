@@ -21,6 +21,7 @@
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
 #include <linux/ioport.h>
 #include "board.h"
@@ -361,9 +362,13 @@ static struct tegra_dc_out_pin edp_out_pins[] = {
 	},
 };
 
-static int edp_i_1080p_11_6_bl_notify(struct device *unused, int brightness)
+static int edp_i_1080p_11_6_bl_notify(struct device *dev, int brightness)
 {
+	struct backlight_device *bl = NULL;
+	struct pwm_bl_data *pb = NULL;
 	int cur_sd_brightness = atomic_read(&sd_brightness);
+	bl = (struct backlight_device *)dev_get_drvdata(dev);
+	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
 	/* SD brightness is a percentage */
 	brightness = (brightness * cur_sd_brightness) / 255;
@@ -371,8 +376,8 @@ static int edp_i_1080p_11_6_bl_notify(struct device *unused, int brightness)
 	/* Apply any backlight response curve */
 	if (brightness > 255)
 		pr_info("Error: Brightness > 255!\n");
-	else
-		brightness = edp_i_1080p_11_6_bl_output_measured[brightness];
+	else if (pb->bl_measured)
+		brightness = pb->bl_measured[brightness];
 
 	return brightness;
 }
@@ -387,6 +392,7 @@ static struct platform_pwm_backlight_data edp_i_1080p_11_6_bl_data = {
 	.max_brightness	= 255,
 	.dft_brightness	= 224,
 	.pwm_period_ns	= 1000000,
+	.bl_measured    = edp_i_1080p_11_6_bl_output_measured,
 	.pwm_gpio	= TEGRA_GPIO_INVALID,
 	.notify		= edp_i_1080p_11_6_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */

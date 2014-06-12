@@ -22,6 +22,7 @@
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
 
 #include <mach/dc.h>
@@ -304,9 +305,13 @@ static tegra_dc_bl_output dsi_j_1440_810_5_8_bl_response_curve = {
 	252, 253, 255
 };
 
-static int dsi_j_1440_810_5_8_bl_notify(struct device *unused, int brightness)
+static int dsi_j_1440_810_5_8_bl_notify(struct device *dev, int brightness)
 {
+	struct backlight_device *bl = NULL;
+	struct pwm_bl_data *pb = NULL;
 	int cur_sd_brightness = atomic_read(&sd_brightness);
+	bl = (struct backlight_device *)dev_get_drvdata(dev);
+	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
 	/* SD brightness is a percentage */
 	brightness = (brightness * cur_sd_brightness) / 255;
@@ -314,8 +319,8 @@ static int dsi_j_1440_810_5_8_bl_notify(struct device *unused, int brightness)
 	/* Apply any backlight response curve */
 	if (brightness > 255)
 		pr_info("Error: Brightness > 255!\n");
-	else
-		brightness = dsi_j_1440_810_5_8_bl_response_curve[brightness];
+	else if (pb->bl_measured)
+		brightness = pb->bl_measured[brightness];
 
 	return brightness;
 }
@@ -330,6 +335,7 @@ static struct platform_pwm_backlight_data dsi_j_1440_810_5_8_bl_data = {
 	.max_brightness	= 255,
 	.dft_brightness	= 77,
 	.pwm_period_ns	= 29334,
+	.bl_measured    = dsi_j_1440_810_5_8_bl_response_curve,
 	.notify		= dsi_j_1440_810_5_8_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= dsi_j_1440_810_5_8_check_fb,

@@ -20,8 +20,8 @@
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
-#include <linux/max8831_backlight.h>
 #include <linux/leds.h>
 #include <linux/ioport.h>
 
@@ -346,8 +346,12 @@ static struct tegra_dc_mode dsi_lgd_wxga_7_0_modes[] = {
 	},
 };
 
-static int dsi_lgd_wxga_7_0_bl_notify(struct device *unused, int brightness)
+static int dsi_lgd_wxga_7_0_bl_notify(struct device *dev, int brightness)
 {
+	struct backlight_device *bl = NULL;
+	struct pwm_bl_data *pb = NULL;
+	bl = (struct backlight_device *)dev_get_drvdata(dev);
+	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 	/*
 	 * In early panel bring-up, we will
 	 * not enable PRISM.
@@ -358,7 +362,9 @@ static int dsi_lgd_wxga_7_0_bl_notify(struct device *unused, int brightness)
 	if (brightness > 255) {
 		pr_info("Error: Brightness > 255!\n");
 		brightness = 255;
-	}
+	} else if (pb->bl_measured)
+		brightness = pb->bl_measured[brightness];
+
 	return brightness;
 }
 

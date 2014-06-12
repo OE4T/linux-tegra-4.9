@@ -427,10 +427,11 @@ static int check_access_permission(void)
 	if (!task)
 		return -EACCES;
 
-	if (current_fsuid() != task_uid(task) &&
-	    task_uid(task) != comm_ctx.debug_app_uid) {
+	if (!uid_eq(current_fsuid() , task_uid(task)) &&
+	    from_kuid(&init_user_ns, task_uid(task)) != comm_ctx.debug_app_uid) {
 		pr_err("Permission denied, owner/task uids: %u/%u\n",
-			   current_fsuid(), task_uid(task));
+			   from_kuid(&init_user_ns, current_fsuid()),
+			   from_kuid(&init_user_ns, task_uid(task)));
 		return -EACCES;
 	}
 	return 0;

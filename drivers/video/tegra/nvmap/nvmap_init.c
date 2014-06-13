@@ -127,3 +127,4 @@ int __init nvmap_init(void)
 #endif
 	return err;
 }
+arch_initcall(nvmap_init);

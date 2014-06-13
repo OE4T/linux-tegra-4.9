@@ -40,6 +40,7 @@ struct tegra_panel_ops *fixed_primary_panel_ops;
 struct tegra_panel_ops *fixed_secondary_panel_ops;
 const char *fixed_primary_panel_node;
 const char *fixed_secondary_panel_node;
+struct pwm_bl_data_dt_ops *fixed_pwm_bl_ops;
 
 void tegra_dsi_resources_init(u8 dsi_instance,
 			struct resource *resources, int n_resources)
@@ -177,6 +178,77 @@ void tegra_set_fixed_panel_ops(bool is_primary,
 		fixed_secondary_panel_ops = p_ops;
 		fixed_secondary_panel_node = (const char *)panel_node;
 	}
+}
+
+void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops)
+{
+	fixed_pwm_bl_ops = p_ops;
+}
+
+void tegra_pwm_bl_ops_register(struct device *dev)
+{
+	struct board_info display_board;
+
+	bool is_dsi_a_1200_1920_8_0 = false;
+	bool is_dsi_a_1200_800_8_0 = false;
+	bool is_edp_i_1080p_11_6 = false;
+	bool is_edp_a_1080p_14_0 = false;
+
+	tegra_get_display_board_info(&display_board);
+
+	switch (display_board.board_id) {
+	case BOARD_E1627:
+	case BOARD_E1797:
+		dev_set_drvdata(dev, dsi_a_1200_1920_8_0_ops.pwm_bl_ops);
+		break;
+	case BOARD_E1549:
+		dev_set_drvdata(dev, dsi_lgd_wxga_7_0_ops.pwm_bl_ops);
+		break;
+	case BOARD_E1639:
+	case BOARD_E1813:
+		dev_set_drvdata(dev, dsi_s_wqxga_10_1_ops.pwm_bl_ops);
+		break;
+	case BOARD_E1937:
+		if (display_board.sku == 1100)
+			is_dsi_a_1200_800_8_0 = true;
+		else
+			is_dsi_a_1200_1920_8_0 = true;
+		break;
+	case BOARD_E1807:
+		is_dsi_a_1200_800_8_0 = true;
+		break;
+	case BOARD_P1761:
+		if (tegra_get_board_panel_id())
+			is_dsi_a_1200_1920_8_0 = true;
+		else
+			is_dsi_a_1200_800_8_0 = true;
+		break;
+	case BOARD_PM363:
+	case BOARD_E1824:
+		if (display_board.sku == 1200)
+			is_edp_i_1080p_11_6 = true;
+		else
+			is_edp_a_1080p_14_0 = true;
+		break;
+	default:
+		/* TODO
+		 * Finally, check if there's fixed_pwm_bl_ops
+		 */
+		if (fixed_pwm_bl_ops)
+			dev_set_drvdata(dev, fixed_pwm_bl_ops);
+		else
+			pr_info("pwm_bl_ops are not required\n");
+	};
+
+	if (is_dsi_a_1200_1920_8_0)
+		dev_set_drvdata(dev, dsi_a_1200_1920_8_0_ops.pwm_bl_ops);
+	if (is_dsi_a_1200_800_8_0)
+		dev_set_drvdata(dev, dsi_a_1200_800_8_0_ops.pwm_bl_ops);
+
+	if (is_edp_i_1080p_11_6)
+		dev_set_drvdata(dev, edp_i_1080p_11_6_ops.pwm_bl_ops);
+	if (is_edp_a_1080p_14_0)
+		dev_set_drvdata(dev, edp_a_1080p_14_0_ops.pwm_bl_ops);
 }
 
 static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,

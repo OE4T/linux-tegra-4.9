@@ -20,6 +20,7 @@
 #define __MACH_TEGRA_BOARD_PANEL_H
 
 #include <linux/platform_device.h>
+#include <linux/pwm_backlight.h>
 #include <mach/dc.h>
 #include "tegra-board-id.h"
 
@@ -48,7 +49,6 @@ struct tegra_panel_of {
 static struct tegra_panel_of __maybe_unused panel_of = {
 	.panel_gpio = {-1, -1, -1},
 };
-
 struct tegra_panel_ops {
 	int (*enable)(struct device *);
 	int (*postpoweron)(struct device *);
@@ -57,6 +57,7 @@ struct tegra_panel_ops {
 	int (*hotplug_init)(struct device *);
 	int (*postsuspend)(void);
 	void (*hotplug_report)(bool);
+	struct pwm_bl_data_dt_ops *pwm_bl_ops;
 };
 extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
 extern struct tegra_panel_ops dsi_lgd_wxga_7_0_ops;
@@ -70,6 +71,8 @@ extern struct tegra_panel_ops *fixed_primary_panel_ops;
 extern struct tegra_panel_ops *fixed_secondary_panel_ops;
 extern const char *fixed_primary_panel_node;
 extern const char *fixed_secondary_panel_node;
+
+extern struct pwm_bl_data_dt_ops *fixed_pwm_bl_ops;
 
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
@@ -103,5 +106,9 @@ int tegra_init_hdmi(struct platform_device *pdev,
 
 void tegra_set_fixed_panel_ops(bool is_primary,
 			struct tegra_panel_ops *p_ops, char *panel_node);
+
+void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops);
+
+void tegra_pwm_bl_ops_register(struct device *dev);
 
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

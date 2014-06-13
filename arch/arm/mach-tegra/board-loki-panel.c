@@ -19,7 +19,6 @@
  */
 #include <linux/ioport.h>
 #include <linux/fb.h>
-#include <linux/nvmap.h>
 #include <linux/nvhost.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -453,8 +452,6 @@ int __init loki_panel_init(int board_id)
 		loki_disp2_out.n_modes = ARRAY_SIZE(hdmi_panel_modes);
 	} else
 		loki_panel_select();
-
-	nvmap_init();
 
 	phost1x = loki_host1x_init();
 	if (!phost1x) {

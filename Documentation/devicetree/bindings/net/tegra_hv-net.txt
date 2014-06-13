@@ -1,0 +1,17 @@
+* Tegra Hypervisor Network emulation
+
+Required properties:
+- compatible: Should be "nvidia,tegra-hv-net"
+- ivc: Should contain a tupple containing a reference to the tegra hypervisor
+  node and an index of the IVC channel to use
+
+Optional properties:
+- mac-address: The MAC address to assign, if not available uses a random one.
+
+Example:
+	tegra_hv_net {
+		compatible = "nvidia,tegra-hv-net";
+		status = "okay";
+		/* ivc channel to use definition (third one in tegra_hv) */
+		ivc = <&tegra_hv 2>;
+	};

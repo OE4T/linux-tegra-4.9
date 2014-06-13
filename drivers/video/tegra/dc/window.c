@@ -964,6 +964,11 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 				win_options |= INTERLACE_ENABLE;
 		}
 #endif
+		if (dc_win->csc_dirty) {
+			tegra_dc_set_csc(dc, &dc_win->csc);
+			dc_win->csc_dirty = false;
+		}
+
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
 		dc_win->dirty = 1;

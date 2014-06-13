@@ -563,6 +563,19 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			}
 		}
 
+		if (data->win[i].attr.flags
+			& TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC) {
+			win->csc.yof = data->win[i].attr.csc.yof;
+			win->csc.kyrgb = data->win[i].attr.csc.kyrgb;
+			win->csc.kur = data->win[i].attr.csc.kur;
+			win->csc.kug = data->win[i].attr.csc.kug;
+			win->csc.kub = data->win[i].attr.csc.kub;
+			win->csc.kvr = data->win[i].attr.csc.kvr;
+			win->csc.kvg = data->win[i].attr.csc.kvg;
+			win->csc.kvb = data->win[i].attr.csc.kvb;
+			win->csc_dirty = true;
+		}
+
 		if (!skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
 

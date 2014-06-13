@@ -41,12 +41,6 @@ struct tegra_alt_pcm_dma_params {
 	const char *chan_name;
 };
 
-struct tegra_alt_pcm_runtime_data {
-	int running;
-	int disable_intr;
-	dma_addr_t avp_dma_addr;
-};
-
 int tegra_alt_pcm_platform_register(struct device *dev);
 void tegra_alt_pcm_platform_unregister(struct device *dev);
 

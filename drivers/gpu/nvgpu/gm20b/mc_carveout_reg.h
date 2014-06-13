@@ -1,5 +1,5 @@
 /*
- * GM20B GMMU
+ * GM20B MC registers used by ACR
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,14 +13,10 @@
  * more details.
  */
 
-#ifndef _NVHOST_GM20B_MM
-#define _NVHOST_GM20B_MM
-struct gk20a;
+#ifndef _MC_CARVEOUT_REG_H_
+#define  _MC_CARVEOUT_REG_H_
 
-#define PDE_ADDR_START(x, y)	((x) &  ~((0x1UL << (y)) - 1))
-#define PDE_ADDR_END(x, y)	((x) | ((0x1UL << (y)) - 1))
-#define VPR_INFO_FETCH_WAIT	(5)
-
-void gm20b_init_mm(struct gpu_ops *gops);
-int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g);
-#endif
+#define MC_SECURITY_CARVEOUT2_BOM_0		0xc5c
+#define MC_SECURITY_CARVEOUT3_BOM_0		0xcac
+#define MC_ERR_GENERALIZED_CARVEOUT_STATUS_0		0xc00
+#endif /*_MC_CARVEOUT_REG_H_*/

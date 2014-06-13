@@ -51,6 +51,8 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
+#define APP_VERSION_GM20B_1 18547257
+#define APP_VERSION_GM20B 17615280
 #define APP_VERSION_2 18542378
 #define APP_VERSION_1 17997577
 #define APP_VERSION_0 16856675
@@ -1058,6 +1060,8 @@ struct pmu_gk20a {
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;
+	u8 pmu_mode; /*Added for GM20b, and ACR*/
+	u32 falcon_id;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
@@ -1086,5 +1090,16 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 		u32 *total_cycles);
+void gk20a_init_pmu_ops(struct gpu_ops *gops);
 
+void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
+		u32 dst, u8 *src, u32 size, u8 port);
+void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
+		u32 src, u8 *dst, u32 size, u8 port);
+int pmu_reset(struct pmu_gk20a *pmu);
+int gk20a_init_pmu(struct pmu_gk20a *pmu);
+void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
+void gk20a_remove_pmu_support(struct pmu_gk20a *pmu);
+void pmu_setup_hw(struct work_struct *work);
+void pmu_seq_init(struct pmu_gk20a *pmu);
 #endif /*__PMU_GK20A_H__*/

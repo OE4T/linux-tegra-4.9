@@ -1,5 +1,5 @@
 /*
- * GM20B GMMU
+ * GM20B PMU
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,14 +13,7 @@
  * more details.
  */
 
-#ifndef _NVHOST_GM20B_MM
-#define _NVHOST_GM20B_MM
-struct gk20a;
-
-#define PDE_ADDR_START(x, y)	((x) &  ~((0x1UL << (y)) - 1))
-#define PDE_ADDR_END(x, y)	((x) | ((0x1UL << (y)) - 1))
-#define VPR_INFO_FETCH_WAIT	(5)
-
-void gm20b_init_mm(struct gpu_ops *gops);
-int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g);
-#endif
+#ifndef __PMU_GM20B_H_
+#define __PMU_GM20B_H_
+void gm20b_init_pmu_ops(struct gpu_ops *gops);
+#endif /*__PMU_GM20B_H_*/

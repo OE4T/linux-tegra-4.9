@@ -322,6 +322,14 @@ static inline u32 gr_fecs_cpuctl_startcpu_f(u32 v)
 {
 	return (v & 0x1) << 1;
 }
+static inline u32 gr_fecs_cpuctl_alias_r(void)
+{
+	return 0x00409130;
+}
+static inline u32 gr_fecs_cpuctl_alias_startcpu_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
 static inline u32 gr_fecs_dmactl_r(void)
 {
 	return 0x0040910c;

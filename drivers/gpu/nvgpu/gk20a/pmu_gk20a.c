@@ -38,10 +38,8 @@
 #define gk20a_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 
-static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
-static void pmu_setup_hw(struct work_struct *work);
 static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
@@ -61,6 +59,10 @@ static u32 pmu_cmdline_size_v1(struct pmu_gk20a *pmu)
 static void set_pmu_cmdline_args_cpufreq_v1(struct pmu_gk20a *pmu, u32 freq)
 {
 	pmu->args_v1.cpu_freq_hz = freq;
+}
+static void set_pmu_cmdline_args_secure_mode_v1(struct pmu_gk20a *pmu, u32 val)
+{
+	pmu->args_v1.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_cpufreq_v0(struct pmu_gk20a *pmu, u32 freq)
@@ -482,10 +484,12 @@ static void *get_pmu_sequence_out_alloc_ptr_v0(struct pmu_sequence *seq)
 	return (void *)(&seq->out_v0);
 }
 
-static int gk20a_init_pmu(struct pmu_gk20a *pmu)
+int gk20a_init_pmu(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
 	switch (pmu->desc->app_version) {
+	case APP_VERSION_GM20B_1:
+	case APP_VERSION_GM20B:
 	case APP_VERSION_1:
 	case APP_VERSION_2:
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
@@ -493,6 +497,8 @@ static int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			pmu_cmdline_size_v1;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
 			set_pmu_cmdline_args_cpufreq_v1;
+		g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode =
+			set_pmu_cmdline_args_secure_mode_v1;
 		g->ops.pmu_ver.get_pmu_cmdline_args_ptr =
 			get_pmu_cmdline_args_ptr_v1;
 		g->ops.pmu_ver.get_pmu_allocation_struct_size =
@@ -558,6 +564,8 @@ static int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			pmu_cmdline_size_v0;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
 			set_pmu_cmdline_args_cpufreq_v0;
+		g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode =
+			NULL;
 		g->ops.pmu_ver.get_pmu_cmdline_args_ptr =
 			get_pmu_cmdline_args_ptr_v0;
 		g->ops.pmu_ver.get_pmu_allocation_struct_size =
@@ -627,7 +635,7 @@ static int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
+void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		u32 src, u8 *dst, u32 size, u8 port)
 {
 	struct gk20a *g = pmu->g;
@@ -673,7 +681,7 @@ static void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 	return;
 }
 
-static void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
+void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 		u32 dst, u8 *src, u32 size, u8 port)
 {
 	struct gk20a *g = pmu->g;
@@ -887,7 +895,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 	return 0;
 }
 
-static int pmu_reset(struct pmu_gk20a *pmu)
+int pmu_reset(struct pmu_gk20a *pmu)
 {
 	int err;
 
@@ -999,7 +1007,7 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static void pmu_seq_init(struct pmu_gk20a *pmu)
+void pmu_seq_init(struct pmu_gk20a *pmu)
 {
 	u32 i;
 
@@ -1784,7 +1792,7 @@ static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 static void pmu_setup_hw_load_zbc(struct gk20a *g);
 static void pmu_setup_hw_enable_elpg(struct gk20a *g);
 
-static void pmu_setup_hw(struct work_struct *work)
+void pmu_setup_hw(struct work_struct *work)
 {
 	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
 	struct gk20a *g = pmu->g;
@@ -1967,6 +1975,12 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	}
 }
 
+void gk20a_init_pmu_ops(struct gpu_ops *gops)
+{
+	gops->pmu.pmu_setup_sw = gk20a_init_pmu_setup_sw;
+	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
+}
+
 int gk20a_init_pmu_support(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -1984,11 +1998,10 @@ int gk20a_init_pmu_support(struct gk20a *g)
 		return err;
 
 	if (support_gk20a_pmu()) {
-		err = gk20a_init_pmu_setup_sw(g);
+		err = g->ops.pmu.pmu_setup_sw(g);
 		if (err)
 			return err;
-
-		err = gk20a_init_pmu_setup_hw1(g);
+		err = g->ops.pmu.pmu_setup_hw_and_bootstrap(g);
 		if (err)
 			return err;
 	}
@@ -2724,7 +2737,7 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 	*/
 }
 
-static void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
+void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = pmu->g;
 	int i;

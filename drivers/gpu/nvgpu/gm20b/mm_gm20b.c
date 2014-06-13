@@ -13,9 +13,11 @@
  * more details.
  */
 
+#include <linux/pm_runtime.h>
 #include "gk20a/gk20a.h"
 #include "mm_gm20b.h"
 #include "hw_gmmu_gm20b.h"
+#include "hw_fb_gm20b.h"
 
 static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
 static const u32 gmmu_page_shifts[gmmu_nr_page_sizes] = { 12, 17 };
@@ -24,8 +26,8 @@ static const u64 gmmu_page_offset_masks[gmmu_nr_page_sizes] = { 0xfffLL,
 static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
 
 static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
-				   enum gmmu_pgsz_gk20a pgsz_idx,
-				   u64 first_vaddr, u64 last_vaddr)
+				enum gmmu_pgsz_gk20a pgsz_idx,
+				u64 first_vaddr, u64 last_vaddr)
 {
 	int err;
 	u32 pte_lo, pte_hi;
@@ -39,10 +41,10 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	gk20a_dbg_fn("");
 
 	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
-				   &pde_lo, &pde_hi);
+					&pde_lo, &pde_hi);
 
 	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, pde_lo=%d, pde_hi=%d",
-		   pgsz_idx, pde_lo, pde_hi);
+			pgsz_idx, pde_lo, pde_hi);
 
 	/* Expect ptes of the same pde */
 	BUG_ON(pde_lo != pde_hi);
@@ -185,7 +187,8 @@ static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
 			vaddr_pde_start = (u64)i << pde_shift;
 			allocate_gmmu_ptes_sparse(vm, pgsz_idx,
 				vaddr_pde_start,
-				PDE_ADDR_END(vaddr_pde_start, pde_shift));
+				PDE_ADDR_END(vaddr_pde_start,
+				pde_shift));
 		} else {
 			/* Check leading and trailing spaces which doesn't fit
 			 * into entire pde. */
@@ -210,6 +213,56 @@ fail:
 	WARN_ON(1);
 
 	return err;
+}
+
+static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
+		const unsigned int msec)
+{
+	unsigned long timeout;
+
+	if (tegra_platform_is_silicon())
+		timeout = jiffies + msecs_to_jiffies(msec);
+	else
+		timeout = msecs_to_jiffies(msec);
+
+	while (1) {
+		u32 val;
+		val = gk20a_readl(g, fb_mmu_vpr_info_r());
+		if (fb_mmu_vpr_info_fetch_v(val) ==
+				fb_mmu_vpr_info_fetch_false_v())
+			break;
+		if (tegra_platform_is_silicon()) {
+			if (WARN_ON(time_after(jiffies, timeout)))
+				return -ETIME;
+		} else if (--timeout == 0)
+			return -ETIME;
+	}
+	return 0;
+}
+
+int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
+{
+	int ret = 0;
+
+	gk20a_busy_noresume(g->dev);
+#ifdef CONFIG_PM_RUNTIME
+	if (!pm_runtime_active(&g->dev->dev))
+		goto fail;
+#endif
+
+	if (gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
+		ret = -ETIME;
+		goto fail;
+	}
+
+	gk20a_writel(g, fb_mmu_vpr_info_r(),
+			fb_mmu_vpr_info_fetch_true_v());
+
+	ret = gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
+
+fail:
+	gk20a_idle(g->dev);
+	return ret;
 }
 
 void gm20b_init_mm(struct gpu_ops *gops)

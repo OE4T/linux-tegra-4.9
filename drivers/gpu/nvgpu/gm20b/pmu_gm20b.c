@@ -1,8 +1,8 @@
 /*
- * GM20B GMMU
+ * GM20B PMU
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
- *
+*
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -13,14 +13,14 @@
  * more details.
  */
 
-#ifndef _NVHOST_GM20B_MM
-#define _NVHOST_GM20B_MM
-struct gk20a;
+#include "gk20a/gk20a.h"
+#include "acr_gm20b.h"
 
-#define PDE_ADDR_START(x, y)	((x) &  ~((0x1UL << (y)) - 1))
-#define PDE_ADDR_END(x, y)	((x) | ((0x1UL << (y)) - 1))
-#define VPR_INFO_FETCH_WAIT	(5)
-
-void gm20b_init_mm(struct gpu_ops *gops);
-int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g);
+void gm20b_init_pmu_ops(struct gpu_ops *gops)
+{
+#ifdef CONFIG_TEGRA_ACR
+	gm20b_init_secure_pmu(gops);
+#else
+	gk20a_init_pmu_ops(gops);
 #endif
+}

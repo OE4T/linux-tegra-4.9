@@ -290,6 +290,86 @@ static inline u32 pwr_falcon_cpuctl_startcpu_f(u32 v)
 {
 	return (v & 0x1) << 1;
 }
+static inline u32 pwr_falcon_cpuctl_halt_intr_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_falcon_cpuctl_halt_intr_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_falcon_cpuctl_halt_intr_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_falcon_cpuctl_cpuctl_alias_en_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 pwr_falcon_cpuctl_cpuctl_alias_en_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 pwr_falcon_cpuctl_cpuctl_alias_en_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 pwr_falcon_cpuctl_alias_r(void)
+{
+	return 0x0010a130;
+}
+static inline u32 pwr_falcon_cpuctl_alias_startcpu_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 pwr_pmu_scpctl_stat_r(void)
+{
+	return 0x0010ac08;
+}
+static inline u32 pwr_pmu_scpctl_stat_debug_mode_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 pwr_pmu_scpctl_stat_debug_mode_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 pwr_pmu_scpctl_stat_debug_mode_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 pwr_falcon_imemc_r(u32 i)
+{
+	return 0x0010a180 + i*16;
+}
+static inline u32 pwr_falcon_imemc_offs_f(u32 v)
+{
+	return (v & 0x3f) << 2;
+}
+static inline u32 pwr_falcon_imemc_blk_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 pwr_falcon_imemc_aincw_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_falcon_imemd_r(u32 i)
+{
+	return 0x0010a184 + i*16;
+}
+static inline u32 pwr_falcon_imemt_r(u32 i)
+{
+	return 0x0010a188 + i*16;
+}
+static inline u32 pwr_falcon_sctl_r(void)
+{
+	return 0x0010a240;
+}
+static inline u32 pwr_falcon_mmu_phys_sec_r(void)
+{
+	return 0x00100ce4;
+}
 static inline u32 pwr_falcon_bootvec_r(void)
 {
 	return 0x0010a104;

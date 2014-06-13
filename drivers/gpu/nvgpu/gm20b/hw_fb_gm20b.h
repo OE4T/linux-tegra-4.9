@@ -202,4 +202,24 @@ static inline u32 fb_mmu_debug_ctrl_debug_enabled_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fb_mmu_vpr_info_r(void)
+{
+	return 0x00100cd0;
+}
+static inline u32 fb_mmu_vpr_info_fetch_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 fb_mmu_vpr_info_fetch_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
+{
+	return 0x00000001;
+}
 #endif

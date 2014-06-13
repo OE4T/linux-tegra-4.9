@@ -70,3 +70,12 @@ config TEGRA_GK20A
 	  Enable support for the GK20A graphics engine on Tegra
 	  by adding a Tegra platfrom interface to the GK20A driver.
 	  The Tegra platform interface requires TEGRA_GRHOST (host1x).
+
+config TEGRA_ACR
+	bool "Enable HS bin support on GM20B GPU on Tegra"
+	depends on GK20A_PMU
+	default n
+	help
+	  Enable Support for Loading High Secure binary, and using
+	  Write Protected Regions (WPR) for storing ucodes, and bootstrap
+	  PMU, FECS and GPCCS in Low Secure mode.

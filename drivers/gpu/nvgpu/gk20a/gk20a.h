@@ -28,6 +28,7 @@ struct channel_gk20a;
 struct gr_gk20a;
 struct sim_gk20a;
 struct gk20a_ctxsw_ucode_segments;
+struct acr_gm20b;
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -45,6 +46,7 @@ struct gk20a_ctxsw_ucode_segments;
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 #include "platform_gk20a.h"
+#include "gm20b/acr_gm20b.h"
 
 extern struct platform_device tegra_gk20a_device;
 
@@ -205,6 +207,8 @@ struct gpu_ops {
 				struct pmu_sequence *seq);
 		void *(*get_pmu_seq_out_a_ptr)(
 				struct pmu_sequence *seq);
+		void (*set_pmu_cmdline_args_secure_mode)(struct pmu_gk20a *pmu,
+			u32 val);
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(int index, char *name);
@@ -214,6 +218,10 @@ struct gpu_ops {
 		int (*set_sparse)(struct vm_gk20a *vm, u64 vaddr,
 			       u32 num_pages, u32 pgsz_idx);
 	} mm;
+	struct {
+		int (*pmu_setup_sw)(struct gk20a *g);
+		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
+	} pmu;
 };
 
 struct gk20a {
@@ -236,6 +244,7 @@ struct gk20a {
 	struct sim_gk20a sim;
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
+	struct acr_gm20b acr;
 	struct cooling_device_gk20a gk20a_cdev;
 
 	/* Save pmu fw here so that it lives cross suspend/resume.

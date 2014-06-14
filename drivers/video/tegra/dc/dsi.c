@@ -1970,24 +1970,15 @@ static void tegra_dsi_set_control_reg_lp(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi,
 						u8 driven_mode)
 {
-	u32 dsi_control = dsi->dsi_control_val;
-	u32 host_dsi_control = HOST_DSI_CTRL_COMMON;
-	u32 max_threshold = 0;
-	u32 dcs_cmd = 0;
+	u32 dsi_control;
+	u32 host_dsi_control;
+	u32 max_threshold;
+	u32 dcs_cmd;
 
-	if (dsi->dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE) {
-		if (dsi->info.video_clock_mode ==
-				TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS) {
-			dsi_control |= DSI_CONTROL_HS_CLK_CTRL(CONTINUOUS);
-			dsi->status.clk_mode = DSI_PHYCLK_CONTINUOUS;
-		} else {
-			dsi_control |= DSI_CONTROL_HS_CLK_CTRL(TX_ONLY);
-			dsi->status.clk_mode = DSI_PHYCLK_TX_ONLY;
-		}
-		host_dsi_control |=
-			DSI_HOST_DSI_CONTROL_HIGH_SPEED_TRANS(TEGRA_DSI_HIGH);
-		dsi->status.clk_out = DSI_PHYCLK_OUT_EN;
-	}
+	dsi_control = dsi->dsi_control_val;
+	host_dsi_control = HOST_DSI_CTRL_COMMON;
+	max_threshold = 0;
+	dcs_cmd = 0;
 
 	if (driven_mode == TEGRA_DSI_DRIVEN_BY_HOST) {
 		dsi_control |= DSI_CTRL_HOST_DRIVEN;
@@ -3970,15 +3961,38 @@ static void tegra_dsi_setup_initialized_panel(struct tegra_dc_dsi_data *dsi)
 
 	if (dsi->avdd_dsi_csi)
 		err = regulator_enable(dsi->avdd_dsi_csi);
-	dev_warn(&dsi->dc->ndev->dev,
-		"unable to enable regulator err = %d", err);
+	WARN(err, "unable to enable regulator");
 
 	dsi->status.init = DSI_MODULE_INIT;
+	dsi->status.lphs = DSI_LPHS_IN_HS_MODE;
+	dsi->status.driven = DSI_DRIVEN_MODE_DC;
+	dsi->driven_mode = TEGRA_DSI_DRIVEN_BY_DC;
+	dsi->status.clk_out = DSI_PHYCLK_OUT_EN;
+	dsi->status.lp_op = DSI_LP_OP_NOT_INIT;
+	dsi->status.dc_stream = DSI_DC_STREAM_ENABLE;
+
+	if (dsi->info.video_clock_mode == TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS)
+		dsi->status.clk_mode = DSI_PHYCLK_CONTINUOUS;
+	else
+		dsi->status.clk_mode = DSI_PHYCLK_TX_ONLY;
+
+	if (!(dsi->info.ganged_type)) {
+		if (dsi->info.video_burst_mode ==
+			TEGRA_DSI_VIDEO_NONE_BURST_MODE ||
+			dsi->info.video_burst_mode ==
+			TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END)
+			dsi->status.clk_burst = DSI_CLK_BURST_NONE_BURST;
+		else
+			dsi->status.clk_burst = DSI_CLK_BURST_BURST_MODE;
+	}
+
+	if (dsi->info.video_data_type == TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE)
+		dsi->status.vtype = DSI_VIDEO_TYPE_CMD_MODE;
+	else
+		dsi->status.vtype = DSI_VIDEO_TYPE_VIDEO_MODE;
 
 	tegra_dsi_clk_enable(dsi);
-	tegra_dsi_set_to_hs_mode(dsi->dc, dsi, TEGRA_DSI_DRIVEN_BY_DC);
 
-	dsi->host_suspended = false;
 	dsi->enabled = true;
 }
 
@@ -3990,6 +4004,10 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
+	/*
+	 * Do not program this panel as the bootloader as has already
+	 * initialized it. This avoids periods of blanking during boot.
+	 */
 	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE) {
 		tegra_dsi_setup_initialized_panel(dsi);
 		goto fail;
@@ -4092,6 +4110,10 @@ static void tegra_dc_dsi_postpoweron(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
 
+	/*
+	 * Do not configure. Use bootloader configuration.
+	 * This avoids periods of blanking during boot.
+	 */
 	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
 		return;
 

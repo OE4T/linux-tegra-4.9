@@ -81,8 +81,13 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 	struct fb_videomode mode;
 
 	if ((var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
-	    info->screen_size)
+		info->screen_size) {
+		dev_err(&tegra_fb->ndev->dev,
+			"FB %lu is NOT enough for %dx%d %dbpp!\n",
+			info->screen_size, var->xres, var->yres,
+			var->bits_per_pixel);
 		return -EINVAL;
+	}
 
 	/* Apply mode filter for HDMI only -LVDS supports only fix mode */
 	if (ops && ops->mode_filter) {

@@ -183,15 +183,16 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	if (hdmi->dc->enabled) {
 		pr_info("HDMI from connected to disconnected\n");
-		hdmi->dc->connected = false;
 		tegra_dc_disable(hdmi->dc);
-#ifdef CONFIG_ADF_TEGRA
-		tegra_adf_process_hotplug_disconnected(hdmi->dc->adf);
-#else
-		tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
-#endif
 		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 	}
+	hdmi->dc->connected = false;
+#ifdef CONFIG_ADF_TEGRA
+	tegra_adf_process_hotplug_disconnected(hdmi->dc->adf);
+#else
+	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
+#endif
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 }
 
 static void handle_reset_l(struct tegra_dc_hdmi_data *hdmi)

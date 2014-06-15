@@ -73,6 +73,10 @@ void __clean_dcache_page(struct page *page)
 void __sync_icache_dcache(pte_t pte, unsigned long addr)
 {
 	struct page *page = pte_page(pte);
+	unsigned long pfn = pte_pfn(pte);
+
+	if (!pfn_valid(pfn))
+		return;
 
 	if (!test_and_set_bit(PG_dcache_clean, &page->flags))
 		sync_icache_aliases(page_address(page),

@@ -205,6 +205,7 @@ void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	}
 
 	kfree(runlist->active_channels);
+	kfree(runlist->active_tsgs);
 
 	kfree(f->runlist_info);
 	kfree(f->pbdma_map);
@@ -314,6 +315,12 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
 			GFP_KERNEL);
 	if (!runlist->active_channels)
+		goto clean_up_runlist_info;
+
+	runlist->active_tsgs =
+		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
+			GFP_KERNEL);
+	if (!runlist->active_tsgs)
 		goto clean_up_runlist_info;
 
 	runlist_size  = ram_rl_entry_size_v() * f->num_channels;
@@ -1734,8 +1741,11 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	u32 *runlist_entry = NULL;
 	phys_addr_t runlist_pa;
 	u32 old_buf, new_buf;
-	u32 chid;
+	u32 chid, tsgid;
+	struct channel_gk20a *ch;
+	struct tsg_gk20a *tsg;
 	u32 count = 0;
+	int num_ch;
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.
@@ -1745,10 +1755,28 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			if (test_and_set_bit(hw_chid,
 				runlist->active_channels) == 1)
 				return 0;
+			if (gk20a_is_channel_marked_as_tsg(
+							&f->channel[hw_chid])) {
+				num_ch = gk20a_bind_runnable_channel_to_tsg(
+						&f->channel[hw_chid],
+						f->channel[hw_chid].tsgid);
+				if (num_ch > 0)
+					set_bit(f->channel[hw_chid].tsgid,
+						runlist->active_tsgs);
+			}
 		} else {
 			if (test_and_clear_bit(hw_chid,
 				runlist->active_channels) == 0)
 				return 0;
+			if (gk20a_is_channel_marked_as_tsg(
+							&f->channel[hw_chid])) {
+				num_ch = gk20a_unbind_channel_from_tsg(
+						&f->channel[hw_chid],
+						f->channel[hw_chid].tsgid);
+				if (!num_ch)
+					clear_bit(f->channel[hw_chid].tsgid,
+						runlist->active_tsgs);
+			}
 		}
 	}
 
@@ -1773,14 +1801,56 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	if (hw_chid != ~0 || /* add/remove a valid channel */
 	    add /* resume to add all channels back */) {
 		runlist_entry = runlist_entry_base;
+
+		/* add non-TSG channels first */
 		for_each_set_bit(chid,
 			runlist->active_channels, f->num_channels) {
-			gk20a_dbg_info("add channel %d to runlist", chid);
-			runlist_entry[0] = chid;
+			ch = &f->channel[chid];
+
+			if (!gk20a_is_channel_marked_as_tsg(ch)) {
+				gk20a_dbg_info("add channel %d to runlist",
+					chid);
+				runlist_entry[0] = ram_rl_entry_chid_f(chid);
+				runlist_entry[1] = 0;
+				runlist_entry += 2;
+				count++;
+			}
+		}
+
+		/* now add TSG entries and channels bound to TSG */
+		mutex_lock(&f->tsg_inuse_mutex);
+		for_each_set_bit(tsgid,
+				runlist->active_tsgs, f->num_channels) {
+			tsg = &f->tsg[tsgid];
+			/* add TSG entry */
+			gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
+			runlist_entry[0] = ram_rl_entry_id_f(tsg->tsgid) |
+				ram_rl_entry_type_f(ram_rl_entry_type_tsg_f()) |
+				ram_rl_entry_timeslice_scale_f(
+					ram_rl_entry_timeslice_scale_3_f()) |
+				ram_rl_entry_timeslice_timeout_f(
+				       ram_rl_entry_timeslice_timeout_128_f()) |
+				ram_rl_entry_tsg_length_f(
+					tsg->num_runnable_channels);
 			runlist_entry[1] = 0;
 			runlist_entry += 2;
 			count++;
+
+			/* add channels bound to this TSG */
+			mutex_lock(&tsg->ch_list_lock);
+			list_for_each_entry(ch,
+					&tsg->ch_runnable_list, ch_entry) {
+				gk20a_dbg_info("add channel %d to runlist",
+					ch->hw_chid);
+				runlist_entry[0] =
+					ram_rl_entry_chid_f(ch->hw_chid);
+				runlist_entry[1] = 0;
+				runlist_entry += 2;
+				count++;
+			}
+			mutex_unlock(&tsg->ch_list_lock);
 		}
+		mutex_unlock(&f->tsg_inuse_mutex);
 	} else	/* suspend to remove all channels */
 		count = 0;
 

@@ -50,7 +50,7 @@ int gk20a_bind_runnable_channel_to_tsg(struct channel_gk20a *ch, int tsgid)
 	tsg->num_runnable_channels += 1;
 	mutex_unlock(&tsg->ch_list_lock);
 
-	return 0;
+	return tsg->num_runnable_channels;
 }
 
 int gk20a_unbind_channel_from_tsg(struct channel_gk20a *ch, int tsgid)
@@ -68,7 +68,7 @@ int gk20a_unbind_channel_from_tsg(struct channel_gk20a *ch, int tsgid)
 	tsg->num_runnable_channels -= 1;
 	mutex_unlock(&tsg->ch_list_lock);
 
-	return 0;
+	return tsg->num_runnable_channels;
 }
 
 /*

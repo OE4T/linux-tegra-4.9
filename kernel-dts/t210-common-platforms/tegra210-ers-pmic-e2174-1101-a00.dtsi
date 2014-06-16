@@ -70,7 +70,6 @@
 			maxim,enable-clock32k-out;
 
 			maxim,system-pmic-power-off;
-			maxim,system-pmic-power-reset;
 
 			maxim,hot-die-threshold-temp = <110000>;
 			#thermal-sensor-cells = <0>;

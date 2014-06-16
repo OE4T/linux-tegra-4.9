@@ -59,8 +59,6 @@ static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 							unsigned long hyst_temp,
 							unsigned long trip_temp)
 {
-	int i;
-
 	est->active_hysteresis[trip] = hyst_temp;
 	est->active_trip_temps[trip] = trip_temp;
 	est->active_trip_temps_hyst[(trip << 1)] = trip_temp;
@@ -153,8 +151,7 @@ static int therm_fan_est_get_trip_type(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long *temp)
+					int trip, long *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -170,8 +167,7 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
-					int trip,
-					unsigned long temp)
+					int trip, long temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -183,8 +179,7 @@ static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
-static int therm_fan_est_get_temp(struct thermal_zone_device *thz,
-				unsigned long *temp)
+static int therm_fan_est_get_temp(struct thermal_zone_device *thz, long *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -193,7 +188,7 @@ static int therm_fan_est_get_temp(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
-				int trip, unsigned long hyst_temp)
+				int trip, long hyst_temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -207,7 +202,7 @@ static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_get_trip_hyst(struct thermal_zone_device *thz,
-				int trip, unsigned long *temp)
+				int trip, long *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 

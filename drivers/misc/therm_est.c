@@ -371,7 +371,7 @@ static int __get_trip_temp(struct thermal_zone_device *thz, int trip,
 }
 
 static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
-				   int trip, unsigned long *temp)
+				   int trip, long *temp)
 {
 	struct therm_estimator *est = thz->devdata;
 	struct therm_est_timer_trip_info *timer_info;
@@ -401,7 +401,7 @@ static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
 }
 
 static int therm_est_set_trip_temp(struct thermal_zone_device *thz,
-				   int trip, unsigned long temp)
+				   int trip, long temp)
 {
 	struct therm_estimator *est = thz->devdata;
 
@@ -412,8 +412,7 @@ static int therm_est_set_trip_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
-static int therm_est_get_temp(struct thermal_zone_device *thz,
-				unsigned long *temp)
+static int therm_est_get_temp(struct thermal_zone_device *thz, long *temp)
 {
 	struct therm_estimator *est = thz->devdata;
 

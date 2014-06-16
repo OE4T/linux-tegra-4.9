@@ -14,6 +14,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/jiffies.h>
 
 #include "hw_ltc_gm20b.h"
 #include "hw_top_gm20b.h"
@@ -256,6 +257,19 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 void gm20b_flush_ltc(struct gk20a *g)
 {
 	u32 op_pending;
+	unsigned long now, timeout;
+
+#define __timeout_init()				\
+	do {						\
+		now = jiffies;	timeout = now + HZ;	\
+	} while (0)
+#define __timeout_check()						\
+	do {								\
+		if (tegra_platform_is_silicon() && time_after(now, timeout)) { \
+			gk20a_err(dev_from_gk20a(g), "L2 flush timeout!"); \
+			break;						\
+		}							\
+	} while (0)
 
 	/* Clean... */
 	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt1_r(),
@@ -267,13 +281,17 @@ void gm20b_flush_ltc(struct gk20a *g)
 		ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_f());
 
 	/* Wait on each LTC individually. */
+	__timeout_init();
 	do {
 		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt1_r());
+		__timeout_check();
 	} while (op_pending &
 		 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f());
 
+	__timeout_init();
 	do {
 		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt1_r());
+		__timeout_check();
 	} while (op_pending &
 		 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_f());
 
@@ -286,13 +304,17 @@ void gm20b_flush_ltc(struct gk20a *g)
 	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_f());
 
 	/* Wait on each LTC individually. */
+	__timeout_init();
 	do {
 		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt0_r());
+		__timeout_check();
 	} while (op_pending &
 		 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f());
 
+	__timeout_init();
 	do {
 		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt0_r());
+		__timeout_check();
 	} while (op_pending &
 		 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_f());
 }

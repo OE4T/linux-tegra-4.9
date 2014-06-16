@@ -255,6 +255,8 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
+		add_sync_waits(job->ch, g->pre_fence);
+
 		if (g->class_id != class_id) {
 			nvhost_cdma_push(&job->ch->cdma,
 				nvhost_opcode_setclass(g->class_id, 0, 0),
@@ -262,7 +264,6 @@ static void submit_gathers(struct nvhost_job *job)
 			class_id = g->class_id;
 		}
 
-		add_sync_waits(job->ch, g->pre_fence);
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from
 		 * memory to a register. */

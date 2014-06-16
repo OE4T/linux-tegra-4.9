@@ -43,6 +43,7 @@
 #include "nvhost_scale.h"
 
 #define HOST_EMC_FLOOR 300000000
+#define TSEC_POWERGATE_DELAY 500
 
 #define BIT64(nr) (1ULL << (nr))
 
@@ -134,93 +135,105 @@ struct nvhost_device_data t21_vi_i2c_info = {
 };
 
 struct nvhost_device_data t21_msenc_info = {
-	.version       = NVHOST_ENCODE_FLCN_VER(5, 0),
-	.waitbases     = {NVWAITBASE_MSENC},
-	.class	       = NV_VIDEO_ENCODE_NVENC_CLASS_ID,
+	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.keepalive     = true,
-	.clocks		= {{"msenc", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_flcn_init,
-	.deinit		= nvhost_flcn_deinit,
-	.finalize_poweron = nvhost_nvenc_t210_finalize_poweron,
-	.moduleid	= NVHOST_MODULE_MSENC,
-	.num_channels  = 1,
-	.firmware_name	= "nvhost_nvenc050.fw"
+	.keepalive		= true,
+	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
+				   {"emc", HOST_EMC_FLOOR} },
+	.init			= nvhost_flcn_init,
+	.deinit			= nvhost_flcn_deinit,
+	.finalize_poweron	= nvhost_nvenc_t210_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_MSENC,
+	.num_channels		= 1,
+	.firmware_name		= "nvhost_nvenc050.fw"
 };
 
 struct nvhost_device_data t21_nvdec_info = {
-	.version       = NVHOST_ENCODE_NVDEC_VER(2, 0),
-	.class	       = NV_NVDEC_CLASS_ID,
+	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
+	.class			= NV_NVDEC_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.keepalive     = true,
-	.clocks		= {{"nvdec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_nvdec_init,
-	.deinit		= nvhost_nvdec_deinit,
-	.finalize_poweron = nvhost_nvdec_finalize_poweron,
-	.moduleid	= NVHOST_MODULE_NVDEC,
-	.ctrl_ops      = &tegra_nvdec_ctrl_ops,
-	.num_channels  = 1,
+	.keepalive		= true,
+	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
+				   {"emc", HOST_EMC_FLOOR} },
+	.init			= nvhost_nvdec_init,
+	.deinit			= nvhost_nvdec_deinit,
+	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVDEC,
+	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
+	.num_channels		= 1,
 };
 
 struct nvhost_device_data t21_nvjpg_info = {
-	.version       = NVHOST_ENCODE_NVJPG_VER(1, 0),
-	.class	       = NV_NVJPG_CLASS_ID,
+	.version		= NVHOST_ENCODE_NVJPG_VER(1, 0),
+	.class			= NV_NVJPG_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.keepalive     = true,
-	.clocks		= { {"nvjpg", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_nvjpg_init,
-	.deinit		= nvhost_nvjpg_deinit,
-	.finalize_poweron = nvhost_nvjpg_t210_finalize_poweron,
-	.moduleid	= NVHOST_MODULE_NVJPG,
-	.num_channels  = 1,
+	.keepalive		= true,
+	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
+				    {"emc", HOST_EMC_FLOOR} },
+	.init			= nvhost_nvjpg_init,
+	.deinit			= nvhost_nvjpg_deinit,
+	.finalize_poweron	= nvhost_nvjpg_t210_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVJPG,
+	.num_channels		= 1,
 };
 
 struct nvhost_device_data t21_tsec_info = {
-	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.waitbases     = {NVWAITBASE_TSEC},
-	.class         = NV_TSEC_CLASS_ID,
-	.exclusive     = true,
+	.num_channels		= 1,
+	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
+	.class			= NV_TSEC_CLASS_ID,
+	.exclusive		= true,
+	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
+				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks		= {{"tsec", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_tsec_init,
-	.deinit		= nvhost_tsec_deinit,
-	.moduleid      = NVHOST_MODULE_TSEC,
-	.num_channels  = 1,
+	.keepalive		= true,
+	.moduleid		= NVHOST_MODULE_TSEC,
+	.init			= nvhost_tsec_init,
+	.deinit			= nvhost_tsec_deinit,
+	.finalize_poweron	= nvhost_tsec_finalize_poweron,
+	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.gather_filter_enabled	= false,
 };
 
 struct nvhost_device_data t21_tsecb_info = {
-	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
-	.class         = NV_TSECB_CLASS_ID,
-	.exclusive     = true,
+	.num_channels		= 1,
+	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
+	.class			= NV_TSECB_CLASS_ID,
+	.exclusive		= true,
+	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
+				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks		= {{"tsecb", UINT_MAX}, {"emc", HOST_EMC_FLOOR} },
-	.init		= nvhost_tsec_init,
-	.deinit		= nvhost_tsec_deinit,
-	.moduleid      = NVHOST_MODULE_TSEC,
-	.num_channels  = 1,
+	.can_powergate		= true,
+	.powergate_delay	= TSEC_POWERGATE_DELAY,
+	.keepalive		= true,
+	.init			= nvhost_tsec_init,
+	.deinit			= nvhost_tsec_deinit,
+	.finalize_poweron	= nvhost_tsec_finalize_poweron,
+	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
-	.modulemutexes	= {NVMODMUTEX_VIC},
-	.version = NVHOST_ENCODE_FLCN_VER(4, 0),
-	.clocks = {{"vic03", UINT_MAX}, {"emc", UINT_MAX}, {} },
+	.num_channels		= 1,
+	.modulemutexes		= {NVMODMUTEX_VIC},
+	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
+				   {"emc", UINT_MAX}, {} },
+	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VIC,
-	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
+	.moduleid		= NVHOST_MODULE_VIC,
+	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 
 	.init			= nvhost_flcn_init,
 	.deinit			= nvhost_flcn_deinit,
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
-	.num_channels  = 1,
-	.firmware_name	= "vic04_ucode.bin"
+	.firmware_name		= "vic04_ucode.bin"
 };
 #endif
 

@@ -561,6 +561,7 @@ static inline int nvhost_set_sysfs_capability_node(
 		node->attr.attr.mode = (S_IRWXU|S_IRGRP|S_IROTH);
 	}
 	node->host = host;
+	sysfs_attr_init(&node->attr.attr);
 
 	return sysfs_create_file(host->caps_kobj, &node->attr.attr);
 }

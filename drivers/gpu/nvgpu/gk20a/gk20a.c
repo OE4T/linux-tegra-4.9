@@ -18,9 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/gk20a.h>
-
 #include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <linux/highmem.h>
@@ -47,7 +44,6 @@
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
 
-
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
@@ -60,6 +56,9 @@
 #include "gk20a_scale.h"
 #include "dbg_gpu_gk20a.h"
 #include "hal.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/gk20a.h>
 
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area

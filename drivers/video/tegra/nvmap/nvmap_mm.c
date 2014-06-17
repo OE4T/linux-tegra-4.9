@@ -99,7 +99,7 @@ void nvmap_flush_cache(struct page **pages, int numpages)
 		struct page *page = nvmap_to_page(pages[i]);
 #ifdef CONFIG_ARM64 //__flush_dcache_page flushes inner and outer on ARM64
 		if (flush_inner)
-			__flush_dcache_page(page);
+			__flush_dcache_area(page_address(page), PAGE_SIZE);
 #else
 		if (flush_inner)
 			__flush_dcache_page(page_mapping(page), page);

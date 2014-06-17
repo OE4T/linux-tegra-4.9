@@ -82,7 +82,6 @@ extern bool zero_memory;
 #define outer_flush_all()
 #define outer_clean_all()
 extern void __clean_dcache_page(struct page *);
-extern void __flush_dcache_page(struct page *);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
 #define FLUSH_DCACHE_AREA __cpuc_flush_dcache_area

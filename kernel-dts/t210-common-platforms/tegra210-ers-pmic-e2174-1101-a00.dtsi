@@ -18,8 +18,8 @@
 
 			maxim,enable-clock32k-out;
 
-			system-pmic-power-off;
-			system-pmic-power-reset;
+			maxim,system-pmic-power-off;
+			maxim,system-pmic-power-reset;
 
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;

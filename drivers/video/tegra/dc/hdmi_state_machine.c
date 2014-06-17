@@ -228,9 +228,6 @@ static void handle_check_plug_state_l(struct tegra_dc_hdmi_data *hdmi)
 static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 {
 	struct fb_monspecs specs;
-#ifdef CONFIG_SWITCH
-	int state;
-#endif
 
 	memset(&specs, 0, sizeof(specs));
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
@@ -285,9 +282,6 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 		tegra_dc_hdmi_mode_filter);
 #endif
 #ifdef CONFIG_SWITCH
-	state = tegra_edid_audio_supported(hdmi->edid) ? 1 : 0;
-	switch_set_state(&hdmi->audio_switch, state);
-	pr_info("%s: audio_switch %d\n", __func__, state);
 	switch_set_state(&hdmi->hpd_switch, 1);
 	pr_info("Display connected, hpd_switch 1\n");
 #endif

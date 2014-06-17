@@ -607,4 +607,6 @@ static inline void nvmap_lru_reset(struct nvmap_handle *h)
 	spin_unlock(&nvmap_dev->lru_lock);
 }
 
+void nvmap_dmabuf_release_stashed_maps(struct dma_buf *dmabuf);
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

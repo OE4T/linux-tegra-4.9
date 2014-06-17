@@ -452,6 +452,22 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	kfree(info);
 }
 
+void nvmap_dmabuf_release_stashed_maps(struct dma_buf *dmabuf)
+{
+	struct nvmap_handle_info *info = dmabuf->priv;
+	struct nvmap_handle_sgt *nvmap_sgt;
+
+	mutex_lock(&info->maps_lock);
+	while (!list_empty(&info->maps)) {
+		nvmap_sgt = list_first_entry(&info->maps,
+					     struct nvmap_handle_sgt,
+					     maps_entry);
+		__nvmap_dmabuf_evict_stash(nvmap_sgt);
+		__nvmap_dmabuf_free_sgt_locked(nvmap_sgt);
+	}
+	mutex_unlock(&info->maps_lock);
+}
+
 static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 					  size_t start, size_t len,
 					  enum dma_data_direction dir)

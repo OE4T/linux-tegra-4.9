@@ -109,6 +109,7 @@ struct oz_pd {
 	struct tasklet_struct	timeout_tasklet;
 	unsigned long tasklet_sched;
 	struct work_struct workitem;
+	struct work_struct uevent_workitem;
 	u8	up_audio_buf;
 };
 
@@ -134,5 +135,6 @@ int oz_send_isoc_unit(struct oz_pd *pd, u8 ep_num, const u8 *data, int len);
 void oz_handle_app_elt(struct oz_pd *pd, u8 app_id, struct oz_elt *elt);
 void oz_apps_init(void);
 void oz_apps_term(void);
+void oz_pd_notify_uevent(struct oz_pd *pd);
 
 #endif /* Sentry */

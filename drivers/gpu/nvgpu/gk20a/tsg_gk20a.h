@@ -39,6 +39,10 @@ struct tsg_gk20a {
 	struct list_head ch_runnable_list;
 	int num_runnable_channels;
 	struct mutex ch_list_lock;
+
+	struct gr_ctx_desc *tsg_gr_ctx;
+
+	struct vm_gk20a *vm;
 };
 
 #endif /* __TSG_GK20A_H_ */

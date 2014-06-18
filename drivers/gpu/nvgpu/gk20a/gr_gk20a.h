@@ -20,6 +20,7 @@
 
 #include <linux/slab.h>
 
+#include "tsg_gk20a.h"
 #include "gr_ctx_gk20a.h"
 
 #define GR_IDLE_CHECK_DEFAULT		100 /* usec */
@@ -414,4 +415,6 @@ void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					u32 **sm_dsm_perf_regs,
 					u32 *perf_register_stride);
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
+
+void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
 #endif /*__GR_GK20A_H__*/

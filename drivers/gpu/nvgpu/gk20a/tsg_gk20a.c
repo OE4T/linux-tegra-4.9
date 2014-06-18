@@ -165,6 +165,9 @@ int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
 	tsg->g = g;
 	tsg->num_runnable_channels = 0;
 
+	tsg->tsg_gr_ctx = NULL;
+	tsg->vm = NULL;
+
 	filp->private_data = tsg;
 
 	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
@@ -184,6 +187,13 @@ int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 			tsg->tsgid, tsg->num_runnable_channels);
 		return -EBUSY;
 	}
+
+	if (tsg->tsg_gr_ctx) {
+		gr_gk20a_free_tsg_gr_ctx(tsg);
+		tsg->tsg_gr_ctx = NULL;
+	}
+	if (tsg->vm)
+		tsg->vm = NULL;
 
 	release_used_tsg(&g->fifo, tsg);
 

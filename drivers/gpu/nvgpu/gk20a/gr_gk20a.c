@@ -801,8 +801,8 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 
 	gk20a_dbg_fn("");
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
 			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
@@ -1562,8 +1562,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (!gold_ptr)
 		goto clean_up;
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
 			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		goto clean_up;
@@ -1602,7 +1602,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 				gk20a_mem_rd32(gold_ptr, i);
 	}
 
-	gr_gk20a_commit_inst(c, ch_ctx->gr_ctx.gpu_va);
+	gr_gk20a_commit_inst(c, ch_ctx->gr_ctx->gpu_va);
 
 	gr->ctx_vars.golden_image_initialized = true;
 
@@ -1636,8 +1636,8 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	   Flush and invalidate before cpu update. */
 	gk20a_mm_l2_flush(g, true);
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
 			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
@@ -1676,8 +1676,8 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	   Flush and invalidate before cpu update. */
 	gk20a_mm_l2_flush(g, true);
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
 			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
@@ -2521,12 +2521,11 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 	c->ch_ctx.global_ctx_buffer_mapped = false;
 }
 
-static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
-				struct channel_gk20a *c)
+static int __gr_gk20a_alloc_gr_ctx(struct gk20a *g,
+		struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm)
 {
+	struct gr_ctx_desc *gr_ctx = NULL;
 	struct gr_gk20a *gr = &g->gr;
-	struct gr_ctx_desc *gr_ctx = &c->ch_ctx.gr_ctx;
-	struct vm_gk20a *ch_vm = c->vm;
 	struct device *d = dev_from_gk20a(g);
 	struct sg_table *sgt;
 	DEFINE_DMA_ATTRS(attrs);
@@ -2542,12 +2541,18 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
+	gr_ctx = kzalloc(sizeof(*gr_ctx), GFP_KERNEL);
+	if (!gr_ctx)
+		return -ENOMEM;
+
 	gr_ctx->size = gr->ctx_vars.buffer_total_size;
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 	gr_ctx->pages = dma_alloc_attrs(d, gr_ctx->size,
 				&iova, GFP_KERNEL, &attrs);
-	if (!gr_ctx->pages)
-		return -ENOMEM;
+	if (!gr_ctx->pages) {
+		err = -ENOMEM;
+		goto err_free_ctx;
+	}
 
 	gr_ctx->iova = iova;
 	err = gk20a_get_sgtable_from_pages(d, &sgt, gr_ctx->pages,
@@ -2555,13 +2560,15 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 	if (err)
 		goto err_free;
 
-	gr_ctx->gpu_va = gk20a_gmmu_map(ch_vm, &sgt, gr_ctx->size,
+	gr_ctx->gpu_va = gk20a_gmmu_map(vm, &sgt, gr_ctx->size,
 				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none);
 	if (!gr_ctx->gpu_va)
 		goto err_free_sgt;
 
 	gk20a_free_sgtable(&sgt);
+
+	*__gr_ctx = gr_ctx;
 
 	return 0;
 
@@ -2572,30 +2579,74 @@ static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 		gr_ctx->pages, gr_ctx->iova, &attrs);
 	gr_ctx->pages = NULL;
 	gr_ctx->iova = 0;
+ err_free_ctx:
+	kfree(gr_ctx);
+	gr_ctx = NULL;
 
 	return err;
 }
 
-static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
+static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
+			struct tsg_gk20a *tsg)
 {
-	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct vm_gk20a *ch_vm = c->vm;
-	struct gk20a *g = c->g;
+	struct gr_ctx_desc **gr_ctx = &tsg->tsg_gr_ctx;
+	int err;
+
+	if (!tsg->vm) {
+		gk20a_err(dev_from_gk20a(tsg->g), "No address space bound\n");
+		return -ENOMEM;
+	}
+
+	err = __gr_gk20a_alloc_gr_ctx(g, gr_ctx, tsg->vm);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
+				struct channel_gk20a *c)
+{
+	struct gr_ctx_desc **gr_ctx = &c->ch_ctx.gr_ctx;
+	int err = __gr_gk20a_alloc_gr_ctx(g, gr_ctx, c->vm);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static void __gr_gk20a_free_gr_ctx(struct gk20a *g,
+	struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx)
+{
 	struct device *d = dev_from_gk20a(g);
 	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
 
-	if (!ch_ctx->gr_ctx.gpu_va)
+	if (!gr_ctx || !gr_ctx->gpu_va)
 		return;
 
-	gk20a_gmmu_unmap(ch_vm, ch_ctx->gr_ctx.gpu_va,
-			ch_ctx->gr_ctx.size, gk20a_mem_flag_none);
+	gk20a_gmmu_unmap(vm, gr_ctx->gpu_va,
+			gr_ctx->size, gk20a_mem_flag_none);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	dma_free_attrs(d, ch_ctx->gr_ctx.size,
-		ch_ctx->gr_ctx.pages, ch_ctx->gr_ctx.iova, &attrs);
-	ch_ctx->gr_ctx.pages = NULL;
-	ch_ctx->gr_ctx.iova = 0;
+	dma_free_attrs(d, gr_ctx->size,
+		gr_ctx->pages, gr_ctx->iova, &attrs);
+	gr_ctx->pages = NULL;
+	gr_ctx->iova = 0;
+}
+
+void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)
+{
+	if (!tsg->vm) {
+		gk20a_err(dev_from_gk20a(tsg->g), "No address space bound\n");
+		return;
+	}
+	__gr_gk20a_free_gr_ctx(tsg->g, tsg->vm, tsg->tsg_gr_ctx);
+}
+
+static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
+{
+	__gr_gk20a_free_gr_ctx(c->g, c->vm, c->ch_ctx.gr_ctx);
 }
 
 static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
@@ -2684,7 +2735,8 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c)
 {
 	gr_gk20a_unmap_global_ctx_buffers(c);
 	gr_gk20a_free_channel_patch_ctx(c);
-	gr_gk20a_free_channel_gr_ctx(c);
+	if (!gk20a_is_channel_marked_as_tsg(c))
+		gr_gk20a_free_channel_gr_ctx(c);
 
 	/* zcull_ctx, pm_ctx */
 
@@ -2717,7 +2769,9 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			struct nvhost_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
+	struct fifo_gk20a *f = &g->fifo;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	struct tsg_gk20a *tsg = NULL;
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -2736,27 +2790,44 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		err = -EINVAL;
 		goto out;
 	}
+	c->obj_class = args->class_num;
+
+	if (gk20a_is_channel_marked_as_tsg(c))
+		tsg = &f->tsg[c->tsgid];
 
 	/* allocate gr ctx buffer */
-	if (ch_ctx->gr_ctx.pages == NULL) {
-		err = gr_gk20a_alloc_channel_gr_ctx(g, c);
-		if (err) {
+	if (!tsg) {
+		if (!ch_ctx->gr_ctx) {
+			err = gr_gk20a_alloc_channel_gr_ctx(g, c);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"fail to allocate gr ctx buffer");
+				goto out;
+			}
+		} else {
+			/*TBD: needs to be more subtle about which is
+			 * being allocated as some are allowed to be
+			 * allocated along same channel */
 			gk20a_err(dev_from_gk20a(g),
-				"fail to allocate gr ctx buffer");
+				"too many classes alloc'd on same channel");
+			err = -EINVAL;
 			goto out;
 		}
-		c->obj_class = args->class_num;
 	} else {
-		/*TBD: needs to be more subtle about which is being allocated
-		* as some are allowed to be allocated along same channel */
-		gk20a_err(dev_from_gk20a(g),
-			"too many classes alloc'd on same channel");
-		err = -EINVAL;
-		goto out;
+		if (!tsg->tsg_gr_ctx) {
+			tsg->vm = c->vm;
+			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"fail to allocate TSG gr ctx buffer");
+				goto out;
+			}
+		}
+		ch_ctx->gr_ctx = tsg->tsg_gr_ctx;
 	}
 
 	/* commit gr ctx buffer */
-	err = gr_gk20a_commit_inst(c, ch_ctx->gr_ctx.gpu_va);
+	err = gr_gk20a_commit_inst(c, ch_ctx->gr_ctx->gpu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to commit gr ctx buffer");
@@ -6657,8 +6728,8 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	/* would have been a variant of gr_gk20a_apply_instmem_overrides */
 	/* recoded in-place instead.*/
-	ctx_ptr = vmap(ch_ctx->gr_ctx.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx.size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
 			0, pgprot_dmacoherent(PAGE_KERNEL));
 	if (!ctx_ptr) {
 		err = -ENOMEM;

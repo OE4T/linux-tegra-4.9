@@ -969,7 +969,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			tegra_dc_blend_sequential(dc, &dc->blend);
 
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-			dc->windows[i].dirty = 1;
+			struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+			win->dirty = 1;
 			update_mask |= WIN_A_ACT_REQ << i;
 		}
 	}
@@ -1064,17 +1065,18 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		if (tegra_platform_is_linsim()) {
 			/* FIXME: this is not needed when
 			   the simulator clears WIN_x_UPDATE
 			   bits as in HW */
 			if (interlace_done) {
-				dc->windows[i].dirty = 0;
+				win->dirty = 0;
 				completed = 1;
 			}
 		} else {
 			if (!(val & (WIN_A_ACT_REQ << i)) && interlace_done) {
-				dc->windows[i].dirty = 0;
+				win->dirty = 0;
 				completed = 1;
 			} else {
 				dirty = 1;

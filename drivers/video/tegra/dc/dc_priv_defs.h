@@ -180,7 +180,9 @@ struct tegra_dc {
 	struct tegra_dc_mode		mode;
 	s64				frametime_ns;
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc_win		windows[DC_N_WINDOWS];
+#endif
 	struct tegra_dc_win		shadow_windows[DC_N_WINDOWS];
 
 	struct tegra_dc_blend		blend;

@@ -101,7 +101,7 @@ static unsigned int num_active_internal_wins(struct tegra_dc *dc)
 	int i = 0;
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		struct tegra_dc_win *curr_win = &dc->windows[i];
+		struct tegra_dc_win *curr_win = tegra_dc_get_window(dc, i);
 		enum tegra_la_id curr_win_la_id =
 				la_id_tab[dc->ctrl_num][curr_win->idx];
 
@@ -121,7 +121,7 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
 	int i = 0;
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		struct tegra_dc_win *curr_win = &dc->windows[i];
+		struct tegra_dc_win *curr_win = tegra_dc_get_window(dc, i);
 		enum tegra_la_id curr_win_la_id =
 				la_id_tab[dc->ctrl_num][curr_win->idx];
 
@@ -407,7 +407,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 		int i = 0;
 
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-			struct tegra_dc_win *curr_win = &dc->windows[i];
+			struct tegra_dc_win *curr_win =
+				tegra_dc_get_window(dc, i);
 			enum tegra_la_id curr_win_la_id =
 					la_id_tab[dc->ctrl_num][curr_win->idx];
 			unsigned int curr_win_bw = 0;
@@ -428,7 +429,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 		int i = 0;
 
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-			struct tegra_dc_win *curr_win = &dc->windows[i];
+			struct tegra_dc_win *curr_win =
+				tegra_dc_get_window(dc, i);
 			enum tegra_la_id curr_win_la_id =
 					la_id_tab[dc->ctrl_num][curr_win->idx];
 			unsigned int curr_win_bw = 0;
@@ -886,7 +888,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	}
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		struct tegra_dc_win *w = &dc->windows[i];
+		struct tegra_dc_win *w = tegra_dc_get_window(dc, i);
 
 		if ((use_new || w->bandwidth != w->new_bandwidth) &&
 			w->new_bandwidth != 0)

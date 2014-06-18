@@ -1061,12 +1061,13 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	struct tegra_dc *dc = user->ext->dc;
 	struct tegra_dc_ext_win *ext_win;
 	struct tegra_dc_csc *csc;
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
 
-	if (index >= DC_N_WINDOWS)
+	if (!win)
 		return -EINVAL;
 
 	ext_win = &user->ext->win[index];
-	csc = &dc->windows[index].csc;
+	csc = &win->csc;
 
 	mutex_lock(&ext_win->lock);
 
@@ -1124,15 +1125,16 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	struct tegra_dc *dc = user->ext->dc;
 	struct tegra_dc_ext_win *ext_win;
 	struct tegra_dc_lut *lut;
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
 
-	if (index >= DC_N_WINDOWS)
+	if (!win)
 		return -EINVAL;
 
 	if ((start >= 256) || (len > 256) || ((start + len) > 256))
 		return -EINVAL;
 
 	ext_win = &user->ext->win[index];
-	lut = &dc->windows[index].lut;
+	lut = &win->lut;
 
 	mutex_lock(&ext_win->lock);
 

@@ -120,6 +120,11 @@ static int tegra_dc_resume(struct platform_device *ndev);
 
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
+#endif
+
+
 DEFINE_MUTEX(tegra_dc_lock);
 DEFINE_MUTEX(shared_lock);
 
@@ -1459,7 +1464,11 @@ struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win)
 	if (win >= DC_N_WINDOWS || !test_bit(win, &dc->valid_windows))
 		return NULL;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	return &tegra_dc_windows[win];
+#else
 	return &dc->windows[win];
+#endif
 }
 EXPORT_SYMBOL(tegra_dc_get_window);
 
@@ -2307,6 +2316,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 
 	/* Check for any underflow reset conditions */
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		if (WARN_ONCE(i >= ARRAY_SIZE(masks),
 			"underflow stats unsupported"))
 			break; /* bail if the table above is missing entries */
@@ -2314,18 +2324,18 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			continue; /* skip empty entries */
 
 		if (dc->underflow_mask & masks[i]) {
-			dc->windows[i].underflows++;
+			win->underflows++;
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
-			if (i < 3 && dc->windows[i].underflows > 4) {
+			if (i < 3 && win->underflows > 4) {
 				schedule_work(&dc->reset_work);
 				/* reset counter */
-				dc->windows[i].underflows = 0;
+				win->underflows = 0;
 				trace_display_reset(dc);
 			}
 #endif
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
-			if (i < 3 && dc->windows[i].underflows > 4) {
+			if (i < 3 && win->underflows > 4) {
 				trace_display_reset(dc);
 				tegra_dc_writel(dc, UF_LINE_FLUSH,
 						DC_DISP_DISP_MISC_CONTROL);
@@ -2339,7 +2349,7 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			}
 #endif
 		} else {
-			dc->windows[i].underflows = 0;
+			win->underflows = 0;
 		}
 	}
 
@@ -2768,7 +2778,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 	tegra_dc_set_color_control(dc);
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		struct tegra_dc_win *win = &dc->windows[i];
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
 		tegra_dc_set_csc(dc, &win->csc);
@@ -3065,7 +3075,7 @@ void tegra_dc_enable(struct tegra_dc *dc)
 
 void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
 {
-	struct tegra_dc_win *w = &dc->windows[win];
+	struct tegra_dc_win *w = tegra_dc_get_window(dc, win);
 	u32 max;
 
 	/* reset window bandwidth */
@@ -3635,7 +3645,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	dc->n_windows = DC_N_WINDOWS;
 	for (i = 0; i < DC_N_WINDOWS; i++) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		struct tegra_dc_win *win = &tegra_dc_windows[i];
+#else
 		struct tegra_dc_win *win = &dc->windows[i];
+#endif
 		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 		if (!test_bit(i, &dc->valid_windows))
 			win->flags |= TEGRA_WIN_FLAG_INVALID;

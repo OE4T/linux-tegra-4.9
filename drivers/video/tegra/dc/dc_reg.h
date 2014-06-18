@@ -409,6 +409,7 @@
 #define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
 #define	CURSOR_START_ADDR_HI(_addr) (0)
 #endif
+#define   CURSOR_SIZE_32		(0x0 << 24)
 #define   CURSOR_SIZE_64		(0x1 << 24)
 #define   CURSOR_SIZE_128		(0x2 << 24)
 #define   CURSOR_SIZE_256		(0x3 << 24)
@@ -434,10 +435,11 @@
 #define   UF_LINE_FLUSH                         (1 << 1)
 
 #define	DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
-#define CURSOR_MODE_CAL(x) ((x) << 24)
-#define CURSOR_DST_BLEND_FACTOR_SELECT(x) ((x) << 16)
-#define CURSOR_SRC_BLEND_FACTOR_SELECT(x) ((x) << 8)
-#define CURSOR_ALPHA	0xff
+#define  WINH_CURS_SELECT(x)		(((x) & 0x1) << 28)
+#define  CURSOR_MODE_SELECT(x)		(((x) & 0x1) << 24)
+#define  CURSOR_DST_BLEND_FACTOR_SELECT(x) ((x) << 16)
+#define  CURSOR_SRC_BLEND_FACTOR_SELECT(x) ((x) << 8)
+#define  CURSOR_ALPHA(a)		((a) & 0xff)
 
 #define DC_WIN_COLOR_PALETTE(x)			(0x500 + (x))
 
@@ -865,10 +867,6 @@
 #define  NUM_AGG_PRI_LVLS		4
 #define  SD_AGG_PRI_LVL(x)		((x) >> 3)
 #define  SD_GET_AGG(x)			((x) & 0x7)
-
-#define DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
-#define  WINH_CURS_SELECT(x)		(((x) & 0x1) << 28)
-#define  CURSOR_MODE_SELECT(x)		(((x) & 0x1) << 24)
 
 #define DC_DISP_BLEND_BACKGROUND_COLOR		0x4e4
 

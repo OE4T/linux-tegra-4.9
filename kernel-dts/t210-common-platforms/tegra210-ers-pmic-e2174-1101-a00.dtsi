@@ -78,10 +78,8 @@
 
 				max77620_sd2: sd2 {
 					regulator-name = "vdd-pre-reg";
-					regulator-min-microvolt = <1320000>;
-					regulator-max-microvolt = <1320000>;
-					regulator-always-on;
-					regulator-boot-on;
+					regulator-min-microvolt = <1350000>;
+					regulator-max-microvolt = <1350000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 

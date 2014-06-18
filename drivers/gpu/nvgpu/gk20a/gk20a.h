@@ -220,7 +220,7 @@ struct gpu_ops {
 			       u32 num_pages, u32 pgsz_idx);
 	} mm;
 	struct {
-		int (*pmu_setup_sw)(struct gk20a *g);
+		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 	} pmu;
 };

@@ -1519,6 +1519,88 @@ int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
+static int gk20a_prepare_ucode(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	int i, err = 0;
+	struct sg_table *sgt_pmu_ucode;
+	dma_addr_t iova;
+	struct device *d = dev_from_gk20a(g);
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	void *ucode_ptr;
+	DEFINE_DMA_ATTRS(attrs);
+
+	if (!g->pmu_fw) {
+		g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
+		if (!g->pmu_fw) {
+			gk20a_err(d, "failed to load pmu ucode!!");
+			return err;
+		}
+	}
+
+	gk20a_dbg_fn("firmware loaded");
+
+	pmu->desc = (struct pmu_ucode_desc *)g->pmu_fw->data;
+	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
+			pmu->desc->descriptor_size);
+
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+	pmu->ucode.cpuva = dma_alloc_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
+					&iova,
+					GFP_KERNEL,
+					&attrs);
+	if (!pmu->ucode.cpuva) {
+		gk20a_err(d, "failed to allocate memory\n");
+		err = -ENOMEM;
+		goto err_release_fw;
+	}
+
+	pmu->ucode.iova = iova;
+
+	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
+				pmu->ucode.cpuva,
+				pmu->ucode.iova,
+				GK20A_PMU_UCODE_SIZE_MAX);
+	if (err) {
+		gk20a_err(d, "failed to allocate sg table\n");
+		goto err_free_pmu_ucode;
+	}
+
+	pmu->ucode.pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
+					GK20A_PMU_UCODE_SIZE_MAX,
+					0, /* flags */
+					gk20a_mem_flag_read_only);
+	if (!pmu->ucode.pmu_va) {
+		gk20a_err(d, "failed to map pmu ucode memory!!");
+		goto err_free_ucode_sgt;
+	}
+
+	ucode_ptr = pmu->ucode.cpuva;
+
+	for (i = 0; i < (pmu->desc->app_start_offset +
+			pmu->desc->app_size) >> 2; i++)
+		gk20a_mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
+
+	gk20a_free_sgtable(&sgt_pmu_ucode);
+
+	gk20a_init_pmu(pmu);
+
+	return 0;
+
+ err_free_ucode_sgt:
+	gk20a_free_sgtable(&sgt_pmu_ucode);
+ err_free_pmu_ucode:
+	dma_free_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
+		pmu->ucode.cpuva, pmu->ucode.iova, &attrs);
+	pmu->ucode.cpuva = NULL;
+	pmu->ucode.iova = 0;
+ err_release_fw:
+	release_firmware(g->pmu_fw);
+
+	return err;
+}
+
 int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -1527,10 +1609,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct device *d = dev_from_gk20a(g);
 	int i, err = 0;
 	u8 *ptr;
-	void *ucode_ptr;
-	struct sg_table *sgt_pmu_ucode;
 	struct sg_table *sgt_seq_buf;
-	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
 
 	gk20a_dbg_fn("");
@@ -1575,63 +1654,18 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu_seq_init(pmu);
 
-	if (!g->pmu_fw) {
-		g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
-		if (!g->pmu_fw) {
-			gk20a_err(d, "failed to load pmu ucode!!");
-			err = -ENOENT;
-			goto err_free_seq;
-		}
-	}
-
-	gk20a_dbg_fn("firmware loaded");
-
-	pmu->desc = (struct pmu_ucode_desc *)g->pmu_fw->data;
-	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
-			pmu->desc->descriptor_size);
-
 	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-	pmu->ucode.cpuva = dma_alloc_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
-					&iova,
-					GFP_KERNEL,
-					&attrs);
-	if (!pmu->ucode.cpuva) {
-		gk20a_err(d, "failed to allocate memory\n");
-		err = -ENOMEM;
-		goto err_release_fw;
-	}
-
-	pmu->ucode.iova = iova;
 	pmu->seq_buf.cpuva = dma_alloc_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
 					&iova,
 					GFP_KERNEL);
 	if (!pmu->seq_buf.cpuva) {
 		gk20a_err(d, "failed to allocate memory\n");
 		err = -ENOMEM;
-		goto err_free_pmu_ucode;
+		goto err_free_seq;
 	}
 
 	pmu->seq_buf.iova = iova;
-
-	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
-				pmu->ucode.cpuva,
-				pmu->ucode.iova,
-				GK20A_PMU_UCODE_SIZE_MAX);
-	if (err) {
-		gk20a_err(d, "failed to allocate sg table\n");
-		goto err_free_seq_buf;
-	}
-
-	pmu->ucode.pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
-					GK20A_PMU_UCODE_SIZE_MAX,
-					0, /* flags */
-					gk20a_mem_flag_read_only);
-	if (!pmu->ucode.pmu_va) {
-		gk20a_err(d, "failed to map pmu ucode memory!!");
-		goto err_free_ucode_sgt;
-	}
 
 	err = gk20a_get_sgtable(d, &sgt_seq_buf,
 				pmu->seq_buf.cpuva,
@@ -1639,7 +1673,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 				GK20A_PMU_SEQ_BUF_SIZE);
 	if (err) {
 		gk20a_err(d, "failed to allocate sg table\n");
-		goto err_unmap_ucode;
+		goto err_free_seq_buf;
 	}
 
 	pmu->seq_buf.pmu_va = gk20a_gmmu_map(vm, &sgt_seq_buf,
@@ -1665,13 +1699,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
-	ucode_ptr = pmu->ucode.cpuva;
-
-	for (i = 0; i < (pmu->desc->app_start_offset +
-			pmu->desc->app_size) >> 2; i++)
-		gk20a_mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
-
-	gk20a_free_sgtable(&sgt_pmu_ucode);
 	gk20a_free_sgtable(&sgt_seq_buf);
 
 	pmu->sw_ready = true;
@@ -1700,23 +1727,11 @@ skip_init:
 		GK20A_PMU_SEQ_BUF_SIZE, gk20a_mem_flag_none);
  err_free_seq_buf_sgt:
 	gk20a_free_sgtable(&sgt_seq_buf);
- err_unmap_ucode:
-	gk20a_gmmu_unmap(vm, pmu->ucode.pmu_va,
-		GK20A_PMU_UCODE_SIZE_MAX, gk20a_mem_flag_none);
- err_free_ucode_sgt:
-	gk20a_free_sgtable(&sgt_pmu_ucode);
  err_free_seq_buf:
 	dma_free_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
 		pmu->seq_buf.cpuva, pmu->seq_buf.iova);
 	pmu->seq_buf.cpuva = NULL;
 	pmu->seq_buf.iova = 0;
- err_free_pmu_ucode:
-	dma_free_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
-		pmu->ucode.cpuva, pmu->ucode.iova, &attrs);
-	pmu->ucode.cpuva = NULL;
-	pmu->ucode.iova = 0;
- err_release_fw:
-	release_firmware(g->pmu_fw);
  err_free_seq:
 	kfree(pmu->seq);
  err_free_mutex:
@@ -1977,7 +1992,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
-	gops->pmu.pmu_setup_sw = gk20a_init_pmu_setup_sw;
+	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 }
 
@@ -1996,7 +2011,7 @@ int gk20a_init_pmu_support(struct gk20a *g)
 		return err;
 
 	if (support_gk20a_pmu()) {
-		err = g->ops.pmu.pmu_setup_sw(g);
+		err = gk20a_init_pmu_setup_sw(g);
 		if (err)
 			return err;
 		err = g->ops.pmu.pmu_setup_hw_and_bootstrap(g);

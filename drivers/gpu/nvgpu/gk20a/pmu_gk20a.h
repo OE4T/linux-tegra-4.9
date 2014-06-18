@@ -997,9 +997,8 @@ struct pmu_pg_stats {
 #define PMU_STATE_LOADING_ZBC		4 /* Loading ZBC buf */
 #define PMU_STATE_STARTED		5 /* Fully unitialized */
 
-struct pmu_gk20a {
 
-	struct gk20a *g;
+struct pmu_gk20a {
 
 	struct pmu_ucode_desc *desc;
 	struct pmu_mem_desc ucode;

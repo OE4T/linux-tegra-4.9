@@ -486,7 +486,7 @@ static void *get_pmu_sequence_out_alloc_ptr_v0(struct pmu_sequence *seq)
 
 int gk20a_init_pmu(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	switch (pmu->desc->app_version) {
 	case APP_VERSION_GM20B_1:
 	case APP_VERSION_GM20B:
@@ -626,7 +626,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			get_pmu_sequence_out_alloc_ptr_v0;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(pmu->g),
+		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
 		"PMU code version not supported version: %d\n",
 			pmu->desc->app_version);
 		return -EINVAL;
@@ -638,7 +638,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		u32 src, u8 *dst, u32 size, u8 port)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 i, words, bytes;
 	u32 data, addr_mask;
 	u32 *dst_u32 = (u32*)dst;
@@ -684,7 +684,7 @@ void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 		u32 dst, u8 *src, u32 size, u8 port)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 i, words, bytes;
 	u32 data, addr_mask;
 	u32 *src_u32 = (u32*)src;
@@ -737,7 +737,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 
 static int pmu_idle(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(2000);
 	u32 idle_stat;
@@ -766,7 +766,7 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 
 static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	gk20a_dbg_fn("");
 
@@ -831,7 +831,7 @@ static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 
 static int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	gk20a_dbg_fn("");
 
@@ -863,7 +863,7 @@ static int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 
 static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 pmc_enable;
 	int err;
 
@@ -922,7 +922,7 @@ int pmu_reset(struct pmu_gk20a *pmu)
 
 static int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
@@ -1023,7 +1023,7 @@ void pmu_seq_init(struct pmu_gk20a *pmu)
 static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 			struct pmu_sequence **pseq)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_sequence *seq;
 	u32 index;
 
@@ -1049,7 +1049,7 @@ static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 static void pmu_seq_release(struct pmu_gk20a *pmu,
 			struct pmu_sequence *seq)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	seq->state	= PMU_SEQ_STATE_FREE;
 	seq->desc	= PMU_INVALID_SEQ_DESC;
 	seq->callback	= NULL;
@@ -1067,7 +1067,7 @@ static void pmu_seq_release(struct pmu_gk20a *pmu,
 static int pmu_queue_init(struct pmu_gk20a *pmu,
 		u32 id, union pmu_init_msg_pmu *init)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_queue *queue = &pmu->queue[id];
 	queue->id	= id;
 	g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params(queue, id, init);
@@ -1084,7 +1084,7 @@ static int pmu_queue_init(struct pmu_gk20a *pmu,
 static int pmu_queue_head(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			u32 *head, bool set)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	BUG_ON(!head);
 
@@ -1117,7 +1117,7 @@ static int pmu_queue_head(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 static int pmu_queue_tail(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			u32 *tail, bool set)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	BUG_ON(!tail);
 
@@ -1161,7 +1161,7 @@ static inline void pmu_queue_write(struct pmu_gk20a *pmu,
 
 int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_mutex *mutex;
 	u32 data, owner, max_retry;
 
@@ -1230,7 +1230,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_mutex *mutex;
 	u32 owner, data;
 
@@ -1355,7 +1355,7 @@ static int pmu_queue_push(struct pmu_gk20a *pmu,
 	gk20a_dbg_fn("");
 
 	if (!queue->opened && queue->oflag == OFLAG_WRITE){
-		gk20a_err(dev_from_gk20a(pmu->g),
+		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
 			"queue not opened for write");
 		return -EINVAL;
 	}
@@ -1374,7 +1374,7 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 	*bytes_read = 0;
 
 	if (!queue->opened && queue->oflag == OFLAG_READ){
-		gk20a_err(dev_from_gk20a(pmu->g),
+		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
 			"queue not opened for read");
 		return -EINVAL;
 	}
@@ -1391,7 +1391,7 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 		used = queue->offset + queue->size - tail;
 
 	if (size > used) {
-		gk20a_warn(dev_from_gk20a(pmu->g),
+		gk20a_warn(dev_from_gk20a(gk20a_from_pmu(pmu)),
 			"queue size smaller than request read");
 		size = used;
 	}
@@ -1410,7 +1410,7 @@ static void pmu_queue_rewind(struct pmu_gk20a *pmu,
 	gk20a_dbg_fn("");
 
 	if (!queue->opened) {
-		gk20a_err(dev_from_gk20a(pmu->g),
+		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
 			"queue not opened");
 		return;
 	}
@@ -1462,7 +1462,7 @@ static int pmu_queue_open_write(struct pmu_gk20a *pmu,
 		BUG();
 
 	if (!pmu_queue_has_room(pmu, queue, size, &rewind)) {
-		gk20a_err(dev_from_gk20a(pmu->g), "queue full");
+		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)), "queue full");
 		return -EAGAIN;
 	}
 
@@ -1795,7 +1795,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g);
 void pmu_setup_hw(struct work_struct *work)
 {
 	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	switch (pmu->pmu_state) {
 	case PMU_STATE_ELPG_BOOTED:
@@ -1991,8 +1991,6 @@ int gk20a_init_pmu_support(struct gk20a *g)
 	if (pmu->initialized)
 		return 0;
 
-	pmu->g = g;
-
 	err = gk20a_init_pmu_reset_enable_hw(g);
 	if (err)
 		return err;
@@ -2071,7 +2069,7 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 
 static int pmu_init_powergating(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -2141,7 +2139,7 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 
 static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
@@ -2244,7 +2242,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 			struct pmu_msg *msg)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	union pmu_init_msg_pmu *init;
 	struct pmu_sha1_gid_data gid_data;
@@ -2313,7 +2311,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			struct pmu_msg *msg, int *status)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 read_size, bytes_read;
 	int err;
 
@@ -2393,7 +2391,7 @@ clean_up:
 static int pmu_response_handle(struct pmu_gk20a *pmu,
 			struct pmu_msg *msg)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_sequence *seq;
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	int ret = 0;
@@ -2500,7 +2498,7 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 
 static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
@@ -2544,7 +2542,7 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 
 static int pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -2646,7 +2644,7 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 				 u32 *var, u32 val)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 
@@ -2667,7 +2665,7 @@ static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 
 static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_pg_stats stats;
 
 	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
@@ -2739,7 +2737,7 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 
 void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	int i;
 
 	gk20a_err(dev_from_gk20a(g), "pwr_falcon_os_r : %d",
@@ -2918,7 +2916,7 @@ static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 			struct pmu_msg *msg, struct pmu_payload *payload,
 			u32 queue_id)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_queue *queue;
 	u32 in_size, out_size;
 
@@ -2987,7 +2985,7 @@ invalid_cmd:
 static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 			u32 queue_id, unsigned long timeout)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_queue *queue;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(timeout);

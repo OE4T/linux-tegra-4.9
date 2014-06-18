@@ -522,6 +522,11 @@ static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
 {
 	return container_of(as, struct gk20a, as);
 }
+static inline struct gk20a *gk20a_from_pmu(struct pmu_gk20a *pmu)
+{
+	return container_of(pmu, struct gk20a, pmu);
+}
+
 static inline u32 u64_hi32(u64 n)
 {
 	return (u32)((n >> 32) & ~(u32)0);

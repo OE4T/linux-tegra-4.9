@@ -1082,7 +1082,7 @@ acr_ucode_patch_sig(struct gk20a *g,
 static int bl_bootstrap(struct pmu_gk20a *pmu,
 	struct flcn_bl_dmem_desc *pbl_desc, u32 bl_sz)
 {
-	struct gk20a *g = pmu->g;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u32 imem_dst_blk = 0;

@@ -278,15 +278,11 @@ static void alloc_handle(struct nvmap_client *client,
 		}
 	} else if (type & iovmm_mask) {
 		int ret;
-		size_t reserved = PAGE_ALIGN(h->size);
 
-		atomic_add(reserved, &client->iovm_commit);
 		ret = handle_page_alloc(client, h,
 			h->userflags & NVMAP_HANDLE_PHYS_CONTIG);
-		if (ret) {
-			atomic_sub(reserved, &client->iovm_commit);
+		if (ret)
 			return;
-		}
 		h->heap_pgalloc = true;
 		mb();
 		h->alloc = true;
@@ -425,9 +421,6 @@ void nvmap_free_handle(struct nvmap_client *client,
 	rb_erase(&ref->node, &client->handle_refs);
 	client->handle_count--;
 	atomic_dec(&ref->handle->share_count);
-
-	if (h->alloc && h->heap_pgalloc)
-		atomic_sub(h->size, &client->iovm_commit);
 
 	if (h->alloc && !h->heap_pgalloc) {
 		mutex_lock(&h->lock);
@@ -610,8 +603,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
 			h->size);
 		mutex_unlock(&h->lock);
-	} else {
-		atomic_add(h->size, &client->iovm_commit);
 	}
 
 	atomic_set(&ref->dupes, 1);

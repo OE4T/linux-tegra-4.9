@@ -241,7 +241,6 @@ struct nvmap_carveout_commit {
 struct nvmap_client {
 	const char			*name;
 	struct rb_root			handle_refs;
-	atomic_t			iovm_commit;
 	struct mutex			ref_lock;
 	bool				kernel_client;
 	atomic_t			count;

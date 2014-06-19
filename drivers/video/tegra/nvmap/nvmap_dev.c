@@ -390,8 +390,6 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 	client->kernel_client = true;
 	client->handle_refs = RB_ROOT;
 
-	atomic_set(&client->iovm_commit, 0);
-
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		INIT_LIST_HEAD(&client->carveout_commit[i].list);
 		client->carveout_commit[i].commit = 0;
@@ -845,6 +843,25 @@ static void allocations_stringify(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 }
 
+static void nvmap_get_client_mss(struct nvmap_client *client,
+				 u64 *total, bool iovmm)
+{
+	struct rb_node *n;
+
+	*total = 0;
+	nvmap_ref_lock(client);
+	n = rb_first(&client->handle_refs);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle_ref *ref =
+			rb_entry(n, struct nvmap_handle_ref, node);
+		struct nvmap_handle *handle = ref->handle;
+		if (handle->alloc && handle->heap_pgalloc == iovmm)
+			*total += handle->size /
+				  atomic_read(&handle->share_count);
+	}
+	nvmap_ref_unlock(client);
+}
+
 static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 {
 	struct nvmap_carveout_node *node = s->private;
@@ -953,14 +970,14 @@ static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
 	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
 	list_for_each_entry(client, &dev->clients, list) {
-		int iovm_commit = atomic_read(&client->iovm_commit);
+		u64 client_total;
 		client_stringify(client, s);
-		seq_printf(s, " %10uK\n", K(iovm_commit));
+		nvmap_get_client_mss(client, &client_total, true);
+		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	spin_unlock(&dev->clients_lock);
 	nvmap_iovmm_get_total_mss(NULL, NULL, &total);
 	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
-	PRINT_MEM_STATS_NOTE(SIZE);
 	return 0;
 }
 
@@ -979,16 +996,16 @@ static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
 			"", "", "BASE", "SIZE", "FLAGS", "REFS",
 			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID");
 	list_for_each_entry(client, &dev->clients, list) {
-		int iovm_commit = atomic_read(&client->iovm_commit);
+		u64 client_total;
 		client_stringify(client, s);
-		seq_printf(s, " %10uK\n", K(iovm_commit));
+		nvmap_get_client_mss(client, &client_total, true);
+		seq_printf(s, " %10lluK\n", K(client_total));
 		allocations_stringify(client, s, true);
 		seq_printf(s, "\n");
 	}
 	spin_unlock(&dev->clients_lock);
 	nvmap_iovmm_get_total_mss(NULL, NULL, &total);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
-	PRINT_MEM_STATS_NOTE(SIZE);
 	return 0;
 }
 

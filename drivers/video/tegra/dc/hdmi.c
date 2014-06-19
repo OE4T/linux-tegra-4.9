@@ -57,6 +57,13 @@
 
 #define HDMI_REKEY_DEFAULT		56
 
+/* According to HDMI EDID specs for Short Audio
+ * Descriptor, format type LPCM is 1 (this is required
+ * by HAL before EDL is copied to hda codec driver
+ */
+#define AUDIO_CODING_TYPE_LPCM		1
+#define AUDIO_SAD_BYTE_SIZE		3
+
 #define HDMI_ELD_VER_INDEX			0
 #define HDMI_ELD_RESERVED1_INDEX		1
 #define HDMI_ELD_BASELINE_LEN_INDEX		2
@@ -83,6 +90,14 @@
 #define TEGRA_DC_HDMI_MAX_ASPECT_RATIO_PERCENT	320
 
 struct tegra_dc_hdmi_data *dc_hdmi;
+
+static ssize_t hdmi_audio_get_max_channel(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf);
+
+static struct kobj_attribute hdmi_audio_channel_config =
+	__ATTR(config, 0640, hdmi_audio_get_max_channel, NULL);
+
+static struct kobject *hdmi_audio;
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 const struct tmds_config tmds_config[] = {
@@ -962,6 +977,37 @@ static int tegra_dc_hdmi_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 	return i2c_transfer(hdmi->i2c_info.client->adapter, msgs, num);
 }
 
+/* This is needed to obtain audio channel info before HAL
+ * opens pcm stream and copies edid audio data */
+static int tegra_hdmi_get_max_channels(void)
+{
+	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
+	u8 sad_channels;
+	u8 sad_format;
+	u8 max_channels = 0;
+	int i;
+
+	if (!hdmi)
+		return 0;
+
+	if (!hdmi->eld_retrieved)
+		return 0;
+
+	if (!hdmi->dc->enabled)
+		return 0;
+
+	for (i = 0; i < hdmi->eld.sad_count; i++) {
+		sad_channels = max(((hdmi->eld.sad[AUDIO_SAD_BYTE_SIZE*i]
+			& 0x7) + 1), 2);
+		sad_format = ((hdmi->eld.sad[AUDIO_SAD_BYTE_SIZE*i]
+			& 0x78) >> 3);
+		if (sad_format == AUDIO_CODING_TYPE_LPCM)
+			max_channels =  max_channels > sad_channels ?
+				max_channels : sad_channels;
+	}
+	return max_channels;
+}
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi;
@@ -1175,6 +1221,18 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			gpio_to_irq(dc->out->hotplug_gpio), ret);
 		err = -EBUSY;
 		goto err_gpio_free;
+	}
+
+	/*Add sysfs node to query hdmi audio channels on startup*/
+	hdmi_audio = kobject_create_and_add("hdmi_audio_channels", kernel_kobj);
+	if (!hdmi_audio) {
+		pr_warn("kobject create_and_add hdmi_audio_channels failed\n");
+		return 0;
+	}
+	ret = sysfs_create_file(hdmi_audio, &hdmi_audio_channel_config.attr);
+	if (ret) {
+		pr_warn("sysfs create file hdmi_audio_channels failed\n");
+		return 0;
 	}
 
 	return 0;
@@ -2275,4 +2333,10 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi)
 {
 	return hdmi ? hdmi->dc : NULL;
+}
+
+static ssize_t hdmi_audio_get_max_channel(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", tegra_hdmi_get_max_channels());
 }

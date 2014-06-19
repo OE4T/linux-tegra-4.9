@@ -64,16 +64,6 @@ size_t cache_maint_inner_threshold = SZ_2M;
 size_t cache_maint_outer_threshold = SZ_1M;
 #endif
 
-struct nvmap_carveout_node {
-	unsigned int		heap_bit;
-	struct nvmap_heap	*carveout;
-	int			index;
-	struct list_head	clients;
-	spinlock_t		clients_lock;
-	phys_addr_t			base;
-	size_t			size;
-};
-
 struct nvmap_device *nvmap_dev;
 struct nvmap_stats nvmap_stats;
 
@@ -1228,7 +1218,7 @@ u64 nvmap_stats_read(enum nvmap_stats_t stat)
 	return atomic64_read(&nvmap_stats.stats[stat]);
 }
 
-static int nvmap_probe(struct platform_device *pdev)
+int nvmap_probe(struct platform_device *pdev)
 {
 	struct nvmap_platform_data *plat = pdev->dev.platform_data;
 	struct nvmap_device *dev;
@@ -1408,80 +1398,3 @@ fail:
 	nvmap_dev = NULL;
 	return e;
 }
-
-static int nvmap_remove(struct platform_device *pdev)
-{
-	struct nvmap_device *dev = platform_get_drvdata(pdev);
-	struct rb_node *n;
-	struct nvmap_handle *h;
-	int i;
-
-	misc_deregister(&dev->dev_user);
-
-	while ((n = rb_first(&dev->handles))) {
-		h = rb_entry(n, struct nvmap_handle, node);
-		rb_erase(&h->node, &dev->handles);
-		kfree(h);
-	}
-
-	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_destroy(node->carveout);
-	}
-	kfree(dev->heaps);
-
-	kfree(dev);
-	nvmap_dev = NULL;
-	return 0;
-}
-
-static int nvmap_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	return 0;
-}
-
-static int nvmap_resume(struct platform_device *pdev)
-{
-	return 0;
-}
-
-static struct platform_driver nvmap_driver = {
-	.probe		= nvmap_probe,
-	.remove		= nvmap_remove,
-	.suspend	= nvmap_suspend,
-	.resume		= nvmap_resume,
-
-	.driver = {
-		.name	= "tegra-nvmap",
-		.owner	= THIS_MODULE,
-	},
-};
-
-static int __init nvmap_init_driver(void)
-{
-	int e;
-
-	nvmap_dev = NULL;
-
-	e = nvmap_heap_init();
-	if (e)
-		goto fail;
-
-	e = platform_driver_register(&nvmap_driver);
-	if (e) {
-		nvmap_heap_deinit();
-		goto fail;
-	}
-
-fail:
-	return e;
-}
-fs_initcall(nvmap_init_driver);
-
-static void __exit nvmap_exit_driver(void)
-{
-	platform_driver_unregister(&nvmap_driver);
-	nvmap_heap_deinit();
-	nvmap_dev = NULL;
-}
-module_exit(nvmap_exit_driver);

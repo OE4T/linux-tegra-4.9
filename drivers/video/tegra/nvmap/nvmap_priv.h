@@ -93,6 +93,16 @@ struct nvmap_vma_list {
 	struct vm_area_struct *vma;
 };
 
+struct nvmap_carveout_node {
+	unsigned int		heap_bit;
+	struct nvmap_heap	*carveout;
+	int			index;
+	struct list_head	clients;
+	spinlock_t		clients_lock;
+	phys_addr_t			base;
+	size_t			size;
+};
+
 /* handles allocated using shared system memory (either IOVMM- or high-order
  * page allocations */
 struct nvmap_pgalloc {
@@ -335,6 +345,8 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 		return pgprot_dmacoherent(prot);
 	return prot;
 }
+
+int nvmap_probe(struct platform_device *pdev);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

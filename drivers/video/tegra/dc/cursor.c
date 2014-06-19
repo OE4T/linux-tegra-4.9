@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/cursor.c
+ * drivers/video/tegra/dc/cursor.c
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
@@ -99,14 +99,13 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
 
+	dc->cursor.phys_addr = phys_addr;
+	dc->cursor.size = size;
 	/* this should not fail, as tegra_dc_cursor_image() checks the size */
 	if (WARN(cursor_size_value(size, &val), "invalid cursor size."))
 		return 0;
 
-	/* Get the cursor clip window number */
-	/* TODO: load clip setting from data structure */
-	clip_win = CURSOR_CLIP_GET_WINDOW(
-		tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR));
+	clip_win = dc->cursor.clip_win;
 	val |= CURSOR_CLIP_SHIFT_BITS(clip_win);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
@@ -177,6 +176,7 @@ static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 		tegra_dc_writel(dc, val, DC_DISP_DISP_WIN_OPTIONS);
 		return 1;
 	}
+	dc->cursor.enabled = enable;
 	return 0;
 }
 
@@ -194,6 +194,7 @@ static int set_cursor_blend(struct tegra_dc *dc, u32 format)
 		tegra_dc_writel(dc, newval, DC_DISP_BLEND_CURSOR_CONTROL);
 		return 1;
 	}
+	dc->cursor.format = format;
 
 	return 0;
 }
@@ -211,16 +212,77 @@ static int set_cursor_fg_bg(struct tegra_dc *dc, u32 fg, u32 bg)
 		tegra_dc_writel(dc, bg, DC_DISP_CURSOR_BACKGROUND);
 		general_update_needed |= 1;
 	}
+	dc->cursor.fg = fg;
+	dc->cursor.bg = bg;
 
 	return general_update_needed;
+}
+
+static void tegra_dc_cursor_do_update(struct tegra_dc *dc,
+	bool need_general_update)
+{
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
+#else
+	need_general_update = true;
+#endif
+	if (need_general_update) {
+		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	}
+}
+
+static int tegra_dc_cursor_program(struct tegra_dc *dc)
+{
+	bool need_general_update = false;
+
+	if (!dc->enabled)
+		return 0;
+	/* these checks are redundant */
+	if (cursor_size_value(dc->cursor.size, NULL))
+		return -EINVAL;
+	if (cursor_format_value(dc->cursor.format, NULL))
+		return -EINVAL;
+
+	mutex_lock(&dc->lock);
+	if (!dc->cursor.dirty) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+	tegra_dc_get(dc);
+
+	need_general_update |= set_cursor_start_addr(dc, dc->cursor.size,
+		dc->cursor.phys_addr);
+
+	need_general_update |= set_cursor_fg_bg(dc,
+		dc->cursor.fg, dc->cursor.bg);
+
+	need_general_update |= set_cursor_blend(dc, dc->cursor.format);
+
+	need_general_update |= set_cursor_enable(dc, dc->cursor.enabled);
+
+	need_general_update |= set_cursor_position(dc,
+		dc->cursor.x, dc->cursor.y);
+
+	need_general_update |= set_cursor_activation_control(dc);
+
+	tegra_dc_cursor_do_update(dc, need_general_update);
+
+	tegra_dc_put(dc);
+	dc->cursor.dirty = false;
+	mutex_unlock(&dc->lock);
+
+	return 0;
 }
 
 int tegra_dc_cursor_image(struct tegra_dc *dc,
 	enum tegra_dc_cursor_format format, enum tegra_dc_cursor_size size,
 	u32 fg, u32 bg, dma_addr_t phys_addr)
 {
-	int need_general_update = 0;
-
 	if (cursor_size_value(size, NULL))
 		return -EINVAL;
 
@@ -228,52 +290,27 @@ int tegra_dc_cursor_image(struct tegra_dc *dc,
 		return -EINVAL;
 
 	mutex_lock(&dc->lock);
-	tegra_dc_get(dc);
-
-	need_general_update |= set_cursor_start_addr(dc, size, phys_addr);
-
-	need_general_update |= set_cursor_fg_bg(dc, fg, bg);
-
-	need_general_update |= set_cursor_blend(dc, format);
-
-	if (need_general_update) {
-		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-	}
-
-	tegra_dc_put(dc);
-	/* XXX sync here? */
-
+	dc->cursor.fg = fg;
+	dc->cursor.bg = bg;
+	dc->cursor.size = size;
+	dc->cursor.format = format;
+	dc->cursor.phys_addr = phys_addr;
+	dc->cursor.dirty = true;
 	mutex_unlock(&dc->lock);
 
-	return 0;
+	return tegra_dc_cursor_program(dc);
 }
 
 int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y)
 {
-	int need_general_update = 0;
-
 	mutex_lock(&dc->lock);
-	tegra_dc_get(dc);
-
-	need_general_update |= set_cursor_enable(dc, enable);
-
-	need_general_update |= set_cursor_position(dc, x, y);
-
-	need_general_update |= set_cursor_activation_control(dc);
-
-	if (need_general_update) {
-		tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-	}
-
-	/* TODO: need to sync here?  hopefully can avoid this, but need to
-	 * figure out interaction w/ rest of GENERAL_ACT_REQ */
-
-	tegra_dc_put(dc);
+	dc->cursor.x = x;
+	dc->cursor.y = y;
+	dc->cursor.enabled = enable;
+	dc->cursor.dirty = true;
 	mutex_unlock(&dc->lock);
 
-	return 0;
+	return tegra_dc_cursor_program(dc);
 }
 
 /* clip:
@@ -284,30 +321,34 @@ int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y)
  */
 int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip)
 {
-	unsigned long reg_val;
-
 	mutex_lock(&dc->lock);
-	tegra_dc_get(dc);
-
-	/* TODO: load start address from data structure */
-	reg_val = tegra_dc_readl(dc, DC_DISP_CURSOR_START_ADDR);
-	reg_val &= ~CURSOR_CLIP_SHIFT_BITS(3); /* Clear out the old value */
-	tegra_dc_writel(dc, reg_val | CURSOR_CLIP_SHIFT_BITS(clip),
-		DC_DISP_CURSOR_START_ADDR);
-
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
-#else
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-#endif
-
-	tegra_dc_put(dc);
+	dc->cursor.clip_win = clip;
+	dc->cursor.dirty = true;
 	mutex_unlock(&dc->lock);
 
+	return tegra_dc_cursor_program(dc);
+}
+
+/* disable the cursor on suspend. but leave the state unmodified */
+int tegra_dc_cursor_suspend(struct tegra_dc *dc)
+{
+	u32 val;
+
+	if (!dc->enabled)
+		return 0;
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+	val = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+	val &= ~CURSOR_ENABLE;
+	tegra_dc_cursor_do_update(dc, true);
+	dc->cursor.dirty = true;
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
 	return 0;
+}
+
+/* restore the state */
+int tegra_dc_cursor_resume(struct tegra_dc *dc)
+{
+	return tegra_dc_cursor_program(dc);
 }

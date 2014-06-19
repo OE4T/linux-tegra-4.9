@@ -213,7 +213,7 @@ static void set_enable(struct tegra_dc_ext *ext, bool en)
 	 * out of their critical sections
 	 */
 	for (i = 0; i < ext->dc->n_windows; i++)
-		mutex_lock(&ext->win[i].lock);
+		mutex_lock_nested(&ext->win[i].lock, i);
 	mutex_lock(&ext->cursor.lock);
 
 	ext->enabled = en;
@@ -644,7 +644,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 
 		win = &ext->win[i];
 
-		mutex_lock(&win->lock);
+		mutex_lock_nested(&win->lock, i);
 
 		if (win->user != user)
 			goto fail_unlock;

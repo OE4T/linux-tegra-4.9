@@ -46,7 +46,13 @@
 		(dc->out->hotplug_gpio >= 0) : 0)
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {
-	return nvhost_module_busy_ext(dc->ndev);
+	int ret = 0;
+	ret = nvhost_module_busy_ext(dc->ndev);
+	if (ret < 0) {
+		dev_warn(&dc->ndev->dev,
+			"Host1x powerup failed with err=%d\n", ret);
+	}
+	return ret;
 }
 
 static inline void tegra_dc_io_end(struct tegra_dc *dc)

@@ -61,6 +61,21 @@ struct gk20a_platform {
 	/* Delay before clock gated */
 	int clockgate_delay;
 
+	/* Second Level Clock Gating: true = enable false = disable */
+	bool enable_slcg;
+
+	/* Block Level Clock Gating: true = enable flase = disable */
+	bool enable_blcg;
+
+	/* Engine Level Clock Gating: true = enable flase = disable */
+	bool enable_elcg;
+
+	/* Engine Level Power Gating: true = enable flase = disable */
+	bool enable_elpg;
+
+	/* Adaptative ELPG: true = enable flase = disable */
+	bool enable_aelpg;
+
 	/* Initialize the platform interface of the gk20a driver.
 	 *
 	 * The platform implementation of this function must

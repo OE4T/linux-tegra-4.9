@@ -1455,14 +1455,18 @@ static int gk20a_probe(struct platform_device *dev)
 	if (tegra_platform_is_silicon())
 		gk20a->timeouts_enabled = true;
 
-	/* Set up initial clock gating settings */
-	if (tegra_platform_is_silicon()) {
-		gk20a->slcg_enabled = true;
-		gk20a->blcg_enabled = true;
-		gk20a->elcg_enabled = true;
-		gk20a->elpg_enabled = true;
-		gk20a->aelpg_enabled = true;
-	}
+	/* Set up initial power settings. For non-slicon platforms, disable *
+	 * power features and for silicon platforms, read from platform data */
+	gk20a->slcg_enabled =
+		tegra_platform_is_silicon() ? platform->enable_slcg : false;
+	gk20a->blcg_enabled =
+		tegra_platform_is_silicon() ? platform->enable_blcg : false;
+	gk20a->elcg_enabled =
+		tegra_platform_is_silicon() ? platform->enable_elcg : false;
+	gk20a->elpg_enabled =
+		tegra_platform_is_silicon() ? platform->enable_elpg : false;
+	gk20a->aelpg_enabled =
+		tegra_platform_is_silicon() ? platform->enable_aelpg : false;
 
 	gk20a_create_sysfs(dev);
 

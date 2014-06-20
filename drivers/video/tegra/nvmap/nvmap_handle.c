@@ -421,14 +421,6 @@ void nvmap_free_handle(struct nvmap_client *client,
 	client->handle_count--;
 	atomic_dec(&ref->handle->share_count);
 
-	if (h->alloc && !h->heap_pgalloc) {
-		mutex_lock(&h->lock);
-		nvmap_carveout_commit_subtract(client,
-			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
-			h->size);
-		mutex_unlock(&h->lock);
-	}
-
 	nvmap_ref_unlock(client);
 
 	if (pins)
@@ -594,14 +586,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	if (!ref) {
 		nvmap_handle_put(h);
 		return ERR_PTR(-ENOMEM);
-	}
-
-	if (!h->heap_pgalloc) {
-		mutex_lock(&h->lock);
-		nvmap_carveout_commit_add(client,
-			nvmap_heap_to_arg(nvmap_block_to_heap(h->carveout)),
-			h->size);
-		mutex_unlock(&h->lock);
 	}
 
 	atomic_set(&ref->dupes, 1);

@@ -225,40 +225,6 @@ out:
 	return 0;
 }
 
-void nvmap_carveout_commit_add(struct nvmap_client *client,
-			       struct nvmap_carveout_node *node,
-			       size_t len)
-{
-	spin_lock(&node->clients_lock);
-	BUG_ON(list_empty(&client->carveout_commit[node->index].list) &&
-	       client->carveout_commit[node->index].commit != 0);
-
-	client->carveout_commit[node->index].commit += len;
-	/* if this client isn't already on the list of nodes for this heap,
-	   add it */
-	if (list_empty(&client->carveout_commit[node->index].list)) {
-		list_add(&client->carveout_commit[node->index].list,
-			 &node->clients);
-	}
-	spin_unlock(&node->clients_lock);
-}
-
-void nvmap_carveout_commit_subtract(struct nvmap_client *client,
-				    struct nvmap_carveout_node *node,
-				    size_t len)
-{
-	if (!client)
-		return;
-
-	spin_lock(&node->clients_lock);
-	BUG_ON(client->carveout_commit[node->index].commit < len);
-	client->carveout_commit[node->index].commit -= len;
-	/* if no more allocation in this carveout for this node, delete it */
-	if (!client->carveout_commit[node->index].commit)
-		list_del_init(&client->carveout_commit[node->index].list);
-	spin_unlock(&node->clients_lock);
-}
-
 static
 struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 					      struct nvmap_handle *handle,
@@ -368,24 +334,17 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 {
 	struct nvmap_client *client;
 	struct task_struct *task;
-	int i;
 
 	if (WARN_ON(!dev))
 		return NULL;
 
-	client = kzalloc(sizeof(*client) + (sizeof(struct nvmap_carveout_commit)
-			 * dev->nr_carveouts), GFP_KERNEL);
+	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
 		return NULL;
 
 	client->name = name;
 	client->kernel_client = true;
 	client->handle_refs = RB_ROOT;
-
-	for (i = 0; i < dev->nr_carveouts; i++) {
-		INIT_LIST_HEAD(&client->carveout_commit[i].list);
-		client->carveout_commit[i].commit = 0;
-	}
 
 	get_task_struct(current->group_leader);
 	task_lock(current->group_leader);
@@ -412,7 +371,6 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 static void destroy_client(struct nvmap_client *client)
 {
 	struct rb_node *n;
-	int i;
 
 	if (!client)
 		return;
@@ -446,9 +404,6 @@ static void destroy_client(struct nvmap_client *client)
 
 		kfree(ref);
 	}
-
-	for (i = 0; i < nvmap_dev->nr_carveouts; i++)
-		list_del(&client->carveout_commit[i].list);
 
 	if (client->task)
 		put_task_struct(client->task);

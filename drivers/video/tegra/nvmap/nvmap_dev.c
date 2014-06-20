@@ -259,14 +259,6 @@ void nvmap_carveout_commit_subtract(struct nvmap_client *client,
 	spin_unlock(&node->clients_lock);
 }
 
-static struct nvmap_client *get_client_from_carveout_commit(
-	struct nvmap_carveout_node *node, struct nvmap_carveout_commit *commit)
-{
-	struct nvmap_carveout_commit *first_commit = commit - node->index;
-	return (void *)first_commit - offsetof(struct nvmap_client,
-					       carveout_commit);
-}
-
 static
 struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 					      struct nvmap_handle *handle,
@@ -813,7 +805,7 @@ static void client_stringify(struct nvmap_client *client, struct seq_file *s)
 }
 
 static void allocations_stringify(struct nvmap_client *client,
-				  struct seq_file *s, bool iovmm)
+				  struct seq_file *s, u32 heap_type)
 {
 	struct rb_node *n;
 
@@ -823,8 +815,8 @@ static void allocations_stringify(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
-		if (handle->alloc && handle->heap_pgalloc == iovmm) {
-			phys_addr_t base = iovmm ? 0 :
+		if (handle->alloc && handle->heap_type == heap_type) {
+			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   (handle->carveout->base);
 			seq_printf(s,
 				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8p\n",
@@ -844,7 +836,7 @@ static void allocations_stringify(struct nvmap_client *client,
 }
 
 static void nvmap_get_client_mss(struct nvmap_client *client,
-				 u64 *total, bool iovmm)
+				 u64 *total, u32 heap_type)
 {
 	struct rb_node *n;
 
@@ -855,65 +847,15 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
-		if (handle->alloc && handle->heap_pgalloc == iovmm)
+		if (handle->alloc && handle->heap_type == heap_type)
 			*total += handle->size /
 				  atomic_read(&handle->share_count);
 	}
 	nvmap_ref_unlock(client);
 }
 
-static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
-{
-	struct nvmap_carveout_node *node = s->private;
-	struct nvmap_carveout_commit *commit;
-	unsigned int total = 0;
-
-	spin_lock(&node->clients_lock);
-	seq_printf(s, "%-18s %18s %8s %11s\n",
-		"CLIENT", "PROCESS", "PID", "SIZE");
-	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s\n",
-			"", "", "BASE", "SIZE", "FLAGS", "REFS",
-			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID");
-	list_for_each_entry(commit, &node->clients, list) {
-		struct nvmap_client *client =
-			get_client_from_carveout_commit(node, commit);
-		client_stringify(client, s);
-		seq_printf(s, " %10zuK\n", K(commit->commit));
-		allocations_stringify(client, s, false);
-		seq_printf(s, "\n");
-		total += commit->commit;
-	}
-	seq_printf(s, "%-18s %-18s %8s %10uK\n", "total", "", "", K(total));
-	spin_unlock(&node->clients_lock);
-	return 0;
-}
-
-DEBUGFS_OPEN_FOPS(allocations);
-
-static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
-{
-	struct nvmap_carveout_node *node = s->private;
-	struct nvmap_carveout_commit *commit;
-	unsigned int total = 0;
-
-	spin_lock(&node->clients_lock);
-	seq_printf(s, "%-18s %18s %8s %11s\n",
-		"CLIENT", "PROCESS", "PID", "SIZE");
-	list_for_each_entry(commit, &node->clients, list) {
-		struct nvmap_client *client =
-			get_client_from_carveout_commit(node, commit);
-		client_stringify(client, s);
-		seq_printf(s, " %10zu\n", K(commit->commit));
-		total += commit->commit;
-	}
-	seq_printf(s, "%-18s %18s %8s %10uK\n", "total", "", "", K(total));
-	spin_unlock(&node->clients_lock);
-	return 0;
-}
-
-DEBUGFS_OPEN_FOPS(clients);
-
-static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
+static void nvmap_get_total_mss(u64 *pss, u64 *non_pss,
+				      u64 *total, u32 heap_type)
 {
 	int i;
 	struct rb_node *n;
@@ -932,7 +874,7 @@ static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
 		struct nvmap_handle *h =
 			rb_entry(n, struct nvmap_handle, node);
 
-		if (!h || !h->alloc || !h->heap_pgalloc)
+		if (!h || !h->alloc || h->heap_type != heap_type)
 			continue;
 		if (!non_pss) {
 			*total += h->size;
@@ -952,6 +894,57 @@ static void nvmap_iovmm_get_total_mss(u64 *pss, u64 *non_pss, u64 *total)
 	spin_unlock(&dev->handle_lock);
 }
 
+static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
+{
+	u64 total;
+	struct nvmap_client *client;
+	u32 heap_type = (u32)(uintptr_t)s->private;
+
+	spin_lock(&nvmap_dev->clients_lock);
+	seq_printf(s, "%-18s %18s %8s %11s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s\n",
+			"", "", "BASE", "SIZE", "FLAGS", "REFS",
+			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID");
+	list_for_each_entry(client, &nvmap_dev->clients, list) {
+		u64 client_total;
+		client_stringify(client, s);
+		nvmap_get_client_mss(client, &client_total, heap_type);
+		seq_printf(s, " %10lluK\n", K(client_total));
+		allocations_stringify(client, s, heap_type);
+		seq_printf(s, "\n");
+	}
+	spin_unlock(&nvmap_dev->clients_lock);
+	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(allocations);
+
+static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
+{
+	u64 total;
+	struct nvmap_client *client;
+	ulong heap_type = (ulong)s->private;
+
+	spin_lock(&nvmap_dev->clients_lock);
+	seq_printf(s, "%-18s %18s %8s %11s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
+	list_for_each_entry(client, &nvmap_dev->clients, list) {
+		u64 client_total;
+		client_stringify(client, s);
+		nvmap_get_client_mss(client, &client_total, heap_type);
+		seq_printf(s, " %10lluK\n", K(client_total));
+	}
+	spin_unlock(&nvmap_dev->clients_lock);
+	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(clients);
+
 #define PRINT_MEM_STATS_NOTE(x) \
 do { \
 	seq_printf(s, "Note: total memory is precise account of pages " \
@@ -959,57 +952,6 @@ do { \
 		"\"%s\" accumulated as shared memory \nis accounted in " \
 		"full in each clients \"%s\" that shared memory.\n", #x, #x); \
 } while (0)
-
-static int nvmap_debug_iovmm_clients_show(struct seq_file *s, void *unused)
-{
-	u64 total;
-	struct nvmap_client *client;
-	struct nvmap_device *dev = s->private;
-
-	spin_lock(&dev->clients_lock);
-	seq_printf(s, "%-18s %18s %8s %11s\n",
-		"CLIENT", "PROCESS", "PID", "SIZE");
-	list_for_each_entry(client, &dev->clients, list) {
-		u64 client_total;
-		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, true);
-		seq_printf(s, " %10lluK\n", K(client_total));
-	}
-	spin_unlock(&dev->clients_lock);
-	nvmap_iovmm_get_total_mss(NULL, NULL, &total);
-	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
-	return 0;
-}
-
-DEBUGFS_OPEN_FOPS(iovmm_clients);
-
-static int nvmap_debug_iovmm_allocations_show(struct seq_file *s, void *unused)
-{
-	u64 total;
-	struct nvmap_client *client;
-	struct nvmap_device *dev = s->private;
-
-	spin_lock(&dev->clients_lock);
-	seq_printf(s, "%-18s %18s %8s %11s\n",
-		"CLIENT", "PROCESS", "PID", "SIZE");
-	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s\n",
-			"", "", "BASE", "SIZE", "FLAGS", "REFS",
-			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID");
-	list_for_each_entry(client, &dev->clients, list) {
-		u64 client_total;
-		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, true);
-		seq_printf(s, " %10lluK\n", K(client_total));
-		allocations_stringify(client, s, true);
-		seq_printf(s, "\n");
-	}
-	spin_unlock(&dev->clients_lock);
-	nvmap_iovmm_get_total_mss(NULL, NULL, &total);
-	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
-	return 0;
-}
-
-DEBUGFS_OPEN_FOPS(iovmm_allocations);
 
 static int nvmap_debug_lru_allocations_show(struct seq_file *s, void *unused)
 {
@@ -1093,7 +1035,7 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	}
 	spin_unlock(&dev->clients_lock);
 
-	nvmap_iovmm_get_total_mss(&total_pss, &total_non_pss, &total_memory);
+	nvmap_get_total_mss(&total_pss, &total_non_pss, &total_memory, NVMAP_HEAP_IOVMM);
 	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
 		"total", "", "", K(total_pss),
 		K(total_non_pss), K(total_memory));
@@ -1107,7 +1049,7 @@ ulong nvmap_iovmm_get_used_pages(void)
 {
 	u64 total;
 
-	nvmap_iovmm_get_total_mss(NULL, NULL, &total);
+	nvmap_get_total_mss(NULL, NULL, &total, NVMAP_HEAP_IOVMM);
 	return total >> PAGE_SHIFT;
 }
 
@@ -1436,9 +1378,12 @@ static int nvmap_probe(struct platform_device *pdev)
 				debugfs_create_dir(co->name, nvmap_debug_root);
 			if (!IS_ERR_OR_NULL(heap_root)) {
 				debugfs_create_file("clients", S_IRUGO,
-					heap_root, node, &debug_clients_fops);
+					heap_root,
+					(void *)(uintptr_t)node->heap_bit,
+					&debug_clients_fops);
 				debugfs_create_file("allocations", S_IRUGO,
-					heap_root, node,
+					heap_root,
+					(void *)(uintptr_t)node->heap_bit,
 					&debug_allocations_fops);
 				nvmap_heap_debugfs_init(heap_root,
 							node->carveout);
@@ -1450,9 +1395,11 @@ static int nvmap_probe(struct platform_device *pdev)
 			debugfs_create_dir("iovmm", nvmap_debug_root);
 		if (!IS_ERR_OR_NULL(iovmm_root)) {
 			debugfs_create_file("clients", S_IRUGO, iovmm_root,
-				dev, &debug_iovmm_clients_fops);
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_clients_fops);
 			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
-				dev, &debug_iovmm_allocations_fops);
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_allocations_fops);
 			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_procrank_fops);
 		}

@@ -125,6 +125,7 @@ struct nvmap_handle {
 	};
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
+	u32 heap_type;		/* handle heap is allocated from */
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
 	struct list_head vmas;	/* list of all user vma's */

@@ -265,6 +265,7 @@ static void alloc_handle(struct nvmap_client *client,
 
 		b = nvmap_carveout_alloc(client, h, type);
 		if (b) {
+			h->heap_type = type;
 			h->heap_pgalloc = false;
 			/* barrier to ensure all handle alloc data
 			 * is visible before alloc is seen by other
@@ -272,9 +273,6 @@ static void alloc_handle(struct nvmap_client *client,
 			 */
 			mb();
 			h->alloc = true;
-			nvmap_carveout_commit_add(client,
-				nvmap_heap_to_arg(nvmap_block_to_heap(b)),
-				h->size);
 		}
 	} else if (type & iovmm_mask) {
 		int ret;
@@ -283,6 +281,7 @@ static void alloc_handle(struct nvmap_client *client,
 			h->userflags & NVMAP_HANDLE_PHYS_CONTIG);
 		if (ret)
 			return;
+		h->heap_type = NVMAP_HEAP_IOVMM;
 		h->heap_pgalloc = true;
 		mb();
 		h->alloc = true;

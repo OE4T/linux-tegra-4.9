@@ -128,8 +128,9 @@ struct nvmap_handle {
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
 	struct list_head vmas;	/* list of all user vma's */
-	atomic_t umap_count;	/* number of mapping from user space */
-	atomic_t kmap_count;	/* number of mappings from kernel space */
+	atomic_t umap_count;	/* number of outstanding maps from user */
+	atomic_t kmap_count;	/* number of outstanding map from kernel */
+	atomic_t share_count;	/* number of processes sharing the handle */
 	struct list_head lru;	/* list head to track the lru */
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */

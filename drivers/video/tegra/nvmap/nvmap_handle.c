@@ -424,6 +424,7 @@ void nvmap_free_handle(struct nvmap_client *client,
 	pins = atomic_read(&ref->pin);
 	rb_erase(&ref->node, &client->handle_refs);
 	client->handle_count--;
+	atomic_dec(&ref->handle->share_count);
 
 	if (h->alloc && h->heap_pgalloc)
 		atomic_sub(h->size, &client->iovm_commit);
@@ -484,6 +485,7 @@ static void add_handle_ref(struct nvmap_client *client,
 	client->handle_count++;
 	if (client->handle_count > nvmap_max_handle_count)
 		nvmap_max_handle_count = client->handle_count;
+	atomic_inc(&ref->handle->share_count);
 	nvmap_ref_unlock(client);
 }
 

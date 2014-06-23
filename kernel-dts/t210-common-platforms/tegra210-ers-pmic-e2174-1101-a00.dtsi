@@ -304,7 +304,7 @@
 	};
 
 	i2c@7000c500 {
-		hpa2163@6b {
+		battery-charger@6b {
 			compatible = "ti,bq2419x";
 			reg = <0x6b>;
 
@@ -353,7 +353,7 @@
 			};
 		};
 
-		bq27441@55 {
+		battery-gauge@55 {
 			status = "disabled";
 			compatible = "ti,bq27441";
 			reg = <0x55>;

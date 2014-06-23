@@ -31,6 +31,7 @@
 #include "nvhost_hwctx.h"
 #include "nvhost_intr.h"
 #include "class_ids.h"
+#include "debug.h"
 
 static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
 {
@@ -247,7 +248,7 @@ static void submit_gathers(struct nvhost_job *job)
 {
 	u32 class_id = 0;
 	int i;
-	void *cpuva;
+	void *cpuva = NULL;
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -276,7 +277,8 @@ static void submit_gathers(struct nvhost_job *job)
 			op1 = nvhost_opcode_gather(g->words);
 		op2 = job->gathers[i].mem_base + g->offset;
 
-		cpuva = dma_buf_vmap(g->buf);
+		if (nvhost_debug_trace_cmdbuf)
+			cpuva = dma_buf_vmap(g->buf);
 		nvhost_cdma_push_gather(&job->ch->cdma,
 				cpuva,
 				job->gathers[i].mem_base,

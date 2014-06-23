@@ -128,6 +128,7 @@ struct gpu_ops {
 				u64 addr_base,
 				struct gk20a_ctxsw_ucode_segments *segments,
 				u32 reg_offset);
+		int (*load_ctxsw_ucode)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

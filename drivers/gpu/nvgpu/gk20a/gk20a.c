@@ -897,6 +897,12 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	err = gk20a_enable_gr_hw(g);
+	if (err) {
+		gk20a_err(dev, "failed to enable gr");
+		goto done;
+	}
+
 	err = g->ops.pmu.prepare_ucode(g);
 	if (err) {
 		gk20a_err(dev, "failed to init pmu ucode");

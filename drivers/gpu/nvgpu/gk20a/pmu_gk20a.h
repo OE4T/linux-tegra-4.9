@@ -1103,4 +1103,7 @@ void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu);
 void pmu_setup_hw(struct work_struct *work);
 void pmu_seq_init(struct pmu_gk20a *pmu);
+
+int gk20a_init_pmu(struct pmu_gk20a *pmu);
+
 #endif /*__PMU_GK20A_H__*/

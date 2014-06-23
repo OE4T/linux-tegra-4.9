@@ -655,6 +655,56 @@ static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	return 0;
 }
 
+#ifdef CONFIG_TEGRA_ACR
+static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
+{
+	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
+	u64 addr_base = ucode_info->ucode_gpuva;
+
+	gr_gk20a_load_falcon_bind_instblk(g);
+
+	g->ops.gr.falcon_load_ucode(g, addr_base,
+		&g->ctxsw_ucode_info.gpccs,
+		gr_gpcs_gpccs_falcon_hwcfg_r() -
+		gr_fecs_falcon_hwcfg_r());
+}
+
+static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+{
+	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
+	u64 addr_base = ucode_info->ucode_gpuva;
+	int i;
+
+	gk20a_dbg_fn("");
+
+	if (tegra_platform_is_linsim()) {
+		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
+			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
+		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),
+			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
+	}
+
+	gr_gk20a_load_falcon_bind_instblk(g);
+	g->ops.gr.falcon_load_ucode(g, addr_base,
+		&g->ctxsw_ucode_info.gpccs,
+		gr_gpcs_gpccs_falcon_hwcfg_r() -
+		gr_fecs_falcon_hwcfg_r());
+
+	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), 0x0);
+	gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(1), 0x1);
+	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(6), 0xffffffff);
+
+	gk20a_writel(g, gr_gpccs_dmactl_r(), gr_gpccs_dmactl_require_ctx_f(0));
+
+	gk20a_writel(g, gr_gpccs_cpuctl_r(), gr_gpccs_cpuctl_startcpu_f(1));
+	gk20a_writel(g, gr_fecs_cpuctl_alias_r(), gr_fecs_cpuctl_startcpu_f(1));
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+}
+#endif
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -676,4 +726,9 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_fs_state = gr_gm20b_ctx_state_floorsweep;
 	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
 	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
+#ifdef CONFIG_TEGRA_ACR
+	gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
+#else
+	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
+#endif
 }

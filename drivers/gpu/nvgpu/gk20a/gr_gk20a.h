@@ -319,6 +319,7 @@ struct gpu_ops;
 void gk20a_init_gr(struct gk20a *g);
 void gk20a_init_gr_ops(struct gpu_ops *gops);
 int gk20a_init_gr_support(struct gk20a *g);
+int gk20a_enable_gr_hw(struct gk20a *g);
 int gk20a_gr_reset(struct gk20a *g);
 void gk20a_gr_wait_initialized(struct gk20a *g);
 
@@ -415,6 +416,9 @@ void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					u32 **sm_dsm_perf_regs,
 					u32 *perf_register_stride);
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
+int gr_gk20a_init_ctxsw_ucode(struct gk20a *g);
+int gr_gk20a_load_ctxsw_ucode(struct gk20a *g);
+void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g);
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
 #endif /*__GR_GK20A_H__*/

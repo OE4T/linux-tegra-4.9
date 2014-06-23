@@ -1867,7 +1867,7 @@ static int gr_gk20a_copy_ctxsw_ucode_segments(
 	return 0;
 }
 
-static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
+int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 {
 	struct device *d = dev_from_gk20a(g);
 	struct mm_gk20a *mm = &g->mm;
@@ -1992,7 +1992,7 @@ static int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	return err;
 }
 
-static void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
+void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
 	int retries = 20;
@@ -2149,9 +2149,8 @@ static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 		gr_fecs_falcon_hwcfg_r());
 }
 
-static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 {
-	u32 ret;
 
 	gk20a_dbg_fn("");
 
@@ -2171,11 +2170,20 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 		gr_gk20a_load_falcon_imem(g);
 		gr_gk20a_start_falcon_ucode(g);
 	} else {
-		if (!gr->skip_ucode_init)
+		if (!g->gr.skip_ucode_init)
 			gr_gk20a_init_ctxsw_ucode(g);
 		gr_gk20a_load_falcon_with_bootloader(g);
-		gr->skip_ucode_init = true;
+		g->gr.skip_ucode_init = true;
 	}
+	gk20a_dbg_fn("done");
+	return 0;
+}
+
+static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
+{
+	u32 ret;
+
+	gk20a_dbg_fn("");
 
 	ret = gr_gk20a_ctx_wait_ucode(g, 0, 0,
 				      GR_IS_UCODE_OP_EQUAL,
@@ -4449,9 +4457,36 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 	return -ETIMEDOUT;
 }
 
-static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
+int gr_gk20a_init_ctxsw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
+	u32 err = 0;
+
+	err = g->ops.gr.load_ctxsw_ucode(g);
+	if (err)
+		goto out;
+
+	err = gr_gk20a_wait_ctxsw_ready(g);
+	if (err)
+		goto out;
+
+	/* this appears query for sw states but fecs actually init
+	   ramchain, etc so this is hw init */
+	err = gr_gk20a_init_ctx_state(g, gr);
+	if (err)
+		goto out;
+
+out:
+	if (err)
+		gk20a_err(dev_from_gk20a(g), "fail");
+	else
+		gk20a_dbg_fn("done");
+
+	return 0;
+}
+
+int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
+{
 	struct av_list_gk20a *sw_non_ctx_load = &g->gr.ctx_vars.sw_non_ctx_load;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
@@ -4480,16 +4515,6 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 		goto out;
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (err)
-		goto out;
-
-	err = gr_gk20a_load_ctxsw_ucode(g, gr);
-	if (err)
-		goto out;
-
-	/* this appears query for sw states but fecs actually init
-	   ramchain, etc so this is hw init */
-	err = gr_gk20a_init_ctx_state(g, gr);
 	if (err)
 		goto out;
 
@@ -4624,14 +4649,10 @@ int gk20a_init_gr_support(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_init_gr_prepare(g);
-	if (err)
-		return err;
-
 	/* this is required before gr_gk20a_init_ctx_state */
 	mutex_init(&g->gr.fecs_mutex);
 
-	err = gk20a_init_gr_reset_enable_hw(g);
+	err = gr_gk20a_init_ctxsw(g);
 	if (err)
 		return err;
 
@@ -4817,10 +4838,11 @@ static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-int gk20a_gr_reset(struct gk20a *g)
+int gk20a_enable_gr_hw(struct gk20a *g)
 {
 	int err;
-	u32 size;
+
+	gk20a_dbg_fn("");
 
 	err = gk20a_init_gr_prepare(g);
 	if (err)
@@ -4830,7 +4852,25 @@ int gk20a_gr_reset(struct gk20a *g)
 	if (err)
 		return err;
 
+	gk20a_dbg_fn("done");
+
+	return 0;
+}
+
+int gk20a_gr_reset(struct gk20a *g)
+{
+	int err;
+	u32 size;
+
+	err = gk20a_enable_gr_hw(g);
+	if (err)
+		return err;
+
 	err = gk20a_init_gr_setup_hw(g);
+	if (err)
+		return err;
+
+	err = gr_gk20a_init_ctxsw(g);
 	if (err)
 		return err;
 
@@ -6934,4 +6974,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.set_hww_esr_report_mask = gr_gk20a_set_hww_esr_report_mask;
 	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
 	gops->gr.falcon_load_ucode = gr_gk20a_load_ctxsw_ucode_segments;
+	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 }

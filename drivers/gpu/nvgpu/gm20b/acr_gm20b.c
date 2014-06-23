@@ -55,8 +55,9 @@ static int acr_ucode_patch_sig(struct gk20a *g,
 
 /*Globals*/
 static void __iomem *mc = IO_ADDRESS(TEGRA_MC_BASE);
-get_ucode_details pmu_acr_supp_ucode_list[MAX_SUPPORTED_LSFM] = {
+get_ucode_details pmu_acr_supp_ucode_list[] = {
 	pmu_ucode_details,
+	fecs_ucode_details,
 };
 
 /*Once is LS mode, cpuctl_alias is only accessible*/
@@ -116,6 +117,57 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	return 0;
 }
 
+int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
+{
+	int err = 0;
+	struct lsf_ucode_desc *lsf_desc;
+
+	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
+	if (!lsf_desc)
+		return -ENOMEM;
+	lsf_desc->falcon_id = LSF_FALCON_ID_FECS;
+
+	p_img->desc = kzalloc(sizeof(struct pmu_ucode_desc), GFP_KERNEL);
+	if (p_img->desc == NULL) {
+		kfree(lsf_desc);
+		return -ENOMEM;
+	}
+
+	p_img->desc->bootloader_start_offset =
+		g->ctxsw_ucode_info.fecs.boot.offset;
+	p_img->desc->bootloader_size =
+		g->ctxsw_ucode_info.fecs.boot.size;
+	p_img->desc->bootloader_imem_offset =
+		g->ctxsw_ucode_info.fecs.boot_imem_offset;
+	p_img->desc->bootloader_entry_point =
+		g->ctxsw_ucode_info.fecs.boot_entry;
+
+	p_img->desc->image_size = g->ctxsw_ucode_info.fecs.boot.size +
+		g->ctxsw_ucode_info.fecs.code.size +
+		g->ctxsw_ucode_info.fecs.data.size;
+	p_img->desc->app_size = 0;
+	p_img->desc->app_start_offset = 0;
+	p_img->desc->app_imem_offset = 0;
+	p_img->desc->app_imem_entry = 0;
+	p_img->desc->app_dmem_offset = 0;
+	p_img->desc->app_resident_code_offset =
+		g->ctxsw_ucode_info.fecs.code.offset;
+	p_img->desc->app_resident_code_size =
+		g->ctxsw_ucode_info.fecs.code.size;
+	p_img->desc->app_resident_data_offset =
+		g->ctxsw_ucode_info.fecs.data.offset;
+	p_img->desc->app_resident_data_size =
+		g->ctxsw_ucode_info.fecs.data.size;
+	p_img->data = g->ctxsw_ucode_info.surface_desc.cpuva;
+	p_img->data_size = p_img->desc->image_size;
+
+	p_img->fw_ver = NULL;
+	p_img->header = NULL;
+	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
+	gm20b_dbg_pmu("fecs fw loaded 2\n");
+	return 0;
+}
+
 int prepare_ucode_blob(struct gk20a *g)
 {
 	struct device *d = dev_from_gk20a(g);
@@ -132,6 +184,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	memset((void *)plsfm, 0, sizeof(struct ls_flcn_mgr));
 	gm20b_dbg_pmu("fetching GMMU regs\n");
 	gm20b_mm_mmu_vpr_info_fetch(g);
+	gr_gk20a_init_ctxsw_ucode(g);
 
 	/* Discover all managed falcons*/
 	status = lsfm_discover_ucode_images(g, plsfm);

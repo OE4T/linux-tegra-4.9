@@ -21,7 +21,7 @@
 /*Defines*/
 
 /*chip specific defines*/
-#define MAX_SUPPORTED_LSFM 1 /*PMU, FECS, GPCCS*/
+#define MAX_SUPPORTED_LSFM 2 /*PMU, FECS, GPCCS*/
 #define LSF_UCODE_DATA_ALIGNMENT 4096
 
 #define GM20B_PMU_UCODE_IMAGE "gpmu_ucode.bin"

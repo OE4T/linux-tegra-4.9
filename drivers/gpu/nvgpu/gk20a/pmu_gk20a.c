@@ -487,6 +487,17 @@ static void *get_pmu_sequence_out_alloc_ptr_v0(struct pmu_sequence *seq)
 int gk20a_init_pmu(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+
+	mutex_init(&pmu->elpg_mutex);
+	mutex_init(&pmu->isr_mutex);
+	mutex_init(&pmu->pmu_copy_lock);
+	mutex_init(&pmu->pmu_seq_lock);
+
+	pmu->perfmon_counter.index = 3; /* GR & CE2 */
+	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
+
+	pmu->remove_support = gk20a_remove_pmu_support;
+
 	switch (pmu->desc->app_version) {
 	case APP_VERSION_GM20B_1:
 	case APP_VERSION_GM20B:
@@ -1700,25 +1711,9 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
 	gk20a_free_sgtable(&sgt_seq_buf);
-
 	pmu->sw_ready = true;
 
 skip_init:
-	mutex_init(&pmu->elpg_mutex);
-	mutex_init(&pmu->isr_mutex);
-	mutex_init(&pmu->pmu_copy_lock);
-	mutex_init(&pmu->pmu_seq_lock);
-
-	pmu->perfmon_counter.index = 3; /* GR & CE2 */
-	pmu->perfmon_counter.group_id = PMU_DOMAIN_GROUP_PSTATE;
-
-	pmu->remove_support = gk20a_remove_pmu_support;
-	err = gk20a_init_pmu(pmu);
-	if (err) {
-		gk20a_err(d, "failed to set function pointers\n");
-		return err;
-	}
-
 	gk20a_dbg_fn("done");
 	return 0;
 
@@ -1773,7 +1768,6 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 	int err;
 
 	gk20a_dbg_fn("");
-
 	pmu_reset(pmu);
 
 	/* setup apertures - virtual */
@@ -3770,4 +3764,5 @@ err_out:
 	debugfs_remove_recursive(platform->debugfs);
 	return -ENOMEM;
 }
+
 #endif

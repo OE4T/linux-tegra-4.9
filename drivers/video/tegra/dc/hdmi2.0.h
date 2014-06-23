@@ -102,6 +102,47 @@ struct hdmi_avi_infoframe {
 	u32 reg_hole2:8;
 } __packed;
 
+enum {
+	HDMI_AUDIO_CHANNEL_CNT_STREAM,	/* refer to audio stream header */
+	HDMI_AUDIO_CHANNEL_CNT_2,
+	HDMI_AUDIO_CHANNEL_CNT_3,
+	HDMI_AUDIO_CHANNEL_CNT_4,
+	HDMI_AUDIO_CHANNEL_CNT_5,
+	HDMI_AUDIO_CHANNEL_CNT_6,
+	HDMI_AUDIO_CHANNEL_CNT_7,
+	HDMI_AUDIO_CHANNEL_CNT_8,
+};
+
+/* all fields little endian */
+struct hdmi_audio_infoframe {
+	/* PB0 */
+	u32 csum:8;	/* checksum */
+
+	/* PB1 */
+	u32 channel_cnt:3;
+	u32 res1:1;	/* reserved */
+	u32	coding_type:4;	/* coding type */
+
+	/* PB2 */
+	u32 sample_size:2;
+	u32 sample_freq:3;
+	u32 res2:3;	/* reserved */
+
+	/* PB3 */
+	u32 res3:8; /* reserved */
+
+	/* PB4 */
+	u32 channel_alloc:8;	/* channel/speaker allocation */
+
+	/* PB5 */
+	u32 low_freq_effect_level:2;	/* low freq effect playback level */
+	u32 res4:1;	/* reserved */
+	u32	level_sft_val:4;	/* level shift value */
+	u32 downmix_inhibit:1;
+
+	u32 reg_hole1:16;
+} __packed;
+
 struct tegra_hdmi {
 	struct tegra_dc *dc;
 	struct tegra_hdmi_out *pdata;
@@ -111,6 +152,10 @@ struct tegra_hdmi {
 
 	struct tegra_edid *edid;
 	struct i2c_client *ddc_i2c_client;
+
+	struct hdmi_audio_infoframe audio;
+	bool null_sample_inject;
+	u32 audio_freq;
 };
 
 #endif

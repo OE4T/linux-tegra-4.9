@@ -58,6 +58,8 @@ struct quadd_hrt_ctx {
 	unsigned long rss_size_prev;
 
 	struct timecounter *tc;
+	int use_arch_timer;
+
 	unsigned int unw_method;
 };
 

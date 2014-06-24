@@ -16,8 +16,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define pr_fmt(fmt) "%s: " fmt, __func__
+
 #include <linux/kernel.h>
 #include <linux/of.h>
+#include <linux/of_platform.h>
 
 #include <linux/nvmap.h>
 
@@ -26,12 +29,26 @@
 #include "board.h"
 #include "common.h"
 
+static const struct of_device_id nvmap_of_ids[] = {
+	{ .compatible = "nvidia,carveouts" },
+	{ }
+};
+
+/*
+ * Order of this must match nvmap_carveouts;
+ */
+static char *nvmap_carveout_names[] = {
+	"iram",
+	"generic",
+	"vpr"
+};
+
 static struct nvmap_platform_carveout nvmap_carveouts[] = {
 	[0] = {
 		.name		= "iram",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IRAM,
-		.base		= TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE,
-		.size		= TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE,
+		.base		= 0,
+		.size		= 0,
 		.dma_dev	= &tegra_iram_dev,
 	},
 	[1] = {
@@ -40,6 +57,10 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_generic_dev,
+#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
+		.cma_dev	= &tegra_generic_cma_dev,
+		.resize		= false,
+#endif
 	},
 	[2] = {
 		.name		= "vpr",
@@ -47,6 +68,10 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_vpr_dev,
+#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
+		.cma_dev	= &tegra_vpr_cma_dev,
+		.resize		= true,
+#endif
 	},
 };
 
@@ -55,57 +80,134 @@ static struct nvmap_platform_data nvmap_data = {
 	.nr_carveouts	= ARRAY_SIZE(nvmap_carveouts),
 };
 
+/*
+ * In case there is no DT entry.
+ */
 struct platform_device nvmap_platform_device  = {
-	.name	= "tegra-nvmap",
+	.name	= "tegra-carveouts",
 	.id	= -1,
 	.dev	= {
 		.platform_data = &nvmap_data,
 	},
 };
 
-struct platform_device *nvmap_get_platform_dev(void)
+/*
+ * @data must be at least a 2 element array of u64's.
+ */
+static int nvmap_populate_carveout(const void *data,
+				   struct nvmap_platform_carveout *co)
 {
-	return &nvmap_platform_device;
+	__be64 *co_data = (__be64 *)data;
+	u64 base, size;
+
+	base = be64_to_cpup(co_data);
+	size = be64_to_cpup(co_data + 1);
+
+	/*
+	 * If base and size are 0, then assume the CO is not being populated.
+	 */
+	if (base == 0 && size == 0)
+		return -ENODEV;
+
+	if (size == 0)
+		return -EINVAL;
+
+	co->base = (phys_addr_t)base;
+	co->size = (size_t)size;
+
+	pr_info("Populating %s\n", co->name);
+	pr_info("  base = 0x%08lx size = 0x%x\n",
+		(unsigned long)base, (unsigned int)size);
+
+	return 0;
 }
 
-int __init nvmap_init(void)
+static int __nvmap_init_dt(struct platform_device *pdev)
 {
-	int err = 0;
+	const void *prop;
+	int prop_len, i;
+
+	if (!of_match_device(nvmap_of_ids, &pdev->dev)) {
+		pr_err("Missing DT entry!\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(nvmap_carveout_names); i++) {
+		prop = of_get_property(pdev->dev.of_node,
+				       nvmap_carveout_names[i], &prop_len);
+		if (!prop || prop_len != 4 * sizeof(u32)) {
+			pr_err("Missing carveout for %s!\n",
+			       nvmap_carveout_names[i]);
+			continue;
+		}
+		nvmap_populate_carveout(prop, &nvmap_carveouts[i]);
+	}
+
+	pdev->dev.platform_data = &nvmap_data;
+
+	return 0;
+}
+
+/*
+ * This requires proper kernel arguments to have been passed.
+ */
+static int __nvmap_init_legacy(void)
+{
+	/* IRAM. */
+	nvmap_carveouts[0].base = TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
+	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
+
+	/* Carveout. */
+	nvmap_carveouts[1].base = tegra_carveout_start;
+	nvmap_carveouts[1].size = tegra_carveout_size;
+
+	/* VPR */
+	nvmap_carveouts[2].base = tegra_vpr_start;
+	nvmap_carveouts[2].size = tegra_vpr_size;
+
+	return 0;
+}
+
+/*
+ * Fills in the platform data either from the device tree or with the
+ * legacy path.
+ */
+int nvmap_init(struct platform_device *pdev)
+{
+	int err;
 #ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
 	struct dma_declare_info vpr_dma_info;
 	struct dma_declare_info generic_dma_info;
 #endif
 
-#ifdef CONFIG_TEGRA_NVMAP
-	nvmap_carveouts[1].base = tegra_carveout_start;
-	nvmap_carveouts[1].size = tegra_carveout_size;
+	if (pdev->dev.platform_data) {
+		err = __nvmap_init_legacy();
+		if (err)
+			return err;
+	}
+
+	if (pdev->dev.of_node) {
+		err = __nvmap_init_dt(pdev);
+		if (err)
+			return err;
+	}
+
 	nvmap_carveouts[1].dma_dev = &tegra_generic_dev;
-	nvmap_carveouts[2].base = tegra_vpr_start;
-	nvmap_carveouts[2].size = tegra_vpr_size;
 	nvmap_carveouts[2].dma_dev = &tegra_vpr_dev;
 
 #ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
 	generic_dma_info.name = "generic";
-	generic_dma_info.base = tegra_carveout_start;
-	generic_dma_info.size = tegra_carveout_size;
 	generic_dma_info.resize = false;
 	generic_dma_info.cma_dev = NULL;
 
 	vpr_dma_info.name = "vpr";
-	vpr_dma_info.base = tegra_vpr_start;
+	vpr_dma_info.base = nvmap_carveouts[2].base;
 	vpr_dma_info.size = SZ_32M;
 	vpr_dma_info.resize = true;
-	vpr_dma_info.cma_dev = &tegra_vpr_cma_dev;
+	vpr_dma_info.cma_dev = nvmap_carveouts[2].cma_dev;
 	vpr_dma_info.notifier.ops = &vpr_dev_ops;
 
-	carveout_linear_set(&tegra_generic_cma_dev);
-	nvmap_carveouts[1].cma_dev = &tegra_generic_cma_dev;
-	nvmap_carveouts[1].resize = false;
-	carveout_linear_set(&tegra_vpr_cma_dev);
-	nvmap_carveouts[2].cma_dev = &tegra_vpr_cma_dev;
-	nvmap_carveouts[2].resize = true;
-
-	if (tegra_carveout_size) {
+	if (nvmap_carveouts[1].size) {
 		err = dma_declare_coherent_resizable_cma_memory(
 				&tegra_generic_dev, &generic_dma_info);
 		if (err) {
@@ -113,7 +215,7 @@ int __init nvmap_init(void)
 			return err;
 		}
 	}
-	if (tegra_vpr_size) {
+	if (nvmap_carveouts[2].size) {
 		err = dma_declare_coherent_resizable_cma_memory(
 				&tegra_vpr_dev, &vpr_dma_info);
 		if (err) {
@@ -123,36 +225,7 @@ int __init nvmap_init(void)
 	}
 #endif
 
-	err = platform_device_register(&nvmap_platform_device);
-#endif
 	return err;
-}
-arch_initcall(nvmap_init);
-
-static int nvmap_remove(struct platform_device *pdev)
-{
-	struct nvmap_device *dev = platform_get_drvdata(pdev);
-	struct rb_node *n;
-	struct nvmap_handle *h;
-	int i;
-
-	misc_deregister(&dev->dev_user);
-
-	while ((n = rb_first(&dev->handles))) {
-		h = rb_entry(n, struct nvmap_handle, node);
-		rb_erase(&h->node, &dev->handles);
-		kfree(h);
-	}
-
-	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_destroy(node->carveout);
-	}
-	kfree(dev->heaps);
-
-	kfree(dev);
-	nvmap_dev = NULL;
-	return 0;
 }
 
 static int nvmap_suspend(struct platform_device *pdev, pm_message_t state)
@@ -172,16 +245,28 @@ static struct platform_driver nvmap_driver = {
 	.resume		= nvmap_resume,
 
 	.driver = {
-		.name	= "tegra-nvmap",
+		.name	= "tegra-carveouts",
 		.owner	= THIS_MODULE,
+		.of_match_table = nvmap_of_ids,
 	},
 };
 
 static int __init nvmap_init_driver(void)
 {
-	int e;
+	int e = 0;
+	struct device_node *dnode;
 
 	nvmap_dev = NULL;
+
+	/* Pick DT vs legacy loading. */
+	dnode = of_find_compatible_node(NULL, NULL, "nvidia,carveouts");
+	if (!dnode)
+		e = platform_device_register(&nvmap_platform_device);
+	else
+		of_node_put(dnode);
+
+	if (e)
+		goto fail;
 
 	e = nvmap_heap_init();
 	if (e)

@@ -68,16 +68,6 @@ struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
 
-#ifdef CONFIG_TEGRA_NVMAP
-int __init nvmap_init(void);
-#else
-/* MODS does not enable nvmap. */
-__attribute__((unused)) static int nvmap_init(void)
-{
-	return 0;
-}
-#endif
-
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);
 ulong nvmap_page_pool_get_pool_size(void);

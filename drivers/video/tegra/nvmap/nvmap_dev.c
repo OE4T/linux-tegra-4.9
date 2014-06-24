@@ -1220,12 +1220,15 @@ u64 nvmap_stats_read(enum nvmap_stats_t stat)
 
 int nvmap_probe(struct platform_device *pdev)
 {
-	struct nvmap_platform_data *plat = pdev->dev.platform_data;
+	struct nvmap_platform_data *plat;
 	struct nvmap_device *dev;
 	struct dentry *nvmap_debug_root;
 	unsigned int i;
 	int e;
 
+	nvmap_init(pdev);
+
+	plat = pdev->dev.platform_data;
 	if (!plat) {
 		dev_err(&pdev->dev, "no platform data?\n");
 		return -ENODEV;
@@ -1397,4 +1400,30 @@ fail:
 	kfree(dev);
 	nvmap_dev = NULL;
 	return e;
+}
+
+int nvmap_remove(struct platform_device *pdev)
+{
+	struct nvmap_device *dev = platform_get_drvdata(pdev);
+	struct rb_node *n;
+	struct nvmap_handle *h;
+	int i;
+
+	misc_deregister(&dev->dev_user);
+
+	while ((n = rb_first(&dev->handles))) {
+		h = rb_entry(n, struct nvmap_handle, node);
+		rb_erase(&h->node, &dev->handles);
+		kfree(h);
+	}
+
+	for (i = 0; i < dev->nr_carveouts; i++) {
+		struct nvmap_carveout_node *node = &dev->heaps[i];
+		nvmap_heap_destroy(node->carveout);
+	}
+	kfree(dev->heaps);
+
+	kfree(dev);
+	nvmap_dev = NULL;
+	return 0;
 }

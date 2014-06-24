@@ -347,6 +347,8 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 }
 
 int nvmap_probe(struct platform_device *pdev);
+int nvmap_remove(struct platform_device *pdev);
+int nvmap_init(struct platform_device *pdev);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

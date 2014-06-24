@@ -299,6 +299,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE,
 				&attrs);

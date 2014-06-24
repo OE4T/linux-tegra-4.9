@@ -135,12 +135,16 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 				    struct gr_ctx_buffer_desc *desc,
 				    size_t size)
 {
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
 	struct sg_table *sgt;
 	struct page *page;
 	int err = 0;
+
+	if (!platform->secure_alloc_ready)
+		return -EINVAL;
 
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
 				      DMA_MEMORY_NOMAP, &attrs);

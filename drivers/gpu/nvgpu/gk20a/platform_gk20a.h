@@ -108,6 +108,7 @@ struct gk20a_platform {
 	 */
 	int (*secure_page_alloc)(struct platform_device *dev);
 	struct secure_page_buffer secure_buffer;
+	bool secure_alloc_ready;
 
 	/* Device is going to be suspended */
 	int (*suspend)(struct device *);

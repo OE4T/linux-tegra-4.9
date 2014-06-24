@@ -1351,6 +1351,9 @@ int gk20a_secure_page_alloc(struct platform_device *pdev)
 		tegra_periph_reset_deassert(platform->clk[0]);
 	}
 
+	if (!err)
+		platform->secure_alloc_ready = true;
+
 	return err;
 }
 
@@ -1453,10 +1456,9 @@ static int gk20a_probe(struct platform_device *dev)
 	}
 
 	err = gk20a_secure_page_alloc(dev);
-	if (err) {
-		dev_err(&dev->dev, "failed to allocate secure buffer\n");
-		return err;
-	}
+	if (err)
+		dev_err(&dev->dev,
+			"failed to allocate secure buffer %d\n", err);
 
 	gk20a_debug_init(dev);
 

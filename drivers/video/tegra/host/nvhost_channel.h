@@ -50,7 +50,6 @@ struct nvhost_channel {
 	atomic_t refcount;
 	int chid;
 	int dev_chid;
-	u32 syncpt_id;
 	struct mutex reflock;
 	struct mutex submitlock;
 	void __iomem *aperture;
@@ -63,8 +62,6 @@ struct nvhost_channel {
 	 * belongs to the module. but for
 	 * now just keep it here */
 	struct nvhost_as *as;
-
-	struct list_head list;
 
 	/* error notificatiers used channel submit timeout */
 	struct dma_buf *error_notifier_ref;
@@ -97,10 +94,7 @@ int nvhost_channel_read_reg(struct nvhost_channel *channel,
 	u32 offset, u32 *value);
 
 struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
-	int max_channels, int *current_channel_count);
-
-void nvhost_free_channel_internal(struct nvhost_channel *ch,
-	int *current_channel_count);
+	int max_channels);
 
 int nvhost_channel_save_context(struct nvhost_channel *ch);
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);

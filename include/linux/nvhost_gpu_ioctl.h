@@ -165,4 +165,23 @@ struct nvhost_gpu_get_characteristics {
 #define NVHOST_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_gpu_zbc_query_table_args)
 
+
+/*
+ * /dev/nvhost-tsg-gpu devices
+ *
+ * Opening a '/dev/nvhost-tsg-gpu' device node creates a way to
+ * bind/unbind a channel to/from TSG group
+ */
+#define NVGPU_TSG_IOCTL_MAGIC 'T'
+
+#define NVGPU_TSG_IOCTL_BIND_CHANNEL \
+	_IOW(NVGPU_TSG_IOCTL_MAGIC, 1, int)
+#define NVGPU_TSG_IOCTL_UNBIND_CHANNEL \
+	_IOW(NVGPU_TSG_IOCTL_MAGIC, 2, int)
+
+#define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
+	sizeof(int)
+#define NVGPU_TSG_IOCTL_LAST		\
+	_IOC_NR(NVGPU_TSG_IOCTL_UNBIND_CHANNEL)
+
 #endif

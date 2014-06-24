@@ -56,11 +56,10 @@ struct nvhost_master {
 	struct nvhost_capability_node *caps_nodes;
 	struct mutex timeout_mutex;
 
-	struct nvhost_channel chlist;	/* channel list */
+	struct nvhost_channel **chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	unsigned long allocated_channels;
 	unsigned long next_free_ch;
-	int cnt_alloc_channels;
 };
 
 extern struct nvhost_master *nvhost;

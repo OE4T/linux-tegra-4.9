@@ -296,7 +296,7 @@
 	};
 
 	i2c@7000c500 {
-		battery-charger@6b {
+		bq2419x: battery-charger@6b {
 			compatible = "ti,bq2419x";
 			reg = <0x6b>;
 
@@ -304,7 +304,7 @@
 			interrupts = <TEGRA_GPIO(Z, 0) 0x0>;
 			#extcon-cells = <1>;
 
-			charger {
+			battery_charger: charger {
 				status = "disabled";
 				regulator-name = "batt_regulator";
 				regulator-max-microamp = <3000000>;

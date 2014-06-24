@@ -23,6 +23,7 @@
 /memreserve/ 0x80000000 0x00010000;
 
 #include "tegra186.dtsi"
+#include "tegra186-cpus-2D4A.dtsi"
 
 / {
 	model = "t186ref";

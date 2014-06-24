@@ -114,10 +114,9 @@ u64 quadd_get_time(void)
 {
 	struct timecounter *tc = hrt.tc;
 
-	if (tc)
-		return get_arch_time(tc);
-	else
-		return get_posix_clock_monotonic_time();
+	return (tc && hrt.use_arch_timer) ?
+		get_arch_time(tc) :
+		get_posix_clock_monotonic_time();
 }
 
 static void put_header(void)
@@ -160,6 +159,9 @@ static void put_header(void)
 	hdr->extra_length = 0;
 
 	hdr->reserved |= hrt.unw_method << QUADD_HDR_UNW_METHOD_SHIFT;
+
+	if (hrt.use_arch_timer)
+		hdr->reserved |= QUADD_HDR_USE_ARCH_TIMER;
 
 	if (pmu)
 		nr_events += pmu->get_current_events(events, max_events);
@@ -591,17 +593,7 @@ int quadd_hrt_start(void)
 
 	reset_cpu_ctx();
 
-	put_header();
-
 	extra = param->reserved[QUADD_PARAM_IDX_EXTRA];
-
-	if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
-		err = quadd_get_current_mmap(param->pids[0]);
-		if (err) {
-			pr_err("error: quadd_get_current_mmap\n");
-			return err;
-		}
-	}
 
 	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
 		hrt.unw_method = QUADD_UNW_METHOD_MIXED;
@@ -611,6 +603,23 @@ int quadd_hrt_start(void)
 		hrt.unw_method = QUADD_UNW_METHOD_FP;
 	else
 		hrt.unw_method = QUADD_UNW_METHOD_NONE;
+
+	if (hrt.tc && (extra & QUADD_PARAM_EXTRA_USE_ARCH_TIMER))
+		hrt.use_arch_timer = 1;
+	else
+		hrt.use_arch_timer = 0;
+
+	pr_info("timer: %s\n", hrt.use_arch_timer ? "arch" : "monotonic clock");
+
+	put_header();
+
+	if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
+		err = quadd_get_current_mmap(param->pids[0]);
+		if (err) {
+			pr_err("error: quadd_get_current_mmap\n");
+			return err;
+		}
+	}
 
 	if (ctx->pl310)
 		ctx->pl310->start();
@@ -656,6 +665,16 @@ void quadd_hrt_get_state(struct quadd_module_state *state)
 	state->nr_skipped_samples = 0;
 }
 
+static void init_arch_timer(void)
+{
+	u32 cntkctl = arch_timer_get_cntkctl();
+
+	if (cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN)
+		hrt.tc = arch_timer_get_timecounter();
+	else
+		hrt.tc = NULL;
+}
+
 struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 {
 	int cpu_id;
@@ -677,7 +696,7 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 		hrt.ma_period = 0;
 
 	atomic64_set(&hrt.counter_samples, 0);
-	hrt.tc = arch_timer_get_timecounter();
+	init_arch_timer();
 
 	hrt.cpu_ctx = alloc_percpu(struct quadd_cpu_context);
 	if (!hrt.cpu_ctx)

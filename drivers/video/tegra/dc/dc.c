@@ -938,7 +938,25 @@ static ssize_t dbg_dc_event_inject_write(struct file *file,
 	if (ret < 0)
 		return ret;
 
-	if (event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
+	/*
+	 * ADF has two seperate events for hotplug connect and disconnect.
+	 * We map event 0x0, and 0x1 for them accordingly.  For DC_EXT,
+	 * both events map to HOTPLUG.
+	 */
+#ifdef CONFIG_ADF_TEGRA
+	if (event == 0x0)
+		tegra_adf_process_hotplug_connected(dc->adf, NULL);
+	else if (event == 0x1)
+		tegra_adf_process_hotplug_disconnected(dc->adf);
+	else if (event == 0x2)
+		tegra_adf_process_bandwidth_renegotiate(dc->adf, 0);
+	else {
+		dev_err(&dc->ndev->dev, "Unknown event 0x%lx\n", event);
+		return -EINVAL; /* unknown event number */
+	}
+#endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
+	if (event == 0x0 || event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
 	else if (event == 0x2) /* TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC */
 		tegra_dc_ext_process_bandwidth_renegotiate(
@@ -947,6 +965,7 @@ static ssize_t dbg_dc_event_inject_write(struct file *file,
 		dev_err(&dc->ndev->dev, "Unknown event 0x%lx\n", event);
 		return -EINVAL; /* unknown event number */
 	}
+#endif
 	return len;
 }
 
@@ -2529,11 +2548,14 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 
 static void tegra_dc_process_vblank(struct tegra_dc *dc, ktime_t timestamp)
 {
-	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count))
-		tegra_dc_ext_process_vblank(dc->ndev->id, timestamp);
+	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count)) {
 #ifdef CONFIG_ADF_TEGRA
-	tegra_adf_process_vblank(dc->adf, timestamp);
+		tegra_adf_process_vblank(dc->adf, timestamp);
 #endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
+		tegra_dc_ext_process_vblank(dc->ndev->id, timestamp);
+#endif
+	}
 }
 
 int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
@@ -3017,7 +3039,9 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	for (i = 0; i < DC_N_WINDOWS; i++)
 		dc->blend.z[i] = -1;
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_enable(dc->ext);
+#endif
 
 	/* initialize cursor to defaults, as driver depends on HW state */
 	tegra_dc_writel(dc, 0, DC_DISP_CURSOR_START_ADDR);
@@ -3109,7 +3133,9 @@ static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
 	/* force a full blending update */
 	dc->blend.z[0] = -1;
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_enable(dc->ext);
+#endif
 
 	if (!ret) {
 		dev_err(&dc->ndev->dev, "initialization failed,disabling");
@@ -3331,7 +3357,11 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 
 int tegra_dc_restore(struct tegra_dc *dc)
 {
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	return tegra_dc_ext_restore(dc->ext);
+#else
+	return 0;
+#endif
 }
 
 static void _tegra_dc_disable(struct tegra_dc *dc)
@@ -3357,8 +3387,12 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	if (!tegra_dc_ext_disable(dc->ext))
 		tegra_dc_blank(dc, BLANK_ALL);
+#else
+	tegra_dc_blank(dc, BLANK_ALL);
+#endif
 
 	/* it's important that new underflow work isn't scheduled before the
 	 * lock is acquired. */
@@ -3410,7 +3444,9 @@ static void tegra_dc_reset_worker(struct work_struct *work)
 	dev_warn(&dc->ndev->dev,
 		"overlay stuck in underflow state.  resetting.\n");
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_disable(dc->ext);
+#endif
 
 	mutex_lock(&dc->lock);
 
@@ -3919,11 +3955,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->emc_clk = emc_clk;
 #endif
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {
 		dev_warn(&ndev->dev, "Failed to enable Tegra DC extensions.\n");
 		dc->ext = NULL;
 	}
+#endif
 
 	/* interrupt handler must be registered before tegra_fb_register() */
 	if (request_threaded_irq(irq, NULL, tegra_dc_irq, IRQF_ONESHOT,
@@ -4031,7 +4069,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 				goto err_remove_debugfs;
 			}
 		}
-#else
+#endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 		tegra_dc_io_start(dc);
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		dc->fb = tegra_nvdisp_fb_register(ndev, dc, dc->pdata->fb,
@@ -4077,10 +4116,12 @@ err_remove_debugfs:
 	tegra_dc_remove_debugfs(dc);
 	free_irq(irq, dc);
 err_disable_dc:
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	if (dc->ext) {
 		tegra_dc_ext_disable(dc->ext);
 		tegra_dc_ext_unregister(dc->ext);
 	}
+#endif
 	mutex_lock(&dc->lock);
 	if (dc->enabled)
 		_tegra_dc_disable(dc);
@@ -4135,11 +4176,12 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	if (dc->adf)
 		tegra_adf_unregister(dc->adf);
 #endif
-
-	tegra_dc_ext_disable(dc->ext);
-
-	if (dc->ext)
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
+	if (dc->ext) {
+		tegra_dc_ext_disable(dc->ext);
 		tegra_dc_ext_unregister(dc->ext);
+	}
+#endif
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->one_shot_lock);
@@ -4186,7 +4228,9 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	trace_display_suspend(dc);
 	dev_info(&ndev->dev, "suspend\n");
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_disable(dc->ext);
+#endif
 
 	tegra_dc_cursor_suspend(dc);
 
@@ -4410,16 +4454,20 @@ __setup("disp_params=", tegra_dc_mode_override);
 
 static int __init tegra_dc_module_init(void)
 {
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	int ret = tegra_dc_ext_module_init();
 	if (ret)
 		return ret;
+#endif
 	return platform_driver_register(&tegra_dc_driver);
 }
 
 static void __exit tegra_dc_module_exit(void)
 {
 	platform_driver_unregister(&tegra_dc_driver);
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_module_exit();
+#endif
 }
 
 module_exit(tegra_dc_module_exit);

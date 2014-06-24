@@ -243,7 +243,9 @@ struct tegra_dc {
 		u64			underflows_t;
 	} stats;
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	struct tegra_dc_ext		*ext;
+#endif
 
 	struct tegra_dc_feature		*feature;
 	int				gen1_blend_num;

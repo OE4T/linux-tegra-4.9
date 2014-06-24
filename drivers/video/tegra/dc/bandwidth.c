@@ -528,7 +528,9 @@ static void tegra_dc_process_bandwidth_renegotiate(struct tegra_dc *dc,
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_bandwidth_renegotiate(dc->adf, bw);
 #endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_bandwidth_renegotiate(dc->ctrl_num, bw);
+#endif
 }
 #endif
 

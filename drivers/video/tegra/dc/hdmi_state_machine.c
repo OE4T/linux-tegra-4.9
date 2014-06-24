@@ -185,7 +185,9 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	if (hdmi->dc->connected) {
 		pr_info("HDMI from connected to disconnected\n");
 		tegra_dc_disable(hdmi->dc);
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+#endif
 	}
 	hdmi->dc->connected = false;
 #ifdef CONFIG_ADF_TEGRA
@@ -193,7 +195,9 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 #else
 	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
 #endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+#endif
 }
 
 static void handle_reset_l(struct tegra_dc_hdmi_data *hdmi)
@@ -280,7 +284,8 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_hotplug_connected(hdmi->dc->adf, &specs);
-#else
+#endif
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(hdmi->dc->fb, &specs,
 		tegra_dc_hdmi_mode_filter);
 #endif
@@ -293,7 +298,9 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 #endif
 	hdmi->dc->connected = true;
 
+#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+#endif
 
 	if (unlikely(tegra_is_clk_enabled(hdmi->clk))) {
 		/* the only time this should happen is on boot, where the

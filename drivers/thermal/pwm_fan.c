@@ -35,6 +35,10 @@
 #include <linux/sysfs.h>
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
+#include <linux/kernel.h>
+#include <linux/gfp.h>
+#include <linux/of_device.h>
+#include <linux/of.h>
 
 struct fan_dev_data {
 	int next_state;
@@ -64,6 +68,7 @@ struct fan_dev_data {
 	int fan_state_cap;
 	int pwm_gpio;
 	int pwm_id;
+	const char *name;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -668,17 +673,36 @@ irqreturn_t fan_tach_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+
 static int pwm_fan_probe(struct platform_device *pdev)
 {
 	int i;
-	struct pwm_fan_platform_data *data;
-	struct fan_dev_data *fan_data;
+	struct fan_dev_data *fan_data = NULL;
 	int *rpm_data;
+	int *rru_data;
+	int *rrd_data;
+	int *lookup_data;
+	int *pwm_data;
 	int err = 0;
+	int of_err = 0;
+	struct device_node *node = NULL;
+	struct device_node *data_node = NULL;
+	u32 value;
+	int pwm_fan_gpio;
+	int gpio_free_flag = 0;
 
-	data = dev_get_platdata(&pdev->dev);
-	if (!data) {
-		dev_err(&pdev->dev, "platform data is null\n");
+	if (!pdev)
+		return -EINVAL;
+
+	node = pdev->dev.of_node;
+	if (!node) {
+		pr_err("FAN: dev of_node NULL\n");
+		return -EINVAL;
+	}
+
+	data_node = of_parse_phandle(node, "shared_data", 0);
+	if (!data_node) {
+		pr_err("PWM shared data node NULL, parse phandle failed\n");
 		return -EINVAL;
 	}
 
@@ -687,52 +711,124 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	if (!fan_data)
 		return -ENOMEM;
 
-	rpm_data = devm_kzalloc(&pdev->dev,
-			5 * sizeof(int) * data->active_steps, GFP_KERNEL);
-	if (!rpm_data)
-		return -ENOMEM;
+	fan_data->dev = &pdev->dev;
 
+	of_err |= of_property_read_string(node, "name", &fan_data->name);
+	pr_info("FAN dev name: %s\n", fan_data->name);
+
+	of_err |= of_property_read_u32(data_node, "pwm_gpio", &value);
+	pwm_fan_gpio = (int)value;
+
+	err = gpio_request(pwm_fan_gpio, "pwm-fan");
+	if (err < 0) {
+		pr_err("FAN:gpio request failed\n");
+		err = -EINVAL;
+		goto gpio_request_fail;
+	} else {
+		pr_info("FAN:gpio request success.\n");
+	}
+
+	of_err |= of_property_read_u32(data_node, "active_steps", &value);
+	fan_data->active_steps = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "pwm_period", &value);
+	fan_data->pwm_period = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "pwm_id", &value);
+	fan_data->pwm_id = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "step_time", &value);
+	fan_data->step_time = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "active_pwm_max", &value);
+	fan_data->fan_pwm_max = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "state_cap", &value);
+	fan_data->fan_state_cap = (int)value;
+
+	of_err |= of_property_read_u32(data_node, "tach_gpio", &value);
+	fan_data->tach_gpio = (int)value;
+
+	fan_data->pwm_gpio = pwm_fan_gpio;
+
+	if (of_err) {
+		err = -ENXIO;
+		goto rpm_alloc_fail;
+	}
+
+	/* rpm array */
+	rpm_data = devm_kzalloc(&pdev->dev,
+			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+	if (!rpm_data) {
+		err = -ENOMEM;
+		goto rpm_alloc_fail;
+	}
+	of_err |= of_property_read_u32_array(data_node, "active_rpm", rpm_data,
+		(size_t) fan_data->active_steps);
 	fan_data->fan_rpm = rpm_data;
-	fan_data->fan_pwm = rpm_data + data->active_steps;
-	fan_data->fan_rru = fan_data->fan_pwm + data->active_steps;
-	fan_data->fan_rrd = fan_data->fan_rru + data->active_steps;
-	fan_data->fan_state_cap_lookup = fan_data->fan_rrd + data->active_steps;
+
+	/* rru array */
+	rru_data = devm_kzalloc(&pdev->dev,
+			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+	if (!rru_data) {
+		err = -ENOMEM;
+		goto rru_alloc_fail;
+	}
+	of_err |= of_property_read_u32_array(data_node, "active_rru", rru_data,
+		(size_t) fan_data->active_steps);
+	fan_data->fan_rru = rru_data;
+
+	/* rrd array */
+	rrd_data = devm_kzalloc(&pdev->dev,
+			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+	if (!rrd_data) {
+		err = -ENOMEM;
+		goto rrd_alloc_fail;
+	}
+	of_err |= of_property_read_u32_array(data_node, "active_rrd", rrd_data,
+		(size_t) fan_data->active_steps);
+	fan_data->fan_rrd = rrd_data;
+
+	/* state_cap_lookup array */
+	lookup_data = devm_kzalloc(&pdev->dev,
+			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+	if (!lookup_data) {
+		err = -ENOMEM;
+		goto lookup_alloc_fail;
+	}
+	of_err |= of_property_read_u32_array(data_node, "state_cap_lookup",
+		lookup_data, (size_t) fan_data->active_steps);
+	fan_data->fan_state_cap_lookup = lookup_data;
+
+	/* pwm array */
+	pwm_data = devm_kzalloc(&pdev->dev,
+			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+	if (!pwm_data) {
+		err = -ENOMEM;
+		goto pwm_alloc_fail;
+	}
+	of_err |= of_property_read_u32_array(node, "active_pwm", pwm_data,
+		(size_t) fan_data->active_steps);
+	fan_data->fan_pwm = pwm_data;
+
+	if (of_err) {
+		err = -ENXIO;
+		goto workqueue_alloc_fail;
+	}
 
 	mutex_init(&fan_data->fan_state_lock);
-
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
-	if (!fan_data->workqueue)
-		return -ENOMEM;
+	if (!fan_data->workqueue) {
+		err = -ENOMEM;
+		goto workqueue_alloc_fail;
+	}
 
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 
-	fan_data->step_time = data->step_time;
-	fan_data->active_steps = data->active_steps;
-	fan_data->pwm_period = data->pwm_period;
-	fan_data->fan_pwm_max = data->active_pwm_max;
-	fan_data->dev = &pdev->dev;
-	fan_data->fan_state_cap = data->state_cap;
-	fan_data->pwm_gpio = data->pwm_gpio;
-	fan_data->pwm_id = data->pwm_id;
-
-	for (i = 0; i < fan_data->active_steps; i++) {
-		fan_data->fan_rpm[i] = data->active_rpm[i];
-		fan_data->fan_pwm[i] = data->active_pwm[i];
-		fan_data->fan_rru[i] = data->active_rru[i];
-		fan_data->fan_rrd[i] = data->active_rrd[i];
-		fan_data->fan_state_cap_lookup[i] = data->state_cap_lookup[i];
-		dev_info(&pdev->dev,
-			"rpm=%d, pwm=%d, rru=%d, rrd=%d state:%d\n",
-			fan_data->fan_rpm[i],
-			fan_data->fan_pwm[i],
-			fan_data->fan_rru[i],
-			fan_data->fan_rrd[i],
-			fan_data->fan_state_cap_lookup[i]);
-	}
-	fan_data->fan_cap_pwm = data->active_pwm[data->state_cap];
+	fan_data->fan_cap_pwm = fan_data->fan_pwm[fan_data->fan_state_cap];
 	fan_data->precision_multiplier =
-			data->pwm_period / data->active_pwm_max;
+			fan_data->pwm_period / fan_data->fan_pwm_max;
 	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",
 			fan_data->fan_state_cap, fan_data->fan_cap_pwm);
 
@@ -742,11 +838,11 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	if (IS_ERR_OR_NULL(fan_data->cdev)) {
 		dev_err(&pdev->dev, "Failed to register cooling device\n");
-		return -EINVAL;
+		err = -EINVAL;
+		goto cdev_register_fail;
 	}
 
-	gpio_free(fan_data->pwm_gpio);
-	fan_data->pwm_dev = pwm_request(data->pwm_id, dev_name(&pdev->dev));
+	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
 	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
 		dev_err(&pdev->dev, "unable to request PWM for fan\n");
 		err = -ENODEV;
@@ -755,10 +851,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "got pwm for fan\n");
 	}
 
-
-	fan_data->tach_gpio = data->tach_gpio;
 	fan_data->tach_enabled = 0;
-
+	gpio_free(fan_data->pwm_gpio);
+	gpio_free_flag = 1;
 	if (fan_data->tach_gpio != -1) {
 		/* init fan tach */
 		fan_data->tach_irq = gpio_to_irq(fan_data->tach_gpio);
@@ -768,6 +863,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			goto tach_gpio_request_fail;
 		}
 
+		gpio_free_flag = 0;
 		err = gpio_direction_input(fan_data->tach_gpio);
 		if (err < 0) {
 			dev_err(&pdev->dev, "fan tach set gpio direction input failed\n");
@@ -803,16 +899,48 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "FAN:Can't create debug fs nodes");
 		/*Just continue without debug fs*/
 	}
+
+	/* print out initialized info */
+	for (i = 0; i < fan_data->active_steps; i++) {
+		dev_info(&pdev->dev,
+			"index %d: pwm=%d, rpm=%d, rru=%d, rrd=%d, state:%d\n",
+			i,
+			fan_data->fan_pwm[i],
+			fan_data->fan_rpm[i],
+			fan_data->fan_rru[i],
+			fan_data->fan_rrd[i],
+			fan_data->fan_state_cap_lookup[i]);
+	}
 	return err;
 
 sysfs_fail:
-	pwm_free(fan_data->pwm_dev);
 	free_irq(fan_data->tach_irq, NULL);
 tach_request_irq_fail:
-	gpio_free(fan_data->tach_gpio);
 tach_gpio_request_fail:
+	pwm_free(fan_data->pwm_dev);
 pwm_req_fail:
 	thermal_cooling_device_unregister(fan_data->cdev);
+cdev_register_fail:
+	destroy_workqueue(fan_data->workqueue);
+workqueue_alloc_fail:
+	devm_kfree(&pdev->dev, (void *)pwm_data);
+pwm_alloc_fail:
+	devm_kfree(&pdev->dev, (void *)lookup_data);
+lookup_alloc_fail:
+	devm_kfree(&pdev->dev, (void *)rrd_data);
+rrd_alloc_fail:
+	devm_kfree(&pdev->dev, (void *)rru_data);
+rru_alloc_fail:
+	devm_kfree(&pdev->dev, (void *)rpm_data);
+rpm_alloc_fail:
+	if (!gpio_free_flag)
+		gpio_free(fan_data->pwm_gpio);
+gpio_request_fail:
+	devm_kfree(&pdev->dev, (void *)fan_data);
+	if (err == -ENXIO)
+		pr_err("FAN: of_property_read failed\n");
+	else if (err == -ENOMEM)
+		pr_err("FAN: memery allocation failed\n");
 	return err;
 }
 
@@ -890,10 +1018,19 @@ static int pwm_fan_resume(struct platform_device *pdev)
 }
 #endif
 
+
+static const struct of_device_id of_pwm_fan_match[] = {
+	{ .compatible = "loki-pwm-fan", },
+	{ .compatible = "foster-pwm-fan", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, of_pwm_fan_match);
+
 static struct platform_driver pwm_fan_driver = {
 	.driver = {
+		.name	= "pwm_fan_driver",
 		.owner = THIS_MODULE,
-		.name = "pwm-fan",
+		.of_match_table = of_pwm_fan_match,
 	},
 	.probe = pwm_fan_probe,
 	.remove = pwm_fan_remove,

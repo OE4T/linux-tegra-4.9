@@ -161,10 +161,7 @@ static inline int is_event_supported(struct source_info *si, int event)
 static int
 validate_freq(unsigned int freq)
 {
-	if (capable(CAP_SYS_ADMIN))
-		return freq >= 100 && freq <= 100000;
-	else
-		return freq == 100 || freq == 1000 || freq == 10000;
+	return freq >= 100 && freq <= 100000;
 }
 
 static int

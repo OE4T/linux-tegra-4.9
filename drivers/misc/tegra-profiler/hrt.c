@@ -334,9 +334,6 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	if (get_sample_data(s, regs, task))
 		return;
 
-	if (cc->cs_64)
-		extra_data |= QUADD_SED_IP64;
-
 	vec[vec_idx].base = &extra_data;
 	vec[vec_idx].len = sizeof(extra_data);
 	vec_idx++;
@@ -372,6 +369,9 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 			vec[vec_idx].base = cc->types;
 			vec[vec_idx].len = nr_types * sizeof(cc->types[0]);
 			vec_idx++;
+
+			if (cc->cs_64)
+				extra_data |= QUADD_SED_IP64;
 		}
 
 		extra_data |= cc->unw_method << QUADD_SED_UNW_METHOD_SHIFT;

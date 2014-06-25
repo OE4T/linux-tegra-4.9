@@ -134,13 +134,13 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 	}
 
 	panel->panel_gpio[TEGRA_GPIO_RESET] =
-		of_get_named_gpio(node, "nvidia,dsi-panel-rst-gpio", 0);
+		of_get_named_gpio(node, "nvidia,panel-rst-gpio", 0);
 
 	panel->panel_gpio[TEGRA_GPIO_BL_ENABLE] =
-		of_get_named_gpio(node, "nvidia,dsi-panel-bl-en-gpio", 0);
+		of_get_named_gpio(node, "nvidia,panel-bl-en-gpio", 0);
 
 	panel->panel_gpio[TEGRA_GPIO_PWM] =
-		of_get_named_gpio(node, "nvidia,dsi-panel-bl-pwm-gpio", 0);
+		of_get_named_gpio(node, "nvidia,panel-bl-pwm-gpio", 0);
 
 	for (cnt = 0; cnt < TEGRA_N_GPIO_PANEL; cnt++) {
 		if (gpio_is_valid(panel->panel_gpio[cnt])) {

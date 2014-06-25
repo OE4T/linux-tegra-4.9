@@ -352,64 +352,7 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 static int tegra_vcm30t124_spdif_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
-	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("spdif");
-	int srate, mclk, clk_out_rate;
-	int err;
-
-	srate = params_rate(params);
-	switch (srate) {
-	case 64000:
-	case 88200:
-	case 96000:
-		clk_out_rate = 128 * srate;
-		mclk = clk_out_rate * 2;
-		break;
-	case 8000:
-	case 16000:
-	case 32000:
-	case 48000:
-	default:
-		clk_out_rate = 12288000;
-		/*
-		 * MCLK is pll_a_out, it is a source clock of ahub.
-		 * So it need to be faster than BCLK in slave mode.
-		 */
-		mclk = 12288000 * 2;
-		break;
-	case 44100:
-		clk_out_rate = 11289600;
-		/*
-		 * MCLK is pll_a_out, it is a source clock of ahub.
-		 * So it need to be faster than BCLK in slave mode.
-		 */
-		mclk = 11289600 * 2;
-		break;
-	}
-
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					srate, mclk, clk_out_rate);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure clocks\n");
-		return err;
-	}
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
-						SND_SOC_CLOCK_OUT);
-	else
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
-						SND_SOC_CLOCK_IN);
-
-	if (err < 0) {
-		dev_err(card->dev, "%s cpu_dai clock not set\n",
-			card->rtd[idx].cpu_dai->name);
-		return err;
-	}
+	/* dummy hw_params; clocks set in the init function */
 
 	return 0;
 }
@@ -588,13 +531,37 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 {
-	unsigned int srate = 48000;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	unsigned int mclk, clk_out_rate, srate;
 	int err = 0;
 
-	err = snd_soc_dai_set_sysclk(rtd->cpu_dai, 0, srate,
+	/* Default sampling rate*/
+	srate = dai_params->rate_min;
+	clk_out_rate = srate * 256;
+	mclk = clk_out_rate * 2;
+
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+					srate, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
 					SND_SOC_CLOCK_OUT);
-	err = snd_soc_dai_set_sysclk(rtd->cpu_dai, 0, srate,
+	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
 					SND_SOC_CLOCK_IN);
+	if (err < 0) {
+		dev_err(card->dev, "%s cpu DAI clock not set\n",
+			cpu_dai->name);
+	}
+
 	return err;
 }
 
@@ -1074,7 +1041,7 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 	if (machine->pdata->card_name)
 		card->name = machine->pdata->card_name;
 
-	max9485_info.addr = machine->pdata->max9485_addr;
+	max9485_info.addr = (unsigned int)machine->pdata->priv_data;
 
 	if (max9485_info.addr) {
 		machine->max9485_client = i2c_new_device(i2c_get_adapter(0),

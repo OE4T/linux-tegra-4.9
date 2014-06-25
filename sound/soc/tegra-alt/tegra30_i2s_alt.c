@@ -188,23 +188,23 @@ static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_DSP_A:
 		val |= TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC;
-		val |= TEGRA30_I2S_LRCK_LEFT_LOW;
+		val |= TEGRA30_I2S_CTRL_LRCK_L_LOW;
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
 		val |= TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC;
-		val |= TEGRA30_I2S_LRCK_RIGHT_LOW;
+		val |= TEGRA30_I2S_CTRL_LRCK_R_LOW;
 		break;
 	case SND_SOC_DAIFMT_I2S:
 		val |= TEGRA30_I2S_FRAME_FORMAT_LRCK;
-		val |= TEGRA30_I2S_LRCK_LEFT_LOW;
+		val |= TEGRA30_I2S_CTRL_LRCK_L_LOW;
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
 		val |= TEGRA30_I2S_FRAME_FORMAT_LRCK;
-		val |= TEGRA30_I2S_LRCK_LEFT_LOW;
+		val |= TEGRA30_I2S_CTRL_LRCK_L_LOW;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		val |= TEGRA30_I2S_FRAME_FORMAT_LRCK;
-		val |= TEGRA30_I2S_LRCK_LEFT_LOW;
+		val |= TEGRA30_I2S_CTRL_LRCK_L_LOW;
 		break;
 	default:
 		return -EINVAL;
@@ -286,8 +286,8 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
 				(1 << channels) - 1,
 				(1 << channels) - 1);
-		/* I2S fifo threshold set to 7 when AFC is connected */
-		cif_conf.threshold = 7;
+		/* I2S fifo threshold set to 3 when AFC is connected */
+		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
 		cif_conf.expand = 0;
@@ -302,7 +302,7 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 			i2sclock = srate * channels * sample_size * 2;
 		/* In LRCK mode, hw doesn't support mono.
 		   We should convert mono to steroe through acif */
-		cif_conf.threshold = 7;
+		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = (channels == 1) ? 2 : channels;
 		cif_conf.expand = 0;

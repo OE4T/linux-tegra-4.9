@@ -31,6 +31,55 @@
 #include "hdmi2.0.h"
 #include "sor.h"
 #include "sor_regs.h"
+#include "edid.h"
+
+static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
+					struct i2c_msg *msgs, int num)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	return i2c_transfer(hdmi->ddc_i2c_client->adapter, msgs, num);
+}
+
+static int tegra_hdmi_ddc(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	struct i2c_adapter *i2c_adap;
+	int err = 0;
+	struct i2c_board_info i2c_dev_info = {
+		.type = "tegra_hdmi2.0",
+		.addr = 0x50,
+	};
+
+	hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
+	if (IS_ERR_OR_NULL(hdmi->edid)) {
+		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
+		return PTR_ERR(hdmi->edid);
+	}
+	tegra_dc_set_edid(dc, hdmi->edid);
+
+	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
+	if (!i2c_adap) {
+		dev_err(&dc->ndev->dev,
+			"hdmi: can't get adpater for ddc bus %d\n",
+			dc->out->ddc_bus);
+		err = -EBUSY;
+		goto fail_edid_free;
+	}
+
+	hdmi->ddc_i2c_client = i2c_new_device(i2c_adap, &i2c_dev_info);
+	i2c_put_adapter(i2c_adap);
+	if (!hdmi->ddc_i2c_client) {
+		dev_err(&dc->ndev->dev, "hdmi: can't create new i2c device\n");
+		err = -EBUSY;
+		goto fail_edid_free;
+	}
+
+	return 0;
+fail_edid_free:
+	tegra_edid_destroy(hdmi->edid);
+	return err;
+}
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
@@ -51,6 +100,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	hdmi->enabled = false;
 
+	tegra_hdmi_ddc(hdmi);
+
 	tegra_dc_set_outdata(dc, hdmi);
 
 	return 0;
@@ -65,6 +116,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
 	tegra_dc_sor_destroy(hdmi->sor);
+	tegra_edid_destroy(hdmi->edid);
 	devm_kfree(&dc->ndev->dev, hdmi);
 }
 

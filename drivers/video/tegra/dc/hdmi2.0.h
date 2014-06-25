@@ -108,6 +108,9 @@ struct tegra_hdmi {
 	bool enabled;
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
+
+	struct tegra_edid *edid;
+	struct i2c_client *ddc_i2c_client;
 };
 
 #endif

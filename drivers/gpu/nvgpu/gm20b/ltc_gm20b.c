@@ -103,7 +103,7 @@ static int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 {
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	u32 fbp, slice, ctrl1, val, hw_op = 0;
+	u32 ltc, slice, ctrl1, val, hw_op = 0;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -133,13 +133,13 @@ static int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl1_r(),
 		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) || hw_op);
 
-	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
+	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		for (slice = 0; slice < slices_per_ltc; slice++) {
 
 			delay = GR_IDLE_CHECK_DEFAULT;
 
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
-				fbp * proj_ltc_stride_v() +
+				ltc * proj_ltc_stride_v() +
 				slice * proj_lts_stride_v();
 
 			do {

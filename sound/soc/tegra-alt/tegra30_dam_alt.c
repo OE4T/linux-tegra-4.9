@@ -533,7 +533,7 @@ static int tegra30_dam_set_audio_cif(struct tegra30_dam *dam,
 	return 0;
 }
 
-static int tegra30_dam_in_hw_params(struct snd_pcm_substream *substream,
+static int tegra30_dam_in0_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
@@ -578,6 +578,24 @@ static int tegra30_dam_in_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
+static int tegra30_dam_in1_hw_params(struct snd_pcm_substream *substream,
+				 struct snd_pcm_hw_params *params,
+				 struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct tegra30_dam *dam = snd_soc_dai_get_drvdata(dai);
+	int ret = 0;
+
+	ret = tegra30_dam_set_audio_cif(dam, params,
+				TEGRA_DAM_AUDIOCIF_CH1_CTRL);
+	if (ret) {
+		dev_err(dev, "Can't set DAM%d RX CIF: %d\n",
+			dev->id, ret);
+	}
+
+	return ret;
+}
+
 static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -606,10 +624,22 @@ static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 			TEGRA_DAM_CTRL_FSOUT_MASK,
 			dam->srate_out << TEGRA_DAM_CTRL_FSOUT_SHIFT);
 
-	/* enable stereo SRC */
+	/* clear previous SRC/MIX settings if any */
 	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-			TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK,
-			TEGRA_DAM_CTRL_STEREO_SRC_EN);
+			TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK, 0);
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+			TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK, 0);
+
+	if (dam->srate_out == dam->srate_in)
+		/* enable stereo MIX in bypass mode */
+		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+				TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK,
+				TEGRA_DAM_CTRL_STEREO_MIX_EN);
+	else
+		/* enable stereo SRC */
+		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+				TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK,
+				TEGRA_DAM_CTRL_STEREO_SRC_EN);
 
 	return ret;
 }
@@ -681,12 +711,16 @@ static struct snd_soc_dai_ops tegra30_dam_out_dai_ops = {
 	.hw_params	= tegra30_dam_out_hw_params,
 };
 
-static struct snd_soc_dai_ops tegra30_dam_in_dai_ops = {
-	.hw_params	= tegra30_dam_in_hw_params,
+static struct snd_soc_dai_ops tegra30_dam_in0_dai_ops = {
+	.hw_params	= tegra30_dam_in0_hw_params,
 	.set_sysclk = tegra30_dam_set_dai_sysclk,
 };
 
-#define IN_DAI(id)						\
+static struct snd_soc_dai_ops tegra30_dam_in1_dai_ops = {
+	.hw_params	= tegra30_dam_in1_hw_params,
+};
+
+#define IN_DAI(id, dai_ops)						\
 	{							\
 		.name = "IN" #id,				\
 		.playback = {					\
@@ -699,7 +733,7 @@ static struct snd_soc_dai_ops tegra30_dam_in_dai_ops = {
 				SNDRV_PCM_FMTBIT_S24_LE |	\
 				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
-		.ops = &tegra30_dam_in_dai_ops,		\
+		.ops = dai_ops,		\
 	}
 
 #define OUT_DAI(sname, dai_ops)					\
@@ -719,8 +753,8 @@ static struct snd_soc_dai_ops tegra30_dam_in_dai_ops = {
 	}
 
 static struct snd_soc_dai_driver tegra30_dam_dais[] = {
-	IN_DAI(0),
-	IN_DAI(1),
+	IN_DAI(0, &tegra30_dam_in0_dai_ops),
+	IN_DAI(1, &tegra30_dam_in1_dai_ops),
 	OUT_DAI(OUT, &tegra30_dam_out_dai_ops),
 };
 

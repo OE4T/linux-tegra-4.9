@@ -251,6 +251,14 @@ struct nvhost_device_data t21_msenc_info = {
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
 	.num_channels		= 1,
+	.scaling_init		= nvhost_scale_init,
+	.scaling_deinit		= nvhost_scale_deinit,
+	.actmon_regs		= HOST1X_CHANNEL_ACTMON1_REG_BASE,
+	.mamask_addr		= 0x0000184c,
+	.mamask_val		= 0x3d,
+	.borps_addr		= 0x00001850,
+	.borps_val		= 0x2008,
+	.actmon_enabled		= true,
 	.firmware_name		= "nvhost_nvenc050.fw",
 	.bond_out_id		= BOND_OUT_NVENC
 };

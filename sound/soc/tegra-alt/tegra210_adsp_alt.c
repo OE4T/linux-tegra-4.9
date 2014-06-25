@@ -68,6 +68,8 @@ static struct tegra210_adsp_app_desc {
 		TEGRA210_ADSP_PLUGIN_MP3_DEC1, TEGRA210_ADSP_PLUGIN_MP3_DEC2},
 	{"adma", "adma_plugin.elf",
 		TEGRA210_ADSP_PLUGIN_ADMA1, TEGRA210_ADSP_PLUGIN_ADMA4},
+	{"spkprot", "spkprot_plugin.elf",
+		TEGRA210_ADSP_PLUGIN_SPKPROT, TEGRA210_ADSP_PLUGIN_SPKPROT},
 };
 
 /* ADSP APP specific structure */
@@ -1665,6 +1667,7 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"MP3-DEC2",
 	"AAC-DEC1",
 	"AAC-DEC2",
+	"SPKPROT-SW",
 };
 
 #define ADSP_MUX_ENUM_CTRL_DECL(ename, reg)				\
@@ -1713,6 +1716,7 @@ ADSP_MUX_ENUM_CTRL_DECL(mp3_dec1, TEGRA210_ADSP_PLUGIN_MP3_DEC1);
 ADSP_MUX_ENUM_CTRL_DECL(mp3_dec2, TEGRA210_ADSP_PLUGIN_MP3_DEC2);
 ADSP_MUX_ENUM_CTRL_DECL(aac_dec1, TEGRA210_ADSP_PLUGIN_AAC_DEC1);
 ADSP_MUX_ENUM_CTRL_DECL(aac_dec2, TEGRA210_ADSP_PLUGIN_AAC_DEC2);
+ADSP_MUX_ENUM_CTRL_DECL(spkprot, TEGRA210_ADSP_PLUGIN_SPKPROT);
 
 #define ADSP_EP_WIDGETS(sname, ename)					\
 	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0),	\
@@ -1765,6 +1769,7 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("MP3-DEC2", mp3_dec2, TEGRA210_ADSP_PLUGIN_MP3_DEC2),
 	ADSP_WIDGETS("AAC-DEC1", aac_dec1, TEGRA210_ADSP_PLUGIN_AAC_DEC1),
 	ADSP_WIDGETS("AAC-DEC2", aac_dec2, TEGRA210_ADSP_PLUGIN_AAC_DEC2),
+	ADSP_WIDGETS("SPKPROT-SW", spkprot, TEGRA210_ADSP_PLUGIN_SPKPROT),
 };
 
 #define ADSP_EP_ROUTES(name)					\
@@ -1816,6 +1821,9 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"AAC-DEC1",	"AAC-DEC1 TX"},		\
 	{ name " MUX",	"AAC-DEC2",	"AAC-DEC2 TX"}
 
+#define ADSP_SPKPROT_ROUTES(name)				\
+	{ name " MUX",	"SPKPROT-SW",	"SPKPROT-SW TX"}
+
 #define ADSP_EP_MUX_ROUTES(name)				\
 	{ name " RX",		NULL, name " Receive"},		\
 	{ name " Transmit",	NULL, name " TX"},		\
@@ -1839,7 +1847,12 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 #define ADSP_ADMA_MUX_ROUTES(name)				\
 	{ name " TX",		NULL, name " MUX"},		\
 	ADSP_APM_IN_ROUTES(name),				\
-	ADSP_DEC_ROUTES(name)
+	ADSP_DEC_ROUTES(name),					\
+	ADSP_SPKPROT_ROUTES(name)
+
+#define ADSP_SPKPROT_MUX_ROUTES(name)				\
+	{ name " TX",		NULL, name " MUX"},		\
+	ADSP_ADMA_ROUTES(name)
 
 static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-FE1"),
@@ -1885,6 +1898,8 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_DEC_MUX_ROUTES("MP3-DEC2"),
 	ADSP_DEC_MUX_ROUTES("AAC-DEC1"),
 	ADSP_DEC_MUX_ROUTES("AAC-DEC2"),
+
+	ADSP_SPKPROT_MUX_ROUTES("SPKPROT-SW"),
 };
 
 static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
@@ -1960,7 +1975,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(adsp_app_desc); i++) {
 		for (j = adsp_app_desc[i].reg_start;
-			j < adsp_app_desc[i].reg_end; j++)
+			j <= adsp_app_desc[i].reg_end; j++)
 			adsp->apps[j].desc = &adsp_app_desc[i];
 	}
 

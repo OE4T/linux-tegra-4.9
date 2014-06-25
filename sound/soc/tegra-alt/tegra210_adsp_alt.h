@@ -70,7 +70,9 @@ enum tegra210_adsp_virt_regs {
 	TEGRA210_ADSP_PLUGIN_AAC_DEC1, /* 38 */
 	TEGRA210_ADSP_PLUGIN_AAC_DEC2,
 
-	TEGRA210_ADSP_VIRT_REG_MAX, /* 40 */
+	TEGRA210_ADSP_PLUGIN_SPKPROT, /* 40 */
+
+	TEGRA210_ADSP_VIRT_REG_MAX, /* 41 */
 };
 
 /* Supports widget id 0x0 - 0xFF */
@@ -92,14 +94,16 @@ enum tegra210_adsp_virt_regs {
 #define ADSP_FE_START		TEGRA210_ADSP_FRONT_END1
 #define ADSP_FE_END		TEGRA210_ADSP_FRONT_END5
 #define ADSP_ADMAIF_START	TEGRA210_ADSP_ADMAIF1
-#define ADSP_ADMAIF_END		TEGRA210_ADSP_ADMAIF10
+#define ADSP_ADMAIF_END	TEGRA210_ADSP_ADMAIF10
 
 #define IS_APM_IN(reg)	((reg >= APM_IN_START) && (reg <= APM_IN_END))
 #define IS_APM_OUT(reg) ((reg >= APM_OUT_START) && (reg <= APM_OUT_END))
 #define IS_APM(reg)	(IS_APM_IN(reg) | IS_APM_OUT(reg))
 #define IS_MP3(reg)	((reg >= MP3_DEC_START) && (reg <= MP3_DEC_END))
 #define IS_ADMA(reg)	((reg >= ADMA_START) && (reg <= ADMA_END))
-#define IS_ADSP_APP(reg) (IS_APM(reg) | IS_MP3(reg) | IS_ADMA(reg))
+#define IS_SPKPROT(reg)	(TEGRA210_ADSP_PLUGIN_SPKPROT == reg)
+#define IS_ADSP_APP(reg) (IS_APM(reg) | IS_MP3(reg) | IS_ADMA(reg) | \
+			IS_SPKPROT(reg))
 
 #define IS_ADSP_FE(reg)	((reg >= ADSP_FE_START) && (reg <= ADSP_FE_END))
 #define IS_ADSP_ADMAIF(reg) ((reg >= ADSP_ADMAIF_START) && \

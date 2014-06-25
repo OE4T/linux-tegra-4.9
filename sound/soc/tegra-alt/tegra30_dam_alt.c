@@ -554,6 +554,12 @@ static int tegra30_dam_in_hw_params(struct snd_pcm_substream *substream,
 	/* program coeff ram */
 	tegra30_dam_write_coeff_ram(dam);
 
+	if (dam->srate_in < 0) {
+		dev_err(dev, "DAM%d input rate not set: %d\n",
+			dev->id, -EINVAL);
+		return -EINVAL;
+	}
+
 	/* set input rate */
 	regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
 			TEGRA_DAM_CH0_CTRL_FSIN_MASK,
@@ -608,7 +614,7 @@ static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static int tegra30_dam_get_srate(struct snd_kcontrol *kcontrol,
+static int tegra30_dam_get_out_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
@@ -620,7 +626,7 @@ static int tegra30_dam_get_srate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra30_dam_put_srate(struct snd_kcontrol *kcontrol,
+static int tegra30_dam_put_out_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
@@ -628,6 +634,30 @@ static int tegra30_dam_put_srate(struct snd_kcontrol *kcontrol,
 
 	/* update the dam output rate */
 	dam->srate_out = ucontrol->value.integer.value[0] - 1;
+
+	return 0;
+}
+
+static int tegra30_dam_get_in_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+
+	/* get the dam input rate */
+	ucontrol->value.integer.value[0] = dam->srate_in + 1;
+
+	return 0;
+}
+
+static int tegra30_dam_put_in_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+
+	/* update the dam input rate */
+	dam->srate_in = ucontrol->value.integer.value[0] - 1;
 
 	return 0;
 }
@@ -729,7 +759,9 @@ static const struct soc_enum tegra30_dam_srate =
 
 static const struct snd_kcontrol_new tegra30_dam_controls[] = {
 	SOC_ENUM_EXT("output rate", tegra30_dam_srate,
-		tegra30_dam_get_srate, tegra30_dam_put_srate),
+		tegra30_dam_get_out_srate, tegra30_dam_put_out_srate),
+	SOC_ENUM_EXT("input rate", tegra30_dam_srate,
+		tegra30_dam_get_in_srate, tegra30_dam_put_in_srate),
 };
 
 static struct snd_soc_codec_driver tegra30_dam_codec = {
@@ -836,7 +868,8 @@ static int tegra30_dam_platform_probe(struct platform_device *pdev)
 
 	dam->soc_data = soc_data;
 
-	/* initialize default output srate */
+	/* initialize default srate (in = 8khz; out = 48khz) */
+	dam->srate_in = TEGRA_DAM_FS8;
 	dam->srate_out = TEGRA_DAM_FS48;
 
 	dam->clk_dam = devm_clk_get(&pdev->dev, NULL);

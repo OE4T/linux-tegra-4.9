@@ -124,9 +124,9 @@ static int tegra124_afc_set_thresholds(struct tegra124_afc *afc,
 	if (tegra124_afc_get_dam_id(afc_id)) {
 		/* TODO program thresholds using SRC_BURST */
 	} else {
-		value = 8 << TEGRA_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
-		value |= 7 << TEGRA_AFC_FIFO_START_THRESHOLD_SHIFT;
-		value |= 6;
+		value = 4 << TEGRA_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		value |= 3 << TEGRA_AFC_FIFO_START_THRESHOLD_SHIFT;
+		value |= 2;
 	}
 	regmap_write(afc->regmap, TEGRA_AFC_THRESHOLDS_AFC, value);
 

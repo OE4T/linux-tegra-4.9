@@ -1054,6 +1054,9 @@ struct pmu_gk20a {
 	u32 sample_buffer;
 
 	struct mutex isr_mutex;
+	struct mutex isr_enable_lock;
+	bool isr_enabled;
+
 	bool zbc_ready;
 	union {
 		struct pmu_cmdline_args_v0 args_v0;

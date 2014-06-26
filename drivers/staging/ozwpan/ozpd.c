@@ -282,7 +282,7 @@ void oz_pd_destroy(struct oz_pd *pd)
 
 	ret = schedule_work(&pd->workitem);
 	if (!ret)
-		pr_info("failed to schedule workitem\n");
+		pr_info("oz_pd_destory failed to schedule workitem\n");
 }
 /*------------------------------------------------------------------------------
  */
@@ -312,8 +312,10 @@ void oz_pd_notify_uevent(struct oz_pd *pd)
 	INIT_WORK(&pd->uevent_workitem, oz_pd_uevent_workitem);
 	ret = schedule_work(&pd->uevent_workitem);
 
-	if (!ret)
+	if (!ret) {
 		oz_trace("failed to schedule workitem\n");
+		oz_pd_put(pd);
+	}
 }
 
 /*------------------------------------------------------------------------------

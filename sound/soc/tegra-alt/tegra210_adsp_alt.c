@@ -64,7 +64,7 @@ static struct tegra210_adsp_app_desc {
 } adsp_app_desc[] = {
 	{"apm", "nvfx.elf",
 		TEGRA210_ADSP_APM_IN1, TEGRA210_ADSP_APM_IN8},
-	{"mp3", "mp3_plugin.elf",
+	{"mp3dec", "mp3dec_plugin.elf",
 		TEGRA210_ADSP_PLUGIN_MP3_DEC1, TEGRA210_ADSP_PLUGIN_MP3_DEC2},
 	{"adma", "adma_plugin.elf",
 		TEGRA210_ADSP_PLUGIN_ADMA1, TEGRA210_ADSP_PLUGIN_ADMA4},
@@ -385,7 +385,7 @@ static int tegra210_adsp_send_connect_msg(struct tegra210_adsp_app *src,
 }
 
 static int tegra210_adsp_send_io_buffer_msg(struct tegra210_adsp_app *app,
-					struct snd_dma_buffer *buf,
+					dma_addr_t addr, size_t size,
 					uint32_t flags)
 {
 	apm_msg_t apm_msg;
@@ -396,8 +396,8 @@ static int tegra210_adsp_send_io_buffer_msg(struct tegra210_adsp_app *app,
 	apm_msg.msg.io_buffer_params.pin_type =
 		IS_APM_IN(app->reg) ? NVFX_TYPE_IN_PORT : NVFX_TYPE_OUT_PORT;
 	apm_msg.msg.io_buffer_params.pin_id = 0;
-	apm_msg.msg.io_buffer_params.addr = (variant_t)buf->addr;
-	apm_msg.msg.io_buffer_params.size = buf->bytes;
+	apm_msg.msg.io_buffer_params.addr = (variant_t)addr;
+	apm_msg.msg.io_buffer_params.size = size;
 
 	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
 }
@@ -484,7 +484,9 @@ static int tegra210_adsp_write_pos_msg(struct tegra210_adsp_app *app,
 
 	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_set_write_position_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_set_write_position_params_t);
-	apm_msg.msg.call_params.method = nvfx_apm_method_set_write_position;
+	apm_msg.msg.call_params.method = IS_APM_IN(app->reg) ?
+		nvfx_apm_method_set_write_position :
+		nvfx_apm_method_set_read_position;
 	apm_msg.msg.position_params.pin_id = 0;
 	apm_msg.msg.position_params.offset = pos;
 
@@ -583,7 +585,6 @@ static int tegra210_adsp_connect_plugin(struct tegra210_adsp *adsp,
 		return -ENODEV;
 
 	src = &adsp->apps[source];
-
 	if (!IS_APM_IN(src->reg)) {
 		ret = tegra210_adsp_connect_plugin(adsp, src);
 		if (ret < 0)
@@ -809,7 +810,8 @@ static int tegra210_adsp_compr_set_params(struct snd_compr_stream *cstream,
 	if (ret < 0)
 		return ret;
 
-	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, &prtd->buf,
+	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, prtd->buf.addr,
+					prtd->buf.bytes,
 					TEGRA210_ADSP_MSG_FLAG_HOLD);
 	if (ret < 0) {
 		dev_err(prtd->dev, "IO buffer send msg failed. err %d.", ret);
@@ -1046,8 +1048,14 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 		}
 	} else {
 		source = tegra210_adsp_get_source(adsp, fe_reg);
-		if (IS_APM_OUT(source))
+		if (IS_APM_OUT(source)) {
+			uint32_t apm_in_reg =
+				APM_IN_START + (source - APM_OUT_START);
+			adsp->apps[apm_in_reg].msg_handler =
+				tegra210_adsp_pcm_msg_handler;
+			adsp->apps[apm_in_reg].private_data = prtd;
 			prtd->fe_apm = &adsp->apps[source];
+		}
 	}
 
 	if (!prtd->fe_apm) {
@@ -1104,7 +1112,8 @@ static int tegra210_adsp_pcm_hw_params(struct snd_pcm_substream *substream,
 		 params_period_size(params),
 		 params_buffer_bytes(params));
 
-	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, buf,
+	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, buf->addr,
+					params_buffer_bytes(params),
 					TEGRA210_ADSP_MSG_FLAG_HOLD);
 	if (ret < 0)
 		return ret;
@@ -1193,15 +1202,19 @@ static snd_pcm_uframes_t tegra210_adsp_pcm_pointer(
 {
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
 	struct tegra210_adsp_app *app = prtd->fe_apm;
-	size_t pos = 0;
+	size_t bytes, pos;
 
-	pos = (app->apm->nvfx_shared_state.output[0].bytes %
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		bytes = app->apm->nvfx_shared_state.output[0].bytes;
+	else
+		bytes = app->apm->nvfx_shared_state.input[0].bytes;
+
+	pos = bytes % frames_to_bytes(substream->runtime,
 		substream->runtime->buffer_size);
 
 	/* TODO : If SRC in path do size conversion */
 
-	dev_vdbg(prtd->dev, "%s position %d bytes %d", __func__, (uint32_t)pos,
-		(int)app->apm->nvfx_shared_state.output[0].bytes);
+	dev_vdbg(prtd->dev, "%s bytes %zu position %zu", __func__, bytes, pos);
 	return bytes_to_frames(substream->runtime, pos);
 }
 
@@ -1801,7 +1814,7 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"MP3-DEC1",	"MP3-DEC1 TX"},		\
 	{ name " MUX",	"MP3-DEC2",	"MP3-DEC2 TX"},		\
 	{ name " MUX",	"AAC-DEC1",	"AAC-DEC1 TX"},		\
-	{ name " MUX",	"AAC-DEC2",	"AAC-DEC1 TX"}
+	{ name " MUX",	"AAC-DEC2",	"AAC-DEC2 TX"}
 
 #define ADSP_EP_MUX_ROUTES(name)				\
 	{ name " RX",		NULL, name " Receive"},		\

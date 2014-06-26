@@ -50,10 +50,6 @@
 #ifndef _hw_ltc_gm20b_h_
 #define _hw_ltc_gm20b_h_
 
-static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
-{
-	return 0x0014046c;
-}
 static inline u32 ltc_ltc0_lts0_dstg_cfg0_r(void)
 {
 	return 0x00140518;
@@ -116,7 +112,7 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_active_f(void)
 }
 static inline u32 ltc_ltc0_lts0_cbc_ctrl1_r(void)
 {
-	return 0x0017e26c;
+	return 0x0014046c;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl2_r(void)
 {

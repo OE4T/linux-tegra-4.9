@@ -246,9 +246,11 @@ static inline u32 gather_count(u32 word)
 
 static void submit_gathers(struct nvhost_job *job)
 {
-	u32 class_id = 0;
 	int i;
 	void *cpuva = NULL;
+	struct nvhost_master *master = nvhost;
+	bool gather_filter_enabled =
+		nvhost_gather_filter_enabled(&master->syncpt);
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -258,12 +260,10 @@ static void submit_gathers(struct nvhost_job *job)
 
 		add_sync_waits(job->ch, g->pre_fence);
 
-		if (g->class_id != class_id) {
+		if (gather_filter_enabled && g->class_id)
 			nvhost_cdma_push(&job->ch->cdma,
 				nvhost_opcode_setclass(g->class_id, 0, 0),
 				NVHOST_OPCODE_NOOP);
-			class_id = g->class_id;
-		}
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from

@@ -116,6 +116,7 @@ struct nvhost_device_data t124_isp_info = {
 	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = NVHOST_MODULE_ISP,
+	.class           = NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.modulemutexes   = {NVMODMUTEX_ISP_0},
 	.exclusive       = true,
 	.keepalive       = true,
@@ -155,6 +156,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid        = (1 << 16) | NVHOST_MODULE_ISP,
+	.class           = NV_VIDEO_STREAMING_ISPB_CLASS_ID,
 	.modulemutexes   = {NVMODMUTEX_ISP_1},
 	.exclusive       = true,
 	.keepalive       = true,
@@ -197,6 +199,7 @@ struct nvhost_device_data t124_vi_info = {
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = NVHOST_MODULE_VI,
+	.class            = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.modulemutexes    = {NVMODMUTEX_VI_0},
 	.exclusive        = true,
 	.keepalive       = true,
@@ -237,6 +240,7 @@ struct nvhost_device_data t124_vi_info = {
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = NVHOST_MODULE_VI,
+	.class            = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.modulemutexes    = {NVMODMUTEX_VI_0},
 	.exclusive        = true,
 	.keepalive       = true,
@@ -274,6 +278,7 @@ struct nvhost_device_data t124_vib_info = {
 	/* FIXME: resolve powergating dependency with DIS */
 	/* FIXME: control clocks from user space instead of hard-coding here */
 	.moduleid         = (1 << 16 | NVHOST_MODULE_VI),
+	.class            = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.modulemutexes    = {NVMODMUTEX_VI_1},
 	.exclusive        = true,
 	.keepalive       = true,
@@ -405,6 +410,7 @@ struct nvhost_device_data t124_vic_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
+	.class                  = NV_GRAPHICS_VIC_CLASS_ID,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
 	.can_powergate		= true,
 	.powergate_delay	= 500,

@@ -62,6 +62,7 @@ struct nvhost_device_data t21_host1x_info = {
 
 struct nvhost_device_data t21_isp_info = {
 	.modulemutexes = {NVMODMUTEX_ISP_0},
+	.class           = NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
@@ -75,6 +76,7 @@ struct nvhost_device_data t21_isp_info = {
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
 	.exclusive     = true,
+	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -92,6 +94,7 @@ struct nvhost_device_data t21_vi_info = {
 #else
 struct nvhost_device_data t21_vib_info = {
 	.modulemutexes = {NVMODMUTEX_VI_1},
+	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
@@ -113,6 +116,7 @@ static struct platform_device tegra_vi01b_device = {
 
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes = {NVMODMUTEX_VI_0},
+	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.exclusive     = true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive = true,
@@ -132,6 +136,7 @@ struct nvhost_device_data t21_vi_info = {
 struct nvhost_device_data t21_vi_i2c_info = {
 	.exclusive     = true,
 	.keepalive = true,
+	.class           = NV_VIDEO_STREAMING_VII2C_CLASS_ID,
 };
 
 struct nvhost_device_data t21_msenc_info = {
@@ -226,6 +231,7 @@ struct nvhost_device_data t21_vic_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,
+	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 

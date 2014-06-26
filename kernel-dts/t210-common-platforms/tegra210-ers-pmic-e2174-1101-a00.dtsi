@@ -317,7 +317,6 @@
 
 			interrupt-parent = <&gpio>;
 			interrupts = <TEGRA_GPIO(Z, 0) 0x0>;
-			extcon-name = "bq2419x-extcon";
 			#extcon-cells = <1>;
 
 			charger {

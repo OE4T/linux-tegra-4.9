@@ -757,6 +757,7 @@ static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	ch->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch->timeout_debug_dump = true;
 	ch->has_timedout = false;
+	ch->obj_class = 0;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */

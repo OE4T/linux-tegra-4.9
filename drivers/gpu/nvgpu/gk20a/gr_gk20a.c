@@ -2641,6 +2641,7 @@ static void __gr_gk20a_free_gr_ctx(struct gk20a *g,
 		gr_ctx->pages, gr_ctx->iova, &attrs);
 	gr_ctx->pages = NULL;
 	gr_ctx->iova = 0;
+	kfree(gr_ctx);
 }
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)

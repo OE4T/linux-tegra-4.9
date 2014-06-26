@@ -571,7 +571,7 @@ exit:
 }
 EXPORT_SYMBOL_GPL(thermal_zone_set_trips);
 
-static void update_temperature(struct thermal_zone_device *tz)
+static int update_temperature(struct thermal_zone_device *tz)
 {
 	int temp, ret;
 
@@ -581,7 +581,7 @@ static void update_temperature(struct thermal_zone_device *tz)
 			dev_warn(&tz->device,
 				 "failed to read out thermal zone (%d)\n",
 				 ret);
-		return;
+		return ret;
 	}
 
 	mutex_lock(&tz->lock);
@@ -596,6 +596,8 @@ static void update_temperature(struct thermal_zone_device *tz)
 	else
 		dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
 			tz->last_temperature, tz->temperature);
+
+	return 0;
 }
 
 static void thermal_zone_device_reset(struct thermal_zone_device *tz)
@@ -619,7 +621,8 @@ void thermal_zone_device_update(struct thermal_zone_device *tz,
 	if (!tz->ops->get_temp)
 		return;
 
-	update_temperature(tz);
+	if (update_temperature(tz))
+		return;
 
 	thermal_zone_set_trips(tz);
 

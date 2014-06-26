@@ -287,7 +287,11 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 		dev_err(adsp->dev, "Failed to load OS.");
 		goto exit;
 	}
-	nvadsp_os_start();
+
+	if (nvadsp_os_start()) {
+		dev_err(adsp->dev, "Failed to start OS");
+		goto exit;
+	}
 
 	/* Load ADSP audio apps */
 	for (i = 0; i < ARRAY_SIZE(adsp_app_desc); i++) {
@@ -370,15 +374,11 @@ static int tegra210_adsp_send_connect_msg(struct tegra210_adsp_app *src,
 	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_fx_connect_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_fx_connect_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_fx_connect;
-	apm_msg.msg.fx_connect_params.plugin_src.pvoid =
-		src->plugin->plugin.pvoid;
-	apm_msg.msg.fx_connect_params.port_src =
-		IS_APM(src->reg) ? NVFX_TYPE_IN_PORT : NVFX_TYPE_OUT_PORT;
+	apm_msg.msg.fx_connect_params.plugin_src.pvoid = IS_APM_IN(src->reg) ?
+		NULL : src->plugin->plugin.pvoid;
 	apm_msg.msg.fx_connect_params.pin_src = 0;
-	apm_msg.msg.fx_connect_params.plugin_dst.pvoid =
-		dst->plugin->plugin.pvoid;
-	apm_msg.msg.fx_connect_params.port_dst =
-		IS_APM(dst->reg) ? NVFX_TYPE_OUT_PORT : NVFX_TYPE_IN_PORT;
+	apm_msg.msg.fx_connect_params.plugin_dst.pvoid = IS_APM_OUT(dst->reg) ?
+		NULL : dst->plugin->plugin.pvoid;
 	apm_msg.msg.fx_connect_params.pin_dst = 0;
 
 	return tegra210_adsp_send_msg(src->apm, &apm_msg, flags);
@@ -390,11 +390,11 @@ static int tegra210_adsp_send_io_buffer_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_set_io_buffer_params_t);
-	apm_msg.msg.call_params.size = sizeof(apm_set_io_buffer_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_io_buffer_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_io_buffer_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_io_buffer;
-	apm_msg.msg.io_buffer_params.pin_type =
-		IS_APM_IN(app->reg) ? NVFX_TYPE_IN_PORT : NVFX_TYPE_OUT_PORT;
+	apm_msg.msg.io_buffer_params.pin_type = IS_APM_IN(app->reg) ?
+		NVFX_PIN_TYPE_INPUT : NVFX_PIN_TYPE_OUTPUT;
 	apm_msg.msg.io_buffer_params.pin_id = 0;
 	apm_msg.msg.io_buffer_params.addr = (variant_t)addr;
 	apm_msg.msg.io_buffer_params.size = size;
@@ -408,12 +408,12 @@ static int tegra210_adsp_send_period_size_msg(struct tegra210_adsp_app *app,
 	apm_msg_t apm_msg;
 
 	apm_msg.msgq_msg.size =
-		MSGQ_MSG_SIZE(apm_set_notification_size_params_t);
+		MSGQ_MSG_SIZE(apm_notification_params_t);
 	apm_msg.msg.call_params.size =
-		sizeof(apm_set_notification_size_params_t);
+		sizeof(apm_notification_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_notification_size;
-	apm_msg.msg.notification_params.pin_type =
-		IS_APM_IN(app->reg) ? NVFX_TYPE_IN_PORT : NVFX_TYPE_OUT_PORT;
+	apm_msg.msg.notification_params.pin_type = IS_APM_IN(app->reg) ?
+		NVFX_PIN_TYPE_INPUT : NVFX_PIN_TYPE_OUTPUT;
 	apm_msg.msg.notification_params.pin_id = 0;
 	apm_msg.msg.notification_params.size = size;
 
@@ -448,7 +448,7 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(nvfx_set_state_params_t);
 	apm_msg.msg.call_params.size = sizeof(nvfx_set_state_params_t);
 	apm_msg.msg.call_params.method = nvfx_method_set_state;
-	apm_msg.msg.set_state_params.state = state;
+	apm_msg.msg.state_params.state = state;
 
 	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
 }
@@ -470,23 +470,23 @@ static int tegra210_adsp_send_eos_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_set_eos_params_t);
-	apm_msg.msg.call_params.size = sizeof(apm_set_eos_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_eos_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_eos_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_eos;
 
 	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
 }
 
-static int tegra210_adsp_write_pos_msg(struct tegra210_adsp_app *app,
+static int tegra210_adsp_send_pos_msg(struct tegra210_adsp_app *app,
 					uint32_t pos, uint32_t flags)
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_set_write_position_params_t);
-	apm_msg.msg.call_params.size = sizeof(apm_set_write_position_params_t);
-	apm_msg.msg.call_params.method = IS_APM_IN(app->reg) ?
-		nvfx_apm_method_set_write_position :
-		nvfx_apm_method_set_read_position;
+	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_position_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_position_params_t);
+	apm_msg.msg.call_params.method = nvfx_apm_method_set_position;
+	apm_msg.msg.position_params.pin_type = IS_APM_IN(app->reg) ?
+		NVFX_PIN_TYPE_INPUT : NVFX_PIN_TYPE_OUTPUT;
 	apm_msg.msg.position_params.pin_id = 0;
 	apm_msg.msg.position_params.offset = pos;
 
@@ -691,7 +691,7 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 	struct tegra210_adsp_pcm_rtd *prtd = app->private_data;
 
 	switch (apm_msg->msg.call_params.method) {
-	case nvfx_apm_method_buffer_empty:
+	case nvfx_apm_method_set_position:
 		snd_pcm_period_elapsed(prtd->substream);
 		break;
 	default:
@@ -707,10 +707,10 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 	struct tegra210_adsp_compr_rtd *prtd = app->private_data;
 
 	switch (apm_msg->msg.call_params.method) {
-	case nvfx_apm_method_buffer_empty:
+	case nvfx_apm_method_set_position:
 		snd_compr_fragment_elapsed(prtd->cstream);
 		break;
-	case nvfx_apm_method_eos_reached: {
+	case nvfx_apm_method_set_eos: {
 		if (!prtd->is_draining) {
 			dev_warn(prtd->dev, "EOS reached before drain");
 			break;
@@ -934,7 +934,7 @@ static int tegra210_adsp_compr_copy(struct snd_compr_stream *cstream,
 		if (copy_from_user(prtd->buf.area, buf + copy, count - copy))
 			return -EFAULT;
 	}
-	tegra210_adsp_write_pos_msg(prtd->fe_apm,
+	tegra210_adsp_send_pos_msg(prtd->fe_apm,
 	    (runtime->total_bytes_available + count) % runtime->buffer_size, 0);
 
 	return count;
@@ -1188,7 +1188,7 @@ static int tegra210_adsp_pcm_ack(struct snd_pcm_substream *substream)
 
 	pos = frames_to_bytes(runtime,
 		runtime->control->appl_ptr % runtime->buffer_size);
-	ret = tegra210_adsp_write_pos_msg(prtd->fe_apm, pos, 0);
+	ret = tegra210_adsp_send_pos_msg(prtd->fe_apm, pos, 0);
 	if (ret < 0) {
 		dev_err(prtd->dev, "Failed to send write position.");
 		return ret;

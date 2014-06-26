@@ -17,8 +17,16 @@
 #ifndef _TEGRA_NVFX_APM_H_
 #define _TEGRA_NVFX_APM_H_
 
-#define NVFX_MAX_FX_IN_APM          4
 #define NVFX_APM_CMD_QUEUE_WSIZE    1024
+
+/**
+ * Pin types
+ *
+ * @NVFX_PIN_TYPE_INPUT  Pin type for input pin
+ * @NVFX_PIN_TYPE_OUTPUT Pin type for output pin
+ */
+#define NVFX_PIN_TYPE_INPUT         0
+#define NVFX_PIN_TYPE_OUTPUT        1
 
 /**
  * apm_mbx_cmd:  commands exchanged using mailbox.
@@ -45,64 +53,56 @@ enum {
 
 	nvfx_apm_method_set_io_buffer,
 	nvfx_apm_method_set_notification_size,
-	nvfx_apm_method_set_write_position,
-	nvfx_apm_method_set_read_position,
+	/*
+	 * CPU to ADSP : Used to indicate new write or read position
+	 * ADSP to CPU : Used to notify buffer position as per notification size
+	*/
+	nvfx_apm_method_set_position,
+	/*
+	 * CPU to ADSP : Used to indicate end of stream
+	 * ADSP to CPU : Used to notify that all input data is consumed
+	 */
 	nvfx_apm_method_set_eos,
-
-	nvfx_apm_method_eos_reached,            /* from ADSP to CPU */
-	nvfx_apm_method_buffer_empty,           /* from ADSP to CPU */
 };
 
+/* For method nvfx_apm_method_set_io_buffer */
 typedef struct {
 	nvfx_call_params_t call_params;
-	uint32_t pin_type; /* NVFX_INPUT_PIN or NVFX_OUTPUT_PIN */
+	uint32_t pin_type; /* NVFX_PIN_TYPE_INPUT or NVFX_PIN_TYPE_INPUT */
 	uint32_t pin_id;
 	variant_t addr;
 	uint32_t size;
 	uint32_t flags;
-} apm_set_io_buffer_params_t;
+} apm_io_buffer_params_t;
 
-/* apm_set_write_position */
+/* For method nvfx_apm_method_set_position */
 typedef struct {
 	nvfx_call_params_t call_params;
+	uint32_t pin_type;    /* NVFX_PIN_TYPE_INPUT or NVFX_PIN_TYPE_INPUT */
 	uint32_t pin_id;
 	uint32_t offset;
-} apm_set_write_position_params_t;
+} apm_position_params_t;
 
-/* apm_set_notification_size */
+/* For method nvfx_apm_method_set_notification_size */
 typedef struct {
 	nvfx_call_params_t call_params;
-	uint32_t pin_type; /* NVFX_INPUT_PORT or NVFX_OUTPUT_PORT */
+	uint32_t pin_type; /* NVFX_PIN_TYPE_INPUT or NVFX_PIN_TYPE_INPUT */
 	uint32_t pin_id;
 	uint32_t size;
-} apm_set_notification_size_params_t;
+} apm_notification_params_t;
 
-/* apm_set_eos */
+/* For nvfx_apm_method_set_eos */
 typedef struct {
 	nvfx_call_params_t call_params;
-} apm_set_eos_params_t;
-
-/* apm_eos_reached */
-typedef struct {
-	nvfx_call_params_t call_params;
-} apm_eos_reached_params_t;
-
-/* apm_buffer_empty */
-typedef struct {
-	nvfx_call_params_t call_params;
-	uint32_t pin_type;          /* NVFX_INPUT_PIN or NVFX_OUTPUT_PIN */
-	uint32_t pin_id;
-} apm_buffer_empty_params_t;
+} apm_eos_params_t;
 
 /* Module specific structures */
 typedef struct {
 	nvfx_call_params_t call_params;
-	variant_t plugin_src; /* pointer to plugin_t */
-	int32_t port_src; /* input or output port */
-	int32_t pin_src; /* pin id to connect */
-	variant_t plugin_dst; /* pointer to plugin_t */
-	int32_t port_dst;
-	int32_t pin_dst;
+	variant_t plugin_src; /* source plugin pointer */
+	int32_t pin_src;      /* input pin id */
+	variant_t plugin_dst; /* destination plugin pointer */;
+	int32_t pin_dst;      /* destination pin id */
 } apm_fx_connect_params_t;
 
 typedef struct {
@@ -124,14 +124,12 @@ typedef union {
 		int32_t header[MSGQ_MESSAGE_HEADER_WSIZE];
 		union {
 			nvfx_call_params_t                 call_params;
-			apm_set_io_buffer_params_t         io_buffer_params;
-			apm_set_write_position_params_t    position_params;
-			apm_set_notification_size_params_t notification_params;
-			nvfx_set_state_params_t            set_state_params;
-			nvfx_reset_params_t                set_reset_params;
-			apm_set_eos_params_t               set_eos_params;
-			apm_eos_reached_params_t           eos_reached_params;
-			apm_buffer_empty_params_t          buffer_empty_params;
+			apm_io_buffer_params_t             io_buffer_params;
+			apm_position_params_t              position_params;
+			apm_notification_params_t          notification_params;
+			nvfx_set_state_params_t            state_params;
+			nvfx_reset_params_t                reset_params;
+			apm_eos_params_t                   eos_params;
 			apm_fx_connect_params_t            fx_connect_params;
 			apm_fx_remove_params_t             fx_remove_params;
 			apm_fx_set_param_params_t          fx_set_param_params;
@@ -150,7 +148,7 @@ typedef union {
 #pragma pack()
 
 /**
- *
+ * APM state structure shared between ADSP & CPU
  */
 typedef struct {
 	nvfx_shared_state_t nvfx_shared_state;

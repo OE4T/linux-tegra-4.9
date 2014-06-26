@@ -46,6 +46,7 @@ enum {
 	nvfx_apm_method_set_io_buffer,
 	nvfx_apm_method_set_notification_size,
 	nvfx_apm_method_set_write_position,
+	nvfx_apm_method_set_read_position,
 	nvfx_apm_method_set_eos,
 
 	nvfx_apm_method_eos_reached,            /* from ADSP to CPU */

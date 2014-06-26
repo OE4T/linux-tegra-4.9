@@ -375,9 +375,8 @@ static int tegra210_admaif_enable(struct snd_soc_dapm_widget *w,
 	struct device *dev = codec->dev;
 	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
 
+	/* Note: ADMAIF channel is enabled/disabled by ADSP */
 	tegra210_admaif_global_enable(admaif, !!SND_SOC_DAPM_EVENT_ON(event));
-	regmap_update_bits(admaif->regmap, w->reg, w->mask,
-			!!SND_SOC_DAPM_EVENT_ON(event));
 
 	return 0;
 }
@@ -478,15 +477,11 @@ static struct snd_soc_dai_driver tegra210_admaif_codec_dais[] = {
 
 #define ADMAIF_WIDGETS(id)					\
 	SND_SOC_DAPM_AIF_IN_E("ADMAIF" #id " FIFO RX", NULL, 0,	\
-		TEGRA210_ADMAIF_XBAR_TX_ENABLE +		\
-		((id - 1) * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE),\
-		TEGRA210_ADMAIF_XBAR_TX_ENABLE_SHIFT, 0,	\
+		SND_SOC_NOPM, 0, 0,				\
 		tegra210_admaif_enable,				\
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
 	SND_SOC_DAPM_AIF_OUT_E("ADMAIF" #id " FIFO TX", NULL, 0,\
-		TEGRA210_ADMAIF_XBAR_RX_ENABLE +		\
-		((id - 1) * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE),\
-		TEGRA210_ADMAIF_XBAR_RX_ENABLE_SHIFT, 0,	\
+		SND_SOC_NOPM, 0, 0,				\
 		tegra210_admaif_enable,				\
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
 	SND_SOC_DAPM_AIF_IN("ADMAIF" #id " CIF RX", NULL, 0,	\

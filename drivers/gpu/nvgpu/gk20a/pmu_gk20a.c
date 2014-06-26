@@ -1542,12 +1542,15 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	void *ucode_ptr;
 	DEFINE_DMA_ATTRS(attrs);
 
+	if (g->pmu_fw) {
+		gk20a_init_pmu(pmu);
+		return 0;
+	}
+
+	g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
 	if (!g->pmu_fw) {
-		g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
-		if (!g->pmu_fw) {
-			gk20a_err(d, "failed to load pmu ucode!!");
-			return err;
-		}
+		gk20a_err(d, "failed to load pmu ucode!!");
+		return err;
 	}
 
 	gk20a_dbg_fn("firmware loaded");

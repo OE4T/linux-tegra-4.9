@@ -794,7 +794,10 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	if (mapped_buffer->flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
 		mutex_unlock(&vm->update_gmmu_lock);
 
-		retries = 1000;
+		if (tegra_platform_is_silicon())
+			retries = 1000;
+		else
+			retries = 1000000;
 		while (retries) {
 			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
 				break;

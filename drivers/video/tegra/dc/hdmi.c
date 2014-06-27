@@ -773,7 +773,7 @@ static bool tegra_dc_hdmi_valid_pixclock(const struct tegra_dc *dc,
 
 static bool tegra_dc_check_constraint(const struct fb_videomode *mode)
 {
-	return mode->hsync_len > 1 && mode->vsync_len > 1 &&
+	return mode->hsync_len >= 1 && mode->vsync_len >= 1 &&
 		mode->lower_margin + mode->vsync_len + mode->upper_margin > 1 &&
 		mode->xres >= 16 && mode->yres >= 16;
 }

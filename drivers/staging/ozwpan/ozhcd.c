@@ -34,6 +34,9 @@
 #include "oztrace.h"
 #include "ozurbparanoia.h"
 #include "ozhcd.h"
+#include "ozpd.h"
+#include "ozproto.h"
+#include "ozusbsvc.h"
 
 #define OZ_HUB_DEBOUNCE_TIMEOUT	1500
 
@@ -756,6 +759,7 @@ void oz_hcd_pd_departed(void *hport)
 	struct oz_port *port = (struct oz_port *)hport;
 	struct oz_hcd *ozhcd;
 	void *hpd;
+	struct usb_hcd *hcd;
 	struct oz_endpoint *ep = NULL;
 
 	oz_trace("%s:\n", __func__);
@@ -798,6 +802,8 @@ void oz_hcd_pd_departed(void *hport)
 	spin_unlock_bh(&port->port_lock);
 	if (ep)
 		oz_ep_free(port, ep);
+	hcd = ozhcd->hcd;
+	clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	oz_trace_msg(H, "usb_hcd_poll_rh_status()\n");
 	usb_hcd_poll_rh_status(ozhcd->hcd);
 	oz_usb_put(hpd);
@@ -1995,6 +2001,29 @@ static int oz_set_port_feature(struct usb_hcd *hcd, u16 wvalue, u16 windex)
 		ozhcd->ports[port_id-1].bus_addr = 0;
 		hpd = oz_claim_hpd(&ozhcd->ports[port_id-1]);
 		if (hpd != NULL) {
+			struct oz_usb_ctx *usb_ctx = (struct oz_usb_ctx *)hpd;
+			struct oz_pd *pd = (struct oz_pd *)usb_ctx->pd;
+
+			/* FIXME: Hack to reset network interface
+			 * Unrecoverable situation occured.
+			 */
+			if (pd && ((++pd->reset_retry > 2) ||
+				(!(pd->state & OZ_PD_S_CONNECTED)))) {
+				char *_net_dev = "";
+
+				pr_info("OZ: tear down network interface\n");
+				spin_lock_bh(&port->port_lock);
+				port->flags |= OZ_PORT_F_CHANGED;
+				spin_unlock_bh(&port->port_lock);
+				oz_usb_put(hpd);
+
+				oz_pd_stop(pd);
+				msleep(10);
+				oz_protocol_term();
+				msleep(100);
+				oz_protocol_init(_net_dev);
+				break;
+			}
 			oz_usb_reset_device(hpd);
 			oz_usb_put(hpd);
 		}
@@ -2083,6 +2112,10 @@ static int oz_clear_port_feature(struct usb_hcd *hcd, u16 wvalue, u16 windex)
 	case USB_PORT_FEAT_C_CONNECTION:
 		oz_trace("USB_PORT_FEAT_C_CONNECTION\n");
 		clear_bits = (USB_PORT_STAT_C_CONNECTION << 16);
+		spin_lock_bh(&port->port_lock);
+		port->flags |= OZ_PORT_F_CHANGED;
+		spin_unlock_bh(&port->port_lock);
+
 		break;
 	case USB_PORT_FEAT_C_ENABLE:
 		oz_trace("USB_PORT_FEAT_C_ENABLE\n");

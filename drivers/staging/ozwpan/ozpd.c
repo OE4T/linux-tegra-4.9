@@ -202,6 +202,7 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 		hrtimer_init(&pd->timeout, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		pd->heartbeat.function = oz_pd_heartbeat_event;
 		pd->timeout.function = oz_pd_timeout_event;
+		pd->reset_retry = 0;
 		atomic_set(&pd->pd_destroy_scheduled, 0);
 		memset(&pd->workitem, 0, sizeof(pd->workitem));
 		INIT_WORK(&pd->workitem, oz_pd_free);

@@ -111,6 +111,7 @@ struct oz_pd {
 	struct work_struct workitem;
 	struct work_struct uevent_workitem;
 	atomic_t	pd_destroy_scheduled;
+	unsigned int reset_retry;
 	u8	up_audio_buf;
 };
 

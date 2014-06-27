@@ -37,8 +37,6 @@
 #define DRV_NAME "tegra-snd-grenada"
 struct tegra_grenada {
 	struct tegra_asoc_audio_clock_info audio_clock;
-	struct platform_device *spdif_codec[4];
-	unsigned int num_codecs;
 };
 
 static int tegra_grenada_hw_params(struct snd_pcm_substream *substream,
@@ -1257,26 +1255,6 @@ static struct snd_soc_card snd_soc_tegra_grenada = {
 	.fully_routed = true,
 };
 
-static struct platform_device_info spdif_x_codec_info = {
-	.name = "spdif-dit",
-	.id = 0,
-};
-
-static struct platform_device_info spdif_y_codec_info = {
-	.name = "spdif-dit",
-	.id = 1,
-};
-
-static struct platform_device_info spdif_z_codec_info = {
-	.name = "spdif-dit",
-	.id = 2,
-};
-
-static struct platform_device_info spdif_s_codec_info = {
-	.name = "spdif-dit",
-	.id = 3,
-};
-
 static int tegra_grenada_driver_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1337,16 +1315,33 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 					tegra_grenada_links[0].cpu_of_node;
 		}
 
-		/* I2S dai links */
-		of_property_read_string(np, "nvidia,audio-codec-x",
-					&tegra_grenada_links[10].codec_name);
-		if (!tegra_grenada_links[10].codec_name) {
+		/* audio codec DAI */
+		tegra_grenada_links[10].codec_of_node = of_parse_phandle(np,
+					"nvidia,audio-codec-x", 0);
+		if (!tegra_grenada_links[10].codec_of_node) {
 			dev_err(&pdev->dev,
 				"Property 'nvidia,audio-codec-x' missing or invalid\n");
 			ret = -EINVAL;
 			goto err;
 		}
+		tegra_grenada_links[12].codec_of_node = of_parse_phandle(np,
+					"nvidia,audio-codec-y", 0);
+		if (!tegra_grenada_links[12].codec_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,audio-codec-y' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		tegra_grenada_links[14].codec_of_node = of_parse_phandle(np,
+					"nvidia,audio-codec-z", 0);
+		if (!tegra_grenada_links[14].codec_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,audio-codec-z' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
 
+		/* I2S dai links */
 		tegra_grenada_links[10].cpu_of_node = of_parse_phandle(np,
 					"nvidia,i2s-controller-1", 0);
 		if (!tegra_grenada_links[10].cpu_of_node) {
@@ -1360,15 +1355,6 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 					tegra_grenada_links[10].cpu_of_node;
 		tegra_grenada_links[11].cpu_of_node = tegra_grenada_links[0].codec_of_node;
 
-		of_property_read_string(np, "nvidia,audio-codec-y",
-					&tegra_grenada_links[12].codec_name);
-		if (!tegra_grenada_links[12].codec_name) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,audio-codec-y' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
-
 		tegra_grenada_links[12].cpu_of_node = of_parse_phandle(np,
 					"nvidia,i2s-controller-2", 0);
 		if (!tegra_grenada_links[12].cpu_of_node) {
@@ -1381,15 +1367,6 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		tegra_grenada_links[13].codec_of_node =
 					tegra_grenada_links[12].cpu_of_node;
 		tegra_grenada_links[13].cpu_of_node = tegra_grenada_links[0].codec_of_node;
-
-		of_property_read_string(np, "nvidia,audio-codec-z",
-					&tegra_grenada_links[14].codec_name);
-		if (!tegra_grenada_links[14].codec_name) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,audio-codec-z' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
 
 		tegra_grenada_links[14].cpu_of_node = of_parse_phandle(np,
 					"nvidia,i2s-controller-3", 0);
@@ -1570,9 +1547,9 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		}
 
 		/* SPDIF dai links */
-		of_property_read_string(np, "nvidia,audio-codec-s",
-					&tegra_grenada_links[61].codec_name);
-		if (!tegra_grenada_links[61].codec_name) {
+		tegra_grenada_links[61].codec_of_node = of_parse_phandle(np,
+					"nvidia,audio-codec-s", 0);
+		if (!tegra_grenada_links[61].codec_of_node) {
 			dev_err(&pdev->dev,
 				"Property 'nvidia,audio-codec-s' missing or invalid\n");
 			ret = -EINVAL;
@@ -1655,42 +1632,12 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		}
 	}
 
-	spdif_x_codec_info.parent = &pdev->dev;
-	machine->spdif_codec[0] = platform_device_register_full(&spdif_x_codec_info);
-	if (IS_ERR(machine->spdif_codec[0])) {
-		dev_err(&pdev->dev, "cannot register spdif x codec device\n");
-		goto err;
-	}
-
-	spdif_y_codec_info.parent = &pdev->dev;
-	machine->spdif_codec[1] = platform_device_register_full(&spdif_y_codec_info);
-	if (IS_ERR(machine->spdif_codec[1])) {
-		dev_err(&pdev->dev, "cannot register spdif y codec device\n");
-		goto err_remove_spdif_x_codec;
-	}
-
-	spdif_z_codec_info.parent = &pdev->dev;
-	machine->spdif_codec[2] = platform_device_register_full(&spdif_z_codec_info);
-	if (IS_ERR(machine->spdif_codec[2])) {
-		dev_err(&pdev->dev, "cannot register spdif z codec device\n");
-		goto err_remove_spdif_y_codec;
-	}
-
-	spdif_s_codec_info.parent = &pdev->dev;
-	machine->spdif_codec[3] = platform_device_register_full(&spdif_s_codec_info);
-	if (IS_ERR(machine->spdif_codec[3])) {
-		dev_err(&pdev->dev, "cannot register spdif s codec device\n");
-		goto err_remove_spdif_z_codec;
-	}
-
-	machine->num_codecs = 4;
-
 #ifndef CONFIG_MACH_GRENADA
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,
 					card);
 	if (ret)
-		goto err_spdif_unregister;
+		goto err;
 #endif
 
 	ret = snd_soc_register_card(card);
@@ -1705,15 +1652,7 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 err_fini_utils:
 #ifndef CONFIG_MACH_GRENADA
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
-err_spdif_unregister:
 #endif
-	platform_device_del(machine->spdif_codec[3]);
-err_remove_spdif_z_codec:
-	platform_device_del(machine->spdif_codec[2]);
-err_remove_spdif_y_codec:
-	platform_device_del(machine->spdif_codec[1]);
-err_remove_spdif_x_codec:
-	platform_device_del(machine->spdif_codec[0]);
 err:
 	return ret;
 }
@@ -1721,15 +1660,11 @@ err:
 static int tegra_grenada_driver_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
-	unsigned int i;
 
 	snd_soc_unregister_card(card);
 #ifndef CONFIG_MACH_GRENADA
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 #endif
-	for (i = 0; i < machine->num_codecs; i++)
-		platform_device_del(machine->spdif_codec[i]);
 
 	return 0;
 }

@@ -274,6 +274,7 @@ const u32 init_reg[] = {
 	DSI_INIT_SEQ_DATA_5,
 	DSI_INIT_SEQ_DATA_6,
 	DSI_INIT_SEQ_DATA_7,
+	DSI_INIT_SEQ_DATA_15,
 	DSI_DCS_CMDS,
 	DSI_PKT_SEQ_0_LO,
 	DSI_PKT_SEQ_1_LO,
@@ -859,7 +860,7 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 				struct dsi_phy_timing_inclk *phy_timing_clk,
 				u32 clk_ps, u8 lphs)
 {
-	if (tegra_platform_is_fpga() && !(dsi->info.ganged_type)) {
+	if (tegra_platform_is_fpga()) {
 		clk_ps = (1000 * 1000 * 1000) / (dsi->info.fpga_freq_khz ?
 			dsi->info.fpga_freq_khz : DEFAULT_FPGA_FREQ_KHZ);
 	}
@@ -2099,7 +2100,7 @@ tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 		dev_info(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
 }
 
-#ifdef CONFIG_ARCH_TEGRA_13x_SOC
+#if defined(CONFIG_ARCH_TEGRA_13x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
@@ -2224,8 +2225,8 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_12x_SOC
-static void __maybe_unused tegra_dsi_mipi_calibration_12x
-(struct tegra_dc_dsi_data *dsi)
+static void __maybe_unused
+tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 	struct clk *clk72mhz = NULL;
@@ -2533,7 +2534,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_11x(dsi);
 #elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		tegra_dsi_mipi_calibration_14x(dsi);
-#elif defined(CONFIG_ARCH_TEGRA_13x_SOC)
+#elif defined(CONFIG_ARCH_TEGRA_13x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		tegra_dsi_mipi_calibration_13x(dsi);
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_dsi_mipi_calibration_12x(dsi);
@@ -2625,6 +2626,16 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		for (i = 0; i < ARRAY_SIZE(init_reg_vs1_ext); i++)
 			tegra_dsi_writel(dsi, 0, init_reg_vs1_ext[i]);
 	}
+
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (tegra_platform_is_fpga()) {
+		if (dsi->info.video_data_type ==
+				TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {
+			/* HW fpga WAR: dsi byte clk to dsi pixel clk ratio */
+			tegra_dsi_writel(dsi, 0x8, DSI_INIT_SEQ_DATA_15);
+		}
+	}
+#endif
 
 	tegra_dsi_pad_calibration(dsi);
 

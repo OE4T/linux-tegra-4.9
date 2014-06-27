@@ -1721,9 +1721,9 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 
 	case TEGRA_DC_OUT_HDMI:
-#ifdef CONFIG_TEGRA_HDMI2_0
+#if	defined(CONFIG_TEGRA_HDMI2_0)
 		dc->out_ops = &tegra_dc_hdmi2_0_ops;
-#else
+#elif defined(CONFIG_TEGRA_HDMI)
 		dc->out_ops = &tegra_dc_hdmi_ops;
 #endif
 		break;
@@ -3181,6 +3181,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
+
+	if (tegra_platform_is_linsim()) {
+		dev_info(&ndev->dev, "DC instances are not present on linsim\n");
+		return -ENODEV;
+	}
 
 	if (!np && !ndev->dev.platform_data) {
 		dev_err(&ndev->dev, "no platform data\n");

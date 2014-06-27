@@ -141,7 +141,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	struct resource *mipi_res = NULL;
 	struct resource *base_res;
 	struct clk *clk;
-	struct clk *fixed_clk;
+	struct clk *fixed_clk = NULL;
 	void __iomem *base;
 	int err = 0;
 #ifdef CONFIG_USE_OF
@@ -196,13 +196,18 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		err = PTR_ERR(clk);
 		goto fail_free_map;
 	}
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC)   || \
+	defined(CONFIG_ARCH_TEGRA_3x_SOC)   || \
+	defined(CONFIG_ARCH_TEGRA_11x_SOC)  || \
+	defined(CONFIG_ARCH_TEGRA_14x_SOC)  || \
+	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	fixed_clk = clk_get_sys("mipi-cal-fixed", NULL);
 	if (IS_ERR_OR_NULL(fixed_clk)) {
 		dev_err(&dc->ndev->dev, "mipi_cal: fixed clk get failed\n");
 		err = PTR_ERR(fixed_clk);
 		goto fail_free_map;
 	}
-
+#endif
 	mutex_init(&mipi_cal->lock);
 	mipi_cal->dc = dc;
 	mipi_cal->res = res;

@@ -300,16 +300,19 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
-	tegra_powergate_partition(dc->powergate_id);
+	if (!tegra_platform_is_fpga())
+		tegra_powergate_partition(dc->powergate_id);
 }
 
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
-	int ret;
-	ret = tegra_unpowergate_partition(dc->powergate_id);
-	if (ret < 0)
-		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
-							__func__, ret);
+	if (!tegra_platform_is_fpga()) {
+		int ret;
+		ret = tegra_unpowergate_partition(dc->powergate_id);
+		if (ret < 0)
+			dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
+								__func__, ret);
+	}
 }
 
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
@@ -358,9 +361,9 @@ static inline u32 tegra_dc_reg_h32(dma_addr_t v)
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 
-#ifdef CONFIG_TEGRA_HDMI2_0
+#if defined(CONFIG_TEGRA_HDMI2_0)
 extern struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops;
-#else
+#elif defined(CONFIG_TEGRA_HDMI)
 extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
 #endif
 

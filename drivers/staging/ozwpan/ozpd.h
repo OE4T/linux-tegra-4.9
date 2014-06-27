@@ -110,7 +110,8 @@ struct oz_pd {
 	unsigned long tasklet_sched;
 	struct work_struct workitem;
 	struct work_struct uevent_workitem;
-	atomic_t	pd_destroy_scheduled;
+	spinlock_t	pd_destroy_lock;
+	bool	pd_destroy_scheduled;
 	unsigned int reset_retry;
 	u8	up_audio_buf;
 };

@@ -161,12 +161,10 @@ void oz_pd_get(struct oz_pd *pd)
  */
 void oz_pd_put(struct oz_pd *pd)
 {
-	atomic_dec(&pd->ref_count);
+	if (atomic_dec_and_test(&pd->ref_count))
+		oz_pd_destroy(pd);
 
-	if (atomic_read(&pd->ref_count) > 0 || atomic_read(&pd->ref_count) < 0)
-		return;
-
-	oz_pd_destroy(pd);
+	WARN_ON(atomic_read(&pd->ref_count) < 0);
 }
 /*------------------------------------------------------------------------------
  * Context: softirq-serialized
@@ -186,7 +184,7 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 		memcpy(pd->mac_addr, mac_addr, ETH_ALEN);
 		if (0 != oz_elt_buf_init(&pd->elt_buff)) {
 			kfree(pd);
-			pd = NULL;
+			return NULL;
 		}
 		spin_lock_init(&pd->tx_frame_lock);
 		INIT_LIST_HEAD(&pd->tx_queue);
@@ -203,7 +201,9 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 		pd->heartbeat.function = oz_pd_heartbeat_event;
 		pd->timeout.function = oz_pd_timeout_event;
 		pd->reset_retry = 0;
-		atomic_set(&pd->pd_destroy_scheduled, 0);
+
+		spin_lock_init(&pd->pd_destroy_lock);
+		pd->pd_destroy_scheduled = false;
 		memset(&pd->workitem, 0, sizeof(pd->workitem));
 		INIT_WORK(&pd->workitem, oz_pd_free);
 	}
@@ -258,7 +258,6 @@ static void oz_pd_free(struct work_struct *work)
 		oz_trace_msg(M, "dev_put(%p)\n", pd->net_dev);
 		dev_put(pd->net_dev);
 	}
-	atomic_set(&pd->pd_destroy_scheduled, 0);
 	kfree(pd);
 }
 
@@ -270,11 +269,15 @@ void oz_pd_destroy(struct oz_pd *pd)
 {
 	int ret;
 
-	if (atomic_read(&pd->pd_destroy_scheduled) > 0) {
+	if (pd == NULL)
+		return;
+	spin_lock_bh(&pd->pd_destroy_lock);
+	if (pd->pd_destroy_scheduled) {
 		pr_info("%s: not rescheduling oz_pd_free\n", __func__);
+		spin_unlock_bh(&pd->pd_destroy_lock);
 		return;
 	}
-	atomic_inc(&pd->pd_destroy_scheduled);
+	pd->pd_destroy_scheduled = true;
 
 	if (hrtimer_active(&pd->timeout))
 		hrtimer_cancel(&pd->timeout);
@@ -283,7 +286,8 @@ void oz_pd_destroy(struct oz_pd *pd)
 
 	ret = schedule_work(&pd->workitem);
 	if (!ret)
-		pr_info("oz_pd_destory failed to schedule workitem\n");
+		pr_info("failed to schedule workitem\n");
+	spin_unlock_bh(&pd->pd_destroy_lock);
 }
 /*------------------------------------------------------------------------------
  */

@@ -26,13 +26,17 @@
 
 #include <mach/dc.h>
 #include <mach/fb.h>
+#include <linux/regulator/consumer.h>
 
 #include "sor.h"
 #include "dp.h"
 #include "dsi.h"
+#include "mipi_cal.h"
 
 int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_init_fakedp_panel(struct tegra_dc *dc);
-int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc);
+int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype);
+int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype);
+int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype);
 
 #endif

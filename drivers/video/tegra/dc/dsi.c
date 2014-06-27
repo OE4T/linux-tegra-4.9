@@ -4207,7 +4207,7 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	struct tegra_dsi_cmd *p_suspend_cmd;
 	int err = 0;
 
-	if (dsi->info.n_data_lanes > MAX_DSI_DATA_LANES)
+	if (p_dsi->n_data_lanes > MAX_DSI_DATA_LANES)
 		return -EINVAL;
 
 	p_init_cmd = kzalloc(sizeof(*p_init_cmd) *
@@ -4399,11 +4399,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			goto err_release_regs;
 		}
 
-		dsi_clk = dsi->info.dsi_instance ?
+		dsi_clk = dsi_pdata->dsi_instance ?
 				clk_get(&dc->ndev->dev,
 				dsi_clk_name[DSI_INSTANCE_1]) :
 				clk_get(&dc->ndev->dev, dsi_clk_name[i]);
-		dsi_lp_clk = dsi->info.dsi_instance ?
+		dsi_lp_clk = dsi_pdata->dsi_instance ?
 				clk_get(&dc->ndev->dev,
 				dsi_lp_clk_name[DSI_INSTANCE_1]) :
 				clk_get(&dc->ndev->dev, dsi_lp_clk_name[i]);
@@ -4856,7 +4856,7 @@ static void tegra_dc_dsi_postpoweroff(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
-	if (!dsi->enabled)
+	if (!dsi->enabled && dsi->avdd_dsi_csi)
 		regulator_disable(dsi->avdd_dsi_csi);
 }
 
@@ -5028,7 +5028,8 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 	return 0;
 err_mipi:
-	regulator_put(dsi->avdd_dsi_csi);
+	if (dsi->avdd_dsi_csi)
+		regulator_put(dsi->avdd_dsi_csi);
 err_reg:
 	_tegra_dc_dsi_destroy(dc);
 	tegra_dc_set_outdata(dc, NULL);

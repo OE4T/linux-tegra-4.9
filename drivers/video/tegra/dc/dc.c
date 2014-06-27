@@ -952,14 +952,40 @@ struct tegra_dc_out_info {
 static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
 static int  boot_out_type = -1;
 
+static int is_invalid_dc_out(struct tegra_dc *dc, long dc_outtype)
+{
+	if ((dc_outtype != boot_out_type) &&
+		(dc_outtype != TEGRA_DC_OUT_FAKE_DP) &&
+		(dc_outtype != TEGRA_DC_OUT_FAKE_DSIA) &&
+		(dc_outtype != TEGRA_DC_OUT_FAKE_DSIB) &&
+		(dc_outtype != TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
+		dev_err(&dc->ndev->dev,
+			"Request 0x%lx is neither fakedp or booted output\n",
+			 dc_outtype);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int is_valid_dsi_out(struct tegra_dc *dc, long dc_outtype)
+{
+	if (((dc_outtype >= TEGRA_DC_OUT_FAKE_DSIA) &&
+		(dc_outtype <= TEGRA_DC_OUT_FAKE_DSI_GANGED)) ||
+		(dc_outtype == TEGRA_DC_OUT_DSI))
+			return 1;
+
+	return 0;
+}
+
 static ssize_t dbg_dc_out_type_set(struct file *file,
 	const char __user *addr, size_t len, loff_t *pos)
 {
 	struct seq_file *m = file->private_data; /* single_open() initialized */
 	struct tegra_dc *dc = m ? m->private : NULL;
-	int cur_dc_out;
+	long cur_dc_out;
 	long out_type;
-	int ret;
+	int ret = 0;
 	bool  allocate = false;
 
 	if (!dc)
@@ -984,20 +1010,11 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 	cur_dc_out = dc->pdata->default_out->type;
 
-	/* Nothing to do if new outtype is same as old */
-	if (cur_dc_out == out_type)
+	/* Nothing to do if new outtype is same as old
+	 * Allow to switch between booted out type and fake panel out
+	 */
+	if ((cur_dc_out == out_type) || is_invalid_dc_out(dc, out_type))
 		return -EINVAL;
-
-	/* Currently allowing only to switch between booted
-		out type and fake dp out */
-	if ((out_type != boot_out_type) &&
-		(out_type != TEGRA_DC_OUT_FAKE_DP) &&
-		(out_type != TEGRA_DC_OUT_FAKE_DSIA)) {
-		dev_err(&dc->ndev->dev,
-			"Request 0x%lx is neither fakedp or booted output\n",
-			 out_type);
-		return -EINVAL;
-	}
 
 	/* disable the dc and output controllers */
 	if (dc->enabled)
@@ -1010,13 +1027,21 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		memcpy(&dbg_dc_out_info[cur_dc_out].out, dc->out,
 					sizeof(struct tegra_dc_out));
 		dbg_dc_out_info[cur_dc_out].mode = dc->mode;
-	}
 
+		/* Could swap dispa/b or ganged mode
+		 * for dsi fake panel, to avoid map/unmap issues
+		 * destroy the existing resources and recreate again
+		 */
+		if (is_valid_dsi_out(dc, cur_dc_out) &&
+			dbg_dc_out_info[cur_dc_out].out_data)
+			tegra_dc_destroy_dsi_resources(dc, cur_dc_out);
+	}
 
 	/* If output already created - reuse it */
 	if (dbg_dc_out_info[out_type].out_data) {
 		mutex_lock(&dc->one_shot_lp_lock);
 		mutex_lock(&dc->lock);
+
 		/* Change the out type */
 		dc->pdata->default_out->type = out_type;
 		dc->out_ops = dbg_dc_out_info[out_type].out_ops;
@@ -1024,11 +1049,23 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		memcpy(dc->out, &dbg_dc_out_info[out_type].out,
 						sizeof(struct tegra_dc_out));
 		dc->mode = dbg_dc_out_info[out_type].mode;
+
+		/* Re-init the resources that are destroyed for dsi */
+		if (is_valid_dsi_out(dc, out_type))
+			ret = tegra_dc_reinit_dsi_resources(dc, out_type);
+
 		mutex_unlock(&dc->lock);
 		mutex_unlock(&dc->one_shot_lp_lock);
+
+		if (ret) {
+			dev_err(&dc->ndev->dev, "Failed to reinit!!!\n");
+			return -EINVAL;
+		}
+
 	} else {
 		/* Change the out type */
 		dc->pdata->default_out->type = out_type;
+
 		/* create new - now restricted to fake_dp only */
 		if (out_type == TEGRA_DC_OUT_FAKE_DP) {
 
@@ -1042,17 +1079,17 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 				allocate = true;
 				tegra_dc_init_fakedp_panel(dc);
 			}
-		} else if (out_type == TEGRA_DC_OUT_FAKE_DSIA) {
+		} else if ((out_type >= TEGRA_DC_OUT_FAKE_DSIA) &&
+				(out_type <= TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
 			/* DSI and fake DSI use same data
 			 * create new if not created yet
 			 */
 			if (!dc->pdata->default_out->depth)
 				dc->pdata->default_out->depth = 18;
 
-			if (!dbg_dc_out_info[TEGRA_DC_OUT_DSI].out_data) {
-				allocate = true;
-				tegra_dc_init_fakedsi_panel(dc);
-			}
+			allocate = true;
+			tegra_dc_init_fakedsi_panel(dc, out_type);
+
 		} else {
 			/* set  back to existing one */
 			dc->pdata->default_out->type = cur_dc_out;
@@ -1659,6 +1696,9 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		break;
 
 	case TEGRA_DC_OUT_DSI:
+	case TEGRA_DC_OUT_FAKE_DSIA:
+	case TEGRA_DC_OUT_FAKE_DSIB:
+	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 		dc->out_ops = &tegra_dc_dsi_ops;
 		break;
 

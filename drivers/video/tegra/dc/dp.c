@@ -2116,25 +2116,23 @@ static int tegra_dp_edid(struct tegra_dc_dp_data *dp)
 
 	memset(&specs, 0 , sizeof(specs));
 
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
-		err = tegra_edid_get_monspecs(dp->dp_edid, &specs);
-		if (err < 0) {
-			dev_err(&dc->ndev->dev,
-				"dp: Failed to get EDID data\n");
-			goto fail;
-		}
-
-		/* set bpp if EDID provides primary color depth */
-		dc->out->depth =
-			dc->out->depth ? : specs.bpc ? specs.bpc * 3 : 18;
-		dev_info(&dc->ndev->dev,
-			"dp: EDID: %d bpc panel, set to %d bpp\n",
-			 specs.bpc, dc->out->depth);
-
-		/* in mm */
-		dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;
-		dc->out->v_size = dc->out->v_size ? : specs.max_y * 10;
+	err = tegra_edid_get_monspecs(dp->dp_edid, &specs);
+	if (err < 0) {
+		dev_err(&dc->ndev->dev,
+			"dp: Failed to get EDID data\n");
+		goto fail;
 	}
+
+	/* set bpp if EDID provides primary color depth */
+	dc->out->depth =
+		dc->out->depth ? : specs.bpc ? specs.bpc * 3 : 18;
+	dev_info(&dc->ndev->dev,
+		"dp: EDID: %d bpc panel, set to %d bpp\n",
+		 specs.bpc, dc->out->depth);
+
+	/* in mm */
+	dc->out->h_size = dc->out->h_size ? : specs.max_x * 10;
+	dc->out->v_size = dc->out->v_size ? : specs.max_y * 10;
 
 	/*
 	 * EDID specifies either the acutal screen sizes or
@@ -2202,7 +2200,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		goto error_enable;
 	}
 
-	if (dp->dp_edid && !dp->dp_edid->data)
+	if (dp->dp_edid && !dp->dp_edid->data &&
+		(dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP))
 		tegra_dp_edid(dp);
 
 	tegra_dp_dpcd_init(dp);

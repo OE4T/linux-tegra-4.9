@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -241,7 +241,7 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 		resource_size(mipi_cal->res));
 
 	if (!np_mipi_cal || !of_device_is_available(np_mipi_cal))
-		release_resource(mipi_cal->res);
+		release_resource(mipi_cal->base_res);
 
 	mutex_unlock(&mipi_cal->lock);
 

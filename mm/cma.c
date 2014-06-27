@@ -353,16 +353,8 @@ err:
 	return ret;
 }
 
-/**
- * cma_alloc() - allocate pages from contiguous area
- * @cma:   Contiguous memory region for which the allocation is performed.
- * @count: Requested number of pages.
- * @align: Requested alignment of pages (in PAGE_SIZE order).
- *
- * This function allocates part of contiguous memory on specific
- * contiguous memory area.
- */
-struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
+struct page *cma_alloc_at(struct cma *cma, size_t count,
+				unsigned int align, phys_addr_t at_addr)
 {
 	unsigned long mask, offset;
 	unsigned long pfn = -1;
@@ -370,6 +362,7 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	unsigned long bitmap_maxno, bitmap_no, bitmap_count;
 	struct page *page = NULL;
 	int ret;
+	unsigned long start_pfn = __phys_to_pfn(at_addr);
 
 	if (!cma || !cma->count)
 		return NULL;
@@ -388,12 +381,16 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	if (bitmap_count > bitmap_maxno)
 		return NULL;
 
+	if (start_pfn && start_pfn < cma->base_pfn)
+		return NULL;
+	start = start_pfn ? start_pfn - cma->base_pfn : start;
+
 	for (;;) {
 		mutex_lock(&cma->lock);
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
 				bitmap_maxno, start, bitmap_count, mask,
 				offset);
-		if (bitmap_no >= bitmap_maxno) {
+		if (bitmap_no >= bitmap_maxno || (start && start != bitmap_no)) {
 			mutex_unlock(&cma->lock);
 			break;
 		}
@@ -415,7 +412,7 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 		}
 
 		cma_clear_bitmap(cma, pfn, count);
-		if (ret != -EBUSY)
+		if (ret != -EBUSY || start)
 			break;
 
 		pr_debug("%s(): memory range at %p is busy, retrying\n",
@@ -428,6 +425,20 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
+}
+
+/**
+ * cma_alloc() - allocate pages from contiguous area
+ * @cma:   Contiguous memory region for which the allocation is performed.
+ * @count: Requested number of pages.
+ * @align: Requested alignment of pages (in PAGE_SIZE order).
+ *
+ * This function allocates part of contiguous memory on specific
+ * contiguous memory area.
+ */
+struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
+{
+	return cma_alloc_at(cma, count, align, 0);
 }
 
 /**

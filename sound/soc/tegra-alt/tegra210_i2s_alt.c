@@ -82,6 +82,13 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 static int tegra210_i2s_runtime_suspend(struct device *dev)
 {
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+	int ret;
+
+	if (!IS_ERR(i2s->pin_idle_state)) {
+		ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
+		if (ret < 0)
+			dev_err(dev, "setting dap pinctrl idle state failed\n");
+	}
 
 	regcache_cache_only(i2s->regmap, true);
 	clk_disable_unprepare(i2s->clk_i2s);
@@ -93,6 +100,13 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 {
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int ret;
+
+	if (!IS_ERR(i2s->pin_default_state)) {
+		ret = pinctrl_select_state(i2s->pinctrl,
+					i2s->pin_default_state);
+		if (ret < 0)
+			dev_err(dev, "setting dap pinctrl default state failed\n");
+	}
 
 	ret = clk_prepare_enable(i2s->clk_i2s);
 	if (ret) {
@@ -591,6 +605,33 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		goto err_pll_a_out0_clk_put;
 	}
 
+	i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(i2s->pinctrl)) {
+		dev_warn(&pdev->dev, "Missing pinctrl device\n");
+		goto err_dap;
+	}
+
+	i2s->pin_default_state = pinctrl_lookup_state(i2s->pinctrl,
+								"dap_active");
+	if (IS_ERR(i2s->pin_default_state)) {
+		dev_warn(&pdev->dev, "Missing dap-active state\n");
+		goto err_dap;
+	}
+
+	i2s->pin_idle_state = pinctrl_lookup_state(i2s->pinctrl,
+							"dap_inactive");
+	if (IS_ERR(i2s->pin_idle_state)) {
+		dev_warn(&pdev->dev, "Missing dap-inactive state\n");
+		goto err_dap;
+	}
+
+	ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "setting state failed\n");
+		goto err_dap;
+	}
+
+err_dap:
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra210_i2s_runtime_resume(&pdev->dev);

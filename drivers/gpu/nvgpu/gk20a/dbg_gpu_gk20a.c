@@ -576,6 +576,8 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			if (err)
 				return -EPERM;
 
+			/*do elpg disable before clock gating */
+			gk20a_pmu_disable_elpg(g);
 			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 					false);
 			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
@@ -586,7 +588,6 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
 			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
 
-			gk20a_pmu_disable_elpg(g);
 		}
 
 		dbg_s->is_pg_disabled = true;

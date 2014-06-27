@@ -51,14 +51,11 @@ static struct gk20a_alloc_block *find_block_prepare(
 		struct gk20a_alloc_block **pprev, struct rb_node ***rb_link,
 		struct rb_node **rb_parent);
 
-static u32 check_free_space(u32 addr, u32 limit, u32 len, u32 align);
 static void update_free_addr_cache(struct gk20a_allocator *allocator,
 		struct gk20a_alloc_block *block,
 		u32 addr, u32 len, bool free);
 static int find_free_area(struct gk20a_allocator *allocator,
 		u32 *addr, u32 len);
-static int find_free_area_nc(struct gk20a_allocator *allocator,
-		u32 *addr, u32 *len);
 
 static void adjust_block(struct gk20a_alloc_block *block,
 		u32 start, u32 end,
@@ -72,13 +69,8 @@ static int split_block(struct gk20a_allocator *allocator,
 
 static int block_alloc_single_locked(struct gk20a_allocator *allocator,
 		u32 *addr, u32 len);
-static int block_alloc_list_locked(struct gk20a_allocator *allocator,
-		u32 *addr, u32 len,
-		struct gk20a_alloc_block **pblock);
 static int block_free_locked(struct gk20a_allocator *allocator,
 		u32 addr, u32 len);
-static void block_free_list_locked(struct gk20a_allocator *allocator,
-		struct gk20a_alloc_block *list);
 
 /* link a block into allocator block list */
 static inline void link_block_list(struct gk20a_allocator *allocator,
@@ -337,16 +329,6 @@ find_block_prepare(struct gk20a_allocator *allocator, u32 addr,
 	return block;
 }
 
-/* return available space */
-static u32 check_free_space(u32 addr, u32 limit, u32 len, u32 align)
-{
-	if (addr >= limit)
-		return 0;
-	if (addr + len <= limit)
-		return len;
-	return (limit - addr) & ~(align - 1);
-}
-
 /* update first_free_addr/last_free_addr based on new free addr
    called when free block(s) and allocate block(s) */
 static void update_free_addr_cache(struct gk20a_allocator *allocator,
@@ -430,74 +412,6 @@ full_search:
 				*addr, len);
 			allocator_dbg(allocator, "next free addr: %d",
 				allocator->last_free_addr);
-			return 0;
-		}
-		if (*addr + allocator->cached_hole_size < block->start)
-			allocator->cached_hole_size = block->start - *addr;
-		*addr = block->end;
-	}
-}
-
-/* find a free address range for as long as it meets alignment or meet len */
-static int find_free_area_nc(struct gk20a_allocator *allocator,
-			u32 *addr, u32 *len)
-{
-	struct gk20a_alloc_block *block;
-	u32 start_addr;
-	u32 avail_len;
-
-	/* fixed addr allocation */
-	if (*addr) {
-		block = find_block(allocator, *addr);
-		if (allocator->limit - *len >= *addr) {
-			if (!block)
-				return 0;
-
-			avail_len = check_free_space(*addr, block->start,
-						*len, allocator->align);
-			if (avail_len != 0) {
-				update_free_addr_cache(allocator, block,
-					*addr, avail_len, false);
-				allocator_dbg(allocator,
-					"free space between %d, %d, len %d",
-					*addr, block->start, avail_len);
-				allocator_dbg(allocator, "next free addr: %d",
-					allocator->last_free_addr);
-				*len = avail_len;
-				return 0;
-			} else
-				return -ENOMEM;
-		} else
-			return -ENOMEM;
-	}
-
-	start_addr = *addr = allocator->first_free_addr;
-
-	allocator_dbg(allocator, "start search addr : %d", start_addr);
-
-	for (block = find_block(allocator, *addr);; block = block->next) {
-		if (allocator->limit - *len < *addr)
-			return -ENOMEM;
-		if (!block) {
-			update_free_addr_cache(allocator, block,
-					*addr, *len, false);
-			allocator_dbg(allocator, "free space from %d, len %d",
-				*addr, *len);
-			allocator_dbg(allocator, "next free addr: %d",
-				allocator->first_free_addr);
-			return 0;
-		}
-
-		avail_len = check_free_space(*addr, block->start,
-					*len, allocator->align);
-		if (avail_len != 0) {
-			update_free_addr_cache(allocator, block,
-					*addr, avail_len, false);
-			allocator_dbg(allocator, "free space between %d, %d, len %d",
-				*addr, block->start, avail_len);
-			allocator_dbg(allocator, "next free addr: %d",
-				allocator->first_free_addr);
-			*len = avail_len;
 			return 0;
 		}
 		if (*addr + allocator->cached_hole_size < block->start)
@@ -670,73 +584,6 @@ static int block_alloc_single_locked(struct gk20a_allocator *allocator,
 	return 0;
 }
 
-static int block_alloc_list_locked(struct gk20a_allocator *allocator,
-	u32 *addr_req, u32 nc_len, struct gk20a_alloc_block **pblock)
-{
-	struct gk20a_alloc_block *block;
-	struct gk20a_alloc_block *nc_head = NULL, *nc_prev = NULL;
-	u32 addr = *addr_req, len = nc_len;
-	int err = 0;
-
-	*addr_req = ~0;
-
-	while (nc_len > 0) {
-		err = find_free_area_nc(allocator, &addr, &len);
-		if (err) {
-			allocator_dbg(allocator, "not enough free space");
-			goto clean_up;
-		}
-
-		/* never merge non-contiguous allocation block,
-		   just create a new block */
-		block = kmem_cache_zalloc(allocator->block_cache,
-					GFP_KERNEL);
-		if (!block) {
-			err = -ENOMEM;
-			goto clean_up;
-		}
-
-		block->allocator = allocator;
-		block->start = addr;
-		block->end = addr + len;
-
-		insert_block(allocator, block);
-
-		block->nc_prev = nc_prev;
-		if (nc_prev)
-			nc_prev->nc_next = block;
-		nc_prev = block;
-		block->nc_block = true;
-
-		if (!nc_head)
-			nc_head = block;
-
-		if (*addr_req == ~0)
-			*addr_req = addr;
-
-		addr = 0;
-		nc_len -= len;
-		len = nc_len;
-		allocator_dbg(allocator, "remaining length %d", nc_len);
-	}
-
-clean_up:
-	if (err) {
-		while (nc_head) {
-			unlink_block(allocator, nc_head, nc_head->prev);
-			nc_prev = nc_head;
-			nc_head = nc_head->nc_next;
-			kmem_cache_free(allocator->block_cache, nc_prev);
-		}
-		*pblock = NULL;
-		*addr_req = ~0;
-	} else {
-		*pblock = nc_head;
-	}
-
-	return err;
-}
-
 /* called with rw_sema acquired */
 static int block_free_locked(struct gk20a_allocator *allocator,
 			u32 addr, u32 len)
@@ -792,52 +639,6 @@ static int block_free_locked(struct gk20a_allocator *allocator,
 	return 0;
 }
 
-/* called with rw_sema acquired */
-static void block_free_list_locked(struct gk20a_allocator *allocator,
-			struct gk20a_alloc_block *list)
-{
-	struct gk20a_alloc_block *block;
-	u32 len;
-
-	update_free_addr_cache(allocator, NULL,
-			list->start, list->end - list->start, true);
-
-	while (list) {
-		block = list;
-		unlink_block(allocator, block, block->prev);
-
-		len = block->end - block->start;
-		if (allocator->cached_hole_size < len)
-			allocator->cached_hole_size = len;
-
-		list = block->nc_next;
-		kmem_cache_free(allocator->block_cache, block);
-	}
-}
-
-static int
-gk20a_allocator_constrain(struct gk20a_allocator *a,
-			   bool enable, u32 base, u32 limit)
-{
-	if (enable) {
-		a->constraint.enable = (base >= a->base &&
-					limit <= a->limit);
-		if (!a->constraint.enable)
-			return -EINVAL;
-		a->constraint.base  = base;
-		a->constraint.limit = limit;
-		a->first_free_addr = a->last_free_addr = base;
-
-	} else {
-		a->constraint.enable = false;
-		a->first_free_addr = a->last_free_addr = a->base;
-	}
-
-	a->cached_hole_size = 0;
-
-	return 0;
-}
-
 /* init allocator struct */
 int gk20a_allocator_init(struct gk20a_allocator *allocator,
 		const char *name, u32 start, u32 len, u32 align)
@@ -869,10 +670,7 @@ int gk20a_allocator_init(struct gk20a_allocator *allocator,
 	init_rwsem(&allocator->rw_sema);
 
 	allocator->alloc = gk20a_allocator_block_alloc;
-	allocator->alloc_nc = gk20a_allocator_block_alloc_nc;
 	allocator->free = gk20a_allocator_block_free;
-	allocator->free_nc = gk20a_allocator_block_free_nc;
-	allocator->constrain = gk20a_allocator_constrain;
 
 	return 0;
 }
@@ -979,56 +777,6 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 	return ret;
 }
 
-/*
- * *addr != ~0 for fixed address allocation. if *addr == 0, base addr is
- * returned to caller in *addr.
- *
- * non-contiguous allocation, which returns a list of blocks with aggregated
- * size == len. Individual block size must meet alignment requirement.
- */
-int gk20a_allocator_block_alloc_nc(struct gk20a_allocator *allocator,
-		u32 *addr, u32 len, struct gk20a_alloc_block **pblock)
-{
-	int ret;
-
-	allocator_dbg(allocator, "[in] addr %d, len %d", *addr, len);
-
-	BUG_ON(pblock == NULL);
-	*pblock = NULL;
-
-	if (*addr + len > allocator->limit || /* check addr range */
-	    *addr & (allocator->align - 1) || /* check addr alignment */
-	     len == 0)			      /* check len */
-		return -EINVAL;
-
-	len = ALIGN(len, allocator->align);
-	if (!len)
-		return -ENOMEM;
-
-	down_write(&allocator->rw_sema);
-
-	ret = block_alloc_list_locked(allocator, addr, len, pblock);
-
-#if defined(ALLOCATOR_DEBUG)
-	if (!ret) {
-		struct gk20a_alloc_block *block = *pblock;
-		BUG_ON(!block);
-		BUG_ON(block->start < allocator->base);
-		while (block->nc_next) {
-			BUG_ON(block->end > block->nc_next->start);
-			block = block->nc_next;
-		}
-		BUG_ON(block->end > allocator->limit);
-	}
-#endif
-
-	up_write(&allocator->rw_sema);
-
-	allocator_dbg(allocator, "[out] addr %d, len %d", *addr, len);
-
-	return ret;
-}
-
 /* free all blocks between start and end */
 int gk20a_allocator_block_free(struct gk20a_allocator *allocator,
 		u32 addr, u32 len)
@@ -1067,182 +815,3 @@ int gk20a_allocator_block_free(struct gk20a_allocator *allocator,
 
 	return ret;
 }
-
-/* free non-contiguous allocation block list */
-void gk20a_allocator_block_free_nc(struct gk20a_allocator *allocator,
-		struct gk20a_alloc_block *block)
-{
-	/* nothing to free */
-	if (!block)
-		return;
-
-	down_write(&allocator->rw_sema);
-	block_free_list_locked(allocator, block);
-	up_write(&allocator->rw_sema);
-}
-
-#if defined(ALLOCATOR_DEBUG)
-
-#include <linux/random.h>
-
-/* test suite */
-void gk20a_allocator_test(void)
-{
-	struct gk20a_allocator allocator;
-	struct gk20a_alloc_block *list[5];
-	u32 addr, len;
-	u32 count;
-	int n;
-
-	gk20a_allocator_init(&allocator, "test", 0, 10, 1);
-
-	/* alloc/free a single block in the beginning */
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_block_free(&allocator, addr, 2);
-	gk20a_allocator_dump(&allocator);
-	/* alloc/free a single block in the middle */
-	addr = 4;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_block_free(&allocator, addr, 2);
-	gk20a_allocator_dump(&allocator);
-	/* alloc/free a single block in the end */
-	addr = 8;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_block_free(&allocator, addr, 2);
-	gk20a_allocator_dump(&allocator);
-
-	/* allocate contiguous blocks */
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 4);
-	gk20a_allocator_dump(&allocator);
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 4);
-	gk20a_allocator_dump(&allocator);
-
-	/* no free space */
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-
-	/* free in the end */
-	gk20a_allocator_block_free(&allocator, 8, 2);
-	gk20a_allocator_dump(&allocator);
-	/* free in the beginning */
-	gk20a_allocator_block_free(&allocator, 0, 2);
-	gk20a_allocator_dump(&allocator);
-	/* free in the middle */
-	gk20a_allocator_block_free(&allocator, 4, 2);
-	gk20a_allocator_dump(&allocator);
-
-	/* merge case PPPPAAAANNNN */
-	addr = 4;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	/* merge case ....AAAANNNN */
-	addr = 0;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	/* merge case PPPPAAAA.... */
-	addr = 8;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-
-	/* test free across multiple blocks and split */
-	gk20a_allocator_block_free(&allocator, 2, 2);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_block_free(&allocator, 6, 2);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_block_free(&allocator, 1, 8);
-	gk20a_allocator_dump(&allocator);
-
-	/* test non-contiguous allocation */
-	addr = 4;
-	gk20a_allocator_block_alloc(&allocator, &addr, 2);
-	gk20a_allocator_dump(&allocator);
-	addr = 0;
-	gk20a_allocator_block_alloc_nc(&allocator, &addr, 5, &list[0]);
-	gk20a_allocator_dump(&allocator);
-	gk20a_allocator_dump_nc_list(&allocator, list[0]);
-
-	/* test free a range overlaping non-contiguous blocks */
-	gk20a_allocator_block_free(&allocator, 2, 6);
-	gk20a_allocator_dump(&allocator);
-
-	/* test non-contiguous free */
-	gk20a_allocator_block_free_nc(&allocator, list[0]);
-	gk20a_allocator_dump(&allocator);
-
-	gk20a_allocator_destroy(&allocator);
-
-	/* random stress test */
-	gk20a_allocator_init(&allocator, "test", 4096, 4096 * 1024, 4096);
-	for (;;) {
-		pr_debug("alloc tests...\n");
-		for (count = 0; count < 50; count++) {
-			addr = 0;
-			len = random32() % (4096 * 1024 / 16);
-			gk20a_allocator_block_alloc(&allocator, &addr, len);
-			gk20a_allocator_dump(&allocator);
-		}
-
-		pr_debug("free tests...\n");
-		for (count = 0; count < 30; count++) {
-			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
-			len = random32() % (4096 * 1024 / 16);
-			gk20a_allocator_block_free(&allocator, addr, len);
-			gk20a_allocator_dump(&allocator);
-		}
-
-		pr_debug("non-contiguous alloc tests...\n");
-		for (n = 0; n < 5; n++) {
-			addr = 0;
-			len = random32() % (4096 * 1024 / 8);
-			gk20a_allocator_block_alloc_nc(&allocator, &addr,
-				len, &list[n]);
-			gk20a_allocator_dump(&allocator);
-			gk20a_allocator_dump_nc_list(&allocator, list[n]);
-		}
-
-		pr_debug("free tests...\n");
-		for (count = 0; count < 10; count++) {
-			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
-			len = random32() % (4096 * 1024 / 16);
-			gk20a_allocator_block_free(&allocator, addr, len);
-			gk20a_allocator_dump(&allocator);
-		}
-
-		pr_debug("non-contiguous free tests...\n");
-		for (n = 4; n >= 0; n--) {
-			gk20a_allocator_dump_nc_list(&allocator, list[n]);
-			gk20a_allocator_block_free_nc(&allocator, list[n]);
-			gk20a_allocator_dump(&allocator);
-		}
-
-		pr_debug("fixed addr alloc tests...\n");
-		for (count = 0; count < 10; count++) {
-			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
-			len = random32() % (4096 * 1024 / 32);
-			gk20a_allocator_block_alloc(&allocator, &addr, len);
-			gk20a_allocator_dump(&allocator);
-		}
-
-		pr_debug("free tests...\n");
-		for (count = 0; count < 10; count++) {
-			addr = (random32() % (4096 * 1024)) & ~(4096 - 1);
-			len = random32() % (4096 * 1024 / 16);
-			gk20a_allocator_block_free(&allocator, addr, len);
-			gk20a_allocator_dump(&allocator);
-		}
-	}
-	gk20a_allocator_destroy(&allocator);
-}
-
-#endif /* ALLOCATOR_DEBUG */
-

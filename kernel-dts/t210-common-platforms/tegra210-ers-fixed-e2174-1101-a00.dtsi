@@ -99,7 +99,7 @@
 			regulator-name = "max77620-gpio7";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
+			regulator-boot-on;
 			gpio = <&max77620 7 0>;
 			enable-active-high;
 			consumers {

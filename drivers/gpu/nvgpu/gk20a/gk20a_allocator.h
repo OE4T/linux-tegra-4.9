@@ -33,6 +33,8 @@ struct gk20a_allocator {
 	u32 limit;			/* max value = limit - 1 */
 	u32 align;			/* alignment size, power of 2 */
 
+	unsigned long *bitmap;		/* bitmap */
+
 	struct gk20a_alloc_block *block_first;	/* first block in list */
 	struct gk20a_alloc_block *block_recent; /* last visited block */
 
@@ -60,29 +62,6 @@ struct gk20a_allocator {
 	int (*free)(struct gk20a_allocator *allocator,
 		u32 addr, u32 len);
 
-};
-
-/* a block of linear space range [start, end) */
-struct gk20a_alloc_block {
-	struct gk20a_allocator *allocator;	/* parent allocator */
-	struct rb_node rb;			/* rb tree node */
-
-	u32 start;				/* linear space range
-						   [start, end) */
-	u32 end;
-
-	void *priv;				/* backing structure for this
-						   linear space block
-						   page table, comp tag, etc */
-
-	struct gk20a_alloc_block *prev;	/* prev block with lower address */
-	struct gk20a_alloc_block *next;	/* next block with higher address */
-
-	bool nc_block;
-	struct gk20a_alloc_block *nc_prev;	/* prev block for
-						   non-contiguous allocation */
-	struct gk20a_alloc_block *nc_next;	/* next block for
-						   non-contiguous allocation */
 };
 
 int gk20a_allocator_init(struct gk20a_allocator *allocator,

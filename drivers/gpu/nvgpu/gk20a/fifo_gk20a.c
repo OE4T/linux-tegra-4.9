@@ -1955,6 +1955,41 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g)
 		return false;
 }
 
+int gk20a_fifo_wait_engine_idle(struct gk20a *g)
+{
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	int ret = -ETIMEDOUT;
+	u32 i;
+	struct device *d = dev_from_gk20a(g);
+
+	gk20a_dbg_fn("");
+
+	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
+		do {
+			u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+			if (!fifo_engine_status_engine_v(status)) {
+				ret = 0;
+				break;
+			}
+
+			usleep_range(delay, delay * 2);
+			delay = min_t(unsigned long,
+					delay << 1, GR_IDLE_CHECK_MAX);
+		} while (time_before(jiffies, end_jiffies) ||
+				!tegra_platform_is_silicon());
+		if (ret) {
+			gk20a_err(d, "cannot idle engine %u\n", i);
+			break;
+		}
+	}
+
+	gk20a_dbg_fn("done");
+
+	return ret;
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);

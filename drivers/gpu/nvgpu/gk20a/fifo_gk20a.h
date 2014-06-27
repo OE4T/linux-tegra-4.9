@@ -169,4 +169,5 @@ void gk20a_init_fifo(struct gpu_ops *gops);
 
 void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 		unsigned long fault_id);
+int gk20a_fifo_wait_engine_idle(struct gk20a *g);
 #endif /*__GR_GK20A_H__*/

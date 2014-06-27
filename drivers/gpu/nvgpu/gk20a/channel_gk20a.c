@@ -1948,29 +1948,14 @@ int gk20a_channel_suspend(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	bool channels_in_use = false;
-	struct device *d = dev_from_gk20a(g);
 	int err;
 
 	gk20a_dbg_fn("");
 
-	/* idle the engine by submitting WFI on non-KEPLER_C channel */
-	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *c = &f->channel[chid];
-		if (c->in_use && c->obj_class != KEPLER_C && !c->has_timedout) {
-			err = gk20a_channel_submit_wfi(c);
-			if (err) {
-				gk20a_err(d, "cannot idle channel %d\n",
-						chid);
-				return err;
-			}
-
-			if (c->sync)
-				c->sync->wait_cpu(c->sync,
-						  &c->last_submit.post_fence,
-						  500000);
-			break;
-		}
-	}
+	/* wait for engine idle */
+	err = gk20a_fifo_wait_engine_idle(g);
+	if (err)
+		return err;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (f->channel[chid].in_use) {

@@ -633,6 +633,8 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		break;
 	}
 
+	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d done",
+		   dev_name(dbg_s->dev), powermode);
 	return err;
 }
 

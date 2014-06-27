@@ -301,8 +301,8 @@ struct flcn_acr_desc {
 	u32 wpr_region_id;
 	u32 wpr_offset;
 	struct flcn_acr_regions regions;
-	u32 nonwpr_ucode_blob_start;
 	u32 nonwpr_ucode_blob_size;
+	u64 nonwpr_ucode_blob_start;
 };
 
 /*!

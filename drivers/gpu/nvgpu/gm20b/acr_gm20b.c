@@ -174,7 +174,6 @@ int prepare_ucode_blob(struct gk20a *g)
 	dma_addr_t iova;
 	u32 status;
 	void *nonwpr_addr;
-	u64 nonwpr_pmu_va;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct sg_table *sgt_nonwpr;
 	struct mm_gk20a *mm = &g->mm;
@@ -203,32 +202,12 @@ int prepare_ucode_blob(struct gk20a *g)
 			GFP_KERNEL);
 		if (nonwpr_addr == NULL)
 			return -ENOMEM;
-		status = gk20a_get_sgtable(d, &sgt_nonwpr,
-				nonwpr_addr,
-				iova,
-				plsfm->wpr_size);
-		if (status) {
-			gk20a_err(d, "failed allocate sg table for nonwpr\n");
-			status = -ENOMEM;
-			goto err_free_nonwpr_addr;
-		}
 
-		nonwpr_pmu_va = gk20a_gmmu_map(vm, &sgt_nonwpr,
-				plsfm->wpr_size,
-				0, /* flags */
-				gk20a_mem_flag_read_only);
-		if (!nonwpr_pmu_va) {
-			gk20a_err(d, "failed to map pmu ucode memory!!");
-			status = -ENOMEM;
-			goto err_free_nonwpr_sgt;
-		}
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
 		lsfm_init_wpr_contents(g, plsfm, nonwpr_addr);
-		g->acr.ucode_blob_start = nonwpr_pmu_va;
+		g->acr.ucode_blob_start = NV_MC_SMMU_VADDR_TRANSLATE(iova);
 		g->acr.ucode_blob_size = plsfm->wpr_size;
-		gm20b_dbg_pmu("32 bit ucode_start %x, size %d\n",
-			(u32)nonwpr_pmu_va, plsfm->wpr_size);
 		gm20b_dbg_pmu("base reg carveout 2:%x\n",
 		readl(mc + MC_SECURITY_CARVEOUT2_BOM_0));
 		gm20b_dbg_pmu("base reg carveout 3:%x\n",
@@ -238,15 +217,6 @@ int prepare_ucode_blob(struct gk20a *g)
 	}
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	return 0;
-err_free_nonwpr_sgt:
-	gk20a_free_sgtable(&sgt_nonwpr);
-err_free_nonwpr_addr:
-	dma_free_coherent(d, plsfm->wpr_size,
-			nonwpr_addr, iova);
-	nonwpr_addr = NULL;
-	iova = 0;
-	gm20b_dbg_pmu("prepare ucode blob return %x\n", status);
-	return status;
 }
 
 u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr *plsfm,
@@ -271,7 +241,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	status = pmu_ucode_details(g, &ucode_img);
 	if (status == 0) {
 		if (ucode_img.lsf_desc != NULL) {
-			/* The falonId is formed by grabbing the static base
+			/* The falon_id is formed by grabbing the static base
 			 * falonId from the image and adding the
 			 * engine-designated falcon instance.*/
 			pmu->pmu_mode |= PMU_SECURE_MODE;
@@ -368,7 +338,7 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	addr_base += readl(mc + MC_SECURITY_CARVEOUT3_BOM_0);
+	addr_base += readl(mc + MC_SECURITY_CARVEOUT2_BOM_0);
 	gm20b_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
 	/*From linux*/
 	addr_code = u64_lo32((addr_base +
@@ -391,7 +361,7 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	gm20b_dbg_pmu("addr_args %x\n", addr_args);
 
 	/* Populate the loader_config state*/
-	ldr_cfg->dma_idx = 2;
+	ldr_cfg->dma_idx = GK20A_PMU_DMAIDX_UCODE;
 	ldr_cfg->code_dma_base = addr_code;
 	ldr_cfg->code_size_total = desc->app_size;
 	ldr_cfg->code_size_to_load = desc->app_resident_code_size;
@@ -441,7 +411,7 @@ int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	addr_base += readl(mc + MC_SECURITY_CARVEOUT3_BOM_0);
+	addr_base += readl(mc + MC_SECURITY_CARVEOUT2_BOM_0);
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 		lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
@@ -457,7 +427,7 @@ int flcn_populate_bl_dmem_desc(struct gk20a *g,
 
 	/* Populate the LOADER_CONFIG state */
 	memset((void *) ldr_cfg, 0, sizeof(struct flcn_bl_dmem_desc));
-	ldr_cfg->ctx_dma = 0;
+	ldr_cfg->ctx_dma = GK20A_PMU_DMAIDX_UCODE;
 	ldr_cfg->code_dma_base = addr_code;
 	ldr_cfg->non_sec_code_size = desc->app_resident_code_size;
 	ldr_cfg->data_dma_base = addr_data;
@@ -829,7 +799,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u64 *pacr_ucode_cpuva = NULL, pacr_ucode_pmu_va, *acr_dmem;
 	u32 img_size_in_bytes;
 	struct flcn_bl_dmem_desc bl_dmem_desc;
-	u32 status, start, size;
+	u32 status, size;
+	u64 start;
 	const struct firmware *acr_fw;
 	struct acr_gm20b *acr = &g->acr;
 	u32 *acr_ucode_header_t210_load;
@@ -891,12 +862,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		start;
 	((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_size =
 		size;
-	((struct flcn_acr_desc *)acr_dmem)->wpr_region_id = 2;
 	((struct flcn_acr_desc *)acr_dmem)->regions.no_regions = 2;
-	((struct flcn_acr_desc *)acr_dmem)->regions.region_props[0].region_id
-								= 2;
-	((struct flcn_acr_desc *)acr_dmem)->regions.region_props[1].region_id
-								= 3;
 	((struct flcn_acr_desc *)acr_dmem)->wpr_offset = 0;
 
 	for (i = 0; i < (img_size_in_bytes/4); i++) {
@@ -915,7 +881,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	bl_dmem_desc.signature[1] = 0;
 	bl_dmem_desc.signature[2] = 0;
 	bl_dmem_desc.signature[3] = 0;
-	bl_dmem_desc.ctx_dma = GK20A_PMU_DMAIDX_UCODE;
+	bl_dmem_desc.ctx_dma = GK20A_PMU_DMAIDX_VIRT;
 	bl_dmem_desc.code_dma_base =
 		(unsigned int)(((u64)pacr_ucode_pmu_va >> 8));
 	bl_dmem_desc.non_sec_code_off  = acr_ucode_header_t210_load[0];
@@ -1064,7 +1030,8 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
-			pwr_fbif_transcfg_mem_type_virtual_f());
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_local_fb_f());
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
 			pwr_fbif_transcfg_mem_type_virtual_f());
 	/* setup apertures - physical */

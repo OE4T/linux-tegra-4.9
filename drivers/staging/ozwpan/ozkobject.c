@@ -94,11 +94,13 @@ static ssize_t stop_store(struct kobject *kobj, struct kobj_attribute *attr,
 		}
 
 		pd = oz_pd_find(mac_addr);
-		if (pd && (!(pd->state & OZ_PD_S_CONNECTED))) {
+		if (!pd)
+			return -EINVAL;
+
+		if (!(pd->state & OZ_PD_S_CONNECTED))
 			oz_pd_stop(pd);
-			oz_pd_put(pd);
-		} else
-			oz_pd_put(pd);
+
+		oz_pd_put(pd);
 	}
 
 	return count;

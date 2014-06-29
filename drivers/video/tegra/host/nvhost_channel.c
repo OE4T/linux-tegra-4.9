@@ -125,7 +125,7 @@ int nvhost_channel_release(struct nvhost_device_data *pdata)
 	for (i = 0; i < pdata->num_channels; i++) {
 		ch = pdata->channels[i];
 		if (ch && ch->dev)
-			nvhost_putchannel(ch);
+			nvhost_putchannel(ch, 1);
 	}
 	return 0;
 }
@@ -378,19 +378,17 @@ void nvhost_getchannel(struct nvhost_channel *ch)
 	atomic_inc(&ch->refcount);
 }
 
-void nvhost_putchannel(struct nvhost_channel *ch)
+void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 {
-	if (!atomic_dec_if_positive(&ch->refcount))
+	int ref;
+
+	ref = atomic_sub_return(cnt, &ch->refcount);
+
+	/* WARN on negative reference, with zero reference unmap channel*/
+	if (!ref)
 		nvhost_channel_unmap(ch);
-}
-
-
-void nvhost_putchannel_mult(struct nvhost_channel *ch, int cnt)
-{
-	int i;
-
-	for (i = 0; i < cnt; i++)
-		nvhost_putchannel(ch);
+	else if (ref < 0)
+		WARN_ON(1);
 }
 
 int nvhost_channel_suspend(struct nvhost_channel *ch)

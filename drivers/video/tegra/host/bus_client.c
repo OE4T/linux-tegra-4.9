@@ -202,7 +202,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 		nvhost_job_put(priv->job);
 
 	mutex_unlock(&channel_lock);
-	nvhost_putchannel(priv->ch);
+	nvhost_putchannel(priv->ch, 1);
 	kfree(priv);
 	return 0;
 }
@@ -220,7 +220,8 @@ static int __nvhost_channelopen(struct inode *inode,
 				struct nvhost_device_data, cdev);
 		ret = nvhost_channel_map(pdata, &ch);
 		if (ret) {
-			pr_err("%s: failed to map channel\n", __func__);
+			pr_err("%s: failed to map channel, error: %d\n",
+					__func__, ret);
 			return ret;
 		}
 	} else {
@@ -244,7 +245,7 @@ static int __nvhost_channelopen(struct inode *inode,
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		nvhost_putchannel(ch);
+		nvhost_putchannel(ch, 1);
 		goto fail;
 	}
 	filp->private_data = priv;

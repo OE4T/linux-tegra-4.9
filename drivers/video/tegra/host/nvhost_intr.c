@@ -175,7 +175,7 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 			channel->cdma.med_prio_count,
 			channel->cdma.low_prio_count);
 
-	nvhost_putchannel_mult(channel, nr_completed);
+	nvhost_putchannel(channel, nr_completed);
 
 }
 

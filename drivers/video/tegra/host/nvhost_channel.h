@@ -85,8 +85,7 @@ void nvhost_set_notifier(struct nvhost_channel *ch, __u32 error);
 void nvhost_free_error_notifiers(struct nvhost_channel *ch);
 
 void nvhost_getchannel(struct nvhost_channel *ch);
-void nvhost_putchannel(struct nvhost_channel *ch);
-void nvhost_putchannel_mult(struct nvhost_channel *ch, int cnt);
+void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,

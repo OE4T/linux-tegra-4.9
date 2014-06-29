@@ -318,7 +318,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	err = mutex_lock_interruptible(&ch->submitlock);
 	if (err) {
 		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
-		nvhost_putchannel_mult(ch, job->num_syncpts);
+		nvhost_putchannel(ch, job->num_syncpts);
 		goto error;
 	}
 
@@ -326,7 +326,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		completed_waiters[i] = nvhost_intr_alloc_waiter();
 		if (!completed_waiters[i]) {
 			nvhost_module_idle_mult(ch->dev, job->num_syncpts);
-			nvhost_putchannel_mult(ch, job->num_syncpts);
+			nvhost_putchannel(ch, job->num_syncpts);
 			mutex_unlock(&ch->submitlock);
 			err = -ENOMEM;
 			goto error;
@@ -342,7 +342,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	err = nvhost_cdma_begin(&ch->cdma, job);
 	if (err) {
 		nvhost_module_idle_mult(ch->dev, job->num_syncpts);
-		nvhost_putchannel_mult(ch, job->num_syncpts);
+		nvhost_putchannel(ch, job->num_syncpts);
 		mutex_unlock(&ch->submitlock);
 		goto error;
 	}

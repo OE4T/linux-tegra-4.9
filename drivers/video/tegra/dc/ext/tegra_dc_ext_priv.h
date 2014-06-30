@@ -87,13 +87,16 @@ struct tegra_dc_ext {
 	} cursor;
 
 	bool				enabled;
+	bool				vblank_enabled;
 };
 
-#define TEGRA_DC_EXT_EVENT_MASK_ALL \
-	(TEGRA_DC_EXT_EVENT_HOTPLUG | TEGRA_DC_EXT_EVENT_BANDWIDTH_INC | \
+#define TEGRA_DC_EXT_EVENT_MASK_ALL		\
+	(TEGRA_DC_EXT_EVENT_HOTPLUG |		\
+	 TEGRA_DC_EXT_EVENT_VBLANK |		\
+	 TEGRA_DC_EXT_EVENT_BANDWIDTH_INC |	\
 	 TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC)
 
-#define TEGRA_DC_EXT_EVENT_MAX_SZ	8
+#define TEGRA_DC_EXT_EVENT_MAX_SZ	16
 
 struct tegra_dc_ext_event_list {
 	struct tegra_dc_ext_event	event;
@@ -148,6 +151,8 @@ extern int tegra_dc_ext_control_init(void);
 
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
 				      int output);
+extern int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *,
+				      int output, ktime_t timestamp);
 extern int tegra_dc_ext_queue_bandwidth_renegotiate(
 			struct tegra_dc_ext_control *, int output,
 			struct tegra_dc_bw_data *data);

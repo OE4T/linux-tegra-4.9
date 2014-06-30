@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/events.c
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -141,6 +141,8 @@ static int tegra_dc_ext_queue_event(struct tegra_dc_ext_control *control,
 	struct list_head *cur;
 	int retval = 0;
 
+	WARN_ON(event->data_size > TEGRA_DC_EXT_EVENT_MAX_SZ);
+
 	mutex_lock(&control->lock);
 	list_for_each(cur, &control->users) {
 		struct tegra_dc_ext_control_user *user;
@@ -190,6 +192,26 @@ int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output)
 	pack.event.data_size = sizeof(pack.hotplug);
 
 	pack.hotplug.handle = output;
+
+	tegra_dc_ext_queue_event(control, &pack.event);
+
+	return 0;
+}
+
+int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *control, int output,
+				ktime_t timestamp)
+{
+	struct {
+		struct tegra_dc_ext_event event;
+		struct tegra_dc_ext_control_event_vblank vblank;
+	} __packed pack;
+
+	pack.event.type = TEGRA_DC_EXT_EVENT_VBLANK;
+	pack.event.data_size = sizeof(pack.vblank);
+
+	pack.vblank.handle = output;
+	pack.vblank.reserved = 0;
+	pack.vblank.timestamp_ns = ktime_to_ns(timestamp);
 
 	tegra_dc_ext_queue_event(control, &pack.event);
 

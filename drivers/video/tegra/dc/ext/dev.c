@@ -115,6 +115,8 @@ struct tegra_dc_ext_flip_data {
 	bool dirty_rect_valid;
 };
 
+static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
+
 static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
 {
 	return ((s64) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
@@ -232,6 +234,11 @@ void tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 {
 	int i;
 	set_enable(ext, false);
+
+	/*
+	 * Disable vblank requests
+	 */
+	tegra_dc_ext_set_vblank(ext, false);
 
 	/*
 	 * Flush the flip queue -- note that this must be called with dc->lock
@@ -463,6 +470,27 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	}
 
 	return err;
+}
+
+static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable)
+{
+	struct tegra_dc *dc;
+
+	if (ext->vblank_enabled == enable)
+		return 0;
+
+	dc = ext->dc;
+
+	if (enable) {
+		tegra_dc_hold_dc_out(dc);
+		tegra_dc_vsync_enable(dc);
+	} else {
+		tegra_dc_vsync_disable(dc);
+		tegra_dc_release_dc_out(dc);
+	}
+
+	ext->vblank_enabled = enable;
+	return 0;
 }
 
 static void tegra_dc_ext_unpin_handles(struct tegra_dc_dmabuf *unpin_handles[],
@@ -1647,6 +1675,16 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 #else
 		return -EACCES;
 #endif
+	}
+
+	case TEGRA_DC_EXT_SET_VBLANK:
+	{
+		struct tegra_dc_ext_set_vblank args;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_set_vblank(user->ext, args.enable);
 	}
 
 	default:

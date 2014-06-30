@@ -196,6 +196,15 @@ struct tegra_dc_ext_flip_3 {
 };
 
 /*
+ * vblank control - enable or disable vblank events
+ */
+
+struct tegra_dc_ext_set_vblank {
+	__u8	enable;
+	__u8	reserved[3]; /* unused - must be 0 */
+};
+
+/*
  * Cursor image format:
  *
  * Tegra hardware supports two different cursor formats:
@@ -442,6 +451,9 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_FLIP3 \
 	_IOWR('D', 0x14, struct tegra_dc_ext_flip_3)
 
+#define TEGRA_DC_EXT_SET_VBLANK \
+	_IOW('D', 0x15, struct tegra_dc_ext_set_vblank)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,
@@ -493,13 +505,21 @@ struct tegra_dc_ext_event {
 	char	data[0];
 };
 
-#define TEGRA_DC_EXT_EVENT_HOTPLUG	0x1
+/* Events types are bits in a mask */
+#define TEGRA_DC_EXT_EVENT_HOTPLUG			(1 << 0)
 struct tegra_dc_ext_control_event_hotplug {
 	__u32 handle;
 };
 
-#define TEGRA_DC_EXT_EVENT_BANDWIDTH_INC	0x3
-#define TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC	0x4
+#define TEGRA_DC_EXT_EVENT_VBLANK			(1 << 1)
+struct tegra_dc_ext_control_event_vblank {
+	__u32 handle;
+	__u32 reserved; /* unused */
+	__u64 timestamp_ns;
+};
+
+#define TEGRA_DC_EXT_EVENT_BANDWIDTH_INC	(1 << 2)
+#define TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC	(1 << 3)
 struct tegra_dc_ext_control_event_bandwidth {
 	__u32 handle;
 	__u32 total_bw;

@@ -47,6 +47,11 @@ int tegra_dc_ext_process_hotplug(int output)
 	return tegra_dc_ext_queue_hotplug(&g_control, output);
 }
 
+int tegra_dc_ext_process_vblank(int output, ktime_t timestamp)
+{
+	return tegra_dc_ext_queue_vblank(&g_control, output, timestamp);
+}
+
 static int
 get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 {

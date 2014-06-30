@@ -594,7 +594,7 @@ static int tegra_vcm30t124_amx0_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* AMX0 slot map may be initialized through platform data */
 	if (machine->pdata->num_amx) {
-		tx_slot = machine->pdata->amx_slot_map[0];
+		tx_slot = machine->pdata->amx_config[0].slot_map;
 	} else {
 		for (i = 0, j = 0; i < 32; i += 8) {
 			default_slot[i] = 0;
@@ -626,7 +626,7 @@ static int tegra_vcm30t124_amx1_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* AMX1 slot map may be initialized through platform data */
 	if (machine->pdata->num_amx > 1) {
-		tx_slot = machine->pdata->amx_slot_map[1];
+		tx_slot = machine->pdata->amx_config[1].slot_map;
 	} else {
 		for (i = 0, j = 0; i < 32; i += 8) {
 			default_slot[i] = 0;
@@ -658,7 +658,7 @@ static int tegra_vcm30t124_adx0_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* ADX0 slot map may be initialized through platform data */
 	if (machine->pdata->num_adx) {
-		rx_slot = machine->pdata->adx_slot_map[0];
+		rx_slot = machine->pdata->adx_config[0].slot_map;
 	} else {
 		for (i = 0, j = 0; i < 32; i += 8) {
 			default_slot[i] = 0;
@@ -690,7 +690,7 @@ static int tegra_vcm30t124_adx1_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* ADX1 slot map may be initialized through platform data */
 	if (machine->pdata->num_adx > 1) {
-		rx_slot = machine->pdata->adx_slot_map[1];
+		rx_slot = machine->pdata->adx_config[1].slot_map;
 	} else {
 		for (i = 0, j = 0; i < 32; i += 8) {
 			default_slot[i] = 0;
@@ -777,19 +777,19 @@ static void tegra_vcm30t124_new_codec_links(
 	for (i = 0, j = num_codec_links; i < num_codec_links; i++, j++) {
 		/* initialize DAI links on DAP side */
 		tegra_vcm30t124_codec_links[i].name =
-			pdata->config[i].codec_name;
+			pdata->dai_config[i].codec_name;
 		tegra_vcm30t124_codec_links[i].stream_name = "Playback";
 		tegra_vcm30t124_codec_links[i].cpu_dai_name = "DAP";
 		tegra_vcm30t124_codec_links[i].codec_dai_name =
-			pdata->config[i].codec_dai_name;
+			pdata->dai_config[i].codec_dai_name;
 		tegra_vcm30t124_codec_links[i].cpu_name =
-			pdata->config[i].cpu_name;
+			pdata->dai_config[i].cpu_name;
 		tegra_vcm30t124_codec_links[i].codec_name =
-			pdata->config[i].codec_name;
+			pdata->dai_config[i].codec_name;
 		tegra_vcm30t124_codec_links[i].params =
-			&pdata->config[i].params;
+			&pdata->dai_config[i].params;
 		tegra_vcm30t124_codec_links[i].dai_fmt =
-			pdata->config[i].dai_fmt;
+			pdata->dai_config[i].dai_fmt;
 		if (tegra_vcm30t124_codec_links[i].codec_name) {
 			if (strstr(tegra_vcm30t124_codec_links[i].codec_name,
 				"ad193x"))
@@ -811,24 +811,24 @@ static void tegra_vcm30t124_new_codec_links(
 
 		/* initialize DAI links on CIF side */
 		tegra_vcm30t124_codec_links[j].name =
-			pdata->config[i].cpu_dai_name;
+			pdata->dai_config[i].cpu_dai_name;
 		tegra_vcm30t124_codec_links[j].stream_name =
-			pdata->config[i].cpu_dai_name;
+			pdata->dai_config[i].cpu_dai_name;
 		tegra_vcm30t124_codec_links[j].cpu_dai_name =
-			pdata->config[i].cpu_dai_name;
+			pdata->dai_config[i].cpu_dai_name;
 		tegra_vcm30t124_codec_links[j].codec_dai_name = "CIF";
 		tegra_vcm30t124_codec_links[j].cpu_name = "tegra30-ahub-xbar";
 		tegra_vcm30t124_codec_links[j].codec_name =
-			pdata->config[i].cpu_name;
+			pdata->dai_config[i].cpu_name;
 		tegra_vcm30t124_codec_links[j].params =
-			&pdata->config[i].params;
-		if (pdata->config[i].cpu_dai_name) {
-			if (!strcmp(pdata->config[i].cpu_dai_name,
+			&pdata->dai_config[i].params;
+		if (pdata->dai_config[i].cpu_dai_name) {
+			if (!strcmp(pdata->dai_config[i].cpu_dai_name,
 				"I2S4")) {
 				tegra_vcm30t124_codec_links[j].init =
 					tegra_vcm30t124_i2s4_init;
 				tegra_vcm30t124_codec_links[j].dai_fmt =
-					pdata->config[i].dai_fmt;
+					pdata->dai_config[i].dai_fmt;
 			}
 		}
 	}
@@ -854,9 +854,9 @@ static void tegra_vcm30t124_new_codec_conf(
 
 	for (i = 0; i < num_codec_links; i++) {
 		tegra_vcm30t124_codec_conf[i].dev_name =
-			pdata->config[i].codec_name;
+			pdata->dai_config[i].codec_name;
 		tegra_vcm30t124_codec_conf[i].name_prefix =
-			pdata->config[i].codec_prefix;
+			pdata->dai_config[i].codec_prefix;
 	}
 }
 
@@ -983,6 +983,29 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 	tegra_machine_set_dai_init(DAI_LINK_ADX1,
 		&tegra_vcm30t124_adx1_init);
 
+    /* set AMX/ADX params */
+	for (i = 0; i < machine->pdata->num_amx; i++) {
+		tegra_machine_set_dai_params(DAI_LINK_AMX0_0,
+			&machine->pdata->amx_config[i].params[0]);
+		tegra_machine_set_dai_params(DAI_LINK_AMX0_1,
+			&machine->pdata->amx_config[i].params[1]);
+		tegra_machine_set_dai_params(DAI_LINK_AMX0_2,
+			&machine->pdata->amx_config[i].params[2]);
+		tegra_machine_set_dai_params(DAI_LINK_AMX0_3,
+			&machine->pdata->amx_config[i].params[3]);
+	}
+
+	for (i = 0; i < machine->pdata->num_adx; i++) {
+		tegra_machine_set_dai_params(DAI_LINK_ADX0_0,
+			&machine->pdata->adx_config[i].params[0]);
+		tegra_machine_set_dai_params(DAI_LINK_ADX0_0,
+			&machine->pdata->adx_config[i].params[1]);
+		tegra_machine_set_dai_params(DAI_LINK_ADX0_0,
+			&machine->pdata->adx_config[i].params[2]);
+		tegra_machine_set_dai_params(DAI_LINK_ADX0_0,
+			&machine->pdata->adx_config[i].params[3]);
+	}
+
 	/* set DAM dai_init */
 	tegra_machine_set_dai_init(DAI_LINK_DAM0_0,
 		&tegra_vcm30t124_dam0_init);
@@ -1000,18 +1023,20 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		tegra_machine_set_dai_ops(i, &tegra_vcm30t124_spdif_ops);
 
 	for (i = 0; i < num_codec_links; i++) {
-		if (machine->pdata->config[i].codec_name) {
-			if (strstr(machine->pdata->config[i].codec_name,
+		if (machine->pdata->dai_config[i].codec_name) {
+			if (strstr(machine->pdata->dai_config[i].codec_name,
 				"ad193x")) {
 				for (j = DAI_LINK_APBIF0; j <= DAI_LINK_APBIF3; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_vcm30t124_ad1937_ops);
-			} else if (strstr(machine->pdata->config[i].codec_name,
+			} else if (strstr(
+				machine->pdata->dai_config[i].codec_name,
 				"ak4618")) {
 				for (j = DAI_LINK_APBIF4; j <= DAI_LINK_APBIF7; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_vcm30t124_ak4618_ops);
-			} else if (strstr(machine->pdata->config[i].codec_name,
+			} else if (strstr(
+				machine->pdata->dai_config[i].codec_name,
 				"wm8731")) {
 					tegra_machine_set_dai_ops(DAI_LINK_APBIF4,
 						&tegra_vcm30t124_wm8731_ops);

@@ -63,6 +63,46 @@ static void set_pmu_cmdline_args_secure_mode_v1(struct pmu_gk20a *pmu, u32 val)
 	pmu->args_v1.secure_mode = val;
 }
 
+static void set_pmu_cmdline_args_falctracesize_v1(
+			struct pmu_gk20a *pmu, u32 size)
+{
+	pmu->args_v1.falc_trace_size = size;
+}
+
+void printtrace(struct pmu_gk20a *pmu)
+{
+	u32 i = 0, j = 0;
+	char *trace = pmu->trace_buf.cpuva;
+	u32 *trace1 = pmu->trace_buf.cpuva;
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	gk20a_err(dev_from_gk20a(g), "Dump pmutrace");
+	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
+		for (j = 0; j < 0x40; j++)
+			if (trace1[(i / 4) + j])
+				break;
+		if (j == 0x40)
+			return;
+		gk20a_err(dev_from_gk20a(g), "Index %d: ",
+			trace1[(i / 4)]);
+		gk20a_err(dev_from_gk20a(g),
+			"Params: 0x%x 0x%x 0x%x 0x%x Message: ",
+			trace1[(i / 4) + 1], trace1[(i / 4) + 2],
+			trace1[(i / 4) + 3], trace1[(i / 4) + 4]);
+		gk20a_err(dev_from_gk20a(g), "%s", (trace+i+20));
+	}
+}
+
+static void set_pmu_cmdline_args_falctracedmabase_v1(struct pmu_gk20a *pmu)
+{
+	pmu->args_v1.falc_trace_dma_base = ((u32)pmu->trace_buf.pmu_va)/0x100;
+}
+
+static void set_pmu_cmdline_args_falctracedmaidx_v1(
+			struct pmu_gk20a *pmu, u32 idx)
+{
+	pmu->args_v1.falc_trace_dma_idx = idx;
+}
+
 static void set_pmu_cmdline_args_cpufreq_v0(struct pmu_gk20a *pmu, u32 freq)
 {
 	pmu->args_v0.cpu_freq_hz = freq;
@@ -509,6 +549,12 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_pmu_cmdline_args_cpufreq_v1;
 		g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode =
 			set_pmu_cmdline_args_secure_mode_v1;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_size =
+			set_pmu_cmdline_args_falctracesize_v1;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base =
+			set_pmu_cmdline_args_falctracedmabase_v1;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx =
+			set_pmu_cmdline_args_falctracedmaidx_v1;
 		g->ops.pmu_ver.get_pmu_cmdline_args_ptr =
 			get_pmu_cmdline_args_ptr_v1;
 		g->ops.pmu_ver.get_pmu_allocation_struct_size =
@@ -951,6 +997,11 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 		pwr_pmu_new_instblk_target_sys_coh_f());
 
 	/* TBD: load all other surfaces */
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
+		pmu, GK20A_PMU_TRACE_BUFSIZE);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
+		pmu, GK20A_PMU_DMAIDX_VIRT);
 
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
 		clk_get_rate(platform->clk[1]));
@@ -1623,6 +1674,7 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	int i, err = 0;
 	u8 *ptr;
 	struct sg_table *sgt_seq_buf;
+	struct sg_table *sgt_pmu_buf;
 	dma_addr_t iova;
 
 	gk20a_dbg_fn("");
@@ -1680,13 +1732,23 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.iova = iova;
 
+	pmu->trace_buf.cpuva = dma_alloc_coherent(d, GK20A_PMU_TRACE_BUFSIZE,
+					&iova,
+					GFP_KERNEL);
+	if (!pmu->trace_buf.cpuva) {
+		gk20a_err(d, "failed to allocate trace memory\n");
+		err = -ENOMEM;
+		goto err_free_seq_buf;
+	}
+	pmu->trace_buf.iova = iova;
+
 	err = gk20a_get_sgtable(d, &sgt_seq_buf,
 				pmu->seq_buf.cpuva,
 				pmu->seq_buf.iova,
 				GK20A_PMU_SEQ_BUF_SIZE);
 	if (err) {
-		gk20a_err(d, "failed to allocate sg table\n");
-		goto err_free_seq_buf;
+		gk20a_err(d, "failed to allocate seq buf sg table\n");
+		goto err_free_trace_buf;
 	}
 
 	pmu->seq_buf.pmu_va = gk20a_gmmu_map(vm, &sgt_seq_buf,
@@ -1694,14 +1756,34 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 					0, /* flags */
 					gk20a_mem_flag_none);
 	if (!pmu->seq_buf.pmu_va) {
-		gk20a_err(d, "failed to map pmu ucode memory!!");
+		gk20a_err(d, "failed to gmmu map seq buf memory!!");
+		err = -ENOMEM;
 		goto err_free_seq_buf_sgt;
+	}
+
+	err = gk20a_get_sgtable(d, &sgt_pmu_buf,
+				pmu->trace_buf.cpuva,
+				pmu->trace_buf.iova,
+				GK20A_PMU_TRACE_BUFSIZE);
+	if (err) {
+		gk20a_err(d, "failed to allocate sg table for Trace\n");
+		goto err_unmap_seq_buf;
+	}
+
+	pmu->trace_buf.pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_buf,
+					GK20A_PMU_TRACE_BUFSIZE,
+					0, /* flags */
+					gk20a_mem_flag_none);
+	if (!pmu->trace_buf.pmu_va) {
+		gk20a_err(d, "failed to gmmu map pmu trace memory!!");
+		err = -ENOMEM;
+		goto err_free_trace_buf_sgt;
 	}
 
 	ptr = (u8 *)pmu->seq_buf.cpuva;
 	if (!ptr) {
 		gk20a_err(d, "failed to map cpu ptr for zbc buffer");
-		goto err_unmap_seq_buf;
+		goto err_unmap_trace_buf;
 	}
 
 	/* TBD: remove this if ZBC save/restore is handled by PMU
@@ -1713,17 +1795,29 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
 	gk20a_free_sgtable(&sgt_seq_buf);
+	gk20a_free_sgtable(&sgt_pmu_buf);
+
 	pmu->sw_ready = true;
 
 skip_init:
 	gk20a_dbg_fn("done");
 	return 0;
-
+ err_unmap_trace_buf:
+	gk20a_gmmu_unmap(vm, pmu->trace_buf.pmu_va,
+		GK20A_PMU_TRACE_BUFSIZE, gk20a_mem_flag_none);
+ err_free_trace_buf_sgt:
+	gk20a_free_sgtable(&sgt_pmu_buf);
  err_unmap_seq_buf:
 	gk20a_gmmu_unmap(vm, pmu->seq_buf.pmu_va,
 		GK20A_PMU_SEQ_BUF_SIZE, gk20a_mem_flag_none);
  err_free_seq_buf_sgt:
 	gk20a_free_sgtable(&sgt_seq_buf);
+ err_free_trace_buf:
+	dma_free_coherent(d, GK20A_PMU_TRACE_BUFSIZE,
+		pmu->trace_buf.cpuva, pmu->trace_buf.iova);
+	pmu->trace_buf.cpuva = NULL;
+	pmu->trace_buf.iova = 0;
+
  err_free_seq_buf:
 	dma_free_coherent(d, GK20A_PMU_SEQ_BUF_SIZE,
 		pmu->seq_buf.cpuva, pmu->seq_buf.iova);
@@ -2870,6 +2964,7 @@ void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 
 	/* PMU may crash due to FECS crash. Dump FECS status */
 	gk20a_fecs_dump_falcon_stats(g);
+	printtrace(pmu);
 }
 
 void gk20a_pmu_isr(struct gk20a *g)
@@ -3662,6 +3757,40 @@ static const struct file_operations elpg_transitions_fops = {
 	.release	= single_release,
 };
 
+static int falc_trace_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	struct pmu_gk20a *pmu = &g->pmu;
+	u32 i = 0, j = 0;
+	char *trace = pmu->trace_buf.cpuva;
+	u32 *trace1 = pmu->trace_buf.cpuva;
+	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
+		for (j = 0; j < 0x40; j++)
+			if (trace1[(i / 4) + j])
+				break;
+		if (j == 0x40)
+			return 0;
+		seq_printf(s, "Index %x: ", trace1[(i / 4)]);
+		seq_printf(s, "Params: 0x%x 0x%x 0x%x 0x%x Message: ",
+			trace1[(i / 4) + 1], trace1[(i / 4) + 2],
+			trace1[(i / 4) + 3], trace1[(i / 4) + 4]);
+		seq_printf(s, "%s", (trace+i+20));
+	}
+	return 0;
+}
+
+static int falc_trace_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, falc_trace_show, inode->i_private);
+}
+
+static const struct file_operations falc_trace_fops = {
+	.open		= falc_trace_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int perfmon_events_enable_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
@@ -3756,6 +3885,12 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev)
 	d = debugfs_create_file(
 		"elpg_transitions", S_IRUGO, platform->debugfs, g,
 						&elpg_transitions_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"falc_trace", S_IRUGO, platform->debugfs, g,
+						&falc_trace_fops);
 	if (!d)
 		goto err_out;
 

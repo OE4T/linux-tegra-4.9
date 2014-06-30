@@ -339,6 +339,7 @@ struct pmu_cmdline_args_v1 {
 	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
 };
 
+#define GK20A_PMU_TRACE_BUFSIZE     0x4000   /* 4K */
 #define GK20A_PMU_DMEM_BLKSIZE2		8
 
 #define GK20A_PMU_UCODE_NB_MAX_OVERLAY	    32
@@ -1008,6 +1009,7 @@ struct pmu_gk20a {
 	struct pmu_mem_desc pg_buf;
 	/* TBD: remove this if ZBC seq is fixed */
 	struct pmu_mem_desc seq_buf;
+	struct pmu_mem_desc trace_buf;
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;

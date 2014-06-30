@@ -155,6 +155,12 @@ struct gpu_ops {
 		u32 (*get_pmu_cmdline_args_size)(struct pmu_gk20a *pmu);
 		void (*set_pmu_cmdline_args_cpu_freq)(struct pmu_gk20a *pmu,
 			u32 freq);
+		void (*set_pmu_cmdline_args_trace_size)(struct pmu_gk20a *pmu,
+			u32 size);
+		void (*set_pmu_cmdline_args_trace_dma_base)(
+				struct pmu_gk20a *pmu);
+		void (*set_pmu_cmdline_args_trace_dma_idx)(
+			struct pmu_gk20a *pmu, u32 idx);
 		void * (*get_pmu_cmdline_args_ptr)(struct pmu_gk20a *pmu);
 		u32 (*get_pmu_allocation_struct_size)(struct pmu_gk20a *pmu);
 		void (*set_pmu_allocation_ptr)(struct pmu_gk20a *pmu,

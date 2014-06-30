@@ -39,6 +39,7 @@ static int oz_def_app_start(struct oz_pd *pd, int resume);
 static void oz_def_app_stop(struct oz_pd *pd, int pause);
 static void oz_def_app_rx(struct oz_pd *pd, struct oz_elt *elt);
 static void oz_pd_free(struct work_struct *work);
+static void oz_pd_uevent_workitem(struct work_struct *work);
 /*------------------------------------------------------------------------------
  * Counts the uncompleted isoc frames submitted to netcard.
  */
@@ -203,8 +204,8 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 
 		spin_lock_init(&pd->pd_destroy_lock);
 		pd->pd_destroy_scheduled = false;
-		memset(&pd->workitem, 0, sizeof(pd->workitem));
 		INIT_WORK(&pd->workitem, oz_pd_free);
+		INIT_WORK(&pd->uevent_workitem, oz_pd_uevent_workitem);
 	}
 	return pd;
 }
@@ -219,6 +220,12 @@ static void oz_pd_free(struct work_struct *work)
 	oz_trace_msg(M, "Destroying PD:%p\n", pd);
 	tasklet_kill(&pd->heartbeat_tasklet);
 	tasklet_kill(&pd->timeout_tasklet);
+
+	/* Finish scheduled uevent work, uevent might be rescheduled by
+	 * oz timeout tasklet again
+	 */
+	cancel_work_sync(&pd->uevent_workitem);
+
 	/* Delete any streams.
 	 */
 	e = pd->stream_list.next;
@@ -257,6 +264,7 @@ static void oz_pd_free(struct work_struct *work)
 		oz_trace_msg(M, "%s: dev_put(%p)\n", __func__, pd->net_dev);
 		dev_put(pd->net_dev);
 	}
+
 	kfree(pd);
 }
 
@@ -307,12 +315,10 @@ void oz_pd_notify_uevent(struct oz_pd *pd)
 	int ret;
 
 	oz_pd_get(pd);
-	memset(&pd->uevent_workitem, 0, sizeof(pd->uevent_workitem));
-	INIT_WORK(&pd->uevent_workitem, oz_pd_uevent_workitem);
-	ret = schedule_work(&pd->uevent_workitem);
 
+	ret = schedule_work(&pd->uevent_workitem);
 	if (!ret) {
-		oz_trace("failed to schedule workitem\n");
+		pr_info("%s: failed to schedule workitem\n", __func__);
 		oz_pd_put(pd);
 	}
 }

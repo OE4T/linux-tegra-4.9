@@ -529,10 +529,11 @@ static int nvidia_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	if (ret)
 		hid_warn(hdev, "cannot create sysfs for mode\n");
-	return 0;
 
 	nvidia_init_ff(hdev, loc);
 	nvidia_find_tp_len(hdev, loc);
+
+	return 0;
 
 err_parse:
 	kfree(loc);

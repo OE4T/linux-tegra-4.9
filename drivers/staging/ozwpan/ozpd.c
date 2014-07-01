@@ -255,7 +255,7 @@ static void oz_pd_free(struct work_struct *work)
 		kfree(container_of(e, struct oz_tx_frame, link));
 	}
 	if (pd->net_dev) {
-		oz_trace_msg(M, "dev_put(%p)\n", pd->net_dev);
+		oz_trace_msg(M, "%s: dev_put(%p)\n", __func__, pd->net_dev);
 		dev_put(pd->net_dev);
 	}
 	kfree(pd);
@@ -278,11 +278,6 @@ void oz_pd_destroy(struct oz_pd *pd)
 		return;
 	}
 	pd->pd_destroy_scheduled = true;
-
-	if (hrtimer_active(&pd->timeout))
-		hrtimer_cancel(&pd->timeout);
-	if (hrtimer_active(&pd->heartbeat))
-		hrtimer_cancel(&pd->heartbeat);
 
 	ret = schedule_work(&pd->workitem);
 	if (!ret)
@@ -409,6 +404,17 @@ void oz_pd_stop(struct oz_pd *pd)
 	oz_services_stop(pd, stop_apps, 0);
 	oz_polling_lock_bh();
 	oz_pd_set_state(pd, OZ_PD_S_STOPPED);
+
+	if (hrtimer_active(&pd->timeout)) {
+		pr_info("hrtimer timeout active\n");
+		hrtimer_cancel(&pd->timeout);
+	}
+	if (hrtimer_active(&pd->heartbeat)) {
+		pr_info("hrtimer heartbeat active\n");
+		hrtimer_cancel(&pd->heartbeat);
+	}
+	/* connect_req will restart timers */
+
 	/* Remove from PD list.*/
 	list_del(&pd->link);
 

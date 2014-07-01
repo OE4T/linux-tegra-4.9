@@ -192,7 +192,7 @@ static struct oz_pd *oz_connect_req(struct oz_pd *cur_pd, struct oz_elt *elt,
 	}
 	if (pd->net_dev != net_dev) {
 		old_net_dev = pd->net_dev;
-		oz_trace_msg(M, "dev_hold(%p)\n", net_dev);
+		oz_trace_msg(M, "%s: dev_hold(%p)\n", __func__, net_dev);
 		dev_hold(net_dev);
 		pd->net_dev = net_dev;
 	}
@@ -282,7 +282,7 @@ done:
 		pd = NULL;
 	}
 	if (old_net_dev) {
-		oz_trace_msg(M, "dev_put(%p)", old_net_dev);
+		oz_trace_msg(M, "%s: dev_put(%p)", __func__, old_net_dev);
 		dev_put(old_net_dev);
 	}
 	if (free_pd)
@@ -473,7 +473,8 @@ void oz_protocol_term(void)
 		spin_unlock_bh(&g_binding_lock);
 		dev_remove_pack(&b->ptype);
 		if (b->ptype.dev) {
-			oz_trace_msg(M, "dev_put(%p)\n", b->ptype.dev);
+			oz_trace_msg(M, "%s: dev_put(%p)\n", __func__,
+						b->ptype.dev);
 			dev_put(b->ptype.dev);
 		}
 		kfree(b);
@@ -779,7 +780,8 @@ void oz_binding_remove(const char *net_dev)
 	if (found) {
 		dev_remove_pack(&binding->ptype);
 		if (binding->ptype.dev) {
-			oz_trace_msg(M, "dev_put(%s)\n", binding->name);
+			oz_trace_msg(M, "%s: dev_put(%s)\n", __func__,
+							binding->name);
 			dev_put(binding->ptype.dev);
 			pd_stop_all_for_device(binding->ptype.dev);
 		}

@@ -237,7 +237,7 @@ static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 	struct tegra210_xbar_cif_conf cif_conf;
 
 	channels = params_channels(params);
-	if (channels < 2)
+	if (channels < 1 || channels > 16)
 		return -EINVAL;
 
 	switch (params_format(params)) {

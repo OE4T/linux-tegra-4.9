@@ -593,10 +593,112 @@ static struct snd_soc_codec_conf
 	},
 };
 
+static struct snd_soc_dai_link
+	tegra210_xbar_dai_links[TEGRA210_XBAR_DAI_LINKS] = {
+
+};
+
+static struct snd_soc_codec_conf
+	tegra210_xbar_codec_conf[TEGRA210_XBAR_CODEC_CONF] = {
+	[TEGRA210_CODEC_AMX1_CONF] = {
+		.dev_name = "tegra210-amx.0",
+		.name_prefix = "AMX1",
+	},
+	[TEGRA210_CODEC_AMX2_CONF] = {
+		.dev_name = "tegra210-amx.1",
+		.name_prefix = "AMX2",
+	},
+	[TEGRA210_CODEC_ADX1_CONF] = {
+		.dev_name = "tegra210-adx.0",
+		.name_prefix = "ADX1",
+	},
+	[TEGRA210_CODEC_ADX2_CONF] = {
+		.dev_name = "tegra210-adx.1",
+		.name_prefix = "ADX2",
+	},
+	[TEGRA210_CODEC_SFC1_CONF] = {
+		.dev_name = "tegra210-sfc.0",
+		.name_prefix = "SFC1",
+	},
+	[TEGRA210_CODEC_SFC2_CONF] = {
+		.dev_name = "tegra210-sfc.1",
+		.name_prefix = "SFC2",
+	},
+	[TEGRA210_CODEC_SFC3_CONF] = {
+		.dev_name = "tegra210-sfc.2",
+		.name_prefix = "SFC3",
+	},
+	[TEGRA210_CODEC_SFC4_CONF] = {
+		.dev_name = "tegra210-sfc.3",
+		.name_prefix = "SFC4",
+	},
+	[TEGRA210_CODEC_MVC1_CONF] = {
+		.dev_name = "tegra210-mvc.0",
+		.name_prefix = "MVC1",
+	},
+	[TEGRA210_CODEC_MVC2_CONF] = {
+		.dev_name = "tegra210-mvc.1",
+		.name_prefix = "MVC2",
+	},
+	[TEGRA210_CODEC_AFC1_CONF] = {
+		.dev_name = "tegra210-afc.0",
+		.name_prefix = "AFC1",
+	},
+	[TEGRA210_CODEC_AFC2_CONF] = {
+		.dev_name = "tegra210-afc.1",
+		.name_prefix = "AFC2",
+	},
+	[TEGRA210_CODEC_AFC3_CONF] = {
+		.dev_name = "tegra210-afc.2",
+		.name_prefix = "AFC3",
+	},
+	[TEGRA210_CODEC_AFC4_CONF] = {
+		.dev_name = "tegra210-afc.3",
+		.name_prefix = "AFC4",
+	},
+	[TEGRA210_CODEC_AFC5_CONF] = {
+		.dev_name = "tegra210-afc.4",
+		.name_prefix = "AFC5",
+	},
+	[TEGRA210_CODEC_AFC6_CONF] = {
+		.dev_name = "tegra210-afc.5",
+		.name_prefix = "AFC6",
+	},
+	[TEGRA210_CODEC_I2S1_CONF] = {
+		.dev_name = "tegra210-i2s.0",
+		.name_prefix = "I2S1",
+	},
+	[TEGRA210_CODEC_I2S2_CONF] = {
+		.dev_name = "tegra210-i2s.1",
+		.name_prefix = "I2S2",
+	},
+	[TEGRA210_CODEC_I2S3_CONF] = {
+		.dev_name = "tegra210-i2s.2",
+		.name_prefix = "I2S3",
+	},
+	[TEGRA210_CODEC_I2S4_CONF] = {
+		.dev_name = "tegra210-i2s.3",
+		.name_prefix = "I2S4",
+	},
+	[TEGRA210_CODEC_I2S5_CONF] = {
+		.dev_name = "tegra210-i2s.4",
+		.name_prefix = "I2S5",
+	},
+	[TEGRA210_CODEC_SPDIF_CONF] = {
+		.dev_name = "tegra210-spdif",
+		.name_prefix = "SPDIF",
+	},
+};
+
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {
 	struct snd_soc_dai_link *link = tegra124_xbar_dai_links;
 	unsigned int size = TEGRA124_XBAR_DAI_LINKS;
+
+	if (of_machine_is_compatible("nvidia,tegra210")) {
+		link = tegra210_xbar_dai_links;
+		size = TEGRA210_XBAR_DAI_LINKS;
+	}
 
 	if (tegra_asoc_machine_links)
 		return tegra_asoc_machine_links;
@@ -624,7 +726,8 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_dai_link);
 int tegra_machine_append_dai_link(struct snd_soc_dai_link *link,
 		unsigned int link_size)
 {
-	unsigned int size1 = TEGRA124_XBAR_DAI_LINKS;
+	unsigned int size1 = of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_XBAR_DAI_LINKS : TEGRA124_XBAR_DAI_LINKS;
 	unsigned int size2 = link_size;
 
 	if (!tegra_asoc_machine_links) {
@@ -684,6 +787,11 @@ struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void)
 	struct snd_soc_codec_conf *conf = tegra124_xbar_codec_conf;
 	unsigned int size = TEGRA124_XBAR_CODEC_CONF;
 
+	if (of_machine_is_compatible("nvidia,tegra210")) {
+		conf = tegra210_xbar_codec_conf;
+		size = TEGRA210_XBAR_CODEC_CONF;
+	}
+
 	if (tegra_asoc_codec_conf)
 		return tegra_asoc_codec_conf;
 
@@ -710,7 +818,8 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_codec_conf);
 int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
 		unsigned int conf_size)
 {
-	unsigned int size1 = TEGRA124_XBAR_CODEC_CONF;
+	unsigned int size1 = of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_XBAR_CODEC_CONF : TEGRA124_XBAR_CODEC_CONF;
 	unsigned int size2 = conf_size;
 
 	if (!tegra_asoc_codec_conf) {

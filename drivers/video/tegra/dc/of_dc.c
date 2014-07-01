@@ -68,7 +68,7 @@
 
 #define DSI_NODE		"/host1x/dsi"
 #define HDMI_NODE		"/host1x/hdmi"
-#define DPAUX_NODE		"/host1x/dpaux"
+#define SOR_NODE		"/host1x/sor"
 
 static struct regulator *of_hdmi_vddio;
 static struct regulator *of_hdmi_reg;
@@ -279,8 +279,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	struct device_node *ddc;
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
-	struct device_node *np_dpaux =
-		of_find_node_by_path(DPAUX_NODE);
+	struct device_node *np_sor =
+		of_find_node_by_path(SOR_NODE);
 	struct property *prop;
 	const __be32 *p;
 	u32 u;
@@ -323,10 +323,10 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		if (hotplug_gpio != 0)
 			default_out->hotplug_gpio = hotplug_gpio;
 	}
-	if (np_dpaux && of_device_is_available(np_dpaux) &&
+	if (np_sor && of_device_is_available(np_sor) &&
 		((default_out->type == TEGRA_DC_OUT_DP) ||
 		(default_out->type == TEGRA_DC_OUT_NVSR_DP))) {
-		hotplug_gpio = of_get_named_gpio_flags(np_dpaux,
+		hotplug_gpio = of_get_named_gpio_flags(np_sor,
 				"nvidia,hpd-gpio", 0, &flags);
 		if (hotplug_gpio != 0)
 			default_out->hotplug_gpio = hotplug_gpio;
@@ -1416,29 +1416,29 @@ static int parse_lt_setting(struct device_node *np,
 	return 0;
 }
 
-struct device_node *parse_dpaux_settings(struct platform_device *ndev,
+struct device_node *parse_dp_settings(struct platform_device *ndev,
 	struct tegra_dc_platform_data *pdata)
 {
 	u32 temp;
 	u8 *addr;
-	struct tegra_dp_out *dpaux = pdata->default_out->dp_out;
-	struct device_node *np_dpaux_panel = NULL;
+	struct tegra_dp_out *dpout = pdata->default_out->dp_out;
+	struct device_node *np_dp_panel = NULL;
 	struct device_node *np_dp_lt_set = NULL;
 	struct device_node *entry = NULL;
 	int err;
 
 	if (ndev->id == 0)
-		np_dpaux_panel = tegra_primary_panel_get_dt_node(pdata);
+		np_dp_panel = tegra_primary_panel_get_dt_node(pdata);
 	else
-		np_dpaux_panel = tegra_secondary_panel_get_dt_node(pdata);
+		np_dp_panel = tegra_secondary_panel_get_dt_node(pdata);
 
-	if (!np_dpaux_panel) {
+	if (!np_dp_panel) {
 		pr_err("There is no valid panel node\n");
 		return NULL;
 	}
 
 	np_dp_lt_set =
-		of_get_child_by_name(np_dpaux_panel,
+		of_get_child_by_name(np_dp_panel,
 		"dp-lt-settings");
 
 	if (!np_dp_lt_set) {
@@ -1450,16 +1450,16 @@ struct device_node *parse_dpaux_settings(struct platform_device *ndev,
 		if (!n_lt_settings) {
 			pr_info("lt-settings node has no child node\n");
 		} else {
-			dpaux->n_lt_settings = n_lt_settings;
-			dpaux->lt_settings = devm_kzalloc(&ndev->dev,
+			dpout->n_lt_settings = n_lt_settings;
+			dpout->lt_settings = devm_kzalloc(&ndev->dev,
 				n_lt_settings *
 				sizeof(struct tegra_dc_dp_lt_settings),
 				GFP_KERNEL);
-			if (!dpaux->lt_settings) {
+			if (!dpout->lt_settings) {
 				pr_err("not enough memory\n");
 				return NULL;
 			}
-			addr = (u8 *)dpaux->lt_settings;
+			addr = (u8 *)dpout->lt_settings;
 			for_each_child_of_node(np_dp_lt_set, entry) {
 				err = parse_lt_setting(entry, addr);
 				if (err)
@@ -1470,18 +1470,18 @@ struct device_node *parse_dpaux_settings(struct platform_device *ndev,
 		}
 	}
 
-	if (!of_property_read_u32(np_dpaux_panel,
+	if (!of_property_read_u32(np_dp_panel,
 			"nvidia,tx-pu-disable", &temp)) {
-		dpaux->tx_pu_disable = (bool)temp;
-		OF_DC_LOG("tx_pu_disable %d\n", dpaux->tx_pu_disable);
+		dpout->tx_pu_disable = (bool)temp;
+		OF_DC_LOG("tx_pu_disable %d\n", dpout->tx_pu_disable);
 	}
-	if (!of_property_read_u32(np_dpaux_panel,
+	if (!of_property_read_u32(np_dp_panel,
 			"nvidia,link-bw", &temp)) {
-		dpaux->link_bw = (u8)temp;
-		OF_DC_LOG("link_bw %d\n", dpaux->link_bw);
+		dpout->link_bw = (u8)temp;
+		OF_DC_LOG("link_bw %d\n", dpout->link_bw);
 	}
 
-	return np_dpaux_panel;
+	return np_dp_panel;
 }
 
 static int dc_hdmi_out_enable(struct device *dev)
@@ -1623,8 +1623,8 @@ struct tegra_dc_platform_data
 	struct device_node *np = ndev->dev.of_node;
 	struct device_node *np_dsi = NULL;
 	struct device_node *np_dsi_panel = NULL;
-	struct device_node *np_dpaux = NULL;
-	struct device_node *np_dpaux_panel = NULL;
+	struct device_node *np_sor = NULL;
+	struct device_node *np_dp_panel = NULL;
 	struct device_node *timings_np = NULL;
 	struct device_node *np_target_disp = NULL;
 	struct device_node *sd_np = NULL;
@@ -1722,23 +1722,23 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP) {
-		np_dpaux = of_find_node_by_path(DPAUX_NODE);
+		np_sor = of_find_node_by_path(SOR_NODE);
 
-		if (!np_dpaux) {
-			pr_err("%s: could not find dpaux node\n", __func__);
+		if (!np_sor) {
+			pr_err("%s: could not find sor node\n", __func__);
 			goto fail_parse;
-		} else if (of_device_is_available(np_dpaux)) {
+		} else if (of_device_is_available(np_sor)) {
 			pdata->default_out->dp_out = devm_kzalloc(&ndev->dev,
 				sizeof(struct tegra_dp_out), GFP_KERNEL);
 			if (!pdata->default_out->dp_out) {
 				dev_err(&ndev->dev, "not enough memory\n");
 				goto fail_parse;
 			}
-			np_dpaux_panel = parse_dpaux_settings(ndev, pdata);
-			if (!np_dpaux_panel)
+			np_dp_panel = parse_dp_settings(ndev, pdata);
+			if (!np_dp_panel)
 				goto fail_parse;
 			else
-				np_target_disp = np_dpaux_panel;
+				np_target_disp = np_dp_panel;
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;

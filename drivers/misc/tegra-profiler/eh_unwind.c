@@ -1125,6 +1125,7 @@ quadd_is_ex_entry_exist(struct pt_regs *regs,
 int quadd_unwind_start(struct task_struct *task)
 {
 	struct regions_data *rd, *rd_old;
+	rd = rd_alloc(QUADD_EXTABS_SIZE);
 
 	spin_lock(&ctx.lock);
 
@@ -1132,7 +1133,6 @@ int quadd_unwind_start(struct task_struct *task)
 	if (rd_old)
 		pr_warn("%s: warning: rd_old\n", __func__);
 
-	rd = rd_alloc(QUADD_EXTABS_SIZE);
 	if (IS_ERR_OR_NULL(rd)) {
 		pr_err("%s: error: rd_alloc\n", __func__);
 		spin_unlock(&ctx.lock);

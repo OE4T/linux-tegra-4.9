@@ -40,8 +40,9 @@ static const struct snd_soc_pcm_stream tdm_link_params = {
 	.channels_max = 8,
 };
 
-static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
-	[DAI_LINK_APBIF0] = {
+static struct snd_soc_dai_link
+	tegra124_xbar_dai_links[TEGRA124_XBAR_DAI_LINKS] = {
+	[TEGRA124_DAI_LINK_APBIF0] = {
 		.name = "APBIF0 CIF",
 		.stream_name = "APBIF0 CIF",
 		.cpu_dai_name = "APBIF0",
@@ -51,7 +52,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF1] = {
+	[TEGRA124_DAI_LINK_APBIF1] = {
 		.name = "APBIF1 CIF",
 		.stream_name = "APBIF1 CIF",
 		.cpu_dai_name = "APBIF1",
@@ -61,7 +62,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF2] = {
+	[TEGRA124_DAI_LINK_APBIF2] = {
 		.name = "APBIF2 CIF",
 		.stream_name = "APBIF2 CIF",
 		.cpu_dai_name = "APBIF2",
@@ -71,7 +72,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF3] = {
+	[TEGRA124_DAI_LINK_APBIF3] = {
 		.name = "APBIF3 CIF",
 		.stream_name = "APBIF3 CIF",
 		.cpu_dai_name = "APBIF3",
@@ -81,7 +82,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF4] = {
+	[TEGRA124_DAI_LINK_APBIF4] = {
 		.name = "APBIF4 CIF",
 		.stream_name = "APBIF4 CIF",
 		.cpu_dai_name = "APBIF4",
@@ -91,7 +92,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF5] = {
+	[TEGRA124_DAI_LINK_APBIF5] = {
 		.name = "APBIF5 CIF",
 		.stream_name = "APBIF5 CIF",
 		.cpu_dai_name = "APBIF5",
@@ -101,7 +102,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF6] = {
+	[TEGRA124_DAI_LINK_APBIF6] = {
 		.name = "APBIF6 CIF",
 		.stream_name = "APBIF6 CIF",
 		.cpu_dai_name = "APBIF6",
@@ -111,7 +112,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF7] = {
+	[TEGRA124_DAI_LINK_APBIF7] = {
 		.name = "APBIF7 CIF",
 		.stream_name = "APBIF7 CIF",
 		.cpu_dai_name = "APBIF7",
@@ -121,7 +122,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF8] = {
+	[TEGRA124_DAI_LINK_APBIF8] = {
 		.name = "APBIF8 CIF",
 		.stream_name = "APBIF8 CIF",
 		.cpu_dai_name = "APBIF8",
@@ -131,7 +132,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_APBIF9] = {
+	[TEGRA124_DAI_LINK_APBIF9] = {
 		.name = "APBIF9 CIF",
 		.stream_name = "APBIF9 CIF",
 		.cpu_dai_name = "APBIF9",
@@ -141,7 +142,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.platform_name = "tegra30-ahub-apbif",
 		.ignore_pmdown_time = 1,
 	},
-	[DAI_LINK_AMX0_0] = {
+	[TEGRA124_DAI_LINK_AMX0_0] = {
 		.name = "AMX0 IN0",
 		.stream_name = "AMX0 IN",
 		.cpu_dai_name = "AMX0-0",
@@ -150,7 +151,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX0_1] = {
+	[TEGRA124_DAI_LINK_AMX0_1] = {
 		.name = "AMX0 IN1",
 		.stream_name = "AMX0 IN",
 		.cpu_dai_name = "AMX0-1",
@@ -159,7 +160,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX0_2] = {
+	[TEGRA124_DAI_LINK_AMX0_2] = {
 		.name = "AMX0 IN2",
 		.stream_name = "AMX0 IN",
 		.cpu_dai_name = "AMX0-2",
@@ -168,7 +169,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX0_3] = {
+	[TEGRA124_DAI_LINK_AMX0_3] = {
 		.name = "AMX0 IN3",
 		.stream_name = "AMX0 IN",
 		.cpu_dai_name = "AMX0-3",
@@ -177,7 +178,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX0] = {
+	[TEGRA124_DAI_LINK_AMX0] = {
 		.name = "AMX0 OUT",
 		.stream_name = "AMX0 OUT",
 		.cpu_dai_name = "OUT",
@@ -186,7 +187,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &tdm_link_params,
 	},
-	[DAI_LINK_AMX1_0] = {
+	[TEGRA124_DAI_LINK_AMX1_0] = {
 		.name = "AMX1 IN0",
 		.stream_name = "AMX1 IN",
 		.cpu_dai_name = "AMX1-0",
@@ -195,7 +196,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX1_1] = {
+	[TEGRA124_DAI_LINK_AMX1_1] = {
 		.name = "AMX1 IN1",
 		.stream_name = "AMX1 IN",
 		.cpu_dai_name = "AMX1-1",
@@ -204,7 +205,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX1_2] = {
+	[TEGRA124_DAI_LINK_AMX1_2] = {
 		.name = "AMX1 IN2",
 		.stream_name = "AMX1 IN",
 		.cpu_dai_name = "AMX1-2",
@@ -213,7 +214,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX1_3] = {
+	[TEGRA124_DAI_LINK_AMX1_3] = {
 		.name = "AMX1 IN3",
 		.stream_name = "AMX1 IN",
 		.cpu_dai_name = "AMX1-3",
@@ -222,7 +223,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-amx.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AMX1] = {
+	[TEGRA124_DAI_LINK_AMX1] = {
 		.name = "AMX1 OUT",
 		.stream_name = "AMX1 OUT",
 		.cpu_dai_name = "OUT",
@@ -231,7 +232,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &tdm_link_params,
 	},
-	[DAI_LINK_ADX0] = {
+	[TEGRA124_DAI_LINK_ADX0] = {
 		.name = "ADX0 CIF",
 		.stream_name = "ADX0 IN",
 		.cpu_dai_name = "ADX0",
@@ -240,7 +241,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-adx.0",
 		.params = &tdm_link_params,
 	},
-	[DAI_LINK_ADX0_0] = {
+	[TEGRA124_DAI_LINK_ADX0_0] = {
 		.name = "ADX0 OUT0",
 		.stream_name = "ADX0 OUT",
 		.cpu_dai_name = "OUT0",
@@ -249,7 +250,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX0_1] = {
+	[TEGRA124_DAI_LINK_ADX0_1] = {
 		.name = "ADX0 OUT1",
 		.stream_name = "ADX0 OUT",
 		.cpu_dai_name = "OUT1",
@@ -258,7 +259,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX0_2] = {
+	[TEGRA124_DAI_LINK_ADX0_2] = {
 		.name = "ADX0 OUT2",
 		.stream_name = "ADX0 OUT",
 		.cpu_dai_name = "OUT2",
@@ -267,7 +268,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX0_3] = {
+	[TEGRA124_DAI_LINK_ADX0_3] = {
 		.name = "ADX0 OUT3",
 		.stream_name = "ADX0 OUT",
 		.cpu_dai_name = "OUT3",
@@ -276,7 +277,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX1] = {
+	[TEGRA124_DAI_LINK_ADX1] = {
 		.name = "ADX1 CIF",
 		.stream_name = "ADX1 IN",
 		.cpu_dai_name = "ADX1",
@@ -285,7 +286,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-adx.1",
 		.params = &tdm_link_params,
 	},
-	[DAI_LINK_ADX1_0] = {
+	[TEGRA124_DAI_LINK_ADX1_0] = {
 		.name = "ADX1 OUT0",
 		.stream_name = "ADX1 OUT",
 		.cpu_dai_name = "OUT0",
@@ -294,7 +295,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX1_1] = {
+	[TEGRA124_DAI_LINK_ADX1_1] = {
 		.name = "ADX1 OUT1",
 		.stream_name = "ADX1 OUT",
 		.cpu_dai_name = "OUT1",
@@ -303,7 +304,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX1_2] = {
+	[TEGRA124_DAI_LINK_ADX1_2] = {
 		.name = "ADX1 OUT2",
 		.stream_name = "ADX1 OUT",
 		.cpu_dai_name = "OUT2",
@@ -312,7 +313,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_ADX1_3] = {
+	[TEGRA124_DAI_LINK_ADX1_3] = {
 		.name = "ADX1 OUT3",
 		.stream_name = "ADX1 OUT",
 		.cpu_dai_name = "OUT3",
@@ -321,7 +322,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM0_0] = {
+	[TEGRA124_DAI_LINK_DAM0_0] = {
 		.name = "DAM0 IN0",
 		.stream_name = "DAM0 IN0",
 		.cpu_dai_name = "DAM0-0",
@@ -330,7 +331,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM0_1] = {
+	[TEGRA124_DAI_LINK_DAM0_1] = {
 		.name = "DAM0 IN1",
 		.stream_name = "DAM0 IN1",
 		.cpu_dai_name = "DAM0-1",
@@ -339,7 +340,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM0] = {
+	[TEGRA124_DAI_LINK_DAM0] = {
 		.name = "DAM0 OUT",
 		.stream_name = "DAM0 OUT",
 		.cpu_dai_name = "OUT",
@@ -348,7 +349,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM1_0] = {
+	[TEGRA124_DAI_LINK_DAM1_0] = {
 		.name = "DAM1 IN0",
 		.stream_name = "DAM1 IN0",
 		.cpu_dai_name = "DAM1-0",
@@ -357,7 +358,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM1_1] = {
+	[TEGRA124_DAI_LINK_DAM1_1] = {
 		.name = "DAM1 IN1",
 		.stream_name = "DAM1 IN1",
 		.cpu_dai_name = "DAM1-1",
@@ -366,7 +367,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM1] = {
+	[TEGRA124_DAI_LINK_DAM1] = {
 		.name = "DAM1 OUT",
 		.stream_name = "DAM1 OUT",
 		.cpu_dai_name = "OUT",
@@ -375,7 +376,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM2_0] = {
+	[TEGRA124_DAI_LINK_DAM2_0] = {
 		.name = "DAM2 IN0",
 		.stream_name = "DAM2 IN0",
 		.cpu_dai_name = "DAM2-0",
@@ -384,7 +385,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.2",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM2_1] = {
+	[TEGRA124_DAI_LINK_DAM2_1] = {
 		.name = "DAM2 IN1",
 		.stream_name = "DAM2 IN1",
 		.cpu_dai_name = "DAM2-1",
@@ -393,7 +394,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-dam.2",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_DAM2] = {
+	[TEGRA124_DAI_LINK_DAM2] = {
 		.name = "DAM2 OUT",
 		.stream_name = "DAM2 OUT",
 		.cpu_dai_name = "OUT",
@@ -402,7 +403,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC0_RX] = {
+	[TEGRA124_DAI_LINK_AFC0_RX] = {
 		.name = "AFC0 RX",
 		.stream_name = "AFC0 RX",
 		.cpu_dai_name = "AFC0",
@@ -411,7 +412,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.0",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC0_TX] = {
+	[TEGRA124_DAI_LINK_AFC0_TX] = {
 		.name = "AFC0 TX",
 		.stream_name = "AFC0 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -420,7 +421,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC1_RX] = {
+	[TEGRA124_DAI_LINK_AFC1_RX] = {
 		.name = "AFC1 RX",
 		.stream_name = "AFC1 RX",
 		.cpu_dai_name = "AFC1",
@@ -429,7 +430,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.1",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC1_TX] = {
+	[TEGRA124_DAI_LINK_AFC1_TX] = {
 		.name = "AFC1 TX",
 		.stream_name = "AFC1 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -438,7 +439,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC2_RX] = {
+	[TEGRA124_DAI_LINK_AFC2_RX] = {
 		.name = "AFC2 RX",
 		.stream_name = "AFC2 RX",
 		.cpu_dai_name = "AFC2",
@@ -447,7 +448,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.2",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC2_TX] = {
+	[TEGRA124_DAI_LINK_AFC2_TX] = {
 		.name = "AFC2 TX",
 		.stream_name = "AFC2 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -456,7 +457,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC3_RX] = {
+	[TEGRA124_DAI_LINK_AFC3_RX] = {
 		.name = "AFC3 RX",
 		.stream_name = "AFC3 RX",
 		.cpu_dai_name = "AFC3",
@@ -465,7 +466,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.3",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC3_TX] = {
+	[TEGRA124_DAI_LINK_AFC3_TX] = {
 		.name = "AFC3 TX",
 		.stream_name = "AFC3 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -474,7 +475,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC4_RX] = {
+	[TEGRA124_DAI_LINK_AFC4_RX] = {
 		.name = "AFC4 RX",
 		.stream_name = "AFC4 RX",
 		.cpu_dai_name = "AFC4",
@@ -483,7 +484,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.4",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC4_TX] = {
+	[TEGRA124_DAI_LINK_AFC4_TX] = {
 		.name = "AFC4 TX",
 		.stream_name = "AFC4 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -492,7 +493,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra30-ahub-xbar",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC5_RX] = {
+	[TEGRA124_DAI_LINK_AFC5_RX] = {
 		.name = "AFC5 RX",
 		.stream_name = "AFC5 RX",
 		.cpu_dai_name = "AFC5",
@@ -501,7 +502,7 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 		.codec_name = "tegra124-afc.5",
 		.params = &default_link_params,
 	},
-	[DAI_LINK_AFC5_TX] = {
+	[TEGRA124_DAI_LINK_AFC5_TX] = {
 		.name = "AFC5 TX",
 		.stream_name = "AFC5 TX",
 		.cpu_dai_name = "AFC OUT",
@@ -512,80 +513,81 @@ static struct snd_soc_dai_link tegra_xbar_dai_links[NUM_XBAR_DAI_LINKS] = {
 	},
 };
 
-static struct snd_soc_codec_conf tegra_xbar_codec_conf[NUM_XBAR_CODEC_CONF] = {
-	[CODEC_AMX0_CONF] = {
+static struct snd_soc_codec_conf
+	tegra124_xbar_codec_conf[TEGRA124_XBAR_CODEC_CONF] = {
+	[TEGRA124_CODEC_AMX0_CONF] = {
 		.dev_name = "tegra124-amx.0",
 		.name_prefix = "AMX0",
 	},
-	[CODEC_AMX1_CONF] = {
+	[TEGRA124_CODEC_AMX1_CONF] = {
 		.dev_name = "tegra124-amx.1",
 		.name_prefix = "AMX1",
 	},
-	[CODEC_ADX0_CONF] = {
+	[TEGRA124_CODEC_ADX0_CONF] = {
 		.dev_name = "tegra124-adx.0",
 		.name_prefix = "ADX0",
 	},
-	[CODEC_ADX1_CONF] = {
+	[TEGRA124_CODEC_ADX1_CONF] = {
 		.dev_name = "tegra124-adx.1",
 		.name_prefix = "ADX1",
 	},
-	[CODEC_DAM0_CONF] = {
+	[TEGRA124_CODEC_DAM0_CONF] = {
 		.dev_name = "tegra30-dam.0",
 		.name_prefix = "DAM0",
 	},
-	[CODEC_DAM1_CONF] = {
+	[TEGRA124_CODEC_DAM1_CONF] = {
 		.dev_name = "tegra30-dam.1",
 		.name_prefix = "DAM1",
 	},
-	[CODEC_DAM2_CONF] = {
+	[TEGRA124_CODEC_DAM2_CONF] = {
 		.dev_name = "tegra30-dam.2",
 		.name_prefix = "DAM2",
 	},
-	[CODEC_AFC0_CONF] = {
+	[TEGRA124_CODEC_AFC0_CONF] = {
 		.dev_name = "tegra124-afc.0",
 		.name_prefix = "AFC0",
 	},
-	[CODEC_AFC1_CONF] = {
+	[TEGRA124_CODEC_AFC1_CONF] = {
 		.dev_name = "tegra124-afc.1",
 		.name_prefix = "AFC1",
 	},
-	[CODEC_AFC2_CONF] = {
+	[TEGRA124_CODEC_AFC2_CONF] = {
 		.dev_name = "tegra124-afc.2",
 		.name_prefix = "AFC2",
 	},
-	[CODEC_AFC3_CONF] = {
+	[TEGRA124_CODEC_AFC3_CONF] = {
 		.dev_name = "tegra124-afc.3",
 		.name_prefix = "AFC3",
 	},
-	[CODEC_AFC4_CONF] = {
+	[TEGRA124_CODEC_AFC4_CONF] = {
 		.dev_name = "tegra124-afc.4",
 		.name_prefix = "AFC4",
 	},
-	[CODEC_AFC5_CONF] = {
+	[TEGRA124_CODEC_AFC5_CONF] = {
 		.dev_name = "tegra124-afc.5",
 		.name_prefix = "AFC5",
 	},
-	[CODEC_I2S0_CONF] = {
+	[TEGRA124_CODEC_I2S0_CONF] = {
 		.dev_name = "tegra30-i2s.0",
 		.name_prefix = "I2S0",
 	},
-	[CODEC_I2S1_CONF] = {
+	[TEGRA124_CODEC_I2S1_CONF] = {
 		.dev_name = "tegra30-i2s.1",
 		.name_prefix = "I2S1",
 	},
-	[CODEC_I2S2_CONF] = {
+	[TEGRA124_CODEC_I2S2_CONF] = {
 		.dev_name = "tegra30-i2s.2",
 		.name_prefix = "I2S2",
 	},
-	[CODEC_I2S3_CONF] = {
+	[TEGRA124_CODEC_I2S3_CONF] = {
 		.dev_name = "tegra30-i2s.3",
 		.name_prefix = "I2S3",
 	},
-	[CODEC_I2S4_CONF] = {
+	[TEGRA124_CODEC_I2S4_CONF] = {
 		.dev_name = "tegra30-i2s.4",
 		.name_prefix = "I2S4",
 	},
-	[CODEC_SPDIF_CONF] = {
+	[TEGRA124_CODEC_SPDIF_CONF] = {
 		.dev_name = "tegra30-spdif",
 		.name_prefix = "SPDIF",
 	},
@@ -593,14 +595,17 @@ static struct snd_soc_codec_conf tegra_xbar_codec_conf[NUM_XBAR_CODEC_CONF] = {
 
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {
+	struct snd_soc_dai_link *link = tegra124_xbar_dai_links;
+	unsigned int size = TEGRA124_XBAR_DAI_LINKS;
+
 	if (tegra_asoc_machine_links)
 		return tegra_asoc_machine_links;
 
-	tegra_asoc_machine_links = kzalloc(NUM_XBAR_DAI_LINKS *
+	tegra_asoc_machine_links = kzalloc(size *
 		sizeof(struct snd_soc_dai_link), GFP_KERNEL);
 
-	memcpy(tegra_asoc_machine_links, tegra_xbar_dai_links,
-		NUM_XBAR_DAI_LINKS * sizeof(struct snd_soc_dai_link));
+	memcpy(tegra_asoc_machine_links, link,
+		size * sizeof(struct snd_soc_dai_link));
 
 	return tegra_asoc_machine_links;
 }
@@ -619,7 +624,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_dai_link);
 int tegra_machine_append_dai_link(struct snd_soc_dai_link *link,
 		unsigned int link_size)
 {
-	unsigned int size1 = NUM_XBAR_DAI_LINKS;
+	unsigned int size1 = TEGRA124_XBAR_DAI_LINKS;
 	unsigned int size2 = link_size;
 
 	if (!tegra_asoc_machine_links) {
@@ -676,15 +681,17 @@ EXPORT_SYMBOL_GPL(tegra_machine_set_dai_fmt);
 
 struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void)
 {
+	struct snd_soc_codec_conf *conf = tegra124_xbar_codec_conf;
+	unsigned int size = TEGRA124_XBAR_CODEC_CONF;
+
 	if (tegra_asoc_codec_conf)
 		return tegra_asoc_codec_conf;
 
-	tegra_asoc_codec_conf = kzalloc(NUM_XBAR_CODEC_CONF *
+	tegra_asoc_codec_conf = kzalloc(size *
 		sizeof(struct snd_soc_codec_conf), GFP_KERNEL);
 
-	memcpy(tegra_asoc_codec_conf, tegra_xbar_codec_conf,
-		NUM_XBAR_CODEC_CONF *
-		sizeof(struct snd_soc_codec_conf));
+	memcpy(tegra_asoc_codec_conf, conf,
+		size * sizeof(struct snd_soc_codec_conf));
 
 	return tegra_asoc_codec_conf;
 }
@@ -703,7 +710,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_codec_conf);
 int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
 		unsigned int conf_size)
 {
-	unsigned int size1 = NUM_XBAR_CODEC_CONF;
+	unsigned int size1 = TEGRA124_XBAR_CODEC_CONF;
 	unsigned int size2 = conf_size;
 
 	if (!tegra_asoc_codec_conf) {

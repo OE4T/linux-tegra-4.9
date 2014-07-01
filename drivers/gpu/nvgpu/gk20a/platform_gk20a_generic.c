@@ -27,6 +27,17 @@
 #include "gk20a.h"
 
 /*
+ * gk20a_generic_is_railgated()
+ *
+ * Check status of gk20a power rail
+ */
+
+static bool gk20a_generic_is_railgated(struct platform_device *pdev)
+{
+	return !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+}
+
+/*
  * gk20a_generic_railgate()
  *
  * Gate (disable) gk20a power rail
@@ -108,6 +119,7 @@ static int gk20a_generic_late_probe(struct platform_device *dev)
 struct gk20a_platform gk20a_generic_platform = {
 	.railgate = gk20a_generic_railgate,
 	.unrailgate = gk20a_generic_unrailgate,
+	.is_railgated = gk20a_generic_is_railgated,
 
 	.probe = gk20a_generic_probe,
 	.late_probe = gk20a_generic_late_probe,

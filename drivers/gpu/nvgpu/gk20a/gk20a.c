@@ -1817,6 +1817,13 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->big_page_size = g->mm.big_page_size;
 	gpu->compression_page_size = g->mm.compression_page_size;
 	gpu->pde_coverage_bit_count = g->mm.pde_stride_shift;
+
+	gpu->flags = 0;
+
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
+	    gk20a_platform_has_syncpoints(g->dev))
+		gpu->flags |= NVHOST_GPU_FLAGS_HAS_SYNCPOINTS;
+
 	gpu->reserved = 0;
 
 	return 0;

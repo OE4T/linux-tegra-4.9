@@ -4329,8 +4329,9 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dsi_clk;
 	struct clk *dsi_fixed_clk = NULL;
 	struct clk *dsi_lp_clk = NULL;
-	struct tegra_dsi_out *dsi_pdata;
+	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
+	int dsi_instance;
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
 	char *dsi_clk_name[2] = {"dsia", "dsib"};
 	char *dsi_lp_clk_name[2] = {"dsialp", "dsiblp"};
@@ -4348,10 +4349,16 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 
 	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
+	dsi_instance = (int)dc->out->dsi->dsi_instance;
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (np) {
 			if (np_dsi && of_device_is_available(np_dsi)) {
-				of_address_to_resource(np_dsi, i, &dsi_res);
+				if (!dc->out->dsi->ganged_type)
+					of_address_to_resource(np_dsi,
+						dsi_instance, &dsi_res);
+				else /* ganged type */
+					of_address_to_resource(np_dsi,
+						i, &dsi_res);
 				res = &dsi_res;
 			} else {
 				err = -EINVAL;

@@ -474,6 +474,10 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 		sg_set_buf(sgt->sgl, phys_to_virt(handle_phys(h)), h->size);
 	} else {
 		pages = nvmap_pages(h->pgalloc.pages, npages);
+		if (!pages) {
+			err = -ENOMEM;
+			goto err;
+		}
 		err = sg_alloc_table_from_pages(sgt, pages,
 				npages, 0, h->size, GFP_KERNEL);
 		nvmap_altfree(pages, npages * sizeof(*pages));

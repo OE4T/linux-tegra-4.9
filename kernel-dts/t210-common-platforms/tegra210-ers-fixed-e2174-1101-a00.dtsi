@@ -204,5 +204,27 @@
 				};
 			};
 		};
+
+		vdd_aux_3v3: regulator@9 {
+			compatible = "regulator-fixed-sync";
+			reg = <9>;
+			regulator-name = "aux-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "vcc";
+					regulator-consumer-device = "0-0071";
+				};
+			};
+		};
+
+		vdd_snsr_pm: regulator@10 {
+			compatible = "regulator-fixed-sync";
+			reg = <10>;
+			regulator-name = "snsr_pm";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
 	};
 };

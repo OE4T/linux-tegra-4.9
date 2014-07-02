@@ -416,11 +416,24 @@ static struct platform_device __maybe_unused
 static int  __init edp_i_1080p_11_6_register_bl_dev(void)
 {
 	int err = 0;
-	err = platform_add_devices(edp_i_1080p_11_6_bl_devices,
-				ARRAY_SIZE(edp_i_1080p_11_6_bl_devices));
-	if (err) {
-		pr_err("disp1 bl device registration failed");
-		return err;
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+	struct device_node *pwm_bl_node = NULL;
+
+	find_dc_node(&dc1_node, &dc2_node);
+	pwm_bl_node = of_find_compatible_node(NULL, NULL,
+		"pwm-backlight");
+
+	if (!of_have_populated_dt() || !dc1_node ||
+		!of_device_is_available(dc1_node) ||
+		!pwm_bl_node ||
+		!of_device_is_available(pwm_bl_node)) {
+		err = platform_add_devices(edp_i_1080p_11_6_bl_devices,
+			ARRAY_SIZE(edp_i_1080p_11_6_bl_devices));
+		if (err) {
+			pr_err("disp1 bl device registration failed");
+			return err;
+		}
 	}
 	return err;
 }
@@ -453,10 +466,17 @@ edp_i_1080p_11_6_sd_settings_init(struct tegra_dc_sd_settings *settings)
 	settings->bl_device_name = "pwm-backlight";
 }
 
+struct pwm_bl_data_dt_ops edp_i_1080p_11_6_pwm_bl_ops = {
+	.notify = edp_i_1080p_11_6_bl_notify,
+	.check_fb = edp_i_1080p_11_6_check_fb,
+	.blnode_compatible = "i-edp,1080p-11-6-bl",
+};
+
 struct tegra_panel_ops edp_i_1080p_11_6_ops = {
 	.enable = edp_i_1080p_11_6_enable,
 	.disable = edp_i_1080p_11_6_disable,
 	.postsuspend = edp_i_1080p_11_6_postsuspend,
+	.pwm_bl_ops = &edp_i_1080p_11_6_pwm_bl_ops,
 };
 
 struct tegra_panel __initdata edp_i_1080p_11_6 = {

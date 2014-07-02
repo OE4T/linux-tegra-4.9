@@ -199,7 +199,7 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 	switch (display_board.board_id) {
 	case BOARD_E1627:
 	case BOARD_E1797:
-		dev_set_drvdata(dev, dsi_a_1200_1920_8_0_ops.pwm_bl_ops);
+		dev_set_drvdata(dev, dsi_p_wuxga_10_1_ops.pwm_bl_ops);
 		break;
 	case BOARD_E1549:
 		dev_set_drvdata(dev, dsi_lgd_wxga_7_0_ops.pwm_bl_ops);

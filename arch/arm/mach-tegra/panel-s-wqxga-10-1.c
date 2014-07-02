@@ -742,12 +742,24 @@ static struct platform_device __maybe_unused
 static int __init dsi_s_wqxga_10_1_register_bl_dev(void)
 {
 	int err = 0;
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+	struct device_node *pwm_bl_node = NULL;
 
-	err = platform_add_devices(dsi_s_wqxga_10_1_bl_devices,
-				ARRAY_SIZE(dsi_s_wqxga_10_1_bl_devices));
-	if (err) {
-		pr_err("disp1 bl device registration failed");
-		return err;
+	find_dc_node(&dc1_node, &dc2_node);
+	pwm_bl_node = of_find_compatible_node(NULL, NULL,
+		"pwm-backlight");
+
+	if (!of_have_populated_dt() || !dc1_node ||
+		!of_device_is_available(dc1_node) ||
+		!pwm_bl_node ||
+		!of_device_is_available(pwm_bl_node)) {
+		err = platform_add_devices(dsi_s_wqxga_10_1_bl_devices,
+			ARRAY_SIZE(dsi_s_wqxga_10_1_bl_devices));
+		if (err) {
+			pr_err("disp1 bl device registration failed");
+			return err;
+		}
 	}
 	return err;
 }
@@ -793,11 +805,18 @@ static void dsi_s_wqxga_10_1_cmu_init(struct tegra_dc_platform_data *pdata)
 }
 #endif
 
+struct pwm_bl_data_dt_ops  dsi_s_wqxga_10_1_pwm_bl_ops = {
+	.notify = dsi_s_wqxga_10_1_bl_notify,
+	.check_fb = dsi_s_wqxga_10_1_check_fb,
+	.blnode_compatible = "s,wqxga-10-1-bl",
+};
+
 struct tegra_panel_ops dsi_s_wqxga_10_1_ops = {
 	.enable = dsi_s_wqxga_10_1_enable,
 	.disable = dsi_s_wqxga_10_1_disable,
 	.postpoweron = dsi_s_wqxga_10_1_postpoweron,
 	.postsuspend = dsi_s_wqxga_10_1_postsuspend,
+	.pwm_bl_ops = &dsi_s_wqxga_10_1_pwm_bl_ops,
 };
 
 struct tegra_panel __initdata dsi_s_wqxga_10_1 = {

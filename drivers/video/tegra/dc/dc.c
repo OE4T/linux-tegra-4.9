@@ -78,7 +78,9 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 #include "fake_panel.h"
+#include "null_or.h"
 #endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
+
 
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
@@ -105,7 +107,8 @@ static struct fb_videomode tegra_dc_vga_mode = {
 	.sync = 0,
 };
 
-static struct tegra_dc_mode override_disp_mode[3];
+/* needs to be big enough to be index by largest supported out->type */
+static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 
@@ -943,7 +946,7 @@ static int dbg_dc_outtype_show(struct seq_file *s, void *unused)
 /* Add specific variable related to each output type.
  * Save and reuse on changing the output type
  */
-#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT)
 struct tegra_dc_out_info {
 	struct tegra_dc_out_ops *out_ops;
 	void *out_data;
@@ -953,18 +956,23 @@ struct tegra_dc_out_info {
 };
 
 static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
-static int  boot_out_type = -1;
+/* array for saving the out_type for each head */
+static int  boot_out_type[] = {-1, -1};
 
 static int is_invalid_dc_out(struct tegra_dc *dc, long dc_outtype)
 {
-	if ((dc_outtype != boot_out_type) &&
+	if ((dc_outtype != boot_out_type[dc->ndev->id]) &&
 		(dc_outtype != TEGRA_DC_OUT_FAKE_DP) &&
 		(dc_outtype != TEGRA_DC_OUT_FAKE_DSIA) &&
 		(dc_outtype != TEGRA_DC_OUT_FAKE_DSIB) &&
-		(dc_outtype != TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
+		(dc_outtype != TEGRA_DC_OUT_FAKE_DSI_GANGED) &&
+		(dc_outtype != TEGRA_DC_OUT_NULL)) {
 		dev_err(&dc->ndev->dev,
-			"Request 0x%lx is neither fakedp or booted output\n",
+			"Request 0x%lx is unsupported target out_type\n",
 			 dc_outtype);
+		dev_err(&dc->ndev->dev,
+			"boot_out_type[%d] is 0x%x\n",
+			 dc->ndev->id, boot_out_type[dc->ndev->id]);
 		return -EINVAL;
 	}
 
@@ -1016,13 +1024,13 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 	/* check out type is out of range then skip */
 	if (out_type < TEGRA_DC_OUT_RGB ||
-		out_type > TEGRA_DC_OUT_FAKE_DSI_GANGED) {
+		out_type >= TEGRA_DC_OUT_MAX) {
 		dev_err(&dc->ndev->dev, "Unknown out_type 0x%lx\n", out_type);
 		return -EINVAL;
 	}
 
-	if (boot_out_type == -1)
-		boot_out_type = dc->pdata->default_out->type;
+	if (boot_out_type[dc->ndev->id] == -1)
+		boot_out_type[dc->ndev->id] = dc->pdata->default_out->type;
 
 	cur_dc_out = dc->pdata->default_out->type;
 
@@ -1111,6 +1119,11 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			allocate = true;
 			tegra_dc_init_fakedsi_panel(dc, out_type);
 
+		} else if (out_type == TEGRA_DC_OUT_NULL) {
+			if (!dbg_dc_out_info[TEGRA_DC_OUT_NULL].out_data) {
+				allocate = true;
+				tegra_dc_init_null_or(dc);
+			}
 		} else {
 			/* set  back to existing one */
 			dc->pdata->default_out->type = cur_dc_out;
@@ -1698,7 +1711,8 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 {
 	if (dc->out->type == TEGRA_DC_OUT_RGB ||
 		dc->out->type == TEGRA_DC_OUT_HDMI ||
-		dc->out->type == TEGRA_DC_OUT_DSI)
+		dc->out->type == TEGRA_DC_OUT_DSI ||
+		dc->out->type == TEGRA_DC_OUT_NULL)
 		return override_disp_mode[dc->out->type].pclk ?
 			&override_disp_mode[dc->out->type] : NULL;
 	else
@@ -1797,6 +1811,12 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_lvds_ops;
 		break;
 #endif
+#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
+	case TEGRA_DC_OUT_NULL:
+		dc->out_ops = &tegra_dc_null_ops;
+		break;
+#endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
+
 	default:
 		dc->out_ops = NULL;
 		break;
@@ -1817,7 +1837,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 }
 
 /* returns on error: -EINVAL
- * on success: TEGRA_DC_OUT_RGB, TEGRA_DC_OUT_HDMI, or TEGRA_DC_OUT_DSI. */
+ * on success: TEGRA_DC_OUT_RGB, TEGRA_DC_OUT_HDMI, ... */
 int tegra_dc_get_out(const struct tegra_dc *dc)
 {
 	if (dc && dc->out)
@@ -2834,6 +2854,7 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 		case TEGRA_DC_OUT_DP:
 		case TEGRA_DC_OUT_NVSR_DP:
 		case TEGRA_DC_OUT_FAKE_DP:
+		case TEGRA_DC_OUT_NULL:
 			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
 
 		/* Do nothing for other outputs for now */
@@ -3966,6 +3987,15 @@ static int __init tegra_dc_mode_override(char *str)
 		p += 4;
 		options = strsep(&p, ";");
 		if (parse_disp_params(options, &override_disp_mode[TEGRA_DC_OUT_DSI]))
+			return -EINVAL;
+	}
+
+	p = strstr(str, "null:");
+	if (p) {
+		p += 5;
+		options = strsep(&p, ";");
+		if (parse_disp_params(options,
+				&override_disp_mode[TEGRA_DC_OUT_NULL]))
 			return -EINVAL;
 	}
 

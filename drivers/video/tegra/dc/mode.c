@@ -281,6 +281,7 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_FAKE_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_NULL) ||
 		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
 		tegra_dc_writel(dc, mode->h_back_porch |
 			((v_back_porch - mode->v_ref_to_sync) << 16),
@@ -360,10 +361,14 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 		"nominal-pclk:%d parent:%lu div:%lu.%lu pclk:%lu %d~%d\n",
 		mode->pclk, rate, (div + 2) / 2, ((div + 2) % 2) * 5, pclk,
 		mode->pclk / 100 * 99, mode->pclk / 100 * 109);
-	if (!pclk || pclk < (mode->pclk / 100 * 99) ||
-	    pclk > (mode->pclk / 100 * 109)) {
-		dev_err(&dc->ndev->dev, "pclk out of range!\n");
-		return -EINVAL;
+
+	/* skip pclk range check for TEGRA_DC_OUT_NULL */
+	if (dc->out->type != TEGRA_DC_OUT_NULL) {
+		if (!pclk || pclk < (mode->pclk / 100 * 99) ||
+			pclk > (mode->pclk / 100 * 109)) {
+			dev_err(&dc->ndev->dev, "pclk out of range!\n");
+			return -EINVAL;
+		}
 	}
 
 	/* SW WAR for bug 1045373. To make the shift clk dividor effect under

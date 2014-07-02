@@ -442,6 +442,8 @@ extern struct tegra_dc_out_ops tegra_dc_lvds_ops;
 extern struct tegra_dc_out_ops tegra_dc_nvsr_ops;
 #endif
 
+extern struct tegra_dc_out_ops tegra_dc_null_ops;
+
 /* defined in dc_sysfs.c, used by dc.c */
 void tegra_dc_remove_sysfs(struct device *dev);
 void tegra_dc_create_sysfs(struct device *dev);

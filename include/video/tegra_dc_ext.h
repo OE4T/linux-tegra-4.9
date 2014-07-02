@@ -449,6 +449,7 @@ enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_HDMI,
 	TEGRA_DC_EXT_DVI,
 	TEGRA_DC_EXT_DP,
+	TEGRA_DC_EXT_NULL,
 };
 
 /*

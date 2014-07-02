@@ -34,8 +34,8 @@
 
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
-
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
+#include <linux/of.h>
 
 #include "tegra_cec.h"
 
@@ -451,6 +451,11 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto cec_error;
 	}
 
+	dev_info(&pdev->dev, "dt=%d start=0x%08llX end=0x%08llX irq=%d\n",
+		(pdev->dev.of_node != NULL),
+		res->start, res->end,
+		cec->tegra_cec_irq);
+
 	atomic_set(&cec->init_done, 0);
 	mutex_init(&cec->tx_lock);
 
@@ -558,10 +563,19 @@ static int tegra_cec_resume(struct platform_device *pdev)
 }
 #endif
 
+static struct of_device_id tegra_cec_of_match[] = {
+	{ .compatible = "nvidia,tegra114-cec", },
+	{ .compatible = "nvidia,tegra124-cec", },
+	{ .compatible = "nvidia,tegra210-cec", },
+	{},
+};
+
 static struct platform_driver tegra_cec_driver = {
 	.driver = {
 		.name = TEGRA_CEC_NAME,
 		.owner = THIS_MODULE,
+
+		.of_match_table = of_match_ptr(tegra_cec_of_match),
 	},
 	.probe = tegra_cec_probe,
 	.remove = tegra_cec_remove,

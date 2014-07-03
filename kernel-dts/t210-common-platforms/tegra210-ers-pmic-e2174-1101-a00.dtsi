@@ -1,5 +1,6 @@
 #include <dt-bindings/mfd/max77620.h>
 #include <dt-bindings/regulator/regulator.h>
+#include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
 	i2c@7000d000 {

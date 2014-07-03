@@ -933,21 +933,6 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	memset(q, 0, sizeof(struct priv_cmd_queue));
 }
 
-int gk20a_find_from_priv_cmdbuf(struct channel_gk20a *c,
-				u64 gpu_va, u32 **cpu_va)
-{
-	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	int ret;
-
-	if (gpu_va >= q->base_gpuva && gpu_va < (q->base_gpuva + q->size)) {
-		*cpu_va = gpu_va - q->base_gpuva + q->mem.base_cpuva;
-		ret = 0;
-	} else
-		ret = -EINVAL;
-
-	return ret;
-}
-
 /* allocate a cmd buffer with given size. size is number of u32 entries */
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 			     struct priv_cmd_entry **entry)

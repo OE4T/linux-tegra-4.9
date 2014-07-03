@@ -19,7 +19,6 @@
 #include <linux/seq_file.h>
 
 #include <linux/io.h>
-#include <linux/dma-buf.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -34,7 +33,6 @@ struct platform_device *gk20a_device;
 
 struct gk20a_debug_output {
 	void (*fn)(void *ctx, const char *str, size_t len);
-	void (*cont)(void *ctx, const char *str, size_t len);
 	void *ctx;
 	char buf[256];
 };
@@ -82,12 +80,6 @@ static inline void gk20a_debug_write_printk(void *ctx, const char *str,
 	pr_info("%s", str);
 }
 
-static inline void gk20a_debug_cont_printk(void *ctx, const char *str,
-					    size_t len)
-{
-	pr_cont("%s", str);
-}
-
 static inline void gk20a_debug_write_to_seqfile(void *ctx, const char *str,
 						size_t len)
 {
@@ -103,17 +95,6 @@ void gk20a_debug_output(struct gk20a_debug_output *o, const char *fmt, ...)
 	len = vsnprintf(o->buf, sizeof(o->buf), fmt, args);
 	va_end(args);
 	o->fn(o->ctx, o->buf, len);
-}
-
-void gk20a_debug_output_cont(struct gk20a_debug_output *o, const char *fmt, ...)
-{
-	va_list args;
-	int len;
-
-	va_start(args, fmt);
-	len = vsnprintf(o->buf, sizeof(o->buf), fmt, args);
-	va_end(args);
-	o->cont(o->ctx, o->buf, len);
 }
 
 static void gk20a_debug_show_channel(struct gk20a *g,
@@ -132,14 +113,14 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	syncpointa = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w());
 	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
 
-	gk20a_debug_output_cont(o, "%d-%s, pid %d: ", ch->hw_chid,
+	gk20a_debug_output(o, "%d-%s, pid %d: ", ch->hw_chid,
 			ch->g->dev->name,
 			ch->pid);
-	gk20a_debug_output_cont(o, "%s in use %s %s\n",
+	gk20a_debug_output(o, "%s in use %s %s\n",
 			ccsr_channel_enable_v(channel) ? "" : "not",
 			ccsr_chan_status_str[status],
 			ccsr_channel_busy_v(channel) ? "busy" : "not busy");
-	gk20a_debug_output_cont(o, "TOP: %016llx PUT: %016llx GET: %016llx "
+	gk20a_debug_output(o, "TOP: %016llx PUT: %016llx GET: %016llx "
 			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
 			"SYNCPOINT %08x %08x SEMAPHORE %08x %08x %08x %08x\n",
 		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_top_level_get_w()) +
@@ -163,81 +144,14 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
 		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
 			pbdma_syncpointb_wait_switch_en_v()))
-		gk20a_debug_output_cont(o, "%s on syncpt %u (%s) val %u\n",
+		gk20a_debug_output(o, "%s on syncpt %u (%s) val %u\n",
 			(status == 3 || status == 8) ? "Waiting" : "Waited",
 			pbdma_syncpointb_syncpt_index_v(syncpointb),
 			nvhost_syncpt_get_name(g->host1x_dev,
 				pbdma_syncpointb_syncpt_index_v(syncpointb)),
 			pbdma_syncpointa_payload_v(syncpointa));
 
-	gk20a_debug_output_cont(o, "\n");
-}
-
-static void gk20a_dump_gpfifo(struct channel_gk20a *ch,
-			  struct gpfifo *g, struct gk20a_debug_output *o)
-{
-	struct dma_buf *pb = NULL;
-	u32 *pb_cpu_va = NULL;
-	u64 pb_offset = 0;
-	int i, err = 0;
-
-	u64 gpu_va = (u64)g->entry0
-		| (u64)pbdma_gp_entry1_get_hi_v(g->entry1) << 32ULL;
-	u32 length = pbdma_gp_entry1_length_v(g->entry1);
-
-	if (gk20a_find_from_priv_cmdbuf(ch, gpu_va, &pb_cpu_va)) {
-		gk20a_debug_output_cont(o, "U: ");
-		err = gk20a_vm_find_buffer(ch->vm, gpu_va, &pb, &pb_offset);
-	}
-	if (err) {
-		gk20a_debug_output_cont(o, "Couldn't find push buffer\n");
-		return;
-	}
-
-	if (pb)
-		pb_cpu_va = dma_buf_vmap(pb);
-	for (i = 0; i < length; i++) {
-		if (i && i % 8 == 0)
-			gk20a_debug_output_cont(o, "\n");
-		gk20a_debug_output_cont(o, "%08x ", *(pb_cpu_va + (pb_offset/4) + i));
-	}
-
-	if (pb)
-		dma_buf_vunmap(pb, pb_cpu_va);
-
-	gk20a_debug_output_cont(o, "\n");
-}
-
-static void gk20a_dump_pb(struct gk20a *g,
-			  u32 pbdma_id, struct gk20a_debug_output *o)
-{
-	u32 gp_get = gk20a_readl(g, pbdma_gp_get_r(pbdma_id));
-	u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
-	u32 chan_status = fifo_pbdma_status_chan_status_v(status);
-	u32 hw_chid = fifo_pbdma_status_id_v(status);
-	struct channel_gk20a *ch = g->fifo.channel+ hw_chid;
-
-	gk20a_debug_output_cont(o, "%s pbdma %d: ", g->dev->name, pbdma_id);
-	gk20a_debug_output_cont(o,
-			"id: %d (%s), next_id: %d (%s) status: %s\n",
-			fifo_pbdma_status_id_v(status),
-			fifo_pbdma_status_id_type_v(status) ?
-				"tsg" : "channel",
-			fifo_pbdma_status_next_id_v(status),
-			fifo_pbdma_status_next_id_type_v(status) ?
-				"tsg" : "channel",
-			chan_status_str[chan_status]);
-	gk20a_debug_output_cont(o, "PUT: %08x GET: %08x "
-			"FETCH: %08x HEADER: %08x\n",
-		gk20a_readl(g, pbdma_gp_put_r(pbdma_id)),
-		gk20a_readl(g, pbdma_gp_get_r(pbdma_id)),
-		gk20a_readl(g, pbdma_gp_fetch_r(pbdma_id)),
-		gk20a_readl(g, pbdma_pb_header_r(pbdma_id)));
-
-	if (ch->in_use) {
-		gk20a_dump_gpfifo(ch, &ch->gpfifo.cpu_va[(gp_get-2) % ch->gpfifo.entry_num], o);
-		gk20a_dump_gpfifo(ch, &ch->gpfifo.cpu_va[(gp_get-1) % ch->gpfifo.entry_num], o);
-	}
+	gk20a_debug_output(o, "\n");
 }
 
 void gk20a_debug_show_dump(struct platform_device *pdev,
@@ -250,13 +164,12 @@ void gk20a_debug_show_dump(struct platform_device *pdev,
 	int i;
 
 	gk20a_busy(g->dev);
-	gk20a_debug_output(o, "");
 	for (i = 0; i < fifo_pbdma_status__size_1_v(); i++) {
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
 
-		gk20a_debug_output_cont(o, "%s pbdma %d: ", g->dev->name, i);
-		gk20a_debug_output_cont(o,
+		gk20a_debug_output(o, "%s pbdma %d: ", g->dev->name, i);
+		gk20a_debug_output(o,
 				"id: %d (%s), next_id: %d (%s) status: %s\n",
 				fifo_pbdma_status_id_v(status),
 				fifo_pbdma_status_id_type_v(status) ?
@@ -265,23 +178,23 @@ void gk20a_debug_show_dump(struct platform_device *pdev,
 				fifo_pbdma_status_next_id_type_v(status) ?
 					"tsg" : "channel",
 				chan_status_str[chan_status]);
-		gk20a_debug_output_cont(o, "PUT: %08x GET: %08x "
+		gk20a_debug_output(o, "PUT: %016llx GET: %016llx "
 				"FETCH: %08x HEADER: %08x\n",
-			gk20a_readl(g, pbdma_gp_put_r(i)),
-			gk20a_readl(g, pbdma_gp_get_r(i)),
+			(u64)gk20a_readl(g, pbdma_put_r(i)) +
+			((u64)gk20a_readl(g, pbdma_put_hi_r(i)) << 32ULL),
+			(u64)gk20a_readl(g, pbdma_get_r(i)) +
+			((u64)gk20a_readl(g, pbdma_get_hi_r(i)) << 32ULL),
 			gk20a_readl(g, pbdma_gp_fetch_r(i)),
 			gk20a_readl(g, pbdma_pb_header_r(i)));
-
-		gk20a_dump_pb(g, i, o);
 	}
-	gk20a_debug_output_cont(o, "\n");
+	gk20a_debug_output(o, "\n");
 
 	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
 
-		gk20a_debug_output_cont(o, "%s eng %d: ", g->dev->name, i);
-		gk20a_debug_output_cont(o,
+		gk20a_debug_output(o, "%s eng %d: ", g->dev->name, i);
+		gk20a_debug_output(o,
 				"id: %d (%s), next_id: %d (%s), ctx: %s ",
 				fifo_engine_status_id_v(status),
 				fifo_engine_status_id_type_v(status) ?
@@ -292,12 +205,12 @@ void gk20a_debug_show_dump(struct platform_device *pdev,
 				ctx_status_str[ctx_status]);
 
 		if (fifo_engine_status_faulted_v(status))
-			gk20a_debug_output_cont(o, "faulted ");
+			gk20a_debug_output(o, "faulted ");
 		if (fifo_engine_status_engine_v(status))
-			gk20a_debug_output_cont(o, "busy ");
-		gk20a_debug_output_cont(o, "\n");
+			gk20a_debug_output(o, "busy ");
+		gk20a_debug_output(o, "\n");
 	}
-	gk20a_debug_output_cont(o, "\n");
+	gk20a_debug_output(o, "\n");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (f->channel[chid].in_use) {
@@ -312,8 +225,7 @@ void gk20a_debug_dump(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	struct gk20a_debug_output o = {
-		.fn = gk20a_debug_write_printk,
-		.cont = gk20a_debug_cont_printk
+		.fn = gk20a_debug_write_printk
 	};
 
 	if (platform->dump_platform_dependencies)
@@ -325,8 +237,7 @@ void gk20a_debug_dump(struct platform_device *pdev)
 void gk20a_debug_dump_device(struct platform_device *pdev)
 {
 	struct gk20a_debug_output o = {
-		.fn = gk20a_debug_write_printk,
-		.cont = gk20a_debug_cont_printk
+		.fn = gk20a_debug_write_printk
 	};
 
 	/* Dump the first device if no info is provided */
@@ -342,7 +253,6 @@ static int gk20a_debug_show(struct seq_file *s, void *unused)
 	struct platform_device *pdev = s->private;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_to_seqfile,
-		.cont = gk20a_debug_write_to_seqfile,
 		.ctx = s,
 	};
 	gk20a_debug_show_dump(pdev, &o);

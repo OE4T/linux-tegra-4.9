@@ -162,8 +162,6 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
 void gk20a_channel_semaphore_wakeup(struct gk20a *g);
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,
 			     struct priv_cmd_entry **entry);
-int gk20a_find_from_priv_cmdbuf(struct channel_gk20a *c,
-				u64 addr, u32 **cpu_va);
 
 int gk20a_channel_suspend(struct gk20a *g);
 int gk20a_channel_resume(struct gk20a *g);

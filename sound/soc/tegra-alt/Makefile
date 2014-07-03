@@ -5,6 +5,7 @@ subdir-ccflags-y := -Werror
 # Tegra platform Support
 snd-soc-tegra-alt-pcm-objs := tegra_pcm_alt.o
 snd-soc-tegra-alt-utils-objs := tegra_asoc_utils_alt.o
+snd-soc-tegra-alt-hwdep-objs := tegra_asoc_hwdep_alt.o
 snd-soc-tegra30-alt-apbif-objs := tegra30_apbif_alt.o
 snd-soc-tegra30-alt-xbar-objs := tegra30_xbar_alt.o
 snd-soc-tegra30-alt-i2s-objs := tegra30_i2s_alt.o
@@ -29,6 +30,7 @@ snd-soc-tegra210-alt-fpga-clock-objs := ahub_unit_fpga_clock.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-utils.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-pcm.o
+obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-hwdep.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra210-alt-fpga-clock.o
 obj-$(CONFIG_SND_SOC_TEGRA30_APBIF_ALT) += snd-soc-tegra30-alt-apbif.o
 obj-$(CONFIG_SND_SOC_TEGRA30_XBAR_ALT) += snd-soc-tegra30-alt-xbar.o

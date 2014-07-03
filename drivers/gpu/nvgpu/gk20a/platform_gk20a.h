@@ -118,6 +118,7 @@ struct gk20a_platform {
 
 	/* Called to turn on the device */
 	int (*unrailgate)(struct platform_device *dev);
+	struct mutex railgate_lock;
 
 	/* Called to check state of device */
 	bool (*is_railgated)(struct platform_device *dev);

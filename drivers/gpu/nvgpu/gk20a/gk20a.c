@@ -76,6 +76,8 @@ u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
 u32 gk20a_dbg_ftrace;
 #endif
 
+#define GK20A_WAIT_FOR_IDLE_MS	2000
+
 static int gk20a_pm_finalize_poweron(struct device *dev);
 static int gk20a_pm_prepare_poweroff(struct device *dev);
 
@@ -1736,9 +1738,10 @@ int gk20a_do_idle(void)
 		NULL, "gk20a.0"));
 	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
-	struct fifo_gk20a *f = &g->fifo;
-	unsigned long timeout = jiffies + msecs_to_jiffies(200);
-	int chid, ref_cnt;
+	unsigned long timeout = jiffies +
+		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+	int ref_cnt;
+	bool is_railgated;
 
 	if (!platform->can_railgate)
 		return -ENOSYS;
@@ -1759,12 +1762,8 @@ int gk20a_do_idle(void)
 	/* check and wait until GPU is idle (with a timeout) */
 	pm_runtime_barrier(&pdev->dev);
 
-	for (chid = 0; chid < f->num_channels; chid++)
-		if (gk20a_wait_channel_idle(&f->channel[chid]))
-			goto fail;
-
 	do {
-		mdelay(1);
+		msleep(1);
 		ref_cnt = atomic_read(&pdev->dev.power.usage_count);
 	} while (ref_cnt != 1 && time_before(jiffies, timeout));
 
@@ -1778,19 +1777,20 @@ int gk20a_do_idle(void)
 	pm_runtime_put_sync(&pdev->dev);
 
 	/* add sufficient delay to allow GPU to rail gate */
-	mdelay(platform->railgate_delay);
+	msleep(platform->railgate_delay);
 
-	if (platform->is_railgated(pdev))
+	timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+
+	/* check in loop if GPU is railgated or not */
+	do {
+		msleep(1);
+		is_railgated = platform->is_railgated(pdev);
+	} while (!is_railgated && time_before(jiffies, timeout));
+
+	if (is_railgated)
 		return 0;
-	else {
-		/* wait for some more time */
-		mdelay(100);
-		if (platform->is_railgated(pdev))
-			return 0;
-	}
-
-	/* GPU is not rail gated by now, return error */
-	goto fail_timeout;
+	else
+		goto fail_timeout;
 
 fail:
 	pm_runtime_put_noidle(&pdev->dev);

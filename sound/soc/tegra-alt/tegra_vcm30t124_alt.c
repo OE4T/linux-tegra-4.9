@@ -52,7 +52,9 @@ static unsigned int num_codec_links;
 struct tegra_vcm30t124 {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	int gpio_dap_direction;
-	int rate_via_kcontrol;
+	int wm_rate_via_kcontrol;
+	int ad_rate_via_kcontrol;
+	int ak_rate_via_kcontrol;
 	struct i2c_client *max9485_client;
 	struct tegra_vcm30t124_platform_data *pdata;
 };
@@ -118,25 +120,21 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
-	int srate, mclk, clk_out_rate;
+	int mclk, clk_out_rate;
 	int err;
 
-	srate = params_rate(params);
+	/* rate is either supplied by pcm params or via kcontrol */
+	if (!machine->ak_rate_via_kcontrol)
+		dai_params->rate_min = params_rate(params);
 
-	if ((srate < dai_params->rate_min) || (srate > dai_params->rate_max)) {
-		dev_err(card->dev, "Supported range is [%d, %d]\n",
-			dai_params->rate_min, dai_params->rate_max);
-		return -EINVAL;
-	}
-
-	switch (srate) {
+	switch (dai_params->rate_min) {
 	case 64000:
 	case 96000:
-		clk_out_rate = srate * 256;
+		clk_out_rate = dai_params->rate_min * 256;
 		mclk = 12288000 * 2;
 		break;
 	case 88200:
-		clk_out_rate = srate * 256;
+		clk_out_rate = dai_params->rate_min * 256;
 		mclk = 11289600 * 2;
 		break;
 	case 8000:
@@ -144,7 +142,7 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	case 32000:
 	case 48000:
 	default:
-		clk_out_rate = srate * 512;
+		clk_out_rate = dai_params->rate_min * 512;
 		/*
 		 * MCLK is pll_a_out, it is a source clock of ahub.
 		 * So it need to be faster than BCLK in slave mode.
@@ -152,7 +150,7 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 		mclk = 12288000 * 2;
 		break;
 	case 44100:
-		clk_out_rate = srate * 512;
+		clk_out_rate = dai_params->rate_min * 512;
 		/*
 		 * MCLK is pll_a_out, it is a source clock of ahub.
 		 * So it need to be faster than BCLK in slave mode.
@@ -160,17 +158,17 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 		mclk = 11289600 * 2;
 		break;
 	case 17640:
-		clk_out_rate = srate * 128;
+		clk_out_rate = dai_params->rate_min * 128;
 		mclk = 11289600 * 2;
 		break;
 	case 19200:
-		clk_out_rate = srate * 128;
+		clk_out_rate = dai_params->rate_min * 128;
 		mclk = 12288000 * 2;
 		break;
 	}
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					srate, mclk, clk_out_rate);
+				dai_params->rate_min, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
@@ -183,8 +181,8 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
-					SND_SOC_CLOCK_IN);
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+			dai_params->rate_min, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "x cpu_dai clock not set\n");
 		return err;
@@ -196,7 +194,6 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	} else {
 		dai_params->channels_min = params_channels(params);
 		dai_params->formats = (1ULL << (params_format(params)));
-		dai_params->rate_min = srate;
 	}
 
 	return 0;
@@ -217,7 +214,7 @@ static int tegra_vcm30t124_wm8731_hw_params(struct snd_pcm_substream *substream,
 	int err;
 
 	/* rate is either supplied by pcm params or via kcontrol */
-	if (!machine->rate_via_kcontrol)
+	if (!machine->wm_rate_via_kcontrol)
 		dai_params->rate_min = params_rate(params);
 
 	dai_params->channels_min = params_channels(params);
@@ -288,30 +285,23 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
-	int srate, mclk, clk_out_rate, val;
+	int mclk, clk_out_rate, val;
 	int err;
 
-	srate = params_rate(params);
+	/* rate is either supplied by pcm params or via kcontrol */
+	if (!machine->ad_rate_via_kcontrol)
+		dai_params->rate_min = params_rate(params);
 
-	if ((srate < dai_params->rate_min) || (srate > dai_params->rate_max)) {
-		dev_err(card->dev, "Supported range is [%d, %d]\n",
-			dai_params->rate_min, dai_params->rate_max);
-		return -EINVAL;
-	}
-
-	switch (srate) {
+	switch (dai_params->rate_min) {
 	case 64000:
 	case 88200:
 	case 96000:
-		clk_out_rate = 128 * srate;
+		clk_out_rate = dai_params->rate_min * 128;
 		break;
 	default:
-		clk_out_rate = 256 * srate;
+		clk_out_rate = dai_params->rate_min * 256;
 		break;
 	}
-
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = srate;
 
 	mclk = clk_out_rate * 2;
 
@@ -325,8 +315,8 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0, srate,
-					SND_SOC_CLOCK_IN);
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+			dai_params->rate_min, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "y cpu_dai clock not set\n");
 		return err;
@@ -897,31 +887,92 @@ static const char * const tegra_vcm30t124_srate_text[] = {
 	"192kHz",
 };
 
-static int tegra_vcm30t124_codec_get_rate(struct snd_kcontrol *kcontrol,
+static int tegra_vcm30t124_wm8731_get_rate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
 
-	ucontrol->value.integer.value[0] = machine->rate_via_kcontrol;
+	ucontrol->value.integer.value[0] = machine->wm_rate_via_kcontrol;
 
 	return 0;
 }
 
-static int tegra_vcm30t124_codec_put_rate(struct snd_kcontrol *kcontrol,
+static int tegra_vcm30t124_wm8731_put_rate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("wm8731");
 	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->dai_link[10].params;
+		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
 	/* set the rate control flag */
-	machine->rate_via_kcontrol = ucontrol->value.integer.value[0];
+	machine->wm_rate_via_kcontrol = ucontrol->value.integer.value[0];
 
 	/* update the dai params rate */
 	dai_params->rate_min =
-		tegra_vcm30t124_srate_values[machine->rate_via_kcontrol];
+		tegra_vcm30t124_srate_values[machine->wm_rate_via_kcontrol];
+
+	return 0;
+}
+
+static int tegra_vcm30t124_ad1937_get_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->ad_rate_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_vcm30t124_ad1937_put_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad193x");
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
+
+	/* set the rate control flag */
+	machine->ad_rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->ad_rate_via_kcontrol];
+
+	return 0;
+}
+
+static int tegra_vcm30t124_ak4618_get_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->ak_rate_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_vcm30t124_ak4618_put_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ak4618");
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
+
+	/* set the rate control flag */
+	machine->ak_rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->ak_rate_via_kcontrol];
 
 	return 0;
 }
@@ -935,8 +986,15 @@ static const struct soc_enum tegra_vcm30t124_codec_rate =
 	SOC_ENUM_SINGLE_EXT(13, tegra_vcm30t124_srate_text);
 
 static const struct snd_kcontrol_new tegra_vcm30t124_controls[] = {
-	SOC_ENUM_EXT("codec-x rate", tegra_vcm30t124_codec_rate,
-		tegra_vcm30t124_codec_get_rate, tegra_vcm30t124_codec_put_rate),
+	SOC_ENUM_EXT("codec-wm rate", tegra_vcm30t124_codec_rate,
+		tegra_vcm30t124_wm8731_get_rate,
+		tegra_vcm30t124_wm8731_put_rate),
+	SOC_ENUM_EXT("codec-ad rate", tegra_vcm30t124_codec_rate,
+		tegra_vcm30t124_ad1937_get_rate,
+		tegra_vcm30t124_ad1937_put_rate),
+	SOC_ENUM_EXT("codec-ak rate", tegra_vcm30t124_codec_rate,
+		tegra_vcm30t124_ak4618_get_rate,
+		tegra_vcm30t124_ak4618_put_rate),
 };
 
 static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
@@ -1062,7 +1120,9 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 	card->codec_conf = tegra_machine_codec_conf;
 
 	machine->gpio_dap_direction = GPIO_PR0;
-	machine->rate_via_kcontrol = 0;
+	machine->wm_rate_via_kcontrol = 0;
+	machine->ad_rate_via_kcontrol = 0;
+	machine->ak_rate_via_kcontrol = 0;
 	card->dapm_routes = machine->pdata->dapm_routes;
 	card->num_dapm_routes = machine->pdata->num_dapm_routes;
 
@@ -1107,7 +1167,8 @@ err_fini_utils:
 err_gpio_free:
 	devm_gpio_free(&pdev->dev, machine->gpio_dap_direction);
 err_i2c_unregister:
-	i2c_unregister_device(machine->max9485_client);
+	if (machine->max9485_client)
+		i2c_unregister_device(machine->max9485_client);
 err:
 	return ret;
 }

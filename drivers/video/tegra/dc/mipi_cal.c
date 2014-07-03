@@ -138,7 +138,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 {
 	struct tegra_mipi_cal *mipi_cal;
 	struct resource *res;
-	struct resource mipi_res;
+	struct resource *mipi_res = NULL;
 	struct resource *base_res;
 	struct clk *clk;
 	struct clk *fixed_clk;
@@ -158,9 +158,18 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	}
 
 	if (np_mipi_cal && of_device_is_available(np_mipi_cal)) {
-			of_address_to_resource(
-				np_mipi_cal, 0, &mipi_res);
-			res = &mipi_res;
+		mipi_res = kzalloc(sizeof(struct resource), GFP_KERNEL);
+		if (mipi_res == NULL) {
+			err = -ENOMEM;
+			goto fail_free_mipi_cal;
+		}
+
+		err = of_address_to_resource(np_mipi_cal, 0, mipi_res);
+		if (err)
+			goto fail_free_mipi_cal;
+
+		res = mipi_res;
+
 	} else {
 		res = platform_get_resource_byname(dc->ndev,
 				IORESOURCE_MEM, "mipi_cal");
@@ -213,6 +222,8 @@ fail_free_res:
 		release_resource(res);
 fail_free_mipi_cal:
 	devm_kfree(&dc->ndev->dev, mipi_cal);
+	if (np_mipi_cal)
+		kfree(mipi_res);
 fail:
 	return ERR_PTR(err);
 }
@@ -242,6 +253,8 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 
 	if (!np_mipi_cal || !of_device_is_available(np_mipi_cal))
 		release_resource(mipi_cal->base_res);
+	else
+		kfree(mipi_cal->res);
 
 	mutex_unlock(&mipi_cal->lock);
 

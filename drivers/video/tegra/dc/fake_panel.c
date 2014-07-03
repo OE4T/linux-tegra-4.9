@@ -319,7 +319,8 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		dsi->avdd_dsi_csi = NULL;
 	}
 
-	tegra_mipi_cal_destroy(dc);
+	if (dsi->mipi_cal)
+		tegra_mipi_cal_destroy(dc);
 
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);

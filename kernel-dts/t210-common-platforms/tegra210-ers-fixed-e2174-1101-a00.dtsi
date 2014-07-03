@@ -26,10 +26,6 @@
 			gpio = <&max77620 3 0>;
 			enable-active-high;
 			consumers {
-				c0 {
-					regulator-consumer-supply = "avdd_usb";
-					regulator-consumer-device = "tegra-udc.0";
-				};
 				c1 {
 					regulator-consumer-supply = "avdd_usb";
 					regulator-consumer-device = "tegra-ehci.0";

@@ -116,10 +116,6 @@
 							regulator-consumer-supply = "vddio_sdmmc";
 							regulator-consumer-device = "sdhci-tegra.0";
 						};
-						c6 {
-							regulator-consumer-supply = "avdd_pll_utmip";
-							regulator-consumer-device = "tegra-udc.0";
-						};
 						c7 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.0";
@@ -329,18 +325,13 @@
 				};
 			};
 
-			vbus {
+			usb0_vbus: vbus {
 				regulator-name = "vbus_regulator";
 				ti,otg-iusb-gpio = <&gpio TEGRA_GPIO(CC, 5) 0>;
 				consumers {
 					c1 {
 						regulator-consumer-supply = "usb_vbus";
 						regulator-consumer-device = "tegra-ehci.0";
-					};
-
-					c2 {
-						regulator-consumer-supply = "usb_vbus";
-						regulator-consumer-device = "tegra-otg";
 					};
 				};
 			};

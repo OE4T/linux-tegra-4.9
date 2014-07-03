@@ -22,7 +22,6 @@
 /*------------------------------------------------------------------------------
  */
 #define OZ_MAX_TX_POOL_SIZE	6
-#define AC_VO	0x106
 /*------------------------------------------------------------------------------
  */
 static struct oz_tx_frame *oz_tx_frame_alloc(struct oz_pd *pd);
@@ -739,6 +738,8 @@ static int oz_send_isoc_frame(struct oz_pd *pd)
 	skb_reset_network_header(skb);
 	skb->dev = dev;
 	skb->protocol = htons(OZ_ETHERTYPE);
+	/* For audio packet set priority to AC_VO */
+	skb->priority = AC_VO;
 	if (dev_hard_header(skb, dev, OZ_ETHERTYPE, pd->mac_addr,
 		dev->dev_addr, skb->len) < 0) {
 		kfree_skb(skb);

@@ -28,6 +28,8 @@
 #define OZ_TASKLET_SCHED_TIMEOUT	0
 #define OZ_TASKLET_SCHED_HEARTBEAT	1
 
+/* Audio packet network priority */
+#define AC_VO   0x106
 
 #define ETH_STRING_LEN		17
 /* Data structure that hold information on a frame for transmisson. This is

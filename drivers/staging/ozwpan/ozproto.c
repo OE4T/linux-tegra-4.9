@@ -89,6 +89,7 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 	body = (struct oz_elt_connect_rsp *)(elt+1);
 	skb->dev = dev;
 	skb->protocol = htons(OZ_ETHERTYPE);
+	skb->priority = AC_VO;
 	/* Fill in device header */
 	if (dev_hard_header(skb, dev, OZ_ETHERTYPE, pd->mac_addr,
 			dev->dev_addr, skb->len) < 0) {

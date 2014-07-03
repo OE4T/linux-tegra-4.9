@@ -23,13 +23,14 @@ struct rm_tch_ctrl_para {
 	unsigned char u8_analog_repeat_times;
 	unsigned char u8_idle_digital_repeat_times;
 	unsigned char u8_time2idle;
-	unsigned char u8_power_mode;
+	/*unsigned char u8_power_mode;*/
 	unsigned char u8_kernel_msg;
 	unsigned char u8_timer_trigger_scale;
 	unsigned char u8_idle_mode_check;
 	unsigned char u8_watch_dog_normal_cnt;
 	unsigned char u8_ns_func_enable;
 	unsigned char u8_event_report_mode;
+	unsigned char u8_idle_mode_thd;
 };
 
 extern struct rm_tch_ctrl_para g_st_ctrl;

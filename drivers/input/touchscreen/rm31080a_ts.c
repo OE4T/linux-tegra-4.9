@@ -54,6 +54,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/touchscreen_raydium.h>
 
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)
+#include <linux/input/mt.h>
+#endif
+
 /*=============================================================================
 	DEFINITIONS
 =============================================================================*/
@@ -80,16 +84,16 @@
 
 #define TCH_WAKE_LOCK_TIMEOUT		(HZ/2)
 
-#ifdef ENABLE_SLOW_SCAN
-#define RM_SLOW_SCAN_INTERVAL		20
-#define RM_SLOW_SCAN_CMD_COUNT		0x10
-
 #if ENABLE_FREQ_HOPPING  /*ENABLE_SCAN_DATA_HEADER*/
-#define QUEUE_HEADER_NUM			8
-#define SCAN_TYPE_MT				1
+#define QUEUE_HEADER_NUM			(8)
+#define SCAN_TYPE_MT				(1)
 #else
 #define QUEUE_HEADER_NUM			0
 #endif
+
+#ifdef ENABLE_SLOW_SCAN
+#define RM_SLOW_SCAN_INTERVAL		20
+#define RM_SLOW_SCAN_CMD_COUNT		0x10
 enum RM_SLOW_SCAN_LEVELS {
 	RM_SLOW_SCAN_LEVEL_NORMAL,
 	RM_SLOW_SCAN_LEVEL_20,
@@ -102,12 +106,24 @@ enum RM_SLOW_SCAN_LEVELS {
 };
 #endif
 
+enum RM_TEST_MODE {
+	RM_TEST_MODE_NULL,
+	RM_TEST_MODE_IDLE_SHOW,
+	RM_TEST_MODE_IDLE_LEVEL,
+	RM_TEST_MODE_CALC_TIME_SHOW,
+	RM_TEST_MODE_MAX
+};
+
 #ifdef ENABLE_SMOOTH_LEVEL
 #define RM_SMOOTH_LEVEL_NORMAL		0
 #define RM_SMOOTH_LEVEL_MAX			4
 #endif
 
 #define TS_TIMER_PERIOD		HZ
+
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)
+#define MAX_SUPPORT_SLOT_AMOUNT MAX_REPORT_TOUCHED_POINTS
+#endif
 
 /*#define CS_SUPPORT*/
 #define MASK_USER_SPACE_POINTER 0x00000000FFFFFFFF	/* 64-bit support */
@@ -140,6 +156,9 @@ struct rm31080a_ts_para {
 	u32 u32_slow_scan_level;
 #endif
 
+	u8 u8_touchfile_check;
+	u8 u8_stylus_status;
+
 #ifdef ENABLE_SMOOTH_LEVEL
 	u32 u32_smooth_level;
 #endif
@@ -151,6 +170,8 @@ struct rm31080a_ts_para {
 	u8 u8_repeat;
 	u16 u16_read_para;
 	u8 u8_spi_locked;
+	u8 u8_test_mode;
+	u8 u8_test_mode_type;
 #if ENABLE_FREQ_HOPPING
 	u8 u8_ns_para[9];
 	u8 u8_ns_mode;
@@ -160,7 +181,6 @@ struct rm31080a_ts_para {
 	struct wake_lock wakelock_initialization;
 
 	struct mutex mutex_scan_mode;
-	struct mutex mutex_spi_rw;
 	struct mutex mutex_ns_mode;
 
 	struct workqueue_struct *rm_workqueue;
@@ -210,6 +230,7 @@ struct rm_tch_queue_info g_st_q;
 
 bool g_timer_queue_is_flush;
 bool g_worker_queue_is_flush;
+
 unsigned char *g_pu8_burstread_buf;
 
 unsigned char g_st_cmd_set_idle[KRL_SIZE_SET_IDLE];
@@ -227,6 +248,7 @@ unsigned char g_st_rm_set_rep_time_cmd[KRL_SIZE_RM_SETREPTIME];
 unsigned char g_st_rm_ns_para_cmd[KRL_SIZE_RM_NS_PARA];
 unsigned char g_st_rm_writeimg_cmd[KRL_SIZE_RM_WRITE_IMAGE];
 unsigned char g_st_rm_tlk_cmd[KRL_SIZE_RM_TLK];
+unsigned char g_st_rm_kl_testmode_cmd[KRL_SIZE_RM_KL_TESTMODE];
 
 int g_service_busy_report_count;
 struct timer_list ts_timer_triggle;
@@ -236,6 +258,9 @@ static unsigned int g_spi_bufsize; /*= 0; remove by checkpatch*/
 static unsigned char g_spi_addr;
 bool b_bl_updated;
 u8 g_u8_update_baseline[RM_RAW_DATA_LENGTH];
+
+size_t g_u8_test_mode_count;
+char *g_u8_test_mode_buf;
 
 /*=============================================================================
 	FUNCTION DECLARATION
@@ -272,14 +297,12 @@ static int rm_tch_spi_read(u8 u8addr, u8 *rxbuf, size_t len)
 
 	if (g_st_ts.u8_spi_locked) {
 		memset(rxbuf, 0, len);
-		if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER_REGISTER)
+		if (g_st_ctrl.u8_kernel_msg & DEBUG_REGISTER)
 			rm_printk("Raydium - SPI Read Locked!! 0x%x:%d\n",
 				u8addr, len);
 		/*return RETURN_FAIL;*/
 		return RETURN_OK;
 	}
-
-	mutex_lock(&g_st_ts.mutex_spi_rw);
 
 	spi_message_init(&message);
 	memset(x, 0, sizeof(x));
@@ -296,9 +319,7 @@ static int rm_tch_spi_read(u8 u8addr, u8 *rxbuf, size_t len)
 	/*It returns zero on succcess,else a negative error code.*/
 	status = spi_sync(g_spi, &message);
 
-	mutex_unlock(&g_st_ts.mutex_spi_rw);
-
-	if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER_REGISTER)
+	if (g_st_ctrl.u8_kernel_msg & DEBUG_REGISTER)
 		if (g_st_ts.b_init_finish == 0)
 			rm_printk("Raydium - READ: addr=0x%2x, value=0x%2x",
 				(u8addr&0x7F), rxbuf[0]);
@@ -327,20 +348,16 @@ static int rm_tch_spi_write(u8 *txbuf, size_t len)
 	/*It returns zero on succcess,else a negative error code.*/
 
 	if (g_st_ts.u8_spi_locked) {
-		if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER_REGISTER)
+		if (g_st_ctrl.u8_kernel_msg & DEBUG_REGISTER)
 			rm_printk("Raydium - SPI write Locked!! 0x%x:0x%x\n",
 				txbuf[0], txbuf[1]);
 		/*return RETURN_FAIL;*/
 		return RETURN_OK;
 	}
 
-	mutex_lock(&g_st_ts.mutex_spi_rw);
-
 	status = spi_write(g_spi, txbuf, len);
 
-	mutex_unlock(&g_st_ts.mutex_spi_rw);
-
-	if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER_REGISTER)
+	if (g_st_ctrl.u8_kernel_msg & DEBUG_REGISTER)
 		if (g_st_ts.b_init_finish == 0)
 			rm_printk("Raydium - WRITE: addr=0x%2x, value=0x%2x",
 				txbuf[0], txbuf[1]);
@@ -398,16 +415,19 @@ void raydium_change_scan_mode(u8 u8_touch_count)
 		return;
 	}
 
-	mutex_lock(&g_st_ts.mutex_scan_mode);
-	if (u32_no_touch_count < u16_nt_count_thd) {
+	if (u32_no_touch_count < u16_nt_count_thd)
 		u32_no_touch_count++;
-	} else if (g_st_ts.u8_scan_mode_state == RM_SCAN_ACTIVE_MODE) {
-		g_st_ts.u8_scan_mode_state = RM_SCAN_PRE_IDLE_MODE;
-		u32_no_touch_count = 0;
+	else {
+		mutex_lock(&g_st_ts.mutex_scan_mode);
+		if (g_st_ts.u8_scan_mode_state == RM_SCAN_ACTIVE_MODE) {
+			g_st_ts.u8_scan_mode_state = RM_SCAN_PRE_IDLE_MODE;
+			u32_no_touch_count = 0;
+		}
+		mutex_unlock(&g_st_ts.mutex_scan_mode);
 	}
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
 }
 
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_A)
 void raydium_report_pointer(void *p)
 {
 	static unsigned char u8_last_touch_count; /*= 0; remove by checkpatch*/
@@ -515,11 +535,173 @@ void raydium_report_pointer(void *p)
 		u8_last_touch_count = sp_tp->uc_touch_count;
 	}
 
-	if (g_st_ctrl.u8_power_mode)
-		raydium_change_scan_mode(sp_tp->uc_touch_count);
+	/*if (g_st_ctrl.u8_power_mode)
+		raydium_change_scan_mode(sp_tp->uc_touch_count); */
 
 	kfree(sp_tp);
 }
+#else /*(INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)*/
+void raydium_report_pointer(void *p)
+{
+	static unsigned char u8_last_touch_count; /*= 0; remove by checkpatch*/
+	unsigned int target_abs_mt_tool = MT_TOOL_FINGER;
+	unsigned int target_key_evt_btn_tool = BTN_TOOL_FINGER;
+	int i;
+	int i_count;
+	int i_max_x, i_max_y;
+	struct rm_touch_event *sp_tp;
+	ssize_t missing;
+	sp_tp = kmalloc(sizeof(struct rm_touch_event), GFP_KERNEL);
+	if (sp_tp == NULL)
+		return;
+
+	missing = copy_from_user(sp_tp, p, sizeof(struct rm_touch_event));
+	if (missing) {
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+			__func__, sizeof(struct rm_touch_event), missing);
+		kfree(sp_tp);
+		return;
+	}
+
+	if ((g_st_ctrl.u16_resolution_x != 0) &&
+		(g_st_ctrl.u16_resolution_y != 0)) {
+		i_max_x = g_st_ctrl.u16_resolution_x;
+		i_max_y = g_st_ctrl.u16_resolution_y;
+	} else {
+		i_max_x = RM_INPUT_RESOLUTION_X;
+		i_max_y = RM_INPUT_RESOLUTION_Y;
+	}
+
+	i_count = max(u8_last_touch_count, sp_tp->uc_touch_count);
+
+	if (!i_count) {
+		/*if (g_st_ctrl.u8_power_mode)
+			raydium_change_scan_mode(sp_tp->uc_touch_count);*/
+		kfree(sp_tp);
+		return;
+	}
+
+	for (i = 0; i < i_count; i++) {
+		if (i < sp_tp->uc_touch_count) {
+
+			input_mt_slot(g_input_dev,
+						sp_tp->uc_slot[i] & 0x7F);
+
+			if ((sp_tp->uc_slot[i] & 0x80) ||
+				(sp_tp->uc_id[i] == 0xFF)) {
+				switch (sp_tp->uc_pre_tool_type[i]) {
+				case POINT_TYPE_FINGER:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_FINGER;
+					break;
+				case POINT_TYPE_STYLUS:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_PEN;
+					break;
+				case POINT_TYPE_ERASER:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_PEN;
+					target_key_evt_btn_tool =
+							BTN_TOOL_RUBBER;
+					break;
+				default:
+					if (sp_tp->uc_id[i] != 0xFF) {
+						dev_err(&g_spi->dev,
+						"Raydium - point %d release invalid input tool type: %d, id=%d\n",
+						i, sp_tp->uc_pre_tool_type[i],
+						sp_tp->uc_id[i]);
+					}
+					break;
+				}
+
+				input_mt_report_slot_state(
+					g_input_dev,
+					target_abs_mt_tool, false);
+
+				if (sp_tp->uc_pre_tool_type[i] ==
+					POINT_TYPE_ERASER)
+					input_report_key(
+						g_input_dev,
+						target_key_evt_btn_tool, false);
+			}
+
+			if (sp_tp->uc_id[i] != 0xFF) {
+				switch (sp_tp->uc_tool_type[i]) {
+				case POINT_TYPE_FINGER:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_FINGER;
+					break;
+				case POINT_TYPE_STYLUS:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_PEN;
+					break;
+				case POINT_TYPE_ERASER:
+					if (i == MAX_SUPPORT_SLOT_AMOUNT)
+						break;
+					target_abs_mt_tool = MT_TOOL_PEN;
+					target_key_evt_btn_tool =
+							BTN_TOOL_RUBBER;
+					break;
+				default:
+					dev_err(&g_spi->dev,
+						"Raydium - point %d has invalid input tool type: %d, id=%d\n",
+						i, sp_tp->uc_tool_type[i],
+						sp_tp->uc_id[i]);
+					break;
+				}
+
+				input_mt_report_slot_state(
+					g_input_dev,
+					target_abs_mt_tool, true);
+
+				if (sp_tp->us_x[i] >= (i_max_x - 1))
+					input_report_abs(
+						g_input_dev,
+						ABS_MT_POSITION_X,
+						(i_max_x - 1));
+				else
+					input_report_abs(
+						g_input_dev,
+						ABS_MT_POSITION_X,
+						sp_tp->us_x[i]);
+
+				if (sp_tp->us_y[i] >= (i_max_y - 1))
+					input_report_abs(
+						g_input_dev,
+						ABS_MT_POSITION_Y,
+						(i_max_y - 1));
+				else
+					input_report_abs(
+						g_input_dev,
+						ABS_MT_POSITION_Y,
+						sp_tp->us_y[i]);
+
+				input_report_abs(
+					g_input_dev,
+					ABS_MT_PRESSURE,
+					sp_tp->us_z[i]);
+
+				if (sp_tp->uc_tool_type[i] == POINT_TYPE_ERASER)
+					input_report_key(
+						g_input_dev,
+						target_key_evt_btn_tool, true);
+			}
+		}
+	}
+	u8_last_touch_count = sp_tp->uc_touch_count;
+	input_sync(g_input_dev);
+
+	/*if (g_st_ctrl.u8_power_mode)
+		raydium_change_scan_mode(sp_tp->uc_touch_count);*/
+
+	kfree(sp_tp);
+}
+#endif
 
 /*=============================================================================
 	 Description: Read Sensor Raw Data
@@ -532,6 +714,7 @@ void raydium_report_pointer(void *p)
 static int rm_tch_read_image_data(unsigned char *p)
 {
 	int ret;
+
 	g_pu8_burstread_buf = p;
 
 #if ENABLE_FREQ_HOPPING  /*ENABLE_SCAN_DATA_HEADER*/
@@ -539,10 +722,10 @@ static int rm_tch_read_image_data(unsigned char *p)
 	g_pu8_burstread_buf[1] = (u8)(g_st_ctrl.u16_data_length >> 8);
 	g_pu8_burstread_buf[2] = (u8)(g_st_ctrl.u16_data_length);
 	g_pu8_burstread_buf[3] = g_st_ts.u8_ns_sel;
-	/*g_pu8_burstread_buf[4] = 0x00;*/
-	/*g_pu8_burstread_buf[5] = 0x00;*/
-	/*g_pu8_burstread_buf[6] = 0x00;*/
-	/*g_pu8_burstread_buf[7] = 0x00;*/
+	g_pu8_burstread_buf[4] = 0x00;
+	g_pu8_burstread_buf[5] = 0x00;
+	g_pu8_burstread_buf[6] = 0x00;
+	g_pu8_burstread_buf[7] = 0x00;
 #endif
 
 	ret = rm_tch_cmd_process(0, g_st_rm_readimg_cmd, NULL);
@@ -573,6 +756,7 @@ void rm_set_ns_para(u8 u8Idx, u8 *u8Para)
 {
 	int ii;
 	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
+
 	for (ii = 0; ii < g_st_rm_ns_para_cmd[2]; ii++) {
 		ts->u8_repeat_counter = u8Para[ii*3+u8Idx];
 		rm_tch_cmd_process(ii, g_st_rm_ns_para_cmd, ts);
@@ -599,13 +783,19 @@ void rm_tch_ctrl_enter_auto_mode(void)
 
 void rm_tch_ctrl_leave_auto_mode(void)
 {
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
+
 	g_st_ctrl.u8_idle_mode_check |= 0x01;
 
 #if ENABLE_FREQ_HOPPING
-	if (g_st_ctrl.u8_ns_func_enable&0x01)
+	if (g_st_ctrl.u8_ns_func_enable&0x01) {
+		mutex_lock(&g_st_ts.mutex_ns_mode);
 		rm_set_ns_para(0, (u8 *)&g_st_ts.u8_ns_para[0]);
+		mutex_unlock(&g_st_ts.mutex_ns_mode);
+	}
 #endif
-	rm_tch_cmd_process(0, g_st_cmd_set_idle, NULL);
+
+	rm_tch_cmd_process(0, g_st_cmd_set_idle, ts);
 	rm_set_repeat_times(g_st_ctrl.u8_active_digital_repeat_times);
 
 	if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER)
@@ -632,7 +822,7 @@ int rm_tch_ctrl_wait_for_scan_finish(u8 u8Idx)
 
 		if (g_st_ts.u16_read_para & 0x01) {
 			if (u8Idx)
-				return 1;
+				return 0;
 			else
 				usleep_range(1000, 2000);	/* msleep(1); */
 		} else
@@ -852,6 +1042,9 @@ void rm_show_kernel_tbl_name(u8 *p_cmd_tbl)
 	else if (p_cmd_tbl == g_st_rm_tlk_cmd)
 		snprintf(target_table_name,
 			sizeof(target_table_name), "TLK");
+	else if (p_cmd_tbl == g_st_rm_kl_testmode_cmd)
+		snprintf(target_table_name,
+			sizeof(target_table_name), "Kernel_Test");
 	else {
 		dev_err(&g_spi->dev, "Raydium - %s : no such kernel table - err:%p\n",
 			__func__, p_cmd_tbl);
@@ -859,6 +1052,7 @@ void rm_show_kernel_tbl_name(u8 *p_cmd_tbl)
 	dev_err(&g_spi->dev, "Raydium - Table %s cmd failed\n",
 		target_table_name);
 }
+
 static int rm_tch_cmd_process(u8 u8_sel_case,
 	u8 *p_cmd_tbl, struct rm_tch_ts *ts)
 {
@@ -944,7 +1138,8 @@ static int rm_tch_cmd_process(u8 u8_sel_case,
 			if (g_pu8_burstread_buf != NULL) {
 				ret = rm_tch_spi_read(p_cmd_tbl[_ADDR],
 				g_pu8_burstread_buf + QUEUE_HEADER_NUM,
-				g_st_ctrl.u16_data_length - QUEUE_HEADER_NUM);
+				g_st_ctrl.u16_data_length
+				/* - QUEUE_HEADER_NUM*/);
 			}
 			g_pu8_burstread_buf = NULL;
 			break;
@@ -1083,12 +1278,16 @@ static int rm_tch_cmd_process(u8 u8_sel_case,
 			"- %d\n", p_cmd_tbl[_SUB_CMD]);*/
 			ret = RETURN_OK;
 			if (p_cmd_tbl[_SUB_CMD] == KRL_SUB_CMD_SENSOR_QU) {
+				mutex_unlock(&lock);
 				flush_workqueue(g_st_ts.rm_workqueue);
 				g_worker_queue_is_flush = true;
+				mutex_lock(&lock);
 			} else if (p_cmd_tbl[_SUB_CMD] ==
 						KRL_SUB_CMD_TIMER_QU) {
+				mutex_unlock(&lock);
 				flush_workqueue(g_st_ts.rm_timer_workqueue);
 				g_timer_queue_is_flush = true;
+				mutex_lock(&lock);
 			} else
 				ret = RETURN_FAIL;
 			break;
@@ -1212,6 +1411,9 @@ int rm_set_kernel_tbl(int i_func_idx, u8 *p_u8_src)
 	case KRL_INDEX_RM_TLK:
 		p_u8_dst = g_st_rm_tlk_cmd;
 		break;
+	case KRL_INDEX_RM_KL_TESTMODE:
+		p_u8_dst = g_st_rm_kl_testmode_cmd;
+		break;
 	default:
 		dev_err(&g_spi->dev, "Raydium - %s : no such kernel table - err:%d\n",
 			__func__, i_func_idx);
@@ -1268,8 +1470,11 @@ static void rm_tch_enter_manual_mode(void)
 	if (g_st_ts.u8_scan_mode_state == RM_SCAN_IDLE_MODE) {
 		rm_tch_ctrl_leave_auto_mode();
 		g_st_ts.u8_scan_mode_state = RM_SCAN_ACTIVE_MODE;
+		mutex_unlock(&g_st_ts.mutex_scan_mode);
 		usleep_range(10000, 10050);/*msleep(10);*/
+		return;
 	}
+
 	mutex_unlock(&g_st_ts.mutex_scan_mode);
 }
 
@@ -1278,6 +1483,7 @@ static u32 rm_tch_get_platform_id(u8 *p)
 	u32 u32Ret;
 	struct rm_spi_ts_platform_data *pdata;
 	pdata = g_input_dev->dev.parent->platform_data;
+
 	u32Ret = copy_to_user(p, &pdata->platform_id,
 		sizeof(pdata->platform_id));
 
@@ -1289,6 +1495,7 @@ static u32 rm_tch_get_gpio_sensor_select(u8 *p)
 	u32 u32Ret = 0;
 	struct rm_spi_ts_platform_data *pdata;
 	pdata = g_input_dev->dev.parent->platform_data;
+
 /* Read from GPIO
 	u32Ret = gpio_set_value(pdata->gpio_sensor_select0)
 		| (1 << gpio_set_value(pdata->gpio_sensor_select1));
@@ -1332,14 +1539,11 @@ static int rm_tch_ts_send_signal(int pid, int i_info)
 	struct task_struct *t;
 	int ret = RETURN_OK;
 
-	static DEFINE_MUTEX(lock);
-
 	if (!pid) {
 		dev_err(&g_spi->dev, "Raydium - %s : pid failed\n", __func__);
 		return RETURN_FAIL;
 	}
 
-	mutex_lock(&lock);
 	/* send the signal */
 	memset(&info, 0, sizeof(struct siginfo));
 	info.si_signo = RM_TS_SIGNAL;
@@ -1358,7 +1562,6 @@ static int rm_tch_ts_send_signal(int pid, int i_info)
 	rcu_read_unlock();
 	if (t == NULL) {
 		dev_err(&g_spi->dev, "Raydium - %s : no such pid\n", __func__);
-		mutex_unlock(&lock);
 		return RETURN_FAIL;
 	} else /*send the signal*/
 		ret = send_sig_info(RM_TS_SIGNAL, &info, t);
@@ -1367,7 +1570,6 @@ static int rm_tch_ts_send_signal(int pid, int i_info)
 		dev_err(&g_spi->dev, "Raydium - %s : send sig failed err:%d\n",
 			__func__, ret);
 
-	mutex_unlock(&lock);
 	return ret;
 }
 
@@ -1518,6 +1720,7 @@ static long rm_tch_queue_read_raw_data(u8 *p, u32 u32Len)
 	rm_tch_dequeue_finish();
 	return RETURN_OK;
 }
+
 /*===========================================================================*/
 static void rm_work_handler(struct work_struct *work)
 {
@@ -1529,8 +1732,6 @@ static void rm_work_handler(struct work_struct *work)
 		|| g_st_ts.b_is_suspended
 		|| g_worker_queue_is_flush)
 		return;
-
-	mutex_lock(&g_st_ts.mutex_scan_mode);
 
 	i_ret = rm_tch_ctrl_clear_int();
 
@@ -1547,7 +1748,6 @@ static void rm_work_handler(struct work_struct *work)
 				rm_tch_enqueue_finish();
 		}
 	}
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
 
 	if (u32_flag & RM_NEED_TO_SEND_SIGNAL) {
 		if (g_st_ts.b_calc_finish) {
@@ -1568,6 +1768,7 @@ static void rm_tch_init_ts_structure_part(void)
 	g_st_ts.b_enable_slow_scan = false;
 #endif
 	g_st_ts.u8_scan_mode_state = RM_SCAN_ACTIVE_MODE;
+
 	g_st_ctrl.u8_event_report_mode = EVENT_REPORT_MODE_STYLUS_ERASER_FINGER;
 
 	g_pu8_burstread_buf = NULL;
@@ -1576,7 +1777,9 @@ static void rm_tch_init_ts_structure_part(void)
 	g_st_ts.u16_read_para = 0;
 
 	rm_ctrl_watchdog_func(0);
-	rm_tch_ctrl_init();
+
+	/*g_st_ts.u8_test_mode = false;*/
+	g_st_ts.u8_test_mode_type = RM_TEST_MODE_NULL;
 
 	b_bl_updated = false;
 }
@@ -1633,7 +1836,7 @@ static void rm_watchdog_work_function(unsigned char scan_mode)
 
 	if (g_st_ts.u8_watch_dog_flg) {
 		/*WATCH DOG RESET*/
-		rm_printk("Raydium - WatchDog Resume\n");
+		/*rm_printk("Raydium - WatchDog Resume\n");*/
 		rm_tch_init_ts_structure_part();
 		g_st_ts.b_is_suspended = true;
 		rm_tch_cmd_process(0, g_st_rm_watchdog_cmd, NULL);
@@ -1666,14 +1869,14 @@ static void rm_timer_work_handler(struct work_struct *work)
 	if (g_timer_queue_is_flush == true)
 		return;
 
-	mutex_lock(&g_st_ts.mutex_scan_mode);
 	if (rm_timer_trigger_function()) {
+		mutex_lock(&g_st_ts.mutex_scan_mode);
 		if (g_st_ts.u8_scan_mode_state != RM_SCAN_ACTIVE_MODE)
 			rm_watchdog_work_function(RM_SCAN_IDLE_MODE);
 		else
 			rm_watchdog_work_function(RM_SCAN_ACTIVE_MODE);
+		mutex_unlock(&g_st_ts.mutex_scan_mode);
 	}
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
 
 	if (g_st_ts.b_watch_dog_check == 1) {
 		rm_tch_ts_send_signal(g_st_ts.u32_hal_pid,
@@ -1773,16 +1976,18 @@ static ssize_t rm_tch_slowscan_handler(const char *buf, size_t count)
 
 	ret = (ssize_t) count;
 
-	mutex_lock(&g_st_ts.mutex_scan_mode);
-
 	if (count == 2) {
 		if (buf[0] == '0') {
+			mutex_lock(&g_st_ts.mutex_scan_mode);
 			g_st_ts.b_enable_slow_scan = false;
 			rm_tch_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_MAX);
+			mutex_unlock(&g_st_ts.mutex_scan_mode);
 		} else if (buf[0] == '1') {
+			mutex_lock(&g_st_ts.mutex_scan_mode);
 			g_st_ts.b_enable_slow_scan = true;
 			rm_tch_ctrl_slowscan(RM_SLOW_SCAN_LEVEL_60);
 			g_st_ts.u32_slow_scan_level = RM_SLOW_SCAN_LEVEL_60;
+			mutex_unlock(&g_st_ts.mutex_scan_mode);
 		}
 	} else if ((buf[0] == '2') && (buf[1] == ' ')) {
 		error = kstrtoul(&buf[2], 10, &val);
@@ -1790,14 +1995,14 @@ static ssize_t rm_tch_slowscan_handler(const char *buf, size_t count)
 		if (error) {
 			ret = error;
 		} else {
+			mutex_lock(&g_st_ts.mutex_scan_mode);
 			g_st_ts.b_enable_slow_scan = true;
 			g_st_ts.u32_slow_scan_level =
 				rm_tch_slowscan_round((u32)val);
 			rm_tch_ctrl_slowscan(g_st_ts.u32_slow_scan_level);
+			mutex_unlock(&g_st_ts.mutex_scan_mode);
 		}
 	}
-
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
 	return ret;
 }
 #endif
@@ -1824,6 +2029,36 @@ static ssize_t rm_tch_slowscan_store(struct device *dev,
 #else
 	return count;
 #endif
+}
+
+static ssize_t rm_tch_touchfile_check_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "Touch calibration file check status: 0x%x\n",
+		g_st_ts.u8_touchfile_check);
+}
+
+static ssize_t rm_tch_touchfile_check_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	return count;
+}
+
+static ssize_t rm_tch_stylus_status_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "0x%x\n",
+		g_st_ts.u8_stylus_status);
+}
+
+static ssize_t rm_tch_stylus_status_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	return count;
 }
 
 static void rm_tch_smooth_level_change(unsigned long val)
@@ -1877,6 +2112,122 @@ static ssize_t rm_tch_smooth_level_store(struct device *dev,
 	return count;
 }
 
+void rm_set_kernel_test_para(u8 u8Idx, u8 u8Para)
+{
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
+
+	ts->u8_repeat_counter = u8Para;
+	rm_tch_cmd_process(u8Idx, g_st_rm_kl_testmode_cmd, ts);
+}
+
+static ssize_t rm_tch_testmode_handler(const char *buf, size_t count)
+{
+	unsigned long val = 0;
+	ssize_t error;
+	ssize_t ret;
+
+	if (count < 2)
+		return -EINVAL;
+
+	ret = (ssize_t) count;
+
+	if (count == 2) {
+		if (buf[0] == '0') {
+			g_st_ts.u8_test_mode = false;
+			g_st_ts.u8_test_mode_type = RM_TEST_MODE_NULL;
+			rm_set_kernel_test_para(0, g_st_ctrl.u8_idle_mode_thd);
+		} else if (buf[0] == '1') {
+			g_st_ts.u8_test_mode = true;
+			g_st_ts.u8_test_mode_type = RM_TEST_MODE_IDLE_SHOW;
+		}
+	} else if ((buf[0] == '2') && (buf[1] == ' ')) {
+		error = kstrtoul(&buf[2], 10, &val);
+
+		if (error) {
+			if ((buf[2] == '2') && (buf[3] == ' ')) {
+				g_st_ts.u8_test_mode = true;
+				g_st_ts.u8_test_mode_type =
+				RM_TEST_MODE_IDLE_LEVEL;
+				error = kstrtoul(&buf[4], 10, &val);
+				if (error) {
+					g_st_ts.u8_test_mode = false;
+					ret = error;
+				} else {
+					rm_set_kernel_test_para(0, val);
+				}
+			} else {
+				g_st_ts.u8_test_mode = false;
+				ret = error;
+			}
+		} else {
+		g_st_ts.u8_test_mode = true;
+		g_st_ts.u8_test_mode_type = 1 << ((u8)val - 1);
+		switch (val) {
+		case RM_TEST_MODE_IDLE_SHOW:
+		if (g_st_ts.u8_scan_mode_state == RM_SCAN_IDLE_MODE)
+#if (ISR_POST_HANDLER == WORK_QUEUE)
+			queue_work(g_st_ts.rm_workqueue,
+				&g_st_ts.rm_work);
+#elif (ISR_POST_HANDLER == KTHREAD)
+		{
+		if (waitqueue_active(&g_st_ts.rm_thread_wait_q)) {
+			g_st_ts.b_thread_active = true;
+			wake_up_interruptible(&g_st_ts.rm_thread_wait_q);
+		} else {
+		mutex_lock(&g_st_ts.mutex_irq_wait);
+		g_st_ts.b_irq_is_waited = true;
+		mutex_unlock(&g_st_ts.mutex_irq_wait);
+		}
+		}
+#endif
+		break;
+		case RM_TEST_MODE_IDLE_LEVEL:
+			if ((buf[2] == '2') && (buf[3] == ' ')) {
+				error = kstrtoul(&buf[4], 0, &val);
+				if (error) {
+					g_st_ts.u8_test_mode = false;
+					ret = error;
+				} else {
+					rm_set_kernel_test_para(0, val);
+				}
+			}
+			break;
+		case RM_TEST_MODE_CALC_TIME_SHOW:
+			break;
+		default:
+			g_st_ts.u8_test_mode = false;
+			g_st_ts.u8_test_mode_type = 0;
+		break;
+		}
+		}
+	}
+	rm_printk("Raydium - rm_kernel_test_mode:%s,Type:%d,Para:%d",
+		g_st_ts.u8_test_mode ?
+		"Enabled" : "Disabled",
+		g_st_ts.u8_test_mode_type, (u8)val);
+			return ret;
+}
+
+static ssize_t rm_tch_test_mode_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+		return sprintf(buf, "Test Mode:%s\nType:%d\n",
+			g_st_ts.u8_test_mode ?
+			"Enabled" : "Disabled",
+			g_st_ts.u8_test_mode_type);
+}
+
+static ssize_t rm_tch_test_mode_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	g_u8_test_mode_count = count;
+	memcpy(&g_u8_test_mode_buf, &buf, sizeof(buf));
+
+	return rm_tch_testmode_handler(buf, count);
+}
+
 static ssize_t rm_tch_self_test_handler(struct rm_tch_ts *ts,
 	const char *buf, size_t count)
 {
@@ -1919,6 +2270,7 @@ static ssize_t selftest_platform_id_gpio_set(struct device *dev,
 {
 	return count;
 }
+
 static ssize_t selftest_platform_id_gpio_get(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
@@ -1926,13 +2278,14 @@ static ssize_t selftest_platform_id_gpio_get(struct device *dev,
 	struct rm_spi_ts_platform_data *pdata;
 
 	pdata = g_input_dev->dev.parent->platform_data;
+
 	buf[0] = (char)pdata->platform_id;
 
 	/* Read from data struct */
 	if (pdata->gpio_sensor_select0)
-		buf[1] = 0;
+		buf[1] |= 0x01;
 	if (pdata->gpio_sensor_select1)
-		buf[1] = 1;
+		buf[1] |= 0x02;
 	return 2;
 }
 
@@ -2150,25 +2503,44 @@ static DEVICE_ATTR(selftest_spi_burst_write, 0640,
 static DEVICE_ATTR(slowscan_enable, 0640,
 					rm_tch_slowscan_show,
 					rm_tch_slowscan_store);
+
+static DEVICE_ATTR(touchfile_check, 0640,
+					rm_tch_touchfile_check_show,
+					rm_tch_touchfile_check_store);
+
+static DEVICE_ATTR(stylus_status, 0640,
+					rm_tch_stylus_status_show,
+					rm_tch_stylus_status_store);
+
 static DEVICE_ATTR(smooth_level, 0640,
 					rm_tch_smooth_level_show,
 					rm_tch_smooth_level_store);
+
 static DEVICE_ATTR(self_test, 0640,
 					rm_tch_self_test_show,
 					rm_tch_self_test_store);
+
 static DEVICE_ATTR(version, 0640,
 					rm_tch_version_show,
 					rm_tch_version_store);
+
 static DEVICE_ATTR(module_detect, 0640,
 					rm_tch_module_detect_show,
 					rm_tch_module_detect_store);
+
 static DEVICE_ATTR(report_mode, 0640,
 					rm_tch_report_mode_show,
 					rm_tch_report_mode_store);
 
+static DEVICE_ATTR(test_mode, 0640,
+					rm_tch_test_mode_show,
+					rm_tch_test_mode_store);
+
 static struct attribute *rm_ts_attributes[] = {
 	&dev_attr_get_platform_id_gpio.attr,
 	&dev_attr_slowscan_enable.attr,
+	&dev_attr_touchfile_check.attr,
+	&dev_attr_stylus_status.attr,
 	&dev_attr_selftest_enable.attr,
 	&dev_attr_selftest_spi_byte_read.attr,
 	&dev_attr_selftest_spi_byte_write.attr,
@@ -2179,6 +2551,7 @@ static struct attribute *rm_ts_attributes[] = {
 	&dev_attr_version.attr,
 	&dev_attr_module_detect.attr,
 	&dev_attr_report_mode.attr,
+	&dev_attr_test_mode.attr,
 	NULL
 };
 
@@ -2208,12 +2581,13 @@ static irqreturn_t rm_tch_irq(int irq, void *handle)
 
 	trace_touchscreen_raydium_irq("Raydium_interrupt");
 
-	mutex_lock(&g_st_ts.mutex_scan_mode);
-
-	if (g_st_ctrl.u8_power_mode &&
-			(g_st_ts.u8_scan_mode_state == RM_SCAN_IDLE_MODE))
+	if (/*g_st_ctrl.u8_power_mode &&*/
+		(g_st_ts.u8_scan_mode_state == RM_SCAN_IDLE_MODE)) {
 		input_event(g_input_dev, EV_MSC, MSC_ACTIVITY, 1);
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)
+		input_sync(g_input_dev);
+#endif
+	}
 
 	if (g_st_ts.b_init_finish && g_st_ts.b_is_suspended == false)
 		queue_work(g_st_ts.rm_workqueue, &g_st_ts.rm_work);
@@ -2256,7 +2630,12 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 		g_st_ts.b_enable_scriber = (bool) arg;
 		break;
 	case RM_VARIABLE_AUTOSCAN_FLAG:
-		g_st_ctrl.u8_power_mode = (bool) arg;
+		/*g_st_ctrl.u8_power_mode = (bool) arg;*/
+		if (g_st_ts.u8_scan_mode_state == RM_SCAN_ACTIVE_MODE) {
+			mutex_lock(&g_st_ts.mutex_scan_mode);
+			g_st_ts.u8_scan_mode_state = RM_SCAN_PRE_IDLE_MODE;
+			mutex_unlock(&g_st_ts.mutex_scan_mode);
+		}
 		break;
 	case RM_VARIABLE_TEST_VERSION:
 		g_st_ts.u8_test_version = (u8) arg;
@@ -2276,12 +2655,10 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 		/*rm_printk("Raydium - Repeat %d\n", arg);*/
 		g_st_ts.u8_repeat = (u8) arg;
 #if ENABLE_FREQ_HOPPING
-		if (g_st_ctrl.u8_ns_func_enable) {
-			g_st_ts.u8_ns_rpt = (u8) arg;
-			if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER)
-				rm_printk("g_st_ctrl.u8_ns_rpt %d\n",
-					g_st_ts.u8_ns_rpt);
-		}
+		g_st_ts.u8_ns_rpt = (u8) arg;
+		if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER)
+			rm_printk("g_st_ctrl.u8_ns_rpt %d\n",
+				g_st_ts.u8_ns_rpt);
 #endif
 		break;
 	case RM_VARIABLE_WATCHDOG_FLAG:
@@ -2313,13 +2690,13 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 			(((u8 *)arg) + 3), 3);*/
 		/*missing += copy_from_user(&g_st_ts.bSWC[0],
 			(((u8 *)arg) + 6), 3);*/
+		mutex_unlock(&g_st_ts.mutex_ns_mode);
 		if (missing)
 			dev_err(&g_spi->dev, "Raydium - %s RM_VARIABLE_DPW : copy failed - miss:%d\n",
 				__func__, missing);
 		/*memcpy(&g_st_ts.bDP[0], ((u8 *)arg), 3);*/
 		/*memcpy(&g_st_ts.bSWCPW[0], (((u8 *)arg) + 3), 3);*/
 		/*memcpy(&g_st_ts.bSWC[0], (((u8 *)arg) + 6), 3);*/
-		mutex_unlock(&g_st_ts.mutex_ns_mode);
 		if (g_st_ctrl.u8_kernel_msg & DEBUG_DRIVER)
 			rm_printk("g_st_ctrl.DPW 0x%x:0x%x:0x%x # 0x%x:0x%x:0x%x,# 0x%x:0x%x:0x%x\n",
 			/*g_st_ts.bDP[0], g_st_ts.bDP[1],
@@ -2342,11 +2719,20 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 				g_st_ts.u8_ns_mode);
 		break;
 #endif
+	case RM_VARIABLE_TOUCHFILE_STATUS:
+		g_st_ts.u8_touchfile_check = (u8)(arg);
+		break;
+
+	case RM_VARIABLE_STYLUS_STATUS:
+		g_st_ts.u8_stylus_status = (u8)(arg);
+		break;
+
 	default:
 		break;
 	}
 
 }
+
 static u32 rm_tch_get_variable(unsigned int index, u8 *arg)
 {
 	u32 ret = RETURN_OK;
@@ -2387,10 +2773,13 @@ static void rm_tch_init_ts_structure(void)
 		WAKE_LOCK_SUSPEND, "TouchInitialLock");
 
 	mutex_init(&g_st_ts.mutex_scan_mode);
-	mutex_init(&g_st_ts.mutex_spi_rw);
 	mutex_init(&g_st_ts.mutex_ns_mode);
 
 	g_st_ts.u8_resume_cnt = 0;
+	g_st_ts.u8_touchfile_check = 0xFF;
+	g_st_ts.u8_stylus_status = 0xFF;
+	g_st_ts.u8_test_mode = false;
+	rm_tch_ctrl_init();
 }
 
 static int rm31080_voltage_notifier_1v8(struct notifier_block *nb,
@@ -2420,16 +2809,21 @@ static void rm_ctrl_resume(struct rm_tch_ts *ts)
 		return;
 
 	mutex_lock(&g_st_ts.mutex_scan_mode);
-
 	rm_tch_init_ts_structure_part();
 
 	rm_tch_cmd_process(0, g_st_rm_resume_cmd, ts);
-
 	mutex_unlock(&g_st_ts.mutex_scan_mode);
+
+	if (g_st_ts.u8_test_mode)
+		rm_tch_testmode_handler(g_u8_test_mode_buf,
+			g_u8_test_mode_count);
 }
 
 static void rm_ctrl_suspend(struct rm_tch_ts *ts)
 {
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)
+	int i;
+#endif
 	if (g_st_ts.b_is_suspended == true)
 		return;
 
@@ -2441,14 +2835,24 @@ static void rm_ctrl_suspend(struct rm_tch_ts *ts)
 
 	rm_tch_ctrl_wait_for_scan_finish(0);
 
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_B)
+	for (i = 0; i < MAX_SUPPORT_SLOT_AMOUNT; i++) {
+		input_mt_slot(g_input_dev, i);
+
+		input_mt_report_slot_state(
+			g_input_dev,
+			MT_TOOL_PEN, false);
+
+		input_report_key(
+			g_input_dev,
+			BTN_STYLUS2, false);
+	}
+	input_sync(g_input_dev);
+#endif
 	mutex_lock(&g_st_ts.mutex_scan_mode);
-
 	rm_tch_cmd_process(0, g_st_rm_suspend_cmd, ts);
-
 	rm_tch_ctrl_wait_for_scan_finish(0);
-
 	rm_tch_cmd_process(1, g_st_rm_suspend_cmd, ts);
-
 	mutex_unlock(&g_st_ts.mutex_scan_mode);
 }
 
@@ -2560,7 +2964,7 @@ void raydium_tlk_ns_touch_suspend(void)
 
 	rm_tch_enter_manual_mode();
 	mutex_lock(&g_st_ts.mutex_scan_mode);
-	mutex_lock(&g_st_ts.mutex_spi_rw);
+	mutex_lock(&g_st_ts.mutex_ns_mode);
 	rm_tch_cmd_process(0, g_st_rm_tlk_cmd, ts);
 }
 EXPORT_SYMBOL(raydium_tlk_ns_touch_suspend);
@@ -2576,7 +2980,7 @@ void raydium_tlk_ns_touch_resume(void)
 	rm_tch_cmd_process(1, g_st_rm_tlk_cmd, ts);
 
 	mutex_unlock(&g_st_ts.mutex_scan_mode);
-	mutex_unlock(&g_st_ts.mutex_spi_rw);
+	mutex_unlock(&g_st_ts.mutex_ns_mode);
 }
 EXPORT_SYMBOL(raydium_tlk_ns_touch_resume);
 /*===========================================================================*/
@@ -2631,10 +3035,12 @@ static struct rm_spi_ts_platform_data *rm_ts_parse_dt(struct device *dev,
 	if (ret < 0)
 		goto exit_release_all_gpio;
 	pdata->config = (unsigned char *)val;
+
 	ret = of_property_read_u32(np, "platform-id", &val);
 	if (ret < 0)
 		goto exit_release_all_gpio;
 	pdata->platform_id = val;
+
 	ret = of_property_read_string(np, "name-of-clock", &str);
 	if (ret < 0)
 		goto exit_release_all_gpio;
@@ -2728,12 +3134,29 @@ struct rm_tch_ts *rm_tch_input_init(struct device *dev, unsigned int irq,
 	input_set_drvdata(input_dev, ts);
 	input_set_capability(input_dev, EV_MSC, MSC_ACTIVITY);
 
+#if (INPUT_PROTOCOL_CURRENT_SUPPORT == INPUT_PROTOCOL_TYPE_A)
 	__set_bit(EV_ABS, input_dev->evbit);
 	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xFF, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0, 32, 0, 0);
 
 	__set_bit(EV_KEY, input_dev->evbit);
 	__set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
+#else
+	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(EV_ABS, input_dev->evbit);
+	input_set_abs_params(input_dev, ABS_MT_PRESSURE,
+		0, 0xFF, 0, 0);
+
+	__set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
+#ifdef INPUT_MT_DIRECT
+	input_mt_init_slots(input_dev,
+		MAX_SUPPORT_SLOT_AMOUNT,
+		0);
+#else
+	input_mt_init_slots(input_dev,
+		MAX_SUPPORT_SLOT_AMOUNT);
+#endif
+#endif
 	input_set_abs_params(input_dev,
 		ABS_MT_TOOL_TYPE, 0,
 		MT_TOOL_MAX, 0, 0);
@@ -3012,7 +3435,7 @@ static int rm_tch_spi_remove(struct spi_device *spi)
 		wake_lock_destroy(&g_st_ts.wakelock_initialization);
 
 	mutex_destroy(&g_st_ts.mutex_scan_mode);
-	mutex_destroy(&g_st_ts.mutex_spi_rw);
+	mutex_destroy(&g_st_ts.mutex_ns_mode);
 
 	sysfs_remove_group(&raydium_ts_miscdev.this_device->kobj,
 						&rm_ts_attr_group);
@@ -3212,12 +3635,12 @@ err_spi_speed:
 	if (g_st_ts.rm_workqueue)
 		destroy_workqueue(g_st_ts.rm_workqueue);
 	mutex_destroy(&g_st_ts.mutex_scan_mode);
-	mutex_destroy(&g_st_ts.mutex_spi_rw);
+	mutex_destroy(&g_st_ts.mutex_ns_mode);
 	return ret;
 }
 
 static const struct of_device_id rm_ts_dt_match[] = {
-	{ .compatible = "raydium,rm_ts_spidev" },
+	{ .compatible = "raydium, rm_ts_spidev" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rm_ts_dt_match);

@@ -74,10 +74,6 @@
 				max77620-ldo7-supply = <&max77620_sd2>;
 				max77620-ldo8-supply = <&max77620_sd2>;
 
-				maxim,fps-enable-source = <FPS_SRC_0 FPS_SRC_1 FPS_SRC_2>;
-				maxim,fps-sw-enable = <FPS_EN_SRC_EN0 FPS_EN_SRC_EN1 FPS_EN_SRC_EN0>;
-				maxim,fps-source-timeperiod = <FPS_TIME_PERIOD_DEF FPS_TIME_PERIOD_DEF FPS_TIME_PERIOD_DEF>;
-
 				max77620_sd0: sd0 {
 					regulator-name = "vdd-core";
 					regulator-min-microvolt = <600000>;

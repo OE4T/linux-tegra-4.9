@@ -35,10 +35,16 @@
 					function = "32k-out1";
 				};
 
-				pin_gpio1_2_3_5_6_7 {
-					pins = "gpio1", "gpio2", "gpio3", "gpio5", "gpio6", "gpio7";
+				pin_gpio1_2_5_6_7 {
+					pins = "gpio1", "gpio2", "gpio5", "gpio6", "gpio7";
 					function = "gpio";
 					drive-push-pull = <1>;
+				};
+
+				pin_gpio3 {
+					pins = "gpio3";
+					function = "gpio";
+					drive-open-drain = <1>;
 				};
 
 			};
